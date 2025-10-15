@@ -127,13 +127,13 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
       xtermRef.current?.write('\x1b[32m> \x1b[0m')
     },
   }))
-  const redrawMultiLineFromCurrent = () => {
+  const redrawMultiLineFrom = (startLine: number) => {
     const term = xtermRef.current
     if (!term || !multiLineRef.current) return
     
-    // Clear from current line to end and redraw all remaining lines
-    const currentLine = multiLineCursorLineRef.current
-    const linesToRedraw = multiLineBufferRef.current.slice(currentLine)
+    // Get lines to redraw from the specified start line
+    const linesToRedraw = multiLineBufferRef.current.slice(startLine)
+    const currentLineIndex = multiLineCursorLineRef.current - startLine
     
     // Save current cursor column position
     const savedCursorPos = cursorPositionRef.current
@@ -144,7 +144,7 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
     // Move to start of current line and clear it completely
     term.write('\r\x1b[K')
     
-    // Write continuation prompt + current line content
+    // Write continuation prompt + first line content
     term.write('  ')
     term.write(linesToRedraw[0])
     
@@ -155,13 +155,13 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
       term.write(linesToRedraw[i])
     }
     
-    // Move cursor back to the current line at the cursor position
-    const linesToGoUp = linesToRedraw.length - 1
+    // Move cursor back to the current line
+    const linesToGoUp = linesToRedraw.length - 1 - currentLineIndex
     if (linesToGoUp > 0) {
       term.write(`\x1b[${linesToGoUp}A`)  // Move up N lines
     }
     
-    // Position cursor at the right column
+    // Position cursor at the right column on the current line
     term.write('\r')  // Start of line
     term.write('  ')  // After prompt
     if (savedCursorPos > 0) {
@@ -223,10 +223,10 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
     if (data === '\r' || data === '\n') {
       // This is a regular Enter without Shift
       const input = currentLineRef.current
-      term.writeln('')
 
       // If waiting for input (io.read), resolve the promise
       if (isReadingRef.current && inputResolveRef.current) {
+        term.writeln('')
         inputResolveRef.current(input)
         inputResolveRef.current = null
         isReadingRef.current = false
@@ -241,8 +241,11 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
         const beforeCursor = input.slice(0, cursorPositionRef.current)
         const afterCursor = input.slice(cursorPositionRef.current)
         
+        // Save the line where Enter was pressed
+        const lineBeforeSplit = multiLineCursorLineRef.current
+        
         // Update current line with content before cursor
-        multiLineBufferRef.current[multiLineCursorLineRef.current] = beforeCursor
+        multiLineBufferRef.current[lineBeforeSplit] = beforeCursor
         
         // Insert new line with content after cursor
         multiLineCursorLineRef.current++
@@ -252,12 +255,13 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
         currentLineRef.current = afterCursor
         cursorPositionRef.current = 0
         
-        // Redraw from current position
-        redrawMultiLineFromCurrent()
+        // Redraw from the line where we pressed Enter
+        redrawMultiLineFrom(lineBeforeSplit)
         return
       }
 
       // Otherwise, if onCommand is provided, call it
+      term.writeln('')
       if (onCommand && input.trim()) {
         // Add to history
         historyRef.current.push(input.trim())
@@ -273,10 +277,10 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
     // Handle Enter key (code 13 - this catches some terminals)
     if (code === 13) {
       const input = currentLineRef.current
-      term.writeln('')
 
       // If waiting for input (io.read), resolve the promise
       if (isReadingRef.current && inputResolveRef.current) {
+        term.writeln('')
         inputResolveRef.current(input)
         inputResolveRef.current = null
         isReadingRef.current = false
@@ -291,8 +295,11 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
         const beforeCursor = input.slice(0, cursorPositionRef.current)
         const afterCursor = input.slice(cursorPositionRef.current)
         
+        // Save the line where Enter was pressed
+        const lineBeforeSplit = multiLineCursorLineRef.current
+        
         // Update current line with content before cursor
-        multiLineBufferRef.current[multiLineCursorLineRef.current] = beforeCursor
+        multiLineBufferRef.current[lineBeforeSplit] = beforeCursor
         
         // Insert new line with content after cursor
         multiLineCursorLineRef.current++
@@ -302,12 +309,13 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
         currentLineRef.current = afterCursor
         cursorPositionRef.current = 0
         
-        // Redraw from current position
-        redrawMultiLineFromCurrent()
+        // Redraw from the line where we pressed Enter
+        redrawMultiLineFrom(lineBeforeSplit)
         return
       }
 
       // Otherwise, if onCommand is provided, call it
+      term.writeln('')
       if (onCommand && input.trim()) {
         // Add to history
         historyRef.current.push(input.trim())
