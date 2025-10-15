@@ -281,17 +281,40 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
       return
     }
 
+    // Handle Arrow Left (move cursor left)
+    if (data === '\x1b[D') {
+      if (cursorPositionRef.current > 0) {
+        cursorPositionRef.current--
+        term.write('\x1b[D')  // Move cursor left
+      }
+      return
+    }
+
+    // Handle Arrow Right (move cursor right)
+    if (data === '\x1b[C') {
+      if (cursorPositionRef.current < currentLineRef.current.length) {
+        cursorPositionRef.current++
+        term.write('\x1b[C')  // Move cursor right
+      }
+      return
+    }
+
     // Handle Backspace
     if (code === 127) {
       if (cursorPositionRef.current > 0) {
         const line = currentLineRef.current
-        currentLineRef.current =
-          line.slice(0, cursorPositionRef.current - 1) +
-          line.slice(cursorPositionRef.current)
+        const beforeCursor = line.slice(0, cursorPositionRef.current - 1)
+        const afterCursor = line.slice(cursorPositionRef.current)
+        currentLineRef.current = beforeCursor + afterCursor
         cursorPositionRef.current--
 
-        // Redraw the line
-        term.write('\b \b')
+        // Redraw the line from cursor position
+        const remaining = afterCursor + ' '
+        term.write('\b' + remaining)
+        // Move cursor back to correct position
+        for (let i = 0; i < afterCursor.length + 1; i++) {
+          term.write('\b')
+        }
       }
       return
     }
@@ -321,12 +344,19 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
     // Handle printable characters
     if (code >= 32 && code < 127) {
       const line = currentLineRef.current
-      currentLineRef.current =
-        line.slice(0, cursorPositionRef.current) +
-        data +
-        line.slice(cursorPositionRef.current)
+      const beforeCursor = line.slice(0, cursorPositionRef.current)
+      const afterCursor = line.slice(cursorPositionRef.current)
+      currentLineRef.current = beforeCursor + data + afterCursor
+      
+      // Write the new character and any text after it
+      term.write(data + afterCursor)
+      
+      // Move cursor back to correct position (after the newly inserted character)
+      for (let i = 0; i < afterCursor.length; i++) {
+        term.write('\b')
+      }
+      
       cursorPositionRef.current++
-      term.write(data)
     }
   }
 
