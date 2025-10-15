@@ -434,12 +434,48 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
 
     // Handle Backspace
     if (code === 127) {
+      // In multi-line mode at the beginning of a line (not the first line)
+      if (multiLineRef.current && cursorPositionRef.current === 0 && multiLineCursorLineRef.current > 0) {
+        // Merge current line with previous line
+        const currentContent = currentLineRef.current
+        const previousLineIndex = multiLineCursorLineRef.current - 1
+        const previousContent = multiLineBufferRef.current[previousLineIndex]
+        
+        // Merge the lines
+        const mergedContent = previousContent + currentContent
+        multiLineBufferRef.current[previousLineIndex] = mergedContent
+        
+        // Remove the current line from the buffer
+        multiLineBufferRef.current.splice(multiLineCursorLineRef.current, 1)
+        
+        // Clear current line, move up, go to start of previous line
+        term.write('\r\x1b[K')  // Clear current line
+        term.write('\x1b[A')    // Move cursor up
+        term.write('\r')        // Move to start of line
+        
+        // Move to previous line in our state
+        multiLineCursorLineRef.current = previousLineIndex
+        currentLineRef.current = mergedContent
+        cursorPositionRef.current = previousContent.length
+        
+        // Redraw from the previous line (where we are now)
+        // This will clear everything from here to end of screen and redraw properly
+        redrawMultiLineFrom(previousLineIndex)
+        return
+      }
+      
+      // Normal backspace behavior
       if (cursorPositionRef.current > 0) {
         const line = currentLineRef.current
         const beforeCursor = line.slice(0, cursorPositionRef.current - 1)
         const afterCursor = line.slice(cursorPositionRef.current)
         currentLineRef.current = beforeCursor + afterCursor
         cursorPositionRef.current--
+
+        // Update buffer in multi-line mode
+        if (multiLineRef.current) {
+          multiLineBufferRef.current[multiLineCursorLineRef.current] = currentLineRef.current
+        }
 
         // Redraw the line from cursor position
         const remaining = afterCursor + ' '
