@@ -156,54 +156,33 @@
   font-weight: 600;
 }
 
-.input-prompt-container {
+.terminal-input-line {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  padding: 0.75rem;
-  background: rgba(102, 126, 234, 0.1);
-  border-radius: 6px;
-  border: 2px solid #667eea;
+  align-items: center;
+  margin-top: 0.25rem;
 }
 
-.input-prompt-field {
+.terminal-prompt {
+  color: #d4d4d4;
+  font-weight: bold;
+  margin-right: 0.5rem;
+  user-select: none;
+}
+
+.terminal-input {
   flex: 1;
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #d4d4d4;
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   font-size: 14px;
-  background: white;
-  color: #333;
+  padding: 0;
+  caret-color: #d4d4d4;
 }
 
-.input-prompt-field:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
-}
-
-.input-submit-btn {
-  padding: 0.5rem 1.25rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.input-submit-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
-}
-
-.input-submit-btn:active {
-  transform: translateY(0);
-}
-
-.repl-container {
+.repl-container,
+.terminal-container {
   background: white;
   border-radius: 12px;
   padding: 2rem;
@@ -251,7 +230,8 @@
   }
 
   .playground-content,
-  .repl-container {
+  .repl-container,
+  .terminal-container {
     padding: 1rem;
   }
 }

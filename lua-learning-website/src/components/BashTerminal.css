@@ -1,0 +1,33 @@
+.bash-terminal-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 500px;
+}
+
+.bash-terminal-header {
+  margin-bottom: 1rem;
+}
+
+.bash-terminal-header h3 {
+  margin: 0;
+  color: #667eea;
+  font-size: 1.1rem;
+}
+
+.bash-terminal {
+  flex: 1;
+  background: #1e1e1e;
+  border-radius: 8px;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+/* Ensure xterm terminal fills the container */
+.bash-terminal .xterm {
+  height: 100%;
+}
+
+.bash-terminal .xterm-viewport {
+  background-color: #1e1e1e !important;
+}

@@ -4,6 +4,8 @@ import { StreamLanguage } from '@codemirror/language'
 import { lua } from '@codemirror/legacy-modes/mode/lua'
 import { LuaFactory, LuaEngine } from 'wasmoon'
 import LuaRepl from './LuaRepl'
+import BashTerminal from './BashTerminal'
+import type { BashTerminalHandle } from './BashTerminal'
 import './LuaPlayground.css'
 
 type PlaygroundMode = 'editor' | 'repl'
@@ -29,22 +31,15 @@ print(greet("World"))
 export default function LuaPlayground() {
   const [mode, setMode] = useState<PlaygroundMode>('editor')
   const [code, setCode] = useState(defaultCode)
-  const [output, setOutput] = useState<string[]>([])
   const [isRunning, setIsRunning] = useState(false)
-  const [waitingForInput, setWaitingForInput] = useState(false)
-  const [inputPrompt, setInputPrompt] = useState('')
 
   const luaEngineRef = useRef<LuaEngine | null>(null)
-  const factoryRef = useRef<LuaFactory | null>(null)
-  const inputResolveRef = useRef<((value: string) => void) | null>(null)
+  const terminalRef = useRef<BashTerminalHandle>(null)
 
   // Custom io.read implementation for code editor
   const customIoRead = async (): Promise<string> => {
-    return new Promise((resolve) => {
-      inputResolveRef.current = resolve
-      setWaitingForInput(true)
-      setOutput(prev => [...prev, '> Waiting for input...'])
-    })
+    if (!terminalRef.current) return ''
+    return await terminalRef.current.readLine()
   }
 
   useEffect(() => {
@@ -54,13 +49,12 @@ export default function LuaPlayground() {
         const factory = new LuaFactory()
         const lua = await factory.createEngine()
 
-        factoryRef.current = factory
         luaEngineRef.current = lua
 
         // Capture print output
         lua.global.set('print', (...args: any[]) => {
           const message = args.map(arg => String(arg)).join('\t')
-          setOutput(prev => [...prev, message])
+          terminalRef.current?.writeln(message)
         })
 
         // Create custom io table with read and write functions
@@ -94,7 +88,7 @@ export default function LuaPlayground() {
         `)
       } catch (error) {
         console.error('Failed to initialize Lua engine:', error)
-        setOutput(['Error: Failed to initialize Lua engine'])
+        terminalRef.current?.writeln('Error: Failed to initialize Lua engine')
       }
     }
 
@@ -109,49 +103,32 @@ export default function LuaPlayground() {
   }, [])
 
   const runCode = async () => {
-    if (!luaEngineRef.current) {
-      setOutput(['Error: Lua engine not initialized'])
+    if (!luaEngineRef.current || !terminalRef.current) {
+      terminalRef.current?.writeln('Error: Lua engine not initialized')
       return
     }
 
     setIsRunning(true)
-    setOutput([]) // Clear previous output
+    terminalRef.current.clear() // Clear previous output
 
     try {
       // Execute the Lua code
       await luaEngineRef.current.doString(code)
     } catch (error: any) {
       // Display error messages
-      setOutput(prev => [...prev, `Error: ${error.message || String(error)}`])
+      terminalRef.current.writeln(`Error: ${error.message || String(error)}`)
     } finally {
       setIsRunning(false)
     }
   }
 
-  const handleInputSubmit = () => {
-    if (inputResolveRef.current && inputPrompt !== null) {
-      const value = inputPrompt
-      setOutput(prev => [...prev, value])
-      inputResolveRef.current(value)
-      inputResolveRef.current = null
-      setWaitingForInput(false)
-      setInputPrompt('')
-    }
-  }
-
   const clearOutput = () => {
-    setOutput([])
-    setWaitingForInput(false)
-    setInputPrompt('')
-    inputResolveRef.current = null
+    terminalRef.current?.clear()
   }
 
   const resetCode = () => {
     setCode(defaultCode)
-    setOutput([])
-    setWaitingForInput(false)
-    setInputPrompt('')
-    inputResolveRef.current = null
+    terminalRef.current?.clear()
   }
 
   return (
@@ -205,43 +182,7 @@ export default function LuaPlayground() {
           </div>
 
           <div className="output-panel">
-            <h3>Output</h3>
-            <div className="output-content">
-              {output.length === 0 ? (
-                <div className="output-placeholder">
-                  Run your code to see the output here
-                </div>
-              ) : (
-                output.map((line, index) => (
-                  <div
-                    key={index}
-                    className={line.startsWith('Error:') ? 'output-error' : 'output-line'}
-                  >
-                    {line}
-                  </div>
-                ))
-              )}
-              {waitingForInput && (
-                <div className="input-prompt-container">
-                  <input
-                    type="text"
-                    className="input-prompt-field"
-                    value={inputPrompt}
-                    onChange={(e) => setInputPrompt(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleInputSubmit()
-                      }
-                    }}
-                    placeholder="Enter input and press Enter..."
-                    autoFocus
-                  />
-                  <button onClick={handleInputSubmit} className="input-submit-btn">
-                    Submit
-                  </button>
-                </div>
-              )}
-            </div>
+            <BashTerminal ref={terminalRef} />
           </div>
         </div>
       ) : (

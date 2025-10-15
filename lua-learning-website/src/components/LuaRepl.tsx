@@ -28,7 +28,6 @@ export default function LuaRepl() {
   const customIoRead = async (): Promise<string> => {
     return new Promise((resolve) => {
       setWaitingForInput(true)
-      setLines(prev => [...prev, { type: 'stdin-prompt', content: '(waiting for input...)' }])
       setInputResolve(() => resolve)
     })
   }
@@ -165,7 +164,6 @@ export default function LuaRepl() {
       // If waiting for input from io.read(), provide it
       if (waitingForInput && inputResolve) {
         const inputValue = currentInput
-        setLines(prev => [...prev, { type: 'output', content: inputValue }])
         setCurrentInput('')
         setWaitingForInput(false)
         inputResolve(inputValue)
