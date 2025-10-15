@@ -28,6 +28,8 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
   const historyIndexRef = useRef<number>(-1)
   const multiLineRef = useRef<boolean>(false)
   const multiLineBufferRef = useRef<string[]>([])
+  const multiLineCursorLineRef = useRef<number>(0)  // Current line index in multi-line mode
+  const multiLineStartRowRef = useRef<number>(0)  // Terminal row where multi-line input starts
 
   useEffect(() => {
     if (!terminalRef.current) return
@@ -133,20 +135,29 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
     if (!multiLineRef.current) {
       // Enter multi-line mode
       multiLineRef.current = true
-      multiLineBufferRef.current = [currentLineRef.current]
-      term.writeln(' \x1b[33m(multi-line mode)\x1b[0m')
-      currentLineRef.current = ''
-      cursorPositionRef.current = 0
-      term.write('  ')  // Continuation prompt
+      const firstLine = currentLineRef.current
+      multiLineBufferRef.current = [firstLine]
+      multiLineCursorLineRef.current = 0
+      multiLineStartRowRef.current = term.buffer.active.cursorY
+      
+      term.writeln(' \x1b[33m(multi-line mode - Shift+Enter to execute)\x1b[0m')
+      term.write('  ')
+      
+      // Keep cursor on same line
+      currentLineRef.current = firstLine
+      cursorPositionRef.current = firstLine.length
+      term.write(firstLine)
     } else {
       // Exit multi-line mode and execute
-      multiLineBufferRef.current.push(currentLineRef.current)
+      // Save current line
+      multiLineBufferRef.current[multiLineCursorLineRef.current] = currentLineRef.current
       const fullCommand = multiLineBufferRef.current.join('\n')
       term.writeln('')
       
       // Reset multi-line state
       multiLineRef.current = false
       multiLineBufferRef.current = []
+      multiLineCursorLineRef.current = 0
       currentLineRef.current = ''
       cursorPositionRef.current = 0
       
@@ -182,12 +193,16 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
         return
       }
 
-      // If in multi-line mode, add line to buffer and show continuation prompt
+      // If in multi-line mode, add new line
       if (multiLineRef.current) {
-        multiLineBufferRef.current.push(input)
+        // Save current line
+        multiLineBufferRef.current[multiLineCursorLineRef.current] = input
+        // Add new line and move to it
+        multiLineCursorLineRef.current++
+        multiLineBufferRef.current.push('')
         currentLineRef.current = ''
         cursorPositionRef.current = 0
-        term.write('  ')  // Continuation prompt (2 spaces)
+        term.write('  ')  // Continuation prompt
         return
       }
 
@@ -219,12 +234,16 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
         return
       }
 
-      // If in multi-line mode, add line to buffer and show continuation prompt
+      // If in multi-line mode, add new line
       if (multiLineRef.current) {
-        multiLineBufferRef.current.push(input)
+        // Save current line
+        multiLineBufferRef.current[multiLineCursorLineRef.current] = input
+        // Add new line and move to it
+        multiLineCursorLineRef.current++
+        multiLineBufferRef.current.push('')
         currentLineRef.current = ''
         cursorPositionRef.current = 0
-        term.write('  ')  // Continuation prompt (2 spaces)
+        term.write('  ')  // Continuation prompt
         return
       }
 
@@ -241,16 +260,39 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
       return
     }
 
-    // Handle Arrow Up (navigate history)
+    // Handle Arrow Up
     if (data === '\x1b[A') {
+      // In multi-line mode, move cursor to previous line
+      if (multiLineRef.current) {
+        if (multiLineCursorLineRef.current > 0) {
+          // Save current line content
+          multiLineBufferRef.current[multiLineCursorLineRef.current] = currentLineRef.current
+          
+          // Move cursor up one line
+          term.write('\x1b[A')  // Move cursor up
+          term.write('\r')       // Move to start of line
+          term.write('  ')       // Position after prompt
+          
+          // Move to previous line in buffer
+          multiLineCursorLineRef.current--
+          currentLineRef.current = multiLineBufferRef.current[multiLineCursorLineRef.current]
+          
+          // Position cursor at same column or end of line
+          const targetPos = Math.min(cursorPositionRef.current, currentLineRef.current.length)
+          cursorPositionRef.current = targetPos
+          term.write(currentLineRef.current.substring(0, targetPos))
+        }
+        return
+      }
+      
+      // Navigate history only when NOT in multi-line mode
       if (historyRef.current.length > 0 && historyIndexRef.current > 0) {
         historyIndexRef.current--
         const historyCommand = historyRef.current[historyIndexRef.current]
         
         // Clear current line
         term.write('\r\x1b[K')
-        const prompt = multiLineRef.current ? '  ' : '\x1b[32m> \x1b[0m'
-        term.write(prompt + historyCommand)
+        term.write('\x1b[32m> \x1b[0m' + historyCommand)
         
         currentLineRef.current = historyCommand
         cursorPositionRef.current = historyCommand.length
@@ -258,15 +300,38 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
       return
     }
 
-    // Handle Arrow Down (navigate history)
+    // Handle Arrow Down
     if (data === '\x1b[B') {
+      // In multi-line mode, move cursor to next line
+      if (multiLineRef.current) {
+        if (multiLineCursorLineRef.current < multiLineBufferRef.current.length - 1) {
+          // Save current line content
+          multiLineBufferRef.current[multiLineCursorLineRef.current] = currentLineRef.current
+          
+          // Move cursor down one line
+          term.write('\x1b[B')  // Move cursor down
+          term.write('\r')       // Move to start of line
+          term.write('  ')       // Position after prompt
+          
+          // Move to next line in buffer
+          multiLineCursorLineRef.current++
+          currentLineRef.current = multiLineBufferRef.current[multiLineCursorLineRef.current]
+          
+          // Position cursor at same column or end of line
+          const targetPos = Math.min(cursorPositionRef.current, currentLineRef.current.length)
+          cursorPositionRef.current = targetPos
+          term.write(currentLineRef.current.substring(0, targetPos))
+        }
+        return
+      }
+      
+      // Navigate history only when NOT in multi-line mode
       if (historyIndexRef.current < historyRef.current.length) {
         historyIndexRef.current++
         
         // Clear current line
         term.write('\r\x1b[K')
-        const prompt = multiLineRef.current ? '  ' : '\x1b[32m> \x1b[0m'
-        term.write(prompt)
+        term.write('\x1b[32m> \x1b[0m')
         
         if (historyIndexRef.current < historyRef.current.length) {
           const historyCommand = historyRef.current[historyIndexRef.current]
@@ -328,6 +393,7 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
       if (multiLineRef.current) {
         multiLineRef.current = false
         multiLineBufferRef.current = []
+        multiLineCursorLineRef.current = 0
       }
       
       currentLineRef.current = ''

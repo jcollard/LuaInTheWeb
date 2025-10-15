@@ -131,7 +131,7 @@ export default function LuaRepl() {
       </div>
 
       <div className="repl-help">
-        <strong>Tips:</strong> Press ↑/↓ to navigate history • Enter to execute • Shift+Enter for multi-line mode • Type expressions or statements • io.read() prompts in terminal
+        <strong>Tips:</strong> Press ↑/↓ to navigate history (or lines in multi-line mode) • ←/→ to move cursor • Enter to execute • Shift+Enter for multi-line mode • Type expressions or statements • io.read() prompts in terminal
       </div>
     </div>
   )
