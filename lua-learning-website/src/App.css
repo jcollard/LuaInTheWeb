@@ -26,11 +26,19 @@
   color: white;
   text-decoration: none;
   font-weight: 500;
-  transition: opacity 0.3s;
+  transition: all 0.3s;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
 }
 
 .nav a:hover {
   opacity: 0.8;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.nav a.active {
+  background: rgba(255, 255, 255, 0.2);
+  font-weight: 600;
 }
 
 .main-content {
@@ -118,4 +126,20 @@
 
 .footer p {
   margin: 0;
+}
+
+.content-section {
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+.content-section h2 {
+  font-size: 2rem;
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.content-section p {
+  font-size: 1.1rem;
+  color: #666;
 }
