@@ -26,6 +26,8 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
   const isReadingRef = useRef<boolean>(false)
   const historyRef = useRef<string[]>([])
   const historyIndexRef = useRef<number>(-1)
+  const multiLineRef = useRef<boolean>(false)
+  const multiLineBufferRef = useRef<string[]>([])
 
   useEffect(() => {
     if (!terminalRef.current) return
@@ -70,6 +72,17 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
     xtermRef.current = terminal
     fitAddonRef.current = fitAddon
 
+    // Handle custom key events (for Shift+Enter detection)
+    terminal.attachCustomKeyEventHandler((event) => {
+      // Detect Shift+Enter
+      if (event.key === 'Enter' && event.shiftKey && event.type === 'keydown') {
+        event.preventDefault()
+        handleShiftEnter()
+        return false
+      }
+      return true
+    })
+
     // Handle terminal input
     terminal.onData((data) => {
       handleInput(data)
@@ -109,9 +122,42 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
       })
     },
     showPrompt: () => {
-      xtermRef.current?.write('\x1b[32mREPL $ \x1b[0m')
+      xtermRef.current?.write('\x1b[32m> \x1b[0m')
     },
   }))
+
+  const handleShiftEnter = () => {
+    const term = xtermRef.current
+    if (!term) return
+
+    if (!multiLineRef.current) {
+      // Enter multi-line mode
+      multiLineRef.current = true
+      multiLineBufferRef.current = [currentLineRef.current]
+      term.writeln(' \x1b[33m(multi-line mode)\x1b[0m')
+      currentLineRef.current = ''
+      cursorPositionRef.current = 0
+      term.write('  ')  // Continuation prompt
+    } else {
+      // Exit multi-line mode and execute
+      multiLineBufferRef.current.push(currentLineRef.current)
+      const fullCommand = multiLineBufferRef.current.join('\n')
+      term.writeln('')
+      
+      // Reset multi-line state
+      multiLineRef.current = false
+      multiLineBufferRef.current = []
+      currentLineRef.current = ''
+      cursorPositionRef.current = 0
+      
+      // Execute the command
+      if (onCommand && fullCommand.trim()) {
+        historyRef.current.push(fullCommand.trim())
+        historyIndexRef.current = historyRef.current.length
+        onCommand(fullCommand.trim())
+      }
+    }
+  }
 
   const handleInput = (data: string) => {
     const term = xtermRef.current
@@ -119,7 +165,46 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
 
     const code = data.charCodeAt(0)
 
-    // Handle Enter key
+    // Check for Shift+Enter (escape sequence varies by terminal)
+    // We'll detect it by checking for specific escape sequences
+    if (data === '\r' || data === '\n') {
+      // This is a regular Enter without Shift
+      const input = currentLineRef.current
+      term.writeln('')
+
+      // If waiting for input (io.read), resolve the promise
+      if (isReadingRef.current && inputResolveRef.current) {
+        inputResolveRef.current(input)
+        inputResolveRef.current = null
+        isReadingRef.current = false
+        currentLineRef.current = ''
+        cursorPositionRef.current = 0
+        return
+      }
+
+      // If in multi-line mode, add line to buffer and show continuation prompt
+      if (multiLineRef.current) {
+        multiLineBufferRef.current.push(input)
+        currentLineRef.current = ''
+        cursorPositionRef.current = 0
+        term.write('  ')  // Continuation prompt (2 spaces)
+        return
+      }
+
+      // Otherwise, if onCommand is provided, call it
+      if (onCommand && input.trim()) {
+        // Add to history
+        historyRef.current.push(input.trim())
+        historyIndexRef.current = historyRef.current.length
+        onCommand(input.trim())
+      }
+
+      currentLineRef.current = ''
+      cursorPositionRef.current = 0
+      return
+    }
+
+    // Handle Enter key (code 13 - this catches some terminals)
     if (code === 13) {
       const input = currentLineRef.current
       term.writeln('')
@@ -131,6 +216,15 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
         isReadingRef.current = false
         currentLineRef.current = ''
         cursorPositionRef.current = 0
+        return
+      }
+
+      // If in multi-line mode, add line to buffer and show continuation prompt
+      if (multiLineRef.current) {
+        multiLineBufferRef.current.push(input)
+        currentLineRef.current = ''
+        cursorPositionRef.current = 0
+        term.write('  ')  // Continuation prompt (2 spaces)
         return
       }
 
@@ -155,7 +249,8 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
         
         // Clear current line
         term.write('\r\x1b[K')
-        term.write('\x1b[32m> \x1b[0m' + historyCommand)
+        const prompt = multiLineRef.current ? '  ' : '\x1b[32m> \x1b[0m'
+        term.write(prompt + historyCommand)
         
         currentLineRef.current = historyCommand
         cursorPositionRef.current = historyCommand.length
@@ -170,7 +265,8 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
         
         // Clear current line
         term.write('\r\x1b[K')
-        term.write('\x1b[32m> \x1b[0m')
+        const prompt = multiLineRef.current ? '  ' : '\x1b[32m> \x1b[0m'
+        term.write(prompt)
         
         if (historyIndexRef.current < historyRef.current.length) {
           const historyCommand = historyRef.current[historyIndexRef.current]
@@ -204,6 +300,13 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
     if (code === 3) {
       term.write('^C')
       term.writeln('')
+      
+      // Exit multi-line mode if active
+      if (multiLineRef.current) {
+        multiLineRef.current = false
+        multiLineBufferRef.current = []
+      }
+      
       currentLineRef.current = ''
       cursorPositionRef.current = 0
       return
