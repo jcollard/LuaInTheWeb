@@ -201,8 +201,10 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
           }
         }
         
-        // Set state to first line
-        currentLineRef.current = multiLineBufferRef.current[0]
+        // Set state to last line (cursor is already at the end after displaying)
+        const lastLineIndex = multiLineBufferRef.current.length - 1
+        multiLineCursorLineRef.current = lastLineIndex
+        currentLineRef.current = multiLineBufferRef.current[lastLineIndex]
         cursorPositionRef.current = currentLineRef.current.length
         
         return
