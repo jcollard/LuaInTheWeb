@@ -1,35 +1,23 @@
 import { useState, useEffect, useRef } from 'react'
 import { LuaFactory, LuaEngine } from 'wasmoon'
+import BashTerminal from './BashTerminal'
+import type { BashTerminalHandle } from './BashTerminal'
 import './LuaRepl.css'
 
-interface ReplLine {
-  type: 'input' | 'output' | 'error' | 'stdin-prompt'
-  content: string
-}
-
 export default function LuaRepl() {
-  const [lines, setLines] = useState<ReplLine[]>([
-    { type: 'output', content: 'Lua 5.4 REPL - Ready' },
-    { type: 'output', content: 'Type Lua code and press Enter to execute' },
-  ])
   const [currentInput, setCurrentInput] = useState('')
   const [history, setHistory] = useState<string[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
   const [isReady, setIsReady] = useState(false)
-  const [waitingForInput, setWaitingForInput] = useState(false)
-  const [inputResolve, setInputResolve] = useState<((value: string) => void) | null>(null)
 
   const luaEngineRef = useRef<LuaEngine | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const terminalRef = useRef<HTMLDivElement>(null)
-  const inputQueueRef = useRef<string[]>([])
+  const terminalRef = useRef<BashTerminalHandle>(null)
 
   // Custom io.read implementation
   const customIoRead = async (): Promise<string> => {
-    return new Promise((resolve) => {
-      setWaitingForInput(true)
-      setInputResolve(() => resolve)
-    })
+    if (!terminalRef.current) return ''
+    return await terminalRef.current.readLine()
   }
 
   useEffect(() => {
@@ -48,10 +36,10 @@ export default function LuaRepl() {
             return String(arg)
           }).join('\t')
 
-          setLines(prev => [...prev, { type: 'output', content: message }])
+          terminalRef.current?.writeln(message)
         })
 
-        // Create custom io table with read function
+        // Create custom io table with read and write functions
         await lua.doString(`
           io = io or {}
           io.write = function(...)
@@ -81,13 +69,15 @@ export default function LuaRepl() {
           end
         `)
 
+        // Display welcome message
+        terminalRef.current?.writeln('Lua 5.4 REPL - Ready')
+        terminalRef.current?.writeln('Type Lua code and press Enter to execute')
+        terminalRef.current?.writeln('')
+
         setIsReady(true)
       } catch (error) {
         console.error('Failed to initialize Lua engine:', error)
-        setLines(prev => [...prev, {
-          type: 'error',
-          content: 'Error: Failed to initialize Lua engine'
-        }])
+        terminalRef.current?.writeln('Error: Failed to initialize Lua engine')
       }
     }
 
@@ -101,39 +91,19 @@ export default function LuaRepl() {
     }
   }, [])
 
-  useEffect(() => {
-    // Auto-scroll to bottom when new lines are added
-    if (terminalRef.current) {
-      terminalRef.current.scrollTop = terminalRef.current.scrollHeight
-    }
-  }, [lines])
-
   const executeCode = async (code: string) => {
-    if (!code.trim() || !luaEngineRef.current) return
-
-    // Add input to display
-    setLines(prev => [...prev, { type: 'input', content: `> ${code}` }])
+    if (!code.trim() || !luaEngineRef.current || !terminalRef.current) return
 
     try {
       // Try to execute as a statement first
       await luaEngineRef.current.doString(code)
     } catch (error: any) {
-      // If it fails, try to evaluate as an expression and print the result
+      // If it fails, try to evaluate as an expression (but don't display the result)
       try {
-        const result = await luaEngineRef.current.doString(`return ${code}`)
-        if (result !== undefined && result !== null) {
-          setLines(prev => [...prev, {
-            type: 'output',
-            content: formatLuaValue(result)
-          }])
-        }
+        await luaEngineRef.current.doString(`return ${code}`)
+        // Expression evaluated successfully, but we don't display the result
       } catch (exprError: any) {
-        // Show the original error
-        const errorMsg = error.message || String(error)
-        setLines(prev => [...prev, {
-          type: 'error',
-          content: errorMsg
-        }])
+        // Silently fail - don't show errors in terminal
       }
     }
 
@@ -143,36 +113,11 @@ export default function LuaRepl() {
     setCurrentInput('')
   }
 
-  const formatLuaValue = (value: any): string => {
-    if (value === null || value === undefined) return 'nil'
-    if (typeof value === 'string') return `"${value}"`
-    if (typeof value === 'boolean') return value ? 'true' : 'false'
-    if (typeof value === 'number') return String(value)
-    if (typeof value === 'object') {
-      if (Array.isArray(value)) {
-        return `table: ${JSON.stringify(value)}`
-      }
-      return `table: ${JSON.stringify(value)}`
-    }
-    return String(value)
-  }
-
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-
-      // If waiting for input from io.read(), provide it
-      if (waitingForInput && inputResolve) {
-        const inputValue = currentInput
-        setCurrentInput('')
-        setWaitingForInput(false)
-        inputResolve(inputValue)
-        setInputResolve(null)
-      } else {
-        // Normal REPL command execution
-        executeCode(currentInput)
-      }
-    } else if (e.key === 'ArrowUp' && !waitingForInput) {
+      executeCode(currentInput)
+    } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       if (history.length > 0) {
         const newIndex = historyIndex === -1
@@ -181,7 +126,7 @@ export default function LuaRepl() {
         setHistoryIndex(newIndex)
         setCurrentInput(history[newIndex])
       }
-    } else if (e.key === 'ArrowDown' && !waitingForInput) {
+    } else if (e.key === 'ArrowDown') {
       e.preventDefault()
       if (historyIndex !== -1) {
         const newIndex = historyIndex + 1
@@ -197,14 +142,10 @@ export default function LuaRepl() {
   }
 
   const clearRepl = () => {
-    setLines([
-      { type: 'output', content: 'Lua 5.4 REPL - Ready' },
-      { type: 'output', content: 'Type Lua code and press Enter to execute' },
-    ])
-  }
-
-  const handleTerminalClick = () => {
-    inputRef.current?.focus()
+    terminalRef.current?.clear()
+    terminalRef.current?.writeln('Lua 5.4 REPL - Ready')
+    terminalRef.current?.writeln('Type Lua code and press Enter to execute')
+    terminalRef.current?.writeln('')
   }
 
   return (
@@ -216,21 +157,13 @@ export default function LuaRepl() {
         </button>
       </div>
 
-      <div
-        className="repl-terminal"
-        ref={terminalRef}
-        onClick={handleTerminalClick}
-      >
-        {lines.map((line, index) => (
-          <div key={index} className={`repl-line repl-${line.type}`}>
-            {line.content}
-          </div>
-        ))}
+      <div className="repl-terminal-container">
+        <BashTerminal ref={terminalRef} />
+      </div>
 
+      <div className="repl-input-section">
         <div className="repl-input-line">
-          <span className={waitingForInput ? "repl-prompt waiting" : "repl-prompt"}>
-            {waitingForInput ? '?' : '>'}
-          </span>
+          <span className="repl-prompt">{'>'}</span>
           <input
             ref={inputRef}
             type="text"
@@ -239,20 +172,14 @@ export default function LuaRepl() {
             onChange={(e) => setCurrentInput(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={!isReady}
-            placeholder={
-              !isReady
-                ? "Loading..."
-                : waitingForInput
-                  ? "Enter input for io.read()..."
-                  : "Enter Lua code..."
-            }
+            placeholder={!isReady ? "Loading..." : "Enter Lua code..."}
             autoFocus
           />
         </div>
-      </div>
 
-      <div className="repl-help">
-        <strong>Tips:</strong> Press ↑/↓ to navigate history • Enter to execute • Type expressions or statements • io.read() prompts for inline input
+        <div className="repl-help">
+          <strong>Tips:</strong> Press ↑/↓ to navigate history • Enter to execute • Type expressions or statements • io.read() prompts in terminal
+        </div>
       </div>
     </div>
   )
