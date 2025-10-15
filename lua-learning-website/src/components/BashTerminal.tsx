@@ -127,6 +127,48 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
       xtermRef.current?.write('\x1b[32m> \x1b[0m')
     },
   }))
+  const redrawMultiLineFromCurrent = () => {
+    const term = xtermRef.current
+    if (!term || !multiLineRef.current) return
+    
+    // Clear from current line to end and redraw all remaining lines
+    const currentLine = multiLineCursorLineRef.current
+    const linesToRedraw = multiLineBufferRef.current.slice(currentLine)
+    
+    // Save current cursor column position
+    const savedCursorPos = cursorPositionRef.current
+    
+    // Clear everything from cursor to end of screen
+    term.write('\x1b[J')  // Clear from cursor to end of screen
+    
+    // Move to start of current line and clear it completely
+    term.write('\r\x1b[K')
+    
+    // Write continuation prompt + current line content
+    term.write('  ')
+    term.write(linesToRedraw[0])
+    
+    // Write remaining lines below
+    for (let i = 1; i < linesToRedraw.length; i++) {
+      term.writeln('')
+      term.write('  ')
+      term.write(linesToRedraw[i])
+    }
+    
+    // Move cursor back to the current line at the cursor position
+    const linesToGoUp = linesToRedraw.length - 1
+    if (linesToGoUp > 0) {
+      term.write(`\x1b[${linesToGoUp}A`)  // Move up N lines
+    }
+    
+    // Position cursor at the right column
+    term.write('\r')  // Start of line
+    term.write('  ')  // After prompt
+    if (savedCursorPos > 0) {
+      term.write(currentLineRef.current.substring(0, savedCursorPos))
+    }
+  }
+
 
   const handleShiftEnter = () => {
     const term = xtermRef.current
@@ -195,14 +237,23 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
 
       // If in multi-line mode, add new line
       if (multiLineRef.current) {
-        // Save current line
-        multiLineBufferRef.current[multiLineCursorLineRef.current] = input
-        // Add new line and move to it
+        // Split current line at cursor position
+        const beforeCursor = input.slice(0, cursorPositionRef.current)
+        const afterCursor = input.slice(cursorPositionRef.current)
+        
+        // Update current line with content before cursor
+        multiLineBufferRef.current[multiLineCursorLineRef.current] = beforeCursor
+        
+        // Insert new line with content after cursor
         multiLineCursorLineRef.current++
-        multiLineBufferRef.current.push('')
-        currentLineRef.current = ''
+        multiLineBufferRef.current.splice(multiLineCursorLineRef.current, 0, afterCursor)
+        
+        // Set current line to the new line content
+        currentLineRef.current = afterCursor
         cursorPositionRef.current = 0
-        term.write('  ')  // Continuation prompt
+        
+        // Redraw from current position
+        redrawMultiLineFromCurrent()
         return
       }
 
@@ -236,14 +287,23 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
 
       // If in multi-line mode, add new line
       if (multiLineRef.current) {
-        // Save current line
-        multiLineBufferRef.current[multiLineCursorLineRef.current] = input
-        // Add new line and move to it
+        // Split current line at cursor position
+        const beforeCursor = input.slice(0, cursorPositionRef.current)
+        const afterCursor = input.slice(cursorPositionRef.current)
+        
+        // Update current line with content before cursor
+        multiLineBufferRef.current[multiLineCursorLineRef.current] = beforeCursor
+        
+        // Insert new line with content after cursor
         multiLineCursorLineRef.current++
-        multiLineBufferRef.current.push('')
-        currentLineRef.current = ''
+        multiLineBufferRef.current.splice(multiLineCursorLineRef.current, 0, afterCursor)
+        
+        // Set current line to the new line content
+        currentLineRef.current = afterCursor
         cursorPositionRef.current = 0
-        term.write('  ')  // Continuation prompt
+        
+        // Redraw from current position
+        redrawMultiLineFromCurrent()
         return
       }
 
