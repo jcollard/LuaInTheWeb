@@ -36,75 +36,15 @@
 
 .repl-terminal-container {
   flex: 1;
-  margin-bottom: 1rem;
   min-height: 400px;
 }
 
-.repl-input-section {
-  background: white;
+.repl-help {
   padding: 1rem;
+  margin-top: 1rem;
+  background: white;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.repl-input-line {
-  display: flex;
-  align-items: center;
-  margin-bottom: 0.75rem;
-}
-
-.repl-prompt {
-  color: #667eea;
-  font-weight: bold;
-  margin-right: 0.5rem;
-  user-select: none;
-  font-size: 1.1rem;
-  transition: color 0.3s;
-}
-
-.repl-prompt.waiting {
-  color: #f5a623;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-.repl-input {
-  flex: 1;
-  background: #f8f9fa;
-  border: 2px solid #e0e0e0;
-  outline: none;
-  color: #333;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-  font-size: 14px;
-  padding: 0.5rem;
-  border-radius: 6px;
-  transition: border-color 0.2s;
-}
-
-.repl-input:focus {
-  border-color: #667eea;
-}
-
-.repl-input::placeholder {
-  color: #999;
-  font-style: italic;
-}
-
-.repl-input:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.repl-help {
-  padding: 0.5rem;
   font-size: 0.85rem;
   color: #666;
 }

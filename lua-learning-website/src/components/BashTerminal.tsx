@@ -9,6 +9,7 @@ export interface BashTerminalHandle {
   write: (text: string) => void
   clear: () => void
   readLine: () => Promise<string>
+  showPrompt: () => void
 }
 
 interface BashTerminalProps {
@@ -23,6 +24,8 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
   const cursorPositionRef = useRef<number>(0)
   const inputResolveRef = useRef<((value: string) => void) | null>(null)
   const isReadingRef = useRef<boolean>(false)
+  const historyRef = useRef<string[]>([])
+  const historyIndexRef = useRef<number>(-1)
 
   useEffect(() => {
     if (!terminalRef.current) return
@@ -105,6 +108,9 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
         cursorPositionRef.current = 0
       })
     },
+    showPrompt: () => {
+      xtermRef.current?.write('\x1b[32m> \x1b[0m')
+    },
   }))
 
   const handleInput = (data: string) => {
@@ -130,11 +136,52 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
 
       // Otherwise, if onCommand is provided, call it
       if (onCommand && input.trim()) {
+        // Add to history
+        historyRef.current.push(input.trim())
+        historyIndexRef.current = historyRef.current.length
         onCommand(input.trim())
       }
 
       currentLineRef.current = ''
       cursorPositionRef.current = 0
+      return
+    }
+
+    // Handle Arrow Up (navigate history)
+    if (data === '\x1b[A') {
+      if (historyRef.current.length > 0 && historyIndexRef.current > 0) {
+        historyIndexRef.current--
+        const historyCommand = historyRef.current[historyIndexRef.current]
+        
+        // Clear current line
+        term.write('\r\x1b[K')
+        term.write('\x1b[32m> \x1b[0m' + historyCommand)
+        
+        currentLineRef.current = historyCommand
+        cursorPositionRef.current = historyCommand.length
+      }
+      return
+    }
+
+    // Handle Arrow Down (navigate history)
+    if (data === '\x1b[B') {
+      if (historyIndexRef.current < historyRef.current.length) {
+        historyIndexRef.current++
+        
+        // Clear current line
+        term.write('\r\x1b[K')
+        term.write('\x1b[32m> \x1b[0m')
+        
+        if (historyIndexRef.current < historyRef.current.length) {
+          const historyCommand = historyRef.current[historyIndexRef.current]
+          term.write(historyCommand)
+          currentLineRef.current = historyCommand
+          cursorPositionRef.current = historyCommand.length
+        } else {
+          currentLineRef.current = ''
+          cursorPositionRef.current = 0
+        }
+      }
       return
     }
 
