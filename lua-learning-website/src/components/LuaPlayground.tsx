@@ -31,8 +31,21 @@ export default function LuaPlayground() {
   const [code, setCode] = useState(defaultCode)
   const [output, setOutput] = useState<string[]>([])
   const [isRunning, setIsRunning] = useState(false)
+  const [waitingForInput, setWaitingForInput] = useState(false)
+  const [inputPrompt, setInputPrompt] = useState('')
+
   const luaEngineRef = useRef<LuaEngine | null>(null)
   const factoryRef = useRef<LuaFactory | null>(null)
+  const inputResolveRef = useRef<((value: string) => void) | null>(null)
+
+  // Custom io.read implementation for code editor
+  const customIoRead = async (): Promise<string> => {
+    return new Promise((resolve) => {
+      inputResolveRef.current = resolve
+      setWaitingForInput(true)
+      setOutput(prev => [...prev, '> Waiting for input...'])
+    })
+  }
 
   useEffect(() => {
     // Initialize Lua engine on component mount
@@ -49,6 +62,36 @@ export default function LuaPlayground() {
           const message = args.map(arg => String(arg)).join('\t')
           setOutput(prev => [...prev, message])
         })
+
+        // Create custom io table with read and write functions
+        await lua.doString(`
+          io = io or {}
+          io.write = function(...)
+            local args = {...}
+            local output = ""
+            for i, v in ipairs(args) do
+              output = output .. tostring(v)
+            end
+            print(output)
+          end
+        `)
+
+        // Override io.read with custom implementation
+        lua.global.set('__js_read_input', customIoRead)
+
+        await lua.doString(`
+          io.read = function(format)
+            local input = __js_read_input():await()
+            if format == "*n" or format == "*number" then
+              return tonumber(input)
+            elseif format == "*a" or format == "*all" then
+              return input
+            else
+              -- Default is "*l" or "*line"
+              return input
+            end
+          end
+        `)
       } catch (error) {
         console.error('Failed to initialize Lua engine:', error)
         setOutput(['Error: Failed to initialize Lua engine'])
@@ -85,13 +128,30 @@ export default function LuaPlayground() {
     }
   }
 
+  const handleInputSubmit = () => {
+    if (inputResolveRef.current && inputPrompt !== null) {
+      const value = inputPrompt
+      setOutput(prev => [...prev, value])
+      inputResolveRef.current(value)
+      inputResolveRef.current = null
+      setWaitingForInput(false)
+      setInputPrompt('')
+    }
+  }
+
   const clearOutput = () => {
     setOutput([])
+    setWaitingForInput(false)
+    setInputPrompt('')
+    inputResolveRef.current = null
   }
 
   const resetCode = () => {
     setCode(defaultCode)
     setOutput([])
+    setWaitingForInput(false)
+    setInputPrompt('')
+    inputResolveRef.current = null
   }
 
   return (
@@ -160,6 +220,26 @@ export default function LuaPlayground() {
                     {line}
                   </div>
                 ))
+              )}
+              {waitingForInput && (
+                <div className="input-prompt-container">
+                  <input
+                    type="text"
+                    className="input-prompt-field"
+                    value={inputPrompt}
+                    onChange={(e) => setInputPrompt(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleInputSubmit()
+                      }
+                    }}
+                    placeholder="Enter input and press Enter..."
+                    autoFocus
+                  />
+                  <button onClick={handleInputSubmit} className="input-submit-btn">
+                    Submit
+                  </button>
+                </div>
               )}
             </div>
           </div>

@@ -69,6 +69,12 @@
   padding-left: 1rem;
 }
 
+.repl-stdin-prompt {
+  color: #dcdcaa;
+  padding-left: 1rem;
+  font-style: italic;
+}
+
 .repl-input-line {
   display: flex;
   align-items: center;
@@ -80,6 +86,21 @@
   font-weight: bold;
   margin-right: 0.5rem;
   user-select: none;
+  transition: color 0.3s;
+}
+
+.repl-prompt.waiting {
+  color: #dcdcaa;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .repl-input {
