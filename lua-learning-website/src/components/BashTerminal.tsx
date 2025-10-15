@@ -30,6 +30,7 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
   const multiLineBufferRef = useRef<string[]>([])
   const multiLineCursorLineRef = useRef<number>(0)  // Current line index in multi-line mode
   const multiLineStartRowRef = useRef<number>(0)  // Terminal row where multi-line input starts
+  const collapsedHistoryItemRef = useRef<string | null>(null)  // Stores original multi-line version when collapsed
 
   useEffect(() => {
     if (!terminalRef.current) return
@@ -175,7 +176,39 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
     if (!term) return
 
     if (!multiLineRef.current) {
-      // Enter multi-line mode
+      // Check if we're expanding a collapsed history item
+      if (collapsedHistoryItemRef.current) {
+        // Expand the collapsed multi-line history item
+        const originalText = collapsedHistoryItemRef.current
+        collapsedHistoryItemRef.current = null
+        
+        // Enter multi-line mode with the original lines
+        multiLineRef.current = true
+        multiLineBufferRef.current = originalText.split('\n')
+        multiLineCursorLineRef.current = 0
+        multiLineStartRowRef.current = term.buffer.active.cursorY
+        
+        // Clear current line and redraw
+        term.write('\r\x1b[K')
+        term.writeln(' \x1b[33m(multi-line mode - Shift+Enter to execute)\x1b[0m')
+        
+        // Display all lines
+        for (let i = 0; i < multiLineBufferRef.current.length; i++) {
+          term.write('  ')
+          term.write(multiLineBufferRef.current[i])
+          if (i < multiLineBufferRef.current.length - 1) {
+            term.writeln('')
+          }
+        }
+        
+        // Set state to first line
+        currentLineRef.current = multiLineBufferRef.current[0]
+        cursorPositionRef.current = currentLineRef.current.length
+        
+        return
+      }
+      
+      // Enter multi-line mode normally
       multiLineRef.current = true
       const firstLine = currentLineRef.current
       multiLineBufferRef.current = [firstLine]
@@ -358,12 +391,22 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
         historyIndexRef.current--
         const historyCommand = historyRef.current[historyIndexRef.current]
         
+        // Check if this is a multi-line command
+        let displayCommand = historyCommand
+        if (historyCommand.includes('\n')) {
+          // Collapse newlines to spaces for display
+          displayCommand = historyCommand.replace(/\n/g, ' ')
+          collapsedHistoryItemRef.current = historyCommand
+        } else {
+          collapsedHistoryItemRef.current = null
+        }
+        
         // Clear current line
         term.write('\r\x1b[K')
-        term.write('\x1b[32m> \x1b[0m' + historyCommand)
+        term.write('\x1b[32m> \x1b[0m' + displayCommand)
         
-        currentLineRef.current = historyCommand
-        cursorPositionRef.current = historyCommand.length
+        currentLineRef.current = displayCommand
+        cursorPositionRef.current = displayCommand.length
       }
       return
     }
@@ -403,12 +446,24 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
         
         if (historyIndexRef.current < historyRef.current.length) {
           const historyCommand = historyRef.current[historyIndexRef.current]
-          term.write(historyCommand)
-          currentLineRef.current = historyCommand
-          cursorPositionRef.current = historyCommand.length
+          
+          // Check if this is a multi-line command
+          let displayCommand = historyCommand
+          if (historyCommand.includes('\n')) {
+            // Collapse newlines to spaces for display
+            displayCommand = historyCommand.replace(/\n/g, ' ')
+            collapsedHistoryItemRef.current = historyCommand
+          } else {
+            collapsedHistoryItemRef.current = null
+          }
+          
+          term.write(displayCommand)
+          currentLineRef.current = displayCommand
+          cursorPositionRef.current = displayCommand.length
         } else {
           currentLineRef.current = ''
           cursorPositionRef.current = 0
+          collapsedHistoryItemRef.current = null
         }
       }
       return
