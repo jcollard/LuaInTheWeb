@@ -229,6 +229,26 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
       // Save current line
       multiLineBufferRef.current[multiLineCursorLineRef.current] = currentLineRef.current
       const fullCommand = multiLineBufferRef.current.join('\n')
+      
+      // Move cursor to the end of the input (last line, end position)
+      const lastLineIndex = multiLineBufferRef.current.length - 1
+      const linesToMove = lastLineIndex - multiLineCursorLineRef.current
+      
+      if (linesToMove > 0) {
+        // Move down to last line
+        term.write(`\x1b[${linesToMove}B`)
+      } else if (linesToMove < 0) {
+        // Move up to last line
+        term.write(`\x1b[${Math.abs(linesToMove)}A`)
+      }
+      
+      // Move to end of last line
+      const lastLine = multiLineBufferRef.current[lastLineIndex]
+      term.write('\r')  // Start of line
+      term.write('  ')  // After prompt
+      term.write(lastLine)  // Write to end of line
+      
+      // Add new line before executing
       term.writeln('')
       
       // Reset multi-line state
