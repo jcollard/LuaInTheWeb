@@ -3,7 +3,10 @@ import CodeMirror from '@uiw/react-codemirror'
 import { StreamLanguage } from '@codemirror/language'
 import { lua } from '@codemirror/legacy-modes/mode/lua'
 import { LuaFactory, LuaEngine } from 'wasmoon'
+import LuaRepl from './LuaRepl'
 import './LuaPlayground.css'
+
+type PlaygroundMode = 'editor' | 'repl'
 
 const defaultCode = `-- Welcome to the Lua Playground!
 -- Write your Lua code here and click Run
@@ -24,6 +27,7 @@ print(greet("World"))
 `
 
 export default function LuaPlayground() {
+  const [mode, setMode] = useState<PlaygroundMode>('editor')
   const [code, setCode] = useState(defaultCode)
   const [output, setOutput] = useState<string[]>([])
   const [isRunning, setIsRunning] = useState(false)
@@ -94,55 +98,77 @@ export default function LuaPlayground() {
     <div className="lua-playground">
       <div className="playground-header">
         <h2>Lua Playground</h2>
-        <div className="playground-actions">
-          <button onClick={resetCode} className="btn-secondary">
-            Reset
-          </button>
-          <button onClick={clearOutput} className="btn-secondary">
-            Clear Output
+        <div className="mode-switcher">
+          <button
+            onClick={() => setMode('editor')}
+            className={mode === 'editor' ? 'mode-btn active' : 'mode-btn'}
+          >
+            Code Editor
           </button>
           <button
-            onClick={runCode}
-            disabled={isRunning}
-            className="btn-primary"
+            onClick={() => setMode('repl')}
+            className={mode === 'repl' ? 'mode-btn active' : 'mode-btn'}
           >
-            {isRunning ? 'Running...' : 'Run Code'}
+            Interactive REPL
           </button>
         </div>
+        {mode === 'editor' && (
+          <div className="playground-actions">
+            <button onClick={resetCode} className="btn-secondary">
+              Reset
+            </button>
+            <button onClick={clearOutput} className="btn-secondary">
+              Clear Output
+            </button>
+            <button
+              onClick={runCode}
+              disabled={isRunning}
+              className="btn-primary"
+            >
+              {isRunning ? 'Running...' : 'Run Code'}
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="playground-content">
-        <div className="editor-panel">
-          <h3>Code Editor</h3>
-          <CodeMirror
-            value={code}
-            height="400px"
-            extensions={[StreamLanguage.define(lua)]}
-            onChange={(value) => setCode(value)}
-            theme="light"
-          />
-        </div>
+      {mode === 'editor' ? (
+        <div className="playground-content">
+          <div className="editor-panel">
+            <h3>Code Editor</h3>
+            <CodeMirror
+              value={code}
+              height="400px"
+              extensions={[StreamLanguage.define(lua)]}
+              onChange={(value) => setCode(value)}
+              theme="light"
+            />
+          </div>
 
-        <div className="output-panel">
-          <h3>Output</h3>
-          <div className="output-content">
-            {output.length === 0 ? (
-              <div className="output-placeholder">
-                Run your code to see the output here
-              </div>
-            ) : (
-              output.map((line, index) => (
-                <div
-                  key={index}
-                  className={line.startsWith('Error:') ? 'output-error' : 'output-line'}
-                >
-                  {line}
+          <div className="output-panel">
+            <h3>Output</h3>
+            <div className="output-content">
+              {output.length === 0 ? (
+                <div className="output-placeholder">
+                  Run your code to see the output here
                 </div>
-              ))
-            )}
+              ) : (
+                output.map((line, index) => (
+                  <div
+                    key={index}
+                    className={line.startsWith('Error:') ? 'output-error' : 'output-line'}
+                  >
+                    {line}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="repl-container">
+          <LuaRepl />
+        </div>
+      )}
     </div>
   )
 }

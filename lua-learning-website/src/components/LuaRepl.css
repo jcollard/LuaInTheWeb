@@ -1,0 +1,152 @@
+.lua-repl {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 500px;
+}
+
+.repl-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.repl-header h3 {
+  margin: 0;
+  color: #667eea;
+  font-size: 1.1rem;
+}
+
+.btn-clear {
+  padding: 0.5rem 1rem;
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-clear:hover {
+  background: #f0f2ff;
+}
+
+.repl-terminal {
+  flex: 1;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 1rem;
+  border-radius: 8px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-y: auto;
+  cursor: text;
+  max-height: 500px;
+}
+
+.repl-line {
+  margin-bottom: 0.25rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.repl-input {
+  color: #4ec9b0;
+  font-weight: 600;
+}
+
+.repl-output {
+  color: #d4d4d4;
+  padding-left: 1rem;
+}
+
+.repl-error {
+  color: #f48771;
+  padding-left: 1rem;
+}
+
+.repl-input-line {
+  display: flex;
+  align-items: center;
+  margin-top: 0.5rem;
+}
+
+.repl-prompt {
+  color: #4ec9b0;
+  font-weight: bold;
+  margin-right: 0.5rem;
+  user-select: none;
+}
+
+.repl-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #d4d4d4;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  padding: 0;
+}
+
+.repl-input::placeholder {
+  color: #666;
+  font-style: italic;
+}
+
+.repl-input:disabled {
+  cursor: not-allowed;
+}
+
+.repl-help {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #666;
+  border-left: 3px solid #667eea;
+}
+
+.repl-help strong {
+  color: #667eea;
+  margin-right: 0.5rem;
+}
+
+/* Scrollbar styling */
+.repl-terminal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.repl-terminal::-webkit-scrollbar-track {
+  background: #2d2d2d;
+  border-radius: 4px;
+}
+
+.repl-terminal::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+
+.repl-terminal::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .lua-repl {
+    min-height: 400px;
+  }
+
+  .repl-terminal {
+    max-height: 400px;
+  }
+
+  .repl-help {
+    font-size: 0.75rem;
+  }
+}

@@ -1,0 +1,199 @@
+import { useState, useEffect, useRef } from 'react'
+import { LuaFactory, LuaEngine } from 'wasmoon'
+import './LuaRepl.css'
+
+interface ReplLine {
+  type: 'input' | 'output' | 'error'
+  content: string
+}
+
+export default function LuaRepl() {
+  const [lines, setLines] = useState<ReplLine[]>([
+    { type: 'output', content: 'Lua 5.4 REPL - Ready' },
+    { type: 'output', content: 'Type Lua code and press Enter to execute' },
+  ])
+  const [currentInput, setCurrentInput] = useState('')
+  const [history, setHistory] = useState<string[]>([])
+  const [historyIndex, setHistoryIndex] = useState(-1)
+  const [isReady, setIsReady] = useState(false)
+
+  const luaEngineRef = useRef<LuaEngine | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const terminalRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    // Initialize Lua engine
+    const initLua = async () => {
+      try {
+        const factory = new LuaFactory()
+        const lua = await factory.createEngine()
+        luaEngineRef.current = lua
+
+        // Redirect print to capture output
+        lua.global.set('print', (...args: any[]) => {
+          const message = args.map(arg => {
+            if (arg === null) return 'nil'
+            if (arg === undefined) return 'nil'
+            return String(arg)
+          }).join('\t')
+
+          setLines(prev => [...prev, { type: 'output', content: message }])
+        })
+
+        setIsReady(true)
+      } catch (error) {
+        console.error('Failed to initialize Lua engine:', error)
+        setLines(prev => [...prev, {
+          type: 'error',
+          content: 'Error: Failed to initialize Lua engine'
+        }])
+      }
+    }
+
+    initLua()
+
+    // Cleanup
+    return () => {
+      if (luaEngineRef.current) {
+        luaEngineRef.current.global.close()
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    // Auto-scroll to bottom when new lines are added
+    if (terminalRef.current) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight
+    }
+  }, [lines])
+
+  const executeCode = async (code: string) => {
+    if (!code.trim() || !luaEngineRef.current) return
+
+    // Add input to display
+    setLines(prev => [...prev, { type: 'input', content: `> ${code}` }])
+
+    try {
+      // Try to execute as a statement first
+      await luaEngineRef.current.doString(code)
+    } catch (error: any) {
+      // If it fails, try to evaluate as an expression and print the result
+      try {
+        const result = await luaEngineRef.current.doString(`return ${code}`)
+        if (result !== undefined && result !== null) {
+          setLines(prev => [...prev, {
+            type: 'output',
+            content: formatLuaValue(result)
+          }])
+        }
+      } catch (exprError: any) {
+        // Show the original error
+        const errorMsg = error.message || String(error)
+        setLines(prev => [...prev, {
+          type: 'error',
+          content: errorMsg
+        }])
+      }
+    }
+
+    // Add to history
+    setHistory(prev => [...prev, code])
+    setHistoryIndex(-1)
+    setCurrentInput('')
+  }
+
+  const formatLuaValue = (value: any): string => {
+    if (value === null || value === undefined) return 'nil'
+    if (typeof value === 'string') return `"${value}"`
+    if (typeof value === 'boolean') return value ? 'true' : 'false'
+    if (typeof value === 'number') return String(value)
+    if (typeof value === 'object') {
+      if (Array.isArray(value)) {
+        return `table: ${JSON.stringify(value)}`
+      }
+      return `table: ${JSON.stringify(value)}`
+    }
+    return String(value)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      executeCode(currentInput)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      if (history.length > 0) {
+        const newIndex = historyIndex === -1
+          ? history.length - 1
+          : Math.max(0, historyIndex - 1)
+        setHistoryIndex(newIndex)
+        setCurrentInput(history[newIndex])
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      if (historyIndex !== -1) {
+        const newIndex = historyIndex + 1
+        if (newIndex >= history.length) {
+          setHistoryIndex(-1)
+          setCurrentInput('')
+        } else {
+          setHistoryIndex(newIndex)
+          setCurrentInput(history[newIndex])
+        }
+      }
+    }
+  }
+
+  const clearRepl = () => {
+    setLines([
+      { type: 'output', content: 'Lua 5.4 REPL - Ready' },
+      { type: 'output', content: 'Type Lua code and press Enter to execute' },
+    ])
+  }
+
+  const handleTerminalClick = () => {
+    inputRef.current?.focus()
+  }
+
+  return (
+    <div className="lua-repl">
+      <div className="repl-header">
+        <h3>Interactive REPL</h3>
+        <button onClick={clearRepl} className="btn-clear">
+          Clear
+        </button>
+      </div>
+
+      <div
+        className="repl-terminal"
+        ref={terminalRef}
+        onClick={handleTerminalClick}
+      >
+        {lines.map((line, index) => (
+          <div key={index} className={`repl-line repl-${line.type}`}>
+            {line.content}
+          </div>
+        ))}
+
+        <div className="repl-input-line">
+          <span className="repl-prompt">&gt;</span>
+          <input
+            ref={inputRef}
+            type="text"
+            className="repl-input"
+            value={currentInput}
+            onChange={(e) => setCurrentInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={!isReady}
+            placeholder={isReady ? "Enter Lua code..." : "Loading..."}
+            autoFocus
+          />
+        </div>
+      </div>
+
+      <div className="repl-help">
+        <strong>Tips:</strong> Press ↑/↓ to navigate history • Enter to execute • Type expressions or statements
+      </div>
+    </div>
+  )
+}
