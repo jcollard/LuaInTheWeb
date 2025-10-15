@@ -109,7 +109,7 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
       })
     },
     showPrompt: () => {
-      xtermRef.current?.write('\x1b[32m> \x1b[0m')
+      xtermRef.current?.write('\x1b[32mREPL $ \x1b[0m')
     },
   }))
 
