@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Test coverage and mutation testing
+coverage
+.stryker-tmp
+reports
+
+# Monaco Editor cache
+.monaco

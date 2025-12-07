@@ -1,0 +1,7 @@
+2025-12-07T16:18:51.609220 | Session: 4c5e6301-8034-429c-9ca8-89dd377bdfd3 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd "c:\Users\josep\git\LuaInTheWeb" && find . -type f -name "*.tsx" -o -name "*.ts" -o -name "*.jsx" -o -name "*.js" | grep -E "(component|hook)" | head -30
+2025-12-07T16:18:56.864088 | Session: 4c5e6301-8034-429c-9ca8-89dd377bdfd3 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd "c:\Users\josep\git\LuaInTheWeb" && ls -la
+2025-12-07T16:19:01.430531 | Session: 4c5e6301-8034-429c-9ca8-89dd377bdfd3 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: find "c:\Users\josep\git\LuaInTheWeb\lua-learning-website\src" -type f \( -name "*.tsx" -o -name "*.ts" \) 2>/dev/null | head -30
+2025-12-07T16:19:01.431234 | Session: 4c5e6301-8034-429c-9ca8-89dd377bdfd3 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd "c:\Users\josep\git\LuaInTheWeb\lua-learning-website" && ls -la
+2025-12-07T16:19:54.428749 | Session: 4c5e6301-8034-429c-9ca8-89dd377bdfd3 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: find "c:\Users\josep\git\LuaInTheWeb\lua-learning-website\src" -type f -name "*.tsx" -o -name "*.ts" 2>/dev/null
+2025-12-07T16:19:54.431173 | Session: 4c5e6301-8034-429c-9ca8-89dd377bdfd3 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: ls -la "c:\Users\josep\git\LuaInTheWeb\lua-learning-website\src"
+2025-12-07T16:26:46.073745 | Session: 4c5e6301-8034-429c-9ca8-89dd377bdfd3 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: date

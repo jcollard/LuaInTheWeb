@@ -1,0 +1,5 @@
+# Session-specific files (ephemeral)
+SessionCleanup/
+
+# Local settings overrides
+settings.local.json

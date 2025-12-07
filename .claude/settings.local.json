@@ -1,9 +1,38 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Bash(npm run build)",
+      "Bash(npm run build:*)",
+      "Bash(npm run test)",
+      "Bash(npm run test:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run lint:*)",
+      "Bash(npm run preview)",
+      "Bash(npm run type-check:*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git branch:*)",
+      "Bash(npm install)",
+      "Bash(npm ls:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm outdated:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npx tsc:*)",
+      "Bash(mkdir:*)",
+      "Bash(cloc:*)",
+      "Bash(date)"
     ],
-    "deny": [],
+    "deny": [
+      "Bash(npm run dev)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(rm -rf:*)",
+      "Bash(npm publish:*)",
+      "Bash(python3:*)"
+    ],
     "ask": []
   }
 }
