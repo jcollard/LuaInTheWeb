@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-UserPromptSubmit Hook: Detects !new-feature and !code-review commands,
-strips them from the prompt, and injects corresponding markdown content
+UserPromptSubmit Hook: Detects special commands and injects corresponding markdown content.
+Supported commands: !new-feature, !code-review, !tdd, !mutation-test
 """
 import json
 import sys
@@ -11,7 +11,9 @@ import re
 # Command to markdown file mapping
 COMMANDS = {
     '!new-feature': 'OnNewFeature.md',
-    '!code-review': 'OnCodeReview.md'
+    '!code-review': 'OnCodeReview.md',
+    '!tdd': 'OnTDD.md',
+    '!mutation-test': 'OnMutationTesting.md'
 }
 
 def main():
