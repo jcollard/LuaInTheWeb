@@ -2,81 +2,149 @@
 
 This content is injected when you use the `!code-review` command.
 
-## Review Focus Areas
+## Architecture Review
 
-[TODO: Customize review priorities for your project]
+### Component Structure
 
-Example areas to review:
-1. **Correctness**: Does the code do what it's supposed to do?
-2. **Security**: Are there any security vulnerabilities?
-3. **Performance**: Are there obvious performance issues?
-4. **Maintainability**: Is the code readable and maintainable?
-5. **Testing**: Are tests adequate and meaningful?
-6. **Documentation**: Is the code properly documented?
+- [ ] UI components are PURE - no business logic
+- [ ] All logic is in custom hooks
+- [ ] Components only handle: props, event wiring, JSX
+- [ ] Related files co-located (component, styles, tests, hook)
 
-## Code Review Checklist
+### CSS Review
 
-[TODO: Customize this checklist]
+- [ ] CSS modules used for styling
+- [ ] Existing shared styles reused where applicable
+- [ ] CSS variables used for colors/spacing (not hardcoded values)
+- [ ] No duplicate styles that exist elsewhere
 
-### Functionality
+## Code Quality
+
+### TypeScript
+
+- [ ] No `any` types - use `unknown` if truly unknown
+- [ ] Props interfaces defined for all components
+- [ ] Return types explicit on public functions
+- [ ] No type assertions without justification
+
+### Component Quality
+
+- [ ] Single responsibility - component does one thing
+- [ ] Props are minimal and well-named
+- [ ] Default props handled appropriately
+- [ ] No prop drilling (use context or composition)
+
+### Hook Quality
+
+- [ ] Dependencies arrays correct in useEffect/useCallback/useMemo
+- [ ] No missing dependencies
+- [ ] Side effects properly cleaned up
+- [ ] Loading/error states handled
+
+## Testing Review
+
+### TDD Compliance
+
+- [ ] Tests exist for all new functionality
+- [ ] Tests written BEFORE implementation (check commit order)
+- [ ] Mutation score > 80%
+
+### Test Quality
+
+- [ ] Hook logic thoroughly tested
+- [ ] Component rendering tested
+- [ ] Edge cases covered
+- [ ] Error cases covered
+- [ ] Tests are descriptive and readable
+- [ ] No implementation details tested (test behavior, not internals)
+
+## Functionality
+
 - [ ] Code implements requirements correctly
-- [ ] Edge cases are handled
+- [ ] Edge cases handled
 - [ ] Error handling is appropriate
 - [ ] No obvious bugs or logical errors
 
-### Code Quality
-- [ ] Code follows project style guide
-- [ ] Functions/methods are appropriately sized
-- [ ] Variable/function names are clear and descriptive
-- [ ] No code duplication (DRY principle)
-- [ ] Proper separation of concerns
+## Security
 
-### Security
-- [ ] Input validation is present
-- [ ] No SQL injection vulnerabilities
-- [ ] No XSS vulnerabilities
-- [ ] Sensitive data is not logged
-- [ ] Authentication/authorization is correct
+- [ ] Input validation present where needed
+- [ ] No XSS vulnerabilities (dangerouslySetInnerHTML)
+- [ ] Sensitive data not logged
+- [ ] No secrets in code
 
-### Performance
-- [ ] No obvious performance bottlenecks
-- [ ] Database queries are efficient
-- [ ] Appropriate use of caching
-- [ ] No unnecessary computations
+## Performance
 
-### Testing
-- [ ] Unit tests cover new/modified code
-- [ ] Tests are meaningful and not just for coverage
-- [ ] Integration tests added where appropriate
-- [ ] All tests pass
+- [ ] No unnecessary re-renders
+- [ ] Memoization used appropriately (not everywhere)
+- [ ] No memory leaks (cleanup in useEffect)
+- [ ] Large lists virtualized if needed
 
-### Documentation
-- [ ] Code comments explain "why" not "what"
-- [ ] Public APIs are documented
-- [ ] README updated if needed
-- [ ] Inline documentation for complex logic
+## Accessibility
 
-## Review Approach
-
-[TODO: Define how reviews should be conducted]
-
-Example:
-1. Read the code without running it first
-2. Understand the context and requirements
-3. Check for common anti-patterns
-4. Run tests and verify they pass
-5. Look for opportunities to simplify
-6. Provide constructive feedback
-7. Suggest improvements, don't just criticize
+- [ ] Semantic HTML used
+- [ ] Keyboard navigation works
+- [ ] ARIA attributes where needed
+- [ ] Focus management correct
+- [ ] Color contrast sufficient
 
 ## Common Issues to Watch For
 
-[TODO: List project-specific common issues]
+### Architecture Violations
 
-Example:
-- Hardcoded configuration values
-- Missing error boundaries
-- Unhandled promise rejections
-- Memory leaks
-- Race conditions
-- Insufficient logging
+```typescript
+// ❌ Logic in UI component
+function MyComponent() {
+  const handleClick = async () => {
+    await api.save(data);  // Business logic!
+  };
+}
+
+// ✅ Logic in hook
+function useMyComponent() {
+  const save = useCallback(async () => {
+    await api.save(data);
+  }, [data]);
+  return { save };
+}
+```
+
+### CSS Violations
+
+```typescript
+// ❌ Inline styles
+<div style={{ color: 'red' }}>
+
+// ❌ Hardcoded colors
+.button { color: #3b82f6; }
+
+// ✅ CSS module with variables
+.button { color: var(--color-primary); }
+```
+
+### TypeScript Violations
+
+```typescript
+// ❌ Any type
+function process(data: any) { }
+
+// ❌ Missing interface
+function Button(props) { }
+
+// ✅ Explicit types
+interface ButtonProps {
+  label: string;
+  onClick: () => void;
+}
+function Button({ label, onClick }: ButtonProps) { }
+```
+
+## Review Process
+
+1. **Architecture first**: Check component/hook structure
+2. **Types second**: Verify TypeScript correctness
+3. **Tests third**: Verify TDD compliance and quality
+4. **Details last**: Style, naming, edge cases
+
+## Reference
+
+Full coding standards: [docs/coding-standards.md](docs/coding-standards.md)

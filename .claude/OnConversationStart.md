@@ -29,6 +29,7 @@ Reference these docs for detailed information (do not load entire files unless n
 - **Developer Guide**: [docs/README.md](docs/README.md)
 - **Getting Started**: [docs/getting-started.md](docs/getting-started.md)
 - **Architecture**: [docs/architecture.md](docs/architecture.md)
+- **Coding Standards**: [docs/coding-standards.md](docs/coding-standards.md)
 - **Testing Guide**: [docs/testing.md](docs/testing.md)
 - **Contributing**: [docs/contributing.md](docs/contributing.md)
 
@@ -45,6 +46,15 @@ For new features, create a plan in the roadmap directory before implementation.
 
 - **Python**: Always use `python` (not `python3`) for scripts
 - **Timestamps**: When updating dates in files, use `date` command to get current timestamp
+
+### Code Architecture
+
+- **UI Components are PURE**: No business logic in UI components - only props, event wiring, and rendering
+- **Logic in Hooks**: Extract all business logic into custom hooks for testability
+- **CSS Modules**: Use CSS modules for style isolation; REUSE existing modules before creating new ones
+- **Strict TypeScript**: No `any`, explicit types, prefer interfaces
+
+See [docs/coding-standards.md](docs/coding-standards.md) for detailed guidelines.
 
 ### TDD is MANDATORY
 

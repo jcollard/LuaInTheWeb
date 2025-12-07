@@ -6,6 +6,7 @@ Welcome to the LuaInTheWeb developer documentation. This directory contains all 
 
 - [Getting Started](./getting-started.md) - Set up your development environment
 - [Architecture](./architecture.md) - System design and component overview
+- [Coding Standards](./coding-standards.md) - Component patterns, CSS modules, TypeScript
 - [Testing Guide](./testing.md) - TDD practices and testing standards
 - [Contributing](./contributing.md) - How to contribute to the project
 
