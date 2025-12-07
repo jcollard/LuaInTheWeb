@@ -1,0 +1,79 @@
+# .claude-ignore
+# This file is protected and cannot be modified by Claude
+# Patterns follow .gitignore syntax
+# Use this file to prevent Claude from reading or modifying sensitive files
+
+# Environment and secrets
+.env
+.env.*
+.env.local
+.env.*.local
+secrets/
+private/
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Credentials and authentication
+credentials.json
+*.credentials
+auth.json
+token.json
+.credentials/
+
+# Package lock files (usually should not be manually edited)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+Pipfile.lock
+poetry.lock
+composer.lock
+
+# Build artifacts and generated files
+dist/
+build/
+out/
+.next/
+.nuxt/
+target/
+*.min.js
+*.bundle.js
+
+# Dependencies (usually large and not useful to read)
+node_modules/
+vendor/
+.venv/
+venv/
+__pycache__/
+
+# IDE and system files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+
+# Temporary and cache files
+tmp/
+temp/
+cache/
+*.tmp
+*.cache
+*.log
+
+# Git files (should not be modified)
+.git/
+
+# Add your custom patterns below
+# Example:
+# company-secrets/
+# internal-config.yaml
