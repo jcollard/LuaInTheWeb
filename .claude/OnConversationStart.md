@@ -41,6 +41,11 @@ For new features, create a plan in the roadmap directory before implementation.
 
 ## Development Practices
 
+### Conventions
+
+- **Python**: Always use `python` (not `python3`) for scripts
+- **Timestamps**: When updating dates in files, use `date` command to get current timestamp
+
 ### TDD is MANDATORY
 
 This project follows strict Test-Driven Development:

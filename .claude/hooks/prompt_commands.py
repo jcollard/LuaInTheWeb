@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 UserPromptSubmit Hook: Detects special commands and injects corresponding markdown content.
 Supported commands: !new-feature, !code-review, !tdd, !mutation-test

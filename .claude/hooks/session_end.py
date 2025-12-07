@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 SessionEnd Hook: Save session transcript to SessionCleanup directory
 Files are named with reverse-ordered timestamp so newest appears first when sorted.

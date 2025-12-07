@@ -1,9 +1,10 @@
 # Feature: [Feature Name]
+<!-- Use `date` command to get timestamps -->
 
 **Status**: Draft | Ready for Review | Approved | In Progress | Completed | Abandoned
 **Author**: [Name]
-**Created**: [Date]
-**Updated**: [Date]
+**Created**: [timestamp]
+**Updated**: [timestamp]
 
 ## Summary
 

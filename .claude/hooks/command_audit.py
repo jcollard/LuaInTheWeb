@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 PreToolUse Hook: Command Audit Log
 Logs all Bash commands to .claude-log with timestamp, session ID, and working directory.

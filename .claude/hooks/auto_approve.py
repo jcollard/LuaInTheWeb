@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 PermissionRequest Hook: Auto-approve certain operations
 - Read operations for markdown/documentation files

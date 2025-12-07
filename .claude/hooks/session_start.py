@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 SessionStart Hook: Injects OnConversationStart.md content at session start
 """
