@@ -63,6 +63,10 @@ Mark each item as ✅ PASS, ❌ FAIL, or ⏭️ N/A (not applicable to this plan
 - [ ] Notes about reusing existing utilities
 - [ ] References existing patterns
 
+### E2E Testing (OPTIONAL - for user-facing features)
+- [ ] E2E test cases identified for core user flows
+- [ ] Test page pattern mentioned (if applicable)
+
 ## Output Format
 
 After reviewing, output exactly one of:

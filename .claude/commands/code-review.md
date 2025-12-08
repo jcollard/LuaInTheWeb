@@ -35,6 +35,13 @@ Use this checklist when reviewing code changes.
 - [ ] Mutation score > 80%
 - [ ] Tests colocated with components
 
+## E2E Testing (for user-facing features)
+
+- [ ] E2E tests cover core user flows
+- [ ] Test page created at `/test/<feature>` (dev only)
+- [ ] Tests wait for async operations (Lua engine, Monaco)
+- [ ] Clear assertions on user-visible outcomes
+
 ## File Organization
 
 - [ ] Component folder structure followed
@@ -77,4 +84,5 @@ Use this checklist when reviewing code changes.
 - [ ] `npm run test:mutation` > 80%
 - [ ] `npm run lint` passes
 - [ ] `npm run build` succeeds
+- [ ] `npm run test:e2e` passes (for user-facing features)
 - [ ] No console.log statements left in code

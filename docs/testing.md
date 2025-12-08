@@ -168,6 +168,39 @@ it('should show output after execution', async () => {
 });
 ```
 
+## E2E Testing
+
+For user-facing features, we use Playwright for end-to-end testing. E2E tests verify the full integration works in a real browser.
+
+### When to Write E2E Tests
+
+Write E2E tests for:
+- Core user flows (write code, run, see output)
+- Features that integrate multiple systems (Monaco + Lua)
+- Anything that can't be fully tested with mocked unit tests
+
+Do NOT write E2E tests for:
+- Internal utilities
+- Pure functions
+- Components with no user interaction
+
+### Test Page Pattern
+
+E2E tests target dedicated test pages at `/test/<feature>`:
+- Only available in development mode
+- Serve as E2E test targets AND manual QA sandboxes
+- Located in `src/pages/test/`
+
+### Running E2E Tests
+
+```bash
+npm run test:e2e        # Run all E2E tests (headless)
+npm run test:e2e:ui     # Open Playwright UI
+npm run test:e2e:headed # Run with visible browser
+```
+
+See [E2E Testing Guide](./e2e-testing.md) for detailed information.
+
 ## Test Quality Checklist
 
 Before considering a feature complete:
@@ -179,6 +212,7 @@ Before considering a feature complete:
 - [ ] Mutation score > 80%
 - [ ] No surviving mutations in critical paths
 - [ ] Tests are readable and maintainable
+- [ ] E2E tests cover core user flows (for user-facing features)
 
 ## Running Tests
 
@@ -194,4 +228,9 @@ npm run test:coverage
 
 # Mutation testing
 npm run test:mutation
+
+# E2E tests (Playwright)
+npm run test:e2e
+npm run test:e2e:ui     # Interactive UI mode
+npm run test:e2e:headed # With visible browser
 ```

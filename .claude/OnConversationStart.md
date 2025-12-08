@@ -78,6 +78,7 @@ Use `/mutation-test` command for mutation testing guidelines.
 - [ ] All tests pass: `npm run test`
 - [ ] Mutation score > 80%: `npm run test:mutation`
 - [ ] Linting passes: `npm run lint`
+- [ ] E2E tests pass (for user-facing features): `npm run test:e2e`
 
 ## Commands
 
@@ -89,6 +90,7 @@ npm run test:watch    # Watch mode
 npm run test:mutation # Mutation testing
 npm run build         # Build for production
 npm run lint          # Run linter
+npm run test:e2e      # Run E2E tests (Playwright)
 ```
 
 ## Special Commands
@@ -97,6 +99,7 @@ npm run lint          # Run linter
 - `/mutation-test` - Inject mutation testing guidelines
 - `/code-review` - Inject code review checklist
 - `/new-feature` - Inject new feature development guidelines
+- `/e2e` - Inject E2E testing guidelines
 
 ## Continuation Policy
 - NEVER stop to ask "Do you want to continue?" or "Should I proceed?"

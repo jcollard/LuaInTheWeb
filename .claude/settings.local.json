@@ -27,7 +27,8 @@
       "SlashCommand(/new-feature)",
       "SlashCommand(/tdd)",
       "Bash(npm run test:mutation:*)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(npm run test:e2e:*)"
     ],
     "deny": [
       "Bash(npm run dev)",
