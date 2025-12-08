@@ -49,8 +49,7 @@
       "Bash(git rev-parse:*)",
       "Bash(ls:*)",
       "Bash(sleep:*)",
-      "Bash(node --version:*)",
-      "Bash(npx stryker run:*)"
+      "Bash(node --version:*)"
     ],
     "deny": [
       "Bash(npm run dev)",
@@ -61,10 +60,7 @@
     "ask": [
       "SlashCommand(/accept-review)",
       "Bash(git push:*)",
-      "Bash(git commit:*)",
-      "Bash(rm lua-learning-website/.stryker-incremental.json)",
-      "Bash(del lua-learning-website/.stryker-incremental.json)",
-      "Bash(Remove-Item lua-learning-website/.stryker-incremental.json)"
+      "Bash(git commit:*)"
     ]
   }
 }

@@ -10,12 +10,10 @@
     "src/**/*.tsx",
     "!src/**/*.test.ts",
     "!src/**/*.test.tsx",
-    "!src/**/*.spec.ts",
-    "!src/**/*.spec.tsx",
     "!src/test/**/*",
     "!src/main.tsx",
-    "!src/vite-env.d.ts",
-    "!src/App.tsx"
+    "!src/App.tsx",
+    "!src/**/*.css"
   ],
   "reporters": ["html", "clear-text", "progress"],
   "htmlReporter": {
