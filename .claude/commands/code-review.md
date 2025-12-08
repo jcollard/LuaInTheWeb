@@ -2,6 +2,25 @@
 
 Use this checklist when reviewing code changes.
 
+## IMPORTANT: Start Mutation Tests First
+
+**ALWAYS start mutation tests in the background BEFORE reviewing anything else.**
+
+Mutation tests take the longest to run. Start them immediately, then do the rest of the review while they execute:
+
+```bash
+# Start mutation tests in background FIRST
+npm run test:mutation &
+```
+
+Or use Bash tool with `run_in_background: true`.
+
+After completing ALL other review steps, check if mutation tests finished:
+- If still running, wait in 60-second intervals
+- Only proceed to Final Checks after mutation tests complete
+
+---
+
 ## Tech Debt Tracking
 
 After completing the review, create GitHub issues for any non-blocking findings:
@@ -120,9 +139,24 @@ After completing the review, create GitHub issues for any non-blocking findings:
 
 ## Final Checks
 
+### 1. Run These First (Quick)
 - [ ] `npm run test` passes
-- [ ] `npm run test:mutation` > 80%
 - [ ] `npm run lint` passes
 - [ ] `npm run build` succeeds
-- [ ] `npm run test:e2e` passes (for user-facing features)
 - [ ] No console.log statements left in code
+
+### 2. Check Mutation Tests (Started at Beginning)
+
+Now check if mutation tests (started at the beginning) have completed:
+
+```bash
+# Check mutation test output
+# If using background job, check its status
+```
+
+- If still running: Wait in **60-second intervals** using `BashOutput` with `wait_up_to: 60`
+- Continue waiting until complete
+- [ ] `npm run test:mutation` > 80%
+
+### 3. E2E Tests (If User-Facing Features)
+- [ ] `npm run test:e2e` passes
