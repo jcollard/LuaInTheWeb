@@ -21,6 +21,10 @@ export interface IDEContextValue {
   // Terminal output
   terminalOutput: string[]
 
+  // Input state
+  isAwaitingInput: boolean
+  submitInput: (input: string) => void
+
   // UI state
   activePanel: ActivityPanelType
   setActivePanel: (panel: ActivityPanelType) => void

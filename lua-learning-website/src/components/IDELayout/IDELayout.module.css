@@ -17,3 +17,14 @@
   flex: 1;
   overflow: hidden;
 }
+
+.activityBar {
+  display: block;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .activityBar {
+    display: none;
+  }
+}

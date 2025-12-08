@@ -145,4 +145,80 @@ describe('BottomPanel', () => {
       expect(screen.getByRole('tabpanel')).toBeInTheDocument()
     })
   })
+
+  describe('input handling', () => {
+    it('should not show input field when not awaiting input', () => {
+      // Arrange & Act
+      render(<BottomPanel {...defaultProps} isAwaitingInput={false} />)
+
+      // Assert
+      expect(screen.queryByRole('textbox', { name: /input/i })).not.toBeInTheDocument()
+    })
+
+    it('should show input field when awaiting input', () => {
+      // Arrange & Act
+      render(<BottomPanel {...defaultProps} isAwaitingInput={true} onSubmitInput={() => {}} />)
+
+      // Assert
+      expect(screen.getByRole('textbox', { name: /input/i })).toBeInTheDocument()
+    })
+
+    it('should focus input field when awaiting input', () => {
+      // Arrange & Act
+      render(<BottomPanel {...defaultProps} isAwaitingInput={true} onSubmitInput={() => {}} />)
+
+      // Assert
+      expect(screen.getByRole('textbox', { name: /input/i })).toHaveFocus()
+    })
+
+    it('should call onSubmitInput when Enter is pressed', () => {
+      // Arrange
+      const onSubmitInput = vi.fn()
+      render(<BottomPanel {...defaultProps} isAwaitingInput={true} onSubmitInput={onSubmitInput} />)
+      const input = screen.getByRole('textbox', { name: /input/i })
+
+      // Act
+      fireEvent.change(input, { target: { value: 'test input' } })
+      fireEvent.keyDown(input, { key: 'Enter' })
+
+      // Assert
+      expect(onSubmitInput).toHaveBeenCalledWith('test input')
+    })
+
+    it('should clear input field after submission', () => {
+      // Arrange
+      const onSubmitInput = vi.fn()
+      render(<BottomPanel {...defaultProps} isAwaitingInput={true} onSubmitInput={onSubmitInput} />)
+      const input = screen.getByRole('textbox', { name: /input/i })
+
+      // Act
+      fireEvent.change(input, { target: { value: 'test input' } })
+      fireEvent.keyDown(input, { key: 'Enter' })
+
+      // Assert
+      expect(input).toHaveValue('')
+    })
+
+    it('should show submit button when awaiting input', () => {
+      // Arrange & Act
+      render(<BottomPanel {...defaultProps} isAwaitingInput={true} onSubmitInput={() => {}} />)
+
+      // Assert
+      expect(screen.getByRole('button', { name: /submit/i })).toBeInTheDocument()
+    })
+
+    it('should call onSubmitInput when submit button is clicked', () => {
+      // Arrange
+      const onSubmitInput = vi.fn()
+      render(<BottomPanel {...defaultProps} isAwaitingInput={true} onSubmitInput={onSubmitInput} />)
+      const input = screen.getByRole('textbox', { name: /input/i })
+
+      // Act
+      fireEvent.change(input, { target: { value: 'button input' } })
+      fireEvent.click(screen.getByRole('button', { name: /submit/i }))
+
+      // Assert
+      expect(onSubmitInput).toHaveBeenCalledWith('button input')
+    })
+  })
 })

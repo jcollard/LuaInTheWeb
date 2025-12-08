@@ -10,21 +10,27 @@ export function useLuaEngine(options: UseLuaEngineOptions): UseLuaEngineReturn {
   const [isReady, setIsReady] = useState(false)
   const engineRef = useRef<LuaEngine | null>(null)
 
-  // Store callbacks in refs so they can be used in useEffect cleanup
+  // Store callbacks in refs so they're always current when called from Lua
   const onCleanupRef = useRef(onCleanup)
   onCleanupRef.current = onCleanup
 
+  const onOutputRef = useRef(onOutput)
+  onOutputRef.current = onOutput
+
+  const onReadInputRef = useRef(onReadInput)
+  onReadInputRef.current = onReadInput
+
   const setupEngine = useCallback(async (lua: LuaEngine) => {
-    // Override print to call onOutput
+    // Override print to call onOutput - use ref to get current callback
     lua.global.set('print', (...args: unknown[]) => {
       const message = args.map(arg => String(arg)).join('\t')
-      onOutput?.(message)
+      onOutputRef.current?.(message)
     })
 
-    // Set up __js_read_input for io.read
+    // Set up __js_read_input for io.read - use ref to get current callback
     lua.global.set('__js_read_input', async () => {
-      if (onReadInput) {
-        return await onReadInput()
+      if (onReadInputRef.current) {
+        return await onReadInputRef.current()
       }
       return ''
     })
@@ -52,7 +58,7 @@ export function useLuaEngine(options: UseLuaEngineOptions): UseLuaEngineReturn {
         end
       end
     `)
-  }, [onOutput, onReadInput])
+  }, []) // No dependencies - uses refs for current callbacks
 
   useEffect(() => {
     let mounted = true

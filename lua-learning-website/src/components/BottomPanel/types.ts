@@ -15,6 +15,10 @@ export interface BottomPanelProps {
   onClearTerminal?: () => void
   /** Reference to the terminal for programmatic control */
   terminalRef?: React.RefObject<BashTerminalHandle>
+  /** Whether the terminal is waiting for user input */
+  isAwaitingInput?: boolean
+  /** Callback when user submits input */
+  onSubmitInput?: (input: string) => void
   /** Optional additional className */
   className?: string
 }

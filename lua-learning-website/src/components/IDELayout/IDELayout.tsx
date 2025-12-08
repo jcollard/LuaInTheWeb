@@ -8,6 +8,7 @@ import { BottomPanel } from '../BottomPanel'
 import { IDEPanelGroup } from '../IDEPanelGroup'
 import { IDEPanel } from '../IDEPanel'
 import { IDEResizeHandle } from '../IDEResizeHandle'
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import styles from './IDELayout.module.css'
 import type { IDELayoutProps } from './types'
 
@@ -21,9 +22,14 @@ function IDELayoutInner({ className }: { className?: string }) {
     fileName,
     isDirty,
     terminalOutput,
+    isAwaitingInput,
+    submitInput,
     activePanel,
     setActivePanel,
     sidebarVisible,
+    toggleSidebar,
+    terminalVisible,
+    toggleTerminal,
     runCode,
   } = useIDE()
 
@@ -40,6 +46,13 @@ function IDELayoutInner({ className }: { className?: string }) {
     }
   }, [runCode])
 
+  // Register keyboard shortcuts
+  useKeyboardShortcuts({
+    runCode: handleRun,
+    toggleTerminal,
+    toggleSidebar,
+  })
+
   const combinedClassName = className
     ? `${styles.ideLayout} ${className}`
     : styles.ideLayout
@@ -47,10 +60,12 @@ function IDELayoutInner({ className }: { className?: string }) {
   return (
     <div className={combinedClassName} data-testid="ide-layout">
       <div className={styles.mainContainer}>
-        <ActivityBar
-          activeItem={activePanel}
-          onItemClick={setActivePanel}
-        />
+        <div className={styles.activityBar}>
+          <ActivityBar
+            activeItem={activePanel}
+            onItemClick={setActivePanel}
+          />
+        </div>
         <div className={styles.workArea}>
           <IDEPanelGroup direction="horizontal" persistId="ide-main">
             {sidebarVisible && (
@@ -63,7 +78,7 @@ function IDELayoutInner({ className }: { className?: string }) {
             )}
             <IDEPanel defaultSize={sidebarVisible ? 80 : 100} minSize={40}>
               <IDEPanelGroup direction="vertical" persistId="ide-editor">
-                <IDEPanel defaultSize={70} minSize={30}>
+                <IDEPanel defaultSize={terminalVisible ? 70 : 100} minSize={30}>
                   <EditorPanel
                     code={code}
                     onChange={setCode}
@@ -79,10 +94,18 @@ function IDELayoutInner({ className }: { className?: string }) {
                     }}
                   />
                 </IDEPanel>
-                <IDEResizeHandle />
-                <IDEPanel defaultSize={30} minSize={15}>
-                  <BottomPanel terminalOutput={terminalOutput} />
-                </IDEPanel>
+                {terminalVisible && (
+                  <>
+                    <IDEResizeHandle />
+                    <IDEPanel defaultSize={30} minSize={15}>
+                      <BottomPanel
+                        terminalOutput={terminalOutput}
+                        isAwaitingInput={isAwaitingInput}
+                        onSubmitInput={submitInput}
+                      />
+                    </IDEPanel>
+                  </>
+                )}
               </IDEPanelGroup>
             </IDEPanel>
           </IDEPanelGroup>

@@ -1,6 +1,6 @@
 # Phase 3: IDE Shell & /editor Route
 
-**Status**: Approved
+**Status**: Implemented
 **Author**: Claude & Joseph
 **Created**: Sun, Dec 7, 2025
 **Updated**: Sun, Dec 7, 2025
@@ -30,21 +30,22 @@ Create `IDELayout` component that:
 
 ### Functional Requirements
 
-- [ ] `/editor` route loads IDE layout
-- [ ] Activity bar on left (icons for Explorer, Search, etc.)
-- [ ] Explorer panel (placeholder until Phase 4)
-- [ ] Editor panel with tabs (single file for now)
-- [ ] Terminal panel with BashTerminal
-- [ ] REPL panel with LuaRepl
-- [ ] Status bar showing line/column, language
-- [ ] Run button in toolbar executes code in terminal
+- [x] `/editor` route loads IDE layout
+- [x] Activity bar on left (icons for Explorer, Search, etc.)
+- [x] Explorer panel (placeholder until Phase 4)
+- [x] Editor panel with tabs (single file for now)
+- [x] Terminal panel with BashTerminal
+- [x] REPL panel with LuaRepl
+- [x] Status bar showing line/column, language
+- [x] Run button in toolbar executes code in terminal
+- [x] io.read() support with interactive terminal input
 
 ### Non-Functional Requirements
 
-- [ ] Full viewport height (100vh - header)
-- [ ] Shared Lua engine between editor and terminal
-- [ ] Keyboard shortcuts (Ctrl+` for terminal, Ctrl+Enter for run)
-- [ ] Responsive: hides activity bar on mobile
+- [x] Full viewport height (100vh - header)
+- [x] Shared Lua engine between editor and terminal
+- [x] Keyboard shortcuts (Ctrl+` for terminal, Ctrl+Enter for run, Ctrl+B for sidebar)
+- [x] Responsive: hides activity bar on mobile
 
 ## Technical Design
 

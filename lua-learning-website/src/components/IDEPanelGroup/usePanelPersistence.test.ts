@@ -1,5 +1,4 @@
 import { renderHook, act } from '@testing-library/react'
-import { vi, beforeEach, afterEach } from 'vitest'
 import { usePanelPersistence } from './usePanelPersistence'
 
 describe('usePanelPersistence', () => {

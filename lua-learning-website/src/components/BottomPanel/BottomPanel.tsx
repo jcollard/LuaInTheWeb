@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import LuaRepl from '../LuaRepl'
 import styles from './BottomPanel.module.css'
 import type { BottomPanelProps, BottomPanelTab } from './types'
@@ -8,9 +8,33 @@ import type { BottomPanelProps, BottomPanelTab } from './types'
  */
 export function BottomPanel({
   terminalOutput,
+  isAwaitingInput = false,
+  onSubmitInput,
   className,
 }: BottomPanelProps) {
   const [activeTab, setActiveTab] = useState<BottomPanelTab>('terminal')
+  const [inputValue, setInputValue] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Auto-focus input when awaiting input
+  useEffect(() => {
+    if (isAwaitingInput && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [isAwaitingInput])
+
+  const handleSubmit = () => {
+    if (onSubmitInput) {
+      onSubmitInput(inputValue)
+      setInputValue('')
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSubmit()
+    }
+  }
 
   const combinedClassName = className
     ? `${styles.bottomPanel} ${className}`
@@ -60,6 +84,29 @@ export function BottomPanel({
                 </div>
               )}
             </div>
+            {isAwaitingInput && (
+              <div className={styles.inputContainer}>
+                <span className={styles.inputPrompt}>&gt;</span>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  className={styles.inputField}
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  aria-label="Input"
+                  data-testid="terminal-input"
+                />
+                <button
+                  type="button"
+                  className={styles.submitButton}
+                  onClick={handleSubmit}
+                  aria-label="Submit input"
+                >
+                  Submit
+                </button>
+              </div>
+            )}
           </div>
         )}
         {activeTab === 'repl' && (

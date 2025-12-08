@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
 import { useLuaEngine } from '../../hooks/useLuaEngine'
 import { IDEContext } from './context'
 import type { IDEContextValue, IDEContextProviderProps, ActivityPanelType } from './types'
@@ -18,6 +18,10 @@ export function IDEContextProvider({
   // Terminal state
   const [terminalOutput, setTerminalOutput] = useState<string[]>([])
 
+  // Input state
+  const [isAwaitingInput, setIsAwaitingInput] = useState(false)
+  const inputResolverRef = useRef<((value: string) => void) | null>(null)
+
   // UI state
   const [activePanel, setActivePanel] = useState<ActivityPanelType>('explorer')
   const [terminalVisible, setTerminalVisible] = useState(true)
@@ -35,10 +39,30 @@ export function IDEContextProvider({
     setTerminalOutput(prev => [...prev, error])
   }, [])
 
+  // Handle io.read() - returns a promise that resolves when user submits input
+  const handleReadInput = useCallback((): Promise<string> => {
+    setIsAwaitingInput(true)
+    setTerminalOutput(prev => [...prev, '> Waiting for input...'])
+
+    return new Promise<string>((resolve) => {
+      inputResolverRef.current = resolve
+    })
+  }, [])
+
+  // Submit input to resolve the pending io.read()
+  const submitInput = useCallback((input: string) => {
+    if (inputResolverRef.current) {
+      inputResolverRef.current(input)
+      inputResolverRef.current = null
+      setIsAwaitingInput(false)
+    }
+  }, [])
+
   // Initialize Lua engine
   const engine = useLuaEngine({
     onOutput: handleOutput,
     onError: handleError,
+    onReadInput: handleReadInput,
   })
 
   // Actions
@@ -67,6 +91,8 @@ export function IDEContextProvider({
       fileName,
       isDirty,
       terminalOutput,
+      isAwaitingInput,
+      submitInput,
       activePanel,
       setActivePanel,
       terminalVisible,
@@ -82,6 +108,8 @@ export function IDEContextProvider({
       fileName,
       isDirty,
       terminalOutput,
+      isAwaitingInput,
+      submitInput,
       activePanel,
       terminalVisible,
       sidebarVisible,

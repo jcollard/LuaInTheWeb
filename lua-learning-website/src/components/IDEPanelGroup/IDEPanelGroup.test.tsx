@@ -1,5 +1,4 @@
 import { render, screen } from '@testing-library/react'
-import { vi, beforeEach, afterEach } from 'vitest'
 import { IDEPanelGroup } from './IDEPanelGroup'
 
 // Mock react-resizable-panels

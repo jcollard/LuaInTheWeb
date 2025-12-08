@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react'
-import { vi, beforeEach, afterEach, type Mock } from 'vitest'
+import type { Mock } from 'vitest'
 import { useIsMobile } from './useIsMobile'
 
 // Type for our mock matchMedia

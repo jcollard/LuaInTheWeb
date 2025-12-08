@@ -80,3 +80,48 @@
   color: #858585;
   font-style: italic;
 }
+
+.inputContainer {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  gap: 8px;
+  border-top: 1px solid #3c3c3c;
+  background-color: #1e1e1e;
+}
+
+.inputPrompt {
+  color: #569cd6;
+  font-family: 'Cascadia Code', Menlo, Monaco, 'Courier New', monospace;
+  font-size: 14px;
+}
+
+.inputField {
+  flex: 1;
+  background-color: #3c3c3c;
+  border: 1px solid #3c3c3c;
+  border-radius: 2px;
+  color: #d4d4d4;
+  font-family: 'Cascadia Code', Menlo, Monaco, 'Courier New', monospace;
+  font-size: 14px;
+  padding: 4px 8px;
+  outline: none;
+}
+
+.inputField:focus {
+  border-color: #007acc;
+}
+
+.submitButton {
+  background-color: #0e639c;
+  border: none;
+  border-radius: 2px;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 12px;
+}
+
+.submitButton:hover {
+  background-color: #1177bb;
+}

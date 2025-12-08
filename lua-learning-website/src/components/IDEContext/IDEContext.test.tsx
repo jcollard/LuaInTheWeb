@@ -291,6 +291,161 @@ describe('IDEContext', () => {
     })
   })
 
+  describe('input handling', () => {
+    it('should provide isAwaitingInput as false initially', () => {
+      // Arrange & Act
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Assert
+      expect(result.current.isAwaitingInput).toBe(false)
+    })
+
+    it('should provide submitInput function', () => {
+      // Arrange & Act
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Assert
+      expect(result.current.submitInput).toBeInstanceOf(Function)
+    })
+
+    it('should set isAwaitingInput to true when onReadInput is called', async () => {
+      // Arrange
+      let readInputCallback: (() => Promise<string>) | undefined
+      const { useLuaEngine } = await import('../../hooks/useLuaEngine')
+      vi.mocked(useLuaEngine).mockImplementation((options) => {
+        readInputCallback = options.onReadInput
+        return {
+          isReady: true,
+          execute: mockExecute,
+          reset: mockReset,
+        }
+      })
+
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Act - simulate io.read() being called (don't await, it will block)
+      let inputPromise: Promise<string> | undefined
+      act(() => {
+        inputPromise = readInputCallback?.()
+      })
+
+      // Assert
+      expect(result.current.isAwaitingInput).toBe(true)
+
+      // Cleanup - resolve the promise
+      act(() => {
+        result.current.submitInput('test')
+      })
+      await inputPromise
+    })
+
+    it('should resolve onReadInput promise when submitInput is called', async () => {
+      // Arrange
+      let readInputCallback: (() => Promise<string>) | undefined
+      const { useLuaEngine } = await import('../../hooks/useLuaEngine')
+      vi.mocked(useLuaEngine).mockImplementation((options) => {
+        readInputCallback = options.onReadInput
+        return {
+          isReady: true,
+          execute: mockExecute,
+          reset: mockReset,
+        }
+      })
+
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Act - simulate io.read() and submit input
+      let resolvedValue: string | undefined
+      const inputPromise = readInputCallback?.().then((val) => {
+        resolvedValue = val
+      })
+
+      act(() => {
+        result.current.submitInput('user input')
+      })
+
+      await inputPromise
+
+      // Assert
+      expect(resolvedValue).toBe('user input')
+    })
+
+    it('should set isAwaitingInput to false after submitInput', async () => {
+      // Arrange
+      let readInputCallback: (() => Promise<string>) | undefined
+      const { useLuaEngine } = await import('../../hooks/useLuaEngine')
+      vi.mocked(useLuaEngine).mockImplementation((options) => {
+        readInputCallback = options.onReadInput
+        return {
+          isReady: true,
+          execute: mockExecute,
+          reset: mockReset,
+        }
+      })
+
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Start awaiting input - wrap in act since it causes state update
+      let inputPromise: Promise<string> | undefined
+      act(() => {
+        inputPromise = readInputCallback?.()
+      })
+      expect(result.current.isAwaitingInput).toBe(true)
+
+      // Act
+      act(() => {
+        result.current.submitInput('done')
+      })
+      await inputPromise
+
+      // Assert
+      expect(result.current.isAwaitingInput).toBe(false)
+    })
+
+    it('should add input prompt to terminal output when awaiting', async () => {
+      // Arrange
+      let readInputCallback: (() => Promise<string>) | undefined
+      const { useLuaEngine } = await import('../../hooks/useLuaEngine')
+      vi.mocked(useLuaEngine).mockImplementation((options) => {
+        readInputCallback = options.onReadInput
+        return {
+          isReady: true,
+          execute: mockExecute,
+          reset: mockReset,
+        }
+      })
+
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Act
+      let inputPromise: Promise<string> | undefined
+      act(() => {
+        inputPromise = readInputCallback?.()
+      })
+
+      // Assert - should show input prompt
+      expect(result.current.terminalOutput).toContain('> Waiting for input...')
+
+      // Cleanup
+      act(() => {
+        result.current.submitInput('test')
+      })
+      await inputPromise
+    })
+  })
+
   describe('UI state', () => {
     it('should provide default activePanel as explorer', () => {
       // Arrange & Act

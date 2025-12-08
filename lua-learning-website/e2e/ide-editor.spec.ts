@@ -124,4 +124,254 @@ test.describe('IDE Editor', () => {
     // Assert - Should be on editor page
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
   })
+
+  test('editor is interactable and accepts input', async ({ page }) => {
+    // Wait for Monaco editor to load (the wrapper div)
+    const editorWrapper = page.locator('[data-testid="code-editor-wrapper"]')
+    await expect(editorWrapper).toBeVisible()
+
+    // Wait for Monaco to fully initialize (the monaco-editor class appears when loaded)
+    const monacoEditor = page.locator('.monaco-editor')
+    await expect(monacoEditor).toBeVisible({ timeout: 10000 })
+
+    // Editor should have a reasonable height (at least 100px)
+    const editorBox = await monacoEditor.boundingBox()
+    expect(editorBox).toBeTruthy()
+    expect(editorBox!.height).toBeGreaterThan(100)
+    expect(editorBox!.width).toBeGreaterThan(200)
+
+    // Click on the editor to focus it
+    await monacoEditor.click()
+
+    // Type some Lua code - Monaco should accept keyboard input
+    await page.keyboard.type('x=1')
+
+    // Small delay to let Monaco process and render
+    await page.waitForTimeout(200)
+
+    // Verify Monaco rendered the input - look for line content element
+    // Monaco renders text in .view-line elements
+    const viewLines = page.locator('.monaco-editor .view-lines')
+    await expect(viewLines).toContainText('x=1')
+  })
+
+  test('editor fills available space', async ({ page }) => {
+    // Wait for Monaco to load
+    const monacoEditor = page.locator('.monaco-editor')
+    await expect(monacoEditor).toBeVisible({ timeout: 10000 })
+
+    // Get editor panel dimensions
+    const editorPanel = page.locator('[data-testid="editor-panel"]')
+    const panelBox = await editorPanel.boundingBox()
+
+    // Get Monaco editor dimensions
+    const monacoBox = await monacoEditor.boundingBox()
+
+    // Monaco should fill most of the editor panel (accounting for toolbar)
+    expect(monacoBox).toBeTruthy()
+    expect(panelBox).toBeTruthy()
+
+    // Editor width should match panel width (with small tolerance)
+    expect(monacoBox!.width).toBeGreaterThan(panelBox!.width * 0.9)
+
+    // Editor height should be substantial (panel minus toolbar of ~35px)
+    expect(monacoBox!.height).toBeGreaterThan(panelBox!.height * 0.7)
+  })
+})
+
+test.describe('IDE Editor - io.read()', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/editor')
+    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
+    // Wait for Monaco to load
+    await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 10000 })
+  })
+
+  // Helper to set code in the editor via JavaScript (more reliable than keyboard typing)
+  async function setCode(page: import('@playwright/test').Page, code: string) {
+    // Wait for Monaco to be fully loaded
+    await page.waitForFunction(() => {
+      const win = window as unknown as { monaco?: { editor?: { getEditors?: () => unknown[] } } }
+      return win.monaco?.editor?.getEditors?.()?.length > 0
+    }, { timeout: 5000 })
+
+    // Set the code directly via Monaco API
+    await page.evaluate((newCode) => {
+      const win = window as unknown as { monaco?: { editor?: { getEditors?: () => { setValue: (val: string) => void }[] } } }
+      const editors = win.monaco?.editor?.getEditors?.()
+      if (editors && editors.length > 0) {
+        editors[0].setValue(newCode)
+      }
+    }, code)
+
+    await page.waitForTimeout(100)
+  }
+
+  test('standalone io.read() waits for user input', async ({ page }) => {
+    // Set code that uses io.read()
+    await setCode(page, 'local name = io.read()\nprint("Hello, " .. name)')
+
+    // Click run
+    await page.getByRole('button', { name: /run/i }).click()
+
+    // Should show input field
+    const terminalInput = page.locator('[data-testid="terminal-input"]')
+    await expect(terminalInput).toBeVisible({ timeout: 10000 })
+
+    // Type input and submit
+    await terminalInput.fill('World')
+    await terminalInput.press('Enter')
+
+    // Should show the output
+    await expect(page.locator('[data-testid="terminal-content"]')).toContainText('Hello, World')
+  })
+
+  test('io.read() within function waits for input', async ({ page }) => {
+    // Set code with io.read() inside a function
+    await setCode(page, `function greet()
+  local name = io.read()
+  return "Hi, " .. name
+end
+print(greet())`)
+
+    // Click run
+    await page.getByRole('button', { name: /run/i }).click()
+
+    // Should show input field
+    const terminalInput = page.locator('[data-testid="terminal-input"]')
+    await expect(terminalInput).toBeVisible({ timeout: 10000 })
+
+    // Type input and submit
+    await terminalInput.fill('Alice')
+    await terminalInput.press('Enter')
+
+    // Should show the output
+    await expect(page.locator('[data-testid="terminal-content"]')).toContainText('Hi, Alice')
+  })
+
+  test('io.read() within loop works for each iteration', async ({ page }) => {
+    // Set code with io.read() inside a loop (2 iterations)
+    await setCode(page, `for i = 1, 2 do
+  local val = io.read()
+  print("Got: " .. val)
+end
+print("Done")`)
+
+    // Click run
+    await page.getByRole('button', { name: /run/i }).click()
+
+    // First iteration - should show input field
+    const terminalInput = page.locator('[data-testid="terminal-input"]')
+    await expect(terminalInput).toBeVisible({ timeout: 10000 })
+
+    // Type first input
+    await terminalInput.fill('first')
+    await terminalInput.press('Enter')
+
+    // Should show first output
+    await expect(page.locator('[data-testid="terminal-content"]')).toContainText('Got: first')
+
+    // Second iteration - input should appear again
+    await expect(terminalInput).toBeVisible({ timeout: 10000 })
+
+    // Type second input
+    await terminalInput.fill('second')
+    await terminalInput.press('Enter')
+
+    // Should show second output and done
+    await expect(page.locator('[data-testid="terminal-content"]')).toContainText('Got: second')
+    await expect(page.locator('[data-testid="terminal-content"]')).toContainText('Done')
+  })
+
+  test('io.read() with *n format reads number', async ({ page }) => {
+    // Set code that reads a number
+    await setCode(page, `local num = io.read("*n")
+print("Squared: " .. (num * num))`)
+
+    // Click run
+    await page.getByRole('button', { name: /run/i }).click()
+
+    // Should show input field
+    const terminalInput = page.locator('[data-testid="terminal-input"]')
+    await expect(terminalInput).toBeVisible({ timeout: 10000 })
+
+    // Type a number
+    await terminalInput.fill('7')
+    await terminalInput.press('Enter')
+
+    // Should show squared result
+    await expect(page.locator('[data-testid="terminal-content"]')).toContainText('Squared: 49')
+  })
+})
+
+test.describe('IDE Editor - Keyboard Shortcuts', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/editor')
+    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
+    // Wait for Monaco to load
+    await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 10000 })
+  })
+
+  // Helper to set code in the editor via JavaScript
+  async function setCode(page: import('@playwright/test').Page, code: string) {
+    await page.waitForFunction(() => {
+      const win = window as unknown as { monaco?: { editor?: { getEditors?: () => unknown[] } } }
+      return win.monaco?.editor?.getEditors?.()?.length > 0
+    }, { timeout: 5000 })
+
+    await page.evaluate((newCode) => {
+      const win = window as unknown as { monaco?: { editor?: { getEditors?: () => { setValue: (val: string) => void }[] } } }
+      const editors = win.monaco?.editor?.getEditors?.()
+      if (editors && editors.length > 0) {
+        editors[0].setValue(newCode)
+      }
+    }, code)
+
+    await page.waitForTimeout(100)
+  }
+
+  test('Ctrl+Enter runs code', async ({ page }) => {
+    // Set some code that produces output
+    await setCode(page, 'print("shortcut works")')
+
+    // Press Ctrl+Enter to run
+    await page.keyboard.press('Control+Enter')
+
+    // Should show the output in terminal
+    await expect(page.locator('[data-testid="terminal-content"]')).toContainText('shortcut works', { timeout: 5000 })
+  })
+
+  test('Ctrl+` toggles terminal visibility', async ({ page }) => {
+    // Initially terminal should be visible
+    await expect(page.locator('[data-testid="bottom-panel"]')).toBeVisible()
+
+    // Press Ctrl+` to hide terminal
+    await page.keyboard.press('Control+`')
+
+    // Terminal should be hidden
+    await expect(page.locator('[data-testid="bottom-panel"]')).not.toBeVisible()
+
+    // Press Ctrl+` again to show terminal
+    await page.keyboard.press('Control+`')
+
+    // Terminal should be visible again
+    await expect(page.locator('[data-testid="bottom-panel"]')).toBeVisible()
+  })
+
+  test('Ctrl+B toggles sidebar visibility', async ({ page }) => {
+    // Initially sidebar should be visible
+    await expect(page.locator('[data-testid="sidebar-panel"]')).toBeVisible()
+
+    // Press Ctrl+B to hide sidebar
+    await page.keyboard.press('Control+b')
+
+    // Sidebar should be hidden
+    await expect(page.locator('[data-testid="sidebar-panel"]')).not.toBeVisible()
+
+    // Press Ctrl+B again to show sidebar
+    await page.keyboard.press('Control+b')
+
+    // Sidebar should be visible again
+    await expect(page.locator('[data-testid="sidebar-panel"]')).toBeVisible()
+  })
 })

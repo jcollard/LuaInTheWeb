@@ -14,11 +14,12 @@ test.describe('Panel Layout', () => {
     // Should have left panel with header
     await expect(page.getByText('Left Panel')).toBeVisible()
 
-    // Should have editor panel (use exact match to avoid matching "Code Editor")
-    await expect(page.getByText('Editor', { exact: true })).toBeVisible()
+    // Should have editor panel - scope to panel headers to avoid matching nav links
+    const panelHeaders = page.locator('[data-testid="panel-header"]')
+    await expect(panelHeaders.filter({ hasText: 'Editor' })).toBeVisible()
 
-    // Should have output panel (use exact match to avoid matching "Terminal Output")
-    await expect(page.getByText('Output', { exact: true })).toBeVisible()
+    // Should have output panel
+    await expect(panelHeaders.filter({ hasText: 'Output' })).toBeVisible()
 
     // Should have resize handles (separators)
     const resizeHandles = page.locator('[role="separator"]')
