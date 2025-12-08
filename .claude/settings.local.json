@@ -39,6 +39,7 @@
       "Bash(gh issue comment:*)",
       "SlashCommand(/tech-debt)",
       "SlashCommand(/code-review)",
+      "SlashCommand(/status)",
       "Bash(npx playwright test:*)",
       "Bash(npm run test:mutation:scope:*)",
       "Bash(git rev-parse:*)",
@@ -53,6 +54,8 @@
       "Bash(npm publish:*)",
       "Bash(python3:*)"
     ],
-    "ask": []
+    "ask": [
+      "SlashCommand(/accept-review)"
+    ]
   }
 }
