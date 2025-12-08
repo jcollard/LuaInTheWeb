@@ -8,16 +8,19 @@ Work with GitHub issues. Fetch details, assess complexity, and begin implementat
 /issue <number>           # Show issue details + complexity assessment
 /issue <number> begin     # Create branch and start working on the issue
 /issue <number> review    # Create PR for the issue and run code review
+/issue next               # Auto-select and start next tech debt issue
 ```
 
 ## Arguments
 
-The command accepts an issue number and optional subcommand:
-- `$ARGUMENTS` contains the full argument string (e.g., "13" or "13 begin")
+The command accepts an issue number (or "next") and optional subcommand:
+- `$ARGUMENTS` contains the full argument string (e.g., "13", "13 begin", or "next")
 
 Parse the arguments:
-- First token: Issue number (required)
+- First token: Issue number OR "next" keyword
 - Second token: Subcommand (optional: "begin" or "review")
+
+If the first token is "next", jump directly to **Step 7: Auto-Select Next Issue**.
 
 ---
 
@@ -361,7 +364,212 @@ The PR is linked to issue #13 and will auto-close it when merged.
 
 | Error | Response |
 |-------|----------|
-| No issue number provided | "Usage: `/issue <number>` or `/issue <number> begin`" |
+| No issue number provided | "Usage: `/issue <number>`, `/issue <number> begin`, or `/issue next`" |
 | Issue not found | "Issue #<number> not found. Check the issue number and try again." |
-| Unknown subcommand | "Unknown subcommand '<cmd>'. Available: begin, review" |
+| Unknown subcommand | "Unknown subcommand '<cmd>'. Available: begin, review, next" |
 | GitHub CLI not available | "GitHub CLI (gh) is required. Install from https://cli.github.com" |
+
+---
+
+## Step 7: Auto-Select Next Issue (Next Mode)
+
+If the first argument is "next" (`/issue next`):
+
+### 7a. Check Current Branch Status
+
+First, check if already working on an issue:
+
+```bash
+git branch --show-current
+```
+
+If the branch name matches the pattern `<number>-*` (e.g., `13-fix-repl-ux`), extract the issue number and report:
+
+```
+## Already Working on Issue
+
+You're currently on branch `<branch-name>` which is linked to issue #<number>.
+
+**Options:**
+- Continue working on this issue
+- Run `/issue <number> review` when ready to create a PR
+- Switch to main and run `/issue next` again to pick a new issue:
+  ```bash
+  git checkout main && git pull
+  ```
+```
+
+Then STOP - do not proceed further.
+
+### 7b. Fetch Tech Debt Issues
+
+If on `main` or `master`, fetch open tech debt issues sorted by creation date (oldest first):
+
+```bash
+gh issue list --label "tech-debt" --state open --json number,title,body,labels,createdAt --limit 10
+```
+
+If no tech debt issues found:
+
+```
+## No Tech Debt Issues Available
+
+There are no open tech debt issues to work on.
+
+**Options:**
+- Run `/tech-debt` to review if there's hidden tech debt
+- Check for other open issues: `gh issue list --state open`
+```
+
+Then STOP.
+
+### 7c. Analyze Issues for Clarity
+
+For each issue (starting from oldest), check if it needs clarification by looking for:
+
+**Clarity Blockers (skip this issue):**
+- Label: `needs-clarification`, `needs-discussion`, `blocked`, `question`
+- Body contains: "TODO:", "TBD", "unclear", "need to decide", "options:", "should we"
+- Body is empty or less than 50 characters
+- Title contains: "?", "discuss", "investigate"
+
+**Clear Issue Indicators (can proceed):**
+- Has specific steps or acceptance criteria
+- Has code snippets or file paths
+- Has a `<!-- tech-debt-id: -->` marker
+- Body length > 100 characters with actionable content
+
+### 7d. Select First Clear Issue
+
+Find the first issue that doesn't have clarity blockers.
+
+If all issues need clarification:
+
+```
+## All Tech Debt Issues Need Clarification
+
+Found <count> tech debt issues, but all need clarification before work can begin:
+
+| # | Title | Blocker |
+|---|-------|---------|
+| <number> | <title> | <reason> |
+...
+
+**Options:**
+- Pick one to clarify: `/issue <number>` to view details
+- Add clarification to an issue on GitHub, then run `/issue next` again
+```
+
+Then STOP.
+
+### 7e. Display Selected Issue
+
+When a clear issue is found:
+
+```
+## Auto-Selected Issue #<number>
+
+**Title**: <title>
+**Created**: <date>
+**Labels**: <labels>
+
+### Description
+<body - first 500 chars>
+
+### Clarity Check
+✓ Issue has clear requirements
+✓ No clarification labels
+✓ Actionable content detected
+```
+
+### 7f. Begin Work on Selected Issue
+
+Automatically proceed to begin mode (same as `/issue <number> begin`):
+
+1. Create and checkout branch:
+```bash
+gh issue develop <number> --checkout
+```
+
+2. Inject TDD context:
+```
+/tdd
+```
+
+3. Run complexity analysis and create task list (from Step 3 and Step 5)
+
+4. Output:
+```
+## Starting Issue #<number>: <title>
+
+### Branch Created
+Created and checked out branch: <branch-name>
+
+### Tasks
+[TodoWrite creates tasks based on issue body]
+
+Starting with task 1...
+```
+
+---
+
+## Example: /issue next
+
+### When Already on Issue Branch
+
+```
+/issue next
+
+## Already Working on Issue
+
+You're currently on branch `18-cleanup-unused-exports` which is linked to issue #18.
+
+**Options:**
+- Continue working on this issue
+- Run `/issue 18 review` when ready to create a PR
+- Switch to main and run `/issue next` again to pick a new issue
+```
+
+### When Tech Debt Available
+
+```
+/issue next
+
+## Checking for Current Work...
+Current branch: main ✓
+
+## Fetching Tech Debt Issues...
+Found 3 open tech debt issues.
+
+## Analyzing Issues for Clarity...
+- #15: "Remove deprecated API calls" - ✓ Clear
+- #19: "Investigate performance issues?" - ✗ Needs investigation
+- #21: "TBD: Refactor state management" - ✗ Has TBD marker
+
+## Auto-Selected Issue #15
+
+**Title**: Remove deprecated API calls
+**Created**: Dec 5, 2025
+**Labels**: tech-debt, medium
+
+### Description
+Several API calls in `src/utils/api.ts` use deprecated endpoints...
+
+### Clarity Check
+✓ Issue has clear requirements
+✓ No clarification labels
+✓ Actionable content detected
+
+## Starting Issue #15: Remove deprecated API calls
+
+### Branch Created
+Created and checked out branch: 15-remove-deprecated-api-calls
+
+### Tasks
+1. [ ] Identify all deprecated API calls in src/utils/api.ts
+2. [ ] Update to new endpoints
+3. [ ] Add tests for updated calls
+4. [ ] Run mutation tests
+
+Starting with task 1...
+```
