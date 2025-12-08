@@ -41,21 +41,50 @@ All work is tracked in GitHub Projects with the following fields:
 - **Priority**: P0-Critical, P1-High, P2-Medium, P3-Low
 - **Effort**: XS, S, M, L, XL (t-shirt sizing)
 - **Type**: Feature, Bug, Tech Debt, Docs
-- **Status**: Todo, In Progress, Done
+- **Status**: Concept → Todo → In Progress → Done
 - **Plan**: Link to roadmap implementation plan (for complex features)
 
-### Workflow
+### Status Definitions
 
-1. **Issues** track what needs to be done (bugs, features, tech debt)
-2. **Project Board** provides prioritization and effort estimates
-3. **Roadmap docs** contain detailed implementation plans for complex features
+| Status | Meaning |
+|--------|---------|
+| **Concept** | Idea needs research/definition before it's actionable |
+| **Todo** | Well-defined, ready to be worked on |
+| **In Progress** | Actively being worked on |
+| **Done** | Completed and merged |
+
+### Workflow Decision Tree
+
+```
+New work item identified
+    │
+    ├─► Is it well-defined? (clear scope, actionable)
+    │       │
+    │       ├─► YES: Is it simple? (1-3 tasks, < 1 day)
+    │       │       │
+    │       │       ├─► YES: Create issue → /issue <n> begin → /issue <n> review
+    │       │       │
+    │       │       └─► NO (complex): Create issue → Create roadmap plan → /prepare-plan → /begin
+    │       │
+    │       └─► NO: Create issue in "Concept" status → Research → Move to "Todo" when defined
+    │
+    └─► For existing issues: /status → /issue next (or pick specific issue)
+```
+
+### Two Workflows
+
+| Workflow | When to Use | Commands |
+|----------|-------------|----------|
+| **Issue-based** | Simple bugs, small features, tech debt | `/issue <n> begin` → work → `/issue <n> review` |
+| **Roadmap-based** | Complex features needing planning | Create plan → `/prepare-plan` → `/review-plan` → `/begin` |
 
 ### Quick Commands
 - `/status` - View project board status and suggested next action
 - `/issue <n>` - View issue details and complexity assessment
 - `/issue <n> begin` - Start working on an issue (creates branch, updates project status)
 - `/issue <n> review` - Create PR when done
-- `/issue next` - Auto-select next tech debt issue
+- `/issue next` - Auto-select next issue (highest priority Todo)
+- `/issue next <type>` - Auto-select next issue of type (tech-debt, bug, enhancement, roadmap)
 - `/tech-debt` - View and manage tech debt items
 
 ## Roadmap (Implementation Plans)
@@ -164,7 +193,8 @@ LuaInTheWeb/              # Git repository root (DO NOT run npm commands here)
 - `/issue <n>` - View issue details and complexity assessment
 - `/issue <n> begin` - Start working on an issue (creates branch, updates project)
 - `/issue <n> review` - Run code review and create PR
-- `/issue next` - Auto-select and start next tech debt issue
+- `/issue next` - Auto-select next issue (highest priority Todo)
+- `/issue next <type>` - Auto-select by type (tech-debt, bug, enhancement, roadmap)
 - `/tech-debt` - View and manage tech debt items with priority/effort
 
 ### Roadmap Workflow (Complex Features)
