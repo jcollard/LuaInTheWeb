@@ -30,7 +30,7 @@ This directory contains implementation plans for features and improvements.
 
 | Plan | Status | Dependencies | Description |
 |------|--------|--------------|-------------|
-| [Phase 1.5: E2E Tests](./ide-editor-001.5-e2e-tests.md) | Draft | Phase 1 | E2E tests for EmbeddableEditor with real Monaco + Lua |
+| [Phase 1.5: E2E Testing Foundation](./ide-editor-001.5-e2e-tests.md) | Draft | Phase 1 | Playwright setup, E2E tests, test pages, documentation |
 | [Phase 2: Panel Layout](./ide-editor-002-panels.md) | Draft | Phase 1.5 | Resizable VS Code-style panels |
 | [Phase 3: IDE Shell](./ide-editor-003-ide-shell.md) | Draft | Phases 1, 2 | Full IDE layout at `/editor` route |
 | [Phase 4: Explorer](./ide-editor-004-explorer.md) | Draft | Phase 3 | File tree with virtual filesystem |
