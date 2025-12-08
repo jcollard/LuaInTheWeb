@@ -14,13 +14,12 @@
     "test:mutation": "stryker run"
   },
   "dependencies": {
-    "@codemirror/language": "^6.11.3",
-    "@codemirror/legacy-modes": "^6.5.2",
-    "@uiw/react-codemirror": "^4.25.2",
+    "@monaco-editor/react": "^4.7.0",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/xterm": "^5.5.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-router-dom": "^7.10.1",
     "wasmoon": "^1.16.0"
   },
   "devDependencies": {

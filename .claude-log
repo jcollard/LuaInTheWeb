@@ -22,3 +22,34 @@
 2025-12-07T17:06:16.727132 | Session: c6a9ee09-88ff-4b94-9421-799462e6d6f9 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: date
 2025-12-07T17:10:33.324491 | Session: 2f11933e-3204-42ff-9c39-4d4efff1904f | CWD: c:\Users\josep\git\LuaInTheWeb | Command: date
 2025-12-07T17:15:46.088876 | Session: a3b70b08-35d5-4a52-b0fe-2b81a6e0b37d | CWD: c:\Users\josep\git\LuaInTheWeb | Command: date
+2025-12-07T17:20:30.574972 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: mkdir -p lua-learning-website/src/hooks
+2025-12-07T17:21:29.950237 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/hooks/useLuaEngine.test.ts 2>&1
+2025-12-07T17:22:11.105130 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/hooks/useLuaEngine.test.ts 2>&1
+2025-12-07T17:22:33.949055 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/hooks/useLuaEngine.test.ts 2>&1
+2025-12-07T17:22:54.133505 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/hooks/useLuaEngine.test.ts 2>&1
+2025-12-07T17:23:15.318000 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/hooks/useLuaEngine.test.ts 2>&1
+2025-12-07T17:23:36.616131 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/hooks/useLuaEngine.test.ts 2>&1
+2025-12-07T17:24:17.193537 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/hooks/useLuaEngine.test.ts 2>&1
+2025-12-07T17:24:36.753835 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/hooks/useLuaEngine.test.ts 2>&1
+2025-12-07T17:25:32.434734 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/hooks/useLuaEngine.test.ts 2>&1
+2025-12-07T17:26:05.147388 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/hooks/useLuaEngine.test.ts 2>&1
+2025-12-07T17:27:16.873208 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/hooks/useLuaEngine.test.ts 2>&1
+2025-12-07T17:27:42.377027 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/hooks/useLuaEngine.test.ts 2>&1
+2025-12-07T17:28:02.656114 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm install @monaco-editor/react 2>&1
+2025-12-07T17:28:30.807230 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: mkdir -p lua-learning-website/src/components/CodeEditor
+2025-12-07T17:29:30.311018 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/components/CodeEditor/CodeEditor.test.tsx 2>&1
+2025-12-07T17:29:46.741074 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm install react-router-dom 2>&1
+2025-12-07T17:30:28.065870 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/App.test.tsx 2>&1
+2025-12-07T17:31:56.321435 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/App.test.tsx 2>&1
+2025-12-07T17:32:13.631499 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/App.test.tsx 2>&1
+2025-12-07T17:32:52.673574 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/components/LuaPlayground.test.tsx 2>&1
+2025-12-07T17:33:22.240506 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/components/LuaPlayground.test.tsx 2>&1
+2025-12-07T17:33:40.409461 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/components/LuaPlayground.test.tsx 2>&1
+2025-12-07T17:34:32.180878 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test -- --run src/components/LuaPlayground.test.tsx 2>&1
+2025-12-07T17:34:50.511779 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm uninstall @uiw/react-codemirror @codemirror/language @codemirror/legacy-modes 2>&1
+2025-12-07T17:35:01.880507 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: rm lua-learning-website/src/test/example.test.ts
+2025-12-07T17:35:15.618417 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test 2>&1
+2025-12-07T17:35:24.400389 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run lint 2>&1
+2025-12-07T17:35:48.737535 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run test:mutation 2>&1
+2025-12-07T17:39:35.619583 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: cd lua-learning-website && npm run build 2>&1
+2025-12-07T17:41:07.878657 | Session: 6de5c049-ce34-4552-a1dd-3df7a4eae1c8 | CWD: c:\Users\josep\git\LuaInTheWeb | Command: date

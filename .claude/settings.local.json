@@ -25,7 +25,8 @@
       "Bash(cloc:*)",
       "Bash(date)",
       "SlashCommand(/new-feature)",
-      "SlashCommand(/tdd)"
+      "SlashCommand(/tdd)",
+      "Bash(npm run test:mutation:*)"
     ],
     "deny": [
       "Bash(npm run dev)",

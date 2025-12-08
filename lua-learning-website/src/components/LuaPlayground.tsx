@@ -1,8 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
-import CodeMirror from '@uiw/react-codemirror'
-import { StreamLanguage } from '@codemirror/language'
-import { lua } from '@codemirror/legacy-modes/mode/lua'
-import { LuaFactory, LuaEngine } from 'wasmoon'
+import { useState, useRef } from 'react'
+import { CodeEditor } from './CodeEditor'
+import { useLuaEngine } from '../hooks'
 import LuaRepl from './LuaRepl'
 import BashTerminal from './BashTerminal'
 import type { BashTerminalHandle } from './BashTerminal'
@@ -33,7 +31,6 @@ export default function LuaPlayground() {
   const [code, setCode] = useState(defaultCode)
   const [isRunning, setIsRunning] = useState(false)
 
-  const luaEngineRef = useRef<LuaEngine | null>(null)
   const terminalRef = useRef<BashTerminalHandle>(null)
 
   // Custom io.read implementation for code editor
@@ -42,68 +39,21 @@ export default function LuaPlayground() {
     return await terminalRef.current.readLine()
   }
 
-  useEffect(() => {
-    // Initialize Lua engine on component mount
-    const initLua = async () => {
-      try {
-        const factory = new LuaFactory()
-        const lua = await factory.createEngine()
-
-        luaEngineRef.current = lua
-
-        // Capture print output
-        lua.global.set('print', (...args: any[]) => {
-          const message = args.map(arg => String(arg)).join('\t')
-          terminalRef.current?.writeln(message)
-        })
-
-        // Create custom io table with read and write functions
-        await lua.doString(`
-          io = io or {}
-          io.write = function(...)
-            local args = {...}
-            local output = ""
-            for i, v in ipairs(args) do
-              output = output .. tostring(v)
-            end
-            print(output)
-          end
-        `)
-
-        // Override io.read with custom implementation
-        lua.global.set('__js_read_input', customIoRead)
-
-        await lua.doString(`
-          io.read = function(format)
-            local input = __js_read_input():await()
-            if format == "*n" or format == "*number" then
-              return tonumber(input)
-            elseif format == "*a" or format == "*all" then
-              return input
-            else
-              -- Default is "*l" or "*line"
-              return input
-            end
-          end
-        `)
-      } catch (error) {
-        console.error('Failed to initialize Lua engine:', error)
-        terminalRef.current?.writeln('Error: Failed to initialize Lua engine')
-      }
-    }
-
-    initLua()
-
-    // Cleanup on unmount
-    return () => {
-      if (luaEngineRef.current) {
-        luaEngineRef.current.global.close()
-      }
-    }
-  }, [])
+  const { isReady, execute, reset } = useLuaEngine({
+    onOutput: (text) => {
+      terminalRef.current?.writeln(text)
+    },
+    onError: (error) => {
+      terminalRef.current?.writeln(`Error: ${error}`)
+    },
+    onReadInput: customIoRead,
+    onCleanup: () => {
+      // Optional cleanup logic if needed
+    },
+  })
 
   const runCode = async () => {
-    if (!luaEngineRef.current || !terminalRef.current) {
+    if (!isReady || !terminalRef.current) {
       terminalRef.current?.writeln('Error: Lua engine not initialized')
       return
     }
@@ -111,24 +61,18 @@ export default function LuaPlayground() {
     setIsRunning(true)
     terminalRef.current.clear() // Clear previous output
 
-    try {
-      // Execute the Lua code
-      await luaEngineRef.current.doString(code)
-    } catch (error: any) {
-      // Display error messages
-      terminalRef.current.writeln(`Error: ${error.message || String(error)}`)
-    } finally {
-      setIsRunning(false)
-    }
+    await execute(code)
+    setIsRunning(false)
   }
 
   const clearOutput = () => {
     terminalRef.current?.clear()
   }
 
-  const resetCode = () => {
+  const resetCode = async () => {
     setCode(defaultCode)
     terminalRef.current?.clear()
+    await reset()
   }
 
   return (
@@ -159,7 +103,7 @@ export default function LuaPlayground() {
             </button>
             <button
               onClick={runCode}
-              disabled={isRunning}
+              disabled={isRunning || !isReady}
               className="btn-primary"
             >
               {isRunning ? 'Running...' : 'Run Code'}
@@ -171,13 +115,11 @@ export default function LuaPlayground() {
       {mode === 'editor' ? (
         <div className="playground-content">
           <div className="editor-panel">
-            <h3>Code Editor</h3>
-            <CodeMirror
+            <CodeEditor
               value={code}
+              onChange={setCode}
+              onRun={runCode}
               height="400px"
-              extensions={[StreamLanguage.define(lua)]}
-              onChange={(value) => setCode(value)}
-              theme="light"
             />
           </div>
 
