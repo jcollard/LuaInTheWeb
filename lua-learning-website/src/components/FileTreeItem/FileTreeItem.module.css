@@ -19,6 +19,11 @@
   color: var(--vscode-list-activeSelectionForeground, #ffffff);
 }
 
+.treeItem.dragOver {
+  background-color: var(--vscode-list-dropBackground, rgba(0, 127, 212, 0.18));
+  outline: 1px dashed var(--vscode-focusBorder, #007fd4);
+}
+
 .chevron {
   display: flex;
   align-items: center;

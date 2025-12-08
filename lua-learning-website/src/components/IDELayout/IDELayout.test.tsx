@@ -82,12 +82,14 @@ describe('IDELayout', () => {
       expect(layout).toBeInTheDocument()
     })
 
-    it('should pass correct props to children', () => {
+    it('should show no file tab initially (empty state)', () => {
       // Arrange & Act
-      render(<IDELayout initialFileName="test.lua" />)
+      render(<IDELayout />)
 
-      // Assert - filename should appear in editor tab
-      expect(screen.getByText('test.lua')).toBeInTheDocument()
+      // Assert - no file tabs should be open initially
+      // File tabs have close buttons, bottom panel tabs (Terminal/REPL) don't
+      const closeButtons = screen.queryAllByRole('button', { name: /^close /i })
+      expect(closeButtons).toHaveLength(0)
     })
 
     it('should pass initial code to editor', () => {
@@ -118,12 +120,12 @@ describe('IDELayout', () => {
 
     // Helper to get the file tab (not the terminal/repl tabs)
     function getFileTab() {
-      return screen.getByRole('tab', { name: /new-file\.lua/i })
+      return screen.getByRole('tab', { name: /untitled-\d+\.lua/i })
     }
 
     // Helper to query the file tab (returns null if not found)
     function queryFileTab() {
-      return screen.queryByRole('tab', { name: /new-file\.lua/i })
+      return screen.queryByRole('tab', { name: /untitled-\d+\.lua/i })
     }
 
     // Helper to create and open a file
@@ -132,13 +134,17 @@ describe('IDELayout', () => {
       const newFileButton = screen.getByRole('button', { name: /new file/i })
       await user.click(newFileButton)
 
-      // Wait for file to appear in tree
+      // Wait for file to appear in tree (new file uses unique naming like untitled-1.lua)
+      // The file enters rename mode immediately
       await waitFor(() => {
-        expect(screen.getByRole('treeitem', { name: /new-file\.lua/i })).toBeInTheDocument()
+        expect(screen.getByRole('treeitem', { name: /untitled-\d+\.lua/i })).toBeInTheDocument()
       })
 
+      // Confirm the default name by pressing Enter
+      await user.keyboard('{Enter}')
+
       // Click on the file to open it (creates a tab)
-      const fileItem = screen.getByRole('treeitem', { name: /new-file\.lua/i })
+      const fileItem = screen.getByRole('treeitem', { name: /untitled-\d+\.lua/i })
       await user.click(fileItem)
 
       // Wait for file tab to appear
@@ -158,7 +164,7 @@ describe('IDELayout', () => {
       expect(getFileTab()).toBeInTheDocument()
 
       // Act - close the non-dirty tab using its specific close button
-      const closeButton = screen.getByRole('button', { name: /close new-file\.lua/i })
+      const closeButton = screen.getByRole('button', { name: /close untitled-\d+\.lua/i })
       await user.click(closeButton)
 
       // Assert - no confirmation dialog, tab is closed
@@ -183,7 +189,7 @@ describe('IDELayout', () => {
       })
 
       // Act - try to close the dirty tab
-      const closeButton = screen.getByRole('button', { name: /close new-file\.lua/i })
+      const closeButton = screen.getByRole('button', { name: /close untitled-\d+\.lua/i })
       await user.click(closeButton)
 
       // Assert - confirmation dialog should appear
@@ -210,7 +216,7 @@ describe('IDELayout', () => {
       })
 
       // Try to close
-      const closeButton = screen.getByRole('button', { name: /close new-file\.lua/i })
+      const closeButton = screen.getByRole('button', { name: /close untitled-\d+\.lua/i })
       await user.click(closeButton)
 
       // Verify dialog appeared
@@ -245,7 +251,7 @@ describe('IDELayout', () => {
       })
 
       // Try to close
-      const closeButton = screen.getByRole('button', { name: /close new-file\.lua/i })
+      const closeButton = screen.getByRole('button', { name: /close untitled-\d+\.lua/i })
       await user.click(closeButton)
 
       // Verify dialog appeared

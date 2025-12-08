@@ -38,7 +38,8 @@
       "Bash(gh issue close:*)",
       "Bash(gh issue comment:*)",
       "SlashCommand(/tech-debt)",
-      "SlashCommand(/code-review)"    
+      "SlashCommand(/code-review)",
+      "Bash(npx playwright test:*)"
     ],
     "deny": [
       "Bash(npm run dev)",

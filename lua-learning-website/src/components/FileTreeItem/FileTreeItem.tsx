@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type MouseEvent, type KeyboardEvent } from 'react'
+import { useState, useEffect, useRef, type MouseEvent, type KeyboardEvent, type DragEvent } from 'react'
 import styles from './FileTreeItem.module.css'
 import type { FileTreeItemProps } from './types'
 
@@ -36,8 +36,11 @@ export function FileTreeItem({
   onContextMenu,
   onRenameSubmit,
   onRenameCancel,
+  onDragStart,
+  onDrop,
 }: FileTreeItemProps) {
   const [renameValue, setRenameValue] = useState(name)
+  const [isDragOver, setIsDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Focus input when entering rename mode
@@ -83,12 +86,45 @@ export function FileTreeItem({
     onRenameSubmit?.(path, renameValue)
   }
 
+  // Drag and drop handlers
+  const handleDragStart = (event: DragEvent) => {
+    event.dataTransfer.setData('text/plain', path)
+    event.dataTransfer.effectAllowed = 'move'
+    onDragStart?.(path)
+  }
+
+  const handleDragOver = (event: DragEvent) => {
+    if (!isFolder) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+    setIsDragOver(true)
+  }
+
+  const handleDragLeave = () => {
+    setIsDragOver(false)
+  }
+
+  const handleDrop = (event: DragEvent) => {
+    event.preventDefault()
+    setIsDragOver(false)
+
+    if (!isFolder) return
+
+    const sourcePath = event.dataTransfer.getData('text/plain')
+
+    // Don't drop on itself
+    if (sourcePath === path) return
+
+    onDrop?.(sourcePath, path)
+  }
+
   const isFolder = type === 'folder'
   const indentStyle = { paddingLeft: `${depth * INDENT_SIZE}px` }
 
   const classNames = [
     styles.treeItem,
     isSelected && styles.selected,
+    isDragOver && styles.dragOver,
   ].filter(Boolean).join(' ')
 
   return (
@@ -101,6 +137,11 @@ export function FileTreeItem({
       style={indentStyle}
       onClick={handleClick}
       onContextMenu={handleContextMenu}
+      draggable
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
       {/* Chevron for folders */}
       {isFolder ? (

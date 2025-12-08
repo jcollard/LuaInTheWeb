@@ -8,8 +8,8 @@ export interface EditorPanelProps {
   code: string
   /** Called when code changes */
   onChange: (code: string) => void
-  /** File name to show in tab (used when tabBarProps not provided) */
-  fileName: string
+  /** File name to show in tab (null when no file open, used when tabBarProps not provided) */
+  fileName: string | null
   /** Whether the file has unsaved changes (used when tabBarProps not provided) */
   isDirty: boolean
   /** Called when run button is clicked */

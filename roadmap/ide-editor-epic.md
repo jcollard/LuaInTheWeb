@@ -1,6 +1,6 @@
 # Epic: IDE-Style Code Editor
 
-**Status**: Completed
+**Status**: In Progress
 **Author**: Claude & Joseph
 **Created**: Sun, Dec 7, 2025
 **Updated**: Mon, Dec 8, 2025
@@ -34,6 +34,7 @@ Transform the Lua Playground into a full-featured, VS Code-style IDE experience 
 | 2 | [Panel Layout System](./ide-editor-002-panels.md) | **Completed** | Phase 0 | Resizable split panel infrastructure |
 | 3 | [IDE Shell](./ide-editor-003-ide-shell.md) | **Completed** | Phases 1, 2 | Full IDE layout at `/editor` route |
 | 4 | [Explorer Panel](./ide-editor-004-explorer.md) | **Completed** | Phase 3 | File tree with virtual filesystem |
+| 5 | [Explorer UX Polish](./ide-editor-005-explorer-polish.md) | **Approved** | Phase 4 | Bug fixes and UX improvements for file explorer |
 
 ## Dependency Graph
 
@@ -141,3 +142,6 @@ useFileSystem() → { files, openFile, saveFile, createFile, deleteFile }
 
 ### Phase 4: Explorer Panel
 - [x] Completed (Dec 8, 2025)
+
+### Phase 5: Explorer UX Polish
+- [ ] Not started

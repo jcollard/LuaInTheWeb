@@ -16,6 +16,7 @@ export function FileTree({
   renamingPath,
   onRenameSubmit,
   onRenameCancel,
+  onDrop,
 }: FileTreeProps) {
   // Flatten tree to get ordered list of visible paths for keyboard navigation
   const visiblePaths = useMemo(() => {
@@ -153,6 +154,7 @@ export function FileTree({
           onContextMenu={handleItemContextMenu}
           onRenameSubmit={onRenameSubmit}
           onRenameCancel={onRenameCancel}
+          onDrop={onDrop}
         />
         {isFolder && isExpanded && node.children && (
           <div role="group">

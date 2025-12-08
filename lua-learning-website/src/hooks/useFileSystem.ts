@@ -28,6 +28,7 @@ export interface UseFileSystemReturn {
   writeFile: (path: string, content: string) => void
   deleteFile: (path: string) => void
   renameFile: (oldPath: string, newPath: string) => void
+  moveFile: (sourcePath: string, targetFolderPath: string) => void
 
   // Folder operations
   createFolder: (path: string) => void
@@ -385,6 +386,105 @@ export function useFileSystem(): UseFileSystemReturn {
     [state.files, state.folders]
   )
 
+  const moveFile = useCallback(
+    (sourcePath: string, targetFolderPath: string): void => {
+      const normalizedSourcePath = normalizePath(sourcePath)
+      const normalizedTargetFolder = normalizePath(targetFolderPath)
+
+      // Check source exists (file or folder)
+      const isSourceFile = normalizedSourcePath in state.files
+      const isSourceFolder = state.folders.has(normalizedSourcePath)
+
+      if (!isSourceFile && !isSourceFolder) {
+        throw new Error(`Source not found: ${normalizedSourcePath}`)
+      }
+
+      // Check target folder exists
+      if (normalizedTargetFolder !== '/' && !state.folders.has(normalizedTargetFolder)) {
+        throw new Error(`Target folder not found: ${normalizedTargetFolder}`)
+      }
+
+      // Get the name of the item being moved
+      const itemName = getFileName(normalizedSourcePath)
+      const newPath = normalizedTargetFolder === '/'
+        ? `/${itemName}`
+        : `${normalizedTargetFolder}/${itemName}`
+
+      // Check if already in target folder (no-op)
+      const currentParent = getParentPath(normalizedSourcePath)
+      if (currentParent === normalizedTargetFolder) {
+        return // No-op, already in target folder
+      }
+
+      // Check if trying to move folder into itself or its children
+      if (isSourceFolder && (normalizedTargetFolder === normalizedSourcePath || normalizedTargetFolder.startsWith(normalizedSourcePath + '/'))) {
+        throw new Error(`Cannot move folder into itself or its children`)
+      }
+
+      // Check if something already exists at target path
+      if (newPath in state.files || state.folders.has(newPath)) {
+        throw new Error(`Target already exists: ${newPath}`)
+      }
+
+      // Perform the move using rename functions
+      if (isSourceFile) {
+        // Move file
+        setState((prev) => {
+          const file = prev.files[normalizedSourcePath]
+          const newFiles = { ...prev.files }
+          delete newFiles[normalizedSourcePath]
+          newFiles[newPath] = {
+            ...file,
+            updatedAt: Date.now(),
+          }
+          return {
+            ...prev,
+            version: prev.version + 1,
+            files: newFiles,
+          }
+        })
+      } else {
+        // Move folder with all contents
+        setState((prev) => {
+          const newFiles = { ...prev.files }
+          const newFolders = new Set(prev.folders)
+
+          // Update all file paths under this folder
+          for (const filePath of Object.keys(prev.files)) {
+            if (filePath.startsWith(normalizedSourcePath + '/')) {
+              const newFilePath = newPath + filePath.slice(normalizedSourcePath.length)
+              newFiles[newFilePath] = {
+                ...prev.files[filePath],
+                updatedAt: Date.now(),
+              }
+              delete newFiles[filePath]
+            }
+          }
+
+          // Update all subfolder paths
+          for (const folderPath of prev.folders) {
+            if (folderPath === normalizedSourcePath) {
+              newFolders.delete(folderPath)
+              newFolders.add(newPath)
+            } else if (folderPath.startsWith(normalizedSourcePath + '/')) {
+              const newFolderPath = newPath + folderPath.slice(normalizedSourcePath.length)
+              newFolders.delete(folderPath)
+              newFolders.add(newFolderPath)
+            }
+          }
+
+          return {
+            ...prev,
+            version: prev.version + 1,
+            files: newFiles,
+            folders: newFolders,
+          }
+        })
+      }
+    },
+    [state.files, state.folders]
+  )
+
   const listDirectory = useCallback(
     (path: string): string[] => {
       const normalizedPath = normalizePath(path)
@@ -460,6 +560,7 @@ export function useFileSystem(): UseFileSystemReturn {
     writeFile,
     deleteFile,
     renameFile,
+    moveFile,
     createFolder,
     deleteFolder,
     renameFolder,

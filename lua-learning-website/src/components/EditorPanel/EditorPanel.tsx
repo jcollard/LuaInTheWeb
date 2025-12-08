@@ -28,6 +28,15 @@ export function EditorPanel({
       return <TabBar {...tabBarProps} />
     }
 
+    // Empty state - no file is open
+    if (fileName === null) {
+      return (
+        <div className={styles.welcomeMessage}>
+          <span>Create a new file or open an existing one to get started</span>
+        </div>
+      )
+    }
+
     return (
       <div className={styles.tabs}>
         <div className={styles.tab}>

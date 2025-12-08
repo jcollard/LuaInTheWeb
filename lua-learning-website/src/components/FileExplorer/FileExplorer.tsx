@@ -1,4 +1,4 @@
-import { useCallback, type MouseEvent } from 'react'
+import { useCallback, useEffect, type MouseEvent } from 'react'
 import { FileTree } from '../FileTree'
 import { ContextMenu } from '../ContextMenu'
 import { ConfirmDialog } from '../ConfirmDialog'
@@ -45,6 +45,7 @@ const folderContextMenuItems: ContextMenuItem[] = [
 export function FileExplorer({
   tree,
   selectedPath: controlledSelectedPath,
+  pendingNewFilePath,
   onCreateFile,
   onCreateFolder,
   onRenameFile,
@@ -52,6 +53,8 @@ export function FileExplorer({
   onDeleteFile,
   onDeleteFolder,
   onSelectFile,
+  onMoveFile,
+  onCancelPendingNewFile,
   className,
 }: FileExplorerProps) {
   const {
@@ -72,6 +75,13 @@ export function FileExplorer({
 
   // Use controlled selected path if provided
   const selectedPath = controlledSelectedPath ?? internalSelectedPath
+
+  // Start rename mode when a new file is pending
+  useEffect(() => {
+    if (pendingNewFilePath) {
+      startRename(pendingNewFilePath)
+    }
+  }, [pendingNewFilePath, startRename])
 
   // Find node type by path
   const findNodeType = useCallback((path: string): 'file' | 'folder' | null => {
@@ -178,9 +188,26 @@ export function FileExplorer({
     } else {
       onRenameFile(path, newName)
     }
+    // Clear pending new file if this was a pending file being renamed
+    if (path === pendingNewFilePath && onCancelPendingNewFile) {
+      onCancelPendingNewFile()
+    }
     cancelRename()
     // Stryker disable next-line all: React hooks dependency optimization
-  }, [findNodeType, onRenameFile, onRenameFolder, cancelRename])
+  }, [findNodeType, onRenameFile, onRenameFolder, cancelRename, pendingNewFilePath, onCancelPendingNewFile])
+
+  // Handle rename cancel - delete pending new file if applicable
+  const handleRenameCancel = useCallback(() => {
+    if (renamingPath === pendingNewFilePath && pendingNewFilePath) {
+      // Delete the pending file since rename was cancelled
+      onDeleteFile(pendingNewFilePath)
+      if (onCancelPendingNewFile) {
+        onCancelPendingNewFile()
+      }
+    }
+    cancelRename()
+    // Stryker disable next-line all: React hooks dependency optimization
+  }, [renamingPath, pendingNewFilePath, onDeleteFile, onCancelPendingNewFile, cancelRename])
 
   const handleDeleteKey = useCallback((path: string) => {
     const type = findNodeType(path)
@@ -251,7 +278,8 @@ export function FileExplorer({
           onDelete={handleDeleteKey}
           renamingPath={renamingPath}
           onRenameSubmit={handleRenameSubmit}
-          onRenameCancel={cancelRename}
+          onRenameCancel={handleRenameCancel}
+          onDrop={onMoveFile}
         />
       </div>
 

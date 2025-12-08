@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useRef } from 'react'
 import { useLuaEngine } from '../../hooks/useLuaEngine'
 import { useFileSystem } from '../../hooks/useFileSystem'
 import { useTabBar } from '../TabBar'
+import { useToast } from '../Toast'
 import { IDEContext } from './context'
 import type { IDEContextValue, IDEContextProviderProps, ActivityPanelType } from './types'
 
@@ -24,7 +25,6 @@ function getParentPath(path: string): string {
 export function IDEContextProvider({
   children,
   initialCode = '',
-  initialFileName = 'untitled.lua',
 }: IDEContextProviderProps) {
   // Filesystem hook
   const filesystem = useFileSystem()
@@ -32,11 +32,25 @@ export function IDEContextProvider({
   // Tab bar hook
   const tabBar = useTabBar()
 
+  // Toast hook for error notifications
+  const { toasts, showToast, dismissToast } = useToast()
+
+  // Helper to show error messages
+  const showError = useCallback((message: string) => {
+    showToast({ message, type: 'error' })
+  }, [showToast])
+
   // Code state - stores current editor content
   const [code, setCodeState] = useState(initialCode)
 
   // Track original content per file for dirty detection (state to trigger re-renders)
   const [originalContent, setOriginalContent] = useState<Map<string, string>>(new Map())
+
+  // Track unsaved content per tab (content that differs from filesystem)
+  const [unsavedContent, setUnsavedContent] = useState<Map<string, string>>(new Map())
+
+  // Track pending new file that needs renaming
+  const [pendingNewFilePath, setPendingNewFilePath] = useState<string | null>(null)
 
   // Terminal state
   const [terminalOutput, setTerminalOutput] = useState<string[]>([])
@@ -54,8 +68,8 @@ export function IDEContextProvider({
   const activeTab = tabBar.activeTab
   const tabs = tabBar.tabs
 
-  // fileName derived from active tab or default
-  const fileName = activeTab ? getFileName(activeTab) : initialFileName
+  // fileName derived from active tab (null when no file is open)
+  const fileName = activeTab ? getFileName(activeTab) : null
 
   // isDirty: compare current code to original content
   const isDirty = useMemo(() => {
@@ -112,12 +126,71 @@ export function IDEContextProvider({
     setCodeState(newCode)
     if (activeTab) {
       const original = originalContent.get(activeTab)
-      tabBar.setDirty(activeTab, original !== undefined && newCode !== original)
+      const isDirtyNow = original !== undefined && newCode !== original
+      tabBar.setDirty(activeTab, isDirtyNow)
+
+      // Track unsaved content for tab switching
+      if (isDirtyNow) {
+        setUnsavedContent(prev => {
+          const next = new Map(prev)
+          next.set(activeTab, newCode)
+          return next
+        })
+      } else {
+        // Clear unsaved content if back to original
+        setUnsavedContent(prev => {
+          if (prev.has(activeTab)) {
+            const next = new Map(prev)
+            next.delete(activeTab)
+            return next
+          }
+          return prev
+        })
+      }
     }
   }, [activeTab, originalContent, tabBar])
 
+  // Helper to load content for a path - checks unsavedContent first, then filesystem
+  const loadContentForPath = useCallback((path: string) => {
+    const savedUnsaved = unsavedContent.get(path)
+    if (savedUnsaved !== undefined) {
+      setCodeState(savedUnsaved)
+    } else {
+      const content = filesystem.readFile(path)
+      if (content !== null) {
+        setCodeState(content)
+      }
+    }
+  }, [filesystem, unsavedContent])
+
   // Open a file: load content and open tab
   const openFile = useCallback((path: string) => {
+    // If file is already open as a tab, just select it (preserving unsaved changes)
+    const existingTab = tabBar.tabs.find(t => t.path === path)
+    if (existingTab) {
+      // Save current unsaved content before switching
+      if (activeTab && activeTab !== path && code !== originalContent.get(activeTab)) {
+        setUnsavedContent(prev => {
+          const next = new Map(prev)
+          next.set(activeTab, code)
+          return next
+        })
+      }
+
+      tabBar.selectTab(path)
+      loadContentForPath(path)
+      return
+    }
+
+    // Save current unsaved content before switching
+    if (activeTab && code !== originalContent.get(activeTab)) {
+      setUnsavedContent(prev => {
+        const next = new Map(prev)
+        next.set(activeTab, code)
+        return next
+      })
+    }
+
     const content = filesystem.readFile(path)
     if (content !== null) {
       setCodeState(content)
@@ -128,7 +201,7 @@ export function IDEContextProvider({
       })
       tabBar.openTab(path, getFileName(path))
     }
-  }, [filesystem, tabBar])
+  }, [activeTab, code, filesystem, loadContentForPath, originalContent, tabBar])
 
   // Save current file
   const saveFile = useCallback(() => {
@@ -139,19 +212,33 @@ export function IDEContextProvider({
         next.set(activeTab, code)
         return next
       })
+      // Clear unsaved content since file is now saved
+      setUnsavedContent(prev => {
+        if (prev.has(activeTab)) {
+          const next = new Map(prev)
+          next.delete(activeTab)
+          return next
+        }
+        return prev
+      })
       tabBar.setDirty(activeTab, false)
     }
   }, [activeTab, code, filesystem, tabBar])
 
-  // Select a tab: load its content
+  // Select a tab: load its content (preserving unsaved edits)
   const selectTab = useCallback((path: string) => {
-    // Save current content to a temp map before switching
-    tabBar.selectTab(path)
-    const content = filesystem.readFile(path)
-    if (content !== null) {
-      setCodeState(content)
+    // Save current unsaved content before switching
+    if (activeTab && code !== originalContent.get(activeTab)) {
+      setUnsavedContent(prev => {
+        const next = new Map(prev)
+        next.set(activeTab, code)
+        return next
+      })
     }
-  }, [filesystem, tabBar])
+
+    tabBar.selectTab(path)
+    loadContentForPath(path)
+  }, [activeTab, code, loadContentForPath, originalContent, tabBar])
 
   // Close a tab
   const closeTab = useCallback((path: string) => {
@@ -161,29 +248,73 @@ export function IDEContextProvider({
       next.delete(path)
       return next
     })
+    // Clean up unsaved content for closed tab
+    setUnsavedContent(prev => {
+      if (prev.has(path)) {
+        const next = new Map(prev)
+        next.delete(path)
+        return next
+      }
+      return prev
+    })
 
     // If closing active tab, load next active tab's content
     const remainingTabs = tabs.filter(t => t.path !== path)
     if (remainingTabs.length > 0 && activeTab === path) {
       const nextTab = remainingTabs[Math.min(tabs.findIndex(t => t.path === path), remainingTabs.length - 1)]
-      const content = filesystem.readFile(nextTab.path)
-      if (content !== null) {
-        setCodeState(content)
-      }
+      loadContentForPath(nextTab.path)
     } else if (remainingTabs.length === 0) {
       setCodeState(initialCode)
     }
-  }, [activeTab, filesystem, initialCode, tabBar, tabs])
+  }, [activeTab, initialCode, loadContentForPath, tabBar, tabs])
 
-  // Create file wrapper
+  // Create file wrapper with error handling
   const createFile = useCallback((path: string, content: string = '') => {
-    filesystem.createFile(path, content)
-  }, [filesystem])
+    try {
+      filesystem.createFile(path, content)
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Failed to create file')
+    }
+  }, [filesystem, showError])
 
   // Create folder wrapper
   const createFolder = useCallback((path: string) => {
     filesystem.createFolder(path)
   }, [filesystem])
+
+  // Generate unique filename for new files
+  const generateUniqueFileName = useCallback((parentPath: string = '/'): string => {
+    const baseName = 'untitled'
+    const extension = '.lua'
+    let counter = 1
+
+    // Check existing files in parent directory
+    const prefix = parentPath === '/' ? '/' : `${parentPath}/`
+
+    while (filesystem.exists(`${prefix}${baseName}-${counter}${extension}`)) {
+      counter++
+    }
+
+    return `${baseName}-${counter}${extension}`
+  }, [filesystem])
+
+  // Create new file with rename mode
+  const createFileWithRename = useCallback((parentPath: string = '/') => {
+    const fileName = generateUniqueFileName(parentPath)
+    const fullPath = parentPath === '/' ? `/${fileName}` : `${parentPath}/${fileName}`
+
+    try {
+      filesystem.createFile(fullPath, '')
+      setPendingNewFilePath(fullPath)
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Failed to create file')
+    }
+  }, [filesystem, generateUniqueFileName, showError])
+
+  // Clear pending new file
+  const clearPendingNewFile = useCallback(() => {
+    setPendingNewFilePath(null)
+  }, [])
 
   // Delete file - also close tab if open
   const deleteFile = useCallback((path: string) => {
@@ -199,34 +330,43 @@ export function IDEContextProvider({
     filesystem.deleteFolder(path)
   }, [filesystem])
 
-  // Rename file - update tab if open
+  // Rename file - update tab if open, with error handling
   const renameFile = useCallback((oldPath: string, newName: string) => {
     const parentPath = getParentPath(oldPath)
     const newPath = parentPath === '/' ? `/${newName}` : `${parentPath}/${newName}`
 
-    // Update tab if open
-    const tabIndex = tabs.findIndex(t => t.path === oldPath)
-    if (tabIndex !== -1) {
-      filesystem.renameFile(oldPath, newPath)
-
-      // Update original content map
-      setOriginalContent(prev => {
-        if (prev.has(oldPath)) {
-          const next = new Map(prev)
-          const origContent = next.get(oldPath)!
-          next.delete(oldPath)
-          next.set(newPath, origContent)
-          return next
-        }
-        return prev
-      })
-
-      // Rename the tab in place
-      tabBar.renameTab(oldPath, newPath, newName)
-    } else {
-      filesystem.renameFile(oldPath, newPath)
+    // Skip if the path hasn't changed (same name)
+    if (oldPath === newPath) {
+      return
     }
-  }, [filesystem, tabBar, tabs])
+
+    try {
+      // Update tab if open
+      const tabIndex = tabs.findIndex(t => t.path === oldPath)
+      if (tabIndex !== -1) {
+        filesystem.renameFile(oldPath, newPath)
+
+        // Update original content map
+        setOriginalContent(prev => {
+          if (prev.has(oldPath)) {
+            const next = new Map(prev)
+            const origContent = next.get(oldPath)!
+            next.delete(oldPath)
+            next.set(newPath, origContent)
+            return next
+          }
+          return prev
+        })
+
+        // Rename the tab in place
+        tabBar.renameTab(oldPath, newPath, newName)
+      } else {
+        filesystem.renameFile(oldPath, newPath)
+      }
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Failed to rename file')
+    }
+  }, [filesystem, showError, tabBar, tabs])
 
   // Rename folder wrapper
   const renameFolder = useCallback((oldPath: string, newName: string) => {
@@ -234,6 +374,15 @@ export function IDEContextProvider({
     const newPath = parentPath === '/' ? `/${newName}` : `${parentPath}/${newName}`
     filesystem.renameFolder(oldPath, newPath)
   }, [filesystem])
+
+  // Move file wrapper with error handling
+  const moveFile = useCallback((sourcePath: string, targetFolderPath: string) => {
+    try {
+      filesystem.moveFile(sourcePath, targetFolderPath)
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Failed to move file')
+    }
+  }, [filesystem, showError])
 
   // Actions
   const runCode = useCallback(async () => {
@@ -282,6 +431,7 @@ export function IDEContextProvider({
       deleteFolder,
       renameFile,
       renameFolder,
+      moveFile,
       openFile,
       saveFile,
       // Tabs
@@ -289,6 +439,15 @@ export function IDEContextProvider({
       activeTab,
       selectTab,
       closeTab,
+      // Toasts
+      toasts,
+      showError,
+      dismissToast,
+      // New file creation
+      pendingNewFilePath,
+      generateUniqueFileName,
+      createFileWithRename,
+      clearPendingNewFile,
     }),
     [
       engine,
@@ -313,12 +472,20 @@ export function IDEContextProvider({
       deleteFolder,
       renameFile,
       renameFolder,
+      moveFile,
       openFile,
       saveFile,
       tabs,
       activeTab,
       selectTab,
       closeTab,
+      toasts,
+      showError,
+      dismissToast,
+      pendingNewFilePath,
+      generateUniqueFileName,
+      createFileWithRename,
+      clearPendingNewFile,
     ]
   )
 

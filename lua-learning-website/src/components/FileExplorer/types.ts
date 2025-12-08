@@ -3,6 +3,7 @@ import type { TreeNode } from '../../hooks/useFileSystem'
 export interface FileExplorerProps {
   tree: TreeNode[]
   selectedPath?: string | null
+  pendingNewFilePath?: string | null
   onCreateFile: (parentPath?: string) => void
   onCreateFolder: (parentPath?: string) => void
   onRenameFile: (oldPath: string, newName: string) => void
@@ -10,6 +11,8 @@ export interface FileExplorerProps {
   onDeleteFile: (path: string) => void
   onDeleteFolder: (path: string) => void
   onSelectFile: (path: string) => void
+  onMoveFile?: (sourcePath: string, targetFolderPath: string) => void
+  onCancelPendingNewFile?: () => void
   className?: string
 }
 

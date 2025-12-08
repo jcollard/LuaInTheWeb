@@ -38,8 +38,11 @@ test.describe('File Explorer', () => {
 
   test.describe('file selection', () => {
     test('clicking a file selects it', async ({ page }) => {
-      // Arrange - Create a file first
+      // Arrange - Create a file first and complete the rename
       await page.getByRole('button', { name: /new file/i }).click()
+      const sidebar = page.getByTestId('sidebar-panel')
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
       await page.waitForTimeout(200)
 
       // Find a file in the tree and click it
@@ -127,29 +130,39 @@ test.describe('File Explorer', () => {
 
   test.describe('F2 rename shortcut', () => {
     test('pressing F2 on selected file enters rename mode', async ({ page }) => {
-      // Arrange - Create a file and select it
+      // Arrange - Create a file, complete rename, and select it
       await page.getByRole('button', { name: /new file/i }).click()
+      const sidebar = page.getByTestId('sidebar-panel')
+      let input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
       await page.waitForTimeout(200)
+
       const treeItem = page.getByRole('treeitem').first()
       await treeItem.click()
+      await page.waitForTimeout(100)
 
       // Act - Press F2
       const tree = page.getByRole('tree', { name: 'File Explorer' })
       await tree.press('F2')
 
       // Assert - Input should appear in sidebar for renaming
-      const sidebar = page.getByTestId('sidebar-panel')
-      await expect(sidebar.getByRole('textbox')).toBeVisible()
+      input = sidebar.getByRole('textbox')
+      await expect(input).toBeVisible()
     })
   })
 
   test.describe('Delete key shortcut', () => {
     test('pressing Delete on selected file shows confirmation dialog', async ({ page }) => {
-      // Arrange - Create a file and select it
+      // Arrange - Create a file, complete rename, and select it
       await page.getByRole('button', { name: /new file/i }).click()
+      const sidebar = page.getByTestId('sidebar-panel')
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
       await page.waitForTimeout(200)
+
       const treeItem = page.getByRole('treeitem').first()
       await treeItem.click()
+      await page.waitForTimeout(100)
 
       // Act - Press Delete
       const tree = page.getByRole('tree', { name: 'File Explorer' })
@@ -161,17 +174,26 @@ test.describe('File Explorer', () => {
     })
 
     test('confirming delete removes the file', async ({ page }) => {
-      // Arrange - Create a file and select it
+      // Arrange - Create a file, complete rename, and select it
       await page.getByRole('button', { name: /new file/i }).click()
+      const sidebar = page.getByTestId('sidebar-panel')
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
       await page.waitForTimeout(200)
+
       const treeItem = page.getByRole('treeitem').first()
       const fileName = await treeItem.textContent()
       await treeItem.click()
+      await page.waitForTimeout(100)
 
       // Act - Press Delete and confirm
       const tree = page.getByRole('tree', { name: 'File Explorer' })
       await tree.press('Delete')
-      await page.getByRole('button', { name: /delete/i }).click()
+      await page.waitForTimeout(100)
+
+      // Click the Delete button in the dialog
+      const dialog = page.getByRole('dialog')
+      await dialog.getByRole('button', { name: /delete/i }).click()
 
       // Assert - File should be removed from tree
       await expect(page.getByText(fileName!)).not.toBeVisible()
@@ -207,6 +229,138 @@ test.describe('File Explorer', () => {
 
       // Should still be in tree
       await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+    })
+  })
+
+  test.describe('empty state', () => {
+    test('shows welcome message when no file is open', async ({ page }) => {
+      // Assert - Welcome message should be visible when no file is open
+      await expect(page.getByText(/create a new file or open an existing one/i)).toBeVisible()
+    })
+
+    test('hides welcome message after opening a file', async ({ page }) => {
+      // Arrange - Create a file and complete rename
+      await page.getByRole('button', { name: /new file/i }).click()
+      const sidebar = page.getByTestId('sidebar-panel')
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
+      await page.waitForTimeout(200)
+
+      // Double-click the file to open it
+      const treeItem = page.getByRole('treeitem').first()
+      await treeItem.dblclick()
+      await page.waitForTimeout(200)
+
+      // Assert - Welcome message should be hidden
+      await expect(page.getByText(/create a new file or open an existing one/i)).not.toBeVisible()
+    })
+  })
+
+  test.describe('new file inline rename', () => {
+    test('new file immediately enters rename mode', async ({ page }) => {
+      // Act - Click New File button
+      await page.getByRole('button', { name: /new file/i }).click()
+
+      // Assert - Input should appear in sidebar for renaming
+      const sidebar = page.getByTestId('sidebar-panel')
+      await expect(sidebar.getByRole('textbox')).toBeVisible()
+    })
+
+    test('can rename new file by typing and pressing Enter', async ({ page }) => {
+      // Act - Click New File button and rename
+      await page.getByRole('button', { name: /new file/i }).click()
+      await page.waitForTimeout(100)
+
+      // Type new name
+      const sidebar = page.getByTestId('sidebar-panel')
+      const input = sidebar.getByRole('textbox')
+      await input.clear()
+      await input.fill('my-script.lua')
+      await input.press('Enter')
+      await page.waitForTimeout(200)
+
+      // Assert - File should be renamed in tree
+      await expect(page.getByText('my-script.lua')).toBeVisible()
+    })
+
+    test('pressing Escape on new file deletes it', async ({ page }) => {
+      // Act - Click New File button and cancel with Escape
+      await page.getByRole('button', { name: /new file/i }).click()
+      await page.waitForTimeout(100)
+
+      // Press Escape to cancel
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(200)
+
+      // Assert - File should be deleted (untitled-1.lua should not exist)
+      await expect(page.getByText('untitled-1.lua')).not.toBeVisible()
+    })
+  })
+
+  test.describe('drag and drop', () => {
+    test('file items are draggable', async ({ page }) => {
+      // Arrange - Create a file and complete rename
+      await page.getByRole('button', { name: /new file/i }).click()
+      const sidebar = page.getByTestId('sidebar-panel')
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
+      await page.waitForTimeout(200)
+
+      // Assert - File item should be draggable
+      const treeItem = page.getByRole('treeitem').first()
+      await expect(treeItem).toHaveAttribute('draggable', 'true')
+    })
+
+    test('folder items are draggable', async ({ page }) => {
+      // Arrange - Create a folder
+      await page.getByRole('button', { name: /new folder/i }).click()
+      await page.waitForTimeout(200)
+
+      // Assert - Folder item should be draggable
+      const treeItem = page.getByRole('treeitem').first()
+      await expect(treeItem).toHaveAttribute('draggable', 'true')
+    })
+  })
+
+  test.describe('error toast notifications', () => {
+    test('shows error toast when creating file with invalid characters', async ({ page }) => {
+      // Arrange - Create a file
+      await page.getByRole('button', { name: /new file/i }).click()
+      await page.waitForTimeout(100)
+
+      // Act - Try to rename with invalid characters
+      const sidebar = page.getByTestId('sidebar-panel')
+      const input = sidebar.getByRole('textbox')
+      await input.clear()
+      await input.fill('bad<name>.lua')
+      await input.press('Enter')
+      await page.waitForTimeout(200)
+
+      // Assert - Error toast should appear in toast container
+      const toastContainer = page.getByTestId('toast-container')
+      await expect(toastContainer).toBeVisible()
+      await expect(toastContainer.getByText(/invalid|forbidden/i)).toBeVisible()
+    })
+
+    test('error toast can be dismissed', async ({ page }) => {
+      // Arrange - Create an error condition
+      await page.getByRole('button', { name: /new file/i }).click()
+      await page.waitForTimeout(100)
+      const sidebar = page.getByTestId('sidebar-panel')
+      const input = sidebar.getByRole('textbox')
+      await input.clear()
+      await input.fill('bad<name>.lua')
+      await input.press('Enter')
+      await page.waitForTimeout(200)
+
+      // Act - Click dismiss button on toast
+      const toastContainer = page.getByTestId('toast-container')
+      await expect(toastContainer).toBeVisible()
+      const dismissButton = toastContainer.getByRole('button', { name: /close/i })
+      await dismissButton.click()
+
+      // Assert - Toast should be dismissed
+      await expect(toastContainer).not.toBeVisible()
     })
   })
 })

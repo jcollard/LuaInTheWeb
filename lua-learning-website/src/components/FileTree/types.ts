@@ -13,4 +13,6 @@ export interface FileTreeProps {
   renamingPath?: string | null
   onRenameSubmit?: (path: string, newName: string) => void
   onRenameCancel?: () => void
+  // Drag and drop
+  onDrop?: (sourcePath: string, targetPath: string) => void
 }

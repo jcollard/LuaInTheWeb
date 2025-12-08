@@ -275,4 +275,54 @@ describe('EditorPanel', () => {
       expect(screen.getByText('main.lua')).toBeInTheDocument()
     })
   })
+
+  describe('empty state', () => {
+    it('should show welcome message when no file is open', () => {
+      // Arrange & Act
+      render(
+        <EditorPanel
+          code=""
+          onChange={vi.fn()}
+          fileName={null}
+          isDirty={false}
+          onRun={vi.fn()}
+        />
+      )
+
+      // Assert
+      expect(screen.getByText(/create a new file/i)).toBeInTheDocument()
+    })
+
+    it('should still show editor when no file is open', () => {
+      // Arrange & Act
+      render(
+        <EditorPanel
+          code=""
+          onChange={vi.fn()}
+          fileName={null}
+          isDirty={false}
+          onRun={vi.fn()}
+        />
+      )
+
+      // Assert - editor should still be visible for quick experimentation
+      expect(screen.getByTestId('mock-monaco')).toBeInTheDocument()
+    })
+
+    it('should not show tab area when no file is open', () => {
+      // Arrange & Act
+      render(
+        <EditorPanel
+          code=""
+          onChange={vi.fn()}
+          fileName={null}
+          isDirty={false}
+          onRun={vi.fn()}
+        />
+      )
+
+      // Assert - no tabs or tab-like elements should be shown
+      expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    })
+  })
 })

@@ -9,6 +9,7 @@ import { IDEPanelGroup } from '../IDEPanelGroup'
 import { IDEPanel } from '../IDEPanel'
 import { IDEResizeHandle } from '../IDEResizeHandle'
 import { ConfirmDialog } from '../ConfirmDialog'
+import { ToastContainer } from '../Toast'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import styles from './IDELayout.module.css'
 import type { IDELayoutProps } from './types'
@@ -34,19 +35,26 @@ function IDELayoutInner({ className }: { className?: string }) {
     runCode,
     // Filesystem
     fileTree,
-    createFile,
     createFolder,
     deleteFile,
     deleteFolder,
     renameFile,
     renameFolder,
+    moveFile,
     openFile,
     saveFile,
+    // New file creation
+    pendingNewFilePath,
+    createFileWithRename,
+    clearPendingNewFile,
     // Tabs
     tabs,
     activeTab,
     selectTab,
     closeTab,
+    // Toasts
+    toasts,
+    dismissToast,
   } = useIDE()
 
   const [isRunning, setIsRunning] = useState(false)
@@ -75,28 +83,20 @@ function IDELayoutInner({ className }: { className?: string }) {
     ? `${styles.ideLayout} ${className}`
     : styles.ideLayout
 
-  // Generate unique filename for new files
-  const generateFileName = useCallback((parentPath?: string, isFolder = false) => {
-    const baseName = isFolder ? 'new-folder' : 'new-file.lua'
+  // Wrapper for FileExplorer's onCreateFile - creates with unique filename and starts rename
+  const handleCreateFile = useCallback((parentPath?: string) => {
+    createFileWithRename(parentPath)
+  }, [createFileWithRename])
+
+  // Wrapper for FileExplorer's onCreateFolder - generates a unique folder name
+  const handleCreateFolder = useCallback((parentPath?: string) => {
+    const baseName = 'new-folder'
     const parentDir = parentPath || ''
     const fullPath = parentDir === '/' || parentDir === ''
       ? `/${baseName}`
       : `${parentDir}/${baseName}`
-    return fullPath
-  }, [])
-
-  // Wrapper for FileExplorer's onCreateFile - generates a unique filename
-  const handleCreateFile = useCallback((parentPath?: string) => {
-    const newPath = generateFileName(parentPath, false)
-    createFile(newPath, '-- New file\n')
-    openFile(newPath)
-  }, [createFile, generateFileName, openFile])
-
-  // Wrapper for FileExplorer's onCreateFolder - generates a unique folder name
-  const handleCreateFolder = useCallback((parentPath?: string) => {
-    const newPath = generateFileName(parentPath, true)
-    createFolder(newPath)
-  }, [createFolder, generateFileName])
+    createFolder(fullPath)
+  }, [createFolder])
 
   // Handle tab close with dirty confirmation
   const handleCloseTab = useCallback((path: string) => {
@@ -127,6 +127,7 @@ function IDELayoutInner({ className }: { className?: string }) {
   const explorerProps = {
     tree: fileTree,
     selectedPath: activeTab,
+    pendingNewFilePath,
     onCreateFile: handleCreateFile,
     onCreateFolder: handleCreateFolder,
     onRenameFile: renameFile,
@@ -134,6 +135,8 @@ function IDELayoutInner({ className }: { className?: string }) {
     onDeleteFile: deleteFile,
     onDeleteFolder: deleteFolder,
     onSelectFile: openFile,
+    onMoveFile: moveFile,
+    onCancelPendingNewFile: clearPendingNewFile,
   }
 
   // Tab bar props for EditorPanel (only when tabs exist)
@@ -220,6 +223,8 @@ function IDELayoutInner({ className }: { className?: string }) {
         onConfirm={handleConfirmCloseTab}
         onCancel={handleCancelCloseTab}
       />
+      {/* Toast notifications */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
     </div>
   )
 }
@@ -229,11 +234,10 @@ function IDELayoutInner({ className }: { className?: string }) {
  */
 export function IDELayout({
   initialCode = '',
-  initialFileName = 'untitled.lua',
   className,
 }: IDELayoutProps) {
   return (
-    <IDEContextProvider initialCode={initialCode} initialFileName={initialFileName}>
+    <IDEContextProvider initialCode={initialCode}>
       <IDELayoutInner className={className} />
     </IDEContextProvider>
   )

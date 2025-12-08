@@ -45,12 +45,12 @@ test.describe('IDE Editor', () => {
     await expect(page.getByText('Extensions coming soon...')).toBeVisible()
   })
 
-  test('displays editor panel with Monaco editor', async ({ page }) => {
+  test('displays editor panel with welcome message when no file is open', async ({ page }) => {
     // Assert - Editor panel should be visible
     await expect(page.locator('[data-testid="editor-panel"]')).toBeVisible()
 
-    // Should have a file tab
-    await expect(page.getByText('untitled.lua')).toBeVisible()
+    // Should show welcome message when no file is open
+    await expect(page.getByText(/create a new file or open an existing one/i)).toBeVisible()
 
     // Should have run button
     await expect(page.getByRole('button', { name: /run/i })).toBeVisible()

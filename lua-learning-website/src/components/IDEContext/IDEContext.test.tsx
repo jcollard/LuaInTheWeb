@@ -162,22 +162,34 @@ describe('IDEContext', () => {
   })
 
   describe('file name', () => {
-    it('should provide default file name', () => {
+    beforeEach(() => {
+      localStorage.clear()
+    })
+
+    it('should return null when no file is open', () => {
       // Arrange & Act
       const { result } = renderHook(() => useIDE(), {
         wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
       })
 
       // Assert
-      expect(result.current.fileName).toBe('untitled.lua')
+      expect(result.current.fileName).toBeNull()
     })
 
-    it('should provide custom file name from props', () => {
-      // Arrange & Act
+    it('should return file name from active tab when file is open', () => {
+      // Arrange
       const { result } = renderHook(() => useIDE(), {
-        wrapper: ({ children }) => (
-          <IDEContextProvider initialFileName="main.lua">{children}</IDEContextProvider>
-        ),
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Act - create a file (separate act blocks since createFile updates state)
+      act(() => {
+        result.current.createFile('/main.lua', '')
+      })
+
+      // Open the file after state has updated
+      act(() => {
+        result.current.openFile('/main.lua')
       })
 
       // Assert
@@ -826,6 +838,491 @@ describe('IDEContext', () => {
       expect(result.current.tabs[0].path).toBe('/new.lua')
       expect(result.current.tabs[0].name).toBe('new.lua')
       expect(result.current.activeTab).toBe('/new.lua')
+    })
+  })
+
+  describe('empty state', () => {
+    beforeEach(() => {
+      localStorage.clear()
+    })
+
+    it('should return null fileName when no file is open', () => {
+      // Arrange & Act
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Assert - when no file is open, fileName should be null
+      expect(result.current.fileName).toBeNull()
+    })
+
+    it('should have empty code when no file is open', () => {
+      // Arrange & Act
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Assert
+      expect(result.current.code).toBe('')
+    })
+
+    it('should have null activeTab when no file is open', () => {
+      // Arrange & Act
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Assert
+      expect(result.current.activeTab).toBeNull()
+    })
+
+    it('should have empty tabs array when no file is open', () => {
+      // Arrange & Act
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Assert
+      expect(result.current.tabs).toEqual([])
+    })
+  })
+
+  describe('new file creation', () => {
+    beforeEach(() => {
+      localStorage.clear()
+    })
+
+    it('should provide generateUniqueFileName function', () => {
+      // Arrange & Act
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Assert
+      expect(result.current.generateUniqueFileName).toBeInstanceOf(Function)
+    })
+
+    it('should generate untitled-1.lua for first new file', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Act
+      const fileName = result.current.generateUniqueFileName()
+
+      // Assert
+      expect(fileName).toBe('untitled-1.lua')
+    })
+
+    it('should generate untitled-2.lua if untitled-1.lua exists', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Create untitled-1.lua
+      act(() => {
+        result.current.createFile('/untitled-1.lua', '')
+      })
+
+      // Act
+      const fileName = result.current.generateUniqueFileName()
+
+      // Assert
+      expect(fileName).toBe('untitled-2.lua')
+    })
+
+    it('should skip existing numbered files to find unique name', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Create files 1, 2, and 3
+      act(() => {
+        result.current.createFile('/untitled-1.lua', '')
+        result.current.createFile('/untitled-2.lua', '')
+        result.current.createFile('/untitled-3.lua', '')
+      })
+
+      // Act
+      const fileName = result.current.generateUniqueFileName()
+
+      // Assert
+      expect(fileName).toBe('untitled-4.lua')
+    })
+
+    it('should provide pendingNewFilePath state', () => {
+      // Arrange & Act
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Assert
+      expect(result.current.pendingNewFilePath).toBeNull()
+    })
+
+    it('should provide createFileWithRename function', () => {
+      // Arrange & Act
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Assert
+      expect(result.current.createFileWithRename).toBeInstanceOf(Function)
+    })
+
+    it('should set pendingNewFilePath when createFileWithRename is called', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Act
+      act(() => {
+        result.current.createFileWithRename()
+      })
+
+      // Assert
+      expect(result.current.pendingNewFilePath).toBe('/untitled-1.lua')
+    })
+
+    it('should create file in filesystem when createFileWithRename is called', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Act
+      act(() => {
+        result.current.createFileWithRename()
+      })
+
+      // Assert
+      expect(result.current.fileTree).toContainEqual(
+        expect.objectContaining({ path: '/untitled-1.lua' })
+      )
+    })
+
+    it('should clear pendingNewFilePath after clearPendingNewFile is called', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFileWithRename()
+      })
+      expect(result.current.pendingNewFilePath).toBe('/untitled-1.lua')
+
+      // Act
+      act(() => {
+        result.current.clearPendingNewFile()
+      })
+
+      // Assert
+      expect(result.current.pendingNewFilePath).toBeNull()
+    })
+
+    it('should create file in specified parent folder', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Create a folder first
+      act(() => {
+        result.current.createFolder('/utils')
+      })
+
+      // Act
+      act(() => {
+        result.current.createFileWithRename('/utils')
+      })
+
+      // Assert
+      expect(result.current.pendingNewFilePath).toBe('/utils/untitled-1.lua')
+    })
+  })
+
+  describe('error handling', () => {
+    beforeEach(() => {
+      localStorage.clear()
+    })
+
+    it('should provide showError function', () => {
+      // Arrange & Act
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Assert
+      expect(result.current.showError).toBeInstanceOf(Function)
+    })
+
+    it('should provide toasts array', () => {
+      // Arrange & Act
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Assert
+      expect(result.current.toasts).toEqual([])
+    })
+
+    it('should show error toast when renaming file to existing name', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Create two files
+      act(() => {
+        result.current.createFile('/file1.lua', '')
+        result.current.createFile('/file2.lua', '')
+      })
+
+      // Act - try to rename file1 to file2's name
+      act(() => {
+        result.current.renameFile('/file1.lua', 'file2.lua')
+      })
+
+      // Assert - should have error toast
+      expect(result.current.toasts).toHaveLength(1)
+      expect(result.current.toasts[0].type).toBe('error')
+      expect(result.current.toasts[0].message).toMatch(/already exists/i)
+    })
+
+    it('should show error toast when creating file with existing name', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Create a file
+      act(() => {
+        result.current.createFile('/test.lua', '')
+      })
+
+      // Act - try to create another file with same name
+      act(() => {
+        result.current.createFile('/test.lua', '')
+      })
+
+      // Assert - should have error toast
+      expect(result.current.toasts).toHaveLength(1)
+      expect(result.current.toasts[0].type).toBe('error')
+      expect(result.current.toasts[0].message).toMatch(/already exists/i)
+    })
+
+    it('should provide dismissToast function', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Assert
+      expect(result.current.dismissToast).toBeInstanceOf(Function)
+    })
+
+    it('should dismiss toast when dismissToast is called', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Create duplicate file to trigger error
+      act(() => {
+        result.current.createFile('/test.lua', '')
+      })
+      act(() => {
+        result.current.createFile('/test.lua', '')
+      })
+
+      expect(result.current.toasts).toHaveLength(1)
+      const toastId = result.current.toasts[0].id
+
+      // Act
+      act(() => {
+        result.current.dismissToast(toastId)
+      })
+
+      // Assert
+      expect(result.current.toasts).toHaveLength(0)
+    })
+  })
+
+  describe('tab state preservation', () => {
+    beforeEach(() => {
+      localStorage.clear()
+    })
+
+    it('should preserve unsaved edits when switching tabs', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Create two files
+      act(() => {
+        result.current.createFile('/file1.lua', 'original1')
+        result.current.createFile('/file2.lua', 'original2')
+      })
+
+      // Open file1
+      act(() => {
+        result.current.openFile('/file1.lua')
+      })
+
+      // Edit file1 (but don't save)
+      act(() => {
+        result.current.setCode('modified1')
+      })
+      expect(result.current.code).toBe('modified1')
+      expect(result.current.isDirty).toBe(true)
+
+      // Open file2
+      act(() => {
+        result.current.openFile('/file2.lua')
+      })
+      expect(result.current.code).toBe('original2')
+
+      // Act - switch back to file1
+      act(() => {
+        result.current.selectTab('/file1.lua')
+      })
+
+      // Assert - edits should be preserved
+      expect(result.current.code).toBe('modified1')
+      expect(result.current.isDirty).toBe(true)
+    })
+
+    it('should preserve dirty indicator across tab switches', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFile('/file1.lua', 'original1')
+        result.current.createFile('/file2.lua', 'original2')
+      })
+
+      act(() => {
+        result.current.openFile('/file1.lua')
+      })
+
+      // Make file1 dirty
+      act(() => {
+        result.current.setCode('modified1')
+      })
+      expect(result.current.tabs[0].isDirty).toBe(true)
+
+      // Open and switch to file2
+      act(() => {
+        result.current.openFile('/file2.lua')
+      })
+
+      // Act - switch back to file1
+      act(() => {
+        result.current.selectTab('/file1.lua')
+      })
+
+      // Assert - dirty indicator should still be true
+      expect(result.current.tabs.find(t => t.path === '/file1.lua')?.isDirty).toBe(true)
+      expect(result.current.isDirty).toBe(true)
+    })
+
+    it('should clear unsaved content from memory when file is saved', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFile('/file1.lua', 'original1')
+        result.current.createFile('/file2.lua', 'original2')
+      })
+
+      act(() => {
+        result.current.openFile('/file1.lua')
+      })
+
+      // Edit file1
+      act(() => {
+        result.current.setCode('saved_content')
+      })
+
+      // Save file1
+      act(() => {
+        result.current.saveFile()
+      })
+
+      // Switch to file2
+      act(() => {
+        result.current.openFile('/file2.lua')
+      })
+
+      // Switch back to file1
+      act(() => {
+        result.current.selectTab('/file1.lua')
+      })
+
+      // Assert - should show saved content (not from memory map, from filesystem)
+      expect(result.current.code).toBe('saved_content')
+      expect(result.current.isDirty).toBe(false)
+    })
+
+    it('should handle rapid tab switches without losing content', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFile('/a.lua', 'content_a')
+        result.current.createFile('/b.lua', 'content_b')
+        result.current.createFile('/c.lua', 'content_c')
+      })
+
+      act(() => {
+        result.current.openFile('/a.lua')
+      })
+
+      act(() => {
+        result.current.setCode('edited_a')
+      })
+
+      act(() => {
+        result.current.openFile('/b.lua')
+      })
+
+      act(() => {
+        result.current.setCode('edited_b')
+      })
+
+      act(() => {
+        result.current.openFile('/c.lua')
+      })
+
+      // Act - rapid switches
+      act(() => {
+        result.current.selectTab('/a.lua')
+      })
+      expect(result.current.code).toBe('edited_a')
+
+      act(() => {
+        result.current.selectTab('/b.lua')
+      })
+      expect(result.current.code).toBe('edited_b')
+
+      act(() => {
+        result.current.selectTab('/c.lua')
+      })
+
+      // Assert
+      expect(result.current.code).toBe('content_c')
     })
   })
 })

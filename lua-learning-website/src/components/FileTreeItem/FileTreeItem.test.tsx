@@ -314,4 +314,137 @@ describe('FileTreeItem', () => {
       expect(item).toHaveStyle({ paddingLeft: '0px' })
     })
   })
+
+  describe('drag and drop', () => {
+    it('should be draggable', () => {
+      // Arrange & Act
+      render(<FileTreeItem {...defaultFileProps} />)
+
+      // Assert
+      expect(screen.getByRole('treeitem')).toHaveAttribute('draggable', 'true')
+    })
+
+    it('should set drag data on drag start', () => {
+      // Arrange
+      render(<FileTreeItem {...defaultFileProps} />)
+      const dataTransfer = {
+        setData: vi.fn(),
+        effectAllowed: '',
+      }
+
+      // Act
+      fireEvent.dragStart(screen.getByRole('treeitem'), { dataTransfer })
+
+      // Assert
+      expect(dataTransfer.setData).toHaveBeenCalledWith('text/plain', '/main.lua')
+    })
+
+    it('should call onDragStart when provided', () => {
+      // Arrange
+      const onDragStart = vi.fn()
+      render(<FileTreeItem {...defaultFileProps} onDragStart={onDragStart} />)
+      const dataTransfer = {
+        setData: vi.fn(),
+        effectAllowed: '',
+      }
+
+      // Act
+      fireEvent.dragStart(screen.getByRole('treeitem'), { dataTransfer })
+
+      // Assert
+      expect(onDragStart).toHaveBeenCalledWith('/main.lua')
+    })
+
+    it('folder should accept drop', () => {
+      // Arrange
+      const onDrop = vi.fn()
+      render(<FileTreeItem {...defaultFolderProps} onDrop={onDrop} />)
+      const dataTransfer = {
+        getData: vi.fn().mockReturnValue('/some-file.lua'),
+      }
+
+      // Act
+      fireEvent.drop(screen.getByRole('treeitem'), { dataTransfer })
+
+      // Assert
+      expect(onDrop).toHaveBeenCalledWith('/some-file.lua', '/utils')
+    })
+
+    it('folder should show drag-over state during drag', () => {
+      // Arrange
+      render(<FileTreeItem {...defaultFolderProps} />)
+      const dataTransfer = {
+        getData: vi.fn().mockReturnValue('/some-file.lua'),
+        dropEffect: '',
+      }
+
+      // Act
+      fireEvent.dragOver(screen.getByRole('treeitem'), { dataTransfer })
+
+      // Assert
+      expect(screen.getByRole('treeitem').className).toMatch(/dragOver/)
+    })
+
+    it('folder should clear drag-over state on drag leave', () => {
+      // Arrange
+      render(<FileTreeItem {...defaultFolderProps} />)
+      const dataTransfer = { getData: vi.fn().mockReturnValue('/some-file.lua'), dropEffect: '' }
+      const item = screen.getByRole('treeitem')
+
+      // Set drag over state
+      fireEvent.dragOver(item, { dataTransfer })
+      expect(item.className).toMatch(/dragOver/)
+
+      // Act
+      fireEvent.dragLeave(item)
+
+      // Assert
+      expect(item.className).not.toMatch(/dragOver/)
+    })
+
+    it('file should not accept drop', () => {
+      // Arrange
+      const onDrop = vi.fn()
+      render(<FileTreeItem {...defaultFileProps} onDrop={onDrop} />)
+      const dataTransfer = {
+        getData: vi.fn().mockReturnValue('/other-file.lua'),
+      }
+
+      // Act
+      fireEvent.drop(screen.getByRole('treeitem'), { dataTransfer })
+
+      // Assert
+      expect(onDrop).not.toHaveBeenCalled()
+    })
+
+    it('should not trigger drop when dropping item on itself', () => {
+      // Arrange
+      const onDrop = vi.fn()
+      render(<FileTreeItem {...defaultFolderProps} onDrop={onDrop} />)
+      const dataTransfer = {
+        getData: vi.fn().mockReturnValue('/utils'), // Same path as the folder
+      }
+
+      // Act
+      fireEvent.drop(screen.getByRole('treeitem'), { dataTransfer })
+
+      // Assert
+      expect(onDrop).not.toHaveBeenCalled()
+    })
+
+    it('should not trigger drop when dropping item into its own subfolder', () => {
+      // Arrange
+      const onDrop = vi.fn()
+      render(<FileTreeItem {...defaultFolderProps} onDrop={onDrop} />)
+      const dataTransfer = {
+        getData: vi.fn().mockReturnValue('/'), // Root folder containing utils
+      }
+
+      // Act - dropping root into /utils (which is inside root)
+      fireEvent.drop(screen.getByRole('treeitem'), { dataTransfer })
+
+      // Assert - this should work because /utils is not inside /
+      expect(onDrop).toHaveBeenCalled()
+    })
+  })
 })

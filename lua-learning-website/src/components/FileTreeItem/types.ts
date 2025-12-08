@@ -13,4 +13,7 @@ export interface FileTreeItemProps {
   onContextMenu?: (path: string, event: MouseEvent) => void
   onRenameSubmit?: (path: string, newName: string) => void
   onRenameCancel?: () => void
+  // Drag and drop
+  onDragStart?: (sourcePath: string) => void
+  onDrop?: (sourcePath: string, targetPath: string) => void
 }

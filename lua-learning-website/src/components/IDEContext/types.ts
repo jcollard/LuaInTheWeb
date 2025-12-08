@@ -1,6 +1,7 @@
 import type { UseLuaEngineReturn } from '../../hooks/types'
 import type { TreeNode } from '../../hooks/useFileSystem'
 import type { TabInfo } from '../TabBar'
+import type { ToastData } from '../Toast'
 
 /**
  * Activity bar panel options
@@ -17,7 +18,7 @@ export interface IDEContextValue {
   // Current editor state
   code: string
   setCode: (code: string) => void
-  fileName: string
+  fileName: string | null
   isDirty: boolean
 
   // Terminal output
@@ -47,6 +48,7 @@ export interface IDEContextValue {
   deleteFolder: (path: string) => void
   renameFile: (oldPath: string, newName: string) => void
   renameFolder: (oldPath: string, newName: string) => void
+  moveFile: (sourcePath: string, targetFolderPath: string) => void
   openFile: (path: string) => void
   saveFile: () => void
 
@@ -55,6 +57,17 @@ export interface IDEContextValue {
   activeTab: string | null
   selectTab: (path: string) => void
   closeTab: (path: string) => void
+
+  // Toast notifications
+  toasts: ToastData[]
+  showError: (message: string) => void
+  dismissToast: (id: string) => void
+
+  // New file creation
+  pendingNewFilePath: string | null
+  generateUniqueFileName: (parentPath?: string) => string
+  createFileWithRename: (parentPath?: string) => void
+  clearPendingNewFile: () => void
 }
 
 /**
@@ -65,6 +78,4 @@ export interface IDEContextProviderProps {
   children: React.ReactNode
   /** Initial code (defaults to empty string) */
   initialCode?: string
-  /** Initial file name (defaults to 'untitled.lua') */
-  initialFileName?: string
 }
