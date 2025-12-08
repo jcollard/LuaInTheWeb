@@ -3,6 +3,8 @@
   "testRunner": "vitest",
   "checkers": ["typescript"],
   "tsconfigFile": "tsconfig.app.json",
+  "incremental": true,
+  "incrementalFile": "reports/mutation/.stryker-incremental.json",
   "mutate": [
     "src/**/*.ts",
     "src/**/*.tsx",

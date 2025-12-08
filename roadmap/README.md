@@ -39,18 +39,17 @@ roadmap/
 
 | Epic | Status | Description |
 |------|--------|-------------|
-| [IDE-Style Code Editor](./ide-editor/epic.md) | In Progress | VS Code-style IDE at `/editor` with Explorer, Editor, Terminal, REPL |
+| [IDE-Style Code Editor](./ide-editor/epic.md) | Completed | VS Code-style IDE at `/editor` with Explorer, Editor, Terminal, REPL |
 
 ### Active Phases
 
-| Plan | Status | Dependencies | Description |
-|------|--------|--------------|-------------|
-| [Phase 5: Explorer UX Polish](./ide-editor/005-explorer-polish.md) | Approved | Phase 4 | Bug fixes and UX improvements for file explorer |
+*No active phases - IDE-Style Code Editor epic is complete!*
 
 ## Completed Plans
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| [Phase 5: Explorer UX Polish](./ide-editor/005-explorer-polish.md) | Dec 8, 2025 | Bug fixes and UX improvements for file explorer |
 | [Phase 4: Explorer](./ide-editor/004-explorer.md) | Dec 8, 2025 | File tree with virtual filesystem |
 | [Phase 3: IDE Shell](./ide-editor/003-ide-shell.md) | Dec 7, 2025 | Full IDE layout at `/editor` route |
 | [Phase 2: Panel Layout](./ide-editor/002-panels.md) | Dec 7, 2025 | Resizable VS Code-style panels |

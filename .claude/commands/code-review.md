@@ -163,6 +163,46 @@ Now check if mutation tests (started at the beginning) have completed:
 
 ---
 
+## Update Plan Checkboxes
+
+Before generating the review record, update the active phase's plan file to mark completed items.
+
+### 1. Find Active Phase
+
+```bash
+# Find the active phase file (status = "Approved" or "In Progress")
+ls roadmap/*/[0-9]*.md 2>/dev/null
+```
+
+Read each phase file and identify the one with status "Approved" or "In Progress".
+
+### 2. Mark Implementation Items Complete
+
+If the code review passes (all tests, lint, build, mutation, e2e checks pass), update the plan file:
+
+1. **Read the plan file** to find unchecked items (`- [ ]`)
+2. **Mark all implementation items as complete** (`- [x]`)
+3. Sections to update:
+   - Functional Requirements
+   - Non-Functional Requirements
+   - Components Affected
+   - Edge Cases to Handle
+   - Implementation Plan (all steps and sub-items)
+   - Integration Tests
+   - Manual Testing Checklist
+   - E2E Test Cases
+   - Success Metrics
+
+### 3. Update Plan Status
+
+If all items are now complete:
+- Change status from "Approved" to "In Progress" (if starting implementation)
+- Or keep as "In Progress" (if continuing implementation)
+
+**Note**: Status changes to "Completed" only happen via `/accept-review`.
+
+---
+
 ## Review Record
 
 After completing all checks, generate a review record:
