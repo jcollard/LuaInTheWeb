@@ -52,11 +52,6 @@
   overflow: hidden;
 }
 
-.repl-header--embedded {
-  justify-content: flex-end;
-  margin-bottom: 0.5rem;
-}
-
 .repl-help {
   padding: 1rem;
   margin-top: 1rem;

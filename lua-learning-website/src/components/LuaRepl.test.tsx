@@ -77,12 +77,12 @@ describe('LuaRepl', () => {
       expect(screen.queryByRole('heading', { name: /interactive repl/i })).not.toBeInTheDocument()
     })
 
-    it('should still render Clear button when embedded', () => {
+    it('should not render Clear button when embedded (use clear() command instead)', () => {
       // Arrange & Act
       render(<LuaRepl embedded />)
 
       // Assert
-      expect(screen.getByRole('button', { name: /clear/i })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /clear/i })).not.toBeInTheDocument()
     })
 
     it('should not render Tips section when embedded', () => {

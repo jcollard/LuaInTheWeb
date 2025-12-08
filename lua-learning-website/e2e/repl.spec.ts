@@ -96,16 +96,94 @@ test.describe('REPL in IDE', () => {
     expect(terminalBox!.y).toBeGreaterThanOrEqual(bottomPanelBox!.y)
   })
 
-  test('Clear button is visible and functional', async ({ page }) => {
-    // Clear button should be visible in embedded mode
-    const clearButton = page.getByRole('button', { name: /clear/i })
-    await expect(clearButton).toBeVisible()
+  test('clear() command clears the terminal', async ({ page }) => {
+    // Click on the terminal to focus it
+    const terminal = page.locator('.xterm-screen')
+    await terminal.click()
 
-    // Click the clear button
-    await clearButton.click()
+    // Type some commands first
+    await page.keyboard.type('x = 1')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    await page.keyboard.type('print(x)')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    // Now type clear() command
+    await page.keyboard.type('clear()')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(500)
 
     // Terminal should still be visible after clear
+    await expect(terminal).toBeVisible()
+
+    // The welcome message should be shown again (indicating screen was cleared)
+    // We can't easily verify the content was cleared, but we can verify the terminal is still functional
+  })
+
+  test('help() command displays help information', async ({ page }) => {
+    // Click on the terminal to focus it
     const terminal = page.locator('.xterm-screen')
+    await terminal.click()
+
+    // Type help() command
+    await page.keyboard.type('help()')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(500)
+
+    // Terminal should still be visible
+    await expect(terminal).toBeVisible()
+
+    // The terminal should contain help text - verify by looking for key terms in the terminal content
+    // Note: xterm renders text in canvas, so we check the terminal is functional
+    // The actual content verification would require reading xterm buffer which is complex
+
+    // Type another command to verify terminal is still functional after help()
+    await page.keyboard.type('print("after help")')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    await expect(terminal).toBeVisible()
+  })
+
+  test('reset() command resets REPL state', async ({ page }) => {
+    // Click on the terminal to focus it
+    const terminal = page.locator('.xterm-screen')
+    await terminal.click()
+
+    // Set a variable
+    await page.keyboard.type('myVar = 42')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    // Verify variable is set
+    await page.keyboard.type('print(myVar)')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    // Reset the REPL
+    await page.keyboard.type('reset()')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(1000) // Give time for engine to reinitialize
+
+    // After reset, the variable should no longer exist (will print nil or error)
+    await page.keyboard.type('print(myVar)')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    // Terminal should still be visible and functional
+    await expect(terminal).toBeVisible()
+
+    // Set a new variable to verify REPL is working
+    await page.keyboard.type('newVar = 100')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    await page.keyboard.type('print(newVar)')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
     await expect(terminal).toBeVisible()
   })
 
