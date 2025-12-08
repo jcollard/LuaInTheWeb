@@ -30,7 +30,7 @@ This directory contains implementation plans for features and improvements.
 
 | Plan | Status | Dependencies | Description |
 |------|--------|--------------|-------------|
-| [Phase 2: Panel Layout](./ide-editor-002-panels.md) | Draft | Phase 1.5 | Resizable VS Code-style panels |
+| [Phase 2: Panel Layout](./ide-editor-002-panels.md) | Approved | Phase 1.5 | Resizable VS Code-style panels |
 | [Phase 3: IDE Shell](./ide-editor-003-ide-shell.md) | Draft | Phases 1, 2 | Full IDE layout at `/editor` route |
 | [Phase 4: Explorer](./ide-editor-004-explorer.md) | Draft | Phase 3 | File tree with virtual filesystem |
 

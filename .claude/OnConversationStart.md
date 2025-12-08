@@ -95,11 +95,17 @@ npm run test:e2e      # Run E2E tests (Playwright)
 
 ## Special Commands
 
+### Roadmap Workflow
+- `/prepare-plan` - Prepare next draft plan for implementation (applies TDD, structure, E2E)
+- `/review-plan` - Review current plan for compliance before starting
+- `/begin` - Create task list and begin implementation
+
+### Development Guidelines
 - `/tdd` - Inject TDD guidelines for current task
-- `/mutation-test` - Inject mutation testing guidelines
-- `/code-review` - Inject code review checklist
 - `/new-feature` - Inject new feature development guidelines
 - `/e2e` - Inject E2E testing guidelines
+- `/mutation-test` - Inject mutation testing guidelines
+- `/code-review` - Inject code review checklist
 
 ## Continuation Policy
 - NEVER stop to ask "Do you want to continue?" or "Should I proceed?"
