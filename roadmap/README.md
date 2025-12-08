@@ -30,13 +30,13 @@ This directory contains implementation plans for features and improvements.
 
 | Plan | Status | Dependencies | Description |
 |------|--------|--------------|-------------|
-| [Phase 3: IDE Shell](./ide-editor-003-ide-shell.md) | Approved | Phases 1, 2 | Full IDE layout at `/editor` route |
-| [Phase 4: Explorer](./ide-editor-004-explorer.md) | Draft | Phase 3 | File tree with virtual filesystem |
+| [Phase 4: Explorer](./ide-editor-004-explorer.md) | Approved | Phase 3 | File tree with virtual filesystem |
 
 ## Completed Plans
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| [Phase 3: IDE Shell](./ide-editor-003-ide-shell.md) | Dec 8, 2025 | Full IDE layout at `/editor` route |
 | [Phase 2: Panel Layout](./ide-editor-002-panels.md) | Dec 7, 2025 | Resizable VS Code-style panels |
 | [Phase 1.5: E2E Testing Foundation](./ide-editor-001.5-e2e-tests.md) | Dec 7, 2025 | Playwright setup, E2E tests, test pages, documentation |
 | [Phase 1: Embeddable Editor](./ide-editor-001-embeddable.md) | Dec 7, 2025 | Standalone editor for examples/challenges |
