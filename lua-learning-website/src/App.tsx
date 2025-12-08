@@ -1,15 +1,23 @@
+import { Suspense, lazy } from 'react'
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import './App.css'
-import LuaPlayground from './components/LuaPlayground'
-import { IDELayout } from './components/IDELayout'
-import { EmbeddableEditorTest, PanelLayoutTest } from './pages/test'
+
+// Lazy load heavy components that use Monaco editor
+const LuaPlayground = lazy(() => import('./components/LuaPlayground'))
+const IDELayout = lazy(() => import('./components/IDELayout').then(m => ({ default: m.IDELayout })))
+const EmbeddableEditorTest = lazy(() => import('./pages/test').then(m => ({ default: m.EmbeddableEditorTest })))
+const PanelLayoutTest = lazy(() => import('./pages/test').then(m => ({ default: m.PanelLayoutTest })))
 
 function App() {
   const location = useLocation()
 
   // Full-screen routes bypass the normal site layout
   if (location.pathname === '/editor') {
-    return <IDELayout />
+    return (
+      <Suspense fallback={<div>Loading editor...</div>}>
+        <IDELayout />
+      </Suspense>
+    )
   }
 
   return (
@@ -51,19 +59,21 @@ function App() {
       </header>
 
       <main className="main-content">
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/tutorials" element={<TutorialsPage />} />
-          <Route path="/examples" element={<ExamplesPage />} />
-          <Route path="/playground" element={<LuaPlayground />} />
-          {/* Test pages - E2E test targets and manual QA sandboxes */}
-          {import.meta.env.DEV && (
-            <>
-              <Route path="/test/embeddable-editor" element={<EmbeddableEditorTest />} />
-              <Route path="/test/panel-layout" element={<PanelLayoutTest />} />
-            </>
-          )}
-        </Routes>
+        <Suspense fallback={<div>Loading...</div>}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/tutorials" element={<TutorialsPage />} />
+            <Route path="/examples" element={<ExamplesPage />} />
+            <Route path="/playground" element={<LuaPlayground />} />
+            {/* Test pages - E2E test targets and manual QA sandboxes */}
+            {import.meta.env.DEV && (
+              <>
+                <Route path="/test/embeddable-editor" element={<EmbeddableEditorTest />} />
+                <Route path="/test/panel-layout" element={<PanelLayoutTest />} />
+              </>
+            )}
+          </Routes>
+        </Suspense>
       </main>
 
       <footer className="footer">
