@@ -1,0 +1,69 @@
+.handle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+/* Horizontal resize (side by side panels) */
+.handle[data-panel-group-direction='horizontal'] {
+  width: 8px;
+  cursor: col-resize;
+}
+
+/* Vertical resize (stacked panels) */
+.handle[data-panel-group-direction='vertical'] {
+  height: 8px;
+  cursor: row-resize;
+}
+
+.inner {
+  position: absolute;
+  background: var(--border-color, #3c3c3c);
+  border-radius: 4px;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+/* Horizontal inner bar */
+.handle[data-panel-group-direction='horizontal'] .inner {
+  width: 4px;
+  height: 40px;
+  max-height: 100%;
+}
+
+/* Vertical inner bar */
+.handle[data-panel-group-direction='vertical'] .inner {
+  height: 4px;
+  width: 40px;
+  max-width: 100%;
+}
+
+/* Hover state */
+.inner[data-hovered='true'] {
+  background: var(--accent-color, #007acc);
+}
+
+/* Dragging state */
+.inner[data-dragging='true'] {
+  background: var(--accent-color, #007acc);
+  transform: scale(1.2);
+}
+
+/* Focus state for keyboard navigation */
+.inner[data-focused='true'] {
+  background: var(--accent-color, #007acc);
+  outline: 2px solid var(--focus-outline, #007acc);
+  outline-offset: 2px;
+}
+
+/* Mobile: hide resize handles */
+@media (max-width: 768px) {
+  .handle {
+    display: none;
+  }
+}

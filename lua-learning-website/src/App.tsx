@@ -1,7 +1,7 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import './App.css'
 import LuaPlayground from './components/LuaPlayground'
-import { EmbeddableEditorTest } from './pages/test'
+import { EmbeddableEditorTest, PanelLayoutTest } from './pages/test'
 
 function App() {
   const location = useLocation()
@@ -46,7 +46,10 @@ function App() {
           <Route path="/playground" element={<LuaPlayground />} />
           {/* Test pages - E2E test targets and manual QA sandboxes */}
           {import.meta.env.DEV && (
-            <Route path="/test/embeddable-editor" element={<EmbeddableEditorTest />} />
+            <>
+              <Route path="/test/embeddable-editor" element={<EmbeddableEditorTest />} />
+              <Route path="/test/panel-layout" element={<PanelLayoutTest />} />
+            </>
           )}
         </Routes>
       </main>

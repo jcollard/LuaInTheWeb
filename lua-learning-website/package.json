@@ -22,6 +22,7 @@
     "@xterm/xterm": "^5.5.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-resizable-panels": "^3.0.6",
     "react-router-dom": "^7.10.1",
     "wasmoon": "^1.16.0"
   },

@@ -1,0 +1,56 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--panel-bg, #1e1e1e);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--header-bg, #252526);
+  border-bottom: 1px solid var(--border-color, #3c3c3c);
+  min-height: 32px;
+  flex-shrink: 0;
+}
+
+.headerText {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--header-text, #cccccc);
+  letter-spacing: 0.04em;
+}
+
+.collapseButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--header-text, #cccccc);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 10px;
+  transition: background 0.15s ease;
+}
+
+.collapseButton:hover {
+  background: var(--button-hover-bg, #3c3c3c);
+}
+
+.collapseButton:focus-visible {
+  outline: 2px solid var(--focus-outline, #007acc);
+  outline-offset: 1px;
+}
+
+.content {
+  flex: 1;
+  overflow: auto;
+}
