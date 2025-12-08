@@ -103,27 +103,32 @@ export default function LuaRepl({ embedded = false }: LuaReplProps) {
     })
 
     // Add reset() function to reset REPL state
-    lua.global.set('reset', async () => {
-      // Close current engine
-      if (luaEngineRef.current) {
-        luaEngineRef.current.global.close()
-        luaEngineRef.current = null
-      }
+    // Uses setTimeout to defer engine reset until after current Lua execution completes
+    lua.global.set('reset', () => {
+      setTimeout(async () => {
+        // Close current engine
+        if (luaEngineRef.current) {
+          luaEngineRef.current.global.close()
+          luaEngineRef.current = null
+        }
 
-      // Clear terminal
-      terminalRef.current?.clear()
+        // Clear terminal
+        terminalRef.current?.clear()
 
-      // Reinitialize engine
-      try {
-        const newLua = await initLuaEngine()
-        luaEngineRef.current = newLua
-        showWelcome()
-        terminalRef.current?.writeln('\x1b[32mREPL state has been reset.\x1b[0m')
-        terminalRef.current?.writeln('')
-      } catch (error) {
-        console.error('Failed to reset Lua engine:', error)
-        terminalRef.current?.writeln('\x1b[31mError: Failed to reset REPL\x1b[0m')
-      }
+        // Reinitialize engine
+        try {
+          const newLua = await initLuaEngine()
+          luaEngineRef.current = newLua
+          showWelcome()
+          terminalRef.current?.writeln('\x1b[32mREPL state has been reset.\x1b[0m')
+          terminalRef.current?.writeln('')
+          terminalRef.current?.showPrompt()
+        } catch (error) {
+          console.error('Failed to reset Lua engine:', error)
+          terminalRef.current?.writeln('\x1b[31mError: Failed to reset REPL\x1b[0m')
+          terminalRef.current?.showPrompt()
+        }
+      }, 0)
     })
 
     return lua
