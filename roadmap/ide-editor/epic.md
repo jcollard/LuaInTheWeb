@@ -29,12 +29,12 @@ Transform the Lua Playground into a full-featured, VS Code-style IDE experience 
 
 | # | Plan | Status | Dependencies | Description |
 |---|------|--------|--------------|-------------|
-| 0 | [Foundation Refactoring](./ide-editor-000-foundation.md) | **Completed** | None | Extract hooks, add React Router, setup Monaco |
-| 1 | [Embeddable Editor](./ide-editor-001-embeddable.md) | **Completed** | Phase 0 | Standalone editor component for examples/challenges |
-| 2 | [Panel Layout System](./ide-editor-002-panels.md) | **Completed** | Phase 0 | Resizable split panel infrastructure |
-| 3 | [IDE Shell](./ide-editor-003-ide-shell.md) | **Completed** | Phases 1, 2 | Full IDE layout at `/editor` route |
-| 4 | [Explorer Panel](./ide-editor-004-explorer.md) | **Completed** | Phase 3 | File tree with virtual filesystem |
-| 5 | [Explorer UX Polish](./ide-editor-005-explorer-polish.md) | **Approved** | Phase 4 | Bug fixes and UX improvements for file explorer |
+| 0 | [Foundation Refactoring](./000-foundation.md) | **Completed** | None | Extract hooks, add React Router, setup Monaco |
+| 1 | [Embeddable Editor](./001-embeddable.md) | **Completed** | Phase 0 | Standalone editor component for examples/challenges |
+| 2 | [Panel Layout System](./002-panels.md) | **Completed** | Phase 0 | Resizable split panel infrastructure |
+| 3 | [IDE Shell](./003-ide-shell.md) | **Completed** | Phases 1, 2 | Full IDE layout at `/editor` route |
+| 4 | [Explorer Panel](./004-explorer.md) | **Completed** | Phase 3 | File tree with virtual filesystem |
+| 5 | [Explorer UX Polish](./005-explorer-polish.md) | **Approved** | Phase 4 | Bug fixes and UX improvements for file explorer |
 
 ## Dependency Graph
 

@@ -160,3 +160,100 @@ Now check if mutation tests (started at the beginning) have completed:
 
 ### 3. E2E Tests (If User-Facing Features)
 - [ ] `npm run test:e2e` passes
+
+---
+
+## Review Record
+
+After completing all checks, generate a review record:
+
+### 1. Collect Review Metadata
+
+Run these commands to gather review metadata:
+
+```bash
+# Get current timestamp
+date -u +"%Y-%m-%dT%H:%M:%SZ"
+
+# Get current branch name and commit
+git rev-parse --abbrev-ref HEAD
+git rev-parse --short HEAD
+
+# Get main branch commit
+git rev-parse --short main
+```
+
+### 2. Identify Active Epic
+
+Determine which epic this review covers by examining modified files:
+
+```bash
+# Check which roadmap phases were modified or are relevant
+git diff --name-only main...HEAD | grep -E "^(src|roadmap)/"
+```
+
+### 3. Write Review Record
+
+Create a JSON review file at `roadmap/{epic}/reviews/{date}_{main-sha}_{branch-sha}.json`:
+
+```json
+{
+  "timestamp": "<ISO 8601 timestamp>",
+  "branch": "<branch-name>",
+  "branchCommit": "<branch-sha>",
+  "mainCommit": "<main-sha>",
+  "findings": {
+    "blocking": [],
+    "techDebt": ["<issue-numbers>"],
+    "warnings": ["<descriptions>"]
+  },
+  "checks": {
+    "tests": "pass|fail",
+    "lint": "pass|fail",
+    "build": "pass|fail",
+    "mutationScore": "<percentage>",
+    "e2e": "pass|fail|skipped"
+  },
+  "phasesReviewed": ["<phase-ids>"],
+  "recommendation": "accept|reject|needs-work",
+  "notes": "<summary of review findings>"
+}
+```
+
+### 4. Output Review Summary
+
+At the end of the review, output a summary block:
+
+```
+## Review Summary
+
+**Timestamp**: <timestamp>
+**Branch**: <branch> @ <sha>
+**Main**: <main-sha>
+**Epic**: <epic-name>
+**Phases**: <phases reviewed>
+
+### Checks
+- Tests: ✅/❌
+- Lint: ✅/❌
+- Build: ✅/❌
+- Mutation: <score>%
+- E2E: ✅/❌/⏭️
+
+### Findings
+- Blocking: <count>
+- Tech Debt Issues: <issue numbers>
+- Warnings: <count>
+
+### Recommendation
+<accept|reject|needs-work>
+
+**Next Step**: Run `/accept-review` to mark phases complete, or address findings first.
+```
+
+### 5. Staleness Warning
+
+The review record enables `/accept-review` to detect stale reviews:
+- If branch has new commits since review, warn user
+- If main has new commits, suggest rebasing
+- Review file serves as proof of review state

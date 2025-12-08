@@ -40,7 +40,10 @@
       "SlashCommand(/tech-debt)",
       "SlashCommand(/code-review)",
       "Bash(npx playwright test:*)",
-      "Bash(npm run test:mutation:scope:*)"
+      "Bash(npm run test:mutation:scope:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(ls:*)",
+      "Bash(sleep:*)"
     ],
     "deny": [
       "Bash(npm run dev)",

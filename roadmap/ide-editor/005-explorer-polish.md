@@ -4,7 +4,7 @@
 **Author**: Claude & Joseph
 **Created**: Mon, Dec 8, 2025
 **Updated**: Mon, Dec 8, 2025
-**Parent Epic**: [IDE-Style Code Editor](./ide-editor-epic.md)
+**Parent Epic**: [IDE-Style Code Editor](./epic.md)
 
 ## Summary
 
