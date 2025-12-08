@@ -65,9 +65,9 @@
       "SlashCommand(/accept-review)",
       "Bash(git push:*)",
       "Bash(git commit:*)",
-      "Bash(rm lua-learning-website/.stryker-incremental.json)",
-      "Bash(del lua-learning-website/.stryker-incremental.json)",
-      "Bash(Remove-Item lua-learning-website/.stryker-incremental.json)"
+      "Bash(rm lua-learning-website/reports/mutation/.stryker-incremental.json)",
+      "Bash(del lua-learning-website/reports/mutation/.stryker-incremental.json)",
+      "Bash(Remove-Item lua-learning-website/reports/mutation/.stryker-incremental.json)"
     ]
   }
 }
