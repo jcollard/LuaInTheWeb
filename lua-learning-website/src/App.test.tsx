@@ -26,13 +26,14 @@ describe('App routing', () => {
   })
 
   // Cycle 3.2: Playground route works
-  it('should render playground at /playground', () => {
+  it('should render playground at /playground', async () => {
     render(
       <MemoryRouter initialEntries={['/playground']}>
         <App />
       </MemoryRouter>
     )
-    expect(screen.getByText('Lua Playground')).toBeInTheDocument()
+    // Wait for lazy-loaded component
+    expect(await screen.findByText('Lua Playground')).toBeInTheDocument()
   })
 
   // Cycle 3.3: Navigation links work
@@ -44,7 +45,8 @@ describe('App routing', () => {
     )
 
     await userEvent.click(screen.getByText('Playground'))
-    expect(screen.getByText('Lua Playground')).toBeInTheDocument()
+    // Wait for lazy-loaded component
+    expect(await screen.findByText('Lua Playground')).toBeInTheDocument()
   })
 
   it('should render tutorials at /tutorials', () => {
@@ -84,13 +86,14 @@ describe('App routing', () => {
     expect(screen.getByText(/Code examples coming soon/)).toBeInTheDocument()
   })
 
-  it('should render IDE layout at /editor', () => {
+  it('should render IDE layout at /editor', async () => {
     render(
       <MemoryRouter initialEntries={['/editor']}>
         <App />
       </MemoryRouter>
     )
-    expect(screen.getByTestId('ide-layout')).toBeInTheDocument()
+    // Wait for lazy-loaded component
+    expect(await screen.findByTestId('ide-layout')).toBeInTheDocument()
   })
 
   it('should navigate to editor when link clicked', async () => {
@@ -101,6 +104,7 @@ describe('App routing', () => {
     )
 
     await userEvent.click(screen.getByText('Editor'))
-    expect(screen.getByTestId('ide-layout')).toBeInTheDocument()
+    // Wait for lazy-loaded component
+    expect(await screen.findByTestId('ide-layout')).toBeInTheDocument()
   })
 })
