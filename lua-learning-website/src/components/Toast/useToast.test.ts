@@ -169,4 +169,26 @@ describe('useToast', () => {
     expect(result.current.toasts).toHaveLength(1)
     expect(result.current.toasts[0].message).toBe('Second')
   })
+
+  it('should clear all timers on unmount', () => {
+    // Arrange
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout')
+    const { result, unmount } = renderHook(() => useToast())
+
+    act(() => {
+      result.current.showToast({ message: 'First', type: 'error', duration: 10000 })
+      result.current.showToast({ message: 'Second', type: 'error', duration: 10000 })
+    })
+
+    expect(result.current.toasts).toHaveLength(2)
+    clearTimeoutSpy.mockClear() // Reset to only count cleanup calls
+
+    // Act - unmount the hook
+    unmount()
+
+    // Assert - should have cleared both timers
+    expect(clearTimeoutSpy).toHaveBeenCalledTimes(2)
+
+    clearTimeoutSpy.mockRestore()
+  })
 })
