@@ -14,7 +14,8 @@
     "!src/**/*.spec.tsx",
     "!src/test/**/*",
     "!src/main.tsx",
-    "!src/vite-env.d.ts"
+    "!src/vite-env.d.ts",
+    "!src/App.tsx"
   ],
   "reporters": ["html", "clear-text", "progress"],
   "htmlReporter": {
