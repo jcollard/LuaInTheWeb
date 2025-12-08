@@ -53,7 +53,8 @@
       "Bash(npx stryker run:*)",
       "Bash(gh pr view:*)",
       "Bash(gh project:*)",
-      "Bash(git rev-list:*)"
+      "Bash(git rev-list:*)",
+      "Bash(gh issue:*)"
     ],
     "deny": [
       "Bash(npm run dev)",
