@@ -29,7 +29,7 @@ Transform the Lua Playground into a full-featured, VS Code-style IDE experience 
 
 | # | Plan | Status | Dependencies | Description |
 |---|------|--------|--------------|-------------|
-| 0 | [Foundation Refactoring](./ide-editor-000-foundation.md) | Draft | None | Extract hooks, add React Router, setup Monaco |
+| 0 | [Foundation Refactoring](./ide-editor-000-foundation.md) | **Completed** | None | Extract hooks, add React Router, setup Monaco |
 | 1 | [Embeddable Editor](./ide-editor-001-embeddable.md) | Draft | Phase 0 | Standalone editor component for examples/challenges |
 | 2 | [Panel Layout System](./ide-editor-002-panels.md) | Draft | Phase 0 | Resizable split panel infrastructure |
 | 3 | [IDE Shell](./ide-editor-003-ide-shell.md) | Draft | Phases 1, 2 | Full IDE layout at `/editor` route |
@@ -128,7 +128,7 @@ useFileSystem() → { files, openFile, saveFile, createFile, deleteFile }
 ## Progress Tracking
 
 ### Phase 0: Foundation
-- [ ] Not started
+- [x] Completed (Dec 7, 2025)
 
 ### Phase 1: Embeddable Editor
 - [ ] Not started
