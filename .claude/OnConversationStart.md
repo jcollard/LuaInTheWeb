@@ -82,8 +82,12 @@ Use `/mutation-test` command for mutation testing guidelines.
 
 ## Commands
 
+**CRITICAL: All npm commands MUST be run from the `lua-learning-website` directory, NOT the root `LuaInTheWeb` directory.**
+
 ```bash
+# ALWAYS change to the correct directory first
 cd lua-learning-website
+
 npm run dev           # Start development server
 npm run test          # Run tests
 npm run test:watch    # Watch mode
@@ -91,6 +95,15 @@ npm run test:mutation # Mutation testing
 npm run build         # Build for production
 npm run lint          # Run linter
 npm run test:e2e      # Run E2E tests (Playwright)
+```
+
+The project has this structure:
+```
+LuaInTheWeb/              # Git repository root (DO NOT run npm commands here)
+└── lua-learning-website/ # Application directory (RUN npm commands here)
+    ├── package.json
+    ├── src/
+    └── ...
 ```
 
 ## Special Commands

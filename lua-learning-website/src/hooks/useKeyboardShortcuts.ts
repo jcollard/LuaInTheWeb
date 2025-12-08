@@ -38,6 +38,7 @@ export function useKeyboardShortcuts({
           break
       }
     },
+    // Stryker disable next-line ArrayDeclaration: React dependency array - tests verify behavior, not re-render optimization
     [runCode, toggleTerminal, toggleSidebar]
   )
 
@@ -46,5 +47,6 @@ export function useKeyboardShortcuts({
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
+    // Stryker disable next-line ArrayDeclaration: React dependency array - tests verify behavior, not re-render optimization
   }, [handleKeyDown])
 }
