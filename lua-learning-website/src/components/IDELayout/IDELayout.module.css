@@ -1,0 +1,19 @@
+.ideLayout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #1e1e1e;
+  color: #cccccc;
+  overflow: hidden;
+}
+
+.mainContainer {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.workArea {
+  flex: 1;
+  overflow: hidden;
+}

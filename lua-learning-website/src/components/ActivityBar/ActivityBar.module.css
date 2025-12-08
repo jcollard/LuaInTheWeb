@@ -1,0 +1,60 @@
+.activityBar {
+  display: flex;
+  flex-direction: column;
+  width: 48px;
+  background-color: #333333;
+  border-right: 1px solid #252526;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: transparent;
+  border: none;
+  color: #858585;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.1s ease;
+}
+
+.item:hover {
+  color: #ffffff;
+}
+
+.item:focus {
+  outline: none;
+}
+
+.item:focus-visible {
+  outline: 1px solid #007acc;
+  outline-offset: -1px;
+}
+
+.item.active {
+  color: #ffffff;
+}
+
+.item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #ffffff;
+}
+
+.item svg {
+  width: 24px;
+  height: 24px;
+}

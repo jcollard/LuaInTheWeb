@@ -1,10 +1,16 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import './App.css'
 import LuaPlayground from './components/LuaPlayground'
+import { IDELayout } from './components/IDELayout'
 import { EmbeddableEditorTest, PanelLayoutTest } from './pages/test'
 
 function App() {
   const location = useLocation()
+
+  // Full-screen routes bypass the normal site layout
+  if (location.pathname === '/editor') {
+    return <IDELayout />
+  }
 
   return (
     <div className="app">
@@ -34,6 +40,12 @@ function App() {
             className={location.pathname === '/playground' ? 'active' : ''}
           >
             Playground
+          </Link>
+          <Link
+            to="/editor"
+            className={location.pathname === '/editor' ? 'active' : ''}
+          >
+            Editor
           </Link>
         </nav>
       </header>

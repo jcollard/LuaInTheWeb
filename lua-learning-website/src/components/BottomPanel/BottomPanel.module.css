@@ -1,0 +1,82 @@
+.bottomPanel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #1e1e1e;
+}
+
+.tabBar {
+  display: flex;
+  align-items: center;
+  height: 35px;
+  background-color: #252526;
+  border-bottom: 1px solid #1e1e1e;
+  padding-left: 8px;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 12px;
+  background: transparent;
+  border: none;
+  color: #858585;
+  font-size: 13px;
+  cursor: pointer;
+  position: relative;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.tab:hover {
+  color: #ffffff;
+}
+
+.tab.active {
+  color: #ffffff;
+}
+
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background-color: #ffffff;
+}
+
+.content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.terminalContent,
+.replContent {
+  height: 100%;
+  overflow: auto;
+}
+
+.outputContainer {
+  padding: 8px 12px;
+  font-family: 'Cascadia Code', Menlo, Monaco, 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #d4d4d4;
+}
+
+.outputLine {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.outputLine.error {
+  color: #f48771;
+}
+
+.placeholder {
+  color: #858585;
+  font-style: italic;
+}

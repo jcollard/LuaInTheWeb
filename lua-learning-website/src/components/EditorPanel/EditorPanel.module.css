@@ -1,0 +1,72 @@
+.editorPanel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #1e1e1e;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 35px;
+  background-color: #252526;
+  border-bottom: 1px solid #1e1e1e;
+}
+
+.tabs {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 12px;
+  background-color: #1e1e1e;
+  border-right: 1px solid #252526;
+  cursor: default;
+}
+
+.tabName {
+  font-size: 13px;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  padding-right: 8px;
+  gap: 8px;
+}
+
+.runButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  background-color: #0e639c;
+  color: #ffffff;
+  border: none;
+  border-radius: 2px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.runButton:hover:not(:disabled) {
+  background-color: #1177bb;
+}
+
+.runButton:disabled {
+  background-color: #4d4d4d;
+  cursor: not-allowed;
+}
+
+.editorContainer {
+  flex: 1;
+  overflow: hidden;
+}

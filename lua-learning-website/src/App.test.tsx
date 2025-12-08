@@ -9,6 +9,11 @@ vi.mock('./components/LuaPlayground', () => ({
   default: () => <div data-testid="mock-lua-playground">Lua Playground</div>,
 }))
 
+// Mock IDELayout to avoid complex component tree in routing tests
+vi.mock('./components/IDELayout', () => ({
+  IDELayout: () => <div data-testid="ide-layout">IDE Layout</div>,
+}))
+
 describe('App routing', () => {
   // Cycle 3.1: Routes render correct components
   it('should render home page at /', () => {
@@ -77,5 +82,25 @@ describe('App routing', () => {
     // Navigate to examples
     await userEvent.click(screen.getByText('Examples'))
     expect(screen.getByText(/Code examples coming soon/)).toBeInTheDocument()
+  })
+
+  it('should render IDE layout at /editor', () => {
+    render(
+      <MemoryRouter initialEntries={['/editor']}>
+        <App />
+      </MemoryRouter>
+    )
+    expect(screen.getByTestId('ide-layout')).toBeInTheDocument()
+  })
+
+  it('should navigate to editor when link clicked', async () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>
+    )
+
+    await userEvent.click(screen.getByText('Editor'))
+    expect(screen.getByTestId('ide-layout')).toBeInTheDocument()
   })
 })
