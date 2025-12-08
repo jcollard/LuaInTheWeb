@@ -64,13 +64,13 @@ This project follows strict Test-Driven Development:
 2. **GREEN**: Write minimum code to pass
 3. **REFACTOR**: Improve while tests pass
 
-Use `!tdd` command for detailed TDD guidelines.
+Use `/tdd` command for detailed TDD guidelines.
 
 ### Mutation Testing
 
 Tests must be verified with mutation testing to ensure they actually catch bugs.
 
-Use `!mutation-test` command for mutation testing guidelines.
+Use `/mutation-test` command for mutation testing guidelines.
 
 ### Before Completing Any Task
 
@@ -93,7 +93,15 @@ npm run lint          # Run linter
 
 ## Special Commands
 
-- `!tdd` - Inject TDD guidelines for current task
-- `!mutation-test` - Inject mutation testing guidelines
-- `!code-review` - Inject code review checklist
-- `!new-feature` - Inject new feature development guidelines
+- `/tdd` - Inject TDD guidelines for current task
+- `/mutation-test` - Inject mutation testing guidelines
+- `/code-review` - Inject code review checklist
+- `/new-feature` - Inject new feature development guidelines
+
+## Continuation Policy
+- NEVER stop to ask "Do you want to continue?" or "Should I proceed?"
+- Work through the ENTIRE task list until completion
+- If context gets full, auto-compact and continue working
+- Only stop for actual blockers (missing info, errors, ambiguity)
+- Avoid using bash commands that are not present in @settings.local.json or @.claude/settings.json 
+- When you finish. Create another comprehensive ToDo Task List with remaining items and continue until there is nothing left to complete.

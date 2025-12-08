@@ -23,7 +23,9 @@
       "Bash(npx tsc:*)",
       "Bash(mkdir:*)",
       "Bash(cloc:*)",
-      "Bash(date)"
+      "Bash(date)",
+      "SlashCommand(/new-feature)",
+      "SlashCommand(/tdd)"
     ],
     "deny": [
       "Bash(npm run dev)",
