@@ -14,7 +14,9 @@
     "test:mutation": "stryker run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed"
+    "test:e2e:headed": "playwright test --headed",
+    "lines": "node scripts/line-count.js",
+    "lines:json": "node scripts/line-count.js --json"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",

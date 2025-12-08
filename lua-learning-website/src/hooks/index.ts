@@ -1,3 +1,5 @@
 export { useLuaEngine } from './useLuaEngine'
 export { useIsMobile } from './useIsMobile'
+export { useFileSystem } from './useFileSystem'
 export type { UseLuaEngineOptions, UseLuaEngineReturn } from './types'
+export type { UseFileSystemReturn, TreeNode, VirtualFile } from './useFileSystem'

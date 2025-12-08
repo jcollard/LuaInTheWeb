@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { vi } from 'vitest'
 import { EditorPanel } from './EditorPanel'
+import type { TabInfo } from '../TabBar'
 
 // Mock Monaco Editor - it doesn't work in jsdom
 interface MockMonacoProps {
@@ -28,6 +29,18 @@ describe('EditorPanel', () => {
     fileName: 'main.lua',
     isDirty: false,
     onRun: vi.fn(),
+  }
+
+  const mockTabs: TabInfo[] = [
+    { path: '/main.lua', name: 'main.lua', isDirty: false },
+    { path: '/utils/math.lua', name: 'math.lua', isDirty: true },
+  ]
+
+  const defaultTabBarProps = {
+    tabs: mockTabs,
+    activeTab: '/main.lua',
+    onSelect: vi.fn(),
+    onClose: vi.fn(),
   }
 
   beforeEach(() => {
@@ -159,6 +172,107 @@ describe('EditorPanel', () => {
       // Assert
       const runButton = screen.getByRole('button', { name: /run/i })
       expect(runButton.getAttribute('aria-label')).toMatch(/running/i)
+    })
+  })
+
+  describe('TabBar integration', () => {
+    it('should render TabBar when tabBarProps provided', () => {
+      // Arrange & Act
+      render(
+        <EditorPanel
+          {...defaultProps}
+          tabBarProps={defaultTabBarProps}
+        />
+      )
+
+      // Assert
+      expect(screen.getByRole('tablist')).toBeInTheDocument()
+    })
+
+    it('should render all tabs from tabBarProps', () => {
+      // Arrange & Act
+      render(
+        <EditorPanel
+          {...defaultProps}
+          tabBarProps={defaultTabBarProps}
+        />
+      )
+
+      // Assert
+      expect(screen.getByText('main.lua')).toBeInTheDocument()
+      expect(screen.getByText('math.lua')).toBeInTheDocument()
+    })
+
+    it('should highlight active tab', () => {
+      // Arrange & Act
+      render(
+        <EditorPanel
+          {...defaultProps}
+          tabBarProps={defaultTabBarProps}
+        />
+      )
+
+      // Assert
+      const mainTab = screen.getByRole('tab', { name: /main\.lua/i })
+      expect(mainTab).toHaveAttribute('aria-selected', 'true')
+    })
+
+    it('should call onSelect when tab is clicked', () => {
+      // Arrange
+      const onSelect = vi.fn()
+      render(
+        <EditorPanel
+          {...defaultProps}
+          tabBarProps={{ ...defaultTabBarProps, onSelect }}
+        />
+      )
+
+      // Act
+      fireEvent.click(screen.getByRole('tab', { name: /math\.lua/i }))
+
+      // Assert
+      expect(onSelect).toHaveBeenCalledWith('/utils/math.lua')
+    })
+
+    it('should call onClose when tab close button is clicked', () => {
+      // Arrange
+      const onClose = vi.fn()
+      render(
+        <EditorPanel
+          {...defaultProps}
+          tabBarProps={{ ...defaultTabBarProps, onClose }}
+        />
+      )
+
+      // Act
+      const closeButtons = screen.getAllByRole('button', { name: /close/i })
+      fireEvent.click(closeButtons[0])
+
+      // Assert
+      expect(onClose).toHaveBeenCalledWith('/main.lua')
+    })
+
+    it('should show dirty indicator on modified tabs', () => {
+      // Arrange & Act
+      render(
+        <EditorPanel
+          {...defaultProps}
+          tabBarProps={defaultTabBarProps}
+        />
+      )
+
+      // Assert
+      const mathTab = screen.getByRole('tab', { name: /math\.lua/i })
+      expect(mathTab.textContent).toMatch(/\*/)
+    })
+
+    it('should fall back to single tab display when tabBarProps not provided', () => {
+      // Arrange & Act
+      render(<EditorPanel {...defaultProps} />)
+
+      // Assert
+      expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+      expect(screen.getByText('main.lua')).toBeInTheDocument()
     })
   })
 })

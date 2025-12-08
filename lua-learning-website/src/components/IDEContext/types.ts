@@ -1,4 +1,6 @@
 import type { UseLuaEngineReturn } from '../../hooks/types'
+import type { TreeNode } from '../../hooks/useFileSystem'
+import type { TabInfo } from '../TabBar'
 
 /**
  * Activity bar panel options
@@ -36,6 +38,23 @@ export interface IDEContextValue {
   // Actions
   runCode: () => Promise<void>
   clearTerminal: () => void
+
+  // Filesystem
+  fileTree: TreeNode[]
+  createFile: (path: string, content?: string) => void
+  createFolder: (path: string) => void
+  deleteFile: (path: string) => void
+  deleteFolder: (path: string) => void
+  renameFile: (oldPath: string, newName: string) => void
+  renameFolder: (oldPath: string, newName: string) => void
+  openFile: (path: string) => void
+  saveFile: () => void
+
+  // Tabs
+  tabs: TabInfo[]
+  activeTab: string | null
+  selectTab: (path: string) => void
+  closeTab: (path: string) => void
 }
 
 /**

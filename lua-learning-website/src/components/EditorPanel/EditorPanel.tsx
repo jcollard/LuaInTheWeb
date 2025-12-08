@@ -1,4 +1,5 @@
 import { CodeEditor } from '../CodeEditor'
+import { TabBar } from '../TabBar'
 import styles from './EditorPanel.module.css'
 import type { EditorPanelProps } from './types'
 
@@ -13,6 +14,7 @@ export function EditorPanel({
   onRun,
   isRunning = false,
   className,
+  tabBarProps,
 }: EditorPanelProps) {
   const combinedClassName = className
     ? `${styles.editorPanel} ${className}`
@@ -21,14 +23,24 @@ export function EditorPanel({
   const displayFileName = isDirty ? `${fileName} *` : fileName
   const runButtonLabel = isRunning ? 'Code is running' : 'Run code (Ctrl+Enter)'
 
+  const renderTabs = () => {
+    if (tabBarProps) {
+      return <TabBar {...tabBarProps} />
+    }
+
+    return (
+      <div className={styles.tabs}>
+        <div className={styles.tab}>
+          <span className={styles.tabName}>{displayFileName}</span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className={combinedClassName} data-testid="editor-panel">
       <div className={styles.toolbar}>
-        <div className={styles.tabs}>
-          <div className={styles.tab}>
-            <span className={styles.tabName}>{displayFileName}</span>
-          </div>
-        </div>
+        {renderTabs()}
         <div className={styles.actions}>
           <button
             type="button"

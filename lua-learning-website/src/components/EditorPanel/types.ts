@@ -1,3 +1,5 @@
+import type { TabBarProps } from '../TabBar'
+
 /**
  * Props for the EditorPanel component
  */
@@ -6,9 +8,9 @@ export interface EditorPanelProps {
   code: string
   /** Called when code changes */
   onChange: (code: string) => void
-  /** File name to show in tab */
+  /** File name to show in tab (used when tabBarProps not provided) */
   fileName: string
-  /** Whether the file has unsaved changes */
+  /** Whether the file has unsaved changes (used when tabBarProps not provided) */
   isDirty: boolean
   /** Called when run button is clicked */
   onRun: () => void
@@ -22,6 +24,8 @@ export interface EditorPanelProps {
   onCursorChange?: (line: number, column: number) => void
   /** Optional additional className */
   className?: string
+  /** Props for TabBar when multi-file mode is active */
+  tabBarProps?: Omit<TabBarProps, 'className'>
 }
 
 /**

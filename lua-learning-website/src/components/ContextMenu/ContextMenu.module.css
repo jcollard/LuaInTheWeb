@@ -1,0 +1,46 @@
+.menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 160px;
+  background-color: var(--vscode-menu-background, #252526);
+  border: 1px solid var(--vscode-menu-border, #454545);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
+  padding: 4px 0;
+  outline: none;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  cursor: pointer;
+  color: var(--vscode-menu-foreground, #cccccc);
+  font-size: 13px;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+
+.menuItem:hover,
+.menuItem:focus {
+  background-color: var(--vscode-menu-selectionBackground, #04395e);
+  color: var(--vscode-menu-selectionForeground, #ffffff);
+  outline: none;
+}
+
+.menuItem:disabled {
+  color: var(--vscode-disabledForeground, #6c6c6c);
+  cursor: not-allowed;
+}
+
+.menuItem:disabled:hover {
+  background-color: transparent;
+}
+
+.divider {
+  height: 1px;
+  margin: 4px 0;
+  background-color: var(--vscode-menu-separatorBackground, #454545);
+}

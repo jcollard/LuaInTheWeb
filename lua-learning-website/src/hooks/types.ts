@@ -10,6 +10,8 @@ export interface UseLuaEngineOptions {
   onReadInput?: () => Promise<string>
   /** Called when the engine is destroyed (unmount or reset) */
   onCleanup?: () => void
+  /** Called when require() needs to read a file from the virtual filesystem */
+  fileReader?: (path: string) => string | null
 }
 
 /**

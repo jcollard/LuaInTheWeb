@@ -314,4 +314,122 @@ describe('useLuaEngine', () => {
     const input = await readInputFn?.()
     expect(input).toBe('')
   })
+
+  // require() override tests
+  describe('require() override', () => {
+    it('should setup __js_require when fileReader is provided', async () => {
+      // Arrange
+      const fileReader = vi.fn()
+      const { result } = renderHook(() => useLuaEngine({ fileReader }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Assert - __js_require should be set
+      const jsRequireFn = mockGlobalSet.mock.calls.find(
+        (call: unknown[]) => call[0] === '__js_require'
+      )
+      expect(jsRequireFn).toBeDefined()
+    })
+
+    it('should not setup __js_require when fileReader is not provided', async () => {
+      // Arrange - no fileReader
+      const { result } = renderHook(() => useLuaEngine({}))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Assert - __js_require should NOT be set
+      const jsRequireFn = mockGlobalSet.mock.calls.find(
+        (call: unknown[]) => call[0] === '__js_require'
+      )
+      expect(jsRequireFn).toBeUndefined()
+    })
+
+    it('should call fileReader with module.lua path for require("module")', async () => {
+      // Arrange
+      const fileReader = vi.fn().mockReturnValue('return 42')
+      const { result } = renderHook(() => useLuaEngine({ fileReader }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Get the __js_require function
+      const jsRequireFn = mockGlobalSet.mock.calls.find(
+        (call: unknown[]) => call[0] === '__js_require'
+      )?.[1] as ((moduleName: string) => string | null) | undefined
+
+      // Act
+      const content = jsRequireFn?.('utils')
+
+      // Assert
+      expect(fileReader).toHaveBeenCalledWith('/utils.lua')
+      expect(content).toBe('return 42')
+    })
+
+    it('should call fileReader with folder path for require("folder.module")', async () => {
+      // Arrange
+      const fileReader = vi.fn().mockReturnValue('return {}')
+      const { result } = renderHook(() => useLuaEngine({ fileReader }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Get the __js_require function
+      const jsRequireFn = mockGlobalSet.mock.calls.find(
+        (call: unknown[]) => call[0] === '__js_require'
+      )?.[1] as ((moduleName: string) => string | null) | undefined
+
+      // Act
+      jsRequireFn?.('utils.math')
+
+      // Assert
+      expect(fileReader).toHaveBeenCalledWith('/utils/math.lua')
+    })
+
+    it('should try init.lua for folder when module.lua not found', async () => {
+      // Arrange
+      const fileReader = vi.fn()
+        .mockReturnValueOnce(null) // First call for /game.lua returns null
+        .mockReturnValueOnce('return {start = function() end}') // Second call for /game/init.lua
+      const { result } = renderHook(() => useLuaEngine({ fileReader }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Get the __js_require function
+      const jsRequireFn = mockGlobalSet.mock.calls.find(
+        (call: unknown[]) => call[0] === '__js_require'
+      )?.[1] as ((moduleName: string) => string | null) | undefined
+
+      // Act
+      const content = jsRequireFn?.('game')
+
+      // Assert
+      expect(fileReader).toHaveBeenNthCalledWith(1, '/game.lua')
+      expect(fileReader).toHaveBeenNthCalledWith(2, '/game/init.lua')
+      expect(content).toBe('return {start = function() end}')
+    })
+
+    it('should return null when module not found', async () => {
+      // Arrange
+      const fileReader = vi.fn().mockReturnValue(null)
+      const { result } = renderHook(() => useLuaEngine({ fileReader }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Get the __js_require function
+      const jsRequireFn = mockGlobalSet.mock.calls.find(
+        (call: unknown[]) => call[0] === '__js_require'
+      )?.[1] as ((moduleName: string) => string | null) | undefined
+
+      // Act
+      const content = jsRequireFn?.('nonexistent')
+
+      // Assert
+      expect(content).toBeNull()
+    })
+
+    it('should setup require override Lua code when fileReader is provided', async () => {
+      // Arrange
+      const fileReader = vi.fn()
+      const { result } = renderHook(() => useLuaEngine({ fileReader }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Assert - doString should have been called with require override code
+      const requireSetupCall = mockDoString.mock.calls.find(
+        (call: unknown[]) => typeof call[0] === 'string' && (call[0] as string).includes('__loaded_modules')
+      )
+      expect(requireSetupCall).toBeDefined()
+    })
+  })
 })

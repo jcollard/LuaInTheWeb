@@ -3,10 +3,19 @@ import { LuaFactory, LuaEngine } from 'wasmoon'
 import type { UseLuaEngineOptions, UseLuaEngineReturn } from './types'
 
 /**
+ * Convert module name to file path
+ * "utils.math" -> "/utils/math.lua"
+ */
+function moduleNameToPath(moduleName: string): string {
+  const path = '/' + moduleName.replace(/\./g, '/') + '.lua'
+  return path
+}
+
+/**
  * Hook that provides a Lua execution environment
  */
 export function useLuaEngine(options: UseLuaEngineOptions): UseLuaEngineReturn {
-  const { onOutput, onError, onReadInput, onCleanup } = options
+  const { onOutput, onError, onReadInput, onCleanup, fileReader } = options
   const [isReady, setIsReady] = useState(false)
   const engineRef = useRef<LuaEngine | null>(null)
 
@@ -19,6 +28,9 @@ export function useLuaEngine(options: UseLuaEngineOptions): UseLuaEngineReturn {
 
   const onReadInputRef = useRef(onReadInput)
   onReadInputRef.current = onReadInput
+
+  const fileReaderRef = useRef(fileReader)
+  fileReaderRef.current = fileReader
 
   const setupEngine = useCallback(async (lua: LuaEngine) => {
     // Override print to call onOutput - use ref to get current callback
@@ -34,6 +46,54 @@ export function useLuaEngine(options: UseLuaEngineOptions): UseLuaEngineReturn {
       }
       return ''
     })
+
+    // Set up __js_require for require() - only if fileReader is provided
+    if (fileReaderRef.current) {
+      lua.global.set('__js_require', (moduleName: string): string | null => {
+        if (!fileReaderRef.current) return null
+
+        // Try module.lua first
+        const modulePath = moduleNameToPath(moduleName)
+        let content = fileReaderRef.current(modulePath)
+
+        // If not found, try module/init.lua
+        if (content === null) {
+          const initPath = '/' + moduleName.replace(/\./g, '/') + '/init.lua'
+          content = fileReaderRef.current(initPath)
+        }
+
+        return content
+      })
+
+      // Set up require() override in Lua
+      await lua.doString(`
+        __loaded_modules = {}
+
+        function require(modname)
+          -- Check cache first
+          if __loaded_modules[modname] ~= nil then
+            return __loaded_modules[modname]
+          end
+
+          -- Get content from JavaScript
+          local content = __js_require(modname)
+          if content == nil then
+            error("module '" .. modname .. "' not found")
+          end
+
+          -- Load and execute the module
+          local fn, err = load(content, modname)
+          if not fn then
+            error("error loading module '" .. modname .. "': " .. (err or "unknown error"))
+          end
+
+          local result = fn()
+          -- Cache the result (use true if module returns nil)
+          __loaded_modules[modname] = result or true
+          return __loaded_modules[modname]
+        end
+      `)
+    }
 
     // Set up io table with write function via Lua code
     await lua.doString(`

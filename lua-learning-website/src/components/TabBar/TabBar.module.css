@@ -1,0 +1,77 @@
+.tabBar {
+  display: flex;
+  align-items: center;
+  background-color: var(--vscode-editorGroupHeader-tabsBackground, #252526);
+  border-bottom: 1px solid var(--vscode-editorGroupHeader-tabsBorder, #252526);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.tabBar::-webkit-scrollbar {
+  height: 3px;
+}
+
+.tabBar::-webkit-scrollbar-thumb {
+  background-color: var(--vscode-scrollbarSlider-background, rgba(100, 100, 100, 0.4));
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background-color: var(--vscode-tab-inactiveBackground, #2d2d2d);
+  color: var(--vscode-tab-inactiveForeground, #969696);
+  border: none;
+  border-right: 1px solid var(--vscode-tab-border, #252526);
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.tab:hover {
+  background-color: var(--vscode-tab-hoverBackground, #323232);
+}
+
+.tab.active {
+  background-color: var(--vscode-tab-activeBackground, #1e1e1e);
+  color: var(--vscode-tab-activeForeground, #ffffff);
+}
+
+.tabName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dirtyIndicator {
+  color: var(--vscode-tab-unfocusedActiveForeground, #969696);
+  font-size: 12px;
+}
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--vscode-icon-foreground, #c5c5c5);
+  opacity: 0.6;
+}
+
+.closeButton:hover {
+  opacity: 1;
+  background-color: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+}
+
+.closeIcon {
+  width: 14px;
+  height: 14px;
+}

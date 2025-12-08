@@ -31,6 +31,20 @@ function IDELayoutInner({ className }: { className?: string }) {
     terminalVisible,
     toggleTerminal,
     runCode,
+    // Filesystem
+    fileTree,
+    createFile,
+    createFolder,
+    deleteFile,
+    deleteFolder,
+    renameFile,
+    renameFolder,
+    openFile,
+    // Tabs
+    tabs,
+    activeTab,
+    selectTab,
+    closeTab,
   } = useIDE()
 
   const [isRunning, setIsRunning] = useState(false)
@@ -57,6 +71,50 @@ function IDELayoutInner({ className }: { className?: string }) {
     ? `${styles.ideLayout} ${className}`
     : styles.ideLayout
 
+  // Generate unique filename for new files
+  const generateFileName = useCallback((parentPath?: string, isFolder = false) => {
+    const baseName = isFolder ? 'new-folder' : 'new-file.lua'
+    const parentDir = parentPath || ''
+    const fullPath = parentDir === '/' || parentDir === ''
+      ? `/${baseName}`
+      : `${parentDir}/${baseName}`
+    return fullPath
+  }, [])
+
+  // Wrapper for FileExplorer's onCreateFile - generates a unique filename
+  const handleCreateFile = useCallback((parentPath?: string) => {
+    const newPath = generateFileName(parentPath, false)
+    createFile(newPath, '-- New file\n')
+    openFile(newPath)
+  }, [createFile, generateFileName, openFile])
+
+  // Wrapper for FileExplorer's onCreateFolder - generates a unique folder name
+  const handleCreateFolder = useCallback((parentPath?: string) => {
+    const newPath = generateFileName(parentPath, true)
+    createFolder(newPath)
+  }, [createFolder, generateFileName])
+
+  // Explorer props for FileExplorer
+  const explorerProps = {
+    tree: fileTree,
+    selectedPath: activeTab,
+    onCreateFile: handleCreateFile,
+    onCreateFolder: handleCreateFolder,
+    onRenameFile: renameFile,
+    onRenameFolder: renameFolder,
+    onDeleteFile: deleteFile,
+    onDeleteFolder: deleteFolder,
+    onSelectFile: openFile,
+  }
+
+  // Tab bar props for EditorPanel (only when tabs exist)
+  const tabBarProps = tabs.length > 0 ? {
+    tabs,
+    activeTab,
+    onSelect: selectTab,
+    onClose: closeTab,
+  } : undefined
+
   return (
     <div className={combinedClassName} data-testid="ide-layout">
       <div className={styles.mainContainer}>
@@ -71,7 +129,10 @@ function IDELayoutInner({ className }: { className?: string }) {
             {sidebarVisible && (
               <>
                 <IDEPanel defaultSize={20} minSize={15} maxSize={40}>
-                  <SidebarPanel activePanel={activePanel} />
+                  <SidebarPanel
+                    activePanel={activePanel}
+                    explorerProps={explorerProps}
+                  />
                 </IDEPanel>
                 <IDEResizeHandle />
               </>
@@ -92,6 +153,7 @@ function IDELayoutInner({ className }: { className?: string }) {
                       setCursorLine(line)
                       setCursorColumn(col)
                     }}
+                    tabBarProps={tabBarProps}
                   />
                 </IDEPanel>
                 {terminalVisible && (

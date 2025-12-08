@@ -1,0 +1,85 @@
+.treeItem {
+  display: flex;
+  align-items: center;
+  padding: 2px 8px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--vscode-foreground, #cccccc);
+  font-size: 13px;
+  line-height: 22px;
+  border-radius: 3px;
+}
+
+.treeItem:hover {
+  background-color: var(--vscode-list-hoverBackground, rgba(90, 93, 94, 0.31));
+}
+
+.treeItem.selected {
+  background-color: var(--vscode-list-activeSelectionBackground, #04395e);
+  color: var(--vscode-list-activeSelectionForeground, #ffffff);
+}
+
+.chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  transition: transform 0.1s ease;
+}
+
+.chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.chevronIcon {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.iconSvg {
+  width: 16px;
+  height: 16px;
+}
+
+.fileIcon {
+  fill: var(--vscode-icon-foreground, #c5c5c5);
+}
+
+.folderIcon {
+  fill: var(--vscode-gitDecoration-untrackedResourceForeground, #73c991);
+}
+
+.name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.renameInput {
+  flex: 1;
+  background: var(--vscode-input-background, #3c3c3c);
+  border: 1px solid var(--vscode-focusBorder, #007fd4);
+  color: var(--vscode-input-foreground, #cccccc);
+  font-size: 13px;
+  padding: 0 4px;
+  outline: none;
+  font-family: inherit;
+}
+
+.renameInput:focus {
+  border-color: var(--vscode-focusBorder, #007fd4);
+}
