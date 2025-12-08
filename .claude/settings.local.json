@@ -37,10 +37,16 @@
       "Bash(gh issue edit:*)",
       "Bash(gh issue close:*)",
       "Bash(gh issue comment:*)",
+      "Bash(gh issue view:*)",
+      "SlashCommand(/issue)",
       "SlashCommand(/tech-debt)",
       "SlashCommand(/code-review)",
+      "SlashCommand(/status)",
       "Bash(npx playwright test:*)",
-      "Bash(npm run test:mutation:scope:*)"
+      "Bash(npm run test:mutation:scope:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(ls:*)",
+      "Bash(sleep:*)"
     ],
     "deny": [
       "Bash(npm run dev)",
@@ -50,6 +56,8 @@
       "Bash(npm publish:*)",
       "Bash(python3:*)"
     ],
-    "ask": []
+    "ask": [
+      "SlashCommand(/accept-review)"
+    ]
   }
 }

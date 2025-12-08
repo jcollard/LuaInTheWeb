@@ -53,10 +53,16 @@
   overflow: hidden;
 }
 
-.terminalContent,
-.replContent {
+.terminalContent {
   height: 100%;
   overflow: auto;
+}
+
+.replContent {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .outputContainer {

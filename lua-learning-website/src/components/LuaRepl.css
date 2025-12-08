@@ -5,6 +5,13 @@
   min-height: 600px;
 }
 
+.lua-repl--embedded {
+  min-height: 0;
+  height: 100%;
+  flex: 1;
+  overflow: hidden;
+}
+
 .repl-header {
   display: flex;
   justify-content: space-between;
@@ -37,6 +44,12 @@
 .repl-terminal-container {
   flex: 1;
   min-height: 400px;
+}
+
+.lua-repl--embedded .repl-terminal-container {
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
 }
 
 .repl-help {

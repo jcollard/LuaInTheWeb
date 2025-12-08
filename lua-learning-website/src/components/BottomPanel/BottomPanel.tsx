@@ -111,7 +111,7 @@ export function BottomPanel({
         )}
         {activeTab === 'repl' && (
           <div className={styles.replContent} id="repl-tabpanel">
-            <LuaRepl />
+            <LuaRepl embedded />
           </div>
         )}
       </div>

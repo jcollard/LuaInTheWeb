@@ -5,7 +5,7 @@
 **Created**: Sun, Dec 7, 2025
 **Updated**: Sun, Dec 7, 2025
 **Completed**: Sun, Dec 7, 2025
-**Parent Epic**: [IDE-Style Code Editor](./ide-editor-epic.md)
+**Parent Epic**: [IDE-Style Code Editor](./epic.md)
 
 ## Summary
 
