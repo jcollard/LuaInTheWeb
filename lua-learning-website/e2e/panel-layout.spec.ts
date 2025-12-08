@@ -192,4 +192,47 @@ test.describe('Panel Layout', () => {
       await expect(page.getByText('Terminal Output')).toBeVisible()
     }
   })
+
+  test('double-click resize handle resets to default size', async ({ page }) => {
+    // Get the first resize handle (between left panel and right section)
+    const resizeHandle = page.locator('[role="separator"]').first()
+    await expect(resizeHandle).toBeVisible()
+
+    // Get initial handle position (default 30/70 split)
+    const initialBox = await resizeHandle.boundingBox()
+
+    if (initialBox) {
+      // Drag the handle significantly to the right
+      await page.mouse.move(
+        initialBox.x + initialBox.width / 2,
+        initialBox.y + initialBox.height / 2
+      )
+      await page.mouse.down()
+      await page.mouse.move(initialBox.x + 200, initialBox.y + initialBox.height / 2)
+      await page.mouse.up()
+
+      // Wait for resize to take effect
+      await page.waitForTimeout(200)
+
+      // Verify handle has moved
+      const afterDragBox = await resizeHandle.boundingBox()
+      expect(afterDragBox).toBeTruthy()
+      if (afterDragBox) {
+        expect(afterDragBox.x).toBeGreaterThan(initialBox.x + 50)
+      }
+
+      // Double-click the handle to reset
+      await resizeHandle.dblclick()
+
+      // Wait for reset animation
+      await page.waitForTimeout(200)
+
+      // Verify handle is back near original position
+      const afterResetBox = await resizeHandle.boundingBox()
+      if (afterResetBox) {
+        // Should be within 30px of original position (allowing for minor differences)
+        expect(Math.abs(afterResetBox.x - initialBox.x)).toBeLessThan(30)
+      }
+    }
+  })
 })

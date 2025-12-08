@@ -28,5 +28,9 @@ coverage
 .stryker-tmp
 reports
 
+# Playwright
+playwright-report
+test-results
+
 # Monaco Editor cache
 .monaco

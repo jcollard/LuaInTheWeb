@@ -3,7 +3,7 @@ import { PanelResizeHandle } from 'react-resizable-panels'
 import type { IDEResizeHandleProps } from './types'
 import styles from './IDEResizeHandle.module.css'
 
-export function IDEResizeHandle({ className }: IDEResizeHandleProps) {
+export function IDEResizeHandle({ className, onDoubleClick }: IDEResizeHandleProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const [isFocused, setIsFocused] = useState(false)
@@ -41,6 +41,7 @@ export function IDEResizeHandle({ className }: IDEResizeHandleProps) {
     <PanelResizeHandle
       className={combinedClassName}
       onDragging={handleDragging}
+      onDoubleClick={onDoubleClick}
     >
       <div
         data-testid="resize-handle-inner"

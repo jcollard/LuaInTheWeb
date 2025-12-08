@@ -10,3 +10,10 @@ export interface IDEPanelGroupProps {
   /** Additional CSS class */
   className?: string
 }
+
+export interface IDEPanelGroupHandle {
+  /** Get current layout sizes */
+  getLayout: () => number[]
+  /** Set layout to specific sizes */
+  setLayout: (sizes: number[]) => void
+}

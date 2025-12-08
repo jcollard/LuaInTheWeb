@@ -4,9 +4,10 @@ import { IDEResizeHandle } from './IDEResizeHandle'
 
 // Mock react-resizable-panels
 vi.mock('react-resizable-panels', () => ({
-  PanelResizeHandle: ({ className, onDragging, children, id }: {
+  PanelResizeHandle: ({ className, onDragging, onDoubleClick, children, id }: {
     className?: string
     onDragging?: (isDragging: boolean) => void
+    onDoubleClick?: () => void
     children?: React.ReactNode
     id?: string
   }) => (
@@ -19,6 +20,7 @@ vi.mock('react-resizable-panels', () => ({
       id={id}
       onMouseDown={() => onDragging?.(true)}
       onMouseUp={() => onDragging?.(false)}
+      onDoubleClick={onDoubleClick}
     >
       {children}
     </div>
@@ -205,6 +207,30 @@ describe('IDEResizeHandle', () => {
 
       // Assert
       expect(screen.getByTestId('resize-handle')).toHaveClass('custom-class')
+    })
+  })
+
+  describe('double-click reset', () => {
+    it('should call onDoubleClick when handle is double-clicked', () => {
+      // Arrange
+      const onDoubleClick = vi.fn()
+      render(<IDEResizeHandle onDoubleClick={onDoubleClick} />)
+      const handle = screen.getByTestId('resize-handle')
+
+      // Act
+      fireEvent.doubleClick(handle)
+
+      // Assert
+      expect(onDoubleClick).toHaveBeenCalledTimes(1)
+    })
+
+    it('should not throw when double-clicked without onDoubleClick handler', () => {
+      // Arrange
+      render(<IDEResizeHandle />)
+      const handle = screen.getByTestId('resize-handle')
+
+      // Act & Assert - should not throw
+      expect(() => fireEvent.doubleClick(handle)).not.toThrow()
     })
   })
 })

@@ -1,7 +1,10 @@
-import { useState } from 'react'
-import { IDEPanelGroup } from '../../components/IDEPanelGroup'
+import { useState, useRef, useCallback } from 'react'
+import { IDEPanelGroup, type IDEPanelGroupHandle } from '../../components/IDEPanelGroup'
 import { IDEPanel } from '../../components/IDEPanel'
 import { IDEResizeHandle } from '../../components/IDEResizeHandle'
+
+const DEFAULT_HORIZONTAL_LAYOUT = [30, 70]
+const DEFAULT_VERTICAL_LAYOUT = [60, 40]
 
 /**
  * Test page for Panel Layout components
@@ -9,6 +12,16 @@ import { IDEResizeHandle } from '../../components/IDEResizeHandle'
  */
 export function PanelLayoutTest() {
   const [leftCollapsed, setLeftCollapsed] = useState(false)
+  const horizontalGroupRef = useRef<IDEPanelGroupHandle>(null)
+  const verticalGroupRef = useRef<IDEPanelGroupHandle>(null)
+
+  const handleHorizontalReset = useCallback(() => {
+    horizontalGroupRef.current?.setLayout(DEFAULT_HORIZONTAL_LAYOUT)
+  }, [])
+
+  const handleVerticalReset = useCallback(() => {
+    verticalGroupRef.current?.setLayout(DEFAULT_VERTICAL_LAYOUT)
+  }, [])
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -20,7 +33,7 @@ export function PanelLayoutTest() {
       </header>
 
       <main style={{ flex: 1, overflow: 'hidden' }}>
-        <IDEPanelGroup direction="horizontal" persistId="test-layout">
+        <IDEPanelGroup ref={horizontalGroupRef} direction="horizontal" persistId="test-layout">
           <IDEPanel
             defaultSize={30}
             minSize={10}
@@ -42,10 +55,10 @@ export function PanelLayoutTest() {
             </div>
           </IDEPanel>
 
-          <IDEResizeHandle />
+          <IDEResizeHandle onDoubleClick={handleHorizontalReset} />
 
           <IDEPanel defaultSize={70} minSize={20}>
-            <IDEPanelGroup direction="vertical" persistId="test-layout-right">
+            <IDEPanelGroup ref={verticalGroupRef} direction="vertical" persistId="test-layout-right">
               <IDEPanel defaultSize={60} minSize={20} header="Editor">
                 <div style={{ padding: '16px' }}>
                   <h2 style={{ fontSize: '14px', marginTop: 0 }}>Code Editor</h2>
@@ -66,7 +79,7 @@ greet("World")`}
                 </div>
               </IDEPanel>
 
-              <IDEResizeHandle />
+              <IDEResizeHandle onDoubleClick={handleVerticalReset} />
 
               <IDEPanel defaultSize={40} minSize={15} header="Output">
                 <div style={{ padding: '16px' }}>
