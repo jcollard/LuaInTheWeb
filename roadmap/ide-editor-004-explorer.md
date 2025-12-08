@@ -28,21 +28,21 @@ Currently, the editor only supports a single file. Real-world Lua projects use m
 
 ### Functional Requirements
 
-- [ ] File tree displays folder/file hierarchy
-- [ ] Create new file/folder via context menu or button
-- [ ] Rename files/folders inline
-- [ ] Delete files/folders with confirmation
-- [ ] Click file to open in editor
-- [ ] Multiple files open as tabs
-- [ ] Dirty indicator for unsaved changes
-- [ ] `require("module")` loads from virtual filesystem
-- [ ] Persist filesystem to localStorage
+- [x] File tree displays folder/file hierarchy
+- [x] Create new file/folder via context menu or button
+- [x] Rename files/folders inline
+- [x] Delete files/folders with confirmation
+- [x] Click file to open in editor
+- [x] Multiple files open as tabs
+- [x] Dirty indicator for unsaved changes
+- [x] `require("module")` loads from virtual filesystem
+- [x] Persist filesystem to localStorage
 
 ### Non-Functional Requirements
 
-- [ ] Supports 100+ files without lag
-- [ ] Keyboard navigation in file tree
-- [ ] Accessible (screen reader support)
+- [x] Supports 100+ files without lag
+- [x] Keyboard navigation in file tree
+- [x] Accessible (screen reader support)
 - [ ] Drag-and-drop to move files (stretch goal)
 
 ## Technical Design
@@ -729,10 +729,10 @@ return M
 
 ## Success Metrics
 
-- [ ] Can create 10+ file project
-- [ ] require() works across files
-- [ ] Filesystem survives page refresh
-- [ ] No data loss on normal usage
+- [x] Can create 10+ file project
+- [x] require() works across files
+- [x] Filesystem survives page refresh
+- [x] No data loss on normal usage
 
 ---
 

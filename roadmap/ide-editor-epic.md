@@ -1,9 +1,9 @@
 # Epic: IDE-Style Code Editor
 
-**Status**: Approved
+**Status**: Completed
 **Author**: Claude & Joseph
 **Created**: Sun, Dec 7, 2025
-**Updated**: Sun, Dec 7, 2025
+**Updated**: Mon, Dec 8, 2025
 
 ## Summary
 
@@ -30,10 +30,10 @@ Transform the Lua Playground into a full-featured, VS Code-style IDE experience 
 | # | Plan | Status | Dependencies | Description |
 |---|------|--------|--------------|-------------|
 | 0 | [Foundation Refactoring](./ide-editor-000-foundation.md) | **Completed** | None | Extract hooks, add React Router, setup Monaco |
-| 1 | [Embeddable Editor](./ide-editor-001-embeddable.md) | Draft | Phase 0 | Standalone editor component for examples/challenges |
-| 2 | [Panel Layout System](./ide-editor-002-panels.md) | Draft | Phase 0 | Resizable split panel infrastructure |
-| 3 | [IDE Shell](./ide-editor-003-ide-shell.md) | Draft | Phases 1, 2 | Full IDE layout at `/editor` route |
-| 4 | [Explorer Panel](./ide-editor-004-explorer.md) | Draft | Phase 3 | File tree with virtual filesystem |
+| 1 | [Embeddable Editor](./ide-editor-001-embeddable.md) | **Completed** | Phase 0 | Standalone editor component for examples/challenges |
+| 2 | [Panel Layout System](./ide-editor-002-panels.md) | **Completed** | Phase 0 | Resizable split panel infrastructure |
+| 3 | [IDE Shell](./ide-editor-003-ide-shell.md) | **Completed** | Phases 1, 2 | Full IDE layout at `/editor` route |
+| 4 | [Explorer Panel](./ide-editor-004-explorer.md) | **Completed** | Phase 3 | File tree with virtual filesystem |
 
 ## Dependency Graph
 
@@ -99,13 +99,13 @@ useFileSystem() → { files, openFile, saveFile, createFile, deleteFile }
 
 ## Success Criteria
 
-- [ ] `/editor` route loads VS Code-style IDE
-- [ ] All VS Code shortcuts work (Ctrl+D, Alt+Up/Down, Ctrl+/, etc.)
-- [ ] Panels are resizable and persist layout
-- [ ] Editor is embeddable with `<EmbeddableEditor code="..." />`
-- [ ] Existing Playground functionality preserved
-- [ ] Mobile-responsive (panels stack vertically)
-- [ ] Performance: Editor loads in < 2 seconds
+- [x] `/editor` route loads VS Code-style IDE
+- [x] All VS Code shortcuts work (Ctrl+D, Alt+Up/Down, Ctrl+/, etc.)
+- [x] Panels are resizable and persist layout
+- [x] Editor is embeddable with `<EmbeddableEditor code="..." />`
+- [x] Existing Playground functionality preserved
+- [x] Mobile-responsive (panels stack vertically)
+- [x] Performance: Editor loads in < 2 seconds
 
 ## Risks
 
@@ -131,13 +131,13 @@ useFileSystem() → { files, openFile, saveFile, createFile, deleteFile }
 - [x] Completed (Dec 7, 2025)
 
 ### Phase 1: Embeddable Editor
-- [ ] Not started
+- [x] Completed (Dec 7, 2025)
 
 ### Phase 2: Panel Layout System
-- [ ] Not started
+- [x] Completed (Dec 7, 2025)
 
 ### Phase 3: IDE Shell
-- [ ] Not started
+- [x] Completed (Dec 7, 2025)
 
 ### Phase 4: Explorer Panel
-- [ ] Not started
+- [x] Completed (Dec 8, 2025)
