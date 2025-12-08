@@ -6,7 +6,8 @@ Work with GitHub issues. Fetch details, assess complexity, and begin implementat
 
 ```
 /issue <number>           # Show issue details + complexity assessment
-/issue <number> begin     # Start working on the issue
+/issue <number> begin     # Create branch and start working on the issue
+/issue <number> review    # Create PR for the issue and run code review
 ```
 
 ## Arguments
@@ -16,7 +17,7 @@ The command accepts an issue number and optional subcommand:
 
 Parse the arguments:
 - First token: Issue number (required)
-- Second token: Subcommand (optional, currently only "begin")
+- Second token: Subcommand (optional: "begin" or "review")
 
 ---
 
@@ -101,9 +102,25 @@ If no subcommand provided (`/issue 13`), end with:
 
 If subcommand is "begin" (`/issue 13 begin`):
 
-### 5a. Inject Development Context
+### 5a. Create Branch from Issue
 
-**FIRST**, run these commands to inject full development guidelines:
+**FIRST**, create and checkout a branch linked to the issue:
+
+```bash
+gh issue develop <number> --checkout
+```
+
+This creates a branch named `<number>-<issue-title-slug>` and checks it out.
+The branch is automatically linked to the issue for tracking.
+
+If the branch already exists, checkout the existing branch instead:
+```bash
+git checkout <number>-<issue-title-slug>
+```
+
+### 5b. Inject Development Context
+
+Run these commands to inject full development guidelines:
 
 ```
 /tdd
@@ -111,7 +128,7 @@ If subcommand is "begin" (`/issue 13 begin`):
 
 This ensures the TDD cycle (Red-Green-Refactor-Mutate) guidelines are loaded.
 
-### 5b. For Simple Issues (1-3 tasks)
+### 5c. For Simple Issues (1-3 tasks)
 
 Create a TodoWrite task list and start immediately:
 
@@ -153,7 +170,7 @@ npm run test:mutation:scope "src/components/AffectedComponent/**"
 - [ ] Build succeeds: `npm run build`
 - [ ] E2E tests pass (if applicable): `npm run test:e2e`
 
-### 5c. For Medium Issues (4-5 tasks)
+### 5d. For Medium Issues (4-5 tasks)
 
 Create a brief plan before starting:
 
@@ -178,7 +195,7 @@ Create a brief plan before starting:
 
 Then create TodoWrite tasks and begin implementation following the **Development Practices** above.
 
-### 5d. For Complex Issues (6+ tasks or architectural)
+### 5e. For Complex Issues (6+ tasks or architectural)
 
 Recommend creating a roadmap phase instead:
 
@@ -196,6 +213,60 @@ Recommend creating a roadmap phase instead:
 2. Proceed anyway: `/issue <number> begin --force`
 
 Run `/new-feature` to create a proper roadmap phase for this work.
+```
+
+---
+
+## Step 6: Review and Create PR (Review Mode)
+
+If subcommand is "review" (`/issue 13 review`):
+
+### 6a. Run Code Review
+
+First, run the code review checklist:
+
+```
+/code-review
+```
+
+This validates all tests pass, lint passes, and build succeeds.
+
+### 6b. Create Pull Request
+
+After code review passes, create a PR linked to the issue:
+
+```bash
+gh pr create --title "<Issue Title>" --body "$(cat <<'EOF'
+## Summary
+<Brief summary of changes - 1-3 bullet points>
+
+## Test plan
+<How to verify the changes work>
+
+Fixes #<number>
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"
+```
+
+The `Fixes #<number>` syntax automatically closes the issue when the PR is merged.
+
+### 6c. Output PR URL
+
+After PR creation, output:
+
+```
+## PR Created for Issue #<number>
+
+**PR URL**: <pr-url>
+
+The PR is linked to issue #<number> and will auto-close it when merged.
+
+**Next steps:**
+- Review the PR on GitHub
+- Request reviews if needed
+- Merge when approved
 ```
 
 ---
@@ -237,6 +308,9 @@ The REPL component has several UX issues when embedded in the `/editor` IDE layo
 
 ## Starting Issue #13: REPL UX issues
 
+### Branch Created
+Created and checked out branch: 13-repl-ux-issues-in-editor-context
+
 **Complexity**: Simple - Creating task list directly
 
 ### Tasks
@@ -252,6 +326,35 @@ The REPL component has several UX issues when embedded in the `/editor` IDE layo
 Starting with task 1...
 ```
 
+### Example: Creating PR for Issue
+
+```
+/issue 13 review
+
+## Code Review for Issue #13
+
+Running /code-review...
+✓ All 634 tests pass
+✓ Lint passes
+✓ Build succeeds
+✓ E2E tests pass
+
+## Creating PR for Issue #13
+
+Creating pull request...
+
+## PR Created for Issue #13
+
+**PR URL**: https://github.com/jcollard/LuaInTheWeb/pull/16
+
+The PR is linked to issue #13 and will auto-close it when merged.
+
+**Next steps:**
+- Review the PR on GitHub
+- Request reviews if needed
+- Merge when approved
+```
+
 ---
 
 ## Error Handling
@@ -260,5 +363,5 @@ Starting with task 1...
 |-------|----------|
 | No issue number provided | "Usage: `/issue <number>` or `/issue <number> begin`" |
 | Issue not found | "Issue #<number> not found. Check the issue number and try again." |
-| Unknown subcommand | "Unknown subcommand '<cmd>'. Available: begin" |
+| Unknown subcommand | "Unknown subcommand '<cmd>'. Available: begin, review" |
 | GitHub CLI not available | "GitHub CLI (gh) is required. Install from https://cli.github.com" |

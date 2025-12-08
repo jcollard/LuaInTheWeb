@@ -50,14 +50,14 @@
     ],
     "deny": [
       "Bash(npm run dev)",
-      "Bash(git push:*)",
       "Bash(git commit:*)",
       "Bash(rm -rf:*)",
       "Bash(npm publish:*)",
       "Bash(python3:*)"
     ],
     "ask": [
-      "SlashCommand(/accept-review)"
+      "SlashCommand(/accept-review)",
+      "Bash(git push:*)"
     ]
   }
 }
