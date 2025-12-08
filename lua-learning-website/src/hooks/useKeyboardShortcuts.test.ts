@@ -6,11 +6,13 @@ describe('useKeyboardShortcuts', () => {
   let mockRunCode: Mock<() => void>
   let mockToggleTerminal: Mock<() => void>
   let mockToggleSidebar: Mock<() => void>
+  let mockSaveFile: Mock<() => void>
 
   beforeEach(() => {
     mockRunCode = vi.fn<() => void>()
     mockToggleTerminal = vi.fn<() => void>()
     mockToggleSidebar = vi.fn<() => void>()
+    mockSaveFile = vi.fn<() => void>()
   })
 
   afterEach(() => {
@@ -25,6 +27,7 @@ describe('useKeyboardShortcuts', () => {
           runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
         })
       )
 
@@ -47,6 +50,7 @@ describe('useKeyboardShortcuts', () => {
           runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
         })
       )
 
@@ -71,6 +75,7 @@ describe('useKeyboardShortcuts', () => {
           runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
         })
       )
 
@@ -93,6 +98,7 @@ describe('useKeyboardShortcuts', () => {
           runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
         })
       )
 
@@ -117,6 +123,7 @@ describe('useKeyboardShortcuts', () => {
           runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
         })
       )
 
@@ -139,6 +146,7 @@ describe('useKeyboardShortcuts', () => {
           runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
         })
       )
 
@@ -161,6 +169,7 @@ describe('useKeyboardShortcuts', () => {
           runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
         })
       )
 
@@ -177,6 +186,77 @@ describe('useKeyboardShortcuts', () => {
     })
   })
 
+  describe('Ctrl+S', () => {
+    it('should call saveFile when Ctrl+S is pressed', () => {
+      // Arrange
+      renderHook(() =>
+        useKeyboardShortcuts({
+          runCode: mockRunCode,
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+        })
+      )
+
+      // Act
+      const event = new KeyboardEvent('keydown', {
+        key: 's',
+        ctrlKey: true,
+        bubbles: true,
+      })
+      document.dispatchEvent(event)
+
+      // Assert
+      expect(mockSaveFile).toHaveBeenCalledTimes(1)
+    })
+
+    it('should call saveFile for uppercase S with Ctrl', () => {
+      // Arrange
+      renderHook(() =>
+        useKeyboardShortcuts({
+          runCode: mockRunCode,
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+        })
+      )
+
+      // Act
+      const event = new KeyboardEvent('keydown', {
+        key: 'S',
+        ctrlKey: true,
+        bubbles: true,
+      })
+      document.dispatchEvent(event)
+
+      // Assert
+      expect(mockSaveFile).toHaveBeenCalledTimes(1)
+    })
+
+    it('should not call saveFile when only S is pressed without Ctrl', () => {
+      // Arrange
+      renderHook(() =>
+        useKeyboardShortcuts({
+          runCode: mockRunCode,
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+        })
+      )
+
+      // Act
+      const event = new KeyboardEvent('keydown', {
+        key: 's',
+        ctrlKey: false,
+        bubbles: true,
+      })
+      document.dispatchEvent(event)
+
+      // Assert
+      expect(mockSaveFile).not.toHaveBeenCalled()
+    })
+  })
+
   describe('cleanup', () => {
     it('should remove event listener on unmount', () => {
       // Arrange
@@ -185,6 +265,7 @@ describe('useKeyboardShortcuts', () => {
           runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
         })
       )
 
@@ -212,6 +293,7 @@ describe('useKeyboardShortcuts', () => {
           runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
         })
       )
 
@@ -236,12 +318,38 @@ describe('useKeyboardShortcuts', () => {
           runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
         })
       )
 
       // Act
       const event = new KeyboardEvent('keydown', {
         key: 'b',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+      document.dispatchEvent(event)
+
+      // Assert
+      expect(preventDefaultSpy).toHaveBeenCalled()
+    })
+
+    it('should prevent default for Ctrl+S to avoid browser save dialog', () => {
+      // Arrange
+      renderHook(() =>
+        useKeyboardShortcuts({
+          runCode: mockRunCode,
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+        })
+      )
+
+      // Act
+      const event = new KeyboardEvent('keydown', {
+        key: 's',
         ctrlKey: true,
         bubbles: true,
         cancelable: true,

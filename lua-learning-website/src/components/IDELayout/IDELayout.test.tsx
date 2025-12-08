@@ -1,11 +1,16 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import { IDELayout } from './IDELayout'
 
-// Mock Monaco Editor
+// Mock Monaco Editor with onChange support
 vi.mock('@monaco-editor/react', () => ({
-  default: ({ value }: { value: string }) => (
-    <textarea data-testid="mock-monaco" defaultValue={value} />
+  default: ({ value, onChange }: { value: string; onChange?: (value: string | undefined) => void }) => (
+    <textarea
+      data-testid="mock-monaco"
+      defaultValue={value}
+      onChange={(e) => onChange?.(e.target.value)}
+    />
   ),
 }))
 
@@ -102,6 +107,162 @@ describe('IDELayout', () => {
 
       // Assert
       expect(screen.getByTestId('ide-layout')).toHaveClass('custom-class')
+    })
+  })
+
+  describe('dirty tab close confirmation', () => {
+    beforeEach(() => {
+      // Clear localStorage to ensure clean state
+      localStorage.clear()
+    })
+
+    // Helper to get the file tab (not the terminal/repl tabs)
+    function getFileTab() {
+      return screen.getByRole('tab', { name: /new-file\.lua/i })
+    }
+
+    // Helper to query the file tab (returns null if not found)
+    function queryFileTab() {
+      return screen.queryByRole('tab', { name: /new-file\.lua/i })
+    }
+
+    // Helper to create and open a file
+    async function createAndOpenFile(user: ReturnType<typeof userEvent.setup>) {
+      // Create a new file via the new file button
+      const newFileButton = screen.getByRole('button', { name: /new file/i })
+      await user.click(newFileButton)
+
+      // Wait for file to appear in tree
+      await waitFor(() => {
+        expect(screen.getByRole('treeitem', { name: /new-file\.lua/i })).toBeInTheDocument()
+      })
+
+      // Click on the file to open it (creates a tab)
+      const fileItem = screen.getByRole('treeitem', { name: /new-file\.lua/i })
+      await user.click(fileItem)
+
+      // Wait for file tab to appear
+      await waitFor(() => {
+        expect(getFileTab()).toBeInTheDocument()
+      })
+    }
+
+    it('should close non-dirty tab immediately without confirmation', async () => {
+      // Arrange
+      const user = userEvent.setup()
+      render(<IDELayout />)
+
+      await createAndOpenFile(user)
+
+      // Verify file tab exists
+      expect(getFileTab()).toBeInTheDocument()
+
+      // Act - close the non-dirty tab using its specific close button
+      const closeButton = screen.getByRole('button', { name: /close new-file\.lua/i })
+      await user.click(closeButton)
+
+      // Assert - no confirmation dialog, tab is closed
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(queryFileTab()).not.toBeInTheDocument()
+    })
+
+    it('should show confirmation dialog when closing dirty tab', async () => {
+      // Arrange
+      const user = userEvent.setup()
+      render(<IDELayout />)
+
+      await createAndOpenFile(user)
+
+      // Make the tab dirty by changing the editor content
+      const editor = screen.getByTestId('mock-monaco')
+      fireEvent.change(editor, { target: { value: 'print("modified")' } })
+
+      // Verify dirty indicator appears
+      await waitFor(() => {
+        expect(screen.getByText('*')).toBeInTheDocument()
+      })
+
+      // Act - try to close the dirty tab
+      const closeButton = screen.getByRole('button', { name: /close new-file\.lua/i })
+      await user.click(closeButton)
+
+      // Assert - confirmation dialog should appear
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+      })
+      // Check for dialog heading specifically
+      expect(screen.getByRole('heading', { name: /unsaved changes/i })).toBeInTheDocument()
+    })
+
+    it('should close dirty tab when confirm is clicked', async () => {
+      // Arrange
+      const user = userEvent.setup()
+      render(<IDELayout />)
+
+      await createAndOpenFile(user)
+
+      // Make tab dirty
+      const editor = screen.getByTestId('mock-monaco')
+      fireEvent.change(editor, { target: { value: 'print("modified")' } })
+
+      await waitFor(() => {
+        expect(screen.getByText('*')).toBeInTheDocument()
+      })
+
+      // Try to close
+      const closeButton = screen.getByRole('button', { name: /close new-file\.lua/i })
+      await user.click(closeButton)
+
+      // Verify dialog appeared
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+      })
+
+      // Act - click confirm (discard changes)
+      const confirmButton = screen.getByRole('button', { name: /discard/i })
+      await user.click(confirmButton)
+
+      // Assert - dialog closes, tab is closed
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      })
+      expect(queryFileTab()).not.toBeInTheDocument()
+    })
+
+    it('should keep dirty tab open when cancel is clicked', async () => {
+      // Arrange
+      const user = userEvent.setup()
+      render(<IDELayout />)
+
+      await createAndOpenFile(user)
+
+      // Make tab dirty
+      const editor = screen.getByTestId('mock-monaco')
+      fireEvent.change(editor, { target: { value: 'print("modified")' } })
+
+      await waitFor(() => {
+        expect(screen.getByText('*')).toBeInTheDocument()
+      })
+
+      // Try to close
+      const closeButton = screen.getByRole('button', { name: /close new-file\.lua/i })
+      await user.click(closeButton)
+
+      // Verify dialog appeared
+      await waitFor(() => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+      })
+
+      // Act - click cancel (keep editing)
+      const cancelButton = screen.getByRole('button', { name: /cancel/i })
+      await user.click(cancelButton)
+
+      // Assert - dialog closes, tab remains open with dirty indicator
+      await waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      })
+      expect(getFileTab()).toBeInTheDocument()
+      expect(screen.getByText('*')).toBeInTheDocument()
     })
   })
 })

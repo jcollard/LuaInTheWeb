@@ -4,6 +4,7 @@ export interface UseKeyboardShortcutsOptions {
   runCode: () => void
   toggleTerminal: () => void
   toggleSidebar: () => void
+  saveFile: () => void
 }
 
 /**
@@ -11,11 +12,13 @@ export interface UseKeyboardShortcutsOptions {
  * - Ctrl+Enter: Run code
  * - Ctrl+`: Toggle terminal
  * - Ctrl+B: Toggle sidebar
+ * - Ctrl+S: Save file
  */
 export function useKeyboardShortcuts({
   runCode,
   toggleTerminal,
   toggleSidebar,
+  saveFile,
 }: UseKeyboardShortcutsOptions): void {
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
@@ -36,10 +39,15 @@ export function useKeyboardShortcuts({
           event.preventDefault()
           toggleSidebar()
           break
+        case 's':
+        case 'S':
+          event.preventDefault()
+          saveFile()
+          break
       }
     },
     // Stryker disable next-line ArrayDeclaration: React dependency array - tests verify behavior, not re-render optimization
-    [runCode, toggleTerminal, toggleSidebar]
+    [runCode, toggleTerminal, toggleSidebar, saveFile]
   )
 
   useEffect(() => {

@@ -8,6 +8,7 @@ import { BottomPanel } from '../BottomPanel'
 import { IDEPanelGroup } from '../IDEPanelGroup'
 import { IDEPanel } from '../IDEPanel'
 import { IDEResizeHandle } from '../IDEResizeHandle'
+import { ConfirmDialog } from '../ConfirmDialog'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import styles from './IDELayout.module.css'
 import type { IDELayoutProps } from './types'
@@ -40,6 +41,7 @@ function IDELayoutInner({ className }: { className?: string }) {
     renameFile,
     renameFolder,
     openFile,
+    saveFile,
     // Tabs
     tabs,
     activeTab,
@@ -50,6 +52,7 @@ function IDELayoutInner({ className }: { className?: string }) {
   const [isRunning, setIsRunning] = useState(false)
   const [cursorLine, setCursorLine] = useState(1)
   const [cursorColumn, setCursorColumn] = useState(1)
+  const [pendingCloseTabPath, setPendingCloseTabPath] = useState<string | null>(null)
 
   const handleRun = useCallback(async () => {
     setIsRunning(true)
@@ -65,6 +68,7 @@ function IDELayoutInner({ className }: { className?: string }) {
     runCode: handleRun,
     toggleTerminal,
     toggleSidebar,
+    saveFile,
   })
 
   const combinedClassName = className
@@ -94,6 +98,31 @@ function IDELayoutInner({ className }: { className?: string }) {
     createFolder(newPath)
   }, [createFolder, generateFileName])
 
+  // Handle tab close with dirty confirmation
+  const handleCloseTab = useCallback((path: string) => {
+    const tab = tabs.find(t => t.path === path)
+    if (tab?.isDirty) {
+      // Show confirmation dialog
+      setPendingCloseTabPath(path)
+    } else {
+      // Close immediately
+      closeTab(path)
+    }
+  }, [tabs, closeTab])
+
+  // Confirm closing dirty tab (discard changes)
+  const handleConfirmCloseTab = useCallback(() => {
+    if (pendingCloseTabPath) {
+      closeTab(pendingCloseTabPath)
+      setPendingCloseTabPath(null)
+    }
+  }, [pendingCloseTabPath, closeTab])
+
+  // Cancel closing dirty tab
+  const handleCancelCloseTab = useCallback(() => {
+    setPendingCloseTabPath(null)
+  }, [])
+
   // Explorer props for FileExplorer
   const explorerProps = {
     tree: fileTree,
@@ -112,7 +141,7 @@ function IDELayoutInner({ className }: { className?: string }) {
     tabs,
     activeTab,
     onSelect: selectTab,
-    onClose: closeTab,
+    onClose: handleCloseTab,
   } : undefined
 
   return (
@@ -179,6 +208,17 @@ function IDELayoutInner({ className }: { className?: string }) {
         language="Lua"
         encoding="UTF-8"
         indentation="Spaces: 2"
+      />
+      {/* Dirty tab close confirmation dialog */}
+      <ConfirmDialog
+        isOpen={pendingCloseTabPath !== null}
+        title="Unsaved Changes"
+        message={`You have unsaved changes in "${tabs.find(t => t.path === pendingCloseTabPath)?.name || 'this file'}". Do you want to discard your changes?`}
+        confirmLabel="Discard"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmCloseTab}
+        onCancel={handleCancelCloseTab}
       />
     </div>
   )
