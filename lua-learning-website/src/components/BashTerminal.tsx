@@ -14,9 +14,11 @@ export interface BashTerminalHandle {
 
 interface BashTerminalProps {
   onCommand?: (command: string) => void
+  /** When true, hides the Output header for embedded IDE context */
+  embedded?: boolean
 }
 
-const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onCommand }, ref) => {
+const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onCommand, embedded = false }, ref) => {
   const terminalRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -607,11 +609,15 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
     }
   }
 
+  const containerClassName = `bash-terminal-container${embedded ? ' bash-terminal-container--embedded' : ''}`
+
   return (
-    <div className="bash-terminal-container">
-      <div className="bash-terminal-header">
-        <h3>Output</h3>
-      </div>
+    <div className={containerClassName} data-testid="bash-terminal-container">
+      {!embedded && (
+        <div className="bash-terminal-header">
+          <h3>Output</h3>
+        </div>
+      )}
       <div ref={terminalRef} className="bash-terminal" />
     </div>
   )

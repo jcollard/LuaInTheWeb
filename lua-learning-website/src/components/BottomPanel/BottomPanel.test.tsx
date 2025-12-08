@@ -10,7 +10,9 @@ vi.mock('../BashTerminal', () => ({
 }))
 
 vi.mock('../LuaRepl', () => ({
-  default: () => <div data-testid="lua-repl">LuaRepl Mock</div>,
+  default: ({ embedded }: { embedded?: boolean }) => (
+    <div data-testid="lua-repl" data-embedded={embedded}>LuaRepl Mock</div>
+  ),
 }))
 
 describe('BottomPanel', () => {
@@ -106,6 +108,18 @@ describe('BottomPanel', () => {
 
       // Assert
       expect(screen.getByTestId('lua-repl')).toBeInTheDocument()
+    })
+
+    it('should pass embedded prop to LuaRepl', () => {
+      // Arrange
+      render(<BottomPanel {...defaultProps} />)
+
+      // Act
+      fireEvent.click(screen.getByRole('tab', { name: /repl/i }))
+
+      // Assert
+      const luaRepl = screen.getByTestId('lua-repl')
+      expect(luaRepl).toHaveAttribute('data-embedded', 'true')
     })
 
     it('should display terminal output', () => {

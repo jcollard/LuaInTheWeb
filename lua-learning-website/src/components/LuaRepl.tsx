@@ -4,9 +4,15 @@ import BashTerminal from './BashTerminal'
 import type { BashTerminalHandle } from './BashTerminal'
 import './LuaRepl.css'
 
-export default function LuaRepl() {
+interface LuaReplProps {
+  /** When true, hides header and tips for embedded IDE context */
+  embedded?: boolean
+}
+
+export default function LuaRepl({ embedded = false }: LuaReplProps) {
   const luaEngineRef = useRef<LuaEngine | null>(null)
   const terminalRef = useRef<BashTerminalHandle>(null)
+  const initializedRef = useRef(false)
 
   // Custom io.read implementation
   const customIoRead = async (): Promise<string> => {
@@ -15,6 +21,10 @@ export default function LuaRepl() {
   }
 
   useEffect(() => {
+    // Prevent double initialization in React Strict Mode
+    if (initializedRef.current) return
+    initializedRef.current = true
+
     // Initialize Lua engine
     const initLua = async () => {
       try {
@@ -118,21 +128,32 @@ export default function LuaRepl() {
   }
 
   return (
-    <div className="lua-repl">
-      <div className="repl-header">
-        <h3>Interactive REPL</h3>
-        <button onClick={clearRepl} className="btn-clear">
-          Clear
-        </button>
-      </div>
+    <div className={`lua-repl${embedded ? ' lua-repl--embedded' : ''}`}>
+      {!embedded && (
+        <div className="repl-header">
+          <h3>Interactive REPL</h3>
+          <button onClick={clearRepl} className="btn-clear">
+            Clear
+          </button>
+        </div>
+      )}
+      {embedded && (
+        <div className="repl-header repl-header--embedded">
+          <button onClick={clearRepl} className="btn-clear">
+            Clear
+          </button>
+        </div>
+      )}
 
       <div className="repl-terminal-container">
-        <BashTerminal ref={terminalRef} onCommand={executeCode} />
+        <BashTerminal ref={terminalRef} onCommand={executeCode} embedded={embedded} />
       </div>
 
-      <div className="repl-help">
-        <strong>Tips:</strong> Press ↑/↓ to navigate history (or lines in multi-line mode) • ←/→ to move cursor • Enter to execute • Shift+Enter for multi-line mode • Type expressions or statements • io.read() prompts in terminal
-      </div>
+      {!embedded && (
+        <div className="repl-help">
+          <strong>Tips:</strong> Press ↑/↓ to navigate history (or lines in multi-line mode) • ←/→ to move cursor • Enter to execute • Shift+Enter for multi-line mode • Type expressions or statements • io.read() prompts in terminal
+        </div>
+      )}
     </div>
   )
 }
