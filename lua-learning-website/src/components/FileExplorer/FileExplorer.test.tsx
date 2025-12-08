@@ -118,6 +118,36 @@ describe('FileExplorer', () => {
       // Assert
       expect(screen.getByText('Delete')).toBeInTheDocument()
     })
+
+    it('should show only rename and delete for file context menu', () => {
+      // Arrange
+      render(<FileExplorer {...defaultProps} />)
+
+      // Act - right-click file
+      const fileItem = screen.getByText('main.lua').closest('[role="treeitem"]')
+      fireEvent.contextMenu(fileItem!)
+
+      // Assert - file context menu should NOT have New File/Folder options
+      expect(screen.getByText('Rename')).toBeInTheDocument()
+      expect(screen.getByText('Delete')).toBeInTheDocument()
+      expect(screen.queryByText('New File')).not.toBeInTheDocument()
+      expect(screen.queryByText('New Folder')).not.toBeInTheDocument()
+    })
+
+    it('should show New File and New Folder options for folder context menu', () => {
+      // Arrange
+      render(<FileExplorer {...defaultProps} />)
+
+      // Act - expand folder then right-click it
+      const folderItem = screen.getByText('utils').closest('[role="treeitem"]')
+      fireEvent.contextMenu(folderItem!)
+
+      // Assert - folder context menu should have all options
+      expect(screen.getByText('New File')).toBeInTheDocument()
+      expect(screen.getByText('New Folder')).toBeInTheDocument()
+      expect(screen.getByText('Rename')).toBeInTheDocument()
+      expect(screen.getByText('Delete')).toBeInTheDocument()
+    })
   })
 
   describe('file creation', () => {
@@ -208,6 +238,58 @@ describe('FileExplorer', () => {
 
       // Assert
       expect(onRenameFile).toHaveBeenCalledWith('/main.lua', 'renamed.lua')
+    })
+  })
+
+  describe('keyboard shortcuts', () => {
+    it('should enter rename mode when F2 pressed on selected file', () => {
+      // Arrange
+      render(<FileExplorer {...defaultProps} selectedPath="/main.lua" />)
+
+      // Act - press F2 on tree
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'F2' })
+
+      // Assert - should show input for rename
+      expect(screen.getByRole('textbox')).toBeInTheDocument()
+      expect(screen.getByRole('textbox')).toHaveValue('main.lua')
+    })
+
+    it('should show delete confirmation when Delete pressed on selected file', () => {
+      // Arrange
+      render(<FileExplorer {...defaultProps} selectedPath="/main.lua" />)
+
+      // Act - press Delete on tree
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'Delete' })
+
+      // Assert - should show confirm dialog
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+      expect(screen.getByText(/Are you sure you want to delete/i)).toBeInTheDocument()
+    })
+
+    it('should call onDeleteFile when Delete confirmed', () => {
+      // Arrange
+      const onDeleteFile = vi.fn()
+      render(<FileExplorer {...defaultProps} selectedPath="/main.lua" onDeleteFile={onDeleteFile} />)
+
+      // Act - press Delete and confirm
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'Delete' })
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }))
+
+      // Assert
+      expect(onDeleteFile).toHaveBeenCalledWith('/main.lua')
+    })
+
+    it('should call onDeleteFolder when Delete pressed on folder', () => {
+      // Arrange
+      const onDeleteFolder = vi.fn()
+      render(<FileExplorer {...defaultProps} selectedPath="/utils" onDeleteFolder={onDeleteFolder} />)
+
+      // Act - press Delete and confirm
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'Delete' })
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }))
+
+      // Assert
+      expect(onDeleteFolder).toHaveBeenCalledWith('/utils')
     })
   })
 })

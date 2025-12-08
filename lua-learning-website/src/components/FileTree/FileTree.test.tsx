@@ -265,4 +265,154 @@ describe('FileTree', () => {
       expect(screen.getByRole('tree')).toHaveAttribute('aria-label', 'File Explorer')
     })
   })
+
+  describe('F2 rename shortcut', () => {
+    it('should call onRename when F2 is pressed with selected item', () => {
+      // Arrange
+      const onRename = vi.fn()
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={flatTree}
+          selectedPath="/main.lua"
+          onRename={onRename}
+        />
+      )
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'F2' })
+
+      // Assert
+      expect(onRename).toHaveBeenCalledWith('/main.lua')
+    })
+
+    it('should not call onRename when F2 is pressed without selection', () => {
+      // Arrange
+      const onRename = vi.fn()
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={flatTree}
+          selectedPath={null}
+          onRename={onRename}
+        />
+      )
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'F2' })
+
+      // Assert
+      expect(onRename).not.toHaveBeenCalled()
+    })
+
+    it('should not call onRename when onRename is not provided', () => {
+      // Arrange - no onRename callback provided
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={flatTree}
+          selectedPath="/main.lua"
+        />
+      )
+
+      // Act & Assert - should not throw
+      expect(() => {
+        fireEvent.keyDown(screen.getByRole('tree'), { key: 'F2' })
+      }).not.toThrow()
+    })
+
+    it('should call onRename for folders', () => {
+      // Arrange
+      const onRename = vi.fn()
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={nestedTree}
+          selectedPath="/utils"
+          onRename={onRename}
+        />
+      )
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'F2' })
+
+      // Assert
+      expect(onRename).toHaveBeenCalledWith('/utils')
+    })
+  })
+
+  describe('Delete key shortcut', () => {
+    it('should call onDelete when Delete is pressed with selected item', () => {
+      // Arrange
+      const onDelete = vi.fn()
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={flatTree}
+          selectedPath="/main.lua"
+          onDelete={onDelete}
+        />
+      )
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'Delete' })
+
+      // Assert
+      expect(onDelete).toHaveBeenCalledWith('/main.lua')
+    })
+
+    it('should not call onDelete when Delete is pressed without selection', () => {
+      // Arrange
+      const onDelete = vi.fn()
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={flatTree}
+          selectedPath={null}
+          onDelete={onDelete}
+        />
+      )
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'Delete' })
+
+      // Assert
+      expect(onDelete).not.toHaveBeenCalled()
+    })
+
+    it('should not call onDelete when onDelete is not provided', () => {
+      // Arrange - no onDelete callback provided
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={flatTree}
+          selectedPath="/main.lua"
+        />
+      )
+
+      // Act & Assert - should not throw
+      expect(() => {
+        fireEvent.keyDown(screen.getByRole('tree'), { key: 'Delete' })
+      }).not.toThrow()
+    })
+
+    it('should call onDelete for folders', () => {
+      // Arrange
+      const onDelete = vi.fn()
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={nestedTree}
+          selectedPath="/utils"
+          onDelete={onDelete}
+        />
+      )
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'Delete' })
+
+      // Assert
+      expect(onDelete).toHaveBeenCalledWith('/utils')
+    })
+  })
 })
