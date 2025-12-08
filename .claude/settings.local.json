@@ -37,6 +37,8 @@
       "Bash(gh issue edit:*)",
       "Bash(gh issue close:*)",
       "Bash(gh issue comment:*)",
+      "Bash(gh issue view:*)",
+      "SlashCommand(/issue)",
       "SlashCommand(/tech-debt)",
       "SlashCommand(/code-review)",
       "SlashCommand(/status)",

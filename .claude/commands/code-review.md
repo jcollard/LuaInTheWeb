@@ -2,6 +2,26 @@
 
 Use this checklist when reviewing code changes.
 
+## Review Mode Detection
+
+This command adapts based on whether there's an active roadmap phase:
+
+```bash
+# Check for active phase (status = "Approved" or "In Progress")
+ls roadmap/*/[0-9]*.md 2>/dev/null
+```
+
+Read each phase file and check for `**Status**: Approved` or `**Status**: In Progress`.
+
+| Mode | Condition | Behavior |
+|------|-----------|----------|
+| **Roadmap Mode** | Active phase exists | Full workflow: update plan checkboxes, generate review record, `/accept-review` available |
+| **Issue Mode** | No active phase | Lightweight: run checks only, output results, no record generation |
+
+Report the detected mode at the start of the review.
+
+---
+
 ## IMPORTANT: Start Mutation Tests First
 
 **ALWAYS start mutation tests in the background BEFORE reviewing anything else.**
@@ -163,18 +183,11 @@ Now check if mutation tests (started at the beginning) have completed:
 
 ---
 
-## Update Plan Checkboxes
+## Update Plan Checkboxes (Roadmap Mode Only)
+
+> **Skip this section if in Issue Mode** (no active roadmap phase detected)
 
 Before generating the review record, update the active phase's plan file to mark completed items.
-
-### 1. Find Active Phase
-
-```bash
-# Find the active phase file (status = "Approved" or "In Progress")
-ls roadmap/*/[0-9]*.md 2>/dev/null
-```
-
-Read each phase file and identify the one with status "Approved" or "In Progress".
 
 ### 2. Mark Implementation Items Complete
 
@@ -203,7 +216,9 @@ If all items are now complete:
 
 ---
 
-## Review Record
+## Review Record (Roadmap Mode Only)
+
+> **Skip this section if in Issue Mode** (no active roadmap phase detected)
 
 After completing all checks, generate a review record:
 
@@ -297,3 +312,36 @@ The review record enables `/accept-review` to detect stale reviews:
 - If branch has new commits since review, warn user
 - If main has new commits, suggest rebasing
 - Review file serves as proof of review state
+
+---
+
+## Issue Mode Summary (Issue Mode Only)
+
+> **Use this section if in Issue Mode** (no active roadmap phase detected)
+
+When reviewing issue-based work (no roadmap phase), output a simple summary:
+
+```
+## Code Review Summary (Issue Mode)
+
+**Branch**: <branch> @ <sha>
+**Issue**: #<issue-number> (if applicable)
+
+### Checks
+| Check | Status | Details |
+|-------|--------|---------|
+| Tests | ✅/❌ | X passed, Y failed |
+| Lint | ✅/❌ | X errors, Y warnings |
+| Build | ✅/❌ | Succeeded/Failed |
+| Mutation | ✅/❌ | X% (threshold: 80%) |
+| E2E | ✅/❌/⏭️ | X passed, Y failed |
+
+### Result
+<PASS|FAIL>
+
+### Next Steps
+- If PASS: Ready to merge
+- If FAIL: Address issues and re-run `/code-review`
+```
+
+**Note**: No review record is generated in Issue Mode. The branch can be merged directly after passing checks.
