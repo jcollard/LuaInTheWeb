@@ -26,7 +26,8 @@
       "Bash(date)",
       "SlashCommand(/new-feature)",
       "SlashCommand(/tdd)",
-      "Bash(npm run test:mutation:*)"
+      "Bash(npm run test:mutation:*)",
+      "Bash(npx eslint:*)"
     ],
     "deny": [
       "Bash(npm run dev)",

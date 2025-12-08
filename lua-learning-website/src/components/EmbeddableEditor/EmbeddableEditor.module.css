@@ -1,0 +1,102 @@
+.container {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+}
+
+.runButton,
+.resetButton {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.runButton {
+  background: #4caf50;
+  color: white;
+  border: none;
+}
+
+.runButton:hover:not(:disabled) {
+  background: #45a049;
+}
+
+.runButton:disabled {
+  background: #94c896;
+  cursor: not-allowed;
+}
+
+.resetButton {
+  background: #fff;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.resetButton:hover {
+  background: #f0f0f0;
+}
+
+.editorWrapper {
+  border-bottom: 1px solid #ddd;
+}
+
+.outputPanel {
+  display: flex;
+  flex-direction: column;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 13px;
+  overflow: hidden;
+}
+
+.outputHeader {
+  padding: 6px 12px;
+  background: #252526;
+  border-bottom: 1px solid #3c3c3c;
+  font-size: 12px;
+  color: #858585;
+}
+
+.outputContent {
+  flex: 1;
+  padding: 8px 12px;
+  margin: 0;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error {
+  color: #f48771;
+}
+
+.placeholder {
+  color: #6a6a6a;
+  font-style: italic;
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+  .toolbar {
+    flex-wrap: wrap;
+  }
+
+  .runButton,
+  .resetButton {
+    flex: 1;
+    min-width: 80px;
+  }
+}

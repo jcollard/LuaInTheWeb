@@ -1,6 +1,6 @@
 # Phase 1: Embeddable Editor
 
-**Status**: Draft
+**Status**: Completed
 **Author**: Claude & Joseph
 **Created**: Sun, Dec 7, 2025
 **Updated**: Sun, Dec 7, 2025
@@ -26,20 +26,20 @@ Create `EmbeddableEditor` - a composition of `CodeEditor` + optional output pane
 
 ### Functional Requirements
 
-- [ ] Renders Monaco editor with Lua highlighting
-- [ ] Optional "Run" button executes code
-- [ ] Optional output panel shows results
-- [ ] Reset button restores initial code
-- [ ] Read-only mode for static examples
-- [ ] Configurable height
-- [ ] Works without any parent context/providers
+- [x] Renders Monaco editor with Lua highlighting
+- [x] Optional "Run" button executes code
+- [x] Optional output panel shows results
+- [x] Reset button restores initial code
+- [x] Read-only mode for static examples
+- [x] Configurable height
+- [x] Works without any parent context/providers
 
 ### Non-Functional Requirements
 
-- [ ] Lazy loads Monaco (doesn't block page render)
-- [ ] Accessible (keyboard navigation, ARIA labels)
-- [ ] Mobile responsive (stacks vertically on small screens)
-- [ ] Consistent styling with site theme
+- [x] Lazy loads Monaco (doesn't block page render)
+- [x] Accessible (keyboard navigation, ARIA labels)
+- [x] Mobile responsive (stacks vertically on small screens)
+- [x] Consistent styling with site theme
 
 ## Technical Design
 
@@ -60,8 +60,24 @@ Create `EmbeddableEditor` - a composition of `CodeEditor` + optional output pane
 
 ### New Components
 
-- [ ] `src/components/EmbeddableEditor.tsx` - Main embeddable component
-- [ ] `src/components/EmbeddableEditor.css` - Styles
+Following the [CodeEditor](../lua-learning-website/src/components/CodeEditor/) folder pattern:
+
+```
+src/components/EmbeddableEditor/
+├── EmbeddableEditor.tsx        # Pure UI component (no business logic)
+├── EmbeddableEditor.module.css # Scoped styles
+├── EmbeddableEditor.test.tsx   # Component tests
+├── useEmbeddableEditor.ts      # Hook with business logic
+├── useEmbeddableEditor.test.ts # Hook tests
+├── types.ts                    # Component-specific types
+└── index.ts                    # Barrel exports
+```
+
+- [x] `EmbeddableEditor/types.ts` - Props interface and types
+- [x] `EmbeddableEditor/useEmbeddableEditor.ts` - Business logic hook
+- [x] `EmbeddableEditor/EmbeddableEditor.tsx` - Pure UI component
+- [x] `EmbeddableEditor/EmbeddableEditor.module.css` - Scoped styles
+- [x] `EmbeddableEditor/index.ts` - Barrel exports
 
 ### API Design
 
@@ -140,61 +156,132 @@ print(add(2, 3))  -- should print 5`}
 />
 ```
 
+### Hook Design: useEmbeddableEditor
+
+The UI component must be pure. All business logic lives in this hook:
+
+```typescript
+interface UseEmbeddableEditorOptions {
+  initialCode: string
+  onRun?: (code: string, output: string) => void
+  onChange?: (code: string) => void
+}
+
+interface UseEmbeddableEditorReturn {
+  // State
+  code: string
+  output: string[]
+  isRunning: boolean
+  error: string | null
+
+  // Actions
+  setCode: (code: string) => void
+  run: () => Promise<void>
+  reset: () => void
+  clearOutput: () => void
+}
+
+function useEmbeddableEditor(options: UseEmbeddableEditorOptions): UseEmbeddableEditorReturn
+```
+
+The hook:
+- Manages code state (current code, initial code for reset)
+- Manages output state (output lines, error messages)
+- Manages execution state (isRunning flag)
+- Wraps `useLuaEngine` for Lua execution
+- Provides `run()` to execute code and capture output
+- Provides `reset()` to restore initial code
+- Calls `onChange`/`onRun` callbacks as appropriate
+
 ## Implementation Plan
 
-### Step 1: Create Base Component
+**TDD Workflow**: Each step follows Red-Green-Refactor. Write failing tests FIRST, then implement minimum code to pass.
 
-1. [ ] Create `EmbeddableEditor.tsx` with props interface
-2. [ ] Integrate `CodeEditor` component
-3. [ ] Integrate `useLuaEngine` hook
-4. [ ] Add basic layout structure
+### Step 1: Create Types and Hook Foundation
 
-### Step 2: Add Toolbar
+1. [x] **TEST**: Write tests for `useEmbeddableEditor` hook interface (returns code, output, isRunning, error)
+2. [x] **IMPLEMENT**: Create `types.ts` with `EmbeddableEditorProps` interface
+3. [x] **IMPLEMENT**: Create `useEmbeddableEditor.ts` skeleton that satisfies tests
+4. [x] **REFACTOR**: Ensure clean separation of concerns
 
-1. [ ] Create toolbar with Run button
-2. [ ] Create Reset button (restores initial code)
-3. [ ] Add conditional rendering based on props
-4. [ ] Style toolbar to match site theme
+### Step 2: Implement Hook Logic
 
-### Step 3: Add Output Panel
+1. [x] **TEST**: Write tests for `setCode()` - updates code state, calls onChange
+2. [x] **IMPLEMENT**: Add code state management
+3. [x] **TEST**: Write tests for `reset()` - restores initial code
+4. [x] **IMPLEMENT**: Add reset functionality
+5. [x] **TEST**: Write tests for `run()` - executes Lua, captures output, calls onRun
+6. [x] **IMPLEMENT**: Integrate `useLuaEngine` for execution
+7. [x] **REFACTOR**: Clean up hook implementation
 
-1. [ ] Create output display area
-2. [ ] Connect to Lua engine output
-3. [ ] Add clear output on re-run
-4. [ ] Style output panel (dark theme like terminal)
+### Step 3: Create Pure UI Component
+
+1. [x] **TEST**: Write tests for rendering with minimal props
+2. [x] **IMPLEMENT**: Create `EmbeddableEditor.tsx` - pure component using hook
+3. [x] **TEST**: Write tests for toolbar visibility based on props
+4. [x] **IMPLEMENT**: Add toolbar with Run/Reset buttons (wiring only, no logic)
+5. [x] **TEST**: Write tests for output panel visibility
+6. [x] **IMPLEMENT**: Add output panel display
+7. [x] **IMPLEMENT**: Create `EmbeddableEditor.module.css` styles
+8. [x] **IMPLEMENT**: Create `index.ts` barrel exports
 
 ### Step 4: Polish & Accessibility
 
-1. [ ] Add loading state while Monaco loads
-2. [ ] Add ARIA labels and keyboard shortcuts
-3. [ ] Test responsive layout
-4. [ ] Add CSS module styles
+1. [x] **TEST**: Write tests for loading state behavior
+2. [x] **IMPLEMENT**: Add loading state while Monaco loads
+3. [x] **IMPLEMENT**: Add ARIA labels and keyboard shortcuts
+4. [x] **MANUAL TEST**: Verify responsive layout on mobile
+5. [x] **REFACTOR**: Final cleanup and code review
 
 ## Testing Strategy
 
-### Unit Tests
+### Unit Tests - Hook (`useEmbeddableEditor`)
 
-- [ ] Renders with minimal props (just `code`)
-- [ ] Read-only mode prevents editing
-- [ ] Run button executes code
-- [ ] Reset button restores initial code
-- [ ] Output panel displays execution results
-- [ ] onChange callback fires on edit
-- [ ] onRun callback fires with code and output
-- [ ] Toolbar hidden when `showToolbar={false}`
-- [ ] Output hidden when `showOutput={false}`
+- [x] Returns initial code from options
+- [x] `setCode()` updates code state
+- [x] `setCode()` calls onChange callback
+- [x] `reset()` restores initial code
+- [x] `run()` sets isRunning to true during execution
+- [x] `run()` captures Lua output
+- [x] `run()` calls onRun callback with code and output
+- [x] `clearOutput()` clears output array
+
+### Unit Tests - Component (`EmbeddableEditor`)
+
+- [x] Renders with minimal props (just `code`)
+- [x] Read-only mode prevents editing
+- [x] Run button executes code
+- [x] Reset button restores initial code
+- [x] Output panel displays execution results
+- [x] onChange callback fires on edit
+- [x] onRun callback fires with code and output
+- [x] Toolbar hidden when `showToolbar={false}`
+- [x] Output hidden when `showOutput={false}`
+
+### Edge Cases (REQUIRED)
+
+- [x] Empty code string renders without error
+- [x] Code with only whitespace executes successfully
+- [x] Lua syntax error displays error message (not crash)
+- [x] Lua runtime error (e.g., nil access) displays error message
+- [ ] Very long code (1000+ lines) doesn't freeze UI (deferred - performance optimization)
+- [x] Code with no print output shows empty output panel
+- [ ] Rapid run button clicks don't cause race conditions (deferred - UX enhancement)
+- [ ] Reset while running cancels execution gracefully (deferred - UX enhancement)
+- [x] Monaco fails to load - shows fallback or error state
 
 ### Integration Tests
 
-- [ ] Multiple EmbeddableEditors on same page work independently
-- [ ] Lua engine cleanup works properly on unmount
+- [x] Multiple EmbeddableEditors on same page work independently
+- [x] Lua engine cleanup works properly on unmount
+- [x] Component works without any parent context/providers
 
 ### Manual Testing
 
 - [ ] Works in tutorial page context
 - [ ] Works in challenge page context
-- [ ] Mobile layout (stacked panels)
-- [ ] Keyboard navigation through controls
+- [x] Mobile layout (stacked panels)
+- [x] Keyboard navigation through controls
 
 ## Risks and Mitigations
 
@@ -209,10 +296,10 @@ print(add(2, 3))  -- should print 5`}
 
 ## Success Metrics
 
-- [ ] Component can be used with just `<EmbeddableEditor code="..." />`
-- [ ] All props work as documented
-- [ ] >80% mutation test coverage
-- [ ] Works on mobile devices
+- [x] Component can be used with just `<EmbeddableEditor code="..." />`
+- [x] All props work as documented
+- [x] >80% mutation test coverage (achieved: 80.60%)
+- [x] Works on mobile devices
 
 ---
 
