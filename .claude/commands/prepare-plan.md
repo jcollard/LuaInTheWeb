@@ -32,7 +32,7 @@ Read the draft plan and identify:
 
 ### Step 3: Rewrite Implementation Plan
 
-Transform the implementation steps to follow TDD:
+Transform the implementation steps to follow TDD with scoped mutation testing:
 
 ```markdown
 ### Step N: [Feature Name]
@@ -49,8 +49,29 @@ Transform the implementation steps to follow TDD:
 
 **Verification:**
 7. [ ] All tests pass
-8. [ ] Lint passes
+8. [ ] **Scoped mutation tests: `npm run test:mutation:scope "path/to/new/files/**"`**
+9. [ ] **Mutation score >= 80%**
+10. [ ] Lint passes
 ```
+
+### Step 3b: Identify E2E Milestones
+
+Group related implementation steps into **MILESTONES** where user flows become testable:
+
+```markdown
+---
+**MILESTONE: [User Flow Name]**
+After completing Steps N-M, run `/milestone`:
+- User can [describe complete user action]
+- E2E test: `e2e/[feature-name].spec.ts`
+- Test page: `/test/[feature-name]`
+---
+```
+
+Place MILESTONE markers:
+- After every 2-4 related implementation steps
+- When a user-visible flow is complete
+- Before moving to a different feature area
 
 ### Step 4: Add Component Structure
 
@@ -74,19 +95,33 @@ src/components/ComponentName/
 
 ### Step 5: Add E2E Testing Section (if user-facing)
 
-For user-facing features, add:
+For user-facing features, add E2E section with MILESTONE references:
 
 ```markdown
 ## E2E Testing
 
-### Test Page
-- Route: `/test/[feature-name]`
-- Location: `src/pages/test/[FeatureName]Test.tsx`
+E2E tests are written at **MILESTONE** checkpoints, not after every item.
 
-### E2E Test Cases
-- [ ] [Core user flow 1]
-- [ ] [Core user flow 2]
-- [ ] [Error handling flow]
+### Milestones in This Plan
+
+| Milestone | After Steps | User Flow | E2E Test |
+|-----------|-------------|-----------|----------|
+| [Name 1] | Steps 1-3 | [User can...] | `e2e/feature-a.spec.ts` |
+| [Name 2] | Steps 4-6 | [User can...] | `e2e/feature-b.spec.ts` |
+
+### Test Pages
+- `/test/[feature-a]` - Test page for Milestone 1
+- `/test/[feature-b]` - Test page for Milestone 2
+
+### E2E Test Cases (by Milestone)
+
+**Milestone 1: [Name]**
+- [ ] [Core user flow]
+- [ ] [Error handling]
+
+**Milestone 2: [Name]**
+- [ ] [Core user flow]
+- [ ] [Edge case handling]
 ```
 
 ### Step 6: Add Edge Cases Section

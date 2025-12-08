@@ -58,27 +58,52 @@ See [docs/coding-standards.md](docs/coding-standards.md) for detailed guidelines
 
 ### TDD is MANDATORY
 
-This project follows strict Test-Driven Development:
+This project follows strict Test-Driven Development with the **Red-Green-Refactor-Mutate** cycle:
 
 1. **RED**: Write a failing test FIRST
 2. **GREEN**: Write minimum code to pass
 3. **REFACTOR**: Improve while tests pass
+4. **MUTATE**: Run scoped mutation tests immediately
 
 Use `/tdd` command for detailed TDD guidelines.
 
-### Mutation Testing
+### Mutation Testing (Per Item)
 
-Tests must be verified with mutation testing to ensure they actually catch bugs.
+Tests must be verified with mutation testing **immediately after each implementation item** - do NOT batch until the end.
+
+```bash
+# Run scoped mutation tests on new files
+npm run test:mutation:scope "src/components/NewFeature/**"
+```
 
 Use `/mutation-test` command for mutation testing guidelines.
 
-### Before Completing Any Task
+### E2E Testing (At Milestones)
 
-- [ ] Tests written BEFORE implementation
+E2E tests are written at **MILESTONE** checkpoints when user flows are complete, not after every item.
+
+Use `/milestone` command when a user-visible flow is ready for E2E testing.
+
+### Before Completing Each Implementation Item
+
+- [ ] Tests written BEFORE implementation (RED)
+- [ ] Minimum code to pass (GREEN)
+- [ ] Code refactored (REFACTOR)
+- [ ] **Scoped mutation tests pass: `npm run test:mutation:scope "path/to/files/**"`**
+- [ ] **Mutation score >= 80% on new files**
+
+### At Each MILESTONE Checkpoint
+
+- [ ] E2E test page created (if needed)
+- [ ] E2E tests written for completed user flow
+- [ ] E2E tests pass: `npm run test:e2e`
+
+### Before Completing Any Plan
+
 - [ ] All tests pass: `npm run test`
-- [ ] Mutation score > 80%: `npm run test:mutation`
+- [ ] Full mutation score > 80%: `npm run test:mutation`
 - [ ] Linting passes: `npm run lint`
-- [ ] E2E tests pass (for user-facing features): `npm run test:e2e`
+- [ ] All E2E tests pass: `npm run test:e2e`
 
 ## Commands
 
@@ -88,13 +113,14 @@ Use `/mutation-test` command for mutation testing guidelines.
 # ALWAYS change to the correct directory first
 cd lua-learning-website
 
-npm run dev           # Start development server
-npm run test          # Run tests
-npm run test:watch    # Watch mode
-npm run test:mutation # Mutation testing
-npm run build         # Build for production
-npm run lint          # Run linter
-npm run test:e2e      # Run E2E tests (Playwright)
+npm run dev                  # Start development server
+npm run test                 # Run tests
+npm run test:watch           # Watch mode
+npm run test:mutation        # Full mutation testing (end of plan)
+npm run test:mutation:scope "path/**"  # Scoped mutation testing (per item)
+npm run build                # Build for production
+npm run lint                 # Run linter
+npm run test:e2e             # Run E2E tests (Playwright)
 ```
 
 The project has this structure:
@@ -109,15 +135,16 @@ LuaInTheWeb/              # Git repository root (DO NOT run npm commands here)
 ## Special Commands
 
 ### Roadmap Workflow
-- `/prepare-plan` - Prepare next draft plan for implementation (applies TDD, structure, E2E)
+- `/prepare-plan` - Prepare next draft plan for implementation (applies TDD, structure, E2E milestones)
 - `/review-plan` - Review current plan for compliance before starting
-- `/begin` - Create task list and begin implementation
+- `/begin` - Create task list and begin implementation (includes mutation + E2E checkpoints)
+- `/milestone` - **NEW**: E2E checkpoint when a user flow is complete
 
 ### Development Guidelines
-- `/tdd` - Inject TDD guidelines for current task
+- `/tdd` - Inject TDD guidelines (Red-Green-Refactor-Mutate cycle)
 - `/new-feature` - Inject new feature development guidelines
 - `/e2e` - Inject E2E testing guidelines
-- `/mutation-test` - Inject mutation testing guidelines
+- `/mutation-test` - Inject mutation testing guidelines (scoped + full)
 - `/code-review` - Inject code review checklist
 
 ## Continuation Policy

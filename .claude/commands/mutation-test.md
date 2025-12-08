@@ -4,6 +4,28 @@ Mutation testing verifies that your tests actually catch bugs by introducing sma
 
 ## Running Mutation Tests
 
+### Scoped Mutation Testing (Recommended - Per Item)
+
+**Run immediately after each implementation item** - do NOT wait until the end:
+
+```bash
+# Scope to specific files/folders you just implemented
+npm run test:mutation:scope "src/components/NewFeature/**/*.ts"
+npm run test:mutation:scope "src/hooks/useNewHook.ts"
+
+# Multiple files
+npm run test:mutation:scope "src/components/Button/**/*.ts,src/hooks/useButton.ts"
+```
+
+Benefits of scoped testing:
+- **Fast feedback** - seconds instead of minutes
+- **Fresh context** - fix issues while code is still in your head
+- **Incremental quality** - don't accumulate test debt
+
+### Full Mutation Testing (Final Verification)
+
+Run at the end of a plan for full coverage:
+
 ```bash
 npm run test:mutation
 ```
@@ -64,12 +86,29 @@ Focus mutation testing on:
 - Data transformation utilities
 - Error handling code
 
+## Workflow Integration
+
+### Per Implementation Item (Immediate)
+1. Complete RED-GREEN-REFACTOR cycle
+2. Run scoped mutation test: `npm run test:mutation:scope "path/to/new/files/**"`
+3. If score < 80%, kill surviving mutants
+4. **Do NOT proceed to next item until score >= 80%**
+
+### Per Plan (Final)
+1. All items completed with scoped mutation testing
+2. Run full mutation test: `npm run test:mutation`
+3. Address any cross-file mutations that survived
+
 ## Checklist
 
-Before considering tests complete:
+Per implementation item:
+- [ ] Scoped mutation tests run: `npm run test:mutation:scope "path/to/files/**"`
+- [ ] Mutation score >= 80% on new files
+- [ ] Surviving mutants addressed before moving on
 
-- [ ] Mutation tests run: `npm run test:mutation`
-- [ ] Mutation score > 80%
+Final verification:
+- [ ] Full mutation tests run: `npm run test:mutation`
+- [ ] Overall mutation score > 80%
 - [ ] No surviving mutations in critical paths
 - [ ] Boundary conditions tested
 - [ ] Both branches of conditionals tested

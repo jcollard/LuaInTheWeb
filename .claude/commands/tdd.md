@@ -2,7 +2,7 @@
 
 Follow strict Test-Driven Development for all implementation work.
 
-## Red-Green-Refactor Cycle
+## Red-Green-Refactor-Mutate Cycle
 
 ### 1. RED: Write a Failing Test First
 
@@ -39,6 +39,33 @@ With tests passing, safely refactor:
 - Improve naming
 - Optimize performance
 - Run tests after each change
+
+### 4. MUTATE: Verify Test Quality (Per Item)
+
+**CRITICAL: Run scoped mutation tests IMMEDIATELY after each implementation item.**
+
+Do NOT wait until all items are complete. Run mutation tests on just the new/changed files:
+
+```bash
+# Scope to specific files/folders you just implemented
+npm run test:mutation:scope "src/components/NewFeature/**/*.ts"
+npm run test:mutation:scope "src/hooks/useNewHook.ts"
+```
+
+If mutation score < 80%:
+1. Review surviving mutants in `reports/mutation/index.html`
+2. Add tests to kill surviving mutants
+3. Re-run scoped mutation tests
+4. **DO NOT proceed to next item until score >= 80%**
+
+Common mutations and how to kill them:
+
+| Mutation | Fix |
+|----------|-----|
+| `>` → `>=` | Add boundary test for exact value |
+| `&&` → `\|\|` | Test both conditions independently |
+| Removed call | Assert on side effects |
+| Changed return | Assert return value explicitly |
 
 ## Test Quality Requirements
 
@@ -85,9 +112,13 @@ Each test should verify ONE behavior. Multiple assertions are OK if testing the 
 
 ## Checklist
 
-Before implementation is complete:
+Before moving to the next implementation item:
 
-- [ ] Tests written BEFORE implementation
+- [ ] Tests written BEFORE implementation (RED)
+- [ ] Minimum code to pass (GREEN)
+- [ ] Code refactored safely (REFACTOR)
+- [ ] **Scoped mutation tests run: `npm run test:mutation:scope "path/to/new/files/**"`**
+- [ ] **Mutation score >= 80% on new files**
 - [ ] All tests pass: `npm run test`
 - [ ] AAA pattern used consistently
 - [ ] Edge cases covered
