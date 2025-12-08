@@ -2,6 +2,46 @@
 
 Use this checklist when reviewing code changes.
 
+## Tech Debt Tracking
+
+After completing the review, create GitHub issues for any non-blocking findings:
+
+1. **Check for existing issues** before creating new ones:
+   ```bash
+   gh issue list --label "tech-debt" --search "<unique-identifier>" --json number
+   ```
+
+2. **Create issues** with deduplication IDs in the body:
+   ```bash
+   gh issue create --title "[Tech Debt] <file>: <brief description>" \
+     --label "tech-debt" \
+     --body "<!-- tech-debt-id: <unique-id> -->
+
+   ## Description
+   <what needs to be fixed>
+
+   ## Location
+   - [file.tsx:line](src/path/file.tsx#Lline)
+
+   ## Suggested Fix
+   <how to fix it>
+
+   ## Priority
+   High|Medium|Low - <reason>
+
+   ## Found In
+   Code review of \`<branch-name>\` branch"
+   ```
+
+3. **Unique ID format**: `<filename>-<issue-type>-<line-numbers>`
+   - Example: `luarepl-any-types-26-93-101`
+   - Example: `stryker-exclude-test-files`
+
+4. **Priority levels**:
+   - **High**: Violates coding standards, security issues
+   - **Medium**: ESLint warnings, performance issues
+   - **Low**: Nice-to-have improvements
+
 ## Architecture
 
 - [ ] UI components contain NO business logic

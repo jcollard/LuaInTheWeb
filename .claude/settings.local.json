@@ -28,7 +28,17 @@
       "SlashCommand(/tdd)",
       "Bash(npm run test:mutation:*)",
       "Bash(npx eslint:*)",
-      "Bash(npm run test:e2e:*)"
+      "Bash(npm run test:e2e:*)",
+      "Bash(gh label list:*)",
+      "Bash(gh label create:*)",
+      "Bash(gh issue create:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh issue list)",
+      "Bash(gh issue edit:*)",
+      "Bash(gh issue close:*)",
+      "Bash(gh issue comment:*)",
+      "SlashCommand(/tech-debt)",
+      "SlashCommand(/code-review)"    
     ],
     "deny": [
       "Bash(npm run dev)",
