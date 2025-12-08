@@ -50,14 +50,17 @@
     ],
     "deny": [
       "Bash(npm run dev)",
-      "Bash(git commit:*)",
       "Bash(rm -rf:*)",
       "Bash(npm publish:*)",
       "Bash(python3:*)"
     ],
     "ask": [
       "SlashCommand(/accept-review)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(rm *.stryker-incremental.json*)",
+      "Bash(del *.stryker-incremental.json*)",
+      "Bash(Remove-Item *.stryker-incremental.json*)",
+      "Bash(git commit:*)"
     ]
   }
 }
