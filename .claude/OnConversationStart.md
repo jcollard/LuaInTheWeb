@@ -33,12 +33,37 @@ Reference these docs for detailed information (do not load entire files unless n
 - **Testing Guide**: [docs/testing.md](docs/testing.md)
 - **Contributing**: [docs/contributing.md](docs/contributing.md)
 
-## Roadmap
+## GitHub Project Board
+
+📋 **[View Project Board](https://github.com/users/jcollard/projects/3)**
+
+All work is tracked in GitHub Projects with the following fields:
+- **Priority**: P0-Critical, P1-High, P2-Medium, P3-Low
+- **Effort**: XS, S, M, L, XL (t-shirt sizing)
+- **Type**: Feature, Bug, Tech Debt, Docs
+- **Status**: Todo, In Progress, Done
+- **Plan**: Link to roadmap implementation plan (for complex features)
+
+### Workflow
+
+1. **Issues** track what needs to be done (bugs, features, tech debt)
+2. **Project Board** provides prioritization and effort estimates
+3. **Roadmap docs** contain detailed implementation plans for complex features
+
+### Quick Commands
+- `/status` - View project board status and suggested next action
+- `/issue <n>` - View issue details and complexity assessment
+- `/issue <n> begin` - Start working on an issue (creates branch, updates project status)
+- `/issue <n> review` - Create PR when done
+- `/issue next` - Auto-select next tech debt issue
+- `/tech-debt` - View and manage tech debt items
+
+## Roadmap (Implementation Plans)
 
 - **Current Plans**: [roadmap/README.md](roadmap/README.md)
 - **Plan Template**: [roadmap/_template.md](roadmap/_template.md)
 
-For new features, create a plan in the roadmap directory before implementation.
+For complex features, create a detailed plan in the roadmap directory linked to a GitHub issue.
 
 ## Development Practices
 
@@ -134,11 +159,19 @@ LuaInTheWeb/              # Git repository root (DO NOT run npm commands here)
 
 ## Special Commands
 
-### Roadmap Workflow
+### Project & Issue Management
+- `/status` - View project board status, git state, and suggested next action
+- `/issue <n>` - View issue details and complexity assessment
+- `/issue <n> begin` - Start working on an issue (creates branch, updates project)
+- `/issue <n> review` - Run code review and create PR
+- `/issue next` - Auto-select and start next tech debt issue
+- `/tech-debt` - View and manage tech debt items with priority/effort
+
+### Roadmap Workflow (Complex Features)
 - `/prepare-plan` - Prepare next draft plan for implementation (applies TDD, structure, E2E milestones)
 - `/review-plan` - Review current plan for compliance before starting
 - `/begin` - Create task list and begin implementation (includes mutation + E2E checkpoints)
-- `/milestone` - **NEW**: E2E checkpoint when a user flow is complete
+- `/milestone` - E2E checkpoint when a user flow is complete
 
 ### Development Guidelines
 - `/tdd` - Inject TDD guidelines (Red-Green-Refactor-Mutate cycle)

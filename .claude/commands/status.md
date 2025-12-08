@@ -20,7 +20,26 @@ Report:
 - **Status**: Clean / X files modified
 - **vs Main**: X commits ahead, Y behind
 
-## 2. Roadmap Status
+## 2. GitHub Project Status
+
+### Fetch Project Items
+
+```bash
+# Get all project items with their fields
+gh project item-list 3 --owner jcollard --format json
+```
+
+Parse and report:
+- **Total Items**: Count of items in project
+- **By Status**: Count items in each status (Todo, In Progress, Done)
+- **By Priority**: Count items by priority (P0, P1, P2, P3)
+- **In Progress Items**: List items currently being worked on
+
+### Project Board Link
+
+Always include: [📋 View Project Board](https://github.com/users/jcollard/projects/3)
+
+## 3. Roadmap Status (if applicable)
 
 ### Find Active Epic(s)
 
@@ -46,7 +65,7 @@ If review files exist:
 - Check if stale (compare commits)
 - Suggest `/accept-review` if valid
 
-## 3. Build Status Report
+## 4. Build Status Report
 
 Output a formatted status block:
 
@@ -58,33 +77,44 @@ Output a formatted status block:
 - **State**: <clean/dirty>
 - **vs Main**: <ahead/behind>
 
-### Active Epic: <epic-name>
-- **Status**: <status>
-- **Progress**: <X/Y phases complete> (<percentage>%)
-- **Current Phase**: <phase-name> (<phase-status>)
+### 📋 GitHub Project Board
+[View Board](https://github.com/users/jcollard/projects/3)
 
-### Pending Reviews
-- <review-file>: <timestamp> (<fresh/stale>)
+| Status | Count |
+|--------|-------|
+| Todo | X |
+| In Progress | Y |
+| Done | Z |
+
+**In Progress:**
+- #<issue>: <title> (Priority: <P0-P3>, Effort: <XS-XL>)
+
+**High Priority (P0-P1):**
+- #<issue>: <title>
+
+### Active Roadmap (if applicable)
+- **Epic**: <epic-name>
+- **Current Phase**: <phase-name> (<status>)
 
 ### Recent Tech Debt
 - #<issue>: <title>
 ```
 
-## 4. Suggest Next Action
+## 5. Suggest Next Action
 
 Based on the state, suggest ONE clear next action:
 
 | State | Suggestion |
 |-------|------------|
+| Items "In Progress" | "Continue working on #<issue>. Run `/issue <n> review` when ready" |
+| High priority items in Todo | "High priority item needs attention: #<issue>. Run `/issue <n> begin`" |
 | Pending review exists (fresh) | "Run `/accept-review` to mark phases complete" |
-| Pending review exists (stale) | "Review is stale. Run `/code-review` to re-review current state" |
 | Phase status = "Approved" | "Run `/begin` to start implementing <phase-name>" |
-| Phase status = "In Progress" | "Continue working on <phase-name>. Run `/code-review` when ready" |
-| All phases complete | "Epic complete! Consider planning next epic or addressing tech debt" |
+| No work in progress | "Pick next item from project board. Run `/issue next` for auto-select" |
 | Dirty working tree | "You have uncommitted changes. Review and commit or stash" |
 | Behind main | "Your branch is behind main. Consider rebasing" |
 
-## 5. Optional: Show Open Tech Debt
+## 6. Optional: Show Open Tech Debt
 
 ```bash
 # List open tech debt issues (limit 5)

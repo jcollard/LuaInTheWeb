@@ -51,7 +51,8 @@
       "Bash(sleep:*)",
       "Bash(node --version:*)",
       "Bash(npx stryker run:*)",
-      "Bash(gh pr view:*)"
+      "Bash(gh pr view:*)",
+      "Bash(gh project:*)"
     ],
     "deny": [
       "Bash(npm run dev)",

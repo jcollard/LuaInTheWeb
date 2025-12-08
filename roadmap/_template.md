@@ -1,10 +1,17 @@
 # Feature: [Feature Name]
 <!-- Use `date` command to get timestamps -->
 
+---
+**GitHub Issue**: #[issue-number] <!-- Link to tracking issue -->
 **Status**: Draft | Ready for Review | Approved | In Progress | Completed | Abandoned
 **Author**: [Name]
 **Created**: [timestamp]
 **Updated**: [timestamp]
+---
+
+> **📋 GitHub Project**: [View in Project](https://github.com/users/jcollard/projects/3)
+>
+> This plan is linked to GitHub Issue #[issue-number]. Update the issue status in the project board as work progresses.
 
 ## Summary
 

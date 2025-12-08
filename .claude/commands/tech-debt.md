@@ -4,6 +4,24 @@ This command helps you view and manage technical debt tracked in GitHub issues.
 
 ## View Current Tech Debt
 
+### From GitHub Project (Recommended)
+
+View tech debt items with priority and effort from the project board:
+
+```bash
+# Get all project items
+gh project item-list 3 --owner jcollard --format json
+```
+
+Filter for tech-debt items and display with project fields:
+- **Priority**: P0-Critical, P1-High, P2-Medium, P3-Low
+- **Effort**: XS, S, M, L, XL
+- **Status**: Todo, In Progress, Done
+
+📋 [View Tech Debt in Project Board](https://github.com/users/jcollard/projects/3?filterQuery=label%3Atech-debt)
+
+### From Issues List
+
 List all open tech debt issues:
 ```bash
 gh issue list --label "tech-debt" --state open --json number,title,url,labels
@@ -11,10 +29,18 @@ gh issue list --label "tech-debt" --state open --json number,title,url,labels
 
 ## Prioritization
 
-Issues are tagged with priority in their body:
-- **High**: Fix before next release (coding standards, security)
-- **Medium**: Fix when working in related area (warnings, performance)
-- **Low**: Fix during dedicated cleanup sprints (nice-to-haves)
+Issues are prioritized in the GitHub Project with the **Priority** field:
+- **P0-Critical**: Blocking issues, security vulnerabilities - fix immediately
+- **P1-High**: Fix before next release (coding standards, security)
+- **P2-Medium**: Fix when working in related area (warnings, performance)
+- **P3-Low**: Fix during dedicated cleanup sprints (nice-to-haves)
+
+**Effort** estimates use t-shirt sizing:
+- **XS**: < 1 hour
+- **S**: 1-2 hours
+- **M**: 2-4 hours
+- **L**: 4-8 hours (half day)
+- **XL**: 1+ days (consider breaking down)
 
 ## Working on Tech Debt
 

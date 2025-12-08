@@ -1,5 +1,8 @@
 # Roadmap
 
+> **Note**: Issue tracking and prioritization has moved to [GitHub Projects](https://github.com/users/jcollard/projects/3).
+> This directory now contains **detailed implementation plans** for complex features that require more planning than a GitHub issue provides.
+
 This directory contains implementation plans for features and improvements.
 
 ## Directory Structure

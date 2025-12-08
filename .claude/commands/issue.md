@@ -121,6 +121,28 @@ If the branch already exists, checkout the existing branch instead:
 git checkout <number>-<issue-title-slug>
 ```
 
+### 5a.1. Update Project Status
+
+Update the issue status to "In Progress" in the GitHub Project:
+
+```bash
+# Get the project item ID for this issue
+gh project item-list 3 --owner jcollard --format json
+
+# Find the item matching the issue number, then update its status
+# Use gh project item-edit with the item ID and field ID
+```
+
+The project uses these Status values:
+- `Todo` (id: f75ad846)
+- `In Progress` (id: 47fc9ee4)
+- `Done` (id: 98236657)
+
+**Note**: Project field updates require knowing the item ID. If the issue isn't in the project yet, add it first:
+```bash
+gh project item-add 3 --owner jcollard --url "https://github.com/jcollard/LuaInTheWeb/issues/<number>"
+```
+
 ### 5b. Inject Development Context
 
 Run these commands to inject full development guidelines:
@@ -254,6 +276,12 @@ EOF
 ```
 
 The `Fixes #<number>` syntax automatically closes the issue when the PR is merged.
+
+### 6b.1. Update Project Status to Review
+
+Update the issue status to reflect it's in review (optional - can stay "In Progress" until merged):
+
+The project will auto-update to "Done" when the issue is closed via the PR merge, if you have GitHub's built-in automation enabled.
 
 ### 6c. Output PR URL
 
