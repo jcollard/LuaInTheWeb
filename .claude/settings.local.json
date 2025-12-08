@@ -52,7 +52,8 @@
       "Bash(node --version:*)",
       "Bash(npx stryker run:*)",
       "Bash(gh pr view:*)",
-      "Bash(gh project:*)"
+      "Bash(gh project:*)",
+      "Bash(git rev-list:*)"
     ],
     "deny": [
       "Bash(npm run dev)",
