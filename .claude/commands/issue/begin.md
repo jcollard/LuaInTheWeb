@@ -59,6 +59,91 @@ Then STOP - do not proceed further.
 
 ---
 
+## Step 1.5: Epic Detection (Sub-Issue Check)
+
+**Check if this issue is a sub-issue of an epic:**
+
+```bash
+gh issue view <number> --json body
+```
+
+**A sub-issue is detected if its body contains:**
+```markdown
+## Parent Issue
+Part of #<epic-number>
+```
+
+Or similar patterns like:
+- `Part of #58`
+- `Parent: #58`
+- `Epic: #58`
+
+**If this is a sub-issue:**
+
+1. Extract the parent epic number
+2. Check if we're in the epic worktree:
+   ```bash
+   git rev-parse --show-toplevel | grep "epic-<epic-number>"
+   ```
+
+**If in epic worktree (correct context):**
+- Continue to Step 2 with epic context flag set
+- The sub-issue will branch from `epic-<n>` instead of main
+
+**If in main worktree:**
+- Check if epic worktree exists:
+  ```bash
+  git worktree list | grep "epic-<epic-number>"
+  ```
+
+**If epic worktree exists but we're not in it:**
+```
+## Sub-Issue of Epic #<epic-number>
+
+This issue is part of epic #<epic-number>: <epic-title>
+
+The epic worktree already exists. Please work on this sub-issue from there:
+```bash
+cd ../LuaInTheWeb-epic-<epic-number>
+claude
+```
+
+Then run:
+```bash
+/epic <epic-number> next
+```
+
+Or directly:
+```bash
+/issue <number> begin
+```
+```
+
+Then STOP.
+
+**If epic not started:**
+```
+## Sub-Issue of Epic #<epic-number>
+
+This issue is part of epic #<epic-number>: <epic-title>
+
+**The epic has not been started yet.**
+
+Start the epic first to set up the shared workspace:
+```bash
+/epic <epic-number> begin
+```
+
+This will create the epic branch and worktree, then you can work on sub-issues.
+```
+
+Then STOP.
+
+**If NOT a sub-issue:**
+- Continue to Step 2 normally (regular issue flow)
+
+---
+
 ## Step 2: Generate Implementation Plan
 
 Analyze the issue and generate an implementation plan:
@@ -214,7 +299,12 @@ Then STOP - the user must open a new session in the worktree.
 
 ### 5.1. Create Branch from Issue
 
-Create and checkout a branch linked to the issue:
+**Determine the base branch:**
+
+- **Regular issue** (not a sub-issue): Branch from `main`
+- **Sub-issue of epic**: Branch from `epic-<epic-number>`
+
+**For regular issues:**
 
 ```bash
 gh issue develop <number> --checkout
@@ -223,10 +313,25 @@ gh issue develop <number> --checkout
 This creates a branch named `<number>-<issue-title-slug>` and checks it out.
 The branch is automatically linked to the issue for tracking.
 
+**For sub-issues (when in epic worktree):**
+
+```bash
+# Ensure we're on the epic branch
+git checkout epic-<epic-number>
+
+# Create sub-issue branch from epic branch
+git checkout -b <number>-<issue-title-slug>
+
+# Link branch to issue (for tracking)
+gh issue develop <number> --branch <number>-<issue-title-slug>
+```
+
 If the branch already exists, checkout the existing branch instead:
 ```bash
 git checkout <number>-<issue-title-slug>
 ```
+
+**Note**: Sub-issue branches will be merged back to `epic-<n>` (not main) when complete.
 
 ### 5.2. Update Project Status
 
