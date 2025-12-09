@@ -32,6 +32,7 @@ Reference these docs for detailed information (do not load entire files unless n
 - **Coding Standards**: [docs/coding-standards.md](docs/coding-standards.md)
 - **Testing Guide**: [docs/testing.md](docs/testing.md)
 - **Contributing**: [docs/contributing.md](docs/contributing.md)
+- **Worktrees Guide**: [docs/worktrees.md](docs/worktrees.md)
 
 ## GitHub Project Board
 
@@ -78,11 +79,44 @@ New work item identified
 | **Issue-based** | Simple bugs, small features, tech debt | `/issue <n> begin` → work → `/issue <n> review` |
 | **Roadmap-based** | Complex features needing planning | Create plan → `/prepare-plan` → `/review-plan` → `/begin` |
 
+## Parallel Development with Worktrees
+
+This project supports **git worktrees** for running multiple Claude Code agents on separate issues simultaneously.
+
+### Worktree Structure
+
+```
+C:\Users\User\git\jcollard\
+├── LuaInTheWeb/                    # Main worktree (main branch)
+├── LuaInTheWeb-issue-42/           # Worktree for issue #42
+└── LuaInTheWeb-issue-15/           # Worktree for issue #15
+```
+
+### Quick Worktree Commands
+
+| Command | Description |
+|---------|-------------|
+| `/worktree list` | List all active worktrees |
+| `/worktree create <n>` | Create worktree for issue #n (includes npm install) |
+| `/worktree remove <n>` | Remove worktree for issue #n |
+| `/worktree status` | Show status of all worktrees |
+
+### Parallel Workflow
+
+1. **Create a worktree** for an issue: `/worktree create 42`
+2. **Open new Claude Code session** in the worktree directory
+3. **Work on the issue**: `/issue 42 begin`
+4. **When done**: `/issue 42 review` to create PR
+5. **Clean up**: `/worktree remove 42` (from main worktree)
+
+See [docs/worktrees.md](docs/worktrees.md) for detailed documentation.
+
 ### Quick Commands
 - `/status` - View project board status and suggested next action
 - `/issue <n>` - View issue details and complexity assessment
 - `/issue <n> begin` - Start working on an issue (creates branch, updates project status)
 - `/issue <n> review` - Create PR when done
+- `/issue <n> eval` - Evaluate issue: estimate priority/effort/type, make concrete
 - `/issue next` - Auto-select next issue (highest priority Todo)
 - `/issue next <type>` - Auto-select next issue of type (tech-debt, bug, enhancement, roadmap)
 - `/tech-debt` - View and manage tech debt items
@@ -189,13 +223,20 @@ LuaInTheWeb/              # Git repository root (DO NOT run npm commands here)
 ## Special Commands
 
 ### Project & Issue Management
-- `/status` - View project board status, git state, and suggested next action
+- `/status` - View project board status, git state, worktrees, and suggested next action
 - `/issue <n>` - View issue details and complexity assessment
 - `/issue <n> begin` - Start working on an issue (creates branch, updates project)
 - `/issue <n> review` - Run code review and create PR
+- `/issue <n> eval` - Evaluate issue: estimate priority/effort/type, make concrete, ask questions if needed
 - `/issue next` - Auto-select next issue (highest priority Todo)
 - `/issue next <type>` - Auto-select by type (tech-debt, bug, enhancement, roadmap)
 - `/tech-debt` - View and manage tech debt items with priority/effort
+
+### Worktree Management (Parallel Development)
+- `/worktree list` - List all active worktrees
+- `/worktree create <n>` - Create worktree for issue #n (includes npm install)
+- `/worktree remove <n>` - Remove worktree for issue #n
+- `/worktree status` - Show status of all worktrees with git state
 
 ### Roadmap Workflow (Complex Features)
 - `/prepare-plan` - Prepare next draft plan for implementation (applies TDD, structure, E2E milestones)

@@ -8,6 +8,7 @@ Work with GitHub issues. Fetch details, assess complexity, and begin implementat
 /issue <number>           # Show issue details + complexity assessment
 /issue <number> begin     # Create branch and start working on the issue
 /issue <number> review    # Create PR for the issue and run code review
+/issue <number> eval      # Evaluate issue: estimate priority/effort/type, make concrete
 /issue next               # Auto-select next issue (highest priority Todo)
 /issue next <type>        # Auto-select next issue of specific type
 ```
@@ -21,7 +22,7 @@ The command accepts an issue number (or "next") and optional subcommand:
 
 Parse the arguments:
 - First token: Issue number OR "next" keyword
-- Second token: Subcommand (optional: "begin", "review") OR type filter (if first token is "next")
+- Second token: Subcommand (optional: "begin", "review", "eval") OR type filter (if first token is "next")
 
 If the first token is "next":
 - If second token exists and is a valid type (`tech-debt`, `bug`, `enhancement`, `roadmap`): filter by that type
@@ -111,9 +112,53 @@ If no subcommand provided (`/issue 13`), end with:
 
 If subcommand is "begin" (`/issue 13 begin`):
 
-### 5a. Create Branch from Issue
+### 5a. Check Worktree Context
 
-**FIRST**, create and checkout a branch linked to the issue:
+**FIRST**, determine if we're in a worktree and if the context is appropriate:
+
+```bash
+# Get current worktree path
+git rev-parse --show-toplevel
+
+# Check if this is a worktree (not the main repo)
+git rev-parse --git-common-dir
+```
+
+**Worktree Detection Logic:**
+
+1. **In issue-specific worktree** (path contains `issue-<n>`):
+   - If `<n>` matches the requested issue: Proceed normally
+   - If `<n>` doesn't match: Warn and suggest using the correct worktree
+
+2. **In main worktree** (primary repo):
+   - Suggest creating a worktree for parallel work (optional)
+   - Proceed with branch creation if user continues
+
+**If in wrong worktree:**
+
+```
+## Wrong Worktree
+
+You're in the worktree for issue #<current>, but trying to work on issue #<requested>.
+
+**Options:**
+- Switch to the correct worktree: `cd ../LuaInTheWeb-issue-<requested>`
+- Create a new worktree: `/worktree create <requested>`
+- Or proceed here anyway (not recommended for parallel work)
+```
+
+**If in main worktree (optional suggestion):**
+
+```
+💡 **Tip**: For parallel development, consider using a worktree:
+   `/worktree create <number>` - then open a new Claude Code session there
+
+Continuing in main worktree...
+```
+
+### 5b. Create Branch from Issue
+
+Create and checkout a branch linked to the issue:
 
 ```bash
 gh issue develop <number> --checkout
@@ -127,7 +172,7 @@ If the branch already exists, checkout the existing branch instead:
 git checkout <number>-<issue-title-slug>
 ```
 
-### 5a.1. Update Project Status
+### 5c. Update Project Status
 
 Update the issue status to "In Progress" in the GitHub Project:
 
@@ -150,7 +195,7 @@ The project uses these Status values:
 gh project item-add 3 --owner jcollard --url "https://github.com/jcollard/LuaInTheWeb/issues/<number>"
 ```
 
-### 5b. Inject Development Context
+### 5d. Inject Development Context
 
 Run these commands to inject full development guidelines:
 
@@ -160,7 +205,7 @@ Run these commands to inject full development guidelines:
 
 This ensures the TDD cycle (Red-Green-Refactor-Mutate) guidelines are loaded.
 
-### 5c. For Simple Issues (1-3 tasks)
+### 5e. For Simple Issues (1-3 tasks)
 
 Create a TodoWrite task list and start immediately:
 
@@ -202,7 +247,7 @@ npm run test:mutation:scope "src/components/AffectedComponent/**"
 - [ ] Build succeeds: `npm run build`
 - [ ] E2E tests pass (if applicable): `npm run test:e2e`
 
-### 5d. For Medium Issues (4-5 tasks)
+### 5f. For Medium Issues (4-5 tasks)
 
 Create a brief plan before starting:
 
@@ -227,7 +272,7 @@ Create a brief plan before starting:
 
 Then create TodoWrite tasks and begin implementation following the **Development Practices** above.
 
-### 5e. For Complex Issues (6+ tasks or architectural)
+### 5g. For Complex Issues (6+ tasks or architectural)
 
 Recommend creating a roadmap phase instead:
 
@@ -305,6 +350,226 @@ The PR is linked to issue #<number> and will auto-close it when merged.
 - Review the PR on GitHub
 - Request reviews if needed
 - Merge when approved
+```
+
+---
+
+## Step 6.5: Evaluate Issue (Eval Mode)
+
+If subcommand is "eval" (`/issue 13 eval`):
+
+This mode analyzes an issue to estimate its metadata fields and make the issue more actionable. The evaluation should be thoughtful and genuine - only raise questions, concerns, or suggestions when they are truly relevant.
+
+### 6.5a. Fetch and Display Issue
+
+Fetch the full issue details:
+
+```bash
+gh issue view <number> --json number,title,body,labels,state,createdAt
+```
+
+Display the current state:
+
+```
+## Evaluating Issue #<number>: <title>
+
+**Current Labels**: <labels or "None">
+**State**: <state>
+**Created**: <date>
+
+### Current Description
+<full body>
+```
+
+### 6.5b. Analyze and Estimate Fields
+
+Carefully read the issue and estimate:
+
+#### Priority (P0-Critical to P3-Low)
+
+| Priority | Criteria |
+|----------|----------|
+| P0-Critical | System broken, security issue, data loss, blocks all users |
+| P1-High | Major functionality broken, significant user impact, blocking other work |
+| P2-Medium | Important but not urgent, noticeable user impact, should be done soon |
+| P3-Low | Nice to have, minor improvement, can wait |
+
+#### Effort (T-shirt sizing)
+
+| Effort | Criteria |
+|--------|----------|
+| XS | < 1 hour, trivial change, single file |
+| S | 1-4 hours, simple change, 1-3 files |
+| M | Half day to full day, moderate complexity, multiple files |
+| L | 2-3 days, significant work, architectural consideration |
+| XL | Week+, major feature, multiple components, needs planning |
+
+#### Type
+
+| Type | Indicators |
+|------|------------|
+| Bug | Something is broken, unexpected behavior, error, regression |
+| Feature | New functionality, new capability, user-facing addition |
+| Tech Debt | Code quality, refactoring, cleanup, performance, dependencies |
+| Docs | Documentation, README, comments, examples |
+
+### 6.5c. Assess Issue Clarity
+
+Determine if the issue is actionable as written:
+
+**Clear Issue Indicators:**
+- Specific problem or goal described
+- Steps to reproduce (for bugs)
+- Acceptance criteria or definition of done
+- Relevant file paths or code references
+- Enough context to start work
+
+**Unclear Issue Indicators:**
+- Vague or ambiguous description
+- Missing steps to reproduce
+- Multiple unrelated concerns bundled together
+- No clear success criteria
+- Missing context about where/how
+
+### 6.5d. Formulate Response
+
+Output the evaluation:
+
+```
+## Issue Evaluation: #<number>
+
+### Estimated Fields
+
+| Field | Estimate | Reasoning |
+|-------|----------|-----------|
+| **Priority** | <P0-P3> | <brief reason based on impact/urgency> |
+| **Effort** | <XS-XL> | <brief reason based on scope/complexity> |
+| **Type** | <type> | <brief reason based on content> |
+```
+
+### 6.5e. Make Issue Concrete (if needed)
+
+If the issue description could be improved, suggest a more concrete version:
+
+```
+### Suggested Improvements
+
+The issue could be made more actionable. Here's a suggested revision:
+
+---
+
+<rewritten issue body that is clearer and more actionable>
+
+---
+```
+
+**Guidelines for rewriting:**
+- Keep the original intent
+- Add structure (problem, solution, acceptance criteria)
+- Be specific about what needs to change
+- Include relevant file paths if known
+- Add steps to reproduce for bugs
+- Only rewrite if it genuinely adds value - skip this section if the issue is already clear
+
+### 6.5f. Questions (Only If Genuinely Needed)
+
+**IMPORTANT**: Only include this section if there are genuine ambiguities that would block implementation. Do NOT ask questions just to fill this section.
+
+If questions are needed:
+
+```
+### Questions
+
+Before this issue can be worked on, the following should be clarified:
+
+1. <genuine question about scope, approach, or requirements>
+2. <another question if needed>
+```
+
+Examples of valid questions:
+- "Should the fix maintain backward compatibility with existing saved data?"
+- "Is this a user-facing change that needs documentation?"
+- "Which browsers need to be supported?"
+
+Do NOT ask obvious questions or questions whose answers are in the issue.
+
+### 6.5g. Concerns (Only If Real)
+
+**IMPORTANT**: Only include this section if there are genuine concerns that should be considered. Do NOT manufacture concerns.
+
+If concerns exist:
+
+```
+### Concerns
+
+⚠️ <genuine concern about approach, risk, or trade-off>
+```
+
+Examples of valid concerns:
+- "This change might affect performance in the hot path"
+- "The proposed approach could break existing integrations"
+- "This duplicates functionality in <other component>"
+
+### 6.5h. Suggestions (Only If Valuable)
+
+**IMPORTANT**: Only include this section if you have genuinely useful suggestions. Do NOT add suggestions just to have something.
+
+If suggestions exist:
+
+```
+### Suggestions
+
+💡 <actionable suggestion that adds value>
+```
+
+Examples of valid suggestions:
+- "Consider combining this with issue #X which addresses the same area"
+- "The <existing utility> could be extended to handle this case"
+- "Adding a test for the edge case mentioned would prevent regression"
+
+### 6.5i. Offer to Apply Changes
+
+End with available actions:
+
+```
+---
+
+**Actions available:**
+- **Apply estimates**: I can update the issue's project fields with these estimates
+- **Update description**: I can apply the suggested improvements to the issue body
+- **Add labels**: I can add appropriate labels based on the type
+
+Would you like me to apply any of these changes?
+```
+
+### 6.5j. Applying Changes (if requested)
+
+If user wants to apply estimates, update the project board fields:
+
+```bash
+# Get project item ID
+gh project item-list 3 --owner jcollard --format json
+
+# Update Priority field (field ID: PVTSSF_lADOCQkuPc4A4Q2PzgfZvgI)
+gh project item-edit --project-id <project-id> --id <item-id> --field-id PVTSSF_lADOCQkuPc4A4Q2PzgfZvgI --single-select-option-id <priority-option-id>
+
+# Update Effort field
+gh project item-edit --project-id <project-id> --id <item-id> --field-id <effort-field-id> --single-select-option-id <effort-option-id>
+
+# Update Type field
+gh project item-edit --project-id <project-id> --id <item-id> --field-id <type-field-id> --single-select-option-id <type-option-id>
+```
+
+If user wants to update the description:
+
+```bash
+gh issue edit <number> --body "<updated body>"
+```
+
+If user wants to add labels:
+
+```bash
+gh issue edit <number> --add-label "<type>"
 ```
 
 ---
@@ -393,6 +658,119 @@ The PR is linked to issue #13 and will auto-close it when merged.
 - Merge when approved
 ```
 
+### Example: Evaluating an Issue
+
+```
+/issue 25 eval
+
+## Evaluating Issue #25: Improve error messages for invalid Lua syntax
+
+**Current Labels**: None
+**State**: Open
+**Created**: Dec 8, 2025
+
+### Current Description
+When users enter invalid Lua code, the error messages are not helpful. We should improve them.
+
+---
+
+## Issue Evaluation: #25
+
+### Estimated Fields
+
+| Field | Estimate | Reasoning |
+|-------|----------|-----------|
+| **Priority** | P2-Medium | Improves UX but not blocking functionality |
+| **Effort** | M | Need to parse wasmoon errors and map to user-friendly messages |
+| **Type** | Feature | Adding new capability (better error messages) |
+
+### Suggested Improvements
+
+The issue could be made more actionable. Here's a suggested revision:
+
+---
+
+## Problem
+
+When users enter invalid Lua syntax, wasmoon returns technical error messages that are hard for beginners to understand.
+
+**Example current error:**
+`[string "..."]:1: syntax error near 'end'`
+
+## Proposed Solution
+
+1. Intercept Lua compilation/runtime errors from wasmoon
+2. Parse the error message to extract:
+   - Line number
+   - Error type (syntax, runtime, etc.)
+   - Relevant code context
+3. Display user-friendly error with:
+   - Clear description of what went wrong
+   - Suggestion for how to fix it
+   - Highlight the problematic line
+
+## Acceptance Criteria
+
+- [ ] Syntax errors show friendly message with line number
+- [ ] Common errors (missing `end`, unclosed string, etc.) have specific help text
+- [ ] Error panel highlights the relevant line in the editor
+
+---
+
+### Questions
+
+Before this issue can be worked on, the following should be clarified:
+
+1. Should errors be localized or English-only for now?
+
+---
+
+**Actions available:**
+- **Apply estimates**: I can update the issue's project fields with these estimates
+- **Update description**: I can apply the suggested improvements to the issue body
+- **Add labels**: I can add appropriate labels based on the type
+
+Would you like me to apply any of these changes?
+```
+
+### Example: Eval with No Questions/Concerns Needed
+
+```
+/issue 18 eval
+
+## Evaluating Issue #18: Remove unused CSS classes in LuaPlayground
+
+**Current Labels**: tech-debt
+**State**: Open
+**Created**: Dec 7, 2025
+
+### Current Description
+The LuaPlayground.module.css file has accumulated unused CSS classes over time.
+Clean up: .oldHeader, .deprecatedButton, .unusedWrapper
+
+---
+
+## Issue Evaluation: #18
+
+### Estimated Fields
+
+| Field | Estimate | Reasoning |
+|-------|----------|-----------|
+| **Priority** | P3-Low | Code cleanup, no user impact |
+| **Effort** | XS | Simple deletion of 3 known classes |
+| **Type** | Tech Debt | Code cleanup task |
+
+The issue is already well-defined with specific classes to remove. No improvements needed.
+
+---
+
+**Actions available:**
+- **Apply estimates**: I can update the issue's project fields with these estimates
+- **Add labels**: I can add appropriate labels based on the type
+
+Would you like me to apply any of these changes?
+```
+
 ---
 
 ## Error Handling
@@ -401,7 +779,7 @@ The PR is linked to issue #13 and will auto-close it when merged.
 |-------|----------|
 | No issue number provided | "Usage: `/issue <number>`, `/issue <number> begin`, `/issue next`, or `/issue next <type>`" |
 | Issue not found | "Issue #<number> not found. Check the issue number and try again." |
-| Unknown subcommand | "Unknown subcommand '<cmd>'. Available: begin, review" |
+| Unknown subcommand | "Unknown subcommand '<cmd>'. Available: begin, review, eval" |
 | Invalid type filter | "Unknown type '<type>'. Available: tech-debt, bug, enhancement, roadmap" |
 | GitHub CLI not available | "GitHub CLI (gh) is required. Install from https://cli.github.com" |
 

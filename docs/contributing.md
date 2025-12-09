@@ -36,12 +36,22 @@ See [Testing Guide](./testing.md) for details.
 
 ### 4. Create a Pull Request
 
+**Option A: Single Branch (Traditional)**
 1. Create a feature branch: `git checkout -b feature/your-feature`
 2. Make your changes following TDD
 3. Ensure all tests pass: `npm run test`
 4. Ensure mutation score is acceptable: `npm run test:mutation`
 5. Ensure linting passes: `npm run lint`
 6. Push and create a PR
+
+**Option B: Worktree (Parallel Development)**
+1. Create a worktree for your issue: `git worktree add ../LuaInTheWeb-issue-<n> -b <n>-feature-name`
+2. Work in the worktree directory
+3. Follow TDD and complete your changes
+4. Push and create PR from the worktree
+5. Clean up when done: `git worktree remove ../LuaInTheWeb-issue-<n>`
+
+See [Worktrees Guide](./worktrees.md) for detailed documentation on parallel development.
 
 ### PR Checklist
 
