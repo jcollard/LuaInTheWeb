@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { vi } from 'vitest'
 import { BottomPanel } from './BottomPanel'
+import type { TerminalLine } from './types'
 
 // Mock BashTerminal and LuaRepl since they use xterm which doesn't work in jsdom
 vi.mock('../BashTerminal', () => ({
@@ -16,7 +17,7 @@ vi.mock('../LuaRepl', () => ({
 }))
 
 describe('BottomPanel', () => {
-  const defaultProps = {
+  const defaultProps: { terminalOutput: TerminalLine[] } = {
     terminalOutput: [],
   }
 
@@ -122,9 +123,15 @@ describe('BottomPanel', () => {
       expect(luaRepl).toHaveAttribute('data-embedded', 'true')
     })
 
-    it('should display terminal output', () => {
-      // Arrange & Act
-      render(<BottomPanel {...defaultProps} terminalOutput={['Hello', 'World']} />)
+    it('should display terminal output with stable keys', () => {
+      // Arrange
+      const terminalOutput: TerminalLine[] = [
+        { id: 'line-1', text: 'Hello' },
+        { id: 'line-2', text: 'World' },
+      ]
+
+      // Act
+      render(<BottomPanel {...defaultProps} terminalOutput={terminalOutput} />)
 
       // Assert
       expect(screen.getByText('Hello')).toBeInTheDocument()

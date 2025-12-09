@@ -2,6 +2,7 @@ import type { UseLuaEngineReturn } from '../../hooks/types'
 import type { TreeNode } from '../../hooks/useFileSystem'
 import type { TabInfo } from '../TabBar'
 import type { ToastData } from '../Toast'
+import type { TerminalLine } from '../BottomPanel/types'
 
 /**
  * Activity bar panel options
@@ -22,7 +23,7 @@ export interface IDEContextValue {
   isDirty: boolean
 
   // Terminal output
-  terminalOutput: string[]
+  terminalOutput: TerminalLine[]
 
   // Input state
   isAwaitingInput: boolean

@@ -5,6 +5,7 @@ import { useTabBar } from '../TabBar'
 import { useToast } from '../Toast'
 import { IDEContext } from './context'
 import type { IDEContextValue, IDEContextProviderProps, ActivityPanelType } from './types'
+import type { TerminalLine } from '../BottomPanel/types'
 
 // Helper to extract file name from path
 function getFileName(path: string): string {
@@ -53,7 +54,8 @@ export function IDEContextProvider({
   const [pendingNewFilePath, setPendingNewFilePath] = useState<string | null>(null)
 
   // Terminal state
-  const [terminalOutput, setTerminalOutput] = useState<string[]>([])
+  const [terminalOutput, setTerminalOutput] = useState<TerminalLine[]>([])
+  const lineCounterRef = useRef(0)
 
   // Input state
   const [isAwaitingInput, setIsAwaitingInput] = useState(false)
@@ -82,17 +84,20 @@ export function IDEContextProvider({
 
   // Callbacks for terminal output
   const handleOutput = useCallback((text: string) => {
-    setTerminalOutput(prev => [...prev, text])
+    const id = `line-${++lineCounterRef.current}`
+    setTerminalOutput(prev => [...prev, { id, text }])
   }, [])
 
   const handleError = useCallback((error: string) => {
-    setTerminalOutput(prev => [...prev, error])
+    const id = `line-${++lineCounterRef.current}`
+    setTerminalOutput(prev => [...prev, { id, text: error }])
   }, [])
 
   // Handle io.read() - returns a promise that resolves when user submits input
   const handleReadInput = useCallback((): Promise<string> => {
     setIsAwaitingInput(true)
-    setTerminalOutput(prev => [...prev, '> Waiting for input...'])
+    const id = `line-${++lineCounterRef.current}`
+    setTerminalOutput(prev => [...prev, { id, text: '> Waiting for input...' }])
 
     return new Promise<string>((resolve) => {
       inputResolverRef.current = resolve
