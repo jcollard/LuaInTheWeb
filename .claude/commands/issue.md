@@ -8,19 +8,25 @@ Work with GitHub issues. Fetch details, assess complexity, and begin implementat
 /issue <number>           # Show issue details + complexity assessment
 /issue <number> begin     # Create branch and start working on the issue
 /issue <number> review    # Create PR for the issue and run code review
-/issue next               # Auto-select and start next tech debt issue
+/issue next               # Auto-select next issue (highest priority Todo)
+/issue next <type>        # Auto-select next issue of specific type
 ```
+
+**Type filter options:** `tech-debt`, `bug`, `enhancement`, `roadmap`
 
 ## Arguments
 
 The command accepts an issue number (or "next") and optional subcommand:
-- `$ARGUMENTS` contains the full argument string (e.g., "13", "13 begin", or "next")
+- `$ARGUMENTS` contains the full argument string (e.g., "13", "13 begin", "next", or "next tech-debt")
 
 Parse the arguments:
 - First token: Issue number OR "next" keyword
-- Second token: Subcommand (optional: "begin" or "review")
+- Second token: Subcommand (optional: "begin", "review") OR type filter (if first token is "next")
 
-If the first token is "next", jump directly to **Step 7: Auto-Select Next Issue**.
+If the first token is "next":
+- If second token exists and is a valid type (`tech-debt`, `bug`, `enhancement`, `roadmap`): filter by that type
+- If no second token: fetch all types (highest priority Todo)
+- Jump to **Step 7: Auto-Select Next Issue**
 
 ---
 
@@ -119,6 +125,29 @@ The branch is automatically linked to the issue for tracking.
 If the branch already exists, checkout the existing branch instead:
 ```bash
 git checkout <number>-<issue-title-slug>
+```
+
+### 5a.1. Update Project Status
+
+Update the issue status to "In Progress" in the GitHub Project:
+
+```bash
+# Get the project item ID for this issue
+gh project item-list 3 --owner jcollard --format json
+
+# Find the item matching the issue number, then update its status
+# Use gh project item-edit with the item ID and field ID
+```
+
+The project uses these Status values:
+- `Concept` (id: f53885f8) - Needs more definition
+- `Todo` (id: f75ad846) - Ready to work on
+- `In Progress` (id: 47fc9ee4) - Actively being worked on
+- `Done` (id: 98236657) - Completed
+
+**Note**: Project field updates require knowing the item ID. If the issue isn't in the project yet, add it first:
+```bash
+gh project item-add 3 --owner jcollard --url "https://github.com/jcollard/LuaInTheWeb/issues/<number>"
 ```
 
 ### 5b. Inject Development Context
@@ -255,6 +284,12 @@ EOF
 
 The `Fixes #<number>` syntax automatically closes the issue when the PR is merged.
 
+### 6b.1. Update Project Status to Review
+
+Update the issue status to reflect it's in review (optional - can stay "In Progress" until merged):
+
+The project will auto-update to "Done" when the issue is closed via the PR merge, if you have GitHub's built-in automation enabled.
+
 ### 6c. Output PR URL
 
 After PR creation, output:
@@ -364,16 +399,21 @@ The PR is linked to issue #13 and will auto-close it when merged.
 
 | Error | Response |
 |-------|----------|
-| No issue number provided | "Usage: `/issue <number>`, `/issue <number> begin`, or `/issue next`" |
+| No issue number provided | "Usage: `/issue <number>`, `/issue <number> begin`, `/issue next`, or `/issue next <type>`" |
 | Issue not found | "Issue #<number> not found. Check the issue number and try again." |
-| Unknown subcommand | "Unknown subcommand '<cmd>'. Available: begin, review, next" |
+| Unknown subcommand | "Unknown subcommand '<cmd>'. Available: begin, review" |
+| Invalid type filter | "Unknown type '<type>'. Available: tech-debt, bug, enhancement, roadmap" |
 | GitHub CLI not available | "GitHub CLI (gh) is required. Install from https://cli.github.com" |
 
 ---
 
 ## Step 7: Auto-Select Next Issue (Next Mode)
 
-If the first argument is "next" (`/issue next`):
+Supports two modes:
+- `/issue next` - Pick highest priority "Todo" issue (any type)
+- `/issue next <type>` - Pick highest priority "Todo" issue of specific type
+
+**Valid types:** `tech-debt`, `bug`, `enhancement`, `roadmap`
 
 ### 7a. Check Current Branch Status
 
@@ -401,31 +441,58 @@ You're currently on branch `<branch-name>` which is linked to issue #<number>.
 
 Then STOP - do not proceed further.
 
-### 7b. Fetch Tech Debt Issues
+### 7b. Fetch Issues from Project Board
 
-If on `main` or `master`, fetch open tech debt issues sorted by creation date (oldest first):
+If on `main` or `master`, fetch open issues with their project status and priority:
 
 ```bash
-gh issue list --label "tech-debt" --state open --json number,title,body,labels,createdAt --limit 10
+# Fetch issues - optionally filter by label
+# Without type filter:
+gh issue list --state open --json number,title,body,labels,createdAt --limit 20
+
+# With type filter (e.g., tech-debt):
+gh issue list --label "<type>" --state open --json number,title,body,labels,createdAt --limit 20
 ```
 
-If no tech debt issues found:
+Then get project data to check status and priority:
+
+```bash
+# Get project items with status and priority fields
+gh project item-list 3 --owner jcollard --format json --limit 100
+```
+
+### 7b.1 Filter and Sort Issues
+
+1. **Filter out non-Todo issues**: Skip issues with project status "Concept", "In Progress", or "Done"
+   - Only include issues with status "Todo" (id: f75ad846)
+   - Issues not in the project are treated as "Todo" candidates
+
+2. **Sort by Priority**: Order by Priority field (P0-Critical first, then P1, P2, P3, then unset)
+   - P0-Critical > P1-High > P2-Medium > P3-Low > (no priority)
+   - Within same priority, sort by creation date (oldest first)
+
+If no matching issues found:
 
 ```
-## No Tech Debt Issues Available
+## No Issues Available
 
-There are no open tech debt issues to work on.
+<If type filter was used:>
+There are no open <type> issues in "Todo" status.
+
+<If no type filter:>
+There are no open issues in "Todo" status.
 
 **Options:**
-- Run `/tech-debt` to review if there's hidden tech debt
-- Check for other open issues: `gh issue list --state open`
+- Run `/status` to see all project items and their status
+- Check issues in "Concept" status that may need definition
+- Run `/issue next <type>` to filter by a specific type
 ```
 
 Then STOP.
 
 ### 7c. Analyze Issues for Clarity
 
-For each issue (starting from oldest), check if it needs clarification by looking for:
+For each issue (in priority order), check if it needs clarification by looking for:
 
 **Clarity Blockers (skip this issue):**
 - Label: `needs-clarification`, `needs-discussion`, `blocked`, `question`
@@ -441,23 +508,24 @@ For each issue (starting from oldest), check if it needs clarification by lookin
 
 ### 7d. Select First Clear Issue
 
-Find the first issue that doesn't have clarity blockers.
+Find the first issue (by priority order) that doesn't have clarity blockers.
 
 If all issues need clarification:
 
 ```
-## All Tech Debt Issues Need Clarification
+## All Issues Need Clarification
 
-Found <count> tech debt issues, but all need clarification before work can begin:
+Found <count> issues in "Todo" status, but all need clarification before work can begin:
 
-| # | Title | Blocker |
-|---|-------|---------|
-| <number> | <title> | <reason> |
+| # | Title | Priority | Blocker |
+|---|-------|----------|---------|
+| <number> | <title> | <priority> | <reason> |
 ...
 
 **Options:**
 - Pick one to clarify: `/issue <number>` to view details
 - Add clarification to an issue on GitHub, then run `/issue next` again
+- Move unclear issues to "Concept" status in the project board
 ```
 
 Then STOP.
@@ -470,16 +538,21 @@ When a clear issue is found:
 ## Auto-Selected Issue #<number>
 
 **Title**: <title>
-**Created**: <date>
+**Priority**: <priority or "Not set">
 **Labels**: <labels>
+**Created**: <date>
+
+<If type filter was used:>
+**Filter**: <type>
 
 ### Description
 <body - first 500 chars>
 
-### Clarity Check
+### Selection Criteria
+✓ Status: Todo
+✓ Priority: <priority> (highest available)
 ✓ Issue has clear requirements
 ✓ No clarification labels
-✓ Actionable content detected
 ```
 
 ### 7f. Begin Work on Selected Issue
@@ -530,7 +603,7 @@ You're currently on branch `18-cleanup-unused-exports` which is linked to issue 
 - Switch to main and run `/issue next` again to pick a new issue
 ```
 
-### When Tech Debt Available
+### When Issues Available (Any Type)
 
 ```
 /issue next
@@ -538,27 +611,34 @@ You're currently on branch `18-cleanup-unused-exports` which is linked to issue 
 ## Checking for Current Work...
 Current branch: main ✓
 
-## Fetching Tech Debt Issues...
-Found 3 open tech debt issues.
+## Fetching Issues from Project Board...
+Found 5 open issues in "Todo" status.
+
+## Sorting by Priority...
+| # | Title | Priority | Type |
+|---|-------|----------|------|
+| #15 | Remove deprecated API calls | P1-High | tech-debt |
+| #22 | Add dark mode toggle | P2-Medium | enhancement |
+| #19 | Fix input validation | P2-Medium | bug |
 
 ## Analyzing Issues for Clarity...
 - #15: "Remove deprecated API calls" - ✓ Clear
-- #19: "Investigate performance issues?" - ✗ Needs investigation
-- #21: "TBD: Refactor state management" - ✗ Has TBD marker
 
 ## Auto-Selected Issue #15
 
 **Title**: Remove deprecated API calls
+**Priority**: P1-High
+**Labels**: tech-debt
 **Created**: Dec 5, 2025
-**Labels**: tech-debt, medium
 
 ### Description
 Several API calls in `src/utils/api.ts` use deprecated endpoints...
 
-### Clarity Check
+### Selection Criteria
+✓ Status: Todo
+✓ Priority: P1-High (highest available)
 ✓ Issue has clear requirements
 ✓ No clarification labels
-✓ Actionable content detected
 
 ## Starting Issue #15: Remove deprecated API calls
 
@@ -570,6 +650,57 @@ Created and checked out branch: 15-remove-deprecated-api-calls
 2. [ ] Update to new endpoints
 3. [ ] Add tests for updated calls
 4. [ ] Run mutation tests
+
+Starting with task 1...
+```
+
+### With Type Filter
+
+```
+/issue next bug
+
+## Checking for Current Work...
+Current branch: main ✓
+
+## Fetching Issues from Project Board...
+Filtering by type: bug
+Found 2 open bug issues in "Todo" status.
+
+## Sorting by Priority...
+| # | Title | Priority |
+|---|-------|----------|
+| #19 | Fix input validation | P2-Medium |
+| #23 | Handle edge case in parser | P3-Low |
+
+## Analyzing Issues for Clarity...
+- #19: "Fix input validation" - ✓ Clear
+
+## Auto-Selected Issue #19
+
+**Title**: Fix input validation
+**Priority**: P2-Medium
+**Labels**: bug
+**Created**: Dec 6, 2025
+**Filter**: bug
+
+### Description
+The input validation in the form component doesn't handle...
+
+### Selection Criteria
+✓ Status: Todo
+✓ Priority: P2-Medium (highest available for type: bug)
+✓ Issue has clear requirements
+✓ No clarification labels
+
+## Starting Issue #19: Fix input validation
+
+### Branch Created
+Created and checked out branch: 19-fix-input-validation
+
+### Tasks
+1. [ ] Add validation for empty input
+2. [ ] Add validation for special characters
+3. [ ] Update tests
 
 Starting with task 1...
 ```

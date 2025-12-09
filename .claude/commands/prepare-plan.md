@@ -14,6 +14,22 @@ Before preparing a plan, verify:
    - Look for draft plans with all dependencies completed
    - Select the next sequential phase (e.g., Phase 2 after Phase 1.5)
 
+3. **Check for linked GitHub issue**
+   - Look for `**GitHub Issue**: #<number>` in the plan frontmatter
+   - If missing, check for a matching issue in the project:
+     ```bash
+     gh issue list --state open --label "roadmap" --json number,title
+     ```
+   - If no issue exists, create one:
+     ```bash
+     gh issue create --title "[Roadmap] <Plan Name>" --label "roadmap" --body "<Summary from plan>"
+     ```
+   - After creating, add to GitHub Project:
+     ```bash
+     gh project item-add 3 --owner jcollard --url "https://github.com/jcollard/LuaInTheWeb/issues/<number>"
+     ```
+   - Update the plan frontmatter with the issue number
+
 ## Preparation Steps
 
 ### Step 1: Load Context

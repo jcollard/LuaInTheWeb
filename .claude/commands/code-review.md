@@ -72,11 +72,17 @@ After completing the review, create GitHub issues for any non-blocking findings:
    Code review of \`<branch-name>\` branch"
    ```
 
-3. **Unique ID format**: `<filename>-<issue-type>-<line-numbers>`
+3. **Add issue to GitHub Project** after creation:
+   ```bash
+   gh project item-add 3 --owner jcollard --url "https://github.com/jcollard/LuaInTheWeb/issues/<new-issue-number>"
+   ```
+   This ensures all tech debt is tracked in the project board for prioritization.
+
+4. **Unique ID format**: `<filename>-<issue-type>-<line-numbers>`
    - Example: `luarepl-any-types-26-93-101`
    - Example: `stryker-exclude-test-files`
 
-4. **Priority levels**:
+5. **Priority levels**:
    - **High**: Violates coding standards, security issues
    - **Medium**: ESLint warnings, performance issues
    - **Low**: Nice-to-have improvements

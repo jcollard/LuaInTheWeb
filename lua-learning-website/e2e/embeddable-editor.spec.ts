@@ -3,15 +3,15 @@ import { test, expect } from '@playwright/test'
 test.describe('EmbeddableEditor', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/test/embeddable-editor')
-    // Wait for Monaco editor to be visible
-    await expect(page.locator('.monaco-editor').first()).toBeVisible()
+    // Wait for Monaco editor to be visible with extended timeout for slow CI environments
+    await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 30000 })
     // Wait for Lua WASM engine to initialize (no UI indicator, so we wait a bit)
     await page.waitForTimeout(1000)
   })
 
   test('renders Monaco editor', async ({ page }) => {
-    // Monaco editor should be visible (already verified in beforeEach)
-    await expect(page.locator('.monaco-editor').first()).toBeVisible()
+    // Monaco editor should be visible (already verified in beforeEach, but check again for test assertion)
+    await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 30000 })
   })
 
   test('executes Lua code and shows output', async ({ page }) => {

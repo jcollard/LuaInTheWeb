@@ -33,12 +33,66 @@ Reference these docs for detailed information (do not load entire files unless n
 - **Testing Guide**: [docs/testing.md](docs/testing.md)
 - **Contributing**: [docs/contributing.md](docs/contributing.md)
 
-## Roadmap
+## GitHub Project Board
+
+📋 **[View Project Board](https://github.com/users/jcollard/projects/3)**
+
+All work is tracked in GitHub Projects with the following fields:
+- **Priority**: P0-Critical, P1-High, P2-Medium, P3-Low
+- **Effort**: XS, S, M, L, XL (t-shirt sizing)
+- **Type**: Feature, Bug, Tech Debt, Docs
+- **Status**: Concept → Todo → In Progress → Done
+- **Plan**: Link to roadmap implementation plan (for complex features)
+
+### Status Definitions
+
+| Status | Meaning |
+|--------|---------|
+| **Concept** | Idea needs research/definition before it's actionable |
+| **Todo** | Well-defined, ready to be worked on |
+| **In Progress** | Actively being worked on |
+| **Done** | Completed and merged |
+
+### Workflow Decision Tree
+
+```
+New work item identified
+    │
+    ├─► Is it well-defined? (clear scope, actionable)
+    │       │
+    │       ├─► YES: Is it simple? (1-3 tasks, < 1 day)
+    │       │       │
+    │       │       ├─► YES: Create issue → /issue <n> begin → /issue <n> review
+    │       │       │
+    │       │       └─► NO (complex): Create issue → Create roadmap plan → /prepare-plan → /begin
+    │       │
+    │       └─► NO: Create issue in "Concept" status → Research → Move to "Todo" when defined
+    │
+    └─► For existing issues: /status → /issue next (or pick specific issue)
+```
+
+### Two Workflows
+
+| Workflow | When to Use | Commands |
+|----------|-------------|----------|
+| **Issue-based** | Simple bugs, small features, tech debt | `/issue <n> begin` → work → `/issue <n> review` |
+| **Roadmap-based** | Complex features needing planning | Create plan → `/prepare-plan` → `/review-plan` → `/begin` |
+
+### Quick Commands
+- `/status` - View project board status and suggested next action
+- `/issue <n>` - View issue details and complexity assessment
+- `/issue <n> begin` - Start working on an issue (creates branch, updates project status)
+- `/issue <n> review` - Create PR when done
+- `/issue next` - Auto-select next issue (highest priority Todo)
+- `/issue next <type>` - Auto-select next issue of type (tech-debt, bug, enhancement, roadmap)
+- `/tech-debt` - View and manage tech debt items
+
+## Roadmap (Implementation Plans)
 
 - **Current Plans**: [roadmap/README.md](roadmap/README.md)
 - **Plan Template**: [roadmap/_template.md](roadmap/_template.md)
 
-For new features, create a plan in the roadmap directory before implementation.
+For complex features, create a detailed plan in the roadmap directory linked to a GitHub issue.
 
 ## Development Practices
 
@@ -134,11 +188,20 @@ LuaInTheWeb/              # Git repository root (DO NOT run npm commands here)
 
 ## Special Commands
 
-### Roadmap Workflow
+### Project & Issue Management
+- `/status` - View project board status, git state, and suggested next action
+- `/issue <n>` - View issue details and complexity assessment
+- `/issue <n> begin` - Start working on an issue (creates branch, updates project)
+- `/issue <n> review` - Run code review and create PR
+- `/issue next` - Auto-select next issue (highest priority Todo)
+- `/issue next <type>` - Auto-select by type (tech-debt, bug, enhancement, roadmap)
+- `/tech-debt` - View and manage tech debt items with priority/effort
+
+### Roadmap Workflow (Complex Features)
 - `/prepare-plan` - Prepare next draft plan for implementation (applies TDD, structure, E2E milestones)
 - `/review-plan` - Review current plan for compliance before starting
 - `/begin` - Create task list and begin implementation (includes mutation + E2E checkpoints)
-- `/milestone` - **NEW**: E2E checkpoint when a user flow is complete
+- `/milestone` - E2E checkpoint when a user flow is complete
 
 ### Development Guidelines
 - `/tdd` - Inject TDD guidelines (Red-Green-Refactor-Mutate cycle)
