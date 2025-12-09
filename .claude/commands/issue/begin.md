@@ -334,3 +334,30 @@ After PR is created, output the PR URL and suggest next steps:
 - Run `/pr-review <number>` for code review
 - Address any feedback
 - Merge when approved
+
+---
+
+## Step 7: Updating an Existing PR (Rework)
+
+If changes are requested after PR creation, use `update-pr.py` to add commits:
+
+```bash
+# Add additional commits to the PR (runs checks by default)
+python scripts/update-pr.py <pr-number> commit --message "fix: Address review feedback"
+
+# Or use file-based message (recommended for agents)
+python scripts/update-pr.py <pr-number> commit --message-file /tmp/commit-msg.txt
+
+# Skip checks if needed (not recommended)
+python scripts/update-pr.py <pr-number> commit --message "fix: Quick typo fix" --skip-checks
+
+# Update PR description
+python scripts/update-pr.py <pr-number> update-body --body "Updated description"
+python scripts/update-pr.py <pr-number> update-body --body-file /tmp/pr-body.txt
+
+# Add a comment to the PR
+python scripts/update-pr.py <pr-number> comment --body "Ready for re-review"
+python scripts/update-pr.py <pr-number> comment --body-file /tmp/comment.txt
+```
+
+**Note**: Use SYSTEM temp directory for file-based inputs (see warning above).
