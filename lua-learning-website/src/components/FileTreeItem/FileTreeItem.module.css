@@ -4,24 +4,24 @@
   padding: 2px 8px;
   cursor: pointer;
   user-select: none;
-  color: var(--vscode-foreground, #cccccc);
+  color: var(--theme-text-primary);
   font-size: 13px;
   line-height: 22px;
   border-radius: 3px;
 }
 
 .treeItem:hover {
-  background-color: var(--vscode-list-hoverBackground, rgba(90, 93, 94, 0.31));
+  background-color: var(--theme-bg-hover);
 }
 
 .treeItem.selected {
-  background-color: var(--vscode-list-activeSelectionBackground, #04395e);
-  color: var(--vscode-list-activeSelectionForeground, #ffffff);
+  background-color: var(--theme-accent-primary);
+  color: var(--theme-text-inverse);
 }
 
 .treeItem.dragOver {
-  background-color: var(--vscode-list-dropBackground, rgba(0, 127, 212, 0.18));
-  outline: 1px dashed var(--vscode-focusBorder, #007fd4);
+  background-color: var(--theme-bg-hover);
+  outline: 1px dashed var(--theme-border-focus);
 }
 
 .chevron {
@@ -60,11 +60,11 @@
 }
 
 .fileIcon {
-  fill: var(--vscode-icon-foreground, #c5c5c5);
+  fill: var(--theme-text-muted);
 }
 
 .folderIcon {
-  fill: var(--vscode-gitDecoration-untrackedResourceForeground, #73c991);
+  fill: var(--theme-success);
 }
 
 .name {
@@ -76,9 +76,9 @@
 
 .renameInput {
   flex: 1;
-  background: var(--vscode-input-background, #3c3c3c);
-  border: 1px solid var(--vscode-focusBorder, #007fd4);
-  color: var(--vscode-input-foreground, #cccccc);
+  background: var(--theme-bg-tertiary);
+  border: 1px solid var(--theme-border-focus);
+  color: var(--theme-text-primary);
   font-size: 13px;
   padding: 0 4px;
   outline: none;
@@ -86,5 +86,5 @@
 }
 
 .renameInput:focus {
-  border-color: var(--vscode-focusBorder, #007fd4);
+  border-color: var(--theme-border-focus);
 }

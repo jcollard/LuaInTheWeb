@@ -205,4 +205,31 @@ test.describe('Theme - Layout Components', () => {
     // Should have transition properties for background-color
     expect(transition).toContain('background-color')
   })
+
+  test('file explorer uses theme colors', async ({ page }) => {
+    // Start with dark theme
+    await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'dark'))
+    await page.reload()
+    const fileExplorer = page.locator('[data-testid="file-explorer"]')
+    await expect(fileExplorer).toBeVisible()
+
+    // In dark theme, bg-secondary should be #252526
+    const darkBgColor = await fileExplorer.evaluate(el =>
+      getComputedStyle(el).backgroundColor
+    )
+    expect(darkBgColor).toBe('rgb(37, 37, 38)') // #252526
+
+    // Switch to light theme
+    await page.evaluate(() => {
+      localStorage.setItem('lua-ide-theme', 'light')
+      document.documentElement.setAttribute('data-theme', 'light')
+    })
+    await page.waitForTimeout(300)
+
+    // In light theme, bg-secondary should be #f3f3f3
+    const lightBgColor = await fileExplorer.evaluate(el =>
+      getComputedStyle(el).backgroundColor
+    )
+    expect(lightBgColor).toBe('rgb(243, 243, 243)') // #f3f3f3
+  })
 })

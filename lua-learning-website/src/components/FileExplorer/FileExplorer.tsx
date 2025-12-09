@@ -242,7 +242,7 @@ export function FileExplorer({
     : fileContextMenuItems
 
   return (
-    <div className={combinedClassName}>
+    <div className={combinedClassName} data-testid="file-explorer">
       {/* Toolbar */}
       <div className={styles.toolbar}>
         <button
