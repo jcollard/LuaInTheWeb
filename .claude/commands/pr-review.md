@@ -254,6 +254,19 @@ Please resolve conflicts first:
 4. `git push`
 ```
 
+### 8a.5. Detect Epic Context
+
+**Check if this PR targets an epic branch** (not main):
+
+If `baseRefName` matches pattern `epic-<n>`:
+- This is a sub-issue PR being merged to an epic
+- Store the epic number for later EPIC.md update
+- Set `is_epic_subissue = true`
+
+If `baseRefName` is `main`:
+- This is a regular PR
+- Set `is_epic_subissue = false`
+
 ### 8b. Extract Linked Issues
 
 Parse the PR body to find linked issues using common patterns:
@@ -302,13 +315,69 @@ gh pr merge <number> --squash --delete-branch
 - `--squash`: Combines all commits into a single commit (cleaner history)
 - `--delete-branch`: Removes the feature branch after merge
 
+### 8d.5. Update EPIC.md (Sub-Issues Only)
+
+**If `is_epic_subissue` is true**, update EPIC.md in the epic worktree:
+
+1. Navigate to epic worktree:
+   ```bash
+   cd ../LuaInTheWeb-epic-<epic-number>
+   ```
+
+2. Update the sub-issue row in EPIC.md to mark as complete:
+   ```
+   | #<issue-number> | <title> | ✅ Complete | <branch> | Merged in PR #<pr-number> |
+   ```
+
+3. Add progress log entry:
+   ```markdown
+   ### <date>
+   - Completed #<issue-number>: <title>
+   - Merged PR #<pr-number> to epic-<epic-number>
+   ```
+
+4. Update status line progress count:
+   ```
+   **Status:** In Progress (<new-complete>/<total> complete)
+   ```
+
+5. Update "Last Updated" timestamp
+
+6. Commit and push the EPIC.md update:
+   ```bash
+   git add EPIC.md
+   git commit -m "docs: Update EPIC.md - completed #<issue-number>"
+   git push origin epic-<epic-number>
+   ```
+
+7. **Check if all sub-issues are complete:**
+   - Count completed vs total sub-issues
+   - If all complete, output:
+     ```
+     ### All Sub-Issues Complete!
+
+     Epic #<epic-number> has all <count> sub-issues completed.
+
+     **Ready to create PR to main:**
+     ```bash
+     /epic <epic-number> review
+     ```
+     ```
+
 ### 8e. Update Local Repository
 
-After merge, update local main branch:
+After merge, update local branch:
 
+**For regular PRs:**
 ```bash
 git checkout main
 git pull origin main
+```
+
+**For sub-issue PRs (merged to epic):**
+```bash
+git checkout epic-<epic-number>
+git pull origin epic-<epic-number>
 ```
 
 ### 8f. Prompt for Tech Debt Issues (Before Issue Closure)
@@ -454,11 +523,12 @@ If no worktree found, the script reports this and exits cleanly.
 
 ### 8k. Output Success Summary
 
+**For regular PRs (merged to main):**
 ```
 ## PR #<number> Merged Successfully
 
 **Title**: <title>
-**Branch**: <headRefName> → <baseRefName>
+**Branch**: <headRefName> → main
 **Merge Type**: Squash merge
 
 ### Tech Debt Issues Created & Added to Project Board
@@ -482,6 +552,44 @@ If no worktree found, the script reports this and exits cleanly.
 ### Next Steps
 - Run `/status` to see project board
 - Run `/issue next` to pick up next task
+```
+
+**For sub-issue PRs (merged to epic branch):**
+```
+## Sub-Issue PR #<number> Merged to Epic
+
+**Title**: <title>
+**Branch**: <headRefName> → epic-<epic-number>
+**Merge Type**: Squash merge
+
+### Epic Progress
+**Epic #<epic-number>**: <epic-title>
+**Progress**: <complete>/<total> sub-issues complete (<percentage>%)
+
+### EPIC.md Updated
+- ✅ Sub-issue #<issue-number> marked as complete
+- ✅ Progress log updated
+
+### Linked Issues Closed
+- #<issue-number>: <issue-title> ✅ Closed
+
+### Cleanup
+- ✅ Switched to epic branch
+- ✅ Pulled latest changes
+- ✅ Sub-issue worktree removed (if applicable)
+
+<If all sub-issues complete:>
+### All Sub-Issues Complete!
+
+Ready to create PR to main:
+```bash
+/epic <epic-number> review
+```
+
+<Otherwise:>
+### Next Steps
+- Run `/epic <epic-number>` to see epic progress
+- Run `/epic <epic-number> next` to start next sub-issue
 ```
 
 ---

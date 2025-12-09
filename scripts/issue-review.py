@@ -9,6 +9,7 @@ Options:
   --summary-file PATH   PR summary from file (recommended for agents)
   --test-plan "..."     Test plan text (inline)
   --test-plan-file PATH Test plan from file (recommended for agents)
+  --base BRANCH         Target branch for PR (default: main, use epic-<n> for sub-issues)
   --skip-checks         Skip tests, lint, and build checks
   --dry-run             Show what would happen without doing it
 
@@ -197,8 +198,16 @@ def push_branch(branch):
     return output is not None or err == ""
 
 
-def create_pr(issue_number, issue_title, summary, test_plan):
-    """Create a pull request."""
+def create_pr(issue_number, issue_title, summary, test_plan, base=None):
+    """Create a pull request.
+
+    Args:
+        issue_number: The issue number
+        issue_title: The issue title
+        summary: PR summary text
+        test_plan: Test plan text
+        base: Target branch for PR (default: main, use epic-<n> for sub-issues)
+    """
     # Sanitize title
     clean_title = re.sub(r'^\[(Tech Debt|Roadmap|BUG)\]\s*', '', issue_title, flags=re.IGNORECASE)
     pr_title = f"feat(#{issue_number}): {clean_title}"
@@ -220,7 +229,9 @@ Fixes #{issue_number}
     temp_file.write_text(pr_body, encoding='utf-8')
 
     try:
-        output, err = run(f'gh pr create --title "{pr_title}" --body-file "{temp_file}"')
+        # Build the gh pr create command
+        base_arg = f' --base "{base}"' if base else ''
+        output, err = run(f'gh pr create --title "{pr_title}" --body-file "{temp_file}"{base_arg}')
         if output:
             # Extract PR URL from output
             lines = output.strip().split('\n')
@@ -318,6 +329,7 @@ def parse_args():
         'test_plan': None,
         'summary_file': None,
         'test_plan_file': None,
+        'base': None,  # Target branch for PR (default: main, use epic-<n> for sub-issues)
         'skip_checks': False,
         'dry_run': False
     }
@@ -337,6 +349,9 @@ def parse_args():
             i += 2
         elif arg == '--test-plan-file' and i + 1 < len(sys.argv):
             args['test_plan_file'] = sys.argv[i + 1]
+            i += 2
+        elif arg == '--base' and i + 1 < len(sys.argv):
+            args['base'] = sys.argv[i + 1]
             i += 2
         elif arg == '--skip-checks':
             args['skip_checks'] = True
@@ -376,6 +391,7 @@ def main():
         print(f"  --summary-file PATH   PR summary from file (recommended)")
         print(f"  --test-plan \"...\"     Test plan text (inline)")
         print(f"  --test-plan-file PATH Test plan from file (recommended)")
+        print(f"  --base BRANCH         Target branch for PR (default: main)")
         print(f"  --skip-checks         Skip tests, lint, and build checks")
         print(f"  --dry-run             Show what would happen without doing it")
         sys.exit(1)
@@ -519,7 +535,7 @@ def main():
         # Step 10: Create PR
         print()
         print(f"{BLUE}Creating pull request...{NC}")
-        success, result = create_pr(issue_number, issue_title, args['summary'], args['test_plan'])
+        success, result = create_pr(issue_number, issue_title, args['summary'], args['test_plan'], args['base'])
         if not success:
             print(f"{RED}Error creating PR: {result}{NC}")
             sys.exit(1)
