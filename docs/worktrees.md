@@ -34,12 +34,21 @@ C:\Users\User\git\jcollard\
 ### Create a Worktree for an Issue
 
 ```bash
-# From the main LuaInTheWeb directory
-git worktree add ../LuaInTheWeb-issue-42 -b 42-feature-name
+# Recommended: Use the Python script (handles everything automatically)
+python scripts/worktree-create.py 42
 
-# Or use the slash command
+# Or use the slash command in Claude Code
 /worktree create 42
+
+# Or manually with git
+git worktree add ../LuaInTheWeb-issue-42 -b 42-feature-name
 ```
+
+The Python script automatically:
+- Fetches the issue title from GitHub
+- Creates a properly named branch (`42-feature-name-slug`)
+- Installs npm dependencies
+- Seeds the mutation test cache from main
 
 ### List Active Worktrees
 
@@ -53,10 +62,17 @@ git worktree list
 ### Remove a Worktree When Done
 
 ```bash
-git worktree remove ../LuaInTheWeb-issue-42
+# Recommended: Use the Python script
+python scripts/worktree-remove.py 42
 
-# Or use the slash command
+# Keep the branch (don't delete it)
+python scripts/worktree-remove.py 42 --keep-branch
+
+# Or use the slash command in Claude Code
 /worktree remove 42
+
+# Or manually with git
+git worktree remove ../LuaInTheWeb-issue-42
 ```
 
 ## Workflow for Multiple Agents
@@ -191,3 +207,40 @@ Each worktree is independent. Resolve conflicts in each worktree separately, or 
 git fetch origin
 git rebase origin/main
 ```
+
+## Python Scripts Reference
+
+The `scripts/` directory contains Python scripts for worktree management:
+
+### worktree-create.py
+
+Creates a worktree with full setup for an issue.
+
+```bash
+python scripts/worktree-create.py <issue-number>
+```
+
+**What it does:**
+1. Fetches issue title from GitHub
+2. Creates a slug from the title (e.g., `6-file-explorer-improve-mutation-test`)
+3. Creates branch `<number>-<slug>`
+4. Creates worktree at `../LuaInTheWeb-issue-<number>`
+5. Runs `npm install` in the worktree
+6. Copies mutation test cache from main worktree
+
+### worktree-remove.py
+
+Removes a worktree and optionally its branch.
+
+```bash
+python scripts/worktree-remove.py <issue-number> [--keep-branch]
+```
+
+**Options:**
+- `--keep-branch`: Don't delete the branch after removing the worktree
+
+**What it does:**
+1. Finds the worktree for the issue
+2. Removes the worktree directory
+3. Deletes the branch (unless `--keep-branch` is specified)
+4. If branch isn't merged, prompts for confirmation before force-deleting
