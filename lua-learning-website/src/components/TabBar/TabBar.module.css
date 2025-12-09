@@ -3,17 +3,47 @@
   align-items: center;
   background-color: var(--vscode-editorGroupHeader-tabsBackground, #252526);
   border-bottom: 1px solid var(--vscode-editorGroupHeader-tabsBorder, #252526);
+  overflow: hidden;
+}
+
+.tabsContainer {
+  display: flex;
+  align-items: center;
+  flex: 1;
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: thin;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
 }
 
-.tabBar::-webkit-scrollbar {
-  height: 3px;
+.tabsContainer::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Opera */
 }
 
-.tabBar::-webkit-scrollbar-thumb {
-  background-color: var(--vscode-scrollbarSlider-background, rgba(100, 100, 100, 0.4));
+.scrollButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 100%;
+  min-height: 32px;
+  padding: 0;
+  border: none;
+  background-color: var(--vscode-editorGroupHeader-tabsBackground, #252526);
+  cursor: pointer;
+  color: var(--vscode-icon-foreground, #c5c5c5);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.scrollButton:hover {
+  opacity: 1;
+  background-color: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+}
+
+.chevronIcon {
+  width: 16px;
+  height: 16px;
 }
 
 .tab {

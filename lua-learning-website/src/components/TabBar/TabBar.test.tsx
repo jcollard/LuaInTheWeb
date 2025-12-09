@@ -3,6 +3,7 @@ import { vi } from 'vitest'
 import { TabBar } from './TabBar'
 import { renderHook, act } from '@testing-library/react'
 import { useTabBar } from './useTabBar'
+import * as useTabBarScrollModule from './useTabBarScroll'
 
 describe('TabBar', () => {
   const defaultTabs = [
@@ -39,6 +40,18 @@ describe('TabBar', () => {
 
       // Assert
       expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+      // Empty state should still hide overflow
+      const tablist = screen.getByRole('tablist')
+      expect(tablist).toHaveStyle({ overflow: 'hidden' })
+    })
+
+    it('should apply custom className when provided', () => {
+      // Arrange & Act
+      render(<TabBar {...defaultProps} className="custom-class" />)
+
+      // Assert
+      const tablist = screen.getByRole('tablist')
+      expect(tablist).toHaveClass('custom-class')
     })
   })
 
@@ -61,6 +74,42 @@ describe('TabBar', () => {
       const tabs = screen.getAllByRole('tab')
       const inactiveTabs = tabs.filter(tab => tab.getAttribute('aria-selected') === 'false')
       expect(inactiveTabs).toHaveLength(2)
+    })
+
+    it('should apply active class to active tab', () => {
+      // Arrange & Act
+      render(<TabBar {...defaultProps} activeTab="/main.lua" />)
+
+      // Assert
+      const tabs = screen.getAllByRole('tab')
+      const activeTab = tabs.find(tab => tab.getAttribute('aria-selected') === 'true')
+      // CSS module class names are hashed, so check for substring
+      expect(activeTab?.className).toMatch(/_active_/)
+    })
+
+    it('should apply tab class to all tabs', () => {
+      // Arrange & Act
+      render(<TabBar {...defaultProps} />)
+
+      // Assert
+      const tabs = screen.getAllByRole('tab')
+      tabs.forEach(tab => {
+        // CSS module class names are hashed, so check for substring
+        expect(tab.className).toMatch(/_tab_/)
+      })
+    })
+
+    it('should not apply active class to inactive tabs', () => {
+      // Arrange & Act
+      render(<TabBar {...defaultProps} activeTab="/main.lua" />)
+
+      // Assert
+      const tabs = screen.getAllByRole('tab')
+      const inactiveTabs = tabs.filter(tab => tab.getAttribute('aria-selected') === 'false')
+      inactiveTabs.forEach(tab => {
+        // CSS module class names are hashed, so check for substring
+        expect(tab.className).not.toMatch(/_active_/)
+      })
     })
   })
 
@@ -137,14 +186,224 @@ describe('TabBar', () => {
     })
   })
 
-  describe('overflow', () => {
-    it('should have horizontal scroll when tabs overflow', () => {
-      // Arrange & Act
+  describe('overflow navigation', () => {
+    const mockScrollLeft = vi.fn()
+    const mockScrollRight = vi.fn()
+    const mockHandleScroll = vi.fn()
+    const mockCheckOverflow = vi.fn()
+    const mockSetContainerRef = vi.fn()
+
+    beforeEach(() => {
+      vi.clearAllMocks()
+    })
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('should hide navigation arrows when no overflow', () => {
+      // Arrange - mock hook to return no overflow
+      vi.spyOn(useTabBarScrollModule, 'useTabBarScroll').mockReturnValue({
+        canScrollLeft: false,
+        canScrollRight: false,
+        hasOverflow: false,
+        scrollLeft: mockScrollLeft,
+        scrollRight: mockScrollRight,
+        handleScroll: mockHandleScroll,
+        checkOverflow: mockCheckOverflow,
+        setContainerRef: mockSetContainerRef,
+      })
+
+      // Act
+      render(<TabBar {...defaultProps} />)
+
+      // Assert - no arrows when no overflow
+      expect(screen.queryByRole('button', { name: /scroll left/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /scroll right/i })).not.toBeInTheDocument()
+    })
+
+    it('should show only right arrow when at start with overflow', () => {
+      // Arrange - mock hook to return overflow at start
+      vi.spyOn(useTabBarScrollModule, 'useTabBarScroll').mockReturnValue({
+        canScrollLeft: false,
+        canScrollRight: true,
+        hasOverflow: true,
+        scrollLeft: mockScrollLeft,
+        scrollRight: mockScrollRight,
+        handleScroll: mockHandleScroll,
+        checkOverflow: mockCheckOverflow,
+        setContainerRef: mockSetContainerRef,
+      })
+
+      // Act
       render(<TabBar {...defaultProps} />)
 
       // Assert
+      expect(screen.queryByRole('button', { name: /scroll left/i })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /scroll right/i })).toBeInTheDocument()
+    })
+
+    it('should show both arrows when in middle', () => {
+      // Arrange - mock hook to return overflow in middle
+      vi.spyOn(useTabBarScrollModule, 'useTabBarScroll').mockReturnValue({
+        canScrollLeft: true,
+        canScrollRight: true,
+        hasOverflow: true,
+        scrollLeft: mockScrollLeft,
+        scrollRight: mockScrollRight,
+        handleScroll: mockHandleScroll,
+        checkOverflow: mockCheckOverflow,
+        setContainerRef: mockSetContainerRef,
+      })
+
+      // Act
+      render(<TabBar {...defaultProps} />)
+
+      // Assert
+      expect(screen.getByRole('button', { name: /scroll left/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /scroll right/i })).toBeInTheDocument()
+    })
+
+    it('should show only left arrow when at end', () => {
+      // Arrange - mock hook to return overflow at end
+      vi.spyOn(useTabBarScrollModule, 'useTabBarScroll').mockReturnValue({
+        canScrollLeft: true,
+        canScrollRight: false,
+        hasOverflow: true,
+        scrollLeft: mockScrollLeft,
+        scrollRight: mockScrollRight,
+        handleScroll: mockHandleScroll,
+        checkOverflow: mockCheckOverflow,
+        setContainerRef: mockSetContainerRef,
+      })
+
+      // Act
+      render(<TabBar {...defaultProps} />)
+
+      // Assert
+      expect(screen.getByRole('button', { name: /scroll left/i })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /scroll right/i })).not.toBeInTheDocument()
+    })
+
+    it('should call scrollRight when right arrow is clicked', () => {
+      // Arrange
+      vi.spyOn(useTabBarScrollModule, 'useTabBarScroll').mockReturnValue({
+        canScrollLeft: false,
+        canScrollRight: true,
+        hasOverflow: true,
+        scrollLeft: mockScrollLeft,
+        scrollRight: mockScrollRight,
+        handleScroll: mockHandleScroll,
+        checkOverflow: mockCheckOverflow,
+        setContainerRef: mockSetContainerRef,
+      })
+
+      render(<TabBar {...defaultProps} />)
+
+      // Act
+      fireEvent.click(screen.getByRole('button', { name: /scroll right/i }))
+
+      // Assert
+      expect(mockScrollRight).toHaveBeenCalledTimes(1)
+    })
+
+    it('should call scrollLeft when left arrow is clicked', () => {
+      // Arrange
+      vi.spyOn(useTabBarScrollModule, 'useTabBarScroll').mockReturnValue({
+        canScrollLeft: true,
+        canScrollRight: false,
+        hasOverflow: true,
+        scrollLeft: mockScrollLeft,
+        scrollRight: mockScrollRight,
+        handleScroll: mockHandleScroll,
+        checkOverflow: mockCheckOverflow,
+        setContainerRef: mockSetContainerRef,
+      })
+
+      render(<TabBar {...defaultProps} />)
+
+      // Act
+      fireEvent.click(screen.getByRole('button', { name: /scroll left/i }))
+
+      // Assert
+      expect(mockScrollLeft).toHaveBeenCalledTimes(1)
+    })
+
+    it('should hide scrollbar on tablist container', () => {
+      // Arrange & Act
+      render(<TabBar {...defaultProps} />)
+
+      // Assert - tablist container should hide overflow
       const tablist = screen.getByRole('tablist')
-      expect(tablist).toHaveStyle({ overflowX: 'auto' })
+      expect(tablist).toHaveStyle({ overflow: 'hidden' })
+    })
+
+    it('should call checkOverflow when tabs change', () => {
+      // Arrange
+      vi.spyOn(useTabBarScrollModule, 'useTabBarScroll').mockReturnValue({
+        canScrollLeft: false,
+        canScrollRight: false,
+        hasOverflow: false,
+        scrollLeft: mockScrollLeft,
+        scrollRight: mockScrollRight,
+        handleScroll: mockHandleScroll,
+        checkOverflow: mockCheckOverflow,
+        setContainerRef: mockSetContainerRef,
+      })
+
+      const { rerender } = render(<TabBar {...defaultProps} />)
+
+      // checkOverflow should be called on initial render
+      expect(mockCheckOverflow).toHaveBeenCalled()
+      mockCheckOverflow.mockClear()
+
+      // Act - rerender with different tabs
+      const newTabs = [...defaultTabs, { path: '/new.lua', name: 'new.lua', isDirty: false }]
+      rerender(<TabBar {...defaultProps} tabs={newTabs} />)
+
+      // Assert - checkOverflow should be called again
+      expect(mockCheckOverflow).toHaveBeenCalled()
+    })
+
+    it('should pass setContainerRef to tabs container', () => {
+      // Arrange
+      vi.spyOn(useTabBarScrollModule, 'useTabBarScroll').mockReturnValue({
+        canScrollLeft: false,
+        canScrollRight: false,
+        hasOverflow: false,
+        scrollLeft: mockScrollLeft,
+        scrollRight: mockScrollRight,
+        handleScroll: mockHandleScroll,
+        checkOverflow: mockCheckOverflow,
+        setContainerRef: mockSetContainerRef,
+      })
+
+      // Act
+      render(<TabBar {...defaultProps} />)
+
+      // Assert - setContainerRef should have been called (ref callback)
+      expect(mockSetContainerRef).toHaveBeenCalled()
+    })
+
+    it('should not show arrows when hasOverflow is false even if canScroll is true', () => {
+      // Arrange - edge case: hasOverflow is false but canScroll values are true
+      vi.spyOn(useTabBarScrollModule, 'useTabBarScroll').mockReturnValue({
+        canScrollLeft: true,
+        canScrollRight: true,
+        hasOverflow: false, // No overflow means no arrows regardless of canScroll
+        scrollLeft: mockScrollLeft,
+        scrollRight: mockScrollRight,
+        handleScroll: mockHandleScroll,
+        checkOverflow: mockCheckOverflow,
+        setContainerRef: mockSetContainerRef,
+      })
+
+      // Act
+      render(<TabBar {...defaultProps} />)
+
+      // Assert - no arrows because hasOverflow is false
+      expect(screen.queryByRole('button', { name: /scroll left/i })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /scroll right/i })).not.toBeInTheDocument()
     })
   })
 
