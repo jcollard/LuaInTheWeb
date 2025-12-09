@@ -233,7 +233,7 @@ describe('IDEContext', () => {
       })
 
       // Assert
-      expect(result.current.terminalOutput).toContain('Hello, World!')
+      expect(result.current.terminalOutput.map(line => line.text)).toContain('Hello, World!')
     })
 
     it('should append multiple outputs to terminal history', async () => {
@@ -253,7 +253,7 @@ describe('IDEContext', () => {
       })
 
       // Assert
-      expect(result.current.terminalOutput).toEqual(['line 1', 'line 2'])
+      expect(result.current.terminalOutput.map(line => line.text)).toEqual(['line 1', 'line 2'])
     })
 
     it('should append error messages to terminal history', async () => {
@@ -272,7 +272,7 @@ describe('IDEContext', () => {
       })
 
       // Assert
-      expect(result.current.terminalOutput).toContain('Error: syntax error')
+      expect(result.current.terminalOutput.map(line => line.text)).toContain('Error: syntax error')
     })
   })
 
@@ -448,7 +448,7 @@ describe('IDEContext', () => {
       })
 
       // Assert - should show input prompt
-      expect(result.current.terminalOutput).toContain('> Waiting for input...')
+      expect(result.current.terminalOutput.map(line => line.text)).toContain('> Waiting for input...')
 
       // Cleanup
       act(() => {

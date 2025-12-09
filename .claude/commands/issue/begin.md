@@ -78,6 +78,7 @@ Analyze the issue and generate an implementation plan:
 2. [ ] <Step 2>
 3. [ ] <Step 3>
 ...
+N. [ ] Write E2E tests for affected user flows (if user-facing - see E2E Requirements)
 
 ### Files to Modify/Create
 - `<file1>` - <what changes>
@@ -89,7 +90,7 @@ Analyze the issue and generate an implementation plan:
 
 ### Testing Strategy
 - **Unit tests**: <what to test>
-- **E2E tests**: <what user flows, if applicable>
+- **E2E tests**: <what user flows to test> (REQUIRED if user-facing, N/A otherwise)
 ```
 
 **Plan Depth by Complexity:**
@@ -99,6 +100,24 @@ Analyze the issue and generate an implementation plan:
 | Simple | 1-5 | Brief approach, files, basic tests |
 | Medium | 6-10 | Detailed steps, edge cases, full test strategy |
 | Complex | 10+ | Recommend splitting into sub-issues |
+
+**E2E Test Requirements:**
+
+Determine if E2E tests are required based on the issue type:
+
+| Issue Type | E2E Required | Examples |
+|------------|--------------|----------|
+| Feature adding/modifying UI | **Yes** | New button, form, panel, dialog |
+| Bug fix affecting user interaction | **Yes** | Click handler broken, display issue |
+| Internal refactoring (no UI changes) | No | Code cleanup, reorganization |
+| Pure utility/helper functions | No | Date formatting, string utils |
+| Build/config changes | No | Vite config, ESLint rules |
+| Documentation-only changes | No | README updates, comments |
+
+**When E2E is required**, add it as an explicit numbered step in the Implementation Steps:
+```
+N. [ ] Write E2E tests for affected user flows
+```
 
 For **Complex** issues (10+ tasks), output:
 
@@ -274,16 +293,17 @@ npm run test:mutation:scope "src/components/AffectedComponent/**"
 ```
 - Mutation score must be >= 80% on new/modified files
 
-**E2E Tests (if user-facing changes):**
-- Add E2E tests for new user flows
+**E2E Tests (REQUIRED for user-facing changes - see E2E Test Requirements in Step 2):**
+- Add E2E tests for new/modified user flows
 - Run `npm run test:e2e` before completing
+- Skip only for internal-only changes (refactoring, utilities, config)
 
 **Completion Checklist:**
 - [ ] All unit tests pass: `npm run test`
 - [ ] Scoped mutation tests pass (>= 80%)
 - [ ] Lint passes: `npm run lint`
 - [ ] Build succeeds: `npm run build`
-- [ ] E2E tests pass (if applicable): `npm run test:e2e`
+- [ ] E2E tests pass: `npm run test:e2e` (REQUIRED for user-facing changes, skip for internal-only)
 
 ---
 
@@ -292,22 +312,17 @@ npm run test:mutation:scope "src/components/AffectedComponent/**"
 **IMPORTANT**: After completing ALL implementation tasks and passing the completion checklist above, **automatically run the review script**:
 
 ```bash
-# Write summary and test plan to SYSTEM temp directory (NOT repo directory!)
-# Use absolute paths to avoid committing temp files:
-#   - Unix/Mac: /tmp/summary.txt, /tmp/test-plan.txt
-#   - Windows: %TEMP%\summary.txt or C:\Users\<user>\AppData\Local\Temp\summary.txt
+# Write summary and test plan to the local .tmp/ directory (gitignored)
+# This directory is automatically created by the scripts if needed
 
-# Example (Unix/Mac):
-python scripts/issue-review.py <number> --summary-file /tmp/summary.txt --test-plan-file /tmp/test-plan.txt
-
-# Example (Windows - use absolute path):
-python scripts/issue-review.py <number> --summary-file C:\Users\User\AppData\Local\Temp\summary.txt --test-plan-file C:\Users\User\AppData\Local\Temp\test-plan.txt
+# Recommended approach - use file-based inputs:
+python scripts/issue-review.py <number> --summary-file .tmp/summary.txt --test-plan-file .tmp/test-plan.txt
 
 # Or use inline arguments (may have shell escaping issues):
 python scripts/issue-review.py <number> --summary "summary text" --test-plan "test plan"
 ```
 
-**WARNING**: Do NOT create temp files in the repository directory - they will be committed by `git add -A`.
+**Note**: The `.tmp/` directory is gitignored, so temp files won't be committed.
 
 This script is **auto-approved** and will:
 1. Validate branch matches issue number
@@ -346,18 +361,18 @@ If changes are requested after PR creation, use `update-pr.py` to add commits:
 python scripts/update-pr.py <pr-number> commit --message "fix: Address review feedback"
 
 # Or use file-based message (recommended for agents)
-python scripts/update-pr.py <pr-number> commit --message-file /tmp/commit-msg.txt
+python scripts/update-pr.py <pr-number> commit --message-file .tmp/commit-msg.txt
 
 # Skip checks if needed (not recommended)
 python scripts/update-pr.py <pr-number> commit --message "fix: Quick typo fix" --skip-checks
 
 # Update PR description
 python scripts/update-pr.py <pr-number> update-body --body "Updated description"
-python scripts/update-pr.py <pr-number> update-body --body-file /tmp/pr-body.txt
+python scripts/update-pr.py <pr-number> update-body --body-file .tmp/pr-body.txt
 
 # Add a comment to the PR
 python scripts/update-pr.py <pr-number> comment --body "Ready for re-review"
-python scripts/update-pr.py <pr-number> comment --body-file /tmp/comment.txt
+python scripts/update-pr.py <pr-number> comment --body-file .tmp/comment.txt
 ```
 
-**Note**: Use SYSTEM temp directory for file-based inputs (see warning above).
+**Note**: Use the local `.tmp/` directory for file-based inputs (gitignored).
