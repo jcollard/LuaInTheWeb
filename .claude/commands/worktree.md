@@ -153,7 +153,31 @@ git worktree add "<worktree-path>" <branch-name>
 cd "<worktree-path>/lua-learning-website" && npm install
 ```
 
-#### Step 2f: Output Success
+#### Step 2f: Seed Mutation Test Cache
+
+Copy the Stryker incremental cache from main to speed up mutation tests:
+
+```bash
+# Create reports directory if it doesn't exist
+mkdir -p "<worktree-path>/lua-learning-website/reports/mutation"
+
+# Copy cache from main worktree
+cp "$REPO_ROOT/lua-learning-website/reports/mutation/.stryker-incremental.json" \
+   "<worktree-path>/lua-learning-website/reports/mutation/" 2>/dev/null || true
+```
+
+If the cache doesn't exist in main, optionally run a quick mutation test to seed it:
+
+```bash
+# Check if cache exists
+if [ ! -f "<worktree-path>/lua-learning-website/reports/mutation/.stryker-incremental.json" ]; then
+    echo "No mutation cache found. First mutation test run will be slower."
+fi
+```
+
+**Note**: The incremental cache significantly speeds up mutation tests by only re-testing changed files. If the cache is missing from main, the first mutation test in the worktree will take longer but will create the cache for subsequent runs.
+
+#### Step 2g: Output Success
 
 ```
 ## Worktree Created for Issue #<n>
@@ -161,6 +185,10 @@ cd "<worktree-path>/lua-learning-website" && npm install
 **Issue**: #<n> - <title>
 **Path**: <worktree-path>
 **Branch**: <branch-name>
+
+### Setup Complete
+- ✅ Dependencies installed
+- ✅ Mutation cache seeded (or "⚠️ No cache found - first run will be slower")
 
 ### Next Steps
 
@@ -174,8 +202,6 @@ cd "<worktree-path>/lua-learning-website" && npm install
    ```bash
    /issue <n> begin
    ```
-
-**Note**: Dependencies have been installed in the worktree.
 ```
 
 ### Subcommand: remove <n>
@@ -312,8 +338,17 @@ Active worktrees remaining: <count>
 
 Creating worktree...
 Installing dependencies...
+Seeding mutation cache...
 
 ## Worktree Created for Issue #42
+
+**Issue**: #42 - Add dark mode toggle
+**Path**: C:\Users\User\git\jcollard\LuaInTheWeb-issue-42
+**Branch**: 42-add-dark-mode-toggle
+
+### Setup Complete
+- ✅ Dependencies installed
+- ✅ Mutation cache seeded
 
 ### Next Steps
 
@@ -327,8 +362,6 @@ Installing dependencies...
    ```bash
    /issue 42 begin
    ```
-
-**Note**: Dependencies have been installed in the worktree.
 ```
 
 ### Check Status
@@ -386,5 +419,8 @@ Active worktrees remaining: 2
 
 - Worktrees share the same `.git` directory, so all branches and history are available
 - Each worktree needs its own `npm install` (~200MB)
+- **Mutation cache is copied from main** to speed up `npm run test:mutation:scope`
+- The incremental cache only re-tests mutants for changed files
 - Use `/status` in any worktree to see overall project state
 - The main worktree should generally stay on `main` for coordination
+- Keep main's mutation cache up-to-date by running `npm run test:mutation` periodically
