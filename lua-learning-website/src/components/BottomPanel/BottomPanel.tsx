@@ -73,9 +73,9 @@ export function BottomPanel({
           >
             <div className={styles.outputContainer}>
               {terminalOutput.length > 0 ? (
-                terminalOutput.map((line, index) => (
-                  <div key={index} className={styles.outputLine}>
-                    {line}
+                terminalOutput.map((line) => (
+                  <div key={line.id} className={styles.outputLine}>
+                    {line.text}
                   </div>
                 ))
               ) : (
