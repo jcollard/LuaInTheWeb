@@ -243,6 +243,139 @@ describe('FileTreeItem', () => {
       // Assert
       expect(onRenameSubmit).toHaveBeenCalledWith('/main.lua', 'newname.lua')
     })
+
+    it('should stop propagation for left arrow key', () => {
+      // Arrange
+      const onRenameSubmit = vi.fn()
+      render(<FileTreeItem {...defaultFileProps} isRenaming={true} onRenameSubmit={onRenameSubmit} />)
+
+      // Act
+      const input = screen.getByRole('textbox')
+      fireEvent.keyDown(input, { key: 'ArrowLeft' })
+
+      // Assert - event should be stopped (not bubble up)
+      expect(onRenameSubmit).not.toHaveBeenCalled()
+    })
+
+    it('should stop propagation for right arrow key', () => {
+      // Arrange
+      const onRenameSubmit = vi.fn()
+      render(<FileTreeItem {...defaultFileProps} isRenaming={true} onRenameSubmit={onRenameSubmit} />)
+
+      // Act
+      const input = screen.getByRole('textbox')
+      fireEvent.keyDown(input, { key: 'ArrowRight' })
+
+      // Assert - event should be stopped
+      expect(onRenameSubmit).not.toHaveBeenCalled()
+    })
+
+    it('should stop propagation for up arrow key', () => {
+      // Arrange
+      const onRenameSubmit = vi.fn()
+      render(<FileTreeItem {...defaultFileProps} isRenaming={true} onRenameSubmit={onRenameSubmit} />)
+
+      // Act
+      const input = screen.getByRole('textbox')
+      fireEvent.keyDown(input, { key: 'ArrowUp' })
+
+      // Assert - event should be stopped
+      expect(onRenameSubmit).not.toHaveBeenCalled()
+    })
+
+    it('should stop propagation for down arrow key', () => {
+      // Arrange
+      const onRenameSubmit = vi.fn()
+      render(<FileTreeItem {...defaultFileProps} isRenaming={true} onRenameSubmit={onRenameSubmit} />)
+
+      // Act
+      const input = screen.getByRole('textbox')
+      fireEvent.keyDown(input, { key: 'ArrowDown' })
+
+      // Assert - event should be stopped
+      expect(onRenameSubmit).not.toHaveBeenCalled()
+    })
+
+    it('should stop propagation for Home key', () => {
+      // Arrange
+      const onRenameSubmit = vi.fn()
+      render(<FileTreeItem {...defaultFileProps} isRenaming={true} onRenameSubmit={onRenameSubmit} />)
+
+      // Act
+      const input = screen.getByRole('textbox')
+      fireEvent.keyDown(input, { key: 'Home' })
+
+      // Assert - event should be stopped
+      expect(onRenameSubmit).not.toHaveBeenCalled()
+    })
+
+    it('should stop propagation for End key', () => {
+      // Arrange
+      const onRenameSubmit = vi.fn()
+      render(<FileTreeItem {...defaultFileProps} isRenaming={true} onRenameSubmit={onRenameSubmit} />)
+
+      // Act
+      const input = screen.getByRole('textbox')
+      fireEvent.keyDown(input, { key: 'End' })
+
+      // Assert - event should be stopped
+      expect(onRenameSubmit).not.toHaveBeenCalled()
+    })
+
+    it('should prevent keyboard events from bubbling during rename', () => {
+      // Arrange
+      const parentKeyHandler = vi.fn()
+      render(
+        <div onKeyDown={parentKeyHandler}>
+          <FileTreeItem {...defaultFileProps} isRenaming={true} />
+        </div>
+      )
+
+      // Act
+      const input = screen.getByRole('textbox')
+      fireEvent.keyDown(input, { key: 'ArrowLeft' })
+      fireEvent.keyDown(input, { key: 'ArrowRight' })
+      fireEvent.keyDown(input, { key: 'ArrowUp' })
+      fireEvent.keyDown(input, { key: 'ArrowDown' })
+      fireEvent.keyDown(input, { key: 'Home' })
+      fireEvent.keyDown(input, { key: 'End' })
+
+      // Assert - none of the events should reach parent
+      expect(parentKeyHandler).not.toHaveBeenCalled()
+    })
+
+    it('should not call onRenameCancel when regular keys are pressed', () => {
+      // Arrange
+      const onRenameCancel = vi.fn()
+      render(<FileTreeItem {...defaultFileProps} isRenaming={true} onRenameCancel={onRenameCancel} />)
+
+      // Act - press various keys that should not trigger cancel
+      const input = screen.getByRole('textbox')
+      fireEvent.keyDown(input, { key: 'ArrowLeft' })
+      fireEvent.keyDown(input, { key: 'ArrowRight' })
+      fireEvent.keyDown(input, { key: 'a' })
+      fireEvent.keyDown(input, { key: 'Home' })
+      fireEvent.keyDown(input, { key: 'End' })
+
+      // Assert - cancel should not be called for these keys
+      expect(onRenameCancel).not.toHaveBeenCalled()
+    })
+
+    it('should not call onRenameSubmit when regular navigation keys are pressed', () => {
+      // Arrange
+      const onRenameSubmit = vi.fn()
+      render(<FileTreeItem {...defaultFileProps} isRenaming={true} onRenameSubmit={onRenameSubmit} />)
+
+      // Act - press navigation keys that should not trigger submit
+      const input = screen.getByRole('textbox')
+      fireEvent.keyDown(input, { key: 'ArrowLeft' })
+      fireEvent.keyDown(input, { key: 'ArrowRight' })
+      fireEvent.keyDown(input, { key: 'Home' })
+      fireEvent.keyDown(input, { key: 'End' })
+
+      // Assert - submit should not be called for these keys
+      expect(onRenameSubmit).not.toHaveBeenCalled()
+    })
   })
 
   describe('accessibility', () => {
