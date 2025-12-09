@@ -579,5 +579,189 @@ describe('FileTreeItem', () => {
       // Assert - this should work because /utils is not inside /
       expect(onDrop).toHaveBeenCalled()
     })
+
+    it('should set effectAllowed to move on drag start', () => {
+      // Arrange
+      render(<FileTreeItem {...defaultFileProps} />)
+      const dataTransfer = {
+        setData: vi.fn(),
+        effectAllowed: '',
+      }
+
+      // Act
+      fireEvent.dragStart(screen.getByRole('treeitem'), { dataTransfer })
+
+      // Assert
+      expect(dataTransfer.effectAllowed).toBe('move')
+    })
+
+    it('should set dropEffect to move on drag over folder', () => {
+      // Arrange
+      render(<FileTreeItem {...defaultFolderProps} />)
+      const dataTransfer = {
+        getData: vi.fn(),
+        dropEffect: '',
+      }
+
+      // Act
+      fireEvent.dragOver(screen.getByRole('treeitem'), { dataTransfer })
+
+      // Assert
+      expect(dataTransfer.dropEffect).toBe('move')
+    })
+
+    it('should NOT set dragOver state for files', () => {
+      // Arrange
+      render(<FileTreeItem {...defaultFileProps} />)
+      const dataTransfer = { getData: vi.fn(), dropEffect: '' }
+
+      // Act
+      fireEvent.dragOver(screen.getByRole('treeitem'), { dataTransfer })
+
+      // Assert - file should NOT show dragOver state
+      expect(screen.getByRole('treeitem').className).not.toMatch(/dragOver/)
+    })
+
+    it('should clear dragOver state on drop', () => {
+      // Arrange
+      const onDrop = vi.fn()
+      render(<FileTreeItem {...defaultFolderProps} onDrop={onDrop} />)
+      const item = screen.getByRole('treeitem')
+      const dragOverTransfer = { getData: vi.fn(), dropEffect: '' }
+      const dropTransfer = { getData: vi.fn().mockReturnValue('/some-file.lua') }
+
+      // Set drag over state
+      fireEvent.dragOver(item, { dataTransfer: dragOverTransfer })
+      expect(item.className).toMatch(/dragOver/)
+
+      // Act
+      fireEvent.drop(item, { dataTransfer: dropTransfer })
+
+      // Assert
+      expect(item.className).not.toMatch(/dragOver/)
+    })
+
+    it('should work without onDragStart callback', () => {
+      // Arrange - no onDragStart callback
+      render(<FileTreeItem {...defaultFileProps} />)
+      const dataTransfer = { setData: vi.fn(), effectAllowed: '' }
+
+      // Act & Assert - should not throw
+      expect(() => {
+        fireEvent.dragStart(screen.getByRole('treeitem'), { dataTransfer })
+      }).not.toThrow()
+    })
+
+    it('should work without onDrop callback', () => {
+      // Arrange - no onDrop callback
+      render(<FileTreeItem {...defaultFolderProps} />)
+      const dataTransfer = { getData: vi.fn().mockReturnValue('/file.lua') }
+
+      // Act & Assert - should not throw
+      expect(() => {
+        fireEvent.drop(screen.getByRole('treeitem'), { dataTransfer })
+      }).not.toThrow()
+    })
+  })
+
+  describe('effect hooks', () => {
+    it('should reset rename value when name prop changes', () => {
+      // Arrange
+      const { rerender } = render(<FileTreeItem {...defaultFileProps} isRenaming={true} />)
+      const input = screen.getByRole('textbox')
+      fireEvent.change(input, { target: { value: 'changed-name.lua' } })
+      expect(input).toHaveValue('changed-name.lua')
+
+      // Act - re-render with new name prop
+      rerender(<FileTreeItem {...defaultFileProps} name="new-name.lua" isRenaming={true} />)
+
+      // Assert - input should reset to new name
+      expect(screen.getByRole('textbox')).toHaveValue('new-name.lua')
+    })
+
+    it('should reset rename value when exiting rename mode', () => {
+      // Arrange
+      const { rerender } = render(<FileTreeItem {...defaultFileProps} isRenaming={true} />)
+      const input = screen.getByRole('textbox')
+      fireEvent.change(input, { target: { value: 'changed-name.lua' } })
+
+      // Act - exit rename mode
+      rerender(<FileTreeItem {...defaultFileProps} isRenaming={false} />)
+
+      // Assert - no textbox should be present
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+
+      // Re-enter rename mode
+      rerender(<FileTreeItem {...defaultFileProps} isRenaming={true} />)
+
+      // Assert - value should be reset to original name
+      expect(screen.getByRole('textbox')).toHaveValue('main.lua')
+    })
+  })
+
+  describe('click handling edge cases', () => {
+    it('should stop click propagation when clicking rename input', () => {
+      // Arrange
+      const onClick = vi.fn()
+      render(<FileTreeItem {...defaultFileProps} isRenaming={true} onClick={onClick} />)
+
+      // Act
+      fireEvent.click(screen.getByRole('textbox'))
+
+      // Assert - onClick should not be called
+      expect(onClick).not.toHaveBeenCalled()
+    })
+
+    it('should work without onToggle callback for folders', () => {
+      // Arrange - no onToggle callback
+      render(<FileTreeItem {...defaultFolderProps} onToggle={undefined} />)
+
+      // Act & Assert - should not throw when clicking chevron
+      expect(() => {
+        fireEvent.click(screen.getByTestId('folder-chevron'))
+      }).not.toThrow()
+    })
+
+    it('should work without onContextMenu callback', () => {
+      // Arrange - no onContextMenu callback
+      render(<FileTreeItem {...defaultFileProps} />)
+
+      // Act & Assert - should not throw
+      expect(() => {
+        fireEvent.contextMenu(screen.getByRole('treeitem'))
+      }).not.toThrow()
+    })
+  })
+
+  describe('rename handlers edge cases', () => {
+    it('should work without onRenameSubmit callback on Enter', () => {
+      // Arrange - no onRenameSubmit callback
+      render(<FileTreeItem {...defaultFileProps} isRenaming={true} />)
+
+      // Act & Assert - should not throw
+      expect(() => {
+        fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Enter' })
+      }).not.toThrow()
+    })
+
+    it('should work without onRenameCancel callback on Escape', () => {
+      // Arrange - no onRenameCancel callback
+      render(<FileTreeItem {...defaultFileProps} isRenaming={true} />)
+
+      // Act & Assert - should not throw
+      expect(() => {
+        fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' })
+      }).not.toThrow()
+    })
+
+    it('should work without onRenameSubmit callback on blur', () => {
+      // Arrange - no onRenameSubmit callback
+      render(<FileTreeItem {...defaultFileProps} isRenaming={true} />)
+
+      // Act & Assert - should not throw
+      expect(() => {
+        fireEvent.blur(screen.getByRole('textbox'))
+      }).not.toThrow()
+    })
   })
 })

@@ -132,6 +132,33 @@ describe('useFileSystem', () => {
         })
       }).toThrow(/exists/i)
     })
+
+    it('should throw when parent folder does not exist', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+
+      // Act & Assert
+      expect(() => {
+        act(() => {
+          result.current.createFile('/nonexistent/file.lua')
+        })
+      }).toThrow(/not found/i)
+    })
+
+    it('should reject file with same name as existing folder', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/name')
+      })
+
+      // Act & Assert
+      expect(() => {
+        act(() => {
+          result.current.createFile('/name')
+        })
+      }).toThrow(/exists/i)
+    })
   })
 
   describe('readFile', () => {
@@ -273,6 +300,51 @@ describe('useFileSystem', () => {
         })
       }).toThrow(/exists/i)
     })
+
+    it('should throw when source file does not exist', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+
+      // Act & Assert
+      expect(() => {
+        act(() => {
+          result.current.renameFile('/nonexistent.lua', '/new.lua')
+        })
+      }).toThrow(/not found/i)
+    })
+
+    it('should throw when target is an existing folder', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFile('/file.lua')
+      })
+      act(() => {
+        result.current.createFolder('/folder')
+      })
+
+      // Act & Assert
+      expect(() => {
+        act(() => {
+          result.current.renameFile('/file.lua', '/folder')
+        })
+      }).toThrow(/exists/i)
+    })
+
+    it('should throw for invalid new file name', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFile('/old.lua')
+      })
+
+      // Act & Assert
+      expect(() => {
+        act(() => {
+          result.current.renameFile('/old.lua', '/new<invalid>.lua')
+        })
+      }).toThrow(/invalid/i)
+    })
   })
 
   describe('createFolder', () => {
@@ -322,6 +394,45 @@ describe('useFileSystem', () => {
         })
       }).toThrow(/exists/i)
     })
+
+    it('should throw when parent folder does not exist', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+
+      // Act & Assert
+      expect(() => {
+        act(() => {
+          result.current.createFolder('/nonexistent/child')
+        })
+      }).toThrow(/not found/i)
+    })
+
+    it('should reject folder with same name as existing file', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFile('/name.lua')
+      })
+
+      // Act & Assert
+      expect(() => {
+        act(() => {
+          result.current.createFolder('/name.lua')
+        })
+      }).toThrow(/exists/i)
+    })
+
+    it('should reject invalid folder names', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+
+      // Act & Assert
+      expect(() => {
+        act(() => {
+          result.current.createFolder('/invalid<name>')
+        })
+      }).toThrow(/invalid/i)
+    })
   })
 
   describe('deleteFolder', () => {
@@ -359,6 +470,61 @@ describe('useFileSystem', () => {
           result.current.deleteFolder('/nonexistent')
         })
       }).toThrow(/not found/i)
+    })
+
+    it('should remove nested subfolders recursively', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/parent')
+      })
+      act(() => {
+        result.current.createFolder('/parent/child')
+      })
+      act(() => {
+        result.current.createFolder('/parent/child/grandchild')
+      })
+      act(() => {
+        result.current.createFile('/parent/child/grandchild/deep.lua')
+      })
+
+      // Act
+      act(() => {
+        result.current.deleteFolder('/parent')
+      })
+
+      // Assert
+      expect(result.current.exists('/parent')).toBe(false)
+      expect(result.current.exists('/parent/child')).toBe(false)
+      expect(result.current.exists('/parent/child/grandchild')).toBe(false)
+      expect(result.current.exists('/parent/child/grandchild/deep.lua')).toBe(false)
+    })
+
+    it('should only delete the specified folder and not siblings', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/folder1')
+      })
+      act(() => {
+        result.current.createFolder('/folder2')
+      })
+      act(() => {
+        result.current.createFile('/folder1/file.lua')
+      })
+      act(() => {
+        result.current.createFile('/folder2/file.lua')
+      })
+
+      // Act
+      act(() => {
+        result.current.deleteFolder('/folder1')
+      })
+
+      // Assert
+      expect(result.current.exists('/folder1')).toBe(false)
+      expect(result.current.exists('/folder2')).toBe(true)
+      expect(result.current.exists('/folder2/file.lua')).toBe(true)
     })
   })
 
@@ -503,6 +669,82 @@ describe('useFileSystem', () => {
       // Assert
       expect(tree.map(n => n.name)).toEqual(['a.lua', 'b.lua', 'c.lua'])
     })
+
+    it('should sort files after folders when mixed', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFile('/file1.lua')
+        result.current.createFolder('/folder1')
+        result.current.createFile('/file2.lua')
+        result.current.createFolder('/folder2')
+      })
+
+      // Act
+      const tree = result.current.getTree()
+
+      // Assert - all folders first, then all files
+      expect(tree[0].type).toBe('folder')
+      expect(tree[1].type).toBe('folder')
+      expect(tree[2].type).toBe('file')
+      expect(tree[3].type).toBe('file')
+    })
+
+    it('should return 1 when file compared to folder in sort', () => {
+      // Arrange - create file first, then folder to test sort comparison
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFile('/z-file.lua') // File with name after folder alphabetically
+        result.current.createFolder('/a-folder')  // Folder with name before file alphabetically
+      })
+
+      // Act
+      const tree = result.current.getTree()
+
+      // Assert - folder should still come first despite alphabetical order
+      expect(tree[0].name).toBe('a-folder')
+      expect(tree[0].type).toBe('folder')
+      expect(tree[1].name).toBe('z-file.lua')
+      expect(tree[1].type).toBe('file')
+    })
+
+    it('should sort folders alphabetically among themselves', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/zebra')
+        result.current.createFolder('/alpha')
+        result.current.createFolder('/beta')
+      })
+
+      // Act
+      const tree = result.current.getTree()
+
+      // Assert
+      expect(tree.map(n => n.name)).toEqual(['alpha', 'beta', 'zebra'])
+    })
+
+    it('should apply sorting recursively in nested folders', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/parent')
+      })
+      act(() => {
+        result.current.createFile('/parent/z.lua')
+        result.current.createFolder('/parent/subfolder')
+        result.current.createFile('/parent/a.lua')
+      })
+
+      // Act
+      const tree = result.current.getTree()
+      const parent = tree.find(n => n.name === 'parent')
+
+      // Assert - subfolder first, then files alphabetically
+      expect(parent?.children?.[0].name).toBe('subfolder')
+      expect(parent?.children?.[1].name).toBe('a.lua')
+      expect(parent?.children?.[2].name).toBe('z.lua')
+    })
   })
 
   describe('persistence', () => {
@@ -534,6 +776,75 @@ describe('useFileSystem', () => {
       expect(() => {
         renderHook(() => useFileSystem())
       }).not.toThrow()
+    })
+
+    it('should handle missing version field in stored data', () => {
+      // Arrange - stored data has no version field
+      localStorageMock.clear()
+      const savedState = {
+        files: {
+          '/test.lua': { name: 'test.lua', content: 'content', createdAt: 1000, updatedAt: 1000 }
+        }
+      }
+      localStorageMock.getItem.mockReturnValueOnce(JSON.stringify(savedState))
+
+      // Act
+      const { result } = renderHook(() => useFileSystem())
+
+      // Assert - should still load the file despite missing version
+      expect(result.current.exists('/test.lua')).toBe(true)
+    })
+
+    it('should handle missing files field in stored data', () => {
+      // Arrange - stored data has only folders, no files
+      localStorageMock.clear()
+      const savedState = {
+        version: 1,
+        folders: ['/']
+      }
+      localStorageMock.getItem.mockReturnValueOnce(JSON.stringify(savedState))
+
+      // Act
+      const { result } = renderHook(() => useFileSystem())
+
+      // Assert - should initialize without crashing, tree should be empty
+      expect(result.current.getTree()).toEqual([])
+    })
+
+    it('should handle missing folders field in stored data', () => {
+      // Arrange - stored data has files but no folders array
+      localStorageMock.clear()
+      const savedState = {
+        version: 1,
+        files: {
+          '/test.lua': { name: 'test.lua', content: 'content', createdAt: 1000, updatedAt: 1000 }
+        }
+      }
+      localStorageMock.getItem.mockReturnValueOnce(JSON.stringify(savedState))
+
+      // Act
+      const { result } = renderHook(() => useFileSystem())
+
+      // Assert - file should exist because files are loaded
+      expect(result.current.exists('/test.lua')).toBe(true)
+    })
+
+    it('should persist folders as array', async () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/utils')
+      })
+
+      // Wait for debounced save
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 350))
+      })
+
+      // Assert
+      const savedData = JSON.parse(localStorageMock.setItem.mock.calls[0][1])
+      expect(Array.isArray(savedData.folders)).toBe(true)
+      expect(savedData.folders).toContain('/utils')
     })
   })
 
@@ -661,6 +972,67 @@ describe('useFileSystem', () => {
         })
       }).toThrow(/invalid/i)
     })
+
+    it('should reject whitespace-only file names', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+
+      // Act & Assert
+      expect(() => {
+        act(() => {
+          result.current.createFile('/   ')
+        })
+      }).toThrow(/invalid/i)
+    })
+  })
+
+  describe('path normalization', () => {
+    it('should normalize path without leading slash', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+
+      // Act
+      act(() => {
+        result.current.createFile('main.lua', 'content')
+      })
+
+      // Assert - path should be normalized to /main.lua
+      expect(result.current.exists('/main.lua')).toBe(true)
+      expect(result.current.readFile('main.lua')).toBe('content')
+    })
+
+    it('should normalize path with trailing slash', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+
+      // Act
+      act(() => {
+        result.current.createFolder('/utils/')
+      })
+
+      // Assert - path should be normalized to /utils
+      expect(result.current.exists('/utils')).toBe(true)
+      expect(result.current.exists('/utils/')).toBe(true)
+    })
+
+    it('should handle root path with trailing slash', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/src')
+      })
+      act(() => {
+        result.current.createFile('/src/main.lua', 'content')
+      })
+
+      // Act - move to root with trailing slash
+      act(() => {
+        result.current.moveFile('/src/main.lua', '/')
+      })
+
+      // Assert
+      expect(result.current.exists('/main.lua')).toBe(true)
+    })
   })
 
   describe('renameFolder', () => {
@@ -684,6 +1056,96 @@ describe('useFileSystem', () => {
       expect(result.current.exists('/new')).toBe(true)
       expect(result.current.exists('/new/file.lua')).toBe(true)
       expect(result.current.readFile('/new/file.lua')).toBe('content')
+    })
+
+    it('should throw when folder does not exist', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+
+      // Act & Assert
+      expect(() => {
+        act(() => {
+          result.current.renameFolder('/nonexistent', '/new')
+        })
+      }).toThrow(/not found/i)
+    })
+
+    it('should throw when target already exists as folder', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/old')
+      })
+      act(() => {
+        result.current.createFolder('/existing')
+      })
+
+      // Act & Assert
+      expect(() => {
+        act(() => {
+          result.current.renameFolder('/old', '/existing')
+        })
+      }).toThrow(/exists/i)
+    })
+
+    it('should throw when target already exists as file', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/old')
+      })
+      act(() => {
+        result.current.createFile('/existing.lua')
+      })
+
+      // Act & Assert
+      expect(() => {
+        act(() => {
+          result.current.renameFolder('/old', '/existing.lua')
+        })
+      }).toThrow(/exists/i)
+    })
+
+    it('should throw for invalid new folder name', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/old')
+      })
+
+      // Act & Assert
+      expect(() => {
+        act(() => {
+          result.current.renameFolder('/old', '/new<invalid>')
+        })
+      }).toThrow(/invalid/i)
+    })
+
+    it('should rename folder with nested subfolders', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/parent')
+      })
+      act(() => {
+        result.current.createFolder('/parent/child')
+      })
+      act(() => {
+        result.current.createFile('/parent/child/deep.lua', 'content')
+      })
+
+      // Act
+      act(() => {
+        result.current.renameFolder('/parent', '/renamed')
+      })
+
+      // Assert
+      expect(result.current.exists('/parent')).toBe(false)
+      expect(result.current.exists('/parent/child')).toBe(false)
+      expect(result.current.exists('/renamed')).toBe(true)
+      expect(result.current.exists('/renamed/child')).toBe(true)
+      expect(result.current.exists('/renamed/child/deep.lua')).toBe(true)
+      expect(result.current.readFile('/renamed/child/deep.lua')).toBe('content')
     })
   })
 

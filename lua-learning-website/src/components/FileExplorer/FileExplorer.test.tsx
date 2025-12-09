@@ -292,4 +292,265 @@ describe('FileExplorer', () => {
       expect(onDeleteFolder).toHaveBeenCalledWith('/utils')
     })
   })
+
+  describe('context menu actions', () => {
+    it('should call onCreateFile when New File selected from folder context menu', () => {
+      // Arrange
+      const onCreateFile = vi.fn()
+      render(<FileExplorer {...defaultProps} onCreateFile={onCreateFile} />)
+
+      // Act - right-click folder, select New File
+      const folderItem = screen.getByText('utils').closest('[role="treeitem"]')
+      fireEvent.contextMenu(folderItem!)
+      fireEvent.click(screen.getByText('New File'))
+
+      // Assert - should call with folder path as parent
+      expect(onCreateFile).toHaveBeenCalledWith('/utils')
+    })
+
+    it('should call onCreateFolder when New Folder selected from folder context menu', () => {
+      // Arrange
+      const onCreateFolder = vi.fn()
+      render(<FileExplorer {...defaultProps} onCreateFolder={onCreateFolder} />)
+
+      // Act - right-click folder, select New Folder
+      const folderItem = screen.getByText('utils').closest('[role="treeitem"]')
+      fireEvent.contextMenu(folderItem!)
+      fireEvent.click(screen.getByText('New Folder'))
+
+      // Assert - should call with folder path as parent
+      expect(onCreateFolder).toHaveBeenCalledWith('/utils')
+    })
+
+    it('should call onDeleteFolder when deleting folder from context menu', () => {
+      // Arrange
+      const onDeleteFolder = vi.fn()
+      render(<FileExplorer {...defaultProps} onDeleteFolder={onDeleteFolder} />)
+
+      // Act - right-click folder, select Delete, confirm
+      const folderItem = screen.getByText('utils').closest('[role="treeitem"]')
+      fireEvent.contextMenu(folderItem!)
+      fireEvent.click(screen.getByText('Delete'))
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }))
+
+      // Assert
+      expect(onDeleteFolder).toHaveBeenCalledWith('/utils')
+    })
+  })
+
+  describe('folder rename', () => {
+    it('should call onRenameFolder when renaming a folder', () => {
+      // Arrange
+      const onRenameFolder = vi.fn()
+      render(<FileExplorer {...defaultProps} onRenameFolder={onRenameFolder} />)
+
+      // Act - right-click folder, select Rename
+      const folderItem = screen.getByText('utils').closest('[role="treeitem"]')
+      fireEvent.contextMenu(folderItem!)
+      fireEvent.click(screen.getByText('Rename'))
+
+      // Change name and submit
+      const input = screen.getByRole('textbox')
+      fireEvent.change(input, { target: { value: 'lib' } })
+      fireEvent.keyDown(input, { key: 'Enter' })
+
+      // Assert
+      expect(onRenameFolder).toHaveBeenCalledWith('/utils', 'lib')
+    })
+  })
+
+  describe('pending new file', () => {
+    it('should enter rename mode when pendingNewFilePath is set', () => {
+      // Arrange - add the pending file to the tree
+      const treeWithPending: TreeNode[] = [
+        ...mockTree,
+        { name: 'untitled.lua', path: '/untitled.lua', type: 'file' },
+      ]
+
+      // Act
+      render(
+        <FileExplorer
+          {...defaultProps}
+          tree={treeWithPending}
+          pendingNewFilePath="/untitled.lua"
+        />
+      )
+
+      // Assert - should show rename input
+      expect(screen.getByRole('textbox')).toBeInTheDocument()
+      expect(screen.getByRole('textbox')).toHaveValue('untitled.lua')
+    })
+
+    it('should call onCancelPendingNewFile when rename submitted for pending file', () => {
+      // Arrange
+      const onCancelPendingNewFile = vi.fn()
+      const treeWithPending: TreeNode[] = [
+        ...mockTree,
+        { name: 'untitled.lua', path: '/untitled.lua', type: 'file' },
+      ]
+
+      render(
+        <FileExplorer
+          {...defaultProps}
+          tree={treeWithPending}
+          pendingNewFilePath="/untitled.lua"
+          onCancelPendingNewFile={onCancelPendingNewFile}
+        />
+      )
+
+      // Act - submit rename
+      const input = screen.getByRole('textbox')
+      fireEvent.change(input, { target: { value: 'newfile.lua' } })
+      fireEvent.keyDown(input, { key: 'Enter' })
+
+      // Assert
+      expect(onCancelPendingNewFile).toHaveBeenCalled()
+    })
+
+    it('should call onDeleteFile when rename cancelled for pending file', () => {
+      // Arrange
+      const onDeleteFile = vi.fn()
+      const onCancelPendingNewFile = vi.fn()
+      const treeWithPending: TreeNode[] = [
+        ...mockTree,
+        { name: 'untitled.lua', path: '/untitled.lua', type: 'file' },
+      ]
+
+      render(
+        <FileExplorer
+          {...defaultProps}
+          tree={treeWithPending}
+          pendingNewFilePath="/untitled.lua"
+          onDeleteFile={onDeleteFile}
+          onCancelPendingNewFile={onCancelPendingNewFile}
+        />
+      )
+
+      // Act - cancel rename
+      const input = screen.getByRole('textbox')
+      fireEvent.keyDown(input, { key: 'Escape' })
+
+      // Assert - pending file should be deleted
+      expect(onDeleteFile).toHaveBeenCalledWith('/untitled.lua')
+      expect(onCancelPendingNewFile).toHaveBeenCalled()
+    })
+  })
+
+  describe('deep tree navigation', () => {
+    it('should find nested file in folder children via context menu', () => {
+      // Arrange - use mockTree which has /utils/math.lua
+      const onDeleteFile = vi.fn()
+      render(<FileExplorer {...defaultProps} onDeleteFile={onDeleteFile} />)
+
+      // Act - expand folder first to access nested file
+      fireEvent.click(screen.getByTestId('folder-chevron'))
+
+      // Then right-click the nested file
+      const nestedFile = screen.getByText('math.lua').closest('[role="treeitem"]')
+      fireEvent.contextMenu(nestedFile!)
+      fireEvent.click(screen.getByText('Delete'))
+      fireEvent.click(screen.getByRole('button', { name: /delete/i }))
+
+      // Assert - should call onDeleteFile with nested path
+      expect(onDeleteFile).toHaveBeenCalledWith('/utils/math.lua')
+    })
+
+    it('should find nested file name correctly in delete dialog', () => {
+      // Arrange
+      render(<FileExplorer {...defaultProps} />)
+
+      // Act - expand folder and delete nested file
+      fireEvent.click(screen.getByTestId('folder-chevron'))
+      const nestedFile = screen.getByText('math.lua').closest('[role="treeitem"]')
+      fireEvent.contextMenu(nestedFile!)
+      fireEvent.click(screen.getByText('Delete'))
+
+      // Assert - dialog should show the correct file name
+      expect(screen.getByText(/Are you sure you want to delete "math.lua"/)).toBeInTheDocument()
+    })
+  })
+
+  describe('className handling', () => {
+    it('should apply custom className when provided', () => {
+      // Arrange & Act
+      const { container } = render(
+        <FileExplorer {...defaultProps} className="custom-class" />
+      )
+
+      // Assert
+      const explorer = container.firstChild as HTMLElement
+      expect(explorer.className).toContain('custom-class')
+    })
+
+    it('should apply default styles without custom className', () => {
+      // Arrange & Act
+      const { container } = render(<FileExplorer {...defaultProps} />)
+
+      // Assert - should have explorer class but not custom class
+      const explorer = container.firstChild as HTMLElement
+      expect(explorer.className).toMatch(/explorer/)
+      expect(explorer.className).not.toContain('custom-class')
+    })
+  })
+
+  describe('controlled vs uncontrolled selection', () => {
+    it('should use controlled selectedPath when provided', () => {
+      // Arrange & Act
+      render(<FileExplorer {...defaultProps} selectedPath="/main.lua" />)
+
+      // Assert - main.lua should be selected
+      const item = screen.getByText('main.lua').closest('[role="treeitem"]')
+      expect(item?.className).toMatch(/selected/)
+    })
+
+    it('should manage selection internally when no controlled path', () => {
+      // Arrange
+      const onSelectFile = vi.fn()
+      render(<FileExplorer {...defaultProps} onSelectFile={onSelectFile} />)
+
+      // Act - click on file
+      fireEvent.click(screen.getByText('main.lua'))
+
+      // Assert
+      expect(onSelectFile).toHaveBeenCalledWith('/main.lua')
+    })
+  })
+
+  describe('delete key with non-existent path', () => {
+    it('should not crash when path not found in tree', () => {
+      // Arrange - use a selectedPath that doesn't exist
+      const onDeleteFile = vi.fn()
+      render(
+        <FileExplorer
+          {...defaultProps}
+          selectedPath="/nonexistent.lua"
+          onDeleteFile={onDeleteFile}
+        />
+      )
+
+      // Act - should not throw
+      expect(() => {
+        fireEvent.keyDown(screen.getByRole('tree'), { key: 'Delete' })
+      }).not.toThrow()
+
+      // Assert - onDeleteFile should NOT be called
+      expect(onDeleteFile).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('drag and drop', () => {
+    it('should call onMoveFile when file dropped on folder', () => {
+      // Arrange
+      const onMoveFile = vi.fn()
+      render(<FileExplorer {...defaultProps} onMoveFile={onMoveFile} />)
+
+      // Act - simulate drop
+      const folderItem = screen.getByText('utils').closest('[role="treeitem"]')
+      const dataTransfer = { getData: vi.fn().mockReturnValue('/main.lua') }
+      fireEvent.drop(folderItem!, { dataTransfer })
+
+      // Assert
+      expect(onMoveFile).toHaveBeenCalledWith('/main.lua', '/utils')
+    })
+  })
 })

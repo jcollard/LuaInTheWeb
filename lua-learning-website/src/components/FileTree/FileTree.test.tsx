@@ -230,6 +230,244 @@ describe('FileTree', () => {
       // Assert
       expect(onSelect).toHaveBeenCalledWith('/main.lua')
     })
+
+    it('should not move selection below last item with ArrowDown', () => {
+      // Arrange
+      const onSelect = vi.fn()
+      render(<FileTree {...defaultProps} tree={flatTree} selectedPath="/config.lua" onSelect={onSelect} />)
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'ArrowDown' })
+
+      // Assert - should not be called when at last item
+      expect(onSelect).not.toHaveBeenCalled()
+    })
+
+    it('should not move selection above first item with ArrowUp', () => {
+      // Arrange
+      const onSelect = vi.fn()
+      render(<FileTree {...defaultProps} tree={flatTree} selectedPath="/main.lua" onSelect={onSelect} />)
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'ArrowUp' })
+
+      // Assert - should not be called when at first item
+      expect(onSelect).not.toHaveBeenCalled()
+    })
+
+    it('should expand collapsed folder with ArrowRight', () => {
+      // Arrange
+      const onToggle = vi.fn()
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={nestedTree}
+          selectedPath="/utils"
+          expandedPaths={new Set()}
+          onToggle={onToggle}
+        />
+      )
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'ArrowRight' })
+
+      // Assert
+      expect(onToggle).toHaveBeenCalledWith('/utils')
+    })
+
+    it('should not toggle expanded folder with ArrowRight', () => {
+      // Arrange
+      const onToggle = vi.fn()
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={nestedTree}
+          selectedPath="/utils"
+          expandedPaths={new Set(['/utils'])}
+          onToggle={onToggle}
+        />
+      )
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'ArrowRight' })
+
+      // Assert - should NOT call toggle since folder is already expanded
+      expect(onToggle).not.toHaveBeenCalled()
+    })
+
+    it('should collapse expanded folder with ArrowLeft', () => {
+      // Arrange
+      const onToggle = vi.fn()
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={nestedTree}
+          selectedPath="/utils"
+          expandedPaths={new Set(['/utils'])}
+          onToggle={onToggle}
+        />
+      )
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'ArrowLeft' })
+
+      // Assert
+      expect(onToggle).toHaveBeenCalledWith('/utils')
+    })
+
+    it('should not toggle collapsed folder with ArrowLeft', () => {
+      // Arrange
+      const onToggle = vi.fn()
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={nestedTree}
+          selectedPath="/utils"
+          expandedPaths={new Set()}
+          onToggle={onToggle}
+        />
+      )
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'ArrowLeft' })
+
+      // Assert - should NOT call toggle since folder is already collapsed
+      expect(onToggle).not.toHaveBeenCalled()
+    })
+
+    it('should not toggle file with ArrowRight', () => {
+      // Arrange
+      const onToggle = vi.fn()
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={flatTree}
+          selectedPath="/main.lua"
+          onToggle={onToggle}
+        />
+      )
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'ArrowRight' })
+
+      // Assert - files should not toggle
+      expect(onToggle).not.toHaveBeenCalled()
+    })
+
+    it('should not toggle file with ArrowLeft', () => {
+      // Arrange
+      const onToggle = vi.fn()
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={flatTree}
+          selectedPath="/main.lua"
+          onToggle={onToggle}
+        />
+      )
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'ArrowLeft' })
+
+      // Assert - files should not toggle
+      expect(onToggle).not.toHaveBeenCalled()
+    })
+
+    it('should select first item when no selection and ArrowDown pressed', () => {
+      // Arrange
+      const onSelect = vi.fn()
+      render(<FileTree {...defaultProps} tree={flatTree} selectedPath={null} onSelect={onSelect} />)
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'ArrowDown' })
+
+      // Assert
+      expect(onSelect).toHaveBeenCalledWith('/main.lua')
+    })
+
+    it('should select first item when no selection and ArrowUp pressed', () => {
+      // Arrange
+      const onSelect = vi.fn()
+      render(<FileTree {...defaultProps} tree={flatTree} selectedPath={null} onSelect={onSelect} />)
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'ArrowUp' })
+
+      // Assert
+      expect(onSelect).toHaveBeenCalledWith('/main.lua')
+    })
+
+    it('should select first item when no selection and Enter pressed', () => {
+      // Arrange
+      const onSelect = vi.fn()
+      render(<FileTree {...defaultProps} tree={flatTree} selectedPath={null} onSelect={onSelect} />)
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'Enter' })
+
+      // Assert
+      expect(onSelect).toHaveBeenCalledWith('/main.lua')
+    })
+
+    it('should navigate through visible expanded folder children', () => {
+      // Arrange
+      const onSelect = vi.fn()
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={nestedTree}
+          selectedPath="/utils"
+          expandedPaths={new Set(['/utils'])}
+          onSelect={onSelect}
+        />
+      )
+
+      // Act - arrow down should go to first child in expanded folder
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'ArrowDown' })
+
+      // Assert
+      expect(onSelect).toHaveBeenCalledWith('/utils/math.lua')
+    })
+
+    it('should skip collapsed folder children during navigation', () => {
+      // Arrange
+      const onSelect = vi.fn()
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={nestedTree}
+          selectedPath="/utils"
+          expandedPaths={new Set()} // folder is collapsed
+          onSelect={onSelect}
+        />
+      )
+
+      // Act - arrow down should skip to next sibling, not children
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'ArrowDown' })
+
+      // Assert - should go to main.lua, skipping folder children
+      expect(onSelect).toHaveBeenCalledWith('/main.lua')
+    })
+
+    it('should handle selectedPath not in visible paths', () => {
+      // Arrange - select a file that's in a collapsed folder
+      const onSelect = vi.fn()
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={nestedTree}
+          selectedPath="/utils/math.lua" // not visible because /utils is collapsed
+          expandedPaths={new Set()}
+          onSelect={onSelect}
+        />
+      )
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'ArrowDown' })
+
+      // Assert - should not crash, and should not call onSelect
+      expect(onSelect).not.toHaveBeenCalled()
+    })
   })
 
   describe('context menu', () => {
@@ -263,6 +501,142 @@ describe('FileTree', () => {
 
       // Assert
       expect(screen.getByRole('tree')).toHaveAttribute('aria-label', 'File Explorer')
+    })
+
+    it('should have tabindex for keyboard focus', () => {
+      // Arrange & Act
+      render(<FileTree {...defaultProps} tree={flatTree} />)
+
+      // Assert
+      expect(screen.getByRole('tree')).toHaveAttribute('tabIndex', '0')
+    })
+
+    it('empty tree should have role tree but no tabindex', () => {
+      // Arrange & Act
+      render(<FileTree {...defaultProps} tree={emptyTree} />)
+
+      // Assert
+      expect(screen.getByRole('tree')).toBeInTheDocument()
+      expect(screen.getByRole('tree')).not.toHaveAttribute('tabIndex')
+    })
+  })
+
+  describe('inline rename', () => {
+    it('should show rename input when renamingPath matches', () => {
+      // Arrange & Act
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={flatTree}
+          renamingPath="/main.lua"
+          onRenameSubmit={vi.fn()}
+          onRenameCancel={vi.fn()}
+        />
+      )
+
+      // Assert
+      expect(screen.getByRole('textbox')).toBeInTheDocument()
+      expect(screen.getByRole('textbox')).toHaveValue('main.lua')
+    })
+
+    it('should show rename input for folder', () => {
+      // Arrange & Act
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={nestedTree}
+          renamingPath="/utils"
+          onRenameSubmit={vi.fn()}
+          onRenameCancel={vi.fn()}
+        />
+      )
+
+      // Assert
+      expect(screen.getByRole('textbox')).toBeInTheDocument()
+      expect(screen.getByRole('textbox')).toHaveValue('utils')
+    })
+
+    it('should not show rename input when renamingPath does not match', () => {
+      // Arrange & Act
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={flatTree}
+          renamingPath="/other.lua"
+          onRenameSubmit={vi.fn()}
+          onRenameCancel={vi.fn()}
+        />
+      )
+
+      // Assert
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('drag and drop', () => {
+    it('should pass onDrop to FileTreeItem', () => {
+      // Arrange
+      const onDrop = vi.fn()
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={nestedTree}
+          expandedPaths={new Set(['/utils'])}
+          onDrop={onDrop}
+        />
+      )
+
+      // Act - simulate drop on folder
+      const folderItem = screen.getByText('utils').closest('[role="treeitem"]')
+      const dataTransfer = { getData: vi.fn().mockReturnValue('/main.lua') }
+      fireEvent.drop(folderItem!, { dataTransfer })
+
+      // Assert
+      expect(onDrop).toHaveBeenCalledWith('/main.lua', '/utils')
+    })
+  })
+
+  describe('deep tree navigation', () => {
+    it('should find selected node in deeply nested tree', () => {
+      // Arrange
+      const onToggle = vi.fn()
+      const allExpanded = new Set(['/a', '/a/b', '/a/b/c'])
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={deepTree}
+          selectedPath="/a/b/c/deep.lua"
+          expandedPaths={allExpanded}
+          onToggle={onToggle}
+        />
+      )
+
+      // Act - try to toggle with Enter (should call onSelect for file)
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'Enter' })
+
+      // Assert - should NOT call onToggle since it's a file
+      expect(onToggle).not.toHaveBeenCalled()
+    })
+
+    it('should find and toggle deeply nested folder', () => {
+      // Arrange
+      const onToggle = vi.fn()
+      const allExpanded = new Set(['/a', '/a/b'])
+      render(
+        <FileTree
+          {...defaultProps}
+          tree={deepTree}
+          selectedPath="/a/b/c"
+          expandedPaths={allExpanded}
+          onToggle={onToggle}
+        />
+      )
+
+      // Act
+      fireEvent.keyDown(screen.getByRole('tree'), { key: 'Enter' })
+
+      // Assert
+      expect(onToggle).toHaveBeenCalledWith('/a/b/c')
     })
   })
 
