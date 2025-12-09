@@ -44,6 +44,7 @@
       "SlashCommand(/tech-debt)",
       "SlashCommand(/code-review)",
       "SlashCommand(/status)",
+      "SlashCommand(/pr-review)",
       "Bash(npx playwright test:*)",
       "Bash(npm run test:mutation:scope:*)",
       "Bash(git rev-parse:*)",
@@ -52,9 +53,15 @@
       "Bash(node --version:*)",
       "Bash(npx stryker run:*)",
       "Bash(gh pr view:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh pr review:*)",
       "Bash(gh project:*)",
       "Bash(git rev-list:*)",
-      "Bash(gh issue:*)"
+      "Bash(gh issue:*)",
+      "Bash(git fetch:*)",
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [
       "Bash(npm run dev)",
@@ -66,6 +73,7 @@
       "SlashCommand(/accept-review)",
       "Bash(git push:*)",
       "Bash(git commit:*)",
+      "Bash(gh pr merge:*)",
       "Bash(rm lua-learning-website/reports/mutation/.stryker-incremental.json)",
       "Bash(del lua-learning-website/reports/mutation/.stryker-incremental.json)",
       "Bash(Remove-Item lua-learning-website/reports/mutation/.stryker-incremental.json)"
