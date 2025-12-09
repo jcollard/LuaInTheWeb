@@ -43,11 +43,29 @@ The `Fixes #<number>` syntax automatically closes the issue when the PR is merge
 
 ---
 
-## Step 3: Update Project Status (Optional)
+## Step 3: Update Project Status to "Needs Review"
 
-Update the issue status to reflect it's in review (optional - can stay "In Progress" until merged):
+After creating the PR, update the issue status in the GitHub Project:
 
-The project will auto-update to "Done" when the issue is closed via the PR merge, if you have GitHub's built-in automation enabled.
+```bash
+# Get the project item ID for this issue
+gh project item-list 3 --owner jcollard --format json --limit 100
+```
+
+Find the item matching issue number `<number>`, then update its status:
+
+```bash
+# Project configuration
+# - Project ID: Get from `gh project list --owner jcollard --format json`
+# - Status field ID: PVTSSF_lAHOADXapM4BKKH8zg6G6Vo
+# - "Needs Review" option ID: 44687678
+
+gh project item-edit --project-id <project-id> --id <item-id> \
+  --field-id PVTSSF_lAHOADXapM4BKKH8zg6G6Vo \
+  --single-select-option-id 44687678
+```
+
+If the update fails, warn but continue (the PR was still created successfully).
 
 ---
 
@@ -86,6 +104,11 @@ Running /code-review...
 ## Creating PR for Issue #13
 
 Creating pull request...
+
+## Updating Project Status
+
+Moving issue #13 to "Needs Review"...
+✓ Status updated
 
 ## PR Created for Issue #13
 

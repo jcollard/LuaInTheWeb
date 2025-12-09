@@ -221,10 +221,11 @@ gh project item-list 3 --owner jcollard --format json
 # Use gh project item-edit with the item ID and field ID
 ```
 
-The project uses these Status values:
+The project uses these Status values (field ID: `PVTSSF_lAHOADXapM4BKKH8zg6G6Vo`):
 - `Concept` (id: f53885f8) - Needs more definition
 - `Todo` (id: f75ad846) - Ready to work on
 - `In Progress` (id: 47fc9ee4) - Actively being worked on
+- `Needs Review` (id: 44687678) - PR created, awaiting review
 - `Done` (id: 98236657) - Completed
 
 **Note**: Project field updates require knowing the item ID. If the issue isn't in the project yet, add it first:

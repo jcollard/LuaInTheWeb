@@ -64,7 +64,7 @@ def update_project_status(issue_number):
     # Project configuration
     PROJECT_NUMBER = 3
     PROJECT_OWNER = "jcollard"
-    STATUS_FIELD_ID = "PVTSSF_lADOADXapM4BKKH8zgfZwAQ"  # Status field
+    STATUS_FIELD_ID = "PVTSSF_lAHOADXapM4BKKH8zg6G6Vo"  # Status field
     IN_PROGRESS_OPTION_ID = "47fc9ee4"  # "In Progress" option
 
     # Get project items
