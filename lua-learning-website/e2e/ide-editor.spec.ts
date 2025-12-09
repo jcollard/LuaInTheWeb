@@ -1,5 +1,18 @@
 import { test, expect } from '@playwright/test'
 
+// Helper to create and open a file so Monaco editor is visible
+async function createAndOpenFile(page: import('@playwright/test').Page) {
+  const sidebar = page.getByTestId('sidebar-panel')
+  await sidebar.getByRole('button', { name: /new file/i }).click()
+  const input = sidebar.getByRole('textbox')
+  await input.press('Enter') // Accept default name
+  await page.waitForTimeout(200)
+  // Click the file to open it
+  const treeItem = page.getByRole('treeitem').first()
+  await treeItem.click()
+  await page.waitForTimeout(200)
+}
+
 test.describe('IDE Editor', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/editor')
@@ -103,6 +116,9 @@ test.describe('IDE Editor', () => {
   })
 
   test('run button is clickable and responds', async ({ page }) => {
+    // Arrange - Create and open a file so editor is visible
+    await createAndOpenFile(page)
+
     // Assert - Run button should be visible and enabled
     const runButton = page.getByRole('button', { name: /run/i })
     await expect(runButton).toBeVisible()
@@ -128,6 +144,9 @@ test.describe('IDE Editor', () => {
   })
 
   test('editor is interactable and accepts input', async ({ page }) => {
+    // Arrange - Create and open a file so editor is visible
+    await createAndOpenFile(page)
+
     // Wait for Monaco editor to load (the wrapper div)
     const editorWrapper = page.locator('[data-testid="code-editor-wrapper"]')
     await expect(editorWrapper).toBeVisible()
@@ -158,6 +177,9 @@ test.describe('IDE Editor', () => {
   })
 
   test('editor fills available space', async ({ page }) => {
+    // Arrange - Create and open a file so editor is visible
+    await createAndOpenFile(page)
+
     // Wait for Monaco to load
     const monacoEditor = page.locator('.monaco-editor')
     await expect(monacoEditor).toBeVisible({ timeout: 10000 })
@@ -185,6 +207,8 @@ test.describe('IDE Editor - io.read()', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/editor')
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
+    // Create and open a file so Monaco editor is visible
+    await createAndOpenFile(page)
     // Wait for Monaco to load
     await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 10000 })
   })
@@ -310,6 +334,8 @@ test.describe('IDE Editor - Keyboard Shortcuts', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/editor')
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
+    // Create and open a file so Monaco editor is visible
+    await createAndOpenFile(page)
     // Wait for Monaco to load
     await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 10000 })
   })
