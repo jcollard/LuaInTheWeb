@@ -10,6 +10,7 @@ import { IDEPanel } from '../IDEPanel'
 import { IDEResizeHandle } from '../IDEResizeHandle'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { ToastContainer } from '../Toast'
+import { WelcomeScreen } from '../WelcomeScreen'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import styles from './IDELayout.module.css'
 import type { IDELayoutProps } from './types'
@@ -55,6 +56,9 @@ function IDELayoutInner({ className }: { className?: string }) {
     // Toasts
     toasts,
     dismissToast,
+    // Recent files
+    recentFiles,
+    clearRecentFiles,
   } = useIDE()
 
   const [isRunning, setIsRunning] = useState(false)
@@ -123,6 +127,13 @@ function IDELayoutInner({ className }: { className?: string }) {
     setPendingCloseTabPath(null)
   }, [])
 
+  // Open REPL (show terminal if hidden)
+  const handleOpenRepl = useCallback(() => {
+    if (!terminalVisible) {
+      toggleTerminal()
+    }
+  }, [terminalVisible, toggleTerminal])
+
   // Explorer props for FileExplorer
   const explorerProps = {
     tree: fileTree,
@@ -172,21 +183,31 @@ function IDELayoutInner({ className }: { className?: string }) {
             <IDEPanel defaultSize={sidebarVisible ? 80 : 100} minSize={40}>
               <IDEPanelGroup direction="vertical" persistId="ide-editor">
                 <IDEPanel defaultSize={terminalVisible ? 70 : 100} minSize={30}>
-                  <EditorPanel
-                    code={code}
-                    onChange={setCode}
-                    fileName={fileName}
-                    isDirty={isDirty}
-                    onRun={handleRun}
-                    isRunning={isRunning}
-                    cursorLine={cursorLine}
-                    cursorColumn={cursorColumn}
-                    onCursorChange={(line, col) => {
-                      setCursorLine(line)
-                      setCursorColumn(col)
-                    }}
-                    tabBarProps={tabBarProps}
-                  />
+                  {tabs.length === 0 ? (
+                    <WelcomeScreen
+                      recentFiles={recentFiles}
+                      onCreateFile={() => handleCreateFile()}
+                      onOpenFile={openFile}
+                      onOpenRepl={handleOpenRepl}
+                      onClearRecentFiles={clearRecentFiles}
+                    />
+                  ) : (
+                    <EditorPanel
+                      code={code}
+                      onChange={setCode}
+                      fileName={fileName}
+                      isDirty={isDirty}
+                      onRun={handleRun}
+                      isRunning={isRunning}
+                      cursorLine={cursorLine}
+                      cursorColumn={cursorColumn}
+                      onCursorChange={(line, col) => {
+                        setCursorLine(line)
+                        setCursorColumn(col)
+                      }}
+                      tabBarProps={tabBarProps}
+                    />
+                  )}
                 </IDEPanel>
                 {terminalVisible && (
                   <>

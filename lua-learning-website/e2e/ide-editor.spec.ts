@@ -1,5 +1,18 @@
 import { test, expect } from '@playwright/test'
 
+// Helper to create and open a file so Monaco editor is visible
+async function createAndOpenFile(page: import('@playwright/test').Page) {
+  const sidebar = page.getByTestId('sidebar-panel')
+  await sidebar.getByRole('button', { name: /new file/i }).click()
+  const input = sidebar.getByRole('textbox')
+  await input.press('Enter') // Accept default name
+  await page.waitForTimeout(200)
+  // Click the file to open it
+  const treeItem = page.getByRole('treeitem').first()
+  await treeItem.click()
+  await page.waitForTimeout(200)
+}
+
 test.describe('IDE Editor - Tab Overflow Navigation', () => {
   test.beforeEach(async ({ page }) => {
     // Clear localStorage to start with clean state
@@ -9,14 +22,14 @@ test.describe('IDE Editor - Tab Overflow Navigation', () => {
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
   })
 
-  // Helper to create and open a file with a specific name
-  async function createAndOpenFile(page: import('@playwright/test').Page, filename: string) {
-    // Click New File button
-    await page.getByRole('button', { name: /new file/i }).click()
+  // Helper to create and open a file with a specific name (scoped to sidebar)
+  async function createAndOpenFileWithName(page: import('@playwright/test').Page, filename: string) {
+    // Click New File button in sidebar (scoped to avoid Welcome Screen button)
+    const sidebar = page.getByTestId('sidebar-panel')
+    await sidebar.getByRole('button', { name: /new file/i }).click()
     await page.waitForTimeout(100)
 
     // Find the input field in the sidebar and type the filename
-    const sidebar = page.getByTestId('sidebar-panel')
     const input = sidebar.getByRole('textbox')
     await input.fill(filename)
     await input.press('Enter')
@@ -33,7 +46,7 @@ test.describe('IDE Editor - Tab Overflow Navigation', () => {
     const filenames = ['component.lua', 'utilities.lua', 'functions.lua', 'handlers.lua', 'services.lua', 'constants.lua', 'helpers.lua', 'managers.lua', 'factories.lua', 'providers.lua']
 
     for (const filename of filenames) {
-      await createAndOpenFile(page, filename)
+      await createAndOpenFileWithName(page, filename)
     }
 
     // Hide sidebar to reduce editor panel width
@@ -82,8 +95,8 @@ test.describe('IDE Editor - Tab Overflow Navigation', () => {
     await page.setViewportSize({ width: 1400, height: 800 })
 
     // Create just a couple of files (should fit without overflow)
-    await createAndOpenFile(page, 'small1.lua')
-    await createAndOpenFile(page, 'small2.lua')
+    await createAndOpenFileWithName(page, 'small1.lua')
+    await createAndOpenFileWithName(page, 'small2.lua')
 
     await page.waitForTimeout(200)
 
@@ -100,8 +113,8 @@ test.describe('IDE Editor - Tab Overflow Navigation', () => {
 
   test('tablist container renders tabs correctly', async ({ page }) => {
     // Create some files
-    await createAndOpenFile(page, 'test1.lua')
-    await createAndOpenFile(page, 'test2.lua')
+    await createAndOpenFileWithName(page, 'test1.lua')
+    await createAndOpenFileWithName(page, 'test2.lua')
 
     await page.waitForTimeout(200)
 
@@ -161,15 +174,17 @@ test.describe('IDE Editor', () => {
     await expect(page.getByText('Extensions coming soon...')).toBeVisible()
   })
 
-  test('displays editor panel with welcome message when no file is open', async ({ page }) => {
-    // Assert - Editor panel should be visible
-    await expect(page.locator('[data-testid="editor-panel"]')).toBeVisible()
+  test('displays Welcome Screen when no file is open', async ({ page }) => {
+    // Assert - Welcome screen should be visible (not editor panel)
+    await expect(page.locator('[data-testid="welcome-screen"]')).toBeVisible()
 
-    // Should show welcome message when no file is open
-    await expect(page.getByText(/create a new file or open an existing one/i)).toBeVisible()
+    // Should show welcome title
+    await expect(page.getByText('Welcome to Lua IDE')).toBeVisible()
 
-    // Should have run button
-    await expect(page.getByRole('button', { name: /run/i })).toBeVisible()
+    // Should have New File and Open REPL buttons
+    const welcomeScreen = page.locator('[data-testid="welcome-screen"]')
+    await expect(welcomeScreen.getByRole('button', { name: /new file/i })).toBeVisible()
+    await expect(welcomeScreen.getByRole('button', { name: /open repl/i })).toBeVisible()
   })
 
   test('displays bottom panel with Terminal and REPL tabs', async ({ page }) => {
@@ -217,6 +232,9 @@ test.describe('IDE Editor', () => {
   })
 
   test('run button is clickable and responds', async ({ page }) => {
+    // Arrange - Create and open a file so editor is visible
+    await createAndOpenFile(page)
+
     // Assert - Run button should be visible and enabled
     const runButton = page.getByRole('button', { name: /run/i })
     await expect(runButton).toBeVisible()
@@ -242,6 +260,9 @@ test.describe('IDE Editor', () => {
   })
 
   test('editor is interactable and accepts input', async ({ page }) => {
+    // Arrange - Create and open a file so editor is visible
+    await createAndOpenFile(page)
+
     // Wait for Monaco editor to load (the wrapper div)
     const editorWrapper = page.locator('[data-testid="code-editor-wrapper"]')
     await expect(editorWrapper).toBeVisible()
@@ -272,6 +293,9 @@ test.describe('IDE Editor', () => {
   })
 
   test('editor fills available space', async ({ page }) => {
+    // Arrange - Create and open a file so editor is visible
+    await createAndOpenFile(page)
+
     // Wait for Monaco to load
     const monacoEditor = page.locator('.monaco-editor')
     await expect(monacoEditor).toBeVisible({ timeout: 10000 })
@@ -299,6 +323,8 @@ test.describe('IDE Editor - io.read()', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/editor')
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
+    // Create and open a file so Monaco editor is visible
+    await createAndOpenFile(page)
     // Wait for Monaco to load
     await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 10000 })
   })
@@ -424,6 +450,8 @@ test.describe('IDE Editor - Keyboard Shortcuts', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/editor')
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
+    // Create and open a file so Monaco editor is visible
+    await createAndOpenFile(page)
     // Wait for Monaco to load
     await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 10000 })
   })

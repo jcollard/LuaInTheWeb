@@ -76,6 +76,8 @@ describe('useIDE', () => {
         generateUniqueFileName: vi.fn(),
         createFileWithRename: vi.fn(),
         clearPendingNewFile: vi.fn(),
+        recentFiles: [],
+        clearRecentFiles: vi.fn(),
       }
 
       const wrapper = ({ children }: { children: React.ReactNode }) =>
@@ -128,6 +130,8 @@ describe('useIDE', () => {
         generateUniqueFileName: vi.fn(),
         createFileWithRename: vi.fn(),
         clearPendingNewFile: vi.fn(),
+        recentFiles: [],
+        clearRecentFiles: vi.fn(),
       }
 
       const wrapper = ({ children }: { children: React.ReactNode }) =>
