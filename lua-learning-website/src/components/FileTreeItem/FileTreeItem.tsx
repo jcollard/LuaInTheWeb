@@ -73,6 +73,11 @@ export function FileTreeItem({
   }
 
   const handleRenameKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    // Stop all keyboard events from propagating to parent components
+    // This ensures arrow keys, Home, End, etc. work in the input field
+    // instead of triggering file tree navigation
+    event.stopPropagation()
+
     if (event.key === 'Enter') {
       event.preventDefault()
       onRenameSubmit?.(path, renameValue)
