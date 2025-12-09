@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 
 const SCROLL_AMOUNT = 150
 
@@ -18,6 +18,7 @@ export function useTabBarScroll(): UseTabBarScrollReturn {
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
   const [hasOverflow, setHasOverflow] = useState(false)
+  const resizeObserverRef = useRef<ResizeObserver | null>(null)
 
   const updateScrollState = useCallback((element: HTMLDivElement | null) => {
     if (!element) {
@@ -37,11 +38,34 @@ export function useTabBarScroll(): UseTabBarScrollReturn {
 
   const setContainerRef = useCallback(
     (element: HTMLDivElement | null) => {
+      // Clean up previous observer
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect()
+        resizeObserverRef.current = null
+      }
+
       setContainer(element)
       updateScrollState(element)
+
+      // Set up ResizeObserver for new element
+      if (element && typeof ResizeObserver !== 'undefined') {
+        resizeObserverRef.current = new ResizeObserver(() => {
+          updateScrollState(element)
+        })
+        resizeObserverRef.current.observe(element)
+      }
     },
     [updateScrollState]
   )
+
+  // Clean up ResizeObserver on unmount
+  useEffect(() => {
+    return () => {
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect()
+      }
+    }
+  }, [])
 
   const handleScroll = useCallback(() => {
     updateScrollState(container)
