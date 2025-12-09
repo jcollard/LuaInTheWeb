@@ -28,6 +28,25 @@ All work is tracked in the [GitHub Project Board](https://github.com/users/jcoll
 
 ---
 
+## Branch Policy
+
+> **Never commit directly to main.** All changes must go through branches and pull requests.
+
+This policy ensures:
+- **Code review**: Every change is reviewed before merging
+- **Issue tracking**: All work is linked to issues for traceability
+- **Audit trail**: Complete history of decisions and discussions
+- **CI validation**: All changes pass automated checks before merge
+
+**Required workflow:**
+1. All work must be associated with an issue
+2. Create a feature branch (via worktree or manually)
+3. Make changes in the feature branch
+4. Create a pull request for review
+5. Merge only after approval and CI passes
+
+---
+
 ## Unified Workflow
 
 All work follows the same flow, with complexity determining depth:
