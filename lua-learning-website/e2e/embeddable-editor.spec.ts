@@ -60,8 +60,9 @@ test.describe('EmbeddableEditor', () => {
     // Click Run
     await page.click('button:has-text("Run")')
 
-    // Output should show an error message (case insensitive check)
+    // Output should show a Lua error message
+    // Lua errors have the format: [string "..."]:line: message
     const outputPanel = page.locator('[data-testid="output-panel"]').first()
-    await expect(outputPanel).toContainText(/error/i, { timeout: 10000 })
+    await expect(outputPanel).toContainText(/\[string.*\]:\d+:/, { timeout: 10000 })
   })
 })
