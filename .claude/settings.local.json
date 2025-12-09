@@ -61,7 +61,8 @@
       "Bash(gh issue:*)",
       "Bash(git fetch:*)",
       "Bash(git pull:*)",
-      "Bash(git worktree:*)"
+      "Bash(git worktree:*)",
+      "Bash(gh pr list:*)"
     ],
     "deny": [
       "Bash(npm run dev)",
