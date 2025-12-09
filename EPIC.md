@@ -21,7 +21,7 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #60 | Create theme infrastructure (CSS variables, context, localStorage) | ✅ Complete | 60-create-theme-infrastructure | Merged PR #74 |
-| #61 | Theme core layout components (sidebar, panels, tabs) | 📝 Needs Review | 61-theme-core-layout-components | PR pending |
+| #61 | Theme core layout components (sidebar, panels, tabs) | 📝 Needs Review | 61-theme-core-layout-components | PR #84 |
 | #62 | Theme terminal and REPL components | ⏳ Pending | - | - |
 | #63 | Integrate Monaco Editor theme switching | ⏳ Pending | - | - |
 | #64 | Add theme switcher UI control | ⏳ Pending | - | - |
@@ -45,7 +45,7 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 - Completed #60 implementation, PR #74 created
 - PR #74 merged, #60 complete
 - Started work on #61: Theme core layout components
-- Completed #61 implementation, PR pending
+- Completed #61 implementation, PR #84 created
 
 ## Key Files
 
