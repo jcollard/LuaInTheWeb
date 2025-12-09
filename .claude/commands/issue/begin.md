@@ -278,9 +278,45 @@ npm run test:mutation:scope "src/components/AffectedComponent/**"
 - Add E2E tests for new user flows
 - Run `npm run test:e2e` before completing
 
-**Before running `/issue <n> review`:**
+**Completion Checklist:**
 - [ ] All unit tests pass: `npm run test`
 - [ ] Scoped mutation tests pass (>= 80%)
 - [ ] Lint passes: `npm run lint`
 - [ ] Build succeeds: `npm run build`
 - [ ] E2E tests pass (if applicable): `npm run test:e2e`
+
+---
+
+## Step 6: Automatic Review on Completion
+
+**IMPORTANT**: After completing ALL implementation tasks and passing the completion checklist above, **automatically run the review script**:
+
+```bash
+python scripts/issue-review.py <number> --summary "<summary from completed tasks>" --test-plan "<how it was tested>"
+```
+
+This script is **auto-approved** and will:
+1. Validate branch matches issue number
+2. Run all checks (tests, lint, build)
+3. Create standardized commit
+4. Push to remote
+5. Create PR with proper format
+6. Update project status to "Needs Review"
+
+**When to trigger automatic review:**
+- All TodoWrite tasks are marked as completed
+- All checklist items above pass
+- No blocking issues or errors remain
+
+**When NOT to trigger automatic review:**
+- Tests are failing
+- Build errors exist
+- Mutation score is below 80%
+- User explicitly requested to stop before review
+
+If any blocking issues exist, report them and wait for user input instead of triggering review.
+
+After PR is created, output the PR URL and suggest next steps:
+- Run `/pr-review <number>` for code review
+- Address any feedback
+- Merge when approved

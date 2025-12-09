@@ -8,70 +8,49 @@ Run code review and create a pull request for the issue.
 
 ---
 
-## Step 1: Run Code Review
+## Step 1: Gather PR Details
 
-First, run the code review checklist:
+Before running the review script, gather a brief summary and test plan from the work completed.
 
-```
-/code-review
-```
+Based on the completed TodoWrite tasks and implementation work, prepare:
 
-This validates all tests pass, lint passes, and build succeeds.
-
----
-
-## Step 2: Create Pull Request
-
-After code review passes, create a PR linked to the issue:
-
-```bash
-gh pr create --title "<Issue Title>" --body "$(cat <<'EOF'
-## Summary
-<Brief summary of changes - 1-3 bullet points>
-
-## Test plan
-<How to verify the changes work>
-
-Fixes #<number>
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-EOF
-)"
-```
-
-The `Fixes #<number>` syntax automatically closes the issue when the PR is merged.
+1. **Summary**: 1-3 bullet points describing what was implemented
+2. **Test plan**: How the changes were verified (tests added, manual testing done)
 
 ---
 
-## Step 3: Update Project Status to "Needs Review"
+## Step 2: Run the Review Script
 
-After creating the PR, update the issue status in the GitHub Project:
+Use the automated review script which handles:
+- Validating branch matches issue number
+- Running all checks (tests, lint, build)
+- Creating standardized commit
+- Pushing to remote
+- Creating PR with proper format
+- Updating project status to "Needs Review"
 
 ```bash
-# Get the project item ID for this issue
-gh project item-list 3 --owner jcollard --format json --limit 100
+python scripts/issue-review.py <number> --summary "<summary>" --test-plan "<test-plan>"
 ```
 
-Find the item matching issue number `<number>`, then update its status:
+**Parameters:**
+- `<number>`: The issue number (required)
+- `--summary`: Brief summary of changes for PR body (optional)
+- `--test-plan`: How changes were tested for PR body (optional)
+- `--skip-checks`: Skip test/lint/build validation (not recommended)
+- `--dry-run`: Show what would happen without executing
 
-```bash
-# Project configuration
-# - Project ID: Get from `gh project list --owner jcollard --format json`
-# - Status field ID: PVTSSF_lAHOADXapM4BKKH8zg6G6Vo
-# - "Needs Review" option ID: 44687678
-
-gh project item-edit --project-id <project-id> --id <item-id> \
-  --field-id PVTSSF_lAHOADXapM4BKKH8zg6G6Vo \
-  --single-select-option-id 44687678
-```
-
-If the update fails, warn but continue (the PR was still created successfully).
+**Safety features:**
+- Will NOT run on main/master branch
+- Will NOT commit if tests fail
+- Branch must match pattern `<number>-*`
+- Uses standardized commit message format
 
 ---
 
-## Step 4: Output PR URL
+## Step 3: Output Results
 
-After PR creation, output:
+After the script completes successfully, output:
 
 ```
 ## PR Created for Issue #<number>
@@ -81,10 +60,12 @@ After PR creation, output:
 The PR is linked to issue #<number> and will auto-close it when merged.
 
 **Next steps:**
-- Review the PR on GitHub
-- Request reviews if needed
+- Run `/pr-review <number>` for code review
+- Address any feedback
 - Merge when approved
 ```
+
+If the script fails, report the error and suggest fixes.
 
 ---
 
@@ -93,22 +74,13 @@ The PR is linked to issue #<number> and will auto-close it when merged.
 ```
 /issue 13 review
 
-## Code Review for Issue #13
-
-Running /code-review...
-✓ All 634 tests pass
-✓ Lint passes
-✓ Build succeeds
-✓ E2E tests pass
-
 ## Creating PR for Issue #13
 
-Creating pull request...
+Gathering summary from completed tasks...
 
-## Updating Project Status
+python scripts/issue-review.py 13 --summary "- Added unit tests for useContextMenu hook\n- Added tests for useTabBar hook" --test-plan "- All new tests pass\n- Mutation score > 80%"
 
-Moving issue #13 to "Needs Review"...
-✓ Status updated
+[Script output showing validation, commit, push, PR creation]
 
 ## PR Created for Issue #13
 
@@ -117,7 +89,20 @@ Moving issue #13 to "Needs Review"...
 The PR is linked to issue #13 and will auto-close it when merged.
 
 **Next steps:**
-- Review the PR on GitHub
-- Request reviews if needed
+- Run `/pr-review 13` for code review
+- Address any feedback
 - Merge when approved
 ```
+
+---
+
+## Error Handling
+
+| Error | Solution |
+|-------|----------|
+| "Cannot run on main branch" | Switch to feature branch first |
+| "Branch does not match issue" | Ensure branch starts with `<number>-` |
+| "Tests must pass" | Fix failing tests before review |
+| "Lint must pass" | Fix lint errors before review |
+| "Build must pass" | Fix build errors before review |
+| "PR already exists" | Script reports existing PR URL |
