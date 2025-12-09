@@ -5,20 +5,23 @@ Review a GitHub pull request for code quality, testing, and adherence to project
 ## Usage
 
 ```
-/pr-review <number>           # Review PR by number
-/pr-review <url>              # Review PR by URL
-/pr-review <number> accept    # Merge PR to main and close linked issues
+/pr-review <number>                    # Review PR by number
+/pr-review <url>                       # Review PR by URL
+/pr-review <number> accept             # Merge PR, cleanup, create tech debt issues
+/pr-review <number> reject "feedback"  # Create rework tasks from feedback
 ```
 
 ## Arguments
 
-- `$ARGUMENTS` contains the PR number/URL and optional subcommand
+- `$ARGUMENTS` contains the PR number/URL and optional subcommand with feedback
 
 Parse the arguments:
 - First token: PR number OR URL
-- Second token (optional): "accept" subcommand
+- Second token (optional): "accept" or "reject" subcommand
+- Remaining tokens (for reject): feedback text in quotes
 - If URL: extract PR number from URL (e.g., `https://github.com/jcollard/LuaInTheWeb/pull/27` → `27`)
 - If subcommand is "accept": jump to **Step 8: Accept and Merge PR**
+- If subcommand is "reject": jump to **Step 9: Reject PR and Create Rework Tasks**
 
 ---
 
@@ -329,7 +332,79 @@ gh project item-list 3 --owner jcollard --format json | # find item
 gh project item-edit --project-id <project-id> --id <item-id> --field-id <status-field-id> --single-select-option-id 98236657
 ```
 
-### 8h. Output Success Summary
+### 8h. Prompt for Tech Debt Issues
+
+If tech debt was identified during code review (from `/code-review` or `/issue <n> review`), prompt:
+
+```
+### Tech Debt Identified
+
+The following tech debt items were noted during code review:
+
+1. <tech debt item 1>
+2. <tech debt item 2>
+...
+
+**Create GitHub issues for these items?**
+- Type "yes" or "all" to create issues for all items
+- Type numbers (e.g., "1,3") to create issues for specific items
+- Type "no" or "skip" to skip issue creation
+```
+
+If user confirms, create issues:
+
+```bash
+gh issue create --title "[Tech Debt] <brief description>" \
+  --label "tech-debt" \
+  --body "<!-- tech-debt-id: <unique-id> -->
+
+## Description
+<what needs to be fixed>
+
+## Location
+- [file.tsx:line](src/path/file.tsx#Lline)
+
+## Found In
+PR #<pr-number> - <pr-title>
+
+## Priority
+<High|Medium|Low> - <reason>"
+
+# Add to project board
+gh project item-add 3 --owner jcollard --url "https://github.com/jcollard/LuaInTheWeb/issues/<new-issue-number>"
+```
+
+### 8i. Clean Up Worktree
+
+Find and remove the worktree associated with this PR:
+
+```bash
+# List worktrees to find the one for this issue
+git worktree list
+
+# Extract issue number from PR branch name (e.g., "13-fix-repl-ux" → 13)
+# Or from linked issues found in step 8b
+```
+
+If a worktree exists for the linked issue:
+
+```bash
+# Get worktree path
+WORKTREE_PATH=$(git worktree list | grep "issue-<number>" | awk '{print $1}')
+
+# Remove the worktree
+git worktree remove "$WORKTREE_PATH" --force
+```
+
+Output:
+```
+### Worktree Cleanup
+- ✅ Removed worktree: <worktree-path>
+```
+
+If no worktree found, skip silently.
+
+### 8j. Output Success Summary
 
 ```
 ## PR #<number> Merged Successfully
@@ -342,9 +417,16 @@ gh project item-edit --project-id <project-id> --id <item-id> --field-id <status
 <For each linked issue:>
 - #<issue-number>: <issue-title> ✅ Closed
 
-### Local Repository
+### Tech Debt Issues Created
+<If any:>
+- #<new-issue>: <title>
+<Or:>
+- None (no tech debt identified or skipped)
+
+### Cleanup
 - ✅ Switched to main branch
 - ✅ Pulled latest changes
+- ✅ Worktree removed (if applicable)
 
 ### Next Steps
 - Run `/status` to see project board
@@ -353,16 +435,126 @@ gh project item-edit --project-id <project-id> --id <item-id> --field-id <status
 
 ---
 
+## Step 9: Reject PR and Create Rework Tasks (Reject Mode)
+
+If subcommand is "reject" (`/pr-review 27 reject "feedback text"`):
+
+### 9a. Parse Feedback
+
+Extract the feedback text from the arguments (everything after "reject").
+
+If no feedback provided:
+```
+## Missing Feedback
+
+The reject command requires feedback explaining what needs to be changed.
+
+**Usage**: `/pr-review <number> reject "Your feedback here"`
+
+**Example**: `/pr-review 27 reject "Tests are missing for the edge case. Also fix the linting error on line 42."`
+```
+
+Then STOP.
+
+### 9b. Fetch PR and Branch Info
+
+```bash
+gh pr view <number> --json number,title,headRefName,body
+```
+
+Extract:
+- PR title
+- Branch name
+- Linked issue number (from "Fixes #X" in body)
+
+### 9c. Parse Feedback into Rework Tasks
+
+Analyze the feedback text and create actionable tasks:
+
+**Parsing rules:**
+- Split on periods, semicolons, or "also"/"and then"
+- Look for action verbs: "fix", "add", "remove", "update", "change", "rewrite"
+- Identify specific files, lines, or components mentioned
+- Group related items
+
+Example feedback:
+> "Tests are missing for the edge case when input is empty. Also fix the linting error on line 42 of LuaRepl.tsx. The error message should be more user-friendly."
+
+Parsed tasks:
+1. Add tests for edge case: empty input
+2. Fix linting error in LuaRepl.tsx:42
+3. Improve error message for user-friendliness
+
+### 9d. Create Rework Task List
+
+Use TodoWrite to create a task list:
+
+```
+## PR #<number> Rejected - Rework Required
+
+**PR**: <title>
+**Branch**: <headRefName>
+**Linked Issue**: #<issue-number>
+
+### Reviewer Feedback
+<original feedback text>
+
+### Rework Tasks
+
+[TodoWrite creates:]
+1. [ ] <parsed task 1>
+2. [ ] <parsed task 2>
+3. [ ] <parsed task 3>
+...
+N. [ ] Run `/issue <n> review` when rework is complete
+
+### Files Likely Affected
+- <file 1 from feedback>
+- <file 2 from feedback>
+```
+
+### 9e. Inject TDD Context
+
+```
+/tdd
+```
+
+Ensure TDD guidelines are loaded for the rework.
+
+### 9f. Output Next Steps
+
+```
+---
+
+## Ready to Begin Rework
+
+The task list above has been created based on the reviewer feedback.
+
+**Workflow:**
+1. Work through each task following TDD
+2. Run scoped mutation tests after changes
+3. When all tasks complete, run `/issue <issue-number> review` to update the PR
+
+**Note**: The PR remains open. Your new commits will be added to the existing PR.
+
+Starting with task 1...
+```
+
+Then begin working on the first rework task.
+
+---
+
 ## Error Handling
 
 | Error | Response |
 |-------|----------|
-| No PR number provided | "Usage: `/pr-review <number>`, `/pr-review <url>`, or `/pr-review <number> accept`" |
+| No PR number provided | "Usage: `/pr-review <number>`, `/pr-review <number> accept`, or `/pr-review <number> reject \"feedback\"`" |
 | PR not found | "PR #<number> not found. Check the PR number and try again." |
 | PR is closed/merged | "PR #<number> is already <state>. Nothing to review." |
 | PR has conflicts | "PR #<number> has merge conflicts. Resolve conflicts before accepting." |
 | Tests failing | "Tests are failing. Run `/code-review` to diagnose." |
-| Unknown subcommand | "Unknown subcommand '<cmd>'. Available: accept" |
+| Reject without feedback | "The reject command requires feedback. Usage: `/pr-review <number> reject \"feedback\"`" |
+| Unknown subcommand | "Unknown subcommand '<cmd>'. Available: accept, reject" |
 | GitHub CLI not available | "GitHub CLI (gh) is required. Install from https://cli.github.com" |
 
 ---
@@ -443,9 +635,22 @@ Found: Fixes #7
 - Tests: ✅ 635 passed
 - Branch up to date: ✅
 
+### Tech Debt Identified
+
+The following tech debt items were noted during code review:
+
+1. Consider adding a comment explaining why 30000ms timeout was chosen
+
+**Create GitHub issues for these items?**
+
+User types: `no`
+
 ### Merging...
 ✅ PR #27 merged via squash merge
 ✅ Branch 7-tech-debt-flaky-e2e-test deleted
+
+### Worktree Cleanup
+✅ Removed worktree: C:\Users\User\git\jcollard\LuaInTheWeb-issue-7
 
 ---
 
@@ -458,11 +663,58 @@ Found: Fixes #7
 ### Linked Issues Closed
 - #7: [Tech Debt] Flaky E2E test: EmbeddableEditor renders Monaco editor ✅ Closed
 
-### Local Repository
+### Tech Debt Issues Created
+- None (skipped by user)
+
+### Cleanup
 - ✅ Switched to main branch
 - ✅ Pulled latest changes
+- ✅ Worktree removed
 
 ### Next Steps
 - Run `/status` to see project board
 - Run `/issue next` to pick up next task
+```
+
+### Example: Reject a PR with Feedback
+
+```
+/pr-review 28 reject "The error handling is incomplete - needs to handle the case when the file doesn't exist. Also add tests for the empty input edge case."
+
+## Parsing Rejection Feedback...
+
+### PR #28: Add file upload feature
+
+**Branch**: 28-add-file-upload
+**Linked Issue**: #28
+
+### Reviewer Feedback
+> The error handling is incomplete - needs to handle the case when the file doesn't exist. Also add tests for the empty input edge case.
+
+### Rework Tasks
+
+[TodoWrite creates:]
+1. [ ] Add error handling for file not found case
+2. [ ] Add tests for empty input edge case
+3. [ ] Run scoped mutation tests on changes
+4. [ ] Run `/issue 28 review` when rework complete
+
+### Files Likely Affected
+- src/components/FileUpload/FileUpload.tsx
+- src/components/FileUpload/FileUpload.test.tsx
+
+---
+
+## Ready to Begin Rework
+
+The task list above has been created based on the reviewer feedback.
+
+**Workflow:**
+1. Work through each task following TDD
+2. Run scoped mutation tests after changes
+3. When all tasks complete, run `/issue 28 review` to update the PR
+
+**Note**: The PR remains open. Your new commits will be added to the existing PR.
+
+Starting with task 1...
 ```

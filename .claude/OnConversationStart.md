@@ -33,107 +33,56 @@ Reference these docs for detailed information (do not load entire files unless n
 - **Testing Guide**: [docs/testing.md](docs/testing.md)
 - **Contributing**: [docs/contributing.md](docs/contributing.md)
 - **Worktrees Guide**: [docs/worktrees.md](docs/worktrees.md)
+- **Workflow**: [.claude/workflow.md](.claude/workflow.md) - **Single source of truth for project workflow**
 
-## GitHub Project Board
+## Workflow Summary
 
-📋 **[View Project Board](https://github.com/users/jcollard/projects/3)**
+📋 **[GitHub Project Board](https://github.com/users/jcollard/projects/3)** - All work is tracked here.
 
-All work is tracked in GitHub Projects with the following fields:
-- **Priority**: P0-Critical, P1-High, P2-Medium, P3-Low
-- **Effort**: XS, S, M, L, XL (t-shirt sizing)
-- **Type**: Feature, Bug, Tech Debt, Docs
-- **Status**: Concept → Todo → In Progress → Done
-- **Plan**: Link to roadmap implementation plan (for complex features)
+**Run `/workflow` for full workflow documentation.**
 
-### Status Definitions
+### Unified Workflow
 
-| Status | Meaning |
-|--------|---------|
-| **Concept** | Idea needs research/definition before it's actionable |
-| **Todo** | Well-defined, ready to be worked on |
-| **In Progress** | Actively being worked on |
-| **Done** | Completed and merged |
-
-### Workflow Decision Tree
+All work follows: **Plan → Approve → Implement → Review → Accept/Reject**
 
 ```
-New work item identified
-    │
-    ├─► Is it well-defined? (clear scope, actionable)
-    │       │
-    │       ├─► YES: Is it simple? (1-3 tasks, < 1 day)
-    │       │       │
-    │       │       ├─► YES: Create issue → /issue <n> begin → /issue <n> review
-    │       │       │
-    │       │       └─► NO (complex): Create issue → Create roadmap plan → /prepare-plan → /begin
-    │       │
-    │       └─► NO: Create issue in "Concept" status → Research → Move to "Todo" when defined
-    │
-    └─► For existing issues: /status → /issue next (or pick specific issue)
+/status → /issue next → /issue <n> begin → [APPROVE] → [TDD Work] → /issue <n> review → /pr-review <n> → accept/reject
 ```
-
-### Two Workflows
-
-| Workflow | When to Use | Commands |
-|----------|-------------|----------|
-| **Issue-based** | Simple bugs, small features, tech debt | `/issue <n> begin` → work → `/issue <n> review` |
-| **Roadmap-based** | Complex features needing planning | Create plan → `/prepare-plan` → `/review-plan` → `/begin` |
-
-## Parallel Development with Worktrees
-
-This project supports **git worktrees** for running multiple Claude Code agents on separate issues simultaneously.
-
-### Worktree Structure
-
-```
-C:\Users\User\git\jcollard\
-├── LuaInTheWeb/                    # Main worktree (main branch)
-├── LuaInTheWeb-issue-42/           # Worktree for issue #42
-└── LuaInTheWeb-issue-15/           # Worktree for issue #15
-```
-
-### Quick Worktree Commands
-
-| Command | Description |
-|---------|-------------|
-| `/worktree list` | List all active worktrees |
-| `/worktree create <n>` | Create worktree for issue #n (includes npm install) |
-| `/worktree remove <n>` | Remove worktree for issue #n |
-| `/worktree status` | Show status of all worktrees |
-
-### Parallel Workflow
-
-1. **Create a worktree** for an issue: `/worktree create 42`
-2. **Open new Claude Code session** in the worktree directory
-3. **Work on the issue**: `/issue 42 begin`
-4. **When done**: `/issue 42 review` to create PR
-5. **Clean up**: `/worktree remove 42` (from main worktree)
-
-See [docs/worktrees.md](docs/worktrees.md) for detailed documentation.
 
 ### Quick Commands
-- `/status` - View project board status and suggested next action
-- `/issue <n>` - View issue details and complexity assessment
-- `/issue <n> begin` - Start working on an issue (creates branch, updates project status)
-- `/issue <n> review` - Create PR when done
-- `/issue <n> eval` - Evaluate issue: estimate priority/effort/type, make concrete
-- `/issue next` - Auto-select next issue (highest priority Todo)
-- `/issue next <type>` - Auto-select next issue of type (tech-debt, bug, enhancement, roadmap)
-- `/tech-debt` - View and manage tech debt items
 
-## Roadmap (Implementation Plans)
+| Situation | Command |
+|-----------|---------|
+| Check project state | `/status` |
+| Start next available issue | `/issue next` |
+| Start a specific issue | `/issue <n> begin` (shows plan, waits for approval) |
+| Evaluate unclear issue | `/issue <n> eval` |
+| Create PR when done | `/issue <n> review` |
+| Review a PR | `/pr-review <n>` |
+| Accept and merge PR | `/pr-review <n> accept` |
+| Reject PR with feedback | `/pr-review <n> reject "feedback"` |
 
-- **Current Plans**: [roadmap/README.md](roadmap/README.md)
-- **Plan Template**: [roadmap/_template.md](roadmap/_template.md)
+### Workflow by Complexity
 
-For complex features, create a detailed plan in the roadmap directory linked to a GitHub issue.
+| Complexity | Tasks | Flow |
+|------------|-------|------|
+| Simple | 1-5 | `/issue <n> begin` → brief plan → approve → work |
+| Medium | 6-10 | `/issue <n> begin` → detailed plan → approve → work |
+| Complex | 10+ | Split into sub-issues (epic pattern) |
+
+### Worktrees
+
+All work happens in isolated worktrees. `/issue <n> begin` auto-creates worktrees after plan approval.
+
+| Command | Purpose |
+|---------|---------|
+| `/worktree list` | List active worktrees |
+| `/worktree create <n>` | Create worktree for issue |
+| `/worktree remove <n>` | Remove worktree |
+
+**Note**: Worktrees are auto-removed by `/pr-review <n> accept` after merge.
 
 ## Development Practices
-
-### Conventions
-
-- **Python**: Always use `python` (not `python3`) for scripts
-- **Timestamps**: When updating dates in files, use `date` command to get current timestamp
 
 ### Code Architecture
 
@@ -146,59 +95,28 @@ See [docs/coding-standards.md](docs/coding-standards.md) for detailed guidelines
 
 ### TDD is MANDATORY
 
-This project follows strict Test-Driven Development with the **Red-Green-Refactor-Mutate** cycle:
+**Red-Green-Refactor-Mutate** cycle:
 
 1. **RED**: Write a failing test FIRST
 2. **GREEN**: Write minimum code to pass
 3. **REFACTOR**: Improve while tests pass
 4. **MUTATE**: Run scoped mutation tests immediately
 
-Use `/tdd` command for detailed TDD guidelines.
+Use `/tdd` for detailed TDD guidelines, `/mutation-test` for mutation testing guidelines.
 
-### Mutation Testing (Per Item)
+### Checkpoints
 
-Tests must be verified with mutation testing **immediately after each implementation item** - do NOT batch until the end.
+**After each item**: Scoped mutation tests (`npm run test:mutation:scope "path/**"`) >= 80%
 
-```bash
-# Run scoped mutation tests on new files
-npm run test:mutation:scope "src/components/NewFeature/**"
-```
+**At MILESTONEs**: Run `/milestone` for E2E testing
 
-Use `/mutation-test` command for mutation testing guidelines.
-
-### E2E Testing (At Milestones)
-
-E2E tests are written at **MILESTONE** checkpoints when user flows are complete, not after every item.
-
-Use `/milestone` command when a user-visible flow is ready for E2E testing.
-
-### Before Completing Each Implementation Item
-
-- [ ] Tests written BEFORE implementation (RED)
-- [ ] Minimum code to pass (GREEN)
-- [ ] Code refactored (REFACTOR)
-- [ ] **Scoped mutation tests pass: `npm run test:mutation:scope "path/to/files/**"`**
-- [ ] **Mutation score >= 80% on new files**
-
-### At Each MILESTONE Checkpoint
-
-- [ ] E2E test page created (if needed)
-- [ ] E2E tests written for completed user flow
-- [ ] E2E tests pass: `npm run test:e2e`
-
-### Before Completing Any Plan
-
-- [ ] All tests pass: `npm run test`
-- [ ] Full mutation score > 80%: `npm run test:mutation`
-- [ ] Linting passes: `npm run lint`
-- [ ] All E2E tests pass: `npm run test:e2e`
+**Before PR**: All tests, mutation, lint, build, E2E pass
 
 ## Commands
 
 **CRITICAL: All npm commands MUST be run from the `lua-learning-website` directory, NOT the root `LuaInTheWeb` directory.**
 
 ```bash
-# ALWAYS change to the correct directory first
 cd lua-learning-website
 
 npm run dev                  # Start development server
@@ -211,50 +129,48 @@ npm run lint                 # Run linter
 npm run test:e2e             # Run E2E tests (Playwright)
 ```
 
-The project has this structure:
-```
-LuaInTheWeb/              # Git repository root (DO NOT run npm commands here)
-└── lua-learning-website/ # Application directory (RUN npm commands here)
-    ├── package.json
-    ├── src/
-    └── ...
-```
-
 ## Special Commands
 
-### Project & Issue Management
-- `/status` - View project board status, git state, worktrees, and suggested next action
-- `/issue <n>` - View issue details and complexity assessment
-- `/issue <n> begin` - Start working on an issue (creates branch, updates project)
-- `/issue <n> review` - Run code review and create PR
-- `/issue <n> eval` - Evaluate issue: estimate priority/effort/type, make concrete, ask questions if needed
-- `/issue next` - Auto-select next issue (highest priority Todo)
-- `/issue next <type>` - Auto-select by type (tech-debt, bug, enhancement, roadmap)
-- `/tech-debt` - View and manage tech debt items with priority/effort
+### Workflow & Status
+- `/workflow` - **Inject full workflow documentation**
+- `/status` - View project board status, git state, suggested next action
 
-### Worktree Management (Parallel Development)
-- `/worktree list` - List all active worktrees
-- `/worktree create <n>` - Create worktree for issue #n (includes npm install)
-- `/worktree remove <n>` - Remove worktree for issue #n
-- `/worktree status` - Show status of all worktrees with git state
+### Issue Management
+- `/issue <n>` - View issue details and complexity
+- `/issue <n> begin` - **Show plan, wait for approval**, then create worktree + branch
+- `/issue <n> review` - Code review and create PR
+- `/issue <n> eval` - Evaluate issue fields
+- `/issue next` - Auto-select next issue
+- `/tech-debt` - View tech debt items
 
-### Roadmap Workflow (Complex Features)
-- `/prepare-plan` - Prepare next draft plan for implementation (applies TDD, structure, E2E milestones)
-- `/review-plan` - Review current plan for compliance before starting
-- `/begin` - Create task list and begin implementation (includes mutation + E2E checkpoints)
-- `/milestone` - E2E checkpoint when a user flow is complete
+### PR Management
+- `/pr-review <n>` - Review PR against coding standards
+- `/pr-review <n> accept` - **Merge, close issue, create tech debt, remove worktree**
+- `/pr-review <n> reject "feedback"` - **Create rework tasks from feedback**
+
+### Epic Management (Complex Features 10+)
+- `/prepare-plan` - Prepare epic phase for implementation
+- `/review-plan` - Review epic phase compliance
+- `/begin` - Create task list and start
+- `/milestone` - E2E checkpoint
 
 ### Development Guidelines
-- `/tdd` - Inject TDD guidelines (Red-Green-Refactor-Mutate cycle)
-- `/new-feature` - Inject new feature development guidelines
-- `/e2e` - Inject E2E testing guidelines
-- `/mutation-test` - Inject mutation testing guidelines (scoped + full)
-- `/code-review` - Inject code review checklist
+- `/tdd` - TDD guidelines
+- `/new-feature` - New feature guidelines
+- `/e2e` - E2E testing guidelines
+- `/mutation-test` - Mutation testing guidelines
+- `/code-review` - Code review checklist
+
+## Conventions
+
+- **Python**: Always use `python` (not `python3`) for scripts
+- **Timestamps**: When updating dates in files, use `date` command to get current timestamp
 
 ## Continuation Policy
+
 - NEVER stop to ask "Do you want to continue?" or "Should I proceed?"
 - Work through the ENTIRE task list until completion
 - If context gets full, auto-compact and continue working
 - Only stop for actual blockers (missing info, errors, ambiguity)
-- Avoid using bash commands that are not present in @settings.local.json or @.claude/settings.json 
-- When you finish. Create another comprehensive ToDo Task List with remaining items and continue until there is nothing left to complete.
+- Avoid using bash commands that are not present in @settings.local.json or @.claude/settings.json
+- When you finish, create another comprehensive ToDo Task List with remaining items and continue until there is nothing left to complete.

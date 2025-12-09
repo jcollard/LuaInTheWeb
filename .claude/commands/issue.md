@@ -112,9 +112,17 @@ If no subcommand provided (`/issue 13`), end with:
 
 If subcommand is "begin" (`/issue 13 begin`):
 
-### 5a. Check Worktree Context and Create if Needed
+The begin command follows a **Plan → Approve → Execute** flow:
 
-**FIRST**, determine if we're in a worktree and handle accordingly:
+1. Generate implementation plan based on complexity
+2. **Wait for human approval** before proceeding
+3. On approval: create worktree and start work
+
+---
+
+### 5a. Check Worktree Context First
+
+**FIRST**, determine if we're in a worktree:
 
 ```bash
 # Get current worktree path
@@ -127,13 +135,11 @@ git worktree list
 **Worktree Detection Logic:**
 
 1. **In issue-specific worktree** (path contains `issue-<n>`):
-   - If `<n>` matches the requested issue: **Proceed to Step 5b** (continue normally)
+   - If `<n>` matches the requested issue: **Proceed to Step 5b** (generate plan)
    - If `<n>` doesn't match: Warn and STOP
 
 2. **In main worktree** (primary repo, path does NOT contain `issue-`):
-   - Check if worktree for this issue already exists
-   - If exists: Inform user and STOP (must open new session there)
-   - If not exists: Create worktree automatically, then inform user and STOP
+   - **Proceed to Step 5b** (generate plan first, worktree created after approval)
 
 **If in wrong worktree:**
 
@@ -153,15 +159,103 @@ You're in the worktree for issue #<current>, but trying to work on issue #<reque
 
 Then STOP - do not proceed further.
 
-**If in main worktree - check/create worktree:**
+---
 
-#### Step 5a.1: Check if Worktree Exists
+### 5b. Generate Implementation Plan
+
+Analyze the issue and generate an implementation plan:
+
+```
+## Implementation Plan for Issue #<number>
+
+**Issue**: <title>
+**Complexity**: <Simple|Medium|Complex>
+**Estimated Tasks**: <count>
+
+### Approach
+<Brief description of how to solve this - 2-3 sentences>
+
+### Implementation Steps
+1. [ ] <Step 1 - test first>
+2. [ ] <Step 2>
+3. [ ] <Step 3>
+...
+
+### Files to Modify/Create
+- `<file1>` - <what changes>
+- `<file2>` - <what changes>
+
+### Edge Cases to Handle
+- <edge case 1>
+- <edge case 2>
+
+### Testing Strategy
+- **Unit tests**: <what to test>
+- **E2E tests**: <what user flows, if applicable>
+```
+
+**Plan Depth by Complexity:**
+
+| Complexity | Tasks | Plan Includes |
+|------------|-------|---------------|
+| Simple | 1-5 | Brief approach, files, basic tests |
+| Medium | 6-10 | Detailed steps, edge cases, full test strategy |
+| Complex | 10+ | Recommend splitting into sub-issues |
+
+For **Complex** issues (10+ tasks), output:
+
+```
+## Complex Issue Detected
+
+This issue has <N> estimated tasks, which is too large for a single implementation cycle.
+
+**Recommendation**: Split into sub-issues (epic pattern)
+
+### Suggested Sub-Issues
+1. <sub-issue 1 title> - <scope>
+2. <sub-issue 2 title> - <scope>
+3. <sub-issue 3 title> - <scope>
+
+**Options:**
+- Type "split" to create these sub-issues and link them to a parent epic
+- Type "proceed" to implement as a single large issue (not recommended)
+- Type "cancel" to abort
+```
+
+Then STOP and wait for user decision.
+
+---
+
+### 5c. Wait for Approval
+
+After outputting the plan, **STOP and wait for user approval**:
+
+```
+---
+
+**Ready to proceed?**
+- Type "approve" or "yes" to create worktree and begin implementation
+- Type "revise" to request changes to the plan
+- Type "cancel" to abort
+
+Waiting for approval...
+```
+
+**IMPORTANT**: Do NOT proceed until the user explicitly approves. This is a checkpoint.
+
+---
+
+### 5d. On Approval: Create Worktree (if in main)
+
+After user approves, if in main worktree, create the issue worktree:
+
+#### Check if Worktree Exists
 
 ```bash
 git worktree list | grep "issue-<number>"
 ```
 
-#### Step 5a.2: If Worktree Exists
+#### If Worktree Exists
 
 Output:
 
@@ -187,7 +281,7 @@ Then run:
 
 Then STOP - the user must open a new session in the worktree.
 
-#### Step 5a.3: If Worktree Does Not Exist - Create It
+#### If Worktree Does Not Exist - Create It
 
 Generate paths:
 ```bash
@@ -230,6 +324,10 @@ Output:
 
 Dependencies installed ✓
 
+### Implementation Plan Approved ✓
+
+<repeat the plan summary>
+
 ### Next Steps
 
 Open a new Claude Code session in the worktree:
@@ -250,9 +348,11 @@ Then STOP - the user must open a new session in the worktree.
 
 ---
 
-**IMPORTANT**: Steps 5b onwards only execute if already in the correct issue-specific worktree.
+### 5e. Continue in Worktree (After Approval)
 
-### 5b. Create Branch from Issue
+**IMPORTANT**: This step only executes if already in the correct issue-specific worktree AND plan was approved.
+
+#### 5e.1. Create Branch from Issue
 
 Create and checkout a branch linked to the issue:
 
@@ -268,7 +368,7 @@ If the branch already exists, checkout the existing branch instead:
 git checkout <number>-<issue-title-slug>
 ```
 
-### 5c. Update Project Status
+#### 5e.2. Update Project Status
 
 Update the issue status to "In Progress" in the GitHub Project:
 
@@ -291,7 +391,7 @@ The project uses these Status values:
 gh project item-add 3 --owner jcollard --url "https://github.com/jcollard/LuaInTheWeb/issues/<number>"
 ```
 
-### 5d. Inject Development Context
+#### 5e.3. Inject Development Context
 
 Run these commands to inject full development guidelines:
 
@@ -301,21 +401,21 @@ Run these commands to inject full development guidelines:
 
 This ensures the TDD cycle (Red-Green-Refactor-Mutate) guidelines are loaded.
 
-### 5e. For Simple Issues (1-3 tasks)
+#### 5e.4. Create Task List and Begin Implementation
 
-Create a TodoWrite task list and start immediately:
+Use the **approved plan** from Step 5b to create a TodoWrite task list:
 
 ```
 ## Starting Issue #<number>
 
-**Complexity**: Simple - Creating task list directly
+**Plan Approved** ✓
 
-### Implementation Plan
+### Implementation Tasks
 ```
 
-Use TodoWrite to create tasks based on identified work items.
+Use TodoWrite to create tasks based on the approved implementation steps.
 
-Then begin implementation following the standard development flow:
+Then begin implementation following TDD:
 
 ### Development Practices (Always Apply)
 
@@ -336,57 +436,12 @@ npm run test:mutation:scope "src/components/AffectedComponent/**"
 - Add E2E tests for new user flows
 - Run `npm run test:e2e` before completing
 
-**Before marking issue complete:**
+**Before running `/issue <n> review`:**
 - [ ] All unit tests pass: `npm run test`
 - [ ] Scoped mutation tests pass (>= 80%)
 - [ ] Lint passes: `npm run lint`
 - [ ] Build succeeds: `npm run build`
 - [ ] E2E tests pass (if applicable): `npm run test:e2e`
-
-### 5f. For Medium Issues (4-5 tasks)
-
-Create a brief plan before starting:
-
-```
-## Starting Issue #<number>
-
-**Complexity**: Medium - Brief planning first
-
-### Approach
-1. <high-level step 1>
-2. <high-level step 2>
-3. <high-level step 3>
-
-### Files to Modify
-- <file1>
-- <file2>
-
-### Edge Cases
-- <edge case 1>
-- <edge case 2>
-```
-
-Then create TodoWrite tasks and begin implementation following the **Development Practices** above.
-
-### 5g. For Complex Issues (6+ tasks or architectural)
-
-Recommend creating a roadmap phase instead:
-
-```
-## Issue #<number> - Complex Issue Detected
-
-**Complexity**: Complex
-**Recommendation**: Consider creating a roadmap phase for this work.
-
-### Why?
-- <reasons based on analysis>
-
-### Options:
-1. Create a roadmap phase: Better for tracking, TDD compliance, review workflow
-2. Proceed anyway: `/issue <number> begin --force`
-
-Run `/new-feature` to create a proper roadmap phase for this work.
-```
 
 ---
 
@@ -706,7 +761,7 @@ The REPL component has several UX issues when embedded in the `/editor` IDE layo
 - Run `/issue 13 begin` to start working on this issue
 ```
 
-### Example: Starting Work (from Main - Creates Worktree)
+### Example: Starting Work (from Main - Plan and Approve)
 
 ```
 /issue 13 begin
@@ -714,13 +769,53 @@ The REPL component has several UX issues when embedded in the `/editor` IDE layo
 ## Checking Worktree Context...
 
 Current directory: C:\Users\User\git\jcollard\LuaInTheWeb (main worktree)
-Checking for existing worktree...
 
-No worktree found for issue #13. Creating one...
+## Implementation Plan for Issue #13
 
-Creating worktree at: C:\Users\User\git\jcollard\LuaInTheWeb-issue-13
-Creating branch: 13-repl-ux-issues-in-editor-context
-Installing dependencies...
+**Issue**: REPL UX issues in /editor context
+**Complexity**: Simple
+**Estimated Tasks**: 3
+
+### Approach
+Fix three UX issues in the LuaRepl component when embedded in the IDE layout:
+nested scrollbars, redundant titles, and duplicate welcome messages.
+
+### Implementation Steps
+1. [ ] Write test for scrollbar behavior
+2. [ ] Fix nested scrollbars in REPL panel (CSS)
+3. [ ] Write test for title rendering
+4. [ ] Remove unnecessary "Interactive REPL" and "Output" titles
+5. [ ] Write test for welcome message
+6. [ ] Fix duplicate "Lua 5.4 REPL" welcome message
+
+### Files to Modify/Create
+- `src/components/LuaRepl/LuaRepl.tsx` - Remove duplicate titles, fix welcome message
+- `src/components/LuaRepl/LuaRepl.module.css` - Fix scrollbar overflow
+
+### Edge Cases to Handle
+- Ensure changes don't affect standalone REPL usage
+- Verify scrolling still works in small viewports
+
+### Testing Strategy
+- **Unit tests**: Test title rendering, welcome message display
+- **E2E tests**: Verify REPL in /editor route works correctly
+
+---
+
+**Ready to proceed?**
+- Type "approve" or "yes" to create worktree and begin implementation
+- Type "revise" to request changes to the plan
+- Type "cancel" to abort
+
+Waiting for approval...
+```
+
+User types: `approve`
+
+```
+## Plan Approved ✓
+
+Creating worktree for issue #13...
 
 ## Worktree Created for Issue #13
 
@@ -742,8 +837,6 @@ Then run:
 ```bash
 /issue 13 begin
 ```
-
-**Note**: The worktree is ready with all dependencies. Open a new session there to begin work.
 ```
 
 ### Example: Starting Work (from Worktree - Continues)
@@ -758,20 +851,20 @@ Already in correct worktree for issue #13.
 
 ## Starting Issue #13: REPL UX issues
 
+**Plan Approved** ✓
+
 ### Branch Created
 Created and checked out branch: 13-repl-ux-issues-in-editor-context
 
-**Complexity**: Simple - Creating task list directly
-
-### Tasks
+### Implementation Tasks
 [TodoWrite creates:]
-1. [ ] Fix nested scrollbars in REPL panel
-2. [ ] Remove unnecessary "Interactive REPL" and "Output" titles
-3. [ ] Fix duplicate "Lua 5.4 REPL" welcome message
-
-### Files to Modify
-- src/components/LuaRepl/LuaRepl.tsx
-- src/components/LuaRepl/LuaRepl.module.css (if needed)
+1. [ ] Write test for scrollbar behavior
+2. [ ] Fix nested scrollbars in REPL panel
+3. [ ] Write test for title rendering
+4. [ ] Remove redundant titles
+5. [ ] Write test for welcome message
+6. [ ] Fix duplicate welcome message
+7. [ ] Run scoped mutation tests
 
 Starting with task 1...
 ```

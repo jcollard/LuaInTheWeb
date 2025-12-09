@@ -2,25 +2,50 @@
 
 Thank you for contributing to LuaInTheWeb! This guide explains our development process.
 
+## Workflow
+
+> **See [.claude/workflow.md](../.claude/workflow.md) for the complete workflow documentation.**
+>
+> Run `/workflow` in Claude Code to inject the full workflow reference.
+
+### Quick Reference
+
+| I want to... | Action |
+|--------------|--------|
+| See project status | `/status` |
+| Start next available issue | `/issue next` |
+| Start a specific issue | `/issue <n> begin` |
+| Create PR when done | `/issue <n> review` |
+| Work on complex feature | Create plan → `/prepare-plan` → `/review-plan` → `/begin` |
+
+### Two Workflows
+
+| Workflow | When to Use | Commands |
+|----------|-------------|----------|
+| **Issue-based** | Simple bugs, small features, tech debt (1-5 tasks) | `/issue <n> begin` → work → `/issue <n> review` |
+| **Roadmap-based** | Complex features needing planning (6+ tasks) | Create plan → `/prepare-plan` → `/review-plan` → `/begin` |
+
 ## Development Process
 
-### 1. Check the Roadmap
+### 1. Check the Project Board
 
-Before starting work, check [roadmap/](../roadmap/) for:
-- Existing plans that might overlap with your idea
-- Current priorities
-- Features that need implementation
+Before starting work, check the [GitHub Project Board](https://github.com/users/jcollard/projects/3) for:
+- Current priorities (P0-P3)
+- Items in "Todo" status ready to work
+- Roadmap plans in [roadmap/](../roadmap/)
 
-### 2. Create or Review a Plan
+### 2. Choose Your Workflow
 
-For significant changes:
+**For simple work (1-5 tasks)**:
+- Run `/issue next` to auto-select, or pick a specific issue
+- Run `/issue <n> begin` to create worktree and start
+
+**For complex features (6+ tasks)**:
 1. Copy `roadmap/_template.md` to a new plan file
 2. Fill out the template completely
-3. Get plan approved before implementation
-
-For small changes (bug fixes, minor improvements):
-- Create an issue describing the change
-- Reference the issue in your PR
+3. Run `/prepare-plan` to apply TDD structure
+4. Run `/review-plan` to verify
+5. Run `/begin` to start implementation
 
 ### 3. Follow TDD
 

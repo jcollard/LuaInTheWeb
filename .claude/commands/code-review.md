@@ -43,49 +43,70 @@ After completing ALL other review steps, check if mutation tests finished:
 
 ## Tech Debt Tracking
 
-After completing the review, create GitHub issues for any non-blocking findings:
+**IMPORTANT**: Tech debt issues are **identified but NOT created** during code review. They are created later during `/pr-review <n> accept` when the PR is approved. This prevents:
+- Creating issues for things fixed before PR merge
+- Creating issues for rejected PRs
+- Noise from premature issue creation
 
-1. **Check for existing issues** before creating new ones:
-   ```bash
-   gh issue list --label "tech-debt" --search "<unique-identifier>" --json number
-   ```
+### Identifying Tech Debt
 
-2. **Create issues** with deduplication IDs in the body:
-   ```bash
-   gh issue create --title "[Tech Debt] <file>: <brief description>" \
-     --label "tech-debt" \
-     --body "<!-- tech-debt-id: <unique-id> -->
+During review, track tech debt findings for later creation:
 
-   ## Description
-   <what needs to be fixed>
+1. **Record findings** with enough detail to create issues later:
+   - File and line number
+   - Brief description of the issue
+   - Suggested fix
+   - Priority level
 
-   ## Location
-   - [file.tsx:line](src/path/file.tsx#Lline)
-
-   ## Suggested Fix
-   <how to fix it>
-
-   ## Priority
-   High|Medium|Low - <reason>
-
-   ## Found In
-   Code review of \`<branch-name>\` branch"
-   ```
-
-3. **Add issue to GitHub Project** after creation:
-   ```bash
-   gh project item-add 3 --owner jcollard --url "https://github.com/jcollard/LuaInTheWeb/issues/<new-issue-number>"
-   ```
-   This ensures all tech debt is tracked in the project board for prioritization.
-
-4. **Unique ID format**: `<filename>-<issue-type>-<line-numbers>`
-   - Example: `luarepl-any-types-26-93-101`
-   - Example: `stryker-exclude-test-files`
-
-5. **Priority levels**:
+2. **Priority levels**:
    - **High**: Violates coding standards, security issues
    - **Medium**: ESLint warnings, performance issues
    - **Low**: Nice-to-have improvements
+
+3. **Unique ID format** (for deduplication): `<filename>-<issue-type>-<line-numbers>`
+   - Example: `luarepl-any-types-26-93-101`
+   - Example: `stryker-exclude-test-files`
+
+### Output Format for Tech Debt
+
+In the review summary, list tech debt items in a format that can be used by `/pr-review accept`:
+
+```
+### Tech Debt Identified
+
+| # | File | Issue | Priority |
+|---|------|-------|----------|
+| 1 | LuaRepl.tsx:42 | Uses `any` type for callback | High |
+| 2 | utils.ts:15-20 | Duplicate code with parser.ts | Medium |
+| 3 | styles.css | Unused CSS class `.oldHeader` | Low |
+
+**Note**: These will be converted to GitHub issues when the PR is accepted via `/pr-review <n> accept`.
+```
+
+### Tech Debt Issue Creation (Deferred to /pr-review accept)
+
+When `/pr-review <n> accept` is run, it will prompt to create issues for any tech debt items identified:
+
+```bash
+gh issue create --title "[Tech Debt] <file>: <brief description>" \
+  --label "tech-debt" \
+  --body "<!-- tech-debt-id: <unique-id> -->
+
+## Description
+<what needs to be fixed>
+
+## Location
+- [file.tsx:line](src/path/file.tsx#Lline)
+
+## Suggested Fix
+<how to fix it>
+
+## Priority
+High|Medium|Low - <reason>
+
+## Found In
+PR #<pr-number> - <pr-title>"
+```
 
 ## Architecture
 
