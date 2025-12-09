@@ -73,6 +73,16 @@ def get_repo_root():
     return Path(output) if output else None
 
 
+def get_temp_dir():
+    """Get a temp directory within the repo (gitignored)."""
+    repo_root = get_repo_root()
+    if not repo_root:
+        return None
+    temp_dir = repo_root / ".tmp"
+    temp_dir.mkdir(exist_ok=True)
+    return temp_dir
+
+
 def get_current_branch():
     """Get the current branch name."""
     output, _ = run('git rev-parse --abbrev-ref HEAD')
@@ -167,18 +177,17 @@ Closes #{issue_number}
 
 Co-Authored-By: Claude <noreply@anthropic.com>"""
 
-    # Use a temp file for the commit message to handle special characters
-    import tempfile
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
-        f.write(commit_message)
-        temp_file = f.name
+    # Use local temp directory for the commit message to handle special characters
+    temp_dir = get_temp_dir()
+    temp_file = temp_dir / f"commit-{issue_number}.txt"
+    temp_file.write_text(commit_message, encoding='utf-8')
 
     try:
         output, err = run(f'git commit -F "{temp_file}"')
         success = output is not None or (err and "nothing to commit" not in err.lower())
         return success, commit_message
     finally:
-        os.unlink(temp_file)
+        temp_file.unlink(missing_ok=True)
 
 
 def push_branch(branch):
@@ -205,11 +214,10 @@ Fixes #{issue_number}
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)"""
 
-    # Use temp file for PR body
-    import tempfile
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
-        f.write(pr_body)
-        temp_file = f.name
+    # Use local temp directory for PR body
+    temp_dir = get_temp_dir()
+    temp_file = temp_dir / f"pr-body-{issue_number}.txt"
+    temp_file.write_text(pr_body, encoding='utf-8')
 
     try:
         output, err = run(f'gh pr create --title "{pr_title}" --body-file "{temp_file}"')
@@ -222,7 +230,7 @@ Fixes #{issue_number}
             return True, output.strip()
         return False, err
     finally:
-        os.unlink(temp_file)
+        temp_file.unlink(missing_ok=True)
 
 
 def update_project_status(issue_number):
