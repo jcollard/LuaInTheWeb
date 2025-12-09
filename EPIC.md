@@ -63,3 +63,9 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 ## Blockers
 
 (none)
+
+## Tech Debt
+
+| # | Description | Priority | Notes |
+|---|-------------|----------|-------|
+| #75 | Scope theme transitions to specific components instead of global `*` selector | Low | Address at end of epic if performance issues observed |
