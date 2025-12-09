@@ -6,11 +6,15 @@ This module handles:
 - Uploading screenshots as PR comments
 """
 
+import os
 import re
 import json
 import subprocess
 from pathlib import Path
 from .helpers import run, get_repo_root, get_temp_dir, BLUE, GREEN, YELLOW, RED, NC
+
+# Timeout for screenshot capture subprocess (configurable via environment variable)
+SCREENSHOT_CAPTURE_TIMEOUT = int(os.environ.get('SCREENSHOT_CAPTURE_TIMEOUT', 300))
 
 
 def parse_visual_verification(body):
@@ -151,7 +155,7 @@ def capture_screenshots(routes, output_dir=None, skip_build=False):
         cwd=str(npm_dir),
         capture_output=True,
         text=True,
-        timeout=300,  # 5 minute timeout
+        timeout=SCREENSHOT_CAPTURE_TIMEOUT,
     )
 
     # Parse JSON output from the script

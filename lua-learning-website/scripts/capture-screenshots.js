@@ -11,10 +11,15 @@
  *   --no-build          Skip building the app (assume already built)
  *   --help              Show help message
  *
+ * Environment Variables:
+ *   SCREENSHOT_WAIT_TIMEOUT     Page load timeout in ms (default: 30000)
+ *   SCREENSHOT_SERVER_TIMEOUT   Server start timeout in ms (default: 30000)
+ *
  * Examples:
  *   node scripts/capture-screenshots.js /editor /repl
  *   node scripts/capture-screenshots.js --output-dir ./screenshots /editor
  *   node scripts/capture-screenshots.js --no-build --base-url http://localhost:5173 /editor
+ *   SCREENSHOT_WAIT_TIMEOUT=60000 node scripts/capture-screenshots.js /editor
  *
  * The script will:
  * 1. Build the app (unless --no-build)
@@ -33,21 +38,33 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 
-// Default configuration
+// Default configuration (timeouts configurable via environment variables)
 const DEFAULTS = {
   outputDir: path.resolve(PROJECT_ROOT, '..', '.tmp', 'screenshots'),
   baseUrl: 'http://localhost:4173',
   viewport: { width: 1280, height: 720 },
-  waitTimeout: 30000,
-  serverStartTimeout: 30000,
+  waitTimeout: parseInt(process.env.SCREENSHOT_WAIT_TIMEOUT, 10) || 30000,
+  serverStartTimeout: parseInt(process.env.SCREENSHOT_SERVER_TIMEOUT, 10) || 30000,
 };
 
 /**
  * Normalize a route path (handle Git Bash path conversion on Windows)
- * Git Bash converts /foo to C:/Program Files/Git/foo, so we detect and fix this
+ *
+ * WINDOWS-SPECIFIC QUIRK:
+ * When running in Git Bash on Windows, POSIX-style paths like "/editor" get
+ * automatically converted to Windows paths by MSYS path conversion.
+ * For example: "/editor" becomes "C:/Program Files/Git/editor"
+ *
+ * This happens because Git Bash interprets paths starting with "/" as references
+ * to the Git installation directory. This is a known MSYS/MinGW behavior.
+ *
+ * To work around this, we detect converted paths (containing "Git" after a drive
+ * letter) and extract the intended route from the end of the path.
+ *
+ * See: https://stackoverflow.com/questions/7250130/how-to-stop-mingw-and-msys-from-mangling-path-names-given-at-the-command-line
  */
 function normalizeRoute(route) {
-  // Check if this looks like a Git Bash converted path
+  // Check if this looks like a Git Bash converted path (e.g., "C:/Program Files/Git/editor")
   if (route.match(/^[A-Z]:.*Git/i)) {
     // Extract the intended route from the converted path
     // e.g., "C:/Program Files/Git/editor" -> "/editor"
@@ -118,10 +135,15 @@ Options:
   --no-build          Skip building the app (assume already built)
   --help              Show this help message
 
+Environment Variables:
+  SCREENSHOT_WAIT_TIMEOUT     Page load timeout in ms (default: 30000)
+  SCREENSHOT_SERVER_TIMEOUT   Server start timeout in ms (default: 30000)
+
 Examples:
   node scripts/capture-screenshots.js /editor /repl
   node scripts/capture-screenshots.js --output-dir ./screenshots /editor
   node scripts/capture-screenshots.js --no-build --base-url http://localhost:5173 /editor
+  SCREENSHOT_WAIT_TIMEOUT=60000 node scripts/capture-screenshots.js /editor
 `);
 }
 
