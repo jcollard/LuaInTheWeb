@@ -6,11 +6,13 @@ Usage:
   python scripts/update-pr.py <pr-number> commit [options]     # Add commits to PR
   python scripts/update-pr.py <pr-number> update-body [options] # Update PR description
   python scripts/update-pr.py <pr-number> comment [options]     # Add comment to PR
+  python scripts/update-pr.py <pr-number> update-manual-testing # Regenerate manual testing section
 
 Subcommands:
-  commit       Stage all changes, create commit, and push to PR branch
-  update-body  Update the PR title and/or body
-  comment      Add a comment to the PR
+  commit               Stage all changes, create commit, and push to PR branch
+  update-body          Update the PR title and/or body
+  comment              Add a comment to the PR
+  update-manual-testing  Regenerate the manual testing checklist based on changed files
 
 Options for 'commit':
   --message "..."       Commit message (inline)
@@ -38,6 +40,7 @@ Safety features:
 """
 
 import sys
+import re
 import json
 from pathlib import Path
 
@@ -46,8 +49,9 @@ from lib.helpers import (
     run, get_repo_root, get_temp_dir, get_current_branch,
     get_staged_files, get_unstaged_changes, get_untracked_files,
     read_file_content, run_tests, run_lint, run_build,
-    stage_all_changes, push_branch,
+    stage_all_changes, push_branch, get_changed_files,
 )
+from lib.manual_testing import generate_manual_testing_checklist
 
 
 def get_pr_info(pr_number):
@@ -127,6 +131,38 @@ def add_pr_comment(pr_number, body):
         temp_file.unlink(missing_ok=True)
 
 
+def update_manual_testing_section(pr_body, new_checklist):
+    """Update the Manual Testing section in a PR body.
+
+    Args:
+        pr_body: The existing PR body text
+        new_checklist: The new manual testing checklist content
+
+    Returns:
+        Updated PR body with new manual testing section.
+    """
+    # Pattern to match the Manual Testing section
+    # Matches from "## Manual Testing" to the next ## section or Fixes #
+    pattern = r'(## Manual Testing\s*\n)(.*?)(\n## |\nFixes #|\n---|\Z)'
+
+    new_section = f"## Manual Testing\n{new_checklist}\n"
+
+    if re.search(pattern, pr_body, re.DOTALL):
+        # Replace existing section
+        return re.sub(
+            pattern,
+            lambda m: new_section + m.group(3),
+            pr_body,
+            flags=re.DOTALL
+        )
+    else:
+        # Insert before "Fixes #" if present, otherwise append
+        if '\nFixes #' in pr_body:
+            return pr_body.replace('\nFixes #', f'\n{new_section}\nFixes #')
+        else:
+            return pr_body + f'\n\n{new_section}'
+
+
 def parse_args():
     """Parse command line arguments."""
     args = {
@@ -173,7 +209,7 @@ def parse_args():
         elif arg.isdigit() and args['pr_number'] is None:
             args['pr_number'] = arg
             i += 1
-        elif arg in ['commit', 'update-body', 'comment'] and args['subcommand'] is None:
+        elif arg in ['commit', 'update-body', 'comment', 'update-manual-testing'] and args['subcommand'] is None:
             args['subcommand'] = arg
             i += 1
         else:
@@ -198,9 +234,10 @@ def print_usage():
     print(f"Usage: python {sys.argv[0]} <pr-number> <subcommand> [options]")
     print()
     print("Subcommands:")
-    print("  commit       Stage changes, create commit, push to PR")
-    print("  update-body  Update PR title and/or description")
-    print("  comment      Add a comment to the PR")
+    print("  commit               Stage changes, create commit, push to PR")
+    print("  update-body          Update PR title and/or description")
+    print("  comment              Add a comment to the PR")
+    print("  update-manual-testing  Regenerate the manual testing checklist")
     print()
     print("Options for 'commit':")
     print("  --message \"...\"       Commit message (inline)")
@@ -411,6 +448,47 @@ def cmd_comment(args, pr_info):
         return 1
 
 
+def cmd_update_manual_testing(args, pr_info):
+    """Handle the update-manual-testing subcommand."""
+    base_branch = pr_info['baseRefName']
+    pr_body = pr_info.get('body', '')
+
+    print(f"{BLUE}Analyzing changed files against {base_branch}...{NC}")
+
+    # Get changed files
+    changed_files = get_changed_files(base_branch)
+
+    if not changed_files:
+        print(f"{YELLOW}No changed files detected{NC}")
+        return 0
+
+    print(f"  Found {GREEN}{len(changed_files)}{NC} changed files")
+
+    # Generate new checklist
+    new_checklist = generate_manual_testing_checklist(changed_files)
+
+    if args['dry_run']:
+        print(f"{YELLOW}Dry run mode - would update manual testing section to:{NC}")
+        print()
+        print(new_checklist)
+        return 0
+
+    # Update PR body with new section
+    print(f"{BLUE}Updating PR body...{NC}")
+    updated_body = update_manual_testing_section(pr_body, new_checklist)
+
+    success, err = update_pr_body(args['pr_number'], body=updated_body)
+
+    if success:
+        print(f"  {GREEN}[OK] Manual testing section updated{NC}")
+        print()
+        print(f"  PR: {GREEN}{pr_info['url']}{NC}")
+        return 0
+    else:
+        print(f"  {RED}[FAIL] {err}{NC}")
+        return 1
+
+
 def main():
     args = parse_args()
 
@@ -450,6 +528,8 @@ def main():
         sys.exit(cmd_update_body(args, pr_info))
     elif args['subcommand'] == 'comment':
         sys.exit(cmd_comment(args, pr_info))
+    elif args['subcommand'] == 'update-manual-testing':
+        sys.exit(cmd_update_manual_testing(args, pr_info))
     else:
         print(f"{RED}Error: Unknown subcommand '{args['subcommand']}'{NC}")
         print_usage()

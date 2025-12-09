@@ -107,6 +107,21 @@ def get_untracked_files():
     return output.split('\n') if output else []
 
 
+def get_changed_files(base_branch='main'):
+    """Get list of files changed between base branch and HEAD.
+
+    Args:
+        base_branch: The base branch to compare against (default: main)
+
+    Returns:
+        List of file paths that have changed.
+    """
+    output, _ = run(f'git diff --name-only {base_branch}...HEAD', check=False)
+    if not output:
+        return []
+    return output.split('\n')
+
+
 def read_file_content(file_path):
     """Read content from a file, returning None if file doesn't exist or is empty.
 
