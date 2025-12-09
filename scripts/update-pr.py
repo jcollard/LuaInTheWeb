@@ -72,6 +72,16 @@ def get_repo_root():
     return Path(output) if output else None
 
 
+def get_temp_dir():
+    """Get a temp directory within the repo (gitignored)."""
+    repo_root = get_repo_root()
+    if not repo_root:
+        return None
+    temp_dir = repo_root / ".tmp"
+    temp_dir.mkdir(exist_ok=True)
+    return temp_dir
+
+
 def get_current_branch():
     """Get the current branch name."""
     output, _ = run('git rev-parse --abbrev-ref HEAD')
@@ -173,18 +183,17 @@ def stage_all_changes():
 
 def create_commit(message):
     """Create a commit with the given message."""
-    # Use a temp file for the commit message to handle special characters
-    import tempfile
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
-        f.write(message)
-        temp_file = f.name
+    # Use local temp directory for the commit message to handle special characters
+    temp_dir = get_temp_dir()
+    temp_file = temp_dir / "commit-msg.txt"
+    temp_file.write_text(message, encoding='utf-8')
 
     try:
         output, err = run(f'git commit -F "{temp_file}"')
         success = output is not None or (err and "nothing to commit" not in err.lower())
         return success, message
     finally:
-        os.unlink(temp_file)
+        temp_file.unlink(missing_ok=True)
 
 
 def push_branch(branch):
@@ -208,11 +217,10 @@ def update_pr_body(pr_number, title=None, body=None, append=False):
             if pr_info and pr_info.get('body'):
                 body = pr_info['body'] + "\n\n---\n\n" + body
 
-        # Use temp file for body
-        import tempfile
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
-            f.write(body)
-            temp_file = f.name
+        # Use local temp directory for body
+        temp_dir = get_temp_dir()
+        temp_file = temp_dir / f"pr-body-{pr_number}.txt"
+        temp_file.write_text(body, encoding='utf-8')
 
         try:
             args.append(f'--body-file "{temp_file}"')
@@ -220,7 +228,7 @@ def update_pr_body(pr_number, title=None, body=None, append=False):
             output, err = run(cmd, check=False)
             return output is not None or err == "", err
         finally:
-            os.unlink(temp_file)
+            temp_file.unlink(missing_ok=True)
     elif args:
         cmd = f'gh pr edit {pr_number} {" ".join(args)}'
         output, err = run(cmd, check=False)
@@ -231,16 +239,16 @@ def update_pr_body(pr_number, title=None, body=None, append=False):
 
 def add_pr_comment(pr_number, body):
     """Add a comment to the PR."""
-    import tempfile
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
-        f.write(body)
-        temp_file = f.name
+    # Use local temp directory for comment body
+    temp_dir = get_temp_dir()
+    temp_file = temp_dir / f"pr-comment-{pr_number}.txt"
+    temp_file.write_text(body, encoding='utf-8')
 
     try:
         output, err = run(f'gh pr comment {pr_number} --body-file "{temp_file}"', check=False)
         return output is not None or err == "", err
     finally:
-        os.unlink(temp_file)
+        temp_file.unlink(missing_ok=True)
 
 
 def parse_args():
