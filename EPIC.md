@@ -20,7 +20,7 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
-| #60 | Create theme infrastructure (CSS variables, context, localStorage) | 🔄 In Progress | 60-create-theme-infrastructure | Started 2025-12-09 |
+| #60 | Create theme infrastructure (CSS variables, context, localStorage) | 📝 Needs Review | 60-create-theme-infrastructure | PR #74 |
 | #61 | Theme core layout components (sidebar, panels, tabs) | ⏳ Pending | - | - |
 | #62 | Theme terminal and REPL components | ⏳ Pending | - | - |
 | #63 | Integrate Monaco Editor theme switching | ⏳ Pending | - | - |
@@ -29,6 +29,7 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 **Status Legend:**
 - ⏳ Pending - Not yet started
 - 🔄 In Progress - Currently being worked on
+- 📝 Needs Review - PR created, awaiting review
 - ✅ Complete - Merged to epic branch
 - ❌ Blocked - Has unresolved blockers
 
@@ -41,6 +42,7 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 ### 2025-12-09
 - Epic started
 - Started work on #60: Create theme infrastructure
+- Completed #60 implementation, PR #74 created
 
 ## Key Files
 
