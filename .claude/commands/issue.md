@@ -358,6 +358,8 @@ The PR is linked to issue #<number> and will auto-close it when merged.
 
 If subcommand is "eval" (`/issue 13 eval`):
 
+**NOTE**: This mode is for evaluation ONLY. It NEVER leads to implementation. After evaluation, STOP and wait for user to choose actions. If user wants to implement, they must run `/issue <number> begin` separately.
+
 This mode analyzes an issue to estimate its metadata fields and make the issue more actionable. The evaluation should be thoughtful and genuine - only raise questions, concerns, or suggestions when they are truly relevant.
 
 ### 6.5a. Fetch and Display Issue
@@ -527,9 +529,9 @@ Examples of valid suggestions:
 - "The <existing utility> could be extended to handle this case"
 - "Adding a test for the edge case mentioned would prevent regression"
 
-### 6.5i. Offer to Apply Changes
+### 6.5i. Offer to Apply Changes and STOP
 
-End with available actions:
+End with available actions and **STOP immediately**:
 
 ```
 ---
@@ -541,6 +543,10 @@ End with available actions:
 
 Would you like me to apply any of these changes?
 ```
+
+**IMPORTANT**: After displaying this message, STOP and wait for user response. Do NOT proceed to implementation. The `eval` subcommand is for evaluation only - it never leads to implementation.
+
+If the user wants to start implementation after eval, they must run `/issue <number> begin` as a separate command.
 
 ### 6.5j. Applying Changes (if requested)
 
