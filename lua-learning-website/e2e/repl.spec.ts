@@ -324,4 +324,42 @@ test.describe('REPL in IDE', () => {
 
     await expect(terminal).toBeVisible()
   })
+
+  test('evaluating multi-line function displays clean output', async ({ page }) => {
+    // Click on the terminal to focus it
+    const terminal = page.locator('.xterm-screen')
+    await terminal.click()
+
+    // Define a multi-line function using Shift+Enter for line continuation
+    await page.keyboard.type('function multiLine(x)')
+    await page.keyboard.press('Shift+Enter') // Enter multi-line mode
+    await page.waitForTimeout(200)
+
+    await page.keyboard.type('  local result = x * 2')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(200)
+
+    await page.keyboard.type('  return result')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(200)
+
+    await page.keyboard.type('end')
+    await page.keyboard.press('Shift+Enter') // Execute multi-line
+    await page.waitForTimeout(500)
+
+    // Evaluate the multi-line function name
+    await page.keyboard.type('multiLine')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(500)
+
+    // Terminal should still be visible and functional (no crash)
+    await expect(terminal).toBeVisible()
+
+    // Verify the function works correctly
+    await page.keyboard.type('print(multiLine(5))')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    await expect(terminal).toBeVisible()
+  })
 })

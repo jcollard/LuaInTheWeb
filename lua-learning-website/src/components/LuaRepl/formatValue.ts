@@ -51,9 +51,15 @@ function __format_value(v, seen, depth)
       end
       local paramStr = table.concat(params, ", ")
 
-      -- Format source location
+      -- Format source location - truncate multi-line sources
       local source = info.source or "?"
       local line = info.linedefined or 0
+
+      -- If source contains newlines or is too long, use abbreviated form
+      if source:find("\n") or #source > 40 then
+        source = '[string "..."]'
+      end
+
       return string.format("function(%s) [%s:%d]", paramStr, source, line)
     end
   end
