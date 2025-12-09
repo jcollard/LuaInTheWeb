@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { LuaFactory, LuaEngine } from 'wasmoon'
-import { setupLuaFormatter, formatLuaValue } from './formatValue'
+import { setupLuaFormatter } from './formatValue'
 
 export interface UseLuaReplOptions {
   /** Callback when output is produced (from print or expression results) */
@@ -151,13 +151,15 @@ export function useLuaRepl(options: UseLuaReplOptions): UseLuaReplReturn {
       // Try to execute as a statement first
       await engineRef.current.doString(code)
     } catch {
-      // If it fails, try to evaluate as an expression and display the result
+      // If it fails, try to evaluate as an expression and display the formatted result
+      // We format directly in Lua to avoid JS/Lua value conversion issues
       try {
-        const result = await engineRef.current.doString(`return ${code}`)
+        const formatted = await engineRef.current.doString(
+          `return __format_value((${code}))`
+        )
         // Display the result if it's not nil
-        if (result !== null && result !== undefined) {
-          const formatted = await formatLuaValue(engineRef.current, result)
-          onOutputRef.current?.(formatted)
+        if (formatted !== 'nil') {
+          onOutputRef.current?.(String(formatted))
         }
       } catch (exprError: unknown) {
         // Show the error

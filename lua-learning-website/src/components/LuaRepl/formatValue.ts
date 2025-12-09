@@ -155,38 +155,9 @@ end
 
 /**
  * Sets up the Lua formatter function in the given Lua engine.
- * Must be called before using formatLuaValue.
+ * Call this during engine initialization. The formatter can then be used
+ * by calling `return __format_value(expression)` directly in Lua code.
  */
 export async function setupLuaFormatter(lua: LuaEngine): Promise<void> {
   await lua.doString(LUA_FORMATTER_CODE)
-}
-
-/**
- * Formats a Lua value using the Lua-side formatter.
- * Returns a human-readable string representation of the value.
- */
-export async function formatLuaValue(lua: LuaEngine, value: unknown): Promise<string> {
-  // Handle null/undefined as nil
-  if (value === null || value === undefined) {
-    return 'nil'
-  }
-
-  // For primitive JS types, we can format directly
-  if (typeof value === 'boolean') {
-    return String(value)
-  }
-  if (typeof value === 'number') {
-    return String(value)
-  }
-  if (typeof value === 'string') {
-    return `"${value}"`
-  }
-
-  // For complex types (functions, tables, etc.), use the Lua formatter
-  // We need to pass the value to Lua and call __format_value on it
-  lua.global.set('__temp_value', value)
-  const result = await lua.doString('return __format_value(__temp_value)')
-  lua.global.set('__temp_value', null)
-
-  return String(result)
 }

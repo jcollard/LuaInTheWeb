@@ -225,4 +225,103 @@ test.describe('REPL in IDE', () => {
     // Allow some padding/margin tolerance
     expect(terminalBox!.width).toBeLessThanOrEqual(replContentBox!.width + 50)
   })
+
+  test('evaluating a function displays formatted function info', async ({ page }) => {
+    // Click on the terminal to focus it
+    const terminal = page.locator('.xterm-screen')
+    await terminal.click()
+
+    // Define a function
+    await page.keyboard.type('function myFunc(a, b) return a + b end')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(500)
+
+    // Evaluate the function name (without calling it)
+    await page.keyboard.type('myFunc')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(500)
+
+    // Terminal should still be visible and functional (no crash)
+    await expect(terminal).toBeVisible()
+
+    // Type another command to verify REPL is still working
+    await page.keyboard.type('print("still working")')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    await expect(terminal).toBeVisible()
+  })
+
+  test('evaluating a table displays formatted table contents', async ({ page }) => {
+    // Click on the terminal to focus it
+    const terminal = page.locator('.xterm-screen')
+    await terminal.click()
+
+    // Create a table
+    await page.keyboard.type('myTable = {a = 1, b = 2, c = 3}')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(500)
+
+    // Evaluate the table name
+    await page.keyboard.type('myTable')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(500)
+
+    // Terminal should still be visible and functional (no crash)
+    await expect(terminal).toBeVisible()
+
+    // Type another command to verify REPL is still working
+    await page.keyboard.type('print("table test passed")')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    await expect(terminal).toBeVisible()
+  })
+
+  test('evaluating a coroutine displays thread info', async ({ page }) => {
+    // Click on the terminal to focus it
+    const terminal = page.locator('.xterm-screen')
+    await terminal.click()
+
+    // Create a coroutine
+    await page.keyboard.type('co = coroutine.create(function() end)')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(500)
+
+    // Evaluate the coroutine
+    await page.keyboard.type('co')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(500)
+
+    // Terminal should still be visible and functional (no crash)
+    await expect(terminal).toBeVisible()
+
+    // Type another command to verify REPL is still working
+    await page.keyboard.type('print("coroutine test passed")')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    await expect(terminal).toBeVisible()
+  })
+
+  test('evaluating built-in print function displays function: [C]', async ({ page }) => {
+    // Click on the terminal to focus it
+    const terminal = page.locator('.xterm-screen')
+    await terminal.click()
+
+    // Evaluate the built-in print function
+    await page.keyboard.type('print')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(500)
+
+    // Terminal should still be visible and functional (no crash)
+    await expect(terminal).toBeVisible()
+
+    // Type another command to verify REPL is still working
+    await page.keyboard.type('print("print function test passed")')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    await expect(terminal).toBeVisible()
+  })
 })

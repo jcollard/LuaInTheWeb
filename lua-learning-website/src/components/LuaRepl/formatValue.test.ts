@@ -1,17 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { setupLuaFormatter, formatLuaValue, LUA_FORMATTER_CODE } from './formatValue'
+import { setupLuaFormatter, LUA_FORMATTER_CODE } from './formatValue'
 
 // Mock wasmoon - WASM doesn't load properly in test environment
-const { mockDoString, mockGlobalSet, mockLuaEngine } = vi.hoisted(() => {
+const { mockDoString, mockLuaEngine } = vi.hoisted(() => {
   const mockDoString = vi.fn()
-  const mockGlobalSet = vi.fn()
   const mockLuaEngine = {
     doString: mockDoString,
     global: {
-      set: mockGlobalSet,
+      set: vi.fn(),
     },
   }
-  return { mockDoString, mockGlobalSet, mockLuaEngine }
+  return { mockDoString, mockLuaEngine }
 })
 
 vi.mock('wasmoon', () => {
@@ -40,157 +39,6 @@ describe('formatValue', () => {
 
       // Assert
       expect(mockDoString).toHaveBeenCalledWith(LUA_FORMATTER_CODE)
-    })
-  })
-
-  describe('formatLuaValue - primitive types', () => {
-    it('should format null as "nil"', async () => {
-      // Arrange
-      const lua = mockLuaEngine as unknown as import('wasmoon').LuaEngine
-
-      // Act
-      const result = await formatLuaValue(lua, null)
-
-      // Assert
-      expect(result).toBe('nil')
-    })
-
-    it('should format undefined as "nil"', async () => {
-      // Arrange
-      const lua = mockLuaEngine as unknown as import('wasmoon').LuaEngine
-
-      // Act
-      const result = await formatLuaValue(lua, undefined)
-
-      // Assert
-      expect(result).toBe('nil')
-    })
-
-    it('should format boolean true', async () => {
-      // Arrange
-      const lua = mockLuaEngine as unknown as import('wasmoon').LuaEngine
-
-      // Act
-      const result = await formatLuaValue(lua, true)
-
-      // Assert
-      expect(result).toBe('true')
-    })
-
-    it('should format boolean false', async () => {
-      // Arrange
-      const lua = mockLuaEngine as unknown as import('wasmoon').LuaEngine
-
-      // Act
-      const result = await formatLuaValue(lua, false)
-
-      // Assert
-      expect(result).toBe('false')
-    })
-
-    it('should format integer numbers', async () => {
-      // Arrange
-      const lua = mockLuaEngine as unknown as import('wasmoon').LuaEngine
-
-      // Act
-      const result = await formatLuaValue(lua, 42)
-
-      // Assert
-      expect(result).toBe('42')
-    })
-
-    it('should format floating point numbers', async () => {
-      // Arrange
-      const lua = mockLuaEngine as unknown as import('wasmoon').LuaEngine
-
-      // Act
-      const result = await formatLuaValue(lua, 3.14159)
-
-      // Assert
-      expect(result).toBe('3.14159')
-    })
-
-    it('should format strings with quotes', async () => {
-      // Arrange
-      const lua = mockLuaEngine as unknown as import('wasmoon').LuaEngine
-
-      // Act
-      const result = await formatLuaValue(lua, 'hello')
-
-      // Assert
-      expect(result).toBe('"hello"')
-    })
-
-    it('should format empty strings with quotes', async () => {
-      // Arrange
-      const lua = mockLuaEngine as unknown as import('wasmoon').LuaEngine
-
-      // Act
-      const result = await formatLuaValue(lua, '')
-
-      // Assert
-      expect(result).toBe('""')
-    })
-  })
-
-  describe('formatLuaValue - complex types (via Lua formatter)', () => {
-    it('should use Lua formatter for function values', async () => {
-      // Arrange
-      const lua = mockLuaEngine as unknown as import('wasmoon').LuaEngine
-      const mockFunction = () => {}
-      mockDoString.mockResolvedValueOnce('function() [string "..."]:1]')
-
-      // Act
-      const result = await formatLuaValue(lua, mockFunction)
-
-      // Assert
-      expect(mockGlobalSet).toHaveBeenCalledWith('__temp_value', mockFunction)
-      expect(mockDoString).toHaveBeenCalledWith('return __format_value(__temp_value)')
-      expect(result).toBe('function() [string "..."]:1]')
-    })
-
-    it('should use Lua formatter for table/object values', async () => {
-      // Arrange
-      const lua = mockLuaEngine as unknown as import('wasmoon').LuaEngine
-      const mockTable = { a: 1, b: 2 }
-      mockDoString.mockResolvedValueOnce('{a = 1, b = 2}')
-
-      // Act
-      const result = await formatLuaValue(lua, mockTable)
-
-      // Assert
-      expect(mockGlobalSet).toHaveBeenCalledWith('__temp_value', mockTable)
-      expect(mockDoString).toHaveBeenCalledWith('return __format_value(__temp_value)')
-      expect(result).toBe('{a = 1, b = 2}')
-    })
-
-    it('should use Lua formatter for array values', async () => {
-      // Arrange
-      const lua = mockLuaEngine as unknown as import('wasmoon').LuaEngine
-      const mockArray = [1, 2, 3]
-      mockDoString.mockResolvedValueOnce('{1, 2, 3}')
-
-      // Act
-      const result = await formatLuaValue(lua, mockArray)
-
-      // Assert
-      expect(mockGlobalSet).toHaveBeenCalledWith('__temp_value', mockArray)
-      expect(mockDoString).toHaveBeenCalledWith('return __format_value(__temp_value)')
-      expect(result).toBe('{1, 2, 3}')
-    })
-
-    it('should clear __temp_value after formatting', async () => {
-      // Arrange
-      const lua = mockLuaEngine as unknown as import('wasmoon').LuaEngine
-      const mockTable = { key: 'value' }
-      mockDoString.mockResolvedValueOnce('{key = "value"}')
-
-      // Act
-      await formatLuaValue(lua, mockTable)
-
-      // Assert - verify temp value is cleared
-      const setCalls = mockGlobalSet.mock.calls
-      expect(setCalls[setCalls.length - 1]).toEqual(['__temp_value', null])
     })
   })
 
