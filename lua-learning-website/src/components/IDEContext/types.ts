@@ -1,5 +1,6 @@
 import type { UseLuaEngineReturn } from '../../hooks/types'
 import type { TreeNode } from '../../hooks/useFileSystem'
+import type { RecentFile } from '../../hooks/useRecentFiles'
 import type { TabInfo } from '../TabBar'
 import type { ToastData } from '../Toast'
 
@@ -68,6 +69,10 @@ export interface IDEContextValue {
   generateUniqueFileName: (parentPath?: string) => string
   createFileWithRename: (parentPath?: string) => void
   clearPendingNewFile: () => void
+
+  // Recent files
+  recentFiles: RecentFile[]
+  clearRecentFiles: () => void
 }
 
 /**

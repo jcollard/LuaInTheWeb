@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useRef } from 'react'
 import { useLuaEngine } from '../../hooks/useLuaEngine'
 import { useFileSystem } from '../../hooks/useFileSystem'
+import { useRecentFiles } from '../../hooks/useRecentFiles'
 import { useTabBar } from '../TabBar'
 import { useToast } from '../Toast'
 import { IDEContext } from './context'
@@ -28,6 +29,9 @@ export function IDEContextProvider({
 }: IDEContextProviderProps) {
   // Filesystem hook
   const filesystem = useFileSystem()
+
+  // Recent files hook
+  const { recentFiles, addRecentFile, clearRecentFiles } = useRecentFiles()
 
   // Tab bar hook
   const tabBar = useTabBar()
@@ -179,6 +183,7 @@ export function IDEContextProvider({
 
       tabBar.selectTab(path)
       loadContentForPath(path)
+      addRecentFile(path)
       return
     }
 
@@ -200,8 +205,9 @@ export function IDEContextProvider({
         return next
       })
       tabBar.openTab(path, getFileName(path))
+      addRecentFile(path)
     }
-  }, [activeTab, code, filesystem, loadContentForPath, originalContent, tabBar])
+  }, [activeTab, addRecentFile, code, filesystem, loadContentForPath, originalContent, tabBar])
 
   // Save current file
   const saveFile = useCallback(() => {
@@ -448,6 +454,9 @@ export function IDEContextProvider({
       generateUniqueFileName,
       createFileWithRename,
       clearPendingNewFile,
+      // Recent files
+      recentFiles,
+      clearRecentFiles,
     }),
     [
       engine,
@@ -486,6 +495,8 @@ export function IDEContextProvider({
       generateUniqueFileName,
       createFileWithRename,
       clearPendingNewFile,
+      recentFiles,
+      clearRecentFiles,
     ]
   )
 

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import { IDELayout } from './IDELayout'
@@ -50,9 +50,9 @@ describe('IDELayout', () => {
       // Arrange & Act
       render(<IDELayout />)
 
-      // Assert - should have sidebar and editor areas
+      // Assert - should have sidebar and welcome screen (no files open)
       expect(screen.getByTestId('sidebar-panel')).toBeInTheDocument()
-      expect(screen.getByTestId('editor-panel')).toBeInTheDocument()
+      expect(screen.getByTestId('welcome-screen')).toBeInTheDocument()
     })
 
     it('should render StatusBar', () => {
@@ -92,13 +92,13 @@ describe('IDELayout', () => {
       expect(closeButtons).toHaveLength(0)
     })
 
-    it('should pass initial code to editor', () => {
+    it('should show WelcomeScreen initially (no files open)', () => {
       // Arrange & Act
       render(<IDELayout initialCode="print('hello')" />)
 
-      // Assert
-      const editor = screen.getByTestId('mock-monaco')
-      expect(editor).toHaveValue("print('hello')")
+      // Assert - Welcome screen is shown when no files are open
+      expect(screen.getByTestId('welcome-screen')).toBeInTheDocument()
+      expect(screen.queryByTestId('editor-panel')).not.toBeInTheDocument()
     })
   })
 
@@ -130,8 +130,9 @@ describe('IDELayout', () => {
 
     // Helper to create and open a file
     async function createAndOpenFile(user: ReturnType<typeof userEvent.setup>) {
-      // Create a new file via the new file button
-      const newFileButton = screen.getByRole('button', { name: /new file/i })
+      // Create a new file via the new file button in the sidebar (FileExplorer)
+      const sidebar = screen.getByTestId('sidebar-panel')
+      const newFileButton = within(sidebar).getByRole('button', { name: /new file/i })
       await user.click(newFileButton)
 
       // Wait for file to appear in tree (new file uses unique naming like untitled-1.lua)

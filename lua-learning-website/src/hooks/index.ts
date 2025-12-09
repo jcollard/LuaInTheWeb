@@ -1,5 +1,7 @@
 export { useLuaEngine } from './useLuaEngine'
 export { useIsMobile } from './useIsMobile'
 export { useFileSystem } from './useFileSystem'
+export { useRecentFiles } from './useRecentFiles'
 export type { UseLuaEngineOptions, UseLuaEngineReturn } from './types'
 export type { UseFileSystemReturn, TreeNode, VirtualFile } from './useFileSystem'
+export type { UseRecentFilesReturn, RecentFile } from './useRecentFiles'
