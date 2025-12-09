@@ -22,7 +22,7 @@
 
 .inner {
   position: absolute;
-  background: var(--border-color, #3c3c3c);
+  background: var(--theme-border-secondary);
   border-radius: 4px;
   transition:
     background 0.15s ease,
@@ -45,19 +45,19 @@
 
 /* Hover state */
 .inner[data-hovered='true'] {
-  background: var(--accent-color, #007acc);
+  background: var(--theme-accent-primary);
 }
 
 /* Dragging state */
 .inner[data-dragging='true'] {
-  background: var(--accent-color, #007acc);
+  background: var(--theme-accent-primary);
   transform: scale(1.2);
 }
 
 /* Focus state for keyboard navigation */
 .inner[data-focused='true'] {
-  background: var(--accent-color, #007acc);
-  outline: 2px solid var(--focus-outline, #007acc);
+  background: var(--theme-accent-primary);
+  outline: 2px solid var(--theme-border-focus);
   outline-offset: 2px;
 }
 

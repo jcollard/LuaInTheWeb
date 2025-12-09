@@ -21,7 +21,7 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #60 | Create theme infrastructure (CSS variables, context, localStorage) | ✅ Complete | 60-create-theme-infrastructure | Merged PR #74 |
-| #61 | Theme core layout components (sidebar, panels, tabs) | ⏳ Pending | - | - |
+| #61 | Theme core layout components (sidebar, panels, tabs) | 📝 Needs Review | 61-theme-core-layout-components | PR #84 |
 | #62 | Theme terminal and REPL components | ⏳ Pending | - | - |
 | #63 | Integrate Monaco Editor theme switching | ⏳ Pending | - | - |
 | #64 | Add theme switcher UI control | ⏳ Pending | - | - |
@@ -44,6 +44,9 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 - Started work on #60: Create theme infrastructure
 - Completed #60 implementation, PR #74 created
 - PR #74 merged, #60 complete
+- Started work on #61: Theme core layout components
+- Completed #61 implementation, PR #84 created
+- Fixed file explorer theming (FileExplorer, FileTree, FileTreeItem CSS files)
 
 ## Key Files
 
@@ -54,6 +57,18 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 - `src/contexts/context.ts` - ThemeContext creation
 - `src/contexts/index.ts` - Public exports
 - `src/main.tsx` - ThemeProvider integration
+- `src/components/ActivityBar/ActivityBar.module.css` - Themed activity bar styles
+- `src/components/SidebarPanel/SidebarPanel.module.css` - Themed sidebar styles
+- `src/components/IDELayout/IDELayout.module.css` - Themed layout styles
+- `src/components/StatusBar/StatusBar.module.css` - Themed status bar styles
+- `src/components/EditorPanel/EditorPanel.module.css` - Themed editor panel styles
+- `src/components/TabBar/TabBar.module.css` - Themed tab bar styles
+- `src/components/BottomPanel/BottomPanel.module.css` - Themed bottom panel styles
+- `src/components/IDEResizeHandle/IDEResizeHandle.module.css` - Themed resize handle styles
+- `src/components/FileExplorer/FileExplorer.module.css` - Themed file explorer styles
+- `src/components/FileTree/FileTree.module.css` - Themed file tree styles
+- `src/components/FileTreeItem/FileTreeItem.module.css` - Themed file tree item styles
+- `e2e/theme-layout.spec.ts` - E2E tests for theme layout components
 
 ## Open Questions
 

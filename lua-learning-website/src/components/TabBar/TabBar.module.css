@@ -1,8 +1,8 @@
 .tabBar {
   display: flex;
   align-items: center;
-  background-color: var(--vscode-editorGroupHeader-tabsBackground, #252526);
-  border-bottom: 1px solid var(--vscode-editorGroupHeader-tabsBorder, #252526);
+  background-color: var(--theme-bg-secondary);
+  border-bottom: 1px solid var(--theme-border-primary);
   overflow: hidden;
 }
 
@@ -29,16 +29,16 @@
   min-height: 32px;
   padding: 0;
   border: none;
-  background-color: var(--vscode-editorGroupHeader-tabsBackground, #252526);
+  background-color: var(--theme-bg-secondary);
   cursor: pointer;
-  color: var(--vscode-icon-foreground, #c5c5c5);
+  color: var(--theme-text-primary);
   opacity: 0.7;
   flex-shrink: 0;
 }
 
 .scrollButton:hover {
   opacity: 1;
-  background-color: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+  background-color: var(--theme-bg-hover);
 }
 
 .chevronIcon {
@@ -51,10 +51,10 @@
   align-items: center;
   gap: 4px;
   padding: 6px 10px;
-  background-color: var(--vscode-tab-inactiveBackground, #2d2d2d);
-  color: var(--vscode-tab-inactiveForeground, #969696);
+  background-color: var(--theme-bg-tertiary);
+  color: var(--theme-text-muted);
   border: none;
-  border-right: 1px solid var(--vscode-tab-border, #252526);
+  border-right: 1px solid var(--theme-border-primary);
   cursor: pointer;
   font-size: 13px;
   white-space: nowrap;
@@ -63,12 +63,12 @@
 }
 
 .tab:hover {
-  background-color: var(--vscode-tab-hoverBackground, #323232);
+  background-color: var(--theme-bg-hover);
 }
 
 .tab.active {
-  background-color: var(--vscode-tab-activeBackground, #1e1e1e);
-  color: var(--vscode-tab-activeForeground, #ffffff);
+  background-color: var(--theme-bg-primary);
+  color: var(--theme-indicator-active);
 }
 
 .tabName {
@@ -77,7 +77,7 @@
 }
 
 .dirtyIndicator {
-  color: var(--vscode-tab-unfocusedActiveForeground, #969696);
+  color: var(--theme-text-muted);
   font-size: 12px;
 }
 
@@ -92,13 +92,13 @@
   background: transparent;
   border-radius: 3px;
   cursor: pointer;
-  color: var(--vscode-icon-foreground, #c5c5c5);
+  color: var(--theme-text-primary);
   opacity: 0.6;
 }
 
 .closeButton:hover {
   opacity: 1;
-  background-color: var(--vscode-toolbar-hoverBackground, rgba(90, 93, 94, 0.31));
+  background-color: var(--theme-bg-hover);
 }
 
 .closeIcon {
