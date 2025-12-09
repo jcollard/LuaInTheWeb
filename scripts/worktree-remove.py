@@ -2,7 +2,7 @@
 """
 Remove a git worktree for a GitHub issue.
 
-Usage: python scripts/worktree-remove.py <issue-number> [--keep-branch] [--headless]
+Usage: python scripts/worktree-remove.py <issue-number> [--keep-branch] [--headless] [--orphan]
 
 This script:
 1. Finds the worktree for the given issue number
@@ -13,6 +13,7 @@ This script:
 Options:
     --keep-branch    Keep the branch after removing the worktree
     --headless       Run without interactive prompts (force-deletes unmerged branches)
+    --orphan         Remove orphaned directory even if not registered as a worktree
 """
 
 import subprocess
@@ -74,15 +75,31 @@ def find_worktree_for_issue(issue_number):
     return None, None
 
 
+def find_orphan_directory(issue_number):
+    """Find orphaned worktree directory that isn't registered with git."""
+    # Get the parent directory of the current repo
+    current_dir = Path.cwd()
+    repo_name = current_dir.name.split('-issue-')[0] if '-issue-' in current_dir.name else current_dir.name
+    parent_dir = current_dir.parent
+
+    # Look for directory matching pattern: RepoName-issue-N
+    orphan_path = parent_dir / f"{repo_name}-issue-{issue_number}"
+    if orphan_path.exists():
+        return orphan_path
+
+    return None
+
+
 def main():
     # Parse arguments
     keep_branch = '--keep-branch' in sys.argv
     headless = '--headless' in sys.argv
+    orphan_mode = '--orphan' in sys.argv
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
 
     if len(args) < 1:
         print(f"{RED}Error: Issue number required{NC}")
-        print(f"Usage: python {sys.argv[0]} <issue-number> [--keep-branch] [--headless]")
+        print(f"Usage: python {sys.argv[0]} <issue-number> [--keep-branch] [--headless] [--orphan]")
         sys.exit(1)
 
     issue_number = args[0]
@@ -107,13 +124,38 @@ def main():
     worktree_path, branch_name = find_worktree_for_issue(issue_number)
 
     if not worktree_path:
+        # Check for orphaned directory if --orphan flag is set
+        if orphan_mode:
+            orphan_dir = find_orphan_directory(issue_number)
+            if orphan_dir:
+                print(f"{YELLOW}Found orphaned directory (not registered as worktree):{NC}")
+                print(f"  {GREEN}{orphan_dir}{NC}")
+                print(f"{BLUE}Removing orphaned directory...{NC}")
+                try:
+                    shutil.rmtree(orphan_dir)
+                    print(f"  {GREEN}Directory deleted successfully{NC}")
+                    sys.exit(0)
+                except Exception as e:
+                    print(f"  {RED}Failed to delete directory: {e}{NC}")
+                    sys.exit(1)
+            else:
+                print(f"{YELLOW}No orphaned directory found for issue #{issue_number}{NC}")
+                sys.exit(0)
+
         print(f"{YELLOW}No worktree found for issue #{issue_number}{NC}")
-        # List available worktrees
-        worktree_list = run('git worktree list')
-        if worktree_list:
-            print("\nAvailable worktrees:")
-            for line in worktree_list.split('\n'):
-                print(f"  {line}")
+        # Check if orphan directory exists and suggest using --orphan
+        orphan_dir = find_orphan_directory(issue_number)
+        if orphan_dir:
+            print(f"\n{YELLOW}Found orphaned directory: {orphan_dir}{NC}")
+            print(f"Use {BLUE}--orphan{NC} flag to remove it:")
+            print(f"  {BLUE}python scripts/worktree-remove.py {issue_number} --orphan{NC}")
+        else:
+            # List available worktrees
+            worktree_list = run('git worktree list')
+            if worktree_list:
+                print("\nAvailable worktrees:")
+                for line in worktree_list.split('\n'):
+                    print(f"  {line}")
         sys.exit(0)
 
     print(f"  Worktree: {GREEN}{worktree_path}{NC}")
