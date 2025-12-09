@@ -201,7 +201,7 @@ test.describe('File Explorer', () => {
       await dialog.getByRole('button', { name: /delete/i }).click()
 
       // Assert - File should be removed from tree
-      await expect(page.getByText(fileName!)).not.toBeVisible()
+      await expect(page.getByRole('treeitem', { name: new RegExp(fileName!) })).not.toBeVisible()
     })
   })
 
