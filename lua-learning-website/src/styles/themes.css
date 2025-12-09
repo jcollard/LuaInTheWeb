@@ -1,0 +1,138 @@
+/**
+ * Theme CSS Variables
+ *
+ * This file defines CSS custom properties for light and dark themes.
+ * Components should use these variables instead of hardcoded colors.
+ *
+ * Usage: var(--theme-bg-primary)
+ *
+ * Theme is controlled via data-theme attribute on :root (html element)
+ */
+
+/* Dark theme (default) */
+:root,
+:root[data-theme="dark"] {
+  /* Background colors */
+  --theme-bg-primary: #1e1e1e;
+  --theme-bg-secondary: #252526;
+  --theme-bg-tertiary: #333333;
+  --theme-bg-hover: #2a2d2e;
+  --theme-bg-active: #37373d;
+
+  /* Text colors */
+  --theme-text-primary: #cccccc;
+  --theme-text-secondary: #bbbbbb;
+  --theme-text-muted: #858585;
+  --theme-text-inverse: #1e1e1e;
+
+  /* Border colors */
+  --theme-border-primary: #252526;
+  --theme-border-secondary: #3c3c3c;
+  --theme-border-focus: #007acc;
+
+  /* Accent colors */
+  --theme-accent-primary: #007acc;
+  --theme-accent-hover: #1c8fd1;
+  --theme-accent-active: #0062a3;
+
+  /* Status colors */
+  --theme-success: #4ec9b0;
+  --theme-error: #f14c4c;
+  --theme-warning: #cca700;
+  --theme-info: #3794ff;
+
+  /* Interactive states */
+  --theme-indicator-active: #ffffff;
+  --theme-scrollbar-bg: #1e1e1e;
+  --theme-scrollbar-thumb: #424242;
+  --theme-scrollbar-thumb-hover: #4f4f4f;
+
+  /* Terminal specific */
+  --theme-terminal-bg: #1e1e1e;
+  --theme-terminal-text: #cccccc;
+  --theme-terminal-prompt: #4ec9b0;
+  --theme-terminal-output: #cccccc;
+  --theme-terminal-error: #f14c4c;
+  --theme-terminal-cursor: #ffffff;
+
+  /* Editor specific */
+  --theme-editor-bg: #1e1e1e;
+  --theme-editor-line-number: #858585;
+  --theme-editor-line-number-active: #cccccc;
+  --theme-editor-selection: #264f78;
+  --theme-editor-cursor: #ffffff;
+}
+
+/* Light theme */
+:root[data-theme="light"] {
+  /* Background colors */
+  --theme-bg-primary: #ffffff;
+  --theme-bg-secondary: #f3f3f3;
+  --theme-bg-tertiary: #e8e8e8;
+  --theme-bg-hover: #e8e8e8;
+  --theme-bg-active: #d4d4d4;
+
+  /* Text colors */
+  --theme-text-primary: #1e1e1e;
+  --theme-text-secondary: #3b3b3b;
+  --theme-text-muted: #6e6e6e;
+  --theme-text-inverse: #ffffff;
+
+  /* Border colors */
+  --theme-border-primary: #e0e0e0;
+  --theme-border-secondary: #c8c8c8;
+  --theme-border-focus: #0066b8;
+
+  /* Accent colors */
+  --theme-accent-primary: #0066b8;
+  --theme-accent-hover: #0078d4;
+  --theme-accent-active: #005a9e;
+
+  /* Status colors */
+  --theme-success: #107c10;
+  --theme-error: #d02020;
+  --theme-warning: #d18800;
+  --theme-info: #0066b8;
+
+  /* Interactive states */
+  --theme-indicator-active: #1e1e1e;
+  --theme-scrollbar-bg: #f3f3f3;
+  --theme-scrollbar-thumb: #c1c1c1;
+  --theme-scrollbar-thumb-hover: #929292;
+
+  /* Terminal specific */
+  --theme-terminal-bg: #ffffff;
+  --theme-terminal-text: #1e1e1e;
+  --theme-terminal-prompt: #107c10;
+  --theme-terminal-output: #1e1e1e;
+  --theme-terminal-error: #d02020;
+  --theme-terminal-cursor: #1e1e1e;
+
+  /* Editor specific */
+  --theme-editor-bg: #ffffff;
+  --theme-editor-line-number: #6e6e6e;
+  --theme-editor-line-number-active: #1e1e1e;
+  --theme-editor-selection: #add6ff;
+  --theme-editor-cursor: #1e1e1e;
+}
+
+/**
+ * Theme transition
+ *
+ * Apply smooth transitions when switching themes.
+ * This class is applied to elements that should animate theme changes.
+ */
+:root {
+  --theme-transition-duration: 200ms;
+  --theme-transition-timing: ease-in-out;
+}
+
+/* Base transition for all theme-affected properties */
+*,
+*::before,
+*::after {
+  transition:
+    background-color var(--theme-transition-duration) var(--theme-transition-timing),
+    border-color var(--theme-transition-duration) var(--theme-transition-timing),
+    color var(--theme-transition-duration) var(--theme-transition-timing);
+}
