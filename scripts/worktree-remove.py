@@ -18,6 +18,7 @@ Options:
 import subprocess
 import sys
 import re
+import shutil
 from pathlib import Path
 
 # ANSI colors
@@ -34,7 +35,9 @@ def run(cmd, capture=True, check=True):
         cmd,
         shell=True,
         capture_output=capture,
-        text=True
+        text=True,
+        encoding='utf-8',
+        errors='replace'
     )
     if check and result.returncode != 0:
         if result.stderr:
@@ -124,6 +127,17 @@ def main():
         # Try pruning if remove failed
         print(f"{YELLOW}Worktree remove failed, trying to prune...{NC}")
         run('git worktree prune')
+
+    # Clean up directory if it still exists (Windows often leaves directories behind)
+    worktree_dir = Path(worktree_path)
+    if worktree_dir.exists():
+        print(f"{YELLOW}Directory still exists, cleaning up...{NC}")
+        try:
+            shutil.rmtree(worktree_dir)
+            print(f"  {GREEN}Directory deleted{NC}")
+        except Exception as e:
+            print(f"  {RED}Failed to delete directory: {e}{NC}")
+            print(f"  {YELLOW}Please manually delete: {worktree_path}{NC}")
 
     # Delete the branch unless --keep-branch was specified
     if not keep_branch and branch_name:
