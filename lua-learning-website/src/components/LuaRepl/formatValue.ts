@@ -56,7 +56,7 @@ function __format_value(v, seen, depth)
       local line = info.linedefined or 0
 
       -- If source contains newlines or is too long, use abbreviated form
-      if source:find("\n") or #source > 40 then
+      if source:find("\\n") or #source > 40 then
         source = '[string "..."]'
       end
 
@@ -66,7 +66,8 @@ function __format_value(v, seen, depth)
 
   -- Handle threads (coroutines)
   if t == "thread" then
-    return "thread: " .. tostring(v):match("thread: (.+)") or tostring(v)
+    local threadId = tostring(v):match("thread: (.+)")
+    return "thread: " .. (threadId or tostring(v))
   end
 
   -- Handle userdata
@@ -75,7 +76,8 @@ function __format_value(v, seen, depth)
     if mt and mt.__tostring then
       return tostring(v)
     end
-    return "userdata: " .. tostring(v):match("userdata: (.+)") or tostring(v)
+    local userdataId = tostring(v):match("userdata: (.+)")
+    return "userdata: " .. (userdataId or tostring(v))
   end
 
   -- Handle tables
