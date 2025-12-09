@@ -8,3 +8,13 @@ __pycache__/
 
 # Local temp directory for scripts
 .tmp/
+
+# Screenshots from visual verification (prevent accidental commits)
+screenshots-review/
+*.png
+*.jpg
+*.jpeg
+!lua-learning-website/**/*.png
+!lua-learning-website/**/*.jpg
+!docs/**/*.png
+!docs/**/*.jpg

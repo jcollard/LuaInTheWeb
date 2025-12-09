@@ -80,6 +80,26 @@ python scripts/issue-review.py <number> --summary "<summary>" --test-plan "<test
 - Branch must match pattern `<number>-*`
 - Uses standardized commit message format
 
+**Visual Verification (automatic):**
+
+The review script automatically checks for a Visual Verification section in the issue body. If present, it will:
+
+1. Capture screenshots of specified routes using Playwright
+2. Post the screenshots as a comment on the PR
+3. Report any visual concerns (non-blocking)
+
+This is completely automatic and non-blocking - if screenshot capture fails or no Visual Verification section exists, the PR creation continues normally.
+
+To enable visual verification for an issue, add a section like:
+
+```markdown
+## Visual Verification
+- /editor - Editor page with welcome screen
+- /repl - REPL with prompt visible
+```
+
+See the workflow documentation for more details on the Visual Verification format.
+
 ---
 
 ## Step 2.5: Update EPIC.md (Sub-Issues Only)
