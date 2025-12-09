@@ -24,7 +24,7 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 | #61 | Theme core layout components (sidebar, panels, tabs) | ✅ Complete | 61-theme-core-layout-components | Merged PR #84 |
 | #62 | Theme terminal and REPL components | ✅ Complete | 62-theme-terminal-and-repl-components | Merged PR #89 |
 | #63 | Integrate Monaco Editor theme switching | ✅ Complete | 63-integrate-monaco-editor-theme-switching | Merged PR #94 |
-| #64 | Add theme switcher UI control | ⏳ Pending | - | - |
+| #64 | Add theme switcher UI control | 🔄 In Progress | 64-add-theme-switcher-ui-control | - |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -65,6 +65,7 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 - PR #93 created for #63, targeting epic-58 branch
 - PR #94 merged, #63 complete
 - Tech debt issues created: #95 (useTheme mock), #96 (E2E timeouts)
+- Started work on #64: Add theme switcher UI control
 
 ## Key Files
 
@@ -93,6 +94,9 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 - `src/components/BottomPanel/BottomPanel.module.css` - Themed bottom panel terminal output styles
 - `e2e/theme-terminal.spec.ts` - E2E tests for terminal theme colors
 - `e2e/theme-editor.spec.ts` - E2E tests for Monaco editor theme switching
+- `src/components/ThemeToggle/ThemeToggle.tsx` - Theme toggle button component
+- `src/components/ThemeToggle/ThemeToggle.module.css` - Theme toggle button styles
+- `e2e/theme-toggle.spec.ts` - E2E tests for theme toggle UI
 
 ## Open Questions
 

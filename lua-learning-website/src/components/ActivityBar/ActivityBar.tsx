@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import styles from './ActivityBar.module.css'
 import type { ActivityBarProps } from './types'
 import type { ActivityPanelType } from '../IDEContext/types'
+import { ThemeToggle } from '../ThemeToggle'
 
 // SVG icons for the activity bar
 const ExplorerIcon = () => (
@@ -80,6 +81,9 @@ export function ActivityBar({
             </button>
           )
         })}
+      </div>
+      <div className={styles.bottom}>
+        <ThemeToggle className={styles.item} />
       </div>
     </nav>
   )
