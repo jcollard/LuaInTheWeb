@@ -117,39 +117,83 @@ describe('useLuaRepl', () => {
       expect(mockDoString).not.toHaveBeenCalledWith('print("test")')
     })
 
-    // Cycle 7: Statement fails, fallback to expression evaluation
+    // Cycle 7: Statement fails, fallback to expression evaluation with formatting
     it('should fallback to expression evaluation when statement fails', async () => {
       // Arrange
       const onOutput = vi.fn()
       const { result } = renderHook(() => useLuaRepl({ onOutput }))
       await waitFor(() => expect(result.current.isReady).toBe(true))
 
-      // First call (statement) fails, second call (expression) returns value
+      // First call (statement) fails, second call formats and returns result
       mockDoString
         .mockRejectedValueOnce(new Error('syntax error'))
-        .mockResolvedValueOnce(42)
+        .mockResolvedValueOnce('2') // formatter returns formatted string directly
 
       // Act
       await act(async () => {
         await result.current.executeCode('1 + 1')
       })
 
-      // Assert - should have tried as expression
-      expect(mockDoString).toHaveBeenCalledWith('return 1 + 1')
-      expect(onOutput).toHaveBeenCalledWith('42')
+      // Assert - should format expression directly in Lua
+      expect(mockDoString).toHaveBeenCalledWith('return __format_value((1 + 1))')
+      expect(onOutput).toHaveBeenCalledWith('2')
     })
 
-    // Cycle 8: Expression evaluation returns null (no output)
-    it('should not output when expression returns null', async () => {
+    // Cycle 7b: Expression returns formatted function string
+    it('should format function values using Lua formatter', async () => {
       // Arrange
       const onOutput = vi.fn()
       const { result } = renderHook(() => useLuaRepl({ onOutput }))
       await waitFor(() => expect(result.current.isReady).toBe(true))
 
-      // First call fails, second returns null
+      // First call (statement) fails, second call returns formatted function
       mockDoString
         .mockRejectedValueOnce(new Error('syntax error'))
-        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce('function(arg1, arg2) [string "..."]:1]')
+
+      // Act
+      await act(async () => {
+        await result.current.executeCode('myFunc')
+      })
+
+      // Assert - formatter wraps the expression directly
+      expect(mockDoString).toHaveBeenCalledWith('return __format_value((myFunc))')
+      expect(onOutput).toHaveBeenCalledWith('function(arg1, arg2) [string "..."]:1]')
+    })
+
+    // Cycle 7c: Expression returns formatted table string
+    it('should format table values using Lua formatter', async () => {
+      // Arrange
+      const onOutput = vi.fn()
+      const { result } = renderHook(() => useLuaRepl({ onOutput }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // First call (statement) fails, second call returns formatted table
+      mockDoString
+        .mockRejectedValueOnce(new Error('syntax error'))
+        .mockResolvedValueOnce('{a = 1, b = 2}')
+
+      // Act
+      await act(async () => {
+        await result.current.executeCode('{a = 1, b = 2}')
+      })
+
+      // Assert - formatter wraps the expression directly
+      expect(mockDoString).toHaveBeenCalledWith('return __format_value(({a = 1, b = 2}))')
+      expect(onOutput).toHaveBeenCalledWith('{a = 1, b = 2}')
+    })
+
+    // Cycle 8: Expression evaluation returns nil (no output)
+    it('should not output when expression returns nil', async () => {
+      // Arrange
+      const onOutput = vi.fn()
+      const { result } = renderHook(() => useLuaRepl({ onOutput }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // First call fails, second returns 'nil' string from formatter
+      mockDoString
+        .mockRejectedValueOnce(new Error('syntax error'))
+        .mockResolvedValueOnce('nil')
 
       // Act
       await act(async () => {
