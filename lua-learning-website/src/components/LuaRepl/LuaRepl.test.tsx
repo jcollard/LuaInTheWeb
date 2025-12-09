@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { vi } from 'vitest'
 
 // Mock BashTerminal since it uses xterm which doesn't work in jsdom
-vi.mock('./BashTerminal', () => ({
+vi.mock('../BashTerminal', () => ({
   default: vi.fn().mockImplementation(({ embedded }) => (
     <div data-testid="bash-terminal" data-embedded={embedded}>
       BashTerminal Mock
