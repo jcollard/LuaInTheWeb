@@ -305,14 +305,14 @@ Run `/code-review` to see full test results and fix issues before merging.
 
 ### 8d. Merge the PR
 
-Merge the PR using squash merge (combines all commits into one):
+Merge the PR using regular merge (preserves commit history for better conflict detection):
 
 ```bash
-gh pr merge <number> --squash --delete-branch
+gh pr merge <number> --merge --delete-branch
 ```
 
 **Merge options:**
-- `--squash`: Combines all commits into a single commit (cleaner history)
+- `--merge`: Creates a merge commit preserving commit history (better conflict detection)
 - `--delete-branch`: Removes the feature branch after merge
 
 ### 8d.5. Update EPIC.md (Sub-Issues Only)
@@ -529,7 +529,7 @@ If no worktree found, the script reports this and exits cleanly.
 
 **Title**: <title>
 **Branch**: <headRefName> → main
-**Merge Type**: Squash merge
+**Merge Type**: Regular merge
 
 ### Tech Debt Issues Created & Added to Project Board
 <If any:>
@@ -560,7 +560,7 @@ If no worktree found, the script reports this and exits cleanly.
 
 **Title**: <title>
 **Branch**: <headRefName> → epic-<epic-number>
-**Merge Type**: Squash merge
+**Merge Type**: Regular merge
 
 ### Epic Progress
 **Epic #<epic-number>**: <epic-title>
@@ -795,7 +795,7 @@ Found: Fixes #7
 - Branch up to date: ✅
 
 ### Merging...
-✅ PR #27 merged via squash merge
+✅ PR #27 merged via regular merge
 ✅ Branch 7-tech-debt-flaky-e2e-test deleted
 
 ### Tech Debt Identified
@@ -826,7 +826,7 @@ User types: `yes`
 
 **Title**: Fix flaky E2E test: EmbeddableEditor renders Monaco editor
 **Branch**: 7-tech-debt-flaky-e2e-test → main
-**Merge Type**: Squash merge
+**Merge Type**: Regular merge
 
 ### Tech Debt Issues Created & Added to Project Board
 - #32: [Tech Debt] Add comment explaining 30000ms timeout choice
