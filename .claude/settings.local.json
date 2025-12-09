@@ -66,7 +66,8 @@
       "Bash(node scripts/jq.js:*)",
       "Bash(python scripts/worktree-create.py:*)",
       "Bash(python scripts/worktree-remove.py:*)",
-      "Bash(python scripts/issue-review.py:*)"
+      "Bash(python scripts/issue-review.py:*)",
+      "Bash(python scripts/update-pr.py:*)"
     ],
     "deny": [
       "Bash(npm run dev)",

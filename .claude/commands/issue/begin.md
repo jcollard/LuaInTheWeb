@@ -292,8 +292,22 @@ npm run test:mutation:scope "src/components/AffectedComponent/**"
 **IMPORTANT**: After completing ALL implementation tasks and passing the completion checklist above, **automatically run the review script**:
 
 ```bash
-python scripts/issue-review.py <number> --summary "<summary from completed tasks>" --test-plan "<how it was tested>"
+# Write summary and test plan to SYSTEM temp directory (NOT repo directory!)
+# Use absolute paths to avoid committing temp files:
+#   - Unix/Mac: /tmp/summary.txt, /tmp/test-plan.txt
+#   - Windows: %TEMP%\summary.txt or C:\Users\<user>\AppData\Local\Temp\summary.txt
+
+# Example (Unix/Mac):
+python scripts/issue-review.py <number> --summary-file /tmp/summary.txt --test-plan-file /tmp/test-plan.txt
+
+# Example (Windows - use absolute path):
+python scripts/issue-review.py <number> --summary-file C:\Users\User\AppData\Local\Temp\summary.txt --test-plan-file C:\Users\User\AppData\Local\Temp\test-plan.txt
+
+# Or use inline arguments (may have shell escaping issues):
+python scripts/issue-review.py <number> --summary "summary text" --test-plan "test plan"
 ```
+
+**WARNING**: Do NOT create temp files in the repository directory - they will be committed by `git add -A`.
 
 This script is **auto-approved** and will:
 1. Validate branch matches issue number
@@ -320,3 +334,30 @@ After PR is created, output the PR URL and suggest next steps:
 - Run `/pr-review <number>` for code review
 - Address any feedback
 - Merge when approved
+
+---
+
+## Step 7: Updating an Existing PR (Rework)
+
+If changes are requested after PR creation, use `update-pr.py` to add commits:
+
+```bash
+# Add additional commits to the PR (runs checks by default)
+python scripts/update-pr.py <pr-number> commit --message "fix: Address review feedback"
+
+# Or use file-based message (recommended for agents)
+python scripts/update-pr.py <pr-number> commit --message-file /tmp/commit-msg.txt
+
+# Skip checks if needed (not recommended)
+python scripts/update-pr.py <pr-number> commit --message "fix: Quick typo fix" --skip-checks
+
+# Update PR description
+python scripts/update-pr.py <pr-number> update-body --body "Updated description"
+python scripts/update-pr.py <pr-number> update-body --body-file /tmp/pr-body.txt
+
+# Add a comment to the PR
+python scripts/update-pr.py <pr-number> comment --body "Ready for re-review"
+python scripts/update-pr.py <pr-number> comment --body-file /tmp/comment.txt
+```
+
+**Note**: Use SYSTEM temp directory for file-based inputs (see warning above).
