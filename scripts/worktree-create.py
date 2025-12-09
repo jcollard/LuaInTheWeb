@@ -10,6 +10,7 @@ This script:
 3. Creates a worktree at ../LuaInTheWeb-issue-<number>
 4. Installs npm dependencies
 5. Seeds mutation test cache from main worktree
+6. Updates issue status to "In Progress" in GitHub Project
 """
 
 import subprocess
@@ -17,6 +18,7 @@ import sys
 import os
 import re
 import shutil
+import json
 from pathlib import Path
 
 # ANSI colors
@@ -55,6 +57,99 @@ def slugify(title):
     slug = slug.strip('-')
     # Truncate to 50 chars
     return slug[:50]
+
+
+def update_project_status(issue_number):
+    """Update issue status to 'In Progress' in GitHub Project."""
+    # Project configuration
+    PROJECT_NUMBER = 3
+    PROJECT_OWNER = "jcollard"
+    STATUS_FIELD_ID = "PVTSSF_lADOADXapM4BKKH8zgfZwAQ"  # Status field
+    IN_PROGRESS_OPTION_ID = "47fc9ee4"  # "In Progress" option
+
+    # Get project items
+    items_json = run(
+        f'gh project item-list {PROJECT_NUMBER} --owner {PROJECT_OWNER} --format json --limit 100',
+        check=False
+    )
+
+    if not items_json:
+        return False, "Could not fetch project items"
+
+    try:
+        data = json.loads(items_json)
+        items = data.get('items', [])
+    except json.JSONDecodeError:
+        return False, "Invalid JSON from project"
+
+    # Find the item for this issue
+    item_id = None
+    for item in items:
+        content = item.get('content', {})
+        if content.get('number') == int(issue_number):
+            item_id = item.get('id')
+            break
+
+    if not item_id:
+        # Issue not in project, try to add it first
+        add_result = run(
+            f'gh project item-add {PROJECT_NUMBER} --owner {PROJECT_OWNER} '
+            f'--url "https://github.com/{PROJECT_OWNER}/LuaInTheWeb/issues/{issue_number}"',
+            check=False
+        )
+        if add_result is None:
+            return False, "Issue not in project and could not add it"
+
+        # Fetch items again to get the new item ID
+        items_json = run(
+            f'gh project item-list {PROJECT_NUMBER} --owner {PROJECT_OWNER} --format json --limit 100',
+            check=False
+        )
+        if items_json:
+            try:
+                data = json.loads(items_json)
+                for item in data.get('items', []):
+                    if item.get('content', {}).get('number') == int(issue_number):
+                        item_id = item.get('id')
+                        break
+            except json.JSONDecodeError:
+                pass
+
+    if not item_id:
+        return False, "Could not find project item ID"
+
+    # Update the status field
+    # Get project ID first
+    project_json = run(
+        f'gh project list --owner {PROJECT_OWNER} --format json',
+        check=False
+    )
+
+    project_id = None
+    if project_json:
+        try:
+            projects = json.loads(project_json)
+            for proj in projects.get('projects', []):
+                if proj.get('number') == PROJECT_NUMBER:
+                    project_id = proj.get('id')
+                    break
+        except json.JSONDecodeError:
+            pass
+
+    if not project_id:
+        return False, "Could not find project ID"
+
+    # Update the status
+    update_result = run(
+        f'gh project item-edit --project-id {project_id} --id {item_id} '
+        f'--field-id {STATUS_FIELD_ID} --single-select-option-id {IN_PROGRESS_OPTION_ID}',
+        check=False
+    )
+
+    if update_result is None:
+        return False, "Failed to update status"
+
+    return True, "Status updated to In Progress"
 
 
 def main():
@@ -142,6 +237,14 @@ def main():
         print(f"  {GREEN}Cache seeded from main worktree{NC}")
     else:
         print(f"  {YELLOW}No mutation cache found in main worktree{NC}")
+
+    # Update project status to "In Progress"
+    print(f"{BLUE}Updating project status...{NC}")
+    success, message = update_project_status(issue_number)
+    if success:
+        print(f"  {GREEN}Issue moved to In Progress{NC}")
+    else:
+        print(f"  {YELLOW}Could not update status: {message}{NC}")
 
     # Success message
     print()

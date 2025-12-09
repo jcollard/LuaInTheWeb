@@ -96,6 +96,7 @@ The script handles:
 4. Creating the worktree at `../LuaInTheWeb-issue-<n>`
 5. Installing npm dependencies
 6. Seeding mutation test cache from main
+7. Updating issue status to "In Progress" in GitHub Project
 
 If the worktree already exists, the script reports where it is.
 

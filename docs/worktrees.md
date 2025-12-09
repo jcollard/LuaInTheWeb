@@ -227,6 +227,7 @@ python scripts/worktree-create.py <issue-number>
 4. Creates worktree at `../LuaInTheWeb-issue-<number>`
 5. Runs `npm install` in the worktree
 6. Copies mutation test cache from main worktree
+7. Updates issue status to "In Progress" in GitHub Project
 
 ### worktree-remove.py
 
