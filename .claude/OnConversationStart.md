@@ -64,11 +64,13 @@ All work follows: **Plan → Approve → Implement → Review → Accept/Reject*
 
 ### Workflow by Complexity
 
-| Complexity | Tasks | Flow |
-|------------|-------|------|
-| Simple | 1-5 | `/issue <n> begin` → brief plan → approve → work |
-| Medium | 6-10 | `/issue <n> begin` → detailed plan → approve → work |
-| Complex | 10+ | Split into sub-issues (epic pattern) |
+| Complexity | Tasks | Command | Flow |
+|------------|-------|---------|------|
+| Simple | 1-5 | `/issue <n> begin` | brief plan → approve → work |
+| Medium | 6-10 | `/issue <n> begin` | detailed plan → approve → work |
+| **Epic** | 10+ | `/epic <n> begin` | Has `## Sub-Issues` section |
+
+> ⚠️ **Epic Detection:** If issue body contains `## Sub-Issues`, use `/epic` not `/issue`
 
 ### Worktrees
 
@@ -148,10 +150,12 @@ npm run test:e2e             # Run E2E tests (Playwright)
 - `/pr-review <n> accept` - **Merge, close issue, create tech debt, remove worktree**
 - `/pr-review <n> reject "feedback"` - **Create rework tasks from feedback**
 
-### Epic Management (Complex Features 10+)
-- `/prepare-plan` - Prepare epic phase for implementation
-- `/review-plan` - Review epic phase compliance
-- `/begin` - Create task list and start
+### Epic Management (Issues with `## Sub-Issues` section)
+- `/epic <n>` - View epic overview and progress
+- `/epic <n> begin` - Start epic: create worktree + tracking
+- `/epic <n> next` - Start next sub-issue with context
+- `/epic <n> status` - Show dependency graph
+- `/epic <n> review` - Create PR when all sub-issues complete
 - `/milestone` - E2E checkpoint
 
 ### Development Guidelines
@@ -162,6 +166,8 @@ npm run test:e2e             # Run E2E tests (Playwright)
 - `/code-review` - Code review checklist
 
 ## Conventions
+
+- **Branch Policy**: Never commit directly to main. All changes must go through branches and PRs.
 
 - **Python**: Always use `python` (not `python3`) for scripts
 - **Timestamps**: When updating dates in files, use `date` command to get current timestamp

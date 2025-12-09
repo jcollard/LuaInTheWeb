@@ -49,31 +49,29 @@ Parse and report:
 
 Always include: [📋 View Project Board](https://github.com/users/jcollard/projects/3)
 
-## 3. Roadmap Status (if applicable)
+## 3. Epic Detection
 
-### Find Active Epic(s)
+### Find Active Epics (GitHub Issues)
 
-```bash
-# List epic directories
-ls -d roadmap/*/epic.md 2>/dev/null
-```
-
-For each epic, read and report:
-- Epic name and overall status
-- Current active phase (status = "Approved" or "In Progress")
-- Completion percentage (completed phases / total phases)
-
-### Check for Pending Reviews
+Check for epic issues (issues with `## Sub-Issues` in body):
 
 ```bash
-# Find any review files
-ls roadmap/*/reviews/*.json 2>/dev/null
+# Get all open issues and check for epics
+gh issue list --state open --json number,title,body --limit 50
 ```
 
-If review files exist:
-- Report review timestamp and branch
-- Check if stale (compare commits)
-- Suggest `/accept-review` if valid
+For each issue, check if body contains `## Sub-Issues`. If so, it's an epic.
+
+**Report active epics:**
+```
+### Active Epics
+
+| # | Title | Status | Sub-Issues |
+|---|-------|--------|------------|
+| #<n> | <title> | <In Progress/Todo> | <complete>/<total> |
+
+**To work on an epic:** `/epic <n> begin` or `/epic <n> next`
+```
 
 ## 4. Build Status Report
 
@@ -111,10 +109,6 @@ Output a formatted status block:
 **High Priority (P0-P1):**
 - #<issue>: <title>
 
-### Active Roadmap (if applicable)
-- **Epic**: <epic-name>
-- **Current Phase**: <phase-name> (<status>)
-
 ### Recent Tech Debt
 - #<issue>: <title>
 ```
@@ -126,11 +120,12 @@ Based on the state, suggest ONE clear next action:
 | State | Suggestion |
 |-------|------------|
 | In issue worktree, issue in progress | "Continue working on #<issue>. Run `/issue <n> review` when ready" |
+| In epic worktree | "Continue epic work. Run `/epic <n> next` for next sub-issue or `/epic <n> status` for progress" |
 | In main worktree, items "In Progress" | "Issue #<n> is in progress. Switch to its worktree or continue here" |
-| High priority items in Todo | "High priority item needs attention: #<issue>. Run `/worktree create <n>` for parallel work or `/issue <n> begin`" |
-| Pending review exists (fresh) | "Run `/accept-review` to mark phases complete" |
-| Phase status = "Approved" | "Run `/begin` to start implementing <phase-name>" |
-| No work in progress | "Pick next item from project board. Run `/issue next` for auto-select or `/worktree create <n>`" |
+| Active epic exists, not started | "Epic #<n> is available. Run `/epic <n> begin` to start" |
+| High priority items in Todo | "High priority item needs attention: #<issue>. Run `/issue <n> begin`" |
+| High priority epic in Todo | "Epic #<n> is high priority. Run `/epic <n> begin` to start" |
+| No work in progress | "Pick next item from project board. Run `/issue next` for auto-select" |
 | Dirty working tree | "You have uncommitted changes. Review and commit or stash" |
 | Behind main | "Your branch is behind main. Consider rebasing" |
 | Multiple worktrees active | "You have <n> active worktrees. Run `/worktree status` to see their state" |
@@ -162,13 +157,12 @@ gh issue list --label "tech-debt" --limit 5 --json number,title
 | LuaInTheWeb-issue-42 | 42-add-dark-mode | #42 | 2 files modified |
 | LuaInTheWeb-issue-15 | 15-fix-repl-bug | #15 | Clean |
 
-### Active Epic: IDE-Style Code Editor
-- **Status**: In Progress
-- **Progress**: 5/6 phases complete (83%)
-- **Current Phase**: Phase 5 - Explorer UX Polish (Approved)
+### Active Epics
+| # | Title | Status | Sub-Issues |
+|---|-------|--------|------------|
+| #58 | Add light/dark mode theme switcher | Todo | 0/5 |
 
-### Pending Reviews
-None
+**To work on an epic:** `/epic 58 begin` or `/epic 58 next`
 
 ### Open Tech Debt (5 most recent)
 - #8: BashTerminal.tsx - Add unit tests
@@ -181,7 +175,5 @@ None
 
 ## Suggested Next Action
 
-You have 2 active worktrees. Phase 5 (Explorer UX Polish) is **Approved** and ready to implement.
-
-Run `/begin` to create a task list and start implementation, or `/worktree status` to check active worktrees.
+Epic #58 is available. Run `/epic 58 begin` to start, or `/worktree status` to check active worktrees.
 ```

@@ -28,6 +28,25 @@ All work is tracked in the [GitHub Project Board](https://github.com/users/jcoll
 
 ---
 
+## Branch Policy
+
+> **Never commit directly to main.** All changes must go through branches and pull requests.
+
+This policy ensures:
+- **Code review**: Every change is reviewed before merging
+- **Issue tracking**: All work is linked to issues for traceability
+- **Audit trail**: Complete history of decisions and discussions
+- **CI validation**: All changes pass automated checks before merge
+
+**Required workflow:**
+1. All work must be associated with an issue
+2. Create a feature branch (via worktree or manually)
+3. Make changes in the feature branch
+4. Create a pull request for review
+5. Merge only after approval and CI passes
+
+---
+
 ## Unified Workflow
 
 All work follows the same flow, with complexity determining depth:
@@ -166,31 +185,49 @@ This command:
 
 ---
 
+## Issue Types: Regular vs Epic
+
+**IMPORTANT:** Before starting work, identify the issue type:
+
+| Issue Type | How to Identify | Command to Use |
+|------------|-----------------|----------------|
+| **Regular Issue** | No `## Sub-Issues` section | `/issue <n>` |
+| **Epic** | Has `## Sub-Issues` section with linked issues | `/epic <n>` |
+
+> ℹ️ **Using `/issue` on an epic will auto-redirect** to `/epic` with guidance.
+
+---
+
 ## Epics (Complex Features)
 
 For work requiring 10+ tasks or multiple related issues, use an **epic**:
 
-### Epic Structure
+### Epic Detection
 
-```
-roadmap/
-└── {epic-name}/
-    ├── epic.md           # Epic overview, links to sub-issues
-    ├── NNN-phase.md      # Phase plans (optional, for very large epics)
-    └── reviews/          # Code review records
+An issue is an **epic** if its body contains:
+```markdown
+## Sub-Issues
+- #60 - First sub-issue
+- #61 - Second sub-issue
 ```
 
 ### Epic Workflow
 
-1. Create parent GitHub issue with `epic` label
-2. Break into sub-issues, each linked to parent
-3. Each sub-issue follows the standard workflow
-4. Epic tracks overall progress
+```
+/epic <n>           ← View epic overview & progress
+/epic <n> begin     ← Start epic: create worktree + EPIC.md tracking
+/epic <n> next      ← Start next sub-issue with epic context
+/epic <n> status    ← Show dependency graph & progress
+/epic <n> review    ← Create PR when all sub-issues complete
+```
 
-| Command | Purpose |
-|---------|---------|
-| `/prepare-plan` | Prepare epic phase for implementation |
-| `/review-plan` | Review epic phase compliance |
+**Flow:**
+1. `/epic <n> begin` - Creates epic worktree and tracking file
+2. `/epic <n> next` - Starts first/next sub-issue (creates sub-worktree)
+3. Work on sub-issue following standard TDD workflow
+4. `/issue <n> review` - PR for sub-issue
+5. Repeat steps 2-4 for each sub-issue
+6. `/epic <n> review` - Final PR when all sub-issues merged
 
 ---
 
@@ -275,13 +312,21 @@ This prevents:
 | I want to... | Command |
 |--------------|---------|
 | See project status | `/status` |
+| **Regular Issues** | |
 | Start next available issue | `/issue next` |
 | Start a specific issue | `/issue <n> begin` |
 | Evaluate an unclear issue | `/issue <n> eval` |
 | Create PR for my work | `/issue <n> review` |
+| **Epics (multi-issue features)** | |
+| View epic progress | `/epic <n>` |
+| Start an epic | `/epic <n> begin` |
+| Work on next sub-issue | `/epic <n> next` |
+| Epic dependency status | `/epic <n> status` |
+| **PR Management** | |
 | Review a PR | `/pr-review <n>` |
 | Merge an approved PR | `/pr-review <n> accept` |
 | Reject PR with feedback | `/pr-review <n> reject "feedback"` |
+| **Other** | |
 | See full workflow | `/workflow` |
 | See TDD guidelines | `/tdd` |
 | See mutation testing guide | `/mutation-test` |
@@ -291,7 +336,7 @@ This prevents:
 
 ## Command Reference
 
-### Issue Management
+### Issue Management (Regular Issues)
 - `/issue <n>` - View issue details and complexity
 - `/issue <n> eval` - Evaluate and define unclear issue
 - `/issue <n> begin` - Plan, approve, then start work
@@ -299,15 +344,20 @@ This prevents:
 - `/issue next` - Auto-select next issue
 - `/issue next <type>` - Auto-select by type
 
+### Epic Management (Multi-Issue Features)
+
+> Use `/epic` for issues with `## Sub-Issues` section
+
+- `/epic <n>` - View epic overview and progress
+- `/epic <n> begin` - Start epic: create worktree + tracking
+- `/epic <n> next` - Start next sub-issue with context
+- `/epic <n> status` - Show dependency graph and progress
+- `/epic <n> review` - Create PR when all sub-issues complete
+
 ### PR Management
 - `/pr-review <n>` - Review PR
 - `/pr-review <n> accept` - Merge, cleanup, create tech debt
 - `/pr-review <n> reject "feedback"` - Create rework tasks
-
-### Epic Management (Complex Features)
-- `/prepare-plan` - Prepare epic phase
-- `/review-plan` - Review epic phase
-- `/begin` - Start epic phase implementation
 
 ### Worktree Management
 - `/worktree list` - List worktrees
