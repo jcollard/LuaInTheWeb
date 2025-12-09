@@ -210,27 +210,6 @@ An issue is an **epic** if its body contains:
 5. Repeat steps 2-4 for each sub-issue
 6. `/epic <n> review` - Final PR when all sub-issues merged
 
-### Epic Structure
-
-```
-roadmap/
-└── {epic-name}/
-    ├── EPIC.md           # Epic tracking (auto-generated)
-    ├── NNN-phase.md      # Phase plans (optional, for very large epics)
-    └── reviews/          # Code review records
-```
-
-### Legacy Commands (Deprecated)
-
-> ⚠️ These commands are from an older phase-based epic system stored in `roadmap/` directories.
-> **Prefer using `/epic` commands** for new epics based on GitHub issue sub-issues.
-
-| Command | Purpose | Status |
-|---------|---------|--------|
-| `/prepare-plan` | Prepare epic phase for implementation | Deprecated |
-| `/review-plan` | Review epic phase compliance | Deprecated |
-| `/begin` | Start epic phase implementation | Deprecated |
-
 ---
 
 ## Worktree Management
@@ -355,11 +334,6 @@ This prevents:
 - `/epic <n> next` - Start next sub-issue with context
 - `/epic <n> status` - Show dependency graph and progress
 - `/epic <n> review` - Create PR when all sub-issues complete
-
-**Legacy commands (deprecated - use `/epic` instead):**
-- `/prepare-plan` - Prepare epic phase (deprecated)
-- `/review-plan` - Review epic phase (deprecated)
-- `/begin` - Start epic phase implementation (deprecated)
 
 ### PR Management
 - `/pr-review <n>` - Review PR

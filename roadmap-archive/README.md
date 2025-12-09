@@ -1,9 +1,11 @@
-# Roadmap
+# Roadmap Archive
 
-> **Note**: Issue tracking and prioritization has moved to [GitHub Projects](https://github.com/users/jcollard/projects/3).
-> This directory now contains **detailed implementation plans** for complex features that require more planning than a GitHub issue provides.
+> **ARCHIVED**: This directory contains a completed epic from a legacy phase-based workflow.
+>
+> **Current workflow**: Use GitHub Issues with `## Sub-Issues` sections and the `/epic` command.
+> See [.claude/workflow.md](../.claude/workflow.md) for the current workflow.
 
-This directory contains implementation plans for features and improvements.
+This archive preserves the IDE-Style Code Editor epic completed in December 2025.
 
 ## Directory Structure
 
