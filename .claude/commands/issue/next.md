@@ -109,11 +109,36 @@ For each issue (in priority order), check if it needs clarification by looking f
 
 ---
 
-## Step 5: Select First Clear Issue
+## Step 5: Select First Clear Issue (Skip Epics)
 
-Find the first issue (by priority order) that doesn't have clarity blockers.
+Find the first issue (by priority order) that:
+1. Doesn't have clarity blockers
+2. **Is NOT an epic** (no `## Sub-Issues` section in body)
 
-If all issues need clarification:
+**Epic Detection:**
+For each candidate issue, check if the body contains `## Sub-Issues`:
+
+```bash
+gh issue view <number> --json body | node scripts/jq.js ".body"
+```
+
+If the body contains `## Sub-Issues`, **skip this issue** and add it to the "Epics Found" list. Continue to the next candidate.
+
+If epics were skipped during selection, include them in the output:
+
+```
+## Epics Skipped
+
+The following epics were found but skipped (use `/epic` command instead):
+
+| # | Title | Priority |
+|---|-------|----------|
+| <number> | <title> | <priority> |
+
+**To work on an epic:** `/epic <number> begin`
+```
+
+If all non-epic issues need clarification:
 
 ```
 ## All Issues Need Clarification
@@ -125,8 +150,16 @@ Found <count> issues in "Todo" status, but all need clarification before work ca
 | <number> | <title> | <priority> | <reason> |
 ...
 
+<If epics were found:>
+### Epics Available
+These epics are ready to start (use `/epic` command):
+| # | Title | Priority |
+|---|-------|----------|
+| <number> | <title> | <priority> |
+
 **Options:**
-- Pick one to clarify: `/issue <number>` to view details
+- Start an epic: `/epic <number> begin`
+- Pick a regular issue to clarify: `/issue <number>` to view details
 - Add clarification to an issue on GitHub, then run `/issue next` again
 - Move unclear issues to "Concept" status in the project board
 ```

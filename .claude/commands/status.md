@@ -49,16 +49,38 @@ Parse and report:
 
 Always include: [📋 View Project Board](https://github.com/users/jcollard/projects/3)
 
-## 3. Roadmap Status (if applicable)
+## 3. Epic Detection
 
-### Find Active Epic(s)
+### Find Active Epics (GitHub Issues)
+
+Check for epic issues (issues with `## Sub-Issues` in body):
 
 ```bash
-# List epic directories
+# Get all open issues and check for epics
+gh issue list --state open --json number,title,body --limit 50
+```
+
+For each issue, check if body contains `## Sub-Issues`. If so, it's an epic.
+
+**Report active epics:**
+```
+### Active Epics
+
+| # | Title | Status | Sub-Issues |
+|---|-------|--------|------------|
+| #<n> | <title> | <In Progress/Todo> | <complete>/<total> |
+
+**To work on an epic:** `/epic <n> begin` or `/epic <n> next`
+```
+
+### Find Roadmap Epics (Legacy)
+
+```bash
+# List epic directories (legacy phase-based approach)
 ls -d roadmap/*/epic.md 2>/dev/null
 ```
 
-For each epic, read and report:
+For each roadmap epic, read and report:
 - Epic name and overall status
 - Current active phase (status = "Approved" or "In Progress")
 - Completion percentage (completed phases / total phases)
@@ -126,11 +148,14 @@ Based on the state, suggest ONE clear next action:
 | State | Suggestion |
 |-------|------------|
 | In issue worktree, issue in progress | "Continue working on #<issue>. Run `/issue <n> review` when ready" |
+| In epic worktree | "Continue epic work. Run `/epic <n> next` for next sub-issue or `/epic <n> status` for progress" |
 | In main worktree, items "In Progress" | "Issue #<n> is in progress. Switch to its worktree or continue here" |
-| High priority items in Todo | "High priority item needs attention: #<issue>. Run `/worktree create <n>` for parallel work or `/issue <n> begin`" |
+| Active epic exists, not started | "Epic #<n> is available. Run `/epic <n> begin` to start" |
+| High priority items in Todo | "High priority item needs attention: #<issue>. Run `/issue <n> begin`" |
+| High priority epic in Todo | "Epic #<n> is high priority. Run `/epic <n> begin` to start" |
 | Pending review exists (fresh) | "Run `/accept-review` to mark phases complete" |
 | Phase status = "Approved" | "Run `/begin` to start implementing <phase-name>" |
-| No work in progress | "Pick next item from project board. Run `/issue next` for auto-select or `/worktree create <n>`" |
+| No work in progress | "Pick next item from project board. Run `/issue next` for auto-select" |
 | Dirty working tree | "You have uncommitted changes. Review and commit or stash" |
 | Behind main | "Your branch is behind main. Consider rebasing" |
 | Multiple worktrees active | "You have <n> active worktrees. Run `/worktree status` to see their state" |
