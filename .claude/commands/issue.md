@@ -112,27 +112,28 @@ If no subcommand provided (`/issue 13`), end with:
 
 If subcommand is "begin" (`/issue 13 begin`):
 
-### 5a. Check Worktree Context
+### 5a. Check Worktree Context and Create if Needed
 
-**FIRST**, determine if we're in a worktree and if the context is appropriate:
+**FIRST**, determine if we're in a worktree and handle accordingly:
 
 ```bash
 # Get current worktree path
 git rev-parse --show-toplevel
 
-# Check if this is a worktree (not the main repo)
-git rev-parse --git-common-dir
+# List all worktrees to determine context
+git worktree list
 ```
 
 **Worktree Detection Logic:**
 
 1. **In issue-specific worktree** (path contains `issue-<n>`):
-   - If `<n>` matches the requested issue: Proceed normally
-   - If `<n>` doesn't match: Warn and suggest using the correct worktree
+   - If `<n>` matches the requested issue: **Proceed to Step 5b** (continue normally)
+   - If `<n>` doesn't match: Warn and STOP
 
-2. **In main worktree** (primary repo):
-   - Suggest creating a worktree for parallel work (optional)
-   - Proceed with branch creation if user continues
+2. **In main worktree** (primary repo, path does NOT contain `issue-`):
+   - Check if worktree for this issue already exists
+   - If exists: Inform user and STOP (must open new session there)
+   - If not exists: Create worktree automatically, then inform user and STOP
 
 **If in wrong worktree:**
 
@@ -142,19 +143,114 @@ git rev-parse --git-common-dir
 You're in the worktree for issue #<current>, but trying to work on issue #<requested>.
 
 **Options:**
-- Switch to the correct worktree: `cd ../LuaInTheWeb-issue-<requested>`
-- Create a new worktree: `/worktree create <requested>`
-- Or proceed here anyway (not recommended for parallel work)
+- Open a new Claude Code session in the correct worktree:
+  ```bash
+  cd <path-to-correct-worktree>
+  claude
+  ```
+- Or switch to main first: `cd ../LuaInTheWeb`
 ```
 
-**If in main worktree (optional suggestion):**
+Then STOP - do not proceed further.
+
+**If in main worktree - check/create worktree:**
+
+#### Step 5a.1: Check if Worktree Exists
+
+```bash
+git worktree list | grep "issue-<number>"
+```
+
+#### Step 5a.2: If Worktree Exists
+
+Output:
 
 ```
-💡 **Tip**: For parallel development, consider using a worktree:
-   `/worktree create <number>` - then open a new Claude Code session there
+## Worktree Already Exists for Issue #<number>
 
-Continuing in main worktree...
+A worktree for this issue already exists at:
+**Path**: <worktree-path>
+
+### Next Steps
+
+Open a new Claude Code session in the worktree:
+```bash
+cd <worktree-path>
+claude
 ```
+
+Then run:
+```bash
+/issue <number> begin
+```
+```
+
+Then STOP - the user must open a new session in the worktree.
+
+#### Step 5a.3: If Worktree Does Not Exist - Create It
+
+Generate paths:
+```bash
+REPO_ROOT=$(git rev-parse --show-toplevel)
+REPO_NAME=$(basename "$REPO_ROOT")
+PARENT_DIR=$(dirname "$REPO_ROOT")
+WORKTREE_PATH="$PARENT_DIR/${REPO_NAME}-issue-<number>"
+```
+
+Fetch issue title for branch name:
+```bash
+gh issue view <number> --json title --jq '.title'
+```
+
+Create worktree with branch:
+```bash
+# Create worktree and branch linked to issue
+git worktree add "<worktree-path>" -b <number>-<issue-title-slug>
+```
+
+If the branch already exists:
+```bash
+# Use existing branch
+git worktree add "<worktree-path>" <branch-name>
+```
+
+Install dependencies:
+```bash
+cd "<worktree-path>/lua-learning-website" && npm install
+```
+
+Output:
+
+```
+## Worktree Created for Issue #<number>
+
+**Issue**: #<number> - <title>
+**Path**: <worktree-path>
+**Branch**: <branch-name>
+
+Dependencies installed ✓
+
+### Next Steps
+
+Open a new Claude Code session in the worktree:
+```bash
+cd <worktree-path>
+claude
+```
+
+Then run:
+```bash
+/issue <number> begin
+```
+
+**Note**: The worktree is ready with all dependencies. Open a new session there to begin work.
+```
+
+Then STOP - the user must open a new session in the worktree.
+
+---
+
+**IMPORTANT**: Steps 5b onwards only execute if already in the correct issue-specific worktree.
 
 ### 5b. Create Branch from Issue
 
@@ -610,10 +706,55 @@ The REPL component has several UX issues when embedded in the `/editor` IDE layo
 - Run `/issue 13 begin` to start working on this issue
 ```
 
-### Example: Starting Work
+### Example: Starting Work (from Main - Creates Worktree)
 
 ```
 /issue 13 begin
+
+## Checking Worktree Context...
+
+Current directory: C:\Users\User\git\jcollard\LuaInTheWeb (main worktree)
+Checking for existing worktree...
+
+No worktree found for issue #13. Creating one...
+
+Creating worktree at: C:\Users\User\git\jcollard\LuaInTheWeb-issue-13
+Creating branch: 13-repl-ux-issues-in-editor-context
+Installing dependencies...
+
+## Worktree Created for Issue #13
+
+**Issue**: #13 - REPL UX issues in /editor context
+**Path**: C:\Users\User\git\jcollard\LuaInTheWeb-issue-13
+**Branch**: 13-repl-ux-issues-in-editor-context
+
+Dependencies installed ✓
+
+### Next Steps
+
+Open a new Claude Code session in the worktree:
+```bash
+cd C:\Users\User\git\jcollard\LuaInTheWeb-issue-13
+claude
+```
+
+Then run:
+```bash
+/issue 13 begin
+```
+
+**Note**: The worktree is ready with all dependencies. Open a new session there to begin work.
+```
+
+### Example: Starting Work (from Worktree - Continues)
+
+```
+/issue 13 begin
+
+## Checking Worktree Context...
+
+Current directory: C:\Users\User\git\jcollard\LuaInTheWeb-issue-13 ✓
+Already in correct worktree for issue #13.
 
 ## Starting Issue #13: REPL UX issues
 
@@ -941,32 +1082,20 @@ When a clear issue is found:
 
 ### 7f. Begin Work on Selected Issue
 
-Automatically proceed to begin mode (same as `/issue <number> begin`):
+Automatically proceed to begin mode - **execute Step 5a** (Check Worktree Context and Create if Needed).
 
-1. Create and checkout branch:
-```bash
-gh issue develop <number> --checkout
-```
+This will:
+1. Check if worktree exists for this issue
+2. If not, create worktree automatically
+3. Instruct user to open new Claude Code session in worktree
+4. STOP
 
-2. Inject TDD context:
-```
-/tdd
-```
-
-3. Run complexity analysis and create task list (from Step 3 and Step 5)
-
-4. Output:
-```
-## Starting Issue #<number>: <title>
-
-### Branch Created
-Created and checked out branch: <branch-name>
-
-### Tasks
-[TodoWrite creates tasks based on issue body]
-
-Starting with task 1...
-```
+When user opens new session in worktree and runs `/issue <number> begin` again, Step 5b onwards will execute normally:
+- Create/checkout branch
+- Inject TDD context
+- Run complexity analysis
+- Create task list
+- Begin implementation
 
 ---
 
@@ -987,7 +1116,7 @@ You're currently on branch `18-cleanup-unused-exports` which is linked to issue 
 - Switch to main and run `/issue next` again to pick a new issue
 ```
 
-### When Issues Available (Any Type)
+### When Issues Available (Any Type) - From Main
 
 ```
 /issue next
@@ -1024,18 +1153,34 @@ Several API calls in `src/utils/api.ts` use deprecated endpoints...
 ✓ Issue has clear requirements
 ✓ No clarification labels
 
-## Starting Issue #15: Remove deprecated API calls
+## Checking Worktree Context...
 
-### Branch Created
-Created and checked out branch: 15-remove-deprecated-api-calls
+No worktree found for issue #15. Creating one...
 
-### Tasks
-1. [ ] Identify all deprecated API calls in src/utils/api.ts
-2. [ ] Update to new endpoints
-3. [ ] Add tests for updated calls
-4. [ ] Run mutation tests
+Creating worktree at: C:\Users\User\git\jcollard\LuaInTheWeb-issue-15
+Creating branch: 15-remove-deprecated-api-calls
+Installing dependencies...
 
-Starting with task 1...
+## Worktree Created for Issue #15
+
+**Issue**: #15 - Remove deprecated API calls
+**Path**: C:\Users\User\git\jcollard\LuaInTheWeb-issue-15
+**Branch**: 15-remove-deprecated-api-calls
+
+Dependencies installed ✓
+
+### Next Steps
+
+Open a new Claude Code session in the worktree:
+```bash
+cd C:\Users\User\git\jcollard\LuaInTheWeb-issue-15
+claude
+```
+
+Then run:
+```bash
+/issue 15 begin
+```
 ```
 
 ### With Type Filter
@@ -1076,15 +1221,28 @@ The input validation in the form component doesn't handle...
 ✓ Issue has clear requirements
 ✓ No clarification labels
 
-## Starting Issue #19: Fix input validation
+## Checking Worktree Context...
 
-### Branch Created
-Created and checked out branch: 19-fix-input-validation
+No worktree found for issue #19. Creating one...
 
-### Tasks
-1. [ ] Add validation for empty input
-2. [ ] Add validation for special characters
-3. [ ] Update tests
+## Worktree Created for Issue #19
 
-Starting with task 1...
+**Issue**: #19 - Fix input validation
+**Path**: C:\Users\User\git\jcollard\LuaInTheWeb-issue-19
+**Branch**: 19-fix-input-validation
+
+Dependencies installed ✓
+
+### Next Steps
+
+Open a new Claude Code session in the worktree:
+```bash
+cd C:\Users\User\git\jcollard\LuaInTheWeb-issue-19
+claude
+```
+
+Then run:
+```bash
+/issue 19 begin
+```
 ```
