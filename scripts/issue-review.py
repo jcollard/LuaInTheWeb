@@ -65,6 +65,95 @@ def get_issue_title(issue_number):
     return output if output else None
 
 
+def get_issue_body(issue_number):
+    """Fetch issue body from GitHub.
+
+    Args:
+        issue_number: The issue number to fetch
+
+    Returns:
+        The issue body as a string, or None if not found/empty.
+    """
+    output, _ = run(f'gh issue view {issue_number} --json body', check=False)
+    if not output:
+        return None
+
+    try:
+        data = json.loads(output)
+        body = data.get('body')
+        return body if body else None
+    except json.JSONDecodeError:
+        return None
+
+
+def detect_epic_parent(body):
+    """Detect if issue is a sub-issue of an epic.
+
+    Looks for epic markers in the issue body:
+    - "Part of #N"
+    - "Parent: #N"
+    - "Epic: #N"
+
+    Args:
+        body: The issue body text
+
+    Returns:
+        The epic issue number as a string, or None if not a sub-issue.
+    """
+    if not body:
+        return None
+
+    # Patterns to match epic markers (case-insensitive, flexible whitespace)
+    patterns = [
+        r'part\s+of\s+#\s*(\d+)',  # Part of #58
+        r'parent:\s*#\s*(\d+)',     # Parent: #58
+        r'epic:\s*#\s*(\d+)',       # Epic: #58
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, body, re.IGNORECASE)
+        if match:
+            return match.group(1)
+
+    return None
+
+
+def auto_detect_epic_base(body, user_base=None):
+    """Auto-detect the correct PR base branch for epic sub-issues.
+
+    Args:
+        body: The issue body text
+        user_base: User-provided --base argument (if any)
+
+    Returns:
+        Tuple of (base_branch, warning_message).
+        - base_branch: The branch to use as PR base (or None if no epic detected)
+        - warning_message: Warning if user_base conflicts (or None)
+    """
+    epic_number = detect_epic_parent(body)
+
+    if not epic_number:
+        # Not a sub-issue, use user-provided base or None (defaults to main)
+        return (user_base, None)
+
+    expected_base = f"epic-{epic_number}"
+
+    if user_base is None:
+        # Auto-set to epic branch
+        return (expected_base, None)
+
+    if user_base == expected_base:
+        # User provided correct base
+        return (expected_base, None)
+
+    # User provided conflicting base - warn and override
+    warning = (
+        f"Detected sub-issue of epic #{epic_number}. "
+        f"Overriding --base '{user_base}' with '{expected_base}'."
+    )
+    return (expected_base, warning)
+
+
 def create_commit(issue_number, issue_title):
     """Create a commit with standardized message."""
     # Sanitize issue title for commit message
@@ -314,6 +403,18 @@ def main():
         sys.exit(1)
 
     print(f"  Issue: {GREEN}#{issue_number} - {issue_title}{NC}")
+
+    # Step 4.5: Auto-detect epic sub-issue and set PR base
+    issue_body = get_issue_body(issue_number)
+    detected_base, base_warning = auto_detect_epic_base(issue_body, args['base'])
+
+    if base_warning:
+        print(f"  {YELLOW}Warning: {base_warning}{NC}")
+
+    if detected_base:
+        args['base'] = detected_base
+        print(f"  PR Base: {GREEN}{detected_base}{NC}")
+
     print()
 
     # Step 5: Run checks (unless skipped)
