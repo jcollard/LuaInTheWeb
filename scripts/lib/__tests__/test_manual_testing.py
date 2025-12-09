@@ -59,6 +59,24 @@ class TestCategorizeFile(unittest.TestCase):
         """Unknown file types should return None."""
         self.assertIsNone(categorize_file('random.xyz'))
 
+    def test_pattern_order_priority(self):
+        """Files matching multiple patterns should match the first (most specific) pattern.
+
+        Pattern order matters - test patterns come before hook/component patterns
+        to ensure test files in those directories are correctly categorized.
+        """
+        # This file matches both __tests__ pattern (test) and hooks pattern (interaction)
+        # Should return 'test' because test patterns are checked first
+        self.assertEqual(categorize_file('src/hooks/__tests__/useAuth.test.ts'), 'test')
+
+        # This file matches both .test.tsx pattern (test) and components pattern (ui)
+        # Should return 'test' because test patterns are checked first
+        self.assertEqual(categorize_file('src/components/__tests__/Button.test.tsx'), 'test')
+
+        # Verify non-test files in same directories get correct category
+        self.assertEqual(categorize_file('src/hooks/useAuth.ts'), 'interaction')
+        self.assertEqual(categorize_file('src/components/Button.tsx'), 'ui')
+
 
 class TestGenerateManualTestingChecklist(unittest.TestCase):
     """Test generate_manual_testing_checklist() function."""
