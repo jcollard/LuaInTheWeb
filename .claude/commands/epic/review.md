@@ -209,6 +209,17 @@ feat(epic-<number>): <epic-title>
 - Lint passes
 - Build succeeds
 
+## Manual Testing
+
+<Generated checklist based on changed files - use generate_manual_testing_checklist() from scripts/lib/manual_testing.py>
+
+**Categories to check:**
+- **UI Changes**: Verify affected components render correctly
+- **User Interactions**: Test hooks behavior in affected components
+- **Visual Changes**: Check styling changes visually
+- **Page Changes**: Navigate to affected pages and verify
+- **Config Changes**: Verify dev server and build work
+
 ## Closes
 
 Fixes #<epic-number>

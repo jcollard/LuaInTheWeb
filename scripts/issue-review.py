@@ -42,8 +42,9 @@ from lib.helpers import (
     run, get_repo_root, get_temp_dir, get_current_branch,
     get_staged_files, get_unstaged_changes, get_untracked_files,
     read_file_content, run_tests, run_lint, run_build,
-    stage_all_changes, push_branch,
+    stage_all_changes, push_branch, get_changed_files,
 )
+from lib.manual_testing import generate_manual_testing_checklist
 
 # Project configuration
 PROJECT_NUMBER = 3
@@ -180,7 +181,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"""
         temp_file.unlink(missing_ok=True)
 
 
-def create_pr(issue_number, issue_title, summary, test_plan, base=None):
+def create_pr(issue_number, issue_title, summary, test_plan, base=None, manual_testing=None):
     """Create a pull request.
 
     Args:
@@ -189,10 +190,17 @@ def create_pr(issue_number, issue_title, summary, test_plan, base=None):
         summary: PR summary text
         test_plan: Test plan text
         base: Target branch for PR (default: main, use epic-<n> for sub-issues)
+        manual_testing: Manual testing checklist (auto-generated if not provided)
     """
     # Sanitize title
     clean_title = re.sub(r'^\[(Tech Debt|Roadmap|BUG)\]\s*', '', issue_title, flags=re.IGNORECASE)
     pr_title = f"feat(#{issue_number}): {clean_title}"
+
+    # Generate manual testing checklist if not provided
+    if manual_testing is None:
+        base_branch = base if base else 'main'
+        changed_files = get_changed_files(base_branch)
+        manual_testing = generate_manual_testing_checklist(changed_files)
 
     # Build PR body
     pr_body = f"""## Summary
@@ -200,6 +208,9 @@ def create_pr(issue_number, issue_title, summary, test_plan, base=None):
 
 ## Test plan
 {test_plan if test_plan else "- All unit tests pass\n- Lint passes\n- Build succeeds"}
+
+## Manual Testing
+{manual_testing}
 
 Fixes #{issue_number}
 
