@@ -1,6 +1,6 @@
 # Epic #58: Add light/dark mode theme switcher for the editor
 
-**Status:** In Progress (3/5 complete, #63 in progress)
+**Status:** In Progress (4/5 complete)
 **Branch:** epic-58
 **Created:** 2025-12-09
 **Last Updated:** 2025-12-09
@@ -23,7 +23,7 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 | #60 | Create theme infrastructure (CSS variables, context, localStorage) | ✅ Complete | 60-create-theme-infrastructure | Merged PR #74 |
 | #61 | Theme core layout components (sidebar, panels, tabs) | ✅ Complete | 61-theme-core-layout-components | Merged PR #84 |
 | #62 | Theme terminal and REPL components | ✅ Complete | 62-theme-terminal-and-repl-components | Merged PR #89 |
-| #63 | Integrate Monaco Editor theme switching | 📝 Needs Review | 63-integrate-monaco-editor-theme-switching | PR #93 |
+| #63 | Integrate Monaco Editor theme switching | ✅ Complete | 63-integrate-monaco-editor-theme-switching | Merged PR #94 |
 | #64 | Add theme switcher UI control | ⏳ Pending | - | - |
 
 **Status Legend:**
@@ -63,6 +63,8 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 - Added E2E tests for Monaco editor theme switching (theme-editor.spec.ts)
 - Fixed test files to mock useTheme (IDELayout, EmbeddableEditor, EditorPanel, LuaRepl)
 - PR #93 created for #63, targeting epic-58 branch
+- PR #94 merged, #63 complete
+- Tech debt issues created: #95 (useTheme mock), #96 (E2E timeouts)
 
 ## Key Files
 
@@ -107,3 +109,5 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 | # | Description | Priority | Notes |
 |---|-------------|----------|-------|
 | #75 | Scope theme transitions to specific components instead of global `*` selector | Low | Address at end of epic if performance issues observed |
+| #95 | Extract shared useTheme mock to test utility | Low | PR #94 review feedback |
+| #96 | Extract E2E test timeouts to constants | Low | PR #94 review feedback |
