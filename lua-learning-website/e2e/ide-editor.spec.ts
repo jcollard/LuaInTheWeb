@@ -45,15 +45,17 @@ test.describe('IDE Editor', () => {
     await expect(page.getByText('Extensions coming soon...')).toBeVisible()
   })
 
-  test('displays editor panel with welcome message when no file is open', async ({ page }) => {
-    // Assert - Editor panel should be visible
-    await expect(page.locator('[data-testid="editor-panel"]')).toBeVisible()
+  test('displays Welcome Screen when no file is open', async ({ page }) => {
+    // Assert - Welcome screen should be visible (not editor panel)
+    await expect(page.locator('[data-testid="welcome-screen"]')).toBeVisible()
 
-    // Should show welcome message when no file is open
-    await expect(page.getByText(/create a new file or open an existing one/i)).toBeVisible()
+    // Should show welcome title
+    await expect(page.getByText('Welcome to Lua IDE')).toBeVisible()
 
-    // Should have run button
-    await expect(page.getByRole('button', { name: /run/i })).toBeVisible()
+    // Should have New File and Open REPL buttons
+    const welcomeScreen = page.locator('[data-testid="welcome-screen"]')
+    await expect(welcomeScreen.getByRole('button', { name: /new file/i })).toBeVisible()
+    await expect(welcomeScreen.getByRole('button', { name: /open repl/i })).toBeVisible()
   })
 
   test('displays bottom panel with Terminal and REPL tabs', async ({ page }) => {

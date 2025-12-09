@@ -233,15 +233,16 @@ test.describe('File Explorer', () => {
   })
 
   test.describe('empty state', () => {
-    test('shows welcome message when no file is open', async ({ page }) => {
-      // Assert - Welcome message should be visible when no file is open
-      await expect(page.getByText(/create a new file or open an existing one/i)).toBeVisible()
+    test('shows Welcome Screen when no file is open', async ({ page }) => {
+      // Assert - Welcome Screen should be visible when no file is open
+      await expect(page.locator('[data-testid="welcome-screen"]')).toBeVisible()
+      await expect(page.getByText('Welcome to Lua IDE')).toBeVisible()
     })
 
-    test('hides welcome message after opening a file', async ({ page }) => {
+    test('hides Welcome Screen after opening a file', async ({ page }) => {
       // Arrange - Create a file and complete rename
-      await page.getByRole('button', { name: /new file/i }).click()
       const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new file/i }).click()
       const input = sidebar.getByRole('textbox')
       await input.press('Enter') // Accept default name
       await page.waitForTimeout(200)
@@ -251,8 +252,9 @@ test.describe('File Explorer', () => {
       await treeItem.dblclick()
       await page.waitForTimeout(200)
 
-      // Assert - Welcome message should be hidden
-      await expect(page.getByText(/create a new file or open an existing one/i)).not.toBeVisible()
+      // Assert - Welcome Screen should be hidden, editor panel visible
+      await expect(page.locator('[data-testid="welcome-screen"]')).not.toBeVisible()
+      await expect(page.locator('[data-testid="editor-panel"]')).toBeVisible()
     })
   })
 
