@@ -2,7 +2,7 @@
 """
 Remove a git worktree for a GitHub issue.
 
-Usage: python scripts/worktree-remove.py <issue-number> [--keep-branch]
+Usage: python scripts/worktree-remove.py <issue-number> [--keep-branch] [--headless]
 
 This script:
 1. Finds the worktree for the given issue number
@@ -12,6 +12,7 @@ This script:
 
 Options:
     --keep-branch    Keep the branch after removing the worktree
+    --headless       Run without interactive prompts (force-deletes unmerged branches)
 """
 
 import subprocess
@@ -73,11 +74,12 @@ def find_worktree_for_issue(issue_number):
 def main():
     # Parse arguments
     keep_branch = '--keep-branch' in sys.argv
+    headless = '--headless' in sys.argv
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
 
     if len(args) < 1:
         print(f"{RED}Error: Issue number required{NC}")
-        print(f"Usage: python {sys.argv[0]} <issue-number> [--keep-branch]")
+        print(f"Usage: python {sys.argv[0]} <issue-number> [--keep-branch] [--headless]")
         sys.exit(1)
 
     issue_number = args[0]
@@ -136,12 +138,17 @@ def main():
         else:
             # Branch not merged, force delete with warning
             print(f"  {YELLOW}Warning: Branch not merged to main{NC}")
-            response = input(f"  Force delete branch '{branch_name}'? [y/N] ").strip().lower()
-            if response == 'y':
+            if headless:
+                # In headless mode, automatically force delete
                 run(f'git branch -D "{branch_name}"', check=False)
-                print(f"  {GREEN}Branch force deleted{NC}")
+                print(f"  {GREEN}Branch force deleted (headless mode){NC}")
             else:
-                print(f"  {YELLOW}Branch kept{NC}")
+                response = input(f"  Force delete branch '{branch_name}'? [y/N] ").strip().lower()
+                if response == 'y':
+                    run(f'git branch -D "{branch_name}"', check=False)
+                    print(f"  {GREEN}Branch force deleted{NC}")
+                else:
+                    print(f"  {YELLOW}Branch kept{NC}")
     elif keep_branch:
         print(f"  {YELLOW}Branch kept (--keep-branch specified){NC}")
 

@@ -234,14 +234,17 @@ python scripts/worktree-create.py <issue-number>
 Removes a worktree and optionally its branch.
 
 ```bash
-python scripts/worktree-remove.py <issue-number> [--keep-branch]
+python scripts/worktree-remove.py <issue-number> [--keep-branch] [--headless]
 ```
 
 **Options:**
 - `--keep-branch`: Don't delete the branch after removing the worktree
+- `--headless`: Run without interactive prompts (auto-force-deletes unmerged branches)
 
 **What it does:**
 1. Finds the worktree for the issue
 2. Removes the worktree directory
 3. Deletes the branch (unless `--keep-branch` is specified)
-4. If branch isn't merged, prompts for confirmation before force-deleting
+4. If branch isn't merged:
+   - In interactive mode: prompts for confirmation before force-deleting
+   - In headless mode: automatically force-deletes

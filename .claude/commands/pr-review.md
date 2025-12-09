@@ -428,33 +428,29 @@ gh issue close <linked-issue-number> --reason completed
 
 ### 8j. Clean Up Worktree
 
-Find and remove the worktree associated with this PR:
+Find and remove the worktree associated with this PR using the Python script:
 
 ```bash
-# List worktrees to find the one for this issue
-git worktree list
-
 # Extract issue number from PR branch name (e.g., "13-fix-repl-ux" → 13)
 # Or from linked issues found in step 8b
+
+# Remove the worktree using Python script with headless mode
+python scripts/worktree-remove.py <issue-number> --headless
 ```
 
-If a worktree exists for the linked issue:
-
-```bash
-# Get worktree path
-WORKTREE_PATH=$(git worktree list | grep "issue-<number>" | awk '{print $1}')
-
-# Remove the worktree
-git worktree remove "$WORKTREE_PATH" --force
-```
+The script handles:
+- Finding the worktree for the issue
+- Removing the worktree directory
+- Deleting the branch (auto-force-deletes in headless mode)
 
 Output:
 ```
 ### Worktree Cleanup
 - ✅ Removed worktree: <worktree-path>
+- ✅ Branch deleted
 ```
 
-If no worktree found, skip silently.
+If no worktree found, the script reports this and exits cleanly.
 
 ### 8k. Output Success Summary
 

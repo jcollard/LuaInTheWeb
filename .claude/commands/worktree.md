@@ -124,18 +124,22 @@ Then run:
 **Delegate to Python script:**
 
 ```bash
-python scripts/worktree-remove.py <n>
+python scripts/worktree-remove.py <n> --headless
 ```
 
 The script handles:
 1. Finding the worktree for the issue
 2. Removing the worktree directory
-3. Deleting the branch (prompts if not merged)
+3. Deleting the branch (auto-force-deletes unmerged branches in headless mode)
+
+**Options:**
+- `--headless`: Run without interactive prompts (used by agents)
+- `--keep-branch`: Keep the branch after removing the worktree
 
 To keep the branch after removing:
 
 ```bash
-python scripts/worktree-remove.py <n> --keep-branch
+python scripts/worktree-remove.py <n> --keep-branch --headless
 ```
 
 ---
