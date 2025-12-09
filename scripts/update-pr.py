@@ -37,89 +37,17 @@ Safety features:
 - Validates PR exists and is open before making changes
 """
 
-import subprocess
 import sys
-import os
-import re
 import json
 from pathlib import Path
 
-# ANSI colors
-RED = '\033[0;31m'
-GREEN = '\033[0;32m'
-YELLOW = '\033[1;33m'
-BLUE = '\033[0;34m'
-NC = '\033[0m'  # No Color
-
-
-def run(cmd, capture=True, check=True, cwd=None):
-    """Run a shell command and return output."""
-    result = subprocess.run(
-        cmd,
-        shell=True,
-        capture_output=capture,
-        text=True,
-        cwd=cwd
-    )
-    if check and result.returncode != 0:
-        return None, result.stderr
-    return result.stdout.strip() if capture else "", result.stderr
-
-
-def get_repo_root():
-    """Get the repository root directory."""
-    output, _ = run('git rev-parse --show-toplevel')
-    return Path(output) if output else None
-
-
-def get_temp_dir():
-    """Get a temp directory within the repo (gitignored)."""
-    repo_root = get_repo_root()
-    if not repo_root:
-        return None
-    temp_dir = repo_root / ".tmp"
-    temp_dir.mkdir(exist_ok=True)
-    return temp_dir
-
-
-def get_current_branch():
-    """Get the current branch name."""
-    output, _ = run('git rev-parse --abbrev-ref HEAD')
-    return output
-
-
-def get_unstaged_changes():
-    """Get list of files with unstaged changes."""
-    output, _ = run('git diff --name-only')
-    return output.split('\n') if output else []
-
-
-def get_untracked_files():
-    """Get list of untracked files."""
-    output, _ = run('git ls-files --others --exclude-standard')
-    return output.split('\n') if output else []
-
-
-def get_staged_files():
-    """Get list of staged files."""
-    output, _ = run('git diff --cached --name-only')
-    return output.split('\n') if output else []
-
-
-def read_file_content(file_path):
-    """Read content from a file, returning None if file doesn't exist or is empty."""
-    if not file_path:
-        return None
-    try:
-        path = Path(file_path)
-        if not path.exists():
-            print(f"{YELLOW}Warning: File not found: {file_path}{NC}")
-            return None
-        content = path.read_text(encoding='utf-8').strip()
-        return content if content else None
-    except Exception as e:
-        print(f"{YELLOW}Warning: Could not read file {file_path}: {e}{NC}")
-        return None
+from lib.helpers import (
+    RED, GREEN, YELLOW, BLUE, NC,
+    run, get_repo_root, get_temp_dir, get_current_branch,
+    get_staged_files, get_unstaged_changes, get_untracked_files,
+    read_file_content, run_tests, run_lint, run_build,
+    stage_all_changes, push_branch,
+)
 
 
 def get_pr_info(pr_number):
@@ -136,51 +64,6 @@ def get_pr_info(pr_number):
         return None, "Invalid JSON from GitHub"
 
 
-def run_tests(npm_dir):
-    """Run the test suite."""
-    print(f"{BLUE}Running tests...{NC}")
-    result = subprocess.run(
-        'npm run test',
-        shell=True,
-        cwd=str(npm_dir),
-        capture_output=True,
-        text=True
-    )
-    return result.returncode == 0, result.stdout + result.stderr
-
-
-def run_lint(npm_dir):
-    """Run linting."""
-    print(f"{BLUE}Running lint...{NC}")
-    result = subprocess.run(
-        'npm run lint',
-        shell=True,
-        cwd=str(npm_dir),
-        capture_output=True,
-        text=True
-    )
-    return result.returncode == 0, result.stdout + result.stderr
-
-
-def run_build(npm_dir):
-    """Run the build."""
-    print(f"{BLUE}Running build...{NC}")
-    result = subprocess.run(
-        'npm run build',
-        shell=True,
-        cwd=str(npm_dir),
-        capture_output=True,
-        text=True
-    )
-    return result.returncode == 0, result.stdout + result.stderr
-
-
-def stage_all_changes():
-    """Stage all changes for commit."""
-    output, err = run('git add -A')
-    return err == "" or err is None
-
-
 def create_commit(message):
     """Create a commit with the given message."""
     # Use local temp directory for the commit message to handle special characters
@@ -194,13 +77,6 @@ def create_commit(message):
         return success, message
     finally:
         temp_file.unlink(missing_ok=True)
-
-
-def push_branch(branch):
-    """Push branch to remote."""
-    print(f"{BLUE}Pushing to origin/{branch}...{NC}")
-    output, err = run(f'git push -u origin {branch}')
-    return output is not None or err == ""
 
 
 def update_pr_body(pr_number, title=None, body=None, append=False):
