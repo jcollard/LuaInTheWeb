@@ -311,28 +311,7 @@ git checkout main
 git pull origin main
 ```
 
-### 8f. Verify Issue Closure
-
-GitHub automatically closes issues linked with "Fixes #X" syntax when the PR is merged.
-
-Verify closure:
-```bash
-# Check each linked issue
-gh issue view <linked-issue-number> --json state
-```
-
-### 8g. Update Project Board (if applicable)
-
-If the project has automation enabled, issues will automatically move to "Done".
-
-If not, manually update:
-```bash
-# Get project item ID and update status to Done
-gh project item-list 3 --owner jcollard --format json | # find item
-gh project item-edit --project-id <project-id> --id <item-id> --field-id <status-field-id> --single-select-option-id 98236657
-```
-
-### 8h. Prompt for Tech Debt Issues
+### 8f. Prompt for Tech Debt Issues (Before Issue Closure)
 
 If tech debt was identified during code review (from `/code-review` or `/issue <n> review`), prompt:
 
@@ -351,8 +330,9 @@ The following tech debt items were noted during code review:
 - Type "no" or "skip" to skip issue creation
 ```
 
-If user confirms, create issues:
+If user confirms, create issues and add them to the project board:
 
+**Step 1: Create the GitHub issue**
 ```bash
 gh issue create --title "[Tech Debt] <brief description>" \
   --label "tech-debt" \
@@ -369,12 +349,72 @@ PR #<pr-number> - <pr-title>
 
 ## Priority
 <High|Medium|Low> - <reason>"
+```
 
-# Add to project board
+**Step 2: Add issue to project board**
+```bash
+# Add the newly created issue to the project board
 gh project item-add 3 --owner jcollard --url "https://github.com/jcollard/LuaInTheWeb/issues/<new-issue-number>"
 ```
 
-### 8i. Clean Up Worktree
+**Step 3: Set project fields (Priority and Effort)**
+```bash
+# Get project field IDs
+gh project field-list 3 --owner jcollard --format json
+
+# Get the item ID for the newly added issue
+gh project item-list 3 --owner jcollard --format json | # find item by issue URL
+
+# Set Priority field (P2-Medium for most tech debt, P1-High for coding standards violations)
+gh project item-edit --project-id <project-id> --id <item-id> --field-id <priority-field-id> --single-select-option-id <priority-option-id>
+
+# Set Effort field (estimate based on description)
+gh project item-edit --project-id <project-id> --id <item-id> --field-id <effort-field-id> --single-select-option-id <effort-option-id>
+```
+
+**Priority Assignment Guidelines:**
+- **P1-High**: Security issues, coding standard violations, test failures
+- **P2-Medium**: Missing tests, incomplete error handling, performance issues
+- **P3-Low**: Documentation, code style suggestions, nice-to-haves
+
+**Effort Assignment Guidelines:**
+- **XS**: Simple fix, < 1 hour
+- **S**: 1-2 hours
+- **M**: 2-4 hours
+- **L**: Half day (4-8 hours)
+
+Repeat for each tech debt item the user confirmed.
+
+### 8g. Verify Issue Closure
+
+GitHub automatically closes issues linked with "Fixes #X" syntax when the PR is merged.
+
+Verify closure:
+```bash
+# Check each linked issue
+gh issue view <linked-issue-number> --json state
+```
+
+### 8h. Update Project Board (if applicable)
+
+If the project has automation enabled, issues will automatically move to "Done".
+
+If not, manually update:
+```bash
+# Get project item ID and update status to Done
+gh project item-list 3 --owner jcollard --format json | # find item
+gh project item-edit --project-id <project-id> --id <item-id> --field-id <status-field-id> --single-select-option-id 98236657
+```
+
+### 8i. Close Linked Issue (if not auto-closed)
+
+If the linked issue wasn't automatically closed (e.g., no "Fixes #X" in PR body), close it manually:
+
+```bash
+gh issue close <linked-issue-number> --reason completed
+```
+
+### 8j. Clean Up Worktree
 
 Find and remove the worktree associated with this PR:
 
@@ -404,7 +444,7 @@ Output:
 
 If no worktree found, skip silently.
 
-### 8j. Output Success Summary
+### 8k. Output Success Summary
 
 ```
 ## PR #<number> Merged Successfully
@@ -413,15 +453,18 @@ If no worktree found, skip silently.
 **Branch**: <headRefName> → <baseRefName>
 **Merge Type**: Squash merge
 
+### Tech Debt Issues Created & Added to Project Board
+<If any:>
+- #<new-issue>: <title>
+  - Added to project board ✅
+  - Priority: <P1-High|P2-Medium|P3-Low>
+  - Effort: <XS|S|M|L>
+<Or:>
+- None (no tech debt identified or skipped)
+
 ### Linked Issues Closed
 <For each linked issue:>
 - #<issue-number>: <issue-title> ✅ Closed
-
-### Tech Debt Issues Created
-<If any:>
-- #<new-issue>: <title>
-<Or:>
-- None (no tech debt identified or skipped)
 
 ### Cleanup
 - ✅ Switched to main branch
@@ -635,6 +678,10 @@ Found: Fixes #7
 - Tests: ✅ 635 passed
 - Branch up to date: ✅
 
+### Merging...
+✅ PR #27 merged via squash merge
+✅ Branch 7-tech-debt-flaky-e2e-test deleted
+
 ### Tech Debt Identified
 
 The following tech debt items were noted during code review:
@@ -643,11 +690,16 @@ The following tech debt items were noted during code review:
 
 **Create GitHub issues for these items?**
 
-User types: `no`
+User types: `yes`
 
-### Merging...
-✅ PR #27 merged via squash merge
-✅ Branch 7-tech-debt-flaky-e2e-test deleted
+### Creating Tech Debt Issues...
+✅ Created issue #32: [Tech Debt] Add comment explaining 30000ms timeout choice
+✅ Added to project board
+✅ Set Priority: P3-Low
+✅ Set Effort: XS
+
+### Linked Issue Closure
+- #7: [Tech Debt] Flaky E2E test: EmbeddableEditor renders Monaco editor ✅ Closed
 
 ### Worktree Cleanup
 ✅ Removed worktree: C:\Users\User\git\jcollard\LuaInTheWeb-issue-7
@@ -660,11 +712,14 @@ User types: `no`
 **Branch**: 7-tech-debt-flaky-e2e-test → main
 **Merge Type**: Squash merge
 
+### Tech Debt Issues Created & Added to Project Board
+- #32: [Tech Debt] Add comment explaining 30000ms timeout choice
+  - Added to project board ✅
+  - Priority: P3-Low
+  - Effort: XS
+
 ### Linked Issues Closed
 - #7: [Tech Debt] Flaky E2E test: EmbeddableEditor renders Monaco editor ✅ Closed
-
-### Tech Debt Issues Created
-- None (skipped by user)
 
 ### Cleanup
 - ✅ Switched to main branch

@@ -166,6 +166,22 @@ npm run test:e2e             # Run E2E tests (Playwright)
 - **Python**: Always use `python` (not `python3`) for scripts
 - **Timestamps**: When updating dates in files, use `date` command to get current timestamp
 
+## Utility Scripts
+
+### JSON Filtering (`scripts/jq.js`)
+
+A lightweight jq alternative for JSON filtering in shell pipelines (works on Windows):
+
+```bash
+# Get a field
+gh project item-list 3 --owner jcollard --format json | node scripts/jq.js ".items[0].id"
+
+# Filter with select
+gh project item-list 3 --owner jcollard --format json | node scripts/jq.js ".items[] | select(.content.number == 34)"
+
+# Supported: . .field .field.nested .array[0] .array[] select() pipes (|)
+```
+
 ## Continuation Policy
 
 - NEVER stop to ask "Do you want to continue?" or "Should I proceed?"
