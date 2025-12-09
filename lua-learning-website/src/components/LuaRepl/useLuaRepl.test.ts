@@ -124,10 +124,12 @@ describe('useLuaRepl', () => {
       const { result } = renderHook(() => useLuaRepl({ onOutput }))
       await waitFor(() => expect(result.current.isReady).toBe(true))
 
-      // First call (statement) fails, second call (expression) returns value
+      // First call (statement) fails, second call (expression) returns value,
+      // third call formats the value
       mockDoString
         .mockRejectedValueOnce(new Error('syntax error'))
         .mockResolvedValueOnce(42)
+        .mockResolvedValueOnce('42') // formatter returns string
 
       // Act
       await act(async () => {
@@ -137,6 +139,54 @@ describe('useLuaRepl', () => {
       // Assert - should have tried as expression
       expect(mockDoString).toHaveBeenCalledWith('return 1 + 1')
       expect(onOutput).toHaveBeenCalledWith('42')
+    })
+
+    // Cycle 7b: Expression returns complex type (function), formatter is called
+    it('should format complex return values using Lua formatter', async () => {
+      // Arrange
+      const onOutput = vi.fn()
+      const { result } = renderHook(() => useLuaRepl({ onOutput }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Simulate a function being returned
+      const mockFunction = () => {}
+      mockDoString
+        .mockRejectedValueOnce(new Error('syntax error'))
+        .mockResolvedValueOnce(mockFunction)
+        .mockResolvedValueOnce('function() [string "..."]:1]')
+
+      // Act
+      await act(async () => {
+        await result.current.executeCode('myFunc')
+      })
+
+      // Assert - formatter should be called with __format_value
+      expect(mockDoString).toHaveBeenCalledWith('return __format_value(__temp_value)')
+      expect(onOutput).toHaveBeenCalledWith('function() [string "..."]:1]')
+    })
+
+    // Cycle 7c: Expression returns table, formatter is called
+    it('should format table return values using Lua formatter', async () => {
+      // Arrange
+      const onOutput = vi.fn()
+      const { result } = renderHook(() => useLuaRepl({ onOutput }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Simulate a table being returned
+      const mockTable = { a: 1, b: 2 }
+      mockDoString
+        .mockRejectedValueOnce(new Error('syntax error'))
+        .mockResolvedValueOnce(mockTable)
+        .mockResolvedValueOnce('{a = 1, b = 2}')
+
+      // Act
+      await act(async () => {
+        await result.current.executeCode('{a = 1, b = 2}')
+      })
+
+      // Assert - formatter should format the table
+      expect(mockDoString).toHaveBeenCalledWith('return __format_value(__temp_value)')
+      expect(onOutput).toHaveBeenCalledWith('{a = 1, b = 2}')
     })
 
     // Cycle 8: Expression evaluation returns null (no output)
