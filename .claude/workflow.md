@@ -261,6 +261,65 @@ C:\Users\User\git\jcollard\
 
 ---
 
+## Visual Verification
+
+For user-facing changes, add a Visual Verification section to the issue to enable automated screenshot capture during PR review.
+
+### Adding Visual Verification to an Issue
+
+Add this section to your issue body:
+
+```markdown
+## Visual Verification
+- /editor - Description of expected appearance
+- /repl - Another route to capture
+```
+
+### Format
+
+| Element | Description |
+|---------|-------------|
+| Route | Path to navigate (e.g., `/editor`, `/repl`) |
+| Description | Optional note about expected state (after the route, separated by `-`) |
+
+### What Happens
+
+When you run `/issue <n> review`, the review script will:
+
+1. **Check for Visual Verification section** in the issue body
+2. **Build and start preview server** (reuses existing build if available)
+3. **Capture screenshots** of each specified route (1280x720 viewport)
+4. **Post screenshots** as a comment on the PR
+5. **Continue normally** - this is non-blocking
+
+### Example
+
+Issue body:
+```markdown
+## Visual Verification
+- /editor - Editor with welcome screen visible
+- /repl - REPL with command prompt
+```
+
+During `issue-review.py` execution:
+```
+Running visual verification...
+  Found 2 route(s) to capture
+  ✓ /editor -> editor.png
+  ✓ /repl -> repl.png
+  [OK] Captured 2 screenshot(s)
+  [OK] Screenshots posted to PR
+```
+
+### Notes
+
+- Visual verification is **completely optional** - issues without the section skip it
+- Screenshot capture is **non-blocking** - failures just log warnings
+- Screenshots are saved to `.tmp/screenshots/` (gitignored)
+- Useful for visual changes, new UI components, or layout modifications
+
+---
+
 ## Tech Debt Handling
 
 Tech debt follows a **identify → decide → create** flow:
