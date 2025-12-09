@@ -24,6 +24,8 @@ LuaInTheWeb is a web-based Lua learning and practice platform that allows users 
 
 ## Development Workflow
 
+> **Branch Policy:** Never commit directly to main. All changes go through branches and PRs.
+
 1. Check the [roadmap](../roadmap/) for current plans
 2. Follow TDD practices (see [Testing Guide](./testing.md))
 3. Run mutation tests to verify test quality

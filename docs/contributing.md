@@ -2,6 +2,12 @@
 
 Thank you for contributing to LuaInTheWeb! This guide explains our development process.
 
+## Branch Policy
+
+> **Never commit directly to main.** All changes must go through branches and pull requests.
+
+This ensures code review, issue tracking, and CI validation for every change. See [workflow.md](../.claude/workflow.md) for details.
+
 ## Workflow
 
 > **See [.claude/workflow.md](../.claude/workflow.md) for the complete workflow documentation.**

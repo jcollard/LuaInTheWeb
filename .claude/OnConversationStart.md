@@ -167,6 +167,8 @@ npm run test:e2e             # Run E2E tests (Playwright)
 
 ## Conventions
 
+- **Branch Policy**: Never commit directly to main. All changes must go through branches and PRs.
+
 - **Python**: Always use `python` (not `python3`) for scripts
 - **Timestamps**: When updating dates in files, use `date` command to get current timestamp
 
