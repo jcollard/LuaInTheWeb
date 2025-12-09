@@ -247,7 +247,9 @@ Waiting for approval...
 
 ### 5d. On Approval: Create Worktree (if in main)
 
-After user approves, if in main worktree, create the issue worktree:
+After user approves, if in main worktree, create the issue worktree.
+
+**IMPORTANT**: Worktree creation follows the same steps as `/worktree create <number>` (see `worktree.md`). This ensures all setup is performed consistently, including dependencies and mutation cache seeding.
 
 #### Check if Worktree Exists
 
@@ -313,6 +315,16 @@ Install dependencies:
 cd "<worktree-path>/lua-learning-website" && npm install
 ```
 
+Seed mutation test cache (speeds up mutation testing):
+```bash
+# Create reports directory if it doesn't exist
+mkdir -p "<worktree-path>/lua-learning-website/reports/mutation"
+
+# Copy cache from main worktree
+cp "$REPO_ROOT/lua-learning-website/reports/mutation/.stryker-incremental.json" \
+   "<worktree-path>/lua-learning-website/reports/mutation/" 2>/dev/null || true
+```
+
 Output:
 
 ```
@@ -322,7 +334,8 @@ Output:
 **Path**: <worktree-path>
 **Branch**: <branch-name>
 
-Dependencies installed ✓
+✅ Dependencies installed
+✅ Mutation cache seeded
 
 ### Implementation Plan Approved ✓
 
@@ -823,7 +836,8 @@ Creating worktree for issue #13...
 **Path**: C:\Users\User\git\jcollard\LuaInTheWeb-issue-13
 **Branch**: 13-repl-ux-issues-in-editor-context
 
-Dependencies installed ✓
+✅ Dependencies installed
+✅ Mutation cache seeded
 
 ### Next Steps
 
@@ -1179,7 +1193,7 @@ Automatically proceed to begin mode - **execute Step 5a** (Check Worktree Contex
 
 This will:
 1. Check if worktree exists for this issue
-2. If not, create worktree automatically
+2. If not, create worktree automatically (includes dependencies + mutation cache seeding per Step 5d)
 3. Instruct user to open new Claude Code session in worktree
 4. STOP
 
@@ -1260,7 +1274,8 @@ Installing dependencies...
 **Path**: C:\Users\User\git\jcollard\LuaInTheWeb-issue-15
 **Branch**: 15-remove-deprecated-api-calls
 
-Dependencies installed ✓
+✅ Dependencies installed
+✅ Mutation cache seeded
 
 ### Next Steps
 
@@ -1324,7 +1339,8 @@ No worktree found for issue #19. Creating one...
 **Path**: C:\Users\User\git\jcollard\LuaInTheWeb-issue-19
 **Branch**: 19-fix-input-validation
 
-Dependencies installed ✓
+✅ Dependencies installed
+✅ Mutation cache seeded
 
 ### Next Steps
 
