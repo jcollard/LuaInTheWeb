@@ -28,6 +28,16 @@ vi.mock('../LuaRepl', () => ({
   default: () => <div data-testid="lua-repl">LuaRepl Mock</div>,
 }))
 
+// Mock theme context (CodeEditor uses useTheme)
+vi.mock('../../contexts/useTheme', () => ({
+  useTheme: () => ({
+    theme: 'dark',
+    setTheme: vi.fn(),
+    toggleTheme: vi.fn(),
+    isDark: true,
+  }),
+}))
+
 describe('IDELayout', () => {
   describe('rendering', () => {
     it('should render IDEContextProvider (context available)', () => {
