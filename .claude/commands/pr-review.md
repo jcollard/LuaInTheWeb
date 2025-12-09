@@ -395,16 +395,28 @@ Verify closure:
 gh issue view <linked-issue-number> --json state
 ```
 
-### 8h. Update Project Board (if applicable)
+### 8h. Update Project Board Status to "Done"
 
-If the project has automation enabled, issues will automatically move to "Done".
+Update the linked issue's status to "Done" in the GitHub Project:
 
-If not, manually update:
 ```bash
-# Get project item ID and update status to Done
-gh project item-list 3 --owner jcollard --format json | # find item
-gh project item-edit --project-id <project-id> --id <item-id> --field-id <status-field-id> --single-select-option-id 98236657
+# Get the project item ID for the linked issue
+gh project item-list 3 --owner jcollard --format json --limit 100
 ```
+
+Find the item matching the linked issue number, then update its status:
+
+```bash
+# Project configuration
+# - Status field ID: PVTSSF_lAHOADXapM4BKKH8zg6G6Vo
+# - "Done" option ID: 98236657
+
+gh project item-edit --project-id <project-id> --id <item-id> \
+  --field-id PVTSSF_lAHOADXapM4BKKH8zg6G6Vo \
+  --single-select-option-id 98236657
+```
+
+**Note**: If the project has GitHub automation enabled with "Item closed" → "Done", this may happen automatically.
 
 ### 8i. Close Linked Issue (if not auto-closed)
 

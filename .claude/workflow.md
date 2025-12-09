@@ -9,12 +9,13 @@ All work is tracked in the [GitHub Project Board](https://github.com/users/jcoll
 
 ### Status Definitions
 
-| Status | Meaning |
-|--------|---------|
-| **Concept** | Idea needs research/definition before it's actionable |
-| **Todo** | Well-defined, ready to be worked on |
-| **In Progress** | Actively being worked on |
-| **Done** | Completed and merged |
+| Status | Meaning | Triggered By |
+|--------|---------|--------------|
+| **Concept** | Idea needs research/definition before it's actionable | Manual |
+| **Todo** | Well-defined, ready to be worked on | `/issue <n> eval` |
+| **In Progress** | Actively being worked on | `worktree-create.py` |
+| **Needs Review** | PR created, awaiting review | `/issue <n> review` |
+| **Done** | Completed and merged | `/pr-review <n> accept` |
 
 ### Project Fields
 
@@ -40,7 +41,7 @@ All work follows the same flow, with complexity determining depth:
 │       │                                                              │
 │       ▼                                                              │
 │  /issue next                ← Auto-select or pick specific issue     │
-│  /issue <n>                                                          │
+│  /issue <n>                   [Status: Todo]                         │
 │       │                                                              │
 │       ▼                                                              │
 │  /issue <n> eval            ← (If unclear) Define and clarify issue  │
@@ -51,13 +52,13 @@ All work follows the same flow, with complexity determining depth:
 │       ▼                                                              │
 │  [APPROVE]                  ← Human approves plan                    │
 │       │                                                              │
-│       │                     Creates worktree, starts TDD work        │
+│       │                     Creates worktree → [Status: In Progress] │
 │       ▼                                                              │
 │  [TDD Work]                 ← Red-Green-Refactor-Mutate cycle        │
 │       │                                                              │
 │       ▼                                                              │
 │  /issue <n> review          ← Code review + create PR                │
-│       │                     (Tech debt identified, not created yet)  │
+│       │                       → [Status: Needs Review]               │
 │       ▼                                                              │
 │  /pr-review <n>             ← Human reviews PR                       │
 │       │                                                              │
@@ -71,7 +72,7 @@ All work follows the same flow, with complexity determining depth:
 │       │ • Remove worktree            ▼                               │
 │       │                         [Rework] ──► /issue <n> review       │
 │       ▼                                                              │
-│     DONE                                                             │
+│  [Status: Done]                                                      │
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
