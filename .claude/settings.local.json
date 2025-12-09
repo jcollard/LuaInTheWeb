@@ -60,7 +60,8 @@
       "Bash(git rev-list:*)",
       "Bash(gh issue:*)",
       "Bash(git fetch:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(git worktree:*)"
     ],
     "deny": [
       "Bash(npm run dev)",
