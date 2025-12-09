@@ -19,9 +19,15 @@ test.describe('REPL in IDE', () => {
 
     // Get the xterm terminal element (the actual terminal viewport)
     const terminal = page.locator('.xterm-screen')
-    await expect(terminal).toBeVisible()
-    const terminalBox = await terminal.boundingBox()
-    expect(terminalBox).toBeTruthy()
+    await expect(terminal).toBeVisible({ timeout: 10000 })
+    // Poll until boundingBox is available (xterm canvas may take time to render)
+    let terminalBox: Awaited<ReturnType<typeof terminal.boundingBox>> = null
+    await expect
+      .poll(async () => {
+        terminalBox = await terminal.boundingBox()
+        return terminalBox
+      }, { timeout: 10000 })
+      .toBeTruthy()
 
     // The bottom of the terminal should be at or above the top of the status bar
     // (terminal should not overlap or be hidden by status bar)
@@ -79,11 +85,17 @@ test.describe('REPL in IDE', () => {
     const bottomPanelBox = await bottomPanel.boundingBox()
     expect(bottomPanelBox).toBeTruthy()
 
-    // Get the terminal element
+    // Get the terminal element - wait for xterm to fully initialize and have layout
     const terminal = page.locator('.xterm-screen')
-    await expect(terminal).toBeVisible()
-    const terminalBox = await terminal.boundingBox()
-    expect(terminalBox).toBeTruthy()
+    await expect(terminal).toBeVisible({ timeout: 10000 })
+    // Poll until boundingBox is available (xterm canvas may take time to render)
+    let terminalBox: Awaited<ReturnType<typeof terminal.boundingBox>> = null
+    await expect
+      .poll(async () => {
+        terminalBox = await terminal.boundingBox()
+        return terminalBox
+      }, { timeout: 10000 })
+      .toBeTruthy()
 
     // Terminal should be fully contained within the bottom panel
     const terminalBottom = terminalBox!.y + terminalBox!.height
@@ -193,13 +205,21 @@ test.describe('REPL in IDE', () => {
 
     // Get the REPL content container dimensions
     const replContent = page.locator('#repl-tabpanel')
+    await expect(replContent).toBeVisible()
     const replContentBox = await replContent.boundingBox()
     expect(replContentBox).toBeTruthy()
 
-    // Get the terminal dimensions
+    // Get the terminal dimensions - wait for xterm to fully initialize and have layout
     const terminal = page.locator('.xterm-screen')
-    const terminalBox = await terminal.boundingBox()
-    expect(terminalBox).toBeTruthy()
+    await expect(terminal).toBeVisible({ timeout: 10000 })
+    // Poll until boundingBox is available (xterm canvas may take time to render)
+    let terminalBox: Awaited<ReturnType<typeof terminal.boundingBox>> = null
+    await expect
+      .poll(async () => {
+        terminalBox = await terminal.boundingBox()
+        return terminalBox
+      }, { timeout: 10000 })
+      .toBeTruthy()
 
     // Terminal width should roughly match container width (not causing horizontal scroll)
     // Allow some padding/margin tolerance
