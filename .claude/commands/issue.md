@@ -247,96 +247,25 @@ Waiting for approval...
 
 ### 5d. On Approval: Create Worktree (if in main)
 
-After user approves, if in main worktree, create the issue worktree.
+After user approves, if in main worktree, create the issue worktree using the Python script.
 
-**IMPORTANT**: Worktree creation follows the same steps as `/worktree create <number>` (see `worktree.md`). This ensures all setup is performed consistently, including dependencies and mutation cache seeding.
-
-#### Check if Worktree Exists
+**Delegate to Python script:**
 
 ```bash
-git worktree list | grep "issue-<number>"
+python scripts/worktree-create.py <number>
 ```
 
-#### If Worktree Exists
+The script handles:
+1. Checking if worktree already exists (reports path if so)
+2. Fetching issue title from GitHub
+3. Creating slugified branch name (`<number>-<title-slug>`)
+4. Creating worktree at `../LuaInTheWeb-issue-<number>`
+5. Installing npm dependencies
+6. Seeding mutation test cache from main
 
-Output:
-
-```
-## Worktree Already Exists for Issue #<number>
-
-A worktree for this issue already exists at:
-**Path**: <worktree-path>
-
-### Next Steps
-
-Open a new Claude Code session in the worktree:
-```bash
-cd <worktree-path>
-claude
-```
-
-Then run:
-```bash
-/issue <number> begin
-```
-```
-
-Then STOP - the user must open a new session in the worktree.
-
-#### If Worktree Does Not Exist - Create It
-
-Generate paths:
-```bash
-REPO_ROOT=$(git rev-parse --show-toplevel)
-REPO_NAME=$(basename "$REPO_ROOT")
-PARENT_DIR=$(dirname "$REPO_ROOT")
-WORKTREE_PATH="$PARENT_DIR/${REPO_NAME}-issue-<number>"
-```
-
-Fetch issue title for branch name:
-```bash
-gh issue view <number> --json title --jq '.title'
-```
-
-Create worktree with branch:
-```bash
-# Create worktree and branch linked to issue
-git worktree add "<worktree-path>" -b <number>-<issue-title-slug>
-```
-
-If the branch already exists:
-```bash
-# Use existing branch
-git worktree add "<worktree-path>" <branch-name>
-```
-
-Install dependencies:
-```bash
-cd "<worktree-path>/lua-learning-website" && npm install
-```
-
-Seed mutation test cache (speeds up mutation testing):
-```bash
-# Create reports directory if it doesn't exist
-mkdir -p "<worktree-path>/lua-learning-website/reports/mutation"
-
-# Copy cache from main worktree
-cp "$REPO_ROOT/lua-learning-website/reports/mutation/.stryker-incremental.json" \
-   "<worktree-path>/lua-learning-website/reports/mutation/" 2>/dev/null || true
-```
-
-Output:
+After the script completes, output:
 
 ```
-## Worktree Created for Issue #<number>
-
-**Issue**: #<number> - <title>
-**Path**: <worktree-path>
-**Branch**: <branch-name>
-
-✅ Dependencies installed
-✅ Mutation cache seeded
-
 ### Implementation Plan Approved ✓
 
 <repeat the plan summary>
@@ -1189,18 +1118,25 @@ When a clear issue is found:
 
 ### 7f. Begin Work on Selected Issue
 
-Automatically proceed to begin mode - **execute Step 5a** (Check Worktree Context and Create if Needed).
+Automatically proceed to create the worktree using the Python script:
 
-This will:
-1. Check if worktree exists for this issue
-2. If not, create worktree automatically (includes dependencies + mutation cache seeding per Step 5d)
-3. Instruct user to open new Claude Code session in worktree
-4. STOP
+```bash
+python scripts/worktree-create.py <number>
+```
+
+The script handles:
+1. Checking if worktree already exists (reports path if so)
+2. Fetching issue title from GitHub
+3. Creating slugified branch name
+4. Creating worktree with npm install and mutation cache seeding
+
+After script completes, instruct user to open new Claude Code session in worktree.
 
 When user opens new session in worktree and runs `/issue <number> begin` again, Step 5b onwards will execute normally:
+- Generate implementation plan
+- Wait for approval
 - Create/checkout branch
 - Inject TDD context
-- Run complexity analysis
 - Create task list
 - Begin implementation
 
@@ -1260,22 +1196,21 @@ Several API calls in `src/utils/api.ts` use deprecated endpoints...
 ✓ Issue has clear requirements
 ✓ No clarification labels
 
-## Checking Worktree Context...
+## Creating Worktree...
 
-No worktree found for issue #15. Creating one...
+Running: python scripts/worktree-create.py 15
 
-Creating worktree at: C:\Users\User\git\jcollard\LuaInTheWeb-issue-15
-Creating branch: 15-remove-deprecated-api-calls
-Installing dependencies...
+[Script output with colored status messages showing:
+- Fetching issue title
+- Creating branch
+- Installing dependencies
+- Seeding mutation cache]
 
 ## Worktree Created for Issue #15
 
 **Issue**: #15 - Remove deprecated API calls
 **Path**: C:\Users\User\git\jcollard\LuaInTheWeb-issue-15
 **Branch**: 15-remove-deprecated-api-calls
-
-✅ Dependencies installed
-✅ Mutation cache seeded
 
 ### Next Steps
 
@@ -1329,18 +1264,17 @@ The input validation in the form component doesn't handle...
 ✓ Issue has clear requirements
 ✓ No clarification labels
 
-## Checking Worktree Context...
+## Creating Worktree...
 
-No worktree found for issue #19. Creating one...
+Running: python scripts/worktree-create.py 19
+
+[Script output]
 
 ## Worktree Created for Issue #19
 
 **Issue**: #19 - Fix input validation
 **Path**: C:\Users\User\git\jcollard\LuaInTheWeb-issue-19
 **Branch**: 19-fix-input-validation
-
-✅ Dependencies installed
-✅ Mutation cache seeded
 
 ### Next Steps
 
