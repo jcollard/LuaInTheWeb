@@ -1,7 +1,7 @@
 import { useRef, useCallback, useEffect } from 'react'
-import BashTerminal from './BashTerminal'
-import type { BashTerminalHandle } from './BashTerminal'
-import { useLuaRepl } from './LuaRepl/useLuaRepl'
+import BashTerminal from '../BashTerminal'
+import type { BashTerminalHandle } from '../BashTerminal'
+import { useLuaRepl } from './useLuaRepl'
 import './LuaRepl.css'
 
 interface LuaReplProps {

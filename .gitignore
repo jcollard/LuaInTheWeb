@@ -1,2 +1,7 @@
 # Claude Code session log
 .claude-log
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
