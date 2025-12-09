@@ -24,7 +24,7 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 | #61 | Theme core layout components (sidebar, panels, tabs) | ✅ Complete | 61-theme-core-layout-components | Merged PR #84 |
 | #62 | Theme terminal and REPL components | ✅ Complete | 62-theme-terminal-and-repl-components | Merged PR #89 |
 | #63 | Integrate Monaco Editor theme switching | ✅ Complete | 63-integrate-monaco-editor-theme-switching | Merged PR #94 |
-| #64 | Add theme switcher UI control | 🔄 In Progress | 64-add-theme-switcher-ui-control | - |
+| #64 | Add theme switcher UI control | 📝 Needs Review | 64-add-theme-switcher-ui-control | PR #97 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -66,6 +66,10 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 - PR #94 merged, #63 complete
 - Tech debt issues created: #95 (useTheme mock), #96 (E2E timeouts)
 - Started work on #64: Add theme switcher UI control
+- Created ThemeToggle component with sun/moon icons
+- Added ThemeToggle to ActivityBar bottom section
+- Added unit tests (14) and E2E tests (8) for theme toggle
+- PR #97 created for #64, targeting epic-58 branch
 
 ## Key Files
 
