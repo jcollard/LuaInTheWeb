@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: #1e1e1e;
+  background-color: var(--theme-bg-primary);
 }
 
 .toolbar {
@@ -10,8 +10,8 @@
   justify-content: space-between;
   align-items: center;
   height: 35px;
-  background-color: #252526;
-  border-bottom: 1px solid #1e1e1e;
+  background-color: var(--theme-bg-secondary);
+  border-bottom: 1px solid var(--theme-bg-primary);
 }
 
 .tabs {
@@ -25,14 +25,14 @@
   align-items: center;
   height: 100%;
   padding: 0 12px;
-  background-color: #1e1e1e;
-  border-right: 1px solid #252526;
+  background-color: var(--theme-bg-primary);
+  border-right: 1px solid var(--theme-bg-secondary);
   cursor: default;
 }
 
 .tabName {
   font-size: 13px;
-  color: #ffffff;
+  color: var(--theme-indicator-active);
   white-space: nowrap;
 }
 
@@ -48,7 +48,7 @@
   align-items: center;
   justify-content: center;
   padding: 4px 12px;
-  background-color: #0e639c;
+  background-color: var(--theme-accent-primary);
   color: #ffffff;
   border: none;
   border-radius: 2px;
@@ -58,11 +58,11 @@
 }
 
 .runButton:hover:not(:disabled) {
-  background-color: #1177bb;
+  background-color: var(--theme-accent-hover);
 }
 
 .runButton:disabled {
-  background-color: #4d4d4d;
+  background-color: var(--theme-bg-tertiary);
   cursor: not-allowed;
 }
 
@@ -77,5 +77,5 @@
   height: 100%;
   padding: 0 12px;
   font-size: 13px;
-  color: #858585;
+  color: var(--theme-text-muted);
 }
