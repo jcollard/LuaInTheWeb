@@ -292,7 +292,12 @@ npm run test:mutation:scope "src/components/AffectedComponent/**"
 **IMPORTANT**: After completing ALL implementation tasks and passing the completion checklist above, **automatically run the review script**:
 
 ```bash
-python scripts/issue-review.py <number> --summary "<summary from completed tasks>" --test-plan "<how it was tested>"
+# Write summary and test plan to temp files (recommended for agents)
+# Then run:
+python scripts/issue-review.py <number> --summary-file /tmp/summary.txt --test-plan-file /tmp/test-plan.txt
+
+# Or use inline arguments (may have shell escaping issues):
+python scripts/issue-review.py <number> --summary "summary text" --test-plan "test plan"
 ```
 
 This script is **auto-approved** and will:

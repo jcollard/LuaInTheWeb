@@ -2,7 +2,19 @@
 """
 Create a commit, push, and open a PR for a GitHub issue.
 
-Usage: python scripts/issue-review.py <issue-number> [--summary "..."] [--test-plan "..."]
+Usage: python scripts/issue-review.py <issue-number> [options]
+
+Options:
+  --summary "..."       PR summary text (inline)
+  --summary-file PATH   PR summary from file (recommended for agents)
+  --test-plan "..."     Test plan text (inline)
+  --test-plan-file PATH Test plan from file (recommended for agents)
+  --skip-checks         Skip tests, lint, and build checks
+  --dry-run             Show what would happen without doing it
+
+Note: File-based inputs (--summary-file, --test-plan-file) take precedence
+over inline arguments and are recommended for agent use to avoid shell
+escaping issues.
 
 This script:
 1. Validates preconditions (correct branch, not on main, etc.)
@@ -274,12 +286,30 @@ def update_project_status(issue_number):
     return True, "Status updated to Needs Review"
 
 
+def read_file_content(file_path):
+    """Read content from a file, returning None if file doesn't exist or is empty."""
+    if not file_path:
+        return None
+    try:
+        path = Path(file_path)
+        if not path.exists():
+            print(f"{YELLOW}Warning: File not found: {file_path}{NC}")
+            return None
+        content = path.read_text(encoding='utf-8').strip()
+        return content if content else None
+    except Exception as e:
+        print(f"{YELLOW}Warning: Could not read file {file_path}: {e}{NC}")
+        return None
+
+
 def parse_args():
     """Parse command line arguments."""
     args = {
         'issue_number': None,
         'summary': None,
         'test_plan': None,
+        'summary_file': None,
+        'test_plan_file': None,
         'skip_checks': False,
         'dry_run': False
     }
@@ -294,6 +324,12 @@ def parse_args():
         elif arg == '--test-plan' and i + 1 < len(sys.argv):
             args['test_plan'] = sys.argv[i + 1]
             i += 2
+        elif arg == '--summary-file' and i + 1 < len(sys.argv):
+            args['summary_file'] = sys.argv[i + 1]
+            i += 2
+        elif arg == '--test-plan-file' and i + 1 < len(sys.argv):
+            args['test_plan_file'] = sys.argv[i + 1]
+            i += 2
         elif arg == '--skip-checks':
             args['skip_checks'] = True
             i += 1
@@ -306,6 +342,17 @@ def parse_args():
         else:
             i += 1
 
+    # File-based inputs take precedence over inline arguments
+    if args['summary_file']:
+        file_content = read_file_content(args['summary_file'])
+        if file_content:
+            args['summary'] = file_content
+
+    if args['test_plan_file']:
+        file_content = read_file_content(args['test_plan_file'])
+        if file_content:
+            args['test_plan'] = file_content
+
     return args
 
 
@@ -314,7 +361,15 @@ def main():
 
     if not args['issue_number']:
         print(f"{RED}Error: Issue number required{NC}")
-        print(f"Usage: python {sys.argv[0]} <issue-number> [--summary \"...\"] [--test-plan \"...\"]")
+        print(f"Usage: python {sys.argv[0]} <issue-number> [options]")
+        print(f"")
+        print(f"Options:")
+        print(f"  --summary \"...\"       PR summary text (inline)")
+        print(f"  --summary-file PATH   PR summary from file (recommended)")
+        print(f"  --test-plan \"...\"     Test plan text (inline)")
+        print(f"  --test-plan-file PATH Test plan from file (recommended)")
+        print(f"  --skip-checks         Skip tests, lint, and build checks")
+        print(f"  --dry-run             Show what would happen without doing it")
         sys.exit(1)
 
     issue_number = args['issue_number']
@@ -368,9 +423,9 @@ def main():
         # Tests
         tests_pass, test_output = run_tests(npm_dir)
         if tests_pass:
-            print(f"  Tests: {GREEN}✓ Pass{NC}")
+            print(f"  Tests: {GREEN}[PASS]{NC}")
         else:
-            print(f"  Tests: {RED}✗ Fail{NC}")
+            print(f"  Tests: {RED}[FAIL]{NC}")
             print(f"\n{test_output}")
             print(f"\n{RED}Error: Tests must pass before creating PR{NC}")
             sys.exit(1)
@@ -378,9 +433,9 @@ def main():
         # Lint
         lint_pass, lint_output = run_lint(npm_dir)
         if lint_pass:
-            print(f"  Lint: {GREEN}✓ Pass{NC}")
+            print(f"  Lint: {GREEN}[PASS]{NC}")
         else:
-            print(f"  Lint: {RED}✗ Fail{NC}")
+            print(f"  Lint: {RED}[FAIL]{NC}")
             print(f"\n{lint_output}")
             print(f"\n{RED}Error: Lint must pass before creating PR{NC}")
             sys.exit(1)
@@ -388,9 +443,9 @@ def main():
         # Build
         build_pass, build_output = run_build(npm_dir)
         if build_pass:
-            print(f"  Build: {GREEN}✓ Pass{NC}")
+            print(f"  Build: {GREEN}[PASS]{NC}")
         else:
-            print(f"  Build: {RED}✗ Fail{NC}")
+            print(f"  Build: {RED}[FAIL]{NC}")
             print(f"\n{build_output}")
             print(f"\n{RED}Error: Build must pass before creating PR{NC}")
             sys.exit(1)
@@ -434,7 +489,7 @@ def main():
             print(f"{RED}Error: Failed to create commit{NC}")
             sys.exit(1)
 
-        print(f"  {GREEN}✓ Commit created{NC}")
+        print(f"  {GREEN}[OK] Commit created{NC}")
     else:
         print(f"{YELLOW}No changes to commit{NC}")
 
@@ -444,7 +499,7 @@ def main():
         print(f"{RED}Error: Failed to push to remote{NC}")
         sys.exit(1)
 
-    print(f"  {GREEN}✓ Pushed to origin/{branch}{NC}")
+    print(f"  {GREEN}[OK] Pushed to origin/{branch}{NC}")
 
     # Step 9: Check if PR already exists
     existing_pr, _ = run(f'gh pr view --json url --jq ".url"', check=False)
@@ -462,16 +517,16 @@ def main():
             sys.exit(1)
 
         pr_url = result
-        print(f"  {GREEN}✓ PR created{NC}")
+        print(f"  {GREEN}[OK] PR created{NC}")
 
     # Step 11: Update project status
     print()
     print(f"{BLUE}Updating project status...{NC}")
     success, message = update_project_status(issue_number)
     if success:
-        print(f"  {GREEN}✓ {message}{NC}")
+        print(f"  {GREEN}[OK] {message}{NC}")
     else:
-        print(f"  {YELLOW}⚠ {message}{NC}")
+        print(f"  {YELLOW}[WARN] {message}{NC}")
 
     # Success summary
     print()

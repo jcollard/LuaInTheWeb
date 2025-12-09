@@ -1,0 +1,5 @@
+- Verified script runs without Unicode encoding errors on Windows (cp1252)
+- Tested --dry-run mode showing all ASCII symbols display correctly
+- All unit tests pass (843 tests)
+- Lint passes
+- Build succeeds
