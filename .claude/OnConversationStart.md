@@ -196,3 +196,27 @@ gh project item-list 3 --owner jcollard --format json | node scripts/jq.js ".ite
 - Only stop for actual blockers (missing info, errors, ambiguity)
 - Avoid using bash commands that are not present in @settings.local.json or @.claude/settings.json
 - When you finish, create another comprehensive ToDo Task List with remaining items and continue until there is nothing left to complete.
+
+## Windows-Specific Error Handling
+
+### File Modification Error
+
+If you encounter this error repeatedly:
+
+```
+Error: File has been unexpectedly modified. Read it again before attempting to write it.
+```
+
+**This is a known Windows-specific bug.** If this error occurs more than **2 times in a row** on the same file operation:
+
+1. **STOP all current work immediately**
+2. **Notify the user** with this message:
+   > **Windows Terminal Bug Detected**
+   >
+   > The "File has been unexpectedly modified" error has occurred multiple times.
+   > This is a known Windows-specific bug that requires a new terminal session.
+   >
+   > Please close this terminal and start a new Claude Code session.
+3. **Wait for further instructions** - do NOT continue retrying the operation
+
+**Important**: Do NOT keep retrying the same operation. This wastes context and time, as the issue will not resolve without a fresh terminal.
