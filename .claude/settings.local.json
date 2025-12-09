@@ -71,7 +71,8 @@
       "Bash(python -m pytest:*)",
       "Bash(python -m unittest:*)",
       "Bash(python issue-review.py:*)",
-      "Bash(python update-pr.py:*)"
+      "Bash(python update-pr.py:*)",
+      "Bash(node scripts/capture-screenshots.js:*)"
     ],
     "deny": [
       "Bash(npm run dev)",

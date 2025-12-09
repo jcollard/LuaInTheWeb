@@ -45,6 +45,7 @@ from lib.helpers import (
     stage_all_changes, push_branch, get_changed_files,
 )
 from lib.manual_testing import generate_manual_testing_checklist
+from lib.visual_verification import run_visual_verification
 
 # Project configuration
 PROJECT_NUMBER = 3
@@ -57,6 +58,21 @@ NEEDS_REVIEW_OPTION_ID = "44687678"
 def extract_issue_number_from_branch(branch):
     """Extract issue number from branch name like '10-some-feature'."""
     match = re.match(r'^(\d+)-', branch)
+    return match.group(1) if match else None
+
+
+def extract_pr_number_from_url(pr_url):
+    """Extract PR number from GitHub PR URL.
+
+    Args:
+        pr_url: GitHub PR URL like 'https://github.com/owner/repo/pull/123'
+
+    Returns:
+        PR number as string, or None if not found.
+    """
+    if not pr_url:
+        return None
+    match = re.search(r'/pull/(\d+)', pr_url)
     return match.group(1) if match else None
 
 
@@ -540,6 +556,33 @@ def main():
         print(f"  {GREEN}[OK] {message}{NC}")
     else:
         print(f"  {YELLOW}[WARN] {message}{NC}")
+
+    # Step 12: Visual Verification (non-blocking)
+    pr_number = extract_pr_number_from_url(pr_url)
+    if pr_number:
+        print()
+        print(f"{BLUE}Running visual verification...{NC}")
+        try:
+            # Skip build since we already built during checks
+            vv_result = run_visual_verification(
+                issue_number,
+                pr_number=pr_number,
+                skip_build=True
+            )
+            if vv_result.get('skipped'):
+                reason = vv_result.get('reason', 'No Visual Verification section')
+                print(f"  {YELLOW}[SKIP] {reason}{NC}")
+            elif vv_result.get('success'):
+                screenshots = vv_result.get('screenshots', [])
+                successful = [s for s in screenshots if s.get('success')]
+                print(f"  {GREEN}[OK] Captured {len(successful)} screenshot(s){NC}")
+                if vv_result.get('upload', {}).get('success'):
+                    print(f"  {GREEN}[OK] Screenshots posted to PR{NC}")
+            else:
+                error = vv_result.get('error', 'Unknown error')
+                print(f"  {YELLOW}[WARN] Visual verification failed: {error}{NC}")
+        except Exception as e:
+            print(f"  {YELLOW}[WARN] Visual verification error: {e}{NC}")
 
     # Success summary
     print()
