@@ -1,6 +1,6 @@
 # Epic #58: Add light/dark mode theme switcher for the editor
 
-**Status:** In Progress (3/5 complete)
+**Status:** In Progress (3/5 complete, #63 in progress)
 **Branch:** epic-58
 **Created:** 2025-12-09
 **Last Updated:** 2025-12-09
@@ -23,7 +23,7 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 | #60 | Create theme infrastructure (CSS variables, context, localStorage) | ✅ Complete | 60-create-theme-infrastructure | Merged PR #74 |
 | #61 | Theme core layout components (sidebar, panels, tabs) | ✅ Complete | 61-theme-core-layout-components | Merged PR #84 |
 | #62 | Theme terminal and REPL components | ✅ Complete | 62-theme-terminal-and-repl-components | Merged PR #89 |
-| #63 | Integrate Monaco Editor theme switching | ⏳ Pending | - | - |
+| #63 | Integrate Monaco Editor theme switching | 📝 Needs Review | 63-integrate-monaco-editor-theme-switching | PR #93 |
 | #64 | Add theme switcher UI control | ⏳ Pending | - | - |
 
 **Status Legend:**
@@ -57,6 +57,12 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 - Themed BottomPanel terminal output (replaced hardcoded colors with CSS variables)
 - Added E2E tests for terminal theme colors
 - PR #89 merged, #62 complete
+- Started work on #63: Integrate Monaco Editor theme switching
+- Connected CodeEditor to useTheme() hook with Monaco theme mapping (dark → vs-dark, light → vs)
+- Updated CodeEditor.module.css loading state to use theme CSS variables
+- Added E2E tests for Monaco editor theme switching (theme-editor.spec.ts)
+- Fixed test files to mock useTheme (IDELayout, EmbeddableEditor, EditorPanel, LuaRepl)
+- PR #93 created for #63, targeting epic-58 branch
 
 ## Key Files
 
@@ -84,6 +90,7 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 - `src/components/LuaRepl/LuaRepl.module.css` - Themed REPL container styles
 - `src/components/BottomPanel/BottomPanel.module.css` - Themed bottom panel terminal output styles
 - `e2e/theme-terminal.spec.ts` - E2E tests for terminal theme colors
+- `e2e/theme-editor.spec.ts` - E2E tests for Monaco editor theme switching
 
 ## Open Questions
 
