@@ -2,7 +2,7 @@ import { useRef, useCallback, useEffect } from 'react'
 import BashTerminal from '../BashTerminal'
 import type { BashTerminalHandle } from '../BashTerminal'
 import { useLuaRepl } from './useLuaRepl'
-import './LuaRepl.css'
+import styles from './LuaRepl.module.css'
 
 interface LuaReplProps {
   /** When true, hides header and tips for embedded IDE context */
@@ -91,22 +91,22 @@ export default function LuaRepl({ embedded = false }: LuaReplProps) {
   }, [showWelcome])
 
   return (
-    <div className={`lua-repl${embedded ? ' lua-repl--embedded' : ''}`}>
+    <div className={`${styles.repl}${embedded ? ` ${styles.replEmbedded}` : ''}`}>
       {!embedded && (
-        <div className="repl-header">
+        <div className={styles.header}>
           <h3>Interactive REPL</h3>
-          <button onClick={clearRepl} className="btn-clear">
+          <button onClick={clearRepl} className={styles.btnClear}>
             Clear
           </button>
         </div>
       )}
 
-      <div className="repl-terminal-container">
+      <div className={styles.terminalContainer}>
         <BashTerminal ref={terminalRef} onCommand={handleCommand} embedded={embedded} />
       </div>
 
       {!embedded && (
-        <div className="repl-help">
+        <div className={styles.help}>
           <strong>Tips:</strong> Press ↑/↓ to navigate history (or lines in multi-line mode) • ←/→ to move cursor • Enter to execute • Shift+Enter for multi-line mode • Type expressions or statements • io.read() prompts in terminal
         </div>
       )}

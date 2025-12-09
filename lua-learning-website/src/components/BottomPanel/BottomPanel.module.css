@@ -70,7 +70,7 @@
   font-family: 'Cascadia Code', Menlo, Monaco, 'Courier New', monospace;
   font-size: 14px;
   line-height: 1.5;
-  color: #d4d4d4;
+  color: var(--theme-terminal-text);
 }
 
 .outputLine {
@@ -79,11 +79,11 @@
 }
 
 .outputLine.error {
-  color: #f48771;
+  color: var(--theme-terminal-error);
 }
 
 .placeholder {
-  color: #858585;
+  color: var(--theme-text-muted);
   font-style: italic;
 }
 
@@ -92,22 +92,22 @@
   align-items: center;
   padding: 8px 12px;
   gap: 8px;
-  border-top: 1px solid #3c3c3c;
-  background-color: #1e1e1e;
+  border-top: 1px solid var(--theme-border-secondary);
+  background-color: var(--theme-terminal-bg);
 }
 
 .inputPrompt {
-  color: #569cd6;
+  color: var(--theme-accent-primary);
   font-family: 'Cascadia Code', Menlo, Monaco, 'Courier New', monospace;
   font-size: 14px;
 }
 
 .inputField {
   flex: 1;
-  background-color: #3c3c3c;
-  border: 1px solid #3c3c3c;
+  background-color: var(--theme-bg-tertiary);
+  border: 1px solid var(--theme-border-secondary);
   border-radius: 2px;
-  color: #d4d4d4;
+  color: var(--theme-terminal-text);
   font-family: 'Cascadia Code', Menlo, Monaco, 'Courier New', monospace;
   font-size: 14px;
   padding: 4px 8px;
@@ -115,19 +115,19 @@
 }
 
 .inputField:focus {
-  border-color: #007acc;
+  border-color: var(--theme-border-focus);
 }
 
 .submitButton {
-  background-color: #0e639c;
+  background-color: var(--theme-accent-primary);
   border: none;
   border-radius: 2px;
-  color: #ffffff;
+  color: var(--theme-text-inverse);
   cursor: pointer;
   font-size: 12px;
   padding: 4px 12px;
 }
 
 .submitButton:hover {
-  background-color: #1177bb;
+  background-color: var(--theme-accent-hover);
 }

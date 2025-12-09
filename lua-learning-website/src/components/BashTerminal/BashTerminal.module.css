@@ -1,45 +1,45 @@
-.bash-terminal-container {
+.container {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 500px;
 }
 
-.bash-terminal-container--embedded {
+.containerEmbedded {
   min-height: 0;
   height: 100%;
   flex: 1;
   overflow: hidden;
 }
 
-.bash-terminal-header {
+.header {
   margin-bottom: 1rem;
 }
 
-.bash-terminal-header h3 {
+.header h3 {
   margin: 0;
-  color: #667eea;
+  color: var(--theme-accent-primary);
   font-size: 1.1rem;
 }
 
-.bash-terminal {
+.terminal {
   flex: 1;
-  background: #1e1e1e;
+  background: var(--theme-terminal-bg);
   border-radius: 8px;
   padding: 1rem;
   overflow: hidden;
 }
 
-.bash-terminal-container--embedded .bash-terminal {
+.containerEmbedded .terminal {
   padding: 0.5rem;
   border-radius: 0;
 }
 
 /* Ensure xterm terminal fills the container */
-.bash-terminal .xterm {
+.terminal :global(.xterm) {
   height: 100%;
 }
 
-.bash-terminal .xterm-viewport {
-  background-color: #1e1e1e !important;
+.terminal :global(.xterm-viewport) {
+  background-color: var(--theme-terminal-bg) !important;
 }

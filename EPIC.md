@@ -22,7 +22,7 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 |---|-------|--------|--------|-------|
 | #60 | Create theme infrastructure (CSS variables, context, localStorage) | ✅ Complete | 60-create-theme-infrastructure | Merged PR #74 |
 | #61 | Theme core layout components (sidebar, panels, tabs) | ✅ Complete | 61-theme-core-layout-components | Merged PR #84 |
-| #62 | Theme terminal and REPL components | ⏳ Pending | - | - |
+| #62 | Theme terminal and REPL components | 📝 Needs Review | 62-theme-terminal-and-repl-components | PR #89 |
 | #63 | Integrate Monaco Editor theme switching | ⏳ Pending | - | - |
 | #64 | Add theme switcher UI control | ⏳ Pending | - | - |
 
@@ -48,6 +48,14 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 - Completed #61 implementation, PR #84 created
 - Fixed file explorer theming (FileExplorer, FileTree, FileTreeItem CSS files)
 - PR #84 merged, #61 complete
+- Started work on #62: Theme terminal and REPL components
+- Created xterm.js theme configuration (dark/light terminal themes)
+- Updated BashTerminal to use useTheme() with dynamic theme switching
+- Converted BashTerminal.css to CSS module with theme variables
+- Converted LuaRepl.css to CSS module with theme variables
+- Fixed xterm.js theme application (set theme after terminal.open())
+- Themed BottomPanel terminal output (replaced hardcoded colors with CSS variables)
+- Added E2E tests for terminal theme colors
 
 ## Key Files
 
@@ -70,6 +78,11 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 - `src/components/FileTree/FileTree.module.css` - Themed file tree styles
 - `src/components/FileTreeItem/FileTreeItem.module.css` - Themed file tree item styles
 - `e2e/theme-layout.spec.ts` - E2E tests for theme layout components
+- `src/components/BashTerminal/terminalTheme.ts` - xterm.js dark/light theme configuration
+- `src/components/BashTerminal/BashTerminal.module.css` - Themed terminal container styles
+- `src/components/LuaRepl/LuaRepl.module.css` - Themed REPL container styles
+- `src/components/BottomPanel/BottomPanel.module.css` - Themed bottom panel terminal output styles
+- `e2e/theme-terminal.spec.ts` - E2E tests for terminal theme colors
 
 ## Open Questions
 
