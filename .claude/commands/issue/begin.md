@@ -78,6 +78,7 @@ Analyze the issue and generate an implementation plan:
 2. [ ] <Step 2>
 3. [ ] <Step 3>
 ...
+N. [ ] Write E2E tests for affected user flows (if user-facing - see E2E Requirements)
 
 ### Files to Modify/Create
 - `<file1>` - <what changes>
@@ -89,7 +90,7 @@ Analyze the issue and generate an implementation plan:
 
 ### Testing Strategy
 - **Unit tests**: <what to test>
-- **E2E tests**: <what user flows, if applicable>
+- **E2E tests**: <what user flows to test> (REQUIRED if user-facing, N/A otherwise)
 ```
 
 **Plan Depth by Complexity:**
@@ -99,6 +100,24 @@ Analyze the issue and generate an implementation plan:
 | Simple | 1-5 | Brief approach, files, basic tests |
 | Medium | 6-10 | Detailed steps, edge cases, full test strategy |
 | Complex | 10+ | Recommend splitting into sub-issues |
+
+**E2E Test Requirements:**
+
+Determine if E2E tests are required based on the issue type:
+
+| Issue Type | E2E Required | Examples |
+|------------|--------------|----------|
+| Feature adding/modifying UI | **Yes** | New button, form, panel, dialog |
+| Bug fix affecting user interaction | **Yes** | Click handler broken, display issue |
+| Internal refactoring (no UI changes) | No | Code cleanup, reorganization |
+| Pure utility/helper functions | No | Date formatting, string utils |
+| Build/config changes | No | Vite config, ESLint rules |
+| Documentation-only changes | No | README updates, comments |
+
+**When E2E is required**, add it as an explicit numbered step in the Implementation Steps:
+```
+N. [ ] Write E2E tests for affected user flows
+```
 
 For **Complex** issues (10+ tasks), output:
 
@@ -274,16 +293,17 @@ npm run test:mutation:scope "src/components/AffectedComponent/**"
 ```
 - Mutation score must be >= 80% on new/modified files
 
-**E2E Tests (if user-facing changes):**
-- Add E2E tests for new user flows
+**E2E Tests (REQUIRED for user-facing changes - see E2E Test Requirements in Step 2):**
+- Add E2E tests for new/modified user flows
 - Run `npm run test:e2e` before completing
+- Skip only for internal-only changes (refactoring, utilities, config)
 
 **Completion Checklist:**
 - [ ] All unit tests pass: `npm run test`
 - [ ] Scoped mutation tests pass (>= 80%)
 - [ ] Lint passes: `npm run lint`
 - [ ] Build succeeds: `npm run build`
-- [ ] E2E tests pass (if applicable): `npm run test:e2e`
+- [ ] E2E tests pass: `npm run test:e2e` (REQUIRED for user-facing changes, skip for internal-only)
 
 ---
 
