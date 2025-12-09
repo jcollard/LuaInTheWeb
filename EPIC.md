@@ -1,6 +1,6 @@
 # Epic #58: Add light/dark mode theme switcher for the editor
 
-**Status:** In Progress (1/5 complete)
+**Status:** In Progress (2/5 complete)
 **Branch:** epic-58
 **Created:** 2025-12-09
 **Last Updated:** 2025-12-09
@@ -21,7 +21,7 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #60 | Create theme infrastructure (CSS variables, context, localStorage) | ✅ Complete | 60-create-theme-infrastructure | Merged PR #74 |
-| #61 | Theme core layout components (sidebar, panels, tabs) | 📝 Needs Review | 61-theme-core-layout-components | PR #84 |
+| #61 | Theme core layout components (sidebar, panels, tabs) | ✅ Complete | 61-theme-core-layout-components | Merged PR #84 |
 | #62 | Theme terminal and REPL components | ⏳ Pending | - | - |
 | #63 | Integrate Monaco Editor theme switching | ⏳ Pending | - | - |
 | #64 | Add theme switcher UI control | ⏳ Pending | - | - |
@@ -47,6 +47,7 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 - Started work on #61: Theme core layout components
 - Completed #61 implementation, PR #84 created
 - Fixed file explorer theming (FileExplorer, FileTree, FileTreeItem CSS files)
+- PR #84 merged, #61 complete
 
 ## Key Files
 
