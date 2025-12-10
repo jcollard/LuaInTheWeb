@@ -55,7 +55,7 @@ LuaInTheWeb/
 
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
-| #120 | Initialize shell-core package structure | ✅ Complete | epic-119 | Package structure, workspace, build/test configured |
+| #120 | Initialize shell-core package structure | ✅ Complete | 120-initialize-shell-core | Merged PR #126 |
 | #121 | Extract shell types and utilities | ⏳ Pending | - | - |
 | #122 | Extract CommandRegistry and filesystem adapter | ⏳ Pending | - | - |
 | #123 | Extract shell commands (cd, pwd, ls, help) | ⏳ Pending | - | - |
@@ -79,6 +79,7 @@ LuaInTheWeb/
   - Configured package.json, tsconfig.json, vitest.config.ts
   - Set up npm workspaces at root level
   - Verified build and test pass
+  - Merged PR #126 to epic-119
 
 ## Key Files
 
