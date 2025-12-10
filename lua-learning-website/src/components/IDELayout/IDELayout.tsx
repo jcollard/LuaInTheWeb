@@ -98,7 +98,7 @@ function IDELayoutInner({ className }: { className?: string }) {
         id: 'file',
         label: 'File',
         items: [
-          { id: 'new-file', label: 'New File', shortcut: 'Ctrl+N', action: () => createFileWithRename() },
+          { id: 'new-file', label: 'New File', action: () => createFileWithRename() },
           { id: 'open-file', label: 'Open File...', disabled: true },
           { type: 'divider' },
           { id: 'save', label: 'Save', shortcut: 'Ctrl+S', action: saveFile, disabled: !isDirty },
@@ -150,7 +150,6 @@ function IDELayoutInner({ className }: { className?: string }) {
     toggleTerminal,
     toggleSidebar,
     saveFile,
-    createFile: createFileWithRename,
   })
 
   const combinedClassName = className
