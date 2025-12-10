@@ -247,16 +247,15 @@ test.describe('IDE Editor', () => {
     await expect(runButton).toBeVisible()
   })
 
-  test('navigating to /editor from home page works', async ({ page }) => {
-    // Start at home
+  test('root URL redirects to /editor', async ({ page }) => {
+    // Navigate to root
     await page.goto('/')
-    await expect(page.getByText('Welcome to Learn Lua')).toBeVisible()
 
-    // Click Editor link
-    await page.getByRole('link', { name: /editor/i }).click()
-
-    // Assert - Should be on editor page
+    // Should redirect to /editor and show IDE
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
+
+    // URL should be /editor
+    await expect(page).toHaveURL(/\/editor/)
   })
 
   test('editor is interactable and accepts input', async ({ page }) => {

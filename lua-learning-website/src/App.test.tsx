@@ -1,13 +1,7 @@
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { vi } from 'vitest'
 import App from './App'
-
-// Mock LuaPlayground to avoid xterm/wasmoon issues in tests
-vi.mock('./components/LuaPlayground', () => ({
-  default: () => <div data-testid="mock-lua-playground">Lua Playground</div>,
-}))
 
 // Mock IDELayout to avoid complex component tree in routing tests
 vi.mock('./components/IDELayout', () => ({
@@ -15,77 +9,6 @@ vi.mock('./components/IDELayout', () => ({
 }))
 
 describe('App routing', () => {
-  // Cycle 3.1: Routes render correct components
-  it('should render home page at /', () => {
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <App />
-      </MemoryRouter>
-    )
-    expect(screen.getByText('Welcome to Learn Lua')).toBeInTheDocument()
-  })
-
-  // Cycle 3.2: Playground route works
-  it('should render playground at /playground', async () => {
-    render(
-      <MemoryRouter initialEntries={['/playground']}>
-        <App />
-      </MemoryRouter>
-    )
-    // Wait for lazy-loaded component
-    expect(await screen.findByText('Lua Playground')).toBeInTheDocument()
-  })
-
-  // Cycle 3.3: Navigation links work
-  it('should navigate to playground when link clicked', async () => {
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <App />
-      </MemoryRouter>
-    )
-
-    await userEvent.click(screen.getByText('Playground'))
-    // Wait for lazy-loaded component
-    expect(await screen.findByText('Lua Playground')).toBeInTheDocument()
-  })
-
-  it('should render tutorials at /tutorials', () => {
-    render(
-      <MemoryRouter initialEntries={['/tutorials']}>
-        <App />
-      </MemoryRouter>
-    )
-    expect(screen.getByRole('heading', { name: 'Tutorials' })).toBeInTheDocument()
-  })
-
-  it('should render examples at /examples', () => {
-    render(
-      <MemoryRouter initialEntries={['/examples']}>
-        <App />
-      </MemoryRouter>
-    )
-    expect(screen.getByText('Code Examples')).toBeInTheDocument()
-  })
-
-  it('should navigate between routes', async () => {
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <App />
-      </MemoryRouter>
-    )
-
-    // Start at home
-    expect(screen.getByText('Welcome to Learn Lua')).toBeInTheDocument()
-
-    // Navigate to tutorials
-    await userEvent.click(screen.getByText('Tutorials'))
-    expect(screen.getByText(/Tutorial content coming soon/)).toBeInTheDocument()
-
-    // Navigate to examples
-    await userEvent.click(screen.getByText('Examples'))
-    expect(screen.getByText(/Code examples coming soon/)).toBeInTheDocument()
-  })
-
   it('should render IDE layout at /editor', async () => {
     render(
       <MemoryRouter initialEntries={['/editor']}>
@@ -96,15 +19,33 @@ describe('App routing', () => {
     expect(await screen.findByTestId('ide-layout')).toBeInTheDocument()
   })
 
-  it('should navigate to editor when link clicked', async () => {
+  it('should redirect root to /editor', async () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <App />
       </MemoryRouter>
     )
-
-    await userEvent.click(screen.getByText('Editor'))
-    // Wait for lazy-loaded component
+    // Should redirect to editor and render IDELayout
     expect(await screen.findByTestId('ide-layout')).toBeInTheDocument()
+  })
+
+  it('should redirect unknown routes to /editor', async () => {
+    render(
+      <MemoryRouter initialEntries={['/unknown-route']}>
+        <App />
+      </MemoryRouter>
+    )
+    // Should redirect to editor and render IDELayout
+    expect(await screen.findByTestId('ide-layout')).toBeInTheDocument()
+  })
+
+  it('renders without crashing', async () => {
+    // Simple smoke test - component should render successfully
+    const { container } = render(
+      <MemoryRouter initialEntries={['/editor']}>
+        <App />
+      </MemoryRouter>
+    )
+    expect(container).toBeInTheDocument()
   })
 })
