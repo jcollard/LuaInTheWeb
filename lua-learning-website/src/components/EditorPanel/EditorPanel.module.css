@@ -3,6 +3,7 @@
   flex-direction: column;
   height: 100%;
   background-color: var(--theme-bg-primary);
+  transition: var(--theme-transition);
 }
 
 .toolbar {

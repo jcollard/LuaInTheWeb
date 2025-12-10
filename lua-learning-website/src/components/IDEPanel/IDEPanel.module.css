@@ -4,6 +4,7 @@
   height: 100%;
   overflow: hidden;
   background: var(--theme-bg-primary);
+  transition: var(--theme-transition);
 }
 
 .header {

@@ -8,6 +8,7 @@ vi.mock('../../contexts', () => ({
     theme: 'dark',
     isDark: true,
     toggleTheme: vi.fn(),
+    setTheme: vi.fn(),
   }),
 }))
 

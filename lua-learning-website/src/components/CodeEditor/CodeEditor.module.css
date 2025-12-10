@@ -12,4 +12,5 @@
   background-color: var(--theme-editor-bg);
   color: var(--theme-text-muted);
   font-size: 14px;
+  transition: var(--theme-transition);
 }

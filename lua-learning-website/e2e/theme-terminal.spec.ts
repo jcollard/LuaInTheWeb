@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { TIMEOUTS } from './constants'
 
 test.describe('Theme - Terminal Components', () => {
   test.beforeEach(async ({ page }) => {
@@ -21,10 +22,10 @@ test.describe('Theme - Terminal Components', () => {
 
     // Wait for terminal container to be visible
     const terminalContainer = page.locator('[data-testid="bash-terminal-container"]')
-    await expect(terminalContainer).toBeVisible({ timeout: 10000 })
+    await expect(terminalContainer).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
     // Wait for xterm to create its DOM
-    await page.waitForSelector('.xterm-viewport', { timeout: 10000 })
+    await page.waitForSelector('.xterm-viewport', { timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
     // Check the xterm viewport background
     const xtermViewport = page.locator('.xterm-viewport')
@@ -47,8 +48,8 @@ test.describe('Theme - Terminal Components', () => {
 
     // Wait for terminal
     const terminalContainer = page.locator('[data-testid="bash-terminal-container"]')
-    await expect(terminalContainer).toBeVisible({ timeout: 10000 })
-    await page.waitForSelector('.xterm-viewport', { timeout: 10000 })
+    await expect(terminalContainer).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+    await page.waitForSelector('.xterm-viewport', { timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
     // Check the xterm viewport background
     const xtermViewport = page.locator('.xterm-viewport')
@@ -71,8 +72,8 @@ test.describe('Theme - Terminal Components', () => {
 
     // Wait for terminal container
     const terminalContainer = page.locator('[data-testid="bash-terminal-container"]')
-    await expect(terminalContainer).toBeVisible({ timeout: 10000 })
-    await page.waitForTimeout(1000) // Wait for REPL to initialize
+    await expect(terminalContainer).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+    await page.waitForTimeout(TIMEOUTS.INIT) // Wait for REPL to initialize
 
     // Find any canvas element in the terminal (xterm uses canvas for text rendering)
     const canvases = page.locator('[data-testid="bash-terminal-container"] canvas')
@@ -160,21 +161,21 @@ test.describe('Theme - Terminal Components', () => {
 
     // Wait for terminal container
     const terminalContainer = page.locator('[data-testid="bash-terminal-container"]')
-    await expect(terminalContainer).toBeVisible({ timeout: 10000 })
-    await page.waitForTimeout(500)
+    await expect(terminalContainer).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+    await page.waitForTimeout(TIMEOUTS.ANIMATION)
 
     // Switch to light theme
     await page.evaluate(() => {
       localStorage.setItem('lua-ide-theme', 'light')
       document.documentElement.setAttribute('data-theme', 'light')
     })
-    await page.waitForTimeout(1000)
+    await page.waitForTimeout(TIMEOUTS.INIT)
 
     // Type something in the REPL to create new text with the new theme
     await terminalContainer.click()
     await page.keyboard.type('print("test")')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(TIMEOUTS.ANIMATION)
 
     // Find canvas and check text color
     const canvases = page.locator('[data-testid="bash-terminal-container"] canvas')

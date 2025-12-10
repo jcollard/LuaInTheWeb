@@ -5,6 +5,7 @@
   width: 48px;
   background-color: var(--theme-bg-tertiary);
   border-right: 1px solid var(--theme-border-primary);
+  transition: var(--theme-transition);
 }
 
 .items {
