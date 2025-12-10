@@ -29,3 +29,10 @@ export {
 
 // Command parsing
 export { parseCommand } from './parseCommand'
+
+// Command registry
+export { CommandRegistry } from './CommandRegistry'
+
+// Filesystem adapter
+export { createFileSystemAdapter } from './createFileSystemAdapter'
+export type { ExternalFileSystem } from './createFileSystemAdapter'
