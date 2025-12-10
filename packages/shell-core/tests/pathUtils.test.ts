@@ -76,6 +76,14 @@ describe('pathUtils', () => {
     it('should normalize the result', () => {
       expect(joinPath('/foo/', '/bar/../baz')).toBe('/baz')
     })
+
+    it('should return root for no arguments', () => {
+      expect(joinPath()).toBe('/')
+    })
+
+    it('should return root for all empty arguments', () => {
+      expect(joinPath('', '', '')).toBe('/')
+    })
   })
 
   describe('resolvePath', () => {

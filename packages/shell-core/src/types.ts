@@ -72,13 +72,19 @@ export interface IFileSystem {
 
   /**
    * Create a directory.
+   * Creates only the final directory in the path (not parent directories).
+   * Use recursive calls to implement mkdir -p behavior if needed.
    * @param path - The directory path to create
+   * @throws Error if parent directory doesn't exist or path already exists
    */
   createDirectory(path: string): void
 
   /**
    * Delete a file or directory.
+   * For directories, only deletes if empty (non-recursive).
+   * Implementations may provide a separate recursive delete method.
    * @param path - The path to delete
+   * @throws Error if path doesn't exist or directory is not empty
    */
   delete(path: string): void
 }

@@ -7,9 +7,11 @@ import type { ParsedCommand } from './types'
 /**
  * Parse a command string into its components.
  * Handles:
- * - Simple commands with space-separated arguments
+ * - Simple commands with whitespace-separated arguments (spaces and tabs)
  * - Quoted arguments (single and double quotes)
- * - Escaped characters (backslash)
+ * - Escaped characters (backslash) - note: escapes are literal inside single quotes (bash-compatible)
+ * - Unclosed quotes (returns partial token)
+ * - Trailing backslash (preserved in output)
  */
 export function parseCommand(input: string): ParsedCommand {
   const raw = input
@@ -56,8 +58,8 @@ export function parseCommand(input: string): ParsedCommand {
       continue
     }
 
-    // Handle spaces (token separator when not in quotes)
-    if (char === ' ' && !inDoubleQuote && !inSingleQuote) {
+    // Handle whitespace (token separator when not in quotes)
+    if ((char === ' ' || char === '\t') && !inDoubleQuote && !inSingleQuote) {
       if (current !== '' || hasQuotedContent) {
         tokens.push(current)
         current = ''
@@ -68,6 +70,11 @@ export function parseCommand(input: string): ParsedCommand {
 
     // Regular character
     current += char
+  }
+
+  // Handle trailing backslash (preserve it)
+  if (escaped) {
+    current += '\\'
   }
 
   // Don't forget the last token

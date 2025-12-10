@@ -91,6 +91,30 @@ describe('parseCommand', () => {
       expect(result.command).toBe('echo')
       expect(result.args).toEqual(['he said "hello"'])
     })
+
+    it('should handle unclosed double quotes', () => {
+      const result = parseCommand('echo "hello')
+      expect(result.command).toBe('echo')
+      expect(result.args).toEqual(['hello'])
+    })
+
+    it('should handle unclosed single quotes', () => {
+      const result = parseCommand("echo 'hello")
+      expect(result.command).toBe('echo')
+      expect(result.args).toEqual(['hello'])
+    })
+
+    it('should concatenate adjacent quoted strings', () => {
+      const result = parseCommand('echo "hello""world"')
+      expect(result.command).toBe('echo')
+      expect(result.args).toEqual(['helloworld'])
+    })
+
+    it('should concatenate mixed adjacent quotes', () => {
+      const result = parseCommand("echo \"hello\"'world'")
+      expect(result.command).toBe('echo')
+      expect(result.args).toEqual(['helloworld'])
+    })
   })
 
   describe('escape sequences', () => {
@@ -111,6 +135,18 @@ describe('parseCommand', () => {
       expect(result.command).toBe('echo')
       expect(result.args).toEqual(['\\path'])
     })
+
+    it('should treat backslash literally inside single quotes (bash-compatible)', () => {
+      const result = parseCommand("echo 'path\\to\\file'")
+      expect(result.command).toBe('echo')
+      expect(result.args).toEqual(['path\\to\\file'])
+    })
+
+    it('should preserve trailing backslash', () => {
+      const result = parseCommand('echo hello\\')
+      expect(result.command).toBe('echo')
+      expect(result.args).toEqual(['hello\\'])
+    })
   })
 
   describe('special characters', () => {
@@ -130,6 +166,24 @@ describe('parseCommand', () => {
       const result = parseCommand('cd ../folder')
       expect(result.command).toBe('cd')
       expect(result.args).toEqual(['../folder'])
+    })
+
+    it('should treat tabs as separators', () => {
+      const result = parseCommand('echo\thello\tworld')
+      expect(result.command).toBe('echo')
+      expect(result.args).toEqual(['hello', 'world'])
+    })
+
+    it('should handle mixed spaces and tabs', () => {
+      const result = parseCommand('echo \t hello \t world')
+      expect(result.command).toBe('echo')
+      expect(result.args).toEqual(['hello', 'world'])
+    })
+
+    it('should preserve tabs inside quotes', () => {
+      const result = parseCommand('echo "hello\tworld"')
+      expect(result.command).toBe('echo')
+      expect(result.args).toEqual(['hello\tworld'])
     })
   })
 
