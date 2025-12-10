@@ -35,6 +35,7 @@ function IDELayoutInner({ className }: { className?: string }) {
     toggleTerminal,
     runCode,
     // Filesystem
+    filesystem,
     fileTree,
     createFolder,
     deleteFile,
@@ -217,6 +218,7 @@ function IDELayoutInner({ className }: { className?: string }) {
                         terminalOutput={terminalOutput}
                         isAwaitingInput={isAwaitingInput}
                         onSubmitInput={submitInput}
+                        filesystem={filesystem}
                       />
                     </IDEPanel>
                   </>
