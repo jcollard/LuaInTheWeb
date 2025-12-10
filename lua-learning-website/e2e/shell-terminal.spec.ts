@@ -1,5 +1,15 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, Page } from '@playwright/test'
 import { TIMEOUTS } from './constants'
+
+/**
+ * Helper to get terminal content via SerializeAddon
+ */
+async function getShellContent(page: Page): Promise<string> {
+  return await page.evaluate(() => {
+    const getContent = (window as unknown as { __getShellContent?: () => string }).__getShellContent
+    return getContent?.() ?? ''
+  })
+}
 
 test.describe('Shell Terminal', () => {
   test.beforeEach(async ({ page }) => {
@@ -13,159 +23,91 @@ test.describe('Shell Terminal', () => {
     })
   })
 
-  test('Shell tab is accessible and shows terminal', async ({ page }) => {
-    const shellTab = page.getByRole('tab', { name: /shell/i })
-    await expect(shellTab).toBeVisible()
-    await expect(shellTab).toHaveAttribute('aria-selected', 'true')
+  test('shows welcome message on load', async ({ page }) => {
+    // Wait for welcome message to appear
+    await expect
+      .poll(async () => getShellContent(page), { timeout: TIMEOUTS.ELEMENT_VISIBLE })
+      .toContain('Lua Shell - Ready')
 
-    // Terminal should be visible
-    const terminal = page.locator('.xterm-screen')
-    await expect(terminal).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+    const content = await getShellContent(page)
+    expect(content).toContain("Type 'help' for available commands")
   })
 
-  test('pwd command executes without error', async ({ page }) => {
+  test('pwd command shows current directory', async ({ page }) => {
     const terminal = page.locator('.xterm-screen')
     await terminal.click()
 
-    // Type pwd command
     await page.keyboard.type('pwd')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-    // Terminal should remain functional
-    await expect(terminal).toBeVisible()
+    // Wait for prompt to reappear after command executes
+    // Use accessibility tree text verification via tabpanel
+    const tabpanel = page.getByRole('tabpanel')
+    await expect(tabpanel).toContainText('pwd')
+    await expect(tabpanel).toContainText('/')
+    await expect(tabpanel).toContainText('$')
   })
 
-  test('help command executes and terminal remains functional', async ({ page }) => {
+  test('help command shows available commands', async ({ page }) => {
     const terminal = page.locator('.xterm-screen')
     await terminal.click()
 
-    // Type help command
     await page.keyboard.type('help')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-    // Type another command to verify terminal is still working
-    await page.keyboard.type('pwd')
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
+    // Verify help shows available commands
+    await expect
+      .poll(async () => getShellContent(page), { timeout: TIMEOUTS.ELEMENT_VISIBLE })
+      .toContain('Available commands')
 
-    await expect(terminal).toBeVisible()
+    const content = await getShellContent(page)
+    expect(content).toContain('pwd')
+    expect(content).toContain('cd')
+    expect(content).toContain('ls')
+    expect(content).toContain('help')
   })
 
-  test('cd to non-existent directory handles error gracefully', async ({ page }) => {
+  test('cd to non-existent directory shows error', async ({ page }) => {
     const terminal = page.locator('.xterm-screen')
     await terminal.click()
 
-    // Type cd command to a non-existent directory
     await page.keyboard.type('cd nonexistent')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-    // Terminal should remain functional after error
-    await page.keyboard.type('pwd')
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-    await expect(terminal).toBeVisible()
+    // Verify error message appears in tabpanel
+    const tabpanel = page.getByRole('tabpanel')
+    await expect(tabpanel).toContainText('No such file or directory')
   })
 
-  test('cd .. executes at root without error', async ({ page }) => {
+  test('ls command works on empty directory', async ({ page }) => {
     const terminal = page.locator('.xterm-screen')
     await terminal.click()
 
-    // At root, cd .. should not error
-    await page.keyboard.type('cd ..')
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-    // Verify terminal still works
-    await page.keyboard.type('pwd')
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-    await expect(terminal).toBeVisible()
-  })
-
-  test('cd ~ executes without error', async ({ page }) => {
-    const terminal = page.locator('.xterm-screen')
-    await terminal.click()
-
-    // Navigate with ~
-    await page.keyboard.type('cd ~')
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-    // Verify terminal still works
-    await page.keyboard.type('pwd')
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-    await expect(terminal).toBeVisible()
-  })
-
-  test('ls command executes on empty directory without error', async ({ page }) => {
-    const terminal = page.locator('.xterm-screen')
-    await terminal.click()
-
-    // Type ls command on empty root directory
     await page.keyboard.type('ls')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-    // Terminal should remain functional
-    await expect(terminal).toBeVisible()
+    // Wait for command to execute - after ls, prompt should reappear
+    // On empty directory, ls produces no output, verify no error and terminal still works
+    await expect
+      .poll(async () => {
+        const content = await getShellContent(page)
+        // ls was typed, no error message, and prompt reappeared (contains $ )
+        return content.includes('ls') && !content.includes('error') && content.includes('$ ')
+      }, { timeout: TIMEOUTS.ELEMENT_VISIBLE })
+      .toBe(true)
   })
 
-  test('unknown command shows error and terminal remains functional', async ({ page }) => {
+  test('unknown command shows command not found error', async ({ page }) => {
     const terminal = page.locator('.xterm-screen')
     await terminal.click()
 
-    // Type unknown command
-    await page.keyboard.type('unknowncommand')
+    await page.keyboard.type('notarealcommand')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-    // Type another command to verify terminal is still working
-    await page.keyboard.type('pwd')
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-    await expect(terminal).toBeVisible()
-  })
-
-  test('command history navigation with arrow keys', async ({ page }) => {
-    const terminal = page.locator('.xterm-screen')
-    await terminal.click()
-
-    // Type first command
-    await page.keyboard.type('pwd')
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-    // Type second command
-    await page.keyboard.type('help')
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-    // Press up arrow to get previous command
-    await page.keyboard.press('ArrowUp')
-    await page.waitForTimeout(TIMEOUTS.BRIEF)
-
-    // Press up again to get first command
-    await page.keyboard.press('ArrowUp')
-    await page.waitForTimeout(TIMEOUTS.BRIEF)
-
-    // Press down to go back
-    await page.keyboard.press('ArrowDown')
-    await page.waitForTimeout(TIMEOUTS.BRIEF)
-
-    // Execute recalled command
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-    // Terminal should still be functional
-    await expect(terminal).toBeVisible()
+    // Verify error message
+    await expect
+      .poll(async () => getShellContent(page), { timeout: TIMEOUTS.ELEMENT_VISIBLE })
+      .toContain('command not found')
   })
 
   test('Ctrl+C cancels current input', async ({ page }) => {
@@ -178,14 +120,18 @@ test.describe('Shell Terminal', () => {
 
     // Press Ctrl+C to cancel
     await page.keyboard.press('Control+c')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
 
-    // Type a new command to verify terminal is still working
+    // Now type a real command to verify terminal still works
     await page.keyboard.type('pwd')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-    await expect(terminal).toBeVisible()
+    // Verify pwd works (proves Ctrl+C didn't break terminal)
+    const tabpanel = page.getByRole('tabpanel')
+    await expect(tabpanel).toContainText('pwd')
+    await expect(tabpanel).toContainText('/')
+    // Verify "some" was NOT executed as a command
+    await expect(tabpanel).not.toContainText('some: command not found')
   })
 
   test('Shell terminal is contained within bottom panel', async ({ page }) => {

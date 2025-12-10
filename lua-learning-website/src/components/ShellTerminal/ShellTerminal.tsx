@@ -49,6 +49,20 @@ export function ShellTerminal({ filesystem, embedded = false }: ShellTerminalPro
     showShellPrompt();
   }, [showWelcome, showShellPrompt]);
 
+  // Expose terminal content for E2E tests
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as unknown as { __getShellContent?: () => string }).__getShellContent = () => {
+        return terminalRef.current?.getContent() ?? '';
+      };
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        delete (window as unknown as { __getShellContent?: () => string }).__getShellContent;
+      }
+    };
+  }, []);
+
   // Handle command execution
   const handleCommand = useCallback(
     async (input: string) => {

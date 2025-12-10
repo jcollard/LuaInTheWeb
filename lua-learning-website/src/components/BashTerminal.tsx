@@ -1,6 +1,7 @@
 import { useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
+import { SerializeAddon } from '@xterm/addon-serialize'
 import '@xterm/xterm/css/xterm.css'
 import styles from './BashTerminal/BashTerminal.module.css'
 import { useTheme } from '../contexts/useTheme'
@@ -12,6 +13,8 @@ export interface BashTerminalHandle {
   clear: () => void
   readLine: () => Promise<string>
   showPrompt: () => void
+  /** Get the current terminal buffer content (for testing) */
+  getContent: () => string
 }
 
 interface BashTerminalProps {
@@ -26,6 +29,7 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
   const terminalRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
+  const serializeAddonRef = useRef<SerializeAddon | null>(null)
   const currentLineRef = useRef<string>('')
   const cursorPositionRef = useRef<number>(0)
   const inputResolveRef = useRef<((value: string) => void) | null>(null)
@@ -555,6 +559,10 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
     const fitAddon = new FitAddon()
     terminal.loadAddon(fitAddon)
 
+    // Create and load serialize addon (for testing)
+    const serializeAddon = new SerializeAddon()
+    terminal.loadAddon(serializeAddon)
+
     // Open terminal in the container
     terminal.open(terminalRef.current)
 
@@ -566,6 +574,7 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
     // Store references
     xtermRef.current = terminal
     fitAddonRef.current = fitAddon
+    serializeAddonRef.current = serializeAddon
 
     // Handle custom key events (for Shift+Enter detection)
     terminal.attachCustomKeyEventHandler((event) => {
@@ -627,6 +636,9 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
     },
     showPrompt: () => {
       xtermRef.current?.write('\x1b[32m> \x1b[0m')
+    },
+    getContent: () => {
+      return serializeAddonRef.current?.serialize() ?? ''
     },
   }))
 
