@@ -1,6 +1,6 @@
 # Epic #58: Add light/dark mode theme switcher for the editor
 
-**Status:** In Progress (4/5 complete)
+**Status:** Complete (5/5 complete)
 **Branch:** epic-58
 **Created:** 2025-12-09
 **Last Updated:** 2025-12-09
@@ -24,7 +24,7 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 | #61 | Theme core layout components (sidebar, panels, tabs) | ✅ Complete | 61-theme-core-layout-components | Merged PR #84 |
 | #62 | Theme terminal and REPL components | ✅ Complete | 62-theme-terminal-and-repl-components | Merged PR #89 |
 | #63 | Integrate Monaco Editor theme switching | ✅ Complete | 63-integrate-monaco-editor-theme-switching | Merged PR #94 |
-| #64 | Add theme switcher UI control | 📝 Needs Review | 64-add-theme-switcher-ui-control | PR #97 |
+| #64 | Add theme switcher UI control | ✅ Complete | 64-add-theme-switcher-ui-control | Merged PR #97 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -70,6 +70,9 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 - Added ThemeToggle to ActivityBar bottom section
 - Added unit tests (14) and E2E tests (8) for theme toggle
 - PR #97 created for #64, targeting epic-58 branch
+- Fixed IDEPanel.module.css to use theme variables (light mode fix)
+- PR #97 merged, #64 complete
+- **All 5 sub-issues complete - Epic ready for review**
 
 ## Key Files
 
