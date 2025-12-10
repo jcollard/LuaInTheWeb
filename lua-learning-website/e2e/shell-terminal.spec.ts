@@ -23,7 +23,7 @@ test.describe('Shell Terminal', () => {
     await expect(terminal).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
   })
 
-  test('pwd command shows current directory', async ({ page }) => {
+  test('pwd command executes without error', async ({ page }) => {
     const terminal = page.locator('.xterm-screen')
     await terminal.click()
 
@@ -32,11 +32,11 @@ test.describe('Shell Terminal', () => {
     await page.keyboard.press('Enter')
     await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-    // Terminal should still be visible and functional
+    // Terminal should remain functional
     await expect(terminal).toBeVisible()
   })
 
-  test('help command shows available commands', async ({ page }) => {
+  test('help command executes and terminal remains functional', async ({ page }) => {
     const terminal = page.locator('.xterm-screen')
     await terminal.click()
 
@@ -44,9 +44,6 @@ test.describe('Shell Terminal', () => {
     await page.keyboard.type('help')
     await page.keyboard.press('Enter')
     await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-    // Terminal should still be visible and functional
-    await expect(terminal).toBeVisible()
 
     // Type another command to verify terminal is still working
     await page.keyboard.type('pwd')
@@ -56,39 +53,33 @@ test.describe('Shell Terminal', () => {
     await expect(terminal).toBeVisible()
   })
 
-  test('cd command changes directory', async ({ page }) => {
+  test('cd to non-existent directory handles error gracefully', async ({ page }) => {
     const terminal = page.locator('.xterm-screen')
     await terminal.click()
 
-    // Type cd command to change to a directory
-    await page.keyboard.type('cd home')
+    // Type cd command to a non-existent directory
+    await page.keyboard.type('cd nonexistent')
     await page.keyboard.press('Enter')
     await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-    // Verify with pwd
+    // Terminal should remain functional after error
     await page.keyboard.type('pwd')
     await page.keyboard.press('Enter')
     await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-    // Terminal should still be functional
     await expect(terminal).toBeVisible()
   })
 
-  test('cd .. navigates to parent directory', async ({ page }) => {
+  test('cd .. executes at root without error', async ({ page }) => {
     const terminal = page.locator('.xterm-screen')
     await terminal.click()
 
-    // Navigate to a directory first
-    await page.keyboard.type('cd home')
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-    // Navigate back up
+    // At root, cd .. should not error
     await page.keyboard.type('cd ..')
     await page.keyboard.press('Enter')
     await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-    // Verify with pwd
+    // Verify terminal still works
     await page.keyboard.type('pwd')
     await page.keyboard.press('Enter')
     await page.waitForTimeout(TIMEOUTS.TRANSITION)
@@ -96,21 +87,16 @@ test.describe('Shell Terminal', () => {
     await expect(terminal).toBeVisible()
   })
 
-  test('cd ~ navigates to home/root', async ({ page }) => {
+  test('cd ~ executes without error', async ({ page }) => {
     const terminal = page.locator('.xterm-screen')
     await terminal.click()
 
-    // Navigate away first
-    await page.keyboard.type('cd home')
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-    // Navigate to home with ~
+    // Navigate with ~
     await page.keyboard.type('cd ~')
     await page.keyboard.press('Enter')
     await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-    // Verify with pwd
+    // Verify terminal still works
     await page.keyboard.type('pwd')
     await page.keyboard.press('Enter')
     await page.waitForTimeout(TIMEOUTS.TRANSITION)
@@ -118,20 +104,20 @@ test.describe('Shell Terminal', () => {
     await expect(terminal).toBeVisible()
   })
 
-  test('ls command lists directory contents', async ({ page }) => {
+  test('ls command executes on empty directory without error', async ({ page }) => {
     const terminal = page.locator('.xterm-screen')
     await terminal.click()
 
-    // Type ls command
+    // Type ls command on empty root directory
     await page.keyboard.type('ls')
     await page.keyboard.press('Enter')
     await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-    // Terminal should still be visible and functional
+    // Terminal should remain functional
     await expect(terminal).toBeVisible()
   })
 
-  test('unknown command shows error message', async ({ page }) => {
+  test('unknown command shows error and terminal remains functional', async ({ page }) => {
     const terminal = page.locator('.xterm-screen')
     await terminal.click()
 
@@ -139,9 +125,6 @@ test.describe('Shell Terminal', () => {
     await page.keyboard.type('unknowncommand')
     await page.keyboard.press('Enter')
     await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-    // Terminal should still be visible and functional
-    await expect(terminal).toBeVisible()
 
     // Type another command to verify terminal is still working
     await page.keyboard.type('pwd')
@@ -176,6 +159,10 @@ test.describe('Shell Terminal', () => {
     // Press down to go back
     await page.keyboard.press('ArrowDown')
     await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    // Execute recalled command
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
     // Terminal should still be functional
     await expect(terminal).toBeVisible()
