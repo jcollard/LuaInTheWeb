@@ -1,9 +1,9 @@
 # Epic #119: Shell Core Package Extraction
 
-**Status:** In Progress (4/6 complete)
+**Status:** In Progress (5/6 complete)
 **Branch:** epic-119
 **Created:** 2025-12-10
-**Last Updated:** 2025-12-10 16:00
+**Last Updated:** 2025-12-10 16:37
 
 ## Overview
 
@@ -58,7 +58,7 @@ LuaInTheWeb/
 | #120 | Initialize shell-core package structure | ✅ Complete | 120-initialize-shell-core | Merged PR #126 |
 | #121 | Extract shell types and utilities | ✅ Complete | 121-extract-shell-types-and-utilities | Merged PR #127 |
 | #122 | Extract CommandRegistry and filesystem adapter | ✅ Complete | 122-extract-commandregistry-and-filesystem-adapter | Merged PR #128 |
-| #123 | Extract shell commands (cd, pwd, ls, help) | 🔄 In Progress | 123-extract-shell-commands | Implementation complete, awaiting review |
+| #123 | Extract shell commands (cd, pwd, ls, help) | ✅ Complete | 123-extract-shell-commands | Merged PR #129 |
 | #124 | Integrate shell-core into editor | ⏳ Pending | - | - |
 | #125 | Shell-core documentation and cleanup | ⏳ Pending | - | - |
 
@@ -92,7 +92,7 @@ LuaInTheWeb/
   - Added 55 tests (122 total)
   - Mutation scores: CommandRegistry 100%, createFileSystemAdapter 91.14%
   - Merged PR #128 to epic-119
-- **#123 In Progress**: Extract shell commands (cd, pwd, ls, help)
+- **#123 Complete**: Extract shell commands (cd, pwd, ls, help)
   - Created `commands/pwd.ts` - print working directory
   - Created `commands/cd.ts` - change directory with path resolution
   - Created `commands/ls.ts` - list directory contents with sorting (dirs first)
@@ -100,6 +100,7 @@ LuaInTheWeb/
   - Created `commands/index.ts` - exports and `registerBuiltinCommands()` helper
   - Added 59 tests (181 total)
   - Mutation scores: pwd 100%, cd 100%, ls 100%, help 93.10%, commands overall 97.53%
+  - Merged PR #129 to epic-119
 
 ## Key Files
 
