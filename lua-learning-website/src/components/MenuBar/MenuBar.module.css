@@ -1,0 +1,11 @@
+.menuBar {
+  display: flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 8px;
+  background-color: var(--theme-bg-secondary);
+  border-bottom: 1px solid var(--theme-border-primary);
+  font-size: 13px;
+  user-select: none;
+  transition: var(--theme-transition);
+}

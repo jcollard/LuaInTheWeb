@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { IDEContextProvider, useIDE } from '../IDEContext'
 import { ActivityBar } from '../ActivityBar'
 import { StatusBar } from '../StatusBar'
@@ -11,9 +11,12 @@ import { IDEResizeHandle } from '../IDEResizeHandle'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { ToastContainer } from '../Toast'
 import { WelcomeScreen } from '../WelcomeScreen'
+import { MenuBar } from '../MenuBar'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { useTheme } from '../../contexts/useTheme'
 import styles from './IDELayout.module.css'
 import type { IDELayoutProps } from './types'
+import type { MenuDefinition } from '../MenuBar'
 
 /**
  * Inner component that uses IDE context
@@ -66,6 +69,9 @@ function IDELayoutInner({ className }: { className?: string }) {
   const [cursorColumn, setCursorColumn] = useState(1)
   const [pendingCloseTabPath, setPendingCloseTabPath] = useState<string | null>(null)
 
+  // Theme support for Settings menu
+  const { theme, toggleTheme } = useTheme()
+
   const handleRun = useCallback(async () => {
     setIsRunning(true)
     try {
@@ -74,6 +80,56 @@ function IDELayoutInner({ className }: { className?: string }) {
       setIsRunning(false)
     }
   }, [runCode])
+
+  // Menu bar definitions
+  const menus: MenuDefinition[] = useMemo(
+    () => [
+      {
+        id: 'file',
+        label: 'File',
+        items: [
+          { id: 'new-file', label: 'New File', shortcut: 'Ctrl+N', action: () => createFileWithRename() },
+          { type: 'divider' },
+          { id: 'save', label: 'Save', shortcut: 'Ctrl+S', action: saveFile, disabled: !isDirty },
+        ],
+      },
+      {
+        id: 'edit',
+        label: 'Edit',
+        items: [
+          { id: 'undo', label: 'Undo', shortcut: 'Ctrl+Z', disabled: true },
+          { id: 'redo', label: 'Redo', shortcut: 'Ctrl+Y', disabled: true },
+          { type: 'divider' },
+          { id: 'cut', label: 'Cut', shortcut: 'Ctrl+X', disabled: true },
+          { id: 'copy', label: 'Copy', shortcut: 'Ctrl+C', disabled: true },
+          { id: 'paste', label: 'Paste', shortcut: 'Ctrl+V', disabled: true },
+        ],
+      },
+      {
+        id: 'view',
+        label: 'View',
+        items: [
+          { id: 'toggle-sidebar', label: sidebarVisible ? 'Hide Sidebar' : 'Show Sidebar', shortcut: 'Ctrl+B', action: toggleSidebar },
+          { id: 'toggle-terminal', label: terminalVisible ? 'Hide Terminal' : 'Show Terminal', shortcut: 'Ctrl+`', action: toggleTerminal },
+        ],
+      },
+      {
+        id: 'run',
+        label: 'Run',
+        items: [
+          { id: 'run-code', label: 'Run Code', shortcut: 'Ctrl+Enter', action: handleRun, disabled: isRunning },
+        ],
+      },
+      {
+        id: 'settings',
+        label: 'Settings',
+        items: [
+          { id: 'toggle-theme', label: theme === 'dark' ? 'Light Theme' : 'Dark Theme', action: toggleTheme },
+        ],
+      },
+    ],
+    [createFileWithRename, saveFile, isDirty, sidebarVisible, toggleSidebar, terminalVisible, toggleTerminal, handleRun, isRunning, theme, toggleTheme]
+  )
 
   // Register keyboard shortcuts
   useKeyboardShortcuts({
@@ -160,6 +216,7 @@ function IDELayoutInner({ className }: { className?: string }) {
 
   return (
     <div className={combinedClassName} data-testid="ide-layout">
+      <MenuBar menus={menus} />
       <div className={styles.mainContainer}>
         <div className={styles.activityBar}>
           <ActivityBar
