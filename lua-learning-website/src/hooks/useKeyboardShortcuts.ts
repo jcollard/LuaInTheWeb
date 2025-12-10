@@ -49,8 +49,9 @@ export function useKeyboardShortcuts({
           break
         case 'n':
         case 'N':
+          // Always prevent browser's "new window" action
+          event.preventDefault()
           if (createFile) {
-            event.preventDefault()
             createFile()
           }
           break

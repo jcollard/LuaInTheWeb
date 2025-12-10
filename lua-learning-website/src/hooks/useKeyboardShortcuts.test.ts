@@ -351,6 +351,31 @@ describe('useKeyboardShortcuts', () => {
       })
       expect(() => document.dispatchEvent(event)).not.toThrow()
     })
+
+    it('should always prevent default for Ctrl+N even without createFile', () => {
+      // Arrange - no createFile provided
+      renderHook(() =>
+        useKeyboardShortcuts({
+          runCode: mockRunCode,
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+        })
+      )
+
+      // Act
+      const event = new KeyboardEvent('keydown', {
+        key: 'n',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+      document.dispatchEvent(event)
+
+      // Assert - should still prevent browser's new window action
+      expect(preventDefaultSpy).toHaveBeenCalled()
+    })
   })
 
   describe('cleanup', () => {
