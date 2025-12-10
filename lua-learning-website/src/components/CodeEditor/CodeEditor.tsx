@@ -1,6 +1,7 @@
 import Editor from '@monaco-editor/react'
 import type { CodeEditorProps } from './types'
 import styles from './CodeEditor.module.css'
+import { useTheme } from '../../contexts/useTheme'
 
 /**
  * A code editor component wrapping Monaco Editor
@@ -13,6 +14,9 @@ export function CodeEditor({
   readOnly = false,
   onRun,
 }: CodeEditorProps) {
+  const { theme } = useTheme()
+  const monacoTheme = theme === 'dark' ? 'vs-dark' : 'vs'
+
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && event.ctrlKey) {
       onRun?.()
@@ -29,6 +33,7 @@ export function CodeEditor({
         height={height}
         language={language}
         value={value}
+        theme={monacoTheme}
         onChange={(newValue) => onChange(newValue ?? '')}
         options={{
           readOnly,

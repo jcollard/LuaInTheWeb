@@ -2,7 +2,9 @@ import { useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
-import './BashTerminal.css'
+import styles from './BashTerminal/BashTerminal.module.css'
+import { useTheme } from '../contexts/useTheme'
+import { getTerminalTheme } from './BashTerminal/terminalTheme'
 
 export interface BashTerminalHandle {
   writeln: (text: string) => void
@@ -19,6 +21,8 @@ interface BashTerminalProps {
 }
 
 const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onCommand, embedded = false }, ref) => {
+  const { theme } = useTheme()
+  const initialThemeRef = useRef(theme)
   const terminalRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -516,32 +520,11 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
   useEffect(() => {
     if (!terminalRef.current) return
 
-    // Create terminal instance
+    // Create terminal instance WITHOUT theme (set after open per xterm.js docs)
     const terminal = new Terminal({
       cursorBlink: true,
       fontSize: 14,
       fontFamily: '"Cascadia Code", Menlo, Monaco, "Courier New", monospace',
-      theme: {
-        background: '#1e1e1e',
-        foreground: '#d4d4d4',
-        cursor: '#d4d4d4',
-        black: '#000000',
-        red: '#cd3131',
-        green: '#0dbc79',
-        yellow: '#e5e510',
-        blue: '#2472c8',
-        magenta: '#bc3fbc',
-        cyan: '#11a8cd',
-        white: '#e5e5e5',
-        brightBlack: '#666666',
-        brightRed: '#f14c4c',
-        brightGreen: '#23d18b',
-        brightYellow: '#f5f543',
-        brightBlue: '#3b8eea',
-        brightMagenta: '#d670d6',
-        brightCyan: '#29b8db',
-        brightWhite: '#e5e5e5',
-      },
     })
 
     // Create and load fit addon
@@ -550,6 +533,10 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
 
     // Open terminal in the container
     terminal.open(terminalRef.current)
+
+    // Set theme AFTER open() per xterm.js documentation
+    terminal.options.theme = getTerminalTheme(initialThemeRef.current)
+
     fitAddon.fit()
 
     // Store references
@@ -585,6 +572,15 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
     }
   }, [handleInput, handleShiftEnter])
 
+  // Update terminal theme when theme changes
+  useEffect(() => {
+    if (xtermRef.current) {
+      xtermRef.current.options.theme = getTerminalTheme(theme)
+      // Force refresh to repaint all rows with new theme colors
+      xtermRef.current.refresh(0, xtermRef.current.rows)
+    }
+  }, [theme])
+
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
     writeln: (text: string) => {
@@ -610,16 +606,16 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
     },
   }))
 
-  const containerClassName = `bash-terminal-container${embedded ? ' bash-terminal-container--embedded' : ''}`
+  const containerClassName = `${styles.container}${embedded ? ` ${styles.containerEmbedded}` : ''}`
 
   return (
     <div className={containerClassName} data-testid="bash-terminal-container">
       {!embedded && (
-        <div className="bash-terminal-header">
+        <div className={styles.header}>
           <h3>Output</h3>
         </div>
       )}
-      <div ref={terminalRef} className="bash-terminal" />
+      <div ref={terminalRef} className={styles.terminal} />
     </div>
   )
 })

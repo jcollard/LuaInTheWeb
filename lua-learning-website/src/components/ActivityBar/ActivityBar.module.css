@@ -1,9 +1,10 @@
 .activityBar {
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   width: 48px;
-  background-color: #333333;
-  border-right: 1px solid #252526;
+  background-color: var(--theme-bg-tertiary);
+  border-right: 1px solid var(--theme-border-primary);
 }
 
 .items {
@@ -21,14 +22,14 @@
   height: 48px;
   background: transparent;
   border: none;
-  color: #858585;
+  color: var(--theme-text-muted);
   cursor: pointer;
   position: relative;
   transition: color 0.1s ease;
 }
 
 .item:hover {
-  color: #ffffff;
+  color: var(--theme-indicator-active);
 }
 
 .item:focus {
@@ -36,12 +37,12 @@
 }
 
 .item:focus-visible {
-  outline: 1px solid #007acc;
+  outline: 1px solid var(--theme-border-focus);
   outline-offset: -1px;
 }
 
 .item.active {
-  color: #ffffff;
+  color: var(--theme-indicator-active);
 }
 
 .item.active::before {
@@ -51,10 +52,17 @@
   top: 0;
   bottom: 0;
   width: 2px;
-  background-color: #ffffff;
+  background-color: var(--theme-indicator-active);
 }
 
 .item svg {
   width: 24px;
   height: 24px;
+}
+
+.bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 4px;
 }

@@ -22,6 +22,16 @@ vi.mock('@monaco-editor/react', () => ({
   },
 }))
 
+// Mock theme context (CodeEditor uses useTheme)
+vi.mock('../../contexts/useTheme', () => ({
+  useTheme: () => ({
+    theme: 'dark',
+    setTheme: vi.fn(),
+    toggleTheme: vi.fn(),
+    isDark: true,
+  }),
+}))
+
 describe('EditorPanel', () => {
   const defaultProps = {
     code: 'print("hello")',

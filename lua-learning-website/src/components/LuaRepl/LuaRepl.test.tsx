@@ -26,6 +26,16 @@ vi.mock('wasmoon', () => ({
   LuaEngine: class MockLuaEngine {},
 }))
 
+// Mock theme context (LuaRepl uses useTheme for CSS module styling)
+vi.mock('../../contexts/useTheme', () => ({
+  useTheme: () => ({
+    theme: 'dark',
+    setTheme: vi.fn(),
+    toggleTheme: vi.fn(),
+    isDark: true,
+  }),
+}))
+
 import LuaRepl from './LuaRepl'
 
 describe('LuaRepl', () => {

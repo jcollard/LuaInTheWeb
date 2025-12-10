@@ -45,6 +45,7 @@ vi.mock('@monaco-editor/react', () => ({
 vi.mock('@xterm/xterm', () => ({
   Terminal: class {
     options = {}
+    rows = 24
     onData = vi.fn().mockReturnValue({ dispose: vi.fn() })
     open = vi.fn()
     write = vi.fn()
@@ -54,6 +55,7 @@ vi.mock('@xterm/xterm', () => ({
     loadAddon = vi.fn()
     attachCustomKeyEventHandler = vi.fn()
     scrollToBottom = vi.fn()
+    refresh = vi.fn()
   },
 }))
 
@@ -62,6 +64,16 @@ vi.mock('@xterm/addon-fit', () => ({
     fit = vi.fn()
     dispose = vi.fn()
   },
+}))
+
+// Mock theme context for components using useTheme
+vi.mock('../contexts/useTheme', () => ({
+  useTheme: () => ({
+    theme: 'dark',
+    setTheme: vi.fn(),
+    toggleTheme: vi.fn(),
+    isDark: true,
+  }),
 }))
 
 describe('LuaPlayground', () => {

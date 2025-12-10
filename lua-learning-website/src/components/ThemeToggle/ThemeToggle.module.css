@@ -1,0 +1,30 @@
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: transparent;
+  border: none;
+  color: var(--theme-text-muted);
+  cursor: pointer;
+  transition: color 0.1s ease;
+}
+
+.toggle:hover {
+  color: var(--theme-indicator-active);
+}
+
+.toggle:focus {
+  outline: none;
+}
+
+.toggle:focus-visible {
+  outline: 1px solid var(--theme-border-focus);
+  outline-offset: -1px;
+}
+
+.toggle svg {
+  width: 24px;
+  height: 24px;
+}

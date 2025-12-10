@@ -2,6 +2,15 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { vi } from 'vitest'
 import { ActivityBar } from './ActivityBar'
 
+// Mock the useTheme hook used by ThemeToggle
+vi.mock('../../contexts', () => ({
+  useTheme: () => ({
+    theme: 'dark',
+    isDark: true,
+    toggleTheme: vi.fn(),
+  }),
+}))
+
 describe('ActivityBar', () => {
   const defaultProps = {
     activeItem: 'explorer' as const,

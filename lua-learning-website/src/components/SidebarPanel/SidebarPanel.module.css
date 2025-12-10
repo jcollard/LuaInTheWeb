@@ -2,8 +2,8 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background-color: #252526;
-  color: #cccccc;
+  background-color: var(--theme-bg-secondary);
+  color: var(--theme-text-primary);
 }
 
 .header {
@@ -15,7 +15,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #bbbbbb;
+  color: var(--theme-text-secondary);
 }
 
 .title {
@@ -40,6 +40,6 @@
 
 .placeholderText {
   font-size: 13px;
-  color: #858585;
+  color: var(--theme-text-muted);
   font-style: italic;
 }
