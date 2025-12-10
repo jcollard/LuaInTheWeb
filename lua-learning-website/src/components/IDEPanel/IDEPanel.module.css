@@ -3,7 +3,7 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  background: var(--panel-bg, #1e1e1e);
+  background: var(--theme-bg-primary);
 }
 
 .header {
@@ -11,8 +11,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background: var(--header-bg, #252526);
-  border-bottom: 1px solid var(--border-color, #3c3c3c);
+  background: var(--theme-bg-secondary);
+  border-bottom: 1px solid var(--theme-border-secondary);
   min-height: 32px;
   flex-shrink: 0;
 }
@@ -21,7 +21,7 @@
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
-  color: var(--header-text, #cccccc);
+  color: var(--theme-text-primary);
   letter-spacing: 0.04em;
 }
 
@@ -34,7 +34,7 @@
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--header-text, #cccccc);
+  color: var(--theme-text-primary);
   cursor: pointer;
   border-radius: 4px;
   font-size: 10px;
@@ -42,11 +42,11 @@
 }
 
 .collapseButton:hover {
-  background: var(--button-hover-bg, #3c3c3c);
+  background: var(--theme-bg-hover);
 }
 
 .collapseButton:focus-visible {
-  outline: 2px solid var(--focus-outline, #007acc);
+  outline: 2px solid var(--theme-border-focus);
   outline-offset: 1px;
 }
 

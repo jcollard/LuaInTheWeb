@@ -1,6 +1,7 @@
 .activityBar {
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   width: 48px;
   background-color: var(--theme-bg-tertiary);
   border-right: 1px solid var(--theme-border-primary);
@@ -57,4 +58,11 @@
 .item svg {
   width: 24px;
   height: 24px;
+}
+
+.bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 4px;
 }
