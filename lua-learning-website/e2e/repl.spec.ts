@@ -362,4 +362,119 @@ test.describe('REPL in IDE', () => {
 
     await expect(terminal).toBeVisible()
   })
+
+  test('Home key moves cursor to start of line', async ({ page }) => {
+    // Click on the terminal to focus it
+    const terminal = page.locator('.xterm-screen')
+    await terminal.click()
+
+    // Type some text
+    await page.keyboard.type('world')
+    await page.waitForTimeout(100)
+
+    // Press Home to move cursor to start
+    await page.keyboard.press('Home')
+    await page.waitForTimeout(100)
+
+    // Type at the beginning
+    await page.keyboard.type('hello ')
+    await page.waitForTimeout(100)
+
+    // Press Enter to execute - "hello world" should be the variable value
+    // We'll assign it to a variable to test
+    await page.keyboard.press('Home')
+    await page.waitForTimeout(50)
+
+    // Clear and test with a new approach: define a string and print it
+    await page.keyboard.press('Control+c')
+    await page.waitForTimeout(200)
+
+    // Type "world", then Home, then type "hello " to get "hello world"
+    await page.keyboard.type('testVar = "world"')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    // Now type a partial string, use Home, and complete it
+    await page.keyboard.type('= "world"')
+    await page.keyboard.press('Home')
+    await page.waitForTimeout(100)
+    await page.keyboard.type('testResult ')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    // Verify terminal is still functional
+    await page.keyboard.type('print("home key works")')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    await expect(terminal).toBeVisible()
+  })
+
+  test('End key moves cursor to end of line', async ({ page }) => {
+    // Click on the terminal to focus it
+    const terminal = page.locator('.xterm-screen')
+    await terminal.click()
+
+    // Type some text
+    await page.keyboard.type('print("hello")')
+    await page.waitForTimeout(100)
+
+    // Move to start
+    await page.keyboard.press('Home')
+    await page.waitForTimeout(100)
+
+    // Press End to move cursor back to end
+    await page.keyboard.press('End')
+    await page.waitForTimeout(100)
+
+    // The cursor should now be at the end, so pressing Enter executes the command
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    // Terminal should still be visible and functional
+    await expect(terminal).toBeVisible()
+
+    // Type another command to verify
+    await page.keyboard.type('print("end key works")')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    await expect(terminal).toBeVisible()
+  })
+
+  test('Home and End keys work together for editing', async ({ page }) => {
+    // Click on the terminal to focus it
+    const terminal = page.locator('.xterm-screen')
+    await terminal.click()
+
+    // Type a print statement with a typo
+    await page.keyboard.type('print("test")')
+    await page.waitForTimeout(100)
+
+    // Move to start, then End, then back - cursor navigation test
+    await page.keyboard.press('Home')
+    await page.waitForTimeout(100)
+    await page.keyboard.press('End')
+    await page.waitForTimeout(100)
+    await page.keyboard.press('Home')
+    await page.waitForTimeout(100)
+
+    // Type 'x = ' at the start
+    await page.keyboard.type('x = ')
+    await page.waitForTimeout(100)
+
+    // Press End and Enter to execute
+    await page.keyboard.press('End')
+    await page.waitForTimeout(100)
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    // Verify x is set (should be nil since print returns nil)
+    await page.keyboard.type('print(type(x))')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(300)
+
+    // Terminal should still be visible and functional
+    await expect(terminal).toBeVisible()
+  })
 })

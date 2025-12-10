@@ -32,6 +32,7 @@ export default function LuaRepl({ embedded = false }: LuaReplProps) {
     terminalRef.current?.writeln('\x1b[1;33mKeyboard shortcuts:\x1b[0m')
     terminalRef.current?.writeln('  \x1b[32m↑/↓\x1b[0m         - Navigate command history')
     terminalRef.current?.writeln('  \x1b[32m←/→\x1b[0m         - Move cursor')
+    terminalRef.current?.writeln('  \x1b[32mHome/End\x1b[0m    - Jump to start/end of line')
     terminalRef.current?.writeln('  \x1b[32mEnter\x1b[0m       - Execute command')
     terminalRef.current?.writeln('  \x1b[32mShift+Enter\x1b[0m - Multi-line input mode')
     terminalRef.current?.writeln('')
@@ -107,7 +108,7 @@ export default function LuaRepl({ embedded = false }: LuaReplProps) {
 
       {!embedded && (
         <div className={styles.help}>
-          <strong>Tips:</strong> Press ↑/↓ to navigate history (or lines in multi-line mode) • ←/→ to move cursor • Enter to execute • Shift+Enter for multi-line mode • Type expressions or statements • io.read() prompts in terminal
+          <strong>Tips:</strong> Press ↑/↓ to navigate history (or lines in multi-line mode) • ←/→ to move cursor • Home/End to jump to start/end • Enter to execute • Shift+Enter for multi-line mode • io.read() prompts in terminal
         </div>
       )}
     </div>
