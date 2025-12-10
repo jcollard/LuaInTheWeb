@@ -1,0 +1,44 @@
+.menuItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 24px 6px 12px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--theme-text-primary);
+  background-color: transparent;
+  white-space: nowrap;
+  transition: var(--theme-transition);
+}
+
+.menuItem:hover {
+  background-color: var(--theme-bg-hover);
+}
+
+.menuItem.focused {
+  background-color: var(--theme-bg-active);
+  outline: none;
+}
+
+.menuItem.disabled {
+  color: var(--theme-text-muted);
+  cursor: not-allowed;
+}
+
+.menuItem.disabled:hover {
+  background-color: transparent;
+}
+
+.label {
+  flex: 1;
+}
+
+.shortcut {
+  margin-left: 24px;
+  color: var(--theme-text-muted);
+  font-size: 0.85em;
+}
+
+.menuItem.disabled .shortcut {
+  color: var(--theme-text-muted);
+}
