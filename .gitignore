@@ -1,6 +1,14 @@
 # Claude Code session log
 .claude-log
 
+# Root npm workspace
+node_modules/
+package-lock.json
+
+# Package build outputs
+packages/*/dist/
+packages/*/node_modules/
+
 # Python bytecode
 __pycache__/
 *.pyc

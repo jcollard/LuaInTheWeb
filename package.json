@@ -1,0 +1,12 @@
+{
+  "name": "lua-in-the-web",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "lua-learning-website"
+  ],
+  "scripts": {
+    "build:shell-core": "npm run build -w @lua-learning/shell-core",
+    "test:shell-core": "npm run test -w @lua-learning/shell-core"
+  }
+}
