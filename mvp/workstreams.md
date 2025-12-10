@@ -11,10 +11,10 @@ This is the main feature stream and the critical path for MVP.
 │                        STREAM A: Terminal & Filesystem                  │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
-│  Phase 1: Foundation (Sequential to main)                               │
-│  ├── #12 CSS Modules (S) ─────────────────────────► merge to main       │
-│  ├── #33 Hook Integration (M) ────────────────────► merge to main       │
-│  └── #100 Home/End Keys (XS) ─────────────────────► merge to main       │
+│  Phase 1: Foundation (Sequential to main) ✅ COMPLETE                   │
+│  ├── #12 CSS Modules (S) ─────────────────────────► ✅ merged to main   │
+│  ├── #33 Hook Integration (M) ────────────────────► ✅ merged to main   │
+│  └── #100 Home/End Keys (XS) ─────────────────────► ✅ (in #33)         │
 │                                                                         │
 │  Phase 2: Terminal Epic                                                 │
 │  └── #14 Unix Terminal (XL) ──────────────────────► merge to main       │
@@ -92,10 +92,10 @@ Lower priority items that can fill gaps.
 ```
 Week    Stream A (Terminal)             Stream B (Menu)         Stream C (Debt)
 ────    ───────────────────             ───────────────         ───────────────
-  1     #12 CSS ──► main                                        #51, #70, #71
-        #33 Hook ──► main
+  1     #12 CSS ──► main ✅                                     #51, #70, #71
+        #33 Hook ──► main ✅
 
-  2     #100 Keys ──► main              #82 Start
+  2     (Foundation complete)           #82 Start
         #14 Start (commands)            ├─ MenuBar arch
 
   3     #14 Continue                    ├─ File menu            #72
@@ -134,9 +134,9 @@ Week    Stream A (Terminal)             Stream B (Menu)         Stream C (Debt)
 
 | Issue | Merge Target | Timing |
 |-------|--------------|--------|
-| #12 | main | Immediately when done |
-| #33 | main | Immediately when done |
-| #100 | main | Immediately when done |
+| #12 | main | ✅ Done |
+| #33 | main | ✅ Done (PR #112) |
+| #100 | main | ✅ Done (consolidated into #33) |
 | #14 | main | When all terminal commands work |
 | #82 | main | When all menus + keyboard nav work |
 | #20 | main | When workspace management works |
@@ -175,9 +175,9 @@ Coordinate: Merge timing, shared component updates
 ## Definition of Done (per stream)
 
 ### Stream A Complete When:
-- [ ] All legacy CSS converted to modules (#12)
-- [ ] BashTerminal uses useBashTerminal hook (#33)
-- [ ] Home/End keys work in terminal (#100)
+- [x] All legacy CSS converted to modules (#12) ✅
+- [x] BashTerminal uses useBashTerminal hook (#33) ✅
+- [x] Home/End keys work in terminal (#100 → #33) ✅
 - [ ] Terminal has: cd, pwd, ls, mkdir, cat, open, lua, Ctrl+C (#14)
 - [ ] Can open local directory as workspace (#20)
 - [ ] Can render markdown files in editor (#26)

@@ -4,8 +4,8 @@
 
 ```
                     ┌─────────────────────────────────────────────┐
-                    │           FOUNDATION LAYER                  │
-                    │  (Complete first - enables everything else) │
+                    │      FOUNDATION LAYER ✅ COMPLETE           │
+                    │         (All items merged to main)          │
                     └─────────────────────────────────────────────┘
                                         │
             ┌───────────────────────────┴───────────────────────────┐
@@ -13,8 +13,8 @@
             ▼                                                       ▼
     ┌───────────────┐                                      ┌───────────────┐
     │  #12 - CSS    │                                      │ #33 - Hook +  │
-    │  Modules      │                                      │ Home/End Keys │
-    │  (S)          │                                      │ (M)           │
+    │  Modules ✅   │                                      │ Home/End ✅   │
+    │  (S) DONE     │                                      │ (M) PR #112   │
     └───────────────┘                                      └───────┬───────┘
                                                                    │
                                                                    ▼
@@ -73,11 +73,10 @@
 
 ## Dependency Explanations
 
-### #33 → #14 (Hook + Home/End → Unix Terminal)
-- **Why**: BashTerminal will be heavily modified for Unix terminal
-- **Risk if skipped**: Would need to refactor twice
-- **Note**: #100 (Home/End keys) has been consolidated into #33
-- **Recommendation**: Complete #33 before starting #14
+### #33 → #14 (Hook + Home/End → Unix Terminal) ✅ CLEARED
+- **Status**: ✅ #33 completed (PR #112) - #14 can now proceed
+- **Note**: #100 (Home/End keys) was consolidated into #33 and delivered
+- **Result**: Foundation complete, terminal epic ready to start
 
 ### #14 → #20 (Unix Terminal → File API)
 - **Why**: Shell commands (ls, cd, cat) need filesystem abstraction
@@ -125,16 +124,16 @@ Then:
 
 ## Recommended Approach: Option B
 
-1. **Phase 1 - Foundation** (Sequential)
-   - #12 CSS Modules
-   - #33 Hook Integration + Home/End Keys
+1. **Phase 1 - Foundation** ✅ COMPLETE
+   - ✅ #12 CSS Modules - Done
+   - ✅ #33 Hook Integration + Home/End Keys - Done (PR #112)
 
-2. **Phase 2 - Parallel Development**
+2. **Phase 2 - Parallel Development** ← CURRENT PHASE
    - **Stream A**: #14 Epic (#102→#103→#104→#105) → #20 → #26
    - **Stream B**: #82 Epic (#106→#107/#108/#109→#110→#111)
 
 3. **Merge Strategy**
-   - Merge foundation items to main immediately
+   - ✅ Foundation items merged to main
    - #82 sub-issues can merge as epic branch or to main (independent)
    - Terminal stream (#14) sub-issues merge to epic branch, then epic to main
    - Merge #20 and #26 to main when complete

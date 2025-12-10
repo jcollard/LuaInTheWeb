@@ -11,14 +11,14 @@
 | 26 | Markdown Reader | L | P3 | Concept | Render markdown files in editor for assignments/projects |
 | 82 | Top Bar Menu (Epic) | M-L | P2 | Open | File, Edit, Settings menus with keyboard navigation |
 
-### Tech Debt (MVP Required)
+### Tech Debt (MVP Required) ✅ COMPLETE
 
 | # | Title | Effort | Priority | Status | Description |
 |---|-------|--------|----------|--------|-------------|
-| 12 | CSS Modules Migration | S | P3 | Todo | Convert BashTerminal.css, LuaPlayground.css, LuaRepl.css, App.css |
-| 33 | BashTerminal Hook + Home/End Keys | M | P2 | Open | Hook integration + Home/End navigation (includes #100) |
+| 12 | CSS Modules Migration | S | P3 | ✅ Done | Migrated to CSS modules |
+| 33 | BashTerminal Hook + Home/End Keys | M | P2 | ✅ Done (PR #112) | Hook integration + Home/End navigation (includes #100) |
 
-> **Note**: #100 has been consolidated into #33
+> **Note**: #100 was consolidated into #33 and completed in PR #112
 
 ### Optional (Not MVP)
 
@@ -135,39 +135,33 @@
 
 ---
 
-### #33 - BashTerminal Hook + Home/End Keys (M)
+### #33 - BashTerminal Hook + Home/End Keys (M) ✅ COMPLETE
 
 **Goal**: Connect existing tested hook to BashTerminal component AND add Home/End key navigation
 
-> **Consolidation**: This issue now includes #100 (Home/End keys) since both involve terminal input handling
+> **Completed**: PR #112 merged on 2025-12-10
 
-**Current State**:
-- `useBashTerminal.ts` exists with 51 tests
-- `BashTerminal.tsx` still has inline logic
-- Creates maintenance burden
-
-**Tasks**:
-- Refactor BashTerminal.tsx to use hook
-- Remove duplicated input handling logic
-- Add Home/End key navigation
-- Verify all existing functionality works
+**What Was Delivered**:
+- `handleHome`/`handleEnd` handlers in `useBashTerminal` hook (13 new tests, 90.65% mutation score)
+- Home/End key detection in `BashTerminal.tsx` supporting multiple escape sequences
+- New `executeTerminalCommands` utility (94.74% mutation score)
+- Updated help text documenting Home/End shortcuts
+- 3 E2E tests verifying navigation works
 
 **Dependencies**:
-- None - should be done early to clean up before #14
+- ✅ Done - #14 Terminal Epic can now proceed
 
 ---
 
-### #12 - CSS Modules Migration (S)
+### #12 - CSS Modules Migration (S) ✅ COMPLETE
 
 **Goal**: Convert legacy CSS files to CSS modules
 
-**Status Update**: After cleanup, most legacy CSS files have been removed:
+**Status**: ✅ Done - All legacy CSS files migrated or removed:
 - ~~App.css~~ - Deleted (unused routes removed)
 - ~~LuaPlayground.css~~ - Deleted (component removed)
-- BashTerminal.css → Already migrated to `BashTerminal.module.css`
-- LuaRepl.css → Already migrated to `LuaRepl.module.css`
-
-**Remaining Work**: Verify no legacy CSS imports remain; may be mostly complete.
+- BashTerminal.css → Migrated to `BashTerminal.module.css`
+- LuaRepl.css → Migrated to `LuaRepl.module.css`
 
 **Dependencies**:
-- None - should be done early for consistency
+- ✅ Done - Established clean baseline for all new work

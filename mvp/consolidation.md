@@ -4,18 +4,20 @@
 
 ### 1. Terminal Input Handling: #33 (includes #100)
 
-**Status**: ✅ DONE
+**Status**: ✅ IMPLEMENTED (PR #112 merged 2025-12-10)
 
 **What was consolidated**:
 - #33: Integrate useBashTerminal hook with BashTerminal.tsx
 - #100: Home/End keys do not navigate in REPL (CLOSED)
 
-**Result**:
-- #33 updated to include Home/End key navigation tasks
-- #100 closed with reference to #33
-- Single PR will handle both: hook integration + Home/End keys
+**What Was Delivered**:
+- `handleHome`/`handleEnd` handlers in `useBashTerminal` hook (13 new tests)
+- Home/End key detection supporting multiple escape sequences
+- New `executeTerminalCommands` utility for future hook integration
+- 3 E2E tests for Home/End navigation
+- Help text updated
 
-**Estimated Effort**: M
+**Effort**: M (as estimated)
 
 ---
 
@@ -118,17 +120,17 @@
 ## Final Issue Map
 
 ```
-Foundation:
-  #12 - CSS Modules (S)
-  #33 - BashTerminal Hook + Home/End (M) ← includes #100
+Foundation: ✅ COMPLETE
+  #12 - CSS Modules (S) ✅
+  #33 - BashTerminal Hook + Home/End (M) ✅ PR #112
 
-Terminal Epic (#14):
+Terminal Epic (#14): ← READY TO START
   #102 - Command infrastructure + cd, pwd, ls
   #103 - File commands: mkdir, cat, open
   #104 - Lua execution + REPL mode
   #105 - Process control: Ctrl+C
 
-Menu Bar Epic (#82):
+Menu Bar Epic (#82): (can start in parallel)
   #106 - MenuBar architecture
   #107 - File menu
   #108 - Edit menu
