@@ -1,39 +1,50 @@
-# Epic #58: Add light/dark mode theme switcher for the editor
+# Epic #14: Unix / Linux like terminal
 
-**Status:** Complete (5/5 complete)
-**Branch:** epic-58
+**Status:** In Progress (0/4 complete)
+**Branch:** 14-epic-unix-linux-like-terminal
 **Created:** 2025-12-09
 **Last Updated:** 2025-12-09
 
 ## Overview
 
-Add support for light and dark mode themes in the editor, allowing users to switch between them. This will improve accessibility and user comfort, especially for users who prefer working in different lighting conditions.
+Transform the current output-only terminal into an interactive Unix/Linux-like shell. One of the goals of the class is for students to become more familiar with computers in general.
+
+### Goals
+- Provide a Unix/Linux style shell experience
+- Enable students to learn command-line basics
+- Integrate Lua execution into the terminal
+- Potentially eliminate the need for a separate REPL tab
+
+### Acceptance Criteria
+- Shell prompt with working command input
+- Basic navigation commands (cd, pwd, ls)
+- File operation commands (mkdir, cat, open)
+- Lua execution (lua {filename} or lua for REPL)
+- Process control (Ctrl+C to kill running processes)
+- Multiple terminal support (stretch goal)
 
 ## Architecture Decisions
 
-- **CSS Variables approach**: Theme colors defined as CSS custom properties on `:root` with `[data-theme="dark"]` and `[data-theme="light"]` selectors
-- **React Context pattern**: `ThemeProvider` wraps the app, `useTheme()` hook provides access
-- **Persistence**: localStorage with key `lua-ide-theme`, falls back to system preference via `prefers-color-scheme`
-- **File structure**: Follows IDEContext pattern with separate files for context, types, provider, and hook
+<!-- Document key decisions as work progresses -->
+
+(none yet)
 
 ## Sub-Issues
 
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
-| #60 | Create theme infrastructure (CSS variables, context, localStorage) | ✅ Complete | 60-create-theme-infrastructure | Merged PR #74 |
-| #61 | Theme core layout components (sidebar, panels, tabs) | ✅ Complete | 61-theme-core-layout-components | Merged PR #84 |
-| #62 | Theme terminal and REPL components | ✅ Complete | 62-theme-terminal-and-repl-components | Merged PR #89 |
-| #63 | Integrate Monaco Editor theme switching | ✅ Complete | 63-integrate-monaco-editor-theme-switching | Merged PR #94 |
-| #64 | Add theme switcher UI control | ✅ Complete | 64-add-theme-switcher-ui-control | Merged PR #97 |
+| #102 | Terminal: Command infrastructure + cd, pwd, ls | ⏳ Pending | - | Phase 1 |
+| #103 | Terminal: File commands - mkdir, cat, open | ⏳ Pending | - | Phase 2 |
+| #104 | Terminal: Lua execution command with REPL mode | ⏳ Pending | - | Phase 3 |
+| #105 | Terminal: Process control - Ctrl+C, job management | ⏳ Pending | - | Phase 4 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
 - 🔄 In Progress - Currently being worked on
-- 📝 Needs Review - PR created, awaiting review
 - ✅ Complete - Merged to epic branch
 - ❌ Blocked - Has unresolved blockers
 
-**Suggested order:** #60 → (#61, #62, #63 in parallel) → #64
+**Suggested order:** #102 → #103 → #104 → #105 (sequential phases)
 
 ## Progress Log
 
@@ -41,69 +52,12 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 
 ### 2025-12-09
 - Epic started
-- Started work on #60: Create theme infrastructure
-- Completed #60 implementation, PR #74 created
-- PR #74 merged, #60 complete
-- Started work on #61: Theme core layout components
-- Completed #61 implementation, PR #84 created
-- Fixed file explorer theming (FileExplorer, FileTree, FileTreeItem CSS files)
-- PR #84 merged, #61 complete
-- Started work on #62: Theme terminal and REPL components
-- Created xterm.js theme configuration (dark/light terminal themes)
-- Updated BashTerminal to use useTheme() with dynamic theme switching
-- Converted BashTerminal.css to CSS module with theme variables
-- Converted LuaRepl.css to CSS module with theme variables
-- Fixed xterm.js theme application (set theme after terminal.open())
-- Themed BottomPanel terminal output (replaced hardcoded colors with CSS variables)
-- Added E2E tests for terminal theme colors
-- PR #89 merged, #62 complete
-- Started work on #63: Integrate Monaco Editor theme switching
-- Connected CodeEditor to useTheme() hook with Monaco theme mapping (dark → vs-dark, light → vs)
-- Updated CodeEditor.module.css loading state to use theme CSS variables
-- Added E2E tests for Monaco editor theme switching (theme-editor.spec.ts)
-- Fixed test files to mock useTheme (IDELayout, EmbeddableEditor, EditorPanel, LuaRepl)
-- PR #93 created for #63, targeting epic-58 branch
-- PR #94 merged, #63 complete
-- Tech debt issues created: #95 (useTheme mock), #96 (E2E timeouts)
-- Started work on #64: Add theme switcher UI control
-- Created ThemeToggle component with sun/moon icons
-- Added ThemeToggle to ActivityBar bottom section
-- Added unit tests (14) and E2E tests (8) for theme toggle
-- PR #97 created for #64, targeting epic-58 branch
-- Fixed IDEPanel.module.css to use theme variables (light mode fix)
-- PR #97 merged, #64 complete
-- **All 5 sub-issues complete - Epic ready for review**
 
 ## Key Files
 
-- `src/styles/themes.css` - CSS custom properties for light/dark themes + transitions
-- `src/contexts/ThemeContext.tsx` - ThemeProvider component
-- `src/contexts/useTheme.ts` - useTheme hook
-- `src/contexts/types.ts` - Theme and ThemeContextValue types
-- `src/contexts/context.ts` - ThemeContext creation
-- `src/contexts/index.ts` - Public exports
-- `src/main.tsx` - ThemeProvider integration
-- `src/components/ActivityBar/ActivityBar.module.css` - Themed activity bar styles
-- `src/components/SidebarPanel/SidebarPanel.module.css` - Themed sidebar styles
-- `src/components/IDELayout/IDELayout.module.css` - Themed layout styles
-- `src/components/StatusBar/StatusBar.module.css` - Themed status bar styles
-- `src/components/EditorPanel/EditorPanel.module.css` - Themed editor panel styles
-- `src/components/TabBar/TabBar.module.css` - Themed tab bar styles
-- `src/components/BottomPanel/BottomPanel.module.css` - Themed bottom panel styles
-- `src/components/IDEResizeHandle/IDEResizeHandle.module.css` - Themed resize handle styles
-- `src/components/FileExplorer/FileExplorer.module.css` - Themed file explorer styles
-- `src/components/FileTree/FileTree.module.css` - Themed file tree styles
-- `src/components/FileTreeItem/FileTreeItem.module.css` - Themed file tree item styles
-- `e2e/theme-layout.spec.ts` - E2E tests for theme layout components
-- `src/components/BashTerminal/terminalTheme.ts` - xterm.js dark/light theme configuration
-- `src/components/BashTerminal/BashTerminal.module.css` - Themed terminal container styles
-- `src/components/LuaRepl/LuaRepl.module.css` - Themed REPL container styles
-- `src/components/BottomPanel/BottomPanel.module.css` - Themed bottom panel terminal output styles
-- `e2e/theme-terminal.spec.ts` - E2E tests for terminal theme colors
-- `e2e/theme-editor.spec.ts` - E2E tests for Monaco editor theme switching
-- `src/components/ThemeToggle/ThemeToggle.tsx` - Theme toggle button component
-- `src/components/ThemeToggle/ThemeToggle.module.css` - Theme toggle button styles
-- `e2e/theme-toggle.spec.ts` - E2E tests for theme toggle UI
+<!-- Populated as files are created/modified -->
+
+(none yet)
 
 ## Open Questions
 
@@ -115,10 +69,56 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 
 (none)
 
+## Dependencies
+
+| # | Title | Status |
+|---|-------|--------|
+| #33 | Refactor BashTerminal: Hook integration + Home/End keys | ✅ Complete |
+| #12 | CSS: Migrate legacy CSS files to CSS modules | ✅ Complete |
+
+All dependencies have been completed.
+
+## Priority
+
+**P2-Medium** - Core educational feature for teaching command-line basics
+
+## Technical Notes
+
+### Command Registry Pattern
+Create a command registry that allows easy addition of new commands:
+```typescript
+interface Command {
+  name: string;
+  description: string;
+  usage: string;
+  execute: (args: string[], context: ShellContext) => Promise<CommandResult>;
+}
+```
+
+### Filesystem Abstraction
+Commands should work with an abstract filesystem interface to support future File API integration (#20):
+```typescript
+interface IFileSystem {
+  readFile(path: string): Promise<string>;
+  writeFile(path: string, content: string): Promise<void>;
+  listDirectory(path: string): Promise<FileEntry[]>;
+  // ...
+}
+```
+
+### Future Commands (Low-hanging fruit)
+After MVP, consider adding:
+- `echo` - Print text
+- `clear` - Clear terminal
+- `help` - Show available commands
+- `touch` - Create empty file
+- `rm` - Remove file
+- `cp` / `mv` - Copy/move files
+- `grep` - Search in files
+- `history` - Command history
+
 ## Tech Debt
 
-| # | Description | Priority | Notes |
-|---|-------------|----------|-------|
-| #75 | Scope theme transitions to specific components instead of global `*` selector | Low | Address at end of epic if performance issues observed |
-| #95 | Extract shared useTheme mock to test utility | Low | PR #94 review feedback |
-| #96 | Extract E2E test timeouts to constants | Low | PR #94 review feedback |
+<!-- Track tech debt items identified during epic work -->
+
+(none yet)
