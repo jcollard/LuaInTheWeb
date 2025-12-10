@@ -82,6 +82,71 @@ test.describe('Menu Bar', () => {
     })
   })
 
+  test.describe('File menu', () => {
+    test('should show all File menu items', async ({ page }) => {
+      // Open File menu
+      await getMenuTrigger(page, 'File').click()
+
+      // Should show all File menu items
+      await expect(page.getByRole('menuitem', { name: 'New File' })).toBeVisible()
+      await expect(page.getByRole('menuitem', { name: 'Open File...' })).toBeVisible()
+      await expect(page.getByRole('menuitem', { name: 'Save' })).toBeVisible()
+      await expect(page.getByRole('menuitem', { name: 'Export As...' })).toBeVisible()
+    })
+
+    test('should show Open File as disabled', async ({ page }) => {
+      // Open File menu
+      await getMenuTrigger(page, 'File').click()
+
+      // Open File should be disabled (placeholder for future implementation)
+      const openFileItem = page.getByRole('menuitem', { name: 'Open File...' })
+      await expect(openFileItem).toBeVisible()
+      await expect(openFileItem).toHaveClass(/disabled/)
+    })
+
+    test('should create new file via File menu', async ({ page }) => {
+      // Open File menu and click New File
+      await getMenuTrigger(page, 'File').click()
+      await page.getByRole('menuitem', { name: 'New File' }).click()
+
+      // Menu should close
+      await expect(page.getByRole('menu')).not.toBeVisible()
+
+      // A rename input should appear in the file tree (indicating a new file is being created)
+      const sidebar = page.getByTestId('sidebar-panel')
+      await expect(sidebar.getByRole('textbox')).toBeVisible({ timeout: 3000 })
+    })
+
+    test('should show Export As enabled when file has content', async ({ page }) => {
+      // First, create and open a file so Monaco editor is visible
+      const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new file/i }).click()
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
+      // Wait for input to disappear (file created)
+      await expect(input).not.toBeVisible()
+      // Click the file to open it
+      const treeItem = page.getByRole('treeitem').first()
+      await treeItem.click()
+      // Wait for Monaco editor to be visible
+      await expect(page.locator('.monaco-editor')).toBeVisible()
+
+      // Type some content into the editor (new file is empty by default)
+      // Click on the editor lines area to focus
+      await page.locator('.monaco-editor .view-lines').click()
+      // Type content using keyboard
+      await page.keyboard.type('print("hello")')
+
+      // Open File menu
+      await getMenuTrigger(page, 'File').click()
+
+      // Export As should be enabled (not disabled) since file has content
+      const exportItem = page.getByRole('menuitem', { name: 'Export As...' })
+      await expect(exportItem).toBeVisible()
+      await expect(exportItem).not.toHaveClass(/disabled/)
+    })
+  })
+
   test.describe('menu actions', () => {
     test('should toggle sidebar visibility from View menu', async ({ page }) => {
       // Verify sidebar is visible initially

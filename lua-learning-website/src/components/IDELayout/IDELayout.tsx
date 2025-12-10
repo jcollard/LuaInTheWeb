@@ -13,6 +13,7 @@ import { ToastContainer } from '../Toast'
 import { WelcomeScreen } from '../WelcomeScreen'
 import { MenuBar } from '../MenuBar'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { useFileExport } from '../../hooks/useFileExport'
 import { useTheme } from '../../contexts/useTheme'
 import styles from './IDELayout.module.css'
 import type { IDELayoutProps } from './types'
@@ -72,6 +73,15 @@ function IDELayoutInner({ className }: { className?: string }) {
   // Theme support for Settings menu
   const { theme, toggleTheme } = useTheme()
 
+  // File export functionality
+  const { exportFile, canExport } = useFileExport()
+
+  const handleExport = useCallback(() => {
+    if (fileName && code) {
+      exportFile(code, fileName)
+    }
+  }, [code, fileName, exportFile])
+
   const handleRun = useCallback(async () => {
     setIsRunning(true)
     try {
@@ -88,9 +98,12 @@ function IDELayoutInner({ className }: { className?: string }) {
         id: 'file',
         label: 'File',
         items: [
-          { id: 'new-file', label: 'New File', shortcut: 'Ctrl+N', action: () => createFileWithRename() },
+          { id: 'new-file', label: 'New File', action: () => createFileWithRename() },
+          { id: 'open-file', label: 'Open File...', disabled: true },
           { type: 'divider' },
           { id: 'save', label: 'Save', shortcut: 'Ctrl+S', action: saveFile, disabled: !isDirty },
+          { type: 'divider' },
+          { id: 'export', label: 'Export As...', action: handleExport, disabled: !canExport(code) },
         ],
       },
       {
@@ -128,7 +141,7 @@ function IDELayoutInner({ className }: { className?: string }) {
         ],
       },
     ],
-    [createFileWithRename, saveFile, isDirty, sidebarVisible, toggleSidebar, terminalVisible, toggleTerminal, handleRun, isRunning, theme, toggleTheme]
+    [createFileWithRename, saveFile, isDirty, sidebarVisible, toggleSidebar, terminalVisible, toggleTerminal, handleRun, isRunning, theme, toggleTheme, handleExport, canExport, code]
   )
 
   // Register keyboard shortcuts
