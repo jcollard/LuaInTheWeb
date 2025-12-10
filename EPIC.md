@@ -3,7 +3,7 @@
 **Status:** In Progress (1/6 complete)
 **Branch:** 82-epic-create-top-bar-menu-file-edit-settings
 **Created:** 2025-12-09
-**Last Updated:** 2025-12-09
+**Last Updated:** 2025-12-10
 
 ## Overview
 
@@ -40,7 +40,7 @@ Add a top navigation bar with dropdown menus similar to VS Code and other deskto
 
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
-| #106 | MenuBar: Base component architecture | ✅ Complete | 106-menubar-base-component-architecture | Completed 2025-12-09 |
+| #106 | MenuBar: Base component architecture | ✅ Complete | 106-menubar-base-component-architecture | Merged PR #116 |
 | #107 | MenuBar: Implement File menu | ⏳ Pending | - | Phase 2: Menu Implementations |
 | #108 | MenuBar: Implement Edit menu | ⏳ Pending | - | Phase 2: Menu Implementations |
 | #109 | MenuBar: Implement Settings menu | ⏳ Pending | - | Phase 2: Menu Implementations |
@@ -58,6 +58,11 @@ Add a top navigation bar with dropdown menus similar to VS Code and other deskto
 ## Progress Log
 
 <!-- Updated after each sub-issue completion -->
+
+### 2025-12-10
+- Merged PR #116 for #106: MenuBar base component architecture
+- Created tech debt issue #117 for Menu.tsx mutation score (66%)
+- Updated #110 to include keyboard hook extraction task
 
 ### 2025-12-09
 - Epic started
@@ -105,4 +110,4 @@ Add a top navigation bar with dropdown menus similar to VS Code and other deskto
 
 | # | Description | Priority | Notes |
 |---|-------------|----------|-------|
-| - | - | - | - |
+| #117 | Menu.tsx mutation score (66%) below threshold | Low | Will be addressed in #110 via hook extraction |
