@@ -19,6 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:mutation": "stryker run",
     "clean": "rm -rf dist"
   },
   "keywords": [
@@ -28,6 +29,9 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "@stryker-mutator/core": "^9.0.2",
+    "@stryker-mutator/typescript-checker": "^9.0.2",
+    "@stryker-mutator/vitest-runner": "^9.0.2",
     "typescript": "~5.9.3",
     "vitest": "^4.0.15"
   }

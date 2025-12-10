@@ -6,3 +6,26 @@
  */
 
 export const VERSION = '0.0.1'
+
+// Types
+export type {
+  FileEntry,
+  IFileSystem,
+  CommandResult,
+  ParsedCommand,
+  Command,
+  ShellOptions,
+} from './types'
+
+// Path utilities
+export {
+  normalizePath,
+  joinPath,
+  resolvePath,
+  isAbsolutePath,
+  getParentPath,
+  getBasename,
+} from './pathUtils'
+
+// Command parsing
+export { parseCommand } from './parseCommand'
