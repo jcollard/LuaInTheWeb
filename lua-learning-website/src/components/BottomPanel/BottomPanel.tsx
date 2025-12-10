@@ -17,6 +17,15 @@ export function BottomPanel({
   const [activeTab, setActiveTab] = useState<BottomPanelTab>('terminal')
   const [inputValue, setInputValue] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+  // Track if shell has ever been opened - once opened, keep mounted to preserve state
+  const [shellEverOpened, setShellEverOpened] = useState(false)
+
+  // Mark shell as opened when first visited
+  useEffect(() => {
+    if (activeTab === 'shell' && !shellEverOpened) {
+      setShellEverOpened(true)
+    }
+  }, [activeTab, shellEverOpened])
 
   // Auto-focus input when awaiting input
   useEffect(() => {
@@ -128,8 +137,13 @@ export function BottomPanel({
             <LuaRepl embedded />
           </div>
         )}
-        {activeTab === 'shell' && filesystem && (
-          <div className={styles.shellContent} id="shell-tabpanel">
+        {/* Shell - mounted after first visit, hidden with CSS to preserve xterm state */}
+        {filesystem && (activeTab === 'shell' || shellEverOpened) && (
+          <div
+            className={styles.shellContent}
+            id="shell-tabpanel"
+            style={{ display: activeTab === 'shell' ? 'flex' : 'none' }}
+          >
             <ShellTerminal filesystem={filesystem} embedded />
           </div>
         )}
