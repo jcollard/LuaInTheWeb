@@ -435,6 +435,7 @@ export function IDEContextProvider({
       runCode,
       clearTerminal,
       // Filesystem
+      filesystem,
       fileTree,
       createFile,
       createFolder,
@@ -479,6 +480,7 @@ export function IDEContextProvider({
       toggleSidebar,
       runCode,
       clearTerminal,
+      filesystem,
       fileTree,
       createFile,
       createFolder,

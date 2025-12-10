@@ -1,5 +1,5 @@
 import type { UseLuaEngineReturn } from '../../hooks/types'
-import type { TreeNode } from '../../hooks/useFileSystem'
+import type { TreeNode, UseFileSystemReturn } from '../../hooks/useFileSystem'
 import type { RecentFile } from '../../hooks/useRecentFiles'
 import type { TabInfo } from '../TabBar'
 import type { ToastData } from '../Toast'
@@ -43,6 +43,7 @@ export interface IDEContextValue {
   clearTerminal: () => void
 
   // Filesystem
+  filesystem: UseFileSystemReturn
   fileTree: TreeNode[]
   createFile: (path: string, content?: string) => void
   createFolder: (path: string) => void
