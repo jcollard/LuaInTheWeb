@@ -1,9 +1,9 @@
 # Epic #119: Shell Core Package Extraction
 
-**Status:** In Progress (1/6 complete)
+**Status:** In Progress (2/6 complete)
 **Branch:** epic-119
 **Created:** 2025-12-10
-**Last Updated:** 2025-12-10 14:21
+**Last Updated:** 2025-12-10 14:38
 
 ## Overview
 
@@ -56,7 +56,7 @@ LuaInTheWeb/
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #120 | Initialize shell-core package structure | ✅ Complete | 120-initialize-shell-core | Merged PR #126 |
-| #121 | Extract shell types and utilities | 🔄 In Progress | 121-extract-shell-types-and-utilities | PR #127 |
+| #121 | Extract shell types and utilities | ✅ Complete | 121-extract-shell-types-and-utilities | Merged PR #127 |
 | #122 | Extract CommandRegistry and filesystem adapter | ⏳ Pending | - | - |
 | #123 | Extract shell commands (cd, pwd, ls, help) | ⏳ Pending | - | - |
 | #124 | Integrate shell-core into editor | ⏳ Pending | - | - |
@@ -80,12 +80,12 @@ LuaInTheWeb/
   - Set up npm workspaces at root level
   - Verified build and test pass
   - Merged PR #126 to epic-119
-- **#121 In Progress**: Extract shell types and utilities
+- **#121 Complete**: Extract shell types and utilities
   - Created `types.ts` with core interfaces (IFileSystem, Command, CommandResult, etc.)
   - Created `pathUtils.ts` with path manipulation functions
   - Created `parseCommand.ts` with command string parser
-  - Added 56 tests with 84.97% mutation score
-  - PR #127 created targeting epic-119
+  - Added 67 tests with 85.63% mutation score
+  - Merged PR #127 to epic-119
 
 ## Key Files
 
