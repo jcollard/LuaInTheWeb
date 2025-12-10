@@ -7,12 +7,14 @@ describe('useKeyboardShortcuts', () => {
   let mockToggleTerminal: Mock<() => void>
   let mockToggleSidebar: Mock<() => void>
   let mockSaveFile: Mock<() => void>
+  let mockCreateFile: Mock<() => void>
 
   beforeEach(() => {
     mockRunCode = vi.fn<() => void>()
     mockToggleTerminal = vi.fn<() => void>()
     mockToggleSidebar = vi.fn<() => void>()
     mockSaveFile = vi.fn<() => void>()
+    mockCreateFile = vi.fn<() => void>()
   })
 
   afterEach(() => {
@@ -257,6 +259,100 @@ describe('useKeyboardShortcuts', () => {
     })
   })
 
+  describe('Ctrl+N', () => {
+    it('should call createFile when Ctrl+N is pressed', () => {
+      // Arrange
+      renderHook(() =>
+        useKeyboardShortcuts({
+          runCode: mockRunCode,
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+          createFile: mockCreateFile,
+        })
+      )
+
+      // Act
+      const event = new KeyboardEvent('keydown', {
+        key: 'n',
+        ctrlKey: true,
+        bubbles: true,
+      })
+      document.dispatchEvent(event)
+
+      // Assert
+      expect(mockCreateFile).toHaveBeenCalledTimes(1)
+    })
+
+    it('should call createFile for uppercase N with Ctrl', () => {
+      // Arrange
+      renderHook(() =>
+        useKeyboardShortcuts({
+          runCode: mockRunCode,
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+          createFile: mockCreateFile,
+        })
+      )
+
+      // Act
+      const event = new KeyboardEvent('keydown', {
+        key: 'N',
+        ctrlKey: true,
+        bubbles: true,
+      })
+      document.dispatchEvent(event)
+
+      // Assert
+      expect(mockCreateFile).toHaveBeenCalledTimes(1)
+    })
+
+    it('should not call createFile when only N is pressed without Ctrl', () => {
+      // Arrange
+      renderHook(() =>
+        useKeyboardShortcuts({
+          runCode: mockRunCode,
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+          createFile: mockCreateFile,
+        })
+      )
+
+      // Act
+      const event = new KeyboardEvent('keydown', {
+        key: 'n',
+        ctrlKey: false,
+        bubbles: true,
+      })
+      document.dispatchEvent(event)
+
+      // Assert
+      expect(mockCreateFile).not.toHaveBeenCalled()
+    })
+
+    it('should not crash when createFile is not provided', () => {
+      // Arrange
+      renderHook(() =>
+        useKeyboardShortcuts({
+          runCode: mockRunCode,
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+        })
+      )
+
+      // Act & Assert - should not throw
+      const event = new KeyboardEvent('keydown', {
+        key: 'n',
+        ctrlKey: true,
+        bubbles: true,
+      })
+      expect(() => document.dispatchEvent(event)).not.toThrow()
+    })
+  })
+
   describe('cleanup', () => {
     it('should remove event listener on unmount', () => {
       // Arrange
@@ -350,6 +446,32 @@ describe('useKeyboardShortcuts', () => {
       // Act
       const event = new KeyboardEvent('keydown', {
         key: 's',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+      document.dispatchEvent(event)
+
+      // Assert
+      expect(preventDefaultSpy).toHaveBeenCalled()
+    })
+
+    it('should prevent default for Ctrl+N to avoid browser new window', () => {
+      // Arrange
+      renderHook(() =>
+        useKeyboardShortcuts({
+          runCode: mockRunCode,
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+          createFile: mockCreateFile,
+        })
+      )
+
+      // Act
+      const event = new KeyboardEvent('keydown', {
+        key: 'n',
         ctrlKey: true,
         bubbles: true,
         cancelable: true,

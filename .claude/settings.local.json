@@ -73,7 +73,10 @@
       "Bash(python issue-review.py:*)",
       "Bash(python update-pr.py:*)",
       "Bash(node scripts/capture-screenshots.js:*)",
-      "Bash(SCREENSHOT_SERVER_TIMEOUT=60000 node scripts/capture-screenshots.js:*)"
+      "Bash(SCREENSHOT_SERVER_TIMEOUT=60000 node scripts/capture-screenshots.js:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(node /c/Users/User/git/jcollard/AdventuresInLua/LuaInTheWeb-issue-82/scripts/jq.js:*)"
     ],
     "deny": [
       "Bash(npm run dev)",
