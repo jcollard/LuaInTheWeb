@@ -43,13 +43,11 @@ export function useFileExport(): UseFileExportReturn {
     anchor.href = url
     anchor.download = sanitizedFilename
 
-    // Trigger download
-    document.body.appendChild(anchor)
+    // Trigger download (modern browsers don't require appending to DOM)
     anchor.click()
 
     // Cleanup
     URL.revokeObjectURL(url)
-    document.body.removeChild(anchor)
   }, [])
 
   const canExport = useCallback((content: string | undefined): boolean => {

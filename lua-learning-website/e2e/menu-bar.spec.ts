@@ -123,18 +123,19 @@ test.describe('Menu Bar', () => {
       await sidebar.getByRole('button', { name: /new file/i }).click()
       const input = sidebar.getByRole('textbox')
       await input.press('Enter') // Accept default name
-      await page.waitForTimeout(200)
+      // Wait for input to disappear (file created)
+      await expect(input).not.toBeVisible()
       // Click the file to open it
       const treeItem = page.getByRole('treeitem').first()
       await treeItem.click()
-      await page.waitForTimeout(500) // Wait for Monaco to initialize
+      // Wait for Monaco editor to be visible
+      await expect(page.locator('.monaco-editor')).toBeVisible()
 
       // Type some content into the editor (new file is empty by default)
       // Click on the editor lines area to focus
       await page.locator('.monaco-editor .view-lines').click()
       // Type content using keyboard
       await page.keyboard.type('print("hello")')
-      await page.waitForTimeout(200)
 
       // Open File menu
       await getMenuTrigger(page, 'File').click()
