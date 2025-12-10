@@ -1,9 +1,9 @@
 # Epic #119: Shell Core Package Extraction
 
-**Status:** In Progress (2/6 complete, 1 in review)
+**Status:** In Progress (3/6 complete)
 **Branch:** epic-119
 **Created:** 2025-12-10
-**Last Updated:** 2025-12-10 15:38
+**Last Updated:** 2025-12-10 17:47
 
 ## Overview
 
@@ -57,7 +57,7 @@ LuaInTheWeb/
 |---|-------|--------|--------|-------|
 | #120 | Initialize shell-core package structure | ✅ Complete | 120-initialize-shell-core | Merged PR #126 |
 | #121 | Extract shell types and utilities | ✅ Complete | 121-extract-shell-types-and-utilities | Merged PR #127 |
-| #122 | Extract CommandRegistry and filesystem adapter | 🔄 In Progress | 122-extract-commandregistry-and-filesystem-adapter | PR #128 pending review |
+| #122 | Extract CommandRegistry and filesystem adapter | ✅ Complete | 122-extract-commandregistry-and-filesystem-adapter | Merged PR #128 |
 | #123 | Extract shell commands (cd, pwd, ls, help) | ⏳ Pending | - | - |
 | #124 | Integrate shell-core into editor | ⏳ Pending | - | - |
 | #125 | Shell-core documentation and cleanup | ⏳ Pending | - | - |
@@ -86,12 +86,12 @@ LuaInTheWeb/
   - Created `parseCommand.ts` with command string parser
   - Added 67 tests with 85.63% mutation score
   - Merged PR #127 to epic-119
-- **#122 In Review**: Extract CommandRegistry and filesystem adapter
+- **#122 Complete**: Extract CommandRegistry and filesystem adapter
   - Created `CommandRegistry.ts` - manages command registration, lookup, and execution
   - Created `createFileSystemAdapter.ts` - bridges external filesystems to IFileSystem interface
   - Added 55 tests (122 total)
   - Mutation scores: CommandRegistry 100%, createFileSystemAdapter 91.14%
-  - PR #128 created, pending review
+  - Merged PR #128 to epic-119
 
 ## Key Files
 
