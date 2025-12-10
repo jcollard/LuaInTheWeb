@@ -36,3 +36,13 @@ export { CommandRegistry } from './CommandRegistry'
 // Filesystem adapter
 export { createFileSystemAdapter } from './createFileSystemAdapter'
 export type { ExternalFileSystem } from './createFileSystemAdapter'
+
+// Built-in commands
+export {
+  pwd,
+  cd,
+  ls,
+  createHelpCommand,
+  registerBuiltinCommands,
+  builtinCommands,
+} from './commands'
