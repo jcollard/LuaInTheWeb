@@ -4,6 +4,7 @@
   background-color: var(--theme-bg-secondary);
   border-bottom: 1px solid var(--theme-border-primary);
   overflow: hidden;
+  transition: var(--theme-transition);
 }
 
 .tabsContainer {

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { TIMEOUTS } from './constants'
 
 // Helper to create and open a file so Monaco editor is visible
 async function createAndOpenFile(page: import('@playwright/test').Page) {
@@ -6,11 +7,11 @@ async function createAndOpenFile(page: import('@playwright/test').Page) {
   await sidebar.getByRole('button', { name: /new file/i }).click()
   const input = sidebar.getByRole('textbox')
   await input.press('Enter') // Accept default name
-  await page.waitForTimeout(200)
+  await page.waitForTimeout(TIMEOUTS.UI_STABLE)
   // Click the file to open it
   const treeItem = page.getByRole('treeitem').first()
   await treeItem.click()
-  await page.waitForTimeout(500)
+  await page.waitForTimeout(TIMEOUTS.ANIMATION)
 }
 
 test.describe('Theme - Monaco Editor', () => {
@@ -33,7 +34,7 @@ test.describe('Theme - Monaco Editor', () => {
 
     // Wait for Monaco editor to be visible
     const monacoEditor = page.locator('.monaco-editor')
-    await expect(monacoEditor).toBeVisible({ timeout: 10000 })
+    await expect(monacoEditor).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
     // Monaco adds theme class to the editor element
     // vs-dark theme adds 'vs-dark' class
@@ -51,7 +52,7 @@ test.describe('Theme - Monaco Editor', () => {
 
     // Wait for Monaco editor to be visible
     const monacoEditor = page.locator('.monaco-editor')
-    await expect(monacoEditor).toBeVisible({ timeout: 10000 })
+    await expect(monacoEditor).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
     // vs (light) theme should NOT have vs-dark class
     await expect(monacoEditor).not.toHaveClass(/vs-dark/)
@@ -68,7 +69,7 @@ test.describe('Theme - Monaco Editor', () => {
 
     // Wait for Monaco editor
     const monacoEditor = page.locator('.monaco-editor')
-    await expect(monacoEditor).toBeVisible({ timeout: 10000 })
+    await expect(monacoEditor).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
     // Check background color - vs-dark uses #1e1e1e
     const bgColor = await monacoEditor.evaluate(el =>
@@ -89,7 +90,7 @@ test.describe('Theme - Monaco Editor', () => {
 
     // Wait for Monaco editor
     const monacoEditor = page.locator('.monaco-editor')
-    await expect(monacoEditor).toBeVisible({ timeout: 10000 })
+    await expect(monacoEditor).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
     // Check background color - vs (light) uses #fffffe (near white)
     const bgColor = await monacoEditor.evaluate(el =>
@@ -110,7 +111,7 @@ test.describe('Theme - Monaco Editor', () => {
 
     // Wait for Monaco editor and verify dark theme
     let monacoEditor = page.locator('.monaco-editor')
-    await expect(monacoEditor).toBeVisible({ timeout: 10000 })
+    await expect(monacoEditor).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
     await expect(monacoEditor).toHaveClass(/vs-dark/)
 
     // Change theme to light and reload (simulating user switching themes)
@@ -123,7 +124,7 @@ test.describe('Theme - Monaco Editor', () => {
 
     // Monaco should now have vs (light) theme
     monacoEditor = page.locator('.monaco-editor')
-    await expect(monacoEditor).toBeVisible({ timeout: 10000 })
+    await expect(monacoEditor).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
     await expect(monacoEditor).not.toHaveClass(/vs-dark/)
   })
 })

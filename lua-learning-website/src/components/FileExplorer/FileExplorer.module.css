@@ -4,6 +4,7 @@
   height: 100%;
   background-color: var(--theme-bg-secondary);
   color: var(--theme-text-primary);
+  transition: var(--theme-transition);
 }
 
 .toolbar {

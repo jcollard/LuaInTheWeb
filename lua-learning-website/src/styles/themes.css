@@ -119,19 +119,14 @@
 /**
  * Theme transition
  *
- * Apply smooth transitions when switching themes.
- * This class is applied to elements that should animate theme changes.
+ * Transitions are scoped to specific components for better performance.
+ * Each component's CSS module applies theme transitions to its root element.
+ * Use var(--theme-transition) in component CSS modules.
  */
 :root {
   --theme-transition-duration: 200ms;
   --theme-transition-timing: ease-in-out;
-}
-
-/* Base transition for all theme-affected properties */
-*,
-*::before,
-*::after {
-  transition:
+  --theme-transition:
     background-color var(--theme-transition-duration) var(--theme-transition-timing),
     border-color var(--theme-transition-duration) var(--theme-transition-timing),
     color var(--theme-transition-duration) var(--theme-transition-timing);

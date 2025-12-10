@@ -5,6 +5,7 @@
   background-color: var(--theme-bg-primary);
   color: var(--theme-text-primary);
   overflow: hidden;
+  transition: var(--theme-transition);
 }
 
 .mainContainer {

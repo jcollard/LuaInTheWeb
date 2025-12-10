@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { TIMEOUTS } from './constants'
 
 test.describe('Theme - Layout Components', () => {
   test.beforeEach(async ({ page }) => {
@@ -51,7 +52,7 @@ test.describe('Theme - Layout Components', () => {
       localStorage.setItem('lua-ide-theme', 'light')
       document.documentElement.setAttribute('data-theme', 'light')
     })
-    await page.waitForTimeout(300) // Wait for transition
+    await page.waitForTimeout(TIMEOUTS.TRANSITION) // Wait for transition
 
     // In light theme, bg-primary should be #ffffff
     const lightBgColor = await ideLayout.evaluate(el =>
@@ -78,7 +79,7 @@ test.describe('Theme - Layout Components', () => {
       localStorage.setItem('lua-ide-theme', 'light')
       document.documentElement.setAttribute('data-theme', 'light')
     })
-    await page.waitForTimeout(300)
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
     // In light theme, bg-tertiary should be #e8e8e8
     const lightBgColor = await activityBar.evaluate(el =>
@@ -105,7 +106,7 @@ test.describe('Theme - Layout Components', () => {
       localStorage.setItem('lua-ide-theme', 'light')
       document.documentElement.setAttribute('data-theme', 'light')
     })
-    await page.waitForTimeout(300)
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
     // In light theme, bg-secondary should be #f3f3f3
     const lightBgColor = await sidebarPanel.evaluate(el =>
@@ -132,7 +133,7 @@ test.describe('Theme - Layout Components', () => {
       localStorage.setItem('lua-ide-theme', 'light')
       document.documentElement.setAttribute('data-theme', 'light')
     })
-    await page.waitForTimeout(300)
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
     // In light theme, accent-primary should be #0066b8
     const lightBgColor = await statusBar.evaluate(el =>
@@ -159,7 +160,7 @@ test.describe('Theme - Layout Components', () => {
       localStorage.setItem('lua-ide-theme', 'light')
       document.documentElement.setAttribute('data-theme', 'light')
     })
-    await page.waitForTimeout(300)
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
     // In light theme, bg-primary should be #ffffff
     const lightBgColor = await bottomPanel.evaluate(el =>
@@ -224,7 +225,7 @@ test.describe('Theme - Layout Components', () => {
       localStorage.setItem('lua-ide-theme', 'light')
       document.documentElement.setAttribute('data-theme', 'light')
     })
-    await page.waitForTimeout(300)
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
     // In light theme, bg-secondary should be #f3f3f3
     const lightBgColor = await fileExplorer.evaluate(el =>
