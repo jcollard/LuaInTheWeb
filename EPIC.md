@@ -1,6 +1,6 @@
 # Epic #82: Create top bar menu - File | Edit | Settings
 
-**Status:** In Progress (1/6 complete)
+**Status:** In Progress (1/6 complete, 1 in review)
 **Branch:** 82-epic-create-top-bar-menu-file-edit-settings
 **Created:** 2025-12-09
 **Last Updated:** 2025-12-10
@@ -41,7 +41,7 @@ Add a top navigation bar with dropdown menus similar to VS Code and other deskto
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #106 | MenuBar: Base component architecture | ✅ Complete | 106-menubar-base-component-architecture | Merged PR #116 |
-| #107 | MenuBar: Implement File menu | ⏳ Pending | - | Phase 2: Menu Implementations |
+| #107 | MenuBar: Implement File menu | 🔄 In Progress | 107-menubar-implement-file-menu | PR #118 created |
 | #108 | MenuBar: Implement Edit menu | ⏳ Pending | - | Phase 2: Menu Implementations |
 | #109 | MenuBar: Implement Settings menu | ⏳ Pending | - | Phase 2: Menu Implementations |
 | #110 | MenuBar: Keyboard navigation | ⏳ Pending | - | Phase 3: Polish |
@@ -60,6 +60,12 @@ Add a top navigation bar with dropdown menus similar to VS Code and other deskto
 <!-- Updated after each sub-issue completion -->
 
 ### 2025-12-10
+- Started #107: MenuBar: Implement File menu
+  - Created `useFileExport` hook (80% mutation score)
+  - Added "Open File..." placeholder, "Export As..." menu items
+  - Implemented Ctrl+N keyboard shortcut (95.24% mutation score)
+  - Added E2E tests for File menu interactions
+  - Created PR #118 targeting epic branch
 - Merged PR #116 for #106: MenuBar base component architecture
 - Created tech debt issue #117 for Menu.tsx mutation score (66%)
 - Updated #110 to include keyboard hook extraction task
