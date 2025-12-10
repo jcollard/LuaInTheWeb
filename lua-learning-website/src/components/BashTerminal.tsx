@@ -419,6 +419,30 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
       return
     }
 
+    // Handle Home key (move cursor to start of line)
+    // Home key escape sequences: \x1b[H, \x1b[1~, or \x1bOH
+    if (data === '\x1b[H' || data === '\x1b[1~' || data === '\x1bOH') {
+      const pos = cursorPositionRef.current
+      if (pos > 0) {
+        cursorPositionRef.current = 0
+        term.write(`\x1b[${pos}D`)  // Move cursor left by pos positions
+      }
+      return
+    }
+
+    // Handle End key (move cursor to end of line)
+    // End key escape sequences: \x1b[F, \x1b[4~, or \x1bOF
+    if (data === '\x1b[F' || data === '\x1b[4~' || data === '\x1bOF') {
+      const pos = cursorPositionRef.current
+      const lineLength = currentLineRef.current.length
+      if (pos < lineLength) {
+        const moveCount = lineLength - pos
+        cursorPositionRef.current = lineLength
+        term.write(`\x1b[${moveCount}C`)  // Move cursor right
+      }
+      return
+    }
+
     // Handle Backspace
     if (code === 127) {
       // In multi-line mode at the beginning of a line (not the first line)

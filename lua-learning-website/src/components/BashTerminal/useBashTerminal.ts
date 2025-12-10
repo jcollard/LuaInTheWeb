@@ -32,6 +32,8 @@ export interface UseBashTerminalReturn {
   handleArrowDown: () => TerminalCommand[]
   handleArrowLeft: () => TerminalCommand[]
   handleArrowRight: () => TerminalCommand[]
+  handleHome: () => TerminalCommand[]
+  handleEnd: () => TerminalCommand[]
   handleShiftEnter: () => TerminalCommand[]
   handleCtrlC: () => TerminalCommand[]
 }
@@ -235,6 +237,28 @@ export function useBashTerminal(options?: UseBashTerminalOptions): UseBashTermin
     return []
   }, [])
 
+  const handleHome = useCallback((): TerminalCommand[] => {
+    const pos = cursorPositionRef.current
+
+    if (pos > 0) {
+      setCursorPosition(0)
+      return [{ type: 'moveCursor', direction: 'left', count: pos }]
+    }
+    return []
+  }, [])
+
+  const handleEnd = useCallback((): TerminalCommand[] => {
+    const pos = cursorPositionRef.current
+    const line = currentLineRef.current
+    const lineLength = line.length
+
+    if (pos < lineLength) {
+      setCursorPosition(lineLength)
+      return [{ type: 'moveCursor', direction: 'right', count: lineLength - pos }]
+    }
+    return []
+  }, [])
+
   const handleShiftEnter = useCallback((): TerminalCommand[] => {
     const isMultiLine = isMultiLineModeRef.current
     const line = currentLineRef.current
@@ -313,6 +337,8 @@ export function useBashTerminal(options?: UseBashTerminalOptions): UseBashTermin
     handleArrowDown,
     handleArrowLeft,
     handleArrowRight,
+    handleHome,
+    handleEnd,
     handleShiftEnter,
     handleCtrlC,
   }
