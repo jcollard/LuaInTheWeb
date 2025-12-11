@@ -560,6 +560,60 @@ describe('useFileSystem', () => {
     })
   })
 
+  describe('isDirectory', () => {
+    it('should return true for existing folder', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/utils')
+      })
+
+      // Act & Assert
+      expect(result.current.isDirectory('/utils')).toBe(true)
+    })
+
+    it('should return true for root folder', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+
+      // Act & Assert
+      expect(result.current.isDirectory('/')).toBe(true)
+    })
+
+    it('should return false for existing file', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFile('/test.lua')
+      })
+
+      // Act & Assert
+      expect(result.current.isDirectory('/test.lua')).toBe(false)
+    })
+
+    it('should return false for non-existent path', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+
+      // Act & Assert
+      expect(result.current.isDirectory('/nonexistent')).toBe(false)
+    })
+
+    it('should return true for nested folder', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/parent')
+      })
+      act(() => {
+        result.current.createFolder('/parent/child')
+      })
+
+      // Act & Assert
+      expect(result.current.isDirectory('/parent/child')).toBe(true)
+    })
+  })
+
   describe('listDirectory', () => {
     it('should return children of folder', () => {
       // Arrange

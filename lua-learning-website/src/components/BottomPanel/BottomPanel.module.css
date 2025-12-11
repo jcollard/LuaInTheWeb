@@ -52,6 +52,11 @@
 .content {
   flex: 1;
   overflow: hidden;
+  position: relative;
+}
+
+.hidden {
+  display: none !important;
 }
 
 .terminalContent {
@@ -60,6 +65,13 @@
 }
 
 .replContent {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.shellContent {
   height: 100%;
   overflow: hidden;
   display: flex;

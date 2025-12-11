@@ -37,6 +37,7 @@ export interface UseFileSystemReturn {
 
   // Utilities
   exists: (path: string) => boolean
+  isDirectory: (path: string) => boolean
   listDirectory: (path: string) => string[]
   getTree: () => TreeNode[]
 }
@@ -137,6 +138,14 @@ export function useFileSystem(): UseFileSystemReturn {
       return normalizedPath in state.files || state.folders.has(normalizedPath)
     },
     [state.files, state.folders]
+  )
+
+  const isDirectory = useCallback(
+    (path: string): boolean => {
+      const normalizedPath = normalizePath(path)
+      return state.folders.has(normalizedPath)
+    },
+    [state.folders]
   )
 
   const createFile = useCallback(
@@ -565,6 +574,7 @@ export function useFileSystem(): UseFileSystemReturn {
     deleteFolder,
     renameFolder,
     exists,
+    isDirectory,
     listDirectory,
     getTree,
   }
