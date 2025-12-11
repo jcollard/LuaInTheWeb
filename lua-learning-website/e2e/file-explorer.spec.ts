@@ -45,7 +45,7 @@ test.describe('File Explorer', () => {
       await sidebar.getByRole('button', { name: /new file/i }).click()
       const input = sidebar.getByRole('textbox')
       await input.press('Enter') // Accept default name
-      await page.waitForTimeout(200)
+      await expect(input).not.toBeVisible()
 
       // Find a file in the tree and click it
       const treeItem = page.getByRole('treeitem').first()
@@ -61,9 +61,14 @@ test.describe('File Explorer', () => {
       // Arrange - Create a folder and a file (so we have 2 items)
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
-      await page.waitForTimeout(200)
+      let input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
+      await expect(input).not.toBeVisible()
+
       await sidebar.getByRole('button', { name: /new file/i }).click()
-      await page.waitForTimeout(200)
+      input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
+      await expect(input).not.toBeVisible()
 
       // Focus tree and select first item (folder)
       const tree = page.getByRole('tree', { name: 'File Explorer' })
@@ -76,7 +81,6 @@ test.describe('File Explorer', () => {
 
       // Press ArrowDown to move to next item (file)
       await tree.press('ArrowDown')
-      await page.waitForTimeout(100)
 
       // The second item should now be selected
       const secondItem = items.nth(1)
@@ -86,10 +90,12 @@ test.describe('File Explorer', () => {
 
   test.describe('context menu', () => {
     test('right-clicking file opens context menu', async ({ page }) => {
-      // Arrange - Create a file
+      // Arrange - Create a file and complete rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
-      await page.waitForTimeout(200)
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
+      await expect(input).not.toBeVisible()
 
       // Act - Right-click the file
       const treeItem = page.getByRole('treeitem').first()
@@ -105,7 +111,10 @@ test.describe('File Explorer', () => {
       // Arrange - Create a file and open context menu
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
-      await page.waitForTimeout(200)
+      let input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
+      await expect(input).not.toBeVisible()
+
       const treeItem = page.getByRole('treeitem').first()
       await treeItem.click({ button: 'right' })
 
@@ -113,14 +122,18 @@ test.describe('File Explorer', () => {
       await page.getByText('Rename').click()
 
       // Assert - Input should appear in sidebar (not Monaco editor)
-      await expect(sidebar.getByRole('textbox')).toBeVisible()
+      input = sidebar.getByRole('textbox')
+      await expect(input).toBeVisible()
     })
 
     test('clicking delete in context menu shows confirmation dialog', async ({ page }) => {
       // Arrange - Create a file and open context menu
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
-      await page.waitForTimeout(200)
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
+      await expect(input).not.toBeVisible()
+
       const treeItem = page.getByRole('treeitem').first()
       await treeItem.click({ button: 'right' })
 
@@ -140,11 +153,11 @@ test.describe('File Explorer', () => {
       await sidebar.getByRole('button', { name: /new file/i }).click()
       let input = sidebar.getByRole('textbox')
       await input.press('Enter') // Accept default name
-      await page.waitForTimeout(200)
+      await expect(input).not.toBeVisible()
 
       const treeItem = page.getByRole('treeitem').first()
       await treeItem.click()
-      await page.waitForTimeout(100)
+      await expect(treeItem).toHaveClass(/selected/)
 
       // Act - Press F2
       const tree = page.getByRole('tree', { name: 'File Explorer' })
@@ -163,11 +176,11 @@ test.describe('File Explorer', () => {
       await sidebar.getByRole('button', { name: /new file/i }).click()
       const input = sidebar.getByRole('textbox')
       await input.press('Enter') // Accept default name
-      await page.waitForTimeout(200)
+      await expect(input).not.toBeVisible()
 
       const treeItem = page.getByRole('treeitem').first()
       await treeItem.click()
-      await page.waitForTimeout(100)
+      await expect(treeItem).toHaveClass(/selected/)
 
       // Act - Press Delete
       const tree = page.getByRole('tree', { name: 'File Explorer' })
@@ -184,17 +197,17 @@ test.describe('File Explorer', () => {
       await sidebar.getByRole('button', { name: /new file/i }).click()
       const input = sidebar.getByRole('textbox')
       await input.press('Enter') // Accept default name
-      await page.waitForTimeout(200)
+      await expect(input).not.toBeVisible()
 
       const treeItem = page.getByRole('treeitem').first()
       const fileName = await treeItem.textContent()
       await treeItem.click()
-      await page.waitForTimeout(100)
+      await expect(treeItem).toHaveClass(/selected/)
 
       // Act - Press Delete and confirm
       const tree = page.getByRole('tree', { name: 'File Explorer' })
       await tree.press('Delete')
-      await page.waitForTimeout(100)
+      await expect(page.getByRole('dialog')).toBeVisible()
 
       // Click the Delete button in the dialog
       const dialog = page.getByRole('dialog')
@@ -210,29 +223,27 @@ test.describe('File Explorer', () => {
       // Act - Click New Folder button in sidebar
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
-      await page.waitForTimeout(200)
 
-      // Assert - A new folder should appear in the tree
-      const tree = page.getByRole('tree', { name: 'File Explorer' })
-      await expect(tree).toBeVisible()
+      // Assert - A new folder should appear in the tree with rename input visible
+      await expect(sidebar.getByRole('textbox')).toBeVisible()
       // Folder item should have a chevron for expansion
       await expect(page.getByTestId('folder-chevron')).toBeVisible()
     })
 
     test('clicking folder expands/collapses it', async ({ page }) => {
-      // Arrange - Create a folder
+      // Arrange - Create a folder and complete rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
-      await page.waitForTimeout(200)
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
+      await expect(input).not.toBeVisible()
 
       // Click chevron to expand (it may already be expanded or collapsed)
       const chevron = page.getByTestId('folder-chevron')
       await chevron.click()
-      await page.waitForTimeout(100)
 
       // Toggle again
       await chevron.click()
-      await page.waitForTimeout(100)
 
       // Should still be in tree
       await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
@@ -252,12 +263,12 @@ test.describe('File Explorer', () => {
       await sidebar.getByRole('button', { name: /new file/i }).click()
       const input = sidebar.getByRole('textbox')
       await input.press('Enter') // Accept default name
-      await page.waitForTimeout(200)
+      await expect(input).not.toBeVisible()
 
       // Double-click the file to open it
       const treeItem = page.getByRole('treeitem').first()
       await treeItem.dblclick()
-      await page.waitForTimeout(200)
+      await expect(page.locator('[data-testid="editor-panel"]')).toBeVisible()
 
       // Assert - Welcome Screen should be hidden, editor panel visible
       await expect(page.locator('[data-testid="welcome-screen"]')).not.toBeVisible()
@@ -279,14 +290,14 @@ test.describe('File Explorer', () => {
       // Act - Click New File button and rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
-      await page.waitForTimeout(100)
 
       // Type new name
       const input = sidebar.getByRole('textbox')
+      await expect(input).toBeVisible()
       await input.clear()
       await input.fill('my-script.lua')
       await input.press('Enter')
-      await page.waitForTimeout(200)
+      await expect(input).not.toBeVisible()
 
       // Assert - File should be renamed in tree
       await expect(page.getByText('my-script.lua')).toBeVisible()
@@ -296,11 +307,12 @@ test.describe('File Explorer', () => {
       // Act - Click New File button and cancel with Escape
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
-      await page.waitForTimeout(100)
+      const input = sidebar.getByRole('textbox')
+      await expect(input).toBeVisible()
 
       // Press Escape to cancel
       await page.keyboard.press('Escape')
-      await page.waitForTimeout(200)
+      await expect(input).not.toBeVisible()
 
       // Assert - File should be deleted (untitled-1.lua should not exist)
       await expect(page.getByText('untitled-1.lua')).not.toBeVisible()
@@ -321,14 +333,14 @@ test.describe('File Explorer', () => {
       // Act - Click New Folder button and rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
-      await page.waitForTimeout(100)
 
       // Type new name
       const input = sidebar.getByRole('textbox')
+      await expect(input).toBeVisible()
       await input.clear()
       await input.fill('my-scripts')
       await input.press('Enter')
-      await page.waitForTimeout(200)
+      await expect(input).not.toBeVisible()
 
       // Assert - Folder should be renamed in tree
       await expect(page.getByText('my-scripts')).toBeVisible()
@@ -338,11 +350,12 @@ test.describe('File Explorer', () => {
       // Act - Click New Folder button and cancel with Escape
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
-      await page.waitForTimeout(100)
+      const input = sidebar.getByRole('textbox')
+      await expect(input).toBeVisible()
 
       // Press Escape to cancel
       await page.keyboard.press('Escape')
-      await page.waitForTimeout(200)
+      await expect(input).not.toBeVisible()
 
       // Assert - Folder should be deleted (new-folder should not exist)
       await expect(page.getByText('new-folder')).not.toBeVisible()
@@ -352,8 +365,8 @@ test.describe('File Explorer', () => {
       // Act - Create folder and accept default name
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
-      await page.waitForTimeout(100)
       const input = sidebar.getByRole('textbox')
+      await expect(input).toBeVisible()
       await input.press('Enter') // Accept default name 'new-folder'
 
       // Wait for rename mode to exit (textbox should disappear)
@@ -373,7 +386,7 @@ test.describe('File Explorer', () => {
       await sidebar.getByRole('button', { name: /new file/i }).click()
       const input = sidebar.getByRole('textbox')
       await input.press('Enter') // Accept default name
-      await page.waitForTimeout(200)
+      await expect(input).not.toBeVisible()
 
       // Assert - File item should be draggable
       const treeItem = page.getByRole('treeitem').first()
@@ -381,10 +394,12 @@ test.describe('File Explorer', () => {
     })
 
     test('folder items are draggable', async ({ page }) => {
-      // Arrange - Create a folder
+      // Arrange - Create a folder and complete rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
-      await page.waitForTimeout(200)
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
+      await expect(input).not.toBeVisible()
 
       // Assert - Folder item should be draggable
       const treeItem = page.getByRole('treeitem').first()
@@ -397,14 +412,13 @@ test.describe('File Explorer', () => {
       // Arrange - Create a file
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
-      await page.waitForTimeout(100)
 
       // Act - Try to rename with invalid characters
       const input = sidebar.getByRole('textbox')
+      await expect(input).toBeVisible()
       await input.clear()
       await input.fill('bad<name>.lua')
       await input.press('Enter')
-      await page.waitForTimeout(200)
 
       // Assert - Error toast should appear in toast container
       const toastContainer = page.getByTestId('toast-container')
@@ -416,12 +430,11 @@ test.describe('File Explorer', () => {
       // Arrange - Create an error condition
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
-      await page.waitForTimeout(100)
       const input = sidebar.getByRole('textbox')
+      await expect(input).toBeVisible()
       await input.clear()
       await input.fill('bad<name>.lua')
       await input.press('Enter')
-      await page.waitForTimeout(200)
 
       // Act - Click dismiss button on toast
       const toastContainer = page.getByTestId('toast-container')
