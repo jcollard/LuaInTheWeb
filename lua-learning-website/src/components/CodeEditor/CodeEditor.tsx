@@ -1,4 +1,4 @@
-import Editor from '@monaco-editor/react'
+import Editor, { type OnMount } from '@monaco-editor/react'
 import type { CodeEditorProps } from './types'
 import styles from './CodeEditor.module.css'
 import { useTheme } from '../../contexts/useTheme'
@@ -13,6 +13,8 @@ export function CodeEditor({
   height = '400px',
   readOnly = false,
   onRun,
+  onMount,
+  onCursorChange,
 }: CodeEditorProps) {
   const { theme } = useTheme()
   const monacoTheme = theme === 'dark' ? 'vs-dark' : 'vs'
@@ -20,6 +22,18 @@ export function CodeEditor({
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Enter' && event.ctrlKey) {
       onRun?.()
+    }
+  }
+
+  const handleEditorMount: OnMount = (editor) => {
+    // Call the onMount callback with the editor instance
+    onMount?.(editor)
+
+    // Set up cursor position change listener
+    if (onCursorChange) {
+      editor.onDidChangeCursorPosition((e) => {
+        onCursorChange(e.position.lineNumber, e.position.column)
+      })
     }
   }
 
@@ -35,6 +49,7 @@ export function CodeEditor({
         value={value}
         theme={monacoTheme}
         onChange={(newValue) => onChange(newValue ?? '')}
+        onMount={handleEditorMount}
         options={{
           readOnly,
           minimap: { enabled: false },

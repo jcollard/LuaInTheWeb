@@ -13,6 +13,8 @@ export function EditorPanel({
   isDirty,
   onRun,
   isRunning = false,
+  onCursorChange,
+  onEditorMount,
   className,
   tabBarProps,
 }: EditorPanelProps) {
@@ -69,6 +71,8 @@ export function EditorPanel({
           language="lua"
           height="100%"
           onRun={onRun}
+          onMount={onEditorMount}
+          onCursorChange={onCursorChange}
         />
       </div>
     </div>

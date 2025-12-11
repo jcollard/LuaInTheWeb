@@ -1,6 +1,6 @@
 # Epic #82: Create top bar menu - File | Edit | Settings
 
-**Status:** In Progress (2/6 complete)
+**Status:** In Progress (3/6 complete)
 **Branch:** 82-epic-create-top-bar-menu-file-edit-settings
 **Created:** 2025-12-09
 **Last Updated:** 2025-12-10
@@ -42,7 +42,7 @@ Add a top navigation bar with dropdown menus similar to VS Code and other deskto
 |---|-------|--------|--------|-------|
 | #106 | MenuBar: Base component architecture | ✅ Complete | 106-menubar-base-component-architecture | Merged PR #116 |
 | #107 | MenuBar: Implement File menu | ✅ Complete | 107-menubar-implement-file-menu | Merged PR #118 |
-| #108 | MenuBar: Implement Edit menu | ⏳ Pending | - | Phase 2: Menu Implementations |
+| #108 | MenuBar: Implement Edit menu | 🔄 In Progress | 108-menubar-implement-edit-menu | Phase 2: Menu Implementations |
 | #109 | MenuBar: Implement Settings menu | ⏳ Pending | - | Phase 2: Menu Implementations |
 | #110 | MenuBar: Keyboard navigation | ⏳ Pending | - | Phase 3: Polish |
 | #111 | MenuBar: Integration and E2E tests | ⏳ Pending | - | Phase 3: Polish |
@@ -60,6 +60,12 @@ Add a top navigation bar with dropdown menus similar to VS Code and other deskto
 <!-- Updated after each sub-issue completion -->
 
 ### 2025-12-10
+- Working on #108: MenuBar: Implement Edit menu
+  - Created `useEditorCommands` hook (79% mutation score) for Monaco editor integration
+  - Added `onMount` and `onCursorChange` callbacks to CodeEditor component
+  - Wired Edit menu items to actual editor commands (undo, redo, cut, copy, paste, selectAll)
+  - Menu items dynamically enable/disable based on editor state (hasUndo, hasRedo, hasSelection)
+  - Added 5 E2E tests for Edit menu interactions
 - Completed #107: MenuBar: Implement File menu - Merged PR #118
   - Created `useFileExport` hook (80% mutation score)
   - Added "Open File..." placeholder, "Export As..." menu items
@@ -94,6 +100,7 @@ Add a top navigation bar with dropdown menus similar to VS Code and other deskto
 
 **Hooks:**
 - `src/hooks/useMenuBar.ts` - Menu state management
+- `src/hooks/useEditorCommands.ts` - Monaco editor command integration for Edit menu
 
 **Styles:**
 - `src/components/MenuBar/*.module.css` - Theme-aware CSS modules
