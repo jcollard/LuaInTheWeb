@@ -13,6 +13,7 @@ All work is tracked in the [GitHub Project Board](https://github.com/users/jcoll
 |--------|---------|--------------|
 | **Concept** | Idea needs research/definition before it's actionable | Manual |
 | **Todo** | Well-defined, ready to be worked on | `/issue <n> eval` |
+| **Blocked** | Waiting on dependencies or external factors | Manual |
 | **In Progress** | Actively being worked on | `worktree-create.py` |
 | **Needs Review** | PR created, awaiting review | `/issue <n> review` |
 | **Done** | Completed and merged | `/pr-review <n> accept` |
