@@ -97,9 +97,80 @@ Then STOP.
 
 ---
 
+## Step 3.5: Check for Existing Epic Branch
+
+Check if the epic branch already exists (without a worktree):
+
+```bash
+git branch --list epic-<number>
+git branch -r --list origin/epic-<number>
+```
+
+**If branch exists locally or remotely:**
+
+The epic was previously started. We need to merge main before continuing.
+
+```bash
+# Checkout the existing branch
+git checkout epic-<number>
+
+# Pull any remote changes
+git pull origin epic-<number> --no-edit 2>/dev/null || true
+
+# Fetch and merge main
+git fetch origin main
+git merge origin/main --no-edit
+```
+
+**Handle merge result:**
+
+**If merge succeeds:**
+```
+### Main Integrated ✓
+
+Merged `origin/main` into existing `epic-<number>` branch.
+Epic branch is now current with main.
+
+Continuing to create worktree...
+```
+
+Then proceed to Step 4c (skip 4a and 4b since branch exists).
+
+**If merge has conflicts:**
+
+```
+## Merge Conflicts Detected
+
+Conflicts occurred while merging `origin/main` into `epic-<number>`.
+
+**Conflicting files:**
+<list of conflicting files from `git diff --name-only --diff-filter=U`>
+
+**To resolve:**
+1. Open the conflicting files and resolve the conflicts
+2. Stage the resolved files: `git add <file>`
+3. Complete the merge: `git commit`
+4. Run `/epic <number> begin` again
+
+**To abort the merge:**
+```bash
+git merge --abort
+```
+```
+
+Then STOP - do not proceed until conflicts are resolved.
+
+**If branch does NOT exist:**
+
+Proceed to Step 4 to create a fresh epic branch.
+
+---
+
 ## Step 4: Create Epic Branch and Worktree
 
 **4a. Ensure we're on main and up to date:**
+
+(Skip this step if branch already exists - see Step 3.5)
 
 ```bash
 git checkout main
@@ -107,6 +178,8 @@ git pull origin main
 ```
 
 **4b. Create the epic branch:**
+
+(Skip this step if branch already exists - see Step 3.5)
 
 ```bash
 git checkout -b epic-<number>
