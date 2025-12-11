@@ -1,9 +1,9 @@
 # Epic #119: Shell Core Package Extraction
 
-**Status:** In Progress (4/6 complete, 1 in progress)
+**Status:** In Progress (5/6 complete)
 **Branch:** epic-119
 **Created:** 2025-12-10
-**Last Updated:** 2025-12-10 16:58
+**Last Updated:** 2025-12-11 08:54
 
 ## Overview
 
@@ -59,7 +59,7 @@ LuaInTheWeb/
 | #121 | Extract shell types and utilities | ✅ Complete | 121-extract-shell-types-and-utilities | Merged PR #127 |
 | #122 | Extract CommandRegistry and filesystem adapter | ✅ Complete | 122-extract-commandregistry-and-filesystem-adapter | Merged PR #128 |
 | #123 | Extract shell commands (cd, pwd, ls, help) | ✅ Complete | 123-extract-shell-commands | Merged PR #129 |
-| #124 | Integrate shell-core into editor | 🔄 In Progress | 124-integrate-shell-core-into-editor | Shell tab in BottomPanel |
+| #124 | Integrate shell-core into editor | ✅ Complete | 124-integrate-shell-core-into-editor | Merged PR #130 |
 | #125 | Shell-core documentation and cleanup | ⏳ Pending | - | - |
 
 **Status Legend:**
@@ -101,13 +101,18 @@ LuaInTheWeb/
   - Added 59 tests (181 total)
   - Mutation scores: pwd 100%, cd 100%, ls 100%, help 93.10%, commands overall 97.53%
   - Merged PR #129 to epic-119
-- **#124 In Progress**: Integrate shell-core into editor
+- **#124 Complete**: Integrate shell-core into editor
   - Added `@lua-learning/shell-core` as workspace dependency
   - Added `isDirectory` method to `useFileSystem` hook
   - Created `useShell.ts` hook that integrates shell-core with editor filesystem
   - Created `ShellTerminal.tsx` component using xterm.js and useShell
   - Added Shell tab to BottomPanel (alongside Terminal and REPL)
   - Exposed `fileSystem` through IDEContext for shell integration
+  - Merged PR #130 to epic-119
+
+### 2025-12-11
+- **#124 Complete**: Integrate shell-core into editor
+  - Merged PR #130 to epic-119
 
 ## Key Files
 
