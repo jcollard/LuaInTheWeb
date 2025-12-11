@@ -447,6 +447,8 @@ Running visual verification...
 
 Tech debt follows a **identify → decide → create** flow:
 
+> **IMPORTANT:** All issues created by agents must include `--project "LuaInTheWeb"` to ensure they appear on the [GitHub Project Board](https://github.com/users/jcollard/projects/3).
+
 | Phase | What Happens |
 |-------|--------------|
 | `/code-review` | Tech debt identified and listed in output |
