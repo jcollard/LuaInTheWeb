@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
@@ -6,7 +6,53 @@ import styles from '../BashTerminal/BashTerminal.module.css'
 import { useTheme } from '../../contexts/useTheme'
 import { getTerminalTheme } from '../BashTerminal/terminalTheme'
 import { useShell } from '../../hooks/useShell'
+import { useShellTerminal, type TerminalCommand } from './useShellTerminal'
 import type { ShellTerminalProps } from './types'
+
+/**
+ * Executes terminal commands on xterm.js terminal.
+ * Converts TerminalCommand[] to ANSI escape sequences.
+ */
+function executeTerminalCommands(
+  terminal: Terminal,
+  commands: TerminalCommand[]
+): void {
+  const cursorDirectionCodes: Record<string, string> = {
+    up: 'A',
+    down: 'B',
+    right: 'C',
+    left: 'D',
+  }
+
+  for (const command of commands) {
+    switch (command.type) {
+      case 'write':
+        terminal.write(command.data ?? '')
+        break
+      case 'writeln':
+        terminal.writeln(command.data ?? '')
+        break
+      case 'moveCursor': {
+        const direction = command.direction
+        if (direction) {
+          const code = cursorDirectionCodes[direction]
+          const count = command.count ?? 1
+          terminal.write(`\x1b[${count}${code}`)
+        }
+        break
+      }
+      case 'clearLine':
+        terminal.write('\r\x1b[K')
+        break
+      case 'clearToEnd':
+        terminal.write('\x1b[K')
+        break
+      case 'clear':
+        terminal.clear()
+        break
+    }
+  }
+}
 
 /**
  * Terminal component that provides a shell interface using shell-core.
@@ -22,29 +68,109 @@ export function ShellTerminal({
   const terminalRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
-  const currentLineRef = useRef<string>('')
-  const cursorPositionRef = useRef<number>(0)
-  const historyIndexRef = useRef<number>(-1)
 
   const { executeCommand, cwd, history } = useShell(fileSystem)
 
-  // Store latest values in refs so the terminal event handler always has current data
+  // Store latest values in refs so handlers can access current data
   const cwdRef = useRef(cwd)
-  const historyRef = useRef(history)
   const executeCommandRef = useRef(executeCommand)
 
-  // Keep refs up to date
   useEffect(() => {
     cwdRef.current = cwd
   }, [cwd])
 
   useEffect(() => {
-    historyRef.current = history
-  }, [history])
-
-  useEffect(() => {
     executeCommandRef.current = executeCommand
   }, [executeCommand])
+
+  // Helper to show prompt - needs to be stable and use refs
+  const showPrompt = useCallback(() => {
+    if (xtermRef.current) {
+      xtermRef.current.write(`\x1b[32m${cwdRef.current}\x1b[0m \x1b[33m$\x1b[0m `)
+    }
+  }, [])
+
+  // Handle command execution
+  const handleCommand = useCallback((input: string) => {
+    const terminal = xtermRef.current
+    if (!terminal) return
+
+    const result = executeCommandRef.current(input)
+
+    // Display stdout
+    if (result.stdout) {
+      const lines = result.stdout.split('\n')
+      lines.forEach((line: string) => {
+        terminal.writeln(line)
+      })
+    }
+
+    // Display stderr in red
+    if (result.stderr) {
+      const lines = result.stderr.split('\n')
+      lines.forEach((line: string) => {
+        terminal.writeln(`\x1b[31m${line}\x1b[0m`)
+      })
+    }
+
+    // Update cwd ref immediately so prompt shows correct directory
+    cwdRef.current = result.cwd
+
+    showPrompt()
+  }, [showPrompt])
+
+  // Use the shell terminal hook for input handling
+  const {
+    handleCharacter,
+    handleBackspace,
+    handleEnter,
+    handleArrowUp,
+    handleArrowDown,
+    handleArrowLeft,
+    handleArrowRight,
+    handleCtrlC,
+    handleCtrlL,
+  } = useShellTerminal({
+    history,
+    onCommand: handleCommand,
+  })
+
+  // Store hook handlers in refs for stable terminal event handler
+  const handlersRef = useRef({
+    handleCharacter,
+    handleBackspace,
+    handleEnter,
+    handleArrowUp,
+    handleArrowDown,
+    handleArrowLeft,
+    handleArrowRight,
+    handleCtrlC,
+    handleCtrlL,
+  })
+
+  useEffect(() => {
+    handlersRef.current = {
+      handleCharacter,
+      handleBackspace,
+      handleEnter,
+      handleArrowUp,
+      handleArrowDown,
+      handleArrowLeft,
+      handleArrowRight,
+      handleCtrlC,
+      handleCtrlL,
+    }
+  }, [
+    handleCharacter,
+    handleBackspace,
+    handleEnter,
+    handleArrowUp,
+    handleArrowDown,
+    handleArrowLeft,
+    handleArrowRight,
+    handleCtrlC,
+    handleCtrlL,
+  ])
 
   // Initialize terminal once
   useEffect(() => {
@@ -66,72 +192,29 @@ export function ShellTerminal({
     xtermRef.current = terminal
     fitAddonRef.current = fitAddon
 
-    // Helper to show prompt with current directory
-    const showPrompt = () => {
-      terminal.write(`\x1b[32m${cwdRef.current}\x1b[0m \x1b[33m$\x1b[0m `)
-    }
-
-    // Handle enter key - execute command
-    const handleEnter = () => {
-      const input = currentLineRef.current.trim()
-      terminal.writeln('')
-
-      if (input) {
-        const result = executeCommandRef.current(input)
-        // Display stdout
-        if (result.stdout) {
-          const lines = result.stdout.split('\n')
-          lines.forEach((line: string) => {
-            terminal.writeln(line)
-          })
-        }
-        // Display stderr in red
-        if (result.stderr) {
-          const lines = result.stderr.split('\n')
-          lines.forEach((line: string) => {
-            terminal.writeln(`\x1b[31m${line}\x1b[0m`)
-          })
-        }
-        // Update cwd ref immediately so prompt shows correct directory
-        cwdRef.current = result.cwd
-      }
-
-      currentLineRef.current = ''
-      cursorPositionRef.current = 0
-      historyIndexRef.current = -1
-      showPrompt()
-    }
-
-    // Handle all terminal input
+    // Handle terminal input - dispatch to hook handlers
     const handleInput = (data: string) => {
       const code = data.charCodeAt(0)
+      const handlers = handlersRef.current
+      let commands: TerminalCommand[] = []
 
       // Handle Enter
       if (data === '\r' || data === '\n' || code === 13) {
-        handleEnter()
+        commands = handlers.handleEnter()
+        executeTerminalCommands(terminal, commands)
         return
       }
 
       // Handle Arrow Up (history)
       if (data === '\x1b[A') {
-        const hist = historyRef.current
-        if (hist.length > 0) {
-          const newIndex =
-            historyIndexRef.current === -1
-              ? hist.length - 1
-              : Math.max(0, historyIndexRef.current - 1)
-
-          if (newIndex !== historyIndexRef.current || historyIndexRef.current === -1) {
-            historyIndexRef.current = newIndex
-            const historyCommand = hist[newIndex]
-
-            // Clear current line
-            terminal.write('\r\x1b[K')
-            showPrompt()
-            terminal.write(historyCommand)
-
-            currentLineRef.current = historyCommand
-            cursorPositionRef.current = historyCommand.length
+        commands = handlers.handleArrowUp()
+        executeTerminalCommands(terminal, commands)
+        showPrompt()
+        if (commands.length > 0) {
+          // Re-write the command after prompt
+          const writeCmd = commands.find(c => c.type === 'write')
+          if (writeCmd?.data) {
+            terminal.write(writeCmd.data)
           }
         }
         return
@@ -139,23 +222,13 @@ export function ShellTerminal({
 
       // Handle Arrow Down (history)
       if (data === '\x1b[B') {
-        const hist = historyRef.current
-        if (historyIndexRef.current !== -1) {
-          const newIndex = historyIndexRef.current + 1
-
-          terminal.write('\r\x1b[K')
-          showPrompt()
-
-          if (newIndex >= hist.length) {
-            historyIndexRef.current = -1
-            currentLineRef.current = ''
-            cursorPositionRef.current = 0
-          } else {
-            historyIndexRef.current = newIndex
-            const historyCommand = hist[newIndex]
-            terminal.write(historyCommand)
-            currentLineRef.current = historyCommand
-            cursorPositionRef.current = historyCommand.length
+        commands = handlers.handleArrowDown()
+        executeTerminalCommands(terminal, commands)
+        showPrompt()
+        if (commands.length > 0) {
+          const writeCmd = commands.find(c => c.type === 'write')
+          if (writeCmd?.data) {
+            terminal.write(writeCmd.data)
           }
         }
         return
@@ -163,70 +236,45 @@ export function ShellTerminal({
 
       // Handle Arrow Left
       if (data === '\x1b[D') {
-        if (cursorPositionRef.current > 0) {
-          cursorPositionRef.current--
-          terminal.write('\x1b[D')
-        }
+        commands = handlers.handleArrowLeft()
+        executeTerminalCommands(terminal, commands)
         return
       }
 
       // Handle Arrow Right
       if (data === '\x1b[C') {
-        if (cursorPositionRef.current < currentLineRef.current.length) {
-          cursorPositionRef.current++
-          terminal.write('\x1b[C')
-        }
+        commands = handlers.handleArrowRight()
+        executeTerminalCommands(terminal, commands)
         return
       }
 
       // Handle Backspace
       if (code === 127) {
-        if (cursorPositionRef.current > 0) {
-          const line = currentLineRef.current
-          const beforeCursor = line.slice(0, cursorPositionRef.current - 1)
-          const afterCursor = line.slice(cursorPositionRef.current)
-          currentLineRef.current = beforeCursor + afterCursor
-          cursorPositionRef.current--
-
-          const remaining = afterCursor + ' '
-          terminal.write('\b' + remaining)
-          for (let i = 0; i < afterCursor.length + 1; i++) {
-            terminal.write('\b')
-          }
-        }
+        commands = handlers.handleBackspace()
+        executeTerminalCommands(terminal, commands)
         return
       }
 
       // Handle Ctrl+C
       if (code === 3) {
-        terminal.write('^C')
-        terminal.writeln('')
-        currentLineRef.current = ''
-        cursorPositionRef.current = 0
+        commands = handlers.handleCtrlC()
+        executeTerminalCommands(terminal, commands)
         showPrompt()
         return
       }
 
       // Handle Ctrl+L (clear screen)
       if (code === 12) {
-        terminal.clear()
+        commands = handlers.handleCtrlL()
+        executeTerminalCommands(terminal, commands)
         showPrompt()
         return
       }
 
       // Handle printable characters
       if (code >= 32 && code < 127) {
-        const line = currentLineRef.current
-        const beforeCursor = line.slice(0, cursorPositionRef.current)
-        const afterCursor = line.slice(cursorPositionRef.current)
-        currentLineRef.current = beforeCursor + data + afterCursor
-
-        terminal.write(data + afterCursor)
-        for (let i = 0; i < afterCursor.length; i++) {
-          terminal.write('\b')
-        }
-
-        cursorPositionRef.current++
+        commands = handlers.handleCharacter(data)
+        executeTerminalCommands(terminal, commands)
       }
     }
 
@@ -246,7 +294,7 @@ export function ShellTerminal({
       window.removeEventListener('resize', handleResize)
       terminal.dispose()
     }
-  }, []) // Empty dependency array - only run once
+  }, [showPrompt])
 
   // Update terminal theme when theme changes
   useEffect(() => {

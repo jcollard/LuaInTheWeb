@@ -200,6 +200,8 @@ describe('useShell', () => {
 
       // Assert
       expect(commandResult!.exitCode).toBe(0)
+      expect(commandResult!.stdout).toContain('file1.lua')
+      expect(commandResult!.stdout).toContain('folder1')
     })
   })
 })
