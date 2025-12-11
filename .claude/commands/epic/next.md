@@ -55,6 +55,83 @@ Then STOP.
 
 ---
 
+## Step 1.5: Merge Main into Epic Branch
+
+Before starting a new sub-issue, ensure the epic branch is current with main to prevent merge conflicts later.
+
+**Fetch and merge main:**
+
+```bash
+# Ensure we're on the epic branch
+git checkout epic-<number>
+
+# Fetch latest changes from origin
+git fetch origin main
+
+# Merge main into epic branch
+git merge origin/main --no-edit
+```
+
+**Handle merge result:**
+
+**If merge succeeds (no conflicts):**
+
+```
+### Main Integrated ✓
+
+Merged `origin/main` into `epic-<number>` successfully.
+- <commit-count> new commits integrated
+- Epic branch is now current with main
+
+Continuing to next sub-issue...
+```
+
+If already up-to-date:
+```
+### Main Integrated ✓
+
+Epic branch `epic-<number>` is already up-to-date with main.
+
+Continuing to next sub-issue...
+```
+
+Then proceed to Step 2.
+
+**If merge has conflicts:**
+
+```
+## Merge Conflicts Detected
+
+Conflicts occurred while merging `origin/main` into `epic-<number>`.
+
+**Conflicting files:**
+<list of conflicting files from `git diff --name-only --diff-filter=U`>
+
+**To resolve:**
+1. Open the conflicting files and resolve the conflicts
+2. Stage the resolved files: `git add <file>`
+3. Complete the merge: `git commit`
+4. Run `/epic <number> next` again
+
+**To abort the merge:**
+```bash
+git merge --abort
+```
+```
+
+Then STOP - do not proceed until conflicts are resolved.
+
+**Update EPIC.md progress log:**
+
+After successful merge, add an entry to the Progress Log section:
+
+```markdown
+### <current-date>
+- Integrated main into epic branch (<commit-count> commits)
+```
+
+---
+
 ## Step 2: Read EPIC.md Context
 
 Read the EPIC.md file for:
