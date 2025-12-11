@@ -55,7 +55,7 @@ describe('useShell', () => {
       const { result } = renderHook(() => useShell(mockFileSystem))
 
       // Act
-      let commandResult: { exitCode: number; stdout: string; stderr: string }
+      let commandResult: { exitCode: number; stdout: string; stderr: string; cwd: string }
       act(() => {
         commandResult = result.current.executeCommand('')
       })
@@ -64,6 +64,7 @@ describe('useShell', () => {
       expect(commandResult!.exitCode).toBe(0)
       expect(commandResult!.stdout).toBe('')
       expect(commandResult!.stderr).toBe('')
+      expect(commandResult!.cwd).toBe('/')
     })
 
     it('should add command to history', () => {
@@ -84,7 +85,7 @@ describe('useShell', () => {
       const { result } = renderHook(() => useShell(mockFileSystem))
 
       // Act
-      let commandResult: { exitCode: number; stdout: string; stderr: string }
+      let commandResult: { exitCode: number; stdout: string; stderr: string; cwd: string }
       act(() => {
         commandResult = result.current.executeCommand('pwd')
       })
@@ -92,6 +93,7 @@ describe('useShell', () => {
       // Assert
       expect(commandResult!.exitCode).toBe(0)
       expect(commandResult!.stdout).toBe('/')
+      expect(commandResult!.cwd).toBe('/')
     })
 
     it('should execute help command', () => {
@@ -99,7 +101,7 @@ describe('useShell', () => {
       const { result } = renderHook(() => useShell(mockFileSystem))
 
       // Act
-      let commandResult: { exitCode: number; stdout: string; stderr: string }
+      let commandResult: { exitCode: number; stdout: string; stderr: string; cwd: string }
       act(() => {
         commandResult = result.current.executeCommand('help')
       })
@@ -114,7 +116,7 @@ describe('useShell', () => {
       const { result } = renderHook(() => useShell(mockFileSystem))
 
       // Act
-      let commandResult: { exitCode: number; stdout: string; stderr: string }
+      let commandResult: { exitCode: number; stdout: string; stderr: string; cwd: string }
       act(() => {
         commandResult = result.current.executeCommand('unknowncommand')
       })
@@ -154,11 +156,13 @@ describe('useShell', () => {
       const { result } = renderHook(() => useShell(mockFs))
 
       // Act
+      let commandResult: { exitCode: number; stdout: string; stderr: string; cwd: string }
       act(() => {
-        result.current.executeCommand('cd /test')
+        commandResult = result.current.executeCommand('cd /test')
       })
 
-      // Assert - the cwd should be updated
+      // Assert - the cwd should be updated and returned
+      expect(commandResult!.cwd).toBe('/test')
       expect(result.current.cwd).toBe('/test')
     })
 
@@ -169,7 +173,7 @@ describe('useShell', () => {
       const { result } = renderHook(() => useShell(mockFs))
 
       // Act
-      let commandResult: { exitCode: number; stdout: string; stderr: string }
+      let commandResult: { exitCode: number; stdout: string; stderr: string; cwd: string }
       act(() => {
         commandResult = result.current.executeCommand('cd /nonexistent')
       })
@@ -189,7 +193,7 @@ describe('useShell', () => {
       const { result } = renderHook(() => useShell(mockFs))
 
       // Act
-      let commandResult: { exitCode: number; stdout: string; stderr: string }
+      let commandResult: { exitCode: number; stdout: string; stderr: string; cwd: string }
       act(() => {
         commandResult = result.current.executeCommand('ls')
       })

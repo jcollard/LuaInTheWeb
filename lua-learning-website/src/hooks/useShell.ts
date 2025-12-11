@@ -11,11 +11,19 @@ import {
 import type { UseFileSystemReturn } from './useFileSystem'
 
 /**
+ * Extended command result that includes the current working directory
+ */
+export interface ShellCommandResult extends CommandResult {
+  /** Current working directory after command execution */
+  cwd: string
+}
+
+/**
  * Shell hook return type
  */
 export interface UseShellReturn {
-  /** Execute a command string */
-  executeCommand: (input: string) => CommandResult
+  /** Execute a command string, returns result with current cwd */
+  executeCommand: (input: string) => ShellCommandResult
   /** Current working directory */
   cwd: string
   /** Command history */
@@ -66,10 +74,10 @@ export function useShell(fileSystem: UseFileSystemReturn): UseShellReturn {
   }, [])
 
   const executeCommand = useCallback(
-    (input: string): CommandResult => {
+    (input: string): ShellCommandResult => {
       const trimmed = input.trim()
       if (!trimmed) {
-        return { exitCode: 0, stdout: '', stderr: '' }
+        return { exitCode: 0, stdout: '', stderr: '', cwd }
       }
 
       // Add to history
@@ -78,19 +86,20 @@ export function useShell(fileSystem: UseFileSystemReturn): UseShellReturn {
       // Parse the command
       const parsed = parseCommand(trimmed)
       if (!parsed) {
-        return { exitCode: 1, stdout: '', stderr: `Invalid command: ${trimmed}` }
+        return { exitCode: 1, stdout: '', stderr: `Invalid command: ${trimmed}`, cwd }
       }
 
       // Execute the command
       const result = registry.execute(parsed.command, parsed.args, shellFileSystem)
 
-      // Update cwd if it changed (e.g., from cd command)
+      // Get the new cwd after command execution
       const newCwd = shellFileSystem.getCurrentDirectory()
       if (newCwd !== cwd) {
         setCwd(newCwd)
       }
 
-      return result
+      // Return result with the current cwd so caller can update immediately
+      return { ...result, cwd: newCwd }
     },
     [registry, shellFileSystem, cwd]
   )

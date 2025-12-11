@@ -92,6 +92,8 @@ export function ShellTerminal({
             terminal.writeln(`\x1b[31m${line}\x1b[0m`)
           })
         }
+        // Update cwd ref immediately so prompt shows correct directory
+        cwdRef.current = result.cwd
       }
 
       currentLineRef.current = ''
