@@ -95,6 +95,9 @@ export function ShellTerminal({
     const terminal = xtermRef.current
     if (!terminal) return
 
+    // Move to new line before showing output
+    terminal.writeln('')
+
     const result = executeCommandRef.current(input)
 
     // Display stdout
@@ -208,11 +211,11 @@ export function ShellTerminal({
       // Handle Arrow Up (history)
       if (data === '\x1b[A') {
         commands = handlers.handleArrowUp()
-        executeTerminalCommands(terminal, commands)
-        showPrompt()
         if (commands.length > 0) {
-          // Re-write the command after prompt
-          const writeCmd = commands.find(c => c.type === 'write')
+          // Clear line, show prompt, then write history command
+          terminal.write('\r\x1b[K')
+          showPrompt()
+          const writeCmd = commands.find((c) => c.type === 'write')
           if (writeCmd?.data) {
             terminal.write(writeCmd.data)
           }
@@ -223,13 +226,12 @@ export function ShellTerminal({
       // Handle Arrow Down (history)
       if (data === '\x1b[B') {
         commands = handlers.handleArrowDown()
-        executeTerminalCommands(terminal, commands)
+        // Clear line, show prompt, then write history command (if any)
+        terminal.write('\r\x1b[K')
         showPrompt()
-        if (commands.length > 0) {
-          const writeCmd = commands.find(c => c.type === 'write')
-          if (writeCmd?.data) {
-            terminal.write(writeCmd.data)
-          }
+        const writeCmd = commands.find((c) => c.type === 'write')
+        if (writeCmd?.data) {
+          terminal.write(writeCmd.data)
         }
         return
       }

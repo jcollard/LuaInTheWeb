@@ -118,7 +118,8 @@ export function useShellTerminal(
     setCursorPosition(0)
     setHistoryIndex(-1)
 
-    return [{ type: 'writeln', data: '' }]
+    // Return empty - newline is handled by onCommand callback
+    return []
   }, [onCommand])
 
   const handleArrowUp = useCallback((): TerminalCommand[] => {
