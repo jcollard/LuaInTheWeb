@@ -486,4 +486,78 @@ describe('useFileSystem', () => {
       expect(parent?.children?.[2].name).toBe('z.lua')
     })
   })
+
+  describe('synchronous operations (shell command simulation)', () => {
+    it('should allow creating a file immediately after creating its parent folder', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+
+      // Act - Simulate what happens during `cp -r folder dest`:
+      // 1. Create destination folder
+      // 2. Immediately create files inside it (same synchronous execution)
+      act(() => {
+        result.current.createFolder('/newdir')
+        result.current.createFile('/newdir/file.txt', 'content')
+      })
+
+      // Assert
+      expect(result.current.exists('/newdir')).toBe(true)
+      expect(result.current.exists('/newdir/file.txt')).toBe(true)
+      expect(result.current.readFile('/newdir/file.txt')).toBe('content')
+    })
+
+    it('should allow creating nested folders in sequence', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+
+      // Act - Create parent, child, grandchild in same synchronous execution
+      act(() => {
+        result.current.createFolder('/a')
+        result.current.createFolder('/a/b')
+        result.current.createFolder('/a/b/c')
+        result.current.createFile('/a/b/c/deep.txt', 'deep content')
+      })
+
+      // Assert
+      expect(result.current.exists('/a/b/c/deep.txt')).toBe(true)
+      expect(result.current.readFile('/a/b/c/deep.txt')).toBe('deep content')
+    })
+
+    it('should allow copying directory structure in single operation', () => {
+      // Arrange - Set up source directory with files
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/src')
+      })
+      act(() => {
+        result.current.createFile('/src/file1.txt', 'content1')
+        result.current.createFile('/src/file2.txt', 'content2')
+        result.current.createFolder('/src/subdir')
+      })
+      act(() => {
+        result.current.createFile('/src/subdir/nested.txt', 'nested')
+      })
+
+      // Act - Simulate cp -r /src /dest
+      act(() => {
+        // Create dest directory
+        result.current.createFolder('/dest')
+        // Copy files into dest
+        result.current.createFile('/dest/file1.txt', result.current.readFile('/src/file1.txt') ?? '')
+        result.current.createFile('/dest/file2.txt', result.current.readFile('/src/file2.txt') ?? '')
+        // Create subdir and copy nested file
+        result.current.createFolder('/dest/subdir')
+        result.current.createFile('/dest/subdir/nested.txt', result.current.readFile('/src/subdir/nested.txt') ?? '')
+      })
+
+      // Assert
+      expect(result.current.exists('/dest')).toBe(true)
+      expect(result.current.exists('/dest/file1.txt')).toBe(true)
+      expect(result.current.exists('/dest/file2.txt')).toBe(true)
+      expect(result.current.exists('/dest/subdir')).toBe(true)
+      expect(result.current.exists('/dest/subdir/nested.txt')).toBe(true)
+      expect(result.current.readFile('/dest/file1.txt')).toBe('content1')
+      expect(result.current.readFile('/dest/subdir/nested.txt')).toBe('nested')
+    })
+  })
 })

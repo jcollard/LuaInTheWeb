@@ -28,13 +28,43 @@ function copyDirectory(srcPath: string, destPath: string, fs: IFileSystem): void
 }
 
 /**
+ * Copy a single source to a destination.
+ */
+function copySingle(
+  resolvedSource: string,
+  resolvedDest: string,
+  sourcePath: string,
+  fs: IFileSystem
+): CommandResult | null {
+  // Check if source is a directory
+  if (fs.isDirectory(resolvedSource)) {
+    copyDirectory(resolvedSource, resolvedDest, fs)
+    return null // success, continue
+  }
+
+  // Source is a file
+  const content = fs.readFile(resolvedSource)
+
+  // Check if destination is a directory
+  let finalDest = resolvedDest
+  if (fs.exists(resolvedDest) && fs.isDirectory(resolvedDest)) {
+    // Copy into directory with same name
+    const basename = getBasename(sourcePath)
+    finalDest = joinPath(resolvedDest, basename)
+  }
+
+  fs.writeFile(finalDest, content)
+  return null // success
+}
+
+/**
  * cp command implementation.
  * Copies files and directories.
  */
 export const cp: Command = {
   name: 'cp',
   description: 'Copy files and directories',
-  usage: 'cp <source> <destination>',
+  usage: 'cp <source>... <destination>',
 
   execute(args: string[], fs: IFileSystem): CommandResult {
     // Check for required arguments
@@ -54,11 +84,70 @@ export const cp: Command = {
       }
     }
 
+    const currentDir = fs.getCurrentDirectory()
+
+    // Handle multiple sources (Unix-style: cp source1 source2 ... destdir)
+    if (args.length > 2) {
+      const sources = args.slice(0, -1)
+      const destPath = args[args.length - 1]
+      const resolvedDest = resolvePath(currentDir, destPath)
+
+      // Destination must exist and be a directory
+      if (!fs.exists(resolvedDest)) {
+        return {
+          exitCode: 1,
+          stdout: '',
+          stderr: `cp: target '${resolvedDest}': No such file or directory`,
+        }
+      }
+
+      if (!fs.isDirectory(resolvedDest)) {
+        return {
+          exitCode: 1,
+          stdout: '',
+          stderr: `cp: target '${destPath}' is not a directory`,
+        }
+      }
+
+      try {
+        for (const sourcePath of sources) {
+          const resolvedSource = resolvePath(currentDir, sourcePath)
+
+          if (!fs.exists(resolvedSource)) {
+            return {
+              exitCode: 1,
+              stdout: '',
+              stderr: `cp: cannot stat '${resolvedSource}': No such file or directory`,
+            }
+          }
+
+          const basename = getBasename(sourcePath)
+          const finalDest = joinPath(resolvedDest, basename)
+
+          copySingle(resolvedSource, finalDest, sourcePath, fs)
+        }
+
+        return { exitCode: 0, stdout: '', stderr: '' }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        return { exitCode: 1, stdout: '', stderr: `cp: ${message}` }
+      }
+    }
+
+    // Standard two-argument case
     const sourcePath = args[0]
     const destPath = args[1]
-    const currentDir = fs.getCurrentDirectory()
     const resolvedSource = resolvePath(currentDir, sourcePath)
     const resolvedDest = resolvePath(currentDir, destPath)
+
+    // Check if source and destination are the same
+    if (resolvedSource === resolvedDest) {
+      return {
+        exitCode: 1,
+        stdout: '',
+        stderr: `cp: '${sourcePath}' and '${destPath}' are the same file`,
+      }
+    }
 
     // Check if source exists
     if (!fs.exists(resolvedSource)) {
@@ -70,41 +159,11 @@ export const cp: Command = {
     }
 
     try {
-      // Check if source is a directory
-      if (fs.isDirectory(resolvedSource)) {
-        copyDirectory(resolvedSource, resolvedDest, fs)
-        return {
-          exitCode: 0,
-          stdout: '',
-          stderr: '',
-        }
-      }
-
-      // Source is a file
-      const content = fs.readFile(resolvedSource)
-
-      // Check if destination is a directory
-      let finalDest = resolvedDest
-      if (fs.exists(resolvedDest) && fs.isDirectory(resolvedDest)) {
-        // Copy into directory with same name
-        const basename = getBasename(resolvedSource)
-        finalDest = joinPath(resolvedDest, basename)
-      }
-
-      fs.writeFile(finalDest, content)
-
-      return {
-        exitCode: 0,
-        stdout: '',
-        stderr: '',
-      }
+      copySingle(resolvedSource, resolvedDest, sourcePath, fs)
+      return { exitCode: 0, stdout: '', stderr: '' }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
-      return {
-        exitCode: 1,
-        stdout: '',
-        stderr: `cp: ${message}`,
-      }
+      return { exitCode: 1, stdout: '', stderr: `cp: ${message}` }
     }
   },
 }

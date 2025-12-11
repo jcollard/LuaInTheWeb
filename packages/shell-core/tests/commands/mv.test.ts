@@ -130,6 +130,31 @@ describe('mv command', () => {
     })
   })
 
+  describe('execute when source and destination are the same', () => {
+    it('should return error when moving file to itself', () => {
+      const result = mv.execute(['file.txt', 'file.txt'], mockFs)
+
+      expect(result.exitCode).toBe(1)
+      expect(result.stdout).toBe('')
+      expect(result.stderr).toContain('are the same file')
+    })
+
+    it('should return error when paths resolve to same location', () => {
+      const result = mv.execute(['./file.txt', 'file.txt'], mockFs)
+
+      expect(result.exitCode).toBe(1)
+      expect(result.stderr).toContain('are the same file')
+    })
+
+    it('should not read, write, or delete any files', () => {
+      mv.execute(['file.txt', 'file.txt'], mockFs)
+
+      expect(mockFs.readFile).not.toHaveBeenCalled()
+      expect(mockFs.writeFile).not.toHaveBeenCalled()
+      expect(mockFs.delete).not.toHaveBeenCalled()
+    })
+  })
+
   describe('execute moving directory recursively', () => {
     it('should move directory and its contents', () => {
       // Set up directory structure
@@ -200,15 +225,45 @@ describe('mv command', () => {
     })
   })
 
-  describe('edge cases', () => {
-    it('should ignore extra arguments', () => {
-      const result = mv.execute(['source.txt', 'dest.txt', 'extra'], mockFs)
+  describe('execute with multiple sources', () => {
+    it('should move multiple files to destination directory', () => {
+      mockFs.isDirectory = vi.fn().mockImplementation((path: string) => {
+        return path === '/home/user/destdir'
+      })
+      mockFs.exists = vi.fn().mockReturnValue(true)
+
+      const result = mv.execute(['file1.txt', 'file2.txt', 'destdir'], mockFs)
 
       expect(result.exitCode).toBe(0)
-      expect(mockFs.writeFile).toHaveBeenCalledTimes(1)
-      expect(mockFs.delete).toHaveBeenCalledTimes(1)
+      expect(mockFs.writeFile).toHaveBeenCalledWith('/home/user/destdir/file1.txt', 'file content')
+      expect(mockFs.writeFile).toHaveBeenCalledWith('/home/user/destdir/file2.txt', 'file content')
+      expect(mockFs.delete).toHaveBeenCalledWith('/home/user/file1.txt')
+      expect(mockFs.delete).toHaveBeenCalledWith('/home/user/file2.txt')
     })
 
+    it('should return error when destination is not a directory with multiple sources', () => {
+      mockFs.isDirectory = vi.fn().mockReturnValue(false)
+      mockFs.isFile = vi.fn().mockReturnValue(true)
+
+      const result = mv.execute(['file1.txt', 'file2.txt', 'destfile'], mockFs)
+
+      expect(result.exitCode).toBe(1)
+      expect(result.stderr).toContain('not a directory')
+    })
+
+    it('should return error when destination directory does not exist with multiple sources', () => {
+      mockFs.exists = vi.fn().mockImplementation((path: string) => {
+        return path !== '/home/user/nonexistent'
+      })
+
+      const result = mv.execute(['file1.txt', 'file2.txt', 'nonexistent'], mockFs)
+
+      expect(result.exitCode).toBe(1)
+      expect(result.stderr).toContain('No such file or directory')
+    })
+  })
+
+  describe('edge cases', () => {
     it('should handle read errors gracefully', () => {
       mockFs.readFile = vi.fn().mockImplementation(() => {
         throw new Error('Permission denied')

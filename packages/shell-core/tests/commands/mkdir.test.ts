@@ -113,20 +113,49 @@ describe('mkdir command', () => {
     })
   })
 
+  describe('execute with multiple directories', () => {
+    it('should create all directories', () => {
+      const result = mkdir.execute(['dir1', 'dir2', 'dir3'], mockFs)
+
+      expect(result.exitCode).toBe(0)
+      expect(mockFs.createDirectory).toHaveBeenCalledTimes(3)
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/home/user/dir1')
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/home/user/dir2')
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/home/user/dir3')
+    })
+
+    it('should continue on error and report all errors', () => {
+      let callCount = 0
+      mockFs.createDirectory = vi.fn().mockImplementation((path: string) => {
+        callCount++
+        if (path === '/home/user/dir2') {
+          throw new Error('Path already exists')
+        }
+      })
+
+      const result = mkdir.execute(['dir1', 'dir2', 'dir3'], mockFs)
+
+      // Should have attempted all three
+      expect(mockFs.createDirectory).toHaveBeenCalledTimes(3)
+      // Should report error
+      expect(result.exitCode).toBe(1)
+      expect(result.stderr).toContain('dir2')
+    })
+
+    it('should return success when all directories created', () => {
+      const result = mkdir.execute(['a', 'b'], mockFs)
+
+      expect(result.exitCode).toBe(0)
+      expect(result.stderr).toBe('')
+    })
+  })
+
   describe('edge cases', () => {
     it('should handle path with trailing slash', () => {
       const result = mkdir.execute(['newdir/'], mockFs)
 
       expect(result.exitCode).toBe(0)
       expect(mockFs.createDirectory).toHaveBeenCalled()
-    })
-
-    it('should ignore extra arguments', () => {
-      const result = mkdir.execute(['dir1', 'dir2', 'dir3'], mockFs)
-
-      expect(result.exitCode).toBe(0)
-      // Only creates the first directory
-      expect(mockFs.createDirectory).toHaveBeenCalledTimes(1)
     })
   })
 })

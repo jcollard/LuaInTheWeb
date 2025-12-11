@@ -7,12 +7,12 @@ import { resolvePath } from '../pathUtils'
 
 /**
  * mkdir command implementation.
- * Creates a directory at the specified path.
+ * Creates directories at the specified paths.
  */
 export const mkdir: Command = {
   name: 'mkdir',
-  description: 'Create a directory',
-  usage: 'mkdir <directory>',
+  description: 'Create directories',
+  usage: 'mkdir <directory>...',
 
   execute(args: string[], fs: IFileSystem): CommandResult {
     // Check for required argument
@@ -24,24 +24,33 @@ export const mkdir: Command = {
       }
     }
 
-    const targetPath = args[0]
     const currentDir = fs.getCurrentDirectory()
-    const resolvedPath = resolvePath(currentDir, targetPath)
+    const errors: string[] = []
 
-    try {
-      fs.createDirectory(resolvedPath)
-      return {
-        exitCode: 0,
-        stdout: '',
-        stderr: '',
+    // Create all directories, collecting errors
+    for (const targetPath of args) {
+      const resolvedPath = resolvePath(currentDir, targetPath)
+
+      try {
+        fs.createDirectory(resolvedPath)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        errors.push(`mkdir: cannot create directory '${resolvedPath}': ${message}`)
       }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
+    }
+
+    if (errors.length > 0) {
       return {
         exitCode: 1,
         stdout: '',
-        stderr: `mkdir: cannot create directory '${resolvedPath}': ${message}`,
+        stderr: errors.join('\n'),
       }
+    }
+
+    return {
+      exitCode: 0,
+      stdout: '',
+      stderr: '',
     }
   },
 }

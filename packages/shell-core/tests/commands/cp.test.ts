@@ -127,6 +127,30 @@ describe('cp command', () => {
     })
   })
 
+  describe('execute when source and destination are the same', () => {
+    it('should return error when copying file to itself', () => {
+      const result = cp.execute(['file.txt', 'file.txt'], mockFs)
+
+      expect(result.exitCode).toBe(1)
+      expect(result.stdout).toBe('')
+      expect(result.stderr).toContain('are the same file')
+    })
+
+    it('should return error when paths resolve to same location', () => {
+      const result = cp.execute(['./file.txt', 'file.txt'], mockFs)
+
+      expect(result.exitCode).toBe(1)
+      expect(result.stderr).toContain('are the same file')
+    })
+
+    it('should not read or write any files', () => {
+      cp.execute(['file.txt', 'file.txt'], mockFs)
+
+      expect(mockFs.readFile).not.toHaveBeenCalled()
+      expect(mockFs.writeFile).not.toHaveBeenCalled()
+    })
+  })
+
   describe('execute copying directory recursively', () => {
     it('should copy directory and its contents', () => {
       // Set up directory structure
@@ -191,14 +215,44 @@ describe('cp command', () => {
     })
   })
 
-  describe('edge cases', () => {
-    it('should ignore extra arguments', () => {
-      const result = cp.execute(['source.txt', 'dest.txt', 'extra'], mockFs)
+  describe('execute with multiple sources', () => {
+    it('should copy multiple files to destination directory', () => {
+      mockFs.isDirectory = vi.fn().mockImplementation((path: string) => {
+        return path === '/home/user/destdir'
+      })
+      mockFs.exists = vi.fn().mockReturnValue(true)
+
+      const result = cp.execute(['file1.txt', 'file2.txt', 'destdir'], mockFs)
 
       expect(result.exitCode).toBe(0)
-      expect(mockFs.writeFile).toHaveBeenCalledTimes(1)
+      expect(mockFs.writeFile).toHaveBeenCalledWith('/home/user/destdir/file1.txt', 'file content')
+      expect(mockFs.writeFile).toHaveBeenCalledWith('/home/user/destdir/file2.txt', 'file content')
     })
 
+    it('should return error when destination is not a directory with multiple sources', () => {
+      // destfile is a file, not a directory
+      mockFs.isDirectory = vi.fn().mockReturnValue(false)
+      mockFs.isFile = vi.fn().mockReturnValue(true)
+
+      const result = cp.execute(['file1.txt', 'file2.txt', 'destfile'], mockFs)
+
+      expect(result.exitCode).toBe(1)
+      expect(result.stderr).toContain('not a directory')
+    })
+
+    it('should return error when destination directory does not exist with multiple sources', () => {
+      mockFs.exists = vi.fn().mockImplementation((path: string) => {
+        return path !== '/home/user/nonexistent'
+      })
+
+      const result = cp.execute(['file1.txt', 'file2.txt', 'nonexistent'], mockFs)
+
+      expect(result.exitCode).toBe(1)
+      expect(result.stderr).toContain('No such file or directory')
+    })
+  })
+
+  describe('edge cases', () => {
     it('should handle read errors gracefully', () => {
       mockFs.readFile = vi.fn().mockImplementation(() => {
         throw new Error('Permission denied')
