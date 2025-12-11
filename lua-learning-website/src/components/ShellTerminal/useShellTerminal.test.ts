@@ -447,7 +447,7 @@ describe('useShellTerminal', () => {
       expect(result.current.historyIndex).toBe(-1)
     })
 
-    it('should return writeln command', () => {
+    it('should return empty commands (newline handled by onCommand)', () => {
       const { result } = renderHook(() => useShellTerminal({}))
 
       act(() => {
@@ -459,7 +459,7 @@ describe('useShellTerminal', () => {
         commands = result.current.handleEnter()
       })
 
-      expect(commands!).toContainEqual({ type: 'writeln', data: '' })
+      expect(commands!).toEqual([])
     })
   })
 
