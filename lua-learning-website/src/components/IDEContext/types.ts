@@ -71,6 +71,12 @@ export interface IDEContextValue {
   createFileWithRename: (parentPath?: string) => void
   clearPendingNewFile: () => void
 
+  // New folder creation
+  pendingNewFolderPath: string | null
+  generateUniqueFolderName: (parentPath?: string) => string
+  createFolderWithRename: (parentPath?: string) => void
+  clearPendingNewFolder: () => void
+
   // Recent files
   recentFiles: RecentFile[]
   clearRecentFiles: () => void

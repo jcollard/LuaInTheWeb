@@ -57,6 +57,9 @@ export function IDEContextProvider({
   // Track pending new file that needs renaming
   const [pendingNewFilePath, setPendingNewFilePath] = useState<string | null>(null)
 
+  // Track pending new folder that needs renaming
+  const [pendingNewFolderPath, setPendingNewFolderPath] = useState<string | null>(null)
+
   // Terminal state
   const [terminalOutput, setTerminalOutput] = useState<TerminalLine[]>([])
   const lineCounterRef = useRef(0)
@@ -327,6 +330,45 @@ export function IDEContextProvider({
     setPendingNewFilePath(null)
   }, [])
 
+  // Generate unique folder name for new folders
+  const generateUniqueFolderName = useCallback((parentPath: string = '/'): string => {
+    const baseName = 'new-folder'
+
+    // Check existing folders in parent directory
+    const prefix = parentPath === '/' ? '/' : `${parentPath}/`
+
+    // First check if base name is available
+    if (!filesystem.exists(`${prefix}${baseName}`)) {
+      return baseName
+    }
+
+    // Otherwise find next available number
+    let counter = 1
+    while (filesystem.exists(`${prefix}${baseName}-${counter}`)) {
+      counter++
+    }
+
+    return `${baseName}-${counter}`
+  }, [filesystem])
+
+  // Create new folder with rename mode
+  const createFolderWithRename = useCallback((parentPath: string = '/') => {
+    const folderName = generateUniqueFolderName(parentPath)
+    const fullPath = parentPath === '/' ? `/${folderName}` : `${parentPath}/${folderName}`
+
+    try {
+      filesystem.createFolder(fullPath)
+      setPendingNewFolderPath(fullPath)
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Failed to create folder')
+    }
+  }, [filesystem, generateUniqueFolderName, showError])
+
+  // Clear pending new folder
+  const clearPendingNewFolder = useCallback(() => {
+    setPendingNewFolderPath(null)
+  }, [])
+
   // Delete file - also close tab if open
   const deleteFile = useCallback((path: string) => {
     // Close tab if open
@@ -379,12 +421,22 @@ export function IDEContextProvider({
     }
   }, [filesystem, showError, tabBar, tabs])
 
-  // Rename folder wrapper
+  // Rename folder wrapper with error handling
   const renameFolder = useCallback((oldPath: string, newName: string) => {
     const parentPath = getParentPath(oldPath)
     const newPath = parentPath === '/' ? `/${newName}` : `${parentPath}/${newName}`
-    filesystem.renameFolder(oldPath, newPath)
-  }, [filesystem])
+
+    // Skip if the path hasn't changed (same name)
+    if (oldPath === newPath) {
+      return
+    }
+
+    try {
+      filesystem.renameFolder(oldPath, newPath)
+    } catch (error) {
+      showError(error instanceof Error ? error.message : 'Failed to rename folder')
+    }
+  }, [filesystem, showError])
 
   // Move file wrapper with error handling
   const moveFile = useCallback((sourcePath: string, targetFolderPath: string) => {
@@ -459,6 +511,11 @@ export function IDEContextProvider({
       generateUniqueFileName,
       createFileWithRename,
       clearPendingNewFile,
+      // New folder creation
+      pendingNewFolderPath,
+      generateUniqueFolderName,
+      createFolderWithRename,
+      clearPendingNewFolder,
       // Recent files
       recentFiles,
       clearRecentFiles,
@@ -502,6 +559,10 @@ export function IDEContextProvider({
       generateUniqueFileName,
       createFileWithRename,
       clearPendingNewFile,
+      pendingNewFolderPath,
+      generateUniqueFolderName,
+      createFolderWithRename,
+      clearPendingNewFolder,
       recentFiles,
       clearRecentFiles,
       filesystem,

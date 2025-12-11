@@ -46,6 +46,7 @@ export function FileExplorer({
   tree,
   selectedPath: controlledSelectedPath,
   pendingNewFilePath,
+  pendingNewFolderPath,
   onCreateFile,
   onCreateFolder,
   onRenameFile,
@@ -55,6 +56,7 @@ export function FileExplorer({
   onSelectFile,
   onMoveFile,
   onCancelPendingNewFile,
+  onCancelPendingNewFolder,
   className,
 }: FileExplorerProps) {
   const {
@@ -82,6 +84,13 @@ export function FileExplorer({
       startRename(pendingNewFilePath)
     }
   }, [pendingNewFilePath, startRename])
+
+  // Start rename mode when a new folder is pending
+  useEffect(() => {
+    if (pendingNewFolderPath) {
+      startRename(pendingNewFolderPath)
+    }
+  }, [pendingNewFolderPath, startRename])
 
   // Find node type by path
   const findNodeType = useCallback((path: string): 'file' | 'folder' | null => {
@@ -192,11 +201,15 @@ export function FileExplorer({
     if (path === pendingNewFilePath && onCancelPendingNewFile) {
       onCancelPendingNewFile()
     }
+    // Clear pending new folder if this was a pending folder being renamed
+    if (path === pendingNewFolderPath && onCancelPendingNewFolder) {
+      onCancelPendingNewFolder()
+    }
     cancelRename()
     // Stryker disable next-line all: React hooks dependency optimization
-  }, [findNodeType, onRenameFile, onRenameFolder, cancelRename, pendingNewFilePath, onCancelPendingNewFile])
+  }, [findNodeType, onRenameFile, onRenameFolder, cancelRename, pendingNewFilePath, onCancelPendingNewFile, pendingNewFolderPath, onCancelPendingNewFolder])
 
-  // Handle rename cancel - delete pending new file if applicable
+  // Handle rename cancel - delete pending new file/folder if applicable
   const handleRenameCancel = useCallback(() => {
     if (renamingPath === pendingNewFilePath && pendingNewFilePath) {
       // Delete the pending file since rename was cancelled
@@ -205,9 +218,16 @@ export function FileExplorer({
         onCancelPendingNewFile()
       }
     }
+    if (renamingPath === pendingNewFolderPath && pendingNewFolderPath) {
+      // Delete the pending folder since rename was cancelled
+      onDeleteFolder(pendingNewFolderPath)
+      if (onCancelPendingNewFolder) {
+        onCancelPendingNewFolder()
+      }
+    }
     cancelRename()
     // Stryker disable next-line all: React hooks dependency optimization
-  }, [renamingPath, pendingNewFilePath, onDeleteFile, onCancelPendingNewFile, cancelRename])
+  }, [renamingPath, pendingNewFilePath, onDeleteFile, onCancelPendingNewFile, pendingNewFolderPath, onDeleteFolder, onCancelPendingNewFolder, cancelRename])
 
   const handleDeleteKey = useCallback((path: string) => {
     const type = findNodeType(path)
