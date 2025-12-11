@@ -187,9 +187,12 @@ describe('IDEPanel', () => {
         </IDEPanel>
       )
 
-      // Assert - header visible, content hidden
+      // Assert - header visible, content hidden via CSS (but still in DOM for state preservation)
       expect(screen.getByText('Header')).toBeInTheDocument()
-      expect(screen.queryByTestId('panel-content')).not.toBeInTheDocument()
+      const content = screen.getByTestId('panel-content')
+      expect(content).toBeInTheDocument()
+      // Content should be hidden via CSS (parent has display: none)
+      expect(content.parentElement).toHaveStyle({ display: 'none' })
     })
 
     it('should show content when not collapsed', () => {

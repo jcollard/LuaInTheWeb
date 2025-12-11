@@ -184,7 +184,7 @@ function IDELayoutInner({ className }: { className?: string }) {
             )}
             <IDEPanel defaultSize={sidebarVisible ? 80 : 100} minSize={40}>
               <IDEPanelGroup direction="vertical" persistId="ide-editor">
-                <IDEPanel defaultSize={terminalVisible ? 70 : 100} minSize={30}>
+                <IDEPanel defaultSize={70} minSize={30}>
                   {tabs.length === 0 ? (
                     <WelcomeScreen
                       recentFiles={recentFiles}
@@ -211,19 +211,21 @@ function IDELayoutInner({ className }: { className?: string }) {
                     />
                   )}
                 </IDEPanel>
-                {terminalVisible && (
-                  <>
-                    <IDEResizeHandle />
-                    <IDEPanel defaultSize={30} minSize={15}>
-                      <BottomPanel
-                        terminalOutput={terminalOutput}
-                        isAwaitingInput={isAwaitingInput}
-                        onSubmitInput={submitInput}
-                        fileSystem={fileSystem}
-                      />
-                    </IDEPanel>
-                  </>
-                )}
+                {/* Always render BottomPanel to preserve shell state */}
+                <IDEResizeHandle style={{ display: terminalVisible ? undefined : 'none' }} />
+                <IDEPanel
+                  defaultSize={30}
+                  minSize={terminalVisible ? 15 : 0}
+                  collapsible
+                  collapsed={!terminalVisible}
+                >
+                  <BottomPanel
+                    terminalOutput={terminalOutput}
+                    isAwaitingInput={isAwaitingInput}
+                    onSubmitInput={submitInput}
+                    fileSystem={fileSystem}
+                  />
+                </IDEPanel>
               </IDEPanelGroup>
             </IDEPanel>
           </IDEPanelGroup>

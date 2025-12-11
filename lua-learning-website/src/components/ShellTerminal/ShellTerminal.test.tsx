@@ -10,6 +10,26 @@ let terminalInstances: Array<{
   onData: ReturnType<typeof vi.fn>
 }> = []
 
+// Store FitAddon instances for testing
+let fitAddonInstances: Array<{
+  fit: ReturnType<typeof vi.fn>
+}> = []
+
+// Store ResizeObserver callbacks for testing
+let resizeObserverCallbacks: Array<ResizeObserverCallback> = []
+
+// Mock ResizeObserver
+class MockResizeObserver {
+  constructor(callback: ResizeObserverCallback) {
+    resizeObserverCallbacks.push(callback)
+  }
+  observe = vi.fn()
+  unobserve = vi.fn()
+  disconnect = vi.fn()
+}
+
+vi.stubGlobal('ResizeObserver', MockResizeObserver)
+
 // Mock xterm.js - use factory functions for vi.mock hoisting
 vi.mock('@xterm/xterm', () => {
   const MockTerminal = vi.fn().mockImplementation(function(this: Record<string, unknown>) {
@@ -36,6 +56,10 @@ vi.mock('@xterm/xterm', () => {
 vi.mock('@xterm/addon-fit', () => {
   const MockFitAddon = vi.fn().mockImplementation(function(this: Record<string, unknown>) {
     this.fit = vi.fn()
+    // Store instance for test access
+    fitAddonInstances.push({
+      fit: this.fit as ReturnType<typeof vi.fn>,
+    })
   })
   return { FitAddon: MockFitAddon }
 })
@@ -90,6 +114,8 @@ describe('ShellTerminal', () => {
   beforeEach(() => {
     mockFileSystem = createMockFileSystem()
     terminalInstances = []
+    fitAddonInstances = []
+    resizeObserverCallbacks = []
     mockUseShell.history = []
     vi.clearAllMocks()
   })
@@ -206,6 +232,28 @@ describe('ShellTerminal', () => {
       const writelnCalls = terminal.writeln.mock.calls.map((c) => c[0])
       expect(writelnCalls).toContain('file1.txt')
       expect(writelnCalls).toContain('file2.txt')
+    })
+  })
+
+  describe('resize handling', () => {
+    it('should call fitAddon.fit when container is resized via ResizeObserver', async () => {
+      render(<ShellTerminal fileSystem={mockFileSystem} />)
+
+      const fitAddon = fitAddonInstances[0]
+
+      // Clear initial fit call from initialization
+      fitAddon.fit.mockClear()
+
+      // Verify ResizeObserver callback was registered
+      expect(resizeObserverCallbacks.length).toBe(1)
+
+      // Simulate resize by calling the ResizeObserver callback
+      await act(async () => {
+        resizeObserverCallbacks[0]([], {} as ResizeObserver)
+      })
+
+      // fit() should be called on resize
+      expect(fitAddon.fit).toHaveBeenCalled()
     })
   })
 
