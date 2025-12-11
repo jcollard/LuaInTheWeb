@@ -1,9 +1,9 @@
 # Epic #119: Shell Core Package Extraction
 
-**Status:** In Progress (5/6 complete)
+**Status:** Complete (6/6 complete)
 **Branch:** epic-119
 **Created:** 2025-12-10
-**Last Updated:** 2025-12-11 08:54
+**Last Updated:** 2025-12-11 10:19
 
 ## Overview
 
@@ -60,7 +60,7 @@ LuaInTheWeb/
 | #122 | Extract CommandRegistry and filesystem adapter | ✅ Complete | 122-extract-commandregistry-and-filesystem-adapter | Merged PR #128 |
 | #123 | Extract shell commands (cd, pwd, ls, help) | ✅ Complete | 123-extract-shell-commands | Merged PR #129 |
 | #124 | Integrate shell-core into editor | ✅ Complete | 124-integrate-shell-core-into-editor | Merged PR #130 |
-| #125 | Shell-core documentation and cleanup | 🔄 In Progress | 125-shell-core-documentation-and-cleanup | Started 2025-12-11 |
+| #125 | Shell-core documentation and cleanup | ✅ Complete | 125-shell-core-documentation-and-cleanup | Merged PR #132 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -113,6 +113,15 @@ LuaInTheWeb/
 ### 2025-12-11
 - **#124 Complete**: Integrate shell-core into editor
   - Merged PR #130 to epic-119
+- **#125 Complete**: Shell-core documentation and cleanup
+  - Created comprehensive README.md for shell-core package with full API reference
+  - Updated docs/architecture.md with shell-core package structure and integration flow
+  - Fixed shell terminal bug: command output now appears on new line
+  - Fixed history navigation: prompt shows before command, no duplicates
+  - Added integration tests for ShellTerminal bug fixes
+  - Merged PR #132 to epic-119
+
+**All sub-issues complete! Epic ready for PR to main.**
 
 ## Key Files
 
