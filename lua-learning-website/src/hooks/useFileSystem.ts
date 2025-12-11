@@ -1,116 +1,18 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import type { VirtualFile, TreeNode, FileSystemState, UseFileSystemReturn } from './fileSystemTypes'
+import {
+  DEBOUNCE_MS,
+  validateFileName,
+  getFileName,
+  getParentPath,
+  normalizePath,
+  loadFromStorage,
+  saveToStorage,
+  buildTree,
+} from './fileSystemUtils'
 
-// Types
-export interface VirtualFile {
-  name: string
-  content: string
-  createdAt: number
-  updatedAt: number
-}
-
-export interface TreeNode {
-  name: string
-  path: string
-  type: 'file' | 'folder'
-  children?: TreeNode[]
-}
-
-interface FileSystemState {
-  version: number
-  files: Record<string, VirtualFile>
-  folders: Set<string>
-}
-
-export interface UseFileSystemReturn {
-  // File operations
-  createFile: (path: string, content?: string) => void
-  readFile: (path: string) => string | null
-  writeFile: (path: string, content: string) => void
-  deleteFile: (path: string) => void
-  renameFile: (oldPath: string, newPath: string) => void
-  moveFile: (sourcePath: string, targetFolderPath: string) => void
-
-  // Folder operations
-  createFolder: (path: string) => void
-  deleteFolder: (path: string) => void
-  renameFolder: (oldPath: string, newPath: string) => void
-
-  // Utilities
-  exists: (path: string) => boolean
-  isDirectory: (path: string) => boolean
-  listDirectory: (path: string) => string[]
-  getTree: () => TreeNode[]
-}
-
-const STORAGE_KEY = 'lua-ide-filesystem'
-const DEBOUNCE_MS = 300
-
-// Invalid characters for file/folder names (Windows + Unix restrictions)
-const INVALID_CHARS_REGEX = /[\\:*?"<>|]/
-
-function validateFileName(name: string): void {
-  if (!name || name.trim() === '') {
-    throw new Error('Invalid file name: name cannot be empty')
-  }
-  if (INVALID_CHARS_REGEX.test(name)) {
-    throw new Error(`Invalid file name: contains forbidden characters (\\:*?"<>|)`)
-  }
-}
-
-function getFileName(path: string): string {
-  const parts = path.split('/').filter(Boolean)
-  return parts[parts.length - 1] || ''
-}
-
-function getParentPath(path: string): string {
-  const parts = path.split('/').filter(Boolean)
-  parts.pop()
-  return parts.length === 0 ? '/' : '/' + parts.join('/')
-}
-
-function normalizePath(path: string): string {
-  // Ensure path starts with /
-  if (!path.startsWith('/')) {
-    path = '/' + path
-  }
-  // Remove trailing slash unless it's root
-  if (path !== '/' && path.endsWith('/')) {
-    path = path.slice(0, -1)
-  }
-  return path
-}
-
-interface SerializedState {
-  version: number
-  files: Record<string, VirtualFile>
-  folders?: string[]
-}
-
-function loadFromStorage(): FileSystemState {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (!stored) {
-      return { version: 1, files: {}, folders: new Set(['/']) }
-    }
-    const parsed: SerializedState = JSON.parse(stored)
-    return {
-      version: parsed.version || 1,
-      files: parsed.files || {},
-      folders: new Set(parsed.folders || ['/']),
-    }
-  } catch {
-    return { version: 1, files: {}, folders: new Set(['/']) }
-  }
-}
-
-function saveToStorage(state: FileSystemState): void {
-  const serialized: SerializedState = {
-    version: state.version,
-    files: state.files,
-    folders: Array.from(state.folders),
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(serialized))
-}
+// Re-export types for backward compatibility
+export type { VirtualFile, TreeNode, UseFileSystemReturn }
 
 export function useFileSystem(): UseFileSystemReturn {
   const [state, setState] = useState<FileSystemState>(() => loadFromStorage())
@@ -159,7 +61,6 @@ export function useFileSystem(): UseFileSystemReturn {
         throw new Error(`File already exists: ${normalizedPath}`)
       }
 
-      // Ensure parent folder exists
       const parentPath = getParentPath(normalizedPath)
       if (parentPath !== '/' && !state.folders.has(parentPath)) {
         throw new Error(`Parent folder not found: ${parentPath}`)
@@ -171,12 +72,7 @@ export function useFileSystem(): UseFileSystemReturn {
         version: prev.version + 1,
         files: {
           ...prev.files,
-          [normalizedPath]: {
-            name: fileName,
-            content,
-            createdAt: now,
-            updatedAt: now,
-          },
+          [normalizedPath]: { name: fileName, content, createdAt: now, updatedAt: now },
         },
       }))
     },
@@ -205,11 +101,7 @@ export function useFileSystem(): UseFileSystemReturn {
         version: prev.version + 1,
         files: {
           ...prev.files,
-          [normalizedPath]: {
-            ...prev.files[normalizedPath],
-            content,
-            updatedAt: Date.now(),
-          },
+          [normalizedPath]: { ...prev.files[normalizedPath], content, updatedAt: Date.now() },
         },
       }))
     },
@@ -227,11 +119,7 @@ export function useFileSystem(): UseFileSystemReturn {
       setState((prev) => {
         const newFiles = { ...prev.files }
         delete newFiles[normalizedPath]
-        return {
-          ...prev,
-          version: prev.version + 1,
-          files: newFiles,
-        }
+        return { ...prev, version: prev.version + 1, files: newFiles }
       })
     },
     [state.files]
@@ -257,16 +145,8 @@ export function useFileSystem(): UseFileSystemReturn {
         const file = prev.files[normalizedOldPath]
         const newFiles = { ...prev.files }
         delete newFiles[normalizedOldPath]
-        newFiles[normalizedNewPath] = {
-          ...file,
-          name: newFileName,
-          updatedAt: Date.now(),
-        }
-        return {
-          ...prev,
-          version: prev.version + 1,
-          files: newFiles,
-        }
+        newFiles[normalizedNewPath] = { ...file, name: newFileName, updatedAt: Date.now() }
+        return { ...prev, version: prev.version + 1, files: newFiles }
       })
     },
     [state.files, state.folders]
@@ -283,7 +163,6 @@ export function useFileSystem(): UseFileSystemReturn {
         throw new Error(`Folder already exists: ${normalizedPath}`)
       }
 
-      // Ensure parent folder exists
       const parentPath = getParentPath(normalizedPath)
       if (parentPath !== '/' && !state.folders.has(parentPath)) {
         throw new Error(`Parent folder not found: ${parentPath}`)
@@ -292,11 +171,7 @@ export function useFileSystem(): UseFileSystemReturn {
       setState((prev) => {
         const newFolders = new Set(prev.folders)
         newFolders.add(normalizedPath)
-        return {
-          ...prev,
-          version: prev.version + 1,
-          folders: newFolders,
-        }
+        return { ...prev, version: prev.version + 1, folders: newFolders }
       })
     },
     [state.files, state.folders]
@@ -311,30 +186,22 @@ export function useFileSystem(): UseFileSystemReturn {
       }
 
       setState((prev) => {
-        // Remove all files and folders under this path
         const newFiles = { ...prev.files }
         const newFolders = new Set(prev.folders)
 
-        // Remove all files under this folder
         for (const filePath of Object.keys(newFiles)) {
           if (filePath.startsWith(normalizedPath + '/')) {
             delete newFiles[filePath]
           }
         }
 
-        // Remove all subfolders
         for (const folderPath of newFolders) {
           if (folderPath === normalizedPath || folderPath.startsWith(normalizedPath + '/')) {
             newFolders.delete(folderPath)
           }
         }
 
-        return {
-          ...prev,
-          version: prev.version + 1,
-          files: newFiles,
-          folders: newFolders,
-        }
+        return { ...prev, version: prev.version + 1, files: newFiles, folders: newFolders }
       })
     },
     [state.folders]
@@ -360,19 +227,14 @@ export function useFileSystem(): UseFileSystemReturn {
         const newFiles = { ...prev.files }
         const newFolders = new Set(prev.folders)
 
-        // Update all file paths under this folder
         for (const filePath of Object.keys(prev.files)) {
           if (filePath.startsWith(normalizedOldPath + '/')) {
             const newFilePath = normalizedNewPath + filePath.slice(normalizedOldPath.length)
-            newFiles[newFilePath] = {
-              ...prev.files[filePath],
-              updatedAt: Date.now(),
-            }
+            newFiles[newFilePath] = { ...prev.files[filePath], updatedAt: Date.now() }
             delete newFiles[filePath]
           }
         }
 
-        // Update all subfolder paths
         for (const folderPath of prev.folders) {
           if (folderPath === normalizedOldPath) {
             newFolders.delete(folderPath)
@@ -384,12 +246,7 @@ export function useFileSystem(): UseFileSystemReturn {
           }
         }
 
-        return {
-          ...prev,
-          version: prev.version + 1,
-          files: newFiles,
-          folders: newFolders,
-        }
+        return { ...prev, version: prev.version + 1, files: newFiles, folders: newFolders }
       })
     },
     [state.files, state.folders]
@@ -400,7 +257,6 @@ export function useFileSystem(): UseFileSystemReturn {
       const normalizedSourcePath = normalizePath(sourcePath)
       const normalizedTargetFolder = normalizePath(targetFolderPath)
 
-      // Check source exists (file or folder)
       const isSourceFile = normalizedSourcePath in state.files
       const isSourceFolder = state.folders.has(normalizedSourcePath)
 
@@ -408,69 +264,45 @@ export function useFileSystem(): UseFileSystemReturn {
         throw new Error(`Source not found: ${normalizedSourcePath}`)
       }
 
-      // Check target folder exists
       if (normalizedTargetFolder !== '/' && !state.folders.has(normalizedTargetFolder)) {
         throw new Error(`Target folder not found: ${normalizedTargetFolder}`)
       }
 
-      // Get the name of the item being moved
       const itemName = getFileName(normalizedSourcePath)
-      const newPath = normalizedTargetFolder === '/'
-        ? `/${itemName}`
-        : `${normalizedTargetFolder}/${itemName}`
+      const newPath = normalizedTargetFolder === '/' ? `/${itemName}` : `${normalizedTargetFolder}/${itemName}`
 
-      // Check if already in target folder (no-op)
       const currentParent = getParentPath(normalizedSourcePath)
-      if (currentParent === normalizedTargetFolder) {
-        return // No-op, already in target folder
-      }
+      if (currentParent === normalizedTargetFolder) return // No-op
 
-      // Check if trying to move folder into itself or its children
       if (isSourceFolder && (normalizedTargetFolder === normalizedSourcePath || normalizedTargetFolder.startsWith(normalizedSourcePath + '/'))) {
         throw new Error(`Cannot move folder into itself or its children`)
       }
 
-      // Check if something already exists at target path
       if (newPath in state.files || state.folders.has(newPath)) {
         throw new Error(`Target already exists: ${newPath}`)
       }
 
-      // Perform the move using rename functions
       if (isSourceFile) {
-        // Move file
         setState((prev) => {
           const file = prev.files[normalizedSourcePath]
           const newFiles = { ...prev.files }
           delete newFiles[normalizedSourcePath]
-          newFiles[newPath] = {
-            ...file,
-            updatedAt: Date.now(),
-          }
-          return {
-            ...prev,
-            version: prev.version + 1,
-            files: newFiles,
-          }
+          newFiles[newPath] = { ...file, updatedAt: Date.now() }
+          return { ...prev, version: prev.version + 1, files: newFiles }
         })
       } else {
-        // Move folder with all contents
         setState((prev) => {
           const newFiles = { ...prev.files }
           const newFolders = new Set(prev.folders)
 
-          // Update all file paths under this folder
           for (const filePath of Object.keys(prev.files)) {
             if (filePath.startsWith(normalizedSourcePath + '/')) {
               const newFilePath = newPath + filePath.slice(normalizedSourcePath.length)
-              newFiles[newFilePath] = {
-                ...prev.files[filePath],
-                updatedAt: Date.now(),
-              }
+              newFiles[newFilePath] = { ...prev.files[filePath], updatedAt: Date.now() }
               delete newFiles[filePath]
             }
           }
 
-          // Update all subfolder paths
           for (const folderPath of prev.folders) {
             if (folderPath === normalizedSourcePath) {
               newFolders.delete(folderPath)
@@ -482,12 +314,7 @@ export function useFileSystem(): UseFileSystemReturn {
             }
           }
 
-          return {
-            ...prev,
-            version: prev.version + 1,
-            files: newFiles,
-            folders: newFolders,
-          }
+          return { ...prev, version: prev.version + 1, files: newFiles, folders: newFolders }
         })
       }
     },
@@ -499,7 +326,6 @@ export function useFileSystem(): UseFileSystemReturn {
       const normalizedPath = normalizePath(path)
       const children: string[] = []
 
-      // Add files in this directory
       for (const filePath of Object.keys(state.files)) {
         const parentPath = getParentPath(filePath)
         if (parentPath === normalizedPath) {
@@ -507,9 +333,8 @@ export function useFileSystem(): UseFileSystemReturn {
         }
       }
 
-      // Add folders in this directory
       for (const folderPath of state.folders) {
-        if (folderPath === '/') continue // Skip root
+        if (folderPath === '/') continue
         const parentPath = getParentPath(folderPath)
         if (parentPath === normalizedPath) {
           children.push(getFileName(folderPath))
@@ -522,45 +347,7 @@ export function useFileSystem(): UseFileSystemReturn {
   )
 
   const getTree = useCallback((): TreeNode[] => {
-    const buildTree = (dirPath: string): TreeNode[] => {
-      const nodes: TreeNode[] = []
-
-      // Collect files in this directory
-      for (const [filePath, file] of Object.entries(state.files)) {
-        const parentPath = getParentPath(filePath)
-        if (parentPath === dirPath) {
-          nodes.push({
-            name: file.name,
-            path: filePath,
-            type: 'file',
-          })
-        }
-      }
-
-      // Collect folders in this directory
-      for (const folderPath of state.folders) {
-        if (folderPath === '/') continue // Skip root
-        const parentPath = getParentPath(folderPath)
-        if (parentPath === dirPath) {
-          nodes.push({
-            name: getFileName(folderPath),
-            path: folderPath,
-            type: 'folder',
-            children: buildTree(folderPath),
-          })
-        }
-      }
-
-      // Sort: folders first, then alphabetically
-      return nodes.sort((a, b) => {
-        if (a.type !== b.type) {
-          return a.type === 'folder' ? -1 : 1
-        }
-        return a.name.localeCompare(b.name)
-      })
-    }
-
-    return buildTree('/')
+    return buildTree(state.files, state.folders, '/')
   }, [state.files, state.folders])
 
   return {
