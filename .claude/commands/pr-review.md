@@ -358,6 +358,58 @@ If tests fail:
 Run `/code-review` to see full test results and fix issues before merging.
 ```
 
+### 8c.5. Clean Up Worktree (Before Merge)
+
+**IMPORTANT:** The worktree must be removed BEFORE merging because `--delete-branch` will fail if the branch is still associated with a worktree.
+
+1. **Extract issue number** from PR branch name or linked issues:
+   ```bash
+   # Branch name pattern: "<issue-number>-description" (e.g., "149-fix-branch-delete")
+   # Extract from headRefName or from linked issues found in step 8b
+   ```
+
+2. **Check if worktree exists** for this issue:
+   ```bash
+   git worktree list
+   # Look for worktree matching pattern: *-issue-<issue-number>
+   ```
+
+3. **If worktree exists, check for uncommitted changes:**
+   ```bash
+   # Get the worktree path (e.g., ../LuaInTheWeb-issue-149)
+   git -C "<worktree-path>" status --porcelain
+   ```
+
+4. **Handle uncommitted changes:**
+
+   If uncommitted changes exist:
+   ```
+   ## Warning: Uncommitted Changes in Worktree
+
+   The worktree for issue #<issue-number> has uncommitted changes:
+   <list of changed files>
+
+   **Options:**
+   - Type "discard" to remove worktree anyway (changes will be lost)
+   - Type "abort" to cancel the merge and handle changes manually
+   ```
+
+   If user types "abort", stop the accept process.
+
+5. **Remove the worktree** (using `--keep-branch` since merge will handle branch deletion):
+   ```bash
+   python scripts/worktree-remove.py <issue-number> --keep-branch --headless
+   ```
+
+   Output:
+   ```
+   ### Pre-Merge Worktree Cleanup
+   - ✅ Removed worktree: <worktree-path>
+   - ℹ️ Branch kept (will be deleted by merge)
+   ```
+
+6. **If no worktree found**, continue silently (worktree may not exist or was already removed).
+
 ### 8d. Merge the PR
 
 Merge the PR using regular merge (preserves commit history for better conflict detection):
@@ -551,31 +603,18 @@ If the linked issue wasn't automatically closed (e.g., no "Fixes #X" in PR body)
 gh issue close <linked-issue-number> --reason completed
 ```
 
-### 8j. Clean Up Worktree
+### 8j. Verify Worktree Cleanup
 
-Find and remove the worktree associated with this PR using the Python script:
+**Note:** Worktree cleanup was performed in Step 8c.5 (before merge). This step verifies cleanup was successful.
+
+If the worktree directory still exists (e.g., on Windows where directory deletion can fail):
 
 ```bash
-# Extract issue number from PR branch name (e.g., "13-fix-repl-ux" → 13)
-# Or from linked issues found in step 8b
-
-# Remove the worktree using Python script with headless mode
-python scripts/worktree-remove.py <issue-number> --headless
+# Check if orphaned directory exists
+python scripts/worktree-remove.py <issue-number> --orphan --headless
 ```
 
-The script handles:
-- Finding the worktree for the issue
-- Removing the worktree directory
-- Deleting the branch (auto-force-deletes in headless mode)
-
-Output:
-```
-### Worktree Cleanup
-- ✅ Removed worktree: <worktree-path>
-- ✅ Branch deleted
-```
-
-If no worktree found, the script reports this and exits cleanly.
+This handles cleanup of directories that weren't fully removed in Step 8c.5.
 
 ### 8k. Output Success Summary
 
@@ -601,9 +640,10 @@ If no worktree found, the script reports this and exits cleanly.
 - #<issue-number>: <issue-title> ✅ Closed
 
 ### Cleanup
+- ✅ Worktree removed before merge (Step 8c.5)
+- ✅ Branch deleted by merge
 - ✅ Switched to main branch
 - ✅ Pulled latest changes
-- ✅ Worktree removed (if applicable)
 
 ### Next Steps
 - Run `/status` to see project board
@@ -630,9 +670,10 @@ If no worktree found, the script reports this and exits cleanly.
 - #<issue-number>: <issue-title> ✅ Closed
 
 ### Cleanup
+- ✅ Worktree removed before merge (Step 8c.5)
+- ✅ Branch deleted by merge
 - ✅ Switched to epic branch
 - ✅ Pulled latest changes
-- ✅ Sub-issue worktree removed (if applicable)
 
 <If all sub-issues complete:>
 ### All Sub-Issues Complete!
@@ -850,6 +891,10 @@ Found: Fixes #7
 - Tests: ✅ 635 passed
 - Branch up to date: ✅
 
+### Pre-Merge Worktree Cleanup
+- ✅ Removed worktree: C:\Users\User\git\jcollard\LuaInTheWeb-issue-7
+- ℹ️ Branch kept (will be deleted by merge)
+
 ### Merging...
 ✅ PR #27 merged via regular merge
 ✅ Branch 7-tech-debt-flaky-e2e-test deleted
@@ -873,9 +918,6 @@ User types: `yes`
 ### Linked Issue Closure
 - #7: [Tech Debt] Flaky E2E test: EmbeddableEditor renders Monaco editor ✅ Closed
 
-### Worktree Cleanup
-✅ Removed worktree: C:\Users\User\git\jcollard\LuaInTheWeb-issue-7
-
 ---
 
 ## PR #27 Merged Successfully
@@ -894,9 +936,10 @@ User types: `yes`
 - #7: [Tech Debt] Flaky E2E test: EmbeddableEditor renders Monaco editor ✅ Closed
 
 ### Cleanup
+- ✅ Worktree removed before merge (Step 8c.5)
+- ✅ Branch deleted by merge
 - ✅ Switched to main branch
 - ✅ Pulled latest changes
-- ✅ Worktree removed
 
 ### Next Steps
 - Run `/status` to see project board
