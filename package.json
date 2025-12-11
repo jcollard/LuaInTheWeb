@@ -6,6 +6,7 @@
     "lua-learning-website"
   ],
   "scripts": {
+    "build": "npm run build -w @lua-learning/shell-core && npm run build -w lua-learning-website",
     "build:shell-core": "npm run build -w @lua-learning/shell-core",
     "test:shell-core": "npm run test -w @lua-learning/shell-core"
   }

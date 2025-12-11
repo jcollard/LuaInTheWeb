@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "npm run build -w @lua-learning/shell-core",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",

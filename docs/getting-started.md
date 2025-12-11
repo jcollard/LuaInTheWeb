@@ -8,6 +8,20 @@ This guide will help you set up your development environment for LuaInTheWeb.
 - npm 9+ or yarn
 - Git
 
+## Project Structure
+
+LuaInTheWeb uses npm workspaces to manage multiple packages:
+
+```
+LuaInTheWeb/
+├── lua-learning-website/    # Main React application
+├── packages/
+│   └── shell-core/          # @lua-learning/shell-core - Shell emulation library
+└── package.json             # Root workspace configuration
+```
+
+The `lua-learning-website` depends on `@lua-learning/shell-core`, which provides shell emulation functionality. This package is built automatically when you run `npm run build` in the website directory.
+
 ## Setup
 
 1. Clone the repository:
@@ -16,18 +30,36 @@ This guide will help you set up your development environment for LuaInTheWeb.
    cd LuaInTheWeb
    ```
 
-2. Install dependencies:
+2. Install dependencies (from the root directory):
    ```bash
-   cd lua-learning-website
    npm install
    ```
+   This installs dependencies for all workspace packages.
 
 3. Start the development server:
    ```bash
+   cd lua-learning-website
    npm run dev
    ```
 
 4. Open http://localhost:5173 in your browser
+
+## Building
+
+To build for production:
+
+```bash
+cd lua-learning-website
+npm run build
+```
+
+This automatically builds the `@lua-learning/shell-core` dependency first via the `prebuild` script, then builds the website.
+
+Alternatively, build all packages from the root:
+
+```bash
+npm run build
+```
 
 ## Available Scripts
 
