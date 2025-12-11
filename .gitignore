@@ -3,7 +3,6 @@
 
 # Root npm workspace
 node_modules/
-package-lock.json
 
 # Package build outputs
 packages/*/dist/
