@@ -185,6 +185,129 @@ This command:
 
 ---
 
+## Review Guidelines
+
+> **IMPORTANT:** Before starting any code review (`/pr-review`, `/code-review`, or `/issue <n> review`),
+> the reviewer MUST state the review criteria and confirm with the user before proceeding.
+
+### Pre-Review Confirmation
+
+Before reviewing, output this confirmation:
+
+```
+## Review Criteria Checklist
+
+I will review this PR against the following criteria:
+
+**Code Quality:**
+- [ ] Read ALL changed files thoroughly
+- [ ] Verify tests perform real testing (not just coverage)
+- [ ] Check best practices are followed
+- [ ] Identify DRY violations (duplicate code)
+- [ ] Identify SOLID principle violations
+
+**Architecture:**
+- [ ] UI components are pure (no business logic)
+- [ ] All logic extracted into custom hooks
+- [ ] Proper separation of concerns
+
+**TypeScript:**
+- [ ] No `any` types
+- [ ] Explicit return types on public functions
+- [ ] Props interfaces defined
+
+**Testing:**
+- [ ] Tests accompany code changes
+- [ ] AAA pattern used (Arrange-Act-Assert)
+- [ ] Edge cases and error cases covered
+- [ ] Tests are colocated with components
+- [ ] Mutation score >= 80% on changed code
+
+**Security:**
+- [ ] No user input rendered as HTML without sanitization
+- [ ] No secrets in code
+- [ ] Input validation present at boundaries
+
+**Additional Checks:**
+- [ ] Error handling is explicit with user-friendly messages
+- [ ] Performance considerations (unnecessary re-renders, memory leaks)
+- [ ] Accessibility (ARIA labels, keyboard navigation)
+- [ ] Naming is clear and intention-revealing
+
+Shall I proceed with the review?
+```
+
+Wait for user confirmation before starting the review.
+
+### Review Criteria Details
+
+#### 1. Read All Files
+- Examine every changed file in the PR
+- Don't skip files based on assumptions
+- Understand the full scope of changes
+
+#### 2. Real Testing (Not Just Coverage)
+Verify tests actually validate behavior:
+
+| Bad (Coverage Only) | Good (Real Testing) |
+|---------------------|---------------------|
+| `expect(result).toBeDefined()` | `expect(result.name).toBe('expected')` |
+| `expect(fn).toHaveBeenCalled()` | `expect(fn).toHaveBeenCalledWith(expectedArgs)` |
+| Just checking no errors thrown | Checking specific return values and side effects |
+
+#### 3. Best Practices
+- Code follows project coding standards
+- Consistent patterns used throughout
+- No anti-patterns introduced
+
+#### 4. DRY (Don't Repeat Yourself)
+Look for:
+- Duplicate code blocks that could be extracted
+- Similar logic in multiple places
+- Copy-pasted code with minor variations
+
+#### 5. SOLID Principles
+
+| Principle | Check For |
+|-----------|-----------|
+| **S**ingle Responsibility | Each function/class does one thing |
+| **O**pen/Closed | Extended through composition, not modification |
+| **L**iskov Substitution | Subtypes work where parent types expected |
+| **I**nterface Segregation | No unused dependencies on interfaces |
+| **D**ependency Inversion | Depend on abstractions, not concretions |
+
+#### 6. Architecture Compliance
+Per project standards:
+- UI components contain NO business logic
+- All logic lives in custom hooks
+- Components are pure: props in, JSX out
+
+#### 7. Test Quality Checks
+- Tests should fail if the code breaks
+- Tests cover the "what" not the "how"
+- Mock only external dependencies
+- Integration tests verify component interactions
+
+#### 8. Security Review
+- XSS: No `dangerouslySetInnerHTML` without sanitization
+- Injection: User input validated before use
+- Secrets: No API keys, passwords, or tokens in code
+- External data: Validated at system boundaries
+
+### Review Output Format
+
+After reviewing, provide:
+
+1. **Summary** - What the PR does
+2. **Files Reviewed** - Table with assessment per file
+3. **Blocking Issues** - Must fix before merge
+4. **Suggestions** - Non-blocking improvements
+5. **Positive Observations** - What the PR does well
+6. **Checklist Results** - Status per category
+7. **Recommendation** - APPROVE / REQUEST_CHANGES / COMMENT
+
+---
+
 ## Issue Types: Regular vs Epic
 
 **IMPORTANT:** Before starting work, identify the issue type:
