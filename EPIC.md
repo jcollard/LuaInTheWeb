@@ -60,7 +60,7 @@ LuaInTheWeb/
 | #122 | Extract CommandRegistry and filesystem adapter | ✅ Complete | 122-extract-commandregistry-and-filesystem-adapter | Merged PR #128 |
 | #123 | Extract shell commands (cd, pwd, ls, help) | ✅ Complete | 123-extract-shell-commands | Merged PR #129 |
 | #124 | Integrate shell-core into editor | ✅ Complete | 124-integrate-shell-core-into-editor | Merged PR #130 |
-| #125 | Shell-core documentation and cleanup | ⏳ Pending | - | - |
+| #125 | Shell-core documentation and cleanup | 🔄 In Progress | 125-shell-core-documentation-and-cleanup | Started 2025-12-11 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -123,6 +123,7 @@ LuaInTheWeb/
 - `packages/shell-core/tsconfig.json` - TypeScript configuration
 - `packages/shell-core/vitest.config.ts` - Test configuration
 - `packages/shell-core/stryker.config.json` - Mutation testing configuration
+- `packages/shell-core/README.md` - Package documentation
 - `packages/shell-core/src/index.ts` - Package entry point with exports
 - `packages/shell-core/src/types.ts` - Core interfaces (IFileSystem, Command, etc.)
 - `packages/shell-core/src/pathUtils.ts` - Path manipulation utilities
