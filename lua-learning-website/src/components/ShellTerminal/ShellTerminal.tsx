@@ -95,6 +95,9 @@ export function ShellTerminal({
     const terminal = xtermRef.current
     if (!terminal) return
 
+    // Move to new line before showing output
+    terminal.writeln('')
+
     const result = executeCommandRef.current(input)
 
     // Display stdout
