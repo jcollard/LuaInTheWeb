@@ -306,4 +306,45 @@ describe('IDELayout', () => {
       expect(screen.getByText('*')).toBeInTheDocument()
     })
   })
+
+  describe('state persistence', () => {
+    it('should keep BottomPanel mounted when terminal is toggled (state preservation)', async () => {
+      // Arrange
+      const user = userEvent.setup()
+      render(<IDELayout />)
+
+      // Verify bottom panel is initially visible
+      const bottomPanel = screen.getByTestId('bottom-panel')
+      expect(bottomPanel).toBeInTheDocument()
+
+      // Get the shell terminal container (inside bottom panel)
+      const shellTab = screen.getByRole('tab', { name: /shell/i })
+      await user.click(shellTab)
+
+      const shellContainer = screen.getByTestId('shell-terminal-container')
+      expect(shellContainer).toBeInTheDocument()
+
+      // Act - toggle terminal visibility (Ctrl+`)
+      await user.keyboard('{Control>}`{/Control}')
+
+      // Assert - bottom panel should still be in the DOM (just hidden via CSS)
+      // The panel uses collapsible behavior, so it stays mounted
+      await waitFor(() => {
+        // Bottom panel should still exist in DOM
+        expect(screen.getByTestId('bottom-panel')).toBeInTheDocument()
+        // Shell terminal should still exist in DOM (state preserved)
+        expect(screen.getByTestId('shell-terminal-container')).toBeInTheDocument()
+      })
+
+      // Act - toggle terminal back on
+      await user.keyboard('{Control>}`{/Control}')
+
+      // Assert - panel is visible and shell state is preserved (same instance)
+      await waitFor(() => {
+        const panel = screen.getByTestId('bottom-panel')
+        // Check that the panel is visible (parent not hidden)
+        expect(panel).toBeVisible()
+      })
+    })
+  })
 })

@@ -59,9 +59,12 @@ export function IDEPanel({
           )}
         </div>
       )}
-      {!collapsed && (
-        <div className={styles.content}>{children}</div>
-      )}
+      <div
+        className={styles.content}
+        style={{ display: collapsed ? 'none' : undefined }}
+      >
+        {children}
+      </div>
     </Panel>
   )
 }

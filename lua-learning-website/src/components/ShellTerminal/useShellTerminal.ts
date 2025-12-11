@@ -118,7 +118,12 @@ export function useShellTerminal(
     setCursorPosition(0)
     setHistoryIndex(-1)
 
-    // Return empty - newline is handled by onCommand callback
+    // Return writeln only for empty input (to show new prompt)
+    // When there's content, newline is handled by onCommand callback
+    if (!trimmedLine) {
+      return [{ type: 'writeln', data: '' }]
+    }
+
     return []
   }, [onCommand])
 

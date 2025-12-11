@@ -205,6 +205,10 @@ export function ShellTerminal({
       if (data === '\r' || data === '\n' || code === 13) {
         commands = handlers.handleEnter()
         executeTerminalCommands(terminal, commands)
+        // Show prompt for empty input (commands include writeln)
+        if (commands.length > 0) {
+          showPrompt()
+        }
         return
       }
 
@@ -292,8 +296,13 @@ export function ShellTerminal({
     }
     window.addEventListener('resize', handleResize)
 
+    // Use ResizeObserver to detect container size changes (e.g., panel resize)
+    const resizeObserver = new ResizeObserver(handleResize)
+    resizeObserver.observe(terminalRef.current)
+
     return () => {
       window.removeEventListener('resize', handleResize)
+      resizeObserver.disconnect()
       terminal.dispose()
     }
   }, [showPrompt])

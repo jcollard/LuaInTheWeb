@@ -447,7 +447,7 @@ describe('useShellTerminal', () => {
       expect(result.current.historyIndex).toBe(-1)
     })
 
-    it('should return empty commands (newline handled by onCommand)', () => {
+    it('should return empty commands when line has content (newline handled by onCommand)', () => {
       const { result } = renderHook(() => useShellTerminal({}))
 
       act(() => {
@@ -460,6 +460,17 @@ describe('useShellTerminal', () => {
       })
 
       expect(commands!).toEqual([])
+    })
+
+    it('should return writeln command when line is empty (to show new prompt)', () => {
+      const { result } = renderHook(() => useShellTerminal({}))
+
+      let commands: ReturnType<typeof result.current.handleEnter>
+      act(() => {
+        commands = result.current.handleEnter()
+      })
+
+      expect(commands!).toContainEqual({ type: 'writeln', data: '' })
     })
   })
 
