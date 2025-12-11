@@ -145,6 +145,7 @@ When `/pr-review <n> accept` is run, it will prompt to create issues for any tec
 ```bash
 gh issue create --title "[Tech Debt] <file>: <brief description>" \
   --label "tech-debt" \
+  --project "LuaInTheWeb" \
   --body "<!-- tech-debt-id: <unique-id> -->
 
 ## Description

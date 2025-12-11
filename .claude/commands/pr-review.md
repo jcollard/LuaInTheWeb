@@ -460,6 +460,7 @@ If user confirms, create issues and add them to the project board:
 ```bash
 gh issue create --title "[Tech Debt] <brief description>" \
   --label "tech-debt" \
+  --project "LuaInTheWeb" \
   --body "<!-- tech-debt-id: <unique-id> -->
 
 ## Description
