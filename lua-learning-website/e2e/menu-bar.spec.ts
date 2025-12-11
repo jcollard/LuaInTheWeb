@@ -147,6 +147,118 @@ test.describe('Menu Bar', () => {
     })
   })
 
+  test.describe('Edit menu', () => {
+    test('should show all Edit menu items', async ({ page }) => {
+      // Open Edit menu
+      await getMenuTrigger(page, 'Edit').click()
+
+      // Should show all Edit menu items
+      await expect(page.getByRole('menuitem', { name: 'Undo' })).toBeVisible()
+      await expect(page.getByRole('menuitem', { name: 'Redo' })).toBeVisible()
+      await expect(page.getByRole('menuitem', { name: 'Cut' })).toBeVisible()
+      await expect(page.getByRole('menuitem', { name: 'Copy' })).toBeVisible()
+      await expect(page.getByRole('menuitem', { name: 'Paste' })).toBeVisible()
+      await expect(page.getByRole('menuitem', { name: 'Select All' })).toBeVisible()
+    })
+
+    test('should show Edit items as disabled when no file is open (welcome screen)', async ({ page }) => {
+      // We're on welcome screen by default, so Edit items should be disabled
+      await getMenuTrigger(page, 'Edit').click()
+
+      // All Edit menu items should be disabled since no editor is visible
+      await expect(page.getByRole('menuitem', { name: 'Undo' })).toHaveClass(/disabled/)
+      await expect(page.getByRole('menuitem', { name: 'Redo' })).toHaveClass(/disabled/)
+      await expect(page.getByRole('menuitem', { name: 'Cut' })).toHaveClass(/disabled/)
+      await expect(page.getByRole('menuitem', { name: 'Copy' })).toHaveClass(/disabled/)
+      await expect(page.getByRole('menuitem', { name: 'Paste' })).toHaveClass(/disabled/)
+      await expect(page.getByRole('menuitem', { name: 'Select All' })).toHaveClass(/disabled/)
+    })
+
+    test('should enable Paste and Select All when editor is open', async ({ page }) => {
+      // Create and open a file to get the editor visible
+      const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new file/i }).click()
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter')
+      await expect(input).not.toBeVisible()
+
+      // Click file to open it in editor
+      const treeItem = page.getByRole('treeitem').first()
+      await treeItem.click()
+
+      // Wait for Monaco editor to be visible
+      await expect(page.locator('.monaco-editor')).toBeVisible()
+
+      // Open Edit menu
+      await getMenuTrigger(page, 'Edit').click()
+
+      // Paste and Select All should be enabled (no selection/history needed)
+      await expect(page.getByRole('menuitem', { name: 'Paste' })).not.toHaveClass(/disabled/)
+      await expect(page.getByRole('menuitem', { name: 'Select All' })).not.toHaveClass(/disabled/)
+
+      // Cut/Copy should be disabled (no selection)
+      await expect(page.getByRole('menuitem', { name: 'Cut' })).toHaveClass(/disabled/)
+      await expect(page.getByRole('menuitem', { name: 'Copy' })).toHaveClass(/disabled/)
+
+      // Undo should be disabled (no history yet)
+      await expect(page.getByRole('menuitem', { name: 'Undo' })).toHaveClass(/disabled/)
+    })
+
+    test('should enable Undo after typing content', async ({ page }) => {
+      // Create and open a file
+      const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new file/i }).click()
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter')
+      await expect(input).not.toBeVisible()
+
+      // Click file to open it
+      const treeItem = page.getByRole('treeitem').first()
+      await treeItem.click()
+      await expect(page.locator('.monaco-editor')).toBeVisible()
+
+      // Focus editor and type content
+      await page.locator('.monaco-editor .view-lines').click()
+      await page.keyboard.type('hello')
+
+      // Open Edit menu
+      await getMenuTrigger(page, 'Edit').click()
+
+      // Undo should now be enabled (we have typed content)
+      await expect(page.getByRole('menuitem', { name: 'Undo' })).not.toHaveClass(/disabled/)
+    })
+
+    test('should perform Select All from Edit menu', async ({ page }) => {
+      // Create and open a file
+      const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new file/i }).click()
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter')
+      await expect(input).not.toBeVisible()
+
+      // Click file to open it
+      const treeItem = page.getByRole('treeitem').first()
+      await treeItem.click()
+      await expect(page.locator('.monaco-editor')).toBeVisible()
+
+      // Focus editor and type content
+      await page.locator('.monaco-editor .view-lines').click()
+      await page.keyboard.type('hello world')
+
+      // Open Edit menu and click Select All
+      await getMenuTrigger(page, 'Edit').click()
+      await page.getByRole('menuitem', { name: 'Select All' }).click()
+
+      // Menu should close
+      await expect(page.getByRole('menu')).not.toBeVisible()
+
+      // Now open Edit menu again - Cut and Copy should be enabled (text is selected)
+      await getMenuTrigger(page, 'Edit').click()
+      await expect(page.getByRole('menuitem', { name: 'Cut' })).not.toHaveClass(/disabled/)
+      await expect(page.getByRole('menuitem', { name: 'Copy' })).not.toHaveClass(/disabled/)
+    })
+  })
+
   test.describe('menu actions', () => {
     test('should toggle sidebar visibility from View menu', async ({ page }) => {
       // Verify sidebar is visible initially

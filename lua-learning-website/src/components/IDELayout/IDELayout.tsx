@@ -14,10 +14,12 @@ import { WelcomeScreen } from '../WelcomeScreen'
 import { MenuBar } from '../MenuBar'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useFileExport } from '../../hooks/useFileExport'
+import { useEditorCommands } from '../../hooks/useEditorCommands'
 import { useTheme } from '../../contexts/useTheme'
 import styles from './IDELayout.module.css'
 import type { IDELayoutProps } from './types'
 import type { MenuDefinition } from '../MenuBar'
+import type * as monaco from 'monaco-editor'
 
 /**
  * Inner component that uses IDE context
@@ -76,6 +78,24 @@ function IDELayoutInner({ className }: { className?: string }) {
   // File export functionality
   const { exportFile, canExport } = useFileExport()
 
+  // Editor commands for Edit menu
+  const editorCommands = useEditorCommands()
+
+  const handleEditorMount = useCallback((editor: monaco.editor.IStandaloneCodeEditor) => {
+    editorCommands.editorRef.current = editor
+    editorCommands.updateState()
+
+    // Listen for changes that might affect undo/redo state
+    editor.onDidChangeModelContent(() => {
+      editorCommands.updateState()
+    })
+
+    // Listen for selection changes
+    editor.onDidChangeCursorSelection(() => {
+      editorCommands.updateState()
+    })
+  }, [editorCommands])
+
   const handleExport = useCallback(() => {
     if (fileName && code) {
       exportFile(code, fileName)
@@ -110,12 +130,14 @@ function IDELayoutInner({ className }: { className?: string }) {
         id: 'edit',
         label: 'Edit',
         items: [
-          { id: 'undo', label: 'Undo', shortcut: 'Ctrl+Z', disabled: true },
-          { id: 'redo', label: 'Redo', shortcut: 'Ctrl+Y', disabled: true },
+          { id: 'undo', label: 'Undo', shortcut: 'Ctrl+Z', action: editorCommands.undo, disabled: !editorCommands.hasEditor || !editorCommands.canUndo },
+          { id: 'redo', label: 'Redo', shortcut: 'Ctrl+Y', action: editorCommands.redo, disabled: !editorCommands.hasEditor || !editorCommands.canRedo },
           { type: 'divider' },
-          { id: 'cut', label: 'Cut', shortcut: 'Ctrl+X', disabled: true },
-          { id: 'copy', label: 'Copy', shortcut: 'Ctrl+C', disabled: true },
-          { id: 'paste', label: 'Paste', shortcut: 'Ctrl+V', disabled: true },
+          { id: 'cut', label: 'Cut', shortcut: 'Ctrl+X', action: editorCommands.cut, disabled: !editorCommands.hasEditor || !editorCommands.hasSelection },
+          { id: 'copy', label: 'Copy', shortcut: 'Ctrl+C', action: editorCommands.copy, disabled: !editorCommands.hasEditor || !editorCommands.hasSelection },
+          { id: 'paste', label: 'Paste', shortcut: 'Ctrl+V', action: editorCommands.paste, disabled: !editorCommands.hasEditor },
+          { type: 'divider' },
+          { id: 'select-all', label: 'Select All', shortcut: 'Ctrl+A', action: editorCommands.selectAll, disabled: !editorCommands.hasEditor },
         ],
       },
       {
@@ -141,7 +163,7 @@ function IDELayoutInner({ className }: { className?: string }) {
         ],
       },
     ],
-    [createFileWithRename, saveFile, isDirty, sidebarVisible, toggleSidebar, terminalVisible, toggleTerminal, handleRun, isRunning, theme, toggleTheme, handleExport, canExport, code]
+    [createFileWithRename, saveFile, isDirty, sidebarVisible, toggleSidebar, terminalVisible, toggleTerminal, handleRun, isRunning, theme, toggleTheme, handleExport, canExport, code, editorCommands]
   )
 
   // Register keyboard shortcuts
@@ -275,6 +297,7 @@ function IDELayoutInner({ className }: { className?: string }) {
                         setCursorLine(line)
                         setCursorColumn(col)
                       }}
+                      onEditorMount={handleEditorMount}
                       tabBarProps={tabBarProps}
                     />
                   )}

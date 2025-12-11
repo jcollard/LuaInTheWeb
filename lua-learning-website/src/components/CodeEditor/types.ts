@@ -1,3 +1,5 @@
+import type * as monaco from 'monaco-editor'
+
 /**
  * Props for the CodeEditor component
  */
@@ -14,4 +16,8 @@ export interface CodeEditorProps {
   readOnly?: boolean
   /** Called when Ctrl+Enter is pressed */
   onRun?: () => void
+  /** Called when the Monaco editor mounts with the editor instance */
+  onMount?: (editor: monaco.editor.IStandaloneCodeEditor) => void
+  /** Called when cursor position changes */
+  onCursorChange?: (line: number, column: number) => void
 }

@@ -1,4 +1,5 @@
 import type { TabBarProps } from '../TabBar'
+import type * as monaco from 'monaco-editor'
 
 /**
  * Props for the EditorPanel component
@@ -22,6 +23,8 @@ export interface EditorPanelProps {
   cursorColumn?: number
   /** Called when cursor position changes */
   onCursorChange?: (line: number, column: number) => void
+  /** Called when the Monaco editor mounts with the editor instance */
+  onEditorMount?: (editor: monaco.editor.IStandaloneCodeEditor) => void
   /** Optional additional className */
   className?: string
   /** Props for TabBar when multi-file mode is active */
