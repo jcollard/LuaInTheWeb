@@ -4,17 +4,6 @@ import type { Theme, ThemeContextValue } from './types'
 
 const STORAGE_KEY = 'lua-ide-theme'
 
-function getSystemPreference(): Theme {
-  try {
-    if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-      return 'light'
-    }
-  } catch {
-    // matchMedia not available
-  }
-  return 'dark'
-}
-
 function getStoredTheme(): Theme | null {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
@@ -45,12 +34,8 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const [theme, setThemeState] = useState<Theme>(() => {
-    // Priority: localStorage > system preference > default (dark)
-    const stored = getStoredTheme()
-    if (stored) {
-      return stored
-    }
-    return getSystemPreference()
+    // Priority: localStorage > default (dark)
+    return getStoredTheme() ?? 'dark'
   })
 
   // Apply theme to document on mount and when theme changes

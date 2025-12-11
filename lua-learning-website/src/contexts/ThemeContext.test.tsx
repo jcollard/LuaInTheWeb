@@ -129,30 +129,8 @@ describe('ThemeContext', () => {
       expect(result.current.theme).toBe('dark')
     })
 
-    it('should respect system preference for dark mode on first visit', () => {
-      // Arrange
-      matchMediaMock.mockImplementation((query: string) => ({
-        matches: query === '(prefers-color-scheme: dark)',
-        media: query,
-        onchange: null,
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-      }))
-
-      // Act
-      const { result } = renderHook(() => useTheme(), {
-        wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
-      })
-
-      // Assert
-      expect(result.current.theme).toBe('dark')
-    })
-
-    it('should respect system preference for light mode on first visit', () => {
-      // Arrange
+    it('should default to dark when no saved preference exists (ignores system preference)', () => {
+      // Arrange - system prefers light, but we should still default to dark
       matchMediaMock.mockImplementation((query: string) => ({
         matches: query === '(prefers-color-scheme: light)',
         media: query,
@@ -169,8 +147,8 @@ describe('ThemeContext', () => {
         wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
       })
 
-      // Assert
-      expect(result.current.theme).toBe('light')
+      // Assert - should be dark regardless of system preference
+      expect(result.current.theme).toBe('dark')
     })
 
     it('should load saved theme from localStorage', () => {
