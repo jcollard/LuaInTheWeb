@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
@@ -28,175 +28,25 @@ export function ShellTerminal({
 
   const { executeCommand, cwd, history } = useShell(fileSystem)
 
-  const showPrompt = useCallback(() => {
-    const term = xtermRef.current
-    if (!term) return
-    // Show prompt with current directory
-    term.write(`\x1b[32m${cwd}\x1b[0m \x1b[33m$\x1b[0m `)
+  // Store latest values in refs so the terminal event handler always has current data
+  const cwdRef = useRef(cwd)
+  const historyRef = useRef(history)
+  const executeCommandRef = useRef(executeCommand)
+
+  // Keep refs up to date
+  useEffect(() => {
+    cwdRef.current = cwd
   }, [cwd])
 
-  const handleEnter = useCallback(() => {
-    const term = xtermRef.current
-    if (!term) return
+  useEffect(() => {
+    historyRef.current = history
+  }, [history])
 
-    const input = currentLineRef.current.trim()
-    term.writeln('')
+  useEffect(() => {
+    executeCommandRef.current = executeCommand
+  }, [executeCommand])
 
-    if (input) {
-      const result = executeCommand(input)
-      // Display stdout
-      if (result.stdout) {
-        const lines = result.stdout.split('\n')
-        lines.forEach((line: string) => {
-          term.writeln(line)
-        })
-      }
-      // Display stderr in red
-      if (result.stderr) {
-        const lines = result.stderr.split('\n')
-        lines.forEach((line: string) => {
-          term.writeln(`\x1b[31m${line}\x1b[0m`)
-        })
-      }
-    }
-
-    currentLineRef.current = ''
-    cursorPositionRef.current = 0
-    historyIndexRef.current = -1
-    showPrompt()
-  }, [executeCommand, showPrompt])
-
-  const handleInput = useCallback(
-    (data: string) => {
-      const term = xtermRef.current
-      if (!term) return
-
-      const code = data.charCodeAt(0)
-
-      // Handle Enter
-      if (data === '\r' || data === '\n' || code === 13) {
-        handleEnter()
-        return
-      }
-
-      // Handle Arrow Up (history)
-      if (data === '\x1b[A') {
-        if (history.length > 0) {
-          const newIndex =
-            historyIndexRef.current === -1
-              ? history.length - 1
-              : Math.max(0, historyIndexRef.current - 1)
-
-          if (newIndex !== historyIndexRef.current || historyIndexRef.current === -1) {
-            historyIndexRef.current = newIndex
-            const historyCommand = history[newIndex]
-
-            // Clear current line
-            term.write('\r\x1b[K')
-            showPrompt()
-            term.write(historyCommand)
-
-            currentLineRef.current = historyCommand
-            cursorPositionRef.current = historyCommand.length
-          }
-        }
-        return
-      }
-
-      // Handle Arrow Down (history)
-      if (data === '\x1b[B') {
-        if (historyIndexRef.current !== -1) {
-          const newIndex = historyIndexRef.current + 1
-
-          term.write('\r\x1b[K')
-          showPrompt()
-
-          if (newIndex >= history.length) {
-            historyIndexRef.current = -1
-            currentLineRef.current = ''
-            cursorPositionRef.current = 0
-          } else {
-            historyIndexRef.current = newIndex
-            const historyCommand = history[newIndex]
-            term.write(historyCommand)
-            currentLineRef.current = historyCommand
-            cursorPositionRef.current = historyCommand.length
-          }
-        }
-        return
-      }
-
-      // Handle Arrow Left
-      if (data === '\x1b[D') {
-        if (cursorPositionRef.current > 0) {
-          cursorPositionRef.current--
-          term.write('\x1b[D')
-        }
-        return
-      }
-
-      // Handle Arrow Right
-      if (data === '\x1b[C') {
-        if (cursorPositionRef.current < currentLineRef.current.length) {
-          cursorPositionRef.current++
-          term.write('\x1b[C')
-        }
-        return
-      }
-
-      // Handle Backspace
-      if (code === 127) {
-        if (cursorPositionRef.current > 0) {
-          const line = currentLineRef.current
-          const beforeCursor = line.slice(0, cursorPositionRef.current - 1)
-          const afterCursor = line.slice(cursorPositionRef.current)
-          currentLineRef.current = beforeCursor + afterCursor
-          cursorPositionRef.current--
-
-          const remaining = afterCursor + ' '
-          term.write('\b' + remaining)
-          for (let i = 0; i < afterCursor.length + 1; i++) {
-            term.write('\b')
-          }
-        }
-        return
-      }
-
-      // Handle Ctrl+C
-      if (code === 3) {
-        term.write('^C')
-        term.writeln('')
-        currentLineRef.current = ''
-        cursorPositionRef.current = 0
-        showPrompt()
-        return
-      }
-
-      // Handle Ctrl+L (clear screen)
-      if (code === 12) {
-        term.clear()
-        showPrompt()
-        return
-      }
-
-      // Handle printable characters
-      if (code >= 32 && code < 127) {
-        const line = currentLineRef.current
-        const beforeCursor = line.slice(0, cursorPositionRef.current)
-        const afterCursor = line.slice(cursorPositionRef.current)
-        currentLineRef.current = beforeCursor + data + afterCursor
-
-        term.write(data + afterCursor)
-        for (let i = 0; i < afterCursor.length; i++) {
-          term.write('\b')
-        }
-
-        cursorPositionRef.current++
-      }
-    },
-    [handleEnter, history, showPrompt]
-  )
-
+  // Initialize terminal once
   useEffect(() => {
     if (!terminalRef.current) return
 
@@ -216,6 +66,168 @@ export function ShellTerminal({
     xtermRef.current = terminal
     fitAddonRef.current = fitAddon
 
+    // Helper to show prompt with current directory
+    const showPrompt = () => {
+      terminal.write(`\x1b[32m${cwdRef.current}\x1b[0m \x1b[33m$\x1b[0m `)
+    }
+
+    // Handle enter key - execute command
+    const handleEnter = () => {
+      const input = currentLineRef.current.trim()
+      terminal.writeln('')
+
+      if (input) {
+        const result = executeCommandRef.current(input)
+        // Display stdout
+        if (result.stdout) {
+          const lines = result.stdout.split('\n')
+          lines.forEach((line: string) => {
+            terminal.writeln(line)
+          })
+        }
+        // Display stderr in red
+        if (result.stderr) {
+          const lines = result.stderr.split('\n')
+          lines.forEach((line: string) => {
+            terminal.writeln(`\x1b[31m${line}\x1b[0m`)
+          })
+        }
+      }
+
+      currentLineRef.current = ''
+      cursorPositionRef.current = 0
+      historyIndexRef.current = -1
+      showPrompt()
+    }
+
+    // Handle all terminal input
+    const handleInput = (data: string) => {
+      const code = data.charCodeAt(0)
+
+      // Handle Enter
+      if (data === '\r' || data === '\n' || code === 13) {
+        handleEnter()
+        return
+      }
+
+      // Handle Arrow Up (history)
+      if (data === '\x1b[A') {
+        const hist = historyRef.current
+        if (hist.length > 0) {
+          const newIndex =
+            historyIndexRef.current === -1
+              ? hist.length - 1
+              : Math.max(0, historyIndexRef.current - 1)
+
+          if (newIndex !== historyIndexRef.current || historyIndexRef.current === -1) {
+            historyIndexRef.current = newIndex
+            const historyCommand = hist[newIndex]
+
+            // Clear current line
+            terminal.write('\r\x1b[K')
+            showPrompt()
+            terminal.write(historyCommand)
+
+            currentLineRef.current = historyCommand
+            cursorPositionRef.current = historyCommand.length
+          }
+        }
+        return
+      }
+
+      // Handle Arrow Down (history)
+      if (data === '\x1b[B') {
+        const hist = historyRef.current
+        if (historyIndexRef.current !== -1) {
+          const newIndex = historyIndexRef.current + 1
+
+          terminal.write('\r\x1b[K')
+          showPrompt()
+
+          if (newIndex >= hist.length) {
+            historyIndexRef.current = -1
+            currentLineRef.current = ''
+            cursorPositionRef.current = 0
+          } else {
+            historyIndexRef.current = newIndex
+            const historyCommand = hist[newIndex]
+            terminal.write(historyCommand)
+            currentLineRef.current = historyCommand
+            cursorPositionRef.current = historyCommand.length
+          }
+        }
+        return
+      }
+
+      // Handle Arrow Left
+      if (data === '\x1b[D') {
+        if (cursorPositionRef.current > 0) {
+          cursorPositionRef.current--
+          terminal.write('\x1b[D')
+        }
+        return
+      }
+
+      // Handle Arrow Right
+      if (data === '\x1b[C') {
+        if (cursorPositionRef.current < currentLineRef.current.length) {
+          cursorPositionRef.current++
+          terminal.write('\x1b[C')
+        }
+        return
+      }
+
+      // Handle Backspace
+      if (code === 127) {
+        if (cursorPositionRef.current > 0) {
+          const line = currentLineRef.current
+          const beforeCursor = line.slice(0, cursorPositionRef.current - 1)
+          const afterCursor = line.slice(cursorPositionRef.current)
+          currentLineRef.current = beforeCursor + afterCursor
+          cursorPositionRef.current--
+
+          const remaining = afterCursor + ' '
+          terminal.write('\b' + remaining)
+          for (let i = 0; i < afterCursor.length + 1; i++) {
+            terminal.write('\b')
+          }
+        }
+        return
+      }
+
+      // Handle Ctrl+C
+      if (code === 3) {
+        terminal.write('^C')
+        terminal.writeln('')
+        currentLineRef.current = ''
+        cursorPositionRef.current = 0
+        showPrompt()
+        return
+      }
+
+      // Handle Ctrl+L (clear screen)
+      if (code === 12) {
+        terminal.clear()
+        showPrompt()
+        return
+      }
+
+      // Handle printable characters
+      if (code >= 32 && code < 127) {
+        const line = currentLineRef.current
+        const beforeCursor = line.slice(0, cursorPositionRef.current)
+        const afterCursor = line.slice(cursorPositionRef.current)
+        currentLineRef.current = beforeCursor + data + afterCursor
+
+        terminal.write(data + afterCursor)
+        for (let i = 0; i < afterCursor.length; i++) {
+          terminal.write('\b')
+        }
+
+        cursorPositionRef.current++
+      }
+    }
+
     // Show welcome message and prompt
     terminal.writeln('\x1b[36mLua IDE Shell\x1b[0m')
     terminal.writeln('Type "help" for available commands.\n')
@@ -232,7 +244,7 @@ export function ShellTerminal({
       window.removeEventListener('resize', handleResize)
       terminal.dispose()
     }
-  }, [handleInput, showPrompt])
+  }, []) // Empty dependency array - only run once
 
   // Update terminal theme when theme changes
   useEffect(() => {
