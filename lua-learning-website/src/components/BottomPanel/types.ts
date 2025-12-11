@@ -1,9 +1,10 @@
 import type { BashTerminalHandle } from '../BashTerminal'
+import type { UseFileSystemReturn } from '../../hooks/useFileSystem'
 
 /**
  * Tab types for the bottom panel
  */
-export type BottomPanelTab = 'terminal' | 'repl'
+export type BottomPanelTab = 'terminal' | 'repl' | 'shell'
 
 /**
  * A single terminal output line with a stable unique ID
@@ -29,6 +30,8 @@ export interface BottomPanelProps {
   isAwaitingInput?: boolean
   /** Callback when user submits input */
   onSubmitInput?: (input: string) => void
+  /** File system for shell integration */
+  fileSystem?: UseFileSystemReturn
   /** Optional additional className */
   className?: string
 }

@@ -462,6 +462,8 @@ export function IDEContextProvider({
       // Recent files
       recentFiles,
       clearRecentFiles,
+      // Raw filesystem access
+      fileSystem: filesystem,
     }),
     [
       engine,
@@ -502,6 +504,7 @@ export function IDEContextProvider({
       clearPendingNewFile,
       recentFiles,
       clearRecentFiles,
+      filesystem,
     ]
   )
 

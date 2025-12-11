@@ -78,6 +78,21 @@ describe('useIDE', () => {
         clearPendingNewFile: vi.fn(),
         recentFiles: [],
         clearRecentFiles: vi.fn(),
+        fileSystem: {
+          createFile: vi.fn(),
+          readFile: vi.fn(),
+          writeFile: vi.fn(),
+          deleteFile: vi.fn(),
+          renameFile: vi.fn(),
+          moveFile: vi.fn(),
+          createFolder: vi.fn(),
+          deleteFolder: vi.fn(),
+          renameFolder: vi.fn(),
+          exists: vi.fn(),
+          isDirectory: vi.fn(),
+          listDirectory: vi.fn(),
+          getTree: vi.fn(),
+        },
       }
 
       const wrapper = ({ children }: { children: React.ReactNode }) =>
@@ -132,6 +147,21 @@ describe('useIDE', () => {
         clearPendingNewFile: vi.fn(),
         recentFiles: [],
         clearRecentFiles: vi.fn(),
+        fileSystem: {
+          createFile: vi.fn(),
+          readFile: vi.fn(),
+          writeFile: vi.fn(),
+          deleteFile: vi.fn(),
+          renameFile: vi.fn(),
+          moveFile: vi.fn(),
+          createFolder: vi.fn(),
+          deleteFolder: vi.fn(),
+          renameFolder: vi.fn(),
+          exists: vi.fn(),
+          isDirectory: vi.fn(),
+          listDirectory: vi.fn(),
+          getTree: vi.fn(),
+        },
       }
 
       const wrapper = ({ children }: { children: React.ReactNode }) =>

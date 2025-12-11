@@ -1,0 +1,38 @@
+{
+  "name": "@lua-learning/shell-core",
+  "version": "0.0.1",
+  "description": "Core shell infrastructure for Lua learning platform",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:mutation": "stryker run",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "lua",
+    "shell",
+    "terminal"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@stryker-mutator/core": "^9.0.2",
+    "@stryker-mutator/typescript-checker": "^9.0.2",
+    "@stryker-mutator/vitest-runner": "^9.0.2",
+    "typescript": "~5.9.3",
+    "vitest": "^4.0.15"
+  }
+}

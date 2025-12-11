@@ -1,109 +1,157 @@
-# Epic #58: Add light/dark mode theme switcher for the editor
+# Epic #119: Shell Core Package Extraction
 
-**Status:** Complete (5/5 complete)
-**Branch:** epic-58
-**Created:** 2025-12-09
-**Last Updated:** 2025-12-09
+**Status:** Needs Review (6/6 complete) - PR #133
+**Branch:** epic-119
+**Created:** 2025-12-10
+**Last Updated:** 2025-12-11 10:19
 
 ## Overview
 
-Add support for light and dark mode themes in the editor, allowing users to switch between them. This will improve accessibility and user comfort, especially for users who prefer working in different lighting conditions.
+Extract the shell infrastructure into an independent `@lua-learning/shell-core` package to enable:
+- Isolated testing (faster feedback, clearer coverage)
+- Independent versioning
+- Cleaner architectural boundaries
+- Reuse potential (CLI, tutorials, other contexts)
+
+### Context
+
+The shell infrastructure in `src/shell/` is already ~95% decoupled from the editor with clean abstractions:
+- `IFileSystem` interface for filesystem operations
+- `createFileSystemAdapter` bridges editor filesystem to shell
+- Commands are pure logic with no editor dependencies
+- Only `ShellTerminal.tsx` connects to IDE context
+
+### Package Structure
+
+```
+LuaInTheWeb/
+├── packages/
+│   └── shell-core/              # Independent shell package
+│       ├── src/
+│       │   ├── commands/
+│       │   ├── types.ts
+│       │   ├── CommandRegistry.ts
+│       │   ├── createFileSystemAdapter.ts
+│       │   ├── parseCommand.ts
+│       │   ├── pathUtils.ts
+│       │   └── index.ts
+│       ├── tests/
+│       ├── package.json
+│       ├── tsconfig.json
+│       └── vitest.config.ts
+│
+└── lua-learning-website/        # Editor (imports shell-core)
+    ├── src/components/ShellTerminal/  # Integration wrapper
+    └── package.json             # Depends on shell-core
+```
 
 ## Architecture Decisions
 
-- **CSS Variables approach**: Theme colors defined as CSS custom properties on `:root` with `[data-theme="dark"]` and `[data-theme="light"]` selectors
-- **React Context pattern**: `ThemeProvider` wraps the app, `useTheme()` hook provides access
-- **Persistence**: localStorage with key `lua-ide-theme`, falls back to system preference via `prefers-color-scheme`
-- **File structure**: Follows IDEContext pattern with separate files for context, types, provider, and hook
+<!-- Document key decisions as work progresses -->
+
+(none yet)
 
 ## Sub-Issues
 
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
-| #60 | Create theme infrastructure (CSS variables, context, localStorage) | ✅ Complete | 60-create-theme-infrastructure | Merged PR #74 |
-| #61 | Theme core layout components (sidebar, panels, tabs) | ✅ Complete | 61-theme-core-layout-components | Merged PR #84 |
-| #62 | Theme terminal and REPL components | ✅ Complete | 62-theme-terminal-and-repl-components | Merged PR #89 |
-| #63 | Integrate Monaco Editor theme switching | ✅ Complete | 63-integrate-monaco-editor-theme-switching | Merged PR #94 |
-| #64 | Add theme switcher UI control | ✅ Complete | 64-add-theme-switcher-ui-control | Merged PR #97 |
+| #120 | Initialize shell-core package structure | ✅ Complete | 120-initialize-shell-core | Merged PR #126 |
+| #121 | Extract shell types and utilities | ✅ Complete | 121-extract-shell-types-and-utilities | Merged PR #127 |
+| #122 | Extract CommandRegistry and filesystem adapter | ✅ Complete | 122-extract-commandregistry-and-filesystem-adapter | Merged PR #128 |
+| #123 | Extract shell commands (cd, pwd, ls, help) | ✅ Complete | 123-extract-shell-commands | Merged PR #129 |
+| #124 | Integrate shell-core into editor | ✅ Complete | 124-integrate-shell-core-into-editor | Merged PR #130 |
+| #125 | Shell-core documentation and cleanup | ✅ Complete | 125-shell-core-documentation-and-cleanup | Merged PR #132 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
 - 🔄 In Progress - Currently being worked on
-- 📝 Needs Review - PR created, awaiting review
 - ✅ Complete - Merged to epic branch
 - ❌ Blocked - Has unresolved blockers
-
-**Suggested order:** #60 → (#61, #62, #63 in parallel) → #64
 
 ## Progress Log
 
 <!-- Updated after each sub-issue completion -->
 
-### 2025-12-09
+### 2025-12-10
 - Epic started
-- Started work on #60: Create theme infrastructure
-- Completed #60 implementation, PR #74 created
-- PR #74 merged, #60 complete
-- Started work on #61: Theme core layout components
-- Completed #61 implementation, PR #84 created
-- Fixed file explorer theming (FileExplorer, FileTree, FileTreeItem CSS files)
-- PR #84 merged, #61 complete
-- Started work on #62: Theme terminal and REPL components
-- Created xterm.js theme configuration (dark/light terminal themes)
-- Updated BashTerminal to use useTheme() with dynamic theme switching
-- Converted BashTerminal.css to CSS module with theme variables
-- Converted LuaRepl.css to CSS module with theme variables
-- Fixed xterm.js theme application (set theme after terminal.open())
-- Themed BottomPanel terminal output (replaced hardcoded colors with CSS variables)
-- Added E2E tests for terminal theme colors
-- PR #89 merged, #62 complete
-- Started work on #63: Integrate Monaco Editor theme switching
-- Connected CodeEditor to useTheme() hook with Monaco theme mapping (dark → vs-dark, light → vs)
-- Updated CodeEditor.module.css loading state to use theme CSS variables
-- Added E2E tests for Monaco editor theme switching (theme-editor.spec.ts)
-- Fixed test files to mock useTheme (IDELayout, EmbeddableEditor, EditorPanel, LuaRepl)
-- PR #93 created for #63, targeting epic-58 branch
-- PR #94 merged, #63 complete
-- Tech debt issues created: #95 (useTheme mock), #96 (E2E timeouts)
-- Started work on #64: Add theme switcher UI control
-- Created ThemeToggle component with sun/moon icons
-- Added ThemeToggle to ActivityBar bottom section
-- Added unit tests (14) and E2E tests (8) for theme toggle
-- PR #97 created for #64, targeting epic-58 branch
-- Fixed IDEPanel.module.css to use theme variables (light mode fix)
-- PR #97 merged, #64 complete
-- **All 5 sub-issues complete - Epic ready for review**
+- **#120 Complete**: Initialized shell-core package structure
+  - Created `packages/shell-core/` with src, tests directories
+  - Configured package.json, tsconfig.json, vitest.config.ts
+  - Set up npm workspaces at root level
+  - Verified build and test pass
+  - Merged PR #126 to epic-119
+- **#121 Complete**: Extract shell types and utilities
+  - Created `types.ts` with core interfaces (IFileSystem, Command, CommandResult, etc.)
+  - Created `pathUtils.ts` with path manipulation functions
+  - Created `parseCommand.ts` with command string parser
+  - Added 67 tests with 85.63% mutation score
+  - Merged PR #127 to epic-119
+- **#122 Complete**: Extract CommandRegistry and filesystem adapter
+  - Created `CommandRegistry.ts` - manages command registration, lookup, and execution
+  - Created `createFileSystemAdapter.ts` - bridges external filesystems to IFileSystem interface
+  - Added 55 tests (122 total)
+  - Mutation scores: CommandRegistry 100%, createFileSystemAdapter 91.14%
+  - Merged PR #128 to epic-119
+- **#123 Complete**: Extract shell commands (cd, pwd, ls, help)
+  - Created `commands/pwd.ts` - print working directory
+  - Created `commands/cd.ts` - change directory with path resolution
+  - Created `commands/ls.ts` - list directory contents with sorting (dirs first)
+  - Created `commands/help.ts` - display help for commands (uses CommandRegistry)
+  - Created `commands/index.ts` - exports and `registerBuiltinCommands()` helper
+  - Added 59 tests (181 total)
+  - Mutation scores: pwd 100%, cd 100%, ls 100%, help 93.10%, commands overall 97.53%
+  - Merged PR #129 to epic-119
+- **#124 Complete**: Integrate shell-core into editor
+  - Added `@lua-learning/shell-core` as workspace dependency
+  - Added `isDirectory` method to `useFileSystem` hook
+  - Created `useShell.ts` hook that integrates shell-core with editor filesystem
+  - Created `ShellTerminal.tsx` component using xterm.js and useShell
+  - Added Shell tab to BottomPanel (alongside Terminal and REPL)
+  - Exposed `fileSystem` through IDEContext for shell integration
+  - Merged PR #130 to epic-119
+
+### 2025-12-11
+- **#124 Complete**: Integrate shell-core into editor
+  - Merged PR #130 to epic-119
+- **#125 Complete**: Shell-core documentation and cleanup
+  - Created comprehensive README.md for shell-core package with full API reference
+  - Updated docs/architecture.md with shell-core package structure and integration flow
+  - Fixed shell terminal bug: command output now appears on new line
+  - Fixed history navigation: prompt shows before command, no duplicates
+  - Added integration tests for ShellTerminal bug fixes
+  - Merged PR #132 to epic-119
+
+**All sub-issues complete! Epic ready for PR to main.**
+
+- Epic PR created: #133
+- All 6 sub-issues complete
+- Ready for final review
 
 ## Key Files
 
-- `src/styles/themes.css` - CSS custom properties for light/dark themes + transitions
-- `src/contexts/ThemeContext.tsx` - ThemeProvider component
-- `src/contexts/useTheme.ts` - useTheme hook
-- `src/contexts/types.ts` - Theme and ThemeContextValue types
-- `src/contexts/context.ts` - ThemeContext creation
-- `src/contexts/index.ts` - Public exports
-- `src/main.tsx` - ThemeProvider integration
-- `src/components/ActivityBar/ActivityBar.module.css` - Themed activity bar styles
-- `src/components/SidebarPanel/SidebarPanel.module.css` - Themed sidebar styles
-- `src/components/IDELayout/IDELayout.module.css` - Themed layout styles
-- `src/components/StatusBar/StatusBar.module.css` - Themed status bar styles
-- `src/components/EditorPanel/EditorPanel.module.css` - Themed editor panel styles
-- `src/components/TabBar/TabBar.module.css` - Themed tab bar styles
-- `src/components/BottomPanel/BottomPanel.module.css` - Themed bottom panel styles
-- `src/components/IDEResizeHandle/IDEResizeHandle.module.css` - Themed resize handle styles
-- `src/components/FileExplorer/FileExplorer.module.css` - Themed file explorer styles
-- `src/components/FileTree/FileTree.module.css` - Themed file tree styles
-- `src/components/FileTreeItem/FileTreeItem.module.css` - Themed file tree item styles
-- `e2e/theme-layout.spec.ts` - E2E tests for theme layout components
-- `src/components/BashTerminal/terminalTheme.ts` - xterm.js dark/light theme configuration
-- `src/components/BashTerminal/BashTerminal.module.css` - Themed terminal container styles
-- `src/components/LuaRepl/LuaRepl.module.css` - Themed REPL container styles
-- `src/components/BottomPanel/BottomPanel.module.css` - Themed bottom panel terminal output styles
-- `e2e/theme-terminal.spec.ts` - E2E tests for terminal theme colors
-- `e2e/theme-editor.spec.ts` - E2E tests for Monaco editor theme switching
-- `src/components/ThemeToggle/ThemeToggle.tsx` - Theme toggle button component
-- `src/components/ThemeToggle/ThemeToggle.module.css` - Theme toggle button styles
-- `e2e/theme-toggle.spec.ts` - E2E tests for theme toggle UI
+<!-- Populated as files are created/modified -->
+
+- `package.json` - Root workspace configuration
+- `packages/shell-core/package.json` - Shell-core package definition
+- `packages/shell-core/tsconfig.json` - TypeScript configuration
+- `packages/shell-core/vitest.config.ts` - Test configuration
+- `packages/shell-core/stryker.config.json` - Mutation testing configuration
+- `packages/shell-core/README.md` - Package documentation
+- `packages/shell-core/src/index.ts` - Package entry point with exports
+- `packages/shell-core/src/types.ts` - Core interfaces (IFileSystem, Command, etc.)
+- `packages/shell-core/src/pathUtils.ts` - Path manipulation utilities
+- `packages/shell-core/src/parseCommand.ts` - Command string parser
+- `packages/shell-core/src/CommandRegistry.ts` - Command registration and execution
+- `packages/shell-core/src/createFileSystemAdapter.ts` - External filesystem adapter
+- `packages/shell-core/src/commands/pwd.ts` - pwd command implementation
+- `packages/shell-core/src/commands/cd.ts` - cd command implementation
+- `packages/shell-core/src/commands/ls.ts` - ls command implementation
+- `packages/shell-core/src/commands/help.ts` - help command factory
+- `packages/shell-core/src/commands/index.ts` - Command exports and registration helper
+- `lua-learning-website/src/hooks/useShell.ts` - Shell hook integrating shell-core with editor
+- `lua-learning-website/src/components/ShellTerminal/ShellTerminal.tsx` - Shell terminal UI
+- `lua-learning-website/src/components/ShellTerminal/types.ts` - Shell terminal types
+- `lua-learning-website/src/components/ShellTerminal/index.ts` - Shell terminal exports
 
 ## Open Questions
 
@@ -114,11 +162,3 @@ Add support for light and dark mode themes in the editor, allowing users to swit
 ## Blockers
 
 (none)
-
-## Tech Debt
-
-| # | Description | Priority | Notes |
-|---|-------------|----------|-------|
-| #75 | Scope theme transitions to specific components instead of global `*` selector | Low | Address at end of epic if performance issues observed |
-| #95 | Extract shared useTheme mock to test utility | Low | PR #94 review feedback |
-| #96 | Extract E2E test timeouts to constants | Low | PR #94 review feedback |

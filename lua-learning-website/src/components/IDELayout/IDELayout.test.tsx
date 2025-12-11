@@ -38,6 +38,30 @@ vi.mock('../../contexts/useTheme', () => ({
   }),
 }))
 
+// Mock xterm.js for ShellTerminal
+vi.mock('@xterm/xterm', () => {
+  const MockTerminal = vi.fn().mockImplementation(function(this: Record<string, unknown>) {
+    this.loadAddon = vi.fn()
+    this.open = vi.fn()
+    this.write = vi.fn()
+    this.writeln = vi.fn()
+    this.onData = vi.fn()
+    this.dispose = vi.fn()
+    this.clear = vi.fn()
+    this.refresh = vi.fn()
+    this.rows = 24
+    this.options = {}
+  })
+  return { Terminal: MockTerminal }
+})
+
+vi.mock('@xterm/addon-fit', () => {
+  const MockFitAddon = vi.fn().mockImplementation(function(this: Record<string, unknown>) {
+    this.fit = vi.fn()
+  })
+  return { FitAddon: MockFitAddon }
+})
+
 describe('IDELayout', () => {
   describe('rendering', () => {
     it('should render IDEContextProvider (context available)', () => {
