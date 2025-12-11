@@ -1,15 +1,17 @@
 import { useState, useRef, useEffect } from 'react'
 import LuaRepl from '../LuaRepl'
+import { ShellTerminal } from '../ShellTerminal'
 import styles from './BottomPanel.module.css'
 import type { BottomPanelProps, BottomPanelTab } from './types'
 
 /**
- * Bottom panel with Terminal and REPL tabs
+ * Bottom panel with Terminal, REPL, and Shell tabs
  */
 export function BottomPanel({
   terminalOutput,
   isAwaitingInput = false,
   onSubmitInput,
+  fileSystem,
   className,
 }: BottomPanelProps) {
   const [activeTab, setActiveTab] = useState<BottomPanelTab>('terminal')
@@ -63,6 +65,18 @@ export function BottomPanel({
         >
           REPL
         </button>
+        {fileSystem && (
+          <button
+            type="button"
+            role="tab"
+            className={`${styles.tab} ${activeTab === 'shell' ? styles.active : ''}`}
+            onClick={() => setActiveTab('shell')}
+            aria-selected={activeTab === 'shell'}
+            aria-controls="shell-tabpanel"
+          >
+            Shell
+          </button>
+        )}
       </div>
       <div className={styles.content} role="tabpanel">
         {activeTab === 'terminal' && (
@@ -112,6 +126,11 @@ export function BottomPanel({
         {activeTab === 'repl' && (
           <div className={styles.replContent} id="repl-tabpanel">
             <LuaRepl embedded />
+          </div>
+        )}
+        {activeTab === 'shell' && fileSystem && (
+          <div className={styles.shellContent} id="shell-tabpanel">
+            <ShellTerminal fileSystem={fileSystem} embedded />
           </div>
         )}
       </div>

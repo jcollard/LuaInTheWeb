@@ -59,6 +59,8 @@ function IDELayoutInner({ className }: { className?: string }) {
     // Recent files
     recentFiles,
     clearRecentFiles,
+    // Filesystem (for shell)
+    fileSystem,
   } = useIDE()
 
   const [isRunning, setIsRunning] = useState(false)
@@ -217,6 +219,7 @@ function IDELayoutInner({ className }: { className?: string }) {
                         terminalOutput={terminalOutput}
                         isAwaitingInput={isAwaitingInput}
                         onSubmitInput={submitInput}
+                        fileSystem={fileSystem}
                       />
                     </IDEPanel>
                   </>

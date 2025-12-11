@@ -66,6 +66,13 @@
   flex-direction: column;
 }
 
+.shellContent {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 .outputContainer {
   padding: 8px 12px;
   font-family: 'Cascadia Code', Menlo, Monaco, 'Courier New', monospace;

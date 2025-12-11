@@ -1,5 +1,5 @@
 import type { UseLuaEngineReturn } from '../../hooks/types'
-import type { TreeNode } from '../../hooks/useFileSystem'
+import type { TreeNode, UseFileSystemReturn } from '../../hooks/useFileSystem'
 import type { RecentFile } from '../../hooks/useRecentFiles'
 import type { TabInfo } from '../TabBar'
 import type { ToastData } from '../Toast'
@@ -74,6 +74,9 @@ export interface IDEContextValue {
   // Recent files
   recentFiles: RecentFile[]
   clearRecentFiles: () => void
+
+  // Raw filesystem access (for shell integration)
+  fileSystem: UseFileSystemReturn
 }
 
 /**
