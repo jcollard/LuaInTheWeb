@@ -73,7 +73,8 @@
       "Bash(python issue-review.py:*)",
       "Bash(python update-pr.py:*)",
       "Bash(node scripts/capture-screenshots.js:*)",
-      "Bash(SCREENSHOT_SERVER_TIMEOUT=60000 node scripts/capture-screenshots.js:*)"
+      "Bash(SCREENSHOT_SERVER_TIMEOUT=60000 node scripts/capture-screenshots.js:*)",
+      "Bash(wc:*)"
     ],
     "deny": [
       "Bash(npm run dev)",

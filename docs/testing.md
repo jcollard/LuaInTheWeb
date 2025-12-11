@@ -59,6 +59,27 @@ src/
 │       └── luaHelpers.test.ts
 ```
 
+### File Size Limit
+
+**Test files must not exceed 500 lines** (excluding blank lines and comments). This limit is enforced by ESLint.
+
+Large test files:
+- Consume significant context when reading
+- Make it harder to find the right place to add tests
+- Increase risk of duplicating test cases
+
+When a test file approaches 500 lines, split it by logical grouping:
+
+```
+# Before (single large file)
+useMyHook.test.ts (800 lines)
+
+# After (split by concern)
+useMyHook.core.test.ts      # initialization, basic state
+useMyHook.actions.test.ts   # action handlers
+useMyHook.edge.test.ts      # edge cases, error handling
+```
+
 ### Test Naming
 
 Use descriptive names that explain the behavior:
