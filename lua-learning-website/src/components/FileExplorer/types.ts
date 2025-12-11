@@ -4,6 +4,7 @@ export interface FileExplorerProps {
   tree: TreeNode[]
   selectedPath?: string | null
   pendingNewFilePath?: string | null
+  pendingNewFolderPath?: string | null
   onCreateFile: (parentPath?: string) => void
   onCreateFolder: (parentPath?: string) => void
   onRenameFile: (oldPath: string, newName: string) => void
@@ -13,6 +14,7 @@ export interface FileExplorerProps {
   onSelectFile: (path: string) => void
   onMoveFile?: (sourcePath: string, targetFolderPath: string) => void
   onCancelPendingNewFile?: () => void
+  onCancelPendingNewFolder?: () => void
   className?: string
 }
 

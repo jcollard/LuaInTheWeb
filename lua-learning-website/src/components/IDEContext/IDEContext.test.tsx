@@ -1046,6 +1046,211 @@ describe('IDEContext', () => {
     })
   })
 
+  describe('new folder creation', () => {
+    beforeEach(() => {
+      localStorage.clear()
+    })
+
+    it('should provide generateUniqueFolderName function', () => {
+      // Arrange & Act
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Assert
+      expect(result.current.generateUniqueFolderName).toBeInstanceOf(Function)
+    })
+
+    it('should generate new-folder for first new folder', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Act
+      const folderName = result.current.generateUniqueFolderName()
+
+      // Assert
+      expect(folderName).toBe('new-folder')
+    })
+
+    it('should generate new-folder-1 if new-folder exists', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Create new-folder
+      act(() => {
+        result.current.createFolder('/new-folder')
+      })
+
+      // Act
+      const folderName = result.current.generateUniqueFolderName()
+
+      // Assert
+      expect(folderName).toBe('new-folder-1')
+    })
+
+    it('should skip existing numbered folders to find unique name', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Create folders
+      act(() => {
+        result.current.createFolder('/new-folder')
+        result.current.createFolder('/new-folder-1')
+        result.current.createFolder('/new-folder-2')
+      })
+
+      // Act
+      const folderName = result.current.generateUniqueFolderName()
+
+      // Assert
+      expect(folderName).toBe('new-folder-3')
+    })
+
+    it('should generate unique folder name in specified parent', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Create parent folder first
+      act(() => {
+        result.current.createFolder('/parent')
+      })
+
+      // Then create new-folder inside it (needs separate act for state to update)
+      act(() => {
+        result.current.createFolder('/parent/new-folder')
+      })
+
+      // Act
+      const folderName = result.current.generateUniqueFolderName('/parent')
+
+      // Assert
+      expect(folderName).toBe('new-folder-1')
+    })
+
+    it('should provide pendingNewFolderPath state', () => {
+      // Arrange & Act
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Assert
+      expect(result.current.pendingNewFolderPath).toBeNull()
+    })
+
+    it('should provide createFolderWithRename function', () => {
+      // Arrange & Act
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Assert
+      expect(result.current.createFolderWithRename).toBeInstanceOf(Function)
+    })
+
+    it('should set pendingNewFolderPath when createFolderWithRename is called', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Act
+      act(() => {
+        result.current.createFolderWithRename()
+      })
+
+      // Assert
+      expect(result.current.pendingNewFolderPath).toBe('/new-folder')
+    })
+
+    it('should create folder in filesystem when createFolderWithRename is called', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Act
+      act(() => {
+        result.current.createFolderWithRename()
+      })
+
+      // Assert
+      expect(result.current.fileTree).toContainEqual(
+        expect.objectContaining({ path: '/new-folder', type: 'folder' })
+      )
+    })
+
+    it('should clear pendingNewFolderPath after clearPendingNewFolder is called', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFolderWithRename()
+      })
+      expect(result.current.pendingNewFolderPath).toBe('/new-folder')
+
+      // Act
+      act(() => {
+        result.current.clearPendingNewFolder()
+      })
+
+      // Assert
+      expect(result.current.pendingNewFolderPath).toBeNull()
+    })
+
+    it('should create folder in specified parent folder', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Create a folder first
+      act(() => {
+        result.current.createFolder('/utils')
+      })
+
+      // Act
+      act(() => {
+        result.current.createFolderWithRename('/utils')
+      })
+
+      // Assert
+      expect(result.current.pendingNewFolderPath).toBe('/utils/new-folder')
+    })
+
+    it('should generate unique name when folder already exists at target', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Create new-folder first
+      act(() => {
+        result.current.createFolder('/new-folder')
+      })
+
+      // Act
+      act(() => {
+        result.current.createFolderWithRename()
+      })
+
+      // Assert
+      expect(result.current.pendingNewFolderPath).toBe('/new-folder-1')
+      expect(result.current.fileTree).toContainEqual(
+        expect.objectContaining({ path: '/new-folder-1', type: 'folder' })
+      )
+    })
+  })
+
   describe('error handling', () => {
     beforeEach(() => {
       localStorage.clear()

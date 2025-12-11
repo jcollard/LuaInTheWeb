@@ -76,6 +76,10 @@ describe('useIDE', () => {
         generateUniqueFileName: vi.fn(),
         createFileWithRename: vi.fn(),
         clearPendingNewFile: vi.fn(),
+        pendingNewFolderPath: null,
+        generateUniqueFolderName: vi.fn(),
+        createFolderWithRename: vi.fn(),
+        clearPendingNewFolder: vi.fn(),
         recentFiles: [],
         clearRecentFiles: vi.fn(),
         fileSystem: {
@@ -145,6 +149,10 @@ describe('useIDE', () => {
         generateUniqueFileName: vi.fn(),
         createFileWithRename: vi.fn(),
         clearPendingNewFile: vi.fn(),
+        pendingNewFolderPath: null,
+        generateUniqueFolderName: vi.fn(),
+        createFolderWithRename: vi.fn(),
+        clearPendingNewFolder: vi.fn(),
         recentFiles: [],
         clearRecentFiles: vi.fn(),
         fileSystem: {

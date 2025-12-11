@@ -307,6 +307,65 @@ test.describe('File Explorer', () => {
     })
   })
 
+  test.describe('new folder inline rename', () => {
+    test('new folder immediately enters rename mode', async ({ page }) => {
+      // Act - Click New Folder button in sidebar
+      const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new folder/i }).click()
+
+      // Assert - Input should appear in sidebar for renaming
+      await expect(sidebar.getByRole('textbox')).toBeVisible()
+    })
+
+    test('can rename new folder by typing and pressing Enter', async ({ page }) => {
+      // Act - Click New Folder button and rename
+      const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new folder/i }).click()
+      await page.waitForTimeout(100)
+
+      // Type new name
+      const input = sidebar.getByRole('textbox')
+      await input.clear()
+      await input.fill('my-scripts')
+      await input.press('Enter')
+      await page.waitForTimeout(200)
+
+      // Assert - Folder should be renamed in tree
+      await expect(page.getByText('my-scripts')).toBeVisible()
+    })
+
+    test('pressing Escape on new folder deletes it', async ({ page }) => {
+      // Act - Click New Folder button and cancel with Escape
+      const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new folder/i }).click()
+      await page.waitForTimeout(100)
+
+      // Press Escape to cancel
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(200)
+
+      // Assert - Folder should be deleted (new-folder should not exist)
+      await expect(page.getByText('new-folder')).not.toBeVisible()
+    })
+
+    test('accepting default folder name creates folder in tree', async ({ page }) => {
+      // Act - Create folder and accept default name
+      const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new folder/i }).click()
+      await page.waitForTimeout(100)
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name 'new-folder'
+
+      // Wait for rename mode to exit (textbox should disappear)
+      await expect(input).not.toBeVisible({ timeout: 3000 })
+
+      // Assert - Folder should exist with default name
+      const tree = page.getByRole('tree', { name: 'File Explorer' })
+      const folderItem = tree.getByRole('treeitem', { name: /new-folder/i })
+      await expect(folderItem).toBeVisible()
+    })
+  })
+
   test.describe('drag and drop', () => {
     test('file items are draggable', async ({ page }) => {
       // Arrange - Create a file and complete rename

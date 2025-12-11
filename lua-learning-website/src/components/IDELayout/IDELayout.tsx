@@ -36,7 +36,6 @@ function IDELayoutInner({ className }: { className?: string }) {
     runCode,
     // Filesystem
     fileTree,
-    createFolder,
     deleteFile,
     deleteFolder,
     renameFile,
@@ -48,6 +47,10 @@ function IDELayoutInner({ className }: { className?: string }) {
     pendingNewFilePath,
     createFileWithRename,
     clearPendingNewFile,
+    // New folder creation
+    pendingNewFolderPath,
+    createFolderWithRename,
+    clearPendingNewFolder,
     // Tabs
     tabs,
     activeTab,
@@ -94,15 +97,10 @@ function IDELayoutInner({ className }: { className?: string }) {
     createFileWithRename(parentPath)
   }, [createFileWithRename])
 
-  // Wrapper for FileExplorer's onCreateFolder - generates a unique folder name
+  // Wrapper for FileExplorer's onCreateFolder - creates with unique folder name and starts rename
   const handleCreateFolder = useCallback((parentPath?: string) => {
-    const baseName = 'new-folder'
-    const parentDir = parentPath || ''
-    const fullPath = parentDir === '/' || parentDir === ''
-      ? `/${baseName}`
-      : `${parentDir}/${baseName}`
-    createFolder(fullPath)
-  }, [createFolder])
+    createFolderWithRename(parentPath)
+  }, [createFolderWithRename])
 
   // Handle tab close with dirty confirmation
   const handleCloseTab = useCallback((path: string) => {
@@ -141,6 +139,7 @@ function IDELayoutInner({ className }: { className?: string }) {
     tree: fileTree,
     selectedPath: activeTab,
     pendingNewFilePath,
+    pendingNewFolderPath,
     onCreateFile: handleCreateFile,
     onCreateFolder: handleCreateFolder,
     onRenameFile: renameFile,
@@ -150,6 +149,7 @@ function IDELayoutInner({ className }: { className?: string }) {
     onSelectFile: openFile,
     onMoveFile: moveFile,
     onCancelPendingNewFile: clearPendingNewFile,
+    onCancelPendingNewFolder: clearPendingNewFolder,
   }
 
   // Tab bar props for EditorPanel (only when tabs exist)
