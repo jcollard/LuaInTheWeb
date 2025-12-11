@@ -52,6 +52,11 @@
 .content {
   flex: 1;
   overflow: hidden;
+  position: relative;
+}
+
+.hidden {
+  display: none !important;
 }
 
 .terminalContent {
