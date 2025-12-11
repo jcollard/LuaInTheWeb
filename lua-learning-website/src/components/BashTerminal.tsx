@@ -5,6 +5,14 @@ import '@xterm/xterm/css/xterm.css'
 import styles from './BashTerminal/BashTerminal.module.css'
 import { useTheme } from '../contexts/useTheme'
 import { getTerminalTheme } from './BashTerminal/terminalTheme'
+import {
+  handleEnterKey,
+  handleArrowUp,
+  handleArrowDown,
+  handleBackspace,
+  handleCharacter,
+  type InputState,
+} from './BashTerminal/inputKeyHandlers'
 
 export interface BashTerminalHandle {
   writeln: (text: string) => void
@@ -16,7 +24,6 @@ export interface BashTerminalHandle {
 
 interface BashTerminalProps {
   onCommand?: (command: string) => void
-  /** When true, hides the Output header for embedded IDE context */
   embedded?: boolean
 }
 
@@ -34,93 +41,86 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
   const historyIndexRef = useRef<number>(-1)
   const multiLineRef = useRef<boolean>(false)
   const multiLineBufferRef = useRef<string[]>([])
-  const multiLineCursorLineRef = useRef<number>(0)  // Current line index in multi-line mode
-  const multiLineStartRowRef = useRef<number>(0)  // Terminal row where multi-line input starts
-  const collapsedHistoryItemRef = useRef<string | null>(null)  // Stores original multi-line version when collapsed
+  const multiLineCursorLineRef = useRef<number>(0)
+  const multiLineStartRowRef = useRef<number>(0)
+  const collapsedHistoryItemRef = useRef<string | null>(null)
+
+  const getInputState = useCallback((): InputState => ({
+    currentLine: currentLineRef.current,
+    cursorPosition: cursorPositionRef.current,
+    history: historyRef.current,
+    historyIndex: historyIndexRef.current,
+    isMultiLineMode: multiLineRef.current,
+    multiLineBuffer: multiLineBufferRef.current,
+    multiLineCursorLine: multiLineCursorLineRef.current,
+    collapsedHistoryItem: collapsedHistoryItemRef.current,
+  }), [])
+
+  const applyStateUpdate = useCallback((update: Partial<InputState>) => {
+    if (update.currentLine !== undefined) currentLineRef.current = update.currentLine
+    if (update.cursorPosition !== undefined) cursorPositionRef.current = update.cursorPosition
+    if (update.history !== undefined) historyRef.current = update.history
+    if (update.historyIndex !== undefined) historyIndexRef.current = update.historyIndex
+    if (update.isMultiLineMode !== undefined) multiLineRef.current = update.isMultiLineMode
+    if (update.multiLineBuffer !== undefined) multiLineBufferRef.current = update.multiLineBuffer
+    if (update.multiLineCursorLine !== undefined) multiLineCursorLineRef.current = update.multiLineCursorLine
+    if (update.collapsedHistoryItem !== undefined) collapsedHistoryItemRef.current = update.collapsedHistoryItem
+  }, [])
 
   const redrawMultiLineFrom = useCallback((startLine: number) => {
     const term = xtermRef.current
     if (!term || !multiLineRef.current) return
 
-    // Get lines to redraw from the specified start line
     const linesToRedraw = multiLineBufferRef.current.slice(startLine)
     const currentLineIndex = multiLineCursorLineRef.current - startLine
-
-    // Save current cursor column position
     const savedCursorPos = cursorPositionRef.current
 
-    // Clear everything from cursor to end of screen
-    term.write('\x1b[J')  // Clear from cursor to end of screen
-
-    // Move to start of current line and clear it completely
-    term.write('\r\x1b[K')
-
-    // Write continuation prompt + first line content
+    term.write('\x1b[J\r\x1b[K')
     term.write('  ')
     term.write(linesToRedraw[0])
 
-    // Write remaining lines below
     for (let i = 1; i < linesToRedraw.length; i++) {
       term.writeln('')
       term.write('  ')
       term.write(linesToRedraw[i])
     }
 
-    // Move cursor back to the current line
     const linesToGoUp = linesToRedraw.length - 1 - currentLineIndex
-    if (linesToGoUp > 0) {
-      term.write(`\x1b[${linesToGoUp}A`)  // Move up N lines
-    }
+    if (linesToGoUp > 0) term.write(`\x1b[${linesToGoUp}A`)
 
-    // Position cursor at the right column on the current line
-    term.write('\r')  // Start of line
-    term.write('  ')  // After prompt
-    if (savedCursorPos > 0) {
-      term.write(currentLineRef.current.substring(0, savedCursorPos))
-    }
+    term.write('\r  ')
+    if (savedCursorPos > 0) term.write(currentLineRef.current.substring(0, savedCursorPos))
   }, [])
-
 
   const handleShiftEnter = useCallback(() => {
     const term = xtermRef.current
     if (!term) return
 
     if (!multiLineRef.current) {
-      // Check if we're expanding a collapsed history item
       if (collapsedHistoryItemRef.current) {
-        // Expand the collapsed multi-line history item
         const originalText = collapsedHistoryItemRef.current
         collapsedHistoryItemRef.current = null
-
-        // Enter multi-line mode with the original lines
         multiLineRef.current = true
         multiLineBufferRef.current = originalText.split('\n')
         multiLineCursorLineRef.current = 0
         multiLineStartRowRef.current = term.buffer.active.cursorY
 
-        // Clear current line and redraw
         term.write('\r\x1b[K')
         term.writeln(' \x1b[33m(multi-line mode - Shift+Enter to execute)\x1b[0m')
 
-        // Display all lines
         for (let i = 0; i < multiLineBufferRef.current.length; i++) {
           term.write('  ')
           term.write(multiLineBufferRef.current[i])
-          if (i < multiLineBufferRef.current.length - 1) {
-            term.writeln('')
-          }
+          if (i < multiLineBufferRef.current.length - 1) term.writeln('')
         }
 
-        // Set state to last line (cursor is already at the end after displaying)
         const lastLineIndex = multiLineBufferRef.current.length - 1
         multiLineCursorLineRef.current = lastLineIndex
         currentLineRef.current = multiLineBufferRef.current[lastLineIndex]
         cursorPositionRef.current = currentLineRef.current.length
-
         return
       }
 
-      // Enter multi-line mode normally
       multiLineRef.current = true
       const firstLine = currentLineRef.current
       multiLineBufferRef.current = [firstLine]
@@ -129,46 +129,29 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
 
       term.writeln(' \x1b[33m(multi-line mode - Shift+Enter to execute)\x1b[0m')
       term.write('  ')
-
-      // Keep cursor on same line
       currentLineRef.current = firstLine
       cursorPositionRef.current = firstLine.length
       term.write(firstLine)
     } else {
-      // Exit multi-line mode and execute
-      // Save current line
       multiLineBufferRef.current[multiLineCursorLineRef.current] = currentLineRef.current
       const fullCommand = multiLineBufferRef.current.join('\n')
-
-      // Move cursor to the end of the input (last line, end position)
       const lastLineIndex = multiLineBufferRef.current.length - 1
       const linesToMove = lastLineIndex - multiLineCursorLineRef.current
 
-      if (linesToMove > 0) {
-        // Move down to last line
-        term.write(`\x1b[${linesToMove}B`)
-      } else if (linesToMove < 0) {
-        // Move up to last line
-        term.write(`\x1b[${Math.abs(linesToMove)}A`)
-      }
+      if (linesToMove > 0) term.write(`\x1b[${linesToMove}B`)
+      else if (linesToMove < 0) term.write(`\x1b[${Math.abs(linesToMove)}A`)
 
-      // Move to end of last line
       const lastLine = multiLineBufferRef.current[lastLineIndex]
-      term.write('\r')  // Start of line
-      term.write('  ')  // After prompt
-      term.write(lastLine)  // Write to end of line
-
-      // Add new line before executing
+      term.write('\r  ')
+      term.write(lastLine)
       term.writeln('')
 
-      // Reset multi-line state
       multiLineRef.current = false
       multiLineBufferRef.current = []
       multiLineCursorLineRef.current = 0
       currentLineRef.current = ''
       cursorPositionRef.current = 0
 
-      // Execute the command
       if (onCommand && fullCommand.trim()) {
         historyRef.current.push(fullCommand.trim())
         historyIndexRef.current = historyRef.current.length
@@ -183,16 +166,11 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
 
     const code = data.charCodeAt(0)
 
-    // Check for Shift+Enter (escape sequence varies by terminal)
-    // We'll detect it by checking for specific escape sequences
-    if (data === '\r' || data === '\n') {
-      // This is a regular Enter without Shift
-      const input = currentLineRef.current
-
-      // If waiting for input (io.read), resolve the promise
+    // Handle Enter key
+    if (data === '\r' || data === '\n' || code === 13) {
       if (isReadingRef.current && inputResolveRef.current) {
         term.writeln('')
-        inputResolveRef.current(input)
+        inputResolveRef.current(currentLineRef.current)
         inputResolveRef.current = null
         isReadingRef.current = false
         currentLineRef.current = ''
@@ -200,301 +178,102 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
         return
       }
 
-      // If in multi-line mode, add new line
-      if (multiLineRef.current) {
-        // Split current line at cursor position
-        const beforeCursor = input.slice(0, cursorPositionRef.current)
-        const afterCursor = input.slice(cursorPositionRef.current)
+      const result = handleEnterKey(getInputState())
+      applyStateUpdate(result.stateUpdate)
 
-        // Save the line where Enter was pressed
-        const lineBeforeSplit = multiLineCursorLineRef.current
-
-        // Update current line with content before cursor
-        multiLineBufferRef.current[lineBeforeSplit] = beforeCursor
-
-        // Insert new line with content after cursor
-        multiLineCursorLineRef.current++
-        multiLineBufferRef.current.splice(multiLineCursorLineRef.current, 0, afterCursor)
-
-        // Set current line to the new line content
-        currentLineRef.current = afterCursor
-        cursorPositionRef.current = 0
-
-        // Redraw from the line where we pressed Enter
-        redrawMultiLineFrom(lineBeforeSplit)
-        return
-      }
-
-      // Otherwise, if onCommand is provided, call it
-      term.writeln('')
-      if (onCommand && input.trim()) {
-        // Add to history
-        historyRef.current.push(input.trim())
-        historyIndexRef.current = historyRef.current.length
-        onCommand(input.trim())
-      }
-
-      currentLineRef.current = ''
-      cursorPositionRef.current = 0
-      return
-    }
-
-    // Handle Enter key (code 13 - this catches some terminals)
-    if (code === 13) {
-      const input = currentLineRef.current
-
-      // If waiting for input (io.read), resolve the promise
-      if (isReadingRef.current && inputResolveRef.current) {
+      if (result.isMultiLineNewLine && result.lineBeforeSplit !== undefined) {
+        redrawMultiLineFrom(result.lineBeforeSplit)
+      } else {
         term.writeln('')
-        inputResolveRef.current(input)
-        inputResolveRef.current = null
-        isReadingRef.current = false
-        currentLineRef.current = ''
-        cursorPositionRef.current = 0
-        return
+        if (result.commandToExecute && onCommand) {
+          onCommand(result.commandToExecute)
+        }
       }
-
-      // If in multi-line mode, add new line
-      if (multiLineRef.current) {
-        // Split current line at cursor position
-        const beforeCursor = input.slice(0, cursorPositionRef.current)
-        const afterCursor = input.slice(cursorPositionRef.current)
-
-        // Save the line where Enter was pressed
-        const lineBeforeSplit = multiLineCursorLineRef.current
-
-        // Update current line with content before cursor
-        multiLineBufferRef.current[lineBeforeSplit] = beforeCursor
-
-        // Insert new line with content after cursor
-        multiLineCursorLineRef.current++
-        multiLineBufferRef.current.splice(multiLineCursorLineRef.current, 0, afterCursor)
-
-        // Set current line to the new line content
-        currentLineRef.current = afterCursor
-        cursorPositionRef.current = 0
-
-        // Redraw from the line where we pressed Enter
-        redrawMultiLineFrom(lineBeforeSplit)
-        return
-      }
-
-      // Otherwise, if onCommand is provided, call it
-      term.writeln('')
-      if (onCommand && input.trim()) {
-        // Add to history
-        historyRef.current.push(input.trim())
-        historyIndexRef.current = historyRef.current.length
-        onCommand(input.trim())
-      }
-
-      currentLineRef.current = ''
-      cursorPositionRef.current = 0
       return
     }
 
     // Handle Arrow Up
     if (data === '\x1b[A') {
-      // In multi-line mode, move cursor to previous line
-      if (multiLineRef.current) {
-        if (multiLineCursorLineRef.current > 0) {
-          // Save current line content
-          multiLineBufferRef.current[multiLineCursorLineRef.current] = currentLineRef.current
+      const result = handleArrowUp(getInputState())
+      applyStateUpdate(result.stateUpdate)
 
-          // Move cursor up one line
-          term.write('\x1b[A')  // Move cursor up
-          term.write('\r')       // Move to start of line
-          term.write('  ')       // Position after prompt
-
-          // Move to previous line in buffer
-          multiLineCursorLineRef.current--
-          currentLineRef.current = multiLineBufferRef.current[multiLineCursorLineRef.current]
-
-          // Position cursor at same column or end of line
-          const targetPos = Math.min(cursorPositionRef.current, currentLineRef.current.length)
-          cursorPositionRef.current = targetPos
-          term.write(currentLineRef.current.substring(0, targetPos))
-        }
-        return
-      }
-
-      // Navigate history only when NOT in multi-line mode
-      if (historyRef.current.length > 0 && historyIndexRef.current > 0) {
-        historyIndexRef.current--
-        const historyCommand = historyRef.current[historyIndexRef.current]
-
-        // Check if this is a multi-line command
-        let displayCommand = historyCommand
-        if (historyCommand.includes('\n')) {
-          // Collapse newlines to spaces for display
-          displayCommand = historyCommand.replace(/\n/g, ' ')
-          collapsedHistoryItemRef.current = historyCommand
-        } else {
-          collapsedHistoryItemRef.current = null
-        }
-
-        // Clear current line
-        term.write('\r\x1b[K')
-        term.write('\x1b[32m> \x1b[0m' + displayCommand)
-
-        currentLineRef.current = displayCommand
-        cursorPositionRef.current = displayCommand.length
+      if (multiLineRef.current && result.stateUpdate.multiLineCursorLine !== undefined) {
+        term.write('\x1b[A\r  ')
+        const targetPos = result.stateUpdate.cursorPosition ?? 0
+        term.write((result.stateUpdate.currentLine ?? '').substring(0, targetPos))
+      } else if (result.displayCommand !== undefined) {
+        term.write('\r\x1b[K\x1b[32m> \x1b[0m' + result.displayCommand)
       }
       return
     }
 
     // Handle Arrow Down
     if (data === '\x1b[B') {
-      // In multi-line mode, move cursor to next line
-      if (multiLineRef.current) {
-        if (multiLineCursorLineRef.current < multiLineBufferRef.current.length - 1) {
-          // Save current line content
-          multiLineBufferRef.current[multiLineCursorLineRef.current] = currentLineRef.current
+      const result = handleArrowDown(getInputState())
+      applyStateUpdate(result.stateUpdate)
 
-          // Move cursor down one line
-          term.write('\x1b[B')  // Move cursor down
-          term.write('\r')       // Move to start of line
-          term.write('  ')       // Position after prompt
-
-          // Move to next line in buffer
-          multiLineCursorLineRef.current++
-          currentLineRef.current = multiLineBufferRef.current[multiLineCursorLineRef.current]
-
-          // Position cursor at same column or end of line
-          const targetPos = Math.min(cursorPositionRef.current, currentLineRef.current.length)
-          cursorPositionRef.current = targetPos
-          term.write(currentLineRef.current.substring(0, targetPos))
-        }
-        return
-      }
-
-      // Navigate history only when NOT in multi-line mode
-      if (historyIndexRef.current < historyRef.current.length) {
-        historyIndexRef.current++
-
-        // Clear current line
-        term.write('\r\x1b[K')
-        term.write('\x1b[32m> \x1b[0m')
-
-        if (historyIndexRef.current < historyRef.current.length) {
-          const historyCommand = historyRef.current[historyIndexRef.current]
-
-          // Check if this is a multi-line command
-          let displayCommand = historyCommand
-          if (historyCommand.includes('\n')) {
-            // Collapse newlines to spaces for display
-            displayCommand = historyCommand.replace(/\n/g, ' ')
-            collapsedHistoryItemRef.current = historyCommand
-          } else {
-            collapsedHistoryItemRef.current = null
-          }
-
-          term.write(displayCommand)
-          currentLineRef.current = displayCommand
-          cursorPositionRef.current = displayCommand.length
-        } else {
-          currentLineRef.current = ''
-          cursorPositionRef.current = 0
-          collapsedHistoryItemRef.current = null
-        }
+      if (multiLineRef.current && result.stateUpdate.multiLineCursorLine !== undefined) {
+        term.write('\x1b[B\r  ')
+        const targetPos = result.stateUpdate.cursorPosition ?? 0
+        term.write((result.stateUpdate.currentLine ?? '').substring(0, targetPos))
+      } else if (result.displayCommand !== undefined) {
+        term.write('\r\x1b[K\x1b[32m> \x1b[0m' + result.displayCommand)
       }
       return
     }
 
-    // Handle Arrow Left (move cursor left)
+    // Handle Arrow Left
     if (data === '\x1b[D') {
       if (cursorPositionRef.current > 0) {
         cursorPositionRef.current--
-        term.write('\x1b[D')  // Move cursor left
+        term.write('\x1b[D')
       }
       return
     }
 
-    // Handle Arrow Right (move cursor right)
+    // Handle Arrow Right
     if (data === '\x1b[C') {
       if (cursorPositionRef.current < currentLineRef.current.length) {
         cursorPositionRef.current++
-        term.write('\x1b[C')  // Move cursor right
+        term.write('\x1b[C')
       }
       return
     }
 
-    // Handle Home key (move cursor to start of line)
-    // Home key escape sequences: \x1b[H, \x1b[1~, or \x1bOH
+    // Handle Home key
     if (data === '\x1b[H' || data === '\x1b[1~' || data === '\x1bOH') {
       const pos = cursorPositionRef.current
       if (pos > 0) {
         cursorPositionRef.current = 0
-        term.write(`\x1b[${pos}D`)  // Move cursor left by pos positions
+        term.write(`\x1b[${pos}D`)
       }
       return
     }
 
-    // Handle End key (move cursor to end of line)
-    // End key escape sequences: \x1b[F, \x1b[4~, or \x1bOF
+    // Handle End key
     if (data === '\x1b[F' || data === '\x1b[4~' || data === '\x1bOF') {
       const pos = cursorPositionRef.current
       const lineLength = currentLineRef.current.length
       if (pos < lineLength) {
-        const moveCount = lineLength - pos
         cursorPositionRef.current = lineLength
-        term.write(`\x1b[${moveCount}C`)  // Move cursor right
+        term.write(`\x1b[${lineLength - pos}C`)
       }
       return
     }
 
     // Handle Backspace
     if (code === 127) {
-      // In multi-line mode at the beginning of a line (not the first line)
-      if (multiLineRef.current && cursorPositionRef.current === 0 && multiLineCursorLineRef.current > 0) {
-        // Merge current line with previous line
-        const currentContent = currentLineRef.current
-        const previousLineIndex = multiLineCursorLineRef.current - 1
-        const previousContent = multiLineBufferRef.current[previousLineIndex]
+      const result = handleBackspace(getInputState())
 
-        // Merge the lines
-        const mergedContent = previousContent + currentContent
-        multiLineBufferRef.current[previousLineIndex] = mergedContent
-
-        // Remove the current line from the buffer
-        multiLineBufferRef.current.splice(multiLineCursorLineRef.current, 1)
-
-        // Clear current line, move up, go to start of previous line
-        term.write('\r\x1b[K')  // Clear current line
-        term.write('\x1b[A')    // Move cursor up
-        term.write('\r')        // Move to start of line
-
-        // Move to previous line in our state
-        multiLineCursorLineRef.current = previousLineIndex
-        currentLineRef.current = mergedContent
-        cursorPositionRef.current = previousContent.length
-
-        // Redraw from the previous line (where we are now)
-        // This will clear everything from here to end of screen and redraw properly
-        redrawMultiLineFrom(previousLineIndex)
-        return
-      }
-
-      // Normal backspace behavior
-      if (cursorPositionRef.current > 0) {
-        const line = currentLineRef.current
-        const beforeCursor = line.slice(0, cursorPositionRef.current - 1)
-        const afterCursor = line.slice(cursorPositionRef.current)
-        currentLineRef.current = beforeCursor + afterCursor
-        cursorPositionRef.current--
-
-        // Update buffer in multi-line mode
-        if (multiLineRef.current) {
-          multiLineBufferRef.current[multiLineCursorLineRef.current] = currentLineRef.current
-        }
-
-        // Redraw the line from cursor position
-        const remaining = afterCursor + ' '
-        term.write('\b' + remaining)
-        // Move cursor back to correct position
-        for (let i = 0; i < afterCursor.length + 1; i++) {
-          term.write('\b')
-        }
+      if (result.shouldMergeLines && result.previousLineIndex !== undefined) {
+        applyStateUpdate(result)
+        term.write('\r\x1b[K\x1b[A\r')
+        redrawMultiLineFrom(result.previousLineIndex)
+      } else if (result.currentLine !== undefined) {
+        const afterCursor = currentLineRef.current.slice(cursorPositionRef.current)
+        applyStateUpdate(result)
+        term.write('\b' + afterCursor + ' ')
+        for (let i = 0; i < afterCursor.length + 1; i++) term.write('\b')
       }
       return
     }
@@ -503,20 +282,17 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
     if (code === 3) {
       term.write('^C')
       term.writeln('')
-
-      // Exit multi-line mode if active
       if (multiLineRef.current) {
         multiLineRef.current = false
         multiLineBufferRef.current = []
         multiLineCursorLineRef.current = 0
       }
-
       currentLineRef.current = ''
       cursorPositionRef.current = 0
       return
     }
 
-    // Handle Ctrl+L (clear screen)
+    // Handle Ctrl+L
     if (code === 12) {
       term.clear()
       return
@@ -524,52 +300,33 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
 
     // Handle printable characters
     if (code >= 32 && code < 127) {
-      const line = currentLineRef.current
-      const beforeCursor = line.slice(0, cursorPositionRef.current)
-      const afterCursor = line.slice(cursorPositionRef.current)
-      currentLineRef.current = beforeCursor + data + afterCursor
-
-      // Write the new character and any text after it
+      const afterCursor = currentLineRef.current.slice(cursorPositionRef.current)
+      const result = handleCharacter(getInputState(), data)
+      applyStateUpdate(result)
       term.write(data + afterCursor)
-
-      // Move cursor back to correct position (after the newly inserted character)
-      for (let i = 0; i < afterCursor.length; i++) {
-        term.write('\b')
-      }
-
-      cursorPositionRef.current++
+      for (let i = 0; i < afterCursor.length; i++) term.write('\b')
     }
-  }, [onCommand, redrawMultiLineFrom])
+  }, [onCommand, getInputState, applyStateUpdate, redrawMultiLineFrom])
 
   useEffect(() => {
     if (!terminalRef.current) return
 
-    // Create terminal instance WITHOUT theme (set after open per xterm.js docs)
     const terminal = new Terminal({
       cursorBlink: true,
       fontSize: 14,
       fontFamily: '"Cascadia Code", Menlo, Monaco, "Courier New", monospace',
     })
 
-    // Create and load fit addon
     const fitAddon = new FitAddon()
     terminal.loadAddon(fitAddon)
-
-    // Open terminal in the container
     terminal.open(terminalRef.current)
-
-    // Set theme AFTER open() per xterm.js documentation
     terminal.options.theme = getTerminalTheme(initialThemeRef.current)
-
     fitAddon.fit()
 
-    // Store references
     xtermRef.current = terminal
     fitAddonRef.current = fitAddon
 
-    // Handle custom key events (for Shift+Enter detection)
     terminal.attachCustomKeyEventHandler((event) => {
-      // Detect Shift+Enter
       if (event.key === 'Enter' && event.shiftKey && event.type === 'keydown') {
         event.preventDefault()
         handleShiftEnter()
@@ -578,44 +335,28 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
       return true
     })
 
-    // Handle terminal input
-    terminal.onData((data) => {
-      handleInput(data)
-    })
+    terminal.onData((data) => handleInput(data))
 
-    // Handle window resize
-    const handleResize = () => {
-      fitAddon.fit()
-    }
+    const handleResize = () => fitAddon.fit()
     window.addEventListener('resize', handleResize)
 
-    // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize)
       terminal.dispose()
     }
   }, [handleInput, handleShiftEnter])
 
-  // Update terminal theme when theme changes
   useEffect(() => {
     if (xtermRef.current) {
       xtermRef.current.options.theme = getTerminalTheme(theme)
-      // Force refresh to repaint all rows with new theme colors
       xtermRef.current.refresh(0, xtermRef.current.rows)
     }
   }, [theme])
 
-  // Expose methods to parent component
   useImperativeHandle(ref, () => ({
-    writeln: (text: string) => {
-      xtermRef.current?.writeln(text)
-    },
-    write: (text: string) => {
-      xtermRef.current?.write(text)
-    },
-    clear: () => {
-      xtermRef.current?.clear()
-    },
+    writeln: (text: string) => xtermRef.current?.writeln(text),
+    write: (text: string) => xtermRef.current?.write(text),
+    clear: () => xtermRef.current?.clear(),
     readLine: async () => {
       return new Promise<string>((resolve) => {
         isReadingRef.current = true
@@ -625,9 +366,7 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
         cursorPositionRef.current = 0
       })
     },
-    showPrompt: () => {
-      xtermRef.current?.write('\x1b[32m> \x1b[0m')
-    },
+    showPrompt: () => xtermRef.current?.write('\x1b[32m> \x1b[0m'),
   }))
 
   const containerClassName = `${styles.container}${embedded ? ` ${styles.containerEmbedded}` : ''}`

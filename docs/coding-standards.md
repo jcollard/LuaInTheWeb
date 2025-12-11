@@ -372,6 +372,39 @@ function handleKeyDown(e: React.KeyboardEvent) {
 | Types/Interfaces | PascalCase | `TerminalProps` |
 | Files | Match export name | `LuaPlayground.tsx` |
 
+## File Size Limits
+
+ESLint enforces maximum line limits to maintain code quality and encourage good file decomposition:
+
+| File Type | Max Lines | Enforcement |
+|-----------|-----------|-------------|
+| Source files (`*.ts`, `*.tsx`) | 400 | Warning |
+| Test files (`*.test.ts`, `*.test.tsx`) | 500 | Error |
+
+Line counts exclude blank lines and comments (`skipBlankLines: true`, `skipComments: true`).
+
+### When a File Exceeds Limits
+
+If a file grows beyond the limit:
+
+1. **Extract logical groupings** into separate modules/hooks
+2. **Move types** to a dedicated `types.ts` file
+3. **Move utilities** to a dedicated `utils.ts` file
+4. **Split large hooks** into focused, single-responsibility hooks
+5. **Split large components** into smaller sub-components
+
+### Example Extraction
+
+```typescript
+// Before: Large hook with 500+ lines
+// src/hooks/useFileSystem.ts
+
+// After: Split into focused modules
+// src/hooks/fileSystemTypes.ts     - Type definitions
+// src/hooks/fileSystemUtils.ts     - Helper functions
+// src/hooks/useFileSystem.ts       - Main hook (imports from above)
+```
+
 ## Checklist
 
 Before submitting code:
@@ -386,3 +419,5 @@ Before submitting code:
 - [ ] Keyboard accessible
 - [ ] Tests written for hooks (logic)
 - [ ] Tests written for components (rendering)
+- [ ] Source files under 400 lines (excluding blanks/comments)
+- [ ] Test files under 500 lines (excluding blanks/comments)
