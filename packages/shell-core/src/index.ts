@@ -46,3 +46,11 @@ export {
   registerBuiltinCommands,
   builtinCommands,
 } from './commands'
+
+// Tab completion
+export {
+  getCommandCompletions,
+  getPathCompletions,
+  getCompletionContext,
+} from './tabCompletion'
+export type { CompletionContext } from './tabCompletion'

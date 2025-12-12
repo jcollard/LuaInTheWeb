@@ -1,4 +1,9 @@
 import { useState, useCallback, useRef } from 'react'
+import {
+  getCommandCompletions,
+  getCompletionContext,
+  type FileEntry,
+} from '@lua-learning/shell-core'
 
 /**
  * Terminal command types for rendering.
@@ -11,11 +16,27 @@ export interface TerminalCommand {
   count?: number
 }
 
+/**
+ * Result of tab completion including terminal commands and suggestions
+ */
+export interface TabCompletionResult {
+  /** Terminal commands to execute for displaying completion */
+  commands: TerminalCommand[]
+  /** Suggestions to display (for multiple matches) */
+  suggestions: string[]
+  /** Total count when more than 10 matches (for "N options available" message) */
+  truncatedCount?: number
+}
+
 export interface UseShellTerminalOptions {
   /** Command history from useShell hook */
   history?: string[]
   /** Callback when command is submitted */
   onCommand?: (command: string) => void
+  /** Available command names for tab completion */
+  commandNames?: string[]
+  /** Callback to get path completions */
+  getPathCompletions?: (partialPath: string) => FileEntry[]
 }
 
 export interface UseShellTerminalReturn {
@@ -34,6 +55,7 @@ export interface UseShellTerminalReturn {
   handleArrowRight: () => TerminalCommand[]
   handleCtrlC: () => TerminalCommand[]
   handleCtrlL: () => TerminalCommand[]
+  handleTab: () => TabCompletionResult
 }
 
 /**
@@ -43,7 +65,7 @@ export interface UseShellTerminalReturn {
 export function useShellTerminal(
   options: UseShellTerminalOptions
 ): UseShellTerminalReturn {
-  const { history = [], onCommand } = options
+  const { history = [], onCommand, commandNames = [], getPathCompletions } = options
 
   const [currentLine, setCurrentLine] = useState('')
   const [cursorPosition, setCursorPosition] = useState(0)
@@ -227,6 +249,89 @@ export function useShellTerminal(
     return [{ type: 'clear' }]
   }, [])
 
+  const handleTab = useCallback((): TabCompletionResult => {
+    const line = currentLineRef.current
+    const pos = cursorPositionRef.current
+
+    // No completion support if options not provided
+    if (commandNames.length === 0 && !getPathCompletions) {
+      return { commands: [], suggestions: [] }
+    }
+
+    // Get completion context
+    const context = getCompletionContext(line, pos)
+
+    let completions: string[] = []
+
+    if (context.type === 'command') {
+      // Command completion
+      completions = getCommandCompletions(context.prefix, commandNames)
+    } else if (context.type === 'path' && getPathCompletions) {
+      // Path completion
+      const entries = getPathCompletions(context.prefix)
+
+      // Determine the directory prefix to prepend to completions
+      // If prefix ends with '/', use the whole prefix as dir prefix
+      // If prefix contains '/', use everything up to and including the last '/'
+      // Otherwise, no directory prefix
+      let dirPrefix = ''
+      if (context.prefix.endsWith('/')) {
+        dirPrefix = context.prefix
+      } else if (context.prefix.includes('/')) {
+        dirPrefix = context.prefix.slice(0, context.prefix.lastIndexOf('/') + 1)
+      }
+
+      completions = entries.map((e) => {
+        const suffix = e.type === 'directory' ? '/' : ''
+        return dirPrefix + e.name + suffix
+      })
+    }
+
+    // No matches
+    if (completions.length === 0) {
+      return { commands: [], suggestions: [] }
+    }
+
+    // Single match - auto-complete
+    if (completions.length === 1) {
+      const completion = completions[0]
+      const remainingPart = completion.slice(context.prefix.length)
+
+      // Add space after completion (unless it's a directory with /)
+      const suffix = completion.endsWith('/') ? '' : ' '
+      const textToInsert = remainingPart + suffix
+
+      // Update state
+      const beforeReplaceEnd = line.slice(0, context.replaceEnd)
+      const afterReplaceEnd = line.slice(context.replaceEnd)
+      const newLine = beforeReplaceEnd + textToInsert + afterReplaceEnd
+      const newCursorPos = context.replaceEnd + textToInsert.length
+
+      setCurrentLine(newLine)
+      setCursorPosition(newCursorPos)
+
+      // Return commands to write the completion
+      const commands: TerminalCommand[] = [
+        { type: 'write', data: textToInsert + afterReplaceEnd },
+      ]
+      if (afterReplaceEnd.length > 0) {
+        commands.push({ type: 'moveCursor', direction: 'left', count: afterReplaceEnd.length })
+      }
+
+      return { commands, suggestions: [] }
+    }
+
+    // Multiple matches - show suggestions
+    const truncatedCount = completions.length > 10 ? completions.length : undefined
+    const displaySuggestions = completions.slice(0, 10)
+
+    return {
+      commands: [],
+      suggestions: displaySuggestions,
+      truncatedCount,
+    }
+  }, [commandNames, getPathCompletions])
+
   return {
     currentLine,
     cursorPosition,
@@ -240,5 +345,6 @@ export function useShellTerminal(
     handleArrowRight,
     handleCtrlC,
     handleCtrlL,
+    handleTab,
   }
 }
