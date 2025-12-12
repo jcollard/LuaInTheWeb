@@ -491,6 +491,74 @@ describe('ShellTerminal', () => {
       })
     })
 
+    describe('Ctrl+D handling', () => {
+      it('should stop process when Ctrl+D pressed with empty line and process running', async () => {
+        mockUseProcessManager.isProcessRunning = true
+        mockUseProcessManager.hasForegroundProcess.mockReturnValue(true)
+
+        render(<ShellTerminal fileSystem={mockFileSystem} />)
+
+        const terminal = terminalInstances[0]
+        const onDataHandler = terminal.onData.mock.calls[0][0]
+
+        // Press Ctrl+D (char code 4) with empty line
+        await act(async () => {
+          onDataHandler('\x04')
+        })
+
+        expect(mockStopProcess).toHaveBeenCalledTimes(1)
+      })
+
+      it('should not stop process when Ctrl+D pressed with non-empty line', async () => {
+        mockUseProcessManager.isProcessRunning = true
+        mockUseProcessManager.hasForegroundProcess.mockReturnValue(true)
+
+        render(<ShellTerminal fileSystem={mockFileSystem} />)
+
+        const terminal = terminalInstances[0]
+        const onDataHandler = terminal.onData.mock.calls[0][0]
+
+        // Type some text first
+        await act(async () => {
+          onDataHandler('h')
+        })
+        await act(async () => {
+          onDataHandler('i')
+        })
+
+        // Press Ctrl+D (char code 4) with non-empty line
+        await act(async () => {
+          onDataHandler('\x04')
+        })
+
+        // stopProcess should not be called because line is not empty
+        expect(mockStopProcess).not.toHaveBeenCalled()
+      })
+
+      it('should do nothing when Ctrl+D pressed with no process running', async () => {
+        mockUseProcessManager.isProcessRunning = false
+        mockUseProcessManager.hasForegroundProcess.mockReturnValue(false)
+
+        render(<ShellTerminal fileSystem={mockFileSystem} />)
+
+        const terminal = terminalInstances[0]
+        const onDataHandler = terminal.onData.mock.calls[0][0]
+
+        terminal.write.mockClear()
+
+        // Press Ctrl+D (char code 4)
+        await act(async () => {
+          onDataHandler('\x04')
+        })
+
+        // stopProcess should not be called
+        expect(mockStopProcess).not.toHaveBeenCalled()
+
+        // Should not write anything for Ctrl+D when no process
+        // (just silently ignore)
+      })
+    })
+
     describe('character input routing', () => {
       it('should buffer characters when process is running', async () => {
         mockUseProcessManager.isProcessRunning = true

@@ -362,6 +362,19 @@ export function ShellTerminal({
         return
       }
 
+      // Handle Ctrl+D (EOF - exit process if line is empty)
+      if (code === 4) {
+        // If a process is running and line is empty, stop it (standard EOF behavior)
+        if (isProcessRunningRef.current && currentLineRef.current === '') {
+          stopProcessRef.current()
+          terminal.writeln('')
+          showPrompt()
+          return
+        }
+        // Otherwise ignore Ctrl+D
+        return
+      }
+
       // Handle Ctrl+L (clear screen)
       if (code === 12) {
         commands = handlers.handleCtrlL()
