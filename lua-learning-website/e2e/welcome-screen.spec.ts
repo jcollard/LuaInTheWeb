@@ -24,10 +24,10 @@ test.describe('Welcome Screen', () => {
       await expect(welcomeScreen.getByRole('button', { name: /new file/i })).toBeVisible()
     })
 
-    test('shows Open REPL button in Start section', async ({ page }) => {
-      // Assert - Open REPL button should be visible
+    test('shows Open Shell button in Start section', async ({ page }) => {
+      // Assert - Open Shell button should be visible
       const welcomeScreen = page.locator('[data-testid="welcome-screen"]')
-      await expect(welcomeScreen.getByRole('button', { name: /open repl/i })).toBeVisible()
+      await expect(welcomeScreen.getByRole('button', { name: /open shell/i })).toBeVisible()
     })
 
     test('shows Recent Files section', async ({ page }) => {
@@ -72,27 +72,27 @@ test.describe('Welcome Screen', () => {
     })
   })
 
-  test.describe('Open REPL action', () => {
-    test('clicking Open REPL shows terminal panel if hidden', async ({ page }) => {
+  test.describe('Open Shell action', () => {
+    test('clicking Open Shell shows terminal panel if hidden', async ({ page }) => {
       // Arrange - Hide terminal first using Ctrl+`
       await page.keyboard.press('Control+`')
       await expect(page.locator('[data-testid="bottom-panel"]')).not.toBeVisible()
 
-      // Act - Click Open REPL in welcome screen
+      // Act - Click Open Shell in welcome screen
       const welcomeScreen = page.locator('[data-testid="welcome-screen"]')
-      await welcomeScreen.getByRole('button', { name: /open repl/i }).click()
+      await welcomeScreen.getByRole('button', { name: /open shell/i }).click()
 
       // Assert - Terminal panel should now be visible
       await expect(page.locator('[data-testid="bottom-panel"]')).toBeVisible()
     })
 
-    test('clicking Open REPL keeps terminal visible if already shown', async ({ page }) => {
+    test('clicking Open Shell keeps terminal visible if already shown', async ({ page }) => {
       // Arrange - Terminal should be visible by default
       await expect(page.locator('[data-testid="bottom-panel"]')).toBeVisible()
 
-      // Act - Click Open REPL
+      // Act - Click Open Shell
       const welcomeScreen = page.locator('[data-testid="welcome-screen"]')
-      await welcomeScreen.getByRole('button', { name: /open repl/i }).click()
+      await welcomeScreen.getByRole('button', { name: /open shell/i }).click()
 
       // Assert - Terminal panel should still be visible
       await expect(page.locator('[data-testid="bottom-panel"]')).toBeVisible()

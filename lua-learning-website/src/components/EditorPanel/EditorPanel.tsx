@@ -11,8 +11,6 @@ export function EditorPanel({
   onChange,
   fileName,
   isDirty,
-  onRun,
-  isRunning = false,
   className,
   tabBarProps,
 }: EditorPanelProps) {
@@ -21,7 +19,6 @@ export function EditorPanel({
     : styles.editorPanel
 
   const displayFileName = isDirty ? `${fileName} *` : fileName
-  const runButtonLabel = isRunning ? 'Code is running' : 'Run code (Ctrl+Enter)'
 
   const renderTabs = () => {
     if (tabBarProps) {
@@ -50,17 +47,6 @@ export function EditorPanel({
     <div className={combinedClassName} data-testid="editor-panel">
       <div className={styles.toolbar}>
         {renderTabs()}
-        <div className={styles.actions}>
-          <button
-            type="button"
-            className={styles.runButton}
-            onClick={onRun}
-            disabled={isRunning}
-            aria-label={runButtonLabel}
-          >
-            {isRunning ? 'Running...' : 'Run'}
-          </button>
-        </div>
       </div>
       <div className={styles.editorContainer}>
         <CodeEditor
@@ -68,7 +54,6 @@ export function EditorPanel({
           onChange={onChange}
           language="lua"
           height="100%"
-          onRun={onRun}
         />
       </div>
     </div>

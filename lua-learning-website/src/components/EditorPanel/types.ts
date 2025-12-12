@@ -12,10 +12,6 @@ export interface EditorPanelProps {
   fileName: string | null
   /** Whether the file has unsaved changes (used when tabBarProps not provided) */
   isDirty: boolean
-  /** Called when run button is clicked */
-  onRun: () => void
-  /** Whether the code is currently running */
-  isRunning?: boolean
   /** Current cursor line (1-indexed) */
   cursorLine?: number
   /** Current cursor column (1-indexed) */

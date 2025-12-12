@@ -3,7 +3,6 @@ import type { TreeNode, UseFileSystemReturn } from '../../hooks/useFileSystem'
 import type { RecentFile } from '../../hooks/useRecentFiles'
 import type { TabInfo } from '../TabBar'
 import type { ToastData } from '../Toast'
-import type { TerminalLine } from '../BottomPanel/types'
 
 /**
  * Activity bar panel options
@@ -23,13 +22,6 @@ export interface IDEContextValue {
   fileName: string | null
   isDirty: boolean
 
-  // Terminal output
-  terminalOutput: TerminalLine[]
-
-  // Input state
-  isAwaitingInput: boolean
-  submitInput: (input: string) => void
-
   // UI state
   activePanel: ActivityPanelType
   setActivePanel: (panel: ActivityPanelType) => void
@@ -37,10 +29,6 @@ export interface IDEContextValue {
   toggleTerminal: () => void
   sidebarVisible: boolean
   toggleSidebar: () => void
-
-  // Actions
-  runCode: () => Promise<void>
-  clearTerminal: () => void
 
   // Filesystem
   fileTree: TreeNode[]

@@ -7,7 +7,7 @@ import type { WelcomeScreenProps } from './types'
 export function WelcomeScreen({
   onCreateFile,
   onOpenFile,
-  onOpenRepl,
+  onOpenShell,
   onClearRecentFiles,
   recentFiles,
   className,
@@ -44,9 +44,9 @@ export function WelcomeScreen({
             <button
               type="button"
               className={styles.actionButton}
-              onClick={onOpenRepl}
+              onClick={onOpenShell}
             >
-              Open REPL
+              Open Shell
             </button>
           </div>
         </div>

@@ -5,13 +5,13 @@ import type { RecentFile } from '../../hooks/useRecentFiles'
 describe('WelcomeScreen', () => {
   const mockOnCreateFile = vi.fn()
   const mockOnOpenFile = vi.fn()
-  const mockOnOpenRepl = vi.fn()
+  const mockOnOpenShell = vi.fn()
   const mockOnClearRecentFiles = vi.fn()
 
   const defaultProps = {
     onCreateFile: mockOnCreateFile,
     onOpenFile: mockOnOpenFile,
-    onOpenRepl: mockOnOpenRepl,
+    onOpenShell: mockOnOpenShell,
     onClearRecentFiles: mockOnClearRecentFiles,
     recentFiles: [] as RecentFile[],
   }
@@ -37,12 +37,12 @@ describe('WelcomeScreen', () => {
       expect(screen.getByRole('button', { name: /new file/i })).toBeInTheDocument()
     })
 
-    it('should render Open REPL button', () => {
+    it('should render Open Shell button', () => {
       // Arrange & Act
       render(<WelcomeScreen {...defaultProps} />)
 
       // Assert
-      expect(screen.getByRole('button', { name: /open repl/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /open shell/i })).toBeInTheDocument()
     })
 
     it('should render Recent Files section', () => {
@@ -74,15 +74,15 @@ describe('WelcomeScreen', () => {
       expect(mockOnCreateFile).toHaveBeenCalledTimes(1)
     })
 
-    it('should call onOpenRepl when Open REPL button clicked', () => {
+    it('should call onOpenShell when Open Shell button clicked', () => {
       // Arrange
       render(<WelcomeScreen {...defaultProps} />)
 
       // Act
-      fireEvent.click(screen.getByRole('button', { name: /open repl/i }))
+      fireEvent.click(screen.getByRole('button', { name: /open shell/i }))
 
       // Assert
-      expect(mockOnOpenRepl).toHaveBeenCalledTimes(1)
+      expect(mockOnOpenShell).toHaveBeenCalledTimes(1)
     })
   })
 

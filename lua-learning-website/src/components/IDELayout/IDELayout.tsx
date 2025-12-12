@@ -24,16 +24,12 @@ function IDELayoutInner({ className }: { className?: string }) {
     setCode,
     fileName,
     isDirty,
-    terminalOutput,
-    isAwaitingInput,
-    submitInput,
     activePanel,
     setActivePanel,
     sidebarVisible,
     toggleSidebar,
     terminalVisible,
     toggleTerminal,
-    runCode,
     // Filesystem
     fileTree,
     deleteFile,
@@ -66,23 +62,12 @@ function IDELayoutInner({ className }: { className?: string }) {
     fileSystem,
   } = useIDE()
 
-  const [isRunning, setIsRunning] = useState(false)
   const [cursorLine, setCursorLine] = useState(1)
   const [cursorColumn, setCursorColumn] = useState(1)
   const [pendingCloseTabPath, setPendingCloseTabPath] = useState<string | null>(null)
 
-  const handleRun = useCallback(async () => {
-    setIsRunning(true)
-    try {
-      await runCode()
-    } finally {
-      setIsRunning(false)
-    }
-  }, [runCode])
-
   // Register keyboard shortcuts
   useKeyboardShortcuts({
-    runCode: handleRun,
     toggleTerminal,
     toggleSidebar,
     saveFile,
@@ -127,8 +112,8 @@ function IDELayoutInner({ className }: { className?: string }) {
     setPendingCloseTabPath(null)
   }, [])
 
-  // Open REPL (show terminal if hidden)
-  const handleOpenRepl = useCallback(() => {
+  // Open Shell (show terminal if hidden)
+  const handleOpenShell = useCallback(() => {
     if (!terminalVisible) {
       toggleTerminal()
     }
@@ -190,7 +175,7 @@ function IDELayoutInner({ className }: { className?: string }) {
                       recentFiles={recentFiles}
                       onCreateFile={() => handleCreateFile()}
                       onOpenFile={openFile}
-                      onOpenRepl={handleOpenRepl}
+                      onOpenShell={handleOpenShell}
                       onClearRecentFiles={clearRecentFiles}
                     />
                   ) : (
@@ -199,8 +184,6 @@ function IDELayoutInner({ className }: { className?: string }) {
                       onChange={setCode}
                       fileName={fileName}
                       isDirty={isDirty}
-                      onRun={handleRun}
-                      isRunning={isRunning}
                       cursorLine={cursorLine}
                       cursorColumn={cursorColumn}
                       onCursorChange={(line, col) => {
@@ -219,12 +202,7 @@ function IDELayoutInner({ className }: { className?: string }) {
                   collapsible
                   collapsed={!terminalVisible}
                 >
-                  <BottomPanel
-                    terminalOutput={terminalOutput}
-                    isAwaitingInput={isAwaitingInput}
-                    onSubmitInput={submitInput}
-                    fileSystem={fileSystem}
-                  />
+                  <BottomPanel fileSystem={fileSystem} />
                 </IDEPanel>
               </IDEPanelGroup>
             </IDEPanel>

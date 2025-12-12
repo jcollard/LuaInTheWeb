@@ -12,23 +12,12 @@ export function CodeEditor({
   language = 'lua',
   height = '400px',
   readOnly = false,
-  onRun,
 }: CodeEditorProps) {
   const { theme } = useTheme()
   const monacoTheme = theme === 'dark' ? 'vs-dark' : 'vs'
 
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' && event.ctrlKey) {
-      onRun?.()
-    }
-  }
-
   return (
-    <div
-      className={styles.wrapper}
-      onKeyDown={handleKeyDown}
-      data-testid="code-editor-wrapper"
-    >
+    <div className={styles.wrapper} data-testid="code-editor-wrapper">
       <Editor
         height={height}
         language={language}

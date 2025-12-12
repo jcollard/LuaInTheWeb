@@ -3,13 +3,11 @@ import type { Mock } from 'vitest'
 import { useKeyboardShortcuts } from './useKeyboardShortcuts'
 
 describe('useKeyboardShortcuts', () => {
-  let mockRunCode: Mock<() => void>
   let mockToggleTerminal: Mock<() => void>
   let mockToggleSidebar: Mock<() => void>
   let mockSaveFile: Mock<() => void>
 
   beforeEach(() => {
-    mockRunCode = vi.fn<() => void>()
     mockToggleTerminal = vi.fn<() => void>()
     mockToggleSidebar = vi.fn<() => void>()
     mockSaveFile = vi.fn<() => void>()
@@ -19,60 +17,11 @@ describe('useKeyboardShortcuts', () => {
     vi.clearAllMocks()
   })
 
-  describe('Ctrl+Enter', () => {
-    it('should call runCode when Ctrl+Enter is pressed', () => {
-      // Arrange
-      renderHook(() =>
-        useKeyboardShortcuts({
-          runCode: mockRunCode,
-          toggleTerminal: mockToggleTerminal,
-          toggleSidebar: mockToggleSidebar,
-          saveFile: mockSaveFile,
-        })
-      )
-
-      // Act
-      const event = new KeyboardEvent('keydown', {
-        key: 'Enter',
-        ctrlKey: true,
-        bubbles: true,
-      })
-      document.dispatchEvent(event)
-
-      // Assert
-      expect(mockRunCode).toHaveBeenCalledTimes(1)
-    })
-
-    it('should not call runCode when only Enter is pressed without Ctrl', () => {
-      // Arrange
-      renderHook(() =>
-        useKeyboardShortcuts({
-          runCode: mockRunCode,
-          toggleTerminal: mockToggleTerminal,
-          toggleSidebar: mockToggleSidebar,
-          saveFile: mockSaveFile,
-        })
-      )
-
-      // Act
-      const event = new KeyboardEvent('keydown', {
-        key: 'Enter',
-        ctrlKey: false,
-        bubbles: true,
-      })
-      document.dispatchEvent(event)
-
-      // Assert
-      expect(mockRunCode).not.toHaveBeenCalled()
-    })
-  })
-
   describe('Ctrl+`', () => {
     it('should call toggleTerminal when Ctrl+` is pressed', () => {
       // Arrange
       renderHook(() =>
         useKeyboardShortcuts({
-          runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
           saveFile: mockSaveFile,
@@ -95,7 +44,6 @@ describe('useKeyboardShortcuts', () => {
       // Arrange
       renderHook(() =>
         useKeyboardShortcuts({
-          runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
           saveFile: mockSaveFile,
@@ -120,7 +68,6 @@ describe('useKeyboardShortcuts', () => {
       // Arrange
       renderHook(() =>
         useKeyboardShortcuts({
-          runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
           saveFile: mockSaveFile,
@@ -143,7 +90,6 @@ describe('useKeyboardShortcuts', () => {
       // Arrange
       renderHook(() =>
         useKeyboardShortcuts({
-          runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
           saveFile: mockSaveFile,
@@ -166,7 +112,6 @@ describe('useKeyboardShortcuts', () => {
       // Arrange
       renderHook(() =>
         useKeyboardShortcuts({
-          runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
           saveFile: mockSaveFile,
@@ -191,7 +136,6 @@ describe('useKeyboardShortcuts', () => {
       // Arrange
       renderHook(() =>
         useKeyboardShortcuts({
-          runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
           saveFile: mockSaveFile,
@@ -214,7 +158,6 @@ describe('useKeyboardShortcuts', () => {
       // Arrange
       renderHook(() =>
         useKeyboardShortcuts({
-          runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
           saveFile: mockSaveFile,
@@ -237,7 +180,6 @@ describe('useKeyboardShortcuts', () => {
       // Arrange
       renderHook(() =>
         useKeyboardShortcuts({
-          runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
           saveFile: mockSaveFile,
@@ -262,7 +204,6 @@ describe('useKeyboardShortcuts', () => {
       // Arrange
       const { unmount } = renderHook(() =>
         useKeyboardShortcuts({
-          runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
           saveFile: mockSaveFile,
@@ -274,48 +215,22 @@ describe('useKeyboardShortcuts', () => {
 
       // Dispatch events after unmount
       const event = new KeyboardEvent('keydown', {
-        key: 'Enter',
+        key: '`',
         ctrlKey: true,
         bubbles: true,
       })
       document.dispatchEvent(event)
 
       // Assert - callbacks should not be called after unmount
-      expect(mockRunCode).not.toHaveBeenCalled()
+      expect(mockToggleTerminal).not.toHaveBeenCalled()
     })
   })
 
   describe('preventDefault', () => {
-    it('should prevent default for Ctrl+Enter', () => {
-      // Arrange
-      renderHook(() =>
-        useKeyboardShortcuts({
-          runCode: mockRunCode,
-          toggleTerminal: mockToggleTerminal,
-          toggleSidebar: mockToggleSidebar,
-          saveFile: mockSaveFile,
-        })
-      )
-
-      // Act
-      const event = new KeyboardEvent('keydown', {
-        key: 'Enter',
-        ctrlKey: true,
-        bubbles: true,
-        cancelable: true,
-      })
-      const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
-      document.dispatchEvent(event)
-
-      // Assert
-      expect(preventDefaultSpy).toHaveBeenCalled()
-    })
-
     it('should prevent default for Ctrl+B to avoid browser bookmark dialog', () => {
       // Arrange
       renderHook(() =>
         useKeyboardShortcuts({
-          runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
           saveFile: mockSaveFile,
@@ -340,7 +255,6 @@ describe('useKeyboardShortcuts', () => {
       // Arrange
       renderHook(() =>
         useKeyboardShortcuts({
-          runCode: mockRunCode,
           toggleTerminal: mockToggleTerminal,
           toggleSidebar: mockToggleSidebar,
           saveFile: mockSaveFile,

@@ -44,17 +44,12 @@ describe('useIDE', () => {
         setCode: vi.fn(),
         fileName: 'test.lua',
         isDirty: false,
-        terminalOutput: [],
-        isAwaitingInput: false,
-        submitInput: vi.fn(),
         activePanel: 'explorer',
         setActivePanel: vi.fn(),
         terminalVisible: true,
         toggleTerminal: vi.fn(),
         sidebarVisible: true,
         toggleSidebar: vi.fn(),
-        runCode: vi.fn(),
-        clearTerminal: vi.fn(),
         fileTree: [],
         createFile: vi.fn(),
         createFolder: vi.fn(),
@@ -117,17 +112,12 @@ describe('useIDE', () => {
         setCode: vi.fn(),
         fileName: null,
         isDirty: false,
-        terminalOutput: [],
-        isAwaitingInput: false,
-        submitInput: vi.fn(),
         activePanel: 'explorer',
         setActivePanel: vi.fn(),
         terminalVisible: true,
         toggleTerminal: vi.fn(),
         sidebarVisible: true,
         toggleSidebar: vi.fn(),
-        runCode: vi.fn(),
-        clearTerminal: vi.fn(),
         fileTree: [],
         createFile: vi.fn(),
         createFolder: vi.fn(),
@@ -182,7 +172,6 @@ describe('useIDE', () => {
       expect(result.current.engine).toBeDefined()
       expect(result.current.code).toBeDefined()
       expect(result.current.setCode).toBeInstanceOf(Function)
-      expect(result.current.runCode).toBeInstanceOf(Function)
       expect(result.current.fileTree).toBeInstanceOf(Array)
       expect(result.current.tabs).toBeInstanceOf(Array)
     })

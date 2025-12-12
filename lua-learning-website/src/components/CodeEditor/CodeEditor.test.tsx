@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import type { Theme } from '../../contexts/types'
@@ -98,20 +98,6 @@ describe('CodeEditor', () => {
     expect(onChange).toHaveBeenCalled()
   })
 
-  // Cycle 2.4: Ctrl+Enter triggers onRun
-  it('should call onRun when Ctrl+Enter is pressed', () => {
-    // Arrange
-    const onRun = vi.fn()
-    render(<CodeEditor value="" onChange={() => {}} onRun={onRun} />)
-    const wrapper = screen.getByTestId('code-editor-wrapper')
-
-    // Act - simulate Ctrl+Enter on the wrapper
-    fireEvent.keyDown(wrapper, { key: 'Enter', ctrlKey: true })
-
-    // Assert
-    expect(onRun).toHaveBeenCalled()
-  })
-
   // Cycle 2.5: Respects readOnly prop
   it('should be read-only when readOnly=true', () => {
     // Arrange & Act
@@ -119,19 +105,6 @@ describe('CodeEditor', () => {
 
     // Assert
     expect(screen.getByTestId('mock-monaco')).toHaveProperty('readOnly', true)
-  })
-
-  // Cycle 2.6: Ctrl+Enter without onRun does not crash
-  it('should not crash when Ctrl+Enter pressed without onRun handler', () => {
-    // Arrange
-    render(<CodeEditor value="" onChange={() => {}} />) // no onRun prop
-    const wrapper = screen.getByTestId('code-editor-wrapper')
-
-    // Act & Assert - should not throw
-    expect(() => {
-      fireEvent.keyDown(wrapper, { key: 'Enter', ctrlKey: true })
-    }).not.toThrow()
-    expect(screen.getByTestId('mock-monaco')).toBeInTheDocument()
   })
 
   describe('theme integration', () => {
