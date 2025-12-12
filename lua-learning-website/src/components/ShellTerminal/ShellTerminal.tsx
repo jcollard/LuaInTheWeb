@@ -69,7 +69,7 @@ export function ShellTerminal({
   const xtermRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
 
-  const { executeCommand, cwd, history } = useShell(fileSystem)
+  const { executeCommand, cwd, history, commandNames, getPathCompletionsForTab } = useShell(fileSystem)
 
   // Store latest values in refs so handlers can access current data
   const cwdRef = useRef(cwd)
@@ -124,6 +124,7 @@ export function ShellTerminal({
 
   // Use the shell terminal hook for input handling
   const {
+    currentLine,
     handleCharacter,
     handleBackspace,
     handleEnter,
@@ -133,10 +134,19 @@ export function ShellTerminal({
     handleArrowRight,
     handleCtrlC,
     handleCtrlL,
+    handleTab,
   } = useShellTerminal({
     history,
     onCommand: handleCommand,
+    commandNames,
+    getPathCompletions: getPathCompletionsForTab,
   })
+
+  // Store current line in ref for access in input handler
+  const currentLineRef = useRef(currentLine)
+  useEffect(() => {
+    currentLineRef.current = currentLine
+  }, [currentLine])
 
   // Store hook handlers in refs for stable terminal event handler
   const handlersRef = useRef({
@@ -149,6 +159,7 @@ export function ShellTerminal({
     handleArrowRight,
     handleCtrlC,
     handleCtrlL,
+    handleTab,
   })
 
   useEffect(() => {
@@ -162,6 +173,7 @@ export function ShellTerminal({
       handleArrowRight,
       handleCtrlC,
       handleCtrlL,
+      handleTab,
     }
   }, [
     handleCharacter,
@@ -173,6 +185,7 @@ export function ShellTerminal({
     handleArrowRight,
     handleCtrlC,
     handleCtrlL,
+    handleTab,
   ])
 
   // Initialize terminal once
@@ -274,6 +287,27 @@ export function ShellTerminal({
         commands = handlers.handleCtrlL()
         executeTerminalCommands(terminal, commands)
         showPrompt()
+        return
+      }
+
+      // Handle Tab (completion)
+      if (code === 9) {
+        const tabResult = handlers.handleTab()
+        executeTerminalCommands(terminal, tabResult.commands)
+
+        // Show suggestions if multiple matches
+        if (tabResult.suggestions.length > 0) {
+          terminal.writeln('')
+          if (tabResult.truncatedCount) {
+            terminal.writeln(`${tabResult.truncatedCount} options available`)
+          } else {
+            // Display suggestions in columns
+            terminal.writeln(tabResult.suggestions.join('  '))
+          }
+          showPrompt()
+          // Re-show current input after suggestions
+          terminal.write(currentLineRef.current)
+        }
         return
       }
 

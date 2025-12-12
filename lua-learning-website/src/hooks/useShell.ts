@@ -4,9 +4,11 @@ import {
   createFileSystemAdapter,
   registerBuiltinCommands,
   parseCommand,
+  getPathCompletions,
   type IFileSystem,
   type ExternalFileSystem,
   type CommandResult,
+  type FileEntry,
 } from '@lua-learning/shell-core'
 import type { UseFileSystemReturn } from './useFileSystem'
 
@@ -30,6 +32,10 @@ export interface UseShellReturn {
   history: string[]
   /** Clear history */
   clearHistory: () => void
+  /** Available command names for tab completion */
+  commandNames: string[]
+  /** Get path completions for tab completion */
+  getPathCompletionsForTab: (partialPath: string) => FileEntry[]
 }
 
 /**
@@ -108,10 +114,23 @@ export function useShell(fileSystem: UseFileSystemReturn): UseShellReturn {
     setHistory([])
   }, [])
 
+  // Get command names for tab completion
+  const commandNames = useMemo(() => registry.names(), [registry])
+
+  // Get path completions wrapper for tab completion
+  const getPathCompletionsForTab = useCallback(
+    (partialPath: string): FileEntry[] => {
+      return getPathCompletions(partialPath, shellFileSystem)
+    },
+    [shellFileSystem]
+  )
+
   return {
     executeCommand,
     cwd,
     history,
     clearHistory,
+    commandNames,
+    getPathCompletionsForTab,
   }
 }
