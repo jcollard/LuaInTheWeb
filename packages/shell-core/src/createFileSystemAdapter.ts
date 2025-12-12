@@ -58,13 +58,6 @@ export function createFileSystemAdapter(
     return external.exists(resolved) || createdDirectories.has(resolved)
   }
 
-  /**
-   * Check if a path is a directory (including directories we created this session).
-   */
-  function pathIsDirectory(resolved: string): boolean {
-    return createdDirectories.has(resolved) || external.isDirectory(resolved)
-  }
-
   return {
     getCurrentDirectory(): string {
       return currentDirectory
