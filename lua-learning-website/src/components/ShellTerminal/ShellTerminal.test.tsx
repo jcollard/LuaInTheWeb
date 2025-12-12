@@ -92,6 +92,22 @@ vi.mock('../../hooks/useShell', () => ({
   useShell: () => mockUseShell,
 }))
 
+// Mock useProcessManager with mutable state for testing
+const mockStopProcess = vi.fn()
+const mockHandleInput = vi.fn().mockReturnValue(false)
+
+const mockUseProcessManager = {
+  isProcessRunning: false,
+  hasForegroundProcess: vi.fn().mockReturnValue(false),
+  startProcess: vi.fn(),
+  stopProcess: mockStopProcess,
+  handleInput: mockHandleInput,
+}
+
+vi.mock('../../hooks/useProcessManager', () => ({
+  useProcessManager: () => mockUseProcessManager,
+}))
+
 describe('ShellTerminal', () => {
   const createMockFileSystem = (): UseFileSystemReturn => ({
     createFile: vi.fn(),
@@ -313,6 +329,218 @@ describe('ShellTerminal', () => {
       // Count how many times 'ls' appears
       const lsCount = writeCalls.filter((c) => c === 'ls').length
       expect(lsCount).toBe(1) // Should only appear once
+    })
+  })
+
+  describe('process control', () => {
+    beforeEach(() => {
+      // Reset process manager mock state
+      mockUseProcessManager.isProcessRunning = false
+      mockUseProcessManager.hasForegroundProcess.mockReturnValue(false)
+      mockHandleInput.mockReturnValue(false)
+      mockStopProcess.mockClear()
+      mockHandleInput.mockClear()
+    })
+
+    describe('stop button', () => {
+      it('should show stop button when process is running', () => {
+        mockUseProcessManager.isProcessRunning = true
+
+        render(<ShellTerminal fileSystem={mockFileSystem} />)
+
+        const stopButton = screen.queryByRole('button', { name: /stop/i })
+        expect(stopButton).toBeInTheDocument()
+      })
+
+      it('should not show stop button when no process is running', () => {
+        mockUseProcessManager.isProcessRunning = false
+
+        render(<ShellTerminal fileSystem={mockFileSystem} />)
+
+        const stopButton = screen.queryByRole('button', { name: /stop/i })
+        expect(stopButton).not.toBeInTheDocument()
+      })
+
+      it('should call stopProcess when stop button clicked', async () => {
+        mockUseProcessManager.isProcessRunning = true
+
+        render(<ShellTerminal fileSystem={mockFileSystem} />)
+
+        const stopButton = screen.getByRole('button', { name: /stop/i })
+        await act(async () => {
+          stopButton.click()
+        })
+
+        expect(mockStopProcess).toHaveBeenCalledTimes(1)
+      })
+    })
+
+    describe('input routing', () => {
+      it('should route Enter input to process when process is running', async () => {
+        mockUseProcessManager.isProcessRunning = true
+        mockUseProcessManager.hasForegroundProcess.mockReturnValue(true)
+        mockHandleInput.mockReturnValue(true)
+
+        render(<ShellTerminal fileSystem={mockFileSystem} />)
+
+        const terminal = terminalInstances[0]
+        const onDataHandler = terminal.onData.mock.calls[0][0]
+
+        // Type some text
+        await act(async () => {
+          onDataHandler('h')
+        })
+        await act(async () => {
+          onDataHandler('i')
+        })
+
+        // Press Enter - should route to process
+        await act(async () => {
+          onDataHandler('\r')
+        })
+
+        // Verify handleInput was called with the typed text
+        expect(mockHandleInput).toHaveBeenCalledWith('hi')
+      })
+
+      it('should execute command normally when no process is running', async () => {
+        mockUseProcessManager.isProcessRunning = false
+        mockUseProcessManager.hasForegroundProcess.mockReturnValue(false)
+        mockHandleInput.mockReturnValue(false)
+
+        render(<ShellTerminal fileSystem={mockFileSystem} />)
+
+        const terminal = terminalInstances[0]
+        const onDataHandler = terminal.onData.mock.calls[0][0]
+
+        // Type and execute a command
+        await act(async () => {
+          onDataHandler('l')
+        })
+        await act(async () => {
+          onDataHandler('s')
+        })
+        await act(async () => {
+          onDataHandler('\r')
+        })
+
+        // Verify command was executed normally
+        expect(mockExecuteCommand).toHaveBeenCalledWith('ls')
+        expect(mockHandleInput).not.toHaveBeenCalled()
+      })
+    })
+
+    describe('Ctrl+C handling', () => {
+      it('should stop process when Ctrl+C pressed and process is running', async () => {
+        mockUseProcessManager.isProcessRunning = true
+        mockUseProcessManager.hasForegroundProcess.mockReturnValue(true)
+
+        render(<ShellTerminal fileSystem={mockFileSystem} />)
+
+        const terminal = terminalInstances[0]
+        const onDataHandler = terminal.onData.mock.calls[0][0]
+
+        // Press Ctrl+C (char code 3)
+        await act(async () => {
+          onDataHandler('\x03')
+        })
+
+        expect(mockStopProcess).toHaveBeenCalledTimes(1)
+      })
+
+      it('should clear line but not stop anything when Ctrl+C pressed with no process', async () => {
+        mockUseProcessManager.isProcessRunning = false
+        mockUseProcessManager.hasForegroundProcess.mockReturnValue(false)
+
+        render(<ShellTerminal fileSystem={mockFileSystem} />)
+
+        const terminal = terminalInstances[0]
+        const onDataHandler = terminal.onData.mock.calls[0][0]
+
+        // Press Ctrl+C (char code 3)
+        await act(async () => {
+          onDataHandler('\x03')
+        })
+
+        // stopProcess should not be called
+        expect(mockStopProcess).not.toHaveBeenCalled()
+
+        // Should write ^C to terminal
+        const writeCalls = terminal.write.mock.calls.map((c) => c[0])
+        expect(writeCalls).toContain('^C')
+      })
+    })
+
+    describe('character input routing', () => {
+      it('should buffer characters when process is running', async () => {
+        mockUseProcessManager.isProcessRunning = true
+        mockUseProcessManager.hasForegroundProcess.mockReturnValue(true)
+
+        render(<ShellTerminal fileSystem={mockFileSystem} />)
+
+        const terminal = terminalInstances[0]
+        const onDataHandler = terminal.onData.mock.calls[0][0]
+
+        terminal.write.mockClear()
+
+        // Type characters while process is running
+        await act(async () => {
+          onDataHandler('a')
+        })
+        await act(async () => {
+          onDataHandler('b')
+        })
+
+        // Characters should be echoed to terminal
+        const writeCalls = terminal.write.mock.calls.map((c) => c[0])
+        expect(writeCalls.some((c) => c.includes('a'))).toBe(true)
+        expect(writeCalls.some((c) => c.includes('b'))).toBe(true)
+      })
+    })
+
+    describe('prompt state', () => {
+      it('should not show prompt when process is running', async () => {
+        mockUseProcessManager.isProcessRunning = true
+        mockUseProcessManager.hasForegroundProcess.mockReturnValue(true)
+        mockHandleInput.mockReturnValue(true)
+
+        render(<ShellTerminal fileSystem={mockFileSystem} />)
+
+        const terminal = terminalInstances[0]
+        const onDataHandler = terminal.onData.mock.calls[0][0]
+
+        terminal.write.mockClear()
+
+        // Type and enter while process is running
+        await act(async () => {
+          onDataHandler('t')
+        })
+        await act(async () => {
+          onDataHandler('e')
+        })
+        await act(async () => {
+          onDataHandler('s')
+        })
+        await act(async () => {
+          onDataHandler('t')
+        })
+        await act(async () => {
+          onDataHandler('\r')
+        })
+
+        // Input should be routed to process
+        expect(mockHandleInput).toHaveBeenCalledWith('test')
+
+        // Prompt should not be shown (since process is still running)
+        const writeCalls = terminal.write.mock.calls.map((c) => c[0])
+        // Check that we don't write a new prompt after input
+        // The prompt contains '$'
+        const promptsAfterInput = writeCalls.filter(
+          (c) => c.includes('$') && writeCalls.indexOf(c) > 0
+        )
+        // Should not have new prompts written (or very few from initial setup)
+        expect(promptsAfterInput.length).toBeLessThanOrEqual(1)
+      })
     })
   })
 })

@@ -1,0 +1,30 @@
+.stopButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  background-color: var(--danger-color, #dc3545);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.stopButton:hover:not(:disabled) {
+  background-color: var(--danger-hover-color, #c82333);
+}
+
+.stopButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.stopIcon {
+  display: block;
+  width: 10px;
+  height: 10px;
+  background-color: white;
+  border-radius: 1px;
+}
