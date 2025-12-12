@@ -45,6 +45,7 @@ vi.mock('@xterm/xterm', () => {
     this.write = vi.fn()
     this.writeln = vi.fn()
     this.onData = vi.fn()
+    this.attachCustomKeyEventHandler = vi.fn()
     this.dispose = vi.fn()
     this.clear = vi.fn()
     this.refresh = vi.fn()

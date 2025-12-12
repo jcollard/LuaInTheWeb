@@ -277,8 +277,8 @@ export function ShellTerminal({
     xtermRef.current = terminal
     fitAddonRef.current = fitAddon
 
-    // Handle terminal input - dispatch to hook handlers
-    const handleInput = (data: string) => {
+    // Process a single character or escape sequence
+    const processSingleInput = (data: string) => {
       const code = data.charCodeAt(0)
       const handlers = handlersRef.current
       let commands: TerminalCommand[] = []
@@ -427,10 +427,91 @@ export function ShellTerminal({
       }
     }
 
+    // Handle terminal input - dispatch to hook handlers
+    // Handles multi-character paste by processing each character/sequence
+    const handleInput = (data: string) => {
+      // Check for escape sequences (arrow keys, etc.) - process as single unit
+      if (data.startsWith('\x1b[')) {
+        processSingleInput(data)
+        return
+      }
+
+      // For single characters or control characters, process directly
+      if (data.length === 1) {
+        processSingleInput(data)
+        return
+      }
+
+      // Multi-character input (paste) - handle specially for multi-line content
+      // Normalize line endings: \r\n -> \n, standalone \r -> \n
+      const normalizedData = data.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+
+      // Check if this is multi-line paste (contains newlines)
+      if (normalizedData.includes('\n')) {
+        // If a process is running, send all content at once
+        // The process (e.g., REPL) handles multi-line input internally
+        if (isProcessRunningRef.current) {
+          // Display the pasted content
+          terminal.write(normalizedData.replace(/\n/g, '\r\n'))
+          terminal.writeln('')
+
+          // Send all content to the process at once (without trailing newline)
+          const contentToSend = normalizedData.endsWith('\n')
+            ? normalizedData.slice(0, -1)
+            : normalizedData
+          handleProcessInputRef.current(contentToSend)
+
+          // Clear shell's input state
+          handlersRef.current.handleCtrlC()
+          return
+        }
+
+        // For shell commands (no process running), process line by line
+        const lines = normalizedData.split('\n')
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i]
+          const isLastLine = i === lines.length - 1
+
+          // Skip empty last line (from trailing newline)
+          if (isLastLine && line === '') {
+            continue
+          }
+
+          // Type out the line character by character (for display)
+          for (const char of line) {
+            processSingleInput(char)
+          }
+
+          // Send Enter after each line to submit it
+          processSingleInput('\r')
+        }
+      } else {
+        // Single line paste - process each character
+        for (const char of normalizedData) {
+          processSingleInput(char)
+        }
+      }
+    }
+
     // Show welcome message and prompt
     terminal.writeln('\x1b[36mLua IDE Shell\x1b[0m')
     terminal.writeln('Type "help" for available commands.\n')
     showPrompt()
+
+    // Handle Ctrl+V paste - xterm.js doesn't handle this automatically
+    terminal.attachCustomKeyEventHandler((event) => {
+      if (event.ctrlKey && (event.key === 'v' || event.key === 'V') && event.type === 'keydown') {
+        navigator.clipboard.readText().then((text) => {
+          if (text) {
+            handleInput(text)
+          }
+        }).catch(() => {
+          // Clipboard access denied - ignore silently
+        })
+        return false // Prevent default xterm handling
+      }
+      return true
+    })
 
     terminal.onData(handleInput)
 

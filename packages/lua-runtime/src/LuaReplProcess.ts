@@ -24,12 +24,24 @@ export class LuaReplProcess implements IProcess {
   }> = []
   private history: string[] = []
   private historyIndex = -1
+  private inputBuffer: string[] = []
+  private _inContinuationMode = false
 
   /**
    * Whether this process supports raw key input handling.
    * When true, the shell should forward raw key events to handleKey().
    */
   supportsRawInput = true
+
+  /**
+   * Whether the REPL is currently in continuation mode (awaiting more input).
+   * When true, the REPL is collecting lines for a multi-line construct
+   * (e.g., function definition, loop) and showing the `>>` prompt.
+   * @returns true if awaiting more input for incomplete code
+   */
+  get inContinuationMode(): boolean {
+    return this._inContinuationMode
+  }
 
   /**
    * Callback invoked when the process produces output.
@@ -102,6 +114,7 @@ export class LuaReplProcess implements IProcess {
   /**
    * Handle input from the user.
    * Executes the input as Lua code in the REPL.
+   * Supports multi-line input (e.g., from paste) by splitting on newlines.
    */
   handleInput(input: string): void {
     if (!this.running || !this.engine) return
@@ -115,19 +128,50 @@ export class LuaReplProcess implements IProcess {
       }
     }
 
-    // Add to history if non-empty and not duplicate of last command
-    if (input.trim() !== '') {
-      const lastCommand = this.history[this.history.length - 1]
-      if (input !== lastCommand) {
-        this.history.push(input)
+    // Check if user pressed Enter while viewing a history entry
+    // When viewing history, the terminal shows the entry but input buffer is empty
+    // So we need to use the history entry as the actual input
+    if (this.historyIndex !== -1 && input === '') {
+      const historyEntry = this.history[this.historyIndex]
+      this.historyIndex = -1
+
+      // For multi-line history entries, we need to add all lines to buffer
+      const lines = historyEntry.split('\n')
+      for (const line of lines) {
+        this.inputBuffer.push(line)
       }
+
+      // Check if code is complete (it should be, since it was executed before)
+      // Fire-and-forget: runs async, results via onOutput/onError callbacks
+      this.checkAndExecuteBuffer()
+      return
     }
 
     // Reset history navigation index
     this.historyIndex = -1
 
-    // Execute as REPL code
-    this.executeReplCode(input)
+    // Handle multi-line input (e.g., from paste)
+    // Split by newlines, add all lines to buffer, then check once
+    const lines = input.split('\n')
+    for (const line of lines) {
+      this.inputBuffer.push(line)
+    }
+
+    // Check if code is complete (only once for all lines)
+    // Fire-and-forget: runs async, results via onOutput/onError callbacks
+    this.checkAndExecuteBuffer()
+  }
+
+  /**
+   * Cancel the current multi-line input and return to normal mode.
+   * Clears the input buffer and exits continuation mode, displaying
+   * a fresh prompt. Use this when the user wants to abandon an
+   * incomplete multi-line construct (e.g., via Ctrl+C).
+   */
+  cancelInput(): void {
+    this.inputBuffer = []
+    this._inContinuationMode = false
+    this.showPrompt()
   }
 
   /**
@@ -202,7 +246,48 @@ export class LuaReplProcess implements IProcess {
    * Show the REPL prompt to indicate ready for input.
    */
   private showPrompt(): void {
-    this.onOutput('> ')
+    this.onOutput(this._inContinuationMode ? '>> ' : '> ')
+  }
+
+  /**
+   * Check if the buffered code is complete and execute if so.
+   */
+  private async checkAndExecuteBuffer(): Promise<void> {
+    if (!this.engine) return
+
+    const code = this.inputBuffer.join('\n')
+
+    // Check if code is complete
+    const result = await LuaEngineFactory.isCodeComplete(this.engine, code)
+
+    if (result.complete) {
+      // Code is complete - execute it
+      this._inContinuationMode = false
+
+      // Add to history as a single entry (only if non-empty)
+      if (code.trim() !== '') {
+        const lastCommand = this.history[this.history.length - 1]
+        if (code !== lastCommand) {
+          this.history.push(code)
+        }
+      }
+
+      // Clear buffer before execution
+      this.inputBuffer = []
+
+      // Execute the code
+      await this.executeReplCode(code)
+    } else if (result.error) {
+      // Syntax error - report it and reset
+      this._inContinuationMode = false
+      this.inputBuffer = []
+      this.onError(formatLuaError(result.error) + '\n')
+      this.showPrompt()
+    } else {
+      // Code is incomplete - wait for more input
+      this._inContinuationMode = true
+      this.showPrompt()
+    }
   }
 
   /**
@@ -211,7 +296,7 @@ export class LuaReplProcess implements IProcess {
   private async initEngine(): Promise<void> {
     const callbacks: LuaEngineCallbacks = {
       onOutput: (text: string) => this.onOutput(text),
-      onError: (text: string) => this.onError(formatLuaError(text)),
+      onError: (text: string) => this.onError(formatLuaError(text) + '\n'),
       onReadInput: () => this.waitForInput(),
     }
 
@@ -227,7 +312,7 @@ export class LuaReplProcess implements IProcess {
       this.onOutput('Lua 5.4 REPL - Type exit() to quit\n')
       this.showPrompt()
     } catch (error) {
-      this.onError(formatLuaError(`Failed to initialize Lua engine: ${error}`))
+      this.onError(formatLuaError(`Failed to initialize Lua engine: ${error}`) + '\n')
       this.running = false
       this.onExit(1)
     }
@@ -242,7 +327,7 @@ export class LuaReplProcess implements IProcess {
 
     const callbacks: LuaEngineCallbacks = {
       onOutput: (text: string) => this.onOutput(text),
-      onError: (text: string) => this.onError(formatLuaError(text)),
+      onError: (text: string) => this.onError(formatLuaError(text) + '\n'),
     }
 
     const result = await LuaEngineFactory.executeCode(this.engine, code, callbacks)
