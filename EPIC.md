@@ -3,7 +3,7 @@
 **Status:** In Progress (3/4 complete)
 **Branch:** epic-140
 **Created:** 2025-12-12
-**Last Updated:** 2025-12-12 06:25
+**Last Updated:** 2025-12-12 07:19
 
 ## Overview
 
@@ -48,7 +48,7 @@ packages/
 |---|-------|--------|--------|-------|
 | #170 | Shell Interface Design | ✅ Complete | 170-shell-interface-design | Merged in PR #174 |
 | #171 | Process Control UI | ✅ Complete | 171-process-control-ui | Merged in PR #175 |
-| #172 | Lua Runtime Package | ✅ Complete | 172-lua-runtime-package | PR #176 ready for review |
+| #172 | Lua Runtime Package | ✅ Complete | 172-lua-runtime-package | Merged in PR #176 |
 | #178 | Process Raw Input Handling | ⏳ Pending | - | Depends on #172 |
 | #179 | REPL Multi-line Input Support | ⏳ Pending | - | Depends on #172 |
 | #173 | Remove Legacy UI Components | ⏳ Pending | - | Depends on #178, #179 |
@@ -67,6 +67,11 @@ packages/
 ## Progress Log
 
 <!-- Updated after each sub-issue completion -->
+
+### 2025-12-12 07:19
+- Merged PR #176 to `epic-140`
+- Sub-issue #172 complete
+- Closed GitHub issue #172
 
 ### 2025-12-12 06:25
 - Updated PR #176 with bug fixes from manual testing
