@@ -81,11 +81,18 @@ const mockExecuteCommand = vi.fn().mockReturnValue({
   cwd: '/',
 })
 
+const mockExecuteCommandWithContext = vi.fn().mockReturnValue({
+  cwd: '/',
+})
+
 const mockUseShell = {
   executeCommand: mockExecuteCommand,
+  executeCommandWithContext: mockExecuteCommandWithContext,
   cwd: '/',
   history: [] as string[],
   clearHistory: vi.fn(),
+  commandNames: ['help', 'ls', 'cd', 'pwd', 'cat', 'echo', 'clear', 'lua'],
+  getPathCompletionsForTab: vi.fn().mockReturnValue([]),
 }
 
 vi.mock('../../hooks/useShell', () => ({
@@ -183,12 +190,16 @@ describe('ShellTerminal', () => {
 
   describe('command output formatting', () => {
     it('should write newline before command output', async () => {
-      mockExecuteCommand.mockReturnValue({
-        exitCode: 0,
-        stdout: 'test output',
-        stderr: '',
-        cwd: '/',
-      })
+      // Mock executeCommandWithContext to call the output callback
+      mockExecuteCommandWithContext.mockImplementation(
+        (
+          _input: string,
+          outputHandler: (text: string) => void
+        ) => {
+          outputHandler('test output')
+          return { cwd: '/' }
+        }
+      )
 
       render(<ShellTerminal fileSystem={mockFileSystem} />)
 
@@ -218,12 +229,17 @@ describe('ShellTerminal', () => {
     })
 
     it('should display stdout on new line after command', async () => {
-      mockExecuteCommand.mockReturnValue({
-        exitCode: 0,
-        stdout: 'file1.txt\nfile2.txt',
-        stderr: '',
-        cwd: '/',
-      })
+      // Mock executeCommandWithContext to call the output callback with multiple lines
+      mockExecuteCommandWithContext.mockImplementation(
+        (
+          _input: string,
+          outputHandler: (text: string) => void
+        ) => {
+          outputHandler('file1.txt')
+          outputHandler('file2.txt')
+          return { cwd: '/' }
+        }
+      )
 
       render(<ShellTerminal fileSystem={mockFileSystem} />)
 
@@ -244,10 +260,10 @@ describe('ShellTerminal', () => {
         onDataHandler('\r')
       })
 
-      // Should have written the output lines
-      const writelnCalls = terminal.writeln.mock.calls.map((c) => c[0])
-      expect(writelnCalls).toContain('file1.txt')
-      expect(writelnCalls).toContain('file2.txt')
+      // Should have written the output lines (using write with \r\n for proper xterm handling)
+      const writeCalls = terminal.write.mock.calls.map((c) => c[0])
+      expect(writeCalls.some((c) => c.includes('file1.txt'))).toBe(true)
+      expect(writeCalls.some((c) => c.includes('file2.txt'))).toBe(true)
     })
   })
 
@@ -424,8 +440,12 @@ describe('ShellTerminal', () => {
           onDataHandler('\r')
         })
 
-        // Verify command was executed normally
-        expect(mockExecuteCommand).toHaveBeenCalledWith('ls')
+        // Verify command was executed via executeCommandWithContext
+        expect(mockExecuteCommandWithContext).toHaveBeenCalledWith(
+          'ls',
+          expect.any(Function),
+          expect.any(Function)
+        )
         expect(mockHandleInput).not.toHaveBeenCalled()
       })
     })
@@ -468,6 +488,74 @@ describe('ShellTerminal', () => {
         // Should write ^C to terminal
         const writeCalls = terminal.write.mock.calls.map((c) => c[0])
         expect(writeCalls).toContain('^C')
+      })
+    })
+
+    describe('Ctrl+D handling', () => {
+      it('should stop process when Ctrl+D pressed with empty line and process running', async () => {
+        mockUseProcessManager.isProcessRunning = true
+        mockUseProcessManager.hasForegroundProcess.mockReturnValue(true)
+
+        render(<ShellTerminal fileSystem={mockFileSystem} />)
+
+        const terminal = terminalInstances[0]
+        const onDataHandler = terminal.onData.mock.calls[0][0]
+
+        // Press Ctrl+D (char code 4) with empty line
+        await act(async () => {
+          onDataHandler('\x04')
+        })
+
+        expect(mockStopProcess).toHaveBeenCalledTimes(1)
+      })
+
+      it('should not stop process when Ctrl+D pressed with non-empty line', async () => {
+        mockUseProcessManager.isProcessRunning = true
+        mockUseProcessManager.hasForegroundProcess.mockReturnValue(true)
+
+        render(<ShellTerminal fileSystem={mockFileSystem} />)
+
+        const terminal = terminalInstances[0]
+        const onDataHandler = terminal.onData.mock.calls[0][0]
+
+        // Type some text first
+        await act(async () => {
+          onDataHandler('h')
+        })
+        await act(async () => {
+          onDataHandler('i')
+        })
+
+        // Press Ctrl+D (char code 4) with non-empty line
+        await act(async () => {
+          onDataHandler('\x04')
+        })
+
+        // stopProcess should not be called because line is not empty
+        expect(mockStopProcess).not.toHaveBeenCalled()
+      })
+
+      it('should do nothing when Ctrl+D pressed with no process running', async () => {
+        mockUseProcessManager.isProcessRunning = false
+        mockUseProcessManager.hasForegroundProcess.mockReturnValue(false)
+
+        render(<ShellTerminal fileSystem={mockFileSystem} />)
+
+        const terminal = terminalInstances[0]
+        const onDataHandler = terminal.onData.mock.calls[0][0]
+
+        terminal.write.mockClear()
+
+        // Press Ctrl+D (char code 4)
+        await act(async () => {
+          onDataHandler('\x04')
+        })
+
+        // stopProcess should not be called
+        expect(mockStopProcess).not.toHaveBeenCalled()
+
+        // Should not write anything for Ctrl+D when no process
+        // (just silently ignore)
       })
     })
 

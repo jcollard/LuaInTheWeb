@@ -9,7 +9,10 @@ import {
   type ExternalFileSystem,
   type CommandResult,
   type FileEntry,
+  type IProcess,
+  type ShellContext,
 } from '@lua-learning/shell-core'
+import { LuaCommand } from '@lua-learning/lua-runtime'
 import type { UseFileSystemReturn } from './useFileSystem'
 
 /**
@@ -21,11 +24,25 @@ export interface ShellCommandResult extends CommandResult {
 }
 
 /**
+ * Result of executing a command that may return a process
+ */
+export interface ExecuteCommandWithContextResult {
+  /** The process if the command returns one */
+  process?: IProcess
+  /** Command result for non-process commands */
+  result?: ShellCommandResult
+  /** Current working directory after command */
+  cwd: string
+}
+
+/**
  * Shell hook return type
  */
 export interface UseShellReturn {
   /** Execute a command string, returns result with current cwd */
   executeCommand: (input: string) => ShellCommandResult
+  /** Execute a command that may return an IProcess */
+  executeCommandWithContext: (input: string, outputHandler: (text: string) => void, errorHandler: (text: string) => void) => ExecuteCommandWithContextResult
   /** Current working directory */
   cwd: string
   /** Command history */
@@ -72,10 +89,12 @@ export function useShell(fileSystem: UseFileSystemReturn): UseShellReturn {
     return createFileSystemAdapter(external, cwd)
   }, [fileSystem, cwd])
 
-  // Create command registry with builtin commands - memoized
+  // Create command registry with builtin commands and LuaCommand - memoized
   const registry = useMemo(() => {
     const reg = new CommandRegistry()
     registerBuiltinCommands(reg)
+    // Register Lua command for REPL and script execution
+    reg.registerICommand(new LuaCommand())
     return reg
   }, [])
 
@@ -110,6 +129,56 @@ export function useShell(fileSystem: UseFileSystemReturn): UseShellReturn {
     [registry, shellFileSystem, cwd]
   )
 
+  // Execute command that may return an IProcess
+  const executeCommandWithContext = useCallback(
+    (
+      input: string,
+      outputHandler: (text: string) => void,
+      errorHandler: (text: string) => void
+    ): ExecuteCommandWithContextResult => {
+      const trimmed = input.trim()
+      if (!trimmed) {
+        return { cwd }
+      }
+
+      // Add to history
+      setHistory((prev) => [...prev, trimmed])
+
+      // Parse the command
+      const parsed = parseCommand(trimmed)
+      if (!parsed) {
+        errorHandler(`Invalid command: ${trimmed}`)
+        return { cwd }
+      }
+
+      // Create shell context
+      const context: ShellContext = {
+        cwd: shellFileSystem.getCurrentDirectory(),
+        filesystem: shellFileSystem,
+        output: outputHandler,
+        error: errorHandler,
+      }
+
+      // Execute the command using the new interface
+      const processOrVoid = registry.executeWithContext(parsed.command, parsed.args, context)
+
+      // Get the new cwd after command execution
+      const newCwd = shellFileSystem.getCurrentDirectory()
+      if (newCwd !== cwd) {
+        setCwd(newCwd)
+      }
+
+      // If a process was returned, return it
+      if (processOrVoid) {
+        return { process: processOrVoid, cwd: newCwd }
+      }
+
+      // Otherwise, return just the cwd
+      return { cwd: newCwd }
+    },
+    [registry, shellFileSystem, cwd]
+  )
+
   const clearHistory = useCallback(() => {
     setHistory([])
   }, [])
@@ -127,6 +196,7 @@ export function useShell(fileSystem: UseFileSystemReturn): UseShellReturn {
 
   return {
     executeCommand,
+    executeCommandWithContext,
     cwd,
     history,
     clearHistory,
