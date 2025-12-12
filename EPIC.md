@@ -51,6 +51,7 @@ packages/
 | #172 | Lua Runtime Package | ✅ Complete | 172-lua-runtime-package | Ready for PR |
 | #173 | Remove Legacy UI Components | ⏳ Pending | - | Depends on #171, #172 |
 | #178 | Process Raw Input Handling | ⏳ Pending | - | Forward keys to process for REPL history |
+| #179 | REPL Multi-line Input Support | ⏳ Pending | - | Support functions, loops, etc. |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
