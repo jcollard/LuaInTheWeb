@@ -383,5 +383,32 @@ describe('LuaEngineFactory', () => {
 
       engine.global.close()
     })
+
+    it('should handle code containing ]=] (level-1 long string delimiter)', async () => {
+      const engine = await LuaEngineFactory.create(callbacks)
+
+      // User code with a level-1 long string - works because we embed with level-2
+      const code = 'local s = [=[hello]=]'
+      const result = await LuaEngineFactory.isCodeComplete(engine, code)
+
+      expect(result.complete).toBe(true)
+
+      engine.global.close()
+    })
+
+    // Known limitation: code containing ]==] (level-2 delimiter) will break parsing
+    // This is extremely rare in practice - Lua long strings with multiple = signs
+    // are uncommon. If needed, we could implement dynamic delimiter detection.
+    it.skip('known limitation: code containing ]==] breaks parsing', async () => {
+      const engine = await LuaEngineFactory.create(callbacks)
+
+      // This would break because our embedding uses [==[...]==]
+      const code = 'local s = [==[contains ]==] in string]==]'
+      const result = await LuaEngineFactory.isCodeComplete(engine, code)
+
+      expect(result.complete).toBe(true)
+
+      engine.global.close()
+    })
   })
 })

@@ -142,6 +142,7 @@ export class LuaReplProcess implements IProcess {
       }
 
       // Check if code is complete (it should be, since it was executed before)
+      // Fire-and-forget: runs async, results via onOutput/onError callbacks
       this.checkAndExecuteBuffer()
       return
     }
@@ -157,6 +158,7 @@ export class LuaReplProcess implements IProcess {
     }
 
     // Check if code is complete (only once for all lines)
+    // Fire-and-forget: runs async, results via onOutput/onError callbacks
     this.checkAndExecuteBuffer()
   }
 
