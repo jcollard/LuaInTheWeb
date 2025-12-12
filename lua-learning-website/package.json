@@ -22,6 +22,7 @@
     "screenshots": "node scripts/capture-screenshots.js"
   },
   "dependencies": {
+    "@lua-learning/lua-runtime": "*",
     "@lua-learning/shell-core": "*",
     "@monaco-editor/react": "^4.7.0",
     "@xterm/addon-fit": "^0.10.0",

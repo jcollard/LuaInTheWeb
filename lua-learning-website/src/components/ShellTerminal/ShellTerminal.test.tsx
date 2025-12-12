@@ -81,11 +81,18 @@ const mockExecuteCommand = vi.fn().mockReturnValue({
   cwd: '/',
 })
 
+const mockExecuteCommandWithContext = vi.fn().mockReturnValue({
+  cwd: '/',
+})
+
 const mockUseShell = {
   executeCommand: mockExecuteCommand,
+  executeCommandWithContext: mockExecuteCommandWithContext,
   cwd: '/',
   history: [] as string[],
   clearHistory: vi.fn(),
+  commandNames: ['help', 'ls', 'cd', 'pwd', 'cat', 'echo', 'clear', 'lua'],
+  getPathCompletionsForTab: vi.fn().mockReturnValue([]),
 }
 
 vi.mock('../../hooks/useShell', () => ({
@@ -183,12 +190,16 @@ describe('ShellTerminal', () => {
 
   describe('command output formatting', () => {
     it('should write newline before command output', async () => {
-      mockExecuteCommand.mockReturnValue({
-        exitCode: 0,
-        stdout: 'test output',
-        stderr: '',
-        cwd: '/',
-      })
+      // Mock executeCommandWithContext to call the output callback
+      mockExecuteCommandWithContext.mockImplementation(
+        (
+          _input: string,
+          outputHandler: (text: string) => void
+        ) => {
+          outputHandler('test output')
+          return { cwd: '/' }
+        }
+      )
 
       render(<ShellTerminal fileSystem={mockFileSystem} />)
 
@@ -218,12 +229,17 @@ describe('ShellTerminal', () => {
     })
 
     it('should display stdout on new line after command', async () => {
-      mockExecuteCommand.mockReturnValue({
-        exitCode: 0,
-        stdout: 'file1.txt\nfile2.txt',
-        stderr: '',
-        cwd: '/',
-      })
+      // Mock executeCommandWithContext to call the output callback with multiple lines
+      mockExecuteCommandWithContext.mockImplementation(
+        (
+          _input: string,
+          outputHandler: (text: string) => void
+        ) => {
+          outputHandler('file1.txt')
+          outputHandler('file2.txt')
+          return { cwd: '/' }
+        }
+      )
 
       render(<ShellTerminal fileSystem={mockFileSystem} />)
 
@@ -424,8 +440,12 @@ describe('ShellTerminal', () => {
           onDataHandler('\r')
         })
 
-        // Verify command was executed normally
-        expect(mockExecuteCommand).toHaveBeenCalledWith('ls')
+        // Verify command was executed via executeCommandWithContext
+        expect(mockExecuteCommandWithContext).toHaveBeenCalledWith(
+          'ls',
+          expect.any(Function),
+          expect.any(Function)
+        )
         expect(mockHandleInput).not.toHaveBeenCalled()
       })
     })

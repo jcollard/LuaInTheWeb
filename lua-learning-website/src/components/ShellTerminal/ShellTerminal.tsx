@@ -71,11 +71,12 @@ export function ShellTerminal({
   const xtermRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
 
-  const { executeCommand, cwd, history, commandNames, getPathCompletionsForTab } = useShell(fileSystem)
+  const { executeCommand, executeCommandWithContext, cwd, history, commandNames, getPathCompletionsForTab } = useShell(fileSystem)
 
   // Store latest values in refs so handlers can access current data
   const cwdRef = useRef(cwd)
   const executeCommandRef = useRef(executeCommand)
+  const executeCommandWithContextRef = useRef(executeCommandWithContext)
 
   useEffect(() => {
     cwdRef.current = cwd
@@ -84,6 +85,10 @@ export function ShellTerminal({
   useEffect(() => {
     executeCommandRef.current = executeCommand
   }, [executeCommand])
+
+  useEffect(() => {
+    executeCommandWithContextRef.current = executeCommandWithContext
+  }, [executeCommandWithContext])
 
   // Helper to show prompt - needs to be stable and use refs
   const showPrompt = useCallback(() => {
@@ -117,6 +122,7 @@ export function ShellTerminal({
   // Process manager for handling long-running processes
   const {
     isProcessRunning,
+    startProcess,
     stopProcess,
     handleInput: handleProcessInput,
   } = useProcessManager({
@@ -127,14 +133,16 @@ export function ShellTerminal({
 
   // Store process manager state in refs for stable terminal event handler
   const isProcessRunningRef = useRef(isProcessRunning)
+  const startProcessRef = useRef(startProcess)
   const stopProcessRef = useRef(stopProcess)
   const handleProcessInputRef = useRef(handleProcessInput)
 
   useEffect(() => {
     isProcessRunningRef.current = isProcessRunning
+    startProcessRef.current = startProcess
     stopProcessRef.current = stopProcess
     handleProcessInputRef.current = handleProcessInput
-  }, [isProcessRunning, stopProcess, handleProcessInput])
+  }, [isProcessRunning, startProcess, stopProcess, handleProcessInput])
 
   // Handle command execution
   const handleCommand = useCallback((input: string) => {
@@ -144,27 +152,27 @@ export function ShellTerminal({
     // Move to new line before showing output
     terminal.writeln('')
 
-    const result = executeCommandRef.current(input)
+    // Execute command using the context-aware method
+    // This handles both ICommand (lua) and legacy commands via adapter
+    // Output is handled by the callbacks passed to the context
+    const contextResult = executeCommandWithContextRef.current(
+      input,
+      (text) => terminal.writeln(text),
+      (text) => terminal.writeln(`\x1b[31m${text}\x1b[0m`)
+    )
 
-    // Display stdout
-    if (result.stdout) {
-      const lines = result.stdout.split('\n')
-      lines.forEach((line: string) => {
-        terminal.writeln(line)
-      })
+    // Update cwd ref immediately
+    cwdRef.current = contextResult.cwd
+
+    // If a process was returned, start it and don't show prompt yet
+    // The prompt will be shown when the process exits via onProcessExit callback
+    if (contextResult.process) {
+      startProcessRef.current(contextResult.process)
+      return
     }
 
-    // Display stderr in red
-    if (result.stderr) {
-      const lines = result.stderr.split('\n')
-      lines.forEach((line: string) => {
-        terminal.writeln(`\x1b[31m${line}\x1b[0m`)
-      })
-    }
-
-    // Update cwd ref immediately so prompt shows correct directory
-    cwdRef.current = result.cwd
-
+    // For non-process commands, output was already handled via context callbacks
+    // Just show the prompt
     showPrompt()
   }, [showPrompt])
 

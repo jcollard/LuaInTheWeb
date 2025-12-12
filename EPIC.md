@@ -1,9 +1,9 @@
 # Epic #140: [Epic] Shell Process Model with Lua Execution
 
-**Status:** In Progress (2/4 complete)
+**Status:** In Progress (3/4 complete)
 **Branch:** epic-140
 **Created:** 2025-12-12
-**Last Updated:** 2025-12-12 05:07
+**Last Updated:** 2025-12-12 05:35
 
 ## Overview
 
@@ -48,7 +48,7 @@ packages/
 |---|-------|--------|--------|-------|
 | #170 | Shell Interface Design | ✅ Complete | 170-shell-interface-design | Merged in PR #174 |
 | #171 | Process Control UI | ✅ Complete | 171-process-control-ui | Merged in PR #175 |
-| #172 | Lua Runtime Package | ⏳ Pending | - | Depends on #170 |
+| #172 | Lua Runtime Package | ✅ Complete | 172-lua-runtime-package | Ready for PR |
 | #173 | Remove Legacy UI Components | ⏳ Pending | - | Depends on #171, #172 |
 
 **Status Legend:**
@@ -65,6 +65,19 @@ packages/
 ## Progress Log
 
 <!-- Updated after each sub-issue completion -->
+
+### 2025-12-12 05:35
+- Completed #172: Lua Runtime Package
+- Created new `@lua-learning/lua-runtime` package
+- Implemented LuaEngineFactory for shared Lua engine setup
+- Implemented LuaReplProcess for interactive REPL mode (with io.read() support)
+- Implemented LuaScriptProcess for script file execution
+- Implemented LuaCommand implementing ICommand interface
+- Added error formatting with [error] prefix
+- Integrated lua command into shell via useShell hook
+- All 58 lua-runtime tests pass, all 1135 website tests pass
+- Build succeeds, lint passes
+- Ready for PR
 
 ### 2025-12-12 05:07
 - Merged PR #175 to `epic-140`
@@ -124,6 +137,16 @@ packages/
 - `lua-learning-website/src/hooks/useProcessManager.ts` - React hook wrapping ProcessManager
 - `lua-learning-website/src/components/StopButton/StopButton.tsx` - Stop button component
 - `lua-learning-website/src/components/ShellTerminal/ShellTerminal.tsx` - Updated with process control
+
+### Lua Runtime Package (from #172)
+- `packages/lua-runtime/src/LuaEngineFactory.ts` - Factory for creating Lua engines with callbacks
+- `packages/lua-runtime/src/LuaReplProcess.ts` - Interactive REPL process (implements IProcess)
+- `packages/lua-runtime/src/LuaScriptProcess.ts` - Script execution process (implements IProcess)
+- `packages/lua-runtime/src/LuaCommand.ts` - Lua command (implements ICommand)
+- `packages/lua-runtime/src/index.ts` - Public API exports
+
+### Integration (from #172)
+- `lua-learning-website/src/hooks/useShell.ts` - Updated with LuaCommand registration and executeCommandWithContext
 
 ## Open Questions
 
