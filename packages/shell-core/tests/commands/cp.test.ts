@@ -151,8 +151,35 @@ describe('cp command', () => {
     })
   })
 
-  describe('execute copying directory recursively', () => {
-    it('should copy directory and its contents', () => {
+  describe('execute copying directory without -r flag', () => {
+    it('should return error when copying directory without -r flag', () => {
+      mockFs.isDirectory = vi.fn().mockImplementation((path: string) => {
+        return path === '/home/user/srcdir'
+      })
+      mockFs.exists = vi.fn().mockReturnValue(true)
+
+      const result = cp.execute(['srcdir', 'destdir'], mockFs)
+
+      expect(result.exitCode).toBe(1)
+      expect(result.stderr).toContain('-r not specified')
+      expect(result.stderr).toContain('omitting directory')
+    })
+
+    it('should not copy any files when directory is given without -r', () => {
+      mockFs.isDirectory = vi.fn().mockImplementation((path: string) => {
+        return path === '/home/user/srcdir'
+      })
+      mockFs.exists = vi.fn().mockReturnValue(true)
+
+      cp.execute(['srcdir', 'destdir'], mockFs)
+
+      expect(mockFs.createDirectory).not.toHaveBeenCalled()
+      expect(mockFs.writeFile).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('execute copying directory with -r flag', () => {
+    it('should copy directory and its contents with -r flag', () => {
       // Set up directory structure
       mockFs.isDirectory = vi.fn().mockImplementation((path: string) => {
         return path === '/home/user/srcdir' || path === '/home/user/srcdir/subdir'
@@ -186,7 +213,7 @@ describe('cp command', () => {
         return ''
       })
 
-      const result = cp.execute(['srcdir', 'destdir'], mockFs)
+      const result = cp.execute(['-r', 'srcdir', 'destdir'], mockFs)
 
       expect(result.exitCode).toBe(0)
       expect(result.stdout).toBe('')
@@ -200,7 +227,7 @@ describe('cp command', () => {
       expect(mockFs.writeFile).toHaveBeenCalledWith('/home/user/destdir/subdir/file2.txt', 'content2')
     })
 
-    it('should copy empty directory', () => {
+    it('should copy empty directory with -r flag', () => {
       mockFs.isDirectory = vi.fn().mockReturnValue(true)
       mockFs.isFile = vi.fn().mockReturnValue(false)
       mockFs.listDirectory = vi.fn().mockReturnValue([])
@@ -208,10 +235,31 @@ describe('cp command', () => {
         return path === '/home/user/emptydir'
       })
 
-      const result = cp.execute(['emptydir', 'newdir'], mockFs)
+      const result = cp.execute(['-r', 'emptydir', 'newdir'], mockFs)
 
       expect(result.exitCode).toBe(0)
       expect(mockFs.createDirectory).toHaveBeenCalledWith('/home/user/newdir')
+    })
+
+    it('should copy files without -r flag (files do not need -r)', () => {
+      const result = cp.execute(['source.txt', 'dest.txt'], mockFs)
+
+      expect(result.exitCode).toBe(0)
+      expect(mockFs.writeFile).toHaveBeenCalledWith('/home/user/dest.txt', 'file content')
+    })
+
+    it('should copy multiple directories with -r flag', () => {
+      mockFs.isDirectory = vi.fn().mockImplementation((path: string) => {
+        return ['/home/user/dir1', '/home/user/dir2', '/home/user/destdir'].includes(path)
+      })
+      mockFs.exists = vi.fn().mockReturnValue(true)
+      mockFs.listDirectory = vi.fn().mockReturnValue([])
+
+      const result = cp.execute(['-r', 'dir1', 'dir2', 'destdir'], mockFs)
+
+      expect(result.exitCode).toBe(0)
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/home/user/destdir/dir1')
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/home/user/destdir/dir2')
     })
   })
 

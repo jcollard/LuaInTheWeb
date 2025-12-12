@@ -158,4 +158,83 @@ describe('mkdir command', () => {
       expect(mockFs.createDirectory).toHaveBeenCalled()
     })
   })
+
+  describe('-p flag (create parent directories)', () => {
+    it('should create nested directories with -p flag', () => {
+      const result = mkdir.execute(['-p', 'a/b/c'], mockFs)
+
+      expect(result.exitCode).toBe(0)
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/home/user/a')
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/home/user/a/b')
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/home/user/a/b/c')
+    })
+
+    it('should skip existing directories with -p flag (no error)', () => {
+      // Mock all parent directories as existing
+      mockFs.exists = vi.fn().mockImplementation((path: string) => {
+        return ['/home', '/home/user', '/home/user/existing'].includes(path)
+      })
+      mockFs.isDirectory = vi.fn().mockImplementation((path: string) => {
+        return ['/home', '/home/user', '/home/user/existing'].includes(path)
+      })
+
+      const result = mkdir.execute(['-p', 'existing'], mockFs)
+
+      expect(result.exitCode).toBe(0)
+      expect(result.stderr).toBe('')
+      expect(mockFs.createDirectory).not.toHaveBeenCalled()
+    })
+
+    it('should create only missing parent directories', () => {
+      // Mock /home, /home/user, and /home/user/a as existing
+      mockFs.exists = vi.fn().mockImplementation((path: string) => {
+        return ['/home', '/home/user', '/home/user/a'].includes(path)
+      })
+      mockFs.isDirectory = vi.fn().mockImplementation((path: string) => {
+        return ['/home', '/home/user', '/home/user/a'].includes(path)
+      })
+
+      const result = mkdir.execute(['-p', 'a/b/c'], mockFs)
+
+      expect(result.exitCode).toBe(0)
+      // Should NOT try to create existing directories
+      expect(mockFs.createDirectory).not.toHaveBeenCalledWith('/home')
+      expect(mockFs.createDirectory).not.toHaveBeenCalledWith('/home/user')
+      expect(mockFs.createDirectory).not.toHaveBeenCalledWith('/home/user/a')
+      // Should create b and c
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/home/user/a/b')
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/home/user/a/b/c')
+    })
+
+    it('should handle multiple paths with -p flag', () => {
+      const result = mkdir.execute(['-p', 'a/b', 'c/d/e'], mockFs)
+
+      expect(result.exitCode).toBe(0)
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/home/user/a')
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/home/user/a/b')
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/home/user/c')
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/home/user/c/d')
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/home/user/c/d/e')
+    })
+
+    it('should work with absolute paths', () => {
+      const result = mkdir.execute(['-p', '/tmp/new/nested'], mockFs)
+
+      expect(result.exitCode).toBe(0)
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/tmp')
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/tmp/new')
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/tmp/new/nested')
+    })
+
+    it('should fail without -p flag when parent does not exist', () => {
+      mockFs.createDirectory = vi.fn().mockImplementation(() => {
+        throw new Error('Parent directory not found')
+      })
+
+      const result = mkdir.execute(['a/b/c'], mockFs)
+
+      expect(result.exitCode).toBe(1)
+      expect(result.stderr).toContain('cannot create directory')
+    })
+  })
 })

@@ -117,15 +117,40 @@ describe('touch command', () => {
   })
 
   describe('execute when path is a directory', () => {
-    it('should return error when path is a directory', () => {
+    it('should succeed when path is a directory (like bash)', () => {
       mockFs.exists = vi.fn().mockReturnValue(true)
       mockFs.isDirectory = vi.fn().mockReturnValue(true)
 
       const result = touch.execute(['somedir'], mockFs)
 
-      expect(result.exitCode).toBe(1)
+      expect(result.exitCode).toBe(0)
       expect(result.stdout).toBe('')
-      expect(result.stderr).toContain('is a directory')
+      expect(result.stderr).toBe('')
+    })
+
+    it('should not write to directory', () => {
+      mockFs.exists = vi.fn().mockReturnValue(true)
+      mockFs.isDirectory = vi.fn().mockReturnValue(true)
+
+      touch.execute(['somedir'], mockFs)
+
+      expect(mockFs.writeFile).not.toHaveBeenCalled()
+    })
+
+    it('should handle mixed files and directories', () => {
+      mockFs.exists = vi.fn().mockImplementation((path: string) => {
+        return path === '/home/user/mydir'
+      })
+      mockFs.isDirectory = vi.fn().mockImplementation((path: string) => {
+        return path === '/home/user/mydir'
+      })
+
+      const result = touch.execute(['file1.txt', 'mydir', 'file2.txt'], mockFs)
+
+      expect(result.exitCode).toBe(0)
+      expect(mockFs.writeFile).toHaveBeenCalledTimes(2)
+      expect(mockFs.writeFile).toHaveBeenCalledWith('/home/user/file1.txt', '')
+      expect(mockFs.writeFile).toHaveBeenCalledWith('/home/user/file2.txt', '')
     })
   })
 
@@ -143,13 +168,46 @@ describe('touch command', () => {
     })
   })
 
-  describe('edge cases', () => {
-    it('should ignore extra arguments', () => {
+  describe('multiple files', () => {
+    it('should create all files when given multiple arguments', () => {
       const result = touch.execute(['file1.txt', 'file2.txt', 'file3.txt'], mockFs)
 
       expect(result.exitCode).toBe(0)
-      // Only touches the first file
-      expect(mockFs.writeFile).toHaveBeenCalledTimes(1)
+      expect(mockFs.writeFile).toHaveBeenCalledTimes(3)
+      expect(mockFs.writeFile).toHaveBeenCalledWith('/home/user/file1.txt', '')
+      expect(mockFs.writeFile).toHaveBeenCalledWith('/home/user/file2.txt', '')
+      expect(mockFs.writeFile).toHaveBeenCalledWith('/home/user/file3.txt', '')
+    })
+
+    it('should handle mix of new and existing files', () => {
+      mockFs.exists = vi.fn().mockImplementation((path: string) => {
+        return path === '/home/user/existing.txt'
+      })
+      mockFs.isFile = vi.fn().mockImplementation((path: string) => {
+        return path === '/home/user/existing.txt'
+      })
+
+      const result = touch.execute(['new1.txt', 'existing.txt', 'new2.txt'], mockFs)
+
+      expect(result.exitCode).toBe(0)
+      expect(mockFs.writeFile).toHaveBeenCalledTimes(2)
+      expect(mockFs.writeFile).toHaveBeenCalledWith('/home/user/new1.txt', '')
+      expect(mockFs.writeFile).toHaveBeenCalledWith('/home/user/new2.txt', '')
+    })
+
+    it('should continue and collect errors when some files fail', () => {
+      mockFs.writeFile = vi.fn().mockImplementation((path: string) => {
+        if (path === '/home/user/bad.txt') {
+          throw new Error('Parent directory not found')
+        }
+      })
+
+      const result = touch.execute(['good1.txt', 'bad.txt', 'good2.txt'], mockFs)
+
+      expect(result.exitCode).toBe(1)
+      expect(mockFs.writeFile).toHaveBeenCalledTimes(3)
+      expect(result.stderr).toContain('cannot touch')
+      expect(result.stderr).toContain('bad.txt')
     })
   })
 })
