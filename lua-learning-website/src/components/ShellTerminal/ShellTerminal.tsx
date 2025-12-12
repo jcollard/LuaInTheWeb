@@ -277,8 +277,8 @@ export function ShellTerminal({
     xtermRef.current = terminal
     fitAddonRef.current = fitAddon
 
-    // Handle terminal input - dispatch to hook handlers
-    const handleInput = (data: string) => {
+    // Process a single character or escape sequence
+    const processSingleInput = (data: string) => {
       const code = data.charCodeAt(0)
       const handlers = handlersRef.current
       let commands: TerminalCommand[] = []
@@ -424,6 +424,28 @@ export function ShellTerminal({
       if (code >= 32 && code < 127) {
         commands = handlers.handleCharacter(data)
         executeTerminalCommands(terminal, commands)
+      }
+    }
+
+    // Handle terminal input - dispatch to hook handlers
+    // Handles multi-character paste by processing each character/sequence
+    const handleInput = (data: string) => {
+      // Check for escape sequences (arrow keys, etc.) - process as single unit
+      if (data.startsWith('\x1b[')) {
+        processSingleInput(data)
+        return
+      }
+
+      // For single characters or control characters, process directly
+      if (data.length === 1) {
+        processSingleInput(data)
+        return
+      }
+
+      // Multi-character input (paste) - process each character individually
+      // This handles newlines, special chars, etc. correctly
+      for (const char of data) {
+        processSingleInput(char)
       }
     }
 
