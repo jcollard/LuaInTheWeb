@@ -3,7 +3,7 @@
  * Handles process lifecycle, input routing, and exit notifications.
  */
 
-import type { IProcess } from './interfaces/IProcess'
+import type { IProcess, KeyModifiers } from './interfaces/IProcess'
 
 /**
  * Manages the current foreground process.
@@ -80,6 +80,29 @@ export class ProcessManager {
   handleInput(input: string): boolean {
     if (this.currentProcess) {
       this.currentProcess.handleInput(input)
+      return true
+    }
+    return false
+  }
+
+  /**
+   * Check if the current process supports raw key input.
+   * @returns True if a process is running and supports raw input
+   */
+  supportsRawInput(): boolean {
+    return this.currentProcess?.supportsRawInput === true
+  }
+
+  /**
+   * Route a key event to the foreground process.
+   * Only works if the process supports raw input (supportsRawInput === true).
+   * @param key - The key identifier (e.g., 'ArrowUp', 'ArrowDown')
+   * @param modifiers - Optional modifier key state
+   * @returns True if key was handled by a process, false otherwise
+   */
+  handleKey(key: string, modifiers?: KeyModifiers): boolean {
+    if (this.currentProcess?.supportsRawInput && this.currentProcess.handleKey) {
+      this.currentProcess.handleKey(key, modifiers)
       return true
     }
     return false

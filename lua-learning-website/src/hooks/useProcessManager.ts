@@ -1,5 +1,9 @@
 import { useState, useCallback, useRef } from 'react'
-import { ProcessManager, type IProcess } from '@lua-learning/shell-core'
+import {
+  ProcessManager,
+  type IProcess,
+  type KeyModifiers,
+} from '@lua-learning/shell-core'
 
 export interface UseProcessManagerOptions {
   /** Callback when a process exits */
@@ -21,6 +25,10 @@ export interface UseProcessManagerReturn {
   stopProcess: () => void
   /** Route input to the current process */
   handleInput: (input: string) => boolean
+  /** Check if the current process supports raw key input */
+  supportsRawInput: () => boolean
+  /** Route a key event to the current process */
+  handleKey: (key: string, modifiers?: KeyModifiers) => boolean
 }
 
 /**
@@ -84,11 +92,24 @@ export function useProcessManager(
     return processManagerRef.current.handleInput(input)
   }, [])
 
+  const supportsRawInput = useCallback((): boolean => {
+    return processManagerRef.current.supportsRawInput()
+  }, [])
+
+  const handleKey = useCallback(
+    (key: string, modifiers?: KeyModifiers): boolean => {
+      return processManagerRef.current.handleKey(key, modifiers)
+    },
+    []
+  )
+
   return {
     isProcessRunning,
     hasForegroundProcess,
     startProcess,
     stopProcess,
     handleInput,
+    supportsRawInput,
+    handleKey,
   }
 }

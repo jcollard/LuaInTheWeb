@@ -4,6 +4,18 @@
  */
 
 /**
+ * Key modifier state for raw key input handling.
+ */
+export interface KeyModifiers {
+  /** Ctrl key is pressed */
+  ctrl: boolean
+  /** Alt key is pressed */
+  alt: boolean
+  /** Shift key is pressed */
+  shift: boolean
+}
+
+/**
  * A long-running process that can be started, stopped, and receive input.
  * Used for interactive commands like REPLs or scripts that take time to execute.
  */
@@ -50,4 +62,22 @@ export interface IProcess {
    * @param code - Exit code (0 for success, non-zero for errors)
    */
   onExit: (code: number) => void
+
+  /**
+   * Whether this process supports raw key input handling.
+   * When true, the shell should forward raw key events to handleKey().
+   * When false/undefined, only line-based input via handleInput() is used.
+   * @optional
+   */
+  supportsRawInput?: boolean
+
+  /**
+   * Handle a raw key input event.
+   * Called when the user presses a key while this process is running
+   * and supportsRawInput is true.
+   * @param key - The key identifier (e.g., 'ArrowUp', 'ArrowDown', 'Tab')
+   * @param modifiers - Optional modifier key state
+   * @optional
+   */
+  handleKey?(key: string, modifiers?: KeyModifiers): void
 }

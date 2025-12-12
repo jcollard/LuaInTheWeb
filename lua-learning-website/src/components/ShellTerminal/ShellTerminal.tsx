@@ -127,6 +127,8 @@ export function ShellTerminal({
     startProcess,
     stopProcess,
     handleInput: handleProcessInput,
+    supportsRawInput,
+    handleKey: handleProcessKey,
   } = useProcessManager({
     onOutput: handleProcessOutput,
     onError: handleProcessError,
@@ -138,13 +140,17 @@ export function ShellTerminal({
   const startProcessRef = useRef(startProcess)
   const stopProcessRef = useRef(stopProcess)
   const handleProcessInputRef = useRef(handleProcessInput)
+  const supportsRawInputRef = useRef(supportsRawInput)
+  const handleProcessKeyRef = useRef(handleProcessKey)
 
   useEffect(() => {
     isProcessRunningRef.current = isProcessRunning
     startProcessRef.current = startProcess
     stopProcessRef.current = stopProcess
     handleProcessInputRef.current = handleProcessInput
-  }, [isProcessRunning, startProcess, stopProcess, handleProcessInput])
+    supportsRawInputRef.current = supportsRawInput
+    handleProcessKeyRef.current = handleProcessKey
+  }, [isProcessRunning, startProcess, stopProcess, handleProcessInput, supportsRawInput, handleProcessKey])
 
   // Handle command execution
   const handleCommand = useCallback((input: string) => {
@@ -299,6 +305,11 @@ export function ShellTerminal({
 
       // Handle Arrow Up (history)
       if (data === '\x1b[A') {
+        // If a process is running and supports raw input, forward the key
+        if (isProcessRunningRef.current && supportsRawInputRef.current()) {
+          handleProcessKeyRef.current('ArrowUp', { ctrl: false, alt: false, shift: false })
+          return
+        }
         commands = handlers.handleArrowUp()
         if (commands.length > 0) {
           // Clear line, show prompt, then write history command
@@ -314,6 +325,11 @@ export function ShellTerminal({
 
       // Handle Arrow Down (history)
       if (data === '\x1b[B') {
+        // If a process is running and supports raw input, forward the key
+        if (isProcessRunningRef.current && supportsRawInputRef.current()) {
+          handleProcessKeyRef.current('ArrowDown', { ctrl: false, alt: false, shift: false })
+          return
+        }
         commands = handlers.handleArrowDown()
         // Clear line, show prompt, then write history command (if any)
         terminal.write('\r\x1b[K')

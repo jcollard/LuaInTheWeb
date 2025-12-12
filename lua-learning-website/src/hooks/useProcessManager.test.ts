@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useProcessManager } from './useProcessManager'
-import type { IProcess } from '@lua-learning/shell-core'
+import type { IProcess, KeyModifiers } from '@lua-learning/shell-core'
 
 /**
  * Creates a mock process for testing
@@ -187,6 +187,92 @@ describe('useProcessManager', () => {
       })
 
       expect(onError).toHaveBeenCalledWith('error message')
+    })
+  })
+
+  describe('handleKey', () => {
+    function createMockProcessWithKeySupport(): IProcess {
+      return {
+        start: vi.fn(),
+        stop: vi.fn(),
+        isRunning: vi.fn().mockReturnValue(true),
+        handleInput: vi.fn(),
+        onOutput: vi.fn(),
+        onError: vi.fn(),
+        onExit: vi.fn(),
+        supportsRawInput: true,
+        handleKey: vi.fn(),
+      }
+    }
+
+    it('should forward key events to process that supports raw input', () => {
+      const { result } = renderHook(() => useProcessManager())
+      const mockProcess = createMockProcessWithKeySupport()
+
+      act(() => {
+        result.current.startProcess(mockProcess)
+      })
+
+      const modifiers: KeyModifiers = { ctrl: false, alt: false, shift: false }
+      const handled = result.current.handleKey('ArrowUp', modifiers)
+
+      expect(mockProcess.handleKey).toHaveBeenCalledWith('ArrowUp', modifiers)
+      expect(handled).toBe(true)
+    })
+
+    it('should return false when no process is running', () => {
+      const { result } = renderHook(() => useProcessManager())
+
+      const handled = result.current.handleKey('ArrowUp')
+
+      expect(handled).toBe(false)
+    })
+
+    it('should return false when process does not support raw input', () => {
+      const { result } = renderHook(() => useProcessManager())
+      const mockProcess = createMockProcess()
+
+      act(() => {
+        result.current.startProcess(mockProcess)
+      })
+
+      const handled = result.current.handleKey('ArrowUp')
+
+      expect(handled).toBe(false)
+    })
+  })
+
+  describe('supportsRawInput', () => {
+    it('should return false when no process is running', () => {
+      const { result } = renderHook(() => useProcessManager())
+
+      expect(result.current.supportsRawInput()).toBe(false)
+    })
+
+    it('should return true when process supports raw input', () => {
+      const { result } = renderHook(() => useProcessManager())
+      const mockProcess: IProcess = {
+        ...createMockProcess(),
+        supportsRawInput: true,
+        handleKey: vi.fn(),
+      }
+
+      act(() => {
+        result.current.startProcess(mockProcess)
+      })
+
+      expect(result.current.supportsRawInput()).toBe(true)
+    })
+
+    it('should return false when process does not support raw input', () => {
+      const { result } = renderHook(() => useProcessManager())
+      const mockProcess = createMockProcess()
+
+      act(() => {
+        result.current.startProcess(mockProcess)
+      })
+
+      expect(result.current.supportsRawInput()).toBe(false)
     })
   })
 })

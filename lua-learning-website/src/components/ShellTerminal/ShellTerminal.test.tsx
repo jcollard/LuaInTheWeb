@@ -102,6 +102,8 @@ vi.mock('../../hooks/useShell', () => ({
 // Mock useProcessManager with mutable state for testing
 const mockStopProcess = vi.fn()
 const mockHandleInput = vi.fn().mockReturnValue(false)
+const mockSupportsRawInput = vi.fn().mockReturnValue(false)
+const mockHandleKey = vi.fn().mockReturnValue(false)
 
 const mockUseProcessManager = {
   isProcessRunning: false,
@@ -109,6 +111,8 @@ const mockUseProcessManager = {
   startProcess: vi.fn(),
   stopProcess: mockStopProcess,
   handleInput: mockHandleInput,
+  supportsRawInput: mockSupportsRawInput,
+  handleKey: mockHandleKey,
 }
 
 vi.mock('../../hooks/useProcessManager', () => ({
@@ -630,5 +634,7 @@ describe('ShellTerminal', () => {
         expect(promptsAfterInput.length).toBeLessThanOrEqual(1)
       })
     })
+
+    // Arrow key routing to process tests are in ShellTerminal.processKeys.test.tsx
   })
 })

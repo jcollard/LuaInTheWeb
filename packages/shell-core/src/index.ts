@@ -19,7 +19,7 @@ export type {
 
 // New interfaces for process-based command execution
 export type { ShellContext } from './interfaces/ShellContext'
-export type { IProcess } from './interfaces/IProcess'
+export type { IProcess, KeyModifiers } from './interfaces/IProcess'
 export type { ICommand } from './interfaces/ICommand'
 
 // Path utilities

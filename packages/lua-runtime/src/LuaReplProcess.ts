@@ -3,7 +3,7 @@
  * Provides a read-eval-print-loop for Lua code execution in the shell.
  */
 
-import type { IProcess } from '@lua-learning/shell-core'
+import type { IProcess, KeyModifiers } from '@lua-learning/shell-core'
 import type { LuaEngine } from 'wasmoon'
 import {
   LuaEngineFactory,
@@ -22,6 +22,14 @@ export class LuaReplProcess implements IProcess {
     resolve: (value: string) => void
     reject: (error: Error) => void
   }> = []
+  private history: string[] = []
+  private historyIndex = -1
+
+  /**
+   * Whether this process supports raw key input handling.
+   * When true, the shell should forward raw key events to handleKey().
+   */
+  supportsRawInput = true
 
   /**
    * Callback invoked when the process produces output.
@@ -107,8 +115,87 @@ export class LuaReplProcess implements IProcess {
       }
     }
 
+    // Add to history if non-empty and not duplicate of last command
+    if (input.trim() !== '') {
+      const lastCommand = this.history[this.history.length - 1]
+      if (input !== lastCommand) {
+        this.history.push(input)
+      }
+    }
+
+    // Reset history navigation index
+    this.historyIndex = -1
+
     // Execute as REPL code
     this.executeReplCode(input)
+  }
+
+  /**
+   * Get the command history.
+   * @returns Array of previously executed commands
+   */
+  getHistory(): string[] {
+    return [...this.history]
+  }
+
+  /**
+   * Handle a raw key input event.
+   * Handles arrow keys for history navigation.
+   * @param key - The key identifier (e.g., 'ArrowUp', 'ArrowDown')
+   * @param _modifiers - Optional modifier key state (unused currently)
+   */
+  handleKey(key: string, _modifiers?: KeyModifiers): void {
+    if (!this.running) return
+
+    if (key === 'ArrowUp') {
+      this.navigateHistoryUp()
+    } else if (key === 'ArrowDown') {
+      this.navigateHistoryDown()
+    }
+  }
+
+  /**
+   * Navigate to previous (older) command in history.
+   */
+  private navigateHistoryUp(): void {
+    if (this.history.length === 0) return
+
+    if (this.historyIndex === -1) {
+      // Start at most recent command
+      this.historyIndex = this.history.length - 1
+    } else if (this.historyIndex > 0) {
+      // Go to older command
+      this.historyIndex--
+    }
+
+    // Display the history entry
+    this.displayHistoryEntry()
+  }
+
+  /**
+   * Navigate to next (newer) command in history.
+   */
+  private navigateHistoryDown(): void {
+    if (this.historyIndex === -1) return // Already at current input
+
+    if (this.historyIndex < this.history.length - 1) {
+      // Go to newer command
+      this.historyIndex++
+      this.displayHistoryEntry()
+    } else {
+      // Go past newest to empty current input
+      this.historyIndex = -1
+      this.onOutput('\r\x1b[K> ')
+    }
+  }
+
+  /**
+   * Display the current history entry.
+   */
+  private displayHistoryEntry(): void {
+    const entry = this.history[this.historyIndex]
+    // Clear line, move cursor to start, show prompt and entry
+    this.onOutput(`\r\x1b[K> ${entry}`)
   }
 
   /**
