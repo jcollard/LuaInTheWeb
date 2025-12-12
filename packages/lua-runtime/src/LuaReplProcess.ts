@@ -5,7 +5,11 @@
 
 import type { IProcess } from '@lua-learning/shell-core'
 import type { LuaEngine } from 'wasmoon'
-import { LuaEngineFactory, type LuaEngineCallbacks } from './LuaEngineFactory'
+import {
+  LuaEngineFactory,
+  formatLuaError,
+  type LuaEngineCallbacks,
+} from './LuaEngineFactory'
 
 /**
  * Interactive Lua REPL process.
@@ -60,8 +64,10 @@ export class LuaReplProcess implements IProcess {
     }
     this.inputQueue = []
 
-    // Defer engine cleanup to allow pending operations to complete
-    // This prevents "memory access out of bounds" errors from wasmoon
+    // Defer engine cleanup using setTimeout(0) to allow the JS event loop to
+    // drain pending wasmoon callbacks before closing. Closing immediately while
+    // wasmoon is still processing causes "memory access out of bounds" errors
+    // because WebAssembly memory is freed while still being referenced.
     const engineToClose = this.engine
     this.engine = null
 
@@ -106,13 +112,6 @@ export class LuaReplProcess implements IProcess {
   }
 
   /**
-   * Format an error message with prefix.
-   */
-  private formatError(text: string): string {
-    return `[error] ${text}`
-  }
-
-  /**
    * Show the REPL prompt to indicate ready for input.
    */
   private showPrompt(): void {
@@ -125,7 +124,7 @@ export class LuaReplProcess implements IProcess {
   private async initEngine(): Promise<void> {
     const callbacks: LuaEngineCallbacks = {
       onOutput: (text: string) => this.onOutput(text),
-      onError: (text: string) => this.onError(this.formatError(text)),
+      onError: (text: string) => this.onError(formatLuaError(text)),
       onReadInput: () => this.waitForInput(),
     }
 
@@ -141,7 +140,7 @@ export class LuaReplProcess implements IProcess {
       this.onOutput('Lua 5.4 REPL - Type exit() to quit\n')
       this.showPrompt()
     } catch (error) {
-      this.onError(this.formatError(`Failed to initialize Lua engine: ${error}`))
+      this.onError(formatLuaError(`Failed to initialize Lua engine: ${error}`))
       this.running = false
       this.onExit(1)
     }
@@ -156,7 +155,7 @@ export class LuaReplProcess implements IProcess {
 
     const callbacks: LuaEngineCallbacks = {
       onOutput: (text: string) => this.onOutput(text),
-      onError: (text: string) => this.onError(this.formatError(text)),
+      onError: (text: string) => this.onError(formatLuaError(text)),
     }
 
     const result = await LuaEngineFactory.executeCode(this.engine, code, callbacks)

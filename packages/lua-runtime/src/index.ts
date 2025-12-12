@@ -13,4 +13,8 @@ export { LuaReplProcess } from './LuaReplProcess'
 export { LuaScriptProcess } from './LuaScriptProcess'
 
 // Engine factory export (for advanced usage)
-export { LuaEngineFactory, type LuaEngineCallbacks } from './LuaEngineFactory'
+export {
+  LuaEngineFactory,
+  formatLuaError,
+  type LuaEngineCallbacks,
+} from './LuaEngineFactory'

@@ -5,7 +5,11 @@
 
 import type { IProcess, ShellContext } from '@lua-learning/shell-core'
 import type { LuaEngine } from 'wasmoon'
-import { LuaEngineFactory, type LuaEngineCallbacks } from './LuaEngineFactory'
+import {
+  LuaEngineFactory,
+  formatLuaError,
+  type LuaEngineCallbacks,
+} from './LuaEngineFactory'
 import { resolvePath } from '@lua-learning/shell-core'
 
 /**
@@ -68,8 +72,10 @@ export class LuaScriptProcess implements IProcess {
     }
     this.inputQueue = []
 
-    // Defer engine cleanup to allow pending operations to complete
-    // This prevents "memory access out of bounds" errors from wasmoon
+    // Defer engine cleanup using setTimeout(0) to allow the JS event loop to
+    // drain pending wasmoon callbacks before closing. Closing immediately while
+    // wasmoon is still processing causes "memory access out of bounds" errors
+    // because WebAssembly memory is freed while still being referenced.
     const engineToClose = this.engine
     this.engine = null
 
@@ -91,13 +97,6 @@ export class LuaScriptProcess implements IProcess {
    */
   isRunning(): boolean {
     return this.running
-  }
-
-  /**
-   * Format an error message with prefix.
-   */
-  private formatError(text: string): string {
-    return `[error] ${text}`
   }
 
   /**
@@ -125,14 +124,14 @@ export class LuaScriptProcess implements IProcess {
 
     // Check if file exists
     if (!this.context.filesystem.exists(filepath)) {
-      this.onError(this.formatError(`File not found: ${this.filename}`))
+      this.onError(formatLuaError(`File not found: ${this.filename}`))
       this.exitWithCode(1)
       return
     }
 
     // Check if it's a file (not a directory)
     if (this.context.filesystem.isDirectory(filepath)) {
-      this.onError(this.formatError(`${this.filename} is not a file`))
+      this.onError(formatLuaError(`${this.filename} is not a file`))
       this.exitWithCode(1)
       return
     }
@@ -142,7 +141,7 @@ export class LuaScriptProcess implements IProcess {
     try {
       scriptContent = this.context.filesystem.readFile(filepath)
     } catch (error) {
-      this.onError(this.formatError(`Failed to read file: ${error}`))
+      this.onError(formatLuaError(`Failed to read file: ${error}`))
       this.exitWithCode(1)
       return
     }
@@ -152,7 +151,7 @@ export class LuaScriptProcess implements IProcess {
       onOutput: (text: string) => this.onOutput(text),
       onError: (text: string) => {
         this.hasError = true
-        this.onError(this.formatError(text))
+        this.onError(formatLuaError(text))
       },
       onReadInput: () => this.waitForInput(),
     }
@@ -170,7 +169,7 @@ export class LuaScriptProcess implements IProcess {
     } catch (error) {
       // Script failed with error
       const errorMsg = error instanceof Error ? error.message : String(error)
-      this.onError(this.formatError(errorMsg))
+      this.onError(formatLuaError(errorMsg))
       this.exitWithCode(1)
     }
   }
