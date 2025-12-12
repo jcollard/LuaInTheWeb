@@ -442,10 +442,37 @@ export function ShellTerminal({
         return
       }
 
-      // Multi-character input (paste) - process each character individually
-      // This handles newlines, special chars, etc. correctly
-      for (const char of data) {
-        processSingleInput(char)
+      // Multi-character input (paste) - handle specially for multi-line content
+      // Normalize line endings: \r\n -> \n, standalone \r -> \n
+      const normalizedData = data.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+
+      // Check if this is multi-line paste (contains newlines)
+      if (normalizedData.includes('\n')) {
+        const lines = normalizedData.split('\n')
+
+        // Process each line
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i]
+          const isLastLine = i === lines.length - 1
+
+          // Skip empty last line (from trailing newline)
+          if (isLastLine && line === '') {
+            continue
+          }
+
+          // Type out the line character by character (for display)
+          for (const char of line) {
+            processSingleInput(char)
+          }
+
+          // Send Enter after each line to submit it
+          processSingleInput('\r')
+        }
+      } else {
+        // Single line paste - process each character
+        for (const char of normalizedData) {
+          processSingleInput(char)
+        }
       }
     }
 
