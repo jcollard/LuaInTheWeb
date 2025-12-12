@@ -128,6 +128,7 @@ export function ShellTerminal({
     stopProcess,
     handleInput: handleProcessInput,
     supportsRawInput,
+    inFullRawMode,
     handleKey: handleProcessKey,
   } = useProcessManager({
     onOutput: handleProcessOutput,
@@ -141,6 +142,7 @@ export function ShellTerminal({
   const stopProcessRef = useRef(stopProcess)
   const handleProcessInputRef = useRef(handleProcessInput)
   const supportsRawInputRef = useRef(supportsRawInput)
+  const inFullRawModeRef = useRef(inFullRawMode)
   const handleProcessKeyRef = useRef(handleProcessKey)
 
   useEffect(() => {
@@ -149,8 +151,9 @@ export function ShellTerminal({
     stopProcessRef.current = stopProcess
     handleProcessInputRef.current = handleProcessInput
     supportsRawInputRef.current = supportsRawInput
+    inFullRawModeRef.current = inFullRawMode
     handleProcessKeyRef.current = handleProcessKey
-  }, [isProcessRunning, startProcess, stopProcess, handleProcessInput, supportsRawInput, handleProcessKey])
+  }, [isProcessRunning, startProcess, stopProcess, handleProcessInput, supportsRawInput, inFullRawMode, handleProcessKey])
 
   // Handle command execution
   const handleCommand = useCallback((input: string) => {
@@ -282,6 +285,51 @@ export function ShellTerminal({
       const code = data.charCodeAt(0)
       const handlers = handlersRef.current
       let commands: TerminalCommand[] = []
+
+      // In full raw mode, forward almost all keys to the process
+      // Process handles all editing and outputs ANSI for display
+      if (isProcessRunningRef.current && inFullRawModeRef.current()) {
+        // Still handle Ctrl+C to stop process
+        if (code === 3) {
+          stopProcessRef.current()
+          terminal.write('^C')
+          terminal.writeln('')
+          showPrompt()
+          return
+        }
+        // Still handle Ctrl+D for EOF
+        if (code === 4) {
+          stopProcessRef.current()
+          terminal.writeln('')
+          showPrompt()
+          return
+        }
+
+        // Forward all other keys to process
+        let keyName: string
+        if (data === '\r' || data === '\n' || code === 13) {
+          keyName = 'Enter'
+        } else if (data === '\x1b[A') {
+          keyName = 'ArrowUp'
+        } else if (data === '\x1b[B') {
+          keyName = 'ArrowDown'
+        } else if (data === '\x1b[D') {
+          keyName = 'ArrowLeft'
+        } else if (data === '\x1b[C') {
+          keyName = 'ArrowRight'
+        } else if (code === 127) {
+          keyName = 'Backspace'
+        } else if (data.length === 1 && code >= 32) {
+          // Printable character
+          keyName = data
+        } else {
+          // Unknown key - ignore
+          return
+        }
+
+        handleProcessKeyRef.current(keyName, { ctrl: false, alt: false, shift: false })
+        return
+      }
 
       // Handle Enter
       if (data === '\r' || data === '\n' || code === 13) {

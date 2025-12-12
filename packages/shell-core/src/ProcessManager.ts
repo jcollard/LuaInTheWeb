@@ -94,6 +94,15 @@ export class ProcessManager {
   }
 
   /**
+   * Check if the current process is in full raw input mode.
+   * When true, ALL keyboard input should go through handleKey().
+   * @returns True if process wants full raw input mode
+   */
+  inFullRawMode(): boolean {
+    return this.currentProcess?.inFullRawMode === true
+  }
+
+  /**
    * Route a key event to the foreground process.
    * Only works if the process supports raw input (supportsRawInput === true).
    * @param key - The key identifier (e.g., 'ArrowUp', 'ArrowDown')

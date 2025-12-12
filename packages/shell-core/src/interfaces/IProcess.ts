@@ -72,6 +72,16 @@ export interface IProcess {
   supportsRawInput?: boolean
 
   /**
+   * Whether the process is currently in full raw input mode.
+   * When true, ALL keyboard input (characters, backspace, enter, etc.) should be
+   * forwarded to handleKey() instead of being handled by the shell's line editor.
+   * The process is responsible for all display updates via ANSI output.
+   * This is typically used during multi-line editing modes.
+   * @optional
+   */
+  inFullRawMode?: boolean
+
+  /**
    * Handle a raw key input event.
    * Called when the user presses a key while this process is running
    * and supportsRawInput is true.

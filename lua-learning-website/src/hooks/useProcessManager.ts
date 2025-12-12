@@ -27,6 +27,8 @@ export interface UseProcessManagerReturn {
   handleInput: (input: string) => boolean
   /** Check if the current process supports raw key input */
   supportsRawInput: () => boolean
+  /** Check if the process is in full raw input mode */
+  inFullRawMode: () => boolean
   /** Route a key event to the current process */
   handleKey: (key: string, modifiers?: KeyModifiers) => boolean
 }
@@ -96,6 +98,10 @@ export function useProcessManager(
     return processManagerRef.current.supportsRawInput()
   }, [])
 
+  const inFullRawMode = useCallback((): boolean => {
+    return processManagerRef.current.inFullRawMode()
+  }, [])
+
   const handleKey = useCallback(
     (key: string, modifiers?: KeyModifiers): boolean => {
       return processManagerRef.current.handleKey(key, modifiers)
@@ -110,6 +116,7 @@ export function useProcessManager(
     stopProcess,
     handleInput,
     supportsRawInput,
+    inFullRawMode,
     handleKey,
   }
 }

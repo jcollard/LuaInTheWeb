@@ -37,6 +37,15 @@ export class LuaReplProcess implements IProcess {
   supportsRawInput = true
 
   /**
+   * Whether the process is currently in full raw input mode.
+   * When true, ALL keyboard input should go through handleKey().
+   * We enable this in continuation mode so we can handle multi-line editing.
+   */
+  get inFullRawMode(): boolean {
+    return this._inContinuationMode
+  }
+
+  /**
    * Whether the REPL is currently in continuation mode (awaiting more input).
    * When true, the REPL is collecting lines for a multi-line construct
    * (e.g., function definition, loop) and showing the `>>` prompt.
@@ -237,10 +246,30 @@ export class LuaReplProcess implements IProcess {
       this.moveCursorRight()
     } else if (key === 'Backspace') {
       this.handleBackspace()
+    } else if (key === 'Enter') {
+      this.handleEnterKey()
     } else if (key.length === 1) {
       // Single printable character
       this.insertCharacter(key)
     }
+  }
+
+  /**
+   * Handle Enter key press - submit current line.
+   */
+  private handleEnterKey(): void {
+    // Save current line to buffer
+    if (this._currentLineIndex < this.inputBuffer.length) {
+      this.inputBuffer[this._currentLineIndex] = this._currentLine
+    } else {
+      this.inputBuffer.push(this._currentLine)
+    }
+
+    // Output newline
+    this.onOutput('\n')
+
+    // Check if code is complete
+    this.checkAndExecuteBuffer()
   }
 
   /**
