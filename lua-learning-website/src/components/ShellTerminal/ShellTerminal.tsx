@@ -448,9 +448,26 @@ export function ShellTerminal({
 
       // Check if this is multi-line paste (contains newlines)
       if (normalizedData.includes('\n')) {
-        const lines = normalizedData.split('\n')
+        // If a process is running, send all content at once
+        // The process (e.g., REPL) handles multi-line input internally
+        if (isProcessRunningRef.current) {
+          // Display the pasted content
+          terminal.write(normalizedData.replace(/\n/g, '\r\n'))
+          terminal.writeln('')
 
-        // Process each line
+          // Send all content to the process at once (without trailing newline)
+          const contentToSend = normalizedData.endsWith('\n')
+            ? normalizedData.slice(0, -1)
+            : normalizedData
+          handleProcessInputRef.current(contentToSend)
+
+          // Clear shell's input state
+          handlersRef.current.handleCtrlC()
+          return
+        }
+
+        // For shell commands (no process running), process line by line
+        const lines = normalizedData.split('\n')
         for (let i = 0; i < lines.length; i++) {
           const line = lines[i]
           const isLastLine = i === lines.length - 1

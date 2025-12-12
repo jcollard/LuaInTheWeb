@@ -114,6 +114,7 @@ export class LuaReplProcess implements IProcess {
   /**
    * Handle input from the user.
    * Executes the input as Lua code in the REPL.
+   * Supports multi-line input (e.g., from paste) by splitting on newlines.
    */
   handleInput(input: string): void {
     if (!this.running || !this.engine) return
@@ -148,10 +149,14 @@ export class LuaReplProcess implements IProcess {
     // Reset history navigation index
     this.historyIndex = -1
 
-    // Add line to buffer
-    this.inputBuffer.push(input)
+    // Handle multi-line input (e.g., from paste)
+    // Split by newlines, add all lines to buffer, then check once
+    const lines = input.split('\n')
+    for (const line of lines) {
+      this.inputBuffer.push(line)
+    }
 
-    // Check if code is complete
+    // Check if code is complete (only once for all lines)
     this.checkAndExecuteBuffer()
   }
 
