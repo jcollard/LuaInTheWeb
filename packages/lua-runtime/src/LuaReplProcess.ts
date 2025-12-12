@@ -26,6 +26,9 @@ export class LuaReplProcess implements IProcess {
   private historyIndex = -1
   private inputBuffer: string[] = []
   private _inContinuationMode = false
+  private _cursorPosition = 0
+  private _currentLineIndex = 0
+  private _currentLine = ''
 
   /**
    * Whether this process supports raw key input handling.
@@ -41,6 +44,31 @@ export class LuaReplProcess implements IProcess {
    */
   get inContinuationMode(): boolean {
     return this._inContinuationMode
+  }
+
+  /**
+   * Current cursor position within the current line.
+   * @returns cursor position (0 = start of line)
+   */
+  get cursorPosition(): number {
+    return this._cursorPosition
+  }
+
+  /**
+   * Current line index within the input buffer during continuation mode.
+   * In single-line mode, this is always 0.
+   * @returns line index (0-based)
+   */
+  get currentLineIndex(): number {
+    return this._currentLineIndex
+  }
+
+  /**
+   * Current line content being edited.
+   * @returns the current line string
+   */
+  get currentLine(): string {
+    return this._currentLine
   }
 
   /**
@@ -184,17 +212,184 @@ export class LuaReplProcess implements IProcess {
 
   /**
    * Handle a raw key input event.
-   * Handles arrow keys for history navigation.
-   * @param key - The key identifier (e.g., 'ArrowUp', 'ArrowDown')
+   * Handles arrow keys for cursor movement, history navigation, and character input.
+   * @param key - The key identifier (e.g., 'ArrowUp', 'ArrowDown', 'a', 'Backspace')
    * @param _modifiers - Optional modifier key state (unused currently)
    */
   handleKey(key: string, _modifiers?: KeyModifiers): void {
     if (!this.running) return
 
     if (key === 'ArrowUp') {
-      this.navigateHistoryUp()
+      if (this._inContinuationMode && this._currentLineIndex > 0) {
+        this.navigateLineUp()
+      } else if (!this._inContinuationMode) {
+        this.navigateHistoryUp()
+      }
     } else if (key === 'ArrowDown') {
-      this.navigateHistoryDown()
+      if (this._inContinuationMode && this._currentLineIndex < this.inputBuffer.length - 1) {
+        this.navigateLineDown()
+      } else if (!this._inContinuationMode) {
+        this.navigateHistoryDown()
+      }
+    } else if (key === 'ArrowLeft') {
+      this.moveCursorLeft()
+    } else if (key === 'ArrowRight') {
+      this.moveCursorRight()
+    } else if (key === 'Backspace') {
+      this.handleBackspace()
+    } else if (key.length === 1) {
+      // Single printable character
+      this.insertCharacter(key)
+    }
+  }
+
+  /**
+   * Move cursor left within current line.
+   */
+  private moveCursorLeft(): void {
+    if (this._cursorPosition > 0) {
+      this._cursorPosition--
+      this.onOutput('\x1b[D') // ANSI cursor left
+    }
+  }
+
+  /**
+   * Move cursor right within current line.
+   */
+  private moveCursorRight(): void {
+    if (this._cursorPosition < this._currentLine.length) {
+      this._cursorPosition++
+      this.onOutput('\x1b[C') // ANSI cursor right
+    }
+  }
+
+  /**
+   * Insert a character at the current cursor position.
+   */
+  private insertCharacter(char: string): void {
+    const before = this._currentLine.slice(0, this._cursorPosition)
+    const after = this._currentLine.slice(this._cursorPosition)
+    this._currentLine = before + char + after
+    this._cursorPosition++
+
+    if (after.length === 0) {
+      // Cursor at end - just output the character
+      this.onOutput(char)
+    } else {
+      // Cursor in middle - need to redraw rest of line and reposition cursor
+      this.onOutput(char + after + '\x1b[' + after.length + 'D')
+    }
+
+    // Update input buffer if in continuation mode
+    if (this._inContinuationMode && this._currentLineIndex < this.inputBuffer.length) {
+      this.inputBuffer[this._currentLineIndex] = this._currentLine
+    }
+  }
+
+  /**
+   * Handle backspace key - delete character before cursor or merge lines.
+   */
+  private handleBackspace(): void {
+    if (this._cursorPosition > 0) {
+      // Delete character before cursor
+      const before = this._currentLine.slice(0, this._cursorPosition - 1)
+      const after = this._currentLine.slice(this._cursorPosition)
+      this._currentLine = before + after
+      this._cursorPosition--
+
+      // Move cursor back, clear to end, write rest of line, move cursor back
+      if (after.length === 0) {
+        this.onOutput('\b \b') // Simple backspace at end
+      } else {
+        this.onOutput('\b' + after + ' \x1b[' + (after.length + 1) + 'D')
+      }
+
+      // Update input buffer if in continuation mode
+      if (this._inContinuationMode && this._currentLineIndex < this.inputBuffer.length) {
+        this.inputBuffer[this._currentLineIndex] = this._currentLine
+      }
+    } else if (this._inContinuationMode && this._currentLineIndex > 0) {
+      // At position 0 on a non-first line - merge with previous line
+      this.mergeWithPreviousLine()
+    }
+  }
+
+  /**
+   * Merge current line with previous line (backspace at position 0).
+   */
+  private mergeWithPreviousLine(): void {
+    const prevLineIndex = this._currentLineIndex - 1
+    const prevLine = this.inputBuffer[prevLineIndex]
+    const currentContent = this._currentLine
+
+    // Merge lines
+    const mergedLine = prevLine + currentContent
+    this.inputBuffer[prevLineIndex] = mergedLine
+
+    // Remove current line from buffer
+    this.inputBuffer.splice(this._currentLineIndex, 1)
+
+    // Update state
+    this._currentLineIndex = prevLineIndex
+    this._currentLine = mergedLine
+    this._cursorPosition = prevLine.length
+
+    // Redraw - move up, clear line, write merged content, position cursor
+    this.onOutput('\x1b[A\r\x1b[K>> ' + mergedLine)
+    // Position cursor at merge point
+    const moveBack = mergedLine.length - this._cursorPosition
+    if (moveBack > 0) {
+      this.onOutput('\x1b[' + moveBack + 'D')
+    }
+  }
+
+  /**
+   * Navigate to previous line in continuation mode buffer.
+   */
+  private navigateLineUp(): void {
+    // Save current line content (only if slot exists in buffer)
+    if (this._currentLineIndex < this.inputBuffer.length) {
+      this.inputBuffer[this._currentLineIndex] = this._currentLine
+    } else if (this._currentLine !== '') {
+      // We're on a new line that hasn't been added to buffer yet - add it
+      this.inputBuffer.push(this._currentLine)
+    }
+
+    // Move to previous line
+    this._currentLineIndex--
+    this._currentLine = this.inputBuffer[this._currentLineIndex]
+
+    // Clamp cursor position to new line length
+    this._cursorPosition = Math.min(this._cursorPosition, this._currentLine.length)
+
+    // Redraw - move cursor up, clear line, show prompt and line, position cursor
+    const prompt = this._currentLineIndex === 0 ? '> ' : '>> '
+    this.onOutput('\x1b[A\r\x1b[K' + prompt + this._currentLine)
+    const moveBack = this._currentLine.length - this._cursorPosition
+    if (moveBack > 0) {
+      this.onOutput('\x1b[' + moveBack + 'D')
+    }
+  }
+
+  /**
+   * Navigate to next line in continuation mode buffer.
+   */
+  private navigateLineDown(): void {
+    // Save current line content (should always exist since we're moving to next)
+    this.inputBuffer[this._currentLineIndex] = this._currentLine
+
+    // Move to next line
+    this._currentLineIndex++
+    this._currentLine = this.inputBuffer[this._currentLineIndex] ?? ''
+
+    // Clamp cursor position to new line length
+    this._cursorPosition = Math.min(this._cursorPosition, this._currentLine.length)
+
+    // Redraw - move cursor down, clear line, show prompt and line, position cursor
+    this.onOutput('\x1b[B\r\x1b[K>> ' + this._currentLine)
+    const moveBack = this._currentLine.length - this._cursorPosition
+    if (moveBack > 0) {
+      this.onOutput('\x1b[' + moveBack + 'D')
     }
   }
 
@@ -275,17 +470,35 @@ export class LuaReplProcess implements IProcess {
       // Clear buffer before execution
       this.inputBuffer = []
 
+      // Reset cursor state for new input
+      this._currentLine = ''
+      this._cursorPosition = 0
+      this._currentLineIndex = 0
+
       // Execute the code
       await this.executeReplCode(code)
     } else if (result.error) {
       // Syntax error - report it and reset
       this._inContinuationMode = false
       this.inputBuffer = []
+
+      // Reset cursor state for new input
+      this._currentLine = ''
+      this._cursorPosition = 0
+      this._currentLineIndex = 0
+
       this.onError(formatLuaError(result.error) + '\n')
       this.showPrompt()
     } else {
       // Code is incomplete - wait for more input
       this._inContinuationMode = true
+
+      // Set up cursor state for the next line
+      // Note: we don't add to inputBuffer here - handleInput or handleKey will do that
+      this._currentLineIndex = this.inputBuffer.length
+      this._currentLine = ''
+      this._cursorPosition = 0
+
       this.showPrompt()
     }
   }
