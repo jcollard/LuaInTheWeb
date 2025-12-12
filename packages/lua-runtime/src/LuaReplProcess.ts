@@ -152,8 +152,10 @@ export class LuaReplProcess implements IProcess {
 
     const result = await LuaEngineFactory.executeCode(this.engine, code, callbacks)
 
-    // If expression returned a value, output it with newline
-    if (result !== undefined && result !== 'nil') {
+    // If expression returned a value (including nil), output it with newline
+    // undefined means it was a statement (no return value)
+    // 'nil' means the expression evaluated to nil (e.g., undefined variable)
+    if (result !== undefined) {
       this.onOutput(result + '\n')
     }
 

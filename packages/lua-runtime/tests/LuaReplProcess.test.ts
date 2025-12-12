@@ -112,6 +112,19 @@ describe('LuaReplProcess', () => {
       expect(onOutput).toHaveBeenCalledWith('2\n')
     })
 
+    it('should output nil for undefined variables', async () => {
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      onOutput.mockClear()
+
+      process.handleInput('notdefined')
+
+      // Wait for async execution
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      expect(onOutput).toHaveBeenCalledWith('nil\n')
+    })
+
     it('should output result followed by prompt after expression', async () => {
       process.start()
       await new Promise((resolve) => setTimeout(resolve, 100))
