@@ -98,16 +98,18 @@ export function ShellTerminal({
   }, [])
 
   // Handle process output - write to terminal
+  // Convert \n to \r\n for proper xterm cursor positioning
   const handleProcessOutput = useCallback((text: string) => {
     if (xtermRef.current) {
-      xtermRef.current.write(text)
+      xtermRef.current.write(text.replace(/\n/g, '\r\n'))
     }
   }, [])
 
   // Handle process errors - write in red to terminal
+  // Convert \n to \r\n for proper xterm cursor positioning
   const handleProcessError = useCallback((text: string) => {
     if (xtermRef.current) {
-      xtermRef.current.write(`\x1b[31m${text}\x1b[0m`)
+      xtermRef.current.write(`\x1b[31m${text.replace(/\n/g, '\r\n')}\x1b[0m`)
     }
   }, [])
 
@@ -152,13 +154,20 @@ export function ShellTerminal({
     // Move to new line before showing output
     terminal.writeln('')
 
+    // Helper to write text with proper line endings for xterm
+    // xterm needs \r\n to return cursor to column 0, not just \n
+    const writeOutput = (text: string) => {
+      terminal.write(text.replace(/\n/g, '\r\n'))
+      terminal.write('\r\n')
+    }
+
     // Execute command using the context-aware method
     // This handles both ICommand (lua) and legacy commands via adapter
     // Output is handled by the callbacks passed to the context
     const contextResult = executeCommandWithContextRef.current(
       input,
-      (text) => terminal.writeln(text),
-      (text) => terminal.writeln(`\x1b[31m${text}\x1b[0m`)
+      (text) => writeOutput(text),
+      (text) => writeOutput(`\x1b[31m${text}\x1b[0m`)
     )
 
     // Update cwd ref immediately

@@ -260,10 +260,10 @@ describe('ShellTerminal', () => {
         onDataHandler('\r')
       })
 
-      // Should have written the output lines
-      const writelnCalls = terminal.writeln.mock.calls.map((c) => c[0])
-      expect(writelnCalls).toContain('file1.txt')
-      expect(writelnCalls).toContain('file2.txt')
+      // Should have written the output lines (using write with \r\n for proper xterm handling)
+      const writeCalls = terminal.write.mock.calls.map((c) => c[0])
+      expect(writeCalls.some((c) => c.includes('file1.txt'))).toBe(true)
+      expect(writeCalls.some((c) => c.includes('file2.txt'))).toBe(true)
     })
   })
 
