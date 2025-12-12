@@ -606,6 +606,68 @@ describe('LuaReplProcess', () => {
       expect(history[0]).toBe('function test()\n  print("test")\nend')
     })
 
+    it('should execute recalled multi-line history entry on Enter', async () => {
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Enter and execute a multi-line function
+      process.handleInput('function greet()')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      process.handleInput('  print("hi")')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      process.handleInput('end')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      // Now recall it with ArrowUp
+      process.handleKey!('ArrowUp')
+
+      onOutput.mockClear()
+
+      // Press Enter (terminal sends empty string when viewing history)
+      process.handleInput('')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      // Should show the prompt (function was re-defined)
+      expect(onOutput).toHaveBeenCalledWith('> ')
+
+      // Call the function to verify it works
+      onOutput.mockClear()
+      process.handleInput('greet()')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      expect(onOutput).toHaveBeenCalledWith('hi\n')
+    })
+
+    it('should execute recalled multi-line for loop on Enter', async () => {
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Enter and execute a multi-line for loop
+      process.handleInput('for i=1,2 do')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      process.handleInput('  print(i)')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      process.handleInput('end')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      // Now recall it with ArrowUp
+      process.handleKey!('ArrowUp')
+
+      onOutput.mockClear()
+
+      // Press Enter (terminal sends empty string when viewing history)
+      process.handleInput('')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      // Should have printed 1 and 2 again
+      expect(onOutput).toHaveBeenCalledWith('1\n')
+      expect(onOutput).toHaveBeenCalledWith('2\n')
+    })
+
     it('should handle syntax errors in multi-line input', async () => {
       process.start()
       await new Promise((resolve) => setTimeout(resolve, 100))

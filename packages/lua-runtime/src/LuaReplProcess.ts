@@ -124,6 +124,24 @@ export class LuaReplProcess implements IProcess {
       }
     }
 
+    // Check if user pressed Enter while viewing a history entry
+    // When viewing history, the terminal shows the entry but input buffer is empty
+    // So we need to use the history entry as the actual input
+    if (this.historyIndex !== -1 && input === '') {
+      const historyEntry = this.history[this.historyIndex]
+      this.historyIndex = -1
+
+      // For multi-line history entries, we need to add all lines to buffer
+      const lines = historyEntry.split('\n')
+      for (const line of lines) {
+        this.inputBuffer.push(line)
+      }
+
+      // Check if code is complete (it should be, since it was executed before)
+      this.checkAndExecuteBuffer()
+      return
+    }
+
     // Reset history navigation index
     this.historyIndex = -1
 
