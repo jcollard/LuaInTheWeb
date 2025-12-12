@@ -1,9 +1,9 @@
 # Epic #140: [Epic] Shell Process Model with Lua Execution
 
-**Status:** In Progress (4/6 complete)
+**Status:** In Progress (5/6 complete)
 **Branch:** epic-140
 **Created:** 2025-12-12
-**Last Updated:** 2025-12-12 07:56
+**Last Updated:** 2025-12-12 08:14
 
 ## Overview
 
@@ -50,7 +50,7 @@ packages/
 | #171 | Process Control UI | ✅ Complete | 171-process-control-ui | Merged in PR #175 |
 | #172 | Lua Runtime Package | ✅ Complete | 172-lua-runtime-package | Merged in PR #176 |
 | #178 | Process Raw Input Handling | ✅ Complete | 178-process-raw-input-handling | Merged in PR #182 |
-| #179 | REPL Multi-line Input Support | ⏳ Pending | - | Depends on #172 |
+| #179 | REPL Multi-line Input Support | 🔄 In Progress | 179-repl-multiline-input | Ready for review |
 | #173 | Remove Legacy UI Components | ⏳ Pending | - | Depends on #178, #179 |
 
 **Status Legend:**
@@ -67,6 +67,17 @@ packages/
 ## Progress Log
 
 <!-- Updated after each sub-issue completion -->
+
+### 2025-12-12 08:14
+- Started #179: REPL Multi-line Input Support
+- Added `isCodeComplete()` to LuaEngineFactory for detecting incomplete Lua code
+- Added multi-line input buffering to LuaReplProcess
+- Shows `>> ` continuation prompt when code is incomplete
+- Stores complete multi-line blocks as single history entries
+- Added `cancelInput()` for canceling incomplete input
+- 99 lua-runtime tests pass, 1148 website tests pass
+- Mutation score: 82-87% for modified files
+- Ready for PR
 
 ### 2025-12-12 07:56
 - Completed #178: Process Raw Input Handling
@@ -183,6 +194,10 @@ packages/
 - `packages/lua-runtime/src/LuaReplProcess.ts` - Implemented command history and handleKey() for arrow navigation
 - `lua-learning-website/src/hooks/useProcessManager.ts` - Added supportsRawInput() and handleKey()
 - `lua-learning-website/src/components/ShellTerminal/ShellTerminal.tsx` - Routes arrow keys to process
+
+### Multi-line Input Support (from #179)
+- `packages/lua-runtime/src/LuaEngineFactory.ts` - Added isCodeComplete() and CodeCompletenessResult type
+- `packages/lua-runtime/src/LuaReplProcess.ts` - Added multi-line buffering, continuation mode, cancelInput()
 
 ## Open Questions
 

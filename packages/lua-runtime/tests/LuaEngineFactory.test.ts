@@ -241,4 +241,147 @@ describe('LuaEngineFactory', () => {
       expect(closeSpy).toHaveBeenCalled()
     })
   })
+
+  describe('isCodeComplete', () => {
+    it('should return complete:true for complete single-line statement', async () => {
+      const engine = await LuaEngineFactory.create(callbacks)
+
+      const result = await LuaEngineFactory.isCodeComplete(engine, 'print("hello")')
+
+      expect(result.complete).toBe(true)
+      expect(result.error).toBeUndefined()
+
+      engine.global.close()
+    })
+
+    it('should return complete:true for complete expression', async () => {
+      const engine = await LuaEngineFactory.create(callbacks)
+
+      const result = await LuaEngineFactory.isCodeComplete(engine, '1 + 1')
+
+      expect(result.complete).toBe(true)
+
+      engine.global.close()
+    })
+
+    it('should return complete:false for incomplete function definition', async () => {
+      const engine = await LuaEngineFactory.create(callbacks)
+
+      const result = await LuaEngineFactory.isCodeComplete(engine, 'function hello()')
+
+      expect(result.complete).toBe(false)
+
+      engine.global.close()
+    })
+
+    it('should return complete:false for incomplete if statement', async () => {
+      const engine = await LuaEngineFactory.create(callbacks)
+
+      const result = await LuaEngineFactory.isCodeComplete(engine, 'if true then')
+
+      expect(result.complete).toBe(false)
+
+      engine.global.close()
+    })
+
+    it('should return complete:false for incomplete for loop', async () => {
+      const engine = await LuaEngineFactory.create(callbacks)
+
+      const result = await LuaEngineFactory.isCodeComplete(engine, 'for i=1,10 do')
+
+      expect(result.complete).toBe(false)
+
+      engine.global.close()
+    })
+
+    it('should return complete:false for incomplete while loop', async () => {
+      const engine = await LuaEngineFactory.create(callbacks)
+
+      const result = await LuaEngineFactory.isCodeComplete(engine, 'while true do')
+
+      expect(result.complete).toBe(false)
+
+      engine.global.close()
+    })
+
+    it('should return complete:true for complete multi-line function', async () => {
+      const engine = await LuaEngineFactory.create(callbacks)
+
+      const code = 'function hello()\n  print("hi")\nend'
+      const result = await LuaEngineFactory.isCodeComplete(engine, code)
+
+      expect(result.complete).toBe(true)
+
+      engine.global.close()
+    })
+
+    it('should return complete:false with error for syntax errors', async () => {
+      const engine = await LuaEngineFactory.create(callbacks)
+
+      const result = await LuaEngineFactory.isCodeComplete(engine, 'this is not valid lua!')
+
+      expect(result.complete).toBe(false)
+      expect(result.error).toBeDefined()
+
+      engine.global.close()
+    })
+
+    it('should distinguish syntax error from incomplete code', async () => {
+      const engine = await LuaEngineFactory.create(callbacks)
+
+      // Incomplete code - no error message (waiting for more input)
+      const incomplete = await LuaEngineFactory.isCodeComplete(engine, 'function test()')
+      expect(incomplete.complete).toBe(false)
+      expect(incomplete.error).toBeUndefined()
+
+      // Syntax error - has error message
+      const syntaxError = await LuaEngineFactory.isCodeComplete(engine, 'function 123bad()')
+      expect(syntaxError.complete).toBe(false)
+      expect(syntaxError.error).toBeDefined()
+
+      engine.global.close()
+    })
+
+    it('should return complete:true for empty string', async () => {
+      const engine = await LuaEngineFactory.create(callbacks)
+
+      const result = await LuaEngineFactory.isCodeComplete(engine, '')
+
+      expect(result.complete).toBe(true)
+
+      engine.global.close()
+    })
+
+    it('should return complete:false for incomplete do block', async () => {
+      const engine = await LuaEngineFactory.create(callbacks)
+
+      const result = await LuaEngineFactory.isCodeComplete(engine, 'do')
+
+      expect(result.complete).toBe(false)
+
+      engine.global.close()
+    })
+
+    it('should return complete:false for incomplete repeat until', async () => {
+      const engine = await LuaEngineFactory.create(callbacks)
+
+      const result = await LuaEngineFactory.isCodeComplete(engine, 'repeat')
+
+      expect(result.complete).toBe(false)
+
+      engine.global.close()
+    })
+
+    it('should handle nested incomplete structures', async () => {
+      const engine = await LuaEngineFactory.create(callbacks)
+
+      // Function with nested if - both incomplete
+      const code = 'function test()\n  if true then'
+      const result = await LuaEngineFactory.isCodeComplete(engine, code)
+
+      expect(result.complete).toBe(false)
+
+      engine.global.close()
+    })
+  })
 })

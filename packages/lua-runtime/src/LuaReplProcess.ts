@@ -24,12 +24,21 @@ export class LuaReplProcess implements IProcess {
   }> = []
   private history: string[] = []
   private historyIndex = -1
+  private inputBuffer: string[] = []
+  private _inContinuationMode = false
 
   /**
    * Whether this process supports raw key input handling.
    * When true, the shell should forward raw key events to handleKey().
    */
   supportsRawInput = true
+
+  /**
+   * Whether the REPL is currently in continuation mode (awaiting more input).
+   */
+  get inContinuationMode(): boolean {
+    return this._inContinuationMode
+  }
 
   /**
    * Callback invoked when the process produces output.
@@ -115,19 +124,23 @@ export class LuaReplProcess implements IProcess {
       }
     }
 
-    // Add to history if non-empty and not duplicate of last command
-    if (input.trim() !== '') {
-      const lastCommand = this.history[this.history.length - 1]
-      if (input !== lastCommand) {
-        this.history.push(input)
-      }
-    }
-
     // Reset history navigation index
     this.historyIndex = -1
 
-    // Execute as REPL code
-    this.executeReplCode(input)
+    // Add line to buffer
+    this.inputBuffer.push(input)
+
+    // Check if code is complete
+    this.checkAndExecuteBuffer()
+  }
+
+  /**
+   * Cancel the current multi-line input and return to normal mode.
+   */
+  cancelInput(): void {
+    this.inputBuffer = []
+    this._inContinuationMode = false
+    this.showPrompt()
   }
 
   /**
@@ -202,7 +215,48 @@ export class LuaReplProcess implements IProcess {
    * Show the REPL prompt to indicate ready for input.
    */
   private showPrompt(): void {
-    this.onOutput('> ')
+    this.onOutput(this._inContinuationMode ? '>> ' : '> ')
+  }
+
+  /**
+   * Check if the buffered code is complete and execute if so.
+   */
+  private async checkAndExecuteBuffer(): Promise<void> {
+    if (!this.engine) return
+
+    const code = this.inputBuffer.join('\n')
+
+    // Check if code is complete
+    const result = await LuaEngineFactory.isCodeComplete(this.engine, code)
+
+    if (result.complete) {
+      // Code is complete - execute it
+      this._inContinuationMode = false
+
+      // Add to history as a single entry (only if non-empty)
+      if (code.trim() !== '') {
+        const lastCommand = this.history[this.history.length - 1]
+        if (code !== lastCommand) {
+          this.history.push(code)
+        }
+      }
+
+      // Clear buffer before execution
+      this.inputBuffer = []
+
+      // Execute the code
+      await this.executeReplCode(code)
+    } else if (result.error) {
+      // Syntax error - report it and reset
+      this._inContinuationMode = false
+      this.inputBuffer = []
+      this.onError(formatLuaError(result.error))
+      this.showPrompt()
+    } else {
+      // Code is incomplete - wait for more input
+      this._inContinuationMode = true
+      this.showPrompt()
+    }
   }
 
   /**

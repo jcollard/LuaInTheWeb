@@ -27,6 +27,16 @@ export interface LuaEngineCallbacks {
 }
 
 /**
+ * Result of checking code completeness.
+ */
+export interface CodeCompletenessResult {
+  /** Whether the code is syntactically complete */
+  complete: boolean
+  /** Error message if there's a syntax error (not just incomplete) */
+  error?: string
+}
+
+/**
  * Lua code for io.write and io.read setup.
  */
 const LUA_IO_CODE = `
@@ -141,5 +151,67 @@ export class LuaEngineFactory {
    */
   static close(engine: LuaEngine): void {
     engine.global.close()
+  }
+
+  /**
+   * Check if Lua code is syntactically complete.
+   * Used for multi-line REPL input to determine if more lines are needed.
+   *
+   * @param engine - The Lua engine to use for parsing
+   * @param code - The code to check
+   * @returns Result indicating completeness and any syntax error
+   */
+  static async isCodeComplete(
+    engine: LuaEngine,
+    code: string
+  ): Promise<CodeCompletenessResult> {
+    // Empty code is considered complete
+    if (!code.trim()) {
+      return { complete: true }
+    }
+
+    try {
+      // Use Lua's load() to check syntax without executing
+      // Try both as statement and as expression (with return prefix)
+      // load() returns a function if successful, or nil and error message if not
+      const checkResult = await engine.doString(`
+        local code = [=[${code}]=]
+        -- Try as statement first
+        local fn, err = load(code)
+        if fn then
+          return "complete"
+        end
+        -- Try as expression (like REPL does)
+        local fn2, err2 = load("return (" .. code .. ")")
+        if fn2 then
+          return "complete"
+        end
+        -- Return the original error (from statement parsing)
+        return err
+      `)
+
+      if (checkResult === 'complete') {
+        return { complete: true }
+      }
+
+      // Check if error indicates incomplete input
+      // Lua returns errors ending with "near <eof>" or "near '<eof>'" when code is incomplete
+      // Real syntax errors end with "near 'X'" where X is the problematic token
+      const errorStr = String(checkResult)
+
+      // Incomplete code errors end with: near <eof> (with or without quotes)
+      // This pattern is reliable because complete code with syntax errors
+      // will say "near 'token'" where token is the problematic code
+      if (errorStr.endsWith('<eof>') || errorStr.endsWith("<eof>'")) {
+        return { complete: false }
+      }
+
+      // It's a real syntax error
+      return { complete: false, error: errorStr }
+    } catch (error) {
+      // If the check itself fails, treat as syntax error
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      return { complete: false, error: errorMsg }
+    }
   }
 }
