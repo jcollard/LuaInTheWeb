@@ -51,7 +51,7 @@ packages/
 | #172 | Lua Runtime Package | ✅ Complete | 172-lua-runtime-package | Merged in PR #176 |
 | #178 | Process Raw Input Handling | ✅ Complete | 178-process-raw-input-handling | Merged in PR #182 |
 | #179 | REPL Multi-line Input Support | ✅ Complete | 179-repl-multiline-input | Merged in PR #188 |
-| #173 | Remove Legacy UI Components | ⏳ Pending | - | Depends on #178, #179 |
+| #173 | Remove Legacy UI Components | 🔄 In Progress | 173-remove-legacy-ui-components | PR #191 created |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -67,6 +67,18 @@ packages/
 ## Progress Log
 
 <!-- Updated after each sub-issue completion -->
+
+### 2025-12-12 16:17
+- Started #173: Remove Legacy UI Components
+- Removed 'terminal' and 'repl' tabs from BottomPanel (shell only)
+- Removed Run button and Ctrl+Enter shortcut from EditorPanel
+- Updated WelcomeScreen "Open REPL" → "Open Shell"
+- Removed unused terminal-related props from IDEContext
+- Cleaned up orphaned hooks (useIDETerminal, useBottomPanel)
+- Updated all affected unit tests (1102 tests pass)
+- Updated E2E tests for shell-only behavior (84 tests pass)
+- Mutation tests pass (69.57% > 50% threshold)
+- Created PR #191 for review
 
 ### 2025-12-12 11:03
 - Scrapped #189: REPL Multi-line Cursor Editing
@@ -214,6 +226,13 @@ packages/
 ### Multi-line Input Support (from #179)
 - `packages/lua-runtime/src/LuaEngineFactory.ts` - Added isCodeComplete() and CodeCompletenessResult type
 - `packages/lua-runtime/src/LuaReplProcess.ts` - Added multi-line buffering, continuation mode, cancelInput()
+
+### Legacy UI Cleanup (from #173)
+- `lua-learning-website/src/components/BottomPanel/` - Simplified to shell-only tab
+- `lua-learning-website/src/components/EditorPanel/` - Removed Run button and isRunning props
+- `lua-learning-website/src/components/WelcomeScreen/` - Changed onOpenRepl to onOpenShell
+- `lua-learning-website/src/components/IDEContext/` - Removed terminal-related props
+- `lua-learning-website/src/hooks/useKeyboardShortcuts.ts` - Removed runCode handler
 
 ## Open Questions
 
