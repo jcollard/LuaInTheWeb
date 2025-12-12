@@ -279,6 +279,28 @@ describe('createFileSystemAdapter', () => {
         "Parent directory not found: /missing"
       )
     })
+
+    it('should track created directories for subsequent createDirectory calls', () => {
+      // Simulate external filesystem where exists() has stale state
+      // (doesn't immediately reflect directories we just created)
+      vi.mocked(externalFs.exists).mockImplementation((path) => {
+        // Only root exists according to external fs (stale state)
+        return path === '/'
+      })
+
+      // First createDirectory should succeed (parent '/' exists)
+      adapter.createDirectory('/foo')
+      expect(externalFs.createFolder).toHaveBeenCalledWith('/foo')
+
+      // Second createDirectory should also succeed because adapter
+      // should track that we created '/foo'
+      adapter.createDirectory('/foo/bar')
+      expect(externalFs.createFolder).toHaveBeenCalledWith('/foo/bar')
+
+      // Third level should also work
+      adapter.createDirectory('/foo/bar/baz')
+      expect(externalFs.createFolder).toHaveBeenCalledWith('/foo/bar/baz')
+    })
   })
 
   describe('delete', () => {

@@ -8,12 +8,22 @@ import { pwd } from './pwd'
 import { cd } from './cd'
 import { ls } from './ls'
 import { createHelpCommand } from './help'
+import { clear } from './clear'
+import { mkdir } from './mkdir'
+import { touch } from './touch'
+import { cp } from './cp'
+import { mv } from './mv'
 
 // Export individual commands
 export { pwd } from './pwd'
 export { cd } from './cd'
 export { ls } from './ls'
 export { createHelpCommand } from './help'
+export { clear } from './clear'
+export { mkdir } from './mkdir'
+export { touch } from './touch'
+export { cp } from './cp'
+export { mv } from './mv'
 
 /**
  * Register all built-in commands with a registry.
@@ -24,6 +34,11 @@ export function registerBuiltinCommands(registry: CommandRegistry): CommandRegis
   registry.register(pwd)
   registry.register(cd)
   registry.register(ls)
+  registry.register(clear)
+  registry.register(mkdir)
+  registry.register(touch)
+  registry.register(cp)
+  registry.register(mv)
   registry.register(createHelpCommand(registry))
   return registry
 }
@@ -31,4 +46,4 @@ export function registerBuiltinCommands(registry: CommandRegistry): CommandRegis
 /**
  * Array of all built-in command instances (except help, which requires a registry).
  */
-export const builtinCommands = [pwd, cd, ls] as const
+export const builtinCommands = [pwd, cd, ls, clear, mkdir, touch, cp, mv] as const

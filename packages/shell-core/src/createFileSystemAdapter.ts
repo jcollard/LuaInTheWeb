@@ -36,6 +36,11 @@ export function createFileSystemAdapter(
 ): IFileSystem {
   let currentDirectory = normalizePath(initialCwd)
 
+  // Track directories created during this session to handle stale external state
+  // This fixes race conditions where external.exists() doesn't immediately
+  // reflect directories we just created
+  const createdDirectories = new Set<string>()
+
   /**
    * Resolve a path to an absolute path based on current directory.
    */
@@ -44,6 +49,13 @@ export function createFileSystemAdapter(
       return normalizePath(path)
     }
     return normalizePath(joinPath(currentDirectory, path))
+  }
+
+  /**
+   * Check if a path exists (including directories we created this session).
+   */
+  function pathExists(resolved: string): boolean {
+    return external.exists(resolved) || createdDirectories.has(resolved)
   }
 
   return {
@@ -133,14 +145,16 @@ export function createFileSystemAdapter(
 
     createDirectory(path: string): void {
       const resolved = resolvePath(path)
-      if (external.exists(resolved)) {
+      if (pathExists(resolved)) {
         throw new Error(`Path already exists: ${resolved}`)
       }
       const parent = getParentPath(resolved)
-      if (!external.exists(parent)) {
+      if (!pathExists(parent)) {
         throw new Error(`Parent directory not found: ${parent}`)
       }
       external.createFolder(resolved)
+      // Track this directory so subsequent operations can see it
+      createdDirectories.add(resolved)
     },
 
     delete(path: string): void {
