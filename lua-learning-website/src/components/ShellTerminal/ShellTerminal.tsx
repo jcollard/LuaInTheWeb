@@ -454,6 +454,21 @@ export function ShellTerminal({
     terminal.writeln('Type "help" for available commands.\n')
     showPrompt()
 
+    // Handle Ctrl+V paste - xterm.js doesn't handle this automatically
+    terminal.attachCustomKeyEventHandler((event) => {
+      if (event.ctrlKey && (event.key === 'v' || event.key === 'V') && event.type === 'keydown') {
+        navigator.clipboard.readText().then((text) => {
+          if (text) {
+            handleInput(text)
+          }
+        }).catch(() => {
+          // Clipboard access denied - ignore silently
+        })
+        return false // Prevent default xterm handling
+      }
+      return true
+    })
+
     terminal.onData(handleInput)
 
     const handleResize = () => {
