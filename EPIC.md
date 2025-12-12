@@ -3,7 +3,7 @@
 **Status:** In Progress (3/4 complete)
 **Branch:** epic-140
 **Created:** 2025-12-12
-**Last Updated:** 2025-12-12 07:19
+**Last Updated:** 2025-12-12 07:41
 
 ## Overview
 
@@ -49,7 +49,7 @@ packages/
 | #170 | Shell Interface Design | ✅ Complete | 170-shell-interface-design | Merged in PR #174 |
 | #171 | Process Control UI | ✅ Complete | 171-process-control-ui | Merged in PR #175 |
 | #172 | Lua Runtime Package | ✅ Complete | 172-lua-runtime-package | Merged in PR #176 |
-| #178 | Process Raw Input Handling | ⏳ Pending | - | Depends on #172 |
+| #178 | Process Raw Input Handling | 🔄 In Progress | 178-process-raw-input-handling | Started 2025-12-12 |
 | #179 | REPL Multi-line Input Support | ⏳ Pending | - | Depends on #172 |
 | #173 | Remove Legacy UI Components | ⏳ Pending | - | Depends on #178, #179 |
 
@@ -67,6 +67,10 @@ packages/
 ## Progress Log
 
 <!-- Updated after each sub-issue completion -->
+
+### 2025-12-12 07:25
+- Started work on #178: Process Raw Input Handling
+- Created branch `178-process-raw-input-handling` from `epic-140`
 
 ### 2025-12-12 07:19
 - Merged PR #176 to `epic-140`
@@ -165,6 +169,13 @@ packages/
 
 ### Integration (from #172)
 - `lua-learning-website/src/hooks/useShell.ts` - Updated with LuaCommand registration and executeCommandWithContext
+
+### Process Key Handling (from #178)
+- `packages/shell-core/src/interfaces/IProcess.ts` - Added KeyModifiers type, supportsRawInput, handleKey
+- `packages/shell-core/src/ProcessManager.ts` - Added supportsRawInput() and handleKey() methods
+- `packages/lua-runtime/src/LuaReplProcess.ts` - Implemented command history and handleKey() for arrow navigation
+- `lua-learning-website/src/hooks/useProcessManager.ts` - Added supportsRawInput() and handleKey()
+- `lua-learning-website/src/components/ShellTerminal/ShellTerminal.tsx` - Routes arrow keys to process
 
 ## Open Questions
 

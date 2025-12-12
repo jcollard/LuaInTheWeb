@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ProcessManager } from '../src/ProcessManager'
-import type { IProcess } from '../src/interfaces/IProcess'
+import type { IProcess, KeyModifiers } from '../src/interfaces/IProcess'
 
 describe('ProcessManager', () => {
   let processManager: ProcessManager
@@ -180,6 +180,101 @@ describe('ProcessManager', () => {
 
       // Should not throw even when onProcessExit is not set
       expect(() => exitCallback(0)).not.toThrow()
+    })
+  })
+
+  describe('handleKey', () => {
+    function createMockProcessWithKeySupport(): IProcess {
+      return {
+        start: vi.fn(),
+        stop: vi.fn(),
+        isRunning: vi.fn(() => true),
+        handleInput: vi.fn(),
+        onOutput: vi.fn(),
+        onError: vi.fn(),
+        onExit: vi.fn(),
+        supportsRawInput: true,
+        handleKey: vi.fn(),
+      }
+    }
+
+    it('should forward key events to process that supports raw input', () => {
+      const process = createMockProcessWithKeySupport()
+      processManager.startProcess(process)
+
+      const modifiers: KeyModifiers = { ctrl: false, alt: false, shift: false }
+      processManager.handleKey('ArrowUp', modifiers)
+
+      expect(process.handleKey).toHaveBeenCalledWith('ArrowUp', modifiers)
+    })
+
+    it('should return true when key was handled by process', () => {
+      const process = createMockProcessWithKeySupport()
+      processManager.startProcess(process)
+
+      const handled = processManager.handleKey('ArrowUp')
+
+      expect(handled).toBe(true)
+    })
+
+    it('should return false when no process is running', () => {
+      const handled = processManager.handleKey('ArrowUp')
+
+      expect(handled).toBe(false)
+    })
+
+    it('should return false when process does not support raw input', () => {
+      const process = createMockProcess()
+      processManager.startProcess(process)
+
+      const handled = processManager.handleKey('ArrowUp')
+
+      expect(handled).toBe(false)
+    })
+
+    it('should handle key with modifiers', () => {
+      const process = createMockProcessWithKeySupport()
+      processManager.startProcess(process)
+
+      const modifiers: KeyModifiers = { ctrl: true, alt: false, shift: false }
+      processManager.handleKey('c', modifiers)
+
+      expect(process.handleKey).toHaveBeenCalledWith('c', modifiers)
+    })
+
+    it('should check supportsRawInput before forwarding key', () => {
+      const process = createMockProcessWithKeySupport()
+      process.supportsRawInput = false
+      processManager.startProcess(process)
+
+      const handled = processManager.handleKey('ArrowUp')
+
+      expect(handled).toBe(false)
+      expect(process.handleKey).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('supportsRawInput', () => {
+    it('should return false when no process is running', () => {
+      expect(processManager.supportsRawInput()).toBe(false)
+    })
+
+    it('should return false when process does not support raw input', () => {
+      const process = createMockProcess()
+      processManager.startProcess(process)
+
+      expect(processManager.supportsRawInput()).toBe(false)
+    })
+
+    it('should return true when process supports raw input', () => {
+      const process: IProcess = {
+        ...createMockProcess(),
+        supportsRawInput: true,
+        handleKey: vi.fn(),
+      }
+      processManager.startProcess(process)
+
+      expect(processManager.supportsRawInput()).toBe(true)
     })
   })
 })

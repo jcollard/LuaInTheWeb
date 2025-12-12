@@ -4,5 +4,5 @@
  */
 
 export type { ShellContext } from './ShellContext'
-export type { IProcess } from './IProcess'
+export type { IProcess, KeyModifiers } from './IProcess'
 export type { ICommand } from './ICommand'

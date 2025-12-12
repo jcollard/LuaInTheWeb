@@ -256,6 +256,192 @@ describe('LuaReplProcess', () => {
     })
   })
 
+  describe('raw key input support', () => {
+    it('should support raw input (supportsRawInput is true)', () => {
+      expect(process.supportsRawInput).toBe(true)
+    })
+
+    it('should have handleKey method', () => {
+      expect(process.handleKey).toBeDefined()
+      expect(typeof process.handleKey).toBe('function')
+    })
+  })
+
+  describe('command history', () => {
+    it('should store executed commands in history', async () => {
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      process.handleInput('x = 1')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      process.handleInput('y = 2')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      // History should contain the executed commands
+      expect(process.getHistory()).toEqual(['x = 1', 'y = 2'])
+    })
+
+    it('should not store empty commands in history', async () => {
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      process.handleInput('x = 1')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      process.handleInput('')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      process.handleInput('y = 2')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      expect(process.getHistory()).toEqual(['x = 1', 'y = 2'])
+    })
+
+    it('should not store duplicate consecutive commands', async () => {
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      process.handleInput('x = 1')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      process.handleInput('x = 1')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      process.handleInput('y = 2')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      expect(process.getHistory()).toEqual(['x = 1', 'y = 2'])
+    })
+  })
+
+  describe('handleKey - history navigation', () => {
+    it('should navigate to previous command on ArrowUp', async () => {
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      process.handleInput('first')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      process.handleInput('second')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      onOutput.mockClear()
+
+      // Press ArrowUp - should show 'second' (most recent)
+      process.handleKey!('ArrowUp')
+
+      // Should clear line and show previous command
+      expect(onOutput).toHaveBeenCalledWith('\r\x1b[K> second')
+    })
+
+    it('should navigate to older commands on multiple ArrowUp', async () => {
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      process.handleInput('first')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      process.handleInput('second')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      onOutput.mockClear()
+
+      // Press ArrowUp twice
+      process.handleKey!('ArrowUp')
+      process.handleKey!('ArrowUp')
+
+      // Should show 'first' (oldest)
+      expect(onOutput).toHaveBeenLastCalledWith('\r\x1b[K> first')
+    })
+
+    it('should navigate to newer command on ArrowDown', async () => {
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      process.handleInput('first')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      process.handleInput('second')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      // Navigate to oldest
+      process.handleKey!('ArrowUp')
+      process.handleKey!('ArrowUp')
+
+      onOutput.mockClear()
+
+      // Navigate back to newer
+      process.handleKey!('ArrowDown')
+
+      expect(onOutput).toHaveBeenCalledWith('\r\x1b[K> second')
+    })
+
+    it('should clear line when ArrowDown past newest command', async () => {
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      process.handleInput('first')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      // Navigate up
+      process.handleKey!('ArrowUp')
+
+      onOutput.mockClear()
+
+      // Navigate down past the newest
+      process.handleKey!('ArrowDown')
+
+      // Should show empty line with prompt
+      expect(onOutput).toHaveBeenCalledWith('\r\x1b[K> ')
+    })
+
+    it('should not go past oldest command on ArrowUp', async () => {
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      process.handleInput('only')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      // Press ArrowUp multiple times
+      process.handleKey!('ArrowUp')
+      onOutput.mockClear()
+
+      process.handleKey!('ArrowUp')
+
+      // Should still show 'only'
+      expect(onOutput).toHaveBeenCalledWith('\r\x1b[K> only')
+    })
+
+    it('should do nothing on ArrowUp when history is empty', async () => {
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      onOutput.mockClear()
+
+      process.handleKey!('ArrowUp')
+
+      // Should not output anything (no history to show)
+      expect(onOutput).not.toHaveBeenCalled()
+    })
+
+    it('should do nothing on ArrowDown when at current input', async () => {
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      process.handleInput('first')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      onOutput.mockClear()
+
+      // Press ArrowDown without navigating up first
+      process.handleKey!('ArrowDown')
+
+      // Should not output anything (already at current input)
+      expect(onOutput).not.toHaveBeenCalled()
+    })
+  })
+
   describe('edge cases', () => {
     it('should not start again if already running', async () => {
       process.start()
