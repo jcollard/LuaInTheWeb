@@ -3,7 +3,7 @@
 **Status:** In Progress (3/4 complete)
 **Branch:** epic-140
 **Created:** 2025-12-12
-**Last Updated:** 2025-12-12 05:35
+**Last Updated:** 2025-12-12 06:25
 
 ## Overview
 
@@ -48,7 +48,7 @@ packages/
 |---|-------|--------|--------|-------|
 | #170 | Shell Interface Design | ✅ Complete | 170-shell-interface-design | Merged in PR #174 |
 | #171 | Process Control UI | ✅ Complete | 171-process-control-ui | Merged in PR #175 |
-| #172 | Lua Runtime Package | ✅ Complete | 172-lua-runtime-package | Ready for PR |
+| #172 | Lua Runtime Package | ✅ Complete | 172-lua-runtime-package | PR #176 ready for review |
 | #178 | Process Raw Input Handling | ⏳ Pending | - | Depends on #172 |
 | #179 | REPL Multi-line Input Support | ⏳ Pending | - | Depends on #172 |
 | #173 | Remove Legacy UI Components | ⏳ Pending | - | Depends on #178, #179 |
@@ -67,6 +67,17 @@ packages/
 ## Progress Log
 
 <!-- Updated after each sub-issue completion -->
+
+### 2025-12-12 06:25
+- Updated PR #176 with bug fixes from manual testing
+- Fixed xterm cursor positioning (\n → \r\n conversion)
+- Fixed Lua output newlines and added `> ` prompt
+- Fixed nil output for undefined variables
+- Added predev script for auto-rebuilding packages
+- Created issues #178 (Process Raw Input Handling) and #179 (REPL Multi-line Input)
+- Updated GitHub issue #140 with new sub-issues
+- All 63 lua-runtime tests pass, all 1135 website tests pass
+- PR #176 ready for review
 
 ### 2025-12-12 05:35
 - Completed #172: Lua Runtime Package
