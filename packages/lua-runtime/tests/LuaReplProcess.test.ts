@@ -80,7 +80,7 @@ describe('LuaReplProcess', () => {
       // Wait for async execution
       await new Promise((resolve) => setTimeout(resolve, 50))
 
-      expect(onOutput).toHaveBeenCalledWith('hello')
+      expect(onOutput).toHaveBeenCalledWith('hello\n')
     })
 
     it('should evaluate expressions and output formatted result', async () => {
@@ -93,7 +93,7 @@ describe('LuaReplProcess', () => {
       // Wait for async execution
       await new Promise((resolve) => setTimeout(resolve, 50))
 
-      expect(onOutput).toHaveBeenCalledWith('2')
+      expect(onOutput).toHaveBeenCalledWith('2\n')
     })
 
     it('should output errors for invalid code with [error] prefix', async () => {
@@ -128,7 +128,7 @@ describe('LuaReplProcess', () => {
       process.handleInput('print(x)')
       await new Promise((resolve) => setTimeout(resolve, 50))
 
-      expect(onOutput).toHaveBeenCalledWith('42')
+      expect(onOutput).toHaveBeenCalledWith('42\n')
     })
   })
 
@@ -169,7 +169,7 @@ describe('LuaReplProcess', () => {
       process.handleInput('print(result)')
       await new Promise((resolve) => setTimeout(resolve, 50))
 
-      expect(onOutput).toHaveBeenCalledWith('test input')
+      expect(onOutput).toHaveBeenCalledWith('test input\n')
     })
   })
 
@@ -199,7 +199,7 @@ describe('LuaReplProcess', () => {
       process.handleInput('print(c)')
       await new Promise((resolve) => setTimeout(resolve, 50))
 
-      expect(onOutput).toHaveBeenCalledWith('3')
+      expect(onOutput).toHaveBeenCalledWith('3\n')
     })
 
     it('should handle errors gracefully', async () => {

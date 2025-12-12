@@ -121,8 +121,8 @@ export class LuaReplProcess implements IProcess {
         this.stop()
       })
 
-      // Output welcome message
-      this.onOutput('Lua 5.4 REPL - Type exit() to quit')
+      // Output welcome message with newline so input appears on next line
+      this.onOutput('Lua 5.4 REPL - Type exit() to quit\n')
     } catch (error) {
       this.onError(this.formatError(`Failed to initialize Lua engine: ${error}`))
       this.running = false
@@ -144,9 +144,9 @@ export class LuaReplProcess implements IProcess {
 
     const result = await LuaEngineFactory.executeCode(this.engine, code, callbacks)
 
-    // If expression returned a value, output it
+    // If expression returned a value, output it with newline
     if (result !== undefined && result !== 'nil') {
-      this.onOutput(result)
+      this.onOutput(result + '\n')
     }
   }
 

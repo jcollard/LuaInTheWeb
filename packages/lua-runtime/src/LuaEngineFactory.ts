@@ -189,7 +189,8 @@ io.write = function(...)
   for i, v in ipairs(args) do
     output = output .. tostring(v)
   end
-  print(output)
+  -- Use __js_write for io.write (no automatic newline)
+  __js_write(output)
 end
 io.read = function(format)
   local input = __js_read_input():await()
@@ -217,7 +218,7 @@ export class LuaEngineFactory {
     const factory = new LuaFactory()
     const engine = await factory.createEngine()
 
-    // Setup print function
+    // Setup print function (adds newline like standard Lua print)
     engine.global.set('print', (...args: unknown[]) => {
       const message = args
         .map((arg) => {
@@ -226,7 +227,12 @@ export class LuaEngineFactory {
           return String(arg)
         })
         .join('\t')
-      callbacks.onOutput(message)
+      callbacks.onOutput(message + '\n')
+    })
+
+    // Setup io.write output (no newline, unlike print)
+    engine.global.set('__js_write', (text: string) => {
+      callbacks.onOutput(text)
     })
 
     // Setup io.read input handler if provided

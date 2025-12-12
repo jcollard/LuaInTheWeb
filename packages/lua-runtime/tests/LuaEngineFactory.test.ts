@@ -27,7 +27,7 @@ describe('LuaEngineFactory', () => {
 
       await engine.doString('print("hello world")')
 
-      expect(callbacks.onOutput).toHaveBeenCalledWith('hello world')
+      expect(callbacks.onOutput).toHaveBeenCalledWith('hello world\n')
 
       engine.global.close()
     })
@@ -37,7 +37,7 @@ describe('LuaEngineFactory', () => {
 
       await engine.doString('print("a", "b", "c")')
 
-      expect(callbacks.onOutput).toHaveBeenCalledWith('a\tb\tc')
+      expect(callbacks.onOutput).toHaveBeenCalledWith('a\tb\tc\n')
 
       engine.global.close()
     })
@@ -47,7 +47,7 @@ describe('LuaEngineFactory', () => {
 
       await engine.doString('print(nil)')
 
-      expect(callbacks.onOutput).toHaveBeenCalledWith('nil')
+      expect(callbacks.onOutput).toHaveBeenCalledWith('nil\n')
 
       engine.global.close()
     })
@@ -97,7 +97,7 @@ describe('LuaEngineFactory', () => {
 
       await engine.doString('print(42)')
 
-      expect(callbacks.onOutput).toHaveBeenCalledWith('42')
+      expect(callbacks.onOutput).toHaveBeenCalledWith('42\n')
 
       engine.global.close()
     })
@@ -107,7 +107,7 @@ describe('LuaEngineFactory', () => {
 
       await engine.doString('print(true, false)')
 
-      expect(callbacks.onOutput).toHaveBeenCalledWith('true\tfalse')
+      expect(callbacks.onOutput).toHaveBeenCalledWith('true\tfalse\n')
 
       engine.global.close()
     })
@@ -121,7 +121,7 @@ describe('LuaEngineFactory', () => {
 
       // Verify by printing the value
       await engine.doString('print(x)')
-      expect(callbacks.onOutput).toHaveBeenCalledWith('42')
+      expect(callbacks.onOutput).toHaveBeenCalledWith('42\n')
 
       engine.global.close()
     })

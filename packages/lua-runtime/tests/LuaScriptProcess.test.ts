@@ -59,7 +59,7 @@ describe('LuaScriptProcess', () => {
       // Wait for script execution
       await new Promise((resolve) => setTimeout(resolve, 150))
 
-      expect(onOutput).toHaveBeenCalledWith('hello from script')
+      expect(onOutput).toHaveBeenCalledWith('hello from script\n')
     })
 
     it('should exit with code 0 on success', async () => {
@@ -205,7 +205,7 @@ describe('LuaScriptProcess', () => {
       // Wait for script to complete
       await new Promise((resolve) => setTimeout(resolve, 100))
 
-      expect(onOutput).toHaveBeenCalledWith('You said: hello world')
+      expect(onOutput).toHaveBeenCalledWith('You said: hello world\n')
     })
 
     it('should do nothing if not running', () => {
