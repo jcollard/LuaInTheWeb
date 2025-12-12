@@ -4,8 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "npm run build -w @lua-learning/shell-core && npm run build -w @lua-learning/lua-runtime",
     "dev": "vite",
-    "prebuild": "npm run build -w @lua-learning/shell-core",
+    "prebuild": "npm run build -w @lua-learning/shell-core && npm run build -w @lua-learning/lua-runtime",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
