@@ -281,7 +281,7 @@ export class LuaReplProcess implements IProcess {
       // Syntax error - report it and reset
       this._inContinuationMode = false
       this.inputBuffer = []
-      this.onError(formatLuaError(result.error))
+      this.onError(formatLuaError(result.error) + '\n')
       this.showPrompt()
     } else {
       // Code is incomplete - wait for more input
@@ -296,7 +296,7 @@ export class LuaReplProcess implements IProcess {
   private async initEngine(): Promise<void> {
     const callbacks: LuaEngineCallbacks = {
       onOutput: (text: string) => this.onOutput(text),
-      onError: (text: string) => this.onError(formatLuaError(text)),
+      onError: (text: string) => this.onError(formatLuaError(text) + '\n'),
       onReadInput: () => this.waitForInput(),
     }
 
@@ -312,7 +312,7 @@ export class LuaReplProcess implements IProcess {
       this.onOutput('Lua 5.4 REPL - Type exit() to quit\n')
       this.showPrompt()
     } catch (error) {
-      this.onError(formatLuaError(`Failed to initialize Lua engine: ${error}`))
+      this.onError(formatLuaError(`Failed to initialize Lua engine: ${error}`) + '\n')
       this.running = false
       this.onExit(1)
     }
@@ -327,7 +327,7 @@ export class LuaReplProcess implements IProcess {
 
     const callbacks: LuaEngineCallbacks = {
       onOutput: (text: string) => this.onOutput(text),
-      onError: (text: string) => this.onError(formatLuaError(text)),
+      onError: (text: string) => this.onError(formatLuaError(text) + '\n'),
     }
 
     const result = await LuaEngineFactory.executeCode(this.engine, code, callbacks)
