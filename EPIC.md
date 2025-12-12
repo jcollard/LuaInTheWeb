@@ -1,9 +1,9 @@
 # Epic #140: [Epic] Shell Process Model with Lua Execution
 
-**Status:** In Progress (6/7 complete)
+**Status:** In Progress (5/6 complete)
 **Branch:** epic-140
 **Created:** 2025-12-12
-**Last Updated:** 2025-12-12 09:59
+**Last Updated:** 2025-12-12 11:03
 
 ## Overview
 
@@ -51,8 +51,7 @@ packages/
 | #172 | Lua Runtime Package | ✅ Complete | 172-lua-runtime-package | Merged in PR #176 |
 | #178 | Process Raw Input Handling | ✅ Complete | 178-process-raw-input-handling | Merged in PR #182 |
 | #179 | REPL Multi-line Input Support | ✅ Complete | 179-repl-multiline-input | Merged in PR #188 |
-| #189 | REPL Multi-line Cursor Editing | ⏳ Pending | - | Depends on #179 |
-| #173 | Remove Legacy UI Components | ⏳ Pending | - | Depends on #178, #179, #189 |
+| #173 | Remove Legacy UI Components | ⏳ Pending | - | Depends on #178, #179 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -62,12 +61,20 @@ packages/
 
 **Implementation Order:**
 ```
-#170 (interfaces) → #171 + #172 (parallel) → #178 + #179 (parallel) → #189 (cursor editing) → #173 (cleanup)
+#170 (interfaces) → #171 + #172 (parallel) → #178 + #179 (parallel) → #173 (cleanup)
 ```
 
 ## Progress Log
 
 <!-- Updated after each sub-issue completion -->
+
+### 2025-12-12 11:03
+- Scrapped #189: REPL Multi-line Cursor Editing
+- Closed PR #190 and issue #189 as "not planned"
+- Research showed this is an advanced feature that even Node.js and standard Python REPLs don't have
+- Our current continuation mode with paste support matches Lua's official REPL behavior
+- With text editor available for longer code, the complexity isn't justified
+- Epic reduced from 7 to 6 sub-issues; #173 can now proceed
 
 ### 2025-12-12 09:59
 - Completed #179: REPL Multi-line Input Support
