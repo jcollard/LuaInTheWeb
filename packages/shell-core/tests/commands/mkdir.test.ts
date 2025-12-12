@@ -236,5 +236,34 @@ describe('mkdir command', () => {
       expect(result.exitCode).toBe(1)
       expect(result.stderr).toContain('cannot create directory')
     })
+
+    it('should handle createDirectory throwing "already exists" for directories', () => {
+      // Simulate filesystem where exists() returns false but createDirectory throws
+      mockFs.exists = vi.fn().mockReturnValue(false)
+      mockFs.isDirectory = vi.fn().mockReturnValue(true)
+      mockFs.createDirectory = vi.fn().mockImplementation((path: string) => {
+        if (path === '/home/user/existing') {
+          throw new Error('Path already exists: /home/user/existing')
+        }
+      })
+
+      const result = mkdir.execute(['-p', 'existing/newdir'], mockFs)
+
+      expect(result.exitCode).toBe(0)
+      expect(result.stderr).toBe('')
+    })
+
+    it('should error when path exists as file with -p flag', () => {
+      mockFs.exists = vi.fn().mockReturnValue(false)
+      mockFs.isDirectory = vi.fn().mockReturnValue(false) // It's a file, not a directory
+      mockFs.createDirectory = vi.fn().mockImplementation(() => {
+        throw new Error('Path already exists')
+      })
+
+      const result = mkdir.execute(['-p', 'somefile/subdir'], mockFs)
+
+      expect(result.exitCode).toBe(1)
+      expect(result.stderr).toContain('exists but is not a directory')
+    })
   })
 })

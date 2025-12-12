@@ -24,6 +24,7 @@ function getPathSegments(path: string): string[] {
 
 /**
  * Create directory and all parent directories as needed.
+ * With -p behavior: silently skip existing directories.
  */
 function createWithParents(resolvedPath: string, fs: IFileSystem): void {
   const segments = getPathSegments(resolvedPath)
@@ -33,7 +34,22 @@ function createWithParents(resolvedPath: string, fs: IFileSystem): void {
     if (fs.exists(segment) && fs.isDirectory(segment)) {
       continue
     }
-    fs.createDirectory(segment)
+
+    try {
+      fs.createDirectory(segment)
+    } catch (error) {
+      // With -p flag, ignore "already exists" errors for directories
+      const message = error instanceof Error ? error.message : String(error)
+      if (message.includes('already exists') || message.includes('Path already exists')) {
+        // If it exists as a directory, that's fine - continue
+        if (fs.isDirectory(segment)) {
+          continue
+        }
+        // If it exists as a file, that's an error
+        throw new Error(`'${segment}' exists but is not a directory`)
+      }
+      throw error
+    }
   }
 }
 
