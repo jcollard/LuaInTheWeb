@@ -1,9 +1,9 @@
 # Epic #140: [Epic] Shell Process Model with Lua Execution
 
-**Status:** In Progress (1/4 complete)
+**Status:** In Progress (2/4 complete)
 **Branch:** epic-140
 **Created:** 2025-12-12
-**Last Updated:** 2025-12-12 04:59
+**Last Updated:** 2025-12-12 05:07
 
 ## Overview
 
@@ -47,7 +47,7 @@ packages/
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #170 | Shell Interface Design | ✅ Complete | 170-shell-interface-design | Merged in PR #174 |
-| #171 | Process Control UI | 🔄 In Progress | 171-process-control-ui | Started 2025-12-12 |
+| #171 | Process Control UI | ✅ Complete | 171-process-control-ui | Merged in PR #175 |
 | #172 | Lua Runtime Package | ⏳ Pending | - | Depends on #170 |
 | #173 | Remove Legacy UI Components | ⏳ Pending | - | Depends on #171, #172 |
 
@@ -65,6 +65,10 @@ packages/
 ## Progress Log
 
 <!-- Updated after each sub-issue completion -->
+
+### 2025-12-12 05:07
+- Merged PR #175 to `epic-140`
+- Sub-issue #171 complete
 
 ### 2025-12-12 04:59
 - Completed #171: Process Control UI
