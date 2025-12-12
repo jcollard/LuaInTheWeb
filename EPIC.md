@@ -3,7 +3,7 @@
 **Status:** In Progress (6/7 complete)
 **Branch:** epic-140
 **Created:** 2025-12-12
-**Last Updated:** 2025-12-12 09:59
+**Last Updated:** 2025-12-12 10:38
 
 ## Overview
 
@@ -51,7 +51,7 @@ packages/
 | #172 | Lua Runtime Package | ✅ Complete | 172-lua-runtime-package | Merged in PR #176 |
 | #178 | Process Raw Input Handling | ✅ Complete | 178-process-raw-input-handling | Merged in PR #182 |
 | #179 | REPL Multi-line Input Support | ✅ Complete | 179-repl-multiline-input | Merged in PR #188 |
-| #189 | REPL Multi-line Cursor Editing | ⏳ Pending | - | Depends on #179 |
+| #189 | REPL Multi-line Cursor Editing | 🔄 In Progress | 189-repl-multiline-cursor-editing | PR #190 |
 | #173 | Remove Legacy UI Components | ⏳ Pending | - | Depends on #178, #179, #189 |
 
 **Status Legend:**
@@ -68,6 +68,16 @@ packages/
 ## Progress Log
 
 <!-- Updated after each sub-issue completion -->
+
+### 2025-12-12 10:38
+- Started #189: REPL Multi-line Cursor Editing
+- Added cursor position tracking state (cursorPosition, currentLineIndex, currentLine)
+- Implemented handleKey for ArrowLeft/Right/Up/Down, character insertion, and backspace
+- Added line merging for backspace at position 0 in continuation mode
+- Added ArrowUp/Down navigation between continuation lines
+- Added 33 new cursor editing tests
+- 136 lua-runtime tests pass, 1148 website tests pass
+- Created PR #190 targeting epic-140
 
 ### 2025-12-12 09:59
 - Completed #179: REPL Multi-line Input Support
@@ -207,6 +217,10 @@ packages/
 ### Multi-line Input Support (from #179)
 - `packages/lua-runtime/src/LuaEngineFactory.ts` - Added isCodeComplete() and CodeCompletenessResult type
 - `packages/lua-runtime/src/LuaReplProcess.ts` - Added multi-line buffering, continuation mode, cancelInput()
+
+### Cursor Editing Support (from #189)
+- `packages/lua-runtime/src/LuaReplProcess.ts` - Added cursor position tracking, handleKey for cursor/char input
+- `packages/lua-runtime/tests/LuaReplProcess.cursor.test.ts` - 33 cursor editing tests
 
 ## Open Questions
 
