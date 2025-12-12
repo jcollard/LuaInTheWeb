@@ -65,6 +65,9 @@ export class ProcessManager {
   stopProcess(): void {
     if (this.currentProcess) {
       this.currentProcess.stop()
+      // Clear immediately for instant UI feedback on explicit stop (e.g., Ctrl+C).
+      // This differs from startProcess where onExit clears the process asynchronously
+      // because stop is a synchronous user action requiring immediate state update.
       this.currentProcess = null
     }
   }
