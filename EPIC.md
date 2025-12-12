@@ -49,9 +49,9 @@ packages/
 | #170 | Shell Interface Design | ✅ Complete | 170-shell-interface-design | Merged in PR #174 |
 | #171 | Process Control UI | ✅ Complete | 171-process-control-ui | Merged in PR #175 |
 | #172 | Lua Runtime Package | ✅ Complete | 172-lua-runtime-package | Ready for PR |
-| #173 | Remove Legacy UI Components | ⏳ Pending | - | Depends on #171, #172 |
-| #178 | Process Raw Input Handling | ⏳ Pending | - | Forward keys to process for REPL history |
-| #179 | REPL Multi-line Input Support | ⏳ Pending | - | Support functions, loops, etc. |
+| #178 | Process Raw Input Handling | ⏳ Pending | - | Depends on #172 |
+| #179 | REPL Multi-line Input Support | ⏳ Pending | - | Depends on #172 |
+| #173 | Remove Legacy UI Components | ⏳ Pending | - | Depends on #178, #179 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -61,7 +61,7 @@ packages/
 
 **Implementation Order:**
 ```
-#170 (interfaces) → #171 + #172 (parallel) → #173 (cleanup)
+#170 (interfaces) → #171 + #172 (parallel) → #178 + #179 (parallel) → #173 (cleanup)
 ```
 
 ## Progress Log
