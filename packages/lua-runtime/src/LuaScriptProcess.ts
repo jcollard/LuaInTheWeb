@@ -201,10 +201,21 @@ export class LuaScriptProcess implements IProcess {
   private exitWithCode(code: number): void {
     this.running = false
 
-    // Clean up engine
-    if (this.engine) {
-      LuaEngineFactory.close(this.engine)
-      this.engine = null
+    // Defer engine cleanup using setTimeout(0) to allow the JS event loop to
+    // drain pending wasmoon callbacks before closing. Closing immediately while
+    // wasmoon is still processing causes "memory access out of bounds" errors
+    // because WebAssembly memory is freed while still being referenced.
+    const engineToClose = this.engine
+    this.engine = null
+
+    if (engineToClose) {
+      setTimeout(() => {
+        try {
+          LuaEngineFactory.close(engineToClose)
+        } catch {
+          // Ignore errors during cleanup - engine may already be in invalid state
+        }
+      }, 0)
     }
 
     this.onExit(code)
