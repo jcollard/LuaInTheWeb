@@ -1,6 +1,6 @@
 # Epic #140: [Epic] Shell Process Model with Lua Execution
 
-**Status:** In Progress (5/6 complete)
+**Status:** In Progress (5/7 complete)
 **Branch:** epic-140
 **Created:** 2025-12-12
 **Last Updated:** 2025-12-12 08:14
@@ -51,7 +51,8 @@ packages/
 | #172 | Lua Runtime Package | ✅ Complete | 172-lua-runtime-package | Merged in PR #176 |
 | #178 | Process Raw Input Handling | ✅ Complete | 178-process-raw-input-handling | Merged in PR #182 |
 | #179 | REPL Multi-line Input Support | 🔄 In Progress | 179-repl-multiline-input | Ready for review |
-| #173 | Remove Legacy UI Components | ⏳ Pending | - | Depends on #178, #179 |
+| #189 | REPL Multi-line Cursor Editing | ⏳ Pending | - | Depends on #179 |
+| #173 | Remove Legacy UI Components | ⏳ Pending | - | Depends on #178, #179, #189 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -61,7 +62,7 @@ packages/
 
 **Implementation Order:**
 ```
-#170 (interfaces) → #171 + #172 (parallel) → #178 + #179 (parallel) → #173 (cleanup)
+#170 (interfaces) → #171 + #172 (parallel) → #178 + #179 (parallel) → #189 (cursor editing) → #173 (cleanup)
 ```
 
 ## Progress Log
