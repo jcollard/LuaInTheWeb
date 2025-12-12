@@ -41,6 +41,22 @@ describe('LuaReplProcess', () => {
 
       expect(onOutput).toHaveBeenCalledWith(expect.stringContaining('Lua'))
     })
+
+    it('should output welcome message followed by prompt on new line', async () => {
+      process.start()
+
+      // Wait for engine initialization
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Get all output calls in order
+      const outputCalls = onOutput.mock.calls.map((call) => call[0])
+
+      // First call should be welcome message with newline
+      expect(outputCalls[0]).toBe('Lua 5.4 REPL - Type exit() to quit\n')
+
+      // Second call should be the prompt
+      expect(outputCalls[1]).toBe('> ')
+    })
   })
 
   describe('stop', () => {
@@ -96,6 +112,46 @@ describe('LuaReplProcess', () => {
       expect(onOutput).toHaveBeenCalledWith('2\n')
     })
 
+    it('should output result followed by prompt after expression', async () => {
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      onOutput.mockClear()
+
+      process.handleInput('1 + 1')
+
+      // Wait for async execution
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      // Get all output calls in order
+      const outputCalls = onOutput.mock.calls.map((call) => call[0])
+
+      // First should be the result with newline
+      expect(outputCalls[0]).toBe('2\n')
+
+      // Second should be the prompt
+      expect(outputCalls[1]).toBe('> ')
+    })
+
+    it('should output prompt after print statement', async () => {
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      onOutput.mockClear()
+
+      process.handleInput('print("hello")')
+
+      // Wait for async execution
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      // Get all output calls in order
+      const outputCalls = onOutput.mock.calls.map((call) => call[0])
+
+      // First should be the print output with newline
+      expect(outputCalls[0]).toBe('hello\n')
+
+      // Second should be the prompt
+      expect(outputCalls[1]).toBe('> ')
+    })
+
     it('should output errors for invalid code with [error] prefix', async () => {
       process.start()
       await new Promise((resolve) => setTimeout(resolve, 100))
@@ -109,6 +165,20 @@ describe('LuaReplProcess', () => {
       expect(onError).toHaveBeenCalled()
       const errorCall = onError.mock.calls[0][0]
       expect(errorCall).toMatch(/^\[error\]/)
+    })
+
+    it('should output prompt after error', async () => {
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      onOutput.mockClear()
+
+      process.handleInput('this is not valid lua')
+
+      // Wait for async execution
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      // Should still show prompt after error
+      expect(onOutput).toHaveBeenCalledWith('> ')
     })
 
     it('should do nothing if not running', () => {

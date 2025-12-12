@@ -104,6 +104,13 @@ export class LuaReplProcess implements IProcess {
   }
 
   /**
+   * Show the REPL prompt to indicate ready for input.
+   */
+  private showPrompt(): void {
+    this.onOutput('> ')
+  }
+
+  /**
    * Initialize the Lua engine with REPL callbacks.
    */
   private async initEngine(): Promise<void> {
@@ -121,8 +128,9 @@ export class LuaReplProcess implements IProcess {
         this.stop()
       })
 
-      // Output welcome message with newline so input appears on next line
+      // Output welcome message and prompt
       this.onOutput('Lua 5.4 REPL - Type exit() to quit\n')
+      this.showPrompt()
     } catch (error) {
       this.onError(this.formatError(`Failed to initialize Lua engine: ${error}`))
       this.running = false
@@ -147,6 +155,11 @@ export class LuaReplProcess implements IProcess {
     // If expression returned a value, output it with newline
     if (result !== undefined && result !== 'nil') {
       this.onOutput(result + '\n')
+    }
+
+    // Show prompt for next input (only if still running)
+    if (this.running) {
+      this.showPrompt()
     }
   }
 
