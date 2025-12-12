@@ -3,7 +3,7 @@
 **Status:** In Progress (1/4 complete)
 **Branch:** epic-140
 **Created:** 2025-12-12
-**Last Updated:** 2025-12-12 04:40
+**Last Updated:** 2025-12-12 04:59
 
 ## Overview
 
@@ -47,7 +47,7 @@ packages/
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #170 | Shell Interface Design | ✅ Complete | 170-shell-interface-design | Merged in PR #174 |
-| #171 | Process Control UI | ⏳ Pending | - | Depends on #170 |
+| #171 | Process Control UI | 🔄 In Progress | 171-process-control-ui | Started 2025-12-12 |
 | #172 | Lua Runtime Package | ⏳ Pending | - | Depends on #170 |
 | #173 | Remove Legacy UI Components | ⏳ Pending | - | Depends on #171, #172 |
 
@@ -65,6 +65,20 @@ packages/
 ## Progress Log
 
 <!-- Updated after each sub-issue completion -->
+
+### 2025-12-12 04:59
+- Completed #171: Process Control UI
+- Created useProcessManager hook for React state management
+- Added StopButton component with stop icon
+- Integrated stop button into ShellTerminal (visible when process running)
+- Implemented input routing to processes
+- Implemented Ctrl+C to stop running process
+- All unit tests pass, mutation score 77.78% (surviving mutants are equivalent)
+- Ready for PR
+
+### 2025-12-12 04:47
+- Started work on #171: Process Control UI
+- Created branch `171-process-control-ui` from `epic-140`
 
 ### 2025-12-12 04:40
 - Merged PR #174 to `epic-140`
@@ -101,6 +115,11 @@ packages/
 ### Updated
 - `packages/shell-core/src/CommandRegistry.ts` - Added ICommand support and executeWithContext
 - `packages/shell-core/src/index.ts` - Exports new interfaces and classes
+
+### UI Components (from #171)
+- `lua-learning-website/src/hooks/useProcessManager.ts` - React hook wrapping ProcessManager
+- `lua-learning-website/src/components/StopButton/StopButton.tsx` - Stop button component
+- `lua-learning-website/src/components/ShellTerminal/ShellTerminal.tsx` - Updated with process control
 
 ## Open Questions
 

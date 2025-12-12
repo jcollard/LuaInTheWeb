@@ -6,7 +6,9 @@ import styles from '../BashTerminal/BashTerminal.module.css'
 import { useTheme } from '../../contexts/useTheme'
 import { getTerminalTheme } from '../BashTerminal/terminalTheme'
 import { useShell } from '../../hooks/useShell'
+import { useProcessManager } from '../../hooks/useProcessManager'
 import { useShellTerminal, type TerminalCommand } from './useShellTerminal'
+import { StopButton } from '../StopButton'
 import type { ShellTerminalProps } from './types'
 
 /**
@@ -89,6 +91,50 @@ export function ShellTerminal({
       xtermRef.current.write(`\x1b[32m${cwdRef.current}\x1b[0m \x1b[33m$\x1b[0m `)
     }
   }, [])
+
+  // Handle process output - write to terminal
+  const handleProcessOutput = useCallback((text: string) => {
+    if (xtermRef.current) {
+      xtermRef.current.write(text)
+    }
+  }, [])
+
+  // Handle process errors - write in red to terminal
+  const handleProcessError = useCallback((text: string) => {
+    if (xtermRef.current) {
+      xtermRef.current.write(`\x1b[31m${text}\x1b[0m`)
+    }
+  }, [])
+
+  // Handle process exit - show prompt again
+  const handleProcessExitCallback = useCallback(() => {
+    if (xtermRef.current) {
+      xtermRef.current.writeln('')
+      showPrompt()
+    }
+  }, [showPrompt])
+
+  // Process manager for handling long-running processes
+  const {
+    isProcessRunning,
+    stopProcess,
+    handleInput: handleProcessInput,
+  } = useProcessManager({
+    onOutput: handleProcessOutput,
+    onError: handleProcessError,
+    onProcessExit: handleProcessExitCallback,
+  })
+
+  // Store process manager state in refs for stable terminal event handler
+  const isProcessRunningRef = useRef(isProcessRunning)
+  const stopProcessRef = useRef(stopProcess)
+  const handleProcessInputRef = useRef(handleProcessInput)
+
+  useEffect(() => {
+    isProcessRunningRef.current = isProcessRunning
+    stopProcessRef.current = stopProcess
+    handleProcessInputRef.current = handleProcessInput
+  }, [isProcessRunning, stopProcess, handleProcessInput])
 
   // Handle command execution
   const handleCommand = useCallback((input: string) => {
@@ -216,6 +262,15 @@ export function ShellTerminal({
 
       // Handle Enter
       if (data === '\r' || data === '\n' || code === 13) {
+        // If a process is running, route input to it
+        if (isProcessRunningRef.current) {
+          const currentInput = currentLineRef.current
+          terminal.writeln('')
+          handleProcessInputRef.current(currentInput)
+          // Clear the input state
+          handlers.handleCtrlC() // Reuse to clear line state
+          return
+        }
         commands = handlers.handleEnter()
         executeTerminalCommands(terminal, commands)
         // Show prompt for empty input (commands include writeln)
@@ -276,6 +331,14 @@ export function ShellTerminal({
 
       // Handle Ctrl+C
       if (code === 3) {
+        // If a process is running, stop it
+        if (isProcessRunningRef.current) {
+          stopProcessRef.current()
+          terminal.write('^C')
+          terminal.writeln('')
+          showPrompt()
+          return
+        }
         commands = handlers.handleCtrlC()
         executeTerminalCommands(terminal, commands)
         showPrompt()
@@ -356,6 +419,12 @@ export function ShellTerminal({
       {!embedded && (
         <div className={styles.header}>
           <h3>Shell</h3>
+          {isProcessRunning && <StopButton onStop={stopProcess} />}
+        </div>
+      )}
+      {embedded && isProcessRunning && (
+        <div className={styles.processControls}>
+          <StopButton onStop={stopProcess} />
         </div>
       )}
       <div ref={terminalRef} className={styles.terminal} />

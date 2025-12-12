@@ -3,6 +3,7 @@
   flex-direction: column;
   height: 100%;
   min-height: 500px;
+  position: relative;
 }
 
 .containerEmbedded {
@@ -20,6 +21,13 @@
   margin: 0;
   color: var(--theme-accent-primary);
   font-size: 1.1rem;
+}
+
+.processControls {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  z-index: 10;
 }
 
 .terminal {
