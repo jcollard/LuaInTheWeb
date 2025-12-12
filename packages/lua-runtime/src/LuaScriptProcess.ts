@@ -68,10 +68,19 @@ export class LuaScriptProcess implements IProcess {
     }
     this.inputQueue = []
 
-    // Close the engine
-    if (this.engine) {
-      LuaEngineFactory.close(this.engine)
-      this.engine = null
+    // Defer engine cleanup to allow pending operations to complete
+    // This prevents "memory access out of bounds" errors from wasmoon
+    const engineToClose = this.engine
+    this.engine = null
+
+    if (engineToClose) {
+      setTimeout(() => {
+        try {
+          LuaEngineFactory.close(engineToClose)
+        } catch {
+          // Ignore errors during cleanup - engine may already be in invalid state
+        }
+      }, 0)
     }
 
     this.onExit(0)
