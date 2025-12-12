@@ -174,8 +174,9 @@ export class LuaEngineFactory {
       // Use Lua's load() to check syntax without executing
       // Try both as statement and as expression (with return prefix)
       // load() returns a function if successful, or nil and error message if not
+      // Note: Using level-2 long string [==[...]==] to handle code containing ]=]
       const checkResult = await engine.doString(`
-        local code = [=[${code}]=]
+        local code = [==[${code}]==]
         -- Try as statement first
         local fn, err = load(code)
         if fn then

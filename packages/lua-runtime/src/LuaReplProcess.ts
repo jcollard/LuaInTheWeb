@@ -35,6 +35,9 @@ export class LuaReplProcess implements IProcess {
 
   /**
    * Whether the REPL is currently in continuation mode (awaiting more input).
+   * When true, the REPL is collecting lines for a multi-line construct
+   * (e.g., function definition, loop) and showing the `>>` prompt.
+   * @returns true if awaiting more input for incomplete code
    */
   get inContinuationMode(): boolean {
     return this._inContinuationMode
@@ -154,6 +157,9 @@ export class LuaReplProcess implements IProcess {
 
   /**
    * Cancel the current multi-line input and return to normal mode.
+   * Clears the input buffer and exits continuation mode, displaying
+   * a fresh prompt. Use this when the user wants to abandon an
+   * incomplete multi-line construct (e.g., via Ctrl+C).
    */
   cancelInput(): void {
     this.inputBuffer = []
