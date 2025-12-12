@@ -269,7 +269,22 @@ export function useShellTerminal(
     } else if (context.type === 'path' && getPathCompletions) {
       // Path completion
       const entries = getPathCompletions(context.prefix)
-      completions = entries.map((e) => (e.type === 'directory' ? e.name + '/' : e.name))
+
+      // Determine the directory prefix to prepend to completions
+      // If prefix ends with '/', use the whole prefix as dir prefix
+      // If prefix contains '/', use everything up to and including the last '/'
+      // Otherwise, no directory prefix
+      let dirPrefix = ''
+      if (context.prefix.endsWith('/')) {
+        dirPrefix = context.prefix
+      } else if (context.prefix.includes('/')) {
+        dirPrefix = context.prefix.slice(0, context.prefix.lastIndexOf('/') + 1)
+      }
+
+      completions = entries.map((e) => {
+        const suffix = e.type === 'directory' ? '/' : ''
+        return dirPrefix + e.name + suffix
+      })
     }
 
     // No matches

@@ -143,6 +143,76 @@ describe('useShellTerminal tab completion', () => {
       expect(result.current.currentLine).toBe('cd src/')
     })
 
+    it('should complete subdirectory when path ends with /', () => {
+      // Mock returns 'bar' directory inside 'foo/'
+      const mockSubdirPath = (partial: string): FileEntry[] => {
+        if (partial === 'foo/') {
+          return [{ name: 'bar', type: 'directory', path: '/foo/bar' }]
+        }
+        return []
+      }
+
+      const { result } = renderHook(() =>
+        useShellTerminal({
+          commandNames: mockCommandNames,
+          getPathCompletions: mockSubdirPath,
+        })
+      )
+
+      // Type "touch foo/"
+      act(() => { result.current.handleCharacter('t') })
+      act(() => { result.current.handleCharacter('o') })
+      act(() => { result.current.handleCharacter('u') })
+      act(() => { result.current.handleCharacter('c') })
+      act(() => { result.current.handleCharacter('h') })
+      act(() => { result.current.handleCharacter(' ') })
+      act(() => { result.current.handleCharacter('f') })
+      act(() => { result.current.handleCharacter('o') })
+      act(() => { result.current.handleCharacter('o') })
+      act(() => { result.current.handleCharacter('/') })
+
+      act(() => {
+        result.current.handleTab()
+      })
+
+      // Should complete to "touch foo/bar/"
+      expect(result.current.currentLine).toBe('touch foo/bar/')
+    })
+
+    it('should complete partial filename in subdirectory', () => {
+      // Mock returns 'bar' when typing partial 'foo/b'
+      const mockPartialSubdir = (partial: string): FileEntry[] => {
+        if (partial === 'foo/b') {
+          return [{ name: 'bar', type: 'directory', path: '/foo/bar' }]
+        }
+        return []
+      }
+
+      const { result } = renderHook(() =>
+        useShellTerminal({
+          commandNames: mockCommandNames,
+          getPathCompletions: mockPartialSubdir,
+        })
+      )
+
+      // Type "cd foo/b"
+      act(() => { result.current.handleCharacter('c') })
+      act(() => { result.current.handleCharacter('d') })
+      act(() => { result.current.handleCharacter(' ') })
+      act(() => { result.current.handleCharacter('f') })
+      act(() => { result.current.handleCharacter('o') })
+      act(() => { result.current.handleCharacter('o') })
+      act(() => { result.current.handleCharacter('/') })
+      act(() => { result.current.handleCharacter('b') })
+
+      act(() => {
+        result.current.handleTab()
+      })
+
+      // Should complete to "cd foo/bar/"
+      expect(result.current.currentLine).toBe('cd foo/bar/')
+    })
+
     it('should show multiple matching paths', () => {
       const mockMultiplePaths = (partial: string): FileEntry[] => {
         if (partial === '' || partial === 's') {
