@@ -48,12 +48,21 @@ export class CommandRegistry {
   }
 
   /**
-   * Get a command by name.
+   * Get a legacy command by name.
    * @param name - The command name to look up
    * @returns The command if found, undefined otherwise
    */
   get(name: string): Command | undefined {
     return this.commands.get(name)
+  }
+
+  /**
+   * Get an ICommand by name.
+   * @param name - The command name to look up
+   * @returns The ICommand if found, undefined otherwise
+   */
+  getICommand(name: string): ICommand | undefined {
+    return this.iCommands.get(name)
   }
 
   /**
@@ -66,42 +75,44 @@ export class CommandRegistry {
   }
 
   /**
-   * Get all registered commands.
-   * @returns Array of all registered commands in insertion order
+   * Get all registered legacy commands.
+   * @returns Array of all registered legacy commands
+   * @deprecated Use names() to get all command names, then executeWithContext()
    */
   list(): Command[] {
     return Array.from(this.commands.values())
   }
 
   /**
-   * Get all registered command names.
+   * Get all registered command names (both legacy and ICommand).
    * @returns Array of command names
    */
   names(): string[] {
-    return Array.from(this.commands.keys())
+    return [...this.commands.keys(), ...this.iCommands.keys()]
   }
 
   /**
-   * Get the number of registered commands.
+   * Get the total number of registered commands (both legacy and ICommand).
    */
   get size(): number {
-    return this.commands.size
+    return this.commands.size + this.iCommands.size
   }
 
   /**
-   * Unregister a command by name.
+   * Unregister a command by name (works for both legacy and ICommand).
    * @param name - The command name to remove
    * @returns True if the command was removed, false if it didn't exist
    */
   unregister(name: string): boolean {
-    return this.commands.delete(name)
+    return this.commands.delete(name) || this.iCommands.delete(name)
   }
 
   /**
-   * Remove all registered commands.
+   * Remove all registered commands (both legacy and ICommand).
    */
   clear(): void {
     this.commands.clear()
+    this.iCommands.clear()
   }
 
   /**

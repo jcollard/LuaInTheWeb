@@ -459,5 +459,87 @@ describe('CommandRegistry', () => {
 
       expect(context.output).toHaveBeenCalledWith('Hello from ICommand')
     })
+
+    it('should be retrievable via getICommand()', () => {
+      const iCmd: ICommand = {
+        name: 'icmd',
+        description: 'Test ICommand',
+        usage: 'icmd',
+        execute: () => undefined,
+      }
+
+      registry.registerICommand(iCmd)
+      expect(registry.getICommand('icmd')).toBe(iCmd)
+      expect(registry.get('icmd')).toBeUndefined() // Not in legacy map
+    })
+
+    it('should be included in names()', () => {
+      const legacyCmd = createMockCommand('legacy')
+      const iCmd: ICommand = {
+        name: 'icmd',
+        description: 'ICommand',
+        usage: 'icmd',
+        execute: () => undefined,
+      }
+
+      registry.register(legacyCmd)
+      registry.registerICommand(iCmd)
+
+      const names = registry.names()
+      expect(names).toContain('legacy')
+      expect(names).toContain('icmd')
+      expect(names).toHaveLength(2)
+    })
+
+    it('should be counted in size', () => {
+      const legacyCmd = createMockCommand('legacy')
+      const iCmd: ICommand = {
+        name: 'icmd',
+        description: 'ICommand',
+        usage: 'icmd',
+        execute: () => undefined,
+      }
+
+      expect(registry.size).toBe(0)
+      registry.register(legacyCmd)
+      expect(registry.size).toBe(1)
+      registry.registerICommand(iCmd)
+      expect(registry.size).toBe(2)
+    })
+
+    it('should be removable via unregister()', () => {
+      const iCmd: ICommand = {
+        name: 'removable',
+        description: 'Removable ICommand',
+        usage: 'removable',
+        execute: () => undefined,
+      }
+
+      registry.registerICommand(iCmd)
+      expect(registry.has('removable')).toBe(true)
+
+      const result = registry.unregister('removable')
+      expect(result).toBe(true)
+      expect(registry.has('removable')).toBe(false)
+    })
+
+    it('should be cleared by clear()', () => {
+      const legacyCmd = createMockCommand('legacy')
+      const iCmd: ICommand = {
+        name: 'icmd',
+        description: 'ICommand',
+        usage: 'icmd',
+        execute: () => undefined,
+      }
+
+      registry.register(legacyCmd)
+      registry.registerICommand(iCmd)
+      expect(registry.size).toBe(2)
+
+      registry.clear()
+      expect(registry.size).toBe(0)
+      expect(registry.has('legacy')).toBe(false)
+      expect(registry.has('icmd')).toBe(false)
+    })
   })
 })
