@@ -1,9 +1,9 @@
 # Epic #140: [Epic] Shell Process Model with Lua Execution
 
-**Status:** In Progress (3/4 complete)
+**Status:** In Progress (4/6 complete)
 **Branch:** epic-140
 **Created:** 2025-12-12
-**Last Updated:** 2025-12-12 07:41
+**Last Updated:** 2025-12-12 07:56
 
 ## Overview
 
@@ -49,7 +49,7 @@ packages/
 | #170 | Shell Interface Design | ✅ Complete | 170-shell-interface-design | Merged in PR #174 |
 | #171 | Process Control UI | ✅ Complete | 171-process-control-ui | Merged in PR #175 |
 | #172 | Lua Runtime Package | ✅ Complete | 172-lua-runtime-package | Merged in PR #176 |
-| #178 | Process Raw Input Handling | 🔄 In Progress | 178-process-raw-input-handling | Started 2025-12-12 |
+| #178 | Process Raw Input Handling | ✅ Complete | 178-process-raw-input-handling | Merged in PR #182 |
 | #179 | REPL Multi-line Input Support | ⏳ Pending | - | Depends on #172 |
 | #173 | Remove Legacy UI Components | ⏳ Pending | - | Depends on #178, #179 |
 
@@ -67,6 +67,13 @@ packages/
 ## Progress Log
 
 <!-- Updated after each sub-issue completion -->
+
+### 2025-12-12 07:56
+- Completed #178: Process Raw Input Handling
+- Merged PR #182 to epic-140
+- Added KeyModifiers type and supportsRawInput/handleKey to IProcess interface
+- Implemented command history navigation with arrow keys in LuaReplProcess
+- 4/6 sub-issues now complete
 
 ### 2025-12-12 07:25
 - Started work on #178: Process Raw Input Handling
