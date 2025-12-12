@@ -265,5 +265,37 @@ describe('mkdir command', () => {
       expect(result.exitCode).toBe(1)
       expect(result.stderr).toContain('exists but is not a directory')
     })
+
+    it('should create deeply nested directories even when fs.exists is stale', () => {
+      // Simulate filesystem where exists() doesn't immediately reflect created dirs
+      // but createDirectory works if we track state ourselves
+      const createdDirs = new Set<string>()
+
+      mockFs.exists = vi.fn().mockImplementation((path: string) => {
+        // Only /foo exists initially, created dirs not visible via exists()
+        return path === '/foo'
+      })
+      mockFs.isDirectory = vi.fn().mockImplementation((path: string) => {
+        return path === '/foo' || createdDirs.has(path)
+      })
+      mockFs.createDirectory = vi.fn().mockImplementation((path: string) => {
+        // Simulate fs that checks parent exists
+        const parent = path.substring(0, path.lastIndexOf('/')) || '/'
+        const parentExists = parent === '/' || parent === '/foo' || createdDirs.has(parent)
+        if (!parentExists) {
+          throw new Error(`Parent directory not found: ${parent}`)
+        }
+        createdDirs.add(path)
+      })
+
+      // /foo exists, need to create /foo/bar, /foo/bar/biz, /foo/bar/biz/baz
+      const result = mkdir.execute(['-p', '/foo/bar/biz/baz'], mockFs)
+
+      expect(result.exitCode).toBe(0)
+      expect(result.stderr).toBe('')
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/foo/bar')
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/foo/bar/biz')
+      expect(mockFs.createDirectory).toHaveBeenCalledWith('/foo/bar/biz/baz')
+    })
   })
 })
