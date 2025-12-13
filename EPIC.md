@@ -105,12 +105,13 @@ Enable users to work with files on their actual computer (not just browser local
 | #198 | File System Access API Research | ✅ Complete | - | See [research doc](docs/file-system-access-api-research.md) |
 | #199 | FileSystemAccessAPI IFileSystem Implementation | ✅ Complete | 199-filesystemaccessapi-ifilesystem-implementation | Merged in PR #205 |
 | #200 | Workspace State Management | ✅ Complete | 200-workspace-state-management | useWorkspaceManager + CompositeFileSystem (AD-4) |
-| #201 | Workspace UI Components | ✅ Complete | 201-workspace-ui-components | WorkspaceTabs + AddWorkspaceDialog + FileExplorer integration |
+| #201 | Workspace UI Components | 🔄 PR Created | 201-workspace-ui-components | PR #217 |
 | #202 | Shell Multi-Workspace Integration | ⏳ Pending | - | Depends on #199, #200, #201 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
 - 🔄 In Progress - Currently being worked on
+- 🔄 PR Created - Pull request created, awaiting review
 - ✅ Complete - Merged to epic branch
 - ❌ Blocked - Has unresolved blockers
 
@@ -139,6 +140,7 @@ Enable users to work with files on their actual computer (not just browser local
 <!-- Updated after each sub-issue completion -->
 
 ### 2025-12-13
+- **PR Created for #201** - Workspace UI Components (PR #217)
 - **#201 Complete** - Workspace UI Components
   - Created `WorkspaceTabs` component for workspace navigation
   - Created `AddWorkspaceDialog` for creating new workspaces (virtual and local)
