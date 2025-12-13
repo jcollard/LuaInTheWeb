@@ -1,6 +1,22 @@
 import type { languages } from 'monaco-editor'
 
 /**
+ * IndentAction constants matching Monaco's languages.IndentAction enum.
+ * These are used in onEnterRules to specify indentation behavior.
+ * We define them as constants since Monaco is loaded dynamically at runtime.
+ */
+const IndentAction = {
+  /** Insert new line and copy the previous line's indentation */
+  None: 0,
+  /** Insert new line and indent once (relative to the previous line's indentation) */
+  Indent: 1,
+  /** Insert two new lines: first indented, second at same level as previous line */
+  IndentOutdent: 2,
+  /** Insert new line and outdent once (relative to the previous line's indentation) */
+  Outdent: 3,
+} as const
+
+/**
  * All Lua keywords for syntax highlighting
  */
 export const LUA_KEYWORDS = [
@@ -62,12 +78,25 @@ export const luaLanguageConfig: languages.LanguageConfiguration = {
     },
   },
   indentationRules: {
-    // Increase indent after: function, if...then, for...do, while...do, repeat, do, else, elseif
-    // Uses negative lookahead to exclude lines that are comments
+    /**
+     * Increase indent after block-opening constructs.
+     * Pattern breakdown:
+     *   ^(?!.*--.*)     - Negative lookahead: line must not contain a comment
+     *   .*\b(           - Match any chars, then word boundary, then one of:
+     *     function\b.*\)  - function declaration ending with )
+     *     |then           - if/elseif...then
+     *     |do             - for/while...do or standalone do
+     *     |repeat         - repeat block
+     *     |else           - else clause
+     *     |elseif.*then   - elseif...then
+     *   )\s*$           - Optional trailing whitespace, end of line
+     */
     increaseIndentPattern:
       /^(?!.*--.*).*\b(function\b.*\)|then|do|repeat|else|elseif.*then)\s*$/,
-    // Decrease indent on: end, else, elseif, until - must be at start of line (with optional whitespace)
-    // Uses negative lookahead to exclude lines that are comments
+    /**
+     * Decrease indent for block-closing keywords at line start.
+     * Pattern: optional whitespace, not a comment, then end/else/elseif/until
+     */
     decreaseIndentPattern: /^\s*(?!--)(end|else|elseif|until)\b/,
   },
   onEnterRules: [
@@ -75,18 +104,18 @@ export const luaLanguageConfig: languages.LanguageConfiguration = {
     {
       beforeText:
         /^\s*\b(function.*\(.*\)|if\b.*\bthen|for\b.*\bdo|while\b.*\bdo|repeat|else|elseif\b.*\bthen)\s*$/,
-      action: { indentAction: 1 }, // IndentAction.Indent
+      action: { indentAction: IndentAction.Indent },
     },
     // After standalone 'do' keyword, indent
     {
       beforeText: /^\s*do\s*$/,
-      action: { indentAction: 1 }, // IndentAction.Indent
+      action: { indentAction: IndentAction.Indent },
     },
     // Before 'end', 'else', 'elseif', 'until' - outdent then indent (for typing these keywords)
     {
       beforeText: /^\s*$/,
       afterText: /^\s*(end|else|elseif|until)\b/,
-      action: { indentAction: 2 }, // IndentAction.IndentOutdent
+      action: { indentAction: IndentAction.IndentOutdent },
     },
   ],
 }
