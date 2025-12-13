@@ -20,6 +20,8 @@ export interface WorkspaceProps {
   onRefreshWorkspace: (mountPath: string) => Promise<void>
   /** Check if a workspace supports refresh (is a connected local workspace) */
   supportsRefresh: (mountPath: string) => boolean
+  /** Callback to reconnect a disconnected local workspace */
+  onReconnectWorkspace?: (mountPath: string) => Promise<void>
 }
 
 export interface FileExplorerProps {

@@ -5,21 +5,24 @@
 
 import type { IFileSystem } from '@lua-learning/shell-core'
 import type { TreeNode } from './fileSystemTypes'
+import type { Workspace } from './workspaceTypes'
 
 /**
  * Build a tree from an IFileSystem, marking root-level folders as workspaces.
+ * Optionally includes disconnected workspaces as root nodes with isDisconnected: true.
  */
 export function buildTreeFromFileSystem(
   fs: IFileSystem,
   path: string = '/',
-  isRoot: boolean = true
+  isRoot: boolean = true,
+  disconnectedWorkspaces: Workspace[] = []
 ): TreeNode[] {
   const entries = fs.listDirectory(path)
   const nodes: TreeNode[] = []
 
   for (const entry of entries) {
     if (entry.type === 'directory') {
-      const children = buildTreeFromFileSystem(fs, entry.path, false)
+      const children = buildTreeFromFileSystem(fs, entry.path, false, [])
       nodes.push({
         name: entry.name,
         path: entry.path,
@@ -32,6 +35,20 @@ export function buildTreeFromFileSystem(
         name: entry.name,
         path: entry.path,
         type: 'file',
+      })
+    }
+  }
+
+  // Add disconnected workspaces at root level
+  if (isRoot) {
+    for (const workspace of disconnectedWorkspaces) {
+      nodes.push({
+        name: workspace.mountPath.substring(1), // Remove leading '/'
+        path: workspace.mountPath,
+        type: 'folder',
+        isWorkspace: true,
+        isDisconnected: true,
+        children: [], // No children for disconnected workspaces
       })
     }
   }
@@ -85,8 +102,16 @@ function flushIfSupported(fs: IFileSystem): void {
 
 /**
  * Create an adapter that wraps IFileSystem to provide IDEContext-compatible operations.
+ * @param fs - The underlying filesystem (typically a CompositeFileSystem)
+ * @param workspaces - Optional array of all workspaces (used to show disconnected workspaces in tree)
  */
-export function createFileSystemAdapter(fs: IFileSystem): AdaptedFileSystem {
+export function createFileSystemAdapter(
+  fs: IFileSystem,
+  workspaces: Workspace[] = []
+): AdaptedFileSystem {
+  // Filter disconnected workspaces for tree building
+  const disconnectedWorkspaces = workspaces.filter((w) => w.status === 'disconnected')
+
   return {
     createFile: (path: string, content: string = '') => {
       fs.writeFile(path, content)
@@ -168,7 +193,7 @@ export function createFileSystemAdapter(fs: IFileSystem): AdaptedFileSystem {
       return entries.map((entry) => entry.name)
     },
 
-    getTree: () => buildTreeFromFileSystem(fs),
+    getTree: () => buildTreeFromFileSystem(fs, '/', true, disconnectedWorkspaces),
   }
 }
 

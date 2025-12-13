@@ -32,6 +32,7 @@ interface IDELayoutInnerProps {
   isFileSystemAccessSupported: () => boolean
   refreshWorkspace: (mountPath: string) => Promise<void>
   supportsRefresh: (mountPath: string) => boolean
+  reconnectWorkspace: (id: string, handle: FileSystemDirectoryHandle) => Promise<void>
 }
 
 /**
@@ -47,6 +48,7 @@ function IDELayoutInner({
   isFileSystemAccessSupported,
   refreshWorkspace,
   supportsRefresh,
+  reconnectWorkspace,
 }: IDELayoutInnerProps) {
   const {
     code,
@@ -110,6 +112,31 @@ function IDELayoutInner({
       }
     },
     [addLocalWorkspace]
+  )
+
+  // Handle reconnecting a disconnected local workspace
+  const handleReconnectWorkspace = useCallback(
+    async (mountPath: string) => {
+      // Find workspace by mount path
+      const workspace = workspaces.find((w) => w.mountPath === mountPath)
+      if (!workspace || workspace.type !== 'local') {
+        return
+      }
+
+      try {
+        const handle = await window.showDirectoryPicker({
+          mode: 'readwrite',
+        })
+        await reconnectWorkspace(workspace.id, handle)
+        refreshFileTree()
+      } catch (err) {
+        // User cancelled or error occurred
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Failed to reconnect workspace:', err)
+        }
+      }
+    },
+    [workspaces, reconnectWorkspace, refreshFileTree]
   )
 
   // Register keyboard shortcuts
@@ -193,6 +220,7 @@ function IDELayoutInner({
         refreshFileTree()
       },
       supportsRefresh,
+      onReconnectWorkspace: handleReconnectWorkspace,
     },
   }
 
@@ -310,12 +338,14 @@ export function IDELayout({
     refreshWorkspace,
     refreshAllLocalWorkspaces,
     supportsRefresh,
+    reconnectWorkspace,
   } = useWorkspaceManager()
 
   // Create adapted filesystem for IDEContext
+  // Pass workspaces so the adapter can include disconnected workspaces in the tree
   const adaptedFileSystem = useMemo(
-    () => createFileSystemAdapter(compositeFileSystem),
-    [compositeFileSystem]
+    () => createFileSystemAdapter(compositeFileSystem, workspaces),
+    [compositeFileSystem, workspaces]
   )
 
   // Refresh all local workspaces when window gains focus
@@ -342,6 +372,7 @@ export function IDELayout({
         isFileSystemAccessSupported={isFileSystemAccessSupported}
         refreshWorkspace={refreshWorkspace}
         supportsRefresh={supportsRefresh}
+        reconnectWorkspace={reconnectWorkspace}
       />
     </IDEContextProvider>
   )

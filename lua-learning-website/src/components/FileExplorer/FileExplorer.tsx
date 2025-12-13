@@ -115,6 +115,13 @@ export function FileExplorer({
     [workspaceProps]
   )
 
+  const handleReconnectWorkspace = useCallback(
+    (mountPath: string) => {
+      workspaceProps?.onReconnectWorkspace?.(mountPath)
+    },
+    [workspaceProps]
+  )
+
   // Use controlled selected path if provided
   const selectedPath = controlledSelectedPath ?? internalSelectedPath
 
@@ -383,6 +390,7 @@ export function FileExplorer({
           onRenameSubmit={handleRenameSubmit}
           onRenameCancel={handleRenameCancel}
           onDrop={onMoveFile}
+          onReconnect={handleReconnectWorkspace}
         />
       </div>
 

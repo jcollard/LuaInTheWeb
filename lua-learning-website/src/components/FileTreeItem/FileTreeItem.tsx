@@ -32,11 +32,22 @@ const WorkspaceIcon = () => (
   </svg>
 )
 
+const DisconnectedWorkspaceIcon = () => (
+  <svg className={`${styles.iconSvg} ${styles.disconnectedWorkspaceIcon}`} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    {/* Folder with disconnected indicator */}
+    <path d="M14 4H8l-1-1H2a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1V5a1 1 0 00-1-1z" opacity="0.5" />
+    {/* X mark to indicate disconnected */}
+    <circle cx="12" cy="11" r="2.5" fill="#f14c4c" stroke="var(--bg-secondary, #1e1e1e)" strokeWidth="1" />
+    <path d="M11 10l2 2M13 10l-2 2" stroke="var(--bg-secondary, #1e1e1e)" strokeWidth="1" strokeLinecap="round" />
+  </svg>
+)
+
 export function FileTreeItem({
   name,
   path,
   type,
   isWorkspace,
+  isDisconnected,
   isSelected,
   isExpanded,
   isRenaming,
@@ -48,6 +59,7 @@ export function FileTreeItem({
   onRenameCancel,
   onDragStart,
   onDrop,
+  onReconnect,
 }: FileTreeItemProps) {
   const [renameValue, setRenameValue] = useState(name)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -68,6 +80,11 @@ export function FileTreeItem({
 
   const handleClick = (event: MouseEvent) => {
     event.stopPropagation()
+    // If this is a disconnected workspace, trigger reconnection instead of normal click
+    if (isWorkspace && isDisconnected && onReconnect) {
+      onReconnect(path)
+      return
+    }
     onClick(path)
   }
 
@@ -172,8 +189,8 @@ export function FileTreeItem({
       )}
 
       {/* Icon */}
-      <span className={styles.icon} data-testid={isFolder ? (isWorkspace ? 'workspace-icon' : 'folder-icon') : 'file-icon'}>
-        {isFolder ? (isWorkspace ? <WorkspaceIcon /> : <FolderIcon />) : <FileIcon />}
+      <span className={styles.icon} data-testid={isFolder ? (isWorkspace ? (isDisconnected ? 'disconnected-workspace-icon' : 'workspace-icon') : 'folder-icon') : 'file-icon'}>
+        {isFolder ? (isWorkspace ? (isDisconnected ? <DisconnectedWorkspaceIcon /> : <WorkspaceIcon />) : <FolderIcon />) : <FileIcon />}
       </span>
 
       {/* Name or rename input */}

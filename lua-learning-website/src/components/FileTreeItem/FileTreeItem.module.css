@@ -71,6 +71,10 @@
   fill: var(--theme-accent-secondary, #007acc);
 }
 
+.disconnectedWorkspaceIcon {
+  fill: var(--theme-text-muted, #6e7681);
+}
+
 .name {
   flex: 1;
   overflow: hidden;

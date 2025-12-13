@@ -15,6 +15,8 @@ export interface TreeNode {
   type: 'file' | 'folder'
   /** Indicates this is a workspace root (mount point) */
   isWorkspace?: boolean
+  /** Indicates this workspace is disconnected (local folder needs reconnection) */
+  isDisconnected?: boolean
   children?: TreeNode[]
 }
 

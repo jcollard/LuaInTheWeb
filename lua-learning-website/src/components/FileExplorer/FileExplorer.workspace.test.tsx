@@ -114,6 +114,31 @@ describe('FileExplorer with Workspace Management', () => {
       // Workspace icon should be rendered (not regular folder icon)
       expect(screen.getByTestId('workspace-icon')).toBeInTheDocument()
     })
+
+    it('displays disconnected workspace icon for disconnected workspaces', () => {
+      const workspaces = [
+        createMockWorkspace({ id: 'ws-1', name: 'Local Project', mountPath: '/local-project', status: 'disconnected' }),
+      ]
+      // Create tree with isDisconnected flag
+      const tree = workspaces.map((ws) => ({
+        name: ws.mountPath.replace('/', ''),
+        path: ws.mountPath,
+        type: 'folder' as const,
+        isWorkspace: true,
+        isDisconnected: true,
+        children: [],
+      }))
+      render(
+        <FileExplorer
+          {...baseProps}
+          tree={tree}
+          workspaceProps={{ ...defaultWorkspaceProps, workspaces }}
+        />
+      )
+
+      // Disconnected workspace icon should be rendered
+      expect(screen.getByTestId('disconnected-workspace-icon')).toBeInTheDocument()
+    })
   })
 
   describe('add workspace dialog', () => {
