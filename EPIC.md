@@ -1,57 +1,46 @@
-# Epic #140: [Epic] Shell Process Model with Lua Execution
+# Epic #183: Improve Browser Responsiveness During Long-Running Lua Loops
 
-**Status:** Complete (6/6)
-**Branch:** epic-140
-**Created:** 2025-12-12
-**Last Updated:** 2025-12-12 17:30
+**Status:** In Progress (1/4 complete)
+**Branch:** epic-183
+**Created:** 2025-12-13
+**Last Updated:** 2025-12-13
 
 ## Overview
 
-Create a unified shell experience where the `lua` command provides both script execution and interactive REPL functionality. This eliminates the need for separate REPL tab, Terminal tab, and Run button.
+Infinite or long-running Lua loops (e.g., `while i > 0 do i = i + 1; print(i) end`) cause browser unresponsiveness because wasmoon's `engine.doString()` blocks the JavaScript event loop until completion. The current stop mechanism only works when the process is waiting on `io.read()`.
 
-### Goals
-- **Unified interface**: Shell becomes the single execution interface
-- **Process model**: Each `lua` execution is its own interruptible process
-- **Simplified UX**: Remove redundant UI components
-- **Interface-based architecture**: Shell defines interfaces, lua-runtime implements them
-
-### Architecture
-
-**Package Structure:**
-```
-packages/
-  shell-core/
-    src/
-      interfaces/
-        ICommand.ts       # Simple commands (ls, cd, pwd)
-        IProcess.ts       # Long-running processes
-        ShellContext.ts   # Execution context for commands
-      ProcessManager.ts   # Manages foreground process
-      CommandRegistry.ts  # Registers commands (update existing)
-
-  lua-runtime/            # NEW package
-    src/
-      LuaCommand.ts           # Implements ICommand
-      LuaReplProcess.ts       # Implements IProcess (interactive REPL)
-      LuaScriptProcess.ts     # Implements IProcess (script execution)
-```
+**Solution Components:**
+1. **Debug Hook with Instruction Counting** - Use Lua's `debug.sethook` to periodically check instruction count and prompt users to continue or stop
+2. **Output Throttling** - Batch `print()` outputs at ~60fps to reduce DOM pressure
+3. **Configurable Limits** - Allow customization for rare cases needing extended execution
 
 ## Architecture Decisions
 
 <!-- Document key decisions as work progresses -->
 
-(none yet)
+### Line Hooks vs Count Hooks (#192)
+- **Decision**: Use line-based debug hooks (`"l"`) instead of count-based hooks
+- **Reason**: wasmoon's count hooks don't fire; line hooks work correctly
+- **Impact**: Counting is per-line rather than per-instruction, but still effective
+
+### Synchronous Callbacks (#192)
+- **Decision**: `onInstructionLimitReached` must be synchronous (return boolean, not Promise)
+- **Reason**: Lua debug hooks can't await async JS functions ("attempt to yield across a C-call boundary")
+- **Impact**: UI prompts must use synchronous patterns (e.g., `confirm()` or pre-set flags)
+
+### Explicit Hook Setup (#192)
+- **Decision**: Callers must wrap user code with `__setup_execution_hook()` and `__clear_execution_hook()`
+- **Reason**: Debug hooks don't persist across `engine.doString()` calls in wasmoon
+- **Impact**: Processes (#194) will handle hook setup/teardown
 
 ## Sub-Issues
 
-| # | Title | Status | Branch | Notes |
-|---|-------|--------|--------|-------|
-| #170 | Shell Interface Design | ✅ Complete | 170-shell-interface-design | Merged in PR #174 |
-| #171 | Process Control UI | ✅ Complete | 171-process-control-ui | Merged in PR #175 |
-| #172 | Lua Runtime Package | ✅ Complete | 172-lua-runtime-package | Merged in PR #176 |
-| #178 | Process Raw Input Handling | ✅ Complete | 178-process-raw-input-handling | Merged in PR #182 |
-| #179 | REPL Multi-line Input Support | ✅ Complete | 179-repl-multiline-input | Merged in PR #188 |
-| #173 | Remove Legacy UI Components | ✅ Complete | 173-remove-legacy-ui-components | Merged in PR #191 |
+| # | Title | Status | Dependencies | Notes |
+|---|-------|--------|--------------|-------|
+| #192 | Add Execution Control Infrastructure to LuaEngineFactory | ✅ Complete | - | Merged PR #203 |
+| #193 | Add Output Throttling to Print Callback | ⏳ Pending | - | - |
+| #194 | Integrate Stop Request and Continuation Prompt into Processes | ⏳ Pending | #192 | - |
+| #195 | Add Comprehensive Tests for Execution Control | ⏳ Pending | #192, #193, #194 | - |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -59,192 +48,22 @@ packages/
 - ✅ Complete - Merged to epic branch
 - ❌ Blocked - Has unresolved blockers
 
-**Implementation Order:**
-```
-#170 (interfaces) → #171 + #172 (parallel) → #178 + #179 (parallel) → #173 (cleanup)
-```
-
 ## Progress Log
 
 <!-- Updated after each sub-issue completion -->
 
-### 2025-12-12 17:30
-- **Epic #140 Complete!**
-- Completed #173: Remove Legacy UI Components
-- Addressed all PR #191 review feedback:
-  - Extracted ShellTerminal input handling to useTerminalInput.ts (560→303 lines)
-  - Changed eslint max-lines from 'warn' to 'error'
-  - Added LuaEngineFactory.closeDeferred() to DRY up cleanup code
-  - Split LuaReplProcess.test.ts into 3 files (784→327 lines each)
-  - Deleted 4 orphaned stub files
-- All 1100 unit tests pass, 84 E2E tests pass
-- PR #191 ready for merge to main
-
-### 2025-12-12 16:17
-- Started #173: Remove Legacy UI Components
-- Removed 'terminal' and 'repl' tabs from BottomPanel (shell only)
-- Removed Run button and Ctrl+Enter shortcut from EditorPanel
-- Updated WelcomeScreen "Open REPL" → "Open Shell"
-- Removed unused terminal-related props from IDEContext
-- Cleaned up orphaned hooks (useIDETerminal, useBottomPanel)
-- Updated all affected unit tests (1102 tests pass)
-- Updated E2E tests for shell-only behavior (84 tests pass)
-- Mutation tests pass (69.57% > 50% threshold)
-- Created PR #191 for review
-
-### 2025-12-12 11:03
-- Scrapped #189: REPL Multi-line Cursor Editing
-- Closed PR #190 and issue #189 as "not planned"
-- Research showed this is an advanced feature that even Node.js and standard Python REPLs don't have
-- Our current continuation mode with paste support matches Lua's official REPL behavior
-- With text editor available for longer code, the complexity isn't justified
-- Epic reduced from 7 to 6 sub-issues; #173 can now proceed
-
-### 2025-12-12 09:59
-- Completed #179: REPL Multi-line Input Support
-- Merged PR #188 to epic-140
-- Added Ctrl+V paste support for multi-line content
-- Fixed error message newlines in REPL
-- Added tests documenting long string delimiter edge case
-- 6/7 sub-issues now complete
-
-### 2025-12-12 08:14
-- Started #179: REPL Multi-line Input Support
-- Added `isCodeComplete()` to LuaEngineFactory for detecting incomplete Lua code
-- Added multi-line input buffering to LuaReplProcess
-- Shows `>> ` continuation prompt when code is incomplete
-- Stores complete multi-line blocks as single history entries
-- Added `cancelInput()` for canceling incomplete input
-- 99 lua-runtime tests pass, 1148 website tests pass
-- Mutation score: 82-87% for modified files
-- Ready for PR
-
-### 2025-12-12 07:56
-- Completed #178: Process Raw Input Handling
-- Merged PR #182 to epic-140
-- Added KeyModifiers type and supportsRawInput/handleKey to IProcess interface
-- Implemented command history navigation with arrow keys in LuaReplProcess
-- 4/6 sub-issues now complete
-
-### 2025-12-12 07:25
-- Started work on #178: Process Raw Input Handling
-- Created branch `178-process-raw-input-handling` from `epic-140`
-
-### 2025-12-12 07:19
-- Merged PR #176 to `epic-140`
-- Sub-issue #172 complete
-- Closed GitHub issue #172
-
-### 2025-12-12 06:25
-- Updated PR #176 with bug fixes from manual testing
-- Fixed xterm cursor positioning (\n → \r\n conversion)
-- Fixed Lua output newlines and added `> ` prompt
-- Fixed nil output for undefined variables
-- Added predev script for auto-rebuilding packages
-- Created issues #178 (Process Raw Input Handling) and #179 (REPL Multi-line Input)
-- Updated GitHub issue #140 with new sub-issues
-- All 63 lua-runtime tests pass, all 1135 website tests pass
-- PR #176 ready for review
-
-### 2025-12-12 05:35
-- Completed #172: Lua Runtime Package
-- Created new `@lua-learning/lua-runtime` package
-- Implemented LuaEngineFactory for shared Lua engine setup
-- Implemented LuaReplProcess for interactive REPL mode (with io.read() support)
-- Implemented LuaScriptProcess for script file execution
-- Implemented LuaCommand implementing ICommand interface
-- Added error formatting with [error] prefix
-- Integrated lua command into shell via useShell hook
-- All 58 lua-runtime tests pass, all 1135 website tests pass
-- Build succeeds, lint passes
-- Ready for PR
-
-### 2025-12-12 05:07
-- Merged PR #175 to `epic-140`
-- Sub-issue #171 complete
-
-### 2025-12-12 04:59
-- Completed #171: Process Control UI
-- Created useProcessManager hook for React state management
-- Added StopButton component with stop icon
-- Integrated stop button into ShellTerminal (visible when process running)
-- Implemented input routing to processes
-- Implemented Ctrl+C to stop running process
-- All unit tests pass, mutation score 77.78% (surviving mutants are equivalent)
-- Ready for PR
-
-### 2025-12-12 04:47
-- Started work on #171: Process Control UI
-- Created branch `171-process-control-ui` from `epic-140`
-
-### 2025-12-12 04:40
-- Merged PR #174 to `epic-140`
-- Sub-issue #170 complete
-
-### 2025-12-12 04:15
-- Completed #170: Shell Interface Design
-- Created PR #174 targeting `epic-140`
-- All interfaces, adapters, and ProcessManager implemented with 100% mutation coverage
-
-### 2025-12-12 04:03
-- Started work on #170: Shell Interface Design
-- Created branch `170-shell-interface-design` from `epic-140`
-
-### 2025-12-12
+### 2025-12-13
 - Epic started
-- Created sub-issues #170, #171, #172, #173
-- Set up epic worktree
+- Started work on #192: Add Execution Control Infrastructure to LuaEngineFactory
+- Completed #192: Merged PR #203 to epic-183
 
 ## Key Files
 
 <!-- Populated as files are created/modified -->
 
-### Interfaces
-- `packages/shell-core/src/interfaces/ShellContext.ts` - Execution context for commands
-- `packages/shell-core/src/interfaces/IProcess.ts` - Long-running process interface
-- `packages/shell-core/src/interfaces/ICommand.ts` - Command interface returning IProcess | void
-- `packages/shell-core/src/interfaces/index.ts` - Interface exports
-
-### Process Management
-- `packages/shell-core/src/ProcessManager.ts` - Manages foreground process lifecycle
-- `packages/shell-core/src/adapters/LegacyCommandAdapter.ts` - Adapts legacy Command to ICommand
-
-### Updated
-- `packages/shell-core/src/CommandRegistry.ts` - Added ICommand support and executeWithContext
-- `packages/shell-core/src/index.ts` - Exports new interfaces and classes
-
-### UI Components (from #171)
-- `lua-learning-website/src/hooks/useProcessManager.ts` - React hook wrapping ProcessManager
-- `lua-learning-website/src/components/StopButton/StopButton.tsx` - Stop button component
-- `lua-learning-website/src/components/ShellTerminal/ShellTerminal.tsx` - Updated with process control
-
-### Lua Runtime Package (from #172)
-- `packages/lua-runtime/src/LuaEngineFactory.ts` - Factory for creating Lua engines with callbacks
-- `packages/lua-runtime/src/LuaReplProcess.ts` - Interactive REPL process (implements IProcess)
-- `packages/lua-runtime/src/LuaScriptProcess.ts` - Script execution process (implements IProcess)
-- `packages/lua-runtime/src/LuaCommand.ts` - Lua command (implements ICommand)
-- `packages/lua-runtime/src/index.ts` - Public API exports
-
-### Integration (from #172)
-- `lua-learning-website/src/hooks/useShell.ts` - Updated with LuaCommand registration and executeCommandWithContext
-
-### Process Key Handling (from #178)
-- `packages/shell-core/src/interfaces/IProcess.ts` - Added KeyModifiers type, supportsRawInput, handleKey
-- `packages/shell-core/src/ProcessManager.ts` - Added supportsRawInput() and handleKey() methods
-- `packages/lua-runtime/src/LuaReplProcess.ts` - Implemented command history and handleKey() for arrow navigation
-- `lua-learning-website/src/hooks/useProcessManager.ts` - Added supportsRawInput() and handleKey()
-- `lua-learning-website/src/components/ShellTerminal/ShellTerminal.tsx` - Routes arrow keys to process
-
-### Multi-line Input Support (from #179)
-- `packages/lua-runtime/src/LuaEngineFactory.ts` - Added isCodeComplete() and CodeCompletenessResult type
-- `packages/lua-runtime/src/LuaReplProcess.ts` - Added multi-line buffering, continuation mode, cancelInput()
-
-### Legacy UI Cleanup (from #173)
-- `lua-learning-website/src/components/BottomPanel/` - Simplified to shell-only tab
-- `lua-learning-website/src/components/EditorPanel/` - Removed Run button and isRunning props
-- `lua-learning-website/src/components/WelcomeScreen/` - Changed onOpenRepl to onOpenShell
-- `lua-learning-website/src/components/IDEContext/` - Removed terminal-related props
-- `lua-learning-website/src/hooks/useKeyboardShortcuts.ts` - Removed runCode handler
+- `packages/lua-runtime/src/LuaEngineFactory.ts` - Core engine with debug hooks and output throttling
+- `packages/lua-runtime/src/LuaReplProcess.ts` - REPL process with stop/continuation support
+- `packages/lua-runtime/src/LuaScriptProcess.ts` - Script process with stop/continuation support
 
 ## Open Questions
 
