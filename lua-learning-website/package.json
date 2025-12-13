@@ -23,6 +23,7 @@
     "screenshots": "node scripts/capture-screenshots.js"
   },
   "dependencies": {
+    "@johnnymorganz/stylua": "^2.3.1",
     "@lua-learning/lua-runtime": "*",
     "@lua-learning/shell-core": "*",
     "@monaco-editor/react": "^4.7.0",

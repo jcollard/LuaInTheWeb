@@ -1,4 +1,5 @@
 import { CodeEditor } from '../CodeEditor'
+import { FormatButton } from '../FormatButton'
 import { TabBar } from '../TabBar'
 import styles from './EditorPanel.module.css'
 import type { EditorPanelProps } from './types'
@@ -13,6 +14,8 @@ export function EditorPanel({
   isDirty,
   className,
   tabBarProps,
+  onFormat,
+  isFormatting = false,
 }: EditorPanelProps) {
   const combinedClassName = className
     ? `${styles.editorPanel} ${className}`
@@ -47,6 +50,15 @@ export function EditorPanel({
     <div className={combinedClassName} data-testid="editor-panel">
       <div className={styles.toolbar}>
         {renderTabs()}
+        {onFormat && (
+          <div className={styles.actions}>
+            <FormatButton
+              onFormat={onFormat}
+              loading={isFormatting}
+              disabled={!code.trim()}
+            />
+          </div>
+        )}
       </div>
       <div className={styles.editorContainer}>
         <CodeEditor
@@ -54,6 +66,7 @@ export function EditorPanel({
           onChange={onChange}
           language="lua"
           height="100%"
+          onFormat={onFormat}
         />
       </div>
     </div>
