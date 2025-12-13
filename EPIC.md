@@ -44,7 +44,7 @@ Improve the Lua code editor experience with professional-grade formatting, synta
 |---|-------|--------|--------|-------|
 | #185 | Lua Code Formatter | ✅ Complete | 185-lua-formatter | Merged in PR #204 |
 | #186 | Improved Syntax Highlighting | ✅ Complete | 186-improved-syntax-highlighting | Merged in PR #219 |
-| #187 | Auto-Indentation | 🔄 In Progress | 187-auto-indentation | - |
+| #187 | Auto-Indentation | 🔄 In Progress | 187-auto-indentation | PR #222 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -71,6 +71,7 @@ None - all sub-issues can be implemented independently.
 - Merged PR #219 to epic-184
 - Integrated main into epic branch (merge from origin/main)
 - Started work on #187: Auto-Indentation
+- PR created for #187: Auto-Indentation (PR #222)
 
 ## Key Files
 
