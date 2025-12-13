@@ -29,7 +29,7 @@ git rev-parse --show-toplevel
 ```
 
 **If in epic worktree** (path contains `epic-<n>` where `<n>` matches):
-- Read EPIC.md for cached status
+- Read EPIC-<n>.md for cached status
 - Show live GitHub status alongside
 
 **If in main or different worktree**:
@@ -53,12 +53,12 @@ gh issue view <sub-number> --json title,state,number
 
 ---
 
-## Step 3: Check for EPIC.md (if in epic worktree)
+## Step 3: Check for EPIC-<n>.md (if in epic worktree)
 
-If we're in the epic worktree, read EPIC.md:
+If we're in the epic worktree, read EPIC-<n>.md:
 
 ```bash
-cat EPIC.md
+cat EPIC-<n>.md
 ```
 
 Extract:
@@ -126,7 +126,7 @@ If all are complete or in progress, indicate that.
 
 <If blockers:>
 ### Blockers
-- <blocker from EPIC.md>
+- <blocker from EPIC-<n>.md>
 
 ### Quick Actions
 - `/epic <number> next` - Start next sub-issue
@@ -154,5 +154,5 @@ Epic not started. Run `/epic <number> begin` to create worktree.
 |-------|----------|
 | Epic not found | "Issue #<number> not found. Check the issue number." |
 | Not an epic | "Issue #<number> is not an epic. See `/epic` for requirements." |
-| EPIC.md not found | "EPIC.md not found. Run `/epic <number> begin` to initialize." |
+| EPIC-<n>.md not found | "EPIC-<n>.md not found. Run `/epic <number> begin` to initialize." |
 | No sub-issues | "Epic has no sub-issues defined. Add them to the issue body." |

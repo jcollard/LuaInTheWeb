@@ -34,10 +34,10 @@ gh issue view <number> --json title,body,state,labels,createdAt,updatedAt
 gh issue view <sub-number> --json title,state,number,labels,assignees
 ```
 
-### From EPIC.md (if in epic worktree):
+### From EPIC-<n>.md (if in epic worktree):
 
 ```bash
-cat EPIC.md
+cat EPIC-<n>.md
 ```
 
 ### From Git:
@@ -61,7 +61,7 @@ git log epic-<number> --oneline -10
 ## Epic #<number>: <title>
 
 **Created**: <createdAt>
-**Last Updated**: <updatedAt from EPIC.md or GitHub>
+**Last Updated**: <updatedAt from EPIC-<n>.md or GitHub>
 **Branch**: epic-<number>
 **Worktree**: <path if exists>
 
@@ -94,13 +94,13 @@ git log epic-<number> --oneline -10
 
 <If any blocked:>
 #### Blocked Issues
-- #<sub4>: <blocker reason from EPIC.md or "Unknown">
+- #<sub4>: <blocker reason from EPIC-<n>.md or "Unknown">
 
 ---
 
 ### Architecture Decisions
 
-<From EPIC.md ## Architecture Decisions section>
+<From EPIC-<n>.md ## Architecture Decisions section>
 
 <If none:>
 (No architecture decisions documented yet)
@@ -116,7 +116,7 @@ git log epic-<number> --oneline -10
 
 ### Progress Log
 
-<From EPIC.md ## Progress Log section>
+<From EPIC-<n>.md ## Progress Log section>
 
 <Timeline format:>
 #### <date>
@@ -130,7 +130,7 @@ git log epic-<number> --oneline -10
 
 ### Key Files
 
-<From EPIC.md ## Key Files section>
+<From EPIC-<n>.md ## Key Files section>
 
 <If populated:>
 | File | Purpose |
@@ -144,7 +144,7 @@ git log epic-<number> --oneline -10
 
 ### Open Questions
 
-<From EPIC.md ## Open Questions section>
+<From EPIC-<n>.md ## Open Questions section>
 
 <If any:>
 1. <question>
@@ -200,7 +200,7 @@ cd ../LuaInTheWeb-issue-<current-sub>
 
 ## Step 3: Dependency Graph (Optional)
 
-If EPIC.md contains a `## Dependencies` section with relationships:
+If EPIC-<n>.md contains a `## Dependencies` section with relationships:
 
 ```
 ### Dependency Graph
@@ -228,5 +228,5 @@ No explicit dependencies defined. Sub-issues can be completed in any order.
 |-------|----------|
 | Epic not found | "Issue #<number> not found." |
 | Not an epic | "Issue #<number> is not an epic." |
-| EPIC.md not found | Show GitHub-only status, suggest running `/epic <n> begin` |
+| EPIC-<n>.md not found | Show GitHub-only status, suggest running `/epic <n> begin` |
 | Git commands fail | Fall back to GitHub-only information |
