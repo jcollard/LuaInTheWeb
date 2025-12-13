@@ -562,6 +562,56 @@ describe('FileSystemAccessAPIFileSystem', () => {
     })
   })
 
+  describe('loadFileContent()', () => {
+    it('should reload file content from handle into cache', async () => {
+      const contents = new Map<string, MockFileSystemHandle>()
+      const fileHandle = createMockFileHandle('file.txt', 'initial content')
+      contents.set('file.txt', fileHandle)
+
+      const mockHandle = createMockDirectoryHandle('root', contents)
+      const fs = new FileSystemAccessAPIFileSystem(
+        mockHandle as unknown as FileSystemDirectoryHandle
+      )
+      await fs.initialize()
+
+      // Verify initial content
+      expect(fs.readFile('/file.txt')).toBe('initial content')
+
+      // loadFileContent should call getFile() on the handle
+      await fs.loadFileContent('/file.txt')
+
+      // Verify getFile was called (content reloaded from handle)
+      expect(fileHandle.getFile).toHaveBeenCalled()
+    })
+
+    it('should throw for non-existent file', async () => {
+      const mockHandle = createMockDirectoryHandle('root')
+      const fs = new FileSystemAccessAPIFileSystem(
+        mockHandle as unknown as FileSystemDirectoryHandle
+      )
+      await fs.initialize()
+
+      await expect(fs.loadFileContent('/nonexistent.txt')).rejects.toThrow(
+        /File not found/
+      )
+    })
+
+    it('should throw for directory path', async () => {
+      const contents = new Map<string, MockFileSystemHandle>()
+      contents.set('subdir', createMockDirectoryHandle('subdir'))
+
+      const mockHandle = createMockDirectoryHandle('root', contents)
+      const fs = new FileSystemAccessAPIFileSystem(
+        mockHandle as unknown as FileSystemDirectoryHandle
+      )
+      await fs.initialize()
+
+      await expect(fs.loadFileContent('/subdir')).rejects.toThrow(
+        /File not found/
+      )
+    })
+  })
+
   describe('browser detection utility', () => {
     it('should export isFileSystemAccessSupported function', async () => {
       const { isFileSystemAccessSupported } = await import(

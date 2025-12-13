@@ -147,7 +147,7 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
             break
         }
       } catch (error) {
-        // Re-queue failed operation for retry
+        // Log and drop failed operation (user can retry by calling flush() again)
         console.error(`Failed to flush operation: ${op.type} ${op.path}`, error)
       }
     }
@@ -287,6 +287,9 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
   /**
    * Async method to load file content into cache.
    * Call this before readFile() for lazy loading pattern.
+   *
+   * @warning Do not call on files created via writeFile() before flush() -
+   * those files have null handles. Use readFile() instead (content is already cached).
    */
   async loadFileContent(path: string): Promise<void> {
     const normalizedPath = resolvePath(this.cwd, path)
