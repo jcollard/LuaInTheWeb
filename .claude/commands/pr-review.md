@@ -36,8 +36,12 @@ Output this confirmation message:
 
 I will review PR #<number> against the following criteria:
 
+**Diff Coverage (MANDATORY):**
+- [ ] Read the ENTIRE diff - every line of every changed file
+- [ ] Do NOT skip any files regardless of diff size
+- [ ] If diff is large, process it in chunks but cover 100%
+
 **Code Quality:**
-- [ ] Read ALL changed files thoroughly
 - [ ] Verify tests perform real testing (not just coverage)
 - [ ] Check best practices are followed
 - [ ] Identify DRY violations (duplicate code)
@@ -243,6 +247,27 @@ Output a structured review report:
 **<APPROVE | REQUEST_CHANGES | COMMENT>**
 
 <Reasoning for the recommendation>
+
+---
+
+### Diff Coverage Report
+
+**Files in diff**: <count>
+**Files fully reviewed**: <count>
+**Lines reviewed**: <total lines>
+
+| File | Lines | Reviewed |
+|------|-------|----------|
+| <file1> | +X -Y | ✅ Full |
+| <file2> | +X -Y | ✅ Full |
+...
+
+<If any files were skipped or partially reviewed:>
+**⚠️ Incomplete Coverage:**
+- <file>: <reason> (e.g., "Skipped - generated file", "Partial - only reviewed lines 1-500")
+
+<If 100% coverage:>
+**✅ Complete Coverage**: All <count> files and <lines> changed lines were reviewed.
 
 ---
 
