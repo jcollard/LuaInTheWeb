@@ -282,7 +282,12 @@ export function FileExplorer({
   const handleRenameSubmit = useCallback((path: string, newName: string) => {
     const type = findNodeType(path)
     if (type === 'folder') {
-      onRenameFolder(path, newName)
+      // Check if this is a workspace root - use workspace rename instead of folder rename
+      if (isWorkspaceRoot(path) && workspaceProps?.onRenameWorkspace) {
+        workspaceProps.onRenameWorkspace(path, newName)
+      } else {
+        onRenameFolder(path, newName)
+      }
     } else {
       onRenameFile(path, newName)
     }
@@ -296,7 +301,7 @@ export function FileExplorer({
     }
     cancelRename()
     // Stryker disable next-line all: React hooks dependency optimization
-  }, [findNodeType, onRenameFile, onRenameFolder, cancelRename, pendingNewFilePath, onCancelPendingNewFile, pendingNewFolderPath, onCancelPendingNewFolder])
+  }, [findNodeType, isWorkspaceRoot, onRenameFile, onRenameFolder, cancelRename, pendingNewFilePath, onCancelPendingNewFile, pendingNewFolderPath, onCancelPendingNewFolder, workspaceProps])
 
   // Handle rename cancel - delete pending new file/folder if applicable
   const handleRenameCancel = useCallback(() => {

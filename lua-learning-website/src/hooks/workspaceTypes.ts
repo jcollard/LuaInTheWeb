@@ -106,4 +106,6 @@ export interface UseWorkspaceManagerReturn {
   refreshAllLocalWorkspaces: () => Promise<void>
   /** Check if a workspace supports refresh (is a connected local workspace) */
   supportsRefresh: (mountPath: string) => boolean
+  /** Rename a workspace (changes name and mount path) */
+  renameWorkspace: (mountPath: string, newName: string) => void
 }

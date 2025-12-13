@@ -484,6 +484,38 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
     [state.workspaces]
   )
 
+  /**
+   * Rename a workspace (changes both name and mount path).
+   * The new mount path is generated from the new name.
+   */
+  const renameWorkspace = useCallback(
+    (mountPath: string, newName: string): void => {
+      const workspace = state.workspaces.find((w) => w.mountPath === mountPath)
+
+      if (!workspace) {
+        throw new Error(`Workspace not found: ${mountPath}`)
+      }
+
+      // Generate new mount path from the new name
+      const existingPaths = new Set(
+        state.workspaces
+          .filter((w) => w.mountPath !== mountPath)
+          .map((w) => w.mountPath)
+      )
+      const newMountPath = generateMountPath(newName, existingPaths)
+
+      setState((prev) => ({
+        ...prev,
+        workspaces: prev.workspaces.map((w) =>
+          w.mountPath === mountPath
+            ? { ...w, name: newName, mountPath: newMountPath }
+            : w
+        ),
+      }))
+    },
+    [state.workspaces]
+  )
+
   return {
     workspaces: state.workspaces,
     compositeFileSystem,
@@ -498,5 +530,6 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
     refreshWorkspace,
     refreshAllLocalWorkspaces,
     supportsRefresh,
+    renameWorkspace,
   }
 }

@@ -22,6 +22,8 @@ export interface WorkspaceProps {
   supportsRefresh: (mountPath: string) => boolean
   /** Callback to reconnect a disconnected local workspace */
   onReconnectWorkspace?: (mountPath: string) => Promise<void>
+  /** Callback to rename a workspace (changes name and mount path) */
+  onRenameWorkspace?: (mountPath: string, newName: string) => void
 }
 
 export interface FileExplorerProps {

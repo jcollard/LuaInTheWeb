@@ -33,6 +33,7 @@ interface IDELayoutInnerProps {
   refreshWorkspace: (mountPath: string) => Promise<void>
   supportsRefresh: (mountPath: string) => boolean
   reconnectWorkspace: (id: string, handle: FileSystemDirectoryHandle) => Promise<void>
+  renameWorkspace: (mountPath: string, newName: string) => void
 }
 
 /**
@@ -49,6 +50,7 @@ function IDELayoutInner({
   refreshWorkspace,
   supportsRefresh,
   reconnectWorkspace,
+  renameWorkspace,
 }: IDELayoutInnerProps) {
   const {
     code,
@@ -151,6 +153,15 @@ function IDELayoutInner({
     [workspaces, removeWorkspace, refreshFileTree]
   )
 
+  // Handle renaming a workspace
+  const handleRenameWorkspace = useCallback(
+    (mountPath: string, newName: string) => {
+      renameWorkspace(mountPath, newName)
+      refreshFileTree()
+    },
+    [renameWorkspace, refreshFileTree]
+  )
+
   // Register keyboard shortcuts
   useKeyboardShortcuts({
     toggleTerminal,
@@ -233,6 +244,7 @@ function IDELayoutInner({
       },
       supportsRefresh,
       onReconnectWorkspace: handleReconnectWorkspace,
+      onRenameWorkspace: handleRenameWorkspace,
     },
   }
 
@@ -351,6 +363,7 @@ export function IDELayout({
     refreshAllLocalWorkspaces,
     supportsRefresh,
     reconnectWorkspace,
+    renameWorkspace,
   } = useWorkspaceManager()
 
   // Create adapted filesystem for IDEContext
@@ -385,6 +398,7 @@ export function IDELayout({
         refreshWorkspace={refreshWorkspace}
         supportsRefresh={supportsRefresh}
         reconnectWorkspace={reconnectWorkspace}
+        renameWorkspace={renameWorkspace}
       />
     </IDEContextProvider>
   )
