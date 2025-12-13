@@ -4,8 +4,21 @@
  */
 
 import type { ICommand, IProcess, ShellContext } from '@lua-learning/shell-core'
-import { LuaReplProcess } from './LuaReplProcess'
+import { LuaReplProcess, type LuaReplProcessOptions } from './LuaReplProcess'
 import { LuaScriptProcess } from './LuaScriptProcess'
+
+/**
+ * Default execution control options.
+ * Prompts user after 1M lines (~0.5-1 second) to continue or stop.
+ * Uses window.confirm() which is synchronous and works within the blocked JS thread.
+ */
+const DEFAULT_EXECUTION_OPTIONS = {
+  instructionLimit: 1_000_000, // 1M lines before prompting
+  onInstructionLimitReached: () => {
+    // confirm() is synchronous - pauses execution and waits for user response
+    return confirm('Script has been running for a while. Continue execution?')
+  },
+} satisfies LuaReplProcessOptions
 
 /**
  * Command that starts a Lua REPL or executes a Lua script.
@@ -39,11 +52,11 @@ export class LuaCommand implements ICommand {
   execute(args: string[], context: ShellContext): IProcess {
     if (args.length === 0) {
       // No arguments - start interactive REPL
-      return new LuaReplProcess()
+      return new LuaReplProcess(DEFAULT_EXECUTION_OPTIONS)
     }
 
     // Filename provided - execute script
     const filename = args[0]
-    return new LuaScriptProcess(filename, context)
+    return new LuaScriptProcess(filename, context, DEFAULT_EXECUTION_OPTIONS)
   }
 }
