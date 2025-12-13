@@ -40,6 +40,7 @@ export interface IDEContextValue {
   renameFile: (oldPath: string, newName: string) => void
   renameFolder: (oldPath: string, newName: string) => void
   moveFile: (sourcePath: string, targetFolderPath: string) => void
+  copyFile: (sourcePath: string, targetFolderPath: string) => void
   openFile: (path: string) => void
   saveFile: () => void
 

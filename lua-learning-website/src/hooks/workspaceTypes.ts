@@ -98,6 +98,10 @@ export interface UseWorkspaceManagerReturn {
   isFileSystemAccessSupported: () => boolean
   /** Reconnect a disconnected local workspace */
   reconnectWorkspace: (id: string, handle: FileSystemDirectoryHandle) => Promise<void>
+  /** Try to reconnect using stored handle (returns true if successful, false if picker needed) */
+  tryReconnectWithStoredHandle: (id: string) => Promise<boolean>
+  /** Disconnect a local workspace without removing it */
+  disconnectWorkspace: (id: string) => void
   /** Get all mount points info */
   getMounts: () => MountedWorkspaceInfo[]
   /** Refresh a local workspace to pick up external filesystem changes */
@@ -108,4 +112,8 @@ export interface UseWorkspaceManagerReturn {
   supportsRefresh: (mountPath: string) => boolean
   /** Rename a workspace (changes name and mount path) */
   renameWorkspace: (mountPath: string, newName: string) => void
+  /** Check if a folder is already mounted as a workspace */
+  isFolderAlreadyMounted: (handle: FileSystemDirectoryHandle) => Promise<boolean>
+  /** Get a unique workspace name by appending numbers if needed */
+  getUniqueWorkspaceName: (baseName: string) => string
 }

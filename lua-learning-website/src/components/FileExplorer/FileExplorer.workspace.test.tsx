@@ -6,6 +6,9 @@ import type { Workspace } from '../../hooks/workspaceTypes'
 import type { WorkspaceProps } from './types'
 import type { TreeNode } from '../../hooks/fileSystemTypes'
 
+// Mock the File System Access API
+const mockShowDirectoryPicker = vi.fn()
+
 // Mock filesystem for test workspaces
 const mockFileSystem = {
   getCurrentDirectory: () => '/',
@@ -62,10 +65,18 @@ describe('FileExplorer with Workspace Management', () => {
     onRemoveWorkspace: vi.fn(),
     onRefreshWorkspace: vi.fn(),
     supportsRefresh: vi.fn(() => false),
+    isFolderAlreadyMounted: vi.fn().mockResolvedValue(false),
+    getUniqueWorkspaceName: vi.fn((name: string) => name),
   }
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // Setup window.showDirectoryPicker mock
+    Object.defineProperty(window, 'showDirectoryPicker', {
+      value: mockShowDirectoryPicker,
+      writable: true,
+      configurable: true,
+    })
   })
 
   describe('without workspace props', () => {
@@ -100,8 +111,8 @@ describe('FileExplorer with Workspace Management', () => {
       expect(screen.getByRole('treeitem', { name: /project/i })).toBeInTheDocument()
     })
 
-    it('displays workspace icons for workspace folders', () => {
-      const workspaces = [createMockWorkspace({ id: 'ws-1', name: 'My Files', mountPath: '/my-files' })]
+    it('displays virtual workspace icons for virtual workspace folders', () => {
+      const workspaces = [createMockWorkspace({ id: 'ws-1', name: 'My Files', mountPath: '/my-files', type: 'virtual' })]
       const tree = createWorkspaceTree(workspaces)
       render(
         <FileExplorer
@@ -111,8 +122,30 @@ describe('FileExplorer with Workspace Management', () => {
         />
       )
 
-      // Workspace icon should be rendered (not regular folder icon)
-      expect(screen.getByTestId('workspace-icon')).toBeInTheDocument()
+      // Virtual workspace icon should be rendered (not regular folder icon)
+      expect(screen.getByTestId('virtual-workspace-icon')).toBeInTheDocument()
+    })
+
+    it('displays local workspace icons for local workspace folders', () => {
+      const workspaces = [createMockWorkspace({ id: 'ws-1', name: 'My Project', mountPath: '/my-project', type: 'local' })]
+      const tree = workspaces.map((ws) => ({
+        name: ws.mountPath.replace('/', ''),
+        path: ws.mountPath,
+        type: 'folder' as const,
+        isWorkspace: true,
+        isLocalWorkspace: true,
+        children: [],
+      }))
+      render(
+        <FileExplorer
+          {...baseProps}
+          tree={tree}
+          workspaceProps={{ ...defaultWorkspaceProps, workspaces }}
+        />
+      )
+
+      // Local workspace icon should be rendered (not regular folder icon)
+      expect(screen.getByTestId('local-workspace-icon')).toBeInTheDocument()
     })
 
     it('displays disconnected workspace icon for disconnected workspaces', () => {
@@ -186,9 +219,12 @@ describe('FileExplorer with Workspace Management', () => {
       expect(onAddVirtualWorkspace).toHaveBeenCalledWith('New Virtual Workspace')
     })
 
-    it('calls onAddLocalWorkspace when creating local workspace', async () => {
+    it('calls onAddLocalWorkspace with name and handle when creating local workspace', async () => {
       const user = userEvent.setup()
+      const mockHandle = { name: 'my-project' } as FileSystemDirectoryHandle
+      mockShowDirectoryPicker.mockResolvedValue(mockHandle)
       const onAddLocalWorkspace = vi.fn()
+
       render(
         <FileExplorer
           {...baseProps}
@@ -198,13 +234,16 @@ describe('FileExplorer with Workspace Management', () => {
 
       await user.click(screen.getByRole('button', { name: /add workspace/i }))
       await user.click(screen.getByRole('radio', { name: /local folder/i }))
+      await user.click(screen.getByRole('button', { name: /select folder/i }))
 
-      const input = screen.getByLabelText(/workspace name/i)
-      await user.clear(input)
-      await user.type(input, 'Local Project')
+      // Wait for folder to be selected and name input to appear
+      await waitFor(() => {
+        expect(screen.getByLabelText(/workspace name/i)).toBeInTheDocument()
+      })
+
       await user.click(screen.getByRole('button', { name: /create/i }))
 
-      expect(onAddLocalWorkspace).toHaveBeenCalledWith('Local Project')
+      expect(onAddLocalWorkspace).toHaveBeenCalledWith('my-project', mockHandle)
     })
 
     it('closes dialog after creating workspace', async () => {

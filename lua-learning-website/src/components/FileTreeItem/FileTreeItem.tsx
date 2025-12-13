@@ -12,33 +12,45 @@ const ChevronIcon = () => (
 )
 
 const FileIcon = () => (
-  <svg className={`${styles.iconSvg} ${styles.fileIcon}`} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+  <svg className={`${styles.iconSvg} ${styles.fileIcon}`} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" data-testid="file-icon">
     <path d="M13.71 4.29l-3-3A1 1 0 0010 1H4a1 1 0 00-1 1v12a1 1 0 001 1h8a1 1 0 001-1V5a1 1 0 00-.29-.71zM12 14H4V2h5v3a1 1 0 001 1h2v8z" />
   </svg>
 )
 
 const FolderIcon = () => (
-  <svg className={`${styles.iconSvg} ${styles.folderIcon}`} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+  <svg className={`${styles.iconSvg} ${styles.folderIcon}`} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" data-testid="folder-icon">
     <path d="M14 4H8l-1-1H2a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1V5a1 1 0 00-1-1z" />
   </svg>
 )
 
-const WorkspaceIcon = () => (
-  <svg className={`${styles.iconSvg} ${styles.workspaceIcon}`} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-    {/* Folder with workspace badge */}
-    <path d="M14 4H8l-1-1H2a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1V5a1 1 0 00-1-1z" />
-    {/* Small circle badge to indicate workspace */}
-    <circle cx="12" cy="11" r="2.5" fill="currentColor" stroke="var(--bg-secondary, #1e1e1e)" strokeWidth="1" />
+// Virtual workspace icon - cloud (browser storage)
+const VirtualWorkspaceIcon = () => (
+  <svg className={styles.iconSvg} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" data-testid="virtual-workspace-icon">
+    {/* Cloud shape - white/light gray */}
+    <path d="M13.5 9.5c1.38 0 2.5 1.12 2.5 2.5s-1.12 2.5-2.5 2.5H4c-1.66 0-3-1.34-3-3 0-1.54 1.16-2.8 2.65-2.97A4.5 4.5 0 018 4c2.05 0 3.78 1.38 4.32 3.26.38-.17.79-.26 1.18-.26z" fill="#b0b0b0" />
   </svg>
 )
 
+// Local workspace icon - hard drive/computer (local filesystem)
+const LocalWorkspaceIcon = () => (
+  <svg className={styles.iconSvg} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" data-testid="local-workspace-icon">
+    {/* Hard drive shape - silver/gray */}
+    <rect x="1" y="3" width="14" height="10" rx="1.5" fill="#8a8a8a" />
+    <line x1="1" y1="10" x2="15" y2="10" stroke="#5a5a5a" strokeWidth="1" />
+    <circle cx="12.5" cy="12" r="1" fill="#4a4a4a" />
+    <rect x="3" y="11" width="5" height="1" rx="0.5" fill="#5a5a5a" />
+  </svg>
+)
+
+// Disconnected workspace icon - hard drive with warning
 const DisconnectedWorkspaceIcon = () => (
-  <svg className={`${styles.iconSvg} ${styles.disconnectedWorkspaceIcon}`} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-    {/* Folder with disconnected indicator */}
-    <path d="M14 4H8l-1-1H2a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1V5a1 1 0 00-1-1z" opacity="0.5" />
-    {/* X mark to indicate disconnected */}
-    <circle cx="12" cy="11" r="2.5" fill="#f14c4c" stroke="var(--bg-secondary, #1e1e1e)" strokeWidth="1" />
-    <path d="M11 10l2 2M13 10l-2 2" stroke="var(--bg-secondary, #1e1e1e)" strokeWidth="1" strokeLinecap="round" />
+  <svg className={styles.iconSvg} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" data-testid="disconnected-workspace-icon">
+    {/* Hard drive shape (dimmed) */}
+    <rect x="1" y="3" width="14" height="10" rx="1.5" fill="#8a8a8a" opacity="0.5" />
+    <line x1="1" y1="10" x2="15" y2="10" stroke="#5a5a5a" strokeWidth="1" opacity="0.5" />
+    {/* Warning/disconnect indicator */}
+    <circle cx="12" cy="8" r="3.5" fill="#f14c4c" />
+    <path d="M10.5 6.5l3 3M13.5 6.5l-3 3" stroke="#1e1e1e" strokeWidth="1.2" strokeLinecap="round" />
   </svg>
 )
 
@@ -47,6 +59,7 @@ export function FileTreeItem({
   path,
   type,
   isWorkspace,
+  isLocalWorkspace,
   isDisconnected,
   isSelected,
   isExpanded,
@@ -189,8 +202,22 @@ export function FileTreeItem({
       )}
 
       {/* Icon */}
-      <span className={styles.icon} data-testid={isFolder ? (isWorkspace ? (isDisconnected ? 'disconnected-workspace-icon' : 'workspace-icon') : 'folder-icon') : 'file-icon'}>
-        {isFolder ? (isWorkspace ? (isDisconnected ? <DisconnectedWorkspaceIcon /> : <WorkspaceIcon />) : <FolderIcon />) : <FileIcon />}
+      <span className={styles.icon}>
+        {isFolder ? (
+          isWorkspace ? (
+            isDisconnected ? (
+              <DisconnectedWorkspaceIcon />
+            ) : isLocalWorkspace ? (
+              <LocalWorkspaceIcon />
+            ) : (
+              <VirtualWorkspaceIcon />
+            )
+          ) : (
+            <FolderIcon />
+          )
+        ) : (
+          <FileIcon />
+        )}
       </span>
 
       {/* Name or rename input */}

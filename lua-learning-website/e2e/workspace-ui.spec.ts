@@ -17,8 +17,8 @@ test.describe('Workspace UI', () => {
     })
 
     test('shows workspace icon for workspace folders', async ({ page }) => {
-      // Assert - Workspace should have the workspace icon
-      await expect(page.getByTestId('workspace-icon')).toBeVisible()
+      // Assert - Workspace should have the workspace icon (virtual for default workspace)
+      await expect(page.getByTestId('virtual-workspace-icon')).toBeVisible()
     })
 
     test('displays add workspace button in toolbar', async ({ page }) => {
@@ -125,8 +125,8 @@ test.describe('Workspace UI', () => {
       await input.fill('test-workspace')
       await page.getByRole('button', { name: /create/i }).click()
 
-      // Assert - Multiple workspace icons should be visible (default + new)
-      const workspaceIcons = page.getByTestId('workspace-icon')
+      // Assert - Multiple workspace icons should be visible (default + new, both virtual)
+      const workspaceIcons = page.getByTestId('virtual-workspace-icon')
       await expect(workspaceIcons).toHaveCount(2)
     })
   })

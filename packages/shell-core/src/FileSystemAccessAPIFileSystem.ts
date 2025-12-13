@@ -166,6 +166,8 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
 
   /**
    * Perform async file write to disk.
+   * Handles the case where parent directory was just created (null handle)
+   * by ensuring the parent directory exists on disk first.
    */
   private async performAsyncWrite(path: string, content: string): Promise<void> {
     const parentPath = getParentPath(path)
@@ -176,7 +178,18 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
       throw new Error(`Parent directory not found: ${parentPath}`)
     }
 
-    const parentHandle = parentEntry.handle as FileSystemDirectoryHandle
+    // If parent has a null handle, we need to ensure it exists on disk first
+    let parentHandle = parentEntry.handle as FileSystemDirectoryHandle
+    if (!parentHandle) {
+      // Parent was newly created - ensure it exists on disk
+      await this.performAsyncMkdir(parentPath)
+      // Now the handle should be set
+      parentHandle = parentEntry.handle as FileSystemDirectoryHandle
+      if (!parentHandle) {
+        throw new Error(`Failed to create parent directory: ${parentPath}`)
+      }
+    }
+
     const fileHandle = await parentHandle.getFileHandle(fileName, { create: true })
 
     const writable = await fileHandle.createWritable()
@@ -186,6 +199,7 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
 
   /**
    * Perform async delete on disk.
+   * Handles the case where parent has a null handle (directory was never persisted).
    */
   private async performAsyncDelete(path: string): Promise<void> {
     const parentPath = getParentPath(path)
@@ -197,23 +211,62 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
     }
 
     const parentHandle = parentEntry.handle as FileSystemDirectoryHandle
-    await parentHandle.removeEntry(entryName)
+    if (!parentHandle) {
+      // Parent was never persisted to disk, so nothing to delete on disk
+      // This happens when creating and deleting before flush
+      return
+    }
+
+    // Use recursive: true to ensure directories are deleted even if they contain files
+    // This handles cases where child deletes may have failed or been skipped
+    await parentHandle.removeEntry(entryName, { recursive: true })
   }
 
   /**
    * Perform async directory creation on disk.
+   * Handles the case where parent directories were also just created (null handles)
+   * by walking up the tree to find a valid handle and creating the path from there.
    */
   private async performAsyncMkdir(path: string): Promise<void> {
-    const parentPath = getParentPath(path)
-    const dirName = getBasename(path)
-    const parentEntry = this.cache.get(parentPath)
+    // Walk up the path to find the first ancestor with a valid handle
+    const pathParts: string[] = []
+    let currentPath = path
+    let ancestorHandle: FileSystemDirectoryHandle | null = null
 
-    if (!parentEntry || parentEntry.type !== 'directory') {
-      throw new Error(`Parent directory not found: ${parentPath}`)
+    while (currentPath !== '/') {
+      const entry = this.cache.get(currentPath)
+      if (entry?.handle) {
+        // Found an ancestor with a valid handle - but we need the parent, not this entry
+        // Actually, if this entry has a handle, we can stop here
+        ancestorHandle = entry.handle as FileSystemDirectoryHandle
+        break
+      }
+      // This directory needs to be created
+      pathParts.unshift(getBasename(currentPath))
+      currentPath = getParentPath(currentPath)
     }
 
-    const parentHandle = parentEntry.handle as FileSystemDirectoryHandle
-    await parentHandle.getDirectoryHandle(dirName, { create: true })
+    // If we reached root without finding a handle, use root
+    if (!ancestorHandle) {
+      const rootEntry = this.cache.get('/')
+      if (!rootEntry) {
+        throw new Error('Root directory not found in cache')
+      }
+      ancestorHandle = rootEntry.handle as FileSystemDirectoryHandle
+    }
+
+    // Create each directory in the path, updating handles as we go
+    let currentHandle = ancestorHandle
+    for (const dirName of pathParts) {
+      currentHandle = await currentHandle.getDirectoryHandle(dirName, { create: true })
+      // Update the cache with the real handle
+      const dirPath = currentPath === '/' ? `/${dirName}` : `${currentPath}/${dirName}`
+      const entry = this.cache.get(dirPath)
+      if (entry) {
+        entry.handle = currentHandle
+      }
+      currentPath = dirPath
+    }
   }
 
   // IFileSystem implementation

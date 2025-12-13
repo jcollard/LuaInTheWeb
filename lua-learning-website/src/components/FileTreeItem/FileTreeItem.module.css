@@ -68,11 +68,11 @@
 }
 
 .workspaceIcon {
-  fill: var(--theme-accent-secondary, #007acc);
+  fill: currentColor;
 }
 
 .disconnectedWorkspaceIcon {
-  fill: var(--theme-text-muted, #6e7681);
+  fill: currentColor;
 }
 
 .name {

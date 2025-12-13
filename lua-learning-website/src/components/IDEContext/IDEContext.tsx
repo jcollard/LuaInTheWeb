@@ -175,9 +175,13 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   const deleteFile = useCallback((path: string) => {
     if (tabs.some(t => t.path === path)) closeTab(path)
     filesystem.deleteFile(path)
+    setFileTreeVersion(v => v + 1)
   }, [closeTab, filesystem, tabs])
 
-  const deleteFolder = useCallback((path: string) => { filesystem.deleteFolder(path) }, [filesystem])
+  const deleteFolder = useCallback((path: string) => {
+    filesystem.deleteFolder(path)
+    setFileTreeVersion(v => v + 1)
+  }, [filesystem])
 
   const renameFile = useCallback((oldPath: string, newName: string) => {
     const parentPath = getParentPath(oldPath)
@@ -196,6 +200,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
         })
         tabBar.renameTab(oldPath, newPath, newName)
       } else { filesystem.renameFile(oldPath, newPath) }
+      setFileTreeVersion(v => v + 1)
     } catch (error) { showError(error instanceof Error ? error.message : 'Failed to rename file') }
   }, [filesystem, showError, tabBar, tabs])
 
@@ -203,13 +208,27 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     const parentPath = getParentPath(oldPath)
     const newPath = parentPath === '/' ? `/${newName}` : `${parentPath}/${newName}`
     if (oldPath === newPath) return
-    try { filesystem.renameFolder(oldPath, newPath) }
+    try {
+      filesystem.renameFolder(oldPath, newPath)
+      setFileTreeVersion(v => v + 1)
+    }
     catch (error) { showError(error instanceof Error ? error.message : 'Failed to rename folder') }
   }, [filesystem, showError])
 
   const moveFile = useCallback((sourcePath: string, targetFolderPath: string) => {
-    try { filesystem.moveFile(sourcePath, targetFolderPath) }
+    try {
+      filesystem.moveFile(sourcePath, targetFolderPath)
+      setFileTreeVersion(v => v + 1)
+    }
     catch (error) { showError(error instanceof Error ? error.message : 'Failed to move file') }
+  }, [filesystem, showError])
+
+  const copyFile = useCallback((sourcePath: string, targetFolderPath: string) => {
+    try {
+      filesystem.copyFile(sourcePath, targetFolderPath)
+      setFileTreeVersion(v => v + 1)
+    }
+    catch (error) { showError(error instanceof Error ? error.message : 'Failed to copy file') }
   }, [filesystem, showError])
 
   const toggleTerminal = useCallback(() => { setTerminalVisible(prev => !prev) }, [])
@@ -221,7 +240,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   // File tree is computed fresh on each render (UI operations cause re-renders naturally)
   // For shell commands, refreshFileTree is called to force a re-render via fileTreeVersion
   // We need to read fileTreeVersion to ensure component re-renders when it changes
-  void fileTreeVersion // eslint-disable-line @typescript-eslint/no-unused-expressions
+  void fileTreeVersion
   const fileTree = filesystem.getTree()
 
   const value = useMemo<IDEContextValue>(() => ({
@@ -229,7 +248,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     activePanel, setActivePanel,
     terminalVisible, toggleTerminal, sidebarVisible, toggleSidebar,
     fileTree, refreshFileTree,
-    createFile, createFolder, deleteFile, deleteFolder, renameFile, renameFolder, moveFile, openFile, saveFile,
+    createFile, createFolder, deleteFile, deleteFolder, renameFile, renameFolder, moveFile, copyFile, openFile, saveFile,
     tabs, activeTab, selectTab, closeTab, toasts, showError, dismissToast,
     pendingNewFilePath, generateUniqueFileName, createFileWithRename, clearPendingNewFile,
     pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename, clearPendingNewFolder,
@@ -238,7 +257,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     engine, code, setCode, fileName, isDirty,
     activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
     fileTree, refreshFileTree, createFile, createFolder, deleteFile, deleteFolder,
-    renameFile, renameFolder, moveFile, openFile, saveFile, tabs, activeTab, selectTab, closeTab,
+    renameFile, renameFolder, moveFile, copyFile, openFile, saveFile, tabs, activeTab, selectTab, closeTab,
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,
     clearPendingNewFolder, recentFiles, clearRecentFiles, filesystem,

@@ -15,7 +15,7 @@ export function buildTreeFromFileSystem(
   fs: IFileSystem,
   path: string = '/',
   isRoot: boolean = true,
-  disconnectedWorkspaces: Workspace[] = []
+  allWorkspaces: Workspace[] = []
 ): TreeNode[] {
   const entries = fs.listDirectory(path)
   const nodes: TreeNode[] = []
@@ -23,11 +23,20 @@ export function buildTreeFromFileSystem(
   for (const entry of entries) {
     if (entry.type === 'directory') {
       const children = buildTreeFromFileSystem(fs, entry.path, false, [])
+
+      // For root-level folders, find the matching workspace to get its type
+      let isLocalWorkspace: boolean | undefined
+      if (isRoot) {
+        const workspace = allWorkspaces.find((w) => w.mountPath === entry.path)
+        isLocalWorkspace = workspace?.type === 'local'
+      }
+
       nodes.push({
         name: entry.name,
         path: entry.path,
         type: 'folder',
         isWorkspace: isRoot, // Root-level folders are workspaces
+        isLocalWorkspace,
         children,
       })
     } else {
@@ -41,12 +50,14 @@ export function buildTreeFromFileSystem(
 
   // Add disconnected workspaces at root level
   if (isRoot) {
+    const disconnectedWorkspaces = allWorkspaces.filter((w) => w.status === 'disconnected')
     for (const workspace of disconnectedWorkspaces) {
       nodes.push({
         name: workspace.mountPath.substring(1), // Remove leading '/'
         path: workspace.mountPath,
         type: 'folder',
         isWorkspace: true,
+        isLocalWorkspace: workspace.type === 'local',
         isDisconnected: true,
         children: [], // No children for disconnected workspaces
       })
@@ -73,6 +84,7 @@ export interface AdaptedFileSystem {
   deleteFile: (path: string) => void
   renameFile: (oldPath: string, newPath: string) => void
   moveFile: (sourcePath: string, targetFolderPath: string) => void
+  copyFile: (sourcePath: string, targetFolderPath: string) => void
 
   // Folder operations
   createFolder: (path: string) => void
@@ -109,9 +121,6 @@ export function createFileSystemAdapter(
   fs: IFileSystem,
   workspaces: Workspace[] = []
 ): AdaptedFileSystem {
-  // Filter disconnected workspaces for tree building
-  const disconnectedWorkspaces = workspaces.filter((w) => w.status === 'disconnected')
-
   return {
     createFile: (path: string, content: string = '') => {
       fs.writeFile(path, content)
@@ -165,22 +174,40 @@ export function createFileSystemAdapter(
       flushIfSupported(fs)
     },
 
+    copyFile: (sourcePath: string, targetFolderPath: string) => {
+      // Extract filename and build new path
+      const parts = sourcePath.split('/').filter(Boolean)
+      const fileName = parts[parts.length - 1]
+      const newPath = targetFolderPath === '/' ? `/${fileName}` : `${targetFolderPath}/${fileName}`
+
+      if (fs.isDirectory(sourcePath)) {
+        // Copying a folder - recursively copy contents without deleting source
+        fs.createDirectory(newPath)
+        copyDirectoryContents(fs, sourcePath, newPath)
+      } else {
+        // Copying a file
+        const content = fs.readFile(sourcePath)
+        fs.writeFile(newPath, content)
+      }
+      flushIfSupported(fs)
+    },
+
     createFolder: (path: string) => {
       fs.createDirectory(path)
       flushIfSupported(fs)
     },
 
     deleteFolder: (path: string) => {
-      // IFileSystem.delete should handle recursive deletion
-      fs.delete(path)
+      // Recursively delete folder and all contents
+      deleteDirectoryRecursive(fs, path)
       flushIfSupported(fs)
     },
 
     renameFolder: (oldPath: string, newPath: string) => {
-      // Simulate folder rename: create new, copy contents, delete old
+      // Simulate folder rename: create new, copy contents, delete old recursively
       fs.createDirectory(newPath)
       copyDirectoryContents(fs, oldPath, newPath)
-      fs.delete(oldPath)
+      deleteDirectoryRecursive(fs, oldPath)
       flushIfSupported(fs)
     },
 
@@ -193,7 +220,7 @@ export function createFileSystemAdapter(
       return entries.map((entry) => entry.name)
     },
 
-    getTree: () => buildTreeFromFileSystem(fs, '/', true, disconnectedWorkspaces),
+    getTree: () => buildTreeFromFileSystem(fs, '/', true, workspaces),
   }
 }
 
@@ -217,10 +244,29 @@ function copyDirectoryContents(fs: IFileSystem, sourcePath: string, targetPath: 
 }
 
 /**
+ * Recursively delete a directory and all its contents.
+ */
+function deleteDirectoryRecursive(fs: IFileSystem, path: string): void {
+  const entries = fs.listDirectory(path)
+
+  // Delete all children first
+  for (const entry of entries) {
+    if (entry.type === 'directory') {
+      deleteDirectoryRecursive(fs, entry.path)
+    } else {
+      fs.delete(entry.path)
+    }
+  }
+
+  // Now delete the empty directory
+  fs.delete(path)
+}
+
+/**
  * Recursively move a directory from one path to another.
  */
 function moveDirectoryRecursive(fs: IFileSystem, sourcePath: string, targetPath: string): void {
   fs.createDirectory(targetPath)
   copyDirectoryContents(fs, sourcePath, targetPath)
-  fs.delete(sourcePath)
+  deleteDirectoryRecursive(fs, sourcePath)
 }

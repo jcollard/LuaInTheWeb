@@ -33,7 +33,11 @@ interface IDELayoutInnerProps {
   refreshWorkspace: (mountPath: string) => Promise<void>
   supportsRefresh: (mountPath: string) => boolean
   reconnectWorkspace: (id: string, handle: FileSystemDirectoryHandle) => Promise<void>
+  tryReconnectWithStoredHandle: (id: string) => Promise<boolean>
+  disconnectWorkspace: (id: string) => void
   renameWorkspace: (mountPath: string, newName: string) => void
+  isFolderAlreadyMounted: (handle: FileSystemDirectoryHandle) => Promise<boolean>
+  getUniqueWorkspaceName: (baseName: string) => string
 }
 
 /**
@@ -50,7 +54,11 @@ function IDELayoutInner({
   refreshWorkspace,
   supportsRefresh,
   reconnectWorkspace,
+  tryReconnectWithStoredHandle,
+  disconnectWorkspace,
   renameWorkspace,
+  isFolderAlreadyMounted,
+  getUniqueWorkspaceName,
 }: IDELayoutInnerProps) {
   const {
     code,
@@ -71,6 +79,7 @@ function IDELayoutInner({
     renameFile,
     renameFolder,
     moveFile,
+    copyFile,
     openFile,
     saveFile,
     // New file creation
@@ -98,22 +107,13 @@ function IDELayoutInner({
   const [cursorColumn, setCursorColumn] = useState(1)
   const [pendingCloseTabPath, setPendingCloseTabPath] = useState<string | null>(null)
 
-  // Handle adding a local workspace (triggers directory picker)
+  // Handle adding a local workspace (dialog provides both name and handle)
   const handleAddLocalWorkspace = useCallback(
-    async (name: string) => {
-      try {
-        const handle = await window.showDirectoryPicker({
-          mode: 'readwrite',
-        })
-        await addLocalWorkspace(name, handle)
-      } catch (err) {
-        // User cancelled or error occurred
-        if ((err as Error).name !== 'AbortError') {
-          console.error('Failed to open directory:', err)
-        }
-      }
+    async (name: string, handle: FileSystemDirectoryHandle) => {
+      await addLocalWorkspace(name, handle)
+      refreshFileTree()
     },
-    [addLocalWorkspace]
+    [addLocalWorkspace, refreshFileTree]
   )
 
   // Handle reconnecting a disconnected local workspace
@@ -125,6 +125,14 @@ function IDELayoutInner({
         return
       }
 
+      // First, try to reconnect using the stored handle (shows simple permission prompt)
+      const reconnected = await tryReconnectWithStoredHandle(workspace.id)
+      if (reconnected) {
+        refreshFileTree()
+        return
+      }
+
+      // If stored handle failed, fall back to directory picker
       try {
         const handle = await window.showDirectoryPicker({
           mode: 'readwrite',
@@ -138,7 +146,7 @@ function IDELayoutInner({
         }
       }
     },
-    [workspaces, reconnectWorkspace, refreshFileTree]
+    [workspaces, tryReconnectWithStoredHandle, reconnectWorkspace, refreshFileTree]
   )
 
   // Handle removing a workspace by mount path
@@ -160,6 +168,18 @@ function IDELayoutInner({
       refreshFileTree()
     },
     [renameWorkspace, refreshFileTree]
+  )
+
+  // Handle disconnecting a local workspace
+  const handleDisconnectWorkspace = useCallback(
+    (mountPath: string) => {
+      const workspace = workspaces.find((w) => w.mountPath === mountPath)
+      if (workspace) {
+        disconnectWorkspace(workspace.id)
+        refreshFileTree()
+      }
+    },
+    [workspaces, disconnectWorkspace, refreshFileTree]
   )
 
   // Register keyboard shortcuts
@@ -229,6 +249,7 @@ function IDELayoutInner({
     onDeleteFolder: deleteFolder,
     onSelectFile: openFile,
     onMoveFile: moveFile,
+    onCopyFile: copyFile,
     onCancelPendingNewFile: clearPendingNewFile,
     onCancelPendingNewFolder: clearPendingNewFolder,
     // Workspace management props
@@ -244,7 +265,10 @@ function IDELayoutInner({
       },
       supportsRefresh,
       onReconnectWorkspace: handleReconnectWorkspace,
+      onDisconnectWorkspace: handleDisconnectWorkspace,
       onRenameWorkspace: handleRenameWorkspace,
+      isFolderAlreadyMounted,
+      getUniqueWorkspaceName,
     },
   }
 
@@ -363,7 +387,11 @@ export function IDELayout({
     refreshAllLocalWorkspaces,
     supportsRefresh,
     reconnectWorkspace,
+    tryReconnectWithStoredHandle,
+    disconnectWorkspace,
     renameWorkspace,
+    isFolderAlreadyMounted,
+    getUniqueWorkspaceName,
   } = useWorkspaceManager()
 
   // Create adapted filesystem for IDEContext
@@ -398,7 +426,11 @@ export function IDELayout({
         refreshWorkspace={refreshWorkspace}
         supportsRefresh={supportsRefresh}
         reconnectWorkspace={reconnectWorkspace}
+        tryReconnectWithStoredHandle={tryReconnectWithStoredHandle}
+        disconnectWorkspace={disconnectWorkspace}
         renameWorkspace={renameWorkspace}
+        isFolderAlreadyMounted={isFolderAlreadyMounted}
+        getUniqueWorkspaceName={getUniqueWorkspaceName}
       />
     </IDEContextProvider>
   )

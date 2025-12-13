@@ -6,6 +6,8 @@ export interface FileTreeItemProps {
   type: 'file' | 'folder'
   /** Indicates this is a workspace root (mount point) */
   isWorkspace?: boolean
+  /** Indicates this is a local filesystem workspace (vs virtual/browser-based) */
+  isLocalWorkspace?: boolean
   /** Indicates this workspace is disconnected (local folder needs reconnection) */
   isDisconnected?: boolean
   isSelected: boolean
