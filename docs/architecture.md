@@ -150,6 +150,35 @@ We use wasmoon to run Lua in the browser because:
 - Full Lua 5.4 compatibility
 - Good performance
 
+#### Deferred Engine Cleanup Pattern
+
+When closing a Lua engine, we use `LuaEngineFactory.closeDeferred()` instead of closing synchronously:
+
+```typescript
+// In LuaReplProcess.stop() and LuaScriptProcess.exitWithCode()
+const engineToClose = this.engine
+this.engine = null
+LuaEngineFactory.closeDeferred(engineToClose)
+```
+
+**Why deferred?** The WebAssembly Lua engine can be in an unstable state during certain operations (e.g., mid-execution, during callback handling). Calling `engine.global.close()` synchronously in these states can throw errors or cause undefined behavior. By deferring cleanup to the next event loop tick via `setTimeout(..., 0)`, we ensure the engine has fully unwound before cleanup.
+
+**Implementation** (`LuaEngineFactory.closeDeferred()`):
+```typescript
+static closeDeferred(engine: LuaEngine | null): void {
+  if (!engine) return
+  setTimeout(() => {
+    try {
+      this.close(engine)
+    } catch {
+      // Ignore errors during cleanup - engine may already be invalid
+    }
+  }, 0)
+}
+```
+
+This pattern prevents cleanup-related crashes while ensuring resources are eventually released.
+
 ### xterm.js for Terminal
 
 xterm.js provides:

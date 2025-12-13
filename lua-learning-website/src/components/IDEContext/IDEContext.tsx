@@ -6,7 +6,6 @@ import { getFileName, getParentPath } from '../../hooks/fileSystemUtils'
 import { useTabBar } from '../TabBar'
 import { useToast } from '../Toast'
 import { IDEContext } from './context'
-import { useIDETerminal } from './useIDETerminal'
 import type { IDEContextValue, IDEContextProviderProps, ActivityPanelType } from './types'
 
 export function IDEContextProvider({ children, initialCode = '' }: IDEContextProviderProps) {
@@ -14,7 +13,6 @@ export function IDEContextProvider({ children, initialCode = '' }: IDEContextPro
   const { recentFiles, addRecentFile, clearRecentFiles } = useRecentFiles()
   const tabBar = useTabBar()
   const { toasts, showToast, dismissToast } = useToast()
-  const terminal = useIDETerminal()
 
   const showError = useCallback((message: string) => {
     showToast({ message, type: 'error' })
@@ -42,9 +40,6 @@ export function IDEContextProvider({ children, initialCode = '' }: IDEContextPro
   const fileReader = useCallback((path: string): string | null => filesystem.readFile(path), [filesystem])
 
   const engine = useLuaEngine({
-    onOutput: terminal.handleOutput,
-    onError: terminal.handleError,
-    onReadInput: terminal.handleReadInput,
     fileReader,
   })
 
@@ -196,7 +191,6 @@ export function IDEContextProvider({ children, initialCode = '' }: IDEContextPro
     catch (error) { showError(error instanceof Error ? error.message : 'Failed to move file') }
   }, [filesystem, showError])
 
-  const runCode = useCallback(async () => { await engine.execute(code) }, [engine, code])
   const toggleTerminal = useCallback(() => { setTerminalVisible(prev => !prev) }, [])
   const toggleSidebar = useCallback(() => { setSidebarVisible(prev => !prev) }, [])
 
@@ -204,19 +198,18 @@ export function IDEContextProvider({ children, initialCode = '' }: IDEContextPro
 
   const value = useMemo<IDEContextValue>(() => ({
     engine, code, setCode, fileName, isDirty,
-    terminalOutput: terminal.terminalOutput, isAwaitingInput: terminal.isAwaitingInput,
-    submitInput: terminal.submitInput, activePanel, setActivePanel,
+    activePanel, setActivePanel,
     terminalVisible, toggleTerminal, sidebarVisible, toggleSidebar,
-    runCode, clearTerminal: terminal.clearTerminal, fileTree,
+    fileTree,
     createFile, createFolder, deleteFile, deleteFolder, renameFile, renameFolder, moveFile, openFile, saveFile,
     tabs, activeTab, selectTab, closeTab, toasts, showError, dismissToast,
     pendingNewFilePath, generateUniqueFileName, createFileWithRename, clearPendingNewFile,
     pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename, clearPendingNewFolder,
     recentFiles, clearRecentFiles, fileSystem: filesystem,
   }), [
-    engine, code, setCode, fileName, isDirty, terminal.terminalOutput, terminal.isAwaitingInput,
-    terminal.submitInput, activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
-    runCode, terminal.clearTerminal, fileTree, createFile, createFolder, deleteFile, deleteFolder,
+    engine, code, setCode, fileName, isDirty,
+    activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
+    fileTree, createFile, createFolder, deleteFile, deleteFolder,
     renameFile, renameFolder, moveFile, openFile, saveFile, tabs, activeTab, selectTab, closeTab,
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,

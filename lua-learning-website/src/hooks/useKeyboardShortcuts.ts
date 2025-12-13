@@ -1,7 +1,6 @@
 import { useEffect, useCallback } from 'react'
 
 export interface UseKeyboardShortcutsOptions {
-  runCode: () => void
   toggleTerminal: () => void
   toggleSidebar: () => void
   saveFile: () => void
@@ -9,13 +8,11 @@ export interface UseKeyboardShortcutsOptions {
 
 /**
  * Hook for IDE keyboard shortcuts
- * - Ctrl+Enter: Run code
  * - Ctrl+`: Toggle terminal
  * - Ctrl+B: Toggle sidebar
  * - Ctrl+S: Save file
  */
 export function useKeyboardShortcuts({
-  runCode,
   toggleTerminal,
   toggleSidebar,
   saveFile,
@@ -26,10 +23,6 @@ export function useKeyboardShortcuts({
       if (!event.ctrlKey) return
 
       switch (event.key) {
-        case 'Enter':
-          event.preventDefault()
-          runCode()
-          break
         case '`':
           event.preventDefault()
           toggleTerminal()
@@ -47,7 +40,7 @@ export function useKeyboardShortcuts({
       }
     },
     // Stryker disable next-line ArrayDeclaration: React dependency array - tests verify behavior, not re-render optimization
-    [runCode, toggleTerminal, toggleSidebar, saveFile]
+    [toggleTerminal, toggleSidebar, saveFile]
   )
 
   useEffect(() => {

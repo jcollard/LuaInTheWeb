@@ -8,8 +8,8 @@ export interface WelcomeScreenProps {
   onCreateFile: () => void
   /** Called when user clicks a recent file */
   onOpenFile: (path: string) => void
-  /** Called when user clicks Open REPL */
-  onOpenRepl: () => void
+  /** Called when user clicks Open Shell */
+  onOpenShell: () => void
   /** Called when user clicks Clear Recent Files */
   onClearRecentFiles: () => void
   /** List of recent files */

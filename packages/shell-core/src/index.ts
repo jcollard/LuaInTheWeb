@@ -17,6 +17,11 @@ export type {
   ShellOptions,
 } from './types'
 
+// New interfaces for process-based command execution
+export type { ShellContext } from './interfaces/ShellContext'
+export type { IProcess, KeyModifiers } from './interfaces/IProcess'
+export type { ICommand } from './interfaces/ICommand'
+
 // Path utilities
 export {
   normalizePath,
@@ -32,6 +37,12 @@ export { parseCommand } from './parseCommand'
 
 // Command registry
 export { CommandRegistry } from './CommandRegistry'
+
+// Process management
+export { ProcessManager } from './ProcessManager'
+
+// Adapters for backward compatibility
+export { LegacyCommandAdapter } from './adapters/LegacyCommandAdapter'
 
 // Filesystem adapter
 export { createFileSystemAdapter } from './createFileSystemAdapter'

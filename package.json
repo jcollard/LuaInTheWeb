@@ -6,8 +6,10 @@
     "lua-learning-website"
   ],
   "scripts": {
-    "build": "npm run build -w @lua-learning/shell-core && npm run build -w lua-learning-website",
+    "build": "npm run build -w @lua-learning/shell-core && npm run build -w @lua-learning/lua-runtime && npm run build -w lua-learning-website",
     "build:shell-core": "npm run build -w @lua-learning/shell-core",
-    "test:shell-core": "npm run test -w @lua-learning/shell-core"
+    "build:lua-runtime": "npm run build -w @lua-learning/lua-runtime",
+    "test:shell-core": "npm run test -w @lua-learning/shell-core",
+    "test:lua-runtime": "npm run test -w @lua-learning/lua-runtime"
   }
 }

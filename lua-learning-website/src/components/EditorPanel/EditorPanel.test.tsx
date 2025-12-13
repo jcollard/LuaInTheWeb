@@ -38,7 +38,6 @@ describe('EditorPanel', () => {
     onChange: vi.fn(),
     fileName: 'main.lua',
     isDirty: false,
-    onRun: vi.fn(),
   }
 
   const mockTabs: TabInfo[] = [
@@ -73,14 +72,6 @@ describe('EditorPanel', () => {
       // Assert
       expect(screen.getByText('test.lua')).toBeInTheDocument()
     })
-
-    it('should render run button in toolbar', () => {
-      // Arrange & Act
-      render(<EditorPanel {...defaultProps} />)
-
-      // Assert
-      expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument()
-    })
   })
 
   describe('dirty indicator', () => {
@@ -99,44 +90,6 @@ describe('EditorPanel', () => {
       // Assert - filename should not have *
       expect(screen.getByText('main.lua')).toBeInTheDocument()
       expect(screen.queryByText(/\*/)).not.toBeInTheDocument()
-    })
-  })
-
-  describe('run button', () => {
-    it('should call onRun when run button is clicked', () => {
-      // Arrange
-      const onRun = vi.fn()
-      render(<EditorPanel {...defaultProps} onRun={onRun} />)
-
-      // Act
-      fireEvent.click(screen.getByRole('button', { name: /run/i }))
-
-      // Assert
-      expect(onRun).toHaveBeenCalled()
-    })
-
-    it('should show "Running..." when isRunning is true', () => {
-      // Arrange & Act
-      render(<EditorPanel {...defaultProps} isRunning={true} />)
-
-      // Assert
-      expect(screen.getByRole('button', { name: /run/i })).toHaveTextContent('Running...')
-    })
-
-    it('should show "Run" when isRunning is false', () => {
-      // Arrange & Act
-      render(<EditorPanel {...defaultProps} isRunning={false} />)
-
-      // Assert
-      expect(screen.getByRole('button', { name: /run/i })).toHaveTextContent('Run')
-    })
-
-    it('should disable run button when isRunning is true', () => {
-      // Arrange & Act
-      render(<EditorPanel {...defaultProps} isRunning={true} />)
-
-      // Assert
-      expect(screen.getByRole('button', { name: /run/i })).toBeDisabled()
     })
   })
 
@@ -163,25 +116,6 @@ describe('EditorPanel', () => {
 
       // Assert
       expect(screen.getByTestId('editor-panel')).toHaveClass('custom-class')
-    })
-  })
-
-  describe('accessibility', () => {
-    it('should have aria-label for run button', () => {
-      // Arrange & Act
-      render(<EditorPanel {...defaultProps} />)
-
-      // Assert
-      expect(screen.getByRole('button', { name: /run/i })).toHaveAttribute('aria-label')
-    })
-
-    it('should indicate running state in aria-label', () => {
-      // Arrange & Act
-      render(<EditorPanel {...defaultProps} isRunning={true} />)
-
-      // Assert
-      const runButton = screen.getByRole('button', { name: /run/i })
-      expect(runButton.getAttribute('aria-label')).toMatch(/running/i)
     })
   })
 
@@ -295,7 +229,6 @@ describe('EditorPanel', () => {
           onChange={vi.fn()}
           fileName={null}
           isDirty={false}
-          onRun={vi.fn()}
         />
       )
 
@@ -311,7 +244,6 @@ describe('EditorPanel', () => {
           onChange={vi.fn()}
           fileName={null}
           isDirty={false}
-          onRun={vi.fn()}
         />
       )
 
@@ -327,7 +259,6 @@ describe('EditorPanel', () => {
           onChange={vi.fn()}
           fileName={null}
           isDirty={false}
-          onRun={vi.fn()}
         />
       )
 

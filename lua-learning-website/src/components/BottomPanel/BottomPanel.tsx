@@ -1,43 +1,14 @@
-import { useState, useRef, useEffect } from 'react'
-import LuaRepl from '../LuaRepl'
 import { ShellTerminal } from '../ShellTerminal'
 import styles from './BottomPanel.module.css'
-import type { BottomPanelProps, BottomPanelTab } from './types'
+import type { BottomPanelProps } from './types'
 
 /**
- * Bottom panel with Terminal, REPL, and Shell tabs
+ * Bottom panel with Shell terminal
  */
 export function BottomPanel({
-  terminalOutput,
-  isAwaitingInput = false,
-  onSubmitInput,
   fileSystem,
   className,
 }: BottomPanelProps) {
-  const [activeTab, setActiveTab] = useState<BottomPanelTab>('terminal')
-  const [inputValue, setInputValue] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  // Auto-focus input when awaiting input
-  useEffect(() => {
-    if (isAwaitingInput && inputRef.current) {
-      inputRef.current.focus()
-    }
-  }, [isAwaitingInput])
-
-  const handleSubmit = () => {
-    if (onSubmitInput) {
-      onSubmitInput(inputValue)
-      setInputValue('')
-    }
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSubmit()
-    }
-  }
-
   const combinedClassName = className
     ? `${styles.bottomPanel} ${className}`
     : styles.bottomPanel
@@ -48,94 +19,17 @@ export function BottomPanel({
         <button
           type="button"
           role="tab"
-          className={`${styles.tab} ${activeTab === 'terminal' ? styles.active : ''}`}
-          onClick={() => setActiveTab('terminal')}
-          aria-selected={activeTab === 'terminal'}
-          aria-controls="terminal-tabpanel"
+          className={`${styles.tab} ${styles.active}`}
+          aria-selected={true}
+          aria-controls="shell-tabpanel"
         >
-          Terminal
+          Shell
         </button>
-        <button
-          type="button"
-          role="tab"
-          className={`${styles.tab} ${activeTab === 'repl' ? styles.active : ''}`}
-          onClick={() => setActiveTab('repl')}
-          aria-selected={activeTab === 'repl'}
-          aria-controls="repl-tabpanel"
-        >
-          REPL
-        </button>
-        {fileSystem && (
-          <button
-            type="button"
-            role="tab"
-            className={`${styles.tab} ${activeTab === 'shell' ? styles.active : ''}`}
-            onClick={() => setActiveTab('shell')}
-            aria-selected={activeTab === 'shell'}
-            aria-controls="shell-tabpanel"
-          >
-            Shell
-          </button>
-        )}
       </div>
-      <div className={styles.content} role="tabpanel">
-        {/* Keep all tabs mounted to preserve state, use CSS to show/hide */}
-        <div
-          className={`${styles.terminalContent} ${activeTab !== 'terminal' ? styles.hidden : ''}`}
-          data-testid="terminal-content"
-          id="terminal-tabpanel"
-        >
-          <div className={styles.outputContainer}>
-            {terminalOutput.length > 0 ? (
-              terminalOutput.map((line) => (
-                <div key={line.id} className={styles.outputLine}>
-                  {line.text}
-                </div>
-              ))
-            ) : (
-              <div className={styles.placeholder}>
-                Run code to see output...
-              </div>
-            )}
-          </div>
-          {isAwaitingInput && (
-            <div className={styles.inputContainer}>
-              <span className={styles.inputPrompt}>&gt;</span>
-              <input
-                ref={inputRef}
-                type="text"
-                className={styles.inputField}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                aria-label="Input"
-                data-testid="terminal-input"
-              />
-              <button
-                type="button"
-                className={styles.submitButton}
-                onClick={handleSubmit}
-                aria-label="Submit input"
-              >
-                Submit
-              </button>
-            </div>
-          )}
+      <div className={styles.content} role="tabpanel" id="shell-tabpanel">
+        <div className={styles.shellContent}>
+          <ShellTerminal fileSystem={fileSystem} embedded />
         </div>
-        <div
-          className={`${styles.replContent} ${activeTab !== 'repl' ? styles.hidden : ''}`}
-          id="repl-tabpanel"
-        >
-          <LuaRepl embedded />
-        </div>
-        {fileSystem && (
-          <div
-            className={`${styles.shellContent} ${activeTab !== 'shell' ? styles.hidden : ''}`}
-            id="shell-tabpanel"
-          >
-            <ShellTerminal fileSystem={fileSystem} embedded />
-          </div>
-        )}
       </div>
     </div>
   )

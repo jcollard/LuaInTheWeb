@@ -12,6 +12,4 @@ export interface CodeEditorProps {
   height?: string
   /** Whether the editor is read-only */
   readOnly?: boolean
-  /** Called when Ctrl+Enter is pressed */
-  onRun?: () => void
 }
