@@ -1,6 +1,6 @@
 # Epic #20: File API / Workspace
 
-**Status:** In Progress (2/5 complete)
+**Status:** In Progress (3/5 complete)
 **Branch:** epic-20
 **Created:** 2025-12-13
 **Last Updated:** 2025-12-13
@@ -18,21 +18,25 @@ Enable users to work with files on their actual computer (not just browser local
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Workspace Manager                     │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
-│  │ Virtual FS  │  │  Local FS   │  │  Remote FS  │     │
-│  │(localStorage)│  │ (File API) │  │  (future)   │     │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘     │
-│         │                │                │             │
-│         └────────────────┼────────────────┘             │
-│                          ▼                              │
-│                   IFileSystem                           │
-│                          │                              │
-│         ┌────────────────┼────────────────┐            │
-│         ▼                ▼                ▼            │
-│    Shell Commands   Lua Scripts    File Explorer       │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                      Workspace Manager                           │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │  /my-files   │  │   /project   │  │  /research   │   ...    │
+│  │ (Virtual FS) │  │ (Local FS)   │  │ (Virtual FS) │          │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
+│         │                 │                 │                   │
+│         └─────────────────┼─────────────────┘                   │
+│                           ▼                                     │
+│                  CompositeFileSystem                            │
+│              (routes by path prefix)                            │
+│                           │                                     │
+│                           ▼                                     │
+│                     IFileSystem                                 │
+│                           │                                     │
+│          ┌────────────────┼────────────────┐                   │
+│          ▼                ▼                ▼                   │
+│     Shell Commands   Lua Scripts    File Explorer              │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Architecture Decisions
@@ -73,13 +77,34 @@ Enable users to work with files on their actual computer (not just browser local
 
 **Rationale:** Persistent permissions are Chrome-only and add complexity. Clear UX messaging about re-granting is simpler and more portable.
 
+### AD-4: Multi-Mount Workspace Architecture (from #200)
+
+**Decision:** Use multi-mount architecture where multiple workspaces are simultaneously accessible at different paths.
+
+**Architecture:**
+- Each workspace is mounted at a unique path (e.g., `/my-files`, `/project`)
+- `CompositeFileSystem` routes operations to the correct workspace based on path prefix
+- Virtual root `/` lists all mount points as directories
+- No "active workspace" concept - the shell's cwd determines context
+
+**Mount Path Generation:**
+- Workspace name → slug: "My Files" → `/my-files`
+- Collision handling: `/project`, `/project-2`, `/project-3`
+- Default workspace always at `/my-files`
+
+**Trade-offs:**
+- (+) Multiple workspaces visible and accessible simultaneously
+- (+) Shell navigation naturally determines workspace context
+- (+) Consistent Unix-like filesystem model
+- (-) Slightly more complex than single-active model
+
 ## Sub-Issues
 
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #198 | File System Access API Research | ✅ Complete | - | See [research doc](docs/file-system-access-api-research.md) |
 | #199 | FileSystemAccessAPI IFileSystem Implementation | ✅ Complete | 199-filesystemaccessapi-ifilesystem-implementation | Merged in PR #205 |
-| #200 | Workspace State Management | ⏳ Pending | - | Depends on #199 |
+| #200 | Workspace State Management | ✅ Complete | 200-workspace-state-management | useWorkspaceManager + CompositeFileSystem (AD-4) |
 | #201 | Workspace UI Components | ⏳ Pending | - | Depends on #200 |
 | #202 | Shell Multi-Workspace Integration | ⏳ Pending | - | Depends on #199, #200, #201 |
 
@@ -114,6 +139,16 @@ Enable users to work with files on their actual computer (not just browser local
 <!-- Updated after each sub-issue completion -->
 
 ### 2025-12-13
+- **#200 Complete (Updated)** - Workspace State Management with Multi-Mount Architecture
+  - Created `CompositeFileSystem` in shell-core (routes paths to mounted filesystems)
+  - Created `useWorkspaceManager` hook for multi-workspace management
+  - Created `virtualFileSystemFactory` for workspace-isolated localStorage filesystems
+  - **Multi-mount architecture (AD-4):** Workspaces mounted at unique paths (/my-files, /project)
+  - Features: add/remove workspaces, mount path generation, localStorage persistence
+  - No "active workspace" - shell cwd determines context via CompositeFileSystem
+  - Local workspaces marked as 'disconnected' on page reload (handle re-request required)
+  - Legacy data migration: rootPath → mountPath
+  - 111 unit tests (66 CompositeFileSystem + 45 useWorkspaceManager)
 - **#199 Complete** - FileSystemAccessAPI IFileSystem Implementation
   - Merged PR #205 to epic-20
   - Cache-based synchronous wrapper over async File System Access API
@@ -138,9 +173,14 @@ Enable users to work with files on their actual computer (not just browser local
 - `packages/shell-core/src/createFileSystemAdapter.ts` - Adapter factory
 - `packages/shell-core/src/pathUtils.ts` - Path utilities
 
-### New (to be created)
-- `packages/shell-core/src/FileSystemAccessAPIFileSystem.ts` - New FS implementation
-- `lua-learning-website/src/hooks/useWorkspaceManager.ts` - Workspace state
+### Created (from #199, #200)
+- `packages/shell-core/src/FileSystemAccessAPIFileSystem.ts` - File System Access API implementation
+- `packages/shell-core/src/CompositeFileSystem.ts` - Multi-mount filesystem router
+- `lua-learning-website/src/hooks/useWorkspaceManager.ts` - Workspace state management hook
+- `lua-learning-website/src/hooks/workspaceTypes.ts` - Workspace type definitions
+- `lua-learning-website/src/hooks/virtualFileSystemFactory.ts` - Workspace-isolated virtual filesystem
+
+### To Be Created (#201, #202)
 - `lua-learning-website/src/components/WorkspaceTabs/` - UI components
 - `lua-learning-website/src/components/AddWorkspaceDialog/` - UI components
 
