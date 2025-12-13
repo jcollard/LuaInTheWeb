@@ -86,6 +86,18 @@ function createExternalFileSystemAdapter(fs: UseFileSystemReturn): ExternalFileS
 }
 
 /**
+ * Helper to flush pending filesystem operations if supported.
+ * FileSystemAccessAPIFileSystem uses write-behind caching and requires flush().
+ */
+function flushIfSupported(fs: IFileSystem): void {
+  const flushable = fs as IFileSystem & { flush?: () => Promise<void> }
+  if (typeof flushable.flush === 'function') {
+    // Fire and forget - flush happens async
+    flushable.flush()
+  }
+}
+
+/**
  * Hook that provides shell functionality using shell-core package.
  * Accepts either an IFileSystem directly (e.g., CompositeFileSystem from useWorkspaceManager)
  * or a UseFileSystemReturn from the useFileSystem hook.
@@ -144,6 +156,9 @@ export function useShell(fileSystem: UseShellFileSystem): UseShellReturn {
       // Execute the command
       const result = registry.execute(parsed.command, parsed.args, shellFileSystem)
 
+      // Flush any pending filesystem operations (for local folder workspaces)
+      flushIfSupported(shellFileSystem)
+
       // Get the new cwd after command execution
       const newCwd = shellFileSystem.getCurrentDirectory()
       if (newCwd !== cwd) {
@@ -188,6 +203,9 @@ export function useShell(fileSystem: UseShellFileSystem): UseShellReturn {
 
       // Execute the command using the new interface
       const processOrVoid = registry.executeWithContext(parsed.command, parsed.args, context)
+
+      // Flush any pending filesystem operations (for local folder workspaces)
+      flushIfSupported(shellFileSystem)
 
       // Get the new cwd after command execution
       const newCwd = shellFileSystem.getCurrentDirectory()
