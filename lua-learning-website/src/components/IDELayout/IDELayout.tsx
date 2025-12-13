@@ -12,6 +12,7 @@ import { ConfirmDialog } from '../ConfirmDialog'
 import { ToastContainer } from '../Toast'
 import { WelcomeScreen } from '../WelcomeScreen'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { useWorkspaceManager } from '../../hooks/useWorkspaceManager'
 import styles from './IDELayout.module.css'
 import type { IDELayoutProps } from './types'
 
@@ -65,6 +66,33 @@ function IDELayoutInner({ className }: { className?: string }) {
   const [cursorLine, setCursorLine] = useState(1)
   const [cursorColumn, setCursorColumn] = useState(1)
   const [pendingCloseTabPath, setPendingCloseTabPath] = useState<string | null>(null)
+
+  // Workspace management
+  const {
+    workspaces,
+    addVirtualWorkspace,
+    addLocalWorkspace,
+    removeWorkspace,
+    isFileSystemAccessSupported,
+  } = useWorkspaceManager()
+
+  // Handle adding a local workspace (triggers directory picker)
+  const handleAddLocalWorkspace = useCallback(
+    async (name: string) => {
+      try {
+        const handle = await window.showDirectoryPicker({
+          mode: 'readwrite',
+        })
+        await addLocalWorkspace(name, handle)
+      } catch (err) {
+        // User cancelled or error occurred
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Failed to open directory:', err)
+        }
+      }
+    },
+    [addLocalWorkspace]
+  )
 
   // Register keyboard shortcuts
   useKeyboardShortcuts({
@@ -135,6 +163,14 @@ function IDELayoutInner({ className }: { className?: string }) {
     onMoveFile: moveFile,
     onCancelPendingNewFile: clearPendingNewFile,
     onCancelPendingNewFolder: clearPendingNewFolder,
+    // Workspace management props
+    workspaceProps: {
+      workspaces,
+      isFileSystemAccessSupported: isFileSystemAccessSupported(),
+      onAddVirtualWorkspace: addVirtualWorkspace,
+      onAddLocalWorkspace: handleAddLocalWorkspace,
+      onRemoveWorkspace: removeWorkspace,
+    },
   }
 
   // Tab bar props for EditorPanel (only when tabs exist)

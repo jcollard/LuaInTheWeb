@@ -1,0 +1,179 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background-color: var(--vscode-editor-background, #1e1e1e);
+  border: 1px solid var(--vscode-widget-border, #454545);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  min-width: 350px;
+  max-width: 450px;
+  outline: none;
+}
+
+.header {
+  padding: 16px 16px 8px;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--vscode-foreground, #cccccc);
+}
+
+.body {
+  padding: 8px 16px 16px;
+}
+
+.typeFieldset {
+  border: none;
+  padding: 0;
+  margin: 0 0 16px;
+}
+
+.legend {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vscode-foreground, #cccccc);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.radioOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--vscode-widget-border, #454545);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.1s, border-color 0.1s;
+}
+
+.radioOption:hover:not(.disabled) {
+  background-color: var(--vscode-list-hoverBackground, #2a2d2e);
+}
+
+.radioOption.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.radioOption input[type="radio"] {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.radioContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.radioLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--vscode-foreground, #cccccc);
+}
+
+.radioDescription {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground, #9d9d9d);
+}
+
+.warning {
+  font-size: 11px;
+  color: var(--vscode-errorForeground, #f14c4c);
+  margin-top: 4px;
+}
+
+.inputGroup {
+  margin-bottom: 8px;
+}
+
+.inputLabel {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vscode-foreground, #cccccc);
+  margin-bottom: 6px;
+}
+
+.input {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--vscode-input-border, #454545);
+  border-radius: 4px;
+  background-color: var(--vscode-input-background, #3c3c3c);
+  color: var(--vscode-input-foreground, #cccccc);
+  box-sizing: border-box;
+}
+
+.input:focus {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: -1px;
+}
+
+.input::placeholder {
+  color: var(--vscode-input-placeholderForeground, #888888);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 16px;
+  margin-top: 8px;
+  border-top: 1px solid var(--vscode-widget-border, #454545);
+}
+
+.button {
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background-color 0.1s, border-color 0.1s;
+}
+
+.button:focus {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: 1px;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cancelButton {
+  background-color: var(--vscode-button-secondaryBackground, #3a3d41);
+  color: var(--vscode-button-secondaryForeground, #ffffff);
+  border-color: var(--vscode-button-secondaryBackground, #3a3d41);
+}
+
+.cancelButton:hover:not(:disabled) {
+  background-color: var(--vscode-button-secondaryHoverBackground, #45494e);
+}
+
+.createButton {
+  background-color: var(--vscode-button-background, #0e639c);
+  color: var(--vscode-button-foreground, #ffffff);
+}
+
+.createButton:hover:not(:disabled) {
+  background-color: var(--vscode-button-hoverBackground, #1177bb);
+}

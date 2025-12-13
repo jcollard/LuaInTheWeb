@@ -1,7 +1,9 @@
-import { useCallback, useEffect, type MouseEvent } from 'react'
+import { useCallback, useEffect, useState, type MouseEvent } from 'react'
 import { FileTree } from '../FileTree'
 import { ContextMenu } from '../ContextMenu'
 import { ConfirmDialog } from '../ConfirmDialog'
+import { WorkspaceTabs } from '../WorkspaceTabs'
+import { AddWorkspaceDialog } from '../AddWorkspaceDialog'
 import { useFileExplorer } from './useFileExplorer'
 import type { FileExplorerProps } from './types'
 import type { ContextMenuItem } from '../ContextMenu'
@@ -58,7 +60,10 @@ export function FileExplorer({
   onCancelPendingNewFile,
   onCancelPendingNewFolder,
   className,
+  workspaceProps,
 }: FileExplorerProps) {
+  const [isAddWorkspaceDialogOpen, setIsAddWorkspaceDialogOpen] = useState(false)
+
   const {
     selectedPath: internalSelectedPath,
     selectPath,
@@ -74,6 +79,38 @@ export function FileExplorer({
     openConfirmDialog,
     closeConfirmDialog,
   } = useFileExplorer()
+
+  // Workspace management handlers
+  const handleAddWorkspaceClick = useCallback(() => {
+    setIsAddWorkspaceDialogOpen(true)
+  }, [])
+
+  const handleAddWorkspaceCancel = useCallback(() => {
+    setIsAddWorkspaceDialogOpen(false)
+  }, [])
+
+  const handleCreateVirtualWorkspace = useCallback(
+    (name: string) => {
+      workspaceProps?.onAddVirtualWorkspace(name)
+      setIsAddWorkspaceDialogOpen(false)
+    },
+    [workspaceProps]
+  )
+
+  const handleCreateLocalWorkspace = useCallback(
+    (name: string) => {
+      workspaceProps?.onAddLocalWorkspace(name)
+      setIsAddWorkspaceDialogOpen(false)
+    },
+    [workspaceProps]
+  )
+
+  const handleRemoveWorkspace = useCallback(
+    (workspaceId: string) => {
+      workspaceProps?.onRemoveWorkspace(workspaceId)
+    },
+    [workspaceProps]
+  )
 
   // Use controlled selected path if provided
   const selectedPath = controlledSelectedPath ?? internalSelectedPath
@@ -263,6 +300,15 @@ export function FileExplorer({
 
   return (
     <div className={combinedClassName} data-testid="file-explorer">
+      {/* Workspace Tabs (optional) */}
+      {workspaceProps && (
+        <WorkspaceTabs
+          workspaces={workspaceProps.workspaces}
+          onAddClick={handleAddWorkspaceClick}
+          onClose={handleRemoveWorkspace}
+        />
+      )}
+
       {/* Toolbar */}
       <div className={styles.toolbar}>
         <button
@@ -323,6 +369,17 @@ export function FileExplorer({
         onConfirm={confirmDialog.onConfirm}
         onCancel={closeConfirmDialog}
       />
+
+      {/* Add Workspace Dialog (optional) */}
+      {workspaceProps && (
+        <AddWorkspaceDialog
+          isOpen={isAddWorkspaceDialogOpen}
+          isFileSystemAccessSupported={workspaceProps.isFileSystemAccessSupported}
+          onCreateVirtual={handleCreateVirtualWorkspace}
+          onCreateLocal={handleCreateLocalWorkspace}
+          onCancel={handleAddWorkspaceCancel}
+        />
+      )}
     </div>
   )
 }
