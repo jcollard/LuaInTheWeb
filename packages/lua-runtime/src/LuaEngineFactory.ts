@@ -33,6 +33,23 @@ export const DEFAULT_INSTRUCTION_LIMIT = 10_000_000
 export const DEFAULT_INSTRUCTION_CHECK_INTERVAL = 1000
 
 /**
+ * Options for configuring execution control behavior.
+ * Shared by LuaReplProcess and LuaScriptProcess.
+ */
+export interface ExecutionControlOptions {
+  /** Instruction limit before triggering callback (default: 10,000,000) */
+  instructionLimit?: number
+  /** Interval between instruction count checks (default: 1000) */
+  instructionCheckInterval?: number
+  /**
+   * Called when instruction limit is reached.
+   * Return true to continue execution, false to stop.
+   * NOTE: Must be synchronous due to Lua debug hook limitations.
+   */
+  onInstructionLimitReached?: () => boolean
+}
+
+/**
  * Options for configuring Lua engine execution control.
  */
 export interface LuaEngineOptions {
@@ -40,6 +57,28 @@ export interface LuaEngineOptions {
   instructionLimit?: number
   /** Interval between instruction count checks (default: 1000) */
   instructionCheckInterval?: number
+}
+
+/**
+ * Error thrown when Lua execution is stopped by user or instruction limit.
+ * Provides type-safe error detection instead of string matching.
+ */
+export class ExecutionStoppedError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ExecutionStoppedError'
+  }
+
+  /**
+   * Check if an error is an execution stopped error.
+   * Handles both ExecutionStoppedError instances and wasmoon errors
+   * that contain "Execution stopped" in the message.
+   */
+  static isExecutionStoppedError(error: unknown): boolean {
+    if (error instanceof ExecutionStoppedError) return true
+    const msg = error instanceof Error ? error.message : String(error)
+    return msg.includes('Execution stopped')
+  }
 }
 
 /**

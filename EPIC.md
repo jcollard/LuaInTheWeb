@@ -39,7 +39,7 @@ Infinite or long-running Lua loops (e.g., `while i > 0 do i = i + 1; print(i) en
 |---|-------|--------|--------------|-------|
 | #192 | Add Execution Control Infrastructure to LuaEngineFactory | ✅ Complete | - | Merged PR #203 |
 | #193 | Add Output Throttling to Print Callback | ✅ Complete | - | Merged PR #206 |
-| #194 | Integrate Stop Request and Continuation Prompt into Processes | ⏳ Pending | #192 | - |
+| #194 | Integrate Stop Request and Continuation Prompt into Processes | 🔄 In Progress | #192 | PR #208 |
 | #195 | Add Comprehensive Tests for Execution Control | ⏳ Pending | #192, #193, #194 | - |
 
 **Status Legend:**
@@ -58,6 +58,7 @@ Infinite or long-running Lua loops (e.g., `while i > 0 do i = i + 1; print(i) en
 - Completed #192: Merged PR #203 to epic-183
 - Started work on #193: Add Output Throttling to Print Callback
 - Completed #193: Merged PR #206 to epic-183
+- Started work on #194: Integrate Stop Request and Continuation Prompt into Processes
 
 ## Key Files
 

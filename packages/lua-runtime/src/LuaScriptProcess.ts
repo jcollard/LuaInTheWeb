@@ -9,8 +9,15 @@ import {
   LuaEngineFactory,
   formatLuaError,
   type LuaEngineCallbacks,
+  type LuaEngineOptions,
+  type ExecutionControlOptions,
 } from './LuaEngineFactory'
 import { resolvePath } from '@lua-learning/shell-core'
+
+/**
+ * Options for configuring the Lua script process.
+ */
+export type LuaScriptProcessOptions = ExecutionControlOptions
 
 /**
  * Process that executes a Lua script file.
@@ -24,6 +31,7 @@ export class LuaScriptProcess implements IProcess {
     reject: (error: Error) => void
   }> = []
   private hasError = false
+  private readonly options: LuaScriptProcessOptions
 
   /**
    * Callback invoked when the process produces output.
@@ -42,8 +50,11 @@ export class LuaScriptProcess implements IProcess {
 
   constructor(
     private readonly filename: string,
-    private readonly context: ShellContext
-  ) {}
+    private readonly context: ShellContext,
+    options?: LuaScriptProcessOptions
+  ) {
+    this.options = options ?? {}
+  }
 
   /**
    * Start the script process.
@@ -60,11 +71,22 @@ export class LuaScriptProcess implements IProcess {
   /**
    * Stop the script process.
    * Interrupts script execution and cleans up.
+   * Requests cooperative stop for any running code via debug hook.
    */
   stop(): void {
     if (!this.running) return
 
     this.running = false
+
+    // Request stop from any running Lua code via debug hook
+    // This sets a flag that the debug hook checks periodically
+    if (this.engine) {
+      try {
+        this.engine.doString('__request_stop()')
+      } catch {
+        // Ignore errors - engine may be in invalid state
+      }
+    }
 
     // Reject any pending input requests
     for (const pending of this.inputQueue) {
@@ -104,6 +126,10 @@ export class LuaScriptProcess implements IProcess {
 
   /**
    * Execute the script file.
+   * Wraps execution with debug hooks for instruction limiting.
+   *
+   * NOTE: Due to wasmoon limitations, debug hooks don't persist across doString calls.
+   * We wrap the script content with hook setup/teardown in a single Lua chunk.
    */
   private async executeScript(): Promise<void> {
     // Resolve the file path
@@ -141,13 +167,24 @@ export class LuaScriptProcess implements IProcess {
         this.onError(formatLuaError(text) + '\n')
       },
       onReadInput: () => this.waitForInput(),
+      onInstructionLimitReached: this.options.onInstructionLimitReached,
+    }
+
+    const engineOptions: LuaEngineOptions = {
+      instructionLimit: this.options.instructionLimit,
+      instructionCheckInterval: this.options.instructionCheckInterval,
     }
 
     try {
-      this.engine = await LuaEngineFactory.create(callbacks)
+      this.engine = await LuaEngineFactory.create(callbacks, engineOptions)
 
-      // Execute the script
-      await this.engine.doString(scriptContent)
+      // Execute the script wrapped with hooks
+      // This ensures the debug hook is active during the entire script execution
+      await this.engine.doString(`
+        __setup_execution_hook()
+        ${scriptContent}
+        __clear_execution_hook()
+      `)
 
       // Flush any buffered output from the execution
       LuaEngineFactory.flushOutput(this.engine)

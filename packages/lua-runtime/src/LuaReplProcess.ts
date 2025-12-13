@@ -8,8 +8,16 @@ import type { LuaEngine } from 'wasmoon'
 import {
   LuaEngineFactory,
   formatLuaError,
+  ExecutionStoppedError,
   type LuaEngineCallbacks,
+  type LuaEngineOptions,
+  type ExecutionControlOptions,
 } from './LuaEngineFactory'
+
+/**
+ * Options for configuring the Lua REPL process.
+ */
+export type LuaReplProcessOptions = ExecutionControlOptions
 
 /**
  * Interactive Lua REPL process.
@@ -29,12 +37,21 @@ export class LuaReplProcess implements IProcess {
   private historyIndex = -1
   private inputBuffer: string[] = []
   private _inContinuationMode = false
+  private readonly options: LuaReplProcessOptions
 
   /**
    * Whether this process supports raw key input handling.
    * When true, the shell should forward raw key events to handleKey().
    */
   supportsRawInput = true
+
+  /**
+   * Create a new Lua REPL process.
+   * @param options - Optional configuration for execution control
+   */
+  constructor(options?: LuaReplProcessOptions) {
+    this.options = options ?? {}
+  }
 
   /**
    * Whether the REPL is currently in continuation mode (awaiting more input).
@@ -75,11 +92,22 @@ export class LuaReplProcess implements IProcess {
   /**
    * Stop the REPL process.
    * Closes the Lua engine and cleans up resources.
+   * Requests cooperative stop for any running code via debug hook.
    */
   stop(): void {
     if (!this.running) return
 
     this.running = false
+
+    // Request stop from any running Lua code via debug hook
+    // This sets a flag that the debug hook checks periodically
+    if (this.engine) {
+      try {
+        this.engine.doString('__request_stop()')
+      } catch {
+        // Ignore errors - engine may be in invalid state
+      }
+    }
 
     // Reject any pending input requests
     for (const pending of this.inputQueue) {
@@ -292,10 +320,16 @@ export class LuaReplProcess implements IProcess {
       onOutput: (text: string) => this.onOutput(text),
       onError: (text: string) => this.onError(formatLuaError(text) + '\n'),
       onReadInput: () => this.waitForInput(),
+      onInstructionLimitReached: this.options.onInstructionLimitReached,
+    }
+
+    const engineOptions: LuaEngineOptions = {
+      instructionLimit: this.options.instructionLimit,
+      instructionCheckInterval: this.options.instructionCheckInterval,
     }
 
     try {
-      this.engine = await LuaEngineFactory.create(callbacks)
+      this.engine = await LuaEngineFactory.create(callbacks, engineOptions)
 
       // Setup exit() command
       this.engine.global.set('exit', () => {
@@ -315,30 +349,90 @@ export class LuaReplProcess implements IProcess {
   /**
    * Execute code in REPL mode.
    * Handles both statements and expressions.
+   * Wraps execution with debug hooks for instruction limiting.
+   *
+   * NOTE: Due to wasmoon limitations, debug hooks don't persist across doString calls.
+   * We must wrap user code with hook setup/teardown in a single Lua chunk.
+   * If execution is stopped by instruction limit, the error propagates directly.
    */
   private async executeReplCode(code: string): Promise<void> {
     if (!this.engine) return
 
-    const callbacks: LuaEngineCallbacks = {
-      onOutput: (text: string) => this.onOutput(text),
-      onError: (text: string) => this.onError(formatLuaError(text) + '\n'),
-    }
-
-    const result = await LuaEngineFactory.executeCode(this.engine, code, callbacks)
-
-    // Flush any buffered output from the execution
-    LuaEngineFactory.flushOutput(this.engine)
-
-    // If expression returned a value (including nil), output it with newline
-    // undefined means it was a statement (no return value)
-    // 'nil' means the expression evaluated to nil (e.g., undefined variable)
-    if (result !== undefined) {
-      this.onOutput(result + '\n')
-    }
-
-    // Show prompt for next input (only if still running)
-    if (this.running) {
+    if (!code.trim()) {
       this.showPrompt()
+      return
+    }
+
+    try {
+      // First try as a statement, wrapped with hooks
+      // Hooks are set up and cleared within the same Lua chunk
+      await this.engine.doString(`
+        __setup_execution_hook()
+        ${code}
+        __clear_execution_hook()
+      `)
+
+      // Flush any buffered output from the execution
+      LuaEngineFactory.flushOutput(this.engine)
+
+      // Statement executed successfully, show prompt
+      if (this.running) {
+        this.showPrompt()
+      }
+    } catch (statementError: unknown) {
+      // Check if this was an execution control error (stop request or limit)
+      if (ExecutionStoppedError.isExecutionStoppedError(statementError)) {
+        // Execution was stopped - flush output and report
+        LuaEngineFactory.flushOutput(this.engine)
+        const errorMsg = statementError instanceof Error ? statementError.message : String(statementError)
+        this.onError(formatLuaError(errorMsg) + '\n')
+        if (this.running) {
+          this.showPrompt()
+        }
+        return
+      }
+
+      // Statement failed with syntax error, try as expression
+      try {
+        const formatted = await this.engine.doString(`
+          __setup_execution_hook()
+          local result = __format_value((${code}))
+          __clear_execution_hook()
+          return result
+        `)
+
+        // Flush any buffered output from the execution
+        LuaEngineFactory.flushOutput(this.engine)
+
+        // Output the formatted result
+        this.onOutput(String(formatted) + '\n')
+
+        // Show prompt for next input
+        if (this.running) {
+          this.showPrompt()
+        }
+      } catch (exprError: unknown) {
+        const exprErrorMsg = exprError instanceof Error ? exprError.message : String(exprError)
+
+        // Check if this was an execution control error
+        if (ExecutionStoppedError.isExecutionStoppedError(exprError)) {
+          LuaEngineFactory.flushOutput(this.engine)
+          this.onError(formatLuaError(exprErrorMsg) + '\n')
+          if (this.running) {
+            this.showPrompt()
+          }
+          return
+        }
+
+        // Both statement and expression parsing failed - report error
+        LuaEngineFactory.flushOutput(this.engine)
+        this.onError(formatLuaError(exprErrorMsg) + '\n')
+
+        // Show prompt for next input
+        if (this.running) {
+          this.showPrompt()
+        }
+      }
     }
   }
 
