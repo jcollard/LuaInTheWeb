@@ -1,9 +1,9 @@
 # Epic #140: [Epic] Shell Process Model with Lua Execution
 
-**Status:** In Progress (5/6 complete)
+**Status:** Complete (6/6)
 **Branch:** epic-140
 **Created:** 2025-12-12
-**Last Updated:** 2025-12-12 11:03
+**Last Updated:** 2025-12-12 17:30
 
 ## Overview
 
@@ -51,7 +51,7 @@ packages/
 | #172 | Lua Runtime Package | ✅ Complete | 172-lua-runtime-package | Merged in PR #176 |
 | #178 | Process Raw Input Handling | ✅ Complete | 178-process-raw-input-handling | Merged in PR #182 |
 | #179 | REPL Multi-line Input Support | ✅ Complete | 179-repl-multiline-input | Merged in PR #188 |
-| #173 | Remove Legacy UI Components | 🔄 In Progress | 173-remove-legacy-ui-components | PR #191 created |
+| #173 | Remove Legacy UI Components | ✅ Complete | 173-remove-legacy-ui-components | Merged in PR #191 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -67,6 +67,18 @@ packages/
 ## Progress Log
 
 <!-- Updated after each sub-issue completion -->
+
+### 2025-12-12 17:30
+- **Epic #140 Complete!**
+- Completed #173: Remove Legacy UI Components
+- Addressed all PR #191 review feedback:
+  - Extracted ShellTerminal input handling to useTerminalInput.ts (560→303 lines)
+  - Changed eslint max-lines from 'warn' to 'error'
+  - Added LuaEngineFactory.closeDeferred() to DRY up cleanup code
+  - Split LuaReplProcess.test.ts into 3 files (784→327 lines each)
+  - Deleted 4 orphaned stub files
+- All 1100 unit tests pass, 84 E2E tests pass
+- PR #191 ready for merge to main
 
 ### 2025-12-12 16:17
 - Started #173: Remove Legacy UI Components
