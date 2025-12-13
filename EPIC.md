@@ -3,7 +3,7 @@
 **Status:** In Progress (2/3 complete)
 **Branch:** epic-184
 **Created:** 2025-12-13
-**Last Updated:** 2025-12-13 09:47
+**Last Updated:** 2025-12-13 10:08
 
 ## Overview
 
@@ -31,13 +31,20 @@ Improve the Lua code editor experience with professional-grade formatting, synta
   - Comments: single-line and multi-line
   - Registered via CodeEditor's beforeMount callback
 
+### #187 - Auto-Indentation
+- **Monaco Language Configuration**: Extended `luaLanguageConfig` with indentation rules
+  - `indentationRules.increaseIndentPattern` - Matches block-opening keywords (function, then, do, repeat, else, elseif)
+  - `indentationRules.decreaseIndentPattern` - Matches block-closing keywords at line start (end, else, elseif, until)
+  - `onEnterRules` - Controls behavior when pressing Enter (indent after blocks, outdent for closures)
+  - Regex patterns exclude comments to prevent false matches
+
 ## Sub-Issues
 
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #185 | Lua Code Formatter | ✅ Complete | 185-lua-formatter | Merged in PR #204 |
 | #186 | Improved Syntax Highlighting | ✅ Complete | 186-improved-syntax-highlighting | Merged in PR #219 |
-| #187 | Auto-Indentation | ⏳ Pending | - | - |
+| #187 | Auto-Indentation | 🔄 In Progress | 187-auto-indentation | PR #222 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -62,6 +69,9 @@ None - all sub-issues can be implemented independently.
 - PR created for #186: Improved Syntax Highlighting (PR #219)
 - Completed #186: Improved Syntax Highlighting
 - Merged PR #219 to epic-184
+- Integrated main into epic branch (merge from origin/main)
+- Started work on #187: Auto-Indentation
+- PR created for #187: Auto-Indentation (PR #222)
 
 ## Key Files
 
@@ -77,6 +87,11 @@ None - all sub-issues can be implemented independently.
 - `src/__tests__/luaTokenizer.test.ts` - Unit tests for tokenizer
 - `src/components/CodeEditor/CodeEditor.tsx` - beforeMount registration
 - `e2e/syntax-highlighting.spec.ts` - E2E tests for highlighting
+
+### #187 - Auto-Indentation
+- `src/utils/luaTokenizer.ts` - Added indentationRules and onEnterRules
+- `src/__tests__/luaTokenizer.test.ts` - Unit tests for indentation patterns
+- `e2e/auto-indentation.spec.ts` - E2E tests for auto-indentation behavior
 
 ## Open Questions
 
