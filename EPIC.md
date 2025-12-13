@@ -23,12 +23,20 @@ Improve the Lua code editor experience with professional-grade formatting, synta
   - Uses `?url` import for WASM file loading with Vite plugins
   - Toast notification on format errors for user feedback
 
+### #186 - Improved Syntax Highlighting
+- **Custom Monarch Tokenizer**: Created enhanced Lua tokenizer for Monaco
+  - Multi-line string support (`[[...]]` and `[=[...]=]`)
+  - Table constructor key highlighting
+  - Numbers: decimal, hexadecimal, scientific notation
+  - Comments: single-line and multi-line
+  - Registered via CodeEditor's beforeMount callback
+
 ## Sub-Issues
 
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #185 | Lua Code Formatter | ✅ Complete | 185-lua-formatter | Merged in PR #204 |
-| #186 | Improved Syntax Highlighting | ⏳ Pending | - | - |
+| #186 | Improved Syntax Highlighting | 🔄 In Progress | 186-improved-syntax-highlighting | PR #214 created |
 | #187 | Auto-Indentation | ⏳ Pending | - | - |
 
 **Status Legend:**
@@ -50,6 +58,8 @@ None - all sub-issues can be implemented independently.
 - PR created for #185: Lua Code Formatter (PR #204)
 - Completed #185: Lua Code Formatter
 - Merged PR #204 to epic-184
+- Started work on #186: Improved Syntax Highlighting
+- PR created for #186: Improved Syntax Highlighting (PR #214)
 
 ## Key Files
 
@@ -59,6 +69,12 @@ None - all sub-issues can be implemented independently.
 - `src/components/EditorPanel/EditorPanel.tsx` - Integration
 - `src/components/CodeEditor/CodeEditor.tsx` - Keyboard shortcut support
 - `src/types/global.d.ts` - Window.monaco type declaration
+
+### #186 - Improved Syntax Highlighting
+- `src/utils/luaTokenizer.ts` - Custom Monarch tokenizer configuration
+- `src/__tests__/luaTokenizer.test.ts` - Unit tests for tokenizer
+- `src/components/CodeEditor/CodeEditor.tsx` - beforeMount registration
+- `e2e/syntax-highlighting.spec.ts` - E2E tests for highlighting
 
 ## Open Questions
 
