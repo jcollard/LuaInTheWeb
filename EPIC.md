@@ -1,9 +1,9 @@
 # Epic #184: Add better lua formatter / lua syntax and editor experience
 
-**Status:** In Progress (1/3 complete)
+**Status:** In Progress (2/3 complete)
 **Branch:** epic-184
 **Created:** 2025-12-13
-**Last Updated:** 2025-12-13 07:55
+**Last Updated:** 2025-12-13 09:47
 
 ## Overview
 
@@ -36,7 +36,7 @@ Improve the Lua code editor experience with professional-grade formatting, synta
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #185 | Lua Code Formatter | ✅ Complete | 185-lua-formatter | Merged in PR #204 |
-| #186 | Improved Syntax Highlighting | 🔄 In Progress | 186-improved-syntax-highlighting | PR #219 created |
+| #186 | Improved Syntax Highlighting | ✅ Complete | 186-improved-syntax-highlighting | Merged in PR #219 |
 | #187 | Auto-Indentation | ⏳ Pending | - | - |
 
 **Status Legend:**
@@ -60,6 +60,8 @@ None - all sub-issues can be implemented independently.
 - Merged PR #204 to epic-184
 - Started work on #186: Improved Syntax Highlighting
 - PR created for #186: Improved Syntax Highlighting (PR #219)
+- Completed #186: Improved Syntax Highlighting
+- Merged PR #219 to epic-184
 
 ## Key Files
 
