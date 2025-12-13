@@ -100,4 +100,10 @@ export interface UseWorkspaceManagerReturn {
   reconnectWorkspace: (id: string, handle: FileSystemDirectoryHandle) => Promise<void>
   /** Get all mount points info */
   getMounts: () => MountedWorkspaceInfo[]
+  /** Refresh a local workspace to pick up external filesystem changes */
+  refreshWorkspace: (mountPath: string) => Promise<void>
+  /** Refresh all connected local workspaces */
+  refreshAllLocalWorkspaces: () => Promise<void>
+  /** Check if a workspace supports refresh (is a connected local workspace) */
+  supportsRefresh: (mountPath: string) => boolean
 }

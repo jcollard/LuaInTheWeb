@@ -401,6 +401,89 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
     }))
   }, [state.workspaces])
 
+  /**
+   * Refresh a local workspace to pick up external filesystem changes.
+   * Only works for local (File System Access API) workspaces.
+   */
+  const refreshWorkspace = useCallback(
+    async (mountPath: string): Promise<void> => {
+      const workspace = state.workspaces.find((w) => w.mountPath === mountPath)
+
+      if (!workspace) {
+        throw new Error(`Workspace not found: ${mountPath}`)
+      }
+
+      if (workspace.type !== 'local') {
+        // Virtual workspaces don't need refresh - they're in-memory
+        return
+      }
+
+      if (workspace.status !== 'connected') {
+        throw new Error('Workspace is disconnected')
+      }
+
+      // Call refresh on the filesystem
+      const refreshable = workspace.filesystem as IFileSystem & {
+        refresh?: () => Promise<void>
+      }
+      if (typeof refreshable.refresh === 'function') {
+        await refreshable.refresh()
+      }
+
+      // Trigger a state update to cause re-render (changes the workspaces array reference)
+      setState((prev) => ({
+        ...prev,
+        workspaces: [...prev.workspaces],
+      }))
+    },
+    [state.workspaces]
+  )
+
+  /**
+   * Refresh all connected local workspaces.
+   * Useful for refreshing on window focus.
+   */
+  const refreshAllLocalWorkspaces = useCallback(async (): Promise<void> => {
+    const localWorkspaces = state.workspaces.filter(
+      (w) => w.type === 'local' && w.status === 'connected'
+    )
+
+    if (localWorkspaces.length === 0) {
+      return
+    }
+
+    // Refresh all local workspaces in parallel
+    await Promise.all(
+      localWorkspaces.map(async (workspace) => {
+        const refreshable = workspace.filesystem as IFileSystem & {
+          refresh?: () => Promise<void>
+        }
+        if (typeof refreshable.refresh === 'function') {
+          await refreshable.refresh()
+        }
+      })
+    )
+
+    // Trigger a state update to cause re-render
+    setState((prev) => ({
+      ...prev,
+      workspaces: [...prev.workspaces],
+    }))
+  }, [state.workspaces])
+
+  /**
+   * Check if a workspace supports refresh (is a connected local workspace).
+   */
+  const supportsRefresh = useCallback(
+    (mountPath: string): boolean => {
+      const workspace = state.workspaces.find((w) => w.mountPath === mountPath)
+      return (
+        workspace?.type === 'local' && workspace?.status === 'connected'
+      )
+    },
+    [state.workspaces]
+  )
+
   return {
     workspaces: state.workspaces,
     compositeFileSystem,
@@ -412,5 +495,8 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
     isFileSystemAccessSupported,
     reconnectWorkspace,
     getMounts,
+    refreshWorkspace,
+    refreshAllLocalWorkspaces,
+    supportsRefresh,
   }
 }

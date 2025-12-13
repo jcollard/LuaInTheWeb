@@ -60,6 +60,8 @@ describe('FileExplorer with Workspace Management', () => {
     onAddVirtualWorkspace: vi.fn(),
     onAddLocalWorkspace: vi.fn(),
     onRemoveWorkspace: vi.fn(),
+    onRefreshWorkspace: vi.fn(),
+    supportsRefresh: vi.fn(() => false),
   }
 
   beforeEach(() => {

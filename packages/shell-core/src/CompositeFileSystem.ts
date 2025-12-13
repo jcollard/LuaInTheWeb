@@ -411,4 +411,42 @@ export class CompositeFileSystem implements IFileSystem {
 
     await Promise.all(flushPromises)
   }
+
+  /**
+   * Refresh a specific mounted filesystem to pick up external changes.
+   * This is useful for FileSystemAccessAPIFileSystem-backed mounts where
+   * files may have been modified outside the browser.
+   *
+   * @param mountPath - The mount path to refresh (e.g., '/my-files')
+   * @throws Error if no filesystem is mounted at the path or it doesn't support refresh
+   */
+  async refreshMount(mountPath: string): Promise<void> {
+    const normalizedPath = normalizePath(mountPath)
+    const mount = this.mounts.get(normalizedPath)
+
+    if (!mount) {
+      throw new Error(`No filesystem mounted at: ${normalizedPath}`)
+    }
+
+    // Check if the underlying filesystem has a refresh method
+    const refreshable = mount.filesystem as IFileSystem & { refresh?: () => Promise<void> }
+    if (typeof refreshable.refresh === 'function') {
+      await refreshable.refresh()
+    }
+  }
+
+  /**
+   * Check if a mount path supports refresh (i.e., is backed by a local filesystem).
+   */
+  supportsRefresh(mountPath: string): boolean {
+    const normalizedPath = normalizePath(mountPath)
+    const mount = this.mounts.get(normalizedPath)
+
+    if (!mount) {
+      return false
+    }
+
+    const refreshable = mount.filesystem as IFileSystem & { refresh?: () => Promise<void> }
+    return typeof refreshable.refresh === 'function'
+  }
 }

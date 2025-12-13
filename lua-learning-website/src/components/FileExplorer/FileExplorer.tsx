@@ -148,6 +148,16 @@ export function FileExplorer({
     // Stryker disable next-line all: React hooks dependency optimization
   }, [tree])
 
+  // Check if a path is a workspace root (for context menu options)
+  const isWorkspaceRoot = useCallback((path: string): boolean => {
+    for (const node of tree) {
+      if (node.path === path && node.isWorkspace) {
+        return true
+      }
+    }
+    return false
+  }, [tree])
+
   // Find node name by path
   const findNodeName = useCallback((path: string): string => {
     const search = (nodes: typeof tree): string | null => {
@@ -193,6 +203,10 @@ export function FileExplorer({
       case 'rename':
         startRename(targetPath)
         break
+      case 'refresh':
+        // Refresh workspace - fire and forget
+        workspaceProps?.onRefreshWorkspace(targetPath)
+        break
       case 'delete': {
         const name = findNodeName(targetPath)
         const isFolder = targetType === 'folder'
@@ -228,6 +242,7 @@ export function FileExplorer({
     onCreateFolder,
     onDeleteFile,
     onDeleteFolder,
+    workspaceProps,
   ])
 
   const handleRenameSubmit = useCallback((path: string, newName: string) => {
@@ -297,9 +312,26 @@ export function FileExplorer({
     ? `${styles.explorer} ${className}`
     : styles.explorer
 
-  const contextMenuItems = contextMenu.targetType === 'folder'
-    ? folderContextMenuItems
-    : fileContextMenuItems
+  // Build context menu items dynamically
+  // Add "Refresh" option for local workspace folders that support it
+  const contextMenuItems = (() => {
+    if (contextMenu.targetType !== 'folder') {
+      return fileContextMenuItems
+    }
+
+    const targetPath = contextMenu.targetPath
+    // Check if this is a workspace root that supports refresh
+    if (targetPath && isWorkspaceRoot(targetPath) && workspaceProps?.supportsRefresh(targetPath)) {
+      // Insert Refresh at the top for local workspaces
+      return [
+        { id: 'refresh', label: 'Refresh' },
+        { id: 'divider-refresh', type: 'divider' as const },
+        ...folderContextMenuItems,
+      ]
+    }
+
+    return folderContextMenuItems
+  })()
 
   return (
     <div className={combinedClassName} data-testid="file-explorer">

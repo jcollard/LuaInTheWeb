@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { IDEContextProvider, useIDE } from '../IDEContext'
 import { ActivityBar } from '../ActivityBar'
 import { StatusBar } from '../StatusBar'
@@ -30,6 +30,8 @@ interface IDELayoutInnerProps {
   addLocalWorkspace: (name: string, handle: FileSystemDirectoryHandle) => Promise<Workspace>
   removeWorkspace: (workspaceId: string) => void
   isFileSystemAccessSupported: () => boolean
+  refreshWorkspace: (mountPath: string) => Promise<void>
+  supportsRefresh: (mountPath: string) => boolean
 }
 
 /**
@@ -43,6 +45,8 @@ function IDELayoutInner({
   addLocalWorkspace,
   removeWorkspace,
   isFileSystemAccessSupported,
+  refreshWorkspace,
+  supportsRefresh,
 }: IDELayoutInnerProps) {
   const {
     code,
@@ -184,6 +188,11 @@ function IDELayoutInner({
       onAddVirtualWorkspace: addVirtualWorkspace,
       onAddLocalWorkspace: handleAddLocalWorkspace,
       onRemoveWorkspace: removeWorkspace,
+      onRefreshWorkspace: async (mountPath: string) => {
+        await refreshWorkspace(mountPath)
+        refreshFileTree()
+      },
+      supportsRefresh,
     },
   }
 
@@ -298,6 +307,9 @@ export function IDELayout({
     addLocalWorkspace,
     removeWorkspace,
     isFileSystemAccessSupported,
+    refreshWorkspace,
+    refreshAllLocalWorkspaces,
+    supportsRefresh,
   } = useWorkspaceManager()
 
   // Create adapted filesystem for IDEContext
@@ -305,6 +317,18 @@ export function IDELayout({
     () => createFileSystemAdapter(compositeFileSystem),
     [compositeFileSystem]
   )
+
+  // Refresh all local workspaces when window gains focus
+  // This picks up external filesystem changes made outside the browser
+  useEffect(() => {
+    const handleFocus = () => {
+      // Fire and forget - refresh happens async
+      refreshAllLocalWorkspaces()
+    }
+
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [refreshAllLocalWorkspaces])
 
   return (
     <IDEContextProvider initialCode={initialCode} fileSystem={adaptedFileSystem}>
@@ -316,6 +340,8 @@ export function IDELayout({
         addLocalWorkspace={addLocalWorkspace}
         removeWorkspace={removeWorkspace}
         isFileSystemAccessSupported={isFileSystemAccessSupported}
+        refreshWorkspace={refreshWorkspace}
+        supportsRefresh={supportsRefresh}
       />
     </IDEContextProvider>
   )

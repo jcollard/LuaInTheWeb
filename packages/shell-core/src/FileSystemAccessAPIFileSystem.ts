@@ -126,6 +126,17 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
   }
 
   /**
+   * Refresh the cache by re-reading from the filesystem.
+   * Call this to pick up external changes made outside the browser.
+   */
+  async refresh(): Promise<void> {
+    // Flush any pending writes first to avoid losing data
+    await this.flush()
+    // Re-initialize to reload everything from disk
+    await this.initialize()
+  }
+
+  /**
    * Flush all queued async operations.
    * Call this to ensure all writes are persisted to disk.
    */
