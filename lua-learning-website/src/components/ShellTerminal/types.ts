@@ -1,11 +1,11 @@
-import type { UseFileSystemReturn } from '../../hooks/useFileSystem'
+import type { UseShellFileSystem } from '../../hooks/useShell'
 
 /**
  * Props for ShellTerminal component
  */
 export interface ShellTerminalProps {
-  /** Filesystem from useFileSystem hook */
-  fileSystem: UseFileSystemReturn
+  /** Filesystem - either IFileSystem (e.g., CompositeFileSystem) or UseFileSystemReturn */
+  fileSystem: UseShellFileSystem
   /** When true, hides the header for embedded context */
   embedded?: boolean
   /** Optional class name */

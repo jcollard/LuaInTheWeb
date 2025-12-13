@@ -59,8 +59,6 @@ function IDELayoutInner({ className }: { className?: string }) {
     // Recent files
     recentFiles,
     clearRecentFiles,
-    // Filesystem (for shell)
-    fileSystem,
   } = useIDE()
 
   const [cursorLine, setCursorLine] = useState(1)
@@ -70,6 +68,7 @@ function IDELayoutInner({ className }: { className?: string }) {
   // Workspace management
   const {
     workspaces,
+    compositeFileSystem,
     addVirtualWorkspace,
     addLocalWorkspace,
     removeWorkspace,
@@ -238,7 +237,7 @@ function IDELayoutInner({ className }: { className?: string }) {
                   collapsible
                   collapsed={!terminalVisible}
                 >
-                  <BottomPanel fileSystem={fileSystem} />
+                  <BottomPanel fileSystem={compositeFileSystem} />
                 </IDEPanel>
               </IDEPanelGroup>
             </IDEPanel>

@@ -56,6 +56,19 @@ export interface UseShellReturn {
 }
 
 /**
+ * Input type for useShell - accepts either IFileSystem directly or UseFileSystemReturn
+ */
+export type UseShellFileSystem = IFileSystem | UseFileSystemReturn
+
+/**
+ * Type guard to check if the input is an IFileSystem (has setCurrentDirectory).
+ * UseFileSystemReturn doesn't have this method.
+ */
+function isIFileSystem(fs: UseShellFileSystem): fs is IFileSystem {
+  return 'setCurrentDirectory' in fs && typeof fs.setCurrentDirectory === 'function'
+}
+
+/**
  * Adapts useFileSystem hook to ExternalFileSystem interface for shell-core
  */
 function createExternalFileSystemAdapter(fs: UseFileSystemReturn): ExternalFileSystem {
@@ -74,19 +87,33 @@ function createExternalFileSystemAdapter(fs: UseFileSystemReturn): ExternalFileS
 
 /**
  * Hook that provides shell functionality using shell-core package.
- * Connects to the editor's filesystem via useFileSystem.
+ * Accepts either an IFileSystem directly (e.g., CompositeFileSystem from useWorkspaceManager)
+ * or a UseFileSystemReturn from the useFileSystem hook.
  *
- * @param fileSystem - The filesystem from useFileSystem hook
+ * @param fileSystem - Either IFileSystem or UseFileSystemReturn
  * @returns Shell interface with command execution
  */
-export function useShell(fileSystem: UseFileSystemReturn): UseShellReturn {
+export function useShell(fileSystem: UseShellFileSystem): UseShellReturn {
   const [history, setHistory] = useState<string[]>([])
-  const [cwd, setCwd] = useState('/')
+  // Initialize cwd from IFileSystem's current directory if available, otherwise start at root
+  const [cwd, setCwd] = useState(() => {
+    if (isIFileSystem(fileSystem)) {
+      return fileSystem.getCurrentDirectory()
+    }
+    return '/'
+  })
 
-  // Create the filesystem adapter - memoized to avoid recreating on every render
+  // Create the filesystem - either use IFileSystem directly or adapt UseFileSystemReturn
   const shellFileSystem: IFileSystem = useMemo(() => {
-    const external = createExternalFileSystemAdapter(fileSystem)
-    return createFileSystemAdapter(external, cwd)
+    if (isIFileSystem(fileSystem)) {
+      // Already an IFileSystem (e.g., CompositeFileSystem) - use directly
+      // Initialize cwd from the filesystem's current directory
+      return fileSystem
+    } else {
+      // Need to adapt UseFileSystemReturn to IFileSystem
+      const external = createExternalFileSystemAdapter(fileSystem)
+      return createFileSystemAdapter(external, cwd)
+    }
   }, [fileSystem, cwd])
 
   // Create command registry with builtin commands and LuaCommand - memoized
