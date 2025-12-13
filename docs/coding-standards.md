@@ -189,6 +189,29 @@ function getUser(id: any): any {
 }
 ```
 
+### Unused Parameters Convention
+
+Use underscore prefix (`_`) for intentionally unused parameters. This is common when implementing interfaces that require parameters you don't need:
+
+```typescript
+// ✅ GOOD - Underscore indicates intentionally unused
+interface IProcess {
+  handleKey(key: string, modifiers?: KeyModifiers): void;
+}
+
+class MyProcess implements IProcess {
+  handleKey(key: string, _modifiers?: KeyModifiers): void {
+    // Only using key, modifiers reserved for future use
+    if (key === 'ArrowUp') this.navigateHistory();
+  }
+}
+
+// ✅ GOOD - Callback with unused parameters
+array.forEach((_item, index) => console.log(index));
+```
+
+ESLint is configured with `argsIgnorePattern: '^_'` to recognize this convention. Parameters without the underscore prefix will still trigger unused variable warnings.
+
 ### Props Interfaces
 
 Always define explicit props interfaces:
