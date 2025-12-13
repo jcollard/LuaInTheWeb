@@ -1,6 +1,6 @@
 # Epic #20: File API / Workspace
 
-**Status:** In Progress (1/5 complete)
+**Status:** In Progress (2/5 complete)
 **Branch:** epic-20
 **Created:** 2025-12-13
 **Last Updated:** 2025-12-13
@@ -78,7 +78,7 @@ Enable users to work with files on their actual computer (not just browser local
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #198 | File System Access API Research | ✅ Complete | - | See [research doc](docs/file-system-access-api-research.md) |
-| #199 | FileSystemAccessAPI IFileSystem Implementation | 🔄 In Progress | 199-filesystemaccessapi-ifilesystem-implementation | Started 2025-12-13 |
+| #199 | FileSystemAccessAPI IFileSystem Implementation | ✅ Complete | 199-filesystemaccessapi-ifilesystem-implementation | Merged in PR #205 |
 | #200 | Workspace State Management | ⏳ Pending | - | Depends on #199 |
 | #201 | Workspace UI Components | ⏳ Pending | - | Depends on #200 |
 | #202 | Shell Multi-Workspace Integration | ⏳ Pending | - | Depends on #199, #200, #201 |
@@ -114,6 +114,11 @@ Enable users to work with files on their actual computer (not just browser local
 <!-- Updated after each sub-issue completion -->
 
 ### 2025-12-13
+- **#199 Complete** - FileSystemAccessAPI IFileSystem Implementation
+  - Merged PR #205 to epic-20
+  - Cache-based synchronous wrapper over async File System Access API
+  - 68 unit tests, 81.58% mutation score
+  - Type augmentations for FileSystemDirectoryHandle iterator methods
 - Epic started
 - Foundation already complete from Epic #140:
   - IFileSystem interface
