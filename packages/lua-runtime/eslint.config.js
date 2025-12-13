@@ -24,7 +24,7 @@ export default defineConfig([
     ignores: ['**/*.test.ts'],
     rules: {
       'max-lines': [
-        'warn',
+        'error',
         {
           max: 400,
           skipBlankLines: true,

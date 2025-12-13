@@ -111,14 +111,14 @@ export class LuaScriptProcess implements IProcess {
 
     // Check if file exists
     if (!this.context.filesystem.exists(filepath)) {
-      this.onError(formatLuaError(`File not found: ${this.filename}`))
+      this.onError(formatLuaError(`File not found: ${this.filename}`) + '\n')
       this.exitWithCode(1)
       return
     }
 
     // Check if it's a file (not a directory)
     if (this.context.filesystem.isDirectory(filepath)) {
-      this.onError(formatLuaError(`${this.filename} is not a file`))
+      this.onError(formatLuaError(`${this.filename} is not a file`) + '\n')
       this.exitWithCode(1)
       return
     }
@@ -128,7 +128,7 @@ export class LuaScriptProcess implements IProcess {
     try {
       scriptContent = this.context.filesystem.readFile(filepath)
     } catch (error) {
-      this.onError(formatLuaError(`Failed to read file: ${error}`))
+      this.onError(formatLuaError(`Failed to read file: ${error}`) + '\n')
       this.exitWithCode(1)
       return
     }
@@ -138,7 +138,7 @@ export class LuaScriptProcess implements IProcess {
       onOutput: (text: string) => this.onOutput(text),
       onError: (text: string) => {
         this.hasError = true
-        this.onError(formatLuaError(text))
+        this.onError(formatLuaError(text) + '\n')
       },
       onReadInput: () => this.waitForInput(),
     }
@@ -156,7 +156,7 @@ export class LuaScriptProcess implements IProcess {
     } catch (error) {
       // Script failed with error
       const errorMsg = error instanceof Error ? error.message : String(error)
-      this.onError(formatLuaError(errorMsg))
+      this.onError(formatLuaError(errorMsg) + '\n')
       this.exitWithCode(1)
     }
   }
