@@ -84,22 +84,9 @@ export class LuaReplProcess implements IProcess {
     }
     this.inputQueue = []
 
-    // Defer engine cleanup using setTimeout(0) to allow the JS event loop to
-    // drain pending wasmoon callbacks before closing. Closing immediately while
-    // wasmoon is still processing causes "memory access out of bounds" errors
-    // because WebAssembly memory is freed while still being referenced.
     const engineToClose = this.engine
     this.engine = null
-
-    if (engineToClose) {
-      setTimeout(() => {
-        try {
-          LuaEngineFactory.close(engineToClose)
-        } catch {
-          // Ignore errors during cleanup - engine may already be in invalid state
-        }
-      }, 0)
-    }
+    LuaEngineFactory.closeDeferred(engineToClose)
 
     this.onExit(0)
   }

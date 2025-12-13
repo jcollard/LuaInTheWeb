@@ -154,6 +154,24 @@ export class LuaEngineFactory {
   }
 
   /**
+   * Defer engine cleanup using setTimeout(0).
+   * Allows JS event loop to drain pending wasmoon callbacks before closing.
+   * Prevents "memory access out of bounds" errors from WebAssembly.
+   *
+   * @param engine - The engine to close (will be closed asynchronously), or null
+   */
+  static closeDeferred(engine: LuaEngine | null): void {
+    if (!engine) return
+    setTimeout(() => {
+      try {
+        this.close(engine)
+      } catch {
+        // Ignore errors during cleanup - engine may already be in invalid state
+      }
+    }, 0)
+  }
+
+  /**
    * Check if Lua code is syntactically complete.
    * Used for multi-line REPL input to determine if more lines are needed.
    *
