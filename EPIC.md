@@ -75,6 +75,7 @@ None - all sub-issues can be implemented independently.
 - Completed #187: Auto-Indentation
 - Merged PR #222 to epic-184
 - **All sub-issues complete - Epic ready for final review**
+- Created PR #230 to merge epic-184 → main
 
 ## Key Files
 
