@@ -14,8 +14,8 @@ export interface WorkspaceProps {
   onAddVirtualWorkspace: (name: string) => void
   /** Callback to add a local workspace (triggers directory picker) */
   onAddLocalWorkspace: (name: string) => void
-  /** Callback to remove a workspace */
-  onRemoveWorkspace: (workspaceId: string) => void
+  /** Callback to remove a workspace by its mount path */
+  onRemoveWorkspace: (mountPath: string) => void
   /** Callback to refresh a local workspace from disk */
   onRefreshWorkspace: (mountPath: string) => Promise<void>
   /** Check if a workspace supports refresh (is a connected local workspace) */

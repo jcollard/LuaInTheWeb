@@ -52,6 +52,14 @@ const folderContextMenuItems: ContextMenuItem[] = [
   { id: 'rename', label: 'Rename' },
   { id: 'delete', label: 'Delete' },
 ]
+
+const workspaceContextMenuItems: ContextMenuItem[] = [
+  { id: 'new-file', label: 'New File' },
+  { id: 'new-folder', label: 'New Folder' },
+  { id: 'divider', type: 'divider' },
+  { id: 'rename-workspace', label: 'Rename Workspace' },
+  { id: 'remove-workspace', label: 'Remove Workspace' },
+]
 // Stryker restore all
 
 export function FileExplorer({
@@ -210,10 +218,29 @@ export function FileExplorer({
       case 'rename':
         startRename(targetPath)
         break
+      case 'rename-workspace':
+        // Rename workspace uses the same rename mechanism as folders
+        startRename(targetPath)
+        break
       case 'refresh':
         // Refresh workspace - fire and forget
         workspaceProps?.onRefreshWorkspace(targetPath)
         break
+      case 'remove-workspace': {
+        const name = findNodeName(targetPath)
+        openConfirmDialog({
+          // Stryker disable next-line StringLiteral: dialog text is display-only
+          title: 'Remove Workspace',
+          // Stryker disable next-line StringLiteral: dialog text is display-only
+          message: `Are you sure you want to remove the workspace "${name}"? This will not delete any files.`,
+          variant: 'danger',
+          onConfirm: () => {
+            workspaceProps?.onRemoveWorkspace(targetPath)
+            closeConfirmDialog()
+          },
+        })
+        break
+      }
       case 'delete': {
         const name = findNodeName(targetPath)
         const isFolder = targetType === 'folder'
@@ -320,21 +347,26 @@ export function FileExplorer({
     : styles.explorer
 
   // Build context menu items dynamically
-  // Add "Refresh" option for local workspace folders that support it
+  // Use workspace-specific menu for workspace roots, regular folder menu otherwise
   const contextMenuItems = (() => {
     if (contextMenu.targetType !== 'folder') {
       return fileContextMenuItems
     }
 
     const targetPath = contextMenu.targetPath
-    // Check if this is a workspace root that supports refresh
-    if (targetPath && isWorkspaceRoot(targetPath) && workspaceProps?.supportsRefresh(targetPath)) {
-      // Insert Refresh at the top for local workspaces
-      return [
-        { id: 'refresh', label: 'Refresh' },
-        { id: 'divider-refresh', type: 'divider' as const },
-        ...folderContextMenuItems,
-      ]
+
+    // Check if this is a workspace root
+    if (targetPath && isWorkspaceRoot(targetPath)) {
+      // Use workspace-specific menu items
+      // Add "Refresh" option at the top for local workspaces that support it
+      if (workspaceProps?.supportsRefresh(targetPath)) {
+        return [
+          { id: 'refresh', label: 'Refresh' },
+          { id: 'divider-refresh', type: 'divider' as const },
+          ...workspaceContextMenuItems,
+        ]
+      }
+      return workspaceContextMenuItems
     }
 
     return folderContextMenuItems

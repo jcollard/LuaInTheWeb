@@ -139,6 +139,18 @@ function IDELayoutInner({
     [workspaces, reconnectWorkspace, refreshFileTree]
   )
 
+  // Handle removing a workspace by mount path
+  const handleRemoveWorkspace = useCallback(
+    (mountPath: string) => {
+      const workspace = workspaces.find((w) => w.mountPath === mountPath)
+      if (workspace) {
+        removeWorkspace(workspace.id)
+        refreshFileTree()
+      }
+    },
+    [workspaces, removeWorkspace, refreshFileTree]
+  )
+
   // Register keyboard shortcuts
   useKeyboardShortcuts({
     toggleTerminal,
@@ -214,7 +226,7 @@ function IDELayoutInner({
       isFileSystemAccessSupported: isFileSystemAccessSupported(),
       onAddVirtualWorkspace: addVirtualWorkspace,
       onAddLocalWorkspace: handleAddLocalWorkspace,
-      onRemoveWorkspace: removeWorkspace,
+      onRemoveWorkspace: handleRemoveWorkspace,
       onRefreshWorkspace: async (mountPath: string) => {
         await refreshWorkspace(mountPath)
         refreshFileTree()
