@@ -7,6 +7,22 @@ import { LuaFactory, type LuaEngine } from 'wasmoon'
 import { LUA_FORMATTER_CODE } from './lua/formatter'
 
 /**
+ * Flush interval in milliseconds (~60fps).
+ */
+export const FLUSH_INTERVAL_MS = 16
+
+/**
+ * Maximum buffer size before immediate flush.
+ */
+export const MAX_BUFFER_SIZE = 1000
+
+/**
+ * WeakMap to store flush functions for each engine instance.
+ * Used by close() and closeDeferred() to flush remaining output.
+ */
+const engineFlushMap = new WeakMap<LuaEngine, () => void>()
+
+/**
  * Default instruction limit before prompting user (10 million).
  */
 export const DEFAULT_INSTRUCTION_LIMIT = 10_000_000
@@ -190,6 +206,30 @@ export class LuaEngineFactory {
     const instructionLimit = options?.instructionLimit ?? DEFAULT_INSTRUCTION_LIMIT
     const checkInterval = options?.instructionCheckInterval ?? DEFAULT_INSTRUCTION_CHECK_INTERVAL
 
+    // Output buffering state
+    let outputBuffer: string[] = []
+    let lastFlush = Date.now()
+
+    // Flush buffered output to callback
+    const flushOutput = () => {
+      if (outputBuffer.length > 0) {
+        callbacks.onOutput(outputBuffer.join(''))
+        outputBuffer = []
+        lastFlush = Date.now()
+      }
+    }
+
+    // Store flush function for close() and closeDeferred()
+    engineFlushMap.set(engine, flushOutput)
+
+    // Check if buffer should be flushed (time or size threshold)
+    const maybeFlush = () => {
+      const now = Date.now()
+      if (now - lastFlush >= FLUSH_INTERVAL_MS || outputBuffer.length >= MAX_BUFFER_SIZE) {
+        flushOutput()
+      }
+    }
+
     // Setup print function (adds newline like standard Lua print)
     engine.global.set('print', (...args: unknown[]) => {
       const message = args
@@ -199,12 +239,14 @@ export class LuaEngineFactory {
           return String(arg)
         })
         .join('\t')
-      callbacks.onOutput(message + '\n')
+      outputBuffer.push(message + '\n')
+      maybeFlush()
     })
 
     // Setup io.write output (no newline, unlike print)
     engine.global.set('__js_write', (text: string) => {
-      callbacks.onOutput(text)
+      outputBuffer.push(text)
+      maybeFlush()
     })
 
     // Setup io.read input handler if provided
@@ -276,10 +318,29 @@ export class LuaEngineFactory {
   }
 
   /**
+   * Flush any buffered output for the given engine.
+   * Call this after code execution to ensure all output is delivered.
+   * @param engine - The engine whose buffer to flush
+   */
+  static flushOutput(engine: LuaEngine): void {
+    const flushFn = engineFlushMap.get(engine)
+    if (flushFn) {
+      flushFn()
+    }
+  }
+
+  /**
    * Close the Lua engine and release resources.
+   * Flushes any remaining buffered output before closing.
    * @param engine - The engine to close
    */
   static close(engine: LuaEngine): void {
+    // Flush any remaining buffered output
+    const flushFn = engineFlushMap.get(engine)
+    if (flushFn) {
+      flushFn()
+      engineFlushMap.delete(engine)
+    }
     engine.global.close()
   }
 
@@ -287,14 +348,21 @@ export class LuaEngineFactory {
    * Defer engine cleanup using setTimeout(0).
    * Allows JS event loop to drain pending wasmoon callbacks before closing.
    * Prevents "memory access out of bounds" errors from WebAssembly.
+   * Flushes any remaining buffered output immediately before deferring close.
    *
    * @param engine - The engine to close (will be closed asynchronously), or null
    */
   static closeDeferred(engine: LuaEngine | null): void {
     if (!engine) return
+    // Flush immediately before deferring close
+    const flushFn = engineFlushMap.get(engine)
+    if (flushFn) {
+      flushFn()
+      engineFlushMap.delete(engine)
+    }
     setTimeout(() => {
       try {
-        this.close(engine)
+        engine.global.close()
       } catch {
         // Ignore errors during cleanup - engine may already be in invalid state
       }

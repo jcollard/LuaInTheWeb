@@ -326,6 +326,9 @@ export class LuaReplProcess implements IProcess {
 
     const result = await LuaEngineFactory.executeCode(this.engine, code, callbacks)
 
+    // Flush any buffered output from the execution
+    LuaEngineFactory.flushOutput(this.engine)
+
     // If expression returned a value (including nil), output it with newline
     // undefined means it was a statement (no return value)
     // 'nil' means the expression evaluated to nil (e.g., undefined variable)

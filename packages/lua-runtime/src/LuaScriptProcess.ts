@@ -149,11 +149,18 @@ export class LuaScriptProcess implements IProcess {
       // Execute the script
       await this.engine.doString(scriptContent)
 
+      // Flush any buffered output from the execution
+      LuaEngineFactory.flushOutput(this.engine)
+
       // Script completed successfully
       if (this.running) {
         this.exitWithCode(this.hasError ? 1 : 0)
       }
     } catch (error) {
+      // Flush any buffered output before reporting error
+      if (this.engine) {
+        LuaEngineFactory.flushOutput(this.engine)
+      }
       // Script failed with error
       const errorMsg = error instanceof Error ? error.message : String(error)
       this.onError(formatLuaError(errorMsg) + '\n')
