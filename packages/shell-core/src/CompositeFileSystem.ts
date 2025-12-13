@@ -392,4 +392,23 @@ export class CompositeFileSystem implements IFileSystem {
 
     mountInfo.mount.filesystem.delete(mountInfo.relativePath)
   }
+
+  /**
+   * Flush pending operations for all mounted filesystems that support it.
+   * This is important for filesystems like FileSystemAccessAPIFileSystem
+   * that use write-behind caching.
+   */
+  async flush(): Promise<void> {
+    const flushPromises: Promise<void>[] = []
+
+    for (const mount of this.mounts.values()) {
+      // Check if the underlying filesystem has a flush method
+      const flushable = mount.filesystem as IFileSystem & { flush?: () => Promise<void> }
+      if (typeof flushable.flush === 'function') {
+        flushPromises.push(flushable.flush())
+      }
+    }
+
+    await Promise.all(flushPromises)
+  }
 }

@@ -70,12 +70,27 @@ export interface AdaptedFileSystem {
 }
 
 /**
+ * Helper to flush pending operations if the filesystem supports it.
+ * FileSystemAccessAPIFileSystem uses a write-behind pattern and requires flush().
+ */
+function flushIfSupported(fs: IFileSystem): void {
+  // Check if fs has a flush method (duck typing for FileSystemAccessAPIFileSystem)
+  const flushable = fs as IFileSystem & { flush?: () => Promise<void> }
+  if (typeof flushable.flush === 'function') {
+    // Fire and forget - flush happens async but we don't block on it
+    // Errors are logged in the flush implementation
+    flushable.flush()
+  }
+}
+
+/**
  * Create an adapter that wraps IFileSystem to provide IDEContext-compatible operations.
  */
 export function createFileSystemAdapter(fs: IFileSystem): AdaptedFileSystem {
   return {
     createFile: (path: string, content: string = '') => {
       fs.writeFile(path, content)
+      flushIfSupported(fs)
     },
 
     readFile: (path: string): string | null => {
@@ -91,10 +106,12 @@ export function createFileSystemAdapter(fs: IFileSystem): AdaptedFileSystem {
 
     writeFile: (path: string, content: string) => {
       fs.writeFile(path, content)
+      flushIfSupported(fs)
     },
 
     deleteFile: (path: string) => {
       fs.delete(path)
+      flushIfSupported(fs)
     },
 
     renameFile: (oldPath: string, newPath: string) => {
@@ -102,6 +119,7 @@ export function createFileSystemAdapter(fs: IFileSystem): AdaptedFileSystem {
       const content = fs.readFile(oldPath)
       fs.writeFile(newPath, content)
       fs.delete(oldPath)
+      flushIfSupported(fs)
     },
 
     moveFile: (sourcePath: string, targetFolderPath: string) => {
@@ -119,15 +137,18 @@ export function createFileSystemAdapter(fs: IFileSystem): AdaptedFileSystem {
         fs.writeFile(newPath, content)
         fs.delete(sourcePath)
       }
+      flushIfSupported(fs)
     },
 
     createFolder: (path: string) => {
       fs.createDirectory(path)
+      flushIfSupported(fs)
     },
 
     deleteFolder: (path: string) => {
       // IFileSystem.delete should handle recursive deletion
       fs.delete(path)
+      flushIfSupported(fs)
     },
 
     renameFolder: (oldPath: string, newPath: string) => {
@@ -135,6 +156,7 @@ export function createFileSystemAdapter(fs: IFileSystem): AdaptedFileSystem {
       fs.createDirectory(newPath)
       copyDirectoryContents(fs, oldPath, newPath)
       fs.delete(oldPath)
+      flushIfSupported(fs)
     },
 
     exists: (path: string) => fs.exists(path),
