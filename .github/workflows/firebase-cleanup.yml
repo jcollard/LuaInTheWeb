@@ -1,0 +1,33 @@
+name: Cleanup Firebase Preview
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Authenticate with Firebase
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > $RUNNER_TEMP/firebase-sa.json
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-sa.json" >> $GITHUB_ENV
+
+      - name: Delete preview channel
+        run: firebase hosting:channel:delete pr${{ github.event.pull_request.number }} --project adventuresinlua --force || true
+        working-directory: lua-learning-website
+
+      - name: Cleanup credentials
+        if: always()
+        run: rm -f $RUNNER_TEMP/firebase-sa.json
