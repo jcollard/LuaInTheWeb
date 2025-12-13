@@ -1,38 +1,16 @@
-/* eslint-disable max-lines */
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+/**
+ * Core tests for useWorkspaceManager hook.
+ * Tests: initialization, add/remove workspaces, getters.
+ */
+import { describe, it, expect, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useWorkspaceManager, WORKSPACE_STORAGE_KEY, DEFAULT_WORKSPACE_ID } from './useWorkspaceManager'
+import { useWorkspaceManager, DEFAULT_WORKSPACE_ID } from './useWorkspaceManager'
+import { setupWorkspaceManagerTests } from './useWorkspaceManager.testSetup'
 
-// Mock localStorage
-const createLocalStorageMock = () => {
-  let store: Record<string, string> = {}
-  return {
-    getItem: vi.fn((key: string) => store[key] ?? null),
-    setItem: vi.fn((key: string, value: string) => {
-      store[key] = value
-    }),
-    removeItem: vi.fn((key: string) => {
-      delete store[key]
-    }),
-    clear: vi.fn(() => {
-      store = {}
-    }),
-    _getStore: () => store,
-    _setStore: (newStore: Record<string, string>) => {
-      store = newStore
-    },
-  }
-}
-
-let localStorageMock = createLocalStorageMock()
-
-Object.defineProperty(window, 'localStorage', { value: localStorageMock, writable: true })
-
-// Mock FileSystemAccessAPIFileSystem and CompositeFileSystem
+// Mock FileSystemAccessAPIFileSystem
 vi.mock('@lua-learning/shell-core', async () => {
   const actual = await vi.importActual('@lua-learning/shell-core')
 
-  // Define the mock class inside the factory
   class MockFileSystemAccessAPIFileSystem {
     initialize = vi.fn().mockResolvedValue(undefined)
     getCurrentDirectory = vi.fn(() => '/')
@@ -54,14 +32,9 @@ vi.mock('@lua-learning/shell-core', async () => {
   }
 })
 
-describe('useWorkspaceManager', () => {
-  beforeEach(() => {
-    // Create a fresh mock for each test to avoid state leakage
-    localStorageMock = createLocalStorageMock()
-    Object.defineProperty(window, 'localStorage', { value: localStorageMock, writable: true })
-    vi.clearAllMocks()
-  })
+setupWorkspaceManagerTests()
 
+describe('useWorkspaceManager', () => {
   describe('initialization', () => {
     it('initializes with a default virtual workspace', () => {
       const { result } = renderHook(() => useWorkspaceManager())
@@ -99,46 +72,6 @@ describe('useWorkspaceManager', () => {
       expect(result.current.compositeFileSystem).toBeDefined()
       expect(typeof result.current.compositeFileSystem.readFile).toBe('function')
       expect(typeof result.current.compositeFileSystem.listDirectory).toBe('function')
-    })
-  })
-
-  describe('compositeFileSystem', () => {
-    it('lists mounted workspaces at root', () => {
-      const { result } = renderHook(() => useWorkspaceManager())
-
-      const entries = result.current.compositeFileSystem.listDirectory('/')
-      expect(entries).toHaveLength(1)
-      expect(entries[0].name).toBe('My Files')
-      expect(entries[0].type).toBe('directory')
-    })
-
-    it('updates when workspaces change', () => {
-      const { result } = renderHook(() => useWorkspaceManager())
-
-      act(() => {
-        result.current.addVirtualWorkspace('Project')
-      })
-
-      const entries = result.current.compositeFileSystem.listDirectory('/')
-      expect(entries).toHaveLength(2)
-      expect(entries.map((e) => e.name).sort()).toEqual(['My Files', 'Project'])
-    })
-
-    it('only includes connected workspaces', () => {
-      const savedData = JSON.stringify({
-        workspaces: [
-          { id: DEFAULT_WORKSPACE_ID, name: 'My Files', type: 'virtual', mountPath: '/my-files' },
-          { id: 'ws-local', name: 'Local Project', type: 'local', mountPath: '/local-project' },
-        ],
-      })
-      localStorageMock._setStore({ [WORKSPACE_STORAGE_KEY]: savedData })
-
-      const { result } = renderHook(() => useWorkspaceManager())
-
-      // Local workspace is disconnected, so only 1 mount
-      const entries = result.current.compositeFileSystem.listDirectory('/')
-      expect(entries).toHaveLength(1)
-      expect(entries[0].name).toBe('My Files')
     })
   })
 
@@ -422,255 +355,12 @@ describe('useWorkspaceManager', () => {
     })
   })
 
-  describe('getMounts', () => {
-    it('returns all mount information', () => {
-      const { result } = renderHook(() => useWorkspaceManager())
-
-      act(() => {
-        result.current.addVirtualWorkspace('Project')
-      })
-
-      const mounts = result.current.getMounts()
-      expect(mounts).toHaveLength(2)
-      expect(mounts[0].mountPath).toBe('/my-files')
-      expect(mounts[0].isConnected).toBe(true)
-      expect(mounts[1].mountPath).toBe('/project')
-      expect(mounts[1].isConnected).toBe(true)
-    })
-
-    it('shows disconnected status for local workspaces', () => {
-      const savedData = JSON.stringify({
-        workspaces: [
-          { id: DEFAULT_WORKSPACE_ID, name: 'My Files', type: 'virtual', mountPath: '/my-files' },
-          { id: 'ws-local', name: 'Local', type: 'local', mountPath: '/local' },
-        ],
-      })
-      localStorageMock._setStore({ [WORKSPACE_STORAGE_KEY]: savedData })
-
-      const { result } = renderHook(() => useWorkspaceManager())
-
-      const mounts = result.current.getMounts()
-      const localMount = mounts.find((m) => m.mountPath === '/local')
-      expect(localMount?.isConnected).toBe(false)
-    })
-
-    it('includes workspace reference in each mount', () => {
-      const { result } = renderHook(() => useWorkspaceManager())
-
-      const mounts = result.current.getMounts()
-      expect(mounts[0].workspace).toBeDefined()
-      expect(mounts[0].workspace.name).toBe('My Files')
-    })
-  })
-
   describe('isFileSystemAccessSupported', () => {
     it('returns boolean indicating browser support', () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
       const supported = result.current.isFileSystemAccessSupported()
       expect(typeof supported).toBe('boolean')
-    })
-  })
-
-  describe('localStorage persistence', () => {
-    it('saves workspace metadata to localStorage with correct key', () => {
-      const { result } = renderHook(() => useWorkspaceManager())
-
-      act(() => {
-        result.current.addVirtualWorkspace('Persisted Workspace')
-      })
-
-      // Verify exact key is used
-      expect(WORKSPACE_STORAGE_KEY).toBe('lua-workspaces')
-      expect(localStorageMock.setItem).toHaveBeenCalledWith(
-        'lua-workspaces',
-        expect.any(String)
-      )
-    })
-
-    it('saves workspace data with all required fields', () => {
-      const { result } = renderHook(() => useWorkspaceManager())
-
-      act(() => {
-        result.current.addVirtualWorkspace('Test Workspace')
-      })
-
-      const savedData = JSON.parse(localStorageMock.setItem.mock.calls.slice(-1)[0][1])
-      expect(savedData).toHaveProperty('workspaces')
-      expect(savedData.workspaces.length).toBeGreaterThanOrEqual(2)
-      expect(savedData.workspaces[0]).toHaveProperty('id')
-      expect(savedData.workspaces[0]).toHaveProperty('name')
-      expect(savedData.workspaces[0]).toHaveProperty('type')
-      expect(savedData.workspaces[0]).toHaveProperty('mountPath')
-    })
-
-    it('restores virtual workspaces from localStorage', () => {
-      const savedData = JSON.stringify({
-        workspaces: [
-          { id: DEFAULT_WORKSPACE_ID, name: 'My Files', type: 'virtual', mountPath: '/my-files' },
-          { id: 'ws-2', name: 'Restored Workspace', type: 'virtual', mountPath: '/restored-workspace' },
-        ],
-      })
-      localStorageMock._setStore({ [WORKSPACE_STORAGE_KEY]: savedData })
-
-      const { result } = renderHook(() => useWorkspaceManager())
-
-      expect(result.current.workspaces).toHaveLength(2)
-      expect(result.current.workspaces[1].name).toBe('Restored Workspace')
-    })
-
-    it('marks local workspaces as disconnected on restore', () => {
-      const savedData = JSON.stringify({
-        workspaces: [
-          { id: DEFAULT_WORKSPACE_ID, name: 'My Files', type: 'virtual', mountPath: '/my-files' },
-          { id: 'ws-local', name: 'Local Project', type: 'local', mountPath: '/local-project' },
-        ],
-      })
-      localStorageMock._setStore({ [WORKSPACE_STORAGE_KEY]: savedData })
-
-      const { result } = renderHook(() => useWorkspaceManager())
-
-      const localWorkspace = result.current.workspaces.find((w) => w.type === 'local')
-      expect(localWorkspace?.status).toBe('disconnected')
-    })
-
-    it('adds default workspace if missing from persisted data', () => {
-      const savedData = JSON.stringify({
-        workspaces: [
-          { id: 'ws-other', name: 'Other Workspace', type: 'virtual', mountPath: '/other-workspace' },
-        ],
-      })
-      localStorageMock._setStore({ [WORKSPACE_STORAGE_KEY]: savedData })
-
-      const { result } = renderHook(() => useWorkspaceManager())
-
-      // Should have both default and the other workspace
-      expect(result.current.workspaces.length).toBe(2)
-      expect(result.current.workspaces.some((w) => w.id === DEFAULT_WORKSPACE_ID)).toBe(true)
-    })
-
-    it('does not save on initial mount', () => {
-      localStorageMock.clear()
-      vi.clearAllMocks()
-
-      renderHook(() => useWorkspaceManager())
-
-      // Should not save on initial mount (only reads)
-      expect(localStorageMock.setItem).not.toHaveBeenCalledWith(WORKSPACE_STORAGE_KEY, expect.any(String))
-    })
-  })
-
-  describe('legacy data migration', () => {
-    it('migrates workspaces with rootPath to mountPath', () => {
-      const savedData = JSON.stringify({
-        workspaces: [
-          { id: DEFAULT_WORKSPACE_ID, name: 'My Files', type: 'virtual', rootPath: '/' },
-          { id: 'ws-2', name: 'Old Project', type: 'virtual', rootPath: '/' },
-        ],
-        activeWorkspaceId: DEFAULT_WORKSPACE_ID,
-      })
-      localStorageMock._setStore({ [WORKSPACE_STORAGE_KEY]: savedData })
-
-      const { result } = renderHook(() => useWorkspaceManager())
-
-      expect(result.current.workspaces[0].mountPath).toBe('/my-files')
-      expect(result.current.workspaces[1].mountPath).toBe('/old-project')
-    })
-
-    it('generates unique mount paths for legacy data with same names', () => {
-      const savedData = JSON.stringify({
-        workspaces: [
-          { id: DEFAULT_WORKSPACE_ID, name: 'My Files', type: 'virtual', rootPath: '/' },
-          { id: 'ws-1', name: 'Project', type: 'virtual', rootPath: '/' },
-          { id: 'ws-2', name: 'Project', type: 'virtual', rootPath: '/' },
-        ],
-        activeWorkspaceId: DEFAULT_WORKSPACE_ID,
-      })
-      localStorageMock._setStore({ [WORKSPACE_STORAGE_KEY]: savedData })
-
-      const { result } = renderHook(() => useWorkspaceManager())
-
-      const mountPaths = result.current.workspaces.map((w) => w.mountPath)
-      const uniquePaths = new Set(mountPaths)
-      expect(uniquePaths.size).toBe(mountPaths.length)
-    })
-  })
-
-  describe('reconnectWorkspace', () => {
-    it('reconnects a disconnected local workspace', async () => {
-      const savedData = JSON.stringify({
-        workspaces: [
-          { id: DEFAULT_WORKSPACE_ID, name: 'My Files', type: 'virtual', mountPath: '/my-files' },
-          { id: 'ws-local', name: 'Local Project', type: 'local', mountPath: '/local-project' },
-        ],
-      })
-      localStorageMock._setStore({ [WORKSPACE_STORAGE_KEY]: savedData })
-
-      const { result } = renderHook(() => useWorkspaceManager())
-
-      const mockHandle = {
-        name: 'project',
-        kind: 'directory',
-      } as unknown as FileSystemDirectoryHandle
-
-      await act(async () => {
-        await result.current.reconnectWorkspace('ws-local', mockHandle)
-      })
-
-      const localWorkspace = result.current.workspaces.find((w) => w.id === 'ws-local')
-      expect(localWorkspace?.status).toBe('connected')
-      expect(localWorkspace?.directoryHandle).toBe(mockHandle)
-    })
-
-    it('updates compositeFileSystem when workspace is reconnected', async () => {
-      const savedData = JSON.stringify({
-        workspaces: [
-          { id: DEFAULT_WORKSPACE_ID, name: 'My Files', type: 'virtual', mountPath: '/my-files' },
-          { id: 'ws-local', name: 'Local Project', type: 'local', mountPath: '/local-project' },
-        ],
-      })
-      localStorageMock._setStore({ [WORKSPACE_STORAGE_KEY]: savedData })
-
-      const { result } = renderHook(() => useWorkspaceManager())
-
-      // Before reconnect: only 1 mount (default)
-      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(1)
-
-      const mockHandle = {
-        name: 'project',
-        kind: 'directory',
-      } as unknown as FileSystemDirectoryHandle
-
-      await act(async () => {
-        await result.current.reconnectWorkspace('ws-local', mockHandle)
-      })
-
-      // After reconnect: 2 mounts
-      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(2)
-    })
-
-    it('throws error for non-existent workspace', async () => {
-      const { result } = renderHook(() => useWorkspaceManager())
-
-      const mockHandle = {} as FileSystemDirectoryHandle
-
-      await expect(
-        act(async () => {
-          await result.current.reconnectWorkspace('non-existent', mockHandle)
-        })
-      ).rejects.toThrow('Workspace not found')
-    })
-
-    it('throws error when trying to reconnect a virtual workspace', async () => {
-      const { result } = renderHook(() => useWorkspaceManager())
-
-      const mockHandle = {} as FileSystemDirectoryHandle
-
-      await expect(
-        act(async () => {
-          await result.current.reconnectWorkspace(DEFAULT_WORKSPACE_ID, mockHandle)
-        })
-      ).rejects.toThrow('Cannot reconnect a virtual workspace')
     })
   })
 })
