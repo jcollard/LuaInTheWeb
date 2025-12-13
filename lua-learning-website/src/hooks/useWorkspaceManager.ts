@@ -1,15 +1,21 @@
 /**
- * useWorkspaceManager - Multi-workspace management hook.
+ * useWorkspaceManager - Multi-workspace management hook with multi-mount support.
  *
  * Manages multiple workspaces with different filesystem backends:
  * - Virtual workspaces: localStorage-backed (always available)
  * - Local workspaces: File System Access API-backed (Chromium only)
+ *
+ * Architecture: Multi-mount workspaces
+ * - Each workspace is mounted at a unique path (e.g., /my-files, /project)
+ * - CompositeFileSystem routes operations to the correct workspace
+ * - No "active workspace" - the shell's cwd determines context
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   isFileSystemAccessSupported,
   FileSystemAccessAPIFileSystem,
+  CompositeFileSystem,
 } from '@lua-learning/shell-core'
 import type { IFileSystem } from '@lua-learning/shell-core'
 import type {
@@ -17,18 +23,51 @@ import type {
   PersistedWorkspace,
   UseWorkspaceManagerReturn,
   WorkspaceManagerState,
+  MountedWorkspaceInfo,
 } from './workspaceTypes'
 import { createVirtualFileSystem } from './virtualFileSystemFactory'
 
 export const WORKSPACE_STORAGE_KEY = 'lua-workspaces'
 export const DEFAULT_WORKSPACE_ID = 'default'
 const DEFAULT_WORKSPACE_NAME = 'My Files'
+const DEFAULT_MOUNT_PATH = '/my-files'
 
 /**
  * Generate a unique workspace ID.
  */
 function generateWorkspaceId(): string {
   return `ws-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+}
+
+/**
+ * Convert a workspace name to a mount path.
+ * e.g., "My Files" -> "/my-files", "Project 1" -> "/project-1"
+ */
+function nameToMountPath(name: string): string {
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+  return `/${slug || 'workspace'}`
+}
+
+/**
+ * Generate a unique mount path for a workspace.
+ * Handles collisions by appending numbers: /project, /project-2, /project-3
+ */
+function generateMountPath(name: string, existingPaths: Set<string>): string {
+  const basePath = nameToMountPath(name)
+
+  if (!existingPaths.has(basePath)) {
+    return basePath
+  }
+
+  let counter = 2
+  while (existingPaths.has(`${basePath}-${counter}`)) {
+    counter++
+  }
+
+  return `${basePath}-${counter}`
 }
 
 /**
@@ -47,39 +86,20 @@ function loadPersistedWorkspaces(): PersistedWorkspace[] | null {
 }
 
 /**
- * Load active workspace ID from localStorage.
- */
-function loadActiveWorkspaceId(): string | null {
-  try {
-    const data = localStorage.getItem(WORKSPACE_STORAGE_KEY)
-    if (!data) return null
-
-    const parsed = JSON.parse(data)
-    return parsed.activeWorkspaceId as string
-  } catch {
-    return null
-  }
-}
-
-/**
  * Save workspace metadata to localStorage.
  */
-function saveWorkspaces(
-  workspaces: Workspace[],
-  activeWorkspaceId: string
-): void {
+function saveWorkspaces(workspaces: Workspace[]): void {
   const persistedWorkspaces: PersistedWorkspace[] = workspaces.map((w) => ({
     id: w.id,
     name: w.name,
     type: w.type,
-    rootPath: w.rootPath,
+    mountPath: w.mountPath,
   }))
 
   localStorage.setItem(
     WORKSPACE_STORAGE_KEY,
     JSON.stringify({
       workspaces: persistedWorkspaces,
-      activeWorkspaceId,
     })
   )
 }
@@ -92,9 +112,35 @@ function createDefaultWorkspace(): Workspace {
     id: DEFAULT_WORKSPACE_ID,
     name: DEFAULT_WORKSPACE_NAME,
     type: 'virtual',
-    rootPath: '/',
+    mountPath: DEFAULT_MOUNT_PATH,
     filesystem: createVirtualFileSystem(DEFAULT_WORKSPACE_ID),
     status: 'connected',
+  }
+}
+
+/**
+ * Migrate legacy workspace data that may have rootPath instead of mountPath.
+ */
+function migratePersistedWorkspace(
+  pw: PersistedWorkspace & { rootPath?: string },
+  existingPaths: Set<string>
+): PersistedWorkspace {
+  // If already has mountPath, use it
+  if (pw.mountPath) {
+    return pw
+  }
+
+  // Generate mount path from name for legacy data
+  const mountPath =
+    pw.id === DEFAULT_WORKSPACE_ID
+      ? DEFAULT_MOUNT_PATH
+      : generateMountPath(pw.name, existingPaths)
+
+  return {
+    id: pw.id,
+    name: pw.name,
+    type: pw.type,
+    mountPath,
   }
 }
 
@@ -103,24 +149,32 @@ function createDefaultWorkspace(): Workspace {
  */
 function initializeWorkspaces(): WorkspaceManagerState {
   const persistedWorkspaces = loadPersistedWorkspaces()
-  const savedActiveId = loadActiveWorkspaceId()
 
   if (!persistedWorkspaces || persistedWorkspaces.length === 0) {
     const defaultWorkspace = createDefaultWorkspace()
     return {
       workspaces: [defaultWorkspace],
-      activeWorkspaceId: DEFAULT_WORKSPACE_ID,
     }
   }
 
-  // Restore workspaces
-  const workspaces: Workspace[] = persistedWorkspaces.map((pw) => {
+  // Migrate and restore workspaces
+  const existingPaths = new Set<string>()
+  const migratedWorkspaces = persistedWorkspaces.map((pw) => {
+    const migrated = migratePersistedWorkspace(
+      pw as PersistedWorkspace & { rootPath?: string },
+      existingPaths
+    )
+    existingPaths.add(migrated.mountPath)
+    return migrated
+  })
+
+  const workspaces: Workspace[] = migratedWorkspaces.map((pw) => {
     if (pw.type === 'virtual') {
       return {
         id: pw.id,
         name: pw.name,
         type: pw.type,
-        rootPath: pw.rootPath,
+        mountPath: pw.mountPath,
         filesystem: createVirtualFileSystem(pw.id),
         status: 'connected' as const,
       }
@@ -130,7 +184,7 @@ function initializeWorkspaces(): WorkspaceManagerState {
         id: pw.id,
         name: pw.name,
         type: pw.type,
-        rootPath: pw.rootPath,
+        mountPath: pw.mountPath,
         filesystem: createDisconnectedFileSystem(),
         status: 'disconnected' as const,
       }
@@ -143,15 +197,8 @@ function initializeWorkspaces(): WorkspaceManagerState {
     workspaces.unshift(createDefaultWorkspace())
   }
 
-  // Validate active workspace ID
-  const activeId =
-    savedActiveId && workspaces.some((w) => w.id === savedActiveId)
-      ? savedActiveId
-      : DEFAULT_WORKSPACE_ID
-
   return {
     workspaces,
-    activeWorkspaceId: activeId,
   }
 }
 
@@ -179,6 +226,11 @@ function createDisconnectedFileSystem(): IFileSystem {
 
 /**
  * Hook for managing multiple workspaces with different filesystem backends.
+ *
+ * Architecture: Multi-mount workspaces
+ * - Each workspace is mounted at a unique path (e.g., /my-files, /project)
+ * - CompositeFileSystem routes operations to the correct workspace
+ * - No "active workspace" - the shell's cwd determines context
  */
 export function useWorkspaceManager(): UseWorkspaceManagerReturn {
   const [state, setState] = useState<WorkspaceManagerState>(initializeWorkspaces)
@@ -190,30 +242,49 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
       isInitialMount.current = false
       return
     }
-    saveWorkspaces(state.workspaces, state.activeWorkspaceId)
+    saveWorkspaces(state.workspaces)
   }, [state])
 
-  const activeWorkspace =
-    state.workspaces.find((w) => w.id === state.activeWorkspaceId) ??
-    state.workspaces[0]
+  // Create CompositeFileSystem from connected workspaces
+  const compositeFileSystem = useMemo(() => {
+    const mounts = state.workspaces
+      .filter((w) => w.status === 'connected')
+      .map((w) => ({
+        mountPath: w.mountPath,
+        filesystem: w.filesystem,
+        name: w.name,
+      }))
+
+    return new CompositeFileSystem({ mounts })
+  }, [state.workspaces])
 
   const addVirtualWorkspace = useCallback((name: string): Workspace => {
     const id = generateWorkspaceId()
-    const newWorkspace: Workspace = {
-      id,
-      name,
-      type: 'virtual',
-      rootPath: '/',
-      filesystem: createVirtualFileSystem(id),
-      status: 'connected',
-    }
 
-    setState((prev) => ({
-      ...prev,
-      workspaces: [...prev.workspaces, newWorkspace],
-    }))
+    // Use setState with functional update to get current state for path generation
+    let newWorkspace: Workspace | null = null
 
-    return newWorkspace
+    setState((prev) => {
+      const existingPaths = new Set(prev.workspaces.map((w) => w.mountPath))
+      const mountPath = generateMountPath(name, existingPaths)
+
+      newWorkspace = {
+        id,
+        name,
+        type: 'virtual',
+        mountPath,
+        filesystem: createVirtualFileSystem(id),
+        status: 'connected',
+      }
+
+      return {
+        ...prev,
+        workspaces: [...prev.workspaces, newWorkspace],
+      }
+    })
+
+    // Return the workspace (it's set synchronously in the setState call)
+    return newWorkspace!
   }, [])
 
   const addLocalWorkspace = useCallback(
@@ -225,22 +296,29 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
       const fs = new FileSystemAccessAPIFileSystem(handle)
       await fs.initialize()
 
-      const newWorkspace: Workspace = {
-        id,
-        name,
-        type: 'local',
-        rootPath: '/',
-        filesystem: fs,
-        status: 'connected',
-        directoryHandle: handle,
-      }
+      let newWorkspace: Workspace | null = null
 
-      setState((prev) => ({
-        ...prev,
-        workspaces: [...prev.workspaces, newWorkspace],
-      }))
+      setState((prev) => {
+        const existingPaths = new Set(prev.workspaces.map((w) => w.mountPath))
+        const mountPath = generateMountPath(name, existingPaths)
 
-      return newWorkspace
+        newWorkspace = {
+          id,
+          name,
+          type: 'local',
+          mountPath,
+          filesystem: fs,
+          status: 'connected',
+          directoryHandle: handle,
+        }
+
+        return {
+          ...prev,
+          workspaces: [...prev.workspaces, newWorkspace],
+        }
+      })
+
+      return newWorkspace!
     },
     []
   )
@@ -262,28 +340,9 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
       }
 
       const newWorkspaces = prev.workspaces.filter((w) => w.id !== id)
-      const newActiveId =
-        prev.activeWorkspaceId === id
-          ? DEFAULT_WORKSPACE_ID
-          : prev.activeWorkspaceId
 
       return {
         workspaces: newWorkspaces,
-        activeWorkspaceId: newActiveId,
-      }
-    })
-  }, [])
-
-  const setActiveWorkspace = useCallback((id: string): void => {
-    setState((prev) => {
-      const workspace = prev.workspaces.find((w) => w.id === id)
-      if (!workspace) {
-        throw new Error('Workspace not found')
-      }
-
-      return {
-        ...prev,
-        activeWorkspaceId: id,
       }
     })
   }, [])
@@ -291,6 +350,13 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
   const getWorkspace = useCallback(
     (id: string): Workspace | undefined => {
       return state.workspaces.find((w) => w.id === id)
+    },
+    [state.workspaces]
+  )
+
+  const getWorkspaceByMountPath = useCallback(
+    (mountPath: string): Workspace | undefined => {
+      return state.workspaces.find((w) => w.mountPath === mountPath)
     },
     [state.workspaces]
   )
@@ -327,15 +393,24 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
     [state.workspaces]
   )
 
+  const getMounts = useCallback((): MountedWorkspaceInfo[] => {
+    return state.workspaces.map((w) => ({
+      workspace: w,
+      mountPath: w.mountPath,
+      isConnected: w.status === 'connected',
+    }))
+  }, [state.workspaces])
+
   return {
     workspaces: state.workspaces,
-    activeWorkspace,
+    compositeFileSystem,
     addVirtualWorkspace,
     addLocalWorkspace,
     removeWorkspace,
-    setActiveWorkspace,
     getWorkspace,
+    getWorkspaceByMountPath,
     isFileSystemAccessSupported,
     reconnectWorkspace,
+    getMounts,
   }
 }

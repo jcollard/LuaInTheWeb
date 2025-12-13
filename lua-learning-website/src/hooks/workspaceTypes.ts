@@ -1,5 +1,10 @@
 /**
  * Workspace type definitions for multi-workspace management.
+ *
+ * Architecture: Multi-mount workspaces
+ * - Each workspace is mounted at a unique path (e.g., /my-files, /project)
+ * - CompositeFileSystem routes operations to the correct workspace
+ * - No "active workspace" - the shell's cwd determines context
  */
 
 import type { IFileSystem } from '@lua-learning/shell-core'
@@ -26,8 +31,8 @@ export interface Workspace {
   name: string
   /** Type of filesystem backend */
   type: WorkspaceType
-  /** Root path for this workspace */
-  rootPath: string
+  /** Mount path for this workspace (e.g., '/my-files') */
+  mountPath: string
   /** Filesystem implementation */
   filesystem: IFileSystem
   /** Connection status (local workspaces may be disconnected after reload) */
@@ -47,8 +52,8 @@ export interface PersistedWorkspace {
   name: string
   /** Type of filesystem backend */
   type: WorkspaceType
-  /** Root path for this workspace */
-  rootPath: string
+  /** Mount path for this workspace */
+  mountPath: string
 }
 
 /**
@@ -57,8 +62,18 @@ export interface PersistedWorkspace {
 export interface WorkspaceManagerState {
   /** All workspaces */
   workspaces: Workspace[]
-  /** ID of the currently active workspace */
-  activeWorkspaceId: string
+}
+
+/**
+ * Information about a mounted workspace.
+ */
+export interface MountedWorkspaceInfo {
+  /** The workspace */
+  workspace: Workspace
+  /** Mount path (e.g., '/my-files') */
+  mountPath: string
+  /** Whether the workspace is connected */
+  isConnected: boolean
 }
 
 /**
@@ -67,20 +82,22 @@ export interface WorkspaceManagerState {
 export interface UseWorkspaceManagerReturn {
   /** All workspaces */
   workspaces: Workspace[]
-  /** The currently active workspace */
-  activeWorkspace: Workspace
+  /** The composite filesystem spanning all mounted workspaces */
+  compositeFileSystem: IFileSystem
   /** Add a new virtual (localStorage-backed) workspace */
   addVirtualWorkspace: (name: string) => Workspace
   /** Add a new local (File System Access API-backed) workspace */
   addLocalWorkspace: (name: string, handle: FileSystemDirectoryHandle) => Promise<Workspace>
   /** Remove a workspace by ID */
   removeWorkspace: (id: string) => void
-  /** Set the active workspace by ID */
-  setActiveWorkspace: (id: string) => void
   /** Get a workspace by ID */
   getWorkspace: (id: string) => Workspace | undefined
+  /** Get a workspace by mount path */
+  getWorkspaceByMountPath: (mountPath: string) => Workspace | undefined
   /** Check if File System Access API is supported */
   isFileSystemAccessSupported: () => boolean
   /** Reconnect a disconnected local workspace */
   reconnectWorkspace: (id: string, handle: FileSystemDirectoryHandle) => Promise<void>
+  /** Get all mount points info */
+  getMounts: () => MountedWorkspaceInfo[]
 }

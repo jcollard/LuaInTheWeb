@@ -54,6 +54,10 @@ export {
   isFileSystemAccessSupported,
 } from './FileSystemAccessAPIFileSystem'
 
+// Composite filesystem for multi-mount support
+export { CompositeFileSystem } from './CompositeFileSystem'
+export type { MountPoint, CompositeFileSystemConfig } from './CompositeFileSystem'
+
 // Built-in commands
 export {
   pwd,
