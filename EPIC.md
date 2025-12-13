@@ -1,6 +1,6 @@
 # Epic #183: Improve Browser Responsiveness During Long-Running Lua Loops
 
-**Status:** In Progress (3/4 complete)
+**Status:** Complete (4/4)
 **Branch:** epic-183
 **Created:** 2025-12-13
 **Last Updated:** 2025-12-13
@@ -40,7 +40,7 @@ Infinite or long-running Lua loops (e.g., `while i > 0 do i = i + 1; print(i) en
 | #192 | Add Execution Control Infrastructure to LuaEngineFactory | ✅ Complete | - | Merged PR #203 |
 | #193 | Add Output Throttling to Print Callback | ✅ Complete | - | Merged PR #206 |
 | #194 | Integrate Stop Request and Continuation Prompt into Processes | ✅ Complete | #192 | Merged PR #208 |
-| #195 | Add Comprehensive Tests for Execution Control | ⏳ Pending | #192, #193, #194 | - |
+| #195 | Add Comprehensive Tests for Execution Control | ✅ Complete | #192, #193, #194 | E2E tests added |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -60,6 +60,8 @@ Infinite or long-running Lua loops (e.g., `while i > 0 do i = i + 1; print(i) en
 - Completed #193: Merged PR #206 to epic-183
 - Started work on #194: Integrate Stop Request and Continuation Prompt into Processes
 - Completed #194: Merged PR #208 to epic-183
+- Started work on #195: Add Comprehensive Tests for Execution Control
+- Completed #195: Added E2E tests for execution control (7 tests)
 
 ## Key Files
 
@@ -68,6 +70,7 @@ Infinite or long-running Lua loops (e.g., `while i > 0 do i = i + 1; print(i) en
 - `packages/lua-runtime/src/LuaEngineFactory.ts` - Core engine with debug hooks and output throttling
 - `packages/lua-runtime/src/LuaReplProcess.ts` - REPL process with stop/continuation support
 - `packages/lua-runtime/src/LuaScriptProcess.ts` - Script process with stop/continuation support
+- `lua-learning-website/e2e/execution-control.spec.ts` - E2E tests for execution control
 
 ## Open Questions
 
