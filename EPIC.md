@@ -1,6 +1,6 @@
 # Epic #183: Improve Browser Responsiveness During Long-Running Lua Loops
 
-**Status:** In Progress (1/4 complete)
+**Status:** In Progress (2/4 complete)
 **Branch:** epic-183
 **Created:** 2025-12-13
 **Last Updated:** 2025-12-13
@@ -38,7 +38,7 @@ Infinite or long-running Lua loops (e.g., `while i > 0 do i = i + 1; print(i) en
 | # | Title | Status | Dependencies | Notes |
 |---|-------|--------|--------------|-------|
 | #192 | Add Execution Control Infrastructure to LuaEngineFactory | ✅ Complete | - | Merged PR #203 |
-| #193 | Add Output Throttling to Print Callback | 🔄 In Progress | - | Branch: 193-add-output-throttling-to-print-callback |
+| #193 | Add Output Throttling to Print Callback | ✅ Complete | - | Merged PR #206 |
 | #194 | Integrate Stop Request and Continuation Prompt into Processes | ⏳ Pending | #192 | - |
 | #195 | Add Comprehensive Tests for Execution Control | ⏳ Pending | #192, #193, #194 | - |
 
@@ -57,6 +57,7 @@ Infinite or long-running Lua loops (e.g., `while i > 0 do i = i + 1; print(i) en
 - Started work on #192: Add Execution Control Infrastructure to LuaEngineFactory
 - Completed #192: Merged PR #203 to epic-183
 - Started work on #193: Add Output Throttling to Print Callback
+- Completed #193: Merged PR #206 to epic-183
 
 ## Key Files
 
