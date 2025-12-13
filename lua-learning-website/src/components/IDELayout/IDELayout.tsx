@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { IDEContextProvider, useIDE } from '../IDEContext'
 import { ActivityBar } from '../ActivityBar'
 import { StatusBar } from '../StatusBar'
@@ -12,6 +12,7 @@ import { ConfirmDialog } from '../ConfirmDialog'
 import { ToastContainer } from '../Toast'
 import { WelcomeScreen } from '../WelcomeScreen'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { initFormatter, formatLuaCode } from '../../utils/luaFormatter'
 import styles from './IDELayout.module.css'
 import type { IDELayoutProps } from './types'
 
@@ -54,6 +55,7 @@ function IDELayoutInner({ className }: { className?: string }) {
     closeTab,
     // Toasts
     toasts,
+    showError,
     dismissToast,
     // Recent files
     recentFiles,
@@ -65,6 +67,12 @@ function IDELayoutInner({ className }: { className?: string }) {
   const [cursorLine, setCursorLine] = useState(1)
   const [cursorColumn, setCursorColumn] = useState(1)
   const [pendingCloseTabPath, setPendingCloseTabPath] = useState<string | null>(null)
+  const [isFormatting, setIsFormatting] = useState(false)
+
+  // Initialize the Lua formatter on mount
+  useEffect(() => {
+    initFormatter().catch(console.error)
+  }, [])
 
   // Register keyboard shortcuts
   useKeyboardShortcuts({
@@ -118,6 +126,23 @@ function IDELayoutInner({ className }: { className?: string }) {
       toggleTerminal()
     }
   }, [terminalVisible, toggleTerminal])
+
+  // Format the current code
+  const handleFormat = useCallback(() => {
+    if (!code.trim()) return
+
+    setIsFormatting(true)
+    // Use setTimeout to allow UI to update with loading state
+    setTimeout(() => {
+      const result = formatLuaCode(code)
+      if (result.success && result.code !== undefined) {
+        setCode(result.code)
+      } else if (!result.success && result.error) {
+        showError(`Format failed: ${result.error}`)
+      }
+      setIsFormatting(false)
+    }, 0)
+  }, [code, setCode, showError])
 
   // Explorer props for FileExplorer
   const explorerProps = {
@@ -191,6 +216,8 @@ function IDELayoutInner({ className }: { className?: string }) {
                         setCursorColumn(col)
                       }}
                       tabBarProps={tabBarProps}
+                      onFormat={handleFormat}
+                      isFormatting={isFormatting}
                     />
                   )}
                 </IDEPanel>

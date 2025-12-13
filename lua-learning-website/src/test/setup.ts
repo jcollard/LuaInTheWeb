@@ -8,3 +8,5 @@ class MockResizeObserver {
 }
 
 vi.stubGlobal('ResizeObserver', MockResizeObserver)
+
+// Note: stylua-wasm is mocked via vitest.config.ts aliases to src/test/mocks/

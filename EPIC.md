@@ -1,47 +1,50 @@
-# Epic #183: Improve Browser Responsiveness During Long-Running Lua Loops
+# Epic #184: Add better lua formatter / lua syntax and editor experience
 
-**Status:** Needs Review (4/4 complete)
-**Branch:** epic-183
-**PR:** #216
+**Status:** ✅ Complete (3/3 complete)
+**Branch:** epic-184
 **Created:** 2025-12-13
-**Last Updated:** 2025-12-13
+**Last Updated:** 2025-12-13 10:48
 
 ## Overview
 
-Infinite or long-running Lua loops (e.g., `while i > 0 do i = i + 1; print(i) end`) cause browser unresponsiveness because wasmoon's `engine.doString()` blocks the JavaScript event loop until completion. The current stop mechanism only works when the process is waiting on `io.read()`.
+Improve the Lua code editor experience with professional-grade formatting, syntax highlighting, and auto-indentation features.
 
-**Solution Components:**
-1. **Debug Hook with Instruction Counting** - Use Lua's `debug.sethook` to periodically check instruction count and prompt users to continue or stop
-2. **Output Throttling** - Batch `print()` outputs at ~60fps to reduce DOM pressure
-3. **Configurable Limits** - Allow customization for rare cases needing extended execution
+**Goals:**
+- Provide a "Format" button to auto-format Lua code
+- Enhance syntax highlighting to catch all Lua syntax constructs
+- Add smart auto-indentation when pressing Enter
 
 ## Architecture Decisions
 
-<!-- Document key decisions as work progresses -->
+### #185 - Lua Code Formatter
+- **StyLua WASM library**: Using `stylua-wasm` for code formatting
+  - Production-ready, battle-tested formatter
+  - Changed from `@johnnymorganz/stylua` to `stylua-wasm` for proper browser/Vite support
+  - Uses `?url` import for WASM file loading with Vite plugins
+  - Toast notification on format errors for user feedback
 
-### Line Hooks vs Count Hooks (#192)
-- **Decision**: Use line-based debug hooks (`"l"`) instead of count-based hooks
-- **Reason**: wasmoon's count hooks don't fire; line hooks work correctly
-- **Impact**: Counting is per-line rather than per-instruction, but still effective
+### #186 - Improved Syntax Highlighting
+- **Custom Monarch Tokenizer**: Created enhanced Lua tokenizer for Monaco
+  - Multi-line string support (`[[...]]` and `[=[...]=]`)
+  - Table constructor key highlighting
+  - Numbers: decimal, hexadecimal, scientific notation
+  - Comments: single-line and multi-line
+  - Registered via CodeEditor's beforeMount callback
 
-### Synchronous Callbacks (#192)
-- **Decision**: `onInstructionLimitReached` must be synchronous (return boolean, not Promise)
-- **Reason**: Lua debug hooks can't await async JS functions ("attempt to yield across a C-call boundary")
-- **Impact**: UI prompts must use synchronous patterns (e.g., `confirm()` or pre-set flags)
-
-### Explicit Hook Setup (#192)
-- **Decision**: Callers must wrap user code with `__setup_execution_hook()` and `__clear_execution_hook()`
-- **Reason**: Debug hooks don't persist across `engine.doString()` calls in wasmoon
-- **Impact**: Processes (#194) will handle hook setup/teardown
+### #187 - Auto-Indentation
+- **Monaco Language Configuration**: Extended `luaLanguageConfig` with indentation rules
+  - `indentationRules.increaseIndentPattern` - Matches block-opening keywords (function, then, do, repeat, else, elseif)
+  - `indentationRules.decreaseIndentPattern` - Matches block-closing keywords at line start (end, else, elseif, until)
+  - `onEnterRules` - Controls behavior when pressing Enter (indent after blocks, outdent for closures)
+  - Regex patterns exclude comments to prevent false matches
 
 ## Sub-Issues
 
-| # | Title | Status | Dependencies | Notes |
-|---|-------|--------|--------------|-------|
-| #192 | Add Execution Control Infrastructure to LuaEngineFactory | ✅ Complete | - | Merged PR #203 |
-| #193 | Add Output Throttling to Print Callback | ✅ Complete | - | Merged PR #206 |
-| #194 | Integrate Stop Request and Continuation Prompt into Processes | ✅ Complete | #192 | Merged PR #208 |
-| #195 | Add Comprehensive Tests for Execution Control | ✅ Complete | #192, #193, #194 | E2E tests added |
+| # | Title | Status | Branch | Notes |
+|---|-------|--------|--------|-------|
+| #185 | Lua Code Formatter | ✅ Complete | 185-lua-formatter | Merged in PR #204 |
+| #186 | Improved Syntax Highlighting | ✅ Complete | 186-improved-syntax-highlighting | Merged in PR #219 |
+| #187 | Auto-Indentation | ✅ Complete | 187-auto-indentation | Merged in PR #222 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -49,32 +52,50 @@ Infinite or long-running Lua loops (e.g., `while i > 0 do i = i + 1; print(i) en
 - ✅ Complete - Merged to epic branch
 - ❌ Blocked - Has unresolved blockers
 
+## Dependencies
+
+None - all sub-issues can be implemented independently.
+
 ## Progress Log
 
 <!-- Updated after each sub-issue completion -->
 
 ### 2025-12-13
 - Epic started
-- Started work on #192: Add Execution Control Infrastructure to LuaEngineFactory
-- Completed #192: Merged PR #203 to epic-183
-- Started work on #193: Add Output Throttling to Print Callback
-- Completed #193: Merged PR #206 to epic-183
-- Started work on #194: Integrate Stop Request and Continuation Prompt into Processes
-- Completed #194: Merged PR #208 to epic-183
-- Started work on #195: Add Comprehensive Tests for Execution Control
-- Completed #195: Added E2E tests for execution control (7 tests)
-- Epic PR created: #216
-- All 4 sub-issues complete
-- Ready for final review
+- PR created for #185: Lua Code Formatter (PR #204)
+- Completed #185: Lua Code Formatter
+- Merged PR #204 to epic-184
+- Started work on #186: Improved Syntax Highlighting
+- PR created for #186: Improved Syntax Highlighting (PR #219)
+- Completed #186: Improved Syntax Highlighting
+- Merged PR #219 to epic-184
+- Integrated main into epic branch (merge from origin/main)
+- Started work on #187: Auto-Indentation
+- PR created for #187: Auto-Indentation (PR #222)
+- Completed #187: Auto-Indentation
+- Merged PR #222 to epic-184
+- **All sub-issues complete - Epic ready for final review**
+- Created PR #230 to merge epic-184 → main
 
 ## Key Files
 
-<!-- Populated as files are created/modified -->
+### #185 - Lua Code Formatter
+- `src/utils/luaFormatter.ts` - StyLua wrapper utility
+- `src/components/FormatButton/` - Format button component
+- `src/components/EditorPanel/EditorPanel.tsx` - Integration
+- `src/components/CodeEditor/CodeEditor.tsx` - Keyboard shortcut support
+- `src/types/global.d.ts` - Window.monaco type declaration
 
-- `packages/lua-runtime/src/LuaEngineFactory.ts` - Core engine with debug hooks and output throttling
-- `packages/lua-runtime/src/LuaReplProcess.ts` - REPL process with stop/continuation support
-- `packages/lua-runtime/src/LuaScriptProcess.ts` - Script process with stop/continuation support
-- `lua-learning-website/e2e/execution-control.spec.ts` - E2E tests for execution control
+### #186 - Improved Syntax Highlighting
+- `src/utils/luaTokenizer.ts` - Custom Monarch tokenizer configuration
+- `src/__tests__/luaTokenizer.test.ts` - Unit tests for tokenizer
+- `src/components/CodeEditor/CodeEditor.tsx` - beforeMount registration
+- `e2e/syntax-highlighting.spec.ts` - E2E tests for highlighting
+
+### #187 - Auto-Indentation
+- `src/utils/luaTokenizer.ts` - Added indentationRules and onEnterRules
+- `src/__tests__/luaTokenizer.test.ts` - Unit tests for indentation patterns
+- `e2e/auto-indentation.spec.ts` - E2E tests for auto-indentation behavior
 
 ## Open Questions
 
