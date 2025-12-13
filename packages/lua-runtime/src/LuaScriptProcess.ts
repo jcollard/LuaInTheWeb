@@ -10,24 +10,14 @@ import {
   formatLuaError,
   type LuaEngineCallbacks,
   type LuaEngineOptions,
+  type ExecutionControlOptions,
 } from './LuaEngineFactory'
 import { resolvePath } from '@lua-learning/shell-core'
 
 /**
  * Options for configuring the Lua script process.
  */
-export interface LuaScriptProcessOptions {
-  /** Instruction limit before triggering callback (default: 10,000,000) */
-  instructionLimit?: number
-  /** Interval between instruction count checks (default: 1000) */
-  instructionCheckInterval?: number
-  /**
-   * Called when instruction limit is reached.
-   * Return true to continue execution, false to stop.
-   * NOTE: Must be synchronous due to Lua debug hook limitations.
-   */
-  onInstructionLimitReached?: () => boolean
-}
+export type LuaScriptProcessOptions = ExecutionControlOptions
 
 /**
  * Process that executes a Lua script file.

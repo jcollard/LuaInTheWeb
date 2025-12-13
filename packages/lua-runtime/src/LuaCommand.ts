@@ -5,7 +5,7 @@
 
 import type { ICommand, IProcess, ShellContext } from '@lua-learning/shell-core'
 import { LuaReplProcess, type LuaReplProcessOptions } from './LuaReplProcess'
-import { LuaScriptProcess, type LuaScriptProcessOptions } from './LuaScriptProcess'
+import { LuaScriptProcess } from './LuaScriptProcess'
 
 /**
  * Default execution control options.
@@ -57,6 +57,6 @@ export class LuaCommand implements ICommand {
 
     // Filename provided - execute script
     const filename = args[0]
-    return new LuaScriptProcess(filename, context, DEFAULT_EXECUTION_OPTIONS as LuaScriptProcessOptions)
+    return new LuaScriptProcess(filename, context, DEFAULT_EXECUTION_OPTIONS)
   }
 }

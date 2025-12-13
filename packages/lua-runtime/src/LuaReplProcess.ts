@@ -8,25 +8,16 @@ import type { LuaEngine } from 'wasmoon'
 import {
   LuaEngineFactory,
   formatLuaError,
+  ExecutionStoppedError,
   type LuaEngineCallbacks,
   type LuaEngineOptions,
+  type ExecutionControlOptions,
 } from './LuaEngineFactory'
 
 /**
  * Options for configuring the Lua REPL process.
  */
-export interface LuaReplProcessOptions {
-  /** Instruction limit before triggering callback (default: 10,000,000) */
-  instructionLimit?: number
-  /** Interval between instruction count checks (default: 1000) */
-  instructionCheckInterval?: number
-  /**
-   * Called when instruction limit is reached.
-   * Return true to continue execution, false to stop.
-   * NOTE: Must be synchronous due to Lua debug hook limitations.
-   */
-  onInstructionLimitReached?: () => boolean
-}
+export type LuaReplProcessOptions = ExecutionControlOptions
 
 /**
  * Interactive Lua REPL process.
@@ -390,10 +381,10 @@ export class LuaReplProcess implements IProcess {
       }
     } catch (statementError: unknown) {
       // Check if this was an execution control error (stop request or limit)
-      const errorMsg = statementError instanceof Error ? statementError.message : String(statementError)
-      if (errorMsg.includes('Execution stopped')) {
+      if (ExecutionStoppedError.isExecutionStoppedError(statementError)) {
         // Execution was stopped - flush output and report
         LuaEngineFactory.flushOutput(this.engine)
+        const errorMsg = statementError instanceof Error ? statementError.message : String(statementError)
         this.onError(formatLuaError(errorMsg) + '\n')
         if (this.running) {
           this.showPrompt()
@@ -421,9 +412,10 @@ export class LuaReplProcess implements IProcess {
           this.showPrompt()
         }
       } catch (exprError: unknown) {
-        // Check if this was an execution control error
         const exprErrorMsg = exprError instanceof Error ? exprError.message : String(exprError)
-        if (exprErrorMsg.includes('Execution stopped')) {
+
+        // Check if this was an execution control error
+        if (ExecutionStoppedError.isExecutionStoppedError(exprError)) {
           LuaEngineFactory.flushOutput(this.engine)
           this.onError(formatLuaError(exprErrorMsg) + '\n')
           if (this.running) {

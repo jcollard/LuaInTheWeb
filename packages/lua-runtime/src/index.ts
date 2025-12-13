@@ -16,6 +16,8 @@ export { LuaScriptProcess, type LuaScriptProcessOptions } from './LuaScriptProce
 export {
   LuaEngineFactory,
   formatLuaError,
+  ExecutionStoppedError,
   type LuaEngineCallbacks,
   type LuaEngineOptions,
+  type ExecutionControlOptions,
 } from './LuaEngineFactory'
