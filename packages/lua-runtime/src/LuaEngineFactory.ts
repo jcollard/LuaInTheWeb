@@ -52,6 +52,9 @@ export interface LuaEngineCallbacks {
    * NOTE: This callback is called synchronously from within a Lua debug hook.
    * Due to Lua limitations, async callbacks cannot be properly awaited.
    * Return a boolean directly (not a Promise) for reliable behavior.
+   *
+   * NOTE: Stop requests (including returning false) are checked every
+   * `instructionCheckInterval` lines, so there may be slight latency.
    */
   onInstructionLimitReached?: () => boolean
 }
@@ -88,6 +91,7 @@ function __request_stop()
     __stop_requested = true
 end
 
+-- Internal helper for dynamic limit adjustment (used by processes)
 function __set_instruction_limit(limit)
     __instruction_limit = limit
 end
