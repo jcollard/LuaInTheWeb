@@ -1,6 +1,6 @@
 # Epic #184: Add better lua formatter / lua syntax and editor experience
 
-**Status:** In Progress (0/3 complete)
+**Status:** In Progress (1/3 complete)
 **Branch:** epic-184
 **Created:** 2025-12-13
 **Last Updated:** 2025-12-13
@@ -17,16 +17,17 @@ Improve the Lua code editor experience with professional-grade formatting, synta
 ## Architecture Decisions
 
 ### #185 - Lua Code Formatter
-- **StyLua WASM library**: Using `@johnnymorganz/stylua` for code formatting
-  - Production-ready, battle-tested formatter (2000+ GitHub stars)
-  - WASM version works in browsers via dynamic import
-  - Uses dynamic import pattern to work around verbatimModuleSyntax TypeScript constraints
+- **StyLua WASM library**: Using `stylua-wasm` for code formatting
+  - Production-ready, battle-tested formatter
+  - Changed from `@johnnymorganz/stylua` to `stylua-wasm` for proper browser/Vite support
+  - Uses `?url` import for WASM file loading with Vite plugins
+  - Toast notification on format errors for user feedback
 
 ## Sub-Issues
 
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
-| #185 | Lua Code Formatter | 🔄 PR Created | 185-lua-formatter | PR #204 |
+| #185 | Lua Code Formatter | ✅ Complete | 185-lua-formatter | Merged in PR #204 |
 | #186 | Improved Syntax Highlighting | ⏳ Pending | - | - |
 | #187 | Auto-Indentation | ⏳ Pending | - | - |
 
@@ -47,6 +48,8 @@ None - all sub-issues can be implemented independently.
 ### 2025-12-13
 - Epic started
 - PR created for #185: Lua Code Formatter (PR #204)
+- Completed #185: Lua Code Formatter
+- Merged PR #204 to epic-184
 
 ## Key Files
 
