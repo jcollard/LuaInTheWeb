@@ -75,6 +75,7 @@ export function CodeEditor({
           lineNumbers: 'on',
           scrollBeyondLastLine: false,
           automaticLayout: true,
+          formatOnType: true, // Enable auto-dedent for end/else/elseif/until
         }}
         loading={<div className={styles.loading}>Loading editor...</div>}
       />

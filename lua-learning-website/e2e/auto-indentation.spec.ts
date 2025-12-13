@@ -225,6 +225,31 @@ test.describe('Auto-Indentation', () => {
     expect(getIndentLevel(outerLoopLine!)).toBe(0)
   })
 
+  test('typing end should auto-dedent to match opening block', async ({ page }) => {
+    const monacoEditor = await createAndOpenFile(page)
+    await monacoEditor.click()
+
+    // Type an if block
+    await typeSlowly(page, 'if true then')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(100)
+
+    // Now type 'end' - it should auto-dedent to match the 'if' line
+    await typeSlowly(page, 'end')
+    await page.waitForTimeout(200)
+
+    const lines = await getEditorContent(page)
+    const ifLine = lines.find((line) => containsText(line, 'if true then'))
+    const endLine = lines.find((line) => containsText(line, 'end'))
+
+    expect(ifLine).toBeDefined()
+    expect(endLine).toBeDefined()
+
+    // The 'end' should be at the same indentation level as 'if' (both at level 0)
+    // This test will FAIL if end doesn't auto-dedent
+    expect(getIndentLevel(endLine!)).toBe(getIndentLevel(ifLine!))
+  })
+
   test('editor has language configuration applied', async ({ page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()

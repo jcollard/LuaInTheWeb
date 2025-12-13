@@ -284,6 +284,17 @@ export const luaTokenizerConfig: languages.IMonarchLanguage = {
 }
 
 /**
+ * Pattern to match dedent keywords at the start of a line (with indentation)
+ */
+const DEDENT_PATTERN = /^(\s+)(end|else|elseif|until)\b/
+
+/**
+ * Characters that trigger the auto-dedent check
+ * These are the last characters of: end, else, elseif, until
+ */
+const DEDENT_TRIGGER_CHARS = ['d', 'e', 'f', 'l']
+
+/**
  * Register the enhanced Lua language configuration with Monaco Editor
  * Call this function after Monaco is loaded to override the default Lua tokenizer
  */
@@ -293,4 +304,63 @@ export function registerLuaLanguage(monaco: typeof import('monaco-editor')): voi
 
   // Register the enhanced tokenizer
   monaco.languages.setMonarchTokensProvider('lua', luaTokenizerConfig)
+
+  // Register on-type formatting for auto-dedent of end/else/elseif/until
+  monaco.languages.registerOnTypeFormattingEditProvider('lua', {
+    autoFormatTriggerCharacters: DEDENT_TRIGGER_CHARS,
+
+    provideOnTypeFormattingEdits(model, position, _ch) {
+      // Get the current line text
+      const lineNumber = position.lineNumber
+      const lineText = model.getLineContent(lineNumber)
+
+      // Check if the line matches the dedent pattern
+      const match = lineText.match(DEDENT_PATTERN)
+      if (!match) {
+        return []
+      }
+
+      const currentIndent = match[1]
+      const keyword = match[2]
+
+      // Verify that the cursor is at the end of the keyword
+      // (to avoid triggering on partial matches)
+      const keywordEndCol = currentIndent.length + keyword.length + 1
+      if (position.column !== keywordEndCol) {
+        return []
+      }
+
+      // Calculate the new indentation (one level less)
+      // Detect indent style from the current indent
+      const tabSize = model.getOptions().tabSize
+      let newIndent: string
+
+      if (currentIndent.includes('\t')) {
+        // Tab-based indent: remove one tab
+        newIndent = currentIndent.replace(/\t/, '')
+      } else {
+        // Space-based indent: remove tabSize spaces
+        const spacesToRemove = Math.min(tabSize, currentIndent.length)
+        newIndent = currentIndent.slice(spacesToRemove)
+      }
+
+      // If indent didn't change, no edit needed
+      if (newIndent === currentIndent) {
+        return []
+      }
+
+      // Return edit to replace the leading whitespace
+      return [
+        {
+          range: new monaco.Range(
+            lineNumber,
+            1,
+            lineNumber,
+            currentIndent.length + 1
+          ),
+          text: newIndent,
+        },
+      ]
+    },
+  })
 }
