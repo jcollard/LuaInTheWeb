@@ -1,38 +1,20 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-
-// Define mock at top level using vi.hoisted
-const { mockFormatCode, mockInit, mockConfigNew } = vi.hoisted(() => ({
-  mockFormatCode: vi.fn(),
-  mockInit: vi.fn(() => Promise.resolve()),
-  mockConfigNew: vi.fn(() => ({
-    column_width: 80,
-    line_endings: 0,
-    indent_type: 0,
-    indent_width: 2,
-    quote_style: 0,
-    call_parentheses: 0,
-    collapse_simple_statement: 0,
-  })),
-}))
-
-vi.mock('@johnnymorganz/stylua', () => ({
-  default: mockInit,
-  formatCode: mockFormatCode,
-  Config: { new: mockConfigNew },
-  OutputVerification: { Full: 0, None: 1 },
-  IndentType: { Tabs: 0, Spaces: 1 },
-  LineEndings: { Unix: 0, Windows: 1 },
-  QuoteStyle: { AutoPreferDouble: 0, AutoPreferSingle: 1 },
-  CallParenType: { Always: 0, NoSingleString: 1 },
-  CollapseSimpleStatement: { Never: 0, FunctionOnly: 1 },
-}))
-
-// Import after mocking
 import {
   formatLuaCode,
   initFormatter,
   isFormatterReady,
 } from '../utils/luaFormatter'
+// Import the mocks to access them in tests
+import init, { format } from 'stylua-wasm'
+
+// Cast to mock functions for type safety
+// Note: mockInit is only used when the module hasn't been reset
+const _mockInit = init as unknown as ReturnType<typeof vi.fn>
+const mockFormat = format as unknown as ReturnType<typeof vi.fn>
+
+// Re-export mockInit so it can be used in the first test (before reset)
+// The underscore version is kept to avoid TS6133 when tests use fresh imports
+void _mockInit
 
 describe('luaFormatter', () => {
   beforeEach(() => {
@@ -50,6 +32,10 @@ describe('luaFormatter', () => {
       vi.resetModules()
       vi.clearAllMocks()
 
+      // Re-import the mock module to get fresh mock reference
+      const freshMockModule = await import('stylua-wasm')
+      const freshMockInit = freshMockModule.default as unknown as ReturnType<typeof vi.fn>
+
       const { initFormatter: freshInit } = await import('../utils/luaFormatter')
 
       await freshInit()
@@ -57,7 +43,21 @@ describe('luaFormatter', () => {
       await freshInit()
 
       // Should only call init once
-      expect(mockInit).toHaveBeenCalledTimes(1)
+      expect(freshMockInit).toHaveBeenCalledTimes(1)
+    })
+
+    it('passes the WASM URL to init', async () => {
+      vi.resetModules()
+      vi.clearAllMocks()
+
+      // Re-import the mock module to get fresh mock reference
+      const freshMockModule = await import('stylua-wasm')
+      const freshMockInit = freshMockModule.default as unknown as ReturnType<typeof vi.fn>
+
+      const { initFormatter: freshInit } = await import('../utils/luaFormatter')
+      await freshInit()
+
+      expect(freshMockInit).toHaveBeenCalledWith('mock-wasm-url')
     })
   })
 
@@ -75,49 +75,55 @@ describe('luaFormatter', () => {
 
     describe('basic formatting', () => {
       it('formats simple print statement', () => {
-        mockFormatCode.mockReturnValue('print("hello")\n')
+        mockFormat.mockReturnValue('print("hello")\n')
         const result = formatLuaCode('print("hello")')
         expect(result.success).toBe(true)
         expect(result.code).toBe('print("hello")\n')
       })
 
-      it('calls formatCode with config and verification', () => {
-        mockFormatCode.mockReturnValue('formatted')
+      it('calls format with code, config, and verification', () => {
+        mockFormat.mockReturnValue('formatted')
         formatLuaCode('some code')
-        expect(mockFormatCode).toHaveBeenCalledWith(
+        expect(mockFormat).toHaveBeenCalledWith(
           'some code',
-          expect.any(Object),
-          undefined,
+          expect.objectContaining({
+            column_width: 80,
+            indent_type: 0, // IndentType.Tabs
+            indent_width: 2,
+          }),
           0 // OutputVerification.Full
         )
       })
 
-      it('creates a new config for each format call', () => {
-        mockFormatCode.mockReturnValue('formatted')
-        mockConfigNew.mockClear()
+      it('uses the same config for each format call', () => {
+        mockFormat.mockReturnValue('formatted')
         formatLuaCode('code1')
         formatLuaCode('code2')
-        expect(mockConfigNew).toHaveBeenCalledTimes(2)
+
+        // Both calls should use the same config object structure
+        const firstCallConfig = mockFormat.mock.calls[0][1]
+        const secondCallConfig = mockFormat.mock.calls[1][1]
+        expect(firstCallConfig).toEqual(secondCallConfig)
       })
     })
 
     describe('edge cases', () => {
-      it('handles empty input without calling formatCode', () => {
+      it('handles empty input without calling format', () => {
         const result = formatLuaCode('')
         expect(result.success).toBe(true)
         expect(result.code).toBe('')
-        expect(mockFormatCode).not.toHaveBeenCalled()
+        expect(mockFormat).not.toHaveBeenCalled()
       })
 
-      it('handles whitespace-only input without calling formatCode', () => {
+      it('handles whitespace-only input without calling format', () => {
         const result = formatLuaCode('   \n\t\n   ')
         expect(result.success).toBe(true)
         expect(result.code).toBe('')
-        expect(mockFormatCode).not.toHaveBeenCalled()
+        expect(mockFormat).not.toHaveBeenCalled()
       })
 
-      it('returns error when formatCode throws an Error', () => {
-        mockFormatCode.mockImplementation(() => {
+      it('returns error when format throws an Error', () => {
+        mockFormat.mockImplementation(() => {
           throw new Error('Syntax error at line 1')
         })
         const result = formatLuaCode('invalid code')
@@ -125,8 +131,8 @@ describe('luaFormatter', () => {
         expect(result.error).toBe('Syntax error at line 1')
       })
 
-      it('returns error when formatCode throws a string', () => {
-        mockFormatCode.mockImplementation(() => {
+      it('returns error when format throws a string', () => {
+        mockFormat.mockImplementation(() => {
           throw 'Some string error'
         })
         const result = formatLuaCode('invalid code')
@@ -137,7 +143,7 @@ describe('luaFormatter', () => {
 
     describe('return type structure', () => {
       it('returns success true and formatted code on valid input', () => {
-        mockFormatCode.mockReturnValue('print("test")\n')
+        mockFormat.mockReturnValue('print("test")\n')
         const result = formatLuaCode('print("test")')
         expect(result).toHaveProperty('success', true)
         expect(result).toHaveProperty('code')
@@ -146,7 +152,7 @@ describe('luaFormatter', () => {
       })
 
       it('returns success false and error on error', () => {
-        mockFormatCode.mockImplementation(() => {
+        mockFormat.mockImplementation(() => {
           throw new Error('Parse error')
         })
         const result = formatLuaCode('invalid')
