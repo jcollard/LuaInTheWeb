@@ -11,7 +11,7 @@ Find and start the next sub-issue in the epic, with epic context injected.
 ## Overview
 
 The next command:
-1. Reads EPIC.md for context and progress
+1. Reads EPIC-<n>.md for context and progress
 2. Finds the next incomplete sub-issue
 3. Delegates to `/issue <sub> begin` with epic context
 4. Sub-issue branches from `epic-<n>` (not main)
@@ -121,7 +121,7 @@ git merge --abort
 
 Then STOP - do not proceed until conflicts are resolved.
 
-**Update EPIC.md progress log:**
+**Update EPIC-<n>.md progress log:**
 
 After successful merge, add an entry to the Progress Log section:
 
@@ -132,16 +132,16 @@ After successful merge, add an entry to the Progress Log section:
 
 ---
 
-## Step 2: Read EPIC.md Context
+## Step 2: Read EPIC-<n>.md Context
 
-Read the EPIC.md file for:
+Read the EPIC-<n>.md file for:
 - Current progress
 - Architecture decisions made
 - Any blockers
 - Open questions
 
 ```bash
-cat EPIC.md
+cat EPIC-<n>.md
 ```
 
 This context will be injected when starting the sub-issue.
@@ -150,10 +150,10 @@ This context will be injected when starting the sub-issue.
 
 ## Step 3: Identify Next Sub-Issue
 
-Parse EPIC.md sub-issues table and cross-reference with GitHub:
+Parse EPIC-<n>.md sub-issues table and cross-reference with GitHub:
 
 ```bash
-# Get all sub-issue numbers from EPIC.md
+# Get all sub-issue numbers from EPIC-<n>.md
 # For each, check current state
 gh issue view <sub-number> --json state,title,number
 ```
@@ -227,13 +227,13 @@ Before starting the sub-issue, prepare epic context to inject:
 **Progress**: <complete>/<total> sub-issues complete
 
 **Architecture Decisions Made:**
-<from EPIC.md, or "None yet">
+<from EPIC-<n>.md, or "None yet">
 
 **Open Questions:**
-<from EPIC.md, or "None">
+<from EPIC-<n>.md, or "None">
 
 **Key Files So Far:**
-<from EPIC.md, or "None yet">
+<from EPIC-<n>.md, or "None yet">
 
 ---
 
@@ -274,9 +274,9 @@ Then read and execute `.claude/commands/issue/begin.md` with:
 
 ---
 
-## Step 7: Update EPIC.md
+## Step 7: Update EPIC-<n>.md
 
-After starting the sub-issue, update EPIC.md:
+After starting the sub-issue, update EPIC-<n>.md:
 
 **Update the sub-issue row:**
 ```
@@ -301,7 +301,7 @@ After starting the sub-issue, update EPIC.md:
 | Error | Response |
 |-------|----------|
 | Not in epic worktree | Show correct path and how to switch |
-| EPIC.md not found | "EPIC.md missing. Run `/epic <number> begin` to initialize." |
+| EPIC-<n>.md not found | "EPIC-<n>.md missing. Run `/epic <number> begin` to initialize." |
 | All sub-issues complete | Prompt to run `/epic <number> review` |
 | Sub-issue already in progress | Show path to existing worktree |
 | No sub-issues defined | "No sub-issues found. Add them to the epic issue body." |

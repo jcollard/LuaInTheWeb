@@ -14,7 +14,7 @@ The review command:
 1. Verifies all sub-issues are complete
 2. Runs full test suite on epic branch
 3. Creates PR from `epic-<n>` → `main`
-4. Generates comprehensive PR description from EPIC.md
+4. Generates comprehensive PR description from EPIC-<n>.md
 5. Updates project board status
 
 ---
@@ -51,7 +51,7 @@ Then STOP.
 ## Step 2: Verify All Sub-Issues Complete
 
 ```bash
-# Get all sub-issues from EPIC.md or GitHub
+# Get all sub-issues from EPIC-<n>.md or GitHub
 gh issue view <number> --json body
 ```
 
@@ -162,9 +162,9 @@ Then STOP.
 
 ---
 
-## Step 5: Generate PR Description from EPIC.md
+## Step 5: Generate PR Description from EPIC-<n>.md
 
-Read EPIC.md and extract:
+Read EPIC-<n>.md and extract:
 - Overview
 - Architecture decisions
 - Key files
@@ -180,7 +180,7 @@ feat(epic-<number>): <epic-title>
 ```markdown
 ## Summary
 
-<Overview from EPIC.md>
+<Overview from EPIC-<n>.md>
 
 ## Sub-Issues Completed
 
@@ -192,7 +192,7 @@ feat(epic-<number>): <epic-title>
 
 ## Architecture Decisions
 
-<From EPIC.md, or "No major architecture decisions">
+<From EPIC-<n>.md, or "No major architecture decisions">
 
 ## Key Changes
 
@@ -267,7 +267,7 @@ gh project item-edit --project-id PVT_kwHOADXapM4BKKH8 --id <item-id> \
 
 ---
 
-## Step 8: Update EPIC.md
+## Step 8: Update EPIC-<n>.md
 
 Add final entry to progress log:
 
@@ -286,8 +286,8 @@ Update status:
 Commit and push:
 
 ```bash
-git add EPIC.md
-git commit -m "docs: Update EPIC.md with final PR status"
+git add EPIC-<number>.md
+git commit -m "docs: Update EPIC-<number>.md with final PR status"
 git push origin epic-<number>
 ```
 

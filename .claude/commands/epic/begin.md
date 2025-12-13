@@ -1,6 +1,6 @@
 # Epic Begin
 
-Start working on an epic by creating the epic branch, worktree, and EPIC.md tracking file.
+Start working on an epic by creating the epic branch, worktree, and EPIC-<n>.md tracking file.
 
 **Invoked by**: `/epic <number> begin`
 
@@ -14,7 +14,7 @@ The begin command sets up the epic workspace:
 
 1. Create `epic-<n>` branch from main
 2. Create worktree `LuaInTheWeb-epic-<n>`
-3. Generate `EPIC.md` with overview, sub-issues, and tracking sections
+3. Generate `EPIC-<n>.md` with overview, sub-issues, and tracking sections
 4. Update GitHub project board status to "In Progress"
 
 ---
@@ -208,16 +208,16 @@ fi
 
 ---
 
-## Step 5: Generate EPIC.md
+## Step 5: Generate EPIC-<n>.md
 
-Create the `EPIC.md` file in the epic worktree root:
+Create the `EPIC-<n>.md` file in the epic worktree root (where `<n>` is the epic issue number):
 
 ```bash
 # Get current date
 date +"%Y-%m-%d"
 ```
 
-**EPIC.md Template:**
+**EPIC-<n>.md Template:**
 
 ```markdown
 # Epic #<number>: <title>
@@ -281,7 +281,7 @@ date +"%Y-%m-%d"
 
 Write the file:
 ```bash
-# Write EPIC.md to the epic worktree
+# Write EPIC-<n>.md to the epic worktree
 ```
 
 ---
@@ -332,7 +332,7 @@ Output:
 | #<sub2> | <title2> | ⏳ Pending |
 ...
 
-### EPIC.md Created
+### EPIC-<n>.md Created
 The tracking file has been created with:
 - Overview from epic description
 - Sub-issue table with current status

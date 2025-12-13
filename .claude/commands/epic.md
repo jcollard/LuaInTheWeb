@@ -6,7 +6,7 @@ Manage GitHub issue-based epics. Start epics, track progress, and coordinate mul
 
 ```
 /epic <number>           # Show epic overview & progress
-/epic <number> begin     # Start epic: create branch, worktree, and EPIC.md
+/epic <number> begin     # Start epic: create branch, worktree, and EPIC-<n>.md
 /epic <number> next      # Start next sub-issue with epic context
 /epic <number> status    # Show detailed status with dependency graph
 /epic <number> review    # Create PR to main when all sub-issues complete
