@@ -7,6 +7,82 @@ import { LuaFactory, type LuaEngine } from 'wasmoon'
 import { LUA_FORMATTER_CODE } from './lua/formatter'
 
 /**
+ * Flush interval in milliseconds (~60fps).
+ */
+export const FLUSH_INTERVAL_MS = 16
+
+/**
+ * Maximum buffer size before immediate flush.
+ */
+export const MAX_BUFFER_SIZE = 1000
+
+/**
+ * WeakMap to store flush functions for each engine instance.
+ * Used by close() and closeDeferred() to flush remaining output.
+ * WeakMap (vs Map) allows automatic cleanup when engines are garbage collected.
+ */
+const engineFlushMap = new WeakMap<LuaEngine, () => void>()
+
+/**
+ * Default instruction limit before prompting user (10 million).
+ */
+export const DEFAULT_INSTRUCTION_LIMIT = 10_000_000
+
+/**
+ * Default interval between instruction count checks.
+ */
+export const DEFAULT_INSTRUCTION_CHECK_INTERVAL = 1000
+
+/**
+ * Options for configuring execution control behavior.
+ * Shared by LuaReplProcess and LuaScriptProcess.
+ */
+export interface ExecutionControlOptions {
+  /** Instruction limit before triggering callback (default: 10,000,000) */
+  instructionLimit?: number
+  /** Interval between instruction count checks (default: 1000) */
+  instructionCheckInterval?: number
+  /**
+   * Called when instruction limit is reached.
+   * Return true to continue execution, false to stop.
+   * NOTE: Must be synchronous due to Lua debug hook limitations.
+   */
+  onInstructionLimitReached?: () => boolean
+}
+
+/**
+ * Options for configuring Lua engine execution control.
+ */
+export interface LuaEngineOptions {
+  /** Instruction limit before triggering callback (default: 10,000,000) */
+  instructionLimit?: number
+  /** Interval between instruction count checks (default: 1000) */
+  instructionCheckInterval?: number
+}
+
+/**
+ * Error thrown when Lua execution is stopped by user or instruction limit.
+ * Provides type-safe error detection instead of string matching.
+ */
+export class ExecutionStoppedError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ExecutionStoppedError'
+  }
+
+  /**
+   * Check if an error is an execution stopped error.
+   * Handles both ExecutionStoppedError instances and wasmoon errors
+   * that contain "Execution stopped" in the message.
+   */
+  static isExecutionStoppedError(error: unknown): boolean {
+    if (error instanceof ExecutionStoppedError) return true
+    const msg = error instanceof Error ? error.message : String(error)
+    return msg.includes('Execution stopped')
+  }
+}
+
+/**
  * Format an error message with standard prefix.
  * Used by REPL and script processes for consistent error display.
  */
@@ -24,6 +100,19 @@ export interface LuaEngineCallbacks {
   onError: (text: string) => void
   /** Called when Lua needs input (io.read) - optional */
   onReadInput?: () => Promise<string>
+  /**
+   * Called when instruction limit is reached.
+   * Return true to continue execution, false to stop.
+   * If not provided, execution continues indefinitely.
+   *
+   * NOTE: This callback is called synchronously from within a Lua debug hook.
+   * Due to Lua limitations, async callbacks cannot be properly awaited.
+   * Return a boolean directly (not a Promise) for reliable behavior.
+   *
+   * NOTE: Stop requests (including returning false) are checked every
+   * `instructionCheckInterval` lines, so there may be slight latency.
+   */
+  onInstructionLimitReached?: () => boolean
 }
 
 /**
@@ -34,6 +123,79 @@ export interface CodeCompletenessResult {
   complete: boolean
   /** Error message if there's a syntax error (not just incomplete) */
   error?: string
+}
+
+/**
+ * Generate Lua code for execution control infrastructure.
+ * Note: Due to wasmoon limitations, debug hooks don't persist across doString calls.
+ * The hook must be set up within each code execution using __setup_execution_hook().
+ * @param lineLimit - Maximum lines before triggering callback
+ * @param checkInterval - How often to check line count (every N lines)
+ */
+function generateExecutionControlCode(
+  lineLimit: number,
+  checkInterval: number
+): string {
+  return `
+__stop_requested = false
+__line_count = 0
+__instruction_limit = ${lineLimit}
+__check_interval = ${checkInterval}
+__lines_since_check = 0
+
+function __request_stop()
+    __stop_requested = true
+end
+
+-- Internal helper for dynamic limit adjustment (used by processes)
+function __set_instruction_limit(limit)
+    __instruction_limit = limit
+end
+
+function __reset_instruction_count()
+    __line_count = 0
+    __lines_since_check = 0
+end
+
+-- Hook function that counts lines and checks for stop conditions
+function __execution_hook()
+    __line_count = __line_count + 1
+    __lines_since_check = __lines_since_check + 1
+
+    -- Only check conditions every check_interval lines for performance
+    if __lines_since_check >= __check_interval then
+        __lines_since_check = 0
+
+        if __stop_requested then
+            __stop_requested = false
+            __line_count = 0
+            error("Execution stopped by user", 0)
+        end
+
+        if __line_count >= __instruction_limit then
+            -- Call synchronous JS callback that returns true to continue, false to stop
+            -- Note: Cannot use async/await here due to Lua debug hook limitations
+            local should_continue = __on_limit_reached_sync()
+            if should_continue then
+                __reset_instruction_count()
+            else
+                error("Execution stopped by instruction limit", 0)
+            end
+        end
+    end
+end
+
+-- Set up the execution hook (must be called before executing user code)
+function __setup_execution_hook()
+    __reset_instruction_count()
+    debug.sethook(__execution_hook, "l")
+end
+
+-- Clear the execution hook (call after user code completes)
+function __clear_execution_hook()
+    debug.sethook()
+end
+`
 }
 
 /**
@@ -70,11 +232,43 @@ export class LuaEngineFactory {
   /**
    * Create a new Lua engine with callbacks configured.
    * @param callbacks - Output/error/input handlers
+   * @param options - Optional execution control options
    * @returns Configured Lua engine
    */
-  static async create(callbacks: LuaEngineCallbacks): Promise<LuaEngine> {
+  static async create(
+    callbacks: LuaEngineCallbacks,
+    options?: LuaEngineOptions
+  ): Promise<LuaEngine> {
     const factory = new LuaFactory()
     const engine = await factory.createEngine()
+
+    // Apply options with defaults
+    const instructionLimit = options?.instructionLimit ?? DEFAULT_INSTRUCTION_LIMIT
+    const checkInterval = options?.instructionCheckInterval ?? DEFAULT_INSTRUCTION_CHECK_INTERVAL
+
+    // Output buffering state
+    let outputBuffer: string[] = []
+    let lastFlush = Date.now()
+
+    // Flush buffered output to callback
+    const flushOutput = () => {
+      if (outputBuffer.length > 0) {
+        callbacks.onOutput(outputBuffer.join(''))
+        outputBuffer = []
+        lastFlush = Date.now()
+      }
+    }
+
+    // Store flush function for close() and closeDeferred()
+    engineFlushMap.set(engine, flushOutput)
+
+    // Check if buffer should be flushed (time or size threshold)
+    const maybeFlush = () => {
+      const now = Date.now()
+      if (now - lastFlush >= FLUSH_INTERVAL_MS || outputBuffer.length >= MAX_BUFFER_SIZE) {
+        flushOutput()
+      }
+    }
 
     // Setup print function (adds newline like standard Lua print)
     engine.global.set('print', (...args: unknown[]) => {
@@ -85,12 +279,14 @@ export class LuaEngineFactory {
           return String(arg)
         })
         .join('\t')
-      callbacks.onOutput(message + '\n')
+      outputBuffer.push(message + '\n')
+      maybeFlush()
     })
 
     // Setup io.write output (no newline, unlike print)
     engine.global.set('__js_write', (text: string) => {
-      callbacks.onOutput(text)
+      outputBuffer.push(text)
+      maybeFlush()
     })
 
     // Setup io.read input handler if provided
@@ -103,9 +299,25 @@ export class LuaEngineFactory {
       engine.global.set('__js_read_input', async () => '')
     }
 
-    // Setup formatter and io functions
+    // Setup execution control callback (synchronous)
+    // Note: Cannot use async callbacks in debug hooks due to Lua limitations
+    // ("attempt to yield across a C-call boundary")
+    if (callbacks.onInstructionLimitReached) {
+      engine.global.set('__on_limit_reached_sync', () => {
+        // Call the callback synchronously - it should return a boolean immediately
+        // If the callback is async, this will return a Promise object which is truthy
+        // so async callbacks effectively mean "always continue"
+        return callbacks.onInstructionLimitReached!()
+      })
+    } else {
+      // Default: return true to continue execution indefinitely
+      engine.global.set('__on_limit_reached_sync', () => true)
+    }
+
+    // Setup formatter, io functions, and execution control
     await engine.doString(LUA_FORMATTER_CODE)
     await engine.doString(LUA_IO_CODE)
+    await engine.doString(generateExecutionControlCode(instructionLimit, checkInterval))
 
     return engine
   }
@@ -146,10 +358,29 @@ export class LuaEngineFactory {
   }
 
   /**
+   * Flush any buffered output for the given engine.
+   * Call this after code execution to ensure all output is delivered.
+   * @param engine - The engine whose buffer to flush
+   */
+  static flushOutput(engine: LuaEngine): void {
+    const flushFn = engineFlushMap.get(engine)
+    if (flushFn) {
+      flushFn()
+    }
+  }
+
+  /**
    * Close the Lua engine and release resources.
+   * Flushes any remaining buffered output before closing.
    * @param engine - The engine to close
    */
   static close(engine: LuaEngine): void {
+    // Flush any remaining buffered output
+    const flushFn = engineFlushMap.get(engine)
+    if (flushFn) {
+      flushFn()
+      engineFlushMap.delete(engine)
+    }
     engine.global.close()
   }
 
@@ -157,14 +388,21 @@ export class LuaEngineFactory {
    * Defer engine cleanup using setTimeout(0).
    * Allows JS event loop to drain pending wasmoon callbacks before closing.
    * Prevents "memory access out of bounds" errors from WebAssembly.
+   * Flushes any remaining buffered output immediately before deferring close.
    *
    * @param engine - The engine to close (will be closed asynchronously), or null
    */
   static closeDeferred(engine: LuaEngine | null): void {
     if (!engine) return
+    // Flush immediately before deferring close
+    const flushFn = engineFlushMap.get(engine)
+    if (flushFn) {
+      flushFn()
+      engineFlushMap.delete(engine)
+    }
     setTimeout(() => {
       try {
-        this.close(engine)
+        engine.global.close()
       } catch {
         // Ignore errors during cleanup - engine may already be in invalid state
       }
