@@ -115,9 +115,10 @@ export const luaTokenizerConfig: languages.IMonarchLanguage = {
   tokenizer: {
     root: [
       // Multi-line strings with equal signs [=[...]=]
-      [/\[=+\[/, { token: 'string', next: '@mlstring.$0' }],
+      // Capture the opening bracket pattern for matching the closing
+      [/\[=+\[/, { token: 'string.quote', next: '@mlstring.$0' }],
       // Multi-line strings without equal signs [[...]]
-      [/\[\[/, { token: 'string', next: '@mlstring.[[' }],
+      [/\[\[/, { token: 'string.quote', next: '@mlstring.0' }],
 
       // Identifiers and keywords
       [
@@ -207,28 +208,34 @@ export const luaTokenizerConfig: languages.IMonarchLanguage = {
     ],
 
     // Multi-line string state
+    // $S2 is either '0' for [[...]] or the full opening pattern like '[=[' for [=[...]=]
     mlstring: [
+      // Match any content that's not a closing bracket candidate
       [/[^\]]+/, 'string'],
-      [
-        /\]=*\]/,
-        {
-          cases: {
-            // Match closing bracket with same number of equals
-            '$0==$S2': { token: 'string', next: '@pop' },
-            '@default': 'string',
-          },
-        },
-      ],
+      // For [[...]] case (state param is '0'), match ]] to close
       [
         /\]\]/,
         {
           cases: {
-            '$S2==[[': { token: 'string', next: '@pop' },
+            '$S2==0': { token: 'string.quote', next: '@pop' },
             '@default': 'string',
           },
         },
       ],
-      [/./, 'string'],
+      // For [=[...]=] case, match ]=*] and check equals count matches opening
+      [
+        /\](=*)\]/,
+        {
+          cases: {
+            // $1 is the captured equals, $S2 is the opening like '[=['
+            // Check if ']$1]' would close the string opened by $S2
+            '$S2==[=$1[': { token: 'string.quote', next: '@pop' },
+            '@default': 'string',
+          },
+        },
+      ],
+      // Single ] that doesn't close - treat as string content
+      [/\]/, 'string'],
     ],
 
     string: [

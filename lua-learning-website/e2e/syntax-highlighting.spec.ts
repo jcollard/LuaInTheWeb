@@ -139,4 +139,59 @@ test.describe('Syntax Highlighting', () => {
     const viewLines = page.locator('.monaco-editor .view-lines')
     await expect(viewLines).toContainText('{a = 1}')
   })
+
+  test('keywords inside multi-line strings should not be highlighted as keywords', async ({
+    page,
+  }) => {
+    const monacoEditor = await createAndOpenFile(page)
+    await monacoEditor.click()
+
+    // Type code with keyword to establish the keyword color
+    await typeSlowly(page, 'local s = "hello"')
+    await page.waitForTimeout(500)
+
+    // Get the keyword color from 'local'
+    const keywordColor = await page.evaluate(() => {
+      const spans = document.querySelectorAll('.monaco-editor .view-line span')
+      for (const span of spans) {
+        if (span.textContent === 'local') {
+          return window.getComputedStyle(span).color
+        }
+      }
+      return null
+    })
+    expect(keywordColor).toBeDefined()
+
+    // Now add a multi-line string with keyword text on separate lines
+    await page.keyboard.press('End')
+    await page.keyboard.press('Enter')
+    await typeSlowly(page, 'x = [[')
+    await page.keyboard.press('Enter')
+    await typeSlowly(page, 'return to the kingdom')
+    await page.keyboard.press('Enter')
+    await typeSlowly(page, ']]')
+    await page.waitForTimeout(500)
+
+    // Get the color of 'return' inside the multi-line string (line 3)
+    const returnInsideStringColor = await page.evaluate(() => {
+      const viewLines = document.querySelectorAll('.monaco-editor .view-line')
+      // Line 3 (index 2) should contain "return to the kingdom"
+      for (let i = 0; i < viewLines.length; i++) {
+        const line = viewLines[i]
+        const spans = line.querySelectorAll('span')
+        for (const span of spans) {
+          const text = span.textContent || ''
+          if (text.includes('return') && i >= 2) {
+            return window.getComputedStyle(span).color
+          }
+        }
+      }
+      return null
+    })
+    expect(returnInsideStringColor).toBeDefined()
+
+    // The 'return' inside [[...]] should NOT have the same color as 'local' keyword
+    // If they match, keywords inside strings are being incorrectly styled (bug!)
+    expect(returnInsideStringColor).not.toBe(keywordColor)
+  })
 })
