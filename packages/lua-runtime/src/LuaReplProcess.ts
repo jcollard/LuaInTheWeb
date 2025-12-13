@@ -16,6 +16,9 @@ import {
  * Executes Lua code line by line and maintains state between inputs.
  */
 export class LuaReplProcess implements IProcess {
+  /** Maximum number of commands to keep in history */
+  private static readonly MAX_HISTORY_SIZE = 1000
+
   private engine: LuaEngine | null = null
   private running = false
   private inputQueue: Array<{
@@ -256,6 +259,10 @@ export class LuaReplProcess implements IProcess {
         const lastCommand = this.history[this.history.length - 1]
         if (code !== lastCommand) {
           this.history.push(code)
+          // Enforce history size limit
+          if (this.history.length > LuaReplProcess.MAX_HISTORY_SIZE) {
+            this.history.shift()
+          }
         }
       }
 

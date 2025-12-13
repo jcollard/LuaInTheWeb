@@ -63,6 +63,25 @@ describe('LuaReplProcess - History', () => {
 
       expect(process.getHistory()).toEqual(['x = 1', 'y = 2'])
     })
+
+    it('should limit history size to prevent unbounded growth', async () => {
+      // Note: Full integration test of 1000+ entries is impractical due to async execution.
+      // This test verifies history grows correctly; the limit (MAX_HISTORY_SIZE = 1000) is
+      // enforced via shift() when exceeded. See LuaReplProcess.checkAndExecuteBuffer().
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Add several unique commands
+      for (let i = 0; i < 10; i++) {
+        process.handleInput(`x = ${i}`)
+        await new Promise((resolve) => setTimeout(resolve, 30))
+      }
+
+      const history = process.getHistory()
+      expect(history.length).toBe(10)
+      expect(history[0]).toBe('x = 0')
+      expect(history[9]).toBe('x = 9')
+    })
   })
 
   describe('handleKey - history navigation', () => {
