@@ -105,7 +105,7 @@ Enable users to work with files on their actual computer (not just browser local
 | #198 | File System Access API Research | ✅ Complete | - | See [research doc](docs/file-system-access-api-research.md) |
 | #199 | FileSystemAccessAPI IFileSystem Implementation | ✅ Complete | 199-filesystemaccessapi-ifilesystem-implementation | Merged in PR #205 |
 | #200 | Workspace State Management | ✅ Complete | 200-workspace-state-management | useWorkspaceManager + CompositeFileSystem (AD-4) |
-| #201 | Workspace UI Components | 🔄 PR Created | 201-workspace-ui-components | PR #217 |
+| #201 | Workspace UI Components | ✅ Complete | 201-workspace-ui-components | Merged in PR #217 |
 | #202 | Shell Multi-Workspace Integration | ⏳ Pending | - | Depends on #199, #200, #201 |
 
 **Status Legend:**
@@ -140,7 +140,7 @@ Enable users to work with files on their actual computer (not just browser local
 <!-- Updated after each sub-issue completion -->
 
 ### 2025-12-13
-- **PR Created for #201** - Workspace UI Components (PR #217)
+- **Merged PR #217** - Workspace UI Components (#201) merged to epic-20
 - **#201 Complete** - Workspace UI Components
   - Created `WorkspaceTabs` component for workspace navigation
   - Created `AddWorkspaceDialog` for creating new workspaces (virtual and local)
@@ -183,16 +183,17 @@ Enable users to work with files on their actual computer (not just browser local
 - `packages/shell-core/src/createFileSystemAdapter.ts` - Adapter factory
 - `packages/shell-core/src/pathUtils.ts` - Path utilities
 
-### Created (from #199, #200)
+### Created (from #199, #200, #201)
 - `packages/shell-core/src/FileSystemAccessAPIFileSystem.ts` - File System Access API implementation
 - `packages/shell-core/src/CompositeFileSystem.ts` - Multi-mount filesystem router
 - `lua-learning-website/src/hooks/useWorkspaceManager.ts` - Workspace state management hook
 - `lua-learning-website/src/hooks/workspaceTypes.ts` - Workspace type definitions
 - `lua-learning-website/src/hooks/virtualFileSystemFactory.ts` - Workspace-isolated virtual filesystem
+- `lua-learning-website/src/components/WorkspaceTabs/` - Workspace tab bar component
+- `lua-learning-website/src/components/AddWorkspaceDialog/` - Add workspace dialog component
 
-### To Be Created (#201, #202)
-- `lua-learning-website/src/components/WorkspaceTabs/` - UI components
-- `lua-learning-website/src/components/AddWorkspaceDialog/` - UI components
+### To Be Created (#202)
+- Shell integration for multi-workspace navigation
 
 ## Open Questions
 
