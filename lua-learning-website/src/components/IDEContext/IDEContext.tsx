@@ -8,8 +8,10 @@ import { useToast } from '../Toast'
 import { IDEContext } from './context'
 import type { IDEContextValue, IDEContextProviderProps, ActivityPanelType } from './types'
 
-export function IDEContextProvider({ children, initialCode = '' }: IDEContextProviderProps) {
-  const filesystem = useFileSystem()
+export function IDEContextProvider({ children, initialCode = '', fileSystem: externalFileSystem }: IDEContextProviderProps) {
+  const internalFilesystem = useFileSystem()
+  // Use external filesystem if provided (for workspace integration), otherwise use internal
+  const filesystem = externalFileSystem ?? internalFilesystem
   const { recentFiles, addRecentFile, clearRecentFiles } = useRecentFiles()
   const tabBar = useTabBar()
   const { toasts, showToast, dismissToast } = useToast()
@@ -116,38 +118,55 @@ export function IDEContextProvider({ children, initialCode = '' }: IDEContextPro
 
   const createFolder = useCallback((path: string) => { filesystem.createFolder(path) }, [filesystem])
 
-  const generateUniqueFileName = useCallback((parentPath: string = '/'): string => {
-    const baseName = 'untitled', extension = '.lua'
-    let counter = 1
-    const prefix = parentPath === '/' ? '/' : `${parentPath}/`
-    while (filesystem.exists(`${prefix}${baseName}-${counter}${extension}`)) counter++
-    return `${baseName}-${counter}${extension}`
+  // Helper to get default workspace path when at root
+  const getDefaultWorkspacePath = useCallback((): string => {
+    // Get the first workspace (folder with isWorkspace: true) from root level
+    // This only applies when using compositeFileSystem with workspaces
+    const tree = filesystem.getTree()
+    const firstWorkspace = tree.find((node) => node.type === 'folder' && node.isWorkspace)
+    return firstWorkspace?.path ?? '/'
   }, [filesystem])
 
+  const generateUniqueFileName = useCallback((parentPath: string = '/'): string => {
+    // If at root, use first workspace
+    const effectivePath = parentPath === '/' ? getDefaultWorkspacePath() : parentPath
+    const baseName = 'untitled', extension = '.lua'
+    let counter = 1
+    const prefix = effectivePath === '/' ? '/' : `${effectivePath}/`
+    while (filesystem.exists(`${prefix}${baseName}-${counter}${extension}`)) counter++
+    return `${baseName}-${counter}${extension}`
+  }, [filesystem, getDefaultWorkspacePath])
+
   const createFileWithRename = useCallback((parentPath: string = '/') => {
-    const fName = generateUniqueFileName(parentPath)
-    const fullPath = parentPath === '/' ? `/${fName}` : `${parentPath}/${fName}`
+    // If at root, use first workspace (can't create files at root level in workspace mode)
+    const effectivePath = parentPath === '/' ? getDefaultWorkspacePath() : parentPath
+    const fName = generateUniqueFileName(effectivePath)
+    const fullPath = effectivePath === '/' ? `/${fName}` : `${effectivePath}/${fName}`
     try { filesystem.createFile(fullPath, ''); setPendingNewFilePath(fullPath) }
     catch (error) { showError(error instanceof Error ? error.message : 'Failed to create file') }
-  }, [filesystem, generateUniqueFileName, showError])
+  }, [filesystem, generateUniqueFileName, getDefaultWorkspacePath, showError])
 
   const clearPendingNewFile = useCallback(() => { setPendingNewFilePath(null) }, [])
 
   const generateUniqueFolderName = useCallback((parentPath: string = '/'): string => {
+    // If at root, use first workspace
+    const effectivePath = parentPath === '/' ? getDefaultWorkspacePath() : parentPath
     const baseName = 'new-folder'
-    const prefix = parentPath === '/' ? '/' : `${parentPath}/`
+    const prefix = effectivePath === '/' ? '/' : `${effectivePath}/`
     if (!filesystem.exists(`${prefix}${baseName}`)) return baseName
     let counter = 1
     while (filesystem.exists(`${prefix}${baseName}-${counter}`)) counter++
     return `${baseName}-${counter}`
-  }, [filesystem])
+  }, [filesystem, getDefaultWorkspacePath])
 
   const createFolderWithRename = useCallback((parentPath: string = '/') => {
-    const folderName = generateUniqueFolderName(parentPath)
-    const fullPath = parentPath === '/' ? `/${folderName}` : `${parentPath}/${folderName}`
+    // If at root, use first workspace (can't create folders at root level in workspace mode)
+    const effectivePath = parentPath === '/' ? getDefaultWorkspacePath() : parentPath
+    const folderName = generateUniqueFolderName(effectivePath)
+    const fullPath = effectivePath === '/' ? `/${folderName}` : `${effectivePath}/${folderName}`
     try { filesystem.createFolder(fullPath); setPendingNewFolderPath(fullPath) }
     catch (error) { showError(error instanceof Error ? error.message : 'Failed to create folder') }
-  }, [filesystem, generateUniqueFolderName, showError])
+  }, [filesystem, generateUniqueFolderName, getDefaultWorkspacePath, showError])
 
   const clearPendingNewFolder = useCallback(() => { setPendingNewFolderPath(null) }, [])
 

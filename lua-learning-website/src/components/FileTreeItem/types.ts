@@ -4,6 +4,8 @@ export interface FileTreeItemProps {
   name: string
   path: string
   type: 'file' | 'folder'
+  /** Indicates this is a workspace root (mount point) */
+  isWorkspace?: boolean
   isSelected: boolean
   isExpanded?: boolean
   isRenaming?: boolean

@@ -23,10 +23,20 @@ const FolderIcon = () => (
   </svg>
 )
 
+const WorkspaceIcon = () => (
+  <svg className={`${styles.iconSvg} ${styles.workspaceIcon}`} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    {/* Folder with workspace badge */}
+    <path d="M14 4H8l-1-1H2a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1V5a1 1 0 00-1-1z" />
+    {/* Small circle badge to indicate workspace */}
+    <circle cx="12" cy="11" r="2.5" fill="currentColor" stroke="var(--bg-secondary, #1e1e1e)" strokeWidth="1" />
+  </svg>
+)
+
 export function FileTreeItem({
   name,
   path,
   type,
+  isWorkspace,
   isSelected,
   isExpanded,
   isRenaming,
@@ -162,8 +172,8 @@ export function FileTreeItem({
       )}
 
       {/* Icon */}
-      <span className={styles.icon} data-testid={isFolder ? 'folder-icon' : 'file-icon'}>
-        {isFolder ? <FolderIcon /> : <FileIcon />}
+      <span className={styles.icon} data-testid={isFolder ? (isWorkspace ? 'workspace-icon' : 'folder-icon') : 'file-icon'}>
+        {isFolder ? (isWorkspace ? <WorkspaceIcon /> : <FolderIcon />) : <FileIcon />}
       </span>
 
       {/* Name or rename input */}

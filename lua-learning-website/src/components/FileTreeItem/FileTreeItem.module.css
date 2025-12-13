@@ -67,6 +67,10 @@
   fill: var(--theme-success);
 }
 
+.workspaceIcon {
+  fill: var(--theme-accent-secondary, #007acc);
+}
+
 .name {
   flex: 1;
   overflow: hidden;

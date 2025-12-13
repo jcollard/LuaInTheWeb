@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState, type MouseEvent } from 'react'
 import { FileTree } from '../FileTree'
 import { ContextMenu } from '../ContextMenu'
 import { ConfirmDialog } from '../ConfirmDialog'
-import { WorkspaceTabs } from '../WorkspaceTabs'
 import { AddWorkspaceDialog } from '../AddWorkspaceDialog'
 import { useFileExplorer } from './useFileExplorer'
 import type { FileExplorerProps } from './types'
@@ -25,6 +24,17 @@ const NewFolderIcon = () => (
       fill="currentColor"
       d="M14 4H8l-1-1H2a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1V5a1 1 0 00-1-1zm-1 10H3V5h4l1 1h5v8zM8 8v1.5H6.5V11h1.5v1.5H9.5V11H11V9.5H9.5V8H8z"
     />
+  </svg>
+)
+
+const AddWorkspaceIcon = () => (
+  <svg className={styles.toolbarIcon} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path
+      fill="currentColor"
+      d="M14 4H8l-1-1H2a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1V5a1 1 0 00-1-1z"
+    />
+    <circle cx="12" cy="11" r="3" fill="currentColor" stroke="var(--bg-primary, #252526)" strokeWidth="1" />
+    <path d="M12 9.5v3M10.5 11h3" stroke="var(--bg-primary, #252526)" strokeWidth="1" strokeLinecap="round" />
   </svg>
 )
 // Stryker restore all
@@ -101,13 +111,6 @@ export function FileExplorer({
     (name: string) => {
       workspaceProps?.onAddLocalWorkspace(name)
       setIsAddWorkspaceDialogOpen(false)
-    },
-    [workspaceProps]
-  )
-
-  const handleRemoveWorkspace = useCallback(
-    (workspaceId: string) => {
-      workspaceProps?.onRemoveWorkspace(workspaceId)
     },
     [workspaceProps]
   )
@@ -300,15 +303,6 @@ export function FileExplorer({
 
   return (
     <div className={combinedClassName} data-testid="file-explorer">
-      {/* Workspace Tabs (optional) */}
-      {workspaceProps && (
-        <WorkspaceTabs
-          workspaces={workspaceProps.workspaces}
-          onAddClick={handleAddWorkspaceClick}
-          onClose={handleRemoveWorkspace}
-        />
-      )}
-
       {/* Toolbar */}
       <div className={styles.toolbar}>
         <button
@@ -329,6 +323,17 @@ export function FileExplorer({
         >
           <NewFolderIcon />
         </button>
+        {workspaceProps && (
+          <button
+            type="button"
+            className={styles.toolbarButton}
+            onClick={handleAddWorkspaceClick}
+            aria-label="Add Workspace"
+            title="Add Workspace"
+          >
+            <AddWorkspaceIcon />
+          </button>
+        )}
       </div>
 
       {/* File Tree */}

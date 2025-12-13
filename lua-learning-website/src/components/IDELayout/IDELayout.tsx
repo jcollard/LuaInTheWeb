@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { IDEContextProvider, useIDE } from '../IDEContext'
 import { ActivityBar } from '../ActivityBar'
 import { StatusBar } from '../StatusBar'
@@ -13,13 +13,37 @@ import { ToastContainer } from '../Toast'
 import { WelcomeScreen } from '../WelcomeScreen'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useWorkspaceManager } from '../../hooks/useWorkspaceManager'
+import { createFileSystemAdapter } from '../../hooks/compositeFileSystemAdapter'
+import type { Workspace } from '../../hooks/workspaceTypes'
+import type { IFileSystem } from '@lua-learning/shell-core'
 import styles from './IDELayout.module.css'
 import type { IDELayoutProps } from './types'
 
 /**
+ * Props passed from IDELayout to IDELayoutInner
+ */
+interface IDELayoutInnerProps {
+  className?: string
+  compositeFileSystem: IFileSystem
+  workspaces: Workspace[]
+  addVirtualWorkspace: (name: string) => void
+  addLocalWorkspace: (name: string, handle: FileSystemDirectoryHandle) => Promise<Workspace>
+  removeWorkspace: (workspaceId: string) => void
+  isFileSystemAccessSupported: () => boolean
+}
+
+/**
  * Inner component that uses IDE context
  */
-function IDELayoutInner({ className }: { className?: string }) {
+function IDELayoutInner({
+  className,
+  compositeFileSystem,
+  workspaces,
+  addVirtualWorkspace,
+  addLocalWorkspace,
+  removeWorkspace,
+  isFileSystemAccessSupported,
+}: IDELayoutInnerProps) {
   const {
     code,
     setCode,
@@ -64,16 +88,6 @@ function IDELayoutInner({ className }: { className?: string }) {
   const [cursorLine, setCursorLine] = useState(1)
   const [cursorColumn, setCursorColumn] = useState(1)
   const [pendingCloseTabPath, setPendingCloseTabPath] = useState<string | null>(null)
-
-  // Workspace management
-  const {
-    workspaces,
-    compositeFileSystem,
-    addVirtualWorkspace,
-    addLocalWorkspace,
-    removeWorkspace,
-    isFileSystemAccessSupported,
-  } = useWorkspaceManager()
 
   // Handle adding a local workspace (triggers directory picker)
   const handleAddLocalWorkspace = useCallback(
@@ -275,9 +289,33 @@ export function IDELayout({
   initialCode = '',
   className,
 }: IDELayoutProps) {
+  // Workspace management (hoisted here to pass filesystem to IDEContextProvider)
+  const {
+    workspaces,
+    compositeFileSystem,
+    addVirtualWorkspace,
+    addLocalWorkspace,
+    removeWorkspace,
+    isFileSystemAccessSupported,
+  } = useWorkspaceManager()
+
+  // Create adapted filesystem for IDEContext
+  const adaptedFileSystem = useMemo(
+    () => createFileSystemAdapter(compositeFileSystem),
+    [compositeFileSystem]
+  )
+
   return (
-    <IDEContextProvider initialCode={initialCode}>
-      <IDELayoutInner className={className} />
+    <IDEContextProvider initialCode={initialCode} fileSystem={adaptedFileSystem}>
+      <IDELayoutInner
+        className={className}
+        compositeFileSystem={compositeFileSystem}
+        workspaces={workspaces}
+        addVirtualWorkspace={addVirtualWorkspace}
+        addLocalWorkspace={addLocalWorkspace}
+        removeWorkspace={removeWorkspace}
+        isFileSystemAccessSupported={isFileSystemAccessSupported}
+      />
     </IDEContextProvider>
   )
 }

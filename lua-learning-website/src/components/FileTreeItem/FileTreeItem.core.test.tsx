@@ -56,6 +56,18 @@ describe('FileTreeItem', () => {
       expect(screen.getByTestId('folder-icon')).toBeInTheDocument()
     })
 
+    it('should render workspace icon for workspace folders', () => {
+      render(<FileTreeItem {...defaultFolderProps} isWorkspace={true} />)
+      expect(screen.getByTestId('workspace-icon')).toBeInTheDocument()
+      expect(screen.queryByTestId('folder-icon')).not.toBeInTheDocument()
+    })
+
+    it('should render folder icon for non-workspace folders', () => {
+      render(<FileTreeItem {...defaultFolderProps} isWorkspace={false} />)
+      expect(screen.getByTestId('folder-icon')).toBeInTheDocument()
+      expect(screen.queryByTestId('workspace-icon')).not.toBeInTheDocument()
+    })
+
     it('should render expanded chevron when folder is expanded', () => {
       render(<FileTreeItem {...defaultFolderProps} isExpanded={true} />)
       const chevron = screen.getByTestId('folder-chevron')

@@ -145,6 +145,7 @@ export function FileTree({
           name={node.name}
           path={node.path}
           type={node.type}
+          isWorkspace={node.isWorkspace}
           isSelected={isSelected}
           isExpanded={isExpanded}
           isRenaming={isRenaming}

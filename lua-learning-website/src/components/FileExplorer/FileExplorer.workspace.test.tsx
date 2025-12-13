@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { FileExplorer } from './FileExplorer'
 import type { Workspace } from '../../hooks/workspaceTypes'
 import type { WorkspaceProps } from './types'
+import type { TreeNode } from '../../hooks/fileSystemTypes'
 
 // Mock filesystem for test workspaces
 const mockFileSystem = {
@@ -31,6 +32,16 @@ function createMockWorkspace(overrides: Partial<Workspace> = {}): Workspace {
   }
 }
 
+function createWorkspaceTree(workspaces: Workspace[]): TreeNode[] {
+  return workspaces.map((ws) => ({
+    name: ws.mountPath.replace('/', ''),
+    path: ws.mountPath,
+    type: 'folder' as const,
+    isWorkspace: true,
+    children: [],
+  }))
+}
+
 describe('FileExplorer with Workspace Management', () => {
   const baseProps = {
     tree: [],
@@ -56,37 +67,50 @@ describe('FileExplorer with Workspace Management', () => {
   })
 
   describe('without workspace props', () => {
-    it('does not render workspace tabs', () => {
+    it('does not render add workspace button', () => {
       render(<FileExplorer {...baseProps} />)
-      expect(screen.queryByTestId('workspace-tabs')).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /add workspace/i })).not.toBeInTheDocument()
     })
   })
 
   describe('with workspace props', () => {
-    it('renders workspace tabs', () => {
+    it('renders add workspace button in toolbar', () => {
       render(<FileExplorer {...baseProps} workspaceProps={defaultWorkspaceProps} />)
-      expect(screen.getByTestId('workspace-tabs')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /add workspace/i })).toBeInTheDocument()
     })
 
-    it('renders tabs for each workspace', () => {
+    it('renders workspaces as root-level folders in tree', () => {
       const workspaces = [
-        createMockWorkspace({ id: 'ws-1', name: 'My Files' }),
-        createMockWorkspace({ id: 'ws-2', name: 'Project' }),
+        createMockWorkspace({ id: 'ws-1', name: 'My Files', mountPath: '/my-files' }),
+        createMockWorkspace({ id: 'ws-2', name: 'Project', mountPath: '/project' }),
       ]
+      const tree = createWorkspaceTree(workspaces)
       render(
         <FileExplorer
           {...baseProps}
+          tree={tree}
           workspaceProps={{ ...defaultWorkspaceProps, workspaces }}
         />
       )
 
-      expect(screen.getByRole('tab', { name: /My Files/i })).toBeInTheDocument()
-      expect(screen.getByRole('tab', { name: /Project/i })).toBeInTheDocument()
+      // Workspaces appear as tree items, not tabs
+      expect(screen.getByRole('treeitem', { name: /my-files/i })).toBeInTheDocument()
+      expect(screen.getByRole('treeitem', { name: /project/i })).toBeInTheDocument()
     })
 
-    it('renders add workspace button', () => {
-      render(<FileExplorer {...baseProps} workspaceProps={defaultWorkspaceProps} />)
-      expect(screen.getByRole('button', { name: /add workspace/i })).toBeInTheDocument()
+    it('displays workspace icons for workspace folders', () => {
+      const workspaces = [createMockWorkspace({ id: 'ws-1', name: 'My Files', mountPath: '/my-files' })]
+      const tree = createWorkspaceTree(workspaces)
+      render(
+        <FileExplorer
+          {...baseProps}
+          tree={tree}
+          workspaceProps={{ ...defaultWorkspaceProps, workspaces }}
+        />
+      )
+
+      // Workspace icon should be rendered (not regular folder icon)
+      expect(screen.getByTestId('workspace-icon')).toBeInTheDocument()
     })
   })
 
@@ -185,34 +209,6 @@ describe('FileExplorer with Workspace Management', () => {
       await user.click(screen.getByRole('button', { name: /add workspace/i }))
 
       expect(screen.getByRole('radio', { name: /local folder/i })).toBeDisabled()
-    })
-  })
-
-  describe('remove workspace', () => {
-    it('calls onRemoveWorkspace when close button is clicked', async () => {
-      const user = userEvent.setup()
-      const onRemoveWorkspace = vi.fn()
-      const workspaces = [
-        createMockWorkspace({ id: 'ws-1', name: 'First' }),
-        createMockWorkspace({ id: 'ws-2', name: 'Second' }),
-      ]
-      render(
-        <FileExplorer
-          {...baseProps}
-          workspaceProps={{ ...defaultWorkspaceProps, workspaces, onRemoveWorkspace }}
-        />
-      )
-
-      const closeButtons = screen.getAllByRole('button', { name: /close/i })
-      await user.click(closeButtons[1]) // Click close on second workspace
-
-      expect(onRemoveWorkspace).toHaveBeenCalledWith('ws-2')
-    })
-
-    it('does not show close button when only one workspace', () => {
-      render(<FileExplorer {...baseProps} workspaceProps={defaultWorkspaceProps} />)
-
-      expect(screen.queryByRole('button', { name: /close/i })).not.toBeInTheDocument()
     })
   })
 })

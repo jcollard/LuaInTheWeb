@@ -1,5 +1,6 @@
 import type { UseLuaEngineReturn } from '../../hooks/types'
 import type { TreeNode, UseFileSystemReturn } from '../../hooks/useFileSystem'
+import type { AdaptedFileSystem } from '../../hooks/compositeFileSystemAdapter'
 import type { RecentFile } from '../../hooks/useRecentFiles'
 import type { TabInfo } from '../TabBar'
 import type { ToastData } from '../Toast'
@@ -70,7 +71,7 @@ export interface IDEContextValue {
   clearRecentFiles: () => void
 
   // Raw filesystem access (for shell integration)
-  fileSystem: UseFileSystemReturn
+  fileSystem: UseFileSystemReturn | AdaptedFileSystem
 }
 
 /**
@@ -81,4 +82,6 @@ export interface IDEContextProviderProps {
   children: React.ReactNode
   /** Initial code (defaults to empty string) */
   initialCode?: string
+  /** External filesystem to use instead of built-in useFileSystem (for workspace integration) */
+  fileSystem?: AdaptedFileSystem
 }

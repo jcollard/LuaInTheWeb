@@ -3,10 +3,10 @@ import type { Workspace } from '../../hooks/workspaceTypes'
 
 /**
  * Props for workspace management in FileExplorer.
- * When provided, WorkspaceTabs and AddWorkspaceDialog are rendered.
+ * When provided, "Add Workspace" toolbar button and AddWorkspaceDialog are rendered.
  */
 export interface WorkspaceProps {
-  /** List of workspaces to display as tabs */
+  /** List of workspaces (workspaces appear as root-level folders in the tree) */
   workspaces: Workspace[]
   /** Whether the File System Access API is supported */
   isFileSystemAccessSupported: boolean

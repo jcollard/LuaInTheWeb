@@ -13,6 +13,8 @@ export interface TreeNode {
   name: string
   path: string
   type: 'file' | 'folder'
+  /** Indicates this is a workspace root (mount point) */
+  isWorkspace?: boolean
   children?: TreeNode[]
 }
 
