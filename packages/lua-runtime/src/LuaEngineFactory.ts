@@ -19,6 +19,7 @@ export const MAX_BUFFER_SIZE = 1000
 /**
  * WeakMap to store flush functions for each engine instance.
  * Used by close() and closeDeferred() to flush remaining output.
+ * WeakMap (vs Map) allows automatic cleanup when engines are garbage collected.
  */
 const engineFlushMap = new WeakMap<LuaEngine, () => void>()
 
