@@ -1,4 +1,22 @@
 import type { TreeNode } from '../../hooks/useFileSystem'
+import type { Workspace } from '../../hooks/workspaceTypes'
+
+/**
+ * Props for workspace management in FileExplorer.
+ * When provided, WorkspaceTabs and AddWorkspaceDialog are rendered.
+ */
+export interface WorkspaceProps {
+  /** List of workspaces to display as tabs */
+  workspaces: Workspace[]
+  /** Whether the File System Access API is supported */
+  isFileSystemAccessSupported: boolean
+  /** Callback to add a virtual workspace */
+  onAddVirtualWorkspace: (name: string) => void
+  /** Callback to add a local workspace (triggers directory picker) */
+  onAddLocalWorkspace: (name: string) => void
+  /** Callback to remove a workspace */
+  onRemoveWorkspace: (workspaceId: string) => void
+}
 
 export interface FileExplorerProps {
   tree: TreeNode[]
@@ -16,6 +34,8 @@ export interface FileExplorerProps {
   onCancelPendingNewFile?: () => void
   onCancelPendingNewFolder?: () => void
   className?: string
+  /** Optional workspace management props. When provided, workspace tabs are shown. */
+  workspaceProps?: WorkspaceProps
 }
 
 export interface ContextMenuState {

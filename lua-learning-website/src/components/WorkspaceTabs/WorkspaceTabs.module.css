@@ -1,0 +1,130 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--theme-border-secondary);
+  background-color: var(--theme-bg-secondary);
+  min-height: 32px;
+}
+
+.tabsScroll {
+  display: flex;
+  flex: 1;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.tabsScroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tabsScroll::-webkit-scrollbar-thumb {
+  background-color: var(--theme-border-secondary);
+  border-radius: 2px;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background-color: var(--theme-bg-primary);
+  border: 1px solid var(--theme-border-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--theme-text-primary);
+  transition: background-color 0.1s, border-color 0.1s;
+}
+
+.tab:hover {
+  background-color: var(--theme-bg-hover);
+}
+
+.tab:focus {
+  outline: 1px solid var(--theme-border-focus);
+  outline-offset: -1px;
+}
+
+.tab[data-status="disconnected"] {
+  opacity: 0.6;
+  border-style: dashed;
+}
+
+.tab[data-type="local"]::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23888' d='M14 4H8l-1-1H2a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1V5a1 1 0 00-1-1z'/%3E%3C/svg%3E");
+  background-size: contain;
+  flex-shrink: 0;
+}
+
+.tabName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--theme-text-secondary);
+  flex-shrink: 0;
+}
+
+.closeButton:hover {
+  background-color: var(--theme-bg-hover);
+  color: var(--theme-text-primary);
+}
+
+.closeButton:focus {
+  outline: 1px solid var(--theme-border-focus);
+  outline-offset: -1px;
+}
+
+.closeIcon {
+  width: 12px;
+  height: 12px;
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--theme-text-primary);
+  flex-shrink: 0;
+}
+
+.addButton:hover {
+  background-color: var(--theme-bg-hover);
+}
+
+.addButton:focus {
+  outline: 1px solid var(--theme-border-focus);
+  outline-offset: -1px;
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+}

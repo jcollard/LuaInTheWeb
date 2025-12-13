@@ -1,6 +1,6 @@
 # Epic #20: File API / Workspace
 
-**Status:** In Progress (3/5 complete)
+**Status:** In Progress (4/5 complete)
 **Branch:** epic-20
 **Created:** 2025-12-13
 **Last Updated:** 2025-12-13
@@ -105,12 +105,13 @@ Enable users to work with files on their actual computer (not just browser local
 | #198 | File System Access API Research | ✅ Complete | - | See [research doc](docs/file-system-access-api-research.md) |
 | #199 | FileSystemAccessAPI IFileSystem Implementation | ✅ Complete | 199-filesystemaccessapi-ifilesystem-implementation | Merged in PR #205 |
 | #200 | Workspace State Management | ✅ Complete | 200-workspace-state-management | useWorkspaceManager + CompositeFileSystem (AD-4) |
-| #201 | Workspace UI Components | ⏳ Pending | - | Depends on #200 |
+| #201 | Workspace UI Components | 🔄 PR Created | 201-workspace-ui-components | PR #217 |
 | #202 | Shell Multi-Workspace Integration | ⏳ Pending | - | Depends on #199, #200, #201 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
 - 🔄 In Progress - Currently being worked on
+- 🔄 PR Created - Pull request created, awaiting review
 - ✅ Complete - Merged to epic branch
 - ❌ Blocked - Has unresolved blockers
 
@@ -139,6 +140,15 @@ Enable users to work with files on their actual computer (not just browser local
 <!-- Updated after each sub-issue completion -->
 
 ### 2025-12-13
+- **PR Created for #201** - Workspace UI Components (PR #217)
+- **#201 Complete** - Workspace UI Components
+  - Created `WorkspaceTabs` component for workspace navigation
+  - Created `AddWorkspaceDialog` for creating new workspaces (virtual and local)
+  - Integrated workspace UI into `FileExplorer` component
+  - Added `workspaceProps` to `FileExplorerProps` for optional workspace management
+  - Integrated `useWorkspaceManager` hook in `IDELayout`
+  - Added E2E tests for workspace UI flows
+  - Full theme support (light/dark mode)
 - **#200 Complete (Updated)** - Workspace State Management with Multi-Mount Architecture
   - Created `CompositeFileSystem` in shell-core (routes paths to mounted filesystems)
   - Created `useWorkspaceManager` hook for multi-workspace management
