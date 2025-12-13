@@ -26,7 +26,7 @@ Improve the Lua code editor experience with professional-grade formatting, synta
 
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
-| #185 | Lua Code Formatter | 🔄 In Progress | 185-lua-formatter | Using StyLua WASM library |
+| #185 | Lua Code Formatter | 🔄 PR Created | 185-lua-formatter | PR #204 |
 | #186 | Improved Syntax Highlighting | ⏳ Pending | - | - |
 | #187 | Auto-Indentation | ⏳ Pending | - | - |
 
@@ -46,6 +46,7 @@ None - all sub-issues can be implemented independently.
 
 ### 2025-12-13
 - Epic started
+- PR created for #185: Lua Code Formatter (PR #204)
 
 ## Key Files
 
