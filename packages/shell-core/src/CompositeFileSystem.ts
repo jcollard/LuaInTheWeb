@@ -258,7 +258,9 @@ export class CompositeFileSystem implements IFileSystem {
     if (resolved === '/') {
       return Array.from(this.mounts.values())
         .map((mount) => ({
-          name: mount.name,
+          // Use the directory name from mount path (e.g., "my-files" from "/my-files")
+          // This ensures the name matches what users need to type for cd
+          name: mount.mountPath.substring(1), // Remove leading '/'
           type: 'directory' as const,
           path: mount.mountPath,
         }))
