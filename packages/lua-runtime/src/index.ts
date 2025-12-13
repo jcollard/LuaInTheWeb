@@ -9,12 +9,13 @@
 export { LuaCommand } from './LuaCommand'
 
 // Process exports
-export { LuaReplProcess } from './LuaReplProcess'
-export { LuaScriptProcess } from './LuaScriptProcess'
+export { LuaReplProcess, type LuaReplProcessOptions } from './LuaReplProcess'
+export { LuaScriptProcess, type LuaScriptProcessOptions } from './LuaScriptProcess'
 
 // Engine factory export (for advanced usage)
 export {
   LuaEngineFactory,
   formatLuaError,
   type LuaEngineCallbacks,
+  type LuaEngineOptions,
 } from './LuaEngineFactory'
