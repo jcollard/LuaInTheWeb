@@ -23,6 +23,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Lint all packages
+      - name: Lint lua-runtime
+        run: npm run lint
+        working-directory: packages/lua-runtime
+
+      - name: Lint lua-learning-website
+        run: npm run lint
+        working-directory: lua-learning-website
+
+      # Build all packages
       - name: Build shell-core
         run: npm run build
         working-directory: packages/shell-core
@@ -31,11 +41,20 @@ jobs:
         run: npm run build
         working-directory: packages/lua-runtime
 
-      - name: Lint
-        run: npm run lint
+      - name: Build lua-learning-website
+        run: npm run build
         working-directory: lua-learning-website
 
-      - name: Run unit tests
+      # Test all packages
+      - name: Test shell-core
+        run: npm run test
+        working-directory: packages/shell-core
+
+      - name: Test lua-runtime
+        run: npm run test
+        working-directory: packages/lua-runtime
+
+      - name: Test lua-learning-website
         run: npm run test
         working-directory: lua-learning-website
 
