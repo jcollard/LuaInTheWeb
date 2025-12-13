@@ -1,13 +1,13 @@
-name: E2E Tests
+name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'epic-**']
   pull_request:
-    branches: [main]
+    branches: [main, 'epic-**']
 
 jobs:
-  e2e:
+  ci:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,6 +26,14 @@ jobs:
       - name: Build shell-core
         run: npm run build
         working-directory: packages/shell-core
+
+      - name: Lint
+        run: npm run lint
+        working-directory: lua-learning-website
+
+      - name: Run unit tests
+        run: npm run test
+        working-directory: lua-learning-website
 
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
