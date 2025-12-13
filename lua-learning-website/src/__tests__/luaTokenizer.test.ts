@@ -276,4 +276,217 @@ describe('luaTokenizer', () => {
       expect('\\U00000041').toMatch(escapeRegex)
     })
   })
+
+  describe('indentationRules', () => {
+    it('has indentationRules configured', () => {
+      expect(luaLanguageConfig.indentationRules).toBeDefined()
+    })
+
+    it('has increaseIndentPattern for block-opening keywords', () => {
+      const rules = luaLanguageConfig.indentationRules
+      expect(rules?.increaseIndentPattern).toBeDefined()
+      expect(rules?.increaseIndentPattern).toBeInstanceOf(RegExp)
+    })
+
+    it('has decreaseIndentPattern for block-closing keywords', () => {
+      const rules = luaLanguageConfig.indentationRules
+      expect(rules?.decreaseIndentPattern).toBeDefined()
+      expect(rules?.decreaseIndentPattern).toBeInstanceOf(RegExp)
+    })
+
+    describe('increaseIndentPattern', () => {
+      const getPattern = () => luaLanguageConfig.indentationRules?.increaseIndentPattern
+
+      it('matches function declarations', () => {
+        const pattern = getPattern()
+        expect('function foo()').toMatch(pattern!)
+        expect('local function bar()').toMatch(pattern!)
+        expect('function()').toMatch(pattern!)
+      })
+
+      it('matches if statements', () => {
+        const pattern = getPattern()
+        expect('if x > 0 then').toMatch(pattern!)
+        expect('if true then').toMatch(pattern!)
+      })
+
+      it('matches for loops', () => {
+        const pattern = getPattern()
+        expect('for i = 1, 10 do').toMatch(pattern!)
+        expect('for k, v in pairs(t) do').toMatch(pattern!)
+      })
+
+      it('matches while loops', () => {
+        const pattern = getPattern()
+        expect('while x > 0 do').toMatch(pattern!)
+      })
+
+      it('matches repeat blocks', () => {
+        const pattern = getPattern()
+        expect('repeat').toMatch(pattern!)
+      })
+
+      it('matches do blocks', () => {
+        const pattern = getPattern()
+        expect('do').toMatch(pattern!)
+      })
+
+      it('matches else and elseif', () => {
+        const pattern = getPattern()
+        expect('else').toMatch(pattern!)
+        expect('elseif x then').toMatch(pattern!)
+      })
+
+      it('does not match keywords in comments', () => {
+        const pattern = getPattern()
+        expect('-- function foo()').not.toMatch(pattern!)
+        expect('-- if x then').not.toMatch(pattern!)
+      })
+    })
+
+    describe('decreaseIndentPattern', () => {
+      const getPattern = () => luaLanguageConfig.indentationRules?.decreaseIndentPattern
+
+      it('matches end keyword at start of line', () => {
+        const pattern = getPattern()
+        expect('end').toMatch(pattern!)
+        expect('  end').toMatch(pattern!)
+        expect('\tend').toMatch(pattern!)
+      })
+
+      it('matches else keyword at start of line', () => {
+        const pattern = getPattern()
+        expect('else').toMatch(pattern!)
+        expect('  else').toMatch(pattern!)
+      })
+
+      it('matches elseif keyword at start of line', () => {
+        const pattern = getPattern()
+        expect('elseif').toMatch(pattern!)
+        expect('elseif x then').toMatch(pattern!)
+        expect('  elseif b then').toMatch(pattern!)
+      })
+
+      it('matches until keyword at start of line', () => {
+        const pattern = getPattern()
+        expect('until x > 0').toMatch(pattern!)
+        expect('  until').toMatch(pattern!)
+      })
+
+      it('does not match keywords in comments', () => {
+        const pattern = getPattern()
+        expect('-- end').not.toMatch(pattern!)
+        expect('-- else').not.toMatch(pattern!)
+        expect('  -- end').not.toMatch(pattern!)
+      })
+
+      it('does not match keywords in middle of line', () => {
+        const pattern = getPattern()
+        expect('x = "end"').not.toMatch(pattern!)
+        expect('return end_value').not.toMatch(pattern!) // 'end' is part of identifier
+      })
+    })
+  })
+
+  describe('onEnterRules', () => {
+    it('has onEnterRules configured', () => {
+      expect(luaLanguageConfig.onEnterRules).toBeDefined()
+      expect(Array.isArray(luaLanguageConfig.onEnterRules)).toBe(true)
+    })
+
+    it('has at least one onEnterRule', () => {
+      expect(luaLanguageConfig.onEnterRules?.length).toBeGreaterThan(0)
+    })
+
+    it('has rules with beforeText patterns', () => {
+      const rules = luaLanguageConfig.onEnterRules
+      const hasBeforeText = rules?.some((rule) => rule.beforeText !== undefined)
+      expect(hasBeforeText).toBe(true)
+    })
+
+    it('has rules with action configurations', () => {
+      const rules = luaLanguageConfig.onEnterRules
+      const hasAction = rules?.some((rule) => rule.action !== undefined)
+      expect(hasAction).toBe(true)
+    })
+  })
+
+  describe('nested structure patterns', () => {
+    const getIncreasePattern = () =>
+      luaLanguageConfig.indentationRules?.increaseIndentPattern
+    const getDecreasePattern = () =>
+      luaLanguageConfig.indentationRules?.decreaseIndentPattern
+
+    it('handles function inside if block', () => {
+      const increase = getIncreasePattern()!
+      const decrease = getDecreasePattern()!
+
+      // Each line should trigger appropriate indentation
+      expect('if condition then').toMatch(increase)
+      expect('  function inner()').toMatch(increase)
+      expect('  end').toMatch(decrease) // end at start of line (with indent)
+      expect('end').toMatch(decrease)
+    })
+
+    it('handles nested loops', () => {
+      const increase = getIncreasePattern()!
+      const decrease = getDecreasePattern()!
+
+      expect('for i = 1, 10 do').toMatch(increase)
+      expect('  while j > 0 do').toMatch(increase)
+      expect('  end').toMatch(decrease) // end at start of line (with indent)
+      expect('end').toMatch(decrease)
+    })
+
+    it('handles repeat-until inside function', () => {
+      const increase = getIncreasePattern()!
+      const decrease = getDecreasePattern()!
+
+      expect('function test()').toMatch(increase)
+      expect('  repeat').toMatch(increase)
+      expect('until done').toMatch(decrease) // until at start of line
+      expect('end').toMatch(decrease)
+    })
+
+    it('handles if-elseif-else chain', () => {
+      const increase = getIncreasePattern()!
+      const decrease = getDecreasePattern()!
+
+      expect('if a then').toMatch(increase)
+      expect('elseif b then').toMatch(increase)
+      expect('elseif b then').toMatch(decrease) // elseif at start of line
+      expect('else').toMatch(increase)
+      expect('else').toMatch(decrease) // else at start of line
+      expect('end').toMatch(decrease)
+    })
+
+    it('handles anonymous function in table', () => {
+      const increase = getIncreasePattern()!
+
+      // Anonymous functions should also trigger indent
+      expect('callback = function()').toMatch(increase)
+      expect('items = { function()').toMatch(increase)
+    })
+
+    it('handles do-end blocks', () => {
+      const increase = getIncreasePattern()!
+      const decrease = getDecreasePattern()!
+
+      expect('do').toMatch(increase)
+      expect('end').toMatch(decrease)
+    })
+
+    it('does not match keywords that do not end the line properly', () => {
+      const increase = getIncreasePattern()!
+      const decrease = getDecreasePattern()!
+
+      // These lines contain keywords but don't follow the expected patterns
+      // Note: Regex-based rules can't perfectly detect string context, but they
+      // work well for typical code patterns where keywords end lines properly
+      expect('x = "then"').not.toMatch(increase) // 'then' in string, not at end
+      expect('y = something').not.toMatch(increase) // no block keyword
+      expect('z = 42').not.toMatch(decrease) // no closing keyword
+      expect('msg = "end of line"').not.toMatch(decrease) // 'end' not at start
+    })
+  })
 })

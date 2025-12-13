@@ -61,6 +61,34 @@ export const luaLanguageConfig: languages.LanguageConfiguration = {
       end: /^\s*--\s*#?endregion\b/,
     },
   },
+  indentationRules: {
+    // Increase indent after: function, if...then, for...do, while...do, repeat, do, else, elseif
+    // Uses negative lookahead to exclude lines that are comments
+    increaseIndentPattern:
+      /^(?!.*--.*).*\b(function\b.*\)|then|do|repeat|else|elseif.*then)\s*$/,
+    // Decrease indent on: end, else, elseif, until - must be at start of line (with optional whitespace)
+    // Uses negative lookahead to exclude lines that are comments
+    decreaseIndentPattern: /^\s*(?!--)(end|else|elseif|until)\b/,
+  },
+  onEnterRules: [
+    // After block-opening keywords, indent
+    {
+      beforeText:
+        /^\s*\b(function.*\(.*\)|if\b.*\bthen|for\b.*\bdo|while\b.*\bdo|repeat|else|elseif\b.*\bthen)\s*$/,
+      action: { indentAction: 1 }, // IndentAction.Indent
+    },
+    // After standalone 'do' keyword, indent
+    {
+      beforeText: /^\s*do\s*$/,
+      action: { indentAction: 1 }, // IndentAction.Indent
+    },
+    // Before 'end', 'else', 'elseif', 'until' - outdent then indent (for typing these keywords)
+    {
+      beforeText: /^\s*$/,
+      afterText: /^\s*(end|else|elseif|until)\b/,
+      action: { indentAction: 2 }, // IndentAction.IndentOutdent
+    },
+  ],
 }
 
 /**
