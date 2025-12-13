@@ -78,7 +78,7 @@ Enable users to work with files on their actual computer (not just browser local
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #198 | File System Access API Research | ✅ Complete | - | See [research doc](docs/file-system-access-api-research.md) |
-| #199 | FileSystemAccessAPI IFileSystem Implementation | ⏳ Pending | - | Depends on #198 |
+| #199 | FileSystemAccessAPI IFileSystem Implementation | 🔄 In Progress | 199-filesystemaccessapi-ifilesystem-implementation | Started 2025-12-13 |
 | #200 | Workspace State Management | ⏳ Pending | - | Depends on #199 |
 | #201 | Workspace UI Components | ⏳ Pending | - | Depends on #200 |
 | #202 | Shell Multi-Workspace Integration | ⏳ Pending | - | Depends on #199, #200, #201 |

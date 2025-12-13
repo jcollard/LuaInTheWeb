@@ -48,6 +48,12 @@ export { LegacyCommandAdapter } from './adapters/LegacyCommandAdapter'
 export { createFileSystemAdapter } from './createFileSystemAdapter'
 export type { ExternalFileSystem } from './createFileSystemAdapter'
 
+// File System Access API implementation
+export {
+  FileSystemAccessAPIFileSystem,
+  isFileSystemAccessSupported,
+} from './FileSystemAccessAPIFileSystem'
+
 // Built-in commands
 export {
   pwd,
