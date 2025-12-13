@@ -266,4 +266,66 @@ describe('EditorPanel', () => {
       expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
     })
   })
+
+  describe('format button', () => {
+    it('should render format button when onFormat is provided', () => {
+      // Arrange & Act
+      render(<EditorPanel {...defaultProps} onFormat={vi.fn()} />)
+
+      // Assert
+      expect(screen.getByRole('button', { name: /format/i })).toBeInTheDocument()
+    })
+
+    it('should not render format button when onFormat is not provided', () => {
+      // Arrange & Act
+      render(<EditorPanel {...defaultProps} />)
+
+      // Assert
+      expect(screen.queryByRole('button', { name: /format/i })).not.toBeInTheDocument()
+    })
+
+    it('should call onFormat when format button is clicked', () => {
+      // Arrange
+      const onFormat = vi.fn()
+      render(<EditorPanel {...defaultProps} onFormat={onFormat} />)
+
+      // Act
+      fireEvent.click(screen.getByRole('button', { name: /format/i }))
+
+      // Assert
+      expect(onFormat).toHaveBeenCalledTimes(1)
+    })
+
+    it('should show loading state when isFormatting is true', () => {
+      // Arrange & Act
+      render(<EditorPanel {...defaultProps} onFormat={vi.fn()} isFormatting />)
+
+      // Assert
+      expect(screen.getByRole('button', { name: /formatting/i })).toBeInTheDocument()
+    })
+
+    it('should disable format button when code is empty', () => {
+      // Arrange & Act
+      render(<EditorPanel {...defaultProps} code="" onFormat={vi.fn()} />)
+
+      // Assert
+      expect(screen.getByRole('button', { name: /format/i })).toBeDisabled()
+    })
+
+    it('should disable format button when code is whitespace only', () => {
+      // Arrange & Act
+      render(<EditorPanel {...defaultProps} code="   " onFormat={vi.fn()} />)
+
+      // Assert
+      expect(screen.getByRole('button', { name: /format/i })).toBeDisabled()
+    })
+
+    it('should enable format button when code has content', () => {
+      // Arrange & Act
+      render(<EditorPanel {...defaultProps} code='print("hello")' onFormat={vi.fn()} />)
+
+      // Assert
+      expect(screen.getByRole('button', { name: /format/i })).not.toBeDisabled()
+    })
+  })
 })
