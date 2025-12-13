@@ -34,12 +34,16 @@ describe('useLuaEngine', () => {
     vi.clearAllMocks()
   })
   // Cycle 1.1: Hook returns isReady=false initially
-  it('should return isReady=false initially', () => {
+  it('should return isReady=false initially', async () => {
     // Arrange & Act
-    const { result } = renderHook(() => useLuaEngine({}))
+    const { result, unmount } = renderHook(() => useLuaEngine({}))
 
     // Assert
     expect(result.current.isReady).toBe(false)
+
+    // Wait for any pending state updates before unmounting
+    await waitFor(() => expect(result.current.isReady).toBe(true))
+    unmount()
   })
 
   // Cycle 1.2: Hook becomes ready after initialization
@@ -172,13 +176,16 @@ describe('useLuaEngine', () => {
   })
 
   // Cycle 1.7b: No cleanup if unmount before ready
-  it('should not call onCleanup if unmounted before engine ready', () => {
+  it('should not call onCleanup if unmounted before engine ready', async () => {
     // Arrange
     const onCleanup = vi.fn()
 
     // Act - unmount immediately, before engine initializes
     const { unmount } = renderHook(() => useLuaEngine({ onCleanup }))
     unmount()
+
+    // Wait for any pending async operations to settle
+    await act(async () => {})
 
     // Assert - onCleanup should not be called since engine was never ready
     expect(onCleanup).not.toHaveBeenCalled()
@@ -205,7 +212,7 @@ describe('useLuaEngine', () => {
   it('should not execute when engine is not ready', async () => {
     // Arrange
     const onOutput = vi.fn()
-    const { result } = renderHook(() => useLuaEngine({ onOutput }))
+    const { result, unmount } = renderHook(() => useLuaEngine({ onOutput }))
     // Don't wait for ready - check isReady is false
     expect(result.current.isReady).toBe(false)
 
@@ -217,6 +224,10 @@ describe('useLuaEngine', () => {
     // Assert - doString should not have been called with our specific code
     // (setup may call doString for io.write, but our execute should not)
     expect(mockDoString).not.toHaveBeenCalledWith('print("should not run")')
+
+    // Wait for engine initialization to complete before unmounting
+    await waitFor(() => expect(result.current.isReady).toBe(true))
+    unmount()
   })
 
   // Cycle 1.10: Runtime error calls onError
