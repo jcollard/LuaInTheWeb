@@ -10,6 +10,8 @@ export interface ShellTerminalProps {
   embedded?: boolean
   /** Optional class name */
   className?: string
+  /** Callback when shell command modifies filesystem (for refreshing file tree) */
+  onFileSystemChange?: () => void
 }
 
 /**

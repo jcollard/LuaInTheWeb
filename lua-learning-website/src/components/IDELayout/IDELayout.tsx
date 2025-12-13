@@ -57,6 +57,7 @@ function IDELayoutInner({
     toggleTerminal,
     // Filesystem
     fileTree,
+    refreshFileTree,
     deleteFile,
     deleteFolder,
     renameFile,
@@ -251,7 +252,7 @@ function IDELayoutInner({
                   collapsible
                   collapsed={!terminalVisible}
                 >
-                  <BottomPanel fileSystem={compositeFileSystem} />
+                  <BottomPanel fileSystem={compositeFileSystem} onFileSystemChange={refreshFileTree} />
                 </IDEPanel>
               </IDEPanelGroup>
             </IDEPanel>

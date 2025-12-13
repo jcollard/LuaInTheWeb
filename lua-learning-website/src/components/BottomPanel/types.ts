@@ -8,4 +8,6 @@ export interface BottomPanelProps {
   fileSystem: UseShellFileSystem
   /** Optional additional className */
   className?: string
+  /** Callback when shell command modifies filesystem (for refreshing file tree) */
+  onFileSystemChange?: () => void
 }

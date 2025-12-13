@@ -72,6 +72,9 @@ export interface IDEContextValue {
 
   // Raw filesystem access (for shell integration)
   fileSystem: UseFileSystemReturn | AdaptedFileSystem
+
+  // File tree refresh (for shell integration - triggers re-render after shell modifies filesystem)
+  refreshFileTree: () => void
 }
 
 /**

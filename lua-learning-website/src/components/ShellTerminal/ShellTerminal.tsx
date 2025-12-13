@@ -20,6 +20,7 @@ export function ShellTerminal({
   fileSystem,
   embedded = false,
   className,
+  onFileSystemChange,
 }: ShellTerminalProps) {
   const { theme } = useTheme()
   const initialThemeRef = useRef(theme)
@@ -45,6 +46,12 @@ export function ShellTerminal({
   useEffect(() => {
     executeCommandWithContextRef.current = executeCommandWithContext
   }, [executeCommandWithContext])
+
+  // Store onFileSystemChange in ref for stable callback access
+  const onFileSystemChangeRef = useRef(onFileSystemChange)
+  useEffect(() => {
+    onFileSystemChangeRef.current = onFileSystemChange
+  }, [onFileSystemChange])
 
   // Helper to show prompt - needs to be stable and use refs
   const showPrompt = useCallback(() => {
@@ -134,6 +141,9 @@ export function ShellTerminal({
 
     // Update cwd ref immediately
     cwdRef.current = contextResult.cwd
+
+    // Notify that filesystem may have changed (for file tree refresh)
+    onFileSystemChangeRef.current?.()
 
     // If a process was returned, start it and don't show prompt yet
     // The prompt will be shown when the process exits via onProcessExit callback

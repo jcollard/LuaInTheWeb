@@ -28,6 +28,8 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   const [activePanel, setActivePanel] = useState<ActivityPanelType>('explorer')
   const [terminalVisible, setTerminalVisible] = useState(true)
   const [sidebarVisible, setSidebarVisible] = useState(true)
+  // Version counter to trigger file tree refresh (incremented when shell modifies filesystem)
+  const [fileTreeVersion, setFileTreeVersion] = useState(0)
 
   const activeTab = tabBar.activeTab
   const tabs = tabBar.tabs
@@ -213,13 +215,20 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   const toggleTerminal = useCallback(() => { setTerminalVisible(prev => !prev) }, [])
   const toggleSidebar = useCallback(() => { setSidebarVisible(prev => !prev) }, [])
 
+  // Refresh file tree by incrementing version counter (triggers re-render for shell commands)
+  const refreshFileTree = useCallback(() => { setFileTreeVersion(v => v + 1) }, [])
+
+  // File tree is computed fresh on each render (UI operations cause re-renders naturally)
+  // For shell commands, refreshFileTree is called to force a re-render via fileTreeVersion
+  // We need to read fileTreeVersion to ensure component re-renders when it changes
+  void fileTreeVersion // eslint-disable-line @typescript-eslint/no-unused-expressions
   const fileTree = filesystem.getTree()
 
   const value = useMemo<IDEContextValue>(() => ({
     engine, code, setCode, fileName, isDirty,
     activePanel, setActivePanel,
     terminalVisible, toggleTerminal, sidebarVisible, toggleSidebar,
-    fileTree,
+    fileTree, refreshFileTree,
     createFile, createFolder, deleteFile, deleteFolder, renameFile, renameFolder, moveFile, openFile, saveFile,
     tabs, activeTab, selectTab, closeTab, toasts, showError, dismissToast,
     pendingNewFilePath, generateUniqueFileName, createFileWithRename, clearPendingNewFile,
@@ -228,7 +237,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   }), [
     engine, code, setCode, fileName, isDirty,
     activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
-    fileTree, createFile, createFolder, deleteFile, deleteFolder,
+    fileTree, refreshFileTree, createFile, createFolder, deleteFile, deleteFolder,
     renameFile, renameFolder, moveFile, openFile, saveFile, tabs, activeTab, selectTab, closeTab,
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,
