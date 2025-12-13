@@ -34,12 +34,16 @@ describe('useLuaRepl', () => {
   })
 
   // Cycle 1: Hook returns isReady=false initially
-  it('should return isReady=false initially', () => {
+  it('should return isReady=false initially', async () => {
     // Arrange & Act
-    const { result } = renderHook(() => useLuaRepl({}))
+    const { result, unmount } = renderHook(() => useLuaRepl({}))
 
     // Assert
     expect(result.current.isReady).toBe(false)
+
+    // Wait for any pending state updates before unmounting
+    await waitFor(() => expect(result.current.isReady).toBe(true))
+    unmount()
   })
 
   // Cycle 2: Hook becomes ready after initialization
@@ -104,7 +108,7 @@ describe('useLuaRepl', () => {
     // Cycle 6: Execute before ready returns early
     it('should not execute when engine is not ready', async () => {
       // Arrange
-      const { result } = renderHook(() => useLuaRepl({}))
+      const { result, unmount } = renderHook(() => useLuaRepl({}))
       // Don't wait for ready
       expect(result.current.isReady).toBe(false)
 
@@ -115,6 +119,10 @@ describe('useLuaRepl', () => {
 
       // Assert - doString should not have been called with our code
       expect(mockDoString).not.toHaveBeenCalledWith('print("test")')
+
+      // Wait for engine initialization to complete before unmounting
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+      unmount()
     })
 
     // Cycle 7: Statement fails, fallback to expression evaluation with formatting
