@@ -1,9 +1,10 @@
-import Editor, { type OnMount } from '@monaco-editor/react'
+import Editor, { type OnMount, type BeforeMount } from '@monaco-editor/react'
 import { useCallback, useRef, useEffect } from 'react'
 import type { CodeEditorProps } from './types'
 import styles from './CodeEditor.module.css'
 import { useTheme } from '../../contexts/useTheme'
 import type { editor, IDisposable } from 'monaco-editor'
+import { registerLuaLanguage } from '../../utils/luaTokenizer'
 
 /**
  * A code editor component wrapping Monaco Editor
@@ -26,6 +27,11 @@ export function CodeEditor({
   useEffect(() => {
     onFormatRef.current = onFormat
   }, [onFormat])
+
+  const handleBeforeMount: BeforeMount = useCallback((monaco) => {
+    // Register enhanced Lua syntax highlighting
+    registerLuaLanguage(monaco)
+  }, [])
 
   const handleEditorMount: OnMount = useCallback((editorInstance) => {
     editorRef.current = editorInstance
@@ -60,6 +66,7 @@ export function CodeEditor({
         value={value}
         theme={monacoTheme}
         onChange={(newValue) => onChange(newValue ?? '')}
+        beforeMount={handleBeforeMount}
         onMount={handleEditorMount}
         options={{
           readOnly,
