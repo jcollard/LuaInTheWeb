@@ -1,7 +1,8 @@
 # Epic #183: Improve Browser Responsiveness During Long-Running Lua Loops
 
-**Status:** Complete (4/4)
+**Status:** Needs Review (4/4 complete)
 **Branch:** epic-183
+**PR:** #216
 **Created:** 2025-12-13
 **Last Updated:** 2025-12-13
 
@@ -62,6 +63,9 @@ Infinite or long-running Lua loops (e.g., `while i > 0 do i = i + 1; print(i) en
 - Completed #194: Merged PR #208 to epic-183
 - Started work on #195: Add Comprehensive Tests for Execution Control
 - Completed #195: Added E2E tests for execution control (7 tests)
+- Epic PR created: #216
+- All 4 sub-issues complete
+- Ready for final review
 
 ## Key Files
 
