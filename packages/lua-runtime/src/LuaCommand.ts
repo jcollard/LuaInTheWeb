@@ -9,14 +9,15 @@ import { LuaScriptProcess, type LuaScriptProcessOptions } from './LuaScriptProce
 
 /**
  * Default execution control options.
- * Stops execution after 1M lines (~0.5-1 second) to prevent browser freeze.
- * This provides a reasonable balance between allowing legitimate long-running
- * code and keeping the browser responsive.
+ * Prompts user after 1M lines (~0.5-1 second) to continue or stop.
+ * Uses window.confirm() which is synchronous and works within the blocked JS thread.
  */
 const DEFAULT_EXECUTION_OPTIONS = {
-  instructionLimit: 1_000_000, // 1M lines for responsive UI
-  // Stop after limit is reached (returns false = stop)
-  onInstructionLimitReached: () => false,
+  instructionLimit: 1_000_000, // 1M lines before prompting
+  onInstructionLimitReached: () => {
+    // confirm() is synchronous - pauses execution and waits for user response
+    return confirm('Script has been running for a while. Continue execution?')
+  },
 } satisfies LuaReplProcessOptions
 
 /**
