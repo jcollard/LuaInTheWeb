@@ -263,6 +263,45 @@ export function ShellTerminal({
     terminal.writeln('Type "help" for available commands.\n')
     showPrompt()
 
+    // Expose test API for E2E tests (non-production only)
+    if (import.meta.env.MODE !== 'production') {
+      ;(window as unknown as { __shellTerminal?: object }).__shellTerminal = {
+        getBuffer: () => {
+          const buffer = terminal.buffer.active
+          const lines: string[] = []
+          for (let i = 0; i < buffer.length; i++) {
+            const line = buffer.getLine(i)
+            if (line) {
+              lines.push(line.translateToString().trimEnd())
+            }
+          }
+          return lines
+        },
+        getVisibleText: () => {
+          const buffer = terminal.buffer.active
+          const lines: string[] = []
+          for (let i = buffer.viewportY; i < buffer.viewportY + terminal.rows; i++) {
+            const line = buffer.getLine(i)
+            if (line) {
+              lines.push(line.translateToString().trimEnd())
+            }
+          }
+          return lines.join('\n')
+        },
+        getAllText: () => {
+          const buffer = terminal.buffer.active
+          const lines: string[] = []
+          for (let i = 0; i < buffer.length; i++) {
+            const line = buffer.getLine(i)
+            if (line) {
+              lines.push(line.translateToString().trimEnd())
+            }
+          }
+          return lines.join('\n')
+        },
+      }
+    }
+
     // Handle Ctrl+V paste - xterm.js doesn't handle this automatically
     terminal.attachCustomKeyEventHandler(createPasteHandler(handleInput))
 
@@ -281,6 +320,10 @@ export function ShellTerminal({
       window.removeEventListener('resize', handleResize)
       resizeObserver.disconnect()
       terminal.dispose()
+      // Clean up test API
+      if (import.meta.env.MODE !== 'production') {
+        delete (window as unknown as { __shellTerminal?: object }).__shellTerminal
+      }
     }
   }, [showPrompt])
 

@@ -154,4 +154,67 @@ test.describe('Workspace UI', () => {
       await expect(page.getByText('Add Workspace')).toBeVisible()
     })
   })
+
+  test.describe('workspace context menu', () => {
+    test('right-click on workspace shows context menu with Rename and Remove options', async ({
+      page,
+    }) => {
+      // Act - Right-click on default workspace
+      const workspace = page.getByRole('treeitem', { name: /my-files/i })
+      await workspace.click({ button: 'right' })
+
+      // Assert - Context menu with workspace options should appear
+      await expect(page.getByRole('menuitem', { name: /rename workspace/i })).toBeVisible()
+      await expect(page.getByRole('menuitem', { name: /remove workspace/i })).toBeVisible()
+    })
+  })
+
+  test.describe('workspace file operations', () => {
+    test('can create file inside workspace via context menu', async ({ page }) => {
+      // Arrange - Expand workspace by clicking on it
+      const workspace = page.getByRole('treeitem', { name: /my-files/i })
+      await workspace.click()
+      await page.waitForTimeout(200)
+
+      // Act - Right-click and select New File
+      await workspace.click({ button: 'right' })
+      const newFileMenuItem = page.getByRole('menuitem', { name: /new file/i })
+      await expect(newFileMenuItem).toBeVisible()
+      await newFileMenuItem.click()
+
+      // Assert - Either an input field should appear (for rename mode),
+      // or a new file should be created in the tree
+      // Look for textbox (rename input) or a new tree item with default name
+      const hasInput = await page.getByRole('textbox').isVisible().catch(() => false)
+      const hasNewFile = await page
+        .getByRole('treeitem', { name: /untitled|new.*file/i })
+        .isVisible()
+        .catch(() => false)
+
+      expect(hasInput || hasNewFile).toBe(true)
+    })
+
+    test('can create folder inside workspace via context menu', async ({ page }) => {
+      // Arrange - Expand workspace by clicking on it
+      const workspace = page.getByRole('treeitem', { name: /my-files/i })
+      await workspace.click()
+      await page.waitForTimeout(200)
+
+      // Act - Right-click and select New Folder
+      await workspace.click({ button: 'right' })
+      const newFolderMenuItem = page.getByRole('menuitem', { name: /new folder/i })
+      await expect(newFolderMenuItem).toBeVisible()
+      await newFolderMenuItem.click()
+
+      // Assert - Either an input field should appear (for rename mode),
+      // or a new folder should be created in the tree
+      const hasInput = await page.getByRole('textbox').isVisible().catch(() => false)
+      const hasNewFolder = await page
+        .getByRole('treeitem', { name: /untitled|new.*folder/i })
+        .isVisible()
+        .catch(() => false)
+
+      expect(hasInput || hasNewFolder).toBe(true)
+    })
+  })
 })

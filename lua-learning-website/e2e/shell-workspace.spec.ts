@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { TIMEOUTS } from './constants'
+import { createTerminalHelper } from './helpers/terminal'
 
 /**
  * E2E tests for Shell workspace integration (Issue #202).
@@ -35,151 +36,118 @@ test.describe('Shell Workspace Integration', () => {
 
   test.describe('workspace navigation', () => {
     test('shell starts at root directory showing workspaces', async ({ page }) => {
-      const terminal = page.locator('[data-testid="shell-terminal-container"] .xterm-screen')
-      await terminal.click()
-      await page.waitForTimeout(TIMEOUTS.BRIEF)
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
 
       // Run ls to see workspace mount points
-      await page.keyboard.type('ls')
-      await page.keyboard.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+      await terminal.execute('ls')
 
       // Terminal should show the default workspace mount point (my-files)
-      await expect(terminal).toBeVisible()
+      await terminal.expectToContain('my-files')
     })
 
     test('can navigate to workspace with cd', async ({ page }) => {
-      const terminal = page.locator('[data-testid="shell-terminal-container"] .xterm-screen')
-      await terminal.click()
-      await page.waitForTimeout(TIMEOUTS.BRIEF)
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
 
       // Navigate to the default workspace
-      await page.keyboard.type('cd /my-files')
-      await page.keyboard.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+      await terminal.execute('cd /my-files')
 
       // Verify we're in the workspace
-      await page.keyboard.type('pwd')
-      await page.keyboard.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+      await terminal.execute('pwd')
 
-      await expect(terminal).toBeVisible()
+      // Should show /my-files as current directory
+      await terminal.expectToContain('/my-files')
     })
 
     test('can create files in workspace via shell', async ({ page }) => {
-      const terminal = page.locator('[data-testid="shell-terminal-container"] .xterm-screen')
-      await terminal.click()
-      await page.waitForTimeout(TIMEOUTS.BRIEF)
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
 
       // Navigate to workspace and create a file
-      await page.keyboard.type('cd /my-files')
-      await page.keyboard.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-      await page.keyboard.type('touch test-file.lua')
-      await page.keyboard.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+      await terminal.execute('cd /my-files')
+      await terminal.execute('touch test-file.lua')
 
       // Verify file was created
-      await page.keyboard.type('ls')
-      await page.keyboard.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-      await expect(terminal).toBeVisible()
+      await terminal.execute('ls')
+      await terminal.expectToContain('test-file.lua')
     })
 
     test('can create directories in workspace via shell', async ({ page }) => {
-      const terminal = page.locator('[data-testid="shell-terminal-container"] .xterm-screen')
-      await terminal.click()
-      await page.waitForTimeout(TIMEOUTS.BRIEF)
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
 
       // Navigate to workspace and create a directory
-      await page.keyboard.type('cd /my-files')
-      await page.keyboard.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-      await page.keyboard.type('mkdir test-dir')
-      await page.keyboard.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+      await terminal.execute('cd /my-files')
+      await terminal.execute('mkdir test-dir')
 
       // Navigate into the new directory
-      await page.keyboard.type('cd test-dir')
-      await page.keyboard.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+      await terminal.execute('cd test-dir')
 
       // Verify current directory
-      await page.keyboard.type('pwd')
-      await page.keyboard.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-      await expect(terminal).toBeVisible()
+      await terminal.execute('pwd')
+      await terminal.expectToContain('/my-files/test-dir')
     })
   })
 
   test.describe('workspace root operations', () => {
     test('shell can list mount points at root', async ({ page }) => {
-      const terminal = page.locator('[data-testid="shell-terminal-container"] .xterm-screen')
-      await terminal.click()
-      await page.waitForTimeout(TIMEOUTS.BRIEF)
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
 
       // Navigate to root and list mount points
-      await page.keyboard.type('cd /')
-      await page.keyboard.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+      await terminal.execute('cd /')
+      await terminal.execute('ls')
 
-      await page.keyboard.type('ls')
-      await page.keyboard.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-      // Verify terminal is functional
-      await expect(terminal).toBeVisible()
+      // Should show the default workspace
+      await terminal.expectToContain('my-files')
     })
 
     test('shell can navigate back to root from workspace', async ({ page }) => {
-      const terminal = page.locator('[data-testid="shell-terminal-container"] .xterm-screen')
-      await terminal.click()
-      await page.waitForTimeout(TIMEOUTS.BRIEF)
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
 
       // First navigate to workspace
-      await page.keyboard.type('cd /my-files')
-      await page.keyboard.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+      await terminal.execute('cd /my-files')
 
       // Navigate back to root
-      await page.keyboard.type('cd /')
-      await page.keyboard.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+      await terminal.execute('cd /')
 
-      // Verify we're at root
-      await page.keyboard.type('pwd')
-      await page.keyboard.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+      // Verify we're at root by checking pwd output
+      await terminal.execute('pwd')
 
-      await expect(terminal).toBeVisible()
+      // The buffer should contain a line with just "/" as the pwd output
+      const content = await terminal.getAllText()
+      // Look for pwd followed by a line containing just /
+      expect(content).toMatch(/pwd[\s\S]*\n\/\s*\n/)
     })
   })
 
   test.describe('shell-workspace interaction', () => {
-    test('files created in shell appear in workspace', async ({ page }) => {
-      const terminal = page.locator('[data-testid="shell-terminal-container"] .xterm-screen')
-      await terminal.click()
-      await page.waitForTimeout(TIMEOUTS.BRIEF)
+    test('files created in shell are accessible via shell commands', async ({ page }) => {
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
 
       // Create a file in the workspace via shell
-      await page.keyboard.type('cd /my-files')
-      await page.keyboard.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-      await page.keyboard.type('touch shell-created.lua')
-      await page.keyboard.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+      await terminal.execute('cd /my-files')
+      await terminal.execute('touch shell-created.lua')
 
       // Verify file exists via ls
-      await page.keyboard.type('ls')
-      await page.keyboard.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+      await terminal.execute('ls')
+      await terminal.expectToContain('shell-created.lua')
 
-      await expect(terminal).toBeVisible()
+      // Verify we can write content to the file
+      await terminal.execute('echo "print(42)" > shell-created.lua')
+
+      // Verify we can read the file
+      await terminal.execute('cat shell-created.lua')
+      await terminal.expectToContain('print(42)')
+
+      // Verify file persists after navigation
+      await terminal.execute('cd /')
+      await terminal.execute('cd /my-files')
+      await terminal.execute('ls')
+      await terminal.expectToContain('shell-created.lua')
     })
   })
 })

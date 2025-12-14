@@ -311,5 +311,103 @@ describe('compositeFileSystemAdapter', () => {
         expect(tree[0].isWorkspace).toBe(true)
       })
     })
+
+    describe('copyFile', () => {
+      it('copies a file to target folder', () => {
+        vi.mocked(mockFs.isDirectory).mockReturnValue(false)
+        vi.mocked(mockFs.readFile).mockReturnValue('content')
+
+        const adapter = createFileSystemAdapter(mockFs)
+        adapter.copyFile('/test.lua', '/folder')
+
+        // Should write to new location
+        expect(mockFs.writeFile).toHaveBeenCalledWith('/folder/test.lua', 'content')
+        // Should NOT delete original
+        expect(mockFs.delete).not.toHaveBeenCalled()
+      })
+
+      it('copies a file to root folder', () => {
+        vi.mocked(mockFs.isDirectory).mockImplementation((path) => path === '/')
+        vi.mocked(mockFs.readFile).mockReturnValue('content')
+
+        const adapter = createFileSystemAdapter(mockFs)
+        adapter.copyFile('/folder/test.lua', '/')
+
+        expect(mockFs.writeFile).toHaveBeenCalledWith('/test.lua', 'content')
+        expect(mockFs.delete).not.toHaveBeenCalled()
+      })
+
+      it('copies a directory by creating directory and copying contents', () => {
+        // Setup: /src is a directory with /src/file.lua
+        vi.mocked(mockFs.isDirectory).mockImplementation((path) =>
+          path === '/src' || path === '/dest'
+        )
+        vi.mocked(mockFs.listDirectory).mockImplementation((path) => {
+          if (path === '/src') {
+            return [{ name: 'file.lua', type: 'file', path: '/src/file.lua' }]
+          }
+          return []
+        })
+        vi.mocked(mockFs.readFile).mockReturnValue('content')
+
+        const adapter = createFileSystemAdapter(mockFs)
+        adapter.copyFile('/src', '/dest')
+
+        // Should create directory in destination
+        expect(mockFs.createDirectory).toHaveBeenCalledWith('/dest/src')
+        // Should copy file contents
+        expect(mockFs.writeFile).toHaveBeenCalledWith('/dest/src/file.lua', 'content')
+      })
+
+      it('copies a directory with nested structure', () => {
+        // Setup: /src is a directory with /src/sub (directory) and /src/sub/file.lua
+        vi.mocked(mockFs.isDirectory).mockImplementation((path) =>
+          path === '/src' || path === '/src/sub' || path === '/dest'
+        )
+        vi.mocked(mockFs.listDirectory).mockImplementation((path) => {
+          if (path === '/src') {
+            return [{ name: 'sub', type: 'directory', path: '/src/sub' }]
+          }
+          if (path === '/src/sub') {
+            return [{ name: 'file.lua', type: 'file', path: '/src/sub/file.lua' }]
+          }
+          return []
+        })
+        vi.mocked(mockFs.readFile).mockReturnValue('nested content')
+
+        const adapter = createFileSystemAdapter(mockFs)
+        adapter.copyFile('/src', '/dest')
+
+        // Should create directories
+        expect(mockFs.createDirectory).toHaveBeenCalledWith('/dest/src')
+        expect(mockFs.createDirectory).toHaveBeenCalledWith('/dest/src/sub')
+        // Should copy nested file
+        expect(mockFs.writeFile).toHaveBeenCalledWith('/dest/src/sub/file.lua', 'nested content')
+      })
+    })
+
+    describe('renameFolder', () => {
+      it('renames folder by copying and deleting', () => {
+        vi.mocked(mockFs.isDirectory).mockImplementation((path) => path === '/old')
+        vi.mocked(mockFs.listDirectory).mockImplementation((path) => {
+          if (path === '/old') {
+            return [{ name: 'file.lua', type: 'file', path: '/old/file.lua' }]
+          }
+          return []
+        })
+        vi.mocked(mockFs.readFile).mockReturnValue('content')
+
+        const adapter = createFileSystemAdapter(mockFs)
+        adapter.renameFolder('/old', '/new')
+
+        // Should create new directory
+        expect(mockFs.createDirectory).toHaveBeenCalledWith('/new')
+        // Should copy file to new location
+        expect(mockFs.writeFile).toHaveBeenCalledWith('/new/file.lua', 'content')
+        // Should delete old folder contents then folder
+        expect(mockFs.delete).toHaveBeenCalledWith('/old/file.lua')
+        expect(mockFs.delete).toHaveBeenCalledWith('/old')
+      })
+    })
   })
 })
