@@ -14,6 +14,7 @@ import { WelcomeScreen } from '../WelcomeScreen'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useWorkspaceManager } from '../../hooks/useWorkspaceManager'
 import { createFileSystemAdapter } from '../../hooks/compositeFileSystemAdapter'
+import { initFormatter, formatLuaCode } from '../../utils/luaFormatter'
 import type { Workspace } from '../../hooks/workspaceTypes'
 import type { IFileSystem } from '@lua-learning/shell-core'
 import styles from './IDELayout.module.css'
@@ -97,6 +98,7 @@ function IDELayoutInner({
     closeTab,
     // Toasts
     toasts,
+    showError,
     dismissToast,
     // Recent files
     recentFiles,
@@ -106,6 +108,12 @@ function IDELayoutInner({
   const [cursorLine, setCursorLine] = useState(1)
   const [cursorColumn, setCursorColumn] = useState(1)
   const [pendingCloseTabPath, setPendingCloseTabPath] = useState<string | null>(null)
+  const [isFormatting, setIsFormatting] = useState(false)
+
+  // Initialize the Lua formatter on mount
+  useEffect(() => {
+    initFormatter().catch(console.error)
+  }, [])
 
   // Handle adding a local workspace (dialog provides both name and handle)
   const handleAddLocalWorkspace = useCallback(
@@ -235,6 +243,23 @@ function IDELayoutInner({
     }
   }, [terminalVisible, toggleTerminal])
 
+  // Format the current code
+  const handleFormat = useCallback(() => {
+    if (!code.trim()) return
+
+    setIsFormatting(true)
+    // Use setTimeout to allow UI to update with loading state
+    setTimeout(() => {
+      const result = formatLuaCode(code)
+      if (result.success && result.code !== undefined) {
+        setCode(result.code)
+      } else if (!result.success && result.error) {
+        showError(`Format failed: ${result.error}`)
+      }
+      setIsFormatting(false)
+    }, 0)
+  }, [code, setCode, showError])
+
   // Explorer props for FileExplorer
   const explorerProps = {
     tree: fileTree,
@@ -326,6 +351,8 @@ function IDELayoutInner({
                         setCursorColumn(col)
                       }}
                       tabBarProps={tabBarProps}
+                      onFormat={handleFormat}
+                      isFormatting={isFormatting}
                     />
                   )}
                 </IDEPanel>

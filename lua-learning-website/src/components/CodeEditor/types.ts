@@ -12,4 +12,6 @@ export interface CodeEditorProps {
   height?: string
   /** Whether the editor is read-only */
   readOnly?: boolean
+  /** Called when format keyboard shortcut is pressed (Shift+Alt+F) */
+  onFormat?: () => void
 }

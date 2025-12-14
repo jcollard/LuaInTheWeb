@@ -2,7 +2,7 @@ name: Deploy PR Preview
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, 'epic-**']
 
 permissions:
   checks: write

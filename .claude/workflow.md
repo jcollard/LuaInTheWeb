@@ -339,7 +339,7 @@ An issue is an **epic** if its body contains:
 
 ```
 /epic <n>           ← View epic overview & progress
-/epic <n> begin     ← Start epic: create worktree + EPIC.md tracking
+/epic <n> begin     ← Start epic: create worktree + EPIC-<n>.md tracking
 /epic <n> next      ← Start next sub-issue with epic context
 /epic <n> status    ← Show dependency graph & progress
 /epic <n> review    ← Create PR when all sub-issues complete

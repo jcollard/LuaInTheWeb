@@ -22,6 +22,10 @@ export interface EditorPanelProps {
   className?: string
   /** Props for TabBar when multi-file mode is active */
   tabBarProps?: Omit<TabBarProps, 'className'>
+  /** Called when format button is clicked */
+  onFormat?: () => void
+  /** Whether formatting is in progress */
+  isFormatting?: boolean
 }
 
 /**

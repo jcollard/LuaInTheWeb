@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
 
 // Mock BashTerminal since it uses xterm which doesn't work in jsdom
@@ -43,73 +43,111 @@ describe('LuaRepl', () => {
     vi.clearAllMocks()
   })
 
+  // Helper to wait for engine initialization to complete
+  const waitForEngineInit = async () => {
+    // Give time for the async engine initialization to complete
+    await waitFor(() => {}, { timeout: 50 })
+  }
+
   describe('standalone mode (default)', () => {
-    it('should render Interactive REPL header by default', () => {
+    it('should render Interactive REPL header by default', async () => {
       // Arrange & Act
-      render(<LuaRepl />)
+      const { unmount } = render(<LuaRepl />)
 
       // Assert
       expect(screen.getByRole('heading', { name: /interactive repl/i })).toBeInTheDocument()
+
+      // Wait for async operations to complete before unmount
+      await waitForEngineInit()
+      unmount()
     })
 
-    it('should render Clear button by default', () => {
+    it('should render Clear button by default', async () => {
       // Arrange & Act
-      render(<LuaRepl />)
+      const { unmount } = render(<LuaRepl />)
 
       // Assert
       expect(screen.getByRole('button', { name: /clear/i })).toBeInTheDocument()
+
+      // Wait for async operations to complete before unmount
+      await waitForEngineInit()
+      unmount()
     })
 
-    it('should render Tips section by default', () => {
+    it('should render Tips section by default', async () => {
       // Arrange & Act
-      render(<LuaRepl />)
+      const { unmount } = render(<LuaRepl />)
 
       // Assert
       expect(screen.getByText(/tips:/i)).toBeInTheDocument()
+
+      // Wait for async operations to complete before unmount
+      await waitForEngineInit()
+      unmount()
     })
 
-    it('should pass embedded=false to BashTerminal by default', () => {
+    it('should pass embedded=false to BashTerminal by default', async () => {
       // Arrange & Act
-      render(<LuaRepl />)
+      const { unmount } = render(<LuaRepl />)
 
       // Assert
       const terminal = screen.getByTestId('bash-terminal')
       expect(terminal).toHaveAttribute('data-embedded', 'false')
+
+      // Wait for async operations to complete before unmount
+      await waitForEngineInit()
+      unmount()
     })
   })
 
   describe('embedded mode', () => {
-    it('should not render Interactive REPL header when embedded', () => {
+    it('should not render Interactive REPL header when embedded', async () => {
       // Arrange & Act
-      render(<LuaRepl embedded />)
+      const { unmount } = render(<LuaRepl embedded />)
 
       // Assert
       expect(screen.queryByRole('heading', { name: /interactive repl/i })).not.toBeInTheDocument()
+
+      // Wait for async operations to complete before unmount
+      await waitForEngineInit()
+      unmount()
     })
 
-    it('should not render Clear button when embedded (use clear() command instead)', () => {
+    it('should not render Clear button when embedded (use clear() command instead)', async () => {
       // Arrange & Act
-      render(<LuaRepl embedded />)
+      const { unmount } = render(<LuaRepl embedded />)
 
       // Assert
       expect(screen.queryByRole('button', { name: /clear/i })).not.toBeInTheDocument()
+
+      // Wait for async operations to complete before unmount
+      await waitForEngineInit()
+      unmount()
     })
 
-    it('should not render Tips section when embedded', () => {
+    it('should not render Tips section when embedded', async () => {
       // Arrange & Act
-      render(<LuaRepl embedded />)
+      const { unmount } = render(<LuaRepl embedded />)
 
       // Assert
       expect(screen.queryByText(/tips:/i)).not.toBeInTheDocument()
+
+      // Wait for async operations to complete before unmount
+      await waitForEngineInit()
+      unmount()
     })
 
-    it('should pass embedded=true to BashTerminal when embedded', () => {
+    it('should pass embedded=true to BashTerminal when embedded', async () => {
       // Arrange & Act
-      render(<LuaRepl embedded />)
+      const { unmount } = render(<LuaRepl embedded />)
 
       // Assert
       const terminal = screen.getByTestId('bash-terminal')
       expect(terminal).toHaveAttribute('data-embedded', 'true')
+
+      // Wait for async operations to complete before unmount
+      await waitForEngineInit()
+      unmount()
     })
   })
 })

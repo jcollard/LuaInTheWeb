@@ -25,7 +25,7 @@ gh issue view <number> --json body
 
 1. Extract the parent epic number
 2. PR will target `epic-<epic-number>` instead of `main`
-3. After PR is created, EPIC.md will be updated
+3. After PR is created, EPIC-<n>.md will be updated
 
 **Determine target branch:**
 - **Regular issue**: Target `main`
@@ -102,16 +102,16 @@ See the workflow documentation for more details on the Visual Verification forma
 
 ---
 
-## Step 2.5: Update EPIC.md (Sub-Issues Only)
+## Step 2.5: Update EPIC-<n>.md (Sub-Issues Only)
 
-**If this is a sub-issue**, after the PR is created, update EPIC.md in the epic worktree:
+**If this is a sub-issue**, after the PR is created, update EPIC-<n>.md in the epic worktree:
 
 1. Navigate to epic worktree (if not already there):
    ```bash
    cd ../LuaInTheWeb-epic-<epic-number>
    ```
 
-2. Update the sub-issue row in EPIC.md:
+2. Update the sub-issue row in EPIC-<n>.md:
    ```
    | #<number> | <title> | 🔄 PR Created | <branch> | PR #<pr-number> |
    ```
@@ -124,10 +124,10 @@ See the workflow documentation for more details on the Visual Verification forma
 
 4. Update "Last Updated" timestamp
 
-5. Commit and push the EPIC.md update:
+5. Commit and push the EPIC-<n>.md update:
    ```bash
-   git add EPIC.md
-   git commit -m "docs: Update EPIC.md - PR created for #<number>"
+   git add EPIC-<epic-number>.md
+   git commit -m "docs: Update EPIC-<epic-number>.md - PR created for #<number>"
    git push origin epic-<epic-number>
    ```
 
@@ -162,7 +162,7 @@ The PR is linked to issue #<number> and will auto-close it when merged.
 
 The PR targets the epic branch and will be merged there (not main).
 
-**EPIC.md Updated:**
+**EPIC-<epic-number>.md Updated:**
 - Sub-issue status: 🔄 PR Created
 - Progress log entry added
 

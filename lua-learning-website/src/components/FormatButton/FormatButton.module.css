@@ -1,0 +1,45 @@
+.formatButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  background-color: transparent;
+  color: var(--theme-text-secondary, #888);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.formatButton:hover:not(:disabled) {
+  background-color: var(--theme-bg-tertiary, rgba(255, 255, 255, 0.1));
+  color: var(--theme-text-primary, #fff);
+}
+
+.formatButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+}
+
+.spinner {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

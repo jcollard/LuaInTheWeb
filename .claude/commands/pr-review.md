@@ -36,8 +36,12 @@ Output this confirmation message:
 
 I will review PR #<number> against the following criteria:
 
+**Diff Coverage (MANDATORY):**
+- [ ] Read the ENTIRE diff - every line of every changed file
+- [ ] Do NOT skip any files regardless of diff size
+- [ ] If diff is large, process it in chunks but cover 100%
+
 **Code Quality:**
-- [ ] Read ALL changed files thoroughly
 - [ ] Verify tests perform real testing (not just coverage)
 - [ ] Check best practices are followed
 - [ ] Identify DRY violations (duplicate code)
@@ -246,6 +250,27 @@ Output a structured review report:
 
 ---
 
+### Diff Coverage Report
+
+**Files in diff**: <count>
+**Files fully reviewed**: <count>
+**Lines reviewed**: <total lines>
+
+| File | Lines | Reviewed |
+|------|-------|----------|
+| <file1> | +X -Y | ✅ Full |
+| <file2> | +X -Y | ✅ Full |
+...
+
+<If any files were skipped or partially reviewed:>
+**⚠️ Incomplete Coverage:**
+- <file>: <reason> (e.g., "Skipped - generated file", "Partial - only reviewed lines 1-500")
+
+<If 100% coverage:>
+**✅ Complete Coverage**: All <count> files and <lines> changed lines were reviewed.
+
+---
+
 ### Next Steps
 - If APPROVE: Ready to merge
 - If REQUEST_CHANGES: Address blocking issues and request re-review
@@ -315,12 +340,15 @@ Please resolve conflicts first:
 
 If `baseRefName` matches pattern `epic-<n>`:
 - This is a sub-issue PR being merged to an epic
-- Store the epic number for later EPIC.md update
+- Store the epic number for later EPIC-<n>.md update
 - Set `is_epic_subissue = true`
 
 If `baseRefName` is `main`:
-- This is a regular PR
+- This is a regular PR OR an epic PR (epic branch merging to main)
 - Set `is_epic_subissue = false`
+- **Check if `headRefName` matches pattern `epic-<n>`:**
+  - If yes: This is an epic PR being merged to main, set `is_epic_pr = true`
+  - If no: Regular issue PR, set `is_epic_pr = false`
 
 ### 8b. Extract Linked Issues
 
@@ -422,16 +450,16 @@ gh pr merge <number> --merge --delete-branch
 - `--merge`: Creates a merge commit preserving commit history (better conflict detection)
 - `--delete-branch`: Removes the feature branch after merge
 
-### 8d.5. Update EPIC.md (Sub-Issues Only)
+### 8d.5. Update EPIC-<n>.md (Sub-Issues Only)
 
-**If `is_epic_subissue` is true**, update EPIC.md in the epic worktree:
+**If `is_epic_subissue` is true**, update EPIC-<n>.md in the epic worktree:
 
 1. Navigate to epic worktree:
    ```bash
    cd ../LuaInTheWeb-epic-<epic-number>
    ```
 
-2. Update the sub-issue row in EPIC.md to mark as complete:
+2. Update the sub-issue row in EPIC-<n>.md to mark as complete:
    ```
    | #<issue-number> | <title> | ✅ Complete | <branch> | Merged in PR #<pr-number> |
    ```
@@ -450,10 +478,10 @@ gh pr merge <number> --merge --delete-branch
 
 5. Update "Last Updated" timestamp
 
-6. Commit and push the EPIC.md update:
+6. Commit and push the EPIC-<n>.md update:
    ```bash
-   git add EPIC.md
-   git commit -m "docs: Update EPIC.md - completed #<issue-number>"
+   git add EPIC-<epic-number>.md
+   git commit -m "docs: Update EPIC-<epic-number>.md - completed #<issue-number>"
    git push origin epic-<epic-number>
    ```
 
@@ -470,6 +498,26 @@ gh pr merge <number> --merge --delete-branch
      /epic <epic-number> review
      ```
      ```
+
+### 8d.6. Clean Up EPIC-<n>.md (Epic PRs Only)
+
+**If `is_epic_pr` is true** (epic branch being merged to main), delete the tracking file:
+
+1. The EPIC-<n>.md file has served its purpose during epic development
+2. Git history preserves the file content for reference
+3. Deleting prevents stale files from accumulating in main
+
+**Before merge** (while still in epic worktree):
+```bash
+# Delete the tracking file
+git rm EPIC-<epic-number>.md
+git commit -m "chore: Remove EPIC-<epic-number>.md after epic completion"
+git push origin epic-<epic-number>
+```
+
+**Note**: This cleanup happens before the merge so the tracking file is not included in main.
+
+---
 
 ### 8e. Update Local Repository
 
@@ -662,7 +710,7 @@ This handles cleanup of directories that weren't fully removed in Step 8c.5.
 **Epic #<epic-number>**: <epic-title>
 **Progress**: <complete>/<total> sub-issues complete (<percentage>%)
 
-### EPIC.md Updated
+### EPIC-<epic-number>.md Updated
 - ✅ Sub-issue #<issue-number> marked as complete
 - ✅ Progress log updated
 
