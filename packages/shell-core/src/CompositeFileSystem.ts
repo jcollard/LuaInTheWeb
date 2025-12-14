@@ -258,7 +258,9 @@ export class CompositeFileSystem implements IFileSystem {
     if (resolved === '/') {
       return Array.from(this.mounts.values())
         .map((mount) => ({
-          name: mount.name,
+          // Use the directory name from mount path (e.g., "my-files" from "/my-files")
+          // This ensures the name matches what users need to type for cd
+          name: mount.mountPath.substring(1), // Remove leading '/'
           type: 'directory' as const,
           path: mount.mountPath,
         }))
@@ -389,5 +391,62 @@ export class CompositeFileSystem implements IFileSystem {
     }
 
     mountInfo.mount.filesystem.delete(mountInfo.relativePath)
+  }
+
+  /**
+   * Flush pending operations for all mounted filesystems that support it.
+   * This is important for filesystems like FileSystemAccessAPIFileSystem
+   * that use write-behind caching.
+   */
+  async flush(): Promise<void> {
+    const flushPromises: Promise<void>[] = []
+
+    for (const mount of this.mounts.values()) {
+      // Check if the underlying filesystem has a flush method
+      const flushable = mount.filesystem as IFileSystem & { flush?: () => Promise<void> }
+      if (typeof flushable.flush === 'function') {
+        flushPromises.push(flushable.flush())
+      }
+    }
+
+    await Promise.all(flushPromises)
+  }
+
+  /**
+   * Refresh a specific mounted filesystem to pick up external changes.
+   * This is useful for FileSystemAccessAPIFileSystem-backed mounts where
+   * files may have been modified outside the browser.
+   *
+   * @param mountPath - The mount path to refresh (e.g., '/my-files')
+   * @throws Error if no filesystem is mounted at the path or it doesn't support refresh
+   */
+  async refreshMount(mountPath: string): Promise<void> {
+    const normalizedPath = normalizePath(mountPath)
+    const mount = this.mounts.get(normalizedPath)
+
+    if (!mount) {
+      throw new Error(`No filesystem mounted at: ${normalizedPath}`)
+    }
+
+    // Check if the underlying filesystem has a refresh method
+    const refreshable = mount.filesystem as IFileSystem & { refresh?: () => Promise<void> }
+    if (typeof refreshable.refresh === 'function') {
+      await refreshable.refresh()
+    }
+  }
+
+  /**
+   * Check if a mount path supports refresh (i.e., is backed by a local filesystem).
+   */
+  supportsRefresh(mountPath: string): boolean {
+    const normalizedPath = normalizePath(mountPath)
+    const mount = this.mounts.get(normalizedPath)
+
+    if (!mount) {
+      return false
+    }
+
+    const refreshable = mount.filesystem as IFileSystem & { refresh?: () => Promise<void> }
+    return typeof refreshable.refresh === 'function'
   }
 }

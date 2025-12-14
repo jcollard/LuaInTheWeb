@@ -212,6 +212,100 @@ describe('useFileSystem', () => {
       expect(result.current.exists('/folder2')).toBe(true)
       expect(result.current.exists('/folder2/file.lua')).toBe(true)
     })
+
+    it('should delete deeply nested folder structure with multiple files', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/root')
+      })
+      act(() => {
+        result.current.createFolder('/root/level1')
+        result.current.createFile('/root/file1.lua', 'content1')
+      })
+      act(() => {
+        result.current.createFolder('/root/level1/level2')
+        result.current.createFile('/root/level1/file2.lua', 'content2')
+      })
+      act(() => {
+        result.current.createFolder('/root/level1/level2/level3')
+        result.current.createFile('/root/level1/level2/file3.lua', 'content3')
+      })
+      act(() => {
+        result.current.createFile('/root/level1/level2/level3/file4.lua', 'content4')
+      })
+
+      // Act
+      act(() => {
+        result.current.deleteFolder('/root')
+      })
+
+      // Assert - all files should be deleted
+      expect(result.current.exists('/root')).toBe(false)
+      expect(result.current.exists('/root/file1.lua')).toBe(false)
+      expect(result.current.exists('/root/level1')).toBe(false)
+      expect(result.current.exists('/root/level1/file2.lua')).toBe(false)
+      expect(result.current.exists('/root/level1/level2')).toBe(false)
+      expect(result.current.exists('/root/level1/level2/file3.lua')).toBe(false)
+      expect(result.current.exists('/root/level1/level2/level3')).toBe(false)
+      expect(result.current.exists('/root/level1/level2/level3/file4.lua')).toBe(false)
+    })
+
+    it('should delete folder with multiple sibling subfolders', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/parent')
+      })
+      act(() => {
+        result.current.createFolder('/parent/child1')
+        result.current.createFolder('/parent/child2')
+        result.current.createFolder('/parent/child3')
+      })
+      act(() => {
+        result.current.createFile('/parent/child1/a.lua', 'a')
+        result.current.createFile('/parent/child2/b.lua', 'b')
+        result.current.createFile('/parent/child3/c.lua', 'c')
+      })
+
+      // Act
+      act(() => {
+        result.current.deleteFolder('/parent')
+      })
+
+      // Assert
+      expect(result.current.exists('/parent')).toBe(false)
+      expect(result.current.exists('/parent/child1')).toBe(false)
+      expect(result.current.exists('/parent/child2')).toBe(false)
+      expect(result.current.exists('/parent/child3')).toBe(false)
+      expect(result.current.exists('/parent/child1/a.lua')).toBe(false)
+      expect(result.current.exists('/parent/child2/b.lua')).toBe(false)
+      expect(result.current.exists('/parent/child3/c.lua')).toBe(false)
+    })
+
+    it('should not delete folders with similar path prefixes', () => {
+      // Arrange - create /folder and /folder-extra (similar prefix)
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/folder')
+        result.current.createFolder('/folder-extra')
+      })
+      act(() => {
+        result.current.createFile('/folder/file.lua', 'folder')
+        result.current.createFile('/folder-extra/file.lua', 'folder-extra')
+      })
+
+      // Act - delete /folder but NOT /folder-extra
+      act(() => {
+        result.current.deleteFolder('/folder')
+      })
+
+      // Assert
+      expect(result.current.exists('/folder')).toBe(false)
+      expect(result.current.exists('/folder/file.lua')).toBe(false)
+      expect(result.current.exists('/folder-extra')).toBe(true)
+      expect(result.current.exists('/folder-extra/file.lua')).toBe(true)
+    })
   })
 
   describe('exists', () => {
@@ -342,6 +436,85 @@ describe('useFileSystem', () => {
 
       // Assert
       expect(children).toEqual([])
+    })
+
+    it('should return sorted children alphabetically', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFile('/z.lua')
+        result.current.createFile('/a.lua')
+        result.current.createFile('/m.lua')
+        result.current.createFolder('/b-folder')
+      })
+
+      // Act
+      const children = result.current.listDirectory('/')
+
+      // Assert - should be sorted
+      expect(children).toEqual(['a.lua', 'b-folder', 'm.lua', 'z.lua'])
+    })
+
+    it('should only return direct children, not nested items', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/parent')
+      })
+      act(() => {
+        result.current.createFile('/parent/child.lua')
+        result.current.createFolder('/parent/subfolder')
+      })
+      act(() => {
+        result.current.createFile('/parent/subfolder/nested.lua')
+      })
+
+      // Act
+      const children = result.current.listDirectory('/parent')
+
+      // Assert - should only contain direct children
+      expect(children).toContain('child.lua')
+      expect(children).toContain('subfolder')
+      expect(children).not.toContain('nested.lua')
+      expect(children).toHaveLength(2)
+    })
+
+    it('should not include root folder itself in root listing', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFile('/test.lua')
+      })
+
+      // Act
+      const children = result.current.listDirectory('/')
+
+      // Assert - root (/) should not be in the list
+      expect(children).not.toContain('/')
+      expect(children).toContain('test.lua')
+    })
+
+    it('should return children from nested folder', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/deep')
+      })
+      act(() => {
+        result.current.createFolder('/deep/nested')
+      })
+      act(() => {
+        result.current.createFile('/deep/nested/file1.lua')
+        result.current.createFile('/deep/nested/file2.lua')
+      })
+
+      // Act
+      const children = result.current.listDirectory('/deep/nested')
+
+      // Assert
+      expect(children).toContain('file1.lua')
+      expect(children).toContain('file2.lua')
+      expect(children).toHaveLength(2)
     })
   })
 

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState, type MouseEvent } from 'react'
 import { FileTree } from '../FileTree'
 import { ContextMenu } from '../ContextMenu'
 import { ConfirmDialog } from '../ConfirmDialog'
-import { WorkspaceTabs } from '../WorkspaceTabs'
 import { AddWorkspaceDialog } from '../AddWorkspaceDialog'
 import { useFileExplorer } from './useFileExplorer'
 import type { FileExplorerProps } from './types'
@@ -27,6 +26,17 @@ const NewFolderIcon = () => (
     />
   </svg>
 )
+
+const AddWorkspaceIcon = () => (
+  <svg className={styles.toolbarIcon} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+    <path
+      fill="currentColor"
+      d="M14 4H8l-1-1H2a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1V5a1 1 0 00-1-1z"
+    />
+    <circle cx="12" cy="11" r="3" fill="currentColor" stroke="var(--bg-primary, #252526)" strokeWidth="1" />
+    <path d="M12 9.5v3M10.5 11h3" stroke="var(--bg-primary, #252526)" strokeWidth="1" strokeLinecap="round" />
+  </svg>
+)
 // Stryker restore all
 
 // Stryker disable all: Menu item IDs are internal identifiers tested via behavior
@@ -41,6 +51,14 @@ const folderContextMenuItems: ContextMenuItem[] = [
   { id: 'divider', type: 'divider' },
   { id: 'rename', label: 'Rename' },
   { id: 'delete', label: 'Delete' },
+]
+
+const workspaceContextMenuItems: ContextMenuItem[] = [
+  { id: 'new-file', label: 'New File' },
+  { id: 'new-folder', label: 'New Folder' },
+  { id: 'divider', type: 'divider' },
+  { id: 'rename-workspace', label: 'Rename Workspace' },
+  { id: 'remove-workspace', label: 'Remove Workspace' },
 ]
 // Stryker restore all
 
@@ -57,6 +75,7 @@ export function FileExplorer({
   onDeleteFolder,
   onSelectFile,
   onMoveFile,
+  onCopyFile,
   onCancelPendingNewFile,
   onCancelPendingNewFolder,
   className,
@@ -98,16 +117,16 @@ export function FileExplorer({
   )
 
   const handleCreateLocalWorkspace = useCallback(
-    (name: string) => {
-      workspaceProps?.onAddLocalWorkspace(name)
+    (name: string, handle: FileSystemDirectoryHandle) => {
+      workspaceProps?.onAddLocalWorkspace(name, handle)
       setIsAddWorkspaceDialogOpen(false)
     },
     [workspaceProps]
   )
 
-  const handleRemoveWorkspace = useCallback(
-    (workspaceId: string) => {
-      workspaceProps?.onRemoveWorkspace(workspaceId)
+  const handleReconnectWorkspace = useCallback(
+    (mountPath: string) => {
+      workspaceProps?.onReconnectWorkspace?.(mountPath)
     },
     [workspaceProps]
   )
@@ -145,6 +164,16 @@ export function FileExplorer({
     // Stryker disable next-line all: React hooks dependency optimization
   }, [tree])
 
+  // Check if a path is a workspace root (for context menu options)
+  const isWorkspaceRoot = useCallback((path: string): boolean => {
+    for (const node of tree) {
+      if (node.path === path && node.isWorkspace) {
+        return true
+      }
+    }
+    return false
+  }, [tree])
+
   // Find node name by path
   const findNodeName = useCallback((path: string): string => {
     const search = (nodes: typeof tree): string | null => {
@@ -161,10 +190,98 @@ export function FileExplorer({
     // Stryker disable next-line all: React hooks dependency optimization
   }, [tree])
 
+  // Check if a path exists in the tree
+  const pathExists = useCallback((path: string): boolean => {
+    const search = (nodes: typeof tree): boolean => {
+      for (const node of nodes) {
+        if (node.path === path) return true
+        if (node.children && search(node.children)) return true
+      }
+      return false
+    }
+    return search(tree)
+  }, [tree])
+
+  // Get the workspace (root folder) for a given path
+  const getWorkspaceForPath = useCallback((path: string): string | null => {
+    // Extract the first path segment (workspace mount point)
+    const parts = path.split('/').filter(Boolean)
+    if (parts.length === 0) return null
+    const workspacePath = `/${parts[0]}`
+    // Verify it's actually a workspace in the tree
+    for (const node of tree) {
+      if (node.path === workspacePath && node.isWorkspace) {
+        return workspacePath
+      }
+    }
+    return null
+  }, [tree])
+
   const handleSelect = useCallback((path: string) => {
     selectPath(path)
     onSelectFile(path)
   }, [selectPath, onSelectFile])
+
+  // Handle drop with overwrite confirmation and cross-workspace detection
+  const handleDrop = useCallback((sourcePath: string, targetFolderPath: string) => {
+    if (!onMoveFile) return
+
+    // Extract filename from source path and build target path
+    const fileName = sourcePath.split('/').pop() || ''
+    const targetPath = targetFolderPath === '/' ? `/${fileName}` : `${targetFolderPath}/${fileName}`
+
+    // Check if this is a cross-workspace operation
+    const sourceWorkspace = getWorkspaceForPath(sourcePath)
+    const targetWorkspace = getWorkspaceForPath(targetFolderPath)
+    const isCrossWorkspace = sourceWorkspace && targetWorkspace && sourceWorkspace !== targetWorkspace
+
+    if (isCrossWorkspace) {
+      // Cross-workspace operation - only allow copy to prevent data loss
+      const sourceWorkspaceName = sourceWorkspace.split('/').pop() || sourceWorkspace
+      const targetWorkspaceName = targetWorkspace.split('/').pop() || targetWorkspace
+
+      if (pathExists(targetPath)) {
+        // Target exists in different workspace
+        openConfirmDialog({
+          title: 'Copy Between Workspaces',
+          message: `You are copying "${fileName}" from "${sourceWorkspaceName}" to "${targetWorkspaceName}". A file with this name already exists. Do you want to replace it with a copy?`,
+          variant: 'danger',
+          confirmLabel: 'Replace with Copy',
+          onConfirm: () => {
+            onCopyFile?.(sourcePath, targetFolderPath)
+            closeConfirmDialog()
+          },
+        })
+      } else {
+        openConfirmDialog({
+          title: 'Copy Between Workspaces',
+          message: `Moving files between workspaces is not allowed to prevent data loss. Would you like to copy "${fileName}" from "${sourceWorkspaceName}" to "${targetWorkspaceName}" instead?`,
+          variant: 'default',
+          confirmLabel: 'Copy',
+          onConfirm: () => {
+            onCopyFile?.(sourcePath, targetFolderPath)
+            closeConfirmDialog()
+          },
+        })
+      }
+    } else {
+      // Same workspace - allow move
+      if (pathExists(targetPath)) {
+        openConfirmDialog({
+          title: 'Replace File',
+          message: `A file named "${fileName}" already exists in this location. Do you want to replace it?`,
+          variant: 'danger',
+          confirmLabel: 'Replace',
+          onConfirm: () => {
+            onMoveFile(sourcePath, targetFolderPath)
+            closeConfirmDialog()
+          },
+        })
+      } else {
+        onMoveFile(sourcePath, targetFolderPath)
+      }
+    }
+  }, [onMoveFile, onCopyFile, pathExists, getWorkspaceForPath, openConfirmDialog, closeConfirmDialog])
 
   const handleContextMenu = useCallback((path: string, event: MouseEvent) => {
     const type = findNodeType(path)
@@ -190,6 +307,33 @@ export function FileExplorer({
       case 'rename':
         startRename(targetPath)
         break
+      case 'rename-workspace':
+        // Rename workspace uses the same rename mechanism as folders
+        startRename(targetPath)
+        break
+      case 'refresh':
+        // Refresh workspace - fire and forget
+        workspaceProps?.onRefreshWorkspace(targetPath)
+        break
+      case 'disconnect-workspace':
+        // Disconnect workspace without removing it
+        workspaceProps?.onDisconnectWorkspace?.(targetPath)
+        break
+      case 'remove-workspace': {
+        const name = findNodeName(targetPath)
+        openConfirmDialog({
+          // Stryker disable next-line StringLiteral: dialog text is display-only
+          title: 'Remove Workspace',
+          // Stryker disable next-line StringLiteral: dialog text is display-only
+          message: `Are you sure you want to remove the workspace "${name}"? This will not delete any files.`,
+          variant: 'danger',
+          onConfirm: () => {
+            workspaceProps?.onRemoveWorkspace(targetPath)
+            closeConfirmDialog()
+          },
+        })
+        break
+      }
       case 'delete': {
         const name = findNodeName(targetPath)
         const isFolder = targetType === 'folder'
@@ -225,12 +369,18 @@ export function FileExplorer({
     onCreateFolder,
     onDeleteFile,
     onDeleteFolder,
+    workspaceProps,
   ])
 
   const handleRenameSubmit = useCallback((path: string, newName: string) => {
     const type = findNodeType(path)
     if (type === 'folder') {
-      onRenameFolder(path, newName)
+      // Check if this is a workspace root - use workspace rename instead of folder rename
+      if (isWorkspaceRoot(path) && workspaceProps?.onRenameWorkspace) {
+        workspaceProps.onRenameWorkspace(path, newName)
+      } else {
+        onRenameFolder(path, newName)
+      }
     } else {
       onRenameFile(path, newName)
     }
@@ -244,7 +394,7 @@ export function FileExplorer({
     }
     cancelRename()
     // Stryker disable next-line all: React hooks dependency optimization
-  }, [findNodeType, onRenameFile, onRenameFolder, cancelRename, pendingNewFilePath, onCancelPendingNewFile, pendingNewFolderPath, onCancelPendingNewFolder])
+  }, [findNodeType, isWorkspaceRoot, onRenameFile, onRenameFolder, cancelRename, pendingNewFilePath, onCancelPendingNewFile, pendingNewFolderPath, onCancelPendingNewFolder, workspaceProps])
 
   // Handle rename cancel - delete pending new file/folder if applicable
   const handleRenameCancel = useCallback(() => {
@@ -294,21 +444,36 @@ export function FileExplorer({
     ? `${styles.explorer} ${className}`
     : styles.explorer
 
-  const contextMenuItems = contextMenu.targetType === 'folder'
-    ? folderContextMenuItems
-    : fileContextMenuItems
+  // Build context menu items dynamically
+  // Use workspace-specific menu for workspace roots, regular folder menu otherwise
+  const contextMenuItems = (() => {
+    if (contextMenu.targetType !== 'folder') {
+      return fileContextMenuItems
+    }
+
+    const targetPath = contextMenu.targetPath
+
+    // Check if this is a workspace root
+    if (targetPath && isWorkspaceRoot(targetPath)) {
+      // Use workspace-specific menu items
+      // Add "Refresh" and "Disconnect" options for connected local workspaces
+      const isConnectedLocalWorkspace = workspaceProps?.supportsRefresh(targetPath)
+      if (isConnectedLocalWorkspace) {
+        return [
+          { id: 'refresh', label: 'Refresh' },
+          { id: 'disconnect-workspace', label: 'Disconnect Workspace' },
+          { id: 'divider-refresh', type: 'divider' as const },
+          ...workspaceContextMenuItems,
+        ]
+      }
+      return workspaceContextMenuItems
+    }
+
+    return folderContextMenuItems
+  })()
 
   return (
     <div className={combinedClassName} data-testid="file-explorer">
-      {/* Workspace Tabs (optional) */}
-      {workspaceProps && (
-        <WorkspaceTabs
-          workspaces={workspaceProps.workspaces}
-          onAddClick={handleAddWorkspaceClick}
-          onClose={handleRemoveWorkspace}
-        />
-      )}
-
       {/* Toolbar */}
       <div className={styles.toolbar}>
         <button
@@ -329,6 +494,17 @@ export function FileExplorer({
         >
           <NewFolderIcon />
         </button>
+        {workspaceProps && (
+          <button
+            type="button"
+            className={styles.toolbarButton}
+            onClick={handleAddWorkspaceClick}
+            aria-label="Add Workspace"
+            title="Add Workspace"
+          >
+            <AddWorkspaceIcon />
+          </button>
+        )}
       </div>
 
       {/* File Tree */}
@@ -345,7 +521,8 @@ export function FileExplorer({
           renamingPath={renamingPath}
           onRenameSubmit={handleRenameSubmit}
           onRenameCancel={handleRenameCancel}
-          onDrop={onMoveFile}
+          onDrop={handleDrop}
+          onReconnect={handleReconnectWorkspace}
         />
       </div>
 
@@ -363,7 +540,7 @@ export function FileExplorer({
         isOpen={confirmDialog.isOpen}
         title={confirmDialog.title}
         message={confirmDialog.message}
-        confirmLabel="Delete"
+        confirmLabel={confirmDialog.confirmLabel || 'Delete'}
         cancelLabel="Cancel"
         variant={confirmDialog.variant}
         onConfirm={confirmDialog.onConfirm}
@@ -378,6 +555,8 @@ export function FileExplorer({
           onCreateVirtual={handleCreateVirtualWorkspace}
           onCreateLocal={handleCreateLocalWorkspace}
           onCancel={handleAddWorkspaceCancel}
+          isFolderAlreadyMounted={workspaceProps.isFolderAlreadyMounted}
+          getUniqueWorkspaceName={workspaceProps.getUniqueWorkspaceName}
         />
       )}
     </div>

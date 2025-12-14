@@ -67,6 +67,14 @@
   fill: var(--theme-success);
 }
 
+.workspaceIcon {
+  fill: currentColor;
+}
+
+.disconnectedWorkspaceIcon {
+  fill: currentColor;
+}
+
 .name {
   flex: 1;
   overflow: hidden;

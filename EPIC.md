@@ -106,7 +106,7 @@ Enable users to work with files on their actual computer (not just browser local
 | #199 | FileSystemAccessAPI IFileSystem Implementation | ✅ Complete | 199-filesystemaccessapi-ifilesystem-implementation | Merged in PR #205 |
 | #200 | Workspace State Management | ✅ Complete | 200-workspace-state-management | useWorkspaceManager + CompositeFileSystem (AD-4) |
 | #201 | Workspace UI Components | ✅ Complete | 201-workspace-ui-components | Merged in PR #217 |
-| #202 | Shell Multi-Workspace Integration | ⏳ Pending | - | Depends on #199, #200, #201 |
+| #202 | Shell Multi-Workspace Integration | 🔄 PR Created | 202-shell-multi-workspace-integration | PR #227 → epic-20 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -140,6 +140,16 @@ Enable users to work with files on their actual computer (not just browser local
 <!-- Updated after each sub-issue completion -->
 
 ### 2025-12-13
+- **#202 PR Created (PR #227)** - Shell Multi-Workspace Integration
+  - Updated `useShell` hook to accept either `IFileSystem` or `UseFileSystemReturn`
+  - Added type guard `isIFileSystem()` for runtime type detection
+  - Updated `ShellTerminal` and `BottomPanel` types to accept `UseShellFileSystem`
+  - Integrated `compositeFileSystem` from `useWorkspaceManager()` into `IDELayout`
+  - Shell now uses multi-mount workspace filesystem for all commands
+  - Added 27 unit tests for shell with IFileSystem (including disconnected workspace handling)
+  - Added 7 E2E tests for shell workspace flows (navigation, file creation, directory creation)
+  - Shell prompt automatically shows workspace paths (e.g., `/my-files/docs $`)
+- Integrated main into epic branch (merge conflict resolved)
 - **Merged PR #217** - Workspace UI Components (#201) merged to epic-20
 - **#201 Complete** - Workspace UI Components
   - Created `WorkspaceTabs` component for workspace navigation
@@ -192,8 +202,12 @@ Enable users to work with files on their actual computer (not just browser local
 - `lua-learning-website/src/components/WorkspaceTabs/` - Workspace tab bar component
 - `lua-learning-website/src/components/AddWorkspaceDialog/` - Add workspace dialog component
 
-### To Be Created (#202)
-- Shell integration for multi-workspace navigation
+### Created (#202)
+- `lua-learning-website/src/hooks/useShell.ts` - Updated to accept IFileSystem directly
+- `lua-learning-website/src/components/ShellTerminal/types.ts` - Updated prop types
+- `lua-learning-website/src/components/BottomPanel/types.ts` - Updated prop types
+- `lua-learning-website/src/components/IDELayout/IDELayout.tsx` - Integrated compositeFileSystem
+- `lua-learning-website/e2e/shell-workspace.spec.ts` - E2E tests for shell workspace flows
 
 ## Open Questions
 

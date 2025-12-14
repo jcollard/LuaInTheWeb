@@ -13,6 +13,12 @@ export interface TreeNode {
   name: string
   path: string
   type: 'file' | 'folder'
+  /** Indicates this is a workspace root (mount point) */
+  isWorkspace?: boolean
+  /** Indicates this is a local filesystem workspace (vs virtual/browser-based) */
+  isLocalWorkspace?: boolean
+  /** Indicates this workspace is disconnected (local folder needs reconnection) */
+  isDisconnected?: boolean
   children?: TreeNode[]
 }
 
@@ -30,6 +36,7 @@ export interface UseFileSystemReturn {
   deleteFile: (path: string) => void
   renameFile: (oldPath: string, newPath: string) => void
   moveFile: (sourcePath: string, targetFolderPath: string) => void
+  copyFile: (sourcePath: string, targetFolderPath: string) => void
 
   // Folder operations
   createFolder: (path: string) => void

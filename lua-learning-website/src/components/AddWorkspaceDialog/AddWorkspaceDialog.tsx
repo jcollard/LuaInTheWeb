@@ -8,9 +8,14 @@ export function AddWorkspaceDialog({
   onCreateVirtual,
   onCreateLocal,
   onCancel,
+  isFolderAlreadyMounted,
+  getUniqueWorkspaceName,
 }: AddWorkspaceDialogProps) {
   const [workspaceType, setWorkspaceType] = useState<WorkspaceTypeSelection>('virtual')
-  const [workspaceName, setWorkspaceName] = useState('New Workspace')
+  const [workspaceName, setWorkspaceName] = useState('')
+  const [selectedHandle, setSelectedHandle] = useState<FileSystemDirectoryHandle | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [isSelectingFolder, setIsSelectingFolder] = useState(false)
   const cancelButtonRef = useRef<HTMLButtonElement>(null)
   const titleId = useId()
 
@@ -18,27 +23,71 @@ export function AddWorkspaceDialog({
   useEffect(() => {
     if (isOpen) {
       setWorkspaceType('virtual')
-      setWorkspaceName('New Workspace')
+      setWorkspaceName('')
+      setSelectedHandle(null)
+      setError(null)
+      setIsSelectingFolder(false)
       // Focus cancel button when opened
       cancelButtonRef.current?.focus()
     }
   }, [isOpen])
 
-  const isNameValid = workspaceName.trim().length > 0
+  // For virtual workspaces, name must be non-empty
+  // For local workspaces, must have selected a folder and name must be non-empty
+  const isFormValid = workspaceType === 'virtual'
+    ? workspaceName.trim().length > 0
+    : selectedHandle !== null && workspaceName.trim().length > 0
+
+  const handleSelectFolder = useCallback(async () => {
+    setError(null)
+    setIsSelectingFolder(true)
+
+    try {
+      const handle = await window.showDirectoryPicker({
+        mode: 'readwrite',
+      })
+
+      // Check for duplicate mount
+      if (isFolderAlreadyMounted) {
+        const isDuplicate = await isFolderAlreadyMounted(handle)
+        if (isDuplicate) {
+          setError('This folder is already mounted as a workspace.')
+          setIsSelectingFolder(false)
+          return
+        }
+      }
+
+      setSelectedHandle(handle)
+
+      // Pre-fill name with folder name, ensuring uniqueness
+      const baseName = handle.name
+      const uniqueName = getUniqueWorkspaceName
+        ? getUniqueWorkspaceName(baseName)
+        : baseName
+      setWorkspaceName(uniqueName)
+    } catch (err) {
+      // User cancelled or error occurred
+      if ((err as Error).name !== 'AbortError') {
+        setError('Failed to select folder. Please try again.')
+      }
+    } finally {
+      setIsSelectingFolder(false)
+    }
+  }, [isFolderAlreadyMounted, getUniqueWorkspaceName])
 
   const handleSubmit = useCallback(
     (event?: FormEvent) => {
       event?.preventDefault()
-      if (!isNameValid) return
+      if (!isFormValid) return
 
       const trimmedName = workspaceName.trim()
       if (workspaceType === 'virtual') {
         onCreateVirtual(trimmedName)
-      } else {
-        onCreateLocal(trimmedName)
+      } else if (selectedHandle) {
+        onCreateLocal(trimmedName, selectedHandle)
       }
     },
-    [workspaceType, workspaceName, isNameValid, onCreateVirtual, onCreateLocal]
+    [workspaceType, workspaceName, selectedHandle, isFormValid, onCreateVirtual, onCreateLocal]
   )
 
   const handleKeyDown = useCallback(
@@ -50,6 +99,18 @@ export function AddWorkspaceDialog({
     },
     [onCancel]
   )
+
+  const handleTypeChange = useCallback((type: WorkspaceTypeSelection) => {
+    setWorkspaceType(type)
+    // Reset state when changing type
+    if (type === 'virtual') {
+      setSelectedHandle(null)
+      setWorkspaceName('')
+    } else {
+      setWorkspaceName('')
+    }
+    setError(null)
+  }, [])
 
   if (!isOpen) {
     return null
@@ -77,7 +138,7 @@ export function AddWorkspaceDialog({
                 name="workspaceType"
                 value="virtual"
                 checked={workspaceType === 'virtual'}
-                onChange={() => setWorkspaceType('virtual')}
+                onChange={() => handleTypeChange('virtual')}
                 aria-label="Virtual Workspace"
               />
               <div className={styles.radioContent}>
@@ -94,7 +155,7 @@ export function AddWorkspaceDialog({
                 name="workspaceType"
                 value="local"
                 checked={workspaceType === 'local'}
-                onChange={() => setWorkspaceType('local')}
+                onChange={() => handleTypeChange('local')}
                 disabled={!isFileSystemAccessSupported}
                 aria-label="Local Folder"
               />
@@ -112,19 +173,51 @@ export function AddWorkspaceDialog({
             </label>
           </fieldset>
 
-          <div className={styles.inputGroup}>
-            <label htmlFor="workspaceName" className={styles.inputLabel}>
-              Workspace Name
-            </label>
-            <input
-              id="workspaceName"
-              type="text"
-              className={styles.input}
-              value={workspaceName}
-              onChange={(e) => setWorkspaceName(e.target.value)}
-              placeholder="Enter workspace name"
-            />
-          </div>
+          {/* For local workspaces: show folder selector first */}
+          {workspaceType === 'local' && (
+            <div className={styles.inputGroup}>
+              <label className={styles.inputLabel}>Selected Folder</label>
+              <div className={styles.folderSelector}>
+                {selectedHandle ? (
+                  <span className={styles.selectedFolder}>{selectedHandle.name}</span>
+                ) : (
+                  <span className={styles.noFolderSelected}>No folder selected</span>
+                )}
+                <button
+                  type="button"
+                  className={styles.selectFolderButton}
+                  onClick={handleSelectFolder}
+                  disabled={isSelectingFolder}
+                >
+                  {isSelectingFolder ? 'Selecting...' : selectedHandle ? 'Change' : 'Select Folder'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Show name input: always for virtual, after folder selection for local */}
+          {(workspaceType === 'virtual' || selectedHandle) && (
+            <div className={styles.inputGroup}>
+              <label htmlFor="workspaceName" className={styles.inputLabel}>
+                Workspace Name
+              </label>
+              <input
+                id="workspaceName"
+                type="text"
+                className={styles.input}
+                value={workspaceName}
+                onChange={(e) => setWorkspaceName(e.target.value)}
+                placeholder="Enter workspace name"
+              />
+            </div>
+          )}
+
+          {/* Error message */}
+          {error && (
+            <div className={styles.error} role="alert">
+              {error}
+            </div>
+          )}
 
           <div className={styles.footer}>
             <button
@@ -138,7 +231,7 @@ export function AddWorkspaceDialog({
             <button
               type="submit"
               className={`${styles.button} ${styles.createButton}`}
-              disabled={!isNameValid}
+              disabled={!isFormValid}
             >
               Create
             </button>

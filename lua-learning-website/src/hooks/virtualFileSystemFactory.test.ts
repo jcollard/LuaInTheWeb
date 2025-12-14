@@ -139,6 +139,40 @@ describe('createVirtualFileSystem', () => {
 
       expect(() => fs.delete('/notempty')).toThrow('Directory not empty')
     })
+
+    it('throws when deleting directory containing subdirectory', () => {
+      const fs = createVirtualFileSystem('test')
+
+      fs.createDirectory('/parent')
+      fs.createDirectory('/parent/child')
+
+      // Directory has subdirectory, so should throw
+      expect(() => fs.delete('/parent')).toThrow('Directory not empty')
+    })
+
+    it('throws when deleting directory containing nested subdirectory', () => {
+      const fs = createVirtualFileSystem('test')
+
+      fs.createDirectory('/parent')
+      fs.createDirectory('/parent/child')
+      fs.createDirectory('/parent/child/grandchild')
+
+      // Directory has nested subdirectory, so should throw
+      expect(() => fs.delete('/parent')).toThrow('Directory not empty')
+    })
+
+    it('allows deleting empty directory that had sibling with same prefix', () => {
+      const fs = createVirtualFileSystem('test')
+
+      fs.createDirectory('/folder')
+      fs.createDirectory('/folder-extra')
+
+      // Delete /folder should work (it's empty) and not affect /folder-extra
+      fs.delete('/folder')
+
+      expect(fs.exists('/folder')).toBe(false)
+      expect(fs.exists('/folder-extra')).toBe(true)
+    })
   })
 
   describe('file operations', () => {
@@ -253,6 +287,61 @@ describe('createVirtualFileSystem', () => {
 
       expect(fs.exists('/restored.txt')).toBe(true)
       expect(fs.readFile('/restored.txt')).toBe('restored content')
+    })
+
+    it('adds root folder when restored state is missing it', () => {
+      // Simulate old state that might not have root folder
+      const savedState = JSON.stringify({
+        version: 1,
+        files: {
+          '/file.txt': {
+            name: 'file.txt',
+            content: 'content',
+            createdAt: 12345,
+            updatedAt: 12345,
+          },
+        },
+        folders: ['/subdir'], // Missing root '/'
+      })
+      localStorageMock.getItem.mockReturnValue(savedState)
+
+      const fs = createVirtualFileSystem('missing-root-test')
+
+      // Root should still exist
+      expect(fs.exists('/')).toBe(true)
+      expect(fs.isDirectory('/')).toBe(true)
+      // And the subdir should also exist
+      expect(fs.exists('/subdir')).toBe(true)
+    })
+
+    it('handles restored state with empty folders array', () => {
+      const savedState = JSON.stringify({
+        version: 1,
+        files: {},
+        folders: [], // Empty folders array
+      })
+      localStorageMock.getItem.mockReturnValue(savedState)
+
+      const fs = createVirtualFileSystem('empty-folders-test')
+
+      // Root should be automatically added
+      expect(fs.exists('/')).toBe(true)
+      expect(fs.isDirectory('/')).toBe(true)
+    })
+
+    it('handles restored state with undefined folders', () => {
+      const savedState = JSON.stringify({
+        version: 1,
+        files: {},
+        // folders is undefined
+      })
+      localStorageMock.getItem.mockReturnValue(savedState)
+
+      const fs = createVirtualFileSystem('undefined-folders-test')
+
+      // Root should be automatically added
+      expect(fs.exists('/')).toBe(true)
+      expect(fs.isDirectory('/')).toBe(true)
     })
 
     it('persists directories to localStorage', () => {

@@ -908,7 +908,132 @@ describe('FileSystemAccessAPIFileSystem', () => {
       fs.delete('/file.txt')
       await fs.flush()
 
-      expect(mockHandle.removeEntry).toHaveBeenCalledWith('file.txt')
+      expect(mockHandle.removeEntry).toHaveBeenCalledWith('file.txt', {
+        recursive: true,
+      })
+    })
+  })
+
+  describe('null handle scenarios (write-behind pattern)', () => {
+    it('should create nested directories when parent has null handle', async () => {
+      const contents = new Map<string, MockFileSystemHandle>()
+      const mockHandle = createMockDirectoryHandle('root', contents)
+      const fs = new FileSystemAccessAPIFileSystem(
+        mockHandle as unknown as FileSystemDirectoryHandle
+      )
+      await fs.initialize()
+
+      // Create nested directories before flush (parent has null handle)
+      fs.createDirectory('/level1')
+      fs.createDirectory('/level1/level2')
+      fs.createDirectory('/level1/level2/level3')
+
+      // Verify cache state
+      expect(fs.exists('/level1')).toBe(true)
+      expect(fs.exists('/level1/level2')).toBe(true)
+      expect(fs.exists('/level1/level2/level3')).toBe(true)
+
+      // Flush should create all directories
+      await fs.flush()
+
+      // Verify getDirectoryHandle was called for each level
+      expect(mockHandle.getDirectoryHandle).toHaveBeenCalledWith('level1', { create: true })
+    })
+
+    it('should write file when parent directory has null handle', async () => {
+      const contents = new Map<string, MockFileSystemHandle>()
+      const mockHandle = createMockDirectoryHandle('root', contents)
+      const fs = new FileSystemAccessAPIFileSystem(
+        mockHandle as unknown as FileSystemDirectoryHandle
+      )
+      await fs.initialize()
+
+      // Create directory then write file before flush
+      fs.createDirectory('/newdir')
+      fs.writeFile('/newdir/file.txt', 'content')
+
+      // Verify cache state
+      expect(fs.exists('/newdir')).toBe(true)
+      expect(fs.exists('/newdir/file.txt')).toBe(true)
+      expect(fs.readFile('/newdir/file.txt')).toBe('content')
+
+      // Flush should work without errors
+      await fs.flush()
+    })
+
+    it('should skip delete when parent was never persisted', async () => {
+      const contents = new Map<string, MockFileSystemHandle>()
+      const mockHandle = createMockDirectoryHandle('root', contents)
+      const fs = new FileSystemAccessAPIFileSystem(
+        mockHandle as unknown as FileSystemDirectoryHandle
+      )
+      await fs.initialize()
+
+      // Create and then delete before flush (parent never persisted)
+      fs.createDirectory('/tempdir')
+      fs.writeFile('/tempdir/temp.txt', 'temp content')
+      fs.delete('/tempdir/temp.txt')
+      fs.delete('/tempdir')
+
+      // Verify cache state
+      expect(fs.exists('/tempdir')).toBe(false)
+      expect(fs.exists('/tempdir/temp.txt')).toBe(false)
+
+      // Flush should complete without errors
+      await fs.flush()
+    })
+
+    it('should handle recursive folder copy with nested structure', async () => {
+      const contents = new Map<string, MockFileSystemHandle>()
+      const mockHandle = createMockDirectoryHandle('root', contents)
+      const fs = new FileSystemAccessAPIFileSystem(
+        mockHandle as unknown as FileSystemDirectoryHandle
+      )
+      await fs.initialize()
+
+      // Create a directory structure
+      fs.createDirectory('/source')
+      fs.createDirectory('/source/sub1')
+      fs.createDirectory('/source/sub1/sub2')
+      fs.writeFile('/source/file1.txt', 'content1')
+      fs.writeFile('/source/sub1/file2.txt', 'content2')
+      fs.writeFile('/source/sub1/sub2/file3.txt', 'content3')
+
+      // Verify the structure exists
+      expect(fs.exists('/source/sub1/sub2/file3.txt')).toBe(true)
+      expect(fs.readFile('/source/sub1/sub2/file3.txt')).toBe('content3')
+
+      // Flush should persist all
+      await fs.flush()
+    })
+
+    it('should use recursive: true when deleting directory with contents', async () => {
+      const nestedContents = new Map<string, MockFileSystemHandle>()
+      nestedContents.set('nested.txt', createMockFileHandle('nested.txt', 'nested'))
+
+      const subdirContents = new Map<string, MockFileSystemHandle>()
+      subdirContents.set('subfile.txt', createMockFileHandle('subfile.txt', 'sub content'))
+      subdirContents.set('nested', createMockDirectoryHandle('nested', nestedContents))
+
+      const contents = new Map<string, MockFileSystemHandle>()
+      contents.set('mydir', createMockDirectoryHandle('mydir', subdirContents))
+
+      const mockHandle = createMockDirectoryHandle('root', contents)
+      const fs = new FileSystemAccessAPIFileSystem(
+        mockHandle as unknown as FileSystemDirectoryHandle
+      )
+      await fs.initialize()
+
+      // Delete nested contents first (required by sync API), then directory
+      fs.delete('/mydir/nested/nested.txt')
+      fs.delete('/mydir/nested')
+      fs.delete('/mydir/subfile.txt')
+      fs.delete('/mydir')
+
+      await fs.flush()
+
+      // All removeEntry calls should use recursive: true
+      expect(mockHandle.removeEntry).toHaveBeenCalledWith('mydir', { recursive: true })
     })
   })
 })

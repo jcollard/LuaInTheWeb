@@ -3,19 +3,33 @@ import type { Workspace } from '../../hooks/workspaceTypes'
 
 /**
  * Props for workspace management in FileExplorer.
- * When provided, WorkspaceTabs and AddWorkspaceDialog are rendered.
+ * When provided, "Add Workspace" toolbar button and AddWorkspaceDialog are rendered.
  */
 export interface WorkspaceProps {
-  /** List of workspaces to display as tabs */
+  /** List of workspaces (workspaces appear as root-level folders in the tree) */
   workspaces: Workspace[]
   /** Whether the File System Access API is supported */
   isFileSystemAccessSupported: boolean
   /** Callback to add a virtual workspace */
   onAddVirtualWorkspace: (name: string) => void
-  /** Callback to add a local workspace (triggers directory picker) */
-  onAddLocalWorkspace: (name: string) => void
-  /** Callback to remove a workspace */
-  onRemoveWorkspace: (workspaceId: string) => void
+  /** Callback to add a local workspace with the selected folder handle */
+  onAddLocalWorkspace: (name: string, handle: FileSystemDirectoryHandle) => void
+  /** Callback to remove a workspace by its mount path */
+  onRemoveWorkspace: (mountPath: string) => void
+  /** Callback to refresh a local workspace from disk */
+  onRefreshWorkspace: (mountPath: string) => Promise<void>
+  /** Check if a workspace supports refresh (is a connected local workspace) */
+  supportsRefresh: (mountPath: string) => boolean
+  /** Callback to reconnect a disconnected local workspace */
+  onReconnectWorkspace?: (mountPath: string) => Promise<void>
+  /** Callback to disconnect a local workspace without removing it */
+  onDisconnectWorkspace?: (mountPath: string) => void
+  /** Callback to rename a workspace (changes name and mount path) */
+  onRenameWorkspace?: (mountPath: string, newName: string) => void
+  /** Check if a folder is already mounted (for duplicate detection) */
+  isFolderAlreadyMounted?: (handle: FileSystemDirectoryHandle) => Promise<boolean>
+  /** Get a unique workspace name (handles collisions) */
+  getUniqueWorkspaceName?: (baseName: string) => string
 }
 
 export interface FileExplorerProps {
@@ -31,6 +45,7 @@ export interface FileExplorerProps {
   onDeleteFolder: (path: string) => void
   onSelectFile: (path: string) => void
   onMoveFile?: (sourcePath: string, targetFolderPath: string) => void
+  onCopyFile?: (sourcePath: string, targetFolderPath: string) => void
   onCancelPendingNewFile?: () => void
   onCancelPendingNewFolder?: () => void
   className?: string
@@ -50,6 +65,7 @@ export interface ConfirmDialogState {
   title: string
   message: string
   variant?: 'default' | 'danger'
+  confirmLabel?: string
   onConfirm: () => void
 }
 

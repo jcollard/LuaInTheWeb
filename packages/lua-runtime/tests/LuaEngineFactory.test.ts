@@ -27,9 +27,10 @@ describe('LuaEngineFactory', () => {
 
       await engine.doString('print("hello world")')
 
-      expect(callbacks.onOutput).toHaveBeenCalledWith('hello world\n')
+      // Flush buffered output
+      LuaEngineFactory.close(engine)
 
-      engine.global.close()
+      expect(callbacks.onOutput).toHaveBeenCalledWith('hello world\n')
     })
 
     it('should concatenate multiple print arguments with tabs', async () => {
@@ -37,9 +38,10 @@ describe('LuaEngineFactory', () => {
 
       await engine.doString('print("a", "b", "c")')
 
-      expect(callbacks.onOutput).toHaveBeenCalledWith('a\tb\tc\n')
+      // Flush buffered output
+      LuaEngineFactory.close(engine)
 
-      engine.global.close()
+      expect(callbacks.onOutput).toHaveBeenCalledWith('a\tb\tc\n')
     })
 
     it('should convert nil values to string "nil" in print', async () => {
@@ -47,9 +49,10 @@ describe('LuaEngineFactory', () => {
 
       await engine.doString('print(nil)')
 
-      expect(callbacks.onOutput).toHaveBeenCalledWith('nil\n')
+      // Flush buffered output
+      LuaEngineFactory.close(engine)
 
-      engine.global.close()
+      expect(callbacks.onOutput).toHaveBeenCalledWith('nil\n')
     })
 
     it('should provide io.write function that outputs without newline', async () => {
@@ -57,9 +60,10 @@ describe('LuaEngineFactory', () => {
 
       await engine.doString('io.write("hello")')
 
-      expect(callbacks.onOutput).toHaveBeenCalledWith('hello')
+      // Flush buffered output
+      LuaEngineFactory.close(engine)
 
-      engine.global.close()
+      expect(callbacks.onOutput).toHaveBeenCalledWith('hello')
     })
 
     it('should use default empty string handler when onReadInput is not provided', async () => {
@@ -97,9 +101,10 @@ describe('LuaEngineFactory', () => {
 
       await engine.doString('print(42)')
 
-      expect(callbacks.onOutput).toHaveBeenCalledWith('42\n')
+      // Flush buffered output
+      LuaEngineFactory.close(engine)
 
-      engine.global.close()
+      expect(callbacks.onOutput).toHaveBeenCalledWith('42\n')
     })
 
     it('should convert booleans in print', async () => {
@@ -107,9 +112,10 @@ describe('LuaEngineFactory', () => {
 
       await engine.doString('print(true, false)')
 
-      expect(callbacks.onOutput).toHaveBeenCalledWith('true\tfalse\n')
+      // Flush buffered output
+      LuaEngineFactory.close(engine)
 
-      engine.global.close()
+      expect(callbacks.onOutput).toHaveBeenCalledWith('true\tfalse\n')
     })
   })
 
@@ -121,9 +127,11 @@ describe('LuaEngineFactory', () => {
 
       // Verify by printing the value
       await engine.doString('print(x)')
-      expect(callbacks.onOutput).toHaveBeenCalledWith('42\n')
 
-      engine.global.close()
+      // Flush buffered output
+      LuaEngineFactory.close(engine)
+
+      expect(callbacks.onOutput).toHaveBeenCalledWith('42\n')
     })
 
     it('should evaluate expressions and return formatted result', async () => {

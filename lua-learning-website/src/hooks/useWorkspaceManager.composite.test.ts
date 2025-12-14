@@ -41,7 +41,8 @@ describe('useWorkspaceManager', () => {
 
       const entries = result.current.compositeFileSystem.listDirectory('/')
       expect(entries).toHaveLength(1)
-      expect(entries[0].name).toBe('My Files')
+      // listDirectory returns mount path name (slug), not display name
+      expect(entries[0].name).toBe('my-files')
       expect(entries[0].type).toBe('directory')
     })
 
@@ -54,7 +55,8 @@ describe('useWorkspaceManager', () => {
 
       const entries = result.current.compositeFileSystem.listDirectory('/')
       expect(entries).toHaveLength(2)
-      expect(entries.map((e) => e.name).sort()).toEqual(['My Files', 'Project'])
+      // listDirectory returns mount path names (slugs), not display names
+      expect(entries.map((e) => e.name).sort()).toEqual(['my-files', 'project'])
     })
 
     it('only includes connected workspaces', () => {
@@ -72,7 +74,8 @@ describe('useWorkspaceManager', () => {
       // Local workspace is disconnected, so only 1 mount
       const entries = result.current.compositeFileSystem.listDirectory('/')
       expect(entries).toHaveLength(1)
-      expect(entries[0].name).toBe('My Files')
+      // listDirectory returns mount path name (slug), not display name
+      expect(entries[0].name).toBe('my-files')
     })
   })
 

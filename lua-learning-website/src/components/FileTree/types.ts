@@ -15,4 +15,6 @@ export interface FileTreeProps {
   onRenameCancel?: () => void
   // Drag and drop
   onDrop?: (sourcePath: string, targetPath: string) => void
+  // Workspace reconnection
+  onReconnect?: (path: string) => void
 }
