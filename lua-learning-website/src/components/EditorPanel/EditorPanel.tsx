@@ -16,6 +16,7 @@ export function EditorPanel({
   tabBarProps,
   onFormat,
   isFormatting = false,
+  onEditorReady,
 }: EditorPanelProps) {
   const combinedClassName = className
     ? `${styles.editorPanel} ${className}`
@@ -67,6 +68,7 @@ export function EditorPanel({
           language="lua"
           height="100%"
           onFormat={onFormat}
+          onEditorReady={onEditorReady}
         />
       </div>
     </div>

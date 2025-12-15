@@ -1,3 +1,18 @@
+import type { Monaco } from '@monaco-editor/react'
+import type { editor } from 'monaco-editor'
+
+/**
+ * Information provided when the editor is ready
+ */
+export interface EditorReadyInfo {
+  /** The Monaco instance */
+  monaco: Monaco
+  /** The editor instance */
+  editor: editor.IStandaloneCodeEditor
+  /** The text model */
+  model: editor.ITextModel
+}
+
 /**
  * Props for the CodeEditor component
  */
@@ -14,4 +29,6 @@ export interface CodeEditorProps {
   readOnly?: boolean
   /** Called when format keyboard shortcut is pressed (Shift+Alt+F) */
   onFormat?: () => void
+  /** Called when the editor is ready with monaco, editor, and model references */
+  onEditorReady?: (info: EditorReadyInfo) => void
 }

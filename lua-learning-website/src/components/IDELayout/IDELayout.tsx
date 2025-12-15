@@ -13,6 +13,7 @@ import { ToastContainer } from '../Toast'
 import { WelcomeScreen } from '../WelcomeScreen'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useWorkspaceManager } from '../../hooks/useWorkspaceManager'
+import { useIDEDiagnostics } from '../../hooks/useIDEDiagnostics'
 import { createFileSystemAdapter } from '../../hooks/compositeFileSystemAdapter'
 import { initFormatter, formatLuaCode } from '../../utils/luaFormatter'
 import type { Workspace } from '../../hooks/workspaceTypes'
@@ -109,6 +110,9 @@ function IDELayoutInner({
   const [cursorColumn, setCursorColumn] = useState(1)
   const [pendingCloseTabPath, setPendingCloseTabPath] = useState<string | null>(null)
   const [isFormatting, setIsFormatting] = useState(false)
+
+  // Diagnostics hook for showing Lua errors in editor
+  const { handleEditorReady } = useIDEDiagnostics()
 
   // Initialize the Lua formatter on mount
   useEffect(() => {
@@ -353,6 +357,7 @@ function IDELayoutInner({
                       tabBarProps={tabBarProps}
                       onFormat={handleFormat}
                       isFormatting={isFormatting}
+                      onEditorReady={handleEditorReady}
                     />
                   )}
                 </IDEPanel>

@@ -1,4 +1,4 @@
-import Editor, { type OnMount, type BeforeMount } from '@monaco-editor/react'
+import Editor, { type OnMount, type BeforeMount, type Monaco } from '@monaco-editor/react'
 import { useCallback, useRef, useEffect } from 'react'
 import type { CodeEditorProps } from './types'
 import styles from './CodeEditor.module.css'
@@ -16,19 +16,28 @@ export function CodeEditor({
   height = '400px',
   readOnly = false,
   onFormat,
+  onEditorReady,
 }: CodeEditorProps) {
   const { theme } = useTheme()
   const monacoTheme = theme === 'dark' ? 'vs-dark' : 'vs'
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
+  const monacoRef = useRef<Monaco | null>(null)
   const formatActionRef = useRef<IDisposable | null>(null)
   const onFormatRef = useRef(onFormat)
+  const onEditorReadyRef = useRef(onEditorReady)
 
-  // Keep ref up to date
+  // Keep refs up to date
   useEffect(() => {
     onFormatRef.current = onFormat
   }, [onFormat])
 
+  useEffect(() => {
+    onEditorReadyRef.current = onEditorReady
+  }, [onEditorReady])
+
   const handleBeforeMount: BeforeMount = useCallback((monaco) => {
+    // Store monaco reference for later use
+    monacoRef.current = monaco
     // Register enhanced Lua syntax highlighting
     registerLuaLanguage(monaco)
   }, [])
@@ -49,6 +58,16 @@ export function CodeEditor({
         onFormatRef.current?.()
       },
     })
+
+    // Notify parent component that editor is ready
+    const model = editorInstance.getModel()
+    if (monacoRef.current && model) {
+      onEditorReadyRef.current?.({
+        monaco: monacoRef.current,
+        editor: editorInstance,
+        model,
+      })
+    }
   }, [])
 
   // Cleanup on unmount
