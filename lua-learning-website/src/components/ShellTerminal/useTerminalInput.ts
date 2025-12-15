@@ -68,11 +68,23 @@ interface ProcessRefs {
   handleProcessKey: MutableRefObject<(key: string, modifiers: { ctrl: boolean; alt: boolean; shift: boolean }) => void>
 }
 
+/**
+ * Refs for character mode input (io.read(n)).
+ * When charModeCount > 0, terminal captures exactly that many characters
+ * without waiting for Enter.
+ */
+interface CharModeRefs {
+  charModeCount: MutableRefObject<number>
+  charBuffer: MutableRefObject<string>
+  setCharModeCount: MutableRefObject<(count: number) => void>
+}
+
 interface InputHandlerDeps {
   terminal: Terminal
   handlersRef: MutableRefObject<TerminalInputHandlers>
   currentLineRef: MutableRefObject<string>
   processRefs: ProcessRefs
+  charModeRefs?: CharModeRefs
   showPrompt: () => void
 }
 
@@ -81,7 +93,7 @@ interface InputHandlerDeps {
  * Processes single characters, escape sequences, and multi-character paste.
  */
 export function createInputHandler(deps: InputHandlerDeps): (data: string) => void {
-  const { terminal, handlersRef, currentLineRef, processRefs, showPrompt } = deps
+  const { terminal, handlersRef, currentLineRef, processRefs, charModeRefs, showPrompt } = deps
   const {
     isProcessRunning: isProcessRunningRef,
     handleProcessInput: handleProcessInputRef,
@@ -90,11 +102,55 @@ export function createInputHandler(deps: InputHandlerDeps): (data: string) => vo
     handleProcessKey: handleProcessKeyRef,
   } = processRefs
 
+  /**
+   * Check if currently in character mode (io.read(n)).
+   */
+  const isInCharMode = (): boolean => {
+    return !!charModeRefs && charModeRefs.charModeCount.current > 0
+  }
+
+  /**
+   * Handle character mode input (io.read(n)).
+   * Buffers ALL input as raw bytes (including escape sequences).
+   * No echo - the program controls what gets displayed.
+   * Returns true if input was handled in char mode, false otherwise.
+   */
+  const handleCharModeInput = (data: string): boolean => {
+    if (!charModeRefs) return false
+    const charCount = charModeRefs.charModeCount.current
+    if (charCount <= 0) return false
+
+    // Add all bytes to buffer (raw input, including escape sequences)
+    charModeRefs.charBuffer.current += data
+
+    // No echo in character mode - program controls display via io.write/print
+
+    // Check if we have enough bytes
+    if (charModeRefs.charBuffer.current.length >= charCount) {
+      const input = charModeRefs.charBuffer.current.slice(0, charCount)
+      // Keep remaining bytes in buffer for subsequent reads
+      charModeRefs.charBuffer.current = charModeRefs.charBuffer.current.slice(charCount)
+      // Reset character mode (process will request again if needed)
+      charModeRefs.setCharModeCount.current(0)
+      // Send input to process
+      handleProcessInputRef.current(input)
+    }
+
+    return true
+  }
+
   // Process a single character or escape sequence
   const processSingleInput = (data: string) => {
     const code = data.charCodeAt(0)
     const handlers = handlersRef.current
     let commands: TerminalCommand[] = []
+
+    // In character mode, intercept ALL input as raw bytes
+    // Exception: Ctrl+C (code 3) still stops the process
+    if (isInCharMode() && isProcessRunningRef.current && code !== 3) {
+      handleCharModeInput(data)
+      return
+    }
 
     // Handle Enter
     if (data === '\r' || data === '\n' || code === 13) {
@@ -169,6 +225,8 @@ export function createInputHandler(deps: InputHandlerDeps): (data: string) => vo
     }
 
     // Handle Backspace
+    // Note: In character mode, backspace is handled as a raw byte (ASCII 127)
+    // by the early return above, matching standard terminal raw mode behavior
     if (code === 127) {
       commands = handlers.handleBackspace()
       executeTerminalCommands(terminal, commands)
@@ -179,6 +237,11 @@ export function createInputHandler(deps: InputHandlerDeps): (data: string) => vo
     if (code === 3) {
       // If a process is running, stop it
       if (isProcessRunningRef.current) {
+        // Reset character mode state
+        if (charModeRefs) {
+          charModeRefs.charBuffer.current = ''
+          charModeRefs.setCharModeCount.current(0)
+        }
         stopProcessRef.current()
         terminal.write('^C')
         terminal.writeln('')
@@ -234,6 +297,7 @@ export function createInputHandler(deps: InputHandlerDeps): (data: string) => vo
     }
 
     // Handle printable characters
+    // Note: In character mode, these are handled as raw bytes by the early return above
     if (code >= 32 && code < 127) {
       commands = handlers.handleCharacter(data)
       executeTerminalCommands(terminal, commands)

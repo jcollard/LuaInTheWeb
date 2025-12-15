@@ -12,6 +12,12 @@ export interface UseProcessManagerOptions {
   onOutput?: (text: string) => void
   /** Callback for process errors */
   onError?: (text: string) => void
+  /**
+   * Callback when process requests input (io.read).
+   * @param charCount - If provided, read exactly this many characters (no Enter required).
+   *                    If undefined, read a full line (wait for Enter).
+   */
+  onRequestInput?: (charCount?: number) => void
 }
 
 export interface UseProcessManagerReturn {
@@ -38,7 +44,7 @@ export interface UseProcessManagerReturn {
 export function useProcessManager(
   options: UseProcessManagerOptions = {}
 ): UseProcessManagerReturn {
-  const { onProcessExit, onOutput, onError } = options
+  const { onProcessExit, onOutput, onError, onRequestInput } = options
 
   const [isProcessRunning, setIsProcessRunning] = useState(false)
   const processManagerRef = useRef<ProcessManager>(new ProcessManager())
@@ -47,9 +53,11 @@ export function useProcessManager(
   const onProcessExitRef = useRef(onProcessExit)
   const onOutputRef = useRef(onOutput)
   const onErrorRef = useRef(onError)
+  const onRequestInputRef = useRef(onRequestInput)
   onProcessExitRef.current = onProcessExit
   onOutputRef.current = onOutput
   onErrorRef.current = onError
+  onRequestInputRef.current = onRequestInput
 
   const hasForegroundProcess = useCallback((): boolean => {
     return processManagerRef.current.hasForegroundProcess()
@@ -68,6 +76,18 @@ export function useProcessManager(
     process.onError = (text: string) => {
       if (onErrorRef.current) {
         onErrorRef.current(text)
+      }
+    }
+
+    // Wire up onRequestInput callback if the process supports it
+    // This is used by LuaScriptProcess and LuaReplProcess for io.read()
+    if ('onRequestInput' in process) {
+      ;(process as IProcess & { onRequestInput: (charCount?: number) => void }).onRequestInput = (
+        charCount?: number
+      ) => {
+        if (onRequestInputRef.current) {
+          onRequestInputRef.current(charCount)
+        }
       }
     }
 

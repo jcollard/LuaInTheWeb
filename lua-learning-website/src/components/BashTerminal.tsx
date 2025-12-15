@@ -19,6 +19,11 @@ export interface BashTerminalHandle {
   write: (text: string) => void
   clear: () => void
   readLine: () => Promise<string>
+  /**
+   * Read exactly `count` characters without waiting for Enter.
+   * Characters are NOT echoed (silent mode for hybrid behavior).
+   */
+  readChars: (count: number) => Promise<string>
   showPrompt: () => void
 }
 
@@ -37,6 +42,8 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
   const cursorPositionRef = useRef<number>(0)
   const inputResolveRef = useRef<((value: string) => void) | null>(null)
   const isReadingRef = useRef<boolean>(false)
+  const charModeCountRef = useRef<number>(0) // 0 = line mode, >0 = character mode
+  const charBufferRef = useRef<string>('') // Buffer for character-mode input
   const historyRef = useRef<string[]>([])
   const historyIndexRef = useRef<number>(-1)
   const multiLineRef = useRef<boolean>(false)
@@ -300,6 +307,25 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
 
     // Handle printable characters
     if (code >= 32 && code < 127) {
+      // Character-mode input: capture characters without waiting for Enter
+      if (isReadingRef.current && charModeCountRef.current > 0) {
+        charBufferRef.current += data
+        // No echo in character mode (hybrid behavior - program controls display)
+
+        // Check if we have enough characters
+        if (charBufferRef.current.length >= charModeCountRef.current) {
+          const result = charBufferRef.current.slice(0, charModeCountRef.current)
+          charBufferRef.current = ''
+          charModeCountRef.current = 0
+          isReadingRef.current = false
+          if (inputResolveRef.current) {
+            inputResolveRef.current(result)
+            inputResolveRef.current = null
+          }
+        }
+        return
+      }
+
       const afterCursor = currentLineRef.current.slice(cursorPositionRef.current)
       const result = handleCharacter(getInputState(), data)
       applyStateUpdate(result)
@@ -360,10 +386,20 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
     readLine: async () => {
       return new Promise<string>((resolve) => {
         isReadingRef.current = true
+        charModeCountRef.current = 0 // Line mode
         inputResolveRef.current = resolve
         xtermRef.current?.write('> ')
         currentLineRef.current = ''
         cursorPositionRef.current = 0
+      })
+    },
+    readChars: async (count: number) => {
+      return new Promise<string>((resolve) => {
+        isReadingRef.current = true
+        charModeCountRef.current = count // Character mode
+        charBufferRef.current = ''
+        inputResolveRef.current = resolve
+        // No prompt in character mode - characters capture immediately
       })
     },
     showPrompt: () => xtermRef.current?.write('\x1b[32m> \x1b[0m'),
