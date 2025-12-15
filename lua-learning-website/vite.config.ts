@@ -30,6 +30,12 @@ const packageVersion = getPackageVersion()
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [react(), wasm(), topLevelAwait()],
+  server: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+  },
   define: {
     __BUILD_COMMIT__: JSON.stringify(gitCommit),
     __BUILD_BRANCH__: JSON.stringify(gitBranch),
