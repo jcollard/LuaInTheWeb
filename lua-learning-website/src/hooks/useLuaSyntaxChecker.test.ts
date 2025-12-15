@@ -73,7 +73,7 @@ describe('useLuaSyntaxChecker', () => {
 
       // Advance timer past debounce delay and flush promises
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(350)
+        await vi.advanceTimersByTimeAsync(1600)
       })
 
       // Should only have checked once with the final value
@@ -98,7 +98,7 @@ describe('useLuaSyntaxChecker', () => {
       })
 
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(350)
+        await vi.advanceTimersByTimeAsync(1600)
       })
 
       expect(result.current.syntaxError).toBe("[string \"...\"]:1: unexpected symbol near '0'")
@@ -123,7 +123,7 @@ describe('useLuaSyntaxChecker', () => {
       })
 
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(350)
+        await vi.advanceTimersByTimeAsync(1600)
       })
 
       expect(result.current.syntaxError).toBe('syntax error')
@@ -139,7 +139,7 @@ describe('useLuaSyntaxChecker', () => {
       })
 
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(350)
+        await vi.advanceTimersByTimeAsync(1600)
       })
 
       expect(result.current.syntaxError).toBeNull()
@@ -163,7 +163,7 @@ describe('useLuaSyntaxChecker', () => {
       })
 
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(350)
+        await vi.advanceTimersByTimeAsync(1600)
       })
 
       expect(LuaEngineFactory.isCodeComplete).toHaveBeenCalled()
@@ -189,7 +189,7 @@ describe('useLuaSyntaxChecker', () => {
       })
 
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(350)
+        await vi.advanceTimersByTimeAsync(1600)
       })
 
       expect(result.current.syntaxError).toBe('syntax error')
@@ -207,7 +207,7 @@ describe('useLuaSyntaxChecker', () => {
 
       // Advance time - should not have called isCodeComplete
       await act(async () => {
-        await vi.advanceTimersByTimeAsync(350)
+        await vi.advanceTimersByTimeAsync(1600)
       })
 
       expect(LuaEngineFactory.isCodeComplete).not.toHaveBeenCalled()
@@ -234,7 +234,7 @@ describe('useLuaSyntaxChecker', () => {
 
       // Advance past debounce to start check
       await act(async () => {
-        vi.advanceTimersByTime(350)
+        vi.advanceTimersByTime(1600)
       })
 
       // Should be checking now
