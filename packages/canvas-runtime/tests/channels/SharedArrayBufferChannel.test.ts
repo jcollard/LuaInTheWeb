@@ -41,6 +41,36 @@ describe('SharedArrayBufferChannel', () => {
       expect(received).toEqual([]);
     });
 
+    it('should return empty array and warn when buffer contains corrupted JSON', () => {
+      const int32View = new Int32Array(sharedBuffer);
+      const uint8View = new Uint8Array(sharedBuffer);
+
+      // Write invalid JSON to the draw buffer (offset 1024)
+      const invalidJson = '{not valid json';
+      const encoder = new TextEncoder();
+      const encoded = encoder.encode(invalidJson);
+      uint8View.set(encoded, 1024);
+
+      // Set count and length to indicate data exists
+      int32View[1] = 1; // OFFSET_DRAW_COUNT = 4, index = 4/4 = 1
+      int32View[2] = encoded.length; // OFFSET_DRAW_LENGTH = 8, index = 8/4 = 2
+
+      // Mock console.warn to verify it's called
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      // Should return empty array instead of throwing
+      const received = mainChannel.getDrawCommands();
+      expect(received).toEqual([]);
+
+      // Should have warned about the parse failure
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Failed to parse draw commands JSON:',
+        expect.any(Error)
+      );
+
+      warnSpy.mockRestore();
+    });
+
     it('should clear commands after retrieval', () => {
       const commands: DrawCommand[] = [{ type: 'clear' }];
       workerChannel.sendDrawCommands(commands);

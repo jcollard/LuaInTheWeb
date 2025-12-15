@@ -99,6 +99,92 @@ describe('PostMessageChannel', () => {
       expect(state.mouseY).toBe(0);
       expect(state.mouseButtons.size).toBe(0);
     });
+
+    it('should handle multiple keys pressed', () => {
+      const inputState: InputState = {
+        keysDown: new Set(['a', 'b', 'c', 'd', 'e']),
+        keysPressed: new Set(['a', 'c']),
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtons: new Set(),
+      };
+
+      mainChannel.setInputState(inputState);
+
+      return new Promise<void>(resolve => {
+        setTimeout(() => {
+          const received = workerChannel.getInputState();
+          expect(received.keysDown.size).toBe(5);
+          expect(received.keysDown.has('a')).toBe(true);
+          expect(received.keysDown.has('b')).toBe(true);
+          expect(received.keysDown.has('c')).toBe(true);
+          expect(received.keysDown.has('d')).toBe(true);
+          expect(received.keysDown.has('e')).toBe(true);
+          expect(received.keysPressed.size).toBe(2);
+          expect(received.keysPressed.has('a')).toBe(true);
+          expect(received.keysPressed.has('c')).toBe(true);
+          resolve();
+        }, 10);
+      });
+    });
+
+    it('should handle all mouse buttons', () => {
+      const inputState: InputState = {
+        keysDown: new Set(),
+        keysPressed: new Set(),
+        mouseX: 100,
+        mouseY: 200,
+        mouseButtons: new Set(['left', 'middle', 'right']),
+      };
+
+      mainChannel.setInputState(inputState);
+
+      return new Promise<void>(resolve => {
+        setTimeout(() => {
+          const received = workerChannel.getInputState();
+          expect(received.mouseButtons.size).toBe(3);
+          expect(received.mouseButtons.has('left')).toBe(true);
+          expect(received.mouseButtons.has('middle')).toBe(true);
+          expect(received.mouseButtons.has('right')).toBe(true);
+          resolve();
+        }, 10);
+      });
+    });
+
+    it('should handle updating input state multiple times', () => {
+      // First state
+      mainChannel.setInputState({
+        keysDown: new Set(['a']),
+        keysPressed: new Set(['a']),
+        mouseX: 10,
+        mouseY: 20,
+        mouseButtons: new Set(['left']),
+      });
+
+      return new Promise<void>(resolve => {
+        setTimeout(() => {
+          // Second state overwrites first
+          mainChannel.setInputState({
+            keysDown: new Set(['b']),
+            keysPressed: new Set(),
+            mouseX: 30,
+            mouseY: 40,
+            mouseButtons: new Set(['right']),
+          });
+
+          setTimeout(() => {
+            const received = workerChannel.getInputState();
+            expect(received.keysDown.has('a')).toBe(false);
+            expect(received.keysDown.has('b')).toBe(true);
+            expect(received.mouseX).toBe(30);
+            expect(received.mouseY).toBe(40);
+            expect(received.mouseButtons.has('left')).toBe(false);
+            expect(received.mouseButtons.has('right')).toBe(true);
+            resolve();
+          }, 10);
+        }, 10);
+      });
+    });
   });
 
   describe('timing', () => {

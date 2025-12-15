@@ -43,6 +43,7 @@ interface SerializedInputState {
  */
 export class PostMessageChannel implements IWorkerChannel {
   private readonly port: MessagePort;
+  // Preserved for debugging and future validation (e.g., ensuring main-only methods aren't called from worker)
   private readonly side: 'main' | 'worker';
 
   // State storage

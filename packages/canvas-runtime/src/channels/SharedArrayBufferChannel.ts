@@ -67,6 +67,7 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
   private readonly int32View: Int32Array;
   private readonly float64View: Float64Array;
   private readonly uint8View: Uint8Array;
+  // Preserved for debugging and future validation (e.g., ensuring main-only methods aren't called from worker)
   private readonly side: 'main' | 'worker';
   private readonly textEncoder: TextEncoder;
   private readonly textDecoder: TextDecoder;
@@ -129,7 +130,8 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
 
     try {
       return JSON.parse(json) as DrawCommand[];
-    } catch {
+    } catch (error) {
+      console.warn('Failed to parse draw commands JSON:', error);
       return [];
     }
   }
