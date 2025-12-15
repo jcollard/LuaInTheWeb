@@ -1,5 +1,5 @@
 import type { languages } from 'monaco-editor'
-import { findMatchingBlockIndent } from './luaBlockParser'
+import { calculateCorrectIndent, findMatchingBlockIndent } from './luaBlockParser'
 
 /**
  * IndentAction constants matching Monaco's languages.IndentAction enum.
@@ -319,10 +319,14 @@ export const luaTokenizerConfig: languages.IMonarchLanguage = {
 const DEDENT_PATTERN = /^(\s+)(end|else|elseif|until)\b/
 
 /**
- * Characters that trigger the auto-dedent check
- * These are the last characters of: end, else, elseif, until
+ * All lowercase letters and underscore - triggers for auto-indent on empty lines
+ * This covers all valid Lua identifier start characters
  */
-const DEDENT_TRIGGER_CHARS = ['d', 'e', 'f', 'l']
+const AUTO_INDENT_TRIGGER_CHARS = [
+  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+  'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+  '_', // for identifiers starting with underscore
+]
 
 /**
  * Register the enhanced Lua language configuration with Monaco Editor
@@ -335,72 +339,86 @@ export function registerLuaLanguage(monaco: typeof import('monaco-editor')): voi
   // Register the enhanced tokenizer
   monaco.languages.setMonarchTokensProvider('lua', luaTokenizerConfig)
 
-  // Register on-type formatting for auto-dedent of end/else/elseif/until
+  // Register on-type formatting for auto-dedent and auto-indent
   monaco.languages.registerOnTypeFormattingEditProvider('lua', {
-    autoFormatTriggerCharacters: DEDENT_TRIGGER_CHARS,
+    autoFormatTriggerCharacters: AUTO_INDENT_TRIGGER_CHARS,
 
-    provideOnTypeFormattingEdits(model, position, _ch) {
-      // Get the current line text
+    provideOnTypeFormattingEdits(model, position, ch) {
       const lineNumber = position.lineNumber
       const lineText = model.getLineContent(lineNumber)
 
-      // Check if the line matches the dedent pattern
-      const match = lineText.match(DEDENT_PATTERN)
-      if (!match) {
+      // Case 1: Check for dedent keywords (end, else, elseif, until)
+      const dedentMatch = lineText.match(DEDENT_PATTERN)
+      if (dedentMatch) {
+        const currentIndent = dedentMatch[1]
+        const keyword = dedentMatch[2] as 'end' | 'else' | 'elseif' | 'until'
+
+        // Verify cursor is at the end of the keyword
+        const keywordEndCol = currentIndent.length + keyword.length + 1
+        if (position.column === keywordEndCol) {
+          // Get code above to analyze block structure
+          const codeAbove =
+            lineNumber > 1
+              ? model.getValueInRange(
+                  new monaco.Range(1, 1, lineNumber - 1, model.getLineMaxColumn(lineNumber - 1))
+                )
+              : ''
+
+          const targetIndentLength = findMatchingBlockIndent(codeAbove, keyword)
+          const useTabs = currentIndent.includes('\t')
+          const newIndent = useTabs
+            ? '\t'.repeat(targetIndentLength)
+            : ' '.repeat(targetIndentLength)
+
+          if (newIndent !== currentIndent) {
+            return [
+              {
+                range: new monaco.Range(lineNumber, 1, lineNumber, currentIndent.length + 1),
+                text: newIndent,
+              },
+            ]
+          }
+        }
         return []
       }
 
-      const currentIndent = match[1]
-      const keyword = match[2] as 'end' | 'else' | 'elseif' | 'until'
+      // Case 2: Auto-indent on empty line
+      // Check if the line was empty/whitespace before this character was typed
+      // position.column is 1-indexed and points AFTER the typed character
+      // So position.column - 2 gives us everything BEFORE the typed character
+      const textBeforeTypedChar = lineText.substring(0, position.column - 2)
+      if (textBeforeTypedChar.trim() === '' && position.column === lineText.length + 1) {
+        // Line was empty/whitespace, and cursor is at the end (just typed a char)
+        // Calculate correct indentation
+        const codeAbove =
+          lineNumber > 1
+            ? model.getValueInRange(
+                new monaco.Range(1, 1, lineNumber - 1, model.getLineMaxColumn(lineNumber - 1))
+              )
+            : ''
 
-      // Verify that the cursor is at the end of the keyword
-      // (to avoid triggering on partial matches)
-      const keywordEndCol = currentIndent.length + keyword.length + 1
-      if (position.column !== keywordEndCol) {
-        return []
+        const targetIndentLevel = calculateCorrectIndent(codeAbove)
+
+        if (targetIndentLevel > 0) {
+          // Detect indent style from existing code or use spaces (2 per level)
+          const tabSize = model.getOptions().tabSize
+          const useSpaces = model.getOptions().insertSpaces
+
+          const indentString = useSpaces
+            ? ' '.repeat(targetIndentLevel * tabSize)
+            : '\t'.repeat(targetIndentLevel)
+
+          // Replace the line content with proper indentation + the typed character
+          return [
+            {
+              range: new monaco.Range(lineNumber, 1, lineNumber, position.column),
+              text: indentString + ch,
+            },
+          ]
+        }
       }
 
-      // Get all code above the current line to analyze block structure
-      const codeAbove =
-        lineNumber > 1
-          ? model.getValueInRange(
-              new monaco.Range(1, 1, lineNumber - 1, model.getLineMaxColumn(lineNumber - 1))
-            )
-          : ''
-
-      // Find the indentation of the matching block opener
-      const targetIndentLength = findMatchingBlockIndent(codeAbove, keyword)
-
-      // Determine indent style (tabs vs spaces) from current indent
-      const useTabs = currentIndent.includes('\t')
-
-      // Generate the target indentation string
-      let newIndent: string
-      if (useTabs) {
-        // Tab-based: targetIndentLength represents number of tabs
-        newIndent = '\t'.repeat(targetIndentLength)
-      } else {
-        // Space-based: targetIndentLength represents number of spaces
-        newIndent = ' '.repeat(targetIndentLength)
-      }
-
-      // If indent didn't change, no edit needed
-      if (newIndent === currentIndent) {
-        return []
-      }
-
-      // Return edit to replace the leading whitespace
-      return [
-        {
-          range: new monaco.Range(
-            lineNumber,
-            1,
-            lineNumber,
-            currentIndent.length + 1
-          ),
-          text: newIndent,
-        },
-      ]
+      return []
     },
   })
 }

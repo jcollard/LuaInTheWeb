@@ -394,4 +394,65 @@ test.describe('Auto-Indentation', () => {
     const lines = await getEditorContent(page)
     expect(containsText(lines[0], 'local x = 1')).toBe(true)
   })
+
+  test('typing on empty line inside function auto-indents', async ({ page }) => {
+    const monacoEditor = await createAndOpenFile(page)
+    await monacoEditor.click()
+
+    // Type a function declaration
+    await typeSlowly(page, 'function foo()')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(100)
+
+    // Clear any auto-indent that might have been applied and go to start of line
+    await page.keyboard.press('Home')
+    // Select all content on this line and delete it to start fresh
+    await page.keyboard.press('Shift+End')
+    await page.keyboard.press('Delete')
+    await page.waitForTimeout(100)
+
+    // Now type on the empty line - it should auto-indent
+    await typeSlowly(page, 'print')
+    await page.waitForTimeout(200)
+
+    const lines = await getEditorContent(page)
+    const printLine = lines.find((line) => containsText(line, 'print'))
+
+    expect(printLine).toBeDefined()
+    // The 'print' line should be indented (at least 1 level)
+    expect(getIndentLevel(printLine!)).toBeGreaterThanOrEqual(1)
+  })
+
+  test('typing on empty line inside nested blocks auto-indents correctly', async ({ page }) => {
+    const monacoEditor = await createAndOpenFile(page)
+    await monacoEditor.click()
+
+    // Type nested blocks
+    await typeSlowly(page, 'function outer()')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(100)
+    await typeSlowly(page, 'if true then')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(100)
+
+    // Clear any auto-indent and go to start of line
+    await page.keyboard.press('Home')
+    await page.keyboard.press('Shift+End')
+    await page.keyboard.press('Delete')
+    await page.waitForTimeout(100)
+
+    // Type on the empty line - should auto-indent to level 2
+    await typeSlowly(page, 'x')
+    await page.waitForTimeout(200)
+
+    const lines = await getEditorContent(page)
+    // Find the line that just has 'x' (with indentation)
+    const xLine = lines.find(
+      (line) => containsText(line, 'x') && !containsText(line, 'function') && !containsText(line, 'if')
+    )
+
+    expect(xLine).toBeDefined()
+    // Should be at indent level 2 (inside function > inside if)
+    expect(getIndentLevel(xLine!)).toBeGreaterThanOrEqual(2)
+  })
 })

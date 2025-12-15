@@ -269,3 +269,40 @@ export function findMatchingBlockIndent(
 
   return 0
 }
+
+/**
+ * Calculate the correct indentation level for new code based on block structure.
+ *
+ * This differs from findMatchingBlockIndent:
+ * - findMatchingBlockIndent finds where a CLOSING keyword should go
+ * - calculateCorrectIndent finds where NEW code should go (one level deeper than
+ *   the innermost open block)
+ *
+ * @param code - The code above the current line
+ * @returns The number of indentation levels for new code (multiply by tab size for spaces)
+ */
+export function calculateCorrectIndent(code: string): number {
+  // Strip strings and comments to avoid matching keywords inside them
+  const strippedCode = stripStringsAndComments(code)
+  const lines = strippedCode.split('\n')
+
+  // Track the number of open blocks
+  let openBlocks = 0
+
+  for (const line of lines) {
+    // Check for block openers (function, if...then, for...do, while...do, repeat, do)
+    // Note: else and elseif are NOT openers - they continue the existing if block
+    const openMatch = line.match(BLOCK_OPEN_PATTERN)
+    if (openMatch) {
+      openBlocks++
+    }
+
+    // Check for block closers (end, until)
+    const closeMatch = line.match(BLOCK_CLOSE_PATTERN)
+    if (closeMatch) {
+      openBlocks = Math.max(0, openBlocks - 1)
+    }
+  }
+
+  return openBlocks
+}
