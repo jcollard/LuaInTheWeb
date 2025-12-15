@@ -7,6 +7,7 @@ import type { Theme } from '../../contexts/types'
 const mockState = vi.hoisted(() => ({
   lastMonacoTheme: null as string | null,
   theme: 'dark' as Theme,
+  lastOptions: null as Record<string, unknown> | null,
 }))
 
 // Mock Monaco Editor - it doesn't work in jsdom
@@ -21,8 +22,9 @@ interface MockMonacoProps {
 
 vi.mock('@monaco-editor/react', () => ({
   default: ({ value, onChange, options, loading, theme }: MockMonacoProps) => {
-    // Capture the theme prop
+    // Capture the theme prop and options
     mockState.lastMonacoTheme = theme ?? null
+    mockState.lastOptions = options ?? null
     // If loading is provided, we're simulating the loading state
     if (loading && value === '__loading__') {
       return <div data-testid="monaco-loading">{loading}</div>
@@ -55,6 +57,7 @@ describe('CodeEditor', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockState.lastMonacoTheme = null
+    mockState.lastOptions = null
     mockState.theme = 'dark'
   })
 
@@ -142,6 +145,17 @@ describe('CodeEditor', () => {
 
       // Assert
       expect(mockState.lastMonacoTheme).toBe('vs')
+    })
+  })
+
+  describe('autocomplete behavior', () => {
+    it('should disable automatic suggestions (only show on Ctrl+Space)', () => {
+      // Arrange & Act
+      render(<CodeEditor value="" onChange={() => {}} />)
+
+      // Assert - quickSuggestions and suggestOnTriggerCharacters should be false
+      expect(mockState.lastOptions?.quickSuggestions).toBe(false)
+      expect(mockState.lastOptions?.suggestOnTriggerCharacters).toBe(false)
     })
   })
 })
