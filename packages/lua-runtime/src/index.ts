@@ -17,8 +17,10 @@ export {
   LuaEngineFactory,
   formatLuaError,
   ExecutionStoppedError,
-  LUA_SHELL_CODE,
   type LuaEngineCallbacks,
   type LuaEngineOptions,
   type ExecutionControlOptions,
 } from './LuaEngineFactory'
+
+// Shell library export
+export { LUA_SHELL_CODE } from './lua/shell'
