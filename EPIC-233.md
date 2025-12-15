@@ -49,7 +49,7 @@ Mouse                                       │
 
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
-| #252 | Communication Abstraction Layer | ⏳ Pending | - | M - Foundation |
+| #252 | Communication Abstraction Layer | 🔄 In Progress | 252-communication-abstraction-layer | PR #262 |
 | #253 | SharedArrayBuffer Memory Layout | ⏳ Pending | - | M - Depends on #252 |
 | #254 | Web Worker + Lua Integration | ⏳ Pending | - | L - Depends on #252 |
 | #255 | Main Thread Rendering | ⏳ Pending | - | M - Depends on #252 |
@@ -95,6 +95,7 @@ Mouse                                       │
 - Created 8 sub-issues (#252-#259)
 - Worktree created at `LuaInTheWeb-epic-233`
 - ✅ Completed #258: COOP/COEP Header Configuration (PR #260)
+- Started #252: Communication Abstraction Layer (PR #262)
 
 ## Key Files
 
@@ -102,6 +103,12 @@ Mouse                                       │
 
 - `lua-learning-website/firebase.json` - COOP/COEP headers for production
 - `lua-learning-website/vite.config.ts` - COOP/COEP headers for dev server
+- `packages/canvas-runtime/` - New package for canvas game runtime
+  - `src/channels/IWorkerChannel.ts` - Channel interface
+  - `src/channels/PostMessageChannel.ts` - Fallback implementation
+  - `src/channels/SharedArrayBufferChannel.ts` - High-performance implementation
+  - `src/channels/channelFactory.ts` - Auto-detection factory
+  - `src/shared/types.ts` - DrawCommand, InputState, TimingInfo types
 
 ## Open Questions
 
