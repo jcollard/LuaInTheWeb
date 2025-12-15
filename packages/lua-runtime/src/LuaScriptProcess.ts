@@ -189,11 +189,9 @@ export class LuaScriptProcess implements IProcess {
 
       // Execute the script wrapped with hooks
       // This ensures the debug hook is active during the entire script execution
-      await this.engine.doString(`
-        __setup_execution_hook()
-        ${scriptContent}
-        __clear_execution_hook()
-      `)
+      // Note: We use semicolons on the same line to preserve line numbers in error messages
+      await this.engine.doString(`__setup_execution_hook(); ${scriptContent}
+__clear_execution_hook()`)
 
       // Flush any buffered output from the execution
       LuaEngineFactory.flushOutput(this.engine)
