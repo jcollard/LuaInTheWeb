@@ -94,7 +94,7 @@ describe('FileExplorer with Workspace Management', () => {
 
     it('renders workspaces as root-level folders in tree', () => {
       const workspaces = [
-        createMockWorkspace({ id: 'ws-1', name: 'My Files', mountPath: '/my-files' }),
+        createMockWorkspace({ id: 'ws-1', name: 'home', mountPath: '/home' }),
         createMockWorkspace({ id: 'ws-2', name: 'Project', mountPath: '/project' }),
       ]
       const tree = createWorkspaceTree(workspaces)
@@ -107,12 +107,12 @@ describe('FileExplorer with Workspace Management', () => {
       )
 
       // Workspaces appear as tree items, not tabs
-      expect(screen.getByRole('treeitem', { name: /my-files/i })).toBeInTheDocument()
+      expect(screen.getByRole('treeitem', { name: /home/i })).toBeInTheDocument()
       expect(screen.getByRole('treeitem', { name: /project/i })).toBeInTheDocument()
     })
 
     it('displays virtual workspace icons for virtual workspace folders', () => {
-      const workspaces = [createMockWorkspace({ id: 'ws-1', name: 'My Files', mountPath: '/my-files', type: 'virtual' })]
+      const workspaces = [createMockWorkspace({ id: 'ws-1', name: 'home', mountPath: '/home', type: 'virtual' })]
       const tree = createWorkspaceTree(workspaces)
       render(
         <FileExplorer

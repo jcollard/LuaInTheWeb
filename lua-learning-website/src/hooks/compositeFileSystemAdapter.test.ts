@@ -26,12 +26,12 @@ describe('compositeFileSystemAdapter', () => {
       vi.mocked(mockFs.listDirectory).mockImplementation((path: string) => {
         if (path === '/') {
           return [
-            { name: 'my-files', type: 'directory', path: '/my-files' },
+            { name: 'home', type: 'directory', path: '/home' },
           ]
         }
-        if (path === '/my-files') {
+        if (path === '/home') {
           return [
-            { name: 'main.lua', type: 'file', path: '/my-files/main.lua' },
+            { name: 'main.lua', type: 'file', path: '/home/main.lua' },
           ]
         }
         return []
@@ -40,7 +40,7 @@ describe('compositeFileSystemAdapter', () => {
       const tree = buildTreeFromFileSystem(mockFs)
 
       expect(tree).toHaveLength(1)
-      expect(tree[0].name).toBe('my-files')
+      expect(tree[0].name).toBe('home')
       expect(tree[0].type).toBe('folder')
       expect(tree[0].isWorkspace).toBe(true)
       expect(tree[0].children).toHaveLength(1)

@@ -73,7 +73,7 @@ describe('useWorkspaceManager', () => {
       const localStorageMock = getLocalStorageMock()
       const savedData = JSON.stringify({
         workspaces: [
-          { id: DEFAULT_WORKSPACE_ID, name: 'My Files', type: 'virtual', mountPath: '/my-files' },
+          { id: DEFAULT_WORKSPACE_ID, name: 'home', type: 'virtual', mountPath: '/home' },
           { id: 'ws-2', name: 'Restored Workspace', type: 'virtual', mountPath: '/restored-workspace' },
         ],
       })
@@ -89,7 +89,7 @@ describe('useWorkspaceManager', () => {
       const localStorageMock = getLocalStorageMock()
       const savedData = JSON.stringify({
         workspaces: [
-          { id: DEFAULT_WORKSPACE_ID, name: 'My Files', type: 'virtual', mountPath: '/my-files' },
+          { id: DEFAULT_WORKSPACE_ID, name: 'home', type: 'virtual', mountPath: '/home' },
           { id: 'ws-local', name: 'Local Project', type: 'local', mountPath: '/local-project' },
         ],
       })
@@ -134,7 +134,7 @@ describe('useWorkspaceManager', () => {
       const localStorageMock = getLocalStorageMock()
       const savedData = JSON.stringify({
         workspaces: [
-          { id: DEFAULT_WORKSPACE_ID, name: 'My Files', type: 'virtual', rootPath: '/' },
+          { id: DEFAULT_WORKSPACE_ID, name: 'home', type: 'virtual', rootPath: '/' },
           { id: 'ws-2', name: 'Old Project', type: 'virtual', rootPath: '/' },
         ],
         activeWorkspaceId: DEFAULT_WORKSPACE_ID,
@@ -143,7 +143,7 @@ describe('useWorkspaceManager', () => {
 
       const { result } = renderHook(() => useWorkspaceManager())
 
-      expect(result.current.workspaces[0].mountPath).toBe('/my-files')
+      expect(result.current.workspaces[0].mountPath).toBe('/home')
       expect(result.current.workspaces[1].mountPath).toBe('/old-project')
     })
 
@@ -151,7 +151,7 @@ describe('useWorkspaceManager', () => {
       const localStorageMock = getLocalStorageMock()
       const savedData = JSON.stringify({
         workspaces: [
-          { id: DEFAULT_WORKSPACE_ID, name: 'My Files', type: 'virtual', rootPath: '/' },
+          { id: DEFAULT_WORKSPACE_ID, name: 'home', type: 'virtual', rootPath: '/' },
           { id: 'ws-1', name: 'Project', type: 'virtual', rootPath: '/' },
           { id: 'ws-2', name: 'Project', type: 'virtual', rootPath: '/' },
         ],
@@ -172,7 +172,7 @@ describe('useWorkspaceManager', () => {
       const localStorageMock = getLocalStorageMock()
       const savedData = JSON.stringify({
         workspaces: [
-          { id: DEFAULT_WORKSPACE_ID, name: 'My Files', type: 'virtual', mountPath: '/my-files' },
+          { id: DEFAULT_WORKSPACE_ID, name: 'home', type: 'virtual', mountPath: '/home' },
           { id: 'ws-local', name: 'Local Project', type: 'local', mountPath: '/local-project' },
         ],
       })
@@ -198,7 +198,7 @@ describe('useWorkspaceManager', () => {
       const localStorageMock = getLocalStorageMock()
       const savedData = JSON.stringify({
         workspaces: [
-          { id: DEFAULT_WORKSPACE_ID, name: 'My Files', type: 'virtual', mountPath: '/my-files' },
+          { id: DEFAULT_WORKSPACE_ID, name: 'home', type: 'virtual', mountPath: '/home' },
           { id: 'ws-local', name: 'Local Project', type: 'local', mountPath: '/local-project' },
         ],
       })

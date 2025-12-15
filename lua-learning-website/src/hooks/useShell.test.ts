@@ -269,9 +269,9 @@ describe('useShell with IFileSystem', () => {
     let currentDir = '/'
     const files: Record<string, string> = {
       '/test.txt': 'hello world',
-      '/my-files/script.lua': 'print("Hello")',
+      '/home/script.lua': 'print("Hello")',
     }
-    const directories = new Set(['/', '/my-files'])
+    const directories = new Set(['/', '/home'])
 
     return {
       getCurrentDirectory: () => currentDir,
@@ -382,17 +382,17 @@ describe('useShell with IFileSystem', () => {
 
       expect(output!.exitCode).toBe(0)
       expect(output!.stdout).toContain('test.txt')
-      expect(output!.stdout).toContain('my-files')
+      expect(output!.stdout).toContain('home')
     })
 
     it('executes cd command and updates cwd', () => {
       const { result } = renderHook(() => useShell(mockFs))
 
       act(() => {
-        result.current.executeCommand('cd /my-files')
+        result.current.executeCommand('cd /home')
       })
 
-      expect(result.current.cwd).toBe('/my-files')
+      expect(result.current.cwd).toBe('/home')
     })
 
     it('executes pwd command to show current directory', () => {
@@ -412,10 +412,10 @@ describe('useShell with IFileSystem', () => {
 
       act(() => {
         result.current.executeCommand('ls')
-        result.current.executeCommand('cd /my-files')
+        result.current.executeCommand('cd /home')
       })
 
-      expect(result.current.history).toEqual(['ls', 'cd /my-files'])
+      expect(result.current.history).toEqual(['ls', 'cd /home'])
     })
 
     it('returns error for invalid commands', () => {
@@ -450,10 +450,10 @@ describe('useShell with IFileSystem', () => {
 
       let execResult: ReturnType<typeof result.current.executeCommandWithContext>
       act(() => {
-        execResult = result.current.executeCommandWithContext('cd /my-files', vi.fn(), vi.fn())
+        execResult = result.current.executeCommandWithContext('cd /home', vi.fn(), vi.fn())
       })
 
-      expect(execResult!.cwd).toBe('/my-files')
+      expect(execResult!.cwd).toBe('/home')
     })
   })
 
@@ -463,12 +463,12 @@ describe('useShell with IFileSystem', () => {
 
       let completions: ReturnType<typeof result.current.getPathCompletionsForTab> = []
       act(() => {
-        completions = result.current.getPathCompletionsForTab('/my')
+        completions = result.current.getPathCompletionsForTab('/ho')
       })
 
       expect(completions).toBeDefined()
-      // Should include /my-files
-      expect(completions.some((c) => c.name === 'my-files')).toBe(true)
+      // Should include /home
+      expect(completions.some((c) => c.name === 'home')).toBe(true)
     })
   })
 
@@ -478,7 +478,7 @@ describe('useShell with IFileSystem', () => {
 
       act(() => {
         result.current.executeCommand('ls')
-        result.current.executeCommand('cd /my-files')
+        result.current.executeCommand('cd /home')
       })
 
       expect(result.current.history).toHaveLength(2)

@@ -42,7 +42,7 @@ describe('useWorkspaceManager', () => {
       const entries = result.current.compositeFileSystem.listDirectory('/')
       expect(entries).toHaveLength(1)
       // listDirectory returns mount path name (slug), not display name
-      expect(entries[0].name).toBe('my-files')
+      expect(entries[0].name).toBe('home')
       expect(entries[0].type).toBe('directory')
     })
 
@@ -56,14 +56,14 @@ describe('useWorkspaceManager', () => {
       const entries = result.current.compositeFileSystem.listDirectory('/')
       expect(entries).toHaveLength(2)
       // listDirectory returns mount path names (slugs), not display names
-      expect(entries.map((e) => e.name).sort()).toEqual(['my-files', 'project'])
+      expect(entries.map((e) => e.name).sort()).toEqual(['home', 'project'])
     })
 
     it('only includes connected workspaces', () => {
       const localStorageMock = getLocalStorageMock()
       const savedData = JSON.stringify({
         workspaces: [
-          { id: DEFAULT_WORKSPACE_ID, name: 'My Files', type: 'virtual', mountPath: '/my-files' },
+          { id: DEFAULT_WORKSPACE_ID, name: 'home', type: 'virtual', mountPath: '/home' },
           { id: 'ws-local', name: 'Local Project', type: 'local', mountPath: '/local-project' },
         ],
       })
@@ -75,7 +75,7 @@ describe('useWorkspaceManager', () => {
       const entries = result.current.compositeFileSystem.listDirectory('/')
       expect(entries).toHaveLength(1)
       // listDirectory returns mount path name (slug), not display name
-      expect(entries[0].name).toBe('my-files')
+      expect(entries[0].name).toBe('home')
     })
   })
 
@@ -89,7 +89,7 @@ describe('useWorkspaceManager', () => {
 
       const mounts = result.current.getMounts()
       expect(mounts).toHaveLength(2)
-      expect(mounts[0].mountPath).toBe('/my-files')
+      expect(mounts[0].mountPath).toBe('/home')
       expect(mounts[0].isConnected).toBe(true)
       expect(mounts[1].mountPath).toBe('/project')
       expect(mounts[1].isConnected).toBe(true)
@@ -99,7 +99,7 @@ describe('useWorkspaceManager', () => {
       const localStorageMock = getLocalStorageMock()
       const savedData = JSON.stringify({
         workspaces: [
-          { id: DEFAULT_WORKSPACE_ID, name: 'My Files', type: 'virtual', mountPath: '/my-files' },
+          { id: DEFAULT_WORKSPACE_ID, name: 'home', type: 'virtual', mountPath: '/home' },
           { id: 'ws-local', name: 'Local', type: 'local', mountPath: '/local' },
         ],
       })
@@ -117,7 +117,7 @@ describe('useWorkspaceManager', () => {
 
       const mounts = result.current.getMounts()
       expect(mounts[0].workspace).toBeDefined()
-      expect(mounts[0].workspace.name).toBe('My Files')
+      expect(mounts[0].workspace.name).toBe('home')
     })
   })
 })

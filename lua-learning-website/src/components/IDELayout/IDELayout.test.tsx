@@ -165,8 +165,8 @@ describe('IDELayout', () => {
 
     // Helper to create and open a file
     async function createAndOpenFile(user: ReturnType<typeof userEvent.setup>) {
-      // First, expand the workspace folder (my-files) to see files inside it
-      const workspaceFolder = screen.getByRole('treeitem', { name: /my-files/i })
+      // First, expand the workspace folder (home) to see files inside it
+      const workspaceFolder = screen.getByRole('treeitem', { name: /home/i })
       const chevron = within(workspaceFolder).getByTestId('folder-chevron')
       await user.click(chevron)
 
@@ -176,7 +176,7 @@ describe('IDELayout', () => {
       })
 
       // Create a new file via the new file button in the sidebar (FileExplorer)
-      // When at root, files are created in the first workspace (my-files) by default
+      // When at root, files are created in the first workspace (home) by default
       const sidebar = screen.getByTestId('sidebar-panel')
       const newFileButton = within(sidebar).getByRole('button', { name: /new file/i })
       await user.click(newFileButton)

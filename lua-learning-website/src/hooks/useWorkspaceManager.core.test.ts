@@ -40,7 +40,7 @@ describe('useWorkspaceManager', () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
       expect(result.current.workspaces).toHaveLength(1)
-      expect(result.current.workspaces[0].name).toBe('My Files')
+      expect(result.current.workspaces[0].name).toBe('home')
       expect(result.current.workspaces[0].type).toBe('virtual')
       expect(result.current.workspaces[0].status).toBe('connected')
     })
@@ -60,10 +60,10 @@ describe('useWorkspaceManager', () => {
       expect(typeof result.current.workspaces[0].filesystem.readFile).toBe('function')
     })
 
-    it('default workspace has mountPath of "/my-files"', () => {
+    it('default workspace has mountPath of "/home"', () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      expect(result.current.workspaces[0].mountPath).toBe('/my-files')
+      expect(result.current.workspaces[0].mountPath).toBe('/home')
     })
 
     it('provides a compositeFileSystem', () => {
@@ -339,10 +339,10 @@ describe('useWorkspaceManager', () => {
       expect(found?.name).toBe('Find Me')
     })
 
-    it('returns default workspace for /my-files', () => {
+    it('returns default workspace for /home', () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      const found = result.current.getWorkspaceByMountPath('/my-files')
+      const found = result.current.getWorkspaceByMountPath('/home')
       expect(found).toBeDefined()
       expect(found?.id).toBe(DEFAULT_WORKSPACE_ID)
     })
