@@ -174,6 +174,10 @@ export function ShellTerminal({
       terminal.write('\r\n')
     }
 
+    // Clear any existing error markers before execution
+    const win = window as Window & { __luaSetError?: (msg: string) => void; __luaClearErrors?: () => void }
+    win.__luaClearErrors?.()
+
     // Execute command using the context-aware method
     // This handles both ICommand (lua) and legacy commands via adapter
     // Output is handled by the callbacks passed to the context
@@ -183,7 +187,6 @@ export function ShellTerminal({
       (text) => {
         writeOutput(`\x1b[31m${text}\x1b[0m`)
         // Set error marker in editor if available
-        const win = window as Window & { __luaSetError?: (msg: string) => void }
         win.__luaSetError?.(text)
       }
     )
