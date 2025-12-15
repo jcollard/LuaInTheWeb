@@ -279,10 +279,15 @@ __clear_execution_hook()
    * Adjust line numbers in Lua error messages to account for wrapper code.
    * Lua errors have format: [string "..."]:LINE: message
    * or: filename.lua:LINE: message
+   *
+   * Also adjusts line numbers mentioned in error message body (e.g., "at line 5")
+   * and hides internal wrapper function names from user-facing errors.
    */
   private adjustErrorLineNumber(error: string, offset: number): string {
-    // Match patterns like [string "..."]:5: or test.lua:5:
-    return error.replace(
+    let adjusted = error
+
+    // Adjust line numbers in source:line: format (e.g., [string "..."]:5:)
+    adjusted = adjusted.replace(
       /(\[string "[^"]*"\]|[^:\s]+\.lua):(\d+):/g,
       (_match, source, lineStr) => {
         const line = parseInt(lineStr, 10)
@@ -290,5 +295,28 @@ __clear_execution_hook()
         return `${source}:${adjustedLine}:`
       }
     )
+
+    // Adjust line numbers mentioned in message body (e.g., "at line 5", "line 3")
+    adjusted = adjusted.replace(
+      /\b(at line|line)\s+(\d+)\b/gi,
+      (_match, prefix, lineStr) => {
+        const line = parseInt(lineStr, 10)
+        const adjustedLine = Math.max(1, line - offset)
+        return `${prefix} ${adjustedLine}`
+      }
+    )
+
+    // Hide internal wrapper function names from user-facing errors
+    // Replace references to wrapper functions with <end of file>
+    adjusted = adjusted.replace(
+      /'__(?:setup|clear)_execution_hook'/g,
+      '<end of file>'
+    )
+    adjusted = adjusted.replace(
+      /near\s+__(?:setup|clear)_execution_hook/g,
+      'near <end of file>'
+    )
+
+    return adjusted
   }
 }
