@@ -1,6 +1,6 @@
 # Epic #20: File API / Workspace
 
-**Status:** ✅ Complete (5/5 sub-issues)
+**Status:** Needs Review (PR #237)
 **Branch:** epic-20
 **Created:** 2025-12-13
 **Last Updated:** 2025-12-14
@@ -140,9 +140,10 @@ Enable users to work with files on their actual computer (not just browser local
 <!-- Updated after each sub-issue completion -->
 
 ### 2025-12-14
+- **Epic PR Created** - PR #237 to merge epic-20 → main
 - **#202 Complete** - Shell Multi-Workspace Integration (Merged PR #227)
 - **Epic Complete** - All 5 sub-issues are complete
-- Ready to create PR to merge epic-20 → main
+- Ready for final review
 
 ### 2025-12-13
 - **#202 PR Created (PR #227)** - Shell Multi-Workspace Integration
