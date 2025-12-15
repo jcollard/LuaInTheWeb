@@ -46,6 +46,48 @@ describe('channelFactory', () => {
         configurable: true,
       });
     });
+
+    it('should return false when crossOriginIsolated is undefined', () => {
+      const originalCrossOriginIsolated = globalThis.crossOriginIsolated;
+      // Delete the property to make typeof return 'undefined'
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (globalThis as any).crossOriginIsolated;
+
+      expect(isSharedArrayBufferAvailable()).toBe(false);
+
+      // Restore
+      Object.defineProperty(globalThis, 'crossOriginIsolated', {
+        value: originalCrossOriginIsolated,
+        writable: true,
+        configurable: true,
+      });
+    });
+
+    it('should return false when SharedArrayBuffer is undefined', () => {
+      const originalSAB = globalThis.SharedArrayBuffer;
+      const originalCrossOriginIsolated = globalThis.crossOriginIsolated;
+
+      // Mock crossOriginIsolated to true
+      Object.defineProperty(globalThis, 'crossOriginIsolated', {
+        value: true,
+        writable: true,
+        configurable: true,
+      });
+
+      // Delete SharedArrayBuffer
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      delete (globalThis as any).SharedArrayBuffer;
+
+      expect(isSharedArrayBufferAvailable()).toBe(false);
+
+      // Restore
+      globalThis.SharedArrayBuffer = originalSAB;
+      Object.defineProperty(globalThis, 'crossOriginIsolated', {
+        value: originalCrossOriginIsolated,
+        writable: true,
+        configurable: true,
+      });
+    });
   });
 
   describe('createChannelPair', () => {

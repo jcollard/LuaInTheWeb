@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { SharedArrayBufferChannel } from '../../src/channels/SharedArrayBufferChannel.js';
 import type { DrawCommand, InputState, TimingInfo } from '../../src/shared/types.js';
 
@@ -69,6 +69,63 @@ describe('SharedArrayBufferChannel', () => {
       workerChannel.sendDrawCommands(commands);
       const received = mainChannel.getDrawCommands();
       expect(received).toEqual(commands);
+    });
+
+    it('should warn when draw commands exceed buffer size', () => {
+      // DRAW_BUFFER_SIZE = 65536 - 1024 = 64512 bytes
+      // Create a text command with a very long string to exceed buffer
+      const longText = 'x'.repeat(70000); // 70KB text string
+      const commands: DrawCommand[] = [{ type: 'text', x: 0, y: 0, text: longText }];
+
+      // Mock console.warn to capture the warning
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      workerChannel.sendDrawCommands(commands);
+
+      // Should have warned about buffer overflow
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Draw commands too large')
+      );
+
+      warnSpy.mockRestore();
+    });
+
+    it('should not warn when draw commands are within buffer size', () => {
+      // DRAW_BUFFER_SIZE = 65536 - 1024 = 64512 bytes
+      // Create commands that are just under the limit
+      const text = 'x'.repeat(60000); // 60KB - safely under limit
+      const commands: DrawCommand[] = [{ type: 'text', x: 0, y: 0, text }];
+
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      workerChannel.sendDrawCommands(commands);
+
+      // Should NOT have warned
+      expect(warnSpy).not.toHaveBeenCalled();
+
+      warnSpy.mockRestore();
+    });
+
+    it('should warn at the correct buffer boundary (64512 bytes)', () => {
+      // DRAW_BUFFER_SIZE = 65536 - 1024 = 64512 bytes
+      // This tests the boundary: 64513 bytes should warn
+      // The JSON overhead is approximately: [{"type":"text","x":0,"y":0,"text":"..."}]
+      // which is about 37 bytes, so we need text of ~64476 bytes to hit the boundary
+      // Using 64500 bytes to be just over the limit
+      const text = 'x'.repeat(64500);
+      const commands: DrawCommand[] = [{ type: 'text', x: 0, y: 0, text }];
+
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      workerChannel.sendDrawCommands(commands);
+
+      // With DRAW_BUFFER_SIZE = 64512, this should warn
+      // With mutant DRAW_BUFFER_SIZE = 66560, this would NOT warn
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Draw commands too large')
+      );
+
+      warnSpy.mockRestore();
     });
   });
 
@@ -168,6 +225,45 @@ describe('SharedArrayBufferChannel', () => {
       expect(received.mouseButtons.has('left')).toBe(false);
       expect(received.mouseButtons.has('middle')).toBe(false);
       expect(received.mouseButtons.has('right')).toBe(true);
+    });
+
+    it('should handle more keys than MAX_KEYS (32)', () => {
+      // MAX_KEYS = 32, so we test with 35 keys
+      const manyKeys = new Set<string>();
+      for (let i = 0; i < 35; i++) {
+        manyKeys.add(`key${i}`);
+      }
+
+      mainChannel.setInputState({
+        keysDown: manyKeys,
+        keysPressed: new Set(),
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtons: new Set(),
+      });
+
+      const received = workerChannel.getInputState();
+      // Should only get MAX_KEYS (32) keys
+      expect(received.keysDown.size).toBe(32);
+    });
+
+    it('should handle key names longer than KEY_SIZE (8 bytes)', () => {
+      const longKeyName = 'VeryLongKeyNameThatExceeds8Bytes';
+
+      mainChannel.setInputState({
+        keysDown: new Set([longKeyName]),
+        keysPressed: new Set(),
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtons: new Set(),
+      });
+
+      const received = workerChannel.getInputState();
+      // Key should be truncated to KEY_SIZE - 1 = 7 characters
+      expect(received.keysDown.size).toBe(1);
+      const receivedKey = [...received.keysDown][0];
+      expect(receivedKey.length).toBeLessThanOrEqual(7);
+      expect(longKeyName.startsWith(receivedKey)).toBe(true);
     });
 
     it('should handle updating input state multiple times', () => {
@@ -278,6 +374,112 @@ describe('SharedArrayBufferChannel', () => {
       expect(workerChannel.getBuffer()).toBe(sharedBuffer);
     });
 
+    // Memory layout offset tests - verify data is written at documented positions
+    // These tests kill arithmetic operator mutations (/ 4 → * 4)
+
+    it('should write frame ready flag at offset 0', () => {
+      const int32View = new Int32Array(sharedBuffer);
+      mainChannel.signalFrameReady();
+      expect(int32View[0]).toBe(1); // OFFSET_FRAME_READY = 0, index = 0/4 = 0
+    });
+
+    it('should write draw commands count at offset 4', () => {
+      const int32View = new Int32Array(sharedBuffer);
+      workerChannel.sendDrawCommands([{ type: 'clear' }, { type: 'clear' }]);
+      expect(int32View[1]).toBe(2); // OFFSET_DRAW_COUNT = 4, index = 4/4 = 1
+    });
+
+    it('should write draw commands length at offset 8', () => {
+      const int32View = new Int32Array(sharedBuffer);
+      workerChannel.sendDrawCommands([{ type: 'clear' }]);
+      expect(int32View[2]).toBeGreaterThan(0); // OFFSET_DRAW_LENGTH = 8, index = 8/4 = 2
+    });
+
+    it('should write delta time at offset 16', () => {
+      const float64View = new Float64Array(sharedBuffer);
+      mainChannel.setTimingInfo({ deltaTime: 0.0165, totalTime: 0, frameNumber: 0 });
+      expect(float64View[2]).toBeCloseTo(0.0165, 5); // OFFSET_DELTA_TIME = 16, index = 16/8 = 2
+    });
+
+    it('should write total time at offset 24', () => {
+      const float64View = new Float64Array(sharedBuffer);
+      mainChannel.setTimingInfo({ deltaTime: 0, totalTime: 7.777, frameNumber: 0 });
+      expect(float64View[3]).toBeCloseTo(7.777, 5); // OFFSET_TOTAL_TIME = 24, index = 24/8 = 3
+    });
+
+    it('should write frame number at offset 32', () => {
+      const int32View = new Int32Array(sharedBuffer);
+      mainChannel.setTimingInfo({ deltaTime: 0, totalTime: 0, frameNumber: 98765 });
+      expect(int32View[8]).toBe(98765); // OFFSET_FRAME_NUMBER = 32, index = 32/4 = 8
+    });
+
+    it('should write mouse X at offset 36', () => {
+      const int32View = new Int32Array(sharedBuffer);
+      mainChannel.setInputState({
+        keysDown: new Set(),
+        keysPressed: new Set(),
+        mouseX: 555,
+        mouseY: 0,
+        mouseButtons: new Set(),
+      });
+      expect(int32View[9]).toBe(555); // OFFSET_MOUSE_X = 36, index = 36/4 = 9
+    });
+
+    it('should write mouse Y at offset 40', () => {
+      const int32View = new Int32Array(sharedBuffer);
+      mainChannel.setInputState({
+        keysDown: new Set(),
+        keysPressed: new Set(),
+        mouseX: 0,
+        mouseY: 666,
+        mouseButtons: new Set(),
+      });
+      expect(int32View[10]).toBe(666); // OFFSET_MOUSE_Y = 40, index = 40/4 = 10
+    });
+
+    it('should write mouse buttons at offset 44', () => {
+      const int32View = new Int32Array(sharedBuffer);
+      mainChannel.setInputState({
+        keysDown: new Set(),
+        keysPressed: new Set(),
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtons: new Set(['left', 'right']), // bitmask: 1 | 4 = 5
+      });
+      expect(int32View[11]).toBe(5); // OFFSET_MOUSE_BUTTONS = 44, index = 44/4 = 11
+    });
+
+    it('should write keys down count at offset 48', () => {
+      const int32View = new Int32Array(sharedBuffer);
+      mainChannel.setInputState({
+        keysDown: new Set(['a', 'b', 'c']),
+        keysPressed: new Set(),
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtons: new Set(),
+      });
+      expect(int32View[12]).toBe(3); // OFFSET_KEYS_DOWN_COUNT = 48, index = 48/4 = 12
+    });
+
+    it('should write keys pressed count at offset 308', () => {
+      const int32View = new Int32Array(sharedBuffer);
+      mainChannel.setInputState({
+        keysDown: new Set(),
+        keysPressed: new Set(['x', 'y']),
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtons: new Set(),
+      });
+      expect(int32View[77]).toBe(2); // OFFSET_KEYS_PRESSED_COUNT = 308, index = 308/4 = 77
+    });
+
+    it('should write draw commands data starting at offset 1024', () => {
+      const uint8View = new Uint8Array(sharedBuffer);
+      workerChannel.sendDrawCommands([{ type: 'clear' }]);
+      // JSON starts with '[' which is byte 91
+      expect(uint8View[1024]).toBe(91); // OFFSET_DRAW_BUFFER = 1024
+    });
+
     it('should store data at correct memory locations', () => {
       // This test verifies that data is stored at the documented offsets
       // by checking that independent data doesn't interfere with each other
@@ -348,6 +550,35 @@ describe('SharedArrayBufferChannel', () => {
       const commands = mainChannel.getDrawCommands();
       expect(commands).toHaveLength(2);
       expect(commands[0].type).toBe('setColor');
+    });
+
+    // Tests for clearing behavior - verify offsets are used correctly when resetting
+    it('should clear draw count at offset 4 after getDrawCommands', () => {
+      const int32View = new Int32Array(sharedBuffer);
+
+      // Send some draw commands
+      workerChannel.sendDrawCommands([{ type: 'clear' }]);
+      expect(int32View[1]).toBe(1); // OFFSET_DRAW_COUNT = 4, index = 4/4 = 1
+
+      // Read them (which should clear)
+      mainChannel.getDrawCommands();
+
+      // Verify count was reset at the correct offset
+      expect(int32View[1]).toBe(0); // Should be cleared at index 1, not index 16
+    });
+
+    it('should clear draw length at offset 8 after getDrawCommands', () => {
+      const int32View = new Int32Array(sharedBuffer);
+
+      // Send some draw commands
+      workerChannel.sendDrawCommands([{ type: 'clear' }]);
+      expect(int32View[2]).toBeGreaterThan(0); // OFFSET_DRAW_LENGTH = 8, index = 8/4 = 2
+
+      // Read them (which should clear)
+      mainChannel.getDrawCommands();
+
+      // Verify length was reset at the correct offset
+      expect(int32View[2]).toBe(0); // Should be cleared at index 2, not index 32
     });
   });
 
