@@ -95,6 +95,8 @@ export function CodeEditor({
           scrollBeyondLastLine: false,
           automaticLayout: true,
           formatOnType: true, // Enable auto-dedent for end/else/elseif/until
+          quickSuggestions: false, // Only show autocomplete on Ctrl+Space
+          suggestOnTriggerCharacters: false, // Don't auto-suggest on '.' etc.
         }}
         loading={<div className={styles.loading}>Loading editor...</div>}
       />
