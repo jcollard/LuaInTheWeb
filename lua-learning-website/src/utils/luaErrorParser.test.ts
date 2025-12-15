@@ -118,5 +118,29 @@ describe('luaErrorParser', () => {
       expect(result.line).toBe(2)
       expect(result.message).toBe('error message')
     })
+
+    it('parses error with [error] prefix', () => {
+      const errorMessage = '[error] [string "..."]:6: unexpected symbol near \'0\''
+      const result = parseLuaError(errorMessage)
+
+      expect(result).toEqual<LuaError>({
+        line: 6,
+        column: 1,
+        message: "unexpected symbol near '0'",
+        fullMessage: errorMessage,
+      })
+    })
+
+    it('parses file error with [error] prefix', () => {
+      const errorMessage = '[error] test.lua:5: some error'
+      const result = parseLuaError(errorMessage)
+
+      expect(result).toEqual<LuaError>({
+        line: 5,
+        column: 1,
+        message: 'some error',
+        fullMessage: errorMessage,
+      })
+    })
   })
 })

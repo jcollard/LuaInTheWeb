@@ -16,8 +16,9 @@ export interface LuaError {
  * Regular expression to match Lua error message format:
  * - [string "...source..."]:line: message
  * - filename.lua:line: message
+ * - [error] [string "..."]:line: message (with optional prefix)
  */
-const LUA_ERROR_PATTERN = /^(?:\[string ".*?"\]|[^:]+\.lua):(\d+):\s*(.*)$/
+const LUA_ERROR_PATTERN = /(?:\[string ".*?"\]|[^:\s]+\.lua):(\d+):\s*(.*)$/
 
 /**
  * Parse a Lua error message to extract line number and message
