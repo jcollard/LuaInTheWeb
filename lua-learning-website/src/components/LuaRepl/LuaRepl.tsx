@@ -50,8 +50,12 @@ export default function LuaRepl({ embedded = false }: LuaReplProps) {
     onError: (message) => {
       terminalRef.current?.writeln(`\x1b[31mError: ${message}\x1b[0m`)
     },
-    onReadInput: async () => {
+    onReadInput: async (charCount?: number) => {
       if (!terminalRef.current) return ''
+      // Use character mode or line mode based on charCount
+      if (charCount !== undefined && charCount > 0) {
+        return await terminalRef.current.readChars(charCount)
+      }
       return await terminalRef.current.readLine()
     },
     onClear: () => {

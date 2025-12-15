@@ -29,6 +29,7 @@ export class LuaScriptProcess implements IProcess {
   private inputQueue: Array<{
     resolve: (value: string) => void
     reject: (error: Error) => void
+    charCount?: number
   }> = []
   private hasError = false
   private readonly options: LuaScriptProcessOptions
@@ -47,6 +48,14 @@ export class LuaScriptProcess implements IProcess {
    * Callback invoked when the process exits.
    */
   onExit: (code: number) => void = () => {}
+
+  /**
+   * Callback invoked when the process requests input (io.read).
+   * @param charCount - If provided, the process expects exactly this many characters
+   *                    (character mode - no Enter required). If undefined, expects
+   *                    a full line (line mode - wait for Enter).
+   */
+  onRequestInput: (charCount?: number) => void = () => {}
 
   constructor(
     private readonly filename: string,
@@ -166,7 +175,7 @@ export class LuaScriptProcess implements IProcess {
         this.hasError = true
         this.onError(formatLuaError(text) + '\n')
       },
-      onReadInput: () => this.waitForInput(),
+      onReadInput: (charCount?: number) => this.waitForInput(charCount),
       onInstructionLimitReached: this.options.onInstructionLimitReached,
     }
 
@@ -219,11 +228,31 @@ export class LuaScriptProcess implements IProcess {
 
   /**
    * Wait for user input (used by io.read()).
+   * @param charCount - If provided, requests exactly this many characters (character mode).
+   *                    If undefined, requests a full line (line mode).
    */
-  private waitForInput(): Promise<string> {
+  private waitForInput(charCount?: number): Promise<string> {
     return new Promise((resolve, reject) => {
-      this.inputQueue.push({ resolve, reject })
+      this.inputQueue.push({ resolve, reject, charCount })
+      // Notify UI that input is requested
+      this.onRequestInput(charCount)
     })
+  }
+
+  /**
+   * Get the expected character count for the current pending input request.
+   * Returns undefined if no input is pending or if in line mode.
+   */
+  getPendingInputCharCount(): number | undefined {
+    if (this.inputQueue.length === 0) return undefined
+    return this.inputQueue[0].charCount
+  }
+
+  /**
+   * Check if there's a pending input request.
+   */
+  hasPendingInput(): boolean {
+    return this.inputQueue.length > 0
   }
 
   /**

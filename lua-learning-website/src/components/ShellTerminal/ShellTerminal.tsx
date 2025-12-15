@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
@@ -69,6 +69,40 @@ export function ShellTerminal({
     }
   }, [])
 
+  // Character mode state for io.read(n)
+  // When charModeCount > 0, we capture exactly that many characters without Enter
+  const [charModeCount, setCharModeCount] = useState(0)
+  const charBufferRef = useRef('')
+
+  // Handle process requesting input
+  // Note: We need a ref to handleProcessInput to avoid circular dependency
+  // (handleRequestInput is passed to useProcessManager, but needs to call handleProcessInput)
+  const processInputCallbackRef = useRef<(input: string) => boolean>(() => false)
+
+  const handleRequestInput = useCallback((requestedCharCount?: number) => {
+    if (requestedCharCount !== undefined && requestedCharCount > 0) {
+      // Check if buffer already has enough bytes from previous read
+      const existingBuffer = charBufferRef.current
+      if (existingBuffer.length >= requestedCharCount) {
+        // Buffer has enough - send immediately without waiting for new input
+        const input = existingBuffer.slice(0, requestedCharCount)
+        charBufferRef.current = existingBuffer.slice(requestedCharCount)
+        // Don't set charModeCount - we're satisfying the request immediately
+        // Use setTimeout to avoid calling back into process synchronously
+        setTimeout(() => {
+          processInputCallbackRef.current(input)
+        }, 0)
+      } else {
+        // Not enough in buffer - switch to character mode to wait for more input
+        setCharModeCount(requestedCharCount)
+        // Don't clear buffer - keep existing bytes for the read
+      }
+    } else {
+      // Line mode - no special handling needed
+      setCharModeCount(0)
+    }
+  }, [])
+
   // Handle process exit - show prompt again
   const handleProcessExitCallback = useCallback(() => {
     if (xtermRef.current) {
@@ -89,6 +123,7 @@ export function ShellTerminal({
     onOutput: handleProcessOutput,
     onError: handleProcessError,
     onProcessExit: handleProcessExitCallback,
+    onRequestInput: handleRequestInput,
   })
 
   // Store process manager state in refs for stable terminal event handler
@@ -98,15 +133,21 @@ export function ShellTerminal({
   const handleProcessInputRef = useRef(handleProcessInput)
   const supportsRawInputRef = useRef(supportsRawInput)
   const handleProcessKeyRef = useRef(handleProcessKey)
+  const charModeCountRef = useRef(charModeCount)
+  const setCharModeCountRef = useRef(setCharModeCount)
 
   useEffect(() => {
     isProcessRunningRef.current = isProcessRunning
     startProcessRef.current = startProcess
     stopProcessRef.current = stopProcess
     handleProcessInputRef.current = handleProcessInput
+    // Also update the callback ref used by handleRequestInput
+    processInputCallbackRef.current = handleProcessInput
     supportsRawInputRef.current = supportsRawInput
     handleProcessKeyRef.current = handleProcessKey
-  }, [isProcessRunning, startProcess, stopProcess, handleProcessInput, supportsRawInput, handleProcessKey])
+    charModeCountRef.current = charModeCount
+    setCharModeCountRef.current = setCharModeCount
+  }, [isProcessRunning, startProcess, stopProcess, handleProcessInput, supportsRawInput, handleProcessKey, charModeCount])
 
   // Handle command execution
   const handleCommand = useCallback((input: string) => {
@@ -244,6 +285,11 @@ export function ShellTerminal({
         stopProcess: stopProcessRef,
         supportsRawInput: supportsRawInputRef,
         handleProcessKey: handleProcessKeyRef,
+      },
+      charModeRefs: {
+        charModeCount: charModeCountRef,
+        charBuffer: charBufferRef,
+        setCharModeCount: setCharModeCountRef,
       },
       showPrompt,
     })

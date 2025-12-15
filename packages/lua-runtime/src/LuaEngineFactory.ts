@@ -98,8 +98,12 @@ export interface LuaEngineCallbacks {
   onOutput: (text: string) => void
   /** Called when Lua produces an error */
   onError: (text: string) => void
-  /** Called when Lua needs input (io.read) - optional */
-  onReadInput?: () => Promise<string>
+  /**
+   * Called when Lua needs input (io.read) - optional.
+   * @param charCount - If provided, read exactly this many characters (character mode).
+   *                    If undefined, read a full line (line mode, wait for Enter).
+   */
+  onReadInput?: (charCount?: number) => Promise<string>
   /**
    * Called when instruction limit is reached.
    * Return true to continue execution, false to stop.
@@ -200,6 +204,7 @@ end
 
 /**
  * Lua code for io.write and io.read setup.
+ * Implements Lua 5.4 io.read() argument handling.
  */
 const LUA_IO_CODE = `
 io = io or {}
@@ -212,19 +217,94 @@ io.write = function(...)
   -- Use __js_write for io.write (no automatic newline)
   __js_write(output)
 end
-io.read = function(format)
+
+-- Helper to normalize format string (remove * prefix if present)
+local function __normalize_format(fmt)
+  if type(fmt) == "string" and fmt:sub(1, 1) == "*" then
+    return fmt:sub(2)
+  end
+  return fmt
+end
+
+-- Helper to read a single value based on format
+local function __read_one(fmt)
   -- Flush output buffer before blocking for input
-  -- This ensures prompts like io.write("Enter name: ") appear before waiting
   __js_flush()
-  local input = __js_read_input():await()
-  if format == "*n" or format == "*number" then
-    return tonumber(input)
-  elseif format == "*a" or format == "*all" then
-    return input
-  else
-    -- Default is "*l" or "*line"
+
+  -- Handle numeric argument: io.read(n) reads n characters
+  if type(fmt) == "number" then
+    if fmt == 0 then
+      return ""
+    end
+    local input = __js_read_input(fmt):await()
+    -- Return nil at EOF (empty input)
+    if input == "" then
+      return nil
+    end
+    -- Truncate to exactly n characters (defensive: in case callback returns more)
+    return input:sub(1, fmt)
+  end
+
+  -- Normalize string format (remove * prefix)
+  local normalized = __normalize_format(fmt)
+
+  -- "n" or "*n" - read and parse number
+  if normalized == "n" or normalized == "number" then
+    local input = __js_read_input():await()
+    -- Return nil at EOF
+    if input == "" then
+      return nil
+    end
+    -- tonumber handles leading whitespace and Lua number syntax
+    local num = tonumber(input)
+    return num  -- Returns nil if parsing fails
+  end
+
+  -- "a" or "*a" - read all remaining input
+  if normalized == "a" or normalized == "all" then
+    local input = __js_read_input():await()
+    -- "a" format returns empty string at EOF, never nil
     return input
   end
+
+  -- "L" or "*L" - read line, keep newline
+  if normalized == "L" then
+    local input = __js_read_input():await()
+    -- Return nil at EOF
+    if input == "" then
+      return nil
+    end
+    return input .. "\\n"
+  end
+
+  -- Default: "l" or "*l" or nil - read line, strip newline
+  local input = __js_read_input():await()
+  -- Return nil at EOF
+  if input == "" then
+    return nil
+  end
+  return input
+end
+
+io.read = function(...)
+  local args = {...}
+
+  -- No arguments: default to "l" (line without newline)
+  if #args == 0 then
+    return __read_one("l")
+  end
+
+  -- Single argument
+  if #args == 1 then
+    return __read_one(args[1])
+  end
+
+  -- Multiple arguments: return multiple values
+  local results = {}
+  for i, fmt in ipairs(args) do
+    results[i] = __read_one(fmt)
+  end
+  return table.unpack(results)
 end
 `
 
@@ -299,8 +379,8 @@ export class LuaEngineFactory {
 
     // Setup io.read input handler if provided
     if (callbacks.onReadInput) {
-      engine.global.set('__js_read_input', async () => {
-        return await callbacks.onReadInput!()
+      engine.global.set('__js_read_input', async (charCount?: number) => {
+        return await callbacks.onReadInput!(charCount)
       })
     } else {
       // Default handler returns empty string
