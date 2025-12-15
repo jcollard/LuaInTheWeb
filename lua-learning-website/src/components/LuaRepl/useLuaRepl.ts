@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { LuaEngine } from 'wasmoon'
-import { LuaEngineFactory } from '@lua-learning/lua-runtime'
+import { LuaEngineFactory, LUA_SHELL_CODE } from '@lua-learning/lua-runtime'
 
 export interface UseLuaReplOptions {
   /** Callback when output is produced (from print or expression results) */
@@ -21,6 +21,10 @@ export interface UseLuaReplOptions {
   onReset?: () => void
   /** Callback when Lua reset() command is invoked (before reset happens) */
   onResetRequest?: () => void
+  /** Get terminal width in columns (for shell.width()) */
+  getTerminalWidth?: () => number
+  /** Get terminal height in rows (for shell.height()) */
+  getTerminalHeight?: () => number
 }
 
 export interface UseLuaReplReturn {
@@ -37,7 +41,17 @@ export interface UseLuaReplReturn {
  * Uses LuaEngineFactory for consistent io.read/io.write behavior.
  */
 export function useLuaRepl(options: UseLuaReplOptions): UseLuaReplReturn {
-  const { onOutput, onError, onReadInput, onClear, onShowHelp, onReset, onResetRequest } = options
+  const {
+    onOutput,
+    onError,
+    onReadInput,
+    onClear,
+    onShowHelp,
+    onReset,
+    onResetRequest,
+    getTerminalWidth,
+    getTerminalHeight,
+  } = options
   const [isReady, setIsReady] = useState(false)
   const engineRef = useRef<LuaEngine | null>(null)
   const initializedRef = useRef(false)
@@ -64,11 +78,18 @@ export function useLuaRepl(options: UseLuaReplOptions): UseLuaReplReturn {
   const onResetRequestRef = useRef(onResetRequest)
   onResetRequestRef.current = onResetRequest
 
+  const getTerminalWidthRef = useRef(getTerminalWidth)
+  getTerminalWidthRef.current = getTerminalWidth
+
+  const getTerminalHeightRef = useRef(getTerminalHeight)
+  getTerminalHeightRef.current = getTerminalHeight
+
   /**
    * Add REPL-specific commands to the engine (clear, help, reset).
    * These are not part of standard Lua but useful for the REPL.
+   * Also sets up shell library support.
    */
-  const addReplCommands = useCallback((engine: LuaEngine) => {
+  const addReplCommands = useCallback(async (engine: LuaEngine) => {
     engine.global.set('clear', () => {
       onClearRef.current?.()
     })
@@ -80,6 +101,26 @@ export function useLuaRepl(options: UseLuaReplOptions): UseLuaReplReturn {
     engine.global.set('reset', () => {
       onResetRequestRef.current?.()
     })
+
+    // Set up terminal dimension bridge functions for shell library
+    engine.global.set('__shell_get_width', () => {
+      return getTerminalWidthRef.current?.() ?? 80
+    })
+    engine.global.set('__shell_get_height', () => {
+      return getTerminalHeightRef.current?.() ?? 24
+    })
+
+    // Set up __js_write for shell library (outputs without newline, for ANSI sequences)
+    engine.global.set('__js_write', (text: string) => {
+      onOutputRef.current?.(text)
+    })
+
+    // Register shell library in package.preload for require('shell')
+    await engine.doString(`
+      package.preload['shell'] = function()
+        ${LUA_SHELL_CODE}
+      end
+    `)
   }, [])
 
   /**
@@ -97,7 +138,7 @@ export function useLuaRepl(options: UseLuaReplOptions): UseLuaReplReturn {
       },
     })
 
-    addReplCommands(engine)
+    await addReplCommands(engine)
     return engine
   }, [addReplCommands])
 

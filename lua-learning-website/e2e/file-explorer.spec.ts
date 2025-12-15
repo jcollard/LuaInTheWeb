@@ -230,9 +230,9 @@ test.describe('File Explorer', () => {
 
       // Assert - A new folder should appear in the tree with rename input visible
       await expect(sidebar.getByRole('textbox')).toBeVisible()
-      // New folder should have a chevron (the second one after workspace)
+      // New folder should have a chevron (after home workspace and libs workspace)
       const chevrons = page.getByTestId('folder-chevron')
-      await expect(chevrons).toHaveCount(2) // workspace + new folder
+      await expect(chevrons).toHaveCount(3) // home workspace + libs workspace + new folder
     })
 
     test('clicking folder expands/collapses it', async ({ page }) => {
@@ -243,8 +243,8 @@ test.describe('File Explorer', () => {
       await input.press('Enter') // Accept default name
       await expect(input).not.toBeVisible()
 
-      // Click the new folder's chevron (second one)
-      const chevron = page.getByTestId('folder-chevron').nth(1)
+      // Click the new folder's chevron (third one - after home and libs workspace)
+      const chevron = page.getByTestId('folder-chevron').nth(2)
       await chevron.click()
 
       // Toggle again

@@ -21,6 +21,9 @@ export const workspaceContextMenuItems: ContextMenuItem[] = [
   { id: 'rename-workspace', label: 'Rename Workspace' },
   { id: 'remove-workspace', label: 'Remove Workspace' },
 ]
+
+// Library workspaces are read-only and cannot be modified
+export const libraryWorkspaceContextMenuItems: ContextMenuItem[] = []
 // Stryker restore all
 
 /**

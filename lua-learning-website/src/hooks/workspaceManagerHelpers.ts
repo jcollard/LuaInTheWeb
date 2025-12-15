@@ -5,6 +5,7 @@
  */
 
 import type { IFileSystem } from '@lua-learning/shell-core'
+import { LUA_SHELL_CODE } from '@lua-learning/lua-runtime'
 import type {
   Workspace,
   PersistedWorkspace,
@@ -16,6 +17,9 @@ export const WORKSPACE_STORAGE_KEY = 'lua-workspaces'
 export const DEFAULT_WORKSPACE_ID = 'default'
 export const DEFAULT_WORKSPACE_NAME = 'home'
 export const DEFAULT_MOUNT_PATH = '/home'
+export const LIBRARY_WORKSPACE_ID = 'libs'
+export const LIBRARY_WORKSPACE_NAME = 'libs'
+export const LIBRARY_MOUNT_PATH = '/libs'
 
 /**
  * Generate a unique workspace ID.
@@ -104,6 +108,42 @@ export function createDefaultWorkspace(): Workspace {
 }
 
 /**
+ * Generate a clean version of the shell library source code for display.
+ * This reformats the embedded Lua code for better readability.
+ */
+function generateShellLibrarySource(): string {
+  // Add a header comment and clean up the source
+  return `-- shell.lua - Terminal control library
+-- Load with: local shell = require('shell')
+--
+-- This library provides functions for terminal control including
+-- colors, cursor movement, and screen management.
+
+${LUA_SHELL_CODE.trim()}
+`
+}
+
+/**
+ * Create the library workspace containing built-in libraries.
+ * This workspace is read-only and contains files like shell.lua.
+ */
+export function createLibraryWorkspace(): Workspace {
+  const libraryFiles: Record<string, string> = {
+    'shell.lua': generateShellLibrarySource(),
+  }
+
+  return {
+    id: LIBRARY_WORKSPACE_ID,
+    name: LIBRARY_WORKSPACE_NAME,
+    type: 'library',
+    mountPath: LIBRARY_MOUNT_PATH,
+    filesystem: createReadOnlyFileSystem(libraryFiles),
+    status: 'connected',
+    isReadOnly: true,
+  }
+}
+
+/**
  * Migrate legacy workspace data that may have rootPath instead of mountPath.
  */
 export function migratePersistedWorkspace(
@@ -152,15 +192,67 @@ export function createDisconnectedFileSystem(): IFileSystem {
 }
 
 /**
+ * Create a read-only in-memory filesystem for library workspaces.
+ * Files can be read but not written, deleted, or created.
+ */
+export function createReadOnlyFileSystem(files: Record<string, string>): IFileSystem {
+  const throwReadOnly = (): never => {
+    throw new Error('This file is read-only and cannot be modified.')
+  }
+
+  return {
+    getCurrentDirectory: () => '/',
+    setCurrentDirectory: () => {}, // Allow cd, but no-op
+    exists: (path: string) => {
+      const normalized = path.startsWith('/') ? path.slice(1) : path
+      return normalized in files || normalized === ''
+    },
+    isDirectory: (path: string) => {
+      // Only root is a directory in this simple implementation
+      return path === '/' || path === ''
+    },
+    isFile: (path: string) => {
+      const normalized = path.startsWith('/') ? path.slice(1) : path
+      return normalized in files
+    },
+    listDirectory: (path: string) => {
+      if (path === '/' || path === '') {
+        return Object.keys(files).map((name) => ({
+          name,
+          type: 'file' as const,
+          path: `/${name}`,
+        }))
+      }
+      return []
+    },
+    readFile: (path: string) => {
+      const normalized = path.startsWith('/') ? path.slice(1) : path
+      const content = files[normalized]
+      if (content === undefined) {
+        throw new Error(`File not found: ${path}`)
+      }
+      return content
+    },
+    writeFile: throwReadOnly,
+    createDirectory: throwReadOnly,
+    delete: throwReadOnly,
+  }
+}
+
+/**
  * Initialize workspaces from localStorage or create default.
+ * Always includes the library workspace for built-in libraries.
  */
 export function initializeWorkspaces(): WorkspaceManagerState {
   const persistedWorkspaces = loadPersistedWorkspaces()
 
+  // Library workspace is always present (not persisted, always created fresh)
+  const libraryWorkspace = createLibraryWorkspace()
+
   if (!persistedWorkspaces || persistedWorkspaces.length === 0) {
     const defaultWorkspace = createDefaultWorkspace()
     return {
-      workspaces: [defaultWorkspace],
+      workspaces: [defaultWorkspace, libraryWorkspace],
     }
   }
 
@@ -203,6 +295,9 @@ export function initializeWorkspaces(): WorkspaceManagerState {
   if (!hasDefault) {
     workspaces.unshift(createDefaultWorkspace())
   }
+
+  // Add library workspace (always present, not persisted)
+  workspaces.push(libraryWorkspace)
 
   return {
     workspaces,

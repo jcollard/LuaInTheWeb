@@ -10,26 +10,43 @@ import type { Workspace } from './workspaceTypes'
 /**
  * Build a tree from an IFileSystem, marking root-level folders as workspaces.
  * Optionally includes disconnected workspaces as root nodes with isDisconnected: true.
+ * @param fs - The filesystem to build the tree from
+ * @param path - Current path (default: '/')
+ * @param isRoot - Whether this is the root level (default: true)
+ * @param allWorkspaces - All workspaces (used for workspace type detection)
+ * @param parentReadOnly - Whether the parent is read-only (propagates to children)
  */
 export function buildTreeFromFileSystem(
   fs: IFileSystem,
   path: string = '/',
   isRoot: boolean = true,
-  allWorkspaces: Workspace[] = []
+  allWorkspaces: Workspace[] = [],
+  parentReadOnly: boolean = false
 ): TreeNode[] {
   const entries = fs.listDirectory(path)
   const nodes: TreeNode[] = []
 
   for (const entry of entries) {
     if (entry.type === 'directory') {
-      const children = buildTreeFromFileSystem(fs, entry.path, false, [])
-
       // For root-level folders, find the matching workspace to get its type
       let isLocalWorkspace: boolean | undefined
+      let isLibraryWorkspace: boolean | undefined
+      let isReadOnly = parentReadOnly
+
       if (isRoot) {
         const workspace = allWorkspaces.find((w) => w.mountPath === entry.path)
         isLocalWorkspace = workspace?.type === 'local'
+        isLibraryWorkspace = workspace?.type === 'library'
+        isReadOnly = workspace?.isReadOnly === true
       }
+
+      const children = buildTreeFromFileSystem(
+        fs,
+        entry.path,
+        false,
+        allWorkspaces,
+        isReadOnly // Propagate read-only status to children
+      )
 
       nodes.push({
         name: entry.name,
@@ -37,6 +54,8 @@ export function buildTreeFromFileSystem(
         type: 'folder',
         isWorkspace: isRoot, // Root-level folders are workspaces
         isLocalWorkspace,
+        isLibraryWorkspace,
+        isReadOnly: isReadOnly || undefined, // Only set if true
         children,
       })
     } else {
@@ -44,6 +63,7 @@ export function buildTreeFromFileSystem(
         name: entry.name,
         path: entry.path,
         type: 'file',
+        isReadOnly: parentReadOnly || undefined, // Inherit from parent
       })
     }
   }

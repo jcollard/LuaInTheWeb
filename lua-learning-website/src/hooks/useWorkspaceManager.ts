@@ -34,6 +34,7 @@ import {
 import {
   DEFAULT_WORKSPACE_ID,
   DEFAULT_MOUNT_PATH,
+  LIBRARY_WORKSPACE_ID,
   generateWorkspaceId,
   generateMountPath,
   saveWorkspaces,
@@ -57,12 +58,14 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
   const isInitialMount = useRef(true)
 
   // Save to localStorage whenever state changes (except initial mount)
+  // Filter out library workspaces as they are ephemeral and recreated on startup
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false
       return
     }
-    saveWorkspaces(state.workspaces)
+    const persistableWorkspaces = state.workspaces.filter((w) => w.type !== 'library')
+    saveWorkspaces(persistableWorkspaces)
   }, [state])
 
   // Create CompositeFileSystem from connected workspaces
@@ -498,6 +501,28 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
     [state.workspaces]
   )
 
+  /**
+   * Check if a path is in a read-only workspace.
+   * @param path - The file path to check (e.g., '/libs/shell.lua')
+   * @returns true if the path is in a read-only workspace
+   */
+  const isPathReadOnly = useCallback(
+    (path: string): boolean => {
+      // Find the workspace that contains this path
+      const workspace = state.workspaces.find((w) => path.startsWith(w.mountPath))
+      return workspace?.isReadOnly === true
+    },
+    [state.workspaces]
+  )
+
+  /**
+   * Get the library workspace.
+   * @returns The library workspace, or undefined if not found
+   */
+  const getLibraryWorkspace = useCallback((): Workspace | undefined => {
+    return state.workspaces.find((w) => w.id === LIBRARY_WORKSPACE_ID)
+  }, [state.workspaces])
+
   return {
     workspaces: state.workspaces,
     compositeFileSystem,
@@ -517,5 +542,7 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
     renameWorkspace,
     isFolderAlreadyMounted,
     getUniqueWorkspaceName,
+    isPathReadOnly,
+    getLibraryWorkspace,
   }
 }

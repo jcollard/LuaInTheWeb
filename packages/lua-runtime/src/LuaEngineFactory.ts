@@ -5,32 +5,19 @@
 
 import { LuaFactory, type LuaEngine } from 'wasmoon'
 import { LUA_FORMATTER_CODE } from './lua/formatter'
+import { LUA_SHELL_CODE } from './lua/shell'
+import { LUA_IO_CODE } from './lua/io'
+import { generateExecutionControlCode } from './lua/executionControl'
 
-/**
- * Flush interval in milliseconds (~60fps).
- */
+/** Flush interval in milliseconds (~60fps). */
 export const FLUSH_INTERVAL_MS = 16
-
-/**
- * Maximum buffer size before immediate flush.
- */
+/** Maximum buffer size before immediate flush. */
 export const MAX_BUFFER_SIZE = 1000
-
-/**
- * WeakMap to store flush functions for each engine instance.
- * Used by close() and closeDeferred() to flush remaining output.
- * WeakMap (vs Map) allows automatic cleanup when engines are garbage collected.
- */
+/** WeakMap to store flush functions for each engine instance. */
 const engineFlushMap = new WeakMap<LuaEngine, () => void>()
-
-/**
- * Default instruction limit before prompting user (10 million).
- */
+/** Default instruction limit before prompting user (10 million). */
 export const DEFAULT_INSTRUCTION_LIMIT = 10_000_000
-
-/**
- * Default interval between instruction count checks.
- */
+/** Default interval between instruction count checks. */
 export const DEFAULT_INSTRUCTION_CHECK_INTERVAL = 1000
 
 /**
@@ -117,6 +104,18 @@ export interface LuaEngineCallbacks {
    * `instructionCheckInterval` lines, so there may be slight latency.
    */
   onInstructionLimitReached?: () => boolean
+  /**
+   * Get terminal width in columns.
+   * Used by shell.width() function.
+   * Returns default of 80 if not provided.
+   */
+  getTerminalWidth?: () => number
+  /**
+   * Get terminal height in rows.
+   * Used by shell.height() function.
+   * Returns default of 24 if not provided.
+   */
+  getTerminalHeight?: () => number
 }
 
 /**
@@ -128,185 +127,6 @@ export interface CodeCompletenessResult {
   /** Error message if there's a syntax error (not just incomplete) */
   error?: string
 }
-
-/**
- * Generate Lua code for execution control infrastructure.
- * Note: Due to wasmoon limitations, debug hooks don't persist across doString calls.
- * The hook must be set up within each code execution using __setup_execution_hook().
- * @param lineLimit - Maximum lines before triggering callback
- * @param checkInterval - How often to check line count (every N lines)
- */
-function generateExecutionControlCode(
-  lineLimit: number,
-  checkInterval: number
-): string {
-  return `
-__stop_requested = false
-__line_count = 0
-__instruction_limit = ${lineLimit}
-__check_interval = ${checkInterval}
-__lines_since_check = 0
-
-function __request_stop()
-    __stop_requested = true
-end
-
--- Internal helper for dynamic limit adjustment (used by processes)
-function __set_instruction_limit(limit)
-    __instruction_limit = limit
-end
-
-function __reset_instruction_count()
-    __line_count = 0
-    __lines_since_check = 0
-end
-
--- Hook function that counts lines and checks for stop conditions
-function __execution_hook()
-    __line_count = __line_count + 1
-    __lines_since_check = __lines_since_check + 1
-
-    -- Only check conditions every check_interval lines for performance
-    if __lines_since_check >= __check_interval then
-        __lines_since_check = 0
-
-        if __stop_requested then
-            __stop_requested = false
-            __line_count = 0
-            error("Execution stopped by user", 0)
-        end
-
-        if __line_count >= __instruction_limit then
-            -- Call synchronous JS callback that returns true to continue, false to stop
-            -- Note: Cannot use async/await here due to Lua debug hook limitations
-            local should_continue = __on_limit_reached_sync()
-            if should_continue then
-                __reset_instruction_count()
-            else
-                error("Execution stopped by instruction limit", 0)
-            end
-        end
-    end
-end
-
--- Set up the execution hook (must be called before executing user code)
-function __setup_execution_hook()
-    __reset_instruction_count()
-    debug.sethook(__execution_hook, "l")
-end
-
--- Clear the execution hook (call after user code completes)
-function __clear_execution_hook()
-    debug.sethook()
-end
-`
-}
-
-/**
- * Lua code for io.write and io.read setup.
- * Implements Lua 5.4 io.read() argument handling.
- */
-const LUA_IO_CODE = `
-io = io or {}
-io.write = function(...)
-  local args = {...}
-  local output = ""
-  for i, v in ipairs(args) do
-    output = output .. tostring(v)
-  end
-  -- Use __js_write for io.write (no automatic newline)
-  __js_write(output)
-end
-
--- Helper to normalize format string (remove * prefix if present)
-local function __normalize_format(fmt)
-  if type(fmt) == "string" and fmt:sub(1, 1) == "*" then
-    return fmt:sub(2)
-  end
-  return fmt
-end
-
--- Helper to read a single value based on format
-local function __read_one(fmt)
-  -- Flush output buffer before blocking for input
-  __js_flush()
-
-  -- Handle numeric argument: io.read(n) reads n characters
-  if type(fmt) == "number" then
-    if fmt == 0 then
-      return ""
-    end
-    local input = __js_read_input(fmt):await()
-    -- Return nil at EOF (empty input)
-    if input == "" then
-      return nil
-    end
-    -- Truncate to exactly n characters (defensive: in case callback returns more)
-    return input:sub(1, fmt)
-  end
-
-  -- Normalize string format (remove * prefix)
-  local normalized = __normalize_format(fmt)
-
-  -- "n" or "*n" - read and parse number
-  if normalized == "n" or normalized == "number" then
-    local input = __js_read_input():await()
-    -- Return nil at EOF
-    if input == "" then
-      return nil
-    end
-    -- tonumber handles leading whitespace and Lua number syntax
-    local num = tonumber(input)
-    return num  -- Returns nil if parsing fails
-  end
-
-  -- "a" or "*a" - read all remaining input
-  if normalized == "a" or normalized == "all" then
-    local input = __js_read_input():await()
-    -- "a" format returns empty string at EOF, never nil
-    return input
-  end
-
-  -- "L" or "*L" - read line, keep newline
-  if normalized == "L" then
-    local input = __js_read_input():await()
-    -- Return nil at EOF
-    if input == "" then
-      return nil
-    end
-    return input .. "\\n"
-  end
-
-  -- Default: "l" or "*l" or nil - read line, strip newline
-  local input = __js_read_input():await()
-  -- Return nil at EOF
-  if input == "" then
-    return nil
-  end
-  return input
-end
-
-io.read = function(...)
-  local args = {...}
-
-  -- No arguments: default to "l" (line without newline)
-  if #args == 0 then
-    return __read_one("l")
-  end
-
-  -- Single argument
-  if #args == 1 then
-    return __read_one(args[1])
-  end
-
-  -- Multiple arguments: return multiple values
-  local results = {}
-  for i, fmt in ipairs(args) do
-    results[i] = __read_one(fmt)
-  end
-  return table.unpack(results)
-end
-`
 
 /**
  * Factory for creating Lua engines with standard setup.
@@ -402,10 +222,25 @@ export class LuaEngineFactory {
       engine.global.set('__on_limit_reached_sync', () => true)
     }
 
+    // Setup terminal dimension bridge functions for shell library
+    engine.global.set('__shell_get_width', () => {
+      return callbacks.getTerminalWidth?.() ?? 80
+    })
+    engine.global.set('__shell_get_height', () => {
+      return callbacks.getTerminalHeight?.() ?? 24
+    })
+
     // Setup formatter, io functions, and execution control
     await engine.doString(LUA_FORMATTER_CODE)
     await engine.doString(LUA_IO_CODE)
     await engine.doString(generateExecutionControlCode(instructionLimit, checkInterval))
+
+    // Register shell library in package.preload for require('shell')
+    await engine.doString(`
+      package.preload['shell'] = function()
+        ${LUA_SHELL_CODE}
+      end
+    `)
 
     return engine
   }

@@ -21,3 +21,6 @@ export {
   type LuaEngineOptions,
   type ExecutionControlOptions,
 } from './LuaEngineFactory'
+
+// Shell library export
+export { LUA_SHELL_CODE } from './lua/shell'

@@ -68,6 +68,13 @@ describe('FileTreeItem', () => {
       expect(screen.queryByTestId('folder-icon')).not.toBeInTheDocument()
     })
 
+    it('should render library workspace icon for library workspace folders', () => {
+      render(<FileTreeItem {...defaultFolderProps} isWorkspace={true} isLibraryWorkspace={true} />)
+      expect(screen.getByTestId('library-workspace-icon')).toBeInTheDocument()
+      expect(screen.queryByTestId('folder-icon')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('virtual-workspace-icon')).not.toBeInTheDocument()
+    })
+
     it('should render folder icon for non-workspace folders', () => {
       render(<FileTreeItem {...defaultFolderProps} isWorkspace={false} />)
       expect(screen.getByTestId('folder-icon')).toBeInTheDocument()

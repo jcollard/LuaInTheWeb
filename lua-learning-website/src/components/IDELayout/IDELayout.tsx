@@ -419,6 +419,7 @@ export function IDELayout({
     renameWorkspace,
     isFolderAlreadyMounted,
     getUniqueWorkspaceName,
+    isPathReadOnly,
   } = useWorkspaceManager()
 
   // Create adapted filesystem for IDEContext
@@ -441,7 +442,7 @@ export function IDELayout({
   }, [refreshAllLocalWorkspaces])
 
   return (
-    <IDEContextProvider initialCode={initialCode} fileSystem={adaptedFileSystem}>
+    <IDEContextProvider initialCode={initialCode} fileSystem={adaptedFileSystem} isPathReadOnly={isPathReadOnly}>
       <IDELayoutInner
         className={className}
         compositeFileSystem={compositeFileSystem}

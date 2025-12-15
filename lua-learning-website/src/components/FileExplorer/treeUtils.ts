@@ -33,6 +33,18 @@ export function isWorkspaceRoot(tree: TreeNode[], path: string): boolean {
 }
 
 /**
+ * Check if a path is a library workspace root (read-only, built-in libraries).
+ */
+export function isLibraryWorkspace(tree: TreeNode[], path: string): boolean {
+  for (const node of tree) {
+    if (node.path === path && node.isLibraryWorkspace) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
  * Find the name of a node at a given path in the tree.
  */
 export function findNodeName(tree: TreeNode[], path: string): string {

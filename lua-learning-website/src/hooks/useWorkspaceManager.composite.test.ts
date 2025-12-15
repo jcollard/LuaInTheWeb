@@ -40,10 +40,10 @@ describe('useWorkspaceManager', () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
       const entries = result.current.compositeFileSystem.listDirectory('/')
-      expect(entries).toHaveLength(1)
-      // listDirectory returns mount path name (slug), not display name
-      expect(entries[0].name).toBe('home')
-      expect(entries[0].type).toBe('directory')
+      // default + library = 2
+      expect(entries).toHaveLength(2)
+      // listDirectory returns mount path names (slugs)
+      expect(entries.map((e) => e.name).sort()).toEqual(['home', 'libs'])
     })
 
     it('updates when workspaces change', () => {
@@ -54,9 +54,10 @@ describe('useWorkspaceManager', () => {
       })
 
       const entries = result.current.compositeFileSystem.listDirectory('/')
-      expect(entries).toHaveLength(2)
+      // default + library + new = 3
+      expect(entries).toHaveLength(3)
       // listDirectory returns mount path names (slugs), not display names
-      expect(entries.map((e) => e.name).sort()).toEqual(['home', 'project'])
+      expect(entries.map((e) => e.name).sort()).toEqual(['home', 'libs', 'project'])
     })
 
     it('only includes connected workspaces', () => {
@@ -71,11 +72,11 @@ describe('useWorkspaceManager', () => {
 
       const { result } = renderHook(() => useWorkspaceManager())
 
-      // Local workspace is disconnected, so only 1 mount
+      // Local workspace is disconnected, so only default + library = 2
       const entries = result.current.compositeFileSystem.listDirectory('/')
-      expect(entries).toHaveLength(1)
-      // listDirectory returns mount path name (slug), not display name
-      expect(entries[0].name).toBe('home')
+      expect(entries).toHaveLength(2)
+      // listDirectory returns mount path names (slugs)
+      expect(entries.map((e) => e.name).sort()).toEqual(['home', 'libs'])
     })
   })
 
@@ -88,11 +89,11 @@ describe('useWorkspaceManager', () => {
       })
 
       const mounts = result.current.getMounts()
-      expect(mounts).toHaveLength(2)
-      expect(mounts[0].mountPath).toBe('/home')
-      expect(mounts[0].isConnected).toBe(true)
-      expect(mounts[1].mountPath).toBe('/project')
-      expect(mounts[1].isConnected).toBe(true)
+      // default + library + new = 3
+      expect(mounts).toHaveLength(3)
+      expect(mounts.some((m) => m.mountPath === '/home' && m.isConnected)).toBe(true)
+      expect(mounts.some((m) => m.mountPath === '/libs' && m.isConnected)).toBe(true)
+      expect(mounts.some((m) => m.mountPath === '/project' && m.isConnected)).toBe(true)
     })
 
     it('shows disconnected status for local workspaces', () => {

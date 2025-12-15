@@ -19,6 +19,10 @@ export interface TreeNode {
   isLocalWorkspace?: boolean
   /** Indicates this workspace is disconnected (local folder needs reconnection) */
   isDisconnected?: boolean
+  /** Indicates this is a library workspace (read-only, built-in libraries) */
+  isLibraryWorkspace?: boolean
+  /** Indicates this file/folder is in a read-only workspace */
+  isReadOnly?: boolean
   children?: TreeNode[]
 }
 
