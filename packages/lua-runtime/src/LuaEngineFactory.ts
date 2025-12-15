@@ -127,6 +127,8 @@ export interface CodeCompletenessResult {
   complete: boolean
   /** Error message if there's a syntax error (not just incomplete) */
   error?: string
+  /** Error message if the code is incomplete (e.g., unclosed parenthesis) */
+  incompleteError?: string
 }
 
 /**
@@ -547,12 +549,13 @@ export class LuaEngineFactory {
       // Incomplete code errors end with: near <eof> (with or without quotes)
       // This pattern is reliable because complete code with syntax errors
       // will say "near 'token'" where token is the problematic code
-      if (errorStr.endsWith('<eof>') || errorStr.endsWith("<eof>'")) {
-        return { complete: false }
-      }
+      const isIncomplete =
+        errorStr.endsWith('<eof>') || errorStr.endsWith("<eof>'")
 
-      // It's a real syntax error
-      return { complete: false, error: errorStr }
+      // Always return the error string - callers can decide whether to show it
+      // For REPL: check `complete` to determine if more input is needed
+      // For file editing: show the error regardless of `complete` status
+      return { complete: false, error: isIncomplete ? undefined : errorStr, incompleteError: isIncomplete ? errorStr : undefined }
     } catch (error) {
       // If the check itself fails, treat as syntax error
       const errorMsg = error instanceof Error ? error.message : String(error)

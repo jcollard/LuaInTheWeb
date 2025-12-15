@@ -145,10 +145,11 @@ describe('useLuaSyntaxChecker', () => {
       expect(result.current.syntaxError).toBeNull()
     })
 
-    it('does not show error for incomplete code', async () => {
-      // Incomplete code (waiting for more input) - no error field
+    it('shows error for incomplete code (e.g., unclosed parenthesis)', async () => {
+      // Incomplete code - has incompleteError field for file editing
       vi.mocked(LuaEngineFactory.isCodeComplete).mockResolvedValue({
         complete: false,
+        incompleteError: "[string \"...\"]:3: ')' expected near <eof>",
       })
 
       const { result } = renderHook(() => useLuaSyntaxChecker())
@@ -158,7 +159,7 @@ describe('useLuaSyntaxChecker', () => {
       })
 
       act(() => {
-        result.current.checkSyntax('function foo()')
+        result.current.checkSyntax('print("hi"\n')
       })
 
       await act(async () => {
@@ -166,8 +167,8 @@ describe('useLuaSyntaxChecker', () => {
       })
 
       expect(LuaEngineFactory.isCodeComplete).toHaveBeenCalled()
-      // Should not show error for incomplete code
-      expect(result.current.syntaxError).toBeNull()
+      // Should show error for incomplete code when editing files
+      expect(result.current.syntaxError).toBe("[string \"...\"]:3: ')' expected near <eof>")
     })
 
     it('clears error for empty code without checking', async () => {

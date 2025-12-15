@@ -88,8 +88,12 @@ export function useLuaSyntaxChecker(): UseLuaSyntaxCheckerReturn {
       } else if (result.error) {
         // Code has a syntax error
         setSyntaxError(result.error)
+      } else if (result.incompleteError) {
+        // Code is incomplete (e.g., unclosed parenthesis)
+        // For file editing, show this as an error too
+        setSyntaxError(result.incompleteError)
       } else {
-        // Code is incomplete (e.g., unclosed function) - not an error yet
+        // No error information available
         setSyntaxError(null)
       }
     } catch {
