@@ -1,4 +1,5 @@
 import type { languages } from 'monaco-editor'
+import { findMatchingBlockIndent } from './luaBlockParser'
 
 /**
  * IndentAction constants matching Monaco's languages.IndentAction enum.
@@ -350,7 +351,7 @@ export function registerLuaLanguage(monaco: typeof import('monaco-editor')): voi
       }
 
       const currentIndent = match[1]
-      const keyword = match[2]
+      const keyword = match[2] as 'end' | 'else' | 'elseif' | 'until'
 
       // Verify that the cursor is at the end of the keyword
       // (to avoid triggering on partial matches)
@@ -359,18 +360,28 @@ export function registerLuaLanguage(monaco: typeof import('monaco-editor')): voi
         return []
       }
 
-      // Calculate the new indentation (one level less)
-      // Detect indent style from the current indent
-      const tabSize = model.getOptions().tabSize
-      let newIndent: string
+      // Get all code above the current line to analyze block structure
+      const codeAbove =
+        lineNumber > 1
+          ? model.getValueInRange(
+              new monaco.Range(1, 1, lineNumber - 1, model.getLineMaxColumn(lineNumber - 1))
+            )
+          : ''
 
-      if (currentIndent.includes('\t')) {
-        // Tab-based indent: remove one tab
-        newIndent = currentIndent.replace(/\t/, '')
+      // Find the indentation of the matching block opener
+      const targetIndentLength = findMatchingBlockIndent(codeAbove, keyword)
+
+      // Determine indent style (tabs vs spaces) from current indent
+      const useTabs = currentIndent.includes('\t')
+
+      // Generate the target indentation string
+      let newIndent: string
+      if (useTabs) {
+        // Tab-based: targetIndentLength represents number of tabs
+        newIndent = '\t'.repeat(targetIndentLength)
       } else {
-        // Space-based indent: remove tabSize spaces
-        const spacesToRemove = Math.min(tabSize, currentIndent.length)
-        newIndent = currentIndent.slice(spacesToRemove)
+        // Space-based: targetIndentLength represents number of spaces
+        newIndent = ' '.repeat(targetIndentLength)
       }
 
       // If indent didn't change, no edit needed
