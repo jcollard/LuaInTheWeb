@@ -1,13 +1,13 @@
-import type { FileTreeNode } from '../FileTree/types'
+import type { TreeNode } from '../../hooks/useFileSystem'
 
 /**
  * Find the type of a node at a given path in the tree.
  */
 export function findNodeType(
-  tree: FileTreeNode[],
+  tree: TreeNode[],
   path: string
 ): 'file' | 'folder' | null {
-  const search = (nodes: FileTreeNode[]): 'file' | 'folder' | null => {
+  const search = (nodes: TreeNode[]): 'file' | 'folder' | null => {
     for (const node of nodes) {
       if (node.path === path) return node.type
       if (node.children) {
@@ -23,7 +23,7 @@ export function findNodeType(
 /**
  * Check if a path is a workspace root (top-level folder with isWorkspace flag).
  */
-export function isWorkspaceRoot(tree: FileTreeNode[], path: string): boolean {
+export function isWorkspaceRoot(tree: TreeNode[], path: string): boolean {
   for (const node of tree) {
     if (node.path === path && node.isWorkspace) {
       return true
@@ -35,8 +35,8 @@ export function isWorkspaceRoot(tree: FileTreeNode[], path: string): boolean {
 /**
  * Find the name of a node at a given path in the tree.
  */
-export function findNodeName(tree: FileTreeNode[], path: string): string {
-  const search = (nodes: FileTreeNode[]): string | null => {
+export function findNodeName(tree: TreeNode[], path: string): string {
+  const search = (nodes: TreeNode[]): string | null => {
     for (const node of nodes) {
       if (node.path === path) return node.name
       if (node.children) {
@@ -52,8 +52,8 @@ export function findNodeName(tree: FileTreeNode[], path: string): string {
 /**
  * Check if a path exists in the tree.
  */
-export function pathExists(tree: FileTreeNode[], path: string): boolean {
-  const search = (nodes: FileTreeNode[]): boolean => {
+export function pathExists(tree: TreeNode[], path: string): boolean {
+  const search = (nodes: TreeNode[]): boolean => {
     for (const node of nodes) {
       if (node.path === path) return true
       if (node.children && search(node.children)) return true
@@ -68,7 +68,7 @@ export function pathExists(tree: FileTreeNode[], path: string): boolean {
  * Returns null if the path is not within a workspace.
  */
 export function getWorkspaceForPath(
-  tree: FileTreeNode[],
+  tree: TreeNode[],
   path: string
 ): string | null {
   // Extract the first path segment (workspace mount point)
