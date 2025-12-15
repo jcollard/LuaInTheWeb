@@ -21,7 +21,7 @@ export interface BashTerminalHandle {
   readLine: () => Promise<string>
   /**
    * Read exactly `count` characters without waiting for Enter.
-   * Characters are echoed as typed. Returns immediately after count chars received.
+   * Characters are NOT echoed (silent mode for hybrid behavior).
    */
   readChars: (count: number) => Promise<string>
   showPrompt: () => void
@@ -310,7 +310,7 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
       // Character-mode input: capture characters without waiting for Enter
       if (isReadingRef.current && charModeCountRef.current > 0) {
         charBufferRef.current += data
-        term.write(data) // Echo character
+        // No echo in character mode (hybrid behavior - program controls display)
 
         // Check if we have enough characters
         if (charBufferRef.current.length >= charModeCountRef.current) {

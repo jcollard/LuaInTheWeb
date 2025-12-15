@@ -199,7 +199,7 @@ describe('BashTerminal', () => {
       expect(result).toBe('abc')
     })
 
-    it('should echo each character as it is typed', async () => {
+    it('should NOT echo characters in character mode (hybrid behavior)', async () => {
       // Arrange
       const ref = createRef<BashTerminalHandle>()
       render(<BashTerminal ref={ref} />)
@@ -207,15 +207,22 @@ describe('BashTerminal', () => {
       const onDataCallback = mockState.lastTerminalInstance?.onData.mock.calls[0][0]
       const writeMethod = mockState.lastTerminalInstance?.write
 
+      // Clear any previous write calls from initialization
+      writeMethod?.mockClear()
+
       // Act
-      ref.current?.readChars(2)
+      const readPromise = ref.current?.readChars(2)
 
       await act(async () => {
         onDataCallback('x')
+        onDataCallback('y')
       })
 
-      // Assert - character should be echoed
-      expect(writeMethod).toHaveBeenCalledWith('x')
+      await readPromise
+
+      // Assert - characters should NOT be echoed in character mode
+      expect(writeMethod).not.toHaveBeenCalledWith('x')
+      expect(writeMethod).not.toHaveBeenCalledWith('y')
     })
 
     it('should resolve immediately when character count is reached', async () => {

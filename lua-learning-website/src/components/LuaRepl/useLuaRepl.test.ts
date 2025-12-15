@@ -229,8 +229,8 @@ describe('useLuaRepl', () => {
       // Act
       printFn?.('hello')
 
-      // Assert
-      expect(onOutput).toHaveBeenCalledWith('hello')
+      // Assert - LuaEngineFactory's print adds newline (correct Lua behavior)
+      expect(onOutput).toHaveBeenCalledWith('hello\n')
     })
 
     // Cycle 10: Multiple print args joined with tabs
@@ -248,8 +248,8 @@ describe('useLuaRepl', () => {
       // Act
       printFn?.('a', 'b', 'c')
 
-      // Assert
-      expect(onOutput).toHaveBeenCalledWith('a\tb\tc')
+      // Assert - LuaEngineFactory's print adds newline (correct Lua behavior)
+      expect(onOutput).toHaveBeenCalledWith('a\tb\tc\n')
     })
 
     // Cycle 11: Print converts null/undefined to 'nil'
@@ -267,8 +267,8 @@ describe('useLuaRepl', () => {
       // Act
       printFn?.(null, undefined, 'value')
 
-      // Assert
-      expect(onOutput).toHaveBeenCalledWith('nil\tnil\tvalue')
+      // Assert - LuaEngineFactory's print adds newline (correct Lua behavior)
+      expect(onOutput).toHaveBeenCalledWith('nil\tnil\tvalue\n')
     })
 
     // Cycle 12: Print without onOutput doesn't crash
