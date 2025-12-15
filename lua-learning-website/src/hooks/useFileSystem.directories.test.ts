@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+// Comprehensive directory operation tests - keeping together for test organization
 import { renderHook, act } from '@testing-library/react'
 import { vi, beforeEach, afterEach } from 'vitest'
 import { useFileSystem } from './useFileSystem'

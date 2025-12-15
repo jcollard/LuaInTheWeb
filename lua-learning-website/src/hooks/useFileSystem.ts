@@ -1,3 +1,6 @@
+/* eslint-disable max-lines */
+// This hook manages all filesystem operations with synchronized refs for shell commands.
+// Splitting would break the ref synchronization that enables synchronous filesystem access.
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type { VirtualFile, TreeNode, FileSystemState, UseFileSystemReturn } from './fileSystemTypes'
 import {

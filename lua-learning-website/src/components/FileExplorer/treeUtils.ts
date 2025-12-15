@@ -1,0 +1,85 @@
+import type { FileTreeNode } from '../FileTree/types'
+
+/**
+ * Find the type of a node at a given path in the tree.
+ */
+export function findNodeType(
+  tree: FileTreeNode[],
+  path: string
+): 'file' | 'folder' | null {
+  const search = (nodes: FileTreeNode[]): 'file' | 'folder' | null => {
+    for (const node of nodes) {
+      if (node.path === path) return node.type
+      if (node.children) {
+        const found = search(node.children)
+        if (found) return found
+      }
+    }
+    return null
+  }
+  return search(tree)
+}
+
+/**
+ * Check if a path is a workspace root (top-level folder with isWorkspace flag).
+ */
+export function isWorkspaceRoot(tree: FileTreeNode[], path: string): boolean {
+  for (const node of tree) {
+    if (node.path === path && node.isWorkspace) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
+ * Find the name of a node at a given path in the tree.
+ */
+export function findNodeName(tree: FileTreeNode[], path: string): string {
+  const search = (nodes: FileTreeNode[]): string | null => {
+    for (const node of nodes) {
+      if (node.path === path) return node.name
+      if (node.children) {
+        const found = search(node.children)
+        if (found) return found
+      }
+    }
+    return null
+  }
+  return search(tree) || path.split('/').pop() || path
+}
+
+/**
+ * Check if a path exists in the tree.
+ */
+export function pathExists(tree: FileTreeNode[], path: string): boolean {
+  const search = (nodes: FileTreeNode[]): boolean => {
+    for (const node of nodes) {
+      if (node.path === path) return true
+      if (node.children && search(node.children)) return true
+    }
+    return false
+  }
+  return search(tree)
+}
+
+/**
+ * Get the workspace (root folder) for a given path.
+ * Returns null if the path is not within a workspace.
+ */
+export function getWorkspaceForPath(
+  tree: FileTreeNode[],
+  path: string
+): string | null {
+  // Extract the first path segment (workspace mount point)
+  const parts = path.split('/').filter(Boolean)
+  if (parts.length === 0) return null
+  const workspacePath = `/${parts[0]}`
+  // Verify it's actually a workspace in the tree
+  for (const node of tree) {
+    if (node.path === workspacePath && node.isWorkspace) {
+      return workspacePath
+    }
+  }
+  return null
+}
