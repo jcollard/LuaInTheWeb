@@ -229,7 +229,7 @@ describe('useLuaRepl', () => {
       // Act
       printFn?.('hello')
 
-      // Assert - print adds newline like standard Lua
+      // Assert - LuaEngineFactory's print adds newline (correct Lua behavior)
       expect(onOutput).toHaveBeenCalledWith('hello\n')
     })
 
@@ -248,7 +248,7 @@ describe('useLuaRepl', () => {
       // Act
       printFn?.('a', 'b', 'c')
 
-      // Assert - print adds newline like standard Lua
+      // Assert - LuaEngineFactory's print adds newline (correct Lua behavior)
       expect(onOutput).toHaveBeenCalledWith('a\tb\tc\n')
     })
 
@@ -267,7 +267,7 @@ describe('useLuaRepl', () => {
       // Act
       printFn?.(null, undefined, 'value')
 
-      // Assert - print adds newline like standard Lua
+      // Assert - LuaEngineFactory's print adds newline (correct Lua behavior)
       expect(onOutput).toHaveBeenCalledWith('nil\tnil\tvalue\n')
     })
 
