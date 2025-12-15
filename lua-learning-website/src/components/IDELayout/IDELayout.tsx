@@ -111,8 +111,8 @@ function IDELayoutInner({
   const [pendingCloseTabPath, setPendingCloseTabPath] = useState<string | null>(null)
   const [isFormatting, setIsFormatting] = useState(false)
 
-  // Diagnostics hook for showing Lua errors in editor
-  const { handleEditorReady } = useIDEDiagnostics()
+  // Diagnostics hook for showing Lua errors in editor (including real-time syntax checking)
+  const { handleEditorReady } = useIDEDiagnostics({ code })
 
   // Initialize the Lua formatter on mount
   useEffect(() => {
