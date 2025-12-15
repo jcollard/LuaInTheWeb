@@ -31,9 +31,6 @@ describe('LuaEngineFactory - Output Throttling', () => {
     it('should buffer print outputs instead of calling callback immediately', async () => {
       const engine = await LuaEngineFactory.create(callbacks)
 
-      // Record call count before print
-      const callsBefore = (callbacks.onOutput as ReturnType<typeof vi.fn>).mock.calls.length
-
       await engine.doString('print("hello")')
 
       // Output may or may not be called depending on timing (if engine creation
@@ -41,10 +38,8 @@ describe('LuaEngineFactory - Output Throttling', () => {
       // that output eventually appears and is correctly formatted.
       LuaEngineFactory.close(engine)
 
-      // After close, output should have been flushed exactly once more (or once total)
-      const callsAfter = (callbacks.onOutput as ReturnType<typeof vi.fn>).mock.calls.length
-      expect(callsAfter).toBeGreaterThanOrEqual(1)
-      // Verify the output content is correct
+      // Verify output was flushed and content is correct
+      expect(callbacks.onOutput).toHaveBeenCalled()
       expect(callbacks.onOutput).toHaveBeenCalledWith('hello\n')
     })
 
