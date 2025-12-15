@@ -12,6 +12,7 @@ const initialConfirmDialog: ConfirmDialogState = {
   isOpen: false,
   title: '',
   message: '',
+  confirmLabel: 'Delete',
   onConfirm: () => {},
 }
 

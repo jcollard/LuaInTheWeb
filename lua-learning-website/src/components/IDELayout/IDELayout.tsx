@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { IDEContextProvider, useIDE } from '../IDEContext'
 import { ActivityBar } from '../ActivityBar'
 import { StatusBar } from '../StatusBar'
@@ -12,14 +12,55 @@ import { ConfirmDialog } from '../ConfirmDialog'
 import { ToastContainer } from '../Toast'
 import { WelcomeScreen } from '../WelcomeScreen'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { useWorkspaceManager } from '../../hooks/useWorkspaceManager'
+import { createFileSystemAdapter } from '../../hooks/compositeFileSystemAdapter'
 import { initFormatter, formatLuaCode } from '../../utils/luaFormatter'
+import type { Workspace } from '../../hooks/workspaceTypes'
+import type { IFileSystem } from '@lua-learning/shell-core'
 import styles from './IDELayout.module.css'
 import type { IDELayoutProps } from './types'
 
 /**
+ * Props passed from IDELayout to IDELayoutInner
+ */
+interface IDELayoutInnerProps {
+  className?: string
+  compositeFileSystem: IFileSystem
+  workspaces: Workspace[]
+  addVirtualWorkspace: (name: string) => void
+  addLocalWorkspace: (name: string, handle: FileSystemDirectoryHandle) => Promise<Workspace>
+  removeWorkspace: (workspaceId: string) => void
+  isFileSystemAccessSupported: () => boolean
+  refreshWorkspace: (mountPath: string) => Promise<void>
+  supportsRefresh: (mountPath: string) => boolean
+  reconnectWorkspace: (id: string, handle: FileSystemDirectoryHandle) => Promise<void>
+  tryReconnectWithStoredHandle: (id: string) => Promise<boolean>
+  disconnectWorkspace: (id: string) => void
+  renameWorkspace: (mountPath: string, newName: string) => void
+  isFolderAlreadyMounted: (handle: FileSystemDirectoryHandle) => Promise<boolean>
+  getUniqueWorkspaceName: (baseName: string) => string
+}
+
+/**
  * Inner component that uses IDE context
  */
-function IDELayoutInner({ className }: { className?: string }) {
+function IDELayoutInner({
+  className,
+  compositeFileSystem,
+  workspaces,
+  addVirtualWorkspace,
+  addLocalWorkspace,
+  removeWorkspace,
+  isFileSystemAccessSupported,
+  refreshWorkspace,
+  supportsRefresh,
+  reconnectWorkspace,
+  tryReconnectWithStoredHandle,
+  disconnectWorkspace,
+  renameWorkspace,
+  isFolderAlreadyMounted,
+  getUniqueWorkspaceName,
+}: IDELayoutInnerProps) {
   const {
     code,
     setCode,
@@ -33,11 +74,13 @@ function IDELayoutInner({ className }: { className?: string }) {
     toggleTerminal,
     // Filesystem
     fileTree,
+    refreshFileTree,
     deleteFile,
     deleteFolder,
     renameFile,
     renameFolder,
     moveFile,
+    copyFile,
     openFile,
     saveFile,
     // New file creation
@@ -60,8 +103,6 @@ function IDELayoutInner({ className }: { className?: string }) {
     // Recent files
     recentFiles,
     clearRecentFiles,
-    // Filesystem (for shell)
-    fileSystem,
   } = useIDE()
 
   const [cursorLine, setCursorLine] = useState(1)
@@ -73,6 +114,81 @@ function IDELayoutInner({ className }: { className?: string }) {
   useEffect(() => {
     initFormatter().catch(console.error)
   }, [])
+
+  // Handle adding a local workspace (dialog provides both name and handle)
+  const handleAddLocalWorkspace = useCallback(
+    async (name: string, handle: FileSystemDirectoryHandle) => {
+      await addLocalWorkspace(name, handle)
+      refreshFileTree()
+    },
+    [addLocalWorkspace, refreshFileTree]
+  )
+
+  // Handle reconnecting a disconnected local workspace
+  const handleReconnectWorkspace = useCallback(
+    async (mountPath: string) => {
+      // Find workspace by mount path
+      const workspace = workspaces.find((w) => w.mountPath === mountPath)
+      if (!workspace || workspace.type !== 'local') {
+        return
+      }
+
+      // First, try to reconnect using the stored handle (shows simple permission prompt)
+      const reconnected = await tryReconnectWithStoredHandle(workspace.id)
+      if (reconnected) {
+        refreshFileTree()
+        return
+      }
+
+      // If stored handle failed, fall back to directory picker
+      try {
+        const handle = await window.showDirectoryPicker({
+          mode: 'readwrite',
+        })
+        await reconnectWorkspace(workspace.id, handle)
+        refreshFileTree()
+      } catch (err) {
+        // User cancelled or error occurred
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Failed to reconnect workspace:', err)
+        }
+      }
+    },
+    [workspaces, tryReconnectWithStoredHandle, reconnectWorkspace, refreshFileTree]
+  )
+
+  // Handle removing a workspace by mount path
+  const handleRemoveWorkspace = useCallback(
+    (mountPath: string) => {
+      const workspace = workspaces.find((w) => w.mountPath === mountPath)
+      if (workspace) {
+        removeWorkspace(workspace.id)
+        refreshFileTree()
+      }
+    },
+    [workspaces, removeWorkspace, refreshFileTree]
+  )
+
+  // Handle renaming a workspace
+  const handleRenameWorkspace = useCallback(
+    (mountPath: string, newName: string) => {
+      renameWorkspace(mountPath, newName)
+      refreshFileTree()
+    },
+    [renameWorkspace, refreshFileTree]
+  )
+
+  // Handle disconnecting a local workspace
+  const handleDisconnectWorkspace = useCallback(
+    (mountPath: string) => {
+      const workspace = workspaces.find((w) => w.mountPath === mountPath)
+      if (workspace) {
+        disconnectWorkspace(workspace.id)
+        refreshFileTree()
+      }
+    },
+    [workspaces, disconnectWorkspace, refreshFileTree]
+  )
 
   // Register keyboard shortcuts
   useKeyboardShortcuts({
@@ -158,8 +274,27 @@ function IDELayoutInner({ className }: { className?: string }) {
     onDeleteFolder: deleteFolder,
     onSelectFile: openFile,
     onMoveFile: moveFile,
+    onCopyFile: copyFile,
     onCancelPendingNewFile: clearPendingNewFile,
     onCancelPendingNewFolder: clearPendingNewFolder,
+    // Workspace management props
+    workspaceProps: {
+      workspaces,
+      isFileSystemAccessSupported: isFileSystemAccessSupported(),
+      onAddVirtualWorkspace: addVirtualWorkspace,
+      onAddLocalWorkspace: handleAddLocalWorkspace,
+      onRemoveWorkspace: handleRemoveWorkspace,
+      onRefreshWorkspace: async (mountPath: string) => {
+        await refreshWorkspace(mountPath)
+        refreshFileTree()
+      },
+      supportsRefresh,
+      onReconnectWorkspace: handleReconnectWorkspace,
+      onDisconnectWorkspace: handleDisconnectWorkspace,
+      onRenameWorkspace: handleRenameWorkspace,
+      isFolderAlreadyMounted,
+      getUniqueWorkspaceName,
+    },
   }
 
   // Tab bar props for EditorPanel (only when tabs exist)
@@ -229,7 +364,7 @@ function IDELayoutInner({ className }: { className?: string }) {
                   collapsible
                   collapsed={!terminalVisible}
                 >
-                  <BottomPanel fileSystem={fileSystem} />
+                  <BottomPanel fileSystem={compositeFileSystem} onFileSystemChange={refreshFileTree} />
                 </IDEPanel>
               </IDEPanelGroup>
             </IDEPanel>
@@ -267,9 +402,63 @@ export function IDELayout({
   initialCode = '',
   className,
 }: IDELayoutProps) {
+  // Workspace management (hoisted here to pass filesystem to IDEContextProvider)
+  const {
+    workspaces,
+    compositeFileSystem,
+    addVirtualWorkspace,
+    addLocalWorkspace,
+    removeWorkspace,
+    isFileSystemAccessSupported,
+    refreshWorkspace,
+    refreshAllLocalWorkspaces,
+    supportsRefresh,
+    reconnectWorkspace,
+    tryReconnectWithStoredHandle,
+    disconnectWorkspace,
+    renameWorkspace,
+    isFolderAlreadyMounted,
+    getUniqueWorkspaceName,
+  } = useWorkspaceManager()
+
+  // Create adapted filesystem for IDEContext
+  // Pass workspaces so the adapter can include disconnected workspaces in the tree
+  const adaptedFileSystem = useMemo(
+    () => createFileSystemAdapter(compositeFileSystem, workspaces),
+    [compositeFileSystem, workspaces]
+  )
+
+  // Refresh all local workspaces when window gains focus
+  // This picks up external filesystem changes made outside the browser
+  useEffect(() => {
+    const handleFocus = () => {
+      // Fire and forget - refresh happens async
+      refreshAllLocalWorkspaces()
+    }
+
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [refreshAllLocalWorkspaces])
+
   return (
-    <IDEContextProvider initialCode={initialCode}>
-      <IDELayoutInner className={className} />
+    <IDEContextProvider initialCode={initialCode} fileSystem={adaptedFileSystem}>
+      <IDELayoutInner
+        className={className}
+        compositeFileSystem={compositeFileSystem}
+        workspaces={workspaces}
+        addVirtualWorkspace={addVirtualWorkspace}
+        addLocalWorkspace={addLocalWorkspace}
+        removeWorkspace={removeWorkspace}
+        isFileSystemAccessSupported={isFileSystemAccessSupported}
+        refreshWorkspace={refreshWorkspace}
+        supportsRefresh={supportsRefresh}
+        reconnectWorkspace={reconnectWorkspace}
+        tryReconnectWithStoredHandle={tryReconnectWithStoredHandle}
+        disconnectWorkspace={disconnectWorkspace}
+        renameWorkspace={renameWorkspace}
+        isFolderAlreadyMounted={isFolderAlreadyMounted}
+        getUniqueWorkspaceName={getUniqueWorkspaceName}
+      />
     </IDEContextProvider>
   )
 }

@@ -8,8 +8,10 @@ import { useToast } from '../Toast'
 import { IDEContext } from './context'
 import type { IDEContextValue, IDEContextProviderProps, ActivityPanelType } from './types'
 
-export function IDEContextProvider({ children, initialCode = '' }: IDEContextProviderProps) {
-  const filesystem = useFileSystem()
+export function IDEContextProvider({ children, initialCode = '', fileSystem: externalFileSystem }: IDEContextProviderProps) {
+  const internalFilesystem = useFileSystem()
+  // Use external filesystem if provided (for workspace integration), otherwise use internal
+  const filesystem = externalFileSystem ?? internalFilesystem
   const { recentFiles, addRecentFile, clearRecentFiles } = useRecentFiles()
   const tabBar = useTabBar()
   const { toasts, showToast, dismissToast } = useToast()
@@ -26,6 +28,8 @@ export function IDEContextProvider({ children, initialCode = '' }: IDEContextPro
   const [activePanel, setActivePanel] = useState<ActivityPanelType>('explorer')
   const [terminalVisible, setTerminalVisible] = useState(true)
   const [sidebarVisible, setSidebarVisible] = useState(true)
+  // Version counter to trigger file tree refresh (incremented when shell modifies filesystem)
+  const [fileTreeVersion, setFileTreeVersion] = useState(0)
 
   const activeTab = tabBar.activeTab
   const tabs = tabBar.tabs
@@ -116,47 +120,68 @@ export function IDEContextProvider({ children, initialCode = '' }: IDEContextPro
 
   const createFolder = useCallback((path: string) => { filesystem.createFolder(path) }, [filesystem])
 
-  const generateUniqueFileName = useCallback((parentPath: string = '/'): string => {
-    const baseName = 'untitled', extension = '.lua'
-    let counter = 1
-    const prefix = parentPath === '/' ? '/' : `${parentPath}/`
-    while (filesystem.exists(`${prefix}${baseName}-${counter}${extension}`)) counter++
-    return `${baseName}-${counter}${extension}`
+  // Helper to get default workspace path when at root
+  const getDefaultWorkspacePath = useCallback((): string => {
+    // Get the first workspace (folder with isWorkspace: true) from root level
+    // This only applies when using compositeFileSystem with workspaces
+    const tree = filesystem.getTree()
+    const firstWorkspace = tree.find((node) => node.type === 'folder' && node.isWorkspace)
+    return firstWorkspace?.path ?? '/'
   }, [filesystem])
 
+  const generateUniqueFileName = useCallback((parentPath: string = '/'): string => {
+    // If at root, use first workspace
+    const effectivePath = parentPath === '/' ? getDefaultWorkspacePath() : parentPath
+    const baseName = 'untitled', extension = '.lua'
+    let counter = 1
+    const prefix = effectivePath === '/' ? '/' : `${effectivePath}/`
+    while (filesystem.exists(`${prefix}${baseName}-${counter}${extension}`)) counter++
+    return `${baseName}-${counter}${extension}`
+  }, [filesystem, getDefaultWorkspacePath])
+
   const createFileWithRename = useCallback((parentPath: string = '/') => {
-    const fName = generateUniqueFileName(parentPath)
-    const fullPath = parentPath === '/' ? `/${fName}` : `${parentPath}/${fName}`
+    // If at root, use first workspace (can't create files at root level in workspace mode)
+    const effectivePath = parentPath === '/' ? getDefaultWorkspacePath() : parentPath
+    const fName = generateUniqueFileName(effectivePath)
+    const fullPath = effectivePath === '/' ? `/${fName}` : `${effectivePath}/${fName}`
     try { filesystem.createFile(fullPath, ''); setPendingNewFilePath(fullPath) }
     catch (error) { showError(error instanceof Error ? error.message : 'Failed to create file') }
-  }, [filesystem, generateUniqueFileName, showError])
+  }, [filesystem, generateUniqueFileName, getDefaultWorkspacePath, showError])
 
   const clearPendingNewFile = useCallback(() => { setPendingNewFilePath(null) }, [])
 
   const generateUniqueFolderName = useCallback((parentPath: string = '/'): string => {
+    // If at root, use first workspace
+    const effectivePath = parentPath === '/' ? getDefaultWorkspacePath() : parentPath
     const baseName = 'new-folder'
-    const prefix = parentPath === '/' ? '/' : `${parentPath}/`
+    const prefix = effectivePath === '/' ? '/' : `${effectivePath}/`
     if (!filesystem.exists(`${prefix}${baseName}`)) return baseName
     let counter = 1
     while (filesystem.exists(`${prefix}${baseName}-${counter}`)) counter++
     return `${baseName}-${counter}`
-  }, [filesystem])
+  }, [filesystem, getDefaultWorkspacePath])
 
   const createFolderWithRename = useCallback((parentPath: string = '/') => {
-    const folderName = generateUniqueFolderName(parentPath)
-    const fullPath = parentPath === '/' ? `/${folderName}` : `${parentPath}/${folderName}`
+    // If at root, use first workspace (can't create folders at root level in workspace mode)
+    const effectivePath = parentPath === '/' ? getDefaultWorkspacePath() : parentPath
+    const folderName = generateUniqueFolderName(effectivePath)
+    const fullPath = effectivePath === '/' ? `/${folderName}` : `${effectivePath}/${folderName}`
     try { filesystem.createFolder(fullPath); setPendingNewFolderPath(fullPath) }
     catch (error) { showError(error instanceof Error ? error.message : 'Failed to create folder') }
-  }, [filesystem, generateUniqueFolderName, showError])
+  }, [filesystem, generateUniqueFolderName, getDefaultWorkspacePath, showError])
 
   const clearPendingNewFolder = useCallback(() => { setPendingNewFolderPath(null) }, [])
 
   const deleteFile = useCallback((path: string) => {
     if (tabs.some(t => t.path === path)) closeTab(path)
     filesystem.deleteFile(path)
+    setFileTreeVersion(v => v + 1)
   }, [closeTab, filesystem, tabs])
 
-  const deleteFolder = useCallback((path: string) => { filesystem.deleteFolder(path) }, [filesystem])
+  const deleteFolder = useCallback((path: string) => {
+    filesystem.deleteFolder(path)
+    setFileTreeVersion(v => v + 1)
+  }, [filesystem])
 
   const renameFile = useCallback((oldPath: string, newName: string) => {
     const parentPath = getParentPath(oldPath)
@@ -175,6 +200,7 @@ export function IDEContextProvider({ children, initialCode = '' }: IDEContextPro
         })
         tabBar.renameTab(oldPath, newPath, newName)
       } else { filesystem.renameFile(oldPath, newPath) }
+      setFileTreeVersion(v => v + 1)
     } catch (error) { showError(error instanceof Error ? error.message : 'Failed to rename file') }
   }, [filesystem, showError, tabBar, tabs])
 
@@ -182,26 +208,47 @@ export function IDEContextProvider({ children, initialCode = '' }: IDEContextPro
     const parentPath = getParentPath(oldPath)
     const newPath = parentPath === '/' ? `/${newName}` : `${parentPath}/${newName}`
     if (oldPath === newPath) return
-    try { filesystem.renameFolder(oldPath, newPath) }
+    try {
+      filesystem.renameFolder(oldPath, newPath)
+      setFileTreeVersion(v => v + 1)
+    }
     catch (error) { showError(error instanceof Error ? error.message : 'Failed to rename folder') }
   }, [filesystem, showError])
 
   const moveFile = useCallback((sourcePath: string, targetFolderPath: string) => {
-    try { filesystem.moveFile(sourcePath, targetFolderPath) }
+    try {
+      filesystem.moveFile(sourcePath, targetFolderPath)
+      setFileTreeVersion(v => v + 1)
+    }
     catch (error) { showError(error instanceof Error ? error.message : 'Failed to move file') }
+  }, [filesystem, showError])
+
+  const copyFile = useCallback((sourcePath: string, targetFolderPath: string) => {
+    try {
+      filesystem.copyFile(sourcePath, targetFolderPath)
+      setFileTreeVersion(v => v + 1)
+    }
+    catch (error) { showError(error instanceof Error ? error.message : 'Failed to copy file') }
   }, [filesystem, showError])
 
   const toggleTerminal = useCallback(() => { setTerminalVisible(prev => !prev) }, [])
   const toggleSidebar = useCallback(() => { setSidebarVisible(prev => !prev) }, [])
 
+  // Refresh file tree by incrementing version counter (triggers re-render for shell commands)
+  const refreshFileTree = useCallback(() => { setFileTreeVersion(v => v + 1) }, [])
+
+  // File tree is computed fresh on each render (UI operations cause re-renders naturally)
+  // For shell commands, refreshFileTree is called to force a re-render via fileTreeVersion
+  // We need to read fileTreeVersion to ensure component re-renders when it changes
+  void fileTreeVersion
   const fileTree = filesystem.getTree()
 
   const value = useMemo<IDEContextValue>(() => ({
     engine, code, setCode, fileName, isDirty,
     activePanel, setActivePanel,
     terminalVisible, toggleTerminal, sidebarVisible, toggleSidebar,
-    fileTree,
-    createFile, createFolder, deleteFile, deleteFolder, renameFile, renameFolder, moveFile, openFile, saveFile,
+    fileTree, refreshFileTree,
+    createFile, createFolder, deleteFile, deleteFolder, renameFile, renameFolder, moveFile, copyFile, openFile, saveFile,
     tabs, activeTab, selectTab, closeTab, toasts, showError, dismissToast,
     pendingNewFilePath, generateUniqueFileName, createFileWithRename, clearPendingNewFile,
     pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename, clearPendingNewFolder,
@@ -209,8 +256,8 @@ export function IDEContextProvider({ children, initialCode = '' }: IDEContextPro
   }), [
     engine, code, setCode, fileName, isDirty,
     activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
-    fileTree, createFile, createFolder, deleteFile, deleteFolder,
-    renameFile, renameFolder, moveFile, openFile, saveFile, tabs, activeTab, selectTab, closeTab,
+    fileTree, refreshFileTree, createFile, createFolder, deleteFile, deleteFolder,
+    renameFile, renameFolder, moveFile, copyFile, openFile, saveFile, tabs, activeTab, selectTab, closeTab,
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,
     clearPendingNewFolder, recentFiles, clearRecentFiles, filesystem,

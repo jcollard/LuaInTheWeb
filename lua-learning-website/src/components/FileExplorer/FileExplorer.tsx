@@ -1,46 +1,26 @@
-import { useCallback, useEffect, type MouseEvent } from 'react'
+import { useCallback, useEffect, useState, useMemo, type MouseEvent } from 'react'
 import { FileTree } from '../FileTree'
 import { ContextMenu } from '../ContextMenu'
 import { ConfirmDialog } from '../ConfirmDialog'
+import { AddWorkspaceDialog } from '../AddWorkspaceDialog'
 import { useFileExplorer } from './useFileExplorer'
+import { NewFileIcon, NewFolderIcon, AddWorkspaceIcon } from './FileExplorerIcons'
+import {
+  fileContextMenuItems,
+  folderContextMenuItems,
+  workspaceContextMenuItems,
+  buildConnectedWorkspaceMenuItems,
+} from './contextMenuItems'
+import {
+  findNodeType as findNodeTypeUtil,
+  findNodeName as findNodeNameUtil,
+  pathExists as pathExistsUtil,
+  isWorkspaceRoot as isWorkspaceRootUtil,
+  getWorkspaceForPath as getWorkspaceForPathUtil,
+} from './treeUtils'
+import { handleDropOperation } from './dropHandler'
 import type { FileExplorerProps } from './types'
-import type { ContextMenuItem } from '../ContextMenu'
 import styles from './FileExplorer.module.css'
-
-// Stryker disable all: Icon components are visual-only, no logic to test
-const NewFileIcon = () => (
-  <svg className={styles.toolbarIcon} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-    <path
-      fill="currentColor"
-      d="M12 1H4a1 1 0 00-1 1v12a1 1 0 001 1h8a1 1 0 001-1V4l-1-3zm-1 13H5V3h5v2h2v9zM8 7v2H6v1h2v2h1V10h2V9h-2V7H8z"
-    />
-  </svg>
-)
-
-const NewFolderIcon = () => (
-  <svg className={styles.toolbarIcon} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-    <path
-      fill="currentColor"
-      d="M14 4H8l-1-1H2a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1V5a1 1 0 00-1-1zm-1 10H3V5h4l1 1h5v8zM8 8v1.5H6.5V11h1.5v1.5H9.5V11H11V9.5H9.5V8H8z"
-    />
-  </svg>
-)
-// Stryker restore all
-
-// Stryker disable all: Menu item IDs are internal identifiers tested via behavior
-const fileContextMenuItems: ContextMenuItem[] = [
-  { id: 'rename', label: 'Rename' },
-  { id: 'delete', label: 'Delete' },
-]
-
-const folderContextMenuItems: ContextMenuItem[] = [
-  { id: 'new-file', label: 'New File' },
-  { id: 'new-folder', label: 'New Folder' },
-  { id: 'divider', type: 'divider' },
-  { id: 'rename', label: 'Rename' },
-  { id: 'delete', label: 'Delete' },
-]
-// Stryker restore all
 
 export function FileExplorer({
   tree,
@@ -55,10 +35,14 @@ export function FileExplorer({
   onDeleteFolder,
   onSelectFile,
   onMoveFile,
+  onCopyFile,
   onCancelPendingNewFile,
   onCancelPendingNewFolder,
   className,
+  workspaceProps,
 }: FileExplorerProps) {
+  const [isAddWorkspaceDialogOpen, setIsAddWorkspaceDialogOpen] = useState(false)
+
   const {
     selectedPath: internalSelectedPath,
     selectPath,
@@ -74,6 +58,38 @@ export function FileExplorer({
     openConfirmDialog,
     closeConfirmDialog,
   } = useFileExplorer()
+
+  // Workspace management handlers
+  const handleAddWorkspaceClick = useCallback(() => {
+    setIsAddWorkspaceDialogOpen(true)
+  }, [])
+
+  const handleAddWorkspaceCancel = useCallback(() => {
+    setIsAddWorkspaceDialogOpen(false)
+  }, [])
+
+  const handleCreateVirtualWorkspace = useCallback(
+    (name: string) => {
+      workspaceProps?.onAddVirtualWorkspace(name)
+      setIsAddWorkspaceDialogOpen(false)
+    },
+    [workspaceProps]
+  )
+
+  const handleCreateLocalWorkspace = useCallback(
+    (name: string, handle: FileSystemDirectoryHandle) => {
+      workspaceProps?.onAddLocalWorkspace(name, handle)
+      setIsAddWorkspaceDialogOpen(false)
+    },
+    [workspaceProps]
+  )
+
+  const handleReconnectWorkspace = useCallback(
+    (mountPath: string) => {
+      workspaceProps?.onReconnectWorkspace?.(mountPath)
+    },
+    [workspaceProps]
+  )
 
   // Use controlled selected path if provided
   const selectedPath = controlledSelectedPath ?? internalSelectedPath
@@ -92,42 +108,46 @@ export function FileExplorer({
     }
   }, [pendingNewFolderPath, startRename])
 
-  // Find node type by path
-  const findNodeType = useCallback((path: string): 'file' | 'folder' | null => {
-    const search = (nodes: typeof tree): 'file' | 'folder' | null => {
-      for (const node of nodes) {
-        if (node.path === path) return node.type
-        if (node.children) {
-          const found = search(node.children)
-          if (found) return found
-        }
-      }
-      return null
-    }
-    return search(tree)
-    // Stryker disable next-line all: React hooks dependency optimization
-  }, [tree])
-
-  // Find node name by path
-  const findNodeName = useCallback((path: string): string => {
-    const search = (nodes: typeof tree): string | null => {
-      for (const node of nodes) {
-        if (node.path === path) return node.name
-        if (node.children) {
-          const found = search(node.children)
-          if (found) return found
-        }
-      }
-      return null
-    }
-    return search(tree) || path.split('/').pop() || path
-    // Stryker disable next-line all: React hooks dependency optimization
-  }, [tree])
+  // Tree utility functions - memoized wrappers around pure utilities
+  const findNodeType = useMemo(
+    () => (path: string) => findNodeTypeUtil(tree, path),
+    [tree]
+  )
+  const isWorkspaceRoot = useMemo(
+    () => (path: string) => isWorkspaceRootUtil(tree, path),
+    [tree]
+  )
+  const findNodeName = useMemo(
+    () => (path: string) => findNodeNameUtil(tree, path),
+    [tree]
+  )
+  const pathExists = useMemo(
+    () => (path: string) => pathExistsUtil(tree, path),
+    [tree]
+  )
+  const getWorkspaceForPath = useMemo(
+    () => (path: string) => getWorkspaceForPathUtil(tree, path),
+    [tree]
+  )
 
   const handleSelect = useCallback((path: string) => {
     selectPath(path)
     onSelectFile(path)
   }, [selectPath, onSelectFile])
+
+  // Handle drop with overwrite confirmation and cross-workspace detection
+  const handleDrop = useCallback((sourcePath: string, targetFolderPath: string) => {
+    handleDropOperation({
+      sourcePath,
+      targetFolderPath,
+      pathExists,
+      getWorkspaceForPath,
+      onMoveFile,
+      onCopyFile,
+      openConfirmDialog,
+      closeConfirmDialog,
+    })
+  }, [pathExists, getWorkspaceForPath, onMoveFile, onCopyFile, openConfirmDialog, closeConfirmDialog])
 
   const handleContextMenu = useCallback((path: string, event: MouseEvent) => {
     const type = findNodeType(path)
@@ -153,6 +173,33 @@ export function FileExplorer({
       case 'rename':
         startRename(targetPath)
         break
+      case 'rename-workspace':
+        // Rename workspace uses the same rename mechanism as folders
+        startRename(targetPath)
+        break
+      case 'refresh':
+        // Refresh workspace - fire and forget
+        workspaceProps?.onRefreshWorkspace(targetPath)
+        break
+      case 'disconnect-workspace':
+        // Disconnect workspace without removing it
+        workspaceProps?.onDisconnectWorkspace?.(targetPath)
+        break
+      case 'remove-workspace': {
+        const name = findNodeName(targetPath)
+        openConfirmDialog({
+          // Stryker disable next-line StringLiteral: dialog text is display-only
+          title: 'Remove Workspace',
+          // Stryker disable next-line StringLiteral: dialog text is display-only
+          message: `Are you sure you want to remove the workspace "${name}"? This will not delete any files.`,
+          variant: 'danger',
+          onConfirm: () => {
+            workspaceProps?.onRemoveWorkspace(targetPath)
+            closeConfirmDialog()
+          },
+        })
+        break
+      }
       case 'delete': {
         const name = findNodeName(targetPath)
         const isFolder = targetType === 'folder'
@@ -188,12 +235,18 @@ export function FileExplorer({
     onCreateFolder,
     onDeleteFile,
     onDeleteFolder,
+    workspaceProps,
   ])
 
   const handleRenameSubmit = useCallback((path: string, newName: string) => {
     const type = findNodeType(path)
     if (type === 'folder') {
-      onRenameFolder(path, newName)
+      // Check if this is a workspace root - use workspace rename instead of folder rename
+      if (isWorkspaceRoot(path) && workspaceProps?.onRenameWorkspace) {
+        workspaceProps.onRenameWorkspace(path, newName)
+      } else {
+        onRenameFolder(path, newName)
+      }
     } else {
       onRenameFile(path, newName)
     }
@@ -207,7 +260,7 @@ export function FileExplorer({
     }
     cancelRename()
     // Stryker disable next-line all: React hooks dependency optimization
-  }, [findNodeType, onRenameFile, onRenameFolder, cancelRename, pendingNewFilePath, onCancelPendingNewFile, pendingNewFolderPath, onCancelPendingNewFolder])
+  }, [findNodeType, isWorkspaceRoot, onRenameFile, onRenameFolder, cancelRename, pendingNewFilePath, onCancelPendingNewFile, pendingNewFolderPath, onCancelPendingNewFolder, workspaceProps])
 
   // Handle rename cancel - delete pending new file/folder if applicable
   const handleRenameCancel = useCallback(() => {
@@ -257,9 +310,27 @@ export function FileExplorer({
     ? `${styles.explorer} ${className}`
     : styles.explorer
 
-  const contextMenuItems = contextMenu.targetType === 'folder'
-    ? folderContextMenuItems
-    : fileContextMenuItems
+  // Build context menu items dynamically
+  // Use workspace-specific menu for workspace roots, regular folder menu otherwise
+  const contextMenuItems = (() => {
+    if (contextMenu.targetType !== 'folder') {
+      return fileContextMenuItems
+    }
+
+    const targetPath = contextMenu.targetPath
+
+    // Check if this is a workspace root
+    if (targetPath && isWorkspaceRoot(targetPath)) {
+      // Add "Refresh" and "Disconnect" options for connected local workspaces
+      const isConnectedLocalWorkspace = workspaceProps?.supportsRefresh(targetPath)
+      if (isConnectedLocalWorkspace) {
+        return buildConnectedWorkspaceMenuItems()
+      }
+      return workspaceContextMenuItems
+    }
+
+    return folderContextMenuItems
+  })()
 
   return (
     <div className={combinedClassName} data-testid="file-explorer">
@@ -283,6 +354,17 @@ export function FileExplorer({
         >
           <NewFolderIcon />
         </button>
+        {workspaceProps && (
+          <button
+            type="button"
+            className={styles.toolbarButton}
+            onClick={handleAddWorkspaceClick}
+            aria-label="Add Workspace"
+            title="Add Workspace"
+          >
+            <AddWorkspaceIcon />
+          </button>
+        )}
       </div>
 
       {/* File Tree */}
@@ -299,7 +381,8 @@ export function FileExplorer({
           renamingPath={renamingPath}
           onRenameSubmit={handleRenameSubmit}
           onRenameCancel={handleRenameCancel}
-          onDrop={onMoveFile}
+          onDrop={handleDrop}
+          onReconnect={handleReconnectWorkspace}
         />
       </div>
 
@@ -317,12 +400,25 @@ export function FileExplorer({
         isOpen={confirmDialog.isOpen}
         title={confirmDialog.title}
         message={confirmDialog.message}
-        confirmLabel="Delete"
+        confirmLabel={confirmDialog.confirmLabel || 'Delete'}
         cancelLabel="Cancel"
         variant={confirmDialog.variant}
         onConfirm={confirmDialog.onConfirm}
         onCancel={closeConfirmDialog}
       />
+
+      {/* Add Workspace Dialog (optional) */}
+      {workspaceProps && (
+        <AddWorkspaceDialog
+          isOpen={isAddWorkspaceDialogOpen}
+          isFileSystemAccessSupported={workspaceProps.isFileSystemAccessSupported}
+          onCreateVirtual={handleCreateVirtualWorkspace}
+          onCreateLocal={handleCreateLocalWorkspace}
+          onCancel={handleAddWorkspaceCancel}
+          isFolderAlreadyMounted={workspaceProps.isFolderAlreadyMounted}
+          getUniqueWorkspaceName={workspaceProps.getUniqueWorkspaceName}
+        />
+      )}
     </div>
   )
 }

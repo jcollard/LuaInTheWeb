@@ -20,6 +20,7 @@ export function ShellTerminal({
   fileSystem,
   embedded = false,
   className,
+  onFileSystemChange,
 }: ShellTerminalProps) {
   const { theme } = useTheme()
   const initialThemeRef = useRef(theme)
@@ -45,6 +46,12 @@ export function ShellTerminal({
   useEffect(() => {
     executeCommandWithContextRef.current = executeCommandWithContext
   }, [executeCommandWithContext])
+
+  // Store onFileSystemChange in ref for stable callback access
+  const onFileSystemChangeRef = useRef(onFileSystemChange)
+  useEffect(() => {
+    onFileSystemChangeRef.current = onFileSystemChange
+  }, [onFileSystemChange])
 
   // Helper to show prompt - needs to be stable and use refs
   const showPrompt = useCallback(() => {
@@ -134,6 +141,9 @@ export function ShellTerminal({
 
     // Update cwd ref immediately
     cwdRef.current = contextResult.cwd
+
+    // Notify that filesystem may have changed (for file tree refresh)
+    onFileSystemChangeRef.current?.()
 
     // If a process was returned, start it and don't show prompt yet
     // The prompt will be shown when the process exits via onProcessExit callback
@@ -253,6 +263,45 @@ export function ShellTerminal({
     terminal.writeln('Type "help" for available commands.\n')
     showPrompt()
 
+    // Expose test API for E2E tests (non-production only)
+    if (import.meta.env.MODE !== 'production') {
+      ;(window as unknown as { __shellTerminal?: object }).__shellTerminal = {
+        getBuffer: () => {
+          const buffer = terminal.buffer.active
+          const lines: string[] = []
+          for (let i = 0; i < buffer.length; i++) {
+            const line = buffer.getLine(i)
+            if (line) {
+              lines.push(line.translateToString().trimEnd())
+            }
+          }
+          return lines
+        },
+        getVisibleText: () => {
+          const buffer = terminal.buffer.active
+          const lines: string[] = []
+          for (let i = buffer.viewportY; i < buffer.viewportY + terminal.rows; i++) {
+            const line = buffer.getLine(i)
+            if (line) {
+              lines.push(line.translateToString().trimEnd())
+            }
+          }
+          return lines.join('\n')
+        },
+        getAllText: () => {
+          const buffer = terminal.buffer.active
+          const lines: string[] = []
+          for (let i = 0; i < buffer.length; i++) {
+            const line = buffer.getLine(i)
+            if (line) {
+              lines.push(line.translateToString().trimEnd())
+            }
+          }
+          return lines.join('\n')
+        },
+      }
+    }
+
     // Handle Ctrl+V paste - xterm.js doesn't handle this automatically
     terminal.attachCustomKeyEventHandler(createPasteHandler(handleInput))
 
@@ -271,6 +320,10 @@ export function ShellTerminal({
       window.removeEventListener('resize', handleResize)
       resizeObserver.disconnect()
       terminal.dispose()
+      // Clean up test API
+      if (import.meta.env.MODE !== 'production') {
+        delete (window as unknown as { __shellTerminal?: object }).__shellTerminal
+      }
     }
   }, [showPrompt])
 

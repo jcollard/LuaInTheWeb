@@ -1,11 +1,13 @@
-import type { UseFileSystemReturn } from '../../hooks/useFileSystem'
+import type { UseShellFileSystem } from '../../hooks/useShell'
 
 /**
  * Props for the BottomPanel component
  */
 export interface BottomPanelProps {
-  /** File system for shell integration */
-  fileSystem: UseFileSystemReturn
+  /** File system for shell integration - either IFileSystem or UseFileSystemReturn */
+  fileSystem: UseShellFileSystem
   /** Optional additional className */
   className?: string
+  /** Callback when shell command modifies filesystem (for refreshing file tree) */
+  onFileSystemChange?: () => void
 }

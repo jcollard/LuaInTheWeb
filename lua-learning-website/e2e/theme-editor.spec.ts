@@ -4,13 +4,29 @@ import { TIMEOUTS } from './constants'
 // Helper to create and open a file so Monaco editor is visible
 async function createAndOpenFile(page: import('@playwright/test').Page) {
   const sidebar = page.getByTestId('sidebar-panel')
+
+  // First, expand the workspace folder by clicking its chevron
+  const workspaceChevron = page.getByTestId('folder-chevron').first()
+  await workspaceChevron.click()
+  await page.waitForTimeout(TIMEOUTS.ANIMATION) // Wait for expansion animation
+
+  // Now click New File button - the file will be created inside the expanded workspace
   await sidebar.getByRole('button', { name: /new file/i }).click()
+
   const input = sidebar.getByRole('textbox')
+  await expect(input).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE }) // Wait for rename input to appear
   await input.press('Enter') // Accept default name
-  await page.waitForTimeout(TIMEOUTS.UI_STABLE)
-  // Click the file to open it
-  const treeItem = page.getByRole('treeitem').first()
-  await treeItem.click()
+  await expect(input).not.toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE }) // Wait for rename to complete
+
+  // Click the newly created file to open it (should be second treeitem after workspace)
+  const fileItems = page.getByRole('treeitem')
+  const count = await fileItems.count()
+  if (count > 1) {
+    await fileItems.nth(1).click() // Click the file inside the workspace
+  } else {
+    // Fallback: click first item
+    await fileItems.first().click()
+  }
   await page.waitForTimeout(TIMEOUTS.ANIMATION)
 }
 
@@ -21,6 +37,8 @@ test.describe('Theme - Monaco Editor', () => {
     await page.evaluate(() => localStorage.clear())
     // Wait for IDE layout to be ready
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
+    // Wait for file tree to render (ensures workspace is ready)
+    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
   })
 
   test('Monaco editor uses vs-dark theme in dark mode', async ({ page }) => {

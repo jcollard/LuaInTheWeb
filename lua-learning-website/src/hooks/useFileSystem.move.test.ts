@@ -145,6 +145,101 @@ describe('useFileSystem', () => {
       expect(result.current.exists('/renamed/child/deep.lua')).toBe(true)
       expect(result.current.readFile('/renamed/child/deep.lua')).toBe('content')
     })
+
+    it('should rename folder with deeply nested structure', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/old')
+      })
+      act(() => {
+        result.current.createFolder('/old/level1')
+        result.current.createFile('/old/file0.lua', 'file0')
+      })
+      act(() => {
+        result.current.createFolder('/old/level1/level2')
+        result.current.createFile('/old/level1/file1.lua', 'file1')
+      })
+      act(() => {
+        result.current.createFile('/old/level1/level2/file2.lua', 'file2')
+      })
+
+      // Act
+      act(() => {
+        result.current.renameFolder('/old', '/new')
+      })
+
+      // Assert - all old paths should not exist
+      expect(result.current.exists('/old')).toBe(false)
+      expect(result.current.exists('/old/file0.lua')).toBe(false)
+      expect(result.current.exists('/old/level1')).toBe(false)
+      expect(result.current.exists('/old/level1/file1.lua')).toBe(false)
+      expect(result.current.exists('/old/level1/level2')).toBe(false)
+      expect(result.current.exists('/old/level1/level2/file2.lua')).toBe(false)
+
+      // Assert - all new paths should exist with correct content
+      expect(result.current.exists('/new')).toBe(true)
+      expect(result.current.exists('/new/file0.lua')).toBe(true)
+      expect(result.current.exists('/new/level1')).toBe(true)
+      expect(result.current.exists('/new/level1/file1.lua')).toBe(true)
+      expect(result.current.exists('/new/level1/level2')).toBe(true)
+      expect(result.current.exists('/new/level1/level2/file2.lua')).toBe(true)
+      expect(result.current.readFile('/new/file0.lua')).toBe('file0')
+      expect(result.current.readFile('/new/level1/file1.lua')).toBe('file1')
+      expect(result.current.readFile('/new/level1/level2/file2.lua')).toBe('file2')
+    })
+
+    it('should not rename folders with similar path prefixes', () => {
+      // Arrange - /folder and /folder-extra
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/folder')
+        result.current.createFolder('/folder-extra')
+      })
+      act(() => {
+        result.current.createFile('/folder/file.lua', 'folder')
+        result.current.createFile('/folder-extra/file.lua', 'folder-extra')
+      })
+
+      // Act
+      act(() => {
+        result.current.renameFolder('/folder', '/renamed')
+      })
+
+      // Assert - /folder-extra should be untouched
+      expect(result.current.exists('/folder')).toBe(false)
+      expect(result.current.exists('/renamed')).toBe(true)
+      expect(result.current.exists('/renamed/file.lua')).toBe(true)
+      expect(result.current.exists('/folder-extra')).toBe(true)
+      expect(result.current.exists('/folder-extra/file.lua')).toBe(true)
+      expect(result.current.readFile('/folder-extra/file.lua')).toBe('folder-extra')
+    })
+
+    it('should rename nested subfolder correctly', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/parent')
+      })
+      act(() => {
+        result.current.createFolder('/parent/oldname')
+      })
+      act(() => {
+        result.current.createFile('/parent/oldname/file.lua', 'content')
+      })
+
+      // Act - rename the subfolder, not the parent
+      act(() => {
+        result.current.renameFolder('/parent/oldname', '/parent/newname')
+      })
+
+      // Assert
+      expect(result.current.exists('/parent')).toBe(true)
+      expect(result.current.exists('/parent/oldname')).toBe(false)
+      expect(result.current.exists('/parent/newname')).toBe(true)
+      expect(result.current.exists('/parent/newname/file.lua')).toBe(true)
+      expect(result.current.readFile('/parent/newname/file.lua')).toBe('content')
+    })
   })
 
   describe('moveFile', () => {
@@ -301,6 +396,130 @@ describe('useFileSystem', () => {
           result.current.moveFile('/parent', '/parent/child')
         })
       }).toThrow(/cannot move/i)
+    })
+
+    it('should move folder with deeply nested structure', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/source')
+      })
+      act(() => {
+        result.current.createFolder('/source/level1')
+        result.current.createFile('/source/file0.lua', 'file0')
+      })
+      act(() => {
+        result.current.createFolder('/source/level1/level2')
+        result.current.createFile('/source/level1/file1.lua', 'file1')
+      })
+      act(() => {
+        result.current.createFile('/source/level1/level2/file2.lua', 'file2')
+      })
+      act(() => {
+        result.current.createFolder('/target')
+      })
+
+      // Act
+      act(() => {
+        result.current.moveFile('/source', '/target')
+      })
+
+      // Assert - all old paths should not exist
+      expect(result.current.exists('/source')).toBe(false)
+      expect(result.current.exists('/source/file0.lua')).toBe(false)
+      expect(result.current.exists('/source/level1')).toBe(false)
+      expect(result.current.exists('/source/level1/file1.lua')).toBe(false)
+      expect(result.current.exists('/source/level1/level2')).toBe(false)
+      expect(result.current.exists('/source/level1/level2/file2.lua')).toBe(false)
+
+      // Assert - all new paths should exist with correct content
+      expect(result.current.exists('/target/source')).toBe(true)
+      expect(result.current.exists('/target/source/file0.lua')).toBe(true)
+      expect(result.current.exists('/target/source/level1')).toBe(true)
+      expect(result.current.exists('/target/source/level1/file1.lua')).toBe(true)
+      expect(result.current.exists('/target/source/level1/level2')).toBe(true)
+      expect(result.current.exists('/target/source/level1/level2/file2.lua')).toBe(true)
+      expect(result.current.readFile('/target/source/file0.lua')).toBe('file0')
+      expect(result.current.readFile('/target/source/level1/file1.lua')).toBe('file1')
+      expect(result.current.readFile('/target/source/level1/level2/file2.lua')).toBe('file2')
+    })
+
+    it('should not move folders with similar path prefixes', () => {
+      // Arrange - /folder and /folder-extra
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/folder')
+        result.current.createFolder('/folder-extra')
+        result.current.createFolder('/target')
+      })
+      act(() => {
+        result.current.createFile('/folder/file.lua', 'folder')
+        result.current.createFile('/folder-extra/file.lua', 'folder-extra')
+      })
+
+      // Act
+      act(() => {
+        result.current.moveFile('/folder', '/target')
+      })
+
+      // Assert - /folder-extra should be untouched
+      expect(result.current.exists('/folder')).toBe(false)
+      expect(result.current.exists('/target/folder')).toBe(true)
+      expect(result.current.exists('/target/folder/file.lua')).toBe(true)
+      expect(result.current.exists('/folder-extra')).toBe(true)
+      expect(result.current.exists('/folder-extra/file.lua')).toBe(true)
+      expect(result.current.readFile('/folder-extra/file.lua')).toBe('folder-extra')
+    })
+
+    it('should move folder with multiple sibling subfolders', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/src')
+      })
+      act(() => {
+        result.current.createFolder('/src/a')
+        result.current.createFolder('/src/b')
+        result.current.createFolder('/src/c')
+      })
+      act(() => {
+        result.current.createFile('/src/a/file.lua', 'a')
+        result.current.createFile('/src/b/file.lua', 'b')
+        result.current.createFile('/src/c/file.lua', 'c')
+      })
+      act(() => {
+        result.current.createFolder('/dest')
+      })
+
+      // Act
+      act(() => {
+        result.current.moveFile('/src', '/dest')
+      })
+
+      // Assert
+      expect(result.current.exists('/src')).toBe(false)
+      expect(result.current.exists('/dest/src')).toBe(true)
+      expect(result.current.exists('/dest/src/a')).toBe(true)
+      expect(result.current.exists('/dest/src/b')).toBe(true)
+      expect(result.current.exists('/dest/src/c')).toBe(true)
+      expect(result.current.readFile('/dest/src/a/file.lua')).toBe('a')
+      expect(result.current.readFile('/dest/src/b/file.lua')).toBe('b')
+      expect(result.current.readFile('/dest/src/c/file.lua')).toBe('c')
+    })
+
+    it('should throw when target folder does not exist for folder move', () => {
+      // Arrange
+      const { result } = renderHook(() => useFileSystem())
+      act(() => {
+        result.current.createFolder('/folder')
+      })
+
+      // Act & Assert
+      expect(() => {
+        act(() => {
+          result.current.moveFile('/folder', '/nonexistent')
+        })
+      }).toThrow(/not found/i)
     })
   })
 })

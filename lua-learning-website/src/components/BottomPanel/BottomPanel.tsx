@@ -8,6 +8,7 @@ import type { BottomPanelProps } from './types'
 export function BottomPanel({
   fileSystem,
   className,
+  onFileSystemChange,
 }: BottomPanelProps) {
   const combinedClassName = className
     ? `${styles.bottomPanel} ${className}`
@@ -28,7 +29,7 @@ export function BottomPanel({
       </div>
       <div className={styles.content} role="tabpanel" id="shell-tabpanel">
         <div className={styles.shellContent}>
-          <ShellTerminal fileSystem={fileSystem} embedded />
+          <ShellTerminal fileSystem={fileSystem} embedded onFileSystemChange={onFileSystemChange} />
         </div>
       </div>
     </div>

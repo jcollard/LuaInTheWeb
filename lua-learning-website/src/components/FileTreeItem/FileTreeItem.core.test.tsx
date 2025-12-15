@@ -56,6 +56,25 @@ describe('FileTreeItem', () => {
       expect(screen.getByTestId('folder-icon')).toBeInTheDocument()
     })
 
+    it('should render virtual workspace icon for virtual workspace folders', () => {
+      render(<FileTreeItem {...defaultFolderProps} isWorkspace={true} isLocalWorkspace={false} />)
+      expect(screen.getByTestId('virtual-workspace-icon')).toBeInTheDocument()
+      expect(screen.queryByTestId('folder-icon')).not.toBeInTheDocument()
+    })
+
+    it('should render local workspace icon for local workspace folders', () => {
+      render(<FileTreeItem {...defaultFolderProps} isWorkspace={true} isLocalWorkspace={true} />)
+      expect(screen.getByTestId('local-workspace-icon')).toBeInTheDocument()
+      expect(screen.queryByTestId('folder-icon')).not.toBeInTheDocument()
+    })
+
+    it('should render folder icon for non-workspace folders', () => {
+      render(<FileTreeItem {...defaultFolderProps} isWorkspace={false} />)
+      expect(screen.getByTestId('folder-icon')).toBeInTheDocument()
+      expect(screen.queryByTestId('virtual-workspace-icon')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('local-workspace-icon')).not.toBeInTheDocument()
+    })
+
     it('should render expanded chevron when folder is expanded', () => {
       render(<FileTreeItem {...defaultFolderProps} isExpanded={true} />)
       const chevron = screen.getByTestId('folder-chevron')

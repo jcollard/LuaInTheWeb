@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test'
 
+// Helper to expand workspace folder so files can be created/selected
+async function expandWorkspace(page: import('@playwright/test').Page) {
+  const workspaceChevron = page.getByTestId('folder-chevron').first()
+  await workspaceChevron.click()
+  await page.waitForTimeout(200)
+}
+
 test.describe('Welcome Screen', () => {
   test.beforeEach(async ({ page }) => {
     // Clear localStorage to start with clean state (no recent files)
@@ -7,6 +14,8 @@ test.describe('Welcome Screen', () => {
     await page.evaluate(() => localStorage.clear())
     await page.reload()
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
+    // Wait for file tree to render (ensures workspace is ready)
+    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
   })
 
   test.describe('initial display', () => {
@@ -48,6 +57,9 @@ test.describe('Welcome Screen', () => {
 
   test.describe('New File action', () => {
     test('clicking New File creates and opens a file', async ({ page }) => {
+      // First expand the workspace to see created files
+      await expandWorkspace(page)
+
       // Act - Click New File button in welcome screen
       const welcomeScreen = page.locator('[data-testid="welcome-screen"]')
       await welcomeScreen.getByRole('button', { name: /new file/i }).click()
@@ -55,14 +67,14 @@ test.describe('Welcome Screen', () => {
       // Wait for file to be created (enters rename mode)
       const sidebar = page.getByTestId('sidebar-panel')
       const input = sidebar.getByRole('textbox')
-      await expect(input).toBeVisible()
+      await expect(input).toBeVisible({ timeout: 5000 })
 
       // Accept default name
       await input.press('Enter')
-      await page.waitForTimeout(200)
+      await expect(input).not.toBeVisible({ timeout: 5000 })
 
-      // Click on file to open it
-      const treeItem = page.getByRole('treeitem').first()
+      // Click on file to open it (second treeitem after workspace)
+      const treeItem = page.getByRole('treeitem').nth(1)
       await treeItem.click()
       await page.waitForTimeout(200)
 
@@ -101,15 +113,19 @@ test.describe('Welcome Screen', () => {
 
   test.describe('Recent Files', () => {
     test('recent files appear after opening files', async ({ page }) => {
+      // First expand the workspace
+      await expandWorkspace(page)
+
       // Arrange - Create and open a file
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
 
       const input = sidebar.getByRole('textbox')
+      await expect(input).toBeVisible({ timeout: 5000 })
       await input.clear()
       await input.fill('test-file.lua')
       await input.press('Enter')
-      await page.waitForTimeout(200)
+      await expect(input).not.toBeVisible({ timeout: 5000 })
 
       // Open the file
       const treeItem = page.getByRole('treeitem', { name: /test-file\.lua/i })
@@ -129,15 +145,19 @@ test.describe('Welcome Screen', () => {
     })
 
     test('clicking recent file opens it', async ({ page }) => {
+      // First expand the workspace
+      await expandWorkspace(page)
+
       // Arrange - Create, open, and close a file to add it to recent files
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
 
       const input = sidebar.getByRole('textbox')
+      await expect(input).toBeVisible({ timeout: 5000 })
       await input.clear()
       await input.fill('recent-test.lua')
       await input.press('Enter')
-      await page.waitForTimeout(200)
+      await expect(input).not.toBeVisible({ timeout: 5000 })
 
       // Open the file
       const treeItem = page.getByRole('treeitem', { name: /recent-test\.lua/i })
@@ -161,16 +181,20 @@ test.describe('Welcome Screen', () => {
     })
 
     test('Clear button removes recent files', async ({ page }) => {
+      // First expand the workspace
+      await expandWorkspace(page)
+
       // Arrange - Create and open a file to add to recent files
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
 
       const input = sidebar.getByRole('textbox')
+      await expect(input).toBeVisible({ timeout: 5000 })
       await input.press('Enter')
-      await page.waitForTimeout(200)
+      await expect(input).not.toBeVisible({ timeout: 5000 })
 
-      // Open the file
-      const treeItem = page.getByRole('treeitem').first()
+      // Open the file (second treeitem after workspace)
+      const treeItem = page.getByRole('treeitem').nth(1)
       await treeItem.click()
       await page.waitForTimeout(200)
 
@@ -194,16 +218,20 @@ test.describe('Welcome Screen', () => {
 
   test.describe('Welcome Screen visibility', () => {
     test('Welcome Screen reappears when all tabs are closed', async ({ page }) => {
+      // First expand the workspace
+      await expandWorkspace(page)
+
       // Arrange - Create and open a file
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
 
       const input = sidebar.getByRole('textbox')
+      await expect(input).toBeVisible({ timeout: 5000 })
       await input.press('Enter')
-      await page.waitForTimeout(200)
+      await expect(input).not.toBeVisible({ timeout: 5000 })
 
-      // Open the file
-      const treeItem = page.getByRole('treeitem').first()
+      // Open the file (second treeitem after workspace)
+      const treeItem = page.getByRole('treeitem').nth(1)
       await treeItem.click()
       await page.waitForTimeout(200)
 

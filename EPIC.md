@@ -1,107 +1,228 @@
-# Epic #184: Add better lua formatter / lua syntax and editor experience
+# Epic #20: File API / Workspace
 
-**Status:** ✅ Complete (3/3 complete)
-**Branch:** epic-184
+**Status:** Needs Review (PR #237)
+**Branch:** epic-20
 **Created:** 2025-12-13
-**Last Updated:** 2025-12-13 10:48
+**Last Updated:** 2025-12-14
 
 ## Overview
 
-Improve the Lua code editor experience with professional-grade formatting, syntax highlighting, and auto-indentation features.
+Enable users to work with files on their actual computer (not just browser localStorage) by implementing the File System Access API and adding workspace management features.
 
 **Goals:**
-- Provide a "Format" button to auto-format Lua code
-- Enhance syntax highlighting to catch all Lua syntax constructs
-- Add smart auto-indentation when pressing Enter
+- Implement File System Access API backend for IFileSystem
+- Create workspace management UI (tabs, dialogs)
+- Integrate workspaces with shell and file explorer
+- Graceful fallback for unsupported browsers
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Workspace Manager                           │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │  /my-files   │  │   /project   │  │  /research   │   ...    │
+│  │ (Virtual FS) │  │ (Local FS)   │  │ (Virtual FS) │          │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘          │
+│         │                 │                 │                   │
+│         └─────────────────┼─────────────────┘                   │
+│                           ▼                                     │
+│                  CompositeFileSystem                            │
+│              (routes by path prefix)                            │
+│                           │                                     │
+│                           ▼                                     │
+│                     IFileSystem                                 │
+│                           │                                     │
+│          ┌────────────────┼────────────────┐                   │
+│          ▼                ▼                ▼                   │
+│     Shell Commands   Lua Scripts    File Explorer              │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ## Architecture Decisions
 
-### #185 - Lua Code Formatter
-- **StyLua WASM library**: Using `stylua-wasm` for code formatting
-  - Production-ready, battle-tested formatter
-  - Changed from `@johnnymorganz/stylua` to `stylua-wasm` for proper browser/Vite support
-  - Uses `?url` import for WASM file loading with Vite plugins
-  - Toast notification on format errors for user feedback
+### AD-1: Cache-Based Sync Wrapper (from #198)
 
-### #186 - Improved Syntax Highlighting
-- **Custom Monarch Tokenizer**: Created enhanced Lua tokenizer for Monaco
-  - Multi-line string support (`[[...]]` and `[=[...]=]`)
-  - Table constructor key highlighting
-  - Numbers: decimal, hexadecimal, scientific notation
-  - Comments: single-line and multi-line
-  - Registered via CodeEditor's beforeMount callback
+**Decision:** Use a cache-based synchronous wrapper for the async File System Access API.
 
-### #187 - Auto-Indentation
-- **Monaco Language Configuration**: Extended `luaLanguageConfig` with indentation rules
-  - `indentationRules.increaseIndentPattern` - Matches block-opening keywords (function, then, do, repeat, else, elseif)
-  - `indentationRules.decreaseIndentPattern` - Matches block-closing keywords at line start (end, else, elseif, until)
-  - `onEnterRules` - Controls behavior when pressing Enter (indent after blocks, outdent for closures)
-  - Regex patterns exclude comments to prevent false matches
+**Rationale:** The existing `IFileSystem` interface is synchronous, but the File System Access API is entirely async. To avoid breaking changes throughout the codebase, we'll:
+1. Pre-load directory structure into an in-memory cache on initialization
+2. Synchronous read operations read from cache
+3. Write operations update cache immediately and queue async writes
+
+**Trade-offs:**
+- (+) No changes to existing commands or shell
+- (+) Consistent behavior with virtual filesystem
+- (-) Cache must be kept in sync with disk
+- (-) Large directories may have memory impact
+
+### AD-2: Graceful Browser Degradation (from #198)
+
+**Decision:** Support Chromium browsers (Chrome, Edge, Opera) with graceful fallback for others.
+
+**Browser Support:**
+| Browser | Support |
+|---------|---------|
+| Chrome/Edge 105+ | Full |
+| Opera 91+ | Full |
+| Firefox | Virtual workspace only |
+| Safari | Virtual workspace only |
+| Mobile | Virtual workspace only |
+
+**Global Coverage:** ~34% of users have full support
+
+### AD-3: Session-Only Permissions (from #198)
+
+**Decision:** Use session-only permissions (user re-grants on page reload).
+
+**Rationale:** Persistent permissions are Chrome-only and add complexity. Clear UX messaging about re-granting is simpler and more portable.
+
+### AD-4: Multi-Mount Workspace Architecture (from #200)
+
+**Decision:** Use multi-mount architecture where multiple workspaces are simultaneously accessible at different paths.
+
+**Architecture:**
+- Each workspace is mounted at a unique path (e.g., `/my-files`, `/project`)
+- `CompositeFileSystem` routes operations to the correct workspace based on path prefix
+- Virtual root `/` lists all mount points as directories
+- No "active workspace" concept - the shell's cwd determines context
+
+**Mount Path Generation:**
+- Workspace name → slug: "My Files" → `/my-files`
+- Collision handling: `/project`, `/project-2`, `/project-3`
+- Default workspace always at `/my-files`
+
+**Trade-offs:**
+- (+) Multiple workspaces visible and accessible simultaneously
+- (+) Shell navigation naturally determines workspace context
+- (+) Consistent Unix-like filesystem model
+- (-) Slightly more complex than single-active model
 
 ## Sub-Issues
 
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
-| #185 | Lua Code Formatter | ✅ Complete | 185-lua-formatter | Merged in PR #204 |
-| #186 | Improved Syntax Highlighting | ✅ Complete | 186-improved-syntax-highlighting | Merged in PR #219 |
-| #187 | Auto-Indentation | ✅ Complete | 187-auto-indentation | Merged in PR #222 |
+| #198 | File System Access API Research | ✅ Complete | - | See [research doc](docs/file-system-access-api-research.md) |
+| #199 | FileSystemAccessAPI IFileSystem Implementation | ✅ Complete | 199-filesystemaccessapi-ifilesystem-implementation | Merged in PR #205 |
+| #200 | Workspace State Management | ✅ Complete | 200-workspace-state-management | useWorkspaceManager + CompositeFileSystem (AD-4) |
+| #201 | Workspace UI Components | ✅ Complete | 201-workspace-ui-components | Merged in PR #217 |
+| #202 | Shell Multi-Workspace Integration | ✅ Complete | 202-shell-multi-workspace-integration | Merged in PR #227 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
 - 🔄 In Progress - Currently being worked on
+- 🔄 PR Created - Pull request created, awaiting review
 - ✅ Complete - Merged to epic branch
 - ❌ Blocked - Has unresolved blockers
 
 ## Dependencies
 
-None - all sub-issues can be implemented independently.
+**Dependency Graph:**
+```
+#198 (Research)
+  │
+  ▼
+#199 (FS Implementation)
+  │
+  ├──────────────┐
+  ▼              ▼
+#200 (State)   (also needed by #202)
+  │
+  ▼
+#201 (UI)
+  │
+  ▼
+#202 (Shell Integration) ← depends on #199, #200, #201
+```
 
 ## Progress Log
 
 <!-- Updated after each sub-issue completion -->
 
+### 2025-12-14
+- **Epic PR Created** - PR #237 to merge epic-20 → main
+- **#202 Complete** - Shell Multi-Workspace Integration (Merged PR #227)
+- **Epic Complete** - All 5 sub-issues are complete
+- Ready for final review
+
 ### 2025-12-13
+- **#202 PR Created (PR #227)** - Shell Multi-Workspace Integration
+  - Updated `useShell` hook to accept either `IFileSystem` or `UseFileSystemReturn`
+  - Added type guard `isIFileSystem()` for runtime type detection
+  - Updated `ShellTerminal` and `BottomPanel` types to accept `UseShellFileSystem`
+  - Integrated `compositeFileSystem` from `useWorkspaceManager()` into `IDELayout`
+  - Shell now uses multi-mount workspace filesystem for all commands
+  - Added 27 unit tests for shell with IFileSystem (including disconnected workspace handling)
+  - Added 7 E2E tests for shell workspace flows (navigation, file creation, directory creation)
+  - Shell prompt automatically shows workspace paths (e.g., `/my-files/docs $`)
+- Integrated main into epic branch (merge conflict resolved)
+- **Merged PR #217** - Workspace UI Components (#201) merged to epic-20
+- **#201 Complete** - Workspace UI Components
+  - Created `WorkspaceTabs` component for workspace navigation
+  - Created `AddWorkspaceDialog` for creating new workspaces (virtual and local)
+  - Integrated workspace UI into `FileExplorer` component
+  - Added `workspaceProps` to `FileExplorerProps` for optional workspace management
+  - Integrated `useWorkspaceManager` hook in `IDELayout`
+  - Added E2E tests for workspace UI flows
+  - Full theme support (light/dark mode)
+- **#200 Complete (Updated)** - Workspace State Management with Multi-Mount Architecture
+  - Created `CompositeFileSystem` in shell-core (routes paths to mounted filesystems)
+  - Created `useWorkspaceManager` hook for multi-workspace management
+  - Created `virtualFileSystemFactory` for workspace-isolated localStorage filesystems
+  - **Multi-mount architecture (AD-4):** Workspaces mounted at unique paths (/my-files, /project)
+  - Features: add/remove workspaces, mount path generation, localStorage persistence
+  - No "active workspace" - shell cwd determines context via CompositeFileSystem
+  - Local workspaces marked as 'disconnected' on page reload (handle re-request required)
+  - Legacy data migration: rootPath → mountPath
+  - 111 unit tests (66 CompositeFileSystem + 45 useWorkspaceManager)
+- **#199 Complete** - FileSystemAccessAPI IFileSystem Implementation
+  - Merged PR #205 to epic-20
+  - Cache-based synchronous wrapper over async File System Access API
+  - 68 unit tests, 81.58% mutation score
+  - Type augmentations for FileSystemDirectoryHandle iterator methods
 - Epic started
-- PR created for #185: Lua Code Formatter (PR #204)
-- Completed #185: Lua Code Formatter
-- Merged PR #204 to epic-184
-- Started work on #186: Improved Syntax Highlighting
-- PR created for #186: Improved Syntax Highlighting (PR #219)
-- Completed #186: Improved Syntax Highlighting
-- Merged PR #219 to epic-184
-- Integrated main into epic branch (merge from origin/main)
-- Started work on #187: Auto-Indentation
-- PR created for #187: Auto-Indentation (PR #222)
-- Completed #187: Auto-Indentation
-- Merged PR #222 to epic-184
-- **All sub-issues complete - Epic ready for final review**
-- Created PR #230 to merge epic-184 → main
+- Foundation already complete from Epic #140:
+  - IFileSystem interface
+  - ExternalFileSystem adapter
+  - Path utilities
+  - All commands use filesystem abstraction
+- **#198 Complete** - File System Access API Research
+  - GO decision: API is suitable for local workspace feature
+  - Browser support: ~34% (Chromium-only)
+  - Key decisions: cache-based sync wrapper, graceful fallback, session permissions
+  - Full research: [docs/file-system-access-api-research.md](docs/file-system-access-api-research.md)
 
 ## Key Files
 
-### #185 - Lua Code Formatter
-- `src/utils/luaFormatter.ts` - StyLua wrapper utility
-- `src/components/FormatButton/` - Format button component
-- `src/components/EditorPanel/EditorPanel.tsx` - Integration
-- `src/components/CodeEditor/CodeEditor.tsx` - Keyboard shortcut support
-- `src/types/global.d.ts` - Window.monaco type declaration
+### Existing (from Epic #140)
+- `packages/shell-core/src/types.ts` - IFileSystem interface
+- `packages/shell-core/src/createFileSystemAdapter.ts` - Adapter factory
+- `packages/shell-core/src/pathUtils.ts` - Path utilities
 
-### #186 - Improved Syntax Highlighting
-- `src/utils/luaTokenizer.ts` - Custom Monarch tokenizer configuration
-- `src/__tests__/luaTokenizer.test.ts` - Unit tests for tokenizer
-- `src/components/CodeEditor/CodeEditor.tsx` - beforeMount registration
-- `e2e/syntax-highlighting.spec.ts` - E2E tests for highlighting
+### Created (from #199, #200, #201)
+- `packages/shell-core/src/FileSystemAccessAPIFileSystem.ts` - File System Access API implementation
+- `packages/shell-core/src/CompositeFileSystem.ts` - Multi-mount filesystem router
+- `lua-learning-website/src/hooks/useWorkspaceManager.ts` - Workspace state management hook
+- `lua-learning-website/src/hooks/workspaceTypes.ts` - Workspace type definitions
+- `lua-learning-website/src/hooks/virtualFileSystemFactory.ts` - Workspace-isolated virtual filesystem
+- `lua-learning-website/src/components/WorkspaceTabs/` - Workspace tab bar component
+- `lua-learning-website/src/components/AddWorkspaceDialog/` - Add workspace dialog component
 
-### #187 - Auto-Indentation
-- `src/utils/luaTokenizer.ts` - Added indentationRules and onEnterRules
-- `src/__tests__/luaTokenizer.test.ts` - Unit tests for indentation patterns
-- `e2e/auto-indentation.spec.ts` - E2E tests for auto-indentation behavior
+### Created (#202)
+- `lua-learning-website/src/hooks/useShell.ts` - Updated to accept IFileSystem directly
+- `lua-learning-website/src/components/ShellTerminal/types.ts` - Updated prop types
+- `lua-learning-website/src/components/BottomPanel/types.ts` - Updated prop types
+- `lua-learning-website/src/components/IDELayout/IDELayout.tsx` - Integrated compositeFileSystem
+- `lua-learning-website/e2e/shell-workspace.spec.ts` - E2E tests for shell workspace flows
 
 ## Open Questions
 
 <!-- Questions that arise during implementation -->
 
-(none)
+1. ~~How to handle permission re-requests on page reload for local workspaces?~~
+   - **Resolved (AD-3):** Use clear UX messaging. Show "reconnect" button for previously-used workspaces.
+2. ~~Should we support persistent permissions (Chrome-only feature)?~~
+   - **Resolved (AD-3):** No. Session-only permissions are simpler and more portable.
 
 ## Blockers
 

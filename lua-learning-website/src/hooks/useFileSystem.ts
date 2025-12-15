@@ -1,3 +1,6 @@
+/* eslint-disable max-lines */
+// This hook manages all filesystem operations with synchronized refs for shell commands.
+// Splitting would break the ref synchronization that enables synchronous filesystem access.
 import { useState, useCallback, useEffect, useRef } from 'react'
 import type { VirtualFile, TreeNode, FileSystemState, UseFileSystemReturn } from './fileSystemTypes'
 import {
@@ -434,6 +437,104 @@ export function useFileSystem(): UseFileSystemReturn {
     []
   )
 
+  const copyFile = useCallback(
+    (sourcePath: string, targetFolderPath: string): void => {
+      const normalizedSourcePath = normalizePath(sourcePath)
+      const normalizedTargetFolder = normalizePath(targetFolderPath)
+
+      // Use refs for synchronous validation
+      const isSourceFile = normalizedSourcePath in filesRef.current
+      const isSourceFolder = foldersRef.current.has(normalizedSourcePath)
+
+      if (!isSourceFile && !isSourceFolder) {
+        throw new Error(`Source not found: ${normalizedSourcePath}`)
+      }
+
+      if (normalizedTargetFolder !== '/' && !foldersRef.current.has(normalizedTargetFolder)) {
+        throw new Error(`Target folder not found: ${normalizedTargetFolder}`)
+      }
+
+      const itemName = getFileName(normalizedSourcePath)
+      const newPath = normalizedTargetFolder === '/' ? `/${itemName}` : `${normalizedTargetFolder}/${itemName}`
+
+      if (newPath in filesRef.current || foldersRef.current.has(newPath)) {
+        throw new Error(`Target already exists: ${newPath}`)
+      }
+
+      if (isSourceFile) {
+        // Copy file - create new file with same content
+        const file = filesRef.current[normalizedSourcePath]
+        const now = Date.now()
+        const newFile = { name: itemName, content: file.content, createdAt: now, updatedAt: now }
+
+        // Update ref synchronously
+        filesRef.current = { ...filesRef.current, [newPath]: newFile }
+
+        setState((prev) => ({
+          ...prev,
+          version: prev.version + 1,
+          files: { ...prev.files, [newPath]: newFile },
+        }))
+      } else {
+        // Copy folder - recursively copy all contents
+        const newFilesRef = { ...filesRef.current }
+        const newFoldersRef = new Set(foldersRef.current)
+        const now = Date.now()
+
+        // Add the target folder
+        newFoldersRef.add(newPath)
+
+        // Copy all nested folders
+        for (const folderPath of foldersRef.current) {
+          if (folderPath.startsWith(normalizedSourcePath + '/')) {
+            const newFolderPath = newPath + folderPath.slice(normalizedSourcePath.length)
+            newFoldersRef.add(newFolderPath)
+          }
+        }
+
+        // Copy all nested files
+        for (const filePath of Object.keys(filesRef.current)) {
+          if (filePath.startsWith(normalizedSourcePath + '/')) {
+            const newFilePath = newPath + filePath.slice(normalizedSourcePath.length)
+            const file = filesRef.current[filePath]
+            newFilesRef[newFilePath] = { ...file, createdAt: now, updatedAt: now }
+          }
+        }
+
+        filesRef.current = newFilesRef
+        foldersRef.current = newFoldersRef
+
+        setState((prev) => {
+          const newFiles = { ...prev.files }
+          const newFolders = new Set(prev.folders)
+
+          // Add the target folder
+          newFolders.add(newPath)
+
+          // Copy all nested folders
+          for (const folderPath of prev.folders) {
+            if (folderPath.startsWith(normalizedSourcePath + '/')) {
+              const newFolderPath = newPath + folderPath.slice(normalizedSourcePath.length)
+              newFolders.add(newFolderPath)
+            }
+          }
+
+          // Copy all nested files
+          for (const filePath of Object.keys(prev.files)) {
+            if (filePath.startsWith(normalizedSourcePath + '/')) {
+              const newFilePath = newPath + filePath.slice(normalizedSourcePath.length)
+              const file = prev.files[filePath]
+              newFiles[newFilePath] = { ...file, createdAt: now, updatedAt: now }
+            }
+          }
+
+          return { ...prev, version: prev.version + 1, files: newFiles, folders: newFolders }
+        })
+      }
+    },
+    []
+  )
+
   const listDirectory = useCallback(
     (path: string): string[] => {
       const normalizedPath = normalizePath(path)
@@ -470,6 +571,7 @@ export function useFileSystem(): UseFileSystemReturn {
     deleteFile,
     renameFile,
     moveFile,
+    copyFile,
     createFolder,
     deleteFolder,
     renameFolder,

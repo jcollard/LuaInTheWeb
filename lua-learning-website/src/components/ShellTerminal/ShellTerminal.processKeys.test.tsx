@@ -122,6 +122,7 @@ describe('ShellTerminal - Process Key Routing', () => {
     deleteFile: vi.fn(),
     renameFile: vi.fn(),
     moveFile: vi.fn(),
+    copyFile: vi.fn(),
     createFolder: vi.fn(),
     deleteFolder: vi.fn(),
     renameFolder: vi.fn(),

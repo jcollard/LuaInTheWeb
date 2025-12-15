@@ -48,6 +48,16 @@ export { LegacyCommandAdapter } from './adapters/LegacyCommandAdapter'
 export { createFileSystemAdapter } from './createFileSystemAdapter'
 export type { ExternalFileSystem } from './createFileSystemAdapter'
 
+// File System Access API implementation
+export {
+  FileSystemAccessAPIFileSystem,
+  isFileSystemAccessSupported,
+} from './FileSystemAccessAPIFileSystem'
+
+// Composite filesystem for multi-mount support
+export { CompositeFileSystem } from './CompositeFileSystem'
+export type { MountPoint, CompositeFileSystemConfig } from './CompositeFileSystem'
+
 // Built-in commands
 export {
   pwd,

@@ -10,6 +10,8 @@
     "build:shell-core": "npm run build -w @lua-learning/shell-core",
     "build:lua-runtime": "npm run build -w @lua-learning/lua-runtime",
     "test:shell-core": "npm run test -w @lua-learning/shell-core",
-    "test:lua-runtime": "npm run test -w @lua-learning/lua-runtime"
+    "test:lua-runtime": "npm run test -w @lua-learning/lua-runtime",
+    "ci": "node scripts/ci-local.js",
+    "ci:quick": "node scripts/ci-local.js --skip-e2e"
   }
 }
