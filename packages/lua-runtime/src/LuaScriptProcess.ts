@@ -169,11 +169,15 @@ export class LuaScriptProcess implements IProcess {
     }
 
     // Create engine and execute
+    // The wrapper adds 2 lines before the script (empty line + setup hook)
+    const LINE_OFFSET = 2
     const callbacks: LuaEngineCallbacks = {
       onOutput: (text: string) => this.onOutput(text),
       onError: (text: string) => {
         this.hasError = true
-        this.onError(formatLuaError(text) + '\n')
+        // Adjust line numbers in error messages to account for wrapper lines
+        const adjustedError = this.adjustErrorLineNumber(text, LINE_OFFSET)
+        this.onError(formatLuaError(adjustedError) + '\n')
       },
       onReadInput: (charCount?: number) => this.waitForInput(charCount),
       onInstructionLimitReached: this.options.onInstructionLimitReached,
@@ -189,11 +193,12 @@ export class LuaScriptProcess implements IProcess {
 
       // Execute the script wrapped with hooks
       // This ensures the debug hook is active during the entire script execution
+      // The wrapper adds 2 lines before the script content, which we adjust for in error messages
       await this.engine.doString(`
-        __setup_execution_hook()
-        ${scriptContent}
-        __clear_execution_hook()
-      `)
+__setup_execution_hook()
+${scriptContent}
+__clear_execution_hook()
+`)
 
       // Flush any buffered output from the execution
       LuaEngineFactory.flushOutput(this.engine)
@@ -209,7 +214,9 @@ export class LuaScriptProcess implements IProcess {
       }
       // Script failed with error
       const errorMsg = error instanceof Error ? error.message : String(error)
-      this.onError(formatLuaError(errorMsg) + '\n')
+      // Adjust line numbers in error messages to account for wrapper lines
+      const adjustedError = this.adjustErrorLineNumber(errorMsg, LINE_OFFSET)
+      this.onError(formatLuaError(adjustedError) + '\n')
       this.exitWithCode(1)
     }
   }
@@ -266,5 +273,50 @@ export class LuaScriptProcess implements IProcess {
     LuaEngineFactory.closeDeferred(engineToClose)
 
     this.onExit(code)
+  }
+
+  /**
+   * Adjust line numbers in Lua error messages to account for wrapper code.
+   * Lua errors have format: [string "..."]:LINE: message
+   * or: filename.lua:LINE: message
+   *
+   * Also adjusts line numbers mentioned in error message body (e.g., "at line 5")
+   * and hides internal wrapper function names from user-facing errors.
+   */
+  private adjustErrorLineNumber(error: string, offset: number): string {
+    let adjusted = error
+
+    // Adjust line numbers in source:line: format (e.g., [string "..."]:5:)
+    adjusted = adjusted.replace(
+      /(\[string "[^"]*"\]|[^:\s]+\.lua):(\d+):/g,
+      (_match, source, lineStr) => {
+        const line = parseInt(lineStr, 10)
+        const adjustedLine = Math.max(1, line - offset)
+        return `${source}:${adjustedLine}:`
+      }
+    )
+
+    // Adjust line numbers mentioned in message body (e.g., "at line 5", "line 3")
+    adjusted = adjusted.replace(
+      /\b(at line|line)\s+(\d+)\b/gi,
+      (_match, prefix, lineStr) => {
+        const line = parseInt(lineStr, 10)
+        const adjustedLine = Math.max(1, line - offset)
+        return `${prefix} ${adjustedLine}`
+      }
+    )
+
+    // Hide internal wrapper function names from user-facing errors
+    // Replace references to wrapper functions with <end of file>
+    adjusted = adjusted.replace(
+      /'__(?:setup|clear)_execution_hook'/g,
+      '<end of file>'
+    )
+    adjusted = adjusted.replace(
+      /near\s+__(?:setup|clear)_execution_hook/g,
+      'near <end of file>'
+    )
+
+    return adjusted
   }
 }

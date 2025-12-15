@@ -1,4 +1,5 @@
 import type { TabBarProps } from '../TabBar'
+import type { EditorReadyInfo } from '../CodeEditor/types'
 
 /**
  * Props for the EditorPanel component
@@ -26,6 +27,8 @@ export interface EditorPanelProps {
   onFormat?: () => void
   /** Whether formatting is in progress */
   isFormatting?: boolean
+  /** Called when the editor is ready with monaco, editor, and model references */
+  onEditorReady?: (info: EditorReadyInfo) => void
 }
 
 /**

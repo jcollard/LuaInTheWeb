@@ -74,6 +74,9 @@ export function ShellTerminal({
     if (xtermRef.current) {
       xtermRef.current.write(`\x1b[31m${text.replace(/\n/g, '\r\n')}\x1b[0m`)
     }
+    // Set error marker in editor if available
+    const win = window as Window & { __luaSetError?: (msg: string) => void }
+    win.__luaSetError?.(text)
   }, [])
 
   // Character mode state for io.read(n)
@@ -171,13 +174,21 @@ export function ShellTerminal({
       terminal.write('\r\n')
     }
 
+    // Clear any existing error markers before execution
+    const win = window as Window & { __luaSetError?: (msg: string) => void; __luaClearErrors?: () => void }
+    win.__luaClearErrors?.()
+
     // Execute command using the context-aware method
     // This handles both ICommand (lua) and legacy commands via adapter
     // Output is handled by the callbacks passed to the context
     const contextResult = executeCommandWithContextRef.current(
       input,
       (text) => writeOutput(text),
-      (text) => writeOutput(`\x1b[31m${text}\x1b[0m`)
+      (text) => {
+        writeOutput(`\x1b[31m${text}\x1b[0m`)
+        // Set error marker in editor if available
+        win.__luaSetError?.(text)
+      }
     )
 
     // Update cwd ref immediately
