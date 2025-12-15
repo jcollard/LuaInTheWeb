@@ -1,6 +1,6 @@
 # Epic #233: High-Performance Canvas Game Loop with Web Workers and SharedArrayBuffer
 
-**Status:** In Progress (0/8 complete)
+**Status:** In Progress (1/8 complete)
 **Branch:** epic-233
 **Created:** 2025-12-15
 **Last Updated:** 2025-12-15
@@ -55,7 +55,7 @@ Mouse                                       │
 | #255 | Main Thread Rendering | ⏳ Pending | - | M - Depends on #252 |
 | #256 | Process Integration | ⏳ Pending | - | S - Depends on #254 |
 | #257 | React Integration & Canvas UI | ⏳ Pending | - | M - Depends on #255, #256 |
-| #258 | COOP/COEP Header Configuration | ⏳ Pending | - | XS - No deps |
+| #258 | COOP/COEP Header Configuration | ✅ Complete | - | Merged PR #260 |
 | #259 | Library Workspace Integration | ⏳ Pending | - | S - Depends on #254 |
 
 **Status Legend:**
@@ -94,12 +94,14 @@ Mouse                                       │
 - Epic started
 - Created 8 sub-issues (#252-#259)
 - Worktree created at `LuaInTheWeb-epic-233`
+- ✅ Completed #258: COOP/COEP Header Configuration (PR #260)
 
 ## Key Files
 
 <!-- Populated as files are created/modified -->
 
-(none yet)
+- `lua-learning-website/firebase.json` - COOP/COEP headers for production
+- `lua-learning-website/vite.config.ts` - COOP/COEP headers for dev server
 
 ## Open Questions
 
