@@ -169,11 +169,15 @@ export class LuaScriptProcess implements IProcess {
     }
 
     // Create engine and execute
+    // The wrapper adds 2 lines before the script (empty line + setup hook)
+    const LINE_OFFSET = 2
     const callbacks: LuaEngineCallbacks = {
       onOutput: (text: string) => this.onOutput(text),
       onError: (text: string) => {
         this.hasError = true
-        this.onError(formatLuaError(text) + '\n')
+        // Adjust line numbers in error messages to account for wrapper lines
+        const adjustedError = this.adjustErrorLineNumber(text, LINE_OFFSET)
+        this.onError(formatLuaError(adjustedError) + '\n')
       },
       onReadInput: (charCount?: number) => this.waitForInput(charCount),
       onInstructionLimitReached: this.options.onInstructionLimitReached,
@@ -189,9 +193,12 @@ export class LuaScriptProcess implements IProcess {
 
       // Execute the script wrapped with hooks
       // This ensures the debug hook is active during the entire script execution
-      // Note: We use semicolons on the same line to preserve line numbers in error messages
-      await this.engine.doString(`__setup_execution_hook(); ${scriptContent}
-__clear_execution_hook()`)
+      // The wrapper adds 2 lines before the script content, which we adjust for in error messages
+      await this.engine.doString(`
+__setup_execution_hook()
+${scriptContent}
+__clear_execution_hook()
+`)
 
       // Flush any buffered output from the execution
       LuaEngineFactory.flushOutput(this.engine)
@@ -264,5 +271,22 @@ __clear_execution_hook()`)
     LuaEngineFactory.closeDeferred(engineToClose)
 
     this.onExit(code)
+  }
+
+  /**
+   * Adjust line numbers in Lua error messages to account for wrapper code.
+   * Lua errors have format: [string "..."]:LINE: message
+   * or: filename.lua:LINE: message
+   */
+  private adjustErrorLineNumber(error: string, offset: number): string {
+    // Match patterns like [string "..."]:5: or test.lua:5:
+    return error.replace(
+      /(\[string "[^"]*"\]|[^:\s]+\.lua):(\d+):/g,
+      (_match, source, lineStr) => {
+        const line = parseInt(lineStr, 10)
+        const adjustedLine = Math.max(1, line - offset)
+        return `${source}:${adjustedLine}:`
+      }
+    )
   }
 }
