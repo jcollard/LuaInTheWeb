@@ -2,6 +2,41 @@ import type { languages } from 'monaco-editor'
 import { calculateCorrectIndent, findMatchingBlockIndent } from './luaBlockParser'
 
 /**
+ * Storage key for auto-indent setting
+ */
+const AUTO_INDENT_STORAGE_KEY = 'lua-ide-auto-indent'
+
+/**
+ * Check if auto-indent is enabled (defaults to true)
+ */
+function isAutoIndentEnabled(): boolean {
+  try {
+    const stored = localStorage.getItem(AUTO_INDENT_STORAGE_KEY)
+    return stored !== 'false'
+  } catch {
+    return true
+  }
+}
+
+/**
+ * Set auto-indent enabled/disabled
+ */
+export function setAutoIndentEnabled(enabled: boolean): void {
+  try {
+    localStorage.setItem(AUTO_INDENT_STORAGE_KEY, String(enabled))
+  } catch {
+    // localStorage not available
+  }
+}
+
+/**
+ * Get current auto-indent setting
+ */
+export function getAutoIndentEnabled(): boolean {
+  return isAutoIndentEnabled()
+}
+
+/**
  * IndentAction constants matching Monaco's languages.IndentAction enum.
  * These are used in onEnterRules to specify indentation behavior.
  * We define them as constants since Monaco is loaded dynamically at runtime.
@@ -344,6 +379,11 @@ export function registerLuaLanguage(monaco: typeof import('monaco-editor')): voi
     autoFormatTriggerCharacters: AUTO_INDENT_TRIGGER_CHARS,
 
     provideOnTypeFormattingEdits(model, position, ch) {
+      // Check if auto-indent is enabled
+      if (!isAutoIndentEnabled()) {
+        return []
+      }
+
       const lineNumber = position.lineNumber
       const lineText = model.getLineContent(lineNumber)
 
