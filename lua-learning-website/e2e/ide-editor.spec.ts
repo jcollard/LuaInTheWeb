@@ -3,13 +3,29 @@ import { test, expect } from '@playwright/test'
 // Helper to create and open a file so Monaco editor is visible
 async function createAndOpenFile(page: import('@playwright/test').Page) {
   const sidebar = page.getByTestId('sidebar-panel')
+
+  // First, expand the workspace folder by clicking its chevron
+  const workspaceChevron = page.getByTestId('folder-chevron').first()
+  await workspaceChevron.click()
+  await page.waitForTimeout(200) // Wait for expansion animation
+
+  // Now click New File button - the file will be created inside the expanded workspace
   await sidebar.getByRole('button', { name: /new file/i }).click()
+
   const input = sidebar.getByRole('textbox')
+  await expect(input).toBeVisible({ timeout: 5000 }) // Wait for rename input to appear
   await input.press('Enter') // Accept default name
-  await page.waitForTimeout(200)
-  // Click the file to open it
-  const treeItem = page.getByRole('treeitem').first()
-  await treeItem.click()
+  await expect(input).not.toBeVisible({ timeout: 5000 }) // Wait for rename to complete
+
+  // Click the newly created file to open it (should be second treeitem after workspace)
+  const fileItems = page.getByRole('treeitem')
+  const count = await fileItems.count()
+  if (count > 1) {
+    await fileItems.nth(1).click() // Click the file inside the workspace
+  } else {
+    // Fallback: click first item
+    await fileItems.first().click()
+  }
   await page.waitForTimeout(200)
 }
 
@@ -20,6 +36,12 @@ test.describe('IDE Editor - Tab Overflow Navigation', () => {
     await page.evaluate(() => localStorage.clear())
     await page.reload()
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
+    // Wait for file tree to render (ensures workspace is ready)
+    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+    // Expand the workspace folder so files are visible
+    const workspaceChevron = page.getByTestId('folder-chevron').first()
+    await workspaceChevron.click()
+    await page.waitForTimeout(200)
   })
 
   // Helper to create and open a file with a specific name (scoped to sidebar)
@@ -27,13 +49,13 @@ test.describe('IDE Editor - Tab Overflow Navigation', () => {
     // Click New File button in sidebar (scoped to avoid Welcome Screen button)
     const sidebar = page.getByTestId('sidebar-panel')
     await sidebar.getByRole('button', { name: /new file/i }).click()
-    await page.waitForTimeout(100)
 
     // Find the input field in the sidebar and type the filename
     const input = sidebar.getByRole('textbox')
+    await expect(input).toBeVisible({ timeout: 5000 })
     await input.fill(filename)
     await input.press('Enter')
-    await page.waitForTimeout(100)
+    await expect(input).not.toBeVisible({ timeout: 5000 })
 
     // Click the file to open it in a tab
     const treeItem = page.getByRole('treeitem', { name: new RegExp(filename) })
