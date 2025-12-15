@@ -64,15 +64,25 @@ export function CodeEditor({
       },
     })
 
-    // Register toggle auto-indent action (accessible via Command Palette)
-    toggleAutoIndentActionRef.current = editorInstance.addAction({
-      id: 'toggle-auto-indent',
-      label: 'Toggle Auto-Indent',
-      run: () => {
-        const current = getAutoIndentEnabled()
-        setAutoIndentEnabled(!current)
-      },
-    })
+    // Helper to register auto-indent action with current state label
+    const registerAutoIndentAction = () => {
+      const isEnabled = getAutoIndentEnabled()
+      const label = isEnabled ? 'Turn Off Auto-Indent' : 'Turn On Auto-Indent'
+
+      return editorInstance.addAction({
+        id: 'toggle-auto-indent',
+        label,
+        run: () => {
+          setAutoIndentEnabled(!isEnabled)
+          // Re-register with updated label
+          toggleAutoIndentActionRef.current?.dispose()
+          toggleAutoIndentActionRef.current = registerAutoIndentAction()
+        },
+      })
+    }
+
+    // Register auto-indent toggle action (accessible via Command Palette)
+    toggleAutoIndentActionRef.current = registerAutoIndentAction()
 
     // Notify parent component that editor is ready
     const model = editorInstance.getModel()
