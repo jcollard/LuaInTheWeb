@@ -54,6 +54,20 @@ const DisconnectedWorkspaceIcon = () => (
   </svg>
 )
 
+// Library workspace icon - open book (read-only libraries)
+const LibraryWorkspaceIcon = () => (
+  <svg className={styles.iconSvg} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" data-testid="library-workspace-icon">
+    {/* Open book shape */}
+    <path d="M8 3c-1.5-1-3.5-1.5-5.5-1.5-.5 0-1 0-1.5.1v10.8c.5-.1 1-.1 1.5-.1 2 0 4 .5 5.5 1.5 1.5-1 3.5-1.5 5.5-1.5.5 0 1 0 1.5.1V1.6c-.5-.1-1-.1-1.5-.1-2 0-4 .5-5.5 1.5z" fill="#6b9bd1" stroke="#4a7ab0" strokeWidth="0.5" />
+    {/* Center binding */}
+    <path d="M8 3v10.8" stroke="#4a7ab0" strokeWidth="0.8" />
+    {/* Page lines on left */}
+    <path d="M3 5h3M3 7h3M3 9h3" stroke="#4a7ab0" strokeWidth="0.5" opacity="0.6" />
+    {/* Page lines on right */}
+    <path d="M10 5h3M10 7h3M10 9h3" stroke="#4a7ab0" strokeWidth="0.5" opacity="0.6" />
+  </svg>
+)
+
 export function FileTreeItem({
   name,
   path,
@@ -61,6 +75,8 @@ export function FileTreeItem({
   isWorkspace,
   isLocalWorkspace,
   isDisconnected,
+  isLibraryWorkspace,
+  isReadOnly,
   isSelected,
   isExpanded,
   isRenaming,
@@ -74,6 +90,8 @@ export function FileTreeItem({
   onDrop,
   onReconnect,
 }: FileTreeItemProps) {
+  // Mark isReadOnly as used (will be used for save blocking in IDEContext)
+  void isReadOnly
   const [renameValue, setRenameValue] = useState(name)
   const [isDragOver, setIsDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -207,6 +225,8 @@ export function FileTreeItem({
           isWorkspace ? (
             isDisconnected ? (
               <DisconnectedWorkspaceIcon />
+            ) : isLibraryWorkspace ? (
+              <LibraryWorkspaceIcon />
             ) : isLocalWorkspace ? (
               <LocalWorkspaceIcon />
             ) : (

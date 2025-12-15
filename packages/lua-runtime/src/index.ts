@@ -17,6 +17,7 @@ export {
   LuaEngineFactory,
   formatLuaError,
   ExecutionStoppedError,
+  LUA_SHELL_CODE,
   type LuaEngineCallbacks,
   type LuaEngineOptions,
   type ExecutionControlOptions,

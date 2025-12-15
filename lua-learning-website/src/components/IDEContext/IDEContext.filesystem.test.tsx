@@ -320,6 +320,83 @@ describe('IDEContext', () => {
       expect(result.current.tabs[0].name).toBe('new.lua')
       expect(result.current.activeTab).toBe('/new.lua')
     })
+
+    it('should show error toast and not save when file is read-only', () => {
+      // Arrange - provide a mock isPathReadOnly function that marks /readonly-test.lua as read-only
+      const isPathReadOnly = vi.fn((path: string) => path === '/readonly-test.lua')
+
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => (
+          <IDEContextProvider isPathReadOnly={isPathReadOnly}>
+            {children}
+          </IDEContextProvider>
+        ),
+      })
+
+      // Create and open a file that will be marked as read-only
+      act(() => {
+        result.current.createFile('/readonly-test.lua', 'original')
+      })
+
+      act(() => {
+        result.current.openFile('/readonly-test.lua')
+      })
+
+      act(() => {
+        result.current.setCode('modified')
+      })
+
+      // Verify dirty state
+      expect(result.current.isDirty).toBe(true)
+
+      // Act - try to save read-only file
+      act(() => {
+        result.current.saveFile()
+      })
+
+      // Assert - should show error toast and remain dirty
+      expect(result.current.toasts).toHaveLength(1)
+      expect(result.current.toasts[0].type).toBe('error')
+      expect(result.current.toasts[0].message).toBe('This file is read-only and cannot be saved')
+      expect(result.current.isDirty).toBe(true) // Still dirty - save was blocked
+    })
+
+    it('should save normally when file is not read-only', () => {
+      // Arrange - provide a mock isPathReadOnly function that doesn't mark the file as read-only
+      const isPathReadOnly = vi.fn((path: string) => path === '/readonly-test.lua')
+
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => (
+          <IDEContextProvider isPathReadOnly={isPathReadOnly}>
+            {children}
+          </IDEContextProvider>
+        ),
+      })
+
+      // Create and open a regular file (not read-only)
+      act(() => {
+        result.current.createFile('/normal-test.lua', 'original')
+      })
+
+      act(() => {
+        result.current.openFile('/normal-test.lua')
+      })
+
+      act(() => {
+        result.current.setCode('modified')
+      })
+
+      expect(result.current.isDirty).toBe(true)
+
+      // Act - save regular file
+      act(() => {
+        result.current.saveFile()
+      })
+
+      // Assert - should save successfully
+      expect(result.current.toasts).toHaveLength(0) // No error toast
+      expect(result.current.isDirty).toBe(false) // No longer dirty
+    })
   })
 
   describe('empty state', () => {

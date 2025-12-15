@@ -45,7 +45,8 @@ export default function LuaRepl({ embedded = false }: LuaReplProps) {
 
   const { isReady, executeCode, reset } = useLuaRepl({
     onOutput: (message) => {
-      terminalRef.current?.writeln(message)
+      // Use write instead of writeln to support ANSI sequences from shell library
+      terminalRef.current?.write(message)
     },
     onError: (message) => {
       terminalRef.current?.writeln(`\x1b[31mError: ${message}\x1b[0m`)
@@ -70,6 +71,8 @@ export default function LuaRepl({ embedded = false }: LuaReplProps) {
         terminalRef.current?.showPrompt()
       }, 0)
     },
+    getTerminalWidth: () => terminalRef.current?.getWidth() ?? 80,
+    getTerminalHeight: () => terminalRef.current?.getHeight() ?? 24,
   })
 
   // Show welcome and prompt when ready

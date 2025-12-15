@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { LuaFactory, LuaEngine } from 'wasmoon'
 import { setupLuaFormatter } from './formatValue'
+import { LUA_SHELL_CODE } from '@lua-learning/lua-runtime'
 
 export interface UseLuaReplOptions {
   /** Callback when output is produced (from print or expression results) */
@@ -17,6 +18,10 @@ export interface UseLuaReplOptions {
   onReset?: () => void
   /** Callback when Lua reset() command is invoked (before reset happens) */
   onResetRequest?: () => void
+  /** Get terminal width in columns (for shell.width()) */
+  getTerminalWidth?: () => number
+  /** Get terminal height in rows (for shell.height()) */
+  getTerminalHeight?: () => number
 }
 
 export interface UseLuaReplReturn {
@@ -32,7 +37,17 @@ export interface UseLuaReplReturn {
  * Hook that provides a Lua REPL environment
  */
 export function useLuaRepl(options: UseLuaReplOptions): UseLuaReplReturn {
-  const { onOutput, onError, onReadInput, onClear, onShowHelp, onReset, onResetRequest } = options
+  const {
+    onOutput,
+    onError,
+    onReadInput,
+    onClear,
+    onShowHelp,
+    onReset,
+    onResetRequest,
+    getTerminalWidth,
+    getTerminalHeight,
+  } = options
   const [isReady, setIsReady] = useState(false)
   const engineRef = useRef<LuaEngine | null>(null)
   const initializedRef = useRef(false)
@@ -59,18 +74,24 @@ export function useLuaRepl(options: UseLuaReplOptions): UseLuaReplReturn {
   const onResetRequestRef = useRef(onResetRequest)
   onResetRequestRef.current = onResetRequest
 
+  const getTerminalWidthRef = useRef(getTerminalWidth)
+  getTerminalWidthRef.current = getTerminalWidth
+
+  const getTerminalHeightRef = useRef(getTerminalHeight)
+  getTerminalHeightRef.current = getTerminalHeight
+
   const setupEngine = useCallback(async (lua: LuaEngine) => {
     // Setup the Lua formatter for value formatting
     await setupLuaFormatter(lua)
 
-    // Override print to call onOutput
+    // Override print to call onOutput (adds newline like standard Lua print)
     lua.global.set('print', (...args: unknown[]) => {
       const message = args.map(arg => {
         if (arg === null) return 'nil'
         if (arg === undefined) return 'nil'
         return String(arg)
       }).join('\t')
-      onOutputRef.current?.(message)
+      onOutputRef.current?.(message + '\n')
     })
 
     // Set up __js_read_input for io.read
@@ -119,6 +140,26 @@ export function useLuaRepl(options: UseLuaReplOptions): UseLuaReplReturn {
     lua.global.set('reset', () => {
       onResetRequestRef.current?.()
     })
+
+    // Set up terminal dimension bridge functions for shell library
+    lua.global.set('__shell_get_width', () => {
+      return getTerminalWidthRef.current?.() ?? 80
+    })
+    lua.global.set('__shell_get_height', () => {
+      return getTerminalHeightRef.current?.() ?? 24
+    })
+
+    // Set up __js_write for shell library (outputs without newline, for ANSI sequences)
+    lua.global.set('__js_write', (text: string) => {
+      onOutputRef.current?.(text)
+    })
+
+    // Register shell library in package.preload for require('shell')
+    await lua.doString(`
+      package.preload['shell'] = function()
+        ${LUA_SHELL_CODE}
+      end
+    `)
   }, [])
 
   useEffect(() => {

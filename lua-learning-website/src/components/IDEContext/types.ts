@@ -88,4 +88,6 @@ export interface IDEContextProviderProps {
   initialCode?: string
   /** External filesystem to use instead of built-in useFileSystem (for workspace integration) */
   fileSystem?: AdaptedFileSystem
+  /** Optional callback to check if a path is in a read-only workspace */
+  isPathReadOnly?: (path: string) => boolean
 }

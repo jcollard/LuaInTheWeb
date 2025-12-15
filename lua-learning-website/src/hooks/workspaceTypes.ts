@@ -11,8 +11,11 @@ import type { IFileSystem } from '@lua-learning/shell-core'
 
 /**
  * Supported workspace types.
+ * - 'virtual': localStorage-backed workspace
+ * - 'local': File System Access API-backed workspace
+ * - 'library': Read-only workspace for built-in libraries (e.g., /libs)
  */
-export type WorkspaceType = 'virtual' | 'local'
+export type WorkspaceType = 'virtual' | 'local' | 'library'
 
 /**
  * Connection status for workspaces.
@@ -39,6 +42,8 @@ export interface Workspace {
   status: WorkspaceConnectionStatus
   /** For local workspaces: the directory handle (cannot be persisted) */
   directoryHandle?: FileSystemDirectoryHandle
+  /** Whether the workspace is read-only (library workspaces are always read-only) */
+  isReadOnly?: boolean
 }
 
 /**
@@ -116,4 +121,8 @@ export interface UseWorkspaceManagerReturn {
   isFolderAlreadyMounted: (handle: FileSystemDirectoryHandle) => Promise<boolean>
   /** Get a unique workspace name by appending numbers if needed */
   getUniqueWorkspaceName: (baseName: string) => string
+  /** Check if a path is in a read-only workspace */
+  isPathReadOnly: (path: string) => boolean
+  /** Get the library workspace (returns undefined if not found) */
+  getLibraryWorkspace: () => Workspace | undefined
 }

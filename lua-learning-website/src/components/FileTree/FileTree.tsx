@@ -149,6 +149,8 @@ export function FileTree({
           isWorkspace={node.isWorkspace}
           isLocalWorkspace={node.isLocalWorkspace}
           isDisconnected={node.isDisconnected}
+          isLibraryWorkspace={node.isLibraryWorkspace}
+          isReadOnly={node.isReadOnly}
           isSelected={isSelected}
           isExpanded={isExpanded}
           isRenaming={isRenaming}

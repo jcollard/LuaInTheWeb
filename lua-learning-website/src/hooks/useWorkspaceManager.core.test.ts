@@ -36,13 +36,17 @@ setupWorkspaceManagerTests()
 
 describe('useWorkspaceManager', () => {
   describe('initialization', () => {
-    it('initializes with a default virtual workspace', () => {
+    it('initializes with a default virtual workspace and library workspace', () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      expect(result.current.workspaces).toHaveLength(1)
+      // Default workspace + library workspace
+      expect(result.current.workspaces).toHaveLength(2)
       expect(result.current.workspaces[0].name).toBe('home')
       expect(result.current.workspaces[0].type).toBe('virtual')
       expect(result.current.workspaces[0].status).toBe('connected')
+      // Library workspace
+      expect(result.current.workspaces[1].name).toBe('libs')
+      expect(result.current.workspaces[1].type).toBe('library')
     })
 
     it('default workspace has id DEFAULT_WORKSPACE_ID', () => {
@@ -83,9 +87,10 @@ describe('useWorkspaceManager', () => {
         result.current.addVirtualWorkspace('Test Workspace')
       })
 
-      expect(result.current.workspaces).toHaveLength(2)
-      expect(result.current.workspaces[1].name).toBe('Test Workspace')
-      expect(result.current.workspaces[1].type).toBe('virtual')
+      // default + library + new workspace = 3
+      expect(result.current.workspaces).toHaveLength(3)
+      expect(result.current.workspaces.find((w) => w.name === 'Test Workspace')).toBeDefined()
+      expect(result.current.workspaces.find((w) => w.name === 'Test Workspace')?.type).toBe('virtual')
     })
 
     it('returns the newly created workspace', () => {
@@ -180,10 +185,12 @@ describe('useWorkspaceManager', () => {
         await result.current.addLocalWorkspace('My Project', mockHandle)
       })
 
-      expect(result.current.workspaces).toHaveLength(2)
-      expect(result.current.workspaces[1].name).toBe('My Project')
-      expect(result.current.workspaces[1].type).toBe('local')
-      expect(result.current.workspaces[1].directoryHandle).toBe(mockHandle)
+      // default + library + new local workspace = 3
+      expect(result.current.workspaces).toHaveLength(3)
+      const localWorkspace = result.current.workspaces.find((w) => w.name === 'My Project')
+      expect(localWorkspace).toBeDefined()
+      expect(localWorkspace?.type).toBe('local')
+      expect(localWorkspace?.directoryHandle).toBe(mockHandle)
     })
 
     it('initializes the FileSystemAccessAPIFileSystem', async () => {
@@ -249,7 +256,8 @@ describe('useWorkspaceManager', () => {
         result.current.removeWorkspace(workspace!.id)
       })
 
-      expect(result.current.workspaces).toHaveLength(1)
+      // After removal: default + library = 2
+      expect(result.current.workspaces).toHaveLength(2)
       expect(result.current.workspaces.find((w) => w.id === workspace!.id)).toBeUndefined()
     })
 
@@ -266,9 +274,10 @@ describe('useWorkspaceManager', () => {
     it('throws error when trying to remove the last workspace', () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      // Only have the default workspace
-      expect(result.current.workspaces).toHaveLength(1)
+      // default + library workspaces
+      expect(result.current.workspaces).toHaveLength(2)
 
+      // Try to remove default workspace - should throw "Cannot remove default"
       expect(() => {
         act(() => {
           result.current.removeWorkspace(result.current.workspaces[0].id)
@@ -294,13 +303,15 @@ describe('useWorkspaceManager', () => {
         workspace = result.current.addVirtualWorkspace('To Remove')
       })
 
-      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(2)
+      // default + library + new workspace = 3
+      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(3)
 
       act(() => {
         result.current.removeWorkspace(workspace!.id)
       })
 
-      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(1)
+      // After removal: default + library = 2
+      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(2)
     })
   })
 

@@ -20,6 +20,10 @@ export interface BashTerminalHandle {
   clear: () => void
   readLine: () => Promise<string>
   showPrompt: () => void
+  /** Get terminal width in columns */
+  getWidth: () => number
+  /** Get terminal height in rows */
+  getHeight: () => number
 }
 
 interface BashTerminalProps {
@@ -367,6 +371,8 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
       })
     },
     showPrompt: () => xtermRef.current?.write('\x1b[32m> \x1b[0m'),
+    getWidth: () => xtermRef.current?.cols ?? 80,
+    getHeight: () => xtermRef.current?.rows ?? 24,
   }))
 
   const containerClassName = `${styles.container}${embedded ? ` ${styles.containerEmbedded}` : ''}`

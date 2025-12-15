@@ -8,7 +8,7 @@ import { useToast } from '../Toast'
 import { IDEContext } from './context'
 import type { IDEContextValue, IDEContextProviderProps, ActivityPanelType } from './types'
 
-export function IDEContextProvider({ children, initialCode = '', fileSystem: externalFileSystem }: IDEContextProviderProps) {
+export function IDEContextProvider({ children, initialCode = '', fileSystem: externalFileSystem, isPathReadOnly }: IDEContextProviderProps) {
   const internalFilesystem = useFileSystem()
   // Use external filesystem if provided (for workspace integration), otherwise use internal
   const filesystem = externalFileSystem ?? internalFilesystem
@@ -88,12 +88,17 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
 
   const saveFile = useCallback(() => {
     if (activeTab) {
+      // Check if file is in a read-only workspace (e.g., library files)
+      if (isPathReadOnly?.(activeTab)) {
+        showError('This file is read-only and cannot be saved')
+        return
+      }
       filesystem.writeFile(activeTab, code)
       setOriginalContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
       setUnsavedContent(prev => { if (prev.has(activeTab)) { const next = new Map(prev); next.delete(activeTab); return next } return prev })
       tabBar.setDirty(activeTab, false)
     }
-  }, [activeTab, code, filesystem, tabBar])
+  }, [activeTab, code, filesystem, isPathReadOnly, showError, tabBar])
 
   const selectTab = useCallback((path: string) => {
     if (activeTab && code !== originalContent.get(activeTab)) {

@@ -81,8 +81,9 @@ describe('useWorkspaceManager', () => {
 
       const { result } = renderHook(() => useWorkspaceManager())
 
-      expect(result.current.workspaces).toHaveLength(2)
-      expect(result.current.workspaces[1].name).toBe('Restored Workspace')
+      // Includes 2 persisted workspaces + library workspace
+      expect(result.current.workspaces).toHaveLength(3)
+      expect(result.current.workspaces.some((w) => w.name === 'Restored Workspace')).toBe(true)
     })
 
     it('marks local workspaces as disconnected on restore', () => {
@@ -112,8 +113,8 @@ describe('useWorkspaceManager', () => {
 
       const { result } = renderHook(() => useWorkspaceManager())
 
-      // Should have both default and the other workspace
-      expect(result.current.workspaces.length).toBe(2)
+      // Should have default + other + library workspace
+      expect(result.current.workspaces.length).toBe(3)
       expect(result.current.workspaces.some((w) => w.id === DEFAULT_WORKSPACE_ID)).toBe(true)
     })
 
@@ -206,8 +207,8 @@ describe('useWorkspaceManager', () => {
 
       const { result } = renderHook(() => useWorkspaceManager())
 
-      // Before reconnect: only 1 mount (default)
-      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(1)
+      // Before reconnect: 2 mounts (default + library)
+      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(2)
 
       const mockHandle = {
         name: 'project',
@@ -218,8 +219,8 @@ describe('useWorkspaceManager', () => {
         await result.current.reconnectWorkspace('ws-local', mockHandle)
       })
 
-      // After reconnect: 2 mounts
-      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(2)
+      // After reconnect: 3 mounts (default + library + reconnected local)
+      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(3)
     })
 
     it('throws error for non-existent workspace', async () => {
