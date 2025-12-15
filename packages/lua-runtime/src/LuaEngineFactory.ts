@@ -213,6 +213,9 @@ io.write = function(...)
   __js_write(output)
 end
 io.read = function(format)
+  -- Flush output buffer before blocking for input
+  -- This ensures prompts like io.write("Enter name: ") appear before waiting
+  __js_flush()
   local input = __js_read_input():await()
   if format == "*n" or format == "*number" then
     return tonumber(input)
@@ -287,6 +290,11 @@ export class LuaEngineFactory {
     engine.global.set('__js_write', (text: string) => {
       outputBuffer.push(text)
       maybeFlush()
+    })
+
+    // Setup flush function for io.read to call before blocking
+    engine.global.set('__js_flush', () => {
+      flushOutput()
     })
 
     // Setup io.read input handler if provided
