@@ -214,7 +214,9 @@ __clear_execution_hook()
       }
       // Script failed with error
       const errorMsg = error instanceof Error ? error.message : String(error)
-      this.onError(formatLuaError(errorMsg) + '\n')
+      // Adjust line numbers in error messages to account for wrapper lines
+      const adjustedError = this.adjustErrorLineNumber(errorMsg, LINE_OFFSET)
+      this.onError(formatLuaError(adjustedError) + '\n')
       this.exitWithCode(1)
     }
   }
