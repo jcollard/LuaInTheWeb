@@ -172,6 +172,78 @@ describe('LuaEngineFactory - Output Throttling', () => {
     })
   })
 
+  describe('flush before io.read()', () => {
+    it('should flush output buffer before io.read() blocks for input', async () => {
+      let inputResolver: ((value: string) => void) | null = null
+      const inputPromise = new Promise<string>((resolve) => {
+        inputResolver = resolve
+      })
+
+      callbacks.onReadInput = vi.fn().mockReturnValue(inputPromise)
+
+      const engine = await LuaEngineFactory.create(callbacks)
+
+      // Start executing code that writes output then calls io.read()
+      // This should NOT complete until we provide input
+      const executePromise = engine.doString(`
+        io.write("Enter your name: ")
+        local name = io.read()
+        print("Hello, " .. name)
+      `)
+
+      // Wait a tick for the io.read() to be called and block
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      // CRITICAL: The output should be flushed BEFORE io.read() blocks
+      // This is what the user expects - they see the prompt before being asked for input
+      expect(callbacks.onOutput).toHaveBeenCalledWith('Enter your name: ')
+
+      // Now provide input to unblock
+      inputResolver!('World')
+
+      // Wait for execution to complete
+      await executePromise
+
+      // Close to flush remaining output
+      LuaEngineFactory.close(engine)
+
+      // Verify the final output includes the greeting
+      expect(callbacks.onOutput).toHaveBeenCalledWith('Hello, World\n')
+    })
+
+    it('should flush print() output before io.read() blocks', async () => {
+      let inputResolver: ((value: string) => void) | null = null
+      const inputPromise = new Promise<string>((resolve) => {
+        inputResolver = resolve
+      })
+
+      callbacks.onReadInput = vi.fn().mockReturnValue(inputPromise)
+
+      const engine = await LuaEngineFactory.create(callbacks)
+
+      // Start executing code that prints then calls io.read()
+      const executePromise = engine.doString(`
+        print("Please enter a value:")
+        local value = io.read()
+        print("You entered: " .. value)
+      `)
+
+      // Wait a tick for the io.read() to be called and block
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      // The print output should be flushed before io.read() blocks
+      expect(callbacks.onOutput).toHaveBeenCalledWith('Please enter a value:\n')
+
+      // Provide input
+      inputResolver!('42')
+
+      await executePromise
+      LuaEngineFactory.close(engine)
+
+      expect(callbacks.onOutput).toHaveBeenCalledWith('You entered: 42\n')
+    })
+  })
+
   describe('edge cases', () => {
     it('should handle empty print calls', async () => {
       const engine = await LuaEngineFactory.create(callbacks)
