@@ -33,6 +33,7 @@ import {
 } from './directoryHandleStorage'
 import {
   DEFAULT_WORKSPACE_ID,
+  DEFAULT_MOUNT_PATH,
   generateWorkspaceId,
   generateMountPath,
   saveWorkspaces,
@@ -74,7 +75,7 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
         name: w.name,
       }))
 
-    return new CompositeFileSystem({ mounts })
+    return new CompositeFileSystem({ mounts, initialCwd: DEFAULT_MOUNT_PATH })
   }, [state.workspaces])
 
   const addVirtualWorkspace = useCallback((name: string): Workspace => {

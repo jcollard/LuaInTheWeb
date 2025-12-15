@@ -11,9 +11,9 @@ test.describe('Workspace UI', () => {
 
   test.describe('workspace display', () => {
     test('displays default workspace as root folder in tree', async ({ page }) => {
-      // Assert - Default workspace (my-files) should be visible in the file tree
+      // Assert - Default workspace (home) should be visible in the file tree
       // Workspaces appear as root-level folders with workspace icon
-      await expect(page.getByRole('treeitem', { name: /my-files/i })).toBeVisible()
+      await expect(page.getByRole('treeitem', { name: /home/i })).toBeVisible()
     })
 
     test('shows workspace icon for workspace folders', async ({ page }) => {
@@ -138,7 +138,7 @@ test.describe('Workspace UI', () => {
 
     test('workspaces use treeitem role', async ({ page }) => {
       // Default workspace should be a treeitem
-      await expect(page.getByRole('treeitem', { name: /my-files/i })).toBeVisible()
+      await expect(page.getByRole('treeitem', { name: /home/i })).toBeVisible()
     })
 
     test('add workspace dialog is accessible', async ({ page }) => {
@@ -160,7 +160,7 @@ test.describe('Workspace UI', () => {
       page,
     }) => {
       // Act - Right-click on default workspace
-      const workspace = page.getByRole('treeitem', { name: /my-files/i })
+      const workspace = page.getByRole('treeitem', { name: /home/i })
       await workspace.click({ button: 'right' })
 
       // Assert - Context menu with workspace options should appear
@@ -172,7 +172,7 @@ test.describe('Workspace UI', () => {
   test.describe('workspace file operations', () => {
     test('can create file inside workspace via context menu', async ({ page }) => {
       // Arrange - Expand workspace by clicking on it
-      const workspace = page.getByRole('treeitem', { name: /my-files/i })
+      const workspace = page.getByRole('treeitem', { name: /home/i })
       await workspace.click()
       await page.waitForTimeout(200)
 
@@ -196,7 +196,7 @@ test.describe('Workspace UI', () => {
 
     test('can create folder inside workspace via context menu', async ({ page }) => {
       // Arrange - Expand workspace by clicking on it
-      const workspace = page.getByRole('treeitem', { name: /my-files/i })
+      const workspace = page.getByRole('treeitem', { name: /home/i })
       await workspace.click()
       await page.waitForTimeout(200)
 

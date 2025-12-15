@@ -35,37 +35,34 @@ test.describe('Shell Workspace Integration', () => {
   })
 
   test.describe('workspace navigation', () => {
-    test('shell starts at root directory showing workspaces', async ({ page }) => {
+    test('shell starts in home directory', async ({ page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
-      // Run ls to see workspace mount points
-      await terminal.execute('ls')
-
-      // Terminal should show the default workspace mount point (my-files)
-      await terminal.expectToContain('my-files')
-    })
-
-    test('can navigate to workspace with cd', async ({ page }) => {
-      const terminal = createTerminalHelper(page)
-      await terminal.focus()
-
-      // Navigate to the default workspace
-      await terminal.execute('cd /my-files')
-
-      // Verify we're in the workspace
+      // Verify we start in /home
       await terminal.execute('pwd')
 
-      // Should show /my-files as current directory
-      await terminal.expectToContain('/my-files')
+      // Terminal should show /home as current directory
+      await terminal.expectToContain('/home')
+    })
+
+    test('can navigate to root and see workspaces', async ({ page }) => {
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
+
+      // Navigate to root to see mount points
+      await terminal.execute('cd /')
+      await terminal.execute('ls')
+
+      // Should show the default workspace mount point (home)
+      await terminal.expectToContain('home')
     })
 
     test('can create files in workspace via shell', async ({ page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
-      // Navigate to workspace and create a file
-      await terminal.execute('cd /my-files')
+      // Shell starts in /home, create a file directly
       await terminal.execute('touch test-file.lua')
 
       // Verify file was created
@@ -77,8 +74,7 @@ test.describe('Shell Workspace Integration', () => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
-      // Navigate to workspace and create a directory
-      await terminal.execute('cd /my-files')
+      // Shell starts in /home, create a directory
       await terminal.execute('mkdir test-dir')
 
       // Navigate into the new directory
@@ -86,7 +82,7 @@ test.describe('Shell Workspace Integration', () => {
 
       // Verify current directory
       await terminal.execute('pwd')
-      await terminal.expectToContain('/my-files/test-dir')
+      await terminal.expectToContain('/home/test-dir')
     })
   })
 
@@ -100,17 +96,14 @@ test.describe('Shell Workspace Integration', () => {
       await terminal.execute('ls')
 
       // Should show the default workspace
-      await terminal.expectToContain('my-files')
+      await terminal.expectToContain('home')
     })
 
-    test('shell can navigate back to root from workspace', async ({ page }) => {
+    test('shell can navigate back to root from home', async ({ page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
-      // First navigate to workspace
-      await terminal.execute('cd /my-files')
-
-      // Navigate back to root
+      // Shell starts in /home, navigate to root
       await terminal.execute('cd /')
 
       // Verify we're at root by checking pwd output
@@ -128,8 +121,7 @@ test.describe('Shell Workspace Integration', () => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
-      // Create a file in the workspace via shell
-      await terminal.execute('cd /my-files')
+      // Shell starts in /home, create a file directly
       await terminal.execute('touch shell-created.lua')
 
       // Verify file exists via ls
@@ -145,7 +137,7 @@ test.describe('Shell Workspace Integration', () => {
 
       // Verify file persists after navigation
       await terminal.execute('cd /')
-      await terminal.execute('cd /my-files')
+      await terminal.execute('cd /home')
       await terminal.execute('ls')
       await terminal.expectToContain('shell-created.lua')
     })

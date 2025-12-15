@@ -132,7 +132,7 @@ export class TerminalHelper {
  * const terminal = createTerminalHelper(page)
  * await terminal.focus()
  * await terminal.execute('ls')
- * await terminal.expectToContain('my-files')
+ * await terminal.expectToContain('home')
  * ```
  */
 export function createTerminalHelper(page: Page, selector?: string): TerminalHelper {

@@ -14,8 +14,8 @@ import { createVirtualFileSystem } from './virtualFileSystemFactory'
 
 export const WORKSPACE_STORAGE_KEY = 'lua-workspaces'
 export const DEFAULT_WORKSPACE_ID = 'default'
-export const DEFAULT_WORKSPACE_NAME = 'My Files'
-export const DEFAULT_MOUNT_PATH = '/my-files'
+export const DEFAULT_WORKSPACE_NAME = 'home'
+export const DEFAULT_MOUNT_PATH = '/home'
 
 /**
  * Generate a unique workspace ID.
