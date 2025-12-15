@@ -3,7 +3,7 @@ import { LuaEngineFactory } from '@lua-learning/lua-runtime'
 import type { LuaEngine } from 'wasmoon'
 
 /** Debounce delay for syntax checking (ms) */
-const DEBOUNCE_DELAY = 1500
+const DEBOUNCE_DELAY = 300
 
 /**
  * Return type for the useLuaSyntaxChecker hook
