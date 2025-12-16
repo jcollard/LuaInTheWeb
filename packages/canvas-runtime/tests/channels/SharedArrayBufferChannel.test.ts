@@ -262,6 +262,51 @@ describe('SharedArrayBufferChannel', () => {
       expect(received.mouseButtonsDown.includes(2)).toBe(true);
     });
 
+    it('should distinguish mouseButtonsDown from mouseButtonsPressed', () => {
+      // This tests the case where a button is held down but not "just pressed this frame"
+      // (i.e., button was pressed in a previous frame and is still being held)
+      const inputState: InputState = {
+        keysDown: ['a'],
+        keysPressed: [], // 'a' is held but not just pressed
+        mouseX: 100,
+        mouseY: 200,
+        mouseButtonsDown: [0], // Left button is held
+        mouseButtonsPressed: [], // But not just pressed this frame
+      };
+
+      mainChannel.setInputState(inputState);
+      const received = workerChannel.getInputState();
+
+      // Button should be down but NOT pressed
+      expect(received.mouseButtonsDown).toContain(0);
+      expect(received.mouseButtonsPressed).not.toContain(0);
+
+      // Key should be down but NOT pressed
+      expect(received.keysDown).toContain('a');
+      expect(received.keysPressed).not.toContain('a');
+    });
+
+    it('should handle button pressed but not down edge case', () => {
+      // Edge case: button could theoretically be "pressed" on one frame
+      // and already released before we read the state
+      const inputState: InputState = {
+        keysDown: [],
+        keysPressed: ['b'], // 'b' was just pressed but released before read
+        mouseX: 50,
+        mouseY: 75,
+        mouseButtonsDown: [],
+        mouseButtonsPressed: [2], // Right button was just pressed
+      };
+
+      mainChannel.setInputState(inputState);
+      const received = workerChannel.getInputState();
+
+      expect(received.mouseButtonsDown).not.toContain(2);
+      expect(received.mouseButtonsPressed).toContain(2);
+      expect(received.keysDown).not.toContain('b');
+      expect(received.keysPressed).toContain('b');
+    });
+
     it('should handle more keys than MAX_KEYS (32)', () => {
       // MAX_KEYS = 32, so we test with 35 keys
       const manyKeys: string[] = [];
