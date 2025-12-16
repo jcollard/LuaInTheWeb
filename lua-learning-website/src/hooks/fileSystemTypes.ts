@@ -21,6 +21,8 @@ export interface TreeNode {
   isDisconnected?: boolean
   /** Indicates this is a library workspace (read-only, built-in libraries) */
   isLibraryWorkspace?: boolean
+  /** Indicates this is a docs workspace (read-only, API documentation) */
+  isDocsWorkspace?: boolean
   /** Indicates this file/folder is in a read-only workspace */
   isReadOnly?: boolean
   children?: TreeNode[]

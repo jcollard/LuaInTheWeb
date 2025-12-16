@@ -1,6 +1,16 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
+
+// Mock @lua-learning/lua-runtime for shell library code (used by docs workspace)
+vi.mock('@lua-learning/lua-runtime', async () => {
+  const actual = await vi.importActual('@lua-learning/lua-runtime')
+  return {
+    ...actual,
+    LUA_SHELL_CODE: '-- mock shell code for testing',
+  }
+})
+
 import { IDELayout } from './IDELayout'
 
 // Mock Monaco Editor with onChange support

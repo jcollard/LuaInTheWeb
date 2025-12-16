@@ -68,6 +68,16 @@ const LibraryWorkspaceIcon = () => (
   </svg>
 )
 
+// Docs workspace icon - document with question mark (API documentation)
+const DocsWorkspaceIcon = () => (
+  <svg className={styles.iconSvg} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" data-testid="docs-workspace-icon">
+    {/* Document shape */}
+    <path d="M3 1.5A1.5 1.5 0 014.5 0h5.793a1 1 0 01.707.293l2.707 2.707a1 1 0 01.293.707V14.5a1.5 1.5 0 01-1.5 1.5h-8A1.5 1.5 0 013 14.5v-13z" fill="#7cc47c" stroke="#5a9c5a" strokeWidth="0.5" />
+    {/* Question mark for docs/help */}
+    <text x="8" y="11" fontSize="8" fill="#3a6c3a" textAnchor="middle" fontWeight="bold">?</text>
+  </svg>
+)
+
 export function FileTreeItem({
   name,
   path,
@@ -76,6 +86,7 @@ export function FileTreeItem({
   isLocalWorkspace,
   isDisconnected,
   isLibraryWorkspace,
+  isDocsWorkspace,
   isReadOnly,
   isSelected,
   isExpanded,
@@ -227,6 +238,8 @@ export function FileTreeItem({
               <DisconnectedWorkspaceIcon />
             ) : isLibraryWorkspace ? (
               <LibraryWorkspaceIcon />
+            ) : isDocsWorkspace ? (
+              <DocsWorkspaceIcon />
             ) : isLocalWorkspace ? (
               <LocalWorkspaceIcon />
             ) : (

@@ -65,9 +65,9 @@ test.describe('Library Workspace', () => {
       await expect(page.locator('.monaco-editor')).toBeVisible()
       // The file should have Lua code for shell library
       const editorContent = page.locator('.monaco-editor')
-      // Check for key content - the actual text has line numbers, so match characteristic code
+      // Check for key content - the file starts with LuaDoc annotations
       await expect(editorContent).toContainText('Terminal control library')
-      await expect(editorContent).toContainText('local shell = {}')
+      await expect(editorContent).toContainText('@class shell')
     })
   })
 

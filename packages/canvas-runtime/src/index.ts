@@ -64,3 +64,8 @@ export type {
   ErrorMessage,
   StateChangedMessage,
 } from './worker/index.js';
+
+// Process components
+export { LuaCanvasProcess } from './process/index.js';
+
+export type { LuaCanvasProcessOptions } from './process/index.js';

@@ -31,12 +31,14 @@ export function buildTreeFromFileSystem(
       // For root-level folders, find the matching workspace to get its type
       let isLocalWorkspace: boolean | undefined
       let isLibraryWorkspace: boolean | undefined
+      let isDocsWorkspace: boolean | undefined
       let isReadOnly = parentReadOnly
 
       if (isRoot) {
         const workspace = allWorkspaces.find((w) => w.mountPath === entry.path)
         isLocalWorkspace = workspace?.type === 'local'
         isLibraryWorkspace = workspace?.type === 'library'
+        isDocsWorkspace = workspace?.type === 'docs'
         isReadOnly = workspace?.isReadOnly === true
       }
 
@@ -55,6 +57,7 @@ export function buildTreeFromFileSystem(
         isWorkspace: isRoot, // Root-level folders are workspaces
         isLocalWorkspace,
         isLibraryWorkspace,
+        isDocsWorkspace,
         isReadOnly: isReadOnly || undefined, // Only set if true
         children,
       })
