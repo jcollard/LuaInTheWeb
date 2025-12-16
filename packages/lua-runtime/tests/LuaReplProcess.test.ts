@@ -217,6 +217,23 @@ describe('LuaReplProcess', () => {
 
       expect(onOutput).toHaveBeenCalledWith('42\n')
     })
+
+    it('should handle multiple return values with nil in middle', async () => {
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      onOutput.mockClear()
+
+      // Define function that returns (1, nil, 3)
+      process.handleInput('function test() return 1, nil, 3 end')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      // Call the function - should display all values including nil
+      process.handleInput('test()')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      // Should output all values tab-separated: "1\tnil\t3\n"
+      expect(onOutput).toHaveBeenCalledWith('1\tnil\t3\n')
+    })
   })
 
   describe('exit command', () => {

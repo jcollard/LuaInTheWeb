@@ -471,6 +471,66 @@ describe('useLuaRepl', () => {
       expect(mockDoString).toHaveBeenCalledWith('return __format_results(string.find("hello", "ll"))')
       expect(onOutput).toHaveBeenCalledWith('3\t4')
     })
+
+    // Cycle 22: Multiple return values with nil in middle
+    it('should handle nil in middle of multiple return values', async () => {
+      // Arrange
+      const onOutput = vi.fn()
+      const { result } = renderHook(() => useLuaRepl({ onOutput }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Mock: function returns (1, nil, 3) formatted as "1\tnil\t3"
+      mockDoString.mockResolvedValueOnce('1\tnil\t3')
+
+      // Act - call function that returns values with nil in middle
+      await act(async () => {
+        await result.current.executeCode('test()')
+      })
+
+      // Assert - should display all values including nil in middle
+      expect(mockDoString).toHaveBeenCalledWith('return __format_results(test())')
+      expect(onOutput).toHaveBeenCalledWith('1\tnil\t3')
+    })
+
+    // Cycle 23: Multiple return values with nil at start
+    it('should handle nil at start of multiple return values', async () => {
+      // Arrange
+      const onOutput = vi.fn()
+      const { result } = renderHook(() => useLuaRepl({ onOutput }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Mock: function returns (nil, 2, 3) formatted as "nil\t2\t3"
+      mockDoString.mockResolvedValueOnce('nil\t2\t3')
+
+      // Act - call function that returns nil first
+      await act(async () => {
+        await result.current.executeCode('test()')
+      })
+
+      // Assert - should display all values including nil at start
+      expect(mockDoString).toHaveBeenCalledWith('return __format_results(test())')
+      expect(onOutput).toHaveBeenCalledWith('nil\t2\t3')
+    })
+
+    // Cycle 24: Multiple return values with trailing nils
+    it('should handle trailing nils in multiple return values', async () => {
+      // Arrange
+      const onOutput = vi.fn()
+      const { result } = renderHook(() => useLuaRepl({ onOutput }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Mock: function returns (1, 2, nil) formatted as "1\t2\tnil"
+      mockDoString.mockResolvedValueOnce('1\t2\tnil')
+
+      // Act - call function that returns trailing nil
+      await act(async () => {
+        await result.current.executeCode('test()')
+      })
+
+      // Assert - should display all values including trailing nil
+      expect(mockDoString).toHaveBeenCalledWith('return __format_results(test())')
+      expect(onOutput).toHaveBeenCalledWith('1\t2\tnil')
+    })
   })
 
   describe('error handling', () => {

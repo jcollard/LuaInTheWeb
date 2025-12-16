@@ -164,12 +164,13 @@ end
 
 -- Format multiple return values, joining them with tabs
 function __format_results(...)
-  local results = {...}
-  if #results == 0 then
+  local count = select('#', ...)
+  if count == 0 then
     return "nil"
   end
   local formatted = {}
-  for i, v in ipairs(results) do
+  for i = 1, count do
+    local v = select(i, ...)
     table.insert(formatted, __format_value(v))
   end
   return table.concat(formatted, "\\t")
