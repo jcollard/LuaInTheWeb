@@ -99,6 +99,6 @@
     ]
   },
   "env": {
-    "SKIP_PRE_PUSH_TESTS": "1"
+    "SKIP_PRE_PUSH_TESTS": "0"
   }
 }
