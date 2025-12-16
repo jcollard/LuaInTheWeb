@@ -170,8 +170,10 @@ export class InputCapture {
   }
 
   private onBlur(): void {
-    // Clear all keys on blur to prevent stuck keys
+    // Clear all input state on blur to prevent stuck keys/buttons
     this.keysDown.clear();
     this.keysPressed.clear();
+    this.mouseButtonsDown.clear();
+    this.mouseButtonsPressed.clear();
   }
 }

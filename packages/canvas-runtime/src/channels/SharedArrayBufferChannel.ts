@@ -144,7 +144,10 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
     if (mouseButtonMask & MOUSE_MIDDLE) mouseButtonsDown.push(1);
     if (mouseButtonMask & MOUSE_RIGHT) mouseButtonsDown.push(2);
 
-    // For now, mouseButtonsPressed is the same - we'll track pressed state separately if needed
+    // TODO: The memory layout doesn't have separate storage for mouseButtonsPressed.
+    // Currently copies from mouseButtonsDown. The main thread's InputCapture tracks
+    // pressed state correctly and writes it via setInputState, but getInputState
+    // on the worker side can't distinguish them. Add separate bitmask if needed.
     const mouseButtonsPressed = [...mouseButtonsDown];
 
     const keysDown = this.readKeyArray(OFFSET_KEYS_DOWN_COUNT, OFFSET_KEYS_DOWN_DATA);

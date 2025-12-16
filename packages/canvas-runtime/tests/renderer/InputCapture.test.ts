@@ -315,5 +315,17 @@ describe('InputCapture', () => {
 
       expect(inputCapture.isKeyDown('KeyA')).toBe(false);
     });
+
+    it('should clear mouse buttons on blur to prevent stuck buttons', () => {
+      target.dispatchEvent(new MouseEvent('mousedown', { button: 0 }));
+      target.dispatchEvent(new MouseEvent('mousedown', { button: 2 }));
+      expect(inputCapture.isMouseButtonDown(0)).toBe(true);
+      expect(inputCapture.isMouseButtonDown(2)).toBe(true);
+
+      target.dispatchEvent(new FocusEvent('blur'));
+
+      expect(inputCapture.isMouseButtonDown(0)).toBe(false);
+      expect(inputCapture.isMouseButtonDown(2)).toBe(false);
+    });
   });
 });
