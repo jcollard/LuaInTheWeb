@@ -57,7 +57,7 @@ Mouse                                       │
 | #257 | React Integration & Canvas UI | ✅ Complete | - | Merged PR #281 |
 | #258 | COOP/COEP Header Configuration | ✅ Complete | - | Merged PR #260 |
 | #259 | Library Workspace Integration | ✅ Complete | - | Merged PR #277 |
-| #286 | Shell integration: canvas.start() and canvas.stop() | 🔄 In Progress | 286-shell-canvas-integration | M - Depends on #257 |
+| #286 | Shell integration: canvas.start() and canvas.stop() | 🔄 PR Created | 286-shell-canvas-integration | PR #289 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -149,6 +149,12 @@ Mouse                                       │
   - All print() output goes to terminal while canvas runs
 - Integrated main into epic branch (useWindowFocusRefresh hook)
 - Started #286: Shell integration - canvas.start() and canvas.stop()
+- PR created for #286: Shell integration (PR #289)
+  - Removed 'Run Canvas' button from EditorPanel toolbar
+  - Added canvas.start() and canvas.stop() for shell-based canvas control
+  - Extended LuaReplProcess and LuaScriptProcess with canvas API
+  - Created shared setupCanvasAPI.ts to eliminate duplication
+  - 6 new E2E tests, 1790 unit tests pass
 
 ## Key Files
 
