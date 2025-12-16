@@ -181,11 +181,26 @@ export class LuaScriptProcess implements IProcess {
       },
       onReadInput: (charCount?: number) => this.waitForInput(charCount),
       onInstructionLimitReached: this.options.onInstructionLimitReached,
+      // Enable require() to load modules from the virtual file system
+      fileReader: (path: string): string | null => {
+        if (!this.context.filesystem.exists(path)) {
+          return null
+        }
+        if (this.context.filesystem.isDirectory(path)) {
+          return null
+        }
+        try {
+          return this.context.filesystem.readFile(path)
+        } catch {
+          return null
+        }
+      },
     }
 
     const engineOptions: LuaEngineOptions = {
       instructionLimit: this.options.instructionLimit,
       instructionCheckInterval: this.options.instructionCheckInterval,
+      scriptPath: filepath,
     }
 
     try {
