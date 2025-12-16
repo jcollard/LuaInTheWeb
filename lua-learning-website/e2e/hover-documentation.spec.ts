@@ -7,7 +7,8 @@ async function createAndOpenFile(page: import('@playwright/test').Page) {
   // First, expand the workspace folder by clicking its chevron
   const workspaceChevron = page.getByTestId('folder-chevron').first()
   await workspaceChevron.click()
-  await page.waitForTimeout(200)
+  // Wait for expansion to complete
+  await expect(workspaceChevron).toBeVisible()
 
   // Click New File button
   await sidebar.getByRole('button', { name: /new file/i }).click()
@@ -25,7 +26,14 @@ async function createAndOpenFile(page: import('@playwright/test').Page) {
   } else {
     await fileItems.first().click()
   }
-  await page.waitForTimeout(200)
+
+  // Wait for Monaco editor textarea to be ready (indicates editor is fully loaded)
+  await expect(page.locator('.monaco-editor textarea')).toBeVisible({ timeout: 5000 })
+}
+
+// Helper to type text slowly with delays (to avoid character dropping)
+async function typeSlowly(page: import('@playwright/test').Page, text: string) {
+  await page.keyboard.type(text, { delay: 50 })
 }
 
 test.describe('Hover Documentation', () => {
@@ -49,15 +57,11 @@ test.describe('Hover Documentation', () => {
 
     // Click editor and type simple code with print
     await monacoEditor.click()
-    await page.waitForTimeout(100)
-
-    // Type simple code - just print without special characters
-    await page.keyboard.type('print')
-    await page.waitForTimeout(300)
+    await typeSlowly(page, 'print')
 
     // Verify the code was typed
     const viewLines = page.locator('.monaco-editor .view-lines')
-    await expect(viewLines).toContainText('print')
+    await expect(viewLines).toContainText('print', { timeout: 5000 })
 
     // Get the bounding box of the editor content area
     const editorContent = page.locator('.monaco-editor .lines-content')
@@ -89,9 +93,11 @@ test.describe('Hover Documentation', () => {
 
     // Click editor and type simple code
     await monacoEditor.click()
-    await page.waitForTimeout(100)
-    await page.keyboard.type('type')
-    await page.waitForTimeout(300)
+    await typeSlowly(page, 'type')
+
+    // Verify the code was typed
+    const viewLines = page.locator('.monaco-editor .view-lines')
+    await expect(viewLines).toContainText('type', { timeout: 5000 })
 
     // Get editor content area
     const editorContent = page.locator('.monaco-editor .lines-content')
@@ -113,24 +119,19 @@ test.describe('Hover Documentation', () => {
   test('editor accepts code with standard library functions', async ({ page }) => {
     const monacoEditor = page.locator('.monaco-editor')
 
-    // Click editor and type code with various standard library functions
+    // Click editor and type standard library function calls
     await monacoEditor.click()
-    await page.waitForTimeout(100)
-
-    // Type standard library function calls
-    await page.keyboard.type('tonumber')
-    await page.waitForTimeout(200)
+    await typeSlowly(page, 'tonumber')
 
     // Verify the code was typed correctly
     const viewLines = page.locator('.monaco-editor .view-lines')
-    await expect(viewLines).toContainText('tonumber')
+    await expect(viewLines).toContainText('tonumber', { timeout: 5000 })
 
     // Type more code
     await page.keyboard.press('Enter')
-    await page.keyboard.type('tostring')
-    await page.waitForTimeout(200)
+    await typeSlowly(page, 'tostring')
 
-    await expect(viewLines).toContainText('tostring')
+    await expect(viewLines).toContainText('tostring', { timeout: 5000 })
   })
 
   test('hover provider is registered for Lua files', async ({ page }) => {
@@ -144,12 +145,11 @@ test.describe('Hover Documentation', () => {
     const statusBar = page.getByRole('status')
     await expect(statusBar.getByText('Lua')).toBeVisible()
 
-    // Monaco editor should be interactive
+    // Click editor and type
     await monacoEditor.click()
-    await page.keyboard.type('x')
-    await page.waitForTimeout(100)
+    await typeSlowly(page, 'x')
 
     const viewLines = page.locator('.monaco-editor .view-lines')
-    await expect(viewLines).toContainText('x')
+    await expect(viewLines).toContainText('x', { timeout: 5000 })
   })
 })
