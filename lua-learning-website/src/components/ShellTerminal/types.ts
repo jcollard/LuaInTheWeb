@@ -1,4 +1,4 @@
-import type { UseShellFileSystem } from '../../hooks/useShell'
+import type { UseShellFileSystem, ShellCanvasCallbacks } from '../../hooks/useShell'
 
 /**
  * Props for ShellTerminal component
@@ -12,6 +12,8 @@ export interface ShellTerminalProps {
   className?: string
   /** Callback when shell command modifies filesystem (for refreshing file tree) */
   onFileSystemChange?: () => void
+  /** Canvas callbacks for canvas.start()/stop() support */
+  canvasCallbacks?: ShellCanvasCallbacks
 }
 
 /**

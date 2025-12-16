@@ -5,9 +5,9 @@ import * as useTabBarScrollModule from './useTabBarScroll'
 
 describe('TabBar', () => {
   const defaultTabs = [
-    { path: '/main.lua', name: 'main.lua', isDirty: false, isPreview: false },
-    { path: '/utils/math.lua', name: 'math.lua', isDirty: true, isPreview: false },
-    { path: '/config.lua', name: 'config.lua', isDirty: false, isPreview: false },
+    { path: '/main.lua', name: 'main.lua', isDirty: false, type: 'file' as const, isPreview: false },
+    { path: '/utils/math.lua', name: 'math.lua', isDirty: true, type: 'file' as const, isPreview: false },
+    { path: '/config.lua', name: 'config.lua', isDirty: false, type: 'file' as const, isPreview: false },
   ]
 
   const defaultProps = {
@@ -356,7 +356,7 @@ describe('TabBar', () => {
       mockCheckOverflow.mockClear()
 
       // Act - rerender with different tabs
-      const newTabs = [...defaultTabs, { path: '/new.lua', name: 'new.lua', isDirty: false, isPreview: false }]
+      const newTabs = [...defaultTabs, { path: '/new.lua', name: 'new.lua', isDirty: false, type: 'file' as const, isPreview: false }]
       rerender(<TabBar {...defaultProps} tabs={newTabs} />)
 
       // Assert - checkOverflow should be called again
@@ -427,8 +427,8 @@ describe('TabBar', () => {
     it('should apply preview class to preview tabs', () => {
       // Arrange
       const tabsWithPreview = [
-        { path: '/main.lua', name: 'main.lua', isDirty: false, isPreview: false },
-        { path: '/preview.lua', name: 'preview.lua', isDirty: false, isPreview: true },
+        { path: '/main.lua', name: 'main.lua', isDirty: false, isPreview: false, type: 'file' as const },
+        { path: '/preview.lua', name: 'preview.lua', isDirty: false, isPreview: true, type: 'file' as const },
       ]
 
       // Act
@@ -443,7 +443,7 @@ describe('TabBar', () => {
     it('should show preview tab name in italics via CSS class', () => {
       // Arrange
       const tabsWithPreview = [
-        { path: '/preview.lua', name: 'preview.lua', isDirty: false, isPreview: true },
+        { path: '/preview.lua', name: 'preview.lua', isDirty: false, isPreview: true, type: 'file' as const },
       ]
 
       // Act
@@ -457,7 +457,7 @@ describe('TabBar', () => {
     it('should not apply preview class to permanent tabs', () => {
       // Arrange
       const tabsWithPermanent = [
-        { path: '/permanent.lua', name: 'permanent.lua', isDirty: false, isPreview: false },
+        { path: '/permanent.lua', name: 'permanent.lua', isDirty: false, isPreview: false, type: 'file' as const },
       ]
 
       // Act

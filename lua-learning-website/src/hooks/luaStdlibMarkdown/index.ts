@@ -9,6 +9,7 @@ import { generateTableDocumentation } from './table'
 import { generateMathDocumentation } from './math'
 import { generateIODocumentation } from './io'
 import { generateShellDocumentation } from './shell'
+import { generateCanvasDocumentation } from '../libraryDocumentation'
 
 export {
   generateBasicsDocumentation,
@@ -17,6 +18,7 @@ export {
   generateMathDocumentation,
   generateIODocumentation,
   generateShellDocumentation,
+  generateCanvasDocumentation,
 }
 
 /**
@@ -26,6 +28,7 @@ export {
 export function getAllDocs(): Record<string, string> {
   return {
     'shell.md': generateShellDocumentation(),
+    'canvas.md': generateCanvasDocumentation(),
     'lua/basics.md': generateBasicsDocumentation(),
     'lua/string.md': generateStringDocumentation(),
     'lua/table.md': generateTableDocumentation(),

@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const PORT = process.env.PORT || '5173'
-const BASE_URL = `http://localhost:${PORT}`
+// E2E tests use a dedicated high port to avoid conflicts with dev servers
+const E2E_PORT = 52086
 
 export default defineConfig({
   testDir: './e2e',
@@ -11,7 +11,7 @@ export default defineConfig({
   workers: process.env.CI ? 2 : undefined,
   reporter: 'html',
   use: {
-    baseURL: BASE_URL,
+    baseURL: `http://localhost:${E2E_PORT}`,
     trace: 'on-first-retry',
   },
   projects: [
@@ -21,8 +21,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
-    url: BASE_URL,
+    command: `npm run dev -- --port ${E2E_PORT}`,
+    url: `http://localhost:${E2E_PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },

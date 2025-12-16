@@ -5,7 +5,10 @@
  */
 
 import type { IFileSystem } from '@lua-learning/shell-core'
-import { LUA_SHELL_CODE } from '@lua-learning/lua-runtime'
+import {
+  generateShellLibrarySource,
+  generateCanvasLibrarySource,
+} from './libraryDocumentation'
 import type {
   Workspace,
   PersistedWorkspace,
@@ -113,28 +116,13 @@ export function createDefaultWorkspace(): Workspace {
 }
 
 /**
- * Generate a clean version of the shell library source code for display.
- * This reformats the embedded Lua code for better readability.
- */
-function generateShellLibrarySource(): string {
-  // Add a header comment and clean up the source
-  return `-- shell.lua - Terminal control library
--- Load with: local shell = require('shell')
---
--- This library provides functions for terminal control including
--- colors, cursor movement, and screen management.
-
-${LUA_SHELL_CODE.trim()}
-`
-}
-
-/**
  * Create the library workspace containing built-in libraries.
  * This workspace is read-only and contains files like shell.lua.
  */
 export function createLibraryWorkspace(): Workspace {
   const libraryFiles: Record<string, string> = {
     'shell.lua': generateShellLibrarySource(),
+    'canvas.lua': generateCanvasLibrarySource(),
   }
 
   return {

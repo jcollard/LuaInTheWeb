@@ -33,6 +33,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
 
   const activeTab = tabBar.activeTab
   const tabs = tabBar.tabs
+  const activeTabType = tabBar.getActiveTabType()
   const fileName = activeTab ? getFileName(activeTab) : null
 
   const isDirty = useMemo(() => {
@@ -133,6 +134,14 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     }
     tabBar.selectTab(path); loadContentForPath(path)
   }, [activeTab, code, loadContentForPath, originalContent, tabBar])
+
+  const openCanvasTab = useCallback((id: string, name?: string) => {
+    // Save current file content if switching away from a file tab
+    if (activeTab && code !== originalContent.get(activeTab)) {
+      setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
+    }
+    tabBar.openCanvasTab(id, name)
+  }, [activeTab, code, originalContent, tabBar])
 
   const closeTab = useCallback((path: string) => {
     tabBar.closeTab(path)
@@ -283,7 +292,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     terminalVisible, toggleTerminal, sidebarVisible, toggleSidebar,
     fileTree, refreshFileTree,
     createFile, createFolder, deleteFile, deleteFolder, renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, saveFile,
-    tabs, activeTab, selectTab, closeTab, makeTabPermanent, toasts, showError, dismissToast,
+    tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, makeTabPermanent, toasts, showError, dismissToast,
     pendingNewFilePath, generateUniqueFileName, createFileWithRename, clearPendingNewFile,
     pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename, clearPendingNewFolder,
     recentFiles, clearRecentFiles, fileSystem: filesystem,
@@ -291,7 +300,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     engine, code, setCode, fileName, isDirty,
     activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
     fileTree, refreshFileTree, createFile, createFolder, deleteFile, deleteFolder,
-    renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, saveFile, tabs, activeTab, selectTab, closeTab, makeTabPermanent,
+    renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, saveFile, tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, makeTabPermanent,
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,
     clearPendingNewFolder, recentFiles, clearRecentFiles, filesystem,

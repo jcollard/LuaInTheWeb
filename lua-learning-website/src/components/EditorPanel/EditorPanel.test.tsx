@@ -41,8 +41,8 @@ describe('EditorPanel', () => {
   }
 
   const mockTabs: TabInfo[] = [
-    { path: '/main.lua', name: 'main.lua', isDirty: false, isPreview: false },
-    { path: '/utils/math.lua', name: 'math.lua', isDirty: true, isPreview: false },
+    { path: '/main.lua', name: 'main.lua', isDirty: false, type: 'file', isPreview: false },
+    { path: '/utils/math.lua', name: 'math.lua', isDirty: true, type: 'file', isPreview: false },
   ]
 
   const defaultTabBarProps = {
@@ -328,4 +328,5 @@ describe('EditorPanel', () => {
       expect(screen.getByRole('button', { name: /format/i })).not.toBeDisabled()
     })
   })
+
 })

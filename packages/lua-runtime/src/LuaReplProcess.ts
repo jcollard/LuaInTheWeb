@@ -13,11 +13,16 @@ import {
   type LuaEngineOptions,
   type ExecutionControlOptions,
 } from './LuaEngineFactory'
+import { CanvasController, type CanvasCallbacks } from './CanvasController'
+import { setupCanvasAPI } from './setupCanvasAPI'
 
 /**
  * Options for configuring the Lua REPL process.
  */
-export type LuaReplProcessOptions = ExecutionControlOptions
+export interface LuaReplProcessOptions extends ExecutionControlOptions {
+  /** Canvas callbacks for canvas.start()/stop() integration */
+  canvasCallbacks?: CanvasCallbacks
+}
 
 /**
  * Interactive Lua REPL process.
@@ -39,6 +44,8 @@ export class LuaReplProcess implements IProcess {
   private inputBuffer: string[] = []
   private _inContinuationMode = false
   private readonly options: LuaReplProcessOptions
+  /** Canvas controller for canvas.start()/stop() functionality */
+  private canvasController: CanvasController | null = null
 
   /**
    * Whether this process supports raw key input handling.
@@ -107,6 +114,12 @@ export class LuaReplProcess implements IProcess {
     if (!this.running) return
 
     this.running = false
+
+    // Stop any running canvas
+    if (this.canvasController?.isActive()) {
+      this.canvasController.stop()
+    }
+    this.canvasController = null
 
     // Request stop from any running Lua code via debug hook
     // This sets a flag that the debug hook checks periodically
@@ -345,6 +358,11 @@ export class LuaReplProcess implements IProcess {
         this.stop()
       })
 
+      // Setup canvas API if canvas callbacks are provided
+      if (this.options.canvasCallbacks) {
+        this.initCanvasAPI()
+      }
+
       // Output welcome message and prompt
       this.onOutput('Lua 5.4 REPL - Type exit() to quit\n')
       this.showPrompt()
@@ -353,6 +371,25 @@ export class LuaReplProcess implements IProcess {
       this.running = false
       this.onExit(1)
     }
+  }
+
+  /**
+   * Set up the canvas API for canvas.start(), canvas.stop(), and drawing functions.
+   */
+  private initCanvasAPI(): void {
+    if (!this.engine || !this.options.canvasCallbacks) return
+
+    // Create canvas controller with error reporting wired to process onError
+    const callbacksWithError = {
+      ...this.options.canvasCallbacks,
+      onError: (error: string) => {
+        this.onError(formatLuaError(error) + '\n')
+      },
+    }
+    this.canvasController = new CanvasController(callbacksWithError)
+
+    // Use shared setup function
+    setupCanvasAPI(this.engine, () => this.canvasController)
   }
 
   /**

@@ -6,13 +6,18 @@ import { describe, it, expect, vi } from 'vitest'
 // Mock the lua-runtime module
 vi.mock('@lua-learning/lua-runtime', () => ({
   LUA_SHELL_CODE: '-- mock shell code',
+  LUA_CANVAS_CODE: '-- mock canvas code\nlocal canvas = {}\nfunction canvas.on_draw(callback) end\nfunction canvas.clear() end\nfunction canvas.set_color(r, g, b, a) end\nfunction canvas.rect(x, y, w, h) end\nfunction canvas.fill_rect(x, y, w, h) end\nfunction canvas.circle(x, y, r) end\nfunction canvas.fill_circle(x, y, r) end\nfunction canvas.line(x1, y1, x2, y2) end\nfunction canvas.text(x, y, text) end\nfunction canvas.get_delta() end\nfunction canvas.get_time() end\nfunction canvas.is_key_down(key) end\nfunction canvas.is_key_pressed(key) end\nfunction canvas.get_mouse_x() end\nfunction canvas.get_mouse_y() end\nfunction canvas.is_mouse_down(button) end\nreturn canvas',
 }))
 
 import {
   createDocsWorkspace,
+  createLibraryWorkspace,
   DOCS_WORKSPACE_ID,
   DOCS_WORKSPACE_NAME,
   DOCS_MOUNT_PATH,
+  LIBRARY_WORKSPACE_ID,
+  LIBRARY_WORKSPACE_NAME,
+  LIBRARY_MOUNT_PATH,
 } from './workspaceManagerHelpers'
 
 describe('workspaceManagerHelpers', () => {
@@ -152,15 +157,17 @@ describe('workspaceManagerHelpers', () => {
       }).toThrow('read-only')
     })
 
-    it('filesystem lists shell.md and lua/ in root directory', () => {
+    it('filesystem lists canvas.md, lua/, and shell.md in root directory', () => {
       const workspace = createDocsWorkspace()
       const entries = workspace.filesystem.listDirectory('/')
-      expect(entries).toHaveLength(2)
-      // Directories come first, then files (sorted)
+      expect(entries).toHaveLength(3)
+      // Directories come first, then files (sorted alphabetically)
       expect(entries[0].name).toBe('lua')
       expect(entries[0].type).toBe('directory')
-      expect(entries[1].name).toBe('shell.md')
+      expect(entries[1].name).toBe('canvas.md')
       expect(entries[1].type).toBe('file')
+      expect(entries[2].name).toBe('shell.md')
+      expect(entries[2].type).toBe('file')
     })
 
     it('filesystem lists lua stdlib docs in lua/ directory', () => {
@@ -173,6 +180,167 @@ describe('workspaceManagerHelpers', () => {
       expect(names).toContain('table.md')
       expect(names).toContain('math.md')
       expect(names).toContain('io.md')
+    })
+
+    it('filesystem contains canvas.md file', () => {
+      const workspace = createDocsWorkspace()
+      expect(workspace.filesystem.exists('canvas.md')).toBe(true)
+      expect(workspace.filesystem.isFile('canvas.md')).toBe(true)
+    })
+
+    it('canvas.md contains canvas library documentation', () => {
+      const workspace = createDocsWorkspace()
+      const content = workspace.filesystem.readFile('canvas.md')
+      expect(content).toContain('# Canvas Library')
+      expect(content).toContain('require')
+      expect(content).toContain('canvas')
+    })
+
+    it('canvas.md documents drawing functions', () => {
+      const workspace = createDocsWorkspace()
+      const content = workspace.filesystem.readFile('canvas.md')
+      expect(content).toContain('canvas.clear')
+      expect(content).toContain('canvas.set_color')
+      expect(content).toContain('canvas.draw_rect')
+      expect(content).toContain('canvas.fill_rect')
+      expect(content).toContain('canvas.draw_circle')
+      expect(content).toContain('canvas.fill_circle')
+      expect(content).toContain('canvas.draw_line')
+      expect(content).toContain('canvas.draw_text')
+    })
+
+    it('canvas.md documents timing functions', () => {
+      const workspace = createDocsWorkspace()
+      const content = workspace.filesystem.readFile('canvas.md')
+      expect(content).toContain('canvas.get_delta')
+      expect(content).toContain('canvas.get_time')
+    })
+
+    it('canvas.md documents keyboard input functions', () => {
+      const workspace = createDocsWorkspace()
+      const content = workspace.filesystem.readFile('canvas.md')
+      expect(content).toContain('canvas.is_key_down')
+      expect(content).toContain('canvas.is_key_pressed')
+    })
+
+    it('canvas.md documents mouse input functions', () => {
+      const workspace = createDocsWorkspace()
+      const content = workspace.filesystem.readFile('canvas.md')
+      expect(content).toContain('canvas.get_mouse_x')
+      expect(content).toContain('canvas.get_mouse_y')
+      expect(content).toContain('canvas.is_mouse_down')
+    })
+
+    it('canvas.md documents game loop', () => {
+      const workspace = createDocsWorkspace()
+      const content = workspace.filesystem.readFile('canvas.md')
+      expect(content).toContain('canvas.on_draw')
+    })
+
+    it('canvas.md contains usage examples', () => {
+      const workspace = createDocsWorkspace()
+      const content = workspace.filesystem.readFile('canvas.md')
+      expect(content).toContain('```lua')
+    })
+  })
+
+  describe('createLibraryWorkspace', () => {
+    it('creates a workspace with id LIBRARY_WORKSPACE_ID', () => {
+      const workspace = createLibraryWorkspace()
+      expect(workspace.id).toBe(LIBRARY_WORKSPACE_ID)
+    })
+
+    it('creates a workspace with name LIBRARY_WORKSPACE_NAME', () => {
+      const workspace = createLibraryWorkspace()
+      expect(workspace.name).toBe(LIBRARY_WORKSPACE_NAME)
+    })
+
+    it('creates a workspace with type "library"', () => {
+      const workspace = createLibraryWorkspace()
+      expect(workspace.type).toBe('library')
+    })
+
+    it('creates a workspace with mountPath LIBRARY_MOUNT_PATH', () => {
+      const workspace = createLibraryWorkspace()
+      expect(workspace.mountPath).toBe(LIBRARY_MOUNT_PATH)
+    })
+
+    it('creates a workspace with status "connected"', () => {
+      const workspace = createLibraryWorkspace()
+      expect(workspace.status).toBe('connected')
+    })
+
+    it('creates a workspace with isReadOnly set to true', () => {
+      const workspace = createLibraryWorkspace()
+      expect(workspace.isReadOnly).toBe(true)
+    })
+
+    it('filesystem contains shell.lua file', () => {
+      const workspace = createLibraryWorkspace()
+      expect(workspace.filesystem.exists('shell.lua')).toBe(true)
+      expect(workspace.filesystem.isFile('shell.lua')).toBe(true)
+    })
+
+    it('filesystem contains canvas.lua file', () => {
+      const workspace = createLibraryWorkspace()
+      expect(workspace.filesystem.exists('canvas.lua')).toBe(true)
+      expect(workspace.filesystem.isFile('canvas.lua')).toBe(true)
+    })
+
+    it('canvas.lua contains canvas library code', () => {
+      const workspace = createLibraryWorkspace()
+      const content = workspace.filesystem.readFile('canvas.lua')
+      expect(content).toContain('canvas')
+      expect(content).toContain('canvas.on_draw')
+    })
+
+    it('canvas.lua documents drawing functions', () => {
+      const workspace = createLibraryWorkspace()
+      const content = workspace.filesystem.readFile('canvas.lua')
+      expect(content).toContain('canvas.clear')
+      expect(content).toContain('canvas.set_color')
+      expect(content).toContain('canvas.rect')
+      expect(content).toContain('canvas.fill_rect')
+    })
+
+    it('canvas.lua documents timing functions', () => {
+      const workspace = createLibraryWorkspace()
+      const content = workspace.filesystem.readFile('canvas.lua')
+      expect(content).toContain('canvas.get_delta')
+      expect(content).toContain('canvas.get_time')
+    })
+
+    it('canvas.lua documents input functions', () => {
+      const workspace = createLibraryWorkspace()
+      const content = workspace.filesystem.readFile('canvas.lua')
+      expect(content).toContain('canvas.is_key_down')
+      expect(content).toContain('canvas.is_key_pressed')
+      expect(content).toContain('canvas.get_mouse_x')
+      expect(content).toContain('canvas.get_mouse_y')
+      expect(content).toContain('canvas.is_mouse_down')
+    })
+
+    it('filesystem lists shell.lua and canvas.lua in root directory', () => {
+      const workspace = createLibraryWorkspace()
+      const entries = workspace.filesystem.listDirectory('/')
+      expect(entries).toHaveLength(2)
+      const names = entries.map((e) => e.name)
+      expect(names).toContain('shell.lua')
+      expect(names).toContain('canvas.lua')
+    })
+
+    it('filesystem is read-only (cannot write)', () => {
+      const workspace = createLibraryWorkspace()
+      expect(() => {
+        workspace.filesystem.writeFile('test.lua', 'content')
+      }).toThrow('read-only')
+    })
+
+    it('filesystem is read-only (cannot delete)', () => {
+      const workspace = createLibraryWorkspace()
+      expect(() => {
+        workspace.filesystem.delete('canvas.lua')
+      }).toThrow('read-only')
     })
   })
 })

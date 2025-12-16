@@ -32,4 +32,18 @@ export interface ShellContext {
    * @param text - Error text to output
    */
   error: (text: string) => void
+
+  /**
+   * Request a canvas tab to be opened.
+   * Returns the canvas element when the tab is ready.
+   * @param canvasId - Unique identifier for the canvas tab
+   * @returns Promise resolving to the HTMLCanvasElement when ready
+   */
+  onRequestCanvasTab?: (canvasId: string) => Promise<HTMLCanvasElement>
+
+  /**
+   * Request a canvas tab to be closed.
+   * @param canvasId - Unique identifier for the canvas tab to close
+   */
+  onCloseCanvasTab?: (canvasId: string) => void
 }

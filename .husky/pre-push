@@ -1,0 +1,45 @@
+#!/bin/sh
+
+# Skip if environment variable is set (for agents/CI)
+if [ "$SKIP_PRE_PUSH_TESTS" = "1" ]; then
+  echo "Skipping pre-push tests (SKIP_PRE_PUSH_TESTS=1)"
+  exit 0
+fi
+
+# Get the branch being pushed to
+remote="$1"
+url="$2"
+
+# Read stdin for refs
+while read local_ref local_sha remote_ref remote_sha; do
+  # Extract branch name from refs/heads/branch-name
+  branch=$(echo "$remote_ref" | sed 's|refs/heads/||')
+
+  # Skip if pushing to main
+  if [ "$branch" = "main" ]; then
+    echo "Pushing to main - skipping pre-push tests"
+    exit 0
+  fi
+done
+
+# Non-interactive mode (agent/CI) - run tests automatically
+if [ ! -t 0 ] || [ ! -t 1 ]; then
+  echo "Non-interactive mode detected. Running full CI..."
+  npm run ci
+  exit $?
+fi
+
+# Interactive mode (human) - prompt
+echo ""
+echo "Pushing to non-main branch."
+printf "Run tests before push? [y/N]: "
+read -r response < /dev/tty
+
+if [ "$response" = "y" ] || [ "$response" = "Y" ]; then
+  echo "Running full CI (lint + build + unit + E2E)..."
+  npm run ci
+  exit $?
+else
+  echo "Skipping tests."
+  exit 0
+fi

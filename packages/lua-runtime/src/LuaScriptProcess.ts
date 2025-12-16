@@ -13,11 +13,16 @@ import {
   type ExecutionControlOptions,
 } from './LuaEngineFactory'
 import { resolvePath } from '@lua-learning/shell-core'
+import { CanvasController, type CanvasCallbacks } from './CanvasController'
+import { setupCanvasAPI } from './setupCanvasAPI'
 
 /**
  * Options for configuring the Lua script process.
  */
-export type LuaScriptProcessOptions = ExecutionControlOptions
+export interface LuaScriptProcessOptions extends ExecutionControlOptions {
+  /** Callbacks for canvas tab management (enables canvas.start()/stop()) */
+  canvasCallbacks?: CanvasCallbacks
+}
 
 /**
  * Process that executes a Lua script file.
@@ -33,6 +38,7 @@ export class LuaScriptProcess implements IProcess {
   }> = []
   private hasError = false
   private readonly options: LuaScriptProcessOptions
+  private canvasController: CanvasController | null = null
 
   /**
    * Callback invoked when the process produces output.
@@ -86,6 +92,12 @@ export class LuaScriptProcess implements IProcess {
     if (!this.running) return
 
     this.running = false
+
+    // Stop any running canvas first
+    if (this.canvasController?.isActive()) {
+      this.canvasController.stop()
+    }
+    this.canvasController = null
 
     // Request stop from any running Lua code via debug hook
     // This sets a flag that the debug hook checks periodically
@@ -206,6 +218,9 @@ export class LuaScriptProcess implements IProcess {
     try {
       this.engine = await LuaEngineFactory.create(callbacks, engineOptions)
 
+      // Set up canvas API if callbacks are provided
+      this.initCanvasAPI()
+
       // Set up a helper function to execute script content with hooks
       // Using load() allows scripts to have top-level return statements
       this.engine.global.set('__script_content', scriptContent)
@@ -293,6 +308,12 @@ __clear_execution_hook()
   private exitWithCode(code: number): void {
     this.running = false
 
+    // Stop any running canvas
+    if (this.canvasController?.isActive()) {
+      this.canvasController.stop()
+    }
+    this.canvasController = null
+
     const engineToClose = this.engine
     this.engine = null
     LuaEngineFactory.closeDeferred(engineToClose)
@@ -343,5 +364,25 @@ __clear_execution_hook()
     )
 
     return adjusted
+  }
+
+  /**
+   * Set up the canvas API if canvas callbacks are provided.
+   * This enables canvas.start(), canvas.stop(), and all drawing/input functions.
+   */
+  private initCanvasAPI(): void {
+    if (!this.engine || !this.options.canvasCallbacks) return
+
+    // Create canvas controller with error reporting wired to process onError
+    const callbacksWithError = {
+      ...this.options.canvasCallbacks,
+      onError: (error: string) => {
+        this.onError(formatLuaError(error) + '\n')
+      },
+    }
+    this.canvasController = new CanvasController(callbacksWithError)
+
+    // Use shared setup function
+    setupCanvasAPI(this.engine, () => this.canvasController)
   }
 }

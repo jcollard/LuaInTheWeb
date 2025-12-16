@@ -1,17 +1,17 @@
 import { useState, useCallback } from 'react'
-import type { TabInfo, UseTabBarReturn } from './types'
+import type { TabInfo, TabType, UseTabBarReturn } from './types'
 
 export function useTabBar(): UseTabBarReturn {
   const [tabs, setTabs] = useState<TabInfo[]>([])
   const [activeTab, setActiveTab] = useState<string | null>(null)
 
-  const openTab = useCallback((path: string, name: string) => {
+  const openTab = useCallback((path: string, name: string, type: TabType = 'file') => {
     setTabs((prev) => {
       // Check if tab already exists
       if (prev.some((tab) => tab.path === path)) {
         return prev
       }
-      return [...prev, { path, name, isDirty: false, isPreview: false }]
+      return [...prev, { path, name, isDirty: false, type, isPreview: false }]
     })
     setActiveTab(path)
   }, [])
@@ -29,11 +29,11 @@ export function useTabBar(): UseTabBarReturn {
       if (existingPreviewIndex !== -1) {
         // Replace the preview tab
         const newTabs = [...prev]
-        newTabs[existingPreviewIndex] = { path, name, isDirty: false, isPreview: true }
+        newTabs[existingPreviewIndex] = { path, name, isDirty: false, type: 'file', isPreview: true }
         return newTabs
       }
       // No existing preview, add new preview tab
-      return [...prev, { path, name, isDirty: false, isPreview: true }]
+      return [...prev, { path, name, isDirty: false, type: 'file', isPreview: true }]
     })
     setActiveTab(path)
   }, [])
@@ -90,15 +90,39 @@ export function useTabBar(): UseTabBarReturn {
     setActiveTab((prev) => prev === oldPath ? newPath : prev)
   }, [])
 
+  const openCanvasTab = useCallback((id: string, name: string = 'Canvas') => {
+    const path = `canvas://${id}`
+    setTabs((prev) => {
+      // Check if tab already exists
+      if (prev.some((tab) => tab.path === path)) {
+        return prev
+      }
+      return [...prev, { path, name, isDirty: false, type: 'canvas' as const, isPreview: false }]
+    })
+    setActiveTab(path)
+  }, [])
+
+  const getActiveTabType = useCallback((): TabType | null => {
+    if (!activeTab) return null
+    // First, try to find the tab in the tabs array
+    const tab = tabs.find((t) => t.path === activeTab)
+    if (tab) return tab.type
+    // Fallback: infer type from path prefix (handles race condition during tab creation)
+    if (activeTab.startsWith('canvas://')) return 'canvas'
+    return 'file'
+  }, [activeTab, tabs])
+
   return {
     tabs,
     activeTab,
     openTab,
     openPreviewTab,
+    openCanvasTab,
     closeTab,
     selectTab,
     setDirty,
     renameTab,
+    getActiveTabType,
     makeTabPermanent,
   }
 }
