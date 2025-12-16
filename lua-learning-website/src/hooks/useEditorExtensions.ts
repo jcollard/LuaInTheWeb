@@ -1,7 +1,12 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import type { EditorReadyInfo } from '../components/CodeEditor/types'
 import { useIDEDiagnostics } from './useIDEDiagnostics'
 import { useLuaHoverProvider } from './useLuaHoverProvider'
+
+/** Minimal filesystem interface for reading files */
+interface FileSystemReader {
+  readFile(path: string): string
+}
 
 /**
  * Options for the useEditorExtensions hook
@@ -9,6 +14,10 @@ import { useLuaHoverProvider } from './useLuaHoverProvider'
 export interface UseEditorExtensionsOptions {
   /** Current code in the editor - used for real-time syntax checking */
   code?: string
+  /** Filesystem for reading module files (for hover docs on required modules) */
+  fileSystem?: FileSystemReader | null
+  /** Absolute path to the current file being edited */
+  currentFilePath?: string | null
 }
 
 /**
@@ -35,16 +44,33 @@ export interface UseEditorExtensionsReturn {
 export function useEditorExtensions(
   options: UseEditorExtensionsOptions = {}
 ): UseEditorExtensionsReturn {
+  const { code, fileSystem, currentFilePath } = options
+
+  // Create fileReader from fileSystem
+  const fileReader = useMemo(() => {
+    if (!fileSystem) return undefined
+    return (path: string): string | null => {
+      try {
+        return fileSystem.readFile(path)
+      } catch {
+        return null
+      }
+    }
+  }, [fileSystem])
+
   // Diagnostics for showing Lua errors in editor (including real-time syntax checking)
   const {
     handleEditorReady: handleDiagnosticsReady,
     setError,
     clearErrors,
     isCheckingSyntax,
-  } = useIDEDiagnostics(options)
+  } = useIDEDiagnostics({ code })
 
   // Hover provider for showing Lua documentation on hover
-  const { handleEditorReady: handleHoverReady } = useLuaHoverProvider()
+  const { handleEditorReady: handleHoverReady } = useLuaHoverProvider({
+    fileReader,
+    currentFilePath,
+  })
 
   // Combined editor ready handler for all editor extensions
   const handleEditorReady = useCallback(

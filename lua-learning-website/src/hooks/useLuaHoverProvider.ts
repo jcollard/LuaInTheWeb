@@ -10,6 +10,18 @@ import {
   getAvailableLibraries,
   type LibraryDocEntry,
 } from '../utils/luaLibraryDocs'
+import { resolveModulePath } from '../utils/luaModuleResolver'
+import { moduleDocCache } from '../utils/moduleDocCache'
+
+/**
+ * Options for the useLuaHoverProvider hook
+ */
+export interface UseLuaHoverProviderOptions {
+  /** Function to read file content from the filesystem */
+  fileReader?: (path: string) => string | null
+  /** Absolute path to the current file being edited */
+  currentFilePath?: string | null
+}
 
 /**
  * Return type for the useLuaHoverProvider hook
@@ -145,7 +157,10 @@ function getQualifiedName(
  * Creates a hover provider for Lua that shows documentation for standard library,
  * user-defined functions, and required library modules.
  */
-function createHoverProvider(_monaco: Monaco): languages.HoverProvider {
+function createHoverProvider(
+  _monaco: Monaco,
+  options?: UseLuaHoverProviderOptions
+): languages.HoverProvider {
   // Cache for parsed documentation
   let cachedCode: string | null = null
   let cachedUserDocs: Map<string, UserFunctionDoc> = new Map()
@@ -153,6 +168,10 @@ function createHoverProvider(_monaco: Monaco): languages.HoverProvider {
 
   // Get available libraries for require resolution
   const availableLibraries = new Set(getAvailableLibraries())
+
+  // Extract options
+  const fileReader = options?.fileReader
+  const currentFilePath = options?.currentFilePath
 
   return {
     provideHover(
@@ -181,13 +200,10 @@ function createHoverProvider(_monaco: Monaco): languages.HoverProvider {
           cachedUserDocs.set(fn.name, fn)
         }
 
-        // Parse require statements
+        // Parse require statements - track ALL mappings for user module support
         const requireMappings = parseRequireStatements(currentCode)
         for (const mapping of requireMappings) {
-          // Only track mappings for libraries we have documentation for
-          if (availableLibraries.has(mapping.moduleName)) {
-            cachedRequireMappings.set(mapping.localName, mapping.moduleName)
-          }
+          cachedRequireMappings.set(mapping.localName, mapping.moduleName)
         }
       }
 
@@ -206,23 +222,76 @@ function createHoverProvider(_monaco: Monaco): languages.HoverProvider {
         }
       }
 
-      // Check for library documentation (e.g., shell.foreground when shell = require('shell'))
+      // Check for library/module documentation (e.g., shell.foreground, utils.greet)
       if (qualifiedName.includes('.')) {
         const [prefix, memberName] = qualifiedName.split('.')
         const moduleName = cachedRequireMappings.get(prefix)
         if (moduleName) {
-          const libraryDoc = getLibraryDocumentation(moduleName, memberName)
-          if (libraryDoc) {
-            const startColumn = wordInfo.startColumn - prefix.length - 1 // Include prefix and dot
-            const range: IRange = {
-              startLineNumber: position.lineNumber,
-              startColumn,
-              endLineNumber: position.lineNumber,
-              endColumn: wordInfo.endColumn,
+          // First, check hardcoded library docs (e.g., shell)
+          if (availableLibraries.has(moduleName)) {
+            const libraryDoc = getLibraryDocumentation(moduleName, memberName)
+            if (libraryDoc) {
+              const startColumn = wordInfo.startColumn - prefix.length - 1 // Include prefix and dot
+              const range: IRange = {
+                startLineNumber: position.lineNumber,
+                startColumn,
+                endLineNumber: position.lineNumber,
+                endColumn: wordInfo.endColumn,
+              }
+              return {
+                contents: [formatLibraryDoc(libraryDoc)],
+                range,
+              }
             }
-            return {
-              contents: [formatLibraryDoc(libraryDoc)],
-              range,
+          }
+
+          // Then, check user module docs (requires filesystem access)
+          if (fileReader && currentFilePath) {
+            const resolved = resolveModulePath({
+              moduleName,
+              currentFilePath,
+              fileExists: (path) => {
+                try {
+                  return fileReader(path) !== null
+                } catch {
+                  return false
+                }
+              },
+            })
+
+            if (resolved) {
+              try {
+                const content = fileReader(resolved.path)
+                if (content) {
+                  const moduleDocs = moduleDocCache.get(resolved.path, content)
+                  // Look up the member - try direct match first, then look for tbl.member patterns
+                  let funcDoc = moduleDocs.get(memberName)
+                  if (!funcDoc) {
+                    // Module may define functions as tbl.func() - search for any *.memberName or *:memberName
+                    for (const [name, doc] of moduleDocs) {
+                      if (name.endsWith(`.${memberName}`) || name.endsWith(`:${memberName}`)) {
+                        funcDoc = doc
+                        break
+                      }
+                    }
+                  }
+                  if (funcDoc) {
+                    const startColumn = wordInfo.startColumn - prefix.length - 1
+                    const range: IRange = {
+                      startLineNumber: position.lineNumber,
+                      startColumn,
+                      endLineNumber: position.lineNumber,
+                      endColumn: wordInfo.endColumn,
+                    }
+                    return {
+                      contents: [formatUserFunctionDoc(funcDoc)],
+                      range,
+                    }
+                  }
+                }
+              } catch {
+                // File read failed, continue to standard library lookup
+              }
             }
           }
         }
@@ -280,11 +349,21 @@ function createHoverProvider(_monaco: Monaco): languages.HoverProvider {
  * in the editor. Supports both global functions (print, type) and library functions
  * (string.sub, table.insert, math.floor).
  *
+ * When fileReader and currentFilePath are provided, also shows documentation
+ * for user-created modules loaded via require().
+ *
+ * @param options - Configuration options for filesystem access
  * @returns Functions to handle editor ready event
  */
-export function useLuaHoverProvider(): UseLuaHoverProviderReturn {
+export function useLuaHoverProvider(
+  options?: UseLuaHoverProviderOptions
+): UseLuaHoverProviderReturn {
   const [monacoInstance, setMonacoInstance] = useState<Monaco | null>(null)
   const disposableRef = useRef<IDisposable | null>(null)
+  const optionsRef = useRef(options)
+
+  // Keep options ref up to date
+  optionsRef.current = options
 
   // Handle editor ready event
   const handleEditorReady = useCallback((info: EditorReadyInfo) => {
@@ -297,7 +376,7 @@ export function useLuaHoverProvider(): UseLuaHoverProviderReturn {
       return
     }
 
-    const provider = createHoverProvider(monacoInstance)
+    const provider = createHoverProvider(monacoInstance, optionsRef.current)
     disposableRef.current = monacoInstance.languages.registerHoverProvider('lua', provider)
 
     return () => {

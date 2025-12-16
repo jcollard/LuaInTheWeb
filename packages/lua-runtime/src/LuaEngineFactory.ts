@@ -21,6 +21,34 @@ export const DEFAULT_INSTRUCTION_LIMIT = 10_000_000
 export const DEFAULT_INSTRUCTION_CHECK_INTERVAL = 1000
 
 /**
+ * Get the directory portion of a file path.
+ * @param filePath - Full file path (e.g., "/home/user/script.lua")
+ * @returns Directory path (e.g., "/home/user")
+ */
+function getDirectoryFromPath(filePath: string): string {
+  const lastSlash = filePath.lastIndexOf('/')
+  if (lastSlash <= 0) return '/'
+  return filePath.substring(0, lastSlash)
+}
+
+/**
+ * Join path segments into a single path.
+ * Handles leading/trailing slashes correctly.
+ * @param segments - Path segments to join
+ * @returns Joined path
+ */
+function joinPath(...segments: string[]): string {
+  const parts: string[] = []
+  for (const segment of segments) {
+    const cleanSegment = segment.replace(/^\/+|\/+$/g, '')
+    if (cleanSegment) {
+      parts.push(cleanSegment)
+    }
+  }
+  return '/' + parts.join('/')
+}
+
+/**
  * Options for configuring execution control behavior.
  * Shared by LuaReplProcess and LuaScriptProcess.
  */
@@ -45,6 +73,12 @@ export interface LuaEngineOptions {
   instructionLimit?: number
   /** Interval between instruction count checks (default: 1000) */
   instructionCheckInterval?: number
+  /**
+   * Path to the main script being executed.
+   * Used to resolve relative require() paths.
+   * If not provided, require() searches from root only.
+   */
+  scriptPath?: string
 }
 
 /**
@@ -116,6 +150,13 @@ export interface LuaEngineCallbacks {
    * Returns default of 24 if not provided.
    */
   getTerminalHeight?: () => number
+  /**
+   * Read a file from the virtual file system.
+   * Used by require() to load modules.
+   * @param path - Absolute path to the file
+   * @returns File content as string, or null if file doesn't exist
+   */
+  fileReader?: (path: string) => string | null
 }
 
 /**
@@ -231,6 +272,148 @@ export class LuaEngineFactory {
     engine.global.set('__shell_get_height', () => {
       return callbacks.getTerminalHeight?.() ?? 24
     })
+
+    // Setup require() with virtual file system support
+    if (callbacks.fileReader) {
+      const scriptDir = options?.scriptPath
+        ? getDirectoryFromPath(options.scriptPath)
+        : '/'
+
+      // Store fileReader in a ref so it's accessible from the closure
+      const fileReaderRef = callbacks.fileReader
+
+      // Store module content and path separately to avoid JSON parsing issues
+      // Using a simple table-like approach with two global vars
+      let lastModuleContent: string | null = null
+      let lastModulePath: string | null = null
+
+      // Setup __js_require_lookup to find and store module data
+      engine.global.set(
+        '__js_require_lookup',
+        (moduleName: string, currentModulePath: string | undefined): boolean => {
+          // Determine the base directory for resolution
+          // If we're in a nested require, use the current module's directory
+          // Otherwise, use the script's directory
+          const baseDir =
+            currentModulePath !== undefined && currentModulePath !== ''
+              ? getDirectoryFromPath(currentModulePath)
+              : scriptDir
+
+          // Convert module name to relative path
+          // Support both "lib/utils" and "lib.utils" formats
+          const modulePath = moduleName.replace(/\./g, '/')
+
+          // Try relative to current module/script directory first
+          const relativePath = joinPath(baseDir, modulePath + '.lua')
+          let content = fileReaderRef(relativePath)
+          if (content !== null) {
+            lastModuleContent = content
+            lastModulePath = relativePath
+            return true
+          }
+
+          // Try init.lua for package directories
+          const initPath = joinPath(baseDir, modulePath, 'init.lua')
+          content = fileReaderRef(initPath)
+          if (content !== null) {
+            lastModuleContent = content
+            lastModulePath = initPath
+            return true
+          }
+
+          // Fall back to root if different from base
+          if (baseDir !== '/') {
+            const rootPath = '/' + modulePath + '.lua'
+            content = fileReaderRef(rootPath)
+            if (content !== null) {
+              lastModuleContent = content
+              lastModulePath = rootPath
+              return true
+            }
+
+            // Try root init.lua
+            const rootInitPath = '/' + modulePath + '/init.lua'
+            content = fileReaderRef(rootInitPath)
+            if (content !== null) {
+              lastModuleContent = content
+              lastModulePath = rootInitPath
+              return true
+            }
+          }
+
+          lastModuleContent = null
+          lastModulePath = null
+          return false
+        }
+      )
+
+      // Setup getter for module content
+      engine.global.set('__js_get_module_content', (): string => {
+        return lastModuleContent ?? ''
+      })
+
+      // Setup getter for module path
+      engine.global.set('__js_get_module_path', (): string => {
+        return lastModulePath ?? ''
+      })
+
+      // Setup the Lua require function
+      await engine.doString(`
+        __loaded_modules = {}
+        __module_path_stack = {}
+
+        function require(modname)
+          -- Check cache first
+          if __loaded_modules[modname] ~= nil then
+            return __loaded_modules[modname]
+          end
+
+          -- Check package.preload (for built-in modules like 'shell')
+          if package.preload[modname] then
+            local result = package.preload[modname]()
+            __loaded_modules[modname] = result or true
+            return __loaded_modules[modname]
+          end
+
+          -- Get current module path (top of stack) for relative resolution
+          local currentPath = ""
+          if #__module_path_stack > 0 then
+            currentPath = __module_path_stack[#__module_path_stack]
+          end
+
+          -- Lookup module in JavaScript
+          local found = __js_require_lookup(modname, currentPath)
+          if not found then
+            error("module '" .. modname .. "' not found")
+          end
+
+          -- Get the content and path from JavaScript
+          local content = __js_get_module_content()
+          local modulePath = __js_get_module_path()
+
+          -- Push current module path onto stack for nested requires
+          table.insert(__module_path_stack, modulePath)
+
+          -- Load and execute the module
+          local fn, err = load(content, modname)
+          if not fn then
+            table.remove(__module_path_stack)
+            error("error loading module '" .. modname .. "': " .. (err or "unknown error"))
+          end
+
+          local ok, result = pcall(fn)
+          table.remove(__module_path_stack)
+
+          if not ok then
+            error("error running module '" .. modname .. "': " .. tostring(result))
+          end
+
+          -- Cache the result (use true if module returns nil)
+          __loaded_modules[modname] = result or true
+          return __loaded_modules[modname]
+        end
+      `)
+    }
 
     // Setup formatter, io functions, and execution control
     await engine.doString(LUA_FORMATTER_CODE)

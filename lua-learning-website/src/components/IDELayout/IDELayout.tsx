@@ -112,7 +112,11 @@ function IDELayoutInner({
   const [isFormatting, setIsFormatting] = useState(false)
 
   // Editor extensions (diagnostics + hover documentation)
-  const { handleEditorReady } = useEditorExtensions({ code })
+  const { handleEditorReady } = useEditorExtensions({
+    code,
+    fileSystem: compositeFileSystem,
+    currentFilePath: activeTab,
+  })
 
   // Initialize the Lua formatter on mount
   useEffect(() => {

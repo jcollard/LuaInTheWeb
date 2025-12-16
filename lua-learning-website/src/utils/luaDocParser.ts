@@ -124,9 +124,9 @@ export function parseLuaDocComments(code: string): UserFunctionDoc[] {
     }
 
     // Check if this line is a function definition
-    // Match: function name(...) or local function name(...) or function Class:method(...)
+    // Match: function name(...) or local function name(...) or function Class:method(...) or function tbl.name(...)
     const funcMatch = trimmed.match(
-      /^(?:local\s+)?function\s+([\w:]+)\s*\(([^)]*)\)/
+      /^(?:local\s+)?function\s+([\w.:]+)\s*\(([^)]*)\)/
     )
 
     if (funcMatch && inDocComment && docCommentLines.length > 0) {
