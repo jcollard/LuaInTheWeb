@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { IDEContextProvider, useIDE } from '../IDEContext'
 import { ActivityBar } from '../ActivityBar'
 import { StatusBar } from '../StatusBar'
@@ -13,6 +13,7 @@ import { ToastContainer } from '../Toast'
 import { WelcomeScreen } from '../WelcomeScreen'
 import { CanvasTabContent } from './CanvasTabContent'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { useCanvasTabManager } from '../../hooks/useCanvasTabManager'
 import { useWorkspaceManager } from '../../hooks/useWorkspaceManager'
 import { useEditorExtensions } from '../../hooks/useEditorExtensions'
 import { createFileSystemAdapter } from '../../hooks/compositeFileSystemAdapter'
@@ -115,10 +116,15 @@ function IDELayoutInner({
   const [cursorColumn, setCursorColumn] = useState(1)
   const [pendingCloseTabPath, setPendingCloseTabPath] = useState<string | null>(null)
   const [isFormatting, setIsFormatting] = useState(false)
-  // Store canvas code for each canvas tab (by tab path)
-  const canvasCodesRef = useRef<Map<string, string>>(new Map())
-  // Track the last active canvas tab to keep it running in background
-  const lastActiveCanvasTabRef = useRef<string | null>(null)
+
+  // Canvas tab management (extracted to reduce IDELayout complexity)
+  const { handleRunCanvas, handleCanvasExit, hasCanvasTabs, canvasCode } = useCanvasTabManager({
+    code,
+    tabs,
+    activeTab,
+    activeTabType,
+    openCanvasTab,
+  })
 
   // Editor extensions (diagnostics + hover documentation)
   const { handleEditorReady } = useEditorExtensions({
@@ -219,39 +225,6 @@ function IDELayoutInner({
       setIsFormatting(false)
     }, 0)
   }, [code, setCode, showError])
-
-  // Run the current code in a canvas tab
-  const handleRunCanvas = useCallback(() => {
-    if (!code.trim()) return
-
-    // Generate a unique ID for the canvas tab
-    const canvasId = `canvas-${Date.now()}`
-    const tabPath = `canvas://${canvasId}`
-
-    // Store the code for this canvas tab
-    canvasCodesRef.current.set(tabPath, code)
-
-    // Open the canvas tab
-    openCanvasTab(canvasId, 'Canvas')
-  }, [code, openCanvasTab])
-
-  // Handle canvas process exit - keep tab open so user can see final state
-  // Tab will be closed when user clicks the close button
-  const handleCanvasExit = useCallback((_exitCode: number) => {
-    // Process finished but we don't auto-close - user may want to see result
-  }, [])
-
-  // Track the last active canvas tab to keep canvas running when switching to file tabs
-  if (activeTab && activeTabType === 'canvas') {
-    lastActiveCanvasTabRef.current = activeTab
-  }
-
-  // Check if there are any canvas tabs (to know if we should render CanvasTabContent)
-  const hasCanvasTabs = tabs.some(t => t.type === 'canvas')
-
-  // Get the code for the canvas - use active canvas tab or last active canvas tab
-  const canvasTabPath = activeTabType === 'canvas' ? activeTab : lastActiveCanvasTabRef.current
-  const canvasCode = canvasTabPath ? canvasCodesRef.current.get(canvasTabPath) ?? '' : ''
 
   // Explorer props for FileExplorer
   const explorerProps = createExplorerProps({
