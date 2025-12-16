@@ -117,6 +117,8 @@ function IDELayoutInner({
   const [isFormatting, setIsFormatting] = useState(false)
   // Store canvas code for each canvas tab (by tab path)
   const canvasCodesRef = useRef<Map<string, string>>(new Map())
+  // Track the last active canvas tab to keep it running in background
+  const lastActiveCanvasTabRef = useRef<string | null>(null)
 
   // Editor extensions (diagnostics + hover documentation)
   const { handleEditorReady } = useEditorExtensions({ code })
@@ -235,10 +237,17 @@ function IDELayoutInner({
     // Process finished but we don't auto-close - user may want to see result
   }, [])
 
-  // Get the code for the current canvas tab
-  const activeCanvasCode = activeTab && activeTabType === 'canvas'
-    ? canvasCodesRef.current.get(activeTab) ?? ''
-    : ''
+  // Track the last active canvas tab to keep canvas running when switching to file tabs
+  if (activeTab && activeTabType === 'canvas') {
+    lastActiveCanvasTabRef.current = activeTab
+  }
+
+  // Check if there are any canvas tabs (to know if we should render CanvasTabContent)
+  const hasCanvasTabs = tabs.some(t => t.type === 'canvas')
+
+  // Get the code for the canvas - use active canvas tab or last active canvas tab
+  const canvasTabPath = activeTabType === 'canvas' ? activeTab : lastActiveCanvasTabRef.current
+  const canvasCode = canvasTabPath ? canvasCodesRef.current.get(canvasTabPath) ?? '' : ''
 
   // Explorer props for FileExplorer
   const explorerProps = createExplorerProps({
@@ -294,34 +303,43 @@ function IDELayoutInner({
                       onOpenShell={handleOpenShell}
                       onClearRecentFiles={clearRecentFiles}
                     />
-                  ) : activeTabType === 'canvas' ? (
-                    <CanvasTabContent
-                      tabs={tabs}
-                      activeTab={activeTab}
-                      canvasCode={activeCanvasCode}
-                      onSelectTab={selectTab}
-                      onCloseTab={handleCloseTab}
-                      onExit={handleCanvasExit}
-                      onError={showError}
-                    />
                   ) : (
-                    <EditorPanel
-                      code={code}
-                      onChange={setCode}
-                      fileName={fileName}
-                      isDirty={isDirty}
-                      cursorLine={cursorLine}
-                      cursorColumn={cursorColumn}
-                      onCursorChange={(line, col) => {
-                        setCursorLine(line)
-                        setCursorColumn(col)
-                      }}
-                      tabBarProps={tabBarProps}
-                      onFormat={handleFormat}
-                      isFormatting={isFormatting}
-                      onEditorReady={handleEditorReady}
-                      onRunCanvas={handleRunCanvas}
-                    />
+                    <>
+                      {/* Canvas content - always mounted when canvas tabs exist to keep running in background */}
+                      {hasCanvasTabs && (
+                        <div style={{ display: activeTabType === 'canvas' ? 'contents' : 'none' }}>
+                          <CanvasTabContent
+                            tabs={tabs}
+                            activeTab={activeTab}
+                            canvasCode={canvasCode}
+                            onSelectTab={selectTab}
+                            onCloseTab={handleCloseTab}
+                            onExit={handleCanvasExit}
+                            onError={showError}
+                          />
+                        </div>
+                      )}
+                      {/* Editor panel - hidden when canvas tab is active */}
+                      {activeTabType !== 'canvas' && (
+                        <EditorPanel
+                          code={code}
+                          onChange={setCode}
+                          fileName={fileName}
+                          isDirty={isDirty}
+                          cursorLine={cursorLine}
+                          cursorColumn={cursorColumn}
+                          onCursorChange={(line, col) => {
+                            setCursorLine(line)
+                            setCursorColumn(col)
+                          }}
+                          tabBarProps={tabBarProps}
+                          onFormat={handleFormat}
+                          isFormatting={isFormatting}
+                          onEditorReady={handleEditorReady}
+                          onRunCanvas={handleRunCanvas}
+                        />
+                      )}
+                    </>
                   )}
                 </IDEPanel>
                 {/* Always render BottomPanel to preserve shell state */}
