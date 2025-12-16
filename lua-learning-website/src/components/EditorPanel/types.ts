@@ -29,6 +29,8 @@ export interface EditorPanelProps {
   isFormatting?: boolean
   /** Called when the editor is ready with monaco, editor, and model references */
   onEditorReady?: (info: EditorReadyInfo) => void
+  /** Called when run canvas button is clicked */
+  onRunCanvas?: () => void
 }
 
 /**

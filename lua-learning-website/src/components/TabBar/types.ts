@@ -1,7 +1,13 @@
+/**
+ * Type of tab - file for code editor, canvas for game canvas
+ */
+export type TabType = 'file' | 'canvas'
+
 export interface TabInfo {
   path: string
   name: string
   isDirty: boolean
+  type: TabType
 }
 
 export interface TabBarProps {
@@ -15,9 +21,11 @@ export interface TabBarProps {
 export interface UseTabBarReturn {
   tabs: TabInfo[]
   activeTab: string | null
-  openTab: (path: string, name: string) => void
+  openTab: (path: string, name: string, type?: TabType) => void
+  openCanvasTab: (id: string, name?: string) => void
   closeTab: (path: string) => void
   selectTab: (path: string) => void
   setDirty: (path: string, isDirty: boolean) => void
   renameTab: (oldPath: string, newPath: string, newName: string) => void
+  getActiveTabType: () => TabType | null
 }

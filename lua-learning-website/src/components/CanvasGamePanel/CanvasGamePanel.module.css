@@ -1,0 +1,144 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--theme-editor-bg);
+  color: var(--theme-editor-fg);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--theme-border);
+  background: var(--theme-panel-bg);
+}
+
+.modeIndicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  background: var(--theme-badge-bg);
+  color: var(--theme-badge-fg);
+}
+
+.modeIndicator.performance {
+  background: var(--theme-success-bg, #1a3d1a);
+  color: var(--theme-success-fg, #4ade80);
+}
+
+.modeIndicator.compatibility {
+  background: var(--theme-warning-bg, #3d3d1a);
+  color: var(--theme-warning-fg, #facc15);
+}
+
+.stopButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 4px;
+  background: var(--theme-danger-bg, #7f1d1d);
+  color: var(--theme-danger-fg, #fca5a5);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.stopButton:hover {
+  background: var(--theme-danger-hover-bg, #991b1b);
+}
+
+.popOutButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 4px;
+  background: var(--theme-accent-primary, #3b82f6);
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.popOutButton:hover {
+  background: var(--theme-accent-hover, #2563eb);
+}
+
+.canvasContainer {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow: auto;
+}
+
+.canvas {
+  border: 1px solid var(--theme-border);
+  background: #000;
+  outline: none;
+}
+
+.canvas:focus {
+  border-color: var(--theme-indicator-active);
+  box-shadow: 0 0 0 2px var(--theme-focus-ring);
+}
+
+.errorOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 10;
+}
+
+.errorContent {
+  max-width: 400px;
+  padding: 16px;
+  border-radius: 8px;
+  background: var(--theme-panel-bg);
+  border: 1px solid var(--theme-danger-border, #dc2626);
+}
+
+.errorTitle {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--theme-danger-fg, #fca5a5);
+}
+
+.errorMessage {
+  margin: 0 0 16px;
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--theme-editor-fg);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.dismissButton {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 4px;
+  background: var(--theme-button-bg);
+  color: var(--theme-button-fg);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.dismissButton:hover {
+  background: var(--theme-button-hover-bg);
+}

@@ -2,7 +2,7 @@ import type { UseLuaEngineReturn } from '../../hooks/types'
 import type { TreeNode, UseFileSystemReturn } from '../../hooks/useFileSystem'
 import type { AdaptedFileSystem } from '../../hooks/compositeFileSystemAdapter'
 import type { RecentFile } from '../../hooks/useRecentFiles'
-import type { TabInfo } from '../TabBar'
+import type { TabInfo, TabType } from '../TabBar'
 import type { ToastData } from '../Toast'
 
 /**
@@ -47,8 +47,10 @@ export interface IDEContextValue {
   // Tabs
   tabs: TabInfo[]
   activeTab: string | null
+  activeTabType: TabType | null
   selectTab: (path: string) => void
   closeTab: (path: string) => void
+  openCanvasTab: (id: string, name?: string) => void
 
   // Toast notifications
   toasts: ToastData[]

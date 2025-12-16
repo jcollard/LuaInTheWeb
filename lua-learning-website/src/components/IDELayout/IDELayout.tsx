@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { IDEContextProvider, useIDE } from '../IDEContext'
 import { ActivityBar } from '../ActivityBar'
 import { StatusBar } from '../StatusBar'
@@ -11,6 +11,7 @@ import { IDEResizeHandle } from '../IDEResizeHandle'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { ToastContainer } from '../Toast'
 import { WelcomeScreen } from '../WelcomeScreen'
+import { CanvasTabContent } from './CanvasTabContent'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useWorkspaceManager } from '../../hooks/useWorkspaceManager'
 import { useEditorExtensions } from '../../hooks/useEditorExtensions'
@@ -20,6 +21,8 @@ import type { Workspace } from '../../hooks/workspaceTypes'
 import type { IFileSystem } from '@lua-learning/shell-core'
 import styles from './IDELayout.module.css'
 import type { IDELayoutProps } from './types'
+import { createExplorerProps } from './explorerPropsHelper'
+import { useWorkspaceHandlers } from './workspaceHandlers'
 
 /**
  * Props passed from IDELayout to IDELayoutInner
@@ -95,8 +98,10 @@ function IDELayoutInner({
     // Tabs
     tabs,
     activeTab,
+    activeTabType,
     selectTab,
     closeTab,
+    openCanvasTab,
     // Toasts
     toasts,
     showError,
@@ -110,6 +115,8 @@ function IDELayoutInner({
   const [cursorColumn, setCursorColumn] = useState(1)
   const [pendingCloseTabPath, setPendingCloseTabPath] = useState<string | null>(null)
   const [isFormatting, setIsFormatting] = useState(false)
+  // Store canvas code for each canvas tab (by tab path)
+  const canvasCodesRef = useRef<Map<string, string>>(new Map())
 
   // Editor extensions (diagnostics + hover documentation)
   const { handleEditorReady } = useEditorExtensions({ code })
@@ -119,80 +126,23 @@ function IDELayoutInner({
     initFormatter().catch(console.error)
   }, [])
 
-  // Handle adding a local workspace (dialog provides both name and handle)
-  const handleAddLocalWorkspace = useCallback(
-    async (name: string, handle: FileSystemDirectoryHandle) => {
-      await addLocalWorkspace(name, handle)
-      refreshFileTree()
-    },
-    [addLocalWorkspace, refreshFileTree]
-  )
-
-  // Handle reconnecting a disconnected local workspace
-  const handleReconnectWorkspace = useCallback(
-    async (mountPath: string) => {
-      // Find workspace by mount path
-      const workspace = workspaces.find((w) => w.mountPath === mountPath)
-      if (!workspace || workspace.type !== 'local') {
-        return
-      }
-
-      // First, try to reconnect using the stored handle (shows simple permission prompt)
-      const reconnected = await tryReconnectWithStoredHandle(workspace.id)
-      if (reconnected) {
-        refreshFileTree()
-        return
-      }
-
-      // If stored handle failed, fall back to directory picker
-      try {
-        const handle = await window.showDirectoryPicker({
-          mode: 'readwrite',
-        })
-        await reconnectWorkspace(workspace.id, handle)
-        refreshFileTree()
-      } catch (err) {
-        // User cancelled or error occurred
-        if ((err as Error).name !== 'AbortError') {
-          console.error('Failed to reconnect workspace:', err)
-        }
-      }
-    },
-    [workspaces, tryReconnectWithStoredHandle, reconnectWorkspace, refreshFileTree]
-  )
-
-  // Handle removing a workspace by mount path
-  const handleRemoveWorkspace = useCallback(
-    (mountPath: string) => {
-      const workspace = workspaces.find((w) => w.mountPath === mountPath)
-      if (workspace) {
-        removeWorkspace(workspace.id)
-        refreshFileTree()
-      }
-    },
-    [workspaces, removeWorkspace, refreshFileTree]
-  )
-
-  // Handle renaming a workspace
-  const handleRenameWorkspace = useCallback(
-    (mountPath: string, newName: string) => {
-      renameWorkspace(mountPath, newName)
-      refreshFileTree()
-    },
-    [renameWorkspace, refreshFileTree]
-  )
-
-  // Handle disconnecting a local workspace
-  const handleDisconnectWorkspace = useCallback(
-    (mountPath: string) => {
-      const workspace = workspaces.find((w) => w.mountPath === mountPath)
-      if (workspace) {
-        disconnectWorkspace(workspace.id)
-        refreshFileTree()
-      }
-    },
-    [workspaces, disconnectWorkspace, refreshFileTree]
-  )
+  // Workspace handlers
+  const {
+    handleAddLocalWorkspace,
+    handleReconnectWorkspace,
+    handleRemoveWorkspace,
+    handleRenameWorkspace,
+    handleDisconnectWorkspace,
+  } = useWorkspaceHandlers({
+    workspaces,
+    addLocalWorkspace,
+    removeWorkspace,
+    refreshFileTree,
+    tryReconnectWithStoredHandle,
+    reconnectWorkspace,
+    disconnectWorkspace,
+    renameWorkspace,
+  })
 
   // Register keyboard shortcuts
   useKeyboardShortcuts({
@@ -264,42 +214,44 @@ function IDELayoutInner({
     }, 0)
   }, [code, setCode, showError])
 
+  // Run the current code in a canvas tab
+  const handleRunCanvas = useCallback(() => {
+    if (!code.trim()) return
+
+    // Generate a unique ID for the canvas tab
+    const canvasId = `canvas-${Date.now()}`
+    const tabPath = `canvas://${canvasId}`
+
+    // Store the code for this canvas tab
+    canvasCodesRef.current.set(tabPath, code)
+
+    // Open the canvas tab
+    openCanvasTab(canvasId, 'Canvas')
+  }, [code, openCanvasTab])
+
+  // Handle canvas process exit - keep tab open so user can see final state
+  // Tab will be closed when user clicks the close button
+  const handleCanvasExit = useCallback((_exitCode: number) => {
+    // Process finished but we don't auto-close - user may want to see result
+  }, [])
+
+  // Get the code for the current canvas tab
+  const activeCanvasCode = activeTab && activeTabType === 'canvas'
+    ? canvasCodesRef.current.get(activeTab) ?? ''
+    : ''
+
   // Explorer props for FileExplorer
-  const explorerProps = {
-    tree: fileTree,
-    selectedPath: activeTab,
-    pendingNewFilePath,
-    pendingNewFolderPath,
-    onCreateFile: handleCreateFile,
-    onCreateFolder: handleCreateFolder,
-    onRenameFile: renameFile,
-    onRenameFolder: renameFolder,
-    onDeleteFile: deleteFile,
-    onDeleteFolder: deleteFolder,
-    onSelectFile: openFile,
-    onMoveFile: moveFile,
-    onCopyFile: copyFile,
-    onCancelPendingNewFile: clearPendingNewFile,
-    onCancelPendingNewFolder: clearPendingNewFolder,
-    // Workspace management props
-    workspaceProps: {
-      workspaces,
-      isFileSystemAccessSupported: isFileSystemAccessSupported(),
-      onAddVirtualWorkspace: addVirtualWorkspace,
-      onAddLocalWorkspace: handleAddLocalWorkspace,
-      onRemoveWorkspace: handleRemoveWorkspace,
-      onRefreshWorkspace: async (mountPath: string) => {
-        await refreshWorkspace(mountPath)
-        refreshFileTree()
-      },
-      supportsRefresh,
-      onReconnectWorkspace: handleReconnectWorkspace,
-      onDisconnectWorkspace: handleDisconnectWorkspace,
-      onRenameWorkspace: handleRenameWorkspace,
-      isFolderAlreadyMounted,
-      getUniqueWorkspaceName,
-    },
-  }
+  const explorerProps = createExplorerProps({
+    fileTree, activeTab, pendingNewFilePath, pendingNewFolderPath,
+    handleCreateFile, handleCreateFolder, renameFile, renameFolder,
+    deleteFile, deleteFolder, openFile, moveFile, copyFile,
+    clearPendingNewFile, clearPendingNewFolder, workspaces,
+    isFileSystemAccessSupported: isFileSystemAccessSupported(),
+    addVirtualWorkspace, handleAddLocalWorkspace, handleRemoveWorkspace,
+    refreshWorkspace, refreshFileTree, supportsRefresh, handleReconnectWorkspace,
+    handleDisconnectWorkspace, handleRenameWorkspace, isFolderAlreadyMounted,
+    getUniqueWorkspaceName,
+  })
 
   // Tab bar props for EditorPanel (only when tabs exist)
   const tabBarProps = tabs.length > 0 ? {
@@ -342,6 +294,16 @@ function IDELayoutInner({
                       onOpenShell={handleOpenShell}
                       onClearRecentFiles={clearRecentFiles}
                     />
+                  ) : activeTabType === 'canvas' ? (
+                    <CanvasTabContent
+                      tabs={tabs}
+                      activeTab={activeTab}
+                      canvasCode={activeCanvasCode}
+                      onSelectTab={selectTab}
+                      onCloseTab={handleCloseTab}
+                      onExit={handleCanvasExit}
+                      onError={showError}
+                    />
                   ) : (
                     <EditorPanel
                       code={code}
@@ -358,6 +320,7 @@ function IDELayoutInner({
                       onFormat={handleFormat}
                       isFormatting={isFormatting}
                       onEditorReady={handleEditorReady}
+                      onRunCanvas={handleRunCanvas}
                     />
                   )}
                 </IDEPanel>
