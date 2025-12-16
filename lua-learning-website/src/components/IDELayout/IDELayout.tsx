@@ -351,7 +351,8 @@ function IDELayoutInner({
                         </div>
                       )}
                       {/* Editor panel - hidden when canvas tab is active */}
-                      {activeTabType !== 'canvas' && (
+                      {/* Note: also show if hasCanvasTabs is false to handle race condition during canvas tab close */}
+                      {(activeTabType !== 'canvas' || !hasCanvasTabs) && (
                         <EditorPanel
                           code={code}
                           onChange={setCode}

@@ -26,6 +26,80 @@ test.describe('Canvas Shell Integration', () => {
     })
   })
 
+  test.describe('Canvas Module Pattern', () => {
+    test('canvas is not available as a global', async ({ page }) => {
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
+
+      // Start Lua REPL
+      await terminal.execute('lua')
+      await page.waitForTimeout(TIMEOUTS.ANIMATION)
+
+      // Wait for REPL to be ready
+      const stopButton = page.getByRole('button', { name: /stop process/i })
+      await expect(stopButton).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Try to access canvas directly - should be nil
+      await terminal.type('print(type(canvas))')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Should print "nil" because canvas is not a global
+      await terminal.expectToContain('nil', { timeout: TIMEOUTS.ASYNC_OPERATION })
+    })
+
+    test('require("canvas") returns the canvas module', async ({ page }) => {
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
+
+      // Start Lua REPL
+      await terminal.execute('lua')
+      await page.waitForTimeout(TIMEOUTS.ANIMATION)
+
+      // Wait for REPL to be ready
+      const stopButton = page.getByRole('button', { name: /stop process/i })
+      await expect(stopButton).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Require canvas and check it's a table
+      await terminal.type('canvas = require("canvas")')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      await terminal.type('print(type(canvas))')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Should print "table"
+      await terminal.expectToContain('table', { timeout: TIMEOUTS.ASYNC_OPERATION })
+    })
+
+    test('canvas module has expected functions', async ({ page }) => {
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
+
+      // Start Lua REPL
+      await terminal.execute('lua')
+      await page.waitForTimeout(TIMEOUTS.ANIMATION)
+
+      // Wait for REPL to be ready
+      const stopButton = page.getByRole('button', { name: /stop process/i })
+      await expect(stopButton).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Require canvas
+      await terminal.type('canvas = require("canvas")')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Check that key functions exist
+      await terminal.type('print(type(canvas.start), type(canvas.stop), type(canvas.on_draw))')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Should print "function function function"
+      await terminal.expectToContain('function', { timeout: TIMEOUTS.ASYNC_OPERATION })
+    })
+  })
+
   test.describe('Canvas Tab Opens', () => {
     test('canvas.start() opens a canvas tab in REPL', async ({ page }) => {
       const terminal = createTerminalHelper(page)
@@ -38,6 +112,11 @@ test.describe('Canvas Shell Integration', () => {
       // Wait for stop button to appear (indicates Lua process is running)
       const stopButton = page.getByRole('button', { name: /stop process/i })
       await expect(stopButton).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Require canvas module (must use global assignment to persist across REPL lines)
+      await terminal.type('canvas = require("canvas")')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
       // Set up on_draw callback that stops after a short time
       await terminal.type('canvas.on_draw(function() if canvas.get_time() > 0.1 then canvas.stop() end end)')
@@ -79,6 +158,11 @@ test.describe('Canvas Shell Integration', () => {
       const stopButton = page.getByRole('button', { name: /stop process/i })
       await expect(stopButton).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
+      // Require canvas module
+      await terminal.type('canvas = require("canvas")')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
       // Set up canvas that stops quickly
       await terminal.type('canvas.on_draw(function() if canvas.get_time() > 0.05 then canvas.stop() end end)')
       await terminal.press('Enter')
@@ -106,6 +190,11 @@ test.describe('Canvas Shell Integration', () => {
 
       const stopButton = page.getByRole('button', { name: /stop process/i })
       await expect(stopButton).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Require canvas module
+      await terminal.type('canvas = require("canvas")')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
       // Print before canvas
       await terminal.type('print("Before canvas.start()")')
@@ -147,6 +236,11 @@ test.describe('Canvas Shell Integration', () => {
       const stopButton = page.getByRole('button', { name: /stop process/i })
       await expect(stopButton).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
+      // Require canvas module
+      await terminal.type('canvas = require("canvas")')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
       // Set up frame counter
       await terminal.type('frame_count = 0')
       await terminal.press('Enter')
@@ -181,6 +275,11 @@ test.describe('Canvas Shell Integration', () => {
       // Start Lua REPL
       await terminal.execute('lua')
       await page.waitForTimeout(TIMEOUTS.ANIMATION)
+
+      // Require canvas module
+      await terminal.type('canvas = require("canvas")')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
       // Set up infinite canvas (no canvas.stop())
       await terminal.type('canvas.on_draw(function() canvas.clear() canvas.set_color(255, 0, 0) canvas.fill_rect(0, 0, 100, 100) end)')
@@ -223,6 +322,11 @@ test.describe('Canvas Shell Integration', () => {
 
       const stopButton = page.getByRole('button', { name: /stop process/i })
       await expect(stopButton).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Require canvas module
+      await terminal.type('canvas = require("canvas")')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
       // Set up canvas that tries to start again
       await terminal.type('started = false')

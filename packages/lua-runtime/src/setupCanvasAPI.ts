@@ -136,25 +136,26 @@ export function setupCanvasAPI(
   })
 
   // --- Set up Lua-side canvas table ---
+  // Canvas is NOT a global - it must be accessed via require('canvas')
   engine.doStringSync(`
-    canvas = {}
+    local _canvas = {}
 
     -- Canvas lifecycle
-    function canvas.start()
+    function _canvas.start()
       if __canvas_is_active() then
         error("Canvas is already running. Call canvas.stop() first.")
       end
       __canvas_start():await()
     end
 
-    function canvas.stop()
+    function _canvas.stop()
       __canvas_stop()
     end
 
     -- Store the user's callback and wrap with error handling
     local __user_on_draw_callback = nil
 
-    function canvas.on_draw(callback)
+    function _canvas.on_draw(callback)
       __user_on_draw_callback = callback
       -- Create a wrapper that uses xpcall to capture stack trace on error
       __canvas_setOnDrawCallback(function()
@@ -171,62 +172,62 @@ export function setupCanvasAPI(
     end
 
     -- Canvas configuration
-    function canvas.set_size(width, height)
+    function _canvas.set_size(width, height)
       __canvas_setSize(width, height)
     end
 
-    function canvas.get_width()
+    function _canvas.get_width()
       return __canvas_getWidth()
     end
 
-    function canvas.get_height()
+    function _canvas.get_height()
       return __canvas_getHeight()
     end
 
     -- Drawing state
-    function canvas.clear()
+    function _canvas.clear()
       __canvas_clear()
     end
 
-    function canvas.set_color(r, g, b, a)
+    function _canvas.set_color(r, g, b, a)
       __canvas_setColor(r, g, b, a)
     end
 
-    function canvas.set_line_width(width)
+    function _canvas.set_line_width(width)
       __canvas_setLineWidth(width)
     end
 
     -- Shape drawing
-    function canvas.draw_rect(x, y, w, h)
+    function _canvas.draw_rect(x, y, w, h)
       __canvas_rect(x, y, w, h)
     end
 
-    function canvas.fill_rect(x, y, w, h)
+    function _canvas.fill_rect(x, y, w, h)
       __canvas_fillRect(x, y, w, h)
     end
 
-    function canvas.draw_circle(x, y, r)
+    function _canvas.draw_circle(x, y, r)
       __canvas_circle(x, y, r)
     end
 
-    function canvas.fill_circle(x, y, r)
+    function _canvas.fill_circle(x, y, r)
       __canvas_fillCircle(x, y, r)
     end
 
-    function canvas.draw_line(x1, y1, x2, y2)
+    function _canvas.draw_line(x1, y1, x2, y2)
       __canvas_line(x1, y1, x2, y2)
     end
 
-    function canvas.draw_text(x, y, text)
+    function _canvas.draw_text(x, y, text)
       __canvas_text(x, y, text)
     end
 
     -- Timing
-    function canvas.get_delta()
+    function _canvas.get_delta()
       return __canvas_getDelta()
     end
 
-    function canvas.get_time()
+    function _canvas.get_time()
       return __canvas_getTime()
     end
 
@@ -259,41 +260,41 @@ export function setupCanvasAPI(
     end
 
     -- Keyboard input
-    function canvas.is_key_down(key)
+    function _canvas.is_key_down(key)
       return __canvas_isKeyDown(normalize_key(key))
     end
 
-    function canvas.is_key_pressed(key)
+    function _canvas.is_key_pressed(key)
       return __canvas_isKeyPressed(normalize_key(key))
     end
 
-    function canvas.get_keys_down()
+    function _canvas.get_keys_down()
       return __canvas_getKeysDown()
     end
 
-    function canvas.get_keys_pressed()
+    function _canvas.get_keys_pressed()
       return __canvas_getKeysPressed()
     end
 
     -- Mouse input
-    function canvas.get_mouse_x()
+    function _canvas.get_mouse_x()
       return __canvas_getMouseX()
     end
 
-    function canvas.get_mouse_y()
+    function _canvas.get_mouse_y()
       return __canvas_getMouseY()
     end
 
-    function canvas.is_mouse_down(button)
+    function _canvas.is_mouse_down(button)
       return __canvas_isMouseDown(button)
     end
 
-    function canvas.is_mouse_pressed(button)
+    function _canvas.is_mouse_pressed(button)
       return __canvas_isMousePressed(button)
     end
 
     -- Key constants for discoverability
-    canvas.keys = {
+    _canvas.keys = {
       -- Letters
       A = 'KeyA', B = 'KeyB', C = 'KeyC', D = 'KeyD', E = 'KeyE',
       F = 'KeyF', G = 'KeyG', H = 'KeyH', I = 'KeyI', J = 'KeyJ',
@@ -350,8 +351,9 @@ export function setupCanvasAPI(
     }
 
     -- Register canvas as a module so require('canvas') works
+    -- Note: canvas is NOT a global - it must be accessed via require('canvas')
     package.preload['canvas'] = function()
-      return canvas
+      return _canvas
     end
   `)
 }
