@@ -357,7 +357,7 @@ export class LuaReplProcess implements IProcess {
 
   /**
    * Execute code in REPL mode.
-   * Handles both statements and expressions.
+   * Uses "try return first" pattern to display function return values.
    * Wraps execution with debug hooks for instruction limiting.
    *
    * NOTE: Due to wasmoon limitations, debug hooks don't persist across doString calls.
@@ -373,27 +373,33 @@ export class LuaReplProcess implements IProcess {
     }
 
     try {
-      // First try as a statement, wrapped with hooks
-      // Hooks are set up and cleared within the same Lua chunk
-      await this.engine.doString(`
+      // Try "return <code>" first to capture function calls and expressions
+      // Use __format_results to handle multiple return values tab-separated
+      const formatted = await this.engine.doString(`
         __setup_execution_hook()
-        ${code}
+        local result = __format_results(${code})
         __clear_execution_hook()
+        return result
       `)
 
       // Flush any buffered output from the execution
       LuaEngineFactory.flushOutput(this.engine)
 
-      // Statement executed successfully, show prompt
+      // Display the result if it's not nil
+      if (formatted !== 'nil') {
+        this.onOutput(String(formatted) + '\n')
+      }
+
+      // Show prompt for next input
       if (this.running) {
         this.showPrompt()
       }
-    } catch (statementError: unknown) {
+    } catch (returnError: unknown) {
       // Check if this was an execution control error (stop request or limit)
-      if (ExecutionStoppedError.isExecutionStoppedError(statementError)) {
+      if (ExecutionStoppedError.isExecutionStoppedError(returnError)) {
         // Execution was stopped - flush output and report
         LuaEngineFactory.flushOutput(this.engine)
-        const errorMsg = statementError instanceof Error ? statementError.message : String(statementError)
+        const errorMsg = returnError instanceof Error ? returnError.message : String(returnError)
         this.onError(formatLuaError(errorMsg) + '\n')
         if (this.running) {
           this.showPrompt()
@@ -401,41 +407,37 @@ export class LuaReplProcess implements IProcess {
         return
       }
 
-      // Statement failed with syntax error, try as expression
+      // "return <code>" failed, try as statement
       try {
-        const formatted = await this.engine.doString(`
+        await this.engine.doString(`
           __setup_execution_hook()
-          local result = __format_value((${code}))
+          ${code}
           __clear_execution_hook()
-          return result
         `)
 
         // Flush any buffered output from the execution
         LuaEngineFactory.flushOutput(this.engine)
 
-        // Output the formatted result
-        this.onOutput(String(formatted) + '\n')
-
-        // Show prompt for next input
+        // Statement executed successfully, show prompt
         if (this.running) {
           this.showPrompt()
         }
-      } catch (exprError: unknown) {
-        const exprErrorMsg = exprError instanceof Error ? exprError.message : String(exprError)
+      } catch (statementError: unknown) {
+        const statementErrorMsg = statementError instanceof Error ? statementError.message : String(statementError)
 
         // Check if this was an execution control error
-        if (ExecutionStoppedError.isExecutionStoppedError(exprError)) {
+        if (ExecutionStoppedError.isExecutionStoppedError(statementError)) {
           LuaEngineFactory.flushOutput(this.engine)
-          this.onError(formatLuaError(exprErrorMsg) + '\n')
+          this.onError(formatLuaError(statementErrorMsg) + '\n')
           if (this.running) {
             this.showPrompt()
           }
           return
         }
 
-        // Both statement and expression parsing failed - report error
+        // Both return and statement failed - report error
         LuaEngineFactory.flushOutput(this.engine)
-        this.onError(formatLuaError(exprErrorMsg) + '\n')
+        this.onError(formatLuaError(statementErrorMsg) + '\n')
 
         // Show prompt for next input
         if (this.running) {
