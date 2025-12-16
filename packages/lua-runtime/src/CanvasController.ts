@@ -25,6 +25,8 @@ export interface CanvasCallbacks {
   onRequestCanvasTab: (canvasId: string) => Promise<HTMLCanvasElement>
   /** Request a canvas tab to be closed */
   onCloseCanvasTab: (canvasId: string) => void
+  /** Report an error that occurred during canvas execution */
+  onError?: (error: string) => void
 }
 
 /**
@@ -330,6 +332,63 @@ export class CanvasController {
   // --- Internal ---
 
   /**
+   * Format an error from the onDraw callback with helpful context.
+   * Detects common errors and provides user-friendly explanations.
+   */
+  private formatOnDrawError(error: unknown): string {
+    const rawMessage = error instanceof Error ? error.message : String(error)
+
+    // Detect "yield across C-call boundary" error from blocking operations
+    if (rawMessage.includes('yield across') || rawMessage.includes('C-call boundary')) {
+      // Try to extract location from stack trace
+      const location = this.extractLocationFromTraceback(rawMessage)
+      const locationInfo = location ? ` (${location})` : ''
+
+      return (
+        `canvas.on_draw${locationInfo}: Cannot use blocking operations like io.read() inside on_draw.\n` +
+        'The on_draw callback runs every frame and cannot wait for user input.\n' +
+        'Use canvas.is_key_pressed() or canvas.get_keys_pressed() for input instead.'
+      )
+    }
+
+    // For other errors, include the full message with traceback
+    return `canvas.on_draw: ${rawMessage}`
+  }
+
+  /**
+   * Extract the first user-code location from a Lua traceback.
+   * Looks for patterns like "test.lua:5:" or "[string "..."]:5:"
+   * Skips internal frames (C functions, canvas API internals).
+   */
+  private extractLocationFromTraceback(traceback: string): string | null {
+    // Look for file:line patterns in the traceback
+    // Match patterns like: test.lua:5: or [string "test.lua"]:5: or @test.lua:5:
+    const patterns = [
+      /@?([^:\s]+\.lua):(\d+)/,           // filename.lua:line
+      /\[string "([^"]+)"\]:(\d+)/,        // [string "name"]:line
+    ]
+
+    for (const pattern of patterns) {
+      const match = traceback.match(pattern)
+      if (match) {
+        const [, file, line] = match
+        // Skip internal frames
+        if (!file.includes('canvas') && !file.includes('__')) {
+          return `${file}:${line}`
+        }
+      }
+    }
+
+    // Try to find any line number reference
+    const lineMatch = traceback.match(/:(\d+):/)
+    if (lineMatch) {
+      return `line ${lineMatch[1]}`
+    }
+
+    return null
+  }
+
+  /**
    * Frame callback from GameLoopController.
    */
   private onFrame(timing: TimingInfo): void {
@@ -346,8 +405,9 @@ export class CanvasController {
       try {
         this.onDrawCallback()
       } catch (error) {
-        // Errors in onDraw should stop the canvas
-        console.error('Error in canvas.on_draw:', error)
+        // Errors in onDraw should stop the canvas and report to shell
+        const errorMessage = this.formatOnDrawError(error)
+        this.callbacks.onError?.(errorMessage)
         this.stop()
         return
       }

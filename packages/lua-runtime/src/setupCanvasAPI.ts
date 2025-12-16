@@ -38,7 +38,8 @@ export function setupCanvasAPI(
     }
   })
 
-  engine.global.set('__canvas_onDraw', (callback: () => void) => {
+  // Set the raw callback (called from Lua wrapper that adds error handling)
+  engine.global.set('__canvas_setOnDrawCallback', (callback: () => void) => {
     getController()?.setOnDrawCallback(callback)
   })
 
@@ -150,8 +151,23 @@ export function setupCanvasAPI(
       __canvas_stop()
     end
 
+    -- Store the user's callback and wrap with error handling
+    local __user_on_draw_callback = nil
+
     function canvas.on_draw(callback)
-      __canvas_onDraw(callback)
+      __user_on_draw_callback = callback
+      -- Create a wrapper that uses xpcall to capture stack trace on error
+      __canvas_setOnDrawCallback(function()
+        if __user_on_draw_callback then
+          local success, err = xpcall(__user_on_draw_callback, function(e)
+            -- Capture stack trace, skip internal frames
+            return debug.traceback(e, 2)
+          end)
+          if not success then
+            error(err, 0)  -- Re-throw with traceback included
+          end
+        end
+      end)
     end
 
     -- Canvas configuration

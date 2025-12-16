@@ -379,8 +379,14 @@ export class LuaReplProcess implements IProcess {
   private initCanvasAPI(): void {
     if (!this.engine || !this.options.canvasCallbacks) return
 
-    // Create canvas controller
-    this.canvasController = new CanvasController(this.options.canvasCallbacks)
+    // Create canvas controller with error reporting wired to process onError
+    const callbacksWithError = {
+      ...this.options.canvasCallbacks,
+      onError: (error: string) => {
+        this.onError(formatLuaError(error) + '\n')
+      },
+    }
+    this.canvasController = new CanvasController(callbacksWithError)
 
     // Use shared setup function
     setupCanvasAPI(this.engine, () => this.canvasController)
