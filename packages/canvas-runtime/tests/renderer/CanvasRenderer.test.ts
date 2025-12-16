@@ -1,0 +1,224 @@
+/**
+ * @vitest-environment jsdom
+ */
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { CanvasRenderer } from '../../src/renderer/CanvasRenderer.js';
+import type { DrawCommand } from '../../src/shared/types.js';
+
+// Mock CanvasRenderingContext2D
+function createMockContext(): CanvasRenderingContext2D {
+  return {
+    clearRect: vi.fn(),
+    fillRect: vi.fn(),
+    strokeRect: vi.fn(),
+    beginPath: vi.fn(),
+    arc: vi.fn(),
+    fill: vi.fn(),
+    stroke: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    fillText: vi.fn(),
+    fillStyle: '',
+    strokeStyle: '',
+  } as unknown as CanvasRenderingContext2D;
+}
+
+describe('CanvasRenderer', () => {
+  let canvas: HTMLCanvasElement;
+  let mockCtx: CanvasRenderingContext2D;
+  let renderer: CanvasRenderer;
+
+  beforeEach(() => {
+    // Create mock canvas
+    canvas = document.createElement('canvas');
+    canvas.width = 800;
+    canvas.height = 600;
+
+    // Create and inject mock context
+    mockCtx = createMockContext();
+    vi.spyOn(canvas, 'getContext').mockReturnValue(mockCtx);
+
+    renderer = new CanvasRenderer(canvas);
+  });
+
+  describe('constructor', () => {
+    it('should create renderer with canvas', () => {
+      expect(renderer).toBeDefined();
+    });
+
+    it('should throw if canvas has no 2d context', () => {
+      const badCanvas = document.createElement('canvas');
+      vi.spyOn(badCanvas, 'getContext').mockReturnValue(null);
+
+      expect(() => new CanvasRenderer(badCanvas)).toThrow(
+        'Could not get 2D rendering context'
+      );
+    });
+  });
+
+  describe('clear command', () => {
+    it('should clear the entire canvas', () => {
+      const commands: DrawCommand[] = [{ type: 'clear' }];
+
+      renderer.render(commands);
+
+      expect(mockCtx.clearRect).toHaveBeenCalledWith(0, 0, 800, 600);
+    });
+  });
+
+  describe('setColor command', () => {
+    it('should set fill and stroke style with RGB', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setColor', r: 255, g: 128, b: 64 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.fillStyle).toBe('#ff8040');
+      expect(mockCtx.strokeStyle).toBe('#ff8040');
+    });
+
+    it('should set fill and stroke style with RGBA', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setColor', r: 255, g: 0, b: 0, a: 0.5 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.fillStyle).toBe('rgba(255, 0, 0, 0.5)');
+      expect(mockCtx.strokeStyle).toBe('rgba(255, 0, 0, 0.5)');
+    });
+
+    it('should handle alpha of 1 as RGB (no alpha)', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setColor', r: 0, g: 255, b: 0, a: 1 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.fillStyle).toBe('#00ff00');
+    });
+  });
+
+  describe('rect command', () => {
+    it('should draw stroked rectangle', () => {
+      const commands: DrawCommand[] = [
+        { type: 'rect', x: 10, y: 20, width: 100, height: 50 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.strokeRect).toHaveBeenCalledWith(10, 20, 100, 50);
+    });
+  });
+
+  describe('fillRect command', () => {
+    it('should draw filled rectangle', () => {
+      const commands: DrawCommand[] = [
+        { type: 'fillRect', x: 10, y: 20, width: 100, height: 50 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.fillRect).toHaveBeenCalledWith(10, 20, 100, 50);
+    });
+  });
+
+  describe('circle command', () => {
+    it('should draw stroked circle', () => {
+      const commands: DrawCommand[] = [
+        { type: 'circle', x: 100, y: 100, radius: 50 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.beginPath).toHaveBeenCalled();
+      expect(mockCtx.arc).toHaveBeenCalledWith(100, 100, 50, 0, Math.PI * 2);
+      expect(mockCtx.stroke).toHaveBeenCalled();
+    });
+  });
+
+  describe('fillCircle command', () => {
+    it('should draw filled circle', () => {
+      const commands: DrawCommand[] = [
+        { type: 'fillCircle', x: 100, y: 100, radius: 50 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.beginPath).toHaveBeenCalled();
+      expect(mockCtx.arc).toHaveBeenCalledWith(100, 100, 50, 0, Math.PI * 2);
+      expect(mockCtx.fill).toHaveBeenCalled();
+    });
+  });
+
+  describe('line command', () => {
+    it('should draw line between two points', () => {
+      const commands: DrawCommand[] = [
+        { type: 'line', x1: 0, y1: 0, x2: 100, y2: 100 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.beginPath).toHaveBeenCalled();
+      expect(mockCtx.moveTo).toHaveBeenCalledWith(0, 0);
+      expect(mockCtx.lineTo).toHaveBeenCalledWith(100, 100);
+      expect(mockCtx.stroke).toHaveBeenCalled();
+    });
+  });
+
+  describe('text command', () => {
+    it('should draw text at position', () => {
+      const commands: DrawCommand[] = [
+        { type: 'text', x: 50, y: 50, text: 'Hello World' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.fillText).toHaveBeenCalledWith('Hello World', 50, 50);
+    });
+  });
+
+  describe('multiple commands', () => {
+    it('should execute commands in order', () => {
+      const commands: DrawCommand[] = [
+        { type: 'clear' },
+        { type: 'setColor', r: 255, g: 0, b: 0 },
+        { type: 'fillRect', x: 10, y: 10, width: 50, height: 50 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.clearRect).toHaveBeenCalled();
+      expect(mockCtx.fillRect).toHaveBeenCalledWith(10, 10, 50, 50);
+    });
+  });
+
+  describe('unknown command', () => {
+    it('should ignore unknown command types', () => {
+      const commands = [
+        { type: 'unknownCommand' } as unknown as DrawCommand,
+      ];
+
+      // Should not throw
+      expect(() => renderer.render(commands)).not.toThrow();
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle empty command array', () => {
+      expect(() => renderer.render([])).not.toThrow();
+    });
+
+    it('should clamp color values to valid range', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setColor', r: 300, g: -50, b: 128 },
+      ];
+
+      renderer.render(commands);
+
+      // 300 should clamp to 255 (ff), -50 should clamp to 0 (00)
+      expect(mockCtx.fillStyle).toBe('#ff0080');
+    });
+  });
+});
