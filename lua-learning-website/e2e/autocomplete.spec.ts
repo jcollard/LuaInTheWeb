@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { TIMEOUTS } from './constants'
 
 // Helper to create and open a file so Monaco editor is visible
 async function createAndOpenFile(page: import('@playwright/test').Page) {
@@ -7,15 +8,16 @@ async function createAndOpenFile(page: import('@playwright/test').Page) {
   // First, expand the workspace folder by clicking its chevron
   const workspaceChevron = page.getByTestId('folder-chevron').first()
   await workspaceChevron.click()
-  await page.waitForTimeout(200) // Wait for expansion animation
+  // Wait for folder to expand by checking for child items
+  await expect(page.getByRole('treeitem').nth(1)).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
   // Now click New File button - the file will be created inside the expanded workspace
   await sidebar.getByRole('button', { name: /new file/i }).click()
 
   const input = sidebar.getByRole('textbox')
-  await expect(input).toBeVisible({ timeout: 5000 }) // Wait for rename input to appear
+  await expect(input).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
   await input.press('Enter') // Accept default name
-  await expect(input).not.toBeVisible({ timeout: 5000 }) // Wait for rename to complete
+  await expect(input).not.toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
   // Click the newly created file to open it (should be second treeitem after workspace)
   const fileItems = page.getByRole('treeitem')
@@ -26,7 +28,8 @@ async function createAndOpenFile(page: import('@playwright/test').Page) {
     // Fallback: click first item
     await fileItems.first().click()
   }
-  await page.waitForTimeout(200)
+  // Wait for Monaco editor to load
+  await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 }
 
 test.describe('IDE Editor - Autocomplete Behavior', () => {
@@ -36,7 +39,7 @@ test.describe('IDE Editor - Autocomplete Behavior', () => {
     // Create and open a file so Monaco editor is visible
     await createAndOpenFile(page)
     // Wait for Monaco to load
-    await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
   })
 
   test('autocomplete does not appear automatically while typing', async ({ page }) => {
@@ -44,11 +47,13 @@ test.describe('IDE Editor - Autocomplete Behavior', () => {
     const monacoEditor = page.locator('.monaco-editor')
     await monacoEditor.click()
 
-    // Type a Lua keyword prefix that would trigger autocomplete if enabled
-    await page.keyboard.type('pri')
+    // Type a Lua keyword prefix slowly to ensure Monaco processes each character
+    await page.keyboard.type('pri', { delay: 50 })
+    // Wait for Monaco to stabilize
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-    // Wait a moment for potential autocomplete popup
-    await page.waitForTimeout(500)
+    // Give autocomplete time to appear (if it would) - use longer timeout for negative test
+    await page.waitForTimeout(TIMEOUTS.INIT)
 
     // Autocomplete popup (suggest-widget) should NOT be visible
     const suggestWidget = page.locator('.monaco-editor .suggest-widget')
@@ -59,32 +64,40 @@ test.describe('IDE Editor - Autocomplete Behavior', () => {
     // Click on the editor to focus it
     const monacoEditor = page.locator('.monaco-editor')
     await monacoEditor.click()
+    // Ensure editor is focused
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-    // Type some text first
-    await page.keyboard.type('pri')
-    await page.waitForTimeout(200)
+    // Type some text first slowly
+    await page.keyboard.type('pri', { delay: 50 })
+    // Wait for Monaco to stabilize
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
     // Press Ctrl+Space to trigger autocomplete
     await page.keyboard.press('Control+Space')
 
-    // Wait for autocomplete popup to appear
-    await page.waitForTimeout(500)
-
     // Autocomplete popup (suggest-widget) should be visible
-    const suggestWidget = page.locator('.monaco-editor .suggest-widget.visible')
-    await expect(suggestWidget).toBeVisible({ timeout: 5000 })
+    // Use a more specific selector that Monaco uses for visible suggestions
+    const suggestWidget = page.locator('.monaco-editor .suggest-widget')
+    await expect(suggestWidget).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+    // Also verify it has the visible class (Monaco adds this when widget is active)
+    await expect(suggestWidget).toHaveClass(/visible/, { timeout: TIMEOUTS.ASYNC_OPERATION })
   })
 
   test('autocomplete does not appear on trigger characters like dot', async ({ page }) => {
     // Click on the editor to focus it
     const monacoEditor = page.locator('.monaco-editor')
     await monacoEditor.click()
+    // Ensure editor is focused
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
     // Type something that would trigger autocomplete on '.' if enabled
-    await page.keyboard.type('string.')
+    // Type slowly to ensure Monaco processes each character
+    await page.keyboard.type('string.', { delay: 50 })
+    // Wait for Monaco to stabilize after typing the dot
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-    // Wait a moment for potential autocomplete popup
-    await page.waitForTimeout(500)
+    // Give autocomplete time to appear (if it would) - use longer timeout for negative test
+    await page.waitForTimeout(TIMEOUTS.INIT)
 
     // Autocomplete popup should NOT be visible (since suggestOnTriggerCharacters is false)
     const suggestWidget = page.locator('.monaco-editor .suggest-widget')

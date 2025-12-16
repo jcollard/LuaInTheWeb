@@ -221,13 +221,18 @@ describe('useLuaRepl', () => {
       const { result } = renderHook(() => useLuaRepl({ onOutput }))
       await waitFor(() => expect(result.current.isReady).toBe(true))
 
-      // Get the print function that was set
+      // Get the print function and flush function that were set
       const printFn = mockGlobalSet.mock.calls.find(
         (call: unknown[]) => call[0] === 'print'
       )?.[1] as ((...args: unknown[]) => void) | undefined
+      const flushFn = mockGlobalSet.mock.calls.find(
+        (call: unknown[]) => call[0] === '__js_flush'
+      )?.[1] as (() => void) | undefined
 
       // Act
       printFn?.('hello')
+      // Output is buffered, flush to deliver it
+      flushFn?.()
 
       // Assert - LuaEngineFactory's print adds newline (correct Lua behavior)
       expect(onOutput).toHaveBeenCalledWith('hello\n')
@@ -240,13 +245,18 @@ describe('useLuaRepl', () => {
       const { result } = renderHook(() => useLuaRepl({ onOutput }))
       await waitFor(() => expect(result.current.isReady).toBe(true))
 
-      // Get the print function that was set
+      // Get the print function and flush function that were set
       const printFn = mockGlobalSet.mock.calls.find(
         (call: unknown[]) => call[0] === 'print'
       )?.[1] as ((...args: unknown[]) => void) | undefined
+      const flushFn = mockGlobalSet.mock.calls.find(
+        (call: unknown[]) => call[0] === '__js_flush'
+      )?.[1] as (() => void) | undefined
 
       // Act
       printFn?.('a', 'b', 'c')
+      // Output is buffered, flush to deliver it
+      flushFn?.()
 
       // Assert - LuaEngineFactory's print adds newline (correct Lua behavior)
       expect(onOutput).toHaveBeenCalledWith('a\tb\tc\n')
@@ -259,13 +269,18 @@ describe('useLuaRepl', () => {
       const { result } = renderHook(() => useLuaRepl({ onOutput }))
       await waitFor(() => expect(result.current.isReady).toBe(true))
 
-      // Get the print function that was set
+      // Get the print function and flush function that were set
       const printFn = mockGlobalSet.mock.calls.find(
         (call: unknown[]) => call[0] === 'print'
       )?.[1] as ((...args: unknown[]) => void) | undefined
+      const flushFn = mockGlobalSet.mock.calls.find(
+        (call: unknown[]) => call[0] === '__js_flush'
+      )?.[1] as (() => void) | undefined
 
       // Act
       printFn?.(null, undefined, 'value')
+      // Output is buffered, flush to deliver it
+      flushFn?.()
 
       // Assert - LuaEngineFactory's print adds newline (correct Lua behavior)
       expect(onOutput).toHaveBeenCalledWith('nil\tnil\tvalue\n')

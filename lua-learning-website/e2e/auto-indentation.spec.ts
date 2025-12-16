@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { TIMEOUTS } from './constants'
 
 // Helper to create and open a file so Monaco editor is visible
 async function createAndOpenFile(page: import('@playwright/test').Page) {
@@ -7,15 +8,16 @@ async function createAndOpenFile(page: import('@playwright/test').Page) {
   // First, expand the workspace folder by clicking its chevron
   const workspaceChevron = page.getByTestId('folder-chevron').first()
   await workspaceChevron.click()
-  await page.waitForTimeout(200) // Wait for expansion animation
+  // Wait for folder to expand by checking for child items
+  await expect(page.getByRole('treeitem').nth(1)).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
   // Now click New File button - the file will be created inside the expanded workspace
   await sidebar.getByRole('button', { name: /new file/i }).click()
 
   const input = sidebar.getByRole('textbox')
-  await expect(input).toBeVisible({ timeout: 5000 }) // Wait for rename input to appear
+  await expect(input).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE }) // Wait for rename input to appear
   await input.press('Enter') // Accept default name
-  await expect(input).not.toBeVisible({ timeout: 5000 }) // Wait for rename to complete
+  await expect(input).not.toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE }) // Wait for rename to complete
 
   // Click the newly created file to open it (should be second treeitem after workspace)
   const fileItems = page.getByRole('treeitem')
@@ -29,14 +31,18 @@ async function createAndOpenFile(page: import('@playwright/test').Page) {
 
   // Wait for Monaco to load
   const monacoEditor = page.locator('.monaco-editor')
-  await expect(monacoEditor).toBeVisible({ timeout: 10000 })
+  await expect(monacoEditor).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+  // Wait for Monaco to fully initialize
+  await page.waitForTimeout(TIMEOUTS.UI_STABLE)
   return monacoEditor
 }
 
 // Helper to type text slowly with delays (to avoid character dropping)
 async function typeSlowly(page: import('@playwright/test').Page, text: string) {
   await page.keyboard.type(text, { delay: 50 })
-  await page.waitForTimeout(200)
+  // Wait for Monaco to render the text
+  const viewLines = page.locator('.monaco-editor .view-lines')
+  await expect(viewLines).toContainText(text.trim(), { timeout: TIMEOUTS.ELEMENT_VISIBLE })
 }
 
 // Helper to get the content of all lines in the editor
@@ -83,6 +89,8 @@ test.describe('Auto-Indentation', () => {
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
     // Wait for file tree to render (ensures workspace is ready)
     await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+    // Wait for UI to fully stabilize before test
+    await page.waitForTimeout(TIMEOUTS.UI_STABLE)
   })
 
   test('indents after function declaration', async ({ page }) => {
@@ -214,12 +222,9 @@ test.describe('Auto-Indentation', () => {
 
     await typeSlowly(page, 'for i = 1, 10 do')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(100) // Wait for Monaco to process
     await typeSlowly(page, 'for j = 1, 10 do')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(100) // Wait for Monaco to process
     await typeSlowly(page, 'print(i * j)')
-    await page.waitForTimeout(200) // Wait for rendering
 
     const lines = await getEditorContent(page)
     // Monaco may render lines differently - check that:
@@ -249,11 +254,9 @@ test.describe('Auto-Indentation', () => {
     // Type an if block
     await typeSlowly(page, 'if true then')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(100)
 
     // Now type 'end' - it should auto-dedent to match the 'if' line
     await typeSlowly(page, 'end')
-    await page.waitForTimeout(200)
 
     const lines = await getEditorContent(page)
     const ifLine = lines.find((line) => containsText(line, 'if true then'))
@@ -274,17 +277,13 @@ test.describe('Auto-Indentation', () => {
     // Type a nested function structure
     await typeSlowly(page, 'function outer()')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(100)
     await typeSlowly(page, 'function inner()')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(100)
     await typeSlowly(page, 'print("hello")')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(100)
 
     // Type first 'end' - should match inner function at indent level 1
     await typeSlowly(page, 'end')
-    await page.waitForTimeout(200)
 
     const lines = await getEditorContent(page)
     const innerFuncLine = lines.find((line) => containsText(line, 'function inner'))
@@ -304,14 +303,11 @@ test.describe('Auto-Indentation', () => {
     // Type an if block with content
     await typeSlowly(page, 'if condition then')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(100)
     await typeSlowly(page, 'doSomething()')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(100)
 
     // Type 'else' - should dedent to match 'if'
     await typeSlowly(page, 'else')
-    await page.waitForTimeout(200)
 
     const lines = await getEditorContent(page)
     const ifLine = lines.find((line) => containsText(line, 'if condition then'))
@@ -331,14 +327,11 @@ test.describe('Auto-Indentation', () => {
     // Type an if block with content
     await typeSlowly(page, 'if a then')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(100)
     await typeSlowly(page, 'doA()')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(100)
 
     // Type 'elseif' - should dedent to match 'if'
     await typeSlowly(page, 'elseif b then')
-    await page.waitForTimeout(200)
 
     const lines = await getEditorContent(page)
     const ifLine = lines.find((line) => containsText(line, 'if a then'))
@@ -358,14 +351,11 @@ test.describe('Auto-Indentation', () => {
     // Type a repeat block
     await typeSlowly(page, 'repeat')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(100)
     await typeSlowly(page, 'x = x + 1')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(100)
 
     // Type 'until' - should dedent to match 'repeat'
     await typeSlowly(page, 'until x > 10')
-    await page.waitForTimeout(200)
 
     const lines = await getEditorContent(page)
     const repeatLine = lines.find((line) => containsText(line, 'repeat'))
@@ -402,18 +392,15 @@ test.describe('Auto-Indentation', () => {
     // Type a function declaration
     await typeSlowly(page, 'function foo()')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(100)
 
     // Clear any auto-indent that might have been applied and go to start of line
     await page.keyboard.press('Home')
     // Select all content on this line and delete it to start fresh
     await page.keyboard.press('Shift+End')
     await page.keyboard.press('Delete')
-    await page.waitForTimeout(100)
 
     // Now type on the empty line - it should auto-indent
     await typeSlowly(page, 'print')
-    await page.waitForTimeout(200)
 
     const lines = await getEditorContent(page)
     const printLine = lines.find((line) => containsText(line, 'print'))
@@ -430,20 +417,16 @@ test.describe('Auto-Indentation', () => {
     // Type nested blocks
     await typeSlowly(page, 'function outer()')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(100)
     await typeSlowly(page, 'if true then')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(100)
 
     // Clear any auto-indent and go to start of line
     await page.keyboard.press('Home')
     await page.keyboard.press('Shift+End')
     await page.keyboard.press('Delete')
-    await page.waitForTimeout(100)
 
     // Type on the empty line - should auto-indent to level 2
     await typeSlowly(page, 'x')
-    await page.waitForTimeout(200)
 
     const lines = await getEditorContent(page)
     // Find the line that just has 'x' (with indentation)

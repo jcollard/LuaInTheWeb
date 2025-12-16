@@ -123,9 +123,10 @@ describe('LuaReplProcess - Multi-line Input', () => {
       process.handleInput('end')
       await new Promise((resolve) => setTimeout(resolve, 50))
 
-      // Should have printed 1 and 2
-      expect(onOutput).toHaveBeenCalledWith('1\n')
-      expect(onOutput).toHaveBeenCalledWith('2\n')
+      // Should have printed 1 and 2 (may be batched together or separate)
+      const allOutput = onOutput.mock.calls.map((call) => call[0]).join('')
+      expect(allOutput).toContain('1\n')
+      expect(allOutput).toContain('2\n')
     })
   })
 

@@ -28,8 +28,9 @@ test.describe('Execution Control', () => {
     terminal: ReturnType<typeof createTerminalHelper>
   ) {
     await terminal.execute('lua')
-    // Wait for REPL to start (shows Lua prompt)
-    await page.waitForTimeout(TIMEOUTS.INIT)
+    // Wait for REPL to start - verify stop button appears (indicates Lua process is running)
+    const stopButton = page.getByRole('button', { name: /stop process/i })
+    await expect(stopButton).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
   }
 
   test.describe('Stop Button', () => {
@@ -59,33 +60,30 @@ test.describe('Execution Control', () => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
-      // Start Lua REPL
-      await startLuaRepl(page, terminal)
-
-      // Set up a dialog handler to auto-dismiss any continuation prompts
+      // Set up a dialog handler to auto-dismiss any continuation prompts BEFORE starting REPL
       page.on('dialog', async (dialog: Dialog) => {
         await dialog.dismiss()
       })
+
+      // Start Lua REPL
+      await startLuaRepl(page, terminal)
 
       // Run an infinite loop - this will block until stopped
       await terminal.type('while true do local x = 1 end')
       await terminal.press('Enter')
 
-      // Give the loop time to start
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+      // Give the loop time to start executing
+      await page.waitForTimeout(TIMEOUTS.ANIMATION)
 
-      // Stop button should be visible
+      // Stop button should already be visible (from startLuaRepl)
       const stopButton = page.getByRole('button', { name: /stop process/i })
       await expect(stopButton).toBeVisible({ timeout: TIMEOUTS.ASYNC_OPERATION })
 
       // Click stop button
       await stopButton.click()
 
-      // Wait for process to stop
-      await page.waitForTimeout(TIMEOUTS.ANIMATION)
-
       // Stop button should disappear after stopping
-      await expect(stopButton).not.toBeVisible({ timeout: TIMEOUTS.ASYNC_OPERATION })
+      await expect(stopButton).not.toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
       // Terminal should show shell prompt and be functional
       await terminal.execute('pwd')
@@ -198,8 +196,8 @@ test.describe('Execution Control', () => {
       // The UI should remain responsive - stop button should be clickable
       const stopButton = page.getByRole('button', { name: /stop process/i })
 
-      // Give the loop a moment to start
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+      // Give the loop a moment to start - use longer timeout for print operations
+      await page.waitForTimeout(TIMEOUTS.ANIMATION)
 
       // Try to interact with the stop button - if UI is frozen, this will timeout
       await expect(stopButton).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
@@ -231,13 +229,17 @@ test.describe('Execution Control', () => {
       await terminal.type('for i = 1, 100 do print("item" .. i) end')
       await terminal.press('Enter')
 
-      // Wait for execution to complete
+      // Wait for execution to complete - use longer timeout for output delivery
       await page.waitForTimeout(TIMEOUTS.ASYNC_OPERATION)
 
       // The terminal should contain output from the loop
-      // Check for some of the printed items
-      await terminal.expectToContain('item1')
-      await terminal.expectToContain('item100')
+      // Check for some of the printed items - use retry pattern for throttled output
+      await expect(async () => {
+        await terminal.expectToContain('item1')
+      }).toPass({ timeout: TIMEOUTS.ASYNC_OPERATION })
+      await expect(async () => {
+        await terminal.expectToContain('item100')
+      }).toPass({ timeout: TIMEOUTS.ASYNC_OPERATION })
 
       // The REPL process is still running
       const stopButton = page.getByRole('button', { name: /stop process/i })
@@ -266,8 +268,8 @@ test.describe('Execution Control', () => {
       await terminal.type('while true do local x = 1 end')
       await terminal.press('Enter')
 
-      // Give the loop time to start
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+      // Give the loop time to start - use longer timeout for infinite loop
+      await page.waitForTimeout(TIMEOUTS.ANIMATION)
 
       // Stop button should be visible
       const stopButton = page.getByRole('button', { name: /stop process/i })
@@ -276,8 +278,8 @@ test.describe('Execution Control', () => {
       // Press Ctrl+C to stop
       await terminal.press('Control+c')
 
-      // Wait for process to stop
-      await page.waitForTimeout(TIMEOUTS.ANIMATION)
+      // Wait for process to stop - use longer timeout for signal handling
+      await page.waitForTimeout(TIMEOUTS.INIT)
 
       // If still visible after reasonable time, click the stop button as fallback
       const isStillVisible = await stopButton.isVisible()
