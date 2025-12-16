@@ -8,8 +8,6 @@ import type { IFileSystem } from '@lua-learning/shell-core'
 import {
   generateShellLibrarySource,
   generateCanvasLibrarySource,
-  generateShellDocumentation,
-  generateCanvasDocumentation,
 } from './libraryDocumentation'
 import type {
   Workspace,
@@ -17,6 +15,8 @@ import type {
   WorkspaceManagerState,
 } from './workspaceTypes'
 import { createVirtualFileSystem } from './virtualFileSystemFactory'
+import { getAllDocs } from './luaStdlibMarkdown/index'
+import { createReadOnlyFileSystem } from './readOnlyFileSystem'
 
 export const WORKSPACE_STORAGE_KEY = 'lua-workspaces'
 export const DEFAULT_WORKSPACE_ID = 'default'
@@ -141,17 +141,12 @@ export function createLibraryWorkspace(): Workspace {
  * This workspace is read-only and contains markdown documentation files.
  */
 export function createDocsWorkspace(): Workspace {
-  const docsFiles: Record<string, string> = {
-    'shell.md': generateShellDocumentation(),
-    'canvas.md': generateCanvasDocumentation(),
-  }
-
   return {
     id: DOCS_WORKSPACE_ID,
     name: DOCS_WORKSPACE_NAME,
     type: 'docs',
     mountPath: DOCS_MOUNT_PATH,
-    filesystem: createReadOnlyFileSystem(docsFiles),
+    filesystem: createReadOnlyFileSystem(getAllDocs()),
     status: 'connected',
     isReadOnly: true,
   }
@@ -202,54 +197,6 @@ export function createDisconnectedFileSystem(): IFileSystem {
     writeFile: throwDisconnected,
     createDirectory: throwDisconnected,
     delete: throwDisconnected,
-  }
-}
-
-/**
- * Create a read-only in-memory filesystem for library workspaces.
- * Files can be read but not written, deleted, or created.
- */
-export function createReadOnlyFileSystem(files: Record<string, string>): IFileSystem {
-  const throwReadOnly = (): never => {
-    throw new Error('This file is read-only and cannot be modified.')
-  }
-
-  return {
-    getCurrentDirectory: () => '/',
-    setCurrentDirectory: () => {}, // Allow cd, but no-op
-    exists: (path: string) => {
-      const normalized = path.startsWith('/') ? path.slice(1) : path
-      return normalized in files || normalized === ''
-    },
-    isDirectory: (path: string) => {
-      // Only root is a directory in this simple implementation
-      return path === '/' || path === ''
-    },
-    isFile: (path: string) => {
-      const normalized = path.startsWith('/') ? path.slice(1) : path
-      return normalized in files
-    },
-    listDirectory: (path: string) => {
-      if (path === '/' || path === '') {
-        return Object.keys(files).map((name) => ({
-          name,
-          type: 'file' as const,
-          path: `/${name}`,
-        }))
-      }
-      return []
-    },
-    readFile: (path: string) => {
-      const normalized = path.startsWith('/') ? path.slice(1) : path
-      const content = files[normalized]
-      if (content === undefined) {
-        throw new Error(`File not found: ${path}`)
-      }
-      return content
-    },
-    writeFile: throwReadOnly,
-    createDirectory: throwReadOnly,
-    delete: throwReadOnly,
   }
 }
 

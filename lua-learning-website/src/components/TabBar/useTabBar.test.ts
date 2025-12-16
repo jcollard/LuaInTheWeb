@@ -36,6 +36,7 @@ describe('useTabBar', () => {
         path: '/test/file.lua',
         name: 'file.lua',
         isDirty: false,
+        type: 'file',
       })
     })
 
@@ -404,6 +405,197 @@ describe('useTabBar', () => {
       expect(result.current.setDirty).toBe(initialSetDirty)
       expect(result.current.renameTab).toBe(initialRenameTab)
       // Note: closeTab depends on activeTab, so it may change between renders
+    })
+  })
+
+  describe('tab types', () => {
+    it('should default to file type when opening a tab', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      // Act
+      act(() => {
+        result.current.openTab('/test/file.lua', 'file.lua')
+      })
+
+      // Assert
+      expect(result.current.tabs[0].type).toBe('file')
+    })
+
+    it('should allow specifying tab type when opening', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      // Act
+      act(() => {
+        result.current.openTab('canvas://game', 'Canvas Game', 'canvas')
+      })
+
+      // Assert
+      expect(result.current.tabs[0].type).toBe('canvas')
+    })
+  })
+
+  describe('openCanvasTab', () => {
+    it('should open a canvas tab with correct properties', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      // Act
+      act(() => {
+        result.current.openCanvasTab('canvas-1', 'My Game')
+      })
+
+      // Assert
+      expect(result.current.tabs).toHaveLength(1)
+      expect(result.current.tabs[0]).toEqual({
+        path: 'canvas://canvas-1',
+        name: 'My Game',
+        isDirty: false,
+        type: 'canvas',
+      })
+    })
+
+    it('should set canvas tab as active', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      // Act
+      act(() => {
+        result.current.openCanvasTab('canvas-1', 'My Game')
+      })
+
+      // Assert
+      expect(result.current.activeTab).toBe('canvas://canvas-1')
+    })
+
+    it('should focus existing canvas tab if already open', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      act(() => {
+        result.current.openTab('/test/file.lua', 'file.lua')
+        result.current.openCanvasTab('canvas-1', 'My Game')
+        result.current.selectTab('/test/file.lua')
+      })
+
+      expect(result.current.activeTab).toBe('/test/file.lua')
+
+      // Act - try to open same canvas tab again
+      act(() => {
+        result.current.openCanvasTab('canvas-1', 'My Game')
+      })
+
+      // Assert - should focus existing tab without creating duplicate
+      expect(result.current.tabs.filter((t) => t.type === 'canvas')).toHaveLength(1)
+      expect(result.current.activeTab).toBe('canvas://canvas-1')
+    })
+
+    it('should generate unique canvas tab id with default name', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      // Act
+      act(() => {
+        result.current.openCanvasTab('test-id')
+      })
+
+      // Assert
+      expect(result.current.tabs[0].name).toBe('Canvas')
+      expect(result.current.tabs[0].path).toBe('canvas://test-id')
+    })
+  })
+
+  describe('canvas tab interactions with file tabs', () => {
+    it('should allow mixing file and canvas tabs', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      // Act
+      act(() => {
+        result.current.openTab('/test/file.lua', 'file.lua')
+        result.current.openCanvasTab('game-1', 'Game')
+        result.current.openTab('/test/another.lua', 'another.lua')
+      })
+
+      // Assert
+      expect(result.current.tabs).toHaveLength(3)
+      expect(result.current.tabs[0].type).toBe('file')
+      expect(result.current.tabs[1].type).toBe('canvas')
+      expect(result.current.tabs[2].type).toBe('file')
+    })
+
+    it('should close canvas tab like any other tab', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      act(() => {
+        result.current.openTab('/test/file.lua', 'file.lua')
+        result.current.openCanvasTab('game-1', 'Game')
+      })
+
+      // Act
+      act(() => {
+        result.current.closeTab('canvas://game-1')
+      })
+
+      // Assert
+      expect(result.current.tabs).toHaveLength(1)
+      expect(result.current.tabs[0].path).toBe('/test/file.lua')
+    })
+
+    it('should switch to file tab when closing active canvas tab', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      act(() => {
+        result.current.openTab('/test/file.lua', 'file.lua')
+        result.current.openCanvasTab('game-1', 'Game')
+      })
+
+      expect(result.current.activeTab).toBe('canvas://game-1')
+
+      // Act
+      act(() => {
+        result.current.closeTab('canvas://game-1')
+      })
+
+      // Assert
+      expect(result.current.activeTab).toBe('/test/file.lua')
+    })
+  })
+
+  describe('getActiveTabType', () => {
+    it('should return null when no tab is active', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      // Assert
+      expect(result.current.getActiveTabType()).toBeNull()
+    })
+
+    it('should return file when a file tab is active', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      act(() => {
+        result.current.openTab('/test/file.lua', 'file.lua')
+      })
+
+      // Assert
+      expect(result.current.getActiveTabType()).toBe('file')
+    })
+
+    it('should return canvas when a canvas tab is active', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      act(() => {
+        result.current.openCanvasTab('game-1', 'Game')
+      })
+
+      // Assert
+      expect(result.current.getActiveTabType()).toBe('canvas')
     })
   })
 })

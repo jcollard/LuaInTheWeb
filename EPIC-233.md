@@ -54,7 +54,7 @@ Mouse                                       │
 | #254 | Web Worker + Lua Integration | ✅ Complete | - | Merged PR #272 |
 | #255 | Main Thread Rendering | ✅ Complete | - | Merged PR #268 |
 | #256 | Process Integration | ✅ Complete | - | Merged PR #273 |
-| #257 | React Integration & Canvas UI | ⏳ Pending | - | M - Depends on #255, #256 |
+| #257 | React Integration & Canvas UI | 🔄 In Progress | 257-react-integration-canvas-ui | M - Depends on #255, #256 |
 | #258 | COOP/COEP Header Configuration | ✅ Complete | - | Merged PR #260 |
 | #259 | Library Workspace Integration | ✅ Complete | - | Merged PR #277 |
 
@@ -127,6 +127,8 @@ Mouse                                       │
   - Improved canvas API: snake_case naming, clearer function names
   - Added set_size, get_width, get_height, set_line_width, is_mouse_pressed
   - 45 new tests, 83.54% mutation score
+- Integrated main into epic branch (resolved Lua stdlib docs merge)
+- Started #257: React Integration & Canvas UI
 
 ## Key Files
 

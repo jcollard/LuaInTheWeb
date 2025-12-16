@@ -9,7 +9,13 @@ import {
   isSharedArrayBufferAvailable,
   DEFAULT_BUFFER_SIZE,
   type ChannelMode,
+  createChannelPair,
+  type ChannelPairResult,
 } from '../channels/channelFactory.js';
+import type { IWorkerChannel } from '../channels/IWorkerChannel.js';
+import { GameLoopController } from '../renderer/GameLoopController.js';
+import { CanvasRenderer } from '../renderer/CanvasRenderer.js';
+import { InputCapture } from '../renderer/InputCapture.js';
 import type { WorkerToMainMessage, WorkerState } from '../worker/WorkerMessages.js';
 
 /**
@@ -43,7 +49,13 @@ export class LuaCanvasProcess implements IProcess {
   private worker: Worker | null = null;
   private running = false;
   private currentWorkerState: WorkerState = 'idle';
-  private sharedBuffer: SharedArrayBuffer | null = null;
+
+  // Rendering components
+  private channel: IWorkerChannel | null = null;
+  private gameLoop: GameLoopController | null = null;
+  private renderer: CanvasRenderer | null = null;
+  private inputCapture: InputCapture | null = null;
+  private channelPairResult: ChannelPairResult | null = null;
 
   /**
    * Callback invoked when the process produces output.
@@ -102,10 +114,18 @@ export class LuaCanvasProcess implements IProcess {
       this.onOutput('Running in compatibility mode\n');
     }
 
-    // Create shared buffer if using SharedArrayBuffer mode
-    if (useSharedArrayBuffer) {
-      this.sharedBuffer = new SharedArrayBuffer(DEFAULT_BUFFER_SIZE);
-    }
+    // Create channel pair for main ↔ worker communication
+    const actualMode = useSharedArrayBuffer ? 'sharedArrayBuffer' : 'postMessage';
+    this.channelPairResult = createChannelPair(actualMode, DEFAULT_BUFFER_SIZE);
+    this.channel = this.channelPairResult.mainChannel;
+
+    // Set canvas size on channel
+    this.channel.setCanvasSize(this.canvas.width, this.canvas.height);
+
+    // Create rendering components
+    this.renderer = new CanvasRenderer(this.canvas);
+    this.gameLoop = new GameLoopController(this.handleFrame.bind(this));
+    this.inputCapture = new InputCapture(this.canvas);
 
     // Create the worker
     this.worker = this.createWorker();
@@ -114,17 +134,28 @@ export class LuaCanvasProcess implements IProcess {
     this.worker.onmessage = this.handleWorkerMessage.bind(this);
     this.worker.onerror = this.handleWorkerError.bind(this);
 
-    // Send init message
-    const initMessage: { type: 'init'; code: string; buffer?: SharedArrayBuffer } = {
+    // Build init message with channel resources
+    const initMessage: {
+      type: 'init';
+      code: string;
+      buffer?: SharedArrayBuffer;
+      port?: MessagePort;
+    } = {
       type: 'init',
       code: this.code,
     };
 
-    if (this.sharedBuffer) {
-      initMessage.buffer = this.sharedBuffer;
+    // Transfer the appropriate resources to the worker
+    const transferList: Transferable[] = [];
+
+    if (this.channelPairResult.mode === 'sharedArrayBuffer' && this.channelPairResult.buffer) {
+      initMessage.buffer = this.channelPairResult.buffer;
+    } else if (this.channelPairResult.mode === 'postMessage' && this.channelPairResult.ports) {
+      initMessage.port = this.channelPairResult.ports.port2;
+      transferList.push(this.channelPairResult.ports.port2);
     }
 
-    this.worker.postMessage(initMessage);
+    this.worker.postMessage(initMessage, transferList);
   }
 
   /**
@@ -133,6 +164,24 @@ export class LuaCanvasProcess implements IProcess {
    */
   stop(): void {
     if (!this.running) return;
+
+    // Stop the game loop
+    if (this.gameLoop) {
+      this.gameLoop.dispose();
+      this.gameLoop = null;
+    }
+
+    // Dispose input capture
+    if (this.inputCapture) {
+      this.inputCapture.dispose();
+      this.inputCapture = null;
+    }
+
+    // Dispose the channel
+    if (this.channel) {
+      this.channel.dispose();
+      this.channel = null;
+    }
 
     // Send stop message if worker exists
     if (this.worker) {
@@ -143,7 +192,8 @@ export class LuaCanvasProcess implements IProcess {
 
     this.running = false;
     this.currentWorkerState = 'stopped';
-    this.sharedBuffer = null;
+    this.renderer = null;
+    this.channelPairResult = null;
 
     this.onExit(0);
   }
@@ -153,6 +203,33 @@ export class LuaCanvasProcess implements IProcess {
    */
   isRunning(): boolean {
     return this.running;
+  }
+
+  /**
+   * Pause the canvas process.
+   * Pauses the game loop but keeps the worker alive.
+   */
+  pause(): void {
+    if (this.gameLoop) {
+      this.gameLoop.pause();
+    }
+  }
+
+  /**
+   * Resume the canvas process.
+   * Resumes the game loop.
+   */
+  resume(): void {
+    if (this.gameLoop) {
+      this.gameLoop.resume();
+    }
+  }
+
+  /**
+   * Check if the process is currently paused.
+   */
+  isPaused(): boolean {
+    return this.gameLoop?.isPaused() ?? false;
   }
 
   /**
@@ -242,7 +319,10 @@ export class LuaCanvasProcess implements IProcess {
   private handleStateChanged(state: WorkerState): void {
     this.currentWorkerState = state;
 
-    if (state === 'stopped') {
+    if (state === 'running') {
+      // Worker is running, start the game loop
+      this.startGameLoop();
+    } else if (state === 'stopped') {
       this.running = false;
     } else if (state === 'error') {
       this.terminateWithError();
@@ -250,9 +330,74 @@ export class LuaCanvasProcess implements IProcess {
   }
 
   /**
+   * Start the main-thread game loop for rendering.
+   */
+  private startGameLoop(): void {
+    if (this.gameLoop) {
+      this.gameLoop.start();
+    }
+  }
+
+  /**
+   * Handle each frame of the game loop.
+   * Gets draw commands from channel and renders them.
+   */
+  private handleFrame(timing: { deltaTime: number; totalTime: number; frameNumber: number }): void {
+    if (!this.channel || !this.renderer) return;
+
+    // Update timing info on the channel for the worker
+    this.channel.setTimingInfo(timing);
+
+    // Send current input state to the worker
+    if (this.inputCapture) {
+      this.channel.setInputState(this.inputCapture.getInputState());
+    }
+
+    // Get draw commands from worker via channel
+    const commands = this.channel.getDrawCommands();
+
+    // Render the commands and update channel state for any setSize commands
+    if (commands.length > 0) {
+      for (const cmd of commands) {
+        if (cmd.type === 'setSize') {
+          // Update channel's canvas size so get_width/get_height return correct values
+          this.channel.setCanvasSize(cmd.width, cmd.height);
+        }
+      }
+      this.renderer.render(commands);
+    }
+
+    // Clear "just pressed" state for next frame
+    if (this.inputCapture) {
+      this.inputCapture.update();
+    }
+
+    // Signal that the frame is ready (for frame synchronization)
+    this.channel.signalFrameReady();
+  }
+
+  /**
    * Terminate the process with an error code.
    */
   private terminateWithError(): void {
+    // Stop the game loop
+    if (this.gameLoop) {
+      this.gameLoop.dispose();
+      this.gameLoop = null;
+    }
+
+    // Dispose input capture
+    if (this.inputCapture) {
+      this.inputCapture.dispose();
+      this.inputCapture = null;
+    }
+
+    // Dispose the channel
+    if (this.channel) {
+      this.channel.dispose();
+      this.channel = null;
+    }
+
     if (this.worker) {
       this.worker.terminate();
       this.worker = null;
@@ -260,7 +405,8 @@ export class LuaCanvasProcess implements IProcess {
 
     this.running = false;
     this.currentWorkerState = 'error';
-    this.sharedBuffer = null;
+    this.renderer = null;
+    this.channelPairResult = null;
 
     this.onExit(1);
   }

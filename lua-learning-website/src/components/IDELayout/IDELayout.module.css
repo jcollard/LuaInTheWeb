@@ -23,6 +23,68 @@
   display: block;
 }
 
+/* Canvas container styles */
+.canvasContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--theme-editor-bg);
+}
+
+.canvasToolbar {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  border-bottom: 1px solid var(--theme-border);
+  background-color: var(--theme-panel-bg);
+}
+
+.canvasTabs {
+  display: flex;
+  flex: 1;
+  overflow-x: auto;
+}
+
+.canvasTab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--theme-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.canvasTab:hover {
+  background-color: var(--theme-bg-hover);
+}
+
+.canvasTabActive {
+  background-color: var(--theme-editor-bg);
+  color: var(--theme-text-primary);
+  border-bottom: 2px solid var(--theme-indicator-active);
+}
+
+.canvasTabClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.6;
+}
+
+.canvasTabClose:hover {
+  opacity: 1;
+  background-color: var(--theme-bg-hover);
+}
+
 /* Mobile responsive styles */
 @media (max-width: 768px) {
   .activityBar {

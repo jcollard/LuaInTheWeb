@@ -38,6 +38,7 @@ try {
   section('🔨', 'Building packages...')
   run('npm run build', path.join(ROOT_DIR, 'packages/shell-core'))
   run('npm run build', path.join(ROOT_DIR, 'packages/lua-runtime'))
+  run('npm run build', path.join(ROOT_DIR, 'packages/canvas-runtime'))
   run('npm run build', path.join(ROOT_DIR, 'lua-learning-website'))
   console.log('✅ Build passed')
 
@@ -45,6 +46,7 @@ try {
   section('🧪', 'Running unit tests...')
   run('npm run test', path.join(ROOT_DIR, 'packages/shell-core'))
   run('npm run test', path.join(ROOT_DIR, 'packages/lua-runtime'))
+  run('npm run test', path.join(ROOT_DIR, 'packages/canvas-runtime'))
   run('npm run test', path.join(ROOT_DIR, 'lua-learning-website'))
   console.log('✅ Unit tests passed')
 

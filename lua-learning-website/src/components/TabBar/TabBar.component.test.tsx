@@ -5,9 +5,9 @@ import * as useTabBarScrollModule from './useTabBarScroll'
 
 describe('TabBar', () => {
   const defaultTabs = [
-    { path: '/main.lua', name: 'main.lua', isDirty: false },
-    { path: '/utils/math.lua', name: 'math.lua', isDirty: true },
-    { path: '/config.lua', name: 'config.lua', isDirty: false },
+    { path: '/main.lua', name: 'main.lua', isDirty: false, type: 'file' as const },
+    { path: '/utils/math.lua', name: 'math.lua', isDirty: true, type: 'file' as const },
+    { path: '/config.lua', name: 'config.lua', isDirty: false, type: 'file' as const },
   ]
 
   const defaultProps = {
@@ -356,7 +356,7 @@ describe('TabBar', () => {
       mockCheckOverflow.mockClear()
 
       // Act - rerender with different tabs
-      const newTabs = [...defaultTabs, { path: '/new.lua', name: 'new.lua', isDirty: false }]
+      const newTabs = [...defaultTabs, { path: '/new.lua', name: 'new.lua', isDirty: false, type: 'file' as const }]
       rerender(<TabBar {...defaultProps} tabs={newTabs} />)
 
       // Assert - checkOverflow should be called again

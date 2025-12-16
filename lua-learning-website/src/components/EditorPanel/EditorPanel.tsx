@@ -17,6 +17,7 @@ export function EditorPanel({
   onFormat,
   isFormatting = false,
   onEditorReady,
+  onRunCanvas,
 }: EditorPanelProps) {
   const combinedClassName = className
     ? `${styles.editorPanel} ${className}`
@@ -47,17 +48,33 @@ export function EditorPanel({
     )
   }
 
+  const hasActions = onFormat || onRunCanvas
+
   return (
     <div className={combinedClassName} data-testid="editor-panel">
       <div className={styles.toolbar}>
         {renderTabs()}
-        {onFormat && (
+        {hasActions && (
           <div className={styles.actions}>
-            <FormatButton
-              onFormat={onFormat}
-              loading={isFormatting}
-              disabled={!code.trim()}
-            />
+            {onRunCanvas && (
+              <button
+                type="button"
+                className={styles.runButton}
+                onClick={onRunCanvas}
+                disabled={!code.trim()}
+                aria-label="Run canvas"
+                title="Run in canvas"
+              >
+                Run Canvas
+              </button>
+            )}
+            {onFormat && (
+              <FormatButton
+                onFormat={onFormat}
+                loading={isFormatting}
+                disabled={!code.trim()}
+              />
+            )}
           </div>
         )}
       </div>

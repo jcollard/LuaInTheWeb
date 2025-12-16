@@ -132,6 +132,170 @@ describe('IDEContext', () => {
     })
   })
 
+  describe('canvas tabs', () => {
+    beforeEach(() => {
+      localStorage.clear()
+    })
+
+    it('should provide openCanvasTab function', () => {
+      // Arrange & Act
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Assert
+      expect(result.current.openCanvasTab).toBeInstanceOf(Function)
+    })
+
+    it('should open a canvas tab with the specified id', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Act
+      act(() => {
+        result.current.openCanvasTab('game-1', 'My Game')
+      })
+
+      // Assert
+      expect(result.current.tabs).toHaveLength(1)
+      expect(result.current.tabs[0].path).toBe('canvas://game-1')
+      expect(result.current.tabs[0].name).toBe('My Game')
+      expect(result.current.tabs[0].type).toBe('canvas')
+    })
+
+    it('should set canvas tab as active tab', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Act
+      act(() => {
+        result.current.openCanvasTab('game-1', 'My Game')
+      })
+
+      // Assert
+      expect(result.current.activeTab).toBe('canvas://game-1')
+    })
+
+    it('should return activeTabType as canvas when canvas tab is active', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Act
+      act(() => {
+        result.current.openCanvasTab('game-1', 'My Game')
+      })
+
+      // Assert
+      expect(result.current.activeTabType).toBe('canvas')
+    })
+
+    it('should return activeTabType as file when file tab is active', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Create a file
+      act(() => {
+        result.current.createFile('/test.lua', 'print("hello")')
+      })
+
+      // Open the file
+      act(() => {
+        result.current.openFile('/test.lua')
+      })
+
+      // Assert
+      expect(result.current.activeTabType).toBe('file')
+    })
+
+    it('should allow mixing file and canvas tabs', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Create a file
+      act(() => {
+        result.current.createFile('/test.lua', 'print("hello")')
+      })
+
+      // Open the file
+      act(() => {
+        result.current.openFile('/test.lua')
+      })
+
+      // Open a canvas tab
+      act(() => {
+        result.current.openCanvasTab('game-1', 'My Game')
+      })
+
+      // Assert
+      expect(result.current.tabs).toHaveLength(2)
+      expect(result.current.tabs[0].type).toBe('file')
+      expect(result.current.tabs[1].type).toBe('canvas')
+    })
+
+    it('should switch between file and canvas tabs', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Create a file
+      act(() => {
+        result.current.createFile('/test.lua', 'print("hello")')
+      })
+
+      // Open the file
+      act(() => {
+        result.current.openFile('/test.lua')
+      })
+
+      // Open a canvas tab
+      act(() => {
+        result.current.openCanvasTab('game-1', 'My Game')
+      })
+
+      expect(result.current.activeTabType).toBe('canvas')
+
+      // Act - switch to file tab
+      act(() => {
+        result.current.selectTab('/test.lua')
+      })
+
+      // Assert
+      expect(result.current.activeTabType).toBe('file')
+      expect(result.current.code).toBe('print("hello")')
+    })
+
+    it('should close canvas tab', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.openCanvasTab('game-1', 'My Game')
+      })
+
+      // Act
+      act(() => {
+        result.current.closeTab('canvas://game-1')
+      })
+
+      // Assert
+      expect(result.current.tabs).toHaveLength(0)
+      expect(result.current.activeTab).toBeNull()
+    })
+  })
+
   describe('tab state preservation', () => {
     beforeEach(() => {
       localStorage.clear()

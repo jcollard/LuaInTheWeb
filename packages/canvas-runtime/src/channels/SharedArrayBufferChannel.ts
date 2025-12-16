@@ -15,15 +15,16 @@ import type { DrawCommand, InputState, TimingInfo } from '../shared/types.js';
  * 32-35    | 4B     | Frame number
  * 36-39    | 4B     | Mouse X
  * 40-43    | 4B     | Mouse Y
- * 44-47    | 4B     | Mouse buttons (bitmask)
+ * 44-47    | 4B     | Mouse buttons down (bitmask)
  * 48-51    | 4B     | Keys down count
- * 52-307   | 256B   | Keys down data (up to 32 keys, 8 bytes each)
- * 308-311  | 4B     | Keys pressed count
- * 312-567  | 256B   | Keys pressed data (up to 32 keys, 8 bytes each)
- * 568-571  | 4B     | Canvas width
- * 572-575  | 4B     | Canvas height
- * 576-1023 | 448B   | Reserved for future use
- * 1024-65535| 64KB  | Draw commands ring buffer
+ * 52-563   | 512B   | Keys down data (up to 32 keys, 16 bytes each)
+ * 564-567  | 4B     | Keys pressed count
+ * 568-1079 | 512B   | Keys pressed data (up to 32 keys, 16 bytes each)
+ * 1080-1083| 4B     | Canvas width
+ * 1084-1087| 4B     | Canvas height
+ * 1088-1091| 4B     | Mouse buttons pressed (bitmask)
+ * 1092-2047| 956B   | Reserved for future use
+ * 2048-65535| 63KB  | Draw commands ring buffer
  */
 
 // Memory layout offsets
@@ -38,14 +39,15 @@ const OFFSET_MOUSE_Y = 40;
 const OFFSET_MOUSE_BUTTONS = 44;
 const OFFSET_KEYS_DOWN_COUNT = 48;
 const OFFSET_KEYS_DOWN_DATA = 52;
-const OFFSET_KEYS_PRESSED_COUNT = 308;
-const OFFSET_KEYS_PRESSED_DATA = 312;
-const OFFSET_CANVAS_WIDTH = 568;
-const OFFSET_CANVAS_HEIGHT = 572;
-const OFFSET_DRAW_BUFFER = 1024;
+const OFFSET_KEYS_PRESSED_COUNT = 564;
+const OFFSET_KEYS_PRESSED_DATA = 568;
+const OFFSET_CANVAS_WIDTH = 1080;
+const OFFSET_CANVAS_HEIGHT = 1084;
+const OFFSET_MOUSE_BUTTONS_PRESSED = 1088;
+const OFFSET_DRAW_BUFFER = 2048;
 
 const MAX_KEYS = 32;
-const KEY_SIZE = 8; // 8 bytes per key name
+const KEY_SIZE = 16; // 16 bytes per key name (longest: "NumpadSubtract" = 14 chars)
 const DRAW_BUFFER_SIZE = 65536 - OFFSET_DRAW_BUFFER;
 
 // Mouse button bitmasks
@@ -141,18 +143,20 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
   getInputState(): InputState {
     const mouseX = Atomics.load(this.int32View, OFFSET_MOUSE_X / 4);
     const mouseY = Atomics.load(this.int32View, OFFSET_MOUSE_Y / 4);
-    const mouseButtonMask = Atomics.load(this.int32View, OFFSET_MOUSE_BUTTONS / 4);
 
+    // Read mouse buttons down bitmask
+    const mouseButtonDownMask = Atomics.load(this.int32View, OFFSET_MOUSE_BUTTONS / 4);
     const mouseButtonsDown: number[] = [];
-    if (mouseButtonMask & MOUSE_LEFT) mouseButtonsDown.push(0);
-    if (mouseButtonMask & MOUSE_MIDDLE) mouseButtonsDown.push(1);
-    if (mouseButtonMask & MOUSE_RIGHT) mouseButtonsDown.push(2);
+    if (mouseButtonDownMask & MOUSE_LEFT) mouseButtonsDown.push(0);
+    if (mouseButtonDownMask & MOUSE_MIDDLE) mouseButtonsDown.push(1);
+    if (mouseButtonDownMask & MOUSE_RIGHT) mouseButtonsDown.push(2);
 
-    // TODO: The memory layout doesn't have separate storage for mouseButtonsPressed.
-    // Currently copies from mouseButtonsDown. The main thread's InputCapture tracks
-    // pressed state correctly and writes it via setInputState, but getInputState
-    // on the worker side can't distinguish them. Add separate bitmask if needed.
-    const mouseButtonsPressed = [...mouseButtonsDown];
+    // Read mouse buttons pressed bitmask (separate from down)
+    const mouseButtonPressedMask = Atomics.load(this.int32View, OFFSET_MOUSE_BUTTONS_PRESSED / 4);
+    const mouseButtonsPressed: number[] = [];
+    if (mouseButtonPressedMask & MOUSE_LEFT) mouseButtonsPressed.push(0);
+    if (mouseButtonPressedMask & MOUSE_MIDDLE) mouseButtonsPressed.push(1);
+    if (mouseButtonPressedMask & MOUSE_RIGHT) mouseButtonsPressed.push(2);
 
     const keysDown = this.readKeyArray(OFFSET_KEYS_DOWN_COUNT, OFFSET_KEYS_DOWN_DATA);
     const keysPressed = this.readKeyArray(OFFSET_KEYS_PRESSED_COUNT, OFFSET_KEYS_PRESSED_DATA);
@@ -171,11 +175,19 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
     Atomics.store(this.int32View, OFFSET_MOUSE_X / 4, state.mouseX);
     Atomics.store(this.int32View, OFFSET_MOUSE_Y / 4, state.mouseY);
 
-    let mouseButtonMask = 0;
-    if (state.mouseButtonsDown.includes(0)) mouseButtonMask |= MOUSE_LEFT;
-    if (state.mouseButtonsDown.includes(1)) mouseButtonMask |= MOUSE_MIDDLE;
-    if (state.mouseButtonsDown.includes(2)) mouseButtonMask |= MOUSE_RIGHT;
-    Atomics.store(this.int32View, OFFSET_MOUSE_BUTTONS / 4, mouseButtonMask);
+    // Write mouse buttons down bitmask
+    let mouseButtonDownMask = 0;
+    if (state.mouseButtonsDown.includes(0)) mouseButtonDownMask |= MOUSE_LEFT;
+    if (state.mouseButtonsDown.includes(1)) mouseButtonDownMask |= MOUSE_MIDDLE;
+    if (state.mouseButtonsDown.includes(2)) mouseButtonDownMask |= MOUSE_RIGHT;
+    Atomics.store(this.int32View, OFFSET_MOUSE_BUTTONS / 4, mouseButtonDownMask);
+
+    // Write mouse buttons pressed bitmask (separate from down)
+    let mouseButtonPressedMask = 0;
+    if (state.mouseButtonsPressed.includes(0)) mouseButtonPressedMask |= MOUSE_LEFT;
+    if (state.mouseButtonsPressed.includes(1)) mouseButtonPressedMask |= MOUSE_MIDDLE;
+    if (state.mouseButtonsPressed.includes(2)) mouseButtonPressedMask |= MOUSE_RIGHT;
+    Atomics.store(this.int32View, OFFSET_MOUSE_BUTTONS_PRESSED / 4, mouseButtonPressedMask);
 
     this.writeKeyArray(OFFSET_KEYS_DOWN_COUNT, OFFSET_KEYS_DOWN_DATA, state.keysDown);
     this.writeKeyArray(OFFSET_KEYS_PRESSED_COUNT, OFFSET_KEYS_PRESSED_DATA, state.keysPressed);

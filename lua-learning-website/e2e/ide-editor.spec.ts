@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { TIMEOUTS } from './constants'
 
 // Helper to create and open a file so Monaco editor is visible
 async function createAndOpenFile(page: import('@playwright/test').Page) {
@@ -7,15 +8,16 @@ async function createAndOpenFile(page: import('@playwright/test').Page) {
   // First, expand the workspace folder by clicking its chevron
   const workspaceChevron = page.getByTestId('folder-chevron').first()
   await workspaceChevron.click()
-  await page.waitForTimeout(200) // Wait for expansion animation
+  // Wait for folder to expand by checking for child items
+  await expect(page.getByRole('treeitem').nth(1)).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
   // Now click New File button - the file will be created inside the expanded workspace
   await sidebar.getByRole('button', { name: /new file/i }).click()
 
   const input = sidebar.getByRole('textbox')
-  await expect(input).toBeVisible({ timeout: 5000 }) // Wait for rename input to appear
+  await expect(input).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE }) // Wait for rename input to appear
   await input.press('Enter') // Accept default name
-  await expect(input).not.toBeVisible({ timeout: 5000 }) // Wait for rename to complete
+  await expect(input).not.toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE }) // Wait for rename to complete
 
   // Click the newly created file to open it (should be second treeitem after workspace)
   const fileItems = page.getByRole('treeitem')
@@ -26,7 +28,8 @@ async function createAndOpenFile(page: import('@playwright/test').Page) {
     // Fallback: click first item
     await fileItems.first().click()
   }
-  await page.waitForTimeout(200)
+  // Wait for Monaco editor to be visible after file click
+  await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 }
 
 test.describe('IDE Editor - Tab Overflow Navigation', () => {
@@ -41,7 +44,8 @@ test.describe('IDE Editor - Tab Overflow Navigation', () => {
     // Expand the workspace folder so files are visible
     const workspaceChevron = page.getByTestId('folder-chevron').first()
     await workspaceChevron.click()
-    await page.waitForTimeout(200)
+    // Wait for folder to expand by checking for child items
+    await expect(page.getByRole('treeitem').nth(1)).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
   })
 
   // Helper to create and open a file with a specific name (scoped to sidebar)
@@ -52,15 +56,17 @@ test.describe('IDE Editor - Tab Overflow Navigation', () => {
 
     // Find the input field in the sidebar and type the filename
     const input = sidebar.getByRole('textbox')
-    await expect(input).toBeVisible({ timeout: 5000 })
+    await expect(input).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
     await input.fill(filename)
     await input.press('Enter')
-    await expect(input).not.toBeVisible({ timeout: 5000 })
+    await expect(input).not.toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
     // Click the file to open it in a tab
     const treeItem = page.getByRole('treeitem', { name: new RegExp(filename) })
     await treeItem.click()
-    await page.waitForTimeout(100)
+    // Wait for tab to be visible instead of hardcoded timeout
+    const editorPanel = page.getByTestId('editor-panel')
+    await expect(editorPanel.getByRole('tab', { name: new RegExp(filename) })).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
   }
 
   test('scroll arrows appear and work when tabs overflow', async ({ page }) => {
@@ -73,11 +79,13 @@ test.describe('IDE Editor - Tab Overflow Navigation', () => {
 
     // Hide sidebar to reduce editor panel width
     await page.keyboard.press('Control+b')
-    await page.waitForTimeout(300)
+    // Wait for sidebar to be hidden
+    await expect(page.locator('[data-testid="sidebar-panel"]')).not.toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
     // Resize window to force overflow
     await page.setViewportSize({ width: 600, height: 600 })
-    await page.waitForTimeout(500)
+    // Wait for layout to stabilize after viewport change
+    await page.waitForTimeout(TIMEOUTS.ANIMATION)
 
     // Get the editor panel
     const editorPanel = page.getByTestId('editor-panel')
@@ -100,14 +108,13 @@ test.describe('IDE Editor - Tab Overflow Navigation', () => {
 
       // Click right to scroll
       await rightArrow.click()
-      await page.waitForTimeout(300)
-
-      // Left arrow should now be visible
-      await expect(leftArrow).toBeVisible()
+      // Wait for left arrow to appear after scrolling
+      await expect(leftArrow).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
       // Click left to scroll back
       await leftArrow.click()
-      await page.waitForTimeout(300)
+      // Wait for scroll animation to complete
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
     }
     // If no overflow, test still passes - the feature is working correctly for the given viewport
   })
@@ -120,10 +127,11 @@ test.describe('IDE Editor - Tab Overflow Navigation', () => {
     await createAndOpenFileWithName(page, 'small1.lua')
     await createAndOpenFileWithName(page, 'small2.lua')
 
-    await page.waitForTimeout(200)
-
     // Get the editor panel
     const editorPanel = page.getByTestId('editor-panel')
+
+    // Verify tabs are visible before checking arrows
+    await expect(editorPanel.getByRole('tab')).toHaveCount(2, { timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
     // Scroll arrows should not be visible when tabs fit
     const rightArrow = editorPanel.getByRole('button', { name: /scroll right/i })
@@ -138,16 +146,14 @@ test.describe('IDE Editor - Tab Overflow Navigation', () => {
     await createAndOpenFileWithName(page, 'test1.lua')
     await createAndOpenFileWithName(page, 'test2.lua')
 
-    await page.waitForTimeout(200)
-
     // Get the editor panel tablist (not the bottom panel tabs)
     const editorPanel = page.getByTestId('editor-panel')
     const tablist = editorPanel.getByRole('tablist')
-    await expect(tablist).toBeVisible()
+    await expect(tablist).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
     // Verify tablist has proper structure
     const tabs = editorPanel.getByRole('tab')
-    await expect(tabs).toHaveCount(2)
+    await expect(tabs).toHaveCount(2, { timeout: TIMEOUTS.ELEMENT_VISIBLE })
   })
 })
 
@@ -273,13 +279,11 @@ test.describe('IDE Editor', () => {
     // Type some Lua code - Monaco should accept keyboard input
     await page.keyboard.type('x=1')
 
-    // Small delay to let Monaco process and render
-    await page.waitForTimeout(200)
-
     // Verify Monaco rendered the input - look for line content element
     // Monaco renders text in .view-line elements
     const viewLines = page.locator('.monaco-editor .view-lines')
-    await expect(viewLines).toContainText('x=1')
+    // Use element-based wait instead of hardcoded timeout
+    await expect(viewLines).toContainText('x=1', { timeout: TIMEOUTS.ELEMENT_VISIBLE })
   })
 
   test('editor fills available space', async ({ page }) => {
