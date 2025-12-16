@@ -9,6 +9,10 @@ import { useLuaHoverProvider } from './useLuaHoverProvider'
 export interface UseEditorExtensionsOptions {
   /** Current code in the editor - used for real-time syntax checking */
   code?: string
+  /** Function to read file content from the filesystem (for hover docs on required modules) */
+  fileReader?: (path: string) => string | null
+  /** Absolute path to the current file being edited */
+  currentFilePath?: string | null
 }
 
 /**
@@ -35,16 +39,21 @@ export interface UseEditorExtensionsReturn {
 export function useEditorExtensions(
   options: UseEditorExtensionsOptions = {}
 ): UseEditorExtensionsReturn {
+  const { code, fileReader, currentFilePath } = options
+
   // Diagnostics for showing Lua errors in editor (including real-time syntax checking)
   const {
     handleEditorReady: handleDiagnosticsReady,
     setError,
     clearErrors,
     isCheckingSyntax,
-  } = useIDEDiagnostics(options)
+  } = useIDEDiagnostics({ code })
 
   // Hover provider for showing Lua documentation on hover
-  const { handleEditorReady: handleHoverReady } = useLuaHoverProvider()
+  const { handleEditorReady: handleHoverReady } = useLuaHoverProvider({
+    fileReader,
+    currentFilePath,
+  })
 
   // Combined editor ready handler for all editor extensions
   const handleEditorReady = useCallback(
