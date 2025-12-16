@@ -230,6 +230,15 @@ export class LuaCanvasRuntime {
       return state.mouseButtonsPressed.includes(button);
     });
 
+    // Functions to get all keys (returns arrays that Lua converts to tables)
+    lua.global.set('__canvas_getKeysDown', () => {
+      return runtime.channel.getInputState().keysDown;
+    });
+
+    lua.global.set('__canvas_getKeysPressed', () => {
+      return runtime.channel.getInputState().keysPressed;
+    });
+
     // Canvas dimensions and configuration
     lua.global.set('__canvas_getWidth', () => {
       return runtime.channel.getCanvasSize().width;
@@ -370,6 +379,14 @@ export class LuaCanvasRuntime {
 
       function canvas.is_key_pressed(key)
         return __canvas_isKeyPressed(normalize_key(key))
+      end
+
+      function canvas.get_keys_down()
+        return __canvas_getKeysDown()
+      end
+
+      function canvas.get_keys_pressed()
+        return __canvas_getKeysPressed()
       end
 
       -- Mouse input
