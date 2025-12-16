@@ -328,8 +328,8 @@ describe('SharedArrayBufferChannel', () => {
       expect(received.keysDown.length).toBe(32);
     });
 
-    it('should handle key names longer than KEY_SIZE (8 bytes)', () => {
-      const longKeyName = 'VeryLongKeyNameThatExceeds8Bytes';
+    it('should handle key names longer than KEY_SIZE (16 bytes)', () => {
+      const longKeyName = 'VeryLongKeyNameThatExceeds16Bytes';
 
       mainChannel.setInputState({
         keysDown: [longKeyName],
@@ -341,10 +341,10 @@ describe('SharedArrayBufferChannel', () => {
       });
 
       const received = workerChannel.getInputState();
-      // Key should be truncated to KEY_SIZE - 1 = 7 characters
+      // Key should be truncated to KEY_SIZE - 1 = 15 characters
       expect(received.keysDown.length).toBe(1);
       const receivedKey = received.keysDown[0];
-      expect(receivedKey.length).toBeLessThanOrEqual(7);
+      expect(receivedKey.length).toBeLessThanOrEqual(15);
       expect(longKeyName.startsWith(receivedKey)).toBe(true);
     });
 
@@ -549,7 +549,7 @@ describe('SharedArrayBufferChannel', () => {
       expect(int32View[12]).toBe(3); // OFFSET_KEYS_DOWN_COUNT = 48, index = 48/4 = 12
     });
 
-    it('should write keys pressed count at offset 308', () => {
+    it('should write keys pressed count at offset 564', () => {
       const int32View = new Int32Array(sharedBuffer);
       mainChannel.setInputState({
         keysDown: [],
@@ -559,14 +559,14 @@ describe('SharedArrayBufferChannel', () => {
         mouseButtonsDown: [],
         mouseButtonsPressed: [],
       });
-      expect(int32View[77]).toBe(2); // OFFSET_KEYS_PRESSED_COUNT = 308, index = 308/4 = 77
+      expect(int32View[141]).toBe(2); // OFFSET_KEYS_PRESSED_COUNT = 564, index = 564/4 = 141
     });
 
-    it('should write draw commands data starting at offset 1024', () => {
+    it('should write draw commands data starting at offset 2048', () => {
       const uint8View = new Uint8Array(sharedBuffer);
       workerChannel.sendDrawCommands([{ type: 'clear' }]);
       // JSON starts with '[' which is byte 91
-      expect(uint8View[1024]).toBe(91); // OFFSET_DRAW_BUFFER = 1024
+      expect(uint8View[2048]).toBe(91); // OFFSET_DRAW_BUFFER = 2048
     });
 
     it('should store data at correct memory locations', () => {

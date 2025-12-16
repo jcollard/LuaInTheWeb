@@ -17,14 +17,14 @@ import type { DrawCommand, InputState, TimingInfo } from '../shared/types.js';
  * 40-43    | 4B     | Mouse Y
  * 44-47    | 4B     | Mouse buttons down (bitmask)
  * 48-51    | 4B     | Keys down count
- * 52-307   | 256B   | Keys down data (up to 32 keys, 8 bytes each)
- * 308-311  | 4B     | Keys pressed count
- * 312-567  | 256B   | Keys pressed data (up to 32 keys, 8 bytes each)
- * 568-571  | 4B     | Canvas width
- * 572-575  | 4B     | Canvas height
- * 576-579  | 4B     | Mouse buttons pressed (bitmask)
- * 580-1023 | 444B   | Reserved for future use
- * 1024-65535| 64KB  | Draw commands ring buffer
+ * 52-563   | 512B   | Keys down data (up to 32 keys, 16 bytes each)
+ * 564-567  | 4B     | Keys pressed count
+ * 568-1079 | 512B   | Keys pressed data (up to 32 keys, 16 bytes each)
+ * 1080-1083| 4B     | Canvas width
+ * 1084-1087| 4B     | Canvas height
+ * 1088-1091| 4B     | Mouse buttons pressed (bitmask)
+ * 1092-2047| 956B   | Reserved for future use
+ * 2048-65535| 63KB  | Draw commands ring buffer
  */
 
 // Memory layout offsets
@@ -39,15 +39,15 @@ const OFFSET_MOUSE_Y = 40;
 const OFFSET_MOUSE_BUTTONS = 44;
 const OFFSET_KEYS_DOWN_COUNT = 48;
 const OFFSET_KEYS_DOWN_DATA = 52;
-const OFFSET_KEYS_PRESSED_COUNT = 308;
-const OFFSET_KEYS_PRESSED_DATA = 312;
-const OFFSET_CANVAS_WIDTH = 568;
-const OFFSET_CANVAS_HEIGHT = 572;
-const OFFSET_MOUSE_BUTTONS_PRESSED = 576;
-const OFFSET_DRAW_BUFFER = 1024;
+const OFFSET_KEYS_PRESSED_COUNT = 564;
+const OFFSET_KEYS_PRESSED_DATA = 568;
+const OFFSET_CANVAS_WIDTH = 1080;
+const OFFSET_CANVAS_HEIGHT = 1084;
+const OFFSET_MOUSE_BUTTONS_PRESSED = 1088;
+const OFFSET_DRAW_BUFFER = 2048;
 
 const MAX_KEYS = 32;
-const KEY_SIZE = 8; // 8 bytes per key name
+const KEY_SIZE = 16; // 16 bytes per key name (longest: "NumpadSubtract" = 14 chars)
 const DRAW_BUFFER_SIZE = 65536 - OFFSET_DRAW_BUFFER;
 
 // Mouse button bitmasks
