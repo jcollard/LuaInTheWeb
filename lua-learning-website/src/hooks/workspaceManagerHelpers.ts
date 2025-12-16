@@ -17,6 +17,7 @@ import type {
 import { createVirtualFileSystem } from './virtualFileSystemFactory'
 import { getAllDocs } from './luaStdlibMarkdown/index'
 import { createReadOnlyFileSystem } from './readOnlyFileSystem'
+import { fetchBookContent } from './bookFetcher'
 
 export const WORKSPACE_STORAGE_KEY = 'lua-workspaces'
 export const DEFAULT_WORKSPACE_ID = 'default'
@@ -28,6 +29,10 @@ export const LIBRARY_MOUNT_PATH = '/libs'
 export const DOCS_WORKSPACE_ID = 'docs'
 export const DOCS_WORKSPACE_NAME = 'docs'
 export const DOCS_MOUNT_PATH = '/docs'
+export const BOOK_WORKSPACE_ID = 'adventures'
+export const BOOK_WORKSPACE_NAME = 'Adventures'
+export const BOOK_MOUNT_PATH = '/adventures'
+export const BOOK_PUBLIC_PATH = '/adventures-in-lua-book'
 
 /**
  * Generate a unique workspace ID.
@@ -150,6 +155,34 @@ export function createDocsWorkspace(): Workspace {
     status: 'connected',
     isReadOnly: true,
   }
+}
+
+/**
+ * Create the book workspace from pre-fetched content.
+ * This workspace is read-only and contains book chapters.
+ */
+export function createBookWorkspace(files: Record<string, string>): Workspace {
+  return {
+    id: BOOK_WORKSPACE_ID,
+    name: BOOK_WORKSPACE_NAME,
+    type: 'book',
+    mountPath: BOOK_MOUNT_PATH,
+    filesystem: createReadOnlyFileSystem(files),
+    status: 'connected',
+    isReadOnly: true,
+  }
+}
+
+/**
+ * Fetch book content and create the book workspace.
+ * Returns null if the fetch fails.
+ */
+export async function fetchAndCreateBookWorkspace(): Promise<Workspace | null> {
+  const files = await fetchBookContent(BOOK_PUBLIC_PATH)
+  if (Object.keys(files).length === 0) {
+    return null
+  }
+  return createBookWorkspace(files)
 }
 
 /**

@@ -1,7 +1,7 @@
 /**
- * Tests for workspaceManagerHelpers - docs workspace functionality.
+ * Tests for workspaceManagerHelpers - docs, library, and book workspace functionality.
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // Mock the lua-runtime module
 vi.mock('@lua-learning/lua-runtime', () => ({
@@ -12,12 +12,18 @@ vi.mock('@lua-learning/lua-runtime', () => ({
 import {
   createDocsWorkspace,
   createLibraryWorkspace,
+  createBookWorkspace,
+  fetchAndCreateBookWorkspace,
   DOCS_WORKSPACE_ID,
   DOCS_WORKSPACE_NAME,
   DOCS_MOUNT_PATH,
   LIBRARY_WORKSPACE_ID,
   LIBRARY_WORKSPACE_NAME,
   LIBRARY_MOUNT_PATH,
+  BOOK_WORKSPACE_ID,
+  BOOK_WORKSPACE_NAME,
+  BOOK_MOUNT_PATH,
+  BOOK_PUBLIC_PATH,
 } from './workspaceManagerHelpers'
 
 describe('workspaceManagerHelpers', () => {
@@ -341,6 +347,178 @@ describe('workspaceManagerHelpers', () => {
       expect(() => {
         workspace.filesystem.delete('canvas.lua')
       }).toThrow('read-only')
+    })
+  })
+
+  describe('book workspace constants', () => {
+    it('has BOOK_WORKSPACE_ID set to "adventures"', () => {
+      expect(BOOK_WORKSPACE_ID).toBe('adventures')
+    })
+
+    it('has BOOK_WORKSPACE_NAME set to "Adventures"', () => {
+      expect(BOOK_WORKSPACE_NAME).toBe('Adventures')
+    })
+
+    it('has BOOK_MOUNT_PATH set to "/adventures"', () => {
+      expect(BOOK_MOUNT_PATH).toBe('/adventures')
+    })
+
+    it('has BOOK_PUBLIC_PATH set to "/adventures-in-lua-book"', () => {
+      expect(BOOK_PUBLIC_PATH).toBe('/adventures-in-lua-book')
+    })
+  })
+
+  describe('createBookWorkspace', () => {
+    const mockFiles = {
+      'chapter1.md': '# Chapter 1\nHello',
+      'chapter2.md': '# Chapter 2\nWorld',
+    }
+
+    it('creates a workspace with id BOOK_WORKSPACE_ID', () => {
+      const workspace = createBookWorkspace(mockFiles)
+      expect(workspace.id).toBe(BOOK_WORKSPACE_ID)
+    })
+
+    it('creates a workspace with name BOOK_WORKSPACE_NAME', () => {
+      const workspace = createBookWorkspace(mockFiles)
+      expect(workspace.name).toBe(BOOK_WORKSPACE_NAME)
+    })
+
+    it('creates a workspace with type "book"', () => {
+      const workspace = createBookWorkspace(mockFiles)
+      expect(workspace.type).toBe('book')
+    })
+
+    it('creates a workspace with mountPath BOOK_MOUNT_PATH', () => {
+      const workspace = createBookWorkspace(mockFiles)
+      expect(workspace.mountPath).toBe(BOOK_MOUNT_PATH)
+    })
+
+    it('creates a workspace with status "connected"', () => {
+      const workspace = createBookWorkspace(mockFiles)
+      expect(workspace.status).toBe('connected')
+    })
+
+    it('creates a workspace with isReadOnly set to true', () => {
+      const workspace = createBookWorkspace(mockFiles)
+      expect(workspace.isReadOnly).toBe(true)
+    })
+
+    it('creates a workspace with a filesystem', () => {
+      const workspace = createBookWorkspace(mockFiles)
+      expect(workspace.filesystem).toBeDefined()
+      expect(typeof workspace.filesystem.readFile).toBe('function')
+    })
+
+    it('filesystem contains the provided files', () => {
+      const workspace = createBookWorkspace(mockFiles)
+      expect(workspace.filesystem.exists('chapter1.md')).toBe(true)
+      expect(workspace.filesystem.exists('chapter2.md')).toBe(true)
+    })
+
+    it('filesystem can read file content', () => {
+      const workspace = createBookWorkspace(mockFiles)
+      expect(workspace.filesystem.readFile('chapter1.md')).toBe('# Chapter 1\nHello')
+      expect(workspace.filesystem.readFile('chapter2.md')).toBe('# Chapter 2\nWorld')
+    })
+
+    it('filesystem is read-only (cannot write)', () => {
+      const workspace = createBookWorkspace(mockFiles)
+      expect(() => {
+        workspace.filesystem.writeFile('test.md', 'content')
+      }).toThrow('read-only')
+    })
+
+    it('filesystem is read-only (cannot create directory)', () => {
+      const workspace = createBookWorkspace(mockFiles)
+      expect(() => {
+        workspace.filesystem.createDirectory('test')
+      }).toThrow('read-only')
+    })
+
+    it('filesystem is read-only (cannot delete)', () => {
+      const workspace = createBookWorkspace(mockFiles)
+      expect(() => {
+        workspace.filesystem.delete('chapter1.md')
+      }).toThrow('read-only')
+    })
+
+    it('filesystem lists all files in root directory', () => {
+      const workspace = createBookWorkspace(mockFiles)
+      const entries = workspace.filesystem.listDirectory('/')
+      expect(entries).toHaveLength(2)
+      const names = entries.map((e) => e.name)
+      expect(names).toContain('chapter1.md')
+      expect(names).toContain('chapter2.md')
+    })
+  })
+
+  describe('fetchAndCreateBookWorkspace', () => {
+    const mockFetch = vi.fn()
+
+    beforeEach(() => {
+      vi.stubGlobal('fetch', mockFetch)
+      mockFetch.mockReset()
+    })
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('returns a workspace when fetch succeeds', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ name: 'Test', files: ['ch1.md'] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          text: () => Promise.resolve('# Chapter 1'),
+        })
+
+      const workspace = await fetchAndCreateBookWorkspace()
+
+      expect(workspace).not.toBeNull()
+      expect(workspace?.id).toBe(BOOK_WORKSPACE_ID)
+      expect(workspace?.type).toBe('book')
+    })
+
+    it('returns null when manifest fetch fails', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+      })
+
+      const workspace = await fetchAndCreateBookWorkspace()
+
+      expect(workspace).toBeNull()
+    })
+
+    it('returns null when no files are fetched', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ name: 'Empty', files: [] }),
+      })
+
+      const workspace = await fetchAndCreateBookWorkspace()
+
+      expect(workspace).toBeNull()
+    })
+
+    it('fetches from BOOK_PUBLIC_PATH', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ name: 'Test', files: ['ch1.md'] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          text: () => Promise.resolve('content'),
+        })
+
+      await fetchAndCreateBookWorkspace()
+
+      expect(mockFetch).toHaveBeenNthCalledWith(1, `${BOOK_PUBLIC_PATH}/manifest.json`)
     })
   })
 })

@@ -78,6 +78,22 @@ const DocsWorkspaceIcon = () => (
   </svg>
 )
 
+// Book workspace icon - compass/adventure theme (learning content)
+const BookWorkspaceIcon = () => (
+  <svg className={styles.iconSvg} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" data-testid="book-workspace-icon">
+    {/* Compass circle */}
+    <circle cx="8" cy="8" r="7" fill="#e8b84a" stroke="#c99a2e" strokeWidth="0.8" />
+    {/* Inner circle */}
+    <circle cx="8" cy="8" r="5" fill="none" stroke="#c99a2e" strokeWidth="0.5" />
+    {/* Compass needle - north (red) */}
+    <path d="M8 3l1.5 5L8 7l-1.5 1z" fill="#d64545" />
+    {/* Compass needle - south (white) */}
+    <path d="M8 13l-1.5-5L8 9l1.5-1z" fill="#f5f5f5" />
+    {/* Center dot */}
+    <circle cx="8" cy="8" r="0.8" fill="#c99a2e" />
+  </svg>
+)
+
 export function FileTreeItem({
   name,
   path,
@@ -87,6 +103,7 @@ export function FileTreeItem({
   isDisconnected,
   isLibraryWorkspace,
   isDocsWorkspace,
+  isBookWorkspace,
   isReadOnly,
   isSelected,
   isExpanded,
@@ -247,6 +264,8 @@ export function FileTreeItem({
               <LibraryWorkspaceIcon />
             ) : isDocsWorkspace ? (
               <DocsWorkspaceIcon />
+            ) : isBookWorkspace ? (
+              <BookWorkspaceIcon />
             ) : isLocalWorkspace ? (
               <LocalWorkspaceIcon />
             ) : (

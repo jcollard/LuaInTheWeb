@@ -32,6 +32,7 @@ export function buildTreeFromFileSystem(
       let isLocalWorkspace: boolean | undefined
       let isLibraryWorkspace: boolean | undefined
       let isDocsWorkspace: boolean | undefined
+      let isBookWorkspace: boolean | undefined
       let isReadOnly = parentReadOnly
 
       if (isRoot) {
@@ -39,6 +40,7 @@ export function buildTreeFromFileSystem(
         isLocalWorkspace = workspace?.type === 'local'
         isLibraryWorkspace = workspace?.type === 'library'
         isDocsWorkspace = workspace?.type === 'docs'
+        isBookWorkspace = workspace?.type === 'book'
         isReadOnly = workspace?.isReadOnly === true
       }
 
@@ -58,6 +60,7 @@ export function buildTreeFromFileSystem(
         isLocalWorkspace,
         isLibraryWorkspace,
         isDocsWorkspace,
+        isBookWorkspace,
         isReadOnly: isReadOnly || undefined, // Only set if true
         children,
       })
