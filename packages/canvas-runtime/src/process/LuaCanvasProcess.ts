@@ -329,8 +329,14 @@ export class LuaCanvasProcess implements IProcess {
     // Get draw commands from worker via channel
     const commands = this.channel.getDrawCommands();
 
-    // Render the commands
+    // Render the commands and update channel state for any setSize commands
     if (commands.length > 0) {
+      for (const cmd of commands) {
+        if (cmd.type === 'setSize') {
+          // Update channel's canvas size so get_width/get_height return correct values
+          this.channel.setCanvasSize(cmd.width, cmd.height);
+        }
+      }
       this.renderer.render(commands);
     }
 
