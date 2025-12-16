@@ -76,7 +76,8 @@
       "Bash(SCREENSHOT_SERVER_TIMEOUT=60000 node scripts/capture-screenshots.js:*)",
       "Bash(wc:*)",
       "Bash(git checkout:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git add:*)"
     ],
     "deny": [
       "Bash(npm run dev)",
