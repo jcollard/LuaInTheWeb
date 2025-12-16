@@ -1,6 +1,6 @@
 # Epic #233: High-Performance Canvas Game Loop with Web Workers and SharedArrayBuffer
 
-**Status:** In Progress (5/8 complete)
+**Status:** In Progress (6/8 complete)
 **Branch:** epic-233
 **Created:** 2025-12-15
 **Last Updated:** 2025-12-15
@@ -53,7 +53,7 @@ Mouse                                       │
 | #253 | SharedArrayBuffer Memory Layout | ✅ Complete | - | Done in #252 (PR #262) |
 | #254 | Web Worker + Lua Integration | ✅ Complete | - | Merged PR #272 |
 | #255 | Main Thread Rendering | ✅ Complete | - | Merged PR #268 |
-| #256 | Process Integration | 🔄 In Progress | 256-process-integration | S - Depends on #254 |
+| #256 | Process Integration | ✅ Complete | - | Merged PR #273 |
 | #257 | React Integration & Canvas UI | ⏳ Pending | - | M - Depends on #255, #256 |
 | #258 | COOP/COEP Header Configuration | ✅ Complete | - | Merged PR #260 |
 | #259 | Library Workspace Integration | ⏳ Pending | - | S - Depends on #254 |
@@ -114,6 +114,12 @@ Mouse                                       │
   - Created LuaCanvasWorker entry point
   - Updated PostMessageChannel for broader target support
   - 171 tests, 76.84% mutation score
+- ✅ Completed #256: Process Integration (PR #273)
+  - Implemented LuaCanvasProcess implementing IProcess interface
+  - Web Worker lifecycle management (create, start, stop, terminate)
+  - Mode detection (SharedArrayBuffer vs postMessage) with friendly messaging
+  - Worker state tracking and error handling
+  - 202 tests, 75.93% mutation score
 
 ## Key Files
 
