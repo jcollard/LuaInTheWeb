@@ -121,7 +121,7 @@ function IDELayoutInner({
   const [isFormatting, setIsFormatting] = useState(false)
 
   // Canvas tab management (extracted to reduce IDELayout complexity)
-  const { handleRunCanvas, handleCanvasExit, hasCanvasTabs, canvasCode } = useCanvasTabManager({
+  const { handleCanvasExit, hasCanvasTabs, canvasCode } = useCanvasTabManager({
     code,
     tabs,
     activeTab,
@@ -319,7 +319,6 @@ function IDELayoutInner({
                           onFormat={handleFormat}
                           isFormatting={isFormatting}
                           onEditorReady={handleEditorReady}
-                          onRunCanvas={handleRunCanvas}
                         />
                       )}
                     </>

@@ -57,7 +57,7 @@ Mouse                                       │
 | #257 | React Integration & Canvas UI | ✅ Complete | - | Merged PR #281 |
 | #258 | COOP/COEP Header Configuration | ✅ Complete | - | Merged PR #260 |
 | #259 | Library Workspace Integration | ✅ Complete | - | Merged PR #277 |
-| #286 | Shell integration: canvas.start() and canvas.stop() | ⏳ Pending | - | M - Depends on #257 |
+| #286 | Shell integration: canvas.start() and canvas.stop() | 🔄 In Progress | 286-shell-canvas-integration | M - Depends on #257 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -147,6 +147,8 @@ Mouse                                       │
   - Adds `canvas.start()` to open canvas tab and block until `canvas.stop()` or Ctrl+C
   - Removes "Run Canvas" button from EditorPanel
   - All print() output goes to terminal while canvas runs
+- Integrated main into epic branch (useWindowFocusRefresh hook)
+- Started #286: Shell integration - canvas.start() and canvas.stop()
 
 ## Key Files
 

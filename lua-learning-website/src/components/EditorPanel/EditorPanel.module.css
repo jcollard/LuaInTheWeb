@@ -44,29 +44,6 @@
   gap: 8px;
 }
 
-.runButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 12px;
-  background-color: var(--theme-accent-primary);
-  color: #ffffff;
-  border: none;
-  border-radius: 2px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: background-color 0.1s ease;
-}
-
-.runButton:hover:not(:disabled) {
-  background-color: var(--theme-accent-hover);
-}
-
-.runButton:disabled {
-  background-color: var(--theme-bg-tertiary);
-  cursor: not-allowed;
-}
-
 .editorContainer {
   flex: 1;
   overflow: hidden;
