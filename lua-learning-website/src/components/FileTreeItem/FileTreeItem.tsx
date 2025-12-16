@@ -93,6 +93,7 @@ export function FileTreeItem({
   isRenaming,
   depth = 0,
   onClick,
+  onDoubleClick,
   onToggle,
   onContextMenu,
   onRenameSubmit,
@@ -128,6 +129,11 @@ export function FileTreeItem({
       return
     }
     onClick(path)
+  }
+
+  const handleDoubleClick = (event: MouseEvent) => {
+    event.stopPropagation()
+    onDoubleClick?.(path)
   }
 
   const handleChevronClick = (event: MouseEvent) => {
@@ -210,6 +216,7 @@ export function FileTreeItem({
       className={classNames}
       style={indentStyle}
       onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
       onContextMenu={handleContextMenu}
       draggable
       onDragStart={handleDragStart}

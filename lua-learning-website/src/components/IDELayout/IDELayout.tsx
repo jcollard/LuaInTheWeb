@@ -86,6 +86,7 @@ function IDELayoutInner({
     moveFile,
     copyFile,
     openFile,
+    openPreviewFile,
     saveFile,
     // New file creation
     pendingNewFilePath,
@@ -287,7 +288,8 @@ function IDELayoutInner({
     onRenameFolder: renameFolder,
     onDeleteFile: deleteFile,
     onDeleteFolder: deleteFolder,
-    onSelectFile: openFile,
+    onSelectFile: openPreviewFile,
+    onDoubleClickFile: openFile,
     onMoveFile: moveFile,
     onCopyFile: copyFile,
     onCancelPendingNewFile: clearPendingNewFile,

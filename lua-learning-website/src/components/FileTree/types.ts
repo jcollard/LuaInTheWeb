@@ -6,6 +6,7 @@ export interface FileTreeProps {
   selectedPath: string | null
   expandedPaths: Set<string>
   onSelect: (path: string) => void
+  onDoubleClick?: (path: string) => void
   onToggle: (path: string) => void
   onContextMenu?: (path: string, event: MouseEvent) => void
   onRename?: (path: string) => void

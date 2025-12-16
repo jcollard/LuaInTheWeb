@@ -77,6 +77,10 @@
   text-overflow: ellipsis;
 }
 
+.tab.preview .tabName {
+  font-style: italic;
+}
+
 .dirtyIndicator {
   color: var(--theme-text-muted);
   font-size: 12px;
