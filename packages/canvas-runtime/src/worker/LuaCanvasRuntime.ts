@@ -94,6 +94,12 @@ export class LuaCanvasRuntime {
       throw new Error('No onDraw callback registered');
     }
 
+    // Send any initialization commands (like set_size called at top level)
+    if (this.frameCommands.length > 0) {
+      this.channel.sendDrawCommands(this.frameCommands);
+      this.frameCommands = [];
+    }
+
     this.state = 'running';
     this.loopRunning = true;
     this.runLoop();
