@@ -395,4 +395,211 @@ describe('useLuaHoverProvider', () => {
       expect(hover).not.toBeNull()
     })
   })
+
+  describe('library documentation via require', () => {
+    it('returns documentation for shell.clear when shell is required', async () => {
+      const { result } = renderHook(() => useLuaHoverProvider())
+
+      act(() => {
+        result.current.handleEditorReady({
+          monaco: mockMonaco as Monaco,
+          editor: mockEditor as editor.IStandaloneCodeEditor,
+          model: mockModel as unknown as editor.ITextModel,
+        })
+      })
+
+      // Simulate code with require statement
+      const code = `local shell = require('shell')
+shell.clear()`
+      mockModel.getValue.mockReturnValue(code)
+      mockModel.getWordAtPosition.mockReturnValue({ word: 'clear', startColumn: 7, endColumn: 12 })
+      mockModel.getLineContent.mockReturnValue('shell.clear()')
+
+      const mockPosition = { lineNumber: 2, column: 9 } as Position
+      const mockToken = { isCancellationRequested: false } as CancellationToken
+
+      const hover = await registeredProvider?.provideHover(
+        mockModel as unknown as editor.ITextModel,
+        mockPosition,
+        mockToken
+      )
+
+      expect(hover).not.toBeNull()
+      expect(hover?.contents).toBeDefined()
+      const content = hover?.contents[0]
+      if (typeof content === 'object' && 'value' in content) {
+        expect(content.value).toContain('shell.clear')
+        expect(content.value.toLowerCase()).toContain('clear')
+      }
+    })
+
+    it('returns documentation for shell.foreground with parameters', async () => {
+      const { result } = renderHook(() => useLuaHoverProvider())
+
+      act(() => {
+        result.current.handleEditorReady({
+          monaco: mockMonaco as Monaco,
+          editor: mockEditor as editor.IStandaloneCodeEditor,
+          model: mockModel as unknown as editor.ITextModel,
+        })
+      })
+
+      const code = `local shell = require('shell')
+shell.foreground(shell.RED)`
+      mockModel.getValue.mockReturnValue(code)
+      mockModel.getWordAtPosition.mockReturnValue({
+        word: 'foreground',
+        startColumn: 7,
+        endColumn: 17,
+      })
+      mockModel.getLineContent.mockReturnValue('shell.foreground(shell.RED)')
+
+      const mockPosition = { lineNumber: 2, column: 10 } as Position
+      const mockToken = { isCancellationRequested: false } as CancellationToken
+
+      const hover = await registeredProvider?.provideHover(
+        mockModel as unknown as editor.ITextModel,
+        mockPosition,
+        mockToken
+      )
+
+      expect(hover).not.toBeNull()
+      const content = hover?.contents[0]
+      if (typeof content === 'object' && 'value' in content) {
+        expect(content.value).toContain('shell.foreground')
+        expect(content.value.toLowerCase()).toContain('color')
+      }
+    })
+
+    it('returns documentation for shell color constants', async () => {
+      const { result } = renderHook(() => useLuaHoverProvider())
+
+      act(() => {
+        result.current.handleEditorReady({
+          monaco: mockMonaco as Monaco,
+          editor: mockEditor as editor.IStandaloneCodeEditor,
+          model: mockModel as unknown as editor.ITextModel,
+        })
+      })
+
+      const code = `local shell = require('shell')
+print(shell.RED)`
+      mockModel.getValue.mockReturnValue(code)
+      mockModel.getWordAtPosition.mockReturnValue({ word: 'RED', startColumn: 13, endColumn: 16 })
+      mockModel.getLineContent.mockReturnValue('print(shell.RED)')
+
+      const mockPosition = { lineNumber: 2, column: 14 } as Position
+      const mockToken = { isCancellationRequested: false } as CancellationToken
+
+      const hover = await registeredProvider?.provideHover(
+        mockModel as unknown as editor.ITextModel,
+        mockPosition,
+        mockToken
+      )
+
+      expect(hover).not.toBeNull()
+      const content = hover?.contents[0]
+      if (typeof content === 'object' && 'value' in content) {
+        expect(content.value).toContain('shell.RED')
+        expect(content.value.toLowerCase()).toContain('red')
+      }
+    })
+
+    it('works with aliased require (local sh = require("shell"))', async () => {
+      const { result } = renderHook(() => useLuaHoverProvider())
+
+      act(() => {
+        result.current.handleEditorReady({
+          monaco: mockMonaco as Monaco,
+          editor: mockEditor as editor.IStandaloneCodeEditor,
+          model: mockModel as unknown as editor.ITextModel,
+        })
+      })
+
+      const code = `local sh = require('shell')
+sh.reset()`
+      mockModel.getValue.mockReturnValue(code)
+      mockModel.getWordAtPosition.mockReturnValue({ word: 'reset', startColumn: 4, endColumn: 9 })
+      mockModel.getLineContent.mockReturnValue('sh.reset()')
+
+      const mockPosition = { lineNumber: 2, column: 6 } as Position
+      const mockToken = { isCancellationRequested: false } as CancellationToken
+
+      const hover = await registeredProvider?.provideHover(
+        mockModel as unknown as editor.ITextModel,
+        mockPosition,
+        mockToken
+      )
+
+      expect(hover).not.toBeNull()
+      const content = hover?.contents[0]
+      if (typeof content === 'object' && 'value' in content) {
+        expect(content.value).toContain('shell.reset')
+      }
+    })
+
+    it('returns null for unknown library members', async () => {
+      const { result } = renderHook(() => useLuaHoverProvider())
+
+      act(() => {
+        result.current.handleEditorReady({
+          monaco: mockMonaco as Monaco,
+          editor: mockEditor as editor.IStandaloneCodeEditor,
+          model: mockModel as unknown as editor.ITextModel,
+        })
+      })
+
+      const code = `local shell = require('shell')
+shell.unknownFunction()`
+      mockModel.getValue.mockReturnValue(code)
+      mockModel.getWordAtPosition.mockReturnValue({
+        word: 'unknownFunction',
+        startColumn: 7,
+        endColumn: 22,
+      })
+      mockModel.getLineContent.mockReturnValue('shell.unknownFunction()')
+
+      const mockPosition = { lineNumber: 2, column: 12 } as Position
+      const mockToken = { isCancellationRequested: false } as CancellationToken
+
+      const hover = await registeredProvider?.provideHover(
+        mockModel as unknown as editor.ITextModel,
+        mockPosition,
+        mockToken
+      )
+
+      expect(hover).toBeNull()
+    })
+
+    it('does not confuse local variables with libraries', async () => {
+      const { result } = renderHook(() => useLuaHoverProvider())
+
+      act(() => {
+        result.current.handleEditorReady({
+          monaco: mockMonaco as Monaco,
+          editor: mockEditor as editor.IStandaloneCodeEditor,
+          model: mockModel as unknown as editor.ITextModel,
+        })
+      })
+
+      // No require statement, so mylib.clear should not get shell docs
+      const code = `local mylib = {}
+mylib.clear()`
+      mockModel.getValue.mockReturnValue(code)
+      mockModel.getWordAtPosition.mockReturnValue({ word: 'clear', startColumn: 7, endColumn: 12 })
+      mockModel.getLineContent.mockReturnValue('mylib.clear()')
+
+      const mockPosition = { lineNumber: 2, column: 9 } as Position
+      const mockToken = { isCancellationRequested: false } as CancellationToken
+
+      const hover = await registeredProvider?.provideHover(
+        mockModel as unknown as editor.ITextModel,
+        mockPosition,
+        mockToken
+      )
+
+      // Should return null since mylib is not a require'd library
+      expect(hover).toBeNull()
+    })
+  })
 })

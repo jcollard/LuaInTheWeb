@@ -4,6 +4,12 @@ import type { editor, IDisposable, languages, IRange, IMarkdownString } from 'mo
 import type { EditorReadyInfo } from '../components/CodeEditor/types'
 import { getLuaDocumentation, type LuaDocEntry } from '../utils/luaStandardLibrary'
 import { parseLuaDocComments, type UserFunctionDoc } from '../utils/luaDocParser'
+import { parseRequireStatements } from '../utils/luaRequireParser'
+import {
+  getLibraryDocumentation,
+  getAvailableLibraries,
+  type LibraryDocEntry,
+} from '../utils/luaLibraryDocs'
 
 /**
  * Return type for the useLuaHoverProvider hook
@@ -73,6 +79,44 @@ function formatUserFunctionDoc(doc: UserFunctionDoc): IMarkdownString {
 }
 
 /**
+ * Formats library documentation into Markdown for Monaco hover tooltip
+ */
+function formatLibraryDoc(doc: LibraryDocEntry): IMarkdownString {
+  const lines: string[] = []
+
+  // Add signature as code block
+  lines.push('```lua')
+  lines.push(doc.signature)
+  lines.push('```')
+
+  // Add description
+  if (doc.description) {
+    lines.push('')
+    lines.push(doc.description)
+  }
+
+  // Add parameters
+  if (doc.params && doc.params.length > 0) {
+    lines.push('')
+    lines.push('**Parameters:**')
+    for (const param of doc.params) {
+      lines.push(`- \`${param.name}\` - ${param.description}`)
+    }
+  }
+
+  // Add return value
+  if (doc.returns) {
+    lines.push('')
+    lines.push(`**Returns:** ${doc.returns}`)
+  }
+
+  return {
+    value: lines.join('\n'),
+    isTrusted: true,
+  }
+}
+
+/**
  * Gets the qualified name (e.g., "string.sub") by looking at the context around the word
  */
 function getQualifiedName(
@@ -98,13 +142,17 @@ function getQualifiedName(
 }
 
 /**
- * Creates a hover provider for Lua that shows documentation for standard library
- * and user-defined functions
+ * Creates a hover provider for Lua that shows documentation for standard library,
+ * user-defined functions, and required library modules.
  */
 function createHoverProvider(_monaco: Monaco): languages.HoverProvider {
-  // Cache for parsed user function documentation
+  // Cache for parsed documentation
   let cachedCode: string | null = null
-  let cachedDocs: Map<string, UserFunctionDoc> = new Map()
+  let cachedUserDocs: Map<string, UserFunctionDoc> = new Map()
+  let cachedRequireMappings: Map<string, string> = new Map() // localName -> moduleName
+
+  // Get available libraries for require resolution
+  const availableLibraries = new Set(getAvailableLibraries())
 
   return {
     provideHover(
@@ -120,19 +168,31 @@ function createHoverProvider(_monaco: Monaco): languages.HoverProvider {
       // Get the qualified name (handles "string.sub", "table.insert", etc.)
       const qualifiedName = getQualifiedName(model, position, wordInfo)
 
-      // Parse user functions from current code if needed
+      // Parse user functions and require statements from current code if needed
       const currentCode = model.getValue()
       if (currentCode !== cachedCode) {
         cachedCode = currentCode
-        cachedDocs = new Map()
+        cachedUserDocs = new Map()
+        cachedRequireMappings = new Map()
+
+        // Parse user-defined functions
         const userFunctions = parseLuaDocComments(currentCode)
         for (const fn of userFunctions) {
-          cachedDocs.set(fn.name, fn)
+          cachedUserDocs.set(fn.name, fn)
+        }
+
+        // Parse require statements
+        const requireMappings = parseRequireStatements(currentCode)
+        for (const mapping of requireMappings) {
+          // Only track mappings for libraries we have documentation for
+          if (availableLibraries.has(mapping.moduleName)) {
+            cachedRequireMappings.set(mapping.localName, mapping.moduleName)
+          }
         }
       }
 
       // First, check for user-defined function
-      const userDoc = cachedDocs.get(qualifiedName) || cachedDocs.get(wordInfo.word)
+      const userDoc = cachedUserDocs.get(qualifiedName) || cachedUserDocs.get(wordInfo.word)
       if (userDoc) {
         const range: IRange = {
           startLineNumber: position.lineNumber,
@@ -143,6 +203,28 @@ function createHoverProvider(_monaco: Monaco): languages.HoverProvider {
         return {
           contents: [formatUserFunctionDoc(userDoc)],
           range,
+        }
+      }
+
+      // Check for library documentation (e.g., shell.foreground when shell = require('shell'))
+      if (qualifiedName.includes('.')) {
+        const [prefix, memberName] = qualifiedName.split('.')
+        const moduleName = cachedRequireMappings.get(prefix)
+        if (moduleName) {
+          const libraryDoc = getLibraryDocumentation(moduleName, memberName)
+          if (libraryDoc) {
+            const startColumn = wordInfo.startColumn - prefix.length - 1 // Include prefix and dot
+            const range: IRange = {
+              startLineNumber: position.lineNumber,
+              startColumn,
+              endLineNumber: position.lineNumber,
+              endColumn: wordInfo.endColumn,
+            }
+            return {
+              contents: [formatLibraryDoc(libraryDoc)],
+              range,
+            }
+          }
         }
       }
 
