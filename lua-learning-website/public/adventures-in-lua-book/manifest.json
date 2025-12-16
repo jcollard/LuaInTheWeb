@@ -1,0 +1,16 @@
+{
+  "name": "Adventures in Lua",
+  "files": [
+    "00_index.md",
+    "01_your_first_program.md",
+    "02_variables_and_values.md",
+    "03_tables_luas_most_powerful_tool.md",
+    "04_functions.md",
+    "05_basic_decisions.md",
+    "06_numbers_and_math.md",
+    "07_strings_and_text.md",
+    "08_advanced_decisions.md",
+    "09_loops.md",
+    "10_input_and_output.md"
+  ]
+}

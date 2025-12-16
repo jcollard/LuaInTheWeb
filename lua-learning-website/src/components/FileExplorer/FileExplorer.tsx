@@ -11,6 +11,7 @@ import {
   workspaceContextMenuItems,
   libraryWorkspaceContextMenuItems,
   docsWorkspaceContextMenuItems,
+  bookWorkspaceContextMenuItems,
   buildConnectedWorkspaceMenuItems,
 } from './contextMenuItems'
 import {
@@ -20,6 +21,7 @@ import {
   isWorkspaceRoot as isWorkspaceRootUtil,
   isLibraryWorkspace as isLibraryWorkspaceUtil,
   isDocsWorkspace as isDocsWorkspaceUtil,
+  isBookWorkspace as isBookWorkspaceUtil,
   getWorkspaceForPath as getWorkspaceForPathUtil,
 } from './treeUtils'
 import { handleDropOperation } from './dropHandler'
@@ -128,6 +130,10 @@ export function FileExplorer({
   )
   const isDocsWorkspace = useMemo(
     () => (path: string) => isDocsWorkspaceUtil(tree, path),
+    [tree]
+  )
+  const isBookWorkspace = useMemo(
+    () => (path: string) => isBookWorkspaceUtil(tree, path),
     [tree]
   )
   const findNodeName = useMemo(
@@ -345,6 +351,10 @@ export function FileExplorer({
       // Docs workspaces have no context menu options (read-only)
       if (isDocsWorkspace(targetPath)) {
         return docsWorkspaceContextMenuItems
+      }
+      // Book workspaces have no context menu options (read-only)
+      if (isBookWorkspace(targetPath)) {
+        return bookWorkspaceContextMenuItems
       }
       // Add "Refresh" and "Disconnect" options for connected local workspaces
       const isConnectedLocalWorkspace = workspaceProps?.supportsRefresh(targetPath)
