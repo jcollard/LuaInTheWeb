@@ -124,7 +124,7 @@ test.describe('Canvas Tabs', () => {
     await expect(canvas).toBeVisible({ timeout: 5000 })
   })
 
-  test('canvas tab has Stop button when running', async ({ page }) => {
+  test('canvas tab has Pause button when running', async ({ page }) => {
     // Create and open a file to show the editor
     await createAndOpenFile(page)
 
@@ -137,7 +137,7 @@ test.describe('Canvas Tabs', () => {
 
     // Type some code
     await monacoEditor.click()
-    await page.keyboard.type('print("stop test")')
+    await page.keyboard.type('print("pause test")')
     await page.waitForTimeout(200)
 
     // Click Run Canvas
@@ -148,9 +148,9 @@ test.describe('Canvas Tabs', () => {
     const canvas = page.locator('canvas[aria-label="Canvas game"]')
     await expect(canvas).toBeVisible({ timeout: 5000 })
 
-    // Stop button should be visible in the canvas panel
-    const stopButton = page.getByRole('button', { name: /stop game/i })
-    await expect(stopButton).toBeVisible({ timeout: 5000 })
+    // Pause button should be visible in the canvas panel
+    const pauseButton = page.getByRole('button', { name: /pause game/i })
+    await expect(pauseButton).toBeVisible({ timeout: 5000 })
   })
 
   test('Format button coexists with Run Canvas button', async ({ page }) => {

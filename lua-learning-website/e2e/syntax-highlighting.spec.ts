@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { TIMEOUTS } from './constants'
 
 // Helper to create and open a file so Monaco editor is visible
 async function createAndOpenFile(page: import('@playwright/test').Page) {
@@ -7,15 +8,16 @@ async function createAndOpenFile(page: import('@playwright/test').Page) {
   // First, expand the workspace folder by clicking its chevron
   const workspaceChevron = page.getByTestId('folder-chevron').first()
   await workspaceChevron.click()
-  await page.waitForTimeout(200) // Wait for expansion animation
+  // Wait for folder to expand by checking for child items
+  await expect(page.getByRole('treeitem').nth(1)).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
   // Now click New File button - the file will be created inside the expanded workspace
   await sidebar.getByRole('button', { name: /new file/i }).click()
 
   const input = sidebar.getByRole('textbox')
-  await expect(input).toBeVisible({ timeout: 5000 }) // Wait for rename input to appear
+  await expect(input).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE }) // Wait for rename input to appear
   await input.press('Enter') // Accept default name
-  await expect(input).not.toBeVisible({ timeout: 5000 }) // Wait for rename to complete
+  await expect(input).not.toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE }) // Wait for rename to complete
 
   // Click the newly created file to open it (should be second treeitem after workspace)
   const fileItems = page.getByRole('treeitem')
@@ -29,14 +31,18 @@ async function createAndOpenFile(page: import('@playwright/test').Page) {
 
   // Wait for Monaco to load
   const monacoEditor = page.locator('.monaco-editor')
-  await expect(monacoEditor).toBeVisible({ timeout: 10000 })
+  await expect(monacoEditor).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+  // Wait for Monaco to fully initialize
+  await page.waitForTimeout(TIMEOUTS.UI_STABLE)
   return monacoEditor
 }
 
 // Helper to type text slowly with delays (to avoid character dropping)
 async function typeSlowly(page: import('@playwright/test').Page, text: string) {
   await page.keyboard.type(text, { delay: 50 })
-  await page.waitForTimeout(200)
+  // Wait for Monaco to process and render the text
+  const viewLines = page.locator('.monaco-editor .view-lines')
+  await expect(viewLines).toContainText(text.trim(), { timeout: TIMEOUTS.ELEMENT_VISIBLE })
 }
 
 test.describe('Syntax Highlighting', () => {
@@ -48,6 +54,8 @@ test.describe('Syntax Highlighting', () => {
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
     // Wait for file tree to render (ensures workspace is ready)
     await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+    // Wait for UI to fully stabilize before test
+    await page.waitForTimeout(TIMEOUTS.UI_STABLE)
   })
 
   test('highlights Lua keywords correctly', async ({ page }) => {
@@ -164,8 +172,9 @@ test.describe('Syntax Highlighting', () => {
     await monacoEditor.click()
 
     // Type code with keyword to establish the keyword color
-    await typeSlowly(page, 'local s = "hello"')
-    await page.waitForTimeout(500)
+    await page.keyboard.type('local s = "hello"', { delay: 50 })
+    // Wait for tokenization to complete by checking for styled tokens
+    await expect(page.locator('.monaco-editor .view-line span[class*="mtk"]').first()).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
     // Get the keyword color from 'local'
     const keywordColor = await page.evaluate(() => {
@@ -182,12 +191,14 @@ test.describe('Syntax Highlighting', () => {
     // Now add a multi-line string with keyword text on separate lines
     await page.keyboard.press('End')
     await page.keyboard.press('Enter')
-    await typeSlowly(page, 'x = [[')
+    await page.keyboard.type('x = [[', { delay: 50 })
     await page.keyboard.press('Enter')
-    await typeSlowly(page, 'return to the kingdom')
+    await page.keyboard.type('return to the kingdom', { delay: 50 })
     await page.keyboard.press('Enter')
-    await typeSlowly(page, ']]')
-    await page.waitForTimeout(500)
+    await page.keyboard.type(']]', { delay: 50 })
+    // Wait for all content to be rendered
+    const viewLines = page.locator('.monaco-editor .view-lines')
+    await expect(viewLines).toContainText(']]', { timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
     // Get the color of 'return' inside the multi-line string (line 3)
     const returnInsideStringColor = await page.evaluate(() => {

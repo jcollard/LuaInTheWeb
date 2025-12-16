@@ -121,7 +121,11 @@ function IDELayoutInner({
   const lastActiveCanvasTabRef = useRef<string | null>(null)
 
   // Editor extensions (diagnostics + hover documentation)
-  const { handleEditorReady } = useEditorExtensions({ code })
+  const { handleEditorReady } = useEditorExtensions({
+    code,
+    fileSystem: compositeFileSystem,
+    currentFilePath: activeTab,
+  })
 
   // Initialize the Lua formatter on mount
   useEffect(() => {

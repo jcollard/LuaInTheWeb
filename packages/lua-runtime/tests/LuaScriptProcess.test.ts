@@ -254,4 +254,240 @@ describe('LuaScriptProcess', () => {
       expect(mockFileSystem.readFile).toHaveBeenCalledWith('/absolute/path/test.lua')
     })
   })
+
+  describe('require', () => {
+    it('should find module in same directory as script', async () => {
+      // Setup: main.lua requires utils, both in /home
+      const readFileMock = mockFileSystem.readFile as ReturnType<typeof vi.fn>
+      readFileMock.mockImplementation((path: string) => {
+        if (path === '/home/main.lua') {
+          return `
+            local utils = require("utils")
+            print(utils.greet("World"))
+          `
+        }
+        if (path === '/home/utils.lua') {
+          return `
+            local M = {}
+            function M.greet(name)
+              return "Hello, " .. name
+            end
+            return M
+          `
+        }
+        return null
+      })
+      const existsMock = mockFileSystem.exists as ReturnType<typeof vi.fn>
+      existsMock.mockImplementation((path: string) => {
+        return path === '/home/main.lua' || path === '/home/utils.lua'
+      })
+
+      process = new LuaScriptProcess('/home/main.lua', context)
+      process.onOutput = onOutput
+      process.onError = onError
+      process.onExit = onExit
+
+      process.start()
+
+      // Wait for execution
+      await new Promise((resolve) => setTimeout(resolve, 200))
+
+      expect(onOutput).toHaveBeenCalledWith('Hello, World\n')
+      expect(onExit).toHaveBeenCalledWith(0)
+    })
+
+    it('should find module in subdirectory relative to script', async () => {
+      // Setup: main.lua in /project requires lib/utils from /project/lib/utils.lua
+      const readFileMock = mockFileSystem.readFile as ReturnType<typeof vi.fn>
+      readFileMock.mockImplementation((path: string) => {
+        if (path === '/project/main.lua') {
+          return `
+            local utils = require("lib/utils")
+            print(utils.add(2, 3))
+          `
+        }
+        if (path === '/project/lib/utils.lua') {
+          return `
+            local M = {}
+            function M.add(a, b)
+              return a + b
+            end
+            return M
+          `
+        }
+        return null
+      })
+      const existsMock = mockFileSystem.exists as ReturnType<typeof vi.fn>
+      existsMock.mockImplementation((path: string) => {
+        return path === '/project/main.lua' || path === '/project/lib/utils.lua'
+      })
+
+      process = new LuaScriptProcess('/project/main.lua', context)
+      process.onOutput = onOutput
+      process.onError = onError
+      process.onExit = onExit
+
+      process.start()
+
+      // Wait for execution
+      await new Promise((resolve) => setTimeout(resolve, 200))
+
+      expect(onOutput).toHaveBeenCalledWith('5\n')
+      expect(onExit).toHaveBeenCalledWith(0)
+    })
+
+    it('should cache loaded modules', async () => {
+      // Setup: script requires utils twice
+      const readFileMock = mockFileSystem.readFile as ReturnType<typeof vi.fn>
+      readFileMock.mockImplementation((path: string) => {
+        if (path === '/home/main.lua') {
+          return `
+            local utils1 = require("utils")
+            local utils2 = require("utils")
+            print(utils1 == utils2)
+          `
+        }
+        if (path === '/home/utils.lua') {
+          return 'return { value = 42 }'
+        }
+        return null
+      })
+      const existsMock = mockFileSystem.exists as ReturnType<typeof vi.fn>
+      existsMock.mockImplementation((path: string) => {
+        return path === '/home/main.lua' || path === '/home/utils.lua'
+      })
+
+      process = new LuaScriptProcess('/home/main.lua', context)
+      process.onOutput = onOutput
+      process.onError = onError
+      process.onExit = onExit
+
+      process.start()
+
+      // Wait for execution
+      await new Promise((resolve) => setTimeout(resolve, 200))
+
+      // Modules are cached, so utils1 == utils2 should be true
+      expect(onOutput).toHaveBeenCalledWith('true\n')
+    })
+
+    it('should show clear error when module not found', async () => {
+      // Setup: script requires non-existent module
+      const readFileMock = mockFileSystem.readFile as ReturnType<typeof vi.fn>
+      readFileMock.mockImplementation((path: string) => {
+        if (path === '/home/main.lua') {
+          return 'require("nonexistent")'
+        }
+        return null
+      })
+      const existsMock = mockFileSystem.exists as ReturnType<typeof vi.fn>
+      existsMock.mockImplementation((path: string) => {
+        return path === '/home/main.lua'
+      })
+
+      process = new LuaScriptProcess('/home/main.lua', context)
+      process.onOutput = onOutput
+      process.onError = onError
+      process.onExit = onExit
+
+      process.start()
+
+      // Wait for execution
+      await new Promise((resolve) => setTimeout(resolve, 200))
+
+      expect(onError).toHaveBeenCalled()
+      const errorMsg = onError.mock.calls[0][0]
+      expect(errorMsg).toContain('nonexistent')
+      expect(errorMsg).toContain('not found')
+      expect(onExit).toHaveBeenCalledWith(1)
+    })
+
+    it('should support nested requires (A requires B, B requires C)', async () => {
+      // Setup: main requires moduleA, moduleA requires moduleB
+      const readFileMock = mockFileSystem.readFile as ReturnType<typeof vi.fn>
+      readFileMock.mockImplementation((path: string) => {
+        if (path === '/home/main.lua') {
+          return `
+            local a = require("moduleA")
+            print(a.getValue())
+          `
+        }
+        if (path === '/home/moduleA.lua') {
+          return `
+            local b = require("moduleB")
+            local M = {}
+            function M.getValue()
+              return b.base + 10
+            end
+            return M
+          `
+        }
+        if (path === '/home/moduleB.lua') {
+          return 'return { base = 5 }'
+        }
+        return null
+      })
+      const existsMock = mockFileSystem.exists as ReturnType<typeof vi.fn>
+      existsMock.mockImplementation((path: string) => {
+        return (
+          path === '/home/main.lua' ||
+          path === '/home/moduleA.lua' ||
+          path === '/home/moduleB.lua'
+        )
+      })
+
+      process = new LuaScriptProcess('/home/main.lua', context)
+      process.onOutput = onOutput
+      process.onError = onError
+      process.onExit = onExit
+
+      process.start()
+
+      // Wait for execution
+      await new Promise((resolve) => setTimeout(resolve, 200))
+
+      expect(onOutput).toHaveBeenCalledWith('15\n')
+      expect(onExit).toHaveBeenCalledWith(0)
+    })
+
+    it('should support dot notation for nested modules (utils.math)', async () => {
+      // Setup: require("lib.utils") should find lib/utils.lua
+      const readFileMock = mockFileSystem.readFile as ReturnType<typeof vi.fn>
+      readFileMock.mockImplementation((path: string) => {
+        if (path === '/project/main.lua') {
+          return `
+            local utils = require("lib.utils")
+            print(utils.multiply(3, 4))
+          `
+        }
+        if (path === '/project/lib/utils.lua') {
+          return `
+            local M = {}
+            function M.multiply(a, b)
+              return a * b
+            end
+            return M
+          `
+        }
+        return null
+      })
+      const existsMock = mockFileSystem.exists as ReturnType<typeof vi.fn>
+      existsMock.mockImplementation((path: string) => {
+        return path === '/project/main.lua' || path === '/project/lib/utils.lua'
+      })
+
+      process = new LuaScriptProcess('/project/main.lua', context)
+      process.onOutput = onOutput
+      process.onError = onError
+      process.onExit = onExit
+
+      process.start()
+
+      // Wait for execution
+      await new Promise((resolve) => setTimeout(resolve, 200))
+
+      expect(onOutput).toHaveBeenCalledWith('12\n')
+      expect(onExit).toHaveBeenCalledWith(0)
+    })
+  })
 })

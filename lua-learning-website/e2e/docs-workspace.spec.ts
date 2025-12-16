@@ -77,6 +77,7 @@ test.describe('Docs Workspace', () => {
 
       // Assert - Documentation should mention color-related content
       // (visible in the initial viewport where Color Constants section is shown)
+      await expect(page.locator('.monaco-editor')).toBeVisible()
       const editorContent = page.locator('.monaco-editor')
       await expect(editorContent).toContainText('shell.foreground')
     })
@@ -89,6 +90,7 @@ test.describe('Docs Workspace', () => {
       await shellDoc.dblclick()
 
       // Assert - Documentation should show how to load the library
+      await expect(page.locator('.monaco-editor')).toBeVisible()
       const editorContent = page.locator('.monaco-editor')
       await expect(editorContent).toContainText("require('shell')")
     })
@@ -105,10 +107,10 @@ test.describe('Docs Workspace', () => {
 
       // Make a change in the editor to mark as dirty
       const editor = page.locator('.monaco-editor')
+      await expect(editor).toBeVisible()
       await editor.click()
       // Type something to modify the content
-      await page.keyboard.type('-- modified')
-      await page.waitForTimeout(100)
+      await page.keyboard.type('-- modified', { delay: 30 })
 
       // Act - Try to save with Ctrl+S
       await page.keyboard.press('Control+s')
@@ -129,6 +131,7 @@ test.describe('Docs Workspace', () => {
 
       // Act - Make a change in the editor
       const editor = page.locator('.monaco-editor')
+      await expect(editor).toBeVisible()
       await editor.click()
       await page.keyboard.type('-- test')
 
