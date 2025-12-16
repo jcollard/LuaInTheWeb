@@ -98,14 +98,18 @@ export function TabBar({
       >
         {tabs.map((tab) => {
           const isActive = tab.path === activeTab
-          const tabClassName = `${styles.tab} ${isActive ? styles.active : ''}`
+          const tabClassNames = [
+            styles.tab,
+            isActive && styles.active,
+            tab.isPreview && styles.preview,
+          ].filter(Boolean).join(' ')
 
           return (
             <div
               key={tab.path}
               role="tab"
               aria-selected={isActive}
-              className={tabClassName}
+              className={tabClassNames}
               onClick={() => handleTabClick(tab.path)}
             >
               <span className={styles.tabName}>{tab.name}</span>

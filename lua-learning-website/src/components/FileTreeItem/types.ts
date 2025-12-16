@@ -21,6 +21,7 @@ export interface FileTreeItemProps {
   isRenaming?: boolean
   depth?: number
   onClick: (path: string) => void
+  onDoubleClick?: (path: string) => void
   onToggle?: (path: string) => void
   onContextMenu?: (path: string, event: MouseEvent) => void
   onRenameSubmit?: (path: string, newName: string) => void

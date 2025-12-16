@@ -9,6 +9,7 @@ export function FileTree({
   selectedPath,
   expandedPaths,
   onSelect,
+  onDoubleClick,
   onToggle,
   onContextMenu,
   onRename,
@@ -137,6 +138,13 @@ export function FileTree({
     [onSelect]
   )
 
+  const handleItemDoubleClick = useCallback(
+    (path: string) => {
+      onDoubleClick?.(path)
+    },
+    [onDoubleClick]
+  )
+
   const handleItemToggle = useCallback(
     (path: string) => {
       onToggle(path)
@@ -175,6 +183,7 @@ export function FileTree({
           isRenaming={isRenaming}
           depth={depth}
           onClick={handleItemClick}
+          onDoubleClick={handleItemDoubleClick}
           onToggle={handleItemToggle}
           onContextMenu={handleItemContextMenu}
           onRenameSubmit={onRenameSubmit}

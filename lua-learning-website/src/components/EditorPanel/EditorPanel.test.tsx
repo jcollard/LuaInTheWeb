@@ -41,8 +41,8 @@ describe('EditorPanel', () => {
   }
 
   const mockTabs: TabInfo[] = [
-    { path: '/main.lua', name: 'main.lua', isDirty: false },
-    { path: '/utils/math.lua', name: 'math.lua', isDirty: true },
+    { path: '/main.lua', name: 'main.lua', isDirty: false, isPreview: false },
+    { path: '/utils/math.lua', name: 'math.lua', isDirty: true, isPreview: false },
   ]
 
   const defaultTabBarProps = {

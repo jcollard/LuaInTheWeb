@@ -38,6 +38,7 @@ export function FileExplorer({
   onDeleteFile,
   onDeleteFolder,
   onSelectFile,
+  onDoubleClickFile,
   onMoveFile,
   onCopyFile,
   onCancelPendingNewFile,
@@ -146,6 +147,10 @@ export function FileExplorer({
     selectPath(path)
     onSelectFile(path)
   }, [selectPath, onSelectFile])
+
+  const handleDoubleClick = useCallback((path: string) => {
+    onDoubleClickFile?.(path)
+  }, [onDoubleClickFile])
 
   // Handle drop with overwrite confirmation and cross-workspace detection
   const handleDrop = useCallback((sourcePath: string, targetFolderPath: string) => {
@@ -394,6 +399,7 @@ export function FileExplorer({
           selectedPath={selectedPath}
           expandedPaths={expandedPaths}
           onSelect={handleSelect}
+          onDoubleClick={handleDoubleClick}
           onToggle={toggleFolder}
           onContextMenu={handleContextMenu}
           onRename={startRename}
