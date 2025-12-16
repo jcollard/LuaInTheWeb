@@ -24,6 +24,9 @@ export const workspaceContextMenuItems: ContextMenuItem[] = [
 
 // Library workspaces are read-only and cannot be modified
 export const libraryWorkspaceContextMenuItems: ContextMenuItem[] = []
+
+// Docs workspaces are read-only and cannot be modified
+export const docsWorkspaceContextMenuItems: ContextMenuItem[] = []
 // Stryker restore all
 
 /**

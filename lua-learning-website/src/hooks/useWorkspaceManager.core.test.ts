@@ -36,17 +36,20 @@ setupWorkspaceManagerTests()
 
 describe('useWorkspaceManager', () => {
   describe('initialization', () => {
-    it('initializes with a default virtual workspace and library workspace', () => {
+    it('initializes with a default virtual workspace, library workspace, and docs workspace', () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      // Default workspace + library workspace
-      expect(result.current.workspaces).toHaveLength(2)
+      // Default workspace + library workspace + docs workspace
+      expect(result.current.workspaces).toHaveLength(3)
       expect(result.current.workspaces[0].name).toBe('home')
       expect(result.current.workspaces[0].type).toBe('virtual')
       expect(result.current.workspaces[0].status).toBe('connected')
       // Library workspace
       expect(result.current.workspaces[1].name).toBe('libs')
       expect(result.current.workspaces[1].type).toBe('library')
+      // Docs workspace
+      expect(result.current.workspaces[2].name).toBe('docs')
+      expect(result.current.workspaces[2].type).toBe('docs')
     })
 
     it('default workspace has id DEFAULT_WORKSPACE_ID', () => {
@@ -87,8 +90,8 @@ describe('useWorkspaceManager', () => {
         result.current.addVirtualWorkspace('Test Workspace')
       })
 
-      // default + library + new workspace = 3
-      expect(result.current.workspaces).toHaveLength(3)
+      // default + library + docs + new workspace = 4
+      expect(result.current.workspaces).toHaveLength(4)
       expect(result.current.workspaces.find((w) => w.name === 'Test Workspace')).toBeDefined()
       expect(result.current.workspaces.find((w) => w.name === 'Test Workspace')?.type).toBe('virtual')
     })
@@ -185,8 +188,8 @@ describe('useWorkspaceManager', () => {
         await result.current.addLocalWorkspace('My Project', mockHandle)
       })
 
-      // default + library + new local workspace = 3
-      expect(result.current.workspaces).toHaveLength(3)
+      // default + library + docs + new local workspace = 4
+      expect(result.current.workspaces).toHaveLength(4)
       const localWorkspace = result.current.workspaces.find((w) => w.name === 'My Project')
       expect(localWorkspace).toBeDefined()
       expect(localWorkspace?.type).toBe('local')
@@ -256,8 +259,8 @@ describe('useWorkspaceManager', () => {
         result.current.removeWorkspace(workspace!.id)
       })
 
-      // After removal: default + library = 2
-      expect(result.current.workspaces).toHaveLength(2)
+      // After removal: default + library + docs = 3
+      expect(result.current.workspaces).toHaveLength(3)
       expect(result.current.workspaces.find((w) => w.id === workspace!.id)).toBeUndefined()
     })
 
@@ -274,8 +277,8 @@ describe('useWorkspaceManager', () => {
     it('throws error when trying to remove the last workspace', () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      // default + library workspaces
-      expect(result.current.workspaces).toHaveLength(2)
+      // default + library + docs workspaces
+      expect(result.current.workspaces).toHaveLength(3)
 
       // Try to remove default workspace - should throw "Cannot remove default"
       expect(() => {
@@ -303,15 +306,15 @@ describe('useWorkspaceManager', () => {
         workspace = result.current.addVirtualWorkspace('To Remove')
       })
 
-      // default + library + new workspace = 3
-      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(3)
+      // default + library + docs + new workspace = 4
+      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(4)
 
       act(() => {
         result.current.removeWorkspace(workspace!.id)
       })
 
-      // After removal: default + library = 2
-      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(2)
+      // After removal: default + library + docs = 3
+      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(3)
     })
   })
 

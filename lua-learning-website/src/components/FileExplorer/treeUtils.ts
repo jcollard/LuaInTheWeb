@@ -45,6 +45,18 @@ export function isLibraryWorkspace(tree: TreeNode[], path: string): boolean {
 }
 
 /**
+ * Check if a path is a docs workspace root (read-only, API documentation).
+ */
+export function isDocsWorkspace(tree: TreeNode[], path: string): boolean {
+  for (const node of tree) {
+    if (node.path === path && node.isDocsWorkspace) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
  * Find the name of a node at a given path in the tree.
  */
 export function findNodeName(tree: TreeNode[], path: string): string {
