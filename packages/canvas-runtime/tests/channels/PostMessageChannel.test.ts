@@ -67,11 +67,12 @@ describe('PostMessageChannel', () => {
   describe('input state', () => {
     it('should set and get input state', () => {
       const inputState: InputState = {
-        keysDown: new Set(['ArrowUp', 'Space']),
-        keysPressed: new Set(['Space']),
+        keysDown: ['ArrowUp', 'Space'],
+        keysPressed: ['Space'],
         mouseX: 150,
         mouseY: 200,
-        mouseButtons: new Set(['left']),
+        mouseButtonsDown: [0],
+        mouseButtonsPressed: [0],
       };
 
       mainChannel.setInputState(inputState);
@@ -82,10 +83,10 @@ describe('PostMessageChannel', () => {
           const received = workerChannel.getInputState();
           expect(received.mouseX).toBe(150);
           expect(received.mouseY).toBe(200);
-          expect(received.keysDown.has('ArrowUp')).toBe(true);
-          expect(received.keysDown.has('Space')).toBe(true);
-          expect(received.keysPressed.has('Space')).toBe(true);
-          expect(received.mouseButtons.has('left')).toBe(true);
+          expect(received.keysDown.includes('ArrowUp')).toBe(true);
+          expect(received.keysDown.includes('Space')).toBe(true);
+          expect(received.keysPressed.includes('Space')).toBe(true);
+          expect(received.mouseButtonsDown.includes(0)).toBe(true);
           resolve();
         }, 10);
       });
@@ -93,20 +94,21 @@ describe('PostMessageChannel', () => {
 
     it('should return empty input state initially', () => {
       const state = workerChannel.getInputState();
-      expect(state.keysDown.size).toBe(0);
-      expect(state.keysPressed.size).toBe(0);
+      expect(state.keysDown.length).toBe(0);
+      expect(state.keysPressed.length).toBe(0);
       expect(state.mouseX).toBe(0);
       expect(state.mouseY).toBe(0);
-      expect(state.mouseButtons.size).toBe(0);
+      expect(state.mouseButtonsDown.length).toBe(0);
     });
 
     it('should handle multiple keys pressed', () => {
       const inputState: InputState = {
-        keysDown: new Set(['a', 'b', 'c', 'd', 'e']),
-        keysPressed: new Set(['a', 'c']),
+        keysDown: ['a', 'b', 'c', 'd', 'e'],
+        keysPressed: ['a', 'c'],
         mouseX: 0,
         mouseY: 0,
-        mouseButtons: new Set(),
+        mouseButtonsDown: [],
+        mouseButtonsPressed: [],
       };
 
       mainChannel.setInputState(inputState);
@@ -114,15 +116,15 @@ describe('PostMessageChannel', () => {
       return new Promise<void>(resolve => {
         setTimeout(() => {
           const received = workerChannel.getInputState();
-          expect(received.keysDown.size).toBe(5);
-          expect(received.keysDown.has('a')).toBe(true);
-          expect(received.keysDown.has('b')).toBe(true);
-          expect(received.keysDown.has('c')).toBe(true);
-          expect(received.keysDown.has('d')).toBe(true);
-          expect(received.keysDown.has('e')).toBe(true);
-          expect(received.keysPressed.size).toBe(2);
-          expect(received.keysPressed.has('a')).toBe(true);
-          expect(received.keysPressed.has('c')).toBe(true);
+          expect(received.keysDown.length).toBe(5);
+          expect(received.keysDown.includes('a')).toBe(true);
+          expect(received.keysDown.includes('b')).toBe(true);
+          expect(received.keysDown.includes('c')).toBe(true);
+          expect(received.keysDown.includes('d')).toBe(true);
+          expect(received.keysDown.includes('e')).toBe(true);
+          expect(received.keysPressed.length).toBe(2);
+          expect(received.keysPressed.includes('a')).toBe(true);
+          expect(received.keysPressed.includes('c')).toBe(true);
           resolve();
         }, 10);
       });
@@ -130,11 +132,12 @@ describe('PostMessageChannel', () => {
 
     it('should handle all mouse buttons', () => {
       const inputState: InputState = {
-        keysDown: new Set(),
-        keysPressed: new Set(),
+        keysDown: [],
+        keysPressed: [],
         mouseX: 100,
         mouseY: 200,
-        mouseButtons: new Set(['left', 'middle', 'right']),
+        mouseButtonsDown: [0, 1, 2],
+        mouseButtonsPressed: [0, 1, 2],
       };
 
       mainChannel.setInputState(inputState);
@@ -142,10 +145,10 @@ describe('PostMessageChannel', () => {
       return new Promise<void>(resolve => {
         setTimeout(() => {
           const received = workerChannel.getInputState();
-          expect(received.mouseButtons.size).toBe(3);
-          expect(received.mouseButtons.has('left')).toBe(true);
-          expect(received.mouseButtons.has('middle')).toBe(true);
-          expect(received.mouseButtons.has('right')).toBe(true);
+          expect(received.mouseButtonsDown.length).toBe(3);
+          expect(received.mouseButtonsDown.includes(0)).toBe(true);
+          expect(received.mouseButtonsDown.includes(1)).toBe(true);
+          expect(received.mouseButtonsDown.includes(2)).toBe(true);
           resolve();
         }, 10);
       });
@@ -154,32 +157,34 @@ describe('PostMessageChannel', () => {
     it('should handle updating input state multiple times', () => {
       // First state
       mainChannel.setInputState({
-        keysDown: new Set(['a']),
-        keysPressed: new Set(['a']),
+        keysDown: ['a'],
+        keysPressed: ['a'],
         mouseX: 10,
         mouseY: 20,
-        mouseButtons: new Set(['left']),
+        mouseButtonsDown: [0],
+        mouseButtonsPressed: [0],
       });
 
       return new Promise<void>(resolve => {
         setTimeout(() => {
           // Second state overwrites first
           mainChannel.setInputState({
-            keysDown: new Set(['b']),
-            keysPressed: new Set(),
+            keysDown: ['b'],
+            keysPressed: [],
             mouseX: 30,
             mouseY: 40,
-            mouseButtons: new Set(['right']),
+            mouseButtonsDown: [2],
+            mouseButtonsPressed: [2],
           });
 
           setTimeout(() => {
             const received = workerChannel.getInputState();
-            expect(received.keysDown.has('a')).toBe(false);
-            expect(received.keysDown.has('b')).toBe(true);
+            expect(received.keysDown.includes('a')).toBe(false);
+            expect(received.keysDown.includes('b')).toBe(true);
             expect(received.mouseX).toBe(30);
             expect(received.mouseY).toBe(40);
-            expect(received.mouseButtons.has('left')).toBe(false);
-            expect(received.mouseButtons.has('right')).toBe(true);
+            expect(received.mouseButtonsDown.includes(0)).toBe(false);
+            expect(received.mouseButtonsDown.includes(2)).toBe(true);
             resolve();
           }, 10);
         }, 10);

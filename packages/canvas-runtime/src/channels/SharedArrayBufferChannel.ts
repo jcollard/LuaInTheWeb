@@ -1,6 +1,5 @@
 import type { IWorkerChannel, ChannelConfig } from './IWorkerChannel.js';
-import type { DrawCommand, InputState, TimingInfo, MouseButton } from '../shared/types.js';
-import { createEmptyInputState, createDefaultTimingInfo } from '../shared/types.js';
+import type { DrawCommand, InputState, TimingInfo } from '../shared/types.js';
 
 /**
  * SharedArrayBuffer memory layout (64KB total):
@@ -67,13 +66,10 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
   private readonly int32View: Int32Array;
   private readonly float64View: Float64Array;
   private readonly uint8View: Uint8Array;
-  // Preserved for debugging and future validation (e.g., ensuring main-only methods aren't called from worker)
-  private readonly side: 'main' | 'worker';
   private readonly textEncoder: TextEncoder;
   private readonly textDecoder: TextDecoder;
 
-  constructor(config: ChannelConfig, buffer: SharedArrayBuffer) {
-    this.side = config.side;
+  constructor(_config: ChannelConfig, buffer: SharedArrayBuffer) {
     this.buffer = buffer;
     this.int32View = new Int32Array(buffer);
     this.float64View = new Float64Array(buffer);
@@ -143,20 +139,24 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
     const mouseY = Atomics.load(this.int32View, OFFSET_MOUSE_Y / 4);
     const mouseButtonMask = Atomics.load(this.int32View, OFFSET_MOUSE_BUTTONS / 4);
 
-    const mouseButtons = new Set<MouseButton>();
-    if (mouseButtonMask & MOUSE_LEFT) mouseButtons.add('left');
-    if (mouseButtonMask & MOUSE_MIDDLE) mouseButtons.add('middle');
-    if (mouseButtonMask & MOUSE_RIGHT) mouseButtons.add('right');
+    const mouseButtonsDown: number[] = [];
+    if (mouseButtonMask & MOUSE_LEFT) mouseButtonsDown.push(0);
+    if (mouseButtonMask & MOUSE_MIDDLE) mouseButtonsDown.push(1);
+    if (mouseButtonMask & MOUSE_RIGHT) mouseButtonsDown.push(2);
 
-    const keysDown = this.readKeySet(OFFSET_KEYS_DOWN_COUNT, OFFSET_KEYS_DOWN_DATA);
-    const keysPressed = this.readKeySet(OFFSET_KEYS_PRESSED_COUNT, OFFSET_KEYS_PRESSED_DATA);
+    // For now, mouseButtonsPressed is the same - we'll track pressed state separately if needed
+    const mouseButtonsPressed = [...mouseButtonsDown];
+
+    const keysDown = this.readKeyArray(OFFSET_KEYS_DOWN_COUNT, OFFSET_KEYS_DOWN_DATA);
+    const keysPressed = this.readKeyArray(OFFSET_KEYS_PRESSED_COUNT, OFFSET_KEYS_PRESSED_DATA);
 
     return {
       keysDown,
       keysPressed,
       mouseX,
       mouseY,
-      mouseButtons,
+      mouseButtonsDown,
+      mouseButtonsPressed,
     };
   }
 
@@ -165,18 +165,18 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
     Atomics.store(this.int32View, OFFSET_MOUSE_Y / 4, state.mouseY);
 
     let mouseButtonMask = 0;
-    if (state.mouseButtons.has('left')) mouseButtonMask |= MOUSE_LEFT;
-    if (state.mouseButtons.has('middle')) mouseButtonMask |= MOUSE_MIDDLE;
-    if (state.mouseButtons.has('right')) mouseButtonMask |= MOUSE_RIGHT;
+    if (state.mouseButtonsDown.includes(0)) mouseButtonMask |= MOUSE_LEFT;
+    if (state.mouseButtonsDown.includes(1)) mouseButtonMask |= MOUSE_MIDDLE;
+    if (state.mouseButtonsDown.includes(2)) mouseButtonMask |= MOUSE_RIGHT;
     Atomics.store(this.int32View, OFFSET_MOUSE_BUTTONS / 4, mouseButtonMask);
 
-    this.writeKeySet(OFFSET_KEYS_DOWN_COUNT, OFFSET_KEYS_DOWN_DATA, state.keysDown);
-    this.writeKeySet(OFFSET_KEYS_PRESSED_COUNT, OFFSET_KEYS_PRESSED_DATA, state.keysPressed);
+    this.writeKeyArray(OFFSET_KEYS_DOWN_COUNT, OFFSET_KEYS_DOWN_DATA, state.keysDown);
+    this.writeKeyArray(OFFSET_KEYS_PRESSED_COUNT, OFFSET_KEYS_PRESSED_DATA, state.keysPressed);
   }
 
-  private readKeySet(countOffset: number, dataOffset: number): Set<string> {
+  private readKeyArray(countOffset: number, dataOffset: number): string[] {
     const count = Atomics.load(this.int32View, countOffset / 4);
-    const keys = new Set<string>();
+    const keys: string[] = [];
 
     for (let i = 0; i < count && i < MAX_KEYS; i++) {
       const keyStart = dataOffset + i * KEY_SIZE;
@@ -187,15 +187,15 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
       }
       if (keyEnd > keyStart) {
         const keyData = this.uint8View.slice(keyStart, keyEnd);
-        keys.add(this.textDecoder.decode(keyData));
+        keys.push(this.textDecoder.decode(keyData));
       }
     }
 
     return keys;
   }
 
-  private writeKeySet(countOffset: number, dataOffset: number, keys: Set<string>): void {
-    const keyArray = Array.from(keys).slice(0, MAX_KEYS);
+  private writeKeyArray(countOffset: number, dataOffset: number, keys: string[]): void {
+    const keyArray = keys.slice(0, MAX_KEYS);
     Atomics.store(this.int32View, countOffset / 4, keyArray.length);
 
     // Clear existing data

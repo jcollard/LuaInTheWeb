@@ -19,16 +19,6 @@ interface ChannelMessage {
   payload: unknown;
 }
 
-/**
- * Serialized input state (Sets converted to arrays for postMessage).
- */
-interface SerializedInputState {
-  keysDown: string[];
-  keysPressed: string[];
-  mouseX: number;
-  mouseY: number;
-  mouseButtons: string[];
-}
 
 /**
  * PostMessage-based implementation of IWorkerChannel.
@@ -43,8 +33,6 @@ interface SerializedInputState {
  */
 export class PostMessageChannel implements IWorkerChannel {
   private readonly port: MessagePort;
-  // Preserved for debugging and future validation (e.g., ensuring main-only methods aren't called from worker)
-  private readonly side: 'main' | 'worker';
 
   // State storage
   private pendingDrawCommands: DrawCommand[] = [];
@@ -54,8 +42,7 @@ export class PostMessageChannel implements IWorkerChannel {
   // Frame synchronization
   private frameReadyResolver: (() => void) | null = null;
 
-  constructor(config: ChannelConfig, port: MessagePort) {
-    this.side = config.side;
+  constructor(_config: ChannelConfig, port: MessagePort) {
     this.port = port;
 
     // Set up message handler
@@ -75,7 +62,7 @@ export class PostMessageChannel implements IWorkerChannel {
         break;
 
       case 'input-state':
-        this.inputState = this.deserializeInputState(payload as SerializedInputState);
+        this.inputState = payload as InputState;
         break;
 
       case 'timing-info':
@@ -89,32 +76,6 @@ export class PostMessageChannel implements IWorkerChannel {
         }
         break;
     }
-  }
-
-  /**
-   * Serialize InputState for postMessage (Sets → Arrays).
-   */
-  private serializeInputState(state: InputState): SerializedInputState {
-    return {
-      keysDown: Array.from(state.keysDown),
-      keysPressed: Array.from(state.keysPressed),
-      mouseX: state.mouseX,
-      mouseY: state.mouseY,
-      mouseButtons: Array.from(state.mouseButtons),
-    };
-  }
-
-  /**
-   * Deserialize InputState from postMessage (Arrays → Sets).
-   */
-  private deserializeInputState(serialized: SerializedInputState): InputState {
-    return {
-      keysDown: new Set(serialized.keysDown),
-      keysPressed: new Set(serialized.keysPressed),
-      mouseX: serialized.mouseX,
-      mouseY: serialized.mouseY,
-      mouseButtons: new Set(serialized.mouseButtons) as Set<'left' | 'middle' | 'right'>,
-    };
   }
 
   /**
@@ -142,7 +103,7 @@ export class PostMessageChannel implements IWorkerChannel {
   }
 
   setInputState(state: InputState): void {
-    this.send('input-state', this.serializeInputState(state));
+    this.send('input-state', state);
   }
 
   getDeltaTime(): number {

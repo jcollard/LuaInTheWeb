@@ -40,3 +40,12 @@ export {
   isSharedArrayBufferAvailable,
   DEFAULT_BUFFER_SIZE,
 } from './channels/index.js';
+
+// Renderer components
+export {
+  CanvasRenderer,
+  InputCapture,
+  GameLoopController,
+} from './renderer/index.js';
+
+export type { FrameCallback } from './renderer/index.js';

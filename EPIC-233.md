@@ -52,7 +52,7 @@ Mouse                                       │
 | #252 | Communication Abstraction Layer | ✅ Complete | - | Merged PR #262 |
 | #253 | SharedArrayBuffer Memory Layout | ✅ Complete | - | Done in #252 (PR #262) |
 | #254 | Web Worker + Lua Integration | ⏳ Pending | - | L - Depends on #252 |
-| #255 | Main Thread Rendering | ⏳ Pending | - | M - Depends on #252 |
+| #255 | Main Thread Rendering | 🔄 In Progress | 255-main-thread-rendering | Started |
 | #256 | Process Integration | ⏳ Pending | - | S - Depends on #254 |
 | #257 | React Integration & Canvas UI | ⏳ Pending | - | M - Depends on #255, #256 |
 | #258 | COOP/COEP Header Configuration | ✅ Complete | - | Merged PR #260 |
@@ -101,6 +101,7 @@ Mouse                                       │
   - Implemented PostMessageChannel and SharedArrayBufferChannel
   - 70 tests, 77.92% mutation score
 - ✅ Closed #253: SharedArrayBuffer Memory Layout (work done in #252)
+- Started #255: Main Thread Rendering
 
 ## Key Files
 

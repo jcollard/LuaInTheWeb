@@ -119,18 +119,21 @@ export type MouseButton = 'left' | 'middle' | 'right';
 
 /**
  * State of keyboard and mouse input.
+ * Uses arrays instead of Sets for channel serialization.
  */
 export interface InputState {
   /** Keys currently held down (key codes) */
-  keysDown: Set<string>;
+  keysDown: string[];
   /** Keys pressed this frame (for isKeyPressed) */
-  keysPressed: Set<string>;
+  keysPressed: string[];
   /** Mouse X position relative to canvas */
   mouseX: number;
   /** Mouse Y position relative to canvas */
   mouseY: number;
-  /** Mouse buttons currently held down */
-  mouseButtons: Set<MouseButton>;
+  /** Mouse buttons currently held down (0=left, 1=middle, 2=right) */
+  mouseButtonsDown: number[];
+  /** Mouse buttons pressed this frame */
+  mouseButtonsPressed: number[];
 }
 
 /**
@@ -150,11 +153,12 @@ export interface TimingInfo {
  */
 export function createEmptyInputState(): InputState {
   return {
-    keysDown: new Set(),
-    keysPressed: new Set(),
+    keysDown: [],
+    keysPressed: [],
     mouseX: 0,
     mouseY: 0,
-    mouseButtons: new Set(),
+    mouseButtonsDown: [],
+    mouseButtonsPressed: [],
   };
 }
 
