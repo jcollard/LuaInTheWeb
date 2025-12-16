@@ -1,6 +1,6 @@
 # Epic #233: High-Performance Canvas Game Loop with Web Workers and SharedArrayBuffer
 
-**Status:** In Progress (3/8 complete)
+**Status:** In Progress (4/8 complete)
 **Branch:** epic-233
 **Created:** 2025-12-15
 **Last Updated:** 2025-12-15
@@ -52,7 +52,7 @@ Mouse                                       │
 | #252 | Communication Abstraction Layer | ✅ Complete | - | Merged PR #262 |
 | #253 | SharedArrayBuffer Memory Layout | ✅ Complete | - | Done in #252 (PR #262) |
 | #254 | Web Worker + Lua Integration | ⏳ Pending | - | L - Depends on #252 |
-| #255 | Main Thread Rendering | 🔄 In Progress | 255-main-thread-rendering | Started |
+| #255 | Main Thread Rendering | ✅ Complete | - | Merged PR #268 |
 | #256 | Process Integration | ⏳ Pending | - | S - Depends on #254 |
 | #257 | React Integration & Canvas UI | ⏳ Pending | - | M - Depends on #255, #256 |
 | #258 | COOP/COEP Header Configuration | ✅ Complete | - | Merged PR #260 |
@@ -102,6 +102,12 @@ Mouse                                       │
   - 70 tests, 77.92% mutation score
 - ✅ Closed #253: SharedArrayBuffer Memory Layout (work done in #252)
 - Started #255: Main Thread Rendering
+- ✅ Completed #255: Main Thread Rendering (PR #268)
+  - Implemented CanvasRenderer for rendering DrawCommands
+  - Implemented InputCapture for keyboard/mouse input tracking
+  - Implemented GameLoopController for RAF-based game loop
+  - Updated InputState to use arrays for channel serialization
+  - 143 tests, 75.98% mutation score
 
 ## Key Files
 
@@ -115,6 +121,9 @@ Mouse                                       │
   - `src/channels/SharedArrayBufferChannel.ts` - High-performance implementation
   - `src/channels/channelFactory.ts` - Auto-detection factory
   - `src/shared/types.ts` - DrawCommand, InputState, TimingInfo types
+  - `src/renderer/CanvasRenderer.ts` - Renders DrawCommands to canvas
+  - `src/renderer/InputCapture.ts` - Captures keyboard/mouse input
+  - `src/renderer/GameLoopController.ts` - RAF-based game loop controller
 
 ## Open Questions
 
