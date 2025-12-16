@@ -41,7 +41,10 @@ describe('useWindowFocusRefresh', () => {
     renderHook(() => useWindowFocusRefresh(refreshWorkspaces, refreshFileTree))
 
     // Get the handler that was registered
-    const handler = addEventListenerSpy.mock.calls.find((call) => call[0] === 'focus')?.[1] as () => void
+    const focusCall = addEventListenerSpy.mock.calls.find(
+      (call: [string, EventListenerOrEventListenerObject]) => call[0] === 'focus'
+    )
+    const handler = focusCall?.[1] as () => Promise<void>
 
     // Simulate focus event
     await handler()
@@ -61,7 +64,10 @@ describe('useWindowFocusRefresh', () => {
 
     renderHook(() => useWindowFocusRefresh(refreshWorkspaces, refreshFileTree))
 
-    const handler = addEventListenerSpy.mock.calls.find((call) => call[0] === 'focus')?.[1] as () => void
+    const focusCall = addEventListenerSpy.mock.calls.find(
+      (call: [string, EventListenerOrEventListenerObject]) => call[0] === 'focus'
+    )
+    const handler = focusCall?.[1] as () => Promise<void>
     await handler()
 
     expect(callOrder).toEqual(['refreshWorkspaces', 'refreshFileTree'])
