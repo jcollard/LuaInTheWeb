@@ -9,6 +9,9 @@ import { createTerminalHelper } from './helpers/terminal'
  * and expressions using the "try return first" pattern.
  */
 test.describe('Shell Lua REPL - Return Value Display', () => {
+  // Run tests serially to avoid shared state issues with the terminal
+  test.describe.configure({ mode: 'serial' })
+
   test.beforeEach(async ({ page }) => {
     // Clear localStorage to start with clean state
     await page.goto('/editor')
@@ -44,12 +47,12 @@ test.describe('Shell Lua REPL - Return Value Display', () => {
 
     // Define a function
     await terminal.type('function add(a, b) return a + b end')
-    await terminal.pressEnter()
+    await terminal.press('Enter')
     await page.waitForTimeout(TIMEOUTS.BRIEF)
 
     // Call the function - should display return value
     await terminal.type('add(2, 3)')
-    await terminal.pressEnter()
+    await terminal.press('Enter')
     await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
     // Should show the return value '5'
@@ -66,7 +69,7 @@ test.describe('Shell Lua REPL - Return Value Display', () => {
 
     // Execute expression - should display result
     await terminal.type('1 + 1')
-    await terminal.pressEnter()
+    await terminal.press('Enter')
     await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
     // Should show the result '2'
@@ -83,13 +86,13 @@ test.describe('Shell Lua REPL - Return Value Display', () => {
 
     // Execute statement (assignment)
     await terminal.type('x = 42')
-    await terminal.pressEnter()
+    await terminal.press('Enter')
     await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
     // Should NOT show '42' (statements don't display values)
     // But we can verify the variable was set
     await terminal.type('x')
-    await terminal.pressEnter()
+    await terminal.press('Enter')
     await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
     // Should show '42' when we evaluate the variable
@@ -106,7 +109,7 @@ test.describe('Shell Lua REPL - Return Value Display', () => {
 
     // Evaluate nil
     await terminal.type('nil')
-    await terminal.pressEnter()
+    await terminal.press('Enter')
     await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
     // Should NOT show 'nil' output (suppressed)
@@ -123,7 +126,7 @@ test.describe('Shell Lua REPL - Return Value Display', () => {
 
     // Call string.upper
     await terminal.type('string.upper("hello")')
-    await terminal.pressEnter()
+    await terminal.press('Enter')
     await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
     // Should show "HELLO"
@@ -140,7 +143,7 @@ test.describe('Shell Lua REPL - Return Value Display', () => {
 
     // Call string.find which returns two values
     await terminal.type('string.find("hello", "ll")')
-    await terminal.pressEnter()
+    await terminal.press('Enter')
     await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
     // Should show both return values: 3 and 4
@@ -158,12 +161,12 @@ test.describe('Shell Lua REPL - Return Value Display', () => {
 
     // Define function with no return
     await terminal.type('function noreturn() end')
-    await terminal.pressEnter()
+    await terminal.press('Enter')
     await page.waitForTimeout(TIMEOUTS.BRIEF)
 
     // Call function - should not display anything
     await terminal.type('noreturn()')
-    await terminal.pressEnter()
+    await terminal.press('Enter')
     await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
     // Should just show the next prompt (no output)
