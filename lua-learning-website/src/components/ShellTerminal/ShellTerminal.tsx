@@ -21,6 +21,7 @@ export function ShellTerminal({
   embedded = false,
   className,
   onFileSystemChange,
+  canvasCallbacks,
 }: ShellTerminalProps) {
   const { theme } = useTheme()
   const initialThemeRef = useRef(theme)
@@ -28,7 +29,10 @@ export function ShellTerminal({
   const xtermRef = useRef<Terminal | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
 
-  const { executeCommand, executeCommandWithContext, cwd, history, commandNames, getPathCompletionsForTab } = useShell(fileSystem)
+  const { executeCommand, executeCommandWithContext, cwd, history, commandNames, getPathCompletionsForTab } = useShell(
+    fileSystem,
+    { canvasCallbacks }
+  )
 
   // Store latest values in refs so handlers can access current data
   const cwdRef = useRef(cwd)

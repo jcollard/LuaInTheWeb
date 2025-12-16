@@ -42,13 +42,13 @@ jobs:
         run: npm run build
         working-directory: packages/shell-core
 
-      - name: Build lua-runtime
-        run: npm run build
-        working-directory: packages/lua-runtime
-
       - name: Build canvas-runtime
         run: npm run build
         working-directory: packages/canvas-runtime
+
+      - name: Build lua-runtime
+        run: npm run build
+        working-directory: packages/lua-runtime
 
       - name: Build lua-learning-website
         run: npm run build

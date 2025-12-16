@@ -1,6 +1,6 @@
 # Epic #233: High-Performance Canvas Game Loop with Web Workers and SharedArrayBuffer
 
-**Status:** In Progress (8/9 complete)
+**Status:** In Progress (8/10 complete)
 **Branch:** epic-233
 **Created:** 2025-12-15
 **Last Updated:** 2025-12-16
@@ -57,7 +57,8 @@ Mouse                                       │
 | #257 | React Integration & Canvas UI | ✅ Complete | - | Merged PR #281 |
 | #258 | COOP/COEP Header Configuration | ✅ Complete | - | Merged PR #260 |
 | #259 | Library Workspace Integration | ✅ Complete | - | Merged PR #277 |
-| #286 | Shell integration: canvas.start() and canvas.stop() | ⏳ Pending | - | M - Depends on #257 |
+| #286 | Shell integration: canvas.start() and canvas.stop() | 🔄 PR Created | 286-shell-canvas-integration | PR #289 |
+| #293 | Canvas module pattern and hover documentation | ⏳ Pending | - | Depends on #286 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -76,7 +77,7 @@ Mouse                                       │
                              │         │             │                    │
                              │         └─────────────┼── #259 (Libs)      │
                              │                       │                    │
-                             └── #255 (Rendering) ───┴────────────────────┴── #257 (React UI) ── #286 (Shell Integration)
+                             └── #255 (Rendering) ───┴────────────────────┴── #257 (React UI) ── #286 (Shell Integration) ── #293 (Module & Docs)
 ```
 
 **Recommended order:**
@@ -87,6 +88,7 @@ Mouse                                       │
 5. #256 (S) & #259 (S) - Can be done in parallel after #254
 6. #257 (M) - Final UI integration
 7. #286 (M) - Shell integration with canvas.start()/canvas.stop()
+8. #293 (S) - Canvas module pattern and hover documentation
 
 ## Progress Log
 
@@ -147,6 +149,14 @@ Mouse                                       │
   - Adds `canvas.start()` to open canvas tab and block until `canvas.stop()` or Ctrl+C
   - Removes "Run Canvas" button from EditorPanel
   - All print() output goes to terminal while canvas runs
+- Integrated main into epic branch (useWindowFocusRefresh hook)
+- Started #286: Shell integration - canvas.start() and canvas.stop()
+- PR created for #286: Shell integration (PR #289)
+  - Removed 'Run Canvas' button from EditorPanel toolbar
+  - Added canvas.start() and canvas.stop() for shell-based canvas control
+  - Extended LuaReplProcess and LuaScriptProcess with canvas API
+  - Created shared setupCanvasAPI.ts to eliminate duplication
+  - 6 new E2E tests, 1790 unit tests pass
 
 ## Key Files
 

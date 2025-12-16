@@ -9,6 +9,7 @@ export function BottomPanel({
   fileSystem,
   className,
   onFileSystemChange,
+  canvasCallbacks,
 }: BottomPanelProps) {
   const combinedClassName = className
     ? `${styles.bottomPanel} ${className}`
@@ -29,7 +30,12 @@ export function BottomPanel({
       </div>
       <div className={styles.content} role="tabpanel" id="shell-tabpanel">
         <div className={styles.shellContent}>
-          <ShellTerminal fileSystem={fileSystem} embedded onFileSystemChange={onFileSystemChange} />
+          <ShellTerminal
+            fileSystem={fileSystem}
+            embedded
+            onFileSystemChange={onFileSystemChange}
+            canvasCallbacks={canvasCallbacks}
+          />
         </div>
       </div>
     </div>

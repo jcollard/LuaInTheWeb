@@ -1,4 +1,4 @@
-import type { UseShellFileSystem } from '../../hooks/useShell'
+import type { UseShellFileSystem, ShellCanvasCallbacks } from '../../hooks/useShell'
 
 /**
  * Props for the BottomPanel component
@@ -10,4 +10,6 @@ export interface BottomPanelProps {
   className?: string
   /** Callback when shell command modifies filesystem (for refreshing file tree) */
   onFileSystemChange?: () => void
+  /** Canvas callbacks for canvas.start()/stop() support */
+  canvasCallbacks?: ShellCanvasCallbacks
 }

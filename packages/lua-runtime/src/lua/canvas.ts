@@ -21,6 +21,31 @@ export const LUA_CANVAS_CODE = `
 local canvas = {}
 
 -- =============================================================================
+-- Canvas Lifecycle
+-- =============================================================================
+
+--- Start the canvas and block until canvas.stop() is called or Ctrl+C.
+--- This opens a canvas tab and runs the game loop.
+--- Call canvas.on_draw() before this to register your render callback.
+---@return nil
+---@usage canvas.on_draw(function()
+---   canvas.clear()
+---   canvas.set_color(255, 0, 0)
+---   canvas.fill_rect(10, 10, 50, 50)
+--- end)
+--- canvas.start()  -- Blocks until stop
+function canvas.start() end
+
+--- Stop the canvas and close the canvas tab.
+--- This unblocks the canvas.start() call and returns control to the script.
+---@return nil
+---@usage -- Stop after 5 seconds
+--- if canvas.get_time() > 5 then
+---   canvas.stop()
+--- end
+function canvas.stop() end
+
+-- =============================================================================
 -- Game Loop
 -- =============================================================================
 

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { IDEContextProvider, useIDE } from '../IDEContext'
 import { ActivityBar } from '../ActivityBar'
 import { StatusBar } from '../StatusBar'
@@ -121,7 +121,7 @@ function IDELayoutInner({
   const [isFormatting, setIsFormatting] = useState(false)
 
   // Canvas tab management (extracted to reduce IDELayout complexity)
-  const { handleRunCanvas, handleCanvasExit, hasCanvasTabs, canvasCode } = useCanvasTabManager({
+  const { handleCanvasExit, hasCanvasTabs, canvasCode } = useCanvasTabManager({
     code,
     tabs,
     activeTab,
@@ -169,6 +169,52 @@ function IDELayoutInner({
     toggleSidebar,
     saveFile,
   })
+
+  // Canvas tab request management for shell-based canvas.start()
+  // Stores pending resolvers for canvas requests (canvasId -> resolver)
+  const pendingCanvasRequestsRef = useRef<Map<string, (canvas: HTMLCanvasElement) => void>>(new Map())
+
+  // Handle canvas tab request from shell (canvas.start())
+  const handleRequestCanvasTab = useCallback(async (canvasId: string): Promise<HTMLCanvasElement> => {
+    // Tab path format: canvas://{canvasId}
+    const tabPath = `canvas://${canvasId}`
+
+    // Open a canvas tab using the existing tab management
+    // Pass canvasId as the name so it shows in the tab
+    openCanvasTab(canvasId, canvasId)
+
+    // Return a Promise that will be resolved when the canvas element is ready
+    return new Promise<HTMLCanvasElement>((resolve) => {
+      pendingCanvasRequestsRef.current.set(tabPath, resolve)
+    })
+  }, [openCanvasTab])
+
+  // Handle canvas tab close from shell (canvas.stop() or Ctrl+C)
+  const handleCloseCanvasTab = useCallback((canvasId: string) => {
+    // Tab path format: canvas://{canvasId}
+    const tabPath = `canvas://${canvasId}`
+
+    // Remove any pending resolver
+    pendingCanvasRequestsRef.current.delete(tabPath)
+
+    // Close the canvas tab
+    closeTab(tabPath)
+  }, [closeTab])
+
+  // Callback when canvas element is ready (passed to CanvasTabContent)
+  const handleCanvasReady = useCallback((canvasId: string, canvas: HTMLCanvasElement) => {
+    const resolver = pendingCanvasRequestsRef.current.get(canvasId)
+    if (resolver) {
+      resolver(canvas)
+      pendingCanvasRequestsRef.current.delete(canvasId)
+    }
+  }, [])
+
+  // Canvas callbacks to pass to shell
+  const canvasCallbacks = useMemo(() => ({
+    onRequestCanvasTab: handleRequestCanvasTab,
+    onCloseCanvasTab: handleCloseCanvasTab,
+  }), [handleRequestCanvasTab, handleCloseCanvasTab])
 
   const combinedClassName = className
     ? `${styles.ideLayout} ${className}`
@@ -299,6 +345,7 @@ function IDELayoutInner({
                             onSelectTab={selectTab}
                             onCloseTab={handleCloseTab}
                             onExit={handleCanvasExit}
+                            onCanvasReady={handleCanvasReady}
                           />
                         </div>
                       )}
@@ -319,7 +366,6 @@ function IDELayoutInner({
                           onFormat={handleFormat}
                           isFormatting={isFormatting}
                           onEditorReady={handleEditorReady}
-                          onRunCanvas={handleRunCanvas}
                         />
                       )}
                     </>
@@ -333,7 +379,11 @@ function IDELayoutInner({
                   collapsible
                   collapsed={!terminalVisible}
                 >
-                  <BottomPanel fileSystem={compositeFileSystem} onFileSystemChange={refreshFileTree} />
+                  <BottomPanel
+                  fileSystem={compositeFileSystem}
+                  onFileSystemChange={refreshFileTree}
+                  canvasCallbacks={canvasCallbacks}
+                />
                 </IDEPanel>
               </IDEPanelGroup>
             </IDEPanel>
