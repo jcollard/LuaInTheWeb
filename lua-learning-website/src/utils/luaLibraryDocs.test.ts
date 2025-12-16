@@ -142,4 +142,212 @@ describe('luaLibraryDocs', () => {
       expect(doc?.library).toBe('shell')
     })
   })
+
+  describe('canvas library documentation', () => {
+    it('returns canvas as an available library', () => {
+      const libs = getAvailableLibraries()
+
+      expect(libs).toContain('canvas')
+    })
+
+    // Canvas Lifecycle
+    it('returns documentation for canvas.start', () => {
+      const doc = getLibraryDocumentation('canvas', 'start')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.name).toBe('start')
+      expect(doc?.signature).toContain('canvas.start')
+      expect(doc?.description).toContain('Start')
+      expect(doc?.library).toBe('canvas')
+    })
+
+    it('returns documentation for canvas.stop', () => {
+      const doc = getLibraryDocumentation('canvas', 'stop')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.name).toBe('stop')
+      expect(doc?.description).toContain('Stop')
+    })
+
+    // Game Loop
+    it('returns documentation for canvas.on_draw', () => {
+      const doc = getLibraryDocumentation('canvas', 'on_draw')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.signature).toContain('callback')
+      expect(doc?.description).toContain('draw callback')
+    })
+
+    // Canvas Configuration
+    it('returns documentation for canvas.set_size', () => {
+      const doc = getLibraryDocumentation('canvas', 'set_size')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.signature).toContain('width')
+      expect(doc?.signature).toContain('height')
+    })
+
+    it('returns documentation for canvas.get_width', () => {
+      const doc = getLibraryDocumentation('canvas', 'get_width')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.description).toContain('width')
+    })
+
+    it('returns documentation for canvas.get_height', () => {
+      const doc = getLibraryDocumentation('canvas', 'get_height')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.description).toContain('height')
+    })
+
+    // Drawing State
+    it('returns documentation for canvas.clear', () => {
+      const doc = getLibraryDocumentation('canvas', 'clear')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.description).toContain('Clear')
+    })
+
+    it('returns documentation for canvas.set_color', () => {
+      const doc = getLibraryDocumentation('canvas', 'set_color')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.signature).toContain('r, g, b')
+      expect(doc?.params).toBeDefined()
+      expect(doc?.params?.length).toBe(4)
+    })
+
+    it('returns documentation for canvas.set_line_width', () => {
+      const doc = getLibraryDocumentation('canvas', 'set_line_width')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.signature).toContain('width')
+    })
+
+    // Shape Drawing
+    it('returns documentation for canvas.draw_rect', () => {
+      const doc = getLibraryDocumentation('canvas', 'draw_rect')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.description).toContain('rectangle')
+    })
+
+    it('returns documentation for canvas.fill_rect', () => {
+      const doc = getLibraryDocumentation('canvas', 'fill_rect')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.description).toContain('filled')
+    })
+
+    it('returns documentation for canvas.draw_circle', () => {
+      const doc = getLibraryDocumentation('canvas', 'draw_circle')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.description).toContain('circle')
+    })
+
+    it('returns documentation for canvas.fill_circle', () => {
+      const doc = getLibraryDocumentation('canvas', 'fill_circle')
+
+      expect(doc).not.toBeNull()
+    })
+
+    it('returns documentation for canvas.draw_line', () => {
+      const doc = getLibraryDocumentation('canvas', 'draw_line')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.description).toContain('line')
+    })
+
+    it('returns documentation for canvas.draw_text', () => {
+      const doc = getLibraryDocumentation('canvas', 'draw_text')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.signature).toContain('text')
+    })
+
+    // Timing Functions
+    it('returns documentation for canvas.get_delta', () => {
+      const doc = getLibraryDocumentation('canvas', 'get_delta')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.description).toContain('time')
+    })
+
+    it('returns documentation for canvas.get_time', () => {
+      const doc = getLibraryDocumentation('canvas', 'get_time')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.returns).toContain('Total elapsed time')
+    })
+
+    // Keyboard Input
+    it('returns documentation for canvas.is_key_down', () => {
+      const doc = getLibraryDocumentation('canvas', 'is_key_down')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.description).toContain('key')
+    })
+
+    it('returns documentation for canvas.is_key_pressed', () => {
+      const doc = getLibraryDocumentation('canvas', 'is_key_pressed')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.description).toContain('pressed this frame')
+    })
+
+    it('returns documentation for canvas.get_keys_down', () => {
+      const doc = getLibraryDocumentation('canvas', 'get_keys_down')
+
+      expect(doc).not.toBeNull()
+    })
+
+    it('returns documentation for canvas.get_keys_pressed', () => {
+      const doc = getLibraryDocumentation('canvas', 'get_keys_pressed')
+
+      expect(doc).not.toBeNull()
+    })
+
+    // Mouse Input
+    it('returns documentation for canvas.get_mouse_x', () => {
+      const doc = getLibraryDocumentation('canvas', 'get_mouse_x')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.description).toContain('mouse')
+    })
+
+    it('returns documentation for canvas.get_mouse_y', () => {
+      const doc = getLibraryDocumentation('canvas', 'get_mouse_y')
+
+      expect(doc).not.toBeNull()
+    })
+
+    it('returns documentation for canvas.is_mouse_down', () => {
+      const doc = getLibraryDocumentation('canvas', 'is_mouse_down')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.params).toBeDefined()
+    })
+
+    it('returns documentation for canvas.is_mouse_pressed', () => {
+      const doc = getLibraryDocumentation('canvas', 'is_mouse_pressed')
+
+      expect(doc).not.toBeNull()
+    })
+
+    // Key Constants
+    it('returns documentation for canvas.keys', () => {
+      const doc = getLibraryDocumentation('canvas', 'keys')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.description).toContain('key constants')
+    })
+
+    it('includes canvas library name in returned entry', () => {
+      const doc = getLibraryDocumentation('canvas', 'clear')
+
+      expect(doc?.library).toBe('canvas')
+    })
+  })
 })

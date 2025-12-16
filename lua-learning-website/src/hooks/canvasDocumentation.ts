@@ -20,6 +20,38 @@ The canvas library provides functions for 2D graphics rendering, input handling,
 local canvas = require('canvas')
 \`\`\`
 
+## Canvas Lifecycle
+
+### canvas.start()
+
+Start the canvas and block until \`canvas.stop()\` is called or Ctrl+C.
+This opens a canvas tab and runs the game loop.
+Call \`canvas.on_draw()\` before this to register your render callback.
+
+\`\`\`lua
+local canvas = require('canvas')
+
+canvas.on_draw(function()
+  canvas.clear()
+  canvas.set_color(255, 0, 0)
+  canvas.fill_rect(10, 10, 50, 50)
+end)
+
+canvas.start()  -- Blocks until stop or Ctrl+C
+\`\`\`
+
+### canvas.stop()
+
+Stop the canvas and close the canvas tab.
+This unblocks the \`canvas.start()\` call and returns control to the script.
+
+\`\`\`lua
+-- Stop after 5 seconds
+if canvas.get_time() > 5 then
+  canvas.stop()
+end
+\`\`\`
+
 ## Game Loop
 
 ### canvas.on_draw(callback)
@@ -281,6 +313,9 @@ canvas.on_draw(function()
   canvas.set_color(255, 100, 0)
   canvas.fill_rect(x, y, 50, 50)
 end)
+
+-- Start the canvas (blocks until Ctrl+C)
+canvas.start()
 \`\`\`
 `
 }

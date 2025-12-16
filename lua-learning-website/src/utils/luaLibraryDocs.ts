@@ -5,6 +5,8 @@
  * in library modules that can be required via `require('modulename')`.
  */
 
+import { canvasLibraryDocs } from './canvasLibraryDocs'
+
 /**
  * Documentation entry for a library member (function or field).
  */
@@ -243,6 +245,7 @@ const shellLibraryDocs: Record<string, LibraryDocEntry> = {
  */
 const libraryDocs: Record<string, Record<string, LibraryDocEntry>> = {
   shell: shellLibraryDocs,
+  canvas: canvasLibraryDocs,
 }
 
 /**

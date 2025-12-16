@@ -427,8 +427,8 @@ describe('TabBar', () => {
     it('should apply preview class to preview tabs', () => {
       // Arrange
       const tabsWithPreview = [
-        { path: '/main.lua', name: 'main.lua', isDirty: false, isPreview: false },
-        { path: '/preview.lua', name: 'preview.lua', isDirty: false, isPreview: true },
+        { path: '/main.lua', name: 'main.lua', isDirty: false, isPreview: false, type: 'file' as const },
+        { path: '/preview.lua', name: 'preview.lua', isDirty: false, isPreview: true, type: 'file' as const },
       ]
 
       // Act
@@ -443,7 +443,7 @@ describe('TabBar', () => {
     it('should show preview tab name in italics via CSS class', () => {
       // Arrange
       const tabsWithPreview = [
-        { path: '/preview.lua', name: 'preview.lua', isDirty: false, isPreview: true },
+        { path: '/preview.lua', name: 'preview.lua', isDirty: false, isPreview: true, type: 'file' as const },
       ]
 
       // Act
@@ -457,7 +457,7 @@ describe('TabBar', () => {
     it('should not apply preview class to permanent tabs', () => {
       // Arrange
       const tabsWithPermanent = [
-        { path: '/permanent.lua', name: 'permanent.lua', isDirty: false, isPreview: false },
+        { path: '/permanent.lua', name: 'permanent.lua', isDirty: false, isPreview: false, type: 'file' as const },
       ]
 
       // Act

@@ -87,8 +87,8 @@ describe('useCanvasTabManager', () => {
 
     it('should return false when only file tabs exist', () => {
       const tabs: TabInfo[] = [
-        { path: '/file1.lua', name: 'file1.lua', isDirty: false, type: 'file' },
-        { path: '/file2.lua', name: 'file2.lua', isDirty: false, type: 'file' },
+        { path: '/file1.lua', name: 'file1.lua', isDirty: false, type: 'file', isPreview: false },
+        { path: '/file2.lua', name: 'file2.lua', isDirty: false, type: 'file', isPreview: false },
       ]
 
       const { result } = renderHook(() =>
@@ -106,8 +106,8 @@ describe('useCanvasTabManager', () => {
 
     it('should return true when canvas tabs exist', () => {
       const tabs: TabInfo[] = [
-        { path: '/file1.lua', name: 'file1.lua', isDirty: false, type: 'file' },
-        { path: 'canvas://canvas-123', name: 'Canvas', isDirty: false, type: 'canvas' },
+        { path: '/file1.lua', name: 'file1.lua', isDirty: false, type: 'file', isPreview: false },
+        { path: 'canvas://canvas-123', name: 'Canvas', isDirty: false, type: 'canvas', isPreview: false },
       ]
 
       const { result } = renderHook(() =>
@@ -168,7 +168,7 @@ describe('useCanvasTabManager', () => {
 
       // Simulate the canvas tab being opened and active
       const tabs: TabInfo[] = [
-        { path: canvasTabPath, name: 'Canvas', isDirty: false, type: 'canvas' },
+        { path: canvasTabPath, name: 'Canvas', isDirty: false, type: 'canvas', isPreview: false },
       ]
 
       rerender({
@@ -209,8 +209,8 @@ describe('useCanvasTabManager', () => {
       })
 
       // Canvas tab is now active
-      const canvasTab: TabInfo = { path: canvasTabPath, name: 'Canvas', isDirty: false, type: 'canvas' }
-      const fileTab: TabInfo = { path: '/file.lua', name: 'file.lua', isDirty: false, type: 'file' }
+      const canvasTab: TabInfo = { path: canvasTabPath, name: 'Canvas', isDirty: false, type: 'canvas', isPreview: false }
+      const fileTab: TabInfo = { path: '/file.lua', name: 'file.lua', isDirty: false, type: 'file', isPreview: false }
 
       rerender({
         code,

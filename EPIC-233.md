@@ -1,6 +1,6 @@
 # Epic #233: High-Performance Canvas Game Loop with Web Workers and SharedArrayBuffer
 
-**Status:** In Progress (9/10 complete)
+**Status:** In Progress (10/10 complete)
 **Branch:** epic-233
 **Created:** 2025-12-15
 **Last Updated:** 2025-12-16
@@ -58,7 +58,7 @@ Mouse                                       │
 | #258 | COOP/COEP Header Configuration | ✅ Complete | - | Merged PR #260 |
 | #259 | Library Workspace Integration | ✅ Complete | - | Merged PR #277 |
 | #286 | Shell integration: canvas.start() and canvas.stop() | ✅ Complete | - | Merged PR #289 |
-| #293 | Canvas module pattern and hover documentation | ⏳ Pending | - | Depends on #286 |
+| #293 | Canvas module pattern and hover documentation | ✅ Complete | - | Merged PR #TBD |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -157,6 +157,14 @@ Mouse                                       │
   - Created shared setupCanvasAPI.ts to eliminate code duplication
   - Wired canvas callbacks through ShellContext, useShell, and IDELayout
   - 1790 unit tests pass, 6 new E2E tests, 181 E2E tests total
+- ✅ Completed #293: Canvas module pattern and hover documentation
+  - Removed canvas from global context - now require-only via `local canvas = require('canvas')`
+  - Added comprehensive hover documentation for all 25+ canvas functions
+  - Created canvasLibraryDocs.ts with full API documentation entries
+  - Updated canvas.md documentation with canvas.start()/canvas.stop() lifecycle
+  - Updated E2E tests to use `canvas = require("canvas")` pattern
+  - Added new E2E tests for module pattern verification
+  - 18 new unit tests for setupCanvasAPI, 28 new tests for canvas hover docs
 
 ## Key Files
 
