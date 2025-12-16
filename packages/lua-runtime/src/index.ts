@@ -27,3 +27,6 @@ export { LUA_SHELL_CODE } from './lua/shell'
 
 // Canvas library export
 export { LUA_CANVAS_CODE } from './lua/canvas'
+
+// Canvas controller for shell-based canvas (non-worker)
+export { CanvasController, type CanvasCallbacks } from './CanvasController'

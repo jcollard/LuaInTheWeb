@@ -19,6 +19,8 @@ export interface CanvasGamePanelProps {
   className?: string
   /** Callback when process exits */
   onExit?: (code: number) => void
+  /** Callback when canvas element is ready (for shell integration) */
+  onCanvasReady?: (canvas: HTMLCanvasElement) => void
 }
 
 export function CanvasGamePanel({
@@ -28,6 +30,7 @@ export function CanvasGamePanel({
   autoStart = true,
   className,
   onExit,
+  onCanvasReady,
 }: CanvasGamePanelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -51,6 +54,13 @@ export function CanvasGamePanel({
       startGame(code, canvasRef.current)
     }
   }, [autoStart, code, state, startGame])
+
+  // Notify when canvas element is ready (for shell integration)
+  useEffect(() => {
+    if (canvasRef.current && onCanvasReady) {
+      onCanvasReady(canvasRef.current)
+    }
+  }, [onCanvasReady])
 
   const handlePauseResume = useCallback(() => {
     if (isPaused) {

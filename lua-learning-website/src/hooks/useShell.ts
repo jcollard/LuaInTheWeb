@@ -61,6 +61,24 @@ export interface UseShellReturn {
 export type UseShellFileSystem = IFileSystem | UseFileSystemReturn
 
 /**
+ * Canvas callbacks for shell-to-UI communication
+ */
+export interface ShellCanvasCallbacks {
+  /** Request a canvas tab to be opened, returns the canvas element when ready */
+  onRequestCanvasTab: (canvasId: string) => Promise<HTMLCanvasElement>
+  /** Request a canvas tab to be closed */
+  onCloseCanvasTab: (canvasId: string) => void
+}
+
+/**
+ * Options for useShell hook
+ */
+export interface UseShellOptions {
+  /** Canvas callbacks for canvas.start()/stop() integration */
+  canvasCallbacks?: ShellCanvasCallbacks
+}
+
+/**
  * Type guard to check if the input is an IFileSystem (has setCurrentDirectory).
  * UseFileSystemReturn doesn't have this method.
  */
@@ -103,9 +121,10 @@ function flushIfSupported(fs: IFileSystem): void {
  * or a UseFileSystemReturn from the useFileSystem hook.
  *
  * @param fileSystem - Either IFileSystem or UseFileSystemReturn
+ * @param options - Optional configuration including canvas callbacks
  * @returns Shell interface with command execution
  */
-export function useShell(fileSystem: UseShellFileSystem): UseShellReturn {
+export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptions): UseShellReturn {
   const [history, setHistory] = useState<string[]>([])
   // Initialize cwd from IFileSystem's current directory if available, otherwise start at root
   const [cwd, setCwd] = useState(() => {
@@ -199,6 +218,9 @@ export function useShell(fileSystem: UseShellFileSystem): UseShellReturn {
         filesystem: shellFileSystem,
         output: outputHandler,
         error: errorHandler,
+        // Canvas callbacks for canvas.start()/stop() support
+        onRequestCanvasTab: options?.canvasCallbacks?.onRequestCanvasTab,
+        onCloseCanvasTab: options?.canvasCallbacks?.onCloseCanvasTab,
       }
 
       // Execute the command using the new interface

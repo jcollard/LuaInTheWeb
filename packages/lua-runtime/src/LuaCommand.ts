@@ -57,6 +57,19 @@ export class LuaCommand implements ICommand {
 
     // Filename provided - execute script
     const filename = args[0]
-    return new LuaScriptProcess(filename, context, DEFAULT_EXECUTION_OPTIONS)
+
+    // Build options, including canvas callbacks if available
+    const options = {
+      ...DEFAULT_EXECUTION_OPTIONS,
+      // Pass canvas callbacks if provided in the context
+      canvasCallbacks: context.onRequestCanvasTab && context.onCloseCanvasTab
+        ? {
+            onRequestCanvasTab: context.onRequestCanvasTab,
+            onCloseCanvasTab: context.onCloseCanvasTab,
+          }
+        : undefined,
+    }
+
+    return new LuaScriptProcess(filename, context, options)
   }
 }

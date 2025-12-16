@@ -19,6 +19,8 @@ export interface CanvasTabContentProps {
   onCloseTab: (path: string) => void
   /** Callback when the canvas game exits */
   onExit: (exitCode: number) => void
+  /** Callback when canvas element is ready (for shell integration) */
+  onCanvasReady?: (canvasId: string, canvas: HTMLCanvasElement) => void
 }
 
 export function CanvasTabContent({
@@ -28,6 +30,7 @@ export function CanvasTabContent({
   onSelectTab,
   onCloseTab,
   onExit,
+  onCanvasReady,
 }: CanvasTabContentProps) {
   return (
     <div className={styles.canvasContainer}>
@@ -57,6 +60,7 @@ export function CanvasTabContent({
       <CanvasGamePanel
         code={canvasCode}
         onExit={onExit}
+        onCanvasReady={activeTab && onCanvasReady ? (canvas) => onCanvasReady(activeTab, canvas) : undefined}
       />
     </div>
   )
