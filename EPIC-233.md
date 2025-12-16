@@ -1,9 +1,9 @@
 # Epic #233: High-Performance Canvas Game Loop with Web Workers and SharedArrayBuffer
 
-**Status:** In Progress (7/8 complete)
+**Status:** In Progress (8/9 complete)
 **Branch:** epic-233
 **Created:** 2025-12-15
-**Last Updated:** 2025-12-15
+**Last Updated:** 2025-12-16
 
 ## Overview
 
@@ -54,9 +54,10 @@ Mouse                                       │
 | #254 | Web Worker + Lua Integration | ✅ Complete | - | Merged PR #272 |
 | #255 | Main Thread Rendering | ✅ Complete | - | Merged PR #268 |
 | #256 | Process Integration | ✅ Complete | - | Merged PR #273 |
-| #257 | React Integration & Canvas UI | 🔄 In Progress | 257-react-integration-canvas-ui | M - Depends on #255, #256 |
+| #257 | React Integration & Canvas UI | ✅ Complete | - | Merged PR #281 |
 | #258 | COOP/COEP Header Configuration | ✅ Complete | - | Merged PR #260 |
 | #259 | Library Workspace Integration | ✅ Complete | - | Merged PR #277 |
+| #286 | Shell integration: canvas.start() and canvas.stop() | ⏳ Pending | - | M - Depends on #257 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -75,7 +76,7 @@ Mouse                                       │
                              │         │             │                    │
                              │         └─────────────┼── #259 (Libs)      │
                              │                       │                    │
-                             └── #255 (Rendering) ───┴────────────────────┴── #257 (React UI)
+                             └── #255 (Rendering) ───┴────────────────────┴── #257 (React UI) ── #286 (Shell Integration)
 ```
 
 **Recommended order:**
@@ -85,6 +86,7 @@ Mouse                                       │
 4. #254 (L) - Web Worker integration
 5. #256 (S) & #259 (S) - Can be done in parallel after #254
 6. #257 (M) - Final UI integration
+7. #286 (M) - Shell integration with canvas.start()/canvas.stop()
 
 ## Progress Log
 
@@ -129,6 +131,22 @@ Mouse                                       │
   - 45 new tests, 83.54% mutation score
 - Integrated main into epic branch (resolved Lua stdlib docs merge)
 - Started #257: React Integration & Canvas UI
+
+### 2025-12-16
+- ✅ Completed #257: React Integration & Canvas UI (PR #281)
+  - Created CanvasGamePanel component with useCanvasGame hook
+  - Integrated canvas tabs into IDELayout with TabBar support
+  - Added "Run Canvas" button to EditorPanel toolbar
+  - Implemented pause/resume controls for canvas games
+  - Canvas keeps running in background when switching tabs
+  - Auto-close canvas tabs on process exit (optional)
+  - Extracted useCanvasTabManager hook to reduce IDELayout complexity
+  - Added canvas documentation to hover provider
+  - 6 new E2E tests, comprehensive unit test coverage
+- Created #286: Shell integration - canvas.start() and canvas.stop() via lua command
+  - Adds `canvas.start()` to open canvas tab and block until `canvas.stop()` or Ctrl+C
+  - Removes "Run Canvas" button from EditorPanel
+  - All print() output goes to terminal while canvas runs
 
 ## Key Files
 
