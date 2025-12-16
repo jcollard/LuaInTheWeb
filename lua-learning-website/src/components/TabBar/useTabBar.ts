@@ -46,6 +46,14 @@ export function useTabBar(): UseTabBarReturn {
     )
   }, [])
 
+  const convertToFileTab = useCallback((path: string) => {
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.path === path ? { ...tab, type: 'file', isPreview: false } : tab
+      )
+    )
+  }, [])
+
   const closeTab = useCallback((path: string) => {
     setTabs((prev) => {
       const index = prev.findIndex((tab) => tab.path === path)
@@ -102,6 +110,28 @@ export function useTabBar(): UseTabBarReturn {
     setActiveTab(path)
   }, [])
 
+  const openMarkdownPreviewTab = useCallback((path: string, name: string) => {
+    setTabs((prev) => {
+      // Check if tab already exists
+      const existingTab = prev.find((tab) => tab.path === path)
+      if (existingTab) {
+        // Just activate it, don't change preview state
+        return prev
+      }
+      // Replace existing preview tab if there is one (any type of preview)
+      const existingPreviewIndex = prev.findIndex((tab) => tab.isPreview)
+      if (existingPreviewIndex !== -1) {
+        // Replace the preview tab
+        const newTabs = [...prev]
+        newTabs[existingPreviewIndex] = { path, name, isDirty: false, type: 'markdown', isPreview: true }
+        return newTabs
+      }
+      // No existing preview, add new preview tab
+      return [...prev, { path, name, isDirty: false, type: 'markdown', isPreview: true }]
+    })
+    setActiveTab(path)
+  }, [])
+
   const getActiveTabType = useCallback((): TabType | null => {
     if (!activeTab) return null
     // First, try to find the tab in the tabs array
@@ -118,11 +148,13 @@ export function useTabBar(): UseTabBarReturn {
     openTab,
     openPreviewTab,
     openCanvasTab,
+    openMarkdownPreviewTab,
     closeTab,
     selectTab,
     setDirty,
     renameTab,
     getActiveTabType,
     makeTabPermanent,
+    convertToFileTab,
   }
 }
