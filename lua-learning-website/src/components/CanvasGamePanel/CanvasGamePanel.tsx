@@ -17,12 +17,8 @@ export interface CanvasGamePanelProps {
   autoStart?: boolean
   /** Additional CSS class */
   className?: string
-  /** Callback when stop button is clicked */
-  onStop?: () => void
   /** Callback when process exits */
   onExit?: (code: number) => void
-  /** Callback when pop-out button is clicked */
-  onPopOut?: () => void
 }
 
 export function CanvasGamePanel({
@@ -31,16 +27,23 @@ export function CanvasGamePanel({
   height = 600,
   autoStart = true,
   className,
-  onStop,
   onExit,
-  onPopOut,
 }: CanvasGamePanelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  const { state, isRunning, error, mode, startGame, stopGame, clearError } =
-    useCanvasGame({
-      onExit,
-    })
+  const {
+    state,
+    isRunning,
+    isPaused,
+    error,
+    mode,
+    startGame,
+    pauseGame,
+    resumeGame,
+    clearError,
+  } = useCanvasGame({
+    onExit,
+  })
 
   // Auto-start game when mounted
   useEffect(() => {
@@ -49,10 +52,13 @@ export function CanvasGamePanel({
     }
   }, [autoStart, code, state, startGame])
 
-  const handleStop = useCallback(() => {
-    stopGame()
-    onStop?.()
-  }, [stopGame, onStop])
+  const handlePauseResume = useCallback(() => {
+    if (isPaused) {
+      resumeGame()
+    } else {
+      pauseGame()
+    }
+  }, [isPaused, pauseGame, resumeGame])
 
   const panelClassName = [styles.panel, className].filter(Boolean).join(' ')
 
@@ -72,24 +78,14 @@ export function CanvasGamePanel({
             >
               {mode === 'performance' ? 'Performance' : 'Compatibility'}
             </span>
-            {onPopOut && (
-              <button
-                type="button"
-                className={styles.popOutButton}
-                onClick={onPopOut}
-                aria-label="Pop out"
-                title="Open in new window"
-              >
-                Pop Out
-              </button>
-            )}
             <button
               type="button"
-              className={styles.stopButton}
-              onClick={handleStop}
-              aria-label="Stop game"
+              className={styles.pauseButton}
+              onClick={handlePauseResume}
+              aria-label={isPaused ? 'Resume game' : 'Pause game'}
+              title={isPaused ? 'Resume' : 'Pause'}
             >
-              Stop
+              {isPaused ? 'Resume' : 'Pause'}
             </button>
           </>
         )}

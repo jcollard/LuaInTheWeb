@@ -315,7 +315,6 @@ function IDELayoutInner({
                             onSelectTab={selectTab}
                             onCloseTab={handleCloseTab}
                             onExit={handleCanvasExit}
-                            onError={showError}
                           />
                         </div>
                       )}

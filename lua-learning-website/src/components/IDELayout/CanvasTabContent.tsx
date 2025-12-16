@@ -2,10 +2,8 @@
  * Canvas tab content component.
  * Renders the canvas game panel with a simple tab bar for switching between tabs.
  */
-import { useCallback } from 'react'
 import { CanvasGamePanel } from '../CanvasGamePanel'
 import type { TabInfo } from '../TabBar'
-import { openCanvasPopout } from '../../utils/canvasPopout'
 import styles from './IDELayout.module.css'
 
 export interface CanvasTabContentProps {
@@ -21,8 +19,6 @@ export interface CanvasTabContentProps {
   onCloseTab: (path: string) => void
   /** Callback when the canvas game exits */
   onExit: (exitCode: number) => void
-  /** Callback when an error occurs */
-  onError?: (message: string) => void
 }
 
 export function CanvasTabContent({
@@ -32,16 +28,7 @@ export function CanvasTabContent({
   onSelectTab,
   onCloseTab,
   onExit,
-  onError,
 }: CanvasTabContentProps) {
-  const handlePopOut = useCallback(() => {
-    if (!canvasCode) return
-    const popup = openCanvasPopout(canvasCode, { title: 'Lua Canvas' })
-    if (!popup) {
-      onError?.('Pop-out was blocked. Please allow popups for this site.')
-    }
-  }, [canvasCode, onError])
-
   return (
     <div className={styles.canvasContainer}>
       <div className={styles.canvasToolbar}>
@@ -70,7 +57,6 @@ export function CanvasTabContent({
       <CanvasGamePanel
         code={canvasCode}
         onExit={onExit}
-        onPopOut={handlePopOut}
       />
     </div>
   )

@@ -20,12 +20,15 @@ export interface UseCanvasGameOptions {
 export interface UseCanvasGameReturn {
   state: CanvasGameState
   isRunning: boolean
+  isPaused: boolean
   error: string | null
   output: string
   mode: CanvasGameMode
   process: LuaCanvasProcess | null
   startGame: (code: string, canvas: HTMLCanvasElement) => void
   stopGame: () => void
+  pauseGame: () => void
+  resumeGame: () => void
   clearOutput: () => void
   clearError: () => void
 }
@@ -40,6 +43,7 @@ export function useCanvasGame(
   const { onOutput, onError, onExit } = options
 
   const [state, setState] = useState<CanvasGameState>('idle')
+  const [isPaused, setIsPaused] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [output, setOutput] = useState<string>('')
 
@@ -100,6 +104,21 @@ export function useCanvasGame(
       processRef.current.stop()
       processRef.current = null
       setState('idle')
+      setIsPaused(false)
+    }
+  }, [])
+
+  const pauseGame = useCallback(() => {
+    if (processRef.current) {
+      processRef.current.pause()
+      setIsPaused(true)
+    }
+  }, [])
+
+  const resumeGame = useCallback(() => {
+    if (processRef.current) {
+      processRef.current.resume()
+      setIsPaused(false)
     }
   }, [])
 
@@ -126,12 +145,15 @@ export function useCanvasGame(
   return {
     state,
     isRunning: state === 'running',
+    isPaused,
     error,
     output,
     mode,
     process: processRef.current,
     startGame,
     stopGame,
+    pauseGame,
+    resumeGame,
     clearOutput,
     clearError,
   }

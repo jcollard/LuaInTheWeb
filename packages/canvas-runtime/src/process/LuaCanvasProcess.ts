@@ -206,6 +206,33 @@ export class LuaCanvasProcess implements IProcess {
   }
 
   /**
+   * Pause the canvas process.
+   * Pauses the game loop but keeps the worker alive.
+   */
+  pause(): void {
+    if (this.gameLoop) {
+      this.gameLoop.pause();
+    }
+  }
+
+  /**
+   * Resume the canvas process.
+   * Resumes the game loop.
+   */
+  resume(): void {
+    if (this.gameLoop) {
+      this.gameLoop.resume();
+    }
+  }
+
+  /**
+   * Check if the process is currently paused.
+   */
+  isPaused(): boolean {
+    return this.gameLoop?.isPaused() ?? false;
+  }
+
+  /**
    * Handle input from the user.
    * Canvas games use keyboard/mouse input, not text input - this is a no-op.
    */

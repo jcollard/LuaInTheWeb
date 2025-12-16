@@ -9,18 +9,23 @@ import { CanvasGamePanel } from './CanvasGamePanel'
 // Mock the useCanvasGame hook
 const mockStartGame = vi.fn()
 const mockStopGame = vi.fn()
+const mockPauseGame = vi.fn()
+const mockResumeGame = vi.fn()
 const mockClearError = vi.fn()
 
 vi.mock('../../hooks/useCanvasGame', () => ({
   useCanvasGame: vi.fn(() => ({
     state: 'idle',
     isRunning: false,
+    isPaused: false,
     error: null,
     output: '',
     mode: 'performance',
     process: null,
     startGame: mockStartGame,
     stopGame: mockStopGame,
+    pauseGame: mockPauseGame,
+    resumeGame: mockResumeGame,
     clearOutput: vi.fn(),
     clearError: mockClearError,
   })),
@@ -38,23 +43,26 @@ describe('CanvasGamePanel', () => {
       expect(canvas).toBeInTheDocument()
     })
 
-    it('renders stop button when running', async () => {
+    it('renders pause button when running', async () => {
       const { useCanvasGame } = await import('../../hooks/useCanvasGame')
       vi.mocked(useCanvasGame).mockReturnValue({
         state: 'running',
         isRunning: true,
+        isPaused: false,
         error: null,
         output: '',
         mode: 'performance',
         process: null,
         startGame: mockStartGame,
         stopGame: mockStopGame,
+        pauseGame: mockPauseGame,
+        resumeGame: mockResumeGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
       })
 
       render(<CanvasGamePanel code="print('hello')" />)
-      expect(screen.getByRole('button', { name: /stop/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /pause/i })).toBeInTheDocument()
     })
 
     it('renders mode indicator showing performance mode', async () => {
@@ -62,12 +70,15 @@ describe('CanvasGamePanel', () => {
       vi.mocked(useCanvasGame).mockReturnValue({
         state: 'running',
         isRunning: true,
+        isPaused: false,
         error: null,
         output: '',
         mode: 'performance',
         process: null,
         startGame: mockStartGame,
         stopGame: mockStopGame,
+        pauseGame: mockPauseGame,
+        resumeGame: mockResumeGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
       })
@@ -81,12 +92,15 @@ describe('CanvasGamePanel', () => {
       vi.mocked(useCanvasGame).mockReturnValue({
         state: 'running',
         isRunning: true,
+        isPaused: false,
         error: null,
         output: '',
         mode: 'compatibility',
         process: null,
         startGame: mockStartGame,
         stopGame: mockStopGame,
+        pauseGame: mockPauseGame,
+        resumeGame: mockResumeGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
       })
@@ -100,12 +114,15 @@ describe('CanvasGamePanel', () => {
       vi.mocked(useCanvasGame).mockReturnValue({
         state: 'error',
         isRunning: false,
+        isPaused: false,
         error: 'Runtime error: invalid operation',
         output: '',
         mode: 'performance',
         process: null,
         startGame: mockStartGame,
         stopGame: mockStopGame,
+        pauseGame: mockPauseGame,
+        resumeGame: mockResumeGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
       })
@@ -139,45 +156,50 @@ describe('CanvasGamePanel', () => {
   })
 
   describe('interactions', () => {
-    it('calls stopGame when stop button is clicked', async () => {
+    it('calls pauseGame when pause button is clicked', async () => {
       const { useCanvasGame } = await import('../../hooks/useCanvasGame')
       vi.mocked(useCanvasGame).mockReturnValue({
         state: 'running',
         isRunning: true,
+        isPaused: false,
         error: null,
         output: '',
         mode: 'performance',
         process: null,
         startGame: mockStartGame,
         stopGame: mockStopGame,
+        pauseGame: mockPauseGame,
+        resumeGame: mockResumeGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
       })
 
       render(<CanvasGamePanel code="print('hello')" />)
-      fireEvent.click(screen.getByRole('button', { name: /stop/i }))
-      expect(mockStopGame).toHaveBeenCalled()
+      fireEvent.click(screen.getByRole('button', { name: /pause/i }))
+      expect(mockPauseGame).toHaveBeenCalled()
     })
 
-    it('calls onStop callback when stop button is clicked', async () => {
-      const onStop = vi.fn()
+    it('calls resumeGame when resume button is clicked', async () => {
       const { useCanvasGame } = await import('../../hooks/useCanvasGame')
       vi.mocked(useCanvasGame).mockReturnValue({
         state: 'running',
         isRunning: true,
+        isPaused: true,
         error: null,
         output: '',
         mode: 'performance',
         process: null,
         startGame: mockStartGame,
         stopGame: mockStopGame,
+        pauseGame: mockPauseGame,
+        resumeGame: mockResumeGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
       })
 
-      render(<CanvasGamePanel code="print('hello')" onStop={onStop} />)
-      fireEvent.click(screen.getByRole('button', { name: /stop/i }))
-      expect(onStop).toHaveBeenCalled()
+      render(<CanvasGamePanel code="print('hello')" />)
+      fireEvent.click(screen.getByRole('button', { name: /resume/i }))
+      expect(mockResumeGame).toHaveBeenCalled()
     })
 
     it('calls clearError when error is dismissed', async () => {
@@ -185,12 +207,15 @@ describe('CanvasGamePanel', () => {
       vi.mocked(useCanvasGame).mockReturnValue({
         state: 'error',
         isRunning: false,
+        isPaused: false,
         error: 'Some error',
         output: '',
         mode: 'performance',
         process: null,
         startGame: mockStartGame,
         stopGame: mockStopGame,
+        pauseGame: mockPauseGame,
+        resumeGame: mockResumeGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
       })
@@ -208,12 +233,15 @@ describe('CanvasGamePanel', () => {
       vi.mocked(useCanvasGame).mockReturnValue({
         state: 'idle',
         isRunning: false,
+        isPaused: false,
         error: null,
         output: '',
         mode: 'performance',
         process: null,
         startGame: mockStartGame,
         stopGame: mockStopGame,
+        pauseGame: mockPauseGame,
+        resumeGame: mockResumeGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
       })
@@ -227,12 +255,15 @@ describe('CanvasGamePanel', () => {
       vi.mocked(useCanvasGame).mockReturnValue({
         state: 'idle',
         isRunning: false,
+        isPaused: false,
         error: null,
         output: '',
         mode: 'performance',
         process: null,
         startGame: mockStartGame,
         stopGame: mockStopGame,
+        pauseGame: mockPauseGame,
+        resumeGame: mockResumeGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
       })
@@ -252,12 +283,15 @@ describe('CanvasGamePanel', () => {
         return {
           state: 'running',
           isRunning: true,
+          isPaused: false,
           error: null,
           output: '',
           mode: 'performance',
           process: null,
           startGame: mockStartGame,
           stopGame: mockStopGame,
+          pauseGame: mockPauseGame,
+          resumeGame: mockResumeGame,
           clearOutput: vi.fn(),
           clearError: mockClearError,
         }
@@ -285,83 +319,4 @@ describe('CanvasGamePanel', () => {
     })
   })
 
-  describe('pop-out functionality', () => {
-    it('renders pop-out button when running and onPopOut is provided', async () => {
-      const { useCanvasGame } = await import('../../hooks/useCanvasGame')
-      vi.mocked(useCanvasGame).mockReturnValue({
-        state: 'running',
-        isRunning: true,
-        error: null,
-        output: '',
-        mode: 'performance',
-        process: null,
-        startGame: mockStartGame,
-        stopGame: mockStopGame,
-        clearOutput: vi.fn(),
-        clearError: mockClearError,
-      })
-
-      render(<CanvasGamePanel code="print('hello')" onPopOut={vi.fn()} />)
-      expect(screen.getByRole('button', { name: /pop.?out/i })).toBeInTheDocument()
-    })
-
-    it('does not render pop-out button when onPopOut is not provided', async () => {
-      const { useCanvasGame } = await import('../../hooks/useCanvasGame')
-      vi.mocked(useCanvasGame).mockReturnValue({
-        state: 'running',
-        isRunning: true,
-        error: null,
-        output: '',
-        mode: 'performance',
-        process: null,
-        startGame: mockStartGame,
-        stopGame: mockStopGame,
-        clearOutput: vi.fn(),
-        clearError: mockClearError,
-      })
-
-      render(<CanvasGamePanel code="print('hello')" />)
-      expect(screen.queryByRole('button', { name: /pop.?out/i })).not.toBeInTheDocument()
-    })
-
-    it('calls onPopOut when pop-out button is clicked', async () => {
-      const onPopOut = vi.fn()
-      const { useCanvasGame } = await import('../../hooks/useCanvasGame')
-      vi.mocked(useCanvasGame).mockReturnValue({
-        state: 'running',
-        isRunning: true,
-        error: null,
-        output: '',
-        mode: 'performance',
-        process: null,
-        startGame: mockStartGame,
-        stopGame: mockStopGame,
-        clearOutput: vi.fn(),
-        clearError: mockClearError,
-      })
-
-      render(<CanvasGamePanel code="print('hello')" onPopOut={onPopOut} />)
-      fireEvent.click(screen.getByRole('button', { name: /pop.?out/i }))
-      expect(onPopOut).toHaveBeenCalled()
-    })
-
-    it('does not render pop-out button when not running', async () => {
-      const { useCanvasGame } = await import('../../hooks/useCanvasGame')
-      vi.mocked(useCanvasGame).mockReturnValue({
-        state: 'idle',
-        isRunning: false,
-        error: null,
-        output: '',
-        mode: 'performance',
-        process: null,
-        startGame: mockStartGame,
-        stopGame: mockStopGame,
-        clearOutput: vi.fn(),
-        clearError: mockClearError,
-      })
-
-      render(<CanvasGamePanel code="print('hello')" onPopOut={vi.fn()} />)
-      expect(screen.queryByRole('button', { name: /pop.?out/i })).not.toBeInTheDocument()
-    })
-  })
 })
