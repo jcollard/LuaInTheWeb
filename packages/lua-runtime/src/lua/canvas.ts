@@ -15,7 +15,7 @@ export const LUA_CANVAS_CODE = `
 --- input handling, and game loop management.
 ---
 --- Note: The canvas API is only available in canvas mode.
---- Use canvas.onDraw() to register your render callback.
+--- Use canvas.on_draw() to register your render callback.
 
 ---@class canvas
 local canvas = {}
@@ -29,12 +29,12 @@ local canvas = {}
 --- All drawing operations should be performed inside this callback.
 ---@param callback fun() Function to call each frame
 ---@return nil
----@usage canvas.onDraw(function()
+---@usage canvas.on_draw(function()
 ---   canvas.clear()
----   canvas.setColor(255, 0, 0)
----   canvas.fillRect(10, 10, 50, 50)
+---   canvas.set_color(255, 0, 0)
+---   canvas.fill_rect(10, 10, 50, 50)
 --- end)
-function canvas.onDraw(callback) end
+function canvas.on_draw(callback) end
 
 -- =============================================================================
 -- Drawing Functions
@@ -51,9 +51,9 @@ function canvas.clear() end
 ---@param b number Blue component (0-255)
 ---@param a? number Alpha component (0-255, default: 255)
 ---@return nil
----@usage canvas.setColor(255, 0, 0)       -- Red
----@usage canvas.setColor(0, 255, 0, 128)  -- Semi-transparent green
-function canvas.setColor(r, g, b, a) end
+---@usage canvas.set_color(255, 0, 0)       -- Red
+---@usage canvas.set_color(0, 255, 0, 128)  -- Semi-transparent green
+function canvas.set_color(r, g, b, a) end
 
 --- Draw a rectangle outline.
 ---@param x number X coordinate of top-left corner
@@ -69,7 +69,7 @@ function canvas.rect(x, y, width, height) end
 ---@param width number Width of rectangle
 ---@param height number Height of rectangle
 ---@return nil
-function canvas.fillRect(x, y, width, height) end
+function canvas.fill_rect(x, y, width, height) end
 
 --- Draw a circle outline.
 ---@param x number X coordinate of center
@@ -83,7 +83,7 @@ function canvas.circle(x, y, radius) end
 ---@param y number Y coordinate of center
 ---@param radius number Radius of circle
 ---@return nil
-function canvas.fillCircle(x, y, radius) end
+function canvas.fill_circle(x, y, radius) end
 
 --- Draw a line between two points.
 ---@param x1 number X coordinate of start point
@@ -107,12 +107,12 @@ function canvas.text(x, y, text) end
 --- Get the time elapsed since the last frame (in seconds).
 --- Use this for frame-rate independent movement.
 ---@return number deltaTime Time since last frame in seconds
----@usage local x = x + speed * canvas.getDelta()
-function canvas.getDelta() end
+---@usage local x = x + speed * canvas.get_delta()
+function canvas.get_delta() end
 
 --- Get the total time since the game started (in seconds).
 ---@return number totalTime Total elapsed time in seconds
-function canvas.getTime() end
+function canvas.get_time() end
 
 -- =============================================================================
 -- Keyboard Input
@@ -121,19 +121,19 @@ function canvas.getTime() end
 --- Check if a key is currently held down.
 ---@param key string Key name (e.g., 'ArrowUp', 'ArrowDown', 'a', 'Space')
 ---@return boolean isDown True if key is currently held
----@usage if canvas.isKeyDown('ArrowUp') then
----   y = y - speed * canvas.getDelta()
+---@usage if canvas.is_key_down('ArrowUp') then
+---   y = y - speed * canvas.get_delta()
 --- end
-function canvas.isKeyDown(key) end
+function canvas.is_key_down(key) end
 
 --- Check if a key was pressed this frame.
 --- Returns true only on the frame the key was first pressed.
 ---@param key string Key name (e.g., 'ArrowUp', 'ArrowDown', 'a', 'Space')
 ---@return boolean wasPressed True if key was just pressed
----@usage if canvas.isKeyPressed('Space') then
+---@usage if canvas.is_key_pressed('Space') then
 ---   jump()
 --- end
-function canvas.isKeyPressed(key) end
+function canvas.is_key_pressed(key) end
 
 -- =============================================================================
 -- Mouse Input
@@ -141,19 +141,19 @@ function canvas.isKeyPressed(key) end
 
 --- Get the current mouse X position.
 ---@return number x Mouse X coordinate relative to canvas
-function canvas.getMouseX() end
+function canvas.get_mouse_x() end
 
 --- Get the current mouse Y position.
 ---@return number y Mouse Y coordinate relative to canvas
-function canvas.getMouseY() end
+function canvas.get_mouse_y() end
 
 --- Check if a mouse button is currently held down.
 ---@param button number Button number (0 = left, 1 = middle, 2 = right)
 ---@return boolean isDown True if button is held
----@usage if canvas.isMouseDown(0) then
+---@usage if canvas.is_mouse_down(0) then
 ---   -- Left mouse button is held
 --- end
-function canvas.isMouseDown(button) end
+function canvas.is_mouse_down(button) end
 
 return canvas
 `

@@ -6,7 +6,7 @@ import { describe, it, expect, vi } from 'vitest'
 // Mock the lua-runtime module
 vi.mock('@lua-learning/lua-runtime', () => ({
   LUA_SHELL_CODE: '-- mock shell code',
-  LUA_CANVAS_CODE: '-- mock canvas code\nlocal canvas = {}\nfunction canvas.onDraw(callback) end\nfunction canvas.clear() end\nfunction canvas.setColor(r, g, b, a) end\nfunction canvas.rect(x, y, w, h) end\nfunction canvas.fillRect(x, y, w, h) end\nfunction canvas.circle(x, y, r) end\nfunction canvas.fillCircle(x, y, r) end\nfunction canvas.line(x1, y1, x2, y2) end\nfunction canvas.text(x, y, text) end\nfunction canvas.getDelta() end\nfunction canvas.getTime() end\nfunction canvas.isKeyDown(key) end\nfunction canvas.isKeyPressed(key) end\nfunction canvas.getMouseX() end\nfunction canvas.getMouseY() end\nfunction canvas.isMouseDown(button) end\nreturn canvas',
+  LUA_CANVAS_CODE: '-- mock canvas code\nlocal canvas = {}\nfunction canvas.on_draw(callback) end\nfunction canvas.clear() end\nfunction canvas.set_color(r, g, b, a) end\nfunction canvas.rect(x, y, w, h) end\nfunction canvas.fill_rect(x, y, w, h) end\nfunction canvas.circle(x, y, r) end\nfunction canvas.fill_circle(x, y, r) end\nfunction canvas.line(x1, y1, x2, y2) end\nfunction canvas.text(x, y, text) end\nfunction canvas.get_delta() end\nfunction canvas.get_time() end\nfunction canvas.is_key_down(key) end\nfunction canvas.is_key_pressed(key) end\nfunction canvas.get_mouse_x() end\nfunction canvas.get_mouse_y() end\nfunction canvas.is_mouse_down(button) end\nreturn canvas',
 }))
 
 import {
@@ -184,11 +184,11 @@ describe('workspaceManagerHelpers', () => {
       const workspace = createDocsWorkspace()
       const content = workspace.filesystem.readFile('canvas.md')
       expect(content).toContain('canvas.clear')
-      expect(content).toContain('canvas.setColor')
+      expect(content).toContain('canvas.set_color')
       expect(content).toContain('canvas.rect')
-      expect(content).toContain('canvas.fillRect')
+      expect(content).toContain('canvas.fill_rect')
       expect(content).toContain('canvas.circle')
-      expect(content).toContain('canvas.fillCircle')
+      expect(content).toContain('canvas.fill_circle')
       expect(content).toContain('canvas.line')
       expect(content).toContain('canvas.text')
     })
@@ -196,29 +196,29 @@ describe('workspaceManagerHelpers', () => {
     it('canvas.md documents timing functions', () => {
       const workspace = createDocsWorkspace()
       const content = workspace.filesystem.readFile('canvas.md')
-      expect(content).toContain('canvas.getDelta')
-      expect(content).toContain('canvas.getTime')
+      expect(content).toContain('canvas.get_delta')
+      expect(content).toContain('canvas.get_time')
     })
 
     it('canvas.md documents keyboard input functions', () => {
       const workspace = createDocsWorkspace()
       const content = workspace.filesystem.readFile('canvas.md')
-      expect(content).toContain('canvas.isKeyDown')
-      expect(content).toContain('canvas.isKeyPressed')
+      expect(content).toContain('canvas.is_key_down')
+      expect(content).toContain('canvas.is_key_pressed')
     })
 
     it('canvas.md documents mouse input functions', () => {
       const workspace = createDocsWorkspace()
       const content = workspace.filesystem.readFile('canvas.md')
-      expect(content).toContain('canvas.getMouseX')
-      expect(content).toContain('canvas.getMouseY')
-      expect(content).toContain('canvas.isMouseDown')
+      expect(content).toContain('canvas.get_mouse_x')
+      expect(content).toContain('canvas.get_mouse_y')
+      expect(content).toContain('canvas.is_mouse_down')
     })
 
     it('canvas.md documents game loop', () => {
       const workspace = createDocsWorkspace()
       const content = workspace.filesystem.readFile('canvas.md')
-      expect(content).toContain('canvas.onDraw')
+      expect(content).toContain('canvas.on_draw')
     })
 
     it('canvas.md contains usage examples', () => {
@@ -275,33 +275,33 @@ describe('workspaceManagerHelpers', () => {
       const workspace = createLibraryWorkspace()
       const content = workspace.filesystem.readFile('canvas.lua')
       expect(content).toContain('canvas')
-      expect(content).toContain('canvas.onDraw')
+      expect(content).toContain('canvas.on_draw')
     })
 
     it('canvas.lua documents drawing functions', () => {
       const workspace = createLibraryWorkspace()
       const content = workspace.filesystem.readFile('canvas.lua')
       expect(content).toContain('canvas.clear')
-      expect(content).toContain('canvas.setColor')
+      expect(content).toContain('canvas.set_color')
       expect(content).toContain('canvas.rect')
-      expect(content).toContain('canvas.fillRect')
+      expect(content).toContain('canvas.fill_rect')
     })
 
     it('canvas.lua documents timing functions', () => {
       const workspace = createLibraryWorkspace()
       const content = workspace.filesystem.readFile('canvas.lua')
-      expect(content).toContain('canvas.getDelta')
-      expect(content).toContain('canvas.getTime')
+      expect(content).toContain('canvas.get_delta')
+      expect(content).toContain('canvas.get_time')
     })
 
     it('canvas.lua documents input functions', () => {
       const workspace = createLibraryWorkspace()
       const content = workspace.filesystem.readFile('canvas.lua')
-      expect(content).toContain('canvas.isKeyDown')
-      expect(content).toContain('canvas.isKeyPressed')
-      expect(content).toContain('canvas.getMouseX')
-      expect(content).toContain('canvas.getMouseY')
-      expect(content).toContain('canvas.isMouseDown')
+      expect(content).toContain('canvas.is_key_down')
+      expect(content).toContain('canvas.is_key_pressed')
+      expect(content).toContain('canvas.get_mouse_x')
+      expect(content).toContain('canvas.get_mouse_y')
+      expect(content).toContain('canvas.is_mouse_down')
     })
 
     it('filesystem lists shell.lua and canvas.lua in root directory', () => {

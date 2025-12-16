@@ -219,11 +219,11 @@ export class LuaCanvasRuntime {
       return state.mouseButtonsDown.includes(button);
     });
 
-    // Set up the Lua-side canvas table with methods
+    // Set up the Lua-side canvas table with methods (using snake_case for Lua conventions)
     lua.doStringSync(`
       canvas = {}
 
-      function canvas.onDraw(callback)
+      function canvas.on_draw(callback)
         __canvas_onDraw(callback)
       end
 
@@ -231,7 +231,7 @@ export class LuaCanvasRuntime {
         __canvas_clear()
       end
 
-      function canvas.setColor(r, g, b, a)
+      function canvas.set_color(r, g, b, a)
         __canvas_setColor(r, g, b, a)
       end
 
@@ -239,7 +239,7 @@ export class LuaCanvasRuntime {
         __canvas_rect(x, y, w, h)
       end
 
-      function canvas.fillRect(x, y, w, h)
+      function canvas.fill_rect(x, y, w, h)
         __canvas_fillRect(x, y, w, h)
       end
 
@@ -247,7 +247,7 @@ export class LuaCanvasRuntime {
         __canvas_circle(x, y, r)
       end
 
-      function canvas.fillCircle(x, y, r)
+      function canvas.fill_circle(x, y, r)
         __canvas_fillCircle(x, y, r)
       end
 
@@ -259,31 +259,31 @@ export class LuaCanvasRuntime {
         __canvas_text(x, y, text)
       end
 
-      function canvas.getDelta()
+      function canvas.get_delta()
         return __canvas_getDelta()
       end
 
-      function canvas.getTime()
+      function canvas.get_time()
         return __canvas_getTime()
       end
 
-      function canvas.isKeyDown(key)
+      function canvas.is_key_down(key)
         return __canvas_isKeyDown(key)
       end
 
-      function canvas.isKeyPressed(key)
+      function canvas.is_key_pressed(key)
         return __canvas_isKeyPressed(key)
       end
 
-      function canvas.getMouseX()
+      function canvas.get_mouse_x()
         return __canvas_getMouseX()
       end
 
-      function canvas.getMouseY()
+      function canvas.get_mouse_y()
         return __canvas_getMouseY()
       end
 
-      function canvas.isMouseDown(button)
+      function canvas.is_mouse_down(button)
         return __canvas_isMouseDown(button)
       end
     `);

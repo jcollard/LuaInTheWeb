@@ -265,7 +265,7 @@ local canvas = require('canvas')
 
 ## Game Loop
 
-### canvas.onDraw(callback)
+### canvas.on_draw(callback)
 
 Register the draw callback function. This callback is called once per frame (~60fps).
 All drawing operations should be performed inside this callback.
@@ -274,10 +274,10 @@ All drawing operations should be performed inside this callback.
 - \`callback\` (function): Function to call each frame
 
 \`\`\`lua
-canvas.onDraw(function()
+canvas.on_draw(function()
   canvas.clear()
-  canvas.setColor(255, 0, 0)
-  canvas.fillRect(10, 10, 50, 50)
+  canvas.set_color(255, 0, 0)
+  canvas.fill_rect(10, 10, 50, 50)
 end)
 \`\`\`
 
@@ -287,7 +287,7 @@ end)
 
 Clear the canvas with the current background color.
 
-### canvas.setColor(r, g, b, a)
+### canvas.set_color(r, g, b, a)
 
 Set the drawing color. All subsequent drawing operations will use this color.
 
@@ -298,8 +298,8 @@ Set the drawing color. All subsequent drawing operations will use this color.
 - \`a\` (number, optional): Alpha component (0-255, default: 255)
 
 \`\`\`lua
-canvas.setColor(255, 0, 0)       -- Red
-canvas.setColor(0, 255, 0, 128)  -- Semi-transparent green
+canvas.set_color(255, 0, 0)       -- Red
+canvas.set_color(0, 255, 0, 128)  -- Semi-transparent green
 \`\`\`
 
 ### canvas.rect(x, y, width, height)
@@ -312,7 +312,7 @@ Draw a rectangle outline.
 - \`width\` (number): Width of rectangle
 - \`height\` (number): Height of rectangle
 
-### canvas.fillRect(x, y, width, height)
+### canvas.fill_rect(x, y, width, height)
 
 Draw a filled rectangle.
 
@@ -331,7 +331,7 @@ Draw a circle outline.
 - \`y\` (number): Y coordinate of center
 - \`radius\` (number): Radius of circle
 
-### canvas.fillCircle(x, y, radius)
+### canvas.fill_circle(x, y, radius)
 
 Draw a filled circle.
 
@@ -361,7 +361,7 @@ Draw text at the specified position.
 
 ## Timing Functions
 
-### canvas.getDelta()
+### canvas.get_delta()
 
 Get the time elapsed since the last frame (in seconds).
 Use this for frame-rate independent movement.
@@ -371,10 +371,10 @@ Use this for frame-rate independent movement.
 
 \`\`\`lua
 local speed = 100 -- pixels per second
-x = x + speed * canvas.getDelta()
+x = x + speed * canvas.get_delta()
 \`\`\`
 
-### canvas.getTime()
+### canvas.get_time()
 
 Get the total time since the game started (in seconds).
 
@@ -383,7 +383,7 @@ Get the total time since the game started (in seconds).
 
 ## Keyboard Input
 
-### canvas.isKeyDown(key)
+### canvas.is_key_down(key)
 
 Check if a key is currently held down.
 
@@ -394,12 +394,12 @@ Check if a key is currently held down.
 - (boolean): True if key is currently held
 
 \`\`\`lua
-if canvas.isKeyDown('ArrowUp') then
-  y = y - speed * canvas.getDelta()
+if canvas.is_key_down('ArrowUp') then
+  y = y - speed * canvas.get_delta()
 end
 \`\`\`
 
-### canvas.isKeyPressed(key)
+### canvas.is_key_pressed(key)
 
 Check if a key was pressed this frame. Returns true only on the frame the key was first pressed.
 
@@ -410,28 +410,28 @@ Check if a key was pressed this frame. Returns true only on the frame the key wa
 - (boolean): True if key was just pressed
 
 \`\`\`lua
-if canvas.isKeyPressed('Space') then
+if canvas.is_key_pressed('Space') then
   jump()
 end
 \`\`\`
 
 ## Mouse Input
 
-### canvas.getMouseX()
+### canvas.get_mouse_x()
 
 Get the current mouse X position.
 
 **Returns:**
 - (number): Mouse X coordinate relative to canvas
 
-### canvas.getMouseY()
+### canvas.get_mouse_y()
 
 Get the current mouse Y position.
 
 **Returns:**
 - (number): Mouse Y coordinate relative to canvas
 
-### canvas.isMouseDown(button)
+### canvas.is_mouse_down(button)
 
 Check if a mouse button is currently held down.
 
@@ -442,9 +442,9 @@ Check if a mouse button is currently held down.
 - (boolean): True if button is held
 
 \`\`\`lua
-if canvas.isMouseDown(0) then
+if canvas.is_mouse_down(0) then
   -- Left mouse button is held
-  shootAt(canvas.getMouseX(), canvas.getMouseY())
+  shootAt(canvas.get_mouse_x(), canvas.get_mouse_y())
 end
 \`\`\`
 
@@ -454,27 +454,27 @@ end
 local x, y = 100, 100
 local speed = 200
 
-canvas.onDraw(function()
+canvas.on_draw(function()
   -- Handle input
-  local dt = canvas.getDelta()
+  local dt = canvas.get_delta()
 
-  if canvas.isKeyDown('ArrowLeft') then
+  if canvas.is_key_down('ArrowLeft') then
     x = x - speed * dt
   end
-  if canvas.isKeyDown('ArrowRight') then
+  if canvas.is_key_down('ArrowRight') then
     x = x + speed * dt
   end
-  if canvas.isKeyDown('ArrowUp') then
+  if canvas.is_key_down('ArrowUp') then
     y = y - speed * dt
   end
-  if canvas.isKeyDown('ArrowDown') then
+  if canvas.is_key_down('ArrowDown') then
     y = y + speed * dt
   end
 
   -- Draw
   canvas.clear()
-  canvas.setColor(255, 100, 0)
-  canvas.fillRect(x, y, 50, 50)
+  canvas.set_color(255, 100, 0)
+  canvas.fill_rect(x, y, 50, 50)
 end)
 \`\`\`
 `
