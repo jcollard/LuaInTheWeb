@@ -127,11 +127,13 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
 
   // Helper to get default workspace path when at root
   const getDefaultWorkspacePath = useCallback((): string => {
-    // Get the first workspace (folder with isWorkspace: true) from root level
+    // Get the first writable workspace (folder with isWorkspace: true and not read-only)
     // This only applies when using compositeFileSystem with workspaces
     const tree = filesystem.getTree()
-    const firstWorkspace = tree.find((node) => node.type === 'folder' && node.isWorkspace)
-    return firstWorkspace?.path ?? '/'
+    const firstWritableWorkspace = tree.find(
+      (node) => node.type === 'folder' && node.isWorkspace && !node.isReadOnly
+    )
+    return firstWritableWorkspace?.path ?? '/'
   }, [filesystem])
 
   const generateUniqueFileName = useCallback((parentPath: string = '/'): string => {

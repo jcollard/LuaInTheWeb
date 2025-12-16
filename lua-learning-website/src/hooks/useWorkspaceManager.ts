@@ -58,13 +58,15 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
   const isInitialMount = useRef(true)
 
   // Save to localStorage whenever state changes (except initial mount)
-  // Filter out library workspaces as they are ephemeral and recreated on startup
+  // Filter out library and docs workspaces as they are ephemeral and recreated on startup
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false
       return
     }
-    const persistableWorkspaces = state.workspaces.filter((w) => w.type !== 'library')
+    const persistableWorkspaces = state.workspaces.filter(
+      (w) => w.type !== 'library' && w.type !== 'docs'
+    )
     saveWorkspaces(persistableWorkspaces)
   }, [state])
 
