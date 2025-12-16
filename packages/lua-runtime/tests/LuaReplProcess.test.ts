@@ -112,7 +112,7 @@ describe('LuaReplProcess', () => {
       expect(onOutput).toHaveBeenCalledWith('2\n')
     })
 
-    it('should output nil for undefined variables', async () => {
+    it('should not output value for undefined variables (nil suppressed)', async () => {
       process.start()
       await new Promise((resolve) => setTimeout(resolve, 100))
       onOutput.mockClear()
@@ -122,7 +122,11 @@ describe('LuaReplProcess', () => {
       // Wait for async execution
       await new Promise((resolve) => setTimeout(resolve, 50))
 
-      expect(onOutput).toHaveBeenCalledWith('nil\n')
+      // nil results are suppressed (only prompt is shown)
+      const calls = onOutput.mock.calls.map(call => call[0])
+      expect(calls).not.toContain('nil\n')
+      // Only the prompt should be output
+      expect(calls.filter(call => call !== '> ')).toHaveLength(0)
     })
 
     it('should output result followed by prompt after expression', async () => {
@@ -212,6 +216,23 @@ describe('LuaReplProcess', () => {
       await new Promise((resolve) => setTimeout(resolve, 50))
 
       expect(onOutput).toHaveBeenCalledWith('42\n')
+    })
+
+    it('should handle multiple return values with nil in middle', async () => {
+      process.start()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      onOutput.mockClear()
+
+      // Define function that returns (1, nil, 3)
+      process.handleInput('function test() return 1, nil, 3 end')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      // Call the function - should display all values including nil
+      process.handleInput('test()')
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      // Should output all values tab-separated: "1\tnil\t3\n"
+      expect(onOutput).toHaveBeenCalledWith('1\tnil\t3\n')
     })
   })
 

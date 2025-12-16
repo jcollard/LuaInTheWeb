@@ -2,19 +2,22 @@ import { test, expect } from '@playwright/test'
 import { TIMEOUTS } from './constants'
 
 /**
- * SKIPPED: These REPL E2E tests are temporarily disabled.
+ * SKIPPED: These REPL E2E tests are obsolete.
  *
- * Reason: The `.xterm-screen` locator now matches multiple elements (REPL + Shell terminals).
- * These tests need to be re-evaluated and potentially moved to test the Shell terminal's
- * `lua` command when that feature is implemented. The Shell terminal will provide a unified
- * Lua execution experience.
+ * Reason: The standalone LuaRepl component has been removed from the UI.
+ * REPL functionality is now provided through the Shell's `lua` command.
  *
- * TODO: When Shell's `lua` command is implemented:
- * 1. Create new E2E tests for Shell Lua execution
- * 2. Decide if REPL-specific tests are still needed
- * 3. Update locators to be more specific if REPL tests are retained
+ * The `.xterm-screen` locator now matches multiple elements (REPL + Shell terminals),
+ * making these tests incompatible with the current architecture.
+ *
+ * **New E2E tests for the `lua` command are in:**
+ * - `shell-lua-repl.spec.ts` - Tests for return value display (Issue #243)
+ *
+ * These tests are kept for reference but should be considered deprecated.
+ * Future REPL testing should use the Shell terminal's `lua` command.
  *
  * @see https://github.com/jcollard/LuaInTheWeb/issues/139
+ * @see https://github.com/jcollard/LuaInTheWeb/issues/243
  */
 test.describe.skip('REPL in IDE', () => {
   test.beforeEach(async ({ page }) => {
