@@ -80,7 +80,9 @@
       "Bash(gh api:*)",
       "Bash(npm test:*)",
       "Bash(grep:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npm run build:lua-runtime:*)",
+      "Bash(npm run build:shell-core:*)"
     ],
     "deny": [
       "Bash(npm run dev)",

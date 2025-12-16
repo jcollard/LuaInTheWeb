@@ -58,18 +58,25 @@ describe('useLuaRepl', () => {
   })
 
   describe('executeCode', () => {
-    // Cycle 3: Execute runs Lua code as statement
+    // Cycle 3: Execute runs Lua code as statement (fallback after return fails)
     it('should execute Lua code as statement', async () => {
       // Arrange
       const { result } = renderHook(() => useLuaRepl({}))
       await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // First try "return __format_results(x = 1 + 1)" - fails (syntax error)
+      // Then fallback to "x = 1 + 1" - succeeds
+      mockDoString
+        .mockRejectedValueOnce(new Error('syntax error'))
+        .mockResolvedValueOnce(undefined)
 
       // Act
       await act(async () => {
         await result.current.executeCode('x = 1 + 1')
       })
 
-      // Assert
+      // Assert - should try return first, then statement
+      expect(mockDoString).toHaveBeenCalledWith('return __format_results(x = 1 + 1)')
       expect(mockDoString).toHaveBeenCalledWith('x = 1 + 1')
     })
 
@@ -125,17 +132,15 @@ describe('useLuaRepl', () => {
       unmount()
     })
 
-    // Cycle 7: Statement fails, fallback to expression evaluation with formatting
-    it('should fallback to expression evaluation when statement fails', async () => {
+    // Cycle 7: Try return first for expressions (succeeds on first try)
+    it('should evaluate and display expression results', async () => {
       // Arrange
       const onOutput = vi.fn()
       const { result } = renderHook(() => useLuaRepl({ onOutput }))
       await waitFor(() => expect(result.current.isReady).toBe(true))
 
-      // First call (statement) fails, second call formats and returns result
-      mockDoString
-        .mockRejectedValueOnce(new Error('syntax error'))
-        .mockResolvedValueOnce('2') // formatter returns formatted string directly
+      // Try return first - succeeds and returns formatted result
+      mockDoString.mockResolvedValueOnce('2')
 
       // Act
       await act(async () => {
@@ -143,21 +148,19 @@ describe('useLuaRepl', () => {
       })
 
       // Assert - should format expression directly in Lua
-      expect(mockDoString).toHaveBeenCalledWith('return __format_value((1 + 1))')
+      expect(mockDoString).toHaveBeenCalledWith('return __format_results(1 + 1)')
       expect(onOutput).toHaveBeenCalledWith('2')
     })
 
-    // Cycle 7b: Expression returns formatted function string
+    // Cycle 7b: Try return first for function values (succeeds on first try)
     it('should format function values using Lua formatter', async () => {
       // Arrange
       const onOutput = vi.fn()
       const { result } = renderHook(() => useLuaRepl({ onOutput }))
       await waitFor(() => expect(result.current.isReady).toBe(true))
 
-      // First call (statement) fails, second call returns formatted function
-      mockDoString
-        .mockRejectedValueOnce(new Error('syntax error'))
-        .mockResolvedValueOnce('function(arg1, arg2) [string "..."]:1]')
+      // Try return first - succeeds and returns formatted function
+      mockDoString.mockResolvedValueOnce('function(arg1, arg2) [string "..."]:1]')
 
       // Act
       await act(async () => {
@@ -165,21 +168,19 @@ describe('useLuaRepl', () => {
       })
 
       // Assert - formatter wraps the expression directly
-      expect(mockDoString).toHaveBeenCalledWith('return __format_value((myFunc))')
+      expect(mockDoString).toHaveBeenCalledWith('return __format_results(myFunc)')
       expect(onOutput).toHaveBeenCalledWith('function(arg1, arg2) [string "..."]:1]')
     })
 
-    // Cycle 7c: Expression returns formatted table string
+    // Cycle 7c: Try return first for table values (succeeds on first try)
     it('should format table values using Lua formatter', async () => {
       // Arrange
       const onOutput = vi.fn()
       const { result } = renderHook(() => useLuaRepl({ onOutput }))
       await waitFor(() => expect(result.current.isReady).toBe(true))
 
-      // First call (statement) fails, second call returns formatted table
-      mockDoString
-        .mockRejectedValueOnce(new Error('syntax error'))
-        .mockResolvedValueOnce('{a = 1, b = 2}')
+      // Try return first - succeeds and returns formatted table
+      mockDoString.mockResolvedValueOnce('{a = 1, b = 2}')
 
       // Act
       await act(async () => {
@@ -187,21 +188,19 @@ describe('useLuaRepl', () => {
       })
 
       // Assert - formatter wraps the expression directly
-      expect(mockDoString).toHaveBeenCalledWith('return __format_value(({a = 1, b = 2}))')
+      expect(mockDoString).toHaveBeenCalledWith('return __format_results({a = 1, b = 2})')
       expect(onOutput).toHaveBeenCalledWith('{a = 1, b = 2}')
     })
 
-    // Cycle 8: Expression evaluation returns nil (no output)
+    // Cycle 8: Try return first - returns nil (no output)
     it('should not output when expression returns nil', async () => {
       // Arrange
       const onOutput = vi.fn()
       const { result } = renderHook(() => useLuaRepl({ onOutput }))
       await waitFor(() => expect(result.current.isReady).toBe(true))
 
-      // First call fails, second returns 'nil' string from formatter
-      mockDoString
-        .mockRejectedValueOnce(new Error('syntax error'))
-        .mockResolvedValueOnce('nil')
+      // Try return first - succeeds and returns 'nil' string from formatter
+      mockDoString.mockResolvedValueOnce('nil')
 
       // Act
       await act(async () => {
@@ -432,38 +431,140 @@ describe('useLuaRepl', () => {
     })
   })
 
+  describe('function return values', () => {
+    // Cycle 20: Function call should display return value
+    it('should display return value when function is called', async () => {
+      // Arrange
+      const onOutput = vi.fn()
+      const { result } = renderHook(() => useLuaRepl({ onOutput }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Mock: try "return __format_results(add(2, 3))" - should succeed and return '5'
+      mockDoString.mockResolvedValueOnce('5')
+
+      // Act - call a function and expect return value to be displayed
+      await act(async () => {
+        await result.current.executeCode('add(2, 3)')
+      })
+
+      // Assert - should display the return value using formatted approach
+      expect(mockDoString).toHaveBeenCalledWith('return __format_results(add(2, 3))')
+      expect(onOutput).toHaveBeenCalledWith('5')
+    })
+
+    // Cycle 21: Multiple return values should be displayed tab-separated
+    it('should display multiple return values tab-separated', async () => {
+      // Arrange
+      const onOutput = vi.fn()
+      const { result } = renderHook(() => useLuaRepl({ onOutput }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Mock: function returns multiple values formatted as "3\t4"
+      mockDoString.mockResolvedValueOnce('3\t4')
+
+      // Act - call string.find which returns multiple values
+      await act(async () => {
+        await result.current.executeCode('string.find("hello", "ll")')
+      })
+
+      // Assert - should display all return values tab-separated
+      expect(mockDoString).toHaveBeenCalledWith('return __format_results(string.find("hello", "ll"))')
+      expect(onOutput).toHaveBeenCalledWith('3\t4')
+    })
+
+    // Cycle 22: Multiple return values with nil in middle
+    it('should handle nil in middle of multiple return values', async () => {
+      // Arrange
+      const onOutput = vi.fn()
+      const { result } = renderHook(() => useLuaRepl({ onOutput }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Mock: function returns (1, nil, 3) formatted as "1\tnil\t3"
+      mockDoString.mockResolvedValueOnce('1\tnil\t3')
+
+      // Act - call function that returns values with nil in middle
+      await act(async () => {
+        await result.current.executeCode('test()')
+      })
+
+      // Assert - should display all values including nil in middle
+      expect(mockDoString).toHaveBeenCalledWith('return __format_results(test())')
+      expect(onOutput).toHaveBeenCalledWith('1\tnil\t3')
+    })
+
+    // Cycle 23: Multiple return values with nil at start
+    it('should handle nil at start of multiple return values', async () => {
+      // Arrange
+      const onOutput = vi.fn()
+      const { result } = renderHook(() => useLuaRepl({ onOutput }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Mock: function returns (nil, 2, 3) formatted as "nil\t2\t3"
+      mockDoString.mockResolvedValueOnce('nil\t2\t3')
+
+      // Act - call function that returns nil first
+      await act(async () => {
+        await result.current.executeCode('test()')
+      })
+
+      // Assert - should display all values including nil at start
+      expect(mockDoString).toHaveBeenCalledWith('return __format_results(test())')
+      expect(onOutput).toHaveBeenCalledWith('nil\t2\t3')
+    })
+
+    // Cycle 24: Multiple return values with trailing nils
+    it('should handle trailing nils in multiple return values', async () => {
+      // Arrange
+      const onOutput = vi.fn()
+      const { result } = renderHook(() => useLuaRepl({ onOutput }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Mock: function returns (1, 2, nil) formatted as "1\t2\tnil"
+      mockDoString.mockResolvedValueOnce('1\t2\tnil')
+
+      // Act - call function that returns trailing nil
+      await act(async () => {
+        await result.current.executeCode('test()')
+      })
+
+      // Assert - should display all values including trailing nil
+      expect(mockDoString).toHaveBeenCalledWith('return __format_results(test())')
+      expect(onOutput).toHaveBeenCalledWith('1\t2\tnil')
+    })
+  })
+
   describe('error handling', () => {
-    // Cycle 20: onError called when both statement and expression fail
-    it('should call onError when both statement and expression evaluation fail', async () => {
+    // Cycle 21: onError called when both return and statement fail
+    it('should call onError when both return and statement evaluation fail', async () => {
       // Arrange
       const onError = vi.fn()
       const { result } = renderHook(() => useLuaRepl({ onError }))
       await waitFor(() => expect(result.current.isReady).toBe(true))
 
-      // Both calls fail
+      // Both calls fail - return first, then statement
       mockDoString
-        .mockRejectedValueOnce(new Error('syntax error'))
-        .mockRejectedValueOnce(new Error('expression error'))
+        .mockRejectedValueOnce(new Error('return error'))
+        .mockRejectedValueOnce(new Error('statement error'))
 
       // Act
       await act(async () => {
         await result.current.executeCode('invalid!!!')
       })
 
-      // Assert
-      expect(onError).toHaveBeenCalledWith('expression error')
+      // Assert - should show the statement error (from fallback)
+      expect(onError).toHaveBeenCalledWith('statement error')
     })
 
-    // Cycle 21: Error handling without callback doesn't crash
+    // Cycle 22: Error handling without callback doesn't crash
     it('should not crash on error when onError is not provided', async () => {
       // Arrange - no onError callback
       const { result } = renderHook(() => useLuaRepl({}))
       await waitFor(() => expect(result.current.isReady).toBe(true))
 
-      // Both calls fail
+      // Both calls fail - return first, then statement
       mockDoString
-        .mockRejectedValueOnce(new Error('syntax error'))
-        .mockRejectedValueOnce(new Error('expression error'))
+        .mockRejectedValueOnce(new Error('return error'))
+        .mockRejectedValueOnce(new Error('statement error'))
 
       // Act & Assert - should not throw
       await act(async () => {
@@ -484,16 +585,16 @@ describe('useLuaRepl', () => {
       expect(mockGlobalClose).toHaveBeenCalled()
     })
 
-    // Cycle 23: String error messages handled
+    // Cycle 24: String error messages handled
     it('should handle non-Error thrown values', async () => {
       // Arrange
       const onError = vi.fn()
       const { result } = renderHook(() => useLuaRepl({ onError }))
       await waitFor(() => expect(result.current.isReady).toBe(true))
 
-      // Both calls fail, second with string
+      // Both calls fail, second (statement) with string error
       mockDoString
-        .mockRejectedValueOnce(new Error('syntax error'))
+        .mockRejectedValueOnce(new Error('return error'))
         .mockRejectedValueOnce('string error')
 
       // Act
@@ -501,7 +602,7 @@ describe('useLuaRepl', () => {
         await result.current.executeCode('invalid!!!')
       })
 
-      // Assert
+      // Assert - should handle string error from statement fallback
       expect(onError).toHaveBeenCalledWith('string error')
     })
   })

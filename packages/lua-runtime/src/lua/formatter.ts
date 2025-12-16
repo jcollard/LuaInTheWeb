@@ -161,4 +161,18 @@ function __format_value(v, seen, depth)
   -- Fallback
   return tostring(v)
 end
+
+-- Format multiple return values, joining them with tabs
+function __format_results(...)
+  local count = select('#', ...)
+  if count == 0 then
+    return "nil"
+  end
+  local formatted = {}
+  for i = 1, count do
+    local v = select(i, ...)
+    table.insert(formatted, __format_value(v))
+  end
+  return table.concat(formatted, "\\t")
+end
 `

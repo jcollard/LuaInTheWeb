@@ -166,25 +166,24 @@ export function useLuaRepl(options: UseLuaReplOptions): UseLuaReplReturn {
     if (!code.trim() || !engineRef.current) return
 
     try {
-      // Try to execute as a statement first
-      await engineRef.current.doString(code)
+      // Try to execute as "return <code>" first to capture function calls and expressions
+      // Use __format_results to handle multiple return values tab-separated
+      const formatted = await engineRef.current.doString(`return __format_results(${code})`)
       // Flush any buffered output
       LuaEngineFactory.flushOutput(engineRef.current)
+      // Display the result if it's not nil
+      if (formatted !== 'nil') {
+        onOutputRef.current?.(String(formatted))
+      }
     } catch {
-      // If it fails, try to evaluate as an expression and display the formatted result
+      // If "return <code>" fails, try to execute as a statement
       try {
-        const formatted = await engineRef.current.doString(
-          `return __format_value((${code}))`
-        )
+        await engineRef.current.doString(code)
         // Flush any buffered output
         LuaEngineFactory.flushOutput(engineRef.current)
-        // Display the result if it's not nil
-        if (formatted !== 'nil') {
-          onOutputRef.current?.(String(formatted))
-        }
-      } catch (exprError: unknown) {
+      } catch (stmtError: unknown) {
         // Show the error
-        const errorMsg = exprError instanceof Error ? exprError.message : String(exprError)
+        const errorMsg = stmtError instanceof Error ? stmtError.message : String(stmtError)
         onErrorRef.current?.(errorMsg)
       }
     }
