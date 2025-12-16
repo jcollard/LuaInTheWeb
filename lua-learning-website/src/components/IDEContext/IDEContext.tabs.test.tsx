@@ -468,5 +468,32 @@ describe('IDEContext', () => {
       expect(result.current.tabs).toHaveLength(1)
       expect(result.current.tabs[0].isPreview).toBe(false)
     })
+
+    it('should convert preview tab to permanent when opening with openFile', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFile('/file.lua', 'content')
+      })
+
+      // Open as preview
+      act(() => {
+        result.current.openPreviewFile('/file.lua')
+      })
+
+      expect(result.current.tabs[0].isPreview).toBe(true)
+
+      // Act - open same file with openFile (simulates double-click)
+      act(() => {
+        result.current.openFile('/file.lua')
+      })
+
+      // Assert - should convert to permanent
+      expect(result.current.tabs).toHaveLength(1)
+      expect(result.current.tabs[0].isPreview).toBe(false)
+    })
   })
 })

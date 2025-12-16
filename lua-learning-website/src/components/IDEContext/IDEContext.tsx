@@ -70,6 +70,10 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   const openFile = useCallback((path: string) => {
     const existingTab = tabBar.tabs.find(t => t.path === path)
     if (existingTab) {
+      // Convert preview tab to permanent if double-clicking
+      if (existingTab.isPreview) {
+        tabBar.makeTabPermanent(path)
+      }
       if (activeTab && activeTab !== path && code !== originalContent.get(activeTab)) {
         setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
       }
