@@ -79,7 +79,11 @@ export function useCanvasGame(
       }
 
       process.onExit = (exitCode: number) => {
-        setState('idle')
+        // Only set to 'idle' on successful exit (code 0)
+        // On error exit (code != 0), keep the 'error' state to prevent restart loops
+        if (exitCode === 0) {
+          setState('idle')
+        }
         onExit?.(exitCode)
       }
 

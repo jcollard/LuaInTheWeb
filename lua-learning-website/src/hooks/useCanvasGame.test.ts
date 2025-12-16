@@ -459,4 +459,50 @@ describe('useCanvasGame', () => {
       expect(result.current.state).toBe('idle')
     })
   })
+
+  describe('error handling', () => {
+    it('keeps error state when onExit is called after onError (non-zero exit code)', () => {
+      const { result } = renderHook(() => useCanvasGame())
+
+      act(() => {
+        result.current.startGame('print("hello")', mockCanvas)
+      })
+
+      const mockInstance = mockProcessInstances[0]
+
+      // Simulate error followed by exit (as happens when process terminates with error)
+      act(() => {
+        mockInstance.onError?.('No onDraw callback registered')
+      })
+
+      expect(result.current.state).toBe('error')
+      expect(result.current.error).toBe('No onDraw callback registered')
+
+      // Now onExit is called with non-zero exit code
+      act(() => {
+        mockInstance.onExit?.(1)
+      })
+
+      // State should remain 'error', NOT become 'idle'
+      // This prevents auto-restart loops in components that restart on 'idle' state
+      expect(result.current.state).toBe('error')
+    })
+
+    it('sets state to idle when onExit is called with exit code 0', () => {
+      const { result } = renderHook(() => useCanvasGame())
+
+      act(() => {
+        result.current.startGame('print("hello")', mockCanvas)
+      })
+
+      const mockInstance = mockProcessInstances[0]
+
+      // Normal exit with code 0
+      act(() => {
+        mockInstance.onExit?.(0)
+      })
+
+      expect(result.current.state).toBe('idle')
+    })
+  })
 })
