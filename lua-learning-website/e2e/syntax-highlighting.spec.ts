@@ -32,6 +32,8 @@ async function createAndOpenFile(page: import('@playwright/test').Page) {
   // Wait for Monaco to load
   const monacoEditor = page.locator('.monaco-editor')
   await expect(monacoEditor).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+  // Wait for Monaco to fully initialize
+  await page.waitForTimeout(TIMEOUTS.UI_STABLE)
   return monacoEditor
 }
 
@@ -52,6 +54,8 @@ test.describe('Syntax Highlighting', () => {
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
     // Wait for file tree to render (ensures workspace is ready)
     await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+    // Wait for UI to fully stabilize before test
+    await page.waitForTimeout(TIMEOUTS.UI_STABLE)
   })
 
   test('highlights Lua keywords correctly', async ({ page }) => {

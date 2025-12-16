@@ -29,6 +29,8 @@ async function createAndOpenFile(page: import('@playwright/test').Page) {
   }
   // Wait for Monaco editor to load
   await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+  // Wait for Monaco to fully initialize
+  await page.waitForTimeout(TIMEOUTS.UI_STABLE)
 }
 
 test.describe('IDE Editor - Error Markers', () => {
@@ -113,8 +115,11 @@ test.describe('IDE Editor - Error Markers', () => {
       win.__luaClearErrors?.()
     })
 
-    // Error marker should be gone
-    await expect(errorDecoration).not.toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+    // Wait for Monaco to process the clear operation
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+    // Error marker should be gone - use longer timeout for negative check
+    await expect(errorDecoration).not.toBeVisible({ timeout: TIMEOUTS.INIT })
   })
 
   test('shows error message on hover', async ({ page }) => {

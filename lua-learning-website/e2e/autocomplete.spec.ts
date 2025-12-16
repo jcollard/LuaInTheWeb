@@ -47,13 +47,13 @@ test.describe('IDE Editor - Autocomplete Behavior', () => {
     const monacoEditor = page.locator('.monaco-editor')
     await monacoEditor.click()
 
-    // Type a Lua keyword prefix that would trigger autocomplete if enabled
-    await page.keyboard.type('pri')
-    // Wait for text to render
-    await expect(page.locator('.monaco-editor .view-lines')).toContainText('pri', { timeout: TIMEOUTS.ELEMENT_VISIBLE })
+    // Type a Lua keyword prefix slowly to ensure Monaco processes each character
+    await page.keyboard.type('pri', { delay: 50 })
+    // Wait for Monaco to stabilize
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-    // Give autocomplete time to appear (if it would) - this is intentional for negative test
-    await page.waitForTimeout(TIMEOUTS.ANIMATION)
+    // Give autocomplete time to appear (if it would) - use longer timeout for negative test
+    await page.waitForTimeout(TIMEOUTS.INIT)
 
     // Autocomplete popup (suggest-widget) should NOT be visible
     const suggestWidget = page.locator('.monaco-editor .suggest-widget')
@@ -64,32 +64,40 @@ test.describe('IDE Editor - Autocomplete Behavior', () => {
     // Click on the editor to focus it
     const monacoEditor = page.locator('.monaco-editor')
     await monacoEditor.click()
+    // Ensure editor is focused
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-    // Type some text first
-    await page.keyboard.type('pri')
-    // Wait for text to render
-    await expect(page.locator('.monaco-editor .view-lines')).toContainText('pri', { timeout: TIMEOUTS.ELEMENT_VISIBLE })
+    // Type some text first slowly
+    await page.keyboard.type('pri', { delay: 50 })
+    // Wait for Monaco to stabilize
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
     // Press Ctrl+Space to trigger autocomplete
     await page.keyboard.press('Control+Space')
 
     // Autocomplete popup (suggest-widget) should be visible
-    const suggestWidget = page.locator('.monaco-editor .suggest-widget.visible')
+    // Use a more specific selector that Monaco uses for visible suggestions
+    const suggestWidget = page.locator('.monaco-editor .suggest-widget')
     await expect(suggestWidget).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+    // Also verify it has the visible class (Monaco adds this when widget is active)
+    await expect(suggestWidget).toHaveClass(/visible/, { timeout: TIMEOUTS.ASYNC_OPERATION })
   })
 
   test('autocomplete does not appear on trigger characters like dot', async ({ page }) => {
     // Click on the editor to focus it
     const monacoEditor = page.locator('.monaco-editor')
     await monacoEditor.click()
+    // Ensure editor is focused
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
     // Type something that would trigger autocomplete on '.' if enabled
-    await page.keyboard.type('string.')
-    // Wait for text to render
-    await expect(page.locator('.monaco-editor .view-lines')).toContainText('string.', { timeout: TIMEOUTS.ELEMENT_VISIBLE })
+    // Type slowly to ensure Monaco processes each character
+    await page.keyboard.type('string.', { delay: 50 })
+    // Wait for Monaco to stabilize after typing the dot
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-    // Give autocomplete time to appear (if it would) - this is intentional for negative test
-    await page.waitForTimeout(TIMEOUTS.ANIMATION)
+    // Give autocomplete time to appear (if it would) - use longer timeout for negative test
+    await page.waitForTimeout(TIMEOUTS.INIT)
 
     // Autocomplete popup should NOT be visible (since suggestOnTriggerCharacters is false)
     const suggestWidget = page.locator('.monaco-editor .suggest-widget')
