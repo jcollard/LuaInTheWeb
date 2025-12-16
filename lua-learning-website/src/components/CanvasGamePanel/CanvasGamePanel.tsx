@@ -48,12 +48,13 @@ export function CanvasGamePanel({
     onExit,
   })
 
-  // Auto-start game when mounted
+  // Auto-start game when mounted (only in standalone mode, not shell integration mode)
+  // When onCanvasReady is provided, the shell manages the Lua execution
   useEffect(() => {
-    if (autoStart && canvasRef.current && state === 'idle') {
+    if (autoStart && canvasRef.current && state === 'idle' && !onCanvasReady) {
       startGame(code, canvasRef.current)
     }
-  }, [autoStart, code, state, startGame])
+  }, [autoStart, code, state, startGame, onCanvasReady])
 
   // Notify when canvas element is ready (for shell integration)
   useEffect(() => {
