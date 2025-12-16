@@ -331,6 +331,9 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
   /**
    * Refresh a local workspace to pick up external filesystem changes.
    * Only works for local (File System Access API) workspaces.
+   * Note: This does NOT trigger a compositeFileSystem recreation - the filesystem
+   * object is mutated in place. UI components that need to re-render on refresh
+   * should watch the refreshVersion returned by this hook.
    */
   const refreshWorkspace = useCallback(
     async (mountPath: string): Promise<void> => {
@@ -349,7 +352,7 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
         throw new Error('Workspace is disconnected')
       }
 
-      // Call refresh on the filesystem
+      // Call refresh on the filesystem - the filesystem object is mutated in place
       const refreshable = workspace.filesystem as IFileSystem & {
         refresh?: () => Promise<void>
       }
@@ -357,11 +360,9 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
         await refreshable.refresh()
       }
 
-      // Trigger a state update to cause re-render (changes the workspaces array reference)
-      setState((prev) => ({
-        ...prev,
-        workspaces: [...prev.workspaces],
-      }))
+      // Note: We intentionally do NOT update state here to avoid recreating
+      // compositeFileSystem, which would reset the shell's cwd (issue #280).
+      // The filesystem refresh happens in-place on the existing filesystem object.
     },
     [state.workspaces]
   )
@@ -369,6 +370,8 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
   /**
    * Refresh all connected local workspaces.
    * Useful for refreshing on window focus.
+   * Note: This does NOT trigger a compositeFileSystem recreation - filesystems
+   * are mutated in place to preserve the shell's cwd (issue #280).
    */
   const refreshAllLocalWorkspaces = useCallback(async (): Promise<void> => {
     const localWorkspaces = state.workspaces.filter(
@@ -379,7 +382,7 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
       return
     }
 
-    // Refresh all local workspaces in parallel
+    // Refresh all local workspaces in parallel - filesystems are mutated in place
     await Promise.all(
       localWorkspaces.map(async (workspace) => {
         const refreshable = workspace.filesystem as IFileSystem & {
@@ -391,11 +394,11 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
       })
     )
 
-    // Trigger a state update to cause re-render
-    setState((prev) => ({
-      ...prev,
-      workspaces: [...prev.workspaces],
-    }))
+    // Note: We intentionally do NOT update state here to avoid recreating
+    // compositeFileSystem, which would reset the shell's cwd (issue #280).
+    // The filesystem refresh happens in-place on the existing filesystem objects.
+    // UI components that watch the file tree will see updated data when they
+    // call listDirectory() on the refreshed filesystem.
   }, [state.workspaces])
 
   /**
