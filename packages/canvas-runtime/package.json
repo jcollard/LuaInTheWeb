@@ -35,5 +35,8 @@
     "@stryker-mutator/vitest-runner": "^9.0.2",
     "typescript": "~5.9.3",
     "vitest": "^4.0.15"
+  },
+  "dependencies": {
+    "wasmoon": "^1.16.0"
   }
 }

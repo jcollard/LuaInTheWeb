@@ -22,7 +22,14 @@ while read local_ref local_sha remote_ref remote_sha; do
   fi
 done
 
-# Prompt user
+# Non-interactive mode (agent/CI) - run tests automatically
+if [ ! -t 0 ] || [ ! -t 1 ]; then
+  echo "Non-interactive mode detected. Running full CI..."
+  npm run ci
+  exit $?
+fi
+
+# Interactive mode (human) - prompt
 echo ""
 echo "Pushing to non-main branch."
 printf "Run tests before push? [y/N]: "
