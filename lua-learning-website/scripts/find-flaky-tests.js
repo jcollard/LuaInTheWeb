@@ -2,8 +2,11 @@
 /**
  * Script to identify flaky E2E tests by running them multiple times.
  *
- * Usage: node scripts/find-flaky-tests.js [iterations]
- * Default: 10 iterations
+ * Usage: node scripts/find-flaky-tests.js [iterations] [--with-retries]
+ * Default: 10 iterations, no retries
+ *
+ * Options:
+ *   --with-retries  Enable CI retries (3 retries per test) to verify 100% pass rate
  */
 
 import { spawn } from 'child_process'
@@ -12,19 +15,30 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-const iterations = parseInt(process.argv[2]) || 10
+// Parse arguments
+const args = process.argv.slice(2)
+const withRetries = args.includes('--with-retries')
+const iterationArg = args.find(arg => !arg.startsWith('--'))
+const iterations = parseInt(iterationArg) || 10
+
 const failures = new Map() // testName -> [{ iteration, error }]
 let totalRuns = 0
 let totalPassed = 0
 
-console.log(`\n🔍 Finding flaky tests with ${iterations} iterations...\n`)
+const mode = withRetries ? 'with retries (CI mode)' : 'without retries'
+console.log(`\n🔍 Finding flaky tests with ${iterations} iterations ${mode}...\n`)
 
 async function runTests(iteration) {
   return new Promise((resolve) => {
     const startTime = Date.now()
 
     // Use JSON reporter for structured output
-    const proc = spawn('npx', ['playwright', 'test', '--reporter=json'], {
+    // Pass retries directly via CLI to avoid CI mode side effects (like reuseExistingServer: false)
+    const args = ['playwright', 'test', '--reporter=json']
+    if (withRetries) {
+      args.push('--retries=3')
+    }
+    const proc = spawn('npx', args, {
       cwd: path.resolve(__dirname, '..'),
       shell: true,
       stdio: ['ignore', 'pipe', 'pipe']
