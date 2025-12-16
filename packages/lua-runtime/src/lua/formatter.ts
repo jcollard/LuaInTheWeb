@@ -161,4 +161,17 @@ function __format_value(v, seen, depth)
   -- Fallback
   return tostring(v)
 end
+
+-- Format multiple return values, joining them with tabs
+function __format_results(...)
+  local results = {...}
+  if #results == 0 then
+    return "nil"
+  end
+  local formatted = {}
+  for i, v in ipairs(results) do
+    table.insert(formatted, __format_value(v))
+  end
+  return table.concat(formatted, "\\t")
+end
 `
