@@ -30,7 +30,8 @@ test.describe('Preview Tabs', () => {
       await page.waitForTimeout(100) // Allow tab to open
 
       // Assert - Tab should appear and have preview class (italic styling)
-      const tab = page.getByRole('tab')
+      const editorPanel = page.getByTestId('editor-panel')
+      const tab = editorPanel.getByRole('tab')
       await expect(tab).toBeVisible()
       await expect(tab).toHaveClass(/_preview_/)
     })
@@ -38,6 +39,7 @@ test.describe('Preview Tabs', () => {
     test('single-clicking another file replaces the preview tab', async ({ page }) => {
       // Arrange - Create two files
       const sidebar = page.getByTestId('sidebar-panel')
+      const editorPanel = page.getByTestId('editor-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
       let input = sidebar.getByRole('textbox')
       await input.fill('file1.lua')
@@ -56,7 +58,7 @@ test.describe('Preview Tabs', () => {
       await page.waitForTimeout(100)
 
       // Assert first file is open as preview
-      let tabs = page.getByRole('tab')
+      let tabs = editorPanel.getByRole('tab')
       await expect(tabs).toHaveCount(1)
       await expect(tabs.first()).toHaveClass(/_preview_/)
       await expect(tabs.first()).toContainText('file1.lua')
@@ -67,7 +69,7 @@ test.describe('Preview Tabs', () => {
       await page.waitForTimeout(100)
 
       // Assert - Should still have only one tab, now showing file2
-      tabs = page.getByRole('tab')
+      tabs = editorPanel.getByRole('tab')
       await expect(tabs).toHaveCount(1)
       await expect(tabs.first()).toContainText('file2.lua')
       await expect(tabs.first()).toHaveClass(/_preview_/)
@@ -78,6 +80,7 @@ test.describe('Preview Tabs', () => {
     test('double-clicking a file opens it as a permanent tab (no italics)', async ({ page }) => {
       // Arrange - Create a file
       const sidebar = page.getByTestId('sidebar-panel')
+      const editorPanel = page.getByTestId('editor-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
       const input = sidebar.getByRole('textbox')
       await input.press('Enter') // Accept default name
@@ -89,7 +92,7 @@ test.describe('Preview Tabs', () => {
       await page.waitForTimeout(100)
 
       // Assert - Tab should appear without preview class
-      const tab = page.getByRole('tab')
+      const tab = editorPanel.getByRole('tab')
       await expect(tab).toBeVisible()
       await expect(tab).not.toHaveClass(/_preview_/)
     })
@@ -97,6 +100,7 @@ test.describe('Preview Tabs', () => {
     test('double-clicking opens permanent tab that is not replaced by single-click', async ({ page }) => {
       // Arrange - Create two files
       const sidebar = page.getByTestId('sidebar-panel')
+      const editorPanel = page.getByTestId('editor-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
       let input = sidebar.getByRole('textbox')
       await input.fill('permanent.lua')
@@ -115,7 +119,7 @@ test.describe('Preview Tabs', () => {
       await page.waitForTimeout(100)
 
       // Assert first file is open as permanent
-      let tabs = page.getByRole('tab')
+      let tabs = editorPanel.getByRole('tab')
       await expect(tabs).toHaveCount(1)
       await expect(tabs.first()).not.toHaveClass(/_preview_/)
 
@@ -125,7 +129,7 @@ test.describe('Preview Tabs', () => {
       await page.waitForTimeout(100)
 
       // Assert - Should now have two tabs (permanent + preview)
-      tabs = page.getByRole('tab')
+      tabs = editorPanel.getByRole('tab')
       await expect(tabs).toHaveCount(2)
     })
   })
@@ -134,6 +138,7 @@ test.describe('Preview Tabs', () => {
     test('editing a preview tab converts it to permanent', async ({ page }) => {
       // Arrange - Create a file and open as preview
       const sidebar = page.getByTestId('sidebar-panel')
+      const editorPanel = page.getByTestId('editor-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
       const input = sidebar.getByRole('textbox')
       await input.press('Enter')
@@ -145,7 +150,7 @@ test.describe('Preview Tabs', () => {
       await page.waitForTimeout(100)
 
       // Verify it's a preview tab
-      const tab = page.getByRole('tab')
+      const tab = editorPanel.getByRole('tab')
       await expect(tab).toHaveClass(/_preview_/)
 
       // Act - Type in the editor to make changes
@@ -165,6 +170,7 @@ test.describe('Preview Tabs', () => {
     test('can have both permanent and preview tabs open', async ({ page }) => {
       // Arrange - Create three files
       const sidebar = page.getByTestId('sidebar-panel')
+      const editorPanel = page.getByTestId('editor-panel')
 
       await sidebar.getByRole('button', { name: /new file/i }).click()
       let input = sidebar.getByRole('textbox')
@@ -199,13 +205,13 @@ test.describe('Preview Tabs', () => {
       await page.waitForTimeout(100)
 
       // Assert - Should have 3 tabs: 2 permanent, 1 preview
-      const tabs = page.getByRole('tab')
+      const tabs = editorPanel.getByRole('tab')
       await expect(tabs).toHaveCount(3)
 
       // Verify specific tabs
-      const tab1 = page.getByRole('tab', { name: /perm1\.lua/i })
-      const tab2 = page.getByRole('tab', { name: /perm2\.lua/i })
-      const tab3 = page.getByRole('tab', { name: /preview\.lua/i })
+      const tab1 = editorPanel.getByRole('tab', { name: /perm1\.lua/i })
+      const tab2 = editorPanel.getByRole('tab', { name: /perm2\.lua/i })
+      const tab3 = editorPanel.getByRole('tab', { name: /preview\.lua/i })
 
       await expect(tab1).not.toHaveClass(/_preview_/)
       await expect(tab2).not.toHaveClass(/_preview_/)
