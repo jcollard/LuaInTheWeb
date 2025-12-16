@@ -152,12 +152,27 @@ describe('workspaceManagerHelpers', () => {
       }).toThrow('read-only')
     })
 
-    it('filesystem lists shell.md in root directory', () => {
+    it('filesystem lists shell.md and lua/ in root directory', () => {
       const workspace = createDocsWorkspace()
       const entries = workspace.filesystem.listDirectory('/')
-      expect(entries).toHaveLength(1)
-      expect(entries[0].name).toBe('shell.md')
-      expect(entries[0].type).toBe('file')
+      expect(entries).toHaveLength(2)
+      // Directories come first, then files (sorted)
+      expect(entries[0].name).toBe('lua')
+      expect(entries[0].type).toBe('directory')
+      expect(entries[1].name).toBe('shell.md')
+      expect(entries[1].type).toBe('file')
+    })
+
+    it('filesystem lists lua stdlib docs in lua/ directory', () => {
+      const workspace = createDocsWorkspace()
+      const entries = workspace.filesystem.listDirectory('/lua')
+      expect(entries.length).toBeGreaterThanOrEqual(5)
+      const names = entries.map((e) => e.name)
+      expect(names).toContain('basics.md')
+      expect(names).toContain('string.md')
+      expect(names).toContain('table.md')
+      expect(names).toContain('math.md')
+      expect(names).toContain('io.md')
     })
   })
 })
