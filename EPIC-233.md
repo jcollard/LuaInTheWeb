@@ -58,7 +58,7 @@ Mouse                                       │
 | #258 | COOP/COEP Header Configuration | ✅ Complete | - | Merged PR #260 |
 | #259 | Library Workspace Integration | ✅ Complete | - | Merged PR #277 |
 | #286 | Shell integration: canvas.start() and canvas.stop() | ✅ Complete | - | Merged PR #289 |
-| #293 | Canvas module pattern and hover documentation | ✅ Complete | - | Merged PR #TBD |
+| #293 | Canvas module pattern and hover documentation | ✅ Complete | - | Merged PR #295 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
