@@ -24,6 +24,7 @@ export class InputCapture {
   private readonly handleMouseMove: (e: MouseEvent) => void;
   private readonly handleMouseDown: (e: MouseEvent) => void;
   private readonly handleMouseUp: (e: MouseEvent) => void;
+  private readonly handleContextMenu: (e: MouseEvent) => void;
   private readonly handleBlur: () => void;
 
   constructor(target: HTMLElement) {
@@ -35,6 +36,7 @@ export class InputCapture {
     this.handleMouseMove = this.onMouseMove.bind(this);
     this.handleMouseDown = this.onMouseDown.bind(this);
     this.handleMouseUp = this.onMouseUp.bind(this);
+    this.handleContextMenu = this.onContextMenu.bind(this);
     this.handleBlur = this.onBlur.bind(this);
 
     // Add event listeners
@@ -43,6 +45,7 @@ export class InputCapture {
     target.addEventListener('mousemove', this.handleMouseMove);
     target.addEventListener('mousedown', this.handleMouseDown);
     target.addEventListener('mouseup', this.handleMouseUp);
+    target.addEventListener('contextmenu', this.handleContextMenu);
     target.addEventListener('blur', this.handleBlur);
   }
 
@@ -138,6 +141,7 @@ export class InputCapture {
     this.target.removeEventListener('mousemove', this.handleMouseMove);
     this.target.removeEventListener('mousedown', this.handleMouseDown);
     this.target.removeEventListener('mouseup', this.handleMouseUp);
+    this.target.removeEventListener('contextmenu', this.handleContextMenu);
     this.target.removeEventListener('blur', this.handleBlur);
   }
 
@@ -167,6 +171,11 @@ export class InputCapture {
 
   private onMouseUp(event: MouseEvent): void {
     this.mouseButtonsDown.delete(event.button);
+  }
+
+  private onContextMenu(event: MouseEvent): void {
+    // Prevent browser context menu so right-click can be used in games
+    event.preventDefault();
   }
 
   private onBlur(): void {
