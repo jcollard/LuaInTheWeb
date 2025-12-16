@@ -4,6 +4,8 @@
 export type DrawCommandType =
   | 'clear'
   | 'setColor'
+  | 'setLineWidth'
+  | 'setSize'
   | 'rect'
   | 'fillRect'
   | 'circle'
@@ -34,6 +36,23 @@ export interface SetColorCommand extends DrawCommandBase {
   g: number;
   b: number;
   a?: number;
+}
+
+/**
+ * Set the line width for stroke operations.
+ */
+export interface SetLineWidthCommand extends DrawCommandBase {
+  type: 'setLineWidth';
+  width: number;
+}
+
+/**
+ * Set the canvas size.
+ */
+export interface SetSizeCommand extends DrawCommandBase {
+  type: 'setSize';
+  width: number;
+  height: number;
 }
 
 /**
@@ -105,6 +124,8 @@ export interface TextCommand extends DrawCommandBase {
 export type DrawCommand =
   | ClearCommand
   | SetColorCommand
+  | SetLineWidthCommand
+  | SetSizeCommand
   | RectCommand
   | FillRectCommand
   | CircleCommand

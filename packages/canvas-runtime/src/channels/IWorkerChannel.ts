@@ -92,6 +92,23 @@ export interface IWorkerChannel {
   signalFrameReady(): void;
 
   /**
+   * Get the current canvas size.
+   * Called by the worker to read canvas dimensions.
+   *
+   * @returns Canvas width and height
+   */
+  getCanvasSize(): { width: number; height: number };
+
+  /**
+   * Set the canvas size.
+   * Called by the main thread to update dimensions.
+   *
+   * @param width - Canvas width in pixels
+   * @param height - Canvas height in pixels
+   */
+  setCanvasSize(width: number, height: number): void;
+
+  /**
    * Clean up resources when the channel is no longer needed.
    */
   dispose(): void;

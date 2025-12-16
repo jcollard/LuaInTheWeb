@@ -24,3 +24,6 @@ export {
 
 // Shell library export
 export { LUA_SHELL_CODE } from './lua/shell'
+
+// Canvas library export
+export { LUA_CANVAS_CODE } from './lua/canvas'
