@@ -13,7 +13,7 @@ import { ToastContainer } from '../Toast'
 import { WelcomeScreen } from '../WelcomeScreen'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useWorkspaceManager } from '../../hooks/useWorkspaceManager'
-import { useIDEDiagnostics } from '../../hooks/useIDEDiagnostics'
+import { useEditorExtensions } from '../../hooks/useEditorExtensions'
 import { createFileSystemAdapter } from '../../hooks/compositeFileSystemAdapter'
 import { initFormatter, formatLuaCode } from '../../utils/luaFormatter'
 import type { Workspace } from '../../hooks/workspaceTypes'
@@ -111,8 +111,8 @@ function IDELayoutInner({
   const [pendingCloseTabPath, setPendingCloseTabPath] = useState<string | null>(null)
   const [isFormatting, setIsFormatting] = useState(false)
 
-  // Diagnostics hook for showing Lua errors in editor (including real-time syntax checking)
-  const { handleEditorReady } = useIDEDiagnostics({ code })
+  // Editor extensions (diagnostics + hover documentation)
+  const { handleEditorReady } = useEditorExtensions({ code })
 
   // Initialize the Lua formatter on mount
   useEffect(() => {
