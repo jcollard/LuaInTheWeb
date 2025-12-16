@@ -25,6 +25,30 @@ test.describe('Workspace UI', () => {
       // Assert - Add workspace button should be visible in the toolbar
       await expect(page.getByRole('button', { name: /add workspace/i })).toBeVisible()
     })
+
+    test('shows divider separating user workspaces from read-only workspaces', async ({ page }) => {
+      // Assert - Divider should be visible between home and libs/docs
+      await expect(page.getByTestId('read-only-divider')).toBeVisible()
+    })
+
+    test('displays read-only workspaces after user workspaces', async ({ page }) => {
+      // Assert - home should appear before libs and docs in the tree
+      const fileTree = page.getByRole('tree', { name: 'File Explorer' })
+      const items = fileTree.getByRole('treeitem')
+
+      // Get all workspace names in order
+      const names = await items.evaluateAll((nodes) =>
+        nodes.map((node) => node.getAttribute('aria-label'))
+      )
+
+      // home should come before libs and docs
+      const homeIndex = names.indexOf('home')
+      const libsIndex = names.indexOf('libs')
+      const docsIndex = names.indexOf('docs')
+
+      expect(homeIndex).toBeLessThan(libsIndex)
+      expect(homeIndex).toBeLessThan(docsIndex)
+    })
   })
 
   test.describe('add workspace dialog', () => {

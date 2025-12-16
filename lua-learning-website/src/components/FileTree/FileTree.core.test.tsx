@@ -308,6 +308,59 @@ describe('FileTree', () => {
     })
   })
 
+  describe('read-only workspace divider', () => {
+    const mixedTree: TreeNode[] = [
+      { name: 'home', path: '/home', type: 'folder', isWorkspace: true },
+      { name: 'project', path: '/project', type: 'folder', isWorkspace: true },
+      { name: 'libs', path: '/libs', type: 'folder', isWorkspace: true, isLibraryWorkspace: true },
+      { name: 'docs', path: '/docs', type: 'folder', isWorkspace: true, isDocsWorkspace: true },
+    ]
+
+    const regularOnlyTree: TreeNode[] = [
+      { name: 'home', path: '/home', type: 'folder', isWorkspace: true },
+      { name: 'project', path: '/project', type: 'folder', isWorkspace: true },
+    ]
+
+    const readOnlyOnlyTree: TreeNode[] = [
+      { name: 'libs', path: '/libs', type: 'folder', isWorkspace: true, isLibraryWorkspace: true },
+      { name: 'docs', path: '/docs', type: 'folder', isWorkspace: true, isDocsWorkspace: true },
+    ]
+
+    it('should show divider when both regular and read-only workspaces exist', () => {
+      // Arrange & Act
+      render(<FileTree {...defaultProps} tree={mixedTree} />)
+
+      // Assert
+      expect(screen.getByTestId('read-only-divider')).toBeInTheDocument()
+    })
+
+    it('should not show divider when only regular workspaces exist', () => {
+      // Arrange & Act
+      render(<FileTree {...defaultProps} tree={regularOnlyTree} />)
+
+      // Assert
+      expect(screen.queryByTestId('read-only-divider')).not.toBeInTheDocument()
+    })
+
+    it('should not show divider when only read-only workspaces exist', () => {
+      // Arrange & Act
+      render(<FileTree {...defaultProps} tree={readOnlyOnlyTree} />)
+
+      // Assert
+      expect(screen.queryByTestId('read-only-divider')).not.toBeInTheDocument()
+    })
+
+    it('should render regular workspaces before read-only workspaces', () => {
+      // Arrange & Act
+      render(<FileTree {...defaultProps} tree={mixedTree} />)
+
+      // Assert - check order of tree items
+      const items = screen.getAllByRole('treeitem')
+      const names = items.map((item) => item.getAttribute('aria-label'))
+      expect(names).toEqual(['home', 'project', 'libs', 'docs'])
+    })
+  })
+
   describe('deep tree navigation', () => {
     it('should find selected node in deeply nested tree', () => {
       // Arrange

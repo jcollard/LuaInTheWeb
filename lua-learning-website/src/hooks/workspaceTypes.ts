@@ -14,8 +14,9 @@ import type { IFileSystem } from '@lua-learning/shell-core'
  * - 'virtual': localStorage-backed workspace
  * - 'local': File System Access API-backed workspace
  * - 'library': Read-only workspace for built-in libraries (e.g., /libs)
+ * - 'docs': Read-only workspace for documentation (e.g., /docs)
  */
-export type WorkspaceType = 'virtual' | 'local' | 'library'
+export type WorkspaceType = 'virtual' | 'local' | 'library' | 'docs'
 
 /**
  * Connection status for workspaces.
