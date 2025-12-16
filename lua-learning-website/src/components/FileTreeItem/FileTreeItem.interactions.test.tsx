@@ -25,6 +25,49 @@ describe('FileTreeItem', () => {
     vi.clearAllMocks()
   })
 
+  describe('double-click detection', () => {
+    it('should call onClick on single click', () => {
+      const onClick = vi.fn()
+      render(<FileTreeItem {...defaultFileProps} onClick={onClick} />)
+      fireEvent.click(screen.getByRole('treeitem'))
+      expect(onClick).toHaveBeenCalledWith('/main.lua')
+    })
+
+    it('should call onDoubleClick on double click', () => {
+      const onClick = vi.fn()
+      const onDoubleClick = vi.fn()
+      render(<FileTreeItem {...defaultFileProps} onClick={onClick} onDoubleClick={onDoubleClick} />)
+      fireEvent.doubleClick(screen.getByRole('treeitem'))
+      expect(onDoubleClick).toHaveBeenCalledWith('/main.lua')
+    })
+
+    it('should not call onDoubleClick if not provided', () => {
+      const onClick = vi.fn()
+      render(<FileTreeItem {...defaultFileProps} onClick={onClick} />)
+      // Should not throw when double clicking without handler
+      expect(() => {
+        fireEvent.doubleClick(screen.getByRole('treeitem'))
+      }).not.toThrow()
+    })
+
+    it('should call both onClick and onDoubleClick when double clicking', () => {
+      const onClick = vi.fn()
+      const onDoubleClick = vi.fn()
+      render(<FileTreeItem {...defaultFileProps} onClick={onClick} onDoubleClick={onDoubleClick} />)
+      fireEvent.doubleClick(screen.getByRole('treeitem'))
+      // Double click events in browsers also fire click events
+      expect(onDoubleClick).toHaveBeenCalledWith('/main.lua')
+    })
+
+    it('should work on folders too', () => {
+      const onClick = vi.fn()
+      const onDoubleClick = vi.fn()
+      render(<FileTreeItem {...defaultFolderProps} onClick={onClick} onDoubleClick={onDoubleClick} />)
+      fireEvent.doubleClick(screen.getByRole('treeitem'))
+      expect(onDoubleClick).toHaveBeenCalledWith('/utils')
+    })
+  })
+
   describe('inline rename mode', () => {
     it('should show input when in rename mode', () => {
       render(<FileTreeItem {...defaultFileProps} isRenaming={true} />)

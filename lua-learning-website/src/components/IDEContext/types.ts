@@ -42,6 +42,7 @@ export interface IDEContextValue {
   moveFile: (sourcePath: string, targetFolderPath: string) => void
   copyFile: (sourcePath: string, targetFolderPath: string) => void
   openFile: (path: string) => void
+  openPreviewFile: (path: string) => void
   saveFile: () => void
 
   // Tabs
@@ -51,6 +52,7 @@ export interface IDEContextValue {
   selectTab: (path: string) => void
   closeTab: (path: string) => void
   openCanvasTab: (id: string, name?: string) => void
+  makeTabPermanent: (path: string) => void
 
   // Toast notifications
   toasts: ToastData[]

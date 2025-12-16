@@ -31,10 +31,16 @@ const packageVersion = getPackageVersion()
 export default defineConfig(({ mode }) => ({
   plugins: [react(), wasm(), topLevelAwait()],
   server: {
+    port: parseInt(process.env.PORT || '5173', 10),
+    strictPort: false, // Allow Vite to find next available port if specified port is taken
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
     },
+  },
+  preview: {
+    port: parseInt(process.env.PORT || '4173', 10),
+    strictPort: false,
   },
   define: {
     __BUILD_COMMIT__: JSON.stringify(gitCommit),

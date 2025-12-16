@@ -71,6 +71,10 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   const openFile = useCallback((path: string) => {
     const existingTab = tabBar.tabs.find(t => t.path === path)
     if (existingTab) {
+      // Convert preview tab to permanent if double-clicking
+      if (existingTab.isPreview) {
+        tabBar.makeTabPermanent(path)
+      }
       if (activeTab && activeTab !== path && code !== originalContent.get(activeTab)) {
         setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
       }
@@ -86,6 +90,29 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
       tabBar.openTab(path, getFileName(path)); addRecentFile(path)
     }
   }, [activeTab, addRecentFile, code, filesystem, loadContentForPath, originalContent, tabBar])
+
+  const openPreviewFile = useCallback((path: string) => {
+    const existingTab = tabBar.tabs.find(t => t.path === path)
+    if (existingTab) {
+      if (activeTab && activeTab !== path && code !== originalContent.get(activeTab)) {
+        setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
+      }
+      tabBar.selectTab(path); loadContentForPath(path); addRecentFile(path); return
+    }
+    if (activeTab && code !== originalContent.get(activeTab)) {
+      setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
+    }
+    const content = filesystem.readFile(path)
+    if (content !== null) {
+      setCodeState(content)
+      setOriginalContent(prev => { const next = new Map(prev); next.set(path, content); return next })
+      tabBar.openPreviewTab(path, getFileName(path)); addRecentFile(path)
+    }
+  }, [activeTab, addRecentFile, code, filesystem, loadContentForPath, originalContent, tabBar])
+
+  const makeTabPermanent = useCallback((path: string) => {
+    tabBar.makeTabPermanent(path)
+  }, [tabBar])
 
   const saveFile = useCallback(() => {
     if (activeTab) {
@@ -264,8 +291,8 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     activePanel, setActivePanel,
     terminalVisible, toggleTerminal, sidebarVisible, toggleSidebar,
     fileTree, refreshFileTree,
-    createFile, createFolder, deleteFile, deleteFolder, renameFile, renameFolder, moveFile, copyFile, openFile, saveFile,
-    tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, toasts, showError, dismissToast,
+    createFile, createFolder, deleteFile, deleteFolder, renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, saveFile,
+    tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, makeTabPermanent, toasts, showError, dismissToast,
     pendingNewFilePath, generateUniqueFileName, createFileWithRename, clearPendingNewFile,
     pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename, clearPendingNewFolder,
     recentFiles, clearRecentFiles, fileSystem: filesystem,
@@ -273,7 +300,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     engine, code, setCode, fileName, isDirty,
     activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
     fileTree, refreshFileTree, createFile, createFolder, deleteFile, deleteFolder,
-    renameFile, renameFolder, moveFile, copyFile, openFile, saveFile, tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab,
+    renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, saveFile, tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, makeTabPermanent,
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,
     clearPendingNewFolder, recentFiles, clearRecentFiles, filesystem,

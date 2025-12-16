@@ -11,9 +11,39 @@ export function useTabBar(): UseTabBarReturn {
       if (prev.some((tab) => tab.path === path)) {
         return prev
       }
-      return [...prev, { path, name, isDirty: false, type }]
+      return [...prev, { path, name, isDirty: false, type, isPreview: false }]
     })
     setActiveTab(path)
+  }, [])
+
+  const openPreviewTab = useCallback((path: string, name: string) => {
+    setTabs((prev) => {
+      // Check if tab already exists
+      const existingTab = prev.find((tab) => tab.path === path)
+      if (existingTab) {
+        // Just activate it, don't change preview state
+        return prev
+      }
+      // Replace existing preview tab if there is one
+      const existingPreviewIndex = prev.findIndex((tab) => tab.isPreview)
+      if (existingPreviewIndex !== -1) {
+        // Replace the preview tab
+        const newTabs = [...prev]
+        newTabs[existingPreviewIndex] = { path, name, isDirty: false, type: 'file', isPreview: true }
+        return newTabs
+      }
+      // No existing preview, add new preview tab
+      return [...prev, { path, name, isDirty: false, type: 'file', isPreview: true }]
+    })
+    setActiveTab(path)
+  }, [])
+
+  const makeTabPermanent = useCallback((path: string) => {
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.path === path ? { ...tab, isPreview: false } : tab
+      )
+    )
   }, [])
 
   const closeTab = useCallback((path: string) => {
@@ -43,7 +73,9 @@ export function useTabBar(): UseTabBarReturn {
   const setDirty = useCallback((path: string, isDirty: boolean) => {
     setTabs((prev) =>
       prev.map((tab) =>
-        tab.path === path ? { ...tab, isDirty } : tab
+        tab.path === path
+          ? { ...tab, isDirty, isPreview: isDirty ? false : tab.isPreview }
+          : tab
       )
     )
   }, [])
@@ -65,7 +97,7 @@ export function useTabBar(): UseTabBarReturn {
       if (prev.some((tab) => tab.path === path)) {
         return prev
       }
-      return [...prev, { path, name, isDirty: false, type: 'canvas' as const }]
+      return [...prev, { path, name, isDirty: false, type: 'canvas' as const, isPreview: false }]
     })
     setActiveTab(path)
   }, [])
@@ -84,11 +116,13 @@ export function useTabBar(): UseTabBarReturn {
     tabs,
     activeTab,
     openTab,
+    openPreviewTab,
     openCanvasTab,
     closeTab,
     selectTab,
     setDirty,
     renameTab,
     getActiveTabType,
+    makeTabPermanent,
   }
 }

@@ -8,6 +8,7 @@ export interface TabInfo {
   name: string
   isDirty: boolean
   type: TabType
+  isPreview: boolean
 }
 
 export interface TabBarProps {
@@ -22,10 +23,12 @@ export interface UseTabBarReturn {
   tabs: TabInfo[]
   activeTab: string | null
   openTab: (path: string, name: string, type?: TabType) => void
+  openPreviewTab: (path: string, name: string) => void
   openCanvasTab: (id: string, name?: string) => void
   closeTab: (path: string) => void
   selectTab: (path: string) => void
   setDirty: (path: string, isDirty: boolean) => void
   renameTab: (oldPath: string, newPath: string, newName: string) => void
   getActiveTabType: () => TabType | null
+  makeTabPermanent: (path: string) => void
 }

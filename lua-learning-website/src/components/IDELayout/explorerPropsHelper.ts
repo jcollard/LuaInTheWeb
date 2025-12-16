@@ -17,6 +17,7 @@ export interface ExplorerPropsParams {
   deleteFile: (path: string) => void
   deleteFolder: (path: string) => void
   openFile: (path: string) => void
+  openPreviewFile: (path: string) => void
   moveFile: (sourcePath: string, targetFolderPath: string) => void
   copyFile: (sourcePath: string, targetFolderPath: string) => void
   clearPendingNewFile: () => void
@@ -49,7 +50,8 @@ export function createExplorerProps(params: ExplorerPropsParams) {
     onRenameFolder: params.renameFolder,
     onDeleteFile: params.deleteFile,
     onDeleteFolder: params.deleteFolder,
-    onSelectFile: params.openFile,
+    onSelectFile: params.openPreviewFile,
+    onDoubleClickFile: params.openFile,
     onMoveFile: params.moveFile,
     onCopyFile: params.copyFile,
     onCancelPendingNewFile: params.clearPendingNewFile,

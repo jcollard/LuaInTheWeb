@@ -90,6 +90,7 @@ function IDELayoutInner({
     moveFile,
     copyFile,
     openFile,
+    openPreviewFile,
     saveFile,
     // New file creation
     pendingNewFilePath,
@@ -283,7 +284,7 @@ function IDELayoutInner({
   const explorerProps = createExplorerProps({
     fileTree, activeTab, pendingNewFilePath, pendingNewFolderPath,
     handleCreateFile, handleCreateFolder, renameFile, renameFolder,
-    deleteFile, deleteFolder, openFile, moveFile, copyFile,
+    deleteFile, deleteFolder, openFile, openPreviewFile, moveFile, copyFile,
     clearPendingNewFile, clearPendingNewFolder, workspaces,
     isFileSystemAccessSupported: isFileSystemAccessSupported(),
     addVirtualWorkspace, handleAddLocalWorkspace, handleRemoveWorkspace,

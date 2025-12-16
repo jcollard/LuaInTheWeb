@@ -61,9 +61,9 @@ test.describe('IDE Editor - Tab Overflow Navigation', () => {
     await input.press('Enter')
     await expect(input).not.toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
-    // Click the file to open it in a tab
+    // Double-click the file to open it as a permanent tab (not preview)
     const treeItem = page.getByRole('treeitem', { name: new RegExp(filename) })
-    await treeItem.click()
+    await treeItem.dblclick()
     // Wait for tab to be visible instead of hardcoded timeout
     const editorPanel = page.getByTestId('editor-panel')
     await expect(editorPanel.getByRole('tab', { name: new RegExp(filename) })).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })

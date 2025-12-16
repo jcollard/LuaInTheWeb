@@ -37,6 +37,7 @@ describe('useTabBar', () => {
         name: 'file.lua',
         isDirty: false,
         type: 'file',
+        isPreview: false,
       })
     })
 
@@ -453,6 +454,7 @@ describe('useTabBar', () => {
         name: 'My Game',
         isDirty: false,
         type: 'canvas',
+        isPreview: false,
       })
     })
 
@@ -596,6 +598,261 @@ describe('useTabBar', () => {
 
       // Assert
       expect(result.current.getActiveTabType()).toBe('canvas')
+    })
+  })
+
+  describe('preview tabs', () => {
+    describe('openPreviewTab', () => {
+      it('should open a tab with isPreview set to true', () => {
+        // Arrange
+        const { result } = renderHook(() => useTabBar())
+
+        // Act
+        act(() => {
+          result.current.openPreviewTab('/test/file.lua', 'file.lua')
+        })
+
+        // Assert
+        expect(result.current.tabs).toHaveLength(1)
+        expect(result.current.tabs[0]).toEqual({
+          path: '/test/file.lua',
+          name: 'file.lua',
+          isDirty: false,
+          type: 'file',
+          isPreview: true,
+        })
+      })
+
+      it('should set the preview tab as active', () => {
+        // Arrange
+        const { result } = renderHook(() => useTabBar())
+
+        // Act
+        act(() => {
+          result.current.openPreviewTab('/test/file.lua', 'file.lua')
+        })
+
+        // Assert
+        expect(result.current.activeTab).toBe('/test/file.lua')
+      })
+
+      it('should replace existing preview tab when opening another preview', () => {
+        // Arrange
+        const { result } = renderHook(() => useTabBar())
+
+        act(() => {
+          result.current.openPreviewTab('/test/file1.lua', 'file1.lua')
+        })
+
+        expect(result.current.tabs).toHaveLength(1)
+        expect(result.current.tabs[0].path).toBe('/test/file1.lua')
+
+        // Act
+        act(() => {
+          result.current.openPreviewTab('/test/file2.lua', 'file2.lua')
+        })
+
+        // Assert - should replace, not add
+        expect(result.current.tabs).toHaveLength(1)
+        expect(result.current.tabs[0].path).toBe('/test/file2.lua')
+        expect(result.current.tabs[0].isPreview).toBe(true)
+      })
+
+      it('should not replace permanent tabs when opening preview', () => {
+        // Arrange
+        const { result } = renderHook(() => useTabBar())
+
+        act(() => {
+          result.current.openTab('/test/permanent.lua', 'permanent.lua')
+        })
+
+        // Act
+        act(() => {
+          result.current.openPreviewTab('/test/preview.lua', 'preview.lua')
+        })
+
+        // Assert - should have both tabs
+        expect(result.current.tabs).toHaveLength(2)
+        expect(result.current.tabs[0].path).toBe('/test/permanent.lua')
+        expect(result.current.tabs[0].isPreview).toBe(false)
+        expect(result.current.tabs[1].path).toBe('/test/preview.lua')
+        expect(result.current.tabs[1].isPreview).toBe(true)
+      })
+
+      it('should activate existing tab if opening preview for already open permanent tab', () => {
+        // Arrange
+        const { result } = renderHook(() => useTabBar())
+
+        act(() => {
+          result.current.openTab('/test/file.lua', 'file.lua')
+          result.current.openTab('/test/other.lua', 'other.lua')
+        })
+
+        expect(result.current.activeTab).toBe('/test/other.lua')
+
+        // Act - try to open preview for already permanent tab
+        act(() => {
+          result.current.openPreviewTab('/test/file.lua', 'file.lua')
+        })
+
+        // Assert - should just activate, not change preview state
+        expect(result.current.activeTab).toBe('/test/file.lua')
+        expect(result.current.tabs).toHaveLength(2)
+        expect(result.current.tabs[0].isPreview).toBe(false)
+      })
+
+      it('should activate existing preview tab without creating duplicate', () => {
+        // Arrange
+        const { result } = renderHook(() => useTabBar())
+
+        act(() => {
+          result.current.openPreviewTab('/test/file.lua', 'file.lua')
+          result.current.openTab('/test/other.lua', 'other.lua')
+        })
+
+        expect(result.current.activeTab).toBe('/test/other.lua')
+
+        // Act - try to open preview for already open preview tab
+        act(() => {
+          result.current.openPreviewTab('/test/file.lua', 'file.lua')
+        })
+
+        // Assert
+        expect(result.current.activeTab).toBe('/test/file.lua')
+        expect(result.current.tabs).toHaveLength(2)
+      })
+    })
+
+    describe('makeTabPermanent', () => {
+      it('should convert preview tab to permanent', () => {
+        // Arrange
+        const { result } = renderHook(() => useTabBar())
+
+        act(() => {
+          result.current.openPreviewTab('/test/file.lua', 'file.lua')
+        })
+
+        expect(result.current.tabs[0].isPreview).toBe(true)
+
+        // Act
+        act(() => {
+          result.current.makeTabPermanent('/test/file.lua')
+        })
+
+        // Assert
+        expect(result.current.tabs[0].isPreview).toBe(false)
+      })
+
+      it('should do nothing for already permanent tab', () => {
+        // Arrange
+        const { result } = renderHook(() => useTabBar())
+
+        act(() => {
+          result.current.openTab('/test/file.lua', 'file.lua')
+        })
+
+        expect(result.current.tabs[0].isPreview).toBe(false)
+
+        // Act
+        act(() => {
+          result.current.makeTabPermanent('/test/file.lua')
+        })
+
+        // Assert
+        expect(result.current.tabs[0].isPreview).toBe(false)
+      })
+
+      it('should only affect the specified tab', () => {
+        // Arrange
+        const { result } = renderHook(() => useTabBar())
+
+        act(() => {
+          result.current.openTab('/test/permanent.lua', 'permanent.lua')
+          result.current.openPreviewTab('/test/preview.lua', 'preview.lua')
+        })
+
+        // Act
+        act(() => {
+          result.current.makeTabPermanent('/test/preview.lua')
+        })
+
+        // Assert
+        expect(result.current.tabs[0].isPreview).toBe(false)
+        expect(result.current.tabs[1].isPreview).toBe(false)
+      })
+    })
+
+    describe('openTab with preview tabs', () => {
+      it('should open permanent tab with isPreview false', () => {
+        // Arrange
+        const { result } = renderHook(() => useTabBar())
+
+        // Act
+        act(() => {
+          result.current.openTab('/test/file.lua', 'file.lua')
+        })
+
+        // Assert
+        expect(result.current.tabs[0].isPreview).toBe(false)
+      })
+
+      it('should not replace preview tab when opening permanent tab', () => {
+        // Arrange
+        const { result } = renderHook(() => useTabBar())
+
+        act(() => {
+          result.current.openPreviewTab('/test/preview.lua', 'preview.lua')
+        })
+
+        // Act
+        act(() => {
+          result.current.openTab('/test/permanent.lua', 'permanent.lua')
+        })
+
+        // Assert - should have both tabs
+        expect(result.current.tabs).toHaveLength(2)
+      })
+    })
+
+    describe('setDirty with preview tabs', () => {
+      it('should convert preview tab to permanent when marked dirty', () => {
+        // Arrange
+        const { result } = renderHook(() => useTabBar())
+
+        act(() => {
+          result.current.openPreviewTab('/test/file.lua', 'file.lua')
+        })
+
+        expect(result.current.tabs[0].isPreview).toBe(true)
+
+        // Act
+        act(() => {
+          result.current.setDirty('/test/file.lua', true)
+        })
+
+        // Assert - should become permanent when edited
+        expect(result.current.tabs[0].isDirty).toBe(true)
+        expect(result.current.tabs[0].isPreview).toBe(false)
+      })
+    })
+
+    describe('closeTab with preview tabs', () => {
+      it('should close preview tab like any other tab', () => {
+        // Arrange
+        const { result } = renderHook(() => useTabBar())
+
+        act(() => {
+          result.current.openPreviewTab('/test/file.lua', 'file.lua')
+        })
+
+        // Act
+        act(() => {
+          result.current.closeTab('/test/file.lua')
+        })
+
+        // Assert
+        expect(result.current.tabs).toHaveLength(0)
+      })
     })
   })
 })

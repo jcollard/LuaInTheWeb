@@ -468,4 +468,196 @@ describe('IDEContext', () => {
       expect(result.current.code).toBe('content_c')
     })
   })
+
+  describe('preview tabs', () => {
+    beforeEach(() => {
+      localStorage.clear()
+    })
+
+    it('should open file as preview tab with openPreviewFile', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFile('/preview.lua', 'preview content')
+      })
+
+      // Act
+      act(() => {
+        result.current.openPreviewFile('/preview.lua')
+      })
+
+      // Assert
+      expect(result.current.tabs).toHaveLength(1)
+      expect(result.current.tabs[0].isPreview).toBe(true)
+      expect(result.current.code).toBe('preview content')
+    })
+
+    it('should replace existing preview tab when opening new preview', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFile('/file1.lua', 'content 1')
+        result.current.createFile('/file2.lua', 'content 2')
+      })
+
+      // Open first file as preview
+      act(() => {
+        result.current.openPreviewFile('/file1.lua')
+      })
+
+      expect(result.current.tabs).toHaveLength(1)
+      expect(result.current.tabs[0].path).toBe('/file1.lua')
+
+      // Act - open another file as preview
+      act(() => {
+        result.current.openPreviewFile('/file2.lua')
+      })
+
+      // Assert - should replace, not add
+      expect(result.current.tabs).toHaveLength(1)
+      expect(result.current.tabs[0].path).toBe('/file2.lua')
+      expect(result.current.tabs[0].isPreview).toBe(true)
+      expect(result.current.code).toBe('content 2')
+    })
+
+    it('should not replace permanent tabs when opening preview', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFile('/permanent.lua', 'permanent content')
+        result.current.createFile('/preview.lua', 'preview content')
+      })
+
+      // Open permanent tab
+      act(() => {
+        result.current.openFile('/permanent.lua')
+      })
+
+      // Act - open preview
+      act(() => {
+        result.current.openPreviewFile('/preview.lua')
+      })
+
+      // Assert - should have both tabs
+      expect(result.current.tabs).toHaveLength(2)
+      expect(result.current.tabs[0].path).toBe('/permanent.lua')
+      expect(result.current.tabs[0].isPreview).toBe(false)
+      expect(result.current.tabs[1].path).toBe('/preview.lua')
+      expect(result.current.tabs[1].isPreview).toBe(true)
+    })
+
+    it('should convert preview to permanent when edited', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFile('/preview.lua', 'original')
+      })
+
+      act(() => {
+        result.current.openPreviewFile('/preview.lua')
+      })
+
+      expect(result.current.tabs[0].isPreview).toBe(true)
+
+      // Act - edit the file
+      act(() => {
+        result.current.setCode('modified')
+      })
+
+      // Assert - should become permanent
+      expect(result.current.tabs[0].isPreview).toBe(false)
+      expect(result.current.tabs[0].isDirty).toBe(true)
+    })
+
+    it('should provide makeTabPermanent function', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFile('/preview.lua', 'content')
+      })
+
+      act(() => {
+        result.current.openPreviewFile('/preview.lua')
+      })
+
+      expect(result.current.tabs[0].isPreview).toBe(true)
+
+      // Act
+      act(() => {
+        result.current.makeTabPermanent('/preview.lua')
+      })
+
+      // Assert
+      expect(result.current.tabs[0].isPreview).toBe(false)
+    })
+
+    it('should just select existing permanent tab if opening as preview', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFile('/file.lua', 'content')
+      })
+
+      // Open as permanent
+      act(() => {
+        result.current.openFile('/file.lua')
+      })
+
+      expect(result.current.tabs[0].isPreview).toBe(false)
+
+      // Act - try to open same file as preview
+      act(() => {
+        result.current.openPreviewFile('/file.lua')
+      })
+
+      // Assert - should just select it, not change preview state
+      expect(result.current.tabs).toHaveLength(1)
+      expect(result.current.tabs[0].isPreview).toBe(false)
+    })
+
+    it('should convert preview tab to permanent when opening with openFile', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFile('/file.lua', 'content')
+      })
+
+      // Open as preview
+      act(() => {
+        result.current.openPreviewFile('/file.lua')
+      })
+
+      expect(result.current.tabs[0].isPreview).toBe(true)
+
+      // Act - open same file with openFile (simulates double-click)
+      act(() => {
+        result.current.openFile('/file.lua')
+      })
+
+      // Assert - should convert to permanent
+      expect(result.current.tabs).toHaveLength(1)
+      expect(result.current.tabs[0].isPreview).toBe(false)
+    })
+  })
 })

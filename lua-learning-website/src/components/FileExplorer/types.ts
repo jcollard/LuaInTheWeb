@@ -44,6 +44,7 @@ export interface FileExplorerProps {
   onDeleteFile: (path: string) => void
   onDeleteFolder: (path: string) => void
   onSelectFile: (path: string) => void
+  onDoubleClickFile?: (path: string) => void
   onMoveFile?: (sourcePath: string, targetFolderPath: string) => void
   onCopyFile?: (sourcePath: string, targetFolderPath: string) => void
   onCancelPendingNewFile?: () => void
