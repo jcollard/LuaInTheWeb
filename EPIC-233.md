@@ -51,7 +51,7 @@ Mouse                                       │
 |---|-------|--------|--------|-------|
 | #252 | Communication Abstraction Layer | ✅ Complete | - | Merged PR #262 |
 | #253 | SharedArrayBuffer Memory Layout | ✅ Complete | - | Done in #252 (PR #262) |
-| #254 | Web Worker + Lua Integration | ⏳ Pending | - | L - Depends on #252 |
+| #254 | Web Worker + Lua Integration | 🔄 In Progress | 254-web-worker-lua-integration | Started |
 | #255 | Main Thread Rendering | ✅ Complete | - | Merged PR #268 |
 | #256 | Process Integration | ⏳ Pending | - | S - Depends on #254 |
 | #257 | React Integration & Canvas UI | ⏳ Pending | - | M - Depends on #255, #256 |

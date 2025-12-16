@@ -5,6 +5,7 @@ export type {
 } from './IWorkerChannel.js';
 
 export { PostMessageChannel } from './PostMessageChannel.js';
+export type { PostMessageTarget } from './PostMessageChannel.js';
 export { SharedArrayBufferChannel } from './SharedArrayBufferChannel.js';
 
 export type {

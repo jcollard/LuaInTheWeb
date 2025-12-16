@@ -21,6 +21,17 @@ interface ChannelMessage {
 
 
 /**
+ * Interface for objects that can send/receive postMessages.
+ * This is satisfied by MessagePort, DedicatedWorkerGlobalScope, and Worker.
+ */
+export interface PostMessageTarget {
+  postMessage(message: unknown): void;
+  onmessage: ((event: MessageEvent<ChannelMessage>) => void) | null;
+  /** Optional start method (required for MessagePort, not for Worker) */
+  start?(): void;
+}
+
+/**
  * PostMessage-based implementation of IWorkerChannel.
  *
  * This is the fallback implementation that works without SharedArrayBuffer,
@@ -32,7 +43,7 @@ interface ChannelMessage {
  * - Works on all platforms including GitHub Pages
  */
 export class PostMessageChannel implements IWorkerChannel {
-  private readonly port: MessagePort;
+  private readonly target: PostMessageTarget;
 
   // State storage
   private pendingDrawCommands: DrawCommand[] = [];
@@ -42,12 +53,13 @@ export class PostMessageChannel implements IWorkerChannel {
   // Frame synchronization
   private frameReadyResolver: (() => void) | null = null;
 
-  constructor(_config: ChannelConfig, port: MessagePort) {
-    this.port = port;
+  constructor(_config: ChannelConfig, target: PostMessageTarget) {
+    this.target = target;
 
     // Set up message handler
-    this.port.onmessage = this.handleMessage.bind(this);
-    this.port.start();
+    this.target.onmessage = this.handleMessage.bind(this);
+    // Only call start() if it exists (MessagePort requires it, Worker doesn't)
+    this.target.start?.();
   }
 
   /**
@@ -83,7 +95,7 @@ export class PostMessageChannel implements IWorkerChannel {
    */
   private send(type: MessageType, payload: unknown): void {
     const message: ChannelMessage = { type, payload };
-    this.port.postMessage(message);
+    this.target.postMessage(message);
   }
 
   // IWorkerChannel implementation
@@ -133,6 +145,9 @@ export class PostMessageChannel implements IWorkerChannel {
   }
 
   dispose(): void {
-    this.port.close();
+    // Only close if it's a MessagePort (has close method)
+    if ('close' in this.target && typeof this.target.close === 'function') {
+      (this.target as MessagePort).close();
+    }
   }
 }

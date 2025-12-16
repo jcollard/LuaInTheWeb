@@ -49,3 +49,18 @@ export {
 } from './renderer/index.js';
 
 export type { FrameCallback } from './renderer/index.js';
+
+// Worker components
+export { LuaCanvasRuntime } from './worker/index.js';
+
+export type {
+  WorkerState,
+  MainToWorkerMessage,
+  WorkerToMainMessage,
+  InitMessage,
+  StartMessage,
+  StopMessage,
+  ReadyMessage,
+  ErrorMessage,
+  StateChangedMessage,
+} from './worker/index.js';

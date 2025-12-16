@@ -7,7 +7,8 @@
   "incrementalFile": "reports/mutation/.stryker-incremental.json",
   "mutate": [
     "src/**/*.ts",
-    "!src/**/*.test.ts"
+    "!src/**/*.test.ts",
+    "!src/worker/LuaCanvasWorker.ts"
   ],
   "reporters": ["html", "clear-text", "progress"],
   "htmlReporter": {
