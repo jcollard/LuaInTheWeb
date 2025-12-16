@@ -14,6 +14,7 @@ import {
   type ExecutionControlOptions,
 } from './LuaEngineFactory'
 import { CanvasController, type CanvasCallbacks } from './CanvasController'
+import { setupCanvasAPI } from './setupCanvasAPI'
 
 /**
  * Options for configuring the Lua REPL process.
@@ -359,7 +360,7 @@ export class LuaReplProcess implements IProcess {
 
       // Setup canvas API if canvas callbacks are provided
       if (this.options.canvasCallbacks) {
-        this.setupCanvasAPI()
+        this.initCanvasAPI()
       }
 
       // Output welcome message and prompt
@@ -375,276 +376,14 @@ export class LuaReplProcess implements IProcess {
   /**
    * Set up the canvas API for canvas.start(), canvas.stop(), and drawing functions.
    */
-  private setupCanvasAPI(): void {
+  private initCanvasAPI(): void {
     if (!this.engine || !this.options.canvasCallbacks) return
-
-    const lua = this.engine
-    const process = this
 
     // Create canvas controller
     this.canvasController = new CanvasController(this.options.canvasCallbacks)
 
-    // --- Canvas lifecycle functions ---
-    lua.global.set('__canvas_is_active', () => {
-      return process.canvasController?.isActive() ?? false
-    })
-
-    lua.global.set('__canvas_start', () => {
-      if (!process.canvasController) {
-        throw new Error('Canvas not available')
-      }
-      return process.canvasController.start()
-    })
-
-    lua.global.set('__canvas_stop', () => {
-      if (process.canvasController?.isActive()) {
-        process.canvasController.stop()
-      }
-    })
-
-    lua.global.set('__canvas_onDraw', (callback: () => void) => {
-      process.canvasController?.setOnDrawCallback(callback)
-    })
-
-    // --- Drawing functions ---
-    lua.global.set('__canvas_clear', () => {
-      process.canvasController?.clear()
-    })
-
-    lua.global.set('__canvas_setColor', (r: number, g: number, b: number, a?: number | null) => {
-      process.canvasController?.setColor(r, g, b, a ?? undefined)
-    })
-
-    lua.global.set('__canvas_setLineWidth', (width: number) => {
-      process.canvasController?.setLineWidth(width)
-    })
-
-    lua.global.set('__canvas_setSize', (width: number, height: number) => {
-      process.canvasController?.setSize(width, height)
-    })
-
-    lua.global.set('__canvas_rect', (x: number, y: number, width: number, height: number) => {
-      process.canvasController?.drawRect(x, y, width, height)
-    })
-
-    lua.global.set('__canvas_fillRect', (x: number, y: number, width: number, height: number) => {
-      process.canvasController?.fillRect(x, y, width, height)
-    })
-
-    lua.global.set('__canvas_circle', (x: number, y: number, radius: number) => {
-      process.canvasController?.drawCircle(x, y, radius)
-    })
-
-    lua.global.set('__canvas_fillCircle', (x: number, y: number, radius: number) => {
-      process.canvasController?.fillCircle(x, y, radius)
-    })
-
-    lua.global.set('__canvas_line', (x1: number, y1: number, x2: number, y2: number) => {
-      process.canvasController?.drawLine(x1, y1, x2, y2)
-    })
-
-    lua.global.set('__canvas_text', (x: number, y: number, text: string) => {
-      process.canvasController?.drawText(x, y, text)
-    })
-
-    // --- Timing functions ---
-    lua.global.set('__canvas_getDelta', () => {
-      return process.canvasController?.getDelta() ?? 0
-    })
-
-    lua.global.set('__canvas_getTime', () => {
-      return process.canvasController?.getTime() ?? 0
-    })
-
-    // --- Canvas dimensions ---
-    lua.global.set('__canvas_getWidth', () => {
-      return process.canvasController?.getWidth() ?? 0
-    })
-
-    lua.global.set('__canvas_getHeight', () => {
-      return process.canvasController?.getHeight() ?? 0
-    })
-
-    // --- Input functions ---
-    lua.global.set('__canvas_isKeyDown', (key: string) => {
-      return process.canvasController?.isKeyDown(key) ?? false
-    })
-
-    lua.global.set('__canvas_isKeyPressed', (key: string) => {
-      return process.canvasController?.isKeyPressed(key) ?? false
-    })
-
-    lua.global.set('__canvas_getKeysDown', () => {
-      return process.canvasController?.getKeysDown() ?? []
-    })
-
-    lua.global.set('__canvas_getKeysPressed', () => {
-      return process.canvasController?.getKeysPressed() ?? []
-    })
-
-    lua.global.set('__canvas_getMouseX', () => {
-      return process.canvasController?.getMouseX() ?? 0
-    })
-
-    lua.global.set('__canvas_getMouseY', () => {
-      return process.canvasController?.getMouseY() ?? 0
-    })
-
-    lua.global.set('__canvas_isMouseDown', (button: number) => {
-      return process.canvasController?.isMouseButtonDown(button) ?? false
-    })
-
-    lua.global.set('__canvas_isMousePressed', (button: number) => {
-      return process.canvasController?.isMouseButtonPressed(button) ?? false
-    })
-
-    // --- Set up Lua-side canvas table ---
-    lua.doStringSync(`
-      canvas = {}
-
-      -- Canvas lifecycle
-      function canvas.start()
-        if __canvas_is_active() then
-          error("Canvas is already running. Call canvas.stop() first.")
-        end
-        __canvas_start():await()
-      end
-
-      function canvas.stop()
-        __canvas_stop()
-      end
-
-      function canvas.on_draw(callback)
-        __canvas_onDraw(callback)
-      end
-
-      -- Canvas configuration
-      function canvas.set_size(width, height)
-        __canvas_setSize(width, height)
-      end
-
-      function canvas.get_width()
-        return __canvas_getWidth()
-      end
-
-      function canvas.get_height()
-        return __canvas_getHeight()
-      end
-
-      -- Drawing state
-      function canvas.clear()
-        __canvas_clear()
-      end
-
-      function canvas.set_color(r, g, b, a)
-        __canvas_setColor(r, g, b, a)
-      end
-
-      function canvas.set_line_width(width)
-        __canvas_setLineWidth(width)
-      end
-
-      -- Shape drawing
-      function canvas.draw_rect(x, y, w, h)
-        __canvas_rect(x, y, w, h)
-      end
-
-      function canvas.fill_rect(x, y, w, h)
-        __canvas_fillRect(x, y, w, h)
-      end
-
-      function canvas.draw_circle(x, y, r)
-        __canvas_circle(x, y, r)
-      end
-
-      function canvas.fill_circle(x, y, r)
-        __canvas_fillCircle(x, y, r)
-      end
-
-      function canvas.draw_line(x1, y1, x2, y2)
-        __canvas_line(x1, y1, x2, y2)
-      end
-
-      function canvas.draw_text(x, y, text)
-        __canvas_text(x, y, text)
-      end
-
-      -- Timing
-      function canvas.get_delta()
-        return __canvas_getDelta()
-      end
-
-      function canvas.get_time()
-        return __canvas_getTime()
-      end
-
-      -- Helper to normalize key names
-      local function normalize_key(key)
-        if type(key) ~= 'string' then return key end
-        -- Single letter keys
-        if #key == 1 and key:match('%a') then
-          return 'Key' .. key:upper()
-        end
-        -- Arrow keys
-        local arrows = { up = 'ArrowUp', down = 'ArrowDown', left = 'ArrowLeft', right = 'ArrowRight' }
-        if arrows[key:lower()] then
-          return arrows[key:lower()]
-        end
-        -- Space key
-        if key:lower() == 'space' or key == ' ' then
-          return 'Space'
-        end
-        -- Common keys
-        local common = {
-          enter = 'Enter', escape = 'Escape', esc = 'Escape',
-          tab = 'Tab', shift = 'ShiftLeft', ctrl = 'ControlLeft',
-          alt = 'AltLeft', backspace = 'Backspace'
-        }
-        if common[key:lower()] then
-          return common[key:lower()]
-        end
-        return key
-      end
-
-      -- Keyboard input
-      function canvas.is_key_down(key)
-        return __canvas_isKeyDown(normalize_key(key))
-      end
-
-      function canvas.is_key_pressed(key)
-        return __canvas_isKeyPressed(normalize_key(key))
-      end
-
-      function canvas.get_keys_down()
-        return __canvas_getKeysDown()
-      end
-
-      function canvas.get_keys_pressed()
-        return __canvas_getKeysPressed()
-      end
-
-      -- Mouse input
-      function canvas.get_mouse_x()
-        return __canvas_getMouseX()
-      end
-
-      function canvas.get_mouse_y()
-        return __canvas_getMouseY()
-      end
-
-      function canvas.is_mouse_down(button)
-        return __canvas_isMouseDown(button)
-      end
-
-      function canvas.is_mouse_pressed(button)
-        return __canvas_isMousePressed(button)
-      end
-
-      -- Register canvas as a module so require('canvas') works
-      package.preload['canvas'] = function()
-        return canvas
-      end
-    `)
+    // Use shared setup function
+    setupCanvasAPI(this.engine, () => this.canvasController)
   }
 
   /**
