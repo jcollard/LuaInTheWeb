@@ -12,6 +12,7 @@ import { ConfirmDialog } from '../ConfirmDialog'
 import { ToastContainer } from '../Toast'
 import { WelcomeScreen } from '../WelcomeScreen'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { useWindowFocusRefresh } from '../../hooks/useWindowFocusRefresh'
 import { useWorkspaceManager } from '../../hooks/useWorkspaceManager'
 import { useEditorExtensions } from '../../hooks/useEditorExtensions'
 import { createFileSystemAdapter } from '../../hooks/compositeFileSystemAdapter'
@@ -33,6 +34,7 @@ interface IDELayoutInnerProps {
   removeWorkspace: (workspaceId: string) => void
   isFileSystemAccessSupported: () => boolean
   refreshWorkspace: (mountPath: string) => Promise<void>
+  refreshAllLocalWorkspaces: () => Promise<void>
   supportsRefresh: (mountPath: string) => boolean
   reconnectWorkspace: (id: string, handle: FileSystemDirectoryHandle) => Promise<void>
   tryReconnectWithStoredHandle: (id: string) => Promise<boolean>
@@ -54,6 +56,7 @@ function IDELayoutInner({
   removeWorkspace,
   isFileSystemAccessSupported,
   refreshWorkspace,
+  refreshAllLocalWorkspaces,
   supportsRefresh,
   reconnectWorkspace,
   tryReconnectWithStoredHandle,
@@ -122,6 +125,10 @@ function IDELayoutInner({
   useEffect(() => {
     initFormatter().catch(console.error)
   }, [])
+
+  // Refresh all local workspaces when window gains focus
+  // This picks up external filesystem changes made outside the browser
+  useWindowFocusRefresh(refreshAllLocalWorkspaces, refreshFileTree)
 
   // Handle adding a local workspace (dialog provides both name and handle)
   const handleAddLocalWorkspace = useCallback(
@@ -438,18 +445,6 @@ export function IDELayout({
     [compositeFileSystem, workspaces]
   )
 
-  // Refresh all local workspaces when window gains focus
-  // This picks up external filesystem changes made outside the browser
-  useEffect(() => {
-    const handleFocus = () => {
-      // Fire and forget - refresh happens async
-      refreshAllLocalWorkspaces()
-    }
-
-    window.addEventListener('focus', handleFocus)
-    return () => window.removeEventListener('focus', handleFocus)
-  }, [refreshAllLocalWorkspaces])
-
   return (
     <IDEContextProvider initialCode={initialCode} fileSystem={adaptedFileSystem} isPathReadOnly={isPathReadOnly}>
       <IDELayoutInner
@@ -461,6 +456,7 @@ export function IDELayout({
         removeWorkspace={removeWorkspace}
         isFileSystemAccessSupported={isFileSystemAccessSupported}
         refreshWorkspace={refreshWorkspace}
+        refreshAllLocalWorkspaces={refreshAllLocalWorkspaces}
         supportsRefresh={supportsRefresh}
         reconnectWorkspace={reconnectWorkspace}
         tryReconnectWithStoredHandle={tryReconnectWithStoredHandle}

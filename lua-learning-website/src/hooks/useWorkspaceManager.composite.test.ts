@@ -80,6 +80,55 @@ describe('useWorkspaceManager', () => {
     })
   })
 
+  describe('refreshAllLocalWorkspaces', () => {
+    it('preserves compositeFileSystem identity (cwd preservation) when no local workspaces', async () => {
+      const { result } = renderHook(() => useWorkspaceManager())
+
+      // Capture the initial compositeFileSystem reference
+      const initialFileSystem = result.current.compositeFileSystem
+
+      // Call refresh - this should NOT recreate compositeFileSystem
+      await act(async () => {
+        await result.current.refreshAllLocalWorkspaces()
+      })
+
+      // The compositeFileSystem should be the SAME object (referential equality)
+      // If it's recreated, the cwd will reset to DEFAULT_MOUNT_PATH
+      expect(result.current.compositeFileSystem).toBe(initialFileSystem)
+    })
+
+    it('preserves compositeFileSystem identity with connected local workspaces (issue #280)', async () => {
+      const { result } = renderHook(() => useWorkspaceManager())
+
+      // Add a local workspace - this creates a connected local workspace
+      const mockHandle = {
+        name: 'my-project',
+        kind: 'directory',
+      } as unknown as FileSystemDirectoryHandle
+
+      await act(async () => {
+        await result.current.addLocalWorkspace('My Project', mockHandle)
+      })
+
+      // Verify the local workspace was added and is connected
+      const localWorkspace = result.current.workspaces.find((w) => w.type === 'local')
+      expect(localWorkspace?.status).toBe('connected')
+
+      // Capture the compositeFileSystem reference AFTER adding the local workspace
+      const initialFileSystem = result.current.compositeFileSystem
+
+      // Call refresh - this should NOT recreate compositeFileSystem
+      // BUG: Previously, this would spread the workspaces array causing useMemo to recreate
+      await act(async () => {
+        await result.current.refreshAllLocalWorkspaces()
+      })
+
+      // The compositeFileSystem should be the SAME object (referential equality)
+      // If it's recreated, the cwd will reset to DEFAULT_MOUNT_PATH, losing user's position
+      expect(result.current.compositeFileSystem).toBe(initialFileSystem)
+    })
+  })
+
   describe('getMounts', () => {
     it('returns all mount information', () => {
       const { result } = renderHook(() => useWorkspaceManager())
