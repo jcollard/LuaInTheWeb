@@ -1,6 +1,6 @@
 # Epic #233: High-Performance Canvas Game Loop with Web Workers and SharedArrayBuffer
 
-**Status:** In Progress (4/8 complete)
+**Status:** In Progress (5/8 complete)
 **Branch:** epic-233
 **Created:** 2025-12-15
 **Last Updated:** 2025-12-15
@@ -51,7 +51,7 @@ Mouse                                       │
 |---|-------|--------|--------|-------|
 | #252 | Communication Abstraction Layer | ✅ Complete | - | Merged PR #262 |
 | #253 | SharedArrayBuffer Memory Layout | ✅ Complete | - | Done in #252 (PR #262) |
-| #254 | Web Worker + Lua Integration | 🔄 In Progress | 254-web-worker-lua-integration | Started |
+| #254 | Web Worker + Lua Integration | ✅ Complete | - | Merged PR #272 |
 | #255 | Main Thread Rendering | ✅ Complete | - | Merged PR #268 |
 | #256 | Process Integration | ⏳ Pending | - | S - Depends on #254 |
 | #257 | React Integration & Canvas UI | ⏳ Pending | - | M - Depends on #255, #256 |
@@ -108,6 +108,12 @@ Mouse                                       │
   - Implemented GameLoopController for RAF-based game loop
   - Updated InputState to use arrays for channel serialization
   - 143 tests, 75.98% mutation score
+- ✅ Completed #254: Web Worker + Lua Integration (PR #272)
+  - Implemented LuaCanvasRuntime with wasmoon Lua engine
+  - Implemented full canvas.* Lua API (drawing, timing, input)
+  - Created LuaCanvasWorker entry point
+  - Updated PostMessageChannel for broader target support
+  - 171 tests, 76.84% mutation score
 
 ## Key Files
 
@@ -124,6 +130,9 @@ Mouse                                       │
   - `src/renderer/CanvasRenderer.ts` - Renders DrawCommands to canvas
   - `src/renderer/InputCapture.ts` - Captures keyboard/mouse input
   - `src/renderer/GameLoopController.ts` - RAF-based game loop controller
+  - `src/worker/LuaCanvasRuntime.ts` - Core Lua runtime with canvas API
+  - `src/worker/LuaCanvasWorker.ts` - Web Worker entry point
+  - `src/worker/WorkerMessages.ts` - Message type definitions
 
 ## Open Questions
 
