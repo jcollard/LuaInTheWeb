@@ -1,6 +1,6 @@
 # Epic #233: High-Performance Canvas Game Loop with Web Workers and SharedArrayBuffer
 
-**Status:** In Progress (8/10 complete)
+**Status:** In Progress (9/10 complete)
 **Branch:** epic-233
 **Created:** 2025-12-15
 **Last Updated:** 2025-12-16
@@ -57,7 +57,7 @@ Mouse                                       │
 | #257 | React Integration & Canvas UI | ✅ Complete | - | Merged PR #281 |
 | #258 | COOP/COEP Header Configuration | ✅ Complete | - | Merged PR #260 |
 | #259 | Library Workspace Integration | ✅ Complete | - | Merged PR #277 |
-| #286 | Shell integration: canvas.start() and canvas.stop() | 🔄 PR Created | 286-shell-canvas-integration | PR #289 |
+| #286 | Shell integration: canvas.start() and canvas.stop() | ✅ Complete | - | Merged PR #289 |
 | #293 | Canvas module pattern and hover documentation | ⏳ Pending | - | Depends on #286 |
 
 **Status Legend:**
@@ -150,13 +150,13 @@ Mouse                                       │
   - Removes "Run Canvas" button from EditorPanel
   - All print() output goes to terminal while canvas runs
 - Integrated main into epic branch (useWindowFocusRefresh hook)
-- Started #286: Shell integration - canvas.start() and canvas.stop()
-- PR created for #286: Shell integration (PR #289)
+- ✅ Completed #286: Shell integration - canvas.start() and canvas.stop() (PR #289)
   - Removed 'Run Canvas' button from EditorPanel toolbar
-  - Added canvas.start() and canvas.stop() for shell-based canvas control
-  - Extended LuaReplProcess and LuaScriptProcess with canvas API
-  - Created shared setupCanvasAPI.ts to eliminate duplication
-  - 6 new E2E tests, 1790 unit tests pass
+  - Added canvas.start() and canvas.stop() functions for shell-based canvas control
+  - Extended both LuaScriptProcess and LuaReplProcess with canvas API support
+  - Created shared setupCanvasAPI.ts to eliminate code duplication
+  - Wired canvas callbacks through ShellContext, useShell, and IDELayout
+  - 1790 unit tests pass, 6 new E2E tests, 181 E2E tests total
 
 ## Key Files
 
