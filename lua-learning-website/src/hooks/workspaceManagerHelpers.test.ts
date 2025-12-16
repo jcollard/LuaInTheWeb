@@ -157,13 +157,29 @@ describe('workspaceManagerHelpers', () => {
       }).toThrow('read-only')
     })
 
-    it('filesystem lists shell.md and canvas.md in root directory', () => {
+    it('filesystem lists canvas.md, lua/, and shell.md in root directory', () => {
       const workspace = createDocsWorkspace()
       const entries = workspace.filesystem.listDirectory('/')
-      expect(entries).toHaveLength(2)
+      expect(entries).toHaveLength(3)
+      // Directories come first, then files (sorted alphabetically)
+      expect(entries[0].name).toBe('lua')
+      expect(entries[0].type).toBe('directory')
+      expect(entries[1].name).toBe('canvas.md')
+      expect(entries[1].type).toBe('file')
+      expect(entries[2].name).toBe('shell.md')
+      expect(entries[2].type).toBe('file')
+    })
+
+    it('filesystem lists lua stdlib docs in lua/ directory', () => {
+      const workspace = createDocsWorkspace()
+      const entries = workspace.filesystem.listDirectory('/lua')
+      expect(entries.length).toBeGreaterThanOrEqual(5)
       const names = entries.map((e) => e.name)
-      expect(names).toContain('shell.md')
-      expect(names).toContain('canvas.md')
+      expect(names).toContain('basics.md')
+      expect(names).toContain('string.md')
+      expect(names).toContain('table.md')
+      expect(names).toContain('math.md')
+      expect(names).toContain('io.md')
     })
 
     it('filesystem contains canvas.md file', () => {
