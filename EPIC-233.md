@@ -53,7 +53,7 @@ Mouse                                       │
 | #253 | SharedArrayBuffer Memory Layout | ✅ Complete | - | Done in #252 (PR #262) |
 | #254 | Web Worker + Lua Integration | ✅ Complete | - | Merged PR #272 |
 | #255 | Main Thread Rendering | ✅ Complete | - | Merged PR #268 |
-| #256 | Process Integration | ⏳ Pending | - | S - Depends on #254 |
+| #256 | Process Integration | 🔄 In Progress | 256-process-integration | S - Depends on #254 |
 | #257 | React Integration & Canvas UI | ⏳ Pending | - | M - Depends on #255, #256 |
 | #258 | COOP/COEP Header Configuration | ✅ Complete | - | Merged PR #260 |
 | #259 | Library Workspace Integration | ⏳ Pending | - | S - Depends on #254 |
@@ -133,6 +133,7 @@ Mouse                                       │
   - `src/worker/LuaCanvasRuntime.ts` - Core Lua runtime with canvas API
   - `src/worker/LuaCanvasWorker.ts` - Web Worker entry point
   - `src/worker/WorkerMessages.ts` - Message type definitions
+  - `src/process/LuaCanvasProcess.ts` - IProcess implementation for canvas games
 
 ## Open Questions
 

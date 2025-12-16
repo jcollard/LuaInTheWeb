@@ -37,6 +37,7 @@
     "vitest": "^4.0.15"
   },
   "dependencies": {
+    "@lua-learning/shell-core": "*",
     "wasmoon": "^1.16.0"
   }
 }
