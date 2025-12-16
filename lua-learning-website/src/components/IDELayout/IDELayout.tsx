@@ -176,22 +176,29 @@ function IDELayoutInner({
 
   // Handle canvas tab request from shell (canvas.start())
   const handleRequestCanvasTab = useCallback(async (canvasId: string): Promise<HTMLCanvasElement> => {
+    // Tab path format: canvas://{canvasId}
+    const tabPath = `canvas://${canvasId}`
+
     // Open a canvas tab using the existing tab management
-    openCanvasTab(canvasId)
+    // Pass canvasId as the name so it shows in the tab
+    openCanvasTab(canvasId, canvasId)
 
     // Return a Promise that will be resolved when the canvas element is ready
     return new Promise<HTMLCanvasElement>((resolve) => {
-      pendingCanvasRequestsRef.current.set(canvasId, resolve)
+      pendingCanvasRequestsRef.current.set(tabPath, resolve)
     })
   }, [openCanvasTab])
 
   // Handle canvas tab close from shell (canvas.stop() or Ctrl+C)
   const handleCloseCanvasTab = useCallback((canvasId: string) => {
+    // Tab path format: canvas://{canvasId}
+    const tabPath = `canvas://${canvasId}`
+
     // Remove any pending resolver
-    pendingCanvasRequestsRef.current.delete(canvasId)
+    pendingCanvasRequestsRef.current.delete(tabPath)
 
     // Close the canvas tab
-    closeTab(canvasId)
+    closeTab(tabPath)
   }, [closeTab])
 
   // Callback when canvas element is ready (passed to CanvasTabContent)

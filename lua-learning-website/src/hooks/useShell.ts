@@ -243,7 +243,7 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
       // Otherwise, return just the cwd
       return { cwd: newCwd }
     },
-    [registry, shellFileSystem, cwd]
+    [registry, shellFileSystem, cwd, options]
   )
 
   const clearHistory = useCallback(() => {

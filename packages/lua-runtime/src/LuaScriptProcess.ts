@@ -699,6 +699,11 @@ __clear_execution_hook()
       function canvas.is_mouse_pressed(button)
         return __canvas_isMousePressed(button)
       end
+
+      -- Register canvas as a module so require('canvas') works
+      package.preload['canvas'] = function()
+        return canvas
+      end
     `)
   }
 }

@@ -50,9 +50,20 @@ export class LuaCommand implements ICommand {
    * @returns IProcess for the Lua execution
    */
   execute(args: string[], context: ShellContext): IProcess {
+    // Build canvas callbacks if available in context
+    const canvasCallbacks = context.onRequestCanvasTab && context.onCloseCanvasTab
+      ? {
+          onRequestCanvasTab: context.onRequestCanvasTab,
+          onCloseCanvasTab: context.onCloseCanvasTab,
+        }
+      : undefined
+
     if (args.length === 0) {
-      // No arguments - start interactive REPL
-      return new LuaReplProcess(DEFAULT_EXECUTION_OPTIONS)
+      // No arguments - start interactive REPL with canvas support
+      return new LuaReplProcess({
+        ...DEFAULT_EXECUTION_OPTIONS,
+        canvasCallbacks,
+      })
     }
 
     // Filename provided - execute script
@@ -61,13 +72,7 @@ export class LuaCommand implements ICommand {
     // Build options, including canvas callbacks if available
     const options = {
       ...DEFAULT_EXECUTION_OPTIONS,
-      // Pass canvas callbacks if provided in the context
-      canvasCallbacks: context.onRequestCanvasTab && context.onCloseCanvasTab
-        ? {
-            onRequestCanvasTab: context.onRequestCanvasTab,
-            onCloseCanvasTab: context.onCloseCanvasTab,
-          }
-        : undefined,
+      canvasCallbacks,
     }
 
     return new LuaScriptProcess(filename, context, options)
