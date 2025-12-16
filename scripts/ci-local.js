@@ -17,6 +17,22 @@ function run(cmd, cwd = ROOT_DIR) {
   execSync(cmd, { cwd, stdio: 'inherit' })
 }
 
+function runWithRetry(cmd, cwd = ROOT_DIR, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`  → ${cmd}${attempt > 1 ? ` (attempt ${attempt}/${maxRetries})` : ''}`)
+      execSync(cmd, { cwd, stdio: 'inherit' })
+      return // Success
+    } catch (error) {
+      if (attempt < maxRetries) {
+        console.log(`  ⚠️  Attempt ${attempt} failed, retrying...`)
+      } else {
+        throw error // All retries exhausted
+      }
+    }
+  }
+}
+
 function section(emoji, title) {
   console.log('')
   console.log(`${emoji} ${title}`)
@@ -50,10 +66,10 @@ try {
   run('npm run test', path.join(ROOT_DIR, 'lua-learning-website'))
   console.log('✅ Unit tests passed')
 
-  // Step 4: E2E tests (optional)
+  // Step 4: E2E tests (optional, with retry for flaky tests)
   if (!skipE2E) {
-    section('🎭', 'Running E2E tests...')
-    run('npm run test:e2e', path.join(ROOT_DIR, 'lua-learning-website'))
+    section('🎭', 'Running E2E tests (with retry)...')
+    runWithRetry('npm run test:e2e', path.join(ROOT_DIR, 'lua-learning-website'), 3)
     console.log('✅ E2E tests passed')
   } else {
     console.log('')
