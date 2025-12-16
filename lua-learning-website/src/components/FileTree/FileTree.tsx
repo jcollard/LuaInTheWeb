@@ -19,7 +19,24 @@ export function FileTree({
   onDrop,
   onReconnect,
 }: FileTreeProps) {
+  // Separate regular workspaces from read-only workspaces (libs, docs)
+  const { regularNodes, readOnlyNodes } = useMemo(() => {
+    const regular: TreeNode[] = []
+    const readOnly: TreeNode[] = []
+
+    for (const node of tree) {
+      if (node.isLibraryWorkspace || node.isDocsWorkspace) {
+        readOnly.push(node)
+      } else {
+        regular.push(node)
+      }
+    }
+
+    return { regularNodes: regular, readOnlyNodes: readOnly }
+  }, [tree])
+
   // Flatten tree to get ordered list of visible paths for keyboard navigation
+  // Uses regularNodes then readOnlyNodes to match render order
   const visiblePaths = useMemo(() => {
     const paths: string[] = []
 
@@ -32,9 +49,10 @@ export function FileTree({
       }
     }
 
-    collectPaths(tree)
+    collectPaths(regularNodes)
+    collectPaths(readOnlyNodes)
     return paths
-  }, [tree, expandedPaths])
+  }, [regularNodes, readOnlyNodes, expandedPaths])
 
   // Find selected node type for keyboard handling
   const selectedNode = useMemo(() => {
@@ -196,7 +214,11 @@ export function FileTree({
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
-      {tree.map((node) => renderNode(node, 0))}
+      {regularNodes.map((node) => renderNode(node, 0))}
+      {readOnlyNodes.length > 0 && regularNodes.length > 0 && (
+        <div className={styles.divider} data-testid="read-only-divider" role="separator" aria-hidden="true" />
+      )}
+      {readOnlyNodes.map((node) => renderNode(node, 0))}
     </div>
   )
 }
