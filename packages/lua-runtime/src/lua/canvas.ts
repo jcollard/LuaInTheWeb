@@ -37,7 +37,29 @@ local canvas = {}
 function canvas.on_draw(callback) end
 
 -- =============================================================================
--- Drawing Functions
+-- Canvas Configuration
+-- =============================================================================
+
+--- Set the canvas size in pixels.
+--- Call this before on_draw() to set the desired canvas dimensions.
+---@param width number Canvas width in pixels
+---@param height number Canvas height in pixels
+---@return nil
+---@usage canvas.set_size(800, 600)
+function canvas.set_size(width, height) end
+
+--- Get the canvas width in pixels.
+---@return number width Canvas width
+---@usage local w = canvas.get_width()
+function canvas.get_width() end
+
+--- Get the canvas height in pixels.
+---@return number height Canvas height
+---@usage local h = canvas.get_height()
+function canvas.get_height() end
+
+-- =============================================================================
+-- Drawing State
 -- =============================================================================
 
 --- Clear the canvas with the current background color.
@@ -55,13 +77,23 @@ function canvas.clear() end
 ---@usage canvas.set_color(0, 255, 0, 128)  -- Semi-transparent green
 function canvas.set_color(r, g, b, a) end
 
+--- Set the line width for stroke operations.
+---@param width number Line width in pixels
+---@return nil
+---@usage canvas.set_line_width(3)
+function canvas.set_line_width(width) end
+
+-- =============================================================================
+-- Drawing Functions
+-- =============================================================================
+
 --- Draw a rectangle outline.
 ---@param x number X coordinate of top-left corner
 ---@param y number Y coordinate of top-left corner
 ---@param width number Width of rectangle
 ---@param height number Height of rectangle
 ---@return nil
-function canvas.rect(x, y, width, height) end
+function canvas.draw_rect(x, y, width, height) end
 
 --- Draw a filled rectangle.
 ---@param x number X coordinate of top-left corner
@@ -76,7 +108,7 @@ function canvas.fill_rect(x, y, width, height) end
 ---@param y number Y coordinate of center
 ---@param radius number Radius of circle
 ---@return nil
-function canvas.circle(x, y, radius) end
+function canvas.draw_circle(x, y, radius) end
 
 --- Draw a filled circle.
 ---@param x number X coordinate of center
@@ -91,14 +123,14 @@ function canvas.fill_circle(x, y, radius) end
 ---@param x2 number X coordinate of end point
 ---@param y2 number Y coordinate of end point
 ---@return nil
-function canvas.line(x1, y1, x2, y2) end
+function canvas.draw_line(x1, y1, x2, y2) end
 
 --- Draw text at the specified position.
 ---@param x number X coordinate
 ---@param y number Y coordinate
 ---@param text string Text to draw
 ---@return nil
-function canvas.text(x, y, text) end
+function canvas.draw_text(x, y, text) end
 
 -- =============================================================================
 -- Timing Functions
@@ -154,6 +186,15 @@ function canvas.get_mouse_y() end
 ---   -- Left mouse button is held
 --- end
 function canvas.is_mouse_down(button) end
+
+--- Check if a mouse button was pressed this frame.
+--- Returns true only on the frame the button was first pressed.
+---@param button number Button number (0 = left, 1 = middle, 2 = right)
+---@return boolean wasPressed True if button was just pressed
+---@usage if canvas.is_mouse_pressed(0) then
+---   -- Left mouse button was just clicked
+--- end
+function canvas.is_mouse_pressed(button) end
 
 return canvas
 `

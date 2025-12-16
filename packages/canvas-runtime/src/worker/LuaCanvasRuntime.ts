@@ -219,6 +219,28 @@ export class LuaCanvasRuntime {
       return state.mouseButtonsDown.includes(button);
     });
 
+    lua.global.set('__canvas_isMousePressed', (button: number) => {
+      const state = runtime.channel.getInputState();
+      return state.mouseButtonsPressed.includes(button);
+    });
+
+    // Canvas dimensions and configuration
+    lua.global.set('__canvas_getWidth', () => {
+      return runtime.channel.getCanvasSize().width;
+    });
+
+    lua.global.set('__canvas_getHeight', () => {
+      return runtime.channel.getCanvasSize().height;
+    });
+
+    lua.global.set('__canvas_setSize', (width: number, height: number) => {
+      runtime.frameCommands.push({ type: 'setSize', width, height });
+    });
+
+    lua.global.set('__canvas_setLineWidth', (width: number) => {
+      runtime.frameCommands.push({ type: 'setLineWidth', width });
+    });
+
     // Set up the Lua-side canvas table with methods (using snake_case for Lua conventions)
     lua.doStringSync(`
       canvas = {}
@@ -227,6 +249,20 @@ export class LuaCanvasRuntime {
         __canvas_onDraw(callback)
       end
 
+      -- Canvas configuration
+      function canvas.set_size(width, height)
+        __canvas_setSize(width, height)
+      end
+
+      function canvas.get_width()
+        return __canvas_getWidth()
+      end
+
+      function canvas.get_height()
+        return __canvas_getHeight()
+      end
+
+      -- Drawing state
       function canvas.clear()
         __canvas_clear()
       end
@@ -235,7 +271,12 @@ export class LuaCanvasRuntime {
         __canvas_setColor(r, g, b, a)
       end
 
-      function canvas.rect(x, y, w, h)
+      function canvas.set_line_width(width)
+        __canvas_setLineWidth(width)
+      end
+
+      -- Shape drawing (renamed to draw_* for clarity)
+      function canvas.draw_rect(x, y, w, h)
         __canvas_rect(x, y, w, h)
       end
 
@@ -243,7 +284,7 @@ export class LuaCanvasRuntime {
         __canvas_fillRect(x, y, w, h)
       end
 
-      function canvas.circle(x, y, r)
+      function canvas.draw_circle(x, y, r)
         __canvas_circle(x, y, r)
       end
 
@@ -251,14 +292,15 @@ export class LuaCanvasRuntime {
         __canvas_fillCircle(x, y, r)
       end
 
-      function canvas.line(x1, y1, x2, y2)
+      function canvas.draw_line(x1, y1, x2, y2)
         __canvas_line(x1, y1, x2, y2)
       end
 
-      function canvas.text(x, y, text)
+      function canvas.draw_text(x, y, text)
         __canvas_text(x, y, text)
       end
 
+      -- Timing
       function canvas.get_delta()
         return __canvas_getDelta()
       end
@@ -267,6 +309,7 @@ export class LuaCanvasRuntime {
         return __canvas_getTime()
       end
 
+      -- Keyboard input
       function canvas.is_key_down(key)
         return __canvas_isKeyDown(key)
       end
@@ -275,6 +318,7 @@ export class LuaCanvasRuntime {
         return __canvas_isKeyPressed(key)
       end
 
+      -- Mouse input
       function canvas.get_mouse_x()
         return __canvas_getMouseX()
       end
@@ -285,6 +329,10 @@ export class LuaCanvasRuntime {
 
       function canvas.is_mouse_down(button)
         return __canvas_isMouseDown(button)
+      end
+
+      function canvas.is_mouse_pressed(button)
+        return __canvas_isMousePressed(button)
       end
     `);
   }

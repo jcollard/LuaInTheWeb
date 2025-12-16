@@ -9,6 +9,7 @@ type MessageType =
   | 'draw-commands'
   | 'input-state'
   | 'timing-info'
+  | 'canvas-size'
   | 'frame-ready';
 
 /**
@@ -49,6 +50,7 @@ export class PostMessageChannel implements IWorkerChannel {
   private pendingDrawCommands: DrawCommand[] = [];
   private inputState: InputState = createEmptyInputState();
   private timingInfo: TimingInfo = createDefaultTimingInfo();
+  private canvasSize: { width: number; height: number } = { width: 800, height: 600 };
 
   // Frame synchronization
   private frameReadyResolver: (() => void) | null = null;
@@ -79,6 +81,10 @@ export class PostMessageChannel implements IWorkerChannel {
 
       case 'timing-info':
         this.timingInfo = payload as TimingInfo;
+        break;
+
+      case 'canvas-size':
+        this.canvasSize = payload as { width: number; height: number };
         break;
 
       case 'frame-ready':
@@ -142,6 +148,15 @@ export class PostMessageChannel implements IWorkerChannel {
 
   signalFrameReady(): void {
     this.send('frame-ready', null);
+  }
+
+  getCanvasSize(): { width: number; height: number } {
+    return this.canvasSize;
+  }
+
+  setCanvasSize(width: number, height: number): void {
+    this.canvasSize = { width, height };
+    this.send('canvas-size', this.canvasSize);
   }
 
   dispose(): void {

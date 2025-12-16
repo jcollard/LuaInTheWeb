@@ -41,6 +41,15 @@ export class CanvasRenderer {
         this.setColor(command.r, command.g, command.b, command.a);
         break;
 
+      case 'setLineWidth':
+        this.ctx.lineWidth = command.width;
+        break;
+
+      case 'setSize':
+        this.canvas.width = command.width;
+        this.canvas.height = command.height;
+        break;
+
       case 'rect':
         this.ctx.strokeRect(command.x, command.y, command.width, command.height);
         break;

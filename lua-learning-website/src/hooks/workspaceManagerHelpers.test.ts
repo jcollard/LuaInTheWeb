@@ -185,12 +185,12 @@ describe('workspaceManagerHelpers', () => {
       const content = workspace.filesystem.readFile('canvas.md')
       expect(content).toContain('canvas.clear')
       expect(content).toContain('canvas.set_color')
-      expect(content).toContain('canvas.rect')
+      expect(content).toContain('canvas.draw_rect')
       expect(content).toContain('canvas.fill_rect')
-      expect(content).toContain('canvas.circle')
+      expect(content).toContain('canvas.draw_circle')
       expect(content).toContain('canvas.fill_circle')
-      expect(content).toContain('canvas.line')
-      expect(content).toContain('canvas.text')
+      expect(content).toContain('canvas.draw_line')
+      expect(content).toContain('canvas.draw_text')
     })
 
     it('canvas.md documents timing functions', () => {

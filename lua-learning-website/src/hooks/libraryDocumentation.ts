@@ -281,11 +281,44 @@ canvas.on_draw(function()
 end)
 \`\`\`
 
-## Drawing Functions
+## Canvas Configuration
+
+### canvas.set_size(width, height)
+
+Set the canvas size in pixels. Call this before on_draw() to set the desired canvas dimensions.
+
+**Parameters:**
+- \`width\` (number): Canvas width in pixels
+- \`height\` (number): Canvas height in pixels
+
+\`\`\`lua
+canvas.set_size(800, 600)
+\`\`\`
+
+### canvas.get_width()
+
+Get the canvas width in pixels.
+
+**Returns:**
+- (number): Canvas width
+
+### canvas.get_height()
+
+Get the canvas height in pixels.
+
+**Returns:**
+- (number): Canvas height
+
+\`\`\`lua
+local center_x = canvas.get_width() / 2
+local center_y = canvas.get_height() / 2
+\`\`\`
+
+## Drawing State
 
 ### canvas.clear()
 
-Clear the canvas with the current background color.
+Clear the canvas.
 
 ### canvas.set_color(r, g, b, a)
 
@@ -302,7 +335,21 @@ canvas.set_color(255, 0, 0)       -- Red
 canvas.set_color(0, 255, 0, 128)  -- Semi-transparent green
 \`\`\`
 
-### canvas.rect(x, y, width, height)
+### canvas.set_line_width(width)
+
+Set the line width for stroke operations (draw_rect, draw_circle, draw_line).
+
+**Parameters:**
+- \`width\` (number): Line width in pixels
+
+\`\`\`lua
+canvas.set_line_width(3)
+canvas.draw_rect(10, 10, 100, 100)  -- 3px thick outline
+\`\`\`
+
+## Drawing Functions
+
+### canvas.draw_rect(x, y, width, height)
 
 Draw a rectangle outline.
 
@@ -322,7 +369,7 @@ Draw a filled rectangle.
 - \`width\` (number): Width of rectangle
 - \`height\` (number): Height of rectangle
 
-### canvas.circle(x, y, radius)
+### canvas.draw_circle(x, y, radius)
 
 Draw a circle outline.
 
@@ -340,7 +387,7 @@ Draw a filled circle.
 - \`y\` (number): Y coordinate of center
 - \`radius\` (number): Radius of circle
 
-### canvas.line(x1, y1, x2, y2)
+### canvas.draw_line(x1, y1, x2, y2)
 
 Draw a line between two points.
 
@@ -350,7 +397,7 @@ Draw a line between two points.
 - \`x2\` (number): X coordinate of end point
 - \`y2\` (number): Y coordinate of end point
 
-### canvas.text(x, y, text)
+### canvas.draw_text(x, y, text)
 
 Draw text at the specified position.
 
@@ -441,16 +488,31 @@ Check if a mouse button is currently held down.
 **Returns:**
 - (boolean): True if button is held
 
+### canvas.is_mouse_pressed(button)
+
+Check if a mouse button was pressed this frame. Returns true only on the frame the button was first pressed.
+
+**Parameters:**
+- \`button\` (number): Button number (0 = left, 1 = middle, 2 = right)
+
+**Returns:**
+- (boolean): True if button was just pressed
+
 \`\`\`lua
-if canvas.is_mouse_down(0) then
-  -- Left mouse button is held
-  shootAt(canvas.get_mouse_x(), canvas.get_mouse_y())
+if canvas.is_mouse_pressed(0) then
+  -- Left mouse button was just clicked
+  shoot_at(canvas.get_mouse_x(), canvas.get_mouse_y())
 end
 \`\`\`
 
 ## Example: Moving Square
 
 \`\`\`lua
+local canvas = require('canvas')
+
+-- Set canvas size
+canvas.set_size(800, 600)
+
 local x, y = 100, 100
 local speed = 200
 
@@ -470,6 +532,12 @@ canvas.on_draw(function()
   if canvas.is_key_down('ArrowDown') then
     y = y + speed * dt
   end
+
+  -- Keep player in bounds
+  if x < 0 then x = 0 end
+  if x > canvas.get_width() - 50 then x = canvas.get_width() - 50 end
+  if y < 0 then y = 0 end
+  if y > canvas.get_height() - 50 then y = canvas.get_height() - 50 end
 
   -- Draw
   canvas.clear()

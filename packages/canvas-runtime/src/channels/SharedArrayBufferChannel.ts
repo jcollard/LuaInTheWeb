@@ -20,7 +20,9 @@ import type { DrawCommand, InputState, TimingInfo } from '../shared/types.js';
  * 52-307   | 256B   | Keys down data (up to 32 keys, 8 bytes each)
  * 308-311  | 4B     | Keys pressed count
  * 312-567  | 256B   | Keys pressed data (up to 32 keys, 8 bytes each)
- * 568-1023 | 456B   | Reserved for future use
+ * 568-571  | 4B     | Canvas width
+ * 572-575  | 4B     | Canvas height
+ * 576-1023 | 448B   | Reserved for future use
  * 1024-65535| 64KB  | Draw commands ring buffer
  */
 
@@ -38,6 +40,8 @@ const OFFSET_KEYS_DOWN_COUNT = 48;
 const OFFSET_KEYS_DOWN_DATA = 52;
 const OFFSET_KEYS_PRESSED_COUNT = 308;
 const OFFSET_KEYS_PRESSED_DATA = 312;
+const OFFSET_CANVAS_WIDTH = 568;
+const OFFSET_CANVAS_HEIGHT = 572;
 const OFFSET_DRAW_BUFFER = 1024;
 
 const MAX_KEYS = 32;
@@ -269,6 +273,17 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
     Atomics.store(this.int32View, OFFSET_FRAME_READY / 4, 1);
     // Notify waiting workers
     Atomics.notify(this.int32View, OFFSET_FRAME_READY / 4, 1);
+  }
+
+  getCanvasSize(): { width: number; height: number } {
+    const width = Atomics.load(this.int32View, OFFSET_CANVAS_WIDTH / 4);
+    const height = Atomics.load(this.int32View, OFFSET_CANVAS_HEIGHT / 4);
+    return { width: width || 800, height: height || 600 };
+  }
+
+  setCanvasSize(width: number, height: number): void {
+    Atomics.store(this.int32View, OFFSET_CANVAS_WIDTH / 4, width);
+    Atomics.store(this.int32View, OFFSET_CANVAS_HEIGHT / 4, height);
   }
 
   dispose(): void {
