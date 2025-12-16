@@ -15,6 +15,7 @@ import {
 import type { IWorkerChannel } from '../channels/IWorkerChannel.js';
 import { GameLoopController } from '../renderer/GameLoopController.js';
 import { CanvasRenderer } from '../renderer/CanvasRenderer.js';
+import { InputCapture } from '../renderer/InputCapture.js';
 import type { WorkerToMainMessage, WorkerState } from '../worker/WorkerMessages.js';
 
 /**
@@ -53,6 +54,7 @@ export class LuaCanvasProcess implements IProcess {
   private channel: IWorkerChannel | null = null;
   private gameLoop: GameLoopController | null = null;
   private renderer: CanvasRenderer | null = null;
+  private inputCapture: InputCapture | null = null;
   private channelPairResult: ChannelPairResult | null = null;
 
   /**
@@ -123,6 +125,7 @@ export class LuaCanvasProcess implements IProcess {
     // Create rendering components
     this.renderer = new CanvasRenderer(this.canvas);
     this.gameLoop = new GameLoopController(this.handleFrame.bind(this));
+    this.inputCapture = new InputCapture(this.canvas);
 
     // Create the worker
     this.worker = this.createWorker();
@@ -166,6 +169,12 @@ export class LuaCanvasProcess implements IProcess {
     if (this.gameLoop) {
       this.gameLoop.dispose();
       this.gameLoop = null;
+    }
+
+    // Dispose input capture
+    if (this.inputCapture) {
+      this.inputCapture.dispose();
+      this.inputCapture = null;
     }
 
     // Dispose the channel
@@ -312,12 +321,22 @@ export class LuaCanvasProcess implements IProcess {
     // Update timing info on the channel for the worker
     this.channel.setTimingInfo(timing);
 
+    // Send current input state to the worker
+    if (this.inputCapture) {
+      this.channel.setInputState(this.inputCapture.getInputState());
+    }
+
     // Get draw commands from worker via channel
     const commands = this.channel.getDrawCommands();
 
     // Render the commands
     if (commands.length > 0) {
       this.renderer.render(commands);
+    }
+
+    // Clear "just pressed" state for next frame
+    if (this.inputCapture) {
+      this.inputCapture.update();
     }
 
     // Signal that the frame is ready (for frame synchronization)
@@ -332,6 +351,12 @@ export class LuaCanvasProcess implements IProcess {
     if (this.gameLoop) {
       this.gameLoop.dispose();
       this.gameLoop = null;
+    }
+
+    // Dispose input capture
+    if (this.inputCapture) {
+      this.inputCapture.dispose();
+      this.inputCapture = null;
     }
 
     // Dispose the channel

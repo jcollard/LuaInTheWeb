@@ -309,13 +309,41 @@ export class LuaCanvasRuntime {
         return __canvas_getTime()
       end
 
+      -- Helper to normalize key names to KeyboardEvent.code format
+      local function normalize_key(key)
+        -- Single letter keys: 'a' -> 'KeyA'
+        if #key == 1 and key:match('[a-zA-Z]') then
+          return 'Key' .. key:upper()
+        end
+        -- Arrow keys: 'up', 'down', 'left', 'right' -> 'ArrowUp', etc.
+        local arrows = { up = 'ArrowUp', down = 'ArrowDown', left = 'ArrowLeft', right = 'ArrowRight' }
+        if arrows[key:lower()] then
+          return arrows[key:lower()]
+        end
+        -- Space key
+        if key:lower() == 'space' or key == ' ' then
+          return 'Space'
+        end
+        -- Common keys
+        local common = {
+          enter = 'Enter', escape = 'Escape', esc = 'Escape',
+          tab = 'Tab', shift = 'ShiftLeft', ctrl = 'ControlLeft',
+          alt = 'AltLeft', backspace = 'Backspace'
+        }
+        if common[key:lower()] then
+          return common[key:lower()]
+        end
+        -- Return as-is if no mapping (allows using raw codes like 'KeyA')
+        return key
+      end
+
       -- Keyboard input
       function canvas.is_key_down(key)
-        return __canvas_isKeyDown(key)
+        return __canvas_isKeyDown(normalize_key(key))
       end
 
       function canvas.is_key_pressed(key)
-        return __canvas_isKeyPressed(key)
+        return __canvas_isKeyPressed(normalize_key(key))
       end
 
       -- Mouse input
