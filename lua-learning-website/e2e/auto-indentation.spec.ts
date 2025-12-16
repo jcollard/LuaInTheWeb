@@ -267,6 +267,117 @@ test.describe('Auto-Indentation', () => {
     expect(getIndentLevel(endLine!)).toBe(getIndentLevel(ifLine!))
   })
 
+  test('typing end should dedent to match nested function', async ({ page }) => {
+    const monacoEditor = await createAndOpenFile(page)
+    await monacoEditor.click()
+
+    // Type a nested function structure
+    await typeSlowly(page, 'function outer()')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(100)
+    await typeSlowly(page, 'function inner()')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(100)
+    await typeSlowly(page, 'print("hello")')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(100)
+
+    // Type first 'end' - should match inner function at indent level 1
+    await typeSlowly(page, 'end')
+    await page.waitForTimeout(200)
+
+    const lines = await getEditorContent(page)
+    const innerFuncLine = lines.find((line) => containsText(line, 'function inner'))
+    const endLines = lines.filter((line) => containsText(line, 'end'))
+
+    expect(innerFuncLine).toBeDefined()
+    expect(endLines.length).toBeGreaterThanOrEqual(1)
+
+    // The 'end' should match inner function's indentation
+    expect(getIndentLevel(endLines[0])).toBe(getIndentLevel(innerFuncLine!))
+  })
+
+  test('typing else should dedent to match if block', async ({ page }) => {
+    const monacoEditor = await createAndOpenFile(page)
+    await monacoEditor.click()
+
+    // Type an if block with content
+    await typeSlowly(page, 'if condition then')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(100)
+    await typeSlowly(page, 'doSomething()')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(100)
+
+    // Type 'else' - should dedent to match 'if'
+    await typeSlowly(page, 'else')
+    await page.waitForTimeout(200)
+
+    const lines = await getEditorContent(page)
+    const ifLine = lines.find((line) => containsText(line, 'if condition then'))
+    const elseLine = lines.find((line) => containsText(line, 'else'))
+
+    expect(ifLine).toBeDefined()
+    expect(elseLine).toBeDefined()
+
+    // The 'else' should be at the same indentation level as 'if'
+    expect(getIndentLevel(elseLine!)).toBe(getIndentLevel(ifLine!))
+  })
+
+  test('typing elseif should dedent to match if block', async ({ page }) => {
+    const monacoEditor = await createAndOpenFile(page)
+    await monacoEditor.click()
+
+    // Type an if block with content
+    await typeSlowly(page, 'if a then')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(100)
+    await typeSlowly(page, 'doA()')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(100)
+
+    // Type 'elseif' - should dedent to match 'if'
+    await typeSlowly(page, 'elseif b then')
+    await page.waitForTimeout(200)
+
+    const lines = await getEditorContent(page)
+    const ifLine = lines.find((line) => containsText(line, 'if a then'))
+    const elseifLine = lines.find((line) => containsText(line, 'elseif b then'))
+
+    expect(ifLine).toBeDefined()
+    expect(elseifLine).toBeDefined()
+
+    // The 'elseif' should be at the same indentation level as 'if'
+    expect(getIndentLevel(elseifLine!)).toBe(getIndentLevel(ifLine!))
+  })
+
+  test('typing until should dedent to match repeat block', async ({ page }) => {
+    const monacoEditor = await createAndOpenFile(page)
+    await monacoEditor.click()
+
+    // Type a repeat block
+    await typeSlowly(page, 'repeat')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(100)
+    await typeSlowly(page, 'x = x + 1')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(100)
+
+    // Type 'until' - should dedent to match 'repeat'
+    await typeSlowly(page, 'until x > 10')
+    await page.waitForTimeout(200)
+
+    const lines = await getEditorContent(page)
+    const repeatLine = lines.find((line) => containsText(line, 'repeat'))
+    const untilLine = lines.find((line) => containsText(line, 'until'))
+
+    expect(repeatLine).toBeDefined()
+    expect(untilLine).toBeDefined()
+
+    // The 'until' should be at the same indentation level as 'repeat'
+    expect(getIndentLevel(untilLine!)).toBe(getIndentLevel(repeatLine!))
+  })
+
   test('editor has language configuration applied', async ({ page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
@@ -282,5 +393,66 @@ test.describe('Auto-Indentation', () => {
 
     const lines = await getEditorContent(page)
     expect(containsText(lines[0], 'local x = 1')).toBe(true)
+  })
+
+  test('typing on empty line inside function auto-indents', async ({ page }) => {
+    const monacoEditor = await createAndOpenFile(page)
+    await monacoEditor.click()
+
+    // Type a function declaration
+    await typeSlowly(page, 'function foo()')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(100)
+
+    // Clear any auto-indent that might have been applied and go to start of line
+    await page.keyboard.press('Home')
+    // Select all content on this line and delete it to start fresh
+    await page.keyboard.press('Shift+End')
+    await page.keyboard.press('Delete')
+    await page.waitForTimeout(100)
+
+    // Now type on the empty line - it should auto-indent
+    await typeSlowly(page, 'print')
+    await page.waitForTimeout(200)
+
+    const lines = await getEditorContent(page)
+    const printLine = lines.find((line) => containsText(line, 'print'))
+
+    expect(printLine).toBeDefined()
+    // The 'print' line should be indented (at least 1 level)
+    expect(getIndentLevel(printLine!)).toBeGreaterThanOrEqual(1)
+  })
+
+  test('typing on empty line inside nested blocks auto-indents correctly', async ({ page }) => {
+    const monacoEditor = await createAndOpenFile(page)
+    await monacoEditor.click()
+
+    // Type nested blocks
+    await typeSlowly(page, 'function outer()')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(100)
+    await typeSlowly(page, 'if true then')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(100)
+
+    // Clear any auto-indent and go to start of line
+    await page.keyboard.press('Home')
+    await page.keyboard.press('Shift+End')
+    await page.keyboard.press('Delete')
+    await page.waitForTimeout(100)
+
+    // Type on the empty line - should auto-indent to level 2
+    await typeSlowly(page, 'x')
+    await page.waitForTimeout(200)
+
+    const lines = await getEditorContent(page)
+    // Find the line that just has 'x' (with indentation)
+    const xLine = lines.find(
+      (line) => containsText(line, 'x') && !containsText(line, 'function') && !containsText(line, 'if')
+    )
+
+    expect(xLine).toBeDefined()
+    // Should be at indent level 2 (inside function > inside if)
+    expect(getIndentLevel(xLine!)).toBeGreaterThanOrEqual(2)
   })
 })
