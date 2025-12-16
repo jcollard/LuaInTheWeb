@@ -264,7 +264,17 @@ function createHoverProvider(
                 const content = fileReader(resolved.path)
                 if (content) {
                   const moduleDocs = moduleDocCache.get(resolved.path, content)
-                  const funcDoc = moduleDocs.get(memberName)
+                  // Look up the member - try direct match first, then look for tbl.member patterns
+                  let funcDoc = moduleDocs.get(memberName)
+                  if (!funcDoc) {
+                    // Module may define functions as tbl.func() - search for any *.memberName or *:memberName
+                    for (const [name, doc] of moduleDocs) {
+                      if (name.endsWith(`.${memberName}`) || name.endsWith(`:${memberName}`)) {
+                        funcDoc = doc
+                        break
+                      }
+                    }
+                  }
                   if (funcDoc) {
                     const startColumn = wordInfo.startColumn - prefix.length - 1
                     const range: IRange = {

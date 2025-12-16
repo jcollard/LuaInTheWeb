@@ -175,5 +175,35 @@ end`
       expect(result[0].params).toHaveLength(2)
       expect(result[0].returns).toBeTruthy()
     })
+
+    it('parses module-style function definitions (tbl.name)', () => {
+      const code = `local M = {}
+--- Greets a person by name
+--- @param name string The name to greet
+function M.greet(name)
+  print("Hello, " .. name)
+end
+return M`
+
+      const result = parseLuaDocComments(code)
+
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe('M.greet')
+      expect(result[0].signature).toBe('M.greet(name)')
+      expect(result[0].description).toBe('Greets a person by name')
+      expect(result[0].params).toHaveLength(1)
+      expect(result[0].params?.[0].name).toBe('name')
+    })
+
+    it('parses nested module-style function definitions', () => {
+      const code = `--- Does something important
+function foo.bar.baz()
+end`
+
+      const result = parseLuaDocComments(code)
+
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe('foo.bar.baz')
+    })
   })
 })
