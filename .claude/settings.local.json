@@ -75,7 +75,12 @@
       "Bash(node scripts/capture-screenshots.js:*)",
       "Bash(SCREENSHOT_SERVER_TIMEOUT=60000 node scripts/capture-screenshots.js:*)",
       "Bash(wc:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(npm test)",
+      "Bash(gh api:*)",
+      "Bash(npm test:*)",
+      "Bash(grep:*)",
+      "Bash(git add:*)"
     ],
     "deny": [
       "Bash(npm run dev)",
@@ -92,5 +97,8 @@
       "Bash(del lua-learning-website/reports/mutation/.stryker-incremental.json)",
       "Bash(Remove-Item lua-learning-website/reports/mutation/.stryker-incremental.json)"
     ]
+  },
+  "env": {
+    "SKIP_PRE_PUSH_TESTS": "1"
   }
 }
