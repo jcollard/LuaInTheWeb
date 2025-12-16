@@ -169,8 +169,8 @@ export class LuaScriptProcess implements IProcess {
     }
 
     // Create engine and execute
-    // The wrapper adds 2 lines before the script (empty line + setup hook)
-    const LINE_OFFSET = 2
+    // With load(), the script content has its own chunk name so line numbers are preserved
+    const LINE_OFFSET = 0
     const callbacks: LuaEngineCallbacks = {
       onOutput: (text: string) => this.onOutput(text),
       onError: (text: string) => {
@@ -206,12 +206,22 @@ export class LuaScriptProcess implements IProcess {
     try {
       this.engine = await LuaEngineFactory.create(callbacks, engineOptions)
 
-      // Execute the script wrapped with hooks
+      // Set up a helper function to execute script content with hooks
+      // Using load() allows scripts to have top-level return statements
+      this.engine.global.set('__script_content', scriptContent)
+      this.engine.global.set('__script_name', this.filename)
+
+      // Execute the script wrapped with hooks using load()
       // This ensures the debug hook is active during the entire script execution
-      // The wrapper adds 2 lines before the script content, which we adjust for in error messages
+      // and properly handles scripts with top-level return statements
+      // The wrapper adds 4 lines before the script content (via load), which we adjust for in error messages
       await this.engine.doString(`
 __setup_execution_hook()
-${scriptContent}
+local __fn, __err = load(__script_content, "@" .. __script_name)
+if not __fn then
+  error(__err)
+end
+__fn()
 __clear_execution_hook()
 `)
 
