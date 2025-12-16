@@ -126,6 +126,42 @@ describe('luaStandardLibrary', () => {
       expect(doc).not.toBeNull()
       expect(doc?.name).toBe('math.random')
     })
+
+    it('returns documentation for io.write', () => {
+      const doc = getLuaDocumentation('io.write')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.name).toBe('io.write')
+      expect(doc?.signature).toContain('io.write')
+      expect(doc?.description).toBeTruthy()
+      expect(doc?.library).toBe('io')
+    })
+
+    it('returns documentation for io.read', () => {
+      const doc = getLuaDocumentation('io.read')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.name).toBe('io.read')
+      expect(doc?.signature).toContain('io.read')
+      expect(doc?.description).toBeTruthy()
+      expect(doc?.library).toBe('io')
+    })
+
+    it('returns documentation for io.open', () => {
+      const doc = getLuaDocumentation('io.open')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.name).toBe('io.open')
+      expect(doc?.library).toBe('io')
+    })
+
+    it('returns documentation for io.lines', () => {
+      const doc = getLuaDocumentation('io.lines')
+
+      expect(doc).not.toBeNull()
+      expect(doc?.name).toBe('io.lines')
+      expect(doc?.library).toBe('io')
+    })
   })
 
   describe('LuaDocEntry type', () => {

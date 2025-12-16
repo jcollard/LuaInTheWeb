@@ -8,6 +8,7 @@ import {
   stringLibrary,
   tableLibrary,
   mathLibrary,
+  ioLibrary,
 } from './luaStdlibDocs'
 
 export interface LuaDocEntry {
@@ -23,6 +24,7 @@ const allDocumentation: Record<string, LuaDocEntry> = {
   ...stringLibrary,
   ...tableLibrary,
   ...mathLibrary,
+  ...ioLibrary,
 }
 
 /**

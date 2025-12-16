@@ -195,3 +195,20 @@ export const mathLibrary: Record<string, LuaDocEntry> = {
   'math.type': { name: 'math.type', signature: 'math.type(x)', description: 'Returns "integer" if x is an integer, "float" if it is a float, or fail if x is not a number.', library: 'math' },
   'math.ult': { name: 'math.ult', signature: 'math.ult(m, n)', description: 'Returns a boolean, true if and only if integer m is below integer n when compared as unsigned integers.', library: 'math' },
 }
+
+export const ioLibrary: Record<string, LuaDocEntry> = {
+  'io.close': { name: 'io.close', signature: 'io.close([file])', description: 'Closes file. Without a parameter, closes the default output file.', library: 'io' },
+  'io.flush': { name: 'io.flush', signature: 'io.flush()', description: 'Flushes the default output file. Equivalent to io.output():flush().', library: 'io' },
+  'io.input': { name: 'io.input', signature: 'io.input([file])', description: 'When called with a file name, it opens the named file (in text mode) and sets its handle as the default input file.', library: 'io' },
+  'io.lines': { name: 'io.lines', signature: 'io.lines([filename, ···])', description: 'Opens the given file name in read mode and returns an iterator function that works like file:lines(···) over the opened file.', library: 'io' },
+  'io.open': { name: 'io.open', signature: 'io.open(filename [, mode])', description: 'Opens a file in the mode specified. Returns a new file handle, or nil plus an error message.', library: 'io' },
+  'io.output': { name: 'io.output', signature: 'io.output([file])', description: 'When called with a file name, it opens the named file (in text mode) and sets its handle as the default output file.', library: 'io' },
+  'io.popen': { name: 'io.popen', signature: 'io.popen(prog [, mode])', description: 'Starts the program prog in a separated process and returns a file handle to read or write.', library: 'io' },
+  'io.read': { name: 'io.read', signature: 'io.read(···)', description: 'Reads from the default input file. Equivalent to io.input():read(···). Formats include "*a" (all), "*l" (line), "*n" (number), or a number for bytes.', library: 'io' },
+  'io.stderr': { name: 'io.stderr', signature: 'io.stderr', description: 'Standard error file handle.', library: 'io' },
+  'io.stdin': { name: 'io.stdin', signature: 'io.stdin', description: 'Standard input file handle.', library: 'io' },
+  'io.stdout': { name: 'io.stdout', signature: 'io.stdout', description: 'Standard output file handle.', library: 'io' },
+  'io.tmpfile': { name: 'io.tmpfile', signature: 'io.tmpfile()', description: 'Returns a handle for a temporary file opened in update mode.', library: 'io' },
+  'io.type': { name: 'io.type', signature: 'io.type(obj)', description: 'Checks whether obj is a valid file handle. Returns "file" if open, "closed file" if closed, or nil if not a file handle.', library: 'io' },
+  'io.write': { name: 'io.write', signature: 'io.write(···)', description: 'Writes the value of each argument to the default output file. Equivalent to io.output():write(···).', library: 'io' },
+}
