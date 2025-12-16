@@ -4,7 +4,11 @@ import type { CodeEditorProps } from './types'
 import styles from './CodeEditor.module.css'
 import { useTheme } from '../../contexts/useTheme'
 import type { editor, IDisposable } from 'monaco-editor'
-import { registerLuaLanguage } from '../../utils/luaTokenizer'
+import {
+  getAutoIndentEnabled,
+  registerLuaLanguage,
+  setAutoIndentEnabled,
+} from '../../utils/luaTokenizer'
 
 /**
  * A code editor component wrapping Monaco Editor
@@ -23,6 +27,7 @@ export function CodeEditor({
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<Monaco | null>(null)
   const formatActionRef = useRef<IDisposable | null>(null)
+  const toggleAutoIndentActionRef = useRef<IDisposable | null>(null)
   const onFormatRef = useRef(onFormat)
   const onEditorReadyRef = useRef(onEditorReady)
 
@@ -59,6 +64,26 @@ export function CodeEditor({
       },
     })
 
+    // Helper to register auto-indent action with current state label
+    const registerAutoIndentAction = () => {
+      const isEnabled = getAutoIndentEnabled()
+      const label = isEnabled ? 'Turn Off Auto-Indent' : 'Turn On Auto-Indent'
+
+      return editorInstance.addAction({
+        id: 'toggle-auto-indent',
+        label,
+        run: () => {
+          setAutoIndentEnabled(!isEnabled)
+          // Re-register with updated label
+          toggleAutoIndentActionRef.current?.dispose()
+          toggleAutoIndentActionRef.current = registerAutoIndentAction()
+        },
+      })
+    }
+
+    // Register auto-indent toggle action (accessible via Command Palette)
+    toggleAutoIndentActionRef.current = registerAutoIndentAction()
+
     // Notify parent component that editor is ready
     const model = editorInstance.getModel()
     if (monacoRef.current && model) {
@@ -74,6 +99,7 @@ export function CodeEditor({
   useEffect(() => {
     return () => {
       formatActionRef.current?.dispose()
+      toggleAutoIndentActionRef.current?.dispose()
     }
   }, [])
 
