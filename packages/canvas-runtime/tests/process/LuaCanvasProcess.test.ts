@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { IProcess } from '@lua-learning/shell-core';
+import type { DrawCommand } from '../../src/shared/types.js';
 
 // We'll import the actual class once implemented
 // import { LuaCanvasProcess } from '../../src/process/LuaCanvasProcess.js';
@@ -17,6 +18,60 @@ class MockErrorEvent {
 
 vi.stubGlobal('ErrorEvent', MockErrorEvent);
 
+// Mock channel for testing draw command flow
+let mockDrawCommands: DrawCommand[] = [];
+
+const mockMainChannel = {
+  sendDrawCommands: vi.fn(),
+  getDrawCommands: vi.fn(() => {
+    const commands = [...mockDrawCommands];
+    mockDrawCommands = [];
+    return commands;
+  }),
+  getInputState: vi.fn(() => ({ keysDown: [], keysPressed: [], mouseX: 0, mouseY: 0, mouseLeft: false, mouseRight: false, mouseMiddle: false })),
+  setInputState: vi.fn(),
+  getDeltaTime: vi.fn(() => 0.016),
+  getTotalTime: vi.fn(() => 0),
+  getTimingInfo: vi.fn(() => ({ deltaTime: 0.016, totalTime: 0, frameNumber: 0 })),
+  setTimingInfo: vi.fn(),
+  waitForFrame: vi.fn(() => Promise.resolve()),
+  signalFrameReady: vi.fn(),
+  getCanvasSize: vi.fn(() => ({ width: 800, height: 600 })),
+  setCanvasSize: vi.fn(),
+  dispose: vi.fn(),
+};
+
+// Mock channelFactory - using a configurable mock that can switch modes
+let mockChannelMode: 'postMessage' | 'sharedArrayBuffer' = 'postMessage';
+let mockSharedBuffer: SharedArrayBuffer | undefined;
+
+vi.mock('../../src/channels/channelFactory.js', async (importOriginal) => {
+  const original = await importOriginal() as Record<string, unknown>;
+  return {
+    ...original,
+    createChannelPair: vi.fn(() => {
+      if (mockChannelMode === 'sharedArrayBuffer') {
+        mockSharedBuffer = new SharedArrayBuffer(65536);
+        return {
+          mainChannel: mockMainChannel,
+          workerChannel: mockMainChannel,
+          mode: 'sharedArrayBuffer' as const,
+          buffer: mockSharedBuffer,
+        };
+      }
+      return {
+        mainChannel: mockMainChannel,
+        workerChannel: mockMainChannel,
+        mode: 'postMessage' as const,
+        ports: {
+          port1: { postMessage: vi.fn(), onmessage: null, start: vi.fn(), close: vi.fn() } as unknown as MessagePort,
+          port2: { postMessage: vi.fn(), onmessage: null, start: vi.fn(), close: vi.fn() } as unknown as MessagePort,
+        },
+      };
+    }),
+  };
+});
+
 /**
  * Tests for LuaCanvasProcess.
  *
@@ -33,7 +88,7 @@ class MockWorker {
   onerror: ((event: ErrorEvent) => void) | null = null;
   private messageHandler: ((msg: unknown) => void) | null = null;
 
-  postMessage = vi.fn((message: unknown) => {
+  postMessage = vi.fn((message: unknown, _transfer?: Transferable[]) => {
     if (this.messageHandler) {
       this.messageHandler(message);
     }
@@ -128,6 +183,9 @@ describe('LuaCanvasProcess', () => {
     vi.clearAllMocks();
     mockCanvas = createMockCanvas();
     rafCallback = null;
+    mockDrawCommands = [];
+    mockChannelMode = 'postMessage';
+    mockSharedBuffer = undefined;
 
     // Dynamic import to get fresh module
     const module = await import('../../src/process/LuaCanvasProcess.js');
@@ -227,11 +285,13 @@ describe('LuaCanvasProcess', () => {
 
       process.start();
 
+      // postMessage is called with (message, transferList)
       expect(mockWorkerInstance.postMessage).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'init',
           code,
-        })
+        }),
+        expect.any(Array) // Transfer list
       );
     });
 
@@ -428,8 +488,9 @@ describe('LuaCanvasProcess', () => {
     });
 
     it('should include SharedArrayBuffer in init when available', () => {
-      // Mock crossOriginIsolated
+      // Mock crossOriginIsolated and set channel mode
       vi.stubGlobal('crossOriginIsolated', true);
+      mockChannelMode = 'sharedArrayBuffer';
 
       process = new LuaCanvasProcess({
         code: 'canvas.onDraw(function() end)',
@@ -590,6 +651,69 @@ describe('LuaCanvasProcess', () => {
       expect(onOutput).toHaveBeenCalledWith(
         expect.stringContaining('compatibility mode')
       );
+    });
+  });
+
+  describe('rendering integration', () => {
+    it('should start game loop when worker is running', () => {
+      process = new LuaCanvasProcess({
+        code: 'canvas.on_draw(function() canvas.clear() end)',
+        canvas: mockCanvas.canvas,
+      });
+
+      process.start();
+      mockWorkerInstance.simulateMessage({ type: 'ready' });
+      mockWorkerInstance.simulateMessage({ type: 'stateChanged', state: 'running' });
+
+      // The game loop should have been started - requestAnimationFrame should have been called
+      expect(rafCallback).not.toBeNull();
+    });
+
+    it('should render draw commands received from worker', () => {
+      process = new LuaCanvasProcess({
+        code: 'canvas.on_draw(function() canvas.clear() end)',
+        canvas: mockCanvas.canvas,
+        mode: 'postMessage',
+      });
+
+      process.start();
+      mockWorkerInstance.simulateMessage({ type: 'ready' });
+      mockWorkerInstance.simulateMessage({ type: 'stateChanged', state: 'running' });
+
+      // Inject draw commands that will be returned by the mock channel
+      mockDrawCommands = [{ type: 'clear' }];
+
+      // Simulate a frame callback to trigger rendering
+      if (rafCallback) {
+        // Mock performance.now to return a timestamp
+        (performance.now as ReturnType<typeof vi.fn>).mockReturnValue(16.67);
+        rafCallback(16.67);
+      }
+
+      // The channel should have been queried for draw commands
+      expect(mockMainChannel.getDrawCommands).toHaveBeenCalled();
+      // The clear command should have been rendered
+      expect(mockCanvas.ctx.clearRect).toHaveBeenCalled();
+    });
+
+    it('should stop game loop when process is stopped', () => {
+      process = new LuaCanvasProcess({
+        code: 'canvas.on_draw(function() canvas.clear() end)',
+        canvas: mockCanvas.canvas,
+      });
+
+      process.start();
+      mockWorkerInstance.simulateMessage({ type: 'ready' });
+      mockWorkerInstance.simulateMessage({ type: 'stateChanged', state: 'running' });
+
+      // Game loop should be running
+      expect(rafCallback).not.toBeNull();
+
+      // Stop the process
+      process.stop();
+
+      // cancelAnimationFrame should have been called
+      expect(cancelAnimationFrame).toHaveBeenCalled();
     });
   });
 });
