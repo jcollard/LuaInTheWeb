@@ -194,7 +194,10 @@ export class LuaEngineFactory {
 
     // Output buffering state
     let outputBuffer: string[] = []
-    let lastFlush = Date.now()
+    // Initialize to null - timing starts on first output, not engine creation
+    // This prevents premature flushes on slow CI machines where engine creation
+    // to first output might exceed FLUSH_INTERVAL_MS
+    let lastFlush: number | null = null
 
     // Flush buffered output to callback
     const flushOutput = () => {
@@ -211,6 +214,11 @@ export class LuaEngineFactory {
     // Check if buffer should be flushed (time or size threshold)
     const maybeFlush = () => {
       const now = Date.now()
+      // If this is the first output, start timing from now (don't flush yet)
+      if (lastFlush === null) {
+        lastFlush = now
+        return
+      }
       if (now - lastFlush >= FLUSH_INTERVAL_MS || outputBuffer.length >= MAX_BUFFER_SIZE) {
         flushOutput()
       }
