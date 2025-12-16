@@ -435,13 +435,18 @@ Get the total time since the game started (in seconds).
 Check if a key is currently held down.
 
 **Parameters:**
-- \`key\` (string): Key name (e.g., 'ArrowUp', 'ArrowDown', 'a', 'Space')
+- \`key\` (string): Key name (e.g., 'w', 'ArrowUp', or use \`canvas.keys.W\`)
 
 **Returns:**
 - (boolean): True if key is currently held
 
 \`\`\`lua
-if canvas.is_key_down('ArrowUp') then
+if canvas.is_key_down('w') then
+  y = y - speed * canvas.get_delta()
+end
+
+-- Or use key constants
+if canvas.is_key_down(canvas.keys.W) then
   y = y - speed * canvas.get_delta()
 end
 \`\`\`
@@ -457,10 +462,128 @@ Check if a key was pressed this frame. Returns true only on the frame the key wa
 - (boolean): True if key was just pressed
 
 \`\`\`lua
-if canvas.is_key_pressed('Space') then
+if canvas.is_key_pressed('space') then
   jump()
 end
 \`\`\`
+
+### canvas.get_keys_down()
+
+Get all keys currently held down.
+
+**Returns:**
+- (table): Array of key codes in KeyboardEvent.code format
+
+\`\`\`lua
+local keys = canvas.get_keys_down()
+for _, key in ipairs(keys) do
+  print("Holding: " .. key)
+end
+\`\`\`
+
+### canvas.get_keys_pressed()
+
+Get all keys pressed this frame.
+
+**Returns:**
+- (table): Array of key codes pressed this frame
+
+\`\`\`lua
+local keys = canvas.get_keys_pressed()
+for _, key in ipairs(keys) do
+  print("Just pressed: " .. key)
+end
+\`\`\`
+
+## Key Constants
+
+The \`canvas.keys\` table provides named constants for all keyboard keys.
+These can be used with \`is_key_down()\` and \`is_key_pressed()\`.
+
+### Letters
+
+| Constant | Key Code |
+|----------|----------|
+| \`canvas.keys.A\` - \`canvas.keys.Z\` | KeyA - KeyZ |
+
+### Number Row
+
+| Constant | Key Code |
+|----------|----------|
+| \`canvas.keys.DIGIT_0\` - \`canvas.keys.DIGIT_9\` | Digit0 - Digit9 |
+| \`canvas.keys['0']\` - \`canvas.keys['9']\` | Digit0 - Digit9 |
+
+### Arrow Keys
+
+| Constant | Key Code |
+|----------|----------|
+| \`canvas.keys.UP\` / \`canvas.keys.ARROW_UP\` | ArrowUp |
+| \`canvas.keys.DOWN\` / \`canvas.keys.ARROW_DOWN\` | ArrowDown |
+| \`canvas.keys.LEFT\` / \`canvas.keys.ARROW_LEFT\` | ArrowLeft |
+| \`canvas.keys.RIGHT\` / \`canvas.keys.ARROW_RIGHT\` | ArrowRight |
+
+### Function Keys
+
+| Constant | Key Code |
+|----------|----------|
+| \`canvas.keys.F1\` - \`canvas.keys.F12\` | F1 - F12 |
+
+### Modifier Keys
+
+| Constant | Key Code |
+|----------|----------|
+| \`canvas.keys.SHIFT\` / \`canvas.keys.SHIFT_LEFT\` | ShiftLeft |
+| \`canvas.keys.SHIFT_RIGHT\` | ShiftRight |
+| \`canvas.keys.CTRL\` / \`canvas.keys.CTRL_LEFT\` | ControlLeft |
+| \`canvas.keys.CTRL_RIGHT\` | ControlRight |
+| \`canvas.keys.ALT\` / \`canvas.keys.ALT_LEFT\` | AltLeft |
+| \`canvas.keys.ALT_RIGHT\` | AltRight |
+| \`canvas.keys.META\` | MetaLeft (Windows/Cmd) |
+| \`canvas.keys.CAPS_LOCK\` | CapsLock |
+
+### Special Keys
+
+| Constant | Key Code |
+|----------|----------|
+| \`canvas.keys.SPACE\` | Space |
+| \`canvas.keys.ENTER\` | Enter |
+| \`canvas.keys.ESCAPE\` | Escape |
+| \`canvas.keys.TAB\` | Tab |
+| \`canvas.keys.BACKSPACE\` | Backspace |
+| \`canvas.keys.DELETE\` | Delete |
+| \`canvas.keys.INSERT\` | Insert |
+| \`canvas.keys.HOME\` | Home |
+| \`canvas.keys.END\` | End |
+| \`canvas.keys.PAGE_UP\` | PageUp |
+| \`canvas.keys.PAGE_DOWN\` | PageDown |
+
+### Numpad Keys
+
+| Constant | Key Code |
+|----------|----------|
+| \`canvas.keys.NUMPAD_0\` - \`canvas.keys.NUMPAD_9\` | Numpad0 - Numpad9 |
+| \`canvas.keys.NUMPAD_ADD\` | NumpadAdd |
+| \`canvas.keys.NUMPAD_SUBTRACT\` | NumpadSubtract |
+| \`canvas.keys.NUMPAD_MULTIPLY\` | NumpadMultiply |
+| \`canvas.keys.NUMPAD_DIVIDE\` | NumpadDivide |
+| \`canvas.keys.NUMPAD_DECIMAL\` | NumpadDecimal |
+| \`canvas.keys.NUMPAD_ENTER\` | NumpadEnter |
+
+### Punctuation
+
+| Constant | Key Code |
+|----------|----------|
+| \`canvas.keys.MINUS\` | Minus (-) |
+| \`canvas.keys.EQUAL\` | Equal (=) |
+| \`canvas.keys.BRACKET_LEFT\` | BracketLeft ([) |
+| \`canvas.keys.BRACKET_RIGHT\` | BracketRight (]) |
+| \`canvas.keys.BACKSLASH\` | Backslash (\\) |
+| \`canvas.keys.SEMICOLON\` | Semicolon (;) |
+| \`canvas.keys.QUOTE\` | Quote (') |
+| \`canvas.keys.BACKQUOTE\` | Backquote (\`) |
+| \`canvas.keys.COMMA\` | Comma (,) |
+| \`canvas.keys.PERIOD\` | Period (.) |
+| \`canvas.keys.SLASH\` | Slash (/) |
 
 ## Mouse Input
 
