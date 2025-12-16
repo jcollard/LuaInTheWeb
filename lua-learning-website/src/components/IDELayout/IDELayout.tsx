@@ -111,22 +111,10 @@ function IDELayoutInner({
   const [pendingCloseTabPath, setPendingCloseTabPath] = useState<string | null>(null)
   const [isFormatting, setIsFormatting] = useState(false)
 
-  // File reader for hover documentation on required modules
-  const fileReader = useCallback(
-    (path: string): string | null => {
-      try {
-        return compositeFileSystem.readFile(path)
-      } catch {
-        return null
-      }
-    },
-    [compositeFileSystem]
-  )
-
   // Editor extensions (diagnostics + hover documentation)
   const { handleEditorReady } = useEditorExtensions({
     code,
-    fileReader,
+    fileSystem: compositeFileSystem,
     currentFilePath: activeTab,
   })
 
