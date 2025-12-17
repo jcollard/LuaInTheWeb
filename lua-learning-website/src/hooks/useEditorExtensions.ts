@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react'
 import type { EditorReadyInfo } from '../components/CodeEditor/types'
 import { useIDEDiagnostics } from './useIDEDiagnostics'
 import { useLuaHoverProvider } from './useLuaHoverProvider'
+import { useEditorScrollPersistence } from './useEditorScrollPersistence'
 
 /** Minimal filesystem interface for reading files */
 interface FileSystemReader {
@@ -72,13 +73,19 @@ export function useEditorExtensions(
     currentFilePath,
   })
 
+  // Scroll position persistence across tab switches
+  const { setEditor } = useEditorScrollPersistence({
+    activeTab: currentFilePath ?? null,
+  })
+
   // Combined editor ready handler for all editor extensions
   const handleEditorReady = useCallback(
     (info: EditorReadyInfo) => {
       handleDiagnosticsReady(info)
       handleHoverReady(info)
+      setEditor(info.editor)
     },
-    [handleDiagnosticsReady, handleHoverReady]
+    [handleDiagnosticsReady, handleHoverReady, setEditor]
   )
 
   return {
