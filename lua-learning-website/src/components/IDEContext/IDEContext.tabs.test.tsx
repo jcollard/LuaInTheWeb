@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { renderHook, act } from '@testing-library/react'
 import { vi } from 'vitest'
 import { IDEContextProvider } from './IDEContext'
