@@ -63,6 +63,7 @@ export type {
   ReadyMessage,
   ErrorMessage,
   StateChangedMessage,
+  SerializedAsset,
 } from './worker/index.js';
 
 // Process components

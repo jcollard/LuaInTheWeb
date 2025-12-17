@@ -3,6 +3,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CanvasRenderer } from '../../src/renderer/CanvasRenderer.js';
+import { ImageCache } from '../../src/renderer/ImageCache.js';
 import type { DrawCommand } from '../../src/shared/types.js';
 
 // Mock CanvasRenderingContext2D
@@ -18,6 +19,7 @@ function createMockContext(): CanvasRenderingContext2D {
     moveTo: vi.fn(),
     lineTo: vi.fn(),
     fillText: vi.fn(),
+    drawImage: vi.fn(),
     fillStyle: '',
     strokeStyle: '',
   } as unknown as CanvasRenderingContext2D;
@@ -219,6 +221,61 @@ describe('CanvasRenderer', () => {
 
       // 300 should clamp to 255 (ff), -50 should clamp to 0 (00)
       expect(mockCtx.fillStyle).toBe('#ff0080');
+    });
+  });
+
+  describe('drawImage command', () => {
+    let imageCache: ImageCache;
+    let rendererWithCache: CanvasRenderer;
+    let mockImage: HTMLImageElement;
+
+    beforeEach(() => {
+      imageCache = new ImageCache();
+      mockImage = new Image();
+      mockImage.width = 64;
+      mockImage.height = 64;
+      imageCache.set('player', mockImage);
+      rendererWithCache = new CanvasRenderer(canvas, imageCache);
+    });
+
+    it('should draw image at position without scaling', () => {
+      const commands: DrawCommand[] = [
+        { type: 'drawImage', name: 'player', x: 100, y: 200 },
+      ];
+
+      rendererWithCache.render(commands);
+
+      expect(mockCtx.drawImage).toHaveBeenCalledWith(mockImage, 100, 200);
+    });
+
+    it('should draw image with scaling when width and height provided', () => {
+      const commands: DrawCommand[] = [
+        { type: 'drawImage', name: 'player', x: 50, y: 75, width: 128, height: 96 },
+      ];
+
+      rendererWithCache.render(commands);
+
+      expect(mockCtx.drawImage).toHaveBeenCalledWith(mockImage, 50, 75, 128, 96);
+    });
+
+    it('should silently skip if image not in cache', () => {
+      const commands: DrawCommand[] = [
+        { type: 'drawImage', name: 'nonexistent', x: 0, y: 0 },
+      ];
+
+      // Should not throw, just skip
+      expect(() => rendererWithCache.render(commands)).not.toThrow();
+      expect(mockCtx.drawImage).not.toHaveBeenCalled();
+    });
+
+    it('should work without image cache (backward compatibility)', () => {
+      const commands: DrawCommand[] = [
+        { type: 'drawImage', name: 'player', x: 0, y: 0 },
+      ];
+
+      // Renderer without cache
+      expect(() => renderer.render(commands)).not.toThrow();
+      expect(mockCtx.drawImage).not.toHaveBeenCalled();
     });
   });
 });

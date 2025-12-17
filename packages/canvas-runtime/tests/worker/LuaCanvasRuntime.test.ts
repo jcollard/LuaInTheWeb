@@ -579,4 +579,191 @@ describe('LuaCanvasRuntime', () => {
       await runtime.dispose(); // Should not throw
     });
   });
+
+  describe('asset API', () => {
+    beforeEach(async () => {
+      await runtime.initialize();
+    });
+
+    describe('canvas.assets.image', () => {
+      it('should register an asset definition', async () => {
+        await runtime.loadCode(`
+          canvas.assets.image("player", "sprites/player.png")
+          canvas.tick(function() end)
+        `);
+        // Should not throw
+      });
+
+      it('should throw if called after start', async () => {
+        const errorHandler = vi.fn();
+        runtime.onError(errorHandler);
+
+        await runtime.loadCode(`
+          canvas.tick(function()
+            canvas.assets.image("player", "sprites/player.png")
+          end)
+        `);
+
+        runtime.start();
+        channel.signalFrameReady();
+
+        await vi.waitFor(() => {
+          return errorHandler.mock.calls.length > 0;
+        }, { timeout: 100 });
+
+        runtime.stop();
+
+        expect(errorHandler).toHaveBeenCalledWith(
+          expect.stringContaining('Cannot define assets after canvas.start()')
+        );
+      });
+
+      it('should throw for invalid image extension', async () => {
+        await expect(runtime.loadCode(`
+          canvas.assets.image("data", "files/data.txt")
+        `)).rejects.toThrow(/unsupported format/i);
+      });
+    });
+
+    describe('canvas.draw_image', () => {
+      it('should send drawImage command with position only', async () => {
+        // Register a mock asset
+        runtime.setAssetDimensions('player', 64, 64);
+
+        await runtime.loadCode(`
+          canvas.tick(function()
+            canvas.draw_image("player", 100, 200)
+          end)
+        `);
+
+        runtime.start();
+        channel.signalFrameReady();
+
+        await vi.waitFor(() => {
+          return (channel.sendDrawCommands as ReturnType<typeof vi.fn>).mock.calls.length > 0;
+        }, { timeout: 100 });
+
+        runtime.stop();
+
+        const calls = (channel.sendDrawCommands as ReturnType<typeof vi.fn>).mock.calls;
+        expect(calls[0][0]).toContainEqual({ type: 'drawImage', name: 'player', x: 100, y: 200 });
+      });
+
+      it('should send drawImage command with scaling', async () => {
+        runtime.setAssetDimensions('player', 64, 64);
+
+        await runtime.loadCode(`
+          canvas.tick(function()
+            canvas.draw_image("player", 50, 75, 128, 96)
+          end)
+        `);
+
+        runtime.start();
+        channel.signalFrameReady();
+
+        await vi.waitFor(() => {
+          return (channel.sendDrawCommands as ReturnType<typeof vi.fn>).mock.calls.length > 0;
+        }, { timeout: 100 });
+
+        runtime.stop();
+
+        const calls = (channel.sendDrawCommands as ReturnType<typeof vi.fn>).mock.calls;
+        expect(calls[0][0]).toContainEqual({
+          type: 'drawImage', name: 'player', x: 50, y: 75, width: 128, height: 96
+        });
+      });
+
+      it('should throw for unknown asset name', async () => {
+        const errorHandler = vi.fn();
+        runtime.onError(errorHandler);
+
+        await runtime.loadCode(`
+          canvas.tick(function()
+            canvas.draw_image("nonexistent", 0, 0)
+          end)
+        `);
+
+        runtime.start();
+        channel.signalFrameReady();
+
+        await vi.waitFor(() => {
+          return errorHandler.mock.calls.length > 0;
+        }, { timeout: 100 });
+
+        runtime.stop();
+
+        expect(errorHandler).toHaveBeenCalledWith(
+          expect.stringContaining("Unknown asset 'nonexistent'")
+        );
+      });
+    });
+
+    describe('canvas.assets.get_width/get_height', () => {
+      it('should return asset width', async () => {
+        runtime.setAssetDimensions('player', 64, 48);
+
+        await runtime.loadCode(`
+          canvas.tick(function()
+            assetWidth = canvas.assets.get_width("player")
+          end)
+        `);
+
+        runtime.start();
+        channel.signalFrameReady();
+
+        await vi.waitFor(() => {
+          return (channel.sendDrawCommands as ReturnType<typeof vi.fn>).mock.calls.length > 0;
+        }, { timeout: 100 });
+
+        runtime.stop();
+
+        expect(await runtime.getGlobal('assetWidth')).toBe(64);
+      });
+
+      it('should return asset height', async () => {
+        runtime.setAssetDimensions('player', 64, 48);
+
+        await runtime.loadCode(`
+          canvas.tick(function()
+            assetHeight = canvas.assets.get_height("player")
+          end)
+        `);
+
+        runtime.start();
+        channel.signalFrameReady();
+
+        await vi.waitFor(() => {
+          return (channel.sendDrawCommands as ReturnType<typeof vi.fn>).mock.calls.length > 0;
+        }, { timeout: 100 });
+
+        runtime.stop();
+
+        expect(await runtime.getGlobal('assetHeight')).toBe(48);
+      });
+
+      it('should throw for unknown asset name', async () => {
+        const errorHandler = vi.fn();
+        runtime.onError(errorHandler);
+
+        await runtime.loadCode(`
+          canvas.tick(function()
+            canvas.assets.get_width("nonexistent")
+          end)
+        `);
+
+        runtime.start();
+        channel.signalFrameReady();
+
+        await vi.waitFor(() => {
+          return errorHandler.mock.calls.length > 0;
+        }, { timeout: 100 });
+
+        runtime.stop();
+
+        expect(errorHandler).toHaveBeenCalledWith(
+          expect.stringContaining("Unknown asset 'nonexistent'")
+        );
+      });
+    });
+  });
 });

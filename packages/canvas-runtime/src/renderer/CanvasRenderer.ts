@@ -1,4 +1,5 @@
 import type { DrawCommand } from '../shared/types.js';
+import type { ImageCache } from './ImageCache.js';
 
 /**
  * Renders draw commands to a canvas element.
@@ -10,9 +11,11 @@ import type { DrawCommand } from '../shared/types.js';
 export class CanvasRenderer {
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D;
+  private readonly imageCache?: ImageCache;
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, imageCache?: ImageCache) {
     this.canvas = canvas;
+    this.imageCache = imageCache;
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       throw new Error('Could not get 2D rendering context');
@@ -74,6 +77,10 @@ export class CanvasRenderer {
         this.ctx.fillText(command.text, command.x, command.y);
         break;
 
+      case 'drawImage':
+        this.drawImage(command.name, command.x, command.y, command.width, command.height);
+        break;
+
       default:
         // Ignore unknown commands for forward compatibility
         break;
@@ -111,5 +118,22 @@ export class CanvasRenderer {
     this.ctx.moveTo(x1, y1);
     this.ctx.lineTo(x2, y2);
     this.ctx.stroke();
+  }
+
+  private drawImage(name: string, x: number, y: number, width?: number, height?: number): void {
+    if (!this.imageCache) {
+      return;
+    }
+
+    const image = this.imageCache.get(name);
+    if (!image) {
+      return;
+    }
+
+    if (width !== undefined && height !== undefined) {
+      this.ctx.drawImage(image, x, y, width, height);
+    } else {
+      this.ctx.drawImage(image, x, y);
+    }
   }
 }
