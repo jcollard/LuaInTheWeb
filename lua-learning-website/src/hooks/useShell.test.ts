@@ -529,11 +529,18 @@ describe('useShell with IFileSystem', () => {
       const { result } = renderHook(() => useShell(mockFs))
 
       // Should not throw when mv is executed without callback
+      let commandResult: { exitCode: number; stdout: string; stderr: string }
       act(() => {
-        result.current.executeCommand('mv /test.txt /renamed.txt')
+        commandResult = result.current.executeCommand('mv /test.txt /renamed.txt')
       })
 
-      expect(result.current.cwd).toBe('/')
+      // Verify mv command succeeded
+      expect(commandResult!.exitCode).toBe(0)
+      expect(commandResult!.stderr).toBe('')
+
+      // Verify the file was actually moved (exists at new path, not at old path)
+      expect(mockFs.exists('/renamed.txt')).toBe(true)
+      expect(mockFs.exists('/test.txt')).toBe(false)
     })
   })
 

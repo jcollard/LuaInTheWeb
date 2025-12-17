@@ -591,43 +591,4 @@ describe('CompositeFileSystem', () => {
     })
   })
 
-  describe('onFileMove callback', () => {
-    it('stores onFileMove callback', () => {
-      const cfs = new CompositeFileSystem()
-      const callback = vi.fn()
-      cfs.onFileMove = callback
-
-      expect(cfs.onFileMove).toBe(callback)
-    })
-
-    it('allows onFileMove callback to be set and called externally', () => {
-      const cfs = new CompositeFileSystem()
-      const callback = vi.fn()
-      cfs.onFileMove = callback
-
-      // Simulate external code calling the callback (like mv command does)
-      cfs.onFileMove?.('/old/path', '/new/path', false)
-
-      expect(callback).toHaveBeenCalledTimes(1)
-      expect(callback).toHaveBeenCalledWith('/old/path', '/new/path', false)
-    })
-
-    it('allows onFileMove callback to be undefined (optional)', () => {
-      const cfs = new CompositeFileSystem()
-
-      // Should not throw when accessing undefined callback
-      expect(cfs.onFileMove).toBeUndefined()
-    })
-
-    it('can clear onFileMove callback by setting to undefined', () => {
-      const cfs = new CompositeFileSystem()
-      const callback = vi.fn()
-      cfs.onFileMove = callback
-
-      expect(cfs.onFileMove).toBe(callback)
-
-      cfs.onFileMove = undefined
-      expect(cfs.onFileMove).toBeUndefined()
-    })
-  })
 })
