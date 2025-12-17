@@ -1,9 +1,9 @@
 # Epic #305: Canvas Image Support
 
-**Status:** In Progress (1/5 complete)
+**Status:** In Progress (2/5 complete)
 **Branch:** epic-305
 **Created:** 2025-12-17
-**Last Updated:** 2025-12-17T14:09:06-07:00
+**Last Updated:** 2025-12-17T14:19:20-07:00
 
 ## Overview
 
@@ -63,7 +63,7 @@ local h = canvas.assets.get_height("player")
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #306 | Core Types & ImageCache | ✅ Complete | 306-core-types-imagecache | Merged in PR #312 |
-| #307 | Asset Loading Infrastructure | 🔄 PR Created | 307-asset-loading-infrastructure | PR #314 |
+| #307 | Asset Loading Infrastructure | ✅ Complete | 307-asset-loading-infrastructure | Merged in PR #314 |
 | #308 | Worker Canvas Implementation | ⏳ Pending | - | Depends on #306, #307 |
 | #309 | Shell Canvas Implementation | ⏳ Pending | - | Depends on #306, #307 |
 | #310 | Process Integration & E2E Testing | ⏳ Pending | - | Depends on #306, #307, #308, #309 |
@@ -101,6 +101,7 @@ local h = canvas.assets.get_height("player")
 - Completed #306: Core Types & ImageCache - Merged PR #312 to epic-305
 - Started work on #307: Asset Loading Infrastructure
 - PR created for #307: Asset Loading Infrastructure (PR #314)
+- Completed #307: Asset Loading Infrastructure - Merged PR #314 to epic-305
 
 ## Key Files
 
