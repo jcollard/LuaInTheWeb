@@ -39,16 +39,20 @@ export function useEditorScrollPersistence(
   const contentChangeListenerRef = useRef<IDisposable | null>(null)
   const scrollListenerRef = useRef<IDisposable | null>(null)
   const activeTabRef = useRef<string | null>(activeTab)
+  const previousActiveTabRef = useRef<string | null>(null)
 
   // Keep activeTabRef in sync (needed for scroll listener callback)
   activeTabRef.current = activeTab
 
-  // Mark that we need to restore scroll when activeTab changes
-  useEffect(() => {
+  // CRITICAL: Set pendingScrollRestoreRef SYNCHRONOUSLY during render, not in useEffect
+  // This is because Monaco's onMount effect (which calls setEditor) runs before our useEffect,
+  // so if we set pendingScrollRestoreRef in useEffect, it won't be set when onDidChangeModelContent fires
+  if (activeTab !== previousActiveTabRef.current) {
     if (activeTab) {
       pendingScrollRestoreRef.current = activeTab
     }
-  }, [activeTab])
+    previousActiveTabRef.current = activeTab
+  }
 
   // Set editor reference and set up listeners
   const setEditor = useCallback((monacoEditor: editor.IStandaloneCodeEditor | null) => {
