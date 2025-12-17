@@ -7,6 +7,7 @@ function createMockEditor(initialScrollTop = 0) {
   let scrollTop = initialScrollTop
   const contentChangeListeners: Array<() => void> = []
   const scrollChangeListeners: Array<() => void> = []
+  const modelChangeListeners: Array<() => void> = []
 
   return {
     getScrollTop: vi.fn(() => scrollTop),
@@ -19,9 +20,17 @@ function createMockEditor(initialScrollTop = 0) {
       scrollChangeListeners.push(callback)
       return { dispose: vi.fn() }
     }),
+    onDidChangeModel: vi.fn((callback: () => void) => {
+      modelChangeListeners.push(callback)
+      return { dispose: vi.fn() }
+    }),
     // Helper to simulate content change
     _triggerContentChange: () => {
       contentChangeListeners.forEach(cb => cb())
+    },
+    // Helper to simulate model change
+    _triggerModelChange: () => {
+      modelChangeListeners.forEach(cb => cb())
     },
     // Helper to simulate scroll and trigger listeners
     _scrollTo: (position: number) => {

@@ -245,6 +245,130 @@ test.describe('Markdown Viewer', () => {
     })
   })
 
+  test.describe('scroll position persistence', () => {
+    test('editor scroll position is preserved when switching from markdown to editor tab', async ({ page }) => {
+      // This test exposes a bug where switching from markdown preview back to
+      // an editor tab resets the scroll position to the top
+
+      // Step 1: Open docs folder and DOUBLE-click on shell.md (markdown preview)
+      // Double-click creates a permanent tab (not replaced when opening another file)
+      const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
+      await docsWorkspace.getByTestId('folder-chevron').click()
+      await page.getByRole('treeitem', { name: 'shell.md' }).dblclick()
+
+      // Wait for markdown viewer
+      await expect(page.getByTestId('markdown-viewer')).toBeVisible()
+
+      // Scroll down in markdown viewer
+      const markdownViewer = page.getByTestId('markdown-viewer')
+      await markdownViewer.evaluate(el => { el.scrollTop = 200 })
+      await page.waitForTimeout(100) // Let scroll settle
+
+      // Step 2: Open libs folder and DOUBLE-click on shell.lua (editor)
+      const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })
+      await libsWorkspace.getByTestId('folder-chevron').click()
+      await page.getByRole('treeitem', { name: 'shell.lua' }).dblclick()
+
+      // Wait for Monaco editor
+      await expect(page.locator('.monaco-editor')).toBeVisible()
+      await page.waitForTimeout(500) // Let editor fully load
+
+      // Scroll down in Monaco editor using Monaco API
+      await page.evaluate(() => {
+        const monacoEditor = (window as unknown as { monaco?: { editor: { getEditors: () => Array<{ setScrollTop: (v: number) => void }> } } }).monaco?.editor.getEditors()[0]
+        if (monacoEditor) {
+          monacoEditor.setScrollTop(300)
+        }
+      })
+      await page.waitForTimeout(200) // Let scroll settle and save
+
+      // Get the scroll position before switching
+      const scrollBeforeSwitch = await page.evaluate(() => {
+        const monacoEditor = (window as unknown as { monaco?: { editor: { getEditors: () => Array<{ getScrollTop: () => number }> } } }).monaco?.editor.getEditors()[0]
+        return monacoEditor ? monacoEditor.getScrollTop() : 0
+      })
+
+      // Verify we actually scrolled
+      expect(scrollBeforeSwitch).toBeGreaterThan(100)
+
+      // Step 3: Click back to markdown tab
+      await page.getByRole('tab', { name: /shell\.md/i }).click()
+      await expect(page.getByTestId('markdown-viewer')).toBeVisible()
+
+      // Step 4: Click back to shell.lua tab - THIS IS WHERE THE BUG OCCURS
+      await page.getByRole('tab', { name: /shell\.lua/i }).click()
+      await expect(page.locator('.monaco-editor')).toBeVisible()
+      await page.waitForTimeout(500) // Wait for scroll restoration
+
+      // Get the scroll position after switching back
+      const scrollAfterSwitch = await page.evaluate(() => {
+        const monacoEditor = (window as unknown as { monaco?: { editor: { getEditors: () => Array<{ getScrollTop: () => number }> } } }).monaco?.editor.getEditors()[0]
+        return monacoEditor ? monacoEditor.getScrollTop() : 0
+      })
+
+      // Assert: Scroll position should be preserved (not reset to 0)
+      // Allow some tolerance for rounding
+      expect(scrollAfterSwitch).toBeGreaterThan(100)
+      expect(Math.abs(scrollAfterSwitch - scrollBeforeSwitch)).toBeLessThan(50)
+    })
+
+    test('editor scroll position is preserved when switching between two editor tabs', async ({ page }) => {
+      // Open libs folder
+      const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })
+      await libsWorkspace.getByTestId('folder-chevron').click()
+
+      // DOUBLE-click shell.lua to create permanent tab
+      await page.getByRole('treeitem', { name: 'shell.lua' }).dblclick()
+      await expect(page.locator('.monaco-editor')).toBeVisible()
+      await page.waitForTimeout(500) // Let editor fully load
+
+      // Scroll down in shell.lua using Monaco API
+      await page.evaluate(() => {
+        const monacoEditor = (window as unknown as { monaco?: { editor: { getEditors: () => Array<{ setScrollTop: (v: number) => void }> } } }).monaco?.editor.getEditors()[0]
+        if (monacoEditor) {
+          monacoEditor.setScrollTop(250)
+        }
+      })
+      await page.waitForTimeout(200) // Let scroll settle and save
+
+      // Get shell.lua scroll position
+      const shellScrollBefore = await page.evaluate(() => {
+        const monacoEditor = (window as unknown as { monaco?: { editor: { getEditors: () => Array<{ getScrollTop: () => number }> } } }).monaco?.editor.getEditors()[0]
+        return monacoEditor ? monacoEditor.getScrollTop() : 0
+      })
+      expect(shellScrollBefore).toBeGreaterThan(100)
+
+      // DOUBLE-click canvas.lua to create permanent tab
+      await page.getByRole('treeitem', { name: 'canvas.lua' }).dblclick()
+      await expect(page.locator('.monaco-editor')).toBeVisible()
+      await page.waitForTimeout(500) // Let editor fully load
+
+      // Scroll down in canvas.lua using Monaco API
+      await page.evaluate(() => {
+        const monacoEditor = (window as unknown as { monaco?: { editor: { getEditors: () => Array<{ setScrollTop: (v: number) => void }> } } }).monaco?.editor.getEditors()[0]
+        if (monacoEditor) {
+          monacoEditor.setScrollTop(400)
+        }
+      })
+      await page.waitForTimeout(200) // Let scroll settle and save
+
+      // Switch back to shell.lua tab
+      await page.getByRole('tab', { name: /shell\.lua/i }).click()
+      await expect(page.locator('.monaco-editor')).toBeVisible()
+      await page.waitForTimeout(500) // Wait for scroll restoration
+
+      // Check scroll position is restored using Monaco API
+      const shellScrollAfter = await page.evaluate(() => {
+        const monacoEditor = (window as unknown as { monaco?: { editor: { getEditors: () => Array<{ getScrollTop: () => number }> } } }).monaco?.editor.getEditors()[0]
+        return monacoEditor ? monacoEditor.getScrollTop() : 0
+      })
+
+      // Should be around 250, not 0 or 400
+      expect(shellScrollAfter).toBeGreaterThan(100)
+      expect(shellScrollAfter).toBeLessThan(350)
+    })
+  })
+
   test.describe('markdown tab switching', () => {
     test('can switch between markdown preview and editor tabs', async ({ page }) => {
       // Expand workspace first
