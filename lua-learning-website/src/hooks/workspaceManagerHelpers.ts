@@ -92,15 +92,28 @@ export function loadPersistedWorkspaces(): PersistedWorkspace[] | null {
 }
 
 /**
+ * IDs of workspaces that should not be persisted (they are recreated fresh on load).
+ */
+const NON_PERSISTED_WORKSPACE_IDS = new Set([
+  LIBRARY_WORKSPACE_ID,
+  DOCS_WORKSPACE_ID,
+  EXAMPLES_WORKSPACE_ID,
+  BOOK_WORKSPACE_ID,
+])
+
+/**
  * Save workspace metadata to localStorage.
+ * Filters out special workspaces (libs, docs, examples, adventures) that are recreated on load.
  */
 export function saveWorkspaces(workspaces: Workspace[]): void {
-  const persistedWorkspaces: PersistedWorkspace[] = workspaces.map((w) => ({
-    id: w.id,
-    name: w.name,
-    type: w.type,
-    mountPath: w.mountPath,
-  }))
+  const persistedWorkspaces: PersistedWorkspace[] = workspaces
+    .filter((w) => !NON_PERSISTED_WORKSPACE_IDS.has(w.id))
+    .map((w) => ({
+      id: w.id,
+      name: w.name,
+      type: w.type,
+      mountPath: w.mountPath,
+    }))
 
   localStorage.setItem(
     WORKSPACE_STORAGE_KEY,

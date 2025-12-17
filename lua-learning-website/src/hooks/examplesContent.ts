@@ -979,6 +979,17 @@ function ui.status_bar(player)
   shell.foreground(config.colors.gold)
   io.write("Gold:" .. player.gold)
 
+  -- Thirst
+  io.write("  ")
+  if player.thirst >= 50 then
+    shell.foreground(config.colors.danger)
+  elseif player.thirst >= 20 then
+    shell.foreground(config.colors.highlight)
+  else
+    shell.foreground(config.colors.muted)
+  end
+  io.write("Thirst:" .. math.floor(player.thirst))
+
   shell.reset()
   print()
 
@@ -1053,6 +1064,293 @@ function ui.level_up(player)
   shell.reset()
 end
 
+-- ============================================================================
+-- SCREEN BUFFER SYSTEM (eliminates flickering during map rendering)
+-- ============================================================================
+
+-- Screen buffer state (double buffering)
+local current_buffer = {}   -- What's currently on screen
+local next_buffer = {}      -- What we want to draw
+local buffer_width = 0
+local buffer_height = 0
+local needs_full_redraw = true
+
+-- Initialize buffers with given dimensions
+function ui.init_buffer(width, height)
+  buffer_width = width
+  buffer_height = height
+  current_buffer = {}
+  next_buffer = {}
+  for y = 1, height do
+    current_buffer[y] = {}
+    next_buffer[y] = {}
+    for x = 1, width do
+      current_buffer[y][x] = { char = " ", color = nil }
+      next_buffer[y][x] = { char = " ", color = nil }
+    end
+  end
+  needs_full_redraw = true
+end
+
+-- Clear the next buffer (fill with spaces)
+function ui.clear_buffer()
+  for y = 1, buffer_height do
+    for x = 1, buffer_width do
+      next_buffer[y][x] = { char = " ", color = nil }
+    end
+  end
+end
+
+-- Set a cell in the next buffer
+function ui.set_cell(x, y, char, color)
+  if y >= 1 and y <= buffer_height and x >= 1 and x <= buffer_width then
+    next_buffer[y][x] = { char = char, color = color }
+  end
+end
+
+-- Draw a string to next buffer starting at position
+function ui.set_string(x, y, str, color)
+  for i = 1, #str do
+    ui.set_cell(x + i - 1, y, str:sub(i, i), color)
+  end
+end
+
+-- Render: compare buffers and only draw changed cells
+function ui.render()
+  shell.hide_cursor()
+
+  if needs_full_redraw then
+    -- Full redraw: draw everything
+    shell.clear()
+    for y = 1, buffer_height do
+      shell.set_cursor(1, y)
+      for x = 1, buffer_width do
+        local cell = next_buffer[y][x]
+        if cell.color then
+          shell.foreground(cell.color)
+        else
+          shell.reset()
+        end
+        io.write(cell.char)
+        -- Update current buffer
+        current_buffer[y][x] = { char = cell.char, color = cell.color }
+      end
+    end
+    needs_full_redraw = false
+  else
+    -- Incremental update: only changed cells
+    local last_color = nil
+    for y = 1, buffer_height do
+      for x = 1, buffer_width do
+        local curr = current_buffer[y][x]
+        local next_cell = next_buffer[y][x]
+
+        -- Check if cell changed
+        if curr.char ~= next_cell.char or curr.color ~= next_cell.color then
+          shell.set_cursor(x, y)
+          if next_cell.color ~= last_color then
+            if next_cell.color then
+              shell.foreground(next_cell.color)
+            else
+              shell.reset()
+            end
+            last_color = next_cell.color
+          end
+          io.write(next_cell.char)
+          -- Update current buffer
+          current_buffer[y][x] = { char = next_cell.char, color = next_cell.color }
+        end
+      end
+    end
+  end
+
+  shell.reset()
+  -- Move cursor to bottom left so it doesn't appear on the map
+  shell.set_cursor(1, buffer_height)
+  shell.show_cursor()
+end
+
+-- Force full redraw on next render
+function ui.invalidate()
+  needs_full_redraw = true
+end
+
+-- Check if buffer is initialized
+function ui.is_buffer_ready()
+  return buffer_width > 0 and buffer_height > 0
+end
+
+-- Get buffer dimensions
+function ui.get_buffer_width()
+  return buffer_width
+end
+
+function ui.get_buffer_height()
+  return buffer_height
+end
+
+-- Display player status bar to buffer (flicker-free version)
+function ui.status_bar_to_buffer(player, start_row)
+  local col = 1
+
+  -- Row 1: Separator line
+  ui.set_string(1, start_row, string.rep("-", 50), config.colors.muted)
+
+  -- Row 2: Stats line
+  local stats_row = start_row + 1
+
+  -- Name
+  ui.set_string(col, stats_row, player.name, config.colors.highlight)
+  col = col + #player.name + 1
+
+  -- Level
+  local level_str = "Lv." .. player.level
+  ui.set_string(col, stats_row, level_str, config.colors.muted)
+  col = col + #level_str + 2
+
+  -- HP label
+  ui.set_string(col, stats_row, "HP:", config.colors.danger)
+  col = col + 3
+
+  -- HP value with color based on percentage
+  local hp_str = player.hp .. "/" .. player.max_hp
+  local hp_pct = player.hp / player.max_hp
+  local hp_color
+  if hp_pct > 0.5 then
+    hp_color = config.colors.success
+  elseif hp_pct > 0.25 then
+    hp_color = config.colors.highlight
+  else
+    hp_color = config.colors.danger
+  end
+  ui.set_string(col, stats_row, hp_str, hp_color)
+  col = col + #hp_str + 2
+
+  -- Gold
+  local gold_str = "Gold:" .. player.gold
+  ui.set_string(col, stats_row, gold_str, config.colors.gold)
+  col = col + #gold_str + 2
+
+  -- Thirst
+  local thirst_str = "Thirst:" .. math.floor(player.thirst)
+  local thirst_color
+  if player.thirst >= 50 then
+    thirst_color = config.colors.danger
+  elseif player.thirst >= 20 then
+    thirst_color = config.colors.highlight
+  else
+    thirst_color = config.colors.muted
+  end
+  ui.set_string(col, stats_row, thirst_str, thirst_color)
+
+  -- Row 3: Separator line
+  ui.set_string(1, start_row + 2, string.rep("-", 50), config.colors.muted)
+
+  -- Return the next available row
+  return start_row + 3
+end
+
+-- Draw horizontal stat bars to the right of the map
+-- bar_start_col: column where bars start
+-- bar_start_row: first row for bars
+function ui.draw_bars_to_buffer(player, bar_start_col, bar_start_row, bar_height)
+  -- Bar width in characters
+  local bar_width = 10
+
+  -- Block characters for beautiful bars
+  local FULL_BLOCK = "█"
+  local LIGHT_SHADE = "░"
+  local MED_SHADE = "▒"
+  local DARK_SHADE = "▓"
+
+  -- Helper to draw a single horizontal bar
+  local function draw_horizontal_bar(row, col, width, current, max, fill_color, empty_color, label, value_str)
+    -- Draw label
+    ui.set_string(col, row, label, fill_color)
+    local bar_col = col + 3  -- After "HP " or "TH " or "XP "
+
+    -- Calculate filled width
+    local pct = current / max
+    local filled = math.floor(pct * width + 0.5)
+    if current > 0 and filled == 0 then filled = 1 end
+
+    -- Draw bar with gradient effect
+    for i = 1, width do
+      local char, color
+      if i <= filled then
+        -- Filled portion - use gradient near the edge
+        if i == filled and filled < width then
+          -- Edge of fill - use medium shade for smooth transition
+          char = DARK_SHADE
+        else
+          char = FULL_BLOCK
+        end
+        color = fill_color
+      else
+        -- Empty portion
+        if i == filled + 1 and filled > 0 then
+          -- Just after fill - lighter transition
+          char = LIGHT_SHADE
+        else
+          char = LIGHT_SHADE
+        end
+        color = empty_color
+      end
+      ui.set_cell(bar_col + i - 1, row, char, color)
+    end
+
+    -- Draw value after bar
+    ui.set_string(bar_col + width + 1, row, value_str, config.colors.text)
+  end
+
+  -- Row positions (spaced out on the right side of map)
+  local name_row = bar_start_row + 1
+  local hp_row = bar_start_row + 3
+  local th_row = bar_start_row + 5
+  local xp_row = bar_start_row + 7
+  local gold_row = bar_start_row + 9
+
+  -- Character name and level
+  local name_str = player.name .. " Lv." .. player.level
+  ui.set_string(bar_start_col, name_row, name_str, config.colors.highlight)
+
+  -- HP Bar (green filled, red empty)
+  local hp_pct = player.hp / player.max_hp
+  local hp_fill_color = config.colors.success
+  if hp_pct <= 0.25 then
+    hp_fill_color = config.colors.danger
+  elseif hp_pct <= 0.5 then
+    hp_fill_color = config.colors.highlight
+  end
+  draw_horizontal_bar(hp_row, bar_start_col, bar_width,
+                      player.hp, player.max_hp,
+                      hp_fill_color, config.colors.danger,
+                      "HP", player.hp .. "/" .. player.max_hp)
+
+  -- Thirst Bar (blue filled = hydrated, red empty = dehydrated)
+  local hydration = player.max_thirst - player.thirst
+  local th_fill_color = config.colors.info
+  if player.thirst >= 50 then
+    th_fill_color = config.colors.danger
+  elseif player.thirst >= 20 then
+    th_fill_color = config.colors.highlight
+  end
+  draw_horizontal_bar(th_row, bar_start_col, bar_width,
+                      hydration, player.max_thirst,
+                      th_fill_color, config.colors.danger,
+                      "TH", math.floor(100 - player.thirst) .. "%")
+
+  -- XP Bar (yellow filled, gray empty)
+  draw_horizontal_bar(xp_row, bar_start_col, bar_width,
+                      player.xp, player.xp_to_level,
+                      config.colors.gold, config.colors.muted,
+                      "XP", player.xp .. "/" .. player.xp_to_level)
+
+  -- Gold display (no bar, just value with coin symbol)
+  ui.set_string(bar_start_col, gold_row, "◆", config.colors.gold)
+  ui.set_string(bar_start_col + 2, gold_row, player.gold .. "g", config.colors.gold)
+end
+
 return ui
 `
 
@@ -1080,6 +1378,10 @@ function player.new(name)
     max_hp = 50,
     str = 10,
     def = 5,
+
+    -- Thirst (depletes outside of town, needed to drink)
+    thirst = 0,       -- Current thirst (0 = not thirsty, 100 = very thirsty)
+    max_thirst = 100,
 
     -- Resources
     gold = 30,
@@ -1241,9 +1543,41 @@ end
 function player.equip_armor(p, armor)
   -- Unequip current armor first
   if p.armor then
-    player.add_item(p, armor)
+    player.add_item(p, p.armor)
   end
   p.armor = armor
+end
+
+-- Thirst functions
+
+-- Increase thirst (called when moving outside town or in combat)
+function player.increase_thirst(p, amount)
+  amount = amount or 0.25  -- Default thirst increase per step
+  p.thirst = math.min(p.max_thirst, p.thirst + amount)
+end
+
+-- Check if player is thirsty enough to drink
+function player.is_thirsty(p)
+  return p.thirst >= 20  -- Need at least 20 thirst to drink
+end
+
+-- Quench thirst (called when drinking)
+function player.quench_thirst(p, amount)
+  amount = amount or 30  -- Default thirst quench
+  p.thirst = math.max(0, p.thirst - amount)
+end
+
+-- Get thirst level description
+function player.get_thirst_desc(p)
+  if p.thirst >= 80 then
+    return "Parched"
+  elseif p.thirst >= 50 then
+    return "Thirsty"
+  elseif p.thirst >= 20 then
+    return "Slightly thirsty"
+  else
+    return "Not thirsty"
+  end
 end
 
 return player
@@ -1267,6 +1601,14 @@ items.weapons = {
     price = 25,
     description = "A basic training sword.",
   },
+  rusty_dagger = {
+    id = "rusty_dagger",
+    name = "Rusty Dagger",
+    type = "weapon",
+    str = 2,
+    price = 10,
+    description = "A worn but functional dagger.",
+  },
   iron_sword = {
     id = "iron_sword",
     name = "Iron Sword",
@@ -1274,6 +1616,14 @@ items.weapons = {
     str = 8,
     price = 80,
     description = "A sturdy iron blade.",
+  },
+  battle_axe = {
+    id = "battle_axe",
+    name = "Battle Axe",
+    type = "weapon",
+    str = 12,
+    price = 120,
+    description = "A heavy two-handed axe.",
   },
   steel_blade = {
     id = "steel_blade",
@@ -1283,6 +1633,14 @@ items.weapons = {
     price = 200,
     description = "A finely crafted steel sword.",
   },
+  war_hammer = {
+    id = "war_hammer",
+    name = "War Hammer",
+    type = "weapon",
+    str = 18,
+    price = 280,
+    description = "Crushes armor with ease.",
+  },
   hero_sword = {
     id = "hero_sword",
     name = "Hero's Sword",
@@ -1291,10 +1649,26 @@ items.weapons = {
     price = 500,
     description = "A legendary blade of heroes.",
   },
+  dragon_slayer = {
+    id = "dragon_slayer",
+    name = "Dragon Slayer",
+    type = "weapon",
+    str = 35,
+    price = 1000,
+    description = "Forged to slay dragons.",
+  },
 }
 
 -- Armor (increase DEF)
 items.armors = {
+  tattered_robe = {
+    id = "tattered_robe",
+    name = "Tattered Robe",
+    type = "armor",
+    def = 1,
+    price = 8,
+    description = "Better than nothing.",
+  },
   cloth_armor = {
     id = "cloth_armor",
     name = "Cloth Armor",
@@ -1311,6 +1685,14 @@ items.armors = {
     price = 60,
     description = "Toughened leather protection.",
   },
+  studded_leather = {
+    id = "studded_leather",
+    name = "Studded Leather",
+    type = "armor",
+    def = 7,
+    price = 100,
+    description = "Leather reinforced with studs.",
+  },
   chain_mail = {
     id = "chain_mail",
     name = "Chain Mail",
@@ -1318,6 +1700,14 @@ items.armors = {
     def = 10,
     price = 150,
     description = "Interlocking metal rings.",
+  },
+  scale_mail = {
+    id = "scale_mail",
+    name = "Scale Mail",
+    type = "armor",
+    def = 14,
+    price = 250,
+    description = "Overlapping metal scales.",
   },
   plate_armor = {
     id = "plate_armor",
@@ -1327,10 +1717,26 @@ items.armors = {
     price = 400,
     description = "Heavy steel plates.",
   },
+  dragon_scale = {
+    id = "dragon_scale",
+    name = "Dragon Scale",
+    type = "armor",
+    def = 28,
+    price = 1200,
+    description = "Armor from dragon scales.",
+  },
 }
 
 -- Consumables
 items.consumables = {
+  herb = {
+    id = "herb",
+    name = "Herb",
+    type = "consumable",
+    heal = 10,
+    price = 5,
+    description = "A healing herb. Restores 10 HP.",
+  },
   potion = {
     id = "potion",
     name = "Potion",
@@ -1347,6 +1753,14 @@ items.consumables = {
     price = 40,
     description = "Restores 80 HP.",
   },
+  super_potion = {
+    id = "super_potion",
+    name = "Super Potion",
+    type = "consumable",
+    heal = 150,
+    price = 75,
+    description = "Restores 150 HP.",
+  },
   max_potion = {
     id = "max_potion",
     name = "Max Potion",
@@ -1354,6 +1768,14 @@ items.consumables = {
     heal = 9999,
     price = 100,
     description = "Fully restores HP.",
+  },
+  elixir = {
+    id = "elixir",
+    name = "Elixir",
+    type = "consumable",
+    heal = 9999,
+    price = 250,
+    description = "A rare healing elixir.",
   },
 }
 
@@ -1382,9 +1804,41 @@ function items.get(item_id)
     or items.consumables[item_id]
 end
 
--- Get shop inventory for a location
+-- Get shop inventory for a shop type
 function items.get_shop_inventory(shop_type)
-  if shop_type == "village" then
+  if shop_type == "weapon" then
+    return {
+      items.weapons.rusty_dagger,
+      items.weapons.wooden_sword,
+      items.weapons.iron_sword,
+      items.weapons.battle_axe,
+      items.weapons.steel_blade,
+      items.weapons.war_hammer,
+      items.weapons.hero_sword,
+      items.weapons.dragon_slayer,
+    }
+  elseif shop_type == "armor" then
+    return {
+      items.armors.tattered_robe,
+      items.armors.cloth_armor,
+      items.armors.leather_armor,
+      items.armors.studded_leather,
+      items.armors.chain_mail,
+      items.armors.scale_mail,
+      items.armors.plate_armor,
+      items.armors.dragon_scale,
+    }
+  elseif shop_type == "potion" then
+    return {
+      items.consumables.herb,
+      items.consumables.potion,
+      items.consumables.hi_potion,
+      items.consumables.super_potion,
+      items.consumables.max_potion,
+      items.consumables.elixir,
+    }
+  elseif shop_type == "village" then
+    -- Legacy mixed shop
     return {
       items.weapons.wooden_sword,
       items.weapons.iron_sword,
@@ -1394,6 +1848,7 @@ function items.get_shop_inventory(shop_type)
       items.consumables.hi_potion,
     }
   elseif shop_type == "town" then
+    -- Legacy mixed shop
     return {
       items.weapons.iron_sword,
       items.weapons.steel_blade,
@@ -1430,34 +1885,38 @@ maps.data = {
     width = 20,
     height = 12,
     grid = {
-      "####################",
+      "#######^^^^#########",
+      "#.###..........###.#",
+      "#.#W#..........#P#.#",
+      "#.###....~~....###.#",
+      "#........~~........#",
+      "#.###..........###.#",
+      "#.#A#..........#I#.#",
+      "#.###..........###.#",
       "#..................#",
-      "#..###....###..S...#",
-      "#..#H#....#.#......#",
-      "#..###....###......#",
-      "#..................#",
-      "#......^^......^^..#",
-      "#..................#",
-      "#..~~~.........~~..#",
-      "#..~~~.........~~..#",
-      "#..................#",
+      "#..TT..........TT..#",
+      "#..TT..........TT..#",
       "####################",
     },
     -- NPCs on this map
     npcs = {
-      { x = 4, y = 4, type = "healer", name = "Elara the Healer" },
-      { x = 16, y = 3, type = "shop", name = "Oakvale Shop", shop_type = "village" },
+      { x = 3, y = 3, type = "shop", name = "Blade & Edge", shop_type = "weapon" },
+      { x = 16, y = 3, type = "shop", name = "Healers' Hut", shop_type = "potion" },
+      { x = 3, y = 7, type = "shop", name = "Iron Hide Armory", shop_type = "armor" },
+      { x = 16, y = 7, type = "inn", name = "The Rusty Anchor Inn" },
     },
     -- Exits to other maps
     exits = {
-      { x = 7, y = 7, dir = "north", dest = "darkwood", dest_x = 10, dest_y = 10 },
-      { x = 8, y = 7, dir = "north", dest = "darkwood", dest_x = 10, dest_y = 10 },
-      { x = 15, y = 7, dir = "north", dest = "darkwood", dest_x = 10, dest_y = 10 },
-      { x = 16, y = 7, dir = "north", dest = "darkwood", dest_x = 10, dest_y = 10 },
+      { x = 9, y = 1, dir = "north", dest = "darkwood", dest_x = 10, dest_y = 11 },
+      { x = 10, y = 1, dir = "north", dest = "darkwood", dest_x = 11, dest_y = 11 },
+      { x = 11, y = 1, dir = "north", dest = "darkwood", dest_x = 12, dest_y = 11 },
+      { x = 12, y = 1, dir = "north", dest = "darkwood", dest_x = 13, dest_y = 11 },
     },
     -- No random encounters in town
     encounter_rate = 0,
     monster_pool = {},
+    -- Safe zone: thirst doesn't increase here
+    safe = true,
   },
 
   darkwood = {
@@ -1475,13 +1934,15 @@ maps.data = {
       "#.T....T.......T...#",
       "#......T...T.......#",
       "#T...T.......T..T..#",
-      "#.........vv.......#",
+      "#.......vvvv.......#",
       "####################",
     },
     npcs = {},
     exits = {
-      { x = 10, y = 11, dir = "south", dest = "oakvale", dest_x = 7, dest_y = 7 },
-      { x = 11, y = 11, dir = "south", dest = "oakvale", dest_x = 8, dest_y = 7 },
+      { x = 9, y = 11, dir = "south", dest = "oakvale", dest_x = 9, dest_y = 2 },
+      { x = 10, y = 11, dir = "south", dest = "oakvale", dest_x = 10, dest_y = 2 },
+      { x = 11, y = 11, dir = "south", dest = "oakvale", dest_x = 11, dest_y = 2 },
+      { x = 12, y = 11, dir = "south", dest = "oakvale", dest_x = 12, dest_y = 2 },
     },
     -- Random encounters in forest
     encounter_rate = 0.15,
@@ -1549,6 +2010,12 @@ function maps.check_encounter(map_name)
   return nil
 end
 
+-- Check if map is a safe zone (town)
+function maps.is_safe(map_name)
+  local map = maps.data[map_name]
+  return map and map.safe == true
+end
+
 -- Get tile color
 local function get_tile_color(tile)
   local colors = config.colors
@@ -1565,7 +2032,7 @@ local function get_tile_color(tile)
   end
 end
 
--- Draw the map with player
+-- Draw the map with player (original version for menus/dialogs)
 function maps.draw(map_name, player_x, player_y)
   local map = maps.data[map_name]
   if not map then return end
@@ -1586,11 +2053,23 @@ function maps.draw(map_name, player_x, player_y)
         local npc = maps.get_npc_at(map_name, x, y)
         if npc then
           if npc.type == "shop" then
-            shell.foreground(config.colors.npc_shop)
-            io.write("S")
-          elseif npc.type == "healer" then
+            -- Different symbols for different shop types
+            if npc.shop_type == "weapon" then
+              shell.foreground(config.colors.npc_shop)
+              io.write("W")
+            elseif npc.shop_type == "armor" then
+              shell.foreground(config.colors.info)
+              io.write("A")
+            elseif npc.shop_type == "potion" then
+              shell.foreground(config.colors.heal)
+              io.write("P")
+            else
+              shell.foreground(config.colors.npc_shop)
+              io.write("S")
+            end
+          elseif npc.type == "inn" then
             shell.foreground(config.colors.npc_healer)
-            io.write("H")
+            io.write("I")
           else
             shell.foreground(config.colors.text)
             io.write("?")
@@ -1605,6 +2084,68 @@ function maps.draw(map_name, player_x, player_y)
     print()
   end
   shell.reset()
+end
+
+-- Draw the map to screen buffer (flicker-free version)
+-- Requires ui module with buffer functions
+function maps.draw_to_buffer(map_name, player_x, player_y, ui, start_row)
+  local map = maps.data[map_name]
+  if not map then return end
+
+  start_row = start_row or 1
+
+  -- Row 1: Title
+  local title = "=== " .. map.name .. " ==="
+  ui.set_string(1, start_row, title, config.colors.title)
+
+  -- Row 2: blank (handled by buffer clear)
+
+  -- Rows 3+: Map grid
+  local map_start_row = start_row + 2
+  for y = 1, map.height do
+    for x = 1, map.width do
+      local char, color
+
+      if x == player_x and y == player_y then
+        char = "@"
+        color = config.colors.player
+      else
+        local npc = maps.get_npc_at(map_name, x, y)
+        if npc then
+          if npc.type == "shop" then
+            -- Different symbols for different shop types
+            if npc.shop_type == "weapon" then
+              char = "W"
+              color = config.colors.npc_shop
+            elseif npc.shop_type == "armor" then
+              char = "A"
+              color = config.colors.info
+            elseif npc.shop_type == "potion" then
+              char = "P"
+              color = config.colors.heal
+            else
+              char = "S"
+              color = config.colors.npc_shop
+            end
+          elseif npc.type == "inn" then
+            char = "I"
+            color = config.colors.npc_healer
+          else
+            char = "?"
+            color = config.colors.text
+          end
+        else
+          char = map.grid[y]:sub(x, x)
+          color = get_tile_color(char)
+        end
+      end
+
+      ui.set_cell(x, map_start_row + y - 1, char, color)
+    end
+  end
+
+  -- Return the next available row after the map
+  return map_start_row + map.height
 end
 
 return maps
@@ -1753,6 +2294,7 @@ local combat = {}
 local current_monster = nil
 local battle_over = false
 local battle_result = nil  -- "victory", "defeat", "fled"
+local battle_thirst = 0    -- Thirst accumulated this fight (max 20)
 
 -- Calculate player attack damage
 local function calc_player_damage(p)
@@ -1888,6 +2430,13 @@ end
 
 -- Main battle loop (one turn)
 local function battle_turn(p, monster)
+  -- Increase thirst each combat round (3 per round, max 20 per fight)
+  if battle_thirst < 20 then
+    local thirst_gain = math.min(3, 20 - battle_thirst)
+    player_mod.increase_thirst(p, thirst_gain)
+    battle_thirst = battle_thirst + thirst_gain
+  end
+
   -- Show battle status
   ui.combat_status(p, monster)
 
@@ -1995,6 +2544,7 @@ function combat.start_battle(p, monster)
   current_monster = monster
   battle_over = false
   battle_result = nil
+  battle_thirst = 0  -- Reset thirst counter for this fight
 
   -- Run the battle
   battle_turn(p, monster)
@@ -2034,12 +2584,25 @@ local game = {}
 -- Current player state
 local player = nil
 
+-- Screen layout constants for buffer rendering
+local SCREEN_WIDTH = 50
+local SCREEN_HEIGHT = 17
+local MAP_START_ROW = 1
+local CONTROLS_ROW = 16
+
+-- Vertical stat bars layout (to the right of map)
+local BAR_START_COL = 25  -- First bar starts here (after 20-char map + gap)
+local BAR_TOP_ROW = 3     -- Align with map grid (row after title + blank)
+local BAR_HEIGHT = 12     -- Match map height
+
 -- Initialize new game
 function game.init(player_name)
   math.randomseed(os.time())
   player = player_mod.new(player_name)
   -- Give player a starting potion
   player_mod.add_item(player, items.create("potion"))
+  -- Initialize screen buffer for flicker-free rendering
+  ui.init_buffer(SCREEN_WIDTH, SCREEN_HEIGHT)
 end
 
 -- Show inventory and allow item use/equip
@@ -2112,6 +2675,17 @@ local function show_game_menu()
   print("  STR: " .. player_mod.get_attack(player) .. " (base: " .. player.str .. ")")
   print("  DEF: " .. player_mod.get_defense(player) .. " (base: " .. player.def .. ")")
   print("  Gold: " .. player.gold)
+  -- Thirst with color coding
+  local thirst_desc = player_mod.get_thirst_desc(player)
+  if player.thirst >= 50 then
+    shell.foreground(config.colors.danger)
+  elseif player.thirst >= 20 then
+    shell.foreground(config.colors.highlight)
+  else
+    shell.foreground(config.colors.muted)
+  end
+  print("  Thirst: " .. thirst_desc)
+  shell.reset()
   print()
 
   ui.print("Equipment:", config.colors.highlight)
@@ -2149,9 +2723,37 @@ local function interact_shop(npc)
   shell.foreground(config.colors.gold)
   print("Your gold: " .. player.gold)
   shell.reset()
-  print()
 
   local shop_type = npc.shop_type or "village"
+
+  -- Show current equipment for weapon/armor shops
+  if shop_type == "weapon" then
+    print()
+    shell.foreground(config.colors.highlight)
+    io.write("Equipped: ")
+    if player.weapon then
+      shell.foreground(config.colors.text)
+      print(player.weapon.name .. " (+" .. player.weapon.str .. " STR)")
+    else
+      shell.foreground(config.colors.muted)
+      print("None")
+    end
+    shell.reset()
+  elseif shop_type == "armor" then
+    print()
+    shell.foreground(config.colors.highlight)
+    io.write("Equipped: ")
+    if player.armor then
+      shell.foreground(config.colors.text)
+      print(player.armor.name .. " (+" .. player.armor.def .. " DEF)")
+    else
+      shell.foreground(config.colors.muted)
+      print("None")
+    end
+    shell.reset()
+  end
+  print()
+
   local inventory = items.get_shop_inventory(shop_type)
 
   local options = {}
@@ -2170,6 +2772,42 @@ local function interact_shop(npc)
       local new_item = items.create(item.id)
       player_mod.add_item(player, new_item)
       ui.print("Bought " .. item.name .. "!", config.colors.success)
+
+      -- Ask to equip if weapon or armor
+      if new_item.str then
+        -- It's a weapon
+        print()
+        shell.foreground(config.colors.highlight)
+        print("Equip " .. new_item.name .. " now? [Y/N]")
+        shell.reset()
+        local equip_choice = io.read(1):lower()
+        if equip_choice == "y" then
+          -- Find and remove item from inventory by id
+          local idx = player_mod.find_item(player, new_item.id)
+          if idx then
+            player_mod.remove_item(player, idx)
+          end
+          player_mod.equip_weapon(player, new_item)
+          ui.print("Equipped " .. new_item.name .. "!", config.colors.success)
+        end
+      elseif new_item.def then
+        -- It's armor
+        print()
+        shell.foreground(config.colors.highlight)
+        print("Equip " .. new_item.name .. " now? [Y/N]")
+        shell.reset()
+        local equip_choice = io.read(1):lower()
+        if equip_choice == "y" then
+          -- Find and remove item from inventory by id
+          local idx = player_mod.find_item(player, new_item.id)
+          if idx then
+            player_mod.remove_item(player, idx)
+          end
+          player_mod.equip_armor(player, new_item)
+          ui.print("Equipped " .. new_item.name .. "!", config.colors.success)
+        end
+      end
+
       io.read(1)
       interact_shop(npc)  -- Stay in shop
     else
@@ -2180,55 +2818,205 @@ local function interact_shop(npc)
   end
 end
 
--- NPC: Healer interaction
-local function interact_healer(npc)
+-- Roll dice (e.g., roll_dice(2, 6) = 2d6)
+local function roll_dice(count, sides)
+  local total = 0
+  for i = 1, count do
+    total = total + math.random(1, sides)
+  end
+  return total
+end
+
+-- Inn drink menu
+local inn_drinks = {
+  { name = "Water", price = 0, dice_count = 1, dice_sides = 4 },
+  { name = "Weak Ale", price = 2, dice_count = 1, dice_sides = 6 },
+  { name = "Hearty Stew", price = 5, dice_count = 2, dice_sides = 4 },
+  { name = "Spiced Mead", price = 8, dice_count = 2, dice_sides = 6 },
+  { name = "Dragon's Breath Whiskey", price = 15, dice_count = 3, dice_sides = 6 },
+}
+
+-- NPC: Inn/Tavern interaction
+local function interact_inn(npc)
   ui.clear()
   shell.foreground(config.colors.npc_healer)
   ui.title(npc.name)
   shell.reset()
 
-  print("Healer: 'I can restore your health.'")
+  print("Innkeeper: 'Welcome, weary traveler!'")
   print()
   print("HP: " .. player.hp .. "/" .. player.max_hp)
-  print()
-
-  if player.hp >= player.max_hp then
-    print("'You're already in perfect health!'")
-    print()
-    shell.foreground(config.colors.muted)
-    print("Press any key to continue...")
-    shell.reset()
-    io.read(1)
-    return
-  end
-
-  local cost = math.ceil((player.max_hp - player.hp) / 2)
-  cost = math.max(5, cost)
-
   shell.foreground(config.colors.gold)
-  print("Cost: " .. cost .. " gold (You have: " .. player.gold .. ")")
+  print("Gold: " .. player.gold)
+  shell.reset()
+  -- Show thirst status
+  local thirst_desc = player_mod.get_thirst_desc(player)
+  if player.thirst >= 50 then
+    shell.foreground(config.colors.danger)
+  elseif player.thirst >= 20 then
+    shell.foreground(config.colors.highlight)
+  else
+    shell.foreground(config.colors.muted)
+  end
+  print("Thirst: " .. thirst_desc)
   shell.reset()
   print()
 
-  local choice = ui.menu("Heal?", { "Yes, heal me", "No thanks" })
+  local options = {
+    "Sleep with the horses (Free)",
+    "Buy a drink",
+    "Rest at the inn (25% of gold)",
+    "Leave"
+  }
+
+  local choice = ui.menu("What would you like?", options)
+
   if choice == 1 then
-    if player_mod.spend_gold(player, cost) then
-      player_mod.full_heal(player)
-      ui.print("Your health has been restored!", config.colors.success)
+    -- Sleep with horses - free, heals up to 40 HP
+    if player.hp >= player.max_hp then
+      ui.print("You're already well rested!", config.colors.muted)
       io.read(1)
+      interact_inn(npc)
+      return
+    end
+
+    local heal_amount = math.min(40, player.max_hp) - player.hp
+    if heal_amount <= 0 then
+      ui.print("The horses snore loudly. You can't sleep.", config.colors.muted)
+      io.read(1)
+      interact_inn(npc)
+      return
+    end
+
+    -- Cap healing at 40 HP total
+    local new_hp = math.min(player.hp + heal_amount, 40, player.max_hp)
+    local healed = new_hp - player.hp
+    if healed > 0 then
+      player.hp = new_hp
+      print()
+      ui.print("You sleep in the stables...", config.colors.muted)
+      print("The hay is itchy but warm.")
+      ui.print("Recovered " .. healed .. " HP!", config.colors.success)
     else
-      ui.print("Not enough gold!", config.colors.danger)
+      ui.print("You're already at 40 HP or more.", config.colors.muted)
+    end
+    io.read(1)
+    interact_inn(npc)
+
+  elseif choice == 2 then
+    -- Buy a drink - must be thirsty first
+    if not player_mod.is_thirsty(player) then
+      print()
+      print("Innkeeper: 'You don't look thirsty, friend.'")
+      ui.print("You're not thirsty enough to drink.", config.colors.muted)
+      io.read(1)
+      interact_inn(npc)
+      return
+    end
+
+    ui.clear()
+    shell.foreground(config.colors.npc_healer)
+    ui.title("Drink Menu")
+    shell.reset()
+    print()
+
+    local drink_options = {}
+    for _, drink in ipairs(inn_drinks) do
+      if drink.price == 0 then
+        table.insert(drink_options, drink.name .. " (Free)")
+      else
+        table.insert(drink_options, drink.name .. " - " .. drink.price .. "g")
+      end
+    end
+
+    local drink_choice = ui.menu("Order:", drink_options)
+    if drink_choice and drink_choice >= 1 and drink_choice <= #inn_drinks then
+      local drink = inn_drinks[drink_choice]
+
+      if drink.price > 0 and not player_mod.spend_gold(player, drink.price) then
+        ui.print("Not enough gold!", config.colors.danger)
+        io.read(1)
+        interact_inn(npc)
+        return
+      end
+
+      -- Roll for healing
+      local heal = roll_dice(drink.dice_count, drink.dice_sides)
+      local old_hp = player.hp
+      player_mod.heal(player, heal)
+      local actual_heal = player.hp - old_hp
+
+      -- Quench thirst
+      player_mod.quench_thirst(player, 30)
+
+      print()
+      if drink.name == "Water" then
+        print("You drink the refreshing water.")
+      elseif drink.name == "Dragon's Breath Whiskey" then
+        print("The whiskey burns going down!")
+        print("You feel warmth spread through you.")
+      else
+        print("You enjoy the " .. drink.name .. ".")
+      end
+
+      if actual_heal > 0 then
+        ui.print("Recovered " .. actual_heal .. " HP!", config.colors.success)
+      else
+        ui.print("You feel satisfied.", config.colors.muted)
+      end
+      ui.print("Your thirst is quenched.", config.colors.info)
+      io.read(1)
+      interact_inn(npc)
+    else
+      interact_inn(npc)
+    end
+
+  elseif choice == 3 then
+    -- Rest at inn - 25% of gold for full heal
+    if player.hp >= player.max_hp then
+      ui.print("You're already well rested!", config.colors.muted)
+      io.read(1)
+      interact_inn(npc)
+      return
+    end
+
+    local cost = math.floor(player.gold * 0.25)
+    cost = math.max(1, cost)  -- Minimum 1 gold if they have any
+
+    if player.gold == 0 then
+      print()
+      print("Innkeeper: 'Sorry, no coin, no room.'")
+      ui.print("You have no gold!", config.colors.danger)
+      io.read(1)
+      interact_inn(npc)
+      return
+    end
+
+    print()
+    shell.foreground(config.colors.gold)
+    print("A warm bed costs " .. cost .. " gold.")
+    shell.reset()
+
+    local confirm = ui.menu("Rest at the inn?", { "Yes, I need proper rest", "No thanks" })
+    if confirm == 1 then
+      player_mod.spend_gold(player, cost)
+      player_mod.full_heal(player)
+      print()
+      print("You sleep soundly in a warm bed...")
+      ui.print("Fully restored!", config.colors.success)
       io.read(1)
     end
+    interact_inn(npc)
   end
+  -- choice == 4 or nil: Leave (do nothing, return to game)
 end
 
 -- Handle NPC interaction
 local function interact_with_npc(npc)
   if npc.type == "shop" then
     interact_shop(npc)
-  elseif npc.type == "healer" then
-    interact_healer(npc)
+  elseif npc.type == "inn" then
+    interact_inn(npc)
   end
 end
 
@@ -2241,6 +3029,7 @@ local function try_move(dx, dy)
   local npc = maps.get_npc_at(player.map, new_x, new_y)
   if npc then
     interact_with_npc(npc)
+    ui.invalidate()  -- Force full redraw after NPC interaction
     return
   end
 
@@ -2252,6 +3041,11 @@ local function try_move(dx, dy)
   -- Move player
   player.x = new_x
   player.y = new_y
+
+  -- Increase thirst when moving outside safe zones (0.25 per step)
+  if not maps.is_safe(player.map) then
+    player_mod.increase_thirst(player, 0.25)
+  end
 
   -- Check for exit
   local exit = maps.get_exit_at(player.map, new_x, new_y)
@@ -2265,6 +3059,7 @@ local function try_move(dx, dy)
     print("Entering " .. map_data.name .. "...")
     shell.reset()
     io.read(1)
+    ui.invalidate()  -- Force full redraw after map transition
     return
   end
 
@@ -2283,6 +3078,7 @@ local function try_move(dx, dy)
       shell.reset()
       io.read(1)
       combat.start_battle(player, monster)
+      ui.invalidate()  -- Force full redraw after combat
     end
   end
 end
@@ -2320,21 +3116,22 @@ local function confirm_quit()
   end
 end
 
--- Main game loop (one frame)
+-- Main game loop (one frame) - uses screen buffer for flicker-free rendering
 local function game_frame()
-  ui.clear()
+  -- Clear buffer (not screen!)
+  ui.clear_buffer()
 
-  -- Draw map
-  maps.draw(player.map, player.x, player.y)
+  -- Draw map to buffer
+  maps.draw_to_buffer(player.map, player.x, player.y, ui, MAP_START_ROW)
 
-  -- Draw status bar
-  ui.status_bar(player)
+  -- Draw stat bars to the right of map (includes name/level)
+  ui.draw_bars_to_buffer(player, BAR_START_COL, BAR_TOP_ROW, BAR_HEIGHT)
 
-  -- Show controls
-  print()
-  shell.foreground(config.colors.muted)
-  print("WASD: Move  E: Interact  M: Menu  Q: Quit")
-  shell.reset()
+  -- Draw controls to buffer
+  ui.set_string(1, CONTROLS_ROW, "WASD: Move  E: Interact  M: Menu  Q: Quit", config.colors.muted)
+
+  -- Render buffer to screen (only changed cells are drawn)
+  ui.render()
 
   -- Get input
   local key = io.read(1):lower()
@@ -2354,11 +3151,13 @@ local function game_frame()
       local npc = maps.get_npc_at(player.map, player.x + dir[1], player.y + dir[2])
       if npc then
         interact_with_npc(npc)
+        ui.invalidate()  -- Force full redraw after NPC interaction
         break
       end
     end
   elseif key == "m" then
     show_game_menu()
+    ui.invalidate()  -- Force full redraw after menu
   elseif key == "q" then
     if confirm_quit() then
       ui.clear()
@@ -2366,6 +3165,7 @@ local function game_frame()
       print()
       return false  -- Quit game
     end
+    ui.invalidate()  -- Force full redraw if quit cancelled
   end
 
   return true  -- Continue game
