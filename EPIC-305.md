@@ -1,9 +1,9 @@
 # Epic #305: Canvas Image Support
 
-**Status:** In Progress (3/5 complete)
+**Status:** In Progress (4/5 complete)
 **Branch:** epic-305
 **Created:** 2025-12-17
-**Last Updated:** 2025-12-17T15:21:00-07:00
+**Last Updated:** 2025-12-17T15:42:00-07:00
 
 ## Overview
 
@@ -65,7 +65,7 @@ local h = canvas.assets.get_height("player")
 | #306 | Core Types & ImageCache | ✅ Complete | 306-core-types-imagecache | Merged in PR #312 |
 | #307 | Asset Loading Infrastructure | ✅ Complete | 307-asset-loading-infrastructure | Merged in PR #314 |
 | #308 | Worker Canvas Implementation | ✅ Complete | 308-worker-canvas-implementation | Merged in PR #317 |
-| #309 | Shell Canvas Implementation | ⏳ Pending | - | Depends on #306, #307 |
+| #309 | Shell Canvas Implementation | 🔄 In Progress | 309-shell-canvas-implementation | Started 2025-12-17 |
 | #310 | Process Integration & E2E Testing | ⏳ Pending | - | Depends on #306, #307, #308, #309 |
 
 ### Dependency Graph
@@ -106,6 +106,7 @@ local h = canvas.assets.get_height("player")
 - Started work on #308: Worker Canvas Implementation
 - PR created for #308: Worker Canvas Implementation (PR #317)
 - Completed #308: Worker Canvas Implementation - Merged PR #317 to epic-305
+- Started work on #309: Shell Canvas Implementation
 
 ## Key Files
 
@@ -119,6 +120,8 @@ local h = canvas.assets.get_height("player")
 - `packages/canvas-runtime/src/worker/WorkerMessages.ts` - SerializedAsset type for worker communication
 - `packages/canvas-runtime/src/worker/LuaCanvasRuntime.ts` - Asset API bindings (canvas.assets.*, canvas.draw_image)
 - `packages/canvas-runtime/src/renderer/CanvasRenderer.ts` - drawImage command with ImageCache support
+- `packages/lua-runtime/src/CanvasController.ts` - Shell canvas: registerAsset, loadAssets, drawImage, getAssetWidth/Height
+- `packages/lua-runtime/src/setupCanvasAPI.ts` - Shell canvas: canvas.assets.image, canvas.draw_image, canvas.assets.get_width/height
 
 ## Open Questions
 

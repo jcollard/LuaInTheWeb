@@ -135,6 +135,23 @@ export function setupCanvasAPI(
     return getController()?.isMouseButtonPressed(button) ?? false
   })
 
+  // --- Asset functions ---
+  engine.global.set('__canvas_assets_image', (name: string, path: string) => {
+    getController()?.registerAsset(name, path)
+  })
+
+  engine.global.set('__canvas_drawImage', (name: string, x: number, y: number, width?: number | null, height?: number | null) => {
+    getController()?.drawImage(name, x, y, width ?? undefined, height ?? undefined)
+  })
+
+  engine.global.set('__canvas_assets_getWidth', (name: string) => {
+    return getController()?.getAssetWidth(name) ?? 0
+  })
+
+  engine.global.set('__canvas_assets_getHeight', (name: string) => {
+    return getController()?.getAssetHeight(name) ?? 0
+  })
+
   // --- Set up Lua-side canvas table ---
   // Canvas is NOT a global - it must be accessed via require('canvas')
   engine.doStringSync(`
@@ -220,6 +237,26 @@ export function setupCanvasAPI(
 
     function _canvas.draw_text(x, y, text)
       __canvas_text(x, y, text)
+    end
+
+    -- Image drawing
+    function _canvas.draw_image(name, x, y, width, height)
+      __canvas_drawImage(name, x, y, width, height)
+    end
+
+    -- Asset management
+    _canvas.assets = {}
+
+    function _canvas.assets.image(name, path)
+      __canvas_assets_image(name, path)
+    end
+
+    function _canvas.assets.get_width(name)
+      return __canvas_assets_getWidth(name)
+    end
+
+    function _canvas.assets.get_height(name)
+      return __canvas_assets_getHeight(name)
     end
 
     -- Timing
