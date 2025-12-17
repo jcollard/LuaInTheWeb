@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { describe, it, expect, vi } from 'vitest'
 import { MarkdownViewer } from './MarkdownViewer'
 
 describe('MarkdownViewer', () => {
@@ -242,6 +243,76 @@ end
       const codeElement = container.querySelector('code')
       expect(codeElement).toBeInTheDocument()
       expect(codeElement?.textContent).toContain('local function add')
+    })
+  })
+
+  describe('relative link handling', () => {
+    it('should call onLinkClick with resolved path for relative links', async () => {
+      const user = userEvent.setup()
+      const onLinkClick = vi.fn()
+      render(
+        <MarkdownViewer
+          content="[Next Lesson](02_lesson.md)"
+          basePath="/book/chapters"
+          onLinkClick={onLinkClick}
+        />
+      )
+      const link = screen.getByRole('link', { name: 'Next Lesson' })
+      await user.click(link)
+      expect(onLinkClick).toHaveBeenCalledWith('/book/chapters/02_lesson.md')
+    })
+
+    it('should resolve paths with ./ prefix', async () => {
+      const user = userEvent.setup()
+      const onLinkClick = vi.fn()
+      render(
+        <MarkdownViewer
+          content="[Link](./relative.md)"
+          basePath="/docs"
+          onLinkClick={onLinkClick}
+        />
+      )
+      const link = screen.getByRole('link', { name: 'Link' })
+      await user.click(link)
+      expect(onLinkClick).toHaveBeenCalledWith('/docs/relative.md')
+    })
+
+    it('should not intercept external http links', async () => {
+      const onLinkClick = vi.fn()
+      render(
+        <MarkdownViewer
+          content="[External](https://example.com)"
+          basePath="/book"
+          onLinkClick={onLinkClick}
+        />
+      )
+      const link = screen.getByRole('link', { name: 'External' })
+      expect(link).toHaveAttribute('href', 'https://example.com')
+    })
+
+    it('should not intercept anchor links', async () => {
+      const onLinkClick = vi.fn()
+      render(
+        <MarkdownViewer
+          content="[Section](#section)"
+          basePath="/book"
+          onLinkClick={onLinkClick}
+        />
+      )
+      const link = screen.getByRole('link', { name: 'Section' })
+      expect(link).toHaveAttribute('href', '#section')
+    })
+
+    it('should render normal links when no basePath provided', () => {
+      const onLinkClick = vi.fn()
+      render(
+        <MarkdownViewer
+          content="[Link](page.md)"
+          onLinkClick={onLinkClick}
+        />
+      )
+      const link = screen.getByRole('link', { name: 'Link' })
+      expect(link).toHaveAttribute('href', 'page.md')
     })
   })
 })

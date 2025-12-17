@@ -356,7 +356,7 @@ function IDELayoutInner({
                       )}
                       {/* Markdown preview - shown when markdown tab is active */}
                       {activeTabType === 'markdown' && (
-                        <MarkdownTabContent code={code} tabBarProps={tabBarProps} />
+                        <MarkdownTabContent code={code} tabBarProps={tabBarProps} currentFilePath={activeTab} onOpenMarkdown={openMarkdownPreview} />
                       )}
                       {/* Editor panel - hidden when canvas or markdown tab is active */}
                       {/* Note: also show if hasCanvasTabs is false to handle race condition during canvas tab close */}
