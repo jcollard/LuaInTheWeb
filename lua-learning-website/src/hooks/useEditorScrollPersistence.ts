@@ -41,14 +41,14 @@ export function useEditorScrollPersistence(
   // Save scroll position for the previous tab before switching
   useEffect(() => {
     const monacoEditor = editorRef.current
-    if (!monacoEditor) return
 
-    // Save scroll position for the previous tab
-    if (previousTabRef.current && previousTabRef.current !== activeTab) {
+    // Save scroll position for the previous tab (only if editor is mounted)
+    if (monacoEditor && previousTabRef.current && previousTabRef.current !== activeTab) {
       scrollPositions.set(previousTabRef.current, monacoEditor.getScrollTop())
     }
 
-    // Mark that we need to restore scroll after content changes
+    // Always mark that we need to restore scroll after content changes
+    // This must happen even if editor isn't mounted yet (e.g., switching from markdown tab)
     if (activeTab) {
       pendingScrollRestoreRef.current = activeTab
     }
