@@ -318,6 +318,72 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   // Refresh file tree by incrementing version counter (triggers re-render for shell commands)
   const refreshFileTree = useCallback(() => { setFileTreeVersion(v => v + 1) }, [])
 
+  // Handle file/directory moves from shell (mv command)
+  // Updates tabs to reflect new paths without losing editor state
+  const handleShellFileMove = useCallback((oldPath: string, newPath: string, isDirectory: boolean) => {
+    if (isDirectory) {
+      // For directories, update all tabs that are children of the old path
+      const affectedTabs = tabs.filter(t => t.path.startsWith(oldPath + '/') || t.path === oldPath)
+      for (const tab of affectedTabs) {
+        const relativePath = tab.path.slice(oldPath.length)
+        const newTabPath = newPath + relativePath
+        const newName = newTabPath.split('/').pop() || newTabPath
+        // Update content maps to preserve dirty state
+        setOriginalContent(prev => {
+          if (prev.has(tab.path)) {
+            const next = new Map(prev)
+            const content = next.get(tab.path)!
+            next.delete(tab.path)
+            next.set(newTabPath, content)
+            return next
+          }
+          return prev
+        })
+        setUnsavedContent(prev => {
+          if (prev.has(tab.path)) {
+            const next = new Map(prev)
+            const content = next.get(tab.path)!
+            next.delete(tab.path)
+            next.set(newTabPath, content)
+            return next
+          }
+          return prev
+        })
+        // Update tab path and name
+        tabBar.renameTab(tab.path, newTabPath, newName)
+      }
+    } else {
+      // For files, update the specific tab if it exists
+      const tabIndex = tabs.findIndex(t => t.path === oldPath)
+      if (tabIndex !== -1) {
+        const newName = newPath.split('/').pop() || newPath
+        // Update content maps to preserve dirty state
+        setOriginalContent(prev => {
+          if (prev.has(oldPath)) {
+            const next = new Map(prev)
+            const content = next.get(oldPath)!
+            next.delete(oldPath)
+            next.set(newPath, content)
+            return next
+          }
+          return prev
+        })
+        setUnsavedContent(prev => {
+          if (prev.has(oldPath)) {
+            const next = new Map(prev)
+            const content = next.get(oldPath)!
+            next.delete(oldPath)
+            next.set(newPath, content)
+            return next
+          }
+          return prev
+        })
+        // Update tab path and name
+        tabBar.renameTab(oldPath, newPath, newName)
+      }
+    }
+  }, [tabs, tabBar])
+
   // File tree is computed fresh on each render (UI operations cause re-renders naturally)
   // For shell commands, refreshFileTree is called to force a re-render via fileTreeVersion
   // We need to read fileTreeVersion to ensure component re-renders when it changes
@@ -328,7 +394,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     engine, code, setCode, fileName, isDirty,
     activePanel, setActivePanel,
     terminalVisible, toggleTerminal, sidebarVisible, toggleSidebar,
-    fileTree, refreshFileTree,
+    fileTree, refreshFileTree, handleShellFileMove,
     createFile, createFolder, deleteFile, deleteFolder, renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, openBinaryViewer, saveFile,
     tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, makeTabPermanent, toasts, showError, dismissToast,
     pendingNewFilePath, generateUniqueFileName, createFileWithRename, clearPendingNewFile,
@@ -337,7 +403,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   }), [
     engine, code, setCode, fileName, isDirty,
     activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
-    fileTree, refreshFileTree, createFile, createFolder, deleteFile, deleteFolder,
+    fileTree, refreshFileTree, handleShellFileMove, createFile, createFolder, deleteFile, deleteFolder,
     renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, openBinaryViewer, saveFile, tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, makeTabPermanent,
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,

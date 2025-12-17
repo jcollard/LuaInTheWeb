@@ -82,6 +82,9 @@ export interface IDEContextValue {
 
   // File tree refresh (for shell integration - triggers re-render after shell modifies filesystem)
   refreshFileTree: () => void
+
+  // Shell file move handler (for shell integration - updates tabs when mv command is used)
+  handleShellFileMove: (oldPath: string, newPath: string, isDirectory: boolean) => void
 }
 
 /**

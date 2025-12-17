@@ -590,4 +590,5 @@ describe('CompositeFileSystem', () => {
       expect(cfs.getCurrentDirectory()).toBe('/')
     })
   })
+
 })

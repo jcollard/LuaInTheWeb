@@ -52,21 +52,32 @@ function deletePaths(paths: string[], rootPath: string, fs: IFileSystem): void {
 }
 
 /**
+ * Result of moving a single source to a destination.
+ */
+interface MoveSingleResult {
+  /** The final destination path */
+  finalDest: string
+  /** Whether the source was a directory */
+  isDirectory: boolean
+}
+
+/**
  * Move a single source to a destination.
+ * Returns information about the move for callback notification.
  */
 function moveSingle(
   resolvedSource: string,
   resolvedDest: string,
   sourcePath: string,
   fs: IFileSystem
-): void {
+): MoveSingleResult {
   // Check if source is a directory
   if (fs.isDirectory(resolvedSource)) {
     // Copy directory recursively
     const copiedPaths = copyDirectoryRecursive(resolvedSource, resolvedDest, fs)
     // Delete source after successful copy
     deletePaths(copiedPaths, resolvedSource, fs)
-    return
+    return { finalDest: resolvedDest, isDirectory: true }
   }
 
   // Source is a file
@@ -84,6 +95,7 @@ function moveSingle(
   fs.writeFile(finalDest, content)
   // Delete source
   fs.delete(resolvedSource)
+  return { finalDest, isDirectory: false }
 }
 
 /**
@@ -139,6 +151,9 @@ export const mv: Command = {
       }
 
       try {
+        // Collect move results for callback notification
+        const moveResults: Array<{ source: string; dest: string; isDirectory: boolean }> = []
+
         for (const sourcePath of sources) {
           const resolvedSource = resolvePath(currentDir, sourcePath)
 
@@ -153,7 +168,15 @@ export const mv: Command = {
           const basename = getBasename(sourcePath)
           const finalDest = joinPath(resolvedDest, basename)
 
-          moveSingle(resolvedSource, finalDest, sourcePath, fs)
+          const result = moveSingle(resolvedSource, finalDest, sourcePath, fs)
+          moveResults.push({ source: resolvedSource, dest: result.finalDest, isDirectory: result.isDirectory })
+        }
+
+        // Notify callback for all successful moves
+        if (fs.onFileMove) {
+          for (const move of moveResults) {
+            fs.onFileMove(move.source, move.dest, move.isDirectory)
+          }
         }
 
         return { exitCode: 0, stdout: '', stderr: '' }
@@ -188,7 +211,11 @@ export const mv: Command = {
     }
 
     try {
-      moveSingle(resolvedSource, resolvedDest, sourcePath, fs)
+      const result = moveSingle(resolvedSource, resolvedDest, sourcePath, fs)
+      // Notify callback for successful move
+      if (fs.onFileMove) {
+        fs.onFileMove(resolvedSource, result.finalDest, result.isDirectory)
+      }
       return { exitCode: 0, stdout: '', stderr: '' }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)

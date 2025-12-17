@@ -88,6 +88,17 @@ export interface IFileSystem {
    */
   delete(path: string): void
 
+  // Event callbacks (optional)
+
+  /**
+   * Optional callback invoked when a file or directory is moved/renamed.
+   * Used by the mv command to notify external systems (e.g., UI tab updates).
+   * @param oldPath - The original path of the file/directory
+   * @param newPath - The new path after move/rename
+   * @param isDirectory - Whether the moved item is a directory
+   */
+  onFileMove?: (oldPath: string, newPath: string, isDirectory: boolean) => void
+
   // Binary file support (optional)
 
   /**
