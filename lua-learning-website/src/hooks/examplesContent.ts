@@ -823,6 +823,10 @@ config.colors = {
   heal = shell.GREEN,
   gold = shell.YELLOW,
   xp = shell.CYAN,
+
+  -- Fog of war colors
+  fog_discovered = shell.GRAY,   -- Explored but not visible
+  fog_hidden = shell.BLACK,      -- Never seen
 }
 
 -- Game balance
@@ -1400,6 +1404,10 @@ function player.new(name)
 
     -- Combat state
     is_defending = false,
+
+    -- Fog of war: tracks discovered tiles per map
+    -- Format: { map_name = { ["x,y"] = true, ... }, ... }
+    discovered = {},
   }
 end
 
@@ -1947,6 +1955,8 @@ maps.data = {
     -- Random encounters in forest
     encounter_rate = 0.15,
     monster_pool = { "slime", "goblin", "wolf" },
+    -- Fog of war: visibility range (can see 3 tiles in each direction)
+    light = 3,
   },
 }
 
@@ -1992,6 +2002,45 @@ function maps.get_exit_at(map_name, x, y)
     end
   end
   return nil
+end
+
+-- ============================================================================
+-- FOG OF WAR FUNCTIONS
+-- ============================================================================
+
+-- Check if a tile is within light range of player
+function maps.is_visible(map_name, player_x, player_y, tile_x, tile_y)
+  local map = maps.data[map_name]
+  if not map or not map.light then return true end  -- No fog = always visible
+
+  local dx = math.abs(tile_x - player_x)
+  local dy = math.abs(tile_y - player_y)
+  return dx <= map.light and dy <= map.light
+end
+
+-- Mark tiles within range as discovered
+function maps.update_discovered(p)
+  local map = maps.data[p.map]
+  if not map or not map.light then return end  -- No fog = nothing to track
+
+  p.discovered[p.map] = p.discovered[p.map] or {}
+  local discovered = p.discovered[p.map]
+
+  for dy = -map.light, map.light do
+    for dx = -map.light, map.light do
+      local tx, ty = p.x + dx, p.y + dy
+      if tx >= 1 and tx <= map.width and ty >= 1 and ty <= map.height then
+        discovered[tx .. "," .. ty] = true
+      end
+    end
+  end
+end
+
+-- Check if tile was previously discovered
+function maps.is_discovered(p, map_name, x, y)
+  local discovered = p.discovered[map_name]
+  if not discovered then return false end
+  return discovered[x .. "," .. y] == true
 end
 
 -- Check for random encounter
@@ -2088,7 +2137,7 @@ end
 
 -- Draw the map to screen buffer (flicker-free version)
 -- Requires ui module with buffer functions
-function maps.draw_to_buffer(map_name, player_x, player_y, ui, start_row)
+function maps.draw_to_buffer(map_name, player_x, player_y, ui, start_row, p)
   local map = maps.data[map_name]
   if not map then return end
 
@@ -2106,38 +2155,86 @@ function maps.draw_to_buffer(map_name, player_x, player_y, ui, start_row)
     for x = 1, map.width do
       local char, color
 
-      if x == player_x and y == player_y then
-        char = "@"
-        color = config.colors.player
-      else
-        local npc = maps.get_npc_at(map_name, x, y)
-        if npc then
-          if npc.type == "shop" then
-            -- Different symbols for different shop types
-            if npc.shop_type == "weapon" then
-              char = "W"
-              color = config.colors.npc_shop
-            elseif npc.shop_type == "armor" then
-              char = "A"
-              color = config.colors.info
-            elseif npc.shop_type == "potion" then
-              char = "P"
-              color = config.colors.heal
-            else
-              char = "S"
-              color = config.colors.npc_shop
-            end
-          elseif npc.type == "inn" then
-            char = "I"
-            color = config.colors.npc_healer
-          else
-            char = "?"
-            color = config.colors.text
-          end
+      -- Check fog of war state
+      local visible = maps.is_visible(map_name, player_x, player_y, x, y)
+      local discovered = p and maps.is_discovered(p, map_name, x, y)
+
+      if not map.light then
+        -- No fog of war - render normally
+        if x == player_x and y == player_y then
+          char = "@"
+          color = config.colors.player
         else
-          char = map.grid[y]:sub(x, x)
-          color = get_tile_color(char)
+          local npc = maps.get_npc_at(map_name, x, y)
+          if npc then
+            if npc.type == "shop" then
+              if npc.shop_type == "weapon" then
+                char = "W"
+                color = config.colors.npc_shop
+              elseif npc.shop_type == "armor" then
+                char = "A"
+                color = config.colors.info
+              elseif npc.shop_type == "potion" then
+                char = "P"
+                color = config.colors.heal
+              else
+                char = "S"
+                color = config.colors.npc_shop
+              end
+            elseif npc.type == "inn" then
+              char = "I"
+              color = config.colors.npc_healer
+            else
+              char = "?"
+              color = config.colors.text
+            end
+          else
+            char = map.grid[y]:sub(x, x)
+            color = get_tile_color(char)
+          end
         end
+      elseif visible then
+        -- Currently visible - render normally with full colors
+        if x == player_x and y == player_y then
+          char = "@"
+          color = config.colors.player
+        else
+          local npc = maps.get_npc_at(map_name, x, y)
+          if npc then
+            if npc.type == "shop" then
+              if npc.shop_type == "weapon" then
+                char = "W"
+                color = config.colors.npc_shop
+              elseif npc.shop_type == "armor" then
+                char = "A"
+                color = config.colors.info
+              elseif npc.shop_type == "potion" then
+                char = "P"
+                color = config.colors.heal
+              else
+                char = "S"
+                color = config.colors.npc_shop
+              end
+            elseif npc.type == "inn" then
+              char = "I"
+              color = config.colors.npc_healer
+            else
+              char = "?"
+              color = config.colors.text
+            end
+          else
+            char = map.grid[y]:sub(x, x)
+            color = get_tile_color(char)
+          end
+        end
+      elseif discovered then
+        -- Explored but not visible - show dimmed terrain only
+        char = map.grid[y]:sub(x, x)
+        color = config.colors.fog_discovered
+      else
+        -- Never seen - show fog pattern
+        char = "░"
+        color = config.colors.fog_hidden
       end
 
       ui.set_cell(x, map_start_row + y - 1, char, color)
@@ -2603,6 +2700,8 @@ function game.init(player_name)
   player_mod.add_item(player, items.create("potion"))
   -- Initialize screen buffer for flicker-free rendering
   ui.init_buffer(SCREEN_WIDTH, SCREEN_HEIGHT)
+  -- Initialize fog of war - reveal starting area
+  maps.update_discovered(player)
 end
 
 -- Show inventory and allow item use/equip
@@ -3042,6 +3141,9 @@ local function try_move(dx, dy)
   player.x = new_x
   player.y = new_y
 
+  -- Update fog of war - reveal tiles around player
+  maps.update_discovered(player)
+
   -- Increase thirst when moving outside safe zones (0.25 per step)
   if not maps.is_safe(player.map) then
     player_mod.increase_thirst(player, 0.25)
@@ -3053,6 +3155,8 @@ local function try_move(dx, dy)
     player.map = exit.dest
     player.x = exit.dest_x
     player.y = exit.dest_y
+    -- Update fog of war for new map
+    maps.update_discovered(player)
     ui.clear()
     shell.foreground(config.colors.highlight)
     local map_data = maps.get(player.map)
@@ -3121,8 +3225,8 @@ local function game_frame()
   -- Clear buffer (not screen!)
   ui.clear_buffer()
 
-  -- Draw map to buffer
-  maps.draw_to_buffer(player.map, player.x, player.y, ui, MAP_START_ROW)
+  -- Draw map to buffer (with fog of war support)
+  maps.draw_to_buffer(player.map, player.x, player.y, ui, MAP_START_ROW, player)
 
   -- Draw stat bars to the right of map (includes name/level)
   ui.draw_bars_to_buffer(player, BAR_START_COL, BAR_TOP_ROW, BAR_HEIGHT)
