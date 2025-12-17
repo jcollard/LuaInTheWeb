@@ -110,7 +110,18 @@ export default function LuaRepl({ embedded = false }: LuaReplProps) {
       )}
 
       <div className={styles.terminalContainer}>
-        <BashTerminal ref={terminalRef} onCommand={handleCommand} embedded={embedded} />
+        <BashTerminal
+          ref={terminalRef}
+          onCommand={handleCommand}
+          embedded={embedded}
+          commandNames={['clear', 'help', 'reset', 'print', 'pairs', 'ipairs']}
+          getPathCompletions={() => [
+            { name: 'untitled-1.lua', type: 'file' },
+            { name: 'untitled-2.lua', type: 'file' },
+            { name: 'main.lua', type: 'file' },
+            { name: 'docs', type: 'directory' },
+          ]}
+        />
       </div>
 
       {!embedded && (
