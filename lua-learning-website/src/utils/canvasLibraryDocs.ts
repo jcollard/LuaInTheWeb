@@ -17,7 +17,7 @@ export const canvasLibraryDocs: Record<string, LibraryDocEntry> = {
     name: 'start',
     signature: 'canvas.start()',
     description:
-      'Start the canvas and block until canvas.stop() is called or Ctrl+C. Opens a canvas tab and runs the game loop. Call canvas.on_draw() before this to register your render callback.',
+      'Start the canvas and block until canvas.stop() is called or Ctrl+C. Opens a canvas tab and runs the game loop. Call canvas.tick() before this to register your render callback.',
     library: 'canvas',
     returns: 'nil',
   },
@@ -31,11 +31,11 @@ export const canvasLibraryDocs: Record<string, LibraryDocEntry> = {
   },
 
   // Game Loop
-  on_draw: {
-    name: 'on_draw',
-    signature: 'canvas.on_draw(callback)',
+  tick: {
+    name: 'tick',
+    signature: 'canvas.tick(callback)',
     description:
-      'Register the draw callback function. Called once per frame (~60fps). All drawing operations should be performed inside this callback.',
+      'Register the tick callback function. Called once per frame (~60fps). All game logic and drawing should be performed inside this callback.',
     library: 'canvas',
     params: [{ name: 'callback', description: 'Function to call each frame' }],
     returns: 'nil',
@@ -46,7 +46,7 @@ export const canvasLibraryDocs: Record<string, LibraryDocEntry> = {
     name: 'set_size',
     signature: 'canvas.set_size(width, height)',
     description:
-      'Set the canvas size in pixels. Call this before on_draw() to set the desired canvas dimensions.',
+      'Set the canvas size in pixels. Call this before tick() to set the desired canvas dimensions.',
     library: 'canvas',
     params: [
       { name: 'width', description: 'Canvas width in pixels' },

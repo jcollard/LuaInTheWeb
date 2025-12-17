@@ -95,9 +95,9 @@ describe('LuaCanvasRuntime', () => {
       await expect(runtime.loadCode('invalid lua code !!!')).rejects.toThrow();
     });
 
-    it('should register canvas.on_draw callback', async () => {
+    it('should register canvas.tick callback', async () => {
       await runtime.loadCode(`
-        canvas.on_draw(function()
+        canvas.tick(function()
           canvas.clear()
         end)
       `);
@@ -112,7 +112,7 @@ describe('LuaCanvasRuntime', () => {
 
     it('should start and stop the game loop', async () => {
       await runtime.loadCode(`
-        canvas.on_draw(function()
+        canvas.tick(function()
           canvas.clear()
         end)
       `);
@@ -139,7 +139,7 @@ describe('LuaCanvasRuntime', () => {
 
       await runtime.loadCode(`
         frameCount = 0
-        canvas.on_draw(function()
+        canvas.tick(function()
           frameCount = frameCount + 1
           canvas.clear()
         end)
@@ -168,7 +168,7 @@ describe('LuaCanvasRuntime', () => {
 
     it('should send clear command', async () => {
       await runtime.loadCode(`
-        canvas.on_draw(function()
+        canvas.tick(function()
           canvas.clear()
         end)
       `);
@@ -189,7 +189,7 @@ describe('LuaCanvasRuntime', () => {
 
     it('should send setColor command', async () => {
       await runtime.loadCode(`
-        canvas.on_draw(function()
+        canvas.tick(function()
           canvas.set_color(255, 128, 64)
         end)
       `);
@@ -209,7 +209,7 @@ describe('LuaCanvasRuntime', () => {
 
     it('should send fillRect command', async () => {
       await runtime.loadCode(`
-        canvas.on_draw(function()
+        canvas.tick(function()
           canvas.fill_rect(10, 20, 100, 50)
         end)
       `);
@@ -229,7 +229,7 @@ describe('LuaCanvasRuntime', () => {
 
     it('should send rect command', async () => {
       await runtime.loadCode(`
-        canvas.on_draw(function()
+        canvas.tick(function()
           canvas.draw_rect(5, 10, 200, 100)
         end)
       `);
@@ -249,7 +249,7 @@ describe('LuaCanvasRuntime', () => {
 
     it('should send circle command', async () => {
       await runtime.loadCode(`
-        canvas.on_draw(function()
+        canvas.tick(function()
           canvas.draw_circle(100, 100, 50)
         end)
       `);
@@ -269,7 +269,7 @@ describe('LuaCanvasRuntime', () => {
 
     it('should send fillCircle command', async () => {
       await runtime.loadCode(`
-        canvas.on_draw(function()
+        canvas.tick(function()
           canvas.fill_circle(200, 150, 30)
         end)
       `);
@@ -289,7 +289,7 @@ describe('LuaCanvasRuntime', () => {
 
     it('should send line command', async () => {
       await runtime.loadCode(`
-        canvas.on_draw(function()
+        canvas.tick(function()
           canvas.draw_line(0, 0, 100, 100)
         end)
       `);
@@ -309,7 +309,7 @@ describe('LuaCanvasRuntime', () => {
 
     it('should send text command', async () => {
       await runtime.loadCode(`
-        canvas.on_draw(function()
+        canvas.tick(function()
           canvas.draw_text(50, 50, "Hello World")
         end)
       `);
@@ -342,7 +342,7 @@ describe('LuaCanvasRuntime', () => {
 
       let capturedDelta = 0;
       await runtime.loadCode(`
-        canvas.on_draw(function()
+        canvas.tick(function()
           capturedDelta = canvas.get_delta()
         end)
       `);
@@ -369,7 +369,7 @@ describe('LuaCanvasRuntime', () => {
       });
 
       await runtime.loadCode(`
-        canvas.on_draw(function()
+        canvas.tick(function()
           capturedTime = canvas.get_time()
         end)
       `);
@@ -404,7 +404,7 @@ describe('LuaCanvasRuntime', () => {
       });
 
       await runtime.loadCode(`
-        canvas.on_draw(function()
+        canvas.tick(function()
           wDown = canvas.is_key_down("KeyW")
           aDown = canvas.is_key_down("KeyA")
         end)
@@ -434,7 +434,7 @@ describe('LuaCanvasRuntime', () => {
       });
 
       await runtime.loadCode(`
-        canvas.on_draw(function()
+        canvas.tick(function()
           spacePressed = canvas.is_key_pressed("Space")
         end)
       `);
@@ -462,7 +462,7 @@ describe('LuaCanvasRuntime', () => {
       });
 
       await runtime.loadCode(`
-        canvas.on_draw(function()
+        canvas.tick(function()
           mx = canvas.get_mouse_x()
           my = canvas.get_mouse_y()
         end)
@@ -492,7 +492,7 @@ describe('LuaCanvasRuntime', () => {
       });
 
       await runtime.loadCode(`
-        canvas.on_draw(function()
+        canvas.tick(function()
           leftDown = canvas.is_mouse_down(0)
           middleDown = canvas.is_mouse_down(1)
           rightDown = canvas.is_mouse_down(2)
@@ -540,7 +540,7 @@ describe('LuaCanvasRuntime', () => {
       runtime.onError(errorHandler);
 
       await runtime.loadCode(`
-        canvas.on_draw(function()
+        canvas.tick(function()
           error("Test error from Lua")
         end)
       `);
@@ -562,7 +562,7 @@ describe('LuaCanvasRuntime', () => {
     it('should clean up resources', async () => {
       await runtime.initialize();
       await runtime.loadCode(`
-        canvas.on_draw(function()
+        canvas.tick(function()
           canvas.clear()
         end)
       `);

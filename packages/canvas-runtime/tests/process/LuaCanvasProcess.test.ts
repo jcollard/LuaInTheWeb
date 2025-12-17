@@ -657,7 +657,7 @@ describe('LuaCanvasProcess', () => {
   describe('rendering integration', () => {
     it('should start game loop when worker is running', () => {
       process = new LuaCanvasProcess({
-        code: 'canvas.on_draw(function() canvas.clear() end)',
+        code: 'canvas.tick(function() canvas.clear() end)',
         canvas: mockCanvas.canvas,
       });
 
@@ -671,7 +671,7 @@ describe('LuaCanvasProcess', () => {
 
     it('should render draw commands received from worker', () => {
       process = new LuaCanvasProcess({
-        code: 'canvas.on_draw(function() canvas.clear() end)',
+        code: 'canvas.tick(function() canvas.clear() end)',
         canvas: mockCanvas.canvas,
         mode: 'postMessage',
       });
@@ -698,7 +698,7 @@ describe('LuaCanvasProcess', () => {
 
     it('should stop game loop when process is stopped', () => {
       process = new LuaCanvasProcess({
-        code: 'canvas.on_draw(function() canvas.clear() end)',
+        code: 'canvas.tick(function() canvas.clear() end)',
         canvas: mockCanvas.canvas,
       });
 

@@ -94,6 +94,20 @@ const BookWorkspaceIcon = () => (
   </svg>
 )
 
+// Examples workspace icon - code brackets with play button (example programs)
+const ExamplesWorkspaceIcon = () => (
+  <svg className={styles.iconSvg} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" data-testid="examples-workspace-icon">
+    {/* Code brackets background */}
+    <rect x="1" y="2" width="14" height="12" rx="2" fill="#4a6785" />
+    {/* Left bracket */}
+    <path d="M5 5L3 8l2 3" stroke="#a0d0ff" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    {/* Right bracket */}
+    <path d="M11 5l2 3-2 3" stroke="#a0d0ff" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    {/* Play triangle in center */}
+    <path d="M7 6v4l3-2z" fill="#90ee90" />
+  </svg>
+)
+
 export function FileTreeItem({
   name,
   path,
@@ -104,6 +118,7 @@ export function FileTreeItem({
   isLibraryWorkspace,
   isDocsWorkspace,
   isBookWorkspace,
+  isExamplesWorkspace,
   isReadOnly,
   isSelected,
   isExpanded,
@@ -266,6 +281,8 @@ export function FileTreeItem({
               <DocsWorkspaceIcon />
             ) : isBookWorkspace ? (
               <BookWorkspaceIcon />
+            ) : isExamplesWorkspace ? (
+              <ExamplesWorkspaceIcon />
             ) : isLocalWorkspace ? (
               <LocalWorkspaceIcon />
             ) : (

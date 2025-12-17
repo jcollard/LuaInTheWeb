@@ -26,6 +26,8 @@ end
 local function __read_one(fmt)
   -- Flush output buffer before blocking for input
   __js_flush()
+  -- Reset instruction count - user interaction means not an infinite loop
+  __reset_instruction_count()
 
   -- Handle numeric argument: io.read(n) reads n characters
   if type(fmt) == "number" then

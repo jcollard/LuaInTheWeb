@@ -260,7 +260,7 @@ export class LuaCanvasRuntime {
     lua.doStringSync(`
       canvas = {}
 
-      function canvas.on_draw(callback)
+      function canvas.tick(callback)
         __canvas_onDraw(callback)
       end
 

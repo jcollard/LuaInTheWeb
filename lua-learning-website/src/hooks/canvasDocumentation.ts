@@ -26,12 +26,12 @@ local canvas = require('canvas')
 
 Start the canvas and block until \`canvas.stop()\` is called or Ctrl+C.
 This opens a canvas tab and runs the game loop.
-Call \`canvas.on_draw()\` before this to register your render callback.
+Call \`canvas.tick()\` before this to register your render callback.
 
 \`\`\`lua
 local canvas = require('canvas')
 
-canvas.on_draw(function()
+canvas.tick(function()
   canvas.clear()
   canvas.set_color(255, 0, 0)
   canvas.fill_rect(10, 10, 50, 50)
@@ -54,16 +54,16 @@ end
 
 ## Game Loop
 
-### canvas.on_draw(callback)
+### canvas.tick(callback)
 
-Register the draw callback function. This callback is called once per frame (~60fps).
-All drawing operations should be performed inside this callback.
+Register the tick callback function. This callback is called once per frame (~60fps).
+All game logic and drawing should be performed inside this callback.
 
 **Parameters:**
 - \`callback\` (function): Function to call each frame
 
 \`\`\`lua
-canvas.on_draw(function()
+canvas.tick(function()
   canvas.clear()
   canvas.set_color(255, 0, 0)
   canvas.fill_rect(10, 10, 50, 50)
@@ -74,7 +74,7 @@ end)
 
 ### canvas.set_size(width, height)
 
-Set the canvas size in pixels. Call this before on_draw() to set the desired canvas dimensions.
+Set the canvas size in pixels. Call this before tick() to set the desired canvas dimensions.
 
 **Parameters:**
 - \`width\` (number): Canvas width in pixels
@@ -285,7 +285,7 @@ canvas.set_size(800, 600)
 local x, y = 100, 100
 local speed = 200
 
-canvas.on_draw(function()
+canvas.tick(function()
   -- Handle input
   local dt = canvas.get_delta()
 

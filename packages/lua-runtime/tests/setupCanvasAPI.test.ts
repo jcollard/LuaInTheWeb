@@ -112,7 +112,7 @@ describe('setupCanvasAPI', () => {
       const result = await engine.doString(`
         local canvas = require('canvas')
         local functions = {
-          'start', 'stop', 'on_draw',
+          'start', 'stop', 'tick',
           'set_size', 'get_width', 'get_height',
           'clear', 'set_color', 'set_line_width',
           'draw_rect', 'fill_rect', 'draw_circle', 'fill_circle',

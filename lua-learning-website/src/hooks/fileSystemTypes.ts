@@ -25,6 +25,8 @@ export interface TreeNode {
   isDocsWorkspace?: boolean
   /** Indicates this is a book workspace (read-only, learning content) */
   isBookWorkspace?: boolean
+  /** Indicates this is an examples workspace (read-only, example Lua programs) */
+  isExamplesWorkspace?: boolean
   /** Indicates this file/folder is in a read-only workspace */
   isReadOnly?: boolean
   children?: TreeNode[]

@@ -81,8 +81,8 @@ describe('useWorkspaceManager', () => {
 
       const { result } = renderHook(() => useWorkspaceManager())
 
-      // Includes 2 persisted workspaces + library workspace + docs workspace
-      expect(result.current.workspaces).toHaveLength(4)
+      // Includes 2 persisted workspaces + library workspace + docs workspace + examples workspace
+      expect(result.current.workspaces).toHaveLength(5)
       expect(result.current.workspaces.some((w) => w.name === 'Restored Workspace')).toBe(true)
     })
 
@@ -113,8 +113,8 @@ describe('useWorkspaceManager', () => {
 
       const { result } = renderHook(() => useWorkspaceManager())
 
-      // Should have default + other + library + docs workspace
-      expect(result.current.workspaces.length).toBe(4)
+      // Should have default + other + library + docs + examples workspace
+      expect(result.current.workspaces.length).toBe(5)
       expect(result.current.workspaces.some((w) => w.id === DEFAULT_WORKSPACE_ID)).toBe(true)
     })
 
@@ -207,8 +207,8 @@ describe('useWorkspaceManager', () => {
 
       const { result } = renderHook(() => useWorkspaceManager())
 
-      // Before reconnect: 3 mounts (default + library + docs)
-      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(3)
+      // Before reconnect: 4 mounts (default + library + docs + examples)
+      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(4)
 
       const mockHandle = {
         name: 'project',
@@ -219,8 +219,8 @@ describe('useWorkspaceManager', () => {
         await result.current.reconnectWorkspace('ws-local', mockHandle)
       })
 
-      // After reconnect: 4 mounts (default + library + docs + reconnected local)
-      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(4)
+      // After reconnect: 5 mounts (default + library + docs + examples + reconnected local)
+      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(5)
     })
 
     it('throws error for non-existent workspace', async () => {

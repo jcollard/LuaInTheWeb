@@ -9,6 +9,7 @@ import {
   generateShellLibrarySource,
   generateCanvasLibrarySource,
 } from './libraryDocumentation'
+import { getExamplesContent } from './examplesContent'
 import type {
   Workspace,
   PersistedWorkspace,
@@ -33,6 +34,9 @@ export const BOOK_WORKSPACE_ID = 'adventures'
 export const BOOK_WORKSPACE_NAME = 'Adventures'
 export const BOOK_MOUNT_PATH = '/adventures'
 export const BOOK_PUBLIC_PATH = '/adventures-in-lua-book'
+export const EXAMPLES_WORKSPACE_ID = 'examples'
+export const EXAMPLES_WORKSPACE_NAME = 'examples'
+export const EXAMPLES_MOUNT_PATH = '/examples'
 
 /**
  * Generate a unique workspace ID.
@@ -88,15 +92,28 @@ export function loadPersistedWorkspaces(): PersistedWorkspace[] | null {
 }
 
 /**
+ * IDs of workspaces that should not be persisted (they are recreated fresh on load).
+ */
+const NON_PERSISTED_WORKSPACE_IDS = new Set([
+  LIBRARY_WORKSPACE_ID,
+  DOCS_WORKSPACE_ID,
+  EXAMPLES_WORKSPACE_ID,
+  BOOK_WORKSPACE_ID,
+])
+
+/**
  * Save workspace metadata to localStorage.
+ * Filters out special workspaces (libs, docs, examples, adventures) that are recreated on load.
  */
 export function saveWorkspaces(workspaces: Workspace[]): void {
-  const persistedWorkspaces: PersistedWorkspace[] = workspaces.map((w) => ({
-    id: w.id,
-    name: w.name,
-    type: w.type,
-    mountPath: w.mountPath,
-  }))
+  const persistedWorkspaces: PersistedWorkspace[] = workspaces
+    .filter((w) => !NON_PERSISTED_WORKSPACE_IDS.has(w.id))
+    .map((w) => ({
+      id: w.id,
+      name: w.name,
+      type: w.type,
+      mountPath: w.mountPath,
+    }))
 
   localStorage.setItem(
     WORKSPACE_STORAGE_KEY,
@@ -174,6 +191,22 @@ export function createBookWorkspace(files: Record<string, string>): Workspace {
 }
 
 /**
+ * Create the examples workspace containing example Lua programs.
+ * This workspace is read-only and contains sample code for users to browse and run.
+ */
+export function createExamplesWorkspace(): Workspace {
+  return {
+    id: EXAMPLES_WORKSPACE_ID,
+    name: EXAMPLES_WORKSPACE_NAME,
+    type: 'examples',
+    mountPath: EXAMPLES_MOUNT_PATH,
+    filesystem: createReadOnlyFileSystem(getExamplesContent()),
+    status: 'connected',
+    isReadOnly: true,
+  }
+}
+
+/**
  * Fetch book content and create the book workspace.
  * Returns null if the fetch fails.
  */
@@ -235,8 +268,9 @@ export function createDisconnectedFileSystem(): IFileSystem {
 
 /**
  * Initialize workspaces from localStorage or create default.
- * Always includes the library workspace for built-in libraries
- * and the docs workspace for API documentation.
+ * Always includes the library workspace for built-in libraries,
+ * the docs workspace for API documentation, and the examples workspace
+ * for sample Lua programs.
  */
 export function initializeWorkspaces(): WorkspaceManagerState {
   const persistedWorkspaces = loadPersistedWorkspaces()
@@ -245,11 +279,13 @@ export function initializeWorkspaces(): WorkspaceManagerState {
   const libraryWorkspace = createLibraryWorkspace()
   // Docs workspace is always present (not persisted, always created fresh)
   const docsWorkspace = createDocsWorkspace()
+  // Examples workspace is always present (not persisted, always created fresh)
+  const examplesWorkspace = createExamplesWorkspace()
 
   if (!persistedWorkspaces || persistedWorkspaces.length === 0) {
     const defaultWorkspace = createDefaultWorkspace()
     return {
-      workspaces: [defaultWorkspace, libraryWorkspace, docsWorkspace],
+      workspaces: [defaultWorkspace, libraryWorkspace, docsWorkspace, examplesWorkspace],
     }
   }
 
@@ -298,6 +334,9 @@ export function initializeWorkspaces(): WorkspaceManagerState {
 
   // Add docs workspace (always present, not persisted)
   workspaces.push(docsWorkspace)
+
+  // Add examples workspace (always present, not persisted)
+  workspaces.push(examplesWorkspace)
 
   return {
     workspaces,

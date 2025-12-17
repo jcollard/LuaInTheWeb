@@ -9,6 +9,7 @@ import {
   libraryWorkspaceContextMenuItems,
   docsWorkspaceContextMenuItems,
   bookWorkspaceContextMenuItems,
+  examplesWorkspaceContextMenuItems,
   buildConnectedWorkspaceMenuItems,
 } from './contextMenuItems'
 import { isMarkdownFile } from './treeUtils'
@@ -19,6 +20,7 @@ interface GetContextMenuItemsParams {
   isLibraryWorkspace: (path: string) => boolean
   isDocsWorkspace: (path: string) => boolean
   isBookWorkspace: (path: string) => boolean
+  isExamplesWorkspace: (path: string) => boolean
   isInReadOnlyWorkspace: (path: string) => boolean
   supportsRefresh?: (path: string) => boolean
 }
@@ -33,6 +35,7 @@ export function getContextMenuItems(params: GetContextMenuItemsParams): ContextM
     isLibraryWorkspace,
     isDocsWorkspace,
     isBookWorkspace,
+    isExamplesWorkspace,
     isInReadOnlyWorkspace,
     supportsRefresh,
   } = params
@@ -64,6 +67,10 @@ export function getContextMenuItems(params: GetContextMenuItemsParams): ContextM
     // Book workspaces have no context menu options (read-only)
     if (isBookWorkspace(targetPath)) {
       return bookWorkspaceContextMenuItems
+    }
+    // Examples workspaces have no context menu options (read-only)
+    if (isExamplesWorkspace(targetPath)) {
+      return examplesWorkspaceContextMenuItems
     }
     // Add "Refresh" and "Disconnect" options for connected local workspaces
     const isConnectedLocalWorkspace = supportsRefresh?.(targetPath)

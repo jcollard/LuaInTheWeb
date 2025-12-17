@@ -170,12 +170,12 @@ describe('luaLibraryDocs', () => {
     })
 
     // Game Loop
-    it('returns documentation for canvas.on_draw', () => {
-      const doc = getLibraryDocumentation('canvas', 'on_draw')
+    it('returns documentation for canvas.tick', () => {
+      const doc = getLibraryDocumentation('canvas', 'tick')
 
       expect(doc).not.toBeNull()
       expect(doc?.signature).toContain('callback')
-      expect(doc?.description).toContain('draw callback')
+      expect(doc?.description).toContain('tick callback')
     })
 
     // Canvas Configuration
