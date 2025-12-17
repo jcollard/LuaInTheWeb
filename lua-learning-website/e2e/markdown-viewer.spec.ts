@@ -95,7 +95,7 @@ test.describe('Markdown Viewer', () => {
   })
 
   test.describe('markdown edit mode', () => {
-    test('double-click on .md file in editable workspace opens editor', async ({ page }) => {
+    test('double-click on .md file in editable workspace opens preview', async ({ page }) => {
       // Expand workspace first
       const workspaceChevron = page.getByTestId('folder-chevron').first()
       await workspaceChevron.click()
@@ -115,13 +115,13 @@ test.describe('Markdown Viewer', () => {
       await input.press('Enter')
       await expect(input).not.toBeVisible()
 
-      // Now double-click on the file to open in edit mode
+      // Now double-click on the file to open (opens preview by default)
       const testMdFile = page.getByRole('treeitem', { name: 'test.md' })
       await expect(testMdFile).toBeVisible()
       await testMdFile.dblclick()
 
-      // Assert - Monaco editor should be visible (not markdown viewer)
-      await expect(page.locator('.monaco-editor')).toBeVisible()
+      // Assert - Markdown preview should be visible (double-click opens preview)
+      await expect(page.getByTestId('markdown-viewer')).toBeVisible()
     })
 
     test('right-click on editable .md file shows Edit Markdown option', async ({ page }) => {
@@ -177,7 +177,7 @@ test.describe('Markdown Viewer', () => {
   })
 
   test.describe('read-only workspace markdown', () => {
-    test('docs workspace .md file shows only Preview option in context menu', async ({ page }) => {
+    test('docs workspace .md file has both Preview and Edit options in context menu', async ({ page }) => {
       // Arrange - Expand docs workspace
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
@@ -186,9 +186,9 @@ test.describe('Markdown Viewer', () => {
       const shellDoc = page.getByRole('treeitem', { name: 'shell.md' })
       await shellDoc.click({ button: 'right' })
 
-      // Assert - Should have Preview Markdown but NOT Edit Markdown
+      // Assert - Should have both Preview and Edit options (Edit opens editor but can't save)
       await expect(page.getByRole('menuitem', { name: /preview markdown/i })).toBeVisible()
-      await expect(page.getByRole('menuitem', { name: /edit markdown/i })).not.toBeVisible()
+      await expect(page.getByRole('menuitem', { name: /edit markdown/i })).toBeVisible()
     })
 
     test('read-only .md files do not show rename or delete options', async ({ page }) => {
@@ -376,7 +376,7 @@ test.describe('Markdown Viewer', () => {
       await workspaceChevron.click()
       await page.waitForTimeout(100)
 
-      // Create a new .md file and open it
+      // Create a new .md file
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
       const input = sidebar.getByRole('textbox')
@@ -386,10 +386,11 @@ test.describe('Markdown Viewer', () => {
       await input.press('Enter')
       await expect(input).not.toBeVisible()
 
-      // Double-click to open in editor
+      // Right-click and select Edit Markdown to open in editor mode
       const mdFile = page.getByRole('treeitem', { name: 'switch-test.md' })
       await expect(mdFile).toBeVisible()
-      await mdFile.dblclick()
+      await mdFile.click({ button: 'right' })
+      await page.getByRole('menuitem', { name: /edit markdown/i }).click()
 
       // Verify Monaco editor is shown
       await expect(page.locator('.monaco-editor')).toBeVisible()
@@ -409,7 +410,7 @@ test.describe('Markdown Viewer', () => {
       // Click back on the switch-test.md tab
       await page.getByRole('tab', { name: /switch-test\.md/i }).click()
 
-      // Should show Monaco editor again
+      // Should show Monaco editor again (maintains edit mode for that tab)
       await expect(page.locator('.monaco-editor')).toBeVisible()
     })
   })
