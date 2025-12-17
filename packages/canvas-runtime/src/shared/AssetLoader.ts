@@ -3,35 +3,47 @@ import type { AssetDefinition } from './types.js';
 import imageSize from 'image-size';
 
 /**
- * Result of loading an asset, containing the image data and metadata.
+ * Result of loading an asset, containing the binary data and optional metadata.
  */
 export interface LoadedAsset {
   /** The asset name from the definition */
   name: string;
-  /** The raw image data */
+  /** The raw binary data */
   data: ArrayBuffer;
-  /** The MIME type of the image */
-  mimeType: string;
-  /** The width of the image in pixels */
-  width: number;
-  /** The height of the image in pixels */
-  height: number;
+  /** The MIME type (inferred from extension, if recognized) */
+  mimeType?: string;
+  /** The width in pixels (only for image files) */
+  width?: number;
+  /** The height in pixels (only for image files) */
+  height?: number;
 }
 
 /**
- * Supported image formats and their MIME types.
+ * Common MIME types by extension (for convenience, not validation).
  */
-const SUPPORTED_FORMATS: Record<string, string> = {
+const MIME_TYPES: Record<string, string> = {
+  // Images
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.gif': 'image/gif',
   '.webp': 'image/webp',
+  '.bmp': 'image/bmp',
+  '.svg': 'image/svg+xml',
+  // Audio
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.ogg': 'audio/ogg',
+  // Text/Data
+  '.json': 'application/json',
+  '.txt': 'text/plain',
+  '.xml': 'application/xml',
 };
 
 /**
- * Loads image assets from the filesystem with path resolution and format validation.
- * Used to preload images before canvas.start() is called.
+ * Loads assets from the filesystem with path resolution.
+ * This is a generic binary loader - format validation should be done
+ * at the API layer (e.g., canvas.assets.image()).
  */
 export class AssetLoader {
   constructor(
@@ -78,51 +90,33 @@ export class AssetLoader {
   }
 
   /**
-   * Validate that a file path has a supported image format.
-   * Returns the MIME type if valid, throws if not.
+   * Get the MIME type for a file based on its extension.
+   * Returns undefined for unrecognized extensions.
    *
-   * @param path - The file path to validate
-   * @returns The MIME type for the file format
-   * @throws Error if the format is not supported
+   * @param path - The file path
+   * @returns The MIME type or undefined
    */
-  validateFormat(path: string): string {
-    // Extract filename from path
+  getMimeType(path: string): string | undefined {
     const filename = path.includes('/') ? path.split('/').pop()! : path;
-
-    // Find the last dot to get the extension
     const lastDotIndex = filename.lastIndexOf('.');
 
-    // No extension or dot at start (hidden file)
     if (lastDotIndex <= 0) {
-      throw new Error(
-        `Cannot load '${filename}': unsupported format (expected PNG, JPG, GIF, or WebP)`
-      );
+      return undefined;
     }
 
     const extension = filename.slice(lastDotIndex).toLowerCase();
-    const mimeType = SUPPORTED_FORMATS[extension];
-
-    if (!mimeType) {
-      throw new Error(
-        `Cannot load '${filename}': unsupported format (expected PNG, JPG, GIF, or WebP)`
-      );
-    }
-
-    return mimeType;
+    return MIME_TYPES[extension];
   }
 
   /**
    * Load an asset from the filesystem.
    *
    * @param definition - The asset definition specifying name, path, and type
-   * @returns Promise resolving to the loaded asset with data and dimensions
-   * @throws Error if file not found, format invalid, or image corrupted
+   * @returns Promise resolving to the loaded asset with data and optional metadata
+   * @throws Error if file not found or cannot be read
    */
   async loadAsset(definition: AssetDefinition): Promise<LoadedAsset> {
     const { name, path } = definition;
-
-    // Validate format first (throws if invalid)
-    const mimeType = this.validateFormat(path);
 
     // Resolve the path
     const resolvedPath = this.resolvePath(path);
@@ -145,47 +139,52 @@ export class AssetLoader {
     // Read binary data
     const binaryData = this.fileSystem.readBinaryFile(resolvedPath);
 
-    // Extract filename for error messages
-    const filename = path.includes('/') ? path.split('/').pop()! : path;
-
-    // Extract dimensions using image-size library
-    const dimensions = this.extractDimensions(binaryData, filename);
-
     // Convert Uint8Array to ArrayBuffer, handling both ArrayBuffer and SharedArrayBuffer
     const arrayBuffer = new ArrayBuffer(binaryData.byteLength);
     new Uint8Array(arrayBuffer).set(binaryData);
 
-    return {
+    // Build result with optional metadata
+    const result: LoadedAsset = {
       name,
       data: arrayBuffer,
-      mimeType,
-      width: dimensions.width,
-      height: dimensions.height,
     };
+
+    // Try to infer MIME type from extension
+    const mimeType = this.getMimeType(path);
+    if (mimeType) {
+      result.mimeType = mimeType;
+    }
+
+    // Try to extract image dimensions (best effort, don't fail)
+    const dimensions = this.tryExtractDimensions(binaryData);
+    if (dimensions) {
+      result.width = dimensions.width;
+      result.height = dimensions.height;
+    }
+
+    return result;
   }
 
   /**
-   * Extract dimensions from image data using the image-size library.
+   * Try to extract dimensions from image data using the image-size library.
+   * Returns null if the data is not a recognized image format.
    *
-   * @param data - The raw image data
-   * @param filename - The filename for error messages
-   * @returns The extracted width and height
-   * @throws Error if image data is invalid
+   * @param data - The raw binary data
+   * @returns The dimensions if extractable, or null
    */
-  private extractDimensions(
-    data: Uint8Array,
-    filename: string
-  ): { width: number; height: number } {
+  private tryExtractDimensions(
+    data: Uint8Array
+  ): { width: number; height: number } | null {
     try {
       const result = imageSize(data);
 
-      if (!result.width || !result.height) {
-        throw new Error(`Failed to load '${filename}': invalid image data`);
+      if (result.width && result.height) {
+        return { width: result.width, height: result.height };
       }
 
-      return { width: result.width, height: result.height };
+      return null;
     } catch {
-      throw new Error(`Failed to load '${filename}': invalid image data`);
+      return null;
     }
   }
 }

@@ -106,80 +106,94 @@ describe('AssetLoader', () => {
     });
   });
 
-  describe('validateFormat', () => {
+  describe('getMimeType', () => {
     beforeEach(() => {
       loader = new AssetLoader(mockFs, '/my-files/games');
     });
 
-    describe('supported formats', () => {
+    describe('image formats', () => {
       it('should return image/png for .png files', () => {
-        expect(loader.validateFormat('player.png')).toBe('image/png');
+        expect(loader.getMimeType('player.png')).toBe('image/png');
       });
 
       it('should return image/jpeg for .jpg files', () => {
-        expect(loader.validateFormat('background.jpg')).toBe('image/jpeg');
+        expect(loader.getMimeType('background.jpg')).toBe('image/jpeg');
       });
 
       it('should return image/jpeg for .jpeg files', () => {
-        expect(loader.validateFormat('background.jpeg')).toBe('image/jpeg');
+        expect(loader.getMimeType('background.jpeg')).toBe('image/jpeg');
       });
 
       it('should return image/gif for .gif files', () => {
-        expect(loader.validateFormat('animation.gif')).toBe('image/gif');
+        expect(loader.getMimeType('animation.gif')).toBe('image/gif');
       });
 
       it('should return image/webp for .webp files', () => {
-        expect(loader.validateFormat('modern.webp')).toBe('image/webp');
+        expect(loader.getMimeType('modern.webp')).toBe('image/webp');
       });
 
-      it('should handle mixed case extensions', () => {
-        expect(loader.validateFormat('player.PNG')).toBe('image/png');
-        expect(loader.validateFormat('background.JPG')).toBe('image/jpeg');
-        expect(loader.validateFormat('animation.GIF')).toBe('image/gif');
-        expect(loader.validateFormat('modern.WebP')).toBe('image/webp');
+      it('should return image/bmp for .bmp files', () => {
+        expect(loader.getMimeType('bitmap.bmp')).toBe('image/bmp');
       });
 
-      it('should handle paths with directories', () => {
-        expect(loader.validateFormat('/sprites/player.png')).toBe('image/png');
-        expect(loader.validateFormat('assets/images/bg.jpg')).toBe('image/jpeg');
+      it('should return image/svg+xml for .svg files', () => {
+        expect(loader.getMimeType('vector.svg')).toBe('image/svg+xml');
       });
     });
 
-    describe('unsupported formats', () => {
-      it('should throw for .txt files', () => {
-        expect(() => loader.validateFormat('data.txt')).toThrow(
-          "Cannot load 'data.txt': unsupported format (expected PNG, JPG, GIF, or WebP)"
-        );
+    describe('audio formats', () => {
+      it('should return audio/mpeg for .mp3 files', () => {
+        expect(loader.getMimeType('music.mp3')).toBe('audio/mpeg');
       });
 
-      it('should throw for .lua files', () => {
-        expect(() => loader.validateFormat('script.lua')).toThrow(
-          "Cannot load 'script.lua': unsupported format (expected PNG, JPG, GIF, or WebP)"
-        );
+      it('should return audio/wav for .wav files', () => {
+        expect(loader.getMimeType('sound.wav')).toBe('audio/wav');
       });
 
-      it('should throw for .bmp files', () => {
-        expect(() => loader.validateFormat('image.bmp')).toThrow(
-          "Cannot load 'image.bmp': unsupported format (expected PNG, JPG, GIF, or WebP)"
-        );
+      it('should return audio/ogg for .ogg files', () => {
+        expect(loader.getMimeType('audio.ogg')).toBe('audio/ogg');
+      });
+    });
+
+    describe('text/data formats', () => {
+      it('should return application/json for .json files', () => {
+        expect(loader.getMimeType('data.json')).toBe('application/json');
       });
 
-      it('should throw for files without extension', () => {
-        expect(() => loader.validateFormat('noextension')).toThrow(
-          "Cannot load 'noextension': unsupported format (expected PNG, JPG, GIF, or WebP)"
-        );
+      it('should return text/plain for .txt files', () => {
+        expect(loader.getMimeType('readme.txt')).toBe('text/plain');
       });
 
-      it('should throw for empty filename with extension', () => {
-        expect(() => loader.validateFormat('.png')).toThrow(
-          "Cannot load '.png': unsupported format (expected PNG, JPG, GIF, or WebP)"
-        );
+      it('should return application/xml for .xml files', () => {
+        expect(loader.getMimeType('config.xml')).toBe('application/xml');
+      });
+    });
+
+    describe('case handling', () => {
+      it('should handle mixed case extensions', () => {
+        expect(loader.getMimeType('player.PNG')).toBe('image/png');
+        expect(loader.getMimeType('background.JPG')).toBe('image/jpeg');
+        expect(loader.getMimeType('music.MP3')).toBe('audio/mpeg');
       });
 
-      it('should throw for unsupported format with path', () => {
-        expect(() => loader.validateFormat('/assets/data.json')).toThrow(
-          "Cannot load 'data.json': unsupported format (expected PNG, JPG, GIF, or WebP)"
-        );
+      it('should handle paths with directories', () => {
+        expect(loader.getMimeType('/sprites/player.png')).toBe('image/png');
+        expect(loader.getMimeType('assets/audio/music.mp3')).toBe('audio/mpeg');
+      });
+    });
+
+    describe('unknown formats', () => {
+      it('should return undefined for unknown extensions', () => {
+        expect(loader.getMimeType('script.lua')).toBeUndefined();
+        expect(loader.getMimeType('data.csv')).toBeUndefined();
+      });
+
+      it('should return undefined for files without extension', () => {
+        expect(loader.getMimeType('noextension')).toBeUndefined();
+      });
+
+      it('should return undefined for hidden files', () => {
+        expect(loader.getMimeType('.gitignore')).toBeUndefined();
       });
     });
   });
@@ -228,38 +242,16 @@ describe('AssetLoader', () => {
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // Padding
     ]);
 
-    // Valid WebP (lossless VP8L) - 50x40
-    const validWebpVp8lData = new Uint8Array([
-      0x52, 0x49, 0x46, 0x46, // RIFF
-      0x20, 0x00, 0x00, 0x00, // File size (placeholder)
-      0x57, 0x45, 0x42, 0x50, // WEBP
-      0x56, 0x50, 0x38, 0x4c, // VP8L
-      0x10, 0x00, 0x00, 0x00, // Chunk size
-      0x2f, // Signature byte
-      // Width-1 and height-1 encoded in 28 bits: 49 | (39 << 14)
-      // 49 = 0x31, 39 << 14 = 0x9C000
-      // Combined: 0x31 | 0x9C000 = 0x9C031
-      // Little-endian: 0x31 0xC0 0x09 0x00
-      0x31, 0xc0, 0x09, 0x00,
-      0x00, 0x00, 0x00, 0x00, // Padding
+    const textFileData = new Uint8Array([
+      0x48, 0x65, 0x6c, 0x6c, 0x6f, // "Hello"
     ]);
 
-    // Valid WebP (extended VP8X) - 200x150
-    const validWebpVp8xData = new Uint8Array([
-      0x52, 0x49, 0x46, 0x46, // RIFF
-      0x24, 0x00, 0x00, 0x00, // File size (placeholder)
-      0x57, 0x45, 0x42, 0x50, // WEBP
-      0x56, 0x50, 0x38, 0x58, // VP8X
-      0x0a, 0x00, 0x00, 0x00, // Chunk size (10 bytes)
-      0x00, 0x00, 0x00, 0x00, // Flags
-      // Canvas width-1 = 199 (0xC7), stored as 24-bit little-endian
-      0xc7, 0x00, 0x00,
-      // Canvas height-1 = 149 (0x95), stored as 24-bit little-endian
-      0x95, 0x00, 0x00,
+    const jsonFileData = new Uint8Array([
+      0x7b, 0x22, 0x6b, 0x65, 0x79, 0x22, 0x3a, 0x31, 0x7d, // {"key":1}
     ]);
 
-    describe('success cases', () => {
-      it('should load a valid PNG file', async () => {
+    describe('image files', () => {
+      it('should load a valid PNG file with dimensions', async () => {
         mockFs = createMockFileSystem({
           exists: vi.fn(() => true),
           isFile: vi.fn(() => true),
@@ -282,7 +274,7 @@ describe('AssetLoader', () => {
         expect(result.height).toBe(32);
       });
 
-      it('should load a valid JPEG file', async () => {
+      it('should load a valid JPEG file with dimensions', async () => {
         mockFs = createMockFileSystem({
           exists: vi.fn(() => true),
           isFile: vi.fn(() => true),
@@ -304,7 +296,7 @@ describe('AssetLoader', () => {
         expect(result.height).toBe(64);
       });
 
-      it('should load a valid GIF file', async () => {
+      it('should load a valid GIF file with dimensions', async () => {
         mockFs = createMockFileSystem({
           exists: vi.fn(() => true),
           isFile: vi.fn(() => true),
@@ -326,7 +318,7 @@ describe('AssetLoader', () => {
         expect(result.height).toBe(16);
       });
 
-      it('should load a valid WebP file (VP8 lossy)', async () => {
+      it('should load a valid WebP file with dimensions', async () => {
         mockFs = createMockFileSystem({
           exists: vi.fn(() => true),
           isFile: vi.fn(() => true),
@@ -347,51 +339,128 @@ describe('AssetLoader', () => {
         expect(result.width).toBe(100);
         expect(result.height).toBe(80);
       });
+    });
 
-      it('should load a valid WebP file (VP8L lossless)', async () => {
+    describe('non-image files', () => {
+      it('should load a text file without dimensions', async () => {
         mockFs = createMockFileSystem({
           exists: vi.fn(() => true),
           isFile: vi.fn(() => true),
-          readBinaryFile: vi.fn(() => validWebpVp8lData),
+          readBinaryFile: vi.fn(() => textFileData),
         });
         loader = new AssetLoader(mockFs, '/my-files/games');
 
         const definition: AssetDefinition = {
-          name: 'icon',
-          path: 'icon.webp',
+          name: 'readme',
+          path: 'readme.txt',
+          type: 'image', // Type doesn't affect loading behavior
+        };
+
+        const result = await loader.loadAsset(definition);
+
+        expect(result.name).toBe('readme');
+        expect(result.mimeType).toBe('text/plain');
+        expect(result.data).toBeInstanceOf(ArrayBuffer);
+        expect(result.width).toBeUndefined();
+        expect(result.height).toBeUndefined();
+      });
+
+      it('should load a JSON file without dimensions', async () => {
+        mockFs = createMockFileSystem({
+          exists: vi.fn(() => true),
+          isFile: vi.fn(() => true),
+          readBinaryFile: vi.fn(() => jsonFileData),
+        });
+        loader = new AssetLoader(mockFs, '/my-files/games');
+
+        const definition: AssetDefinition = {
+          name: 'config',
+          path: 'config.json',
           type: 'image',
         };
 
         const result = await loader.loadAsset(definition);
 
-        expect(result.name).toBe('icon');
-        expect(result.mimeType).toBe('image/webp');
-        expect(result.width).toBe(50);
-        expect(result.height).toBe(40);
+        expect(result.name).toBe('config');
+        expect(result.mimeType).toBe('application/json');
+        expect(result.data).toBeInstanceOf(ArrayBuffer);
+        expect(result.width).toBeUndefined();
+        expect(result.height).toBeUndefined();
       });
 
-      it('should load a valid WebP file (VP8X extended)', async () => {
+      it('should load a file with unknown extension', async () => {
         mockFs = createMockFileSystem({
           exists: vi.fn(() => true),
           isFile: vi.fn(() => true),
-          readBinaryFile: vi.fn(() => validWebpVp8xData),
+          readBinaryFile: vi.fn(() => textFileData),
         });
         loader = new AssetLoader(mockFs, '/my-files/games');
 
         const definition: AssetDefinition = {
-          name: 'background',
-          path: 'bg.webp',
+          name: 'script',
+          path: 'main.lua',
           type: 'image',
         };
 
         const result = await loader.loadAsset(definition);
 
-        expect(result.name).toBe('background');
-        expect(result.mimeType).toBe('image/webp');
-        expect(result.width).toBe(200);
-        expect(result.height).toBe(150);
+        expect(result.name).toBe('script');
+        expect(result.mimeType).toBeUndefined();
+        expect(result.data).toBeInstanceOf(ArrayBuffer);
+        expect(result.width).toBeUndefined();
+        expect(result.height).toBeUndefined();
+      });
+    });
+
+    describe('corrupted image files', () => {
+      it('should load corrupted PNG without dimensions (not throw)', async () => {
+        const corruptedPng = new Uint8Array([0x00, 0x00, 0x00, 0x00]);
+        mockFs = createMockFileSystem({
+          exists: vi.fn(() => true),
+          isFile: vi.fn(() => true),
+          readBinaryFile: vi.fn(() => corruptedPng),
+        });
+        loader = new AssetLoader(mockFs, '/my-files/games');
+
+        const definition: AssetDefinition = {
+          name: 'player',
+          path: 'player.png',
+          type: 'image',
+        };
+
+        const result = await loader.loadAsset(definition);
+
+        expect(result.name).toBe('player');
+        expect(result.mimeType).toBe('image/png');
+        expect(result.data).toBeInstanceOf(ArrayBuffer);
+        expect(result.width).toBeUndefined();
+        expect(result.height).toBeUndefined();
       });
 
+      it('should load empty file without dimensions', async () => {
+        mockFs = createMockFileSystem({
+          exists: vi.fn(() => true),
+          isFile: vi.fn(() => true),
+          readBinaryFile: vi.fn(() => new Uint8Array(0)),
+        });
+        loader = new AssetLoader(mockFs, '/my-files/games');
+
+        const definition: AssetDefinition = {
+          name: 'empty',
+          path: 'empty.png',
+          type: 'image',
+        };
+
+        const result = await loader.loadAsset(definition);
+
+        expect(result.name).toBe('empty');
+        expect(result.data.byteLength).toBe(0);
+        expect(result.width).toBeUndefined();
+        expect(result.height).toBeUndefined();
+      });
+    });
+
+    describe('path resolution', () => {
       it('should resolve relative path correctly', async () => {
         mockFs = createMockFileSystem({
           exists: vi.fn(() => true),
@@ -464,27 +533,8 @@ describe('AssetLoader', () => {
           type: 'image',
         };
 
-        // Format error comes first since we validate format before checking existence
         await expect(loader.loadAsset(definition)).rejects.toThrow(
-          "Cannot load 'sprites': unsupported format"
-        );
-      });
-
-      it('should throw for unsupported format', async () => {
-        mockFs = createMockFileSystem({
-          exists: vi.fn(() => true),
-          isFile: vi.fn(() => true),
-        });
-        loader = new AssetLoader(mockFs, '/my-files/games');
-
-        const definition: AssetDefinition = {
-          name: 'data',
-          path: 'data.txt',
-          type: 'image',
-        };
-
-        await expect(loader.loadAsset(definition)).rejects.toThrow(
-          "Cannot load 'data.txt': unsupported format (expected PNG, JPG, GIF, or WebP)"
+          "Asset 'sprites' not found: sprites"
         );
       });
 
@@ -504,296 +554,6 @@ describe('AssetLoader', () => {
 
         await expect(loader.loadAsset(definition)).rejects.toThrow(
           'Filesystem does not support binary file reading'
-        );
-      });
-
-      it('should throw for corrupted PNG (invalid signature)', async () => {
-        const corruptedPng = new Uint8Array([0x00, 0x00, 0x00, 0x00]);
-        mockFs = createMockFileSystem({
-          exists: vi.fn(() => true),
-          isFile: vi.fn(() => true),
-          readBinaryFile: vi.fn(() => corruptedPng),
-        });
-        loader = new AssetLoader(mockFs, '/my-files/games');
-
-        const definition: AssetDefinition = {
-          name: 'player',
-          path: 'player.png',
-          type: 'image',
-        };
-
-        await expect(loader.loadAsset(definition)).rejects.toThrow(
-          "Failed to load 'player.png': invalid image data"
-        );
-      });
-
-      it('should throw for corrupted JPEG (invalid marker)', async () => {
-        const corruptedJpeg = new Uint8Array([0x00, 0x00, 0x00, 0x00]);
-        mockFs = createMockFileSystem({
-          exists: vi.fn(() => true),
-          isFile: vi.fn(() => true),
-          readBinaryFile: vi.fn(() => corruptedJpeg),
-        });
-        loader = new AssetLoader(mockFs, '/my-files/games');
-
-        const definition: AssetDefinition = {
-          name: 'bg',
-          path: 'bg.jpg',
-          type: 'image',
-        };
-
-        await expect(loader.loadAsset(definition)).rejects.toThrow(
-          "Failed to load 'bg.jpg': invalid image data"
-        );
-      });
-
-      it('should throw for corrupted GIF (invalid header)', async () => {
-        const corruptedGif = new Uint8Array([0x00, 0x00, 0x00, 0x00]);
-        mockFs = createMockFileSystem({
-          exists: vi.fn(() => true),
-          isFile: vi.fn(() => true),
-          readBinaryFile: vi.fn(() => corruptedGif),
-        });
-        loader = new AssetLoader(mockFs, '/my-files/games');
-
-        const definition: AssetDefinition = {
-          name: 'anim',
-          path: 'anim.gif',
-          type: 'image',
-        };
-
-        await expect(loader.loadAsset(definition)).rejects.toThrow(
-          "Failed to load 'anim.gif': invalid image data"
-        );
-      });
-
-      it('should throw for empty file', async () => {
-        mockFs = createMockFileSystem({
-          exists: vi.fn(() => true),
-          isFile: vi.fn(() => true),
-          readBinaryFile: vi.fn(() => new Uint8Array(0)),
-        });
-        loader = new AssetLoader(mockFs, '/my-files/games');
-
-        const definition: AssetDefinition = {
-          name: 'empty',
-          path: 'empty.png',
-          type: 'image',
-        };
-
-        await expect(loader.loadAsset(definition)).rejects.toThrow(
-          "Failed to load 'empty.png': invalid image data"
-        );
-      });
-
-      it('should throw for corrupted WebP (invalid RIFF header)', async () => {
-        const corruptedWebp = new Uint8Array([0x00, 0x00, 0x00, 0x00]);
-        mockFs = createMockFileSystem({
-          exists: vi.fn(() => true),
-          isFile: vi.fn(() => true),
-          readBinaryFile: vi.fn(() => corruptedWebp),
-        });
-        loader = new AssetLoader(mockFs, '/my-files/games');
-
-        const definition: AssetDefinition = {
-          name: 'broken',
-          path: 'broken.webp',
-          type: 'image',
-        };
-
-        await expect(loader.loadAsset(definition)).rejects.toThrow(
-          "Failed to load 'broken.webp': invalid image data"
-        );
-      });
-
-      it('should throw for WebP with invalid WEBP signature', async () => {
-        // Valid RIFF but invalid WEBP signature
-        const invalidWebp = new Uint8Array([
-          0x52, 0x49, 0x46, 0x46, // RIFF
-          0x10, 0x00, 0x00, 0x00, // Size
-          0x00, 0x00, 0x00, 0x00, // Invalid WEBP signature
-          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        ]);
-        mockFs = createMockFileSystem({
-          exists: vi.fn(() => true),
-          isFile: vi.fn(() => true),
-          readBinaryFile: vi.fn(() => invalidWebp),
-        });
-        loader = new AssetLoader(mockFs, '/my-files/games');
-
-        const definition: AssetDefinition = {
-          name: 'invalid',
-          path: 'invalid.webp',
-          type: 'image',
-        };
-
-        await expect(loader.loadAsset(definition)).rejects.toThrow(
-          "Failed to load 'invalid.webp': invalid image data"
-        );
-      });
-
-      it('should throw for WebP with unknown chunk type', async () => {
-        // Valid RIFF + WEBP but unknown chunk type
-        const unknownChunkWebp = new Uint8Array([
-          0x52, 0x49, 0x46, 0x46, // RIFF
-          0x14, 0x00, 0x00, 0x00, // Size
-          0x57, 0x45, 0x42, 0x50, // WEBP
-          0x58, 0x58, 0x58, 0x58, // Unknown chunk "XXXX"
-          0x04, 0x00, 0x00, 0x00, // Chunk size
-          0x00, 0x00, 0x00, 0x00, // Data
-        ]);
-        mockFs = createMockFileSystem({
-          exists: vi.fn(() => true),
-          isFile: vi.fn(() => true),
-          readBinaryFile: vi.fn(() => unknownChunkWebp),
-        });
-        loader = new AssetLoader(mockFs, '/my-files/games');
-
-        const definition: AssetDefinition = {
-          name: 'unknown',
-          path: 'unknown.webp',
-          type: 'image',
-        };
-
-        await expect(loader.loadAsset(definition)).rejects.toThrow(
-          "Failed to load 'unknown.webp': invalid image data"
-        );
-      });
-
-      it('should throw when isFile returns false for existing path', async () => {
-        mockFs = createMockFileSystem({
-          exists: vi.fn(() => true),
-          isFile: vi.fn(() => false),
-        });
-        loader = new AssetLoader(mockFs, '/my-files/games');
-
-        const definition: AssetDefinition = {
-          name: 'dir',
-          path: 'folder.png', // Has valid extension but is a directory
-          type: 'image',
-        };
-
-        await expect(loader.loadAsset(definition)).rejects.toThrow(
-          "Asset 'dir' not found: folder.png"
-        );
-      });
-
-      it('should throw for PNG that is too short for dimensions', async () => {
-        // Valid PNG signature but not enough bytes for IHDR
-        const shortPng = new Uint8Array([
-          0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, // PNG signature
-          0x00, 0x00, 0x00, 0x0d, // Partial IHDR
-        ]);
-        mockFs = createMockFileSystem({
-          exists: vi.fn(() => true),
-          isFile: vi.fn(() => true),
-          readBinaryFile: vi.fn(() => shortPng),
-        });
-        loader = new AssetLoader(mockFs, '/my-files/games');
-
-        const definition: AssetDefinition = {
-          name: 'short',
-          path: 'short.png',
-          type: 'image',
-        };
-
-        await expect(loader.loadAsset(definition)).rejects.toThrow(
-          "Failed to load 'short.png': invalid image data"
-        );
-      });
-
-      it('should throw for JPEG that is too short', async () => {
-        // Only SOI marker, missing SOF
-        const shortJpeg = new Uint8Array([0xff, 0xd8, 0xff]);
-        mockFs = createMockFileSystem({
-          exists: vi.fn(() => true),
-          isFile: vi.fn(() => true),
-          readBinaryFile: vi.fn(() => shortJpeg),
-        });
-        loader = new AssetLoader(mockFs, '/my-files/games');
-
-        const definition: AssetDefinition = {
-          name: 'short',
-          path: 'short.jpg',
-          type: 'image',
-        };
-
-        await expect(loader.loadAsset(definition)).rejects.toThrow(
-          "Failed to load 'short.jpg': invalid image data"
-        );
-      });
-
-      it('should throw for JPEG with invalid marker sequence', async () => {
-        // Valid SOI but next byte is not 0xff
-        const invalidJpeg = new Uint8Array([
-          0xff, 0xd8, // SOI
-          0x00, 0x00, // Invalid - should be 0xff followed by marker
-        ]);
-        mockFs = createMockFileSystem({
-          exists: vi.fn(() => true),
-          isFile: vi.fn(() => true),
-          readBinaryFile: vi.fn(() => invalidJpeg),
-        });
-        loader = new AssetLoader(mockFs, '/my-files/games');
-
-        const definition: AssetDefinition = {
-          name: 'invalid',
-          path: 'invalid.jpg',
-          type: 'image',
-        };
-
-        await expect(loader.loadAsset(definition)).rejects.toThrow(
-          "Failed to load 'invalid.jpg': invalid image data"
-        );
-      });
-
-      it('should throw for JPEG with SOF marker but truncated data', async () => {
-        // Valid SOI, has SOF0 marker but truncated before dimensions
-        const truncatedJpeg = new Uint8Array([
-          0xff, 0xd8, // SOI
-          0xff, 0xc0, // SOF0 marker
-          0x00, 0x0b, // Length
-          0x08, // Precision only, missing dimensions
-        ]);
-        mockFs = createMockFileSystem({
-          exists: vi.fn(() => true),
-          isFile: vi.fn(() => true),
-          readBinaryFile: vi.fn(() => truncatedJpeg),
-        });
-        loader = new AssetLoader(mockFs, '/my-files/games');
-
-        const definition: AssetDefinition = {
-          name: 'truncated',
-          path: 'truncated.jpg',
-          type: 'image',
-        };
-
-        await expect(loader.loadAsset(definition)).rejects.toThrow(
-          "Failed to load 'truncated.jpg': invalid image data"
-        );
-      });
-
-      it('should throw for GIF with wrong header', async () => {
-        // Wrong GIF header (GIF87b instead of GIF87a or GIF89a)
-        const wrongGif = new Uint8Array([
-          0x47, 0x49, 0x46, 0x38, 0x37, 0x62, // GIF87b (invalid)
-          0x08, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00,
-        ]);
-        mockFs = createMockFileSystem({
-          exists: vi.fn(() => true),
-          isFile: vi.fn(() => true),
-          readBinaryFile: vi.fn(() => wrongGif),
-        });
-        loader = new AssetLoader(mockFs, '/my-files/games');
-
-        const definition: AssetDefinition = {
-          name: 'wrong',
-          path: 'wrong.gif',
-          type: 'image',
-        };
-
-        await expect(loader.loadAsset(definition)).rejects.toThrow(
-          "Failed to load 'wrong.gif': invalid image data"
         );
       });
     });
