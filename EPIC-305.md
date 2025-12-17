@@ -64,7 +64,7 @@ local h = canvas.assets.get_height("player")
 |---|-------|--------|--------|-------|
 | #306 | Core Types & ImageCache | ✅ Complete | 306-core-types-imagecache | Merged in PR #312 |
 | #307 | Asset Loading Infrastructure | ✅ Complete | 307-asset-loading-infrastructure | Merged in PR #314 |
-| #308 | Worker Canvas Implementation | 🔄 In Progress | 308-worker-canvas-implementation | Depends on #306, #307 |
+| #308 | Worker Canvas Implementation | 🔄 In Progress | 308-worker-canvas-implementation | PR #317 |
 | #309 | Shell Canvas Implementation | ⏳ Pending | - | Depends on #306, #307 |
 | #310 | Process Integration & E2E Testing | ⏳ Pending | - | Depends on #306, #307, #308, #309 |
 
@@ -104,6 +104,7 @@ local h = canvas.assets.get_height("player")
 - Completed #307: Asset Loading Infrastructure - Merged PR #314 to epic-305
 - Integrated main into epic branch (8 commits)
 - Started work on #308: Worker Canvas Implementation
+- PR created for #308: Worker Canvas Implementation (PR #317)
 
 ## Key Files
 
