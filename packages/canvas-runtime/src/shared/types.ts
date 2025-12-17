@@ -11,7 +11,8 @@ export type DrawCommandType =
   | 'circle'
   | 'fillCircle'
   | 'line'
-  | 'text';
+  | 'text'
+  | 'drawImage';
 
 /**
  * Base interface for all draw commands.
@@ -119,6 +120,23 @@ export interface TextCommand extends DrawCommandBase {
 }
 
 /**
+ * Draw an image from the asset cache.
+ */
+export interface DrawImageCommand extends DrawCommandBase {
+  type: 'drawImage';
+  /** Name of the asset to draw */
+  name: string;
+  /** X position to draw at */
+  x: number;
+  /** Y position to draw at */
+  y: number;
+  /** Optional width to scale image to */
+  width?: number;
+  /** Optional height to scale image to */
+  height?: number;
+}
+
+/**
  * Union type of all draw commands.
  */
 export type DrawCommand =
@@ -131,7 +149,8 @@ export type DrawCommand =
   | CircleCommand
   | FillCircleCommand
   | LineCommand
-  | TextCommand;
+  | TextCommand
+  | DrawImageCommand;
 
 /**
  * Mouse button identifiers.
@@ -193,3 +212,20 @@ export function createDefaultTimingInfo(): TimingInfo {
     frameNumber: 0,
   };
 }
+
+/**
+ * Definition of an asset to be loaded.
+ */
+export interface AssetDefinition {
+  /** Unique name to reference this asset */
+  name: string;
+  /** Path to the asset file (relative or absolute) */
+  path: string;
+  /** Type of asset */
+  type: 'image';
+}
+
+/**
+ * Map of asset names to their definitions.
+ */
+export type AssetManifest = Map<string, AssetDefinition>;
