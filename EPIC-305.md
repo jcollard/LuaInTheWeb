@@ -3,7 +3,7 @@
 **Status:** In Progress (1/5 complete)
 **Branch:** epic-305
 **Created:** 2025-12-17
-**Last Updated:** 2025-12-17T11:30:09-07:00
+**Last Updated:** 2025-12-17T14:09:06-07:00
 
 ## Overview
 
@@ -42,14 +42,28 @@ local h = canvas.assets.get_height("player")
 
 <!-- Document key decisions as work progresses -->
 
-(none yet)
+### ADR-1: Generic AssetLoader with API-layer validation
+
+**Decision:** AssetLoader is a generic binary file loader. Format validation happens at the Lua API layer (`canvas.assets.image()`), not in the loader.
+
+**Context:** Originally AssetLoader was designed to validate image formats and throw on unsupported types. However, this couples the loader to image-specific logic.
+
+**Rationale:**
+- Separation of concerns: loader loads files, API validates intent
+- Future extensibility: `canvas.assets.audio()` can reuse the same loader
+- Cleaner architecture: validation at the layer where user intent is expressed
+
+**Consequences:**
+- `LoadedAsset.width`, `height`, `mimeType` are optional
+- `canvas.assets.image()` must validate extensions and check dimensions exist
+- Non-image files can be loaded without errors (dimensions will be undefined)
 
 ## Sub-Issues
 
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #306 | Core Types & ImageCache | ✅ Complete | 306-core-types-imagecache | Merged in PR #312 |
-| #307 | Asset Loading Infrastructure | 🔄 In Progress | 307-asset-loading-infrastructure | Started 2025-12-17 |
+| #307 | Asset Loading Infrastructure | 🔄 PR Created | 307-asset-loading-infrastructure | PR #314 |
 | #308 | Worker Canvas Implementation | ⏳ Pending | - | Depends on #306, #307 |
 | #309 | Shell Canvas Implementation | ⏳ Pending | - | Depends on #306, #307 |
 | #310 | Process Integration & E2E Testing | ⏳ Pending | - | Depends on #306, #307, #308, #309 |
@@ -86,6 +100,7 @@ local h = canvas.assets.get_height("player")
 - Started work on #306: Core Types & ImageCache
 - Completed #306: Core Types & ImageCache - Merged PR #312 to epic-305
 - Started work on #307: Asset Loading Infrastructure
+- PR created for #307: Asset Loading Infrastructure (PR #314)
 
 ## Key Files
 
@@ -94,6 +109,8 @@ local h = canvas.assets.get_height("player")
 - `packages/canvas-runtime/src/shared/types.ts` - AssetDefinition, AssetManifest, DrawImageCommand types
 - `packages/canvas-runtime/src/renderer/ImageCache.ts` - Image cache class for storing loaded images
 - `packages/canvas-runtime/tests/renderer/ImageCache.test.ts` - ImageCache unit tests
+- `packages/canvas-runtime/src/shared/AssetLoader.ts` - Generic binary asset loader with path resolution
+- `packages/canvas-runtime/tests/shared/AssetLoader.test.ts` - AssetLoader unit tests
 
 ## Open Questions
 
