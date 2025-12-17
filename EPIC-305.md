@@ -1,9 +1,9 @@
 # Epic #305: Canvas Image Support
 
-**Status:** In Progress (2/5 complete)
+**Status:** In Progress (3/5 complete)
 **Branch:** epic-305
 **Created:** 2025-12-17
-**Last Updated:** 2025-12-17T14:24:49-07:00
+**Last Updated:** 2025-12-17T15:21:00-07:00
 
 ## Overview
 
@@ -64,7 +64,7 @@ local h = canvas.assets.get_height("player")
 |---|-------|--------|--------|-------|
 | #306 | Core Types & ImageCache | ✅ Complete | 306-core-types-imagecache | Merged in PR #312 |
 | #307 | Asset Loading Infrastructure | ✅ Complete | 307-asset-loading-infrastructure | Merged in PR #314 |
-| #308 | Worker Canvas Implementation | 🔄 In Progress | 308-worker-canvas-implementation | PR #317 |
+| #308 | Worker Canvas Implementation | ✅ Complete | 308-worker-canvas-implementation | Merged in PR #317 |
 | #309 | Shell Canvas Implementation | ⏳ Pending | - | Depends on #306, #307 |
 | #310 | Process Integration & E2E Testing | ⏳ Pending | - | Depends on #306, #307, #308, #309 |
 
@@ -105,6 +105,7 @@ local h = canvas.assets.get_height("player")
 - Integrated main into epic branch (8 commits)
 - Started work on #308: Worker Canvas Implementation
 - PR created for #308: Worker Canvas Implementation (PR #317)
+- Completed #308: Worker Canvas Implementation - Merged PR #317 to epic-305
 
 ## Key Files
 
@@ -115,6 +116,9 @@ local h = canvas.assets.get_height("player")
 - `packages/canvas-runtime/tests/renderer/ImageCache.test.ts` - ImageCache unit tests
 - `packages/canvas-runtime/src/shared/AssetLoader.ts` - Generic binary asset loader with path resolution
 - `packages/canvas-runtime/tests/shared/AssetLoader.test.ts` - AssetLoader unit tests
+- `packages/canvas-runtime/src/worker/WorkerMessages.ts` - SerializedAsset type for worker communication
+- `packages/canvas-runtime/src/worker/LuaCanvasRuntime.ts` - Asset API bindings (canvas.assets.*, canvas.draw_image)
+- `packages/canvas-runtime/src/renderer/CanvasRenderer.ts` - drawImage command with ImageCache support
 
 ## Open Questions
 
