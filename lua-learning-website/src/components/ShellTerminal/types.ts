@@ -14,6 +14,8 @@ export interface ShellTerminalProps {
   onFileSystemChange?: () => void
   /** Canvas callbacks for canvas.start()/stop() support */
   canvasCallbacks?: ShellCanvasCallbacks
+  /** Callback when a file/directory is moved/renamed via mv command (for updating tabs) */
+  onFileMove?: (oldPath: string, newPath: string, isDirectory: boolean) => void
 }
 
 /**
