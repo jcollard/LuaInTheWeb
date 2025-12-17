@@ -6,16 +6,7 @@ import { ConfirmDialog } from '../ConfirmDialog'
 import { AddWorkspaceDialog } from '../AddWorkspaceDialog'
 import { useFileExplorer } from './useFileExplorer'
 import { NewFileIcon, NewFolderIcon, AddWorkspaceIcon } from './FileExplorerIcons'
-import {
-  fileContextMenuItems,
-  folderContextMenuItems,
-  workspaceContextMenuItems,
-  libraryWorkspaceContextMenuItems,
-  docsWorkspaceContextMenuItems,
-  bookWorkspaceContextMenuItems,
-  examplesWorkspaceContextMenuItems,
-  buildConnectedWorkspaceMenuItems,
-} from './contextMenuItems'
+import { getContextMenuItems } from './contextMenuHelper'
 import {
   findNodeType as findNodeTypeUtil,
   findNodeName as findNodeNameUtil,
@@ -26,6 +17,7 @@ import {
   isBookWorkspace as isBookWorkspaceUtil,
   isExamplesWorkspace as isExamplesWorkspaceUtil,
   getWorkspaceForPath as getWorkspaceForPathUtil,
+  isInReadOnlyWorkspace as isInReadOnlyWorkspaceUtil,
 } from './treeUtils'
 import { handleDropOperation } from './dropHandler'
 import type { FileExplorerProps } from './types'
@@ -48,6 +40,8 @@ export function FileExplorer({
   onCopyFile,
   onCancelPendingNewFile,
   onCancelPendingNewFolder,
+  onPreviewMarkdown,
+  onEditMarkdown,
   className,
   workspaceProps,
 }: FileExplorerProps) {
@@ -194,6 +188,12 @@ export function FileExplorer({
 
     // Stryker disable next-line StringLiteral: switch case IDs tested via behavior
     switch (action) {
+      case 'preview-markdown':
+        onPreviewMarkdown?.(targetPath)
+        break
+      case 'edit-markdown':
+        onEditMarkdown?.(targetPath)
+        break
       case 'new-file':
         onCreateFile(targetPath)
         break
@@ -265,6 +265,8 @@ export function FileExplorer({
     onCreateFolder,
     onDeleteFile,
     onDeleteFolder,
+    onPreviewMarkdown,
+    onEditMarkdown,
     workspaceProps,
   ])
 
@@ -340,43 +342,23 @@ export function FileExplorer({
     ? `${styles.explorer} ${className}`
     : styles.explorer
 
-  // Build context menu items dynamically
-  // Use workspace-specific menu for workspace roots, regular folder menu otherwise
-  const contextMenuItems = (() => {
-    if (contextMenu.targetType !== 'folder') {
-      return fileContextMenuItems
-    }
+  // Memoized wrapper for isInReadOnlyWorkspace
+  const isInReadOnlyWorkspace = useMemo(
+    () => (path: string) => isInReadOnlyWorkspaceUtil(tree, path, isLibraryWorkspace, isDocsWorkspace, isBookWorkspace),
+    [tree, isLibraryWorkspace, isDocsWorkspace, isBookWorkspace]
+  )
 
-    const targetPath = contextMenu.targetPath
-
-    // Check if this is a workspace root
-    if (targetPath && isWorkspaceRoot(targetPath)) {
-      // Library workspaces have no context menu options (read-only)
-      if (isLibraryWorkspace(targetPath)) {
-        return libraryWorkspaceContextMenuItems
-      }
-      // Docs workspaces have no context menu options (read-only)
-      if (isDocsWorkspace(targetPath)) {
-        return docsWorkspaceContextMenuItems
-      }
-      // Book workspaces have no context menu options (read-only)
-      if (isBookWorkspace(targetPath)) {
-        return bookWorkspaceContextMenuItems
-      }
-      // Examples workspaces have no context menu options (read-only)
-      if (isExamplesWorkspace(targetPath)) {
-        return examplesWorkspaceContextMenuItems
-      }
-      // Add "Refresh" and "Disconnect" options for connected local workspaces
-      const isConnectedLocalWorkspace = workspaceProps?.supportsRefresh(targetPath)
-      if (isConnectedLocalWorkspace) {
-        return buildConnectedWorkspaceMenuItems()
-      }
-      return workspaceContextMenuItems
-    }
-
-    return folderContextMenuItems
-  })()
+  // Build context menu items dynamically using the helper
+  const contextMenuItems = getContextMenuItems({
+    contextMenu,
+    isWorkspaceRoot,
+    isLibraryWorkspace,
+    isDocsWorkspace,
+    isBookWorkspace,
+    isExamplesWorkspace,
+    isInReadOnlyWorkspace,
+    supportsRefresh: workspaceProps?.supportsRefresh,
+  })
 
   return (
     <div className={combinedClassName} data-testid="file-explorer">

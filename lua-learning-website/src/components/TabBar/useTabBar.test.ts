@@ -388,6 +388,81 @@ describe('useTabBar', () => {
     })
   })
 
+  describe('markdown tabs', () => {
+    it('should open a markdown file as preview with type markdown', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      // Act
+      act(() => {
+        result.current.openMarkdownPreviewTab('/test/readme.md', 'readme.md')
+      })
+
+      // Assert
+      expect(result.current.tabs).toHaveLength(1)
+      expect(result.current.tabs[0]).toEqual({
+        path: '/test/readme.md',
+        name: 'readme.md',
+        isDirty: false,
+        type: 'markdown',
+        isPreview: true,
+      })
+    })
+
+    it('should replace existing markdown preview when opening new markdown preview', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      act(() => {
+        result.current.openMarkdownPreviewTab('/test/file1.md', 'file1.md')
+      })
+
+      expect(result.current.tabs).toHaveLength(1)
+
+      // Act
+      act(() => {
+        result.current.openMarkdownPreviewTab('/test/file2.md', 'file2.md')
+      })
+
+      // Assert - should replace the preview
+      expect(result.current.tabs).toHaveLength(1)
+      expect(result.current.tabs[0].path).toBe('/test/file2.md')
+      expect(result.current.tabs[0].type).toBe('markdown')
+    })
+
+    it('should not replace existing permanent markdown tab', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      act(() => {
+        result.current.openMarkdownPreviewTab('/test/file1.md', 'file1.md')
+        result.current.makeTabPermanent('/test/file1.md')
+      })
+
+      expect(result.current.tabs[0].isPreview).toBe(false)
+
+      // Act
+      act(() => {
+        result.current.openMarkdownPreviewTab('/test/file2.md', 'file2.md')
+      })
+
+      // Assert - should add new tab, not replace
+      expect(result.current.tabs).toHaveLength(2)
+    })
+
+    it('should return markdown type from getActiveTabType for markdown tabs', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      act(() => {
+        result.current.openMarkdownPreviewTab('/test/readme.md', 'readme.md')
+      })
+
+      // Assert
+      expect(result.current.getActiveTabType()).toBe('markdown')
+    })
+  })
+
   describe('function reference stability', () => {
     it('should maintain stable function references across renders', () => {
       // Arrange

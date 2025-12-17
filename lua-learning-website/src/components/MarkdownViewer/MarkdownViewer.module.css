@@ -1,0 +1,293 @@
+.markdownViewer {
+  padding: 1.5rem 2rem;
+  overflow: auto;
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--theme-text-primary);
+  background-color: var(--theme-editor-bg);
+}
+
+/* Headings */
+.markdownViewer h1,
+.markdownViewer h2,
+.markdownViewer h3,
+.markdownViewer h4,
+.markdownViewer h5,
+.markdownViewer h6 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--theme-text-primary);
+}
+
+.markdownViewer h1 {
+  font-size: 2em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--theme-border-secondary);
+}
+
+.markdownViewer h2 {
+  font-size: 1.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--theme-border-secondary);
+}
+
+.markdownViewer h3 {
+  font-size: 1.25em;
+}
+
+.markdownViewer h4 {
+  font-size: 1em;
+}
+
+.markdownViewer h5 {
+  font-size: 0.875em;
+}
+
+.markdownViewer h6 {
+  font-size: 0.85em;
+  color: var(--theme-text-muted);
+}
+
+/* Paragraphs */
+.markdownViewer p {
+  margin-top: 0;
+  margin-bottom: 1em;
+}
+
+/* Links */
+.markdownViewer a {
+  color: var(--theme-accent-primary);
+  text-decoration: none;
+}
+
+.markdownViewer a:hover {
+  color: var(--theme-accent-hover);
+  text-decoration: underline;
+}
+
+/* Lists */
+.markdownViewer ul,
+.markdownViewer ol {
+  margin-top: 0;
+  margin-bottom: 1em;
+  padding-left: 2em;
+}
+
+.markdownViewer li {
+  margin-bottom: 0.25em;
+}
+
+.markdownViewer li > ul,
+.markdownViewer li > ol {
+  margin-bottom: 0;
+}
+
+/* Code - inline */
+.markdownViewer code {
+  padding: 0.2em 0.4em;
+  font-size: 85%;
+  font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+  background-color: var(--theme-bg-tertiary);
+  border-radius: 3px;
+}
+
+/* Code - blocks */
+.markdownViewer pre {
+  margin-top: 0;
+  margin-bottom: 1em;
+  padding: 1em;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: var(--theme-bg-secondary);
+  border-radius: 6px;
+}
+
+.markdownViewer pre code {
+  padding: 0;
+  font-size: 100%;
+  background-color: transparent;
+  border-radius: 0;
+}
+
+/* Blockquotes */
+.markdownViewer blockquote {
+  margin: 0 0 1em;
+  padding: 0.5em 1em;
+  color: var(--theme-text-secondary);
+  border-left: 4px solid var(--theme-accent-primary);
+  background-color: var(--theme-bg-secondary);
+}
+
+.markdownViewer blockquote > :first-child {
+  margin-top: 0;
+}
+
+.markdownViewer blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* Tables */
+.markdownViewer table {
+  width: 100%;
+  margin-bottom: 1em;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+.markdownViewer th,
+.markdownViewer td {
+  padding: 0.5em 1em;
+  border: 1px solid var(--theme-border-secondary);
+}
+
+.markdownViewer th {
+  font-weight: 600;
+  background-color: var(--theme-bg-secondary);
+}
+
+.markdownViewer tr:nth-child(even) {
+  background-color: var(--theme-bg-secondary);
+}
+
+/* Horizontal rules */
+.markdownViewer hr {
+  height: 2px;
+  margin: 1.5em 0;
+  padding: 0;
+  background-color: var(--theme-border-secondary);
+  border: 0;
+}
+
+/* Images */
+.markdownViewer img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+/* Strong and emphasis */
+.markdownViewer strong {
+  font-weight: 600;
+}
+
+.markdownViewer em {
+  font-style: italic;
+}
+
+/* First child margin reset */
+.markdownViewer > :first-child {
+  margin-top: 0 !important;
+}
+
+/* Last child margin reset */
+.markdownViewer > :last-child {
+  margin-bottom: 0 !important;
+}
+
+/* =============================================================================
+   Syntax Highlighting - Monaco Editor Theme Colors
+   Uses highlight.js classes with colors matching VS Code dark/light themes
+   ============================================================================= */
+
+/* Dark theme syntax highlighting */
+:global([data-theme="dark"]) .markdownViewer :global(.hljs) {
+  color: #d4d4d4;
+}
+
+:global([data-theme="dark"]) .markdownViewer :global(.hljs-keyword) {
+  color: #569cd6;
+}
+
+:global([data-theme="dark"]) .markdownViewer :global(.hljs-built_in) {
+  color: #4ec9b0;
+}
+
+:global([data-theme="dark"]) .markdownViewer :global(.hljs-string) {
+  color: #ce9178;
+}
+
+:global([data-theme="dark"]) .markdownViewer :global(.hljs-number) {
+  color: #b5cea8;
+}
+
+:global([data-theme="dark"]) .markdownViewer :global(.hljs-comment) {
+  color: #6a9955;
+}
+
+:global([data-theme="dark"]) .markdownViewer :global(.hljs-function) {
+  color: #dcdcaa;
+}
+
+:global([data-theme="dark"]) .markdownViewer :global(.hljs-title) {
+  color: #dcdcaa;
+}
+
+:global([data-theme="dark"]) .markdownViewer :global(.hljs-variable) {
+  color: #9cdcfe;
+}
+
+:global([data-theme="dark"]) .markdownViewer :global(.hljs-literal) {
+  color: #569cd6;
+}
+
+:global([data-theme="dark"]) .markdownViewer :global(.hljs-params) {
+  color: #9cdcfe;
+}
+
+:global([data-theme="dark"]) .markdownViewer :global(.hljs-operator) {
+  color: #d4d4d4;
+}
+
+/* Light theme syntax highlighting */
+:global([data-theme="light"]) .markdownViewer :global(.hljs) {
+  color: #000000;
+}
+
+:global([data-theme="light"]) .markdownViewer :global(.hljs-keyword) {
+  color: #0000ff;
+}
+
+:global([data-theme="light"]) .markdownViewer :global(.hljs-built_in) {
+  color: #267f99;
+}
+
+:global([data-theme="light"]) .markdownViewer :global(.hljs-string) {
+  color: #a31515;
+}
+
+:global([data-theme="light"]) .markdownViewer :global(.hljs-number) {
+  color: #098658;
+}
+
+:global([data-theme="light"]) .markdownViewer :global(.hljs-comment) {
+  color: #008000;
+}
+
+:global([data-theme="light"]) .markdownViewer :global(.hljs-function) {
+  color: #795e26;
+}
+
+:global([data-theme="light"]) .markdownViewer :global(.hljs-title) {
+  color: #795e26;
+}
+
+:global([data-theme="light"]) .markdownViewer :global(.hljs-variable) {
+  color: #001080;
+}
+
+:global([data-theme="light"]) .markdownViewer :global(.hljs-literal) {
+  color: #0000ff;
+}
+
+:global([data-theme="light"]) .markdownViewer :global(.hljs-params) {
+  color: #001080;
+}
+
+:global([data-theme="light"]) .markdownViewer :global(.hljs-operator) {
+  color: #000000;
+}

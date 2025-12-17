@@ -224,15 +224,18 @@ test.describe('File Explorer', () => {
 
   test.describe('folder operations', () => {
     test('clicking New Folder button creates a new folder', async ({ page }) => {
+      // Get initial chevron count (workspaces vary based on what's loaded)
+      const initialChevronCount = await page.getByTestId('folder-chevron').count()
+
       // Act - Click New Folder button in sidebar
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
 
       // Assert - A new folder should appear in the tree with rename input visible
       await expect(sidebar.getByRole('textbox')).toBeVisible()
-      // New folder should have a chevron (after home, libs, and docs workspaces)
+      // New folder should add one more chevron
       const chevrons = page.getByTestId('folder-chevron')
-      await expect(chevrons).toHaveCount(4) // home workspace + libs workspace + docs workspace + new folder
+      await expect(chevrons).toHaveCount(initialChevronCount + 1)
     })
 
     test('clicking folder expands/collapses it', async ({ page }) => {

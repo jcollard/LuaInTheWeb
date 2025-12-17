@@ -49,6 +49,10 @@ export interface FileExplorerProps {
   onCopyFile?: (sourcePath: string, targetFolderPath: string) => void
   onCancelPendingNewFile?: () => void
   onCancelPendingNewFolder?: () => void
+  /** Open a markdown file in preview mode (rendered) */
+  onPreviewMarkdown?: (path: string) => void
+  /** Open a markdown file in edit mode (raw text) */
+  onEditMarkdown?: (path: string) => void
   className?: string
   /** Optional workspace management props. When provided, workspace tabs are shown. */
   workspaceProps?: WorkspaceProps

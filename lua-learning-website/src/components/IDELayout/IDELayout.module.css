@@ -85,6 +85,29 @@
   background-color: var(--theme-bg-hover);
 }
 
+/* Markdown container styles */
+.markdownContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--theme-editor-bg);
+}
+
+.markdownContainer .toolbar {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  border-bottom: 1px solid var(--theme-border);
+  background-color: var(--theme-panel-bg);
+}
+
+.markdownContent {
+  flex: 1;
+  overflow: auto;
+  background-color: var(--theme-editor-bg);
+  color: var(--theme-text-primary);
+}
+
 /* Mobile responsive styles */
 @media (max-width: 768px) {
   .activityBar {

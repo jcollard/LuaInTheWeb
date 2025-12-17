@@ -42,15 +42,14 @@ test.describe('Docs Workspace', () => {
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
 
-      // Act - Double-click shell.md to open it
+      // Act - Double-click shell.md to open it (opens markdown preview for docs)
       const shellDoc = page.getByRole('treeitem', { name: 'shell.md' })
       await shellDoc.dblclick()
 
-      // Assert - Editor panel should show shell.md content
-      await expect(page.locator('[data-testid="editor-panel"]')).toBeVisible()
-      // Tab should show shell.md - use tab bar specifically
-      const tabBar = page.getByTestId('editor-panel').getByRole('tablist')
-      await expect(tabBar).toContainText('shell.md')
+      // Assert - Markdown viewer should show shell.md content (docs are read-only, show preview)
+      await expect(page.getByTestId('markdown-viewer')).toBeVisible()
+      // Tab should show shell.md
+      await expect(page.getByRole('tab', { name: /shell\.md/i })).toBeVisible()
     })
 
     test('shell.md contains shell library API documentation', async ({ page }) => {
@@ -60,12 +59,12 @@ test.describe('Docs Workspace', () => {
       const shellDoc = page.getByRole('treeitem', { name: 'shell.md' })
       await shellDoc.dblclick()
 
-      // Assert - Editor should contain shell library documentation
-      await expect(page.locator('.monaco-editor')).toBeVisible()
-      const editorContent = page.locator('.monaco-editor')
+      // Assert - Markdown viewer should contain shell library documentation
+      const markdownViewer = page.getByTestId('markdown-viewer')
+      await expect(markdownViewer).toBeVisible()
       // Check for key content - the documentation should have these sections
-      await expect(editorContent).toContainText('Shell Library')
-      await expect(editorContent).toContainText('Color Constants')
+      await expect(markdownViewer).toContainText('Shell Library')
+      await expect(markdownViewer).toContainText('Color Constants')
     })
 
     test('shell.md documents color functions', async ({ page }) => {
@@ -76,10 +75,9 @@ test.describe('Docs Workspace', () => {
       await shellDoc.dblclick()
 
       // Assert - Documentation should mention color-related content
-      // (visible in the initial viewport where Color Constants section is shown)
-      await expect(page.locator('.monaco-editor')).toBeVisible()
-      const editorContent = page.locator('.monaco-editor')
-      await expect(editorContent).toContainText('shell.foreground')
+      const markdownViewer = page.getByTestId('markdown-viewer')
+      await expect(markdownViewer).toBeVisible()
+      await expect(markdownViewer).toContainText('shell.foreground')
     })
 
     test('shell.md documents require statement', async ({ page }) => {
@@ -90,54 +88,47 @@ test.describe('Docs Workspace', () => {
       await shellDoc.dblclick()
 
       // Assert - Documentation should show how to load the library
-      await expect(page.locator('.monaco-editor')).toBeVisible()
-      const editorContent = page.locator('.monaco-editor')
-      await expect(editorContent).toContainText("require('shell')")
+      const markdownViewer = page.getByTestId('markdown-viewer')
+      await expect(markdownViewer).toBeVisible()
+      await expect(markdownViewer).toContainText("require('shell')")
     })
   })
 
   test.describe('docs file read-only behavior', () => {
-    test('shows error toast when trying to save shell.md', async ({ page }) => {
+    test('docs file opens in preview mode only', async ({ page }) => {
       // Arrange - Open shell.md
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
       const shellDoc = page.getByRole('treeitem', { name: 'shell.md' })
       await shellDoc.dblclick()
-      await expect(page.locator('[data-testid="editor-panel"]')).toBeVisible()
 
-      // Make a change in the editor to mark as dirty
-      const editor = page.locator('.monaco-editor')
-      await expect(editor).toBeVisible()
-      await editor.click()
-      // Type something to modify the content
+      // Assert - Should show markdown viewer (preview), not Monaco editor
+      await expect(page.getByTestId('markdown-viewer')).toBeVisible()
+      await expect(page.locator('.monaco-editor')).not.toBeVisible()
+    })
+
+    test('docs file can be opened in edit mode but shows error on save', async ({ page }) => {
+      // Arrange - Open shell.md via Edit Markdown context menu
+      const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
+      await docsWorkspace.getByTestId('folder-chevron').click()
+      const shellDoc = page.getByRole('treeitem', { name: 'shell.md' })
+      await shellDoc.click({ button: 'right' })
+      await page.getByRole('menuitem', { name: /edit markdown/i }).click()
+
+      // Assert - Monaco editor should be visible
+      await expect(page.locator('.monaco-editor')).toBeVisible()
+
+      // Make a change
+      await page.locator('.monaco-editor').click()
       await page.keyboard.type('-- modified', { delay: 30 })
 
-      // Act - Try to save with Ctrl+S
+      // Try to save with Ctrl+S
       await page.keyboard.press('Control+s')
 
       // Assert - Error toast should appear
       const toastContainer = page.getByTestId('toast-container')
       await expect(toastContainer).toBeVisible({ timeout: 5000 })
       await expect(toastContainer.getByText(/read-only/i)).toBeVisible()
-    })
-
-    test('docs file tab shows dirty indicator after editing', async ({ page }) => {
-      // Arrange - Open shell.md
-      const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
-      await docsWorkspace.getByTestId('folder-chevron').click()
-      const shellDoc = page.getByRole('treeitem', { name: 'shell.md' })
-      await shellDoc.dblclick()
-      await expect(page.locator('[data-testid="editor-panel"]')).toBeVisible()
-
-      // Act - Make a change in the editor
-      const editor = page.locator('.monaco-editor')
-      await expect(editor).toBeVisible()
-      await editor.click()
-      await page.keyboard.type('-- test')
-
-      // Assert - Tab should show dirty indicator
-      const tabBar = page.getByTestId('editor-panel').getByRole('tablist')
-      await expect(tabBar).toContainText(/shell\.md/)
     })
   })
 

@@ -131,3 +131,28 @@ export function getWorkspaceForPath(
   }
   return null
 }
+
+/**
+ * Check if a path is a markdown file (.md extension).
+ */
+export function isMarkdownFile(path: string): boolean {
+  return path.toLowerCase().endsWith('.md')
+}
+
+/**
+ * Check if a path is in a read-only workspace (library, docs, or book).
+ */
+export function isInReadOnlyWorkspace(
+  tree: TreeNode[],
+  path: string,
+  isLibraryWorkspaceCheck: (path: string) => boolean,
+  isDocsWorkspaceCheck: (path: string) => boolean,
+  isBookWorkspaceCheck: (path: string) => boolean
+): boolean {
+  // Check if path starts with a read-only workspace root
+  const workspaceRoot = tree.find(node => path.startsWith(node.path))
+  if (!workspaceRoot) return false
+  return isLibraryWorkspaceCheck(workspaceRoot.path) ||
+         isDocsWorkspaceCheck(workspaceRoot.path) ||
+         isBookWorkspaceCheck(workspaceRoot.path)
+}
