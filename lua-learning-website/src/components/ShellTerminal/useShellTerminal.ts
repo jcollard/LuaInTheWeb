@@ -4,6 +4,7 @@ import {
   getCompletionContext,
   type FileEntry,
 } from '@lua-learning/shell-core'
+import { findLongestCommonPrefix } from '../BashTerminal/inputKeyHandlers'
 
 /**
  * Terminal command types for rendering.
@@ -321,7 +322,34 @@ export function useShellTerminal(
       return { commands, suggestions: [] }
     }
 
-    // Multiple matches - show suggestions
+    // Multiple matches - try partial completion first
+    const commonPrefix = findLongestCommonPrefix(completions)
+
+    // If common prefix extends beyond what user typed, complete to it
+    if (commonPrefix.length > context.prefix.length) {
+      const remainingPart = commonPrefix.slice(context.prefix.length)
+
+      // Update state
+      const beforeReplaceEnd = line.slice(0, context.replaceEnd)
+      const afterReplaceEnd = line.slice(context.replaceEnd)
+      const newLine = beforeReplaceEnd + remainingPart + afterReplaceEnd
+      const newCursorPos = context.replaceEnd + remainingPart.length
+
+      setCurrentLine(newLine)
+      setCursorPosition(newCursorPos)
+
+      // Return commands to write the partial completion
+      const commands: TerminalCommand[] = [
+        { type: 'write', data: remainingPart + afterReplaceEnd },
+      ]
+      if (afterReplaceEnd.length > 0) {
+        commands.push({ type: 'moveCursor', direction: 'left', count: afterReplaceEnd.length })
+      }
+
+      return { commands, suggestions: [] }
+    }
+
+    // No additional common prefix - show suggestions
     const truncatedCount = completions.length > 10 ? completions.length : undefined
     const displaySuggestions = completions.slice(0, 10)
 

@@ -213,7 +213,83 @@ describe('useShellTerminal tab completion', () => {
       expect(result.current.currentLine).toBe('cd foo/bar/')
     })
 
-    it('should show multiple matching paths', () => {
+    it('should complete to common prefix when multiple paths share one', () => {
+      // Mock: 'test' prefix matches 'test/' and 'test2/'
+      const mockCommonPrefixPaths = (partial: string): FileEntry[] => {
+        if (partial === 't' || partial === 'te' || partial === 'tes' || partial === 'test') {
+          return [
+            { name: 'test', type: 'directory', path: '/test' },
+            { name: 'test2', type: 'directory', path: '/test2' },
+          ]
+        }
+        return []
+      }
+
+      const { result } = renderHook(() =>
+        useShellTerminal({
+          commandNames: mockCommandNames,
+          getPathCompletions: mockCommonPrefixPaths,
+        })
+      )
+
+      // Type "cd t"
+      act(() => { result.current.handleCharacter('c') })
+      act(() => { result.current.handleCharacter('d') })
+      act(() => { result.current.handleCharacter(' ') })
+      act(() => { result.current.handleCharacter('t') })
+
+      let tabResult: ReturnType<typeof result.current.handleTab>
+      act(() => {
+        tabResult = result.current.handleTab()
+      })
+
+      // Should complete to common prefix "test" (both test/ and test2/ share "test")
+      expect(result.current.currentLine).toBe('cd test')
+      // Should NOT show suggestions yet since we extended the input
+      expect(tabResult!.suggestions).toEqual([])
+    })
+
+    it('should show suggestions when at common prefix with no further extension', () => {
+      // Mock: 'test' prefix matches 'test/' and 'test2/' - no more common chars
+      const mockCommonPrefixPaths = (partial: string): FileEntry[] => {
+        if (partial === 'test') {
+          return [
+            { name: 'test', type: 'directory', path: '/test' },
+            { name: 'test2', type: 'directory', path: '/test2' },
+          ]
+        }
+        return []
+      }
+
+      const { result } = renderHook(() =>
+        useShellTerminal({
+          commandNames: mockCommandNames,
+          getPathCompletions: mockCommonPrefixPaths,
+        })
+      )
+
+      // Type "cd test" (already at common prefix)
+      act(() => { result.current.handleCharacter('c') })
+      act(() => { result.current.handleCharacter('d') })
+      act(() => { result.current.handleCharacter(' ') })
+      act(() => { result.current.handleCharacter('t') })
+      act(() => { result.current.handleCharacter('e') })
+      act(() => { result.current.handleCharacter('s') })
+      act(() => { result.current.handleCharacter('t') })
+
+      let tabResult: ReturnType<typeof result.current.handleTab>
+      act(() => {
+        tabResult = result.current.handleTab()
+      })
+
+      // Should NOT change input (already at common prefix)
+      expect(result.current.currentLine).toBe('cd test')
+      // Should show suggestions since no further common prefix
+      expect(tabResult!.suggestions).toContain('test/')
+      expect(tabResult!.suggestions).toContain('test2/')
+    })
+
+    it('should show multiple matching paths when no common prefix extends input', () => {
       const mockMultiplePaths = (partial: string): FileEntry[] => {
         if (partial === '' || partial === 's') {
           return [
@@ -231,7 +307,7 @@ describe('useShellTerminal tab completion', () => {
         })
       )
 
-      // Type "ls s"
+      // Type "ls s" - common prefix is just 's' which user already typed
       act(() => { result.current.handleCharacter('l') })
       act(() => { result.current.handleCharacter('s') })
       act(() => { result.current.handleCharacter(' ') })
@@ -242,7 +318,7 @@ describe('useShellTerminal tab completion', () => {
         tabResult = result.current.handleTab()
       })
 
-      // Should not change input
+      // Should not change input (common prefix 's' doesn't extend beyond what's typed)
       expect(result.current.currentLine).toBe('ls s')
       // Should have path suggestions
       expect(tabResult!.suggestions).toContain('src/')
@@ -306,7 +382,8 @@ describe('useShellTerminal tab completion', () => {
     })
 
     it('should indicate when more than 10 matches exist', () => {
-      const manyCommands = Array.from({ length: 15 }, (_, i) => `cmd${i}`)
+      // Use commands with no common prefix (a0, b1, c2, etc.) so partial completion doesn't trigger
+      const manyCommands = Array.from({ length: 15 }, (_, i) => `${String.fromCharCode(97 + i)}${i}`)
 
       const { result } = renderHook(() =>
         useShellTerminal({
