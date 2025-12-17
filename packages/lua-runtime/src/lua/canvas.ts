@@ -15,7 +15,7 @@ export const LUA_CANVAS_CODE = `
 --- input handling, and game loop management.
 ---
 --- Note: The canvas API is only available in canvas mode.
---- Use canvas.on_draw() to register your render callback.
+--- Use canvas.tick() to register your render callback.
 
 ---@class canvas
 local canvas = {}
@@ -26,9 +26,9 @@ local canvas = {}
 
 --- Start the canvas and block until canvas.stop() is called or Ctrl+C.
 --- This opens a canvas tab and runs the game loop.
---- Call canvas.on_draw() before this to register your render callback.
+--- Call canvas.tick() before this to register your render callback.
 ---@return nil
----@usage canvas.on_draw(function()
+---@usage canvas.tick(function()
 ---   canvas.clear()
 ---   canvas.set_color(255, 0, 0)
 ---   canvas.fill_rect(10, 10, 50, 50)
@@ -49,24 +49,24 @@ function canvas.stop() end
 -- Game Loop
 -- =============================================================================
 
---- Register the draw callback function.
+--- Register the tick callback function.
 --- This callback is called once per frame (~60fps).
---- All drawing operations should be performed inside this callback.
+--- All game logic and drawing should be performed inside this callback.
 ---@param callback fun() Function to call each frame
 ---@return nil
----@usage canvas.on_draw(function()
+---@usage canvas.tick(function()
 ---   canvas.clear()
 ---   canvas.set_color(255, 0, 0)
 ---   canvas.fill_rect(10, 10, 50, 50)
 --- end)
-function canvas.on_draw(callback) end
+function canvas.tick(callback) end
 
 -- =============================================================================
 -- Canvas Configuration
 -- =============================================================================
 
 --- Set the canvas size in pixels.
---- Call this before on_draw() to set the desired canvas dimensions.
+--- Call this before tick() to set the desired canvas dimensions.
 ---@param width number Canvas width in pixels
 ---@param height number Canvas height in pixels
 ---@return nil

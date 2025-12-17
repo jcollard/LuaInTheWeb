@@ -345,14 +345,14 @@ export class CanvasController {
       const locationInfo = location ? ` (${location})` : ''
 
       return (
-        `canvas.on_draw${locationInfo}: Cannot use blocking operations like io.read() inside on_draw.\n` +
-        'The on_draw callback runs every frame and cannot wait for user input.\n' +
+        `canvas.tick${locationInfo}: Cannot use blocking operations like io.read() inside tick.\n` +
+        'The tick callback runs every frame and cannot wait for user input.\n' +
         'Use canvas.is_key_pressed() or canvas.get_keys_pressed() for input instead.'
       )
     }
 
     // For other errors, include the full message with traceback
-    return `canvas.on_draw: ${rawMessage}`
+    return `canvas.tick: ${rawMessage}`
   }
 
   /**

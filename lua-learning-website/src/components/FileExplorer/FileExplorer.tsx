@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { useCallback, useEffect, useState, useMemo, type MouseEvent } from 'react'
 import { FileTree } from '../FileTree'
 import { ContextMenu } from '../ContextMenu'
@@ -12,6 +13,7 @@ import {
   libraryWorkspaceContextMenuItems,
   docsWorkspaceContextMenuItems,
   bookWorkspaceContextMenuItems,
+  examplesWorkspaceContextMenuItems,
   buildConnectedWorkspaceMenuItems,
 } from './contextMenuItems'
 import {
@@ -22,6 +24,7 @@ import {
   isLibraryWorkspace as isLibraryWorkspaceUtil,
   isDocsWorkspace as isDocsWorkspaceUtil,
   isBookWorkspace as isBookWorkspaceUtil,
+  isExamplesWorkspace as isExamplesWorkspaceUtil,
   getWorkspaceForPath as getWorkspaceForPathUtil,
 } from './treeUtils'
 import { handleDropOperation } from './dropHandler'
@@ -134,6 +137,10 @@ export function FileExplorer({
   )
   const isBookWorkspace = useMemo(
     () => (path: string) => isBookWorkspaceUtil(tree, path),
+    [tree]
+  )
+  const isExamplesWorkspace = useMemo(
+    () => (path: string) => isExamplesWorkspaceUtil(tree, path),
     [tree]
   )
   const findNodeName = useMemo(
@@ -355,6 +362,10 @@ export function FileExplorer({
       // Book workspaces have no context menu options (read-only)
       if (isBookWorkspace(targetPath)) {
         return bookWorkspaceContextMenuItems
+      }
+      // Examples workspaces have no context menu options (read-only)
+      if (isExamplesWorkspace(targetPath)) {
+        return examplesWorkspaceContextMenuItems
       }
       // Add "Refresh" and "Disconnect" options for connected local workspaces
       const isConnectedLocalWorkspace = workspaceProps?.supportsRefresh(targetPath)

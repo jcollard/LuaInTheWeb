@@ -1,12 +1,13 @@
+/* eslint-disable max-lines */
 /**
- * Tests for workspaceManagerHelpers - docs, library, and book workspace functionality.
+ * Tests for workspaceManagerHelpers - docs, library, book, and examples workspace functionality.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // Mock the lua-runtime module
 vi.mock('@lua-learning/lua-runtime', () => ({
   LUA_SHELL_CODE: '-- mock shell code',
-  LUA_CANVAS_CODE: '-- mock canvas code\nlocal canvas = {}\nfunction canvas.on_draw(callback) end\nfunction canvas.clear() end\nfunction canvas.set_color(r, g, b, a) end\nfunction canvas.rect(x, y, w, h) end\nfunction canvas.fill_rect(x, y, w, h) end\nfunction canvas.circle(x, y, r) end\nfunction canvas.fill_circle(x, y, r) end\nfunction canvas.line(x1, y1, x2, y2) end\nfunction canvas.text(x, y, text) end\nfunction canvas.get_delta() end\nfunction canvas.get_time() end\nfunction canvas.is_key_down(key) end\nfunction canvas.is_key_pressed(key) end\nfunction canvas.get_mouse_x() end\nfunction canvas.get_mouse_y() end\nfunction canvas.is_mouse_down(button) end\nreturn canvas',
+  LUA_CANVAS_CODE: '-- mock canvas code\nlocal canvas = {}\nfunction canvas.tick(callback) end\nfunction canvas.clear() end\nfunction canvas.set_color(r, g, b, a) end\nfunction canvas.rect(x, y, w, h) end\nfunction canvas.fill_rect(x, y, w, h) end\nfunction canvas.circle(x, y, r) end\nfunction canvas.fill_circle(x, y, r) end\nfunction canvas.line(x1, y1, x2, y2) end\nfunction canvas.text(x, y, text) end\nfunction canvas.get_delta() end\nfunction canvas.get_time() end\nfunction canvas.is_key_down(key) end\nfunction canvas.is_key_pressed(key) end\nfunction canvas.get_mouse_x() end\nfunction canvas.get_mouse_y() end\nfunction canvas.is_mouse_down(button) end\nreturn canvas',
 }))
 
 import {
@@ -14,6 +15,7 @@ import {
   createLibraryWorkspace,
   createBookWorkspace,
   fetchAndCreateBookWorkspace,
+  createExamplesWorkspace,
   DOCS_WORKSPACE_ID,
   DOCS_WORKSPACE_NAME,
   DOCS_MOUNT_PATH,
@@ -24,6 +26,9 @@ import {
   BOOK_WORKSPACE_NAME,
   BOOK_MOUNT_PATH,
   BOOK_PUBLIC_PATH,
+  EXAMPLES_WORKSPACE_ID,
+  EXAMPLES_WORKSPACE_NAME,
+  EXAMPLES_MOUNT_PATH,
 } from './workspaceManagerHelpers'
 
 describe('workspaceManagerHelpers', () => {
@@ -240,7 +245,7 @@ describe('workspaceManagerHelpers', () => {
     it('canvas.md documents game loop', () => {
       const workspace = createDocsWorkspace()
       const content = workspace.filesystem.readFile('canvas.md')
-      expect(content).toContain('canvas.on_draw')
+      expect(content).toContain('canvas.tick')
     })
 
     it('canvas.md contains usage examples', () => {
@@ -297,7 +302,7 @@ describe('workspaceManagerHelpers', () => {
       const workspace = createLibraryWorkspace()
       const content = workspace.filesystem.readFile('canvas.lua')
       expect(content).toContain('canvas')
-      expect(content).toContain('canvas.on_draw')
+      expect(content).toContain('canvas.tick')
     })
 
     it('canvas.lua documents drawing functions', () => {
@@ -519,6 +524,221 @@ describe('workspaceManagerHelpers', () => {
       await fetchAndCreateBookWorkspace()
 
       expect(mockFetch).toHaveBeenNthCalledWith(1, `${BOOK_PUBLIC_PATH}/manifest.json`)
+    })
+  })
+
+  describe('examples workspace constants', () => {
+    it('has EXAMPLES_WORKSPACE_ID set to "examples"', () => {
+      expect(EXAMPLES_WORKSPACE_ID).toBe('examples')
+    })
+
+    it('has EXAMPLES_WORKSPACE_NAME set to "examples"', () => {
+      expect(EXAMPLES_WORKSPACE_NAME).toBe('examples')
+    })
+
+    it('has EXAMPLES_MOUNT_PATH set to "/examples"', () => {
+      expect(EXAMPLES_MOUNT_PATH).toBe('/examples')
+    })
+  })
+
+  describe('createExamplesWorkspace', () => {
+    it('creates a workspace with id EXAMPLES_WORKSPACE_ID', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.id).toBe(EXAMPLES_WORKSPACE_ID)
+    })
+
+    it('creates a workspace with name EXAMPLES_WORKSPACE_NAME', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.name).toBe(EXAMPLES_WORKSPACE_NAME)
+    })
+
+    it('creates a workspace with type "examples"', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.type).toBe('examples')
+    })
+
+    it('creates a workspace with mountPath EXAMPLES_MOUNT_PATH', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.mountPath).toBe(EXAMPLES_MOUNT_PATH)
+    })
+
+    it('creates a workspace with status "connected"', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.status).toBe('connected')
+    })
+
+    it('creates a workspace with isReadOnly set to true', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.isReadOnly).toBe(true)
+    })
+
+    it('creates a workspace with a filesystem', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.filesystem).toBeDefined()
+      expect(typeof workspace.filesystem.readFile).toBe('function')
+    })
+
+    it('filesystem contains hello.lua file', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.filesystem.exists('hello.lua')).toBe(true)
+      expect(workspace.filesystem.isFile('hello.lua')).toBe(true)
+    })
+
+    it('filesystem contains colors.lua file', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.filesystem.exists('colors.lua')).toBe(true)
+      expect(workspace.filesystem.isFile('colors.lua')).toBe(true)
+    })
+
+    it('filesystem contains mad_takes.lua file', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.filesystem.exists('mad_takes.lua')).toBe(true)
+      expect(workspace.filesystem.isFile('mad_takes.lua')).toBe(true)
+    })
+
+    it('filesystem contains adventure.lua file', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.filesystem.exists('adventure.lua')).toBe(true)
+      expect(workspace.filesystem.isFile('adventure.lua')).toBe(true)
+    })
+
+    it('filesystem contains ascii_world.lua file', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.filesystem.exists('ascii_world.lua')).toBe(true)
+      expect(workspace.filesystem.isFile('ascii_world.lua')).toBe(true)
+    })
+
+    it('filesystem contains shapes.lua file', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.filesystem.exists('shapes.lua')).toBe(true)
+      expect(workspace.filesystem.isFile('shapes.lua')).toBe(true)
+    })
+
+    it('filesystem contains canvas_demo.lua file', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.filesystem.exists('canvas_demo.lua')).toBe(true)
+      expect(workspace.filesystem.isFile('canvas_demo.lua')).toBe(true)
+    })
+
+    it('filesystem lists 7 example files and 1 subdirectory in root', () => {
+      const workspace = createExamplesWorkspace()
+      const entries = workspace.filesystem.listDirectory('/')
+      expect(entries).toHaveLength(8)
+      const names = entries.map((e) => e.name)
+      // Files
+      expect(names).toContain('hello.lua')
+      expect(names).toContain('colors.lua')
+      expect(names).toContain('mad_takes.lua')
+      expect(names).toContain('adventure.lua')
+      expect(names).toContain('ascii_world.lua')
+      expect(names).toContain('shapes.lua')
+      expect(names).toContain('canvas_demo.lua')
+      // Subdirectory
+      expect(names).toContain('ascii_world')
+    })
+
+    it('ascii_world directory exists', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.filesystem.exists('ascii_world')).toBe(true)
+      expect(workspace.filesystem.isDirectory('ascii_world')).toBe(true)
+    })
+
+    it('ascii_world directory contains 9 files', () => {
+      const workspace = createExamplesWorkspace()
+      const entries = workspace.filesystem.listDirectory('/ascii_world')
+      expect(entries).toHaveLength(9)
+      const names = entries.map((e) => e.name)
+      expect(names).toContain('config.lua')
+      expect(names).toContain('ui.lua')
+      expect(names).toContain('player.lua')
+      expect(names).toContain('items.lua')
+      expect(names).toContain('maps.lua')
+      expect(names).toContain('monsters.lua')
+      expect(names).toContain('combat.lua')
+      expect(names).toContain('game.lua')
+      expect(names).toContain('EXTENSIONS.md')
+    })
+
+    it('ascii_world/config.lua contains game configuration', () => {
+      const workspace = createExamplesWorkspace()
+      const content = workspace.filesystem.readFile('ascii_world/config.lua')
+      expect(content).toContain('config')
+      expect(content).toContain('colors')
+    })
+
+    it('ascii_world/game.lua contains game loop', () => {
+      const workspace = createExamplesWorkspace()
+      const content = workspace.filesystem.readFile('ascii_world/game.lua')
+      expect(content).toContain('game')
+      expect(content).toContain('function')
+    })
+
+    it('hello.lua contains a simple Hello World program', () => {
+      const workspace = createExamplesWorkspace()
+      const content = workspace.filesystem.readFile('hello.lua')
+      expect(content).toContain('print')
+      expect(content.toLowerCase()).toContain('hello')
+    })
+
+    it('colors.lua demonstrates shell library colors', () => {
+      const workspace = createExamplesWorkspace()
+      const content = workspace.filesystem.readFile('colors.lua')
+      expect(content).toContain('require')
+      expect(content).toContain('shell')
+    })
+
+    it('mad_takes.lua demonstrates user input with shell colors', () => {
+      const workspace = createExamplesWorkspace()
+      const content = workspace.filesystem.readFile('mad_takes.lua')
+      expect(content).toContain('io.read')
+    })
+
+    it('adventure.lua demonstrates text adventure with functions', () => {
+      const workspace = createExamplesWorkspace()
+      const content = workspace.filesystem.readFile('adventure.lua')
+      expect(content).toContain('function')
+    })
+
+    it('ascii_world.lua is entry point that requires game module', () => {
+      const workspace = createExamplesWorkspace()
+      const content = workspace.filesystem.readFile('ascii_world.lua')
+      expect(content).toContain('require')
+      expect(content).toContain('ascii_world/game')
+    })
+
+    it('shapes.lua demonstrates canvas drawing', () => {
+      const workspace = createExamplesWorkspace()
+      const content = workspace.filesystem.readFile('shapes.lua')
+      expect(content).toContain('require')
+      expect(content).toContain('canvas')
+    })
+
+    it('canvas_demo.lua demonstrates comprehensive canvas API', () => {
+      const workspace = createExamplesWorkspace()
+      const content = workspace.filesystem.readFile('canvas_demo.lua')
+      expect(content).toContain('require')
+      expect(content).toContain('canvas')
+    })
+
+    it('filesystem is read-only (cannot write)', () => {
+      const workspace = createExamplesWorkspace()
+      expect(() => {
+        workspace.filesystem.writeFile('test.lua', 'content')
+      }).toThrow('read-only')
+    })
+
+    it('filesystem is read-only (cannot create directory)', () => {
+      const workspace = createExamplesWorkspace()
+      expect(() => {
+        workspace.filesystem.createDirectory('test')
+      }).toThrow('read-only')
+    })
+
+    it('filesystem is read-only (cannot delete)', () => {
+      const workspace = createExamplesWorkspace()
+      expect(() => {
+        workspace.filesystem.delete('hello.lua')
+      }).toThrow('read-only')
     })
   })
 })

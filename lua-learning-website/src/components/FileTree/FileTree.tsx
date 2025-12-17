@@ -20,13 +20,13 @@ export function FileTree({
   onDrop,
   onReconnect,
 }: FileTreeProps) {
-  // Separate regular workspaces from read-only workspaces (libs, docs, books)
+  // Separate regular workspaces from read-only workspaces (libs, docs, books, examples)
   const { regularNodes, readOnlyNodes } = useMemo(() => {
     const regular: TreeNode[] = []
     const readOnly: TreeNode[] = []
 
     for (const node of tree) {
-      if (node.isLibraryWorkspace || node.isDocsWorkspace || node.isBookWorkspace) {
+      if (node.isLibraryWorkspace || node.isDocsWorkspace || node.isBookWorkspace || node.isExamplesWorkspace) {
         readOnly.push(node)
       } else {
         regular.push(node)
@@ -178,6 +178,7 @@ export function FileTree({
           isLibraryWorkspace={node.isLibraryWorkspace}
           isDocsWorkspace={node.isDocsWorkspace}
           isBookWorkspace={node.isBookWorkspace}
+          isExamplesWorkspace={node.isExamplesWorkspace}
           isReadOnly={node.isReadOnly}
           isSelected={isSelected}
           isExpanded={isExpanded}

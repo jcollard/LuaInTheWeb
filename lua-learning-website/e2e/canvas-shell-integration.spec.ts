@@ -91,7 +91,7 @@ test.describe('Canvas Shell Integration', () => {
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
       // Check that key functions exist
-      await terminal.type('print(type(canvas.start), type(canvas.stop), type(canvas.on_draw))')
+      await terminal.type('print(type(canvas.start), type(canvas.stop), type(canvas.tick))')
       await terminal.press('Enter')
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
@@ -118,8 +118,8 @@ test.describe('Canvas Shell Integration', () => {
       await terminal.press('Enter')
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
-      // Set up on_draw callback that stops after a short time
-      await terminal.type('canvas.on_draw(function() if canvas.get_time() > 0.1 then canvas.stop() end end)')
+      // Set up tick callback that stops after a short time
+      await terminal.type('canvas.tick(function() if canvas.get_time() > 0.1 then canvas.stop() end end)')
       await terminal.press('Enter')
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
@@ -164,7 +164,7 @@ test.describe('Canvas Shell Integration', () => {
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
       // Set up canvas that stops quickly
-      await terminal.type('canvas.on_draw(function() if canvas.get_time() > 0.05 then canvas.stop() end end)')
+      await terminal.type('canvas.tick(function() if canvas.get_time() > 0.05 then canvas.stop() end end)')
       await terminal.press('Enter')
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
@@ -202,7 +202,7 @@ test.describe('Canvas Shell Integration', () => {
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
       // Set up canvas with quick stop
-      await terminal.type('canvas.on_draw(function() if canvas.get_time() > 0.1 then canvas.stop() end end)')
+      await terminal.type('canvas.tick(function() if canvas.get_time() > 0.1 then canvas.stop() end end)')
       await terminal.press('Enter')
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
@@ -247,7 +247,7 @@ test.describe('Canvas Shell Integration', () => {
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
       // Set up canvas that stops after 5 frames
-      await terminal.type('canvas.on_draw(function() frame_count = frame_count + 1 if frame_count >= 5 then canvas.stop() end end)')
+      await terminal.type('canvas.tick(function() frame_count = frame_count + 1 if frame_count >= 5 then canvas.stop() end end)')
       await terminal.press('Enter')
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
@@ -282,7 +282,7 @@ test.describe('Canvas Shell Integration', () => {
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
       // Set up infinite canvas (no canvas.stop())
-      await terminal.type('canvas.on_draw(function() canvas.clear() canvas.set_color(255, 0, 0) canvas.fill_rect(0, 0, 100, 100) end)')
+      await terminal.type('canvas.tick(function() canvas.clear() canvas.set_color(255, 0, 0) canvas.fill_rect(0, 0, 100, 100) end)')
       await terminal.press('Enter')
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
@@ -334,7 +334,7 @@ test.describe('Canvas Shell Integration', () => {
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
       // Canvas that tries double start
-      await terminal.type('canvas.on_draw(function()')
+      await terminal.type('canvas.tick(function()')
       await terminal.press('Enter')
       await terminal.type('  if not started then')
       await terminal.press('Enter')

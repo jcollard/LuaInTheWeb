@@ -153,14 +153,14 @@ export function setupCanvasAPI(
     end
 
     -- Store the user's callback and wrap with error handling
-    local __user_on_draw_callback = nil
+    local __user_tick_callback = nil
 
-    function _canvas.on_draw(callback)
-      __user_on_draw_callback = callback
+    function _canvas.tick(callback)
+      __user_tick_callback = callback
       -- Create a wrapper that uses xpcall to capture stack trace on error
       __canvas_setOnDrawCallback(function()
-        if __user_on_draw_callback then
-          local success, err = xpcall(__user_on_draw_callback, function(e)
+        if __user_tick_callback then
+          local success, err = xpcall(__user_tick_callback, function(e)
             -- Capture stack trace, skip internal frames
             return debug.traceback(e, 2)
           end)

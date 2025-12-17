@@ -69,6 +69,18 @@ export function isBookWorkspace(tree: TreeNode[], path: string): boolean {
 }
 
 /**
+ * Check if a path is an examples workspace root (read-only, example Lua programs).
+ */
+export function isExamplesWorkspace(tree: TreeNode[], path: string): boolean {
+  for (const node of tree) {
+    if (node.path === path && node.isExamplesWorkspace) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
  * Find the name of a node at a given path in the tree.
  */
 export function findNodeName(tree: TreeNode[], path: string): string {
