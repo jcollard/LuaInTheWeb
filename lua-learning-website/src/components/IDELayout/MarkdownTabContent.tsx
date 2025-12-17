@@ -44,6 +44,7 @@ export function MarkdownTabContent({ code, tabBarProps, currentFilePath, onOpenM
         className={styles.markdownContent}
         basePath={basePath}
         onLinkClick={handleLinkClick}
+        filePath={currentFilePath ?? undefined}
       />
     </div>
   )

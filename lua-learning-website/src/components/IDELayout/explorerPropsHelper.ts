@@ -25,6 +25,7 @@ export interface ExplorerPropsParams {
   // Markdown handlers
   openMarkdownPreview: (path: string) => void
   openMarkdownEdit: (path: string) => void
+  makeTabPermanent: (path: string) => void
   // Workspace props
   workspaces: Workspace[]
   isFileSystemAccessSupported: boolean
@@ -58,10 +59,15 @@ export function createExplorerProps(params: ExplorerPropsParams) {
     }
   }
 
-  // Smart file opener for double-click (opens file for editing, not preview)
-  // Double-click on .md files should open in Monaco editor, not markdown preview
+  // Smart file opener for double-click
+  // For markdown files: make the preview tab permanent (keep as preview, don't edit)
+  // For other files: open for editing
   const smartOpenFile = (path: string) => {
-    params.openFile(path)
+    if (isMarkdownFile(path)) {
+      params.makeTabPermanent(path)
+    } else {
+      params.openFile(path)
+    }
   }
 
   return {

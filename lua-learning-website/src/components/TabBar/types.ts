@@ -33,4 +33,5 @@ export interface UseTabBarReturn {
   getActiveTabType: () => TabType | null
   makeTabPermanent: (path: string) => void
   convertToFileTab: (path: string) => void
+  convertToMarkdownTab: (path: string) => void
 }

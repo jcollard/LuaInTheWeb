@@ -149,6 +149,10 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
       if (activeTab && activeTab !== path && code !== originalContent.get(activeTab)) {
         setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
       }
+      // Convert file tab to markdown preview if it's currently in edit mode
+      if (existingTab.type === 'file') {
+        tabBar.convertToMarkdownTab(path)
+      }
       tabBar.selectTab(path); loadContentForPath(path); addRecentFile(path); return
     }
     if (activeTab && code !== originalContent.get(activeTab)) {

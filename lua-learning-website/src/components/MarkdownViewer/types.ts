@@ -5,4 +5,6 @@ export interface MarkdownViewerProps {
   basePath?: string
   /** Callback when a relative link is clicked */
   onLinkClick?: (path: string) => void
+  /** File path for scroll position persistence */
+  filePath?: string
 }

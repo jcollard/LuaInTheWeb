@@ -109,6 +109,7 @@ function IDELayoutInner({
     selectTab,
     closeTab,
     openCanvasTab,
+    makeTabPermanent,
     // Toasts
     toasts,
     showError,
@@ -287,14 +288,11 @@ function IDELayoutInner({
     fileTree, activeTab, pendingNewFilePath, pendingNewFolderPath,
     handleCreateFile, handleCreateFolder, renameFile, renameFolder,
     deleteFile, deleteFolder, openFile, openPreviewFile, moveFile, copyFile,
-    clearPendingNewFile, clearPendingNewFolder,
-    openMarkdownPreview, openMarkdownEdit: openFile,
-    workspaces,
-    isFileSystemAccessSupported: isFileSystemAccessSupported(),
-    addVirtualWorkspace, handleAddLocalWorkspace, handleRemoveWorkspace,
-    refreshWorkspace, refreshFileTree, supportsRefresh, handleReconnectWorkspace,
-    handleDisconnectWorkspace, handleRenameWorkspace, isFolderAlreadyMounted,
-    getUniqueWorkspaceName,
+    clearPendingNewFile, clearPendingNewFolder, openMarkdownPreview, openMarkdownEdit: openFile,
+    makeTabPermanent, workspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
+    addVirtualWorkspace, handleAddLocalWorkspace, handleRemoveWorkspace, refreshWorkspace,
+    refreshFileTree, supportsRefresh, handleReconnectWorkspace, handleDisconnectWorkspace,
+    handleRenameWorkspace, isFolderAlreadyMounted, getUniqueWorkspaceName,
   })
 
   // Tab bar props for EditorPanel (only when tabs exist)

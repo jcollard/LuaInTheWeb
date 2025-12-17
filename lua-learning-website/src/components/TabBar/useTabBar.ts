@@ -54,6 +54,14 @@ export function useTabBar(): UseTabBarReturn {
     )
   }, [])
 
+  const convertToMarkdownTab = useCallback((path: string) => {
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.path === path ? { ...tab, type: 'markdown', isPreview: false } : tab
+      )
+    )
+  }, [])
+
   const closeTab = useCallback((path: string) => {
     setTabs((prev) => {
       const index = prev.findIndex((tab) => tab.path === path)
@@ -156,5 +164,6 @@ export function useTabBar(): UseTabBarReturn {
     getActiveTabType,
     makeTabPermanent,
     convertToFileTab,
+    convertToMarkdownTab,
   }
 }

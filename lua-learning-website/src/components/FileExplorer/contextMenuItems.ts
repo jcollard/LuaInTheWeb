@@ -17,6 +17,7 @@ export const markdownFileContextMenuItems: ContextMenuItem[] = [
 // Read-only markdown files (in library/docs/book workspaces)
 export const readOnlyMarkdownFileContextMenuItems: ContextMenuItem[] = [
   { id: 'preview-markdown', label: 'Preview Markdown' },
+  { id: 'edit-markdown', label: 'Edit Markdown' },
 ]
 
 export const folderContextMenuItems: ContextMenuItem[] = [

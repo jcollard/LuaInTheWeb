@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import type { Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -7,6 +7,9 @@ import rehypeHighlight from 'rehype-highlight'
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 import styles from './MarkdownViewer.module.css'
 import type { MarkdownViewerProps } from './types'
+
+// Module-level map to persist scroll positions across re-renders
+const scrollPositions = new Map<string, number>()
 
 /**
  * Resolves a relative path against a base path
@@ -52,10 +55,47 @@ const sanitizeSchema = {
 /**
  * Renders markdown content with support for sanitized HTML
  */
-export function MarkdownViewer({ content, className, basePath, onLinkClick }: MarkdownViewerProps) {
+export function MarkdownViewer({ content, className, basePath, onLinkClick, filePath }: MarkdownViewerProps) {
   const combinedClassName = className
     ? `${styles.markdownViewer} ${className}`
     : styles.markdownViewer
+
+  const containerRef = useRef<HTMLDivElement>(null)
+  const previousFilePathRef = useRef<string | undefined>(filePath)
+
+  // Save scroll position when switching away from a file
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container || !filePath) return
+
+    // If file path changed, save the old position and restore the new one
+    if (previousFilePathRef.current && previousFilePathRef.current !== filePath) {
+      // Position was already saved by scroll handler, just restore new file's position
+      const savedPosition = scrollPositions.get(filePath)
+      container.scrollTop = savedPosition ?? 0
+    } else if (!scrollPositions.has(filePath)) {
+      // First time opening this file - scroll to top
+      container.scrollTop = 0
+    } else {
+      // Restoring same file (e.g., on re-mount) - restore position
+      container.scrollTop = scrollPositions.get(filePath) ?? 0
+    }
+
+    previousFilePathRef.current = filePath
+  }, [filePath])
+
+  // Track scroll position on scroll
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container || !filePath) return
+
+    const handleScroll = () => {
+      scrollPositions.set(filePath, container.scrollTop)
+    }
+
+    container.addEventListener('scroll', handleScroll)
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [filePath])
 
   const handleLinkClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
     e.preventDefault()
@@ -78,12 +118,17 @@ export function MarkdownViewer({ content, className, basePath, onLinkClick }: Ma
           </a>
         )
       }
+      // External links open in new tab
+      const isExternal = href?.startsWith('http://') || href?.startsWith('https://')
+      if (isExternal) {
+        return <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>
+      }
       return <a href={href} {...props}>{children}</a>
     }
   }), [basePath, onLinkClick, handleLinkClick])
 
   return (
-    <div className={combinedClassName} data-testid="markdown-viewer">
+    <div ref={containerRef} className={combinedClassName} data-testid="markdown-viewer">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw, rehypeHighlight, [rehypeSanitize, sanitizeSchema]]}

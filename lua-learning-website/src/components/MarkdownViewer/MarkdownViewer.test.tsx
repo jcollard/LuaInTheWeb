@@ -277,7 +277,7 @@ end
       expect(onLinkClick).toHaveBeenCalledWith('/docs/relative.md')
     })
 
-    it('should not intercept external http links', async () => {
+    it('should open external links in new tab', async () => {
       const onLinkClick = vi.fn()
       render(
         <MarkdownViewer
@@ -288,6 +288,8 @@ end
       )
       const link = screen.getByRole('link', { name: 'External' })
       expect(link).toHaveAttribute('href', 'https://example.com')
+      expect(link).toHaveAttribute('target', '_blank')
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer')
     })
 
     it('should not intercept anchor links', async () => {
