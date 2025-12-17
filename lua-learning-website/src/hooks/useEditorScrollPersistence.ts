@@ -24,7 +24,8 @@ export interface UseEditorScrollPersistenceReturn {
  * Hook that persists and restores scroll positions when switching between editor tabs.
  *
  * Stores scroll positions in a module-level Map so they persist across re-renders.
- * When the active tab changes, saves the current position and restores the new tab's position.
+ * Tracks scroll position on every scroll event so it's always up-to-date.
+ * When the active tab changes, restores the saved position.
  *
  * @param options - Configuration options
  * @returns Object with setEditor callback
@@ -34,39 +35,46 @@ export function useEditorScrollPersistence(
 ): UseEditorScrollPersistenceReturn {
   const { activeTab } = options
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
-  const previousTabRef = useRef<string | null>(null)
   const pendingScrollRestoreRef = useRef<string | null>(null)
   const contentChangeListenerRef = useRef<IDisposable | null>(null)
+  const scrollListenerRef = useRef<IDisposable | null>(null)
+  const activeTabRef = useRef<string | null>(activeTab)
 
-  // Save scroll position for the previous tab before switching
+  // Keep activeTabRef in sync (needed for scroll listener callback)
+  activeTabRef.current = activeTab
+
+  // Mark that we need to restore scroll when activeTab changes
   useEffect(() => {
-    const monacoEditor = editorRef.current
-
-    // Save scroll position for the previous tab (only if editor is mounted)
-    if (monacoEditor && previousTabRef.current && previousTabRef.current !== activeTab) {
-      scrollPositions.set(previousTabRef.current, monacoEditor.getScrollTop())
-    }
-
-    // Always mark that we need to restore scroll after content changes
-    // This must happen even if editor isn't mounted yet (e.g., switching from markdown tab)
     if (activeTab) {
       pendingScrollRestoreRef.current = activeTab
     }
-
-    previousTabRef.current = activeTab
   }, [activeTab])
 
-  // Set editor reference and set up content change listener
+  // Set editor reference and set up listeners
   const setEditor = useCallback((monacoEditor: editor.IStandaloneCodeEditor | null) => {
-    // Clean up previous listener
+    // Clean up previous listeners
     if (contentChangeListenerRef.current) {
       contentChangeListenerRef.current.dispose()
       contentChangeListenerRef.current = null
+    }
+    if (scrollListenerRef.current) {
+      scrollListenerRef.current.dispose()
+      scrollListenerRef.current = null
     }
 
     editorRef.current = monacoEditor
 
     if (monacoEditor) {
+      // Track scroll position on EVERY scroll event
+      // This ensures we always have the latest position saved, even if
+      // the editor unmounts before useEffect can save it
+      scrollListenerRef.current = monacoEditor.onDidScrollChange(() => {
+        const currentTab = activeTabRef.current
+        if (currentTab) {
+          scrollPositions.set(currentTab, monacoEditor.getScrollTop())
+        }
+      })
+
       // Listen for content changes to restore scroll position after tab switch
       contentChangeListenerRef.current = monacoEditor.onDidChangeModelContent(() => {
         const pendingTab = pendingScrollRestoreRef.current
@@ -87,11 +95,14 @@ export function useEditorScrollPersistence(
     }
   }, [])
 
-  // Cleanup listener on unmount
+  // Cleanup listeners on unmount
   useEffect(() => {
     return () => {
       if (contentChangeListenerRef.current) {
         contentChangeListenerRef.current.dispose()
+      }
+      if (scrollListenerRef.current) {
+        scrollListenerRef.current.dispose()
       }
     }
   }, [])
