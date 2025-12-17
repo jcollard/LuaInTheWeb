@@ -5,7 +5,10 @@ import {
   handleArrowDown,
   handleBackspace,
   handleCharacter,
+  findLongestCommonPrefix,
+  getTabCompletions,
   type InputState,
+  type CompletionEntry,
 } from './inputKeyHandlers'
 
 function createDefaultState(overrides: Partial<InputState> = {}): InputState {
@@ -264,6 +267,164 @@ describe('inputKeyHandlers', () => {
 
       expect(result.currentLine).toBe('test')
       expect(result.cursorPosition).toBe(1)
+    })
+  })
+
+  describe('findLongestCommonPrefix', () => {
+    it('should return empty string for empty array', () => {
+      expect(findLongestCommonPrefix([])).toBe('')
+    })
+
+    it('should return the string itself for single element array', () => {
+      expect(findLongestCommonPrefix(['hello'])).toBe('hello')
+    })
+
+    it('should return common prefix for multiple strings', () => {
+      expect(findLongestCommonPrefix(['untitled-1.lua', 'untitled-2.lua'])).toBe('untitled-')
+    })
+
+    it('should return empty string when no common prefix exists', () => {
+      expect(findLongestCommonPrefix(['apple', 'banana', 'cherry'])).toBe('')
+    })
+
+    it('should return full string when all strings are identical', () => {
+      expect(findLongestCommonPrefix(['test', 'test', 'test'])).toBe('test')
+    })
+
+    it('should handle strings with different lengths', () => {
+      expect(findLongestCommonPrefix(['prefix', 'prefixLong', 'prefixShort'])).toBe('prefix')
+    })
+
+    it('should handle single character prefix', () => {
+      expect(findLongestCommonPrefix(['abc', 'axy', 'azz'])).toBe('a')
+    })
+
+    it('should handle empty strings in array', () => {
+      expect(findLongestCommonPrefix(['hello', '', 'help'])).toBe('')
+    })
+
+    it('should be case sensitive', () => {
+      expect(findLongestCommonPrefix(['Hello', 'hello'])).toBe('')
+    })
+
+    it('should handle special characters', () => {
+      expect(findLongestCommonPrefix(['file-1.txt', 'file-2.txt', 'file-3.txt'])).toBe('file-')
+    })
+  })
+
+  describe('getTabCompletions', () => {
+    const fileEntries: CompletionEntry[] = [
+      { name: 'untitled-1.lua', type: 'file' },
+      { name: 'untitled-2.lua', type: 'file' },
+      { name: 'main.lua', type: 'file' },
+      { name: 'docs', type: 'directory' },
+    ]
+
+    const commands = ['clear', 'cd', 'cat', 'ls', 'pwd', 'help']
+
+    describe('partial completion (common prefix)', () => {
+      it('should complete to common prefix when multiple files match', () => {
+        const result = getTabCompletions('un', 2, commands, fileEntries)
+
+        expect(result.completedText).toBe('untitled-')
+        expect(result.suggestions).toEqual([])
+        expect(result.truncatedCount).toBeUndefined()
+      })
+
+      it('should show suggestions when no additional common prefix exists', () => {
+        const result = getTabCompletions('untitled-', 9, commands, fileEntries)
+
+        expect(result.completedText).toBe('untitled-')
+        expect(result.suggestions).toEqual(['untitled-1.lua', 'untitled-2.lua'])
+      })
+
+      it('should complete to common prefix for commands', () => {
+        const result = getTabCompletions('c', 1, commands, fileEntries)
+
+        // 'clear', 'cd', 'cat' all start with 'c' - no common prefix beyond 'c'
+        expect(result.completedText).toBe('c')
+        expect(result.suggestions).toEqual(['cat', 'cd', 'clear'])
+      })
+    })
+
+    describe('single match completion', () => {
+      it('should fully complete single file match with space', () => {
+        const result = getTabCompletions('main', 4, commands, fileEntries)
+
+        expect(result.completedText).toBe('main.lua ')
+        expect(result.suggestions).toEqual([])
+      })
+
+      it('should fully complete single directory match with slash', () => {
+        const result = getTabCompletions('do', 2, commands, fileEntries)
+
+        expect(result.completedText).toBe('docs/')
+        expect(result.suggestions).toEqual([])
+      })
+
+      it('should fully complete single command match with space', () => {
+        const result = getTabCompletions('pw', 2, commands, fileEntries)
+
+        expect(result.completedText).toBe('pwd ')
+        expect(result.suggestions).toEqual([])
+      })
+    })
+
+    describe('no matches', () => {
+      it('should return unchanged text when no matches', () => {
+        const result = getTabCompletions('xyz', 3, commands, fileEntries)
+
+        expect(result.completedText).toBe('xyz')
+        expect(result.suggestions).toEqual([])
+      })
+    })
+
+    describe('empty input', () => {
+      it('should show all commands on empty input', () => {
+        const result = getTabCompletions('', 0, commands, fileEntries)
+
+        expect(result.completedText).toBe('')
+        expect(result.suggestions).toEqual(['cat', 'cd', 'clear', 'help', 'ls', 'pwd'])
+      })
+    })
+
+    describe('path completion after command', () => {
+      it('should complete file path after command', () => {
+        const result = getTabCompletions('cat un', 6, commands, fileEntries)
+
+        expect(result.completedText).toBe('cat untitled-')
+        expect(result.suggestions).toEqual([])
+      })
+
+      it('should complete single file after command', () => {
+        const result = getTabCompletions('cat ma', 6, commands, fileEntries)
+
+        expect(result.completedText).toBe('cat main.lua ')
+        expect(result.suggestions).toEqual([])
+      })
+    })
+
+    describe('truncation', () => {
+      it('should truncate when more than 10 matches', () => {
+        const manyFiles: CompletionEntry[] = Array.from({ length: 15 }, (_, i) => ({
+          name: `file${i}.txt`,
+          type: 'file' as const,
+        }))
+
+        const result = getTabCompletions('file', 4, [], manyFiles)
+
+        expect(result.suggestions.length).toBe(10)
+        expect(result.truncatedCount).toBe(15)
+      })
+    })
+
+    describe('cursor position handling', () => {
+      it('should complete word at cursor position', () => {
+        const result = getTabCompletions('cat un extra', 6, commands, fileEntries)
+
+        // Completing 'un' at position 6
+        expect(result.completedText).toBe('cat untitled- extra')
+      })
     })
   })
 })

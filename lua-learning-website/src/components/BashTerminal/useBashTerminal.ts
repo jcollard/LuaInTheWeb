@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
+import { getTabCompletions, type CompletionEntry as ImportedCompletionEntry } from './inputKeyHandlers'
 
 /**
  * Terminal command types for rendering
@@ -10,8 +11,29 @@ export interface TerminalCommand {
   count?: number
 }
 
+/**
+ * File entry for tab completion (re-exported from inputKeyHandlers)
+ */
+export type CompletionEntry = ImportedCompletionEntry
+
+/**
+ * Result of tab completion operation
+ */
+export interface TabCompletionResult {
+  /** Terminal commands to execute for displaying completion */
+  commands: TerminalCommand[]
+  /** Suggestions to display (for multiple matches when no common prefix extends input) */
+  suggestions: string[]
+  /** Total count when more than 10 matches (for "N options available" message) */
+  truncatedCount?: number
+}
+
 export interface UseBashTerminalOptions {
   onCommand?: (command: string) => void
+  /** Available command names for tab completion */
+  commandNames?: string[]
+  /** Callback to get path completions for a partial path */
+  getPathCompletions?: (partialPath: string) => CompletionEntry[]
 }
 
 export interface UseBashTerminalReturn {
@@ -36,6 +58,7 @@ export interface UseBashTerminalReturn {
   handleEnd: () => TerminalCommand[]
   handleShiftEnter: () => TerminalCommand[]
   handleCtrlC: () => TerminalCommand[]
+  handleTab: () => TabCompletionResult
 }
 
 export function useBashTerminal(options?: UseBashTerminalOptions): UseBashTerminalReturn {
@@ -322,6 +345,56 @@ export function useBashTerminal(options?: UseBashTerminalOptions): UseBashTermin
     ]
   }, [])
 
+  const handleTab = useCallback((): TabCompletionResult => {
+    const line = currentLineRef.current
+    const pos = cursorPositionRef.current
+
+    // Get available completions from options
+    const commandNames = options?.commandNames ?? []
+    const getPathCompletions = options?.getPathCompletions
+
+    // Convert path completions to CompletionEntry array
+    const files: CompletionEntry[] = getPathCompletions ? getPathCompletions('') : []
+
+    // Get tab completion result
+    const result = getTabCompletions(line, pos, commandNames, files)
+
+    // If text changed, update state and return terminal commands
+    if (result.completedText !== line) {
+      const oldPos = pos
+      const newLine = result.completedText
+      const newPos = newLine.length - line.slice(pos).length
+
+      setCurrentLine(newLine)
+      setCursorPosition(newPos)
+
+      // Calculate terminal commands to update display
+      const commands: TerminalCommand[] = []
+
+      // Move cursor back to start of line, clear, and rewrite
+      if (oldPos > 0) {
+        commands.push({ type: 'moveCursor', direction: 'left', count: oldPos })
+      }
+      commands.push({ type: 'clearToEnd' })
+      commands.push({ type: 'write', data: newLine })
+
+      // Position cursor correctly if not at end
+      const afterCursor = line.slice(pos)
+      if (afterCursor.length > 0) {
+        commands.push({ type: 'moveCursor', direction: 'left', count: afterCursor.length })
+      }
+
+      return { commands, suggestions: [] }
+    }
+
+    // No completion - return suggestions if any
+    return {
+      commands: [],
+      suggestions: result.suggestions,
+      truncatedCount: result.truncatedCount,
+    }
+  }, [options])
+
   return {
     currentLine,
     cursorPosition,
@@ -341,5 +414,6 @@ export function useBashTerminal(options?: UseBashTerminalOptions): UseBashTermin
     handleEnd,
     handleShiftEnter,
     handleCtrlC,
+    handleTab,
   }
 }
