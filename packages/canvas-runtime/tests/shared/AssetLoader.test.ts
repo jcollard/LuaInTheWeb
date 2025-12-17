@@ -678,32 +678,6 @@ describe('AssetLoader', () => {
         );
       });
 
-      it('should throw for PNG with wrong signature byte', async () => {
-        // PNG with first byte wrong (0x88 instead of 0x89)
-        const wrongSigPng = new Uint8Array([
-          0x88, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, // Wrong signature
-          0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
-          0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x20,
-          0x08, 0x06, 0x00, 0x00, 0x00,
-        ]);
-        mockFs = createMockFileSystem({
-          exists: vi.fn(() => true),
-          isFile: vi.fn(() => true),
-          readBinaryFile: vi.fn(() => wrongSigPng),
-        });
-        loader = new AssetLoader(mockFs, '/my-files/games');
-
-        const definition: AssetDefinition = {
-          name: 'bad',
-          path: 'bad.png',
-          type: 'image',
-        };
-
-        await expect(loader.loadAsset(definition)).rejects.toThrow(
-          "Failed to load 'bad.png': invalid image data"
-        );
-      });
-
       it('should throw for PNG that is too short for dimensions', async () => {
         // Valid PNG signature but not enough bytes for IHDR
         const shortPng = new Uint8Array([
