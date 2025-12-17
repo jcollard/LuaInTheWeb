@@ -8,6 +8,21 @@
 export type WorkerState = 'idle' | 'initializing' | 'running' | 'stopped' | 'error';
 
 /**
+ * Serialized asset data for transfer to worker.
+ * Contains the binary data and metadata for a preloaded asset.
+ */
+export interface SerializedAsset {
+  /** Unique name to reference this asset */
+  name: string;
+  /** The raw binary data as ArrayBuffer (transferable) */
+  data: ArrayBuffer;
+  /** The width in pixels (for images) */
+  width: number;
+  /** The height in pixels (for images) */
+  height: number;
+}
+
+/**
  * Message from main thread to worker.
  */
 export type MainToWorkerMessage =
@@ -22,6 +37,8 @@ export interface InitMessage {
   type: 'init';
   /** Lua code to execute */
   code: string;
+  /** Preloaded asset data (optional) */
+  assets?: SerializedAsset[];
 }
 
 /**
