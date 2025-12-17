@@ -4,7 +4,7 @@ import {
   getCompletionContext,
   type FileEntry,
 } from '@lua-learning/shell-core'
-import { findLongestCommonPrefix } from '../BashTerminal/inputKeyHandlers'
+import { findLongestCommonPrefix } from './inputKeyHandlers'
 
 /**
  * Terminal command types for rendering.

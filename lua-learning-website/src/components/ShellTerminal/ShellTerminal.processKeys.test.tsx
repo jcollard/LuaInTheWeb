@@ -77,7 +77,7 @@ vi.mock('../../contexts/useTheme', () => ({
   useTheme: () => ({ theme: 'dark', toggleTheme: vi.fn() }),
 }))
 
-vi.mock('../BashTerminal/terminalTheme', () => ({
+vi.mock('./terminalTheme', () => ({
   getTerminalTheme: vi.fn().mockReturnValue({}),
 }))
 
