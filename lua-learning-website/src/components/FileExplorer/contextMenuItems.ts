@@ -6,6 +6,20 @@ export const fileContextMenuItems: ContextMenuItem[] = [
   { id: 'delete', label: 'Delete' },
 ]
 
+export const markdownFileContextMenuItems: ContextMenuItem[] = [
+  { id: 'preview-markdown', label: 'Preview Markdown' },
+  { id: 'edit-markdown', label: 'Edit Markdown' },
+  { id: 'divider-markdown', type: 'divider' },
+  { id: 'rename', label: 'Rename' },
+  { id: 'delete', label: 'Delete' },
+]
+
+// Read-only markdown files (in library/docs/book workspaces)
+export const readOnlyMarkdownFileContextMenuItems: ContextMenuItem[] = [
+  { id: 'preview-markdown', label: 'Preview Markdown' },
+  { id: 'edit-markdown', label: 'Edit Markdown' },
+]
+
 export const folderContextMenuItems: ContextMenuItem[] = [
   { id: 'new-file', label: 'New File' },
   { id: 'new-folder', label: 'New Folder' },

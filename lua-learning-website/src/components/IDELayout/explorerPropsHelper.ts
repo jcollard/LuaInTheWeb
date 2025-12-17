@@ -22,6 +22,10 @@ export interface ExplorerPropsParams {
   copyFile: (sourcePath: string, targetFolderPath: string) => void
   clearPendingNewFile: () => void
   clearPendingNewFolder: () => void
+  // Markdown handlers
+  openMarkdownPreview: (path: string) => void
+  openMarkdownEdit: (path: string) => void
+  makeTabPermanent: (path: string) => void
   // Workspace props
   workspaces: Workspace[]
   isFileSystemAccessSupported: boolean
@@ -38,7 +42,34 @@ export interface ExplorerPropsParams {
   getUniqueWorkspaceName: (baseName: string) => string
 }
 
+/**
+ * Check if a path is a markdown file
+ */
+function isMarkdownFile(path: string): boolean {
+  return path.toLowerCase().endsWith('.md')
+}
+
 export function createExplorerProps(params: ExplorerPropsParams) {
+  // Smart file opener that routes to markdown preview for .md files
+  const smartOpenPreviewFile = (path: string) => {
+    if (isMarkdownFile(path)) {
+      params.openMarkdownPreview(path)
+    } else {
+      params.openPreviewFile(path)
+    }
+  }
+
+  // Smart file opener for double-click
+  // For markdown files: make the preview tab permanent (keep as preview, don't edit)
+  // For other files: open for editing
+  const smartOpenFile = (path: string) => {
+    if (isMarkdownFile(path)) {
+      params.makeTabPermanent(path)
+    } else {
+      params.openFile(path)
+    }
+  }
+
   return {
     tree: params.fileTree,
     selectedPath: params.activeTab,
@@ -50,12 +81,14 @@ export function createExplorerProps(params: ExplorerPropsParams) {
     onRenameFolder: params.renameFolder,
     onDeleteFile: params.deleteFile,
     onDeleteFolder: params.deleteFolder,
-    onSelectFile: params.openPreviewFile,
-    onDoubleClickFile: params.openFile,
+    onSelectFile: smartOpenPreviewFile,
+    onDoubleClickFile: smartOpenFile,
     onMoveFile: params.moveFile,
     onCopyFile: params.copyFile,
     onCancelPendingNewFile: params.clearPendingNewFile,
     onCancelPendingNewFolder: params.clearPendingNewFolder,
+    onPreviewMarkdown: params.openMarkdownPreview,
+    onEditMarkdown: params.openMarkdownEdit,
     workspaceProps: {
       workspaces: params.workspaces,
       isFileSystemAccessSupported: params.isFileSystemAccessSupported,

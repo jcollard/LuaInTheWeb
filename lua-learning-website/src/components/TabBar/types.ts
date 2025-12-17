@@ -1,7 +1,7 @@
 /**
- * Type of tab - file for code editor, canvas for game canvas
+ * Type of tab - file for code editor, canvas for game canvas, markdown for markdown preview
  */
-export type TabType = 'file' | 'canvas'
+export type TabType = 'file' | 'canvas' | 'markdown'
 
 export interface TabInfo {
   path: string
@@ -25,10 +25,13 @@ export interface UseTabBarReturn {
   openTab: (path: string, name: string, type?: TabType) => void
   openPreviewTab: (path: string, name: string) => void
   openCanvasTab: (id: string, name?: string) => void
+  openMarkdownPreviewTab: (path: string, name: string) => void
   closeTab: (path: string) => void
   selectTab: (path: string) => void
   setDirty: (path: string, isDirty: boolean) => void
   renameTab: (oldPath: string, newPath: string, newName: string) => void
   getActiveTabType: () => TabType | null
   makeTabPermanent: (path: string) => void
+  convertToFileTab: (path: string) => void
+  convertToMarkdownTab: (path: string) => void
 }

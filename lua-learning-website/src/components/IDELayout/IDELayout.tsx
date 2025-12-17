@@ -12,6 +12,7 @@ import { ConfirmDialog } from '../ConfirmDialog'
 import { ToastContainer } from '../Toast'
 import { WelcomeScreen } from '../WelcomeScreen'
 import { CanvasTabContent } from './CanvasTabContent'
+import { MarkdownTabContent } from './MarkdownTabContent'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useCanvasTabManager } from '../../hooks/useCanvasTabManager'
 import { useWindowFocusRefresh } from '../../hooks/useWindowFocusRefresh'
@@ -91,6 +92,7 @@ function IDELayoutInner({
     copyFile,
     openFile,
     openPreviewFile,
+    openMarkdownPreview,
     saveFile,
     // New file creation
     pendingNewFilePath,
@@ -107,6 +109,7 @@ function IDELayoutInner({
     selectTab,
     closeTab,
     openCanvasTab,
+    makeTabPermanent,
     // Toasts
     toasts,
     showError,
@@ -285,12 +288,11 @@ function IDELayoutInner({
     fileTree, activeTab, pendingNewFilePath, pendingNewFolderPath,
     handleCreateFile, handleCreateFolder, renameFile, renameFolder,
     deleteFile, deleteFolder, openFile, openPreviewFile, moveFile, copyFile,
-    clearPendingNewFile, clearPendingNewFolder, workspaces,
-    isFileSystemAccessSupported: isFileSystemAccessSupported(),
-    addVirtualWorkspace, handleAddLocalWorkspace, handleRemoveWorkspace,
-    refreshWorkspace, refreshFileTree, supportsRefresh, handleReconnectWorkspace,
-    handleDisconnectWorkspace, handleRenameWorkspace, isFolderAlreadyMounted,
-    getUniqueWorkspaceName,
+    clearPendingNewFile, clearPendingNewFolder, openMarkdownPreview, openMarkdownEdit: openFile,
+    makeTabPermanent, workspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
+    addVirtualWorkspace, handleAddLocalWorkspace, handleRemoveWorkspace, refreshWorkspace,
+    refreshFileTree, supportsRefresh, handleReconnectWorkspace, handleDisconnectWorkspace,
+    handleRenameWorkspace, isFolderAlreadyMounted, getUniqueWorkspaceName,
   })
 
   // Tab bar props for EditorPanel (only when tabs exist)
@@ -350,9 +352,13 @@ function IDELayoutInner({
                           />
                         </div>
                       )}
-                      {/* Editor panel - hidden when canvas tab is active */}
+                      {/* Markdown preview - shown when markdown tab is active */}
+                      {activeTabType === 'markdown' && (
+                        <MarkdownTabContent code={code} tabBarProps={tabBarProps} currentFilePath={activeTab} onOpenMarkdown={openMarkdownPreview} />
+                      )}
+                      {/* Editor panel - hidden when canvas or markdown tab is active */}
                       {/* Note: also show if hasCanvasTabs is false to handle race condition during canvas tab close */}
-                      {(activeTabType !== 'canvas' || !hasCanvasTabs) && (
+                      {activeTabType !== 'canvas' && activeTabType !== 'markdown' && (
                         <EditorPanel
                           code={code}
                           onChange={setCode}

@@ -43,6 +43,7 @@ export interface IDEContextValue {
   copyFile: (sourcePath: string, targetFolderPath: string) => void
   openFile: (path: string) => void
   openPreviewFile: (path: string) => void
+  openMarkdownPreview: (path: string) => void
   saveFile: () => void
 
   // Tabs
