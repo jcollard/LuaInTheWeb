@@ -7,6 +7,18 @@ import { renderHook, act } from '@testing-library/react'
 import { useWorkspaceManager, WORKSPACE_STORAGE_KEY, DEFAULT_WORKSPACE_ID } from './useWorkspaceManager'
 import { setupWorkspaceManagerTests, getLocalStorageMock } from './useWorkspaceManager.testSetup'
 
+// Mock virtualFileSystemStorage to avoid IndexedDB in tests
+vi.mock('./virtualFileSystemStorage', () => ({
+  storeFile: vi.fn(async () => {}),
+  getFile: vi.fn(async () => null),
+  deleteFile: vi.fn(async () => {}),
+  getAllFilesForWorkspace: vi.fn(async () => []),
+  storeFolder: vi.fn(async () => {}),
+  deleteFolder: vi.fn(async () => {}),
+  getAllFoldersForWorkspace: vi.fn(async () => []),
+  deleteWorkspaceData: vi.fn(async () => {}),
+}))
+
 // Mock FileSystemAccessAPIFileSystem
 vi.mock('@lua-learning/shell-core', async () => {
   const actual = await vi.importActual('@lua-learning/shell-core')
@@ -36,12 +48,12 @@ setupWorkspaceManagerTests()
 
 describe('useWorkspaceManager', () => {
   describe('localStorage persistence', () => {
-    it('saves workspace metadata to localStorage with correct key', () => {
+    it('saves workspace metadata to localStorage with correct key', async () => {
       const localStorageMock = getLocalStorageMock()
       const { result } = renderHook(() => useWorkspaceManager())
 
-      act(() => {
-        result.current.addVirtualWorkspace('Persisted Workspace')
+      await act(async () => {
+        await result.current.addVirtualWorkspace('Persisted Workspace')
       })
 
       // Verify exact key is used
@@ -52,12 +64,12 @@ describe('useWorkspaceManager', () => {
       )
     })
 
-    it('saves workspace data with all required fields', () => {
+    it('saves workspace data with all required fields', async () => {
       const localStorageMock = getLocalStorageMock()
       const { result } = renderHook(() => useWorkspaceManager())
 
-      act(() => {
-        result.current.addVirtualWorkspace('Test Workspace')
+      await act(async () => {
+        await result.current.addVirtualWorkspace('Test Workspace')
       })
 
       const savedData = JSON.parse(localStorageMock.setItem.mock.calls.slice(-1)[0][1])

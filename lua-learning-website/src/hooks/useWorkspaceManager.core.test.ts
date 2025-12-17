@@ -7,6 +7,18 @@ import { renderHook, act } from '@testing-library/react'
 import { useWorkspaceManager, DEFAULT_WORKSPACE_ID } from './useWorkspaceManager'
 import { setupWorkspaceManagerTests } from './useWorkspaceManager.testSetup'
 
+// Mock virtualFileSystemStorage to avoid IndexedDB in tests
+vi.mock('./virtualFileSystemStorage', () => ({
+  storeFile: vi.fn(async () => {}),
+  getFile: vi.fn(async () => null),
+  deleteFile: vi.fn(async () => {}),
+  getAllFilesForWorkspace: vi.fn(async () => []),
+  storeFolder: vi.fn(async () => {}),
+  deleteFolder: vi.fn(async () => {}),
+  getAllFoldersForWorkspace: vi.fn(async () => []),
+  deleteWorkspaceData: vi.fn(async () => {}),
+}))
+
 // Mock FileSystemAccessAPIFileSystem
 vi.mock('@lua-learning/shell-core', async () => {
   const actual = await vi.importActual('@lua-learning/shell-core')
@@ -83,11 +95,11 @@ describe('useWorkspaceManager', () => {
   })
 
   describe('addVirtualWorkspace', () => {
-    it('adds a new virtual workspace', () => {
+    it('adds a new virtual workspace', async () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      act(() => {
-        result.current.addVirtualWorkspace('Test Workspace')
+      await act(async () => {
+        await result.current.addVirtualWorkspace('Test Workspace')
       })
 
       // default + library + docs + examples + new workspace = 5
@@ -96,24 +108,24 @@ describe('useWorkspaceManager', () => {
       expect(result.current.workspaces.find((w) => w.name === 'Test Workspace')?.type).toBe('virtual')
     })
 
-    it('returns the newly created workspace', () => {
+    it('returns the newly created workspace', async () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      let newWorkspace: ReturnType<typeof result.current.addVirtualWorkspace> | undefined
-      act(() => {
-        newWorkspace = result.current.addVirtualWorkspace('New Workspace')
+      let newWorkspace: Awaited<ReturnType<typeof result.current.addVirtualWorkspace>> | undefined
+      await act(async () => {
+        newWorkspace = await result.current.addVirtualWorkspace('New Workspace')
       })
 
       expect(newWorkspace).toBeDefined()
       expect(newWorkspace!.name).toBe('New Workspace')
     })
 
-    it('generates unique IDs for each workspace', () => {
+    it('generates unique IDs for each workspace', async () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      act(() => {
-        result.current.addVirtualWorkspace('Workspace 1')
-        result.current.addVirtualWorkspace('Workspace 2')
+      await act(async () => {
+        await result.current.addVirtualWorkspace('Workspace 1')
+        await result.current.addVirtualWorkspace('Workspace 2')
       })
 
       const ids = result.current.workspaces.map((w) => w.id)
@@ -121,39 +133,39 @@ describe('useWorkspaceManager', () => {
       expect(uniqueIds.size).toBe(ids.length)
     })
 
-    it('generates mountPath from workspace name', () => {
+    it('generates mountPath from workspace name', async () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      let workspace: ReturnType<typeof result.current.addVirtualWorkspace> | undefined
-      act(() => {
-        workspace = result.current.addVirtualWorkspace('My Project')
+      let workspace: Awaited<ReturnType<typeof result.current.addVirtualWorkspace>> | undefined
+      await act(async () => {
+        workspace = await result.current.addVirtualWorkspace('My Project')
       })
 
       expect(workspace!.mountPath).toBe('/my-project')
     })
 
-    it('converts name with special chars to valid mount path', () => {
+    it('converts name with special chars to valid mount path', async () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      let workspace: ReturnType<typeof result.current.addVirtualWorkspace> | undefined
-      act(() => {
-        workspace = result.current.addVirtualWorkspace('Project #1 - Test!')
+      let workspace: Awaited<ReturnType<typeof result.current.addVirtualWorkspace>> | undefined
+      await act(async () => {
+        workspace = await result.current.addVirtualWorkspace('Project #1 - Test!')
       })
 
       expect(workspace!.mountPath).toBe('/project-1-test')
     })
 
-    it('handles mount path collisions by appending numbers', () => {
+    it('handles mount path collisions by appending numbers', async () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      act(() => {
-        result.current.addVirtualWorkspace('Project')
+      await act(async () => {
+        await result.current.addVirtualWorkspace('Project')
       })
-      act(() => {
-        result.current.addVirtualWorkspace('Project')
+      await act(async () => {
+        await result.current.addVirtualWorkspace('Project')
       })
-      act(() => {
-        result.current.addVirtualWorkspace('Project')
+      await act(async () => {
+        await result.current.addVirtualWorkspace('Project')
       })
 
       // Verify the workspaces have unique mount paths
@@ -163,12 +175,12 @@ describe('useWorkspaceManager', () => {
       expect(mountPaths).toEqual(['/project', '/project-2', '/project-3'])
     })
 
-    it('uses "workspace" for empty name after sanitization', () => {
+    it('uses "workspace" for empty name after sanitization', async () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      let workspace: ReturnType<typeof result.current.addVirtualWorkspace> | undefined
-      act(() => {
-        workspace = result.current.addVirtualWorkspace('!!!')
+      let workspace: Awaited<ReturnType<typeof result.current.addVirtualWorkspace>> | undefined
+      await act(async () => {
+        workspace = await result.current.addVirtualWorkspace('!!!')
       })
 
       expect(workspace!.mountPath).toBe('/workspace')
@@ -247,12 +259,12 @@ describe('useWorkspaceManager', () => {
   })
 
   describe('removeWorkspace', () => {
-    it('removes a workspace by ID', () => {
+    it('removes a workspace by ID', async () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      let workspace: ReturnType<typeof result.current.addVirtualWorkspace>
-      act(() => {
-        workspace = result.current.addVirtualWorkspace('To Remove')
+      let workspace: Awaited<ReturnType<typeof result.current.addVirtualWorkspace>>
+      await act(async () => {
+        workspace = await result.current.addVirtualWorkspace('To Remove')
       })
 
       act(() => {
@@ -298,12 +310,12 @@ describe('useWorkspaceManager', () => {
       }).toThrow('Workspace not found')
     })
 
-    it('updates compositeFileSystem when workspace is removed', () => {
+    it('updates compositeFileSystem when workspace is removed', async () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      let workspace: ReturnType<typeof result.current.addVirtualWorkspace>
-      act(() => {
-        workspace = result.current.addVirtualWorkspace('To Remove')
+      let workspace: Awaited<ReturnType<typeof result.current.addVirtualWorkspace>>
+      await act(async () => {
+        workspace = await result.current.addVirtualWorkspace('To Remove')
       })
 
       // default + library + docs + examples + new workspace = 5
@@ -319,12 +331,12 @@ describe('useWorkspaceManager', () => {
   })
 
   describe('getWorkspace', () => {
-    it('returns workspace by ID', () => {
+    it('returns workspace by ID', async () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      let workspace: ReturnType<typeof result.current.addVirtualWorkspace>
-      act(() => {
-        workspace = result.current.addVirtualWorkspace('Find Me')
+      let workspace: Awaited<ReturnType<typeof result.current.addVirtualWorkspace>>
+      await act(async () => {
+        workspace = await result.current.addVirtualWorkspace('Find Me')
       })
 
       const found = result.current.getWorkspace(workspace!.id)
@@ -341,11 +353,11 @@ describe('useWorkspaceManager', () => {
   })
 
   describe('getWorkspaceByMountPath', () => {
-    it('returns workspace by mount path', () => {
+    it('returns workspace by mount path', async () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      act(() => {
-        result.current.addVirtualWorkspace('Find Me')
+      await act(async () => {
+        await result.current.addVirtualWorkspace('Find Me')
       })
 
       const found = result.current.getWorkspaceByMountPath('/find-me')

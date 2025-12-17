@@ -142,6 +142,36 @@ function flushIfSupported(fs: IFileSystem): void {
 }
 
 /**
+ * Helper to check if a filesystem supports binary operations.
+ */
+function supportsBinary(
+  fs: IFileSystem
+): fs is IFileSystem & {
+  isBinaryFile: (path: string) => boolean
+  readBinaryFile: (path: string) => Uint8Array
+  writeBinaryFile: (path: string, content: Uint8Array) => void
+} {
+  return (
+    typeof (fs as { isBinaryFile?: unknown }).isBinaryFile === 'function' &&
+    typeof (fs as { readBinaryFile?: unknown }).readBinaryFile === 'function' &&
+    typeof (fs as { writeBinaryFile?: unknown }).writeBinaryFile === 'function'
+  )
+}
+
+/**
+ * Copy a single file, handling both text and binary content.
+ */
+function copyFileBinaryAware(fs: IFileSystem, sourcePath: string, targetPath: string): void {
+  if (supportsBinary(fs) && fs.isBinaryFile(sourcePath)) {
+    const content = fs.readBinaryFile(sourcePath)
+    fs.writeBinaryFile(targetPath, content)
+  } else {
+    const content = fs.readFile(sourcePath)
+    fs.writeFile(targetPath, content)
+  }
+}
+
+/**
  * Create an adapter that wraps IFileSystem to provide IDEContext-compatible operations.
  * @param fs - The underlying filesystem (typically a CompositeFileSystem)
  * @param workspaces - Optional array of all workspaces (used to show disconnected workspaces in tree)
@@ -178,9 +208,8 @@ export function createFileSystemAdapter(
     },
 
     renameFile: (oldPath: string, newPath: string) => {
-      // Simulate rename: read content, create new, delete old
-      const content = fs.readFile(oldPath)
-      fs.writeFile(newPath, content)
+      // Simulate rename: copy content to new path, delete old
+      copyFileBinaryAware(fs, oldPath, newPath)
       fs.delete(oldPath)
       flushIfSupported(fs)
     },
@@ -195,9 +224,8 @@ export function createFileSystemAdapter(
         // Moving a folder - need to recursively copy
         moveDirectoryRecursive(fs, sourcePath, newPath)
       } else {
-        // Moving a file
-        const content = fs.readFile(sourcePath)
-        fs.writeFile(newPath, content)
+        // Moving a file - handle binary files
+        copyFileBinaryAware(fs, sourcePath, newPath)
         fs.delete(sourcePath)
       }
       flushIfSupported(fs)
@@ -214,9 +242,8 @@ export function createFileSystemAdapter(
         fs.createDirectory(newPath)
         copyDirectoryContents(fs, sourcePath, newPath)
       } else {
-        // Copying a file
-        const content = fs.readFile(sourcePath)
-        fs.writeFile(newPath, content)
+        // Copying a file - handle binary files
+        copyFileBinaryAware(fs, sourcePath, newPath)
       }
       flushIfSupported(fs)
     },
@@ -255,6 +282,7 @@ export function createFileSystemAdapter(
 
 /**
  * Recursively copy directory contents from one path to another.
+ * Handles both text and binary files.
  */
 function copyDirectoryContents(fs: IFileSystem, sourcePath: string, targetPath: string): void {
   const entries = fs.listDirectory(sourcePath)
@@ -266,8 +294,8 @@ function copyDirectoryContents(fs: IFileSystem, sourcePath: string, targetPath: 
       fs.createDirectory(newPath)
       copyDirectoryContents(fs, entry.path, newPath)
     } else {
-      const content = fs.readFile(entry.path)
-      fs.writeFile(newPath, content)
+      // Use binary-aware copy for files
+      copyFileBinaryAware(fs, entry.path, newPath)
     }
   }
 }

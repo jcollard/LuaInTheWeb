@@ -3,6 +3,27 @@
  */
 import { vi, beforeEach } from 'vitest'
 
+// Mock virtualFileSystemStorage to avoid IndexedDB in tests
+vi.mock('./virtualFileSystemStorage', () => {
+  const workspaceFiles = new Map<string, Map<string, object>>()
+  const workspaceFolders = new Map<string, Set<string>>()
+
+  return {
+    storeFile: vi.fn(async () => {}),
+    getFile: vi.fn(async () => null),
+    deleteFile: vi.fn(async () => {}),
+    getAllFilesForWorkspace: vi.fn(async () => new Map()),
+    storeFolder: vi.fn(async () => {}),
+    deleteFolder: vi.fn(async () => {}),
+    getAllFoldersForWorkspace: vi.fn(async () => new Set()),
+    deleteWorkspaceData: vi.fn(async () => {}),
+    __clearAll: () => {
+      workspaceFiles.clear()
+      workspaceFolders.clear()
+    },
+  }
+})
+
 // Mock localStorage factory
 export const createLocalStorageMock = () => {
   let store: Record<string, string> = {}

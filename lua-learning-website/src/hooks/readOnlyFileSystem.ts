@@ -6,18 +6,59 @@
 import type { IFileSystem, FileEntry } from '@lua-learning/shell-core'
 
 /**
+ * Binary file extensions for automatic detection.
+ */
+const BINARY_EXTENSIONS = new Set([
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.bmp',
+  '.webp',
+  '.ico',
+  '.mp3',
+  '.wav',
+  '.ogg',
+  '.mp4',
+  '.webm',
+  '.bin',
+  '.dat',
+  '.zip',
+  '.tar',
+  '.gz',
+  '.pdf',
+])
+
+/**
+ * Check if a file path has a binary extension.
+ */
+function isBinaryExtension(path: string): boolean {
+  const lastDot = path.lastIndexOf('.')
+  if (lastDot === -1) return false
+  const ext = path.slice(lastDot).toLowerCase()
+  return BINARY_EXTENSIONS.has(ext)
+}
+
+/**
  * Create a read-only in-memory filesystem for library workspaces.
  * Files can be read but not written, deleted, or created.
  * Supports nested directory structures (e.g., 'lua/string.md').
+ * Optionally supports binary files.
  */
-export function createReadOnlyFileSystem(files: Record<string, string>): IFileSystem {
+export function createReadOnlyFileSystem(
+  files: Record<string, string>,
+  binaryFiles?: Record<string, Uint8Array>
+): IFileSystem {
   const throwReadOnly = (): never => {
     throw new Error('This file is read-only and cannot be modified.')
   }
 
-  // Extract all directory paths from file paths
+  const binaries = binaryFiles ?? {}
+
+  // Extract all directory paths from file paths (text and binary)
   const directories = new Set<string>([''])
-  for (const filePath of Object.keys(files)) {
+  const allFilePaths = [...Object.keys(files), ...Object.keys(binaries)]
+  for (const filePath of allFilePaths) {
     const parts = filePath.split('/')
     let currentPath = ''
     for (let i = 0; i < parts.length - 1; i++) {
@@ -31,7 +72,7 @@ export function createReadOnlyFileSystem(files: Record<string, string>): IFileSy
     setCurrentDirectory: () => {}, // Allow cd, but no-op
     exists: (path: string) => {
       const normalized = path.startsWith('/') ? path.slice(1) : path
-      return normalized in files || directories.has(normalized)
+      return normalized in files || normalized in binaries || directories.has(normalized)
     },
     isDirectory: (path: string) => {
       const normalized = path.startsWith('/') ? path.slice(1) : path
@@ -39,7 +80,7 @@ export function createReadOnlyFileSystem(files: Record<string, string>): IFileSy
     },
     isFile: (path: string) => {
       const normalized = path.startsWith('/') ? path.slice(1) : path
-      return normalized in files
+      return normalized in files || normalized in binaries
     },
     listDirectory: (path: string) => {
       const normalized =
@@ -52,7 +93,8 @@ export function createReadOnlyFileSystem(files: Record<string, string>): IFileSy
       const entries: FileEntry[] = []
       const seenNames = new Set<string>()
 
-      for (const filePath of Object.keys(files)) {
+      // Process text and binary files together
+      for (const filePath of allFilePaths) {
         if (normalized === '' || filePath.startsWith(prefix)) {
           const relativePath = normalized === '' ? filePath : filePath.slice(prefix.length)
           const slashIndex = relativePath.indexOf('/')
@@ -80,6 +122,10 @@ export function createReadOnlyFileSystem(files: Record<string, string>): IFileSy
     },
     readFile: (path: string) => {
       const normalized = path.startsWith('/') ? path.slice(1) : path
+      // Check if it's a binary file
+      if (normalized in binaries) {
+        throw new Error(`Cannot read binary file as text: ${path}`)
+      }
       const content = files[normalized]
       if (content === undefined) {
         throw new Error(`File not found: ${path}`)
@@ -89,5 +135,25 @@ export function createReadOnlyFileSystem(files: Record<string, string>): IFileSy
     writeFile: throwReadOnly,
     createDirectory: throwReadOnly,
     delete: throwReadOnly,
+
+    // Binary file support
+    isBinaryFile: (path: string) => {
+      const normalized = path.startsWith('/') ? path.slice(1) : path
+      // Check if explicitly in binaries or has binary extension
+      return normalized in binaries || (normalized in files === false && isBinaryExtension(path))
+    },
+    readBinaryFile: (path: string) => {
+      const normalized = path.startsWith('/') ? path.slice(1) : path
+      const content = binaries[normalized]
+      if (content === undefined) {
+        // Check if it's a text file
+        if (normalized in files) {
+          throw new Error(`Cannot read text file as binary: ${path}`)
+        }
+        throw new Error(`File not found: ${path}`)
+      }
+      return content
+    },
+    writeBinaryFile: throwReadOnly,
   }
 }

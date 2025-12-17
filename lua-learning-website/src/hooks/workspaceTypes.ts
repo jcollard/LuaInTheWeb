@@ -92,8 +92,8 @@ export interface UseWorkspaceManagerReturn {
   workspaces: Workspace[]
   /** The composite filesystem spanning all mounted workspaces */
   compositeFileSystem: IFileSystem
-  /** Add a new virtual (localStorage-backed) workspace */
-  addVirtualWorkspace: (name: string) => Workspace
+  /** Add a new virtual (IndexedDB-backed) workspace */
+  addVirtualWorkspace: (name: string) => Promise<Workspace>
   /** Add a new local (File System Access API-backed) workspace */
   addLocalWorkspace: (name: string, handle: FileSystemDirectoryHandle) => Promise<Workspace>
   /** Remove a workspace by ID */

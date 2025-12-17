@@ -393,6 +393,95 @@ export class CompositeFileSystem implements IFileSystem {
     mountInfo.mount.filesystem.delete(mountInfo.relativePath)
   }
 
+  // Binary file support
+
+  isBinaryFile(path: string): boolean {
+    const resolved = this.resolvePath(path)
+
+    // Root and mount points are not files
+    if (resolved === '/' || this.mounts.has(resolved)) {
+      return false
+    }
+
+    // Delegate to mounted filesystem
+    const mountInfo = this.resolveMount(resolved)
+    if (!mountInfo) {
+      return false
+    }
+
+    const fs = mountInfo.mount.filesystem
+    if (typeof fs.isBinaryFile !== 'function') {
+      return false
+    }
+
+    return fs.isBinaryFile(mountInfo.relativePath)
+  }
+
+  readBinaryFile(path: string): Uint8Array {
+    const resolved = this.resolvePath(path)
+
+    // Cannot read root as a file
+    if (resolved === '/') {
+      throw new Error('Cannot read directory as file: /')
+    }
+
+    // Cannot read mount points as files
+    if (this.mounts.has(resolved)) {
+      throw new Error(`Cannot read directory as file: ${resolved}`)
+    }
+
+    // Delegate to mounted filesystem
+    const mountInfo = this.resolveMount(resolved)
+    if (!mountInfo) {
+      throw new Error(`File not found: ${resolved}`)
+    }
+
+    const fs = mountInfo.mount.filesystem
+    if (typeof fs.readBinaryFile !== 'function') {
+      throw new Error(`Binary file operations not supported: ${resolved}`)
+    }
+
+    return fs.readBinaryFile(mountInfo.relativePath)
+  }
+
+  writeBinaryFile(path: string, content: Uint8Array): void {
+    const resolved = this.resolvePath(path)
+
+    // Cannot write to root
+    if (resolved === '/') {
+      throw new Error('Cannot write to root directory')
+    }
+
+    // Cannot write to mount points
+    if (this.mounts.has(resolved)) {
+      throw new Error(`Cannot write to mount point: ${resolved}`)
+    }
+
+    // Cannot create files at root level
+    if (getParentPath(resolved) === '/') {
+      throw new Error(
+        'Cannot create files at root level. Use workspace management to add new workspaces.'
+      )
+    }
+
+    // Delegate to mounted filesystem
+    const mountInfo = this.resolveMount(resolved)
+    if (!mountInfo) {
+      throw new Error(`Path not within any mounted workspace: ${resolved}`)
+    }
+
+    if (mountInfo.mount.readonly) {
+      throw new Error(`Filesystem is read-only: ${mountInfo.mount.mountPath}`)
+    }
+
+    const fs = mountInfo.mount.filesystem
+    if (typeof fs.writeBinaryFile !== 'function') {
+      throw new Error(`Binary file operations not supported: ${resolved}`)
+    }
+
+    fs.writeBinaryFile(mountInfo.relativePath, content)
+  }
+
   /**
    * Flush pending operations for all mounted filesystems that support it.
    * This is important for filesystems like FileSystemAccessAPIFileSystem

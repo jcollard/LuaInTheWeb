@@ -7,6 +7,18 @@ import { renderHook, act } from '@testing-library/react'
 import { useWorkspaceManager, WORKSPACE_STORAGE_KEY, DEFAULT_WORKSPACE_ID } from './useWorkspaceManager'
 import { setupWorkspaceManagerTests, getLocalStorageMock } from './useWorkspaceManager.testSetup'
 
+// Mock virtualFileSystemStorage to avoid IndexedDB in tests
+vi.mock('./virtualFileSystemStorage', () => ({
+  storeFile: vi.fn(async () => {}),
+  getFile: vi.fn(async () => null),
+  deleteFile: vi.fn(async () => {}),
+  getAllFilesForWorkspace: vi.fn(async () => []),
+  storeFolder: vi.fn(async () => {}),
+  deleteFolder: vi.fn(async () => {}),
+  getAllFoldersForWorkspace: vi.fn(async () => []),
+  deleteWorkspaceData: vi.fn(async () => {}),
+}))
+
 // Mock FileSystemAccessAPIFileSystem
 vi.mock('@lua-learning/shell-core', async () => {
   const actual = await vi.importActual('@lua-learning/shell-core')
@@ -46,11 +58,11 @@ describe('useWorkspaceManager', () => {
       expect(entries.map((e) => e.name).sort()).toEqual(['docs', 'examples', 'home', 'libs'])
     })
 
-    it('updates when workspaces change', () => {
+    it('updates when workspaces change', async () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      act(() => {
-        result.current.addVirtualWorkspace('Project')
+      await act(async () => {
+        await result.current.addVirtualWorkspace('Project')
       })
 
       const entries = result.current.compositeFileSystem.listDirectory('/')
@@ -130,11 +142,11 @@ describe('useWorkspaceManager', () => {
   })
 
   describe('getMounts', () => {
-    it('returns all mount information', () => {
+    it('returns all mount information', async () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      act(() => {
-        result.current.addVirtualWorkspace('Project')
+      await act(async () => {
+        await result.current.addVirtualWorkspace('Project')
       })
 
       const mounts = result.current.getMounts()
