@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /**
  * useWorkspaceManager - Multi-workspace management hook with multi-mount support.
  *

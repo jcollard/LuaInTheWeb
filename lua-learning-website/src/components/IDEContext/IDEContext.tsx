@@ -166,6 +166,21 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     }
   }, [activeTab, addRecentFile, code, filesystem, loadContentForPath, originalContent, tabBar])
 
+  const openBinaryViewer = useCallback((path: string) => {
+    const existingTab = tabBar.tabs.find(t => t.path === path)
+    if (existingTab) {
+      if (activeTab && activeTab !== path && code !== originalContent.get(activeTab)) {
+        setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
+      }
+      tabBar.selectTab(path); addRecentFile(path); return
+    }
+    if (activeTab && code !== originalContent.get(activeTab)) {
+      setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
+    }
+    // Binary files don't load content into code state - the viewer reads directly from filesystem
+    tabBar.openBinaryPreviewTab(path, getFileName(path)); addRecentFile(path)
+  }, [activeTab, addRecentFile, code, originalContent, tabBar])
+
   const closeTab = useCallback((path: string) => {
     tabBar.closeTab(path)
     setOriginalContent(prev => { const next = new Map(prev); next.delete(path); return next })
@@ -314,7 +329,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     activePanel, setActivePanel,
     terminalVisible, toggleTerminal, sidebarVisible, toggleSidebar,
     fileTree, refreshFileTree,
-    createFile, createFolder, deleteFile, deleteFolder, renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, saveFile,
+    createFile, createFolder, deleteFile, deleteFolder, renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, openBinaryViewer, saveFile,
     tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, makeTabPermanent, toasts, showError, dismissToast,
     pendingNewFilePath, generateUniqueFileName, createFileWithRename, clearPendingNewFile,
     pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename, clearPendingNewFolder,
@@ -323,7 +338,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     engine, code, setCode, fileName, isDirty,
     activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
     fileTree, refreshFileTree, createFile, createFolder, deleteFile, deleteFolder,
-    renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, saveFile, tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, makeTabPermanent,
+    renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, openBinaryViewer, saveFile, tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, makeTabPermanent,
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,
     clearPendingNewFolder, recentFiles, clearRecentFiles, filesystem,

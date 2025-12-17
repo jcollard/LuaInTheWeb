@@ -26,6 +26,8 @@ export interface ExplorerPropsParams {
   openMarkdownPreview: (path: string) => void
   openMarkdownEdit: (path: string) => void
   makeTabPermanent: (path: string) => void
+  // Binary file handler
+  openBinaryViewer: (path: string) => void
   // Workspace props
   workspaces: Workspace[]
   isFileSystemAccessSupported: boolean
@@ -49,21 +51,61 @@ function isMarkdownFile(path: string): boolean {
   return path.toLowerCase().endsWith('.md')
 }
 
+/**
+ * Binary file extensions that should open in the binary viewer
+ */
+const BINARY_EXTENSIONS = new Set([
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.bmp',
+  '.webp',
+  '.ico',
+  '.svg',
+  '.mp3',
+  '.wav',
+  '.ogg',
+  '.mp4',
+  '.webm',
+  '.pdf',
+  '.zip',
+  '.tar',
+  '.gz',
+  '.bin',
+  '.exe',
+  '.dll',
+  '.so',
+  '.dylib',
+])
+
+/**
+ * Check if a path is a binary file based on extension
+ */
+function isBinaryFile(path: string): boolean {
+  const lastDot = path.lastIndexOf('.')
+  if (lastDot === -1) return false
+  const ext = path.slice(lastDot).toLowerCase()
+  return BINARY_EXTENSIONS.has(ext)
+}
+
 export function createExplorerProps(params: ExplorerPropsParams) {
-  // Smart file opener that routes to markdown preview for .md files
+  // Smart file opener that routes to appropriate viewer based on file type
   const smartOpenPreviewFile = (path: string) => {
     if (isMarkdownFile(path)) {
       params.openMarkdownPreview(path)
+    } else if (isBinaryFile(path)) {
+      params.openBinaryViewer(path)
     } else {
       params.openPreviewFile(path)
     }
   }
 
   // Smart file opener for double-click
-  // For markdown files: make the preview tab permanent (keep as preview, don't edit)
+  // For markdown/binary files: make the preview tab permanent (keep as preview, don't edit)
   // For other files: open for editing
   const smartOpenFile = (path: string) => {
-    if (isMarkdownFile(path)) {
+    if (isMarkdownFile(path) || isBinaryFile(path)) {
       params.makeTabPermanent(path)
     } else {
       params.openFile(path)
