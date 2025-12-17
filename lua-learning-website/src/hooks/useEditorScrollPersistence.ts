@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react'
-import type { editor } from 'monaco-editor'
+import type { editor, IDisposable } from 'monaco-editor'
 
 // Module-level map to persist scroll positions across re-renders
 const scrollPositions = new Map<string, number>()
@@ -35,40 +35,65 @@ export function useEditorScrollPersistence(
   const { activeTab } = options
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const previousTabRef = useRef<string | null>(null)
+  const pendingScrollRestoreRef = useRef<string | null>(null)
+  const contentChangeListenerRef = useRef<IDisposable | null>(null)
 
   // Save scroll position for the previous tab before switching
   useEffect(() => {
-    const editor = editorRef.current
-    if (!editor) return
+    const monacoEditor = editorRef.current
+    if (!monacoEditor) return
 
     // Save scroll position for the previous tab
     if (previousTabRef.current && previousTabRef.current !== activeTab) {
-      scrollPositions.set(previousTabRef.current, editor.getScrollTop())
+      scrollPositions.set(previousTabRef.current, monacoEditor.getScrollTop())
     }
 
-    // Restore scroll position for the new tab (after a microtask to ensure content is loaded)
+    // Mark that we need to restore scroll after content changes
     if (activeTab) {
-      // Use setTimeout to ensure the editor content has been updated
-      const timeoutId = setTimeout(() => {
-        const savedPosition = scrollPositions.get(activeTab)
-        if (savedPosition !== undefined) {
-          editor.setScrollTop(savedPosition)
-        } else {
-          // First time opening this file - scroll to top
-          editor.setScrollTop(0)
-        }
-      }, 0)
-
-      previousTabRef.current = activeTab
-      return () => clearTimeout(timeoutId)
+      pendingScrollRestoreRef.current = activeTab
     }
 
     previousTabRef.current = activeTab
   }, [activeTab])
 
-  // Set editor reference
-  const setEditor = useCallback((editor: editor.IStandaloneCodeEditor | null) => {
-    editorRef.current = editor
+  // Set editor reference and set up content change listener
+  const setEditor = useCallback((monacoEditor: editor.IStandaloneCodeEditor | null) => {
+    // Clean up previous listener
+    if (contentChangeListenerRef.current) {
+      contentChangeListenerRef.current.dispose()
+      contentChangeListenerRef.current = null
+    }
+
+    editorRef.current = monacoEditor
+
+    if (monacoEditor) {
+      // Listen for content changes to restore scroll position after tab switch
+      contentChangeListenerRef.current = monacoEditor.onDidChangeModelContent(() => {
+        const pendingTab = pendingScrollRestoreRef.current
+        if (pendingTab) {
+          // Use requestAnimationFrame to ensure Monaco has finished rendering
+          requestAnimationFrame(() => {
+            const savedPosition = scrollPositions.get(pendingTab)
+            if (savedPosition !== undefined) {
+              monacoEditor.setScrollTop(savedPosition)
+            } else {
+              // First time opening this file - scroll to top
+              monacoEditor.setScrollTop(0)
+            }
+          })
+          pendingScrollRestoreRef.current = null
+        }
+      })
+    }
+  }, [])
+
+  // Cleanup listener on unmount
+  useEffect(() => {
+    return () => {
+      if (contentChangeListenerRef.current) {
+        contentChangeListenerRef.current.dispose()
+      }
+    }
   }, [])
 
   return { setEditor }
