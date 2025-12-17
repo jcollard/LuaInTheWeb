@@ -11,8 +11,12 @@ import {
   handleArrowDown,
   handleBackspace,
   handleCharacter,
+  getTabCompletions,
   type InputState,
+  type CompletionEntry as CompletionEntryType,
 } from './BashTerminal/inputKeyHandlers'
+
+export type { CompletionEntryType as CompletionEntry }
 
 export interface BashTerminalHandle {
   writeln: (text: string) => void
@@ -34,9 +38,13 @@ export interface BashTerminalHandle {
 interface BashTerminalProps {
   onCommand?: (command: string) => void
   embedded?: boolean
+  /** Available command names for tab completion */
+  commandNames?: string[]
+  /** Callback to get file/directory completions */
+  getPathCompletions?: () => CompletionEntryType[]
 }
 
-const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onCommand, embedded = false }, ref) => {
+const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onCommand, embedded = false, commandNames = [], getPathCompletions }, ref) => {
   const { theme } = useTheme()
   const initialThemeRef = useRef(theme)
   const terminalRef = useRef<HTMLDivElement>(null)
@@ -309,6 +317,50 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
       return
     }
 
+    // Handle Tab key
+    if (code === 9) {
+      const files = getPathCompletions ? getPathCompletions() : []
+      const result = getTabCompletions(
+        currentLineRef.current,
+        cursorPositionRef.current,
+        commandNames,
+        files
+      )
+
+      // If text changed, update display
+      if (result.completedText !== currentLineRef.current) {
+        const oldLine = currentLineRef.current
+        const oldPos = cursorPositionRef.current
+        currentLineRef.current = result.completedText
+        cursorPositionRef.current = result.completedText.length - oldLine.slice(oldPos).length
+
+        // Move cursor to start of line, clear, and rewrite
+        if (oldPos > 0) {
+          term.write(`\x1b[${oldPos}D`)
+        }
+        term.write('\x1b[K') // Clear to end of line
+        term.write(result.completedText)
+
+        // Position cursor if there was text after cursor
+        const afterCursor = oldLine.slice(oldPos)
+        if (afterCursor.length > 0) {
+          term.write(`\x1b[${afterCursor.length}D`)
+        }
+      } else if (result.suggestions.length > 0) {
+        // Show suggestions
+        term.writeln('')
+        if (result.truncatedCount) {
+          term.writeln(`${result.truncatedCount} options available`)
+        } else {
+          term.writeln(result.suggestions.join('  '))
+        }
+        // Reshow prompt and current input
+        term.write('\x1b[32m> \x1b[0m')
+        term.write(currentLineRef.current)
+      }
+      return
+    }
+
     // Handle printable characters
     if (code >= 32 && code < 127) {
       // Character-mode input: capture characters without waiting for Enter
@@ -336,7 +388,7 @@ const BashTerminal = forwardRef<BashTerminalHandle, BashTerminalProps>(({ onComm
       term.write(data + afterCursor)
       for (let i = 0; i < afterCursor.length; i++) term.write('\b')
     }
-  }, [onCommand, getInputState, applyStateUpdate, redrawMultiLineFrom])
+  }, [onCommand, getInputState, applyStateUpdate, redrawMultiLineFrom, commandNames, getPathCompletions])
 
   useEffect(() => {
     if (!terminalRef.current) return
