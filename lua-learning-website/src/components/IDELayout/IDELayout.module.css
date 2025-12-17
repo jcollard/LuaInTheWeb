@@ -108,6 +108,29 @@
   color: var(--theme-text-primary);
 }
 
+/* Binary file container styles */
+.binaryContainer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--theme-editor-bg);
+}
+
+.binaryContainer .toolbar {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  border-bottom: 1px solid var(--theme-border);
+  background-color: var(--theme-panel-bg);
+}
+
+.binaryContent {
+  flex: 1;
+  overflow: auto;
+  background-color: var(--theme-editor-bg);
+  color: var(--theme-text-primary);
+}
+
 /* Mobile responsive styles */
 @media (max-width: 768px) {
   .activityBar {

@@ -1,0 +1,108 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+  overflow: auto;
+  background-color: var(--theme-editor-bg);
+  color: var(--theme-text-primary);
+}
+
+/* Image display */
+.imageContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: auto;
+}
+
+.image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.fileInfo {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  font-size: 12px;
+  color: var(--theme-text-secondary);
+  background-color: var(--theme-bg-secondary);
+  border-radius: 4px;
+}
+
+/* Non-image binary file display */
+.binaryInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  background-color: var(--theme-bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--theme-border-secondary);
+}
+
+.binaryIcon {
+  color: var(--theme-text-muted);
+  opacity: 0.7;
+}
+
+.binaryText {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  text-align: center;
+}
+
+.fileName {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--theme-text-primary);
+  word-break: break-word;
+}
+
+.fileType {
+  font-size: 14px;
+  color: var(--theme-text-secondary);
+}
+
+.fileSize {
+  font-size: 12px;
+  color: var(--theme-text-muted);
+}
+
+/* Error state */
+.errorMessage {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background-color: var(--theme-bg-secondary);
+  border: 1px solid var(--theme-error);
+  border-radius: 6px;
+  color: var(--theme-error);
+}
+
+.errorIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  font-weight: bold;
+  font-size: 14px;
+  background-color: var(--theme-error);
+  color: white;
+  border-radius: 50%;
+  flex-shrink: 0;
+}

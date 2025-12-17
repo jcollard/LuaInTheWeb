@@ -409,5 +409,125 @@ describe('compositeFileSystemAdapter', () => {
         expect(mockFs.delete).toHaveBeenCalledWith('/old')
       })
     })
+
+    describe('binary file operations', () => {
+      // Type for a mock filesystem with binary support
+      type MockBinaryFileSystem = IFileSystem & {
+        isBinaryFile: (path: string) => boolean
+        readBinaryFile: (path: string) => Uint8Array
+        writeBinaryFile: (path: string, content: Uint8Array) => void
+      }
+
+      const createMockBinaryFileSystem = (): MockBinaryFileSystem => ({
+        getCurrentDirectory: vi.fn(() => '/'),
+        setCurrentDirectory: vi.fn(),
+        exists: vi.fn(() => false),
+        isDirectory: vi.fn(() => false),
+        isFile: vi.fn(() => false),
+        listDirectory: vi.fn(() => []),
+        readFile: vi.fn(() => ''),
+        writeFile: vi.fn(),
+        createDirectory: vi.fn(),
+        delete: vi.fn(),
+        isBinaryFile: vi.fn(() => false),
+        readBinaryFile: vi.fn(() => new Uint8Array([0x00])),
+        writeBinaryFile: vi.fn(),
+      })
+
+      it('renameFile uses binary methods for binary files', () => {
+        const binaryFs = createMockBinaryFileSystem()
+        vi.mocked(binaryFs.isBinaryFile).mockReturnValue(true)
+        const binaryContent = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
+        vi.mocked(binaryFs.readBinaryFile).mockReturnValue(binaryContent)
+
+        const adapter = createFileSystemAdapter(binaryFs)
+        adapter.renameFile('/image.png', '/renamed.png')
+
+        expect(binaryFs.isBinaryFile).toHaveBeenCalledWith('/image.png')
+        expect(binaryFs.readBinaryFile).toHaveBeenCalledWith('/image.png')
+        expect(binaryFs.writeBinaryFile).toHaveBeenCalledWith('/renamed.png', binaryContent)
+        expect(binaryFs.delete).toHaveBeenCalledWith('/image.png')
+      })
+
+      it('renameFile uses text methods for text files', () => {
+        const binaryFs = createMockBinaryFileSystem()
+        vi.mocked(binaryFs.isBinaryFile).mockReturnValue(false)
+        vi.mocked(binaryFs.readFile).mockReturnValue('text content')
+
+        const adapter = createFileSystemAdapter(binaryFs)
+        adapter.renameFile('/text.txt', '/renamed.txt')
+
+        expect(binaryFs.isBinaryFile).toHaveBeenCalledWith('/text.txt')
+        expect(binaryFs.readFile).toHaveBeenCalledWith('/text.txt')
+        expect(binaryFs.writeFile).toHaveBeenCalledWith('/renamed.txt', 'text content')
+        expect(binaryFs.readBinaryFile).not.toHaveBeenCalled()
+      })
+
+      it('moveFile uses binary methods for binary files', () => {
+        const binaryFs = createMockBinaryFileSystem()
+        vi.mocked(binaryFs.isBinaryFile).mockReturnValue(true)
+        const binaryContent = new Uint8Array([0xff, 0xd8, 0xff, 0xe0])
+        vi.mocked(binaryFs.readBinaryFile).mockReturnValue(binaryContent)
+
+        const adapter = createFileSystemAdapter(binaryFs)
+        adapter.moveFile('/photo.jpg', '/images')
+
+        expect(binaryFs.isBinaryFile).toHaveBeenCalledWith('/photo.jpg')
+        expect(binaryFs.readBinaryFile).toHaveBeenCalledWith('/photo.jpg')
+        expect(binaryFs.writeBinaryFile).toHaveBeenCalledWith('/images/photo.jpg', binaryContent)
+        expect(binaryFs.delete).toHaveBeenCalledWith('/photo.jpg')
+      })
+
+      it('copyFile uses binary methods for binary files', () => {
+        const binaryFs = createMockBinaryFileSystem()
+        vi.mocked(binaryFs.isBinaryFile).mockReturnValue(true)
+        const binaryContent = new Uint8Array([0x00, 0x01, 0x02])
+        vi.mocked(binaryFs.readBinaryFile).mockReturnValue(binaryContent)
+
+        const adapter = createFileSystemAdapter(binaryFs)
+        adapter.copyFile('/data.bin', '/backup')
+
+        expect(binaryFs.isBinaryFile).toHaveBeenCalledWith('/data.bin')
+        expect(binaryFs.readBinaryFile).toHaveBeenCalledWith('/data.bin')
+        expect(binaryFs.writeBinaryFile).toHaveBeenCalledWith('/backup/data.bin', binaryContent)
+        // Should NOT delete original (it's a copy)
+        expect(binaryFs.delete).not.toHaveBeenCalled()
+      })
+
+      it('copyFile recursively copies binary files in directories', () => {
+        const binaryFs = createMockBinaryFileSystem()
+        vi.mocked(binaryFs.isDirectory).mockImplementation(
+          (path) => path === '/assets' || path === '/backup'
+        )
+        vi.mocked(binaryFs.listDirectory).mockImplementation((path) => {
+          if (path === '/assets') {
+            return [{ name: 'logo.png', type: 'file', path: '/assets/logo.png' }]
+          }
+          return []
+        })
+        vi.mocked(binaryFs.isBinaryFile).mockReturnValue(true)
+        const binaryContent = new Uint8Array([0x89, 0x50])
+        vi.mocked(binaryFs.readBinaryFile).mockReturnValue(binaryContent)
+
+        const adapter = createFileSystemAdapter(binaryFs)
+        adapter.copyFile('/assets', '/backup')
+
+        expect(binaryFs.createDirectory).toHaveBeenCalledWith('/backup/assets')
+        expect(binaryFs.isBinaryFile).toHaveBeenCalledWith('/assets/logo.png')
+        expect(binaryFs.readBinaryFile).toHaveBeenCalledWith('/assets/logo.png')
+        expect(binaryFs.writeBinaryFile).toHaveBeenCalledWith('/backup/assets/logo.png', binaryContent)
+      })
+
+      it('falls back to text methods when filesystem lacks binary support', () => {
+        // Use the non-binary mock filesystem
+        vi.mocked(mockFs.readFile).mockReturnValue('file content')
+
+        const adapter = createFileSystemAdapter(mockFs)
+        adapter.renameFile('/file.txt', '/renamed.txt')
+
+        expect(mockFs.readFile).toHaveBeenCalledWith('/file.txt')
+        expect(mockFs.writeFile).toHaveBeenCalledWith('/renamed.txt', 'file content')
+      })
+    })
   })
 })

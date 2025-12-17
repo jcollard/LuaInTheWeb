@@ -11,13 +11,80 @@ import type { IFileSystem, FileEntry } from './types'
 import { resolvePath, joinPath, getParentPath, getBasename } from './pathUtils'
 
 /**
+ * Binary file extensions - files with these extensions are treated as binary.
+ */
+const BINARY_EXTENSIONS = new Set([
+  // Images
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.bmp',
+  '.webp',
+  '.ico',
+  '.svg',
+  // Audio
+  '.mp3',
+  '.wav',
+  '.ogg',
+  '.m4a',
+  '.flac',
+  '.aac',
+  // Video
+  '.mp4',
+  '.webm',
+  '.avi',
+  '.mov',
+  '.mkv',
+  // Fonts
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.otf',
+  '.eot',
+  // Archives
+  '.zip',
+  '.tar',
+  '.gz',
+  '.7z',
+  '.rar',
+  // Generic binary
+  '.bin',
+  '.dat',
+  '.exe',
+  '.dll',
+  '.so',
+  '.dylib',
+  // Documents (binary)
+  '.pdf',
+  '.doc',
+  '.docx',
+  '.xls',
+  '.xlsx',
+  '.ppt',
+  '.pptx',
+])
+
+/**
+ * Check if a path has a binary file extension.
+ */
+function isBinaryExtension(path: string): boolean {
+  const ext = path.toLowerCase().match(/\.[^.]+$/)?.[0] ?? ''
+  return BINARY_EXTENSIONS.has(ext)
+}
+
+/**
  * Cached entry representing a file or directory in the filesystem.
  */
 interface CachedEntry {
   type: 'file' | 'directory'
   handle: FileSystemHandle
-  /** For files: cached content (lazy loaded) */
+  /** For text files: cached content (lazy loaded) */
   content?: string
+  /** For binary files: cached binary content */
+  binaryContent?: Uint8Array
+  /** Whether this is a binary file */
+  isBinary?: boolean
   /** For directories: child entry names */
   children?: Set<string>
 }
@@ -28,7 +95,8 @@ interface CachedEntry {
 interface QueuedOperation {
   type: 'write' | 'delete' | 'mkdir'
   path: string
-  content?: string
+  content?: string | Uint8Array
+  isBinary?: boolean
 }
 
 /**
@@ -103,13 +171,27 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
         // Load file content into cache
         const fileHandle = childHandle as FileSystemFileHandle
         const file = await fileHandle.getFile()
-        const content = await file.text()
+        const isBinary = isBinaryExtension(childPath)
 
-        this.cache.set(childPath, {
-          type: 'file',
-          handle: childHandle,
-          content,
-        })
+        if (isBinary) {
+          // Load as binary
+          const arrayBuffer = await file.arrayBuffer()
+          this.cache.set(childPath, {
+            type: 'file',
+            handle: childHandle,
+            binaryContent: new Uint8Array(arrayBuffer),
+            isBinary: true,
+          })
+        } else {
+          // Load as text
+          const content = await file.text()
+          this.cache.set(childPath, {
+            type: 'file',
+            handle: childHandle,
+            content,
+            isBinary: false,
+          })
+        }
         parentEntry.children?.add(name)
       } else if (childHandle.kind === 'directory') {
         this.cache.set(childPath, {
@@ -148,7 +230,7 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
       try {
         switch (op.type) {
           case 'write':
-            await this.performAsyncWrite(op.path, op.content ?? '')
+            await this.performAsyncWrite(op.path, op.content ?? '', op.isBinary ?? false)
             break
           case 'delete':
             await this.performAsyncDelete(op.path)
@@ -168,8 +250,13 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
    * Perform async file write to disk.
    * Handles the case where parent directory was just created (null handle)
    * by ensuring the parent directory exists on disk first.
+   * Supports both text (string) and binary (Uint8Array) content.
    */
-  private async performAsyncWrite(path: string, content: string): Promise<void> {
+  private async performAsyncWrite(
+    path: string,
+    content: string | Uint8Array,
+    isBinary: boolean
+  ): Promise<void> {
     const parentPath = getParentPath(path)
     const fileName = getBasename(path)
     const parentEntry = this.cache.get(parentPath)
@@ -193,7 +280,16 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
     const fileHandle = await parentHandle.getFileHandle(fileName, { create: true })
 
     const writable = await fileHandle.createWritable()
-    await writable.write(content)
+    // File System Access API accepts both string and BufferSource
+    // For Uint8Array, we need to pass the underlying buffer as ArrayBuffer
+    if (isBinary && content instanceof Uint8Array) {
+      // Create a proper ArrayBuffer copy from the Uint8Array
+      const buffer = new ArrayBuffer(content.byteLength)
+      new Uint8Array(buffer).set(content)
+      await writable.write(buffer)
+    } else {
+      await writable.write(content as string)
+    }
     await writable.close()
   }
 
@@ -343,6 +439,9 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
     if (entry.type !== 'file') {
       throw new Error(`Not a file: ${normalizedPath}`)
     }
+    if (entry.isBinary) {
+      throw new Error(`Cannot read binary file as text: ${normalizedPath}`)
+    }
 
     // Return cached content (loaded during initialize or created via writeFile)
     return entry.content ?? ''
@@ -392,6 +491,8 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
     if (existingEntry) {
       // Update existing file
       existingEntry.content = content
+      existingEntry.isBinary = false
+      delete existingEntry.binaryContent
     } else {
       // Create new file in cache
       // Note: handle will be created by async operation
@@ -399,12 +500,13 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
         type: 'file',
         handle: null as unknown as FileSystemFileHandle, // Will be set by async op
         content,
+        isBinary: false,
       })
       parentEntry.children?.add(fileName)
     }
 
     // Queue async write
-    this.operationQueue.push({ type: 'write', path: normalizedPath, content })
+    this.operationQueue.push({ type: 'write', path: normalizedPath, content, isBinary: false })
   }
 
   createDirectory(path: string): void {
@@ -467,5 +569,78 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
 
     // Queue async operation
     this.operationQueue.push({ type: 'delete', path: normalizedPath })
+  }
+
+  // Binary file support
+
+  isBinaryFile(path: string): boolean {
+    const normalizedPath = resolvePath(this.cwd, path)
+    const entry = this.cache.get(normalizedPath)
+    if (!entry || entry.type !== 'file') {
+      // If file doesn't exist, check by extension
+      return isBinaryExtension(normalizedPath)
+    }
+    return entry.isBinary === true
+  }
+
+  readBinaryFile(path: string): Uint8Array {
+    const normalizedPath = resolvePath(this.cwd, path)
+    const entry = this.cache.get(normalizedPath)
+
+    if (!entry) {
+      throw new Error(`File not found: ${normalizedPath}`)
+    }
+    if (entry.type !== 'file') {
+      throw new Error(`Not a file: ${normalizedPath}`)
+    }
+
+    if (entry.isBinary) {
+      return entry.binaryContent ?? new Uint8Array(0)
+    }
+
+    // Allow reading text files as binary (convert to Uint8Array)
+    const encoder = new TextEncoder()
+    return encoder.encode(entry.content ?? '')
+  }
+
+  writeBinaryFile(path: string, content: Uint8Array): void {
+    const normalizedPath = resolvePath(this.cwd, path)
+    const parentPath = getParentPath(normalizedPath)
+    const fileName = getBasename(normalizedPath)
+
+    // Check parent exists and is a directory
+    const parentEntry = this.cache.get(parentPath)
+    if (!parentEntry) {
+      throw new Error(`Parent directory not found: ${parentPath}`)
+    }
+    if (parentEntry.type !== 'directory') {
+      throw new Error(`Parent is not a directory: ${parentPath}`)
+    }
+
+    // Check if trying to write to a directory
+    const existingEntry = this.cache.get(normalizedPath)
+    if (existingEntry?.type === 'directory') {
+      throw new Error(`Cannot write to directory: ${normalizedPath}`)
+    }
+
+    // Update cache immediately
+    if (existingEntry) {
+      // Update existing file
+      existingEntry.binaryContent = content
+      existingEntry.isBinary = true
+      delete existingEntry.content
+    } else {
+      // Create new file in cache
+      this.cache.set(normalizedPath, {
+        type: 'file',
+        handle: null as unknown as FileSystemFileHandle,
+        binaryContent: content,
+        isBinary: true,
+      })
+      parentEntry.children?.add(fileName)
+    }
+
+    // Queue async write
+    this.operationQueue.push({ type: 'write', path: normalizedPath, content, isBinary: true })
   }
 }

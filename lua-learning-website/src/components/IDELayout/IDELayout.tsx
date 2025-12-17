@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { IDEContextProvider, useIDE } from '../IDEContext'
 import { ActivityBar } from '../ActivityBar'
@@ -13,6 +14,7 @@ import { ToastContainer } from '../Toast'
 import { WelcomeScreen } from '../WelcomeScreen'
 import { CanvasTabContent } from './CanvasTabContent'
 import { MarkdownTabContent } from './MarkdownTabContent'
+import { BinaryTabContent } from './BinaryTabContent'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useCanvasTabManager } from '../../hooks/useCanvasTabManager'
 import { useWindowFocusRefresh } from '../../hooks/useWindowFocusRefresh'
@@ -93,6 +95,7 @@ function IDELayoutInner({
     openFile,
     openPreviewFile,
     openMarkdownPreview,
+    openBinaryViewer,
     saveFile,
     // New file creation
     pendingNewFilePath,
@@ -289,7 +292,7 @@ function IDELayoutInner({
     handleCreateFile, handleCreateFolder, renameFile, renameFolder,
     deleteFile, deleteFolder, openFile, openPreviewFile, moveFile, copyFile,
     clearPendingNewFile, clearPendingNewFolder, openMarkdownPreview, openMarkdownEdit: openFile,
-    makeTabPermanent, workspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
+    makeTabPermanent, openBinaryViewer, workspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
     addVirtualWorkspace, handleAddLocalWorkspace, handleRemoveWorkspace, refreshWorkspace,
     refreshFileTree, supportsRefresh, handleReconnectWorkspace, handleDisconnectWorkspace,
     handleRenameWorkspace, isFolderAlreadyMounted, getUniqueWorkspaceName,
@@ -356,9 +359,13 @@ function IDELayoutInner({
                       {activeTabType === 'markdown' && (
                         <MarkdownTabContent code={code} tabBarProps={tabBarProps} currentFilePath={activeTab} onOpenMarkdown={openMarkdownPreview} />
                       )}
-                      {/* Editor panel - hidden when canvas or markdown tab is active */}
+                      {/* Binary file viewer - shown when binary tab is active */}
+                      {activeTabType === 'binary' && activeTab && (
+                        <BinaryTabContent filePath={activeTab} fileSystem={compositeFileSystem} tabBarProps={tabBarProps} />
+                      )}
+                      {/* Editor panel - hidden when canvas, markdown, or binary tab is active */}
                       {/* Note: also show if hasCanvasTabs is false to handle race condition during canvas tab close */}
-                      {activeTabType !== 'canvas' && activeTabType !== 'markdown' && (
+                      {activeTabType !== 'canvas' && activeTabType !== 'markdown' && activeTabType !== 'binary' && (
                         <EditorPanel
                           code={code}
                           onChange={setCode}

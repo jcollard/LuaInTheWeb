@@ -31,6 +31,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@lua-learning/canvas-runtime": "*",
     "@lua-learning/shell-core": "*",
     "wasmoon": "^1.16.0"
   },

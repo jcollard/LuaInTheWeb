@@ -44,6 +44,7 @@ export interface IDEContextValue {
   openFile: (path: string) => void
   openPreviewFile: (path: string) => void
   openMarkdownPreview: (path: string) => void
+  openBinaryViewer: (path: string) => void
   saveFile: () => void
 
   // Tabs

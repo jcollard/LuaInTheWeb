@@ -87,6 +87,31 @@ export interface IFileSystem {
    * @throws Error if path doesn't exist or directory is not empty
    */
   delete(path: string): void
+
+  // Binary file support (optional)
+
+  /**
+   * Check if a file is a binary file (as opposed to a text file).
+   * Implementations may use file extension or content inspection.
+   * @param path - The file path to check
+   * @returns true if the file is binary, false if text
+   */
+  isBinaryFile?(path: string): boolean
+
+  /**
+   * Read the contents of a binary file.
+   * @param path - The file path to read
+   * @returns The file contents as a Uint8Array
+   * @throws Error if the path doesn't exist, isn't a file, or isn't a binary file
+   */
+  readBinaryFile?(path: string): Uint8Array
+
+  /**
+   * Write binary contents to a file.
+   * @param path - The file path to write
+   * @param content - The binary content to write
+   */
+  writeBinaryFile?(path: string, content: Uint8Array): void
 }
 
 /**

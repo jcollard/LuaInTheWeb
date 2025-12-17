@@ -1,82 +1,156 @@
 /**
  * Factory for creating workspace-isolated virtual filesystems.
  *
- * Each virtual workspace gets its own localStorage-backed filesystem
- * with keys prefixed by the workspace ID.
+ * Each virtual workspace gets its own IndexedDB-backed filesystem
+ * with keys prefixed by the workspace ID. Supports both text and binary files.
  */
 
 import type { IFileSystem, FileEntry } from '@lua-learning/shell-core'
-import { normalizePath, joinPath, getParentPath, isAbsolutePath, getBasename } from '@lua-learning/shell-core'
+import {
+  normalizePath,
+  joinPath,
+  getParentPath,
+  isAbsolutePath,
+  getBasename,
+} from '@lua-learning/shell-core'
+import {
+  storeFile,
+  deleteFile,
+  getAllFilesForWorkspace,
+  storeFolder,
+  deleteFolder,
+  getAllFoldersForWorkspace,
+} from './virtualFileSystemStorage'
 
-interface VirtualFile {
-  name: string
-  content: string
+/**
+ * Binary file extensions - files with these extensions are treated as binary.
+ */
+const BINARY_EXTENSIONS = new Set([
+  // Images
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.bmp',
+  '.webp',
+  '.ico',
+  '.svg',
+  // Audio
+  '.mp3',
+  '.wav',
+  '.ogg',
+  '.m4a',
+  '.flac',
+  '.aac',
+  // Video
+  '.mp4',
+  '.webm',
+  '.avi',
+  '.mov',
+  '.mkv',
+  // Fonts
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.otf',
+  '.eot',
+  // Archives
+  '.zip',
+  '.tar',
+  '.gz',
+  '.7z',
+  '.rar',
+  // Generic binary
+  '.bin',
+  '.dat',
+  '.exe',
+  '.dll',
+  '.so',
+  '.dylib',
+  // Documents (binary)
+  '.pdf',
+  '.doc',
+  '.docx',
+  '.xls',
+  '.xlsx',
+  '.ppt',
+  '.pptx',
+])
+
+/**
+ * Check if a path has a binary file extension.
+ */
+function isBinaryExtension(path: string): boolean {
+  const ext = path.toLowerCase().match(/\.[^.]+$/)?.[0] ?? ''
+  return BINARY_EXTENSIONS.has(ext)
+}
+
+/**
+ * In-memory file representation.
+ */
+interface CachedFile {
+  content: string | Uint8Array
+  isBinary: boolean
   createdAt: number
   updatedAt: number
 }
 
-interface VirtualFileSystemState {
-  files: Record<string, VirtualFile>
-  folders: string[]
-}
-
-const STORAGE_VERSION = 1
-
 /**
- * Get the localStorage key for a workspace's filesystem data.
+ * Queued async operation for write-behind pattern.
  */
-function getStorageKey(workspaceId: string): string {
-  return `workspace:${workspaceId}:fs`
+interface QueuedOperation {
+  type: 'writeFile' | 'deleteFile' | 'createFolder' | 'deleteFolder'
+  path: string
+  content?: string | Uint8Array
+  isBinary?: boolean
 }
 
 /**
- * Load filesystem state from localStorage.
+ * Extended IFileSystem interface with binary support and async initialization.
  */
-function loadState(workspaceId: string): VirtualFileSystemState {
-  try {
-    const key = getStorageKey(workspaceId)
-    const data = localStorage.getItem(key)
-    if (!data) {
-      return { files: {}, folders: ['/'] }
-    }
-    const parsed = JSON.parse(data)
-    // Ensure root folder exists
-    if (!parsed.folders?.includes('/')) {
-      parsed.folders = ['/', ...(parsed.folders || [])]
-    }
-    return {
-      files: parsed.files || {},
-      folders: parsed.folders || ['/'],
-    }
-  } catch {
-    return { files: {}, folders: ['/'] }
-  }
-}
+export interface VirtualFileSystemExtended extends IFileSystem {
+  /**
+   * Initialize the filesystem by loading data from IndexedDB.
+   * Must be called before using any other methods.
+   */
+  initialize(): Promise<void>
 
-/**
- * Save filesystem state to localStorage.
- */
-function saveState(workspaceId: string, state: VirtualFileSystemState): void {
-  const key = getStorageKey(workspaceId)
-  localStorage.setItem(
-    key,
-    JSON.stringify({
-      version: STORAGE_VERSION,
-      files: state.files,
-      folders: state.folders,
-    })
-  )
+  /**
+   * Flush all pending async operations to IndexedDB.
+   */
+  flush(): Promise<void>
+
+  /**
+   * Check if the filesystem has been initialized.
+   */
+  readonly isInitialized: boolean
+
+  // Override optional binary methods to be required
+  isBinaryFile(path: string): boolean
+  readBinaryFile(path: string): Uint8Array
+  writeBinaryFile(path: string, content: Uint8Array): void
 }
 
 /**
  * Create a virtual filesystem for a workspace.
  *
- * The filesystem is backed by localStorage with keys prefixed by the workspace ID,
- * providing complete isolation between workspaces.
+ * The filesystem is backed by IndexedDB with keys prefixed by the workspace ID,
+ * providing complete isolation between workspaces. Supports both text and binary files.
+ *
+ * @param workspaceId - Unique identifier for the workspace
+ * @returns An extended IFileSystem with binary support
  */
-export function createVirtualFileSystem(workspaceId: string): IFileSystem {
-  const state = loadState(workspaceId)
+export function createVirtualFileSystem(workspaceId: string): VirtualFileSystemExtended {
+  // In-memory cache
+  const files = new Map<string, CachedFile>()
+  const folders = new Set<string>(['/'])
+
+  // State
   let currentDirectory = '/'
+  let _initialized = false
+
+  // Write-behind queue
+  const operationQueue: QueuedOperation[] = []
 
   /**
    * Resolve a path to an absolute path based on current directory.
@@ -89,34 +163,96 @@ export function createVirtualFileSystem(workspaceId: string): IFileSystem {
   }
 
   /**
-   * Persist the current state to localStorage.
+   * Queue an async operation for later execution.
    */
-  function persist(): void {
-    saveState(workspaceId, state)
+  function queueOperation(op: QueuedOperation): void {
+    operationQueue.push(op)
   }
 
   /**
    * Check if a path exists in the filesystem.
    */
   function pathExists(resolved: string): boolean {
-    return resolved in state.files || state.folders.includes(resolved)
+    return files.has(resolved) || folders.has(resolved)
   }
 
   /**
    * Check if a path is a directory.
    */
   function pathIsDirectory(resolved: string): boolean {
-    return state.folders.includes(resolved)
+    return folders.has(resolved)
   }
 
-  return {
+  const fs: VirtualFileSystemExtended = {
+    get isInitialized(): boolean {
+      return _initialized
+    },
+
+    async initialize(): Promise<void> {
+      // Clear existing state
+      files.clear()
+      folders.clear()
+      folders.add('/')
+
+      // Load folders from IndexedDB
+      const storedFolders = await getAllFoldersForWorkspace(workspaceId)
+      for (const folder of storedFolders) {
+        folders.add(folder)
+      }
+
+      // Ensure root exists
+      if (!folders.has('/')) {
+        folders.add('/')
+        queueOperation({ type: 'createFolder', path: '/' })
+      }
+
+      // Load files from IndexedDB
+      const storedFiles = await getAllFilesForWorkspace(workspaceId)
+      for (const [path, stored] of storedFiles) {
+        files.set(path, {
+          content: stored.content,
+          isBinary: stored.isBinary,
+          createdAt: stored.createdAt,
+          updatedAt: stored.updatedAt,
+        })
+      }
+
+      _initialized = true
+    },
+
+    async flush(): Promise<void> {
+      const operations = [...operationQueue]
+      operationQueue.length = 0
+
+      for (const op of operations) {
+        try {
+          switch (op.type) {
+            case 'writeFile':
+              await storeFile(workspaceId, op.path, op.content!, op.isBinary!)
+              break
+            case 'deleteFile':
+              await deleteFile(workspaceId, op.path)
+              break
+            case 'createFolder':
+              await storeFolder(workspaceId, op.path)
+              break
+            case 'deleteFolder':
+              await deleteFolder(workspaceId, op.path)
+              break
+          }
+        } catch (error) {
+          console.error(`Failed to flush operation: ${op.type} ${op.path}`, error)
+        }
+      }
+    },
+
     getCurrentDirectory(): string {
       return currentDirectory
     },
 
     setCurrentDirectory(path: string): void {
       const resolved = resolvePath(path)
-      if (!state.folders.includes(resolved)) {
+      if (!folders.has(resolved)) {
         throw new Error(`Directory not found: ${resolved}`)
       }
       currentDirectory = resolved
@@ -134,19 +270,19 @@ export function createVirtualFileSystem(workspaceId: string): IFileSystem {
 
     isFile(path: string): boolean {
       const resolved = resolvePath(path)
-      return resolved in state.files
+      return files.has(resolved)
     },
 
     listDirectory(path: string): FileEntry[] {
       const resolved = resolvePath(path)
-      if (!state.folders.includes(resolved)) {
+      if (!folders.has(resolved)) {
         throw new Error(`Directory not found: ${resolved}`)
       }
 
       const entries: FileEntry[] = []
 
       // Find files in this directory
-      for (const filePath of Object.keys(state.files)) {
+      for (const filePath of files.keys()) {
         const parent = getParentPath(filePath)
         if (parent === resolved) {
           entries.push({
@@ -158,7 +294,7 @@ export function createVirtualFileSystem(workspaceId: string): IFileSystem {
       }
 
       // Find folders in this directory
-      for (const folderPath of state.folders) {
+      for (const folderPath of folders) {
         if (folderPath === resolved || folderPath === '/') continue
         const parent = getParentPath(folderPath)
         if (parent === resolved) {
@@ -175,11 +311,14 @@ export function createVirtualFileSystem(workspaceId: string): IFileSystem {
 
     readFile(path: string): string {
       const resolved = resolvePath(path)
-      const file = state.files[resolved]
+      const file = files.get(resolved)
       if (!file) {
         throw new Error(`File not found: ${resolved}`)
       }
-      return file.content
+      if (file.isBinary) {
+        throw new Error(`Cannot read binary file as text: ${resolved}`)
+      }
+      return file.content as string
     },
 
     writeFile(path: string, content: string): void {
@@ -187,33 +326,26 @@ export function createVirtualFileSystem(workspaceId: string): IFileSystem {
 
       // Check parent directory exists
       const parent = getParentPath(resolved)
-      if (!state.folders.includes(parent)) {
+      if (!folders.has(parent)) {
         throw new Error(`Parent directory not found: ${parent}`)
       }
 
       // Check not trying to write to a directory
-      if (state.folders.includes(resolved)) {
+      if (folders.has(resolved)) {
         throw new Error(`Cannot write to directory: ${resolved}`)
       }
 
       const now = Date.now()
-      if (resolved in state.files) {
-        // Update existing file
-        state.files[resolved] = {
-          ...state.files[resolved],
-          content,
-          updatedAt: now,
-        }
-      } else {
-        // Create new file
-        state.files[resolved] = {
-          name: getBasename(resolved),
-          content,
-          createdAt: now,
-          updatedAt: now,
-        }
-      }
-      persist()
+      const existing = files.get(resolved)
+
+      files.set(resolved, {
+        content,
+        isBinary: false,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      })
+
+      queueOperation({ type: 'writeFile', path: resolved, content, isBinary: false })
     },
 
     createDirectory(path: string): void {
@@ -226,12 +358,12 @@ export function createVirtualFileSystem(workspaceId: string): IFileSystem {
 
       // Check parent exists
       const parent = getParentPath(resolved)
-      if (!state.folders.includes(parent)) {
+      if (!folders.has(parent)) {
         throw new Error(`Parent directory not found: ${parent}`)
       }
 
-      state.folders.push(resolved)
-      persist()
+      folders.add(resolved)
+      queueOperation({ type: 'createFolder', path: resolved })
     },
 
     delete(path: string): void {
@@ -243,19 +375,78 @@ export function createVirtualFileSystem(workspaceId: string): IFileSystem {
 
       if (pathIsDirectory(resolved)) {
         // Check directory is empty
-        const hasChildren =
-          Object.keys(state.files).some((f) => f.startsWith(`${resolved}/`)) ||
-          state.folders.some((f) => f !== resolved && f.startsWith(`${resolved}/`))
+        const hasFileChildren = Array.from(files.keys()).some((f) =>
+          f.startsWith(`${resolved}/`)
+        )
+        const hasFolderChildren = Array.from(folders).some(
+          (f) => f !== resolved && f.startsWith(`${resolved}/`)
+        )
 
-        if (hasChildren) {
+        if (hasFileChildren || hasFolderChildren) {
           throw new Error(`Directory not empty: ${resolved}`)
         }
 
-        state.folders = state.folders.filter((f) => f !== resolved)
+        folders.delete(resolved)
+        queueOperation({ type: 'deleteFolder', path: resolved })
       } else {
-        delete state.files[resolved]
+        files.delete(resolved)
+        queueOperation({ type: 'deleteFile', path: resolved })
       }
-      persist()
+    },
+
+    // Binary file support
+
+    isBinaryFile(path: string): boolean {
+      const resolved = resolvePath(path)
+      const file = files.get(resolved)
+      if (!file) {
+        // If file doesn't exist, check by extension
+        return isBinaryExtension(resolved)
+      }
+      return file.isBinary
+    },
+
+    readBinaryFile(path: string): Uint8Array {
+      const resolved = resolvePath(path)
+      const file = files.get(resolved)
+      if (!file) {
+        throw new Error(`File not found: ${resolved}`)
+      }
+      if (!file.isBinary) {
+        // Allow reading text files as binary (convert to Uint8Array)
+        const encoder = new TextEncoder()
+        return encoder.encode(file.content as string)
+      }
+      return file.content as Uint8Array
+    },
+
+    writeBinaryFile(path: string, content: Uint8Array): void {
+      const resolved = resolvePath(path)
+
+      // Check parent directory exists
+      const parent = getParentPath(resolved)
+      if (!folders.has(parent)) {
+        throw new Error(`Parent directory not found: ${parent}`)
+      }
+
+      // Check not trying to write to a directory
+      if (folders.has(resolved)) {
+        throw new Error(`Cannot write to directory: ${resolved}`)
+      }
+
+      const now = Date.now()
+      const existing = files.get(resolved)
+
+      files.set(resolved, {
+        content,
+        isBinary: true,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      })
+
+      queueOperation({ type: 'writeFile', path: resolved, content, isBinary: true })
     },
   }
+
+  return fs
 }

@@ -140,6 +140,28 @@ export function useTabBar(): UseTabBarReturn {
     setActiveTab(path)
   }, [])
 
+  const openBinaryPreviewTab = useCallback((path: string, name: string) => {
+    setTabs((prev) => {
+      // Check if tab already exists
+      const existingTab = prev.find((tab) => tab.path === path)
+      if (existingTab) {
+        // Just activate it, don't change preview state
+        return prev
+      }
+      // Replace existing preview tab if there is one (any type of preview)
+      const existingPreviewIndex = prev.findIndex((tab) => tab.isPreview)
+      if (existingPreviewIndex !== -1) {
+        // Replace the preview tab
+        const newTabs = [...prev]
+        newTabs[existingPreviewIndex] = { path, name, isDirty: false, type: 'binary', isPreview: true }
+        return newTabs
+      }
+      // No existing preview, add new preview tab
+      return [...prev, { path, name, isDirty: false, type: 'binary', isPreview: true }]
+    })
+    setActiveTab(path)
+  }, [])
+
   const getActiveTabType = useCallback((): TabType | null => {
     if (!activeTab) return null
     // First, try to find the tab in the tabs array
@@ -157,6 +179,7 @@ export function useTabBar(): UseTabBarReturn {
     openPreviewTab,
     openCanvasTab,
     openMarkdownPreviewTab,
+    openBinaryPreviewTab,
     closeTab,
     selectTab,
     setDirty,

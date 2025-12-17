@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /**
  * useWorkspaceManager - Multi-workspace management hook with multi-mount support.
  *
@@ -24,7 +25,10 @@ import type {
   WorkspaceManagerState,
   MountedWorkspaceInfo,
 } from './workspaceTypes'
-import { createVirtualFileSystem } from './virtualFileSystemFactory'
+import {
+  createVirtualFileSystem,
+  type VirtualFileSystemExtended,
+} from './virtualFileSystemFactory'
 import {
   storeDirectoryHandle,
   getDirectoryHandle,
@@ -71,6 +75,28 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
     saveWorkspaces(persistableWorkspaces)
   }, [state])
 
+  // Initialize virtual filesystems on mount (load data from IndexedDB)
+  useEffect(() => {
+    const initializeVirtualFilesystems = async (): Promise<void> => {
+      const virtualWorkspaces = state.workspaces.filter((w) => w.type === 'virtual')
+
+      await Promise.all(
+        virtualWorkspaces.map(async (w) => {
+          const vfs = w.filesystem as VirtualFileSystemExtended
+          if (typeof vfs.initialize === 'function' && !vfs.isInitialized) {
+            await vfs.initialize()
+          }
+        })
+      )
+    }
+
+    initializeVirtualFilesystems().catch((err) => {
+      console.error('Failed to initialize virtual filesystems:', err)
+    })
+    // Only run on initial mount - workspaces array identity changes but we only want to init once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Fetch and add book workspace on mount
   useBookWorkspaceLoader(setState)
 
@@ -87,10 +113,11 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
     return new CompositeFileSystem({ mounts, initialCwd: DEFAULT_MOUNT_PATH })
   }, [state.workspaces])
 
-  const addVirtualWorkspace = useCallback((name: string): Workspace => {
+  const addVirtualWorkspace = useCallback(async (name: string): Promise<Workspace> => {
     const id = generateWorkspaceId()
+    const fs = createVirtualFileSystem(id)
+    await fs.initialize()
 
-    // Use setState with functional update to get current state for path generation
     let newWorkspace: Workspace | null = null
 
     setState((prev) => {
@@ -102,7 +129,7 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
         name,
         type: 'virtual',
         mountPath,
-        filesystem: createVirtualFileSystem(id),
+        filesystem: fs,
         status: 'connected',
       }
 
@@ -112,7 +139,6 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
       }
     })
 
-    // Return the workspace (it's set synchronously in the setState call)
     return newWorkspace!
   }, [])
 
