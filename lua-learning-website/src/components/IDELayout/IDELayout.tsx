@@ -275,6 +275,31 @@ function IDELayoutInner({
     }
   }, [terminalVisible, toggleTerminal])
 
+  // Handle file open request from shell's 'open' command
+  // Routes to appropriate viewer based on file type
+  const handleRequestOpenFile = useCallback((filePath: string) => {
+    const lowerPath = filePath.toLowerCase()
+    if (lowerPath.endsWith('.md')) {
+      openMarkdownPreview(filePath)
+    } else if (
+      lowerPath.endsWith('.png') || lowerPath.endsWith('.jpg') ||
+      lowerPath.endsWith('.jpeg') || lowerPath.endsWith('.gif') ||
+      lowerPath.endsWith('.bmp') || lowerPath.endsWith('.webp') ||
+      lowerPath.endsWith('.ico') || lowerPath.endsWith('.svg') ||
+      lowerPath.endsWith('.mp3') || lowerPath.endsWith('.wav') ||
+      lowerPath.endsWith('.ogg') || lowerPath.endsWith('.mp4') ||
+      lowerPath.endsWith('.webm') || lowerPath.endsWith('.pdf') ||
+      lowerPath.endsWith('.zip') || lowerPath.endsWith('.tar') ||
+      lowerPath.endsWith('.gz') || lowerPath.endsWith('.bin') ||
+      lowerPath.endsWith('.exe') || lowerPath.endsWith('.dll') ||
+      lowerPath.endsWith('.so') || lowerPath.endsWith('.dylib')
+    ) {
+      openBinaryViewer(filePath)
+    } else {
+      openFile(filePath)
+    }
+  }, [openFile, openMarkdownPreview, openBinaryViewer])
+
   // Format the current code
   const handleFormat = useCallback(() => {
     if (!code.trim()) return
@@ -410,7 +435,7 @@ function IDELayoutInner({
                   onFileSystemChange={refreshFileTree}
                   canvasCallbacks={canvasCallbacks}
                   onFileMove={handleShellFileMove}
-                  onRequestOpenFile={openFile}
+                  onRequestOpenFile={handleRequestOpenFile}
                 />
                 </IDEPanel>
               </IDEPanelGroup>
