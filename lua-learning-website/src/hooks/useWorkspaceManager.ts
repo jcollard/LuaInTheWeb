@@ -46,6 +46,7 @@ import {
   createDisconnectedFileSystem,
 } from './workspaceManagerHelpers'
 import { useBookWorkspaceLoader } from './useBookWorkspaceLoader'
+import { useDocsWorkspaceLoader } from './useDocsWorkspaceLoader'
 import { useExamplesWorkspaceLoader } from './useExamplesWorkspaceLoader'
 
 // Re-export for backwards compatibility
@@ -104,6 +105,9 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
 
   // Fetch and add book workspace on mount
   useBookWorkspaceLoader(setState)
+
+  // Fetch and add docs workspace on mount
+  useDocsWorkspaceLoader(setState)
 
   // Fetch and add examples workspace on mount
   useExamplesWorkspaceLoader(setState)

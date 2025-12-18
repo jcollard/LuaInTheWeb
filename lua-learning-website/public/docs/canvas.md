@@ -1,14 +1,4 @@
-/**
- * Canvas library documentation generator.
- *
- * Extracted from libraryDocumentation to keep file size manageable.
- */
-
-/**
- * Generate the canvas library API documentation in Markdown format.
- */
-export function generateCanvasDocumentation(): string {
-  return `# Canvas Library
+# Canvas Library
 
 The canvas library provides functions for 2D graphics rendering, input handling, and game loop management.
 
@@ -16,19 +6,19 @@ The canvas library provides functions for 2D graphics rendering, input handling,
 
 ## Loading the Library
 
-\`\`\`lua
+```lua
 local canvas = require('canvas')
-\`\`\`
+```
 
 ## Canvas Lifecycle
 
 ### canvas.start()
 
-Start the canvas and block until \`canvas.stop()\` is called or Ctrl+C.
+Start the canvas and block until `canvas.stop()` is called or Ctrl+C.
 This opens a canvas tab and runs the game loop.
-Call \`canvas.tick()\` before this to register your render callback.
+Call `canvas.tick()` before this to register your render callback.
 
-\`\`\`lua
+```lua
 local canvas = require('canvas')
 
 canvas.tick(function()
@@ -38,19 +28,19 @@ canvas.tick(function()
 end)
 
 canvas.start()  -- Blocks until stop or Ctrl+C
-\`\`\`
+```
 
 ### canvas.stop()
 
 Stop the canvas and close the canvas tab.
-This unblocks the \`canvas.start()\` call and returns control to the script.
+This unblocks the `canvas.start()` call and returns control to the script.
 
-\`\`\`lua
+```lua
 -- Stop after 5 seconds
 if canvas.get_time() > 5 then
   canvas.stop()
 end
-\`\`\`
+```
 
 ## Game Loop
 
@@ -60,15 +50,15 @@ Register the tick callback function. This callback is called once per frame (~60
 All game logic and drawing should be performed inside this callback.
 
 **Parameters:**
-- \`callback\` (function): Function to call each frame
+- `callback` (function): Function to call each frame
 
-\`\`\`lua
+```lua
 canvas.tick(function()
   canvas.clear()
   canvas.set_color(255, 0, 0)
   canvas.fill_rect(10, 10, 50, 50)
 end)
-\`\`\`
+```
 
 ## Canvas Configuration
 
@@ -77,12 +67,12 @@ end)
 Set the canvas size in pixels. Call this before tick() to set the desired canvas dimensions.
 
 **Parameters:**
-- \`width\` (number): Canvas width in pixels
-- \`height\` (number): Canvas height in pixels
+- `width` (number): Canvas width in pixels
+- `height` (number): Canvas height in pixels
 
-\`\`\`lua
+```lua
 canvas.set_size(800, 600)
-\`\`\`
+```
 
 ### canvas.get_width()
 
@@ -98,10 +88,10 @@ Get the canvas height in pixels.
 **Returns:**
 - (number): Canvas height
 
-\`\`\`lua
+```lua
 local center_x = canvas.get_width() / 2
 local center_y = canvas.get_height() / 2
-\`\`\`
+```
 
 ## Drawing State
 
@@ -114,27 +104,27 @@ Clear the canvas.
 Set the drawing color. All subsequent drawing operations will use this color.
 
 **Parameters:**
-- \`r\` (number): Red component (0-255)
-- \`g\` (number): Green component (0-255)
-- \`b\` (number): Blue component (0-255)
-- \`a\` (number, optional): Alpha component (0-255, default: 255)
+- `r` (number): Red component (0-255)
+- `g` (number): Green component (0-255)
+- `b` (number): Blue component (0-255)
+- `a` (number, optional): Alpha component (0-255, default: 255)
 
-\`\`\`lua
+```lua
 canvas.set_color(255, 0, 0)       -- Red
 canvas.set_color(0, 255, 0, 128)  -- Semi-transparent green
-\`\`\`
+```
 
 ### canvas.set_line_width(width)
 
 Set the line width for stroke operations (draw_rect, draw_circle, draw_line).
 
 **Parameters:**
-- \`width\` (number): Line width in pixels
+- `width` (number): Line width in pixels
 
-\`\`\`lua
+```lua
 canvas.set_line_width(3)
 canvas.draw_rect(10, 10, 100, 100)  -- 3px thick outline
-\`\`\`
+```
 
 ## Drawing Functions
 
@@ -172,10 +162,10 @@ Use this for frame-rate independent movement.
 **Returns:**
 - (number): Time since last frame in seconds
 
-\`\`\`lua
+```lua
 local speed = 100 -- pixels per second
 x = x + speed * canvas.get_delta()
-\`\`\`
+```
 
 ### canvas.get_time()
 
@@ -191,12 +181,12 @@ Get the total time since the game started (in seconds).
 Check if a key is currently held down.
 
 **Parameters:**
-- \`key\` (string): Key name (e.g., 'w', 'ArrowUp', or use \`canvas.keys.W\`)
+- `key` (string): Key name (e.g., 'w', 'ArrowUp', or use `canvas.keys.W`)
 
 **Returns:**
 - (boolean): True if key is currently held
 
-\`\`\`lua
+```lua
 if canvas.is_key_down('w') then
   y = y - speed * canvas.get_delta()
 end
@@ -205,7 +195,7 @@ end
 if canvas.is_key_down(canvas.keys.W) then
   y = y - speed * canvas.get_delta()
 end
-\`\`\`
+```
 
 ### canvas.is_key_pressed(key)
 
@@ -227,24 +217,24 @@ Get all keys pressed this frame.
 
 ## Key Constants
 
-The \`canvas.keys\` table provides named constants for all keyboard keys.
-These can be used with \`is_key_down()\` and \`is_key_pressed()\`.
+The `canvas.keys` table provides named constants for all keyboard keys.
+These can be used with `is_key_down()` and `is_key_pressed()`.
 
-**Letters:** \`canvas.keys.A\` through \`canvas.keys.Z\` (maps to KeyA-KeyZ)
+**Letters:** `canvas.keys.A` through `canvas.keys.Z` (maps to KeyA-KeyZ)
 
-**Number Row:** \`canvas.keys.DIGIT_0\` through \`canvas.keys.DIGIT_9\` (or \`canvas.keys['0']\` through \`canvas.keys['9']\`)
+**Number Row:** `canvas.keys.DIGIT_0` through `canvas.keys.DIGIT_9` (or `canvas.keys['0']` through `canvas.keys['9']`)
 
-**Arrow Keys:** \`canvas.keys.UP\`, \`canvas.keys.DOWN\`, \`canvas.keys.LEFT\`, \`canvas.keys.RIGHT\` (also \`ARROW_UP\`, etc.)
+**Arrow Keys:** `canvas.keys.UP`, `canvas.keys.DOWN`, `canvas.keys.LEFT`, `canvas.keys.RIGHT` (also `ARROW_UP`, etc.)
 
-**Function Keys:** \`canvas.keys.F1\` through \`canvas.keys.F12\`
+**Function Keys:** `canvas.keys.F1` through `canvas.keys.F12`
 
-**Modifier Keys:** \`canvas.keys.SHIFT\`, \`canvas.keys.CTRL\`, \`canvas.keys.ALT\`, \`canvas.keys.META\`, \`canvas.keys.CAPS_LOCK\` (with _LEFT/_RIGHT variants)
+**Modifier Keys:** `canvas.keys.SHIFT`, `canvas.keys.CTRL`, `canvas.keys.ALT`, `canvas.keys.META`, `canvas.keys.CAPS_LOCK` (with _LEFT/_RIGHT variants)
 
-**Special Keys:** \`canvas.keys.SPACE\`, \`canvas.keys.ENTER\`, \`canvas.keys.ESCAPE\`, \`canvas.keys.TAB\`, \`canvas.keys.BACKSPACE\`, \`canvas.keys.DELETE\`, \`canvas.keys.INSERT\`, \`canvas.keys.HOME\`, \`canvas.keys.END\`, \`canvas.keys.PAGE_UP\`, \`canvas.keys.PAGE_DOWN\`
+**Special Keys:** `canvas.keys.SPACE`, `canvas.keys.ENTER`, `canvas.keys.ESCAPE`, `canvas.keys.TAB`, `canvas.keys.BACKSPACE`, `canvas.keys.DELETE`, `canvas.keys.INSERT`, `canvas.keys.HOME`, `canvas.keys.END`, `canvas.keys.PAGE_UP`, `canvas.keys.PAGE_DOWN`
 
-**Numpad:** \`canvas.keys.NUMPAD_0\` through \`canvas.keys.NUMPAD_9\`, \`canvas.keys.NUMPAD_ADD\`, \`canvas.keys.NUMPAD_SUBTRACT\`, \`canvas.keys.NUMPAD_MULTIPLY\`, \`canvas.keys.NUMPAD_DIVIDE\`, \`canvas.keys.NUMPAD_DECIMAL\`, \`canvas.keys.NUMPAD_ENTER\`
+**Numpad:** `canvas.keys.NUMPAD_0` through `canvas.keys.NUMPAD_9`, `canvas.keys.NUMPAD_ADD`, `canvas.keys.NUMPAD_SUBTRACT`, `canvas.keys.NUMPAD_MULTIPLY`, `canvas.keys.NUMPAD_DIVIDE`, `canvas.keys.NUMPAD_DECIMAL`, `canvas.keys.NUMPAD_ENTER`
 
-**Punctuation:** \`canvas.keys.MINUS\`, \`canvas.keys.EQUAL\`, \`canvas.keys.BRACKET_LEFT\`, \`canvas.keys.BRACKET_RIGHT\`, \`canvas.keys.BACKSLASH\`, \`canvas.keys.SEMICOLON\`, \`canvas.keys.QUOTE\`, \`canvas.keys.BACKQUOTE\`, \`canvas.keys.COMMA\`, \`canvas.keys.PERIOD\`, \`canvas.keys.SLASH\`
+**Punctuation:** `canvas.keys.MINUS`, `canvas.keys.EQUAL`, `canvas.keys.BRACKET_LEFT`, `canvas.keys.BRACKET_RIGHT`, `canvas.keys.BACKSLASH`, `canvas.keys.SEMICOLON`, `canvas.keys.QUOTE`, `canvas.keys.BACKQUOTE`, `canvas.keys.COMMA`, `canvas.keys.PERIOD`, `canvas.keys.SLASH`
 
 ## Mouse Input
 
@@ -261,47 +251,47 @@ Get the current mouse Y position relative to canvas.
 Check if a mouse button is currently held down.
 
 **Parameters:**
-- \`button\` (number): Button number (0 = left, 1 = middle, 2 = right)
+- `button` (number): Button number (0 = left, 1 = middle, 2 = right)
 
 ### canvas.is_mouse_pressed(button)
 
 Check if a mouse button was pressed this frame.
 
-\`\`\`lua
+```lua
 if canvas.is_mouse_pressed(0) then
   -- Left mouse button was just clicked
   shoot_at(canvas.get_mouse_x(), canvas.get_mouse_y())
 end
-\`\`\`
+```
 
 ## Image Assets
 
-Register and draw images on the canvas. Images must be registered before \`canvas.start()\`.
+Register and draw images on the canvas. Images must be registered before `canvas.start()`.
 
 **Supported formats:** PNG, JPG, JPEG, GIF, WebP, BMP
 
 ### canvas.assets.image(name, path)
 
-Register an image asset for loading. Call this before \`canvas.start()\`.
+Register an image asset for loading. Call this before `canvas.start()`.
 
 **Parameters:**
-- \`name\` (string): Unique name to reference this asset
-- \`path\` (string): Path to the image file (relative or absolute)
+- `name` (string): Unique name to reference this asset
+- `path` (string): Path to the image file (relative or absolute)
 
-\`\`\`lua
+```lua
 -- Register images before starting
 canvas.assets.image("ship", "images/ship.png")
 canvas.assets.image("enemy", "images/enemy.png")
 
 canvas.start()  -- Images are loaded here
-\`\`\`
+```
 
 ### canvas.assets.get_width(name)
 
 Get the width of a loaded image in pixels.
 
 **Parameters:**
-- \`name\` (string): The asset name
+- `name` (string): The asset name
 
 **Returns:**
 - (number): Width in pixels
@@ -311,29 +301,29 @@ Get the width of a loaded image in pixels.
 Get the height of a loaded image in pixels.
 
 **Parameters:**
-- \`name\` (string): The asset name
+- `name` (string): The asset name
 
 **Returns:**
 - (number): Height in pixels
 
-\`\`\`lua
+```lua
 local w = canvas.assets.get_width("ship")
 local h = canvas.assets.get_height("ship")
 print("Ship size: " .. w .. "x" .. h)
-\`\`\`
+```
 
 ### canvas.draw_image(name, x, y, width?, height?)
 
 Draw an image at the specified position. Optional width/height parameters enable scaling.
 
 **Parameters:**
-- \`name\` (string): The asset name (registered via \`canvas.assets.image()\`)
-- \`x\` (number): X coordinate of top-left corner
-- \`y\` (number): Y coordinate of top-left corner
-- \`width\` (number, optional): Scale to this width
-- \`height\` (number, optional): Scale to this height
+- `name` (string): The asset name (registered via `canvas.assets.image()`)
+- `x` (number): X coordinate of top-left corner
+- `y` (number): Y coordinate of top-left corner
+- `width` (number, optional): Scale to this width
+- `height` (number, optional): Scale to this height
 
-\`\`\`lua
+```lua
 -- Draw at original size
 canvas.draw_image("ship", 100, 100)
 
@@ -344,11 +334,11 @@ canvas.draw_image("ship", 100, 100, 64, 64)
 local w = canvas.assets.get_width("ship")
 local h = canvas.assets.get_height("ship")
 canvas.draw_image("ship", player_x - w/2, player_y - h/2)
-\`\`\`
+```
 
 ## Example: Moving Square
 
-\`\`\`lua
+```lua
 local canvas = require('canvas')
 
 -- Set canvas size
@@ -388,6 +378,4 @@ end)
 
 -- Start the canvas (blocks until Ctrl+C)
 canvas.start()
-\`\`\`
-`
-}
+```
