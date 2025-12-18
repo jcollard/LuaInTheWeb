@@ -1,9 +1,9 @@
 # Epic #324: Explore moving files for read-only workspaces to public/ and using manifest rather than adding them to ts files
 
-**Status:** In Progress (4/5 complete)
+**Status:** Complete (5/5 complete)
 **Branch:** epic-324
 **Created:** 2025-12-18
-**Last Updated:** 2025-12-18T19:23:34Z
+**Last Updated:** 2025-12-18T20:12:52Z
 
 ## Overview
 
@@ -48,7 +48,7 @@ Migrate to a manifest-based approach (already used for book content):
 | #329 | Migrate Examples workspace to public/ | ✅ Complete | 329-migrate-examples-workspace-to-public | Merged PR #338 |
 | #330 | Migrate Docs workspace to public/ | ✅ Complete | 330-migrate-docs-workspace-to-public | Merged PR #339 |
 | #331 | Migrate Library workspace to public/ | ✅ Complete | 331-migrate-library-workspace-to-public | Merged PR #341 |
-| #332 | Cleanup and verify read-only workspace migration | 🔄 In Progress | 332-cleanup-and-verify-read-only-workspace-migration | Started 2025-12-18 |
+| #332 | Cleanup and verify read-only workspace migration | ✅ Complete | 332-cleanup-and-verify-read-only-workspace-migration | Merged PR #345 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -91,6 +91,12 @@ Migrate to a manifest-based approach (already used for book content):
 - #332: Confirmed no orphaned imports or references
 - #332: Fixed E2E tests to wait for async workspace loading
 - #332: All 741 unit tests pass, 254 E2E tests pass
+- #332: Fixed Firebase preview cleanup workflow (was deleting wrong channel names)
+- #332: Added /preview comment command and reduced expiry to 48h
+- #332: Completed - merged PR #345 to epic-324
+
+### Epic Complete!
+All 5 sub-issues merged to epic-324. Ready for `/epic 324 review` to create PR to main.
 
 ## Key Files
 
