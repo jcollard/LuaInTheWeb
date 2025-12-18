@@ -12,6 +12,7 @@ vi.mock('@lua-learning/lua-runtime', () => ({
 
 import {
   createDocsWorkspace,
+  fetchAndCreateDocsWorkspace,
   createLibraryWorkspace,
   createBookWorkspace,
   fetchAndCreateBookWorkspace,
@@ -49,50 +50,229 @@ describe('workspaceManagerHelpers', () => {
   })
 
   describe('createDocsWorkspace', () => {
+    // Mock docs files that match the expected content structure
+    const mockDocsFiles: Record<string, string> = {
+      'shell.md': `# Shell Library
+
+The shell library provides functions for terminal control.
+
+## Loading the Library
+
+\`\`\`lua
+local shell = require('shell')
+\`\`\`
+
+## Color Constants
+
+| Constant | Description |
+|----------|-------------|
+| \`shell.BLACK\` | Black color |
+| \`shell.RED\` | Red color |
+| \`shell.GREEN\` | Green color |
+
+## Screen Control
+
+### shell.clear()
+
+Clears the terminal screen.
+
+## Color Control
+
+### shell.foreground(color)
+
+Sets the text foreground color.
+
+### shell.background(color)
+
+Sets the text background color.
+
+### shell.reset()
+
+Resets all color attributes.
+
+## Cursor Control
+
+### shell.set_cursor(row, col)
+
+Moves cursor to position.
+
+### shell.cursor_up(n)
+
+Moves cursor up.
+
+### shell.cursor_down(n)
+
+Moves cursor down.
+
+### shell.cursor_left(n)
+
+Moves cursor left.
+
+### shell.cursor_right(n)
+
+Moves cursor right.
+
+### shell.save_cursor()
+
+Saves cursor position.
+
+### shell.restore_cursor()
+
+Restores cursor position.
+
+### shell.hide_cursor()
+
+Hides cursor.
+
+### shell.show_cursor()
+
+Shows cursor.
+
+## Terminal Dimensions
+
+### shell.width()
+
+Returns terminal width.
+
+### shell.height()
+
+Returns terminal height.
+`,
+      'canvas.md': `# Canvas Library
+
+The canvas library provides functions for 2D graphics rendering.
+
+## Loading the Library
+
+\`\`\`lua
+local canvas = require('canvas')
+\`\`\`
+
+## Game Loop
+
+### canvas.tick(callback)
+
+Register tick callback.
+
+## Drawing Functions
+
+### canvas.clear()
+
+Clear the canvas.
+
+### canvas.set_color(r, g, b, a)
+
+Set drawing color.
+
+### canvas.draw_rect(x, y, width, height)
+
+Draw rectangle outline.
+
+### canvas.fill_rect(x, y, width, height)
+
+Draw filled rectangle.
+
+### canvas.draw_circle(x, y, radius)
+
+Draw circle outline.
+
+### canvas.fill_circle(x, y, radius)
+
+Draw filled circle.
+
+### canvas.draw_line(x1, y1, x2, y2)
+
+Draw line.
+
+### canvas.draw_text(x, y, text)
+
+Draw text.
+
+## Timing Functions
+
+### canvas.get_delta()
+
+Get time since last frame.
+
+### canvas.get_time()
+
+Get total time.
+
+## Keyboard Input
+
+### canvas.is_key_down(key)
+
+Check if key is held.
+
+### canvas.is_key_pressed(key)
+
+Check if key was pressed.
+
+## Mouse Input
+
+### canvas.get_mouse_x()
+
+Get mouse X position.
+
+### canvas.get_mouse_y()
+
+Get mouse Y position.
+
+### canvas.is_mouse_down(button)
+
+Check if mouse button is held.
+`,
+      'lua/basics.md': '# Lua Basics\n\nCore global functions.',
+      'lua/string.md': '# String Library\n\nString functions.',
+      'lua/table.md': '# Table Library\n\nTable functions.',
+      'lua/math.md': '# Math Library\n\nMath functions.',
+      'lua/io.md': '# IO Library\n\nIO functions.',
+    }
+
     it('creates a workspace with id DOCS_WORKSPACE_ID', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       expect(workspace.id).toBe(DOCS_WORKSPACE_ID)
     })
 
     it('creates a workspace with name DOCS_WORKSPACE_NAME', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       expect(workspace.name).toBe(DOCS_WORKSPACE_NAME)
     })
 
     it('creates a workspace with type "docs"', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       expect(workspace.type).toBe('docs')
     })
 
     it('creates a workspace with mountPath DOCS_MOUNT_PATH', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       expect(workspace.mountPath).toBe(DOCS_MOUNT_PATH)
     })
 
     it('creates a workspace with status "connected"', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       expect(workspace.status).toBe('connected')
     })
 
     it('creates a workspace with isReadOnly set to true', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       expect(workspace.isReadOnly).toBe(true)
     })
 
     it('creates a workspace with a filesystem', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       expect(workspace.filesystem).toBeDefined()
       expect(typeof workspace.filesystem.readFile).toBe('function')
     })
 
     it('filesystem contains shell.md file', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       expect(workspace.filesystem.exists('shell.md')).toBe(true)
       expect(workspace.filesystem.isFile('shell.md')).toBe(true)
     })
 
     it('shell.md contains shell library documentation', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       const content = workspace.filesystem.readFile('shell.md')
       expect(content).toContain('# Shell Library')
       expect(content).toContain('require')
@@ -100,7 +280,7 @@ describe('workspaceManagerHelpers', () => {
     })
 
     it('shell.md documents color constants', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       const content = workspace.filesystem.readFile('shell.md')
       expect(content).toContain('shell.BLACK')
       expect(content).toContain('shell.RED')
@@ -108,13 +288,13 @@ describe('workspaceManagerHelpers', () => {
     })
 
     it('shell.md documents screen control functions', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       const content = workspace.filesystem.readFile('shell.md')
       expect(content).toContain('shell.clear()')
     })
 
     it('shell.md documents color control functions', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       const content = workspace.filesystem.readFile('shell.md')
       expect(content).toContain('shell.foreground')
       expect(content).toContain('shell.background')
@@ -122,7 +302,7 @@ describe('workspaceManagerHelpers', () => {
     })
 
     it('shell.md documents cursor control functions', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       const content = workspace.filesystem.readFile('shell.md')
       expect(content).toContain('shell.set_cursor')
       expect(content).toContain('shell.cursor_up')
@@ -136,42 +316,42 @@ describe('workspaceManagerHelpers', () => {
     })
 
     it('shell.md documents terminal dimension functions', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       const content = workspace.filesystem.readFile('shell.md')
       expect(content).toContain('shell.width')
       expect(content).toContain('shell.height')
     })
 
     it('shell.md contains usage examples', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       const content = workspace.filesystem.readFile('shell.md')
       // Check for code examples (lua code blocks)
       expect(content).toContain('```lua')
     })
 
     it('filesystem is read-only (cannot write)', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       expect(() => {
         workspace.filesystem.writeFile('test.md', 'content')
       }).toThrow('read-only')
     })
 
     it('filesystem is read-only (cannot create directory)', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       expect(() => {
         workspace.filesystem.createDirectory('test')
       }).toThrow('read-only')
     })
 
     it('filesystem is read-only (cannot delete)', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       expect(() => {
         workspace.filesystem.delete('shell.md')
       }).toThrow('read-only')
     })
 
     it('filesystem lists canvas.md, lua/, and shell.md in root directory', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       const entries = workspace.filesystem.listDirectory('/')
       expect(entries).toHaveLength(3)
       // Directories come first, then files (sorted alphabetically)
@@ -184,7 +364,7 @@ describe('workspaceManagerHelpers', () => {
     })
 
     it('filesystem lists lua stdlib docs in lua/ directory', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       const entries = workspace.filesystem.listDirectory('/lua')
       expect(entries.length).toBeGreaterThanOrEqual(5)
       const names = entries.map((e) => e.name)
@@ -196,13 +376,13 @@ describe('workspaceManagerHelpers', () => {
     })
 
     it('filesystem contains canvas.md file', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       expect(workspace.filesystem.exists('canvas.md')).toBe(true)
       expect(workspace.filesystem.isFile('canvas.md')).toBe(true)
     })
 
     it('canvas.md contains canvas library documentation', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       const content = workspace.filesystem.readFile('canvas.md')
       expect(content).toContain('# Canvas Library')
       expect(content).toContain('require')
@@ -210,7 +390,7 @@ describe('workspaceManagerHelpers', () => {
     })
 
     it('canvas.md documents drawing functions', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       const content = workspace.filesystem.readFile('canvas.md')
       expect(content).toContain('canvas.clear')
       expect(content).toContain('canvas.set_color')
@@ -223,21 +403,21 @@ describe('workspaceManagerHelpers', () => {
     })
 
     it('canvas.md documents timing functions', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       const content = workspace.filesystem.readFile('canvas.md')
       expect(content).toContain('canvas.get_delta')
       expect(content).toContain('canvas.get_time')
     })
 
     it('canvas.md documents keyboard input functions', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       const content = workspace.filesystem.readFile('canvas.md')
       expect(content).toContain('canvas.is_key_down')
       expect(content).toContain('canvas.is_key_pressed')
     })
 
     it('canvas.md documents mouse input functions', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       const content = workspace.filesystem.readFile('canvas.md')
       expect(content).toContain('canvas.get_mouse_x')
       expect(content).toContain('canvas.get_mouse_y')
@@ -245,15 +425,110 @@ describe('workspaceManagerHelpers', () => {
     })
 
     it('canvas.md documents game loop', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       const content = workspace.filesystem.readFile('canvas.md')
       expect(content).toContain('canvas.tick')
     })
 
     it('canvas.md contains usage examples', () => {
-      const workspace = createDocsWorkspace()
+      const workspace = createDocsWorkspace(mockDocsFiles)
       const content = workspace.filesystem.readFile('canvas.md')
       expect(content).toContain('```lua')
+    })
+  })
+
+  describe('fetchAndCreateDocsWorkspace', () => {
+    const mockFetch = vi.fn()
+
+    beforeEach(() => {
+      vi.stubGlobal('fetch', mockFetch)
+      mockFetch.mockReset()
+    })
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('returns a workspace when fetch succeeds', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ name: 'Docs', files: ['shell.md'] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          text: () => Promise.resolve('# Shell Library'),
+        })
+
+      const workspace = await fetchAndCreateDocsWorkspace()
+
+      expect(workspace).not.toBeNull()
+      expect(workspace?.id).toBe(DOCS_WORKSPACE_ID)
+      expect(workspace?.type).toBe('docs')
+    })
+
+    it('returns null when manifest fetch fails', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+      })
+
+      const workspace = await fetchAndCreateDocsWorkspace()
+
+      expect(workspace).toBeNull()
+    })
+
+    it('returns null when no files are fetched', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ name: 'Empty', files: [] }),
+      })
+
+      const workspace = await fetchAndCreateDocsWorkspace()
+
+      expect(workspace).toBeNull()
+    })
+
+    it('fetches from /docs manifest', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ name: 'Docs', files: ['shell.md'] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          text: () => Promise.resolve('# Shell'),
+        })
+
+      await fetchAndCreateDocsWorkspace()
+
+      expect(mockFetch).toHaveBeenNthCalledWith(1, '/docs/manifest.json')
+    })
+
+    it('creates workspace with fetched markdown files', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              name: 'Docs',
+              files: ['shell.md', 'canvas.md'],
+            }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          text: () => Promise.resolve('# Shell Library'),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          text: () => Promise.resolve('# Canvas Library'),
+        })
+
+      const workspace = await fetchAndCreateDocsWorkspace()
+
+      expect(workspace).not.toBeNull()
+      expect(workspace?.filesystem.exists('shell.md')).toBe(true)
+      expect(workspace?.filesystem.exists('canvas.md')).toBe(true)
     })
   })
 

@@ -10,13 +10,13 @@ import {
   generateCanvasLibrarySource,
 } from './libraryDocumentation'
 import { fetchExamplesContent } from './examplesFetcher'
+import { fetchDocsContent } from './docsFetcher'
 import type {
   Workspace,
   PersistedWorkspace,
   WorkspaceManagerState,
 } from './workspaceTypes'
 import { createVirtualFileSystem } from './virtualFileSystemFactory'
-import { getAllDocs } from './luaStdlibMarkdown/index'
 import { createReadOnlyFileSystem } from './readOnlyFileSystem'
 import { fetchBookContent } from './bookFetcher'
 
@@ -160,16 +160,16 @@ export function createLibraryWorkspace(): Workspace {
 }
 
 /**
- * Create the docs workspace containing API documentation.
+ * Create the docs workspace from pre-fetched content.
  * This workspace is read-only and contains markdown documentation files.
  */
-export function createDocsWorkspace(): Workspace {
+export function createDocsWorkspace(files: Record<string, string>): Workspace {
   return {
     id: DOCS_WORKSPACE_ID,
     name: DOCS_WORKSPACE_NAME,
     type: 'docs',
     mountPath: DOCS_MOUNT_PATH,
-    filesystem: createReadOnlyFileSystem(getAllDocs()),
+    filesystem: createReadOnlyFileSystem(files),
     status: 'connected',
     isReadOnly: true,
   }
@@ -236,6 +236,18 @@ export async function fetchAndCreateExamplesWorkspace(): Promise<Workspace | nul
 }
 
 /**
+ * Fetch docs content and create the docs workspace.
+ * Returns null if the fetch fails.
+ */
+export async function fetchAndCreateDocsWorkspace(): Promise<Workspace | null> {
+  const content = await fetchDocsContent()
+  if (Object.keys(content.text).length === 0) {
+    return null
+  }
+  return createDocsWorkspace(content.text)
+}
+
+/**
  * Migrate legacy workspace data that may have rootPath instead of mountPath.
  */
 export function migratePersistedWorkspace(
@@ -285,23 +297,20 @@ export function createDisconnectedFileSystem(): IFileSystem {
 
 /**
  * Initialize workspaces from localStorage or create default.
- * Always includes the library workspace for built-in libraries and
- * the docs workspace for API documentation.
+ * Always includes the library workspace for built-in libraries.
  *
- * Note: The examples and book workspaces are loaded asynchronously via hooks.
+ * Note: The docs, examples and book workspaces are loaded asynchronously via hooks.
  */
 export function initializeWorkspaces(): WorkspaceManagerState {
   const persistedWorkspaces = loadPersistedWorkspaces()
 
   // Library workspace is always present (not persisted, always created fresh)
   const libraryWorkspace = createLibraryWorkspace()
-  // Docs workspace is always present (not persisted, always created fresh)
-  const docsWorkspace = createDocsWorkspace()
 
   if (!persistedWorkspaces || persistedWorkspaces.length === 0) {
     const defaultWorkspace = createDefaultWorkspace()
     return {
-      workspaces: [defaultWorkspace, libraryWorkspace, docsWorkspace],
+      workspaces: [defaultWorkspace, libraryWorkspace],
     }
   }
 
@@ -347,9 +356,6 @@ export function initializeWorkspaces(): WorkspaceManagerState {
 
   // Add library workspace (always present, not persisted)
   workspaces.push(libraryWorkspace)
-
-  // Add docs workspace (always present, not persisted)
-  workspaces.push(docsWorkspace)
 
   return {
     workspaces,

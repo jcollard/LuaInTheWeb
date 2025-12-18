@@ -1,9 +1,9 @@
 # Epic #324: Explore moving files for read-only workspaces to public/ and using manifest rather than adding them to ts files
 
-**Status:** In Progress (2/5 complete)
+**Status:** In Progress (3/5 complete)
 **Branch:** epic-324
 **Created:** 2025-12-18
-**Last Updated:** 2025-12-18T18:07:02Z
+**Last Updated:** 2025-12-18T16:41:18Z
 
 ## Overview
 
@@ -46,7 +46,7 @@ Migrate to a manifest-based approach (already used for book content):
 |---|-------|--------|--------|-------|
 | #328 | Create shared workspace fetcher infrastructure | ✅ Complete | 328-create-shared-workspace-fetcher-infrastructure | Merged PR #334 |
 | #329 | Migrate Examples workspace to public/ | ✅ Complete | 329-migrate-examples-workspace-to-public | Merged PR #338 |
-| #330 | Migrate Docs workspace to public/ | ⏳ Pending | - | Depends on #328 |
+| #330 | Migrate Docs workspace to public/ | ✅ Complete | 330-migrate-docs-workspace-to-public | Pending PR |
 | #331 | Migrate Library workspace to public/ | ⏳ Pending | - | Depends on #328 |
 | #332 | Cleanup and verify read-only workspace migration | ⏳ Pending | - | Depends on #328, #329, #330, #331 |
 
@@ -76,6 +76,10 @@ Migrate to a manifest-based approach (already used for book content):
 - #328: Completed - merged PR #334 to epic-324
 - #329: Migrated examples workspace to public/ (~116KB bundle reduction)
 - #329: Completed - merged PR #338 to epic-324
+- #330: Migrated docs workspace to public/docs/ (shell.md, canvas.md, lua/*.md)
+- #330: Deleted luaStdlibMarkdown/ (~1235 lines) and canvasDocumentation.ts
+- #330: Created docsFetcher.ts with 100% mutation score
+- #330: Docs workspace now loads asynchronously like examples/book
 
 ## Key Files
 
@@ -83,6 +87,10 @@ Migrate to a manifest-based approach (already used for book content):
 
 - `src/hooks/workspaceFetcher.ts` - Generic workspace content fetcher with text/binary support
 - `src/hooks/workspaceFetcher.test.ts` - Unit tests (20 tests, 80% mutation score)
+- `src/hooks/docsFetcher.ts` - Docs workspace content fetcher (100% mutation score)
+- `src/hooks/useDocsWorkspaceLoader.ts` - Hook to async load docs workspace
+- `public/docs/manifest.json` - Manifest for docs workspace files
+- `public/docs/*.md` - Static documentation files (shell.md, canvas.md, lua/*.md)
 
 ## Open Questions
 

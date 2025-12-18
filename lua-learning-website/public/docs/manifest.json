@@ -1,0 +1,12 @@
+{
+  "name": "Docs",
+  "files": [
+    "shell.md",
+    "canvas.md",
+    "lua/basics.md",
+    "lua/string.md",
+    "lua/table.md",
+    "lua/math.md",
+    "lua/io.md"
+  ]
+}

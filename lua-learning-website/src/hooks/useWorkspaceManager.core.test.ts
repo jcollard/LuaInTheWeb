@@ -48,21 +48,18 @@ setupWorkspaceManagerTests()
 
 describe('useWorkspaceManager', () => {
   describe('initialization', () => {
-    it('initializes with a default virtual workspace, library workspace, and docs workspace', () => {
+    it('initializes with a default virtual workspace and library workspace', () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      // Default workspace + library workspace + docs workspace
-      // Note: examples and book workspaces are loaded asynchronously
-      expect(result.current.workspaces).toHaveLength(3)
+      // Default workspace + library workspace
+      // Note: docs, examples, and book workspaces are loaded asynchronously
+      expect(result.current.workspaces).toHaveLength(2)
       expect(result.current.workspaces[0].name).toBe('home')
       expect(result.current.workspaces[0].type).toBe('virtual')
       expect(result.current.workspaces[0].status).toBe('connected')
       // Library workspace
       expect(result.current.workspaces[1].name).toBe('libs')
       expect(result.current.workspaces[1].type).toBe('library')
-      // Docs workspace
-      expect(result.current.workspaces[2].name).toBe('docs')
-      expect(result.current.workspaces[2].type).toBe('docs')
     })
 
     it('default workspace has id DEFAULT_WORKSPACE_ID', () => {
@@ -103,9 +100,9 @@ describe('useWorkspaceManager', () => {
         await result.current.addVirtualWorkspace('Test Workspace')
       })
 
-      // default + library + docs + new workspace = 4
-      // (examples and book workspaces are loaded asynchronously)
-      expect(result.current.workspaces).toHaveLength(4)
+      // default + library + new workspace = 3
+      // (docs, examples, and book workspaces are loaded asynchronously)
+      expect(result.current.workspaces).toHaveLength(3)
       expect(result.current.workspaces.find((w) => w.name === 'Test Workspace')).toBeDefined()
       expect(result.current.workspaces.find((w) => w.name === 'Test Workspace')?.type).toBe('virtual')
     })
@@ -202,9 +199,9 @@ describe('useWorkspaceManager', () => {
         await result.current.addLocalWorkspace('My Project', mockHandle)
       })
 
-      // default + library + docs + new local workspace = 4
-      // (examples and book workspaces are loaded asynchronously)
-      expect(result.current.workspaces).toHaveLength(4)
+      // default + library + new local workspace = 3
+      // (docs, examples, and book workspaces are loaded asynchronously)
+      expect(result.current.workspaces).toHaveLength(3)
       const localWorkspace = result.current.workspaces.find((w) => w.name === 'My Project')
       expect(localWorkspace).toBeDefined()
       expect(localWorkspace?.type).toBe('local')
@@ -274,9 +271,9 @@ describe('useWorkspaceManager', () => {
         result.current.removeWorkspace(workspace!.id)
       })
 
-      // After removal: default + library + docs = 3
-      // (examples and book workspaces are loaded asynchronously)
-      expect(result.current.workspaces).toHaveLength(3)
+      // After removal: default + library = 2
+      // (docs, examples, and book workspaces are loaded asynchronously)
+      expect(result.current.workspaces).toHaveLength(2)
       expect(result.current.workspaces.find((w) => w.id === workspace!.id)).toBeUndefined()
     })
 
@@ -293,9 +290,9 @@ describe('useWorkspaceManager', () => {
     it('throws error when trying to remove the last workspace', () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
-      // default + library + docs workspaces
-      // (examples and book workspaces are loaded asynchronously)
-      expect(result.current.workspaces).toHaveLength(3)
+      // default + library workspaces
+      // (docs, examples, and book workspaces are loaded asynchronously)
+      expect(result.current.workspaces).toHaveLength(2)
 
       // Try to remove default workspace - should throw "Cannot remove default"
       expect(() => {
@@ -323,16 +320,16 @@ describe('useWorkspaceManager', () => {
         workspace = await result.current.addVirtualWorkspace('To Remove')
       })
 
-      // default + library + docs + new workspace = 4
-      // (examples and book workspaces are loaded asynchronously)
-      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(4)
+      // default + library + new workspace = 3
+      // (docs, examples, and book workspaces are loaded asynchronously)
+      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(3)
 
       act(() => {
         result.current.removeWorkspace(workspace!.id)
       })
 
-      // After removal: default + library + docs = 3
-      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(3)
+      // After removal: default + library = 2
+      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(2)
     })
   })
 
