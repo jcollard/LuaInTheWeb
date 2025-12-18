@@ -38,6 +38,7 @@ describe('useTabBar', () => {
         isDirty: false,
         type: 'file',
         isPreview: false,
+        isPinned: false,
       })
     })
 
@@ -406,6 +407,7 @@ describe('useTabBar', () => {
         isDirty: false,
         type: 'markdown',
         isPreview: true,
+        isPinned: false,
       })
     })
 

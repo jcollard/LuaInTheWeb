@@ -5,9 +5,9 @@ import * as useTabBarScrollModule from './useTabBarScroll'
 
 describe('TabBar', () => {
   const defaultTabs = [
-    { path: '/main.lua', name: 'main.lua', isDirty: false, type: 'file' as const, isPreview: false },
-    { path: '/utils/math.lua', name: 'math.lua', isDirty: true, type: 'file' as const, isPreview: false },
-    { path: '/config.lua', name: 'config.lua', isDirty: false, type: 'file' as const, isPreview: false },
+    { path: '/main.lua', name: 'main.lua', isDirty: false, type: 'file' as const, isPreview: false, isPinned: false },
+    { path: '/utils/math.lua', name: 'math.lua', isDirty: true, type: 'file' as const, isPreview: false, isPinned: false },
+    { path: '/config.lua', name: 'config.lua', isDirty: false, type: 'file' as const, isPreview: false, isPinned: false },
   ]
 
   const defaultProps = {
@@ -356,7 +356,7 @@ describe('TabBar', () => {
       mockCheckOverflow.mockClear()
 
       // Act - rerender with different tabs
-      const newTabs = [...defaultTabs, { path: '/new.lua', name: 'new.lua', isDirty: false, type: 'file' as const, isPreview: false }]
+      const newTabs = [...defaultTabs, { path: '/new.lua', name: 'new.lua', isDirty: false, type: 'file' as const, isPreview: false, isPinned: false }]
       rerender(<TabBar {...defaultProps} tabs={newTabs} />)
 
       // Assert - checkOverflow should be called again
@@ -423,12 +423,297 @@ describe('TabBar', () => {
     })
   })
 
+  describe('pinned tabs', () => {
+    it('should apply pinned class to pinned tabs', () => {
+      // Arrange
+      const tabsWithPinned = [
+        { path: '/pinned.lua', name: 'pinned.lua', isDirty: false, isPreview: false, type: 'file' as const, isPinned: true },
+        { path: '/normal.lua', name: 'normal.lua', isDirty: false, isPreview: false, type: 'file' as const, isPinned: false },
+      ]
+
+      // Act
+      render(<TabBar {...defaultProps} tabs={tabsWithPinned} />)
+
+      // Assert
+      const tabs = screen.getAllByRole('tab')
+      expect(tabs[0].className).toMatch(/_pinned_/)
+      expect(tabs[1].className).not.toMatch(/_pinned_/)
+    })
+
+    it('should show pin indicator for pinned tabs', () => {
+      // Arrange
+      const tabsWithPinned = [
+        { path: '/pinned.lua', name: 'pinned.lua', isDirty: false, isPreview: false, type: 'file' as const, isPinned: true },
+      ]
+
+      // Act
+      render(<TabBar {...defaultProps} tabs={tabsWithPinned} activeTab="/pinned.lua" />)
+
+      // Assert - should find the pin icon
+      const tab = screen.getByRole('tab')
+      const pinIcon = tab.querySelector('[data-testid="pin-icon"]')
+      expect(pinIcon).toBeInTheDocument()
+    })
+
+    it('should hide close button for pinned tabs', () => {
+      // Arrange
+      const tabsWithPinned = [
+        { path: '/pinned.lua', name: 'pinned.lua', isDirty: false, isPreview: false, type: 'file' as const, isPinned: true },
+        { path: '/normal.lua', name: 'normal.lua', isDirty: false, isPreview: false, type: 'file' as const, isPinned: false },
+      ]
+
+      // Act
+      render(<TabBar {...defaultProps} tabs={tabsWithPinned} />)
+
+      // Assert - only one close button (for the non-pinned tab)
+      const closeButtons = screen.getAllByRole('button', { name: /close/i })
+      expect(closeButtons).toHaveLength(1)
+    })
+
+    it('should not apply pinned class to non-pinned tabs', () => {
+      // Arrange & Act
+      render(<TabBar {...defaultProps} />)
+
+      // Assert
+      const tabs = screen.getAllByRole('tab')
+      tabs.forEach(tab => {
+        expect(tab.className).not.toMatch(/_pinned_/)
+      })
+    })
+  })
+
+  describe('context menu', () => {
+    it('should open context menu on right-click', () => {
+      // Arrange
+      render(<TabBar {...defaultProps} />)
+      const tab = screen.getAllByRole('tab')[0]
+
+      // Act
+      fireEvent.contextMenu(tab)
+
+      // Assert
+      expect(screen.getByRole('menu')).toBeInTheDocument()
+    })
+
+    it('should show Pin option for unpinned tabs', () => {
+      // Arrange
+      render(<TabBar {...defaultProps} />)
+      const tab = screen.getAllByRole('tab')[0]
+
+      // Act
+      fireEvent.contextMenu(tab)
+
+      // Assert
+      expect(screen.getByRole('menuitem', { name: /pin/i })).toBeInTheDocument()
+    })
+
+    it('should show Unpin option for pinned tabs', () => {
+      // Arrange
+      const tabsWithPinned = [
+        { path: '/pinned.lua', name: 'pinned.lua', isDirty: false, isPreview: false, type: 'file' as const, isPinned: true },
+      ]
+      render(<TabBar {...defaultProps} tabs={tabsWithPinned} activeTab="/pinned.lua" />)
+      const tab = screen.getByRole('tab')
+
+      // Act
+      fireEvent.contextMenu(tab)
+
+      // Assert
+      expect(screen.getByRole('menuitem', { name: /unpin/i })).toBeInTheDocument()
+    })
+
+    it('should call onPinTab when Pin is clicked', () => {
+      // Arrange
+      const onPinTab = vi.fn()
+      render(<TabBar {...defaultProps} onPinTab={onPinTab} />)
+      const tab = screen.getAllByRole('tab')[0]
+
+      // Act
+      fireEvent.contextMenu(tab)
+      fireEvent.click(screen.getByRole('menuitem', { name: /pin/i }))
+
+      // Assert
+      expect(onPinTab).toHaveBeenCalledWith('/main.lua')
+    })
+
+    it('should call onUnpinTab when Unpin is clicked', () => {
+      // Arrange
+      const onUnpinTab = vi.fn()
+      const tabsWithPinned = [
+        { path: '/pinned.lua', name: 'pinned.lua', isDirty: false, isPreview: false, type: 'file' as const, isPinned: true },
+      ]
+      render(<TabBar {...defaultProps} tabs={tabsWithPinned} activeTab="/pinned.lua" onUnpinTab={onUnpinTab} />)
+      const tab = screen.getByRole('tab')
+
+      // Act
+      fireEvent.contextMenu(tab)
+      fireEvent.click(screen.getByRole('menuitem', { name: /unpin/i }))
+
+      // Assert
+      expect(onUnpinTab).toHaveBeenCalledWith('/pinned.lua')
+    })
+
+    it('should call onClose when Close is clicked from context menu', () => {
+      // Arrange
+      const onClose = vi.fn()
+      render(<TabBar {...defaultProps} onClose={onClose} />)
+      const tab = screen.getAllByRole('tab')[0]
+
+      // Act
+      fireEvent.contextMenu(tab)
+      fireEvent.click(screen.getByRole('menuitem', { name: /^close$/i }))
+
+      // Assert
+      expect(onClose).toHaveBeenCalledWith('/main.lua')
+    })
+
+    it('should call onCloseToRight when Close to Right is clicked', () => {
+      // Arrange
+      const onCloseToRight = vi.fn()
+      render(<TabBar {...defaultProps} onCloseToRight={onCloseToRight} />)
+      const tab = screen.getAllByRole('tab')[0]
+
+      // Act
+      fireEvent.contextMenu(tab)
+      fireEvent.click(screen.getByRole('menuitem', { name: /close to right/i }))
+
+      // Assert
+      expect(onCloseToRight).toHaveBeenCalledWith('/main.lua')
+    })
+
+    it('should call onCloseOthers when Close Others is clicked', () => {
+      // Arrange
+      const onCloseOthers = vi.fn()
+      render(<TabBar {...defaultProps} onCloseOthers={onCloseOthers} />)
+      const tab = screen.getAllByRole('tab')[0]
+
+      // Act
+      fireEvent.contextMenu(tab)
+      fireEvent.click(screen.getByRole('menuitem', { name: /close others/i }))
+
+      // Assert
+      expect(onCloseOthers).toHaveBeenCalledWith('/main.lua')
+    })
+
+    it('should close context menu after selecting an option', () => {
+      // Arrange
+      const onClose = vi.fn()
+      render(<TabBar {...defaultProps} onClose={onClose} />)
+      const tab = screen.getAllByRole('tab')[0]
+
+      // Act
+      fireEvent.contextMenu(tab)
+      fireEvent.click(screen.getByRole('menuitem', { name: /^close$/i }))
+
+      // Assert - menu should be closed
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    })
+
+    it('should disable Close option for pinned tabs', () => {
+      // Arrange
+      const tabsWithPinned = [
+        { path: '/pinned.lua', name: 'pinned.lua', isDirty: false, isPreview: false, type: 'file' as const, isPinned: true },
+      ]
+      render(<TabBar {...defaultProps} tabs={tabsWithPinned} activeTab="/pinned.lua" />)
+      const tab = screen.getByRole('tab')
+
+      // Act
+      fireEvent.contextMenu(tab)
+
+      // Assert
+      const closeItem = screen.getByRole('menuitem', { name: /^close$/i })
+      expect(closeItem).toBeDisabled()
+    })
+  })
+
+  describe('drag and drop', () => {
+    it('should make tabs draggable', () => {
+      // Arrange & Act
+      render(<TabBar {...defaultProps} />)
+
+      // Assert
+      const tabs = screen.getAllByRole('tab')
+      tabs.forEach(tab => {
+        expect(tab).toHaveAttribute('draggable', 'true')
+      })
+    })
+
+    it('should call onReorder when a tab is dropped at a new position', () => {
+      // Arrange
+      const onReorder = vi.fn()
+      render(<TabBar {...defaultProps} onReorder={onReorder} />)
+      const tabs = screen.getAllByRole('tab')
+
+      // Act - simulate drag and drop
+      fireEvent.dragStart(tabs[0], {
+        dataTransfer: { setData: vi.fn(), getData: () => '/main.lua' }
+      })
+      fireEvent.dragOver(tabs[2])
+      fireEvent.drop(tabs[2], {
+        dataTransfer: { getData: () => '/main.lua' }
+      })
+
+      // Assert
+      expect(onReorder).toHaveBeenCalledWith('/main.lua', 2)
+    })
+
+    it('should not call onReorder when dropped at same position', () => {
+      // Arrange
+      const onReorder = vi.fn()
+      render(<TabBar {...defaultProps} onReorder={onReorder} />)
+      const tabs = screen.getAllByRole('tab')
+
+      // Act - simulate drag and drop to same position
+      fireEvent.dragStart(tabs[0], {
+        dataTransfer: { setData: vi.fn(), getData: () => '/main.lua' }
+      })
+      fireEvent.dragOver(tabs[0])
+      fireEvent.drop(tabs[0], {
+        dataTransfer: { getData: () => '/main.lua' }
+      })
+
+      // Assert
+      expect(onReorder).not.toHaveBeenCalled()
+    })
+
+    it('should apply drag-over class when dragging over a tab', () => {
+      // Arrange
+      render(<TabBar {...defaultProps} />)
+      const tabs = screen.getAllByRole('tab')
+
+      // Act
+      fireEvent.dragStart(tabs[0], {
+        dataTransfer: { setData: vi.fn() }
+      })
+      fireEvent.dragEnter(tabs[1])
+
+      // Assert
+      expect(tabs[1].className).toMatch(/_dragOver_/)
+    })
+
+    it('should remove drag-over class when drag leaves', () => {
+      // Arrange
+      render(<TabBar {...defaultProps} />)
+      const tabs = screen.getAllByRole('tab')
+
+      // Act
+      fireEvent.dragStart(tabs[0], {
+        dataTransfer: { setData: vi.fn() }
+      })
+      fireEvent.dragEnter(tabs[1])
+      fireEvent.dragLeave(tabs[1])
+
+      // Assert
+      expect(tabs[1].className).not.toMatch(/_dragOver_/)
+    })
+  })
+
   describe('preview tabs', () => {
     it('should apply preview class to preview tabs', () => {
       // Arrange
       const tabsWithPreview = [
-        { path: '/main.lua', name: 'main.lua', isDirty: false, isPreview: false, type: 'file' as const },
-        { path: '/preview.lua', name: 'preview.lua', isDirty: false, isPreview: true, type: 'file' as const },
+        { path: '/main.lua', name: 'main.lua', isDirty: false, isPreview: false, type: 'file' as const, isPinned: false },
+        { path: '/preview.lua', name: 'preview.lua', isDirty: false, isPreview: true, type: 'file' as const, isPinned: false },
       ]
 
       // Act
@@ -443,7 +728,7 @@ describe('TabBar', () => {
     it('should show preview tab name in italics via CSS class', () => {
       // Arrange
       const tabsWithPreview = [
-        { path: '/preview.lua', name: 'preview.lua', isDirty: false, isPreview: true, type: 'file' as const },
+        { path: '/preview.lua', name: 'preview.lua', isDirty: false, isPreview: true, type: 'file' as const, isPinned: false },
       ]
 
       // Act
@@ -457,7 +742,7 @@ describe('TabBar', () => {
     it('should not apply preview class to permanent tabs', () => {
       // Arrange
       const tabsWithPermanent = [
-        { path: '/permanent.lua', name: 'permanent.lua', isDirty: false, isPreview: false, type: 'file' as const },
+        { path: '/permanent.lua', name: 'permanent.lua', isDirty: false, isPreview: false, type: 'file' as const, isPinned: false },
       ]
 
       // Act
