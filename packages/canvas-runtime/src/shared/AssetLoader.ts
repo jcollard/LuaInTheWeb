@@ -116,6 +116,27 @@ export class AssetLoader {
   }
 
   /**
+   * Check if a path is an origin-relative web path (e.g., /images/foo.png).
+   * These paths should be loaded via HTTP relative to the current origin.
+   */
+  private isOriginRelativePath(path: string): boolean {
+    // Must start with / but not // (protocol-relative URL)
+    // and must be in browser context with window.location available
+    if (!path.startsWith('/') || path.startsWith('//')) {
+      return false;
+    }
+    // Check if we're in a browser context
+    return typeof window !== 'undefined' && typeof window.location !== 'undefined';
+  }
+
+  /**
+   * Resolve an origin-relative path to a full URL.
+   */
+  private resolveOriginRelativePath(path: string): string {
+    return `${window.location.origin}${path}`;
+  }
+
+  /**
    * Load an asset from the filesystem or via HTTP URL.
    *
    * @param definition - The asset definition specifying name, path, and type
@@ -128,6 +149,12 @@ export class AssetLoader {
     // Handle HTTP URLs separately
     if (this.isHttpUrl(path)) {
       return this.loadAssetFromUrl(name, path);
+    }
+
+    // Handle origin-relative paths (e.g., /examples-images/ship.png)
+    if (this.isOriginRelativePath(path)) {
+      const fullUrl = this.resolveOriginRelativePath(path);
+      return this.loadAssetFromUrl(name, fullUrl);
     }
 
     // Resolve filesystem path

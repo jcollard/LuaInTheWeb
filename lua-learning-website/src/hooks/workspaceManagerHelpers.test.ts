@@ -608,22 +608,24 @@ describe('workspaceManagerHelpers', () => {
       expect(workspace.filesystem.isFile('ascii_world.lua')).toBe(true)
     })
 
-    it('filesystem contains shapes.lua file', () => {
+    it('filesystem contains canvas directory with shapes.lua', () => {
       const workspace = createExamplesWorkspace()
-      expect(workspace.filesystem.exists('shapes.lua')).toBe(true)
-      expect(workspace.filesystem.isFile('shapes.lua')).toBe(true)
+      expect(workspace.filesystem.exists('canvas')).toBe(true)
+      expect(workspace.filesystem.isDirectory('canvas')).toBe(true)
+      expect(workspace.filesystem.exists('canvas/shapes.lua')).toBe(true)
+      expect(workspace.filesystem.isFile('canvas/shapes.lua')).toBe(true)
     })
 
-    it('filesystem contains canvas_demo.lua file', () => {
+    it('filesystem contains canvas/demo.lua file', () => {
       const workspace = createExamplesWorkspace()
-      expect(workspace.filesystem.exists('canvas_demo.lua')).toBe(true)
-      expect(workspace.filesystem.isFile('canvas_demo.lua')).toBe(true)
+      expect(workspace.filesystem.exists('canvas/demo.lua')).toBe(true)
+      expect(workspace.filesystem.isFile('canvas/demo.lua')).toBe(true)
     })
 
-    it('filesystem lists 7 example files and 1 subdirectory in root', () => {
+    it('filesystem lists 5 example files and 2 subdirectories in root', () => {
       const workspace = createExamplesWorkspace()
       const entries = workspace.filesystem.listDirectory('/')
-      expect(entries).toHaveLength(8)
+      expect(entries).toHaveLength(7)
       const names = entries.map((e) => e.name)
       // Files
       expect(names).toContain('hello.lua')
@@ -631,10 +633,9 @@ describe('workspaceManagerHelpers', () => {
       expect(names).toContain('mad_takes.lua')
       expect(names).toContain('adventure.lua')
       expect(names).toContain('ascii_world.lua')
-      expect(names).toContain('shapes.lua')
-      expect(names).toContain('canvas_demo.lua')
-      // Subdirectory
+      // Subdirectories
       expect(names).toContain('ascii_world')
+      expect(names).toContain('canvas')
     })
 
     it('ascii_world directory exists', () => {
@@ -706,18 +707,26 @@ describe('workspaceManagerHelpers', () => {
       expect(content).toContain('ascii_world/game')
     })
 
-    it('shapes.lua demonstrates canvas drawing', () => {
+    it('canvas/shapes.lua demonstrates canvas drawing', () => {
       const workspace = createExamplesWorkspace()
-      const content = workspace.filesystem.readFile('shapes.lua')
+      const content = workspace.filesystem.readFile('canvas/shapes.lua')
       expect(content).toContain('require')
       expect(content).toContain('canvas')
     })
 
-    it('canvas_demo.lua demonstrates comprehensive canvas API', () => {
+    it('canvas/demo.lua demonstrates comprehensive canvas API', () => {
       const workspace = createExamplesWorkspace()
-      const content = workspace.filesystem.readFile('canvas_demo.lua')
+      const content = workspace.filesystem.readFile('canvas/demo.lua')
       expect(content).toContain('require')
       expect(content).toContain('canvas')
+    })
+
+    it('canvas directory contains space_shooter.lua', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.filesystem.exists('canvas/space_shooter.lua')).toBe(true)
+      expect(workspace.filesystem.isFile('canvas/space_shooter.lua')).toBe(true)
+      const content = workspace.filesystem.readFile('canvas/space_shooter.lua')
+      expect(content).toContain('canvas.assets.image')
     })
 
     it('filesystem is read-only (cannot write)', () => {
