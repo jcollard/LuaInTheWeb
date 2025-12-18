@@ -4,6 +4,7 @@
  */
 import { CanvasGamePanel } from '../CanvasGamePanel'
 import type { TabInfo } from '../TabBar'
+import { useCanvasScaling } from '../../hooks/useCanvasScaling'
 import styles from './IDELayout.module.css'
 
 export interface CanvasTabContentProps {
@@ -32,6 +33,8 @@ export function CanvasTabContent({
   onExit,
   onCanvasReady,
 }: CanvasTabContentProps) {
+  const { scalingMode, setScalingMode } = useCanvasScaling()
+
   return (
     <div className={styles.canvasContainer}>
       <div className={styles.canvasToolbar}>
@@ -61,6 +64,8 @@ export function CanvasTabContent({
         code={canvasCode}
         onExit={onExit}
         onCanvasReady={activeTab && onCanvasReady ? (canvas) => onCanvasReady(activeTab, canvas) : undefined}
+        scalingMode={scalingMode}
+        onScalingModeChange={setScalingMode}
       />
     </div>
   )
