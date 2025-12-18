@@ -410,6 +410,7 @@ function IDELayoutInner({
                   onFileSystemChange={refreshFileTree}
                   canvasCallbacks={canvasCallbacks}
                   onFileMove={handleShellFileMove}
+                  onRequestOpenFile={openFile}
                 />
                 </IDEPanel>
               </IDEPanelGroup>

@@ -78,6 +78,8 @@ export interface UseShellOptions {
   canvasCallbacks?: ShellCanvasCallbacks
   /** Callback invoked when a file or directory is moved/renamed via mv command */
   onFileMove?: (oldPath: string, newPath: string, isDirectory: boolean) => void
+  /** Callback invoked when the 'open' command requests to open a file in the editor */
+  onRequestOpenFile?: (filePath: string) => void
 }
 
 /**
@@ -237,6 +239,8 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
         // Canvas callbacks for canvas.start()/stop() support
         onRequestCanvasTab: options?.canvasCallbacks?.onRequestCanvasTab,
         onCloseCanvasTab: options?.canvasCallbacks?.onCloseCanvasTab,
+        // Editor integration callback for 'open' command
+        onRequestOpenFile: options?.onRequestOpenFile,
       }
 
       // Execute the command using the new interface

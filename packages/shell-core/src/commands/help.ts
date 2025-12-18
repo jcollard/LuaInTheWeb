@@ -21,7 +21,11 @@ export function createHelpCommand(registry: CommandRegistry): Command {
 
       // If a specific command is requested
       if (commandName) {
-        const command = registry.get(commandName)
+        // Try legacy Command first
+        const legacyCommand = registry.get(commandName)
+        // Try ICommand if not found
+        const iCommand = !legacyCommand ? registry.getICommand(commandName) : null
+        const command = legacyCommand || iCommand
 
         if (!command) {
           return {
@@ -45,10 +49,10 @@ export function createHelpCommand(registry: CommandRegistry): Command {
         }
       }
 
-      // List all commands
-      const commands = registry.list()
+      // List all commands (both legacy Command and ICommand)
+      const allCommandNames = registry.names()
 
-      if (commands.length === 0) {
+      if (allCommandNames.length === 0) {
         return {
           exitCode: 0,
           stdout: 'No commands available',
@@ -56,16 +60,24 @@ export function createHelpCommand(registry: CommandRegistry): Command {
         }
       }
 
-      // Sort commands alphabetically
-      const sortedCommands = [...commands].sort((a, b) =>
-        a.name.localeCompare(b.name)
-      )
+      // Sort command names alphabetically
+      const sortedNames = [...allCommandNames].sort((a, b) => a.localeCompare(b))
 
       // Format output
       const lines = ['Available commands:', '']
 
-      for (const cmd of sortedCommands) {
-        lines.push(`  ${cmd.name.padEnd(12)} ${cmd.description}`)
+      for (const name of sortedNames) {
+        // Try legacy Command first
+        const legacyCmd = registry.get(name)
+        if (legacyCmd) {
+          lines.push(`  ${legacyCmd.name.padEnd(12)} ${legacyCmd.description}`)
+          continue
+        }
+        // Try ICommand
+        const iCmd = registry.getICommand(name)
+        if (iCmd) {
+          lines.push(`  ${iCmd.name.padEnd(12)} ${iCmd.description}`)
+        }
       }
 
       lines.push('')
