@@ -98,10 +98,68 @@
   overflow: auto;
 }
 
+/* Auto-fit mode: canvas scales to fit container, no scrollbars */
+.canvasContainerFit {
+  overflow: hidden;
+}
+
+/* Native mode: canvas at native size, scrollbars if needed */
+.canvasContainerNative {
+  overflow: auto;
+}
+
 .canvas {
   border: 1px solid var(--theme-border);
   background: #000;
   outline: none;
+}
+
+/* Auto-fit mode: scale canvas to fit while maintaining aspect ratio */
+.canvasFit {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+/* Native mode: canvas at its native size */
+.canvasNative {
+  /* Canvas uses its native width/height attributes */
+}
+
+/* Scaling mode selector */
+.scalingSelector {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.scalingLabel {
+  font-size: 12px;
+  color: var(--theme-editor-fg);
+  opacity: 0.7;
+}
+
+.scalingSelect {
+  padding: 2px 6px;
+  border: 1px solid var(--theme-border);
+  border-radius: 4px;
+  background: var(--theme-panel-bg);
+  color: var(--theme-editor-fg);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.scalingSelect:hover {
+  border-color: var(--theme-indicator-active);
+}
+
+.scalingSelect:focus {
+  outline: none;
+  border-color: var(--theme-indicator-active);
+  box-shadow: 0 0 0 2px var(--theme-focus-ring);
 }
 
 .canvas:focus {

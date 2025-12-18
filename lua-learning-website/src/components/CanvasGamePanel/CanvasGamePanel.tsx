@@ -2,8 +2,9 @@
  * CanvasGamePanel component.
  * Renders the canvas game and provides controls.
  */
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, type ChangeEvent } from 'react'
 import { useCanvasGame } from '../../hooks/useCanvasGame'
+import type { CanvasScalingMode } from '../../hooks/useCanvasScaling'
 import styles from './CanvasGamePanel.module.css'
 
 export interface CanvasGamePanelProps {
@@ -21,6 +22,10 @@ export interface CanvasGamePanelProps {
   onExit?: (code: number) => void
   /** Callback when canvas element is ready (for shell integration) */
   onCanvasReady?: (canvas: HTMLCanvasElement) => void
+  /** Canvas scaling mode: 'fit' (auto-fit to container) or 'native' (original size) */
+  scalingMode?: CanvasScalingMode
+  /** Callback when scaling mode is changed (enables the scaling selector UI) */
+  onScalingModeChange?: (mode: CanvasScalingMode) => void
 }
 
 export function CanvasGamePanel({
@@ -31,6 +36,8 @@ export function CanvasGamePanel({
   className,
   onExit,
   onCanvasReady,
+  scalingMode = 'fit',
+  onScalingModeChange,
 }: CanvasGamePanelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -71,7 +78,25 @@ export function CanvasGamePanel({
     }
   }, [isPaused, pauseGame, resumeGame])
 
+  const handleScalingModeChange = useCallback(
+    (e: ChangeEvent<HTMLSelectElement>) => {
+      onScalingModeChange?.(e.target.value as CanvasScalingMode)
+    },
+    [onScalingModeChange]
+  )
+
   const panelClassName = [styles.panel, className].filter(Boolean).join(' ')
+
+  // Build canvas container and canvas class names based on scaling mode
+  const containerClassName = [
+    styles.canvasContainer,
+    scalingMode === 'fit' ? styles.canvasContainerFit : styles.canvasContainerNative,
+  ].join(' ')
+
+  const canvasClassName = [
+    styles.canvas,
+    scalingMode === 'fit' ? styles.canvasFit : styles.canvasNative,
+  ].join(' ')
 
   return (
     <div className={panelClassName}>
@@ -100,13 +125,32 @@ export function CanvasGamePanel({
             </button>
           </>
         )}
+
+        {/* Scaling mode selector */}
+        {onScalingModeChange && (
+          <div className={styles.scalingSelector}>
+            <label htmlFor="canvas-scaling-mode" className={styles.scalingLabel}>
+              Scale:
+            </label>
+            <select
+              id="canvas-scaling-mode"
+              className={styles.scalingSelect}
+              value={scalingMode}
+              onChange={handleScalingModeChange}
+              aria-label="Scale"
+            >
+              <option value="fit">Fit</option>
+              <option value="native">1x</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Canvas container */}
-      <div className={styles.canvasContainer}>
+      <div className={containerClassName}>
         <canvas
           ref={canvasRef}
-          className={styles.canvas}
+          className={canvasClassName}
           width={width}
           height={height}
           tabIndex={0}
