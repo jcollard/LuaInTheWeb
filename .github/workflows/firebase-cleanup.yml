@@ -25,7 +25,23 @@ jobs:
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-sa.json" >> $GITHUB_ENV
 
       - name: Delete preview channel
-        run: firebase hosting:channel:delete pr${{ github.event.pull_request.number }} --project adventuresinlua --force || true
+        run: |
+          # The Firebase action creates channels with format: pr<number>-<branch-name-truncated>
+          # List all channels and find any matching this PR number
+          PR_NUM=${{ github.event.pull_request.number }}
+
+          # Get list of channels, extract channel ID from full path, find ones starting with pr<number>-
+          # Channel names are like: projects/adventuresinlua/sites/adventuresinlua/channels/pr340-336-persist-editor-t
+          CHANNELS=$(firebase hosting:channel:list --project adventuresinlua --json 2>/dev/null | jq -r '.result.channels[].name // empty' | sed 's|.*/channels/||' | grep -E "^pr${PR_NUM}-" || true)
+
+          if [ -n "$CHANNELS" ]; then
+            for channel in $CHANNELS; do
+              echo "Deleting channel: $channel"
+              firebase hosting:channel:delete "$channel" --project adventuresinlua --force || true
+            done
+          else
+            echo "No channels found matching pr${PR_NUM}-*"
+          fi
         working-directory: lua-learning-website
 
       - name: Cleanup credentials
