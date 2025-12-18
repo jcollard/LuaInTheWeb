@@ -533,73 +533,128 @@ Check if mouse button is held.
   })
 
   describe('createLibraryWorkspace', () => {
+    // Mock libs files that match the expected content structure
+    const mockLibsFiles: Record<string, string> = {
+      'shell.lua': `-- shell.lua - Terminal control library
+-- Load with: local shell = require('shell')
+
+local shell = {}
+
+shell.BLACK = '#000000'
+shell.RED = '#FF0000'
+shell.GREEN = '#00FF00'
+
+function shell.clear() end
+function shell.foreground(arg1, arg2, arg3) end
+function shell.background(arg1, arg2, arg3) end
+function shell.reset() end
+function shell.set_cursor(x, y) end
+function shell.cursor_up(n) end
+function shell.cursor_down(n) end
+function shell.cursor_left(n) end
+function shell.cursor_right(n) end
+function shell.save_cursor() end
+function shell.restore_cursor() end
+function shell.hide_cursor() end
+function shell.show_cursor() end
+function shell.width() return 80 end
+function shell.height() return 24 end
+
+return shell`,
+      'canvas.lua': `-- canvas.lua - Canvas Graphics Library
+-- Load with: local canvas = require('canvas')
+
+local canvas = {}
+
+function canvas.tick(callback) end
+function canvas.start() end
+function canvas.stop() end
+function canvas.clear() end
+function canvas.set_color(r, g, b, a) end
+function canvas.draw_rect(x, y, w, h) end
+function canvas.fill_rect(x, y, w, h) end
+function canvas.draw_circle(x, y, r) end
+function canvas.fill_circle(x, y, r) end
+function canvas.draw_line(x1, y1, x2, y2) end
+function canvas.draw_text(x, y, text) end
+function canvas.get_delta() return 0.016 end
+function canvas.get_time() return 0 end
+function canvas.is_key_down(key) return false end
+function canvas.is_key_pressed(key) return false end
+function canvas.get_mouse_x() return 0 end
+function canvas.get_mouse_y() return 0 end
+function canvas.is_mouse_down(button) return false end
+
+return canvas`,
+    }
+
     it('creates a workspace with id LIBRARY_WORKSPACE_ID', () => {
-      const workspace = createLibraryWorkspace()
+      const workspace = createLibraryWorkspace(mockLibsFiles)
       expect(workspace.id).toBe(LIBRARY_WORKSPACE_ID)
     })
 
     it('creates a workspace with name LIBRARY_WORKSPACE_NAME', () => {
-      const workspace = createLibraryWorkspace()
+      const workspace = createLibraryWorkspace(mockLibsFiles)
       expect(workspace.name).toBe(LIBRARY_WORKSPACE_NAME)
     })
 
     it('creates a workspace with type "library"', () => {
-      const workspace = createLibraryWorkspace()
+      const workspace = createLibraryWorkspace(mockLibsFiles)
       expect(workspace.type).toBe('library')
     })
 
     it('creates a workspace with mountPath LIBRARY_MOUNT_PATH', () => {
-      const workspace = createLibraryWorkspace()
+      const workspace = createLibraryWorkspace(mockLibsFiles)
       expect(workspace.mountPath).toBe(LIBRARY_MOUNT_PATH)
     })
 
     it('creates a workspace with status "connected"', () => {
-      const workspace = createLibraryWorkspace()
+      const workspace = createLibraryWorkspace(mockLibsFiles)
       expect(workspace.status).toBe('connected')
     })
 
     it('creates a workspace with isReadOnly set to true', () => {
-      const workspace = createLibraryWorkspace()
+      const workspace = createLibraryWorkspace(mockLibsFiles)
       expect(workspace.isReadOnly).toBe(true)
     })
 
     it('filesystem contains shell.lua file', () => {
-      const workspace = createLibraryWorkspace()
+      const workspace = createLibraryWorkspace(mockLibsFiles)
       expect(workspace.filesystem.exists('shell.lua')).toBe(true)
       expect(workspace.filesystem.isFile('shell.lua')).toBe(true)
     })
 
     it('filesystem contains canvas.lua file', () => {
-      const workspace = createLibraryWorkspace()
+      const workspace = createLibraryWorkspace(mockLibsFiles)
       expect(workspace.filesystem.exists('canvas.lua')).toBe(true)
       expect(workspace.filesystem.isFile('canvas.lua')).toBe(true)
     })
 
     it('canvas.lua contains canvas library code', () => {
-      const workspace = createLibraryWorkspace()
+      const workspace = createLibraryWorkspace(mockLibsFiles)
       const content = workspace.filesystem.readFile('canvas.lua')
       expect(content).toContain('canvas')
       expect(content).toContain('canvas.tick')
     })
 
     it('canvas.lua documents drawing functions', () => {
-      const workspace = createLibraryWorkspace()
+      const workspace = createLibraryWorkspace(mockLibsFiles)
       const content = workspace.filesystem.readFile('canvas.lua')
       expect(content).toContain('canvas.clear')
       expect(content).toContain('canvas.set_color')
-      expect(content).toContain('canvas.rect')
+      expect(content).toContain('canvas.draw_rect')
       expect(content).toContain('canvas.fill_rect')
     })
 
     it('canvas.lua documents timing functions', () => {
-      const workspace = createLibraryWorkspace()
+      const workspace = createLibraryWorkspace(mockLibsFiles)
       const content = workspace.filesystem.readFile('canvas.lua')
       expect(content).toContain('canvas.get_delta')
       expect(content).toContain('canvas.get_time')
     })
 
     it('canvas.lua documents input functions', () => {
-      const workspace = createLibraryWorkspace()
+      const workspace = createLibraryWorkspace(mockLibsFiles)
       const content = workspace.filesystem.readFile('canvas.lua')
       expect(content).toContain('canvas.is_key_down')
       expect(content).toContain('canvas.is_key_pressed')
@@ -609,7 +664,7 @@ Check if mouse button is held.
     })
 
     it('filesystem lists shell.lua and canvas.lua in root directory', () => {
-      const workspace = createLibraryWorkspace()
+      const workspace = createLibraryWorkspace(mockLibsFiles)
       const entries = workspace.filesystem.listDirectory('/')
       expect(entries).toHaveLength(2)
       const names = entries.map((e) => e.name)
@@ -618,14 +673,14 @@ Check if mouse button is held.
     })
 
     it('filesystem is read-only (cannot write)', () => {
-      const workspace = createLibraryWorkspace()
+      const workspace = createLibraryWorkspace(mockLibsFiles)
       expect(() => {
         workspace.filesystem.writeFile('test.lua', 'content')
       }).toThrow('read-only')
     })
 
     it('filesystem is read-only (cannot delete)', () => {
-      const workspace = createLibraryWorkspace()
+      const workspace = createLibraryWorkspace(mockLibsFiles)
       expect(() => {
         workspace.filesystem.delete('canvas.lua')
       }).toThrow('read-only')

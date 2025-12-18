@@ -5,12 +5,9 @@
  */
 
 import type { IFileSystem } from '@lua-learning/shell-core'
-import {
-  generateShellLibrarySource,
-  generateCanvasLibrarySource,
-} from './libraryDocumentation'
 import { fetchExamplesContent } from './examplesFetcher'
 import { fetchDocsContent } from './docsFetcher'
+import { fetchLibsContent } from './libsFetcher'
 import type {
   Workspace,
   PersistedWorkspace,
@@ -139,21 +136,16 @@ export function createDefaultWorkspace(): Workspace {
 }
 
 /**
- * Create the library workspace containing built-in libraries.
+ * Create the library workspace from pre-fetched content.
  * This workspace is read-only and contains files like shell.lua.
  */
-export function createLibraryWorkspace(): Workspace {
-  const libraryFiles: Record<string, string> = {
-    'shell.lua': generateShellLibrarySource(),
-    'canvas.lua': generateCanvasLibrarySource(),
-  }
-
+export function createLibraryWorkspace(files: Record<string, string>): Workspace {
   return {
     id: LIBRARY_WORKSPACE_ID,
     name: LIBRARY_WORKSPACE_NAME,
     type: 'library',
     mountPath: LIBRARY_MOUNT_PATH,
-    filesystem: createReadOnlyFileSystem(libraryFiles),
+    filesystem: createReadOnlyFileSystem(files),
     status: 'connected',
     isReadOnly: true,
   }
@@ -248,6 +240,18 @@ export async function fetchAndCreateDocsWorkspace(): Promise<Workspace | null> {
 }
 
 /**
+ * Fetch libs content and create the libs workspace.
+ * Returns null if the fetch fails.
+ */
+export async function fetchAndCreateLibsWorkspace(): Promise<Workspace | null> {
+  const content = await fetchLibsContent()
+  if (Object.keys(content.text).length === 0) {
+    return null
+  }
+  return createLibraryWorkspace(content.text)
+}
+
+/**
  * Migrate legacy workspace data that may have rootPath instead of mountPath.
  */
 export function migratePersistedWorkspace(
@@ -297,20 +301,16 @@ export function createDisconnectedFileSystem(): IFileSystem {
 
 /**
  * Initialize workspaces from localStorage or create default.
- * Always includes the library workspace for built-in libraries.
  *
- * Note: The docs, examples and book workspaces are loaded asynchronously via hooks.
+ * Note: The docs, examples, book, and libs workspaces are loaded asynchronously via hooks.
  */
 export function initializeWorkspaces(): WorkspaceManagerState {
   const persistedWorkspaces = loadPersistedWorkspaces()
 
-  // Library workspace is always present (not persisted, always created fresh)
-  const libraryWorkspace = createLibraryWorkspace()
-
   if (!persistedWorkspaces || persistedWorkspaces.length === 0) {
     const defaultWorkspace = createDefaultWorkspace()
     return {
-      workspaces: [defaultWorkspace, libraryWorkspace],
+      workspaces: [defaultWorkspace],
     }
   }
 
@@ -353,9 +353,6 @@ export function initializeWorkspaces(): WorkspaceManagerState {
   if (!hasDefault) {
     workspaces.unshift(createDefaultWorkspace())
   }
-
-  // Add library workspace (always present, not persisted)
-  workspaces.push(libraryWorkspace)
 
   return {
     workspaces,
