@@ -1,9 +1,9 @@
 # Epic #324: Explore moving files for read-only workspaces to public/ and using manifest rather than adding them to ts files
 
-**Status:** In Progress (3/5 complete)
+**Status:** In Progress (4/5 complete)
 **Branch:** epic-324
 **Created:** 2025-12-18
-**Last Updated:** 2025-12-18T18:57:26Z
+**Last Updated:** 2025-12-18T19:23:34Z
 
 ## Overview
 
@@ -47,7 +47,7 @@ Migrate to a manifest-based approach (already used for book content):
 | #328 | Create shared workspace fetcher infrastructure | ✅ Complete | 328-create-shared-workspace-fetcher-infrastructure | Merged PR #334 |
 | #329 | Migrate Examples workspace to public/ | ✅ Complete | 329-migrate-examples-workspace-to-public | Merged PR #338 |
 | #330 | Migrate Docs workspace to public/ | ✅ Complete | 330-migrate-docs-workspace-to-public | Merged PR #339 |
-| #331 | Migrate Library workspace to public/ | ⏳ Pending | - | Depends on #328 |
+| #331 | Migrate Library workspace to public/ | ✅ Complete | 331-migrate-library-workspace-to-public | Merged PR #341 |
 | #332 | Cleanup and verify read-only workspace migration | ⏳ Pending | - | Depends on #328, #329, #330, #331 |
 
 **Status Legend:**
@@ -81,6 +81,11 @@ Migrate to a manifest-based approach (already used for book content):
 - #330: Created docsFetcher.ts with 100% mutation score
 - #330: Docs workspace now loads asynchronously like examples/book
 - #330: Completed - merged PR #339 to epic-324
+- #331: Migrated library workspace to public/libs/ (shell.lua, canvas.lua)
+- #331: Deleted libraryDocumentation.ts (~41 lines)
+- #331: Created libsFetcher.ts (100% mutation score) and useLibsWorkspaceLoader.ts (86.67%)
+- #331: Library workspace now loads asynchronously like docs/examples/book
+- #331: Completed - merged PR #341 to epic-324
 
 ## Key Files
 
@@ -92,6 +97,11 @@ Migrate to a manifest-based approach (already used for book content):
 - `src/hooks/useDocsWorkspaceLoader.ts` - Hook to async load docs workspace
 - `public/docs/manifest.json` - Manifest for docs workspace files
 - `public/docs/*.md` - Static documentation files (shell.md, canvas.md, lua/*.md)
+- `src/hooks/libsFetcher.ts` - Libs workspace content fetcher (100% mutation score)
+- `src/hooks/useLibsWorkspaceLoader.ts` - Hook to async load libs workspace
+- `public/libs/manifest.json` - Manifest for libs workspace files
+- `public/libs/shell.lua` - Shell/terminal library source (~210 lines)
+- `public/libs/canvas.lua` - Canvas/graphics library source (~390 lines)
 
 ## Open Questions
 
