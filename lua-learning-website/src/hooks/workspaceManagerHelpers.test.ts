@@ -12,6 +12,7 @@ vi.mock('@lua-learning/lua-runtime', () => ({
 
 import {
   createDocsWorkspace,
+  fetchAndCreateDocsWorkspace,
   createLibraryWorkspace,
   createBookWorkspace,
   fetchAndCreateBookWorkspace,
@@ -433,6 +434,101 @@ Check if mouse button is held.
       const workspace = createDocsWorkspace(mockDocsFiles)
       const content = workspace.filesystem.readFile('canvas.md')
       expect(content).toContain('```lua')
+    })
+  })
+
+  describe('fetchAndCreateDocsWorkspace', () => {
+    const mockFetch = vi.fn()
+
+    beforeEach(() => {
+      vi.stubGlobal('fetch', mockFetch)
+      mockFetch.mockReset()
+    })
+
+    afterEach(() => {
+      vi.unstubAllGlobals()
+    })
+
+    it('returns a workspace when fetch succeeds', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ name: 'Docs', files: ['shell.md'] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          text: () => Promise.resolve('# Shell Library'),
+        })
+
+      const workspace = await fetchAndCreateDocsWorkspace()
+
+      expect(workspace).not.toBeNull()
+      expect(workspace?.id).toBe(DOCS_WORKSPACE_ID)
+      expect(workspace?.type).toBe('docs')
+    })
+
+    it('returns null when manifest fetch fails', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+      })
+
+      const workspace = await fetchAndCreateDocsWorkspace()
+
+      expect(workspace).toBeNull()
+    })
+
+    it('returns null when no files are fetched', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ name: 'Empty', files: [] }),
+      })
+
+      const workspace = await fetchAndCreateDocsWorkspace()
+
+      expect(workspace).toBeNull()
+    })
+
+    it('fetches from /docs manifest', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ name: 'Docs', files: ['shell.md'] }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          text: () => Promise.resolve('# Shell'),
+        })
+
+      await fetchAndCreateDocsWorkspace()
+
+      expect(mockFetch).toHaveBeenNthCalledWith(1, '/docs/manifest.json')
+    })
+
+    it('creates workspace with fetched markdown files', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              name: 'Docs',
+              files: ['shell.md', 'canvas.md'],
+            }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          text: () => Promise.resolve('# Shell Library'),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          text: () => Promise.resolve('# Canvas Library'),
+        })
+
+      const workspace = await fetchAndCreateDocsWorkspace()
+
+      expect(workspace).not.toBeNull()
+      expect(workspace?.filesystem.exists('shell.md')).toBe(true)
+      expect(workspace?.filesystem.exists('canvas.md')).toBe(true)
     })
   })
 
