@@ -172,10 +172,12 @@ test.describe('Enhanced Editor Tabs', () => {
         await page.waitForTimeout(100)
       }
 
-      // Assert - Order should be swapped (this may depend on implementation)
-      // Note: The actual behavior depends on how the reorder logic is wired up
-      // This test validates that drag events are handled without errors
+      // Assert - Order should be swapped: second.lua is now first
       await expect(editorPanel.getByRole('tab')).toHaveCount(2)
+      const newFirstTab = editorPanel.getByRole('tab').first()
+      const newSecondTab = editorPanel.getByRole('tab').last()
+      await expect(newFirstTab).toContainText('second.lua')
+      await expect(newSecondTab).toContainText('first.lua')
     })
   })
 })
