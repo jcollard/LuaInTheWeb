@@ -1,0 +1,7 @@
+{
+  "name": "Lua Libraries",
+  "files": [
+    "shell.lua",
+    "canvas.lua"
+  ]
+}

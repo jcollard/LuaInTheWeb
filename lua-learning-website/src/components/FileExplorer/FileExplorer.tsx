@@ -1,4 +1,4 @@
-/* eslint-disable max-lines */
+ 
 import { useCallback, useEffect, useState, useMemo, type MouseEvent } from 'react'
 import { FileTree } from '../FileTree'
 import { ContextMenu } from '../ContextMenu'

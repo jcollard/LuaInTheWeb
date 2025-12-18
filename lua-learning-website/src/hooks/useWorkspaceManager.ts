@@ -46,6 +46,9 @@ import {
   createDisconnectedFileSystem,
 } from './workspaceManagerHelpers'
 import { useBookWorkspaceLoader } from './useBookWorkspaceLoader'
+import { useDocsWorkspaceLoader } from './useDocsWorkspaceLoader'
+import { useExamplesWorkspaceLoader } from './useExamplesWorkspaceLoader'
+import { useLibsWorkspaceLoader } from './useLibsWorkspaceLoader'
 
 // Re-export for backwards compatibility
 export { WORKSPACE_STORAGE_KEY, DEFAULT_WORKSPACE_ID } from './workspaceManagerHelpers'
@@ -63,14 +66,18 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
   const isInitialMount = useRef(true)
 
   // Save to localStorage whenever state changes (except initial mount)
-  // Filter out library, docs, and book workspaces as they are ephemeral and recreated on startup
+  // Filter out library, docs, examples, and book workspaces as they are ephemeral and recreated on startup
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false
       return
     }
     const persistableWorkspaces = state.workspaces.filter(
-      (w) => w.type !== 'library' && w.type !== 'docs' && w.type !== 'book'
+      (w) =>
+        w.type !== 'library' &&
+        w.type !== 'docs' &&
+        w.type !== 'book' &&
+        w.type !== 'examples'
     )
     saveWorkspaces(persistableWorkspaces)
   }, [state])
@@ -99,6 +106,15 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
 
   // Fetch and add book workspace on mount
   useBookWorkspaceLoader(setState)
+
+  // Fetch and add docs workspace on mount
+  useDocsWorkspaceLoader(setState)
+
+  // Fetch and add examples workspace on mount
+  useExamplesWorkspaceLoader(setState)
+
+  // Fetch and add libs workspace on mount
+  useLibsWorkspaceLoader(setState)
 
   // Create CompositeFileSystem from connected workspaces
   const compositeFileSystem = useMemo(() => {
