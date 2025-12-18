@@ -33,6 +33,96 @@ describe('LuaCommand', () => {
     }
   })
 
+  describe('--lint flag', () => {
+    it('should output nothing for valid Lua file', () => {
+      mockFileSystem.readFile = vi.fn().mockReturnValue('print("hello")')
+
+      const result = command.execute(['--lint', 'test.lua'], context)
+
+      // --lint returns undefined (no process), just outputs directly
+      expect(result).toBeUndefined()
+      expect(context.error).not.toHaveBeenCalled()
+    })
+
+    it('should output error for invalid Lua file', () => {
+      mockFileSystem.readFile = vi.fn().mockReturnValue('print("unclosed')
+
+      command.execute(['--lint', 'test.lua'], context)
+
+      expect(context.error).toHaveBeenCalled()
+      const errorMessage = (context.error as ReturnType<typeof vi.fn>).mock.calls[0][0]
+      expect(errorMessage).toContain('test.lua')
+    })
+
+    it('should include line number in error output', () => {
+      mockFileSystem.readFile = vi.fn().mockReturnValue('x = 1\nprint("unclosed')
+
+      command.execute(['--lint', 'test.lua'], context)
+
+      expect(context.error).toHaveBeenCalled()
+      const errorMessage = (context.error as ReturnType<typeof vi.fn>).mock.calls[0][0]
+      // Should mention line 2 where the error is
+      expect(errorMessage).toMatch(/:\d+/)
+    })
+
+    it('should error if no filename provided', () => {
+      command.execute(['--lint'], context)
+
+      expect(context.error).toHaveBeenCalledWith(
+        expect.stringContaining('filename')
+      )
+    })
+
+    it('should error if file does not exist', () => {
+      mockFileSystem.exists = vi.fn().mockReturnValue(false)
+
+      command.execute(['--lint', 'missing.lua'], context)
+
+      expect(context.error).toHaveBeenCalledWith(
+        expect.stringContaining('not found')
+      )
+    })
+
+    it('should resolve relative paths from cwd', () => {
+      mockFileSystem.getCurrentDirectory = vi.fn().mockReturnValue('/project')
+      mockFileSystem.readFile = vi.fn().mockReturnValue('x = 1')
+
+      command.execute(['--lint', 'src/test.lua'], context)
+
+      expect(mockFileSystem.exists).toHaveBeenCalledWith('/project/src/test.lua')
+    })
+
+    it('should handle absolute paths', () => {
+      mockFileSystem.readFile = vi.fn().mockReturnValue('x = 1')
+
+      command.execute(['--lint', '/absolute/path/test.lua'], context)
+
+      expect(mockFileSystem.exists).toHaveBeenCalledWith('/absolute/path/test.lua')
+    })
+
+    it('should not leak WASM-related error messages', () => {
+      // Various malformed code that might cause WASM issues
+      const badCodes = [
+        'print("unclosed',
+        'if if if',
+        '))))',
+      ]
+
+      for (const code of badCodes) {
+        mockFileSystem.readFile = vi.fn().mockReturnValue(code)
+        ;(context.error as ReturnType<typeof vi.fn>).mockClear()
+
+        command.execute(['--lint', 'test.lua'], context)
+
+        if ((context.error as ReturnType<typeof vi.fn>).mock.calls.length > 0) {
+          const errorMessage = (context.error as ReturnType<typeof vi.fn>).mock.calls[0][0]
+          expect(errorMessage.toLowerCase()).not.toContain('wasm')
+          expect(errorMessage.toLowerCase()).not.toContain('memory access')
+        }
+      }
+    })
+  })
+
   describe('metadata', () => {
     it('should have name "lua"', () => {
       expect(command.name).toBe('lua')
