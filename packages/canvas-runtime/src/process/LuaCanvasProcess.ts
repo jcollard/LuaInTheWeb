@@ -4,7 +4,7 @@
  * Runs Lua canvas games in a Web Worker with main-thread rendering.
  */
 
-import type { IProcess } from '@lua-learning/shell-core';
+import type { IProcess, IFileSystem } from '@lua-learning/shell-core';
 import {
   isSharedArrayBufferAvailable,
   DEFAULT_BUFFER_SIZE,
@@ -16,7 +16,14 @@ import type { IWorkerChannel } from '../channels/IWorkerChannel.js';
 import { GameLoopController } from '../renderer/GameLoopController.js';
 import { CanvasRenderer } from '../renderer/CanvasRenderer.js';
 import { InputCapture } from '../renderer/InputCapture.js';
-import type { WorkerToMainMessage, WorkerState } from '../worker/WorkerMessages.js';
+import { ImageCache } from '../renderer/ImageCache.js';
+import { AssetLoader } from '../shared/AssetLoader.js';
+import type {
+  WorkerToMainMessage,
+  WorkerState,
+  SerializedAsset,
+  AssetRequest,
+} from '../worker/WorkerMessages.js';
 
 /**
  * Options for creating a LuaCanvasProcess.
@@ -30,6 +37,10 @@ export interface LuaCanvasProcessOptions {
   workerUrl?: URL;
   /** Force a specific channel mode (optional, defaults to auto) */
   mode?: ChannelMode;
+  /** Filesystem for loading assets (optional, required for image support) */
+  fileSystem?: IFileSystem;
+  /** Script directory for resolving relative asset paths (optional) */
+  scriptDirectory?: string;
 }
 
 /**
@@ -45,6 +56,8 @@ export class LuaCanvasProcess implements IProcess {
   private readonly canvas: HTMLCanvasElement;
   private readonly workerUrl?: URL;
   private readonly mode: ChannelMode;
+  private readonly fileSystem?: IFileSystem;
+  private readonly scriptDirectory: string;
 
   private worker: Worker | null = null;
   private running = false;
@@ -56,6 +69,7 @@ export class LuaCanvasProcess implements IProcess {
   private renderer: CanvasRenderer | null = null;
   private inputCapture: InputCapture | null = null;
   private channelPairResult: ChannelPairResult | null = null;
+  private imageCache: ImageCache | null = null;
 
   /**
    * Callback invoked when the process produces output.
@@ -92,6 +106,8 @@ export class LuaCanvasProcess implements IProcess {
     this.canvas = options.canvas;
     this.workerUrl = options.workerUrl;
     this.mode = options.mode ?? 'auto';
+    this.fileSystem = options.fileSystem;
+    this.scriptDirectory = options.scriptDirectory ?? '/';
   }
 
   /**
@@ -123,7 +139,8 @@ export class LuaCanvasProcess implements IProcess {
     this.channel.setCanvasSize(this.canvas.width, this.canvas.height);
 
     // Create rendering components
-    this.renderer = new CanvasRenderer(this.canvas);
+    this.imageCache = new ImageCache();
+    this.renderer = new CanvasRenderer(this.canvas, this.imageCache);
     this.gameLoop = new GameLoopController(this.handleFrame.bind(this));
     this.inputCapture = new InputCapture(this.canvas);
 
@@ -194,6 +211,7 @@ export class LuaCanvasProcess implements IProcess {
     this.currentWorkerState = 'stopped';
     this.renderer = null;
     this.channelPairResult = null;
+    this.imageCache = null;
 
     this.onExit(0);
   }
@@ -285,6 +303,10 @@ export class LuaCanvasProcess implements IProcess {
       case 'stateChanged':
         this.handleStateChanged(message.state);
         break;
+
+      case 'assetsNeeded':
+        this.handleAssetsNeeded(message.assets);
+        break;
     }
   }
 
@@ -302,6 +324,62 @@ export class LuaCanvasProcess implements IProcess {
     // Worker is initialized, start the game loop
     if (this.worker) {
       this.worker.postMessage({ type: 'start' });
+    }
+  }
+
+  /**
+   * Handle assetsNeeded message from worker.
+   * Loads assets from the filesystem and sends them to the worker.
+   */
+  private async handleAssetsNeeded(assetRequests: AssetRequest[]): Promise<void> {
+    if (!this.fileSystem) {
+      this.handleError('Assets requested but no filesystem provided');
+      return;
+    }
+
+    if (!this.worker) {
+      return;
+    }
+
+    try {
+      const assetLoader = new AssetLoader(this.fileSystem, this.scriptDirectory);
+      const loadedAssets: SerializedAsset[] = [];
+      const transferList: ArrayBuffer[] = [];
+
+      for (const request of assetRequests) {
+        const loaded = await assetLoader.loadAsset({
+          name: request.name,
+          path: request.path,
+          type: 'image',
+        });
+
+        // Store in image cache for main thread rendering
+        if (this.imageCache && loaded.width && loaded.height) {
+          const blob = new Blob([loaded.data]);
+          const imageBitmap = await createImageBitmap(blob);
+          this.imageCache.set(loaded.name, imageBitmap);
+        }
+
+        // Prepare asset for transfer to worker
+        const serialized: SerializedAsset = {
+          name: loaded.name,
+          data: loaded.data,
+          width: loaded.width ?? 0,
+          height: loaded.height ?? 0,
+        };
+
+        loadedAssets.push(serialized);
+        transferList.push(loaded.data);
+      }
+
+      // Send loaded assets to worker with transferable ArrayBuffers
+      this.worker.postMessage({ type: 'assetsLoaded', assets: loadedAssets }, transferList);
+    } catch (error) {
+      if (error instanceof Error) {
+        this.handleError(error.message);
+      } else {
+        this.handleError('Failed to load assets');
+      }
     }
   }
 
@@ -407,6 +485,7 @@ export class LuaCanvasProcess implements IProcess {
     this.currentWorkerState = 'error';
     this.renderer = null;
     this.channelPairResult = null;
+    this.imageCache = null;
 
     this.onExit(1);
   }

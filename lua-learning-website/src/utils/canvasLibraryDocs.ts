@@ -177,6 +177,60 @@ export const canvasLibraryDocs: Record<string, LibraryDocEntry> = {
     returns: 'nil',
   },
 
+  // Image Drawing
+  draw_image: {
+    name: 'draw_image',
+    signature: 'canvas.draw_image(name, x, y, [width], [height])',
+    description:
+      'Draw an image at the specified position. Optional width/height parameters enable scaling.',
+    library: 'canvas',
+    params: [
+      { name: 'name', description: 'Asset name (registered via canvas.assets.image())' },
+      { name: 'x', description: 'X coordinate of top-left corner' },
+      { name: 'y', description: 'Y coordinate of top-left corner' },
+      { name: 'width', description: 'Scale to this width (optional)' },
+      { name: 'height', description: 'Scale to this height (optional)' },
+    ],
+    returns: 'nil',
+  },
+
+  // Image Assets
+  assets: {
+    name: 'assets',
+    signature: 'canvas.assets',
+    description:
+      'Image asset management table. Use canvas.assets.image() to register images before canvas.start().',
+    library: 'canvas',
+  },
+  'assets.image': {
+    name: 'assets.image',
+    signature: 'canvas.assets.image(name, path)',
+    description:
+      'Register an image asset for loading. Call before canvas.start(). Supported formats: PNG, JPG, JPEG, GIF, WebP, BMP.',
+    library: 'canvas',
+    params: [
+      { name: 'name', description: 'Unique name to reference this asset' },
+      { name: 'path', description: 'Path to image file (relative to script, absolute, or HTTP URL)' },
+    ],
+    returns: 'nil',
+  },
+  'assets.get_width': {
+    name: 'assets.get_width',
+    signature: 'canvas.assets.get_width(name)',
+    description: 'Get the width of a loaded image asset in pixels.',
+    library: 'canvas',
+    params: [{ name: 'name', description: 'The asset name' }],
+    returns: 'number - Width in pixels',
+  },
+  'assets.get_height': {
+    name: 'assets.get_height',
+    signature: 'canvas.assets.get_height(name)',
+    description: 'Get the height of a loaded image asset in pixels.',
+    library: 'canvas',
+    params: [{ name: 'name', description: 'The asset name' }],
+    returns: 'number - Height in pixels',
+  },
+
   // Timing Functions
   get_delta: {
     name: 'get_delta',

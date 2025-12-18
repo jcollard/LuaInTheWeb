@@ -1,9 +1,16 @@
 /**
- * Cache for storing loaded HTMLImageElement instances by asset name.
+ * Type for images that can be drawn on a canvas.
+ * Includes HTMLImageElement (from <img> tags) and ImageBitmap (from createImageBitmap).
+ */
+export type CachedImage = HTMLImageElement | ImageBitmap;
+
+/**
+ * Cache for storing loaded images by asset name.
  * Used by the canvas renderer to efficiently draw preloaded images.
+ * Supports both HTMLImageElement and ImageBitmap.
  */
 export class ImageCache {
-  private cache: Map<string, HTMLImageElement>;
+  private cache: Map<string, CachedImage>;
 
   constructor() {
     this.cache = new Map();
@@ -12,18 +19,18 @@ export class ImageCache {
   /**
    * Store an image in the cache by name.
    * @param name - The asset name to store the image under
-   * @param image - The HTMLImageElement to store
+   * @param image - The HTMLImageElement or ImageBitmap to store
    */
-  set(name: string, image: HTMLImageElement): void {
+  set(name: string, image: CachedImage): void {
     this.cache.set(name, image);
   }
 
   /**
    * Retrieve an image from the cache by name.
    * @param name - The asset name to look up
-   * @returns The stored HTMLImageElement, or undefined if not found
+   * @returns The stored image, or undefined if not found
    */
-  get(name: string): HTMLImageElement | undefined {
+  get(name: string): CachedImage | undefined {
     return this.cache.get(name);
   }
 

@@ -38,6 +38,10 @@ export interface CanvasCallbacks {
   onCloseCanvasTab: (canvasId: string) => void
   /** Report an error that occurred during canvas execution */
   onError?: (error: string) => void
+  /** Filesystem for loading assets (optional, required for image support) */
+  fileSystem?: IFileSystem
+  /** Script directory for resolving relative asset paths (optional) */
+  scriptDirectory?: string
 }
 
 /**
@@ -66,6 +70,9 @@ export class CanvasController {
 
   // Track whether start() has been called (prevents adding assets after start)
   private started = false
+
+  // Track whether start() is currently in progress (prevents concurrent start calls)
+  private startInProgress = false
 
   // Asset manifest: registered asset definitions
   private assetManifest: AssetManifest = new Map()
@@ -104,8 +111,24 @@ export class CanvasController {
       throw new Error('Canvas is already running. Call canvas.stop() first.')
     }
 
-    // Mark as started (prevents adding new assets)
+    if (this.startInProgress) {
+      throw new Error('Canvas start() is already in progress.')
+    }
+
+    // Mark as started (prevents adding new assets) and in progress
     this.started = true
+    this.startInProgress = true
+
+    // Auto-load assets if they are registered but not yet loaded
+    if (this.assetManifest.size > 0 && !this.imageCache) {
+      if (!this.callbacks.fileSystem) {
+        throw new Error('Assets were registered but no filesystem is available to load them')
+      }
+      await this.loadAssets(
+        this.callbacks.fileSystem,
+        this.callbacks.scriptDirectory ?? '/'
+      )
+    }
 
     // Request canvas tab from UI
     this.canvas = await this.callbacks.onRequestCanvasTab(this.canvasId)
@@ -157,6 +180,9 @@ export class CanvasController {
     // Close the canvas tab
     this.callbacks.onCloseCanvasTab(this.canvasId)
     this.canvas = null
+
+    // Reset startInProgress flag
+    this.startInProgress = false
 
     // Resolve the blocking Promise
     if (this.stopResolver) {
@@ -420,17 +446,17 @@ export class CanvasController {
     for (const definition of this.assetManifest.values()) {
       const loadedAsset = await loader.loadAsset(definition)
 
-      // Store dimensions
-      if (loadedAsset.width !== undefined && loadedAsset.height !== undefined) {
-        this.assetDimensions.set(definition.name, {
-          width: loadedAsset.width,
-          height: loadedAsset.height,
-        })
-      }
-
       // Convert ArrayBuffer to HTMLImageElement and store in cache
+      // Note: We get dimensions from the loaded image element rather than
+      // the AssetLoader because image-size doesn't work in the browser
       const image = await this.createImageFromData(loadedAsset.data, loadedAsset.mimeType)
       this.imageCache.set(definition.name, image)
+
+      // Store dimensions from the loaded image (browser-native)
+      this.assetDimensions.set(definition.name, {
+        width: image.width,
+        height: image.height,
+      })
     }
   }
 

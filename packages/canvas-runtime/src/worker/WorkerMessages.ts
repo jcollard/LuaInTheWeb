@@ -27,6 +27,7 @@ export interface SerializedAsset {
  */
 export type MainToWorkerMessage =
   | InitMessage
+  | AssetsLoadedMessage
   | StartMessage
   | StopMessage;
 
@@ -39,6 +40,15 @@ export interface InitMessage {
   code: string;
   /** Preloaded asset data (optional) */
   assets?: SerializedAsset[];
+}
+
+/**
+ * Loaded asset data from main thread to worker.
+ */
+export interface AssetsLoadedMessage {
+  type: 'assetsLoaded';
+  /** Array of loaded assets with their data */
+  assets: SerializedAsset[];
 }
 
 /**
@@ -56,12 +66,23 @@ export interface StopMessage {
 }
 
 /**
+ * Asset definition for requesting assets from main thread.
+ */
+export interface AssetRequest {
+  /** Unique name to reference this asset */
+  name: string;
+  /** Path to the asset file */
+  path: string;
+}
+
+/**
  * Message from worker to main thread.
  */
 export type WorkerToMainMessage =
   | ReadyMessage
   | ErrorMessage
-  | StateChangedMessage;
+  | StateChangedMessage
+  | AssetsNeededMessage;
 
 /**
  * Worker is ready (Lua engine initialized).
@@ -86,4 +107,13 @@ export interface ErrorMessage {
 export interface StateChangedMessage {
   type: 'stateChanged';
   state: WorkerState;
+}
+
+/**
+ * Worker needs assets to be loaded by main thread.
+ */
+export interface AssetsNeededMessage {
+  type: 'assetsNeeded';
+  /** Array of assets that need to be loaded */
+  assets: AssetRequest[];
 }

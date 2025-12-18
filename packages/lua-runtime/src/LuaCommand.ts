@@ -50,24 +50,34 @@ export class LuaCommand implements ICommand {
    * @returns IProcess for the Lua execution
    */
   execute(args: string[], context: ShellContext): IProcess {
+    // Filename provided - execute script
+    const filename = args.length > 0 ? args[0] : null
+
+    // Determine script directory for asset resolution
+    // For scripts: use the directory containing the script file
+    // For REPL: use the current working directory
+    const scriptDirectory = filename
+      ? this.getScriptDirectory(filename, context.cwd)
+      : context.cwd
+
     // Build canvas callbacks if available in context
+    // Include filesystem for asset loading support
     const canvasCallbacks = context.onRequestCanvasTab && context.onCloseCanvasTab
       ? {
           onRequestCanvasTab: context.onRequestCanvasTab,
           onCloseCanvasTab: context.onCloseCanvasTab,
+          fileSystem: context.filesystem,
+          scriptDirectory,
         }
       : undefined
 
-    if (args.length === 0) {
+    if (!filename) {
       // No arguments - start interactive REPL with canvas support
       return new LuaReplProcess({
         ...DEFAULT_EXECUTION_OPTIONS,
         canvasCallbacks,
       })
     }
-
-    // Filename provided - execute script
-    const filename = args[0]
 
     // Build options, including canvas callbacks if available
     const options = {
@@ -76,5 +86,29 @@ export class LuaCommand implements ICommand {
     }
 
     return new LuaScriptProcess(filename, context, options)
+  }
+
+  /**
+   * Extract the directory path from a script filename.
+   * Handles both absolute and relative paths.
+   *
+   * @param filename - The script filename (absolute or relative)
+   * @param cwd - The current working directory
+   * @returns The directory containing the script
+   */
+  private getScriptDirectory(filename: string, cwd: string): string {
+    // Resolve the full path if relative
+    let fullPath = filename
+    if (!filename.startsWith('/')) {
+      // Relative path - resolve against cwd
+      fullPath = cwd === '/' ? `/${filename}` : `${cwd}/${filename}`
+    }
+
+    // Extract directory (everything before the last /)
+    const lastSlash = fullPath.lastIndexOf('/')
+    if (lastSlash <= 0) {
+      return '/'
+    }
+    return fullPath.substring(0, lastSlash)
   }
 }
