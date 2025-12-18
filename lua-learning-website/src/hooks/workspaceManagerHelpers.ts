@@ -10,6 +10,7 @@ import {
   generateCanvasLibrarySource,
 } from './libraryDocumentation'
 import { getExamplesContent } from './examplesContent'
+import { getExamplesBinaryContent } from './examplesBinaryAssets'
 import type {
   Workspace,
   PersistedWorkspace,
@@ -193,6 +194,7 @@ export function createBookWorkspace(files: Record<string, string>): Workspace {
 /**
  * Create the examples workspace containing example Lua programs.
  * This workspace is read-only and contains sample code for users to browse and run.
+ * Includes both text files (Lua code) and binary files (images for canvas examples).
  */
 export function createExamplesWorkspace(): Workspace {
   return {
@@ -200,7 +202,7 @@ export function createExamplesWorkspace(): Workspace {
     name: EXAMPLES_WORKSPACE_NAME,
     type: 'examples',
     mountPath: EXAMPLES_MOUNT_PATH,
-    filesystem: createReadOnlyFileSystem(getExamplesContent()),
+    filesystem: createReadOnlyFileSystem(getExamplesContent(), getExamplesBinaryContent()),
     status: 'connected',
     isReadOnly: true,
   }

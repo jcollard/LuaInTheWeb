@@ -783,8 +783,19 @@ main()
 `
 
 /**
+ * Credits file for canvas image assets
+ */
+export const CANVAS_IMAGES_CREDITS = `Space Shooter Assets by Kenney (www.kenney.nl)
+License: CC0 (Public Domain)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Source: Space Shooter Redux
+https://kenney.nl/assets/space-shooter-redux
+`
+
+/**
  * Space shooter game demonstrating canvas image support
- * Uses images from /examples-images/ served via HTTP
+ * Uses images from canvas/images/ in the examples filesystem
  */
 export const CANVAS_SPACE_SHOOTER_LUA = `-- canvas/space_shooter.lua
 -- Space shooter demo showing canvas image support
@@ -793,10 +804,11 @@ export const CANVAS_SPACE_SHOOTER_LUA = `-- canvas/space_shooter.lua
 local canvas = require("canvas")
 
 -- Register image assets (loaded when canvas.start() is called)
-canvas.assets.image("ship", "/examples-images/blue_ship.png")
-canvas.assets.image("enemy", "/examples-images/enemy_ship.png")
-canvas.assets.image("meteor", "/examples-images/meteor.png")
-canvas.assets.image("laser", "/examples-images/laser.png")
+-- Paths are relative to this script (canvas/space_shooter.lua)
+canvas.assets.image("ship", "images/blue_ship.png")
+canvas.assets.image("enemy", "images/enemy_ship.png")
+canvas.assets.image("meteor", "images/meteor.png")
+canvas.assets.image("laser", "images/laser.png")
 
 -- Game state
 local player = { x = 400, y = 500 }
@@ -3859,5 +3871,6 @@ export function getExamplesContent(): Record<string, string> {
     'canvas/shapes.lua': SHAPES_LUA,
     'canvas/demo.lua': CANVAS_DEMO_LUA,
     'canvas/space_shooter.lua': CANVAS_SPACE_SHOOTER_LUA,
+    'canvas/images/CREDITS.txt': CANVAS_IMAGES_CREDITS,
   }
 }

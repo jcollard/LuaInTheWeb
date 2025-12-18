@@ -729,6 +729,42 @@ describe('workspaceManagerHelpers', () => {
       expect(content).toContain('canvas.assets.image')
     })
 
+    it('canvas/images directory contains binary image files', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.filesystem.exists('canvas/images')).toBe(true)
+      expect(workspace.filesystem.isDirectory('canvas/images')).toBe(true)
+      expect(workspace.filesystem.exists('canvas/images/blue_ship.png')).toBe(true)
+      expect(workspace.filesystem.exists('canvas/images/enemy_ship.png')).toBe(true)
+      expect(workspace.filesystem.exists('canvas/images/meteor.png')).toBe(true)
+      expect(workspace.filesystem.exists('canvas/images/laser.png')).toBe(true)
+    })
+
+    it('binary image files are marked as binary', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.filesystem.isBinaryFile?.('canvas/images/blue_ship.png')).toBe(true)
+      expect(workspace.filesystem.isBinaryFile?.('canvas/images/laser.png')).toBe(true)
+    })
+
+    it('binary image files can be read as Uint8Array', () => {
+      const workspace = createExamplesWorkspace()
+      const data = workspace.filesystem.readBinaryFile!('canvas/images/blue_ship.png')
+      expect(data).toBeInstanceOf(Uint8Array)
+      expect(data.length).toBeGreaterThan(0)
+      // PNG files start with magic bytes
+      expect(data[0]).toBe(0x89)
+      expect(data[1]).toBe(0x50) // P
+      expect(data[2]).toBe(0x4e) // N
+      expect(data[3]).toBe(0x47) // G
+    })
+
+    it('canvas/images/CREDITS.txt contains attribution', () => {
+      const workspace = createExamplesWorkspace()
+      expect(workspace.filesystem.exists('canvas/images/CREDITS.txt')).toBe(true)
+      const content = workspace.filesystem.readFile('canvas/images/CREDITS.txt')
+      expect(content).toContain('Kenney')
+      expect(content).toContain('CC0')
+    })
+
     it('filesystem is read-only (cannot write)', () => {
       const workspace = createExamplesWorkspace()
       expect(() => {

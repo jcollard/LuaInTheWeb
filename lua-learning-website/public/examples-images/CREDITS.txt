@@ -1,6 +1,0 @@
-Space Shooter Assets by Kenney (www.kenney.nl)
-License: CC0 (Public Domain)
-https://creativecommons.org/publicdomain/zero/1.0/
-
-Source: Space Shooter Redux
-https://kenney.nl/assets/space-shooter-redux
