@@ -11,7 +11,7 @@ export function useTabBar(): UseTabBarReturn {
       if (prev.some((tab) => tab.path === path)) {
         return prev
       }
-      return [...prev, { path, name, isDirty: false, type, isPreview: false }]
+      return [...prev, { path, name, isDirty: false, type, isPreview: false, isPinned: false }]
     })
     setActiveTab(path)
   }, [])
@@ -29,11 +29,11 @@ export function useTabBar(): UseTabBarReturn {
       if (existingPreviewIndex !== -1) {
         // Replace the preview tab
         const newTabs = [...prev]
-        newTabs[existingPreviewIndex] = { path, name, isDirty: false, type: 'file', isPreview: true }
+        newTabs[existingPreviewIndex] = { path, name, isDirty: false, type: 'file', isPreview: true, isPinned: false }
         return newTabs
       }
       // No existing preview, add new preview tab
-      return [...prev, { path, name, isDirty: false, type: 'file', isPreview: true }]
+      return [...prev, { path, name, isDirty: false, type: 'file', isPreview: true, isPinned: false }]
     })
     setActiveTab(path)
   }, [])
@@ -64,9 +64,11 @@ export function useTabBar(): UseTabBarReturn {
 
   const closeTab = useCallback((path: string) => {
     setTabs((prev) => {
-      const index = prev.findIndex((tab) => tab.path === path)
-      if (index === -1) return prev
+      const tabToClose = prev.find((tab) => tab.path === path)
+      // Don't close pinned tabs
+      if (!tabToClose || tabToClose.isPinned) return prev
 
+      const index = prev.findIndex((tab) => tab.path === path)
       const newTabs = prev.filter((tab) => tab.path !== path)
 
       // If closing active tab, select next tab
@@ -113,7 +115,7 @@ export function useTabBar(): UseTabBarReturn {
       if (prev.some((tab) => tab.path === path)) {
         return prev
       }
-      return [...prev, { path, name, isDirty: false, type: 'canvas' as const, isPreview: false }]
+      return [...prev, { path, name, isDirty: false, type: 'canvas' as const, isPreview: false, isPinned: false }]
     })
     setActiveTab(path)
   }, [])
@@ -131,11 +133,11 @@ export function useTabBar(): UseTabBarReturn {
       if (existingPreviewIndex !== -1) {
         // Replace the preview tab
         const newTabs = [...prev]
-        newTabs[existingPreviewIndex] = { path, name, isDirty: false, type: 'markdown', isPreview: true }
+        newTabs[existingPreviewIndex] = { path, name, isDirty: false, type: 'markdown', isPreview: true, isPinned: false }
         return newTabs
       }
       // No existing preview, add new preview tab
-      return [...prev, { path, name, isDirty: false, type: 'markdown', isPreview: true }]
+      return [...prev, { path, name, isDirty: false, type: 'markdown', isPreview: true, isPinned: false }]
     })
     setActiveTab(path)
   }, [])
@@ -153,11 +155,11 @@ export function useTabBar(): UseTabBarReturn {
       if (existingPreviewIndex !== -1) {
         // Replace the preview tab
         const newTabs = [...prev]
-        newTabs[existingPreviewIndex] = { path, name, isDirty: false, type: 'binary', isPreview: true }
+        newTabs[existingPreviewIndex] = { path, name, isDirty: false, type: 'binary', isPreview: true, isPinned: false }
         return newTabs
       }
       // No existing preview, add new preview tab
-      return [...prev, { path, name, isDirty: false, type: 'binary', isPreview: true }]
+      return [...prev, { path, name, isDirty: false, type: 'binary', isPreview: true, isPinned: false }]
     })
     setActiveTab(path)
   }, [])
@@ -171,6 +173,103 @@ export function useTabBar(): UseTabBarReturn {
     if (activeTab.startsWith('canvas://')) return 'canvas'
     return 'file'
   }, [activeTab, tabs])
+
+  const pinTab = useCallback((path: string) => {
+    setTabs((prev) => {
+      const tabIndex = prev.findIndex((tab) => tab.path === path)
+      if (tabIndex === -1) return prev
+
+      // Mark the tab as pinned
+      const updatedTabs = prev.map((tab) =>
+        tab.path === path ? { ...tab, isPinned: true } : tab
+      )
+
+      // Sort: pinned tabs first (in order they were pinned), then unpinned tabs
+      const pinnedTabs = updatedTabs.filter((tab) => tab.isPinned)
+      const unpinnedTabs = updatedTabs.filter((tab) => !tab.isPinned)
+
+      return [...pinnedTabs, ...unpinnedTabs]
+    })
+  }, [])
+
+  const unpinTab = useCallback((path: string) => {
+    setTabs((prev) => {
+      const tabIndex = prev.findIndex((tab) => tab.path === path)
+      if (tabIndex === -1) return prev
+
+      // Mark the tab as unpinned
+      const updatedTabs = prev.map((tab) =>
+        tab.path === path ? { ...tab, isPinned: false } : tab
+      )
+
+      // Sort: pinned tabs first, then unpinned tabs
+      const pinnedTabs = updatedTabs.filter((tab) => tab.isPinned)
+      const unpinnedTabs = updatedTabs.filter((tab) => !tab.isPinned)
+
+      return [...pinnedTabs, ...unpinnedTabs]
+    })
+  }, [])
+
+  const reorderTab = useCallback((path: string, newIndex: number) => {
+    setTabs((prev) => {
+      const currentIndex = prev.findIndex((tab) => tab.path === path)
+      if (currentIndex === -1) return prev
+
+      const tab = prev[currentIndex]
+      const pinnedCount = prev.filter((t) => t.isPinned).length
+
+      // Constrain the target index based on tab type
+      let targetIndex = newIndex
+      if (tab.isPinned) {
+        // Pinned tabs can only move within the pinned section (0 to pinnedCount-1)
+        targetIndex = Math.max(0, Math.min(newIndex, pinnedCount - 1))
+      } else {
+        // Unpinned tabs can only move within the unpinned section (pinnedCount to end)
+        targetIndex = Math.max(pinnedCount, Math.min(newIndex, prev.length - 1))
+      }
+
+      // If moving to the same position, no change needed
+      if (currentIndex === targetIndex) return prev
+
+      // Remove the tab from its current position
+      const newTabs = [...prev]
+      newTabs.splice(currentIndex, 1)
+      // Insert at the target position
+      newTabs.splice(targetIndex, 0, tab)
+
+      return newTabs
+    })
+  }, [])
+
+  const closeToRight = useCallback((path: string) => {
+    setTabs((prev) => {
+      const index = prev.findIndex((tab) => tab.path === path)
+      if (index === -1) return prev
+
+      // Keep tabs up to and including the specified tab, plus any pinned tabs after
+      const newTabs = prev.filter((tab, i) => i <= index || tab.isPinned)
+
+      // Update active tab if it was closed
+      const activeWasClosed = activeTab && !newTabs.some((t) => t.path === activeTab)
+      if (activeWasClosed) {
+        setActiveTab(path)
+      }
+
+      return newTabs
+    })
+  }, [activeTab])
+
+  const closeOthers = useCallback((path: string) => {
+    setTabs((prev) => {
+      // Keep the specified tab and all pinned tabs
+      const newTabs = prev.filter((tab) => tab.path === path || tab.isPinned)
+
+      // Set active tab to the kept tab
+      setActiveTab(path)
+
+      return newTabs
+    })
+  }, [])
 
   return {
     tabs,
@@ -188,5 +287,10 @@ export function useTabBar(): UseTabBarReturn {
     makeTabPermanent,
     convertToFileTab,
     convertToMarkdownTab,
+    pinTab,
+    unpinTab,
+    reorderTab,
+    closeToRight,
+    closeOthers,
   }
 }

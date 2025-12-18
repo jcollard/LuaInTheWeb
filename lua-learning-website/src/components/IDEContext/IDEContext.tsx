@@ -390,13 +390,35 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   void fileTreeVersion
   const fileTree = filesystem.getTree()
 
+  const pinTab = useCallback((path: string) => {
+    tabBar.pinTab(path)
+  }, [tabBar])
+
+  const unpinTab = useCallback((path: string) => {
+    tabBar.unpinTab(path)
+  }, [tabBar])
+
+  const reorderTab = useCallback((path: string, newIndex: number) => {
+    tabBar.reorderTab(path, newIndex)
+  }, [tabBar])
+
+  const closeToRight = useCallback((path: string) => {
+    tabBar.closeToRight(path)
+  }, [tabBar])
+
+  const closeOthers = useCallback((path: string) => {
+    tabBar.closeOthers(path)
+  }, [tabBar])
+
   const value = useMemo<IDEContextValue>(() => ({
     engine, code, setCode, fileName, isDirty,
     activePanel, setActivePanel,
     terminalVisible, toggleTerminal, sidebarVisible, toggleSidebar,
     fileTree, refreshFileTree, handleShellFileMove,
     createFile, createFolder, deleteFile, deleteFolder, renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, openBinaryViewer, saveFile,
-    tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, makeTabPermanent, toasts, showError, dismissToast,
+    tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, makeTabPermanent,
+    pinTab, unpinTab, reorderTab, closeToRight, closeOthers,
+    toasts, showError, dismissToast,
     pendingNewFilePath, generateUniqueFileName, createFileWithRename, clearPendingNewFile,
     pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename, clearPendingNewFolder,
     recentFiles, clearRecentFiles, fileSystem: filesystem,
@@ -405,6 +427,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
     fileTree, refreshFileTree, handleShellFileMove, createFile, createFolder, deleteFile, deleteFolder,
     renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, openBinaryViewer, saveFile, tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, makeTabPermanent,
+    pinTab, unpinTab, reorderTab, closeToRight, closeOthers,
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,
     clearPendingNewFolder, recentFiles, clearRecentFiles, filesystem,

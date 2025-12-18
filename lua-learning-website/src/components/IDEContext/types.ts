@@ -55,6 +55,11 @@ export interface IDEContextValue {
   closeTab: (path: string) => void
   openCanvasTab: (id: string, name?: string) => void
   makeTabPermanent: (path: string) => void
+  pinTab: (path: string) => void
+  unpinTab: (path: string) => void
+  reorderTab: (path: string, newIndex: number) => void
+  closeToRight: (path: string) => void
+  closeOthers: (path: string) => void
 
   // Toast notifications
   toasts: ToastData[]

@@ -9,6 +9,7 @@ export interface TabInfo {
   isDirty: boolean
   type: TabType
   isPreview: boolean
+  isPinned: boolean
 }
 
 export interface TabBarProps {
@@ -16,6 +17,11 @@ export interface TabBarProps {
   activeTab: string | null
   onSelect: (path: string) => void
   onClose: (path: string) => void
+  onReorder?: (path: string, newIndex: number) => void
+  onPinTab?: (path: string) => void
+  onUnpinTab?: (path: string) => void
+  onCloseToRight?: (path: string) => void
+  onCloseOthers?: (path: string) => void
   className?: string
 }
 
@@ -35,4 +41,9 @@ export interface UseTabBarReturn {
   makeTabPermanent: (path: string) => void
   convertToFileTab: (path: string) => void
   convertToMarkdownTab: (path: string) => void
+  pinTab: (path: string) => void
+  unpinTab: (path: string) => void
+  reorderTab: (path: string, newIndex: number) => void
+  closeToRight: (path: string) => void
+  closeOthers: (path: string) => void
 }
