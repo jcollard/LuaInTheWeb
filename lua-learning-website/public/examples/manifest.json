@@ -22,6 +22,12 @@
     "canvas/images/blue_ship.png",
     "canvas/images/enemy_ship.png",
     "canvas/images/meteor.png",
-    "canvas/images/laser.png"
+    "canvas/images/laser.png",
+    "io/write_file.lua",
+    "io/read_file.lua",
+    "io/io_lines.lua",
+    "io/append_mode.lua",
+    "io/write_chaining.lua",
+    "io/error_handling.lua"
   ]
 }
