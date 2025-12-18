@@ -1,9 +1,9 @@
 # Epic #324: Explore moving files for read-only workspaces to public/ and using manifest rather than adding them to ts files
 
-**Status:** Complete (5/5 complete)
+**Status:** Needs Review (5/5 complete) - PR #347
 **Branch:** epic-324
 **Created:** 2025-12-18
-**Last Updated:** 2025-12-18T20:12:52Z
+**Last Updated:** 2025-12-18T20:20:00Z
 
 ## Overview
 
@@ -97,6 +97,11 @@ Migrate to a manifest-based approach (already used for book content):
 
 ### Epic Complete!
 All 5 sub-issues merged to epic-324. Ready for `/epic 324 review` to create PR to main.
+
+### Epic PR Created
+- Created PR #347 to merge epic-324 → main
+- All 5 sub-issues complete
+- Ready for final review: `/pr-review 347`
 
 ## Key Files
 
