@@ -93,8 +93,9 @@ describe('useWorkspaceManager', () => {
 
       const { result } = renderHook(() => useWorkspaceManager())
 
-      // Includes 2 persisted workspaces + library workspace + docs workspace + examples workspace
-      expect(result.current.workspaces).toHaveLength(5)
+      // Includes 2 persisted workspaces + library workspace + docs workspace = 4
+      // (examples and book workspaces are loaded asynchronously)
+      expect(result.current.workspaces).toHaveLength(4)
       expect(result.current.workspaces.some((w) => w.name === 'Restored Workspace')).toBe(true)
     })
 
@@ -125,8 +126,9 @@ describe('useWorkspaceManager', () => {
 
       const { result } = renderHook(() => useWorkspaceManager())
 
-      // Should have default + other + library + docs + examples workspace
-      expect(result.current.workspaces.length).toBe(5)
+      // Should have default + other + library + docs = 4
+      // (examples and book workspaces are loaded asynchronously)
+      expect(result.current.workspaces.length).toBe(4)
       expect(result.current.workspaces.some((w) => w.id === DEFAULT_WORKSPACE_ID)).toBe(true)
     })
 
@@ -219,8 +221,9 @@ describe('useWorkspaceManager', () => {
 
       const { result } = renderHook(() => useWorkspaceManager())
 
-      // Before reconnect: 4 mounts (default + library + docs + examples)
-      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(4)
+      // Before reconnect: 3 mounts (default + library + docs)
+      // (examples and book workspaces are loaded asynchronously)
+      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(3)
 
       const mockHandle = {
         name: 'project',
@@ -231,8 +234,9 @@ describe('useWorkspaceManager', () => {
         await result.current.reconnectWorkspace('ws-local', mockHandle)
       })
 
-      // After reconnect: 5 mounts (default + library + docs + examples + reconnected local)
-      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(5)
+      // After reconnect: 4 mounts (default + library + docs + reconnected local)
+      // (examples and book workspaces are loaded asynchronously)
+      expect(result.current.compositeFileSystem.listDirectory('/').length).toBe(4)
     })
 
     it('throws error for non-existent workspace', async () => {

@@ -52,10 +52,11 @@ describe('useWorkspaceManager', () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
       const entries = result.current.compositeFileSystem.listDirectory('/')
-      // default + library + docs + examples = 4
-      expect(entries).toHaveLength(4)
+      // default + library + docs = 3
+      // (examples and book workspaces are loaded asynchronously)
+      expect(entries).toHaveLength(3)
       // listDirectory returns mount path names (slugs)
-      expect(entries.map((e) => e.name).sort()).toEqual(['docs', 'examples', 'home', 'libs'])
+      expect(entries.map((e) => e.name).sort()).toEqual(['docs', 'home', 'libs'])
     })
 
     it('updates when workspaces change', async () => {
@@ -66,10 +67,11 @@ describe('useWorkspaceManager', () => {
       })
 
       const entries = result.current.compositeFileSystem.listDirectory('/')
-      // default + library + docs + examples + new = 5
-      expect(entries).toHaveLength(5)
+      // default + library + docs + new = 4
+      // (examples and book workspaces are loaded asynchronously)
+      expect(entries).toHaveLength(4)
       // listDirectory returns mount path names (slugs), not display names
-      expect(entries.map((e) => e.name).sort()).toEqual(['docs', 'examples', 'home', 'libs', 'project'])
+      expect(entries.map((e) => e.name).sort()).toEqual(['docs', 'home', 'libs', 'project'])
     })
 
     it('only includes connected workspaces', () => {
@@ -84,11 +86,12 @@ describe('useWorkspaceManager', () => {
 
       const { result } = renderHook(() => useWorkspaceManager())
 
-      // Local workspace is disconnected, so only default + library + docs + examples = 4
+      // Local workspace is disconnected, so only default + library + docs = 3
+      // (examples and book workspaces are loaded asynchronously)
       const entries = result.current.compositeFileSystem.listDirectory('/')
-      expect(entries).toHaveLength(4)
+      expect(entries).toHaveLength(3)
       // listDirectory returns mount path names (slugs)
-      expect(entries.map((e) => e.name).sort()).toEqual(['docs', 'examples', 'home', 'libs'])
+      expect(entries.map((e) => e.name).sort()).toEqual(['docs', 'home', 'libs'])
     })
   })
 
@@ -150,12 +153,12 @@ describe('useWorkspaceManager', () => {
       })
 
       const mounts = result.current.getMounts()
-      // default + library + docs + examples + new = 5
-      expect(mounts).toHaveLength(5)
+      // default + library + docs + new = 4
+      // (examples and book workspaces are loaded asynchronously)
+      expect(mounts).toHaveLength(4)
       expect(mounts.some((m) => m.mountPath === '/home' && m.isConnected)).toBe(true)
       expect(mounts.some((m) => m.mountPath === '/libs' && m.isConnected)).toBe(true)
       expect(mounts.some((m) => m.mountPath === '/docs' && m.isConnected)).toBe(true)
-      expect(mounts.some((m) => m.mountPath === '/examples' && m.isConnected)).toBe(true)
       expect(mounts.some((m) => m.mountPath === '/project' && m.isConnected)).toBe(true)
     })
 

@@ -1,0 +1,27 @@
+{
+  "name": "Examples",
+  "files": [
+    "hello.lua",
+    "colors.lua",
+    "mad_takes.lua",
+    "adventure.lua",
+    "ascii_world.lua",
+    "ascii_world/config.lua",
+    "ascii_world/ui.lua",
+    "ascii_world/player.lua",
+    "ascii_world/items.lua",
+    "ascii_world/maps.lua",
+    "ascii_world/monsters.lua",
+    "ascii_world/combat.lua",
+    "ascii_world/game.lua",
+    "ascii_world/EXTENSIONS.md",
+    "canvas/shapes.lua",
+    "canvas/demo.lua",
+    "canvas/space_shooter.lua",
+    "canvas/images/CREDITS.txt",
+    "canvas/images/blue_ship.png",
+    "canvas/images/enemy_ship.png",
+    "canvas/images/meteor.png",
+    "canvas/images/laser.png"
+  ]
+}

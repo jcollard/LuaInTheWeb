@@ -9,8 +9,7 @@ import {
   generateShellLibrarySource,
   generateCanvasLibrarySource,
 } from './libraryDocumentation'
-import { getExamplesContent } from './examplesContent'
-import { getExamplesBinaryContent } from './examplesBinaryAssets'
+import { fetchExamplesContent } from './examplesFetcher'
 import type {
   Workspace,
   PersistedWorkspace,
@@ -38,6 +37,7 @@ export const BOOK_PUBLIC_PATH = '/adventures-in-lua-book'
 export const EXAMPLES_WORKSPACE_ID = 'examples'
 export const EXAMPLES_WORKSPACE_NAME = 'examples'
 export const EXAMPLES_MOUNT_PATH = '/examples'
+export const EXAMPLES_PUBLIC_PATH = '/examples'
 
 /**
  * Generate a unique workspace ID.
@@ -192,17 +192,20 @@ export function createBookWorkspace(files: Record<string, string>): Workspace {
 }
 
 /**
- * Create the examples workspace containing example Lua programs.
+ * Create the examples workspace from pre-fetched content.
  * This workspace is read-only and contains sample code for users to browse and run.
  * Includes both text files (Lua code) and binary files (images for canvas examples).
  */
-export function createExamplesWorkspace(): Workspace {
+export function createExamplesWorkspace(
+  text: Record<string, string>,
+  binary?: Record<string, Uint8Array>
+): Workspace {
   return {
     id: EXAMPLES_WORKSPACE_ID,
     name: EXAMPLES_WORKSPACE_NAME,
     type: 'examples',
     mountPath: EXAMPLES_MOUNT_PATH,
-    filesystem: createReadOnlyFileSystem(getExamplesContent(), getExamplesBinaryContent()),
+    filesystem: createReadOnlyFileSystem(text, binary),
     status: 'connected',
     isReadOnly: true,
   }
@@ -218,6 +221,18 @@ export async function fetchAndCreateBookWorkspace(): Promise<Workspace | null> {
     return null
   }
   return createBookWorkspace(files)
+}
+
+/**
+ * Fetch examples content and create the examples workspace.
+ * Returns null if the fetch fails.
+ */
+export async function fetchAndCreateExamplesWorkspace(): Promise<Workspace | null> {
+  const content = await fetchExamplesContent()
+  if (Object.keys(content.text).length === 0) {
+    return null
+  }
+  return createExamplesWorkspace(content.text, content.binary)
 }
 
 /**
@@ -270,9 +285,10 @@ export function createDisconnectedFileSystem(): IFileSystem {
 
 /**
  * Initialize workspaces from localStorage or create default.
- * Always includes the library workspace for built-in libraries,
- * the docs workspace for API documentation, and the examples workspace
- * for sample Lua programs.
+ * Always includes the library workspace for built-in libraries and
+ * the docs workspace for API documentation.
+ *
+ * Note: The examples and book workspaces are loaded asynchronously via hooks.
  */
 export function initializeWorkspaces(): WorkspaceManagerState {
   const persistedWorkspaces = loadPersistedWorkspaces()
@@ -281,13 +297,11 @@ export function initializeWorkspaces(): WorkspaceManagerState {
   const libraryWorkspace = createLibraryWorkspace()
   // Docs workspace is always present (not persisted, always created fresh)
   const docsWorkspace = createDocsWorkspace()
-  // Examples workspace is always present (not persisted, always created fresh)
-  const examplesWorkspace = createExamplesWorkspace()
 
   if (!persistedWorkspaces || persistedWorkspaces.length === 0) {
     const defaultWorkspace = createDefaultWorkspace()
     return {
-      workspaces: [defaultWorkspace, libraryWorkspace, docsWorkspace, examplesWorkspace],
+      workspaces: [defaultWorkspace, libraryWorkspace, docsWorkspace],
     }
   }
 
@@ -336,9 +350,6 @@ export function initializeWorkspaces(): WorkspaceManagerState {
 
   // Add docs workspace (always present, not persisted)
   workspaces.push(docsWorkspace)
-
-  // Add examples workspace (always present, not persisted)
-  workspaces.push(examplesWorkspace)
 
   return {
     workspaces,
