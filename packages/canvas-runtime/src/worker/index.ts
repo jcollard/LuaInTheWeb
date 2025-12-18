@@ -12,4 +12,5 @@ export type {
   ReadyMessage,
   ErrorMessage,
   StateChangedMessage,
+  SerializedAsset,
 } from './WorkerMessages.js';

@@ -347,5 +347,53 @@ function canvas.is_mouse_down(button) end
 --- end
 function canvas.is_mouse_pressed(button) end
 
+-- =============================================================================
+-- Image Assets
+-- =============================================================================
+
+--- Image asset management sub-library.
+--- Register images before canvas.start() to preload them.
+---@class canvas.assets
+canvas.assets = {}
+
+--- Register an image asset for loading.
+--- Call this before canvas.start() to preload images.
+--- Supported formats: .png, .jpg, .jpeg, .gif, .webp, .bmp
+---@param name string Unique name for the asset
+---@param path string Path to the image file (relative to script or absolute)
+---@usage canvas.assets.image("player", "images/player.png")
+---@usage canvas.assets.image("enemy", "/my-files/sprites/enemy.png")
+function canvas.assets.image(name, path) end
+
+--- Get the width of a loaded image asset.
+--- Must be called after canvas.start() has loaded the assets.
+---@param name string The asset name
+---@return number width Width in pixels
+---@usage local w = canvas.assets.get_width("player")
+function canvas.assets.get_width(name) end
+
+--- Get the height of a loaded image asset.
+--- Must be called after canvas.start() has loaded the assets.
+---@param name string The asset name
+---@return number height Height in pixels
+---@usage local h = canvas.assets.get_height("player")
+function canvas.assets.get_height(name) end
+
+-- =============================================================================
+-- Image Drawing
+-- =============================================================================
+
+--- Draw an image at the specified position.
+--- Optional width/height parameters enable scaling.
+--- The image must be registered via canvas.assets.image() before canvas.start().
+---@param name string The asset name (registered via canvas.assets.image())
+---@param x number X coordinate of top-left corner
+---@param y number Y coordinate of top-left corner
+---@param width? number Optional width (scales image if provided)
+---@param height? number Optional height (scales image if provided)
+---@usage canvas.draw_image("player", 100, 100)  -- Original size
+---@usage canvas.draw_image("player", 100, 100, 64, 64)  -- Scaled to 64x64
+function canvas.draw_image(name, x, y, width, height) end
+
 return canvas
 `

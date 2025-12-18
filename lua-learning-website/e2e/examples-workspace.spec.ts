@@ -35,21 +35,20 @@ test.describe('Examples Workspace', () => {
       await expect(page.getByRole('treeitem', { name: 'hello.lua' })).toBeVisible()
     })
 
-    test('examples workspace contains all 7 example files and ascii_world folder', async ({ page }) => {
+    test('examples workspace contains example files and folders', async ({ page }) => {
       // Arrange - Expand examples workspace
       const examplesWorkspace = page.getByRole('treeitem', { name: /^examples$/i })
       await examplesWorkspace.getByTestId('folder-chevron').click()
 
-      // Assert - All 7 example files should be visible
+      // Assert - Root-level example files should be visible
       await expect(page.getByRole('treeitem', { name: 'hello.lua' })).toBeVisible()
       await expect(page.getByRole('treeitem', { name: 'colors.lua' })).toBeVisible()
       await expect(page.getByRole('treeitem', { name: 'mad_takes.lua' })).toBeVisible()
       await expect(page.getByRole('treeitem', { name: 'adventure.lua' })).toBeVisible()
       await expect(page.getByRole('treeitem', { name: 'ascii_world.lua' })).toBeVisible()
-      await expect(page.getByRole('treeitem', { name: 'shapes.lua' })).toBeVisible()
-      await expect(page.getByRole('treeitem', { name: 'canvas_demo.lua' })).toBeVisible()
-      // Assert - ascii_world subdirectory should be visible
+      // Assert - ascii_world and canvas subdirectories should be visible
       await expect(page.getByRole('treeitem', { name: 'ascii_world', exact: true })).toBeVisible()
+      await expect(page.getByRole('treeitem', { name: 'canvas', exact: true })).toBeVisible()
     })
 
     test('can expand ascii_world folder to see game modules', async ({ page }) => {

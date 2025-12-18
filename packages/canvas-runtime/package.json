@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "@lua-learning/shell-core": "*",
+    "image-size": "^2.0.2",
     "wasmoon": "^1.16.0"
   }
 }

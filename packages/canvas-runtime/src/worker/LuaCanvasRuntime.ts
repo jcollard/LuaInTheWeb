@@ -1,6 +1,6 @@
 import { LuaFactory, LuaEngine } from 'wasmoon';
 import type { IWorkerChannel } from '../channels/IWorkerChannel.js';
-import type { DrawCommand } from '../shared/types.js';
+import { VALID_IMAGE_EXTENSIONS, type DrawCommand, type AssetDefinition } from '../shared/types.js';
 import type { WorkerState } from './WorkerMessages.js';
 
 /**
@@ -24,6 +24,15 @@ export class LuaCanvasRuntime {
 
   // Draw commands accumulated during a frame
   private frameCommands: DrawCommand[] = [];
+
+  // Track whether start() has been called
+  private started = false;
+
+  // Asset manifest: registered asset definitions
+  private assetManifest: Map<string, AssetDefinition> = new Map();
+
+  // Asset dimensions: width/height for each loaded asset
+  private assetDimensions: Map<string, { width: number; height: number }> = new Map();
 
   constructor(channel: IWorkerChannel) {
     this.channel = channel;
@@ -94,6 +103,9 @@ export class LuaCanvasRuntime {
       throw new Error('No onDraw callback registered');
     }
 
+    // Mark as started (prevents adding new assets)
+    this.started = true;
+
     // Send any initialization commands (like set_size called at top level)
     if (this.frameCommands.length > 0) {
       this.channel.sendDrawCommands(this.frameCommands);
@@ -103,6 +115,21 @@ export class LuaCanvasRuntime {
     this.state = 'running';
     this.loopRunning = true;
     this.runLoop();
+  }
+
+  /**
+   * Set asset dimensions for a named asset.
+   * Used by tests and by the main thread after loading assets.
+   */
+  setAssetDimensions(name: string, width: number, height: number): void {
+    this.assetDimensions.set(name, { width, height });
+  }
+
+  /**
+   * Get the asset manifest (definitions registered via canvas.assets.image).
+   */
+  getAssetManifest(): Map<string, AssetDefinition> {
+    return this.assetManifest;
   }
 
   /**
@@ -254,6 +281,58 @@ export class LuaCanvasRuntime {
 
     lua.global.set('__canvas_setLineWidth', (width: number) => {
       runtime.frameCommands.push({ type: 'setLineWidth', width });
+    });
+
+    // Asset API functions
+    lua.global.set('__canvas_assets_image', (name: string, path: string) => {
+      // Check if started
+      if (runtime.started) {
+        throw new Error('Cannot define assets after canvas.start()');
+      }
+
+      // Validate image extension
+      const lowerPath = path.toLowerCase();
+      const hasValidExtension = VALID_IMAGE_EXTENSIONS.some((ext) =>
+        lowerPath.endsWith(ext)
+      );
+      if (!hasValidExtension) {
+        throw new Error(
+          `Cannot load '${path}': unsupported format (expected PNG, JPG, GIF, or WebP)`
+        );
+      }
+
+      // Register the asset definition
+      runtime.assetManifest.set(name, { name, path, type: 'image' });
+    });
+
+    lua.global.set('__canvas_drawImage', (name: string, x: number, y: number, width?: number | null, height?: number | null) => {
+      // Verify asset is registered
+      if (!runtime.assetDimensions.has(name)) {
+        throw new Error(`Unknown asset '${name}' - did you call canvas.assets.image()?`);
+      }
+
+      const command: DrawCommand = { type: 'drawImage', name, x, y };
+      if (width !== undefined && width !== null && height !== undefined && height !== null) {
+        (command as { type: 'drawImage'; name: string; x: number; y: number; width?: number; height?: number }).width = width;
+        (command as { type: 'drawImage'; name: string; x: number; y: number; width?: number; height?: number }).height = height;
+      }
+      runtime.frameCommands.push(command);
+    });
+
+    lua.global.set('__canvas_assets_getWidth', (name: string) => {
+      const dims = runtime.assetDimensions.get(name);
+      if (!dims) {
+        throw new Error(`Unknown asset '${name}' - did you call canvas.assets.image()?`);
+      }
+      return dims.width;
+    });
+
+    lua.global.set('__canvas_assets_getHeight', (name: string) => {
+      const dims = runtime.assetDimensions.get(name);
+      if (!dims) {
+        throw new Error(`Unknown asset '${name}' - did you call canvas.assets.image()?`);
+      }
+      return dims.height;
     });
 
     // Set up the Lua-side canvas table with methods (using snake_case for Lua conventions)
@@ -441,6 +520,26 @@ export class LuaCanvasRuntime {
 
       function canvas.is_mouse_pressed(button)
         return __canvas_isMousePressed(button)
+      end
+
+      -- Asset management
+      canvas.assets = {}
+
+      function canvas.assets.image(name, path)
+        __canvas_assets_image(name, path)
+      end
+
+      function canvas.assets.get_width(name)
+        return __canvas_assets_getWidth(name)
+      end
+
+      function canvas.assets.get_height(name)
+        return __canvas_assets_getHeight(name)
+      end
+
+      -- Draw image
+      function canvas.draw_image(name, x, y, width, height)
+        __canvas_drawImage(name, x, y, width, height)
       end
     `);
   }

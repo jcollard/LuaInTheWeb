@@ -9,13 +9,17 @@ export type {
   FillCircleCommand,
   LineCommand,
   TextCommand,
+  DrawImageCommand,
   DrawCommand,
   MouseButton,
   InputState,
   TimingInfo,
+  AssetDefinition,
+  AssetManifest,
+  LoadedAsset,
 } from './shared/index.js';
 
-export { createEmptyInputState, createDefaultTimingInfo } from './shared/index.js';
+export { createEmptyInputState, createDefaultTimingInfo, AssetLoader, VALID_IMAGE_EXTENSIONS } from './shared/index.js';
 
 // Channel interfaces
 export type {
@@ -46,6 +50,7 @@ export {
   CanvasRenderer,
   InputCapture,
   GameLoopController,
+  ImageCache,
 } from './renderer/index.js';
 
 export type { FrameCallback } from './renderer/index.js';
@@ -63,6 +68,7 @@ export type {
   ReadyMessage,
   ErrorMessage,
   StateChangedMessage,
+  SerializedAsset,
 } from './worker/index.js';
 
 // Process components
