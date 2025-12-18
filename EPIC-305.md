@@ -1,9 +1,9 @@
 # Epic #305: Canvas Image Support
 
-**Status:** In Progress (4/5 complete)
+**Status:** Complete (5/5)
 **Branch:** epic-305
 **Created:** 2025-12-17
-**Last Updated:** 2025-12-17T16:06:00-07:00
+**Last Updated:** 2025-12-17T20:34:00-07:00
 
 ## Overview
 
@@ -66,7 +66,7 @@ local h = canvas.assets.get_height("player")
 | #307 | Asset Loading Infrastructure | ✅ Complete | 307-asset-loading-infrastructure | Merged in PR #314 |
 | #308 | Worker Canvas Implementation | ✅ Complete | 308-worker-canvas-implementation | Merged in PR #317 |
 | #309 | Shell Canvas Implementation | ✅ Complete | 309-shell-canvas-implementation | Merged in PR #318 |
-| #310 | Process Integration & E2E Testing | ⏳ Pending | - | Depends on #306, #307, #308, #309 |
+| #310 | Process Integration & E2E Testing | ✅ Complete | 310-process-integration-e2e-testing | PR #323 |
 
 ### Dependency Graph
 
@@ -108,6 +108,9 @@ local h = canvas.assets.get_height("player")
 - Completed #308: Worker Canvas Implementation - Merged PR #317 to epic-305
 - Started work on #309: Shell Canvas Implementation
 - Completed #309: Shell Canvas Implementation - Merged PR #318 to epic-305
+- Started work on #310: Process Integration & E2E Testing
+- Completed #310: Process Integration & E2E Testing - PR #323 created
+- **Epic #305 complete!** All 5 sub-issues finished.
 
 ## Key Files
 
@@ -123,6 +126,8 @@ local h = canvas.assets.get_height("player")
 - `packages/canvas-runtime/src/renderer/CanvasRenderer.ts` - drawImage command with ImageCache support
 - `packages/lua-runtime/src/CanvasController.ts` - Shell canvas: registerAsset, loadAssets, drawImage, getAssetWidth/Height
 - `packages/lua-runtime/src/setupCanvasAPI.ts` - Shell canvas: canvas.assets.image, canvas.draw_image, canvas.assets.get_width/height
+- `packages/canvas-runtime/src/process/LuaCanvasProcess.ts` - Asset loading protocol integration for worker canvas
+- `lua-learning-website/e2e/canvas-image.spec.ts` - E2E tests for canvas image support
 
 ## Open Questions
 
