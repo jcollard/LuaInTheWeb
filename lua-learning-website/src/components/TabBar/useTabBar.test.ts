@@ -485,4 +485,140 @@ describe('useTabBar', () => {
       // Note: closeTab depends on activeTab, so it may change between renders
     })
   })
+
+  describe('initial state with options', () => {
+    it('should accept initial tabs', () => {
+      // Arrange
+      const initialTabs = [
+        { path: '/file1.lua', name: 'file1.lua', type: 'file' as const, isPinned: false, isPreview: false, isDirty: false },
+        { path: '/file2.lua', name: 'file2.lua', type: 'file' as const, isPinned: true, isPreview: false, isDirty: false },
+      ]
+
+      // Act
+      const { result } = renderHook(() => useTabBar({ initialTabs }))
+
+      // Assert
+      expect(result.current.tabs).toHaveLength(2)
+      expect(result.current.tabs[0].path).toBe('/file1.lua')
+      expect(result.current.tabs[1].path).toBe('/file2.lua')
+    })
+
+    it('should accept initial activeTab', () => {
+      // Arrange
+      const initialTabs = [
+        { path: '/file1.lua', name: 'file1.lua', type: 'file' as const, isPinned: false, isPreview: false, isDirty: false },
+        { path: '/file2.lua', name: 'file2.lua', type: 'file' as const, isPinned: false, isPreview: false, isDirty: false },
+      ]
+
+      // Act
+      const { result } = renderHook(() => useTabBar({ initialTabs, initialActiveTab: '/file2.lua' }))
+
+      // Assert
+      expect(result.current.activeTab).toBe('/file2.lua')
+    })
+
+    it('should preserve pinned state from initial tabs', () => {
+      // Arrange
+      const initialTabs = [
+        { path: '/file1.lua', name: 'file1.lua', type: 'file' as const, isPinned: true, isPreview: false, isDirty: false },
+        { path: '/file2.lua', name: 'file2.lua', type: 'file' as const, isPinned: false, isPreview: false, isDirty: false },
+      ]
+
+      // Act
+      const { result } = renderHook(() => useTabBar({ initialTabs }))
+
+      // Assert
+      expect(result.current.tabs[0].isPinned).toBe(true)
+      expect(result.current.tabs[1].isPinned).toBe(false)
+    })
+
+    it('should preserve tab type from initial tabs', () => {
+      // Arrange
+      const initialTabs = [
+        { path: '/file.lua', name: 'file.lua', type: 'file' as const, isPinned: false, isPreview: false, isDirty: false },
+        { path: '/readme.md', name: 'readme.md', type: 'markdown' as const, isPinned: false, isPreview: false, isDirty: false },
+      ]
+
+      // Act
+      const { result } = renderHook(() => useTabBar({ initialTabs }))
+
+      // Assert
+      expect(result.current.tabs[0].type).toBe('file')
+      expect(result.current.tabs[1].type).toBe('markdown')
+    })
+
+    it('should preserve isPreview state from initial tabs', () => {
+      // Arrange
+      const initialTabs = [
+        { path: '/file1.lua', name: 'file1.lua', type: 'file' as const, isPinned: false, isPreview: true, isDirty: false },
+        { path: '/file2.lua', name: 'file2.lua', type: 'file' as const, isPinned: false, isPreview: false, isDirty: false },
+      ]
+
+      // Act
+      const { result } = renderHook(() => useTabBar({ initialTabs }))
+
+      // Assert
+      expect(result.current.tabs[0].isPreview).toBe(true)
+      expect(result.current.tabs[1].isPreview).toBe(false)
+    })
+
+    it('should default to empty tabs when no initial state provided', () => {
+      // Act
+      const { result } = renderHook(() => useTabBar())
+
+      // Assert
+      expect(result.current.tabs).toEqual([])
+    })
+
+    it('should default to null activeTab when no initial state provided', () => {
+      // Act
+      const { result } = renderHook(() => useTabBar())
+
+      // Assert
+      expect(result.current.activeTab).toBeNull()
+    })
+
+    it('should allow opening new tabs after initialization with initial state', () => {
+      // Arrange
+      const initialTabs = [
+        { path: '/file1.lua', name: 'file1.lua', type: 'file' as const, isPinned: false, isPreview: false, isDirty: false },
+      ]
+      const { result } = renderHook(() => useTabBar({ initialTabs, initialActiveTab: '/file1.lua' }))
+
+      // Act
+      act(() => {
+        result.current.openTab('/file2.lua', 'file2.lua')
+      })
+
+      // Assert
+      expect(result.current.tabs).toHaveLength(2)
+      expect(result.current.activeTab).toBe('/file2.lua')
+    })
+
+    it('should allow closing initial tabs', () => {
+      // Arrange
+      const initialTabs = [
+        { path: '/file1.lua', name: 'file1.lua', type: 'file' as const, isPinned: false, isPreview: false, isDirty: false },
+        { path: '/file2.lua', name: 'file2.lua', type: 'file' as const, isPinned: false, isPreview: false, isDirty: false },
+      ]
+      const { result } = renderHook(() => useTabBar({ initialTabs, initialActiveTab: '/file1.lua' }))
+
+      // Act
+      act(() => {
+        result.current.closeTab('/file1.lua')
+      })
+
+      // Assert
+      expect(result.current.tabs).toHaveLength(1)
+      expect(result.current.tabs[0].path).toBe('/file2.lua')
+    })
+
+    it('should default activeTab to null when initial tabs are empty', () => {
+      // Act
+      const { result } = renderHook(() => useTabBar({ initialTabs: [] }))
+
+      // Assert
+      expect(result.current.activeTab).toBeNull()
+    })
+  })
 })
