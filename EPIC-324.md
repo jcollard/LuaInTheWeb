@@ -48,7 +48,7 @@ Migrate to a manifest-based approach (already used for book content):
 | #329 | Migrate Examples workspace to public/ | ✅ Complete | 329-migrate-examples-workspace-to-public | Merged PR #338 |
 | #330 | Migrate Docs workspace to public/ | ✅ Complete | 330-migrate-docs-workspace-to-public | Merged PR #339 |
 | #331 | Migrate Library workspace to public/ | ✅ Complete | 331-migrate-library-workspace-to-public | Merged PR #341 |
-| #332 | Cleanup and verify read-only workspace migration | ⏳ Pending | - | Depends on #328, #329, #330, #331 |
+| #332 | Cleanup and verify read-only workspace migration | 🔄 In Progress | 332-cleanup-and-verify-read-only-workspace-migration | Started 2025-12-18 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
@@ -86,6 +86,11 @@ Migrate to a manifest-based approach (already used for book content):
 - #331: Created libsFetcher.ts (100% mutation score) and useLibsWorkspaceLoader.ts (86.67%)
 - #331: Library workspace now loads asynchronously like docs/examples/book
 - #331: Completed - merged PR #341 to epic-324
+- #332: Started cleanup and verification work
+- #332: Verified all old embedded files removed (examplesContent.ts, examplesBinaryAssets.ts, luaStdlibMarkdown/, libraryDocumentation.ts, canvasDocumentation.ts)
+- #332: Confirmed no orphaned imports or references
+- #332: Fixed E2E tests to wait for async workspace loading
+- #332: All 741 unit tests pass, 254 E2E tests pass
 
 ## Key Files
 
