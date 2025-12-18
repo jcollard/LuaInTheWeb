@@ -9,6 +9,9 @@ test.describe('File Explorer', () => {
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
     // Wait for file tree to render
     await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+    // Wait for async workspaces to load before interacting
+    await expect(page.getByRole('treeitem', { name: 'libs' })).toBeVisible()
+    await expect(page.getByRole('treeitem', { name: 'docs' })).toBeVisible()
     // Expand the workspace folder so new files/folders are visible
     const workspaceChevron = page.getByTestId('folder-chevron').first()
     await workspaceChevron.click()

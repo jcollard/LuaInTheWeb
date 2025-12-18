@@ -32,6 +32,10 @@ test.describe('Workspace UI', () => {
     })
 
     test('displays read-only workspaces after user workspaces', async ({ page }) => {
+      // Wait for async workspaces to load
+      await expect(page.getByRole('treeitem', { name: 'libs' })).toBeVisible()
+      await expect(page.getByRole('treeitem', { name: 'docs' })).toBeVisible()
+
       // Assert - home should appear before libs and docs in the tree
       const fileTree = page.getByRole('tree', { name: 'File Explorer' })
       const items = fileTree.getByRole('treeitem')
