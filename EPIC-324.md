@@ -1,9 +1,9 @@
 # Epic #324: Explore moving files for read-only workspaces to public/ and using manifest rather than adding them to ts files
 
-**Status:** In Progress (1/5 complete)
+**Status:** In Progress (2/5 complete)
 **Branch:** epic-324
 **Created:** 2025-12-18
-**Last Updated:** 2025-12-18T16:49:54Z
+**Last Updated:** 2025-12-18T18:07:02Z
 
 ## Overview
 
@@ -45,7 +45,7 @@ Migrate to a manifest-based approach (already used for book content):
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #328 | Create shared workspace fetcher infrastructure | ✅ Complete | 328-create-shared-workspace-fetcher-infrastructure | Merged PR #334 |
-| #329 | Migrate Examples workspace to public/ | ⏳ Pending | - | Depends on #328 |
+| #329 | Migrate Examples workspace to public/ | ✅ Complete | 329-migrate-examples-workspace-to-public | Merged PR #338 |
 | #330 | Migrate Docs workspace to public/ | ⏳ Pending | - | Depends on #328 |
 | #331 | Migrate Library workspace to public/ | ⏳ Pending | - | Depends on #328 |
 | #332 | Cleanup and verify read-only workspace migration | ⏳ Pending | - | Depends on #328, #329, #330, #331 |
@@ -74,6 +74,8 @@ Migrate to a manifest-based approach (already used for book content):
 - Epic started
 - #328: Created workspaceFetcher.ts with text and binary file support
 - #328: Completed - merged PR #334 to epic-324
+- #329: Migrated examples workspace to public/ (~116KB bundle reduction)
+- #329: Completed - merged PR #338 to epic-324
 
 ## Key Files
 
