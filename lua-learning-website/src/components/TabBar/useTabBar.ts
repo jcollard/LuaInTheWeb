@@ -1,9 +1,17 @@
 import { useState, useCallback } from 'react'
 import type { TabInfo, TabType, UseTabBarReturn } from './types'
 
-export function useTabBar(): UseTabBarReturn {
-  const [tabs, setTabs] = useState<TabInfo[]>([])
-  const [activeTab, setActiveTab] = useState<string | null>(null)
+export interface UseTabBarOptions {
+  /** Initial tabs to display */
+  initialTabs?: TabInfo[]
+  /** Initial active tab path */
+  initialActiveTab?: string | null
+}
+
+export function useTabBar(options: UseTabBarOptions = {}): UseTabBarReturn {
+  const { initialTabs = [], initialActiveTab = null } = options
+  const [tabs, setTabs] = useState<TabInfo[]>(initialTabs)
+  const [activeTab, setActiveTab] = useState<string | null>(initialActiveTab)
 
   const openTab = useCallback((path: string, name: string, type: TabType = 'file') => {
     setTabs((prev) => {

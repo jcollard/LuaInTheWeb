@@ -1,3 +1,6 @@
 export { TabBar } from './TabBar'
 export { useTabBar } from './useTabBar'
+export { useTabBarPersistence, STORAGE_KEY } from './useTabBarPersistence'
 export type { TabBarProps, TabInfo, TabType, UseTabBarReturn } from './types'
+export type { UseTabBarOptions } from './useTabBar'
+export type { PersistedTab, PersistedTabState, UseTabBarPersistenceOptions, UseTabBarPersistenceReturn } from './useTabBarPersistence'
