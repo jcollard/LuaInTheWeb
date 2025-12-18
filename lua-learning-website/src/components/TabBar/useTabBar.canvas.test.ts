@@ -52,6 +52,7 @@ describe('useTabBar - canvas and preview tabs', () => {
         isDirty: false,
         type: 'canvas',
         isPreview: false,
+        isPinned: false,
       })
     })
 
@@ -217,6 +218,7 @@ describe('useTabBar - canvas and preview tabs', () => {
           isDirty: false,
           type: 'file',
           isPreview: true,
+          isPinned: false,
         })
       })
 

@@ -114,6 +114,11 @@ function IDELayoutInner({
     closeTab,
     openCanvasTab,
     makeTabPermanent,
+    pinTab,
+    unpinTab,
+    reorderTab,
+    closeToRight,
+    closeOthers,
     // Toasts
     toasts,
     showError,
@@ -305,6 +310,11 @@ function IDELayoutInner({
     activeTab,
     onSelect: selectTab,
     onClose: handleCloseTab,
+    onPinTab: pinTab,
+    onUnpinTab: unpinTab,
+    onReorder: reorderTab,
+    onCloseToRight: closeToRight,
+    onCloseOthers: closeOthers,
   } : undefined
 
   return (
