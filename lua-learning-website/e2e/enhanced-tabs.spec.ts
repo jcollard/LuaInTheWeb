@@ -10,9 +10,10 @@ test.describe('Enhanced Editor Tabs', () => {
     // Wait for file tree to render
     await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
     // Expand the workspace folder so files are visible
-    const workspaceChevron = page.getByTestId('folder-chevron').first()
-    await workspaceChevron.click()
-    await page.waitForTimeout(100) // Wait for expansion animation
+    const workspaceFolder = page.getByRole('treeitem').first()
+    await page.getByTestId('folder-chevron').first().click()
+    // Wait for folder to expand by checking aria-expanded attribute
+    await expect(workspaceFolder).toHaveAttribute('aria-expanded', 'true')
   })
 
   // Helper to create a file
@@ -29,7 +30,9 @@ test.describe('Enhanced Editor Tabs', () => {
   async function openFilePermanent(page: import('@playwright/test').Page, name: string) {
     const file = page.getByRole('treeitem', { name: new RegExp(name, 'i') })
     await file.dblclick()
-    await page.waitForTimeout(100)
+    // Wait for tab to appear in editor panel
+    const editorPanel = page.getByTestId('editor-panel')
+    await expect(editorPanel.getByRole('tab', { name: new RegExp(name, 'i') })).toBeVisible()
   }
 
   test.describe('Tab Context Menu', () => {
@@ -169,10 +172,10 @@ test.describe('Enhanced Editor Tabs', () => {
         await page.mouse.down()
         await page.mouse.move(tab1Bounds.x, tab1Bounds.y + tab1Bounds.height / 2, { steps: 10 })
         await page.mouse.up()
-        await page.waitForTimeout(100)
       }
 
       // Assert - Order should be swapped: second.lua is now first
+      // Playwright's expect auto-waits for the condition to be met
       await expect(editorPanel.getByRole('tab')).toHaveCount(2)
       const newFirstTab = editorPanel.getByRole('tab').first()
       const newSecondTab = editorPanel.getByRole('tab').last()
