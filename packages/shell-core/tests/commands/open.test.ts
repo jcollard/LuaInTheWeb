@@ -161,7 +161,7 @@ describe('OpenCommand', () => {
   })
 
   describe('execute with directory', () => {
-    it('should allow opening directories (editor may handle them)', () => {
+    it('should show error when trying to open a directory', () => {
       mockFs.isDirectory = vi.fn().mockReturnValue(true)
       mockFs.isFile = vi.fn().mockReturnValue(false)
       const openFileFn = vi.fn()
@@ -169,7 +169,20 @@ describe('OpenCommand', () => {
 
       command.execute(['mydir'], mockContext)
 
-      expect(openFileFn).toHaveBeenCalledWith('/home/user/mydir')
+      expect(mockContext.error).toHaveBeenCalled()
+      const errorCall = vi.mocked(mockContext.error).mock.calls[0][0]
+      expect(errorCall).toContain('Is a directory')
+    })
+
+    it('should not call onRequestOpenFile when path is a directory', () => {
+      mockFs.isDirectory = vi.fn().mockReturnValue(true)
+      mockFs.isFile = vi.fn().mockReturnValue(false)
+      const openFileFn = vi.fn()
+      mockContext.onRequestOpenFile = openFileFn
+
+      command.execute(['mydir'], mockContext)
+
+      expect(openFileFn).not.toHaveBeenCalled()
     })
   })
 

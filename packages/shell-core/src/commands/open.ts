@@ -32,6 +32,12 @@ export class OpenCommand implements ICommand {
       return
     }
 
+    // Check if it's a directory (not allowed)
+    if (context.filesystem.isDirectory(resolvedPath)) {
+      context.error(`open: cannot open '${targetPath}': Is a directory`)
+      return
+    }
+
     // Check if editor integration is available
     if (!context.onRequestOpenFile) {
       context.error('open: Editor integration not available in standalone mode')
