@@ -3,7 +3,7 @@
 **Status:** In Progress (3/5 complete)
 **Branch:** epic-324
 **Created:** 2025-12-18
-**Last Updated:** 2025-12-18T16:41:18Z
+**Last Updated:** 2025-12-18T18:57:26Z
 
 ## Overview
 
@@ -46,7 +46,7 @@ Migrate to a manifest-based approach (already used for book content):
 |---|-------|--------|--------|-------|
 | #328 | Create shared workspace fetcher infrastructure | ✅ Complete | 328-create-shared-workspace-fetcher-infrastructure | Merged PR #334 |
 | #329 | Migrate Examples workspace to public/ | ✅ Complete | 329-migrate-examples-workspace-to-public | Merged PR #338 |
-| #330 | Migrate Docs workspace to public/ | ✅ Complete | 330-migrate-docs-workspace-to-public | Pending PR |
+| #330 | Migrate Docs workspace to public/ | ✅ Complete | 330-migrate-docs-workspace-to-public | Merged PR #339 |
 | #331 | Migrate Library workspace to public/ | ⏳ Pending | - | Depends on #328 |
 | #332 | Cleanup and verify read-only workspace migration | ⏳ Pending | - | Depends on #328, #329, #330, #331 |
 
@@ -80,6 +80,7 @@ Migrate to a manifest-based approach (already used for book content):
 - #330: Deleted luaStdlibMarkdown/ (~1235 lines) and canvasDocumentation.ts
 - #330: Created docsFetcher.ts with 100% mutation score
 - #330: Docs workspace now loads asynchronously like examples/book
+- #330: Completed - merged PR #339 to epic-324
 
 ## Key Files
 
