@@ -55,11 +55,12 @@ export function useLuaSyntaxChecker(): UseLuaSyntaxCheckerReturn {
         // Code is syntactically valid
         setSyntaxError(null)
       } else if (result.error) {
-        // Code has a syntax error - format it nicely
-        const { message, line, column } = result.error
+        // Code has a syntax error - format to match expected Lua error format
+        // Note: Column is not included to maintain compatibility with luaErrorParser
+        // which expects format: [string "..."]:line: message
+        const { message, line } = result.error
         if (line !== undefined) {
-          const colPart = column !== undefined ? `:${column}` : ''
-          setSyntaxError(`[string "..."]:${line}${colPart}: ${message}`)
+          setSyntaxError(`[string "..."]:${line}: ${message}`)
         } else {
           setSyntaxError(message)
         }
