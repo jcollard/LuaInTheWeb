@@ -492,6 +492,50 @@ This prevents:
 
 ---
 
+## Test Value Analysis
+
+The workflow includes automated test value analysis at two points to ensure tests provide meaningful value.
+
+### When It Runs
+
+| Phase | Command | Behavior |
+|-------|---------|----------|
+| **Implementation** | `/issue <n> review` | **Blocking** - must fix or override |
+| **PR Review** | `/pr-review <n>` | **Informational** - reviewer decides |
+
+### Test Value Criteria
+
+Tests are evaluated against these criteria:
+
+| Criterion | HIGH Value | LOW Value (Blocking) |
+|-----------|------------|----------------------|
+| **AAA Pattern** | Clear Arrange-Act-Assert structure | No structure |
+| **Meaningful Assertions** | Asserts specific values | Only `toBeDefined()` |
+| **Tests Behavior** | Verifies outcomes | Only verifies existence |
+| **No Duplicates** | Unique test purpose | Same behavior tested twice |
+| **Test Names** | "should X when Y" | Vague ("test1", "works") |
+| **Edge Cases** | Covers errors, boundaries | Only happy path |
+
+### Blocking Issues
+
+These issues **block PR creation** in `/issue <n> review`:
+- Test has NO meaningful assertion (only `toBeDefined()`, `toBeTruthy()`)
+- Test is exact duplicate of another test
+- Test name is non-descriptive
+
+To proceed despite blocking issues, type: `continue without fixing tests`
+
+### Standalone Analysis
+
+Run `/test-value-analysis` anytime during development to check test quality:
+
+```
+/test-value-analysis              # Check all new tests vs main
+/test-value-analysis src/hooks    # Check tests at specific path
+```
+
+---
+
 ## Quick Reference
 
 | I want to... | Command |
@@ -515,6 +559,7 @@ This prevents:
 | See full workflow | `/workflow` |
 | See TDD guidelines | `/tdd` |
 | See mutation testing guide | `/mutation-test` |
+| Analyze test quality | `/test-value-analysis` |
 | List worktrees | `/worktree list` |
 
 ---
@@ -557,3 +602,4 @@ This prevents:
 - `/e2e` - E2E testing guidelines
 - `/code-review` - Code review checklist
 - `/milestone` - E2E checkpoint
+- `/test-value-analysis` - Analyze test quality and value

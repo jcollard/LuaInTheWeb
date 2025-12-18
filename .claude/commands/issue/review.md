@@ -46,6 +46,101 @@ Based on the completed TodoWrite tasks and implementation work, prepare:
 
 ---
 
+## Step 1.5: Test Value Analysis (BLOCKING)
+
+Before creating the PR, analyze all new tests for value and quality.
+
+### Identify New Test Files
+
+Find all test files changed in this branch:
+
+```bash
+git diff --name-only main...HEAD | grep -E '\.(test|spec)\.(ts|tsx)$'
+```
+
+If no test files found, skip to Step 2.
+
+### Analyze Each Test
+
+For each test file, read the file and evaluate each test case against these criteria:
+
+| Criterion | Check |
+|-----------|-------|
+| **AAA Pattern** | Clear Arrange-Act-Assert structure |
+| **Meaningful Assertions** | Asserts specific values, not just `toBeDefined()` |
+| **Tests Behavior** | Verifies outcomes, not just existence |
+| **No Duplicates** | Not testing same thing as another test |
+| **Test Names** | Describes behavior ("should X when Y") |
+| **Edge Cases** | File covers error cases, boundaries |
+
+### Classification
+
+**Blocking Issues (MUST FIX):**
+- Test has NO meaningful assertion (only `toBeDefined()`, `toBeTruthy()`, or none)
+- Test is exact duplicate of another test
+- Test name is non-descriptive ("test1", "works", "handles")
+
+**Warnings (SHOULD REVIEW):**
+- Assertion could be stronger
+- Test name could be more descriptive
+- Similar tests that might be consolidated
+
+### Output Format
+
+```
+## Test Value Analysis
+
+**Tests Analyzed**: <count>
+**Blocking Issues**: <count>
+**Warnings**: <count>
+
+### Blocking Issues (must fix before PR)
+
+1. `useFeature.test.ts:23` - **No meaningful assertion**
+   ```typescript
+   it('should work', () => {
+     const result = useFeature()
+     expect(result).toBeDefined()  // LOW VALUE
+   })
+   ```
+   **Fix**: Assert specific properties:
+   ```typescript
+   expect(result.isActive).toBe(false)
+   expect(result.data).toEqual([])
+   ```
+
+### Warnings
+
+1. `useHook.test.ts:67` - Test name not descriptive
+   **Suggestion**: "should update state when action dispatched"
+
+---
+
+**Action Required**: Fix blocking issues before creating PR.
+
+To continue anyway (not recommended):
+Type "continue without fixing tests"
+```
+
+### Blocking Logic
+
+**If blocking issues found:**
+- Display the analysis report
+- Wait for user response
+- Only proceed to Step 2 if user explicitly types "continue without fixing tests"
+- If user wants to fix issues, STOP here - they will run `/issue <n> review` again after fixing
+
+**If only warnings found:**
+- Display warnings
+- Ask: "Continue with PR creation? (y/n)"
+- Proceed to Step 2 if user confirms
+
+**If no issues found:**
+- Display brief summary: "Test Value Analysis: All <count> tests pass quality checks."
+- Continue to Step 2
+
+---
+
 ## Step 2: Run the Review Script
 
 Use the automated review script which handles:

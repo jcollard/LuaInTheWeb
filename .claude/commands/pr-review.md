@@ -174,6 +174,99 @@ Review the diff against the project's coding standards. Check each category:
 
 ---
 
+## Step 4.5: Test Value Analysis Report
+
+Analyze all test files in the PR diff and generate a comprehensive report for the reviewer.
+
+### Find Test Files in Diff
+
+```bash
+gh pr diff <number> --name-only | grep -E '\.(test|spec)\.(ts|tsx)$'
+```
+
+If no test files in the PR, skip this step.
+
+### Analyze Each Test File
+
+For each test file in the diff, read and evaluate every test case:
+
+1. **Identify new/modified tests** (focus on added lines in diff)
+2. **Evaluate each test** against value criteria
+3. **Note patterns** across the test suite
+
+### Evaluation Criteria
+
+| Criterion | HIGH | MEDIUM | LOW |
+|-----------|------|--------|-----|
+| **Meaningful Assertions** | Specific values checked | Something verified | Only `toBeDefined()` |
+| **Tests Behavior** | Verifies outcomes | Verifies calls | Verifies existence |
+| **AAA Pattern** | Clear structure | Implied structure | No structure |
+| **Test Names** | "should X when Y" | Describes something | Vague/implementation |
+| **No Duplicates** | Unique purpose | Slight overlap | Same test repeated |
+
+### Report Format
+
+Add this section to the Step 6 Review Report output:
+
+```
+---
+
+### Test Value Analysis
+
+**Test Files in PR**: <count>
+**New/Modified Tests**: <count>
+
+#### Per-Test Analysis
+
+| File | Test Name | Value | Issues |
+|------|-----------|-------|--------|
+| useNewHook.test.ts | should return initial state | HIGH | - |
+| useNewHook.test.ts | should update on action | MEDIUM | Weak assertion |
+| Component.test.tsx | should render correctly | HIGH | - |
+| Component.test.tsx | test click | LOW | Vague name |
+
+#### Value Distribution
+- **HIGH**: <count> tests - specific assertions, behavior-focused
+- **MEDIUM**: <count> tests - adequate but could improve
+- **LOW**: <count> tests - needs improvement
+
+#### Detailed Findings
+
+**High-Value Tests**
+- `useNewHook.test.ts`: "should return initial state"
+  - Clear AAA pattern, specific value assertions
+
+**Needs Improvement**
+- `Component.test.tsx:42`: "test click"
+  - Issue: Name doesn't describe expected behavior
+  - Issue: Uses `toHaveBeenCalled()` without verifying arguments
+  - Suggestion: Rename to "should call onSubmit with form data when clicked"
+
+**Potential Duplicates**
+- None found
+
+#### Test Coverage Assessment
+
+Based on implementation changes, verify coverage of:
+- [ ] Happy path scenarios
+- [ ] Error handling paths
+- [ ] Edge cases (empty, null, boundaries)
+- [ ] Cleanup/unmount behavior (if applicable)
+
+---
+```
+
+### Reviewer Guidance
+
+This analysis is **informational only** - it does NOT block PR acceptance.
+
+Use this information to:
+1. Identify tests that may need improvement (request changes if egregious)
+2. Note coverage gaps in review feedback
+3. Consider LOW value tests as potential tech debt
+
+---
+
 ## Step 5: Check CI Status (if available)
 
 ```bash
