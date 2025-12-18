@@ -1,9 +1,9 @@
 # Epic #324: Explore moving files for read-only workspaces to public/ and using manifest rather than adding them to ts files
 
-**Status:** In Progress (0/5 complete)
+**Status:** In Progress (1/5 complete)
 **Branch:** epic-324
 **Created:** 2025-12-18
-**Last Updated:** 2025-12-18T13:46:00Z
+**Last Updated:** 2025-12-18T16:49:54Z
 
 ## Overview
 
@@ -44,7 +44,7 @@ Migrate to a manifest-based approach (already used for book content):
 
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
-| #328 | Create shared workspace fetcher infrastructure | ⏷ In Progress | 328-create-shared-workspace-fetcher-infrastructure | Started 2025-12-18 |
+| #328 | Create shared workspace fetcher infrastructure | ✅ Complete | 328-create-shared-workspace-fetcher-infrastructure | Merged PR #334 |
 | #329 | Migrate Examples workspace to public/ | ⏳ Pending | - | Depends on #328 |
 | #330 | Migrate Docs workspace to public/ | ⏳ Pending | - | Depends on #328 |
 | #331 | Migrate Library workspace to public/ | ⏳ Pending | - | Depends on #328 |
@@ -73,13 +73,14 @@ Migrate to a manifest-based approach (already used for book content):
 ### 2025-12-18
 - Epic started
 - #328: Created workspaceFetcher.ts with text and binary file support
+- #328: Completed - merged PR #334 to epic-324
 
 ## Key Files
 
 <!-- Populated as files are created/modified -->
 
 - `src/hooks/workspaceFetcher.ts` - Generic workspace content fetcher with text/binary support
-- `src/hooks/workspaceFetcher.test.ts` - Unit tests (22 tests, 80% mutation score)
+- `src/hooks/workspaceFetcher.test.ts` - Unit tests (20 tests, 80% mutation score)
 
 ## Open Questions
 
