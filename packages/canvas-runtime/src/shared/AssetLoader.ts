@@ -109,7 +109,14 @@ export class AssetLoader {
   }
 
   /**
-   * Load an asset from the filesystem.
+   * Check if a path is an HTTP(S) URL.
+   */
+  private isHttpUrl(path: string): boolean {
+    return path.startsWith('http://') || path.startsWith('https://');
+  }
+
+  /**
+   * Load an asset from the filesystem or via HTTP URL.
    *
    * @param definition - The asset definition specifying name, path, and type
    * @returns Promise resolving to the loaded asset with data and optional metadata
@@ -118,7 +125,12 @@ export class AssetLoader {
   async loadAsset(definition: AssetDefinition): Promise<LoadedAsset> {
     const { name, path } = definition;
 
-    // Resolve the path
+    // Handle HTTP URLs separately
+    if (this.isHttpUrl(path)) {
+      return this.loadAssetFromUrl(name, path);
+    }
+
+    // Resolve filesystem path
     const resolvedPath = this.resolvePath(path);
 
     // Check if file exists
@@ -156,6 +168,56 @@ export class AssetLoader {
     }
 
     // Try to extract image dimensions (best effort, don't fail)
+    const dimensions = this.tryExtractDimensions(binaryData);
+    if (dimensions) {
+      result.width = dimensions.width;
+      result.height = dimensions.height;
+    }
+
+    return result;
+  }
+
+  /**
+   * Load an asset from an HTTP URL.
+   * Uses fetch API and browser's image loading for dimensions.
+   *
+   * @param name - The asset name
+   * @param url - The URL to fetch from
+   * @returns Promise resolving to the loaded asset
+   * @throws Error if fetch fails
+   */
+  private async loadAssetFromUrl(name: string, url: string): Promise<LoadedAsset> {
+    // Ensure fetch is available (browser or Node 18+)
+    if (typeof fetch === 'undefined') {
+      throw new Error('HTTP URL loading requires fetch API (browser environment)');
+    }
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Asset '${name}' not found: ${url} (HTTP ${response.status})`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const binaryData = new Uint8Array(arrayBuffer);
+
+    // Build result
+    const result: LoadedAsset = {
+      name,
+      data: arrayBuffer,
+    };
+
+    // Try to get MIME type from response headers or extension
+    const contentType = response.headers.get('content-type');
+    if (contentType) {
+      result.mimeType = contentType.split(';')[0].trim();
+    } else {
+      const mimeType = this.getMimeType(url);
+      if (mimeType) {
+        result.mimeType = mimeType;
+      }
+    }
+
+    // Try to extract image dimensions (best effort)
     const dimensions = this.tryExtractDimensions(binaryData);
     if (dimensions) {
       result.width = dimensions.width;

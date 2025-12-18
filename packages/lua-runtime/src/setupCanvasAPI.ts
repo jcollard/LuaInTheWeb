@@ -137,7 +137,11 @@ export function setupCanvasAPI(
 
   // --- Asset functions ---
   engine.global.set('__canvas_assets_image', (name: string, path: string) => {
-    getController()?.registerAsset(name, path)
+    const controller = getController()
+    if (!controller) {
+      throw new Error('Canvas controller not available - is canvas support enabled?')
+    }
+    controller.registerAsset(name, path)
   })
 
   engine.global.set('__canvas_drawImage', (name: string, x: number, y: number, width?: number | null, height?: number | null) => {

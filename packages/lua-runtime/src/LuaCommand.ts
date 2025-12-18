@@ -51,10 +51,13 @@ export class LuaCommand implements ICommand {
    */
   execute(args: string[], context: ShellContext): IProcess {
     // Build canvas callbacks if available in context
+    // Include filesystem for asset loading support
     const canvasCallbacks = context.onRequestCanvasTab && context.onCloseCanvasTab
       ? {
           onRequestCanvasTab: context.onRequestCanvasTab,
           onCloseCanvasTab: context.onCloseCanvasTab,
+          fileSystem: context.filesystem,
+          scriptDirectory: context.cwd,
         }
       : undefined
 

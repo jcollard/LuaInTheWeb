@@ -558,6 +558,7 @@ describe('CanvasController', () => {
 
   describe('asset dimensions', () => {
     let mockFileSystem: IFileSystem
+    let originalImage: typeof Image
 
     beforeEach(async () => {
       mockFileSystem = {
@@ -576,6 +577,27 @@ describe('CanvasController', () => {
         moveFile: vi.fn(),
         rename: vi.fn(),
       }
+
+      // Mock Image constructor to return image with known dimensions
+      // since createImageFromData extracts dimensions from the loaded image
+      originalImage = global.Image
+      global.Image = class MockImage {
+        width = 64
+        height = 64
+        src = ''
+        onload: (() => void) | null = null
+        onerror: (() => void) | null = null
+        constructor() {
+          // Trigger onload asynchronously
+          setTimeout(() => {
+            if (this.onload) this.onload()
+          }, 0)
+        }
+      } as unknown as typeof Image
+    })
+
+    afterEach(() => {
+      global.Image = originalImage
     })
 
     it('should return asset width after loading', async () => {
