@@ -14,4 +14,6 @@ export interface BottomPanelProps {
   canvasCallbacks?: ShellCanvasCallbacks
   /** Callback when a file/directory is moved/renamed via mv command (for updating tabs) */
   onFileMove?: (oldPath: string, newPath: string, isDirectory: boolean) => void
+  /** Callback when the 'open' command requests to open a file in the editor */
+  onRequestOpenFile?: (filePath: string) => void
 }

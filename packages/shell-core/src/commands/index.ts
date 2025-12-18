@@ -13,6 +13,7 @@ import { mkdir } from './mkdir'
 import { touch } from './touch'
 import { cp } from './cp'
 import { mv } from './mv'
+import { OpenCommand } from './open'
 
 // Export individual commands
 export { pwd } from './pwd'
@@ -24,6 +25,7 @@ export { mkdir } from './mkdir'
 export { touch } from './touch'
 export { cp } from './cp'
 export { mv } from './mv'
+export { OpenCommand } from './open'
 
 /**
  * Register all built-in commands with a registry.
@@ -40,6 +42,8 @@ export function registerBuiltinCommands(registry: CommandRegistry): CommandRegis
   registry.register(cp)
   registry.register(mv)
   registry.register(createHelpCommand(registry))
+  // Register ICommand implementations
+  registry.registerICommand(new OpenCommand())
   return registry
 }
 

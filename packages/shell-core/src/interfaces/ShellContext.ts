@@ -46,4 +46,13 @@ export interface ShellContext {
    * @param canvasId - Unique identifier for the canvas tab to close
    */
   onCloseCanvasTab?: (canvasId: string) => void
+
+  /**
+   * Request a file to be opened in the editor.
+   * Called by the 'open' command to integrate with an IDE or editor.
+   * Optional - when undefined, the open command will report that
+   * editor integration is not available.
+   * @param filePath - Absolute path to the file to open
+   */
+  onRequestOpenFile?: (filePath: string) => void
 }
