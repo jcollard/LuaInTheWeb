@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { renderHook, act } from '@testing-library/react'
 import { vi } from 'vitest'
 import { IDEContextProvider } from './IDEContext'
@@ -658,6 +659,220 @@ describe('IDEContext', () => {
       // Assert - should convert to permanent
       expect(result.current.tabs).toHaveLength(1)
       expect(result.current.tabs[0].isPreview).toBe(false)
+    })
+  })
+
+  describe('handleShellFileMove', () => {
+    beforeEach(() => {
+      localStorage.clear()
+    })
+
+    it('should update tab name and path when file is renamed', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFile('/original.lua', 'content')
+      })
+
+      act(() => {
+        result.current.openFile('/original.lua')
+      })
+
+      expect(result.current.tabs[0].path).toBe('/original.lua')
+      expect(result.current.tabs[0].name).toBe('original.lua')
+
+      // Act - simulate shell mv command
+      act(() => {
+        result.current.handleShellFileMove('/original.lua', '/renamed.lua', false)
+      })
+
+      // Assert
+      expect(result.current.tabs).toHaveLength(1)
+      expect(result.current.tabs[0].path).toBe('/renamed.lua')
+      expect(result.current.tabs[0].name).toBe('renamed.lua')
+    })
+
+    it('should not crash when renaming file that has no open tab', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFile('/notopen.lua', 'content')
+      })
+
+      // Don't open the file in a tab
+
+      // Act - should not throw
+      act(() => {
+        result.current.handleShellFileMove('/notopen.lua', '/renamed.lua', false)
+      })
+
+      // Assert - no tabs affected
+      expect(result.current.tabs).toHaveLength(0)
+    })
+
+    it('should preserve dirty state when renaming file', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFile('/dirty.lua', 'original')
+      })
+
+      act(() => {
+        result.current.openFile('/dirty.lua')
+      })
+
+      // Make the file dirty
+      act(() => {
+        result.current.setCode('modified content')
+      })
+
+      expect(result.current.isDirty).toBe(true)
+      expect(result.current.tabs[0].isDirty).toBe(true)
+
+      // Act - rename via shell
+      act(() => {
+        result.current.handleShellFileMove('/dirty.lua', '/renamed-dirty.lua', false)
+      })
+
+      // Assert - dirty state should be preserved
+      expect(result.current.tabs[0].path).toBe('/renamed-dirty.lua')
+      expect(result.current.tabs[0].isDirty).toBe(true)
+      expect(result.current.code).toBe('modified content')
+    })
+
+    it('should update all child tabs when directory is renamed', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Create files in a directory
+      act(() => {
+        result.current.createFolder('/mydir')
+        result.current.createFile('/mydir/file1.lua', 'content1')
+        result.current.createFile('/mydir/file2.lua', 'content2')
+      })
+
+      // Open both files
+      act(() => {
+        result.current.openFile('/mydir/file1.lua')
+      })
+      act(() => {
+        result.current.openFile('/mydir/file2.lua')
+      })
+
+      expect(result.current.tabs).toHaveLength(2)
+      expect(result.current.tabs[0].path).toBe('/mydir/file1.lua')
+      expect(result.current.tabs[1].path).toBe('/mydir/file2.lua')
+
+      // Act - rename the directory via shell
+      act(() => {
+        result.current.handleShellFileMove('/mydir', '/newdir', true)
+      })
+
+      // Assert - both tabs should have updated paths
+      expect(result.current.tabs).toHaveLength(2)
+      expect(result.current.tabs[0].path).toBe('/newdir/file1.lua')
+      expect(result.current.tabs[0].name).toBe('file1.lua')
+      expect(result.current.tabs[1].path).toBe('/newdir/file2.lua')
+      expect(result.current.tabs[1].name).toBe('file2.lua')
+    })
+
+    it('should preserve dirty state for child files when directory is renamed', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFolder('/mydir')
+        result.current.createFile('/mydir/dirty.lua', 'original')
+      })
+
+      act(() => {
+        result.current.openFile('/mydir/dirty.lua')
+      })
+
+      // Make file dirty
+      act(() => {
+        result.current.setCode('modified')
+      })
+
+      expect(result.current.tabs[0].isDirty).toBe(true)
+
+      // Act - rename directory
+      act(() => {
+        result.current.handleShellFileMove('/mydir', '/renamed', true)
+      })
+
+      // Assert
+      expect(result.current.tabs[0].path).toBe('/renamed/dirty.lua')
+      expect(result.current.tabs[0].isDirty).toBe(true)
+      expect(result.current.code).toBe('modified')
+    })
+
+    it('should only affect tabs that are children of renamed directory', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFolder('/dir1')
+        result.current.createFolder('/dir2')
+        result.current.createFile('/dir1/file.lua', 'dir1 content')
+        result.current.createFile('/dir2/file.lua', 'dir2 content')
+      })
+
+      act(() => {
+        result.current.openFile('/dir1/file.lua')
+      })
+      act(() => {
+        result.current.openFile('/dir2/file.lua')
+      })
+
+      // Act - rename only dir1
+      act(() => {
+        result.current.handleShellFileMove('/dir1', '/renamed1', true)
+      })
+
+      // Assert - only dir1's file should be affected
+      expect(result.current.tabs[0].path).toBe('/renamed1/file.lua')
+      expect(result.current.tabs[1].path).toBe('/dir2/file.lua') // unchanged
+    })
+
+    it('should update active tab when renamed file is currently active', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      act(() => {
+        result.current.createFile('/active.lua', 'content')
+      })
+
+      act(() => {
+        result.current.openFile('/active.lua')
+      })
+
+      expect(result.current.activeTab).toBe('/active.lua')
+
+      // Act
+      act(() => {
+        result.current.handleShellFileMove('/active.lua', '/renamed-active.lua', false)
+      })
+
+      // Assert - activeTab should point to new path
+      expect(result.current.activeTab).toBe('/renamed-active.lua')
     })
   })
 })

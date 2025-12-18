@@ -86,6 +86,7 @@ function IDELayoutInner({
     // Filesystem
     fileTree,
     refreshFileTree,
+    handleShellFileMove,
     deleteFile,
     deleteFolder,
     renameFile,
@@ -398,6 +399,7 @@ function IDELayoutInner({
                   fileSystem={compositeFileSystem}
                   onFileSystemChange={refreshFileTree}
                   canvasCallbacks={canvasCallbacks}
+                  onFileMove={handleShellFileMove}
                 />
                 </IDEPanel>
               </IDEPanelGroup>

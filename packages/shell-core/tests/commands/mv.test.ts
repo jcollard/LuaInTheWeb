@@ -300,4 +300,84 @@ describe('mv command', () => {
       expect(result.stderr).toContain('Permission denied')
     })
   })
+
+  describe('onFileMove callback', () => {
+    it('should call onFileMove callback when moving a file successfully', () => {
+      const onFileMove = vi.fn()
+      mockFs.onFileMove = onFileMove
+
+      const result = mv.execute(['source.txt', 'dest.txt'], mockFs)
+
+      expect(result.exitCode).toBe(0)
+      expect(onFileMove).toHaveBeenCalledTimes(1)
+      expect(onFileMove).toHaveBeenCalledWith('/home/user/source.txt', '/home/user/dest.txt', false)
+    })
+
+    it('should call onFileMove with isDirectory=true when moving a directory', () => {
+      const onFileMove = vi.fn()
+      mockFs.onFileMove = onFileMove
+      mockFs.isDirectory = vi.fn().mockReturnValue(true)
+      mockFs.listDirectory = vi.fn().mockReturnValue([])
+      mockFs.exists = vi.fn().mockImplementation((path: string) => {
+        return path === '/home/user/srcdir'
+      })
+
+      const result = mv.execute(['srcdir', 'destdir'], mockFs)
+
+      expect(result.exitCode).toBe(0)
+      expect(onFileMove).toHaveBeenCalledTimes(1)
+      expect(onFileMove).toHaveBeenCalledWith('/home/user/srcdir', '/home/user/destdir', true)
+    })
+
+    it('should not call onFileMove when move fails', () => {
+      const onFileMove = vi.fn()
+      mockFs.onFileMove = onFileMove
+      mockFs.exists = vi.fn().mockReturnValue(false)
+
+      const result = mv.execute(['missing.txt', 'dest.txt'], mockFs)
+
+      expect(result.exitCode).toBe(1)
+      expect(onFileMove).not.toHaveBeenCalled()
+    })
+
+    it('should call onFileMove for each file when moving multiple files', () => {
+      const onFileMove = vi.fn()
+      mockFs.onFileMove = onFileMove
+      mockFs.isDirectory = vi.fn().mockImplementation((path: string) => {
+        return path === '/home/user/destdir'
+      })
+      mockFs.exists = vi.fn().mockReturnValue(true)
+
+      const result = mv.execute(['file1.txt', 'file2.txt', 'destdir'], mockFs)
+
+      expect(result.exitCode).toBe(0)
+      expect(onFileMove).toHaveBeenCalledTimes(2)
+      expect(onFileMove).toHaveBeenCalledWith('/home/user/file1.txt', '/home/user/destdir/file1.txt', false)
+      expect(onFileMove).toHaveBeenCalledWith('/home/user/file2.txt', '/home/user/destdir/file2.txt', false)
+    })
+
+    it('should work without onFileMove callback (backward compatible)', () => {
+      // No onFileMove callback set
+      delete mockFs.onFileMove
+
+      const result = mv.execute(['source.txt', 'dest.txt'], mockFs)
+
+      expect(result.exitCode).toBe(0)
+      expect(mockFs.writeFile).toHaveBeenCalled()
+      expect(mockFs.delete).toHaveBeenCalled()
+    })
+
+    it('should call onFileMove with correct destination when moving file into directory', () => {
+      const onFileMove = vi.fn()
+      mockFs.onFileMove = onFileMove
+      mockFs.isDirectory = vi.fn().mockImplementation((path: string) => {
+        return path === '/home/user/destdir'
+      })
+
+      const result = mv.execute(['source.txt', 'destdir'], mockFs)
+
+      expect(result.exitCode).toBe(0)
+      expect(onFileMove).toHaveBeenCalledWith('/home/user/source.txt', '/home/user/destdir/source.txt', false)
+    })
+  })
 })

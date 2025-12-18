@@ -10,6 +10,7 @@ export function BottomPanel({
   className,
   onFileSystemChange,
   canvasCallbacks,
+  onFileMove,
 }: BottomPanelProps) {
   const combinedClassName = className
     ? `${styles.bottomPanel} ${className}`
@@ -35,6 +36,7 @@ export function BottomPanel({
             embedded
             onFileSystemChange={onFileSystemChange}
             canvasCallbacks={canvasCallbacks}
+            onFileMove={onFileMove}
           />
         </div>
       </div>

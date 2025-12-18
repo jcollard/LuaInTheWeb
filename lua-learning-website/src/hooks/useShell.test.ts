@@ -491,6 +491,59 @@ describe('useShell with IFileSystem', () => {
     })
   })
 
+  describe('onFileMove callback', () => {
+    it('should call onFileMove callback when mv command is executed', () => {
+      const onFileMove = vi.fn()
+      const { result } = renderHook(() =>
+        useShell(mockFs, { onFileMove })
+      )
+
+      act(() => {
+        result.current.executeCommand('mv /test.txt /renamed.txt')
+      })
+
+      expect(onFileMove).toHaveBeenCalledTimes(1)
+      expect(onFileMove).toHaveBeenCalledWith('/test.txt', '/renamed.txt', false)
+    })
+
+    it('should not call onFileMove callback when mv command fails', () => {
+      const onFileMove = vi.fn()
+      // Create filesystem where source doesn't exist
+      const disconnectedFs: IFileSystem = {
+        ...mockFs,
+        exists: () => false,
+      }
+
+      const { result } = renderHook(() =>
+        useShell(disconnectedFs, { onFileMove })
+      )
+
+      act(() => {
+        result.current.executeCommand('mv /nonexistent.txt /dest.txt')
+      })
+
+      expect(onFileMove).not.toHaveBeenCalled()
+    })
+
+    it('should work without onFileMove callback (backward compatible)', () => {
+      const { result } = renderHook(() => useShell(mockFs))
+
+      // Should not throw when mv is executed without callback
+      let commandResult: { exitCode: number; stdout: string; stderr: string }
+      act(() => {
+        commandResult = result.current.executeCommand('mv /test.txt /renamed.txt')
+      })
+
+      // Verify mv command succeeded
+      expect(commandResult!.exitCode).toBe(0)
+      expect(commandResult!.stderr).toBe('')
+
+      // Verify the file was actually moved (exists at new path, not at old path)
+      expect(mockFs.exists('/renamed.txt')).toBe(true)
+      expect(mockFs.exists('/test.txt')).toBe(false)
+    })
+  })
+
   describe('disconnected workspace handling', () => {
     it('reports errors when operating on a disconnected filesystem', () => {
       // Create a mock disconnected filesystem (like a disconnected local workspace)

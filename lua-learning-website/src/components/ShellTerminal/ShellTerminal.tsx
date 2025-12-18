@@ -22,6 +22,7 @@ export function ShellTerminal({
   className,
   onFileSystemChange,
   canvasCallbacks,
+  onFileMove,
 }: ShellTerminalProps) {
   const { theme } = useTheme()
   const initialThemeRef = useRef(theme)
@@ -31,7 +32,7 @@ export function ShellTerminal({
 
   const { executeCommand, executeCommandWithContext, cwd, history, commandNames, getPathCompletionsForTab } = useShell(
     fileSystem,
-    { canvasCallbacks }
+    { canvasCallbacks, onFileMove }
   )
 
   // Store latest values in refs so handlers can access current data

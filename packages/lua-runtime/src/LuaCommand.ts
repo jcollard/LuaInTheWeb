@@ -6,6 +6,7 @@
 import type { ICommand, IProcess, ShellContext } from '@lua-learning/shell-core'
 import { LuaReplProcess, type LuaReplProcessOptions } from './LuaReplProcess'
 import { LuaScriptProcess } from './LuaScriptProcess'
+import { LuaLinter } from './LuaLinter'
 
 /**
  * Default execution control options.
@@ -26,6 +27,7 @@ const DEFAULT_EXECUTION_OPTIONS = {
  * Usage:
  * - `lua` - Start interactive Lua REPL
  * - `lua <filename>` - Execute a Lua script file
+ * - `lua --lint <filename>` - Check syntax of a Lua file
  */
 export class LuaCommand implements ICommand {
   /**
@@ -41,15 +43,20 @@ export class LuaCommand implements ICommand {
   /**
    * Usage pattern.
    */
-  readonly usage = 'lua [filename]'
+  readonly usage = 'lua [--lint] [filename]'
 
   /**
    * Execute the command.
    * @param args - Command arguments. If empty, starts REPL. If filename provided, executes script.
    * @param context - Shell execution context
-   * @returns IProcess for the Lua execution
+   * @returns IProcess for the Lua execution, or undefined for --lint
    */
-  execute(args: string[], context: ShellContext): IProcess {
+  execute(args: string[], context: ShellContext): IProcess | undefined {
+    // Handle --lint flag
+    if (args[0] === '--lint') {
+      return this.executeLint(args.slice(1), context)
+    }
+
     // Filename provided - execute script
     const filename = args.length > 0 ? args[0] : null
 
@@ -110,5 +117,46 @@ export class LuaCommand implements ICommand {
       return '/'
     }
     return fullPath.substring(0, lastSlash)
+  }
+
+  /**
+   * Execute the --lint command to check syntax of a Lua file.
+   * @param args - Remaining arguments after --lint (should be [filename])
+   * @param context - Shell execution context
+   * @returns undefined (lint is synchronous, outputs directly to context)
+   */
+  private executeLint(args: string[], context: ShellContext): undefined {
+    if (args.length === 0) {
+      context.error('lua --lint requires a filename')
+      return undefined
+    }
+
+    const filename = args[0]
+    const cwd = context.filesystem.getCurrentDirectory()
+
+    // Resolve path (absolute or relative to cwd)
+    const fullPath = filename.startsWith('/') ? filename : `${cwd}/${filename}`
+
+    // Check if file exists
+    if (!context.filesystem.exists(fullPath)) {
+      context.error(`${filename}: file not found`)
+      return undefined
+    }
+
+    // Read file content
+    const content = context.filesystem.readFile(fullPath)
+
+    // Lint the code using luaparse
+    const result = LuaLinter.lint(content)
+
+    if (!result.valid && result.error) {
+      // Format error message: filename:line:column: message
+      const location = result.error.line
+        ? `:${result.error.line}${result.error.column ? `:${result.error.column}` : ''}`
+        : ''
+      context.error(`${filename}${location}: ${result.error.message}`)
+    }
+
+    return undefined
   }
 }

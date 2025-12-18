@@ -1,25 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useLuaSyntaxChecker } from './useLuaSyntaxChecker'
-import { LuaEngineFactory } from '@lua-learning/lua-runtime'
-
-// Mock the LuaEngineFactory
-vi.mock('@lua-learning/lua-runtime', () => ({
-  LuaEngineFactory: {
-    create: vi.fn(),
-    isCodeComplete: vi.fn(),
-    closeDeferred: vi.fn(),
-  },
-}))
 
 describe('useLuaSyntaxChecker', () => {
-  const mockEngine = {}
-
   beforeEach(() => {
     vi.useFakeTimers()
-    vi.mocked(LuaEngineFactory.closeDeferred).mockClear()
-    vi.mocked(LuaEngineFactory.create).mockResolvedValue(mockEngine as never)
-    vi.mocked(LuaEngineFactory.isCodeComplete).mockResolvedValue({ complete: true })
   })
 
   afterEach(() => {
@@ -28,17 +13,6 @@ describe('useLuaSyntaxChecker', () => {
   })
 
   describe('initialization', () => {
-    it('creates a Lua engine on mount', async () => {
-      renderHook(() => useLuaSyntaxChecker())
-
-      // Flush promises and timers
-      await act(async () => {
-        await vi.runAllTimersAsync()
-      })
-
-      expect(LuaEngineFactory.create).toHaveBeenCalled()
-    })
-
     it('starts with no syntax error', () => {
       const { result } = renderHook(() => useLuaSyntaxChecker())
 
@@ -56,11 +30,6 @@ describe('useLuaSyntaxChecker', () => {
     it('debounces syntax checks', async () => {
       const { result } = renderHook(() => useLuaSyntaxChecker())
 
-      // Wait for engine to be created
-      await act(async () => {
-        await vi.runAllTimersAsync()
-      })
-
       // Call checkSyntax multiple times rapidly
       act(() => {
         result.current.checkSyntax('print("hello")')
@@ -68,30 +37,20 @@ describe('useLuaSyntaxChecker', () => {
         result.current.checkSyntax('print("final")')
       })
 
-      // Should not have checked yet (debounce)
-      expect(LuaEngineFactory.isCodeComplete).not.toHaveBeenCalled()
+      // Error should still be null (debounced)
+      expect(result.current.syntaxError).toBeNull()
 
-      // Advance timer past debounce delay and flush promises
+      // Advance timer past debounce delay
       await act(async () => {
         await vi.advanceTimersByTimeAsync(350)
       })
 
-      // Should only have checked once with the final value
-      expect(LuaEngineFactory.isCodeComplete).toHaveBeenCalledTimes(1)
-      expect(LuaEngineFactory.isCodeComplete).toHaveBeenCalledWith(mockEngine, 'print("final")')
+      // Should have processed the final code (which is valid)
+      expect(result.current.syntaxError).toBeNull()
     })
 
     it('sets syntaxError when code has syntax error', async () => {
-      vi.mocked(LuaEngineFactory.isCodeComplete).mockResolvedValue({
-        complete: false,
-        error: "[string \"...\"]:1: unexpected symbol near '0'",
-      })
-
       const { result } = renderHook(() => useLuaSyntaxChecker())
-
-      await act(async () => {
-        await vi.runAllTimersAsync()
-      })
 
       act(() => {
         result.current.checkSyntax('print("hi") 0')
@@ -101,21 +60,12 @@ describe('useLuaSyntaxChecker', () => {
         await vi.advanceTimersByTimeAsync(350)
       })
 
-      expect(result.current.syntaxError).toBe("[string \"...\"]:1: unexpected symbol near '0'")
+      expect(result.current.syntaxError).not.toBeNull()
+      expect(result.current.syntaxError).toContain('unexpected')
     })
 
     it('clears syntaxError when code is valid', async () => {
       const { result } = renderHook(() => useLuaSyntaxChecker())
-
-      await act(async () => {
-        await vi.runAllTimersAsync()
-      })
-
-      // First return an error
-      vi.mocked(LuaEngineFactory.isCodeComplete).mockResolvedValueOnce({
-        complete: false,
-        error: 'syntax error',
-      })
 
       // Check invalid code
       act(() => {
@@ -126,12 +76,7 @@ describe('useLuaSyntaxChecker', () => {
         await vi.advanceTimersByTimeAsync(350)
       })
 
-      expect(result.current.syntaxError).toBe('syntax error')
-
-      // Now return valid
-      vi.mocked(LuaEngineFactory.isCodeComplete).mockResolvedValueOnce({
-        complete: true,
-      })
+      expect(result.current.syntaxError).not.toBeNull()
 
       // Check valid code
       act(() => {
@@ -146,44 +91,25 @@ describe('useLuaSyntaxChecker', () => {
     })
 
     it('shows error for incomplete code (e.g., unclosed parenthesis)', async () => {
-      // Incomplete code - has incompleteError field for file editing
-      vi.mocked(LuaEngineFactory.isCodeComplete).mockResolvedValue({
-        complete: false,
-        incompleteError: "[string \"...\"]:3: ')' expected near <eof>",
-      })
-
       const { result } = renderHook(() => useLuaSyntaxChecker())
 
-      await act(async () => {
-        await vi.runAllTimersAsync()
-      })
-
       act(() => {
-        result.current.checkSyntax('print("hi"\n')
+        result.current.checkSyntax('print("hi"')
       })
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(350)
       })
 
-      expect(LuaEngineFactory.isCodeComplete).toHaveBeenCalled()
       // Should show error for incomplete code when editing files
-      expect(result.current.syntaxError).toBe("[string \"...\"]:3: ')' expected near <eof>")
+      expect(result.current.syntaxError).not.toBeNull()
+      expect(result.current.syntaxError).toContain('<eof>')
     })
 
-    it('clears error for empty code without checking', async () => {
+    it('clears error for empty code without waiting for debounce', async () => {
       const { result } = renderHook(() => useLuaSyntaxChecker())
 
-      await act(async () => {
-        await vi.runAllTimersAsync()
-      })
-
       // First set an error
-      vi.mocked(LuaEngineFactory.isCodeComplete).mockResolvedValueOnce({
-        complete: false,
-        error: 'syntax error',
-      })
-
       act(() => {
         result.current.checkSyntax('invalid 0')
       })
@@ -192,77 +118,99 @@ describe('useLuaSyntaxChecker', () => {
         await vi.advanceTimersByTimeAsync(350)
       })
 
-      expect(result.current.syntaxError).toBe('syntax error')
+      expect(result.current.syntaxError).not.toBeNull()
 
-      // Clear the mock call count
-      vi.mocked(LuaEngineFactory.isCodeComplete).mockClear()
-
-      // Empty code should clear error immediately without checking
+      // Empty code should clear error immediately
       act(() => {
         result.current.checkSyntax('')
       })
 
-      // Error should be cleared immediately
+      // Error should be cleared immediately (no need to wait for debounce)
       expect(result.current.syntaxError).toBeNull()
-
-      // Advance time - should not have called isCodeComplete
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(350)
-      })
-
-      expect(LuaEngineFactory.isCodeComplete).not.toHaveBeenCalled()
     })
 
     it('sets isChecking while checking', async () => {
-      let resolveCheck: (value: { complete: boolean }) => void = () => {}
-      vi.mocked(LuaEngineFactory.isCodeComplete).mockImplementation(
-        () =>
-          new Promise((resolve) => {
-            resolveCheck = resolve
-          })
-      )
-
       const { result } = renderHook(() => useLuaSyntaxChecker())
-
-      await act(async () => {
-        await vi.runAllTimersAsync()
-      })
 
       act(() => {
         result.current.checkSyntax('print("hello")')
       })
 
-      // Advance past debounce to start check
+      // Before debounce completes, isChecking should be false
+      expect(result.current.isChecking).toBe(false)
+
+      // Advance past debounce - the check is synchronous with luaparse
+      // so isChecking will briefly be true then false
       await act(async () => {
-        vi.advanceTimersByTime(350)
+        await vi.advanceTimersByTimeAsync(350)
       })
 
-      // Should be checking now
-      expect(result.current.isChecking).toBe(true)
-
-      // Resolve the check
-      await act(async () => {
-        resolveCheck({ complete: true })
-      })
-
-      // Should no longer be checking
+      // After check completes, should be false again
       expect(result.current.isChecking).toBe(false)
     })
   })
 
-  describe('cleanup', () => {
-    it('closes engine on unmount', async () => {
-      const { unmount } = renderHook(() => useLuaSyntaxChecker())
+  describe('error message quality', () => {
+    it('does not contain WASM-related error messages', async () => {
+      const { result } = renderHook(() => useLuaSyntaxChecker())
 
-      await act(async () => {
-        await vi.runAllTimersAsync()
+      const badCodes = [
+        'print("hello)',
+        'if if if',
+        'local = 5',
+        '))))',
+      ]
+
+      for (const code of badCodes) {
+        act(() => {
+          result.current.checkSyntax(code)
+        })
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(350)
+        })
+
+        if (result.current.syntaxError) {
+          expect(result.current.syntaxError.toLowerCase()).not.toContain('wasm')
+          expect(result.current.syntaxError.toLowerCase()).not.toContain('memory access')
+          expect(result.current.syntaxError.toLowerCase()).not.toContain('runtime error')
+        }
+      }
+    })
+
+    it('includes line number in error message', async () => {
+      const { result } = renderHook(() => useLuaSyntaxChecker())
+
+      act(() => {
+        result.current.checkSyntax('x = 1\nprint("unclosed')
       })
 
-      expect(LuaEngineFactory.create).toHaveBeenCalled()
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350)
+      })
 
+      expect(result.current.syntaxError).not.toBeNull()
+      // Should contain line number in format like ":2:"
+      expect(result.current.syntaxError).toMatch(/:\d+/)
+    })
+  })
+
+  describe('cleanup', () => {
+    it('cleans up debounce timer on unmount', async () => {
+      const { result, unmount } = renderHook(() => useLuaSyntaxChecker())
+
+      // Schedule a check
+      act(() => {
+        result.current.checkSyntax('print("hello")')
+      })
+
+      // Unmount before debounce completes
       unmount()
 
-      expect(LuaEngineFactory.closeDeferred).toHaveBeenCalledWith(mockEngine)
+      // Should not throw or cause issues when timer fires after unmount
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(350)
+      })
     })
   })
 })

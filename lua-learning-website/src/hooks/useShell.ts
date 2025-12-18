@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import {
   CommandRegistry,
   createFileSystemAdapter,
@@ -76,6 +76,8 @@ export interface ShellCanvasCallbacks {
 export interface UseShellOptions {
   /** Canvas callbacks for canvas.start()/stop() integration */
   canvasCallbacks?: ShellCanvasCallbacks
+  /** Callback invoked when a file or directory is moved/renamed via mv command */
+  onFileMove?: (oldPath: string, newPath: string, isDirectory: boolean) => void
 }
 
 /**
@@ -146,6 +148,20 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
       return createFileSystemAdapter(external, cwd)
     }
   }, [fileSystem, cwd])
+
+  // Wire up the onFileMove callback to the filesystem
+  // This allows external code (like IDEContext) to be notified when files are moved
+  useEffect(() => {
+    if (options?.onFileMove) {
+      shellFileSystem.onFileMove = options.onFileMove
+    } else {
+      shellFileSystem.onFileMove = undefined
+    }
+    // Cleanup on unmount or when callback changes
+    return () => {
+      shellFileSystem.onFileMove = undefined
+    }
+  }, [shellFileSystem, options?.onFileMove])
 
   // Create command registry with builtin commands and LuaCommand - memoized
   const registry = useMemo(() => {

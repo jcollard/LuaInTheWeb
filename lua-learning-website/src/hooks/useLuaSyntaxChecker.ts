@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { LuaEngineFactory } from '@lua-learning/lua-runtime'
-import type { LuaEngine } from 'wasmoon'
+import { LuaParser } from '../utils/LuaParser'
 
 /** Debounce delay for syntax checking (ms) */
 const DEBOUNCE_DELAY = 300
@@ -20,7 +19,8 @@ export interface UseLuaSyntaxCheckerReturn {
 /**
  * Hook for real-time Lua syntax checking
  *
- * Uses a dedicated Lua engine to parse code without executing it.
+ * Uses luaparse (pure JavaScript) to parse code without executing it.
+ * This avoids WASM-related errors that can occur with wasmoon.
  * Checks are debounced to avoid performance issues on rapid typing.
  *
  * @returns Functions and state for syntax checking
@@ -28,50 +28,19 @@ export interface UseLuaSyntaxCheckerReturn {
 export function useLuaSyntaxChecker(): UseLuaSyntaxCheckerReturn {
   const [syntaxError, setSyntaxError] = useState<string | null>(null)
   const [isChecking, setIsChecking] = useState(false)
-  const engineRef = useRef<LuaEngine | null>(null)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Initialize Lua engine for syntax checking
+  // Cleanup debounce timer on unmount
   useEffect(() => {
-    let mounted = true
-
-    const initEngine = async () => {
-      try {
-        const engine = await LuaEngineFactory.create({
-          onOutput: () => {},
-          onError: () => {},
-          onReadInput: () => Promise.resolve(''),
-        })
-        if (mounted) {
-          engineRef.current = engine
-        } else {
-          LuaEngineFactory.closeDeferred(engine)
-        }
-      } catch {
-        // Engine creation failed - syntax checking won't work
-        // but this is not critical functionality
-      }
-    }
-
-    initEngine()
-
     return () => {
-      mounted = false
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current)
-      }
-      if (engineRef.current) {
-        LuaEngineFactory.closeDeferred(engineRef.current)
-        engineRef.current = null
       }
     }
   }, [])
 
-  // Perform syntax check
-  const performCheck = useCallback(async (code: string) => {
-    const engine = engineRef.current
-    if (!engine) return
-
+  // Perform syntax check using luaparse
+  const performCheck = useCallback((code: string) => {
     // Empty code is always valid
     if (!code.trim()) {
       setSyntaxError(null)
@@ -80,18 +49,21 @@ export function useLuaSyntaxChecker(): UseLuaSyntaxCheckerReturn {
 
     setIsChecking(true)
     try {
-      const result = await LuaEngineFactory.isCodeComplete(engine, code)
+      const result = LuaParser.checkSyntax(code)
 
-      if (result.complete) {
-        // Code is syntactically complete and valid
+      if (result.valid) {
+        // Code is syntactically valid
         setSyntaxError(null)
       } else if (result.error) {
-        // Code has a syntax error
-        setSyntaxError(result.error)
-      } else if (result.incompleteError) {
-        // Code is incomplete (e.g., unclosed parenthesis)
-        // For file editing, show this as an error too
-        setSyntaxError(result.incompleteError)
+        // Code has a syntax error - format to match expected Lua error format
+        // Note: Column is not included to maintain compatibility with luaErrorParser
+        // which expects format: [string "..."]:line: message
+        const { message, line } = result.error
+        if (line !== undefined) {
+          setSyntaxError(`[string "..."]:${line}: ${message}`)
+        } else {
+          setSyntaxError(message)
+        }
       } else {
         // No error information available
         setSyntaxError(null)
