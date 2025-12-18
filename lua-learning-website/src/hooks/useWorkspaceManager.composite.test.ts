@@ -52,11 +52,11 @@ describe('useWorkspaceManager', () => {
       const { result } = renderHook(() => useWorkspaceManager())
 
       const entries = result.current.compositeFileSystem.listDirectory('/')
-      // default + library = 2
-      // (docs, examples, and book workspaces are loaded asynchronously)
-      expect(entries).toHaveLength(2)
+      // default = 1
+      // (docs, examples, book, and libs workspaces are loaded asynchronously)
+      expect(entries).toHaveLength(1)
       // listDirectory returns mount path names (slugs)
-      expect(entries.map((e) => e.name).sort()).toEqual(['home', 'libs'])
+      expect(entries.map((e) => e.name).sort()).toEqual(['home'])
     })
 
     it('updates when workspaces change', async () => {
@@ -67,11 +67,11 @@ describe('useWorkspaceManager', () => {
       })
 
       const entries = result.current.compositeFileSystem.listDirectory('/')
-      // default + library + new = 3
-      // (docs, examples, and book workspaces are loaded asynchronously)
-      expect(entries).toHaveLength(3)
+      // default + new = 2
+      // (docs, examples, book, and libs workspaces are loaded asynchronously)
+      expect(entries).toHaveLength(2)
       // listDirectory returns mount path names (slugs), not display names
-      expect(entries.map((e) => e.name).sort()).toEqual(['home', 'libs', 'project'])
+      expect(entries.map((e) => e.name).sort()).toEqual(['home', 'project'])
     })
 
     it('only includes connected workspaces', () => {
@@ -86,12 +86,12 @@ describe('useWorkspaceManager', () => {
 
       const { result } = renderHook(() => useWorkspaceManager())
 
-      // Local workspace is disconnected, so only default + library = 2
-      // (docs, examples, and book workspaces are loaded asynchronously)
+      // Local workspace is disconnected, so only default = 1
+      // (docs, examples, book, and libs workspaces are loaded asynchronously)
       const entries = result.current.compositeFileSystem.listDirectory('/')
-      expect(entries).toHaveLength(2)
+      expect(entries).toHaveLength(1)
       // listDirectory returns mount path names (slugs)
-      expect(entries.map((e) => e.name).sort()).toEqual(['home', 'libs'])
+      expect(entries.map((e) => e.name).sort()).toEqual(['home'])
     })
   })
 
@@ -153,11 +153,10 @@ describe('useWorkspaceManager', () => {
       })
 
       const mounts = result.current.getMounts()
-      // default + library + new = 3
-      // (docs, examples, and book workspaces are loaded asynchronously)
-      expect(mounts).toHaveLength(3)
+      // default + new = 2
+      // (docs, examples, book, and libs workspaces are loaded asynchronously)
+      expect(mounts).toHaveLength(2)
       expect(mounts.some((m) => m.mountPath === '/home' && m.isConnected)).toBe(true)
-      expect(mounts.some((m) => m.mountPath === '/libs' && m.isConnected)).toBe(true)
       expect(mounts.some((m) => m.mountPath === '/project' && m.isConnected)).toBe(true)
     })
 

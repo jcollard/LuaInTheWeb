@@ -48,6 +48,7 @@ import {
 import { useBookWorkspaceLoader } from './useBookWorkspaceLoader'
 import { useDocsWorkspaceLoader } from './useDocsWorkspaceLoader'
 import { useExamplesWorkspaceLoader } from './useExamplesWorkspaceLoader'
+import { useLibsWorkspaceLoader } from './useLibsWorkspaceLoader'
 
 // Re-export for backwards compatibility
 export { WORKSPACE_STORAGE_KEY, DEFAULT_WORKSPACE_ID } from './workspaceManagerHelpers'
@@ -111,6 +112,9 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
 
   // Fetch and add examples workspace on mount
   useExamplesWorkspaceLoader(setState)
+
+  // Fetch and add libs workspace on mount
+  useLibsWorkspaceLoader(setState)
 
   // Create CompositeFileSystem from connected workspaces
   const compositeFileSystem = useMemo(() => {
