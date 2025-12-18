@@ -112,6 +112,87 @@ export function formatLuaError(text: string): string {
 }
 
 /**
+ * Result of a file open operation.
+ */
+export interface FileOpenResult {
+  /** Whether the operation succeeded */
+  success: boolean
+  /** File handle ID if successful */
+  handle?: number
+  /** Error message if failed */
+  error?: string
+}
+
+/**
+ * Result of a file read operation.
+ */
+export interface FileReadResult {
+  /** Whether the operation succeeded */
+  success: boolean
+  /** Data read from file (null if EOF) */
+  data?: string | null
+  /** Error message if failed */
+  error?: string
+}
+
+/**
+ * Result of a file write operation.
+ */
+export interface FileWriteResult {
+  /** Whether the operation succeeded */
+  success: boolean
+  /** Error message if failed */
+  error?: string
+}
+
+/**
+ * Result of a file close operation.
+ */
+export interface FileCloseResult {
+  /** Whether the operation succeeded */
+  success: boolean
+  /** Error message if failed */
+  error?: string
+}
+
+/**
+ * Callbacks for file I/O operations.
+ * Used by io.open(), file:read(), file:write(), etc.
+ */
+export interface FileOperationsCallbacks {
+  /**
+   * Open a file for reading or writing.
+   * @param path - Path to the file
+   * @param mode - Open mode: "r" (read), "w" (write), "a" (append), "r+", "w+", "a+"
+   * @returns Result with handle on success, error on failure
+   */
+  open: (path: string, mode: string) => FileOpenResult
+
+  /**
+   * Read from a file.
+   * @param handle - File handle from open()
+   * @param format - Read format: "l" (line), "L" (line+newline), "a" (all), "n" (number), or number of chars
+   * @returns Result with data on success (null if EOF), error on failure
+   */
+  read: (handle: number, format: string | number) => FileReadResult
+
+  /**
+   * Write to a file.
+   * @param handle - File handle from open()
+   * @param content - Content to write
+   * @returns Result indicating success or failure
+   */
+  write: (handle: number, content: string) => FileWriteResult
+
+  /**
+   * Close a file.
+   * @param handle - File handle from open()
+   * @returns Result indicating success or failure
+   */
+  close: (handle: number) => FileCloseResult
+}
+
+/**
  * Callbacks for Lua engine output and input.
  */
 export interface LuaEngineCallbacks {
@@ -157,6 +238,11 @@ export interface LuaEngineCallbacks {
    * @returns File content as string, or null if file doesn't exist
    */
   fileReader?: (path: string) => string | null
+  /**
+   * File I/O operations for io.open(), file:read(), file:write(), etc.
+   * When provided, enables full file I/O support in Lua scripts.
+   */
+  fileOperations?: FileOperationsCallbacks
 }
 
 /**
@@ -280,6 +366,63 @@ export class LuaEngineFactory {
     engine.global.set('__shell_get_height', () => {
       return callbacks.getTerminalHeight?.() ?? 24
     })
+
+    // Setup file I/O bridge functions if fileOperations callbacks are provided
+    if (callbacks.fileOperations) {
+      const fileOps = callbacks.fileOperations
+
+      // Store last operation result for Lua to retrieve
+      let lastFileResult: {
+        success: boolean
+        handle?: number
+        data?: string | null
+        error?: string
+      } = { success: false }
+
+      // Bridge function for io.open
+      engine.global.set('__js_file_open', (path: string, mode: string): boolean => {
+        lastFileResult = fileOps.open(path, mode)
+        return lastFileResult.success
+      })
+
+      // Bridge function for file:read
+      engine.global.set('__js_file_read', (handle: number, format: string | number): boolean => {
+        lastFileResult = fileOps.read(handle, format)
+        return lastFileResult.success
+      })
+
+      // Bridge function for file:write
+      engine.global.set('__js_file_write', (handle: number, content: string): boolean => {
+        lastFileResult = fileOps.write(handle, content)
+        return lastFileResult.success
+      })
+
+      // Bridge function for file:close
+      engine.global.set('__js_file_close', (handle: number): boolean => {
+        lastFileResult = fileOps.close(handle)
+        return lastFileResult.success
+      })
+
+      // Getter for handle from last open
+      engine.global.set('__js_file_get_handle', (): number => {
+        return lastFileResult.handle ?? 0
+      })
+
+      // Check if last read returned EOF (null data)
+      engine.global.set('__js_file_is_eof', (): boolean => {
+        return lastFileResult.data === null || lastFileResult.data === undefined
+      })
+
+      // Getter for data from last read (returns empty string for EOF, use __js_file_is_eof to check)
+      engine.global.set('__js_file_get_data', (): string => {
+        return lastFileResult.data ?? ''
+      })
+
+      // Getter for error from last operation
+      engine.global.set('__js_file_get_error', (): string => {
+        return lastFileResult.error ?? ''
+      })
+    }
 
     // Setup require() with virtual file system support
     if (callbacks.fileReader) {

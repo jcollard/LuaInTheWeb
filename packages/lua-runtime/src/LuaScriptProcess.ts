@@ -11,6 +11,11 @@ import {
   type LuaEngineCallbacks,
   type LuaEngineOptions,
   type ExecutionControlOptions,
+  type FileOperationsCallbacks,
+  type FileOpenResult,
+  type FileReadResult,
+  type FileWriteResult,
+  type FileCloseResult,
 } from './LuaEngineFactory'
 import { resolvePath } from '@lua-learning/shell-core'
 import { CanvasController, type CanvasCallbacks } from './CanvasController'
@@ -28,6 +33,24 @@ export interface LuaScriptProcessOptions extends ExecutionControlOptions {
  * Process that executes a Lua script file.
  * Reads the script from the filesystem, executes it, and exits.
  */
+/**
+ * Represents an open file handle with its state.
+ */
+interface FileHandle {
+  /** Unique handle ID */
+  id: number
+  /** Resolved absolute path to the file */
+  path: string
+  /** File open mode */
+  mode: string
+  /** Current file content (for reading) or buffer (for writing) */
+  content: string
+  /** Current read position */
+  position: number
+  /** Whether the file has been modified (needs flush on close) */
+  dirty: boolean
+}
+
 export class LuaScriptProcess implements IProcess {
   private engine: LuaEngine | null = null
   private running = false
@@ -39,6 +62,11 @@ export class LuaScriptProcess implements IProcess {
   private hasError = false
   private readonly options: LuaScriptProcessOptions
   private canvasController: CanvasController | null = null
+
+  /** Open file handles for io.open() support */
+  private fileHandles: Map<number, FileHandle> = new Map()
+  /** Next available file handle ID */
+  private nextHandleId = 1
 
   /**
    * Callback invoked when the process produces output.
@@ -92,6 +120,9 @@ export class LuaScriptProcess implements IProcess {
     if (!this.running) return
 
     this.running = false
+
+    // Close all open file handles (flushes pending writes)
+    this.closeAllFileHandles()
 
     // Stop any running canvas first
     if (this.canvasController?.isActive()) {
@@ -207,6 +238,8 @@ export class LuaScriptProcess implements IProcess {
           return null
         }
       },
+      // Enable io.open() to read/write files from the virtual file system
+      fileOperations: this.createFileOperations(),
     }
 
     const engineOptions: LuaEngineOptions = {
@@ -308,6 +341,9 @@ __clear_execution_hook()
   private exitWithCode(code: number): void {
     this.running = false
 
+    // Close all open file handles (flushes pending writes)
+    this.closeAllFileHandles()
+
     // Stop any running canvas
     if (this.canvasController?.isActive()) {
       this.canvasController.stop()
@@ -384,5 +420,275 @@ __clear_execution_hook()
 
     // Use shared setup function
     setupCanvasAPI(this.engine, () => this.canvasController)
+  }
+
+  /**
+   * Create file operations callbacks for io.open() support.
+   * Maps Lua file operations to the virtual filesystem.
+   */
+  private createFileOperations(): FileOperationsCallbacks {
+    return {
+      open: (path: string, mode: string): FileOpenResult => {
+        return this.fileOpen(path, mode)
+      },
+      read: (handle: number, format: string | number): FileReadResult => {
+        return this.fileRead(handle, format)
+      },
+      write: (handle: number, content: string): FileWriteResult => {
+        return this.fileWrite(handle, content)
+      },
+      close: (handle: number): FileCloseResult => {
+        return this.fileClose(handle)
+      },
+    }
+  }
+
+  /**
+   * Open a file for reading or writing.
+   */
+  private fileOpen(path: string, mode: string): FileOpenResult {
+    // Resolve relative paths
+    const resolvedPath = this.resolvePath(path)
+
+    // Check mode and handle accordingly
+    const isRead = mode === 'r' || mode === 'r+'
+    const isWrite = mode === 'w' || mode === 'w+'
+    const isAppend = mode === 'a' || mode === 'a+'
+
+    if (isRead) {
+      // Read mode: file must exist
+      if (!this.context.filesystem.exists(resolvedPath)) {
+        return { success: false, error: `${path}: No such file or directory` }
+      }
+      if (this.context.filesystem.isDirectory(resolvedPath)) {
+        return { success: false, error: `${path}: Is a directory` }
+      }
+      try {
+        const content = this.context.filesystem.readFile(resolvedPath)
+        const handle: FileHandle = {
+          id: this.nextHandleId++,
+          path: resolvedPath,
+          mode,
+          content,
+          position: 0,
+          dirty: false,
+        }
+        this.fileHandles.set(handle.id, handle)
+        return { success: true, handle: handle.id }
+      } catch (error) {
+        return { success: false, error: `${path}: ${error}` }
+      }
+    }
+
+    if (isWrite) {
+      // Write mode: create or truncate file
+      try {
+        // Ensure parent directory exists
+        const parentPath = resolvedPath.substring(0, resolvedPath.lastIndexOf('/'))
+        if (parentPath && !this.context.filesystem.exists(parentPath)) {
+          return { success: false, error: `${path}: No such file or directory` }
+        }
+
+        const handle: FileHandle = {
+          id: this.nextHandleId++,
+          path: resolvedPath,
+          mode,
+          content: '',
+          position: 0,
+          dirty: true, // Will need to write on close
+        }
+        this.fileHandles.set(handle.id, handle)
+        return { success: true, handle: handle.id }
+      } catch (error) {
+        return { success: false, error: `${path}: ${error}` }
+      }
+    }
+
+    if (isAppend) {
+      // Append mode: open or create, position at end
+      try {
+        let content = ''
+        if (this.context.filesystem.exists(resolvedPath)) {
+          if (this.context.filesystem.isDirectory(resolvedPath)) {
+            return { success: false, error: `${path}: Is a directory` }
+          }
+          content = this.context.filesystem.readFile(resolvedPath)
+        }
+
+        const handle: FileHandle = {
+          id: this.nextHandleId++,
+          path: resolvedPath,
+          mode,
+          content,
+          position: content.length,
+          dirty: false, // Only dirty when written to
+        }
+        this.fileHandles.set(handle.id, handle)
+        return { success: true, handle: handle.id }
+      } catch (error) {
+        return { success: false, error: `${path}: ${error}` }
+      }
+    }
+
+    return { success: false, error: `Invalid mode: ${mode}` }
+  }
+
+  /**
+   * Read from a file handle.
+   */
+  private fileRead(handleId: number, format: string | number): FileReadResult {
+    const handle = this.fileHandles.get(handleId)
+    if (!handle) {
+      return { success: false, error: 'Bad file descriptor' }
+    }
+
+    // Check if mode allows reading
+    if (handle.mode === 'w' || handle.mode === 'a') {
+      return { success: false, error: 'File not open for reading' }
+    }
+
+    // Handle different read formats
+    if (typeof format === 'number') {
+      // Read n characters
+      if (handle.position >= handle.content.length) {
+        return { success: true, data: null } // EOF
+      }
+      const data = handle.content.substring(handle.position, handle.position + format)
+      handle.position += data.length
+      return { success: true, data }
+    }
+
+    // String formats
+    switch (format) {
+      case 'a':
+      case '*a': {
+        // Read all remaining content
+        const data = handle.content.substring(handle.position)
+        handle.position = handle.content.length
+        return { success: true, data }
+      }
+
+      case 'l':
+      case '*l': {
+        // Read line without newline
+        if (handle.position >= handle.content.length) {
+          return { success: true, data: null } // EOF
+        }
+        const remaining = handle.content.substring(handle.position)
+        const newlineIndex = remaining.indexOf('\n')
+        if (newlineIndex === -1) {
+          // No more newlines, return rest of content
+          handle.position = handle.content.length
+          return { success: true, data: remaining }
+        }
+        const line = remaining.substring(0, newlineIndex)
+        handle.position += newlineIndex + 1 // Skip the newline
+        return { success: true, data: line }
+      }
+
+      case 'L':
+      case '*L': {
+        // Read line with newline
+        if (handle.position >= handle.content.length) {
+          return { success: true, data: null } // EOF
+        }
+        const remaining = handle.content.substring(handle.position)
+        const newlineIndex = remaining.indexOf('\n')
+        if (newlineIndex === -1) {
+          // No more newlines, return rest of content with newline
+          handle.position = handle.content.length
+          return { success: true, data: remaining + '\n' }
+        }
+        const line = remaining.substring(0, newlineIndex + 1) // Include newline
+        handle.position += newlineIndex + 1
+        return { success: true, data: line }
+      }
+
+      case 'n':
+      case '*n': {
+        // Read number
+        if (handle.position >= handle.content.length) {
+          return { success: true, data: null } // EOF
+        }
+        const remaining = handle.content.substring(handle.position)
+        // Skip whitespace
+        const trimmed = remaining.trimStart()
+        const whitespaceSkipped = remaining.length - trimmed.length
+        // Match number pattern
+        const match = trimmed.match(/^[-+]?(\d+\.?\d*|\d*\.?\d+)([eE][-+]?\d+)?/)
+        if (!match) {
+          return { success: true, data: null } // No valid number
+        }
+        handle.position += whitespaceSkipped + match[0].length
+        return { success: true, data: match[0] }
+      }
+
+      default:
+        return { success: false, error: `Invalid read format: ${format}` }
+    }
+  }
+
+  /**
+   * Write to a file handle.
+   */
+  private fileWrite(handleId: number, content: string): FileWriteResult {
+    const handle = this.fileHandles.get(handleId)
+    if (!handle) {
+      return { success: false, error: 'Bad file descriptor' }
+    }
+
+    // Check if mode allows writing
+    if (handle.mode === 'r') {
+      return { success: false, error: 'File not open for writing' }
+    }
+
+    // For append mode, always write at end
+    if (handle.mode === 'a' || handle.mode === 'a+') {
+      handle.content += content
+      handle.position = handle.content.length
+    } else {
+      // For write mode, write at current position
+      handle.content =
+        handle.content.substring(0, handle.position) +
+        content +
+        handle.content.substring(handle.position + content.length)
+      handle.position += content.length
+    }
+
+    handle.dirty = true
+    return { success: true }
+  }
+
+  /**
+   * Close a file handle.
+   */
+  private fileClose(handleId: number): FileCloseResult {
+    const handle = this.fileHandles.get(handleId)
+    if (!handle) {
+      return { success: false, error: 'Bad file descriptor' }
+    }
+
+    // Flush any pending writes
+    if (handle.dirty) {
+      try {
+        this.context.filesystem.writeFile(handle.path, handle.content)
+      } catch (error) {
+        this.fileHandles.delete(handleId)
+        return { success: false, error: `Failed to write file: ${error}` }
+      }
+    }
+
+    this.fileHandles.delete(handleId)
+    return { success: true }
+  }
+
+  /**
+   * Close all open file handles (called on process exit).
+   */
+  private closeAllFileHandles(): void {
+    for (const [handleId] of this.fileHandles) {
+      this.fileClose(handleId)
+    }
+    this.fileHandles.clear()
   }
 }
