@@ -69,11 +69,7 @@ function extractErrorInfo(error: Error): SyntaxError {
  * Incomplete code errors typically mention "<eof>" (end of file).
  */
 function isIncompleteCode(errorMessage: string): boolean {
-  const lowerMessage = errorMessage.toLowerCase()
-  return (
-    lowerMessage.includes('<eof>') ||
-    lowerMessage.includes('expected') && lowerMessage.includes('near') && lowerMessage.includes("'<eof>'")
-  )
+  return errorMessage.toLowerCase().includes('<eof>')
 }
 
 /**
