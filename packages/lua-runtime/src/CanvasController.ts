@@ -16,6 +16,7 @@ import {
   GameLoopController,
   ImageCache,
   AssetLoader,
+  VALID_IMAGE_EXTENSIONS,
 } from '@lua-learning/canvas-runtime'
 import type {
   DrawCommand,
@@ -24,9 +25,6 @@ import type {
   AssetManifest,
 } from '@lua-learning/canvas-runtime'
 import type { IFileSystem } from '@lua-learning/shell-core'
-
-/** Valid image extensions for canvas.assets.image() */
-const VALID_IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp']
 
 /**
  * Callbacks for canvas tab management.

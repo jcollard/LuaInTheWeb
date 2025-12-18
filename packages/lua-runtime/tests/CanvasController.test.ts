@@ -76,6 +76,7 @@ vi.mock('@lua-learning/canvas-runtime', () => {
         mockAssetLoaderInstance = this
       }
     },
+    VALID_IMAGE_EXTENSIONS: ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'],
   }
 })
 

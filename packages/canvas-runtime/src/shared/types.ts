@@ -214,6 +214,12 @@ export function createDefaultTimingInfo(): TimingInfo {
 }
 
 /**
+ * Valid image file extensions for canvas assets.
+ * Used for validation in both worker and shell canvas implementations.
+ */
+export const VALID_IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'] as const;
+
+/**
  * Definition of an asset to be loaded.
  */
 export interface AssetDefinition {

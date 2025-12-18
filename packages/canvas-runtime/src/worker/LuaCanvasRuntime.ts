@@ -1,10 +1,7 @@
 import { LuaFactory, LuaEngine } from 'wasmoon';
 import type { IWorkerChannel } from '../channels/IWorkerChannel.js';
-import type { DrawCommand, AssetDefinition } from '../shared/types.js';
+import { VALID_IMAGE_EXTENSIONS, type DrawCommand, type AssetDefinition } from '../shared/types.js';
 import type { WorkerState } from './WorkerMessages.js';
-
-/** Valid image extensions for canvas.assets.image() */
-const VALID_IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
 
 /**
  * Lua canvas runtime that manages the Lua engine and game loop.

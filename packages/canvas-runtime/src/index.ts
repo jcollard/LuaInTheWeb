@@ -19,7 +19,7 @@ export type {
   LoadedAsset,
 } from './shared/index.js';
 
-export { createEmptyInputState, createDefaultTimingInfo, AssetLoader } from './shared/index.js';
+export { createEmptyInputState, createDefaultTimingInfo, AssetLoader, VALID_IMAGE_EXTENSIONS } from './shared/index.js';
 
 // Channel interfaces
 export type {
