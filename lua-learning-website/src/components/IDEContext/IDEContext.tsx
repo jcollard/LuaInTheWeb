@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useLuaEngine } from '../../hooks/useLuaEngine'
 import { useFileSystem } from '../../hooks/useFileSystem'
 import { useRecentFiles } from '../../hooks/useRecentFiles'
@@ -86,6 +86,9 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     if (savedUnsaved !== undefined) { setCodeState(savedUnsaved) }
     else { const content = filesystem.readFile(path); if (content !== null) setCodeState(content) }
   }, [filesystem, unsavedContent])
+
+  // Track if we've loaded the initial content for a restored active tab
+  const initialContentLoadedRef = useRef(false)
 
   const openFile = useCallback((path: string) => {
     const existingTab = tabBar.tabs.find(t => t.path === path)
@@ -408,6 +411,30 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   // We need to read fileTreeVersion to ensure component re-renders when it changes
   void fileTreeVersion
   const fileTree = filesystem.getTree()
+
+  // Load content for the initial active tab when restored from persistence
+  // This runs after the filesystem is ready (when fileTree changes indicate data is loaded)
+  useEffect(() => {
+    // Only run once, and only if we have a persisted active tab that hasn't been loaded yet
+    if (initialContentLoadedRef.current) return
+    if (!activeTab) return
+
+    // Check if this is a file tab that needs content loaded
+    const tab = tabs.find(t => t.path === activeTab)
+    if (!tab || tab.type === 'canvas' || tab.type === 'binary') return
+
+    // Try to load the content - if file doesn't exist yet (async loading), we'll try again
+    const content = filesystem.readFile(activeTab)
+    if (content !== null) {
+      setCodeState(content)
+      setOriginalContent(prev => {
+        const next = new Map(prev)
+        next.set(activeTab, content)
+        return next
+      })
+      initialContentLoadedRef.current = true
+    }
+  }, [activeTab, tabs, filesystem, fileTree]) // fileTree changes when filesystem loads data
 
   const pinTab = useCallback((path: string) => {
     tabBar.pinTab(path)
