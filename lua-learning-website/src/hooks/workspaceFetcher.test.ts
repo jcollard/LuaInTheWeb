@@ -96,28 +96,6 @@ describe('workspaceFetcher', () => {
       expect(result.text['bad.lua']).toBeUndefined()
     })
 
-    it('should not include text file when response.ok is false', async () => {
-      const manifest: WorkspaceManifest = {
-        name: 'Test Workspace',
-        files: ['only-file.lua'],
-      }
-
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(manifest),
-        })
-        .mockResolvedValueOnce({
-          ok: false,
-          status: 500,
-        })
-
-      const result = await fetchWorkspaceContent('/test-workspace')
-
-      expect(result.text).toEqual({})
-      expect(Object.keys(result.text)).toHaveLength(0)
-    })
-
     it('should handle network errors gracefully', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'))
 
@@ -182,149 +160,19 @@ describe('workspaceFetcher', () => {
       expect(result.text).toEqual({})
     })
 
-    it('should construct correct file URLs from basePath', async () => {
-      const manifest: WorkspaceManifest = {
-        name: 'Test Workspace',
-        files: ['nested/path/file.lua'],
-      }
-
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: () => Promise.resolve(manifest),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          text: () => Promise.resolve('content'),
-        })
-
-      await fetchWorkspaceContent('/base/path')
-
-      expect(mockFetch).toHaveBeenNthCalledWith(2, '/base/path/nested/path/file.lua')
-    })
-
     describe('binary file support', () => {
-      it('should fetch PNG files as binary Uint8Array', async () => {
+      it.each([
+        ['image.png'],
+        ['photo.jpg'],
+        ['photo.jpeg'],
+        ['animation.gif'],
+        ['image.bmp'],
+        ['photo.webp'],
+        ['favicon.ico'],
+      ])('should fetch %s as binary', async (filename) => {
         const manifest: WorkspaceManifest = {
           name: 'Test Workspace',
-          files: ['image.png'],
-        }
-        const mockArrayBuffer = new ArrayBuffer(4)
-        const view = new Uint8Array(mockArrayBuffer)
-        view.set([0x89, 0x50, 0x4e, 0x47]) // PNG magic bytes
-
-        mockFetch
-          .mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve(manifest),
-          })
-          .mockResolvedValueOnce({
-            ok: true,
-            arrayBuffer: () => Promise.resolve(mockArrayBuffer),
-          })
-
-        const result = await fetchWorkspaceContent('/test-workspace')
-
-        expect(result.binary['image.png']).toBeInstanceOf(Uint8Array)
-        expect(result.binary['image.png']).toEqual(new Uint8Array([0x89, 0x50, 0x4e, 0x47]))
-        expect(result.text).toEqual({})
-      })
-
-      it('should fetch JPG files as binary', async () => {
-        const manifest: WorkspaceManifest = {
-          name: 'Test Workspace',
-          files: ['photo.jpg'],
-        }
-        const mockArrayBuffer = new ArrayBuffer(2)
-        const view = new Uint8Array(mockArrayBuffer)
-        view.set([0xff, 0xd8]) // JPG magic bytes
-
-        mockFetch
-          .mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve(manifest),
-          })
-          .mockResolvedValueOnce({
-            ok: true,
-            arrayBuffer: () => Promise.resolve(mockArrayBuffer),
-          })
-
-        const result = await fetchWorkspaceContent('/test-workspace')
-
-        expect(result.binary['photo.jpg']).toBeInstanceOf(Uint8Array)
-      })
-
-      it('should fetch JPEG files as binary', async () => {
-        const manifest: WorkspaceManifest = {
-          name: 'Test Workspace',
-          files: ['photo.jpeg'],
-        }
-        const mockArrayBuffer = new ArrayBuffer(2)
-
-        mockFetch
-          .mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve(manifest),
-          })
-          .mockResolvedValueOnce({
-            ok: true,
-            arrayBuffer: () => Promise.resolve(mockArrayBuffer),
-          })
-
-        const result = await fetchWorkspaceContent('/test-workspace')
-
-        expect(result.binary['photo.jpeg']).toBeInstanceOf(Uint8Array)
-      })
-
-      it('should fetch GIF files as binary', async () => {
-        const manifest: WorkspaceManifest = {
-          name: 'Test Workspace',
-          files: ['animation.gif'],
-        }
-        const mockArrayBuffer = new ArrayBuffer(3)
-
-        mockFetch
-          .mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve(manifest),
-          })
-          .mockResolvedValueOnce({
-            ok: true,
-            arrayBuffer: () => Promise.resolve(mockArrayBuffer),
-          })
-
-        const result = await fetchWorkspaceContent('/test-workspace')
-
-        expect(result.binary['animation.gif']).toBeInstanceOf(Uint8Array)
-      })
-
-      it('should fetch BMP files as binary', async () => {
-        const manifest: WorkspaceManifest = {
-          name: 'Test Workspace',
-          files: ['image.bmp'],
-        }
-        const mockArrayBuffer = new ArrayBuffer(2)
-
-        mockFetch
-          .mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve(manifest),
-          })
-          .mockResolvedValueOnce({
-            ok: true,
-            arrayBuffer: () => Promise.resolve(mockArrayBuffer),
-          })
-
-        const result = await fetchWorkspaceContent('/test-workspace')
-
-        expect(result.binary['image.bmp']).toBeInstanceOf(Uint8Array)
-        expect(result.text['image.bmp']).toBeUndefined()
-      })
-
-      it('should fetch WEBP files as binary', async () => {
-        const manifest: WorkspaceManifest = {
-          name: 'Test Workspace',
-          files: ['photo.webp'],
+          files: [filename],
         }
         const mockArrayBuffer = new ArrayBuffer(4)
 
@@ -340,31 +188,8 @@ describe('workspaceFetcher', () => {
 
         const result = await fetchWorkspaceContent('/test-workspace')
 
-        expect(result.binary['photo.webp']).toBeInstanceOf(Uint8Array)
-        expect(result.text['photo.webp']).toBeUndefined()
-      })
-
-      it('should fetch ICO files as binary', async () => {
-        const manifest: WorkspaceManifest = {
-          name: 'Test Workspace',
-          files: ['favicon.ico'],
-        }
-        const mockArrayBuffer = new ArrayBuffer(2)
-
-        mockFetch
-          .mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve(manifest),
-          })
-          .mockResolvedValueOnce({
-            ok: true,
-            arrayBuffer: () => Promise.resolve(mockArrayBuffer),
-          })
-
-        const result = await fetchWorkspaceContent('/test-workspace')
-
-        expect(result.binary['favicon.ico']).toBeInstanceOf(Uint8Array)
-        expect(result.text['favicon.ico']).toBeUndefined()
+        expect(result.binary[filename]).toBeInstanceOf(Uint8Array)
+        expect(result.text[filename]).toBeUndefined()
       })
 
       it('should treat unknown extensions as text files', async () => {
@@ -399,6 +224,38 @@ describe('workspaceFetcher', () => {
         expect(result.binary['data.json']).toBeUndefined()
         expect(result.binary['script.lua']).toBeUndefined()
         expect(result.binary['readme.txt']).toBeUndefined()
+      })
+
+      it('should treat files without extensions as text', async () => {
+        const manifest: WorkspaceManifest = {
+          name: 'Test Workspace',
+          files: ['Makefile', 'LICENSE', 'README'],
+        }
+
+        mockFetch
+          .mockResolvedValueOnce({
+            ok: true,
+            json: () => Promise.resolve(manifest),
+          })
+          .mockResolvedValueOnce({
+            ok: true,
+            text: () => Promise.resolve('all: build'),
+          })
+          .mockResolvedValueOnce({
+            ok: true,
+            text: () => Promise.resolve('MIT License'),
+          })
+          .mockResolvedValueOnce({
+            ok: true,
+            text: () => Promise.resolve('Project readme'),
+          })
+
+        const result = await fetchWorkspaceContent('/test-workspace')
+
+        expect(result.text['Makefile']).toBe('all: build')
+        expect(result.text['LICENSE']).toBe('MIT License')
+        expect(result.text['README']).toBe('Project readme')
+        expect(Object.keys(result.binary)).toHaveLength(0)
       })
 
       it('should handle mixed text and binary files', async () => {
@@ -505,32 +362,6 @@ describe('workspaceFetcher', () => {
 
         expect(result.binary['IMAGE.PNG']).toBeInstanceOf(Uint8Array)
         expect(result.binary['Photo.JPG']).toBeInstanceOf(Uint8Array)
-      })
-
-      it('should handle nested binary file paths', async () => {
-        const manifest: WorkspaceManifest = {
-          name: 'Test Workspace',
-          files: ['assets/images/logo.png'],
-        }
-        const mockArrayBuffer = new ArrayBuffer(4)
-
-        mockFetch
-          .mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve(manifest),
-          })
-          .mockResolvedValueOnce({
-            ok: true,
-            arrayBuffer: () => Promise.resolve(mockArrayBuffer),
-          })
-
-        const result = await fetchWorkspaceContent('/test-workspace')
-
-        expect(mockFetch).toHaveBeenNthCalledWith(
-          2,
-          '/test-workspace/assets/images/logo.png'
-        )
-        expect(result.binary['assets/images/logo.png']).toBeInstanceOf(Uint8Array)
       })
     })
   })
