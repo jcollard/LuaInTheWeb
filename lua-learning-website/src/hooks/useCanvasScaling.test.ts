@@ -62,6 +62,19 @@ describe('useCanvasScaling', () => {
       // Assert
       expect(result.current.scalingMode).toBe('fit')
     })
+
+    it('should update scalingMode when setScalingMode is called with "full"', () => {
+      // Arrange
+      const { result } = renderHook(() => useCanvasScaling())
+
+      // Act
+      act(() => {
+        result.current.setScalingMode('full')
+      })
+
+      // Assert
+      expect(result.current.scalingMode).toBe('full')
+    })
   })
 
   describe('localStorage persistence', () => {
@@ -176,9 +189,40 @@ describe('useCanvasScaling', () => {
       expect(result.current.scalingMode).toBe('fit')
 
       act(() => {
+        result.current.setScalingMode('full')
+      })
+      expect(result.current.scalingMode).toBe('full')
+
+      act(() => {
         result.current.setScalingMode('native')
       })
       expect(result.current.scalingMode).toBe('native')
+    })
+  })
+
+  describe('full mode', () => {
+    it('should save "full" mode to localStorage when changed', () => {
+      // Arrange
+      const { result } = renderHook(() => useCanvasScaling())
+
+      // Act
+      act(() => {
+        result.current.setScalingMode('full')
+      })
+
+      // Assert
+      expect(localStorage.getItem(STORAGE_KEY)).toBe('full')
+    })
+
+    it('should load "full" mode from localStorage on mount', () => {
+      // Arrange
+      localStorage.setItem(STORAGE_KEY, 'full')
+
+      // Act
+      const { result } = renderHook(() => useCanvasScaling())
+
+      // Assert
+      expect(result.current.scalingMode).toBe('full')
     })
   })
 })

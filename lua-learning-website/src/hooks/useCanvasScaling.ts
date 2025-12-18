@@ -1,9 +1,12 @@
 import { useState, useCallback } from 'react'
 
 /**
- * Valid canvas scaling modes
+ * Valid canvas scaling modes:
+ * - 'fit': Scale down to fit container (never scales up beyond native size)
+ * - 'full': Scale to fill container (scales up or down to fill available space)
+ * - 'native': Display at native size (1x, shows scrollbars if needed)
  */
-export type CanvasScalingMode = 'fit' | 'native'
+export type CanvasScalingMode = 'fit' | 'full' | 'native'
 
 const STORAGE_KEY = 'canvas-scaling:mode'
 const DEFAULT_MODE: CanvasScalingMode = 'fit'
@@ -12,7 +15,7 @@ const DEFAULT_MODE: CanvasScalingMode = 'fit'
  * Validates if a value is a valid CanvasScalingMode
  */
 function isValidScalingMode(value: unknown): value is CanvasScalingMode {
-  return value === 'fit' || value === 'native'
+  return value === 'fit' || value === 'full' || value === 'native'
 }
 
 /**

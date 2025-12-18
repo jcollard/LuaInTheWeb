@@ -98,8 +98,13 @@
   overflow: auto;
 }
 
-/* Auto-fit mode: canvas scales to fit container, no scrollbars */
+/* Auto-fit mode: canvas scales down to fit container, no scrollbars */
 .canvasContainerFit {
+  overflow: hidden;
+}
+
+/* Full mode: canvas scales to fill container (up or down), no scrollbars */
+.canvasContainerFull {
   overflow: hidden;
 }
 
@@ -114,12 +119,19 @@
   outline: none;
 }
 
-/* Auto-fit mode: scale canvas to fit while maintaining aspect ratio */
+/* Auto-fit mode: scale canvas down to fit while maintaining aspect ratio (never scales up) */
 .canvasFit {
   max-width: 100%;
   max-height: 100%;
   width: auto;
   height: auto;
+  object-fit: contain;
+}
+
+/* Full mode: scale canvas to fill container while maintaining aspect ratio (scales up or down) */
+.canvasFull {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
 }
 

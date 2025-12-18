@@ -346,6 +346,16 @@ describe('CanvasGamePanel', () => {
       expect(canvas?.className).toMatch(/canvasNative/)
     })
 
+    it('applies full scaling mode CSS class when scalingMode is full', () => {
+      const { container } = render(
+        <CanvasGamePanel code="print('hello')" scalingMode="full" />
+      )
+      const canvasContainer = container.querySelector('[class*="canvasContainer"]')
+      expect(canvasContainer?.className).toMatch(/canvasContainerFull/)
+      const canvas = container.querySelector('canvas')
+      expect(canvas?.className).toMatch(/canvasFull/)
+    })
+
     it('renders scaling mode selector when onScalingModeChange is provided', () => {
       const onScalingModeChange = vi.fn()
       render(
@@ -363,7 +373,7 @@ describe('CanvasGamePanel', () => {
       expect(screen.queryByRole('combobox', { name: /scale/i })).not.toBeInTheDocument()
     })
 
-    it('calls onScalingModeChange when scaling mode is changed', () => {
+    it('calls onScalingModeChange when scaling mode is changed to native', () => {
       const onScalingModeChange = vi.fn()
       render(
         <CanvasGamePanel
@@ -375,6 +385,20 @@ describe('CanvasGamePanel', () => {
       const select = screen.getByRole('combobox', { name: /scale/i })
       fireEvent.change(select, { target: { value: 'native' } })
       expect(onScalingModeChange).toHaveBeenCalledWith('native')
+    })
+
+    it('calls onScalingModeChange when scaling mode is changed to full', () => {
+      const onScalingModeChange = vi.fn()
+      render(
+        <CanvasGamePanel
+          code="print('hello')"
+          scalingMode="fit"
+          onScalingModeChange={onScalingModeChange}
+        />
+      )
+      const select = screen.getByRole('combobox', { name: /scale/i })
+      fireEvent.change(select, { target: { value: 'full' } })
+      expect(onScalingModeChange).toHaveBeenCalledWith('full')
     })
 
     it('displays correct option as selected in scaling selector', () => {

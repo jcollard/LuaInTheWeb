@@ -88,14 +88,36 @@ export function CanvasGamePanel({
   const panelClassName = [styles.panel, className].filter(Boolean).join(' ')
 
   // Build canvas container and canvas class names based on scaling mode
+  const getContainerScalingClass = () => {
+    switch (scalingMode) {
+      case 'fit':
+        return styles.canvasContainerFit
+      case 'full':
+        return styles.canvasContainerFull
+      case 'native':
+        return styles.canvasContainerNative
+    }
+  }
+
+  const getCanvasScalingClass = () => {
+    switch (scalingMode) {
+      case 'fit':
+        return styles.canvasFit
+      case 'full':
+        return styles.canvasFull
+      case 'native':
+        return styles.canvasNative
+    }
+  }
+
   const containerClassName = [
     styles.canvasContainer,
-    scalingMode === 'fit' ? styles.canvasContainerFit : styles.canvasContainerNative,
+    getContainerScalingClass(),
   ].join(' ')
 
   const canvasClassName = [
     styles.canvas,
-    scalingMode === 'fit' ? styles.canvasFit : styles.canvasNative,
+    getCanvasScalingClass(),
   ].join(' ')
 
   return (
@@ -140,6 +162,7 @@ export function CanvasGamePanel({
               aria-label="Scale"
             >
               <option value="fit">Fit</option>
+              <option value="full">Full</option>
               <option value="native">1x</option>
             </select>
           </div>
