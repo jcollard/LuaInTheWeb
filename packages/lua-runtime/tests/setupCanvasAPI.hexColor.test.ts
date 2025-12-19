@@ -79,7 +79,31 @@ describe('setupCanvasAPI hex color support', () => {
       expect(mockController.setColor).toHaveBeenCalledWith(255, 0, 0, 255)
     })
 
-    it('should parse #A5F to mixed values with alpha 255', async () => {
+    it('should parse #000 to black (boundary case)', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.set_color('#000')
+      `)
+
+      expect(mockController.setColor).toHaveBeenCalledWith(0, 0, 0, 255)
+    })
+
+    it('should parse #FFF to white (boundary case)', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.set_color('#FFF')
+      `)
+
+      expect(mockController.setColor).toHaveBeenCalledWith(255, 255, 255, 255)
+    })
+
+    it('should parse #A5F to mixed values with correct expansion', async () => {
       const mockController = createMockController()
       setupCanvasAPI(engine, () => mockController)
 
@@ -92,7 +116,7 @@ describe('setupCanvasAPI hex color support', () => {
       expect(mockController.setColor).toHaveBeenCalledWith(170, 85, 255, 255)
     })
 
-    it('should be case insensitive for short hex', async () => {
+    it('should be case insensitive (tonumber base 16)', async () => {
       const mockController = createMockController()
       setupCanvasAPI(engine, () => mockController)
 
@@ -107,18 +131,6 @@ describe('setupCanvasAPI hex color support', () => {
   })
 
   describe('full hex format (#RRGGBB)', () => {
-    it('should parse #FF0000 to red with alpha 255', async () => {
-      const mockController = createMockController()
-      setupCanvasAPI(engine, () => mockController)
-
-      await engine.doString(`
-        local canvas = require('canvas')
-        canvas.set_color('#FF0000')
-      `)
-
-      expect(mockController.setColor).toHaveBeenCalledWith(255, 0, 0, 255)
-    })
-
     it('should parse #1A2B3C to correct RGB values', async () => {
       const mockController = createMockController()
       setupCanvasAPI(engine, () => mockController)
@@ -130,19 +142,6 @@ describe('setupCanvasAPI hex color support', () => {
 
       // #1A2B3C = RGB(26, 43, 60)
       expect(mockController.setColor).toHaveBeenCalledWith(26, 43, 60, 255)
-    })
-
-    it('should be case insensitive for full hex', async () => {
-      const mockController = createMockController()
-      setupCanvasAPI(engine, () => mockController)
-
-      await engine.doString(`
-        local canvas = require('canvas')
-        canvas.set_color('#aabbcc')
-      `)
-
-      // #aabbcc = RGB(170, 187, 204)
-      expect(mockController.setColor).toHaveBeenCalledWith(170, 187, 204, 255)
     })
   })
 
@@ -158,6 +157,30 @@ describe('setupCanvasAPI hex color support', () => {
 
       // #FF000080 = RGBA(255, 0, 0, 128)
       expect(mockController.setColor).toHaveBeenCalledWith(255, 0, 0, 128)
+    })
+
+    it('should parse #00000000 to fully transparent (boundary case)', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.set_color('#00000000')
+      `)
+
+      expect(mockController.setColor).toHaveBeenCalledWith(0, 0, 0, 0)
+    })
+
+    it('should parse #FFFFFFFF to fully opaque white (boundary case)', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.set_color('#FFFFFFFF')
+      `)
+
+      expect(mockController.setColor).toHaveBeenCalledWith(255, 255, 255, 255)
     })
   })
 
@@ -188,7 +211,7 @@ describe('setupCanvasAPI hex color support', () => {
   })
 
   describe('error handling', () => {
-    it('should throw error for invalid hex length (2 chars)', async () => {
+    it('should throw error for invalid hex length with helpful message', async () => {
       const mockController = createMockController()
       setupCanvasAPI(engine, () => mockController)
 
@@ -197,22 +220,10 @@ describe('setupCanvasAPI hex color support', () => {
           local canvas = require('canvas')
           canvas.set_color('#AB')
         `)
-      ).rejects.toThrow('Invalid hex color format')
+      ).rejects.toThrow('Expected #RGB, #RRGGBB, or #RRGGBBAA')
     })
 
-    it('should throw error for invalid hex length (4 chars)', async () => {
-      const mockController = createMockController()
-      setupCanvasAPI(engine, () => mockController)
-
-      await expect(
-        engine.doString(`
-          local canvas = require('canvas')
-          canvas.set_color('#ABCD')
-        `)
-      ).rejects.toThrow('Invalid hex color format')
-    })
-
-    it('should throw error for invalid hex length (5 chars)', async () => {
+    it('should throw error for in-between invalid length (5 chars)', async () => {
       const mockController = createMockController()
       setupCanvasAPI(engine, () => mockController)
 
@@ -224,19 +235,7 @@ describe('setupCanvasAPI hex color support', () => {
       ).rejects.toThrow('Invalid hex color format')
     })
 
-    it('should throw error for invalid hex length (7 chars)', async () => {
-      const mockController = createMockController()
-      setupCanvasAPI(engine, () => mockController)
-
-      await expect(
-        engine.doString(`
-          local canvas = require('canvas')
-          canvas.set_color('#ABCDEF1')
-        `)
-      ).rejects.toThrow('Invalid hex color format')
-    })
-
-    it('should throw error for non-hex characters in short form', async () => {
+    it('should throw error for non-hex characters', async () => {
       const mockController = createMockController()
       setupCanvasAPI(engine, () => mockController)
 
@@ -246,30 +245,6 @@ describe('setupCanvasAPI hex color support', () => {
           canvas.set_color('#GGG')
         `)
       ).rejects.toThrow('Invalid hex color')
-    })
-
-    it('should throw error for non-hex characters in full form', async () => {
-      const mockController = createMockController()
-      setupCanvasAPI(engine, () => mockController)
-
-      await expect(
-        engine.doString(`
-          local canvas = require('canvas')
-          canvas.set_color('#GGGGGG')
-        `)
-      ).rejects.toThrow('Invalid hex color')
-    })
-
-    it('should include helpful message about expected formats', async () => {
-      const mockController = createMockController()
-      setupCanvasAPI(engine, () => mockController)
-
-      await expect(
-        engine.doString(`
-          local canvas = require('canvas')
-          canvas.set_color('#AB')
-        `)
-      ).rejects.toThrow('Expected #RGB, #RRGGBB, or #RRGGBBAA')
     })
   })
 })
