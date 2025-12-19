@@ -126,6 +126,10 @@ function IDELayoutInner({
     // Recent files
     recentFiles,
     clearRecentFiles,
+    // Auto-save
+    autoSaveEnabled,
+    toggleAutoSave,
+    saveAllFiles,
   } = useIDE()
 
   const [cursorLine, setCursorLine] = useState(1)
@@ -181,6 +185,7 @@ function IDELayoutInner({
     toggleTerminal,
     toggleSidebar,
     saveFile,
+    saveAllFiles,
   })
 
   // Canvas tab request management for shell-based canvas.start()
@@ -417,6 +422,9 @@ function IDELayoutInner({
                           onFormat={handleFormat}
                           isFormatting={isFormatting}
                           onEditorReady={handleEditorReady}
+                          autoSaveEnabled={autoSaveEnabled}
+                          onToggleAutoSave={toggleAutoSave}
+                          onSaveAllFiles={saveAllFiles}
                         />
                       )}
                     </>
