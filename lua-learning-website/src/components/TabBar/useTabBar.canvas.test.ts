@@ -165,6 +165,54 @@ describe('useTabBar - canvas and preview tabs', () => {
     })
   })
 
+  describe('closing canvas tab race condition', () => {
+    it('should preserve file tabs when closing the only canvas tab', () => {
+      // Arrange - open multiple file tabs and one canvas tab
+      const { result } = renderHook(() => useTabBar())
+
+      act(() => {
+        result.current.openTab('/test/file1.lua', 'file1.lua')
+        result.current.openTab('/test/file2.lua', 'file2.lua')
+        result.current.openCanvasTab('game-1', 'Game')
+      })
+
+      expect(result.current.tabs).toHaveLength(3)
+      expect(result.current.activeTab).toBe('canvas://game-1')
+
+      // Act - close the canvas tab
+      act(() => {
+        result.current.closeTab('canvas://game-1')
+      })
+
+      // Assert - file tabs should still exist and one should be active
+      expect(result.current.tabs).toHaveLength(2)
+      expect(result.current.tabs.every((t) => t.type === 'file')).toBe(true)
+      expect(result.current.activeTab).not.toBeNull()
+      expect(result.current.activeTab).not.toBe('canvas://game-1')
+    })
+
+    it('should set activeTab to a file tab after closing the last canvas tab', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      act(() => {
+        result.current.openTab('/test/file.lua', 'file.lua')
+        result.current.openCanvasTab('game-1', 'Game')
+      })
+
+      expect(result.current.activeTab).toBe('canvas://game-1')
+
+      // Act
+      act(() => {
+        result.current.closeTab('canvas://game-1')
+      })
+
+      // Assert - activeTab should be the file tab, not null or the closed canvas path
+      expect(result.current.activeTab).toBe('/test/file.lua')
+      expect(result.current.getActiveTabType()).toBe('file')
+    })
+  })
+
   describe('getActiveTabType', () => {
     it('should return null when no tab is active', () => {
       // Arrange
