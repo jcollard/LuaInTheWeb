@@ -26,6 +26,8 @@ export interface CanvasGamePanelProps {
   scalingMode?: CanvasScalingMode
   /** Callback when scaling mode is changed (enables the scaling selector UI) */
   onScalingModeChange?: (mode: CanvasScalingMode) => void
+  /** Whether the canvas tab is active and should receive focus */
+  isActive?: boolean
 }
 
 export function CanvasGamePanel({
@@ -38,6 +40,7 @@ export function CanvasGamePanel({
   onCanvasReady,
   scalingMode = 'fit',
   onScalingModeChange,
+  isActive,
 }: CanvasGamePanelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -69,6 +72,13 @@ export function CanvasGamePanel({
       onCanvasReady(canvasRef.current)
     }
   }, [onCanvasReady])
+
+  // Auto-focus canvas when isActive becomes true
+  useEffect(() => {
+    if (isActive && canvasRef.current) {
+      canvasRef.current.focus()
+    }
+  }, [isActive])
 
   const handlePauseResume = useCallback(() => {
     if (isPaused) {

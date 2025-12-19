@@ -22,6 +22,8 @@ export interface CanvasTabContentProps {
   onExit: (exitCode: number) => void
   /** Callback when canvas element is ready (for shell integration) */
   onCanvasReady?: (canvasId: string, canvas: HTMLCanvasElement) => void
+  /** Whether the canvas tab is active and should receive focus */
+  isActive?: boolean
 }
 
 export function CanvasTabContent({
@@ -32,6 +34,7 @@ export function CanvasTabContent({
   onCloseTab,
   onExit,
   onCanvasReady,
+  isActive,
 }: CanvasTabContentProps) {
   const { scalingMode, setScalingMode } = useCanvasScaling()
 
@@ -66,6 +69,7 @@ export function CanvasTabContent({
         onCanvasReady={activeTab && onCanvasReady ? (canvas) => onCanvasReady(activeTab, canvas) : undefined}
         scalingMode={scalingMode}
         onScalingModeChange={setScalingMode}
+        isActive={isActive}
       />
     </div>
   )
