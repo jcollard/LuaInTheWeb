@@ -91,15 +91,27 @@ function canvas.get_height() end
 ---@return nil
 function canvas.clear() end
 
---- Set the drawing color (RGBA values 0-255).
+--- Set the drawing color.
+--- Accepts either RGBA values (0-255) or hex color strings.
 --- All subsequent drawing operations will use this color.
+---
+--- RGBA format:
 ---@param r number Red component (0-255)
 ---@param g number Green component (0-255)
 ---@param b number Blue component (0-255)
 ---@param a? number Alpha component (0-255, default: 255)
+---
+--- Hex format (pass as single string argument):
+--- - #RGB - Short form, expands to #RRGGBB (e.g., #F00 = red)
+--- - #RRGGBB - Full RGB (e.g., #FF0000 = red)
+--- - #RRGGBBAA - Full RGBA with alpha (e.g., #FF000080 = semi-transparent red)
+---
 ---@return nil
----@usage canvas.set_color(255, 0, 0)       -- Red
----@usage canvas.set_color(0, 255, 0, 128)  -- Semi-transparent green
+---@usage canvas.set_color(255, 0, 0)       -- Red (RGBA)
+---@usage canvas.set_color(0, 255, 0, 128)  -- Semi-transparent green (RGBA)
+---@usage canvas.set_color("#F00")          -- Red (short hex)
+---@usage canvas.set_color("#FF0000")       -- Red (full hex)
+---@usage canvas.set_color("#FF000080")     -- Semi-transparent red (hex with alpha)
 function canvas.set_color(r, g, b, a) end
 
 --- Set the line width for stroke operations.

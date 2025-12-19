@@ -443,4 +443,6 @@ describe('setupCanvasAPI', () => {
       expect(result).toBe(96)
     })
   })
+
+  // Note: Hex color tests are in setupCanvasAPI.hexColor.test.ts
 })

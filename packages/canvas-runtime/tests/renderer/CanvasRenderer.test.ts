@@ -80,25 +80,50 @@ describe('CanvasRenderer', () => {
       expect(mockCtx.strokeStyle).toBe('#ff8040');
     });
 
-    it('should set fill and stroke style with RGBA', () => {
+    it('should set fill and stroke style with RGBA (alpha 0-255)', () => {
       const commands: DrawCommand[] = [
-        { type: 'setColor', r: 255, g: 0, b: 0, a: 0.5 },
+        { type: 'setColor', r: 255, g: 0, b: 0, a: 128 },
       ];
 
       renderer.render(commands);
 
-      expect(mockCtx.fillStyle).toBe('rgba(255, 0, 0, 0.5)');
-      expect(mockCtx.strokeStyle).toBe('rgba(255, 0, 0, 0.5)');
+      // Alpha 128/255 ≈ 0.502
+      expect(mockCtx.fillStyle).toMatch(/^rgba\(255, 0, 0, 0\.50/);
+      expect(mockCtx.strokeStyle).toMatch(/^rgba\(255, 0, 0, 0\.50/);
     });
 
-    it('should handle alpha of 1 as RGB (no alpha)', () => {
+    it('should handle alpha of 255 as RGB (fully opaque)', () => {
       const commands: DrawCommand[] = [
-        { type: 'setColor', r: 0, g: 255, b: 0, a: 1 },
+        { type: 'setColor', r: 0, g: 255, b: 0, a: 255 },
       ];
 
       renderer.render(commands);
 
       expect(mockCtx.fillStyle).toBe('#00ff00');
+    });
+
+    it('should convert alpha from 0-255 to 0-1 for CSS rgba()', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setColor', r: 255, g: 0, b: 0, a: 68 },
+      ];
+
+      renderer.render(commands);
+
+      // Alpha 68/255 ≈ 0.267
+      const expectedAlpha = 68 / 255;
+      expect(mockCtx.fillStyle).toBe(`rgba(255, 0, 0, ${expectedAlpha})`);
+      expect(mockCtx.strokeStyle).toBe(`rgba(255, 0, 0, ${expectedAlpha})`);
+    });
+
+    it('should handle fully transparent (alpha 0)', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setColor', r: 255, g: 255, b: 255, a: 0 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.fillStyle).toBe('rgba(255, 255, 255, 0)');
+      expect(mockCtx.strokeStyle).toBe('rgba(255, 255, 255, 0)');
     });
   });
 
