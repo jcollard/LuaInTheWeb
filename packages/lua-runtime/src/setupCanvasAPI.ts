@@ -210,8 +210,59 @@ export function setupCanvasAPI(
       __canvas_clear()
     end
 
+    -- Helper function to parse hex color string to RGBA
+    local function parse_hex_color(hex)
+      -- Remove the # prefix
+      local color = hex:sub(2)
+      local len = #color
+
+      local r, g, b, a
+
+      if len == 3 then
+        -- Short form #RGB -> expand to #RRGGBB
+        local r1 = tonumber(color:sub(1, 1), 16)
+        local g1 = tonumber(color:sub(2, 2), 16)
+        local b1 = tonumber(color:sub(3, 3), 16)
+        if not r1 or not g1 or not b1 then
+          error("Invalid hex color: " .. hex .. ". Contains non-hexadecimal characters")
+        end
+        r = r1 * 17
+        g = g1 * 17
+        b = b1 * 17
+        a = 255
+      elseif len == 6 then
+        -- Full form #RRGGBB
+        r = tonumber(color:sub(1, 2), 16)
+        g = tonumber(color:sub(3, 4), 16)
+        b = tonumber(color:sub(5, 6), 16)
+        a = 255
+        if not r or not g or not b then
+          error("Invalid hex color: " .. hex .. ". Contains non-hexadecimal characters")
+        end
+      elseif len == 8 then
+        -- Full form with alpha #RRGGBBAA
+        r = tonumber(color:sub(1, 2), 16)
+        g = tonumber(color:sub(3, 4), 16)
+        b = tonumber(color:sub(5, 6), 16)
+        a = tonumber(color:sub(7, 8), 16)
+        if not r or not g or not b or not a then
+          error("Invalid hex color: " .. hex .. ". Contains non-hexadecimal characters")
+        end
+      else
+        error("Invalid hex color format: " .. hex .. ". Expected #RGB, #RRGGBB, or #RRGGBBAA")
+      end
+
+      return r, g, b, a
+    end
+
     function _canvas.set_color(r, g, b, a)
-      __canvas_setColor(r, g, b, a)
+      -- Check if first argument is a hex color string
+      if type(r) == 'string' and r:sub(1, 1) == '#' then
+        local hr, hg, hb, ha = parse_hex_color(r)
+        __canvas_setColor(hr, hg, hb, ha)
+      else
+        __canvas_setColor(r, g, b, a)
+      end
     end
 
     function _canvas.set_line_width(width)
