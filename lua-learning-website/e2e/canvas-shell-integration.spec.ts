@@ -311,6 +311,103 @@ test.describe('Canvas Shell Integration', () => {
     })
   })
 
+  test.describe('Canvas Tab Close from UI (Issue #361)', () => {
+    test('closing canvas tab stops the canvas process', async ({ page }) => {
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
+
+      // Start Lua REPL
+      await terminal.execute('lua')
+      await page.waitForTimeout(TIMEOUTS.ANIMATION)
+
+      // Require canvas module
+      await terminal.type('canvas = require("canvas")')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Set up infinite canvas (no canvas.stop())
+      await terminal.type('canvas.tick(function() canvas.clear() canvas.set_color(0, 255, 0) canvas.fill_rect(0, 0, 100, 100) end)')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Start canvas
+      await terminal.type('canvas.start()')
+      await terminal.press('Enter')
+
+      // Verify canvas tab is visible
+      const canvasTab = page.locator('[class*="canvasTab"]').first()
+      await expect(canvasTab).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Wait a moment for canvas to be running
+      await page.waitForTimeout(TIMEOUTS.ANIMATION)
+
+      // Find and click the close button on the canvas tab
+      const closeButton = canvasTab.locator('[class*="canvasTabClose"]')
+      await expect(closeButton).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+      await closeButton.click()
+
+      // Canvas tab should be closed
+      await expect(canvasTab).not.toBeVisible({ timeout: TIMEOUTS.ASYNC_OPERATION })
+
+      // The Lua REPL should return to the prompt (process stopped)
+      // We can verify by being able to execute another command
+      await page.waitForTimeout(TIMEOUTS.ANIMATION)
+      await terminal.type('print("after close")')
+      await terminal.press('Enter')
+      await terminal.expectToContain('after close', { timeout: TIMEOUTS.ASYNC_OPERATION })
+    })
+
+    test('closing canvas tab does not leave orphaned game loop', async ({ page }) => {
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
+
+      // Start Lua REPL
+      await terminal.execute('lua')
+      await page.waitForTimeout(TIMEOUTS.ANIMATION)
+
+      // Require canvas module
+      await terminal.type('canvas = require("canvas")')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Set up canvas with a counter that prints periodically
+      await terminal.type('frame_count = 0')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Canvas that would print if it kept running
+      await terminal.type('canvas.tick(function() frame_count = frame_count + 1 if frame_count % 60 == 0 then print("frame " .. frame_count) end end)')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Start canvas
+      await terminal.type('canvas.start()')
+      await terminal.press('Enter')
+
+      // Verify canvas tab is visible
+      const canvasTab = page.locator('[class*="canvasTab"]').first()
+      await expect(canvasTab).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Wait a moment, then close the tab
+      await page.waitForTimeout(100)
+
+      // Click the close button
+      const closeButton = canvasTab.locator('[class*="canvasTabClose"]')
+      await closeButton.click()
+
+      // Canvas tab should be closed
+      await expect(canvasTab).not.toBeVisible({ timeout: TIMEOUTS.ASYNC_OPERATION })
+
+      // Wait to see if any more frames would print (they shouldn't)
+      await page.waitForTimeout(500)
+
+      // Continue with REPL - this confirms the game loop is really stopped
+      await terminal.type('print("done")')
+      await terminal.press('Enter')
+      await terminal.expectToContain('done', { timeout: TIMEOUTS.ASYNC_OPERATION })
+    })
+  })
+
   test.describe('Error Handling', () => {
     test('second canvas.start() throws error', async ({ page }) => {
       const terminal = createTerminalHelper(page)

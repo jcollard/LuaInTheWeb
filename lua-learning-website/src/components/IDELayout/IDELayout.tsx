@@ -192,6 +192,10 @@ function IDELayoutInner({
   // Stores pending resolvers for canvas requests (canvasId -> resolver)
   const pendingCanvasRequestsRef = useRef<Map<string, (canvas: HTMLCanvasElement) => void>>(new Map())
 
+  // Canvas close handler management for UI-initiated tab close
+  // Stores handlers to call when a canvas tab is closed from UI (canvasId -> stopHandler)
+  const canvasCloseHandlersRef = useRef<Map<string, () => void>>(new Map())
+
   // Handle canvas tab request from shell (canvas.start())
   const handleRequestCanvasTab = useCallback(async (canvasId: string): Promise<HTMLCanvasElement> => {
     // Tab path format: canvas://{canvasId}
@@ -228,11 +232,23 @@ function IDELayoutInner({
     }
   }, [])
 
+  // Register a handler to be called when a canvas tab is closed from the UI
+  const registerCanvasCloseHandler = useCallback((canvasId: string, handler: () => void) => {
+    canvasCloseHandlersRef.current.set(canvasId, handler)
+  }, [])
+
+  // Unregister a canvas close handler (called when canvas stops normally)
+  const unregisterCanvasCloseHandler = useCallback((canvasId: string) => {
+    canvasCloseHandlersRef.current.delete(canvasId)
+  }, [])
+
   // Canvas callbacks to pass to shell
   const canvasCallbacks = useMemo(() => ({
     onRequestCanvasTab: handleRequestCanvasTab,
     onCloseCanvasTab: handleCloseCanvasTab,
-  }), [handleRequestCanvasTab, handleCloseCanvasTab])
+    registerCanvasCloseHandler,
+    unregisterCanvasCloseHandler,
+  }), [handleRequestCanvasTab, handleCloseCanvasTab, registerCanvasCloseHandler, unregisterCanvasCloseHandler])
 
   const combinedClassName = className
     ? `${styles.ideLayout} ${className}`
@@ -255,6 +271,15 @@ function IDELayoutInner({
       // Show confirmation dialog
       setPendingCloseTabPath(path)
     } else {
+      // If this is a canvas tab, invoke the close handler to stop the canvas process
+      if (path.startsWith('canvas://')) {
+        const canvasId = path.replace('canvas://', '')
+        const closeHandler = canvasCloseHandlersRef.current.get(canvasId)
+        if (closeHandler) {
+          closeHandler()
+          // Handler will clean itself up via unregisterCanvasCloseHandler
+        }
+      }
       // Close immediately
       closeTab(path)
     }

@@ -557,6 +557,95 @@ describe('CanvasController', () => {
     })
   })
 
+  describe('canvas close handler registration', () => {
+    it('should register close handler when starting', async () => {
+      // Arrange
+      const registerHandler = vi.fn()
+      const unregisterHandler = vi.fn()
+      const callbacksWithHandler: CanvasCallbacks = {
+        ...mockCallbacks,
+        registerCanvasCloseHandler: registerHandler,
+        unregisterCanvasCloseHandler: unregisterHandler,
+      }
+      const controllerWithHandler = new CanvasController(callbacksWithHandler)
+      const startPromise = controllerWithHandler.start()
+
+      // Wait for start to process
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      // Assert - handler should be registered with the canvasId
+      expect(registerHandler).toHaveBeenCalledWith('canvas-main', expect.any(Function))
+
+      // Cleanup
+      controllerWithHandler.stop()
+      await startPromise
+    })
+
+    it('should unregister close handler when stopping', async () => {
+      // Arrange
+      const registerHandler = vi.fn()
+      const unregisterHandler = vi.fn()
+      const callbacksWithHandler: CanvasCallbacks = {
+        ...mockCallbacks,
+        registerCanvasCloseHandler: registerHandler,
+        unregisterCanvasCloseHandler: unregisterHandler,
+      }
+      const controllerWithHandler = new CanvasController(callbacksWithHandler)
+      const startPromise = controllerWithHandler.start()
+
+      // Wait for start to process
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      // Act - stop the canvas
+      controllerWithHandler.stop()
+      await startPromise
+
+      // Assert - handler should be unregistered
+      expect(unregisterHandler).toHaveBeenCalledWith('canvas-main')
+    })
+
+    it('should stop when close handler is invoked by UI', async () => {
+      // Arrange
+      let registeredHandler: (() => void) | null = null
+      const registerHandler = vi.fn((_id: string, handler: () => void) => {
+        registeredHandler = handler
+      })
+      const callbacksWithHandler: CanvasCallbacks = {
+        ...mockCallbacks,
+        registerCanvasCloseHandler: registerHandler,
+        unregisterCanvasCloseHandler: vi.fn(),
+      }
+      const controllerWithHandler = new CanvasController(callbacksWithHandler)
+      const startPromise = controllerWithHandler.start()
+
+      // Wait for start to process
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      // Act - simulate UI closing the tab by invoking the registered handler
+      expect(registeredHandler).not.toBeNull()
+      registeredHandler!()
+
+      // Assert - controller should stop and Promise should resolve
+      await expect(startPromise).resolves.toBeUndefined()
+      expect(controllerWithHandler.isActive()).toBe(false)
+    })
+
+    it('should work without registerCanvasCloseHandler for backward compatibility', async () => {
+      // Arrange - callbacks without the new handler methods
+      const startPromise = controller.start()
+
+      // Wait for start to process
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      // Assert - should work without errors
+      expect(controller.isActive()).toBe(true)
+
+      // Cleanup
+      controller.stop()
+      await startPromise
+    })
+  })
+
   describe('asset dimensions', () => {
     let mockFileSystem: IFileSystem
     let originalImage: typeof Image

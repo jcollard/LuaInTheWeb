@@ -68,6 +68,19 @@ export interface ShellCanvasCallbacks {
   onRequestCanvasTab: (canvasId: string) => Promise<HTMLCanvasElement>
   /** Request a canvas tab to be closed */
   onCloseCanvasTab: (canvasId: string) => void
+  /**
+   * Register a handler to be called when the canvas tab is closed from the UI.
+   * This allows the canvas process to be stopped when the user closes the tab manually.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when the tab is closed
+   */
+  registerCanvasCloseHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Unregister the close handler for a canvas.
+   * Called when the canvas stops normally to prevent double-cleanup.
+   * @param canvasId - The canvas ID
+   */
+  unregisterCanvasCloseHandler?: (canvasId: string) => void
 }
 
 /**
@@ -240,6 +253,9 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
         // Canvas callbacks for canvas.start()/stop() support
         onRequestCanvasTab: options?.canvasCallbacks?.onRequestCanvasTab,
         onCloseCanvasTab: options?.canvasCallbacks?.onCloseCanvasTab,
+        // Canvas close handler registration for UI-initiated tab close
+        registerCanvasCloseHandler: options?.canvasCallbacks?.registerCanvasCloseHandler,
+        unregisterCanvasCloseHandler: options?.canvasCallbacks?.unregisterCanvasCloseHandler,
         // Editor integration callback for 'open' command
         onRequestOpenFile: options?.onRequestOpenFile,
         // Filesystem change notification for UI refresh (e.g., file tree)
