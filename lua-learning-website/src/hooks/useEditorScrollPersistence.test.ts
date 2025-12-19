@@ -344,6 +344,8 @@ describe('useEditorScrollPersistence', () => {
     })
   })
 
+  // Canvas tab tests moved to useEditorScrollPersistence.canvas.test.ts
+
   describe('scroll to top for new files', () => {
     it('should scroll to top when opening a file for the first time', async () => {
       const mockEditor = createMockEditor(50) // Editor starts at some position
@@ -371,4 +373,6 @@ describe('useEditorScrollPersistence', () => {
       expect(mockEditor.setScrollTop).toHaveBeenCalledWith(0)
     })
   })
+
+  // Edge cases and error handling tests moved to useEditorScrollPersistence.canvas.test.ts
 })
