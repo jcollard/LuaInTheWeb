@@ -10,31 +10,32 @@ import { CanvasController, type CanvasCallbacks } from '../src/CanvasController'
 
 // Global to capture the frame callback for testing
 let capturedFrameCallback: ((timing: { deltaTime: number; totalTime: number; frameNumber: number }) => void) | null = null
-let lastRendererInstance: { render: ReturnType<typeof vi.fn> } | null = null
+let lastRenderFn: ReturnType<typeof vi.fn> | null = null
 
 // Helper to get the captured frame callback
 export function getCapturedFrameCallback() {
   return capturedFrameCallback
 }
 
-// Helper to get the last renderer instance
-export function getLastRendererInstance() {
-  return lastRendererInstance
+// Helper to get the last renderer's render function
+export function getLastRenderFn() {
+  return lastRenderFn
 }
 
 // Reset captured callback between tests
 export function resetCapturedCallback() {
   capturedFrameCallback = null
-  lastRendererInstance = null
+  lastRenderFn = null
 }
 
 // Mock the canvas-runtime imports using classes
 vi.mock('@lua-learning/canvas-runtime', () => {
   return {
     CanvasRenderer: class MockCanvasRenderer {
-      render = vi.fn()
+      render: ReturnType<typeof vi.fn>
       constructor() {
-        lastRendererInstance = this
+        this.render = vi.fn()
+        lastRenderFn = this.render
       }
     },
     InputCapture: class MockInputCapture {
@@ -471,10 +472,10 @@ describe('CanvasController', () => {
 
       // Assert - renderer should have received the setSize command during start()
       // (pre-start commands are processed in start() before the game loop begins)
-      const renderer = getLastRendererInstance()
-      expect(renderer).not.toBeNull()
-      expect(renderer!.render).toHaveBeenCalled()
-      const renderCalls = renderer!.render.mock.calls
+      const renderFn = getLastRenderFn()
+      expect(renderFn).not.toBeNull()
+      expect(renderFn).toHaveBeenCalled()
+      const renderCalls = renderFn!.mock.calls
       const firstRenderCommands = renderCalls[0]?.[0] ?? []
       expect(firstRenderCommands).toContainEqual({
         type: 'setSize',
@@ -499,9 +500,9 @@ describe('CanvasController', () => {
       await new Promise((resolve) => setTimeout(resolve, 0))
 
       // Assert - renderer should NOT have been called (no pre-start commands)
-      const renderer = getLastRendererInstance()
-      expect(renderer).not.toBeNull()
-      expect(renderer!.render).not.toHaveBeenCalled()
+      const renderFn = getLastRenderFn()
+      expect(renderFn).not.toBeNull()
+      expect(renderFn).not.toHaveBeenCalled()
 
       // Cleanup
       controller.stop()
