@@ -279,10 +279,14 @@ describe('useEditorScrollPersistence - canvas tab transitions', () => {
       // IMPORTANTLY: We do NOT call mockEditor2._triggerContentChange()
       // This simulates the real bug where Monaco doesn't fire the event
 
-      // Run requestAnimationFrame callbacks - need to wait for both:
-      // 1. The RAF scheduled by setEditor
-      // 2. The RAF inside restoreScrollForTab
+      // Run requestAnimationFrame callbacks - need to wait for:
+      // 1. First RAF in setEditor (Monaco initialization)
+      // 2. Second RAF in setEditor (Monaco auto-scroll complete)
+      // 3. First RAF inside restoreScrollForTab
+      // 4. Second RAF inside restoreScrollForTab (clear isRestoring)
       await act(async () => {
+        await new Promise(resolve => requestAnimationFrame(resolve))
+        await new Promise(resolve => requestAnimationFrame(resolve))
         await new Promise(resolve => requestAnimationFrame(resolve))
         await new Promise(resolve => requestAnimationFrame(resolve))
       })

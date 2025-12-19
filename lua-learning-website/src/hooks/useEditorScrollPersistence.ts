@@ -149,16 +149,20 @@ export function useEditorScrollPersistence(
       // @monaco-editor/react may set content BEFORE calling onMount, so our
       // onDidChangeModelContent listener might miss the initial content load.
       // This delayed restore handles the case where Monaco doesn't fire events.
-      // Use requestAnimationFrame to ensure Monaco has finished initialization
-      // and the DOM is fully updated before attempting to set scroll position.
+      // Use multiple requestAnimationFrames to ensure Monaco has fully initialized,
+      // rendered, and completed any auto-scrolling (e.g., to cursor position).
       const pendingTab = pendingScrollRestoreRef.current
       if (pendingTab) {
+        // First RAF: Wait for Monaco initialization
         requestAnimationFrame(() => {
-          // Only restore if still pending (not already restored by event listener)
-          if (pendingScrollRestoreRef.current === pendingTab && editorRef.current) {
-            restoreScrollForTab(editorRef.current, pendingTab)
-            pendingScrollRestoreRef.current = null
-          }
+          // Second RAF: Wait for any Monaco auto-scroll to complete
+          requestAnimationFrame(() => {
+            // Only restore if still pending (not already restored by event listener)
+            if (pendingScrollRestoreRef.current === pendingTab && editorRef.current) {
+              restoreScrollForTab(editorRef.current, pendingTab)
+              pendingScrollRestoreRef.current = null
+            }
+          })
         })
       }
     }
