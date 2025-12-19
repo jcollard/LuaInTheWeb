@@ -89,8 +89,10 @@ export class CanvasRenderer {
 
   private setColor(r: number, g: number, b: number, a?: number): void {
     let color: string;
-    if (a !== undefined && a !== 1) {
-      color = `rgba(${r}, ${g}, ${b}, ${a})`;
+    if (a !== undefined && a !== 255) {
+      // Convert alpha from 0-255 range to 0-1 range for CSS rgba()
+      const normalizedAlpha = a / 255;
+      color = `rgba(${r}, ${g}, ${b}, ${normalizedAlpha})`;
     } else {
       color = `#${this.toHex(r)}${this.toHex(g)}${this.toHex(b)}`;
     }
