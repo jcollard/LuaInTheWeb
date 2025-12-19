@@ -113,11 +113,10 @@ function createExternalFileSystemAdapter(fs: UseFileSystemReturn): ExternalFileS
  * Helper to flush pending filesystem operations if supported.
  * FileSystemAccessAPIFileSystem uses write-behind caching and requires flush().
  */
-function flushIfSupported(fs: IFileSystem): void {
+async function flushIfSupported(fs: IFileSystem): Promise<void> {
   const flushable = fs as IFileSystem & { flush?: () => Promise<void> }
   if (typeof flushable.flush === 'function') {
-    // Fire and forget - flush happens async
-    flushable.flush()
+    await flushable.flush()
   }
 }
 
@@ -246,9 +245,9 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
         // Filesystem change notification for UI refresh (e.g., file tree)
         // Wrap callback to flush pending writes before notifying UI
         onFileSystemChange: options?.onFileSystemChange
-          ? () => {
+          ? async () => {
               // Flush pending writes to disk first (for local folder workspaces)
-              flushIfSupported(shellFileSystem)
+              await flushIfSupported(shellFileSystem)
               // Then notify UI to refresh
               options.onFileSystemChange!()
             }

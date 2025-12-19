@@ -21,7 +21,7 @@ describe('LuaEngineFactory file operations (io.open)', () => {
           open: fileOpen,
           read: vi.fn(),
           write: vi.fn(),
-          close: vi.fn(),
+          close: vi.fn().mockResolvedValue({ success: true }),
         },
       }
       const engine = await LuaEngineFactory.create(callbacksWithFile)
@@ -42,7 +42,7 @@ describe('LuaEngineFactory file operations (io.open)', () => {
           open: fileOpen,
           read: vi.fn(),
           write: vi.fn(),
-          close: vi.fn(),
+          close: vi.fn().mockResolvedValue({ success: true }),
         },
       }
       const engine = await LuaEngineFactory.create(callbacksWithFile)
@@ -64,7 +64,7 @@ describe('LuaEngineFactory file operations (io.open)', () => {
           open: fileOpen,
           read: vi.fn(),
           write: vi.fn(),
-          close: vi.fn(),
+          close: vi.fn().mockResolvedValue({ success: true }),
         },
       }
       const engine = await LuaEngineFactory.create(callbacksWithFile)
@@ -86,7 +86,7 @@ describe('LuaEngineFactory file operations (io.open)', () => {
           open: vi.fn().mockReturnValue({ success: true, handle: 1 }),
           read: fileRead,
           write: vi.fn(),
-          close: vi.fn(),
+          close: vi.fn().mockResolvedValue({ success: true }),
         },
       }
       const engine = await LuaEngineFactory.create(callbacksWithFile)
@@ -108,7 +108,7 @@ describe('LuaEngineFactory file operations (io.open)', () => {
           open: vi.fn().mockReturnValue({ success: true, handle: 1 }),
           read: fileRead,
           write: vi.fn(),
-          close: vi.fn(),
+          close: vi.fn().mockResolvedValue({ success: true }),
         },
       }
       const engine = await LuaEngineFactory.create(callbacksWithFile)
@@ -131,7 +131,7 @@ describe('LuaEngineFactory file operations (io.open)', () => {
           open: vi.fn().mockReturnValue({ success: true, handle: 1 }),
           read: vi.fn(),
           write: fileWrite,
-          close: vi.fn(),
+          close: vi.fn().mockResolvedValue({ success: true }),
         },
       }
       const engine = await LuaEngineFactory.create(callbacksWithFile)
@@ -151,7 +151,7 @@ describe('LuaEngineFactory file operations (io.open)', () => {
           open: vi.fn().mockReturnValue({ success: true, handle: 1 }),
           read: vi.fn(),
           write: fileWrite,
-          close: vi.fn(),
+          close: vi.fn().mockResolvedValue({ success: true }),
         },
       }
       const engine = await LuaEngineFactory.create(callbacksWithFile)
@@ -168,7 +168,7 @@ describe('LuaEngineFactory file operations (io.open)', () => {
 
   describe('file:close() and io.close()', () => {
     it('should call fileClose callback with handle', async () => {
-      const fileClose = vi.fn().mockReturnValue({ success: true })
+      const fileClose = vi.fn().mockResolvedValue({ success: true })
       const callbacksWithFile: LuaEngineCallbacks = {
         ...callbacks,
         fileOperations: {
@@ -188,7 +188,7 @@ describe('LuaEngineFactory file operations (io.open)', () => {
     })
 
     it('should support io.close(file) syntax', async () => {
-      const fileClose = vi.fn().mockReturnValue({ success: true })
+      const fileClose = vi.fn().mockResolvedValue({ success: true })
       const callbacksWithFile: LuaEngineCallbacks = {
         ...callbacks,
         fileOperations: {
@@ -224,7 +224,7 @@ describe('LuaEngineFactory file operations (io.open)', () => {
           open: vi.fn().mockReturnValue({ success: true, handle: 1 }),
           read: fileRead,
           write: vi.fn(),
-          close: vi.fn().mockReturnValue({ success: true }),
+          close: vi.fn().mockResolvedValue({ success: true }),
         },
       }
       const engine = await LuaEngineFactory.create(callbacksWithFile)
@@ -257,7 +257,7 @@ describe('LuaEngineFactory file operations (io.open)', () => {
           open: fileOpen,
           read: vi.fn(),
           write: vi.fn(),
-          close: vi.fn(),
+          close: vi.fn().mockResolvedValue({ success: true }),
         },
       }
       const engine = await LuaEngineFactory.create(callbacksWithFile)
@@ -276,7 +276,7 @@ describe('LuaEngineFactory file operations (io.open)', () => {
           open: fileOpen,
           read: vi.fn(),
           write: vi.fn(),
-          close: vi.fn(),
+          close: vi.fn().mockResolvedValue({ success: true }),
         },
       }
       const engine = await LuaEngineFactory.create(callbacksWithFile)
@@ -295,7 +295,7 @@ describe('LuaEngineFactory file operations (io.open)', () => {
           open: fileOpen,
           read: vi.fn(),
           write: vi.fn(),
-          close: vi.fn(),
+          close: vi.fn().mockResolvedValue({ success: true }),
         },
       }
       const engine = await LuaEngineFactory.create(callbacksWithFile)

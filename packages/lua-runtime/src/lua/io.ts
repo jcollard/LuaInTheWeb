@@ -148,7 +148,8 @@ local __file_handle_mt = {
       if self.__closed then
         return nil, "attempt to use a closed file"
       end
-      local success = __js_file_close(self.__handle)
+      -- Await the async close to ensure file is flushed to disk before returning
+      local success = __js_file_close(self.__handle):await()
       self.__closed = true
       if not success then
         return nil, __js_file_get_error()

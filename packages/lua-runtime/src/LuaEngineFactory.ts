@@ -186,10 +186,11 @@ export interface FileOperationsCallbacks {
 
   /**
    * Close a file.
+   * Returns a Promise to allow awaiting filesystem flush operations.
    * @param handle - File handle from open()
-   * @returns Result indicating success or failure
+   * @returns Promise resolving to result indicating success or failure
    */
-  close: (handle: number) => FileCloseResult
+  close: (handle: number) => Promise<FileCloseResult>
 }
 
 /**
@@ -397,9 +398,9 @@ export class LuaEngineFactory {
         return lastFileResult.success
       })
 
-      // Bridge function for file:close
-      engine.global.set('__js_file_close', (handle: number): boolean => {
-        lastFileResult = fileOps.close(handle)
+      // Bridge function for file:close (async to allow awaiting flush)
+      engine.global.set('__js_file_close', async (handle: number): Promise<boolean> => {
+        lastFileResult = await fileOps.close(handle)
         return lastFileResult.success
       })
 

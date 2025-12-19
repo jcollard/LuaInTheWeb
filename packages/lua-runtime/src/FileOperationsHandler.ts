@@ -45,7 +45,7 @@ export class FileOperationsHandler {
   private nextHandleId = 1
   private filesystem: FileSystemOperations
   private pathResolver: (path: string) => string
-  private onFileSystemChange?: () => void
+  private onFileSystemChange?: () => Promise<void> | void
 
   /**
    * Create a new file operations handler.
@@ -56,7 +56,7 @@ export class FileOperationsHandler {
   constructor(
     filesystem: FileSystemOperations,
     pathResolver: (path: string) => string,
-    onFileSystemChange?: () => void
+    onFileSystemChange?: () => Promise<void> | void
   ) {
     this.filesystem = filesystem
     this.pathResolver = pathResolver
@@ -77,7 +77,7 @@ export class FileOperationsHandler {
       write: (handle: number, content: string): FileWriteResult => {
         return this.fileWrite(handle, content)
       },
-      close: (handle: number): FileCloseResult => {
+      close: (handle: number): Promise<FileCloseResult> => {
         return this.fileClose(handle)
       },
     }
@@ -308,8 +308,9 @@ export class FileOperationsHandler {
 
   /**
    * Close a file handle.
+   * Returns a Promise to allow awaiting filesystem flush operations.
    */
-  fileClose(handleId: number): FileCloseResult {
+  async fileClose(handleId: number): Promise<FileCloseResult> {
     const handle = this.fileHandles.get(handleId)
     if (!handle) {
       return { success: false, error: 'Bad file descriptor' }
@@ -329,8 +330,9 @@ export class FileOperationsHandler {
     this.fileHandles.delete(handleId)
 
     // Notify UI that filesystem changed (for file tree refresh)
+    // Await the callback to ensure flush completes before returning
     if (didWrite && this.onFileSystemChange) {
-      this.onFileSystemChange()
+      await this.onFileSystemChange()
     }
 
     return { success: true }

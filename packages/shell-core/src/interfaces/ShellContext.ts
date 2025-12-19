@@ -61,5 +61,5 @@ export interface ShellContext {
    * Called after file operations (create, write, delete) to refresh UI.
    * Optional - when undefined, no notification is sent.
    */
-  onFileSystemChange?: () => void
+  onFileSystemChange?: () => Promise<void> | void
 }

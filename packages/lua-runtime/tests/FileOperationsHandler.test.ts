@@ -16,7 +16,7 @@ describe('FileOperationsHandler', () => {
   })
 
   describe('onFileSystemChange callback', () => {
-    it('should call onFileSystemChange when closing a dirty file', () => {
+    it('should call onFileSystemChange when closing a dirty file', async () => {
       const onFileSystemChange = vi.fn()
       const handler = new FileOperationsHandler(mockFs, pathResolver, onFileSystemChange)
 
@@ -29,13 +29,13 @@ describe('FileOperationsHandler', () => {
       expect(writeResult.success).toBe(true)
 
       // Close the file - should trigger callback
-      const closeResult = handler.fileClose(openResult.handle!)
+      const closeResult = await handler.fileClose(openResult.handle!)
       expect(closeResult.success).toBe(true)
 
       expect(onFileSystemChange).toHaveBeenCalledTimes(1)
     })
 
-    it('should not call onFileSystemChange when closing a clean file', () => {
+    it('should not call onFileSystemChange when closing a clean file', async () => {
       const onFileSystemChange = vi.fn()
       const handler = new FileOperationsHandler(mockFs, pathResolver, onFileSystemChange)
 
@@ -44,13 +44,13 @@ describe('FileOperationsHandler', () => {
       expect(openResult.success).toBe(true)
 
       // Close the file - should not trigger callback
-      const closeResult = handler.fileClose(openResult.handle!)
+      const closeResult = await handler.fileClose(openResult.handle!)
       expect(closeResult.success).toBe(true)
 
       expect(onFileSystemChange).not.toHaveBeenCalled()
     })
 
-    it('should work without onFileSystemChange callback', () => {
+    it('should work without onFileSystemChange callback', async () => {
       // No callback provided
       const handler = new FileOperationsHandler(mockFs, pathResolver)
 
@@ -62,7 +62,7 @@ describe('FileOperationsHandler', () => {
       handler.fileWrite(openResult.handle!, 'hello')
 
       // Close should work without callback
-      const closeResult = handler.fileClose(openResult.handle!)
+      const closeResult = await handler.fileClose(openResult.handle!)
       expect(closeResult.success).toBe(true)
     })
 
@@ -83,7 +83,7 @@ describe('FileOperationsHandler', () => {
       expect(onFileSystemChange).toHaveBeenCalledTimes(2)
     })
 
-    it('should not call onFileSystemChange if write fails', () => {
+    it('should not call onFileSystemChange if write fails', async () => {
       const onFileSystemChange = vi.fn()
       ;(mockFs.writeFile as ReturnType<typeof vi.fn>).mockImplementation(() => {
         throw new Error('Write failed')
@@ -95,7 +95,7 @@ describe('FileOperationsHandler', () => {
       handler.fileWrite(openResult.handle!, 'hello')
 
       // Close should fail and not call callback
-      const closeResult = handler.fileClose(openResult.handle!)
+      const closeResult = await handler.fileClose(openResult.handle!)
       expect(closeResult.success).toBe(false)
 
       expect(onFileSystemChange).not.toHaveBeenCalled()
