@@ -8,6 +8,7 @@ let terminalInstances: Array<{
   write: ReturnType<typeof vi.fn>
   writeln: ReturnType<typeof vi.fn>
   onData: ReturnType<typeof vi.fn>
+  focus: ReturnType<typeof vi.fn>
 }> = []
 
 // Store FitAddon instances for testing
@@ -42,6 +43,7 @@ vi.mock('@xterm/xterm', () => {
     this.dispose = vi.fn()
     this.clear = vi.fn()
     this.refresh = vi.fn()
+    this.focus = vi.fn()
     this.rows = 24
     this.options = {}
     // Store instance for test access
@@ -49,6 +51,7 @@ vi.mock('@xterm/xterm', () => {
       write: this.write as ReturnType<typeof vi.fn>,
       writeln: this.writeln as ReturnType<typeof vi.fn>,
       onData: this.onData as ReturnType<typeof vi.fn>,
+      focus: this.focus as ReturnType<typeof vi.fn>,
     })
   })
   return { Terminal: MockTerminal }
@@ -638,5 +641,64 @@ describe('ShellTerminal', () => {
     })
 
     // Arrow key routing to process tests are in ShellTerminal.processKeys.test.tsx
+  })
+
+  describe('focus management', () => {
+    it('should focus terminal when visible prop changes from false to true', async () => {
+      const { rerender } = render(
+        <ShellTerminal fileSystem={mockFileSystem} visible={false} />
+      )
+
+      const terminal = terminalInstances[0]
+      // Clear any initial focus calls
+      terminal.focus.mockClear()
+
+      // Change visible from false to true
+      rerender(<ShellTerminal fileSystem={mockFileSystem} visible={true} />)
+
+      // Terminal should be focused
+      expect(terminal.focus).toHaveBeenCalled()
+    })
+
+    it('should not focus terminal when visible prop stays true', async () => {
+      const { rerender } = render(
+        <ShellTerminal fileSystem={mockFileSystem} visible={true} />
+      )
+
+      const terminal = terminalInstances[0]
+      // Clear any initial focus calls
+      terminal.focus.mockClear()
+
+      // Rerender with same visible=true
+      rerender(<ShellTerminal fileSystem={mockFileSystem} visible={true} />)
+
+      // Terminal should not be focused (no change)
+      expect(terminal.focus).not.toHaveBeenCalled()
+    })
+
+    it('should not focus terminal when visible changes from true to false', async () => {
+      const { rerender } = render(
+        <ShellTerminal fileSystem={mockFileSystem} visible={true} />
+      )
+
+      const terminal = terminalInstances[0]
+      // Clear any initial focus calls
+      terminal.focus.mockClear()
+
+      // Change visible from true to false
+      rerender(<ShellTerminal fileSystem={mockFileSystem} visible={false} />)
+
+      // Terminal should not be focused
+      expect(terminal.focus).not.toHaveBeenCalled()
+    })
+
+    it('should not focus terminal on initial render (only on transition to visible)', () => {
+      render(<ShellTerminal fileSystem={mockFileSystem} visible={true} />)
+
+      const terminal = terminalInstances[0]
+      // Focus should only happen when transitioning from not visible to visible
+      // On initial render, there is no transition, so focus should not be called
+      expect(terminal.focus).not.toHaveBeenCalled()
+    })
   })
 })

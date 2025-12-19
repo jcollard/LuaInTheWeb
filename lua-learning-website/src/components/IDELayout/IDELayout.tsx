@@ -465,12 +465,13 @@ function IDELayoutInner({
                   collapsed={!terminalVisible}
                 >
                   <BottomPanel
-                  fileSystem={compositeFileSystem}
-                  onFileSystemChange={refreshFileTree}
-                  canvasCallbacks={canvasCallbacks}
-                  onFileMove={handleShellFileMove}
-                  onRequestOpenFile={handleRequestOpenFile}
-                />
+                    fileSystem={compositeFileSystem}
+                    onFileSystemChange={refreshFileTree}
+                    canvasCallbacks={canvasCallbacks}
+                    onFileMove={handleShellFileMove}
+                    onRequestOpenFile={handleRequestOpenFile}
+                    visible={terminalVisible}
+                  />
                 </IDEPanel>
               </IDEPanelGroup>
             </IDEPanel>

@@ -24,11 +24,13 @@ export function ShellTerminal({
   canvasCallbacks,
   onFileMove,
   onRequestOpenFile,
+  visible,
 }: ShellTerminalProps) {
   const { theme } = useTheme()
   const initialThemeRef = useRef(theme)
   const terminalRef = useRef<HTMLDivElement>(null)
   const xtermRef = useRef<Terminal | null>(null)
+  const prevVisibleRef = useRef(visible)
   const fitAddonRef = useRef<FitAddon | null>(null)
 
   const { executeCommand, executeCommandWithContext, cwd, history, commandNames, getPathCompletionsForTab } = useShell(
@@ -397,6 +399,17 @@ export function ShellTerminal({
       xtermRef.current.refresh(0, xtermRef.current.rows)
     }
   }, [theme])
+
+  // Focus terminal when visibility changes from false to true
+  useEffect(() => {
+    const wasVisible = prevVisibleRef.current
+    prevVisibleRef.current = visible
+
+    // Only focus when transitioning from not visible to visible
+    if (!wasVisible && visible && xtermRef.current) {
+      xtermRef.current.focus()
+    }
+  }, [visible])
 
   const containerClassName = `${styles.container}${embedded ? ` ${styles.containerEmbedded}` : ''}${className ? ` ${className}` : ''}`
 

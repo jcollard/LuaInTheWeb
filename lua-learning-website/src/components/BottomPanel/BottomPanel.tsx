@@ -12,6 +12,7 @@ export function BottomPanel({
   canvasCallbacks,
   onFileMove,
   onRequestOpenFile,
+  visible,
 }: BottomPanelProps) {
   const combinedClassName = className
     ? `${styles.bottomPanel} ${className}`
@@ -39,6 +40,7 @@ export function BottomPanel({
             canvasCallbacks={canvasCallbacks}
             onFileMove={onFileMove}
             onRequestOpenFile={onRequestOpenFile}
+            visible={visible}
           />
         </div>
       </div>

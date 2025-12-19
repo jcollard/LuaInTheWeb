@@ -16,4 +16,6 @@ export interface BottomPanelProps {
   onFileMove?: (oldPath: string, newPath: string, isDirectory: boolean) => void
   /** Callback when the 'open' command requests to open a file in the editor */
   onRequestOpenFile?: (filePath: string) => void
+  /** When true, the panel is visible and the shell terminal should receive focus when becoming visible */
+  visible?: boolean
 }
