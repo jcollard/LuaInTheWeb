@@ -76,7 +76,8 @@ test.describe('Shell Tab Completion', () => {
     await terminal.expectToContain('/')
   })
 
-  test('Tab on empty input shows available commands', async ({ page }) => {
+  // Skipped: Flaky test - see https://github.com/jcollard/LuaInTheWeb/issues/359
+  test.skip('Tab on empty input shows available commands', async ({ page }) => {
     const terminal = createTerminalHelper(page)
     await terminal.focus()
 

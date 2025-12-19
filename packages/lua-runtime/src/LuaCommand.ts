@@ -79,10 +79,13 @@ export class LuaCommand implements ICommand {
       : undefined
 
     if (!filename) {
-      // No arguments - start interactive REPL with canvas support
+      // No arguments - start interactive REPL with canvas support and file I/O
       return new LuaReplProcess({
         ...DEFAULT_EXECUTION_OPTIONS,
         canvasCallbacks,
+        fileSystem: context.filesystem,
+        cwd: context.cwd,
+        onFileSystemChange: context.onFileSystemChange,
       })
     }
 

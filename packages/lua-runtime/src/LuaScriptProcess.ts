@@ -15,6 +15,7 @@ import {
 import { resolvePath } from '@lua-learning/shell-core'
 import { CanvasController, type CanvasCallbacks } from './CanvasController'
 import { setupCanvasAPI } from './setupCanvasAPI'
+import { FileOperationsHandler } from './FileOperationsHandler'
 
 /**
  * Options for configuring the Lua script process.
@@ -22,6 +23,8 @@ import { setupCanvasAPI } from './setupCanvasAPI'
 export interface LuaScriptProcessOptions extends ExecutionControlOptions {
   /** Callbacks for canvas tab management (enables canvas.start()/stop()) */
   canvasCallbacks?: CanvasCallbacks
+  /** Callback when filesystem changes (for UI refresh) */
+  onFileSystemChange?: () => void
 }
 
 /**
@@ -39,6 +42,9 @@ export class LuaScriptProcess implements IProcess {
   private hasError = false
   private readonly options: LuaScriptProcessOptions
   private canvasController: CanvasController | null = null
+
+  /** File operations handler for io.open() support */
+  private fileOpsHandler: FileOperationsHandler | null = null
 
   /**
    * Callback invoked when the process produces output.
@@ -92,6 +98,9 @@ export class LuaScriptProcess implements IProcess {
     if (!this.running) return
 
     this.running = false
+
+    // Close all open file handles (flushes pending writes)
+    this.fileOpsHandler?.closeAll()
 
     // Stop any running canvas first
     if (this.canvasController?.isActive()) {
@@ -183,6 +192,14 @@ export class LuaScriptProcess implements IProcess {
     // Create engine and execute
     // With load(), the script content has its own chunk name so line numbers are preserved
     const LINE_OFFSET = 0
+
+    // Create file operations handler for io.open() support
+    this.fileOpsHandler = new FileOperationsHandler(
+      this.context.filesystem,
+      (path: string) => this.resolvePath(path),
+      this.context.onFileSystemChange
+    )
+
     const callbacks: LuaEngineCallbacks = {
       onOutput: (text: string) => this.onOutput(text),
       onError: (text: string) => {
@@ -207,6 +224,8 @@ export class LuaScriptProcess implements IProcess {
           return null
         }
       },
+      // Enable io.open() to read/write files from the virtual file system
+      fileOperations: this.fileOpsHandler.createCallbacks(),
     }
 
     const engineOptions: LuaEngineOptions = {
@@ -308,6 +327,9 @@ __clear_execution_hook()
   private exitWithCode(code: number): void {
     this.running = false
 
+    // Close all open file handles (flushes pending writes)
+    this.fileOpsHandler?.closeAll()
+
     // Stop any running canvas
     if (this.canvasController?.isActive()) {
       this.canvasController.stop()
@@ -385,4 +407,5 @@ __clear_execution_hook()
     // Use shared setup function
     setupCanvasAPI(this.engine, () => this.canvasController)
   }
+
 }

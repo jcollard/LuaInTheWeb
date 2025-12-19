@@ -55,4 +55,11 @@ export interface ShellContext {
    * @param filePath - Absolute path to the file to open
    */
   onRequestOpenFile?: (filePath: string) => void
+
+  /**
+   * Notify that the filesystem has changed.
+   * Called after file operations (create, write, delete) to refresh UI.
+   * Optional - when undefined, no notification is sent.
+   */
+  onFileSystemChange?: () => Promise<void> | void
 }

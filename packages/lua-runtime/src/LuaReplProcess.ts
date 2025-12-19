@@ -3,7 +3,8 @@
  * Provides a read-eval-print-loop for Lua code execution in the shell.
  */
 
-import type { IProcess, KeyModifiers } from '@lua-learning/shell-core'
+import type { IProcess, KeyModifiers, IFileSystem } from '@lua-learning/shell-core'
+import { resolvePath } from '@lua-learning/shell-core'
 import type { LuaEngine } from 'wasmoon'
 import {
   LuaEngineFactory,
@@ -15,6 +16,7 @@ import {
 } from './LuaEngineFactory'
 import { CanvasController, type CanvasCallbacks } from './CanvasController'
 import { setupCanvasAPI } from './setupCanvasAPI'
+import { FileOperationsHandler } from './FileOperationsHandler'
 
 /**
  * Options for configuring the Lua REPL process.
@@ -22,6 +24,12 @@ import { setupCanvasAPI } from './setupCanvasAPI'
 export interface LuaReplProcessOptions extends ExecutionControlOptions {
   /** Canvas callbacks for canvas.start()/stop() integration */
   canvasCallbacks?: CanvasCallbacks
+  /** File system for io.open() support (optional) */
+  fileSystem?: IFileSystem
+  /** Current working directory for relative path resolution (defaults to '/') */
+  cwd?: string
+  /** Callback when filesystem changes (for UI refresh) */
+  onFileSystemChange?: () => void
 }
 
 /**
@@ -46,6 +54,9 @@ export class LuaReplProcess implements IProcess {
   private readonly options: LuaReplProcessOptions
   /** Canvas controller for canvas.start()/stop() functionality */
   private canvasController: CanvasController | null = null
+
+  /** File operations handler for io.open() support */
+  private fileOpsHandler: FileOperationsHandler | null = null
 
   /**
    * Whether this process supports raw key input handling.
@@ -114,6 +125,9 @@ export class LuaReplProcess implements IProcess {
     if (!this.running) return
 
     this.running = false
+
+    // Close all open file handles (flushes pending writes)
+    this.fileOpsHandler?.closeAll()
 
     // Stop any running canvas
     if (this.canvasController?.isActive()) {
@@ -338,11 +352,22 @@ export class LuaReplProcess implements IProcess {
    * Initialize the Lua engine with REPL callbacks.
    */
   private async initEngine(): Promise<void> {
+    // Create file operations handler if filesystem is provided
+    if (this.options.fileSystem) {
+      this.fileOpsHandler = new FileOperationsHandler(
+        this.options.fileSystem,
+        (path: string) => this.resolvePath(path),
+        this.options.onFileSystemChange
+      )
+    }
+
     const callbacks: LuaEngineCallbacks = {
       onOutput: (text: string) => this.onOutput(text),
       onError: (text: string) => this.onError(formatLuaError(text) + '\n'),
       onReadInput: (charCount?: number) => this.waitForInput(charCount),
       onInstructionLimitReached: this.options.onInstructionLimitReached,
+      // Enable io.open() to read/write files from the virtual file system if provided
+      fileOperations: this.fileOpsHandler?.createCallbacks(),
     }
 
     const engineOptions: LuaEngineOptions = {
@@ -513,4 +538,18 @@ export class LuaReplProcess implements IProcess {
   hasPendingInput(): boolean {
     return this.inputQueue.length > 0
   }
+
+  /**
+   * Resolve a path relative to the current working directory.
+   */
+  private resolvePath(path: string): string {
+    const cwd = this.options.cwd ?? '/'
+    // If path starts with /, it's absolute
+    if (path.startsWith('/')) {
+      return path
+    }
+    // Otherwise, resolve relative to cwd
+    return resolvePath(cwd, path)
+  }
+
 }

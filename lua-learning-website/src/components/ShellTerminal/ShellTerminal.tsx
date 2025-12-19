@@ -33,7 +33,7 @@ export function ShellTerminal({
 
   const { executeCommand, executeCommandWithContext, cwd, history, commandNames, getPathCompletionsForTab } = useShell(
     fileSystem,
-    { canvasCallbacks, onFileMove, onRequestOpenFile }
+    { canvasCallbacks, onFileMove, onRequestOpenFile, onFileSystemChange }
   )
 
   // Store latest values in refs so handlers can access current data
