@@ -244,7 +244,15 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
         // Editor integration callback for 'open' command
         onRequestOpenFile: options?.onRequestOpenFile,
         // Filesystem change notification for UI refresh (e.g., file tree)
-        onFileSystemChange: options?.onFileSystemChange,
+        // Wrap callback to flush pending writes before notifying UI
+        onFileSystemChange: options?.onFileSystemChange
+          ? () => {
+              // Flush pending writes to disk first (for local folder workspaces)
+              flushIfSupported(shellFileSystem)
+              // Then notify UI to refresh
+              options.onFileSystemChange!()
+            }
+          : undefined,
       }
 
       // Execute the command using the new interface
