@@ -17,6 +17,9 @@ export function EditorPanel({
   onFormat,
   isFormatting = false,
   onEditorReady,
+  autoSaveEnabled,
+  onToggleAutoSave,
+  onSaveAllFiles,
 }: EditorPanelProps) {
   const combinedClassName = className
     ? `${styles.editorPanel} ${className}`
@@ -69,6 +72,9 @@ export function EditorPanel({
           height="100%"
           onFormat={onFormat}
           onEditorReady={onEditorReady}
+          autoSaveEnabled={autoSaveEnabled}
+          onToggleAutoSave={onToggleAutoSave}
+          onSaveAllFiles={onSaveAllFiles}
         />
       </div>
     </div>

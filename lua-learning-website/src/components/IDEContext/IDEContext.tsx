@@ -7,6 +7,7 @@ import { useTabBar, useTabBarPersistence } from '../TabBar'
 import type { TabInfo } from '../TabBar'
 import { useToast } from '../Toast'
 import { IDEContext } from './context'
+import { useIDEAutoSave } from './useIDEAutoSave'
 import type { IDEContextValue, IDEContextProviderProps, ActivityPanelType } from './types'
 
 export function IDEContextProvider({ children, initialCode = '', fileSystem: externalFileSystem, isPathReadOnly }: IDEContextProviderProps) {
@@ -149,6 +150,12 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
       tabBar.setDirty(activeTab, false)
     }
   }, [activeTab, code, filesystem, isPathReadOnly, showError, tabBar])
+
+  // Auto-save integration (extracted to separate hook)
+  const { autoSaveEnabled, toggleAutoSave, saveAllFiles } = useIDEAutoSave({
+    tabs, activeTab, code, unsavedContent, isDirty, isPathReadOnly, filesystem,
+    setOriginalContent, setUnsavedContent, setDirty: tabBar.setDirty,
+  })
 
   const selectTab = useCallback((path: string) => {
     if (activeTab && code !== originalContent.get(activeTab)) {
@@ -436,25 +443,11 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     }
   }, [activeTab, tabs, filesystem, fileTree]) // fileTree changes when filesystem loads data
 
-  const pinTab = useCallback((path: string) => {
-    tabBar.pinTab(path)
-  }, [tabBar])
-
-  const unpinTab = useCallback((path: string) => {
-    tabBar.unpinTab(path)
-  }, [tabBar])
-
-  const reorderTab = useCallback((path: string, newIndex: number) => {
-    tabBar.reorderTab(path, newIndex)
-  }, [tabBar])
-
-  const closeToRight = useCallback((path: string) => {
-    tabBar.closeToRight(path)
-  }, [tabBar])
-
-  const closeOthers = useCallback((path: string) => {
-    tabBar.closeOthers(path)
-  }, [tabBar])
+  const pinTab = useCallback((path: string) => { tabBar.pinTab(path) }, [tabBar])
+  const unpinTab = useCallback((path: string) => { tabBar.unpinTab(path) }, [tabBar])
+  const reorderTab = useCallback((path: string, newIndex: number) => { tabBar.reorderTab(path, newIndex) }, [tabBar])
+  const closeToRight = useCallback((path: string) => { tabBar.closeToRight(path) }, [tabBar])
+  const closeOthers = useCallback((path: string) => { tabBar.closeOthers(path) }, [tabBar])
 
   // Persist tab state whenever tabs or activeTab changes
   useEffect(() => {
@@ -473,6 +466,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     pendingNewFilePath, generateUniqueFileName, createFileWithRename, clearPendingNewFile,
     pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename, clearPendingNewFolder,
     recentFiles, clearRecentFiles, fileSystem: filesystem,
+    autoSaveEnabled, toggleAutoSave, saveAllFiles,
   }), [
     engine, code, setCode, fileName, isDirty,
     activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
@@ -482,6 +476,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,
     clearPendingNewFolder, recentFiles, clearRecentFiles, filesystem,
+    autoSaveEnabled, toggleAutoSave, saveAllFiles,
   ])
 
   return <IDEContext.Provider value={value}>{children}</IDEContext.Provider>

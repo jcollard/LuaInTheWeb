@@ -21,6 +21,9 @@ export function CodeEditor({
   readOnly = false,
   onFormat,
   onEditorReady,
+  autoSaveEnabled = false,
+  onToggleAutoSave,
+  onSaveAllFiles,
 }: CodeEditorProps) {
   const { theme } = useTheme()
   const monacoTheme = theme === 'dark' ? 'vs-dark' : 'vs'
@@ -28,8 +31,13 @@ export function CodeEditor({
   const monacoRef = useRef<Monaco | null>(null)
   const formatActionRef = useRef<IDisposable | null>(null)
   const toggleAutoIndentActionRef = useRef<IDisposable | null>(null)
+  const toggleAutoSaveActionRef = useRef<IDisposable | null>(null)
+  const saveAllFilesActionRef = useRef<IDisposable | null>(null)
   const onFormatRef = useRef(onFormat)
   const onEditorReadyRef = useRef(onEditorReady)
+  const onToggleAutoSaveRef = useRef(onToggleAutoSave)
+  const onSaveAllFilesRef = useRef(onSaveAllFiles)
+  const autoSaveEnabledRef = useRef(autoSaveEnabled)
 
   // Keep refs up to date
   useEffect(() => {
@@ -39,6 +47,18 @@ export function CodeEditor({
   useEffect(() => {
     onEditorReadyRef.current = onEditorReady
   }, [onEditorReady])
+
+  useEffect(() => {
+    onToggleAutoSaveRef.current = onToggleAutoSave
+  }, [onToggleAutoSave])
+
+  useEffect(() => {
+    onSaveAllFilesRef.current = onSaveAllFiles
+  }, [onSaveAllFiles])
+
+  useEffect(() => {
+    autoSaveEnabledRef.current = autoSaveEnabled
+  }, [autoSaveEnabled])
 
   const handleBeforeMount: BeforeMount = useCallback((monaco) => {
     // Store monaco reference for later use
@@ -84,6 +104,42 @@ export function CodeEditor({
     // Register auto-indent toggle action (accessible via Command Palette)
     toggleAutoIndentActionRef.current = registerAutoIndentAction()
 
+    // Helper to register auto-save toggle action with current state label
+    const registerAutoSaveAction = () => {
+      const isEnabled = autoSaveEnabledRef.current
+      const label = isEnabled ? 'Turn Off Auto-Save' : 'Turn On Auto-Save'
+
+      return editorInstance.addAction({
+        id: 'toggle-auto-save',
+        label,
+        run: () => {
+          onToggleAutoSaveRef.current?.()
+          // Re-register with updated label after a short delay to allow state to update
+          setTimeout(() => {
+            toggleAutoSaveActionRef.current?.dispose()
+            toggleAutoSaveActionRef.current = registerAutoSaveAction()
+          }, 0)
+        },
+      })
+    }
+
+    // Register auto-save toggle action (accessible via Command Palette)
+    toggleAutoSaveActionRef.current = registerAutoSaveAction()
+
+    // Register "Save All Files" action with keyboard shortcut (Ctrl+Shift+S)
+    saveAllFilesActionRef.current = editorInstance.addAction({
+      id: 'save-all-files',
+      label: 'Save All Files',
+      keybindings: [
+        (window.monaco?.KeyMod.CtrlCmd || 0) |
+        (window.monaco?.KeyMod.Shift || 0) |
+        (window.monaco?.KeyCode.KeyS || 0),
+      ],
+      run: () => {
+        onSaveAllFilesRef.current?.()
+      },
+    })
+
     // Notify parent component that editor is ready
     const model = editorInstance.getModel()
     if (monacoRef.current && model) {
@@ -100,6 +156,8 @@ export function CodeEditor({
     return () => {
       formatActionRef.current?.dispose()
       toggleAutoIndentActionRef.current?.dispose()
+      toggleAutoSaveActionRef.current?.dispose()
+      saveAllFilesActionRef.current?.dispose()
     }
   }, [])
 

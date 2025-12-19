@@ -31,4 +31,10 @@ export interface CodeEditorProps {
   onFormat?: () => void
   /** Called when the editor is ready with monaco, editor, and model references */
   onEditorReady?: (info: EditorReadyInfo) => void
+  /** Whether auto-save is currently enabled (for command palette label) */
+  autoSaveEnabled?: boolean
+  /** Called when auto-save is toggled via command palette */
+  onToggleAutoSave?: () => void
+  /** Called when "Save All Files" command is invoked */
+  onSaveAllFiles?: () => void
 }

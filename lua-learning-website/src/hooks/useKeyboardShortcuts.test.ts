@@ -6,11 +6,13 @@ describe('useKeyboardShortcuts', () => {
   let mockToggleTerminal: Mock<() => void>
   let mockToggleSidebar: Mock<() => void>
   let mockSaveFile: Mock<() => void>
+  let mockSaveAllFiles: Mock<() => void>
 
   beforeEach(() => {
     mockToggleTerminal = vi.fn<() => void>()
     mockToggleSidebar = vi.fn<() => void>()
     mockSaveFile = vi.fn<() => void>()
+    mockSaveAllFiles = vi.fn<() => void>()
   })
 
   afterEach(() => {
@@ -273,6 +275,82 @@ describe('useKeyboardShortcuts', () => {
 
       // Assert
       expect(preventDefaultSpy).toHaveBeenCalled()
+    })
+  })
+
+  describe('Ctrl+Shift+S', () => {
+    it('should call saveAllFiles when Ctrl+Shift+S is pressed', () => {
+      // Arrange
+      renderHook(() =>
+        useKeyboardShortcuts({
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+          saveAllFiles: mockSaveAllFiles,
+        })
+      )
+
+      // Act
+      const event = new KeyboardEvent('keydown', {
+        key: 's',
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+      })
+      document.dispatchEvent(event)
+
+      // Assert
+      expect(mockSaveAllFiles).toHaveBeenCalledTimes(1)
+      expect(mockSaveFile).not.toHaveBeenCalled()
+    })
+
+    it('should call saveFile when Ctrl+S is pressed without Shift', () => {
+      // Arrange
+      renderHook(() =>
+        useKeyboardShortcuts({
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+          saveAllFiles: mockSaveAllFiles,
+        })
+      )
+
+      // Act
+      const event = new KeyboardEvent('keydown', {
+        key: 's',
+        ctrlKey: true,
+        shiftKey: false,
+        bubbles: true,
+      })
+      document.dispatchEvent(event)
+
+      // Assert
+      expect(mockSaveFile).toHaveBeenCalledTimes(1)
+      expect(mockSaveAllFiles).not.toHaveBeenCalled()
+    })
+
+    it('should fall back to saveFile when saveAllFiles is not provided', () => {
+      // Arrange
+      renderHook(() =>
+        useKeyboardShortcuts({
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+          // saveAllFiles not provided
+        })
+      )
+
+      // Act
+      const event = new KeyboardEvent('keydown', {
+        key: 's',
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+      })
+      document.dispatchEvent(event)
+
+      // Assert
+      expect(mockSaveFile).toHaveBeenCalledTimes(1)
     })
   })
 })

@@ -90,6 +90,13 @@ export interface IDEContextValue {
 
   // Shell file move handler (for shell integration - updates tabs when mv command is used)
   handleShellFileMove: (oldPath: string, newPath: string, isDirectory: boolean) => void
+
+  // Auto-save
+  autoSaveEnabled: boolean
+  toggleAutoSave: () => void
+
+  // Save all files
+  saveAllFiles: () => void
 }
 
 /**
