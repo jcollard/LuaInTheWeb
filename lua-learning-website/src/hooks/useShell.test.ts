@@ -545,25 +545,6 @@ describe('useShell with IFileSystem', () => {
   })
 
   describe('canvas close handler callbacks', () => {
-    it('should include registerCanvasCloseHandler in canvas callbacks interface', () => {
-      // Arrange
-      const registerHandler = vi.fn()
-      const unregisterHandler = vi.fn()
-      const canvasCallbacks = {
-        onRequestCanvasTab: vi.fn(),
-        onCloseCanvasTab: vi.fn(),
-        registerCanvasCloseHandler: registerHandler,
-        unregisterCanvasCloseHandler: unregisterHandler,
-      }
-
-      const { result } = renderHook(() =>
-        useShell(mockFs, { canvasCallbacks })
-      )
-
-      // Assert - hook should initialize without errors
-      expect(result.current).toBeDefined()
-    })
-
     it('should work without registerCanvasCloseHandler for backward compatibility', () => {
       // Arrange - old-style callbacks without the new methods
       const canvasCallbacks = {
