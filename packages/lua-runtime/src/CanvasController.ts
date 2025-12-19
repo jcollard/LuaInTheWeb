@@ -154,6 +154,13 @@ export class CanvasController {
     this.inputCapture = new InputCapture(this.canvas)
     this.gameLoop = new GameLoopController(this.onFrame.bind(this))
 
+    // Process any commands added before start() (e.g., setSize)
+    // This ensures pre-start configuration is applied before the game loop begins
+    if (this.frameCommands.length > 0) {
+      this.renderer.render(this.frameCommands)
+      this.frameCommands = []
+    }
+
     // Set running state
     this.running = true
 

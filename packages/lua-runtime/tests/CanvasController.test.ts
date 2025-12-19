@@ -8,11 +8,34 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { CanvasController, type CanvasCallbacks } from '../src/CanvasController'
 
+// Global to capture the frame callback for testing
+let capturedFrameCallback: ((timing: { deltaTime: number; totalTime: number; frameNumber: number }) => void) | null = null
+let lastRendererInstance: { render: ReturnType<typeof vi.fn> } | null = null
+
+// Helper to get the captured frame callback
+export function getCapturedFrameCallback() {
+  return capturedFrameCallback
+}
+
+// Helper to get the last renderer instance
+export function getLastRendererInstance() {
+  return lastRendererInstance
+}
+
+// Reset captured callback between tests
+export function resetCapturedCallback() {
+  capturedFrameCallback = null
+  lastRendererInstance = null
+}
+
 // Mock the canvas-runtime imports using classes
 vi.mock('@lua-learning/canvas-runtime', () => {
   return {
     CanvasRenderer: class MockCanvasRenderer {
       render = vi.fn()
+      constructor() {
+        lastRendererInstance = this
+      }
     },
     InputCapture: class MockInputCapture {
       isKeyDown = vi.fn().mockReturnValue(false)
@@ -36,7 +59,9 @@ vi.mock('@lua-learning/canvas-runtime', () => {
       start = vi.fn()
       stop = vi.fn()
       dispose = vi.fn()
-      constructor(_callback: () => void) {}
+      constructor(callback: (timing: { deltaTime: number; totalTime: number; frameNumber: number }) => void) {
+        capturedFrameCallback = callback
+      }
     },
     ImageCache: class MockImageCache {
       set = vi.fn()
@@ -97,6 +122,7 @@ describe('CanvasController', () => {
   afterEach(() => {
     vi.clearAllMocks()
     global.Image = originalImage
+    resetCapturedCallback()
   })
 
   describe('isActive', () => {
@@ -419,6 +445,63 @@ describe('CanvasController', () => {
 
       // Assert - should work without errors
       expect(controller.isActive()).toBe(true)
+
+      // Cleanup
+      controller.stop()
+      await startPromise
+    })
+  })
+
+  describe('pre-start commands (issue #358)', () => {
+    it('should process setSize command added before start()', async () => {
+      // Arrange - Call setSize before start
+      controller.setSize(800, 600)
+
+      // Verify command is in frameCommands before start
+      expect(controller.getFrameCommands()).toContainEqual({
+        type: 'setSize',
+        width: 800,
+        height: 600,
+      })
+
+      const startPromise = controller.start()
+
+      // Wait for start to initialize
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      // Assert - renderer should have received the setSize command during start()
+      // (pre-start commands are processed in start() before the game loop begins)
+      const renderer = getLastRendererInstance()
+      expect(renderer).not.toBeNull()
+      expect(renderer!.render).toHaveBeenCalled()
+      const renderCalls = renderer!.render.mock.calls
+      const firstRenderCommands = renderCalls[0]?.[0] ?? []
+      expect(firstRenderCommands).toContainEqual({
+        type: 'setSize',
+        width: 800,
+        height: 600,
+      })
+
+      // frameCommands should be cleared after processing
+      expect(controller.getFrameCommands()).toHaveLength(0)
+
+      // Cleanup
+      controller.stop()
+      await startPromise
+    })
+
+    it('should not call render if no pre-start commands exist', async () => {
+      // Arrange - Don't add any commands before start
+
+      const startPromise = controller.start()
+
+      // Wait for start to initialize
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      // Assert - renderer should NOT have been called (no pre-start commands)
+      const renderer = getLastRendererInstance()
+      expect(renderer).not.toBeNull()
+      expect(renderer!.render).not.toHaveBeenCalled()
 
       // Cleanup
       controller.stop()
