@@ -544,6 +544,23 @@ describe('useShell with IFileSystem', () => {
     })
   })
 
+  describe('canvas close handler callbacks', () => {
+    it('should work without registerCanvasCloseHandler for backward compatibility', () => {
+      // Arrange - old-style callbacks without the new methods
+      const canvasCallbacks = {
+        onRequestCanvasTab: vi.fn(),
+        onCloseCanvasTab: vi.fn(),
+      }
+
+      const { result } = renderHook(() =>
+        useShell(mockFs, { canvasCallbacks })
+      )
+
+      // Assert - hook should initialize without errors
+      expect(result.current).toBeDefined()
+    })
+  })
+
   describe('disconnected workspace handling', () => {
     it('reports errors when operating on a disconnected filesystem', () => {
       // Create a mock disconnected filesystem (like a disconnected local workspace)

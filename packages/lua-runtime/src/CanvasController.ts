@@ -40,6 +40,19 @@ export interface CanvasCallbacks {
   fileSystem?: IFileSystem
   /** Script directory for resolving relative asset paths (optional) */
   scriptDirectory?: string
+  /**
+   * Register a handler to be called when the canvas tab is closed from the UI.
+   * This allows the UI to stop the canvas when the user closes the tab manually.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when the tab is closed (should call stop())
+   */
+  registerCanvasCloseHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Unregister the close handler for a canvas.
+   * Called when the canvas stops normally (via canvas.stop()) to prevent double-cleanup.
+   * @param canvasId - The canvas ID
+   */
+  unregisterCanvasCloseHandler?: (canvasId: string) => void
 }
 
 /**
@@ -131,6 +144,11 @@ export class CanvasController {
     // Request canvas tab from UI
     this.canvas = await this.callbacks.onRequestCanvasTab(this.canvasId)
 
+    // Register close handler so UI can stop us when tab is closed
+    if (this.callbacks.registerCanvasCloseHandler) {
+      this.callbacks.registerCanvasCloseHandler(this.canvasId, () => this.stop())
+    }
+
     // Initialize renderer with image cache (if assets were loaded), input capture, and game loop
     this.renderer = new CanvasRenderer(this.canvas, this.imageCache ?? undefined)
     this.inputCapture = new InputCapture(this.canvas)
@@ -174,6 +192,11 @@ export class CanvasController {
 
     // Clear renderer reference (canvas may still exist in DOM)
     this.renderer = null
+
+    // Unregister close handler to prevent double-cleanup
+    if (this.callbacks.unregisterCanvasCloseHandler) {
+      this.callbacks.unregisterCanvasCloseHandler(this.canvasId)
+    }
 
     // Close the canvas tab
     this.callbacks.onCloseCanvasTab(this.canvasId)

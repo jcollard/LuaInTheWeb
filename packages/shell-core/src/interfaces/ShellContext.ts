@@ -48,6 +48,21 @@ export interface ShellContext {
   onCloseCanvasTab?: (canvasId: string) => void
 
   /**
+   * Register a handler to be called when the canvas tab is closed from the UI.
+   * This allows the canvas process to be stopped when the user closes the tab manually.
+   * @param canvasId - Unique identifier for the canvas tab
+   * @param handler - Function to call when the tab is closed
+   */
+  registerCanvasCloseHandler?: (canvasId: string, handler: () => void) => void
+
+  /**
+   * Unregister the close handler for a canvas.
+   * Called when the canvas stops normally to prevent double-cleanup.
+   * @param canvasId - Unique identifier for the canvas tab
+   */
+  unregisterCanvasCloseHandler?: (canvasId: string) => void
+
+  /**
    * Request a file to be opened in the editor.
    * Called by the 'open' command to integrate with an IDE or editor.
    * Optional - when undefined, the open command will report that

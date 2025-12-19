@@ -73,6 +73,9 @@ export class LuaCommand implements ICommand {
       ? {
           onRequestCanvasTab: context.onRequestCanvasTab,
           onCloseCanvasTab: context.onCloseCanvasTab,
+          // Canvas close handler registration for UI-initiated tab close
+          registerCanvasCloseHandler: context.registerCanvasCloseHandler,
+          unregisterCanvasCloseHandler: context.unregisterCanvasCloseHandler,
           fileSystem: context.filesystem,
           scriptDirectory,
         }
