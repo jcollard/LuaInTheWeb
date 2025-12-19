@@ -17,6 +17,18 @@ const IMAGE_EXTENSIONS = new Set([
 ])
 
 /**
+ * Audio file extensions that can be played
+ */
+const AUDIO_EXTENSIONS = new Set([
+  '.mp3',
+  '.wav',
+  '.ogg',
+  '.m4a',
+  '.flac',
+  '.aac',
+])
+
+/**
  * Get the file extension from a path
  */
 function getExtension(path: string): string {
@@ -33,11 +45,19 @@ function isImageFile(path: string): boolean {
 }
 
 /**
- * Get the MIME type for an image extension
+ * Check if a file is an audio file based on extension
+ */
+function isAudioFile(path: string): boolean {
+  return AUDIO_EXTENSIONS.has(getExtension(path))
+}
+
+/**
+ * Get the MIME type for an image or audio extension
  */
 function getMimeType(path: string): string {
   const ext = getExtension(path)
   switch (ext) {
+    // Image types
     case '.png':
       return 'image/png'
     case '.jpg':
@@ -53,6 +73,19 @@ function getMimeType(path: string): string {
       return 'image/x-icon'
     case '.svg':
       return 'image/svg+xml'
+    // Audio types
+    case '.mp3':
+      return 'audio/mpeg'
+    case '.wav':
+      return 'audio/wav'
+    case '.ogg':
+      return 'audio/ogg'
+    case '.m4a':
+      return 'audio/mp4'
+    case '.flac':
+      return 'audio/flac'
+    case '.aac':
+      return 'audio/aac'
     default:
       return 'application/octet-stream'
   }
@@ -88,6 +121,7 @@ export function BinaryFileViewer({ filePath, fileSystem, className }: BinaryFile
   const [error, setError] = useState<string | null>(null)
 
   const isImage = useMemo(() => isImageFile(filePath), [filePath])
+  const isAudio = useMemo(() => isAudioFile(filePath), [filePath])
   const extension = useMemo(() => getExtension(filePath), [filePath])
   const fileName = useMemo(() => {
     const lastSlash = filePath.lastIndexOf('/')
@@ -114,8 +148,8 @@ export function BinaryFileViewer({ filePath, fileSystem, className }: BinaryFile
       const content = fileSystem.readBinaryFile(filePath)
       setFileSize(content.byteLength)
 
-      if (isImage) {
-        // Create blob URL for image display
+      if (isImage || isAudio) {
+        // Create blob URL for image/audio display
         const mimeType = getMimeType(filePath)
         // Create a copy of the data as ArrayBuffer for Blob constructor compatibility
         const arrayBuffer = new ArrayBuffer(content.byteLength)
@@ -135,7 +169,7 @@ export function BinaryFileViewer({ filePath, fileSystem, className }: BinaryFile
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filePath, fileSystem, isImage])
+  }, [filePath, fileSystem, isImage, isAudio])
 
   const combinedClassName = className
     ? `${styles.container} ${className}`
@@ -171,7 +205,26 @@ export function BinaryFileViewer({ filePath, fileSystem, className }: BinaryFile
     )
   }
 
-  // Non-image binary file
+  if (isAudio && blobUrl) {
+    return (
+      <div className={combinedClassName}>
+        <div className={styles.audioContainer}>
+          <audio
+            src={blobUrl}
+            controls
+            className={styles.audioPlayer}
+          />
+        </div>
+        {fileSize !== null && (
+          <div className={styles.fileInfo}>
+            {fileName} - {formatBytes(fileSize)}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Non-image/audio binary file
   return (
     <div className={combinedClassName}>
       <div className={styles.binaryInfo}>
