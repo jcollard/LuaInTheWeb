@@ -401,7 +401,7 @@ function IDELayoutInner({
                       )}
                       {/* Editor panel - hidden when canvas, markdown, or binary tab is active */}
                       {/* Note: also show if hasCanvasTabs is false to handle race condition during canvas tab close */}
-                      {activeTabType !== 'canvas' && activeTabType !== 'markdown' && activeTabType !== 'binary' && (
+                      {(activeTabType !== 'canvas' || !hasCanvasTabs) && activeTabType !== 'markdown' && activeTabType !== 'binary' && (
                         <EditorPanel
                           code={code}
                           onChange={setCode}
