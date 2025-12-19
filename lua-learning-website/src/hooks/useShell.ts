@@ -80,6 +80,8 @@ export interface UseShellOptions {
   onFileMove?: (oldPath: string, newPath: string, isDirectory: boolean) => void
   /** Callback invoked when the 'open' command requests to open a file in the editor */
   onRequestOpenFile?: (filePath: string) => void
+  /** Callback invoked when filesystem changes (for file tree refresh) */
+  onFileSystemChange?: () => void
 }
 
 /**
@@ -241,6 +243,8 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
         onCloseCanvasTab: options?.canvasCallbacks?.onCloseCanvasTab,
         // Editor integration callback for 'open' command
         onRequestOpenFile: options?.onRequestOpenFile,
+        // Filesystem change notification for UI refresh (e.g., file tree)
+        onFileSystemChange: options?.onFileSystemChange,
       }
 
       // Execute the command using the new interface

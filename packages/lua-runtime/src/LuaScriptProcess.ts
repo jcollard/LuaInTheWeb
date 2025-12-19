@@ -23,6 +23,8 @@ import { FileOperationsHandler } from './FileOperationsHandler'
 export interface LuaScriptProcessOptions extends ExecutionControlOptions {
   /** Callbacks for canvas tab management (enables canvas.start()/stop()) */
   canvasCallbacks?: CanvasCallbacks
+  /** Callback when filesystem changes (for UI refresh) */
+  onFileSystemChange?: () => void
 }
 
 /**
@@ -194,7 +196,8 @@ export class LuaScriptProcess implements IProcess {
     // Create file operations handler for io.open() support
     this.fileOpsHandler = new FileOperationsHandler(
       this.context.filesystem,
-      (path: string) => this.resolvePath(path)
+      (path: string) => this.resolvePath(path),
+      this.context.onFileSystemChange
     )
 
     const callbacks: LuaEngineCallbacks = {

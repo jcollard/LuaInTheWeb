@@ -28,6 +28,8 @@ export interface LuaReplProcessOptions extends ExecutionControlOptions {
   fileSystem?: IFileSystem
   /** Current working directory for relative path resolution (defaults to '/') */
   cwd?: string
+  /** Callback when filesystem changes (for UI refresh) */
+  onFileSystemChange?: () => void
 }
 
 /**
@@ -354,7 +356,8 @@ export class LuaReplProcess implements IProcess {
     if (this.options.fileSystem) {
       this.fileOpsHandler = new FileOperationsHandler(
         this.options.fileSystem,
-        (path: string) => this.resolvePath(path)
+        (path: string) => this.resolvePath(path),
+        this.options.onFileSystemChange
       )
     }
 

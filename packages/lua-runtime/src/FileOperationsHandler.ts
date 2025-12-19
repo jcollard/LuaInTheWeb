@@ -45,18 +45,22 @@ export class FileOperationsHandler {
   private nextHandleId = 1
   private filesystem: FileSystemOperations
   private pathResolver: (path: string) => string
+  private onFileSystemChange?: () => void
 
   /**
    * Create a new file operations handler.
    * @param filesystem - The filesystem to operate on
    * @param pathResolver - Function to resolve relative paths to absolute paths
+   * @param onFileSystemChange - Optional callback when filesystem changes (for UI refresh)
    */
   constructor(
     filesystem: FileSystemOperations,
-    pathResolver: (path: string) => string
+    pathResolver: (path: string) => string,
+    onFileSystemChange?: () => void
   ) {
     this.filesystem = filesystem
     this.pathResolver = pathResolver
+    this.onFileSystemChange = onFileSystemChange
   }
 
   /**
@@ -311,9 +315,11 @@ export class FileOperationsHandler {
       return { success: false, error: 'Bad file descriptor' }
     }
 
+    let didWrite = false
     if (handle.dirty) {
       try {
         this.filesystem.writeFile(handle.path, handle.content)
+        didWrite = true
       } catch (error) {
         this.fileHandles.delete(handleId)
         return { success: false, error: `Failed to write file: ${error}` }
@@ -321,6 +327,12 @@ export class FileOperationsHandler {
     }
 
     this.fileHandles.delete(handleId)
+
+    // Notify UI that filesystem changed (for file tree refresh)
+    if (didWrite && this.onFileSystemChange) {
+      this.onFileSystemChange()
+    }
+
     return { success: true }
   }
 

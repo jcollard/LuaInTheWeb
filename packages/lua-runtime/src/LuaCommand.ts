@@ -85,6 +85,7 @@ export class LuaCommand implements ICommand {
         canvasCallbacks,
         fileSystem: context.filesystem,
         cwd: context.cwd,
+        onFileSystemChange: context.onFileSystemChange,
       })
     }
 
