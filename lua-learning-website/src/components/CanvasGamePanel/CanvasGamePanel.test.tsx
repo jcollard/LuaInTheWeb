@@ -319,6 +319,49 @@ describe('CanvasGamePanel', () => {
     })
   })
 
+  describe('auto-focus behavior', () => {
+    it('focuses canvas when isActive is true on mount', () => {
+      render(<CanvasGamePanel code="print('hello')" isActive />)
+      const canvas = document.querySelector('canvas')
+      expect(canvas).toHaveFocus()
+    })
+
+    it('does not focus canvas when isActive is false on mount', () => {
+      render(<CanvasGamePanel code="print('hello')" isActive={false} />)
+      const canvas = document.querySelector('canvas')
+      expect(canvas).not.toHaveFocus()
+    })
+
+    it('focuses canvas when isActive changes from false to true', () => {
+      const { rerender } = render(<CanvasGamePanel code="print('hello')" isActive={false} />)
+      const canvas = document.querySelector('canvas')
+      expect(canvas).not.toHaveFocus()
+
+      rerender(<CanvasGamePanel code="print('hello')" isActive />)
+      expect(canvas).toHaveFocus()
+    })
+
+    it('does not focus canvas when isActive changes from true to false', () => {
+      const { rerender } = render(<CanvasGamePanel code="print('hello')" isActive />)
+      const canvas = document.querySelector('canvas') as HTMLCanvasElement
+      expect(canvas).toHaveFocus()
+
+      // Blur the canvas first
+      canvas.blur()
+      expect(canvas).not.toHaveFocus()
+
+      rerender(<CanvasGamePanel code="print('hello')" isActive={false} />)
+      expect(canvas).not.toHaveFocus()
+    })
+
+    it('defaults isActive to undefined (no auto-focus) for backward compatibility', () => {
+      render(<CanvasGamePanel code="print('hello')" />)
+      const canvas = document.querySelector('canvas')
+      // Without isActive prop, canvas should not auto-focus
+      expect(canvas).not.toHaveFocus()
+    })
+  })
+
   describe('scaling mode', () => {
     it('defaults to fit scaling mode', () => {
       const { container } = render(<CanvasGamePanel code="print('hello')" />)

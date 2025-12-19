@@ -393,6 +393,7 @@ function IDELayoutInner({
                             onCloseTab={handleCloseTab}
                             onExit={handleCanvasExit}
                             onCanvasReady={handleCanvasReady}
+                            isActive={activeTabType === 'canvas'}
                           />
                         </div>
                       )}
