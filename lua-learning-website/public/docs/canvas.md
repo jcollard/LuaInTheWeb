@@ -99,19 +99,34 @@ local center_y = canvas.get_height() / 2
 
 Clear the canvas.
 
-### canvas.set_color(r, g, b, a)
+### canvas.set_color(r, g, b, a) or canvas.set_color(hex)
 
 Set the drawing color. All subsequent drawing operations will use this color.
+Accepts either RGBA values (0-255) or hex color strings.
 
-**Parameters:**
+**RGBA Parameters:**
 - `r` (number): Red component (0-255)
 - `g` (number): Green component (0-255)
 - `b` (number): Blue component (0-255)
 - `a` (number, optional): Alpha component (0-255, default: 255)
 
+**Hex Parameter:**
+- `hex` (string): A hex color string in one of these formats:
+  - `#RGB` - Short form, expands to #RRGGBB (e.g., `#F00` = red)
+  - `#RRGGBB` - Full RGB (e.g., `#FF0000` = red)
+  - `#RRGGBBAA` - Full RGBA with alpha (e.g., `#FF000080` = semi-transparent red)
+
+Hex colors are case-insensitive (`#abc` and `#ABC` both work).
+
 ```lua
+-- RGBA format
 canvas.set_color(255, 0, 0)       -- Red
 canvas.set_color(0, 255, 0, 128)  -- Semi-transparent green
+
+-- Hex format
+canvas.set_color("#F00")          -- Red (short form)
+canvas.set_color("#FF0000")       -- Red (full form)
+canvas.set_color("#00FF0080")     -- Semi-transparent green
 ```
 
 ### canvas.set_line_width(width)
