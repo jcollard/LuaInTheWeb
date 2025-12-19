@@ -1,27 +1,12 @@
-/* eslint-disable max-lines */
 /**
- * Tests for CanvasController class.
+ * Tests for CanvasController class - Core functionality.
  * Tests canvas lifecycle management for shell-based canvas integration.
+ * Asset-related tests are in CanvasController.assets.test.ts
  * @vitest-environment jsdom
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { CanvasController, type CanvasCallbacks } from '../src/CanvasController'
-import type { IFileSystem } from '@lua-learning/shell-core'
-
-// Store mock ImageCache instance for testing
-let mockImageCacheInstance: {
-  set: ReturnType<typeof vi.fn>
-  get: ReturnType<typeof vi.fn>
-  has: ReturnType<typeof vi.fn>
-  clear: ReturnType<typeof vi.fn>
-} | null = null
-
-// Store mock AssetLoader instance for testing
-let mockAssetLoaderInstance: {
-  loadAsset: ReturnType<typeof vi.fn>
-  resolvePath: ReturnType<typeof vi.fn>
-} | null = null
 
 // Mock the canvas-runtime imports using classes
 vi.mock('@lua-learning/canvas-runtime', () => {
@@ -58,10 +43,6 @@ vi.mock('@lua-learning/canvas-runtime', () => {
       get = vi.fn()
       has = vi.fn()
       clear = vi.fn()
-      constructor() {
-        // eslint-disable-next-line @typescript-eslint/no-this-alias
-        mockImageCacheInstance = this
-      }
     },
     AssetLoader: class MockAssetLoader {
       loadAsset = vi.fn().mockResolvedValue({
@@ -72,10 +53,6 @@ vi.mock('@lua-learning/canvas-runtime', () => {
         mimeType: 'image/png',
       })
       resolvePath = vi.fn((path: string) => path.startsWith('/') ? path : `/test/${path}`)
-      constructor(_fs: IFileSystem, _scriptDir: string) {
-        // eslint-disable-next-line @typescript-eslint/no-this-alias
-        mockAssetLoaderInstance = this
-      }
     },
     VALID_IMAGE_EXTENSIONS: ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'],
   }
@@ -360,204 +337,6 @@ describe('CanvasController', () => {
     })
   })
 
-  describe('asset registration', () => {
-    it('should register an asset with valid image extension', () => {
-      controller.registerAsset('player', 'sprites/player.png')
-
-      const manifest = controller.getAssetManifest()
-      expect(manifest.has('player')).toBe(true)
-      expect(manifest.get('player')).toEqual({
-        name: 'player',
-        path: 'sprites/player.png',
-        type: 'image',
-      })
-    })
-
-    it('should accept various valid image extensions', () => {
-      const extensions = ['png', 'jpg', 'jpeg', 'gif', 'webp']
-      extensions.forEach((ext) => {
-        controller.registerAsset(ext, `image.${ext}`)
-      })
-
-      const manifest = controller.getAssetManifest()
-      expect(manifest.size).toBe(5)
-      extensions.forEach((ext) => {
-        expect(manifest.has(ext)).toBe(true)
-      })
-    })
-
-    it('should throw for unsupported file extensions', () => {
-      expect(() => controller.registerAsset('data', 'file.txt')).toThrow(
-        "Cannot load 'file.txt': unsupported format (expected PNG, JPG, GIF, or WebP)"
-      )
-    })
-
-    it('should throw for files without extension', () => {
-      expect(() => controller.registerAsset('noext', 'noextension')).toThrow(
-        "Cannot load 'noextension': unsupported format (expected PNG, JPG, GIF, or WebP)"
-      )
-    })
-
-    it('should throw if called after start', async () => {
-      const startPromise = controller.start()
-
-      // Wait for start to initialize
-      await new Promise((resolve) => setTimeout(resolve, 0))
-
-      expect(() => controller.registerAsset('player', 'sprites/player.png')).toThrow(
-        'Cannot define assets after canvas.start()'
-      )
-
-      // Clean up
-      controller.stop()
-      await startPromise
-    })
-
-    it('should allow registering multiple assets with same name (overwrite)', () => {
-      controller.registerAsset('player', 'old.png')
-      controller.registerAsset('player', 'new.png')
-
-      const manifest = controller.getAssetManifest()
-      expect(manifest.size).toBe(1)
-      expect(manifest.get('player')?.path).toBe('new.png')
-    })
-
-    it('should return the asset manifest', () => {
-      controller.registerAsset('player', 'sprites/player.png')
-      controller.registerAsset('enemy', '/my-files/enemy.gif')
-
-      const manifest = controller.getAssetManifest()
-
-      expect(manifest.size).toBe(2)
-      expect(manifest.get('player')).toEqual({
-        name: 'player',
-        path: 'sprites/player.png',
-        type: 'image',
-      })
-      expect(manifest.get('enemy')).toEqual({
-        name: 'enemy',
-        path: '/my-files/enemy.gif',
-        type: 'image',
-      })
-    })
-  })
-
-  describe('asset loading', () => {
-    let mockFileSystem: IFileSystem
-
-    beforeEach(() => {
-      // Reset mock instances
-      mockImageCacheInstance = null
-      mockAssetLoaderInstance = null
-
-      // Create mock filesystem
-      mockFileSystem = {
-        exists: vi.fn().mockReturnValue(true),
-        isFile: vi.fn().mockReturnValue(true),
-        isDirectory: vi.fn().mockReturnValue(false),
-        readFile: vi.fn().mockReturnValue(''),
-        writeFile: vi.fn(),
-        deleteFile: vi.fn(),
-        createDirectory: vi.fn(),
-        deleteDirectory: vi.fn(),
-        listDirectory: vi.fn().mockReturnValue([]),
-        readBinaryFile: vi.fn().mockReturnValue(new Uint8Array([1, 2, 3])),
-        writeBinaryFile: vi.fn(),
-        copyFile: vi.fn(),
-        moveFile: vi.fn(),
-        rename: vi.fn(),
-      }
-    })
-
-    it('should load assets using AssetLoader', async () => {
-      controller.registerAsset('player', 'sprites/player.png')
-
-      await controller.loadAssets(mockFileSystem, '/game')
-
-      // AssetLoader should have been created and loadAsset called
-      expect(mockAssetLoaderInstance).not.toBeNull()
-      expect(mockAssetLoaderInstance!.loadAsset).toHaveBeenCalledWith({
-        name: 'player',
-        path: 'sprites/player.png',
-        type: 'image',
-      })
-    })
-
-    it('should not throw if no assets registered', async () => {
-      // No assets registered
-      await expect(controller.loadAssets(mockFileSystem, '/game')).resolves.not.toThrow()
-    })
-
-    it('should store loaded images in ImageCache', async () => {
-      controller.registerAsset('player', 'sprites/player.png')
-
-      await controller.loadAssets(mockFileSystem, '/game')
-
-      // ImageCache should have been created and set called with the asset name
-      expect(mockImageCacheInstance).not.toBeNull()
-      expect(mockImageCacheInstance!.set).toHaveBeenCalledWith('player', expect.any(Object))
-    })
-  })
-
-  describe('drawImage', () => {
-    let mockFileSystem: IFileSystem
-
-    beforeEach(async () => {
-      mockFileSystem = {
-        exists: vi.fn().mockReturnValue(true),
-        isFile: vi.fn().mockReturnValue(true),
-        isDirectory: vi.fn().mockReturnValue(false),
-        readFile: vi.fn().mockReturnValue(''),
-        writeFile: vi.fn(),
-        deleteFile: vi.fn(),
-        createDirectory: vi.fn(),
-        deleteDirectory: vi.fn(),
-        listDirectory: vi.fn().mockReturnValue([]),
-        readBinaryFile: vi.fn().mockReturnValue(new Uint8Array([1, 2, 3])),
-        writeBinaryFile: vi.fn(),
-        copyFile: vi.fn(),
-        moveFile: vi.fn(),
-        rename: vi.fn(),
-      }
-    })
-
-    it('should add drawImage command to frame commands', async () => {
-      controller.registerAsset('player', 'sprites/player.png')
-      await controller.loadAssets(mockFileSystem, '/game')
-
-      controller.drawImage('player', 100, 200)
-
-      const commands = controller.getFrameCommands()
-      expect(commands).toHaveLength(1)
-      expect(commands[0]).toEqual({ type: 'drawImage', name: 'player', x: 100, y: 200 })
-    })
-
-    it('should add drawImage command with explicit dimensions', async () => {
-      controller.registerAsset('player', 'sprites/player.png')
-      await controller.loadAssets(mockFileSystem, '/game')
-
-      controller.drawImage('player', 100, 200, 128, 128)
-
-      const commands = controller.getFrameCommands()
-      expect(commands).toHaveLength(1)
-      expect(commands[0]).toEqual({
-        type: 'drawImage',
-        name: 'player',
-        x: 100,
-        y: 200,
-        width: 128,
-        height: 128,
-      })
-    })
-
-    it('should throw for unknown asset', async () => {
-      // No assets loaded
-      expect(() => controller.drawImage('unknown', 0, 0)).toThrow(
-        "Unknown asset 'unknown' - did you call canvas.assets.image()?"
-      )
-    })
-  })
-
   describe('canvas close handler registration', () => {
     it('should register close handler when starting', async () => {
       // Arrange
@@ -647,74 +426,4 @@ describe('CanvasController', () => {
     })
   })
 
-  describe('asset dimensions', () => {
-    let mockFileSystem: IFileSystem
-    let originalImage: typeof Image
-
-    beforeEach(async () => {
-      mockFileSystem = {
-        exists: vi.fn().mockReturnValue(true),
-        isFile: vi.fn().mockReturnValue(true),
-        isDirectory: vi.fn().mockReturnValue(false),
-        readFile: vi.fn().mockReturnValue(''),
-        writeFile: vi.fn(),
-        deleteFile: vi.fn(),
-        createDirectory: vi.fn(),
-        deleteDirectory: vi.fn(),
-        listDirectory: vi.fn().mockReturnValue([]),
-        readBinaryFile: vi.fn().mockReturnValue(new Uint8Array([1, 2, 3])),
-        writeBinaryFile: vi.fn(),
-        copyFile: vi.fn(),
-        moveFile: vi.fn(),
-        rename: vi.fn(),
-      }
-
-      // Mock Image constructor to return image with known dimensions
-      // since createImageFromData extracts dimensions from the loaded image
-      originalImage = global.Image
-      global.Image = class MockImage {
-        width = 64
-        height = 64
-        src = ''
-        onload: (() => void) | null = null
-        onerror: (() => void) | null = null
-        constructor() {
-          // Trigger onload asynchronously
-          setTimeout(() => {
-            if (this.onload) this.onload()
-          }, 0)
-        }
-      } as unknown as typeof Image
-    })
-
-    afterEach(() => {
-      global.Image = originalImage
-    })
-
-    it('should return asset width after loading', async () => {
-      controller.registerAsset('player', 'sprites/player.png')
-      await controller.loadAssets(mockFileSystem, '/game')
-
-      expect(controller.getAssetWidth('player')).toBe(64)
-    })
-
-    it('should return asset height after loading', async () => {
-      controller.registerAsset('player', 'sprites/player.png')
-      await controller.loadAssets(mockFileSystem, '/game')
-
-      expect(controller.getAssetHeight('player')).toBe(64)
-    })
-
-    it('should throw for unknown asset width', () => {
-      expect(() => controller.getAssetWidth('unknown')).toThrow(
-        "Unknown asset 'unknown' - did you call canvas.assets.image()?"
-      )
-    })
-
-    it('should throw for unknown asset height', () => {
-      expect(() => controller.getAssetHeight('unknown')).toThrow(
-        "Unknown asset 'unknown' - did you call canvas.assets.image()?"
-      )
-    })
-  })
 })
