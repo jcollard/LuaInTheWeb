@@ -107,6 +107,9 @@ describe('useIDE', () => {
           listDirectory: vi.fn(),
           getTree: vi.fn(),
         },
+        autoSaveEnabled: false,
+        toggleAutoSave: vi.fn(),
+        saveAllFiles: vi.fn(),
       }
 
       const wrapper = ({ children }: { children: React.ReactNode }) =>
@@ -190,6 +193,9 @@ describe('useIDE', () => {
           listDirectory: vi.fn(),
           getTree: vi.fn(),
         },
+        autoSaveEnabled: false,
+        toggleAutoSave: vi.fn(),
+        saveAllFiles: vi.fn(),
       }
 
       const wrapper = ({ children }: { children: React.ReactNode }) =>
