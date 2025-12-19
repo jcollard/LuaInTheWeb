@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /**
  * Tests for CanvasController class.
  * Tests canvas lifecycle management for shell-based canvas integration.
