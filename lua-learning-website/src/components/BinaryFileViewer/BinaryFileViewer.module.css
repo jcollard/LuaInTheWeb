@@ -39,6 +39,23 @@
   border-radius: 4px;
 }
 
+/* Audio display */
+.audioContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 400px;
+  padding: 1rem;
+  background-color: var(--theme-bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--theme-border-secondary);
+}
+
+.audioPlayer {
+  width: 100%;
+}
+
 /* Non-image binary file display */
 .binaryInfo {
   display: flex;

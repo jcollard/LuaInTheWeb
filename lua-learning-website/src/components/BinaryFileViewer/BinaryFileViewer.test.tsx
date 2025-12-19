@@ -344,6 +344,88 @@ describe('BinaryFileViewer', () => {
     })
   })
 
+  describe('audio files', () => {
+    it('should display audio player with controls and file info', async () => {
+      const testData = new Uint8Array(2048)
+      vi.mocked(mockFileSystem.readBinaryFile!).mockReturnValue(testData)
+
+      render(<BinaryFileViewer filePath="/music.mp3" fileSystem={mockFileSystem} />)
+
+      await waitFor(() => {
+        const audio = document.querySelector('audio')
+        expect(audio).toBeInTheDocument()
+        expect(audio).toHaveAttribute('controls')
+        expect(audio).toHaveAttribute('src', 'blob:mock-url')
+        expect(screen.getByText(/music\.mp3/)).toBeInTheDocument()
+        expect(screen.getByText(/2 KB/)).toBeInTheDocument()
+      })
+      expect(screen.queryByRole('img')).not.toBeInTheDocument()
+      expect(mockCreateObjectURL).toHaveBeenCalled()
+    })
+
+    it('should handle all audio extensions', async () => {
+      const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.flac', '.aac']
+      for (const ext of audioExtensions) {
+        const testData = new Uint8Array([1, 2, 3])
+        vi.mocked(mockFileSystem.readBinaryFile!).mockReturnValue(testData)
+        const { unmount } = render(
+          <BinaryFileViewer filePath={`/test${ext}`} fileSystem={mockFileSystem} />
+        )
+        await waitFor(() => expect(document.querySelector('audio')).toBeInTheDocument())
+        unmount()
+      }
+    })
+
+    it('should handle uppercase audio extensions', async () => {
+      const testData = new Uint8Array([1, 2, 3])
+      vi.mocked(mockFileSystem.readBinaryFile!).mockReturnValue(testData)
+
+      render(<BinaryFileViewer filePath="/music.MP3" fileSystem={mockFileSystem} />)
+
+      await waitFor(() => {
+        const audio = document.querySelector('audio')
+        expect(audio).toBeInTheDocument()
+        expect(audio).toHaveAttribute('controls')
+      })
+    })
+  })
+
+  describe('MIME type handling', () => {
+    const mimeTypeCases: [string, string][] = [
+      ['.png', 'image/png'],
+      ['.jpg', 'image/jpeg'],
+      ['.gif', 'image/gif'],
+      ['.mp3', 'audio/mpeg'],
+      ['.wav', 'audio/wav'],
+      ['.ogg', 'audio/ogg'],
+      ['.m4a', 'audio/mp4'],
+      ['.flac', 'audio/flac'],
+      ['.aac', 'audio/aac'],
+    ]
+
+    it('should create blob with correct MIME type for each file type', async () => {
+      for (const [ext, expectedMime] of mimeTypeCases) {
+        const testData = new Uint8Array([1, 2, 3])
+        vi.mocked(mockFileSystem.readBinaryFile!).mockReturnValue(testData)
+        const mockBlob = vi.spyOn(globalThis, 'Blob')
+
+        const { unmount } = render(
+          <BinaryFileViewer filePath={`/test${ext}`} fileSystem={mockFileSystem} />
+        )
+
+        await waitFor(() => {
+          expect(mockBlob).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ type: expectedMime })
+          )
+        })
+
+        mockBlob.mockRestore()
+        unmount()
+      }
+    })
+  })
+
   describe('blob URL management', () => {
     it('should create blob URL for image files', async () => {
       // Arrange
