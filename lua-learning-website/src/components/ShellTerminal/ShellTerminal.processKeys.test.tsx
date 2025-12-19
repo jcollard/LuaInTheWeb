@@ -49,6 +49,7 @@ vi.mock('@xterm/xterm', () => {
     this.dispose = vi.fn()
     this.clear = vi.fn()
     this.refresh = vi.fn()
+    this.focus = vi.fn()
     this.rows = 24
     this.options = {}
     terminalInstances.push({

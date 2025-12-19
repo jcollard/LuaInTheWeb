@@ -18,6 +18,8 @@ export interface ShellTerminalProps {
   onFileMove?: (oldPath: string, newPath: string, isDirectory: boolean) => void
   /** Callback when the 'open' command requests to open a file in the editor */
   onRequestOpenFile?: (filePath: string) => void
+  /** When true, the terminal is visible and should receive focus when becoming visible */
+  visible?: boolean
 }
 
 /**
