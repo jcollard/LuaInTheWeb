@@ -23,9 +23,21 @@ export const canvasLuaCode = `
 
     -- Store the user's callback and wrap with error handling
     local __user_tick_callback = nil
+    local __user_tick_location = nil  -- Stores callback definition location
 
     function _canvas.tick(callback)
       __user_tick_callback = callback
+      -- Capture callback's definition location for better error messages
+      local info = debug.getinfo(callback, "S")
+      if info then
+        local source = info.source or "?"
+        local line = info.linedefined or 0
+        -- Clean up source name (remove @ prefix if present)
+        if source:sub(1, 1) == "@" then
+          source = source:sub(2)
+        end
+        __user_tick_location = source .. ":" .. line
+      end
       -- Create a wrapper that uses xpcall to capture stack trace on error
       __canvas_setOnDrawCallback(function()
         if __user_tick_callback then
@@ -34,7 +46,12 @@ export const canvasLuaCode = `
             return debug.traceback(e, 2)
           end)
           if not success then
-            error(err, 0)  -- Re-throw with traceback included
+            -- If error doesn't have Lua line info, add callback location
+            local errStr = tostring(err)
+            if __user_tick_location and not errStr:match(":%d+:") then
+              err = __user_tick_location .. ": " .. errStr
+            end
+            error(err, 0)  -- Re-throw with location included
           end
         end
       end)
