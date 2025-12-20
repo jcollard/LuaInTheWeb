@@ -210,6 +210,14 @@ test.describe('Canvas Scroll Preservation', () => {
     // 6. File is now visible but scrolled to line 1 (BUG!)
     // 7. Note: focus still in shell
 
+    // Capture console logs for debugging
+    const consoleLogs: string[] = []
+    page.on('console', (msg) => {
+      if (msg.text().includes('[ScrollPersistence]')) {
+        consoleLogs.push(msg.text())
+      }
+    })
+
     const terminal = createTerminalHelper(page)
 
     // Navigate to editor (examples workspace is available in the file tree)
@@ -286,9 +294,14 @@ test.describe('Canvas Scroll Preservation', () => {
     await expect(monacoEditor).toBeVisible({ timeout: TIMEOUTS.ASYNC_OPERATION })
 
     // Give editor time to restore scroll position
-    await page.waitForTimeout(500)
+    await page.waitForTimeout(1000)
 
-    // BUG: Scroll position should still be at line 50, but it's at line 1
+    // Print logs for debugging
+    console.log('\n--- ScrollPersistence Logs ---')
+    consoleLogs.forEach((log) => console.log(log))
+    console.log('--- End Logs ---\n')
+
+    // Scroll position should be preserved at line 50
     await expect(line50).toBeVisible({ timeout: TIMEOUTS.ASYNC_OPERATION })
   })
 

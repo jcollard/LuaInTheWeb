@@ -76,7 +76,6 @@ export function useEditorExtensions(
   // Scroll position persistence across tab switches
   const { setEditor } = useEditorScrollPersistence({
     activeTab: currentFilePath ?? null,
-    code,
   })
 
   // Combined editor ready handler for all editor extensions
