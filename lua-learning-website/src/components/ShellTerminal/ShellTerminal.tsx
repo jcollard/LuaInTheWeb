@@ -394,32 +394,9 @@ export const ShellTerminal = forwardRef<ShellTerminalHandle, ShellTerminalProps>
     const resizeObserver = new ResizeObserver(handleResize)
     resizeObserver.observe(terminalRef.current)
 
-    // Handle drop from file explorer to insert path into terminal
-    // Native event listeners are needed because xterm creates overlays that block React events
-    const terminalElement = terminalRef.current
-    const nativeHandleDrop = (event: DragEvent) => {
-      event.preventDefault()
-      const path = event.dataTransfer?.getData('text/plain')
-      if (path && terminal) {
-        // Quote the path if it contains spaces
-        const quotedPath = path.includes(' ') ? `"${path}"` : path
-        terminal.write(quotedPath)
-      }
-    }
-    const nativeHandleDragOver = (event: DragEvent) => {
-      event.preventDefault()
-      if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = 'copy'
-      }
-    }
-    terminalElement.addEventListener('drop', nativeHandleDrop, true)
-    terminalElement.addEventListener('dragover', nativeHandleDragOver, true)
-
     return () => {
       window.removeEventListener('resize', handleResize)
       resizeObserver.disconnect()
-      terminalElement.removeEventListener('drop', nativeHandleDrop, true)
-      terminalElement.removeEventListener('dragover', nativeHandleDragOver, true)
       terminal.dispose()
       // Clean up test API
       if (import.meta.env.MODE !== 'production') {
