@@ -258,12 +258,22 @@ export const canvasLuaCode = `
       return __canvas_isKeyPressed(normalize_key(key))
     end
 
+    -- Helper to convert JS array proxy to plain Lua table
+    -- This ensures proper Lua errors with line numbers instead of JS TypeErrors
+    local function to_lua_array(js_array)
+      local t = {}
+      for i = 1, #js_array do
+        t[i] = js_array[i]
+      end
+      return t
+    end
+
     function _canvas.get_keys_down()
-      return __canvas_getKeysDown()
+      return to_lua_array(__canvas_getKeysDown())
     end
 
     function _canvas.get_keys_pressed()
-      return __canvas_getKeysPressed()
+      return to_lua_array(__canvas_getKeysPressed())
     end
 
     -- Mouse input
