@@ -9,6 +9,9 @@ packages/*/dist/
 packages/*/node_modules/
 packages/*/reports/
 
+# Auto-generated TypeScript exports from Lua source files
+packages/*/src/**/*.generated.ts
+
 # Python bytecode
 __pycache__/
 *.pyc

@@ -1,10 +1,3 @@
--- canvas.lua - Canvas Graphics Library
--- Load with: local canvas = require('canvas')
---
--- This library provides functions for 2D graphics rendering,
--- input handling, and game loop management.
--- Note: The canvas API is only available in canvas mode.
-
 ---@meta canvas
 --- canvas.lua - Canvas Graphics Library
 --- Load with: local canvas = require('canvas')
@@ -166,77 +159,6 @@ function canvas.draw_line(x1, y1, x2, y2) end
 ---@param text string Text to draw
 ---@return nil
 function canvas.draw_text(x, y, text) end
-
--- =============================================================================
--- Transformation Functions
--- =============================================================================
-
---- Translate (move) the canvas origin.
---- All subsequent drawing will be offset by (dx, dy).
----@param dx number Horizontal distance to move the origin
----@param dy number Vertical distance to move the origin
----@return nil
----@usage canvas.translate(100, 100)  -- Move origin to (100, 100)
-function canvas.translate(dx, dy) end
-
---- Rotate the canvas around the current origin.
---- All subsequent drawing will be rotated by the given angle.
----@param angle number Rotation angle in radians
----@return nil
----@usage canvas.rotate(math.pi / 4)  -- Rotate 45 degrees
-function canvas.rotate(angle) end
-
---- Scale the canvas from the current origin.
---- All subsequent drawing will be scaled by (sx, sy).
----@param sx number Horizontal scale factor (1.0 = normal, 2.0 = double, 0.5 = half)
----@param sy number Vertical scale factor
----@return nil
----@usage canvas.scale(2, 2)  -- Double size in both directions
----@usage canvas.scale(-1, 1)  -- Flip horizontally (mirror)
-function canvas.scale(sx, sy) end
-
---- Save the current transformation state to a stack.
---- Call restore() later to undo all transforms made after this save.
----@return nil
----@usage canvas.save()       -- Save current state
----@usage canvas.translate(100, 100)
----@usage canvas.rotate(math.pi / 4)
----@usage canvas.fill_rect(-25, -25, 50, 50)  -- Draw rotated square
----@usage canvas.restore()    -- Undo all transforms since save
-function canvas.save() end
-
---- Restore the most recently saved transformation state.
---- Undoes all transforms made since the last save() call.
----@return nil
-function canvas.restore() end
-
---- Apply a custom transformation matrix.
---- Multiplies the current transformation by the specified 2x3 matrix.
---- Matrix format: [a, c, e; b, d, f; 0, 0, 1]
----@param a number Horizontal scaling
----@param b number Vertical skewing
----@param c number Horizontal skewing
----@param d number Vertical scaling
----@param e number Horizontal translation
----@param f number Vertical translation
----@return nil
-function canvas.transform(a, b, c, d, e, f) end
-
---- Reset and set a new transformation matrix.
---- Resets to identity matrix, then applies the specified transformation.
----@param a number Horizontal scaling
----@param b number Vertical skewing
----@param c number Horizontal skewing
----@param d number Vertical scaling
----@param e number Horizontal translation
----@param f number Vertical translation
----@return nil
-function canvas.set_transform(a, b, c, d, e, f) end
-
---- Reset the transformation matrix to identity.
---- Clears all translations, rotations, and scaling.
----@return nil
-function canvas.reset_transform() end
 
 -- =============================================================================
 -- Timing Functions
@@ -475,5 +397,95 @@ function canvas.assets.get_height(name) end
 ---@usage canvas.draw_image("player", 100, 100)  -- Original size
 ---@usage canvas.draw_image("player", 100, 100, 64, 64)  -- Scaled to 64x64
 function canvas.draw_image(name, x, y, width, height) end
+
+-- =============================================================================
+-- Transformation Functions
+-- =============================================================================
+
+--- Move the canvas origin by (dx, dy).
+--- All subsequent drawing will be offset by this amount.
+--- Use save() and restore() to manage transformation state.
+---@param dx number Horizontal offset in pixels
+---@param dy number Vertical offset in pixels
+---@return nil
+---@usage canvas.translate(100, 50)  -- Move origin right 100, down 50
+function canvas.translate(dx, dy) end
+
+--- Rotate subsequent drawing operations.
+--- Rotation is applied around the current origin (0, 0).
+--- Use translate() first to rotate around a different point.
+---@param angle number Rotation angle in radians
+---@return nil
+---@usage canvas.rotate(math.pi / 4)  -- Rotate 45 degrees
+---@usage canvas.translate(100, 100)  -- Move to center of object
+---@usage canvas.rotate(angle)        -- Rotate around that point
+function canvas.rotate(angle) end
+
+--- Scale subsequent drawing operations.
+--- Use negative values to flip/mirror the drawing.
+---@param sx number Horizontal scale factor (1.0 = normal, 2.0 = double, -1 = flip)
+---@param sy number Vertical scale factor (1.0 = normal, 2.0 = double, -1 = flip)
+---@return nil
+---@usage canvas.scale(2, 2)    -- Double size
+---@usage canvas.scale(-1, 1)   -- Horizontal flip (mirror)
+---@usage canvas.scale(1, -1)   -- Vertical flip
+---@usage canvas.scale(0.5, 0.5) -- Half size
+function canvas.scale(sx, sy) end
+
+--- Save the current transformation state.
+--- Push the current transformation matrix onto a stack.
+--- Use restore() to return to this saved state.
+---@return nil
+---@usage canvas.save()
+---@usage canvas.translate(100, 100)
+---@usage canvas.rotate(angle)
+---@usage -- draw something rotated
+---@usage canvas.restore()  -- Back to original transform
+function canvas.save() end
+
+--- Restore the previously saved transformation state.
+--- Pop the transformation matrix from the stack.
+--- Must be paired with a previous save() call.
+---@return nil
+---@usage canvas.save()
+---@usage canvas.translate(100, 100)
+---@usage canvas.restore()  -- Undo the translate
+function canvas.restore() end
+
+--- Apply a 2D transformation matrix.
+--- Multiplies the current matrix by the given matrix.
+--- Matrix format: [a c e]
+---                [b d f]
+---                [0 0 1]
+---@param a number Horizontal scaling
+---@param b number Vertical skewing
+---@param c number Horizontal skewing
+---@param d number Vertical scaling
+---@param e number Horizontal translation
+---@param f number Vertical translation
+---@return nil
+---@usage canvas.transform(1, 0, 0.5, 1, 0, 0)  -- Shear effect
+function canvas.transform(a, b, c, d, e, f) end
+
+--- Set an absolute transformation matrix.
+--- Replaces the current transformation (does not multiply).
+--- Useful for setting a known transform state directly.
+---@param a number Horizontal scaling
+---@param b number Vertical skewing
+---@param c number Horizontal skewing
+---@param d number Vertical scaling
+---@param e number Horizontal translation
+---@param f number Vertical translation
+---@return nil
+---@usage canvas.set_transform(1, 0, 0, 1, 100, 100)  -- Just translate
+function canvas.set_transform(a, b, c, d, e, f) end
+
+--- Reset the transformation to the identity matrix.
+--- Clears all transformations (translate, rotate, scale).
+--- After calling this, drawing uses screen coordinates directly.
+---@return nil
+---@usage canvas.reset_transform()  -- Clear all transforms
+---@usage canvas.fill_rect(0, 0, 50, 50)  -- Draw at screen origin
+function canvas.reset_transform() end
 
 return canvas

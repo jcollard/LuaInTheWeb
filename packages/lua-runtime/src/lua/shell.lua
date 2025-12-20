@@ -1,9 +1,3 @@
--- shell.lua - Terminal control library
--- Load with: local shell = require('shell')
---
--- This library provides functions for terminal control including
--- colors, cursor movement, and screen management.
-
 ---@meta shell
 --- shell.lua - Terminal control library
 --- Load with: local shell = require('shell')
