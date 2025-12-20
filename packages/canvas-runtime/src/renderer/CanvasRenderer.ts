@@ -81,6 +81,38 @@ export class CanvasRenderer {
         this.drawImage(command.name, command.x, command.y, command.width, command.height);
         break;
 
+      case 'translate':
+        this.ctx.translate(command.dx, command.dy);
+        break;
+
+      case 'rotate':
+        this.ctx.rotate(command.angle);
+        break;
+
+      case 'scale':
+        this.ctx.scale(command.sx, command.sy);
+        break;
+
+      case 'save':
+        this.ctx.save();
+        break;
+
+      case 'restore':
+        this.ctx.restore();
+        break;
+
+      case 'transform':
+        this.ctx.transform(command.a, command.b, command.c, command.d, command.e, command.f);
+        break;
+
+      case 'setTransform':
+        this.ctx.setTransform(command.a, command.b, command.c, command.d, command.e, command.f);
+        break;
+
+      case 'resetTransform':
+        this.ctx.resetTransform();
+        break;
+
       default:
         // Ignore unknown commands for forward compatibility
         break;

@@ -64,6 +64,15 @@ describe('setupCanvasAPI', () => {
       drawImage: vi.fn(),
       getAssetWidth: vi.fn().mockReturnValue(64),
       getAssetHeight: vi.fn().mockReturnValue(64),
+      // Transformation API methods
+      translate: vi.fn(),
+      rotate: vi.fn(),
+      scale: vi.fn(),
+      save: vi.fn(),
+      restore: vi.fn(),
+      transform: vi.fn(),
+      setTransform: vi.fn(),
+      resetTransform: vi.fn(),
     } as unknown as CanvasController
   }
 
@@ -445,4 +454,143 @@ describe('setupCanvasAPI', () => {
   })
 
   // Note: Hex color tests are in setupCanvasAPI.hexColor.test.ts
+
+  describe('transformation API', () => {
+    it('should expose all transformation functions via require', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      const result = await engine.doString(`
+        local canvas = require('canvas')
+        local functions = {
+          'translate', 'rotate', 'scale',
+          'save', 'restore',
+          'transform', 'set_transform', 'reset_transform'
+        }
+        for _, name in ipairs(functions) do
+          if type(canvas[name]) ~= 'function' then
+            error('Missing function: ' .. name)
+          end
+        end
+        return true
+      `)
+      expect(result).toBe(true)
+    })
+
+    it('should call translate on controller with correct arguments', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.translate(100, 50)
+      `)
+
+      expect(mockController.translate).toHaveBeenCalledWith(100, 50)
+    })
+
+    it('should call rotate on controller with correct angle', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.rotate(math.pi / 4)
+      `)
+
+      expect(mockController.rotate).toHaveBeenCalledWith(Math.PI / 4)
+    })
+
+    it('should call scale on controller with correct factors', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.scale(2, 3)
+      `)
+
+      expect(mockController.scale).toHaveBeenCalledWith(2, 3)
+    })
+
+    it('should call save on controller', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.save()
+      `)
+
+      expect(mockController.save).toHaveBeenCalled()
+    })
+
+    it('should call restore on controller', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.restore()
+      `)
+
+      expect(mockController.restore).toHaveBeenCalled()
+    })
+
+    it('should call transform on controller with all 6 matrix values', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.transform(1, 0, 0, 1, 100, 50)
+      `)
+
+      expect(mockController.transform).toHaveBeenCalledWith(1, 0, 0, 1, 100, 50)
+    })
+
+    it('should call setTransform on controller with all 6 matrix values', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.set_transform(2, 0, 0, 2, 50, 50)
+      `)
+
+      expect(mockController.setTransform).toHaveBeenCalledWith(2, 0, 0, 2, 50, 50)
+    })
+
+    it('should call resetTransform on controller', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.reset_transform()
+      `)
+
+      expect(mockController.resetTransform).toHaveBeenCalled()
+    })
+
+    it('should support typical save/translate/rotate/restore workflow', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.save()
+        canvas.translate(100, 100)
+        canvas.rotate(math.pi / 4)
+        canvas.fill_rect(-25, -25, 50, 50)
+        canvas.restore()
+      `)
+
+      expect(mockController.save).toHaveBeenCalled()
+      expect(mockController.translate).toHaveBeenCalledWith(100, 100)
+      expect(mockController.rotate).toHaveBeenCalledWith(Math.PI / 4)
+      expect(mockController.fillRect).toHaveBeenCalledWith(-25, -25, 50, 50)
+      expect(mockController.restore).toHaveBeenCalled()
+    })
+  })
 })

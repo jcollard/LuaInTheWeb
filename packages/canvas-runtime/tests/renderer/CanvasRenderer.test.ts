@@ -22,6 +22,16 @@ function createMockContext(): CanvasRenderingContext2D {
     drawImage: vi.fn(),
     fillStyle: '',
     strokeStyle: '',
+    lineWidth: 1,
+    // Transformation methods
+    translate: vi.fn(),
+    rotate: vi.fn(),
+    scale: vi.fn(),
+    save: vi.fn(),
+    restore: vi.fn(),
+    transform: vi.fn(),
+    setTransform: vi.fn(),
+    resetTransform: vi.fn(),
   } as unknown as CanvasRenderingContext2D;
 }
 
@@ -301,6 +311,198 @@ describe('CanvasRenderer', () => {
       // Renderer without cache
       expect(() => renderer.render(commands)).not.toThrow();
       expect(mockCtx.drawImage).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('translate command', () => {
+    it('should translate the canvas origin', () => {
+      const commands: DrawCommand[] = [
+        { type: 'translate', dx: 100, dy: 50 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.translate).toHaveBeenCalledWith(100, 50);
+    });
+
+    it('should handle negative translation values', () => {
+      const commands: DrawCommand[] = [
+        { type: 'translate', dx: -25, dy: -75 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.translate).toHaveBeenCalledWith(-25, -75);
+    });
+  });
+
+  describe('rotate command', () => {
+    it('should rotate the canvas by the given angle', () => {
+      const commands: DrawCommand[] = [
+        { type: 'rotate', angle: Math.PI / 4 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.rotate).toHaveBeenCalledWith(Math.PI / 4);
+    });
+
+    it('should handle negative angles', () => {
+      const commands: DrawCommand[] = [
+        { type: 'rotate', angle: -Math.PI / 2 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.rotate).toHaveBeenCalledWith(-Math.PI / 2);
+    });
+
+    it('should handle large angles (wrapping)', () => {
+      const commands: DrawCommand[] = [
+        { type: 'rotate', angle: Math.PI * 4 }, // Two full rotations
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.rotate).toHaveBeenCalledWith(Math.PI * 4);
+    });
+  });
+
+  describe('scale command', () => {
+    it('should scale the canvas', () => {
+      const commands: DrawCommand[] = [
+        { type: 'scale', sx: 2, sy: 3 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.scale).toHaveBeenCalledWith(2, 3);
+    });
+
+    it('should handle fractional scale values', () => {
+      const commands: DrawCommand[] = [
+        { type: 'scale', sx: 0.5, sy: 0.25 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.scale).toHaveBeenCalledWith(0.5, 0.25);
+    });
+
+    it('should handle negative scale values (mirroring)', () => {
+      const commands: DrawCommand[] = [
+        { type: 'scale', sx: -1, sy: 1 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.scale).toHaveBeenCalledWith(-1, 1);
+    });
+  });
+
+  describe('save command', () => {
+    it('should save the current transformation state', () => {
+      const commands: DrawCommand[] = [{ type: 'save' }];
+
+      renderer.render(commands);
+
+      expect(mockCtx.save).toHaveBeenCalled();
+    });
+  });
+
+  describe('restore command', () => {
+    it('should restore the previous transformation state', () => {
+      const commands: DrawCommand[] = [{ type: 'restore' }];
+
+      renderer.render(commands);
+
+      expect(mockCtx.restore).toHaveBeenCalled();
+    });
+  });
+
+  describe('save/restore workflow', () => {
+    it('should support nested save/restore operations', () => {
+      const commands: DrawCommand[] = [
+        { type: 'save' },
+        { type: 'translate', dx: 100, dy: 100 },
+        { type: 'save' },
+        { type: 'rotate', angle: Math.PI / 4 },
+        { type: 'restore' },
+        { type: 'restore' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.save).toHaveBeenCalledTimes(2);
+      expect(mockCtx.translate).toHaveBeenCalledWith(100, 100);
+      expect(mockCtx.rotate).toHaveBeenCalledWith(Math.PI / 4);
+      expect(mockCtx.restore).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('transform command', () => {
+    it('should apply transformation matrix', () => {
+      const commands: DrawCommand[] = [
+        { type: 'transform', a: 1, b: 0, c: 0, d: 1, e: 100, f: 50 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.transform).toHaveBeenCalledWith(1, 0, 0, 1, 100, 50);
+    });
+
+    it('should handle rotation matrix values', () => {
+      // 45-degree rotation matrix
+      const cos45 = Math.cos(Math.PI / 4);
+      const sin45 = Math.sin(Math.PI / 4);
+      const commands: DrawCommand[] = [
+        { type: 'transform', a: cos45, b: sin45, c: -sin45, d: cos45, e: 0, f: 0 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.transform).toHaveBeenCalledWith(cos45, sin45, -sin45, cos45, 0, 0);
+    });
+  });
+
+  describe('setTransform command', () => {
+    it('should set transformation matrix (resetting first)', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setTransform', a: 2, b: 0, c: 0, d: 2, e: 50, f: 50 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.setTransform).toHaveBeenCalledWith(2, 0, 0, 2, 50, 50);
+    });
+  });
+
+  describe('resetTransform command', () => {
+    it('should reset transformation matrix to identity', () => {
+      const commands: DrawCommand[] = [{ type: 'resetTransform' }];
+
+      renderer.render(commands);
+
+      expect(mockCtx.resetTransform).toHaveBeenCalled();
+    });
+  });
+
+  describe('transformation with drawing', () => {
+    it('should execute transforms before drawing commands', () => {
+      const callOrder: string[] = [];
+      (mockCtx.translate as ReturnType<typeof vi.fn>).mockImplementation(() => callOrder.push('translate'));
+      (mockCtx.rotate as ReturnType<typeof vi.fn>).mockImplementation(() => callOrder.push('rotate'));
+      (mockCtx.fillRect as ReturnType<typeof vi.fn>).mockImplementation(() => callOrder.push('fillRect'));
+
+      const commands: DrawCommand[] = [
+        { type: 'translate', dx: 100, dy: 100 },
+        { type: 'rotate', angle: Math.PI / 4 },
+        { type: 'fillRect', x: -25, y: -25, width: 50, height: 50 },
+      ];
+
+      renderer.render(commands);
+
+      expect(callOrder).toEqual(['translate', 'rotate', 'fillRect']);
     });
   });
 });

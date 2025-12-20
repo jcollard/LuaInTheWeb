@@ -309,6 +309,65 @@ export class CanvasController {
     this.addDrawCommand({ type: 'text', x, y, text })
   }
 
+  // --- Transformation API ---
+
+  /**
+   * Translate (move) the canvas origin.
+   */
+  translate(dx: number, dy: number): void {
+    this.addDrawCommand({ type: 'translate', dx, dy })
+  }
+
+  /**
+   * Rotate the canvas around the current origin.
+   * @param angle - Rotation angle in radians
+   */
+  rotate(angle: number): void {
+    this.addDrawCommand({ type: 'rotate', angle })
+  }
+
+  /**
+   * Scale the canvas from the current origin.
+   */
+  scale(sx: number, sy: number): void {
+    this.addDrawCommand({ type: 'scale', sx, sy })
+  }
+
+  /**
+   * Save the current transformation state to the stack.
+   */
+  save(): void {
+    this.addDrawCommand({ type: 'save' })
+  }
+
+  /**
+   * Restore the most recently saved transformation state.
+   */
+  restore(): void {
+    this.addDrawCommand({ type: 'restore' })
+  }
+
+  /**
+   * Multiply the current transformation matrix by the specified matrix.
+   */
+  transform(a: number, b: number, c: number, d: number, e: number, f: number): void {
+    this.addDrawCommand({ type: 'transform', a, b, c, d, e, f })
+  }
+
+  /**
+   * Reset to identity matrix, then apply the specified transformation matrix.
+   */
+  setTransform(a: number, b: number, c: number, d: number, e: number, f: number): void {
+    this.addDrawCommand({ type: 'setTransform', a, b, c, d, e, f })
+  }
+
+  /**
+   * Reset the transformation matrix to identity.
+   */
+  resetTransform(): void {
+    this.addDrawCommand({ type: 'resetTransform' })
+  }
+
   // --- Timing API ---
 
   /**

@@ -12,7 +12,15 @@ export type DrawCommandType =
   | 'fillCircle'
   | 'line'
   | 'text'
-  | 'drawImage';
+  | 'drawImage'
+  | 'translate'
+  | 'rotate'
+  | 'scale'
+  | 'save'
+  | 'restore'
+  | 'transform'
+  | 'setTransform'
+  | 'resetTransform';
 
 /**
  * Base interface for all draw commands.
@@ -137,6 +145,88 @@ export interface DrawImageCommand extends DrawCommandBase {
 }
 
 /**
+ * Translate (move) the canvas origin.
+ */
+export interface TranslateCommand extends DrawCommandBase {
+  type: 'translate';
+  /** Horizontal distance to move */
+  dx: number;
+  /** Vertical distance to move */
+  dy: number;
+}
+
+/**
+ * Rotate the canvas around the current origin.
+ */
+export interface RotateCommand extends DrawCommandBase {
+  type: 'rotate';
+  /** Rotation angle in radians */
+  angle: number;
+}
+
+/**
+ * Scale the canvas from the current origin.
+ */
+export interface ScaleCommand extends DrawCommandBase {
+  type: 'scale';
+  /** Horizontal scale factor */
+  sx: number;
+  /** Vertical scale factor */
+  sy: number;
+}
+
+/**
+ * Save the current transformation state to the stack.
+ */
+export interface SaveCommand extends DrawCommandBase {
+  type: 'save';
+}
+
+/**
+ * Restore the most recently saved transformation state from the stack.
+ */
+export interface RestoreCommand extends DrawCommandBase {
+  type: 'restore';
+}
+
+/**
+ * Multiply the current transformation matrix by the specified matrix.
+ * Matrix format: [a, b, c, d, e, f] representing:
+ * | a c e |
+ * | b d f |
+ * | 0 0 1 |
+ */
+export interface TransformCommand extends DrawCommandBase {
+  type: 'transform';
+  a: number;
+  b: number;
+  c: number;
+  d: number;
+  e: number;
+  f: number;
+}
+
+/**
+ * Reset to identity matrix, then apply the specified transformation matrix.
+ */
+export interface SetTransformCommand extends DrawCommandBase {
+  type: 'setTransform';
+  a: number;
+  b: number;
+  c: number;
+  d: number;
+  e: number;
+  f: number;
+}
+
+/**
+ * Reset the transformation matrix to identity.
+ */
+export interface ResetTransformCommand extends DrawCommandBase {
+  type: 'resetTransform';
+}
+
+/**
  * Union type of all draw commands.
  */
 export type DrawCommand =
@@ -150,7 +240,15 @@ export type DrawCommand =
   | FillCircleCommand
   | LineCommand
   | TextCommand
-  | DrawImageCommand;
+  | DrawImageCommand
+  | TranslateCommand
+  | RotateCommand
+  | ScaleCommand
+  | SaveCommand
+  | RestoreCommand
+  | TransformCommand
+  | SetTransformCommand
+  | ResetTransformCommand;
 
 /**
  * Mouse button identifiers.

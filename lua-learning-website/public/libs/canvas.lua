@@ -168,6 +168,77 @@ function canvas.draw_line(x1, y1, x2, y2) end
 function canvas.draw_text(x, y, text) end
 
 -- =============================================================================
+-- Transformation Functions
+-- =============================================================================
+
+--- Translate (move) the canvas origin.
+--- All subsequent drawing will be offset by (dx, dy).
+---@param dx number Horizontal distance to move the origin
+---@param dy number Vertical distance to move the origin
+---@return nil
+---@usage canvas.translate(100, 100)  -- Move origin to (100, 100)
+function canvas.translate(dx, dy) end
+
+--- Rotate the canvas around the current origin.
+--- All subsequent drawing will be rotated by the given angle.
+---@param angle number Rotation angle in radians
+---@return nil
+---@usage canvas.rotate(math.pi / 4)  -- Rotate 45 degrees
+function canvas.rotate(angle) end
+
+--- Scale the canvas from the current origin.
+--- All subsequent drawing will be scaled by (sx, sy).
+---@param sx number Horizontal scale factor (1.0 = normal, 2.0 = double, 0.5 = half)
+---@param sy number Vertical scale factor
+---@return nil
+---@usage canvas.scale(2, 2)  -- Double size in both directions
+---@usage canvas.scale(-1, 1)  -- Flip horizontally (mirror)
+function canvas.scale(sx, sy) end
+
+--- Save the current transformation state to a stack.
+--- Call restore() later to undo all transforms made after this save.
+---@return nil
+---@usage canvas.save()       -- Save current state
+---@usage canvas.translate(100, 100)
+---@usage canvas.rotate(math.pi / 4)
+---@usage canvas.fill_rect(-25, -25, 50, 50)  -- Draw rotated square
+---@usage canvas.restore()    -- Undo all transforms since save
+function canvas.save() end
+
+--- Restore the most recently saved transformation state.
+--- Undoes all transforms made since the last save() call.
+---@return nil
+function canvas.restore() end
+
+--- Apply a custom transformation matrix.
+--- Multiplies the current transformation by the specified 2x3 matrix.
+--- Matrix format: [a, c, e; b, d, f; 0, 0, 1]
+---@param a number Horizontal scaling
+---@param b number Vertical skewing
+---@param c number Horizontal skewing
+---@param d number Vertical scaling
+---@param e number Horizontal translation
+---@param f number Vertical translation
+---@return nil
+function canvas.transform(a, b, c, d, e, f) end
+
+--- Reset and set a new transformation matrix.
+--- Resets to identity matrix, then applies the specified transformation.
+---@param a number Horizontal scaling
+---@param b number Vertical skewing
+---@param c number Horizontal skewing
+---@param d number Vertical scaling
+---@param e number Horizontal translation
+---@param f number Vertical translation
+---@return nil
+function canvas.set_transform(a, b, c, d, e, f) end
+
+--- Reset the transformation matrix to identity.
+--- Clears all translations, rotations, and scaling.
+---@return nil
+function canvas.reset_transform() end
+
+-- =============================================================================
 -- Timing Functions
 -- =============================================================================
 

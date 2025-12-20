@@ -156,6 +156,39 @@ export function setupCanvasAPI(
     return getController()?.getAssetHeight(name) ?? 0
   })
 
+  // --- Transformation functions ---
+  engine.global.set('__canvas_translate', (dx: number, dy: number) => {
+    getController()?.translate(dx, dy)
+  })
+
+  engine.global.set('__canvas_rotate', (angle: number) => {
+    getController()?.rotate(angle)
+  })
+
+  engine.global.set('__canvas_scale', (sx: number, sy: number) => {
+    getController()?.scale(sx, sy)
+  })
+
+  engine.global.set('__canvas_save', () => {
+    getController()?.save()
+  })
+
+  engine.global.set('__canvas_restore', () => {
+    getController()?.restore()
+  })
+
+  engine.global.set('__canvas_transform', (a: number, b: number, c: number, d: number, e: number, f: number) => {
+    getController()?.transform(a, b, c, d, e, f)
+  })
+
+  engine.global.set('__canvas_setTransform', (a: number, b: number, c: number, d: number, e: number, f: number) => {
+    getController()?.setTransform(a, b, c, d, e, f)
+  })
+
+  engine.global.set('__canvas_resetTransform', () => {
+    getController()?.resetTransform()
+  })
+
   // --- Set up Lua-side canvas table ---
   // Canvas is NOT a global - it must be accessed via require('canvas')
   engine.doStringSync(`
@@ -312,6 +345,39 @@ export function setupCanvasAPI(
 
     function _canvas.assets.get_height(name)
       return __canvas_assets_getHeight(name)
+    end
+
+    -- Transformation functions
+    function _canvas.translate(dx, dy)
+      __canvas_translate(dx, dy)
+    end
+
+    function _canvas.rotate(angle)
+      __canvas_rotate(angle)
+    end
+
+    function _canvas.scale(sx, sy)
+      __canvas_scale(sx, sy)
+    end
+
+    function _canvas.save()
+      __canvas_save()
+    end
+
+    function _canvas.restore()
+      __canvas_restore()
+    end
+
+    function _canvas.transform(a, b, c, d, e, f)
+      __canvas_transform(a, b, c, d, e, f)
+    end
+
+    function _canvas.set_transform(a, b, c, d, e, f)
+      __canvas_setTransform(a, b, c, d, e, f)
+    end
+
+    function _canvas.reset_transform()
+      __canvas_resetTransform()
     end
 
     -- Timing
