@@ -57,6 +57,13 @@ vi.mock('@lua-learning/canvas-runtime', () => {
         setMockImageCacheInstance(this)
       }
     },
+    FontCache: class MockFontCache {
+      set = vi.fn()
+      get = vi.fn()
+      has = vi.fn()
+      getLoadedFonts = vi.fn().mockReturnValue([])
+      clear = vi.fn()
+    },
     AssetLoader: class MockAssetLoader {
       loadAsset = vi.fn().mockResolvedValue({
         name: 'test',
@@ -72,6 +79,7 @@ vi.mock('@lua-learning/canvas-runtime', () => {
       }
     },
     VALID_IMAGE_EXTENSIONS: ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'],
+    VALID_FONT_EXTENSIONS: ['.ttf', '.otf', '.woff', '.woff2'],
   }
 })
 

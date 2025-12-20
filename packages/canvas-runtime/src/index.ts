@@ -3,6 +3,8 @@ export type {
   DrawCommandType,
   ClearCommand,
   SetColorCommand,
+  SetFontSizeCommand,
+  SetFontFamilyCommand,
   RectCommand,
   FillRectCommand,
   CircleCommand,
@@ -19,7 +21,13 @@ export type {
   LoadedAsset,
 } from './shared/index.js';
 
-export { createEmptyInputState, createDefaultTimingInfo, AssetLoader, VALID_IMAGE_EXTENSIONS } from './shared/index.js';
+export {
+  createEmptyInputState,
+  createDefaultTimingInfo,
+  AssetLoader,
+  VALID_IMAGE_EXTENSIONS,
+  VALID_FONT_EXTENSIONS,
+} from './shared/index.js';
 
 // Channel interfaces
 export type {
@@ -51,6 +59,7 @@ export {
   InputCapture,
   GameLoopController,
   ImageCache,
+  FontCache,
 } from './renderer/index.js';
 
 export type { FrameCallback } from './renderer/index.js';

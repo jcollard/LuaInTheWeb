@@ -3,3 +3,4 @@ export { InputCapture } from './InputCapture.js';
 export { GameLoopController } from './GameLoopController.js';
 export type { FrameCallback } from './GameLoopController.js';
 export { ImageCache } from './ImageCache.js';
+export { FontCache } from './FontCache.js';

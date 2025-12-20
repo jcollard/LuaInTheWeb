@@ -23,6 +23,8 @@ function createMockContext(): CanvasRenderingContext2D {
     fillStyle: '',
     strokeStyle: '',
     lineWidth: 1,
+    font: '16px monospace',
+    textBaseline: 'alphabetic',
     // Transformation methods
     translate: vi.fn(),
     rotate: vi.fn(),
@@ -503,6 +505,135 @@ describe('CanvasRenderer', () => {
       renderer.render(commands);
 
       expect(callOrder).toEqual(['translate', 'rotate', 'fillRect']);
+    });
+  });
+
+  describe('setFontSize command', () => {
+    it('should set the font size', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setFontSize', size: 24 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.font).toBe('24px monospace');
+    });
+
+    it('should preserve current font family when setting size', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setFontFamily', family: 'Arial' },
+        { type: 'setFontSize', size: 32 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.font).toBe('32px Arial');
+    });
+  });
+
+  describe('setFontFamily command', () => {
+    it('should set the font family', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setFontFamily', family: 'Arial' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.font).toBe('16px Arial');
+    });
+
+    it('should preserve current font size when setting family', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setFontSize', size: 48 },
+        { type: 'setFontFamily', family: 'Times New Roman' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.font).toBe('48px Times New Roman');
+    });
+  });
+
+  describe('text command with font settings', () => {
+    it('should use current font settings for text', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setFontSize', size: 24 },
+        { type: 'setFontFamily', family: 'Georgia' },
+        { type: 'text', x: 10, y: 20, text: 'Hello' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.font).toBe('24px Georgia');
+      expect(mockCtx.textBaseline).toBe('top');
+      expect(mockCtx.fillText).toHaveBeenCalledWith('Hello', 10, 20);
+    });
+
+    it('should apply fontSize override for single text call', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setFontSize', size: 16 },
+        { type: 'text', x: 10, y: 20, text: 'Big Text', fontSize: 48 },
+      ];
+
+      renderer.render(commands);
+
+      // After rendering, font should be back to current state (16px)
+      // But during the text call, 48px was used
+      expect(mockCtx.fillText).toHaveBeenCalledWith('Big Text', 10, 20);
+    });
+
+    it('should apply fontFamily override for single text call', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setFontFamily', family: 'monospace' },
+        { type: 'text', x: 10, y: 20, text: 'Custom Font', fontFamily: 'Impact' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.fillText).toHaveBeenCalledWith('Custom Font', 10, 20);
+    });
+
+    it('should apply both fontSize and fontFamily overrides', () => {
+      const commands: DrawCommand[] = [
+        { type: 'text', x: 0, y: 0, text: 'Styled', fontSize: 72, fontFamily: 'Comic Sans MS' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.fillText).toHaveBeenCalledWith('Styled', 0, 0);
+    });
+
+    it('should set textBaseline to top for top-left positioning', () => {
+      const commands: DrawCommand[] = [
+        { type: 'text', x: 100, y: 100, text: 'Test' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.textBaseline).toBe('top');
+    });
+  });
+
+  describe('default font settings', () => {
+    it('should use 16px monospace as default font', () => {
+      // The constructor should set default font
+      const freshCanvas = document.createElement('canvas');
+      const freshCtx = createMockContext();
+      vi.spyOn(freshCanvas, 'getContext').mockReturnValue(freshCtx);
+
+      new CanvasRenderer(freshCanvas);
+
+      expect(freshCtx.font).toBe('16px monospace');
+    });
+
+    it('should set textBaseline to top in constructor', () => {
+      const freshCanvas = document.createElement('canvas');
+      const freshCtx = createMockContext();
+      vi.spyOn(freshCanvas, 'getContext').mockReturnValue(freshCtx);
+
+      new CanvasRenderer(freshCanvas);
+
+      expect(freshCtx.textBaseline).toBe('top');
     });
   });
 });

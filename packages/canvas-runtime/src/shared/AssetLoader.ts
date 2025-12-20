@@ -30,6 +30,11 @@ const MIME_TYPES: Record<string, string> = {
   '.webp': 'image/webp',
   '.bmp': 'image/bmp',
   '.svg': 'image/svg+xml',
+  // Fonts
+  '.ttf': 'font/ttf',
+  '.otf': 'font/otf',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
   // Audio
   '.mp3': 'audio/mpeg',
   '.wav': 'audio/wav',

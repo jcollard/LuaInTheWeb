@@ -155,6 +155,24 @@ describe('AssetLoader', () => {
       });
     });
 
+    describe('font formats', () => {
+      it('should return font/ttf for .ttf files', () => {
+        expect(loader.getMimeType('game.ttf')).toBe('font/ttf');
+      });
+
+      it('should return font/otf for .otf files', () => {
+        expect(loader.getMimeType('custom.otf')).toBe('font/otf');
+      });
+
+      it('should return font/woff for .woff files', () => {
+        expect(loader.getMimeType('webfont.woff')).toBe('font/woff');
+      });
+
+      it('should return font/woff2 for .woff2 files', () => {
+        expect(loader.getMimeType('modern.woff2')).toBe('font/woff2');
+      });
+    });
+
     describe('text/data formats', () => {
       it('should return application/json for .json files', () => {
         expect(loader.getMimeType('data.json')).toBe('application/json');

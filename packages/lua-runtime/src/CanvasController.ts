@@ -15,8 +15,10 @@ import {
   InputCapture,
   GameLoopController,
   ImageCache,
+  FontCache,
   AssetLoader,
   VALID_IMAGE_EXTENSIONS,
+  VALID_FONT_EXTENSIONS,
 } from '@lua-learning/canvas-runtime'
 import type {
   DrawCommand,
@@ -91,8 +93,19 @@ export class CanvasController {
   // Image cache for loaded images
   private imageCache: ImageCache | null = null
 
+  // Font cache for loaded fonts
+  private fontCache: FontCache | null = null
+
   // Asset dimensions: width/height for each loaded asset
   private assetDimensions: Map<string, { width: number; height: number }> = new Map()
+
+  // Font state
+  private currentFontSize: number = 16
+  private currentFontFamily: string = 'monospace'
+
+  // Offscreen canvas for text measurement
+  private measureCanvas: HTMLCanvasElement | null = null
+  private measureCtx: CanvasRenderingContext2D | null = null
 
   constructor(callbacks: CanvasCallbacks, canvasId = 'canvas-main') {
     this.callbacks = callbacks
@@ -261,6 +274,51 @@ export class CanvasController {
   }
 
   /**
+   * Set the font size in pixels.
+   */
+  setFontSize(size: number): void {
+    this.currentFontSize = size
+    this.addDrawCommand({ type: 'setFontSize', size })
+    // Update measure context if it exists
+    if (this.measureCtx) {
+      this.measureCtx.font = `${size}px ${this.currentFontFamily}`
+    }
+  }
+
+  /**
+   * Set the font family.
+   */
+  setFontFamily(family: string): void {
+    this.currentFontFamily = family
+    this.addDrawCommand({ type: 'setFontFamily', family })
+    // Update measure context if it exists
+    if (this.measureCtx) {
+      this.measureCtx.font = `${this.currentFontSize}px ${family}`
+    }
+  }
+
+  /**
+   * Get the width of text in pixels using the current font settings.
+   */
+  getTextWidth(text: string): number {
+    const ctx = this.getMeasureContext()
+    return ctx.measureText(text).width
+  }
+
+  /**
+   * Get the measure context for text width calculations.
+   * Creates an offscreen canvas if needed.
+   */
+  private getMeasureContext(): CanvasRenderingContext2D {
+    if (!this.measureCtx) {
+      this.measureCanvas = document.createElement('canvas')
+      this.measureCtx = this.measureCanvas.getContext('2d')!
+      this.measureCtx.font = `${this.currentFontSize}px ${this.currentFontFamily}`
+    }
+    return this.measureCtx
+  }
+
+  /**
    * Set the canvas size.
    */
   setSize(width: number, height: number): void {
@@ -303,10 +361,26 @@ export class CanvasController {
   }
 
   /**
-   * Draw text.
+   * Draw text with optional font overrides.
+   * @param x - X coordinate (top-left)
+   * @param y - Y coordinate (top-left)
+   * @param text - Text to draw
+   * @param options - Optional font overrides for this text only
    */
-  drawText(x: number, y: number, text: string): void {
-    this.addDrawCommand({ type: 'text', x, y, text })
+  drawText(
+    x: number,
+    y: number,
+    text: string,
+    options?: { fontSize?: number; fontFamily?: string }
+  ): void {
+    const command: DrawCommand = { type: 'text', x, y, text }
+    if (options?.fontSize !== undefined) {
+      (command as { fontSize?: number }).fontSize = options.fontSize
+    }
+    if (options?.fontFamily !== undefined) {
+      (command as { fontFamily?: string }).fontFamily = options.fontFamily
+    }
+    this.addDrawCommand(command)
   }
 
   // --- Transformation API ---
@@ -505,6 +579,42 @@ export class CanvasController {
   }
 
   /**
+   * Register a font asset to be loaded when canvas.start() is called.
+   * @param name - Unique name to reference this font (use with set_font_family)
+   * @param path - Path to the font file (.ttf, .otf, .woff, .woff2)
+   * @throws Error if called after canvas.start() or if file extension is invalid
+   */
+  registerFontAsset(name: string, path: string): void {
+    // Check if started
+    if (this.started) {
+      throw new Error('Cannot define assets after canvas.start()')
+    }
+
+    // Validate font extension
+    const lowerPath = path.toLowerCase()
+    const hasValidExtension = VALID_FONT_EXTENSIONS.some((ext) =>
+      lowerPath.endsWith(ext)
+    )
+    if (!hasValidExtension) {
+      throw new Error(
+        `Cannot load '${path}': unsupported font format (expected TTF, OTF, WOFF, or WOFF2)`
+      )
+    }
+
+    // Register the asset definition
+    this.assetManifest.set(name, { name, path, type: 'font' })
+  }
+
+  /**
+   * Check if a font asset has been loaded.
+   * @param name - Name of the font asset
+   * @returns true if the font is loaded and available
+   */
+  isFontLoaded(name: string): boolean {
+    return this.fontCache?.has(name) ?? false
+  }
+
+  /**
    * Get the asset manifest (definitions registered via registerAsset).
    */
   getAssetManifest(): AssetManifest {
@@ -525,26 +635,62 @@ export class CanvasController {
       return
     }
 
-    // Create loader and cache
+    // Create loader and caches
     const loader = new AssetLoader(fileSystem, scriptDirectory)
     this.imageCache = new ImageCache()
+    this.fontCache = new FontCache()
 
     // Load each asset
     for (const definition of this.assetManifest.values()) {
       const loadedAsset = await loader.loadAsset(definition)
 
-      // Convert ArrayBuffer to HTMLImageElement and store in cache
-      // Note: We get dimensions from the loaded image element rather than
-      // the AssetLoader because image-size doesn't work in the browser
-      const image = await this.createImageFromData(loadedAsset.data, loadedAsset.mimeType)
-      this.imageCache.set(definition.name, image)
+      if (definition.type === 'image') {
+        // Convert ArrayBuffer to HTMLImageElement and store in cache
+        // Note: We get dimensions from the loaded image element rather than
+        // the AssetLoader because image-size doesn't work in the browser
+        const image = await this.createImageFromData(loadedAsset.data, loadedAsset.mimeType)
+        this.imageCache.set(definition.name, image)
 
-      // Store dimensions from the loaded image (browser-native)
-      this.assetDimensions.set(definition.name, {
-        width: image.width,
-        height: image.height,
-      })
+        // Store dimensions from the loaded image (browser-native)
+        this.assetDimensions.set(definition.name, {
+          width: image.width,
+          height: image.height,
+        })
+      } else if (definition.type === 'font') {
+        // Load font using FontFace API and add to document
+        const font = await this.createFontFromData(
+          definition.name,
+          loadedAsset.data,
+          loadedAsset.mimeType
+        )
+        this.fontCache.set(definition.name, font)
+      }
     }
+  }
+
+  /**
+   * Create a FontFace from binary data and add to document.
+   * @param name - The font family name to use
+   * @param data - The font binary data
+   * @param mimeType - Optional MIME type
+   * @returns The loaded FontFace
+   */
+  private async createFontFromData(
+    name: string,
+    data: ArrayBuffer,
+    _mimeType?: string
+  ): Promise<FontFace> {
+    // Create FontFace with the asset name as family name
+    const font = new FontFace(name, data)
+
+    // Load the font
+    await font.load()
+
+    // Add to document so CSS can use it
+    // Note: TypeScript's DOM types may not include FontFaceSet.add()
+    ;(document.fonts as unknown as Set<FontFace>).add(font)
+
+    return font
   }
 
   /**
