@@ -191,39 +191,7 @@ describe('luaTokenizer', () => {
     })
   })
 
-  describe('table constructor patterns', () => {
-    const rootRules = luaTokenizerConfig.tokenizer.root
-
-    it('has bracket delimiters for table constructors', () => {
-      const hasBracketPattern = rootRules.some((rule) => {
-        if (Array.isArray(rule) && rule[0] instanceof RegExp) {
-          // Match patterns like [{}()[\]] or [{}()\[\]]
-          const source = rule[0].source
-          return (
-            source.includes('[{}]') ||
-            source.includes('[{}()') ||
-            source === '[{}()[\\]]'
-          )
-        }
-        return false
-      })
-      expect(hasBracketPattern).toBe(true)
-    })
-
-    it('has table key highlighting pattern', () => {
-      const hasKeyPattern = rootRules.some((rule) => {
-        if (Array.isArray(rule) && rule[0] instanceof RegExp) {
-          // Check for key: pattern or key = pattern in table context
-          return (
-            rule[0].source.includes('key') ||
-            (rule[0].source.includes('[a-zA-Z_]') && rule[0].source.includes('='))
-          )
-        }
-        return false
-      })
-      expect(hasKeyPattern).toBe(true)
-    })
-  })
+  // Table constructor pattern tests are in luaTokenizerTable.test.ts
 
   describe('string patterns', () => {
     const rootRules = luaTokenizerConfig.tokenizer.root

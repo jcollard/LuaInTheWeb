@@ -227,27 +227,11 @@ export const luaTokenizerConfig: languages.IMonarchLanguage = {
       // Whitespace and comments
       { include: '@whitespace' },
 
-      // Table key highlighting: { key = value } or { key: value } (colon style)
-      [
-        /({)(\s*)([a-zA-Z_]\w*)(\s*)(=)/,
-        ['@brackets', '', 'variable.property', '', 'delimiter'],
-      ],
-      [
-        /(,)(\s*)([a-zA-Z_]\w*)(\s*)(=)/,
-        ['delimiter', '', 'variable.property', '', 'delimiter'],
-      ],
-      // Table key: { key: value } style (less common in Lua, but supported)
-      [
-        /(,)(\s*)([a-zA-Z_]\w*)(\s*)(:)(?!:)/,
-        ['delimiter', '', 'variable.property', '', 'delimiter'],
-      ],
-      [
-        /({)(\s*)([a-zA-Z_]\w*)(\s*)(:)(?!:)/,
-        ['@brackets', '', 'variable.property', '', 'delimiter'],
-      ],
+      // Table constructor: enter table state for key highlighting
+      [/{/, { token: '@brackets', next: '@table' }],
 
-      // Brackets and delimiters
-      [/[{}()[\]]/, '@brackets'],
+      // Brackets and delimiters (excluding { which is handled above)
+      [/[}()[\]]/, '@brackets'],
       [
         /@symbols/,
         {
@@ -344,6 +328,73 @@ export const luaTokenizerConfig: languages.IMonarchLanguage = {
           },
         },
       ],
+    ],
+
+    // Table constructor state - handles key = value highlighting
+    // Only in this state do we highlight identifiers before = as properties
+    table: [
+      // Exit table on closing brace
+      [/}/, { token: '@brackets', next: '@pop' }],
+
+      // Nested table: enter another table state
+      [/{/, { token: '@brackets', next: '@table' }],
+
+      // Table key highlighting: key = value (first key after { or ,)
+      [
+        /([a-zA-Z_]\w*)(\s*)(=)/,
+        ['variable.property', '', 'delimiter'],
+      ],
+      // Table key: key: value style (less common in Lua, but supported)
+      [
+        /([a-zA-Z_]\w*)(\s*)(:)(?!:)/,
+        ['variable.property', '', 'delimiter'],
+      ],
+
+      // Include all the standard patterns from root for values inside tables
+      // Multi-line strings
+      [/\[=+\[/, { token: 'string.quote', next: '@mlstring.$0' }],
+      [/\[\[/, { token: 'string.quote', next: '@mlstring.0' }],
+
+      // Identifiers and keywords (for values)
+      [
+        /[a-zA-Z_]\w*/,
+        {
+          cases: {
+            '@keywords': { token: 'keyword.$0' },
+            '@default': 'identifier',
+          },
+        },
+      ],
+
+      // Whitespace and comments
+      { include: '@whitespace' },
+
+      // Other brackets and delimiters
+      [/[()[\]]/, '@brackets'],
+      [
+        /@symbols/,
+        {
+          cases: {
+            '@operators': 'delimiter',
+            '@default': '',
+          },
+        },
+      ],
+
+      // Numbers
+      [/0[xX][0-9a-fA-F_]*[0-9a-fA-F](\.[0-9a-fA-F]*)?([pP][+-]?\d+)?/, 'number.hex'],
+      [/\d*\.\d+([eE][+-]?\d+)?/, 'number.float'],
+      [/\d+[eE][+-]?\d+/, 'number.float'],
+      [/\d+/, 'number'],
+
+      // Delimiter after numbers
+      [/[;,.]/, 'delimiter'],
+
+      // Strings
+      [/"([^"\\]|\\.)*$/, 'string.invalid'],
+      [/'([^'\\]|\\.)*$/, 'string.invalid'],
+      [/"/, 'string', '@string."'],
+      [/'/, 'string', "@string.'"],
     ],
   },
 }

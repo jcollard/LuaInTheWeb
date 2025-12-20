@@ -1,4 +1,7 @@
 {
+  "env": {
+    "SKIP_PRE_PUSH_TESTS": "0"
+  },
   "permissions": {
     "allow": [
       "Bash(gh issue list --label \"tech-debt\" --state open --json number,title,body,labels,createdAt --limit 10)",
@@ -82,7 +85,9 @@
       "Bash(grep:*)",
       "Bash(git add:*)",
       "Bash(npm run build:lua-runtime:*)",
-      "Bash(npm run build:shell-core:*)"
+      "Bash(npm run build:shell-core:*)",
+      "Bash(npm run build:canvas-runtime:*)",
+      "Bash(npm run:*)"
     ],
     "deny": [
       "Bash(npm run dev)",
@@ -99,8 +104,5 @@
       "Bash(del lua-learning-website/reports/mutation/.stryker-incremental.json)",
       "Bash(Remove-Item lua-learning-website/reports/mutation/.stryker-incremental.json)"
     ]
-  },
-  "env": {
-    "SKIP_PRE_PUSH_TESTS": "0"
   }
 }
