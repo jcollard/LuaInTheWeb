@@ -2,6 +2,7 @@ import { LuaFactory, LuaEngine } from 'wasmoon';
 import type { IWorkerChannel } from '../channels/IWorkerChannel.js';
 import { VALID_IMAGE_EXTENSIONS, type DrawCommand, type AssetDefinition } from '../shared/types.js';
 import type { WorkerState } from './WorkerMessages.js';
+import { formatCanvasTickError } from './luaErrorUtils.js';
 
 /**
  * Lua canvas runtime that manages the Lua engine and game loop.
@@ -566,7 +567,7 @@ export class LuaCanvasRuntime {
             this.onDrawCallback();
           } catch (error) {
             if (this.errorHandler && error instanceof Error) {
-              this.errorHandler(error.message);
+              this.errorHandler(formatCanvasTickError(error.message));
             }
           }
         }
@@ -577,7 +578,7 @@ export class LuaCanvasRuntime {
         }
       } catch (error) {
         if (this.errorHandler && error instanceof Error) {
-          this.errorHandler(error.message);
+          this.errorHandler(formatCanvasTickError(error.message));
         }
       }
     }

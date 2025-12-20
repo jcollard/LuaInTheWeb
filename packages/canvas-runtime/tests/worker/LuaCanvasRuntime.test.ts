@@ -556,6 +556,32 @@ describe('LuaCanvasRuntime', () => {
 
       expect(errorHandler).toHaveBeenCalledWith(expect.stringContaining('Test error from Lua'));
     });
+
+    it('should format errors with canvas.tick prefix and line number', async () => {
+      const errorHandler = vi.fn();
+      runtime.onError(errorHandler);
+
+      await runtime.loadCode(`
+        canvas.tick(function()
+          error("Test error")
+        end)
+      `);
+
+      runtime.start();
+      channel.signalFrameReady();
+
+      await vi.waitFor(() => {
+        return errorHandler.mock.calls.length > 0;
+      }, { timeout: 100 });
+
+      runtime.stop();
+
+      const errorMessage = errorHandler.mock.calls[0][0];
+      // Should have canvas.tick prefix
+      expect(errorMessage).toMatch(/^canvas\.tick/);
+      // Should include line number in format "(line N)"
+      expect(errorMessage).toMatch(/\(line \d+\)/);
+    });
   });
 
   describe('dispose', () => {
