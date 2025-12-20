@@ -48,6 +48,16 @@ describe('transformLuaError', () => {
       // Should start with the helpful message, no prefix
       expect(result).toMatch(/^attempt to iterate/)
     })
+
+    it('should handle "self2 is not a function" variant', () => {
+      // This variant occurs with different internal variable names
+      const error = 'canvas.tick: TypeError: self2 is not a function'
+      const result = transformLuaError(error)
+      expect(result).toContain('canvas.tick:')
+      expect(result).toContain('pairs()')
+      expect(result).not.toContain('TypeError')
+      expect(result).not.toContain('self2 is not a function')
+    })
   })
 
   describe('passthrough for unrecognized errors', () => {

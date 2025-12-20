@@ -18,14 +18,15 @@ interface ErrorPattern {
  */
 const ERROR_PATTERNS: ErrorPattern[] = [
   {
-    // "o is not a function" - occurs when using for...in on a non-iterator
-    // The "o" is the second return value expected from an iterator function
+    // Iterator errors - occur when using for...in on a non-iterator value
+    // The variable name (o, self2, etc.) is an internal wasmoon variable
     // May appear as:
     //   - "o is not a function"
+    //   - "self2 is not a function"
     //   - "TypeError: o is not a function"
-    //   - "canvas.tick: TypeError: o is not a function"
-    // Pattern: optional canvas.method prefix, optional TypeError, then the error
-    pattern: /^(canvas\.\w+:\s*)?(TypeError:\s*)?o is not a function$/,
+    //   - "canvas.tick: TypeError: self2 is not a function"
+    // Pattern: optional canvas.method prefix, optional TypeError, then short identifier
+    pattern: /^(canvas\.\w+:\s*)?(TypeError:\s*)?\w+ is not a function$/,
     replacement:
       '$1attempt to iterate over a non-iterator value. Hint: use pairs() or ipairs() for tables',
   },
