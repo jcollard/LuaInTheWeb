@@ -20,9 +20,14 @@ const ERROR_PATTERNS: ErrorPattern[] = [
   {
     // "o is not a function" - occurs when using for...in on a non-iterator
     // The "o" is the second return value expected from an iterator function
-    pattern: /^o is not a function$/,
+    // May appear as:
+    //   - "o is not a function"
+    //   - "TypeError: o is not a function"
+    //   - "canvas.tick: TypeError: o is not a function"
+    // Pattern: optional canvas.method prefix, optional TypeError, then the error
+    pattern: /^(canvas\.\w+:\s*)?(TypeError:\s*)?o is not a function$/,
     replacement:
-      'attempt to iterate over a non-iterator value. Hint: use pairs() or ipairs() for tables',
+      '$1attempt to iterate over a non-iterator value. Hint: use pairs() or ipairs() for tables',
   },
 ]
 
@@ -52,7 +57,8 @@ export function transformLuaError(error: string): string {
   // Try to match against known patterns
   for (const { pattern, replacement } of ERROR_PATTERNS) {
     if (pattern.test(message)) {
-      return prefix + replacement
+      const transformed = message.replace(pattern, replacement)
+      return prefix + transformed
     }
   }
 

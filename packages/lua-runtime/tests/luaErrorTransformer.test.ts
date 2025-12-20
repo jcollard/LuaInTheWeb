@@ -28,6 +28,26 @@ describe('transformLuaError', () => {
       expect(result).toContain('main.lua:5:')
       expect(result).toContain('pairs()')
     })
+
+    it('should handle canvas.tick TypeError wrapper', () => {
+      // Real error format from canvas runtime
+      const error = 'canvas.tick: TypeError: o is not a function'
+      const result = transformLuaError(error)
+      expect(result).toContain('canvas.tick:')
+      expect(result).toContain('pairs()')
+      expect(result).not.toContain('TypeError')
+      expect(result).not.toContain('o is not a function')
+    })
+
+    it('should handle TypeError wrapper without canvas.tick', () => {
+      const error = 'TypeError: o is not a function'
+      const result = transformLuaError(error)
+      expect(result).toContain('pairs()')
+      expect(result).not.toContain('TypeError')
+      expect(result).not.toContain('o is not a function')
+      // Should start with the helpful message, no prefix
+      expect(result).toMatch(/^attempt to iterate/)
+    })
   })
 
   describe('passthrough for unrecognized errors', () => {
