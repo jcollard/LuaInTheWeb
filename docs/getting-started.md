@@ -88,6 +88,60 @@ Recommended extensions:
 
 The project includes VS Code settings in `.vscode/settings.json` for consistent formatting.
 
+## MCP (Model Context Protocol) Setup
+
+The project includes Code-Index-MCP configuration for enhanced AI-assisted development with Claude Code.
+
+### Configuration
+
+The `.mcp.json` file in the project root configures the Code-Index-MCP server:
+
+```json
+{
+  "mcpServers": {
+    "code-index-mcp": {
+      "command": "uvx",
+      "args": ["code-index-mcp"]
+    }
+  }
+}
+```
+
+### Prerequisites
+
+- **uv** (Python package manager): Install from [https://docs.astral.sh/uv/](https://docs.astral.sh/uv/)
+- The `uvx` command must be available in your PATH
+
+### Features
+
+Code-Index-MCP provides:
+- **Fast file search**: Find files by pattern across the codebase
+- **Code search**: Search for code patterns with regex support
+- **Symbol extraction**: Index and search functions, classes, interfaces, and methods
+- **File watching**: Automatic index updates when files change
+- **Multi-language support**: TypeScript, JavaScript, Python, Lua, CSS, Markdown, and more
+
+### Usage with Claude Code
+
+When using Claude Code with MCP enabled, the assistant can:
+- Quickly find files and code patterns
+- Understand project structure through symbol indexing
+- Search across the entire codebase efficiently
+
+### Index Management
+
+After switching branches, the index may need to be rebuilt:
+- The file watcher detects changes automatically
+- For major branch switches, a deep index rebuild may be required
+- The MCP server handles this automatically when needed
+
+### Testing the Setup
+
+To verify the MCP server is working:
+1. Start a Claude Code session
+2. The MCP server will automatically connect
+3. Claude can now use advanced code search and indexing features
+
 ## Next Steps
 
 - Read the [Architecture Guide](./architecture.md) to understand the codebase

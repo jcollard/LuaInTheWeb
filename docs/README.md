@@ -10,6 +10,16 @@ Welcome to the LuaInTheWeb developer documentation. This directory contains all 
 - [Testing Guide](./testing.md) - TDD practices and testing standards
 - [Contributing](./contributing.md) - How to contribute to the project
 
+## Prerequisites
+
+Before getting started, ensure you have:
+
+- Node.js 18+ and npm 9+
+- Git
+- **uv/uvx** for Code-Index-MCP (required for Claude Code workflow)
+
+See [Getting Started](./getting-started.md) for detailed setup instructions including MCP configuration.
+
 ## Project Overview
 
 LuaInTheWeb is a web-based Lua learning and practice platform that allows users to learn and execute Lua code directly in their browsers.

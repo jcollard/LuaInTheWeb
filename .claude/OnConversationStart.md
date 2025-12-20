@@ -8,6 +8,57 @@ LuaInTheWeb is a web-based Lua learning and practice platform that allows users 
 
 **Tech Stack:** React 19 + TypeScript 5.9 + Vite 7 + wasmoon (WebAssembly Lua)
 
+## Prerequisites
+
+Before using Claude Code with this project, ensure you have:
+
+- Node.js 18+ (LTS recommended)
+- npm 9+ or yarn
+- Git
+- **uv/uvx** (for Code-Index-MCP): Install from https://docs.astral.sh/uv/
+  - Required for code indexing and search features
+  - See [MCP Setup](docs/getting-started.md#mcp-model-context-protocol-setup) for configuration details
+
+## Tool Usage Guidelines
+
+### Code Search & File Finding
+
+**Prefer MCP tools** for code exploration and search tasks:
+
+| Task | Use This Tool | Not These | Why |
+|------|---------------|-----------|-----|
+| **Search code patterns** | `mcp__code-index-mcp__search_code_advanced` | Grep, Bash grep | Faster, pre-indexed, pagination support |
+| **Find files by pattern** | `mcp__code-index-mcp__find_files` | Glob, Bash find | Uses in-memory index, instant results |
+| **Get file overview** | `mcp__code-index-mcp__get_file_summary` | Read then analyze | Shows structure, symbols, complexity metrics |
+| **Symbol search** | `mcp__code-index-mcp__search_code_advanced` | Grep + parsing | Understands code structure (functions, classes) |
+
+### When to Use Traditional Tools
+
+- **Read**: Still use for reading specific file content
+- **Edit/Write**: File modifications (MCP is read-only)
+- **Grep with context**: When you need `-A`/`-B`/`-C` context lines around matches
+- **Complex regex**: When you need advanced regex that MCP doesn't support
+
+### Best Practices
+
+1. **Start with MCP for exploration**: When you need to understand code structure or find patterns, use MCP first
+2. **Combine tools effectively**: Use MCP to find files, then Read to examine them
+3. **Trust the index**: MCP maintains an up-to-date index via file watching
+4. **Manual refresh when needed**: After major branch switches, the index may need rebuilding:
+   ```
+   mcp__code-index-mcp__refresh_index()
+   ```
+
+### Example Workflow
+
+```
+# Finding where a feature is implemented
+1. mcp__code-index-mcp__search_code_advanced("UserAuthentication")
+   → Find all references quickly
+2. Read the most relevant files
+3. Use mcp__code-index-mcp__get_file_summary() for file overviews
+```
+
 ## Project Structure
 
 ```
