@@ -8,6 +8,17 @@ LuaInTheWeb is a web-based Lua learning and practice platform that allows users 
 
 **Tech Stack:** React 19 + TypeScript 5.9 + Vite 7 + wasmoon (WebAssembly Lua)
 
+## Prerequisites
+
+Before using Claude Code with this project, ensure you have:
+
+- Node.js 18+ (LTS recommended)
+- npm 9+ or yarn
+- Git
+- **uv/uvx** (for Code-Index-MCP): Install from https://docs.astral.sh/uv/
+  - Required for code indexing and search features
+  - See [MCP Setup](docs/getting-started.md#mcp-model-context-protocol-setup) for configuration details
+
 ## Project Structure
 
 ```

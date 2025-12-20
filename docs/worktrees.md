@@ -127,6 +127,18 @@ npm install
 
 This adds ~200MB per worktree but ensures complete isolation.
 
+### Code Index (MCP)
+
+Each worktree has its own independent code index:
+
+- **Automatic indexing**: The MCP server indexes each worktree separately
+- **Branch switching**: When switching branches within a worktree, the index may need rebuilding
+  - The file watcher detects changes automatically
+  - For major branch changes, run a manual rebuild if needed
+- **Performance**: First index build takes a few seconds; subsequent updates are incremental
+
+**Note**: This is why testing MCP with worktrees (issue #394) was important - to ensure indexing works correctly across multiple worktree contexts.
+
 ### Build Artifacts
 
 Each worktree maintains its own build artifacts (`dist/`, `.vite/`, etc.), which:

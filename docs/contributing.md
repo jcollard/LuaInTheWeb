@@ -2,6 +2,17 @@
 
 Thank you for contributing to LuaInTheWeb! This guide explains our development process.
 
+## Prerequisites
+
+Before contributing, you'll need:
+
+- Node.js 18+ (LTS recommended)
+- npm 9+ or yarn
+- Git
+- **uv/uvx** for Code-Index-MCP (required for Claude Code workflow)
+  - Install from https://docs.astral.sh/uv/
+  - See [MCP Setup in Getting Started](./getting-started.md#mcp-model-context-protocol-setup)
+
 ## Branch Policy
 
 > **Never commit directly to main.** All changes must go through branches and pull requests.
