@@ -1,4 +1,8 @@
 import type { UseShellFileSystem, ShellCanvasCallbacks } from '../../hooks/useShell'
+import type { ShellTerminalHandle } from '../ShellTerminal'
+
+// Re-export for convenience
+export type { ShellTerminalHandle }
 
 /**
  * Props for the BottomPanel component

@@ -28,8 +28,11 @@ export interface ExplorerPropsParams {
   makeTabPermanent: (path: string) => void
   // Binary file handler
   openBinaryViewer: (path: string) => void
+  // Shell integration
+  handleCdToLocation?: (path: string) => void
   // Workspace props
   workspaces: Workspace[]
+  pendingWorkspaces: Set<string>
   isFileSystemAccessSupported: boolean
   addVirtualWorkspace: (name: string) => void
   handleAddLocalWorkspace: (name: string, handle: FileSystemDirectoryHandle) => Promise<void>
@@ -131,8 +134,10 @@ export function createExplorerProps(params: ExplorerPropsParams) {
     onCancelPendingNewFolder: params.clearPendingNewFolder,
     onPreviewMarkdown: params.openMarkdownPreview,
     onEditMarkdown: params.openMarkdownEdit,
+    onCdToLocation: params.handleCdToLocation,
     workspaceProps: {
       workspaces: params.workspaces,
+      pendingWorkspaces: params.pendingWorkspaces,
       isFileSystemAccessSupported: params.isFileSystemAccessSupported,
       onAddVirtualWorkspace: params.addVirtualWorkspace,
       onAddLocalWorkspace: params.handleAddLocalWorkspace,

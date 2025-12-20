@@ -5,6 +5,7 @@ import { useFileExplorer } from './useFileExplorer'
 describe('useFileExplorer', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
   })
 
   describe('expanded folders state', () => {
@@ -452,6 +453,73 @@ describe('useFileExplorer', () => {
       // Assert - only folder1 should be collapsed
       expect(result.current.expandedPaths.has('/folder1')).toBe(false)
       expect(result.current.expandedPaths.has('/folder2')).toBe(true)
+    })
+  })
+
+  describe('expanded paths persistence', () => {
+    it('should load expanded paths from localStorage on init', () => {
+      // Arrange - pre-populate localStorage
+      localStorage.setItem('lua-ide-explorer-expanded', JSON.stringify(['/folder1', '/folder2']))
+
+      // Act
+      const { result } = renderHook(() => useFileExplorer())
+
+      // Assert
+      expect(result.current.expandedPaths.has('/folder1')).toBe(true)
+      expect(result.current.expandedPaths.has('/folder2')).toBe(true)
+      expect(result.current.expandedPaths.size).toBe(2)
+    })
+
+    it('should save expanded paths to localStorage when changed', async () => {
+      // Arrange
+      const { result } = renderHook(() => useFileExplorer())
+
+      // Act
+      act(() => {
+        result.current.toggleFolder('/utils')
+      })
+
+      // Wait for debounce
+      await vi.waitFor(() => {
+        const stored = localStorage.getItem('lua-ide-explorer-expanded')
+        expect(stored).not.toBeNull()
+        expect(JSON.parse(stored!)).toContain('/utils')
+      })
+    })
+
+    it('should handle invalid localStorage data gracefully', () => {
+      // Arrange - set invalid JSON
+      localStorage.setItem('lua-ide-explorer-expanded', 'not valid json')
+
+      // Act - should not throw
+      const { result } = renderHook(() => useFileExplorer())
+
+      // Assert - should fall back to empty set
+      expect(result.current.expandedPaths.size).toBe(0)
+    })
+
+    it('should filter out non-string values from localStorage', () => {
+      // Arrange - set array with mixed types
+      localStorage.setItem('lua-ide-explorer-expanded', JSON.stringify(['/valid', 123, null, '/also-valid']))
+
+      // Act
+      const { result } = renderHook(() => useFileExplorer())
+
+      // Assert - should only have string paths
+      expect(result.current.expandedPaths.has('/valid')).toBe(true)
+      expect(result.current.expandedPaths.has('/also-valid')).toBe(true)
+      expect(result.current.expandedPaths.size).toBe(2)
+    })
+
+    it('should handle non-array localStorage data gracefully', () => {
+      // Arrange - set object instead of array
+      localStorage.setItem('lua-ide-explorer-expanded', JSON.stringify({ path: '/folder' }))
+
+      // Act
+      const { result } = renderHook(() => useFileExplorer())
+
+      // Assert - should fall back to empty set
+      expect(result.current.expandedPaths.size).toBe(0)
     })
   })
 })

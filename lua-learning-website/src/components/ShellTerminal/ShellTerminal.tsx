@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useCallback, useState, useImperativeHandle, forwardRef } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
@@ -10,13 +10,13 @@ import { useProcessManager } from '../../hooks/useProcessManager'
 import { useShellTerminal } from './useShellTerminal'
 import { createInputHandler, createPasteHandler } from './useTerminalInput'
 import { StopButton } from '../StopButton'
-import type { ShellTerminalProps } from './types'
+import type { ShellTerminalProps, ShellTerminalHandle } from './types'
 
 /**
  * Terminal component that provides a shell interface using shell-core.
  * Connects to the editor's filesystem for file operations.
  */
-export function ShellTerminal({
+export const ShellTerminal = forwardRef<ShellTerminalHandle, ShellTerminalProps>(function ShellTerminal({
   fileSystem,
   embedded = false,
   className,
@@ -25,7 +25,7 @@ export function ShellTerminal({
   onFileMove,
   onRequestOpenFile,
   visible,
-}: ShellTerminalProps) {
+}, ref) {
   const { theme } = useTheme()
   const initialThemeRef = useRef(theme)
   const terminalRef = useRef<HTMLDivElement>(null)
@@ -216,6 +216,19 @@ export function ShellTerminal({
     // Just show the prompt
     showPrompt()
   }, [showPrompt])
+
+  // Expose imperative handle for external command injection
+  useImperativeHandle(ref, () => ({
+    executeCommand: (command: string) => {
+      const terminal = xtermRef.current
+      if (!terminal) return
+
+      // Write the command to the terminal as if user typed it
+      terminal.write(command)
+      // Execute the command
+      handleCommand(command)
+    },
+  }), [handleCommand])
 
   // Use the shell terminal hook for input handling
   const {
@@ -413,8 +426,12 @@ export function ShellTerminal({
 
   const containerClassName = `${styles.container}${embedded ? ` ${styles.containerEmbedded}` : ''}${className ? ` ${className}` : ''}`
 
+
   return (
-    <div className={containerClassName} data-testid="shell-terminal-container">
+    <div
+      className={containerClassName}
+      data-testid="shell-terminal-container"
+    >
       {!embedded && (
         <div className={styles.header}>
           <h3>Shell</h3>
@@ -429,4 +446,4 @@ export function ShellTerminal({
       <div ref={terminalRef} className={styles.terminal} />
     </div>
   )
-}
+})

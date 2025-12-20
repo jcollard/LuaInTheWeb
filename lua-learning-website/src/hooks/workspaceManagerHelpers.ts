@@ -307,10 +307,19 @@ export function createDisconnectedFileSystem(): IFileSystem {
 export function initializeWorkspaces(): WorkspaceManagerState {
   const persistedWorkspaces = loadPersistedWorkspaces()
 
+  // Async workspaces that will be loaded later
+  const pendingWorkspaces = new Set([
+    BOOK_WORKSPACE_ID,
+    DOCS_WORKSPACE_ID,
+    EXAMPLES_WORKSPACE_ID,
+    LIBRARY_WORKSPACE_ID,
+  ])
+
   if (!persistedWorkspaces || persistedWorkspaces.length === 0) {
     const defaultWorkspace = createDefaultWorkspace()
     return {
       workspaces: [defaultWorkspace],
+      pendingWorkspaces,
     }
   }
 
@@ -356,5 +365,6 @@ export function initializeWorkspaces(): WorkspaceManagerState {
 
   return {
     workspaces,
+    pendingWorkspaces,
   }
 }

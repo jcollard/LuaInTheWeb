@@ -361,6 +361,78 @@ describe('FileTree', () => {
     })
   })
 
+  describe('pending workspaces loading placeholders', () => {
+    const existingTree: TreeNode[] = [
+      { name: 'home', path: '/home', type: 'folder', isWorkspace: true },
+    ]
+
+    const treeWithLoadingWorkspace: TreeNode[] = [
+      { name: 'home', path: '/home', type: 'folder', isWorkspace: true },
+      { name: 'Docs', path: '/docs', type: 'folder', isWorkspace: true, isDocsWorkspace: true, isLoading: true, isReadOnly: true },
+    ]
+
+    it('should render loading placeholder for pending workspace not in tree', () => {
+      // Arrange
+      const pendingWorkspaces = new Set(['docs', 'libs'])
+
+      // Act
+      render(<FileTree {...defaultProps} tree={existingTree} pendingWorkspaces={pendingWorkspaces} />)
+
+      // Assert - should show placeholders for pending workspaces
+      expect(screen.getByText('Docs')).toBeInTheDocument()
+      expect(screen.getByText('Libs')).toBeInTheDocument()
+    })
+
+    it('should show loading spinner icon for loading workspace', () => {
+      // Arrange & Act
+      render(<FileTree {...defaultProps} tree={treeWithLoadingWorkspace} />)
+
+      // Assert
+      expect(screen.getByTestId('loading-workspace-icon')).toBeInTheDocument()
+    })
+
+    it('should not call onSelect when clicking loading placeholder', () => {
+      // Arrange
+      const onSelect = vi.fn()
+      const pendingWorkspaces = new Set(['docs'])
+      render(<FileTree {...defaultProps} tree={existingTree} pendingWorkspaces={pendingWorkspaces} onSelect={onSelect} />)
+
+      // Act - click on loading placeholder
+      fireEvent.click(screen.getByText('Docs'))
+
+      // Assert - onSelect should NOT be called for loading items
+      expect(onSelect).not.toHaveBeenCalled()
+    })
+
+    it('should not duplicate workspace that is both pending and in tree', () => {
+      // Arrange - docs is in the tree and also in pending (shouldn't happen, but test defense)
+      const treeWithDocs: TreeNode[] = [
+        { name: 'home', path: '/home', type: 'folder', isWorkspace: true },
+        { name: 'Docs', path: '/docs', type: 'folder', isWorkspace: true, isDocsWorkspace: true },
+      ]
+      const pendingWorkspaces = new Set(['docs'])
+
+      // Act
+      render(<FileTree {...defaultProps} tree={treeWithDocs} pendingWorkspaces={pendingWorkspaces} />)
+
+      // Assert - should only show one Docs entry
+      expect(screen.getAllByText('Docs')).toHaveLength(1)
+    })
+
+    it('should render loading placeholders in read-only section', () => {
+      // Arrange
+      const pendingWorkspaces = new Set(['adventures'])
+
+      // Act
+      render(<FileTree {...defaultProps} tree={existingTree} pendingWorkspaces={pendingWorkspaces} />)
+
+      // Assert - Adventures should appear after home (in read-only section)
+      const items = screen.getAllByRole('treeitem')
+      const names = items.map((item) => item.getAttribute('aria-label'))
+      expect(names).toEqual(['home', 'Adventures'])
+    })
+  })
+
   describe('deep tree navigation', () => {
     it('should find selected node in deeply nested tree', () => {
       // Arrange

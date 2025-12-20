@@ -1,5 +1,26 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import type { UseFileExplorerReturn, ContextMenuState, ConfirmDialogState } from './types'
+
+const STORAGE_KEY = 'lua-ide-explorer-expanded'
+const DEBOUNCE_MS = 100
+
+/**
+ * Load expanded paths from localStorage
+ */
+function loadExpandedPaths(): Set<string> {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      const paths = JSON.parse(stored)
+      if (Array.isArray(paths)) {
+        return new Set(paths.filter((p): p is string => typeof p === 'string'))
+      }
+    }
+  } catch {
+    // Invalid JSON or localStorage not available
+  }
+  return new Set()
+}
 
 const initialContextMenu: ContextMenuState = {
   isOpen: false,
@@ -20,8 +41,20 @@ export function useFileExplorer(): UseFileExplorerReturn {
   // Selection state
   const [selectedPath, setSelectedPath] = useState<string | null>(null)
 
-  // Expanded folders state
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
+  // Expanded folders state - persisted to localStorage
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(loadExpandedPaths)
+
+  // Save expanded paths to localStorage (debounced)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([...expandedPaths]))
+      } catch {
+        // localStorage not available
+      }
+    }, DEBOUNCE_MS)
+    return () => clearTimeout(timeout)
+  }, [expandedPaths])
 
   // Renaming state
   const [renamingPath, setRenamingPath] = useState<string | null>(null)

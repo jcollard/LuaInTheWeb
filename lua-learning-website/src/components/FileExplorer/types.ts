@@ -8,6 +8,8 @@ import type { Workspace } from '../../hooks/workspaceTypes'
 export interface WorkspaceProps {
   /** List of workspaces (workspaces appear as root-level folders in the tree) */
   workspaces: Workspace[]
+  /** IDs of workspaces currently being loaded (for showing loading indicators) */
+  pendingWorkspaces?: Set<string>
   /** Whether the File System Access API is supported */
   isFileSystemAccessSupported: boolean
   /** Callback to add a virtual workspace */
@@ -53,6 +55,8 @@ export interface FileExplorerProps {
   onPreviewMarkdown?: (path: string) => void
   /** Open a markdown file in edit mode (raw text) */
   onEditMarkdown?: (path: string) => void
+  /** Open a folder/workspace in terminal (cd to location) */
+  onCdToLocation?: (path: string) => void
   className?: string
   /** Optional workspace management props. When provided, workspace tabs are shown. */
   workspaceProps?: WorkspaceProps

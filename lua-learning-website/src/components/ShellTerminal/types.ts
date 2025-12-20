@@ -30,3 +30,12 @@ export interface ShellOutputLine {
   type: 'command' | 'output' | 'error'
   text: string
 }
+
+/**
+ * Imperative handle for ShellTerminal component.
+ * Allows parent components to execute commands in the shell.
+ */
+export interface ShellTerminalHandle {
+  /** Execute a command in the shell as if the user typed it */
+  executeCommand: (command: string) => void
+}

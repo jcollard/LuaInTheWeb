@@ -4,10 +4,19 @@ import type { TreeNode } from '../../hooks/useFileSystem'
 import type { FileTreeProps } from './types'
 import styles from './FileTree.module.css'
 
+// Display names for pending workspace IDs
+const PENDING_WORKSPACE_NAMES: Record<string, string> = {
+  adventures: 'Adventures',
+  docs: 'Docs',
+  examples: 'Examples',
+  libs: 'Libs',
+}
+
 export function FileTree({
   tree,
   selectedPath,
   expandedPaths,
+  pendingWorkspaces,
   onSelect,
   onDoubleClick,
   onToggle,
@@ -21,6 +30,7 @@ export function FileTree({
   onReconnect,
 }: FileTreeProps) {
   // Separate regular workspaces from read-only workspaces (libs, docs, books, examples)
+  // Also create placeholder nodes for pending workspaces
   const { regularNodes, readOnlyNodes } = useMemo(() => {
     const regular: TreeNode[] = []
     const readOnly: TreeNode[] = []
@@ -33,8 +43,35 @@ export function FileTree({
       }
     }
 
+    // Add loading placeholders for pending workspaces that aren't in the tree yet
+    if (pendingWorkspaces && pendingWorkspaces.size > 0) {
+      const existingIds = new Set(tree.map((n) => {
+        // Match workspace ID from path (e.g., '/adventures' -> 'adventures')
+        return n.path.slice(1)
+      }))
+
+      for (const id of pendingWorkspaces) {
+        if (!existingIds.has(id)) {
+          const name = PENDING_WORKSPACE_NAMES[id] || id
+          readOnly.push({
+            name,
+            path: `/${id}`,
+            type: 'folder',
+            isWorkspace: true,
+            isLoading: true,
+            isReadOnly: true,
+            // Set the appropriate workspace type flag
+            isBookWorkspace: id === 'adventures',
+            isDocsWorkspace: id === 'docs',
+            isExamplesWorkspace: id === 'examples',
+            isLibraryWorkspace: id === 'libs',
+          })
+        }
+      }
+    }
+
     return { regularNodes: regular, readOnlyNodes: readOnly }
-  }, [tree])
+  }, [tree, pendingWorkspaces])
 
   // Flatten tree to get ordered list of visible paths for keyboard navigation
   // Uses regularNodes then readOnlyNodes to match render order
@@ -179,15 +216,16 @@ export function FileTree({
           isDocsWorkspace={node.isDocsWorkspace}
           isBookWorkspace={node.isBookWorkspace}
           isExamplesWorkspace={node.isExamplesWorkspace}
+          isLoading={node.isLoading}
           isReadOnly={node.isReadOnly}
           isSelected={isSelected}
           isExpanded={isExpanded}
           isRenaming={isRenaming}
           depth={depth}
-          onClick={handleItemClick}
-          onDoubleClick={handleItemDoubleClick}
-          onToggle={handleItemToggle}
-          onContextMenu={handleItemContextMenu}
+          onClick={node.isLoading ? () => {} : handleItemClick}
+          onDoubleClick={node.isLoading ? undefined : handleItemDoubleClick}
+          onToggle={node.isLoading ? undefined : handleItemToggle}
+          onContextMenu={node.isLoading ? undefined : handleItemContextMenu}
           onRenameSubmit={onRenameSubmit}
           onRenameCancel={onRenameCancel}
           onDrop={onDrop}

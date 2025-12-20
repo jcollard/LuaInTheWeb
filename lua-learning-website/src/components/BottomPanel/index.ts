@@ -1,2 +1,2 @@
 export { BottomPanel } from './BottomPanel'
-export type { BottomPanelProps } from './types'
+export type { BottomPanelProps, ShellTerminalHandle } from './types'
