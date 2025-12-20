@@ -165,6 +165,71 @@ test.describe('Syntax Highlighting', () => {
     await expect(viewLines).toContainText('{a = 1}')
   })
 
+  test('multiple variable assignment should highlight all variables identically', async ({
+    page,
+  }) => {
+    const monacoEditor = await createAndOpenFile(page)
+    await monacoEditor.click()
+
+    // Type multiple variable assignment: local x, y, z = 1, 2, 3
+    await typeSlowly(page, 'local x, y, z = 1, 2, 3')
+
+    // Get colors of all three variables (x, y, z)
+    const variableColors = await page.evaluate(() => {
+      const spans = document.querySelectorAll('.monaco-editor .view-line span')
+      const colors: { [key: string]: string } = {}
+      for (const span of spans) {
+        const text = span.textContent?.trim()
+        if (text === 'x' || text === 'y' || text === 'z') {
+          colors[text] = window.getComputedStyle(span).color
+        }
+      }
+      return colors
+    })
+
+    // Verify we found all three variables
+    expect(variableColors.x).toBeDefined()
+    expect(variableColors.y).toBeDefined()
+    expect(variableColors.z).toBeDefined()
+
+    // All three should have identical highlighting (same color)
+    expect(variableColors.x).toBe(variableColors.y)
+    expect(variableColors.y).toBe(variableColors.z)
+  })
+
+  test('table keys should be highlighted as properties', async ({ page }) => {
+    const monacoEditor = await createAndOpenFile(page)
+    await monacoEditor.click()
+
+    // Type both a variable and a table with keys
+    await typeSlowly(page, 'local v = {a = 1, b = 2}')
+
+    // Get colors of variable 'v' and table keys 'a', 'b'
+    const colors = await page.evaluate(() => {
+      const spans = document.querySelectorAll('.monaco-editor .view-line span')
+      const result: { [key: string]: string } = {}
+      for (const span of spans) {
+        const text = span.textContent?.trim()
+        if (text === 'v' || text === 'a' || text === 'b') {
+          result[text] = window.getComputedStyle(span).color
+        }
+      }
+      return result
+    })
+
+    // Verify we found the elements
+    expect(colors.v).toBeDefined()
+    expect(colors.a).toBeDefined()
+    expect(colors.b).toBeDefined()
+
+    // Table keys 'a' and 'b' should have identical highlighting
+    expect(colors.a).toBe(colors.b)
+
+    // Table keys should be different from the regular variable 'v'
+    // (They're styled as variable.property vs identifier)
+    expect(colors.a).not.toBe(colors.v)
+  })
+
   test('keywords inside multi-line strings should not be highlighted as keywords', async ({
     page,
   }) => {
