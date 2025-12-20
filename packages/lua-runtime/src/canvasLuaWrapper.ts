@@ -134,6 +134,19 @@ export const canvasLuaCode = `
       __canvas_setLineWidth(width)
     end
 
+    -- Font styling
+    function _canvas.set_font_size(size)
+      __canvas_setFontSize(size)
+    end
+
+    function _canvas.set_font_family(family)
+      __canvas_setFontFamily(family)
+    end
+
+    function _canvas.get_text_width(text)
+      return __canvas_getTextWidth(text)
+    end
+
     -- Shape drawing
     function _canvas.draw_rect(x, y, w, h)
       __canvas_rect(x, y, w, h)
@@ -155,8 +168,14 @@ export const canvasLuaCode = `
       __canvas_line(x1, y1, x2, y2)
     end
 
-    function _canvas.draw_text(x, y, text)
-      __canvas_text(x, y, text)
+    function _canvas.draw_text(x, y, text, options)
+      local fontSize = nil
+      local fontFamily = nil
+      if options then
+        fontSize = options.font_size
+        fontFamily = options.font_family
+      end
+      __canvas_text(x, y, text, fontSize, fontFamily)
     end
 
     -- Image drawing
@@ -169,6 +188,10 @@ export const canvasLuaCode = `
 
     function _canvas.assets.image(name, path)
       __canvas_assets_image(name, path)
+    end
+
+    function _canvas.assets.font(name, path)
+      __canvas_assets_font(name, path)
     end
 
     function _canvas.assets.get_width(name)

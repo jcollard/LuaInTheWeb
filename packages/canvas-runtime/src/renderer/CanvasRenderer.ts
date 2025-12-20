@@ -13,6 +13,10 @@ export class CanvasRenderer {
   private readonly ctx: CanvasRenderingContext2D;
   private readonly imageCache?: ImageCache;
 
+  // Font state
+  private currentFontSize: number = 16;
+  private currentFontFamily: string = 'monospace';
+
   constructor(canvas: HTMLCanvasElement, imageCache?: ImageCache) {
     this.canvas = canvas;
     this.imageCache = imageCache;
@@ -21,6 +25,17 @@ export class CanvasRenderer {
       throw new Error('Could not get 2D rendering context');
     }
     this.ctx = ctx;
+
+    // Set default font and text baseline
+    this.updateFont();
+    this.ctx.textBaseline = 'top';
+  }
+
+  /**
+   * Update the canvas context font from current state.
+   */
+  private updateFont(): void {
+    this.ctx.font = `${this.currentFontSize}px ${this.currentFontFamily}`;
   }
 
   /**
@@ -46,6 +61,16 @@ export class CanvasRenderer {
 
       case 'setLineWidth':
         this.ctx.lineWidth = command.width;
+        break;
+
+      case 'setFontSize':
+        this.currentFontSize = command.size;
+        this.updateFont();
+        break;
+
+      case 'setFontFamily':
+        this.currentFontFamily = command.family;
+        this.updateFont();
         break;
 
       case 'setSize':
@@ -74,7 +99,7 @@ export class CanvasRenderer {
         break;
 
       case 'text':
-        this.ctx.fillText(command.text, command.x, command.y);
+        this.drawText(command.x, command.y, command.text, command.fontSize, command.fontFamily);
         break;
 
       case 'drawImage':
@@ -152,6 +177,29 @@ export class CanvasRenderer {
     this.ctx.moveTo(x1, y1);
     this.ctx.lineTo(x2, y2);
     this.ctx.stroke();
+  }
+
+  private drawText(
+    x: number,
+    y: number,
+    text: string,
+    fontSize?: number,
+    fontFamily?: string
+  ): void {
+    // Set textBaseline to top for top-left positioning
+    this.ctx.textBaseline = 'top';
+
+    // Apply font overrides if provided
+    if (fontSize !== undefined || fontFamily !== undefined) {
+      const savedFont = this.ctx.font;
+      const tempSize = fontSize ?? this.currentFontSize;
+      const tempFamily = fontFamily ?? this.currentFontFamily;
+      this.ctx.font = `${tempSize}px ${tempFamily}`;
+      this.ctx.fillText(text, x, y);
+      this.ctx.font = savedFont;
+    } else {
+      this.ctx.fillText(text, x, y);
+    }
   }
 
   private drawImage(name: string, x: number, y: number, width?: number, height?: number): void {

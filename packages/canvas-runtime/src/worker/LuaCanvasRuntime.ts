@@ -1,6 +1,6 @@
 import { LuaFactory, LuaEngine } from 'wasmoon';
 import type { IWorkerChannel } from '../channels/IWorkerChannel.js';
-import { VALID_IMAGE_EXTENSIONS, type DrawCommand, type AssetDefinition } from '../shared/types.js';
+import { VALID_IMAGE_EXTENSIONS, VALID_FONT_EXTENSIONS, type DrawCommand, type AssetDefinition } from '../shared/types.js';
 import type { WorkerState } from './WorkerMessages.js';
 
 /**
@@ -33,6 +33,12 @@ export class LuaCanvasRuntime {
 
   // Asset dimensions: width/height for each loaded asset
   private assetDimensions: Map<string, { width: number; height: number }> = new Map();
+
+  // Font state
+  private currentFontSize: number = 16;
+  private currentFontFamily: string = 'monospace';
+  private measureCanvas: OffscreenCanvas | null = null;
+  private measureCtx: OffscreenCanvasRenderingContext2D | null = null;
 
   constructor(channel: IWorkerChannel) {
     this.channel = channel;
@@ -215,8 +221,15 @@ export class LuaCanvasRuntime {
       runtime.frameCommands.push({ type: 'line', x1, y1, x2, y2 });
     });
 
-    lua.global.set('__canvas_text', (x: number, y: number, text: string) => {
-      runtime.frameCommands.push({ type: 'text', x, y, text });
+    lua.global.set('__canvas_text', (x: number, y: number, text: string, fontSize?: number | null, fontFamily?: string | null) => {
+      const command: DrawCommand = { type: 'text', x, y, text };
+      if (fontSize !== undefined && fontSize !== null) {
+        (command as { type: 'text'; x: number; y: number; text: string; fontSize?: number }).fontSize = fontSize;
+      }
+      if (fontFamily !== undefined && fontFamily !== null) {
+        (command as { type: 'text'; x: number; y: number; text: string; fontFamily?: string }).fontFamily = fontFamily;
+      }
+      runtime.frameCommands.push(command);
     });
 
     // Timing functions
@@ -283,6 +296,30 @@ export class LuaCanvasRuntime {
       runtime.frameCommands.push({ type: 'setLineWidth', width });
     });
 
+    // Font functions
+    lua.global.set('__canvas_setFontSize', (size: number) => {
+      runtime.currentFontSize = size;
+      runtime.frameCommands.push({ type: 'setFontSize', size });
+    });
+
+    lua.global.set('__canvas_setFontFamily', (family: string) => {
+      runtime.currentFontFamily = family;
+      runtime.frameCommands.push({ type: 'setFontFamily', family });
+    });
+
+    lua.global.set('__canvas_getTextWidth', (text: string) => {
+      // Lazily create the offscreen canvas for text measurement
+      if (!runtime.measureCanvas) {
+        runtime.measureCanvas = new OffscreenCanvas(1, 1);
+        runtime.measureCtx = runtime.measureCanvas.getContext('2d');
+      }
+      if (!runtime.measureCtx) {
+        return 0;
+      }
+      runtime.measureCtx.font = `${runtime.currentFontSize}px ${runtime.currentFontFamily}`;
+      return runtime.measureCtx.measureText(text).width;
+    });
+
     // Asset API functions
     lua.global.set('__canvas_assets_image', (name: string, path: string) => {
       // Check if started
@@ -303,6 +340,27 @@ export class LuaCanvasRuntime {
 
       // Register the asset definition
       runtime.assetManifest.set(name, { name, path, type: 'image' });
+    });
+
+    lua.global.set('__canvas_assets_font', (name: string, path: string) => {
+      // Check if started
+      if (runtime.started) {
+        throw new Error('Cannot define assets after canvas.start()');
+      }
+
+      // Validate font extension
+      const lowerPath = path.toLowerCase();
+      const hasValidExtension = VALID_FONT_EXTENSIONS.some((ext) =>
+        lowerPath.endsWith(ext)
+      );
+      if (!hasValidExtension) {
+        throw new Error(
+          `Cannot load '${path}': unsupported font format (expected TTF, OTF, WOFF, or WOFF2)`
+        );
+      }
+
+      // Register the font asset definition
+      runtime.assetManifest.set(name, { name, path, type: 'font' });
     });
 
     lua.global.set('__canvas_drawImage', (name: string, x: number, y: number, width?: number | null, height?: number | null) => {
@@ -369,6 +427,19 @@ export class LuaCanvasRuntime {
         __canvas_setLineWidth(width)
       end
 
+      -- Font styling
+      function canvas.set_font_size(size)
+        __canvas_setFontSize(size)
+      end
+
+      function canvas.set_font_family(family)
+        __canvas_setFontFamily(family)
+      end
+
+      function canvas.get_text_width(text)
+        return __canvas_getTextWidth(text)
+      end
+
       -- Shape drawing (renamed to draw_* for clarity)
       function canvas.draw_rect(x, y, w, h)
         __canvas_rect(x, y, w, h)
@@ -390,8 +461,14 @@ export class LuaCanvasRuntime {
         __canvas_line(x1, y1, x2, y2)
       end
 
-      function canvas.draw_text(x, y, text)
-        __canvas_text(x, y, text)
+      function canvas.draw_text(x, y, text, options)
+        local fontSize = nil
+        local fontFamily = nil
+        if options then
+          fontSize = options.font_size
+          fontFamily = options.font_family
+        end
+        __canvas_text(x, y, text, fontSize, fontFamily)
       end
 
       -- Timing
@@ -527,6 +604,10 @@ export class LuaCanvasRuntime {
 
       function canvas.assets.image(name, path)
         __canvas_assets_image(name, path)
+      end
+
+      function canvas.assets.font(name, path)
+        __canvas_assets_font(name, path)
       end
 
       function canvas.assets.get_width(name)

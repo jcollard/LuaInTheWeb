@@ -5,6 +5,8 @@ export type DrawCommandType =
   | 'clear'
   | 'setColor'
   | 'setLineWidth'
+  | 'setFontSize'
+  | 'setFontFamily'
   | 'setSize'
   | 'rect'
   | 'fillRect'
@@ -53,6 +55,24 @@ export interface SetColorCommand extends DrawCommandBase {
 export interface SetLineWidthCommand extends DrawCommandBase {
   type: 'setLineWidth';
   width: number;
+}
+
+/**
+ * Set the font size for text rendering.
+ */
+export interface SetFontSizeCommand extends DrawCommandBase {
+  type: 'setFontSize';
+  /** Font size in pixels */
+  size: number;
+}
+
+/**
+ * Set the font family for text rendering.
+ */
+export interface SetFontFamilyCommand extends DrawCommandBase {
+  type: 'setFontFamily';
+  /** CSS font family name (e.g., "monospace", "Arial", "MyCustomFont") */
+  family: string;
 }
 
 /**
@@ -125,6 +145,10 @@ export interface TextCommand extends DrawCommandBase {
   x: number;
   y: number;
   text: string;
+  /** Optional font size override for this text only */
+  fontSize?: number;
+  /** Optional font family override for this text only */
+  fontFamily?: string;
 }
 
 /**
@@ -233,6 +257,8 @@ export type DrawCommand =
   | ClearCommand
   | SetColorCommand
   | SetLineWidthCommand
+  | SetFontSizeCommand
+  | SetFontFamilyCommand
   | SetSizeCommand
   | RectCommand
   | FillRectCommand
@@ -318,6 +344,12 @@ export function createDefaultTimingInfo(): TimingInfo {
 export const VALID_IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'] as const;
 
 /**
+ * Valid font file extensions for canvas assets.
+ * Used for validation in both worker and shell canvas implementations.
+ */
+export const VALID_FONT_EXTENSIONS = ['.ttf', '.otf', '.woff', '.woff2'] as const;
+
+/**
  * Definition of an asset to be loaded.
  */
 export interface AssetDefinition {
@@ -326,7 +358,7 @@ export interface AssetDefinition {
   /** Path to the asset file (relative or absolute) */
   path: string;
   /** Type of asset */
-  type: 'image';
+  type: 'image' | 'font';
 }
 
 /**

@@ -53,9 +53,15 @@ vi.mock('@lua-learning/canvas-runtime', () => {
       has = vi.fn()
       clear = vi.fn()
       constructor() {
-        // eslint-disable-next-line @typescript-eslint/no-this-alias
         setMockImageCacheInstance(this)
       }
+    },
+    FontCache: class MockFontCache {
+      set = vi.fn()
+      get = vi.fn()
+      has = vi.fn()
+      getLoadedFonts = vi.fn().mockReturnValue([])
+      clear = vi.fn()
     },
     AssetLoader: class MockAssetLoader {
       loadAsset = vi.fn().mockResolvedValue({
@@ -67,11 +73,11 @@ vi.mock('@lua-learning/canvas-runtime', () => {
       })
       resolvePath = vi.fn((path: string) => (path.startsWith('/') ? path : `/test/${path}`))
       constructor(_fs: IFileSystem, _scriptDir: string) {
-        // eslint-disable-next-line @typescript-eslint/no-this-alias
         setMockAssetLoaderInstance(this)
       }
     },
     VALID_IMAGE_EXTENSIONS: ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'],
+    VALID_FONT_EXTENSIONS: ['.ttf', '.otf', '.woff', '.woff2'],
   }
 })
 

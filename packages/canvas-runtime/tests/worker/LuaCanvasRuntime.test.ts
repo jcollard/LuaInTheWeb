@@ -4,6 +4,29 @@ import type { IWorkerChannel } from '../../src/channels/IWorkerChannel.js';
 import type { DrawCommand, InputState, TimingInfo } from '../../src/shared/types.js';
 import { createEmptyInputState, createDefaultTimingInfo } from '../../src/shared/types.js';
 
+// Mock OffscreenCanvas for text measurement in Node.js environment
+class MockOffscreenCanvas {
+  width: number;
+  height: number;
+
+  constructor(width: number, height: number) {
+    this.width = width;
+    this.height = height;
+  }
+
+  getContext(): { font: string; measureText: (text: string) => { width: number } } | null {
+    return {
+      font: '16px monospace',
+      measureText: (text: string) => ({ width: text.length * 8 }), // Approximate width
+    };
+  }
+}
+
+// Only set if not already defined (Node.js environment)
+if (typeof globalThis.OffscreenCanvas === 'undefined') {
+  (globalThis as unknown as { OffscreenCanvas: typeof MockOffscreenCanvas }).OffscreenCanvas = MockOffscreenCanvas;
+}
+
 /**
  * Create a mock IWorkerChannel for testing.
  */
@@ -789,6 +812,176 @@ describe('LuaCanvasRuntime', () => {
         expect(errorHandler).toHaveBeenCalledWith(
           expect.stringContaining("Unknown asset 'nonexistent'")
         );
+      });
+    });
+
+    describe('canvas.assets.font', () => {
+      it('should register a font asset definition', async () => {
+        await runtime.loadCode(`
+          canvas.assets.font("GameFont", "fonts/pixel.ttf")
+          canvas.tick(function() end)
+        `);
+        // Should not throw
+
+        const manifest = runtime.getAssetManifest();
+        expect(manifest.get('GameFont')).toEqual({
+          name: 'GameFont',
+          path: 'fonts/pixel.ttf',
+          type: 'font',
+        });
+      });
+
+      it('should throw if font registered after canvas.start()', async () => {
+        const errorHandler = vi.fn();
+        runtime.onError(errorHandler);
+
+        await runtime.loadCode(`
+          canvas.tick(function()
+            canvas.assets.font("GameFont", "fonts/pixel.ttf")
+          end)
+        `);
+
+        runtime.start();
+        channel.signalFrameReady();
+
+        await vi.waitFor(() => {
+          return errorHandler.mock.calls.length > 0;
+        }, { timeout: 100 });
+
+        runtime.stop();
+
+        expect(errorHandler).toHaveBeenCalledWith(
+          expect.stringContaining('Cannot define assets after canvas.start()')
+        );
+      });
+
+      it('should throw for invalid font extension', async () => {
+        await expect(runtime.loadCode(`
+          canvas.assets.font("CustomFont", "files/font.exe")
+        `)).rejects.toThrow(/unsupported font format/i);
+      });
+
+      it('should accept .ttf font files', async () => {
+        await runtime.loadCode(`
+          canvas.assets.font("TTFFont", "fonts/test.ttf")
+          canvas.tick(function() end)
+        `);
+        expect(runtime.getAssetManifest().get('TTFFont')?.type).toBe('font');
+      });
+
+      it('should accept .otf font files', async () => {
+        await runtime.loadCode(`
+          canvas.assets.font("OTFFont", "fonts/test.otf")
+          canvas.tick(function() end)
+        `);
+        expect(runtime.getAssetManifest().get('OTFFont')?.type).toBe('font');
+      });
+
+      it('should accept .woff font files', async () => {
+        await runtime.loadCode(`
+          canvas.assets.font("WOFFFont", "fonts/test.woff")
+          canvas.tick(function() end)
+        `);
+        expect(runtime.getAssetManifest().get('WOFFFont')?.type).toBe('font');
+      });
+
+      it('should accept .woff2 font files', async () => {
+        await runtime.loadCode(`
+          canvas.assets.font("WOFF2Font", "fonts/test.woff2")
+          canvas.tick(function() end)
+        `);
+        expect(runtime.getAssetManifest().get('WOFF2Font')?.type).toBe('font');
+      });
+    });
+
+    describe('canvas font styling', () => {
+      it('should send setFontSize command', async () => {
+        await runtime.loadCode(`
+          canvas.tick(function()
+            canvas.set_font_size(24)
+          end)
+        `);
+
+        runtime.start();
+        channel.signalFrameReady();
+
+        await vi.waitFor(() => {
+          return (channel.sendDrawCommands as ReturnType<typeof vi.fn>).mock.calls.length > 0;
+        }, { timeout: 100 });
+
+        runtime.stop();
+
+        const calls = (channel.sendDrawCommands as ReturnType<typeof vi.fn>).mock.calls;
+        expect(calls[0][0]).toContainEqual({ type: 'setFontSize', size: 24 });
+      });
+
+      it('should send setFontFamily command', async () => {
+        await runtime.loadCode(`
+          canvas.tick(function()
+            canvas.set_font_family("Arial")
+          end)
+        `);
+
+        runtime.start();
+        channel.signalFrameReady();
+
+        await vi.waitFor(() => {
+          return (channel.sendDrawCommands as ReturnType<typeof vi.fn>).mock.calls.length > 0;
+        }, { timeout: 100 });
+
+        runtime.stop();
+
+        const calls = (channel.sendDrawCommands as ReturnType<typeof vi.fn>).mock.calls;
+        expect(calls[0][0]).toContainEqual({ type: 'setFontFamily', family: 'Arial' });
+      });
+
+      it('should return text width from get_text_width', async () => {
+        await runtime.loadCode(`
+          canvas.tick(function()
+            textWidth = canvas.get_text_width("Hello World")
+          end)
+        `);
+
+        runtime.start();
+        channel.signalFrameReady();
+
+        await vi.waitFor(() => {
+          return (channel.sendDrawCommands as ReturnType<typeof vi.fn>).mock.calls.length > 0;
+        }, { timeout: 100 });
+
+        runtime.stop();
+
+        // Text width should be a number (may be 0 in test environment without OffscreenCanvas)
+        const width = await runtime.getGlobal('textWidth') as number;
+        expect(typeof width).toBe('number');
+        expect(width).toBeGreaterThanOrEqual(0);
+      });
+
+      it('should send text command with font overrides', async () => {
+        await runtime.loadCode(`
+          canvas.tick(function()
+            canvas.draw_text(10, 20, "Styled", { font_size = 48, font_family = "Impact" })
+          end)
+        `);
+
+        runtime.start();
+        channel.signalFrameReady();
+
+        await vi.waitFor(() => {
+          return (channel.sendDrawCommands as ReturnType<typeof vi.fn>).mock.calls.length > 0;
+        }, { timeout: 100 });
+
+        runtime.stop();
+
+        const calls = (channel.sendDrawCommands as ReturnType<typeof vi.fn>).mock.calls;
+        expect(calls[0][0]).toContainEqual({
+          type: 'text',
+          x: 10,
+          y: 20,
+          text: 'Styled',
+          fontSize: 48,
+          fontFamily: 'Impact',
+        });
       });
     });
   });

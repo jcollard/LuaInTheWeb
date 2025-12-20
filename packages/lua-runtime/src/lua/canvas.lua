@@ -112,6 +112,33 @@ function canvas.set_color(r, g, b, a) end
 function canvas.set_line_width(width) end
 
 -- =============================================================================
+-- Font Styling
+-- =============================================================================
+
+--- Set the font size for text rendering.
+--- All subsequent draw_text() calls will use this size.
+---@param size number Font size in pixels (default: 16)
+---@return nil
+---@usage canvas.set_font_size(24)
+function canvas.set_font_size(size) end
+
+--- Set the font family for text rendering.
+--- Can be a CSS font family name or a custom font loaded via assets.font().
+---@param family string Font family name (default: "monospace")
+---@return nil
+---@usage canvas.set_font_family("Arial")
+---@usage canvas.set_font_family("GameFont")  -- Custom font loaded via assets
+function canvas.set_font_family(family) end
+
+--- Measure the width of text with the current font settings.
+--- Useful for centering text or calculating text layouts.
+---@param text string The text to measure
+---@return number width Width of the text in pixels
+---@usage local width = canvas.get_text_width("Hello World")
+---@usage local x = (canvas.get_width() - width) / 2  -- Center text
+function canvas.get_text_width(text) end
+
+-- =============================================================================
 -- Drawing Functions
 -- =============================================================================
 
@@ -154,11 +181,17 @@ function canvas.fill_circle(x, y, radius) end
 function canvas.draw_line(x1, y1, x2, y2) end
 
 --- Draw text at the specified position.
----@param x number X coordinate
----@param y number Y coordinate
+--- Text is positioned with its top-left corner at (x, y).
+--- Optional style overrides can be provided without changing global state.
+---@param x number X coordinate of top-left corner
+---@param y number Y coordinate of top-left corner
 ---@param text string Text to draw
+---@param options? table Optional style overrides: { font_size?: number, font_family?: string }
 ---@return nil
-function canvas.draw_text(x, y, text) end
+---@usage canvas.draw_text(10, 10, "Hello World")  -- Use current font settings
+---@usage canvas.draw_text(10, 50, "Big text", { font_size = 48 })  -- Override size
+---@usage canvas.draw_text(10, 100, "Custom", { font_family = "Arial", font_size = 32 })
+function canvas.draw_text(x, y, text, options) end
 
 -- =============================================================================
 -- Timing Functions
@@ -351,11 +384,11 @@ function canvas.is_mouse_down(button) end
 function canvas.is_mouse_pressed(button) end
 
 -- =============================================================================
--- Image Assets
+-- Asset Management
 -- =============================================================================
 
---- Image asset management sub-library.
---- Register images before canvas.start() to preload them.
+--- Asset management sub-library.
+--- Register images and fonts before canvas.start() to preload them.
 ---@class canvas.assets
 canvas.assets = {}
 
@@ -367,6 +400,16 @@ canvas.assets = {}
 ---@usage canvas.assets.image("player", "images/player.png")
 ---@usage canvas.assets.image("enemy", "/my-files/sprites/enemy.png")
 function canvas.assets.image(name, path) end
+
+--- Register a custom font asset for loading.
+--- Call this before canvas.start() to preload fonts.
+--- After loading, use set_font_family() with the name to use the font.
+--- Supported formats: .ttf, .otf, .woff, .woff2
+---@param name string Unique name for the font (used with set_font_family)
+---@param path string Path to the font file (relative to script or absolute)
+---@usage canvas.assets.font("GameFont", "fonts/pixel.ttf")
+---@usage canvas.set_font_family("GameFont")  -- Use after canvas.start()
+function canvas.assets.font(name, path) end
 
 --- Get the width of a loaded image asset.
 --- Must be called after canvas.start() has loaded the assets.

@@ -18,7 +18,10 @@ export interface WorkspaceContent {
 /**
  * Binary file extensions - files with these extensions are fetched as binary.
  */
-const BINARY_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.ico'])
+const BINARY_EXTENSIONS = new Set([
+  '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.ico',
+  '.ttf', '.otf', '.woff', '.woff2'  // Font files
+])
 
 /**
  * Check if a filename has a binary extension.

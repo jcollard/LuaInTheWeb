@@ -57,6 +57,18 @@ export function setupCanvasAPI(
     getController()?.setLineWidth(width)
   })
 
+  engine.global.set('__canvas_setFontSize', (size: number) => {
+    getController()?.setFontSize(size)
+  })
+
+  engine.global.set('__canvas_setFontFamily', (family: string) => {
+    getController()?.setFontFamily(family)
+  })
+
+  engine.global.set('__canvas_getTextWidth', (text: string) => {
+    return getController()?.getTextWidth(text) ?? 0
+  })
+
   engine.global.set('__canvas_setSize', (width: number, height: number) => {
     getController()?.setSize(width, height)
   })
@@ -81,8 +93,17 @@ export function setupCanvasAPI(
     getController()?.drawLine(x1, y1, x2, y2)
   })
 
-  engine.global.set('__canvas_text', (x: number, y: number, text: string) => {
-    getController()?.drawText(x, y, text)
+  engine.global.set('__canvas_text', (
+    x: number,
+    y: number,
+    text: string,
+    fontSize?: number | null,
+    fontFamily?: string | null
+  ) => {
+    const options = (fontSize !== undefined && fontSize !== null) || (fontFamily !== undefined && fontFamily !== null)
+      ? { fontSize: fontSize ?? undefined, fontFamily: fontFamily ?? undefined }
+      : undefined
+    getController()?.drawText(x, y, text, options)
   })
 
   // --- Timing functions ---
@@ -143,6 +164,14 @@ export function setupCanvasAPI(
       throw new Error('Canvas controller not available - is canvas support enabled?')
     }
     controller.registerAsset(name, path)
+  })
+
+  engine.global.set('__canvas_assets_font', (name: string, path: string) => {
+    const controller = getController()
+    if (!controller) {
+      throw new Error('Canvas controller not available - is canvas support enabled?')
+    }
+    controller.registerFontAsset(name, path)
   })
 
   engine.global.set('__canvas_drawImage', (name: string, x: number, y: number, width?: number | null, height?: number | null) => {
