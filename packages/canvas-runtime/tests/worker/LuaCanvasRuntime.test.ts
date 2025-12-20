@@ -557,7 +557,7 @@ describe('LuaCanvasRuntime', () => {
       expect(errorHandler).toHaveBeenCalledWith(expect.stringContaining('Test error from Lua'));
     });
 
-    it('should format errors with canvas.tick prefix and line number', async () => {
+    it('should format errors with canvas.tick prefix and preserve wasmoon line info', async () => {
       const errorHandler = vi.fn();
       runtime.onError(errorHandler);
 
@@ -578,9 +578,9 @@ describe('LuaCanvasRuntime', () => {
 
       const errorMessage = errorHandler.mock.calls[0][0];
       // Should have canvas.tick prefix
-      expect(errorMessage).toMatch(/^canvas\.tick/);
-      // Should include line number in format "(line N)"
-      expect(errorMessage).toMatch(/\(line \d+\)/);
+      expect(errorMessage).toMatch(/^canvas\.tick:/);
+      // Should preserve wasmoon line info format (e.g., [string "..."]:N:)
+      expect(errorMessage).toMatch(/:\d+:/);
     });
   });
 
