@@ -8,6 +8,7 @@ import { LUA_FORMATTER_CODE } from './lua/formatter'
 import { LUA_SHELL_CODE } from './lua/shell.generated'
 import { LUA_IO_CODE } from './lua/io'
 import { generateExecutionControlCode } from './lua/executionControl'
+import { transformLuaError } from './luaErrorTransformer'
 
 /** Flush interval in milliseconds (~60fps). */
 export const FLUSH_INTERVAL_MS = 16
@@ -106,9 +107,11 @@ export class ExecutionStoppedError extends Error {
 /**
  * Format an error message with standard prefix.
  * Used by REPL and script processes for consistent error display.
+ * Transforms cryptic Lua errors into user-friendly messages with hints.
  */
 export function formatLuaError(text: string): string {
-  return `[error] ${text}`
+  const transformed = transformLuaError(text)
+  return `[error] ${transformed}`
 }
 
 /**
