@@ -566,7 +566,7 @@ export class LuaCanvasRuntime {
             this.onDrawCallback();
           } catch (error) {
             if (this.errorHandler && error instanceof Error) {
-              this.errorHandler(error.message);
+              this.errorHandler(`canvas.tick: ${error.message}`);
             }
           }
         }
@@ -577,7 +577,7 @@ export class LuaCanvasRuntime {
         }
       } catch (error) {
         if (this.errorHandler && error instanceof Error) {
-          this.errorHandler(error.message);
+          this.errorHandler(`canvas.tick: ${error.message}`);
         }
       }
     }

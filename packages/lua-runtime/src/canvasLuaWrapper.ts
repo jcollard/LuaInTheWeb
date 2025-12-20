@@ -23,9 +23,21 @@ export const canvasLuaCode = `
 
     -- Store the user's callback and wrap with error handling
     local __user_tick_callback = nil
+    local __user_tick_location = nil  -- Stores callback definition location
 
     function _canvas.tick(callback)
       __user_tick_callback = callback
+      -- Capture callback's definition location for better error messages
+      local info = debug.getinfo(callback, "S")
+      if info then
+        local source = info.source or "?"
+        local line = info.linedefined or 0
+        -- Clean up source name (remove @ prefix if present)
+        if source:sub(1, 1) == "@" then
+          source = source:sub(2)
+        end
+        __user_tick_location = source .. ":" .. line
+      end
       -- Create a wrapper that uses xpcall to capture stack trace on error
       __canvas_setOnDrawCallback(function()
         if __user_tick_callback then
@@ -34,7 +46,12 @@ export const canvasLuaCode = `
             return debug.traceback(e, 2)
           end)
           if not success then
-            error(err, 0)  -- Re-throw with traceback included
+            -- If error doesn't have Lua line info, add callback location
+            local errStr = tostring(err)
+            if __user_tick_location and not errStr:match(":%d+:") then
+              err = __user_tick_location .. ": " .. errStr
+            end
+            error(err, 0)  -- Re-throw with location included
           end
         end
       end)
@@ -241,12 +258,22 @@ export const canvasLuaCode = `
       return __canvas_isKeyPressed(normalize_key(key))
     end
 
+    -- Helper to convert JS array proxy to plain Lua table
+    -- This ensures proper Lua errors with line numbers instead of JS TypeErrors
+    local function to_lua_array(js_array)
+      local t = {}
+      for i = 1, #js_array do
+        t[i] = js_array[i]
+      end
+      return t
+    end
+
     function _canvas.get_keys_down()
-      return __canvas_getKeysDown()
+      return to_lua_array(__canvas_getKeysDown())
     end
 
     function _canvas.get_keys_pressed()
-      return __canvas_getKeysPressed()
+      return to_lua_array(__canvas_getKeysPressed())
     end
 
     -- Mouse input
