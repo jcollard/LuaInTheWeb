@@ -631,12 +631,12 @@ export class CanvasController {
   private formatOnDrawError(error: unknown): string {
     const rawMessage = error instanceof Error ? error.message : String(error)
 
+    // Try to extract location from traceback for all errors
+    const location = this.extractLocationFromTraceback(rawMessage)
+    const locationInfo = location ? ` (${location})` : ''
+
     // Detect "yield across C-call boundary" error from blocking operations
     if (rawMessage.includes('yield across') || rawMessage.includes('C-call boundary')) {
-      // Try to extract location from stack trace
-      const location = this.extractLocationFromTraceback(rawMessage)
-      const locationInfo = location ? ` (${location})` : ''
-
       return (
         `canvas.tick${locationInfo}: Cannot use blocking operations like io.read() inside tick.\n` +
         'The tick callback runs every frame and cannot wait for user input.\n' +
@@ -644,8 +644,8 @@ export class CanvasController {
       )
     }
 
-    // For other errors, include the full message with traceback
-    return `canvas.tick: ${rawMessage}`
+    // For other errors, include location if found
+    return `canvas.tick${locationInfo}: ${rawMessage}`
   }
 
   /**
