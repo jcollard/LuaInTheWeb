@@ -114,7 +114,7 @@ test.describe('File Explorer', () => {
       await expect(page.getByText('Delete')).toBeVisible()
     })
 
-    test('right-clicking folder shows "Open in Terminal" option', async ({ page }) => {
+    test('right-clicking folder shows "Open in Shell" option', async ({ page }) => {
       // Arrange - Create a folder and complete rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
@@ -126,9 +126,9 @@ test.describe('File Explorer', () => {
       const treeItem = page.getByRole('treeitem').nth(1)
       await treeItem.click({ button: 'right' })
 
-      // Assert - Context menu should include "Open in Terminal"
+      // Assert - Context menu should include "Open in Shell"
       await expect(page.getByRole('menu')).toBeVisible()
-      await expect(page.getByText('Open in Terminal')).toBeVisible()
+      await expect(page.getByText('Open in Shell')).toBeVisible()
     })
 
     test('clicking rename in context menu shows rename input', async ({ page }) => {

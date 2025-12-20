@@ -279,7 +279,7 @@ describe('FileExplorer', () => {
   })
 
   describe('cd to location', () => {
-    it('should show "Open in Terminal" option when right-clicking on folder', () => {
+    it('should show "Open in Shell" option when right-clicking on folder', () => {
       // Arrange
       render(<FileExplorer {...defaultProps} />)
 
@@ -287,19 +287,19 @@ describe('FileExplorer', () => {
       const folderItem = screen.getByText('utils').closest('[role="treeitem"]')
       fireEvent.contextMenu(folderItem!)
 
-      // Assert - should show "Open in Terminal" menu item
-      expect(screen.getByText('Open in Terminal')).toBeInTheDocument()
+      // Assert - should show "Open in Shell" menu item
+      expect(screen.getByText('Open in Shell')).toBeInTheDocument()
     })
 
-    it('should call onCdToLocation when "Open in Terminal" is clicked', () => {
+    it('should call onCdToLocation when "Open in Shell" is clicked', () => {
       // Arrange
       const onCdToLocation = vi.fn()
       render(<FileExplorer {...defaultProps} onCdToLocation={onCdToLocation} />)
 
-      // Act - right-click on folder and click "Open in Terminal"
+      // Act - right-click on folder and click "Open in Shell"
       const folderItem = screen.getByText('utils').closest('[role="treeitem"]')
       fireEvent.contextMenu(folderItem!)
-      fireEvent.click(screen.getByText('Open in Terminal'))
+      fireEvent.click(screen.getByText('Open in Shell'))
 
       // Assert
       expect(onCdToLocation).toHaveBeenCalledWith('/utils')
