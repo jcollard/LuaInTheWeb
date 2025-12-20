@@ -32,6 +32,7 @@ export interface ExplorerPropsParams {
   handleCdToLocation?: (path: string) => void
   // Workspace props
   workspaces: Workspace[]
+  pendingWorkspaces: Set<string>
   isFileSystemAccessSupported: boolean
   addVirtualWorkspace: (name: string) => void
   handleAddLocalWorkspace: (name: string, handle: FileSystemDirectoryHandle) => Promise<void>
@@ -136,6 +137,7 @@ export function createExplorerProps(params: ExplorerPropsParams) {
     onCdToLocation: params.handleCdToLocation,
     workspaceProps: {
       workspaces: params.workspaces,
+      pendingWorkspaces: params.pendingWorkspaces,
       isFileSystemAccessSupported: params.isFileSystemAccessSupported,
       onAddVirtualWorkspace: params.addVirtualWorkspace,
       onAddLocalWorkspace: params.handleAddLocalWorkspace,

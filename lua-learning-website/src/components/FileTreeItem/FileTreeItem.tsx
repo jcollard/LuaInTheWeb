@@ -108,6 +108,13 @@ const ExamplesWorkspaceIcon = () => (
   </svg>
 )
 
+// Loading workspace icon - spinner animation
+const LoadingWorkspaceIcon = () => (
+  <svg className={`${styles.iconSvg} ${styles.loadingIcon}`} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" data-testid="loading-workspace-icon">
+    <circle cx="8" cy="8" r="6" fill="none" stroke="#666" strokeWidth="2" strokeDasharray="28" strokeDashoffset="7" strokeLinecap="round" />
+  </svg>
+)
+
 export function FileTreeItem({
   name,
   path,
@@ -119,6 +126,7 @@ export function FileTreeItem({
   isDocsWorkspace,
   isBookWorkspace,
   isExamplesWorkspace,
+  isLoading,
   isReadOnly,
   isSelected,
   isExpanded,
@@ -273,7 +281,9 @@ export function FileTreeItem({
       <span className={styles.icon}>
         {isFolder ? (
           isWorkspace ? (
-            isDisconnected ? (
+            isLoading ? (
+              <LoadingWorkspaceIcon />
+            ) : isDisconnected ? (
               <DisconnectedWorkspaceIcon />
             ) : isLibraryWorkspace ? (
               <LibraryWorkspaceIcon />

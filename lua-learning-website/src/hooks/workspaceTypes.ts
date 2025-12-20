@@ -70,6 +70,8 @@ export interface PersistedWorkspace {
 export interface WorkspaceManagerState {
   /** All workspaces */
   workspaces: Workspace[]
+  /** IDs of workspaces currently being loaded (for showing loading indicators) */
+  pendingWorkspaces: Set<string>
 }
 
 /**
@@ -90,6 +92,8 @@ export interface MountedWorkspaceInfo {
 export interface UseWorkspaceManagerReturn {
   /** All workspaces */
   workspaces: Workspace[]
+  /** IDs of workspaces currently being loaded */
+  pendingWorkspaces: Set<string>
   /** The composite filesystem spanning all mounted workspaces */
   compositeFileSystem: IFileSystem
   /** Add a new virtual (IndexedDB-backed) workspace */

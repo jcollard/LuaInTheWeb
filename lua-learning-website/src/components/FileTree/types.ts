@@ -5,6 +5,8 @@ export interface FileTreeProps {
   tree: TreeNode[]
   selectedPath: string | null
   expandedPaths: Set<string>
+  /** Workspace IDs that are currently being loaded */
+  pendingWorkspaces?: Set<string>
   onSelect: (path: string) => void
   onDoubleClick?: (path: string) => void
   onToggle: (path: string) => void

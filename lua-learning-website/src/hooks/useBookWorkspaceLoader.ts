@@ -21,13 +21,18 @@ export function useBookWorkspaceLoader(
       if (cancelled || !bookWorkspace) return
 
       setState((prev) => {
+        // Remove from pending regardless of whether we add it
+        const newPendingWorkspaces = new Set(prev.pendingWorkspaces)
+        newPendingWorkspaces.delete(BOOK_WORKSPACE_ID)
+
         // Don't add if already exists
         if (prev.workspaces.some((w) => w.id === BOOK_WORKSPACE_ID)) {
-          return prev
+          return { ...prev, pendingWorkspaces: newPendingWorkspaces }
         }
         return {
           ...prev,
           workspaces: [...prev.workspaces, bookWorkspace],
+          pendingWorkspaces: newPendingWorkspaces,
         }
       })
     })

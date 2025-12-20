@@ -36,6 +36,7 @@ interface IDELayoutInnerProps {
   className?: string
   compositeFileSystem: IFileSystem
   workspaces: Workspace[]
+  pendingWorkspaces: Set<string>
   addVirtualWorkspace: (name: string) => void
   addLocalWorkspace: (name: string, handle: FileSystemDirectoryHandle) => Promise<Workspace>
   removeWorkspace: (workspaceId: string) => void
@@ -58,6 +59,7 @@ function IDELayoutInner({
   className,
   compositeFileSystem,
   workspaces,
+  pendingWorkspaces,
   addVirtualWorkspace,
   addLocalWorkspace,
   removeWorkspace,
@@ -366,7 +368,7 @@ function IDELayoutInner({
     handleCreateFile, handleCreateFolder, renameFile, renameFolder,
     deleteFile, deleteFolder, openFile, openPreviewFile, moveFile, copyFile,
     clearPendingNewFile, clearPendingNewFolder, openMarkdownPreview, openMarkdownEdit: openFile,
-    makeTabPermanent, openBinaryViewer, handleCdToLocation, workspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
+    makeTabPermanent, openBinaryViewer, handleCdToLocation, workspaces, pendingWorkspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
     addVirtualWorkspace, handleAddLocalWorkspace, handleRemoveWorkspace, refreshWorkspace,
     refreshFileTree, supportsRefresh, handleReconnectWorkspace, handleDisconnectWorkspace,
     handleRenameWorkspace, isFolderAlreadyMounted, getUniqueWorkspaceName,
@@ -526,6 +528,7 @@ export function IDELayout({
   // Workspace management (hoisted here to pass filesystem to IDEContextProvider)
   const {
     workspaces,
+    pendingWorkspaces,
     compositeFileSystem,
     addVirtualWorkspace,
     addLocalWorkspace,
@@ -556,6 +559,7 @@ export function IDELayout({
         className={className}
         compositeFileSystem={compositeFileSystem}
         workspaces={workspaces}
+        pendingWorkspaces={pendingWorkspaces}
         addVirtualWorkspace={addVirtualWorkspace}
         addLocalWorkspace={addLocalWorkspace}
         removeWorkspace={removeWorkspace}

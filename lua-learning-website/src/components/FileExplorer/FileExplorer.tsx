@@ -406,6 +406,7 @@ export function FileExplorer({
           tree={tree}
           selectedPath={selectedPath}
           expandedPaths={expandedPaths}
+          pendingWorkspaces={workspaceProps?.pendingWorkspaces}
           onSelect={handleSelect}
           onDoubleClick={handleDoubleClick}
           onToggle={toggleFolder}

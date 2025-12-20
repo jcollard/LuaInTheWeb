@@ -8,6 +8,8 @@ import type { Workspace } from '../../hooks/workspaceTypes'
 export interface WorkspaceProps {
   /** List of workspaces (workspaces appear as root-level folders in the tree) */
   workspaces: Workspace[]
+  /** IDs of workspaces currently being loaded (for showing loading indicators) */
+  pendingWorkspaces?: Set<string>
   /** Whether the File System Access API is supported */
   isFileSystemAccessSupported: boolean
   /** Callback to add a virtual workspace */

@@ -276,6 +276,7 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
 
       return {
         workspaces: newWorkspaces,
+        pendingWorkspaces: prev.pendingWorkspaces,
       }
     })
   }, [])
@@ -626,6 +627,7 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
 
   return {
     workspaces: state.workspaces,
+    pendingWorkspaces: state.pendingWorkspaces,
     compositeFileSystem,
     addVirtualWorkspace,
     addLocalWorkspace,

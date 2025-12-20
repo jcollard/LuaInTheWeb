@@ -50,7 +50,7 @@ describe('useLibsWorkspaceLoader', () => {
 
     // Get the updater function that was passed to setState
     const updater = mockSetState.mock.calls[0][0]
-    const prevState: WorkspaceManagerState = { workspaces: [] }
+    const prevState: WorkspaceManagerState = { workspaces: [], pendingWorkspaces: new Set(['libs']) }
     const newState = updater(prevState)
 
     expect(newState.workspaces).toContain(mockLibsWorkspace)
@@ -82,11 +82,13 @@ describe('useLibsWorkspaceLoader', () => {
     const updater = mockSetState.mock.calls[0][0]
     const prevState: WorkspaceManagerState = {
       workspaces: [mockLibsWorkspace],
+      pendingWorkspaces: new Set(['libs']),
     }
     const newState = updater(prevState)
 
-    // Should return same state if already exists
-    expect(newState).toBe(prevState)
+    // Should have same workspaces but clear pending state
+    expect(newState.workspaces).toBe(prevState.workspaces)
+    expect(newState.pendingWorkspaces.has('libs')).toBe(false)
   })
 
   it('should not update state if component unmounts before fetch completes', async () => {
