@@ -298,6 +298,122 @@ describe('CanvasController', () => {
     })
   })
 
+  describe('transformation methods', () => {
+    it('should add translate command', () => {
+      controller.translate(100, 50)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({ type: 'translate', dx: 100, dy: 50 })
+    })
+
+    it('should add translate command with negative values', () => {
+      controller.translate(-25, -75)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({ type: 'translate', dx: -25, dy: -75 })
+    })
+
+    it('should add rotate command', () => {
+      const angle = Math.PI / 4
+      controller.rotate(angle)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({ type: 'rotate', angle })
+    })
+
+    it('should add rotate command with negative angle', () => {
+      const angle = -Math.PI / 2
+      controller.rotate(angle)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({ type: 'rotate', angle })
+    })
+
+    it('should add scale command', () => {
+      controller.scale(2, 3)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({ type: 'scale', sx: 2, sy: 3 })
+    })
+
+    it('should add scale command with fractional values', () => {
+      controller.scale(0.5, 0.25)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({ type: 'scale', sx: 0.5, sy: 0.25 })
+    })
+
+    it('should add scale command with negative values (mirroring)', () => {
+      controller.scale(-1, 1)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({ type: 'scale', sx: -1, sy: 1 })
+    })
+
+    it('should add save command', () => {
+      controller.save()
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({ type: 'save' })
+    })
+
+    it('should add restore command', () => {
+      controller.restore()
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({ type: 'restore' })
+    })
+
+    it('should add transform command', () => {
+      controller.transform(1, 0, 0, 1, 100, 50)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({ type: 'transform', a: 1, b: 0, c: 0, d: 1, e: 100, f: 50 })
+    })
+
+    it('should add setTransform command', () => {
+      controller.setTransform(2, 0, 0, 2, 50, 50)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({ type: 'setTransform', a: 2, b: 0, c: 0, d: 2, e: 50, f: 50 })
+    })
+
+    it('should add resetTransform command', () => {
+      controller.resetTransform()
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({ type: 'resetTransform' })
+    })
+
+    it('should support typical save/restore workflow', () => {
+      controller.save()
+      controller.translate(100, 100)
+      controller.rotate(Math.PI / 4)
+      controller.fillRect(-25, -25, 50, 50)
+      controller.restore()
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(5)
+      expect(commands[0]).toEqual({ type: 'save' })
+      expect(commands[1]).toEqual({ type: 'translate', dx: 100, dy: 100 })
+      expect(commands[2]).toEqual({ type: 'rotate', angle: Math.PI / 4 })
+      expect(commands[3]).toEqual({ type: 'fillRect', x: -25, y: -25, width: 50, height: 50 })
+      expect(commands[4]).toEqual({ type: 'restore' })
+    })
+  })
+
   describe('timing methods', () => {
     it('should return 0 for getDelta when not running', () => {
       expect(controller.getDelta()).toBe(0)

@@ -4,9 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "predev": "npm run build -w @lua-learning/shell-core && npm run build -w @lua-learning/lua-runtime && npm run build -w @lua-learning/canvas-runtime",
+    "copy:lua-libs": "node scripts/copy-lua-libs.js",
+    "predev": "npm run build -w @lua-learning/shell-core && npm run build -w @lua-learning/lua-runtime && npm run build -w @lua-learning/canvas-runtime && npm run copy:lua-libs",
     "dev": "vite",
-    "prebuild": "npm run build -w @lua-learning/shell-core && npm run build -w @lua-learning/lua-runtime && npm run build -w @lua-learning/canvas-runtime",
+    "prebuild": "npm run build -w @lua-learning/shell-core && npm run build -w @lua-learning/lua-runtime && npm run build -w @lua-learning/canvas-runtime && npm run copy:lua-libs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",

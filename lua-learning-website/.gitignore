@@ -34,3 +34,6 @@ test-results
 
 # Monaco Editor cache
 .monaco
+
+# Auto-generated Lua library files (copied from lua-runtime package)
+public/libs/*.lua

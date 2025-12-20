@@ -5,7 +5,7 @@
 
 import { LuaFactory, type LuaEngine } from 'wasmoon'
 import { LUA_FORMATTER_CODE } from './lua/formatter'
-import { LUA_SHELL_CODE } from './lua/shell'
+import { LUA_SHELL_CODE } from './lua/shell.generated'
 import { LUA_IO_CODE } from './lua/io'
 import { generateExecutionControlCode } from './lua/executionControl'
 

@@ -167,6 +167,89 @@ Draw a line between two points.
 
 Draw text at the specified position.
 
+## Transformation Functions
+
+Transformations allow you to translate, rotate, and scale the canvas coordinate system.
+All subsequent drawing operations are affected by the current transformation.
+
+### canvas.translate(dx, dy)
+
+Move the canvas origin by the specified amount. All subsequent drawing will be offset.
+
+**Parameters:**
+- `dx` (number): Horizontal distance to move
+- `dy` (number): Vertical distance to move
+
+```lua
+canvas.translate(100, 100)  -- Move origin to (100, 100)
+canvas.fill_rect(0, 0, 50, 50)  -- Draws at (100, 100)
+```
+
+### canvas.rotate(angle)
+
+Rotate the canvas around the current origin. The angle is in radians.
+
+**Parameters:**
+- `angle` (number): Rotation angle in radians
+
+```lua
+canvas.rotate(math.pi / 4)  -- Rotate 45 degrees
+canvas.fill_rect(0, 0, 50, 50)  -- Draws rotated
+```
+
+### canvas.scale(sx, sy)
+
+Scale the canvas from the current origin. Negative values flip/mirror.
+
+**Parameters:**
+- `sx` (number): Horizontal scale factor (1.0 = normal, 2.0 = double, -1 = mirror)
+- `sy` (number): Vertical scale factor
+
+```lua
+canvas.scale(2, 2)   -- Double size
+canvas.scale(-1, 1)  -- Flip horizontally (mirror)
+```
+
+### canvas.save()
+
+Save the current transformation state to a stack. Use with `restore()` to temporarily apply transformations.
+
+```lua
+canvas.save()
+canvas.translate(100, 100)
+canvas.rotate(math.pi / 4)
+canvas.fill_rect(-25, -25, 50, 50)  -- Draw rotated square
+canvas.restore()  -- Undo translate and rotate
+```
+
+### canvas.restore()
+
+Restore the most recently saved transformation state. Undoes all transformations since the last `save()`.
+
+### canvas.transform(a, b, c, d, e, f)
+
+Apply a custom 2D transformation matrix. Multiplies the current matrix by the specified values.
+
+**Parameters (2x3 matrix):**
+- `a` (number): Horizontal scaling
+- `b` (number): Vertical skewing
+- `c` (number): Horizontal skewing
+- `d` (number): Vertical scaling
+- `e` (number): Horizontal translation
+- `f` (number): Vertical translation
+
+### canvas.set_transform(a, b, c, d, e, f)
+
+Reset to identity matrix, then apply the specified transformation.
+
+### canvas.reset_transform()
+
+Reset the transformation matrix to identity (no transformation).
+
+```lua
+canvas.reset_transform()  -- Clear all transforms
+```
+
 ## Timing Functions
 
 ### canvas.get_delta()
