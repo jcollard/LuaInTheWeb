@@ -88,6 +88,21 @@ export function TabBar({
     [onClose]
   )
 
+  const handleMiddleClick = useCallback(
+    (event: MouseEvent, tab: TabInfo) => {
+      // Middle-click is button 1
+      if (event.button === 1) {
+        // Prevent browser's default auto-scroll behavior
+        event.preventDefault()
+        // Only close if the tab is not pinned
+        if (!tab.isPinned) {
+          onClose(tab.path)
+        }
+      }
+    },
+    [onClose]
+  )
+
   const handleDragStart = useCallback(
     (event: DragEvent<HTMLDivElement>, path: string) => {
       event.dataTransfer.setData('text/plain', path)
@@ -246,6 +261,7 @@ export function TabBar({
               aria-selected={isActive}
               className={tabClassNames}
               onClick={() => handleTabClick(tab.path)}
+              onMouseDown={(e) => handleMiddleClick(e, tab)}
               onContextMenu={(e) => handleContextMenu(e, tab)}
               draggable="true"
               onDragStart={(e) => handleDragStart(e, tab.path)}
