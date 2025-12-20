@@ -635,6 +635,15 @@ export class CanvasController {
     const location = this.extractLocationFromTraceback(rawMessage)
     const locationInfo = location ? ` (${location})` : ''
 
+    // Strip the location prefix from the message if we extracted it
+    // Matches patterns like: "foo.lua:3: message" or "[string "foo.lua"]:3: message"
+    let cleanMessage = rawMessage
+    if (location) {
+      cleanMessage = rawMessage
+        .replace(/^@?[^:\s]+\.lua:\d+:\s*/, '')
+        .replace(/^\[string "[^"]*"\]:\d+:\s*/, '')
+    }
+
     // Detect "yield across C-call boundary" error from blocking operations
     if (rawMessage.includes('yield across') || rawMessage.includes('C-call boundary')) {
       return (
@@ -645,7 +654,7 @@ export class CanvasController {
     }
 
     // For other errors, include location if found
-    return `canvas.tick${locationInfo}: ${rawMessage}`
+    return `canvas.tick${locationInfo}: ${cleanMessage}`
   }
 
   /**
