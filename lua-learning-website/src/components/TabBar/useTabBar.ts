@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import type { TabInfo, TabType, UseTabBarReturn } from './types'
 
 export interface UseTabBarOptions {
@@ -12,6 +12,10 @@ export function useTabBar(options: UseTabBarOptions = {}): UseTabBarReturn {
   const { initialTabs = [], initialActiveTab = null } = options
   const [tabs, setTabs] = useState<TabInfo[]>(initialTabs)
   const [activeTab, setActiveTab] = useState<string | null>(initialActiveTab)
+
+  // Ref to track current activeTab for use in callbacks (avoids stale closures)
+  const activeTabRef = useRef<string | null>(activeTab)
+  activeTabRef.current = activeTab
 
   const openTab = useCallback((path: string, name: string, type: TabType = 'file') => {
     setTabs((prev) => {
@@ -71,6 +75,9 @@ export function useTabBar(options: UseTabBarOptions = {}): UseTabBarReturn {
   }, [])
 
   const closeTab = useCallback((path: string) => {
+    // Use ref to get current activeTab value (avoids stale closure issue)
+    const currentActiveTab = activeTabRef.current
+
     setTabs((prev) => {
       const tabToClose = prev.find((tab) => tab.path === path)
       // Don't close pinned tabs
@@ -80,7 +87,8 @@ export function useTabBar(options: UseTabBarOptions = {}): UseTabBarReturn {
       const newTabs = prev.filter((tab) => tab.path !== path)
 
       // If closing active tab, select next tab
-      if (activeTab === path && newTabs.length > 0) {
+      // IMPORTANT: Use currentActiveTab from ref, not the closure value
+      if (currentActiveTab === path && newTabs.length > 0) {
         // Prefer the tab that was after, or the last tab
         const newActiveIndex = Math.min(index, newTabs.length - 1)
         setActiveTab(newTabs[newActiveIndex].path)
@@ -90,7 +98,7 @@ export function useTabBar(options: UseTabBarOptions = {}): UseTabBarReturn {
 
       return newTabs
     })
-  }, [activeTab])
+  }, [])
 
   const selectTab = useCallback((path: string) => {
     setActiveTab(path)
