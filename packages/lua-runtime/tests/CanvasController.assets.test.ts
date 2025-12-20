@@ -53,7 +53,6 @@ vi.mock('@lua-learning/canvas-runtime', () => {
       has = vi.fn()
       clear = vi.fn()
       constructor() {
-        // eslint-disable-next-line @typescript-eslint/no-this-alias
         setMockImageCacheInstance(this)
       }
     },
@@ -74,7 +73,6 @@ vi.mock('@lua-learning/canvas-runtime', () => {
       })
       resolvePath = vi.fn((path: string) => (path.startsWith('/') ? path : `/test/${path}`))
       constructor(_fs: IFileSystem, _scriptDir: string) {
-        // eslint-disable-next-line @typescript-eslint/no-this-alias
         setMockAssetLoaderInstance(this)
       }
     },
