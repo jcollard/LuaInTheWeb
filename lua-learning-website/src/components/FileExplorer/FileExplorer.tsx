@@ -42,6 +42,7 @@ export function FileExplorer({
   onCancelPendingNewFolder,
   onPreviewMarkdown,
   onEditMarkdown,
+  onCdToLocation,
   className,
   workspaceProps,
 }: FileExplorerProps) {
@@ -194,6 +195,9 @@ export function FileExplorer({
       case 'edit-markdown':
         onEditMarkdown?.(targetPath)
         break
+      case 'open-in-terminal':
+        onCdToLocation?.(targetPath)
+        break
       case 'new-file':
         onCreateFile(targetPath)
         break
@@ -267,6 +271,7 @@ export function FileExplorer({
     onDeleteFolder,
     onPreviewMarkdown,
     onEditMarkdown,
+    onCdToLocation,
     workspaceProps,
   ])
 

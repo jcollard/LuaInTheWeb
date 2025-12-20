@@ -24,6 +24,8 @@ export const folderContextMenuItems: ContextMenuItem[] = [
   { id: 'new-file', label: 'New File' },
   { id: 'new-folder', label: 'New Folder' },
   { id: 'divider', type: 'divider' },
+  { id: 'open-in-terminal', label: 'Open in Terminal' },
+  { id: 'divider-terminal', type: 'divider' },
   { id: 'rename', label: 'Rename' },
   { id: 'delete', label: 'Delete' },
 ]
@@ -32,6 +34,8 @@ export const workspaceContextMenuItems: ContextMenuItem[] = [
   { id: 'new-file', label: 'New File' },
   { id: 'new-folder', label: 'New Folder' },
   { id: 'divider', type: 'divider' },
+  { id: 'open-in-terminal', label: 'Open in Terminal' },
+  { id: 'divider-terminal', type: 'divider' },
   { id: 'rename-workspace', label: 'Rename Workspace' },
   { id: 'remove-workspace', label: 'Remove Workspace' },
 ]

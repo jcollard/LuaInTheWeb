@@ -1,11 +1,12 @@
+import { forwardRef } from 'react'
 import { ShellTerminal } from '../ShellTerminal'
 import styles from './BottomPanel.module.css'
-import type { BottomPanelProps } from './types'
+import type { BottomPanelProps, ShellTerminalHandle } from './types'
 
 /**
  * Bottom panel with Shell terminal
  */
-export function BottomPanel({
+export const BottomPanel = forwardRef<ShellTerminalHandle, BottomPanelProps>(function BottomPanel({
   fileSystem,
   className,
   onFileSystemChange,
@@ -13,7 +14,7 @@ export function BottomPanel({
   onFileMove,
   onRequestOpenFile,
   visible,
-}: BottomPanelProps) {
+}, ref) {
   const combinedClassName = className
     ? `${styles.bottomPanel} ${className}`
     : styles.bottomPanel
@@ -34,6 +35,7 @@ export function BottomPanel({
       <div className={styles.content} role="tabpanel" id="shell-tabpanel">
         <div className={styles.shellContent}>
           <ShellTerminal
+            ref={ref}
             fileSystem={fileSystem}
             embedded
             onFileSystemChange={onFileSystemChange}
@@ -46,4 +48,4 @@ export function BottomPanel({
       </div>
     </div>
   )
-}
+})

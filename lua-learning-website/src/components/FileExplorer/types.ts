@@ -53,6 +53,8 @@ export interface FileExplorerProps {
   onPreviewMarkdown?: (path: string) => void
   /** Open a markdown file in edit mode (raw text) */
   onEditMarkdown?: (path: string) => void
+  /** Open a folder/workspace in terminal (cd to location) */
+  onCdToLocation?: (path: string) => void
   className?: string
   /** Optional workspace management props. When provided, workspace tabs are shown. */
   workspaceProps?: WorkspaceProps

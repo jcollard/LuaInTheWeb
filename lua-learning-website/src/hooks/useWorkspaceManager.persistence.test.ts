@@ -2,7 +2,7 @@
  * Persistence and migration tests for useWorkspaceManager hook.
  * Tests: localStorage persistence, legacy data migration, reconnect.
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useWorkspaceManager, WORKSPACE_STORAGE_KEY, DEFAULT_WORKSPACE_ID } from './useWorkspaceManager'
 import { setupWorkspaceManagerTests, getLocalStorageMock } from './useWorkspaceManager.testSetup'
@@ -17,6 +17,20 @@ vi.mock('./virtualFileSystemStorage', () => ({
   deleteFolder: vi.fn(async () => {}),
   getAllFoldersForWorkspace: vi.fn(async () => []),
   deleteWorkspaceData: vi.fn(async () => {}),
+}))
+
+// Mock directoryHandleStorage for auto-reconnect tests
+const mockGetDirectoryHandle = vi.fn().mockResolvedValue(null)
+const mockRequestHandlePermission = vi.fn().mockResolvedValue(false)
+const mockStoreDirectoryHandle = vi.fn().mockResolvedValue(undefined)
+const mockRemoveDirectoryHandle = vi.fn().mockResolvedValue(undefined)
+
+vi.mock('./directoryHandleStorage', () => ({
+  storeDirectoryHandle: (...args: unknown[]) => mockStoreDirectoryHandle(...args),
+  getDirectoryHandle: (...args: unknown[]) => mockGetDirectoryHandle(...args),
+  removeDirectoryHandle: (...args: unknown[]) => mockRemoveDirectoryHandle(...args),
+  requestHandlePermission: (...args: unknown[]) => mockRequestHandlePermission(...args),
+  getAllDirectoryHandles: vi.fn(async () => new Map()),
 }))
 
 // Mock FileSystemAccessAPIFileSystem
@@ -261,6 +275,139 @@ describe('useWorkspaceManager', () => {
           await result.current.reconnectWorkspace(DEFAULT_WORKSPACE_ID, mockHandle)
         })
       ).rejects.toThrow('Cannot reconnect a virtual workspace')
+    })
+  })
+
+  describe('auto-reconnect on startup', () => {
+    beforeEach(() => {
+      mockGetDirectoryHandle.mockReset()
+      mockRequestHandlePermission.mockReset()
+      mockStoreDirectoryHandle.mockReset()
+      mockRemoveDirectoryHandle.mockReset()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('attempts to reconnect disconnected local workspaces on mount', async () => {
+      const localStorageMock = getLocalStorageMock()
+      const savedData = JSON.stringify({
+        workspaces: [
+          { id: DEFAULT_WORKSPACE_ID, name: 'home', type: 'virtual', mountPath: '/home' },
+          { id: 'ws-local', name: 'Local Project', type: 'local', mountPath: '/local-project' },
+        ],
+      })
+      localStorageMock._setStore({ [WORKSPACE_STORAGE_KEY]: savedData })
+
+      const mockHandle = {
+        name: 'project',
+        kind: 'directory',
+      } as unknown as FileSystemDirectoryHandle
+
+      // Simulate stored handle exists and permission is granted
+      mockGetDirectoryHandle.mockResolvedValue(mockHandle)
+      mockRequestHandlePermission.mockResolvedValue(true)
+
+      const { result } = renderHook(() => useWorkspaceManager())
+
+      // Wait for the auto-reconnect effect to run
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      })
+
+      // Should have attempted to get the stored handle
+      expect(mockGetDirectoryHandle).toHaveBeenCalledWith('ws-local')
+      // Should have requested permission on the handle
+      expect(mockRequestHandlePermission).toHaveBeenCalledWith(mockHandle)
+      // Workspace should now be connected
+      const localWorkspace = result.current.workspaces.find((w) => w.id === 'ws-local')
+      expect(localWorkspace?.status).toBe('connected')
+    })
+
+    it('keeps workspace disconnected if no stored handle exists', async () => {
+      const localStorageMock = getLocalStorageMock()
+      const savedData = JSON.stringify({
+        workspaces: [
+          { id: DEFAULT_WORKSPACE_ID, name: 'home', type: 'virtual', mountPath: '/home' },
+          { id: 'ws-local', name: 'Local Project', type: 'local', mountPath: '/local-project' },
+        ],
+      })
+      localStorageMock._setStore({ [WORKSPACE_STORAGE_KEY]: savedData })
+
+      // No stored handle
+      mockGetDirectoryHandle.mockResolvedValue(null)
+
+      const { result } = renderHook(() => useWorkspaceManager())
+
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      })
+
+      const localWorkspace = result.current.workspaces.find((w) => w.id === 'ws-local')
+      expect(localWorkspace?.status).toBe('disconnected')
+    })
+
+    it('keeps workspace disconnected if permission is denied', async () => {
+      const localStorageMock = getLocalStorageMock()
+      const savedData = JSON.stringify({
+        workspaces: [
+          { id: DEFAULT_WORKSPACE_ID, name: 'home', type: 'virtual', mountPath: '/home' },
+          { id: 'ws-local', name: 'Local Project', type: 'local', mountPath: '/local-project' },
+        ],
+      })
+      localStorageMock._setStore({ [WORKSPACE_STORAGE_KEY]: savedData })
+
+      const mockHandle = {
+        name: 'project',
+        kind: 'directory',
+      } as unknown as FileSystemDirectoryHandle
+
+      // Handle exists but permission denied
+      mockGetDirectoryHandle.mockResolvedValue(mockHandle)
+      mockRequestHandlePermission.mockResolvedValue(false)
+
+      const { result } = renderHook(() => useWorkspaceManager())
+
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      })
+
+      const localWorkspace = result.current.workspaces.find((w) => w.id === 'ws-local')
+      expect(localWorkspace?.status).toBe('disconnected')
+    })
+
+    it('reconnects multiple disconnected local workspaces', async () => {
+      const localStorageMock = getLocalStorageMock()
+      const savedData = JSON.stringify({
+        workspaces: [
+          { id: DEFAULT_WORKSPACE_ID, name: 'home', type: 'virtual', mountPath: '/home' },
+          { id: 'ws-local-1', name: 'Project 1', type: 'local', mountPath: '/project-1' },
+          { id: 'ws-local-2', name: 'Project 2', type: 'local', mountPath: '/project-2' },
+        ],
+      })
+      localStorageMock._setStore({ [WORKSPACE_STORAGE_KEY]: savedData })
+
+      const mockHandle1 = { name: 'project1', kind: 'directory' } as unknown as FileSystemDirectoryHandle
+      const mockHandle2 = { name: 'project2', kind: 'directory' } as unknown as FileSystemDirectoryHandle
+
+      mockGetDirectoryHandle.mockImplementation(async (id: string) => {
+        if (id === 'ws-local-1') return mockHandle1
+        if (id === 'ws-local-2') return mockHandle2
+        return null
+      })
+      mockRequestHandlePermission.mockResolvedValue(true)
+
+      const { result } = renderHook(() => useWorkspaceManager())
+
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+      })
+
+      const workspace1 = result.current.workspaces.find((w) => w.id === 'ws-local-1')
+      const workspace2 = result.current.workspaces.find((w) => w.id === 'ws-local-2')
+      expect(workspace1?.status).toBe('connected')
+      expect(workspace2?.status).toBe('connected')
     })
   })
 })

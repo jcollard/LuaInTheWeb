@@ -5,7 +5,7 @@ import { ActivityBar } from '../ActivityBar'
 import { StatusBar } from '../StatusBar'
 import { SidebarPanel } from '../SidebarPanel'
 import { EditorPanel } from '../EditorPanel'
-import { BottomPanel } from '../BottomPanel'
+import { BottomPanel, type ShellTerminalHandle } from '../BottomPanel'
 import { IDEPanelGroup } from '../IDEPanelGroup'
 import { IDEPanel } from '../IDEPanel'
 import { IDEResizeHandle } from '../IDEResizeHandle'
@@ -188,6 +188,9 @@ function IDELayoutInner({
     saveAllFiles,
   })
 
+  // Shell terminal ref for command injection (cd to location, etc.)
+  const shellRef = useRef<ShellTerminalHandle>(null)
+
   // Canvas tab request management for shell-based canvas.start()
   // Stores pending resolvers for canvas requests (canvasId -> resolver)
   const pendingCanvasRequestsRef = useRef<Map<string, (canvas: HTMLCanvasElement) => void>>(new Map())
@@ -305,6 +308,16 @@ function IDELayoutInner({
     }
   }, [terminalVisible, toggleTerminal])
 
+  // Handle "cd to location" from file explorer context menu
+  const handleCdToLocation = useCallback((path: string) => {
+    // Show terminal if hidden
+    if (!terminalVisible) {
+      toggleTerminal()
+    }
+    // Execute cd command in shell
+    shellRef.current?.executeCommand(`cd "${path}"`)
+  }, [terminalVisible, toggleTerminal])
+
   // Handle file open request from shell's 'open' command
   // Routes to appropriate viewer based on file type
   const handleRequestOpenFile = useCallback((filePath: string) => {
@@ -353,7 +366,7 @@ function IDELayoutInner({
     handleCreateFile, handleCreateFolder, renameFile, renameFolder,
     deleteFile, deleteFolder, openFile, openPreviewFile, moveFile, copyFile,
     clearPendingNewFile, clearPendingNewFolder, openMarkdownPreview, openMarkdownEdit: openFile,
-    makeTabPermanent, openBinaryViewer, workspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
+    makeTabPermanent, openBinaryViewer, handleCdToLocation, workspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
     addVirtualWorkspace, handleAddLocalWorkspace, handleRemoveWorkspace, refreshWorkspace,
     refreshFileTree, supportsRefresh, handleReconnectWorkspace, handleDisconnectWorkspace,
     handleRenameWorkspace, isFolderAlreadyMounted, getUniqueWorkspaceName,
@@ -465,6 +478,7 @@ function IDELayoutInner({
                   collapsed={!terminalVisible}
                 >
                   <BottomPanel
+                    ref={shellRef}
                     fileSystem={compositeFileSystem}
                     onFileSystemChange={refreshFileTree}
                     canvasCallbacks={canvasCallbacks}

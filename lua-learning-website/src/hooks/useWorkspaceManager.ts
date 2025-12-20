@@ -116,6 +116,56 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
   // Fetch and add libs workspace on mount
   useLibsWorkspaceLoader(setState)
 
+  // Auto-reconnect disconnected local workspaces on mount
+  useEffect(() => {
+    const autoReconnectWorkspaces = async (): Promise<void> => {
+      const disconnectedLocalWorkspaces = state.workspaces.filter(
+        (w) => w.type === 'local' && w.status === 'disconnected'
+      )
+
+      if (disconnectedLocalWorkspaces.length === 0) {
+        return
+      }
+
+      // Attempt to reconnect each disconnected local workspace
+      for (const workspace of disconnectedLocalWorkspaces) {
+        try {
+          const handle = await getDirectoryHandle(workspace.id)
+          if (!handle) continue
+
+          const granted = await requestHandlePermission(handle)
+          if (!granted) continue
+
+          // Permission granted - reconnect
+          const fs = new FileSystemAccessAPIFileSystem(handle)
+          await fs.initialize()
+
+          setState((prev) => ({
+            ...prev,
+            workspaces: prev.workspaces.map((w) =>
+              w.id === workspace.id
+                ? {
+                    ...w,
+                    filesystem: fs,
+                    status: 'connected' as const,
+                    directoryHandle: handle,
+                  }
+                : w
+            ),
+          }))
+        } catch {
+          // Failed to reconnect, keep disconnected
+        }
+      }
+    }
+
+    autoReconnectWorkspaces().catch((err) => {
+      console.error('Failed to auto-reconnect workspaces:', err)
+    })
+    // Only run on initial mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Create CompositeFileSystem from connected workspaces
   const compositeFileSystem = useMemo(() => {
     const mounts = state.workspaces

@@ -277,4 +277,32 @@ describe('FileExplorer', () => {
       expect(onMoveFile).toHaveBeenCalledWith('/main.lua', '/utils')
     })
   })
+
+  describe('cd to location', () => {
+    it('should show "Open in Terminal" option when right-clicking on folder', () => {
+      // Arrange
+      render(<FileExplorer {...defaultProps} />)
+
+      // Act - right-click on folder
+      const folderItem = screen.getByText('utils').closest('[role="treeitem"]')
+      fireEvent.contextMenu(folderItem!)
+
+      // Assert - should show "Open in Terminal" menu item
+      expect(screen.getByText('Open in Terminal')).toBeInTheDocument()
+    })
+
+    it('should call onCdToLocation when "Open in Terminal" is clicked', () => {
+      // Arrange
+      const onCdToLocation = vi.fn()
+      render(<FileExplorer {...defaultProps} onCdToLocation={onCdToLocation} />)
+
+      // Act - right-click on folder and click "Open in Terminal"
+      const folderItem = screen.getByText('utils').closest('[role="treeitem"]')
+      fireEvent.contextMenu(folderItem!)
+      fireEvent.click(screen.getByText('Open in Terminal'))
+
+      // Assert
+      expect(onCdToLocation).toHaveBeenCalledWith('/utils')
+    })
+  })
 })
