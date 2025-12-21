@@ -179,7 +179,9 @@ test.describe('Canvas Shell Integration', () => {
     })
   })
 
-  test.describe('Print Output During Canvas', () => {
+  // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+  // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+  test.describe.skip('Print Output During Canvas', () => {
     test('print() output goes to terminal while canvas runs', async ({ page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
@@ -311,7 +313,9 @@ test.describe('Canvas Shell Integration', () => {
     })
   })
 
-  test.describe('Canvas Tab Close from UI (Issue #361)', () => {
+  // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+  // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+  test.describe.skip('Canvas Tab Close from UI (Issue #361)', () => {
     test('closing canvas tab stops the canvas process', async ({ page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()

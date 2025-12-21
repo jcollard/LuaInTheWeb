@@ -22,7 +22,9 @@ test.describe('Docs Workspace', () => {
       await expect(page.getByTestId('docs-workspace-icon')).toBeVisible()
     })
 
-    test('can expand docs workspace to see shell.md', async ({ page }) => {
+    // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+    // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+    test.skip('can expand docs workspace to see shell.md', async ({ page }) => {
       // Arrange - Find docs workspace
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await expect(docsWorkspace).toBeVisible()
@@ -36,7 +38,9 @@ test.describe('Docs Workspace', () => {
     })
   })
 
-  test.describe('docs file viewing', () => {
+  // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+  // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+  test.describe.skip('docs file viewing', () => {
     test('can open shell.md from docs workspace', async ({ page }) => {
       // Arrange - Expand docs workspace
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
@@ -94,7 +98,9 @@ test.describe('Docs Workspace', () => {
     })
   })
 
-  test.describe('docs file read-only behavior', () => {
+  // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+  // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+  test.describe.skip('docs file read-only behavior', () => {
     test('docs file opens in preview mode only', async ({ page }) => {
       // Arrange - Open shell.md
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
