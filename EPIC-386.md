@@ -1,9 +1,9 @@
 # Epic #386: Add tab / window splitting allowing multiple tabs to be shown and open at a time
 
-**Status:** In Progress (2/6 complete)
+**Status:** In Progress (3/6 complete)
 **Branch:** epic-386
 **Created:** 2025-12-20
-**Last Updated:** 2025-12-20
+**Last Updated:** 2025-12-21
 
 ## Overview
 
@@ -37,7 +37,7 @@ Add the ability to split the editor area horizontally or vertically, allowing mu
 |---|-------|--------|--------|-------|
 | #396 | Core Split Infrastructure - useSplitLayout hook and types | :white_check_mark: Complete | 396-core-split-infrastructure | Merged in PR #402 |
 | #397 | EditorGroup Component - Standalone editor group with TabBar | :white_check_mark: Complete | 397-editorgroup-component | Merged in PR #403 |
-| #398 | SplitEditorLayout Integration - Integrate with IDELayout | :hourglass_flowing_sand: Pending | - | Depends on #396, #397 |
+| #398 | SplitEditorLayout Integration - Integrate with IDELayout | :white_check_mark: Complete | 398-spliteditorlayout-integration | Merged in PR #405 |
 | #399 | Split Actions & UI - Context menu, close split, focus states | :hourglass_flowing_sand: Pending | - | Depends on #396, #397, #398 |
 | #400 | Keyboard Shortcuts & Persistence - Split navigation and localStorage | :hourglass_flowing_sand: Pending | - | Depends on #396, #398, #399 |
 | #401 | Testing Suite - Unit tests and E2E tests for split functionality | :hourglass_flowing_sand: Pending | - | Depends on all above |
@@ -85,6 +85,15 @@ Add the ability to split the editor area horizontally or vertically, allowing mu
 - Created EditorGroup with TabBar integration, focus indicator, empty state
 - 15 unit tests with 100% mutation score
 - Merged PR #403 to epic-386
+
+### 2025-12-21
+- Completed #398: SplitEditorLayout Integration
+- Created SplitEditorLayout component orchestrating multiple EditorGroups with resizable panels
+- Integrated with IDELayout, replacing direct EditorPanel usage
+- Updated IDEContext to track active split group (activeSplitGroup state)
+- 484 unit tests for SplitEditorLayout with 89.13% mutation score
+- 250 E2E tests passing (66 skipped due to known Monaco/Playwright issues in #404)
+- Merged PR #405 to epic-386
 
 ## Key Files
 
