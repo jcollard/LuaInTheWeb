@@ -1,6 +1,6 @@
 # Epic #386: Add tab / window splitting allowing multiple tabs to be shown and open at a time
 
-**Status:** In Progress (1/6 complete)
+**Status:** In Progress (2/6 complete)
 **Branch:** epic-386
 **Created:** 2025-12-20
 **Last Updated:** 2025-12-20
@@ -36,7 +36,7 @@ Add the ability to split the editor area horizontally or vertically, allowing mu
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #396 | Core Split Infrastructure - useSplitLayout hook and types | :white_check_mark: Complete | 396-core-split-infrastructure | Merged in PR #402 |
-| #397 | EditorGroup Component - Standalone editor group with TabBar | :hourglass_flowing_sand: Pending | - | Depends on #396 |
+| #397 | EditorGroup Component - Standalone editor group with TabBar | :white_check_mark: Complete | 397-editorgroup-component | Merged in PR #403 |
 | #398 | SplitEditorLayout Integration - Integrate with IDELayout | :hourglass_flowing_sand: Pending | - | Depends on #396, #397 |
 | #399 | Split Actions & UI - Context menu, close split, focus states | :hourglass_flowing_sand: Pending | - | Depends on #396, #397, #398 |
 | #400 | Keyboard Shortcuts & Persistence - Split navigation and localStorage | :hourglass_flowing_sand: Pending | - | Depends on #396, #398, #399 |
@@ -81,6 +81,10 @@ Add the ability to split the editor area horizontally or vertically, allowing mu
 - Created `useSplitLayout` hook with types and 27 unit tests (97%+ coverage)
 - Completed #396: Core Split Infrastructure
 - Merged PR #402 to epic-386
+- Completed #397: EditorGroup Component
+- Created EditorGroup with TabBar integration, focus indicator, empty state
+- 15 unit tests with 100% mutation score
+- Merged PR #403 to epic-386
 
 ## Key Files
 
@@ -89,6 +93,10 @@ Add the ability to split the editor area horizontally or vertically, allowing mu
 - `src/components/SplitEditorLayout/types.ts` - Core type definitions (SplitLayout, EditorGroupInfo, SplitDirection)
 - `src/components/SplitEditorLayout/useSplitLayout.ts` - Split layout state management hook
 - `src/components/SplitEditorLayout/__tests__/useSplitLayout.test.ts` - Hook unit tests (27 tests)
+- `src/components/EditorGroup/types.ts` - EditorGroupProps interface
+- `src/components/EditorGroup/EditorGroup.tsx` - Standalone editor group component with TabBar
+- `src/components/EditorGroup/EditorGroup.module.css` - Focus indicator and layout styles
+- `src/components/EditorGroup/__tests__/EditorGroup.test.tsx` - Unit tests (15 tests, 100% mutation score)
 
 ## Open Questions
 
