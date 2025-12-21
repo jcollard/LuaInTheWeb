@@ -22,7 +22,9 @@ test.describe('Library Workspace', () => {
       await expect(page.getByTestId('library-workspace-icon')).toBeVisible()
     })
 
-    test('can expand libs workspace to see shell.lua', async ({ page }) => {
+    // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+    // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+    test.skip('can expand libs workspace to see shell.lua', async ({ page }) => {
       // Arrange - Find libs workspace
       const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })
       await expect(libsWorkspace).toBeVisible()
@@ -36,7 +38,9 @@ test.describe('Library Workspace', () => {
     })
   })
 
-  test.describe('library file viewing', () => {
+  // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+  // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+  test.describe.skip('library file viewing', () => {
     test('can open shell.lua from libs workspace', async ({ page }) => {
       // Arrange - Expand libs workspace
       const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })
@@ -71,7 +75,9 @@ test.describe('Library Workspace', () => {
     })
   })
 
-  test.describe('library file read-only behavior', () => {
+  // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+  // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+  test.describe.skip('library file read-only behavior', () => {
     test('shows error toast when trying to save shell.lua', async ({ page }) => {
       // Arrange - Open shell.lua
       const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })

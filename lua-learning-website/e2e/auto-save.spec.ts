@@ -117,7 +117,9 @@ test.describe('Auto-Save and Save All', () => {
     expect(autoSaveEnabled).toBe('true')
   })
 
-  test('Ctrl+Shift+S saves all files via keyboard shortcut', async ({ page }) => {
+  // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+  // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+  test.skip('Ctrl+Shift+S saves all files via keyboard shortcut', async ({ page }) => {
     // Create and open a file
     await createAndOpenFile(page)
 

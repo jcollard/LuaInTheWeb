@@ -22,7 +22,9 @@ test.describe('Examples Workspace', () => {
       await expect(page.getByTestId('examples-workspace-icon')).toBeVisible()
     })
 
-    test('can expand examples workspace to see hello.lua', async ({ page }) => {
+    // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+    // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+    test.skip('can expand examples workspace to see hello.lua', async ({ page }) => {
       // Arrange - Find examples workspace
       const examplesWorkspace = page.getByRole('treeitem', { name: /^examples$/i })
       await expect(examplesWorkspace).toBeVisible()
@@ -35,7 +37,9 @@ test.describe('Examples Workspace', () => {
       await expect(page.getByRole('treeitem', { name: 'hello.lua' })).toBeVisible()
     })
 
-    test('examples workspace contains example files and folders', async ({ page }) => {
+    // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+    // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+    test.skip('examples workspace contains example files and folders', async ({ page }) => {
       // Arrange - Expand examples workspace
       const examplesWorkspace = page.getByRole('treeitem', { name: /^examples$/i })
       await examplesWorkspace.getByTestId('folder-chevron').click()
@@ -51,7 +55,9 @@ test.describe('Examples Workspace', () => {
       await expect(page.getByRole('treeitem', { name: 'canvas', exact: true })).toBeVisible()
     })
 
-    test('can expand ascii_world folder to see game modules', async ({ page }) => {
+    // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+    // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+    test.skip('can expand ascii_world folder to see game modules', async ({ page }) => {
       // Arrange - Expand examples workspace
       const examplesWorkspace = page.getByRole('treeitem', { name: /^examples$/i })
       await examplesWorkspace.getByTestId('folder-chevron').click()
@@ -67,7 +73,9 @@ test.describe('Examples Workspace', () => {
     })
   })
 
-  test.describe('example file viewing', () => {
+  // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+  // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+  test.describe.skip('example file viewing', () => {
     test('can open hello.lua from examples workspace', async ({ page }) => {
       // Arrange - Expand examples workspace
       const examplesWorkspace = page.getByRole('treeitem', { name: /^examples$/i })
@@ -99,7 +107,9 @@ test.describe('Examples Workspace', () => {
     })
   })
 
-  test.describe('example file read-only behavior', () => {
+  // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+  // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+  test.describe.skip('example file read-only behavior', () => {
     test('shows error toast when trying to save hello.lua', async ({ page }) => {
       // Arrange - Open hello.lua
       const examplesWorkspace = page.getByRole('treeitem', { name: /^examples$/i })

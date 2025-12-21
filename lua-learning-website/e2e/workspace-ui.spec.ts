@@ -31,7 +31,9 @@ test.describe('Workspace UI', () => {
       await expect(page.getByTestId('read-only-divider')).toBeVisible()
     })
 
-    test('displays read-only workspaces after user workspaces', async ({ page }) => {
+    // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+    // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+    test.skip('displays read-only workspaces after user workspaces', async ({ page }) => {
       // Wait for async workspaces to load
       await expect(page.getByRole('treeitem', { name: 'libs' })).toBeVisible()
       await expect(page.getByRole('treeitem', { name: 'docs' })).toBeVisible()

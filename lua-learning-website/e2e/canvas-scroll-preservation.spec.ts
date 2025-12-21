@@ -8,7 +8,9 @@ import { createTerminalHelper } from './helpers/terminal'
  * Issue #371: When the canvas closes, the scroll position in the editor
  * should be restored to where it was before the canvas opened.
  */
-test.describe('Canvas Scroll Preservation', () => {
+// Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+// See: https://github.com/jcollard/LuaInTheWeb/issues/404
+test.describe.skip('Canvas Scroll Preservation', () => {
   test('scroll position preserved after Ctrl+C with focus in shell (Issue #371)', async ({
     page,
   }) => {

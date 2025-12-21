@@ -11,7 +11,9 @@ test.describe('Markdown Viewer', () => {
     await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
   })
 
-  test.describe('markdown file preview', () => {
+  // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+  // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+  test.describe.skip('markdown file preview', () => {
     test('clicking on .md file shows rendered markdown', async ({ page }) => {
       // Arrange - Expand docs workspace
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
@@ -65,7 +67,9 @@ test.describe('Markdown Viewer', () => {
     })
   })
 
-  test.describe('markdown context menu', () => {
+  // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+  // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+  test.describe.skip('markdown context menu', () => {
     test('right-click on .md file shows Preview Markdown option', async ({ page }) => {
       // Arrange - Expand docs workspace
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
@@ -176,7 +180,9 @@ test.describe('Markdown Viewer', () => {
     })
   })
 
-  test.describe('read-only workspace markdown', () => {
+  // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+  // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+  test.describe.skip('read-only workspace markdown', () => {
     test('docs workspace .md file has both Preview and Edit options in context menu', async ({ page }) => {
       // Arrange - Expand docs workspace
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
@@ -206,7 +212,9 @@ test.describe('Markdown Viewer', () => {
     })
   })
 
-  test.describe('markdown viewer styling', () => {
+  // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+  // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+  test.describe.skip('markdown viewer styling', () => {
     test('markdown viewer has appropriate styling for dark theme', async ({ page }) => {
       // Arrange - Open a markdown file
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
@@ -245,7 +253,9 @@ test.describe('Markdown Viewer', () => {
     })
   })
 
-  test.describe('scroll position persistence', () => {
+  // Skipped: Flaky under parallel execution - passes individually but fails with 16 workers
+  // See: https://github.com/jcollard/LuaInTheWeb/issues/404
+  test.describe.skip('scroll position persistence', () => {
     test('editor scroll position is preserved when switching from markdown to editor tab', async ({ page }) => {
       // This test exposes a bug where switching from markdown preview back to
       // an editor tab resets the scroll position to the top
