@@ -479,6 +479,7 @@ function IDELayoutInner({
                                 onChange={setCode}
                                 fileName={fileName}
                                 isDirty={isDirty}
+                                hideToolbar
                                 cursorLine={cursorLine}
                                 cursorColumn={cursorColumn}
                                 onCursorChange={(line, col) => {

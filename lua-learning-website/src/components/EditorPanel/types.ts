@@ -35,6 +35,8 @@ export interface EditorPanelProps {
   onToggleAutoSave?: () => void
   /** Called when "Save All Files" command is invoked */
   onSaveAllFiles?: () => void
+  /** Hide the toolbar (tabs, format button) when used inside SplitEditorLayout */
+  hideToolbar?: boolean
 }
 
 /**

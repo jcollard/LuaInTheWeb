@@ -267,6 +267,32 @@ describe('EditorPanel', () => {
     })
   })
 
+  describe('hideToolbar', () => {
+    it('should hide toolbar when hideToolbar is true', () => {
+      // Arrange & Act
+      render(<EditorPanel {...defaultProps} hideToolbar />)
+
+      // Assert - toolbar should not be present
+      expect(screen.queryByText('main.lua')).not.toBeInTheDocument()
+    })
+
+    it('should show toolbar when hideToolbar is false', () => {
+      // Arrange & Act
+      render(<EditorPanel {...defaultProps} hideToolbar={false} />)
+
+      // Assert - toolbar should be present with filename
+      expect(screen.getByText('main.lua')).toBeInTheDocument()
+    })
+
+    it('should hide format button when hideToolbar is true', () => {
+      // Arrange & Act
+      render(<EditorPanel {...defaultProps} onFormat={vi.fn()} hideToolbar />)
+
+      // Assert - format button should not be present
+      expect(screen.queryByRole('button', { name: /format/i })).not.toBeInTheDocument()
+    })
+  })
+
   describe('format button', () => {
     it('should render format button when onFormat is provided', () => {
       // Arrange & Act
