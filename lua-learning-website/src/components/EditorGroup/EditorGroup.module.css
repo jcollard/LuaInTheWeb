@@ -1,0 +1,27 @@
+.editorGroup {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  border: 1px solid transparent;
+  transition: border-color 0.15s ease;
+}
+
+.editorGroup.active {
+  border-color: var(--vscode-focusBorder, #007acc);
+}
+
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.emptyState {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--vscode-descriptionForeground, #717171);
+  font-size: 14px;
+}
