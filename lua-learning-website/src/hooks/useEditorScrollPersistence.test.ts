@@ -144,8 +144,8 @@ describe('useEditorScrollPersistence', () => {
       expect(mockEditor1.setScrollTop).toHaveBeenCalledWith(200)
     })
 
-    it('should not call setScrollTop if no saved position exists', async () => {
-      const mockEditor = createMockEditor(0)
+    it('should scroll to top when no saved position exists', async () => {
+      const mockEditor = createMockEditor(100) // Start at line 100
 
       const { result } = renderHook(
         ({ activeTab }) => useEditorScrollPersistence({ activeTab }),
@@ -166,8 +166,8 @@ describe('useEditorScrollPersistence', () => {
         await new Promise(resolve => requestAnimationFrame(resolve))
       })
 
-      // Should NOT call setScrollTop since there's no saved position
-      expect(mockEditor.setScrollTop).not.toHaveBeenCalled()
+      // Should call setScrollTop(0) to scroll to top for new files
+      expect(mockEditor.setScrollTop).toHaveBeenCalledWith(0)
     })
 
     it('should restore scroll position on editor remount', async () => {
