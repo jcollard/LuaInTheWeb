@@ -20,6 +20,7 @@ export function EditorPanel({
   autoSaveEnabled,
   onToggleAutoSave,
   onSaveAllFiles,
+  hideToolbar = false,
 }: EditorPanelProps) {
   const combinedClassName = className
     ? `${styles.editorPanel} ${className}`
@@ -51,19 +52,21 @@ export function EditorPanel({
   }
 
   return (
-    <div className={combinedClassName} data-testid="editor-panel">
-      <div className={styles.toolbar}>
-        {renderTabs()}
-        {onFormat && (
-          <div className={styles.actions}>
-            <FormatButton
-              onFormat={onFormat}
-              loading={isFormatting}
-              disabled={!code.trim()}
-            />
-          </div>
-        )}
-      </div>
+    <div className={combinedClassName} data-testid="code-editor-panel">
+      {!hideToolbar && (
+        <div className={styles.toolbar}>
+          {renderTabs()}
+          {onFormat && (
+            <div className={styles.actions}>
+              <FormatButton
+                onFormat={onFormat}
+                loading={isFormatting}
+                disabled={!code.trim()}
+              />
+            </div>
+          )}
+        </div>
+      )}
       <div className={styles.editorContainer}>
         <CodeEditor
           value={code}

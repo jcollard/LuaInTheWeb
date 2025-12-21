@@ -51,6 +51,9 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   // Version counter to trigger file tree refresh (incremented when shell modifies filesystem)
   const [fileTreeVersion, setFileTreeVersion] = useState(0)
 
+  // Split editor group state
+  const [activeSplitGroup, setActiveSplitGroup] = useState<string | null>(null)
+
   const activeTab = tabBar.activeTab
   const tabs = tabBar.tabs
   const activeTabType = tabBar.getActiveTabType()
@@ -462,6 +465,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     createFile, createFolder, deleteFile, deleteFolder, renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, openBinaryViewer, saveFile,
     tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, makeTabPermanent,
     pinTab, unpinTab, reorderTab, closeToRight, closeOthers,
+    activeSplitGroup, setActiveSplitGroup,
     toasts, showError, dismissToast,
     pendingNewFilePath, generateUniqueFileName, createFileWithRename, clearPendingNewFile,
     pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename, clearPendingNewFolder,
@@ -473,6 +477,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     fileTree, refreshFileTree, handleShellFileMove, createFile, createFolder, deleteFile, deleteFolder,
     renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, openBinaryViewer, saveFile, tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, makeTabPermanent,
     pinTab, unpinTab, reorderTab, closeToRight, closeOthers,
+    activeSplitGroup, setActiveSplitGroup,
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,
     clearPendingNewFolder, recentFiles, clearRecentFiles, filesystem,

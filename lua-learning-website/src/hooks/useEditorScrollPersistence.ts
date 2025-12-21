@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useEffect } from 'react'
 import type { editor, IDisposable } from 'monaco-editor'
 
 // Module-level map to persist scroll positions across re-renders
@@ -45,6 +45,12 @@ export function useEditorScrollPersistence(
   // Flag to prevent saving scroll during restoration (Monaco fires scroll events during init)
   const isRestoringRef = useRef<boolean>(false)
 
+  // When activeTab changes, set restoring flag to prevent scroll events during
+  // model transition from being saved to the wrong tab
+  if (activeTab !== activeTabRef.current) {
+    isRestoringRef.current = true
+    log('Tab changing, set restoring flag', { from: activeTabRef.current, to: activeTab })
+  }
   // Keep activeTabRef in sync (needed for scroll listener callback)
   activeTabRef.current = activeTab
 
@@ -69,7 +75,9 @@ export function useEditorScrollPersistence(
         log('Restoring scroll position', { filePath, savedPosition })
         monacoEditor.setScrollTop(savedPosition)
       } else {
-        log('No saved position for', filePath)
+        // No saved position - scroll to top (new file)
+        log('No saved position for', filePath, '- scrolling to top')
+        monacoEditor.setScrollTop(0)
       }
       // Clear restoring flag after a brief delay to let scroll settle
       requestAnimationFrame(() => {
@@ -98,7 +106,7 @@ export function useEditorScrollPersistence(
     if (monacoEditor) {
       // Track scroll position on every scroll event
       scrollListenerRef.current = monacoEditor.onDidScrollChange(() => {
-        // Skip saving during restoration (Monaco fires scroll events during init)
+        // Skip saving during restoration (Monaco fires scroll events during init/tab switch)
         if (isRestoringRef.current) {
           log('Skipping scroll save (restoring in progress)')
           return
@@ -138,6 +146,22 @@ export function useEditorScrollPersistence(
       }
     }
   }, [restoreScrollPosition])
+
+  // Restore scroll position when activeTab changes
+  // Note: onDidChangeModel doesn't fire when Monaco just changes content (same model)
+  // so we need this effect to handle tab switches
+  useEffect(() => {
+    log('activeTab effect', { activeTab, hasEditor: !!editorRef.current })
+    if (activeTab && editorRef.current && !activeTab.startsWith('canvas://')) {
+      // Small delay to ensure Monaco has updated the content
+      const timeoutId = setTimeout(() => {
+        if (editorRef.current && activeTabRef.current === activeTab) {
+          restoreScrollPosition(activeTab, editorRef.current)
+        }
+      }, 50)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [activeTab, restoreScrollPosition])
 
   return { setEditor }
 }
