@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]  # Only run on direct pushes to main
   pull_request:
-    branches: [main, 'epic-**']  # Run on PRs targeting main or epic branches
+    branches: [main]  # Only run on PRs targeting main (use /run-ci for epic branches)
 
 # Cancel in-progress runs when a new commit is pushed
 concurrency:
