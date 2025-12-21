@@ -6,6 +6,7 @@ import { StatusBar } from '../StatusBar'
 import { SidebarPanel } from '../SidebarPanel'
 import { EditorPanel } from '../EditorPanel'
 import { BottomPanel, type ShellTerminalHandle } from '../BottomPanel'
+import { SplitEditorLayout, type SplitLayout } from '../SplitEditorLayout'
 import { IDEPanelGroup } from '../IDEPanelGroup'
 import { IDEPanel } from '../IDEPanel'
 import { IDEResizeHandle } from '../IDEResizeHandle'
@@ -132,6 +133,9 @@ function IDELayoutInner({
     autoSaveEnabled,
     toggleAutoSave,
     saveAllFiles,
+    // Split editor
+    activeSplitGroup,
+    setActiveSplitGroup,
   } = useIDE()
 
   const [cursorLine, setCursorLine] = useState(1)
@@ -374,18 +378,22 @@ function IDELayoutInner({
     handleRenameWorkspace, isFolderAlreadyMounted, getUniqueWorkspaceName,
   })
 
-  // Tab bar props for EditorPanel (only when tabs exist)
-  const tabBarProps = tabs.length > 0 ? {
-    tabs,
-    activeTab,
-    onSelect: selectTab,
-    onClose: handleCloseTab,
-    onPinTab: pinTab,
-    onUnpinTab: unpinTab,
-    onReorder: reorderTab,
-    onCloseToRight: closeToRight,
-    onCloseOthers: closeOthers,
-  } : undefined
+  // Computed split layout for single-group (MVP) - mirrors current tab state
+  // Future: Will be managed by useSplitLayout for multiple groups
+  const splitLayout: SplitLayout = useMemo(() => ({
+    groups: [{
+      id: activeSplitGroup ?? 'default',
+      tabs: tabs,
+      activeTab: activeTab,
+    }],
+    activeGroupId: activeSplitGroup ?? 'default',
+    direction: 'horizontal' as const,
+  }), [tabs, activeTab, activeSplitGroup])
+
+  // Handler for setting active group (updates context)
+  const handleSetActiveGroup = useCallback((groupId: string) => {
+    setActiveSplitGroup(groupId)
+  }, [setActiveSplitGroup])
 
   return (
     <div className={combinedClassName} data-testid="ide-layout">
@@ -421,54 +429,74 @@ function IDELayoutInner({
                       onClearRecentFiles={clearRecentFiles}
                     />
                   ) : (
-                    <>
-                      {/* Canvas content - always mounted when canvas tabs exist to keep running in background */}
-                      {hasCanvasTabs && (
-                        <div style={{ display: activeTabType === 'canvas' ? 'contents' : 'none' }}>
-                          <CanvasTabContent
-                            tabs={tabs}
-                            activeTab={activeTab}
-                            canvasCode={canvasCode}
-                            onSelectTab={selectTab}
-                            onCloseTab={handleCloseTab}
-                            onExit={handleCanvasExit}
-                            onCanvasReady={handleCanvasReady}
-                            isActive={activeTabType === 'canvas'}
-                          />
-                        </div>
-                      )}
-                      {/* Markdown preview - shown when markdown tab is active */}
-                      {activeTabType === 'markdown' && (
-                        <MarkdownTabContent code={code} tabBarProps={tabBarProps} currentFilePath={activeTab} onOpenMarkdown={openMarkdownPreview} />
-                      )}
-                      {/* Binary file viewer - shown when binary tab is active */}
-                      {activeTabType === 'binary' && activeTab && (
-                        <BinaryTabContent filePath={activeTab} fileSystem={compositeFileSystem} tabBarProps={tabBarProps} />
-                      )}
-                      {/* Editor panel - hidden when canvas, markdown, or binary tab is active */}
-                      {/* Note: also show if hasCanvasTabs is false to handle race condition during canvas tab close */}
-                      {(activeTabType !== 'canvas' || !hasCanvasTabs) && activeTabType !== 'markdown' && activeTabType !== 'binary' && (
-                        <EditorPanel
-                          code={code}
-                          onChange={setCode}
-                          fileName={fileName}
-                          isDirty={isDirty}
-                          cursorLine={cursorLine}
-                          cursorColumn={cursorColumn}
-                          onCursorChange={(line, col) => {
-                            setCursorLine(line)
-                            setCursorColumn(col)
-                          }}
-                          tabBarProps={tabBarProps}
-                          onFormat={handleFormat}
-                          isFormatting={isFormatting}
-                          onEditorReady={handleEditorReady}
-                          autoSaveEnabled={autoSaveEnabled}
-                          onToggleAutoSave={toggleAutoSave}
-                          onSaveAllFiles={saveAllFiles}
-                        />
-                      )}
-                    </>
+                    <SplitEditorLayout
+                      layout={splitLayout}
+                      onSetActiveGroup={handleSetActiveGroup}
+                      onTabSelect={selectTab}
+                      onTabClose={handleCloseTab}
+                      onTabReorder={reorderTab}
+                      onTabPin={pinTab}
+                      onTabUnpin={unpinTab}
+                      onCloseToRight={closeToRight}
+                      onCloseOthers={closeOthers}
+                    >
+                      {(_group, isActive) => {
+                        // For MVP with single group, use global activeTabType
+                        // Future: determine content type from _group's activeTab
+                        if (!isActive) {
+                          return null // Placeholder for inactive groups (future)
+                        }
+                        return (
+                          <>
+                            {/* Canvas content - always mounted when canvas tabs exist to keep running in background */}
+                            {hasCanvasTabs && (
+                              <div style={{ display: activeTabType === 'canvas' ? 'contents' : 'none' }}>
+                                <CanvasTabContent
+                                  tabs={tabs}
+                                  activeTab={activeTab}
+                                  canvasCode={canvasCode}
+                                  onSelectTab={selectTab}
+                                  onCloseTab={handleCloseTab}
+                                  onExit={handleCanvasExit}
+                                  onCanvasReady={handleCanvasReady}
+                                  isActive={activeTabType === 'canvas'}
+                                />
+                              </div>
+                            )}
+                            {/* Markdown preview - shown when markdown tab is active */}
+                            {activeTabType === 'markdown' && (
+                              <MarkdownTabContent code={code} currentFilePath={activeTab} onOpenMarkdown={openMarkdownPreview} />
+                            )}
+                            {/* Binary file viewer - shown when binary tab is active */}
+                            {activeTabType === 'binary' && activeTab && (
+                              <BinaryTabContent filePath={activeTab} fileSystem={compositeFileSystem} />
+                            )}
+                            {/* Editor panel - hidden when canvas, markdown, or binary tab is active */}
+                            {/* Note: also show if hasCanvasTabs is false to handle race condition during canvas tab close */}
+                            {(activeTabType !== 'canvas' || !hasCanvasTabs) && activeTabType !== 'markdown' && activeTabType !== 'binary' && (
+                              <EditorPanel
+                                code={code}
+                                onChange={setCode}
+                                fileName={fileName}
+                                isDirty={isDirty}
+                                cursorLine={cursorLine}
+                                cursorColumn={cursorColumn}
+                                onCursorChange={(line, col) => {
+                                  setCursorLine(line)
+                                  setCursorColumn(col)
+                                }}
+                                onFormat={handleFormat}
+                                isFormatting={isFormatting}
+                                onEditorReady={handleEditorReady}
+                                autoSaveEnabled={autoSaveEnabled}
+                                onToggleAutoSave={toggleAutoSave}
+                                onSaveAllFiles={saveAllFiles}
+                              />
+                            )}
+                          </>
+                        )
+                      }}
+                    </SplitEditorLayout>
                   )}
                 </IDEPanel>
                 {/* Always render BottomPanel to preserve shell state */}

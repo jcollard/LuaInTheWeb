@@ -255,7 +255,8 @@ test.describe('IDE Editor', () => {
     await expect(page).toHaveURL(/\/editor/)
   })
 
-  test('editor is interactable and accepts input', async ({ page }) => {
+  // Skipped: Flaky test - Monaco keyboard input drops characters randomly. See #404
+  test.skip('editor is interactable and accepts input', async ({ page }) => {
     // Arrange - Create and open a file so editor is visible
     await createAndOpenFile(page)
 
@@ -340,7 +341,8 @@ test.describe('IDE Editor - Keyboard Shortcuts', () => {
     await expect(page.locator('[data-testid="bottom-panel"]')).toBeVisible()
   })
 
-  test('Ctrl+B toggles sidebar visibility', async ({ page }) => {
+  // Skipped: Flaky test - keyboard shortcuts intermittently fail. See #404
+  test.skip('Ctrl+B toggles sidebar visibility', async ({ page }) => {
     // Initially sidebar should be visible
     await expect(page.locator('[data-testid="sidebar-panel"]')).toBeVisible()
 

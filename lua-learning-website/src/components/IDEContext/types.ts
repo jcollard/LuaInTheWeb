@@ -61,6 +61,10 @@ export interface IDEContextValue {
   closeToRight: (path: string) => void
   closeOthers: (path: string) => void
 
+  // Split editor groups
+  activeSplitGroup: string | null
+  setActiveSplitGroup: (groupId: string) => void
+
   // Toast notifications
   toasts: ToastData[]
   showError: (message: string) => void

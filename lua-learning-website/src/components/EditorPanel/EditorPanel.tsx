@@ -51,7 +51,7 @@ export function EditorPanel({
   }
 
   return (
-    <div className={combinedClassName} data-testid="editor-panel">
+    <div className={combinedClassName} data-testid="code-editor-panel">
       <div className={styles.toolbar}>
         {renderTabs()}
         {onFormat && (

@@ -115,7 +115,7 @@ describe('EditorPanel', () => {
       render(<EditorPanel {...defaultProps} className="custom-class" />)
 
       // Assert
-      expect(screen.getByTestId('editor-panel')).toHaveClass('custom-class')
+      expect(screen.getByTestId('code-editor-panel')).toHaveClass('custom-class')
     })
   })
 
