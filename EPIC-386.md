@@ -1,6 +1,6 @@
 # Epic #386: Add tab / window splitting allowing multiple tabs to be shown and open at a time
 
-**Status:** In Progress (1/6 in progress)
+**Status:** In Progress (1/6 complete)
 **Branch:** epic-386
 **Created:** 2025-12-20
 **Last Updated:** 2025-12-20
@@ -35,7 +35,7 @@ Add the ability to split the editor area horizontally or vertically, allowing mu
 
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
-| #396 | Core Split Infrastructure - useSplitLayout hook and types | :arrows_counterclockwise: In Progress | 396-core-split-infrastructure | Started 2025-12-20 |
+| #396 | Core Split Infrastructure - useSplitLayout hook and types | :white_check_mark: Complete | 396-core-split-infrastructure | Merged in PR #402 |
 | #397 | EditorGroup Component - Standalone editor group with TabBar | :hourglass_flowing_sand: Pending | - | Depends on #396 |
 | #398 | SplitEditorLayout Integration - Integrate with IDELayout | :hourglass_flowing_sand: Pending | - | Depends on #396, #397 |
 | #399 | Split Actions & UI - Context menu, close split, focus states | :hourglass_flowing_sand: Pending | - | Depends on #396, #397, #398 |
@@ -79,6 +79,8 @@ Add the ability to split the editor area horizontally or vertically, allowing mu
 - Generated EPIC-386.md tracking file
 - Started work on #396: Core Split Infrastructure
 - Created `useSplitLayout` hook with types and 27 unit tests (97%+ coverage)
+- Completed #396: Core Split Infrastructure
+- Merged PR #402 to epic-386
 
 ## Key Files
 
