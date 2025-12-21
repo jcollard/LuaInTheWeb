@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react'
+import { useRef, useCallback, useEffect } from 'react'
 import type { editor, IDisposable } from 'monaco-editor'
 
 // Module-level map to persist scroll positions across re-renders
@@ -138,6 +138,22 @@ export function useEditorScrollPersistence(
       }
     }
   }, [restoreScrollPosition])
+
+  // Restore scroll position when activeTab changes (for tab switching without editor remount)
+  useEffect(() => {
+    log('activeTab effect', { activeTab, hasEditor: !!editorRef.current })
+    if (activeTab && editorRef.current && !activeTab.startsWith('canvas://')) {
+      // Set flag to prevent Monaco scroll events from overwriting during restoration
+      isRestoringRef.current = true
+      log('Tab changed, will restore scroll position')
+      // Use requestAnimationFrame to ensure Monaco has updated the content
+      requestAnimationFrame(() => {
+        if (editorRef.current && activeTabRef.current) {
+          restoreScrollPosition(activeTabRef.current, editorRef.current)
+        }
+      })
+    }
+  }, [activeTab, restoreScrollPosition])
 
   return { setEditor }
 }

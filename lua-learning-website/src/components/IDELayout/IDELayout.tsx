@@ -460,6 +460,7 @@ function IDELayoutInner({
                                   onExit={handleCanvasExit}
                                   onCanvasReady={handleCanvasReady}
                                   isActive={activeTabType === 'canvas'}
+                                  hideToolbar
                                 />
                               </div>
                             )}

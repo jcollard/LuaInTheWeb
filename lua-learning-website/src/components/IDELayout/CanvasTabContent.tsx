@@ -24,6 +24,8 @@ export interface CanvasTabContentProps {
   onCanvasReady?: (canvasId: string, canvas: HTMLCanvasElement) => void
   /** Whether the canvas tab is active and should receive focus */
   isActive?: boolean
+  /** Hide the toolbar (tabs) when used inside SplitEditorLayout */
+  hideToolbar?: boolean
 }
 
 export function CanvasTabContent({
@@ -35,34 +37,37 @@ export function CanvasTabContent({
   onExit,
   onCanvasReady,
   isActive,
+  hideToolbar = false,
 }: CanvasTabContentProps) {
   const { scalingMode, setScalingMode } = useCanvasScaling()
 
   return (
     <div className={styles.canvasContainer}>
-      <div className={styles.canvasToolbar}>
-        <div className={styles.canvasTabs}>
-          {tabs.map((tab) => (
-            <button
-              key={tab.path}
-              type="button"
-              className={`${styles.canvasTab} ${tab.path === activeTab ? styles.canvasTabActive : ''}`}
-              onClick={() => onSelectTab(tab.path)}
-            >
-              {tab.name}
-              <span
-                className={styles.canvasTabClose}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onCloseTab(tab.path)
-                }}
+      {!hideToolbar && (
+        <div className={styles.canvasToolbar}>
+          <div className={styles.canvasTabs}>
+            {tabs.map((tab) => (
+              <button
+                key={tab.path}
+                type="button"
+                className={`${styles.canvasTab} ${tab.path === activeTab ? styles.canvasTabActive : ''}`}
+                onClick={() => onSelectTab(tab.path)}
               >
-                ×
-              </span>
-            </button>
-          ))}
+                {tab.name}
+                <span
+                  className={styles.canvasTabClose}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onCloseTab(tab.path)
+                  }}
+                >
+                  ×
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
       <CanvasGamePanel
         code={canvasCode}
         onExit={onExit}
