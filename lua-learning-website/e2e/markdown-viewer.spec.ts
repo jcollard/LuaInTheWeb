@@ -316,12 +316,7 @@ test.describe('Markdown Viewer', () => {
       expect(Math.abs(scrollAfterSwitch - scrollBeforeSwitch)).toBeLessThan(50)
     })
 
-    // SKIPPED: Real bug - scroll position not preserved with multiple editor tabs open
-    // When switching between two Monaco editor tabs, the scroll position of the
-    // previously active tab is not restored. This only affects cases with multiple
-    // editor tabs; single editor + markdown works fine (see test above).
-    // See: https://github.com/jcollard/LuaInTheWeb/issues/435
-    test.skip('editor scroll position is preserved when switching between two editor tabs', async ({ page }) => {
+    test('editor scroll position is preserved when switching between two editor tabs', async ({ page }) => {
       // Open libs folder
       const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })
       await libsWorkspace.getByTestId('folder-chevron').click()
@@ -354,7 +349,7 @@ test.describe('Markdown Viewer', () => {
       await page.getByRole('tab', { name: /shell\.lua/i }).click()
       await page.waitForTimeout(500)
 
-      // BUG: Scroll position should be ~250 but is 400
+      // Verify scroll position is preserved (should be ~250, not 400)
       const shellScrollAfter = await page.evaluate(() => {
         const monaco = (window as unknown as { monaco?: { editor: { getEditors: () => Array<{ getScrollTop: () => number }> } } }).monaco
         return monaco?.editor.getEditors()[0]?.getScrollTop() ?? 0
