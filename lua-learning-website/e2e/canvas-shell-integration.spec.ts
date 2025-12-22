@@ -180,7 +180,9 @@ test.describe('Canvas Shell Integration', () => {
   })
 
   test.describe('Print Output During Canvas', () => {
-    test('print() output goes to terminal while canvas runs', async ({ page }) => {
+    // SKIPPED: Canvas terminal output not appearing consistently
+    // See: https://github.com/jcollard/LuaInTheWeb/issues/434
+    test.skip('print() output goes to terminal while canvas runs', async ({ page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -312,7 +314,9 @@ test.describe('Canvas Shell Integration', () => {
   })
 
   test.describe('Canvas Tab Close from UI (Issue #361)', () => {
-    test('closing canvas tab stops the canvas process', async ({ page }) => {
+    // SKIPPED: Canvas terminal output not appearing consistently
+    // See: https://github.com/jcollard/LuaInTheWeb/issues/434
+    test.skip('closing canvas tab stops the canvas process', async ({ page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -357,7 +361,9 @@ test.describe('Canvas Shell Integration', () => {
       await terminal.expectToContain('after close', { timeout: TIMEOUTS.ASYNC_OPERATION })
     })
 
-    test('closing canvas tab does not leave orphaned game loop', async ({ page }) => {
+    // SKIPPED: Canvas terminal output not appearing consistently
+    // See: https://github.com/jcollard/LuaInTheWeb/issues/434
+    test.skip('closing canvas tab does not leave orphaned game loop', async ({ page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 

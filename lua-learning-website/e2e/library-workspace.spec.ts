@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { TIMEOUTS } from './constants'
 
 test.describe('Library Workspace', () => {
   test.beforeEach(async ({ page }) => {
@@ -9,6 +10,12 @@ test.describe('Library Workspace', () => {
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
     // Wait for file tree to render
     await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+    // Wait for libs workspace to finish loading (loading icon should disappear)
+    // This ensures the async fetch has completed before we try to interact
+    const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })
+    await expect(libsWorkspace).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+    // Wait for the library workspace icon to appear (replaces loading icon)
+    await expect(page.getByTestId('library-workspace-icon')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
   })
 
   test.describe('library workspace display', () => {

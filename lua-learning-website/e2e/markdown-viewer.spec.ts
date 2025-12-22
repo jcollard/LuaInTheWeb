@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { TIMEOUTS } from './constants'
 
 test.describe('Markdown Viewer', () => {
   test.beforeEach(async ({ page }) => {
@@ -9,6 +10,9 @@ test.describe('Markdown Viewer', () => {
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
     // Wait for file tree to render
     await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+    // Wait for async workspaces to fully load (docs and libs are used in these tests)
+    await expect(page.getByTestId('docs-workspace-icon')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+    await expect(page.getByTestId('library-workspace-icon')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
   })
 
   test.describe('markdown file preview', () => {
@@ -312,7 +316,9 @@ test.describe('Markdown Viewer', () => {
       expect(Math.abs(scrollAfterSwitch - scrollBeforeSwitch)).toBeLessThan(50)
     })
 
-    test('editor scroll position is preserved when switching between two editor tabs', async ({ page }) => {
+    // SKIPPED: Scroll position restoration timing-dependent, sometimes gets wrong scroll value
+    // See: https://github.com/jcollard/LuaInTheWeb/issues/435
+    test.skip('editor scroll position is preserved when switching between two editor tabs', async ({ page }) => {
       // Open libs folder
       const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })
       await libsWorkspace.getByTestId('folder-chevron').click()

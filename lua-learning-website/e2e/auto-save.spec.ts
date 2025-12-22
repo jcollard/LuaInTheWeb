@@ -47,6 +47,8 @@ test.describe('Auto-Save and Save All', () => {
     await page.reload()
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
     await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+    // Wait for async workspaces to finish loading to avoid race conditions
+    await expect(page.getByTestId('library-workspace-icon')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
   })
 
   test('command palette shows "Turn On Auto-Save" when auto-save is disabled', async ({ page }) => {
@@ -124,7 +126,8 @@ test.describe('Auto-Save and Save All', () => {
     // Focus editor and type some code
     const monacoEditor = page.locator('.monaco-editor')
     await monacoEditor.click()
-    await page.keyboard.type('print("hello")')
+    // Use delay to ensure all characters are typed correctly (avoids race conditions)
+    await page.keyboard.type('print("hello")', { delay: 30 })
 
     // Wait for content to be typed
     await expect(page.locator('.monaco-editor .view-lines')).toContainText('print', { timeout: TIMEOUTS.ELEMENT_VISIBLE })
