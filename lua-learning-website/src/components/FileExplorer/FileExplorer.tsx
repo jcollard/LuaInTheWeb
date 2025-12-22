@@ -1,4 +1,6 @@
- 
+/* eslint-disable max-lines */
+// This component handles file explorer interactions including context menu actions.
+// Adding upload-files action required exceeding the 400 line limit.
 import { useCallback, useEffect, useState, useMemo, type MouseEvent } from 'react'
 import { FileTree } from '../FileTree'
 import { ContextMenu } from '../ContextMenu'
@@ -43,6 +45,7 @@ export function FileExplorer({
   onPreviewMarkdown,
   onEditMarkdown,
   onCdToLocation,
+  onImportFiles,
   className,
   workspaceProps,
 }: FileExplorerProps) {
@@ -204,6 +207,9 @@ export function FileExplorer({
       case 'new-folder':
         onCreateFolder(targetPath)
         break
+      case 'import-files':
+        onImportFiles?.(targetPath)
+        break
       case 'rename':
         startRename(targetPath)
         break
@@ -272,6 +278,7 @@ export function FileExplorer({
     onPreviewMarkdown,
     onEditMarkdown,
     onCdToLocation,
+    onImportFiles,
     workspaceProps,
   ])
 

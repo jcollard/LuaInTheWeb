@@ -18,6 +18,7 @@ import { BinaryTabContent } from './BinaryTabContent'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useCanvasTabManager } from '../../hooks/useCanvasTabManager'
 import { useWindowFocusRefresh } from '../../hooks/useWindowFocusRefresh'
+import { useFileUpload } from '../../hooks/useFileUpload'
 import { useWorkspaceManager } from '../../hooks/useWorkspaceManager'
 import { useEditorExtensions } from '../../hooks/useEditorExtensions'
 import { createFileSystemAdapter } from '../../hooks/compositeFileSystemAdapter'
@@ -320,6 +321,37 @@ function IDELayoutInner({
     shellRef.current?.executeCommand(`cd "${path}"`)
   }, [terminalVisible, toggleTerminal])
 
+  // File import functionality
+  const { triggerFileUpload } = useFileUpload()
+
+  // Handle file import from file explorer context menu
+  const handleImportFiles = useCallback((targetPath: string) => {
+    triggerFileUpload(targetPath, async (path, files) => {
+      // Create each imported file in the filesystem
+      for (const file of files) {
+        const filePath = path === '/' ? `/${file.name}` : `${path}/${file.name}`
+        try {
+          // Check if file already exists - if so, skip with warning
+          const exists = compositeFileSystem.exists(filePath)
+          if (exists) {
+            showError(`File "${file.name}" already exists in ${path}`)
+            continue
+          }
+          compositeFileSystem.writeFile(filePath, file.content)
+        } catch (error) {
+          showError(`Failed to import "${file.name}": ${error instanceof Error ? error.message : 'Unknown error'}`)
+        }
+      }
+      // Flush to persist changes to local filesystem (if applicable)
+      const flushable = compositeFileSystem as typeof compositeFileSystem & { flush?: () => Promise<void> }
+      if (typeof flushable.flush === 'function') {
+        await flushable.flush()
+      }
+      // Refresh file tree to show new files
+      refreshFileTree()
+    })
+  }, [triggerFileUpload, compositeFileSystem, refreshFileTree, showError])
+
   // Handle file open request from shell's 'open' command
   // Routes to appropriate viewer based on file type
   const handleRequestOpenFile = useCallback((filePath: string) => {
@@ -368,7 +400,7 @@ function IDELayoutInner({
     handleCreateFile, handleCreateFolder, renameFile, renameFolder,
     deleteFile, deleteFolder, openFile, openPreviewFile, moveFile, copyFile,
     clearPendingNewFile, clearPendingNewFolder, openMarkdownPreview, openMarkdownEdit: openFile,
-    makeTabPermanent, openBinaryViewer, handleCdToLocation, workspaces, pendingWorkspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
+    makeTabPermanent, openBinaryViewer, handleCdToLocation, handleImportFiles, workspaces, pendingWorkspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
     addVirtualWorkspace, handleAddLocalWorkspace, handleRemoveWorkspace, refreshWorkspace,
     refreshFileTree, supportsRefresh, handleReconnectWorkspace, handleDisconnectWorkspace,
     handleRenameWorkspace, isFolderAlreadyMounted, getUniqueWorkspaceName,

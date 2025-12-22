@@ -57,6 +57,8 @@ export interface FileExplorerProps {
   onEditMarkdown?: (path: string) => void
   /** Open a folder/workspace in terminal (cd to location) */
   onCdToLocation?: (path: string) => void
+  /** Trigger file import to a specific folder path */
+  onImportFiles?: (targetPath: string) => void
   className?: string
   /** Optional workspace management props. When provided, workspace tabs are shown. */
   workspaceProps?: WorkspaceProps

@@ -131,6 +131,50 @@ test.describe('File Explorer', () => {
       await expect(page.getByText('Open in Shell')).toBeVisible()
     })
 
+    test('right-clicking folder shows "Import Files..." option', async ({ page }) => {
+      // Arrange - Create a folder and complete rename
+      const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new folder/i }).click()
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
+      await expect(input).not.toBeVisible()
+
+      // Act - Right-click the folder (second treeitem after workspace)
+      const treeItem = page.getByRole('treeitem').nth(1)
+      await treeItem.click({ button: 'right' })
+
+      // Assert - Context menu should include "Import Files..."
+      await expect(page.getByRole('menu')).toBeVisible()
+      await expect(page.getByText('Import Files...')).toBeVisible()
+    })
+
+    test('right-clicking workspace shows "Import Files..." option', async ({ page }) => {
+      // Act - Right-click the workspace root (first treeitem)
+      const treeItem = page.getByRole('treeitem').first()
+      await treeItem.click({ button: 'right' })
+
+      // Assert - Context menu should include "Import Files..."
+      await expect(page.getByRole('menu')).toBeVisible()
+      await expect(page.getByText('Import Files...')).toBeVisible()
+    })
+
+    test('file context menu does NOT show "Import Files..." option', async ({ page }) => {
+      // Arrange - Create a file and complete rename
+      const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new file/i }).click()
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
+      await expect(input).not.toBeVisible()
+
+      // Act - Right-click the file (second treeitem after workspace)
+      const treeItem = page.getByRole('treeitem').nth(1)
+      await treeItem.click({ button: 'right' })
+
+      // Assert - Context menu should NOT include "Import Files..."
+      await expect(page.getByRole('menu')).toBeVisible()
+      await expect(page.getByText('Import Files...')).not.toBeVisible()
+    })
+
     test('clicking rename in context menu shows rename input', async ({ page }) => {
       // Arrange - Create a file and open context menu
       const sidebar = page.getByTestId('sidebar-panel')

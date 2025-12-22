@@ -87,7 +87,11 @@
       "Bash(npm run build:lua-runtime:*)",
       "Bash(npm run build:shell-core:*)",
       "Bash(npm run build:canvas-runtime:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "mcp__code-index-mcp__search_code_advanced",
+      "mcp__code-index-mcp__set_project_path",
+      "mcp__code-index-mcp__find_files",
+      "Skill(tdd)"
     ],
     "deny": [
       "Bash(npm run dev)",
@@ -104,5 +108,9 @@
       "Bash(del lua-learning-website/reports/mutation/.stryker-incremental.json)",
       "Bash(Remove-Item lua-learning-website/reports/mutation/.stryker-incremental.json)"
     ]
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "code-index-mcp"
+  ]
 }
