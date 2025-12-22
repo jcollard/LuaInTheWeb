@@ -76,9 +76,7 @@ test.describe('Shell Tab Completion', () => {
     await terminal.expectToContain('/')
   })
 
-  // SKIPPED: Real bug - Tab on empty input doesn't show available commands
-  // Tracked in: https://github.com/jcollard/LuaInTheWeb/issues/359
-  test.skip('Tab on empty input shows available commands', async ({ page }) => {
+  test('Tab on empty input shows available commands', async ({ page }) => {
     const terminal = createTerminalHelper(page)
     await terminal.focus()
 

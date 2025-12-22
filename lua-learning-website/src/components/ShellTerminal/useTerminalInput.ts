@@ -283,11 +283,11 @@ export function createInputHandler(deps: InputHandlerDeps): (data: string) => vo
       // Show suggestions if multiple matches
       if (tabResult.suggestions.length > 0) {
         terminal.writeln('')
+        // Display suggestions in columns
+        terminal.writeln(tabResult.suggestions.join('  '))
+        // Show truncation message if more options exist
         if (tabResult.truncatedCount) {
-          terminal.writeln(`${tabResult.truncatedCount} options available`)
-        } else {
-          // Display suggestions in columns
-          terminal.writeln(tabResult.suggestions.join('  '))
+          terminal.writeln(`... and ${tabResult.truncatedCount - tabResult.suggestions.length} more`)
         }
         showPrompt()
         // Re-show current input after suggestions
