@@ -120,10 +120,32 @@ test.describe('Theme - Monaco Editor', () => {
     expect(bgColor).toBe('rgb(255, 255, 254)')
   })
 
-  // SKIPPED: Test setup issue - createAndOpenFile fails on second call after two reloads
-  // The underlying theme persistence functionality is verified by manual testing
-  // See: https://github.com/jcollard/LuaInTheWeb/issues/404
-  test.skip('Monaco editor theme persists after page reload', async ({ page }) => {
+  test('Monaco editor theme persists after page reload', async ({ page }) => {
+    // Helper to open shell.lua from libs workspace (always exists, no file creation needed)
+    async function openShellLua() {
+      // Wait for libs workspace to be visible
+      const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })
+      await expect(libsWorkspace).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Check if shell.lua is already visible (libs already expanded)
+      const shellLuaItem = page.getByRole('treeitem', { name: 'shell.lua' })
+      const isShellVisible = await shellLuaItem.isVisible().catch(() => false)
+
+      if (!isShellVisible) {
+        // Expand libs folder by clicking its chevron
+        await libsWorkspace.getByTestId('folder-chevron').click()
+        await page.waitForTimeout(TIMEOUTS.ANIMATION)
+        await expect(shellLuaItem).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+      }
+
+      // Click shell.lua to open it
+      await shellLuaItem.click()
+
+      // Wait for Monaco editor to fully load (not just "Loading editor...")
+      const monacoEditor = page.locator('.monaco-editor')
+      await expect(monacoEditor).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+    }
+
     // Start in dark mode
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'dark'))
     await page.reload()
@@ -131,8 +153,8 @@ test.describe('Theme - Monaco Editor', () => {
     // Wait for async workspaces to finish loading
     await expect(page.getByTestId('library-workspace-icon')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
-    // Create and open a file to show Monaco editor
-    await createAndOpenFile(page)
+    // Open shell.lua to show Monaco editor
+    await openShellLua()
 
     // Wait for Monaco editor and verify dark theme
     let monacoEditor = page.locator('.monaco-editor')
@@ -146,8 +168,8 @@ test.describe('Theme - Monaco Editor', () => {
     // Wait for async workspaces to finish loading after second reload
     await expect(page.getByTestId('library-workspace-icon')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
-    // Open a file again
-    await createAndOpenFile(page)
+    // Open shell.lua again
+    await openShellLua()
 
     // Monaco should now have vs (light) theme
     monacoEditor = page.locator('.monaco-editor')

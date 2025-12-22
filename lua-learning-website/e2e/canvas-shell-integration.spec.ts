@@ -180,9 +180,7 @@ test.describe('Canvas Shell Integration', () => {
   })
 
   test.describe('Print Output During Canvas', () => {
-    // SKIPPED: Canvas terminal output not appearing consistently
-    // See: https://github.com/jcollard/LuaInTheWeb/issues/434
-    test.skip('print() output goes to terminal while canvas runs', async ({ page }) => {
+    test('print() output goes to terminal while canvas runs', async ({ page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -212,8 +210,15 @@ test.describe('Canvas Shell Integration', () => {
       await terminal.type('canvas.start()')
       await terminal.press('Enter')
 
-      // Wait for canvas to complete
-      await page.waitForTimeout(500)
+      // Wait for canvas tab to appear
+      const canvasTab = page.locator('[class*="canvasTab"]').first()
+      await expect(canvasTab).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Wait for canvas tab to close (canvas.stop() was called in tick after 0.1s)
+      await expect(canvasTab).not.toBeVisible({ timeout: TIMEOUTS.ASYNC_OPERATION })
+
+      // Refocus terminal (canvas tab took focus away)
+      await terminal.focus()
 
       // Print after canvas
       await terminal.type('print("After canvas.stop()")')
@@ -314,9 +319,7 @@ test.describe('Canvas Shell Integration', () => {
   })
 
   test.describe('Canvas Tab Close from UI (Issue #361)', () => {
-    // SKIPPED: Canvas terminal output not appearing consistently
-    // See: https://github.com/jcollard/LuaInTheWeb/issues/434
-    test.skip('closing canvas tab stops the canvas process', async ({ page }) => {
+    test('closing canvas tab stops the canvas process', async ({ page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -353,17 +356,17 @@ test.describe('Canvas Shell Integration', () => {
       // Canvas tab should be closed
       await expect(canvasTab).not.toBeVisible({ timeout: TIMEOUTS.ASYNC_OPERATION })
 
+      // Refocus terminal (canvas tab took focus away)
+      await terminal.focus()
+
       // The Lua REPL should return to the prompt (process stopped)
       // We can verify by being able to execute another command
-      await page.waitForTimeout(TIMEOUTS.ANIMATION)
       await terminal.type('print("after close")')
       await terminal.press('Enter')
       await terminal.expectToContain('after close', { timeout: TIMEOUTS.ASYNC_OPERATION })
     })
 
-    // SKIPPED: Canvas terminal output not appearing consistently
-    // See: https://github.com/jcollard/LuaInTheWeb/issues/434
-    test.skip('closing canvas tab does not leave orphaned game loop', async ({ page }) => {
+    test('closing canvas tab does not leave orphaned game loop', async ({ page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -403,6 +406,9 @@ test.describe('Canvas Shell Integration', () => {
 
       // Canvas tab should be closed
       await expect(canvasTab).not.toBeVisible({ timeout: TIMEOUTS.ASYNC_OPERATION })
+
+      // Refocus terminal (canvas tab took focus away)
+      await terminal.focus()
 
       // Wait to see if any more frames would print (they shouldn't)
       await page.waitForTimeout(500)
