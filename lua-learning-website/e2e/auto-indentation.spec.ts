@@ -112,8 +112,7 @@ test.describe('Auto-Indentation', () => {
     expect(containsText(lines[1], 'return')).toBe(true)
   })
 
-  // TODO: Flaky test - will be fixed by #355
-  test.skip('indents after if-then statement', async ({ page }) => {
+  test('indents after if-then statement', async ({ page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -194,8 +193,7 @@ test.describe('Auto-Indentation', () => {
     expect(hasElse).toBe(true)
   })
 
-  // TODO: Flaky test - will be fixed by #355
-  test.skip('handles nested function inside if block', async ({ page }) => {
+  test('handles nested function inside if block', async ({ page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 

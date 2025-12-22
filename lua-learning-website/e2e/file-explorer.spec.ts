@@ -436,10 +436,8 @@ test.describe('File Explorer', () => {
   })
 
   test.describe('error toast notifications', () => {
-    // TECH DEBT: These tests are skipped because the composite filesystem adapter
-    // may not properly propagate validation errors to the toast system.
-    // Issue: Toast container never appears after submitting invalid filename.
-    // See: https://github.com/jcollard/LuaInTheWeb/issues (create tech debt issue)
+    // SKIPPED: Toast notifications don't appear for filesystem validation errors.
+    // See: https://github.com/jcollard/LuaInTheWeb/issues/414
     test.skip('shows error toast when creating file with invalid characters', async ({ page }) => {
       // Arrange - Create a file
       const sidebar = page.getByTestId('sidebar-panel')
