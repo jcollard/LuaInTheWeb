@@ -144,6 +144,58 @@ describe('useEditorScrollPersistence', () => {
       expect(mockEditor1.setScrollTop).toHaveBeenCalledWith(200)
     })
 
+    it('should restore scroll position when switching tabs without model change event', async () => {
+      // This tests the case where Monaco reuses cached models and doesn't fire onDidChangeModel
+      const { result, rerender } = renderHook(
+        ({ activeTab }) => useEditorScrollPersistence({ activeTab }),
+        { initialProps: { activeTab: '/file1.lua' } }
+      )
+
+      const mockEditor = createMockEditor(0)
+      act(() => {
+        result.current.setEditor(asEditor(mockEditor))
+      })
+
+      // Wait for initial restoration period to complete
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 100))
+        await new Promise(resolve => requestAnimationFrame(resolve))
+        await new Promise(resolve => requestAnimationFrame(resolve))
+      })
+
+      // Scroll file1 to 250
+      act(() => {
+        mockEditor._scrollTo(250)
+      })
+
+      // Switch to file2 (no model change event - simulating cached model)
+      rerender({ activeTab: '/file2.lua' })
+
+      // Wait for RAF-based restoration
+      await act(async () => {
+        await new Promise(resolve => requestAnimationFrame(resolve))
+        await new Promise(resolve => requestAnimationFrame(resolve))
+      })
+
+      // Scroll file2 to 400
+      act(() => {
+        mockEditor._scrollTo(400)
+      })
+
+      // Switch back to file1 (no model change event - simulating cached model)
+      mockEditor.setScrollTop.mockClear() // Clear previous calls
+      rerender({ activeTab: '/file1.lua' })
+
+      // Wait for RAF-based restoration
+      await act(async () => {
+        await new Promise(resolve => requestAnimationFrame(resolve))
+        await new Promise(resolve => requestAnimationFrame(resolve))
+      })
+
+      // Should restore to 250 (file1's saved position), not 400 (file2's position)
+      expect(mockEditor.setScrollTop).toHaveBeenCalledWith(250)
+    })
+
     it('should not call setScrollTop if no saved position exists', async () => {
       const mockEditor = createMockEditor(0)
 

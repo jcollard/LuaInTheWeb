@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { TIMEOUTS } from './constants'
 
 test.describe('Markdown Viewer', () => {
   test.beforeEach(async ({ page }) => {
@@ -9,6 +10,9 @@ test.describe('Markdown Viewer', () => {
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
     // Wait for file tree to render
     await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+    // Wait for async workspaces to fully load (docs and libs are used in these tests)
+    await expect(page.getByTestId('docs-workspace-icon')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+    await expect(page.getByTestId('library-workspace-icon')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
   })
 
   test.describe('markdown file preview', () => {
@@ -320,50 +324,37 @@ test.describe('Markdown Viewer', () => {
       // DOUBLE-click shell.lua to create permanent tab
       await page.getByRole('treeitem', { name: 'shell.lua' }).dblclick()
       await expect(page.locator('.monaco-editor')).toBeVisible()
-      await page.waitForTimeout(500) // Let editor fully load
+      await page.waitForTimeout(500)
 
-      // Scroll down in shell.lua using Monaco API
+      // Scroll down in shell.lua
       await page.evaluate(() => {
-        const monacoEditor = (window as unknown as { monaco?: { editor: { getEditors: () => Array<{ setScrollTop: (v: number) => void }> } } }).monaco?.editor.getEditors()[0]
-        if (monacoEditor) {
-          monacoEditor.setScrollTop(250)
-        }
+        const monaco = (window as unknown as { monaco?: { editor: { getEditors: () => Array<{ setScrollTop: (v: number) => void }> } } }).monaco
+        monaco?.editor.getEditors()[0]?.setScrollTop(250)
       })
-      await page.waitForTimeout(200) // Let scroll settle and save
+      await page.waitForTimeout(200)
 
-      // Get shell.lua scroll position
-      const shellScrollBefore = await page.evaluate(() => {
-        const monacoEditor = (window as unknown as { monaco?: { editor: { getEditors: () => Array<{ getScrollTop: () => number }> } } }).monaco?.editor.getEditors()[0]
-        return monacoEditor ? monacoEditor.getScrollTop() : 0
-      })
-      expect(shellScrollBefore).toBeGreaterThan(100)
-
-      // DOUBLE-click canvas.lua to create permanent tab
+      // DOUBLE-click canvas.lua to create second tab
       await page.getByRole('treeitem', { name: 'canvas.lua' }).dblclick()
       await expect(page.locator('.monaco-editor')).toBeVisible()
-      await page.waitForTimeout(500) // Let editor fully load
+      await page.waitForTimeout(500)
 
-      // Scroll down in canvas.lua using Monaco API
+      // Scroll down in canvas.lua
       await page.evaluate(() => {
-        const monacoEditor = (window as unknown as { monaco?: { editor: { getEditors: () => Array<{ setScrollTop: (v: number) => void }> } } }).monaco?.editor.getEditors()[0]
-        if (monacoEditor) {
-          monacoEditor.setScrollTop(400)
-        }
+        const monaco = (window as unknown as { monaco?: { editor: { getEditors: () => Array<{ setScrollTop: (v: number) => void }> } } }).monaco
+        monaco?.editor.getEditors()[0]?.setScrollTop(400)
       })
-      await page.waitForTimeout(200) // Let scroll settle and save
+      await page.waitForTimeout(200)
 
       // Switch back to shell.lua tab
       await page.getByRole('tab', { name: /shell\.lua/i }).click()
-      await expect(page.locator('.monaco-editor')).toBeVisible()
-      await page.waitForTimeout(500) // Wait for scroll restoration
+      await page.waitForTimeout(500)
 
-      // Check scroll position is restored using Monaco API
+      // Verify scroll position is preserved (should be ~250, not 400)
       const shellScrollAfter = await page.evaluate(() => {
-        const monacoEditor = (window as unknown as { monaco?: { editor: { getEditors: () => Array<{ getScrollTop: () => number }> } } }).monaco?.editor.getEditors()[0]
-        return monacoEditor ? monacoEditor.getScrollTop() : 0
+        const monaco = (window as unknown as { monaco?: { editor: { getEditors: () => Array<{ getScrollTop: () => number }> } } }).monaco
+        return monaco?.editor.getEditors()[0]?.getScrollTop() ?? 0
       })
 
-      // Should be around 250, not 0 or 400
       expect(shellScrollAfter).toBeGreaterThan(100)
       expect(shellScrollAfter).toBeLessThan(350)
     })

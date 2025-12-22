@@ -2,15 +2,12 @@ import { test, expect } from '@playwright/test'
 import { TIMEOUTS } from './constants'
 
 /**
- * SKIPPED: These REPL terminal theme tests are temporarily disabled.
+ * Theme tests for the Shell terminal component.
  *
- * Reason: The `.xterm-viewport` locator now matches multiple elements (REPL + Shell terminals).
- * These tests need to be re-evaluated and potentially updated when Shell's `lua` command
- * is implemented, or updated with more specific locators if REPL tests are retained.
- *
- * @see https://github.com/jcollard/LuaInTheWeb/issues/139
+ * These tests verify that xterm-based terminals respect theme colors.
+ * Updated to target Shell terminal after REPL component was removed (Issue #139).
  */
-test.describe.skip('Theme - Terminal Components', () => {
+test.describe('Theme - Shell Terminal', () => {
   test.beforeEach(async ({ page }) => {
     // Clear localStorage to start fresh
     await page.goto('/editor')
@@ -19,25 +16,25 @@ test.describe.skip('Theme - Terminal Components', () => {
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
   })
 
-  test('REPL terminal background uses theme colors in dark mode', async ({ page }) => {
+  test('Shell terminal background uses theme colors in dark mode', async ({ page }) => {
     // Set dark theme
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'dark'))
     await page.reload()
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
 
-    // Click on REPL tab to show the xterm-based terminal
-    const replTab = page.getByRole('tab', { name: 'REPL' })
-    await replTab.click()
+    // Click on Shell tab to show the xterm-based terminal
+    const shellTab = page.getByRole('tab', { name: /shell/i })
+    await shellTab.click()
 
     // Wait for terminal container to be visible
-    const terminalContainer = page.locator('[data-testid="bash-terminal-container"]')
+    const terminalContainer = page.locator('[data-testid="shell-terminal-container"]')
     await expect(terminalContainer).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
     // Wait for xterm to create its DOM
-    await page.waitForSelector('.xterm-viewport', { timeout: TIMEOUTS.ELEMENT_VISIBLE })
+    await page.waitForSelector('[data-testid="shell-terminal-container"] .xterm-viewport', { timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
     // Check the xterm viewport background
-    const xtermViewport = page.locator('.xterm-viewport')
+    const xtermViewport = page.locator('[data-testid="shell-terminal-container"] .xterm-viewport')
     const bgColor = await xtermViewport.evaluate(el =>
       getComputedStyle(el).backgroundColor
     )
@@ -45,23 +42,23 @@ test.describe.skip('Theme - Terminal Components', () => {
     expect(bgColor).toBe('rgb(30, 30, 30)')
   })
 
-  test('REPL terminal background uses theme colors in light mode', async ({ page }) => {
+  test('Shell terminal background uses theme colors in light mode', async ({ page }) => {
     // Set light theme
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'light'))
     await page.reload()
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
 
-    // Click on REPL tab
-    const replTab = page.getByRole('tab', { name: 'REPL' })
-    await replTab.click()
+    // Click on Shell tab
+    const shellTab = page.getByRole('tab', { name: /shell/i })
+    await shellTab.click()
 
     // Wait for terminal
-    const terminalContainer = page.locator('[data-testid="bash-terminal-container"]')
+    const terminalContainer = page.locator('[data-testid="shell-terminal-container"]')
     await expect(terminalContainer).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-    await page.waitForSelector('.xterm-viewport', { timeout: TIMEOUTS.ELEMENT_VISIBLE })
+    await page.waitForSelector('[data-testid="shell-terminal-container"] .xterm-viewport', { timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
     // Check the xterm viewport background
-    const xtermViewport = page.locator('.xterm-viewport')
+    const xtermViewport = page.locator('[data-testid="shell-terminal-container"] .xterm-viewport')
     const bgColor = await xtermViewport.evaluate(el =>
       getComputedStyle(el).backgroundColor
     )
@@ -69,23 +66,23 @@ test.describe.skip('Theme - Terminal Components', () => {
     expect(bgColor).toBe('rgb(255, 255, 255)')
   })
 
-  test('REPL terminal text is dark in light mode', async ({ page }) => {
+  test('Shell terminal text is dark in light mode', async ({ page }) => {
     // Set light theme
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'light'))
     await page.reload()
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
 
-    // Click on REPL tab
-    const replTab = page.getByRole('tab', { name: 'REPL' })
-    await replTab.click()
+    // Click on Shell tab
+    const shellTab = page.getByRole('tab', { name: /shell/i })
+    await shellTab.click()
 
     // Wait for terminal container
-    const terminalContainer = page.locator('[data-testid="bash-terminal-container"]')
+    const terminalContainer = page.locator('[data-testid="shell-terminal-container"]')
     await expect(terminalContainer).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-    await page.waitForTimeout(TIMEOUTS.INIT) // Wait for REPL to initialize
+    await page.waitForTimeout(TIMEOUTS.INIT) // Wait for Shell to initialize
 
     // Find any canvas element in the terminal (xterm uses canvas for text rendering)
-    const canvases = page.locator('[data-testid="bash-terminal-container"] canvas')
+    const canvases = page.locator('[data-testid="shell-terminal-container"] canvas')
     const canvasCount = await canvases.count()
 
     // Skip test if no canvas found (xterm might use different renderer)
@@ -149,7 +146,7 @@ test.describe.skip('Theme - Terminal Components', () => {
     })
 
     // Log for debugging
-    console.log('REPL text pixel info:', pixelInfo)
+    console.log('Shell text pixel info:', pixelInfo)
 
     // If we found text, verify it's not light gray
     if (pixelInfo.found && 'isDark' in pixelInfo) {
@@ -158,18 +155,18 @@ test.describe.skip('Theme - Terminal Components', () => {
     }
   })
 
-  test('REPL terminal text changes after theme switch', async ({ page }) => {
+  test('Shell terminal text changes after theme switch', async ({ page }) => {
     // Start in dark mode
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'dark'))
     await page.reload()
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
 
-    // Click on REPL tab
-    const replTab = page.getByRole('tab', { name: 'REPL' })
-    await replTab.click()
+    // Click on Shell tab
+    const shellTab = page.getByRole('tab', { name: /shell/i })
+    await shellTab.click()
 
     // Wait for terminal container
-    const terminalContainer = page.locator('[data-testid="bash-terminal-container"]')
+    const terminalContainer = page.locator('[data-testid="shell-terminal-container"]')
     await expect(terminalContainer).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
     await page.waitForTimeout(TIMEOUTS.ANIMATION)
 
@@ -180,14 +177,14 @@ test.describe.skip('Theme - Terminal Components', () => {
     })
     await page.waitForTimeout(TIMEOUTS.INIT)
 
-    // Type something in the REPL to create new text with the new theme
+    // Type something in the Shell to create new text with the new theme
     await terminalContainer.click()
-    await page.keyboard.type('print("test")')
+    await page.keyboard.type('echo "test"')
     await page.keyboard.press('Enter')
     await page.waitForTimeout(TIMEOUTS.ANIMATION)
 
     // Find canvas and check text color
-    const canvases = page.locator('[data-testid="bash-terminal-container"] canvas')
+    const canvases = page.locator('[data-testid="shell-terminal-container"] canvas')
     const canvasCount = await canvases.count()
 
     if (canvasCount === 0) {
@@ -232,7 +229,7 @@ test.describe.skip('Theme - Terminal Components', () => {
       }
     })
 
-    console.log('REPL text after theme switch:', pixelInfo)
+    console.log('Shell text after theme switch:', pixelInfo)
 
     if (pixelInfo.found && 'isLightGray' in pixelInfo) {
       // New text written after theme switch should NOT be light gray

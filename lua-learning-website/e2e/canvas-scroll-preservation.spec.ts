@@ -32,6 +32,9 @@ test.describe('Canvas Scroll Preservation', () => {
     })
     await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
 
+    // Wait for examples workspace to finish loading
+    await expect(page.getByTestId('examples-workspace-icon')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
     // Find and expand examples workspace
     const examplesWorkspace = page.getByRole('treeitem', { name: /^examples$/i })
     await expect(examplesWorkspace).toBeVisible()

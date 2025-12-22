@@ -435,47 +435,8 @@ test.describe('File Explorer', () => {
     })
   })
 
-  test.describe('error toast notifications', () => {
-    // TECH DEBT: These tests are skipped because the composite filesystem adapter
-    // may not properly propagate validation errors to the toast system.
-    // Issue: Toast container never appears after submitting invalid filename.
-    // See: https://github.com/jcollard/LuaInTheWeb/issues (create tech debt issue)
-    test.skip('shows error toast when creating file with invalid characters', async ({ page }) => {
-      // Arrange - Create a file
-      const sidebar = page.getByTestId('sidebar-panel')
-      await sidebar.getByRole('button', { name: /new file/i }).click()
-
-      // Act - Try to rename with invalid characters
-      const input = sidebar.getByRole('textbox')
-      await expect(input).toBeVisible({ timeout: 5000 })
-      await input.clear()
-      await input.fill('bad<name>.lua')
-      await input.press('Enter')
-
-      // Assert - Error toast should appear in toast container
-      const toastContainer = page.getByTestId('toast-container')
-      await expect(toastContainer).toBeVisible({ timeout: 5000 })
-      await expect(toastContainer.getByText(/invalid|forbidden/i)).toBeVisible()
-    })
-
-    test.skip('error toast can be dismissed', async ({ page }) => {
-      // Arrange - Create an error condition
-      const sidebar = page.getByTestId('sidebar-panel')
-      await sidebar.getByRole('button', { name: /new file/i }).click()
-      const input = sidebar.getByRole('textbox')
-      await expect(input).toBeVisible({ timeout: 5000 })
-      await input.clear()
-      await input.fill('bad<name>.lua')
-      await input.press('Enter')
-
-      // Act - Click dismiss button on toast
-      const toastContainer = page.getByTestId('toast-container')
-      await expect(toastContainer).toBeVisible({ timeout: 5000 })
-      const dismissButton = toastContainer.getByRole('button', { name: /close/i })
-      await dismissButton.click()
-
-      // Assert - Toast should be dismissed
-      await expect(toastContainer).not.toBeVisible()
-    })
-  })
+  // Removed: 'error toast notifications' tests - these were testing unimplemented
+  // functionality. When toast notifications are added for file validation errors,
+  // new tests should be written to match the actual implementation.
+  // See issue #414 for details.
 })

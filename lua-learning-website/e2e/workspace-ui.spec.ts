@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { TIMEOUTS } from './constants'
 
 test.describe('Workspace UI', () => {
   test.beforeEach(async ({ page }) => {
@@ -32,9 +33,9 @@ test.describe('Workspace UI', () => {
     })
 
     test('displays read-only workspaces after user workspaces', async ({ page }) => {
-      // Wait for async workspaces to load
-      await expect(page.getByRole('treeitem', { name: 'libs' })).toBeVisible()
-      await expect(page.getByRole('treeitem', { name: 'docs' })).toBeVisible()
+      // Wait for async workspaces to fully load (icons appear when loaded)
+      await expect(page.getByTestId('library-workspace-icon')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+      await expect(page.getByTestId('docs-workspace-icon')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
       // Assert - home should appear before libs and docs in the tree
       const fileTree = page.getByRole('tree', { name: 'File Explorer' })
