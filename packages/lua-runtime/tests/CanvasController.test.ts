@@ -2,6 +2,7 @@
  * Tests for CanvasController class - Core functionality.
  * Tests canvas lifecycle management for shell-based canvas integration.
  * Asset-related tests are in CanvasController.assets.test.ts
+ * Path API tests are in CanvasController.path.test.ts
  * @vitest-environment jsdom
  */
 

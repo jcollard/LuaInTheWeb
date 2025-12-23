@@ -443,6 +443,50 @@ export class CanvasController {
     this.addDrawCommand({ type: 'resetTransform' })
   }
 
+  // --- Path API ---
+
+  /**
+   * Begin a new path, clearing any existing path data.
+   */
+  beginPath(): void {
+    this.addDrawCommand({ type: 'beginPath' })
+  }
+
+  /**
+   * Close the current path by drawing a line to the starting point.
+   */
+  closePath(): void {
+    this.addDrawCommand({ type: 'closePath' })
+  }
+
+  /**
+   * Move the current point to a new position without drawing.
+   */
+  moveTo(x: number, y: number): void {
+    this.addDrawCommand({ type: 'moveTo', x, y })
+  }
+
+  /**
+   * Draw a line from the current point to a new position.
+   */
+  lineTo(x: number, y: number): void {
+    this.addDrawCommand({ type: 'lineTo', x, y })
+  }
+
+  /**
+   * Fill the current path with the current fill style.
+   */
+  fill(): void {
+    this.addDrawCommand({ type: 'fill' })
+  }
+
+  /**
+   * Stroke the current path with the current stroke style.
+   */
+  stroke(): void {
+    this.addDrawCommand({ type: 'stroke' })
+  }
+
   // --- Timing API ---
 
   /**

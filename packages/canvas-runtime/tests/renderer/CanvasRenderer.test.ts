@@ -13,6 +13,7 @@ function createMockContext(): CanvasRenderingContext2D {
     fillRect: vi.fn(),
     strokeRect: vi.fn(),
     beginPath: vi.fn(),
+    closePath: vi.fn(),
     arc: vi.fn(),
     fill: vi.fn(),
     stroke: vi.fn(),
@@ -634,6 +635,157 @@ describe('CanvasRenderer', () => {
       new CanvasRenderer(freshCanvas);
 
       expect(freshCtx.textBaseline).toBe('top');
+    });
+  });
+
+  // ============================================================================
+  // Path API Commands
+  // ============================================================================
+
+  describe('beginPath command', () => {
+    it('should call ctx.beginPath()', () => {
+      const commands: DrawCommand[] = [{ type: 'beginPath' }];
+
+      renderer.render(commands);
+
+      expect(mockCtx.beginPath).toHaveBeenCalled();
+    });
+  });
+
+  describe('closePath command', () => {
+    it('should call ctx.closePath()', () => {
+      const commands: DrawCommand[] = [{ type: 'closePath' }];
+
+      renderer.render(commands);
+
+      expect(mockCtx.closePath).toHaveBeenCalled();
+    });
+  });
+
+  describe('moveTo command', () => {
+    it('should call ctx.moveTo() with correct coordinates', () => {
+      const commands: DrawCommand[] = [{ type: 'moveTo', x: 100, y: 150 }];
+
+      renderer.render(commands);
+
+      expect(mockCtx.moveTo).toHaveBeenCalledWith(100, 150);
+    });
+
+    it('should handle zero coordinates', () => {
+      const commands: DrawCommand[] = [{ type: 'moveTo', x: 0, y: 0 }];
+
+      renderer.render(commands);
+
+      expect(mockCtx.moveTo).toHaveBeenCalledWith(0, 0);
+    });
+
+    it('should handle negative coordinates', () => {
+      const commands: DrawCommand[] = [{ type: 'moveTo', x: -50, y: -75 }];
+
+      renderer.render(commands);
+
+      expect(mockCtx.moveTo).toHaveBeenCalledWith(-50, -75);
+    });
+  });
+
+  describe('lineTo command', () => {
+    it('should call ctx.lineTo() with correct coordinates', () => {
+      const commands: DrawCommand[] = [{ type: 'lineTo', x: 200, y: 250 }];
+
+      renderer.render(commands);
+
+      expect(mockCtx.lineTo).toHaveBeenCalledWith(200, 250);
+    });
+
+    it('should handle zero coordinates', () => {
+      const commands: DrawCommand[] = [{ type: 'lineTo', x: 0, y: 0 }];
+
+      renderer.render(commands);
+
+      expect(mockCtx.lineTo).toHaveBeenCalledWith(0, 0);
+    });
+
+    it('should handle negative coordinates', () => {
+      const commands: DrawCommand[] = [{ type: 'lineTo', x: -100, y: -200 }];
+
+      renderer.render(commands);
+
+      expect(mockCtx.lineTo).toHaveBeenCalledWith(-100, -200);
+    });
+  });
+
+  describe('fill command', () => {
+    it('should call ctx.fill()', () => {
+      const commands: DrawCommand[] = [{ type: 'fill' }];
+
+      renderer.render(commands);
+
+      expect(mockCtx.fill).toHaveBeenCalled();
+    });
+  });
+
+  describe('stroke command', () => {
+    it('should call ctx.stroke()', () => {
+      const commands: DrawCommand[] = [{ type: 'stroke' }];
+
+      renderer.render(commands);
+
+      expect(mockCtx.stroke).toHaveBeenCalled();
+    });
+  });
+
+  describe('path API workflow', () => {
+    it('should support complete triangle path workflow', () => {
+      const commands: DrawCommand[] = [
+        { type: 'beginPath' },
+        { type: 'moveTo', x: 100, y: 100 },
+        { type: 'lineTo', x: 150, y: 50 },
+        { type: 'lineTo', x: 200, y: 100 },
+        { type: 'closePath' },
+        { type: 'fill' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.beginPath).toHaveBeenCalled();
+      expect(mockCtx.moveTo).toHaveBeenCalledWith(100, 100);
+      expect(mockCtx.lineTo).toHaveBeenCalledWith(150, 50);
+      expect(mockCtx.lineTo).toHaveBeenCalledWith(200, 100);
+      expect(mockCtx.closePath).toHaveBeenCalled();
+      expect(mockCtx.fill).toHaveBeenCalled();
+    });
+
+    it('should support stroke after path creation', () => {
+      const commands: DrawCommand[] = [
+        { type: 'beginPath' },
+        { type: 'moveTo', x: 0, y: 0 },
+        { type: 'lineTo', x: 100, y: 100 },
+        { type: 'stroke' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.beginPath).toHaveBeenCalled();
+      expect(mockCtx.moveTo).toHaveBeenCalledWith(0, 0);
+      expect(mockCtx.lineTo).toHaveBeenCalledWith(100, 100);
+      expect(mockCtx.stroke).toHaveBeenCalled();
+    });
+
+    it('should support both fill and stroke on same path', () => {
+      const commands: DrawCommand[] = [
+        { type: 'beginPath' },
+        { type: 'moveTo', x: 50, y: 50 },
+        { type: 'lineTo', x: 100, y: 50 },
+        { type: 'lineTo', x: 75, y: 100 },
+        { type: 'closePath' },
+        { type: 'fill' },
+        { type: 'stroke' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.fill).toHaveBeenCalled();
+      expect(mockCtx.stroke).toHaveBeenCalled();
     });
   });
 });

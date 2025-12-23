@@ -138,6 +138,31 @@ export class CanvasRenderer {
         this.ctx.resetTransform();
         break;
 
+      // Path API commands
+      case 'beginPath':
+        this.ctx.beginPath();
+        break;
+
+      case 'closePath':
+        this.ctx.closePath();
+        break;
+
+      case 'moveTo':
+        this.ctx.moveTo(command.x, command.y);
+        break;
+
+      case 'lineTo':
+        this.ctx.lineTo(command.x, command.y);
+        break;
+
+      case 'fill':
+        this.ctx.fill();
+        break;
+
+      case 'stroke':
+        this.ctx.stroke();
+        break;
+
       default:
         // Ignore unknown commands for forward compatibility
         break;
