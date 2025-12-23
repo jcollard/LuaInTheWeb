@@ -260,6 +260,14 @@ export function setupCanvasAPI(
     getController()?.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
   })
 
+  engine.global.set('__canvas_ellipse', (x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, counterclockwise?: boolean) => {
+    getController()?.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise)
+  })
+
+  engine.global.set('__canvas_roundRect', (x: number, y: number, width: number, height: number, radii: number | number[]) => {
+    getController()?.roundRect(x, y, width, height, radii)
+  })
+
   // --- Set up Lua-side canvas table ---
   // Canvas is NOT a global - it must be accessed via require('canvas')
   engine.doStringSync(canvasLuaCode)

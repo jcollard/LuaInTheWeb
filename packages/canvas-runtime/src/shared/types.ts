@@ -32,7 +32,9 @@ export type DrawCommandType =
   | 'arc'
   | 'arcTo'
   | 'quadraticCurveTo'
-  | 'bezierCurveTo';
+  | 'bezierCurveTo'
+  | 'ellipse'
+  | 'roundRect';
 
 /**
  * Base interface for all draw commands.
@@ -387,6 +389,46 @@ export interface BezierCurveToCommand extends DrawCommandBase {
 }
 
 /**
+ * Draw an ellipse on the current path.
+ */
+export interface EllipseCommand extends DrawCommandBase {
+  type: 'ellipse';
+  /** X coordinate of the ellipse's center */
+  x: number;
+  /** Y coordinate of the ellipse's center */
+  y: number;
+  /** Horizontal radius of the ellipse */
+  radiusX: number;
+  /** Vertical radius of the ellipse */
+  radiusY: number;
+  /** Rotation of the ellipse in radians */
+  rotation: number;
+  /** Start angle in radians */
+  startAngle: number;
+  /** End angle in radians */
+  endAngle: number;
+  /** Draw counterclockwise (default: false) */
+  counterclockwise?: boolean;
+}
+
+/**
+ * Draw a rounded rectangle on the current path.
+ */
+export interface RoundRectCommand extends DrawCommandBase {
+  type: 'roundRect';
+  /** X coordinate of the rectangle's starting point */
+  x: number;
+  /** Y coordinate of the rectangle's starting point */
+  y: number;
+  /** Width of the rectangle */
+  width: number;
+  /** Height of the rectangle */
+  height: number;
+  /** Corner radii - single value or array of 1-4 values */
+  radii: number | number[];
+}
+
+/**
  * Union type of all draw commands.
  */
 export type DrawCommand =
@@ -420,7 +462,9 @@ export type DrawCommand =
   | ArcCommand
   | ArcToCommand
   | QuadraticCurveToCommand
-  | BezierCurveToCommand;
+  | BezierCurveToCommand
+  | EllipseCommand
+  | RoundRectCommand;
 
 /**
  * Mouse button identifiers.

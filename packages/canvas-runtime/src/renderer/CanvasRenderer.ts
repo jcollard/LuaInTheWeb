@@ -179,6 +179,19 @@ export class CanvasRenderer {
         this.ctx.bezierCurveTo(command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y);
         break;
 
+      case 'ellipse':
+        this.ctx.ellipse(
+          command.x, command.y,
+          command.radiusX, command.radiusY,
+          command.rotation, command.startAngle, command.endAngle,
+          command.counterclockwise
+        );
+        break;
+
+      case 'roundRect':
+        this.ctx.roundRect(command.x, command.y, command.width, command.height, command.radii);
+        break;
+
       default:
         // Ignore unknown commands for forward compatibility
         break;
