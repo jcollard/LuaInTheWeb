@@ -603,4 +603,38 @@ function canvas.fill() end
 ---@usage canvas.stroke()  -- Draws triangle outline
 function canvas.stroke() end
 
+--- Draw an arc (portion of a circle) on the current path.
+--- Angles are in radians. Use math.pi for convenience.
+---@param x number X coordinate of the arc's center
+---@param y number Y coordinate of the arc's center
+---@param radius number Arc radius in pixels
+---@param startAngle number Start angle in radians (0 = 3 o'clock position)
+---@param endAngle number End angle in radians
+---@param counterclockwise? boolean Draw counterclockwise (default: false)
+---@return nil
+---@usage -- Draw a pie chart slice
+---@usage canvas.begin_path()
+---@usage canvas.move_to(200, 200)  -- center
+---@usage canvas.arc(200, 200, 100, 0, math.pi / 2)  -- quarter circle
+---@usage canvas.close_path()
+---@usage canvas.fill()
+function canvas.arc(x, y, radius, startAngle, endAngle, counterclockwise) end
+
+--- Draw an arc using tangent control points.
+--- Creates a smooth arc that connects to the current path position,
+--- tangent to the lines from the current position to (x1, y1) and from (x1, y1) to (x2, y2).
+--- Useful for creating rounded corners.
+---@param x1 number X coordinate of first control point
+---@param y1 number Y coordinate of first control point
+---@param x2 number X coordinate of second control point
+---@param y2 number Y coordinate of second control point
+---@param radius number Arc radius in pixels
+---@return nil
+---@usage -- Draw a rounded corner
+---@usage canvas.begin_path()
+---@usage canvas.move_to(50, 100)
+---@usage canvas.arc_to(100, 100, 100, 50, 20)  -- rounded corner with radius 20
+---@usage canvas.stroke()
+function canvas.arc_to(x1, y1, x2, y2, radius) end
+
 return canvas

@@ -15,6 +15,7 @@ function createMockContext(): CanvasRenderingContext2D {
     beginPath: vi.fn(),
     closePath: vi.fn(),
     arc: vi.fn(),
+    arcTo: vi.fn(),
     fill: vi.fn(),
     stroke: vi.fn(),
     moveTo: vi.fn(),
@@ -731,6 +732,90 @@ describe('CanvasRenderer', () => {
       renderer.render(commands);
 
       expect(mockCtx.stroke).toHaveBeenCalled();
+    });
+  });
+
+  describe('arc command', () => {
+    it('should call ctx.arc() with correct parameters', () => {
+      const commands: DrawCommand[] = [
+        { type: 'arc', x: 100, y: 100, radius: 50, startAngle: 0, endAngle: Math.PI },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.arc).toHaveBeenCalledWith(100, 100, 50, 0, Math.PI, undefined);
+    });
+
+    it('should pass counterclockwise parameter when true', () => {
+      const commands: DrawCommand[] = [
+        { type: 'arc', x: 200, y: 200, radius: 75, startAngle: 0, endAngle: Math.PI / 2, counterclockwise: true },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.arc).toHaveBeenCalledWith(200, 200, 75, 0, Math.PI / 2, true);
+    });
+
+    it('should pass counterclockwise parameter when false', () => {
+      const commands: DrawCommand[] = [
+        { type: 'arc', x: 150, y: 150, radius: 30, startAngle: Math.PI, endAngle: Math.PI * 2, counterclockwise: false },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.arc).toHaveBeenCalledWith(150, 150, 30, Math.PI, Math.PI * 2, false);
+    });
+
+    it('should handle full circle (0 to 2*PI)', () => {
+      const commands: DrawCommand[] = [
+        { type: 'arc', x: 100, y: 100, radius: 50, startAngle: 0, endAngle: Math.PI * 2 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.arc).toHaveBeenCalledWith(100, 100, 50, 0, Math.PI * 2, undefined);
+    });
+
+    it('should handle negative angles', () => {
+      const commands: DrawCommand[] = [
+        { type: 'arc', x: 100, y: 100, radius: 50, startAngle: -Math.PI, endAngle: 0 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.arc).toHaveBeenCalledWith(100, 100, 50, -Math.PI, 0, undefined);
+    });
+  });
+
+  describe('arcTo command', () => {
+    it('should call ctx.arcTo() with correct parameters', () => {
+      const commands: DrawCommand[] = [
+        { type: 'arcTo', x1: 100, y1: 100, x2: 100, y2: 50, radius: 20 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.arcTo).toHaveBeenCalledWith(100, 100, 100, 50, 20);
+    });
+
+    it('should handle zero radius', () => {
+      const commands: DrawCommand[] = [
+        { type: 'arcTo', x1: 50, y1: 50, x2: 100, y2: 50, radius: 0 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.arcTo).toHaveBeenCalledWith(50, 50, 100, 50, 0);
+    });
+
+    it('should handle negative coordinates', () => {
+      const commands: DrawCommand[] = [
+        { type: 'arcTo', x1: -50, y1: -50, x2: -100, y2: -50, radius: 25 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.arcTo).toHaveBeenCalledWith(-50, -50, -100, -50, 25);
     });
   });
 

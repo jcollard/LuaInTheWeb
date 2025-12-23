@@ -487,6 +487,31 @@ export class CanvasController {
     this.addDrawCommand({ type: 'stroke' })
   }
 
+  /**
+   * Draw an arc (portion of a circle) on the current path.
+   * @param x - X coordinate of the arc's center
+   * @param y - Y coordinate of the arc's center
+   * @param radius - Arc radius
+   * @param startAngle - Start angle in radians
+   * @param endAngle - End angle in radians
+   * @param counterclockwise - Draw counterclockwise (default: false)
+   */
+  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, counterclockwise?: boolean): void {
+    this.addDrawCommand({ type: 'arc', x, y, radius, startAngle, endAngle, counterclockwise })
+  }
+
+  /**
+   * Draw an arc using tangent control points (for rounded corners).
+   * @param x1 - X coordinate of first control point
+   * @param y1 - Y coordinate of first control point
+   * @param x2 - X coordinate of second control point
+   * @param y2 - Y coordinate of second control point
+   * @param radius - Arc radius
+   */
+  arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): void {
+    this.addDrawCommand({ type: 'arcTo', x1, y1, x2, y2, radius })
+  }
+
   // --- Timing API ---
 
   /**

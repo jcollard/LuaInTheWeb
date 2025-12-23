@@ -27,6 +27,8 @@
     "canvas/path-triangle.lua",
     "canvas/path-star.lua",
     "canvas/path-house.lua",
+    "canvas/arc-pie-chart.lua",
+    "canvas/arc-smiley.lua",
     "canvas/fonts/10px-Bitfantasy.ttf",
     "canvas/fonts/10px-CelticTime.ttf",
     "canvas/fonts/10px-HelvetiPixel.ttf",
