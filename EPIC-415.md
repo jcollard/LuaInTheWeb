@@ -1,6 +1,6 @@
 # Epic #415: Epic: Complete Canvas 2D API Implementation
 
-**Status:** In Progress (1/17 complete)
+**Status:** In Progress (1/17 complete, #417 in progress)
 **Branch:** epic-415
 **Created:** 2025-12-22
 **Last Updated:** 2025-12-22
@@ -37,7 +37,7 @@ Key considerations:
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #416 | Implement Path API basics (beginPath, closePath, moveTo, lineTo, fill, stroke) | ✅ Complete | 416-path-api-basics | Merged PR #437 |
-| #417 | Implement arc and arcTo for path API | ⏳ Pending | - | - |
+| #417 | Implement arc and arcTo for path API | 🔄 In Progress | 417-implement-arc-and-arcto-for-path-api | Started 2025-12-22 |
 | #418 | Implement Bezier curves (bezierCurveTo, quadraticCurveTo) | ⏳ Pending | - | - |
 | #419 | Implement ellipse() and roundRect() | ⏳ Pending | - | - |
 | #420 | Implement clipping (clip) | ⏳ Pending | - | - |

@@ -260,6 +260,14 @@ export const canvasLuaCode = `
       __canvas_stroke()
     end
 
+    function _canvas.arc(x, y, radius, startAngle, endAngle, counterclockwise)
+      __canvas_arc(x, y, radius, startAngle, endAngle, counterclockwise or false)
+    end
+
+    function _canvas.arc_to(x1, y1, x2, y2, radius)
+      __canvas_arcTo(x1, y1, x2, y2, radius)
+    end
+
     -- Timing
     function _canvas.get_delta()
       return __canvas_getDelta()

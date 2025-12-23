@@ -244,6 +244,14 @@ export function setupCanvasAPI(
     getController()?.stroke()
   })
 
+  engine.global.set('__canvas_arc', (x: number, y: number, radius: number, startAngle: number, endAngle: number, counterclockwise?: boolean) => {
+    getController()?.arc(x, y, radius, startAngle, endAngle, counterclockwise)
+  })
+
+  engine.global.set('__canvas_arcTo', (x1: number, y1: number, x2: number, y2: number, radius: number) => {
+    getController()?.arcTo(x1, y1, x2, y2, radius)
+  })
+
   // --- Set up Lua-side canvas table ---
   // Canvas is NOT a global - it must be accessed via require('canvas')
   engine.doStringSync(canvasLuaCode)

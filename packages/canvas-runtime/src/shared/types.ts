@@ -28,7 +28,9 @@ export type DrawCommandType =
   | 'moveTo'
   | 'lineTo'
   | 'fill'
-  | 'stroke';
+  | 'stroke'
+  | 'arc'
+  | 'arcTo';
 
 /**
  * Base interface for all draw commands.
@@ -311,6 +313,42 @@ export interface StrokeCommand extends DrawCommandBase {
 }
 
 /**
+ * Draw an arc (portion of a circle) on the current path.
+ */
+export interface ArcCommand extends DrawCommandBase {
+  type: 'arc';
+  /** X coordinate of the arc's center */
+  x: number;
+  /** Y coordinate of the arc's center */
+  y: number;
+  /** Arc radius */
+  radius: number;
+  /** Start angle in radians */
+  startAngle: number;
+  /** End angle in radians */
+  endAngle: number;
+  /** Draw counterclockwise (default: false) */
+  counterclockwise?: boolean;
+}
+
+/**
+ * Draw an arc using tangent control points (for rounded corners).
+ */
+export interface ArcToCommand extends DrawCommandBase {
+  type: 'arcTo';
+  /** X coordinate of first control point */
+  x1: number;
+  /** Y coordinate of first control point */
+  y1: number;
+  /** X coordinate of second control point */
+  x2: number;
+  /** Y coordinate of second control point */
+  y2: number;
+  /** Arc radius */
+  radius: number;
+}
+
+/**
  * Union type of all draw commands.
  */
 export type DrawCommand =
@@ -340,7 +378,9 @@ export type DrawCommand =
   | MoveToCommand
   | LineToCommand
   | FillCommand
-  | StrokeCommand;
+  | StrokeCommand
+  | ArcCommand
+  | ArcToCommand;
 
 /**
  * Mouse button identifiers.

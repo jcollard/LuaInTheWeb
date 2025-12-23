@@ -167,6 +167,96 @@ Draw a line between two points.
 
 Draw text at the specified position.
 
+## Path API
+
+The path API allows you to create complex shapes by defining paths with multiple segments.
+
+### canvas.begin_path()
+
+Start a new path. Call this before drawing path segments.
+
+### canvas.close_path()
+
+Close the current path by drawing a line back to the starting point.
+
+### canvas.move_to(x, y)
+
+Move the path cursor to (x, y) without drawing.
+
+**Parameters:**
+- `x` (number): X coordinate
+- `y` (number): Y coordinate
+
+### canvas.line_to(x, y)
+
+Draw a line from the current position to (x, y).
+
+**Parameters:**
+- `x` (number): X coordinate
+- `y` (number): Y coordinate
+
+### canvas.arc(x, y, radius, startAngle, endAngle, counterclockwise?)
+
+Draw an arc (portion of a circle) on the current path.
+
+**Parameters:**
+- `x` (number): X coordinate of arc center
+- `y` (number): Y coordinate of arc center
+- `radius` (number): Arc radius in pixels
+- `startAngle` (number): Start angle in radians (0 = 3 o'clock)
+- `endAngle` (number): End angle in radians
+- `counterclockwise` (boolean, optional): Draw counterclockwise (default: false)
+
+```lua
+-- Draw a pie chart slice
+canvas.begin_path()
+canvas.move_to(200, 200)  -- center
+canvas.arc(200, 200, 100, 0, math.pi / 2)  -- quarter circle
+canvas.close_path()
+canvas.set_color("#FF6B6B")
+canvas.fill()
+```
+
+### canvas.arc_to(x1, y1, x2, y2, radius)
+
+Draw an arc using tangent control points. Useful for creating rounded corners.
+
+**Parameters:**
+- `x1` (number): X coordinate of first control point
+- `y1` (number): Y coordinate of first control point
+- `x2` (number): X coordinate of second control point
+- `y2` (number): Y coordinate of second control point
+- `radius` (number): Arc radius in pixels
+
+```lua
+-- Draw a rounded corner
+canvas.begin_path()
+canvas.move_to(50, 100)
+canvas.arc_to(100, 100, 100, 50, 20)
+canvas.stroke()
+```
+
+### canvas.fill()
+
+Fill the current path with the current color.
+
+### canvas.stroke()
+
+Stroke (outline) the current path with the current color and line width.
+
+```lua
+-- Draw a filled triangle
+canvas.begin_path()
+canvas.move_to(100, 100)
+canvas.line_to(150, 50)
+canvas.line_to(200, 100)
+canvas.close_path()
+canvas.set_color("#4ECDC4")
+canvas.fill()
+canvas.set_color("#000000")
+canvas.stroke()
+```
+
 ## Transformation Functions
 
 Transformations allow you to translate, rotate, and scale the canvas coordinate system.

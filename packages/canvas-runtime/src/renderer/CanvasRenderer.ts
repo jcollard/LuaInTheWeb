@@ -163,6 +163,14 @@ export class CanvasRenderer {
         this.ctx.stroke();
         break;
 
+      case 'arc':
+        this.ctx.arc(command.x, command.y, command.radius, command.startAngle, command.endAngle, command.counterclockwise);
+        break;
+
+      case 'arcTo':
+        this.ctx.arcTo(command.x1, command.y1, command.x2, command.y2, command.radius);
+        break;
+
       default:
         // Ignore unknown commands for forward compatibility
         break;
