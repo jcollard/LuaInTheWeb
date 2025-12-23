@@ -29,6 +29,8 @@
     "canvas/path-house.lua",
     "canvas/arc-pie-chart.lua",
     "canvas/arc-smiley.lua",
+    "canvas/bezier-curves.lua",
+    "canvas/quadratic-curves.lua",
     "canvas/fonts/10px-Bitfantasy.ttf",
     "canvas/fonts/10px-CelticTime.ttf",
     "canvas/fonts/10px-HelvetiPixel.ttf",
