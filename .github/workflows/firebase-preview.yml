@@ -2,7 +2,9 @@ name: Deploy PR Preview
 
 on:
   pull_request:
-    branches: [main]  # Only run on PRs targeting main (not epic branches)
+    branches:
+      - main
+      - 'epic-*'  # Also run on PRs targeting epic branches
   issue_comment:
     types: [created]
 
