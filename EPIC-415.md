@@ -36,7 +36,7 @@ Key considerations:
 
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
-| #416 | Implement Path API basics (beginPath, closePath, moveTo, lineTo, fill, stroke) | ✅ Complete | 416-path-api-basics | Mutation: 80.7%/85.1% |
+| #416 | Implement Path API basics (beginPath, closePath, moveTo, lineTo, fill, stroke) | ✅ Complete | 416-path-api-basics | PR #437 |
 | #417 | Implement arc and arcTo for path API | ⏳ Pending | - | - |
 | #418 | Implement Bezier curves (bezierCurveTo, quadraticCurveTo) | ⏳ Pending | - | - |
 | #419 | Implement ellipse() and roundRect() | ⏳ Pending | - | - |
@@ -70,6 +70,7 @@ Key considerations:
   - Added 6 path commands: beginPath, closePath, moveTo, lineTo, fill, stroke
   - Mutation scores: CanvasRenderer 80.7%, CanvasController 85.1%
   - Created 3 examples: path-triangle.lua, path-star.lua, path-house.lua
+  - PR #437 created targeting epic-415
 
 ## Key Files
 
