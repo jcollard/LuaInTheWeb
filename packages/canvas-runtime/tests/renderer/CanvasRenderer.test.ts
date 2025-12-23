@@ -16,6 +16,8 @@ function createMockContext(): CanvasRenderingContext2D {
     closePath: vi.fn(),
     arc: vi.fn(),
     arcTo: vi.fn(),
+    quadraticCurveTo: vi.fn(),
+    bezierCurveTo: vi.fn(),
     fill: vi.fn(),
     stroke: vi.fn(),
     moveTo: vi.fn(),
@@ -816,6 +818,80 @@ describe('CanvasRenderer', () => {
       renderer.render(commands);
 
       expect(mockCtx.arcTo).toHaveBeenCalledWith(-50, -50, -100, -50, 25);
+    });
+  });
+
+  describe('quadraticCurveTo command', () => {
+    it('should call ctx.quadraticCurveTo() with correct parameters', () => {
+      const commands: DrawCommand[] = [
+        { type: 'quadraticCurveTo', cpx: 100, cpy: 50, x: 200, y: 100 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.quadraticCurveTo).toHaveBeenCalledWith(100, 50, 200, 100);
+    });
+
+    it('should handle zero coordinates', () => {
+      const commands: DrawCommand[] = [
+        { type: 'quadraticCurveTo', cpx: 0, cpy: 0, x: 0, y: 0 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.quadraticCurveTo).toHaveBeenCalledWith(0, 0, 0, 0);
+    });
+
+    it('should handle negative coordinates', () => {
+      const commands: DrawCommand[] = [
+        { type: 'quadraticCurveTo', cpx: -50, cpy: -100, x: -150, y: -200 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.quadraticCurveTo).toHaveBeenCalledWith(-50, -100, -150, -200);
+    });
+  });
+
+  describe('bezierCurveTo command', () => {
+    it('should call ctx.bezierCurveTo() with correct parameters', () => {
+      const commands: DrawCommand[] = [
+        { type: 'bezierCurveTo', cp1x: 100, cp1y: 50, cp2x: 200, cp2y: 150, x: 300, y: 100 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.bezierCurveTo).toHaveBeenCalledWith(100, 50, 200, 150, 300, 100);
+    });
+
+    it('should handle zero coordinates', () => {
+      const commands: DrawCommand[] = [
+        { type: 'bezierCurveTo', cp1x: 0, cp1y: 0, cp2x: 0, cp2y: 0, x: 0, y: 0 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.bezierCurveTo).toHaveBeenCalledWith(0, 0, 0, 0, 0, 0);
+    });
+
+    it('should handle negative coordinates', () => {
+      const commands: DrawCommand[] = [
+        { type: 'bezierCurveTo', cp1x: -50, cp1y: -100, cp2x: -150, cp2y: -200, x: -250, y: -300 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.bezierCurveTo).toHaveBeenCalledWith(-50, -100, -150, -200, -250, -300);
+    });
+
+    it('should handle S-curve shape', () => {
+      const commands: DrawCommand[] = [
+        { type: 'bezierCurveTo', cp1x: 150, cp1y: 50, cp2x: 250, cp2y: 350, x: 350, y: 200 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.bezierCurveTo).toHaveBeenCalledWith(150, 50, 250, 350, 350, 200);
     });
   });
 

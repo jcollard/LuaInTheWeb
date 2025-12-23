@@ -252,6 +252,14 @@ export function setupCanvasAPI(
     getController()?.arcTo(x1, y1, x2, y2, radius)
   })
 
+  engine.global.set('__canvas_quadraticCurveTo', (cpx: number, cpy: number, x: number, y: number) => {
+    getController()?.quadraticCurveTo(cpx, cpy, x, y)
+  })
+
+  engine.global.set('__canvas_bezierCurveTo', (cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number) => {
+    getController()?.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
+  })
+
   // --- Set up Lua-side canvas table ---
   // Canvas is NOT a global - it must be accessed via require('canvas')
   engine.doStringSync(canvasLuaCode)

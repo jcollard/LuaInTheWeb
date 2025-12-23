@@ -81,6 +81,10 @@ describe('setupCanvasAPI Path API', () => {
       lineTo: vi.fn(),
       fill: vi.fn(),
       stroke: vi.fn(),
+      arc: vi.fn(),
+      arcTo: vi.fn(),
+      quadraticCurveTo: vi.fn(),
+      bezierCurveTo: vi.fn(),
     } as unknown as CanvasController
   }
 
@@ -188,6 +192,82 @@ describe('setupCanvasAPI Path API', () => {
       `)
 
       expect(mockController.stroke).toHaveBeenCalled()
+    })
+  })
+
+  describe('quadratic_curve_to', () => {
+    it('should call quadraticCurveTo on controller with correct parameters', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.quadratic_curve_to(100, 50, 200, 100)
+      `)
+
+      expect(mockController.quadraticCurveTo).toHaveBeenCalledWith(100, 50, 200, 100)
+    })
+
+    it('should handle zero coordinates', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.quadratic_curve_to(0, 0, 0, 0)
+      `)
+
+      expect(mockController.quadraticCurveTo).toHaveBeenCalledWith(0, 0, 0, 0)
+    })
+
+    it('should handle negative coordinates', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.quadratic_curve_to(-50, -100, -150, -200)
+      `)
+
+      expect(mockController.quadraticCurveTo).toHaveBeenCalledWith(-50, -100, -150, -200)
+    })
+  })
+
+  describe('bezier_curve_to', () => {
+    it('should call bezierCurveTo on controller with correct parameters', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.bezier_curve_to(100, 50, 200, 150, 300, 100)
+      `)
+
+      expect(mockController.bezierCurveTo).toHaveBeenCalledWith(100, 50, 200, 150, 300, 100)
+    })
+
+    it('should handle zero coordinates', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.bezier_curve_to(0, 0, 0, 0, 0, 0)
+      `)
+
+      expect(mockController.bezierCurveTo).toHaveBeenCalledWith(0, 0, 0, 0, 0, 0)
+    })
+
+    it('should handle negative coordinates', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.bezier_curve_to(-50, -100, -150, -200, -250, -300)
+      `)
+
+      expect(mockController.bezierCurveTo).toHaveBeenCalledWith(-50, -100, -150, -200, -250, -300)
     })
   })
 

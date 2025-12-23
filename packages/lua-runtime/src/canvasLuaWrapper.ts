@@ -268,6 +268,14 @@ export const canvasLuaCode = `
       __canvas_arcTo(x1, y1, x2, y2, radius)
     end
 
+    function _canvas.quadratic_curve_to(cpx, cpy, x, y)
+      __canvas_quadraticCurveTo(cpx, cpy, x, y)
+    end
+
+    function _canvas.bezier_curve_to(cp1x, cp1y, cp2x, cp2y, x, y)
+      __canvas_bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
+    end
+
     -- Timing
     function _canvas.get_delta()
       return __canvas_getDelta()

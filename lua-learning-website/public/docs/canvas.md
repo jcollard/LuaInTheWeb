@@ -236,6 +236,45 @@ canvas.arc_to(100, 100, 100, 50, 20)
 canvas.stroke()
 ```
 
+### canvas.quadratic_curve_to(cpx, cpy, x, y)
+
+Draw a quadratic Bézier curve from the current point. Uses a single control point for a simple curve.
+
+**Parameters:**
+- `cpx` (number): X coordinate of the control point
+- `cpy` (number): Y coordinate of the control point
+- `x` (number): X coordinate of the end point
+- `y` (number): Y coordinate of the end point
+
+```lua
+-- Draw a simple curved arc
+canvas.begin_path()
+canvas.move_to(50, 200)
+canvas.quadratic_curve_to(150, 50, 250, 200)
+canvas.stroke()
+```
+
+### canvas.bezier_curve_to(cp1x, cp1y, cp2x, cp2y, x, y)
+
+Draw a cubic Bézier curve from the current point. Uses two control points for complex S-curves and smooth shapes.
+
+**Parameters:**
+- `cp1x` (number): X coordinate of the first control point
+- `cp1y` (number): Y coordinate of the first control point
+- `cp2x` (number): X coordinate of the second control point
+- `cp2y` (number): Y coordinate of the second control point
+- `x` (number): X coordinate of the end point
+- `y` (number): Y coordinate of the end point
+
+```lua
+-- Draw an S-curve
+canvas.begin_path()
+canvas.move_to(50, 200)
+canvas.bezier_curve_to(150, 50, 250, 350, 350, 200)
+canvas.set_line_width(3)
+canvas.stroke()
+```
+
 ### canvas.fill()
 
 Fill the current path with the current color.

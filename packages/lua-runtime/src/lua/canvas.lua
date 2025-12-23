@@ -637,4 +637,38 @@ function canvas.arc(x, y, radius, startAngle, endAngle, counterclockwise) end
 ---@usage canvas.stroke()
 function canvas.arc_to(x1, y1, x2, y2, radius) end
 
+--- Draw a quadratic Bézier curve from the current point.
+--- A quadratic curve uses a single control point to define the curve shape.
+--- The curve starts at the current path position and ends at (x, y).
+---@param cpx number X coordinate of the control point
+---@param cpy number Y coordinate of the control point
+---@param x number X coordinate of the end point
+---@param y number Y coordinate of the end point
+---@return nil
+---@usage -- Draw a simple curved line
+---@usage canvas.begin_path()
+---@usage canvas.move_to(50, 200)
+---@usage canvas.quadratic_curve_to(150, 50, 250, 200)  -- curve with control point at top
+---@usage canvas.stroke()
+function canvas.quadratic_curve_to(cpx, cpy, x, y) end
+
+--- Draw a cubic Bézier curve from the current point.
+--- A cubic curve uses two control points for more complex curve shapes.
+--- The curve starts at the current path position and ends at (x, y).
+--- Great for drawing S-curves, smooth paths, and complex shapes.
+---@param cp1x number X coordinate of the first control point
+---@param cp1y number Y coordinate of the first control point
+---@param cp2x number X coordinate of the second control point
+---@param cp2y number Y coordinate of the second control point
+---@param x number X coordinate of the end point
+---@param y number Y coordinate of the end point
+---@return nil
+---@usage -- Draw an S-curve
+---@usage canvas.begin_path()
+---@usage canvas.move_to(50, 200)
+---@usage canvas.bezier_curve_to(150, 50, 250, 350, 350, 200)  -- S-curve shape
+---@usage canvas.set_line_width(3)
+---@usage canvas.stroke()
+function canvas.bezier_curve_to(cp1x, cp1y, cp2x, cp2y, x, y) end
+
 return canvas

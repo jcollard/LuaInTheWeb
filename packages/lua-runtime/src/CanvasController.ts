@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /**
  * Canvas controller for managing canvas lifecycle from within LuaScriptProcess.
  *
@@ -510,6 +511,30 @@ export class CanvasController {
    */
   arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): void {
     this.addDrawCommand({ type: 'arcTo', x1, y1, x2, y2, radius })
+  }
+
+  /**
+   * Draw a quadratic Bézier curve from the current point.
+   * @param cpx - X coordinate of the control point
+   * @param cpy - Y coordinate of the control point
+   * @param x - X coordinate of the end point
+   * @param y - Y coordinate of the end point
+   */
+  quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void {
+    this.addDrawCommand({ type: 'quadraticCurveTo', cpx, cpy, x, y })
+  }
+
+  /**
+   * Draw a cubic Bézier curve from the current point.
+   * @param cp1x - X coordinate of the first control point
+   * @param cp1y - Y coordinate of the first control point
+   * @param cp2x - X coordinate of the second control point
+   * @param cp2y - Y coordinate of the second control point
+   * @param x - X coordinate of the end point
+   * @param y - Y coordinate of the end point
+   */
+  bezierCurveTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number): void {
+    this.addDrawCommand({ type: 'bezierCurveTo', cp1x, cp1y, cp2x, cp2y, x, y })
   }
 
   // --- Timing API ---

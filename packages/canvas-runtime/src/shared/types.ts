@@ -30,7 +30,9 @@ export type DrawCommandType =
   | 'fill'
   | 'stroke'
   | 'arc'
-  | 'arcTo';
+  | 'arcTo'
+  | 'quadraticCurveTo'
+  | 'bezierCurveTo';
 
 /**
  * Base interface for all draw commands.
@@ -349,6 +351,42 @@ export interface ArcToCommand extends DrawCommandBase {
 }
 
 /**
+ * Draw a quadratic Bézier curve from the current point to (x, y),
+ * using (cpx, cpy) as the control point.
+ */
+export interface QuadraticCurveToCommand extends DrawCommandBase {
+  type: 'quadraticCurveTo';
+  /** X coordinate of the control point */
+  cpx: number;
+  /** Y coordinate of the control point */
+  cpy: number;
+  /** X coordinate of the end point */
+  x: number;
+  /** Y coordinate of the end point */
+  y: number;
+}
+
+/**
+ * Draw a cubic Bézier curve from the current point to (x, y),
+ * using (cp1x, cp1y) as the first control point and (cp2x, cp2y) as the second.
+ */
+export interface BezierCurveToCommand extends DrawCommandBase {
+  type: 'bezierCurveTo';
+  /** X coordinate of the first control point */
+  cp1x: number;
+  /** Y coordinate of the first control point */
+  cp1y: number;
+  /** X coordinate of the second control point */
+  cp2x: number;
+  /** Y coordinate of the second control point */
+  cp2y: number;
+  /** X coordinate of the end point */
+  x: number;
+  /** Y coordinate of the end point */
+  y: number;
+}
+
+/**
  * Union type of all draw commands.
  */
 export type DrawCommand =
@@ -380,7 +418,9 @@ export type DrawCommand =
   | FillCommand
   | StrokeCommand
   | ArcCommand
-  | ArcToCommand;
+  | ArcToCommand
+  | QuadraticCurveToCommand
+  | BezierCurveToCommand;
 
 /**
  * Mouse button identifiers.

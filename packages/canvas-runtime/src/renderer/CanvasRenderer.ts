@@ -171,6 +171,14 @@ export class CanvasRenderer {
         this.ctx.arcTo(command.x1, command.y1, command.x2, command.y2, command.radius);
         break;
 
+      case 'quadraticCurveTo':
+        this.ctx.quadraticCurveTo(command.cpx, command.cpy, command.x, command.y);
+        break;
+
+      case 'bezierCurveTo':
+        this.ctx.bezierCurveTo(command.cp1x, command.cp1y, command.cp2x, command.cp2y, command.x, command.y);
+        break;
+
       default:
         // Ignore unknown commands for forward compatibility
         break;
