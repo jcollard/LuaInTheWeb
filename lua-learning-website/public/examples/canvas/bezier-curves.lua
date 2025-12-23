@@ -1,12 +1,10 @@
--- Bezier Curves Demo
+-- canvas/bezier-curves.lua
 -- Demonstrates cubic bezier curves for smooth shapes
 
-local canvas = require('canvas')
-
--- Set up canvas
-canvas.set_size(400, 400)
+local canvas = require("canvas")
 
 function draw()
+  -- Clear and draw background
   canvas.clear()
   canvas.set_color(30, 30, 40)
   canvas.fill_rect(0, 0, 400, 400)
@@ -52,9 +50,19 @@ function draw()
 
   -- Labels
   canvas.set_color(255, 255, 255)
-  canvas.text(50, 20, "Cubic Bezier Curves")
+  canvas.draw_text(50, 20, "Cubic Bezier Curves")
   canvas.set_color(200, 200, 200)
-  canvas.text(50, 380, "Yellow = endpoints, Blue = control points")
+  canvas.draw_text(50, 380, "Yellow = endpoints, Blue = control points")
 end
 
-canvas.start(draw)
+function game()
+  draw()
+end
+
+function main()
+  canvas.set_size(400, 400)
+  canvas.tick(game)
+  canvas.start()
+end
+
+main()

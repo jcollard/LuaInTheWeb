@@ -1,12 +1,10 @@
--- Quadratic Curves Demo
+-- canvas/quadratic-curves.lua
 -- Demonstrates quadratic bezier curves with single control point
 
-local canvas = require('canvas')
-
--- Set up canvas
-canvas.set_size(400, 400)
+local canvas = require("canvas")
 
 function draw()
+  -- Clear and draw background
   canvas.clear()
   canvas.set_color(30, 30, 40)
   canvas.fill_rect(0, 0, 400, 400)
@@ -55,14 +53,24 @@ function draw()
 
   -- Bubble text
   canvas.set_color(200, 200, 200)
-  canvas.text(120, 305, "Speech bubble")
-  canvas.text(120, 325, "with curved tail")
+  canvas.draw_text(120, 305, "Speech bubble")
+  canvas.draw_text(120, 325, "with curved tail")
 
   -- Labels
   canvas.set_color(255, 255, 255)
-  canvas.text(50, 20, "Quadratic Bezier Curves")
+  canvas.draw_text(50, 20, "Quadratic Bezier Curves")
   canvas.set_color(200, 200, 200)
-  canvas.text(50, 380, "Uses single control point")
+  canvas.draw_text(50, 380, "Uses single control point")
 end
 
-canvas.start(draw)
+function game()
+  draw()
+end
+
+function main()
+  canvas.set_size(400, 400)
+  canvas.tick(game)
+  canvas.start()
+end
+
+main()
