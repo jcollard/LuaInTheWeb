@@ -1,6 +1,6 @@
 # Epic #415: Epic: Complete Canvas 2D API Implementation
 
-**Status:** In Progress (3/17 complete)
+**Status:** In Progress (4/17 complete)
 **Branch:** epic-415
 **Created:** 2025-12-22
 **Last Updated:** 2025-12-22
@@ -38,7 +38,7 @@ Key considerations:
 |---|-------|--------|--------|-------|
 | #416 | Implement Path API basics (beginPath, closePath, moveTo, lineTo, fill, stroke) | ✅ Complete | 416-path-api-basics | Merged PR #437 |
 | #417 | Implement arc and arcTo for path API | ✅ Complete | 417-implement-arc-and-arcto-for-path-api | Merged PR #438 |
-| #418 | Implement Bezier curves (bezierCurveTo, quadraticCurveTo) | 🔄 In Progress | 418-bezier-curves | Working on epic-415 |
+| #418 | Implement Bezier curves (bezierCurveTo, quadraticCurveTo) | ✅ Complete | epic-415 | Direct commit to epic branch |
 | #419 | Implement ellipse() and roundRect() | ⏳ Pending | - | - |
 | #420 | Implement clipping (clip) | ⏳ Pending | - | - |
 | #421 | Implement line styles (lineCap, lineJoin, miterLimit) | ⏳ Pending | - | - |
@@ -77,12 +77,13 @@ Key considerations:
   - Created 2 examples: arc-pie-chart.lua, arc-smiley.lua
   - Updated docs/canvas.md with Path API section
   - PR #438 merged to epic-415
-- #418 Bezier curves in progress
+- #418 Bezier curves complete
   - Added 2 bezier commands: quadratic_curve_to, bezier_curve_to
   - Mutation scores: CanvasRenderer 80.7%, CanvasController 85.5% (covered)
   - Created 2 examples: bezier-curves.lua, quadratic-curves.lua
   - Updated docs/canvas.md with Bezier curves section
   - Added LuaDoc annotations in canvas.lua
+  - Committed directly to epic-415 branch
 
 ## Key Files
 
