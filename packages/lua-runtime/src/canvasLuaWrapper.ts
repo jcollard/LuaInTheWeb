@@ -276,6 +276,14 @@ export const canvasLuaCode = `
       __canvas_bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
     end
 
+    function _canvas.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise)
+      __canvas_ellipse(x, y, radiusX, radiusY, rotation or 0, startAngle or 0, endAngle or (math.pi * 2), counterclockwise or false)
+    end
+
+    function _canvas.round_rect(x, y, width, height, radii)
+      __canvas_roundRect(x, y, width, height, radii)
+    end
+
     -- Timing
     function _canvas.get_delta()
       return __canvas_getDelta()

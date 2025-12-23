@@ -537,6 +537,52 @@ export class CanvasController {
     this.addDrawCommand({ type: 'bezierCurveTo', cp1x, cp1y, cp2x, cp2y, x, y })
   }
 
+  /**
+   * Draw an ellipse on the current path.
+   * @param x - X coordinate of the ellipse's center
+   * @param y - Y coordinate of the ellipse's center
+   * @param radiusX - Horizontal radius of the ellipse
+   * @param radiusY - Vertical radius of the ellipse
+   * @param rotation - Rotation of the ellipse in radians
+   * @param startAngle - Start angle in radians
+   * @param endAngle - End angle in radians
+   * @param counterclockwise - Draw counterclockwise (default: false)
+   */
+  ellipse(
+    x: number,
+    y: number,
+    radiusX: number,
+    radiusY: number,
+    rotation: number,
+    startAngle: number,
+    endAngle: number,
+    counterclockwise?: boolean
+  ): void {
+    this.addDrawCommand({
+      type: 'ellipse',
+      x,
+      y,
+      radiusX,
+      radiusY,
+      rotation,
+      startAngle,
+      endAngle,
+      counterclockwise,
+    })
+  }
+
+  /**
+   * Draw a rounded rectangle on the current path.
+   * @param x - X coordinate of the rectangle's starting point
+   * @param y - Y coordinate of the rectangle's starting point
+   * @param width - Width of the rectangle
+   * @param height - Height of the rectangle
+   * @param radii - Corner radii (single value or array of 1-4 values)
+   */
+  roundRect(x: number, y: number, width: number, height: number, radii: number | number[]): void {
+    this.addDrawCommand({ type: 'roundRect', x, y, width, height, radii })
+  }
+
   // --- Timing API ---
 
   /**

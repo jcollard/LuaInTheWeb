@@ -1,9 +1,9 @@
 # Epic #415: Epic: Complete Canvas 2D API Implementation
 
-**Status:** In Progress (4/17 complete)
+**Status:** In Progress (5/17 complete)
 **Branch:** epic-415
 **Created:** 2025-12-22
-**Last Updated:** 2025-12-22
+**Last Updated:** 2025-12-23
 
 ## Overview
 
@@ -39,7 +39,7 @@ Key considerations:
 | #416 | Implement Path API basics (beginPath, closePath, moveTo, lineTo, fill, stroke) | ✅ Complete | 416-path-api-basics | Merged PR #437 |
 | #417 | Implement arc and arcTo for path API | ✅ Complete | 417-implement-arc-and-arcto-for-path-api | Merged PR #438 |
 | #418 | Implement Bezier curves (bezierCurveTo, quadraticCurveTo) | ✅ Complete | epic-415 | Direct commit to epic branch |
-| #419 | Implement ellipse() and roundRect() | ⏳ Pending | - | - |
+| #419 | Implement ellipse() and roundRect() | ✅ Complete | 419-ellipse-roundrect | - |
 | #420 | Implement clipping (clip) | ⏳ Pending | - | - |
 | #421 | Implement line styles (lineCap, lineJoin, miterLimit) | ⏳ Pending | - | - |
 | #422 | Implement dashed lines (setLineDash, getLineDash, lineDashOffset) | ⏳ Pending | - | - |
@@ -84,6 +84,15 @@ Key considerations:
   - Updated docs/canvas.md with Bezier curves section
   - Added LuaDoc annotations in canvas.lua
   - Committed directly to epic-415 branch
+
+### 2025-12-23
+- #419 Ellipse and RoundRect complete
+  - Added 2 path commands: ellipse, round_rect
+  - Mutation score: CanvasRenderer 80.7%
+  - Created 2 examples: ellipse-shapes.lua, rounded-buttons.lua
+  - Updated docs/canvas.md and canvas.lua LuaDoc
+  - Updated manifest.json with new examples
+  - Branch: 419-ellipse-roundrect
 
 ## Key Files
 

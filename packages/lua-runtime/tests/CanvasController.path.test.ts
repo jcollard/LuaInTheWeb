@@ -465,4 +465,188 @@ describe('CanvasController Path API', () => {
       expect(commands[3]).toEqual({ type: 'stroke' })
     })
   })
+
+  describe('ellipse', () => {
+    it('should add ellipse command with all parameters', () => {
+      controller.ellipse(200, 150, 100, 50, 0, 0, Math.PI * 2, false)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'ellipse',
+        x: 200,
+        y: 150,
+        radiusX: 100,
+        radiusY: 50,
+        rotation: 0,
+        startAngle: 0,
+        endAngle: Math.PI * 2,
+        counterclockwise: false,
+      })
+    })
+
+    it('should add ellipse command without counterclockwise parameter', () => {
+      controller.ellipse(100, 100, 80, 40, Math.PI / 4, 0, Math.PI)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'ellipse',
+        x: 100,
+        y: 100,
+        radiusX: 80,
+        radiusY: 40,
+        rotation: Math.PI / 4,
+        startAngle: 0,
+        endAngle: Math.PI,
+        counterclockwise: undefined,
+      })
+    })
+
+    it('should add ellipse command with counterclockwise true', () => {
+      controller.ellipse(150, 150, 60, 30, 0, 0, Math.PI / 2, true)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'ellipse',
+        x: 150,
+        y: 150,
+        radiusX: 60,
+        radiusY: 30,
+        rotation: 0,
+        startAngle: 0,
+        endAngle: Math.PI / 2,
+        counterclockwise: true,
+      })
+    })
+
+    it('should add ellipse command with rotation', () => {
+      controller.ellipse(200, 200, 100, 50, Math.PI / 6, 0, Math.PI * 2)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'ellipse',
+        x: 200,
+        y: 200,
+        radiusX: 100,
+        radiusY: 50,
+        rotation: Math.PI / 6,
+        startAngle: 0,
+        endAngle: Math.PI * 2,
+        counterclockwise: undefined,
+      })
+    })
+
+    it('should add ellipse command with partial arc', () => {
+      controller.ellipse(100, 100, 50, 25, 0, Math.PI / 4, Math.PI * 3 / 4)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'ellipse',
+        x: 100,
+        y: 100,
+        radiusX: 50,
+        radiusY: 25,
+        rotation: 0,
+        startAngle: Math.PI / 4,
+        endAngle: Math.PI * 3 / 4,
+        counterclockwise: undefined,
+      })
+    })
+  })
+
+  describe('roundRect', () => {
+    it('should add roundRect command with single radius value', () => {
+      controller.roundRect(50, 50, 200, 100, 15)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'roundRect',
+        x: 50,
+        y: 50,
+        width: 200,
+        height: 100,
+        radii: 15,
+      })
+    })
+
+    it('should add roundRect command with array of radii', () => {
+      controller.roundRect(100, 100, 150, 80, [10, 20, 30, 40])
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'roundRect',
+        x: 100,
+        y: 100,
+        width: 150,
+        height: 80,
+        radii: [10, 20, 30, 40],
+      })
+    })
+
+    it('should add roundRect command with single-element radii array', () => {
+      controller.roundRect(0, 0, 100, 50, [25])
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'roundRect',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 50,
+        radii: [25],
+      })
+    })
+
+    it('should add roundRect command with two-element radii array', () => {
+      controller.roundRect(10, 20, 200, 100, [10, 20])
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'roundRect',
+        x: 10,
+        y: 20,
+        width: 200,
+        height: 100,
+        radii: [10, 20],
+      })
+    })
+
+    it('should add roundRect command with three-element radii array', () => {
+      controller.roundRect(30, 40, 180, 90, [5, 10, 15])
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'roundRect',
+        x: 30,
+        y: 40,
+        width: 180,
+        height: 90,
+        radii: [5, 10, 15],
+      })
+    })
+
+    it('should add roundRect command with zero radius', () => {
+      controller.roundRect(0, 0, 100, 100, 0)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'roundRect',
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        radii: 0,
+      })
+    })
+  })
 })

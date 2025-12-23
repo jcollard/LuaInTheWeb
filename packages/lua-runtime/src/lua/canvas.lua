@@ -671,4 +671,56 @@ function canvas.quadratic_curve_to(cpx, cpy, x, y) end
 ---@usage canvas.stroke()
 function canvas.bezier_curve_to(cp1x, cp1y, cp2x, cp2y, x, y) end
 
+--- Draw an ellipse (oval) on the current path.
+--- An ellipse is like a stretched circle with separate horizontal and vertical radii.
+--- Can also draw partial ellipse arcs by specifying start and end angles.
+---@param x number X coordinate of the ellipse's center
+---@param y number Y coordinate of the ellipse's center
+---@param radiusX number Horizontal radius (half-width) of the ellipse
+---@param radiusY number Vertical radius (half-height) of the ellipse
+---@param rotation? number Rotation of the ellipse in radians (default: 0)
+---@param startAngle? number Start angle in radians (default: 0)
+---@param endAngle? number End angle in radians (default: 2*PI for full ellipse)
+---@param counterclockwise? boolean Draw counterclockwise (default: false)
+---@return nil
+---@usage -- Draw a full oval
+---@usage canvas.begin_path()
+---@usage canvas.ellipse(200, 150, 100, 50)  -- Wide oval
+---@usage canvas.set_color("#4ECDC4")
+---@usage canvas.fill()
+---@usage
+---@usage -- Draw a rotated ellipse
+---@usage canvas.begin_path()
+---@usage canvas.ellipse(200, 200, 80, 40, math.pi / 4)  -- 45-degree rotation
+---@usage canvas.stroke()
+function canvas.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise) end
+
+--- Draw a rounded rectangle on the current path.
+--- Creates a rectangle with rounded corners, useful for buttons and UI elements.
+--- The radii parameter can be a single number for uniform corners, or a table
+--- of 1-4 values for different corner radii.
+---@param x number X coordinate of the rectangle's top-left corner
+---@param y number Y coordinate of the rectangle's top-left corner
+---@param width number Width of the rectangle
+---@param height number Height of the rectangle
+---@param radii number|table Corner radii - single value or table of 1-4 values
+---@return nil
+---@usage -- Draw a button with uniform rounded corners
+---@usage canvas.begin_path()
+---@usage canvas.round_rect(50, 50, 200, 60, 15)  -- 15px radius on all corners
+---@usage canvas.set_color("#667EEA")
+---@usage canvas.fill()
+---@usage
+---@usage -- Draw with different corner radii
+---@usage canvas.begin_path()
+---@usage canvas.round_rect(50, 150, 200, 60, {20, 0, 20, 0})  -- Alternating corners
+---@usage canvas.fill()
+---@usage
+---@usage -- Radii table formats:
+---@usage -- {r}       - Same radius for all corners
+---@usage -- {r1, r2}  - r1=top-left/bottom-right, r2=top-right/bottom-left
+---@usage -- {r1, r2, r3} - r1=top-left, r2=top-right/bottom-left, r3=bottom-right
+---@usage -- {r1, r2, r3, r4} - top-left, top-right, bottom-right, bottom-left
+function canvas.round_rect(x, y, width, height, radii) end
+
 return canvas

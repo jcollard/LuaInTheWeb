@@ -18,6 +18,8 @@ function createMockContext(): CanvasRenderingContext2D {
     arcTo: vi.fn(),
     quadraticCurveTo: vi.fn(),
     bezierCurveTo: vi.fn(),
+    ellipse: vi.fn(),
+    roundRect: vi.fn(),
     fill: vi.fn(),
     stroke: vi.fn(),
     moveTo: vi.fn(),
@@ -947,6 +949,120 @@ describe('CanvasRenderer', () => {
 
       expect(mockCtx.fill).toHaveBeenCalled();
       expect(mockCtx.stroke).toHaveBeenCalled();
+    });
+  });
+
+  describe('ellipse command', () => {
+    it('should call ctx.ellipse() with correct parameters', () => {
+      const commands: DrawCommand[] = [
+        { type: 'ellipse', x: 200, y: 150, radiusX: 100, radiusY: 50, rotation: 0, startAngle: 0, endAngle: Math.PI * 2 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.ellipse).toHaveBeenCalledWith(200, 150, 100, 50, 0, 0, Math.PI * 2, undefined);
+    });
+
+    it('should pass counterclockwise parameter when true', () => {
+      const commands: DrawCommand[] = [
+        { type: 'ellipse', x: 100, y: 100, radiusX: 80, radiusY: 40, rotation: Math.PI / 4, startAngle: 0, endAngle: Math.PI, counterclockwise: true },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.ellipse).toHaveBeenCalledWith(100, 100, 80, 40, Math.PI / 4, 0, Math.PI, true);
+    });
+
+    it('should pass counterclockwise parameter when false', () => {
+      const commands: DrawCommand[] = [
+        { type: 'ellipse', x: 150, y: 150, radiusX: 60, radiusY: 30, rotation: 0, startAngle: 0, endAngle: Math.PI / 2, counterclockwise: false },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.ellipse).toHaveBeenCalledWith(150, 150, 60, 30, 0, 0, Math.PI / 2, false);
+    });
+
+    it('should handle rotation angle', () => {
+      const commands: DrawCommand[] = [
+        { type: 'ellipse', x: 200, y: 200, radiusX: 100, radiusY: 50, rotation: Math.PI / 6, startAngle: 0, endAngle: Math.PI * 2 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.ellipse).toHaveBeenCalledWith(200, 200, 100, 50, Math.PI / 6, 0, Math.PI * 2, undefined);
+    });
+
+    it('should handle partial ellipse arc', () => {
+      const commands: DrawCommand[] = [
+        { type: 'ellipse', x: 100, y: 100, radiusX: 50, radiusY: 25, rotation: 0, startAngle: Math.PI / 4, endAngle: Math.PI * 3 / 4 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.ellipse).toHaveBeenCalledWith(100, 100, 50, 25, 0, Math.PI / 4, Math.PI * 3 / 4, undefined);
+    });
+  });
+
+  describe('roundRect command', () => {
+    it('should call ctx.roundRect() with single radius value', () => {
+      const commands: DrawCommand[] = [
+        { type: 'roundRect', x: 50, y: 50, width: 200, height: 100, radii: 15 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.roundRect).toHaveBeenCalledWith(50, 50, 200, 100, 15);
+    });
+
+    it('should call ctx.roundRect() with array of radii', () => {
+      const commands: DrawCommand[] = [
+        { type: 'roundRect', x: 100, y: 100, width: 150, height: 80, radii: [10, 20, 30, 40] },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.roundRect).toHaveBeenCalledWith(100, 100, 150, 80, [10, 20, 30, 40]);
+    });
+
+    it('should handle single-element radii array', () => {
+      const commands: DrawCommand[] = [
+        { type: 'roundRect', x: 0, y: 0, width: 100, height: 50, radii: [25] },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.roundRect).toHaveBeenCalledWith(0, 0, 100, 50, [25]);
+    });
+
+    it('should handle two-element radii array', () => {
+      const commands: DrawCommand[] = [
+        { type: 'roundRect', x: 10, y: 20, width: 200, height: 100, radii: [10, 20] },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.roundRect).toHaveBeenCalledWith(10, 20, 200, 100, [10, 20]);
+    });
+
+    it('should handle three-element radii array', () => {
+      const commands: DrawCommand[] = [
+        { type: 'roundRect', x: 30, y: 40, width: 180, height: 90, radii: [5, 10, 15] },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.roundRect).toHaveBeenCalledWith(30, 40, 180, 90, [5, 10, 15]);
+    });
+
+    it('should handle zero radius', () => {
+      const commands: DrawCommand[] = [
+        { type: 'roundRect', x: 0, y: 0, width: 100, height: 100, radii: 0 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.roundRect).toHaveBeenCalledWith(0, 0, 100, 100, 0);
     });
   });
 });

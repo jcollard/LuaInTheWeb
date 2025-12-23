@@ -275,6 +275,64 @@ canvas.set_line_width(3)
 canvas.stroke()
 ```
 
+### canvas.ellipse(x, y, radiusX, radiusY, rotation?, startAngle?, endAngle?, counterclockwise?)
+
+Draw an ellipse (oval) on the current path. An ellipse has separate horizontal and vertical radii.
+
+**Parameters:**
+- `x` (number): X coordinate of the ellipse's center
+- `y` (number): Y coordinate of the ellipse's center
+- `radiusX` (number): Horizontal radius (half-width)
+- `radiusY` (number): Vertical radius (half-height)
+- `rotation` (number, optional): Rotation in radians (default: 0)
+- `startAngle` (number, optional): Start angle in radians (default: 0)
+- `endAngle` (number, optional): End angle in radians (default: 2π for full ellipse)
+- `counterclockwise` (boolean, optional): Draw counterclockwise (default: false)
+
+```lua
+-- Draw a full oval
+canvas.begin_path()
+canvas.ellipse(200, 150, 100, 50)  -- Wide oval
+canvas.set_color("#4ECDC4")
+canvas.fill()
+
+-- Draw a rotated ellipse
+canvas.begin_path()
+canvas.ellipse(200, 200, 80, 40, math.pi / 4)  -- 45-degree rotation
+canvas.stroke()
+```
+
+### canvas.round_rect(x, y, width, height, radii)
+
+Draw a rounded rectangle on the current path. Great for buttons and UI elements.
+
+**Parameters:**
+- `x` (number): X coordinate of top-left corner
+- `y` (number): Y coordinate of top-left corner
+- `width` (number): Rectangle width
+- `height` (number): Rectangle height
+- `radii` (number or table): Corner radius/radii
+
+**Radii formats:**
+- Single number: Same radius for all corners
+- `{r}`: Same radius for all corners
+- `{r1, r2}`: r1 for top-left/bottom-right, r2 for top-right/bottom-left
+- `{r1, r2, r3}`: r1=top-left, r2=top-right/bottom-left, r3=bottom-right
+- `{r1, r2, r3, r4}`: top-left, top-right, bottom-right, bottom-left
+
+```lua
+-- Draw a button with uniform rounded corners
+canvas.begin_path()
+canvas.round_rect(50, 50, 200, 60, 15)
+canvas.set_color("#667EEA")
+canvas.fill()
+
+-- Draw with different corner radii
+canvas.begin_path()
+canvas.round_rect(50, 150, 200, 60, {20, 0, 20, 0})  -- Alternating corners
+canvas.fill()
+```
+
 ### canvas.fill()
 
 Fill the current path with the current color.
