@@ -1,6 +1,6 @@
 # Epic #415: Epic: Complete Canvas 2D API Implementation
 
-**Status:** In Progress (1/17 complete)
+**Status:** In Progress (1/17 complete, #417 in progress)
 **Branch:** epic-415
 **Created:** 2025-12-22
 **Last Updated:** 2025-12-22
@@ -37,7 +37,7 @@ Key considerations:
 | # | Title | Status | Branch | Notes |
 |---|-------|--------|--------|-------|
 | #416 | Implement Path API basics (beginPath, closePath, moveTo, lineTo, fill, stroke) | ✅ Complete | 416-path-api-basics | Merged PR #437 |
-| #417 | Implement arc and arcTo for path API | ⏳ Pending | - | - |
+| #417 | Implement arc and arcTo for path API | 🔄 PR Created | 417-implement-arc-and-arcto-for-path-api | PR #438 |
 | #418 | Implement Bezier curves (bezierCurveTo, quadraticCurveTo) | ⏳ Pending | - | - |
 | #419 | Implement ellipse() and roundRect() | ⏳ Pending | - | - |
 | #420 | Implement clipping (clip) | ⏳ Pending | - | - |
@@ -71,6 +71,11 @@ Key considerations:
   - Mutation scores: CanvasRenderer 80.7%, CanvasController 85.1%
   - Created 3 examples: path-triangle.lua, path-star.lua, path-house.lua
   - PR #437 merged to epic-415
+- #417 Arc and ArcTo PR created (#438)
+  - Added 2 arc commands: arc, arc_to
+  - Mutation scores: CanvasRenderer 80.7%, CanvasController 85.2%
+  - Created 2 examples: arc-pie-chart.lua, arc-smiley.lua
+  - Updated docs/canvas.md with Path API section
 
 ## Key Files
 
