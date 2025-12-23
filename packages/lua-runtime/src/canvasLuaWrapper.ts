@@ -235,6 +235,31 @@ export const canvasLuaCode = `
       __canvas_resetTransform()
     end
 
+    -- Path API
+    function _canvas.begin_path()
+      __canvas_beginPath()
+    end
+
+    function _canvas.close_path()
+      __canvas_closePath()
+    end
+
+    function _canvas.move_to(x, y)
+      __canvas_moveTo(x, y)
+    end
+
+    function _canvas.line_to(x, y)
+      __canvas_lineTo(x, y)
+    end
+
+    function _canvas.fill()
+      __canvas_fill()
+    end
+
+    function _canvas.stroke()
+      __canvas_stroke()
+    end
+
     -- Timing
     function _canvas.get_delta()
       return __canvas_getDelta()

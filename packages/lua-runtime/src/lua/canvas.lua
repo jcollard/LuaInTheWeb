@@ -531,4 +531,76 @@ function canvas.set_transform(a, b, c, d, e, f) end
 ---@usage canvas.fill_rect(0, 0, 50, 50)  -- Draw at screen origin
 function canvas.reset_transform() end
 
+-- =============================================================================
+-- Path API
+-- =============================================================================
+
+--- Begin a new path.
+--- Clears any existing path data and starts a new one.
+--- Call this before using move_to(), line_to(), etc.
+---@return nil
+---@usage canvas.begin_path()
+---@usage canvas.move_to(100, 100)
+---@usage canvas.line_to(200, 100)
+---@usage canvas.stroke()
+function canvas.begin_path() end
+
+--- Close the current path.
+--- Draws a straight line from the current point back to the start of the path.
+--- Creates a closed shape ready for fill() or stroke().
+---@return nil
+---@usage canvas.begin_path()
+---@usage canvas.move_to(100, 100)
+---@usage canvas.line_to(150, 50)
+---@usage canvas.line_to(200, 100)
+---@usage canvas.close_path()  -- Draws line back to (100, 100)
+---@usage canvas.fill()
+function canvas.close_path() end
+
+--- Move to a point without drawing.
+--- Sets the starting point for a new sub-path.
+---@param x number X coordinate to move to
+---@param y number Y coordinate to move to
+---@return nil
+---@usage canvas.begin_path()
+---@usage canvas.move_to(50, 50)   -- Start here
+---@usage canvas.line_to(100, 100) -- Draw line from (50,50) to (100,100)
+function canvas.move_to(x, y) end
+
+--- Draw a line to a point.
+--- Draws a straight line from the current point to the specified point.
+---@param x number X coordinate to draw line to
+---@param y number Y coordinate to draw line to
+---@return nil
+---@usage canvas.begin_path()
+---@usage canvas.move_to(0, 0)
+---@usage canvas.line_to(100, 100)
+---@usage canvas.stroke()
+function canvas.line_to(x, y) end
+
+--- Fill the current path.
+--- Fills the interior of the path with the current fill color.
+--- The path does not need to be closed - it will be implicitly closed for fill.
+---@return nil
+---@usage canvas.set_color(255, 0, 0)  -- Red fill
+---@usage canvas.begin_path()
+---@usage canvas.move_to(100, 100)
+---@usage canvas.line_to(150, 50)
+---@usage canvas.line_to(200, 100)
+---@usage canvas.fill()  -- Fills the triangle
+function canvas.fill() end
+
+--- Stroke the current path.
+--- Draws the outline of the path with the current stroke color and line width.
+---@return nil
+---@usage canvas.set_color(0, 0, 0)     -- Black outline
+---@usage canvas.set_line_width(2)
+---@usage canvas.begin_path()
+---@usage canvas.move_to(100, 100)
+---@usage canvas.line_to(150, 50)
+---@usage canvas.line_to(200, 100)
+---@usage canvas.close_path()
+---@usage canvas.stroke()  -- Draws triangle outline
+function canvas.stroke() end
+
 return canvas

@@ -22,7 +22,13 @@ export type DrawCommandType =
   | 'restore'
   | 'transform'
   | 'setTransform'
-  | 'resetTransform';
+  | 'resetTransform'
+  | 'beginPath'
+  | 'closePath'
+  | 'moveTo'
+  | 'lineTo'
+  | 'fill'
+  | 'stroke';
 
 /**
  * Base interface for all draw commands.
@@ -250,6 +256,60 @@ export interface ResetTransformCommand extends DrawCommandBase {
   type: 'resetTransform';
 }
 
+// ============================================================================
+// Path API Commands
+// ============================================================================
+
+/**
+ * Begin a new path, clearing any existing path data.
+ */
+export interface BeginPathCommand extends DrawCommandBase {
+  type: 'beginPath';
+}
+
+/**
+ * Close the current path by drawing a line to the starting point.
+ */
+export interface ClosePathCommand extends DrawCommandBase {
+  type: 'closePath';
+}
+
+/**
+ * Move the current point to a new position without drawing.
+ */
+export interface MoveToCommand extends DrawCommandBase {
+  type: 'moveTo';
+  /** X coordinate to move to */
+  x: number;
+  /** Y coordinate to move to */
+  y: number;
+}
+
+/**
+ * Draw a line from the current point to a new position.
+ */
+export interface LineToCommand extends DrawCommandBase {
+  type: 'lineTo';
+  /** X coordinate to draw line to */
+  x: number;
+  /** Y coordinate to draw line to */
+  y: number;
+}
+
+/**
+ * Fill the current path with the current fill style.
+ */
+export interface FillCommand extends DrawCommandBase {
+  type: 'fill';
+}
+
+/**
+ * Stroke the current path with the current stroke style.
+ */
+export interface StrokeCommand extends DrawCommandBase {
+  type: 'stroke';
+}
+
 /**
  * Union type of all draw commands.
  */
@@ -274,7 +334,13 @@ export type DrawCommand =
   | RestoreCommand
   | TransformCommand
   | SetTransformCommand
-  | ResetTransformCommand;
+  | ResetTransformCommand
+  | BeginPathCommand
+  | ClosePathCommand
+  | MoveToCommand
+  | LineToCommand
+  | FillCommand
+  | StrokeCommand;
 
 /**
  * Mouse button identifiers.

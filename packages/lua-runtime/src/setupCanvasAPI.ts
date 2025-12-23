@@ -219,6 +219,31 @@ export function setupCanvasAPI(
     getController()?.resetTransform()
   })
 
+  // --- Path API functions ---
+  engine.global.set('__canvas_beginPath', () => {
+    getController()?.beginPath()
+  })
+
+  engine.global.set('__canvas_closePath', () => {
+    getController()?.closePath()
+  })
+
+  engine.global.set('__canvas_moveTo', (x: number, y: number) => {
+    getController()?.moveTo(x, y)
+  })
+
+  engine.global.set('__canvas_lineTo', (x: number, y: number) => {
+    getController()?.lineTo(x, y)
+  })
+
+  engine.global.set('__canvas_fill', () => {
+    getController()?.fill()
+  })
+
+  engine.global.set('__canvas_stroke', () => {
+    getController()?.stroke()
+  })
+
   // --- Set up Lua-side canvas table ---
   // Canvas is NOT a global - it must be accessed via require('canvas')
   engine.doStringSync(canvasLuaCode)
