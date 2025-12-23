@@ -34,7 +34,8 @@ export type DrawCommandType =
   | 'quadraticCurveTo'
   | 'bezierCurveTo'
   | 'ellipse'
-  | 'roundRect';
+  | 'roundRect'
+  | 'clip';
 
 /**
  * Base interface for all draw commands.
@@ -429,6 +430,16 @@ export interface RoundRectCommand extends DrawCommandBase {
 }
 
 /**
+ * Clip all future drawing to the current path.
+ * Use with save()/restore() to manage clipping regions.
+ */
+export interface ClipCommand extends DrawCommandBase {
+  type: 'clip';
+  /** Fill rule: "nonzero" (default) or "evenodd" */
+  fillRule?: 'nonzero' | 'evenodd';
+}
+
+/**
  * Union type of all draw commands.
  */
 export type DrawCommand =
@@ -464,7 +475,8 @@ export type DrawCommand =
   | QuadraticCurveToCommand
   | BezierCurveToCommand
   | EllipseCommand
-  | RoundRectCommand;
+  | RoundRectCommand
+  | ClipCommand;
 
 /**
  * Mouse button identifiers.

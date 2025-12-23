@@ -354,6 +354,31 @@ canvas.set_color("#000000")
 canvas.stroke()
 ```
 
+### canvas.clip(fillRule?)
+
+Clip all future drawing to the current path. Creates a clipping region from the current path - all subsequent drawing is constrained to this region.
+
+**Parameters:**
+- `fillRule` (string, optional): "nonzero" (default) or "evenodd"
+
+**Important:** Clipping can only shrink the region, not expand it. Use `save()` before clipping and `restore()` to remove the clipping region.
+
+```lua
+-- Create a circular viewport
+canvas.save()
+canvas.begin_path()
+canvas.arc(200, 200, 80, 0, math.pi * 2)
+canvas.clip()
+
+-- Draw a pattern (clipped to circle)
+canvas.set_color(255, 100, 100)
+for i = 0, 400, 20 do
+  canvas.fill_rect(0, i, 400, 10)
+end
+
+canvas.restore()  -- Remove clipping
+```
+
 ## Transformation Functions
 
 Transformations allow you to translate, rotate, and scale the canvas coordinate system.

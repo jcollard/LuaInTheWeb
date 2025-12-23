@@ -192,6 +192,14 @@ export class CanvasRenderer {
         this.ctx.roundRect(command.x, command.y, command.width, command.height, command.radii);
         break;
 
+      case 'clip':
+        if (command.fillRule) {
+          this.ctx.clip(command.fillRule);
+        } else {
+          this.ctx.clip();
+        }
+        break;
+
       default:
         // Ignore unknown commands for forward compatibility
         break;

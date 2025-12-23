@@ -583,6 +583,15 @@ export class CanvasController {
     this.addDrawCommand({ type: 'roundRect', x, y, width, height, radii })
   }
 
+  /**
+   * Clip all future drawing to the current path.
+   * Use with save()/restore() to manage clipping regions.
+   * @param fillRule - Fill rule: "nonzero" (default) or "evenodd"
+   */
+  clip(fillRule?: 'nonzero' | 'evenodd'): void {
+    this.addDrawCommand({ type: 'clip', fillRule })
+  }
+
   // --- Timing API ---
 
   /**
