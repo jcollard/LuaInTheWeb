@@ -266,6 +266,14 @@ export class CanvasRenderer {
         this.ctx.globalCompositeOperation = command.operation;
         break;
 
+      case 'setTextAlign':
+        this.ctx.textAlign = command.align;
+        break;
+
+      case 'setTextBaseline':
+        this.ctx.textBaseline = command.baseline;
+        break;
+
       default:
         // Ignore unknown commands for forward compatibility
         break;

@@ -715,6 +715,127 @@ end
 canvas.set_composite_operation("source-over")
 ```
 
+## Text Alignment
+
+Control how text is positioned relative to the specified x and y coordinates.
+
+### canvas.set_text_align(align)
+
+Set the horizontal text alignment for all subsequent `draw_text()` calls.
+
+**Parameters:**
+- `align` (string): One of the alignment values below
+
+**Alignment Values:**
+
+| Value | Description |
+|-------|-------------|
+| `"left"` | Text starts at x (left edge at x) |
+| `"right"` | Text ends at x (right edge at x) |
+| `"center"` | Text is centered at x |
+| `"start"` | Same as "left" for left-to-right languages |
+| `"end"` | Same as "right" for left-to-right languages |
+
+**Example:**
+```lua
+local w = canvas.get_width()
+
+-- Centered title
+canvas.set_text_align("center")
+canvas.set_font_size(48)
+canvas.draw_text(w / 2, 50, "Game Title")
+
+-- Left-aligned paragraph
+canvas.set_text_align("left")
+canvas.set_font_size(16)
+canvas.draw_text(50, 100, "Left-aligned text")
+
+-- Right-aligned score
+canvas.set_text_align("right")
+canvas.draw_text(w - 20, 20, "Score: 12345")
+```
+
+### canvas.set_text_baseline(baseline)
+
+Set the vertical text alignment for all subsequent `draw_text()` calls.
+
+**Parameters:**
+- `baseline` (string): One of the baseline values below
+
+**Baseline Values:**
+
+| Value | Description |
+|-------|-------------|
+| `"top"` | Top of text at y |
+| `"hanging"` | Hanging baseline at y (similar to top) |
+| `"middle"` | Middle of text at y |
+| `"alphabetic"` | Alphabetic baseline at y (default, where most letters sit) |
+| `"ideographic"` | Ideographic baseline at y (for CJK characters) |
+| `"bottom"` | Bottom of text at y |
+
+**Example:**
+```lua
+-- Vertically centered text in a button
+local btnX, btnY, btnW, btnH = 100, 100, 150, 50
+
+canvas.set_fill_style("#4CAF50")
+canvas.fill_rect(btnX, btnY, btnW, btnH)
+
+canvas.set_text_align("center")
+canvas.set_text_baseline("middle")
+canvas.set_fill_style("#FFFFFF")
+canvas.draw_text(btnX + btnW/2, btnY + btnH/2, "Click Me")
+```
+
+### canvas.draw_label(x, y, width, height, text, options)
+
+Draw text within a bounded rectangle with automatic alignment and overflow handling. This is a convenience function that simplifies common text layout tasks.
+
+**Parameters:**
+- `x` (number): X coordinate of the rectangle
+- `y` (number): Y coordinate of the rectangle
+- `width` (number): Width of the rectangle
+- `height` (number): Height of the rectangle
+- `text` (string): Text to draw
+- `options` (table, optional): Configuration options
+
+**Options:**
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `align_h` | "left", "center", "right" | "center" | Horizontal alignment |
+| `align_v` | "top", "middle", "bottom" | "middle" | Vertical alignment |
+| `overflow` | "visible", "hidden", "ellipsis" | "visible" | How to handle text that exceeds bounds |
+| `padding` | `{left, top, right, bottom}` | all 0 | Internal padding from edges |
+
+**Example:**
+```lua
+-- Simple centered button
+canvas.set_fill_style("#4CAF50")
+canvas.fill_rect(100, 100, 150, 50)
+canvas.set_fill_style("#FFFFFF")
+canvas.draw_label(100, 100, 150, 50, "Click Me")
+
+-- Left-aligned with padding
+canvas.draw_label(100, 200, 200, 30, "Left aligned", {
+    align_h = "left",
+    padding = {left = 10}
+})
+
+-- Truncate long text with ellipsis
+canvas.draw_label(100, 250, 100, 30, "Very long text here", {
+    overflow = "ellipsis"
+})
+
+-- Full options example
+canvas.draw_label(100, 300, 200, 40, "Padded Label", {
+    align_h = "left",
+    align_v = "middle",
+    overflow = "ellipsis",
+    padding = {left = 10, top = 5, right = 10, bottom = 5}
+})
+```
+
 ## Drawing Functions
 
 ### canvas.draw_rect(x, y, width, height)

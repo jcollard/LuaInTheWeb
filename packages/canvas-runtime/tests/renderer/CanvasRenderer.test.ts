@@ -1950,4 +1950,118 @@ describe('CanvasRenderer', () => {
       expect(mockCtx.globalCompositeOperation).toBe('screen');
     });
   });
+
+  describe('setTextAlign command', () => {
+    it('should set textAlign to left', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setTextAlign', align: 'left' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.textAlign).toBe('left');
+    });
+
+    it('should set textAlign to center', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setTextAlign', align: 'center' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.textAlign).toBe('center');
+    });
+
+    it('should set textAlign to right', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setTextAlign', align: 'right' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.textAlign).toBe('right');
+    });
+
+    it('should set textAlign to start', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setTextAlign', align: 'start' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.textAlign).toBe('start');
+    });
+
+    it('should set textAlign to end', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setTextAlign', align: 'end' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.textAlign).toBe('end');
+    });
+  });
+
+  describe('setTextBaseline command', () => {
+    it('should set textBaseline to top', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setTextBaseline', baseline: 'top' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.textBaseline).toBe('top');
+    });
+
+    it('should set textBaseline to middle', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setTextBaseline', baseline: 'middle' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.textBaseline).toBe('middle');
+    });
+
+    it('should set textBaseline to alphabetic', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setTextBaseline', baseline: 'alphabetic' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.textBaseline).toBe('alphabetic');
+    });
+
+    it('should set textBaseline to bottom', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setTextBaseline', baseline: 'bottom' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.textBaseline).toBe('bottom');
+    });
+
+    it('should set textBaseline to hanging', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setTextBaseline', baseline: 'hanging' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.textBaseline).toBe('hanging');
+    });
+
+    it('should set textBaseline to ideographic', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setTextBaseline', baseline: 'ideographic' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.textBaseline).toBe('ideographic');
+    });
+  });
 });

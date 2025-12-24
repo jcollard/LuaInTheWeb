@@ -28,6 +28,8 @@ import type {
   AssetManifest,
   FillStyle,
   GlobalCompositeOperation,
+  CanvasTextAlign,
+  CanvasTextBaseline,
 } from '@lua-learning/canvas-runtime'
 import type { IFileSystem } from '@lua-learning/shell-core'
 import { formatOnDrawError, createImageFromData, createFontFromData } from './canvasErrorFormatter'
@@ -736,6 +738,24 @@ export class CanvasController {
    */
   setCompositeOperation(operation: GlobalCompositeOperation): void {
     this.addDrawCommand({ type: 'setCompositeOperation', operation })
+  }
+
+  // --- Text Alignment API ---
+
+  /**
+   * Set the text alignment for all subsequent text drawing.
+   * @param align - Horizontal alignment: 'left', 'right', 'center', 'start', or 'end'
+   */
+  setTextAlign(align: CanvasTextAlign): void {
+    this.addDrawCommand({ type: 'setTextAlign', align })
+  }
+
+  /**
+   * Set the text baseline for all subsequent text drawing.
+   * @param baseline - Vertical alignment: 'top', 'hanging', 'middle', 'alphabetic', 'ideographic', or 'bottom'
+   */
+  setTextBaseline(baseline: CanvasTextBaseline): void {
+    this.addDrawCommand({ type: 'setTextBaseline', baseline })
   }
 
   // --- Timing API ---

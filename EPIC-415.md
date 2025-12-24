@@ -48,7 +48,7 @@ Key considerations:
 | #426 | Implement patterns (createPattern) | ✅ Complete | epic-415 | Direct commit to epic branch |
 | #427 | Implement shadows (shadowColor, shadowBlur, shadowOffsetX/Y) | ✅ Complete | epic-415 | Direct commit to epic branch |
 | #428 | Implement compositing (globalAlpha, globalCompositeOperation) | ✅ Complete | 428-compositing | - |
-| #429 | Implement text alignment (textAlign, textBaseline) | ⏳ Pending | - | - |
+| #429 | Implement text alignment (textAlign, textBaseline) | 🔄 In Progress | 429-text-alignment | - |
 | #430 | Implement hit testing (isPointInPath, isPointInStroke) | ⏳ Pending | - | - |
 | #431 | Implement pixel manipulation (getImageData, putImageData, createImageData) | ⏳ Pending | - | - |
 | #432 | Update canvas.lua with complete API documentation | ⏳ Pending | - | - |

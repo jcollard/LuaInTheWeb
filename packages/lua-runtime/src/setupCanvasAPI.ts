@@ -4,7 +4,11 @@
  */
 
 import type { LuaEngine } from 'wasmoon'
-import type { GlobalCompositeOperation } from '@lua-learning/canvas-runtime'
+import type {
+  GlobalCompositeOperation,
+  CanvasTextAlign,
+  CanvasTextBaseline,
+} from '@lua-learning/canvas-runtime'
 import type { CanvasController } from './CanvasController'
 import { canvasLuaCode } from './canvasLuaWrapper'
 
@@ -428,6 +432,15 @@ export function setupCanvasAPI(
 
   engine.global.set('__canvas_setCompositeOperation', (operation: string) => {
     getController()?.setCompositeOperation(operation as GlobalCompositeOperation)
+  })
+
+  // Text Alignment
+  engine.global.set('__canvas_setTextAlign', (align: string) => {
+    getController()?.setTextAlign(align as CanvasTextAlign)
+  })
+
+  engine.global.set('__canvas_setTextBaseline', (baseline: string) => {
+    getController()?.setTextBaseline(baseline as CanvasTextBaseline)
   })
 
   // --- Set up Lua-side canvas table ---

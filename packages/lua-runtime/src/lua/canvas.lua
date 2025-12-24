@@ -452,6 +452,71 @@ function canvas.set_global_alpha(alpha) end
 function canvas.set_composite_operation(operation) end
 
 -- =============================================================================
+-- Text Alignment
+-- =============================================================================
+
+--- Set the text alignment for all subsequent draw_text() calls.
+--- Controls horizontal alignment relative to the x coordinate.
+---@param align string Alignment: "left", "right", "center", "start", or "end"
+---@return nil
+---@usage canvas.set_text_align("center")
+---@usage canvas.draw_text(canvas.get_width() / 2, 50, "Centered Title")
+---
+--- Alignment values:
+--- - "left": Text starts at x (left edge at x)
+--- - "right": Text ends at x (right edge at x)
+--- - "center": Text is centered at x
+--- - "start": Same as "left" for left-to-right languages
+--- - "end": Same as "right" for left-to-right languages
+function canvas.set_text_align(align) end
+
+--- Set the text baseline for all subsequent draw_text() calls.
+--- Controls vertical alignment relative to the y coordinate.
+---@param baseline string Baseline: "top", "hanging", "middle", "alphabetic", "ideographic", or "bottom"
+---@return nil
+---@usage canvas.set_text_baseline("middle")
+---@usage canvas.draw_text(100, canvas.get_height() / 2, "Vertically Centered")
+---
+--- Baseline values:
+--- - "top": Top of text at y
+--- - "hanging": Hanging baseline at y (similar to top)
+--- - "middle": Middle of text at y
+--- - "alphabetic": Alphabetic baseline at y (default, where most letters sit)
+--- - "ideographic": Ideographic baseline at y (for CJK characters)
+--- - "bottom": Bottom of text at y
+function canvas.set_text_baseline(baseline) end
+
+---@class DrawLabelOptions
+---@field align_h? string Horizontal alignment: "left", "center", "right" (default: "center")
+---@field align_v? string Vertical alignment: "top", "middle", "bottom" (default: "middle")
+---@field overflow? string Overflow behavior: "visible", "hidden", "ellipsis" (default: "visible")
+---@field padding? table Padding: {left=0, top=0, right=0, bottom=0}
+
+--- Draw text within a bounded rectangle with alignment and overflow handling.
+--- This is a convenience function that combines clipping, alignment, and text truncation.
+---@param x number X coordinate of the rectangle
+---@param y number Y coordinate of the rectangle
+---@param width number Width of the rectangle
+---@param height number Height of the rectangle
+---@param text string Text to draw
+---@param options? DrawLabelOptions Options for alignment, overflow, and padding
+---@return nil
+---@usage -- Centered button text
+---@usage canvas.draw_label(100, 100, 150, 50, "Click Me")
+---@usage
+---@usage -- Left-aligned with padding
+---@usage canvas.draw_label(100, 100, 200, 30, "Left aligned", {
+---@usage     align_h = "left",
+---@usage     padding = {left = 10}
+---@usage })
+---@usage
+---@usage -- Truncate long text with ellipsis
+---@usage canvas.draw_label(100, 100, 100, 30, "Very long text that will be truncated", {
+---@usage     overflow = "ellipsis"
+---@usage })
+function canvas.draw_label(x, y, width, height, text, options) end
+
+-- =============================================================================
 -- Font Styling
 -- =============================================================================
 
