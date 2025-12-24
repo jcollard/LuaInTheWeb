@@ -1,6 +1,6 @@
 # Epic #415: Epic: Complete Canvas 2D API Implementation
 
-**Status:** In Progress (13/17 complete)
+**Status:** In Progress (14/17 complete)
 **Branch:** epic-415
 **Created:** 2025-12-22
 **Last Updated:** 2025-12-24
@@ -48,7 +48,7 @@ Key considerations:
 | #426 | Implement patterns (createPattern) | ✅ Complete | epic-415 | Direct commit to epic branch |
 | #427 | Implement shadows (shadowColor, shadowBlur, shadowOffsetX/Y) | ✅ Complete | epic-415 | Direct commit to epic branch |
 | #428 | Implement compositing (globalAlpha, globalCompositeOperation) | ✅ Complete | 428-compositing | - |
-| #429 | Implement text alignment (textAlign, textBaseline) | 🔄 In Progress | 429-text-alignment | - |
+| #429 | Implement text alignment (textAlign, textBaseline) | ✅ Complete | 429-text-alignment | Merged PR #446 |
 | #430 | Implement hit testing (isPointInPath, isPointInStroke) | ⏳ Pending | - | - |
 | #431 | Implement pixel manipulation (getImageData, putImageData, createImageData) | ⏳ Pending | - | - |
 | #432 | Update canvas.lua with complete API documentation | ⏳ Pending | - | - |
@@ -150,6 +150,14 @@ Key considerations:
   - Updated docs/canvas.md with Compositing section
   - Updated both canvas.lua files with LuaDoc
   - Created on feature branch 428-compositing
+- #429 Text alignment implementation complete
+  - Added 2 text alignment commands: setTextAlign, setTextBaseline
+  - Added draw_label() convenience function with alignment, overflow, word wrap, and typewriter effect
+  - Mutation score: CanvasRenderer 84.51%
+  - Created 2 examples: text-alignment.lua, game-hud.lua (1920x1080 stylized RPG HUD)
+  - Updated docs/canvas.md with Text Alignment and draw_label sections
+  - Updated both canvas.lua files with LuaDoc
+  - PR #446 merged to epic-415
 
 ## Key Files
 
