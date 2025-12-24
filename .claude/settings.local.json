@@ -87,7 +87,9 @@
       "Bash(npm run build:lua-runtime:*)",
       "Bash(npm run build:shell-core:*)",
       "Bash(npm run build:canvas-runtime:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "mcp__code-index-mcp__set_project_path",
+      "mcp__code-index-mcp__find_files"
     ],
     "deny": [
       "Bash(npm run dev)",

@@ -30,6 +30,9 @@ function createMockContext(): CanvasRenderingContext2D {
     fillStyle: '',
     strokeStyle: '',
     lineWidth: 1,
+    lineCap: 'butt' as CanvasLineCap,
+    lineJoin: 'miter' as CanvasLineJoin,
+    miterLimit: 10,
     font: '16px monospace',
     textBaseline: 'alphabetic',
     // Transformation methods
@@ -1096,6 +1099,92 @@ describe('CanvasRenderer', () => {
       renderer.render(commands);
 
       expect(mockCtx.clip).toHaveBeenCalledWith('evenodd');
+    });
+  });
+
+  describe('setLineCap command', () => {
+    it('should set lineCap to butt', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setLineCap', cap: 'butt' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.lineCap).toBe('butt');
+    });
+
+    it('should set lineCap to round', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setLineCap', cap: 'round' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.lineCap).toBe('round');
+    });
+
+    it('should set lineCap to square', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setLineCap', cap: 'square' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.lineCap).toBe('square');
+    });
+  });
+
+  describe('setLineJoin command', () => {
+    it('should set lineJoin to miter', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setLineJoin', join: 'miter' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.lineJoin).toBe('miter');
+    });
+
+    it('should set lineJoin to round', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setLineJoin', join: 'round' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.lineJoin).toBe('round');
+    });
+
+    it('should set lineJoin to bevel', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setLineJoin', join: 'bevel' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.lineJoin).toBe('bevel');
+    });
+  });
+
+  describe('setMiterLimit command', () => {
+    it('should set miterLimit', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setMiterLimit', limit: 15 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.miterLimit).toBe(15);
+    });
+
+    it('should set miterLimit to default value of 10', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setMiterLimit', limit: 10 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.miterLimit).toBe(10);
     });
   });
 });

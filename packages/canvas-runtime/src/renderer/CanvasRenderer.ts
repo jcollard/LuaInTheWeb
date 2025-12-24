@@ -200,6 +200,18 @@ export class CanvasRenderer {
         }
         break;
 
+      case 'setLineCap':
+        this.ctx.lineCap = command.cap;
+        break;
+
+      case 'setLineJoin':
+        this.ctx.lineJoin = command.join;
+        break;
+
+      case 'setMiterLimit':
+        this.ctx.miterLimit = command.limit;
+        break;
+
       default:
         // Ignore unknown commands for forward compatibility
         break;

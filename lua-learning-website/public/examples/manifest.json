@@ -34,6 +34,7 @@
     "canvas/ellipse-shapes.lua",
     "canvas/rounded-buttons.lua",
     "canvas/clipping-demo.lua",
+    "canvas/line-styles.lua",
     "canvas/fonts/10px-Bitfantasy.ttf",
     "canvas/fonts/10px-CelticTime.ttf",
     "canvas/fonts/10px-HelvetiPixel.ttf",

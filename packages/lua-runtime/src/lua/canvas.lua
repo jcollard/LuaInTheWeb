@@ -111,6 +111,34 @@ function canvas.set_color(r, g, b, a) end
 ---@usage canvas.set_line_width(3)
 function canvas.set_line_width(width) end
 
+--- Set the line cap style for stroke endpoints.
+--- Controls how the ends of lines are drawn.
+---@param cap string Line cap style: "butt" (default), "round", or "square"
+---@return nil
+---@usage canvas.set_line_cap("butt")    -- Flat end at the endpoint
+---@usage canvas.set_line_cap("round")   -- Rounded end extending past endpoint
+---@usage canvas.set_line_cap("square")  -- Square end extending past endpoint
+function canvas.set_line_cap(cap) end
+
+--- Set the line join style for stroke corners.
+--- Controls how corners are drawn when two lines meet.
+---@param join string Line join style: "miter" (default), "round", or "bevel"
+---@return nil
+---@usage canvas.set_line_join("miter")  -- Sharp corner (may be limited by miter_limit)
+---@usage canvas.set_line_join("round")  -- Rounded corner
+---@usage canvas.set_line_join("bevel")  -- Flat corner (chamfered)
+function canvas.set_line_join(join) end
+
+--- Set the miter limit for sharp corners.
+--- When line_join is "miter", this limits how far the corner can extend.
+--- If the miter length exceeds this limit, the corner is drawn as a bevel instead.
+---@param limit number Miter limit value (default: 10)
+---@return nil
+---@usage canvas.set_line_join("miter")
+---@usage canvas.set_miter_limit(5)   -- Tighter limit, more bevels on sharp angles
+---@usage canvas.set_miter_limit(20)  -- Allow sharper corners before beveling
+function canvas.set_miter_limit(limit) end
+
 -- =============================================================================
 -- Font Styling
 -- =============================================================================

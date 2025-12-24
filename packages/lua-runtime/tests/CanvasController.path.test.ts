@@ -684,4 +684,98 @@ describe('CanvasController Path API', () => {
       })
     })
   })
+
+  describe('setLineCap', () => {
+    it('should add setLineCap command with butt', () => {
+      controller.setLineCap('butt')
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setLineCap',
+        cap: 'butt',
+      })
+    })
+
+    it('should add setLineCap command with round', () => {
+      controller.setLineCap('round')
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setLineCap',
+        cap: 'round',
+      })
+    })
+
+    it('should add setLineCap command with square', () => {
+      controller.setLineCap('square')
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setLineCap',
+        cap: 'square',
+      })
+    })
+  })
+
+  describe('setLineJoin', () => {
+    it('should add setLineJoin command with miter', () => {
+      controller.setLineJoin('miter')
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setLineJoin',
+        join: 'miter',
+      })
+    })
+
+    it('should add setLineJoin command with round', () => {
+      controller.setLineJoin('round')
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setLineJoin',
+        join: 'round',
+      })
+    })
+
+    it('should add setLineJoin command with bevel', () => {
+      controller.setLineJoin('bevel')
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setLineJoin',
+        join: 'bevel',
+      })
+    })
+  })
+
+  describe('setMiterLimit', () => {
+    it('should add setMiterLimit command', () => {
+      controller.setMiterLimit(15)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setMiterLimit',
+        limit: 15,
+      })
+    })
+
+    it('should add setMiterLimit command with default value', () => {
+      controller.setMiterLimit(10)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setMiterLimit',
+        limit: 10,
+      })
+    })
+  })
 })
