@@ -258,6 +258,14 @@ export class CanvasRenderer {
         this.ctx.shadowOffsetY = 0;
         break;
 
+      case 'setGlobalAlpha':
+        this.ctx.globalAlpha = command.alpha;
+        break;
+
+      case 'setCompositeOperation':
+        this.ctx.globalCompositeOperation = command.operation;
+        break;
+
       default:
         // Ignore unknown commands for forward compatibility
         break;

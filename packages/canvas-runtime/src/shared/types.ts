@@ -48,7 +48,9 @@ export type DrawCommandType =
   | 'setShadowOffsetX'
   | 'setShadowOffsetY'
   | 'setShadow'
-  | 'clearShadow';
+  | 'clearShadow'
+  | 'setGlobalAlpha'
+  | 'setCompositeOperation';
 
 /**
  * Base interface for all draw commands.
@@ -672,6 +674,59 @@ export interface ClearShadowCommand extends DrawCommandBase {
   type: 'clearShadow';
 }
 
+// ============================================================================
+// Compositing Commands
+// ============================================================================
+
+/**
+ * Standard Canvas 2D composite operations.
+ */
+export type GlobalCompositeOperation =
+  | 'source-over'
+  | 'source-in'
+  | 'source-out'
+  | 'source-atop'
+  | 'destination-over'
+  | 'destination-in'
+  | 'destination-out'
+  | 'destination-atop'
+  | 'lighter'
+  | 'copy'
+  | 'xor'
+  | 'multiply'
+  | 'screen'
+  | 'overlay'
+  | 'darken'
+  | 'lighten'
+  | 'color-dodge'
+  | 'color-burn'
+  | 'hard-light'
+  | 'soft-light'
+  | 'difference'
+  | 'exclusion'
+  | 'hue'
+  | 'saturation'
+  | 'color'
+  | 'luminosity';
+
+/**
+ * Set the global alpha (transparency) for all subsequent drawing.
+ */
+export interface SetGlobalAlphaCommand extends DrawCommandBase {
+  type: 'setGlobalAlpha';
+  /** Alpha value from 0.0 (fully transparent) to 1.0 (fully opaque) */
+  alpha: number;
+}
+
+/**
+ * Set the composite operation (blend mode) for all subsequent drawing.
+ */
+export interface SetCompositeOperationCommand extends DrawCommandBase {
+  type: 'setCompositeOperation';
+  /** Blend mode to use */
+  operation: GlobalCompositeOperation;
+}
+
 /**
  * Union type of all draw commands.
  */
@@ -722,7 +777,9 @@ export type DrawCommand =
   | SetShadowOffsetXCommand
   | SetShadowOffsetYCommand
   | SetShadowCommand
-  | ClearShadowCommand;
+  | ClearShadowCommand
+  | SetGlobalAlphaCommand
+  | SetCompositeOperationCommand;
 
 /**
  * Mouse button identifiers.

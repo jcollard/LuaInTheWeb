@@ -28,6 +28,8 @@ export type {
   PatternDef,
   // Style type
   FillStyle,
+  // Compositing types
+  GlobalCompositeOperation,
 } from './types.js';
 
 export {

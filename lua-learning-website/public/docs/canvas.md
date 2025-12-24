@@ -647,6 +647,74 @@ canvas.clear_shadow()
 canvas.fill_rect(200, 50, 100, 100) -- No shadow
 ```
 
+## Compositing
+
+Control transparency and blend modes for layered graphics and visual effects.
+
+### canvas.set_global_alpha(alpha)
+
+Set the global alpha (transparency) for all subsequent drawing. Affects all drawing operations including shapes, text, and images.
+
+**Parameters:**
+- `alpha` (number): Value from 0.0 (fully transparent) to 1.0 (fully opaque)
+
+**Example:**
+```lua
+canvas.set_global_alpha(0.5)  -- 50% transparent
+canvas.set_fill_style("#FF0000")
+canvas.fill_rect(50, 50, 100, 100)  -- Semi-transparent red
+
+canvas.set_global_alpha(1.0)  -- Reset to fully opaque
+```
+
+### canvas.set_composite_operation(operation)
+
+Set the composite operation (blend mode) for all subsequent drawing. Controls how new pixels are combined with existing pixels on the canvas.
+
+**Parameters:**
+- `operation` (string): One of the blend mode names listed below
+
+**Common Blend Modes:**
+
+| Mode | Description |
+|------|-------------|
+| `"source-over"` | Default. Draw new content on top of existing |
+| `"multiply"` | Multiply colors (darkening effect) |
+| `"screen"` | Screen blend (lightening effect) |
+| `"lighter"` | Additive blending (great for glow effects) |
+| `"overlay"` | Overlay blend |
+| `"darken"` | Keep the darker color |
+| `"lighten"` | Keep the lighter color |
+
+**Additional Blend Modes:**
+- `"source-in"`, `"source-out"`, `"source-atop"`
+- `"destination-over"`, `"destination-in"`, `"destination-out"`, `"destination-atop"`
+- `"copy"`, `"xor"`
+- `"color-dodge"`, `"color-burn"`, `"hard-light"`, `"soft-light"`
+- `"difference"`, `"exclusion"`, `"hue"`, `"saturation"`, `"color"`, `"luminosity"`
+
+**Example:**
+```lua
+-- Draw base shapes
+canvas.set_fill_style("#00FF00")
+canvas.fill_circle(100, 100, 50)
+
+-- Multiply blend (darkening)
+canvas.set_composite_operation("multiply")
+canvas.set_fill_style("#FF0000")
+canvas.fill_circle(130, 100, 50)
+
+-- Additive glow effect
+canvas.set_composite_operation("lighter")
+canvas.set_fill_style("#0000FF40")
+for i = 1, 5 do
+    canvas.fill_circle(250, 100, 20 + i * 10)
+end
+
+-- Reset to default
+canvas.set_composite_operation("source-over")
+```
+
 ## Drawing Functions
 
 ### canvas.draw_rect(x, y, width, height)

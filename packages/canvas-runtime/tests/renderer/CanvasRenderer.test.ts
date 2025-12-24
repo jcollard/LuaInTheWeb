@@ -69,6 +69,9 @@ function createMockContext(): CanvasRenderingContext2D {
     shadowBlur: 0,
     shadowOffsetX: 0,
     shadowOffsetY: 0,
+    // Compositing properties
+    globalAlpha: 1,
+    globalCompositeOperation: 'source-over' as GlobalCompositeOperation,
   } as unknown as CanvasRenderingContext2D;
 }
 
@@ -1869,6 +1872,82 @@ describe('CanvasRenderer', () => {
       expect(mockCtx.shadowBlur).toBe(0);
       expect(mockCtx.shadowOffsetX).toBe(0);
       expect(mockCtx.shadowOffsetY).toBe(0);
+    });
+  });
+
+  describe('setGlobalAlpha command', () => {
+    it('should set globalAlpha to the specified value', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setGlobalAlpha', alpha: 0.5 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.globalAlpha).toBe(0.5);
+    });
+
+    it('should set globalAlpha to 0 for fully transparent', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setGlobalAlpha', alpha: 0 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.globalAlpha).toBe(0);
+    });
+
+    it('should set globalAlpha to 1 for fully opaque', () => {
+      mockCtx.globalAlpha = 0.5; // Start with different value
+      const commands: DrawCommand[] = [
+        { type: 'setGlobalAlpha', alpha: 1 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.globalAlpha).toBe(1);
+    });
+  });
+
+  describe('setCompositeOperation command', () => {
+    it('should set globalCompositeOperation to the specified mode', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setCompositeOperation', operation: 'multiply' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.globalCompositeOperation).toBe('multiply');
+    });
+
+    it('should support source-over (default) mode', () => {
+      mockCtx.globalCompositeOperation = 'multiply';
+      const commands: DrawCommand[] = [
+        { type: 'setCompositeOperation', operation: 'source-over' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.globalCompositeOperation).toBe('source-over');
+    });
+
+    it('should support lighter mode for additive blending', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setCompositeOperation', operation: 'lighter' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.globalCompositeOperation).toBe('lighter');
+    });
+
+    it('should support screen mode', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setCompositeOperation', operation: 'screen' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.globalCompositeOperation).toBe('screen');
     });
   });
 });

@@ -4,6 +4,7 @@
  */
 
 import type { LuaEngine } from 'wasmoon'
+import type { GlobalCompositeOperation } from '@lua-learning/canvas-runtime'
 import type { CanvasController } from './CanvasController'
 import { canvasLuaCode } from './canvasLuaWrapper'
 
@@ -418,6 +419,15 @@ export function setupCanvasAPI(
 
   engine.global.set('__canvas_clearShadow', () => {
     getController()?.clearShadow()
+  })
+
+  // Compositing
+  engine.global.set('__canvas_setGlobalAlpha', (alpha: number) => {
+    getController()?.setGlobalAlpha(alpha)
+  })
+
+  engine.global.set('__canvas_setCompositeOperation', (operation: string) => {
+    getController()?.setCompositeOperation(operation as GlobalCompositeOperation)
   })
 
   // --- Set up Lua-side canvas table ---
