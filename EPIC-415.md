@@ -1,6 +1,6 @@
 # Epic #415: Epic: Complete Canvas 2D API Implementation
 
-**Status:** In Progress (12/17 complete)
+**Status:** In Progress (13/17 complete)
 **Branch:** epic-415
 **Created:** 2025-12-22
 **Last Updated:** 2025-12-24
@@ -47,7 +47,7 @@ Key considerations:
 | #425 | Implement conic gradients | ✅ Complete | 425-conic-gradients | Merged PR #444 |
 | #426 | Implement patterns (createPattern) | ✅ Complete | epic-415 | Direct commit to epic branch |
 | #427 | Implement shadows (shadowColor, shadowBlur, shadowOffsetX/Y) | ✅ Complete | epic-415 | Direct commit to epic branch |
-| #428 | Implement compositing (globalAlpha, globalCompositeOperation) | ⏳ Pending | - | - |
+| #428 | Implement compositing (globalAlpha, globalCompositeOperation) | ✅ Complete | 428-compositing | - |
 | #429 | Implement text alignment (textAlign, textBaseline) | ⏳ Pending | - | - |
 | #430 | Implement hit testing (isPointInPath, isPointInStroke) | ⏳ Pending | - | - |
 | #431 | Implement pixel manipulation (getImageData, putImageData, createImageData) | ⏳ Pending | - | - |
@@ -142,6 +142,14 @@ Key considerations:
   - Updated docs/canvas.md with Shadows section
   - Updated both canvas.lua files with LuaDoc
   - Committed directly to epic-415 branch
+- #428 Compositing implementation complete
+  - Added 2 compositing commands: setGlobalAlpha, setCompositeOperation
+  - Added GlobalCompositeOperation type with 26 blend modes
+  - Mutation score: CanvasRenderer 84.51%
+  - Created 1 example: compositing-demo.lua
+  - Updated docs/canvas.md with Compositing section
+  - Updated both canvas.lua files with LuaDoc
+  - Created on feature branch 428-compositing
 
 ## Key Files
 

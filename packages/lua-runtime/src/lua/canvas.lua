@@ -409,6 +409,49 @@ function canvas.set_shadow(color, blur, offsetX, offsetY) end
 function canvas.clear_shadow() end
 
 -- =============================================================================
+-- Compositing
+-- =============================================================================
+
+--- Set the global alpha (transparency) for all subsequent drawing.
+--- Affects all drawing operations including shapes, text, and images.
+---@param alpha number Alpha value from 0.0 (fully transparent) to 1.0 (fully opaque)
+---@return nil
+---@usage canvas.set_global_alpha(0.5)  -- 50% transparent
+---@usage canvas.fill_rect(50, 50, 100, 100)  -- Semi-transparent rectangle
+---@usage canvas.set_global_alpha(1.0)  -- Reset to fully opaque
+function canvas.set_global_alpha(alpha) end
+
+--- Set the composite operation (blend mode) for all subsequent drawing.
+--- Controls how new pixels are combined with existing pixels on the canvas.
+---@param operation string Blend mode name
+---@return nil
+---@usage canvas.set_composite_operation("multiply")  -- Darkening blend
+---@usage canvas.set_composite_operation("screen")    -- Lightening blend
+---@usage canvas.set_composite_operation("lighter")   -- Additive blend
+---@usage canvas.set_composite_operation("source-over") -- Default (draw on top)
+---
+--- Blend modes:
+--- - "source-over" (default): Draw new content on top
+--- - "source-in": Draw only where new overlaps existing
+--- - "source-out": Draw only where new doesn't overlap existing
+--- - "source-atop": Draw on top, only on existing content
+--- - "destination-over": Draw behind existing content
+--- - "destination-in": Keep existing only where new overlaps
+--- - "destination-out": Keep existing only where new doesn't overlap
+--- - "destination-atop": Keep existing on top of new
+--- - "lighter": Additive blending (good for glow effects)
+--- - "copy": Replace existing with new
+--- - "xor": XOR blend
+--- - "multiply": Multiply colors (darkening)
+--- - "screen": Screen blend (lightening)
+--- - "overlay": Overlay blend
+--- - "darken": Keep darker color
+--- - "lighten": Keep lighter color
+--- - "color-dodge", "color-burn", "hard-light", "soft-light"
+--- - "difference", "exclusion", "hue", "saturation", "color", "luminosity"
+function canvas.set_composite_operation(operation) end
+
+-- =============================================================================
 -- Font Styling
 -- =============================================================================
 

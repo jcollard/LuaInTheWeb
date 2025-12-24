@@ -402,6 +402,15 @@ export const canvasLuaCode = `
       __canvas_clearShadow()
     end
 
+    -- Compositing
+    function _canvas.set_global_alpha(alpha)
+      __canvas_setGlobalAlpha(alpha)
+    end
+
+    function _canvas.set_composite_operation(operation)
+      __canvas_setCompositeOperation(operation)
+    end
+
     -- Timing
     function _canvas.get_delta()
       return __canvas_getDelta()

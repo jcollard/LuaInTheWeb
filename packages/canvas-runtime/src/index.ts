@@ -30,6 +30,8 @@ export type {
   PatternDef,
   // Style type
   FillStyle,
+  // Compositing types
+  GlobalCompositeOperation,
 } from './shared/index.js';
 
 export {

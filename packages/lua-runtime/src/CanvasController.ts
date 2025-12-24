@@ -27,6 +27,7 @@ import type {
   TimingInfo,
   AssetManifest,
   FillStyle,
+  GlobalCompositeOperation,
 } from '@lua-learning/canvas-runtime'
 import type { IFileSystem } from '@lua-learning/shell-core'
 import { formatOnDrawError, createImageFromData, createFontFromData } from './canvasErrorFormatter'
@@ -717,6 +718,24 @@ export class CanvasController {
    */
   clearShadow(): void {
     this.addDrawCommand({ type: 'clearShadow' })
+  }
+
+  // --- Compositing API ---
+
+  /**
+   * Set the global alpha (transparency) for all subsequent drawing.
+   * @param alpha - Value from 0.0 (fully transparent) to 1.0 (fully opaque)
+   */
+  setGlobalAlpha(alpha: number): void {
+    this.addDrawCommand({ type: 'setGlobalAlpha', alpha })
+  }
+
+  /**
+   * Set the composite operation (blend mode) for all subsequent drawing.
+   * @param operation - The blend mode to use
+   */
+  setCompositeOperation(operation: GlobalCompositeOperation): void {
+    this.addDrawCommand({ type: 'setCompositeOperation', operation })
   }
 
   // --- Timing API ---
