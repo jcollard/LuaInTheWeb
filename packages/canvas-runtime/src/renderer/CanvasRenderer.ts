@@ -316,8 +316,11 @@ export class CanvasRenderer {
     let gradient: CanvasGradient;
     if (def.type === 'linear') {
       gradient = this.ctx.createLinearGradient(def.x0, def.y0, def.x1, def.y1);
-    } else {
+    } else if (def.type === 'radial') {
       gradient = this.ctx.createRadialGradient(def.x0, def.y0, def.r0, def.x1, def.y1, def.r1);
+    } else {
+      // conic gradient
+      gradient = this.ctx.createConicGradient(def.startAngle, def.x, def.y);
     }
     for (const stop of def.stops) {
       gradient.addColorStop(stop.offset, stop.color);

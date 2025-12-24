@@ -372,6 +372,45 @@ sphere:add_color_stop(0.3, "#4dabf7") -- Light blue
 sphere:add_color_stop(1, "#1864ab")   -- Dark blue
 ```
 
+### canvas.create_conic_gradient(startAngle, x, y)
+
+Create a conic (angular) gradient that sweeps colors around a center point. Perfect for color wheels, pie charts, and circular progress indicators.
+
+**Parameters:**
+- `startAngle` (number): Starting angle in radians (0 = right, PI/2 = down, PI = left)
+- `x` (number): Center X coordinate
+- `y` (number): Center Y coordinate
+
+**Returns:**
+- (Gradient): A gradient object
+
+```lua
+-- Color wheel (full spectrum)
+local wheel = canvas.create_conic_gradient(0, 200, 200)
+wheel:add_color_stop(0, "#FF0000")     -- Red
+wheel:add_color_stop(0.17, "#FFFF00")  -- Yellow
+wheel:add_color_stop(0.33, "#00FF00")  -- Green
+wheel:add_color_stop(0.5, "#00FFFF")   -- Cyan
+wheel:add_color_stop(0.67, "#0000FF")  -- Blue
+wheel:add_color_stop(0.83, "#FF00FF")  -- Magenta
+wheel:add_color_stop(1, "#FF0000")     -- Back to red
+canvas.set_fill_style(wheel)
+canvas.begin_path()
+canvas.arc(200, 200, 100, 0, math.pi * 2)
+canvas.fill()
+
+-- Pie chart (start from top with -PI/2)
+local pie = canvas.create_conic_gradient(-math.pi/2, 200, 200)
+pie:add_color_stop(0, "#4dabf7")    -- Blue (30%)
+pie:add_color_stop(0.3, "#4dabf7")
+pie:add_color_stop(0.3, "#ff6b6b")  -- Red (50%)
+pie:add_color_stop(0.8, "#ff6b6b")
+pie:add_color_stop(0.8, "#51cf66")  -- Green (20%)
+pie:add_color_stop(1, "#51cf66")
+canvas.set_fill_style(pie)
+canvas.fill_circle(200, 200, 80)
+```
+
 ### Gradient:add_color_stop(offset, color)
 
 Add a color stop to a gradient. Color stops define where colors appear along the gradient. Returns the gradient for method chaining.

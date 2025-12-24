@@ -56,6 +56,7 @@ function createMockContext(): CanvasRenderingContext2D {
     // Gradient methods
     createLinearGradient: vi.fn(() => createMockGradient()),
     createRadialGradient: vi.fn(() => createMockGradient()),
+    createConicGradient: vi.fn(() => createMockGradient()),
   } as unknown as CanvasRenderingContext2D;
 }
 
@@ -1375,6 +1376,35 @@ describe('CanvasRenderer', () => {
       expect(mockCtx.fillStyle).toBe(mockGradient);
     });
 
+    it('should create and set conic gradient as fillStyle', () => {
+      const mockGradient = createMockGradient();
+      (mockCtx.createConicGradient as ReturnType<typeof vi.fn>).mockReturnValue(mockGradient);
+
+      const commands: DrawCommand[] = [
+        {
+          type: 'setFillStyle',
+          style: {
+            type: 'conic',
+            startAngle: 0,
+            x: 200, y: 200,
+            stops: [
+              { offset: 0, color: '#ff0000' },
+              { offset: 0.5, color: '#00ff00' },
+              { offset: 1, color: '#0000ff' },
+            ],
+          },
+        },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.createConicGradient).toHaveBeenCalledWith(0, 200, 200);
+      expect(mockGradient.addColorStop).toHaveBeenCalledWith(0, '#ff0000');
+      expect(mockGradient.addColorStop).toHaveBeenCalledWith(0.5, '#00ff00');
+      expect(mockGradient.addColorStop).toHaveBeenCalledWith(1, '#0000ff');
+      expect(mockCtx.fillStyle).toBe(mockGradient);
+    });
+
     it('should handle gradient with empty stops array', () => {
       const mockGradient = createMockGradient();
       (mockCtx.createLinearGradient as ReturnType<typeof vi.fn>).mockReturnValue(mockGradient);
@@ -1473,6 +1503,33 @@ describe('CanvasRenderer', () => {
       expect(mockCtx.createRadialGradient).toHaveBeenCalledWith(50, 50, 10, 50, 50, 100);
       expect(mockGradient.addColorStop).toHaveBeenCalledWith(0, '#ffffff');
       expect(mockGradient.addColorStop).toHaveBeenCalledWith(1, '#000000');
+      expect(mockCtx.strokeStyle).toBe(mockGradient);
+    });
+
+    it('should create and set conic gradient as strokeStyle', () => {
+      const mockGradient = createMockGradient();
+      (mockCtx.createConicGradient as ReturnType<typeof vi.fn>).mockReturnValue(mockGradient);
+
+      const commands: DrawCommand[] = [
+        {
+          type: 'setStrokeStyle',
+          style: {
+            type: 'conic',
+            startAngle: Math.PI / 2,
+            x: 100, y: 100,
+            stops: [
+              { offset: 0, color: 'blue' },
+              { offset: 1, color: 'red' },
+            ],
+          },
+        },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.createConicGradient).toHaveBeenCalledWith(Math.PI / 2, 100, 100);
+      expect(mockGradient.addColorStop).toHaveBeenCalledWith(0, 'blue');
+      expect(mockGradient.addColorStop).toHaveBeenCalledWith(1, 'red');
       expect(mockCtx.strokeStyle).toBe(mockGradient);
     });
   });
