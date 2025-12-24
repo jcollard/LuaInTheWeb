@@ -649,4 +649,39 @@ describe('CanvasController Path API', () => {
       })
     })
   })
+
+  describe('clip', () => {
+    it('should add clip command with no fill rule', () => {
+      controller.clip()
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'clip',
+        fillRule: undefined,
+      })
+    })
+
+    it('should add clip command with nonzero fill rule', () => {
+      controller.clip('nonzero')
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'clip',
+        fillRule: 'nonzero',
+      })
+    })
+
+    it('should add clip command with evenodd fill rule', () => {
+      controller.clip('evenodd')
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'clip',
+        fillRule: 'evenodd',
+      })
+    })
+  })
 })

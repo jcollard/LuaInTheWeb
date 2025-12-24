@@ -268,6 +268,10 @@ export function setupCanvasAPI(
     getController()?.roundRect(x, y, width, height, radii)
   })
 
+  engine.global.set('__canvas_clip', (fillRule?: string) => {
+    getController()?.clip(fillRule as 'nonzero' | 'evenodd' | undefined)
+  })
+
   // --- Set up Lua-side canvas table ---
   // Canvas is NOT a global - it must be accessed via require('canvas')
   engine.doStringSync(canvasLuaCode)

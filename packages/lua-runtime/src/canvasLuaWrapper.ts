@@ -284,6 +284,10 @@ export const canvasLuaCode = `
       __canvas_roundRect(x, y, width, height, radii)
     end
 
+    function _canvas.clip(fillRule)
+      __canvas_clip(fillRule)
+    end
+
     -- Timing
     function _canvas.get_delta()
       return __canvas_getDelta()

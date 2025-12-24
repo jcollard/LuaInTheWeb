@@ -40,7 +40,7 @@ Key considerations:
 | #417 | Implement arc and arcTo for path API | ✅ Complete | 417-implement-arc-and-arcto-for-path-api | Merged PR #438 |
 | #418 | Implement Bezier curves (bezierCurveTo, quadraticCurveTo) | ✅ Complete | epic-415 | Direct commit to epic branch |
 | #419 | Implement ellipse() and roundRect() | ✅ Complete | 419-ellipse-roundrect | - |
-| #420 | Implement clipping (clip) | ⏳ Pending | - | - |
+| #420 | Implement clipping (clip) | 🔄 In Progress | 420-clipping | - |
 | #421 | Implement line styles (lineCap, lineJoin, miterLimit) | ⏳ Pending | - | - |
 | #422 | Implement dashed lines (setLineDash, getLineDash, lineDashOffset) | ⏳ Pending | - | - |
 | #424 | Implement linear and radial gradients | ⏳ Pending | - | - |
@@ -93,6 +93,11 @@ Key considerations:
   - Updated docs/canvas.md and canvas.lua LuaDoc
   - Updated manifest.json with new examples
   - Branch: 419-ellipse-roundrect
+- #420 Clipping in progress
+  - Added clip() path command with optional fillRule parameter
+  - Mutation score: CanvasRenderer 80.7%
+  - Created 1 example: clipping-demo.lua
+  - Branch: 420-clipping
 
 ## Key Files
 

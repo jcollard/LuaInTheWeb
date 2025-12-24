@@ -723,4 +723,20 @@ function canvas.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, 
 ---@usage -- {r1, r2, r3, r4} - top-left, top-right, bottom-right, bottom-left
 function canvas.round_rect(x, y, width, height, radii) end
 
+--- Clip all future drawing to the current path.
+--- Creates a clipping region from the current path. All subsequent drawing
+--- operations will be constrained to this region. Use save()/restore()
+--- to manage clipping regions - clipping can only shrink, not expand.
+---@param fillRule? string Fill rule: "nonzero" (default) or "evenodd"
+---@return nil
+---@usage -- Create a circular viewport
+---@usage canvas.save()
+---@usage canvas.begin_path()
+---@usage canvas.arc(200, 200, 100, 0, math.pi * 2)
+---@usage canvas.clip()
+---@usage -- All drawing now clipped to the circle
+---@usage canvas.fill_rect(0, 0, 400, 400)  -- Only circle area is filled
+---@usage canvas.restore()  -- Remove clipping
+function canvas.clip(fillRule) end
+
 return canvas

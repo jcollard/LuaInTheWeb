@@ -20,6 +20,7 @@ function createMockContext(): CanvasRenderingContext2D {
     bezierCurveTo: vi.fn(),
     ellipse: vi.fn(),
     roundRect: vi.fn(),
+    clip: vi.fn(),
     fill: vi.fn(),
     stroke: vi.fn(),
     moveTo: vi.fn(),
@@ -1063,6 +1064,38 @@ describe('CanvasRenderer', () => {
       renderer.render(commands);
 
       expect(mockCtx.roundRect).toHaveBeenCalledWith(0, 0, 100, 100, 0);
+    });
+  });
+
+  describe('clip command', () => {
+    it('should call ctx.clip() with no fill rule', () => {
+      const commands: DrawCommand[] = [
+        { type: 'clip' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.clip).toHaveBeenCalledWith();
+    });
+
+    it('should call ctx.clip() with nonzero fill rule', () => {
+      const commands: DrawCommand[] = [
+        { type: 'clip', fillRule: 'nonzero' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.clip).toHaveBeenCalledWith('nonzero');
+    });
+
+    it('should call ctx.clip() with evenodd fill rule', () => {
+      const commands: DrawCommand[] = [
+        { type: 'clip', fillRule: 'evenodd' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.clip).toHaveBeenCalledWith('evenodd');
     });
   });
 });
