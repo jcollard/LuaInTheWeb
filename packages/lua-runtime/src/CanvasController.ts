@@ -26,6 +26,7 @@ import type {
   InputState,
   TimingInfo,
   AssetManifest,
+  FillStyle,
 } from '@lua-learning/canvas-runtime'
 import type { IFileSystem } from '@lua-learning/shell-core'
 import { formatOnDrawError, createImageFromData, createFontFromData } from './canvasErrorFormatter'
@@ -646,6 +647,24 @@ export class CanvasController {
    */
   setLineDashOffset(offset: number): void {
     this.addDrawCommand({ type: 'setLineDashOffset', offset })
+  }
+
+  // --- Fill/Stroke Style API ---
+
+  /**
+   * Set the fill style (color or gradient).
+   * @param style - CSS color string or gradient definition
+   */
+  setFillStyle(style: FillStyle): void {
+    this.addDrawCommand({ type: 'setFillStyle', style })
+  }
+
+  /**
+   * Set the stroke style (color or gradient).
+   * @param style - CSS color string or gradient definition
+   */
+  setStrokeStyle(style: FillStyle): void {
+    this.addDrawCommand({ type: 'setStrokeStyle', style })
   }
 
   // --- Timing API ---

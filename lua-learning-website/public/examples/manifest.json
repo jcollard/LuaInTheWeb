@@ -36,6 +36,8 @@
     "canvas/clipping-demo.lua",
     "canvas/line-styles.lua",
     "canvas/dashed-lines.lua",
+    "canvas/linear-gradient.lua",
+    "canvas/radial-gradient.lua",
     "canvas/fonts/10px-Bitfantasy.ttf",
     "canvas/fonts/10px-CelticTime.ttf",
     "canvas/fonts/10px-HelvetiPixel.ttf",

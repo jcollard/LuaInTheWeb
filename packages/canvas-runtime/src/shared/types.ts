@@ -40,7 +40,9 @@ export type DrawCommandType =
   | 'setLineJoin'
   | 'setMiterLimit'
   | 'setLineDash'
-  | 'setLineDashOffset';
+  | 'setLineDashOffset'
+  | 'setFillStyle'
+  | 'setStrokeStyle';
 
 /**
  * Base interface for all draw commands.
@@ -495,6 +497,86 @@ export interface SetLineDashOffsetCommand extends DrawCommandBase {
   offset: number;
 }
 
+// ============================================================================
+// Gradient Types
+// ============================================================================
+
+/**
+ * A color stop in a gradient.
+ */
+export interface GradientColorStop {
+  /** Position along the gradient (0-1) */
+  offset: number;
+  /** CSS color string (hex, named, rgb, rgba) */
+  color: string;
+}
+
+/**
+ * Definition for a linear gradient.
+ */
+export interface LinearGradientDef {
+  type: 'linear';
+  /** Start X coordinate */
+  x0: number;
+  /** Start Y coordinate */
+  y0: number;
+  /** End X coordinate */
+  x1: number;
+  /** End Y coordinate */
+  y1: number;
+  /** Color stops */
+  stops: GradientColorStop[];
+}
+
+/**
+ * Definition for a radial gradient.
+ */
+export interface RadialGradientDef {
+  type: 'radial';
+  /** Start circle center X */
+  x0: number;
+  /** Start circle center Y */
+  y0: number;
+  /** Start circle radius */
+  r0: number;
+  /** End circle center X */
+  x1: number;
+  /** End circle center Y */
+  y1: number;
+  /** End circle radius */
+  r1: number;
+  /** Color stops */
+  stops: GradientColorStop[];
+}
+
+/**
+ * Union type for gradient definitions.
+ */
+export type GradientDef = LinearGradientDef | RadialGradientDef;
+
+/**
+ * Fill or stroke style - can be a CSS color string or gradient definition.
+ */
+export type FillStyle = string | GradientDef;
+
+/**
+ * Set the fill style (color or gradient).
+ */
+export interface SetFillStyleCommand extends DrawCommandBase {
+  type: 'setFillStyle';
+  /** CSS color string or gradient definition */
+  style: FillStyle;
+}
+
+/**
+ * Set the stroke style (color or gradient).
+ */
+export interface SetStrokeStyleCommand extends DrawCommandBase {
+  type: 'setStrokeStyle';
+  /** CSS color string or gradient definition */
+  style: FillStyle;
+}
+
 /**
  * Union type of all draw commands.
  */
@@ -537,7 +619,9 @@ export type DrawCommand =
   | SetLineJoinCommand
   | SetMiterLimitCommand
   | SetLineDashCommand
-  | SetLineDashOffsetCommand;
+  | SetLineDashOffsetCommand
+  | SetFillStyleCommand
+  | SetStrokeStyleCommand;
 
 /**
  * Mouse button identifiers.

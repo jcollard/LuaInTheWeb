@@ -310,6 +310,193 @@ canvas.tick(function()
 end)
 ```
 
+## Gradients
+
+Gradients allow smooth color transitions for fills and strokes. Create gradient objects, add color stops, then apply them with `set_fill_style()` or `set_stroke_style()`.
+
+### canvas.create_linear_gradient(x0, y0, x1, y1)
+
+Create a linear gradient that transitions colors along a line from (x0, y0) to (x1, y1).
+
+**Parameters:**
+- `x0` (number): Start X coordinate
+- `y0` (number): Start Y coordinate
+- `x1` (number): End X coordinate
+- `y1` (number): End Y coordinate
+
+**Returns:**
+- (Gradient): A gradient object
+
+```lua
+-- Horizontal gradient (left to right)
+local gradient = canvas.create_linear_gradient(0, 0, 200, 0)
+gradient:add_color_stop(0, "#FF0000")  -- Red at start
+gradient:add_color_stop(1, "#0000FF")  -- Blue at end
+
+-- Vertical gradient (top to bottom)
+local sky = canvas.create_linear_gradient(0, 0, 0, 400)
+sky:add_color_stop(0, "#87CEEB")  -- Light blue at top
+sky:add_color_stop(1, "#1E90FF")  -- Darker blue at bottom
+
+-- Diagonal gradient
+local diagonal = canvas.create_linear_gradient(0, 0, 200, 200)
+diagonal:add_color_stop(0, "yellow")
+diagonal:add_color_stop(1, "purple")
+```
+
+### canvas.create_radial_gradient(x0, y0, r0, x1, y1, r1)
+
+Create a radial gradient that transitions colors between two circles. The first circle (x0, y0, r0) is the start, the second (x1, y1, r1) is the end.
+
+**Parameters:**
+- `x0` (number): Center X of start circle
+- `y0` (number): Center Y of start circle
+- `r0` (number): Radius of start circle (use 0 for point source)
+- `x1` (number): Center X of end circle
+- `y1` (number): Center Y of end circle
+- `r1` (number): Radius of end circle
+
+**Returns:**
+- (Gradient): A gradient object
+
+```lua
+-- Spotlight effect (same center, point to circle)
+local light = canvas.create_radial_gradient(200, 200, 0, 200, 200, 150)
+light:add_color_stop(0, "#FFFFFF")         -- White center
+light:add_color_stop(1, "rgba(0,0,0,0)")   -- Transparent edge
+
+-- 3D sphere effect (offset highlight)
+local sphere = canvas.create_radial_gradient(180, 180, 10, 200, 200, 80)
+sphere:add_color_stop(0, "#FFFFFF")   -- Highlight
+sphere:add_color_stop(0.3, "#4dabf7") -- Light blue
+sphere:add_color_stop(1, "#1864ab")   -- Dark blue
+```
+
+### Gradient:add_color_stop(offset, color)
+
+Add a color stop to a gradient. Color stops define where colors appear along the gradient. Returns the gradient for method chaining.
+
+**Parameters:**
+- `offset` (number): Position along gradient (0.0 to 1.0)
+- `color` (string): CSS color string (hex, named color, rgb, rgba)
+
+**Returns:**
+- (Gradient): The gradient object (for chaining)
+
+```lua
+local rainbow = canvas.create_linear_gradient(0, 0, 400, 0)
+rainbow:add_color_stop(0, "red")
+rainbow:add_color_stop(0.17, "orange")
+rainbow:add_color_stop(0.33, "yellow")
+rainbow:add_color_stop(0.5, "green")
+rainbow:add_color_stop(0.67, "blue")
+rainbow:add_color_stop(0.83, "indigo")
+rainbow:add_color_stop(1, "violet")
+
+-- Method chaining
+local gradient = canvas.create_linear_gradient(0, 0, 100, 0)
+  :add_color_stop(0, "red")
+  :add_color_stop(0.5, "yellow")
+  :add_color_stop(1, "green")
+```
+
+### canvas.set_fill_style(style)
+
+Set the fill style for subsequent fill operations. Accepts a CSS color string or a gradient.
+
+**Parameters:**
+- `style` (string|Gradient): CSS color string or gradient object
+
+```lua
+-- Color string
+canvas.set_fill_style("#FF0000")
+canvas.set_fill_style("red")
+canvas.set_fill_style("rgb(255, 0, 0)")
+canvas.set_fill_style("rgba(255, 0, 0, 0.5)")
+
+-- Gradient
+local gradient = canvas.create_linear_gradient(0, 0, 200, 0)
+gradient:add_color_stop(0, "red"):add_color_stop(1, "blue")
+canvas.set_fill_style(gradient)
+canvas.fill_rect(0, 0, 200, 100)
+```
+
+### canvas.set_stroke_style(style)
+
+Set the stroke style for subsequent stroke operations. Accepts a CSS color string or a gradient.
+
+**Parameters:**
+- `style` (string|Gradient): CSS color string or gradient object
+
+```lua
+-- Rainbow line
+local rainbow = canvas.create_linear_gradient(50, 0, 350, 0)
+rainbow:add_color_stop(0, "red")
+rainbow:add_color_stop(0.5, "yellow")
+rainbow:add_color_stop(1, "blue")
+
+canvas.set_line_width(10)
+canvas.set_stroke_style(rainbow)
+canvas.begin_path()
+canvas.move_to(50, 200)
+canvas.line_to(350, 200)
+canvas.stroke()
+```
+
+### Gradient Examples
+
+```lua
+local canvas = require('canvas')
+
+canvas.set_size(400, 400)
+
+canvas.tick(function()
+  canvas.clear()
+
+  -- Sky gradient (vertical)
+  local sky = canvas.create_linear_gradient(0, 0, 0, 200)
+  sky:add_color_stop(0, "#1a1a2e")
+  sky:add_color_stop(0.5, "#16213e")
+  sky:add_color_stop(1, "#0f3460")
+  canvas.set_fill_style(sky)
+  canvas.fill_rect(0, 0, 400, 200)
+
+  -- Sunset gradient (horizontal)
+  local sunset = canvas.create_linear_gradient(0, 200, 400, 200)
+  sunset:add_color_stop(0, "#ff6b6b")
+  sunset:add_color_stop(0.5, "#feca57")
+  sunset:add_color_stop(1, "#48dbfb")
+  canvas.set_fill_style(sunset)
+  canvas.fill_rect(0, 200, 400, 100)
+
+  -- 3D sphere
+  local sphere = canvas.create_radial_gradient(150, 320, 10, 200, 350, 60)
+  sphere:add_color_stop(0, "#ffffff")
+  sphere:add_color_stop(0.3, "#4dabf7")
+  sphere:add_color_stop(1, "#1864ab")
+  canvas.set_fill_style(sphere)
+  canvas.fill_circle(200, 350, 60)
+
+  -- Rainbow stroke
+  local rainbow = canvas.create_linear_gradient(50, 0, 350, 0)
+  rainbow:add_color_stop(0, "#ff0000")
+  rainbow:add_color_stop(0.17, "#ff7f00")
+  rainbow:add_color_stop(0.33, "#ffff00")
+  rainbow:add_color_stop(0.5, "#00ff00")
+  rainbow:add_color_stop(0.67, "#0000ff")
+  rainbow:add_color_stop(0.83, "#4b0082")
+  rainbow:add_color_stop(1, "#9400d3")
+  canvas.set_line_width(8)
+  canvas.set_stroke_style(rainbow)
+  canvas.begin_path()
+  canvas.move_to(50, 150)
+  canvas.line_to(350, 150)
+  canvas.stroke()
+end)
+
+canvas.start()
+```
+
 ## Drawing Functions
 
 ### canvas.draw_rect(x, y, width, height)

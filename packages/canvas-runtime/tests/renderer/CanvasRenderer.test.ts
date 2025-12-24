@@ -6,6 +6,13 @@ import { CanvasRenderer } from '../../src/renderer/CanvasRenderer.js';
 import { ImageCache } from '../../src/renderer/ImageCache.js';
 import type { DrawCommand } from '../../src/shared/types.js';
 
+// Mock CanvasGradient
+function createMockGradient(): CanvasGradient {
+  return {
+    addColorStop: vi.fn(),
+  } as unknown as CanvasGradient;
+}
+
 // Mock CanvasRenderingContext2D
 function createMockContext(): CanvasRenderingContext2D {
   return {
@@ -46,6 +53,9 @@ function createMockContext(): CanvasRenderingContext2D {
     transform: vi.fn(),
     setTransform: vi.fn(),
     resetTransform: vi.fn(),
+    // Gradient methods
+    createLinearGradient: vi.fn(() => createMockGradient()),
+    createRadialGradient: vi.fn(() => createMockGradient()),
   } as unknown as CanvasRenderingContext2D;
 }
 
@@ -1261,6 +1271,209 @@ describe('CanvasRenderer', () => {
       renderer.render(commands);
 
       expect(mockCtx.lineDashOffset).toBe(-10);
+    });
+  });
+
+  // ============================================================================
+  // Gradient Commands
+  // ============================================================================
+
+  describe('setFillStyle command', () => {
+    it('should set fillStyle with a string color', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setFillStyle', style: '#ff0000' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.fillStyle).toBe('#ff0000');
+    });
+
+    it('should set fillStyle with named color', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setFillStyle', style: 'blue' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.fillStyle).toBe('blue');
+    });
+
+    it('should set fillStyle with rgb() color', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setFillStyle', style: 'rgb(100, 150, 200)' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.fillStyle).toBe('rgb(100, 150, 200)');
+    });
+
+    it('should set fillStyle with rgba() color', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setFillStyle', style: 'rgba(255, 0, 0, 0.5)' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.fillStyle).toBe('rgba(255, 0, 0, 0.5)');
+    });
+
+    it('should create and set linear gradient as fillStyle', () => {
+      const mockGradient = createMockGradient();
+      (mockCtx.createLinearGradient as ReturnType<typeof vi.fn>).mockReturnValue(mockGradient);
+
+      const commands: DrawCommand[] = [
+        {
+          type: 'setFillStyle',
+          style: {
+            type: 'linear',
+            x0: 0, y0: 0,
+            x1: 100, y1: 0,
+            stops: [
+              { offset: 0, color: '#ff0000' },
+              { offset: 1, color: '#0000ff' },
+            ],
+          },
+        },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.createLinearGradient).toHaveBeenCalledWith(0, 0, 100, 0);
+      expect(mockGradient.addColorStop).toHaveBeenCalledWith(0, '#ff0000');
+      expect(mockGradient.addColorStop).toHaveBeenCalledWith(1, '#0000ff');
+      expect(mockCtx.fillStyle).toBe(mockGradient);
+    });
+
+    it('should create and set radial gradient as fillStyle', () => {
+      const mockGradient = createMockGradient();
+      (mockCtx.createRadialGradient as ReturnType<typeof vi.fn>).mockReturnValue(mockGradient);
+
+      const commands: DrawCommand[] = [
+        {
+          type: 'setFillStyle',
+          style: {
+            type: 'radial',
+            x0: 100, y0: 100, r0: 0,
+            x1: 100, y1: 100, r1: 50,
+            stops: [
+              { offset: 0, color: 'white' },
+              { offset: 0.5, color: 'yellow' },
+              { offset: 1, color: 'red' },
+            ],
+          },
+        },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.createRadialGradient).toHaveBeenCalledWith(100, 100, 0, 100, 100, 50);
+      expect(mockGradient.addColorStop).toHaveBeenCalledWith(0, 'white');
+      expect(mockGradient.addColorStop).toHaveBeenCalledWith(0.5, 'yellow');
+      expect(mockGradient.addColorStop).toHaveBeenCalledWith(1, 'red');
+      expect(mockCtx.fillStyle).toBe(mockGradient);
+    });
+
+    it('should handle gradient with empty stops array', () => {
+      const mockGradient = createMockGradient();
+      (mockCtx.createLinearGradient as ReturnType<typeof vi.fn>).mockReturnValue(mockGradient);
+
+      const commands: DrawCommand[] = [
+        {
+          type: 'setFillStyle',
+          style: {
+            type: 'linear',
+            x0: 0, y0: 0,
+            x1: 100, y1: 100,
+            stops: [],
+          },
+        },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.createLinearGradient).toHaveBeenCalledWith(0, 0, 100, 100);
+      expect(mockGradient.addColorStop).not.toHaveBeenCalled();
+      expect(mockCtx.fillStyle).toBe(mockGradient);
+    });
+  });
+
+  describe('setStrokeStyle command', () => {
+    it('should set strokeStyle with a string color', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setStrokeStyle', style: '#00ff00' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.strokeStyle).toBe('#00ff00');
+    });
+
+    it('should set strokeStyle with named color', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setStrokeStyle', style: 'red' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.strokeStyle).toBe('red');
+    });
+
+    it('should create and set linear gradient as strokeStyle', () => {
+      const mockGradient = createMockGradient();
+      (mockCtx.createLinearGradient as ReturnType<typeof vi.fn>).mockReturnValue(mockGradient);
+
+      const commands: DrawCommand[] = [
+        {
+          type: 'setStrokeStyle',
+          style: {
+            type: 'linear',
+            x0: 0, y0: 0,
+            x1: 200, y1: 0,
+            stops: [
+              { offset: 0, color: 'red' },
+              { offset: 0.5, color: 'yellow' },
+              { offset: 1, color: 'green' },
+            ],
+          },
+        },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.createLinearGradient).toHaveBeenCalledWith(0, 0, 200, 0);
+      expect(mockGradient.addColorStop).toHaveBeenCalledWith(0, 'red');
+      expect(mockGradient.addColorStop).toHaveBeenCalledWith(0.5, 'yellow');
+      expect(mockGradient.addColorStop).toHaveBeenCalledWith(1, 'green');
+      expect(mockCtx.strokeStyle).toBe(mockGradient);
+    });
+
+    it('should create and set radial gradient as strokeStyle', () => {
+      const mockGradient = createMockGradient();
+      (mockCtx.createRadialGradient as ReturnType<typeof vi.fn>).mockReturnValue(mockGradient);
+
+      const commands: DrawCommand[] = [
+        {
+          type: 'setStrokeStyle',
+          style: {
+            type: 'radial',
+            x0: 50, y0: 50, r0: 10,
+            x1: 50, y1: 50, r1: 100,
+            stops: [
+              { offset: 0, color: '#ffffff' },
+              { offset: 1, color: '#000000' },
+            ],
+          },
+        },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.createRadialGradient).toHaveBeenCalledWith(50, 50, 10, 50, 50, 100);
+      expect(mockGradient.addColorStop).toHaveBeenCalledWith(0, '#ffffff');
+      expect(mockGradient.addColorStop).toHaveBeenCalledWith(1, '#000000');
+      expect(mockCtx.strokeStyle).toBe(mockGradient);
     });
   });
 });
