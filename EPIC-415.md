@@ -1,6 +1,6 @@
 # Epic #415: Epic: Complete Canvas 2D API Implementation
 
-**Status:** In Progress (9/17 complete)
+**Status:** In Progress (10/17 complete)
 **Branch:** epic-415
 **Created:** 2025-12-22
 **Last Updated:** 2025-12-24
@@ -44,7 +44,7 @@ Key considerations:
 | #421 | Implement line styles (lineCap, lineJoin, miterLimit) | ✅ Complete | 421-line-styles | Merged PR #441 |
 | #422 | Implement dashed lines (setLineDash, getLineDash, lineDashOffset) | ✅ Complete | 422-dashed-lines | Merged PR #442 |
 | #424 | Implement linear and radial gradients | ✅ Complete | 424-gradients | Merged PR #443 |
-| #425 | Implement conic gradients | ⏳ Pending | - | - |
+| #425 | Implement conic gradients | 🔄 PR Created | 425-conic-gradients | PR #444 |
 | #426 | Implement patterns (createPattern) | ⏳ Pending | - | - |
 | #427 | Implement shadows (shadowColor, shadowBlur, shadowOffsetX/Y) | ⏳ Pending | - | - |
 | #428 | Implement compositing (globalAlpha, globalCompositeOperation) | ⏳ Pending | - | - |
@@ -119,6 +119,13 @@ Key considerations:
   - Updated docs/canvas.md with Gradients section
   - Added LuaDoc annotations in canvas.lua
   - PR #443 merged to epic-415
+- #425 Conic gradients - PR created
+  - Added create_conic_gradient function
+  - Extends gradient infrastructure from #424 with minimal changes
+  - Mutation score: CanvasRenderer 84.93%
+  - Created 1 example: conic-gradient.lua with color wheel and pie chart
+  - Updated docs/canvas.md with Conic Gradients section
+  - PR #444 created
 
 ## Key Files
 
