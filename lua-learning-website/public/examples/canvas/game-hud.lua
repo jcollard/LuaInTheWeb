@@ -1,10 +1,17 @@
 -- Game HUD Demo
 -- Demonstrates text alignment, draw_label, and various canvas features
--- in a stylized game interface
+-- in a stylized game interface with custom fonts
 
 local canvas = require("canvas")
 
 canvas.set_size(640, 480)
+
+-- Load custom fonts
+canvas.assets.font("Fantasy", "canvas/fonts/10px-Bitfantasy.ttf")
+canvas.assets.font("Quest", "canvas/fonts/11px-Questgiver.ttf")
+canvas.assets.font("Wizard", "canvas/fonts/13px-OldWizard.ttf")
+canvas.assets.font("Dungeon", "canvas/fonts/15px-DungeonSlant.ttf")
+canvas.assets.font("Gothic", "canvas/fonts/16px-Gothbit.ttf")
 
 -- Colors
 local COLORS = {
@@ -73,10 +80,12 @@ local function draw_panel(x, y, w, h, title)
     -- Title if provided
     if title then
         canvas.set_fill_style(COLORS.accent)
-        canvas.set_font_size(11)
+        canvas.set_font_size(12)
+        canvas.set_font_family("Fantasy")
         canvas.set_text_align("left")
         canvas.set_text_baseline("top")
         canvas.draw_text(x + 10, y + 6, title)
+        canvas.set_font_family("monospace")  -- Reset
     end
 end
 
@@ -121,11 +130,13 @@ local function draw_button(x, y, w, h, text, color)
 
     -- Button text
     canvas.set_fill_style(COLORS.text)
-    canvas.set_font_size(12)
+    canvas.set_font_size(13)
+    canvas.set_font_family("Quest")
     canvas.draw_label(x, y, w, h, text, {
         overflow = "ellipsis",
         padding = {left = 8, right = 8}
     })
+    canvas.set_font_family("monospace")
 end
 
 canvas.tick(function()
@@ -144,14 +155,17 @@ canvas.tick(function()
 
     -- Player name and level
     canvas.set_fill_style(COLORS.text)
-    canvas.set_font_size(14)
+    canvas.set_font_size(16)
+    canvas.set_font_family("Dungeon")
     canvas.set_text_align("left")
     canvas.set_text_baseline("top")
     canvas.draw_text(20, 28, player.name)
 
     canvas.set_fill_style(COLORS.accent)
-    canvas.set_font_size(11)
-    canvas.draw_text(20, 46, "Level " .. player.level)
+    canvas.set_font_size(12)
+    canvas.set_font_family("Quest")
+    canvas.draw_text(20, 48, "Level " .. player.level)
+    canvas.set_font_family("monospace")
 
     -- Health bar
     canvas.set_fill_style(COLORS.text_dim)
@@ -202,10 +216,12 @@ canvas.tick(function()
     -- TOP CENTER: Currency/Score
     -- =========================================================================
     canvas.set_fill_style(COLORS.gold)
-    canvas.set_font_size(16)
+    canvas.set_font_size(18)
+    canvas.set_font_family("Gothic")
     canvas.set_text_align("center")
     canvas.set_text_baseline("top")
-    canvas.draw_text(w / 2, 15, string.format("%d G", player.gold))
+    canvas.draw_text(w / 2, 12, string.format("%d G", player.gold))
+    canvas.set_font_family("monospace")
 
     -- =========================================================================
     -- BOTTOM: Dialogue Box (with typewriter effect)
@@ -228,7 +244,8 @@ canvas.tick(function()
 
         -- Speaker name
         canvas.set_fill_style(COLORS.accent)
-        canvas.set_font_size(13)
+        canvas.set_font_size(15)
+        canvas.set_font_family("Wizard")
         canvas.set_text_align("left")
         canvas.set_text_baseline("top")
         canvas.draw_text(dlg_x + 15, dlg_y + 10, dialogue.speaker)
@@ -236,14 +253,16 @@ canvas.tick(function()
         -- Dialogue text with typewriter effect
         local chars = math.floor(time * 25) % (#dialogue.text + 60)
         canvas.set_fill_style(COLORS.text)
-        canvas.set_font_size(12)
-        canvas.draw_label(dlg_x + 15, dlg_y + 30, dlg_w - 30, dlg_h - 45, dialogue.text, {
+        canvas.set_font_size(13)
+        canvas.set_font_family("Quest")
+        canvas.draw_label(dlg_x + 15, dlg_y + 32, dlg_w - 30, dlg_h - 45, dialogue.text, {
             wrap = true,
             align_h = "left",
             align_v = "top",
             char_count = chars,
             line_height = 1.4
         })
+        canvas.set_font_family("monospace")
 
         -- "Press SPACE to continue" hint (blinking)
         if chars >= #dialogue.text then
@@ -259,18 +278,17 @@ canvas.tick(function()
     end
 
     -- =========================================================================
-    -- RIGHT SIDE: Action Buttons
+    -- RIGHT SIDE: Action Buttons (below minimap)
     -- =========================================================================
     local btn_x = w - 110
-    local btn_y = 130
+    local btn_y = 240
     local btn_w = 100
-    local btn_h = 32
-    local btn_gap = 8
+    local btn_h = 28
+    local btn_gap = 6
 
     draw_button(btn_x, btn_y, btn_w, btn_h, "Inventory", COLORS.button)
     draw_button(btn_x, btn_y + btn_h + btn_gap, btn_w, btn_h, "Skills", COLORS.button)
-    draw_button(btn_x, btn_y + (btn_h + btn_gap) * 2, btn_w, btn_h, "Map", COLORS.button)
-    draw_button(btn_x, btn_y + (btn_h + btn_gap) * 3, btn_w, btn_h, "Quest Log", COLORS.button_hover)
+    draw_button(btn_x, btn_y + (btn_h + btn_gap) * 2, btn_w, btn_h, "Quest Log", COLORS.button_hover)
 
     -- =========================================================================
     -- LEFT SIDE: Quick Slots
