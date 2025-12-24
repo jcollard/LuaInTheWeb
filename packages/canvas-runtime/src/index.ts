@@ -32,6 +32,9 @@ export type {
   FillStyle,
   // Compositing types
   GlobalCompositeOperation,
+  // Text alignment types
+  CanvasTextAlign,
+  CanvasTextBaseline,
 } from './shared/index.js';
 
 export {

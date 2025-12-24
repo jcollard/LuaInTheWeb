@@ -266,6 +266,14 @@ export class CanvasRenderer {
         this.ctx.globalCompositeOperation = command.operation;
         break;
 
+      case 'setTextAlign':
+        this.ctx.textAlign = command.align;
+        break;
+
+      case 'setTextBaseline':
+        this.ctx.textBaseline = command.baseline;
+        break;
+
       default:
         // Ignore unknown commands for forward compatibility
         break;
@@ -314,9 +322,7 @@ export class CanvasRenderer {
     fontSize?: number,
     fontFamily?: string
   ): void {
-    // Set textBaseline to top for top-left positioning
-    this.ctx.textBaseline = 'top';
-
+    // Note: textBaseline is set via setTextBaseline command (default 'top' in constructor)
     // Apply font overrides if provided
     if (fontSize !== undefined || fontFamily !== undefined) {
       const savedFont = this.ctx.font;

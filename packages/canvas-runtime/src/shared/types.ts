@@ -50,7 +50,9 @@ export type DrawCommandType =
   | 'setShadow'
   | 'clearShadow'
   | 'setGlobalAlpha'
-  | 'setCompositeOperation';
+  | 'setCompositeOperation'
+  | 'setTextAlign'
+  | 'setTextBaseline';
 
 /**
  * Base interface for all draw commands.
@@ -727,6 +729,46 @@ export interface SetCompositeOperationCommand extends DrawCommandBase {
   operation: GlobalCompositeOperation;
 }
 
+// ============================================================================
+// Text Alignment Types
+// ============================================================================
+
+/**
+ * Canvas text alignment options.
+ * Controls horizontal alignment relative to the x coordinate.
+ */
+export type CanvasTextAlign = 'left' | 'right' | 'center' | 'start' | 'end';
+
+/**
+ * Canvas text baseline options.
+ * Controls vertical alignment relative to the y coordinate.
+ */
+export type CanvasTextBaseline =
+  | 'top'
+  | 'hanging'
+  | 'middle'
+  | 'alphabetic'
+  | 'ideographic'
+  | 'bottom';
+
+/**
+ * Set the text alignment for all subsequent text drawing.
+ */
+export interface SetTextAlignCommand extends DrawCommandBase {
+  type: 'setTextAlign';
+  /** Horizontal alignment relative to x coordinate */
+  align: CanvasTextAlign;
+}
+
+/**
+ * Set the text baseline for all subsequent text drawing.
+ */
+export interface SetTextBaselineCommand extends DrawCommandBase {
+  type: 'setTextBaseline';
+  /** Vertical alignment relative to y coordinate */
+  baseline: CanvasTextBaseline;
+}
+
 /**
  * Union type of all draw commands.
  */
@@ -779,7 +821,9 @@ export type DrawCommand =
   | SetShadowCommand
   | ClearShadowCommand
   | SetGlobalAlphaCommand
-  | SetCompositeOperationCommand;
+  | SetCompositeOperationCommand
+  | SetTextAlignCommand
+  | SetTextBaselineCommand;
 
 /**
  * Mouse button identifiers.
