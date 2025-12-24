@@ -237,6 +237,79 @@ canvas.line_to(200, 50)
 canvas.stroke()
 ```
 
+## Dashed Lines
+
+Create dashed and dotted line effects with control over pattern and animation.
+
+### canvas.set_line_dash(segments)
+
+Set the line dash pattern for strokes. Use an empty table to reset to solid line.
+
+**Parameters:**
+- `segments` (table): Array of dash and gap lengths (e.g., {10, 5} for 10px dash, 5px gap)
+
+```lua
+-- Simple dashed line
+canvas.set_line_dash({10, 5})
+canvas.begin_path()
+canvas.move_to(50, 50)
+canvas.line_to(300, 50)
+canvas.stroke()
+
+-- Dotted line
+canvas.set_line_dash({2, 4})
+canvas.begin_path()
+canvas.move_to(50, 100)
+canvas.line_to(300, 100)
+canvas.stroke()
+
+-- Complex pattern: long dash, gap, short dash, gap
+canvas.set_line_dash({15, 5, 5, 5})
+canvas.begin_path()
+canvas.move_to(50, 150)
+canvas.line_to(300, 150)
+canvas.stroke()
+
+-- Reset to solid line
+canvas.set_line_dash({})
+```
+
+### canvas.get_line_dash()
+
+Get the current line dash pattern.
+
+**Returns:**
+- (table): Current dash pattern array (empty for solid line)
+
+```lua
+canvas.set_line_dash({10, 5})
+local pattern = canvas.get_line_dash()  -- Returns {10, 5}
+```
+
+### canvas.set_line_dash_offset(offset)
+
+Set the line dash offset for animating dashed lines. Useful for creating "marching ants" selection effects.
+
+**Parameters:**
+- `offset` (number): Offset to shift the dash pattern
+
+```lua
+-- Animated marching ants selection box
+local offset = 0
+
+canvas.tick(function()
+  canvas.clear()
+  offset = offset + 0.5
+
+  canvas.set_line_dash({4, 4})
+  canvas.set_line_dash_offset(offset)
+  canvas.set_color(0, 0, 0)
+  canvas.begin_path()
+  canvas.draw_rect(100, 100, 200, 150)
+  canvas.stroke()
+end)
+```
+
 ## Drawing Functions
 
 ### canvas.draw_rect(x, y, width, height)

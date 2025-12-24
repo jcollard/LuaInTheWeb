@@ -38,7 +38,9 @@ export type DrawCommandType =
   | 'clip'
   | 'setLineCap'
   | 'setLineJoin'
-  | 'setMiterLimit';
+  | 'setMiterLimit'
+  | 'setLineDash'
+  | 'setLineDashOffset';
 
 /**
  * Base interface for all draw commands.
@@ -475,6 +477,25 @@ export interface SetMiterLimitCommand extends DrawCommandBase {
 }
 
 /**
+ * Set the line dash pattern for strokes.
+ * Use an empty array to reset to solid line.
+ */
+export interface SetLineDashCommand extends DrawCommandBase {
+  type: 'setLineDash';
+  /** Array of dash and gap lengths (e.g., [10, 5] for 10px dash, 5px gap) */
+  segments: number[];
+}
+
+/**
+ * Set the line dash offset for animating dashed lines.
+ */
+export interface SetLineDashOffsetCommand extends DrawCommandBase {
+  type: 'setLineDashOffset';
+  /** Offset to shift the dash pattern (useful for marching ants animation) */
+  offset: number;
+}
+
+/**
  * Union type of all draw commands.
  */
 export type DrawCommand =
@@ -514,7 +535,9 @@ export type DrawCommand =
   | ClipCommand
   | SetLineCapCommand
   | SetLineJoinCommand
-  | SetMiterLimitCommand;
+  | SetMiterLimitCommand
+  | SetLineDashCommand
+  | SetLineDashOffsetCommand;
 
 /**
  * Mouse button identifiers.

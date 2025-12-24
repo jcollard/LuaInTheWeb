@@ -139,6 +139,28 @@ function canvas.set_line_join(join) end
 ---@usage canvas.set_miter_limit(20)  -- Allow sharper corners before beveling
 function canvas.set_miter_limit(limit) end
 
+--- Set the line dash pattern for strokes.
+--- Creates dashed or dotted lines. Use an empty table to reset to solid line.
+---@param segments number[] Array of dash and gap lengths
+---@return nil
+---@usage canvas.set_line_dash({10, 5})      -- 10px dash, 5px gap
+---@usage canvas.set_line_dash({2, 4})       -- Dotted line
+---@usage canvas.set_line_dash({15, 5, 5, 5}) -- Long dash, gap, short dash, gap
+---@usage canvas.set_line_dash({})           -- Reset to solid line
+function canvas.set_line_dash(segments) end
+
+--- Get the current line dash pattern.
+---@return number[] Current dash pattern array (empty for solid line)
+---@usage local pattern = canvas.get_line_dash()
+function canvas.get_line_dash() end
+
+--- Set the line dash offset for animating dashed lines.
+--- Useful for creating "marching ants" selection effects.
+---@param offset number Offset to shift the dash pattern
+---@return nil
+---@usage canvas.set_line_dash_offset(offset) -- Shift pattern for animation
+function canvas.set_line_dash_offset(offset) end
+
 -- =============================================================================
 -- Font Styling
 -- =============================================================================

@@ -285,6 +285,18 @@ export function setupCanvasAPI(
     getController()?.setMiterLimit(limit)
   })
 
+  engine.global.set('__canvas_setLineDash', (segments: number[]) => {
+    getController()?.setLineDash(segments ?? [])
+  })
+
+  engine.global.set('__canvas_getLineDash', () => {
+    return getController()?.getLineDash() ?? []
+  })
+
+  engine.global.set('__canvas_setLineDashOffset', (offset: number) => {
+    getController()?.setLineDashOffset(offset)
+  })
+
   // --- Set up Lua-side canvas table ---
   // Canvas is NOT a global - it must be accessed via require('canvas')
   engine.doStringSync(canvasLuaCode)
