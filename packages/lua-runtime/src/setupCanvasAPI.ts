@@ -311,7 +311,7 @@ export function setupCanvasAPI(
   // --- Fill/Stroke Style API functions ---
   /**
    * Convert a Lua style value (string or gradient table) to a JavaScript FillStyle.
-   * Gradient tables have: type, x0, y0, x1, y1, r0?, r1?, stops[]
+   * Gradient tables have: type, x0, y0, x1, y1, r0?, r1?, startAngle?, x?, y?, stops[]
    */
   const convertLuaStyleToJS = (style: unknown): import('@lua-learning/canvas-runtime').FillStyle => {
     // String colors pass through directly
@@ -322,7 +322,7 @@ export function setupCanvasAPI(
     // Gradient table: convert from Lua proxy to JS object
     if (style && typeof style === 'object') {
       const luaTable = style as Record<string, unknown>
-      const type = luaTable.type as 'linear' | 'radial'
+      const type = luaTable.type as 'linear' | 'radial' | 'conic'
 
       // Convert stops array from Lua table proxy
       const luaStops = luaTable.stops as Record<number, { offset: number; color: string }> | undefined
@@ -356,6 +356,14 @@ export function setupCanvasAPI(
           x1: luaTable.x1 as number,
           y1: luaTable.y1 as number,
           r1: luaTable.r1 as number,
+          stops,
+        }
+      } else if (type === 'conic') {
+        return {
+          type: 'conic',
+          startAngle: luaTable.startAngle as number,
+          x: luaTable.x as number,
+          y: luaTable.y as number,
           stops,
         }
       }

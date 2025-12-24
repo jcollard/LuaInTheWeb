@@ -351,6 +351,15 @@ export const canvasLuaCode = `
       }, GradientMT)
     end
 
+    function _canvas.create_conic_gradient(startAngle, x, y)
+      return setmetatable({
+        type = "conic",
+        startAngle = startAngle,
+        x = x, y = y,
+        stops = {}
+      }, GradientMT)
+    end
+
     function _canvas.set_fill_style(style)
       __canvas_setFillStyle(style)
     end

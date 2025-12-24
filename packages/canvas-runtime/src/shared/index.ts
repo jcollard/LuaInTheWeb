@@ -21,6 +21,7 @@ export type {
   GradientColorStop,
   LinearGradientDef,
   RadialGradientDef,
+  ConicGradientDef,
   GradientDef,
   FillStyle,
 } from './types.js';

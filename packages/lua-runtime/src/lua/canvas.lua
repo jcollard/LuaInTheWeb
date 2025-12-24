@@ -166,10 +166,10 @@ function canvas.set_line_dash_offset(offset) end
 -- =============================================================================
 
 --- Gradient object for creating smooth color transitions.
---- Create with create_linear_gradient() or create_radial_gradient(),
+--- Create with create_linear_gradient(), create_radial_gradient(), or create_conic_gradient(),
 --- then add color stops and apply with set_fill_style() or set_stroke_style().
 ---@class Gradient
----@field type string Gradient type: "linear" or "radial"
+---@field type string Gradient type: "linear", "radial", or "conic"
 ---@field stops table[] Array of color stops
 
 --- Add a color stop to the gradient.
@@ -234,10 +234,44 @@ function canvas.create_linear_gradient(x0, y0, x1, y1) end
 ---@usage canvas.fill_circle(200, 200, 80)
 function canvas.create_radial_gradient(x0, y0, r0, x1, y1, r1) end
 
+--- Create a conic (angular) gradient.
+--- Conic gradients transition colors around a center point, sweeping like a radar.
+--- Perfect for color wheels, pie charts, and circular progress indicators.
+--- The gradient starts at startAngle and rotates clockwise.
+---@param startAngle number Starting angle in radians (0 = right, PI/2 = down, PI = left)
+---@param x number Center X coordinate
+---@param y number Center Y coordinate
+---@return Gradient gradient The gradient object
+---@usage -- Color wheel (full spectrum)
+---@usage local wheel = canvas.create_conic_gradient(0, 200, 200)
+---@usage wheel:add_color_stop(0, "#FF0000")     -- Red
+---@usage wheel:add_color_stop(0.17, "#FFFF00")  -- Yellow
+---@usage wheel:add_color_stop(0.33, "#00FF00")  -- Green
+---@usage wheel:add_color_stop(0.5, "#00FFFF")   -- Cyan
+---@usage wheel:add_color_stop(0.67, "#0000FF")  -- Blue
+---@usage wheel:add_color_stop(0.83, "#FF00FF")  -- Magenta
+---@usage wheel:add_color_stop(1, "#FF0000")     -- Back to red
+---@usage canvas.set_fill_style(wheel)
+---@usage canvas.begin_path()
+---@usage canvas.arc(200, 200, 100, 0, math.pi * 2)
+---@usage canvas.fill()
+---@usage
+---@usage -- Pie chart (start from top with -PI/2)
+---@usage local pie = canvas.create_conic_gradient(-math.pi/2, 200, 200)
+---@usage pie:add_color_stop(0, "#4dabf7")    -- Blue (30%)
+---@usage pie:add_color_stop(0.3, "#4dabf7")
+---@usage pie:add_color_stop(0.3, "#ff6b6b")  -- Red (50%)
+---@usage pie:add_color_stop(0.8, "#ff6b6b")
+---@usage pie:add_color_stop(0.8, "#51cf66")  -- Green (20%)
+---@usage pie:add_color_stop(1, "#51cf66")
+---@usage canvas.set_fill_style(pie)
+---@usage canvas.fill_circle(200, 200, 80)
+function canvas.create_conic_gradient(startAngle, x, y) end
+
 --- Set the fill style (color or gradient).
 --- Affects all subsequent fill operations (fill_rect, fill_circle, fill).
---- Can be a CSS color string or a gradient created with create_linear_gradient
---- or create_radial_gradient.
+--- Can be a CSS color string or a gradient created with create_linear_gradient,
+--- create_radial_gradient, or create_conic_gradient.
 ---@param style string|Gradient CSS color string or gradient object
 ---@return nil
 ---@usage -- Simple color
@@ -255,8 +289,8 @@ function canvas.set_fill_style(style) end
 
 --- Set the stroke style (color or gradient).
 --- Affects all subsequent stroke operations (stroke, draw_rect, draw_circle, draw_line).
---- Can be a CSS color string or a gradient created with create_linear_gradient
---- or create_radial_gradient.
+--- Can be a CSS color string or a gradient created with create_linear_gradient,
+--- create_radial_gradient, or create_conic_gradient.
 ---@param style string|Gradient CSS color string or gradient object
 ---@return nil
 ---@usage -- Simple color

@@ -550,9 +550,24 @@ export interface RadialGradientDef {
 }
 
 /**
+ * Definition for a conic (angular) gradient.
+ */
+export interface ConicGradientDef {
+  type: 'conic';
+  /** Starting angle in radians (0 = right, PI/2 = down) */
+  startAngle: number;
+  /** Center X coordinate */
+  x: number;
+  /** Center Y coordinate */
+  y: number;
+  /** Color stops */
+  stops: GradientColorStop[];
+}
+
+/**
  * Union type for gradient definitions.
  */
-export type GradientDef = LinearGradientDef | RadialGradientDef;
+export type GradientDef = LinearGradientDef | RadialGradientDef | ConicGradientDef;
 
 /**
  * Fill or stroke style - can be a CSS color string or gradient definition.
