@@ -491,9 +491,11 @@ function canvas.set_text_baseline(baseline) end
 ---@field align_v? string Vertical alignment: "top", "middle", "bottom" (default: "middle")
 ---@field overflow? string Overflow behavior: "visible", "hidden", "ellipsis" (default: "visible")
 ---@field padding? table Padding: {left=0, top=0, right=0, bottom=0}
+---@field wrap? boolean Enable word wrapping (default: false)
+---@field line_height? number Line height multiplier (default: 1.2)
 
---- Draw text within a bounded rectangle with alignment and overflow handling.
---- This is a convenience function that combines clipping, alignment, and text truncation.
+--- Draw text within a bounded rectangle with alignment, overflow handling, and word wrapping.
+--- This is a convenience function that combines clipping, alignment, text truncation, and multi-line text.
 ---@param x number X coordinate of the rectangle
 ---@param y number Y coordinate of the rectangle
 ---@param width number Width of the rectangle
@@ -513,6 +515,13 @@ function canvas.set_text_baseline(baseline) end
 ---@usage -- Truncate long text with ellipsis
 ---@usage canvas.draw_label(100, 100, 100, 30, "Very long text that will be truncated", {
 ---@usage     overflow = "ellipsis"
+---@usage })
+---@usage
+---@usage -- Word wrapping in a text box
+---@usage canvas.draw_label(100, 100, 200, 80, "This is a longer text that will wrap to multiple lines", {
+---@usage     wrap = true,
+---@usage     align_h = "left",
+---@usage     padding = {left = 10, right = 10}
 ---@usage })
 function canvas.draw_label(x, y, width, height, text, options) end
 

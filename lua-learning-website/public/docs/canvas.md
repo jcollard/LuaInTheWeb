@@ -789,7 +789,7 @@ canvas.draw_text(btnX + btnW/2, btnY + btnH/2, "Click Me")
 
 ### canvas.draw_label(x, y, width, height, text, options)
 
-Draw text within a bounded rectangle with automatic alignment and overflow handling. This is a convenience function that simplifies common text layout tasks.
+Draw text within a bounded rectangle with automatic alignment, overflow handling, and word wrapping. This is a convenience function that simplifies common text layout tasks.
 
 **Parameters:**
 - `x` (number): X coordinate of the rectangle
@@ -807,6 +807,8 @@ Draw text within a bounded rectangle with automatic alignment and overflow handl
 | `align_v` | "top", "middle", "bottom" | "middle" | Vertical alignment |
 | `overflow` | "visible", "hidden", "ellipsis" | "visible" | How to handle text that exceeds bounds |
 | `padding` | `{left, top, right, bottom}` | all 0 | Internal padding from edges |
+| `wrap` | boolean | false | Enable word wrapping for multi-line text |
+| `line_height` | number | 1.2 | Line height multiplier for wrapped text |
 
 **Example:**
 ```lua
@@ -827,8 +829,15 @@ canvas.draw_label(100, 250, 100, 30, "Very long text here", {
     overflow = "ellipsis"
 })
 
+-- Word wrapping in a text box
+canvas.draw_label(100, 300, 200, 80, "This is a longer paragraph that will automatically wrap to multiple lines within the bounding box.", {
+    wrap = true,
+    align_h = "left",
+    padding = {left = 10, right = 10}
+})
+
 -- Full options example
-canvas.draw_label(100, 300, 200, 40, "Padded Label", {
+canvas.draw_label(100, 400, 200, 40, "Padded Label", {
     align_h = "left",
     align_v = "middle",
     overflow = "ellipsis",

@@ -6,11 +6,11 @@ local canvas = require("canvas")
 -- Colors
 local BG_COLOR = "#1a1a2e"
 local TEXT_COLOR = "#FFFFFF"
-local GUIDE_COLOR = "#FF6B6B40"
+local GUIDE_COLOR = "#FF6B6B"
 local ACCENT_COLOR = "#4ECDC4"
 local BOX_COLOR = "#2d2d44"
 
-canvas.set_size(560, 500)
+canvas.set_size(600, 520)
 
 canvas.tick(function()
     canvas.clear()
@@ -23,105 +23,92 @@ canvas.tick(function()
 
     -- Title
     canvas.set_fill_style(ACCENT_COLOR)
-    canvas.set_font_size(24)
+    canvas.set_font_size(20)
     canvas.set_text_align("center")
     canvas.set_text_baseline("top")
-    canvas.draw_text(w / 2, 15, "Text Alignment & draw_label() Demo")
+    canvas.draw_text(w / 2, 10, "Text Alignment Demo")
 
     -- =========================================================================
-    -- Section 1: Basic Alignment (set_text_align / set_text_baseline)
+    -- Section 1: set_text_align (horizontal)
     -- =========================================================================
-    local section1Y = 55
-    canvas.set_font_size(14)
+    local section1Y = 45
+    canvas.set_font_size(12)
     canvas.set_fill_style(TEXT_COLOR)
     canvas.set_text_align("left")
-    canvas.draw_text(20, section1Y, "1. Basic Alignment (set_text_align)")
+    canvas.set_text_baseline("top")
+    canvas.draw_text(20, section1Y, "1. set_text_align() - Horizontal")
 
     -- Draw center line for alignment reference
-    local centerX = w / 2
+    local centerX = 140
     canvas.set_stroke_style(GUIDE_COLOR)
-    canvas.set_line_width(2)
+    canvas.set_line_width(1)
     canvas.begin_path()
-    canvas.move_to(centerX, section1Y + 20)
-    canvas.line_to(centerX, section1Y + 80)
+    canvas.move_to(centerX, section1Y + 18)
+    canvas.line_to(centerX, section1Y + 70)
     canvas.stroke()
 
-    -- Show different alignments
-    canvas.set_font_size(13)
+    canvas.set_font_size(11)
     canvas.set_fill_style(TEXT_COLOR)
     canvas.set_text_baseline("middle")
 
     canvas.set_text_align("left")
-    canvas.draw_text(centerX, section1Y + 35, 'align = "left"')
-
+    canvas.draw_text(centerX, section1Y + 28, 'left')
     canvas.set_text_align("center")
-    canvas.draw_text(centerX, section1Y + 52, 'align = "center"')
-
+    canvas.draw_text(centerX, section1Y + 44, 'center')
     canvas.set_text_align("right")
-    canvas.draw_text(centerX, section1Y + 69, 'align = "right"')
+    canvas.draw_text(centerX, section1Y + 60, 'right')
 
     -- =========================================================================
-    -- Section 2: draw_label() Basic Usage
+    -- Section 2: set_text_baseline (vertical)
     -- =========================================================================
-    local section2Y = 145
-    canvas.set_font_size(14)
+    local section2X = 280
+    canvas.set_font_size(12)
     canvas.set_fill_style(TEXT_COLOR)
     canvas.set_text_align("left")
     canvas.set_text_baseline("top")
-    canvas.draw_text(20, section2Y, "2. draw_label() - Centered in Rectangle")
+    canvas.draw_text(section2X, section1Y, "2. set_text_baseline() - Vertical")
 
-    -- Draw labeled boxes
+    -- Draw horizontal baseline reference line
+    local baselineY = section1Y + 50
+    canvas.set_stroke_style(GUIDE_COLOR)
+    canvas.begin_path()
+    canvas.move_to(section2X + 10, baselineY)
+    canvas.line_to(section2X + 300, baselineY)
+    canvas.stroke()
+
+    canvas.set_font_size(11)
+    canvas.set_fill_style(TEXT_COLOR)
+    canvas.set_text_align("left")
+
+    local baselines = {"top", "middle", "alphabetic", "bottom"}
+    local bx = section2X + 20
+    for _, bl in ipairs(baselines) do
+        canvas.set_text_baseline(bl)
+        canvas.draw_text(bx, baselineY, bl)
+        bx = bx + 70
+    end
+
+    -- =========================================================================
+    -- Section 3: draw_label() - Centered in boxes
+    -- =========================================================================
+    local section3Y = 125
+    canvas.set_font_size(12)
+    canvas.set_fill_style(TEXT_COLOR)
+    canvas.set_text_align("left")
+    canvas.set_text_baseline("top")
+    canvas.draw_text(20, section3Y, "3. draw_label() - Alignment in Rectangle")
+
     local boxes = {
-        {x = 30, y = section2Y + 25, w = 110, h = 35, text = "Default"},
-        {x = 160, y = section2Y + 25, w = 110, h = 35, text = "Centered", align_h = "center"},
-        {x = 290, y = section2Y + 25, w = 110, h = 35, text = "Left", align_h = "left"},
-        {x = 420, y = section2Y + 25, w = 110, h = 35, text = "Right", align_h = "right"},
+        {x = 20, y = section3Y + 20, w = 90, h = 35, text = "Default"},
+        {x = 120, y = section3Y + 20, w = 90, h = 35, text = "Left", align_h = "left"},
+        {x = 220, y = section3Y + 20, w = 90, h = 35, text = "Right", align_h = "right"},
+        {x = 320, y = section3Y + 20, w = 90, h = 35, text = "Top", align_v = "top"},
+        {x = 420, y = section3Y + 20, w = 90, h = 35, text = "Bottom", align_v = "bottom"},
     }
 
     for _, box in ipairs(boxes) do
-        -- Box background
         canvas.set_fill_style(BOX_COLOR)
         canvas.fill_rect(box.x, box.y, box.w, box.h)
-
-        -- Box border
-        canvas.set_stroke_style(ACCENT_COLOR)
-        canvas.set_line_width(1)
-        canvas.begin_path()
-        canvas.move_to(box.x, box.y)
-        canvas.line_to(box.x + box.w, box.y)
-        canvas.line_to(box.x + box.w, box.y + box.h)
-        canvas.line_to(box.x, box.y + box.h)
-        canvas.close_path()
-        canvas.stroke()
-
-        -- Label text
-        canvas.set_fill_style(TEXT_COLOR)
-        canvas.set_font_size(13)
-        canvas.draw_label(box.x, box.y, box.w, box.h, box.text, {
-            align_h = box.align_h or "center"
-        })
-    end
-
-    -- =========================================================================
-    -- Section 3: draw_label() with Padding
-    -- =========================================================================
-    local section3Y = 220
-    canvas.set_font_size(14)
-    canvas.set_fill_style(TEXT_COLOR)
-    canvas.set_text_align("left")
-    canvas.set_text_baseline("top")
-    canvas.draw_text(20, section3Y, "3. draw_label() - With Padding")
-
-    local paddingBoxes = {
-        {x = 30, y = section3Y + 25, w = 150, h = 32, text = "No padding", padding = {}},
-        {x = 200, y = section3Y + 25, w = 150, h = 32, text = "Left: 15px", padding = {left = 15}, align_h = "left"},
-        {x = 370, y = section3Y + 25, w = 160, h = 32, text = "All sides: 10px", padding = {left = 10, top = 10, right = 10, bottom = 10}},
-    }
-
-    for _, box in ipairs(paddingBoxes) do
-        canvas.set_fill_style(BOX_COLOR)
-        canvas.fill_rect(box.x, box.y, box.w, box.h)
-
         canvas.set_stroke_style(ACCENT_COLOR)
         canvas.set_line_width(1)
         canvas.begin_path()
@@ -133,18 +120,18 @@ canvas.tick(function()
         canvas.stroke()
 
         canvas.set_fill_style(TEXT_COLOR)
-        canvas.set_font_size(12)
+        canvas.set_font_size(11)
         canvas.draw_label(box.x, box.y, box.w, box.h, box.text, {
             align_h = box.align_h or "center",
-            padding = box.padding
+            align_v = box.align_v or "middle"
         })
     end
 
     -- =========================================================================
-    -- Section 4: draw_label() Overflow Handling
+    -- Section 4: draw_label() - Overflow handling
     -- =========================================================================
-    local section4Y = 295
-    canvas.set_font_size(14)
+    local section4Y = 200
+    canvas.set_font_size(12)
     canvas.set_fill_style(TEXT_COLOR)
     canvas.set_text_align("left")
     canvas.set_text_baseline("top")
@@ -152,15 +139,14 @@ canvas.tick(function()
 
     local longText = "This is a very long text that will overflow"
     local overflowBoxes = {
-        {x = 30, y = section4Y + 30, w = 150, h = 32, overflow = "visible", label = "visible"},
-        {x = 200, y = section4Y + 30, w = 150, h = 32, overflow = "hidden", label = "hidden"},
-        {x = 370, y = section4Y + 30, w = 150, h = 32, overflow = "ellipsis", label = "ellipsis"},
+        {x = 20, y = section4Y + 20, w = 150, h = 30, overflow = "visible", label = "visible"},
+        {x = 190, y = section4Y + 20, w = 150, h = 30, overflow = "hidden", label = "hidden"},
+        {x = 360, y = section4Y + 20, w = 150, h = 30, overflow = "ellipsis", label = "ellipsis"},
     }
 
     for _, box in ipairs(overflowBoxes) do
         canvas.set_fill_style(BOX_COLOR)
         canvas.fill_rect(box.x, box.y, box.w, box.h)
-
         canvas.set_stroke_style(ACCENT_COLOR)
         canvas.set_line_width(1)
         canvas.begin_path()
@@ -172,15 +158,14 @@ canvas.tick(function()
         canvas.stroke()
 
         -- Overflow label
-        canvas.set_fill_style(GUIDE_COLOR)
-        canvas.set_font_size(10)
+        canvas.set_fill_style("#888888")
+        canvas.set_font_size(9)
         canvas.set_text_align("center")
         canvas.set_text_baseline("bottom")
-        canvas.draw_text(box.x + box.w/2, box.y - 2, 'overflow="' .. box.label .. '"')
+        canvas.draw_text(box.x + box.w/2, box.y - 2, box.label)
 
-        -- Text with overflow
         canvas.set_fill_style(TEXT_COLOR)
-        canvas.set_font_size(12)
+        canvas.set_font_size(11)
         canvas.draw_label(box.x, box.y, box.w, box.h, longText, {
             overflow = box.overflow,
             align_h = "left",
@@ -189,30 +174,73 @@ canvas.tick(function()
     end
 
     -- =========================================================================
-    -- Section 5: Practical Button Example
+    -- Section 5: draw_label() - Word Wrapping
     -- =========================================================================
-    local section5Y = 385
-    canvas.set_font_size(14)
+    local section5Y = 275
+    canvas.set_font_size(12)
     canvas.set_fill_style(TEXT_COLOR)
     canvas.set_text_align("left")
     canvas.set_text_baseline("top")
-    canvas.draw_text(20, section5Y, "5. Practical: UI Buttons with draw_label()")
+    canvas.draw_text(20, section5Y, "5. draw_label() - Word Wrapping")
+
+    local wrapText = "This text will wrap to multiple lines within the box"
+    local wrapBoxes = {
+        {x = 20, y = section5Y + 20, w = 130, h = 70, align_h = "left", label = "Left"},
+        {x = 170, y = section5Y + 20, w = 130, h = 70, align_h = "center", label = "Center"},
+        {x = 320, y = section5Y + 20, w = 130, h = 70, align_h = "right", label = "Right"},
+    }
+
+    for _, box in ipairs(wrapBoxes) do
+        canvas.set_fill_style(BOX_COLOR)
+        canvas.fill_rect(box.x, box.y, box.w, box.h)
+        canvas.set_stroke_style(ACCENT_COLOR)
+        canvas.set_line_width(1)
+        canvas.begin_path()
+        canvas.move_to(box.x, box.y)
+        canvas.line_to(box.x + box.w, box.y)
+        canvas.line_to(box.x + box.w, box.y + box.h)
+        canvas.line_to(box.x, box.y + box.h)
+        canvas.close_path()
+        canvas.stroke()
+
+        -- Label
+        canvas.set_fill_style("#888888")
+        canvas.set_font_size(9)
+        canvas.set_text_align("center")
+        canvas.set_text_baseline("bottom")
+        canvas.draw_text(box.x + box.w/2, box.y - 2, box.label)
+
+        canvas.set_fill_style(TEXT_COLOR)
+        canvas.set_font_size(11)
+        canvas.draw_label(box.x, box.y, box.w, box.h, wrapText, {
+            wrap = true,
+            align_h = box.align_h,
+            padding = {left = 8, right = 8}
+        })
+    end
+
+    -- =========================================================================
+    -- Section 6: Practical UI Buttons
+    -- =========================================================================
+    local section6Y = 380
+    canvas.set_font_size(12)
+    canvas.set_fill_style(TEXT_COLOR)
+    canvas.set_text_align("left")
+    canvas.set_text_baseline("top")
+    canvas.draw_text(20, section6Y, "6. Practical: UI Buttons")
 
     local buttons = {
-        {x = 30, y = section5Y + 25, w = 100, h = 38, text = "Play", color = "#4CAF50"},
-        {x = 145, y = section5Y + 25, w = 100, h = 38, text = "Settings", color = "#2196F3"},
-        {x = 260, y = section5Y + 25, w = 100, h = 38, text = "Exit", color = "#f44336"},
-        {x = 375, y = section5Y + 25, w = 150, h = 38, text = "Very Long Button Text", color = "#9C27B0"},
+        {x = 20, y = section6Y + 20, w = 100, h = 40, text = "Play", color = "#4CAF50"},
+        {x = 130, y = section6Y + 20, w = 100, h = 40, text = "Settings", color = "#2196F3"},
+        {x = 240, y = section6Y + 20, w = 100, h = 40, text = "Exit", color = "#f44336"},
+        {x = 350, y = section6Y + 20, w = 140, h = 40, text = "Very Long Button Text", color = "#9C27B0"},
     }
 
     for _, btn in ipairs(buttons) do
-        -- Button background
         canvas.set_fill_style(btn.color)
         canvas.fill_rect(btn.x, btn.y, btn.w, btn.h)
-
-        -- Button text using draw_label (automatically centered with ellipsis)
         canvas.set_fill_style(TEXT_COLOR)
-        canvas.set_font_size(14)
+        canvas.set_font_size(13)
         canvas.draw_label(btn.x, btn.y, btn.w, btn.h, btn.text, {
             overflow = "ellipsis",
             padding = {left = 8, right = 8}
@@ -220,11 +248,11 @@ canvas.tick(function()
     end
 
     -- Footer note
-    canvas.set_fill_style("#888888")
-    canvas.set_font_size(11)
+    canvas.set_fill_style("#666666")
+    canvas.set_font_size(10)
     canvas.set_text_align("center")
     canvas.set_text_baseline("bottom")
-    canvas.draw_text(w / 2, h - 10, "draw_label() simplifies text positioning in UI elements")
+    canvas.draw_text(w / 2, h - 8, "draw_label() simplifies text positioning in UI elements")
 end)
 
 canvas.start()

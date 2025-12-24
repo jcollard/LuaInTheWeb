@@ -24,6 +24,7 @@ export const canvasLuaCode = `
     -- Store the user's callback and wrap with error handling
     local __user_tick_callback = nil
     local __user_tick_location = nil  -- Stores callback definition location
+    local __current_font_size = 16  -- Track current font size for draw_label
 
     function _canvas.tick(callback)
       __user_tick_callback = callback
@@ -136,6 +137,7 @@ export const canvasLuaCode = `
 
     -- Font styling
     function _canvas.set_font_size(size)
+      __current_font_size = size
       __canvas_setFontSize(size)
     end
 
@@ -427,6 +429,8 @@ export const canvasLuaCode = `
       local align_v = options.align_v or "middle"
       local overflow = options.overflow or "visible"
       local padding = options.padding or {}
+      local wrap = options.wrap or false
+      local line_height = options.line_height or 1.2
 
       -- Normalize padding to {left, top, right, bottom}
       local pad_left = padding.left or 0
@@ -440,9 +444,8 @@ export const canvasLuaCode = `
       local inner_w = width - pad_left - pad_right
       local inner_h = height - pad_top - pad_bottom
 
-      -- Calculate text position based on alignment
-      local text_x, text_y
-
+      -- Calculate horizontal text position based on alignment
+      local text_x
       if align_h == "left" then
         text_x = inner_x
       elseif align_h == "right" then
@@ -451,16 +454,8 @@ export const canvasLuaCode = `
         text_x = inner_x + inner_w / 2
       end
 
-      if align_v == "top" then
-        text_y = inner_y
-      elseif align_v == "bottom" then
-        text_y = inner_y + inner_h
-      else -- middle
-        text_y = inner_y + inner_h / 2
-      end
-
       -- Map align_h to Canvas textAlign values
-      local canvas_align = align_h
+      local canvas_align
       if align_h == "left" then
         canvas_align = "left"
       elseif align_h == "right" then
@@ -469,51 +464,12 @@ export const canvasLuaCode = `
         canvas_align = "center"
       end
 
-      -- Map align_v to Canvas textBaseline values
-      local canvas_baseline
-      if align_v == "top" then
-        canvas_baseline = "top"
-      elseif align_v == "bottom" then
-        canvas_baseline = "bottom"
-      else
-        canvas_baseline = "middle"
-      end
-
-      -- Handle text for overflow
-      local display_text = text
-
-      if overflow == "ellipsis" and inner_w > 0 then
-        local text_width = _canvas.get_text_width(text)
-        if text_width > inner_w then
-          -- Truncate with ellipsis
-          local ellipsis = "..."
-          local ellipsis_width = _canvas.get_text_width(ellipsis)
-          local available = inner_w - ellipsis_width
-
-          if available > 0 then
-            -- Find how many characters fit
-            local truncated = ""
-            for i = 1, #text do
-              local test = text:sub(1, i)
-              if _canvas.get_text_width(test) > available then
-                break
-              end
-              truncated = test
-            end
-            display_text = truncated .. ellipsis
-          else
-            display_text = ellipsis
-          end
-        end
-      end
-
       -- Save state
       _canvas.save()
 
       -- Apply clipping if overflow is hidden or ellipsis
       if overflow == "hidden" or overflow == "ellipsis" then
         _canvas.begin_path()
-        -- Use rect path for clipping
         _canvas.move_to(x, y)
         _canvas.line_to(x + width, y)
         _canvas.line_to(x + width, y + height)
@@ -522,10 +478,85 @@ export const canvasLuaCode = `
         _canvas.clip()
       end
 
-      -- Set alignment and draw text
       _canvas.set_text_align(canvas_align)
-      _canvas.set_text_baseline(canvas_baseline)
-      _canvas.draw_text(text_x, text_y, display_text)
+
+      -- Get font size for line height calculation
+      local font_size = __current_font_size or 16
+      local actual_line_height = font_size * line_height
+
+      -- Word wrap logic
+      local lines = {}
+      if wrap and inner_w > 0 then
+        -- Split text into words
+        local words = {}
+        for word in text:gmatch("%S+") do
+          table.insert(words, word)
+        end
+
+        local current_line = ""
+        for i, word in ipairs(words) do
+          local test_line = current_line == "" and word or (current_line .. " " .. word)
+          local test_width = _canvas.get_text_width(test_line)
+
+          if test_width > inner_w and current_line ~= "" then
+            table.insert(lines, current_line)
+            current_line = word
+          else
+            current_line = test_line
+          end
+        end
+        if current_line ~= "" then
+          table.insert(lines, current_line)
+        end
+      else
+        -- No wrapping - single line
+        local display_text = text
+
+        if overflow == "ellipsis" and inner_w > 0 then
+          local text_width = _canvas.get_text_width(text)
+          if text_width > inner_w then
+            local ellipsis = "..."
+            local ellipsis_width = _canvas.get_text_width(ellipsis)
+            local available = inner_w - ellipsis_width
+
+            if available > 0 then
+              local truncated = ""
+              for i = 1, #text do
+                local test = text:sub(1, i)
+                if _canvas.get_text_width(test) > available then
+                  break
+                end
+                truncated = test
+              end
+              display_text = truncated .. ellipsis
+            else
+              display_text = ellipsis
+            end
+          end
+        end
+
+        table.insert(lines, display_text)
+      end
+
+      -- Calculate total text block height
+      local total_height = #lines * actual_line_height
+
+      -- Calculate starting Y position based on vertical alignment
+      local start_y
+      if align_v == "top" then
+        start_y = inner_y + actual_line_height / 2
+      elseif align_v == "bottom" then
+        start_y = inner_y + inner_h - total_height + actual_line_height / 2
+      else -- middle
+        start_y = inner_y + (inner_h - total_height) / 2 + actual_line_height / 2
+      end
+
+      -- Draw each line
+      _canvas.set_text_baseline("middle")
+      for i, line in ipairs(lines) do
+        local line_y = start_y + (i - 1) * actual_line_height
+        _canvas.draw_text(text_x, line_y, line)
+      end
 
       -- Restore state
       _canvas.restore()
