@@ -33,6 +33,8 @@ function createMockContext(): CanvasRenderingContext2D {
     lineCap: 'butt' as CanvasLineCap,
     lineJoin: 'miter' as CanvasLineJoin,
     miterLimit: 10,
+    lineDashOffset: 0,
+    setLineDash: vi.fn(),
     font: '16px monospace',
     textBaseline: 'alphabetic',
     // Transformation methods
@@ -1185,6 +1187,80 @@ describe('CanvasRenderer', () => {
       renderer.render(commands);
 
       expect(mockCtx.miterLimit).toBe(10);
+    });
+  });
+
+  describe('setLineDash command', () => {
+    it('should set line dash with simple pattern', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setLineDash', segments: [10, 5] },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.setLineDash).toHaveBeenCalledWith([10, 5]);
+    });
+
+    it('should set line dash with complex pattern', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setLineDash', segments: [15, 5, 5, 5] },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.setLineDash).toHaveBeenCalledWith([15, 5, 5, 5]);
+    });
+
+    it('should set line dash with empty array for solid line', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setLineDash', segments: [] },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.setLineDash).toHaveBeenCalledWith([]);
+    });
+
+    it('should set line dash with dotted pattern', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setLineDash', segments: [2, 4] },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.setLineDash).toHaveBeenCalledWith([2, 4]);
+    });
+  });
+
+  describe('setLineDashOffset command', () => {
+    it('should set lineDashOffset', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setLineDashOffset', offset: 5 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.lineDashOffset).toBe(5);
+    });
+
+    it('should set lineDashOffset to zero', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setLineDashOffset', offset: 0 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.lineDashOffset).toBe(0);
+    });
+
+    it('should set negative lineDashOffset', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setLineDashOffset', offset: -10 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.lineDashOffset).toBe(-10);
     });
   });
 });

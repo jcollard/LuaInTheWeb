@@ -285,6 +285,29 @@ export function setupCanvasAPI(
     getController()?.setMiterLimit(limit)
   })
 
+  engine.global.set('__canvas_setLineDash', (segments: unknown) => {
+    // Convert Lua table proxy to native JavaScript array
+    const jsArray: number[] = []
+    if (segments && typeof segments === 'object') {
+      const len = (segments as { length?: number }).length ?? 0
+      for (let i = 1; i <= len; i++) {
+        const val = (segments as Record<number, number>)[i]
+        if (typeof val === 'number') {
+          jsArray.push(val)
+        }
+      }
+    }
+    getController()?.setLineDash(jsArray)
+  })
+
+  engine.global.set('__canvas_getLineDash', () => {
+    return getController()?.getLineDash() ?? []
+  })
+
+  engine.global.set('__canvas_setLineDashOffset', (offset: number) => {
+    getController()?.setLineDashOffset(offset)
+  })
+
   // --- Set up Lua-side canvas table ---
   // Canvas is NOT a global - it must be accessed via require('canvas')
   engine.doStringSync(canvasLuaCode)

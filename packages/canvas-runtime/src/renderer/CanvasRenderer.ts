@@ -212,6 +212,14 @@ export class CanvasRenderer {
         this.ctx.miterLimit = command.limit;
         break;
 
+      case 'setLineDash':
+        this.ctx.setLineDash(command.segments);
+        break;
+
+      case 'setLineDashOffset':
+        this.ctx.lineDashOffset = command.offset;
+        break;
+
       default:
         // Ignore unknown commands for forward compatibility
         break;

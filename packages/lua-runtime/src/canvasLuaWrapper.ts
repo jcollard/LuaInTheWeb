@@ -301,6 +301,28 @@ export const canvasLuaCode = `
       __canvas_setMiterLimit(limit)
     end
 
+    function _canvas.set_line_dash(segments)
+      -- Convert Lua table to JS array
+      local js_segments = {}
+      for i, v in ipairs(segments or {}) do
+        js_segments[i] = v
+      end
+      __canvas_setLineDash(js_segments)
+    end
+
+    function _canvas.get_line_dash()
+      local js_array = __canvas_getLineDash()
+      local t = {}
+      for i = 1, #js_array do
+        t[i] = js_array[i]
+      end
+      return t
+    end
+
+    function _canvas.set_line_dash_offset(offset)
+      __canvas_setLineDashOffset(offset)
+    end
+
     -- Timing
     function _canvas.get_delta()
       return __canvas_getDelta()

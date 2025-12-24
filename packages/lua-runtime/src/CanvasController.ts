@@ -105,6 +105,9 @@ export class CanvasController {
   private currentFontSize: number = 16
   private currentFontFamily: string = 'monospace'
 
+  // Line dash state
+  private lineDashSegments: number[] = []
+
   // Offscreen canvas for text measurement
   private measureCanvas: HTMLCanvasElement | null = null
   private measureCtx: CanvasRenderingContext2D | null = null
@@ -617,6 +620,32 @@ export class CanvasController {
    */
   setMiterLimit(limit: number): void {
     this.addDrawCommand({ type: 'setMiterLimit', limit })
+  }
+
+  /**
+   * Set the line dash pattern for strokes.
+   * @param segments - Array of dash and gap lengths (e.g., [10, 5] for 10px dash, 5px gap)
+   *                   Empty array resets to solid line.
+   */
+  setLineDash(segments: number[]): void {
+    this.lineDashSegments = [...segments]
+    this.addDrawCommand({ type: 'setLineDash', segments })
+  }
+
+  /**
+   * Get the current line dash pattern.
+   * @returns Copy of the current dash pattern array
+   */
+  getLineDash(): number[] {
+    return [...this.lineDashSegments]
+  }
+
+  /**
+   * Set the line dash offset for animating dashed lines.
+   * @param offset - Offset to shift the dash pattern (useful for marching ants animation)
+   */
+  setLineDashOffset(offset: number): void {
+    this.addDrawCommand({ type: 'setLineDashOffset', offset })
   }
 
   // --- Timing API ---

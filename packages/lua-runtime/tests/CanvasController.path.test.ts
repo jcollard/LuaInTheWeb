@@ -778,4 +778,100 @@ describe('CanvasController Path API', () => {
       })
     })
   })
+
+  describe('setLineDash', () => {
+    it('should add setLineDash command with simple pattern', () => {
+      controller.setLineDash([10, 5])
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setLineDash',
+        segments: [10, 5],
+      })
+    })
+
+    it('should add setLineDash command with complex pattern', () => {
+      controller.setLineDash([15, 5, 5, 5])
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setLineDash',
+        segments: [15, 5, 5, 5],
+      })
+    })
+
+    it('should add setLineDash command with empty array for solid line', () => {
+      controller.setLineDash([])
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setLineDash',
+        segments: [],
+      })
+    })
+
+    it('should store segments in internal state', () => {
+      controller.setLineDash([10, 5])
+
+      expect(controller.getLineDash()).toEqual([10, 5])
+    })
+  })
+
+  describe('getLineDash', () => {
+    it('should return empty array initially', () => {
+      expect(controller.getLineDash()).toEqual([])
+    })
+
+    it('should return current dash pattern', () => {
+      controller.setLineDash([10, 5])
+
+      expect(controller.getLineDash()).toEqual([10, 5])
+    })
+
+    it('should return copy of internal array', () => {
+      controller.setLineDash([10, 5])
+      const result = controller.getLineDash()
+      result.push(99)
+
+      expect(controller.getLineDash()).toEqual([10, 5])
+    })
+  })
+
+  describe('setLineDashOffset', () => {
+    it('should add setLineDashOffset command', () => {
+      controller.setLineDashOffset(5)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setLineDashOffset',
+        offset: 5,
+      })
+    })
+
+    it('should add setLineDashOffset command with zero', () => {
+      controller.setLineDashOffset(0)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setLineDashOffset',
+        offset: 0,
+      })
+    })
+
+    it('should add setLineDashOffset command with negative value', () => {
+      controller.setLineDashOffset(-10)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setLineDashOffset',
+        offset: -10,
+      })
+    })
+  })
 })
