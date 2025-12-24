@@ -226,3 +226,5 @@ canvas.tick(function()
     canvas.set_text_baseline("bottom")
     canvas.draw_text(w / 2, h - 10, "draw_label() simplifies text positioning in UI elements")
 end)
+
+canvas.start()
