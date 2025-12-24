@@ -64,6 +64,11 @@ function createMockContext(): CanvasRenderingContext2D {
     createConicGradient: vi.fn(() => createMockGradient()),
     // Pattern methods
     createPattern: vi.fn(() => createMockPattern()),
+    // Shadow properties
+    shadowColor: 'transparent',
+    shadowBlur: 0,
+    shadowOffsetX: 0,
+    shadowOffsetY: 0,
   } as unknown as CanvasRenderingContext2D;
 }
 
@@ -1727,6 +1732,143 @@ describe('CanvasRenderer', () => {
 
       expect(() => rendererWithCache.render(commands)).not.toThrow();
       expect(mockCtx.createPattern).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('setShadowColor command', () => {
+    it('should set shadow color', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setShadowColor', color: '#00000080' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.shadowColor).toBe('#00000080');
+    });
+
+    it('should set shadow color to rgba value', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setShadowColor', color: 'rgba(255, 0, 0, 0.5)' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.shadowColor).toBe('rgba(255, 0, 0, 0.5)');
+    });
+  });
+
+  describe('setShadowBlur command', () => {
+    it('should set shadow blur', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setShadowBlur', blur: 10 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.shadowBlur).toBe(10);
+    });
+
+    it('should set shadow blur to zero', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setShadowBlur', blur: 0 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.shadowBlur).toBe(0);
+    });
+  });
+
+  describe('setShadowOffsetX command', () => {
+    it('should set shadow offset X', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setShadowOffsetX', offset: 5 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.shadowOffsetX).toBe(5);
+    });
+
+    it('should set negative shadow offset X', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setShadowOffsetX', offset: -3 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.shadowOffsetX).toBe(-3);
+    });
+  });
+
+  describe('setShadowOffsetY command', () => {
+    it('should set shadow offset Y', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setShadowOffsetY', offset: 5 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.shadowOffsetY).toBe(5);
+    });
+
+    it('should set negative shadow offset Y', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setShadowOffsetY', offset: -3 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.shadowOffsetY).toBe(-3);
+    });
+  });
+
+  describe('setShadow command', () => {
+    it('should set all shadow properties at once', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setShadow', color: '#00000080', blur: 10, offsetX: 5, offsetY: 5 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.shadowColor).toBe('#00000080');
+      expect(mockCtx.shadowBlur).toBe(10);
+      expect(mockCtx.shadowOffsetX).toBe(5);
+      expect(mockCtx.shadowOffsetY).toBe(5);
+    });
+
+    it('should set shadow with glow effect (zero offsets)', () => {
+      const commands: DrawCommand[] = [
+        { type: 'setShadow', color: '#FFD700', blur: 20, offsetX: 0, offsetY: 0 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.shadowColor).toBe('#FFD700');
+      expect(mockCtx.shadowBlur).toBe(20);
+      expect(mockCtx.shadowOffsetX).toBe(0);
+      expect(mockCtx.shadowOffsetY).toBe(0);
+    });
+  });
+
+  describe('clearShadow command', () => {
+    it('should clear all shadow properties', () => {
+      // First set shadow
+      mockCtx.shadowColor = '#00000080';
+      mockCtx.shadowBlur = 10;
+      mockCtx.shadowOffsetX = 5;
+      mockCtx.shadowOffsetY = 5;
+
+      const commands: DrawCommand[] = [
+        { type: 'clearShadow' },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.shadowColor).toBe('transparent');
+      expect(mockCtx.shadowBlur).toBe(0);
+      expect(mockCtx.shadowOffsetX).toBe(0);
+      expect(mockCtx.shadowOffsetY).toBe(0);
     });
   });
 });

@@ -573,6 +573,80 @@ canvas.set_fill_style(stripes)
 canvas.fill_rect(0, 0, 400, 100)
 ```
 
+## Shadows
+
+Add shadow effects to shapes for depth and visual polish. Shadows affect all subsequent drawing operations until cleared.
+
+### canvas.set_shadow_color(color)
+
+Set the shadow color.
+
+**Parameters:**
+- `color` (string): CSS color string (e.g., "#00000080", "rgba(0,0,0,0.5)")
+
+### canvas.set_shadow_blur(blur)
+
+Set the shadow blur radius. Higher values create softer, more diffuse shadows.
+
+**Parameters:**
+- `blur` (number): Blur radius in pixels (0 = sharp shadow)
+
+### canvas.set_shadow_offset_x(offset)
+
+Set the shadow horizontal offset. Positive values move shadow right.
+
+**Parameters:**
+- `offset` (number): Horizontal offset in pixels
+
+### canvas.set_shadow_offset_y(offset)
+
+Set the shadow vertical offset. Positive values move shadow down.
+
+**Parameters:**
+- `offset` (number): Vertical offset in pixels
+
+### canvas.set_shadow(color, blur, offsetX, offsetY)
+
+Set all shadow properties at once.
+
+**Parameters:**
+- `color` (string): CSS color string
+- `blur` (number, optional): Blur radius in pixels (default: 0)
+- `offsetX` (number, optional): Horizontal offset in pixels (default: 0)
+- `offsetY` (number, optional): Vertical offset in pixels (default: 0)
+
+**Example:**
+```lua
+-- Drop shadow
+canvas.set_shadow("#00000080", 10, 5, 5)
+canvas.set_fill_style("#4ECDC4")
+canvas.fill_rect(100, 100, 200, 100)
+
+-- Glow effect (no offset)
+canvas.set_shadow("#FFD700", 20, 0, 0)
+canvas.set_fill_style("#FFD700")
+canvas.fill_circle(400, 150, 50)
+
+-- Text with shadow
+canvas.set_shadow("#000000", 3, 2, 2)
+canvas.set_fill_style("#FFFFFF")
+canvas.set_font_size(48)
+canvas.draw_text(100, 300, "Shadow Text")
+```
+
+### canvas.clear_shadow()
+
+Clear all shadow properties. Resets shadow to default (no shadow) for subsequent drawing.
+
+**Example:**
+```lua
+canvas.set_shadow("#000000", 10, 5, 5)
+canvas.fill_rect(50, 50, 100, 100)  -- With shadow
+
+canvas.clear_shadow()
+canvas.fill_rect(200, 50, 100, 100) -- No shadow
+```
+
 ## Drawing Functions
 
 ### canvas.draw_rect(x, y, width, height)

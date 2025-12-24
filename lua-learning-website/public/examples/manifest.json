@@ -40,6 +40,7 @@
     "canvas/radial-gradient.lua",
     "canvas/conic-gradient.lua",
     "canvas/pattern-demo.lua",
+    "canvas/shadow-demo.lua",
     "canvas/fonts/10px-Bitfantasy.ttf",
     "canvas/fonts/10px-CelticTime.ttf",
     "canvas/fonts/10px-HelvetiPixel.ttf",

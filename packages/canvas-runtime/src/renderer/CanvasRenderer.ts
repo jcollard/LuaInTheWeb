@@ -228,6 +228,36 @@ export class CanvasRenderer {
         this.applyStyle(command.style, 'stroke');
         break;
 
+      case 'setShadowColor':
+        this.ctx.shadowColor = command.color;
+        break;
+
+      case 'setShadowBlur':
+        this.ctx.shadowBlur = command.blur;
+        break;
+
+      case 'setShadowOffsetX':
+        this.ctx.shadowOffsetX = command.offset;
+        break;
+
+      case 'setShadowOffsetY':
+        this.ctx.shadowOffsetY = command.offset;
+        break;
+
+      case 'setShadow':
+        this.ctx.shadowColor = command.color;
+        this.ctx.shadowBlur = command.blur;
+        this.ctx.shadowOffsetX = command.offsetX;
+        this.ctx.shadowOffsetY = command.offsetY;
+        break;
+
+      case 'clearShadow':
+        this.ctx.shadowColor = 'transparent';
+        this.ctx.shadowBlur = 0;
+        this.ctx.shadowOffsetX = 0;
+        this.ctx.shadowOffsetY = 0;
+        break;
+
       default:
         // Ignore unknown commands for forward compatibility
         break;

@@ -1,6 +1,6 @@
 # Epic #415: Epic: Complete Canvas 2D API Implementation
 
-**Status:** In Progress (11/17 complete)
+**Status:** In Progress (12/17 complete)
 **Branch:** epic-415
 **Created:** 2025-12-22
 **Last Updated:** 2025-12-24
@@ -46,7 +46,7 @@ Key considerations:
 | #424 | Implement linear and radial gradients | ✅ Complete | 424-gradients | Merged PR #443 |
 | #425 | Implement conic gradients | ✅ Complete | 425-conic-gradients | Merged PR #444 |
 | #426 | Implement patterns (createPattern) | ✅ Complete | epic-415 | Direct commit to epic branch |
-| #427 | Implement shadows (shadowColor, shadowBlur, shadowOffsetX/Y) | ⏳ Pending | - | - |
+| #427 | Implement shadows (shadowColor, shadowBlur, shadowOffsetX/Y) | ✅ Complete | epic-415 | Direct commit to epic branch |
 | #428 | Implement compositing (globalAlpha, globalCompositeOperation) | ⏳ Pending | - | - |
 | #429 | Implement text alignment (textAlign, textBaseline) | ⏳ Pending | - | - |
 | #430 | Implement hit testing (isPointInPath, isPointInStroke) | ⏳ Pending | - | - |
@@ -132,6 +132,14 @@ Key considerations:
   - Mutation score: CanvasRenderer 83.82%
   - Created 1 example: pattern-demo.lua
   - Updated docs/canvas.md with Patterns section
+  - Updated both canvas.lua files with LuaDoc
+  - Committed directly to epic-415 branch
+- #427 Shadows implementation complete
+  - Added 6 shadow commands: setShadowColor, setShadowBlur, setShadowOffsetX, setShadowOffsetY, setShadow, clearShadow
+  - Added 6 Lua functions: set_shadow_color, set_shadow_blur, set_shadow_offset_x, set_shadow_offset_y, set_shadow, clear_shadow
+  - Mutation score: CanvasRenderer 84.51%
+  - Created 1 example: shadow-demo.lua
+  - Updated docs/canvas.md with Shadows section
   - Updated both canvas.lua files with LuaDoc
   - Committed directly to epic-415 branch
 

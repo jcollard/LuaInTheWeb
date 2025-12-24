@@ -42,7 +42,13 @@ export type DrawCommandType =
   | 'setLineDash'
   | 'setLineDashOffset'
   | 'setFillStyle'
-  | 'setStrokeStyle';
+  | 'setStrokeStyle'
+  | 'setShadowColor'
+  | 'setShadowBlur'
+  | 'setShadowOffsetX'
+  | 'setShadowOffsetY'
+  | 'setShadow'
+  | 'clearShadow';
 
 /**
  * Base interface for all draw commands.
@@ -609,6 +615,64 @@ export interface SetStrokeStyleCommand extends DrawCommandBase {
 }
 
 /**
+ * Set the shadow color.
+ */
+export interface SetShadowColorCommand extends DrawCommandBase {
+  type: 'setShadowColor';
+  /** Shadow color as CSS color string */
+  color: string;
+}
+
+/**
+ * Set the shadow blur radius.
+ */
+export interface SetShadowBlurCommand extends DrawCommandBase {
+  type: 'setShadowBlur';
+  /** Blur radius in pixels */
+  blur: number;
+}
+
+/**
+ * Set the shadow X offset.
+ */
+export interface SetShadowOffsetXCommand extends DrawCommandBase {
+  type: 'setShadowOffsetX';
+  /** Horizontal offset in pixels */
+  offset: number;
+}
+
+/**
+ * Set the shadow Y offset.
+ */
+export interface SetShadowOffsetYCommand extends DrawCommandBase {
+  type: 'setShadowOffsetY';
+  /** Vertical offset in pixels */
+  offset: number;
+}
+
+/**
+ * Set all shadow properties at once.
+ */
+export interface SetShadowCommand extends DrawCommandBase {
+  type: 'setShadow';
+  /** Shadow color as CSS color string */
+  color: string;
+  /** Blur radius in pixels */
+  blur: number;
+  /** Horizontal offset in pixels */
+  offsetX: number;
+  /** Vertical offset in pixels */
+  offsetY: number;
+}
+
+/**
+ * Clear all shadow properties.
+ */
+export interface ClearShadowCommand extends DrawCommandBase {
+  type: 'clearShadow';
+}
+
+/**
  * Union type of all draw commands.
  */
 export type DrawCommand =
@@ -652,7 +716,13 @@ export type DrawCommand =
   | SetLineDashCommand
   | SetLineDashOffsetCommand
   | SetFillStyleCommand
-  | SetStrokeStyleCommand;
+  | SetStrokeStyleCommand
+  | SetShadowColorCommand
+  | SetShadowBlurCommand
+  | SetShadowOffsetXCommand
+  | SetShadowOffsetYCommand
+  | SetShadowCommand
+  | ClearShadowCommand;
 
 /**
  * Mouse button identifiers.

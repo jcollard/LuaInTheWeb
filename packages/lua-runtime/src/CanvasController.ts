@@ -667,6 +667,58 @@ export class CanvasController {
     this.addDrawCommand({ type: 'setStrokeStyle', style })
   }
 
+  // --- Shadow API ---
+
+  /**
+   * Set the shadow color.
+   * @param color - CSS color string
+   */
+  setShadowColor(color: string): void {
+    this.addDrawCommand({ type: 'setShadowColor', color })
+  }
+
+  /**
+   * Set the shadow blur radius.
+   * @param blur - Blur radius in pixels
+   */
+  setShadowBlur(blur: number): void {
+    this.addDrawCommand({ type: 'setShadowBlur', blur })
+  }
+
+  /**
+   * Set the shadow horizontal offset.
+   * @param offset - Offset in pixels
+   */
+  setShadowOffsetX(offset: number): void {
+    this.addDrawCommand({ type: 'setShadowOffsetX', offset })
+  }
+
+  /**
+   * Set the shadow vertical offset.
+   * @param offset - Offset in pixels
+   */
+  setShadowOffsetY(offset: number): void {
+    this.addDrawCommand({ type: 'setShadowOffsetY', offset })
+  }
+
+  /**
+   * Set all shadow properties at once.
+   * @param color - CSS color string
+   * @param blur - Blur radius in pixels
+   * @param offsetX - Horizontal offset in pixels
+   * @param offsetY - Vertical offset in pixels
+   */
+  setShadow(color: string, blur: number, offsetX: number, offsetY: number): void {
+    this.addDrawCommand({ type: 'setShadow', color, blur, offsetX, offsetY })
+  }
+
+  /**
+   * Clear all shadow properties.
+   */
+  clearShadow(): void {
+    this.addDrawCommand({ type: 'clearShadow' })
+  }
+
   // --- Timing API ---
 
   /**

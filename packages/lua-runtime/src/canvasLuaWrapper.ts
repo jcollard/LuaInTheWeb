@@ -377,6 +377,31 @@ export const canvasLuaCode = `
       __canvas_setStrokeStyle(style)
     end
 
+    -- Shadows
+    function _canvas.set_shadow_color(color)
+      __canvas_setShadowColor(color)
+    end
+
+    function _canvas.set_shadow_blur(blur)
+      __canvas_setShadowBlur(blur)
+    end
+
+    function _canvas.set_shadow_offset_x(offset)
+      __canvas_setShadowOffsetX(offset)
+    end
+
+    function _canvas.set_shadow_offset_y(offset)
+      __canvas_setShadowOffsetY(offset)
+    end
+
+    function _canvas.set_shadow(color, blur, offsetX, offsetY)
+      __canvas_setShadow(color, blur or 0, offsetX or 0, offsetY or 0)
+    end
+
+    function _canvas.clear_shadow()
+      __canvas_clearShadow()
+    end
+
     -- Timing
     function _canvas.get_delta()
       return __canvas_getDelta()

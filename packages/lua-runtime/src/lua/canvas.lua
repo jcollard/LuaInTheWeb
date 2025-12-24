@@ -348,6 +348,66 @@ function canvas.set_fill_style(style) end
 ---@usage canvas.stroke()
 function canvas.set_stroke_style(style) end
 
+-- Shadow API
+-- =============================================================================
+
+--- Set the shadow color.
+--- Affects all subsequent drawing operations until changed or cleared.
+---@param color string CSS color string (e.g., "#00000080", "rgba(0,0,0,0.5)")
+---@return nil
+---@usage canvas.set_shadow_color("#00000080")  -- Semi-transparent black
+---@usage canvas.set_shadow_color("rgba(0, 0, 0, 0.5)")
+function canvas.set_shadow_color(color) end
+
+--- Set the shadow blur radius.
+--- Higher values create softer, more diffuse shadows.
+---@param blur number Blur radius in pixels (0 = sharp shadow)
+---@return nil
+---@usage canvas.set_shadow_blur(10)  -- Soft shadow
+---@usage canvas.set_shadow_blur(0)   -- Sharp shadow
+function canvas.set_shadow_blur(blur) end
+
+--- Set the shadow horizontal offset.
+--- Positive values move shadow right, negative moves left.
+---@param offset number Horizontal offset in pixels
+---@return nil
+---@usage canvas.set_shadow_offset_x(5)   -- Shadow 5px to the right
+---@usage canvas.set_shadow_offset_x(-3)  -- Shadow 3px to the left
+function canvas.set_shadow_offset_x(offset) end
+
+--- Set the shadow vertical offset.
+--- Positive values move shadow down, negative moves up.
+---@param offset number Vertical offset in pixels
+---@return nil
+---@usage canvas.set_shadow_offset_y(5)   -- Shadow 5px down
+---@usage canvas.set_shadow_offset_y(-3)  -- Shadow 3px up
+function canvas.set_shadow_offset_y(offset) end
+
+--- Set all shadow properties at once.
+--- Convenience function to configure complete shadow effect.
+---@param color string CSS color string
+---@param blur? number Blur radius in pixels (default: 0)
+---@param offsetX? number Horizontal offset in pixels (default: 0)
+---@param offsetY? number Vertical offset in pixels (default: 0)
+---@return nil
+---@usage -- Drop shadow
+---@usage canvas.set_shadow("#00000080", 10, 5, 5)
+---@usage canvas.fill_rect(100, 100, 200, 100)
+---@usage
+---@usage -- Glow effect (no offset)
+---@usage canvas.set_shadow("#FFD700", 20, 0, 0)
+---@usage canvas.fill_circle(200, 200, 50)
+function canvas.set_shadow(color, blur, offsetX, offsetY) end
+
+--- Clear all shadow properties.
+--- Resets shadow to default (no shadow) for subsequent drawing.
+---@return nil
+---@usage canvas.set_shadow("#000000", 10, 5, 5)
+---@usage canvas.fill_rect(50, 50, 100, 100)  -- With shadow
+---@usage canvas.clear_shadow()
+---@usage canvas.fill_rect(200, 50, 100, 100) -- No shadow
+function canvas.clear_shadow() end
+
 -- =============================================================================
 -- Font Styling
 -- =============================================================================

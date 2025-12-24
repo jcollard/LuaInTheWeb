@@ -392,6 +392,34 @@ export function setupCanvasAPI(
     getController()?.setStrokeStyle(jsStyle)
   })
 
+  // --- Shadow API functions ---
+  engine.global.set('__canvas_setShadowColor', (color: string) => {
+    getController()?.setShadowColor(color)
+  })
+
+  engine.global.set('__canvas_setShadowBlur', (blur: number) => {
+    getController()?.setShadowBlur(blur)
+  })
+
+  engine.global.set('__canvas_setShadowOffsetX', (offset: number) => {
+    getController()?.setShadowOffsetX(offset)
+  })
+
+  engine.global.set('__canvas_setShadowOffsetY', (offset: number) => {
+    getController()?.setShadowOffsetY(offset)
+  })
+
+  engine.global.set(
+    '__canvas_setShadow',
+    (color: string, blur: number, offsetX: number, offsetY: number) => {
+      getController()?.setShadow(color, blur, offsetX, offsetY)
+    }
+  )
+
+  engine.global.set('__canvas_clearShadow', () => {
+    getController()?.clearShadow()
+  })
+
   // --- Set up Lua-side canvas table ---
   // Canvas is NOT a global - it must be accessed via require('canvas')
   engine.doStringSync(canvasLuaCode)
