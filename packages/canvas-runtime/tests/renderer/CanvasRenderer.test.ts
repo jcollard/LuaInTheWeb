@@ -13,6 +13,11 @@ function createMockGradient(): CanvasGradient {
   } as unknown as CanvasGradient;
 }
 
+// Mock CanvasPattern
+function createMockPattern(): CanvasPattern {
+  return {} as unknown as CanvasPattern;
+}
+
 // Mock CanvasRenderingContext2D
 function createMockContext(): CanvasRenderingContext2D {
   return {
@@ -57,6 +62,8 @@ function createMockContext(): CanvasRenderingContext2D {
     createLinearGradient: vi.fn(() => createMockGradient()),
     createRadialGradient: vi.fn(() => createMockGradient()),
     createConicGradient: vi.fn(() => createMockGradient()),
+    // Pattern methods
+    createPattern: vi.fn(() => createMockPattern()),
   } as unknown as CanvasRenderingContext2D;
 }
 
@@ -1531,6 +1538,195 @@ describe('CanvasRenderer', () => {
       expect(mockGradient.addColorStop).toHaveBeenCalledWith(0, 'blue');
       expect(mockGradient.addColorStop).toHaveBeenCalledWith(1, 'red');
       expect(mockCtx.strokeStyle).toBe(mockGradient);
+    });
+  });
+
+  // ============================================================================
+  // Pattern Commands
+  // ============================================================================
+
+  describe('pattern commands with setFillStyle', () => {
+    let imageCache: ImageCache;
+    let rendererWithCache: CanvasRenderer;
+    let mockImage: HTMLImageElement;
+
+    beforeEach(() => {
+      imageCache = new ImageCache();
+      mockImage = new Image();
+      mockImage.width = 32;
+      mockImage.height = 32;
+      imageCache.set('tiles', mockImage);
+      rendererWithCache = new CanvasRenderer(canvas, imageCache);
+    });
+
+    it('should create and set pattern as fillStyle with repeat', () => {
+      const mockPattern = createMockPattern();
+      (mockCtx.createPattern as ReturnType<typeof vi.fn>).mockReturnValue(mockPattern);
+
+      const commands: DrawCommand[] = [
+        {
+          type: 'setFillStyle',
+          style: {
+            type: 'pattern',
+            imageName: 'tiles',
+            repetition: 'repeat',
+          },
+        },
+      ];
+
+      rendererWithCache.render(commands);
+
+      expect(mockCtx.createPattern).toHaveBeenCalledWith(mockImage, 'repeat');
+      expect(mockCtx.fillStyle).toBe(mockPattern);
+    });
+
+    it('should create and set pattern as fillStyle with repeat-x', () => {
+      const mockPattern = createMockPattern();
+      (mockCtx.createPattern as ReturnType<typeof vi.fn>).mockReturnValue(mockPattern);
+
+      const commands: DrawCommand[] = [
+        {
+          type: 'setFillStyle',
+          style: {
+            type: 'pattern',
+            imageName: 'tiles',
+            repetition: 'repeat-x',
+          },
+        },
+      ];
+
+      rendererWithCache.render(commands);
+
+      expect(mockCtx.createPattern).toHaveBeenCalledWith(mockImage, 'repeat-x');
+      expect(mockCtx.fillStyle).toBe(mockPattern);
+    });
+
+    it('should create and set pattern as fillStyle with repeat-y', () => {
+      const mockPattern = createMockPattern();
+      (mockCtx.createPattern as ReturnType<typeof vi.fn>).mockReturnValue(mockPattern);
+
+      const commands: DrawCommand[] = [
+        {
+          type: 'setFillStyle',
+          style: {
+            type: 'pattern',
+            imageName: 'tiles',
+            repetition: 'repeat-y',
+          },
+        },
+      ];
+
+      rendererWithCache.render(commands);
+
+      expect(mockCtx.createPattern).toHaveBeenCalledWith(mockImage, 'repeat-y');
+      expect(mockCtx.fillStyle).toBe(mockPattern);
+    });
+
+    it('should create and set pattern as fillStyle with no-repeat', () => {
+      const mockPattern = createMockPattern();
+      (mockCtx.createPattern as ReturnType<typeof vi.fn>).mockReturnValue(mockPattern);
+
+      const commands: DrawCommand[] = [
+        {
+          type: 'setFillStyle',
+          style: {
+            type: 'pattern',
+            imageName: 'tiles',
+            repetition: 'no-repeat',
+          },
+        },
+      ];
+
+      rendererWithCache.render(commands);
+
+      expect(mockCtx.createPattern).toHaveBeenCalledWith(mockImage, 'no-repeat');
+      expect(mockCtx.fillStyle).toBe(mockPattern);
+    });
+
+    it('should silently skip if pattern image not in cache', () => {
+      const commands: DrawCommand[] = [
+        {
+          type: 'setFillStyle',
+          style: {
+            type: 'pattern',
+            imageName: 'nonexistent',
+            repetition: 'repeat',
+          },
+        },
+      ];
+
+      // Should not throw, just skip
+      expect(() => rendererWithCache.render(commands)).not.toThrow();
+      expect(mockCtx.createPattern).not.toHaveBeenCalled();
+    });
+
+    it('should handle pattern without image cache (backward compatibility)', () => {
+      const commands: DrawCommand[] = [
+        {
+          type: 'setFillStyle',
+          style: {
+            type: 'pattern',
+            imageName: 'tiles',
+            repetition: 'repeat',
+          },
+        },
+      ];
+
+      // Renderer without cache
+      expect(() => renderer.render(commands)).not.toThrow();
+      expect(mockCtx.createPattern).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('pattern commands with setStrokeStyle', () => {
+    let imageCache: ImageCache;
+    let rendererWithCache: CanvasRenderer;
+    let mockImage: HTMLImageElement;
+
+    beforeEach(() => {
+      imageCache = new ImageCache();
+      mockImage = new Image();
+      mockImage.width = 32;
+      mockImage.height = 32;
+      imageCache.set('border', mockImage);
+      rendererWithCache = new CanvasRenderer(canvas, imageCache);
+    });
+
+    it('should create and set pattern as strokeStyle', () => {
+      const mockPattern = createMockPattern();
+      (mockCtx.createPattern as ReturnType<typeof vi.fn>).mockReturnValue(mockPattern);
+
+      const commands: DrawCommand[] = [
+        {
+          type: 'setStrokeStyle',
+          style: {
+            type: 'pattern',
+            imageName: 'border',
+            repetition: 'repeat',
+          },
+        },
+      ];
+
+      rendererWithCache.render(commands);
+
+      expect(mockCtx.createPattern).toHaveBeenCalledWith(mockImage, 'repeat');
+      expect(mockCtx.strokeStyle).toBe(mockPattern);
+    });
+
+    it('should silently skip stroke pattern if image not in cache', () => {
+      const commands: DrawCommand[] = [
+        {
+          type: 'setStrokeStyle',
+          style: {
+            type: 'pattern',
+            imageName: 'missing',
+            repetition: 'repeat',
+          },
+        },
+      ];
+
+      expect(() => rendererWithCache.render(commands)).not.toThrow();
+      expect(mockCtx.createPattern).not.toHaveBeenCalled();
     });
   });
 });

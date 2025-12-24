@@ -570,9 +570,25 @@ export interface ConicGradientDef {
 export type GradientDef = LinearGradientDef | RadialGradientDef | ConicGradientDef;
 
 /**
- * Fill or stroke style - can be a CSS color string or gradient definition.
+ * Pattern repetition modes.
  */
-export type FillStyle = string | GradientDef;
+export type PatternRepetition = 'repeat' | 'repeat-x' | 'repeat-y' | 'no-repeat';
+
+/**
+ * Pattern definition for image-based fills.
+ */
+export interface PatternDef {
+  type: 'pattern';
+  /** Name of registered image asset */
+  imageName: string;
+  /** How the pattern tiles */
+  repetition: PatternRepetition;
+}
+
+/**
+ * Fill or stroke style - can be a CSS color string, gradient, or pattern.
+ */
+export type FillStyle = string | GradientDef | PatternDef;
 
 /**
  * Set the fill style (color or gradient).

@@ -536,6 +536,43 @@ end)
 canvas.start()
 ```
 
+## Patterns
+
+Patterns allow you to fill shapes with repeating images. Create a pattern from a registered image asset, then use it with `set_fill_style()` or `set_stroke_style()`.
+
+### canvas.create_pattern(imageName, repetition)
+
+Create a pattern from a registered image for textured fills and strokes.
+
+**Parameters:**
+- `imageName` (string): Name of image registered via `canvas.assets.image()`
+- `repetition` (string, optional): How the pattern tiles. Defaults to "repeat"
+
+**Repetition modes:**
+- `"repeat"` - Tile in both directions (default)
+- `"repeat-x"` - Tile horizontally only
+- `"repeat-y"` - Tile vertically only
+- `"no-repeat"` - No tiling, single image
+
+**Returns:**
+- (Pattern): A pattern object for use with `set_fill_style()` or `set_stroke_style()`
+
+**Example:**
+```lua
+-- Register an image asset
+canvas.assets.image("tiles", "canvas/images/meteor.png")
+
+-- Create a repeating pattern
+local pattern = canvas.create_pattern("tiles", "repeat")
+canvas.set_fill_style(pattern)
+canvas.fill_rect(0, 0, 400, 300)
+
+-- Horizontal repeat only
+local stripes = canvas.create_pattern("tiles", "repeat-x")
+canvas.set_fill_style(stripes)
+canvas.fill_rect(0, 0, 400, 100)
+```
+
 ## Drawing Functions
 
 ### canvas.draw_rect(x, y, width, height)

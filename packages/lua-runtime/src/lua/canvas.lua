@@ -268,11 +268,45 @@ function canvas.create_radial_gradient(x0, y0, r0, x1, y1, r1) end
 ---@usage canvas.fill_circle(200, 200, 80)
 function canvas.create_conic_gradient(startAngle, x, y) end
 
---- Set the fill style (color or gradient).
+-- =============================================================================
+-- Pattern API
+-- =============================================================================
+
+--- Pattern repetition modes.
+---@alias PatternRepetition "repeat"|"repeat-x"|"repeat-y"|"no-repeat"
+
+--- Pattern object for image-based fills.
+--- Create with create_pattern() using a registered image asset.
+---@class Pattern
+---@field type string Pattern type: "pattern"
+---@field imageName string Name of the registered image asset
+---@field repetition PatternRepetition How the pattern tiles
+
+--- Create a pattern from a registered image for textured fills and strokes.
+--- Patterns repeat an image to fill shapes, similar to CSS background patterns.
+--- The image must first be registered via canvas.assets.image().
+---@param imageName string Name of image registered via canvas.assets.image()
+---@param repetition? PatternRepetition How the pattern tiles (default: "repeat")
+---@return Pattern pattern Pattern object for use with set_fill_style/set_stroke_style
+---@usage -- Register an image asset
+---@usage canvas.assets.image("tiles", "canvas/images/meteor.png")
+---@usage
+---@usage -- Create a repeating pattern
+---@usage local pattern = canvas.create_pattern("tiles", "repeat")
+---@usage canvas.set_fill_style(pattern)
+---@usage canvas.fill_rect(0, 0, 400, 300)
+---@usage
+---@usage -- Horizontal repeat only
+---@usage local stripes = canvas.create_pattern("tiles", "repeat-x")
+---@usage canvas.set_fill_style(stripes)
+---@usage canvas.fill_rect(0, 0, 400, 100)
+function canvas.create_pattern(imageName, repetition) end
+
+--- Set the fill style (color, gradient, or pattern).
 --- Affects all subsequent fill operations (fill_rect, fill_circle, fill).
---- Can be a CSS color string or a gradient created with create_linear_gradient,
---- create_radial_gradient, or create_conic_gradient.
----@param style string|Gradient CSS color string or gradient object
+--- Can be a CSS color string, a gradient created with create_*_gradient,
+--- or a pattern created with create_pattern.
+---@param style string|Gradient|Pattern CSS color string, gradient, or pattern object
 ---@return nil
 ---@usage -- Simple color
 ---@usage canvas.set_fill_style("#FF0000")
@@ -287,11 +321,11 @@ function canvas.create_conic_gradient(startAngle, x, y) end
 ---@usage canvas.fill_rect(0, 0, 200, 100)
 function canvas.set_fill_style(style) end
 
---- Set the stroke style (color or gradient).
+--- Set the stroke style (color, gradient, or pattern).
 --- Affects all subsequent stroke operations (stroke, draw_rect, draw_circle, draw_line).
---- Can be a CSS color string or a gradient created with create_linear_gradient,
---- create_radial_gradient, or create_conic_gradient.
----@param style string|Gradient CSS color string or gradient object
+--- Can be a CSS color string, a gradient created with create_*_gradient,
+--- or a pattern created with create_pattern.
+---@param style string|Gradient|Pattern CSS color string, gradient, or pattern object
 ---@return nil
 ---@usage -- Simple color
 ---@usage canvas.set_stroke_style("#00FF00")

@@ -319,12 +319,21 @@ export function setupCanvasAPI(
       return style
     }
 
-    // Gradient table: convert from Lua proxy to JS object
+    // Gradient/Pattern table: convert from Lua proxy to JS object
     if (style && typeof style === 'object') {
       const luaTable = style as Record<string, unknown>
-      const type = luaTable.type as 'linear' | 'radial' | 'conic'
+      const type = luaTable.type as 'linear' | 'radial' | 'conic' | 'pattern'
 
-      // Convert stops array from Lua table proxy
+      // Handle pattern type (no stops array)
+      if (type === 'pattern') {
+        return {
+          type: 'pattern',
+          imageName: String(luaTable.imageName),
+          repetition: String(luaTable.repetition) as import('@lua-learning/canvas-runtime').PatternRepetition,
+        }
+      }
+
+      // Convert stops array from Lua table proxy (for gradients)
       const luaStops = luaTable.stops as Record<number, { offset: number; color: string }> | undefined
       const stops: Array<{ offset: number; color: string }> = []
       if (luaStops) {

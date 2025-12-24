@@ -360,6 +360,15 @@ export const canvasLuaCode = `
       }, GradientMT)
     end
 
+    function _canvas.create_pattern(imageName, repetition)
+      repetition = repetition or "repeat"
+      return {
+        type = "pattern",
+        imageName = imageName,
+        repetition = repetition
+      }
+    end
+
     function _canvas.set_fill_style(style)
       __canvas_setFillStyle(style)
     end

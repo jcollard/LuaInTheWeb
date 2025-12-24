@@ -23,7 +23,12 @@ export type {
   GradientColorStop,
   LinearGradientDef,
   RadialGradientDef,
+  ConicGradientDef,
   GradientDef,
+  // Pattern types
+  PatternRepetition,
+  PatternDef,
+  // Style type
   FillStyle,
 } from './shared/index.js';
 

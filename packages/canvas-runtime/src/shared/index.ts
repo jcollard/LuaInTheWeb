@@ -23,6 +23,10 @@ export type {
   RadialGradientDef,
   ConicGradientDef,
   GradientDef,
+  // Pattern types
+  PatternRepetition,
+  PatternDef,
+  // Style type
   FillStyle,
 } from './types.js';
 

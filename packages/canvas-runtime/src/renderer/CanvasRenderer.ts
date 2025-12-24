@@ -1,4 +1,4 @@
-import type { DrawCommand, GradientDef, FillStyle } from '../shared/types.js';
+import type { DrawCommand, GradientDef, PatternDef, FillStyle } from '../shared/types.js';
 import type { ImageCache } from './ImageCache.js';
 
 /**
@@ -329,22 +329,38 @@ export class CanvasRenderer {
   }
 
   /**
+   * Create a CanvasPattern from a pattern definition.
+   */
+  private createPattern(def: PatternDef): CanvasPattern | null {
+    const image = this.imageCache?.get(def.imageName);
+    if (!image) {
+      return null;
+    }
+    return this.ctx.createPattern(image, def.repetition);
+  }
+
+  /**
    * Apply a fill or stroke style to the context.
    */
   private applyStyle(style: FillStyle, target: 'fill' | 'stroke'): void {
+    let canvasStyle: string | CanvasGradient | CanvasPattern;
+
     if (typeof style === 'string') {
-      if (target === 'fill') {
-        this.ctx.fillStyle = style;
-      } else {
-        this.ctx.strokeStyle = style;
+      canvasStyle = style;
+    } else if (style.type === 'pattern') {
+      const pattern = this.createPattern(style);
+      if (!pattern) {
+        return; // Image not found - fail silently
       }
+      canvasStyle = pattern;
     } else {
-      const gradient = this.createGradient(style);
-      if (target === 'fill') {
-        this.ctx.fillStyle = gradient;
-      } else {
-        this.ctx.strokeStyle = gradient;
-      }
+      canvasStyle = this.createGradient(style);
+    }
+
+    if (target === 'fill') {
+      this.ctx.fillStyle = canvasStyle;
+    } else {
+      this.ctx.strokeStyle = canvasStyle;
     }
   }
 }
