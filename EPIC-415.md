@@ -1,6 +1,6 @@
 # Epic #415: Epic: Complete Canvas 2D API Implementation
 
-**Status:** In Progress (7/17 complete)
+**Status:** In Progress (8/17 complete)
 **Branch:** epic-415
 **Created:** 2025-12-22
 **Last Updated:** 2025-12-23
@@ -42,7 +42,7 @@ Key considerations:
 | #419 | Implement ellipse() and roundRect() | ✅ Complete | 419-ellipse-roundrect | - |
 | #420 | Implement clipping (clip) | ✅ Complete | 420-clipping | Merged PR #440 |
 | #421 | Implement line styles (lineCap, lineJoin, miterLimit) | ✅ Complete | 421-line-styles | Merged PR #441 |
-| #422 | Implement dashed lines (setLineDash, getLineDash, lineDashOffset) | ⏳ Pending | - | - |
+| #422 | Implement dashed lines (setLineDash, getLineDash, lineDashOffset) | ✅ Complete | 422-dashed-lines | Merged PR #442 |
 | #424 | Implement linear and radial gradients | ⏳ Pending | - | - |
 | #425 | Implement conic gradients | ⏳ Pending | - | - |
 | #426 | Implement patterns (createPattern) | ⏳ Pending | - | - |
@@ -104,6 +104,12 @@ Key considerations:
   - Created 1 example: line-styles.lua
   - Updated docs/canvas.md and canvas.lua LuaDoc
   - PR #441 merged to epic-415
+- #422 Dashed lines complete
+  - Added 3 functions: set_line_dash, get_line_dash, set_line_dash_offset
+  - Mutation scores: CanvasRenderer 81.67%, CanvasController 86.61%
+  - Created 1 example: dashed-lines.lua with marching ants animation
+  - Updated docs/canvas.md and canvas.lua LuaDoc
+  - PR #442 merged to epic-415
 
 ## Key Files
 
