@@ -809,6 +809,7 @@ Draw text within a bounded rectangle with automatic alignment, overflow handling
 | `padding` | `{left, top, right, bottom}` | all 0 | Internal padding from edges |
 | `wrap` | boolean | false | Enable word wrapping for multi-line text |
 | `line_height` | number | 1.2 | Line height multiplier for wrapped text |
+| `char_count` | number | nil | Number of characters to show (for typewriter effects) |
 
 **Example:**
 ```lua
@@ -836,12 +837,11 @@ canvas.draw_label(100, 300, 200, 80, "This is a longer paragraph that will autom
     padding = {left = 10, right = 10}
 })
 
--- Full options example
-canvas.draw_label(100, 400, 200, 40, "Padded Label", {
-    align_h = "left",
-    align_v = "middle",
-    overflow = "ellipsis",
-    padding = {left = 10, top = 5, right = 10, bottom = 5}
+-- Typewriter effect (text appears over time)
+local chars = math.floor(canvas.get_time() * 15)
+canvas.draw_label(100, 400, 300, 80, "Hello, welcome to the game!", {
+    wrap = true,
+    char_count = chars
 })
 ```
 

@@ -10,7 +10,7 @@ local GUIDE_COLOR = "#FF6B6B"
 local ACCENT_COLOR = "#4ECDC4"
 local BOX_COLOR = "#2d2d44"
 
-canvas.set_size(600, 520)
+canvas.set_size(600, 580)
 
 canvas.tick(function()
     canvas.clear()
@@ -176,7 +176,7 @@ canvas.tick(function()
     -- =========================================================================
     -- Section 5: draw_label() - Word Wrapping
     -- =========================================================================
-    local section5Y = 275
+    local section5Y = 270
     canvas.set_font_size(12)
     canvas.set_fill_style(TEXT_COLOR)
     canvas.set_text_align("left")
@@ -185,9 +185,9 @@ canvas.tick(function()
 
     local wrapText = "This text will wrap to multiple lines within the box"
     local wrapBoxes = {
-        {x = 20, y = section5Y + 20, w = 130, h = 70, align_h = "left", label = "Left"},
-        {x = 170, y = section5Y + 20, w = 130, h = 70, align_h = "center", label = "Center"},
-        {x = 320, y = section5Y + 20, w = 130, h = 70, align_h = "right", label = "Right"},
+        {x = 20, y = section5Y + 20, w = 130, h = 60, align_h = "left", label = "Left"},
+        {x = 170, y = section5Y + 20, w = 130, h = 60, align_h = "center", label = "Center"},
+        {x = 320, y = section5Y + 20, w = 130, h = 60, align_h = "right", label = "Right"},
     }
 
     for _, box in ipairs(wrapBoxes) do
@@ -220,20 +220,62 @@ canvas.tick(function()
     end
 
     -- =========================================================================
-    -- Section 6: Practical UI Buttons
+    -- Section 6: Typewriter Effect (char_count)
     -- =========================================================================
-    local section6Y = 380
+    local section6Y = 365
     canvas.set_font_size(12)
     canvas.set_fill_style(TEXT_COLOR)
     canvas.set_text_align("left")
     canvas.set_text_baseline("top")
-    canvas.draw_text(20, section6Y, "6. Practical: UI Buttons")
+    canvas.draw_text(20, section6Y, "6. draw_label() - Typewriter Effect (char_count)")
+
+    local typewriterText = "Hello! This text appears one character at a time, creating a typewriter effect perfect for dialogue in games."
+    local chars_to_show = math.floor(canvas.get_time() * 12) % (#typewriterText + 30)
+
+    -- Typewriter box
+    canvas.set_fill_style(BOX_COLOR)
+    canvas.fill_rect(20, section6Y + 20, 400, 50)
+    canvas.set_stroke_style(ACCENT_COLOR)
+    canvas.set_line_width(1)
+    canvas.begin_path()
+    canvas.move_to(20, section6Y + 20)
+    canvas.line_to(420, section6Y + 20)
+    canvas.line_to(420, section6Y + 70)
+    canvas.line_to(20, section6Y + 70)
+    canvas.close_path()
+    canvas.stroke()
+
+    canvas.set_fill_style(TEXT_COLOR)
+    canvas.set_font_size(11)
+    canvas.draw_label(20, section6Y + 20, 400, 50, typewriterText, {
+        wrap = true,
+        align_h = "left",
+        char_count = chars_to_show,
+        padding = {left = 10, right = 10, top = 5, bottom = 5}
+    })
+
+    -- Character counter
+    canvas.set_fill_style("#888888")
+    canvas.set_font_size(9)
+    canvas.set_text_align("left")
+    canvas.set_text_baseline("top")
+    canvas.draw_text(430, section6Y + 40, "chars: " .. math.min(chars_to_show, #typewriterText) .. "/" .. #typewriterText)
+
+    -- =========================================================================
+    -- Section 7: Practical UI Buttons
+    -- =========================================================================
+    local section7Y = 445
+    canvas.set_font_size(12)
+    canvas.set_fill_style(TEXT_COLOR)
+    canvas.set_text_align("left")
+    canvas.set_text_baseline("top")
+    canvas.draw_text(20, section7Y, "7. Practical: UI Buttons")
 
     local buttons = {
-        {x = 20, y = section6Y + 20, w = 100, h = 40, text = "Play", color = "#4CAF50"},
-        {x = 130, y = section6Y + 20, w = 100, h = 40, text = "Settings", color = "#2196F3"},
-        {x = 240, y = section6Y + 20, w = 100, h = 40, text = "Exit", color = "#f44336"},
-        {x = 350, y = section6Y + 20, w = 140, h = 40, text = "Very Long Button Text", color = "#9C27B0"},
+        {x = 20, y = section7Y + 20, w = 100, h = 40, text = "Play", color = "#4CAF50"},
+        {x = 130, y = section7Y + 20, w = 100, h = 40, text = "Settings", color = "#2196F3"},
+        {x = 240, y = section7Y + 20, w = 100, h = 40, text = "Exit", color = "#f44336"},
+        {x = 350, y = section7Y + 20, w = 140, h = 40, text = "Very Long Button Text", color = "#9C27B0"},
     }
 
     for _, btn in ipairs(buttons) do

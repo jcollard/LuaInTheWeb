@@ -493,6 +493,7 @@ function canvas.set_text_baseline(baseline) end
 ---@field padding? table Padding: {left=0, top=0, right=0, bottom=0}
 ---@field wrap? boolean Enable word wrapping (default: false)
 ---@field line_height? number Line height multiplier (default: 1.2)
+---@field char_count? number Number of characters to show (for typewriter effects)
 
 --- Draw text within a bounded rectangle with alignment, overflow handling, and word wrapping.
 --- This is a convenience function that combines clipping, alignment, text truncation, and multi-line text.
@@ -522,6 +523,13 @@ function canvas.set_text_baseline(baseline) end
 ---@usage     wrap = true,
 ---@usage     align_h = "left",
 ---@usage     padding = {left = 10, right = 10}
+---@usage })
+---@usage
+---@usage -- Typewriter effect (text appears over time)
+---@usage local chars = math.floor(canvas.get_time() * 15)
+---@usage canvas.draw_label(100, 100, 300, 100, "Hello, welcome to the game!", {
+---@usage     wrap = true,
+---@usage     char_count = chars
 ---@usage })
 function canvas.draw_label(x, y, width, height, text, options) end
 

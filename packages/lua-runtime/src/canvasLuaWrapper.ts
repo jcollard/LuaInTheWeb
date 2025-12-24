@@ -431,6 +431,7 @@ export const canvasLuaCode = `
       local padding = options.padding or {}
       local wrap = options.wrap or false
       local line_height = options.line_height or 1.2
+      local char_count = options.char_count  -- nil means show all
 
       -- Normalize padding to {left, top, right, bottom}
       local pad_left = padding.left or 0
@@ -484,7 +485,7 @@ export const canvasLuaCode = `
       local font_size = __current_font_size or 16
       local actual_line_height = font_size * line_height
 
-      -- Word wrap logic
+      -- Word wrap logic (always wrap based on full text for stable layout)
       local lines = {}
       if wrap and inner_w > 0 then
         -- Split text into words
@@ -551,11 +552,22 @@ export const canvasLuaCode = `
         start_y = inner_y + (inner_h - total_height) / 2 + actual_line_height / 2
       end
 
-      -- Draw each line
+      -- Draw each line, applying char_count limit if specified
       _canvas.set_text_baseline("middle")
+      local chars_remaining = char_count  -- nil means unlimited
       for i, line in ipairs(lines) do
         local line_y = start_y + (i - 1) * actual_line_height
-        _canvas.draw_text(text_x, line_y, line)
+
+        if chars_remaining == nil then
+          -- No limit, draw full line
+          _canvas.draw_text(text_x, line_y, line)
+        elseif chars_remaining > 0 then
+          -- Apply character limit
+          local line_to_draw = line:sub(1, chars_remaining)
+          _canvas.draw_text(text_x, line_y, line_to_draw)
+          chars_remaining = chars_remaining - #line - 1  -- -1 for space between lines
+        end
+        -- If chars_remaining <= 0, skip drawing this line
       end
 
       -- Restore state

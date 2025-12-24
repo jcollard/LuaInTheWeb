@@ -322,9 +322,7 @@ export class CanvasRenderer {
     fontSize?: number,
     fontFamily?: string
   ): void {
-    // Set textBaseline to top for top-left positioning
-    this.ctx.textBaseline = 'top';
-
+    // Note: textBaseline is set via setTextBaseline command (default 'top' in constructor)
     // Apply font overrides if provided
     if (fontSize !== undefined || fontFamily !== undefined) {
       const savedFont = this.ctx.font;
