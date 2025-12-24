@@ -1,6 +1,6 @@
 # Epic #415: Epic: Complete Canvas 2D API Implementation
 
-**Status:** In Progress (6/17 complete)
+**Status:** In Progress (7/17 complete)
 **Branch:** epic-415
 **Created:** 2025-12-22
 **Last Updated:** 2025-12-23
@@ -41,7 +41,7 @@ Key considerations:
 | #418 | Implement Bezier curves (bezierCurveTo, quadraticCurveTo) | ✅ Complete | epic-415 | Direct commit to epic branch |
 | #419 | Implement ellipse() and roundRect() | ✅ Complete | 419-ellipse-roundrect | - |
 | #420 | Implement clipping (clip) | ✅ Complete | 420-clipping | Merged PR #440 |
-| #421 | Implement line styles (lineCap, lineJoin, miterLimit) | ⏳ Pending | - | - |
+| #421 | Implement line styles (lineCap, lineJoin, miterLimit) | ✅ Complete | 421-line-styles | Merged PR #441 |
 | #422 | Implement dashed lines (setLineDash, getLineDash, lineDashOffset) | ⏳ Pending | - | - |
 | #424 | Implement linear and radial gradients | ⏳ Pending | - | - |
 | #425 | Implement conic gradients | ⏳ Pending | - | - |
@@ -98,6 +98,12 @@ Key considerations:
   - Mutation score: CanvasRenderer 80.7%
   - Created 1 example: clipping-demo.lua
   - PR #440 merged to epic-415
+- #421 Line styles complete
+  - Added 3 line style commands: set_line_cap, set_line_join, set_miter_limit
+  - Mutation score: CanvasRenderer 81.67%
+  - Created 1 example: line-styles.lua
+  - Updated docs/canvas.md and canvas.lua LuaDoc
+  - PR #441 merged to epic-415
 
 ## Key Files
 
