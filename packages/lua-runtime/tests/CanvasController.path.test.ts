@@ -874,4 +874,145 @@ describe('CanvasController Path API', () => {
       })
     })
   })
+
+  describe('setFillStyle', () => {
+    it('should add setFillStyle command with string color', () => {
+      controller.setFillStyle('#ff0000')
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setFillStyle',
+        style: '#ff0000',
+      })
+    })
+
+    it('should add setFillStyle command with named color', () => {
+      controller.setFillStyle('blue')
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setFillStyle',
+        style: 'blue',
+      })
+    })
+
+    it('should add setFillStyle command with linear gradient', () => {
+      const gradient = {
+        type: 'linear' as const,
+        x0: 0,
+        y0: 0,
+        x1: 100,
+        y1: 0,
+        stops: [
+          { offset: 0, color: '#ff0000' },
+          { offset: 1, color: '#0000ff' },
+        ],
+      }
+      controller.setFillStyle(gradient)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setFillStyle',
+        style: gradient,
+      })
+    })
+
+    it('should add setFillStyle command with radial gradient', () => {
+      const gradient = {
+        type: 'radial' as const,
+        x0: 100,
+        y0: 100,
+        r0: 0,
+        x1: 100,
+        y1: 100,
+        r1: 50,
+        stops: [
+          { offset: 0, color: 'white' },
+          { offset: 1, color: 'black' },
+        ],
+      }
+      controller.setFillStyle(gradient)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setFillStyle',
+        style: gradient,
+      })
+    })
+  })
+
+  describe('setStrokeStyle', () => {
+    it('should add setStrokeStyle command with string color', () => {
+      controller.setStrokeStyle('#00ff00')
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setStrokeStyle',
+        style: '#00ff00',
+      })
+    })
+
+    it('should add setStrokeStyle command with named color', () => {
+      controller.setStrokeStyle('red')
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setStrokeStyle',
+        style: 'red',
+      })
+    })
+
+    it('should add setStrokeStyle command with linear gradient', () => {
+      const gradient = {
+        type: 'linear' as const,
+        x0: 0,
+        y0: 0,
+        x1: 200,
+        y1: 0,
+        stops: [
+          { offset: 0, color: 'red' },
+          { offset: 0.5, color: 'yellow' },
+          { offset: 1, color: 'green' },
+        ],
+      }
+      controller.setStrokeStyle(gradient)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setStrokeStyle',
+        style: gradient,
+      })
+    })
+
+    it('should add setStrokeStyle command with radial gradient', () => {
+      const gradient = {
+        type: 'radial' as const,
+        x0: 50,
+        y0: 50,
+        r0: 10,
+        x1: 50,
+        y1: 50,
+        r1: 100,
+        stops: [
+          { offset: 0, color: '#ffffff' },
+          { offset: 1, color: '#000000' },
+        ],
+      }
+      controller.setStrokeStyle(gradient)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'setStrokeStyle',
+        style: gradient,
+      })
+    })
+  })
 })

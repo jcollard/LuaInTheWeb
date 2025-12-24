@@ -19,6 +19,12 @@ export type {
   AssetDefinition,
   AssetManifest,
   LoadedAsset,
+  // Gradient types
+  GradientColorStop,
+  LinearGradientDef,
+  RadialGradientDef,
+  GradientDef,
+  FillStyle,
 } from './shared/index.js';
 
 export {

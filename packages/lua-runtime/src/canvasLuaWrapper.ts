@@ -323,6 +323,42 @@ export const canvasLuaCode = `
       __canvas_setLineDashOffset(offset)
     end
 
+    -- Gradient API
+    -- Metatable for gradient objects with add_color_stop method
+    local GradientMT = {
+      __index = {
+        add_color_stop = function(self, offset, color)
+          table.insert(self.stops, {offset = offset, color = color})
+          return self  -- Enable method chaining
+        end
+      }
+    }
+
+    function _canvas.create_linear_gradient(x0, y0, x1, y1)
+      return setmetatable({
+        type = "linear",
+        x0 = x0, y0 = y0, x1 = x1, y1 = y1,
+        stops = {}
+      }, GradientMT)
+    end
+
+    function _canvas.create_radial_gradient(x0, y0, r0, x1, y1, r1)
+      return setmetatable({
+        type = "radial",
+        x0 = x0, y0 = y0, r0 = r0,
+        x1 = x1, y1 = y1, r1 = r1,
+        stops = {}
+      }, GradientMT)
+    end
+
+    function _canvas.set_fill_style(style)
+      __canvas_setFillStyle(style)
+    end
+
+    function _canvas.set_stroke_style(style)
+      __canvas_setStrokeStyle(style)
+    end
+
     -- Timing
     function _canvas.get_delta()
       return __canvas_getDelta()

@@ -308,6 +308,73 @@ export function setupCanvasAPI(
     getController()?.setLineDashOffset(offset)
   })
 
+  // --- Fill/Stroke Style API functions ---
+  /**
+   * Convert a Lua style value (string or gradient table) to a JavaScript FillStyle.
+   * Gradient tables have: type, x0, y0, x1, y1, r0?, r1?, stops[]
+   */
+  const convertLuaStyleToJS = (style: unknown): import('@lua-learning/canvas-runtime').FillStyle => {
+    // String colors pass through directly
+    if (typeof style === 'string') {
+      return style
+    }
+
+    // Gradient table: convert from Lua proxy to JS object
+    if (style && typeof style === 'object') {
+      const luaTable = style as Record<string, unknown>
+      const type = luaTable.type as 'linear' | 'radial'
+
+      // Convert stops array from Lua table proxy
+      const luaStops = luaTable.stops as Record<number, { offset: number; color: string }> | undefined
+      const stops: Array<{ offset: number; color: string }> = []
+      if (luaStops) {
+        // Lua arrays are 1-indexed; iterate using length
+        const len = (luaStops as { length?: number }).length ?? 0
+        for (let i = 1; i <= len; i++) {
+          const stop = luaStops[i]
+          if (stop) {
+            stops.push({ offset: stop.offset, color: stop.color })
+          }
+        }
+      }
+
+      if (type === 'linear') {
+        return {
+          type: 'linear',
+          x0: luaTable.x0 as number,
+          y0: luaTable.y0 as number,
+          x1: luaTable.x1 as number,
+          y1: luaTable.y1 as number,
+          stops,
+        }
+      } else if (type === 'radial') {
+        return {
+          type: 'radial',
+          x0: luaTable.x0 as number,
+          y0: luaTable.y0 as number,
+          r0: luaTable.r0 as number,
+          x1: luaTable.x1 as number,
+          y1: luaTable.y1 as number,
+          r1: luaTable.r1 as number,
+          stops,
+        }
+      }
+    }
+
+    // Fallback: treat as string
+    return String(style)
+  }
+
+  engine.global.set('__canvas_setFillStyle', (style: unknown) => {
+    const jsStyle = convertLuaStyleToJS(style)
+    getController()?.setFillStyle(jsStyle)
+  })
+
+  engine.global.set('__canvas_setStrokeStyle', (style: unknown) => {
+    const jsStyle = convertLuaStyleToJS(style)
+    getController()?.setStrokeStyle(jsStyle)
+  })
+
   // --- Set up Lua-side canvas table ---
   // Canvas is NOT a global - it must be accessed via require('canvas')
   engine.doStringSync(canvasLuaCode)

@@ -17,6 +17,12 @@ export type {
   TimingInfo,
   AssetDefinition,
   AssetManifest,
+  // Gradient types
+  GradientColorStop,
+  LinearGradientDef,
+  RadialGradientDef,
+  GradientDef,
+  FillStyle,
 } from './types.js';
 
 export {

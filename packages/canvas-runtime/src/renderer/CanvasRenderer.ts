@@ -1,4 +1,4 @@
-import type { DrawCommand } from '../shared/types.js';
+import type { DrawCommand, GradientDef, FillStyle } from '../shared/types.js';
 import type { ImageCache } from './ImageCache.js';
 
 /**
@@ -220,6 +220,14 @@ export class CanvasRenderer {
         this.ctx.lineDashOffset = command.offset;
         break;
 
+      case 'setFillStyle':
+        this.applyStyle(command.style, 'fill');
+        break;
+
+      case 'setStrokeStyle':
+        this.applyStyle(command.style, 'stroke');
+        break;
+
       default:
         // Ignore unknown commands for forward compatibility
         break;
@@ -298,6 +306,42 @@ export class CanvasRenderer {
       this.ctx.drawImage(image, x, y, width, height);
     } else {
       this.ctx.drawImage(image, x, y);
+    }
+  }
+
+  /**
+   * Create a CanvasGradient from a gradient definition.
+   */
+  private createGradient(def: GradientDef): CanvasGradient {
+    let gradient: CanvasGradient;
+    if (def.type === 'linear') {
+      gradient = this.ctx.createLinearGradient(def.x0, def.y0, def.x1, def.y1);
+    } else {
+      gradient = this.ctx.createRadialGradient(def.x0, def.y0, def.r0, def.x1, def.y1, def.r1);
+    }
+    for (const stop of def.stops) {
+      gradient.addColorStop(stop.offset, stop.color);
+    }
+    return gradient;
+  }
+
+  /**
+   * Apply a fill or stroke style to the context.
+   */
+  private applyStyle(style: FillStyle, target: 'fill' | 'stroke'): void {
+    if (typeof style === 'string') {
+      if (target === 'fill') {
+        this.ctx.fillStyle = style;
+      } else {
+        this.ctx.strokeStyle = style;
+      }
+    } else {
+      const gradient = this.createGradient(style);
+      if (target === 'fill') {
+        this.ctx.fillStyle = gradient;
+      } else {
+        this.ctx.strokeStyle = gradient;
+      }
     }
   }
 }
