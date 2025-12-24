@@ -592,6 +592,33 @@ export class CanvasController {
     this.addDrawCommand({ type: 'clip', fillRule })
   }
 
+  // --- Line Style API ---
+
+  /**
+   * Set the line cap style for stroke endpoints.
+   * @param cap - Line cap style: "butt" (default), "round", or "square"
+   */
+  setLineCap(cap: 'butt' | 'round' | 'square'): void {
+    this.addDrawCommand({ type: 'setLineCap', cap })
+  }
+
+  /**
+   * Set the line join style for stroke corners.
+   * @param join - Line join style: "miter" (default), "round", or "bevel"
+   */
+  setLineJoin(join: 'miter' | 'round' | 'bevel'): void {
+    this.addDrawCommand({ type: 'setLineJoin', join })
+  }
+
+  /**
+   * Set the miter limit for sharp corners.
+   * Only applies when lineJoin is "miter".
+   * @param limit - Miter limit value (default: 10)
+   */
+  setMiterLimit(limit: number): void {
+    this.addDrawCommand({ type: 'setMiterLimit', limit })
+  }
+
   // --- Timing API ---
 
   /**

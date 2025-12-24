@@ -35,7 +35,10 @@ export type DrawCommandType =
   | 'bezierCurveTo'
   | 'ellipse'
   | 'roundRect'
-  | 'clip';
+  | 'clip'
+  | 'setLineCap'
+  | 'setLineJoin'
+  | 'setMiterLimit';
 
 /**
  * Base interface for all draw commands.
@@ -439,6 +442,38 @@ export interface ClipCommand extends DrawCommandBase {
   fillRule?: 'nonzero' | 'evenodd';
 }
 
+// ============================================================================
+// Line Style Commands
+// ============================================================================
+
+/**
+ * Set the line cap style for stroke endpoints.
+ */
+export interface SetLineCapCommand extends DrawCommandBase {
+  type: 'setLineCap';
+  /** Line cap style: "butt" (default), "round", or "square" */
+  cap: 'butt' | 'round' | 'square';
+}
+
+/**
+ * Set the line join style for stroke corners.
+ */
+export interface SetLineJoinCommand extends DrawCommandBase {
+  type: 'setLineJoin';
+  /** Line join style: "miter" (default), "round", or "bevel" */
+  join: 'miter' | 'round' | 'bevel';
+}
+
+/**
+ * Set the miter limit for sharp corners.
+ * Only applies when lineJoin is "miter".
+ */
+export interface SetMiterLimitCommand extends DrawCommandBase {
+  type: 'setMiterLimit';
+  /** Miter limit value (default: 10) */
+  limit: number;
+}
+
 /**
  * Union type of all draw commands.
  */
@@ -476,7 +511,10 @@ export type DrawCommand =
   | BezierCurveToCommand
   | EllipseCommand
   | RoundRectCommand
-  | ClipCommand;
+  | ClipCommand
+  | SetLineCapCommand
+  | SetLineJoinCommand
+  | SetMiterLimitCommand;
 
 /**
  * Mouse button identifiers.

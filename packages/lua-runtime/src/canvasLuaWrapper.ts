@@ -288,6 +288,19 @@ export const canvasLuaCode = `
       __canvas_clip(fillRule)
     end
 
+    -- Line Style API
+    function _canvas.set_line_cap(cap)
+      __canvas_setLineCap(cap)
+    end
+
+    function _canvas.set_line_join(join)
+      __canvas_setLineJoin(join)
+    end
+
+    function _canvas.set_miter_limit(limit)
+      __canvas_setMiterLimit(limit)
+    end
+
     -- Timing
     function _canvas.get_delta()
       return __canvas_getDelta()

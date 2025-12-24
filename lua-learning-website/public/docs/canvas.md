@@ -141,6 +141,102 @@ canvas.set_line_width(3)
 canvas.draw_rect(10, 10, 100, 100)  -- 3px thick outline
 ```
 
+## Line Styles
+
+Control how line endpoints and corners are rendered.
+
+### canvas.set_line_cap(cap)
+
+Set the line cap style for stroke endpoints.
+
+**Parameters:**
+- `cap` (string): Line cap style
+  - `"butt"` (default): Flat end at the endpoint
+  - `"round"`: Rounded end extending past endpoint
+  - `"square"`: Square end extending past endpoint
+
+```lua
+canvas.set_line_width(15)
+
+-- Butt cap: flat end exactly at the endpoint
+canvas.set_line_cap("butt")
+canvas.draw_line(50, 50, 200, 50)
+
+-- Round cap: semicircle extending past endpoint
+canvas.set_line_cap("round")
+canvas.draw_line(50, 100, 200, 100)
+
+-- Square cap: square extending past endpoint
+canvas.set_line_cap("square")
+canvas.draw_line(50, 150, 200, 150)
+```
+
+### canvas.set_line_join(join)
+
+Set the line join style for stroke corners.
+
+**Parameters:**
+- `join` (string): Line join style
+  - `"miter"` (default): Sharp corner (may be limited by miter_limit)
+  - `"round"`: Rounded corner
+  - `"bevel"`: Flat corner (chamfered)
+
+```lua
+canvas.set_line_width(15)
+
+-- Miter join: sharp corners
+canvas.set_line_join("miter")
+canvas.begin_path()
+canvas.move_to(50, 50)
+canvas.line_to(100, 100)
+canvas.line_to(150, 50)
+canvas.stroke()
+
+-- Round join: rounded corners
+canvas.set_line_join("round")
+canvas.begin_path()
+canvas.move_to(200, 50)
+canvas.line_to(250, 100)
+canvas.line_to(300, 50)
+canvas.stroke()
+
+-- Bevel join: flat/chamfered corners
+canvas.set_line_join("bevel")
+canvas.begin_path()
+canvas.move_to(350, 50)
+canvas.line_to(400, 100)
+canvas.line_to(450, 50)
+canvas.stroke()
+```
+
+### canvas.set_miter_limit(limit)
+
+Set the miter limit for sharp corners. When `line_join` is `"miter"`, this limits how far the corner can extend. If the miter length exceeds this limit, the corner is drawn as a bevel instead.
+
+**Parameters:**
+- `limit` (number): Miter limit value (default: 10)
+
+```lua
+canvas.set_line_width(15)
+canvas.set_line_join("miter")
+
+-- Low miter limit: sharp angles become bevels
+canvas.set_miter_limit(2)
+canvas.begin_path()
+canvas.move_to(50, 50)
+canvas.line_to(75, 100)
+canvas.line_to(100, 50)
+canvas.stroke()
+
+-- High miter limit: allows sharper corners
+canvas.set_miter_limit(20)
+canvas.begin_path()
+canvas.move_to(150, 50)
+canvas.line_to(175, 100)
+canvas.line_to(200, 50)
+canvas.stroke()
+```
+
 ## Drawing Functions
 
 ### canvas.draw_rect(x, y, width, height)

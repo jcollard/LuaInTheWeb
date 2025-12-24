@@ -272,6 +272,19 @@ export function setupCanvasAPI(
     getController()?.clip(fillRule as 'nonzero' | 'evenodd' | undefined)
   })
 
+  // --- Line Style API functions ---
+  engine.global.set('__canvas_setLineCap', (cap: string) => {
+    getController()?.setLineCap(cap as 'butt' | 'round' | 'square')
+  })
+
+  engine.global.set('__canvas_setLineJoin', (join: string) => {
+    getController()?.setLineJoin(join as 'miter' | 'round' | 'bevel')
+  })
+
+  engine.global.set('__canvas_setMiterLimit', (limit: number) => {
+    getController()?.setMiterLimit(limit)
+  })
+
   // --- Set up Lua-side canvas table ---
   // Canvas is NOT a global - it must be accessed via require('canvas')
   engine.doStringSync(canvasLuaCode)
