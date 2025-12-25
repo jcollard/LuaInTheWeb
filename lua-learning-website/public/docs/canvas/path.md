@@ -226,4 +226,19 @@ canvas.restore()  -- Remove clipping
 
 ---
 
+## Related Examples
+
+- [Triangle](../../examples/canvas/path/triangle.lua) - Simple path with fill
+- [Star](../../examples/canvas/path/star.lua) - Complex multi-point path
+- [House](../../examples/canvas/path/house.lua) - Compound shapes with paths
+- [Pie Chart](../../examples/canvas/path/arc-pie-chart.lua) - Using arc() for charts
+- [Smiley Face](../../examples/canvas/path/arc-smiley.lua) - Arcs for curved shapes
+- [Bezier Curves](../../examples/canvas/path/bezier-curves.lua) - Cubic bezier curves
+- [Quadratic Curves](../../examples/canvas/path/quadratic-curves.lua) - Quadratic bezier curves
+- [Ellipse Shapes](../../examples/canvas/path/ellipse-shapes.lua) - Ellipse drawing
+- [Rounded Buttons](../../examples/canvas/path/rounded-buttons.lua) - round_rect() for UI elements
+- [Clipping Demo](../../examples/canvas/path/clipping-demo.lua) - clip() for masks
+
+---
+
 [← Back to Canvas Library](../canvas.md)

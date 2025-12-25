@@ -438,4 +438,17 @@ canvas.set_composite_operation("source-over")
 
 ---
 
+## Related Examples
+
+- [Line Styles](../../examples/canvas/styling/line-styles.lua) - Line caps, joins, and widths
+- [Dashed Lines](../../examples/canvas/styling/dashed-lines.lua) - Line dash patterns
+- [Linear Gradient](../../examples/canvas/styling/linear-gradient.lua) - Linear gradient fills
+- [Radial Gradient](../../examples/canvas/styling/radial-gradient.lua) - Radial gradient fills
+- [Conic Gradient](../../examples/canvas/styling/conic-gradient.lua) - Conic/angular gradients
+- [Pattern Demo](../../examples/canvas/styling/pattern-demo.lua) - Image pattern fills
+- [Shadow Demo](../../examples/canvas/styling/shadow-demo.lua) - Shadow effects
+- [Compositing Demo](../../examples/canvas/styling/compositing-demo.lua) - Blend modes
+
+---
+
 [← Back to Canvas Library](../canvas.md)

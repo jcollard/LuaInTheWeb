@@ -138,4 +138,11 @@ canvas.start()
 
 ---
 
+## Related Examples
+
+- [Font Showcase](../../examples/canvas/text/font-showcase.lua) - Loading and using custom fonts
+- [Pattern Demo](../../examples/canvas/styling/pattern-demo.lua) - Loading images for patterns
+
+---
+
 [← Back to Canvas Library](../canvas.md)

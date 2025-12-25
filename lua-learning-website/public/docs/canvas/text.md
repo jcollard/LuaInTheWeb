@@ -238,4 +238,12 @@ canvas.start()
 
 ---
 
+## Related Examples
+
+- [Font Showcase](../../examples/canvas/text/font-showcase.lua) - Custom fonts and text styling
+- [Text Alignment](../../examples/canvas/text/text-alignment.lua) - Text alignment options
+- [Game HUD](../../examples/canvas/text/game-hud.lua) - UI text and draw_label()
+
+---
+
 [← Back to Canvas Library](../canvas.md)

@@ -191,4 +191,10 @@ canvas.start()
 
 ---
 
+## Related Examples
+
+- [Input Demo](../../examples/canvas/input/demo.lua) - Keyboard and mouse input handling
+
+---
+
 [← Back to Canvas Library](../canvas.md)
