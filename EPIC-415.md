@@ -52,7 +52,7 @@ Key considerations:
 | #430 | Implement hit testing (isPointInPath, isPointInStroke) | ✅ Complete | 430-hit-testing | Merged PR #447 |
 | #431 | Implement pixel manipulation (getImageData, putImageData, createImageData) | ✅ Complete | 431-implement-pixel-manipulation | Merged PR #448 |
 | #432 | Update canvas.lua with complete API documentation | ✅ Complete | 432-update-canvas-api-documentation | Merged PR #449 |
-| #433 | Create example programs for all new canvas features | ✅ Complete | 433-canvas-examples | PR #450 |
+| #433 | Create example programs for all new canvas features | ✅ Complete | 433-canvas-examples | Merged PR #450 |
 
 **Status Legend:**
 - ⏳ Pending - Not yet started
