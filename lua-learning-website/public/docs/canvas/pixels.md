@@ -228,4 +228,10 @@ canvas.put_image_data(grayscale, 0, 0)  -- O(1) operation
 
 ---
 
+## Related Examples
+
+- [Pixel Manipulation](../../examples/canvas/pixels/pixel-manipulation.lua) - Image data and pixel effects
+
+---
+
 [← Back to Canvas Library](../canvas.md)

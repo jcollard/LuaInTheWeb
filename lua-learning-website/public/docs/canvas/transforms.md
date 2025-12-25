@@ -141,4 +141,15 @@ canvas.start()
 
 ---
 
+## Related Examples
+
+- [Rotating Square](../../examples/canvas/transforms/rotating-square.lua) - Basic rotation animation
+- [Spinning Shapes](../../examples/canvas/transforms/spinning-shapes.lua) - Multiple rotating shapes
+- [Mirror Effect](../../examples/canvas/transforms/mirror-effect.lua) - Negative scale for flipping
+- [Zoom Effect](../../examples/canvas/transforms/zoom-effect.lua) - Interactive zoom with scale()
+- [Analog Clock](../../examples/canvas/transforms/analog-clock.lua) - Practical rotate() usage
+- [Transform Reset](../../examples/canvas/transforms/transform-reset.lua) - reset_transform() and set_transform()
+
+---
+
 [← Back to Canvas Library](../canvas.md)

@@ -235,4 +235,10 @@ canvas.start()
 
 ---
 
+## Related Examples
+
+- [Hit Testing](../../examples/canvas/hit-testing/hit-testing.lua) - Interactive shape detection
+
+---
+
 [← Back to Canvas Library](../canvas.md)

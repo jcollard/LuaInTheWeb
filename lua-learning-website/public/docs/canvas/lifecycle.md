@@ -120,4 +120,12 @@ Get the total time since the game started (in seconds).
 
 ---
 
+## Related Examples
+
+- [Input Demo](../../examples/canvas/input/demo.lua) - Game loop with user_input(), update(), draw()
+- [Rotating Square](../../examples/canvas/transforms/rotating-square.lua) - Animation using get_delta()
+- [Analog Clock](../../examples/canvas/transforms/analog-clock.lua) - Using get_time() for real-time display
+
+---
+
 [← Back to Canvas Library](../canvas.md)

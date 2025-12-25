@@ -147,4 +147,10 @@ canvas.start()
 
 ---
 
+## Related Examples
+
+- [Basic Shapes](../../examples/canvas/drawing/shapes.lua) - Rectangles, circles, lines, text
+
+---
+
 [← Back to Canvas Library](../canvas.md)
