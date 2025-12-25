@@ -243,7 +243,7 @@ canvas.tick(function()
   -- ===========================================
   canvas.set_font_size(12)
   canvas.set_color(50, 50, 50)
-  canvas.draw_text(10, 350, string.format("Mouse: (%d, %d)", mx, my))
+  canvas.draw_text(10, 350, string.format("Mouse: (%.0f, %.0f)", mx, my))
 
   if clickedShape then
     canvas.draw_text(10, 370, "Last clicked: " .. clickedShape)
