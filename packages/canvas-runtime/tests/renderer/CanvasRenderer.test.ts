@@ -24,6 +24,29 @@ class MockPath2D {
 // Assign to global for tests
 (globalThis as unknown as { Path2D: typeof MockPath2D }).Path2D = MockPath2D;
 
+// Mock ImageData (not available in jsdom)
+class MockImageData {
+  readonly width: number;
+  readonly height: number;
+  readonly data: Uint8ClampedArray;
+
+  constructor(width: number, height: number);
+  constructor(data: Uint8ClampedArray, width: number, height?: number);
+  constructor(widthOrData: number | Uint8ClampedArray, widthOrHeight: number, height?: number) {
+    if (typeof widthOrData === 'number') {
+      this.width = widthOrData;
+      this.height = widthOrHeight;
+      this.data = new Uint8ClampedArray(this.width * this.height * 4);
+    } else {
+      this.data = widthOrData;
+      this.width = widthOrHeight;
+      this.height = height ?? (widthOrData.length / 4 / widthOrHeight);
+    }
+  }
+}
+
+(globalThis as unknown as { ImageData: typeof MockImageData }).ImageData = MockImageData;
+
 // Mock CanvasGradient
 function createMockGradient(): CanvasGradient {
   return {
@@ -2161,6 +2184,101 @@ describe('CanvasRenderer', () => {
       const result = renderer.isPointInStroke(mockPath, 100, 100);
 
       expect(result).toBe(true);
+    });
+  });
+
+  // ============================================================================
+  // Pixel Manipulation Methods
+  // ============================================================================
+
+  describe('getImageData', () => {
+    beforeEach(() => {
+      // Mock getImageData to return a valid ImageData
+      const mockImageData = new ImageData(10, 10);
+      (mockCtx as unknown as { getImageData: ReturnType<typeof vi.fn> }).getImageData = vi.fn(() => mockImageData);
+    });
+
+    it('should call ctx.getImageData with correct parameters', () => {
+      renderer.getImageData(0, 0, 100, 100);
+
+      expect(mockCtx.getImageData).toHaveBeenCalledWith(0, 0, 100, 100);
+    });
+
+    it('should return ImageData from ctx.getImageData', () => {
+      const mockImageData = new ImageData(50, 50);
+      (mockCtx.getImageData as ReturnType<typeof vi.fn>).mockReturnValue(mockImageData);
+
+      const result = renderer.getImageData(10, 20, 50, 50);
+
+      expect(result).toBe(mockImageData);
+    });
+
+    it('should handle non-zero origin coordinates', () => {
+      renderer.getImageData(25, 35, 100, 80);
+
+      expect(mockCtx.getImageData).toHaveBeenCalledWith(25, 35, 100, 80);
+    });
+  });
+
+  describe('putImageData', () => {
+    beforeEach(() => {
+      (mockCtx as unknown as { putImageData: ReturnType<typeof vi.fn> }).putImageData = vi.fn();
+    });
+
+    it('should call ctx.putImageData with imageData and destination coordinates', () => {
+      const imageData = new ImageData(100, 100);
+
+      renderer.putImageData(imageData, 50, 75);
+
+      expect(mockCtx.putImageData).toHaveBeenCalledWith(imageData, 50, 75);
+    });
+
+    it('should handle zero destination coordinates', () => {
+      const imageData = new ImageData(50, 50);
+
+      renderer.putImageData(imageData, 0, 0);
+
+      expect(mockCtx.putImageData).toHaveBeenCalledWith(imageData, 0, 0);
+    });
+
+    it('should handle negative destination coordinates', () => {
+      const imageData = new ImageData(30, 30);
+
+      renderer.putImageData(imageData, -10, -20);
+
+      expect(mockCtx.putImageData).toHaveBeenCalledWith(imageData, -10, -20);
+    });
+  });
+
+  describe('createImageData', () => {
+    beforeEach(() => {
+      const mockImageData = new ImageData(10, 10);
+      (mockCtx as unknown as { createImageData: ReturnType<typeof vi.fn> }).createImageData = vi.fn(() => mockImageData);
+    });
+
+    it('should call ctx.createImageData with width and height', () => {
+      renderer.createImageData(200, 150);
+
+      expect(mockCtx.createImageData).toHaveBeenCalledWith(200, 150);
+    });
+
+    it('should return ImageData from ctx.createImageData', () => {
+      const mockImageData = new ImageData(100, 100);
+      (mockCtx.createImageData as ReturnType<typeof vi.fn>).mockReturnValue(mockImageData);
+
+      const result = renderer.createImageData(100, 100);
+
+      expect(result).toBe(mockImageData);
+    });
+
+    it('should create ImageData with small dimensions', () => {
+      const mockImageData = new ImageData(1, 1);
+      (mockCtx.createImageData as ReturnType<typeof vi.fn>).mockReturnValue(mockImageData);
+
+      const result = renderer.createImageData(1, 1);
+
+      expect(mockCtx.createImageData).toHaveBeenCalledWith(1, 1);
+      expect(result).toBe(mockImageData);
     });
   });
 });

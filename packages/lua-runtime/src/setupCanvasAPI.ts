@@ -452,6 +452,25 @@ export function setupCanvasAPI(
     getController()?.setTextBaseline(baseline as CanvasTextBaseline)
   })
 
+  // --- Pixel Manipulation API functions ---
+  engine.global.set(
+    '__canvas_getImageData',
+    (x: number, y: number, width: number, height: number) => {
+      return getController()?.getImageData(x, y, width, height) ?? null
+    }
+  )
+
+  engine.global.set(
+    '__canvas_putImageData',
+    (data: number[], width: number, height: number, dx: number, dy: number) => {
+      getController()?.putImageData(data, width, height, dx, dy)
+    }
+  )
+
+  engine.global.set('__canvas_createImageData', (width: number, height: number) => {
+    return getController()?.createImageData(width, height) ?? []
+  })
+
   // --- Set up Lua-side canvas table ---
   // Canvas is NOT a global - it must be accessed via require('canvas')
   engine.doStringSync(canvasLuaCode)

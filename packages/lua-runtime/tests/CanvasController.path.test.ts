@@ -1180,4 +1180,58 @@ describe('CanvasController Path API', () => {
       expect(result).toBe(false)
     })
   })
+
+  // ============================================================================
+  // Pixel Manipulation Methods
+  // ============================================================================
+
+  describe('getImageData', () => {
+    it('should return null when no renderer is available', () => {
+      const result = controller.getImageData(0, 0, 100, 100)
+
+      expect(result).toBeNull()
+    })
+
+    it('should accept x, y, width, height parameters', () => {
+      // Without renderer, should return null regardless of parameters
+      const result = controller.getImageData(10, 20, 50, 60)
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('putImageData', () => {
+    it('should not throw when no renderer is available', () => {
+      const data = new Array(100 * 100 * 4).fill(0)
+
+      expect(() => controller.putImageData(data, 100, 100, 0, 0)).not.toThrow()
+    })
+
+    it('should accept data, width, height, dx, dy parameters', () => {
+      const data = [255, 0, 0, 255] // 1 red pixel
+
+      expect(() => controller.putImageData(data, 1, 1, 50, 50)).not.toThrow()
+    })
+  })
+
+  describe('createImageData', () => {
+    it('should return array of zeros for width*height*4 elements', () => {
+      const result = controller.createImageData(10, 10)
+
+      expect(result).toHaveLength(10 * 10 * 4)
+      expect(result.every(v => v === 0)).toBe(true)
+    })
+
+    it('should return empty array for zero dimensions', () => {
+      const result = controller.createImageData(0, 0)
+
+      expect(result).toHaveLength(0)
+    })
+
+    it('should create correct size for non-square dimensions', () => {
+      const result = controller.createImageData(5, 3)
+
+      expect(result).toHaveLength(5 * 3 * 4)
+    })
+  })
 })

@@ -45,6 +45,7 @@
     "canvas/text-alignment.lua",
     "canvas/game-hud.lua",
     "canvas/hit-testing.lua",
+    "canvas/pixel-manipulation.lua",
     "canvas/fonts/10px-Bitfantasy.ttf",
     "canvas/fonts/10px-CelticTime.ttf",
     "canvas/fonts/10px-HelvetiPixel.ttf",

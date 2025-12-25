@@ -299,6 +299,68 @@ export const canvasLuaCode = `
       return __canvas_isPointInStroke(x, y)
     end
 
+    -- Pixel Manipulation API
+    -- ImageData class for pixel-level access
+    local ImageData = {}
+    ImageData.__index = ImageData
+
+    function ImageData.new(width, height, data)
+      local self = setmetatable({}, ImageData)
+      self.width = width
+      self.height = height
+      self.data = data or {}
+      if not data then
+        for i = 1, width * height * 4 do
+          self.data[i] = 0
+        end
+      end
+      return self
+    end
+
+    function ImageData:get_pixel(x, y)
+      if x < 0 or x >= self.width or y < 0 or y >= self.height then
+        return 0, 0, 0, 0
+      end
+      local i = (y * self.width + x) * 4 + 1  -- Lua 1-indexed
+      return self.data[i], self.data[i+1], self.data[i+2], self.data[i+3]
+    end
+
+    function ImageData:set_pixel(x, y, r, g, b, a)
+      if x < 0 or x >= self.width or y < 0 or y >= self.height then return end
+      a = a or 255
+      local i = (y * self.width + x) * 4 + 1
+      self.data[i], self.data[i+1], self.data[i+2], self.data[i+3] = r, g, b, a
+    end
+
+    function _canvas.create_image_data(width, height)
+      local data = __canvas_createImageData(width, height)
+      -- Convert JS array to Lua table
+      -- Wasmoon exposes JS arrays with 1-based indexing, same as Lua tables
+      local lua_data = {}
+      local size = width * height * 4
+      for i = 1, size do
+        lua_data[i] = data[i] or 0
+      end
+      return ImageData.new(width, height, lua_data)
+    end
+
+    function _canvas.get_image_data(x, y, width, height)
+      local data = __canvas_getImageData(x, y, width, height)
+      if not data then return nil end
+      -- Convert JS array to Lua table
+      -- Wasmoon exposes JS arrays with 1-based indexing, same as Lua tables
+      local lua_data = {}
+      local size = width * height * 4
+      for i = 1, size do
+        lua_data[i] = data[i] or 0
+      end
+      return ImageData.new(width, height, lua_data)
+    end
+
+    function _canvas.put_image_data(image_data, dx, dy)
+      __canvas_putImageData(image_data.data, image_data.width, image_data.height, dx, dy)
+    end
+
     -- Line Style API
     function _canvas.set_line_cap(cap)
       __canvas_setLineCap(cap)

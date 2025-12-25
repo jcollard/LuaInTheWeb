@@ -274,10 +274,35 @@ export class CanvasRenderer {
         this.ctx.textBaseline = command.baseline;
         break;
 
+      case 'putImageData':
+        this.putImageDataFromArray(
+          command.data,
+          command.width,
+          command.height,
+          command.dx,
+          command.dy
+        );
+        break;
+
       default:
         // Ignore unknown commands for forward compatibility
         break;
     }
+  }
+
+  /**
+   * Write pixel data to the canvas from a raw RGBA array.
+   * Used by the putImageData DrawCommand.
+   */
+  private putImageDataFromArray(
+    data: number[],
+    width: number,
+    height: number,
+    dx: number,
+    dy: number
+  ): void {
+    const imageData = new ImageData(new Uint8ClampedArray(data), width, height);
+    this.ctx.putImageData(imageData, dx, dy);
   }
 
   private setColor(r: number, g: number, b: number, a?: number): void {
@@ -433,5 +458,41 @@ export class CanvasRenderer {
    */
   isPointInStroke(path: Path2D, x: number, y: number): boolean {
     return this.ctx.isPointInStroke(path, x, y);
+  }
+
+  // ============================================================================
+  // Pixel Manipulation Methods
+  // ============================================================================
+
+  /**
+   * Get pixel data from a region of the canvas.
+   * @param x - X coordinate of the top-left corner
+   * @param y - Y coordinate of the top-left corner
+   * @param width - Width of the region to read
+   * @param height - Height of the region to read
+   * @returns ImageData containing pixel data
+   */
+  getImageData(x: number, y: number, width: number, height: number): ImageData {
+    return this.ctx.getImageData(x, y, width, height);
+  }
+
+  /**
+   * Write pixel data to the canvas.
+   * @param imageData - ImageData containing pixel values
+   * @param dx - Destination X coordinate
+   * @param dy - Destination Y coordinate
+   */
+  putImageData(imageData: ImageData, dx: number, dy: number): void {
+    this.ctx.putImageData(imageData, dx, dy);
+  }
+
+  /**
+   * Create a new empty ImageData object.
+   * @param width - Width in pixels
+   * @param height - Height in pixels
+   * @returns ImageData filled with transparent black pixels
+   */
+  createImageData(width: number, height: number): ImageData {
+    return this.ctx.createImageData(width, height);
   }
 }

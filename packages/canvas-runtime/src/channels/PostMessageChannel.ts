@@ -1,5 +1,11 @@
 import type { IWorkerChannel, ChannelConfig } from './IWorkerChannel.js';
-import type { DrawCommand, InputState, TimingInfo } from '../shared/types.js';
+import type {
+  DrawCommand,
+  GetImageDataRequest,
+  GetImageDataResponse,
+  InputState,
+  TimingInfo,
+} from '../shared/types.js';
 import { createEmptyInputState, createDefaultTimingInfo } from '../shared/types.js';
 
 /**
@@ -10,7 +16,9 @@ type MessageType =
   | 'input-state'
   | 'timing-info'
   | 'canvas-size'
-  | 'frame-ready';
+  | 'frame-ready'
+  | 'image-data-request'
+  | 'image-data-response';
 
 /**
  * Message structure for PostMessage communication.
@@ -51,6 +59,13 @@ export class PostMessageChannel implements IWorkerChannel {
   private inputState: InputState = createEmptyInputState();
   private timingInfo: TimingInfo = createDefaultTimingInfo();
   private canvasSize: { width: number; height: number } = { width: 800, height: 600 };
+
+  // Pixel manipulation state
+  private pendingImageDataRequests: GetImageDataRequest[] = [];
+  private imageDataResponseResolvers: Map<
+    string,
+    (response: GetImageDataResponse) => void
+  > = new Map();
 
   // Frame synchronization
   private frameReadyResolver: (() => void) | null = null;
@@ -93,6 +108,20 @@ export class PostMessageChannel implements IWorkerChannel {
           this.frameReadyResolver = null;
         }
         break;
+
+      case 'image-data-request':
+        this.pendingImageDataRequests.push(payload as GetImageDataRequest);
+        break;
+
+      case 'image-data-response': {
+        const response = payload as GetImageDataResponse;
+        const resolver = this.imageDataResponseResolvers.get(response.requestId);
+        if (resolver) {
+          resolver(response);
+          this.imageDataResponseResolvers.delete(response.requestId);
+        }
+        break;
+      }
     }
   }
 
@@ -157,6 +186,40 @@ export class PostMessageChannel implements IWorkerChannel {
   setCanvasSize(width: number, height: number): void {
     this.canvasSize = { width, height };
     this.send('canvas-size', this.canvasSize);
+  }
+
+  // Pixel manipulation methods
+
+  requestImageData(
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): Promise<GetImageDataResponse> {
+    const requestId = `img-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const request: GetImageDataRequest = {
+      type: 'getImageData',
+      requestId,
+      x,
+      y,
+      width,
+      height,
+    };
+
+    return new Promise<GetImageDataResponse>(resolve => {
+      this.imageDataResponseResolvers.set(requestId, resolve);
+      this.send('image-data-request', request);
+    });
+  }
+
+  getPendingImageDataRequests(): GetImageDataRequest[] {
+    const requests = this.pendingImageDataRequests;
+    this.pendingImageDataRequests = [];
+    return requests;
+  }
+
+  sendImageDataResponse(response: GetImageDataResponse): void {
+    this.send('image-data-response', response);
   }
 
   dispose(): void {

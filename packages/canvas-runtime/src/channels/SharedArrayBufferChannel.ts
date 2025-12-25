@@ -1,5 +1,11 @@
 import type { IWorkerChannel, ChannelConfig } from './IWorkerChannel.js';
-import type { DrawCommand, InputState, TimingInfo } from '../shared/types.js';
+import type {
+  DrawCommand,
+  GetImageDataRequest,
+  GetImageDataResponse,
+  InputState,
+  TimingInfo,
+} from '../shared/types.js';
 
 /**
  * SharedArrayBuffer memory layout (64KB total):
@@ -296,6 +302,39 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
   setCanvasSize(width: number, height: number): void {
     Atomics.store(this.int32View, OFFSET_CANVAS_WIDTH / 4, width);
     Atomics.store(this.int32View, OFFSET_CANVAS_HEIGHT / 4, height);
+  }
+
+  // Pixel manipulation methods
+  // Note: SharedArrayBuffer mode doesn't support pixel manipulation
+  // because image data can be very large (>100KB) and the SAB is only 64KB.
+  // Use PostMessage mode for pixel manipulation.
+
+  requestImageData(
+    _x: number,
+    _y: number,
+    width: number,
+    height: number
+  ): Promise<GetImageDataResponse> {
+    // Return an empty response - pixel manipulation not supported in SAB mode
+    console.warn(
+      'Pixel manipulation not supported in SharedArrayBuffer mode. Use PostMessage mode.'
+    );
+    return Promise.resolve({
+      type: 'getImageDataResponse',
+      requestId: '',
+      width,
+      height,
+      data: [],
+    });
+  }
+
+  getPendingImageDataRequests(): GetImageDataRequest[] {
+    // No pending requests in SAB mode (not supported)
+    return [];
+  }
+
+  sendImageDataResponse(_response: GetImageDataResponse): void {
+    // No-op in SAB mode (not supported)
   }
 
   dispose(): void {

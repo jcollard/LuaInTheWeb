@@ -1,6 +1,12 @@
 import { LuaFactory, LuaEngine } from 'wasmoon';
 import type { IWorkerChannel } from '../channels/IWorkerChannel.js';
-import { VALID_IMAGE_EXTENSIONS, VALID_FONT_EXTENSIONS, type DrawCommand, type AssetDefinition } from '../shared/types.js';
+import {
+  VALID_IMAGE_EXTENSIONS,
+  VALID_FONT_EXTENSIONS,
+  type DrawCommand,
+  type AssetDefinition,
+  type GetImageDataResponse,
+} from '../shared/types.js';
 import type { WorkerState } from './WorkerMessages.js';
 
 /**
@@ -39,6 +45,12 @@ export class LuaCanvasRuntime {
   private currentFontFamily: string = 'monospace';
   private measureCanvas: OffscreenCanvas | null = null;
   private measureCtx: OffscreenCanvasRenderingContext2D | null = null;
+
+  // Pixel manipulation state
+  // Cache of image data responses (keyed by "x,y,w,h")
+  private pixelDataCache: Map<string, GetImageDataResponse> = new Map();
+  // Pending pixel data requests waiting to be sent
+  private pendingPixelRequests: Set<string> = new Set();
 
   constructor(channel: IWorkerChannel) {
     this.channel = channel;
@@ -136,6 +148,51 @@ export class LuaCanvasRuntime {
    */
   getAssetManifest(): Map<string, AssetDefinition> {
     return this.assetManifest;
+  }
+
+  /**
+   * Generate a cache key for pixel data requests.
+   */
+  private getPixelCacheKey(x: number, y: number, width: number, height: number): string {
+    return `${x},${y},${width},${height}`;
+  }
+
+
+  /**
+   * Request image data from the canvas.
+   * Returns cached data if available, otherwise queues request for next frame.
+   * Always queues a new request to keep the cache fresh for the next frame.
+   */
+  private getImageData(
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): number[] | null {
+    const key = this.getPixelCacheKey(x, y, width, height);
+
+    // Check if we have cached data
+    const cached = this.pixelDataCache.get(key);
+    const hasData = cached && cached.data.length > 0;
+
+    // Always queue a request to keep the cache fresh for the next frame
+    if (!this.pendingPixelRequests.has(key)) {
+      this.pendingPixelRequests.add(key);
+
+      // Send the request asynchronously
+      this.channel.requestImageData(x, y, width, height).then(response => {
+        // Cache the response for the next frame
+        this.pixelDataCache.set(key, response);
+        this.pendingPixelRequests.delete(key);
+      });
+    }
+
+    // Return cached data if available, otherwise null
+    if (hasData) {
+      return cached.data;
+    }
+
+    return null;
   }
 
   /**
@@ -393,6 +450,33 @@ export class LuaCanvasRuntime {
       return dims.height;
     });
 
+    // Pixel manipulation functions
+    lua.global.set(
+      '__canvas_getImageData',
+      (x: number, y: number, width: number, height: number) => {
+        return runtime.getImageData(x, y, width, height);
+      }
+    );
+
+    lua.global.set(
+      '__canvas_putImageData',
+      (data: number[], width: number, height: number, dx: number, dy: number) => {
+        runtime.frameCommands.push({
+          type: 'putImageData',
+          data,
+          width,
+          height,
+          dx,
+          dy,
+        });
+      }
+    );
+
+    lua.global.set('__canvas_createImageData', (width: number, height: number) => {
+      // Create an empty RGBA array (all zeros = transparent black)
+      return new Array(width * height * 4).fill(0);
+    });
+
     // Set up the Lua-side canvas table with methods (using snake_case for Lua conventions)
     lua.doStringSync(`
       canvas = {}
@@ -621,6 +705,70 @@ export class LuaCanvasRuntime {
       -- Draw image
       function canvas.draw_image(name, x, y, width, height)
         __canvas_drawImage(name, x, y, width, height)
+      end
+
+      -- Pixel manipulation
+      -- ImageData class for manipulating pixel data
+      local ImageData = {}
+      ImageData.__index = ImageData
+
+      function ImageData.new(width, height, data)
+        local self = setmetatable({}, ImageData)
+        self.width = width
+        self.height = height
+        self.data = data or {}
+        if not data then
+          -- Initialize with transparent black (all zeros)
+          for i = 1, width * height * 4 do
+            self.data[i] = 0
+          end
+        end
+        return self
+      end
+
+      -- Get pixel at x, y (0-indexed coordinates)
+      -- Returns r, g, b, a (0-255)
+      function ImageData:get_pixel(x, y)
+        if x < 0 or x >= self.width or y < 0 or y >= self.height then
+          return 0, 0, 0, 0
+        end
+        local i = (y * self.width + x) * 4 + 1  -- Lua is 1-indexed
+        return self.data[i], self.data[i+1], self.data[i+2], self.data[i+3]
+      end
+
+      -- Set pixel at x, y (0-indexed coordinates)
+      -- r, g, b, a are 0-255 values
+      function ImageData:set_pixel(x, y, r, g, b, a)
+        if x < 0 or x >= self.width or y < 0 or y >= self.height then
+          return
+        end
+        a = a or 255
+        local i = (y * self.width + x) * 4 + 1
+        self.data[i] = r
+        self.data[i+1] = g
+        self.data[i+2] = b
+        self.data[i+3] = a
+      end
+
+      -- Create an empty ImageData buffer
+      function canvas.create_image_data(width, height)
+        local data = __canvas_createImageData(width, height)
+        return ImageData.new(width, height, data)
+      end
+
+      -- Get pixel data from a region of the canvas
+      -- Returns ImageData or nil if data not yet available
+      function canvas.get_image_data(x, y, width, height)
+        local data = __canvas_getImageData(x, y, width, height)
+        if not data then
+          return nil
+        end
+        return ImageData.new(width, height, data)
+      end
+
+      -- Write pixel data to the canvas
+      function canvas.put_image_data(image_data, dx, dy)
+        __canvas_putImageData(image_data.data, image_data.width, image_data.height, dx, dy)
       end
     `);
   }
