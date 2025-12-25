@@ -445,6 +445,9 @@ export class LuaCanvasProcess implements IProcess {
       this.renderer.render(commands);
     }
 
+    // Process pixel data requests from worker
+    this.processPixelRequests();
+
     // Clear "just pressed" state for next frame
     if (this.inputCapture) {
       this.inputCapture.update();
@@ -452,6 +455,31 @@ export class LuaCanvasProcess implements IProcess {
 
     // Signal that the frame is ready (for frame synchronization)
     this.channel.signalFrameReady();
+  }
+
+  /**
+   * Process pending pixel data requests from the worker.
+   * Reads pixel data from the canvas and sends responses.
+   */
+  private processPixelRequests(): void {
+    if (!this.channel || !this.renderer) return;
+
+    const requests = this.channel.getPendingImageDataRequests();
+    for (const request of requests) {
+      const imageData = this.renderer.getImageData(
+        request.x,
+        request.y,
+        request.width,
+        request.height
+      );
+      this.channel.sendImageDataResponse({
+        type: 'getImageDataResponse',
+        requestId: request.requestId,
+        width: request.width,
+        height: request.height,
+        data: Array.from(imageData.data),
+      });
+    }
   }
 
   /**

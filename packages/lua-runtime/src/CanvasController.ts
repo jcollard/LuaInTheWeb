@@ -1078,6 +1078,66 @@ export class CanvasController {
     return this.renderer.isPointInStroke(this.currentPath, x, y)
   }
 
+  // ============================================================================
+  // Pixel Manipulation Methods
+  // ============================================================================
+
+  /**
+   * Flush any pending draw commands to the canvas.
+   * This ensures all drawing operations are applied before reading pixel data.
+   */
+  private flushCommands(): void {
+    if (this.renderer && this.frameCommands.length > 0) {
+      this.renderer.render(this.frameCommands)
+      this.frameCommands = []
+    }
+  }
+
+  /**
+   * Get pixel data from a region of the canvas.
+   * @param x - X coordinate of the top-left corner
+   * @param y - Y coordinate of the top-left corner
+   * @param width - Width of the region to read
+   * @param height - Height of the region to read
+   * @returns Array of RGBA values, or null if renderer not available
+   */
+  getImageData(x: number, y: number, width: number, height: number): number[] | null {
+    if (!this.renderer) return null
+    // Flush pending commands to ensure all drawing is applied before reading
+    this.flushCommands()
+    const imageData = this.renderer.getImageData(x, y, width, height)
+    return Array.from(imageData.data)
+  }
+
+  /**
+   * Write pixel data to the canvas.
+   * @param data - Array of RGBA values
+   * @param width - Width of the image data
+   * @param height - Height of the image data
+   * @param dx - Destination X coordinate
+   * @param dy - Destination Y coordinate
+   */
+  putImageData(data: number[], width: number, height: number, dx: number, dy: number): void {
+    this.addDrawCommand({
+      type: 'putImageData',
+      data,
+      width,
+      height,
+      dx,
+      dy,
+    })
+  }
+
+  /**
+   * Create a new empty image data array.
+   * @param width - Width in pixels
+   * @param height - Height in pixels
+   * @returns Array of zeros with length width * height * 4
+   */
+  createImageData(width: number, height: number): number[] {
+    return new Array(width * height * 4).fill(0)
+  }
+
   // --- Internal ---
 
   /**

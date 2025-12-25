@@ -1229,4 +1229,108 @@ function canvas.is_point_in_path(x, y, fillRule) end
 ---@usage canvas.stroke()
 function canvas.is_point_in_stroke(x, y) end
 
+-- =============================================================================
+-- Pixel Manipulation API
+-- =============================================================================
+
+--- ImageData object for pixel-level access.
+--- Contains raw pixel data as a flat RGBA array (1-indexed in Lua).
+--- Use get_pixel() and set_pixel() helper methods for easier access.
+---@class ImageData
+---@field width number Width of the image in pixels
+---@field height number Height of the image in pixels
+---@field data number[] Raw RGBA pixel data (1-indexed array: r1, g1, b1, a1, r2, g2, b2, a2, ...)
+
+--- Get the RGBA values of a pixel at the specified coordinates.
+--- Coordinates are 0-indexed (x: 0 to width-1, y: 0 to height-1).
+--- Returns 0, 0, 0, 0 for out-of-bounds coordinates.
+---@param x number X coordinate (0-indexed)
+---@param y number Y coordinate (0-indexed)
+---@return number r Red component (0-255)
+---@return number g Green component (0-255)
+---@return number b Blue component (0-255)
+---@return number a Alpha component (0-255)
+---@usage local img = canvas.get_image_data(0, 0, 100, 100)
+---@usage local r, g, b, a = img:get_pixel(50, 50)
+function ImageData:get_pixel(x, y) end
+
+--- Set the RGBA values of a pixel at the specified coordinates.
+--- Coordinates are 0-indexed (x: 0 to width-1, y: 0 to height-1).
+--- Does nothing for out-of-bounds coordinates.
+---@param x number X coordinate (0-indexed)
+---@param y number Y coordinate (0-indexed)
+---@param r number Red component (0-255)
+---@param g number Green component (0-255)
+---@param b number Blue component (0-255)
+---@param a? number Alpha component (0-255, default: 255)
+---@return nil
+---@usage local img = canvas.create_image_data(100, 100)
+---@usage img:set_pixel(50, 50, 255, 0, 0)  -- Red pixel
+---@usage img:set_pixel(51, 50, 0, 255, 0, 128)  -- Semi-transparent green
+function ImageData:set_pixel(x, y, r, g, b, a) end
+
+--- Create a new empty ImageData buffer filled with transparent black.
+--- Use this to create pixel data for procedural generation.
+---@param width number Width in pixels
+---@param height number Height in pixels
+---@return ImageData image_data New ImageData filled with transparent black (0, 0, 0, 0)
+---@usage -- Create and fill with a pattern
+---@usage local img = canvas.create_image_data(100, 100)
+---@usage for y = 0, 99 do
+---@usage   for x = 0, 99 do
+---@usage     local r = (x / 100) * 255
+---@usage     local g = (y / 100) * 255
+---@usage     img:set_pixel(x, y, r, g, 0, 255)
+---@usage   end
+---@usage end
+---@usage canvas.put_image_data(img, 50, 50)
+function canvas.create_image_data(width, height) end
+
+--- Read pixel data from a region of the canvas.
+--- Returns an ImageData object containing the pixel values from the specified region.
+--- Use :get_pixel() to access individual pixels.
+---@param x number X coordinate of the top-left corner
+---@param y number Y coordinate of the top-left corner
+---@param width number Width of the region to read
+---@param height number Height of the region to read
+---@return ImageData|nil image_data Pixel data, or nil if canvas not ready
+---@usage -- Read and analyze a region
+---@usage local img = canvas.get_image_data(0, 0, 100, 100)
+---@usage if img then
+---@usage   local r, g, b, a = img:get_pixel(50, 50)
+---@usage   print("Center pixel: " .. r .. "," .. g .. "," .. b)
+---@usage end
+---@usage
+---@usage -- Invert colors in a region
+---@usage local img = canvas.get_image_data(0, 0, 200, 200)
+---@usage for y = 0, img.height - 1 do
+---@usage   for x = 0, img.width - 1 do
+---@usage     local r, g, b, a = img:get_pixel(x, y)
+---@usage     img:set_pixel(x, y, 255 - r, 255 - g, 255 - b, a)
+---@usage   end
+---@usage end
+---@usage canvas.put_image_data(img, 0, 0)
+function canvas.get_image_data(x, y, width, height) end
+
+--- Write pixel data to the canvas at the specified position.
+--- Draws the ImageData buffer to the canvas at coordinates (dx, dy).
+---@param image_data ImageData The pixel data to write
+---@param dx number Destination X coordinate
+---@param dy number Destination Y coordinate
+---@return nil
+---@usage -- Copy a region to another location
+---@usage local img = canvas.get_image_data(0, 0, 100, 100)
+---@usage canvas.put_image_data(img, 200, 200)  -- Paste at (200, 200)
+---@usage
+---@usage -- Create procedural texture
+---@usage local noise = canvas.create_image_data(64, 64)
+---@usage for y = 0, 63 do
+---@usage   for x = 0, 63 do
+---@usage     local v = math.random(0, 255)
+---@usage     noise:set_pixel(x, y, v, v, v, 255)
+---@usage   end
+---@usage end
+---@usage canvas.put_image_data(noise, 0, 0)
+function canvas.put_image_data(image_data, dx, dy) end
+
 return canvas

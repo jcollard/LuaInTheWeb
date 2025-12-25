@@ -299,6 +299,44 @@ export const canvasLuaCode = `
       return __canvas_isPointInStroke(x, y)
     end
 
+    -- Pixel Manipulation API
+    -- ImageData class for pixel-level access
+    -- Uses JS-side storage for O(1) put_image_data performance
+    local ImageData = {}
+    ImageData.__index = ImageData
+
+    function ImageData.new(jsInfo)
+      local self = setmetatable({}, ImageData)
+      self._jsId = jsInfo.id
+      self.width = jsInfo.width
+      self.height = jsInfo.height
+      return self
+    end
+
+    function ImageData:get_pixel(x, y)
+      local rgba = __canvas_imageDataGetPixel(self._jsId, x, y)
+      return rgba[1], rgba[2], rgba[3], rgba[4]
+    end
+
+    function ImageData:set_pixel(x, y, r, g, b, a)
+      __canvas_imageDataSetPixel(self._jsId, x, y, r, g, b, a or 255)
+    end
+
+    function _canvas.create_image_data(width, height)
+      local info = __canvas_createImageData(width, height)
+      return ImageData.new(info)
+    end
+
+    function _canvas.get_image_data(x, y, width, height)
+      local info = __canvas_getImageData(x, y, width, height)
+      if not info then return nil end
+      return ImageData.new(info)
+    end
+
+    function _canvas.put_image_data(image_data, dx, dy)
+      __canvas_putImageData(image_data._jsId, dx, dy)
+    end
+
     -- Line Style API
     function _canvas.set_line_cap(cap)
       __canvas_setLineCap(cap)

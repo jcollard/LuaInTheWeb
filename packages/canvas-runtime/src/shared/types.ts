@@ -52,7 +52,8 @@ export type DrawCommandType =
   | 'setGlobalAlpha'
   | 'setCompositeOperation'
   | 'setTextAlign'
-  | 'setTextBaseline';
+  | 'setTextBaseline'
+  | 'putImageData';
 
 /**
  * Base interface for all draw commands.
@@ -781,6 +782,23 @@ export interface SetTextBaselineCommand extends DrawCommandBase {
 }
 
 /**
+ * Write pixel data to the canvas at the specified position.
+ */
+export interface PutImageDataCommand extends DrawCommandBase {
+  type: 'putImageData';
+  /** Pixel data as flat RGBA array */
+  data: number[];
+  /** Width of the image data */
+  width: number;
+  /** Height of the image data */
+  height: number;
+  /** Destination X coordinate */
+  dx: number;
+  /** Destination Y coordinate */
+  dy: number;
+}
+
+/**
  * Union type of all draw commands.
  */
 export type DrawCommand =
@@ -834,7 +852,8 @@ export type DrawCommand =
   | SetGlobalAlphaCommand
   | SetCompositeOperationCommand
   | SetTextAlignCommand
-  | SetTextBaselineCommand;
+  | SetTextBaselineCommand
+  | PutImageDataCommand;
 
 /**
  * Mouse button identifiers.
@@ -925,3 +944,51 @@ export interface AssetDefinition {
  * Map of asset names to their definitions.
  */
 export type AssetManifest = Map<string, AssetDefinition>;
+
+// ============================================================================
+// Pixel Manipulation Types
+// ============================================================================
+
+/**
+ * Request to get pixel data from a region of the canvas.
+ * Sent from worker to main thread.
+ */
+export interface GetImageDataRequest {
+  type: 'getImageData';
+  /** Unique request ID for matching response */
+  requestId: string;
+  /** X coordinate of top-left corner */
+  x: number;
+  /** Y coordinate of top-left corner */
+  y: number;
+  /** Width of region to read */
+  width: number;
+  /** Height of region to read */
+  height: number;
+}
+
+/**
+ * Response containing pixel data from the canvas.
+ * Sent from main thread to worker.
+ */
+export interface GetImageDataResponse {
+  type: 'getImageDataResponse';
+  /** Request ID this is responding to */
+  requestId: string;
+  /** Width of the image data */
+  width: number;
+  /** Height of the image data */
+  height: number;
+  /** Pixel data as flat RGBA array (0-255 values) */
+  data: number[];
+}
+
+/**
+ * Union type for pixel data requests.
+ */
+export type PixelDataRequest = GetImageDataRequest;
+
+/**
+ * Union type for pixel data responses.
+ */
+export type PixelDataResponse = GetImageDataResponse;
