@@ -1,18 +1,20 @@
--- Spinning Shapes Example
--- Demonstrates save/restore with multiple rotating objects
+-- canvas/spinning_shapes.lua
+-- Demonstrates: save/restore with multiple rotating objects
+-- Features: save, restore, translate, rotate, fill_rect, fill_circle, draw_line
 --
 -- Each shape has its own rotation using save/restore
 -- to isolate transformations between shapes.
 
 local canvas = require('canvas')
 
-canvas.set_size(600, 400)
-
 local time = 0
 
-canvas.tick(function()
-  canvas.clear()
+local function update()
   time = time + canvas.get_delta()
+end
+
+local function draw()
+  canvas.clear()
 
   -- Shape 1: Red square rotating clockwise
   canvas.save()
@@ -51,6 +53,13 @@ canvas.tick(function()
 
   canvas.draw_text(10, 20, "Multiple shapes with independent rotations")
   canvas.draw_text(10, 40, "Each uses save() and restore()")
-end)
+end
 
+local function game()
+  update()
+  draw()
+end
+
+canvas.set_size(600, 400)
+canvas.tick(game)
 canvas.start()

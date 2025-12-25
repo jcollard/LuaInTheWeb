@@ -1,9 +1,11 @@
 -- canvas/shapes.lua
--- Demonstrates canvas drawing with shapes and colors
+-- Demonstrates: Basic canvas drawing with shapes and colors
+-- Features: set_color, fill_rect, fill_circle, draw_rect, draw_circle,
+--           draw_line, draw_text, set_line_width, get_time
 
 local canvas = require("canvas")
 
-function draw()
+local function draw()
   -- Clear the screen
   canvas.clear()
 
@@ -45,14 +47,10 @@ function draw()
   canvas.draw_text(50, 380, string.format("Time: %.1f seconds", time))
 end
 
-function game()
+local function game()
   draw()
 end
 
-function main()
-  canvas.set_size(800, 600)
-  canvas.tick(game)
-  canvas.start()
-end
-
-main()
+canvas.set_size(800, 600)
+canvas.tick(game)
+canvas.start()

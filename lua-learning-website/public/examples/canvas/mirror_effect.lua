@@ -1,5 +1,6 @@
--- Mirror Effect Example
--- Demonstrates canvas.scale() with negative values for mirroring
+-- canvas/mirror_effect.lua
+-- Demonstrates: scale() with negative values for mirroring
+-- Features: scale, translate, save, restore, fill_rect, draw_line
 --
 -- Negative scale values flip the coordinate system:
 -- scale(-1, 1) = horizontal flip (mirror)
@@ -7,8 +8,6 @@
 -- scale(-1, -1) = both (180 degree rotation)
 
 local canvas = require('canvas')
-
-canvas.set_size(600, 400)
 
 local time = 0
 
@@ -21,9 +20,12 @@ local function draw_arrow()
   canvas.draw_line(10, -25, 10, 25)
 end
 
-canvas.tick(function()
-  canvas.clear()
+local function update()
   time = time + canvas.get_delta()
+end
+
+local function draw()
+  canvas.clear()
 
   -- Bouncing offset for animation
   local bounce = math.sin(time * 3) * 10
@@ -74,6 +76,13 @@ canvas.tick(function()
   canvas.draw_text(400, 300, "Both = 180 deg")
 
   canvas.draw_text(10, 20, "Mirror Effect using negative scale()")
-end)
+end
 
+local function game()
+  update()
+  draw()
+end
+
+canvas.set_size(600, 400)
+canvas.tick(game)
 canvas.start()

@@ -9,7 +9,7 @@ local clicks = 0
 local key_presses = 0
 local last_keys_pressed = {}
 
-local function handle_input()
+local function user_input()
     local dt = canvas.get_delta()
     -- Keyboard: WASD movement (using canvas.keys constants)
     if
@@ -166,16 +166,12 @@ local function draw()
     )
 end
 
-function game()
-    handle_input()
+local function game()
+    user_input()
     update()
     draw()
 end
 
-function main()
-    canvas.set_size(800, 600)
-    canvas.tick(game)
-    canvas.start()
-end
-
-main()
+canvas.set_size(800, 600)
+canvas.tick(game)
+canvas.start()

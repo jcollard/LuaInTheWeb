@@ -1,18 +1,20 @@
--- Transform Reset Example
--- Demonstrates reset_transform() and set_transform()
+-- canvas/transform_reset.lua
+-- Demonstrates: reset_transform() and set_transform()
+-- Features: translate, rotate, scale, reset_transform, set_transform
 --
 -- Shows how reset_transform() clears all transformations
 -- and how set_transform() can set an absolute transformation
 
 local canvas = require('canvas')
 
-canvas.set_size(600, 400)
-
 local time = 0
 
-canvas.tick(function()
-  canvas.clear()
+local function update()
   time = time + canvas.get_delta()
+end
+
+local function draw()
+  canvas.clear()
 
   -- Apply some transformations
   canvas.translate(150, 200)
@@ -50,6 +52,13 @@ canvas.tick(function()
 
   canvas.draw_text(430, 340, "set_transform()")
   canvas.draw_text(430, 360, "(shear effect)")
-end)
+end
 
+local function game()
+  update()
+  draw()
+end
+
+canvas.set_size(600, 400)
+canvas.tick(game)
 canvas.start()

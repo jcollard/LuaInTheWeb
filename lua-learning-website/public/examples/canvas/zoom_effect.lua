@@ -1,13 +1,12 @@
--- Zoom Effect Example
--- Demonstrates canvas.scale() for zoom in/out effects
+-- canvas/zoom_effect.lua
+-- Demonstrates: scale() for zoom in/out effects
+-- Features: scale, translate, save, restore, is_key_down, is_key_pressed
 --
 -- Press UP/DOWN arrows to zoom in/out
 -- Press R to reset zoom
 -- The scene is drawn at a fixed size, then scaled
 
 local canvas = require('canvas')
-
-canvas.set_size(600, 400)
 
 local zoom = 1.0
 local min_zoom = 0.25
@@ -59,7 +58,7 @@ local function draw_scene()
   canvas.fill_circle(87, -30, 35)
 end
 
-canvas.tick(function()
+local function user_input()
   local dt = canvas.get_delta()
 
   -- Handle zoom controls
@@ -72,12 +71,15 @@ canvas.tick(function()
   if canvas.is_key_pressed('r') then
     zoom = 1.0
   end
+end
 
+local function update()
   -- Clamp zoom
   if zoom < min_zoom then zoom = min_zoom end
   if zoom > max_zoom then zoom = max_zoom end
+end
 
-  -- Clear and draw
+local function draw()
   canvas.clear()
 
   -- Apply zoom transformation
@@ -97,6 +99,14 @@ canvas.tick(function()
   canvas.draw_text(10, 20, "Zoom Effect using scale()")
   canvas.draw_text(10, 40, string.format("Zoom: %.2fx", zoom))
   canvas.draw_text(10, 370, "UP/DOWN: Zoom | R: Reset")
-end)
+end
 
+local function game()
+  user_input()
+  update()
+  draw()
+end
+
+canvas.set_size(600, 400)
+canvas.tick(game)
 canvas.start()

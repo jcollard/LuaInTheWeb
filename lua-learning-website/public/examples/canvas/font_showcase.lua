@@ -38,7 +38,7 @@ local function get_rainbow_color(offset)
     return r, g, b
 end
 
-local function handle_input()
+local function user_input()
     -- Cycle through fonts with arrow keys
     if canvas.is_key_pressed(canvas.keys.DOWN) or canvas.is_key_pressed(canvas.keys.S) then
         current_font_index = current_font_index + 1
@@ -233,14 +233,10 @@ local function draw()
 end
 
 local function game()
-    handle_input()
+    user_input()
     draw()
 end
 
-function main()
-    canvas.set_size(800, 800)
-    canvas.tick(game)
-    canvas.start()
-end
-
-main()
+canvas.set_size(800, 800)
+canvas.tick(game)
+canvas.start()
