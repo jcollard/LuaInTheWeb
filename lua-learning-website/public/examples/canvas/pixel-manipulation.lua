@@ -8,8 +8,13 @@ canvas.set_size(500, 400)
 
 -- Current effect mode
 local mode = 1
+local last_mode = 0  -- Track previous mode to detect changes
 local modes = {"Original", "Invert", "Grayscale", "Red Channel", "Noise Overlay"}
 local mode_count = #modes
+
+-- Cached images to avoid reprocessing every frame
+local cached_effect_img = nil
+local gradient_img = nil
 
 -- Base shapes to apply effects to
 local function draw_base_scene()
@@ -111,68 +116,80 @@ local function create_gradient_texture()
 end
 
 canvas.tick(function()
-  canvas.clear()
-
-  -- Draw title
-  canvas.set_color(0, 0, 0)
-  canvas.set_font_size(18)
-  canvas.set_text_align("center")
-  canvas.draw_text(250, 15, "Pixel Manipulation Demo")
-
-  -- Draw base scene on left side
-  canvas.save()
-  canvas.translate(0, 40)
-  draw_base_scene()
-  canvas.restore()
-
-  -- Get pixel data and apply effect
-  local img = canvas.get_image_data(0, 40, 250, 200)
-
-  if img then
-    if mode == 2 then
-      apply_invert(img)
-    elseif mode == 3 then
-      apply_grayscale(img)
-    elseif mode == 4 then
-      apply_red_channel(img)
-    elseif mode == 5 then
-      apply_noise(img)
-    end
-
-    -- Draw processed image on right side
-    canvas.put_image_data(img, 250, 40)
-  end
-
-  -- Draw divider line
-  canvas.set_color(100, 100, 100)
-  canvas.set_line_width(2)
-  canvas.draw_line(250, 40, 250, 240)
-
-  -- Labels
-  canvas.set_font_size(14)
-  canvas.set_text_align("center")
-  canvas.set_color(0, 0, 0)
-  canvas.draw_text(125, 255, "Original")
-  canvas.draw_text(375, 255, modes[mode])
-
-  -- Draw procedural gradient demo
-  canvas.set_font_size(14)
-  canvas.draw_text(250, 285, "Procedural Gradient (create_image_data)")
-
-  local gradient_img = create_gradient_texture()
-  canvas.put_image_data(gradient_img, 200, 300)
-
-  -- Instructions
-  canvas.set_font_size(12)
-  canvas.set_color(80, 80, 80)
-  canvas.draw_text(250, 380, "Press SPACE or click to cycle effects: " .. mode .. "/" .. mode_count)
-
-  -- Handle input
+  -- Handle input first for responsive feel
   if canvas.is_key_pressed("space") or canvas.is_mouse_pressed(0) then
     mode = mode + 1
     if mode > mode_count then
       mode = 1
     end
+  end
+
+  -- Only redraw when mode changes (or first frame)
+  if mode ~= last_mode then
+    last_mode = mode
+
+    canvas.clear()
+
+    -- Draw title
+    canvas.set_color(0, 0, 0)
+    canvas.set_font_size(18)
+    canvas.set_text_align("center")
+    canvas.draw_text(250, 15, "Pixel Manipulation Demo")
+
+    -- Draw base scene on left side
+    canvas.save()
+    canvas.translate(0, 40)
+    draw_base_scene()
+    canvas.restore()
+
+    -- Get pixel data and apply effect
+    local img = canvas.get_image_data(0, 40, 250, 200)
+
+    if img then
+      if mode == 2 then
+        apply_invert(img)
+      elseif mode == 3 then
+        apply_grayscale(img)
+      elseif mode == 4 then
+        apply_red_channel(img)
+      elseif mode == 5 then
+        apply_noise(img)
+      end
+
+      -- Cache the processed image
+      cached_effect_img = img
+    end
+
+    -- Draw processed image on right side
+    if cached_effect_img then
+      canvas.put_image_data(cached_effect_img, 250, 40)
+    end
+
+    -- Draw divider line
+    canvas.set_color(100, 100, 100)
+    canvas.set_line_width(2)
+    canvas.draw_line(250, 40, 250, 240)
+
+    -- Labels
+    canvas.set_font_size(14)
+    canvas.set_text_align("center")
+    canvas.set_color(0, 0, 0)
+    canvas.draw_text(125, 255, "Original")
+    canvas.draw_text(375, 255, modes[mode])
+
+    -- Draw procedural gradient demo (only create once)
+    canvas.set_font_size(14)
+    canvas.draw_text(250, 285, "Procedural Gradient (create_image_data)")
+
+    if not gradient_img then
+      gradient_img = create_gradient_texture()
+    end
+    canvas.put_image_data(gradient_img, 200, 300)
+
+    -- Instructions
+    canvas.set_font_size(12)
+    canvas.set_color(80, 80, 80)
+    canvas.draw_text(250, 380, "Press SPACE or click to cycle effects: " .. mode .. "/" .. mode_count)
   end
 end)
 
