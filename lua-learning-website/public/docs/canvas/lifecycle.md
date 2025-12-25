@@ -13,12 +13,17 @@ Call `canvas.tick()` before this to register your render callback.
 ```lua
 local canvas = require('canvas')
 
-canvas.tick(function()
+local function draw()
   canvas.clear()
   canvas.set_color(255, 0, 0)
   canvas.fill_rect(10, 10, 50, 50)
-end)
+end
 
+local function game()
+  draw()
+end
+
+canvas.tick(game)
 canvas.start()  -- Blocks until stop or Ctrl+C
 ```
 
@@ -45,11 +50,17 @@ All game logic and drawing should be performed inside this callback.
 - `callback` (function): Function to call each frame
 
 ```lua
-canvas.tick(function()
+local function draw()
   canvas.clear()
   canvas.set_color(255, 0, 0)
   canvas.fill_rect(10, 10, 50, 50)
-end)
+end
+
+local function game()
+  draw()
+end
+
+canvas.tick(game)
 ```
 
 ## Canvas Configuration

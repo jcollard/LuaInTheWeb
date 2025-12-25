@@ -150,8 +150,7 @@ canvas.set_size(800, 600)
 local x, y = 100, 100
 local speed = 200
 
-canvas.tick(function()
-  -- Handle input
+local function user_input()
   local dt = canvas.get_delta()
 
   if canvas.is_key_down(canvas.keys.A) or canvas.is_key_down(canvas.keys.LEFT) then
@@ -166,17 +165,27 @@ canvas.tick(function()
   if canvas.is_key_down(canvas.keys.S) or canvas.is_key_down(canvas.keys.DOWN) then
     y = y + speed * dt
   end
+end
 
+local function update()
   -- Keep player in bounds
   x = math.max(25, math.min(canvas.get_width() - 25, x))
   y = math.max(25, math.min(canvas.get_height() - 25, y))
+end
 
-  -- Draw
+local function draw()
   canvas.clear()
   canvas.set_color(255, 100, 0)
   canvas.fill_circle(x, y, 25)
-end)
+end
 
+local function game()
+  user_input()
+  update()
+  draw()
+end
+
+canvas.tick(game)
 canvas.start()
 ```
 

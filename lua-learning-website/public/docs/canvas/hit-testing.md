@@ -112,9 +112,7 @@ local buttons = {
   {x = 50, y = 170, w = 120, h = 40, text = "Quit", color = "#f44336"},
 }
 
-canvas.tick(function()
-  canvas.clear()
-
+local function user_input()
   local mx, my = canvas.get_mouse_x(), canvas.get_mouse_y()
   local clicked = canvas.is_mouse_pressed(0)
 
@@ -130,8 +128,20 @@ canvas.tick(function()
       print("Clicked: " .. btn.text)
     end
 
+    btn.hovered = hovered
+  end
+end
+
+local function draw()
+  canvas.clear()
+
+  for _, btn in ipairs(buttons) do
+    -- Build path for drawing
+    canvas.begin_path()
+    canvas.round_rect(btn.x, btn.y, btn.w, btn.h, 8)
+
     -- Draw button (lighter when hovered)
-    if hovered then
+    if btn.hovered then
       canvas.set_fill_style(btn.color .. "CC")  -- Lighter
     else
       canvas.set_fill_style(btn.color)
@@ -142,8 +152,14 @@ canvas.tick(function()
     canvas.set_fill_style("#FFFFFF")
     canvas.draw_label(btn.x, btn.y, btn.w, btn.h, btn.text)
   end
-end)
+end
 
+local function game()
+  user_input()
+  draw()
+end
+
+canvas.tick(game)
 canvas.start()
 ```
 
@@ -168,11 +184,10 @@ local function pentagon(cx, cy, r)
 end
 
 local pts = pentagon(200, 200, 100)
+local inside = false
 
-canvas.tick(function()
-  canvas.clear()
-
-  -- Build pentagon path
+local function user_input()
+  -- Build pentagon path for hit testing
   canvas.begin_path()
   canvas.move_to(pts[1].x, pts[1].y)
   for i = 2, #pts do
@@ -182,7 +197,19 @@ canvas.tick(function()
 
   -- Hit test
   local mx, my = canvas.get_mouse_x(), canvas.get_mouse_y()
-  local inside = canvas.is_point_in_path(mx, my)
+  inside = canvas.is_point_in_path(mx, my)
+end
+
+local function draw()
+  canvas.clear()
+
+  -- Build pentagon path for drawing
+  canvas.begin_path()
+  canvas.move_to(pts[1].x, pts[1].y)
+  for i = 2, #pts do
+    canvas.line_to(pts[i].x, pts[i].y)
+  end
+  canvas.close_path()
 
   -- Draw with hover effect
   if inside then
@@ -195,8 +222,14 @@ canvas.tick(function()
   canvas.set_stroke_style("#FFFFFF")
   canvas.set_line_width(2)
   canvas.stroke()
-end)
+end
 
+local function game()
+  user_input()
+  draw()
+end
+
+canvas.tick(game)
 canvas.start()
 ```
 
