@@ -1,9 +1,9 @@
 # Epic #415: Epic: Complete Canvas 2D API Implementation
 
-**Status:** In Progress (15/17 complete)
+**Status:** In Progress (16/17 complete)
 **Branch:** epic-415
 **Created:** 2025-12-22
-**Last Updated:** 2025-12-25
+**Last Updated:** 2025-12-26
 
 ## Overview
 
@@ -51,7 +51,7 @@ Key considerations:
 | #429 | Implement text alignment (textAlign, textBaseline) | ✅ Complete | 429-text-alignment | Merged PR #446 |
 | #430 | Implement hit testing (isPointInPath, isPointInStroke) | ✅ Complete | 430-hit-testing | Merged PR #447 |
 | #431 | Implement pixel manipulation (getImageData, putImageData, createImageData) | ✅ Complete | 431-implement-pixel-manipulation | Merged PR #448 |
-| #432 | Update canvas.lua with complete API documentation | ⏳ Pending | - | - |
+| #432 | Update canvas.lua with complete API documentation | ✅ Complete | 432-update-canvas-api-documentation | Merged PR #449 |
 | #433 | Create example programs for all new canvas features | ⏳ Pending | - | - |
 
 **Status Legend:**
@@ -179,6 +179,13 @@ Key considerations:
   - Updated docs/canvas.md with Pixel Manipulation section
   - E2E tests cover create, get, put, and caching scenarios
   - Merged PR #448 to epic-415
+- #432 Canvas API documentation complete
+  - Added table of contents to canvas.lua (23 sections)
+  - Restructured canvas.md as index page with quick reference tables
+  - Split detailed docs into 10 topic files following MDN Canvas API patterns
+  - Topics: lifecycle, drawing, path, styling, transforms, input, assets, text, hit-testing, pixels
+  - Updated all examples to use 4-function pattern (user_input, update, draw, game)
+  - Merged PR #449 to epic-415
 
 ## Key Files
 
