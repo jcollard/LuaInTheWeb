@@ -106,7 +106,7 @@ canvas.assets.image("player", "images/player.png")
 local x, y = 200, 150
 local speed = 150
 
-canvas.tick(function()
+local function user_input()
   local dt = canvas.get_delta()
 
   -- Move with arrow keys
@@ -116,16 +116,23 @@ canvas.tick(function()
   if canvas.is_key_down(canvas.keys.RIGHT) then
     x = x + speed * dt
   end
+end
 
-  -- Draw
+local function draw()
   canvas.clear()
 
   -- Draw player centered
   local w = canvas.assets.get_width("player")
   local h = canvas.assets.get_height("player")
   canvas.draw_image("player", x - w/2, y - h/2)
-end)
+end
 
+local function game()
+  user_input()
+  draw()
+end
+
+canvas.tick(game)
 canvas.start()
 ```
 

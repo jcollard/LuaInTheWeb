@@ -106,9 +106,12 @@ canvas.set_size(400, 400)
 
 local angle = 0
 
-canvas.tick(function()
-  canvas.clear()
+local function update()
   angle = angle + canvas.get_delta()
+end
+
+local function draw()
+  canvas.clear()
 
   -- Draw rotating square at center
   canvas.save()
@@ -125,8 +128,14 @@ canvas.tick(function()
   canvas.set_color(0, 0, 255)
   canvas.fill_rect(-25, -25, 50, 50)
   canvas.restore()
-end)
+end
 
+local function game()
+  update()
+  draw()
+end
+
+canvas.tick(game)
 canvas.start()
 ```
 

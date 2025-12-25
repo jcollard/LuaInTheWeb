@@ -108,17 +108,26 @@ Set the line dash offset for animating dashed lines. Useful for creating "marchi
 -- Animated marching ants selection box
 local offset = 0
 
-canvas.tick(function()
-  canvas.clear()
+local function update()
   offset = offset + 0.5
+end
 
+local function draw()
+  canvas.clear()
   canvas.set_line_dash({4, 4})
   canvas.set_line_dash_offset(offset)
   canvas.set_color(0, 0, 0)
   canvas.begin_path()
   canvas.draw_rect(100, 100, 200, 150)
   canvas.stroke()
-end)
+end
+
+local function game()
+  update()
+  draw()
+end
+
+canvas.tick(game)
 ```
 
 ## Gradients

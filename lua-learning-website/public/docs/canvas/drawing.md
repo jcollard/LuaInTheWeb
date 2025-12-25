@@ -116,7 +116,7 @@ local canvas = require('canvas')
 
 canvas.set_size(400, 300)
 
-canvas.tick(function()
+local function draw()
   canvas.clear()
 
   -- Draw a red square
@@ -135,8 +135,13 @@ canvas.tick(function()
   -- Draw text
   canvas.set_color(0, 0, 0)
   canvas.draw_text(50, 250, "Hello, Canvas!")
-end)
+end
 
+local function game()
+  draw()
+end
+
+canvas.tick(game)
 canvas.start()
 ```
 

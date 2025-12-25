@@ -197,7 +197,7 @@ canvas.set_size(800, 600)
 local score = 12345
 local health = 75
 
-canvas.tick(function()
+local function draw()
   canvas.clear()
 
   -- Title (centered at top)
@@ -226,8 +226,13 @@ canvas.tick(function()
     align_v = "top",
     padding = {left = 15, top = 15, right = 15, bottom = 15}
   })
-end)
+end
 
+local function game()
+  draw()
+end
+
+canvas.tick(game)
 canvas.start()
 ```
 
