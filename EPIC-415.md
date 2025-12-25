@@ -1,6 +1,6 @@
 # Epic #415: Epic: Complete Canvas 2D API Implementation
 
-**Status:** In Progress (14/17 complete)
+**Status:** In Progress (15/17 complete)
 **Branch:** epic-415
 **Created:** 2025-12-22
 **Last Updated:** 2025-12-25
@@ -50,7 +50,7 @@ Key considerations:
 | #428 | Implement compositing (globalAlpha, globalCompositeOperation) | ✅ Complete | 428-compositing | - |
 | #429 | Implement text alignment (textAlign, textBaseline) | ✅ Complete | 429-text-alignment | Merged PR #446 |
 | #430 | Implement hit testing (isPointInPath, isPointInStroke) | ✅ Complete | 430-hit-testing | Merged PR #447 |
-| #431 | Implement pixel manipulation (getImageData, putImageData, createImageData) | ⏳ Pending | - | - |
+| #431 | Implement pixel manipulation (getImageData, putImageData, createImageData) | ✅ Complete | 431-implement-pixel-manipulation | Merged PR #448 |
 | #432 | Update canvas.lua with complete API documentation | ⏳ Pending | - | - |
 | #433 | Create example programs for all new canvas features | ⏳ Pending | - | - |
 
@@ -167,6 +167,18 @@ Key considerations:
   - Created 1 example: hit-testing.lua
   - Updated docs/canvas.md with Hit Testing section
   - Merged PR #447 to epic-415
+
+### 2025-12-25
+- #431 Pixel manipulation implementation complete
+  - Added 3 Lua functions: create_image_data, get_image_data, put_image_data
+  - Added ImageData class with get_pixel/set_pixel helper methods
+  - Implemented JS-side ImageData storage for O(1) put_image_data performance
+  - Added willReadFrequently canvas context option for optimized getImageData
+  - Mutation scores: CanvasRenderer 84.51%, setupCanvasAPI 86.6%
+  - Created 1 example: pixel-manipulation.lua (with loading screen and cached effects)
+  - Updated docs/canvas.md with Pixel Manipulation section
+  - E2E tests cover create, get, put, and caching scenarios
+  - Merged PR #448 to epic-415
 
 ## Key Files
 
