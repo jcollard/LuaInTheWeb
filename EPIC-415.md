@@ -1,9 +1,9 @@
 # Epic #415: Epic: Complete Canvas 2D API Implementation
 
-**Status:** In Progress (15/17 complete)
+**Status:** In Progress (14/17 complete)
 **Branch:** epic-415
 **Created:** 2025-12-22
-**Last Updated:** 2025-12-24
+**Last Updated:** 2025-12-25
 
 ## Overview
 
@@ -49,7 +49,7 @@ Key considerations:
 | #427 | Implement shadows (shadowColor, shadowBlur, shadowOffsetX/Y) | ✅ Complete | epic-415 | Direct commit to epic branch |
 | #428 | Implement compositing (globalAlpha, globalCompositeOperation) | ✅ Complete | 428-compositing | - |
 | #429 | Implement text alignment (textAlign, textBaseline) | ✅ Complete | 429-text-alignment | Merged PR #446 |
-| #430 | Implement hit testing (isPointInPath, isPointInStroke) | ✅ Complete | 430-hit-testing | PR #447 |
+| #430 | Implement hit testing (isPointInPath, isPointInStroke) | ✅ Complete | 430-hit-testing | Merged PR #447 |
 | #431 | Implement pixel manipulation (getImageData, putImageData, createImageData) | ⏳ Pending | - | - |
 | #432 | Update canvas.lua with complete API documentation | ⏳ Pending | - | - |
 | #433 | Create example programs for all new canvas features | ⏳ Pending | - | - |
@@ -162,10 +162,11 @@ Key considerations:
   - Added 2 Lua functions: is_point_in_path, is_point_in_stroke
   - Added FillRule type ('nonzero' | 'evenodd')
   - Track Path2D state in CanvasController alongside draw commands
+  - Fixed InputCapture to handle object-fit:contain letterboxing for mouse coordinates
   - Mutation scores: CanvasRenderer 84.51%, CanvasController 87.02% (covered)
   - Created 1 example: hit-testing.lua
   - Updated docs/canvas.md with Hit Testing section
-  - PR #447 to epic-415
+  - Merged PR #447 to epic-415
 
 ## Key Files
 
