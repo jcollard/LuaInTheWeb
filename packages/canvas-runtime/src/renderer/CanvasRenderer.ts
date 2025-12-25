@@ -20,7 +20,9 @@ export class CanvasRenderer {
   constructor(canvas: HTMLCanvasElement, imageCache?: ImageCache) {
     this.canvas = canvas;
     this.imageCache = imageCache;
-    const ctx = canvas.getContext('2d');
+    // Use willReadFrequently for better getImageData performance
+    // This keeps canvas data in CPU memory instead of GPU, optimizing for pixel manipulation
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) {
       throw new Error('Could not get 2D rendering context');
     }
