@@ -12,6 +12,34 @@
 local canvas = {}
 
 -- =============================================================================
+-- Table of Contents
+-- =============================================================================
+-- 1.  Canvas Lifecycle (start, stop)
+-- 2.  Game Loop (tick)
+-- 3.  Canvas Configuration (set_size, get_width, get_height)
+-- 4.  Drawing State (clear, set_color, set_line_width)
+-- 5.  Line Styling (set_line_cap, set_line_join, set_miter_limit)
+-- 6.  Dashed Lines (set_line_dash, get_line_dash, set_line_dash_offset)
+-- 7.  Gradient API (create_linear_gradient, create_radial_gradient, create_conic_gradient)
+-- 8.  Pattern API (create_pattern, set_fill_style, set_stroke_style)
+-- 9.  Shadow API (set_shadow_color, set_shadow_blur, set_shadow, clear_shadow)
+-- 10. Compositing (set_global_alpha, set_composite_operation)
+-- 11. Text Alignment (set_text_align, set_text_baseline, draw_label)
+-- 12. Font Styling (set_font_size, set_font_family, get_text_width)
+-- 13. Drawing Functions (draw_rect, fill_rect, draw_circle, fill_circle, draw_line, draw_text)
+-- 14. Timing Functions (get_delta, get_time)
+-- 15. Keyboard Input (is_key_down, is_key_pressed, get_keys_down, get_keys_pressed)
+-- 16. Key Constants (canvas.keys.*)
+-- 17. Mouse Input (get_mouse_x, get_mouse_y, is_mouse_down, is_mouse_pressed)
+-- 18. Asset Management (canvas.assets.image, canvas.assets.font, get_width, get_height)
+-- 19. Image Drawing (draw_image)
+-- 20. Transformation Functions (translate, rotate, scale, save, restore, transform)
+-- 21. Path API (begin_path, close_path, move_to, line_to, arc, bezier, ellipse, round_rect, clip)
+-- 22. Hit Testing API (is_point_in_path, is_point_in_stroke)
+-- 23. Pixel Manipulation API (ImageData, create_image_data, get_image_data, put_image_data)
+-- =============================================================================
+
+-- =============================================================================
 -- Canvas Lifecycle
 -- =============================================================================
 
