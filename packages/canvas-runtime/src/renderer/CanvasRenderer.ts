@@ -1,4 +1,4 @@
-import type { DrawCommand, GradientDef, PatternDef, FillStyle } from '../shared/types.js';
+import type { DrawCommand, GradientDef, PatternDef, FillStyle, FillRule } from '../shared/types.js';
 import type { ImageCache } from './ImageCache.js';
 
 /**
@@ -406,5 +406,32 @@ export class CanvasRenderer {
     } else {
       this.ctx.strokeStyle = canvasStyle;
     }
+  }
+
+  // ============================================================================
+  // Hit Testing Methods
+  // ============================================================================
+
+  /**
+   * Check if a point is inside a path.
+   * @param path - The Path2D object to test against
+   * @param x - X coordinate of the point
+   * @param y - Y coordinate of the point
+   * @param fillRule - Fill rule: 'nonzero' (default) or 'evenodd'
+   * @returns true if the point is inside the path
+   */
+  isPointInPath(path: Path2D, x: number, y: number, fillRule: FillRule = 'nonzero'): boolean {
+    return this.ctx.isPointInPath(path, x, y, fillRule);
+  }
+
+  /**
+   * Check if a point is on the stroke of a path.
+   * @param path - The Path2D object to test against
+   * @param x - X coordinate of the point
+   * @param y - Y coordinate of the point
+   * @returns true if the point is on the path's stroke
+   */
+  isPointInStroke(path: Path2D, x: number, y: number): boolean {
+    return this.ctx.isPointInStroke(path, x, y);
   }
 }

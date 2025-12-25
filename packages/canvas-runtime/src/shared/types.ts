@@ -730,6 +730,17 @@ export interface SetCompositeOperationCommand extends DrawCommandBase {
 }
 
 // ============================================================================
+// Hit Testing Types
+// ============================================================================
+
+/**
+ * Fill rule for determining the inside of a path.
+ * - 'nonzero': Non-zero winding rule (default)
+ * - 'evenodd': Even-odd rule
+ */
+export type FillRule = 'nonzero' | 'evenodd';
+
+// ============================================================================
 // Text Alignment Types
 // ============================================================================
 

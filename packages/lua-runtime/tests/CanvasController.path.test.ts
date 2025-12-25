@@ -8,6 +8,24 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { CanvasController, type CanvasCallbacks } from '../src/CanvasController'
 
+// Mock Path2D (not available in jsdom)
+class MockPath2D {
+  commands: unknown[] = [];
+  moveTo(x: number, y: number) { this.commands.push(['moveTo', x, y]); }
+  lineTo(x: number, y: number) { this.commands.push(['lineTo', x, y]); }
+  closePath() { this.commands.push(['closePath']); }
+  arc(...args: unknown[]) { this.commands.push(['arc', ...args]); }
+  arcTo(...args: unknown[]) { this.commands.push(['arcTo', ...args]); }
+  ellipse(...args: unknown[]) { this.commands.push(['ellipse', ...args]); }
+  rect(...args: unknown[]) { this.commands.push(['rect', ...args]); }
+  roundRect(...args: unknown[]) { this.commands.push(['roundRect', ...args]); }
+  quadraticCurveTo(...args: unknown[]) { this.commands.push(['quadraticCurveTo', ...args]); }
+  bezierCurveTo(...args: unknown[]) { this.commands.push(['bezierCurveTo', ...args]); }
+}
+
+// Assign to global for tests
+(globalThis as unknown as { Path2D: typeof MockPath2D }).Path2D = MockPath2D;
+
 // Global to capture the frame callback for testing
 let lastRenderFn: ReturnType<typeof vi.fn> | null = null
 
@@ -1013,6 +1031,153 @@ describe('CanvasController Path API', () => {
         type: 'setStrokeStyle',
         style: gradient,
       })
+    })
+  })
+
+  // ============================================================================
+  // Path2D Tracking for Hit Testing
+  // ============================================================================
+
+  describe('Path2D tracking', () => {
+    it('should track path state for beginPath', () => {
+      controller.beginPath()
+
+      // After beginPath, current path should be reset
+      const path = controller.getCurrentPath()
+      expect(path).toBeDefined()
+    })
+
+    it('should track moveTo in path', () => {
+      controller.beginPath()
+      controller.moveTo(100, 150)
+
+      const path = controller.getCurrentPath()
+      expect(path).toBeDefined()
+    })
+
+    it('should track lineTo in path', () => {
+      controller.beginPath()
+      controller.moveTo(0, 0)
+      controller.lineTo(100, 100)
+
+      const path = controller.getCurrentPath()
+      expect(path).toBeDefined()
+    })
+
+    it('should track closePath in path', () => {
+      controller.beginPath()
+      controller.moveTo(0, 0)
+      controller.lineTo(100, 0)
+      controller.lineTo(50, 100)
+      controller.closePath()
+
+      const path = controller.getCurrentPath()
+      expect(path).toBeDefined()
+    })
+
+    it('should track arc in path', () => {
+      controller.beginPath()
+      controller.arc(100, 100, 50, 0, Math.PI * 2)
+
+      const path = controller.getCurrentPath()
+      expect(path).toBeDefined()
+    })
+
+    it('should track arcTo in path', () => {
+      controller.beginPath()
+      controller.moveTo(50, 50)
+      controller.arcTo(100, 50, 100, 100, 20)
+
+      const path = controller.getCurrentPath()
+      expect(path).toBeDefined()
+    })
+
+    it('should track quadraticCurveTo in path', () => {
+      controller.beginPath()
+      controller.moveTo(0, 0)
+      controller.quadraticCurveTo(50, 100, 100, 0)
+
+      const path = controller.getCurrentPath()
+      expect(path).toBeDefined()
+    })
+
+    it('should track bezierCurveTo in path', () => {
+      controller.beginPath()
+      controller.moveTo(0, 0)
+      controller.bezierCurveTo(25, 100, 75, 100, 100, 0)
+
+      const path = controller.getCurrentPath()
+      expect(path).toBeDefined()
+    })
+
+    it('should track ellipse in path', () => {
+      controller.beginPath()
+      controller.ellipse(100, 100, 80, 40, 0, 0, Math.PI * 2)
+
+      const path = controller.getCurrentPath()
+      expect(path).toBeDefined()
+    })
+
+    it('should track roundRect in path', () => {
+      controller.beginPath()
+      controller.roundRect(50, 50, 200, 100, 15)
+
+      const path = controller.getCurrentPath()
+      expect(path).toBeDefined()
+    })
+
+    it('should reset path on beginPath', () => {
+      controller.beginPath()
+      controller.moveTo(0, 0)
+      controller.lineTo(100, 100)
+
+      const path1 = controller.getCurrentPath()
+
+      controller.beginPath()
+      const path2 = controller.getCurrentPath()
+
+      // path2 should be a new Path2D, not the same as path1
+      expect(path2).not.toBe(path1)
+    })
+  })
+
+  // ============================================================================
+  // Hit Testing Methods
+  // ============================================================================
+
+  describe('isPointInPath', () => {
+    it('should return false when no renderer is available', () => {
+      controller.beginPath()
+      controller.moveTo(0, 0)
+      controller.lineTo(100, 0)
+      controller.lineTo(50, 100)
+      controller.closePath()
+
+      const result = controller.isPointInPath(50, 50)
+
+      expect(result).toBe(false)
+    })
+
+    it('should accept fillRule parameter', () => {
+      controller.beginPath()
+      controller.arc(50, 50, 30, 0, Math.PI * 2)
+
+      // Without renderer, should return false regardless of fillRule
+      const result = controller.isPointInPath(50, 50, 'evenodd')
+
+      expect(result).toBe(false)
+    })
+  })
+
+  describe('isPointInStroke', () => {
+    it('should return false when no renderer is available', () => {
+      controller.beginPath()
+      controller.moveTo(0, 0)
+      controller.lineTo(100, 100)
+
+      const result = controller.isPointInStroke(50, 50)
+
+      expect(result).toBe(false)
     })
   })
 })

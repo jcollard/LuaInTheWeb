@@ -1161,4 +1161,72 @@ function canvas.round_rect(x, y, width, height, radii) end
 ---@usage canvas.restore()  -- Remove clipping
 function canvas.clip(fillRule) end
 
+-- =============================================================================
+-- Hit Testing API
+-- =============================================================================
+
+--- Check if a point is inside the current path.
+--- Useful for detecting clicks on complex shapes.
+--- Must be called after building a path with begin_path(), move_to(), etc.
+---@param x number X coordinate of the point to test
+---@param y number Y coordinate of the point to test
+---@param fillRule? string Fill rule: "nonzero" (default) or "evenodd"
+---@return boolean inside True if the point is inside the path
+---@usage -- Check if mouse is inside a triangle
+---@usage canvas.begin_path()
+---@usage canvas.move_to(200, 100)
+---@usage canvas.line_to(100, 300)
+---@usage canvas.line_to(300, 300)
+---@usage canvas.close_path()
+---@usage
+---@usage local mx, my = canvas.get_mouse_x(), canvas.get_mouse_y()
+---@usage if canvas.is_point_in_path(mx, my) then
+---@usage   canvas.set_color(255, 0, 0)  -- Red when hovered
+---@usage else
+---@usage   canvas.set_color(100, 100, 100)  -- Gray otherwise
+---@usage end
+---@usage canvas.fill()
+---@usage
+---@usage -- Using "evenodd" fill rule for shapes with holes
+---@usage -- Outer square
+---@usage canvas.begin_path()
+---@usage canvas.move_to(50, 50)
+---@usage canvas.line_to(250, 50)
+---@usage canvas.line_to(250, 250)
+---@usage canvas.line_to(50, 250)
+---@usage canvas.close_path()
+---@usage -- Inner square (hole)
+---@usage canvas.move_to(100, 100)
+---@usage canvas.line_to(200, 100)
+---@usage canvas.line_to(200, 200)
+---@usage canvas.line_to(100, 200)
+---@usage canvas.close_path()
+---@usage
+---@usage if canvas.is_point_in_path(mx, my, "evenodd") then
+---@usage   -- Point is inside outer but outside inner square
+---@usage end
+function canvas.is_point_in_path(x, y, fillRule) end
+
+--- Check if a point is on the stroke of the current path.
+--- Useful for detecting clicks on lines and outlines.
+--- The hit detection uses the current line width - wider lines are easier to click.
+--- Must be called after building a path with begin_path(), move_to(), etc.
+---@param x number X coordinate of the point to test
+---@param y number Y coordinate of the point to test
+---@return boolean onStroke True if the point is on the path's stroke
+---@usage -- Check if mouse is on a line
+---@usage canvas.set_line_width(5)  -- 5px wide stroke for easier clicking
+---@usage canvas.begin_path()
+---@usage canvas.move_to(50, 50)
+---@usage canvas.line_to(350, 350)
+---@usage
+---@usage local mx, my = canvas.get_mouse_x(), canvas.get_mouse_y()
+---@usage if canvas.is_point_in_stroke(mx, my) then
+---@usage   canvas.set_color(255, 0, 0)  -- Red when hovered
+---@usage else
+---@usage   canvas.set_color(0, 0, 0)  -- Black otherwise
+---@usage end
+---@usage canvas.stroke()
+function canvas.is_point_in_stroke(x, y) end
+
 return canvas

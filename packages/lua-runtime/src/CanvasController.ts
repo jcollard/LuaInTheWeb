@@ -30,6 +30,7 @@ import type {
   GlobalCompositeOperation,
   CanvasTextAlign,
   CanvasTextBaseline,
+  FillRule,
 } from '@lua-learning/canvas-runtime'
 import type { IFileSystem } from '@lua-learning/shell-core'
 import { formatOnDrawError, createImageFromData, createFontFromData } from './canvasErrorFormatter'
@@ -111,6 +112,9 @@ export class CanvasController {
 
   // Line dash state
   private lineDashSegments: number[] = []
+
+  // Path2D for hit testing - tracks current path operations
+  private currentPath: Path2D = new Path2D()
 
   // Offscreen canvas for text measurement
   private measureCanvas: HTMLCanvasElement | null = null
@@ -457,6 +461,7 @@ export class CanvasController {
    * Begin a new path, clearing any existing path data.
    */
   beginPath(): void {
+    this.currentPath = new Path2D()
     this.addDrawCommand({ type: 'beginPath' })
   }
 
@@ -464,6 +469,7 @@ export class CanvasController {
    * Close the current path by drawing a line to the starting point.
    */
   closePath(): void {
+    this.currentPath.closePath()
     this.addDrawCommand({ type: 'closePath' })
   }
 
@@ -471,6 +477,7 @@ export class CanvasController {
    * Move the current point to a new position without drawing.
    */
   moveTo(x: number, y: number): void {
+    this.currentPath.moveTo(x, y)
     this.addDrawCommand({ type: 'moveTo', x, y })
   }
 
@@ -478,6 +485,7 @@ export class CanvasController {
    * Draw a line from the current point to a new position.
    */
   lineTo(x: number, y: number): void {
+    this.currentPath.lineTo(x, y)
     this.addDrawCommand({ type: 'lineTo', x, y })
   }
 
@@ -505,6 +513,7 @@ export class CanvasController {
    * @param counterclockwise - Draw counterclockwise (default: false)
    */
   arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, counterclockwise?: boolean): void {
+    this.currentPath.arc(x, y, radius, startAngle, endAngle, counterclockwise)
     this.addDrawCommand({ type: 'arc', x, y, radius, startAngle, endAngle, counterclockwise })
   }
 
@@ -517,6 +526,7 @@ export class CanvasController {
    * @param radius - Arc radius
    */
   arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): void {
+    this.currentPath.arcTo(x1, y1, x2, y2, radius)
     this.addDrawCommand({ type: 'arcTo', x1, y1, x2, y2, radius })
   }
 
@@ -528,6 +538,7 @@ export class CanvasController {
    * @param y - Y coordinate of the end point
    */
   quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void {
+    this.currentPath.quadraticCurveTo(cpx, cpy, x, y)
     this.addDrawCommand({ type: 'quadraticCurveTo', cpx, cpy, x, y })
   }
 
@@ -541,6 +552,7 @@ export class CanvasController {
    * @param y - Y coordinate of the end point
    */
   bezierCurveTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number): void {
+    this.currentPath.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
     this.addDrawCommand({ type: 'bezierCurveTo', cp1x, cp1y, cp2x, cp2y, x, y })
   }
 
@@ -565,6 +577,7 @@ export class CanvasController {
     endAngle: number,
     counterclockwise?: boolean
   ): void {
+    this.currentPath.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise)
     this.addDrawCommand({
       type: 'ellipse',
       x,
@@ -587,6 +600,7 @@ export class CanvasController {
    * @param radii - Corner radii (single value or array of 1-4 values)
    */
   roundRect(x: number, y: number, width: number, height: number, radii: number | number[]): void {
+    this.currentPath.roundRect(x, y, width, height, radii)
     this.addDrawCommand({ type: 'roundRect', x, y, width, height, radii })
   }
 
@@ -1029,6 +1043,39 @@ export class CanvasController {
       throw new Error(`Unknown asset '${name}' - did you call canvas.assets.image()?`)
     }
     return dims.height
+  }
+
+  // --- Hit Testing API ---
+
+  /**
+   * Get the current path for testing purposes.
+   * @returns The current Path2D object
+   */
+  getCurrentPath(): Path2D {
+    return this.currentPath
+  }
+
+  /**
+   * Check if a point is inside the current path.
+   * @param x - X coordinate of the point
+   * @param y - Y coordinate of the point
+   * @param fillRule - Fill rule: 'nonzero' (default) or 'evenodd'
+   * @returns true if the point is inside the path
+   */
+  isPointInPath(x: number, y: number, fillRule: FillRule = 'nonzero'): boolean {
+    if (!this.renderer) return false
+    return this.renderer.isPointInPath(this.currentPath, x, y, fillRule)
+  }
+
+  /**
+   * Check if a point is on the stroke of the current path.
+   * @param x - X coordinate of the point
+   * @param y - Y coordinate of the point
+   * @returns true if the point is on the path's stroke
+   */
+  isPointInStroke(x: number, y: number): boolean {
+    if (!this.renderer) return false
+    return this.renderer.isPointInStroke(this.currentPath, x, y)
   }
 
   // --- Internal ---

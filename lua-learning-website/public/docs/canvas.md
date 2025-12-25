@@ -1083,6 +1083,94 @@ end
 canvas.restore()  -- Remove clipping
 ```
 
+## Hit Testing
+
+Hit testing allows you to check if a point (such as mouse coordinates) is inside or on a path. This is useful for detecting clicks on complex shapes.
+
+### canvas.is_point_in_path(x, y, fillRule?)
+
+Check if a point is inside the current path. Must be called after building a path with `begin_path()`, `move_to()`, etc.
+
+**Parameters:**
+- `x` (number): X coordinate of the point to test
+- `y` (number): Y coordinate of the point to test
+- `fillRule` (string, optional): "nonzero" (default) or "evenodd"
+
+**Returns:** `boolean` - true if the point is inside the path
+
+```lua
+-- Interactive triangle that changes color on hover
+canvas.begin_path()
+canvas.move_to(200, 100)
+canvas.line_to(100, 300)
+canvas.line_to(300, 300)
+canvas.close_path()
+
+local mx, my = canvas.get_mouse_x(), canvas.get_mouse_y()
+if canvas.is_point_in_path(mx, my) then
+  canvas.set_color(255, 0, 0)  -- Red when hovered
+else
+  canvas.set_color(100, 100, 100)  -- Gray otherwise
+end
+canvas.fill()
+```
+
+**Fill Rules:**
+- `"nonzero"` (default): Standard winding rule - a point is inside if a ray from it crosses more left-to-right edges than right-to-left
+- `"evenodd"`: A point is inside if a ray from it crosses an odd number of edges - useful for shapes with holes
+
+```lua
+-- Shape with a hole using "evenodd"
+canvas.begin_path()
+-- Outer square
+canvas.move_to(50, 50)
+canvas.line_to(250, 50)
+canvas.line_to(250, 250)
+canvas.line_to(50, 250)
+canvas.close_path()
+-- Inner square (hole)
+canvas.move_to(100, 100)
+canvas.line_to(200, 100)
+canvas.line_to(200, 200)
+canvas.line_to(100, 200)
+canvas.close_path()
+
+local mx, my = canvas.get_mouse_x(), canvas.get_mouse_y()
+-- With "evenodd", the inner square is NOT part of the shape
+if canvas.is_point_in_path(mx, my, "evenodd") then
+  canvas.set_color(0, 255, 0)  -- Green when in the ring
+else
+  canvas.set_color(100, 100, 100)
+end
+canvas.fill("evenodd")
+```
+
+### canvas.is_point_in_stroke(x, y)
+
+Check if a point is on the stroke of the current path. The hit detection uses the current line width - wider lines are easier to click.
+
+**Parameters:**
+- `x` (number): X coordinate of the point to test
+- `y` (number): Y coordinate of the point to test
+
+**Returns:** `boolean` - true if the point is on the path's stroke
+
+```lua
+-- Interactive line that highlights on hover
+canvas.set_line_width(5)  -- 5px wide stroke for easier clicking
+canvas.begin_path()
+canvas.move_to(50, 50)
+canvas.line_to(350, 350)
+
+local mx, my = canvas.get_mouse_x(), canvas.get_mouse_y()
+if canvas.is_point_in_stroke(mx, my) then
+  canvas.set_color(255, 0, 0)  -- Red when hovered
+else
+  canvas.set_color(0, 0, 0)  -- Black otherwise
+end
+canvas.stroke()
+```
+
 ## Transformation Functions
 
 Transformations allow you to translate, rotate, and scale the canvas coordinate system.

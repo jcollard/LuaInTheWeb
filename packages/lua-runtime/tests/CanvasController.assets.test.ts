@@ -17,6 +17,22 @@ import {
 } from './canvasControllerTestSetup'
 import type { IFileSystem } from '@lua-learning/shell-core'
 
+// Mock Path2D for jsdom environment (which doesn't have Path2D)
+class MockPath2D {
+  commands: unknown[] = []
+  moveTo(x: number, y: number) { this.commands.push(['moveTo', x, y]) }
+  lineTo(x: number, y: number) { this.commands.push(['lineTo', x, y]) }
+  closePath() { this.commands.push(['closePath']) }
+  arc(...args: unknown[]) { this.commands.push(['arc', ...args]) }
+  arcTo(...args: unknown[]) { this.commands.push(['arcTo', ...args]) }
+  ellipse(...args: unknown[]) { this.commands.push(['ellipse', ...args]) }
+  rect(...args: unknown[]) { this.commands.push(['rect', ...args]) }
+  roundRect(...args: unknown[]) { this.commands.push(['roundRect', ...args]) }
+  quadraticCurveTo(...args: unknown[]) { this.commands.push(['quadraticCurveTo', ...args]) }
+  bezierCurveTo(...args: unknown[]) { this.commands.push(['bezierCurveTo', ...args]) }
+}
+(globalThis as unknown as { Path2D: typeof MockPath2D }).Path2D = MockPath2D
+
 // Mock the canvas-runtime imports using classes
 vi.mock('@lua-learning/canvas-runtime', () => {
   return {
