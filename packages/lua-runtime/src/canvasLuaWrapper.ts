@@ -290,6 +290,15 @@ export const canvasLuaCode = `
       __canvas_clip(fillRule)
     end
 
+    -- Hit Testing API
+    function _canvas.is_point_in_path(x, y, fillRule)
+      return __canvas_isPointInPath(x, y, fillRule or "nonzero")
+    end
+
+    function _canvas.is_point_in_stroke(x, y)
+      return __canvas_isPointInStroke(x, y)
+    end
+
     -- Line Style API
     function _canvas.set_line_cap(cap)
       __canvas_setLineCap(cap)

@@ -35,6 +35,8 @@ export type {
   // Text alignment types
   CanvasTextAlign,
   CanvasTextBaseline,
+  // Hit testing types
+  FillRule,
 } from './shared/index.js';
 
 export {

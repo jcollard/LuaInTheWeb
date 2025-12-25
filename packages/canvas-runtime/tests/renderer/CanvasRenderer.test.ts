@@ -6,6 +6,24 @@ import { CanvasRenderer } from '../../src/renderer/CanvasRenderer.js';
 import { ImageCache } from '../../src/renderer/ImageCache.js';
 import type { DrawCommand } from '../../src/shared/types.js';
 
+// Mock Path2D (not available in jsdom)
+class MockPath2D {
+  commands: unknown[] = [];
+  moveTo(x: number, y: number) { this.commands.push(['moveTo', x, y]); }
+  lineTo(x: number, y: number) { this.commands.push(['lineTo', x, y]); }
+  closePath() { this.commands.push(['closePath']); }
+  arc(...args: unknown[]) { this.commands.push(['arc', ...args]); }
+  arcTo(...args: unknown[]) { this.commands.push(['arcTo', ...args]); }
+  ellipse(...args: unknown[]) { this.commands.push(['ellipse', ...args]); }
+  rect(...args: unknown[]) { this.commands.push(['rect', ...args]); }
+  roundRect(...args: unknown[]) { this.commands.push(['roundRect', ...args]); }
+  quadraticCurveTo(...args: unknown[]) { this.commands.push(['quadraticCurveTo', ...args]); }
+  bezierCurveTo(...args: unknown[]) { this.commands.push(['bezierCurveTo', ...args]); }
+}
+
+// Assign to global for tests
+(globalThis as unknown as { Path2D: typeof MockPath2D }).Path2D = MockPath2D;
+
 // Mock CanvasGradient
 function createMockGradient(): CanvasGradient {
   return {
@@ -2062,6 +2080,87 @@ describe('CanvasRenderer', () => {
       renderer.render(commands);
 
       expect(mockCtx.textBaseline).toBe('ideographic');
+    });
+  });
+
+  // ============================================================================
+  // Hit Testing Methods
+  // ============================================================================
+
+  describe('isPointInPath', () => {
+    let mockPath: Path2D;
+
+    beforeEach(() => {
+      mockPath = new Path2D();
+      (mockCtx as unknown as { isPointInPath: ReturnType<typeof vi.fn> }).isPointInPath = vi.fn();
+    });
+
+    it('should call ctx.isPointInPath with path, coordinates, and default fill rule', () => {
+      (mockCtx.isPointInPath as ReturnType<typeof vi.fn>).mockReturnValue(true);
+
+      const result = renderer.isPointInPath(mockPath, 50, 50);
+
+      expect(mockCtx.isPointInPath).toHaveBeenCalledWith(mockPath, 50, 50, 'nonzero');
+      expect(result).toBe(true);
+    });
+
+    it('should call ctx.isPointInPath with evenodd fill rule', () => {
+      (mockCtx.isPointInPath as ReturnType<typeof vi.fn>).mockReturnValue(false);
+
+      const result = renderer.isPointInPath(mockPath, 100, 100, 'evenodd');
+
+      expect(mockCtx.isPointInPath).toHaveBeenCalledWith(mockPath, 100, 100, 'evenodd');
+      expect(result).toBe(false);
+    });
+
+    it('should return false when point is outside path', () => {
+      (mockCtx.isPointInPath as ReturnType<typeof vi.fn>).mockReturnValue(false);
+
+      const result = renderer.isPointInPath(mockPath, 0, 0);
+
+      expect(result).toBe(false);
+    });
+
+    it('should return true when point is inside path', () => {
+      (mockCtx.isPointInPath as ReturnType<typeof vi.fn>).mockReturnValue(true);
+
+      const result = renderer.isPointInPath(mockPath, 75, 75);
+
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('isPointInStroke', () => {
+    let mockPath: Path2D;
+
+    beforeEach(() => {
+      mockPath = new Path2D();
+      (mockCtx as unknown as { isPointInStroke: ReturnType<typeof vi.fn> }).isPointInStroke = vi.fn();
+    });
+
+    it('should call ctx.isPointInStroke with path and coordinates', () => {
+      (mockCtx.isPointInStroke as ReturnType<typeof vi.fn>).mockReturnValue(true);
+
+      const result = renderer.isPointInStroke(mockPath, 50, 50);
+
+      expect(mockCtx.isPointInStroke).toHaveBeenCalledWith(mockPath, 50, 50);
+      expect(result).toBe(true);
+    });
+
+    it('should return false when point is not on stroke', () => {
+      (mockCtx.isPointInStroke as ReturnType<typeof vi.fn>).mockReturnValue(false);
+
+      const result = renderer.isPointInStroke(mockPath, 0, 0);
+
+      expect(result).toBe(false);
+    });
+
+    it('should return true when point is on stroke', () => {
+      (mockCtx.isPointInStroke as ReturnType<typeof vi.fn>).mockReturnValue(true);
+
+      const result = renderer.isPointInStroke(mockPath, 100, 100);
+
+      expect(result).toBe(true);
     });
   });
 });

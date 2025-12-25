@@ -277,6 +277,15 @@ export function setupCanvasAPI(
     getController()?.clip(fillRule as 'nonzero' | 'evenodd' | undefined)
   })
 
+  // --- Hit Testing API functions ---
+  engine.global.set('__canvas_isPointInPath', (x: number, y: number, fillRule?: string) => {
+    return getController()?.isPointInPath(x, y, (fillRule as 'nonzero' | 'evenodd') ?? 'nonzero') ?? false
+  })
+
+  engine.global.set('__canvas_isPointInStroke', (x: number, y: number) => {
+    return getController()?.isPointInStroke(x, y) ?? false
+  })
+
   // --- Line Style API functions ---
   engine.global.set('__canvas_setLineCap', (cap: string) => {
     getController()?.setLineCap(cap as 'butt' | 'round' | 'square')

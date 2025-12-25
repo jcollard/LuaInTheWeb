@@ -33,6 +33,8 @@ export type {
   // Text alignment types
   CanvasTextAlign,
   CanvasTextBaseline,
+  // Hit testing types
+  FillRule,
 } from './types.js';
 
 export {
