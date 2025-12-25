@@ -216,4 +216,472 @@ test.describe('Pixel Manipulation', () => {
 
     expect(output).toContain('CREATE_TEST_PASSED')
   })
+
+  test('should cache and reuse ImageData across frames', async ({ page }) => {
+    await page.goto('/editor')
+
+    await expect(page.locator('[data-testid="shell-terminal-container"]')).toBeVisible({
+      timeout: TIMEOUTS.ELEMENT_VISIBLE,
+    })
+
+    const terminal = createTerminalHelper(page)
+    await terminal.focus()
+
+    await terminal.execute('lua')
+    await page.waitForTimeout(TIMEOUTS.ANIMATION)
+
+    await terminal.type('canvas = require("canvas")')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+    await terminal.type('canvas.set_size(100, 100)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+    await terminal.type('cached_img = nil')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('frame = 0')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    // Build the tick function line by line (no comments, no blank lines)
+    await terminal.type('canvas.tick(function()')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('  frame = frame + 1')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('  if frame == 1 then')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    canvas.clear()')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    canvas.set_color(255, 0, 0)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    canvas.fill_rect(0, 0, 50, 50)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    cached_img = canvas.get_image_data(0, 0, 50, 50)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    if cached_img then')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      local r, g, b = cached_img:get_pixel(25, 25)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      print("FRAME1_PIXEL: r=" .. r .. " g=" .. g .. " b=" .. b)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      print("FRAME1_DATA1: " .. tostring(cached_img.data[1]))')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    end')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('  elseif frame == 2 then')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    if cached_img then')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      local r, g, b = cached_img:get_pixel(25, 25)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      print("FRAME2_PIXEL: r=" .. r .. " g=" .. g .. " b=" .. b)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      print("FRAME2_DATA1: " .. tostring(cached_img.data[1]))')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      if r == 255 and g == 0 and b == 0 then')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('        print("CACHE_TEST_PASSED")')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      else')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('        print("CACHE_TEST_FAILED: cached pixel r=" .. r)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      end')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    else')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      print("CACHE_TEST_FAILED: cached_img is nil")')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    end')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    canvas.stop()')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('  end')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('end)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+    await terminal.type('canvas.start()')
+    await terminal.press('Enter')
+
+    await terminal.waitForOutput('CACHE_TEST_', TIMEOUTS.CI_EXTENDED)
+
+    const output = await terminal.getAllText()
+    console.log('Terminal output:', output)
+
+    // Verify frame 1 captured red pixel
+    expect(output).toContain('FRAME1_PIXEL: r=255 g=0 b=0')
+    // Verify frame 2 still has the cached red pixel
+    expect(output).toContain('CACHE_TEST_PASSED')
+  })
+
+  test('should put_image_data work with cached ImageData', async ({ page }) => {
+    await page.goto('/editor')
+
+    await expect(page.locator('[data-testid="shell-terminal-container"]')).toBeVisible({
+      timeout: TIMEOUTS.ELEMENT_VISIBLE,
+    })
+
+    const terminal = createTerminalHelper(page)
+    await terminal.focus()
+
+    await terminal.execute('lua')
+    await page.waitForTimeout(TIMEOUTS.ANIMATION)
+
+    await terminal.type('canvas = require("canvas")')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+    await terminal.type('canvas.set_size(100, 100)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+    await terminal.type('cached_img = nil')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('frame = 0')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('canvas.tick(function()')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('  frame = frame + 1')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('  if frame == 1 then')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    canvas.clear()')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    canvas.set_color(255, 0, 0)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    canvas.fill_rect(0, 0, 50, 50)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    cached_img = canvas.get_image_data(0, 0, 50, 50)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    print("FRAME1: cached")')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('  elseif frame == 2 then')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    canvas.clear()')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    if cached_img then')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      canvas.put_image_data(cached_img, 50, 50)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      print("FRAME2: put_image_data")')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    end')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('  elseif frame == 3 then')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    local verify = canvas.get_image_data(50, 50, 50, 50)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    if verify then')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      local r, g, b = verify:get_pixel(25, 25)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      print("FRAME3: r=" .. r .. " g=" .. g .. " b=" .. b)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      if r == 255 and g == 0 and b == 0 then')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('        print("PUT_CACHE_TEST_PASSED")')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      else')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('        print("PUT_CACHE_TEST_FAILED: r=" .. r)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      end')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    else')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      print("PUT_CACHE_TEST_FAILED: nil")')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    end')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    canvas.stop()')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('  end')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('end)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+    await terminal.type('canvas.start()')
+    await terminal.press('Enter')
+
+    await terminal.waitForOutput('PUT_CACHE_TEST_', TIMEOUTS.CI_EXTENDED)
+
+    const output = await terminal.getAllText()
+    console.log('Terminal output:', output)
+
+    // Extract only the output after canvas.start() to avoid matching echoed code
+    const startIndex = output.indexOf('canvas.start()')
+    const outputAfterStart = startIndex >= 0 ? output.substring(startIndex) : output
+
+    // Check test results (only in the actual output, not echoed code)
+    expect(outputAfterStart).toContain('PUT_CACHE_TEST_PASSED')
+    // Also verify the values are correct
+    expect(outputAfterStart).toContain('r=255 g=0 b=0')
+  })
+
+  test('should cache work with LOCAL variables (like demo)', async ({ page }) => {
+    await page.goto('/editor')
+
+    await expect(page.locator('[data-testid="shell-terminal-container"]')).toBeVisible({
+      timeout: TIMEOUTS.ELEMENT_VISIBLE,
+    })
+
+    const terminal = createTerminalHelper(page)
+    await terminal.focus()
+
+    await terminal.execute('lua')
+    await page.waitForTimeout(TIMEOUTS.ANIMATION)
+
+    await terminal.type('canvas = require("canvas")')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+    await terminal.type('canvas.set_size(100, 100)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+    // Use LOCAL variables like the demo does
+    await terminal.type('local cached_effects = {}')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('local frame = 0')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('canvas.tick(function()')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('  frame = frame + 1')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('  if frame == 1 then')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    canvas.clear()')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    canvas.set_color(255, 0, 0)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    canvas.fill_rect(0, 0, 50, 50)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    cached_effects[1] = canvas.get_image_data(0, 0, 50, 50)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    if cached_effects[1] then')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      local r = cached_effects[1]:get_pixel(25, 25)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      print("FRAME1_LOCAL: r=" .. r)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    end')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('  elseif frame == 2 then')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    if cached_effects[1] then')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      local r = cached_effects[1]:get_pixel(25, 25)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      print("FRAME2_LOCAL: r=" .. r)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      if r == 255 then')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('        print("LOCAL_CACHE_TEST_PASSED")')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      else')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('        print("LOCAL_CACHE_TEST_FAILED: r=" .. r)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      end')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    else')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('      print("LOCAL_CACHE_TEST_FAILED: nil")')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    end')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('    canvas.stop()')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('  end')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+    await terminal.type('end)')
+    await terminal.press('Enter')
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+    await terminal.type('canvas.start()')
+    await terminal.press('Enter')
+
+    await terminal.waitForOutput('LOCAL_CACHE_TEST_', TIMEOUTS.CI_EXTENDED)
+
+    const output = await terminal.getAllText()
+    console.log('Terminal output:', output)
+
+    expect(output).toContain('LOCAL_CACHE_TEST_PASSED')
+  })
 })

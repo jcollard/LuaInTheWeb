@@ -1118,9 +1118,14 @@ export class CanvasController {
    * @param dy - Destination Y coordinate
    */
   putImageData(data: number[], width: number, height: number, dx: number, dy: number): void {
-    if (!this.renderer) return
-    const imageData = new ImageData(new Uint8ClampedArray(data), width, height)
-    this.renderer.putImageData(imageData, dx, dy)
+    this.addDrawCommand({
+      type: 'putImageData',
+      data,
+      width,
+      height,
+      dx,
+      dy,
+    })
   }
 
   /**

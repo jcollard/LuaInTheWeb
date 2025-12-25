@@ -462,8 +462,16 @@ export function setupCanvasAPI(
 
   engine.global.set(
     '__canvas_putImageData',
-    (data: number[], width: number, height: number, dx: number, dy: number) => {
-      getController()?.putImageData(data, width, height, dx, dy)
+    (data: unknown, width: number, height: number, dx: number, dy: number) => {
+      // Wasmoon converts Lua 1-indexed tables to JS 0-indexed arrays automatically
+      // So we can use the data directly if it's array-like, or copy it
+      const size = width * height * 4
+      const jsArray: number[] = new Array(size)
+      for (let i = 0; i < size; i++) {
+        // Access with 0-based index (wasmoon handles the conversion)
+        jsArray[i] = (data as Record<number, number>)[i] ?? 0
+      }
+      getController()?.putImageData(jsArray, width, height, dx, dy)
     }
   )
 

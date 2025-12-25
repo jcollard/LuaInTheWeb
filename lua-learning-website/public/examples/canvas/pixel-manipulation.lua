@@ -12,8 +12,9 @@ local last_mode = 0  -- Track previous mode to detect changes
 local modes = {"Original", "Invert", "Grayscale", "Red Channel", "Noise Overlay"}
 local mode_count = #modes
 
--- Cached images to avoid reprocessing every frame
-local cached_effect_img = nil
+-- Lazy cache: store computed effects by mode number
+-- Each effect is computed once on first access, then reused
+local cached_effects = {}
 local gradient_img = nil
 
 -- Base shapes to apply effects to
@@ -115,6 +116,33 @@ local function create_gradient_texture()
   return img
 end
 
+-- Get or compute the effect for a given mode (lazy caching)
+local function get_effect_image(effect_mode)
+  -- Return cached if available
+  if cached_effects[effect_mode] then
+    return cached_effects[effect_mode]
+  end
+
+  -- Compute the effect
+  local img = canvas.get_image_data(0, 40, 250, 200)
+  if not img then return nil end
+
+  if effect_mode == 2 then
+    apply_invert(img)
+  elseif effect_mode == 3 then
+    apply_grayscale(img)
+  elseif effect_mode == 4 then
+    apply_red_channel(img)
+  elseif effect_mode == 5 then
+    apply_noise(img)
+  end
+  -- Mode 1 (Original) is just the base image, no effect applied
+
+  -- Cache for future use
+  cached_effects[effect_mode] = img
+  return img
+end
+
 canvas.tick(function()
   -- Handle input first for responsive feel
   if canvas.is_key_pressed("space") or canvas.is_mouse_pressed(0) then
@@ -142,27 +170,12 @@ canvas.tick(function()
     draw_base_scene()
     canvas.restore()
 
-    -- Get pixel data and apply effect
-    local img = canvas.get_image_data(0, 40, 250, 200)
-
-    if img then
-      if mode == 2 then
-        apply_invert(img)
-      elseif mode == 3 then
-        apply_grayscale(img)
-      elseif mode == 4 then
-        apply_red_channel(img)
-      elseif mode == 5 then
-        apply_noise(img)
-      end
-
-      -- Cache the processed image
-      cached_effect_img = img
-    end
+    -- Get effect image (cached or computed)
+    local effect_img = get_effect_image(mode)
 
     -- Draw processed image on right side
-    if cached_effect_img then
-      canvas.put_image_data(cached_effect_img, 250, 40)
+    if effect_img then
+      canvas.put_image_data(effect_img, 250, 40)
     end
 
     -- Draw divider line
@@ -177,6 +190,12 @@ canvas.tick(function()
     canvas.draw_text(125, 255, "Original")
     canvas.draw_text(375, 255, modes[mode])
 
+    -- Show cache status
+    local cached_count = 0
+    for i = 1, mode_count do
+      if cached_effects[i] then cached_count = cached_count + 1 end
+    end
+
     -- Draw procedural gradient demo (only create once)
     canvas.set_font_size(14)
     canvas.draw_text(250, 285, "Procedural Gradient (create_image_data)")
@@ -189,7 +208,7 @@ canvas.tick(function()
     -- Instructions
     canvas.set_font_size(12)
     canvas.set_color(80, 80, 80)
-    canvas.draw_text(250, 380, "Press SPACE or click to cycle effects: " .. mode .. "/" .. mode_count)
+    canvas.draw_text(250, 380, "Press SPACE or click to cycle effects: " .. mode .. "/" .. mode_count .. " (cached: " .. cached_count .. ")")
   end
 end)
 
