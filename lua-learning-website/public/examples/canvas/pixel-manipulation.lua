@@ -12,10 +12,13 @@ local last_mode = 0  -- Track previous mode to detect changes
 local modes = {"Original", "Invert", "Grayscale", "Red Channel", "Noise Overlay"}
 local mode_count = #modes
 
--- Lazy cache: store computed effects by mode number
--- Each effect is computed once on first access, then reused
+-- Pre-cached effects (computed during loading)
 local cached_effects = {}
 local gradient_img = nil
+
+-- Frame counter for loading sequence
+local frame = 0
+local loading_complete = false
 
 -- Base shapes to apply effects to
 local function draw_base_scene()
@@ -116,99 +119,134 @@ local function create_gradient_texture()
   return img
 end
 
--- Get or compute the effect for a given mode (lazy caching)
-local function get_effect_image(effect_mode)
-  -- Return cached if available
-  if cached_effects[effect_mode] then
-    return cached_effects[effect_mode]
+-- Precalculate all effects from the base image
+local function precalculate_all_effects()
+  -- Get the base image from the left side
+  local base_img = canvas.get_image_data(0, 40, 250, 200)
+  if not base_img then return end
+
+  -- Mode 1: Original (just copy the base)
+  cached_effects[1] = base_img
+
+  -- Mode 2: Invert
+  local invert_img = canvas.get_image_data(0, 40, 250, 200)
+  apply_invert(invert_img)
+  cached_effects[2] = invert_img
+
+  -- Mode 3: Grayscale
+  local gray_img = canvas.get_image_data(0, 40, 250, 200)
+  apply_grayscale(gray_img)
+  cached_effects[3] = gray_img
+
+  -- Mode 4: Red Channel
+  local red_img = canvas.get_image_data(0, 40, 250, 200)
+  apply_red_channel(red_img)
+  cached_effects[4] = red_img
+
+  -- Mode 5: Noise Overlay
+  local noise_img = canvas.get_image_data(0, 40, 250, 200)
+  apply_noise(noise_img)
+  cached_effects[5] = noise_img
+
+  -- Also create the gradient texture
+  gradient_img = create_gradient_texture()
+end
+
+-- Draw the full UI with the current effect
+local function draw_main_ui()
+  canvas.clear()
+
+  -- Draw title
+  canvas.set_color(0, 0, 0)
+  canvas.set_font_size(18)
+  canvas.set_text_align("center")
+  canvas.draw_text(250, 15, "Pixel Manipulation Demo")
+
+  -- Draw base scene on left side
+  canvas.save()
+  canvas.translate(0, 40)
+  draw_base_scene()
+  canvas.restore()
+
+  -- Draw cached effect on right side
+  if cached_effects[mode] then
+    canvas.put_image_data(cached_effects[mode], 250, 40)
   end
 
-  -- Compute the effect
-  local img = canvas.get_image_data(0, 40, 250, 200)
-  if not img then return nil end
+  -- Draw divider line
+  canvas.set_color(100, 100, 100)
+  canvas.set_line_width(2)
+  canvas.draw_line(250, 40, 250, 240)
 
-  if effect_mode == 2 then
-    apply_invert(img)
-  elseif effect_mode == 3 then
-    apply_grayscale(img)
-  elseif effect_mode == 4 then
-    apply_red_channel(img)
-  elseif effect_mode == 5 then
-    apply_noise(img)
+  -- Labels
+  canvas.set_font_size(14)
+  canvas.set_text_align("center")
+  canvas.set_color(0, 0, 0)
+  canvas.draw_text(125, 255, "Original")
+  canvas.draw_text(375, 255, modes[mode])
+
+  -- Draw procedural gradient demo
+  canvas.set_font_size(14)
+  canvas.draw_text(250, 285, "Procedural Gradient (create_image_data)")
+  if gradient_img then
+    canvas.put_image_data(gradient_img, 200, 300)
   end
-  -- Mode 1 (Original) is just the base image, no effect applied
 
-  -- Cache for future use
-  cached_effects[effect_mode] = img
-  return img
+  -- Instructions
+  canvas.set_font_size(12)
+  canvas.set_color(80, 80, 80)
+  canvas.draw_text(250, 380, "Press SPACE or click to cycle effects: " .. mode .. "/" .. mode_count)
 end
 
 canvas.tick(function()
-  -- Handle input first for responsive feel
-  if canvas.is_key_pressed("space") or canvas.is_mouse_pressed(0) then
-    mode = mode + 1
-    if mode > mode_count then
-      mode = 1
-    end
-  end
+  frame = frame + 1
 
-  -- Only redraw when mode changes (or first frame)
-  if mode ~= last_mode then
-    last_mode = mode
-
+  -- Frame 1: Draw base scene on left side
+  if frame == 1 then
     canvas.clear()
-
-    -- Draw title
     canvas.set_color(0, 0, 0)
     canvas.set_font_size(18)
     canvas.set_text_align("center")
     canvas.draw_text(250, 15, "Pixel Manipulation Demo")
 
-    -- Draw base scene on left side
     canvas.save()
     canvas.translate(0, 40)
     draw_base_scene()
     canvas.restore()
+    return
+  end
 
-    -- Get effect image (cached or computed)
-    local effect_img = get_effect_image(mode)
-
-    -- Draw processed image on right side
-    if effect_img then
-      canvas.put_image_data(effect_img, 250, 40)
-    end
-
-    -- Draw divider line
-    canvas.set_color(100, 100, 100)
-    canvas.set_line_width(2)
-    canvas.draw_line(250, 40, 250, 240)
-
-    -- Labels
-    canvas.set_font_size(14)
+  -- Frame 2: Show loading message
+  if frame == 2 then
+    canvas.set_font_size(24)
     canvas.set_text_align("center")
-    canvas.set_color(0, 0, 0)
-    canvas.draw_text(125, 255, "Original")
-    canvas.draw_text(375, 255, modes[mode])
+    canvas.set_color(100, 100, 100)
+    canvas.draw_text(375, 140, "Loading...")
+    return
+  end
 
-    -- Show cache status
-    local cached_count = 0
-    for i = 1, mode_count do
-      if cached_effects[i] then cached_count = cached_count + 1 end
+  -- Frame 3: Precalculate all effects
+  if frame == 3 then
+    precalculate_all_effects()
+    loading_complete = true
+    return
+  end
+
+  -- Frame 4+: Main interactive loop
+  if loading_complete then
+    -- Handle input
+    if canvas.is_key_pressed("space") or canvas.is_mouse_pressed(0) then
+      mode = mode + 1
+      if mode > mode_count then
+        mode = 1
+      end
     end
 
-    -- Draw procedural gradient demo (only create once)
-    canvas.set_font_size(14)
-    canvas.draw_text(250, 285, "Procedural Gradient (create_image_data)")
-
-    if not gradient_img then
-      gradient_img = create_gradient_texture()
+    -- Only redraw when mode changes (or first interactive frame)
+    if mode ~= last_mode then
+      last_mode = mode
+      draw_main_ui()
     end
-    canvas.put_image_data(gradient_img, 200, 300)
-
-    -- Instructions
-    canvas.set_font_size(12)
-    canvas.set_color(80, 80, 80)
-    canvas.draw_text(250, 380, "Press SPACE or click to cycle effects: " .. mode .. "/" .. mode_count .. " (cached: " .. cached_count .. ")")
   end
 end)
 
