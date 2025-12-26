@@ -14,7 +14,7 @@ local fonts = {
   { name = "OldWizard", file = "../fonts/13px-OldWizard.ttf", size = 26 },
   { name = "DungeonSlant", file = "../fonts/15px-DungeonSlant.ttf", size = 30 },
   { name = "Gothbit", file = "../fonts/16px-Gothbit.ttf", size = 32 },
-  { name = "IBM_VGA", file = "../fonts/16px-IBM_VGA_8x16.ttf", size = 32 },
+  { name = "Royalati", file = "../fonts/16px-Royalati.ttf", size = 32 },
 }
 
 -- Register all fonts
