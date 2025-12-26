@@ -280,6 +280,10 @@ export class CanvasRenderer {
         this.ctx.globalCompositeOperation = command.operation;
         break;
 
+      case 'setImageSmoothing':
+        this.ctx.imageSmoothingEnabled = command.enabled;
+        break;
+
       case 'setTextAlign':
         this.ctx.textAlign = command.align;
         break;

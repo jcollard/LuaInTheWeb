@@ -56,6 +56,7 @@ export type DrawCommandType =
   | 'setCompositeOperation'
   | 'setTextAlign'
   | 'setTextBaseline'
+  | 'setImageSmoothing'
   | 'putImageData';
 
 /**
@@ -783,6 +784,16 @@ export interface SetCompositeOperationCommand extends DrawCommandBase {
   operation: GlobalCompositeOperation;
 }
 
+/**
+ * Set image smoothing (anti-aliasing) for image rendering.
+ * Disable for crisp pixel art, enable for smooth scaled images.
+ */
+export interface SetImageSmoothingCommand extends DrawCommandBase {
+  type: 'setImageSmoothing';
+  /** Whether to enable image smoothing */
+  enabled: boolean;
+}
+
 // ============================================================================
 // Hit Testing Types
 // ============================================================================
@@ -909,6 +920,7 @@ export type DrawCommand =
   | SetCompositeOperationCommand
   | SetTextAlignCommand
   | SetTextBaselineCommand
+  | SetImageSmoothingCommand
   | PutImageDataCommand;
 
 /**

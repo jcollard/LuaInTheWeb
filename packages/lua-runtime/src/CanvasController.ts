@@ -823,6 +823,15 @@ export class CanvasController {
     this.addDrawCommand({ type: 'setCompositeOperation', operation })
   }
 
+  /**
+   * Set image smoothing (anti-aliasing) for image rendering.
+   * Disable for crisp pixel art, enable for smooth scaled images.
+   * @param enabled - Whether to enable image smoothing (default: true)
+   */
+  setImageSmoothing(enabled: boolean): void {
+    this.addDrawCommand({ type: 'setImageSmoothing', enabled })
+  }
+
   // --- Text Alignment API ---
 
   /**

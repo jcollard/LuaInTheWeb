@@ -125,4 +125,10 @@ export const canvasLuaStylingCode = `
     function _canvas.set_composite_operation(operation)
       __canvas_setCompositeOperation(operation)
     end
+
+    -- Image smoothing (anti-aliasing for scaled images)
+    -- Disable for crisp pixel art, enable for smooth scaled images
+    function _canvas.set_image_smoothing(enabled)
+      __canvas_setImageSmoothing(enabled)
+    end
 `
