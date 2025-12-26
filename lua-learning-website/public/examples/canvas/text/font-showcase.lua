@@ -1,22 +1,22 @@
--- canvas/font_showcase.lua
+-- canvas/text/font-showcase.lua
 -- Font API demonstration showcasing custom fonts and text styling
 
 local canvas = require("canvas")
 
 -- Font definitions with their optimal sizes (paths relative to script location)
 local fonts = {
-    { name = "Bitfantasy", path = "fonts/10px-Bitfantasy.ttf", size = 20 },
-    { name = "CelticTime", path = "fonts/10px-CelticTime.ttf", size = 20 },
-    { name = "HelvetiPixel", path = "fonts/10px-HelvetiPixel.ttf", size = 20 },
-    { name = "Questgiver", path = "fonts/11px-Questgiver.ttf", size = 22 },
-    { name = "FancyPixels", path = "fonts/12px-FancyPixels.ttf", size = 24 },
-    { name = "TimesNewPixel", path = "fonts/12px-TimesNewPixel.ttf", size = 24 },
-    { name = "OldWizard", path = "fonts/13px-OldWizard.ttf", size = 26 },
-    { name = "Sword", path = "fonts/13px-sword.ttf", size = 26 },
-    { name = "WizardsManse", path = "fonts/13px-WizardsManse.ttf", size = 26 },
-    { name = "DungeonSlant", path = "fonts/15px-DungeonSlant.ttf", size = 30 },
-    { name = "Gothbit", path = "fonts/16px-Gothbit.ttf", size = 32 },
-    { name = "Royalati", path = "fonts/16px-Royalati.ttf", size = 32 },
+    { name = "Bitfantasy", path = "../fonts/10px-Bitfantasy.ttf", size = 20 },
+    { name = "CelticTime", path = "../fonts/10px-CelticTime.ttf", size = 20 },
+    { name = "HelvetiPixel", path = "../fonts/10px-HelvetiPixel.ttf", size = 20 },
+    { name = "Questgiver", path = "../fonts/11px-Questgiver.ttf", size = 22 },
+    { name = "FancyPixels", path = "../fonts/12px-FancyPixels.ttf", size = 24 },
+    { name = "TimesNewPixel", path = "../fonts/12px-TimesNewPixel.ttf", size = 24 },
+    { name = "OldWizard", path = "../fonts/13px-OldWizard.ttf", size = 26 },
+    { name = "Sword", path = "../fonts/13px-sword.ttf", size = 26 },
+    { name = "WizardsManse", path = "../fonts/13px-WizardsManse.ttf", size = 26 },
+    { name = "DungeonSlant", path = "../fonts/15px-DungeonSlant.ttf", size = 30 },
+    { name = "Gothbit", path = "../fonts/16px-Gothbit.ttf", size = 32 },
+    { name = "Royalati", path = "../fonts/16px-Royalati.ttf", size = 32 },
 }
 
 local current_font_index = 1
@@ -38,7 +38,7 @@ local function get_rainbow_color(offset)
     return r, g, b
 end
 
-local function handle_input()
+local function user_input()
     -- Cycle through fonts with arrow keys
     if canvas.is_key_pressed(canvas.keys.DOWN) or canvas.is_key_pressed(canvas.keys.S) then
         current_font_index = current_font_index + 1
@@ -233,14 +233,10 @@ local function draw()
 end
 
 local function game()
-    handle_input()
+    user_input()
     draw()
 end
 
-function main()
-    canvas.set_size(800, 800)
-    canvas.tick(game)
-    canvas.start()
-end
-
-main()
+canvas.set_size(800, 800)
+canvas.tick(game)
+canvas.start()

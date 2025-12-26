@@ -158,8 +158,52 @@ export class InputCapture {
 
   private onMouseMove(event: MouseEvent): void {
     const rect = this.target.getBoundingClientRect();
-    this.mouseX = event.clientX - rect.left;
-    this.mouseY = event.clientY - rect.top;
+    // Get position relative to displayed element
+    const displayX = event.clientX - rect.left;
+    const displayY = event.clientY - rect.top;
+
+    // If target is a canvas, handle object-fit: contain letterboxing and scaling
+    if (this.target instanceof HTMLCanvasElement) {
+      const canvasWidth = this.target.width;
+      const canvasHeight = this.target.height;
+      const rectWidth = rect.width;
+      const rectHeight = rect.height;
+
+      // Calculate how the canvas content is positioned with object-fit: contain
+      // When aspect ratios differ, there will be letterboxing (black bars)
+      const canvasAspect = canvasWidth / canvasHeight;
+      const rectAspect = rectWidth / rectHeight;
+
+      let contentWidth: number;
+      let contentHeight: number;
+      let offsetX: number;
+      let offsetY: number;
+
+      if (rectAspect > canvasAspect) {
+        // Container is wider than canvas - horizontal letterboxing (black bars on sides)
+        contentHeight = rectHeight;
+        contentWidth = rectHeight * canvasAspect;
+        offsetX = (rectWidth - contentWidth) / 2;
+        offsetY = 0;
+      } else {
+        // Container is taller than canvas - vertical letterboxing (black bars top/bottom)
+        contentWidth = rectWidth;
+        contentHeight = rectWidth / canvasAspect;
+        offsetX = 0;
+        offsetY = (rectHeight - contentHeight) / 2;
+      }
+
+      // Translate from display coords to content coords (accounting for letterboxing)
+      const contentX = displayX - offsetX;
+      const contentY = displayY - offsetY;
+
+      // Scale from content coords to canvas logical coords
+      this.mouseX = contentX * (canvasWidth / contentWidth);
+      this.mouseY = contentY * (canvasHeight / contentHeight);
+    } else {
+      this.mouseX = displayX;
+      this.mouseY = displayY;
+    }
   }
 
   private onMouseDown(event: MouseEvent): void {

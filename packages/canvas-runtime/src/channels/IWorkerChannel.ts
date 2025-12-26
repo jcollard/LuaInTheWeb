@@ -1,4 +1,10 @@
-import type { DrawCommand, InputState, TimingInfo } from '../shared/types.js';
+import type {
+  DrawCommand,
+  GetImageDataRequest,
+  GetImageDataResponse,
+  InputState,
+  TimingInfo,
+} from '../shared/types.js';
 
 /**
  * Communication channel interface for main thread ↔ Web Worker communication.
@@ -107,6 +113,39 @@ export interface IWorkerChannel {
    * @param height - Canvas height in pixels
    */
   setCanvasSize(width: number, height: number): void;
+
+  /**
+   * Request image data from the canvas (worker side).
+   * This is a blocking call that waits for the main thread to respond.
+   *
+   * @param x - X coordinate of the region to read
+   * @param y - Y coordinate of the region to read
+   * @param width - Width of the region to read
+   * @param height - Height of the region to read
+   * @returns Promise resolving to the image data response
+   */
+  requestImageData(
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): Promise<GetImageDataResponse>;
+
+  /**
+   * Get pending image data requests (main thread side).
+   * Called by the main thread to check for pending getImageData requests.
+   *
+   * @returns Array of pending requests
+   */
+  getPendingImageDataRequests(): GetImageDataRequest[];
+
+  /**
+   * Send image data response to the worker (main thread side).
+   * Called by the main thread after processing a getImageData request.
+   *
+   * @param response - The image data response
+   */
+  sendImageDataResponse(response: GetImageDataResponse): void;
 
   /**
    * Clean up resources when the channel is no longer needed.

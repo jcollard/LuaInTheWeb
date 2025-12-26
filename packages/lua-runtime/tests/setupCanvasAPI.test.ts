@@ -1,6 +1,7 @@
 /**
  * Tests for setupCanvasAPI - canvas module pattern.
  * Verifies that canvas is NOT a global and must be accessed via require('canvas').
+ * Path API tests are in setupCanvasAPI.path.test.ts
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -73,6 +74,13 @@ describe('setupCanvasAPI', () => {
       transform: vi.fn(),
       setTransform: vi.fn(),
       resetTransform: vi.fn(),
+      // Path API methods
+      beginPath: vi.fn(),
+      closePath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      fill: vi.fn(),
+      stroke: vi.fn(),
     } as unknown as CanvasController
   }
 

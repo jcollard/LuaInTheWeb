@@ -17,6 +17,24 @@ export type {
   TimingInfo,
   AssetDefinition,
   AssetManifest,
+  // Gradient types
+  GradientColorStop,
+  LinearGradientDef,
+  RadialGradientDef,
+  ConicGradientDef,
+  GradientDef,
+  // Pattern types
+  PatternRepetition,
+  PatternDef,
+  // Style type
+  FillStyle,
+  // Compositing types
+  GlobalCompositeOperation,
+  // Text alignment types
+  CanvasTextAlign,
+  CanvasTextBaseline,
+  // Hit testing types
+  FillRule,
 } from './types.js';
 
 export {

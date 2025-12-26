@@ -1,6 +1,6 @@
 # Canvas Library
 
-The canvas library provides functions for 2D graphics rendering, input handling, and game loop management.
+The canvas library provides functions for 2D graphics rendering, input handling, and game loop management. Create games, animations, and interactive visualizations with a simple, Lua-friendly API.
 
 **Note**: The canvas API is only available in canvas mode.
 
@@ -10,470 +10,201 @@ The canvas library provides functions for 2D graphics rendering, input handling,
 local canvas = require('canvas')
 ```
 
-## Canvas Lifecycle
-
-### canvas.start()
-
-Start the canvas and block until `canvas.stop()` is called or Ctrl+C.
-This opens a canvas tab and runs the game loop.
-Call `canvas.tick()` before this to register your render callback.
-
-```lua
-local canvas = require('canvas')
-
-canvas.tick(function()
-  canvas.clear()
-  canvas.set_color(255, 0, 0)
-  canvas.fill_rect(10, 10, 50, 50)
-end)
-
-canvas.start()  -- Blocks until stop or Ctrl+C
-```
-
-### canvas.stop()
-
-Stop the canvas and close the canvas tab.
-This unblocks the `canvas.start()` call and returns control to the script.
-
-```lua
--- Stop after 5 seconds
-if canvas.get_time() > 5 then
-  canvas.stop()
-end
-```
-
-## Game Loop
-
-### canvas.tick(callback)
-
-Register the tick callback function. This callback is called once per frame (~60fps).
-All game logic and drawing should be performed inside this callback.
-
-**Parameters:**
-- `callback` (function): Function to call each frame
-
-```lua
-canvas.tick(function()
-  canvas.clear()
-  canvas.set_color(255, 0, 0)
-  canvas.fill_rect(10, 10, 50, 50)
-end)
-```
-
-## Canvas Configuration
-
-### canvas.set_size(width, height)
-
-Set the canvas size in pixels. Call this before tick() to set the desired canvas dimensions.
-
-**Parameters:**
-- `width` (number): Canvas width in pixels
-- `height` (number): Canvas height in pixels
-
-```lua
-canvas.set_size(800, 600)
-```
-
-### canvas.get_width()
-
-Get the canvas width in pixels.
-
-**Returns:**
-- (number): Canvas width
-
-### canvas.get_height()
-
-Get the canvas height in pixels.
-
-**Returns:**
-- (number): Canvas height
-
-```lua
-local center_x = canvas.get_width() / 2
-local center_y = canvas.get_height() / 2
-```
-
-## Drawing State
-
-### canvas.clear()
-
-Clear the canvas.
-
-### canvas.set_color(r, g, b, a) or canvas.set_color(hex)
-
-Set the drawing color. All subsequent drawing operations will use this color.
-Accepts either RGBA values (0-255) or hex color strings.
-
-**RGBA Parameters:**
-- `r` (number): Red component (0-255)
-- `g` (number): Green component (0-255)
-- `b` (number): Blue component (0-255)
-- `a` (number, optional): Alpha component (0-255, default: 255)
-
-**Hex Parameter:**
-- `hex` (string): A hex color string in one of these formats:
-  - `#RGB` - Short form, expands to #RRGGBB (e.g., `#F00` = red)
-  - `#RRGGBB` - Full RGB (e.g., `#FF0000` = red)
-  - `#RRGGBBAA` - Full RGBA with alpha (e.g., `#FF000080` = semi-transparent red)
-
-Hex colors are case-insensitive (`#abc` and `#ABC` both work).
-
-```lua
--- RGBA format
-canvas.set_color(255, 0, 0)       -- Red
-canvas.set_color(0, 255, 0, 128)  -- Semi-transparent green
-
--- Hex format
-canvas.set_color("#F00")          -- Red (short form)
-canvas.set_color("#FF0000")       -- Red (full form)
-canvas.set_color("#00FF0080")     -- Semi-transparent green
-```
-
-### canvas.set_line_width(width)
-
-Set the line width for stroke operations (draw_rect, draw_circle, draw_line).
-
-**Parameters:**
-- `width` (number): Line width in pixels
-
-```lua
-canvas.set_line_width(3)
-canvas.draw_rect(10, 10, 100, 100)  -- 3px thick outline
-```
-
-## Drawing Functions
-
-### canvas.draw_rect(x, y, width, height)
-
-Draw a rectangle outline.
-
-### canvas.fill_rect(x, y, width, height)
-
-Draw a filled rectangle.
-
-### canvas.draw_circle(x, y, radius)
-
-Draw a circle outline.
-
-### canvas.fill_circle(x, y, radius)
-
-Draw a filled circle.
-
-### canvas.draw_line(x1, y1, x2, y2)
-
-Draw a line between two points.
-
-### canvas.draw_text(x, y, text)
-
-Draw text at the specified position.
-
-## Transformation Functions
-
-Transformations allow you to translate, rotate, and scale the canvas coordinate system.
-All subsequent drawing operations are affected by the current transformation.
-
-### canvas.translate(dx, dy)
-
-Move the canvas origin by the specified amount. All subsequent drawing will be offset.
-
-**Parameters:**
-- `dx` (number): Horizontal distance to move
-- `dy` (number): Vertical distance to move
-
-```lua
-canvas.translate(100, 100)  -- Move origin to (100, 100)
-canvas.fill_rect(0, 0, 50, 50)  -- Draws at (100, 100)
-```
-
-### canvas.rotate(angle)
-
-Rotate the canvas around the current origin. The angle is in radians.
-
-**Parameters:**
-- `angle` (number): Rotation angle in radians
-
-```lua
-canvas.rotate(math.pi / 4)  -- Rotate 45 degrees
-canvas.fill_rect(0, 0, 50, 50)  -- Draws rotated
-```
-
-### canvas.scale(sx, sy)
-
-Scale the canvas from the current origin. Negative values flip/mirror.
-
-**Parameters:**
-- `sx` (number): Horizontal scale factor (1.0 = normal, 2.0 = double, -1 = mirror)
-- `sy` (number): Vertical scale factor
-
-```lua
-canvas.scale(2, 2)   -- Double size
-canvas.scale(-1, 1)  -- Flip horizontally (mirror)
-```
-
-### canvas.save()
-
-Save the current transformation state to a stack. Use with `restore()` to temporarily apply transformations.
-
-```lua
-canvas.save()
-canvas.translate(100, 100)
-canvas.rotate(math.pi / 4)
-canvas.fill_rect(-25, -25, 50, 50)  -- Draw rotated square
-canvas.restore()  -- Undo translate and rotate
-```
-
-### canvas.restore()
-
-Restore the most recently saved transformation state. Undoes all transformations since the last `save()`.
-
-### canvas.transform(a, b, c, d, e, f)
-
-Apply a custom 2D transformation matrix. Multiplies the current matrix by the specified values.
-
-**Parameters (2x3 matrix):**
-- `a` (number): Horizontal scaling
-- `b` (number): Vertical skewing
-- `c` (number): Horizontal skewing
-- `d` (number): Vertical scaling
-- `e` (number): Horizontal translation
-- `f` (number): Vertical translation
-
-### canvas.set_transform(a, b, c, d, e, f)
-
-Reset to identity matrix, then apply the specified transformation.
-
-### canvas.reset_transform()
-
-Reset the transformation matrix to identity (no transformation).
-
-```lua
-canvas.reset_transform()  -- Clear all transforms
-```
-
-## Timing Functions
-
-### canvas.get_delta()
-
-Get the time elapsed since the last frame (in seconds).
-Use this for frame-rate independent movement.
-
-**Returns:**
-- (number): Time since last frame in seconds
-
-```lua
-local speed = 100 -- pixels per second
-x = x + speed * canvas.get_delta()
-```
-
-### canvas.get_time()
-
-Get the total time since the game started (in seconds).
-
-**Returns:**
-- (number): Total elapsed time in seconds
-
-## Keyboard Input
-
-### canvas.is_key_down(key)
-
-Check if a key is currently held down.
-
-**Parameters:**
-- `key` (string): Key name (e.g., 'w', 'ArrowUp', or use `canvas.keys.W`)
-
-**Returns:**
-- (boolean): True if key is currently held
-
-```lua
-if canvas.is_key_down('w') then
-  y = y - speed * canvas.get_delta()
-end
-
--- Or use key constants
-if canvas.is_key_down(canvas.keys.W) then
-  y = y - speed * canvas.get_delta()
-end
-```
-
-### canvas.is_key_pressed(key)
-
-Check if a key was pressed this frame. Returns true only on the frame the key was first pressed.
-
-### canvas.get_keys_down()
-
-Get all keys currently held down.
-
-**Returns:**
-- (table): Array of key codes in KeyboardEvent.code format
-
-### canvas.get_keys_pressed()
-
-Get all keys pressed this frame.
-
-**Returns:**
-- (table): Array of key codes pressed this frame
-
-## Key Constants
-
-The `canvas.keys` table provides named constants for all keyboard keys.
-These can be used with `is_key_down()` and `is_key_pressed()`.
-
-**Letters:** `canvas.keys.A` through `canvas.keys.Z` (maps to KeyA-KeyZ)
-
-**Number Row:** `canvas.keys.DIGIT_0` through `canvas.keys.DIGIT_9` (or `canvas.keys['0']` through `canvas.keys['9']`)
-
-**Arrow Keys:** `canvas.keys.UP`, `canvas.keys.DOWN`, `canvas.keys.LEFT`, `canvas.keys.RIGHT` (also `ARROW_UP`, etc.)
-
-**Function Keys:** `canvas.keys.F1` through `canvas.keys.F12`
-
-**Modifier Keys:** `canvas.keys.SHIFT`, `canvas.keys.CTRL`, `canvas.keys.ALT`, `canvas.keys.META`, `canvas.keys.CAPS_LOCK` (with _LEFT/_RIGHT variants)
-
-**Special Keys:** `canvas.keys.SPACE`, `canvas.keys.ENTER`, `canvas.keys.ESCAPE`, `canvas.keys.TAB`, `canvas.keys.BACKSPACE`, `canvas.keys.DELETE`, `canvas.keys.INSERT`, `canvas.keys.HOME`, `canvas.keys.END`, `canvas.keys.PAGE_UP`, `canvas.keys.PAGE_DOWN`
-
-**Numpad:** `canvas.keys.NUMPAD_0` through `canvas.keys.NUMPAD_9`, `canvas.keys.NUMPAD_ADD`, `canvas.keys.NUMPAD_SUBTRACT`, `canvas.keys.NUMPAD_MULTIPLY`, `canvas.keys.NUMPAD_DIVIDE`, `canvas.keys.NUMPAD_DECIMAL`, `canvas.keys.NUMPAD_ENTER`
-
-**Punctuation:** `canvas.keys.MINUS`, `canvas.keys.EQUAL`, `canvas.keys.BRACKET_LEFT`, `canvas.keys.BRACKET_RIGHT`, `canvas.keys.BACKSLASH`, `canvas.keys.SEMICOLON`, `canvas.keys.QUOTE`, `canvas.keys.BACKQUOTE`, `canvas.keys.COMMA`, `canvas.keys.PERIOD`, `canvas.keys.SLASH`
-
-## Mouse Input
-
-### canvas.get_mouse_x()
-
-Get the current mouse X position relative to canvas.
-
-### canvas.get_mouse_y()
-
-Get the current mouse Y position relative to canvas.
-
-### canvas.is_mouse_down(button)
-
-Check if a mouse button is currently held down.
-
-**Parameters:**
-- `button` (number): Button number (0 = left, 1 = middle, 2 = right)
-
-### canvas.is_mouse_pressed(button)
-
-Check if a mouse button was pressed this frame.
-
-```lua
-if canvas.is_mouse_pressed(0) then
-  -- Left mouse button was just clicked
-  shoot_at(canvas.get_mouse_x(), canvas.get_mouse_y())
-end
-```
-
-## Image Assets
-
-Register and draw images on the canvas. Images must be registered before `canvas.start()`.
-
-**Supported formats:** PNG, JPG, JPEG, GIF, WebP, BMP
-
-### canvas.assets.image(name, path)
-
-Register an image asset for loading. Call this before `canvas.start()`.
-
-**Parameters:**
-- `name` (string): Unique name to reference this asset
-- `path` (string): Path to the image file (relative or absolute)
-
-```lua
--- Register images before starting
-canvas.assets.image("ship", "images/ship.png")
-canvas.assets.image("enemy", "images/enemy.png")
-
-canvas.start()  -- Images are loaded here
-```
-
-### canvas.assets.get_width(name)
-
-Get the width of a loaded image in pixels.
-
-**Parameters:**
-- `name` (string): The asset name
-
-**Returns:**
-- (number): Width in pixels
-
-### canvas.assets.get_height(name)
-
-Get the height of a loaded image in pixels.
-
-**Parameters:**
-- `name` (string): The asset name
-
-**Returns:**
-- (number): Height in pixels
-
-```lua
-local w = canvas.assets.get_width("ship")
-local h = canvas.assets.get_height("ship")
-print("Ship size: " .. w .. "x" .. h)
-```
-
-### canvas.draw_image(name, x, y, width?, height?)
-
-Draw an image at the specified position. Optional width/height parameters enable scaling.
-
-**Parameters:**
-- `name` (string): The asset name (registered via `canvas.assets.image()`)
-- `x` (number): X coordinate of top-left corner
-- `y` (number): Y coordinate of top-left corner
-- `width` (number, optional): Scale to this width
-- `height` (number, optional): Scale to this height
-
-```lua
--- Draw at original size
-canvas.draw_image("ship", 100, 100)
-
--- Draw scaled to 64x64
-canvas.draw_image("ship", 100, 100, 64, 64)
-
--- Center an image
-local w = canvas.assets.get_width("ship")
-local h = canvas.assets.get_height("ship")
-canvas.draw_image("ship", player_x - w/2, player_y - h/2)
-```
-
-## Example: Moving Square
+## Quick Start
 
 ```lua
 local canvas = require('canvas')
 
 -- Set canvas size
-canvas.set_size(800, 600)
+canvas.set_size(400, 300)
 
-local x, y = 100, 100
-local speed = 200
+-- Game state
+local x, y = 200, 150
+local speed = 100
 
-canvas.tick(function()
-  -- Handle input
+-- Handle input
+local function user_input()
   local dt = canvas.get_delta()
+  if canvas.is_key_down(canvas.keys.LEFT) then x = x - speed * dt end
+  if canvas.is_key_down(canvas.keys.RIGHT) then x = x + speed * dt end
+  if canvas.is_key_down(canvas.keys.UP) then y = y - speed * dt end
+  if canvas.is_key_down(canvas.keys.DOWN) then y = y + speed * dt end
+end
 
-  if canvas.is_key_down('ArrowLeft') then
-    x = x - speed * dt
-  end
-  if canvas.is_key_down('ArrowRight') then
-    x = x + speed * dt
-  end
-  if canvas.is_key_down('ArrowUp') then
-    y = y - speed * dt
-  end
-  if canvas.is_key_down('ArrowDown') then
-    y = y + speed * dt
-  end
-
+-- Update game state
+local function update()
   -- Keep player in bounds
-  if x < 0 then x = 0 end
-  if x > canvas.get_width() - 50 then x = canvas.get_width() - 50 end
-  if y < 0 then y = 0 end
-  if y > canvas.get_height() - 50 then y = canvas.get_height() - 50 end
+  x = math.max(25, math.min(canvas.get_width() - 25, x))
+  y = math.max(25, math.min(canvas.get_height() - 25, y))
+end
 
-  -- Draw
+-- Render the game
+local function draw()
   canvas.clear()
   canvas.set_color(255, 100, 0)
-  canvas.fill_rect(x, y, 50, 50)
-end)
+  canvas.fill_circle(x, y, 25)
+end
 
--- Start the canvas (blocks until Ctrl+C)
+-- Main game loop
+local function game()
+  user_input()
+  update()
+  draw()
+end
+
+-- Register and start
+canvas.tick(game)
 canvas.start()
 ```
+
+## Documentation
+
+### Core
+
+- [**Lifecycle & Game Loop**](canvas/lifecycle.md) - `start()`, `stop()`, `tick()`, timing functions
+- [**Drawing Basics**](canvas/drawing.md) - Shapes, colors, lines, simple text
+
+### Advanced Drawing
+
+- [**Path API**](canvas/path.md) - Complex shapes with `begin_path()`, curves, arcs, ellipses, rounded rectangles, clipping
+- [**Styling**](canvas/styling.md) - Line styles, gradients, patterns, shadows, compositing/blend modes
+
+### Text & Assets
+
+- [**Text Rendering**](canvas/text.md) - Text alignment, font styling, `draw_label()` with word wrap
+- [**Images & Assets**](canvas/assets.md) - Loading and drawing images, custom fonts
+
+### Input
+
+- [**Keyboard & Mouse**](canvas/input.md) - Input handling, key constants, mouse position
+
+### Advanced
+
+- [**Transformations**](canvas/transforms.md) - `translate()`, `rotate()`, `scale()`, `save()`/`restore()`
+- [**Hit Testing**](canvas/hit-testing.md) - Detect clicks on shapes with `is_point_in_path()`
+- [**Pixel Manipulation**](canvas/pixels.md) - Direct pixel access with `ImageData`
+
+## API Reference
+
+### Canvas Lifecycle
+| Function | Description |
+|----------|-------------|
+| `canvas.start()` | Start the canvas and run the game loop |
+| `canvas.stop()` | Stop the canvas and return control |
+| `canvas.tick(callback)` | Register the frame callback function |
+
+### Configuration
+| Function | Description |
+|----------|-------------|
+| `canvas.set_size(w, h)` | Set canvas dimensions |
+| `canvas.get_width()` | Get canvas width |
+| `canvas.get_height()` | Get canvas height |
+
+### Drawing
+| Function | Description |
+|----------|-------------|
+| `canvas.clear()` | Clear the canvas |
+| `canvas.set_color(r, g, b, a?)` | Set drawing color (RGBA or hex) |
+| `canvas.set_line_width(width)` | Set stroke width |
+| `canvas.draw_rect(x, y, w, h)` | Draw rectangle outline |
+| `canvas.fill_rect(x, y, w, h)` | Draw filled rectangle |
+| `canvas.draw_circle(x, y, r)` | Draw circle outline |
+| `canvas.fill_circle(x, y, r)` | Draw filled circle |
+| `canvas.draw_line(x1, y1, x2, y2)` | Draw a line |
+| `canvas.draw_text(x, y, text)` | Draw text |
+
+### Path API
+| Function | Description |
+|----------|-------------|
+| `canvas.begin_path()` | Start a new path |
+| `canvas.close_path()` | Close the path |
+| `canvas.move_to(x, y)` | Move without drawing |
+| `canvas.line_to(x, y)` | Draw line to point |
+| `canvas.arc(x, y, r, start, end)` | Draw an arc |
+| `canvas.bezier_curve_to(...)` | Draw cubic bezier |
+| `canvas.ellipse(x, y, rx, ry, ...)` | Draw ellipse |
+| `canvas.round_rect(x, y, w, h, r)` | Draw rounded rectangle |
+| `canvas.fill()` | Fill the path |
+| `canvas.stroke()` | Stroke the path |
+| `canvas.clip()` | Clip to path |
+
+### Styling
+| Function | Description |
+|----------|-------------|
+| `canvas.create_linear_gradient(...)` | Create linear gradient |
+| `canvas.create_radial_gradient(...)` | Create radial gradient |
+| `canvas.create_conic_gradient(...)` | Create conic gradient |
+| `canvas.create_pattern(name, repeat)` | Create image pattern |
+| `canvas.set_fill_style(style)` | Set fill color/gradient/pattern |
+| `canvas.set_stroke_style(style)` | Set stroke color/gradient/pattern |
+| `canvas.set_shadow(color, blur, x, y)` | Set shadow properties |
+| `canvas.clear_shadow()` | Remove shadow |
+| `canvas.set_global_alpha(alpha)` | Set transparency |
+| `canvas.set_composite_operation(op)` | Set blend mode |
+
+### Text
+| Function | Description |
+|----------|-------------|
+| `canvas.set_font_size(size)` | Set font size |
+| `canvas.set_font_family(family)` | Set font family |
+| `canvas.get_text_width(text)` | Measure text width |
+| `canvas.set_text_align(align)` | Set horizontal alignment |
+| `canvas.set_text_baseline(baseline)` | Set vertical alignment |
+| `canvas.draw_label(x, y, w, h, text, opts)` | Draw text in box |
+
+### Timing
+| Function | Description |
+|----------|-------------|
+| `canvas.get_delta()` | Time since last frame (seconds) |
+| `canvas.get_time()` | Total elapsed time (seconds) |
+
+### Input
+| Function | Description |
+|----------|-------------|
+| `canvas.is_key_down(key)` | Check if key is held |
+| `canvas.is_key_pressed(key)` | Check if key was just pressed |
+| `canvas.get_mouse_x()` | Get mouse X position |
+| `canvas.get_mouse_y()` | Get mouse Y position |
+| `canvas.is_mouse_down(button)` | Check if mouse button is held |
+| `canvas.is_mouse_pressed(button)` | Check if button was just pressed |
+
+### Transformations
+| Function | Description |
+|----------|-------------|
+| `canvas.translate(dx, dy)` | Move origin |
+| `canvas.rotate(angle)` | Rotate (radians) |
+| `canvas.scale(sx, sy)` | Scale |
+| `canvas.save()` | Save transform state |
+| `canvas.restore()` | Restore transform state |
+| `canvas.reset_transform()` | Reset to identity |
+
+### Assets
+| Function | Description |
+|----------|-------------|
+| `canvas.assets.image(name, path)` | Register image |
+| `canvas.assets.font(name, path)` | Register font |
+| `canvas.draw_image(name, x, y, w?, h?)` | Draw image |
+
+### Hit Testing
+| Function | Description |
+|----------|-------------|
+| `canvas.is_point_in_path(x, y)` | Check if point is in path |
+| `canvas.is_point_in_stroke(x, y)` | Check if point is on stroke |
+
+### Pixel Manipulation
+| Function | Description |
+|----------|-------------|
+| `canvas.create_image_data(w, h)` | Create empty pixel buffer |
+| `canvas.get_image_data(x, y, w, h)` | Read pixels from canvas |
+| `canvas.put_image_data(data, x, y)` | Write pixels to canvas |
+
+## Examples
+
+See the [examples directory](https://github.com/jcollard/LuaInTheWeb/tree/main/lua-learning-website/public/examples/canvas) for complete working examples:
+
+- **Path API**: Triangles, stars, houses, pie charts, smileys
+- **Curves**: Bezier curves, quadratic curves
+- **Styling**: Gradients, patterns, shadows, compositing
+- **Text**: Alignment, word wrap, game HUDs
+- **Interaction**: Hit testing, clickable buttons
+- **Effects**: Pixel manipulation, filters

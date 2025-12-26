@@ -12,6 +12,34 @@
 local canvas = {}
 
 -- =============================================================================
+-- Table of Contents
+-- =============================================================================
+-- 1.  Canvas Lifecycle (start, stop)
+-- 2.  Game Loop (tick)
+-- 3.  Canvas Configuration (set_size, get_width, get_height)
+-- 4.  Drawing State (clear, set_color, set_line_width)
+-- 5.  Line Styling (set_line_cap, set_line_join, set_miter_limit)
+-- 6.  Dashed Lines (set_line_dash, get_line_dash, set_line_dash_offset)
+-- 7.  Gradient API (create_linear_gradient, create_radial_gradient, create_conic_gradient)
+-- 8.  Pattern API (create_pattern, set_fill_style, set_stroke_style)
+-- 9.  Shadow API (set_shadow_color, set_shadow_blur, set_shadow, clear_shadow)
+-- 10. Compositing (set_global_alpha, set_composite_operation)
+-- 11. Text Alignment (set_text_align, set_text_baseline, draw_label)
+-- 12. Font Styling (set_font_size, set_font_family, get_text_width)
+-- 13. Drawing Functions (draw_rect, fill_rect, draw_circle, fill_circle, draw_line, draw_text)
+-- 14. Timing Functions (get_delta, get_time)
+-- 15. Keyboard Input (is_key_down, is_key_pressed, get_keys_down, get_keys_pressed)
+-- 16. Key Constants (canvas.keys.*)
+-- 17. Mouse Input (get_mouse_x, get_mouse_y, is_mouse_down, is_mouse_pressed)
+-- 18. Asset Management (canvas.assets.image, canvas.assets.font, get_width, get_height)
+-- 19. Image Drawing (draw_image)
+-- 20. Transformation Functions (translate, rotate, scale, save, restore, transform)
+-- 21. Path API (begin_path, close_path, move_to, line_to, arc, bezier, ellipse, round_rect, clip)
+-- 22. Hit Testing API (is_point_in_path, is_point_in_stroke)
+-- 23. Pixel Manipulation API (ImageData, create_image_data, get_image_data, put_image_data)
+-- =============================================================================
+
+-- =============================================================================
 -- Canvas Lifecycle
 -- =============================================================================
 
@@ -110,6 +138,428 @@ function canvas.set_color(r, g, b, a) end
 ---@return nil
 ---@usage canvas.set_line_width(3)
 function canvas.set_line_width(width) end
+
+--- Set the line cap style for stroke endpoints.
+--- Controls how the ends of lines are drawn.
+---@param cap string Line cap style: "butt" (default), "round", or "square"
+---@return nil
+---@usage canvas.set_line_cap("butt")    -- Flat end at the endpoint
+---@usage canvas.set_line_cap("round")   -- Rounded end extending past endpoint
+---@usage canvas.set_line_cap("square")  -- Square end extending past endpoint
+function canvas.set_line_cap(cap) end
+
+--- Set the line join style for stroke corners.
+--- Controls how corners are drawn when two lines meet.
+---@param join string Line join style: "miter" (default), "round", or "bevel"
+---@return nil
+---@usage canvas.set_line_join("miter")  -- Sharp corner (may be limited by miter_limit)
+---@usage canvas.set_line_join("round")  -- Rounded corner
+---@usage canvas.set_line_join("bevel")  -- Flat corner (chamfered)
+function canvas.set_line_join(join) end
+
+--- Set the miter limit for sharp corners.
+--- When line_join is "miter", this limits how far the corner can extend.
+--- If the miter length exceeds this limit, the corner is drawn as a bevel instead.
+---@param limit number Miter limit value (default: 10)
+---@return nil
+---@usage canvas.set_line_join("miter")
+---@usage canvas.set_miter_limit(5)   -- Tighter limit, more bevels on sharp angles
+---@usage canvas.set_miter_limit(20)  -- Allow sharper corners before beveling
+function canvas.set_miter_limit(limit) end
+
+--- Set the line dash pattern for strokes.
+--- Creates dashed or dotted lines. Use an empty table to reset to solid line.
+---@param segments number[] Array of dash and gap lengths
+---@return nil
+---@usage canvas.set_line_dash({10, 5})      -- 10px dash, 5px gap
+---@usage canvas.set_line_dash({2, 4})       -- Dotted line
+---@usage canvas.set_line_dash({15, 5, 5, 5}) -- Long dash, gap, short dash, gap
+---@usage canvas.set_line_dash({})           -- Reset to solid line
+function canvas.set_line_dash(segments) end
+
+--- Get the current line dash pattern.
+---@return number[] Current dash pattern array (empty for solid line)
+---@usage local pattern = canvas.get_line_dash()
+function canvas.get_line_dash() end
+
+--- Set the line dash offset for animating dashed lines.
+--- Useful for creating "marching ants" selection effects.
+---@param offset number Offset to shift the dash pattern
+---@return nil
+---@usage canvas.set_line_dash_offset(offset) -- Shift pattern for animation
+function canvas.set_line_dash_offset(offset) end
+
+-- =============================================================================
+-- Gradient API
+-- =============================================================================
+
+--- Gradient object for creating smooth color transitions.
+--- Create with create_linear_gradient(), create_radial_gradient(), or create_conic_gradient(),
+--- then add color stops and apply with set_fill_style() or set_stroke_style().
+---@class Gradient
+---@field type string Gradient type: "linear", "radial", or "conic"
+---@field stops table[] Array of color stops
+
+--- Add a color stop to the gradient.
+--- Color stops define where colors appear along the gradient.
+---@param offset number Position along gradient (0.0 to 1.0)
+---@param color string CSS color string (hex, named, rgb, rgba)
+---@return Gradient self Returns self for method chaining
+---@usage local gradient = canvas.create_linear_gradient(0, 0, 200, 0)
+---@usage gradient:add_color_stop(0, "#FF0000")   -- Red at start
+---@usage gradient:add_color_stop(0.5, "yellow") -- Yellow in middle
+---@usage gradient:add_color_stop(1, "#0000FF")  -- Blue at end
+function Gradient:add_color_stop(offset, color) end
+
+--- Create a linear gradient.
+--- Linear gradients transition colors along a straight line from (x0, y0) to (x1, y1).
+--- After creating, add color stops with :add_color_stop() and apply with set_fill_style().
+---@param x0 number Start X coordinate
+---@param y0 number Start Y coordinate
+---@param x1 number End X coordinate
+---@param y1 number End Y coordinate
+---@return Gradient gradient The gradient object
+---@usage -- Horizontal gradient from red to blue
+---@usage local gradient = canvas.create_linear_gradient(0, 0, 200, 0)
+---@usage gradient:add_color_stop(0, "#FF0000")  -- Red at start
+---@usage gradient:add_color_stop(1, "#0000FF")  -- Blue at end
+---@usage canvas.set_fill_style(gradient)
+---@usage canvas.fill_rect(0, 0, 200, 100)
+---@usage
+---@usage -- Vertical gradient for sky effect
+---@usage local sky = canvas.create_linear_gradient(0, 0, 0, 400)
+---@usage sky:add_color_stop(0, "#87CEEB")  -- Light blue at top
+---@usage sky:add_color_stop(1, "#1E90FF")  -- Darker blue at bottom
+---@usage canvas.set_fill_style(sky)
+---@usage canvas.fill_rect(0, 0, 400, 400)
+function canvas.create_linear_gradient(x0, y0, x1, y1) end
+
+--- Create a radial gradient.
+--- Radial gradients transition colors between two circles.
+--- The first circle (x0, y0, r0) is the inner circle, the second (x1, y1, r1) is the outer.
+--- Use same center with different radii for spotlight effects.
+--- Use offset centers for 3D sphere effects.
+---@param x0 number Center X of start circle
+---@param y0 number Center Y of start circle
+---@param r0 number Radius of start circle (0 for point)
+---@param x1 number Center X of end circle
+---@param y1 number Center Y of end circle
+---@param r1 number Radius of end circle
+---@return Gradient gradient The gradient object
+---@usage -- Spotlight effect (same center)
+---@usage local light = canvas.create_radial_gradient(200, 200, 0, 200, 200, 150)
+---@usage light:add_color_stop(0, "#FFFFFF")         -- White center
+---@usage light:add_color_stop(1, "rgba(0,0,0,0)")   -- Transparent edge
+---@usage canvas.set_fill_style(light)
+---@usage canvas.fill_circle(200, 200, 150)
+---@usage
+---@usage -- 3D sphere effect (offset center for highlight)
+---@usage local sphere = canvas.create_radial_gradient(180, 180, 10, 200, 200, 80)
+---@usage sphere:add_color_stop(0, "#FFFFFF")  -- Highlight
+---@usage sphere:add_color_stop(0.3, "#4dabf7") -- Light blue
+---@usage sphere:add_color_stop(1, "#1864ab")   -- Dark blue
+---@usage canvas.set_fill_style(sphere)
+---@usage canvas.fill_circle(200, 200, 80)
+function canvas.create_radial_gradient(x0, y0, r0, x1, y1, r1) end
+
+--- Create a conic (angular) gradient.
+--- Conic gradients transition colors around a center point, sweeping like a radar.
+--- Perfect for color wheels, pie charts, and circular progress indicators.
+--- The gradient starts at startAngle and rotates clockwise.
+---@param startAngle number Starting angle in radians (0 = right, PI/2 = down, PI = left)
+---@param x number Center X coordinate
+---@param y number Center Y coordinate
+---@return Gradient gradient The gradient object
+---@usage -- Color wheel (full spectrum)
+---@usage local wheel = canvas.create_conic_gradient(0, 200, 200)
+---@usage wheel:add_color_stop(0, "#FF0000")     -- Red
+---@usage wheel:add_color_stop(0.17, "#FFFF00")  -- Yellow
+---@usage wheel:add_color_stop(0.33, "#00FF00")  -- Green
+---@usage wheel:add_color_stop(0.5, "#00FFFF")   -- Cyan
+---@usage wheel:add_color_stop(0.67, "#0000FF")  -- Blue
+---@usage wheel:add_color_stop(0.83, "#FF00FF")  -- Magenta
+---@usage wheel:add_color_stop(1, "#FF0000")     -- Back to red
+---@usage canvas.set_fill_style(wheel)
+---@usage canvas.begin_path()
+---@usage canvas.arc(200, 200, 100, 0, math.pi * 2)
+---@usage canvas.fill()
+---@usage
+---@usage -- Pie chart (start from top with -PI/2)
+---@usage local pie = canvas.create_conic_gradient(-math.pi/2, 200, 200)
+---@usage pie:add_color_stop(0, "#4dabf7")    -- Blue (30%)
+---@usage pie:add_color_stop(0.3, "#4dabf7")
+---@usage pie:add_color_stop(0.3, "#ff6b6b")  -- Red (50%)
+---@usage pie:add_color_stop(0.8, "#ff6b6b")
+---@usage pie:add_color_stop(0.8, "#51cf66")  -- Green (20%)
+---@usage pie:add_color_stop(1, "#51cf66")
+---@usage canvas.set_fill_style(pie)
+---@usage canvas.fill_circle(200, 200, 80)
+function canvas.create_conic_gradient(startAngle, x, y) end
+
+-- =============================================================================
+-- Pattern API
+-- =============================================================================
+
+--- Pattern repetition modes.
+---@alias PatternRepetition "repeat"|"repeat-x"|"repeat-y"|"no-repeat"
+
+--- Pattern object for image-based fills.
+--- Create with create_pattern() using a registered image asset.
+---@class Pattern
+---@field type string Pattern type: "pattern"
+---@field imageName string Name of the registered image asset
+---@field repetition PatternRepetition How the pattern tiles
+
+--- Create a pattern from a registered image for textured fills and strokes.
+--- Patterns repeat an image to fill shapes, similar to CSS background patterns.
+--- The image must first be registered via canvas.assets.image().
+---@param imageName string Name of image registered via canvas.assets.image()
+---@param repetition? PatternRepetition How the pattern tiles (default: "repeat")
+---@return Pattern pattern Pattern object for use with set_fill_style/set_stroke_style
+---@usage -- Register an image asset
+---@usage canvas.assets.image("tiles", "canvas/images/meteor.png")
+---@usage
+---@usage -- Create a repeating pattern
+---@usage local pattern = canvas.create_pattern("tiles", "repeat")
+---@usage canvas.set_fill_style(pattern)
+---@usage canvas.fill_rect(0, 0, 400, 300)
+---@usage
+---@usage -- Horizontal repeat only
+---@usage local stripes = canvas.create_pattern("tiles", "repeat-x")
+---@usage canvas.set_fill_style(stripes)
+---@usage canvas.fill_rect(0, 0, 400, 100)
+function canvas.create_pattern(imageName, repetition) end
+
+--- Set the fill style (color, gradient, or pattern).
+--- Affects all subsequent fill operations (fill_rect, fill_circle, fill).
+--- Can be a CSS color string, a gradient created with create_*_gradient,
+--- or a pattern created with create_pattern.
+---@param style string|Gradient|Pattern CSS color string, gradient, or pattern object
+---@return nil
+---@usage -- Simple color
+---@usage canvas.set_fill_style("#FF0000")
+---@usage canvas.set_fill_style("red")
+---@usage canvas.set_fill_style("rgb(255, 0, 0)")
+---@usage canvas.set_fill_style("rgba(255, 0, 0, 0.5)")
+---@usage
+---@usage -- Gradient
+---@usage local gradient = canvas.create_linear_gradient(0, 0, 200, 0)
+---@usage gradient:add_color_stop(0, "red"):add_color_stop(1, "blue")
+---@usage canvas.set_fill_style(gradient)
+---@usage canvas.fill_rect(0, 0, 200, 100)
+function canvas.set_fill_style(style) end
+
+--- Set the stroke style (color, gradient, or pattern).
+--- Affects all subsequent stroke operations (stroke, draw_rect, draw_circle, draw_line).
+--- Can be a CSS color string, a gradient created with create_*_gradient,
+--- or a pattern created with create_pattern.
+---@param style string|Gradient|Pattern CSS color string, gradient, or pattern object
+---@return nil
+---@usage -- Simple color
+---@usage canvas.set_stroke_style("#00FF00")
+---@usage canvas.set_stroke_style("green")
+---@usage
+---@usage -- Rainbow stroke
+---@usage local rainbow = canvas.create_linear_gradient(0, 0, 400, 0)
+---@usage rainbow:add_color_stop(0, "red")
+---@usage rainbow:add_color_stop(0.17, "orange")
+---@usage rainbow:add_color_stop(0.33, "yellow")
+---@usage rainbow:add_color_stop(0.5, "green")
+---@usage rainbow:add_color_stop(0.67, "blue")
+---@usage rainbow:add_color_stop(0.83, "indigo")
+---@usage rainbow:add_color_stop(1, "violet")
+---@usage canvas.set_line_width(10)
+---@usage canvas.set_stroke_style(rainbow)
+---@usage canvas.begin_path()
+---@usage canvas.move_to(50, 200)
+---@usage canvas.line_to(350, 200)
+---@usage canvas.stroke()
+function canvas.set_stroke_style(style) end
+
+-- Shadow API
+-- =============================================================================
+
+--- Set the shadow color.
+--- Affects all subsequent drawing operations until changed or cleared.
+---@param color string CSS color string (e.g., "#00000080", "rgba(0,0,0,0.5)")
+---@return nil
+---@usage canvas.set_shadow_color("#00000080")  -- Semi-transparent black
+---@usage canvas.set_shadow_color("rgba(0, 0, 0, 0.5)")
+function canvas.set_shadow_color(color) end
+
+--- Set the shadow blur radius.
+--- Higher values create softer, more diffuse shadows.
+---@param blur number Blur radius in pixels (0 = sharp shadow)
+---@return nil
+---@usage canvas.set_shadow_blur(10)  -- Soft shadow
+---@usage canvas.set_shadow_blur(0)   -- Sharp shadow
+function canvas.set_shadow_blur(blur) end
+
+--- Set the shadow horizontal offset.
+--- Positive values move shadow right, negative moves left.
+---@param offset number Horizontal offset in pixels
+---@return nil
+---@usage canvas.set_shadow_offset_x(5)   -- Shadow 5px to the right
+---@usage canvas.set_shadow_offset_x(-3)  -- Shadow 3px to the left
+function canvas.set_shadow_offset_x(offset) end
+
+--- Set the shadow vertical offset.
+--- Positive values move shadow down, negative moves up.
+---@param offset number Vertical offset in pixels
+---@return nil
+---@usage canvas.set_shadow_offset_y(5)   -- Shadow 5px down
+---@usage canvas.set_shadow_offset_y(-3)  -- Shadow 3px up
+function canvas.set_shadow_offset_y(offset) end
+
+--- Set all shadow properties at once.
+--- Convenience function to configure complete shadow effect.
+---@param color string CSS color string
+---@param blur? number Blur radius in pixels (default: 0)
+---@param offsetX? number Horizontal offset in pixels (default: 0)
+---@param offsetY? number Vertical offset in pixels (default: 0)
+---@return nil
+---@usage -- Drop shadow
+---@usage canvas.set_shadow("#00000080", 10, 5, 5)
+---@usage canvas.fill_rect(100, 100, 200, 100)
+---@usage
+---@usage -- Glow effect (no offset)
+---@usage canvas.set_shadow("#FFD700", 20, 0, 0)
+---@usage canvas.fill_circle(200, 200, 50)
+function canvas.set_shadow(color, blur, offsetX, offsetY) end
+
+--- Clear all shadow properties.
+--- Resets shadow to default (no shadow) for subsequent drawing.
+---@return nil
+---@usage canvas.set_shadow("#000000", 10, 5, 5)
+---@usage canvas.fill_rect(50, 50, 100, 100)  -- With shadow
+---@usage canvas.clear_shadow()
+---@usage canvas.fill_rect(200, 50, 100, 100) -- No shadow
+function canvas.clear_shadow() end
+
+-- =============================================================================
+-- Compositing
+-- =============================================================================
+
+--- Set the global alpha (transparency) for all subsequent drawing.
+--- Affects all drawing operations including shapes, text, and images.
+---@param alpha number Alpha value from 0.0 (fully transparent) to 1.0 (fully opaque)
+---@return nil
+---@usage canvas.set_global_alpha(0.5)  -- 50% transparent
+---@usage canvas.fill_rect(50, 50, 100, 100)  -- Semi-transparent rectangle
+---@usage canvas.set_global_alpha(1.0)  -- Reset to fully opaque
+function canvas.set_global_alpha(alpha) end
+
+--- Set the composite operation (blend mode) for all subsequent drawing.
+--- Controls how new pixels are combined with existing pixels on the canvas.
+---@param operation string Blend mode name
+---@return nil
+---@usage canvas.set_composite_operation("multiply")  -- Darkening blend
+---@usage canvas.set_composite_operation("screen")    -- Lightening blend
+---@usage canvas.set_composite_operation("lighter")   -- Additive blend
+---@usage canvas.set_composite_operation("source-over") -- Default (draw on top)
+---
+--- Blend modes:
+--- - "source-over" (default): Draw new content on top
+--- - "source-in": Draw only where new overlaps existing
+--- - "source-out": Draw only where new doesn't overlap existing
+--- - "source-atop": Draw on top, only on existing content
+--- - "destination-over": Draw behind existing content
+--- - "destination-in": Keep existing only where new overlaps
+--- - "destination-out": Keep existing only where new doesn't overlap
+--- - "destination-atop": Keep existing on top of new
+--- - "lighter": Additive blending (good for glow effects)
+--- - "copy": Replace existing with new
+--- - "xor": XOR blend
+--- - "multiply": Multiply colors (darkening)
+--- - "screen": Screen blend (lightening)
+--- - "overlay": Overlay blend
+--- - "darken": Keep darker color
+--- - "lighten": Keep lighter color
+--- - "color-dodge", "color-burn", "hard-light", "soft-light"
+--- - "difference", "exclusion", "hue", "saturation", "color", "luminosity"
+function canvas.set_composite_operation(operation) end
+
+-- =============================================================================
+-- Text Alignment
+-- =============================================================================
+
+--- Set the text alignment for all subsequent draw_text() calls.
+--- Controls horizontal alignment relative to the x coordinate.
+---@param align string Alignment: "left", "right", "center", "start", or "end"
+---@return nil
+---@usage canvas.set_text_align("center")
+---@usage canvas.draw_text(canvas.get_width() / 2, 50, "Centered Title")
+---
+--- Alignment values:
+--- - "left": Text starts at x (left edge at x)
+--- - "right": Text ends at x (right edge at x)
+--- - "center": Text is centered at x
+--- - "start": Same as "left" for left-to-right languages
+--- - "end": Same as "right" for left-to-right languages
+function canvas.set_text_align(align) end
+
+--- Set the text baseline for all subsequent draw_text() calls.
+--- Controls vertical alignment relative to the y coordinate.
+---@param baseline string Baseline: "top", "hanging", "middle", "alphabetic", "ideographic", or "bottom"
+---@return nil
+---@usage canvas.set_text_baseline("middle")
+---@usage canvas.draw_text(100, canvas.get_height() / 2, "Vertically Centered")
+---
+--- Baseline values:
+--- - "top": Top of text at y
+--- - "hanging": Hanging baseline at y (similar to top)
+--- - "middle": Middle of text at y
+--- - "alphabetic": Alphabetic baseline at y (default, where most letters sit)
+--- - "ideographic": Ideographic baseline at y (for CJK characters)
+--- - "bottom": Bottom of text at y
+function canvas.set_text_baseline(baseline) end
+
+---@class DrawLabelOptions
+---@field align_h? string Horizontal alignment: "left", "center", "right" (default: "center")
+---@field align_v? string Vertical alignment: "top", "middle", "bottom" (default: "middle")
+---@field overflow? string Overflow behavior: "visible", "hidden", "ellipsis" (default: "visible")
+---@field padding? table Padding: {left=0, top=0, right=0, bottom=0}
+---@field wrap? boolean Enable word wrapping (default: false)
+---@field line_height? number Line height multiplier (default: 1.2)
+---@field char_count? number Number of characters to show (for typewriter effects)
+
+--- Draw text within a bounded rectangle with alignment, overflow handling, and word wrapping.
+--- This is a convenience function that combines clipping, alignment, text truncation, and multi-line text.
+---@param x number X coordinate of the rectangle
+---@param y number Y coordinate of the rectangle
+---@param width number Width of the rectangle
+---@param height number Height of the rectangle
+---@param text string Text to draw
+---@param options? DrawLabelOptions Options for alignment, overflow, and padding
+---@return nil
+---@usage -- Centered button text
+---@usage canvas.draw_label(100, 100, 150, 50, "Click Me")
+---@usage
+---@usage -- Left-aligned with padding
+---@usage canvas.draw_label(100, 100, 200, 30, "Left aligned", {
+---@usage     align_h = "left",
+---@usage     padding = {left = 10}
+---@usage })
+---@usage
+---@usage -- Truncate long text with ellipsis
+---@usage canvas.draw_label(100, 100, 100, 30, "Very long text that will be truncated", {
+---@usage     overflow = "ellipsis"
+---@usage })
+---@usage
+---@usage -- Word wrapping in a text box
+---@usage canvas.draw_label(100, 100, 200, 80, "This is a longer text that will wrap to multiple lines", {
+---@usage     wrap = true,
+---@usage     align_h = "left",
+---@usage     padding = {left = 10, right = 10}
+---@usage })
+---@usage
+---@usage -- Typewriter effect (text appears over time)
+---@usage local chars = math.floor(canvas.get_time() * 15)
+---@usage canvas.draw_label(100, 100, 300, 100, "Hello, welcome to the game!", {
+---@usage     wrap = true,
+---@usage     char_count = chars
+---@usage })
+function canvas.draw_label(x, y, width, height, text, options) end
 
 -- =============================================================================
 -- Font Styling
@@ -530,5 +980,385 @@ function canvas.set_transform(a, b, c, d, e, f) end
 ---@usage canvas.reset_transform()  -- Clear all transforms
 ---@usage canvas.fill_rect(0, 0, 50, 50)  -- Draw at screen origin
 function canvas.reset_transform() end
+
+-- =============================================================================
+-- Path API
+-- =============================================================================
+
+--- Begin a new path.
+--- Clears any existing path data and starts a new one.
+--- Call this before using move_to(), line_to(), etc.
+---@return nil
+---@usage canvas.begin_path()
+---@usage canvas.move_to(100, 100)
+---@usage canvas.line_to(200, 100)
+---@usage canvas.stroke()
+function canvas.begin_path() end
+
+--- Close the current path.
+--- Draws a straight line from the current point back to the start of the path.
+--- Creates a closed shape ready for fill() or stroke().
+---@return nil
+---@usage canvas.begin_path()
+---@usage canvas.move_to(100, 100)
+---@usage canvas.line_to(150, 50)
+---@usage canvas.line_to(200, 100)
+---@usage canvas.close_path()  -- Draws line back to (100, 100)
+---@usage canvas.fill()
+function canvas.close_path() end
+
+--- Move to a point without drawing.
+--- Sets the starting point for a new sub-path.
+---@param x number X coordinate to move to
+---@param y number Y coordinate to move to
+---@return nil
+---@usage canvas.begin_path()
+---@usage canvas.move_to(50, 50)   -- Start here
+---@usage canvas.line_to(100, 100) -- Draw line from (50,50) to (100,100)
+function canvas.move_to(x, y) end
+
+--- Draw a line to a point.
+--- Draws a straight line from the current point to the specified point.
+---@param x number X coordinate to draw line to
+---@param y number Y coordinate to draw line to
+---@return nil
+---@usage canvas.begin_path()
+---@usage canvas.move_to(0, 0)
+---@usage canvas.line_to(100, 100)
+---@usage canvas.stroke()
+function canvas.line_to(x, y) end
+
+--- Fill the current path.
+--- Fills the interior of the path with the current fill color.
+--- The path does not need to be closed - it will be implicitly closed for fill.
+---@return nil
+---@usage canvas.set_color(255, 0, 0)  -- Red fill
+---@usage canvas.begin_path()
+---@usage canvas.move_to(100, 100)
+---@usage canvas.line_to(150, 50)
+---@usage canvas.line_to(200, 100)
+---@usage canvas.fill()  -- Fills the triangle
+function canvas.fill() end
+
+--- Stroke the current path.
+--- Draws the outline of the path with the current stroke color and line width.
+---@return nil
+---@usage canvas.set_color(0, 0, 0)     -- Black outline
+---@usage canvas.set_line_width(2)
+---@usage canvas.begin_path()
+---@usage canvas.move_to(100, 100)
+---@usage canvas.line_to(150, 50)
+---@usage canvas.line_to(200, 100)
+---@usage canvas.close_path()
+---@usage canvas.stroke()  -- Draws triangle outline
+function canvas.stroke() end
+
+--- Draw an arc (portion of a circle) on the current path.
+--- Angles are in radians. Use math.pi for convenience.
+---@param x number X coordinate of the arc's center
+---@param y number Y coordinate of the arc's center
+---@param radius number Arc radius in pixels
+---@param startAngle number Start angle in radians (0 = 3 o'clock position)
+---@param endAngle number End angle in radians
+---@param counterclockwise? boolean Draw counterclockwise (default: false)
+---@return nil
+---@usage -- Draw a pie chart slice
+---@usage canvas.begin_path()
+---@usage canvas.move_to(200, 200)  -- center
+---@usage canvas.arc(200, 200, 100, 0, math.pi / 2)  -- quarter circle
+---@usage canvas.close_path()
+---@usage canvas.fill()
+function canvas.arc(x, y, radius, startAngle, endAngle, counterclockwise) end
+
+--- Draw an arc using tangent control points.
+--- Creates a smooth arc that connects to the current path position,
+--- tangent to the lines from the current position to (x1, y1) and from (x1, y1) to (x2, y2).
+--- Useful for creating rounded corners.
+---@param x1 number X coordinate of first control point
+---@param y1 number Y coordinate of first control point
+---@param x2 number X coordinate of second control point
+---@param y2 number Y coordinate of second control point
+---@param radius number Arc radius in pixels
+---@return nil
+---@usage -- Draw a rounded corner
+---@usage canvas.begin_path()
+---@usage canvas.move_to(50, 100)
+---@usage canvas.arc_to(100, 100, 100, 50, 20)  -- rounded corner with radius 20
+---@usage canvas.stroke()
+function canvas.arc_to(x1, y1, x2, y2, radius) end
+
+--- Draw a quadratic Bézier curve from the current point.
+--- A quadratic curve uses a single control point to define the curve shape.
+--- The curve starts at the current path position and ends at (x, y).
+---@param cpx number X coordinate of the control point
+---@param cpy number Y coordinate of the control point
+---@param x number X coordinate of the end point
+---@param y number Y coordinate of the end point
+---@return nil
+---@usage -- Draw a simple curved line
+---@usage canvas.begin_path()
+---@usage canvas.move_to(50, 200)
+---@usage canvas.quadratic_curve_to(150, 50, 250, 200)  -- curve with control point at top
+---@usage canvas.stroke()
+function canvas.quadratic_curve_to(cpx, cpy, x, y) end
+
+--- Draw a cubic Bézier curve from the current point.
+--- A cubic curve uses two control points for more complex curve shapes.
+--- The curve starts at the current path position and ends at (x, y).
+--- Great for drawing S-curves, smooth paths, and complex shapes.
+---@param cp1x number X coordinate of the first control point
+---@param cp1y number Y coordinate of the first control point
+---@param cp2x number X coordinate of the second control point
+---@param cp2y number Y coordinate of the second control point
+---@param x number X coordinate of the end point
+---@param y number Y coordinate of the end point
+---@return nil
+---@usage -- Draw an S-curve
+---@usage canvas.begin_path()
+---@usage canvas.move_to(50, 200)
+---@usage canvas.bezier_curve_to(150, 50, 250, 350, 350, 200)  -- S-curve shape
+---@usage canvas.set_line_width(3)
+---@usage canvas.stroke()
+function canvas.bezier_curve_to(cp1x, cp1y, cp2x, cp2y, x, y) end
+
+--- Draw an ellipse (oval) on the current path.
+--- An ellipse is like a stretched circle with separate horizontal and vertical radii.
+--- Can also draw partial ellipse arcs by specifying start and end angles.
+---@param x number X coordinate of the ellipse's center
+---@param y number Y coordinate of the ellipse's center
+---@param radiusX number Horizontal radius (half-width) of the ellipse
+---@param radiusY number Vertical radius (half-height) of the ellipse
+---@param rotation? number Rotation of the ellipse in radians (default: 0)
+---@param startAngle? number Start angle in radians (default: 0)
+---@param endAngle? number End angle in radians (default: 2*PI for full ellipse)
+---@param counterclockwise? boolean Draw counterclockwise (default: false)
+---@return nil
+---@usage -- Draw a full oval
+---@usage canvas.begin_path()
+---@usage canvas.ellipse(200, 150, 100, 50)  -- Wide oval
+---@usage canvas.set_color("#4ECDC4")
+---@usage canvas.fill()
+---@usage
+---@usage -- Draw a rotated ellipse
+---@usage canvas.begin_path()
+---@usage canvas.ellipse(200, 200, 80, 40, math.pi / 4)  -- 45-degree rotation
+---@usage canvas.stroke()
+function canvas.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise) end
+
+--- Draw a rounded rectangle on the current path.
+--- Creates a rectangle with rounded corners, useful for buttons and UI elements.
+--- The radii parameter can be a single number for uniform corners, or a table
+--- of 1-4 values for different corner radii.
+---@param x number X coordinate of the rectangle's top-left corner
+---@param y number Y coordinate of the rectangle's top-left corner
+---@param width number Width of the rectangle
+---@param height number Height of the rectangle
+---@param radii number|table Corner radii - single value or table of 1-4 values
+---@return nil
+---@usage -- Draw a button with uniform rounded corners
+---@usage canvas.begin_path()
+---@usage canvas.round_rect(50, 50, 200, 60, 15)  -- 15px radius on all corners
+---@usage canvas.set_color("#667EEA")
+---@usage canvas.fill()
+---@usage
+---@usage -- Draw with different corner radii
+---@usage canvas.begin_path()
+---@usage canvas.round_rect(50, 150, 200, 60, {20, 0, 20, 0})  -- Alternating corners
+---@usage canvas.fill()
+---@usage
+---@usage -- Radii table formats:
+---@usage -- {r}       - Same radius for all corners
+---@usage -- {r1, r2}  - r1=top-left/bottom-right, r2=top-right/bottom-left
+---@usage -- {r1, r2, r3} - r1=top-left, r2=top-right/bottom-left, r3=bottom-right
+---@usage -- {r1, r2, r3, r4} - top-left, top-right, bottom-right, bottom-left
+function canvas.round_rect(x, y, width, height, radii) end
+
+--- Clip all future drawing to the current path.
+--- Creates a clipping region from the current path. All subsequent drawing
+--- operations will be constrained to this region. Use save()/restore()
+--- to manage clipping regions - clipping can only shrink, not expand.
+---@param fillRule? string Fill rule: "nonzero" (default) or "evenodd"
+---@return nil
+---@usage -- Create a circular viewport
+---@usage canvas.save()
+---@usage canvas.begin_path()
+---@usage canvas.arc(200, 200, 100, 0, math.pi * 2)
+---@usage canvas.clip()
+---@usage -- All drawing now clipped to the circle
+---@usage canvas.fill_rect(0, 0, 400, 400)  -- Only circle area is filled
+---@usage canvas.restore()  -- Remove clipping
+function canvas.clip(fillRule) end
+
+-- =============================================================================
+-- Hit Testing API
+-- =============================================================================
+
+--- Check if a point is inside the current path.
+--- Useful for detecting clicks on complex shapes.
+--- Must be called after building a path with begin_path(), move_to(), etc.
+---@param x number X coordinate of the point to test
+---@param y number Y coordinate of the point to test
+---@param fillRule? string Fill rule: "nonzero" (default) or "evenodd"
+---@return boolean inside True if the point is inside the path
+---@usage -- Check if mouse is inside a triangle
+---@usage canvas.begin_path()
+---@usage canvas.move_to(200, 100)
+---@usage canvas.line_to(100, 300)
+---@usage canvas.line_to(300, 300)
+---@usage canvas.close_path()
+---@usage
+---@usage local mx, my = canvas.get_mouse_x(), canvas.get_mouse_y()
+---@usage if canvas.is_point_in_path(mx, my) then
+---@usage   canvas.set_color(255, 0, 0)  -- Red when hovered
+---@usage else
+---@usage   canvas.set_color(100, 100, 100)  -- Gray otherwise
+---@usage end
+---@usage canvas.fill()
+---@usage
+---@usage -- Using "evenodd" fill rule for shapes with holes
+---@usage -- Outer square
+---@usage canvas.begin_path()
+---@usage canvas.move_to(50, 50)
+---@usage canvas.line_to(250, 50)
+---@usage canvas.line_to(250, 250)
+---@usage canvas.line_to(50, 250)
+---@usage canvas.close_path()
+---@usage -- Inner square (hole)
+---@usage canvas.move_to(100, 100)
+---@usage canvas.line_to(200, 100)
+---@usage canvas.line_to(200, 200)
+---@usage canvas.line_to(100, 200)
+---@usage canvas.close_path()
+---@usage
+---@usage if canvas.is_point_in_path(mx, my, "evenodd") then
+---@usage   -- Point is inside outer but outside inner square
+---@usage end
+function canvas.is_point_in_path(x, y, fillRule) end
+
+--- Check if a point is on the stroke of the current path.
+--- Useful for detecting clicks on lines and outlines.
+--- The hit detection uses the current line width - wider lines are easier to click.
+--- Must be called after building a path with begin_path(), move_to(), etc.
+---@param x number X coordinate of the point to test
+---@param y number Y coordinate of the point to test
+---@return boolean onStroke True if the point is on the path's stroke
+---@usage -- Check if mouse is on a line
+---@usage canvas.set_line_width(5)  -- 5px wide stroke for easier clicking
+---@usage canvas.begin_path()
+---@usage canvas.move_to(50, 50)
+---@usage canvas.line_to(350, 350)
+---@usage
+---@usage local mx, my = canvas.get_mouse_x(), canvas.get_mouse_y()
+---@usage if canvas.is_point_in_stroke(mx, my) then
+---@usage   canvas.set_color(255, 0, 0)  -- Red when hovered
+---@usage else
+---@usage   canvas.set_color(0, 0, 0)  -- Black otherwise
+---@usage end
+---@usage canvas.stroke()
+function canvas.is_point_in_stroke(x, y) end
+
+-- =============================================================================
+-- Pixel Manipulation API
+-- =============================================================================
+
+--- ImageData object for pixel-level access.
+--- Contains raw pixel data as a flat RGBA array (1-indexed in Lua).
+--- Use get_pixel() and set_pixel() helper methods for easier access.
+---@class ImageData
+---@field width number Width of the image in pixels
+---@field height number Height of the image in pixels
+---@field data number[] Raw RGBA pixel data (1-indexed array: r1, g1, b1, a1, r2, g2, b2, a2, ...)
+
+--- Get the RGBA values of a pixel at the specified coordinates.
+--- Coordinates are 0-indexed (x: 0 to width-1, y: 0 to height-1).
+--- Returns 0, 0, 0, 0 for out-of-bounds coordinates.
+---@param x number X coordinate (0-indexed)
+---@param y number Y coordinate (0-indexed)
+---@return number r Red component (0-255)
+---@return number g Green component (0-255)
+---@return number b Blue component (0-255)
+---@return number a Alpha component (0-255)
+---@usage local img = canvas.get_image_data(0, 0, 100, 100)
+---@usage local r, g, b, a = img:get_pixel(50, 50)
+function ImageData:get_pixel(x, y) end
+
+--- Set the RGBA values of a pixel at the specified coordinates.
+--- Coordinates are 0-indexed (x: 0 to width-1, y: 0 to height-1).
+--- Does nothing for out-of-bounds coordinates.
+---@param x number X coordinate (0-indexed)
+---@param y number Y coordinate (0-indexed)
+---@param r number Red component (0-255)
+---@param g number Green component (0-255)
+---@param b number Blue component (0-255)
+---@param a? number Alpha component (0-255, default: 255)
+---@return nil
+---@usage local img = canvas.create_image_data(100, 100)
+---@usage img:set_pixel(50, 50, 255, 0, 0)  -- Red pixel
+---@usage img:set_pixel(51, 50, 0, 255, 0, 128)  -- Semi-transparent green
+function ImageData:set_pixel(x, y, r, g, b, a) end
+
+--- Create a new empty ImageData buffer filled with transparent black.
+--- Use this to create pixel data for procedural generation.
+---@param width number Width in pixels
+---@param height number Height in pixels
+---@return ImageData image_data New ImageData filled with transparent black (0, 0, 0, 0)
+---@usage -- Create and fill with a pattern
+---@usage local img = canvas.create_image_data(100, 100)
+---@usage for y = 0, 99 do
+---@usage   for x = 0, 99 do
+---@usage     local r = (x / 100) * 255
+---@usage     local g = (y / 100) * 255
+---@usage     img:set_pixel(x, y, r, g, 0, 255)
+---@usage   end
+---@usage end
+---@usage canvas.put_image_data(img, 50, 50)
+function canvas.create_image_data(width, height) end
+
+--- Read pixel data from a region of the canvas.
+--- Returns an ImageData object containing the pixel values from the specified region.
+--- Use :get_pixel() to access individual pixels.
+---@param x number X coordinate of the top-left corner
+---@param y number Y coordinate of the top-left corner
+---@param width number Width of the region to read
+---@param height number Height of the region to read
+---@return ImageData|nil image_data Pixel data, or nil if canvas not ready
+---@usage -- Read and analyze a region
+---@usage local img = canvas.get_image_data(0, 0, 100, 100)
+---@usage if img then
+---@usage   local r, g, b, a = img:get_pixel(50, 50)
+---@usage   print("Center pixel: " .. r .. "," .. g .. "," .. b)
+---@usage end
+---@usage
+---@usage -- Invert colors in a region
+---@usage local img = canvas.get_image_data(0, 0, 200, 200)
+---@usage for y = 0, img.height - 1 do
+---@usage   for x = 0, img.width - 1 do
+---@usage     local r, g, b, a = img:get_pixel(x, y)
+---@usage     img:set_pixel(x, y, 255 - r, 255 - g, 255 - b, a)
+---@usage   end
+---@usage end
+---@usage canvas.put_image_data(img, 0, 0)
+function canvas.get_image_data(x, y, width, height) end
+
+--- Write pixel data to the canvas at the specified position.
+--- Draws the ImageData buffer to the canvas at coordinates (dx, dy).
+---@param image_data ImageData The pixel data to write
+---@param dx number Destination X coordinate
+---@param dy number Destination Y coordinate
+---@return nil
+---@usage -- Copy a region to another location
+---@usage local img = canvas.get_image_data(0, 0, 100, 100)
+---@usage canvas.put_image_data(img, 200, 200)  -- Paste at (200, 200)
+---@usage
+---@usage -- Create procedural texture
+---@usage local noise = canvas.create_image_data(64, 64)
+---@usage for y = 0, 63 do
+---@usage   for x = 0, 63 do
+---@usage     local v = math.random(0, 255)
+---@usage     noise:set_pixel(x, y, v, v, v, 255)
+---@usage   end
+---@usage end
+---@usage canvas.put_image_data(noise, 0, 0)
+function canvas.put_image_data(image_data, dx, dy) end
 
 return canvas

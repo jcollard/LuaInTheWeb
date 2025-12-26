@@ -1,12 +1,11 @@
--- Analog Clock Example
--- Demonstrates practical use of translate() and rotate()
+-- canvas/transforms/analog-clock.lua
+-- Demonstrates: Practical use of translate() and rotate()
+-- Features: translate, rotate, save, restore, fill_rect, fill_circle, draw_circle
 --
 -- Uses transformations to draw clock hands at the correct angles.
 -- Each hand is drawn pointing up (12 o'clock) and rotated to position.
 
 local canvas = require('canvas')
-
-canvas.set_size(400, 400)
 
 local center_x = 200
 local center_y = 200
@@ -18,7 +17,7 @@ local function draw_hand(length, width, color)
   canvas.fill_rect(-width/2, -length, width, length)
 end
 
-canvas.tick(function()
+local function draw()
   canvas.clear()
 
   local time = canvas.get_time()
@@ -79,6 +78,12 @@ canvas.tick(function()
   canvas.set_color(200, 200, 200)
   canvas.draw_text(10, 20, "Analog Clock")
   canvas.draw_text(10, 40, "Using translate() and rotate()")
-end)
+end
 
+local function game()
+  draw()
+end
+
+canvas.set_size(400, 400)
+canvas.tick(game)
 canvas.start()

@@ -39,6 +39,10 @@ const mockMainChannel = {
   getCanvasSize: vi.fn(() => ({ width: 800, height: 600 })),
   setCanvasSize: vi.fn(),
   dispose: vi.fn(),
+  // Pixel manipulation methods
+  getPendingImageDataRequests: vi.fn(() => []),
+  requestImageData: vi.fn(() => Promise.resolve({ type: 'getImageDataResponse' as const, requestId: 0, width: 0, height: 0, data: [] })),
+  sendImageDataResponse: vi.fn(),
 };
 
 // Mock channelFactory - using a configurable mock that can switch modes

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /**
  * Canvas controller for managing canvas lifecycle from within LuaScriptProcess.
  *
@@ -25,6 +26,11 @@ import type {
   InputState,
   TimingInfo,
   AssetManifest,
+  FillStyle,
+  GlobalCompositeOperation,
+  CanvasTextAlign,
+  CanvasTextBaseline,
+  FillRule,
 } from '@lua-learning/canvas-runtime'
 import type { IFileSystem } from '@lua-learning/shell-core'
 import { formatOnDrawError, createImageFromData, createFontFromData } from './canvasErrorFormatter'
@@ -103,6 +109,12 @@ export class CanvasController {
   // Font state
   private currentFontSize: number = 16
   private currentFontFamily: string = 'monospace'
+
+  // Line dash state
+  private lineDashSegments: number[] = []
+
+  // Path2D for hit testing - tracks current path operations
+  private currentPath: Path2D = new Path2D()
 
   // Offscreen canvas for text measurement
   private measureCanvas: HTMLCanvasElement | null = null
@@ -443,6 +455,323 @@ export class CanvasController {
     this.addDrawCommand({ type: 'resetTransform' })
   }
 
+  // --- Path API ---
+
+  /**
+   * Begin a new path, clearing any existing path data.
+   */
+  beginPath(): void {
+    this.currentPath = new Path2D()
+    this.addDrawCommand({ type: 'beginPath' })
+  }
+
+  /**
+   * Close the current path by drawing a line to the starting point.
+   */
+  closePath(): void {
+    this.currentPath.closePath()
+    this.addDrawCommand({ type: 'closePath' })
+  }
+
+  /**
+   * Move the current point to a new position without drawing.
+   */
+  moveTo(x: number, y: number): void {
+    this.currentPath.moveTo(x, y)
+    this.addDrawCommand({ type: 'moveTo', x, y })
+  }
+
+  /**
+   * Draw a line from the current point to a new position.
+   */
+  lineTo(x: number, y: number): void {
+    this.currentPath.lineTo(x, y)
+    this.addDrawCommand({ type: 'lineTo', x, y })
+  }
+
+  /**
+   * Fill the current path with the current fill style.
+   */
+  fill(): void {
+    this.addDrawCommand({ type: 'fill' })
+  }
+
+  /**
+   * Stroke the current path with the current stroke style.
+   */
+  stroke(): void {
+    this.addDrawCommand({ type: 'stroke' })
+  }
+
+  /**
+   * Draw an arc (portion of a circle) on the current path.
+   * @param x - X coordinate of the arc's center
+   * @param y - Y coordinate of the arc's center
+   * @param radius - Arc radius
+   * @param startAngle - Start angle in radians
+   * @param endAngle - End angle in radians
+   * @param counterclockwise - Draw counterclockwise (default: false)
+   */
+  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, counterclockwise?: boolean): void {
+    this.currentPath.arc(x, y, radius, startAngle, endAngle, counterclockwise)
+    this.addDrawCommand({ type: 'arc', x, y, radius, startAngle, endAngle, counterclockwise })
+  }
+
+  /**
+   * Draw an arc using tangent control points (for rounded corners).
+   * @param x1 - X coordinate of first control point
+   * @param y1 - Y coordinate of first control point
+   * @param x2 - X coordinate of second control point
+   * @param y2 - Y coordinate of second control point
+   * @param radius - Arc radius
+   */
+  arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): void {
+    this.currentPath.arcTo(x1, y1, x2, y2, radius)
+    this.addDrawCommand({ type: 'arcTo', x1, y1, x2, y2, radius })
+  }
+
+  /**
+   * Draw a quadratic Bézier curve from the current point.
+   * @param cpx - X coordinate of the control point
+   * @param cpy - Y coordinate of the control point
+   * @param x - X coordinate of the end point
+   * @param y - Y coordinate of the end point
+   */
+  quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void {
+    this.currentPath.quadraticCurveTo(cpx, cpy, x, y)
+    this.addDrawCommand({ type: 'quadraticCurveTo', cpx, cpy, x, y })
+  }
+
+  /**
+   * Draw a cubic Bézier curve from the current point.
+   * @param cp1x - X coordinate of the first control point
+   * @param cp1y - Y coordinate of the first control point
+   * @param cp2x - X coordinate of the second control point
+   * @param cp2y - Y coordinate of the second control point
+   * @param x - X coordinate of the end point
+   * @param y - Y coordinate of the end point
+   */
+  bezierCurveTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number): void {
+    this.currentPath.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
+    this.addDrawCommand({ type: 'bezierCurveTo', cp1x, cp1y, cp2x, cp2y, x, y })
+  }
+
+  /**
+   * Draw an ellipse on the current path.
+   * @param x - X coordinate of the ellipse's center
+   * @param y - Y coordinate of the ellipse's center
+   * @param radiusX - Horizontal radius of the ellipse
+   * @param radiusY - Vertical radius of the ellipse
+   * @param rotation - Rotation of the ellipse in radians
+   * @param startAngle - Start angle in radians
+   * @param endAngle - End angle in radians
+   * @param counterclockwise - Draw counterclockwise (default: false)
+   */
+  ellipse(
+    x: number,
+    y: number,
+    radiusX: number,
+    radiusY: number,
+    rotation: number,
+    startAngle: number,
+    endAngle: number,
+    counterclockwise?: boolean
+  ): void {
+    this.currentPath.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise)
+    this.addDrawCommand({
+      type: 'ellipse',
+      x,
+      y,
+      radiusX,
+      radiusY,
+      rotation,
+      startAngle,
+      endAngle,
+      counterclockwise,
+    })
+  }
+
+  /**
+   * Draw a rounded rectangle on the current path.
+   * @param x - X coordinate of the rectangle's starting point
+   * @param y - Y coordinate of the rectangle's starting point
+   * @param width - Width of the rectangle
+   * @param height - Height of the rectangle
+   * @param radii - Corner radii (single value or array of 1-4 values)
+   */
+  roundRect(x: number, y: number, width: number, height: number, radii: number | number[]): void {
+    this.currentPath.roundRect(x, y, width, height, radii)
+    this.addDrawCommand({ type: 'roundRect', x, y, width, height, radii })
+  }
+
+  /**
+   * Clip all future drawing to the current path.
+   * Use with save()/restore() to manage clipping regions.
+   * @param fillRule - Fill rule: "nonzero" (default) or "evenodd"
+   */
+  clip(fillRule?: 'nonzero' | 'evenodd'): void {
+    this.addDrawCommand({ type: 'clip', fillRule })
+  }
+
+  // --- Line Style API ---
+
+  /**
+   * Set the line cap style for stroke endpoints.
+   * @param cap - Line cap style: "butt" (default), "round", or "square"
+   */
+  setLineCap(cap: 'butt' | 'round' | 'square'): void {
+    this.addDrawCommand({ type: 'setLineCap', cap })
+  }
+
+  /**
+   * Set the line join style for stroke corners.
+   * @param join - Line join style: "miter" (default), "round", or "bevel"
+   */
+  setLineJoin(join: 'miter' | 'round' | 'bevel'): void {
+    this.addDrawCommand({ type: 'setLineJoin', join })
+  }
+
+  /**
+   * Set the miter limit for sharp corners.
+   * Only applies when lineJoin is "miter".
+   * @param limit - Miter limit value (default: 10)
+   */
+  setMiterLimit(limit: number): void {
+    this.addDrawCommand({ type: 'setMiterLimit', limit })
+  }
+
+  /**
+   * Set the line dash pattern for strokes.
+   * @param segments - Array of dash and gap lengths (e.g., [10, 5] for 10px dash, 5px gap)
+   *                   Empty array resets to solid line.
+   */
+  setLineDash(segments: number[]): void {
+    this.lineDashSegments = [...segments]
+    this.addDrawCommand({ type: 'setLineDash', segments })
+  }
+
+  /**
+   * Get the current line dash pattern.
+   * @returns Copy of the current dash pattern array
+   */
+  getLineDash(): number[] {
+    return [...this.lineDashSegments]
+  }
+
+  /**
+   * Set the line dash offset for animating dashed lines.
+   * @param offset - Offset to shift the dash pattern (useful for marching ants animation)
+   */
+  setLineDashOffset(offset: number): void {
+    this.addDrawCommand({ type: 'setLineDashOffset', offset })
+  }
+
+  // --- Fill/Stroke Style API ---
+
+  /**
+   * Set the fill style (color or gradient).
+   * @param style - CSS color string or gradient definition
+   */
+  setFillStyle(style: FillStyle): void {
+    this.addDrawCommand({ type: 'setFillStyle', style })
+  }
+
+  /**
+   * Set the stroke style (color or gradient).
+   * @param style - CSS color string or gradient definition
+   */
+  setStrokeStyle(style: FillStyle): void {
+    this.addDrawCommand({ type: 'setStrokeStyle', style })
+  }
+
+  // --- Shadow API ---
+
+  /**
+   * Set the shadow color.
+   * @param color - CSS color string
+   */
+  setShadowColor(color: string): void {
+    this.addDrawCommand({ type: 'setShadowColor', color })
+  }
+
+  /**
+   * Set the shadow blur radius.
+   * @param blur - Blur radius in pixels
+   */
+  setShadowBlur(blur: number): void {
+    this.addDrawCommand({ type: 'setShadowBlur', blur })
+  }
+
+  /**
+   * Set the shadow horizontal offset.
+   * @param offset - Offset in pixels
+   */
+  setShadowOffsetX(offset: number): void {
+    this.addDrawCommand({ type: 'setShadowOffsetX', offset })
+  }
+
+  /**
+   * Set the shadow vertical offset.
+   * @param offset - Offset in pixels
+   */
+  setShadowOffsetY(offset: number): void {
+    this.addDrawCommand({ type: 'setShadowOffsetY', offset })
+  }
+
+  /**
+   * Set all shadow properties at once.
+   * @param color - CSS color string
+   * @param blur - Blur radius in pixels
+   * @param offsetX - Horizontal offset in pixels
+   * @param offsetY - Vertical offset in pixels
+   */
+  setShadow(color: string, blur: number, offsetX: number, offsetY: number): void {
+    this.addDrawCommand({ type: 'setShadow', color, blur, offsetX, offsetY })
+  }
+
+  /**
+   * Clear all shadow properties.
+   */
+  clearShadow(): void {
+    this.addDrawCommand({ type: 'clearShadow' })
+  }
+
+  // --- Compositing API ---
+
+  /**
+   * Set the global alpha (transparency) for all subsequent drawing.
+   * @param alpha - Value from 0.0 (fully transparent) to 1.0 (fully opaque)
+   */
+  setGlobalAlpha(alpha: number): void {
+    this.addDrawCommand({ type: 'setGlobalAlpha', alpha })
+  }
+
+  /**
+   * Set the composite operation (blend mode) for all subsequent drawing.
+   * @param operation - The blend mode to use
+   */
+  setCompositeOperation(operation: GlobalCompositeOperation): void {
+    this.addDrawCommand({ type: 'setCompositeOperation', operation })
+  }
+
+  // --- Text Alignment API ---
+
+  /**
+   * Set the text alignment for all subsequent text drawing.
+   * @param align - Horizontal alignment: 'left', 'right', 'center', 'start', or 'end'
+   */
+  setTextAlign(align: CanvasTextAlign): void {
+    this.addDrawCommand({ type: 'setTextAlign', align })
+  }
+
+  /**
+   * Set the text baseline for all subsequent text drawing.
+   * @param baseline - Vertical alignment: 'top', 'hanging', 'middle', 'alphabetic', 'ideographic', or 'bottom'
+   */
+  setTextBaseline(baseline: CanvasTextBaseline): void {
+    this.addDrawCommand({ type: 'setTextBaseline', baseline })
+  }
+
   // --- Timing API ---
 
   /**
@@ -714,6 +1043,99 @@ export class CanvasController {
       throw new Error(`Unknown asset '${name}' - did you call canvas.assets.image()?`)
     }
     return dims.height
+  }
+
+  // --- Hit Testing API ---
+
+  /**
+   * Get the current path for testing purposes.
+   * @returns The current Path2D object
+   */
+  getCurrentPath(): Path2D {
+    return this.currentPath
+  }
+
+  /**
+   * Check if a point is inside the current path.
+   * @param x - X coordinate of the point
+   * @param y - Y coordinate of the point
+   * @param fillRule - Fill rule: 'nonzero' (default) or 'evenodd'
+   * @returns true if the point is inside the path
+   */
+  isPointInPath(x: number, y: number, fillRule: FillRule = 'nonzero'): boolean {
+    if (!this.renderer) return false
+    return this.renderer.isPointInPath(this.currentPath, x, y, fillRule)
+  }
+
+  /**
+   * Check if a point is on the stroke of the current path.
+   * @param x - X coordinate of the point
+   * @param y - Y coordinate of the point
+   * @returns true if the point is on the path's stroke
+   */
+  isPointInStroke(x: number, y: number): boolean {
+    if (!this.renderer) return false
+    return this.renderer.isPointInStroke(this.currentPath, x, y)
+  }
+
+  // ============================================================================
+  // Pixel Manipulation Methods
+  // ============================================================================
+
+  /**
+   * Flush any pending draw commands to the canvas.
+   * This ensures all drawing operations are applied before reading pixel data.
+   */
+  private flushCommands(): void {
+    if (this.renderer && this.frameCommands.length > 0) {
+      this.renderer.render(this.frameCommands)
+      this.frameCommands = []
+    }
+  }
+
+  /**
+   * Get pixel data from a region of the canvas.
+   * @param x - X coordinate of the top-left corner
+   * @param y - Y coordinate of the top-left corner
+   * @param width - Width of the region to read
+   * @param height - Height of the region to read
+   * @returns Array of RGBA values, or null if renderer not available
+   */
+  getImageData(x: number, y: number, width: number, height: number): number[] | null {
+    if (!this.renderer) return null
+    // Flush pending commands to ensure all drawing is applied before reading
+    this.flushCommands()
+    const imageData = this.renderer.getImageData(x, y, width, height)
+    return Array.from(imageData.data)
+  }
+
+  /**
+   * Write pixel data to the canvas.
+   * @param data - Array of RGBA values
+   * @param width - Width of the image data
+   * @param height - Height of the image data
+   * @param dx - Destination X coordinate
+   * @param dy - Destination Y coordinate
+   */
+  putImageData(data: number[], width: number, height: number, dx: number, dy: number): void {
+    this.addDrawCommand({
+      type: 'putImageData',
+      data,
+      width,
+      height,
+      dx,
+      dy,
+    })
+  }
+
+  /**
+   * Create a new empty image data array.
+   * @param width - Width in pixels
+   * @param height - Height in pixels
+   * @returns Array of zeros with length width * height * 4
+   */
+  createImageData(width: number, height: number): number[] {
+    return new Array(width * height * 4).fill(0)
   }
 
   // --- Internal ---

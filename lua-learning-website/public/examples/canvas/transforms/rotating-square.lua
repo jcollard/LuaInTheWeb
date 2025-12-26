@@ -1,5 +1,6 @@
--- Rotating Square Example
--- Demonstrates canvas.translate() and canvas.rotate()
+-- canvas/transforms/rotating-square.lua
+-- Demonstrates: Canvas transformations with translate() and rotate()
+-- Features: translate, rotate, save, restore, fill_rect, fill_circle
 --
 -- The square rotates around its center by:
 -- 1. Translating to the center of the canvas
@@ -8,15 +9,15 @@
 
 local canvas = require('canvas')
 
-canvas.set_size(400, 400)
-
 local angle = 0
 
-canvas.tick(function()
-  canvas.clear()
+local function update()
+  -- Update rotation angle (2 radians per second)
+  angle = angle + canvas.get_delta() * 2
+end
 
-  -- Update rotation angle
-  angle = angle + canvas.get_delta() * 2  -- 2 radians per second
+local function draw()
+  canvas.clear()
 
   -- Save the current transformation state
   canvas.save()
@@ -42,6 +43,13 @@ canvas.tick(function()
   canvas.set_color(200, 200, 200)
   canvas.draw_text(10, 20, "Rotating Square")
   canvas.draw_text(10, 40, "Using translate() and rotate()")
-end)
+end
 
+local function game()
+  update()
+  draw()
+end
+
+canvas.set_size(400, 400)
+canvas.tick(game)
 canvas.start()
