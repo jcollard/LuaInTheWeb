@@ -57,6 +57,10 @@ export class CanvasRenderer {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         break;
 
+      case 'clearRect':
+        this.ctx.clearRect(command.x, command.y, command.width, command.height);
+        break;
+
       case 'setColor':
         this.setColor(command.r, command.g, command.b, command.a);
         break;
@@ -104,8 +108,12 @@ export class CanvasRenderer {
         this.drawText(command.x, command.y, command.text, command.fontSize, command.fontFamily);
         break;
 
+      case 'strokeText':
+        this.strokeText(command.x, command.y, command.text, command.fontSize, command.fontFamily);
+        break;
+
       case 'drawImage':
-        this.drawImage(command.name, command.x, command.y, command.width, command.height);
+        this.drawImage(command.name, command.x, command.y, command.width, command.height, command.sx, command.sy, command.sw, command.sh);
         break;
 
       case 'translate':
@@ -192,6 +200,10 @@ export class CanvasRenderer {
 
       case 'roundRect':
         this.ctx.roundRect(command.x, command.y, command.width, command.height, command.radii);
+        break;
+
+      case 'rectPath':
+        this.ctx.rect(command.x, command.y, command.width, command.height);
         break;
 
       case 'clip':
@@ -363,7 +375,38 @@ export class CanvasRenderer {
     }
   }
 
-  private drawImage(name: string, x: number, y: number, width?: number, height?: number): void {
+  private strokeText(
+    x: number,
+    y: number,
+    text: string,
+    fontSize?: number,
+    fontFamily?: string
+  ): void {
+    // Note: textBaseline is set via setTextBaseline command (default 'top' in constructor)
+    // Apply font overrides if provided
+    if (fontSize !== undefined || fontFamily !== undefined) {
+      const savedFont = this.ctx.font;
+      const tempSize = fontSize ?? this.currentFontSize;
+      const tempFamily = fontFamily ?? this.currentFontFamily;
+      this.ctx.font = `${tempSize}px ${tempFamily}`;
+      this.ctx.strokeText(text, x, y);
+      this.ctx.font = savedFont;
+    } else {
+      this.ctx.strokeText(text, x, y);
+    }
+  }
+
+  private drawImage(
+    name: string,
+    x: number,
+    y: number,
+    width?: number,
+    height?: number,
+    sx?: number,
+    sy?: number,
+    sw?: number,
+    sh?: number
+  ): void {
     if (!this.imageCache) {
       return;
     }
@@ -373,9 +416,15 @@ export class CanvasRenderer {
       return;
     }
 
-    if (width !== undefined && height !== undefined) {
+    // 9-argument form: source cropping
+    if (sx !== undefined && sy !== undefined && sw !== undefined && sh !== undefined &&
+        width !== undefined && height !== undefined) {
+      this.ctx.drawImage(image, sx, sy, sw, sh, x, y, width, height);
+    } else if (width !== undefined && height !== undefined) {
+      // 5-argument form: destination with scaling
       this.ctx.drawImage(image, x, y, width, height);
     } else {
+      // 3-argument form: destination only
       this.ctx.drawImage(image, x, y);
     }
   }

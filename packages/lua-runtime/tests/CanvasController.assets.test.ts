@@ -308,6 +308,29 @@ describe('CanvasController Assets', () => {
         "Unknown asset 'unknown' - did you call canvas.assets.image()?"
       )
     })
+
+    it('should add drawImage command with source cropping (9-arg form)', async () => {
+      controller.registerAsset('spritesheet', 'sprites/spritesheet.png')
+      await controller.loadAssets(mockFileSystem, '/game')
+
+      // Draw 32x32 region from source at (64, 0) to dest at (100, 100) scaled to 64x64
+      controller.drawImage('spritesheet', 100, 200, 64, 64, 64, 0, 32, 32)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'drawImage',
+        name: 'spritesheet',
+        x: 100,
+        y: 200,
+        width: 64,
+        height: 64,
+        sx: 64,
+        sy: 0,
+        sw: 32,
+        sh: 32,
+      })
+    })
   })
 
   describe('asset dimensions', () => {

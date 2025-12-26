@@ -21,6 +21,50 @@ describe('CanvasController Path API - Shapes', () => {
     vi.clearAllMocks()
   })
 
+  describe('rectPath', () => {
+    it('should add rectPath command with all parameters', () => {
+      controller.rectPath(10, 20, 100, 50)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'rectPath',
+        x: 10,
+        y: 20,
+        width: 100,
+        height: 50,
+      })
+    })
+
+    it('should add rectPath command at origin', () => {
+      controller.rectPath(0, 0, 200, 150)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'rectPath',
+        x: 0,
+        y: 0,
+        width: 200,
+        height: 150,
+      })
+    })
+
+    it('should add rectPath command with negative coordinates', () => {
+      controller.rectPath(-50, -25, 100, 50)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'rectPath',
+        x: -50,
+        y: -25,
+        width: 100,
+        height: 50,
+      })
+    })
+  })
+
   describe('roundRect', () => {
     it('should add roundRect command with single radius value', () => {
       controller.roundRect(50, 50, 200, 100, 15)

@@ -87,6 +87,10 @@ export function setupCanvasAPI(
     getController()?.clear()
   })
 
+  engine.global.set('__canvas_clearRect', (x: number, y: number, width: number, height: number) => {
+    getController()?.clearRect(x, y, width, height)
+  })
+
   engine.global.set('__canvas_setColor', (r: number, g: number, b: number, a?: number | null) => {
     getController()?.setColor(r, g, b, a ?? undefined)
   })
@@ -105,6 +109,22 @@ export function setupCanvasAPI(
 
   engine.global.set('__canvas_getTextWidth', (text: string) => {
     return getController()?.getTextWidth(text) ?? 0
+  })
+
+  engine.global.set('__canvas_getTextMetrics', (text: string) => {
+    const metrics = getController()?.getTextMetrics(text)
+    if (!metrics) {
+      return {
+        width: 0,
+        actualBoundingBoxLeft: 0,
+        actualBoundingBoxRight: 0,
+        actualBoundingBoxAscent: 0,
+        actualBoundingBoxDescent: 0,
+        fontBoundingBoxAscent: 0,
+        fontBoundingBoxDescent: 0,
+      }
+    }
+    return metrics
   })
 
   engine.global.set('__canvas_setSize', (width: number, height: number) => {
@@ -142,6 +162,19 @@ export function setupCanvasAPI(
       ? { fontSize: fontSize ?? undefined, fontFamily: fontFamily ?? undefined }
       : undefined
     getController()?.drawText(x, y, text, options)
+  })
+
+  engine.global.set('__canvas_strokeText', (
+    x: number,
+    y: number,
+    text: string,
+    fontSize?: number | null,
+    fontFamily?: string | null
+  ) => {
+    const options = (fontSize !== undefined && fontSize !== null) || (fontFamily !== undefined && fontFamily !== null)
+      ? { fontSize: fontSize ?? undefined, fontFamily: fontFamily ?? undefined }
+      : undefined
+    getController()?.strokeText(x, y, text, options)
   })
 
   // --- Timing functions ---
@@ -212,8 +245,28 @@ export function setupCanvasAPI(
     controller.registerFontAsset(name, path)
   })
 
-  engine.global.set('__canvas_drawImage', (name: string, x: number, y: number, width?: number | null, height?: number | null) => {
-    getController()?.drawImage(name, x, y, width ?? undefined, height ?? undefined)
+  engine.global.set('__canvas_drawImage', (
+    name: string,
+    x: number,
+    y: number,
+    width?: number | null,
+    height?: number | null,
+    sx?: number | null,
+    sy?: number | null,
+    sw?: number | null,
+    sh?: number | null
+  ) => {
+    getController()?.drawImage(
+      name,
+      x,
+      y,
+      width ?? undefined,
+      height ?? undefined,
+      sx ?? undefined,
+      sy ?? undefined,
+      sw ?? undefined,
+      sh ?? undefined
+    )
   })
 
   engine.global.set('__canvas_assets_getWidth', (name: string) => {
@@ -304,6 +357,10 @@ export function setupCanvasAPI(
 
   engine.global.set('__canvas_roundRect', (x: number, y: number, width: number, height: number, radii: number | number[]) => {
     getController()?.roundRect(x, y, width, height, radii)
+  })
+
+  engine.global.set('__canvas_rectPath', (x: number, y: number, width: number, height: number) => {
+    getController()?.rectPath(x, y, width, height)
   })
 
   engine.global.set('__canvas_clip', (fillRule?: string) => {
@@ -541,6 +598,16 @@ export function setupCanvasAPI(
   // dispose: Removes ImageData from store to free memory
   engine.global.set('__canvas_imageDataDispose', (id: number) => {
     imageDataStore.delete(id)
+  })
+
+  // clone: Creates a deep copy of an existing ImageData
+  engine.global.set('__canvas_cloneImageData', (id: number) => {
+    const stored = imageDataStore.get(id)
+    if (!stored) return null
+    // Create a new Uint8ClampedArray with a copy of the data
+    const clonedData = new Uint8ClampedArray(stored.data)
+    const newId = storeImageData(clonedData, stored.width, stored.height)
+    return { id: newId, width: stored.width, height: stored.height }
   })
 
   // --- Set up Lua-side canvas table ---

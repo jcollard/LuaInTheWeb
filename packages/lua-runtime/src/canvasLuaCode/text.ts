@@ -12,6 +12,39 @@ export const canvasLuaTextCode = `
       __canvas_setTextBaseline(baseline)
     end
 
+    -- Draw text outline (stroke only, no fill)
+    function _canvas.stroke_text(x, y, text, options)
+      local fontSize = nil
+      local fontFamily = nil
+      if options then
+        fontSize = options.font_size
+        fontFamily = options.font_family
+      end
+      __canvas_strokeText(x, y, text, fontSize, fontFamily)
+    end
+
+    -- Get comprehensive text metrics
+    -- Returns a table with:
+    --   width: total text width
+    --   actual_bounding_box_left: distance from alignment point to left edge
+    --   actual_bounding_box_right: distance from alignment point to right edge
+    --   actual_bounding_box_ascent: distance from baseline to top
+    --   actual_bounding_box_descent: distance from baseline to bottom
+    --   font_bounding_box_ascent: font ascent (highest glyph)
+    --   font_bounding_box_descent: font descent (lowest glyph)
+    function _canvas.get_text_metrics(text)
+      local metrics = __canvas_getTextMetrics(text)
+      return {
+        width = metrics.width,
+        actual_bounding_box_left = metrics.actualBoundingBoxLeft,
+        actual_bounding_box_right = metrics.actualBoundingBoxRight,
+        actual_bounding_box_ascent = metrics.actualBoundingBoxAscent,
+        actual_bounding_box_descent = metrics.actualBoundingBoxDescent,
+        font_bounding_box_ascent = metrics.fontBoundingBoxAscent,
+        font_bounding_box_descent = metrics.fontBoundingBoxDescent,
+      }
+    end
+
     -- Draw text within a bounded rectangle with alignment and overflow options
     function _canvas.draw_label(x, y, width, height, text, options)
       options = options or {}

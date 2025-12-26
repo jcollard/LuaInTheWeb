@@ -269,6 +269,13 @@ export class CanvasController {
   }
 
   /**
+   * Clear a rectangular area of the canvas to transparent.
+   */
+  clearRect(x: number, y: number, width: number, height: number): void {
+    this.addDrawCommand({ type: 'clearRect', x, y, width, height })
+  }
+
+  /**
    * Set the drawing color.
    */
   setColor(r: number, g: number, b: number, a?: number): void {
@@ -316,6 +323,32 @@ export class CanvasController {
   getTextWidth(text: string): number {
     const ctx = this.getMeasureContext()
     return ctx.measureText(text).width
+  }
+
+  /**
+   * Get comprehensive text metrics using the current font settings.
+   * Returns an object with width and various bounding box measurements.
+   */
+  getTextMetrics(text: string): {
+    width: number
+    actualBoundingBoxLeft: number
+    actualBoundingBoxRight: number
+    actualBoundingBoxAscent: number
+    actualBoundingBoxDescent: number
+    fontBoundingBoxAscent: number
+    fontBoundingBoxDescent: number
+  } {
+    const ctx = this.getMeasureContext()
+    const metrics = ctx.measureText(text)
+    return {
+      width: metrics.width,
+      actualBoundingBoxLeft: metrics.actualBoundingBoxLeft,
+      actualBoundingBoxRight: metrics.actualBoundingBoxRight,
+      actualBoundingBoxAscent: metrics.actualBoundingBoxAscent,
+      actualBoundingBoxDescent: metrics.actualBoundingBoxDescent,
+      fontBoundingBoxAscent: metrics.fontBoundingBoxAscent,
+      fontBoundingBoxDescent: metrics.fontBoundingBoxDescent,
+    }
   }
 
   /**
@@ -387,6 +420,29 @@ export class CanvasController {
     options?: { fontSize?: number; fontFamily?: string }
   ): void {
     const command: DrawCommand = { type: 'text', x, y, text }
+    if (options?.fontSize !== undefined) {
+      (command as { fontSize?: number }).fontSize = options.fontSize
+    }
+    if (options?.fontFamily !== undefined) {
+      (command as { fontFamily?: string }).fontFamily = options.fontFamily
+    }
+    this.addDrawCommand(command)
+  }
+
+  /**
+   * Draw text outline (stroke only, no fill) with optional font overrides.
+   * @param x - X coordinate (top-left)
+   * @param y - Y coordinate (top-left)
+   * @param text - Text to draw
+   * @param options - Optional font overrides for this text only
+   */
+  strokeText(
+    x: number,
+    y: number,
+    text: string,
+    options?: { fontSize?: number; fontFamily?: string }
+  ): void {
+    const command: DrawCommand = { type: 'strokeText', x, y, text }
     if (options?.fontSize !== undefined) {
       (command as { fontSize?: number }).fontSize = options.fontSize
     }
@@ -602,6 +658,19 @@ export class CanvasController {
   roundRect(x: number, y: number, width: number, height: number, radii: number | number[]): void {
     this.currentPath.roundRect(x, y, width, height, radii)
     this.addDrawCommand({ type: 'roundRect', x, y, width, height, radii })
+  }
+
+  /**
+   * Add a rectangle to the current path.
+   * Unlike rect() which draws immediately, this adds to the path for later fill()/stroke().
+   * @param x - X coordinate of the rectangle's starting point
+   * @param y - Y coordinate of the rectangle's starting point
+   * @param width - Width of the rectangle
+   * @param height - Height of the rectangle
+   */
+  rectPath(x: number, y: number, width: number, height: number): void {
+    this.currentPath.rect(x, y, width, height)
+    this.addDrawCommand({ type: 'rectPath', x, y, width, height })
   }
 
   /**
@@ -996,14 +1065,32 @@ export class CanvasController {
 
   /**
    * Draw an image asset at the specified position.
+   * Supports two forms:
+   * - Simple: drawImage(name, x, y, width?, height?) - draws at destination with optional scaling
+   * - Source cropping: drawImage(name, dx, dy, dw, dh, sx, sy, sw, sh) - crops source and draws to destination
+   *
    * @param name - Name of the asset to draw
-   * @param x - X position
-   * @param y - Y position
-   * @param width - Optional width (for scaling)
-   * @param height - Optional height (for scaling)
+   * @param x - X position (destination)
+   * @param y - Y position (destination)
+   * @param width - Optional width (destination, for scaling)
+   * @param height - Optional height (destination, for scaling)
+   * @param sx - Optional source X (top-left of source rect)
+   * @param sy - Optional source Y (top-left of source rect)
+   * @param sw - Optional source width
+   * @param sh - Optional source height
    * @throws Error if asset is unknown
    */
-  drawImage(name: string, x: number, y: number, width?: number, height?: number): void {
+  drawImage(
+    name: string,
+    x: number,
+    y: number,
+    width?: number,
+    height?: number,
+    sx?: number,
+    sy?: number,
+    sw?: number,
+    sh?: number
+  ): void {
     // Verify asset is registered
     if (!this.assetDimensions.has(name)) {
       throw new Error(`Unknown asset '${name}' - did you call canvas.assets.image()?`)
@@ -1011,8 +1098,15 @@ export class CanvasController {
 
     const command: DrawCommand = { type: 'drawImage', name, x, y }
     if (width !== undefined && height !== undefined) {
-      (command as { type: 'drawImage'; name: string; x: number; y: number; width?: number; height?: number }).width = width;
-      (command as { type: 'drawImage'; name: string; x: number; y: number; width?: number; height?: number }).height = height
+      (command as { width?: number; height?: number }).width = width;
+      (command as { width?: number; height?: number }).height = height
+    }
+    // Add source rect params if provided (9-arg form)
+    if (sx !== undefined && sy !== undefined && sw !== undefined && sh !== undefined) {
+      (command as { sx?: number; sy?: number; sw?: number; sh?: number }).sx = sx;
+      (command as { sx?: number; sy?: number; sw?: number; sh?: number }).sy = sy;
+      (command as { sx?: number; sy?: number; sw?: number; sh?: number }).sw = sw;
+      (command as { sx?: number; sy?: number; sw?: number; sh?: number }).sh = sh
     }
     this.addDrawCommand(command)
   }

@@ -3,6 +3,7 @@
  */
 export type DrawCommandType =
   | 'clear'
+  | 'clearRect'
   | 'setColor'
   | 'setLineWidth'
   | 'setFontSize'
@@ -14,6 +15,7 @@ export type DrawCommandType =
   | 'fillCircle'
   | 'line'
   | 'text'
+  | 'strokeText'
   | 'drawImage'
   | 'translate'
   | 'rotate'
@@ -35,6 +37,7 @@ export type DrawCommandType =
   | 'bezierCurveTo'
   | 'ellipse'
   | 'roundRect'
+  | 'rectPath'
   | 'clip'
   | 'setLineCap'
   | 'setLineJoin'
@@ -67,6 +70,17 @@ interface DrawCommandBase {
  */
 export interface ClearCommand extends DrawCommandBase {
   type: 'clear';
+}
+
+/**
+ * Clear a rectangular area of the canvas to transparent.
+ */
+export interface ClearRectCommand extends DrawCommandBase {
+  type: 'clearRect';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 /**
@@ -183,20 +197,43 @@ export interface TextCommand extends DrawCommandBase {
 }
 
 /**
+ * Draw text outline (stroke only, no fill).
+ */
+export interface StrokeTextCommand extends DrawCommandBase {
+  type: 'strokeText';
+  x: number;
+  y: number;
+  text: string;
+  /** Optional font size override for this text only */
+  fontSize?: number;
+  /** Optional font family override for this text only */
+  fontFamily?: string;
+}
+
+/**
  * Draw an image from the asset cache.
+ * Supports both simple form (5 args) and source cropping (9 args).
  */
 export interface DrawImageCommand extends DrawCommandBase {
   type: 'drawImage';
   /** Name of the asset to draw */
   name: string;
-  /** X position to draw at */
+  /** X position to draw at (destination) */
   x: number;
-  /** Y position to draw at */
+  /** Y position to draw at (destination) */
   y: number;
-  /** Optional width to scale image to */
+  /** Optional width to scale image to (destination) */
   width?: number;
-  /** Optional height to scale image to */
+  /** Optional height to scale image to (destination) */
   height?: number;
+  /** Source X - top-left corner of source rectangle (for cropping) */
+  sx?: number;
+  /** Source Y - top-left corner of source rectangle (for cropping) */
+  sy?: number;
+  /** Source width - width of source rectangle (for cropping) */
+  sw?: number;
+  /** Source height - height of source rectangle (for cropping) */
+  sh?: number;
 }
 
 /**
@@ -445,6 +482,22 @@ export interface RoundRectCommand extends DrawCommandBase {
   height: number;
   /** Corner radii - single value or array of 1-4 values */
   radii: number | number[];
+}
+
+/**
+ * Add a rectangle to the current path (does not draw, only adds to path).
+ * Use fill() or stroke() after to actually draw the rectangle.
+ */
+export interface RectPathCommand extends DrawCommandBase {
+  type: 'rectPath';
+  /** X coordinate of the rectangle's starting point */
+  x: number;
+  /** Y coordinate of the rectangle's starting point */
+  y: number;
+  /** Width of the rectangle */
+  width: number;
+  /** Height of the rectangle */
+  height: number;
 }
 
 /**
@@ -803,6 +856,7 @@ export interface PutImageDataCommand extends DrawCommandBase {
  */
 export type DrawCommand =
   | ClearCommand
+  | ClearRectCommand
   | SetColorCommand
   | SetLineWidthCommand
   | SetFontSizeCommand
@@ -814,6 +868,7 @@ export type DrawCommand =
   | FillCircleCommand
   | LineCommand
   | TextCommand
+  | StrokeTextCommand
   | DrawImageCommand
   | TranslateCommand
   | RotateCommand
@@ -835,6 +890,7 @@ export type DrawCommand =
   | BezierCurveToCommand
   | EllipseCommand
   | RoundRectCommand
+  | RectPathCommand
   | ClipCommand
   | SetLineCapCommand
   | SetLineJoinCommand

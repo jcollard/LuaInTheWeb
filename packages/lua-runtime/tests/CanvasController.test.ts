@@ -222,6 +222,14 @@ describe('CanvasController', () => {
       expect(commands[0]).toEqual({ type: 'clear' })
     })
 
+    it('should add clearRect command to frame commands', () => {
+      controller.clearRect(50, 50, 100, 100)
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({ type: 'clearRect', x: 50, y: 50, width: 100, height: 100 })
+    })
+
     it('should add setColor command with RGB values', () => {
       controller.setColor(255, 0, 0)
 
@@ -300,6 +308,70 @@ describe('CanvasController', () => {
       const commands = controller.getFrameCommands()
       expect(commands).toHaveLength(1)
       expect(commands[0]).toEqual({ type: 'text', x: 10, y: 20, text: 'Hello' })
+    })
+
+    it('should add strokeText command', () => {
+      controller.strokeText(10, 20, 'Outlined Text')
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({ type: 'strokeText', x: 10, y: 20, text: 'Outlined Text' })
+    })
+
+    it('should add strokeText command with font overrides', () => {
+      controller.strokeText(10, 20, 'Large Outlined', { fontSize: 24, fontFamily: 'Arial' })
+
+      const commands = controller.getFrameCommands()
+      expect(commands).toHaveLength(1)
+      expect(commands[0]).toEqual({
+        type: 'strokeText',
+        x: 10,
+        y: 20,
+        text: 'Large Outlined',
+        fontSize: 24,
+        fontFamily: 'Arial'
+      })
+    })
+
+    it('should return text metrics with width and height', () => {
+      // Mock the canvas context for text measurement
+      const mockMeasureText = vi.fn().mockReturnValue({
+        width: 100,
+        actualBoundingBoxLeft: 0,
+        actualBoundingBoxRight: 100,
+        actualBoundingBoxAscent: 12,
+        actualBoundingBoxDescent: 3,
+        fontBoundingBoxAscent: 14,
+        fontBoundingBoxDescent: 4,
+      })
+      const mockContext = {
+        font: '',
+        measureText: mockMeasureText,
+      }
+      const mockCanvas = {
+        getContext: vi.fn().mockReturnValue(mockContext),
+      }
+      const originalCreateElement = document.createElement.bind(document)
+      vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+        if (tag === 'canvas') return mockCanvas as unknown as HTMLCanvasElement
+        return originalCreateElement(tag)
+      })
+
+      const metrics = controller.getTextMetrics('Hello World')
+
+      // Should return an object with all metric properties
+      expect(metrics).toHaveProperty('width')
+      expect(typeof metrics.width).toBe('number')
+      expect(metrics.width).toBe(100)
+
+      // Should also include font height metrics
+      expect(metrics).toHaveProperty('fontBoundingBoxAscent')
+      expect(metrics).toHaveProperty('fontBoundingBoxDescent')
+      expect(metrics.fontBoundingBoxAscent).toBe(14)
+      expect(metrics.fontBoundingBoxDescent).toBe(4)
+
+      // Clean up mock
+      vi.restoreAllMocks()
     })
 
     it('should accumulate multiple commands', () => {

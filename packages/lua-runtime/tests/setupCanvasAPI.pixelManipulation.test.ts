@@ -211,4 +211,69 @@ describe('setupCanvasAPI - Pixel Manipulation', () => {
       expect(args.data[3]).toBe(255)
     })
   })
+
+  describe('clone_image_data', () => {
+    it('should clone ImageData with same pixel values', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      const result = await engine.doString(`
+        local canvas = require('canvas')
+        local original = canvas.create_image_data(2, 2)
+        original:set_pixel(0, 0, 100, 150, 200, 255)
+
+        local clone = canvas.clone_image_data(original)
+
+        -- Verify clone has same dimensions
+        if clone.width ~= original.width or clone.height ~= original.height then
+          return "dimension_mismatch"
+        end
+
+        -- Verify clone has same pixel values
+        local r, g, b, a = clone:get_pixel(0, 0)
+        return r .. "," .. g .. "," .. b .. "," .. a
+      `)
+
+      expect(result).toBe('100,150,200,255')
+    })
+
+    it('should create independent copy - modifying clone should not affect original', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      const result = await engine.doString(`
+        local canvas = require('canvas')
+        local original = canvas.create_image_data(2, 2)
+        original:set_pixel(0, 0, 100, 150, 200, 255)
+
+        local clone = canvas.clone_image_data(original)
+        clone:set_pixel(0, 0, 50, 60, 70, 80)
+
+        -- Original should still have original values
+        local r, g, b, a = original:get_pixel(0, 0)
+        return r .. "," .. g .. "," .. b .. "," .. a
+      `)
+
+      expect(result).toBe('100,150,200,255')
+    })
+
+    it('should create new ID for cloned ImageData', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      const result = await engine.doString(`
+        local canvas = require('canvas')
+        local original = canvas.create_image_data(2, 2)
+        local clone = canvas.clone_image_data(original)
+
+        -- IDs should be different (internal _jsId)
+        if original._jsId == clone._jsId then
+          return "same_id"
+        end
+        return "different_id"
+      `)
+
+      expect(result).toBe('different_id')
+    })
+  })
 })
