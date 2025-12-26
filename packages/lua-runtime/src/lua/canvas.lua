@@ -23,7 +23,7 @@ local canvas = {}
 -- 7.  Gradient API (create_linear_gradient, create_radial_gradient, create_conic_gradient)
 -- 8.  Pattern API (create_pattern, set_fill_style, set_stroke_style)
 -- 9.  Shadow API (set_shadow_color, set_shadow_blur, set_shadow, clear_shadow)
--- 10. Compositing (set_global_alpha, set_composite_operation)
+-- 10. Compositing (set_global_alpha, set_composite_operation, set_image_smoothing)
 -- 11. Text Alignment (set_text_align, set_text_baseline, draw_label)
 -- 12. Font Styling (set_font_size, set_font_family, get_text_width, get_text_metrics)
 -- 13. Drawing Functions (draw_rect, fill_rect, draw_circle, fill_circle, draw_line, draw_text, stroke_text)
@@ -495,6 +495,23 @@ function canvas.set_global_alpha(alpha) end
 --- - "color-dodge", "color-burn", "hard-light", "soft-light"
 --- - "difference", "exclusion", "hue", "saturation", "color", "luminosity"
 function canvas.set_composite_operation(operation) end
+
+--- Set image smoothing (anti-aliasing) for scaled images.
+--- When enabled (default), scaled images are smoothed/blurred for a softer appearance.
+--- When disabled, scaled images use nearest-neighbor interpolation for crisp pixel art.
+--- This setting persists until changed - typically set once at initialization.
+--- Note: If using save()/restore(), this setting is part of the saved state.
+---@param enabled boolean True for smooth scaling (default), false for crisp pixel art
+---@return nil
+---@usage -- For pixel art games, set once before canvas.start()
+---@usage canvas.set_size(320, 240)
+---@usage canvas.set_image_smoothing(false)  -- Crisp pixels for pixel art
+---@usage canvas.tick(game)
+---@usage canvas.start()
+---@usage
+---@usage -- For smooth photo-like images (default behavior)
+---@usage canvas.set_image_smoothing(true)  -- Smooth scaling
+function canvas.set_image_smoothing(enabled) end
 
 -- =============================================================================
 -- Text Alignment

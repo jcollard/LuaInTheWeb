@@ -144,6 +144,7 @@ canvas.start()
 | `canvas.clear_shadow()` | Remove shadow |
 | `canvas.set_global_alpha(alpha)` | Set transparency |
 | `canvas.set_composite_operation(op)` | Set blend mode |
+| `canvas.set_image_smoothing(enabled)` | Enable/disable image anti-aliasing (false for pixel art) |
 
 ### Text
 | Function | Description |
