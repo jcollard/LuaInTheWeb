@@ -63,7 +63,8 @@ local function draw()
   canvas.draw_text(text_x, text_y, sample_text)
 
   -- Visualize the metrics with lines and boxes
-  local actual_width = (metrics.actualBoundingBoxLeft or 0) + (metrics.actualBoundingBoxRight or metrics.width)
+  -- Note: Lua API uses snake_case for metric names
+  local actual_width = (metrics.actual_bounding_box_left or 0) + (metrics.actual_bounding_box_right or metrics.width)
 
   -- Width line (green)
   canvas.set_color(0, 255, 0, 150)
@@ -76,12 +77,12 @@ local function draw()
   canvas.draw_line(text_x - 10, text_y, text_x + actual_width + 10, text_y)
 
   -- Ascent line (cyan)
-  local ascent = metrics.actualBoundingBoxAscent or metrics.fontBoundingBoxAscent or font.size * 0.8
+  local ascent = metrics.actual_bounding_box_ascent or metrics.font_bounding_box_ascent or font.size * 0.8
   canvas.set_color(0, 200, 255)
   canvas.draw_line(text_x - 10, text_y - ascent, text_x + actual_width + 10, text_y - ascent)
 
   -- Descent line (pink)
-  local descent = metrics.actualBoundingBoxDescent or metrics.fontBoundingBoxDescent or font.size * 0.2
+  local descent = metrics.actual_bounding_box_descent or metrics.font_bounding_box_descent or font.size * 0.2
   canvas.set_color(255, 100, 255)
   canvas.draw_line(text_x - 10, text_y + descent, text_x + actual_width + 10, text_y + descent)
 
@@ -104,26 +105,26 @@ local function draw()
   y = y + line_height
 
   canvas.set_color(100, 200, 255)
-  canvas.draw_text(20, y, string.format("actualBoundingBoxAscent: %.1f", metrics.actualBoundingBoxAscent or 0))
+  canvas.draw_text(20, y, string.format("actual_bounding_box_ascent: %.1f", metrics.actual_bounding_box_ascent or 0))
   y = y + line_height
 
   canvas.set_color(255, 100, 255)
-  canvas.draw_text(20, y, string.format("actualBoundingBoxDescent: %.1f", metrics.actualBoundingBoxDescent or 0))
+  canvas.draw_text(20, y, string.format("actual_bounding_box_descent: %.1f", metrics.actual_bounding_box_descent or 0))
   y = y + line_height
 
   canvas.set_color(200, 200, 100)
-  canvas.draw_text(20, y, string.format("actualBoundingBoxLeft: %.1f", metrics.actualBoundingBoxLeft or 0))
+  canvas.draw_text(20, y, string.format("actual_bounding_box_left: %.1f", metrics.actual_bounding_box_left or 0))
   y = y + line_height
 
-  canvas.draw_text(20, y, string.format("actualBoundingBoxRight: %.1f", metrics.actualBoundingBoxRight or 0))
+  canvas.draw_text(20, y, string.format("actual_bounding_box_right: %.1f", metrics.actual_bounding_box_right or 0))
   y = y + line_height + 5
 
   -- Font bounding box (full font metrics)
   canvas.set_color(180, 180, 180)
-  canvas.draw_text(20, y, string.format("fontBoundingBoxAscent: %.1f", metrics.fontBoundingBoxAscent or 0))
+  canvas.draw_text(20, y, string.format("font_bounding_box_ascent: %.1f", metrics.font_bounding_box_ascent or 0))
   y = y + line_height
 
-  canvas.draw_text(20, y, string.format("fontBoundingBoxDescent: %.1f", metrics.fontBoundingBoxDescent or 0))
+  canvas.draw_text(20, y, string.format("font_bounding_box_descent: %.1f", metrics.font_bounding_box_descent or 0))
 
   -- Legend
   canvas.set_font_size(10)
