@@ -104,6 +104,7 @@ canvas.start()
 | Function | Description |
 |----------|-------------|
 | `canvas.clear()` | Clear the canvas |
+| `canvas.clear_rect(x, y, w, h)` | Clear a rectangular area to transparent |
 | `canvas.set_color(r, g, b, a?)` | Set drawing color (RGBA or hex) |
 | `canvas.set_line_width(width)` | Set stroke width |
 | `canvas.draw_rect(x, y, w, h)` | Draw rectangle outline |
@@ -111,7 +112,8 @@ canvas.start()
 | `canvas.draw_circle(x, y, r)` | Draw circle outline |
 | `canvas.fill_circle(x, y, r)` | Draw filled circle |
 | `canvas.draw_line(x1, y1, x2, y2)` | Draw a line |
-| `canvas.draw_text(x, y, text)` | Draw text |
+| `canvas.draw_text(x, y, text)` | Draw filled text |
+| `canvas.stroke_text(x, y, text)` | Draw text outline (stroke only) |
 
 ### Path API
 | Function | Description |
@@ -124,6 +126,7 @@ canvas.start()
 | `canvas.bezier_curve_to(...)` | Draw cubic bezier |
 | `canvas.ellipse(x, y, rx, ry, ...)` | Draw ellipse |
 | `canvas.round_rect(x, y, w, h, r)` | Draw rounded rectangle |
+| `canvas.rect(x, y, w, h)` | Add rectangle to path |
 | `canvas.fill()` | Fill the path |
 | `canvas.stroke()` | Stroke the path |
 | `canvas.clip()` | Clip to path |
@@ -141,6 +144,7 @@ canvas.start()
 | `canvas.clear_shadow()` | Remove shadow |
 | `canvas.set_global_alpha(alpha)` | Set transparency |
 | `canvas.set_composite_operation(op)` | Set blend mode |
+| `canvas.set_image_smoothing(enabled)` | Enable/disable image anti-aliasing (false for pixel art) |
 
 ### Text
 | Function | Description |
@@ -148,6 +152,7 @@ canvas.start()
 | `canvas.set_font_size(size)` | Set font size |
 | `canvas.set_font_family(family)` | Set font family |
 | `canvas.get_text_width(text)` | Measure text width |
+| `canvas.get_text_metrics(text)` | Get detailed text metrics (width, height, bounding box) |
 | `canvas.set_text_align(align)` | Set horizontal alignment |
 | `canvas.set_text_baseline(baseline)` | Set vertical alignment |
 | `canvas.draw_label(x, y, w, h, text, opts)` | Draw text in box |
@@ -183,7 +188,7 @@ canvas.start()
 |----------|-------------|
 | `canvas.assets.image(name, path)` | Register image |
 | `canvas.assets.font(name, path)` | Register font |
-| `canvas.draw_image(name, x, y, w?, h?)` | Draw image |
+| `canvas.draw_image(name, x, y, w?, h?, sx?, sy?, sw?, sh?)` | Draw image (with optional source cropping for sprite sheets) |
 
 ### Hit Testing
 | Function | Description |
@@ -197,6 +202,7 @@ canvas.start()
 | `canvas.create_image_data(w, h)` | Create empty pixel buffer |
 | `canvas.get_image_data(x, y, w, h)` | Read pixels from canvas |
 | `canvas.put_image_data(data, x, y)` | Write pixels to canvas |
+| `canvas.clone_image_data(data)` | Create independent copy of ImageData |
 
 ## Examples
 

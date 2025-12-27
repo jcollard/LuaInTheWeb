@@ -395,7 +395,7 @@ describe('setupCanvasAPI', () => {
         canvas.draw_image('player', 100, 200)
       `)
 
-      expect(mockController.drawImage).toHaveBeenCalledWith('player', 100, 200, undefined, undefined)
+      expect(mockController.drawImage).toHaveBeenCalledWith('player', 100, 200, undefined, undefined, undefined, undefined, undefined, undefined)
     })
 
     it('should call drawImage with scaling when width and height provided', async () => {
@@ -407,7 +407,19 @@ describe('setupCanvasAPI', () => {
         canvas.draw_image('player', 100, 200, 64, 64)
       `)
 
-      expect(mockController.drawImage).toHaveBeenCalledWith('player', 100, 200, 64, 64)
+      expect(mockController.drawImage).toHaveBeenCalledWith('player', 100, 200, 64, 64, undefined, undefined, undefined, undefined)
+    })
+
+    it('should call drawImage with source cropping (9-arg form)', async () => {
+      const mockController = createMockController()
+      setupCanvasAPI(engine, () => mockController)
+
+      await engine.doString(`
+        local canvas = require('canvas')
+        canvas.draw_image('spritesheet', 100, 200, 64, 64, 0, 32, 32, 32)
+      `)
+
+      expect(mockController.drawImage).toHaveBeenCalledWith('spritesheet', 100, 200, 64, 64, 0, 32, 32, 32)
     })
 
     it('should expose canvas.assets.get_width function', async () => {

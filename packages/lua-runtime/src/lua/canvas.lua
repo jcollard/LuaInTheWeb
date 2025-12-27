@@ -17,26 +17,26 @@ local canvas = {}
 -- 1.  Canvas Lifecycle (start, stop)
 -- 2.  Game Loop (tick)
 -- 3.  Canvas Configuration (set_size, get_width, get_height)
--- 4.  Drawing State (clear, set_color, set_line_width)
+-- 4.  Drawing State (clear, clear_rect, set_color, set_line_width)
 -- 5.  Line Styling (set_line_cap, set_line_join, set_miter_limit)
 -- 6.  Dashed Lines (set_line_dash, get_line_dash, set_line_dash_offset)
 -- 7.  Gradient API (create_linear_gradient, create_radial_gradient, create_conic_gradient)
 -- 8.  Pattern API (create_pattern, set_fill_style, set_stroke_style)
 -- 9.  Shadow API (set_shadow_color, set_shadow_blur, set_shadow, clear_shadow)
--- 10. Compositing (set_global_alpha, set_composite_operation)
+-- 10. Compositing (set_global_alpha, set_composite_operation, set_image_smoothing)
 -- 11. Text Alignment (set_text_align, set_text_baseline, draw_label)
--- 12. Font Styling (set_font_size, set_font_family, get_text_width)
--- 13. Drawing Functions (draw_rect, fill_rect, draw_circle, fill_circle, draw_line, draw_text)
+-- 12. Font Styling (set_font_size, set_font_family, get_text_width, get_text_metrics)
+-- 13. Drawing Functions (draw_rect, fill_rect, draw_circle, fill_circle, draw_line, draw_text, stroke_text)
 -- 14. Timing Functions (get_delta, get_time)
 -- 15. Keyboard Input (is_key_down, is_key_pressed, get_keys_down, get_keys_pressed)
 -- 16. Key Constants (canvas.keys.*)
 -- 17. Mouse Input (get_mouse_x, get_mouse_y, is_mouse_down, is_mouse_pressed)
 -- 18. Asset Management (canvas.assets.image, canvas.assets.font, get_width, get_height)
--- 19. Image Drawing (draw_image)
+-- 19. Image Drawing (draw_image with source cropping support)
 -- 20. Transformation Functions (translate, rotate, scale, save, restore, transform)
--- 21. Path API (begin_path, close_path, move_to, line_to, arc, bezier, ellipse, round_rect, clip)
+-- 21. Path API (begin_path, close_path, move_to, line_to, arc, bezier, ellipse, round_rect, rect, clip)
 -- 22. Hit Testing API (is_point_in_path, is_point_in_stroke)
--- 23. Pixel Manipulation API (ImageData, create_image_data, get_image_data, put_image_data)
+-- 23. Pixel Manipulation API (ImageData, create_image_data, get_image_data, put_image_data, clone_image_data)
 -- =============================================================================
 
 -- =============================================================================
@@ -109,6 +109,23 @@ function canvas.get_height() end
 --- Clear the canvas with the current background color.
 ---@return nil
 function canvas.clear() end
+
+--- Clear a rectangular area of the canvas to transparent.
+--- Unlike clear() which clears the entire canvas, this clears only the specified region.
+--- The cleared area becomes fully transparent (alpha = 0).
+---@param x number X coordinate of top-left corner
+---@param y number Y coordinate of top-left corner
+---@param width number Width of the area to clear
+---@param height number Height of the area to clear
+---@return nil
+---@usage -- Clear a specific region
+---@usage canvas.clear_rect(100, 100, 50, 50)  -- Clear a 50x50 area
+---@usage
+---@usage -- Reveal underlying content through a "window"
+---@usage canvas.set_color(0, 0, 0)
+---@usage canvas.fill_rect(0, 0, 400, 300)  -- Black overlay
+---@usage canvas.clear_rect(150, 100, 100, 100)  -- Cut a hole to see through
+function canvas.clear_rect(x, y, width, height) end
 
 --- Set the drawing color.
 --- Accepts either RGBA values (0-255) or hex color strings.
@@ -479,6 +496,23 @@ function canvas.set_global_alpha(alpha) end
 --- - "difference", "exclusion", "hue", "saturation", "color", "luminosity"
 function canvas.set_composite_operation(operation) end
 
+--- Set image smoothing (anti-aliasing) for scaled images.
+--- When enabled (default), scaled images are smoothed/blurred for a softer appearance.
+--- When disabled, scaled images use nearest-neighbor interpolation for crisp pixel art.
+--- This setting persists until changed - typically set once at initialization.
+--- Note: If using save()/restore(), this setting is part of the saved state.
+---@param enabled boolean True for smooth scaling (default), false for crisp pixel art
+---@return nil
+---@usage -- For pixel art games, set once before canvas.start()
+---@usage canvas.set_size(320, 240)
+---@usage canvas.set_image_smoothing(false)  -- Crisp pixels for pixel art
+---@usage canvas.tick(game)
+---@usage canvas.start()
+---@usage
+---@usage -- For smooth photo-like images (default behavior)
+---@usage canvas.set_image_smoothing(true)  -- Smooth scaling
+function canvas.set_image_smoothing(enabled) end
+
 -- =============================================================================
 -- Text Alignment
 -- =============================================================================
@@ -588,6 +622,30 @@ function canvas.set_font_family(family) end
 ---@usage local x = (canvas.get_width() - width) / 2  -- Center text
 function canvas.get_text_width(text) end
 
+---@class TextMetrics
+---@field width number Total width of the text
+---@field actual_bounding_box_left number Distance from alignment point to left edge of text
+---@field actual_bounding_box_right number Distance from alignment point to right edge of text
+---@field actual_bounding_box_ascent number Distance from baseline to top of text
+---@field actual_bounding_box_descent number Distance from baseline to bottom of text
+---@field font_bounding_box_ascent number Maximum ascent for the font
+---@field font_bounding_box_descent number Maximum descent for the font
+
+--- Get comprehensive text metrics for the current font settings.
+--- Returns detailed measurements including bounding box dimensions.
+--- More detailed than get_text_width() - includes vertical measurements and alignment info.
+---@param text string The text to measure
+---@return TextMetrics metrics Detailed text measurements
+---@usage local metrics = canvas.get_text_metrics("Hello World")
+---@usage print("Width: " .. metrics.width)
+---@usage print("Height: " .. metrics.actual_bounding_box_ascent + metrics.actual_bounding_box_descent)
+---@usage
+---@usage -- Calculate precise bounding box for hit testing
+---@usage local m = canvas.get_text_metrics("Click Me")
+---@usage local text_height = m.actual_bounding_box_ascent + m.actual_bounding_box_descent
+---@usage local text_width = m.width
+function canvas.get_text_metrics(text) end
+
 -- =============================================================================
 -- Drawing Functions
 -- =============================================================================
@@ -642,6 +700,28 @@ function canvas.draw_line(x1, y1, x2, y2) end
 ---@usage canvas.draw_text(10, 50, "Big text", { font_size = 48 })  -- Override size
 ---@usage canvas.draw_text(10, 100, "Custom", { font_family = "Arial", font_size = 32 })
 function canvas.draw_text(x, y, text, options) end
+
+--- Draw text outline (stroke only, no fill) at the specified position.
+--- Draws only the outline/stroke of the text characters, not filled.
+--- Useful for creating outline text effects or combining with draw_text for bordered text.
+--- Optional style overrides can be provided without changing global state.
+---@param x number X coordinate of top-left corner
+---@param y number Y coordinate of top-left corner
+---@param text string Text to draw
+---@param options? table Optional style overrides: { font_size?: number, font_family?: string }
+---@return nil
+---@usage -- Simple outline text
+---@usage canvas.set_color(0, 0, 0)
+---@usage canvas.set_line_width(2)
+---@usage canvas.stroke_text(10, 10, "Outlined Text")
+---@usage
+---@usage -- Text with outline and fill (bordered text effect)
+---@usage canvas.set_color(255, 255, 255)
+---@usage canvas.draw_text(10, 50, "Bordered", { font_size = 48 })
+---@usage canvas.set_color(0, 0, 0)
+---@usage canvas.set_line_width(3)
+---@usage canvas.stroke_text(10, 50, "Bordered", { font_size = 48 })
+function canvas.stroke_text(x, y, text, options) end
 
 -- =============================================================================
 -- Timing Functions
@@ -880,16 +960,36 @@ function canvas.assets.get_height(name) end
 -- =============================================================================
 
 --- Draw an image at the specified position.
---- Optional width/height parameters enable scaling.
+--- Supports three forms:
+--- 1. Simple: draw_image(name, x, y) - draws at original size
+--- 2. Scaled: draw_image(name, x, y, width, height) - scales to fit
+--- 3. Cropped: draw_image(name, x, y, width, height, sx, sy, sw, sh) - crops from source
+---
 --- The image must be registered via canvas.assets.image() before canvas.start().
 ---@param name string The asset name (registered via canvas.assets.image())
----@param x number X coordinate of top-left corner
----@param y number Y coordinate of top-left corner
----@param width? number Optional width (scales image if provided)
----@param height? number Optional height (scales image if provided)
----@usage canvas.draw_image("player", 100, 100)  -- Original size
----@usage canvas.draw_image("player", 100, 100, 64, 64)  -- Scaled to 64x64
-function canvas.draw_image(name, x, y, width, height) end
+---@param x number X coordinate of destination top-left corner
+---@param y number Y coordinate of destination top-left corner
+---@param width? number Destination width (scales image if provided)
+---@param height? number Destination height (scales image if provided)
+---@param sx? number Source X - top-left corner of source rectangle (for cropping/sprite sheets)
+---@param sy? number Source Y - top-left corner of source rectangle (for cropping/sprite sheets)
+---@param sw? number Source width - width of source rectangle (for cropping/sprite sheets)
+---@param sh? number Source height - height of source rectangle (for cropping/sprite sheets)
+---@usage -- Simple: Original size
+---@usage canvas.draw_image("player", 100, 100)
+---@usage
+---@usage -- Scaled: Resize to 64x64
+---@usage canvas.draw_image("player", 100, 100, 64, 64)
+---@usage
+---@usage -- Cropped: Draw sprite from a sprite sheet
+---@usage -- Source: 32x32 sprite at position (64, 0) in the sprite sheet
+---@usage -- Destination: Draw at (100, 100) scaled to 64x64
+---@usage canvas.draw_image("spritesheet", 100, 100, 64, 64, 64, 0, 32, 32)
+---@usage
+---@usage -- Animation from sprite sheet (4 frames, each 32x32)
+---@usage local frame = math.floor(canvas.get_time() * 10) % 4
+---@usage canvas.draw_image("walk_cycle", 100, 100, 32, 32, frame * 32, 0, 32, 32)
+function canvas.draw_image(name, x, y, width, height, sx, sy, sw, sh) end
 
 -- =============================================================================
 -- Transformation Functions
@@ -1173,6 +1273,36 @@ function canvas.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, 
 ---@usage -- {r1, r2, r3, r4} - top-left, top-right, bottom-right, bottom-left
 function canvas.round_rect(x, y, width, height, radii) end
 
+--- Add a rectangle to the current path.
+--- Unlike draw_rect()/fill_rect() which draw immediately, this adds a rectangle
+--- sub-path that can be combined with other path operations before fill()/stroke().
+--- This is useful for creating complex shapes or hit-test regions.
+---@param x number X coordinate of the rectangle's top-left corner
+---@param y number Y coordinate of the rectangle's top-left corner
+---@param width number Width of the rectangle
+---@param height number Height of the rectangle
+---@return nil
+---@usage -- Draw a simple rectangle using path API
+---@usage canvas.begin_path()
+---@usage canvas.rect(50, 50, 100, 80)
+---@usage canvas.fill()
+---@usage
+---@usage -- Combine multiple rectangles in one path
+---@usage canvas.begin_path()
+---@usage canvas.rect(10, 10, 50, 50)
+---@usage canvas.rect(70, 10, 50, 50)
+---@usage canvas.rect(40, 60, 50, 50)
+---@usage canvas.set_color("#FF6B6B")
+---@usage canvas.fill()
+---@usage
+---@usage -- Use with hit testing
+---@usage canvas.begin_path()
+---@usage canvas.rect(button_x, button_y, button_w, button_h)
+---@usage if canvas.is_point_in_path(canvas.get_mouse_x(), canvas.get_mouse_y()) then
+---@usage   -- Mouse is over button
+---@usage end
+function canvas.rect(x, y, width, height) end
+
 --- Clip all future drawing to the current path.
 --- Creates a clipping region from the current path. All subsequent drawing
 --- operations will be constrained to this region. Use save()/restore()
@@ -1360,5 +1490,28 @@ function canvas.get_image_data(x, y, width, height) end
 ---@usage end
 ---@usage canvas.put_image_data(noise, 0, 0)
 function canvas.put_image_data(image_data, dx, dy) end
+
+--- Create a deep copy (clone) of an existing ImageData object.
+--- The cloned object has independent pixel data - modifications to the clone
+--- do not affect the original, and vice versa.
+--- Useful for caching pixel effects or creating variations of an image.
+---@param image_data ImageData The ImageData to clone
+---@return ImageData|nil cloned_data New ImageData with copied pixel values, or nil if input is invalid
+---@usage -- Clone and apply different effects
+---@usage local original = canvas.get_image_data(0, 0, 100, 100)
+---@usage local clone = canvas.clone_image_data(original)
+---@usage
+---@usage -- Modify clone without affecting original
+---@usage for y = 0, clone.height - 1 do
+---@usage   for x = 0, clone.width - 1 do
+---@usage     local r, g, b, a = clone:get_pixel(x, y)
+---@usage     clone:set_pixel(x, y, 255 - r, 255 - g, 255 - b, a)  -- Invert
+---@usage   end
+---@usage end
+---@usage
+---@usage -- Original is unchanged, clone has inverted colors
+---@usage canvas.put_image_data(original, 0, 0)    -- Original
+---@usage canvas.put_image_data(clone, 110, 0)     -- Inverted clone
+function canvas.clone_image_data(image_data) end
 
 return canvas

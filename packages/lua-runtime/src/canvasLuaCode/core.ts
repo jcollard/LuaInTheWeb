@@ -72,6 +72,10 @@ export const canvasLuaCoreCode = `
       __canvas_clear()
     end
 
+    function _canvas.clear_rect(x, y, width, height)
+      __canvas_clearRect(x, y, width, height)
+    end
+
     -- Helper function to parse hex color string to RGBA
     local function parse_hex_color(hex)
       -- Remove the # prefix
@@ -177,8 +181,11 @@ export const canvasLuaCoreCode = `
     end
 
     -- Image drawing
-    function _canvas.draw_image(name, x, y, width, height)
-      __canvas_drawImage(name, x, y, width, height)
+    -- Supports two forms:
+    -- 1. draw_image(name, x, y, width?, height?) - draws at destination with optional scaling
+    -- 2. draw_image(name, sx, sy, sw, sh, dx, dy, dw, dh) - crops source and draws to destination
+    function _canvas.draw_image(name, x, y, width, height, sx, sy, sw, sh)
+      __canvas_drawImage(name, x, y, width, height, sx, sy, sw, sh)
     end
 
     -- Asset management

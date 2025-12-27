@@ -52,6 +52,11 @@ export const canvasLuaPathCode = `
       __canvas_roundRect(x, y, width, height, radii)
     end
 
+    -- Add a rectangle to the current path (does not draw, use fill() or stroke() after)
+    function _canvas.rect(x, y, width, height)
+      __canvas_rectPath(x, y, width, height)
+    end
+
     function _canvas.clip(fillRule)
       __canvas_clip(fillRule)
     end
@@ -101,5 +106,11 @@ export const canvasLuaPathCode = `
 
     function _canvas.put_image_data(image_data, dx, dy)
       __canvas_putImageData(image_data._jsId, dx, dy)
+    end
+
+    function _canvas.clone_image_data(image_data)
+      local info = __canvas_cloneImageData(image_data._jsId)
+      if not info then return nil end
+      return ImageData.new(info)
     end
 `
