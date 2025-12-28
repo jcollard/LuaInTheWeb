@@ -205,14 +205,27 @@ export const canvasLuaCoreCode = `
     -- Asset management
     _canvas.assets = {}
 
-    function _canvas.assets.image(name, path)
-      __canvas_assets_image(name, path)
+    -- Register a directory path to scan for assets
+    -- Must be called BEFORE canvas.start()
+    function _canvas.assets.add_path(path)
+      __canvas_assets_addPath(path)
     end
 
-    function _canvas.assets.font(name, path)
-      __canvas_assets_font(name, path)
+    -- Create a named reference to a discovered image file
+    -- Returns an asset handle that can be used with draw_image
+    -- Can be called before or after canvas.start()
+    function _canvas.assets.load_image(name, filename)
+      return __canvas_assets_loadImage(name, filename)
     end
 
+    -- Create a named reference to a discovered font file
+    -- Returns an asset handle that can be used with set_font_family
+    -- Can be called before or after canvas.start()
+    function _canvas.assets.load_font(name, filename)
+      return __canvas_assets_loadFont(name, filename)
+    end
+
+    -- Get asset dimensions (accepts string name or asset handle)
     function _canvas.assets.get_width(name)
       return __canvas_assets_getWidth(name)
     end

@@ -634,13 +634,14 @@ describe('LuaCanvasRuntime', () => {
       await runtime.initialize();
     });
 
-    describe('canvas.assets.image', () => {
-      it('should register an asset definition', async () => {
+    describe('canvas.assets.add_path', () => {
+      it('should register an asset path', async () => {
         await runtime.loadCode(`
-          canvas.assets.image("player", "sprites/player.png")
+          canvas.assets.add_path("sprites")
           canvas.tick(function() end)
         `);
-        // Should not throw
+        // Should not throw - path is registered
+        expect(runtime.getAssetPaths()).toContain("sprites");
       });
 
       it('should throw if called after start', async () => {
@@ -649,7 +650,7 @@ describe('LuaCanvasRuntime', () => {
 
         await runtime.loadCode(`
           canvas.tick(function()
-            canvas.assets.image("player", "sprites/player.png")
+            canvas.assets.add_path("sprites")
           end)
         `);
 
@@ -663,14 +664,25 @@ describe('LuaCanvasRuntime', () => {
         runtime.stop();
 
         expect(errorHandler).toHaveBeenCalledWith(
-          expect.stringContaining('Cannot define assets after canvas.start()')
+          expect.stringContaining('Cannot add asset paths after canvas.start()')
         );
       });
+    });
 
-      it('should throw for invalid image extension', async () => {
-        await expect(runtime.loadCode(`
-          canvas.assets.image("data", "files/data.txt")
-        `)).rejects.toThrow(/unsupported format/i);
+    describe('canvas.assets.load_image', () => {
+      it('should register an image asset', async () => {
+        await runtime.loadCode(`
+          canvas.assets.add_path("sprites")
+          canvas.assets.load_image("player", "player.png")
+          canvas.tick(function() end)
+        `);
+        // Should not throw
+        const manifest = runtime.getAssetManifest();
+        expect(manifest.get('player')).toEqual({
+          name: 'player',
+          path: 'player.png',
+          type: 'image',
+        });
       });
     });
 
@@ -815,10 +827,11 @@ describe('LuaCanvasRuntime', () => {
       });
     });
 
-    describe('canvas.assets.font', () => {
+    describe('canvas.assets.load_font', () => {
       it('should register a font asset definition', async () => {
         await runtime.loadCode(`
-          canvas.assets.font("GameFont", "fonts/pixel.ttf")
+          canvas.assets.add_path("fonts")
+          canvas.assets.load_font("GameFont", "pixel.ttf")
           canvas.tick(function() end)
         `);
         // Should not throw
@@ -826,44 +839,15 @@ describe('LuaCanvasRuntime', () => {
         const manifest = runtime.getAssetManifest();
         expect(manifest.get('GameFont')).toEqual({
           name: 'GameFont',
-          path: 'fonts/pixel.ttf',
+          path: 'pixel.ttf',
           type: 'font',
         });
       });
 
-      it('should throw if font registered after canvas.start()', async () => {
-        const errorHandler = vi.fn();
-        runtime.onError(errorHandler);
-
-        await runtime.loadCode(`
-          canvas.tick(function()
-            canvas.assets.font("GameFont", "fonts/pixel.ttf")
-          end)
-        `);
-
-        runtime.start();
-        channel.signalFrameReady();
-
-        await vi.waitFor(() => {
-          return errorHandler.mock.calls.length > 0;
-        }, { timeout: 100 });
-
-        runtime.stop();
-
-        expect(errorHandler).toHaveBeenCalledWith(
-          expect.stringContaining('Cannot define assets after canvas.start()')
-        );
-      });
-
-      it('should throw for invalid font extension', async () => {
-        await expect(runtime.loadCode(`
-          canvas.assets.font("CustomFont", "files/font.exe")
-        `)).rejects.toThrow(/unsupported font format/i);
-      });
-
       it('should accept .ttf font files', async () => {
         await runtime.loadCode(`
-          canvas.assets.font("TTFFont", "fonts/test.ttf")
+          canvas.assets.add_path("fonts")
+          canvas.assets.load_font("TTFFont", "test.ttf")
           canvas.tick(function() end)
         `);
         expect(runtime.getAssetManifest().get('TTFFont')?.type).toBe('font');
@@ -871,7 +855,8 @@ describe('LuaCanvasRuntime', () => {
 
       it('should accept .otf font files', async () => {
         await runtime.loadCode(`
-          canvas.assets.font("OTFFont", "fonts/test.otf")
+          canvas.assets.add_path("fonts")
+          canvas.assets.load_font("OTFFont", "test.otf")
           canvas.tick(function() end)
         `);
         expect(runtime.getAssetManifest().get('OTFFont')?.type).toBe('font');
@@ -879,7 +864,8 @@ describe('LuaCanvasRuntime', () => {
 
       it('should accept .woff font files', async () => {
         await runtime.loadCode(`
-          canvas.assets.font("WOFFFont", "fonts/test.woff")
+          canvas.assets.add_path("fonts")
+          canvas.assets.load_font("WOFFFont", "test.woff")
           canvas.tick(function() end)
         `);
         expect(runtime.getAssetManifest().get('WOFFFont')?.type).toBe('font');
@@ -887,7 +873,8 @@ describe('LuaCanvasRuntime', () => {
 
       it('should accept .woff2 font files', async () => {
         await runtime.loadCode(`
-          canvas.assets.font("WOFF2Font", "fonts/test.woff2")
+          canvas.assets.add_path("fonts")
+          canvas.assets.load_font("WOFF2Font", "test.woff2")
           canvas.tick(function() end)
         `);
         expect(runtime.getAssetManifest().get('WOFF2Font')?.type).toBe('font');

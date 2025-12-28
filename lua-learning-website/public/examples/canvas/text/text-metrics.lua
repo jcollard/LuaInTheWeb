@@ -5,21 +5,22 @@
 
 local canvas = require("canvas")
 
--- Register fonts from the fonts directory
+-- Font definitions
 local fonts = {
-  { name = "Bitfantasy", file = "../fonts/10px-Bitfantasy.ttf", size = 20 },
-  { name = "HelvetiPixel", file = "../fonts/10px-HelvetiPixel.ttf", size = 20 },
-  { name = "Questgiver", file = "../fonts/11px-Questgiver.ttf", size = 22 },
-  { name = "TimesNewPixel", file = "../fonts/12px-TimesNewPixel.ttf", size = 24 },
-  { name = "OldWizard", file = "../fonts/13px-OldWizard.ttf", size = 26 },
-  { name = "DungeonSlant", file = "../fonts/15px-DungeonSlant.ttf", size = 30 },
-  { name = "Gothbit", file = "../fonts/16px-Gothbit.ttf", size = 32 },
-  { name = "Royalati", file = "../fonts/16px-Royalati.ttf", size = 32 },
+  { name = "Bitfantasy", file = "10px-Bitfantasy.ttf", size = 20 },
+  { name = "HelvetiPixel", file = "10px-HelvetiPixel.ttf", size = 20 },
+  { name = "Questgiver", file = "11px-Questgiver.ttf", size = 22 },
+  { name = "TimesNewPixel", file = "12px-TimesNewPixel.ttf", size = 24 },
+  { name = "OldWizard", file = "13px-OldWizard.ttf", size = 26 },
+  { name = "DungeonSlant", file = "15px-DungeonSlant.ttf", size = 30 },
+  { name = "Gothbit", file = "16px-Gothbit.ttf", size = 32 },
+  { name = "Royalati", file = "16px-Royalati.ttf", size = 32 },
 }
 
--- Register all fonts
+-- Register font directory and load all fonts
+canvas.assets.add_path("../assets/fonts")
 for _, font in ipairs(fonts) do
-  canvas.assets.font(font.name, font.file)
+  canvas.assets.load_font(font.name, font.file)
 end
 
 local current_font_index = 1

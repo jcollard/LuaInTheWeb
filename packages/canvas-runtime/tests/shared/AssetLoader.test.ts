@@ -576,4 +576,139 @@ describe('AssetLoader', () => {
       });
     });
   });
+
+  describe('scanDirectory', () => {
+    it('should discover image and font files in a directory', () => {
+      mockFs = createMockFileSystem({
+        exists: vi.fn(() => true),
+        isFile: vi.fn(() => false), // It's a directory
+        listDirectory: vi.fn(() => [
+          { name: 'player.png', path: '/assets/player.png', type: 'file' as const },
+          { name: 'enemy.png', path: '/assets/enemy.png', type: 'file' as const },
+          { name: 'game.ttf', path: '/assets/game.ttf', type: 'file' as const },
+          { name: 'readme.txt', path: '/assets/readme.txt', type: 'file' as const },
+        ]),
+      });
+      loader = new AssetLoader(mockFs, '/my-files/games');
+
+      const files = loader.scanDirectory('assets');
+
+      expect(files).toHaveLength(3); // Should exclude readme.txt
+      expect(files.map(f => f.filename)).toEqual(['player.png', 'enemy.png', 'game.ttf']);
+      expect(files.map(f => f.type)).toEqual(['image', 'image', 'font']);
+    });
+
+    it('should compute relativePath as filename for files directly in base path', () => {
+      mockFs = createMockFileSystem({
+        exists: vi.fn(() => true),
+        isFile: vi.fn(() => false),
+        listDirectory: vi.fn(() => [
+          { name: 'player.png', path: '/assets/player.png', type: 'file' as const },
+        ]),
+      });
+      loader = new AssetLoader(mockFs, '/my-files/games');
+
+      const files = loader.scanDirectory('assets');
+
+      expect(files).toHaveLength(1);
+      expect(files[0].filename).toBe('player.png');
+      expect(files[0].relativePath).toBe('player.png');
+      expect(files[0].basePath).toBe('assets');
+    });
+
+    it('should compute relativePath with subdirectory prefix for nested files', () => {
+      mockFs = createMockFileSystem({
+        exists: vi.fn((path: string) => true),
+        isFile: vi.fn((path: string) => false),
+        listDirectory: vi.fn((path: string) => {
+          if (path === '/my-files/games/assets') {
+            return [
+              { name: 'images', path: '/my-files/games/assets/images', type: 'directory' as const },
+              { name: 'fonts', path: '/my-files/games/assets/fonts', type: 'directory' as const },
+            ];
+          } else if (path === '/my-files/games/assets/images') {
+            return [
+              { name: 'player.png', path: '/my-files/games/assets/images/player.png', type: 'file' as const },
+              { name: 'enemy.png', path: '/my-files/games/assets/images/enemy.png', type: 'file' as const },
+            ];
+          } else if (path === '/my-files/games/assets/fonts') {
+            return [
+              { name: 'game.ttf', path: '/my-files/games/assets/fonts/game.ttf', type: 'file' as const },
+            ];
+          }
+          return [];
+        }),
+      });
+      loader = new AssetLoader(mockFs, '/my-files/games');
+
+      const files = loader.scanDirectory('assets');
+
+      expect(files).toHaveLength(3);
+
+      // Check relativePaths include subdirectory
+      const playerFile = files.find(f => f.filename === 'player.png');
+      const enemyFile = files.find(f => f.filename === 'enemy.png');
+      const fontFile = files.find(f => f.filename === 'game.ttf');
+
+      expect(playerFile?.relativePath).toBe('images/player.png');
+      expect(enemyFile?.relativePath).toBe('images/enemy.png');
+      expect(fontFile?.relativePath).toBe('fonts/game.ttf');
+
+      // All files should have the same basePath
+      expect(files.every(f => f.basePath === 'assets')).toBe(true);
+    });
+
+    it('should handle deeply nested subdirectories', () => {
+      mockFs = createMockFileSystem({
+        exists: vi.fn(() => true),
+        isFile: vi.fn(() => false),
+        listDirectory: vi.fn((path: string) => {
+          if (path === '/my-files/games/assets') {
+            return [
+              { name: 'images', path: '/my-files/games/assets/images', type: 'directory' as const },
+            ];
+          } else if (path === '/my-files/games/assets/images') {
+            return [
+              { name: 'ui', path: '/my-files/games/assets/images/ui', type: 'directory' as const },
+            ];
+          } else if (path === '/my-files/games/assets/images/ui') {
+            return [
+              { name: 'button.png', path: '/my-files/games/assets/images/ui/button.png', type: 'file' as const },
+            ];
+          }
+          return [];
+        }),
+      });
+      loader = new AssetLoader(mockFs, '/my-files/games');
+
+      const files = loader.scanDirectory('assets');
+
+      expect(files).toHaveLength(1);
+      expect(files[0].filename).toBe('button.png');
+      expect(files[0].relativePath).toBe('images/ui/button.png');
+    });
+
+    it('should throw when path does not exist', () => {
+      mockFs = createMockFileSystem({
+        exists: vi.fn(() => false),
+      });
+      loader = new AssetLoader(mockFs, '/my-files/games');
+
+      expect(() => loader.scanDirectory('nonexistent')).toThrow(
+        'Asset path not found: nonexistent'
+      );
+    });
+
+    it('should throw when path is a file, not a directory', () => {
+      mockFs = createMockFileSystem({
+        exists: vi.fn(() => true),
+        isFile: vi.fn(() => true),
+      });
+      loader = new AssetLoader(mockFs, '/my-files/games');
+
+      expect(() => loader.scanDirectory('file.png')).toThrow(
+        'Asset path is not a directory: file.png'
+      );
+    });
+  });
 });

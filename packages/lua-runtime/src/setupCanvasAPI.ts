@@ -213,24 +213,44 @@ export function setupCanvasAPI(
   })
 
   // --- Asset functions ---
-  engine.global.set('__canvas_assets_image', (name: string, path: string) => {
+  engine.global.set('__canvas_assets_addPath', (path: string) => {
     const controller = getController()
     if (!controller) {
       throw new Error('Canvas controller not available - is canvas support enabled?')
     }
-    controller.registerAsset(name, path)
+    controller.addAssetPath(path)
   })
 
-  engine.global.set('__canvas_assets_font', (name: string, path: string) => {
+  engine.global.set('__canvas_assets_loadImage', (name: string, filename: string) => {
     const controller = getController()
     if (!controller) {
       throw new Error('Canvas controller not available - is canvas support enabled?')
     }
-    controller.registerFontAsset(name, path)
+    return controller.loadImageAsset(name, filename)
   })
+
+  engine.global.set('__canvas_assets_loadFont', (name: string, filename: string) => {
+    const controller = getController()
+    if (!controller) {
+      throw new Error('Canvas controller not available - is canvas support enabled?')
+    }
+    return controller.loadFontAsset(name, filename)
+  })
+
+  // Helper to extract asset name from string or handle
+  const extractAssetName = (nameOrHandle: unknown): string => {
+    if (typeof nameOrHandle === 'string') {
+      return nameOrHandle
+    }
+    // Handle AssetHandle objects from Lua (tables with _name property)
+    if (typeof nameOrHandle === 'object' && nameOrHandle !== null && '_name' in nameOrHandle) {
+      return (nameOrHandle as { _name: string })._name
+    }
+    throw new Error('Invalid asset reference: expected string name or asset handle')
+  }
 
   engine.global.set('__canvas_drawImage', (
-    name: string,
+    nameOrHandle: unknown,
     x: number,
     y: number,
     width?: number | null,
@@ -240,6 +260,7 @@ export function setupCanvasAPI(
     sw?: number | null,
     sh?: number | null
   ) => {
+    const name = extractAssetName(nameOrHandle)
     getController()?.drawImage(
       name, x, y,
       width ?? undefined, height ?? undefined,
@@ -247,11 +268,13 @@ export function setupCanvasAPI(
     )
   })
 
-  engine.global.set('__canvas_assets_getWidth', (name: string) => {
+  engine.global.set('__canvas_assets_getWidth', (nameOrHandle: unknown) => {
+    const name = extractAssetName(nameOrHandle)
     return getController()?.getAssetWidth(name) ?? 0
   })
 
-  engine.global.set('__canvas_assets_getHeight', (name: string) => {
+  engine.global.set('__canvas_assets_getHeight', (nameOrHandle: unknown) => {
+    const name = extractAssetName(nameOrHandle)
     return getController()?.getAssetHeight(name) ?? 0
   })
 

@@ -1,5 +1,6 @@
 import type { IFileSystem } from '@lua-learning/shell-core';
-import type { AssetDefinition } from './types.js';
+import type { AssetDefinition, DiscoveredFile } from './types.js';
+import { classifyFileType } from './types.js';
 import imageSize from 'image-size';
 
 /**
@@ -92,6 +93,84 @@ export class AssetLoader {
     }
 
     return normalizedDir + '/' + relativePath;
+  }
+
+  /**
+   * Scan a directory and discover all asset files (images and fonts).
+   * Recursively scans subdirectories by default.
+   *
+   * @param path - The path to scan (relative to script directory or absolute)
+   * @param recursive - Whether to scan subdirectories (default: true)
+   * @returns Array of discovered files with their metadata
+   * @throws Error if path doesn't exist or isn't a directory
+   */
+  scanDirectory(path: string, recursive: boolean = true): DiscoveredFile[] {
+    const resolvedPath = this.resolvePath(path);
+
+    // Check if path exists
+    if (!this.fileSystem.exists(resolvedPath)) {
+      throw new Error(`Asset path not found: ${path} (resolved to ${resolvedPath})`);
+    }
+
+    // Check if it's a directory
+    if (this.fileSystem.isFile(resolvedPath)) {
+      throw new Error(`Asset path is not a directory: ${path}`);
+    }
+
+    return this.scanDirectoryRecursive(resolvedPath, path, '', recursive);
+  }
+
+  /**
+   * Internal recursive directory scanner.
+   *
+   * @param absolutePath - The absolute path of the directory to scan
+   * @param basePath - The original base path passed to scanDirectory
+   * @param relativePrefix - The relative path from basePath to the current directory
+   * @param recursive - Whether to scan subdirectories
+   */
+  private scanDirectoryRecursive(
+    absolutePath: string,
+    basePath: string,
+    relativePrefix: string,
+    recursive: boolean
+  ): DiscoveredFile[] {
+    const discovered: DiscoveredFile[] = [];
+
+    // Get directory entries
+    const entries = this.fileSystem.listDirectory(absolutePath);
+
+    for (const entry of entries) {
+      if (entry.type === 'file') {
+        // Classify the file by extension
+        const fileType = classifyFileType(entry.name);
+
+        // Only include image and font files
+        if (fileType === 'image' || fileType === 'font') {
+          // Compute relative path from base: prefix/filename or just filename
+          const relativePath = relativePrefix
+            ? `${relativePrefix}/${entry.name}`
+            : entry.name;
+
+          discovered.push({
+            filename: entry.name,
+            fullPath: entry.path,
+            type: fileType,
+            basePath: basePath,
+            relativePath: relativePath,
+          });
+        }
+      } else if (entry.type === 'directory' && recursive) {
+        // Compute the new relative prefix for this subdirectory
+        const newPrefix = relativePrefix
+          ? `${relativePrefix}/${entry.name}`
+          : entry.name;
+        // Recursively scan subdirectories
+        const subFiles = this.scanDirectoryRecursive(entry.path, basePath, newPrefix, true);
+        discovered.push(...subFiles);
+      }
+    }
+
+    return discovered;
   }
 
   /**

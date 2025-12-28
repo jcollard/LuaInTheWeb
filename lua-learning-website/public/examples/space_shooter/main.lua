@@ -19,14 +19,19 @@ Enemies.init(EnemyLasers)
 -- Asset Registration
 -- =============================================================================
 
-canvas.assets.image("ship", "src/images/blue_ship.png")
-canvas.assets.image("enemy", "src/images/enemy_ship.png")
-canvas.assets.image("meteor", "src/images/meteor.png")
-canvas.assets.image("laser", "src/images/laser.png")
+-- Register asset directories
+canvas.assets.add_path("src/images")
+canvas.assets.add_path("src/fonts")
 
--- Register fonts
-canvas.assets.font("font_large", "src/fonts/12px-TimesNewPixel.ttf")
-canvas.assets.font("font_small", "src/fonts/9px-Habbo.ttf")
+-- Load images
+canvas.assets.load_image("ship", "blue_ship.png")
+canvas.assets.load_image("enemy", "enemy_ship.png")
+canvas.assets.load_image("meteor", "meteor.png")
+canvas.assets.load_image("laser", "laser.png")
+
+-- Load fonts
+canvas.assets.load_font("font_large", "12px-TimesNewPixel.ttf")
+canvas.assets.load_font("font_small", "9px-Habbo.ttf")
 
 -- Screen dimensions (set after canvas.set_size)
 local SCREEN_WIDTH = 800

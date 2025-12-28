@@ -20,6 +20,7 @@ import type {
   WorkerState,
   SerializedAsset,
   AssetRequest,
+  AssetPathRequest,
 } from './WorkerMessages.js';
 
 // Declare self as DedicatedWorkerGlobalScope
@@ -74,15 +75,18 @@ async function handleInit(code: string, sharedBuffer?: SharedArrayBuffer): Promi
     await runtime.initialize();
     await runtime.loadCode(code);
 
-    // Check if the code registered any assets
+    // Check if the code registered any assets or asset paths
     const assetManifest = runtime.getAssetManifest();
-    if (assetManifest.size > 0) {
+    const assetPaths = runtime.getAssetPaths();
+
+    if (assetManifest.size > 0 || assetPaths.length > 0) {
       // Request assets from main thread
       const assetRequests: AssetRequest[] = Array.from(assetManifest.values()).map((def) => ({
         name: def.name,
         path: def.path,
       }));
-      postMessage({ type: 'assetsNeeded', assets: assetRequests });
+      const assetPathRequests: AssetPathRequest[] = assetPaths.map((path) => ({ path }));
+      postMessage({ type: 'assetsNeeded', assets: assetRequests, assetPaths: assetPathRequests });
       // Don't send 'ready' yet - wait for assets
       notifyStateChange('idle');
     } else {
@@ -115,16 +119,19 @@ async function handleAssetsLoaded(assets: SerializedAsset[]): Promise<void> {
       // Create blob from ArrayBuffer
       const blob = new Blob([asset.data]);
 
-      // Create ImageBitmap (available in workers)
-      const imageBitmap = await createImageBitmap(blob);
+      // For image assets, create ImageBitmap to validate
+      if (asset.assetType === 'image' || (!asset.assetType && asset.width > 0)) {
+        const imageBitmap = await createImageBitmap(blob);
+        imageBitmap.close(); // Clean up - we only needed to validate
+      }
 
-      // Store dimensions in the runtime
+      // Store dimensions in the runtime (for legacy API - by name)
       runtime.setAssetDimensions(asset.name, asset.width, asset.height);
 
-      // Note: The ImageBitmap is created but not stored in the worker
-      // The main thread CanvasRenderer uses ImageCache for actual rendering
-      // The worker just needs the dimensions to respond to get_width/get_height
-      imageBitmap.close(); // Clean up - we only needed to validate and get dimensions
+      // If this asset has a filename, also store it as a discovered file (for new API)
+      if (asset.filename && asset.assetType) {
+        runtime.setDiscoveredFile(asset.filename, asset.width, asset.height, asset.assetType);
+      }
     }
 
     // Now ready to start

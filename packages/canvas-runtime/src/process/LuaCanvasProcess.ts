@@ -23,6 +23,7 @@ import type {
   WorkerState,
   SerializedAsset,
   AssetRequest,
+  AssetPathRequest,
 } from '../worker/WorkerMessages.js';
 
 /**
@@ -305,7 +306,7 @@ export class LuaCanvasProcess implements IProcess {
         break;
 
       case 'assetsNeeded':
-        this.handleAssetsNeeded(message.assets);
+        this.handleAssetsNeeded(message.assets, message.assetPaths);
         break;
     }
   }
@@ -331,7 +332,7 @@ export class LuaCanvasProcess implements IProcess {
    * Handle assetsNeeded message from worker.
    * Loads assets from the filesystem and sends them to the worker.
    */
-  private async handleAssetsNeeded(assetRequests: AssetRequest[]): Promise<void> {
+  private async handleAssetsNeeded(assetRequests: AssetRequest[], assetPaths?: AssetPathRequest[]): Promise<void> {
     if (!this.fileSystem) {
       this.handleError('Assets requested but no filesystem provided');
       return;
@@ -346,6 +347,7 @@ export class LuaCanvasProcess implements IProcess {
       const loadedAssets: SerializedAsset[] = [];
       const transferList: ArrayBuffer[] = [];
 
+      // Load legacy API assets (individual file requests)
       for (const request of assetRequests) {
         const loaded = await assetLoader.loadAsset({
           name: request.name,
@@ -370,6 +372,53 @@ export class LuaCanvasProcess implements IProcess {
 
         loadedAssets.push(serialized);
         transferList.push(loaded.data);
+      }
+
+      // Load new API assets (directory-based discovery)
+      if (assetPaths && assetPaths.length > 0) {
+        // Track loaded filenames to avoid duplicates
+        const loadedFilenames = new Set<string>();
+
+        for (const pathRequest of assetPaths) {
+          // Scan the directory for asset files
+          const discoveredFiles = assetLoader.scanDirectory(pathRequest.path);
+
+          for (const file of discoveredFiles) {
+            // Skip if already loaded (in case of overlapping paths)
+            if (loadedFilenames.has(file.filename)) {
+              console.warn(`Asset file '${file.filename}' already loaded, skipping duplicate`);
+              continue;
+            }
+            loadedFilenames.add(file.filename);
+
+            // Load the asset (scanDirectory only returns 'image' or 'font' types)
+            const loaded = await assetLoader.loadAsset({
+              name: file.filename, // Use filename as the name for loading
+              path: file.fullPath,
+              type: file.type as 'image' | 'font',
+            });
+
+            // Store in image cache for main thread rendering (images only)
+            if (this.imageCache && file.type === 'image' && loaded.width && loaded.height) {
+              const blob = new Blob([loaded.data]);
+              const imageBitmap = await createImageBitmap(blob);
+              this.imageCache.set(file.filename, imageBitmap);
+            }
+
+            // Prepare asset for transfer to worker with filename metadata
+            const serialized: SerializedAsset = {
+              name: file.filename, // Use filename as the name
+              data: loaded.data,
+              width: loaded.width ?? 0,
+              height: loaded.height ?? 0,
+              filename: file.filename,
+              assetType: file.type as 'image' | 'font',
+            };
+
+            loadedAssets.push(serialized);
+            transferList.push(loaded.data);
+          }
+        }
       }
 
       // Send loaded assets to worker with transferable ArrayBuffers

@@ -1,11 +1,8 @@
 import { LuaFactory, LuaEngine } from 'wasmoon';
 import type { IWorkerChannel } from '../channels/IWorkerChannel.js';
-import {
-  VALID_IMAGE_EXTENSIONS,
-  VALID_FONT_EXTENSIONS,
-  type DrawCommand,
-  type AssetDefinition,
-  type GetImageDataResponse,
+import type {
+  DrawCommand,
+  GetImageDataResponse,
 } from '../shared/types.js';
 import type { WorkerState } from './WorkerMessages.js';
 
@@ -34,11 +31,20 @@ export class LuaCanvasRuntime {
   // Track whether start() has been called
   private started = false;
 
-  // Asset manifest: registered asset definitions
-  private assetManifest: Map<string, AssetDefinition> = new Map();
-
-  // Asset dimensions: width/height for each loaded asset
+  // Asset dimensions: width/height for each loaded asset (by name)
   private assetDimensions: Map<string, { width: number; height: number }> = new Map();
+
+  // Asset paths: directories to scan for assets (new API)
+  private assetPaths: string[] = [];
+
+  // Discovered files: files loaded from asset paths, keyed by filename
+  private discoveredFiles: Map<string, { width: number; height: number; type: 'image' | 'font' }> = new Map();
+
+  // Track whether files have been loaded (for validation in load_image/load_font)
+  private filesLoaded = false;
+
+  // Pre-registered assets: assets registered via load_image/load_font before files are loaded
+  private preRegisteredAssets: Map<string, { filename: string; type: 'image' | 'font' }> = new Map();
 
   // Font state
   private currentFontSize: number = 16;
@@ -144,10 +150,29 @@ export class LuaCanvasRuntime {
   }
 
   /**
-   * Get the asset manifest (definitions registered via canvas.assets.image).
+   * Get the asset manifest (definitions registered via load_image/load_font).
    */
-  getAssetManifest(): Map<string, AssetDefinition> {
-    return this.assetManifest;
+  getAssetManifest(): Map<string, { name: string; path: string; type: 'image' | 'font' }> {
+    const manifest = new Map<string, { name: string; path: string; type: 'image' | 'font' }>();
+    for (const [name, { filename, type }] of this.preRegisteredAssets) {
+      manifest.set(name, { name, path: filename, type });
+    }
+    return manifest;
+  }
+
+  /**
+   * Get the asset paths (directories registered via canvas.assets.add_path).
+   */
+  getAssetPaths(): string[] {
+    return this.assetPaths;
+  }
+
+  /**
+   * Set discovered file metadata (called when assets are loaded from paths).
+   */
+  setDiscoveredFile(filename: string, width: number, height: number, type: 'image' | 'font'): void {
+    this.discoveredFiles.set(filename, { width, height, type });
+    this.filesLoaded = true;
   }
 
   /**
@@ -378,52 +403,82 @@ export class LuaCanvasRuntime {
     });
 
     // Asset API functions
-    lua.global.set('__canvas_assets_image', (name: string, path: string) => {
+    lua.global.set('__canvas_assets_addPath', (path: string) => {
       // Check if started
       if (runtime.started) {
-        throw new Error('Cannot define assets after canvas.start()');
+        throw new Error('Cannot add asset paths after canvas.start()');
       }
 
-      // Validate image extension
-      const lowerPath = path.toLowerCase();
-      const hasValidExtension = VALID_IMAGE_EXTENSIONS.some((ext) =>
-        lowerPath.endsWith(ext)
-      );
-      if (!hasValidExtension) {
-        throw new Error(
-          `Cannot load '${path}': unsupported format (expected PNG, JPG, GIF, or WebP)`
-        );
+      // Add the path if not already added
+      if (!runtime.assetPaths.includes(path)) {
+        runtime.assetPaths.push(path);
       }
-
-      // Register the asset definition
-      runtime.assetManifest.set(name, { name, path, type: 'image' });
     });
 
-    lua.global.set('__canvas_assets_font', (name: string, path: string) => {
-      // Check if started
-      if (runtime.started) {
-        throw new Error('Cannot define assets after canvas.start()');
+    lua.global.set('__canvas_assets_loadImage', (name: string, filename: string) => {
+      // If files have been loaded, validate that the file exists
+      if (runtime.filesLoaded) {
+        const fileInfo = runtime.discoveredFiles.get(filename);
+        if (!fileInfo) {
+          throw new Error(`Image file '${filename}' not found - did you call canvas.assets.add_path() with the correct directory?`);
+        }
+
+        if (fileInfo.type !== 'image') {
+          throw new Error(`File '${filename}' is not an image file`);
+        }
+
+        // Register the asset by name with the discovered dimensions
+        runtime.assetDimensions.set(name, { width: fileInfo.width, height: fileInfo.height });
+      } else {
+        // Pre-register the asset for later validation when files are loaded
+        runtime.preRegisteredAssets.set(name, { filename, type: 'image' });
       }
 
-      // Validate font extension
-      const lowerPath = path.toLowerCase();
-      const hasValidExtension = VALID_FONT_EXTENSIONS.some((ext) =>
-        lowerPath.endsWith(ext)
-      );
-      if (!hasValidExtension) {
-        throw new Error(
-          `Cannot load '${path}': unsupported font format (expected TTF, OTF, WOFF, or WOFF2)`
-        );
-      }
-
-      // Register the font asset definition
-      runtime.assetManifest.set(name, { name, path, type: 'font' });
+      // Return an asset handle
+      return { _type: 'image', _name: name, _file: filename };
     });
 
-    lua.global.set('__canvas_drawImage', (name: string, x: number, y: number, width?: number | null, height?: number | null) => {
+    lua.global.set('__canvas_assets_loadFont', (name: string, filename: string) => {
+      // If files have been loaded, validate that the file exists
+      if (runtime.filesLoaded) {
+        const fileInfo = runtime.discoveredFiles.get(filename);
+        if (!fileInfo) {
+          throw new Error(`Font file '${filename}' not found - did you call canvas.assets.add_path() with the correct directory?`);
+        }
+
+        if (fileInfo.type !== 'font') {
+          throw new Error(`File '${filename}' is not a font file`);
+        }
+
+        // Register the asset by name
+        runtime.assetDimensions.set(name, { width: 0, height: 0 });
+      } else {
+        // Pre-register the asset for later validation when files are loaded
+        runtime.preRegisteredAssets.set(name, { filename, type: 'font' });
+      }
+
+      // Return an asset handle
+      return { _type: 'font', _name: name, _file: filename };
+    });
+
+    // Helper to extract asset name from string or handle
+    const extractAssetName = (nameOrHandle: unknown): string => {
+      if (typeof nameOrHandle === 'string') {
+        return nameOrHandle;
+      }
+      // Handle AssetHandle objects from Lua (tables with _name property)
+      if (typeof nameOrHandle === 'object' && nameOrHandle !== null && '_name' in nameOrHandle) {
+        return (nameOrHandle as { _name: string })._name;
+      }
+      throw new Error('Invalid asset reference: expected string name or asset handle');
+    };
+
+    lua.global.set('__canvas_drawImage', (nameOrHandle: unknown, x: number, y: number, width?: number | null, height?: number | null) => {
+      const name = extractAssetName(nameOrHandle);
+
       // Verify asset is registered
       if (!runtime.assetDimensions.has(name)) {
-        throw new Error(`Unknown asset '${name}' - did you call canvas.assets.image()?`);
+        throw new Error(`Unknown asset '${name}' - did you call canvas.assets.load_image()?`);
       }
 
       const command: DrawCommand = { type: 'drawImage', name, x, y };
@@ -434,18 +489,20 @@ export class LuaCanvasRuntime {
       runtime.frameCommands.push(command);
     });
 
-    lua.global.set('__canvas_assets_getWidth', (name: string) => {
+    lua.global.set('__canvas_assets_getWidth', (nameOrHandle: unknown) => {
+      const name = extractAssetName(nameOrHandle);
       const dims = runtime.assetDimensions.get(name);
       if (!dims) {
-        throw new Error(`Unknown asset '${name}' - did you call canvas.assets.image()?`);
+        throw new Error(`Unknown asset '${name}' - did you call canvas.assets.load_image()?`);
       }
       return dims.width;
     });
 
-    lua.global.set('__canvas_assets_getHeight', (name: string) => {
+    lua.global.set('__canvas_assets_getHeight', (nameOrHandle: unknown) => {
+      const name = extractAssetName(nameOrHandle);
       const dims = runtime.assetDimensions.get(name);
       if (!dims) {
-        throw new Error(`Unknown asset '${name}' - did you call canvas.assets.image()?`);
+        throw new Error(`Unknown asset '${name}' - did you call canvas.assets.load_image()?`);
       }
       return dims.height;
     });
@@ -686,14 +743,20 @@ export class LuaCanvasRuntime {
       -- Asset management
       canvas.assets = {}
 
-      function canvas.assets.image(name, path)
-        __canvas_assets_image(name, path)
+      -- Register a directory path to scan for assets
+      function canvas.assets.add_path(path)
+        __canvas_assets_addPath(path)
       end
 
-      function canvas.assets.font(name, path)
-        __canvas_assets_font(name, path)
+      function canvas.assets.load_image(name, filename)
+        return __canvas_assets_loadImage(name, filename)
       end
 
+      function canvas.assets.load_font(name, filename)
+        return __canvas_assets_loadFont(name, filename)
+      end
+
+      -- Get asset dimensions (accepts string name or asset handle)
       function canvas.assets.get_width(name)
         return __canvas_assets_getWidth(name)
       end

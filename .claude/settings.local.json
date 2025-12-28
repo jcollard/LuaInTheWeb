@@ -88,11 +88,11 @@
       "Bash(npm run build:shell-core:*)",
       "Bash(npm run build:canvas-runtime:*)",
       "Bash(npm run:*)",
+      "mcp__code-index-mcp__get_file_watcher_status",
       "mcp__code-index-mcp__set_project_path",
-      "mcp__code-index-mcp__find_files",
-"mcp__code-index-mcp__get_file_summary",
-      "Skill(tdd)",
-      "mcp__code-index-mcp__search_code_advanced"
+      "Bash(gh repo view:*)",
+      "mcp__code-index-mcp__search_code_advanced",
+      "mcp__code-index-mcp__find_files"
     ],
     "deny": [
       "Bash(npm run dev)",
@@ -110,7 +110,6 @@
       "Bash(Remove-Item lua-learning-website/reports/mutation/.stryker-incremental.json)"
     ]
   },
-  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "code-index-mcp"
   ]

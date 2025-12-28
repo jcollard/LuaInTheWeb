@@ -41,6 +41,10 @@ export type {
   FillPathCommand,
   StrokePathCommand,
   ClipPathCommand,
+  // Asset path API types
+  AssetFileType,
+  DiscoveredFile,
+  AssetHandle,
 } from './types.js';
 
 export {
@@ -48,6 +52,9 @@ export {
   createDefaultTimingInfo,
   VALID_IMAGE_EXTENSIONS,
   VALID_FONT_EXTENSIONS,
+  // Asset path API utilities
+  classifyFileType,
+  isAssetHandle,
 } from './types.js';
 
 export { AssetLoader } from './AssetLoader.js';

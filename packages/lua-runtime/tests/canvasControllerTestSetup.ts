@@ -17,6 +17,7 @@ export let mockImageCacheInstance: {
 export let mockAssetLoaderInstance: {
   loadAsset: ReturnType<typeof vi.fn>
   resolvePath: ReturnType<typeof vi.fn>
+  scanDirectory: ReturnType<typeof vi.fn>
 } | null = null
 
 // Functions to reset mock instances

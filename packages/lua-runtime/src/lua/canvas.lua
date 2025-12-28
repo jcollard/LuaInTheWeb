@@ -31,7 +31,7 @@ local canvas = {}
 -- 15. Keyboard Input (is_key_down, is_key_pressed, get_keys_down, get_keys_pressed)
 -- 16. Key Constants (canvas.keys.*)
 -- 17. Mouse Input (get_mouse_x, get_mouse_y, is_mouse_down, is_mouse_pressed)
--- 18. Asset Management (canvas.assets.image, canvas.assets.font, get_width, get_height)
+-- 18. Asset Management (add_path, load_image, load_font, image, font, get_width, get_height)
 -- 19. Image Drawing (draw_image with source cropping support)
 -- 20. Transformation Functions (translate, rotate, scale, save, restore, transform)
 -- 21. Path API (begin_path, close_path, move_to, line_to, arc, bezier, ellipse, round_rect, rect, clip)
@@ -992,42 +992,88 @@ function canvas.is_mouse_pressed(button) end
 -- =============================================================================
 
 --- Asset management sub-library.
---- Register images and fonts before canvas.start() to preload them.
+--- Two APIs are available:
+--- 1. Legacy API: Register individual files with image() and font() before canvas.start()
+--- 2. New API: Register directories with add_path(), then create references with load_image()/load_font()
 ---@class canvas.assets
 canvas.assets = {}
 
---- Register an image asset for loading.
---- Call this before canvas.start() to preload images.
---- Supported formats: .png, .jpg, .jpeg, .gif, .webp, .bmp
----@param name string Unique name for the asset
----@param path string Path to the image file (relative to script or absolute)
----@usage canvas.assets.image("player", "images/player.png")
----@usage canvas.assets.image("enemy", "/my-files/sprites/enemy.png")
-function canvas.assets.image(name, path) end
+-- -----------------------------------------------------------------------------
+-- New API: Directory-based Asset Discovery (Recommended)
+-- -----------------------------------------------------------------------------
 
---- Register a custom font asset for loading.
---- Call this before canvas.start() to preload fonts.
---- After loading, use set_font_family() with the name to use the font.
---- Supported formats: .ttf, .otf, .woff, .woff2
----@param name string Unique name for the font (used with set_font_family)
----@param path string Path to the font file (relative to script or absolute)
----@usage canvas.assets.font("GameFont", "fonts/pixel.ttf")
----@usage canvas.set_font_family("GameFont")  -- Use after canvas.start()
-function canvas.assets.font(name, path) end
+--- Register a directory path for automatic asset discovery.
+--- All image and font files in the directory (and subdirectories) will be loaded.
+--- Call this BEFORE canvas.start() to register directories for scanning.
+--- Supported image formats: .png, .jpg, .jpeg, .gif, .webp, .bmp
+--- Supported font formats: .ttf, .otf, .woff, .woff2
+---@param path string Directory path to scan (relative to script or absolute)
+---@return nil
+---@usage -- Register asset directories before start
+---@usage canvas.assets.add_path("images")
+---@usage canvas.assets.add_path("fonts")
+---@usage canvas.start()
+---@usage
+---@usage -- Then create named references after start
+---@usage local ship = canvas.assets.load_image("ship", "blue_ship.png")
+function canvas.assets.add_path(path) end
+
+---@class AssetHandle
+---@field _type string Asset type: "image" or "font"
+---@field _name string The registered name for this asset
+---@field _file string The source filename
+
+--- Create a named reference to a discovered image file.
+--- Returns an asset handle that can be used with draw_image and other functions.
+--- The file must exist in a directory registered with add_path().
+--- Can be called before or after canvas.start().
+---@param name string Unique name to reference this asset
+---@param filename string Filename of the image (just the filename, not full path)
+---@return AssetHandle handle Asset handle for use with draw_image, etc.
+---@usage canvas.assets.add_path("images")
+---@usage canvas.start()
+---@usage local ship = canvas.assets.load_image("ship", "blue_ship.png")
+---@usage local enemy = canvas.assets.load_image("enemy", "enemy_ship.png")
+---@usage
+---@usage -- Use with draw_image (either handle or string name works)
+---@usage canvas.draw_image(ship, 100, 100)
+---@usage canvas.draw_image("ship", 100, 100)  -- Also works
+function canvas.assets.load_image(name, filename) end
+
+--- Create a named reference to a discovered font file.
+--- Returns an asset handle that can be used with set_font_family.
+--- The file must exist in a directory registered with add_path().
+--- Can be called before or after canvas.start().
+---@param name string Unique name to reference this font (used with set_font_family)
+---@param filename string Filename of the font (just the filename, not full path)
+---@return AssetHandle handle Asset handle for font reference
+---@usage canvas.assets.add_path("fonts")
+---@usage canvas.start()
+---@usage local gameFont = canvas.assets.load_font("GameFont", "pixel.ttf")
+---@usage canvas.set_font_family("GameFont")  -- Use the name to set font
+function canvas.assets.load_font(name, filename) end
+
+-- -----------------------------------------------------------------------------
+-- Asset Dimensions
+-- -----------------------------------------------------------------------------
 
 --- Get the width of a loaded image asset.
 --- Must be called after canvas.start() has loaded the assets.
----@param name string The asset name
+--- Accepts either a string name or an asset handle.
+---@param nameOrHandle string|AssetHandle The asset name or handle
 ---@return number width Width in pixels
 ---@usage local w = canvas.assets.get_width("player")
-function canvas.assets.get_width(name) end
+---@usage local w = canvas.assets.get_width(shipHandle)  -- Also works with handles
+function canvas.assets.get_width(nameOrHandle) end
 
 --- Get the height of a loaded image asset.
 --- Must be called after canvas.start() has loaded the assets.
----@param name string The asset name
+--- Accepts either a string name or an asset handle.
+---@param nameOrHandle string|AssetHandle The asset name or handle
 ---@return number height Height in pixels
 ---@usage local h = canvas.assets.get_height("player")
-function canvas.assets.get_height(name) end
+---@usage local h = canvas.assets.get_height(shipHandle)  -- Also works with handles
+function canvas.assets.get_height(nameOrHandle) end
 
 -- =============================================================================
 -- Image Drawing
@@ -1039,8 +1085,8 @@ function canvas.assets.get_height(name) end
 --- 2. Scaled: draw_image(name, x, y, width, height) - scales to fit
 --- 3. Cropped: draw_image(name, x, y, width, height, sx, sy, sw, sh) - crops from source
 ---
---- The image must be registered via canvas.assets.image() before canvas.start().
----@param name string The asset name (registered via canvas.assets.image())
+--- The image must be loaded via canvas.assets.load_image() before drawing.
+---@param name string|AssetHandle The asset name or handle from load_image()
 ---@param x number X coordinate of destination top-left corner
 ---@param y number Y coordinate of destination top-left corner
 ---@param width? number Destination width (scales image if provided)
