@@ -118,6 +118,102 @@ canvas.set_fill_style("#FFFFFF")
 canvas.draw_text(btnX + btnW/2, btnY + btnH/2, "Click Me")
 ```
 
+### canvas.set_direction(direction)
+
+Set the text direction for all subsequent text drawing. This affects how "start" and "end" alignment values are interpreted.
+
+**Parameters:**
+- `direction` (string): One of the direction values below
+
+**Direction Values:**
+
+| Value | Description |
+|-------|-------------|
+| `"ltr"` | Left-to-right (default for Latin scripts) |
+| `"rtl"` | Right-to-left (for Arabic, Hebrew, etc.) |
+| `"inherit"` | Inherit from canvas/document |
+
+**Note:** Direction affects "start" and "end" alignment:
+- In LTR: "start" = left, "end" = right
+- In RTL: "start" = right, "end" = left
+
+```lua
+-- LTR text (default)
+canvas.set_direction("ltr")
+canvas.set_text_align("start")
+canvas.draw_text(200, 50, "Hello World")  -- Starts at x=200, extends right
+
+-- RTL text
+canvas.set_direction("rtl")
+canvas.set_text_align("start")
+canvas.draw_text(200, 100, "Hello World")  -- Starts at x=200, extends left
+```
+
+## Stroke Text
+
+### canvas.stroke_text(x, y, text, options?)
+
+Draw text outline (stroke only, no fill). Useful for outlined text effects.
+
+**Parameters:**
+- `x` (number): X coordinate
+- `y` (number): Y coordinate
+- `text` (string): Text to draw
+- `options` (table, optional): Font options
+
+**Options:**
+| Option | Type | Description |
+|--------|------|-------------|
+| `font_size` | number | Override font size for this text |
+| `font_family` | string | Override font family for this text |
+| `max_width` | number | Maximum width - text is compressed to fit |
+
+```lua
+-- Basic stroke text
+canvas.set_stroke_style("#FF6B6B")
+canvas.set_line_width(2)
+canvas.set_font_size(48)
+canvas.stroke_text(100, 100, "Outlined Text")
+
+-- Stroke text with fill (outline effect)
+canvas.set_font_size(64)
+canvas.set_stroke_style("#000000")
+canvas.set_fill_style("#FFFFFF")
+canvas.set_line_width(4)
+canvas.stroke_text(100, 200, "Bold Outline")
+canvas.draw_text(100, 200, "Bold Outline")
+
+-- With max_width constraint
+canvas.stroke_text(100, 300, "Compressed Text", {max_width = 150})
+```
+
+## Text with Max Width
+
+Both `draw_text()` and `stroke_text()` accept an optional `max_width` parameter that compresses text to fit within a specified width.
+
+### canvas.draw_text(x, y, text, options?)
+
+**Options:**
+| Option | Type | Description |
+|--------|------|-------------|
+| `font_size` | number | Override font size for this text |
+| `font_family` | string | Override font family for this text |
+| `max_width` | number | Maximum width - text is horizontally compressed to fit |
+
+```lua
+-- Draw text with maximum width constraint
+canvas.set_font_size(24)
+
+-- Normal text
+canvas.draw_text(50, 50, "This is a long piece of text")
+
+-- Same text compressed to 150px
+canvas.draw_text(50, 100, "This is a long piece of text", {max_width = 150})
+
+-- Even more compressed
+canvas.draw_text(50, 150, "This is a long piece of text", {max_width = 80})
+```
+
 ## Advanced Text Layout
 
 ### canvas.draw_label(x, y, width, height, text, options)
@@ -243,6 +339,8 @@ canvas.start()
 - [Font Showcase](../../examples/canvas/text/font-showcase.lua) - Custom fonts and text styling
 - [Text Alignment](../../examples/canvas/text/text-alignment.lua) - Text alignment options
 - [Game HUD](../../examples/canvas/text/game-hud.lua) - UI text and draw_label()
+- [Stroke Text](../../examples/canvas/text/stroke-text.lua) - Outlined text and max_width
+- [Text Direction](../../examples/canvas/text/text-direction.lua) - RTL/LTR text direction
 
 ---
 

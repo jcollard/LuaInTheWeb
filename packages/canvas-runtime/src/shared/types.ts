@@ -57,7 +57,12 @@ export type DrawCommandType =
   | 'setTextAlign'
   | 'setTextBaseline'
   | 'setImageSmoothing'
-  | 'putImageData';
+  | 'setDirection'
+  | 'setFilter'
+  | 'putImageData'
+  | 'fillPath'
+  | 'strokePath'
+  | 'clipPath';
 
 /**
  * Base interface for all draw commands.
@@ -195,10 +200,12 @@ export interface TextCommand extends DrawCommandBase {
   fontSize?: number;
   /** Optional font family override for this text only */
   fontFamily?: string;
+  /** Optional maximum width - text will be scaled to fit if needed */
+  maxWidth?: number;
 }
 
 /**
- * Draw text outline (stroke only, no fill).
+ * Stroke text (draw text outline without filling).
  */
 export interface StrokeTextCommand extends DrawCommandBase {
   type: 'strokeText';
@@ -209,7 +216,10 @@ export interface StrokeTextCommand extends DrawCommandBase {
   fontSize?: number;
   /** Optional font family override for this text only */
   fontFamily?: string;
+  /** Optional maximum width - text will be scaled to fit if needed */
+  maxWidth?: number;
 }
+
 
 /**
  * Draw an image from the asset cache.
@@ -846,6 +856,29 @@ export interface SetTextBaselineCommand extends DrawCommandBase {
 }
 
 /**
+ * Canvas text direction options for RTL/LTR support.
+ */
+export type CanvasDirection = 'ltr' | 'rtl' | 'inherit';
+
+/**
+ * Set the text direction for all subsequent text drawing.
+ */
+export interface SetDirectionCommand extends DrawCommandBase {
+  type: 'setDirection';
+  /** Text direction: 'ltr' (left-to-right), 'rtl' (right-to-left), or 'inherit' */
+  direction: CanvasDirection;
+}
+
+/**
+ * Set the CSS filter for all subsequent drawing operations.
+ */
+export interface SetFilterCommand extends DrawCommandBase {
+  type: 'setFilter';
+  /** CSS filter string (e.g., "blur(5px)", "contrast(150%)", "none") */
+  filter: string;
+}
+
+/**
  * Write pixel data to the canvas at the specified position.
  */
 export interface PutImageDataCommand extends DrawCommandBase {
@@ -860,6 +893,52 @@ export interface PutImageDataCommand extends DrawCommandBase {
   dx: number;
   /** Destination Y coordinate */
   dy: number;
+  /** Optional dirty rect X coordinate (sub-region to draw) */
+  dirtyX?: number;
+  /** Optional dirty rect Y coordinate (sub-region to draw) */
+  dirtyY?: number;
+  /** Optional dirty rect width (sub-region to draw) */
+  dirtyWidth?: number;
+  /** Optional dirty rect height (sub-region to draw) */
+  dirtyHeight?: number;
+}
+
+// ============================================================================
+// Path2D Commands
+// ============================================================================
+
+/**
+ * Fill a stored Path2D object.
+ * The pathId references a path stored in the CanvasController's path registry.
+ */
+export interface FillPathCommand extends DrawCommandBase {
+  type: 'fillPath';
+  /** ID of the path in the path registry */
+  pathId: number;
+  /** Fill rule: "nonzero" (default) or "evenodd" */
+  fillRule?: FillRule;
+}
+
+/**
+ * Stroke a stored Path2D object.
+ * The pathId references a path stored in the CanvasController's path registry.
+ */
+export interface StrokePathCommand extends DrawCommandBase {
+  type: 'strokePath';
+  /** ID of the path in the path registry */
+  pathId: number;
+}
+
+/**
+ * Clip to a stored Path2D object.
+ * The pathId references a path stored in the CanvasController's path registry.
+ */
+export interface ClipPathCommand extends DrawCommandBase {
+  type: 'clipPath';
+  /** ID of the path in the path registry */
+  pathId: number;
+  /** Fill rule: "nonzero" (default) or "evenodd" */
+  fillRule?: FillRule;
 }
 
 /**
@@ -921,7 +1000,12 @@ export type DrawCommand =
   | SetTextAlignCommand
   | SetTextBaselineCommand
   | SetImageSmoothingCommand
-  | PutImageDataCommand;
+  | SetDirectionCommand
+  | SetFilterCommand
+  | PutImageDataCommand
+  | FillPathCommand
+  | StrokePathCommand
+  | ClipPathCommand;
 
 /**
  * Mouse button identifiers.

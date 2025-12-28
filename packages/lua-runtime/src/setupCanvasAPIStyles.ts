@@ -189,4 +189,14 @@ export function setupStyleBindings(
   engine.global.set('__canvas_setTextBaseline', (baseline: string) => {
     getController()?.setTextBaseline(baseline as CanvasTextBaseline)
   })
+
+  // --- Text Direction (RTL/LTR support) ---
+  engine.global.set('__canvas_setDirection', (direction: string) => {
+    getController()?.setDirection(direction as 'ltr' | 'rtl' | 'inherit')
+  })
+
+  // --- CSS Filter ---
+  engine.global.set('__canvas_setFilter', (filter: string) => {
+    getController()?.setFilter(filter)
+  })
 }

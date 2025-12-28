@@ -33,8 +33,14 @@ export type {
   // Text alignment types
   CanvasTextAlign,
   CanvasTextBaseline,
+  // Text direction types
+  CanvasDirection,
   // Hit testing types
   FillRule,
+  // Path2D command types
+  FillPathCommand,
+  StrokePathCommand,
+  ClipPathCommand,
 } from './types.js';
 
 export {

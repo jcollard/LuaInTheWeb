@@ -436,6 +436,82 @@ end
 canvas.set_composite_operation("source-over")
 ```
 
+## CSS Filters
+
+Apply visual effects to all subsequent drawing operations using CSS filter functions.
+
+### canvas.set_filter(filter)
+
+Set the CSS filter for all subsequent drawing operations.
+
+**Parameters:**
+- `filter` (string): CSS filter function(s) or "none" to clear
+
+**Filter Functions:**
+
+| Filter | Syntax | Description |
+|--------|--------|-------------|
+| `blur` | `blur(5px)` | Gaussian blur |
+| `brightness` | `brightness(150%)` | Adjust brightness (100% = normal) |
+| `contrast` | `contrast(200%)` | Adjust contrast (100% = normal) |
+| `grayscale` | `grayscale(100%)` | Convert to grayscale (0-100%) |
+| `sepia` | `sepia(100%)` | Apply sepia tone (0-100%) |
+| `saturate` | `saturate(200%)` | Adjust saturation (100% = normal) |
+| `hue-rotate` | `hue-rotate(90deg)` | Rotate hue (0-360deg) |
+| `invert` | `invert(100%)` | Invert colors (0-100%) |
+| `opacity` | `opacity(50%)` | Set opacity (0-100%) |
+| `drop-shadow` | `drop-shadow(5px 5px 10px black)` | Add drop shadow |
+
+```lua
+-- Apply blur
+canvas.set_filter("blur(3px)")
+canvas.fill_rect(50, 50, 100, 100)
+
+-- Apply brightness
+canvas.set_filter("brightness(150%)")
+canvas.fill_rect(200, 50, 100, 100)
+
+-- Apply grayscale
+canvas.set_filter("grayscale(100%)")
+canvas.fill_rect(350, 50, 100, 100)
+
+-- Clear filter
+canvas.set_filter("none")
+```
+
+### Combining Filters
+
+Multiple filters can be combined in a single string:
+
+```lua
+-- Combine blur and brightness
+canvas.set_filter("blur(2px) brightness(120%)")
+canvas.fill_rect(50, 200, 100, 100)
+
+-- Vintage photo effect
+canvas.set_filter("sepia(50%) contrast(110%) brightness(90%)")
+canvas.fill_rect(200, 200, 100, 100)
+```
+
+### Filter Performance
+
+Filters are applied by the GPU and are generally fast, but complex filter combinations or large blur radii can impact performance. For real-time effects:
+
+- Keep blur radii small (< 10px)
+- Apply filters to smaller areas when possible
+- Clear filters with `"none"` when not needed
+
+```lua
+-- Efficient: apply filter only when needed
+if shouldBlur then
+  canvas.set_filter("blur(3px)")
+else
+  canvas.set_filter("none")
+end
+canvas.fill_rect(x, y, w, h)
+canvas.set_filter("none")  -- Clear for subsequent drawing
+```
+
 ---
 
 ## Related Examples
@@ -448,6 +524,7 @@ canvas.set_composite_operation("source-over")
 - [Pattern Demo](../../examples/canvas/styling/pattern-demo.lua) - Image pattern fills
 - [Shadow Demo](../../examples/canvas/styling/shadow-demo.lua) - Shadow effects
 - [Compositing Demo](../../examples/canvas/styling/compositing-demo.lua) - Blend modes
+- [Filter Effects](../../examples/canvas/styling/filter-effects.lua) - CSS filter effects
 
 ---
 

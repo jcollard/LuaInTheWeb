@@ -23,11 +23,11 @@ local canvas = {}
 -- 7.  Gradient API (create_linear_gradient, create_radial_gradient, create_conic_gradient)
 -- 8.  Pattern API (create_pattern, set_fill_style, set_stroke_style)
 -- 9.  Shadow API (set_shadow_color, set_shadow_blur, set_shadow, clear_shadow)
--- 10. Compositing (set_global_alpha, set_composite_operation, set_image_smoothing)
--- 11. Text Alignment (set_text_align, set_text_baseline, draw_label)
+-- 10. Compositing (set_global_alpha, set_composite_operation, set_image_smoothing, set_filter)
+-- 11. Text Alignment (set_text_align, set_text_baseline, set_direction, draw_label)
 -- 12. Font Styling (set_font_size, set_font_family, get_text_width, get_text_metrics)
 -- 13. Drawing Functions (draw_rect, fill_rect, draw_circle, fill_circle, draw_line, draw_text, stroke_text)
--- 14. Timing Functions (get_delta, get_time)
+-- 14. Timing Functions (get_delta, get_time, capture)
 -- 15. Keyboard Input (is_key_down, is_key_pressed, get_keys_down, get_keys_pressed)
 -- 16. Key Constants (canvas.keys.*)
 -- 17. Mouse Input (get_mouse_x, get_mouse_y, is_mouse_down, is_mouse_pressed)
@@ -36,7 +36,8 @@ local canvas = {}
 -- 20. Transformation Functions (translate, rotate, scale, save, restore, transform)
 -- 21. Path API (begin_path, close_path, move_to, line_to, arc, bezier, ellipse, round_rect, rect, clip)
 -- 22. Hit Testing API (is_point_in_path, is_point_in_stroke)
--- 23. Pixel Manipulation API (ImageData, create_image_data, get_image_data, put_image_data, clone_image_data)
+-- 23. Path2D API (create_path, Path2D methods, fill/stroke/clip with Path2D)
+-- 24. Pixel Manipulation API (ImageData, create_image_data, get_image_data, put_image_data, clone_image_data)
 -- =============================================================================
 
 -- =============================================================================
@@ -513,6 +514,31 @@ function canvas.set_composite_operation(operation) end
 ---@usage canvas.set_image_smoothing(true)  -- Smooth scaling
 function canvas.set_image_smoothing(enabled) end
 
+--- Set CSS filter effects for all subsequent drawing operations.
+--- Filters are applied to everything drawn after this call until changed or cleared.
+--- Multiple filters can be combined in a single string separated by spaces.
+---@param filter string CSS filter function(s) or "none" to clear
+---@return nil
+---@usage -- Single filters
+---@usage canvas.set_filter("blur(5px)")           -- Gaussian blur
+---@usage canvas.set_filter("brightness(150%)")   -- Increase brightness
+---@usage canvas.set_filter("contrast(200%)")     -- Increase contrast
+---@usage canvas.set_filter("grayscale(100%)")    -- Convert to grayscale
+---@usage canvas.set_filter("sepia(100%)")        -- Apply sepia tone
+---@usage canvas.set_filter("saturate(200%)")     -- Increase saturation
+---@usage canvas.set_filter("hue-rotate(90deg)")  -- Rotate hue
+---@usage canvas.set_filter("invert(100%)")       -- Invert colors
+---@usage canvas.set_filter("opacity(50%)")       -- Set opacity
+---@usage canvas.set_filter("drop-shadow(5px 5px 10px black)")  -- Add shadow
+---@usage
+---@usage -- Combine multiple filters
+---@usage canvas.set_filter("blur(2px) brightness(120%)")
+---@usage canvas.set_filter("sepia(50%) contrast(110%)")
+---@usage
+---@usage -- Clear filter
+---@usage canvas.set_filter("none")
+function canvas.set_filter(filter) end
+
 -- =============================================================================
 -- Text Alignment
 -- =============================================================================
@@ -547,6 +573,19 @@ function canvas.set_text_align(align) end
 --- - "ideographic": Ideographic baseline at y (for CJK characters)
 --- - "bottom": Bottom of text at y
 function canvas.set_text_baseline(baseline) end
+
+--- Set the text direction for all subsequent text drawing.
+--- This affects how "start" and "end" alignment values are interpreted.
+---@param direction string Direction: "ltr" (left-to-right), "rtl" (right-to-left), or "inherit"
+---@return nil
+---@usage canvas.set_direction("ltr")  -- Left-to-right (default)
+---@usage canvas.set_direction("rtl")  -- Right-to-left
+---@usage canvas.set_direction("inherit")  -- Inherit from canvas/document
+---
+--- Direction affects "start" and "end" text alignment:
+--- - In LTR: "start" = left, "end" = right
+--- - In RTL: "start" = right, "end" = left
+function canvas.set_direction(direction) end
 
 ---@class DrawLabelOptions
 ---@field align_h? string Horizontal alignment: "left", "center", "right" (default: "center")
@@ -688,39 +727,50 @@ function canvas.fill_circle(x, y, radius) end
 ---@return nil
 function canvas.draw_line(x1, y1, x2, y2) end
 
+---@class DrawTextOptions
+---@field font_size? number Override font size for this text
+---@field font_family? string Override font family for this text
+---@field max_width? number Maximum width - text is horizontally compressed to fit
+
 --- Draw text at the specified position.
---- Text is positioned with its top-left corner at (x, y).
+--- Text is positioned according to current text alignment and baseline settings.
 --- Optional style overrides can be provided without changing global state.
----@param x number X coordinate of top-left corner
----@param y number Y coordinate of top-left corner
+---@param x number X coordinate
+---@param y number Y coordinate
 ---@param text string Text to draw
----@param options? table Optional style overrides: { font_size?: number, font_family?: string }
+---@param options? DrawTextOptions Optional style overrides
 ---@return nil
 ---@usage canvas.draw_text(10, 10, "Hello World")  -- Use current font settings
 ---@usage canvas.draw_text(10, 50, "Big text", { font_size = 48 })  -- Override size
 ---@usage canvas.draw_text(10, 100, "Custom", { font_family = "Arial", font_size = 32 })
+---@usage
+---@usage -- Constrain text width (text is compressed to fit)
+---@usage canvas.draw_text(10, 150, "Long text here", { max_width = 100 })
 function canvas.draw_text(x, y, text, options) end
 
 --- Draw text outline (stroke only, no fill) at the specified position.
 --- Draws only the outline/stroke of the text characters, not filled.
 --- Useful for creating outline text effects or combining with draw_text for bordered text.
 --- Optional style overrides can be provided without changing global state.
----@param x number X coordinate of top-left corner
----@param y number Y coordinate of top-left corner
+---@param x number X coordinate
+---@param y number Y coordinate
 ---@param text string Text to draw
----@param options? table Optional style overrides: { font_size?: number, font_family?: string }
+---@param options? DrawTextOptions Optional style overrides (font_size, font_family, max_width)
 ---@return nil
 ---@usage -- Simple outline text
----@usage canvas.set_color(0, 0, 0)
+---@usage canvas.set_stroke_style("#000000")
 ---@usage canvas.set_line_width(2)
 ---@usage canvas.stroke_text(10, 10, "Outlined Text")
 ---@usage
 ---@usage -- Text with outline and fill (bordered text effect)
----@usage canvas.set_color(255, 255, 255)
+---@usage canvas.set_fill_style("#FFFFFF")
 ---@usage canvas.draw_text(10, 50, "Bordered", { font_size = 48 })
----@usage canvas.set_color(0, 0, 0)
+---@usage canvas.set_stroke_style("#000000")
 ---@usage canvas.set_line_width(3)
 ---@usage canvas.stroke_text(10, 50, "Bordered", { font_size = 48 })
+---@usage
+---@usage -- With max_width constraint
+---@usage canvas.stroke_text(10, 100, "Compressed", { max_width = 80 })
 function canvas.stroke_text(x, y, text, options) end
 
 -- =============================================================================
@@ -736,6 +786,30 @@ function canvas.get_delta() end
 --- Get the total time since the game started (in seconds).
 ---@return number totalTime Total elapsed time in seconds
 function canvas.get_time() end
+
+---@class CaptureOptions
+---@field format? string Image format: "png" (default), "jpeg", "jpg", or "webp"
+---@field quality? number Quality for JPEG/WebP (0.0 to 1.0, default: 0.92)
+
+--- Capture the current canvas state as a data URL (base64-encoded image).
+--- Useful for saving screenshots, creating thumbnails, or implementing undo/redo.
+---@param options? CaptureOptions Capture options (format and quality)
+---@return string dataUrl Data URL of the captured image (e.g., "data:image/png;base64,...")
+---@usage -- Capture as PNG (default)
+---@usage local dataUrl = canvas.capture()
+---@usage
+---@usage -- Capture as JPEG with custom quality
+---@usage local jpegUrl = canvas.capture({format = "jpeg", quality = 0.85})
+---@usage
+---@usage -- Capture as WebP
+---@usage local webpUrl = canvas.capture({format = "webp", quality = 0.9})
+---@usage
+---@usage -- Screenshot on key press
+---@usage if canvas.is_key_pressed(canvas.keys.S) then
+---@usage   local screenshot = canvas.capture()
+---@usage   print("Screenshot captured!")
+---@usage end
+function canvas.capture(options) end
 
 -- =============================================================================
 -- Keyboard Input
@@ -1128,22 +1202,32 @@ function canvas.move_to(x, y) end
 ---@usage canvas.stroke()
 function canvas.line_to(x, y) end
 
---- Fill the current path.
---- Fills the interior of the path with the current fill color.
+--- Fill the current path or a Path2D object.
+--- Fills the interior of the path with the current fill style.
 --- The path does not need to be closed - it will be implicitly closed for fill.
+---@param pathOrFillRule? Path2D|string Optional Path2D object or fill rule ("nonzero" or "evenodd")
+---@param fillRule? string Fill rule when first arg is Path2D: "nonzero" (default) or "evenodd"
 ---@return nil
----@usage canvas.set_color(255, 0, 0)  -- Red fill
+---@usage -- Fill current path
+---@usage canvas.set_fill_style("#FF0000")
 ---@usage canvas.begin_path()
 ---@usage canvas.move_to(100, 100)
 ---@usage canvas.line_to(150, 50)
 ---@usage canvas.line_to(200, 100)
 ---@usage canvas.fill()  -- Fills the triangle
-function canvas.fill() end
+---@usage
+---@usage -- Fill a Path2D object
+---@usage local star = canvas.create_path():move_to(100,10):line_to(40,198):close_path()
+---@usage canvas.fill(star)
+---@usage canvas.fill(star, "evenodd")  -- With fill rule
+function canvas.fill(pathOrFillRule, fillRule) end
 
---- Stroke the current path.
---- Draws the outline of the path with the current stroke color and line width.
+--- Stroke the current path or a Path2D object.
+--- Draws the outline of the path with the current stroke style and line width.
+---@param path? Path2D Optional Path2D object to stroke
 ---@return nil
----@usage canvas.set_color(0, 0, 0)     -- Black outline
+---@usage -- Stroke current path
+---@usage canvas.set_stroke_style("#000000")
 ---@usage canvas.set_line_width(2)
 ---@usage canvas.begin_path()
 ---@usage canvas.move_to(100, 100)
@@ -1151,7 +1235,11 @@ function canvas.fill() end
 ---@usage canvas.line_to(200, 100)
 ---@usage canvas.close_path()
 ---@usage canvas.stroke()  -- Draws triangle outline
-function canvas.stroke() end
+---@usage
+---@usage -- Stroke a Path2D object
+---@usage local circle = canvas.create_path():arc(200, 200, 50, 0, math.pi * 2)
+---@usage canvas.stroke(circle)
+function canvas.stroke(path) end
 
 --- Draw an arc (portion of a circle) on the current path.
 --- Angles are in radians. Use math.pi for convenience.
@@ -1303,13 +1391,14 @@ function canvas.round_rect(x, y, width, height, radii) end
 ---@usage end
 function canvas.rect(x, y, width, height) end
 
---- Clip all future drawing to the current path.
---- Creates a clipping region from the current path. All subsequent drawing
+--- Clip all future drawing to the current path or a Path2D object.
+--- Creates a clipping region from the path. All subsequent drawing
 --- operations will be constrained to this region. Use save()/restore()
 --- to manage clipping regions - clipping can only shrink, not expand.
----@param fillRule? string Fill rule: "nonzero" (default) or "evenodd"
+---@param pathOrFillRule? Path2D|string Optional Path2D object or fill rule ("nonzero" or "evenodd")
+---@param fillRule? string Fill rule when first arg is Path2D: "nonzero" (default) or "evenodd"
 ---@return nil
----@usage -- Create a circular viewport
+---@usage -- Clip to current path
 ---@usage canvas.save()
 ---@usage canvas.begin_path()
 ---@usage canvas.arc(200, 200, 100, 0, math.pi * 2)
@@ -1317,20 +1406,28 @@ function canvas.rect(x, y, width, height) end
 ---@usage -- All drawing now clipped to the circle
 ---@usage canvas.fill_rect(0, 0, 400, 400)  -- Only circle area is filled
 ---@usage canvas.restore()  -- Remove clipping
-function canvas.clip(fillRule) end
+---@usage
+---@usage -- Clip to a Path2D object
+---@usage local clipPath = canvas.create_path():arc(200, 200, 80, 0, math.pi * 2)
+---@usage canvas.save()
+---@usage canvas.clip(clipPath)
+---@usage canvas.fill_rect(0, 0, 400, 400)
+---@usage canvas.restore()
+function canvas.clip(pathOrFillRule, fillRule) end
 
 -- =============================================================================
 -- Hit Testing API
 -- =============================================================================
 
---- Check if a point is inside the current path.
+--- Check if a point is inside the current path or a Path2D object.
 --- Useful for detecting clicks on complex shapes.
---- Must be called after building a path with begin_path(), move_to(), etc.
----@param x number X coordinate of the point to test
----@param y number Y coordinate of the point to test
----@param fillRule? string Fill rule: "nonzero" (default) or "evenodd"
+--- When testing the current path, must be called after building with begin_path(), move_to(), etc.
+---@param pathOrX Path2D|number Path2D object, or X coordinate for current path
+---@param xOrY number X coordinate (if first arg is Path2D), or Y coordinate for current path
+---@param yOrFillRule? number|string Y coordinate (if first arg is Path2D), or fill rule for current path
+---@param fillRule? string Fill rule when testing Path2D: "nonzero" (default) or "evenodd"
 ---@return boolean inside True if the point is inside the path
----@usage -- Check if mouse is inside a triangle
+---@usage -- Check if mouse is inside a triangle (current path)
 ---@usage canvas.begin_path()
 ---@usage canvas.move_to(200, 100)
 ---@usage canvas.line_to(100, 300)
@@ -1339,40 +1436,33 @@ function canvas.clip(fillRule) end
 ---@usage
 ---@usage local mx, my = canvas.get_mouse_x(), canvas.get_mouse_y()
 ---@usage if canvas.is_point_in_path(mx, my) then
----@usage   canvas.set_color(255, 0, 0)  -- Red when hovered
+---@usage   canvas.set_fill_style("#FF0000")  -- Red when hovered
 ---@usage else
----@usage   canvas.set_color(100, 100, 100)  -- Gray otherwise
+---@usage   canvas.set_fill_style("#666666")  -- Gray otherwise
 ---@usage end
 ---@usage canvas.fill()
 ---@usage
----@usage -- Using "evenodd" fill rule for shapes with holes
----@usage -- Outer square
----@usage canvas.begin_path()
----@usage canvas.move_to(50, 50)
----@usage canvas.line_to(250, 50)
----@usage canvas.line_to(250, 250)
----@usage canvas.line_to(50, 250)
----@usage canvas.close_path()
----@usage -- Inner square (hole)
----@usage canvas.move_to(100, 100)
----@usage canvas.line_to(200, 100)
----@usage canvas.line_to(200, 200)
----@usage canvas.line_to(100, 200)
----@usage canvas.close_path()
----@usage
----@usage if canvas.is_point_in_path(mx, my, "evenodd") then
----@usage   -- Point is inside outer but outside inner square
+---@usage -- Check with Path2D object
+---@usage local button = canvas.create_path():round_rect(-60, -20, 120, 40, 10)
+---@usage if canvas.is_point_in_path(button, mx - btnX, my - btnY) then
+---@usage   -- Mouse is over button
 ---@usage end
-function canvas.is_point_in_path(x, y, fillRule) end
+---@usage
+---@usage -- Using "evenodd" fill rule
+---@usage if canvas.is_point_in_path(button, mx, my, "evenodd") then
+---@usage   -- Point is inside with evenodd rule
+---@usage end
+function canvas.is_point_in_path(pathOrX, xOrY, yOrFillRule, fillRule) end
 
---- Check if a point is on the stroke of the current path.
+--- Check if a point is on the stroke of the current path or a Path2D object.
 --- Useful for detecting clicks on lines and outlines.
 --- The hit detection uses the current line width - wider lines are easier to click.
---- Must be called after building a path with begin_path(), move_to(), etc.
----@param x number X coordinate of the point to test
----@param y number Y coordinate of the point to test
+--- When testing the current path, must be called after building with begin_path(), move_to(), etc.
+---@param pathOrX Path2D|number Path2D object, or X coordinate for current path
+---@param xOrY number X coordinate (if first arg is Path2D), or Y coordinate for current path
+---@param y? number Y coordinate (only when first arg is Path2D)
 ---@return boolean onStroke True if the point is on the path's stroke
----@usage -- Check if mouse is on a line
+---@usage -- Check if mouse is on a line (current path)
 ---@usage canvas.set_line_width(5)  -- 5px wide stroke for easier clicking
 ---@usage canvas.begin_path()
 ---@usage canvas.move_to(50, 50)
@@ -1380,12 +1470,150 @@ function canvas.is_point_in_path(x, y, fillRule) end
 ---@usage
 ---@usage local mx, my = canvas.get_mouse_x(), canvas.get_mouse_y()
 ---@usage if canvas.is_point_in_stroke(mx, my) then
----@usage   canvas.set_color(255, 0, 0)  -- Red when hovered
+---@usage   canvas.set_stroke_style("#FF0000")  -- Red when hovered
 ---@usage else
----@usage   canvas.set_color(0, 0, 0)  -- Black otherwise
+---@usage   canvas.set_stroke_style("#000000")  -- Black otherwise
 ---@usage end
 ---@usage canvas.stroke()
-function canvas.is_point_in_stroke(x, y) end
+---@usage
+---@usage -- Check with Path2D object
+---@usage local circle = canvas.create_path():arc(200, 200, 50, 0, math.pi * 2)
+---@usage canvas.set_line_width(10)
+---@usage if canvas.is_point_in_stroke(circle, mx, my) then
+---@usage   -- Mouse is on the circle's stroke
+---@usage end
+function canvas.is_point_in_stroke(pathOrX, xOrY, y) end
+
+-- =============================================================================
+-- Path2D API - Reusable Path Objects
+-- =============================================================================
+
+--- Path2D object for creating reusable path objects.
+--- Paths can be filled, stroked, or used for hit testing multiple times
+--- without rebuilding the path. All building methods are chainable.
+---@class Path2D
+---@field _jsId number Internal JavaScript path ID
+
+--- Move to a point without drawing (chainable).
+---@param x number X coordinate
+---@param y number Y coordinate
+---@return Path2D self Returns self for method chaining
+function Path2D:move_to(x, y) end
+
+--- Draw a line to a point (chainable).
+---@param x number X coordinate
+---@param y number Y coordinate
+---@return Path2D self Returns self for method chaining
+function Path2D:line_to(x, y) end
+
+--- Close the path by drawing a line to the start (chainable).
+---@return Path2D self Returns self for method chaining
+function Path2D:close_path() end
+
+--- Add a rectangle to the path (chainable).
+---@param x number X coordinate of top-left corner
+---@param y number Y coordinate of top-left corner
+---@param width number Width of rectangle
+---@param height number Height of rectangle
+---@return Path2D self Returns self for method chaining
+function Path2D:rect(x, y, width, height) end
+
+--- Add a rounded rectangle to the path (chainable).
+---@param x number X coordinate of top-left corner
+---@param y number Y coordinate of top-left corner
+---@param width number Width of rectangle
+---@param height number Height of rectangle
+---@param radii number|table Corner radii (single value or table of 1-4 values)
+---@return Path2D self Returns self for method chaining
+function Path2D:round_rect(x, y, width, height, radii) end
+
+--- Add an arc to the path (chainable).
+---@param x number X coordinate of center
+---@param y number Y coordinate of center
+---@param radius number Arc radius
+---@param startAngle number Start angle in radians
+---@param endAngle number End angle in radians
+---@param counterclockwise? boolean Draw counterclockwise (default: false)
+---@return Path2D self Returns self for method chaining
+function Path2D:arc(x, y, radius, startAngle, endAngle, counterclockwise) end
+
+--- Add an arc using tangent control points (chainable).
+---@param x1 number X coordinate of first control point
+---@param y1 number Y coordinate of first control point
+---@param x2 number X coordinate of second control point
+---@param y2 number Y coordinate of second control point
+---@param radius number Arc radius
+---@return Path2D self Returns self for method chaining
+function Path2D:arc_to(x1, y1, x2, y2, radius) end
+
+--- Add an ellipse to the path (chainable).
+---@param x number X coordinate of center
+---@param y number Y coordinate of center
+---@param radiusX number Horizontal radius
+---@param radiusY number Vertical radius
+---@param rotation? number Rotation in radians (default: 0)
+---@param startAngle? number Start angle in radians (default: 0)
+---@param endAngle? number End angle in radians (default: 2*PI)
+---@param counterclockwise? boolean Draw counterclockwise (default: false)
+---@return Path2D self Returns self for method chaining
+function Path2D:ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise) end
+
+--- Add a quadratic Bezier curve to the path (chainable).
+---@param cpx number X coordinate of control point
+---@param cpy number Y coordinate of control point
+---@param x number X coordinate of end point
+---@param y number Y coordinate of end point
+---@return Path2D self Returns self for method chaining
+function Path2D:quadratic_curve_to(cpx, cpy, x, y) end
+
+--- Add a cubic Bezier curve to the path (chainable).
+---@param cp1x number X coordinate of first control point
+---@param cp1y number Y coordinate of first control point
+---@param cp2x number X coordinate of second control point
+---@param cp2y number Y coordinate of second control point
+---@param x number X coordinate of end point
+---@param y number Y coordinate of end point
+---@return Path2D self Returns self for method chaining
+function Path2D:bezier_curve_to(cp1x, cp1y, cp2x, cp2y, x, y) end
+
+--- Add another Path2D's contents to this path (chainable).
+---@param other_path Path2D The path to add
+---@return Path2D self Returns self for method chaining
+function Path2D:add_path(other_path) end
+
+--- Free the path's memory when no longer needed.
+--- Call this when you're done with a path to release resources.
+---@return nil
+function Path2D:dispose() end
+
+--- Create a new Path2D object.
+--- Can be created empty, from an SVG path string, or by cloning another Path2D.
+---@param arg? string|Path2D Optional: SVG path string or Path2D to clone
+---@return Path2D|nil path New Path2D object, or nil on error
+---@usage -- Empty path
+---@usage local path = canvas.create_path()
+---@usage path:move_to(10, 10):line_to(100, 100):close_path()
+---@usage
+---@usage -- From SVG path string
+---@usage local heart = canvas.create_path("M 0,-20 C -30,-50 -60,-20 -60,10 Z")
+---@usage
+---@usage -- Clone an existing path
+---@usage local copy = canvas.create_path(original_path)
+---@usage
+---@usage -- Method chaining
+---@usage local star = canvas.create_path()
+---@usage   :move_to(100, 10)
+---@usage   :line_to(40, 198)
+---@usage   :line_to(190, 78)
+---@usage   :line_to(10, 78)
+---@usage   :line_to(160, 198)
+---@usage   :close_path()
+---@usage
+---@usage -- Use with fill/stroke
+---@usage canvas.set_fill_style("#FFD700")
+---@usage canvas.fill(star)
+---@usage canvas.stroke(star)
+function canvas.create_path(arg) end
 
 -- =============================================================================
 -- Pixel Manipulation API
@@ -1470,11 +1698,19 @@ function canvas.create_image_data(width, height) end
 ---@usage canvas.put_image_data(img, 0, 0)
 function canvas.get_image_data(x, y, width, height) end
 
+---@class PutImageDataOptions
+---@field dirty_x? number X offset within the image data (dirty rectangle)
+---@field dirty_y? number Y offset within the image data (dirty rectangle)
+---@field dirty_width? number Width of region to copy (dirty rectangle)
+---@field dirty_height? number Height of region to copy (dirty rectangle)
+
 --- Write pixel data to the canvas at the specified position.
 --- Draws the ImageData buffer to the canvas at coordinates (dx, dy).
+--- Optionally specify a "dirty rectangle" to only write a portion of the image data.
 ---@param image_data ImageData The pixel data to write
 ---@param dx number Destination X coordinate
 ---@param dy number Destination Y coordinate
+---@param options? PutImageDataOptions Optional dirty rectangle for partial updates
 ---@return nil
 ---@usage -- Copy a region to another location
 ---@usage local img = canvas.get_image_data(0, 0, 100, 100)
@@ -1489,7 +1725,15 @@ function canvas.get_image_data(x, y, width, height) end
 ---@usage   end
 ---@usage end
 ---@usage canvas.put_image_data(noise, 0, 0)
-function canvas.put_image_data(image_data, dx, dy) end
+---@usage
+---@usage -- Use dirty rectangle for partial updates (performance optimization)
+---@usage canvas.put_image_data(img, 0, 0, {
+---@usage   dirty_x = 25,
+---@usage   dirty_y = 25,
+---@usage   dirty_width = 50,
+---@usage   dirty_height = 50
+---@usage })
+function canvas.put_image_data(image_data, dx, dy, options) end
 
 --- Create a deep copy (clone) of an existing ImageData object.
 --- The cloned object has independent pixel data - modifications to the clone

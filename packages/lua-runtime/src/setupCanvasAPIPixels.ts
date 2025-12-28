@@ -66,10 +66,29 @@ export function setupPixelBindings(
   )
 
   // put_image_data: Uses stored array by ID - O(1) no copy needed!
-  engine.global.set('__canvas_putImageData', (id: number, dx: number, dy: number) => {
+  // Supports optional dirty rect parameters for sub-region drawing
+  engine.global.set('__canvas_putImageData', (
+    id: number,
+    dx: number,
+    dy: number,
+    dirtyX?: number | null,
+    dirtyY?: number | null,
+    dirtyWidth?: number | null,
+    dirtyHeight?: number | null
+  ) => {
     const stored = imageDataStore.get(id)
     if (!stored) return
-    getController()?.putImageData(Array.from(stored.data), stored.width, stored.height, dx, dy)
+    getController()?.putImageData(
+      Array.from(stored.data),
+      stored.width,
+      stored.height,
+      dx,
+      dy,
+      dirtyX ?? undefined,
+      dirtyY ?? undefined,
+      dirtyWidth ?? undefined,
+      dirtyHeight ?? undefined
+    )
   })
 
   // set_pixel: Modifies stored array directly by ID

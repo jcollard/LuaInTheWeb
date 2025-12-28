@@ -105,11 +105,11 @@ export class CanvasRenderer {
         break;
 
       case 'text':
-        this.drawText(command.x, command.y, command.text, command.fontSize, command.fontFamily);
+        this.drawText(command.x, command.y, command.text, command.fontSize, command.fontFamily, command.maxWidth);
         break;
 
       case 'strokeText':
-        this.strokeText(command.x, command.y, command.text, command.fontSize, command.fontFamily);
+        this.strokeText(command.x, command.y, command.text, command.fontSize, command.fontFamily, command.maxWidth);
         break;
 
       case 'drawImage':
@@ -292,13 +292,25 @@ export class CanvasRenderer {
         this.ctx.textBaseline = command.baseline;
         break;
 
+      case 'setDirection':
+        this.ctx.direction = command.direction;
+        break;
+
+      case 'setFilter':
+        this.ctx.filter = command.filter;
+        break;
+
       case 'putImageData':
         this.putImageDataFromArray(
           command.data,
           command.width,
           command.height,
           command.dx,
-          command.dy
+          command.dy,
+          command.dirtyX,
+          command.dirtyY,
+          command.dirtyWidth,
+          command.dirtyHeight
         );
         break;
 
@@ -311,16 +323,34 @@ export class CanvasRenderer {
   /**
    * Write pixel data to the canvas from a raw RGBA array.
    * Used by the putImageData DrawCommand.
+   * Supports optional dirty rect parameters to draw only a sub-region.
    */
   private putImageDataFromArray(
     data: number[],
     width: number,
     height: number,
     dx: number,
-    dy: number
+    dy: number,
+    dirtyX?: number,
+    dirtyY?: number,
+    dirtyWidth?: number,
+    dirtyHeight?: number
   ): void {
     const imageData = new ImageData(new Uint8ClampedArray(data), width, height);
-    this.ctx.putImageData(imageData, dx, dy);
+    // Use dirty rect if any dirty parameter is provided
+    if (dirtyX !== undefined || dirtyY !== undefined || dirtyWidth !== undefined || dirtyHeight !== undefined) {
+      this.ctx.putImageData(
+        imageData,
+        dx,
+        dy,
+        dirtyX ?? 0,
+        dirtyY ?? 0,
+        dirtyWidth ?? width,
+        dirtyHeight ?? height
+      );
+    } else {
+      this.ctx.putImageData(imageData, dx, dy);
+    }
   }
 
   private setColor(r: number, g: number, b: number, a?: number): void {
@@ -363,7 +393,8 @@ export class CanvasRenderer {
     y: number,
     text: string,
     fontSize?: number,
-    fontFamily?: string
+    fontFamily?: string,
+    maxWidth?: number
   ): void {
     // Note: textBaseline is set via setTextBaseline command (default 'top' in constructor)
     // Apply font overrides if provided
@@ -372,10 +403,10 @@ export class CanvasRenderer {
       const tempSize = fontSize ?? this.currentFontSize;
       const tempFamily = fontFamily ?? this.currentFontFamily;
       this.ctx.font = `${tempSize}px ${tempFamily}`;
-      this.ctx.fillText(text, x, y);
+      this.ctx.fillText(text, x, y, maxWidth);
       this.ctx.font = savedFont;
     } else {
-      this.ctx.fillText(text, x, y);
+      this.ctx.fillText(text, x, y, maxWidth);
     }
   }
 
@@ -384,19 +415,19 @@ export class CanvasRenderer {
     y: number,
     text: string,
     fontSize?: number,
-    fontFamily?: string
+    fontFamily?: string,
+    maxWidth?: number
   ): void {
-    // Note: textBaseline is set via setTextBaseline command (default 'top' in constructor)
     // Apply font overrides if provided
     if (fontSize !== undefined || fontFamily !== undefined) {
       const savedFont = this.ctx.font;
       const tempSize = fontSize ?? this.currentFontSize;
       const tempFamily = fontFamily ?? this.currentFontFamily;
       this.ctx.font = `${tempSize}px ${tempFamily}`;
-      this.ctx.strokeText(text, x, y);
+      this.ctx.strokeText(text, x, y, maxWidth);
       this.ctx.font = savedFont;
     } else {
-      this.ctx.strokeText(text, x, y);
+      this.ctx.strokeText(text, x, y, maxWidth);
     }
   }
 
@@ -549,5 +580,43 @@ export class CanvasRenderer {
    */
   createImageData(width: number, height: number): ImageData {
     return this.ctx.createImageData(width, height);
+  }
+
+  /**
+   * Capture the canvas contents as a data URL.
+   * @param type - MIME type (e.g., 'image/png', 'image/jpeg', 'image/webp')
+   * @param quality - Quality for lossy formats (0-1), only used for jpeg/webp
+   * @returns Data URL string (base64 encoded)
+   */
+  capture(type?: string, quality?: number): string {
+    return this.canvas.toDataURL(type, quality);
+  }
+
+  // --- Path2D rendering methods ---
+
+  /**
+   * Fill a Path2D object with the current fill style.
+   * @param path - The Path2D object to fill
+   * @param fillRule - Fill rule: "nonzero" (default) or "evenodd"
+   */
+  fillPath(path: Path2D, fillRule?: 'nonzero' | 'evenodd'): void {
+    this.ctx.fill(path, fillRule ?? 'nonzero');
+  }
+
+  /**
+   * Stroke a Path2D object with the current stroke style.
+   * @param path - The Path2D object to stroke
+   */
+  strokePath(path: Path2D): void {
+    this.ctx.stroke(path);
+  }
+
+  /**
+   * Clip to a Path2D object.
+   * @param path - The Path2D object to clip to
+   * @param fillRule - Fill rule: "nonzero" (default) or "evenodd"
+   */
+  clipPath(path: Path2D, fillRule?: 'nonzero' | 'evenodd'): void {
+    this.ctx.clip(path, fillRule ?? 'nonzero');
   }
 }

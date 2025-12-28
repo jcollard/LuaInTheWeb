@@ -90,7 +90,9 @@
       "Bash(npm run:*)",
       "mcp__code-index-mcp__set_project_path",
       "mcp__code-index-mcp__find_files",
-      "mcp__code-index-mcp__get_file_summary"
+"mcp__code-index-mcp__get_file_summary",
+      "Skill(tdd)",
+      "mcp__code-index-mcp__search_code_advanced"
     ],
     "deny": [
       "Bash(npm run dev)",

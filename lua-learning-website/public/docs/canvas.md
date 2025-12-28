@@ -127,9 +127,23 @@ canvas.start()
 | `canvas.ellipse(x, y, rx, ry, ...)` | Draw ellipse |
 | `canvas.round_rect(x, y, w, h, r)` | Draw rounded rectangle |
 | `canvas.rect(x, y, w, h)` | Add rectangle to path |
-| `canvas.fill()` | Fill the path |
-| `canvas.stroke()` | Stroke the path |
-| `canvas.clip()` | Clip to path |
+| `canvas.fill(path?)` | Fill the current path or a Path2D object |
+| `canvas.stroke(path?)` | Stroke the current path or a Path2D object |
+| `canvas.clip(path?)` | Clip to current path or a Path2D object |
+
+### Path2D (Reusable Paths)
+| Function | Description |
+|----------|-------------|
+| `canvas.create_path()` | Create empty Path2D object |
+| `canvas.create_path(svg)` | Create Path2D from SVG path string |
+| `canvas.create_path(path)` | Clone an existing Path2D |
+| `path:move_to(x, y)` | Move to point (chainable) |
+| `path:line_to(x, y)` | Line to point (chainable) |
+| `path:arc(x, y, r, start, end)` | Add arc (chainable) |
+| `path:rect(x, y, w, h)` | Add rectangle (chainable) |
+| `path:round_rect(x, y, w, h, r)` | Add rounded rectangle (chainable) |
+| `path:close_path()` | Close the path (chainable) |
+| `path:dispose()` | Free path memory |
 
 ### Styling
 | Function | Description |
@@ -145,6 +159,7 @@ canvas.start()
 | `canvas.set_global_alpha(alpha)` | Set transparency |
 | `canvas.set_composite_operation(op)` | Set blend mode |
 | `canvas.set_image_smoothing(enabled)` | Enable/disable image anti-aliasing (false for pixel art) |
+| `canvas.set_filter(filter)` | Apply CSS filter effects (blur, brightness, contrast, etc.) |
 
 ### Text
 | Function | Description |
@@ -155,6 +170,9 @@ canvas.start()
 | `canvas.get_text_metrics(text)` | Get detailed text metrics (width, height, bounding box) |
 | `canvas.set_text_align(align)` | Set horizontal alignment |
 | `canvas.set_text_baseline(baseline)` | Set vertical alignment |
+| `canvas.set_direction(dir)` | Set text direction ("ltr", "rtl", "inherit") |
+| `canvas.draw_text(x, y, text, opts?)` | Draw filled text (opts: font_size, font_family, max_width) |
+| `canvas.stroke_text(x, y, text, opts?)` | Draw text outline (opts: font_size, font_family, max_width) |
 | `canvas.draw_label(x, y, w, h, text, opts)` | Draw text in box |
 
 ### Timing
@@ -201,8 +219,9 @@ canvas.start()
 |----------|-------------|
 | `canvas.create_image_data(w, h)` | Create empty pixel buffer |
 | `canvas.get_image_data(x, y, w, h)` | Read pixels from canvas |
-| `canvas.put_image_data(data, x, y)` | Write pixels to canvas |
+| `canvas.put_image_data(data, x, y, opts?)` | Write pixels to canvas (opts: dirty_x, dirty_y, dirty_width, dirty_height) |
 | `canvas.clone_image_data(data)` | Create independent copy of ImageData |
+| `canvas.capture(opts?)` | Capture canvas as data URL (opts: format, quality) |
 
 ## Examples
 

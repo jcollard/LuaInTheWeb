@@ -30,6 +30,7 @@ import type {
   GlobalCompositeOperation,
   CanvasTextAlign,
   CanvasTextBaseline,
+  CanvasDirection,
   FillRule,
 } from '@lua-learning/canvas-runtime'
 import type { IFileSystem } from '@lua-learning/shell-core'
@@ -115,6 +116,10 @@ export class CanvasController {
 
   // Path2D for hit testing - tracks current path operations
   private currentPath: Path2D = new Path2D()
+
+  // Path2D registry for reusable path objects (exposed to Lua)
+  private pathRegistry: Map<number, Path2D> = new Map()
+  private nextPathId = 1
 
   // Offscreen canvas for text measurement
   private measureCanvas: HTMLCanvasElement | null = null
@@ -417,7 +422,7 @@ export class CanvasController {
     x: number,
     y: number,
     text: string,
-    options?: { fontSize?: number; fontFamily?: string }
+    options?: { fontSize?: number; fontFamily?: string; maxWidth?: number }
   ): void {
     const command: DrawCommand = { type: 'text', x, y, text }
     if (options?.fontSize !== undefined) {
@@ -426,11 +431,14 @@ export class CanvasController {
     if (options?.fontFamily !== undefined) {
       (command as { fontFamily?: string }).fontFamily = options.fontFamily
     }
+    if (options?.maxWidth !== undefined) {
+      (command as { maxWidth?: number }).maxWidth = options.maxWidth
+    }
     this.addDrawCommand(command)
   }
 
   /**
-   * Draw text outline (stroke only, no fill) with optional font overrides.
+   * Draw text outline (stroke) at the given position.
    * @param x - X coordinate (top-left)
    * @param y - Y coordinate (top-left)
    * @param text - Text to draw
@@ -440,7 +448,7 @@ export class CanvasController {
     x: number,
     y: number,
     text: string,
-    options?: { fontSize?: number; fontFamily?: string }
+    options?: { fontSize?: number; fontFamily?: string; maxWidth?: number }
   ): void {
     const command: DrawCommand = { type: 'strokeText', x, y, text }
     if (options?.fontSize !== undefined) {
@@ -448,6 +456,9 @@ export class CanvasController {
     }
     if (options?.fontFamily !== undefined) {
       (command as { fontFamily?: string }).fontFamily = options.fontFamily
+    }
+    if (options?.maxWidth !== undefined) {
+      (command as { maxWidth?: number }).maxWidth = options.maxWidth
     }
     this.addDrawCommand(command)
   }
@@ -850,6 +861,22 @@ export class CanvasController {
     this.addDrawCommand({ type: 'setTextBaseline', baseline })
   }
 
+  /**
+   * Set the text direction for all subsequent text drawing.
+   * @param direction - Text direction: 'ltr' (left-to-right), 'rtl' (right-to-left), or 'inherit'
+   */
+  setDirection(direction: CanvasDirection): void {
+    this.addDrawCommand({ type: 'setDirection', direction })
+  }
+
+  /**
+   * Set the CSS filter for all subsequent drawing operations.
+   * @param filter - CSS filter string (e.g., "blur(5px)", "contrast(150%)", "none")
+   */
+  setFilter(filter: string): void {
+    this.addDrawCommand({ type: 'setFilter', filter })
+  }
+
   // --- Timing API ---
 
   /**
@@ -1219,8 +1246,22 @@ export class CanvasController {
    * @param height - Height of the image data
    * @param dx - Destination X coordinate
    * @param dy - Destination Y coordinate
+   * @param dirtyX - Optional dirty rect X coordinate (sub-region to draw)
+   * @param dirtyY - Optional dirty rect Y coordinate (sub-region to draw)
+   * @param dirtyWidth - Optional dirty rect width (sub-region to draw)
+   * @param dirtyHeight - Optional dirty rect height (sub-region to draw)
    */
-  putImageData(data: number[], width: number, height: number, dx: number, dy: number): void {
+  putImageData(
+    data: number[],
+    width: number,
+    height: number,
+    dx: number,
+    dy: number,
+    dirtyX?: number,
+    dirtyY?: number,
+    dirtyWidth?: number,
+    dirtyHeight?: number
+  ): void {
     this.addDrawCommand({
       type: 'putImageData',
       data,
@@ -1228,6 +1269,10 @@ export class CanvasController {
       height,
       dx,
       dy,
+      dirtyX,
+      dirtyY,
+      dirtyWidth,
+      dirtyHeight,
     })
   }
 
@@ -1239,6 +1284,158 @@ export class CanvasController {
    */
   createImageData(width: number, height: number): number[] {
     return new Array(width * height * 4).fill(0)
+  }
+
+  /**
+   * Capture the canvas contents as a data URL.
+   * @param type - MIME type (e.g., 'image/png', 'image/jpeg', 'image/webp')
+   * @param quality - Quality for lossy formats (0-1), only used for jpeg/webp
+   * @returns Data URL string (base64 encoded) or empty string if not active
+   */
+  capture(type?: string, quality?: number): string {
+    if (!this.renderer) {
+      return ''
+    }
+    return this.renderer.capture(type, quality)
+  }
+
+  // --- Reusable Path2D API ---
+
+  /**
+   * Create a new Path2D object, optionally from an SVG path string.
+   * @param svgPath - Optional SVG path data string (e.g., "M10 10 L50 50 Z")
+   * @returns Object with `id` for referencing the path
+   */
+  createPath(svgPath?: string): { id: number } {
+    const path = svgPath ? new Path2D(svgPath) : new Path2D()
+    const id = this.nextPathId++
+    this.pathRegistry.set(id, path)
+    return { id }
+  }
+
+  /**
+   * Clone an existing Path2D object.
+   * @param pathId - ID of the path to clone
+   * @returns Object with `id` for the new path, or null if source not found
+   */
+  clonePath(pathId: number): { id: number } | null {
+    const source = this.pathRegistry.get(pathId)
+    if (!source) return null
+    const cloned = new Path2D(source)
+    const id = this.nextPathId++
+    this.pathRegistry.set(id, cloned)
+    return { id }
+  }
+
+  /**
+   * Dispose a Path2D object to free memory.
+   * @param pathId - ID of the path to dispose
+   */
+  disposePath(pathId: number): void {
+    this.pathRegistry.delete(pathId)
+  }
+
+  // --- Path2D building methods ---
+
+  /** Move to a point on a stored path */
+  pathMoveTo(pathId: number, x: number, y: number): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.moveTo(x, y)
+  }
+
+  /** Draw line to a point on a stored path */
+  pathLineTo(pathId: number, x: number, y: number): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.lineTo(x, y)
+  }
+
+  /** Close a stored path */
+  pathClosePath(pathId: number): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.closePath()
+  }
+
+  /** Add a rectangle to a stored path */
+  pathRect(pathId: number, x: number, y: number, width: number, height: number): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.rect(x, y, width, height)
+  }
+
+  /** Add a rounded rectangle to a stored path */
+  pathRoundRect(pathId: number, x: number, y: number, width: number, height: number, radii: number | number[]): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.roundRect(x, y, width, height, radii)
+  }
+
+  /** Add an arc to a stored path */
+  pathArc(pathId: number, x: number, y: number, radius: number, startAngle: number, endAngle: number, counterclockwise?: boolean): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.arc(x, y, radius, startAngle, endAngle, counterclockwise)
+  }
+
+  /** Add an arc to a stored path using control points */
+  pathArcTo(pathId: number, x1: number, y1: number, x2: number, y2: number, radius: number): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.arcTo(x1, y1, x2, y2, radius)
+  }
+
+  /** Add an ellipse to a stored path */
+  pathEllipse(pathId: number, x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, counterclockwise?: boolean): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise)
+  }
+
+  /** Add a quadratic curve to a stored path */
+  pathQuadraticCurveTo(pathId: number, cpx: number, cpy: number, x: number, y: number): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.quadraticCurveTo(cpx, cpy, x, y)
+  }
+
+  /** Add a bezier curve to a stored path */
+  pathBezierCurveTo(pathId: number, cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
+  }
+
+  /** Add another path to a stored path */
+  pathAddPath(pathId: number, sourcePathId: number): void {
+    const path = this.pathRegistry.get(pathId)
+    const source = this.pathRegistry.get(sourcePathId)
+    if (path && source) path.addPath(source)
+  }
+
+  // --- Path2D rendering methods ---
+
+  /** Fill a stored path - adds command to queue for proper rendering order */
+  fillPath(pathId: number, fillRule?: FillRule): void {
+    if (!this.pathRegistry.has(pathId)) return
+    this.addDrawCommand({ type: 'fillPath', pathId, fillRule })
+  }
+
+  /** Stroke a stored path - adds command to queue for proper rendering order */
+  strokePath(pathId: number): void {
+    if (!this.pathRegistry.has(pathId)) return
+    this.addDrawCommand({ type: 'strokePath', pathId })
+  }
+
+  /** Clip to a stored path - adds command to queue for proper rendering order */
+  clipPath(pathId: number, fillRule?: FillRule): void {
+    if (!this.pathRegistry.has(pathId)) return
+    this.addDrawCommand({ type: 'clipPath', pathId, fillRule })
+  }
+
+  /** Check if a point is in a stored path */
+  isPointInStoredPath(pathId: number, x: number, y: number, fillRule?: FillRule): boolean {
+    const path = this.pathRegistry.get(pathId)
+    if (!path) return false
+    return this.renderer?.isPointInPath(path, x, y, fillRule) ?? false
+  }
+
+  /** Check if a point is in a stored path's stroke */
+  isPointInStoredStroke(pathId: number, x: number, y: number): boolean {
+    const path = this.pathRegistry.get(pathId)
+    if (!path) return false
+    return this.renderer?.isPointInStroke(path, x, y) ?? false
   }
 
   // --- Internal ---
@@ -1270,10 +1467,87 @@ export class CanvasController {
 
     // Render accumulated draw commands
     if (this.renderer && this.frameCommands.length > 0) {
-      this.renderer.render(this.frameCommands)
+      this.renderFrameCommands()
     }
 
     // Update input capture (clear "just pressed" state)
     this.inputCapture?.update()
+  }
+
+  /**
+   * Render frame commands, handling Path2D commands specially.
+   * Path2D commands reference paths by ID and need to be looked up in the registry.
+   */
+  private renderFrameCommands(): void {
+    if (!this.renderer) return
+
+    // Separate Path2D commands from regular commands
+    const regularCommands: DrawCommand[] = []
+    const path2dCommands: { index: number; command: DrawCommand }[] = []
+
+    for (let i = 0; i < this.frameCommands.length; i++) {
+      const command = this.frameCommands[i]
+      if (command.type === 'fillPath' || command.type === 'strokePath' || command.type === 'clipPath') {
+        path2dCommands.push({ index: i, command })
+      } else {
+        regularCommands.push(command)
+      }
+    }
+
+    // If no Path2D commands, render all at once (fast path)
+    if (path2dCommands.length === 0) {
+      this.renderer.render(this.frameCommands)
+      return
+    }
+
+    // Process commands in order, handling Path2D commands specially
+    let regularBatch: DrawCommand[] = []
+
+    for (let i = 0; i < this.frameCommands.length; i++) {
+      const command = this.frameCommands[i]
+
+      if (command.type === 'fillPath') {
+        // Flush regular commands first
+        if (regularBatch.length > 0) {
+          this.renderer.render(regularBatch)
+          regularBatch = []
+        }
+        // Process Path2D fill
+        const path = this.pathRegistry.get(command.pathId)
+        if (path) {
+          this.renderer.fillPath(path, command.fillRule)
+        }
+      } else if (command.type === 'strokePath') {
+        // Flush regular commands first
+        if (regularBatch.length > 0) {
+          this.renderer.render(regularBatch)
+          regularBatch = []
+        }
+        // Process Path2D stroke
+        const path = this.pathRegistry.get(command.pathId)
+        if (path) {
+          this.renderer.strokePath(path)
+        }
+      } else if (command.type === 'clipPath') {
+        // Flush regular commands first
+        if (regularBatch.length > 0) {
+          this.renderer.render(regularBatch)
+          regularBatch = []
+        }
+        // Process Path2D clip
+        const path = this.pathRegistry.get(command.pathId)
+        if (path) {
+          this.renderer.clipPath(path, command.fillRule)
+        }
+      } else {
+        // Regular command - batch it
+        regularBatch.push(command)
+      }
+    }
+
+    // Flush any remaining regular commands
+    if (regularBatch.length > 0) {
+      this.renderer.render(regularBatch)
+    }
   }
 }
