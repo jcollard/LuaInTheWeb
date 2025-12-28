@@ -123,4 +123,157 @@ export const canvasLuaPathCode = `
       if not info then return nil end
       return ImageData.new(info)
     end
+
+    -- ==========================================================================
+    -- Path2D API - Reusable path objects
+    -- ==========================================================================
+
+    -- Path2D class for reusable path objects
+    local Path2D = {}
+    Path2D.__index = Path2D
+
+    function Path2D.new(jsInfo)
+      local self = setmetatable({}, Path2D)
+      self._jsId = jsInfo.id
+      return self
+    end
+
+    -- Path building methods (all chainable, return self)
+    function Path2D:move_to(x, y)
+      __canvas_pathMoveTo(self._jsId, x, y)
+      return self
+    end
+
+    function Path2D:line_to(x, y)
+      __canvas_pathLineTo(self._jsId, x, y)
+      return self
+    end
+
+    function Path2D:close_path()
+      __canvas_pathClosePath(self._jsId)
+      return self
+    end
+
+    function Path2D:rect(x, y, width, height)
+      __canvas_pathRect(self._jsId, x, y, width, height)
+      return self
+    end
+
+    function Path2D:round_rect(x, y, width, height, radii)
+      __canvas_pathRoundRect(self._jsId, x, y, width, height, radii)
+      return self
+    end
+
+    function Path2D:arc(x, y, radius, startAngle, endAngle, counterclockwise)
+      __canvas_pathArc(self._jsId, x, y, radius, startAngle, endAngle, counterclockwise or false)
+      return self
+    end
+
+    function Path2D:arc_to(x1, y1, x2, y2, radius)
+      __canvas_pathArcTo(self._jsId, x1, y1, x2, y2, radius)
+      return self
+    end
+
+    function Path2D:ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise)
+      __canvas_pathEllipse(self._jsId, x, y, radiusX, radiusY, rotation or 0, startAngle or 0, endAngle or (math.pi * 2), counterclockwise or false)
+      return self
+    end
+
+    function Path2D:quadratic_curve_to(cpx, cpy, x, y)
+      __canvas_pathQuadraticCurveTo(self._jsId, cpx, cpy, x, y)
+      return self
+    end
+
+    function Path2D:bezier_curve_to(cp1x, cp1y, cp2x, cp2y, x, y)
+      __canvas_pathBezierCurveTo(self._jsId, cp1x, cp1y, cp2x, cp2y, x, y)
+      return self
+    end
+
+    function Path2D:add_path(other_path)
+      __canvas_pathAddPath(self._jsId, other_path._jsId)
+      return self
+    end
+
+    -- Dispose method to free memory
+    function Path2D:dispose()
+      __canvas_disposePath(self._jsId)
+    end
+
+    -- Create a new Path2D object
+    -- Can be created empty, from SVG path string, or by cloning another path
+    function _canvas.create_path(arg)
+      if type(arg) == "string" then
+        -- SVG path string
+        local info = __canvas_createPath(arg)
+        if not info then return nil end
+        return Path2D.new(info)
+      elseif type(arg) == "table" and arg._jsId then
+        -- Clone from another Path2D
+        local info = __canvas_clonePath(arg._jsId)
+        if not info then return nil end
+        return Path2D.new(info)
+      else
+        -- Empty path (arg is nil or ignored)
+        local info = __canvas_createPath(nil)
+        if not info then return nil end
+        return Path2D.new(info)
+      end
+    end
+
+    -- Extend fill/stroke/clip to accept optional Path2D argument
+    local _original_fill = _canvas.fill
+    function _canvas.fill(path_or_fill_rule, fill_rule)
+      if type(path_or_fill_rule) == "table" and path_or_fill_rule._jsId then
+        -- Path2D object passed
+        __canvas_fillPath(path_or_fill_rule._jsId, fill_rule)
+      else
+        -- Original behavior (no path, just fill rule)
+        _original_fill()
+      end
+    end
+
+    local _original_stroke = _canvas.stroke
+    function _canvas.stroke(path)
+      if type(path) == "table" and path._jsId then
+        -- Path2D object passed
+        __canvas_strokePath(path._jsId)
+      else
+        -- Original behavior
+        _original_stroke()
+      end
+    end
+
+    local _original_clip = _canvas.clip
+    function _canvas.clip(path_or_fill_rule, fill_rule)
+      if type(path_or_fill_rule) == "table" and path_or_fill_rule._jsId then
+        -- Path2D object passed
+        __canvas_clipPath(path_or_fill_rule._jsId, fill_rule)
+      else
+        -- Original behavior (no path, just fill rule)
+        _original_clip(path_or_fill_rule)
+      end
+    end
+
+    -- Extend hit testing to accept optional Path2D argument
+    local _original_is_point_in_path = _canvas.is_point_in_path
+    function _canvas.is_point_in_path(path_or_x, x_or_y, y_or_fill_rule, fill_rule)
+      if type(path_or_x) == "table" and path_or_x._jsId then
+        -- Path2D object passed: is_point_in_path(path, x, y, fillRule?)
+        return __canvas_isPointInStoredPath(path_or_x._jsId, x_or_y, y_or_fill_rule, fill_rule or "nonzero")
+      else
+        -- Original behavior: is_point_in_path(x, y, fillRule?)
+        return _original_is_point_in_path(path_or_x, x_or_y, y_or_fill_rule)
+      end
+    end
+
+    local _original_is_point_in_stroke = _canvas.is_point_in_stroke
+    function _canvas.is_point_in_stroke(path_or_x, x_or_y, y)
+      if type(path_or_x) == "table" and path_or_x._jsId then
+        -- Path2D object passed: is_point_in_stroke(path, x, y)
+        return __canvas_isPointInStoredStroke(path_or_x._jsId, x_or_y, y)
+      else
+        -- Original behavior: is_point_in_stroke(x, y)
+        return _original_is_point_in_stroke(path_or_x, x_or_y)
+      end
+    end
 `

@@ -39,6 +39,7 @@
     "canvas/path/rounded-buttons.lua",
     "canvas/path/clipping-demo.lua",
     "canvas/path/rect-path.lua",
+    "canvas/path/path2d-demo.lua",
     "canvas/styling/line-styles.lua",
     "canvas/styling/dashed-lines.lua",
     "canvas/styling/linear-gradient.lua",

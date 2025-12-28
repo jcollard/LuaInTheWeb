@@ -113,4 +113,106 @@ export function setupPathBindings(
   engine.global.set('__canvas_isPointInStroke', (x: number, y: number) => {
     return getController()?.isPointInStroke(x, y) ?? false
   })
+
+  // --- Reusable Path2D API functions ---
+
+  // Create a new Path2D object, optionally from SVG path string
+  engine.global.set('__canvas_createPath', (svgPath?: string | null) => {
+    return getController()?.createPath(svgPath ?? undefined) ?? null
+  })
+
+  // Clone an existing Path2D
+  engine.global.set('__canvas_clonePath', (pathId: number) => {
+    return getController()?.clonePath(pathId) ?? null
+  })
+
+  // Dispose a Path2D object
+  engine.global.set('__canvas_disposePath', (pathId: number) => {
+    getController()?.disposePath(pathId)
+  })
+
+  // --- Path2D building methods ---
+  engine.global.set('__canvas_pathMoveTo', (pathId: number, x: number, y: number) => {
+    getController()?.pathMoveTo(pathId, x, y)
+  })
+
+  engine.global.set('__canvas_pathLineTo', (pathId: number, x: number, y: number) => {
+    getController()?.pathLineTo(pathId, x, y)
+  })
+
+  engine.global.set('__canvas_pathClosePath', (pathId: number) => {
+    getController()?.pathClosePath(pathId)
+  })
+
+  engine.global.set('__canvas_pathRect', (pathId: number, x: number, y: number, width: number, height: number) => {
+    getController()?.pathRect(pathId, x, y, width, height)
+  })
+
+  engine.global.set(
+    '__canvas_pathRoundRect',
+    (pathId: number, x: number, y: number, width: number, height: number, radii: number | number[]) => {
+      getController()?.pathRoundRect(pathId, x, y, width, height, radii)
+    }
+  )
+
+  engine.global.set(
+    '__canvas_pathArc',
+    (pathId: number, x: number, y: number, radius: number, startAngle: number, endAngle: number, counterclockwise?: boolean) => {
+      getController()?.pathArc(pathId, x, y, radius, startAngle, endAngle, counterclockwise)
+    }
+  )
+
+  engine.global.set(
+    '__canvas_pathArcTo',
+    (pathId: number, x1: number, y1: number, x2: number, y2: number, radius: number) => {
+      getController()?.pathArcTo(pathId, x1, y1, x2, y2, radius)
+    }
+  )
+
+  engine.global.set(
+    '__canvas_pathEllipse',
+    (pathId: number, x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, counterclockwise?: boolean) => {
+      getController()?.pathEllipse(pathId, x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise)
+    }
+  )
+
+  engine.global.set(
+    '__canvas_pathQuadraticCurveTo',
+    (pathId: number, cpx: number, cpy: number, x: number, y: number) => {
+      getController()?.pathQuadraticCurveTo(pathId, cpx, cpy, x, y)
+    }
+  )
+
+  engine.global.set(
+    '__canvas_pathBezierCurveTo',
+    (pathId: number, cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number) => {
+      getController()?.pathBezierCurveTo(pathId, cp1x, cp1y, cp2x, cp2y, x, y)
+    }
+  )
+
+  engine.global.set('__canvas_pathAddPath', (pathId: number, sourcePathId: number) => {
+    getController()?.pathAddPath(pathId, sourcePathId)
+  })
+
+  // --- Path2D rendering methods ---
+  engine.global.set('__canvas_fillPath', (pathId: number, fillRule?: string | null) => {
+    getController()?.fillPath(pathId, (fillRule as 'nonzero' | 'evenodd') ?? undefined)
+  })
+
+  engine.global.set('__canvas_strokePath', (pathId: number) => {
+    getController()?.strokePath(pathId)
+  })
+
+  engine.global.set('__canvas_clipPath', (pathId: number, fillRule?: string | null) => {
+    getController()?.clipPath(pathId, (fillRule as 'nonzero' | 'evenodd') ?? undefined)
+  })
+
+  // --- Path2D hit testing ---
+  engine.global.set('__canvas_isPointInStoredPath', (pathId: number, x: number, y: number, fillRule?: string | null) => {
+    return getController()?.isPointInStoredPath(pathId, x, y, (fillRule as 'nonzero' | 'evenodd') ?? undefined) ?? false
+  })
+
+  engine.global.set('__canvas_isPointInStoredStroke', (pathId: number, x: number, y: number) => {
+    return getController()?.isPointInStoredStroke(pathId, x, y) ?? false
+  })
 }

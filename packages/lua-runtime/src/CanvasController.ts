@@ -117,6 +117,10 @@ export class CanvasController {
   // Path2D for hit testing - tracks current path operations
   private currentPath: Path2D = new Path2D()
 
+  // Path2D registry for reusable path objects (exposed to Lua)
+  private pathRegistry: Map<number, Path2D> = new Map()
+  private nextPathId = 1
+
   // Offscreen canvas for text measurement
   private measureCanvas: HTMLCanvasElement | null = null
   private measureCtx: CanvasRenderingContext2D | null = null
@@ -455,29 +459,6 @@ export class CanvasController {
     }
     if (options?.maxWidth !== undefined) {
       (command as { maxWidth?: number }).maxWidth = options.maxWidth
-    }
-    this.addDrawCommand(command)
-  }
-
-  /**
-   * Draw text outline (stroke only, no fill) with optional font overrides.
-   * @param x - X coordinate (top-left)
-   * @param y - Y coordinate (top-left)
-   * @param text - Text to draw
-   * @param options - Optional font overrides for this text only
-   */
-  strokeText(
-    x: number,
-    y: number,
-    text: string,
-    options?: { fontSize?: number; fontFamily?: string }
-  ): void {
-    const command: DrawCommand = { type: 'strokeText', x, y, text }
-    if (options?.fontSize !== undefined) {
-      (command as { fontSize?: number }).fontSize = options.fontSize
-    }
-    if (options?.fontFamily !== undefined) {
-      (command as { fontFamily?: string }).fontFamily = options.fontFamily
     }
     this.addDrawCommand(command)
   }
@@ -1316,6 +1297,150 @@ export class CanvasController {
       return ''
     }
     return this.renderer.capture(type, quality)
+  }
+
+  // --- Reusable Path2D API ---
+
+  /**
+   * Create a new Path2D object, optionally from an SVG path string.
+   * @param svgPath - Optional SVG path data string (e.g., "M10 10 L50 50 Z")
+   * @returns Object with `id` for referencing the path
+   */
+  createPath(svgPath?: string): { id: number } {
+    const path = svgPath ? new Path2D(svgPath) : new Path2D()
+    const id = this.nextPathId++
+    this.pathRegistry.set(id, path)
+    return { id }
+  }
+
+  /**
+   * Clone an existing Path2D object.
+   * @param pathId - ID of the path to clone
+   * @returns Object with `id` for the new path, or null if source not found
+   */
+  clonePath(pathId: number): { id: number } | null {
+    const source = this.pathRegistry.get(pathId)
+    if (!source) return null
+    const cloned = new Path2D(source)
+    const id = this.nextPathId++
+    this.pathRegistry.set(id, cloned)
+    return { id }
+  }
+
+  /**
+   * Dispose a Path2D object to free memory.
+   * @param pathId - ID of the path to dispose
+   */
+  disposePath(pathId: number): void {
+    this.pathRegistry.delete(pathId)
+  }
+
+  // --- Path2D building methods ---
+
+  /** Move to a point on a stored path */
+  pathMoveTo(pathId: number, x: number, y: number): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.moveTo(x, y)
+  }
+
+  /** Draw line to a point on a stored path */
+  pathLineTo(pathId: number, x: number, y: number): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.lineTo(x, y)
+  }
+
+  /** Close a stored path */
+  pathClosePath(pathId: number): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.closePath()
+  }
+
+  /** Add a rectangle to a stored path */
+  pathRect(pathId: number, x: number, y: number, width: number, height: number): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.rect(x, y, width, height)
+  }
+
+  /** Add a rounded rectangle to a stored path */
+  pathRoundRect(pathId: number, x: number, y: number, width: number, height: number, radii: number | number[]): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.roundRect(x, y, width, height, radii)
+  }
+
+  /** Add an arc to a stored path */
+  pathArc(pathId: number, x: number, y: number, radius: number, startAngle: number, endAngle: number, counterclockwise?: boolean): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.arc(x, y, radius, startAngle, endAngle, counterclockwise)
+  }
+
+  /** Add an arc to a stored path using control points */
+  pathArcTo(pathId: number, x1: number, y1: number, x2: number, y2: number, radius: number): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.arcTo(x1, y1, x2, y2, radius)
+  }
+
+  /** Add an ellipse to a stored path */
+  pathEllipse(pathId: number, x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, counterclockwise?: boolean): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise)
+  }
+
+  /** Add a quadratic curve to a stored path */
+  pathQuadraticCurveTo(pathId: number, cpx: number, cpy: number, x: number, y: number): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.quadraticCurveTo(cpx, cpy, x, y)
+  }
+
+  /** Add a bezier curve to a stored path */
+  pathBezierCurveTo(pathId: number, cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number): void {
+    const path = this.pathRegistry.get(pathId)
+    if (path) path.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
+  }
+
+  /** Add another path to a stored path */
+  pathAddPath(pathId: number, sourcePathId: number): void {
+    const path = this.pathRegistry.get(pathId)
+    const source = this.pathRegistry.get(sourcePathId)
+    if (path && source) path.addPath(source)
+  }
+
+  // --- Path2D rendering methods ---
+
+  /** Fill a stored path */
+  fillPath(pathId: number, fillRule?: FillRule): void {
+    const path = this.pathRegistry.get(pathId)
+    if (!path) return
+    // For now, just add the fill command - we'll need to render the stored path
+    // This requires the renderer to have access to the path
+    this.renderer?.fillPath(path, fillRule)
+  }
+
+  /** Stroke a stored path */
+  strokePath(pathId: number): void {
+    const path = this.pathRegistry.get(pathId)
+    if (!path) return
+    this.renderer?.strokePath(path)
+  }
+
+  /** Clip to a stored path */
+  clipPath(pathId: number, fillRule?: FillRule): void {
+    const path = this.pathRegistry.get(pathId)
+    if (!path) return
+    this.renderer?.clipPath(path, fillRule)
+  }
+
+  /** Check if a point is in a stored path */
+  isPointInStoredPath(pathId: number, x: number, y: number, fillRule?: FillRule): boolean {
+    const path = this.pathRegistry.get(pathId)
+    if (!path) return false
+    return this.renderer?.isPointInPath(path, x, y, fillRule) ?? false
+  }
+
+  /** Check if a point is in a stored path's stroke */
+  isPointInStoredStroke(pathId: number, x: number, y: number): boolean {
+    const path = this.pathRegistry.get(pathId)
+    if (!path) return false
+    return this.renderer?.isPointInStroke(path, x, y) ?? false
   }
 
   // --- Internal ---

@@ -293,7 +293,7 @@ describe('CanvasRenderer', () => {
 
       renderer.render(commands);
 
-      expect(mockCtx.fillText).toHaveBeenCalledWith('Hello World', 50, 50);
+      expect(mockCtx.fillText).toHaveBeenCalledWith('Hello World', 50, 50, undefined);
     });
   });
 
@@ -645,7 +645,7 @@ describe('CanvasRenderer', () => {
 
       expect(mockCtx.font).toBe('24px Georgia');
       expect(mockCtx.textBaseline).toBe('top');
-      expect(mockCtx.fillText).toHaveBeenCalledWith('Hello', 10, 20);
+      expect(mockCtx.fillText).toHaveBeenCalledWith('Hello', 10, 20, undefined);
     });
 
     it('should apply fontSize override for single text call', () => {
@@ -658,7 +658,7 @@ describe('CanvasRenderer', () => {
 
       // After rendering, font should be back to current state (16px)
       // But during the text call, 48px was used
-      expect(mockCtx.fillText).toHaveBeenCalledWith('Big Text', 10, 20);
+      expect(mockCtx.fillText).toHaveBeenCalledWith('Big Text', 10, 20, undefined);
     });
 
     it('should apply fontFamily override for single text call', () => {
@@ -669,7 +669,7 @@ describe('CanvasRenderer', () => {
 
       renderer.render(commands);
 
-      expect(mockCtx.fillText).toHaveBeenCalledWith('Custom Font', 10, 20);
+      expect(mockCtx.fillText).toHaveBeenCalledWith('Custom Font', 10, 20, undefined);
     });
 
     it('should apply both fontSize and fontFamily overrides', () => {
@@ -679,7 +679,7 @@ describe('CanvasRenderer', () => {
 
       renderer.render(commands);
 
-      expect(mockCtx.fillText).toHaveBeenCalledWith('Styled', 0, 0);
+      expect(mockCtx.fillText).toHaveBeenCalledWith('Styled', 0, 0, undefined);
     });
 
     it('should set textBaseline to top for top-left positioning', () => {

@@ -112,10 +112,6 @@ export class CanvasRenderer {
         this.strokeText(command.x, command.y, command.text, command.fontSize, command.fontFamily, command.maxWidth);
         break;
 
-      case 'strokeText':
-        this.strokeText(command.x, command.y, command.text, command.fontSize, command.fontFamily);
-        break;
-
       case 'drawImage':
         this.drawImage(command.name, command.x, command.y, command.width, command.height, command.sx, command.sy, command.sw, command.sh);
         break;
@@ -435,27 +431,6 @@ export class CanvasRenderer {
     }
   }
 
-  private strokeText(
-    x: number,
-    y: number,
-    text: string,
-    fontSize?: number,
-    fontFamily?: string
-  ): void {
-    // Note: textBaseline is set via setTextBaseline command (default 'top' in constructor)
-    // Apply font overrides if provided
-    if (fontSize !== undefined || fontFamily !== undefined) {
-      const savedFont = this.ctx.font;
-      const tempSize = fontSize ?? this.currentFontSize;
-      const tempFamily = fontFamily ?? this.currentFontFamily;
-      this.ctx.font = `${tempSize}px ${tempFamily}`;
-      this.ctx.strokeText(text, x, y);
-      this.ctx.font = savedFont;
-    } else {
-      this.ctx.strokeText(text, x, y);
-    }
-  }
-
   private drawImage(
     name: string,
     x: number,
@@ -615,5 +590,33 @@ export class CanvasRenderer {
    */
   capture(type?: string, quality?: number): string {
     return this.canvas.toDataURL(type, quality);
+  }
+
+  // --- Path2D rendering methods ---
+
+  /**
+   * Fill a Path2D object with the current fill style.
+   * @param path - The Path2D object to fill
+   * @param fillRule - Fill rule: "nonzero" (default) or "evenodd"
+   */
+  fillPath(path: Path2D, fillRule?: 'nonzero' | 'evenodd'): void {
+    this.ctx.fill(path, fillRule ?? 'nonzero');
+  }
+
+  /**
+   * Stroke a Path2D object with the current stroke style.
+   * @param path - The Path2D object to stroke
+   */
+  strokePath(path: Path2D): void {
+    this.ctx.stroke(path);
+  }
+
+  /**
+   * Clip to a Path2D object.
+   * @param path - The Path2D object to clip to
+   * @param fillRule - Fill rule: "nonzero" (default) or "evenodd"
+   */
+  clipPath(path: Path2D, fillRule?: 'nonzero' | 'evenodd'): void {
+    this.ctx.clip(path, fillRule ?? 'nonzero');
   }
 }
