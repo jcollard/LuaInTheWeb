@@ -118,6 +118,73 @@ Get the total time since the game started (in seconds).
 **Returns:**
 - (number): Total elapsed time in seconds
 
+## Canvas Capture
+
+### canvas.capture(options?)
+
+Capture the current canvas state as a data URL (base64-encoded image). Useful for saving screenshots, creating thumbnails, or implementing undo/redo functionality.
+
+**Parameters:**
+- `options` (table, optional): Capture options
+
+**Options:**
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `format` | string | "png" | Image format: "png", "jpeg", "jpg", or "webp" |
+| `quality` | number | 0.92 | Quality for JPEG/WebP (0.0 to 1.0) |
+
+**Returns:**
+- (string): Data URL of the captured image (e.g., "data:image/png;base64,...")
+
+```lua
+-- Capture as PNG (default)
+local dataUrl = canvas.capture()
+
+-- Capture as JPEG with custom quality
+local jpegUrl = canvas.capture({format = "jpeg", quality = 0.85})
+
+-- Capture as WebP
+local webpUrl = canvas.capture({format = "webp", quality = 0.9})
+```
+
+### Use Cases
+
+#### Screenshot Button
+
+```lua
+local screenshots = {}
+
+if canvas.is_key_pressed(canvas.keys.S) then
+  -- Capture current frame
+  local screenshot = canvas.capture({format = "png"})
+  table.insert(screenshots, screenshot)
+  print("Screenshot saved! Total: " .. #screenshots)
+end
+```
+
+#### Thumbnail Generation
+
+```lua
+-- Draw something at full resolution
+canvas.set_size(800, 600)
+drawMyScene()
+
+-- Capture the full scene
+local fullImage = canvas.capture()
+
+-- Use it as a texture or save reference
+```
+
+### Data URL Format
+
+The returned data URL can be used:
+- As an image source in web contexts
+- Saved to local storage
+- Sent to a server for processing
+- Displayed in an `<img>` tag
+
+The format is: `data:image/<format>;base64,<encoded-data>`
+
 ---
 
 ## Related Examples
@@ -125,6 +192,7 @@ Get the total time since the game started (in seconds).
 - [Input Demo](../../examples/canvas/input/demo.lua) - Game loop with user_input(), update(), draw()
 - [Rotating Square](../../examples/canvas/transforms/rotating-square.lua) - Animation using get_delta()
 - [Analog Clock](../../examples/canvas/transforms/analog-clock.lua) - Using get_time() for real-time display
+- [Capture Demo](../../examples/canvas/capture/capture-demo.lua) - Canvas capture as data URL
 
 ---
 

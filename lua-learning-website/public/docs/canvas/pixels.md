@@ -103,19 +103,65 @@ if img then
 end
 ```
 
-### canvas.put_image_data(image_data, dx, dy)
+### canvas.put_image_data(image_data, dx, dy, options?)
 
-Write pixel data to the canvas at the specified position.
+Write pixel data to the canvas at the specified position. Optionally specify a "dirty rectangle" to only write a portion of the image data.
 
 **Parameters:**
 - `image_data` (ImageData): The pixel data to write
 - `dx` (number): Destination X coordinate
 - `dy` (number): Destination Y coordinate
+- `options` (table, optional): Dirty rectangle options
+
+**Options (Dirty Rectangle):**
+| Option | Type | Description |
+|--------|------|-------------|
+| `dirty_x` | number | X offset within the image data |
+| `dirty_y` | number | Y offset within the image data |
+| `dirty_width` | number | Width of region to copy |
+| `dirty_height` | number | Height of region to copy |
 
 ```lua
 -- Copy a region to another location
 local img = canvas.get_image_data(0, 0, 100, 100)
 canvas.put_image_data(img, 200, 200)
+
+-- Copy only a portion (dirty rectangle)
+-- This copies a 50x50 region starting at (25, 25) within the image
+canvas.put_image_data(img, 300, 300, {
+  dirty_x = 25,
+  dirty_y = 25,
+  dirty_width = 50,
+  dirty_height = 50
+})
+```
+
+### Dirty Rectangle Use Cases
+
+The dirty rectangle feature is useful for:
+
+1. **Partial updates**: Only update changed portions of large images
+2. **Sprite extraction**: Copy specific regions from sprite sheets
+3. **Performance optimization**: Reduce data transfer for small changes
+
+```lua
+-- Update only a small region of a large image
+local fullImage = canvas.get_image_data(0, 0, 400, 400)
+
+-- Modify some pixels in the center
+for y = 190, 210 do
+  for x = 190, 210 do
+    fullImage:set_pixel(x, y, 255, 0, 0, 255)
+  end
+end
+
+-- Only write the modified region (faster than writing entire image)
+canvas.put_image_data(fullImage, 0, 0, {
+  dirty_x = 190,
+  dirty_y = 190,
+  dirty_width = 20,
+  dirty_height = 20
+})
 ```
 
 ## Examples
@@ -231,6 +277,7 @@ canvas.put_image_data(grayscale, 0, 0)  -- O(1) operation
 ## Related Examples
 
 - [Pixel Manipulation](../../examples/canvas/pixels/pixel-manipulation.lua) - Image data and pixel effects
+- [Dirty Rectangle Demo](../../examples/canvas/pixels/dirty-rect-demo.lua) - Efficient partial updates
 
 ---
 
