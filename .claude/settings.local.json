@@ -89,7 +89,9 @@
       "Bash(npm run build:canvas-runtime:*)",
       "Bash(npm run:*)",
       "mcp__code-index-mcp__set_project_path",
-      "mcp__code-index-mcp__find_files"
+      "mcp__code-index-mcp__find_files",
+      "Skill(tdd)",
+      "mcp__code-index-mcp__search_code_advanced"
     ],
     "deny": [
       "Bash(npm run dev)",

@@ -125,4 +125,9 @@ export const canvasLuaStylingCode = `
     function _canvas.set_composite_operation(operation)
       __canvas_setCompositeOperation(operation)
     end
+
+    -- CSS Filter
+    function _canvas.set_filter(filter)
+      __canvas_setFilter(filter)
+    end
 `

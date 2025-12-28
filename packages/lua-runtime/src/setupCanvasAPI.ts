@@ -136,12 +136,41 @@ export function setupCanvasAPI(
     y: number,
     text: string,
     fontSize?: number | null,
-    fontFamily?: string | null
+    fontFamily?: string | null,
+    maxWidth?: number | null
   ) => {
-    const options = (fontSize !== undefined && fontSize !== null) || (fontFamily !== undefined && fontFamily !== null)
-      ? { fontSize: fontSize ?? undefined, fontFamily: fontFamily ?? undefined }
+    const hasOptions = (fontSize !== undefined && fontSize !== null) ||
+                       (fontFamily !== undefined && fontFamily !== null) ||
+                       (maxWidth !== undefined && maxWidth !== null)
+    const options = hasOptions
+      ? {
+          fontSize: fontSize ?? undefined,
+          fontFamily: fontFamily ?? undefined,
+          maxWidth: maxWidth ?? undefined
+        }
       : undefined
     getController()?.drawText(x, y, text, options)
+  })
+
+  engine.global.set('__canvas_strokeText', (
+    x: number,
+    y: number,
+    text: string,
+    fontSize?: number | null,
+    fontFamily?: string | null,
+    maxWidth?: number | null
+  ) => {
+    const hasOptions = (fontSize !== undefined && fontSize !== null) ||
+                       (fontFamily !== undefined && fontFamily !== null) ||
+                       (maxWidth !== undefined && maxWidth !== null)
+    const options = hasOptions
+      ? {
+          fontSize: fontSize ?? undefined,
+          fontFamily: fontFamily ?? undefined,
+          maxWidth: maxWidth ?? undefined
+        }
+      : undefined
+    getController()?.strokeText(x, y, text, options)
   })
 
   // --- Timing functions ---
@@ -485,6 +514,16 @@ export function setupCanvasAPI(
     getController()?.setTextBaseline(baseline as CanvasTextBaseline)
   })
 
+  // Text Direction (RTL/LTR support)
+  engine.global.set('__canvas_setDirection', (direction: string) => {
+    getController()?.setDirection(direction as 'ltr' | 'rtl' | 'inherit')
+  })
+
+  // CSS Filter
+  engine.global.set('__canvas_setFilter', (filter: string) => {
+    getController()?.setFilter(filter)
+  })
+
   // --- Pixel Manipulation API functions ---
   // These use the JS-side imageDataStore for O(1) put_image_data performance
 
@@ -508,10 +547,29 @@ export function setupCanvasAPI(
   )
 
   // put_image_data: Uses stored array by ID - O(1) no copy needed!
-  engine.global.set('__canvas_putImageData', (id: number, dx: number, dy: number) => {
+  // Supports optional dirty rect parameters for sub-region drawing
+  engine.global.set('__canvas_putImageData', (
+    id: number,
+    dx: number,
+    dy: number,
+    dirtyX?: number | null,
+    dirtyY?: number | null,
+    dirtyWidth?: number | null,
+    dirtyHeight?: number | null
+  ) => {
     const stored = imageDataStore.get(id)
     if (!stored) return
-    getController()?.putImageData(Array.from(stored.data), stored.width, stored.height, dx, dy)
+    getController()?.putImageData(
+      Array.from(stored.data),
+      stored.width,
+      stored.height,
+      dx,
+      dy,
+      dirtyX ?? undefined,
+      dirtyY ?? undefined,
+      dirtyWidth ?? undefined,
+      dirtyHeight ?? undefined
+    )
   })
 
   // set_pixel: Modifies stored array directly by ID
@@ -541,6 +599,11 @@ export function setupCanvasAPI(
   // dispose: Removes ImageData from store to free memory
   engine.global.set('__canvas_imageDataDispose', (id: number) => {
     imageDataStore.delete(id)
+  })
+
+  // capture: Get canvas contents as data URL
+  engine.global.set('__canvas_capture', (type?: string | null, quality?: number | null) => {
+    return getController()?.capture(type ?? undefined, quality ?? undefined) ?? null
   })
 
   // --- Set up Lua-side canvas table ---

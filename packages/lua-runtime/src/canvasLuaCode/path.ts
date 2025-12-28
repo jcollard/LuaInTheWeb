@@ -99,7 +99,17 @@ export const canvasLuaPathCode = `
       return ImageData.new(info)
     end
 
-    function _canvas.put_image_data(image_data, dx, dy)
-      __canvas_putImageData(image_data._jsId, dx, dy)
+    function _canvas.put_image_data(image_data, dx, dy, options)
+      local dirtyX = nil
+      local dirtyY = nil
+      local dirtyWidth = nil
+      local dirtyHeight = nil
+      if options then
+        dirtyX = options.dirty_x
+        dirtyY = options.dirty_y
+        dirtyWidth = options.dirty_width
+        dirtyHeight = options.dirty_height
+      end
+      __canvas_putImageData(image_data._jsId, dx, dy, dirtyX, dirtyY, dirtyWidth, dirtyHeight)
     end
 `

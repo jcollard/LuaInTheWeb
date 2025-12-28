@@ -12,6 +12,11 @@ export const canvasLuaTextCode = `
       __canvas_setTextBaseline(baseline)
     end
 
+    -- Text Direction (RTL/LTR support)
+    function _canvas.set_direction(direction)
+      __canvas_setDirection(direction)
+    end
+
     -- Draw text within a bounded rectangle with alignment and overflow options
     function _canvas.draw_label(x, y, width, height, text, options)
       options = options or {}
