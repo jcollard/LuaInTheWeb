@@ -59,7 +59,10 @@ export type DrawCommandType =
   | 'setImageSmoothing'
   | 'setDirection'
   | 'setFilter'
-  | 'putImageData';
+  | 'putImageData'
+  | 'fillPath'
+  | 'strokePath'
+  | 'clipPath';
 
 /**
  * Base interface for all draw commands.
@@ -900,6 +903,44 @@ export interface PutImageDataCommand extends DrawCommandBase {
   dirtyHeight?: number;
 }
 
+// ============================================================================
+// Path2D Commands
+// ============================================================================
+
+/**
+ * Fill a stored Path2D object.
+ * The pathId references a path stored in the CanvasController's path registry.
+ */
+export interface FillPathCommand extends DrawCommandBase {
+  type: 'fillPath';
+  /** ID of the path in the path registry */
+  pathId: number;
+  /** Fill rule: "nonzero" (default) or "evenodd" */
+  fillRule?: FillRule;
+}
+
+/**
+ * Stroke a stored Path2D object.
+ * The pathId references a path stored in the CanvasController's path registry.
+ */
+export interface StrokePathCommand extends DrawCommandBase {
+  type: 'strokePath';
+  /** ID of the path in the path registry */
+  pathId: number;
+}
+
+/**
+ * Clip to a stored Path2D object.
+ * The pathId references a path stored in the CanvasController's path registry.
+ */
+export interface ClipPathCommand extends DrawCommandBase {
+  type: 'clipPath';
+  /** ID of the path in the path registry */
+  pathId: number;
+  /** Fill rule: "nonzero" (default) or "evenodd" */
+  fillRule?: FillRule;
+}
+
 /**
  * Union type of all draw commands.
  */
@@ -961,7 +1002,10 @@ export type DrawCommand =
   | SetImageSmoothingCommand
   | SetDirectionCommand
   | SetFilterCommand
-  | PutImageDataCommand;
+  | PutImageDataCommand
+  | FillPathCommand
+  | StrokePathCommand
+  | ClipPathCommand;
 
 /**
  * Mouse button identifiers.

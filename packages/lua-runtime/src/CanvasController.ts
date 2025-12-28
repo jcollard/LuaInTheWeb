@@ -1406,27 +1406,22 @@ export class CanvasController {
 
   // --- Path2D rendering methods ---
 
-  /** Fill a stored path */
+  /** Fill a stored path - adds command to queue for proper rendering order */
   fillPath(pathId: number, fillRule?: FillRule): void {
-    const path = this.pathRegistry.get(pathId)
-    if (!path) return
-    // For now, just add the fill command - we'll need to render the stored path
-    // This requires the renderer to have access to the path
-    this.renderer?.fillPath(path, fillRule)
+    if (!this.pathRegistry.has(pathId)) return
+    this.addDrawCommand({ type: 'fillPath', pathId, fillRule })
   }
 
-  /** Stroke a stored path */
+  /** Stroke a stored path - adds command to queue for proper rendering order */
   strokePath(pathId: number): void {
-    const path = this.pathRegistry.get(pathId)
-    if (!path) return
-    this.renderer?.strokePath(path)
+    if (!this.pathRegistry.has(pathId)) return
+    this.addDrawCommand({ type: 'strokePath', pathId })
   }
 
-  /** Clip to a stored path */
+  /** Clip to a stored path - adds command to queue for proper rendering order */
   clipPath(pathId: number, fillRule?: FillRule): void {
-    const path = this.pathRegistry.get(pathId)
-    if (!path) return
-    this.renderer?.clipPath(path, fillRule)
+    if (!this.pathRegistry.has(pathId)) return
+    this.addDrawCommand({ type: 'clipPath', pathId, fillRule })
   }
 
   /** Check if a point is in a stored path */
@@ -1472,10 +1467,87 @@ export class CanvasController {
 
     // Render accumulated draw commands
     if (this.renderer && this.frameCommands.length > 0) {
-      this.renderer.render(this.frameCommands)
+      this.renderFrameCommands()
     }
 
     // Update input capture (clear "just pressed" state)
     this.inputCapture?.update()
+  }
+
+  /**
+   * Render frame commands, handling Path2D commands specially.
+   * Path2D commands reference paths by ID and need to be looked up in the registry.
+   */
+  private renderFrameCommands(): void {
+    if (!this.renderer) return
+
+    // Separate Path2D commands from regular commands
+    const regularCommands: DrawCommand[] = []
+    const path2dCommands: { index: number; command: DrawCommand }[] = []
+
+    for (let i = 0; i < this.frameCommands.length; i++) {
+      const command = this.frameCommands[i]
+      if (command.type === 'fillPath' || command.type === 'strokePath' || command.type === 'clipPath') {
+        path2dCommands.push({ index: i, command })
+      } else {
+        regularCommands.push(command)
+      }
+    }
+
+    // If no Path2D commands, render all at once (fast path)
+    if (path2dCommands.length === 0) {
+      this.renderer.render(this.frameCommands)
+      return
+    }
+
+    // Process commands in order, handling Path2D commands specially
+    let regularBatch: DrawCommand[] = []
+
+    for (let i = 0; i < this.frameCommands.length; i++) {
+      const command = this.frameCommands[i]
+
+      if (command.type === 'fillPath') {
+        // Flush regular commands first
+        if (regularBatch.length > 0) {
+          this.renderer.render(regularBatch)
+          regularBatch = []
+        }
+        // Process Path2D fill
+        const path = this.pathRegistry.get(command.pathId)
+        if (path) {
+          this.renderer.fillPath(path, command.fillRule)
+        }
+      } else if (command.type === 'strokePath') {
+        // Flush regular commands first
+        if (regularBatch.length > 0) {
+          this.renderer.render(regularBatch)
+          regularBatch = []
+        }
+        // Process Path2D stroke
+        const path = this.pathRegistry.get(command.pathId)
+        if (path) {
+          this.renderer.strokePath(path)
+        }
+      } else if (command.type === 'clipPath') {
+        // Flush regular commands first
+        if (regularBatch.length > 0) {
+          this.renderer.render(regularBatch)
+          regularBatch = []
+        }
+        // Process Path2D clip
+        const path = this.pathRegistry.get(command.pathId)
+        if (path) {
+          this.renderer.clipPath(path, command.fillRule)
+        }
+      } else {
+        // Regular command - batch it
+        regularBatch.push(command)
+      }
+    }
+
+    // Flush any remaining regular commands
+    if (regularBatch.length > 0) {
+      this.renderer.render(regularBatch)
+    }
   }
 }

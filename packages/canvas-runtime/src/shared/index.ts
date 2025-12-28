@@ -37,6 +37,10 @@ export type {
   CanvasDirection,
   // Hit testing types
   FillRule,
+  // Path2D command types
+  FillPathCommand,
+  StrokePathCommand,
+  ClipPathCommand,
 } from './types.js';
 
 export {
