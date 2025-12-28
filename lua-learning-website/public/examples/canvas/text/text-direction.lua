@@ -46,14 +46,14 @@ canvas.tick(function()
   canvas.line_to(refX, section1Y + 70)
   canvas.stroke()
 
-  -- LTR text examples
+  -- LTR text examples (using "start" alignment to show direction effect)
   canvas.set_direction("ltr")
   canvas.set_font_size(16)
   canvas.set_fill_style(TEXT_COLOR)
-  canvas.set_text_align("left")
+  canvas.set_text_align("start")  -- "start" means left edge in LTR
   canvas.set_text_baseline("middle")
   canvas.draw_text(refX, section1Y + 35, "Hello World")
-  canvas.draw_text(refX, section1Y + 55, "Left-to-Right")
+  canvas.draw_text(refX, section1Y + 55, "Text flows right →")
 
   -- Label
   canvas.set_fill_style("#888888")
@@ -77,14 +77,14 @@ canvas.tick(function()
   canvas.line_to(refX, section2Y + 70)
   canvas.stroke()
 
-  -- RTL text examples
+  -- RTL text examples (using "start" alignment to show direction effect)
   canvas.set_direction("rtl")
   canvas.set_font_size(16)
   canvas.set_fill_style(TEXT_COLOR)
-  canvas.set_text_align("left")
+  canvas.set_text_align("start")  -- "start" means right edge in RTL
   canvas.set_text_baseline("middle")
   canvas.draw_text(refX, section2Y + 35, "Hello World")
-  canvas.draw_text(refX, section2Y + 55, "Right-to-Left")
+  canvas.draw_text(refX, section2Y + 55, "← Text flows left")
 
   -- Label
   canvas.set_fill_style("#888888")
@@ -113,9 +113,9 @@ canvas.tick(function()
   canvas.set_direction("inherit")
   canvas.set_font_size(16)
   canvas.set_fill_style(TEXT_COLOR)
-  canvas.set_text_align("left")
+  canvas.set_text_align("start")
   canvas.set_text_baseline("middle")
-  canvas.draw_text(refX, section3Y + 40, "Inherits from context")
+  canvas.draw_text(refX, section3Y + 40, "Inherits from canvas/document")
 
   -- =========================================================================
   -- Section 4: Practical Use - Mixed Text
@@ -131,15 +131,15 @@ canvas.tick(function()
   -- Description
   canvas.set_font_size(12)
   canvas.set_fill_style("#888888")
-  canvas.draw_text(30, section4Y + 25, "RTL is essential for languages like Arabic and Hebrew")
-  canvas.draw_text(30, section4Y + 42, "Use set_direction('rtl') before drawing RTL text")
+  canvas.draw_text(30, section4Y + 25, "Direction affects 'start'/'end' alignment behavior")
+  canvas.draw_text(30, section4Y + 42, "LTR: start=left, end=right | RTL: start=right, end=left")
 
   -- Footer
   canvas.set_fill_style("#666666")
   canvas.set_font_size(10)
   canvas.set_text_align("center")
   canvas.set_direction("ltr")
-  canvas.draw_text(w / 2, h - 15, "Direction affects how text flows from its anchor point")
+  canvas.draw_text(w / 2, h - 15, "Use 'start'/'end' alignment to see direction differences")
 end)
 
 canvas.start()
