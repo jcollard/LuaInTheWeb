@@ -20,6 +20,10 @@ export interface SerializedAsset {
   width: number;
   /** The height in pixels (for images) */
   height: number;
+  /** The original filename (for directory-scanned assets) */
+  filename?: string;
+  /** The asset type ('image' or 'font') */
+  assetType?: 'image' | 'font';
 }
 
 /**
@@ -76,6 +80,14 @@ export interface AssetRequest {
 }
 
 /**
+ * Directory path request for the new asset path API.
+ */
+export interface AssetPathRequest {
+  /** Directory path to scan for assets */
+  path: string;
+}
+
+/**
  * Message from worker to main thread.
  */
 export type WorkerToMainMessage =
@@ -114,6 +126,8 @@ export interface StateChangedMessage {
  */
 export interface AssetsNeededMessage {
   type: 'assetsNeeded';
-  /** Array of assets that need to be loaded */
+  /** Array of assets that need to be loaded (legacy API) */
   assets: AssetRequest[];
+  /** Array of directory paths to scan for assets (new API) */
+  assetPaths?: AssetPathRequest[];
 }

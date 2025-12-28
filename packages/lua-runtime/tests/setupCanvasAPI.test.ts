@@ -59,7 +59,9 @@ describe('setupCanvasAPI', () => {
         mouseButtonsPressed: [],
       }),
       // Asset API methods
-      registerAsset: vi.fn(),
+      addAssetPath: vi.fn(),
+      loadImageAsset: vi.fn().mockReturnValue({ _type: 'image', _name: 'test', _file: 'test.png' }),
+      loadFontAsset: vi.fn().mockReturnValue({ _type: 'font', _name: 'test', _file: 'test.ttf' }),
       getAssetManifest: vi.fn().mockReturnValue(new Map()),
       loadAssets: vi.fn().mockResolvedValue(undefined),
       drawImage: vi.fn(),
@@ -340,139 +342,7 @@ describe('setupCanvasAPI', () => {
     })
   })
 
-  describe('asset API', () => {
-    it('should expose canvas.assets table via require', async () => {
-      const mockController = createMockController()
-      setupCanvasAPI(engine, () => mockController)
-
-      const result = await engine.doString(`
-        local canvas = require('canvas')
-        return type(canvas.assets)
-      `)
-      expect(result).toBe('table')
-    })
-
-    it('should expose canvas.assets.image function', async () => {
-      const mockController = createMockController()
-      setupCanvasAPI(engine, () => mockController)
-
-      const result = await engine.doString(`
-        local canvas = require('canvas')
-        return type(canvas.assets.image)
-      `)
-      expect(result).toBe('function')
-    })
-
-    it('should call registerAsset when canvas.assets.image() is called', async () => {
-      const mockController = createMockController()
-      setupCanvasAPI(engine, () => mockController)
-
-      await engine.doString(`
-        local canvas = require('canvas')
-        canvas.assets.image('player', 'sprites/player.png')
-      `)
-
-      expect(mockController.registerAsset).toHaveBeenCalledWith('player', 'sprites/player.png')
-    })
-
-    it('should expose canvas.draw_image function', async () => {
-      const mockController = createMockController()
-      setupCanvasAPI(engine, () => mockController)
-
-      const result = await engine.doString(`
-        local canvas = require('canvas')
-        return type(canvas.draw_image)
-      `)
-      expect(result).toBe('function')
-    })
-
-    it('should call drawImage when canvas.draw_image() is called', async () => {
-      const mockController = createMockController()
-      setupCanvasAPI(engine, () => mockController)
-
-      await engine.doString(`
-        local canvas = require('canvas')
-        canvas.draw_image('player', 100, 200)
-      `)
-
-      expect(mockController.drawImage).toHaveBeenCalledWith('player', 100, 200, undefined, undefined, undefined, undefined, undefined, undefined)
-    })
-
-    it('should call drawImage with scaling when width and height provided', async () => {
-      const mockController = createMockController()
-      setupCanvasAPI(engine, () => mockController)
-
-      await engine.doString(`
-        local canvas = require('canvas')
-        canvas.draw_image('player', 100, 200, 64, 64)
-      `)
-
-      expect(mockController.drawImage).toHaveBeenCalledWith('player', 100, 200, 64, 64, undefined, undefined, undefined, undefined)
-    })
-
-    it('should call drawImage with source cropping (9-arg form)', async () => {
-      const mockController = createMockController()
-      setupCanvasAPI(engine, () => mockController)
-
-      await engine.doString(`
-        local canvas = require('canvas')
-        canvas.draw_image('spritesheet', 100, 200, 64, 64, 0, 32, 32, 32)
-      `)
-
-      expect(mockController.drawImage).toHaveBeenCalledWith('spritesheet', 100, 200, 64, 64, 0, 32, 32, 32)
-    })
-
-    it('should expose canvas.assets.get_width function', async () => {
-      const mockController = createMockController()
-      setupCanvasAPI(engine, () => mockController)
-
-      const result = await engine.doString(`
-        local canvas = require('canvas')
-        return type(canvas.assets.get_width)
-      `)
-      expect(result).toBe('function')
-    })
-
-    it('should call getAssetWidth when canvas.assets.get_width() is called', async () => {
-      const mockController = createMockController()
-      ;(mockController.getAssetWidth as ReturnType<typeof vi.fn>).mockReturnValue(128)
-      setupCanvasAPI(engine, () => mockController)
-
-      const result = await engine.doString(`
-        local canvas = require('canvas')
-        return canvas.assets.get_width('player')
-      `)
-
-      expect(mockController.getAssetWidth).toHaveBeenCalledWith('player')
-      expect(result).toBe(128)
-    })
-
-    it('should expose canvas.assets.get_height function', async () => {
-      const mockController = createMockController()
-      setupCanvasAPI(engine, () => mockController)
-
-      const result = await engine.doString(`
-        local canvas = require('canvas')
-        return type(canvas.assets.get_height)
-      `)
-      expect(result).toBe('function')
-    })
-
-    it('should call getAssetHeight when canvas.assets.get_height() is called', async () => {
-      const mockController = createMockController()
-      ;(mockController.getAssetHeight as ReturnType<typeof vi.fn>).mockReturnValue(96)
-      setupCanvasAPI(engine, () => mockController)
-
-      const result = await engine.doString(`
-        local canvas = require('canvas')
-        return canvas.assets.get_height('player')
-      `)
-
-      expect(mockController.getAssetHeight).toHaveBeenCalledWith('player')
-      expect(result).toBe(96)
-    })
-  })
-
+  // Note: Asset API tests are in setupCanvasAPI.assets.test.ts
   // Note: Hex color tests are in setupCanvasAPI.hexColor.test.ts
 
   describe('transformation API', () => {

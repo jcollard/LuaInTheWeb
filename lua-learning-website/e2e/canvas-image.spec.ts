@@ -6,7 +6,7 @@ import { createTerminalHelper } from './helpers/terminal'
  * E2E tests for canvas image support.
  *
  * Tests the ability to:
- * - Register images via canvas.assets.image()
+ * - Register images via canvas.assets.load_image()
  * - Load images from HTTP URLs
  * - Draw images on the canvas
  * - Get image dimensions via canvas.assets.get_width/get_height
@@ -26,7 +26,7 @@ test.describe('Canvas Image Support', () => {
   })
 
   test.describe('Image Registration', () => {
-    test('canvas.assets.image() registers an image for loading', async ({ page }) => {
+    test('canvas.assets.load_image() registers an image for loading', async ({ page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -44,7 +44,7 @@ test.describe('Canvas Image Support', () => {
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
       // Register an image (using HTTP URL to test fixture)
-      await terminal.type('canvas.assets.image("test", "http://localhost:5173/test-fixtures/red-square.png")')
+      await terminal.type('canvas.assets.load_image("test", "http://localhost:5173/test-fixtures/red-square.png")')
       await terminal.press('Enter')
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
@@ -55,33 +55,6 @@ test.describe('Canvas Image Support', () => {
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
       await terminal.expectToContain('registration succeeded', { timeout: TIMEOUTS.ASYNC_OPERATION })
-    })
-
-    test('canvas.assets.image() rejects unsupported file extensions', async ({ page }) => {
-      const terminal = createTerminalHelper(page)
-      await terminal.focus()
-
-      // Start Lua REPL
-      await terminal.execute('lua')
-      await page.waitForTimeout(TIMEOUTS.ANIMATION)
-
-      // Wait for REPL to be ready (wait for welcome message and prompt)
-      const stopButton = page.getByRole('button', { name: /stop process/i })
-      await expect(stopButton).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-      await terminal.expectToContain('Lua 5.4 REPL', { timeout: TIMEOUTS.ASYNC_OPERATION })
-
-      // Require canvas module
-      await terminal.type('canvas = require("canvas")')
-      await terminal.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-      // Try to register a non-image file - should fail immediately
-      await terminal.type('canvas.assets.image("test", "test.txt")')
-      await terminal.press('Enter')
-      await page.waitForTimeout(TIMEOUTS.TRANSITION)
-
-      // Should show an error about unsupported format
-      await terminal.expectToContain('unsupported format', { timeout: TIMEOUTS.ASYNC_OPERATION })
     })
   })
 
@@ -108,7 +81,7 @@ test.describe('Canvas Image Support', () => {
       const origin = new URL(page.url()).origin
 
       // Register image from HTTP URL (using test server's origin)
-      await terminal.type(`canvas.assets.image("red", "${origin}/test-fixtures/red-square.png")`)
+      await terminal.type(`canvas.assets.load_image("red", "${origin}/test-fixtures/red-square.png")`)
       await terminal.press('Enter')
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
@@ -147,7 +120,7 @@ test.describe('Canvas Image Support', () => {
       const origin = new URL(page.url()).origin
 
       // Register image
-      await terminal.type(`canvas.assets.image("test", "${origin}/test-fixtures/red-square.png")`)
+      await terminal.type(`canvas.assets.load_image("test", "${origin}/test-fixtures/red-square.png")`)
       await terminal.press('Enter')
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 
@@ -188,7 +161,7 @@ test.describe('Canvas Image Support', () => {
       const origin = new URL(page.url()).origin
 
       // Register image
-      await terminal.type(`canvas.assets.image("test", "${origin}/test-fixtures/red-square.png")`)
+      await terminal.type(`canvas.assets.load_image("test", "${origin}/test-fixtures/red-square.png")`)
       await terminal.press('Enter')
       await page.waitForTimeout(TIMEOUTS.TRANSITION)
 

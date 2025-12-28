@@ -39,6 +39,10 @@ export type {
   CanvasDirection,
   // Hit testing types
   FillRule,
+  // Asset path API types
+  AssetFileType,
+  DiscoveredFile,
+  AssetHandle,
 } from './shared/index.js';
 
 export {
@@ -47,6 +51,9 @@ export {
   AssetLoader,
   VALID_IMAGE_EXTENSIONS,
   VALID_FONT_EXTENSIONS,
+  // Asset path API utilities
+  classifyFileType,
+  isAssetHandle,
 } from './shared/index.js';
 
 // Channel interfaces

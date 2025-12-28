@@ -1098,6 +1098,72 @@ export interface AssetDefinition {
 export type AssetManifest = Map<string, AssetDefinition>;
 
 // ============================================================================
+// Asset Path API Types
+// ============================================================================
+
+/**
+ * Type of asset file based on extension.
+ */
+export type AssetFileType = 'image' | 'font' | 'unknown';
+
+/**
+ * Represents a file discovered from scanning an asset path directory.
+ * Created during add_path() directory scan.
+ */
+export interface DiscoveredFile {
+  /** Filename without path (e.g., "blue_ship.png") */
+  filename: string;
+  /** Full resolved path to the file */
+  fullPath: string;
+  /** Type of asset determined from extension */
+  type: AssetFileType;
+  /** The base path this file was discovered from */
+  basePath: string;
+}
+
+/**
+ * Handle returned by load_image() or load_font().
+ * Can be used in place of string name in drawing functions.
+ * This interface matches the Lua table structure.
+ */
+export interface AssetHandle {
+  /** Type discriminator for the handle */
+  _type: 'image' | 'font';
+  /** The registered name for this asset */
+  _name: string;
+  /** The filename this handle maps to */
+  _file: string;
+}
+
+/**
+ * Check if a value is an AssetHandle.
+ */
+export function isAssetHandle(value: unknown): value is AssetHandle {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    '_type' in value &&
+    '_name' in value &&
+    '_file' in value &&
+    (value._type === 'image' || value._type === 'font')
+  );
+}
+
+/**
+ * Classify a file by its extension to determine asset type.
+ */
+export function classifyFileType(filename: string): AssetFileType {
+  const lowerName = filename.toLowerCase();
+  if (VALID_IMAGE_EXTENSIONS.some(ext => lowerName.endsWith(ext))) {
+    return 'image';
+  }
+  if (VALID_FONT_EXTENSIONS.some(ext => lowerName.endsWith(ext))) {
+    return 'font';
+  }
+  return 'unknown';
+}
+
+// ============================================================================
 // Pixel Manipulation Types
 // ============================================================================
 

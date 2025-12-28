@@ -18,8 +18,6 @@ import {
   ImageCache,
   FontCache,
   AssetLoader,
-  VALID_IMAGE_EXTENSIONS,
-  VALID_FONT_EXTENSIONS,
 } from '@lua-learning/canvas-runtime'
 import type {
   DrawCommand,
@@ -32,7 +30,10 @@ import type {
   CanvasTextBaseline,
   CanvasDirection,
   FillRule,
+  DiscoveredFile,
+  AssetHandle,
 } from '@lua-learning/canvas-runtime'
+import { isAssetHandle } from '@lua-learning/canvas-runtime'
 import type { IFileSystem } from '@lua-learning/shell-core'
 import { formatOnDrawError, createImageFromData, createFontFromData } from './canvasErrorFormatter'
 
@@ -95,8 +96,17 @@ export class CanvasController {
   // Track whether start() is currently in progress (prevents concurrent start calls)
   private startInProgress = false
 
-  // Asset manifest: registered asset definitions
+  // Asset manifest: registered asset definitions (legacy API)
   private assetManifest: AssetManifest = new Map()
+
+  // Asset paths: directories to scan for assets (new API)
+  private assetPaths: string[] = []
+
+  // Discovered files: files found in scanned paths, keyed by filename
+  private discoveredFiles: Map<string, DiscoveredFile> = new Map()
+
+  // Track whether files have been loaded (for load_image after start validation)
+  private filesLoaded = false
 
   // Image cache for loaded images
   private imageCache: ImageCache | null = null
@@ -986,58 +996,107 @@ export class CanvasController {
 
   // --- Asset API ---
 
+  // --- Asset Path API ---
+
   /**
-   * Register an image asset to be loaded when canvas.start() is called.
-   * @param name - Unique name to reference this asset
-   * @param path - Path to the image file (relative or absolute)
-   * @throws Error if called after canvas.start() or if file extension is invalid
+   * Add a directory path to scan for assets.
+   * All image and font files in the directory (and subdirectories) will be discovered
+   * and made available for loading via loadImageAsset() or loadFontAsset().
+   *
+   * Must be called BEFORE canvas.start().
+   *
+   * @param path - Directory path to scan (relative to script or absolute)
+   * @throws Error if called after canvas.start()
    */
-  registerAsset(name: string, path: string): void {
-    // Check if started
+  addAssetPath(path: string): void {
     if (this.started) {
-      throw new Error('Cannot define assets after canvas.start()')
+      throw new Error('Cannot add asset paths after canvas.start()')
     }
 
-    // Validate image extension
-    const lowerPath = path.toLowerCase()
-    const hasValidExtension = VALID_IMAGE_EXTENSIONS.some((ext) =>
-      lowerPath.endsWith(ext)
-    )
-    if (!hasValidExtension) {
-      throw new Error(
-        `Cannot load '${path}': unsupported format (expected PNG, JPG, GIF, or WebP)`
-      )
+    // Avoid duplicate paths
+    if (!this.assetPaths.includes(path)) {
+      this.assetPaths.push(path)
     }
-
-    // Register the asset definition
-    this.assetManifest.set(name, { name, path, type: 'image' })
   }
 
   /**
-   * Register a font asset to be loaded when canvas.start() is called.
-   * @param name - Unique name to reference this font (use with set_font_family)
-   * @param path - Path to the font file (.ttf, .otf, .woff, .woff2)
-   * @throws Error if called after canvas.start() or if file extension is invalid
+   * Create a named reference to an image file discovered via add_path().
+   * Can be called before or after canvas.start().
+   *
+   * @param name - Unique name to reference this image
+   * @param filename - Filename of the image (must exist in a scanned path)
+   * @returns AssetHandle that can be used in draw_image() or other functions
+   * @throws Error if file not found after start() or if name already exists
    */
-  registerFontAsset(name: string, path: string): void {
-    // Check if started
-    if (this.started) {
-      throw new Error('Cannot define assets after canvas.start()')
+  loadImageAsset(name: string, filename: string): AssetHandle {
+    // If we've already loaded files, validate that the file exists
+    if (this.filesLoaded) {
+      if (!this.discoveredFiles.has(filename)) {
+        const scannedPaths = this.assetPaths.join(', ') || '(none)'
+        throw new Error(
+          `Image file '${filename}' not found in asset paths. Scanned paths: ${scannedPaths}`
+        )
+      }
     }
 
-    // Validate font extension
-    const lowerPath = path.toLowerCase()
-    const hasValidExtension = VALID_FONT_EXTENSIONS.some((ext) =>
-      lowerPath.endsWith(ext)
-    )
-    if (!hasValidExtension) {
-      throw new Error(
-        `Cannot load '${path}': unsupported font format (expected TTF, OTF, WOFF, or WOFF2)`
-      )
+    // Check for duplicate name (but allow re-mapping same name)
+    if (this.assetManifest.has(name)) {
+      const existing = this.assetManifest.get(name)!
+      // If mapping to a different file, warn but allow it
+      if (existing.path !== filename) {
+        console.warn(`Asset name '${name}' is being remapped from '${existing.path}' to '${filename}'`)
+      }
     }
 
-    // Register the asset definition
-    this.assetManifest.set(name, { name, path, type: 'font' })
+    // Create the asset mapping
+    // For now, we use the filename as the path - loadAssets will resolve it from discoveredFiles
+    this.assetManifest.set(name, { name, path: filename, type: 'image' })
+
+    // Return a handle
+    return {
+      _type: 'image',
+      _name: name,
+      _file: filename,
+    }
+  }
+
+  /**
+   * Create a named reference to a font file discovered via add_path().
+   * Can be called before or after canvas.start().
+   *
+   * @param name - Unique name to reference this font (use with set_font_family)
+   * @param filename - Filename of the font (must exist in a scanned path)
+   * @returns AssetHandle that can be used to reference the font
+   * @throws Error if file not found after start() or if name already exists
+   */
+  loadFontAsset(name: string, filename: string): AssetHandle {
+    // If we've already loaded files, validate that the file exists
+    if (this.filesLoaded) {
+      if (!this.discoveredFiles.has(filename)) {
+        const scannedPaths = this.assetPaths.join(', ') || '(none)'
+        throw new Error(
+          `Font file '${filename}' not found in asset paths. Scanned paths: ${scannedPaths}`
+        )
+      }
+    }
+
+    // Check for duplicate name
+    if (this.assetManifest.has(name)) {
+      const existing = this.assetManifest.get(name)!
+      if (existing.path !== filename) {
+        console.warn(`Asset name '${name}' is being remapped from '${existing.path}' to '${filename}'`)
+      }
+    }
+
+    // Create the asset mapping
+    this.assetManifest.set(name, { name, path: filename, type: 'font' })
+
+    // Return a handle
+    return {
+      _type: 'font',
+      _name: name,
+      _file: filename,
+    }
   }
 
   /**
@@ -1058,6 +1117,10 @@ export class CanvasController {
 
   /**
    * Load all registered assets from the filesystem.
+   *
+   * Scans directories registered via addAssetPath() and loads assets
+   * that were mapped via loadImageAsset()/loadFontAsset().
+   *
    * Must be called before start() for assets to be available.
    *
    * @param fileSystem - The filesystem to load assets from
@@ -1065,36 +1128,79 @@ export class CanvasController {
    * @throws Error if any asset fails to load
    */
   async loadAssets(fileSystem: IFileSystem, scriptDirectory: string): Promise<void> {
-    // Skip if no assets registered
-    if (this.assetManifest.size === 0) {
-      return
-    }
-
     // Create loader and caches
     const loader = new AssetLoader(fileSystem, scriptDirectory)
     this.imageCache = new ImageCache()
     this.fontCache = new FontCache()
 
-    // Load each asset
+    // Step 1: Scan all registered asset paths and discover files
+    for (const path of this.assetPaths) {
+      try {
+        const files = loader.scanDirectory(path)
+        for (const file of files) {
+          // Store by filename - first path wins on collision
+          if (!this.discoveredFiles.has(file.filename)) {
+            this.discoveredFiles.set(file.filename, file)
+          } else {
+            console.warn(
+              `Asset file '${file.filename}' found in multiple paths. ` +
+              `Using ${this.discoveredFiles.get(file.filename)!.fullPath}, ` +
+              `ignoring ${file.fullPath}`
+            )
+          }
+        }
+      } catch (error) {
+        // Re-throw with more context
+        const message = error instanceof Error ? error.message : String(error)
+        throw new Error(`Failed to scan asset path '${path}': ${message}`)
+      }
+    }
+
+    // Mark files as loaded so subsequent load_image/load_font calls can validate
+    this.filesLoaded = true
+
+    // Skip if no assets to load
+    if (this.assetManifest.size === 0 && this.discoveredFiles.size === 0) {
+      return
+    }
+
+    // Step 2: Load each asset from the manifest
     for (const definition of this.assetManifest.values()) {
-      const loadedAsset = await loader.loadAsset(definition)
+      // Resolve the actual path:
+      // - If the path is in discoveredFiles (new API), use the full path
+      // - Otherwise, use the path directly (legacy API)
+      let resolvedPath = definition.path
+      const discovered = this.discoveredFiles.get(definition.path)
+      if (discovered) {
+        resolvedPath = discovered.fullPath
+      }
 
-      if (definition.type === 'image') {
-        // Convert ArrayBuffer to HTMLImageElement and store in cache
-        // Note: We get dimensions from the loaded image element rather than
-        // the AssetLoader because image-size doesn't work in the browser
-        const image = await createImageFromData(loadedAsset.data, loadedAsset.mimeType)
-        this.imageCache.set(definition.name, image)
+      // Create a modified definition with the resolved path
+      const resolvedDefinition = { ...definition, path: resolvedPath }
 
-        // Store dimensions from the loaded image (browser-native)
-        this.assetDimensions.set(definition.name, {
-          width: image.width,
-          height: image.height,
-        })
-      } else if (definition.type === 'font') {
-        // Load font using FontFace API and add to document
-        const font = await createFontFromData(definition.name, loadedAsset.data)
-        this.fontCache.set(definition.name, font)
+      try {
+        const loadedAsset = await loader.loadAsset(resolvedDefinition)
+
+        if (definition.type === 'image') {
+          // Convert ArrayBuffer to HTMLImageElement and store in cache
+          // Note: We get dimensions from the loaded image element rather than
+          // the AssetLoader because image-size doesn't work in the browser
+          const image = await createImageFromData(loadedAsset.data, loadedAsset.mimeType)
+          this.imageCache.set(definition.name, image)
+
+          // Store dimensions from the loaded image (browser-native)
+          this.assetDimensions.set(definition.name, {
+            width: image.width,
+            height: image.height,
+          })
+        } else if (definition.type === 'font') {
+          // Load font using FontFace API and add to document
+          const font = await createFontFromData(definition.name, loadedAsset.data)
+          this.fontCache.set(definition.name, font)
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        throw new Error(`Failed to load asset '${definition.name}': ${message}`)
       }
     }
   }
@@ -1105,7 +1211,7 @@ export class CanvasController {
    * - Simple: drawImage(name, x, y, width?, height?) - draws at destination with optional scaling
    * - Source cropping: drawImage(name, dx, dy, dw, dh, sx, sy, sw, sh) - crops source and draws to destination
    *
-   * @param name - Name of the asset to draw
+   * @param nameOrHandle - Name of the asset (string) or AssetHandle from load_image()
    * @param x - X position (destination)
    * @param y - Y position (destination)
    * @param width - Optional width (destination, for scaling)
@@ -1117,7 +1223,7 @@ export class CanvasController {
    * @throws Error if asset is unknown
    */
   drawImage(
-    name: string,
+    nameOrHandle: string | AssetHandle,
     x: number,
     y: number,
     width?: number,
@@ -1127,9 +1233,12 @@ export class CanvasController {
     sw?: number,
     sh?: number
   ): void {
+    // Extract name from handle if needed
+    const name = isAssetHandle(nameOrHandle) ? nameOrHandle._name : nameOrHandle
+
     // Verify asset is registered
     if (!this.assetDimensions.has(name)) {
-      throw new Error(`Unknown asset '${name}' - did you call canvas.assets.image()?`)
+      throw new Error(`Unknown asset '${name}' - did you call canvas.assets.load_image()?`)
     }
 
     const command: DrawCommand = { type: 'drawImage', name, x, y }
@@ -1149,28 +1258,30 @@ export class CanvasController {
 
   /**
    * Get the width of a loaded asset.
-   * @param name - Name of the asset
+   * @param nameOrHandle - Name of the asset (string) or AssetHandle
    * @returns Width in pixels
    * @throws Error if asset is unknown
    */
-  getAssetWidth(name: string): number {
+  getAssetWidth(nameOrHandle: string | AssetHandle): number {
+    const name = isAssetHandle(nameOrHandle) ? nameOrHandle._name : nameOrHandle
     const dims = this.assetDimensions.get(name)
     if (!dims) {
-      throw new Error(`Unknown asset '${name}' - did you call canvas.assets.image()?`)
+      throw new Error(`Unknown asset '${name}' - did you call canvas.assets.load_image()?`)
     }
     return dims.width
   }
 
   /**
    * Get the height of a loaded asset.
-   * @param name - Name of the asset
+   * @param nameOrHandle - Name of the asset (string) or AssetHandle
    * @returns Height in pixels
    * @throws Error if asset is unknown
    */
-  getAssetHeight(name: string): number {
+  getAssetHeight(nameOrHandle: string | AssetHandle): number {
+    const name = isAssetHandle(nameOrHandle) ? nameOrHandle._name : nameOrHandle
     const dims = this.assetDimensions.get(name)
     if (!dims) {
-      throw new Error(`Unknown asset '${name}' - did you call canvas.assets.image()?`)
+      throw new Error(`Unknown asset '${name}' - did you call canvas.assets.load_image()?`)
     }
     return dims.height
   }

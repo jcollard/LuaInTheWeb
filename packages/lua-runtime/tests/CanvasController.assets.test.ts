@@ -88,12 +88,19 @@ vi.mock('@lua-learning/canvas-runtime', () => {
         mimeType: 'image/png',
       })
       resolvePath = vi.fn((path: string) => (path.startsWith('/') ? path : `/test/${path}`))
+      scanDirectory = vi.fn().mockReturnValue([
+        { filename: 'player.png', fullPath: '/sprites/player.png', type: 'image' as const },
+        { filename: 'enemy.png', fullPath: '/sprites/enemy.png', type: 'image' as const },
+      ])
       constructor(_fs: IFileSystem, _scriptDir: string) {
         setMockAssetLoaderInstance(this)
       }
     },
     VALID_IMAGE_EXTENSIONS: ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'],
     VALID_FONT_EXTENSIONS: ['.ttf', '.otf', '.woff', '.woff2'],
+    isAssetHandle: (obj: unknown): obj is { _type: string; _name: string; _file: string } => {
+      return typeof obj === 'object' && obj !== null && '_type' in obj && '_name' in obj
+    },
   }
 })
 
@@ -143,42 +150,29 @@ describe('CanvasController Assets', () => {
     global.Image = originalImage
   })
 
-  describe('asset registration', () => {
-    it('should register an asset with valid image extension', () => {
-      controller.registerAsset('player', 'sprites/player.png')
+  describe('addAssetPath', () => {
+    it('should register an asset path that gets scanned during loadAssets', async () => {
+      const mockFileSystem = createMockFileSystem()
+      controller.addAssetPath('sprites')
+      controller.loadImageAsset('player', 'player.png')
 
-      const manifest = controller.getAssetManifest()
-      expect(manifest.has('player')).toBe(true)
-      expect(manifest.get('player')).toEqual({
-        name: 'player',
-        path: 'sprites/player.png',
-        type: 'image',
-      })
+      await controller.loadAssets(mockFileSystem, '/game')
+
+      // Verify the path was scanned
+      expect(mockAssetLoaderInstance!.scanDirectory).toHaveBeenCalledWith('sprites')
     })
 
-    it('should accept various valid image extensions', () => {
-      const extensions = ['png', 'jpg', 'jpeg', 'gif', 'webp']
-      extensions.forEach((ext) => {
-        controller.registerAsset(ext, `image.${ext}`)
-      })
+    it('should register multiple asset paths that all get scanned', async () => {
+      const mockFileSystem = createMockFileSystem()
+      controller.addAssetPath('sprites')
+      controller.addAssetPath('fonts')
+      controller.loadImageAsset('player', 'player.png')
 
-      const manifest = controller.getAssetManifest()
-      expect(manifest.size).toBe(5)
-      extensions.forEach((ext) => {
-        expect(manifest.has(ext)).toBe(true)
-      })
-    })
+      await controller.loadAssets(mockFileSystem, '/game')
 
-    it('should throw for unsupported file extensions', () => {
-      expect(() => controller.registerAsset('data', 'file.txt')).toThrow(
-        "Cannot load 'file.txt': unsupported format (expected PNG, JPG, GIF, or WebP)"
-      )
-    })
-
-    it('should throw for files without extension', () => {
-      expect(() => controller.registerAsset('noext', 'noextension')).toThrow(
-        "Cannot load 'noextension': unsupported format (expected PNG, JPG, GIF, or WebP)"
-      )
+      // Verify both paths were scanned
+      expect(mockAssetLoaderInstance!.scanDirectory).toHaveBeenCalledWith('sprites')
+      expect(mockAssetLoaderInstance!.scanDirectory).toHaveBeenCalledWith('fonts')
     })
 
     it('should throw if called after start', async () => {
@@ -187,40 +181,75 @@ describe('CanvasController Assets', () => {
       // Wait for start to initialize
       await new Promise((resolve) => setTimeout(resolve, 0))
 
-      expect(() => controller.registerAsset('player', 'sprites/player.png')).toThrow(
-        'Cannot define assets after canvas.start()'
+      expect(() => controller.addAssetPath('sprites')).toThrow(
+        'Cannot add asset paths after canvas.start()'
       )
 
       // Clean up
       controller.stop()
       await startPromise
     })
+  })
 
-    it('should allow registering multiple assets with same name (overwrite)', () => {
-      controller.registerAsset('player', 'old.png')
-      controller.registerAsset('player', 'new.png')
+  describe('loadImageAsset', () => {
+    it('should register an image asset with name and filename', () => {
+      controller.addAssetPath('sprites')
+      const handle = controller.loadImageAsset('player', 'player.png')
+
+      expect(handle).toEqual({
+        _type: 'image',
+        _name: 'player',
+        _file: 'player.png',
+      })
+
+      const manifest = controller.getAssetManifest()
+      expect(manifest.has('player')).toBe(true)
+      expect(manifest.get('player')).toEqual({
+        name: 'player',
+        path: 'player.png',
+        type: 'image',
+      })
+    })
+
+    it('should allow registering multiple image assets', () => {
+      controller.addAssetPath('sprites')
+      controller.loadImageAsset('player', 'player.png')
+      controller.loadImageAsset('enemy', 'enemy.png')
+
+      const manifest = controller.getAssetManifest()
+      expect(manifest.size).toBe(2)
+      expect(manifest.has('player')).toBe(true)
+      expect(manifest.has('enemy')).toBe(true)
+    })
+
+    it('should allow overwriting asset with same name', () => {
+      controller.addAssetPath('sprites')
+      controller.loadImageAsset('player', 'old.png')
+      controller.loadImageAsset('player', 'new.png')
 
       const manifest = controller.getAssetManifest()
       expect(manifest.size).toBe(1)
       expect(manifest.get('player')?.path).toBe('new.png')
     })
+  })
 
-    it('should return the asset manifest', () => {
-      controller.registerAsset('player', 'sprites/player.png')
-      controller.registerAsset('enemy', '/my-files/enemy.gif')
+  describe('loadFontAsset', () => {
+    it('should register a font asset with name and filename', () => {
+      controller.addAssetPath('fonts')
+      const handle = controller.loadFontAsset('GameFont', 'pixel.ttf')
+
+      expect(handle).toEqual({
+        _type: 'font',
+        _name: 'GameFont',
+        _file: 'pixel.ttf',
+      })
 
       const manifest = controller.getAssetManifest()
-
-      expect(manifest.size).toBe(2)
-      expect(manifest.get('player')).toEqual({
-        name: 'player',
-        path: 'sprites/player.png',
-        type: 'image',
-      })
-      expect(manifest.get('enemy')).toEqual({
-        name: 'enemy',
-        path: '/my-files/enemy.gif',
-        type: 'image',
+      expect(manifest.has('GameFont')).toBe(true)
+      expect(manifest.get('GameFont')).toEqual({
+        name: 'GameFont',
+        path: 'pixel.ttf',
+        type: 'font',
       })
     })
   })
@@ -236,27 +265,25 @@ describe('CanvasController Assets', () => {
       mockFileSystem = createMockFileSystem()
     })
 
-    it('should load assets using AssetLoader', async () => {
-      controller.registerAsset('player', 'sprites/player.png')
-
-      await controller.loadAssets(mockFileSystem, '/game')
-
-      // AssetLoader should have been created and loadAsset called
-      expect(mockAssetLoaderInstance).not.toBeNull()
-      expect(mockAssetLoaderInstance!.loadAsset).toHaveBeenCalledWith({
-        name: 'player',
-        path: 'sprites/player.png',
-        type: 'image',
-      })
-    })
-
     it('should not throw if no assets registered', async () => {
       // No assets registered
       await expect(controller.loadAssets(mockFileSystem, '/game')).resolves.not.toThrow()
     })
 
+    it('should scan registered paths and load discovered files', async () => {
+      controller.addAssetPath('sprites')
+      controller.loadImageAsset('player', 'player.png')
+
+      await controller.loadAssets(mockFileSystem, '/game')
+
+      // AssetLoader should have been created and scanDirectory called
+      expect(mockAssetLoaderInstance).not.toBeNull()
+      expect(mockAssetLoaderInstance!.scanDirectory).toHaveBeenCalledWith('sprites')
+    })
+
     it('should store loaded images in ImageCache', async () => {
-      controller.registerAsset('player', 'sprites/player.png')
+      controller.addAssetPath('sprites')
+      controller.loadImageAsset('player', 'player.png')
 
       await controller.loadAssets(mockFileSystem, '/game')
 
@@ -274,7 +301,8 @@ describe('CanvasController Assets', () => {
     })
 
     it('should add drawImage command to frame commands', async () => {
-      controller.registerAsset('player', 'sprites/player.png')
+      controller.addAssetPath('sprites')
+      controller.loadImageAsset('player', 'player.png')
       await controller.loadAssets(mockFileSystem, '/game')
 
       controller.drawImage('player', 100, 200)
@@ -285,7 +313,8 @@ describe('CanvasController Assets', () => {
     })
 
     it('should add drawImage command with explicit dimensions', async () => {
-      controller.registerAsset('player', 'sprites/player.png')
+      controller.addAssetPath('sprites')
+      controller.loadImageAsset('player', 'player.png')
       await controller.loadAssets(mockFileSystem, '/game')
 
       controller.drawImage('player', 100, 200, 128, 128)
@@ -305,12 +334,13 @@ describe('CanvasController Assets', () => {
     it('should throw for unknown asset', () => {
       // No assets loaded
       expect(() => controller.drawImage('unknown', 0, 0)).toThrow(
-        "Unknown asset 'unknown' - did you call canvas.assets.image()?"
+        "Unknown asset 'unknown' - did you call canvas.assets.load_image()?"
       )
     })
 
     it('should add drawImage command with source cropping (9-arg form)', async () => {
-      controller.registerAsset('spritesheet', 'sprites/spritesheet.png')
+      controller.addAssetPath('sprites')
+      controller.loadImageAsset('spritesheet', 'spritesheet.png')
       await controller.loadAssets(mockFileSystem, '/game')
 
       // Draw 32x32 region from source at (64, 0) to dest at (100, 100) scaled to 64x64
@@ -341,14 +371,16 @@ describe('CanvasController Assets', () => {
     })
 
     it('should return asset width after loading', async () => {
-      controller.registerAsset('player', 'sprites/player.png')
+      controller.addAssetPath('sprites')
+      controller.loadImageAsset('player', 'player.png')
       await controller.loadAssets(mockFileSystem, '/game')
 
       expect(controller.getAssetWidth('player')).toBe(64)
     })
 
     it('should return asset height after loading', async () => {
-      controller.registerAsset('player', 'sprites/player.png')
+      controller.addAssetPath('sprites')
+      controller.loadImageAsset('player', 'player.png')
       await controller.loadAssets(mockFileSystem, '/game')
 
       expect(controller.getAssetHeight('player')).toBe(64)
@@ -356,13 +388,13 @@ describe('CanvasController Assets', () => {
 
     it('should throw for unknown asset width', () => {
       expect(() => controller.getAssetWidth('unknown')).toThrow(
-        "Unknown asset 'unknown' - did you call canvas.assets.image()?"
+        "Unknown asset 'unknown' - did you call canvas.assets.load_image()?"
       )
     })
 
     it('should throw for unknown asset height', () => {
       expect(() => controller.getAssetHeight('unknown')).toThrow(
-        "Unknown asset 'unknown' - did you call canvas.assets.image()?"
+        "Unknown asset 'unknown' - did you call canvas.assets.load_image()?"
       )
     })
   })

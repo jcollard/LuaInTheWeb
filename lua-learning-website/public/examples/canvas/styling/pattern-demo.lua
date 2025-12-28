@@ -5,8 +5,9 @@ local canvas = require("canvas")
 
 canvas.set_size(400, 300)
 
--- Register meteor image as pattern tile
-canvas.assets.image("meteor", "../images/meteor.png")
+-- Register the asset directory and load the meteor image
+canvas.assets.add_path("../assets/images")
+canvas.assets.load_image("meteor", "meteor.png")
 
 canvas.tick(function()
   canvas.clear()

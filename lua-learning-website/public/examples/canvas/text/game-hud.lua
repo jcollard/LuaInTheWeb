@@ -6,12 +6,13 @@ local canvas = require("canvas")
 
 canvas.set_size(1920, 1080)
 
--- Load custom fonts
-canvas.assets.font("Fantasy", "../fonts/10px-Bitfantasy.ttf")
-canvas.assets.font("Quest", "../fonts/11px-Questgiver.ttf")
-canvas.assets.font("Wizard", "../fonts/13px-OldWizard.ttf")
-canvas.assets.font("Dungeon", "../fonts/15px-DungeonSlant.ttf")
-canvas.assets.font("Gothic", "../fonts/16px-Gothbit.ttf")
+-- Load custom fonts from the assets directory
+canvas.assets.add_path("../assets/fonts")
+canvas.assets.load_font("Fantasy", "10px-Bitfantasy.ttf")
+canvas.assets.load_font("Quest", "11px-Questgiver.ttf")
+canvas.assets.load_font("Wizard", "13px-OldWizard.ttf")
+canvas.assets.load_font("Dungeon", "15px-DungeonSlant.ttf")
+canvas.assets.load_font("Gothic", "16px-Gothbit.ttf")
 
 -- Colors
 local COLORS = {

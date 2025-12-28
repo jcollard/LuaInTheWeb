@@ -5,8 +5,9 @@
 
 local canvas = require("canvas")
 
--- Register the sprite sheet (relative path from this script's location)
-canvas.assets.image("tiles", "../images/kenney_tinytown_spritesheet.png")
+-- Register the asset directory and load the sprite sheet
+canvas.assets.add_path("../assets/images")
+canvas.assets.load_image("tiles", "kenney_tinytown_spritesheet.png")
 
 -- Tile size in the sprite sheet
 local TILE = 16

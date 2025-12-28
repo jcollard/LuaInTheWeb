@@ -3,20 +3,20 @@
 
 local canvas = require("canvas")
 
--- Font definitions with their optimal sizes (paths relative to script location)
+-- Font definitions with their optimal sizes
 local fonts = {
-    { name = "Bitfantasy", path = "../fonts/10px-Bitfantasy.ttf", size = 20 },
-    { name = "CelticTime", path = "../fonts/10px-CelticTime.ttf", size = 20 },
-    { name = "HelvetiPixel", path = "../fonts/10px-HelvetiPixel.ttf", size = 20 },
-    { name = "Questgiver", path = "../fonts/11px-Questgiver.ttf", size = 22 },
-    { name = "FancyPixels", path = "../fonts/12px-FancyPixels.ttf", size = 24 },
-    { name = "TimesNewPixel", path = "../fonts/12px-TimesNewPixel.ttf", size = 24 },
-    { name = "OldWizard", path = "../fonts/13px-OldWizard.ttf", size = 26 },
-    { name = "Sword", path = "../fonts/13px-sword.ttf", size = 26 },
-    { name = "WizardsManse", path = "../fonts/13px-WizardsManse.ttf", size = 26 },
-    { name = "DungeonSlant", path = "../fonts/15px-DungeonSlant.ttf", size = 30 },
-    { name = "Gothbit", path = "../fonts/16px-Gothbit.ttf", size = 32 },
-    { name = "Royalati", path = "../fonts/16px-Royalati.ttf", size = 32 },
+    { name = "Bitfantasy", file = "10px-Bitfantasy.ttf", size = 20 },
+    { name = "CelticTime", file = "10px-CelticTime.ttf", size = 20 },
+    { name = "HelvetiPixel", file = "10px-HelvetiPixel.ttf", size = 20 },
+    { name = "Questgiver", file = "11px-Questgiver.ttf", size = 22 },
+    { name = "FancyPixels", file = "12px-FancyPixels.ttf", size = 24 },
+    { name = "TimesNewPixel", file = "12px-TimesNewPixel.ttf", size = 24 },
+    { name = "OldWizard", file = "13px-OldWizard.ttf", size = 26 },
+    { name = "Sword", file = "13px-sword.ttf", size = 26 },
+    { name = "WizardsManse", file = "13px-WizardsManse.ttf", size = 26 },
+    { name = "DungeonSlant", file = "15px-DungeonSlant.ttf", size = 30 },
+    { name = "Gothbit", file = "16px-Gothbit.ttf", size = 32 },
+    { name = "Royalati", file = "16px-Royalati.ttf", size = 32 },
 }
 
 local current_font_index = 1
@@ -24,9 +24,10 @@ local scroll_offset = 0
 local demo_text = "The quick brown fox jumps!"
 local rainbow_phase = 0
 
--- Register all fonts before starting
+-- Register font directory and load all fonts before starting
+canvas.assets.add_path("../assets/fonts")
 for _, font in ipairs(fonts) do
-    canvas.assets.font(font.name, font.path)
+    canvas.assets.load_font(font.name, font.file)
 end
 
 -- Rainbow color cycling

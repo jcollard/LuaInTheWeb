@@ -5,11 +5,12 @@
 local canvas = require("canvas")
 
 -- Register image assets (loaded when canvas.start() is called)
--- Paths are relative to this script (canvas/space_shooter.lua)
-canvas.assets.image("ship", "images/blue_ship.png")
-canvas.assets.image("enemy", "images/enemy_ship.png")
-canvas.assets.image("meteor", "images/meteor.png")
-canvas.assets.image("laser", "images/laser.png")
+-- Register the images directory and load assets
+canvas.assets.add_path("images")
+canvas.assets.load_image("ship", "blue_ship.png")
+canvas.assets.load_image("enemy", "enemy_ship.png")
+canvas.assets.load_image("meteor", "meteor.png")
+canvas.assets.load_image("laser", "laser.png")
 
 -- Game state
 local player = { x = 400, y = 500 }
