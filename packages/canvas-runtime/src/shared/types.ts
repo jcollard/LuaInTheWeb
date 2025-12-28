@@ -57,6 +57,8 @@ export type DrawCommandType =
   | 'setTextAlign'
   | 'setTextBaseline'
   | 'setImageSmoothing'
+  | 'setDirection'
+  | 'setFilter'
   | 'putImageData';
 
 /**
@@ -195,10 +197,12 @@ export interface TextCommand extends DrawCommandBase {
   fontSize?: number;
   /** Optional font family override for this text only */
   fontFamily?: string;
+  /** Optional maximum width - text will be scaled to fit if needed */
+  maxWidth?: number;
 }
 
 /**
- * Draw text outline (stroke only, no fill).
+ * Stroke text (draw text outline without filling).
  */
 export interface StrokeTextCommand extends DrawCommandBase {
   type: 'strokeText';
@@ -209,7 +213,10 @@ export interface StrokeTextCommand extends DrawCommandBase {
   fontSize?: number;
   /** Optional font family override for this text only */
   fontFamily?: string;
+  /** Optional maximum width - text will be scaled to fit if needed */
+  maxWidth?: number;
 }
+
 
 /**
  * Draw an image from the asset cache.
@@ -846,6 +853,29 @@ export interface SetTextBaselineCommand extends DrawCommandBase {
 }
 
 /**
+ * Canvas text direction options for RTL/LTR support.
+ */
+export type CanvasDirection = 'ltr' | 'rtl' | 'inherit';
+
+/**
+ * Set the text direction for all subsequent text drawing.
+ */
+export interface SetDirectionCommand extends DrawCommandBase {
+  type: 'setDirection';
+  /** Text direction: 'ltr' (left-to-right), 'rtl' (right-to-left), or 'inherit' */
+  direction: CanvasDirection;
+}
+
+/**
+ * Set the CSS filter for all subsequent drawing operations.
+ */
+export interface SetFilterCommand extends DrawCommandBase {
+  type: 'setFilter';
+  /** CSS filter string (e.g., "blur(5px)", "contrast(150%)", "none") */
+  filter: string;
+}
+
+/**
  * Write pixel data to the canvas at the specified position.
  */
 export interface PutImageDataCommand extends DrawCommandBase {
@@ -860,6 +890,14 @@ export interface PutImageDataCommand extends DrawCommandBase {
   dx: number;
   /** Destination Y coordinate */
   dy: number;
+  /** Optional dirty rect X coordinate (sub-region to draw) */
+  dirtyX?: number;
+  /** Optional dirty rect Y coordinate (sub-region to draw) */
+  dirtyY?: number;
+  /** Optional dirty rect width (sub-region to draw) */
+  dirtyWidth?: number;
+  /** Optional dirty rect height (sub-region to draw) */
+  dirtyHeight?: number;
 }
 
 /**
@@ -921,6 +959,8 @@ export type DrawCommand =
   | SetTextAlignCommand
   | SetTextBaselineCommand
   | SetImageSmoothingCommand
+  | SetDirectionCommand
+  | SetFilterCommand
   | PutImageDataCommand;
 
 /**

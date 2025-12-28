@@ -30,6 +30,7 @@ import type {
   GlobalCompositeOperation,
   CanvasTextAlign,
   CanvasTextBaseline,
+  CanvasDirection,
   FillRule,
 } from '@lua-learning/canvas-runtime'
 import type { IFileSystem } from '@lua-learning/shell-core'
@@ -417,7 +418,7 @@ export class CanvasController {
     x: number,
     y: number,
     text: string,
-    options?: { fontSize?: number; fontFamily?: string }
+    options?: { fontSize?: number; fontFamily?: string; maxWidth?: number }
   ): void {
     const command: DrawCommand = { type: 'text', x, y, text }
     if (options?.fontSize !== undefined) {
@@ -425,6 +426,35 @@ export class CanvasController {
     }
     if (options?.fontFamily !== undefined) {
       (command as { fontFamily?: string }).fontFamily = options.fontFamily
+    }
+    if (options?.maxWidth !== undefined) {
+      (command as { maxWidth?: number }).maxWidth = options.maxWidth
+    }
+    this.addDrawCommand(command)
+  }
+
+  /**
+   * Draw text outline (stroke) at the given position.
+   * @param x - X coordinate (top-left)
+   * @param y - Y coordinate (top-left)
+   * @param text - Text to draw
+   * @param options - Optional font overrides for this text only
+   */
+  strokeText(
+    x: number,
+    y: number,
+    text: string,
+    options?: { fontSize?: number; fontFamily?: string; maxWidth?: number }
+  ): void {
+    const command: DrawCommand = { type: 'strokeText', x, y, text }
+    if (options?.fontSize !== undefined) {
+      (command as { fontSize?: number }).fontSize = options.fontSize
+    }
+    if (options?.fontFamily !== undefined) {
+      (command as { fontFamily?: string }).fontFamily = options.fontFamily
+    }
+    if (options?.maxWidth !== undefined) {
+      (command as { maxWidth?: number }).maxWidth = options.maxWidth
     }
     this.addDrawCommand(command)
   }
@@ -850,6 +880,22 @@ export class CanvasController {
     this.addDrawCommand({ type: 'setTextBaseline', baseline })
   }
 
+  /**
+   * Set the text direction for all subsequent text drawing.
+   * @param direction - Text direction: 'ltr' (left-to-right), 'rtl' (right-to-left), or 'inherit'
+   */
+  setDirection(direction: CanvasDirection): void {
+    this.addDrawCommand({ type: 'setDirection', direction })
+  }
+
+  /**
+   * Set the CSS filter for all subsequent drawing operations.
+   * @param filter - CSS filter string (e.g., "blur(5px)", "contrast(150%)", "none")
+   */
+  setFilter(filter: string): void {
+    this.addDrawCommand({ type: 'setFilter', filter })
+  }
+
   // --- Timing API ---
 
   /**
@@ -1219,8 +1265,22 @@ export class CanvasController {
    * @param height - Height of the image data
    * @param dx - Destination X coordinate
    * @param dy - Destination Y coordinate
+   * @param dirtyX - Optional dirty rect X coordinate (sub-region to draw)
+   * @param dirtyY - Optional dirty rect Y coordinate (sub-region to draw)
+   * @param dirtyWidth - Optional dirty rect width (sub-region to draw)
+   * @param dirtyHeight - Optional dirty rect height (sub-region to draw)
    */
-  putImageData(data: number[], width: number, height: number, dx: number, dy: number): void {
+  putImageData(
+    data: number[],
+    width: number,
+    height: number,
+    dx: number,
+    dy: number,
+    dirtyX?: number,
+    dirtyY?: number,
+    dirtyWidth?: number,
+    dirtyHeight?: number
+  ): void {
     this.addDrawCommand({
       type: 'putImageData',
       data,
@@ -1228,6 +1288,10 @@ export class CanvasController {
       height,
       dx,
       dy,
+      dirtyX,
+      dirtyY,
+      dirtyWidth,
+      dirtyHeight,
     })
   }
 
@@ -1239,6 +1303,19 @@ export class CanvasController {
    */
   createImageData(width: number, height: number): number[] {
     return new Array(width * height * 4).fill(0)
+  }
+
+  /**
+   * Capture the canvas contents as a data URL.
+   * @param type - MIME type (e.g., 'image/png', 'image/jpeg', 'image/webp')
+   * @param quality - Quality for lossy formats (0-1), only used for jpeg/webp
+   * @returns Data URL string (base64 encoded) or empty string if not active
+   */
+  capture(type?: string, quality?: number): string {
+    if (!this.renderer) {
+      return ''
+    }
+    return this.renderer.capture(type, quality)
   }
 
   // --- Internal ---

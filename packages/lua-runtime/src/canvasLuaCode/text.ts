@@ -16,11 +16,13 @@ export const canvasLuaTextCode = `
     function _canvas.stroke_text(x, y, text, options)
       local fontSize = nil
       local fontFamily = nil
+      local maxWidth = nil
       if options then
         fontSize = options.font_size
         fontFamily = options.font_family
+        maxWidth = options.max_width
       end
-      __canvas_strokeText(x, y, text, fontSize, fontFamily)
+      __canvas_strokeText(x, y, text, fontSize, fontFamily, maxWidth)
     end
 
     -- Get comprehensive text metrics
@@ -43,6 +45,11 @@ export const canvasLuaTextCode = `
         font_bounding_box_ascent = metrics.fontBoundingBoxAscent,
         font_bounding_box_descent = metrics.fontBoundingBoxDescent,
       }
+    end
+
+    -- Text Direction (RTL/LTR support)
+    function _canvas.set_direction(direction)
+      __canvas_setDirection(direction)
     end
 
     -- Draw text within a bounded rectangle with alignment and overflow options

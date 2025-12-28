@@ -124,10 +124,18 @@ export function setupCanvasAPI(
     y: number,
     text: string,
     fontSize?: number | null,
-    fontFamily?: string | null
+    fontFamily?: string | null,
+    maxWidth?: number | null
   ) => {
-    const options = hasTextOptions(fontSize, fontFamily)
-      ? { fontSize: fontSize ?? undefined, fontFamily: fontFamily ?? undefined }
+    const hasOptions = (fontSize !== undefined && fontSize !== null) ||
+                       (fontFamily !== undefined && fontFamily !== null) ||
+                       (maxWidth !== undefined && maxWidth !== null)
+    const options = hasOptions
+      ? {
+          fontSize: fontSize ?? undefined,
+          fontFamily: fontFamily ?? undefined,
+          maxWidth: maxWidth ?? undefined
+        }
       : undefined
     getController()?.drawText(x, y, text, options)
   })
@@ -137,10 +145,18 @@ export function setupCanvasAPI(
     y: number,
     text: string,
     fontSize?: number | null,
-    fontFamily?: string | null
+    fontFamily?: string | null,
+    maxWidth?: number | null
   ) => {
-    const options = hasTextOptions(fontSize, fontFamily)
-      ? { fontSize: fontSize ?? undefined, fontFamily: fontFamily ?? undefined }
+    const hasOptions = (fontSize !== undefined && fontSize !== null) ||
+                       (fontFamily !== undefined && fontFamily !== null) ||
+                       (maxWidth !== undefined && maxWidth !== null)
+    const options = hasOptions
+      ? {
+          fontSize: fontSize ?? undefined,
+          fontFamily: fontFamily ?? undefined,
+          maxWidth: maxWidth ?? undefined
+        }
       : undefined
     getController()?.strokeText(x, y, text, options)
   })
@@ -283,16 +299,12 @@ export function setupCanvasAPI(
   setupStyleBindings(engine, getController)
   setupPixelBindings(engine, getController)
 
+  // capture: Get canvas contents as data URL
+  engine.global.set('__canvas_capture', (type?: string | null, quality?: number | null) => {
+    return getController()?.capture(type ?? undefined, quality ?? undefined) ?? null
+  })
+
   // --- Set up Lua-side canvas table ---
   // Canvas is NOT a global - it must be accessed via require('canvas')
   engine.doStringSync(canvasLuaCode)
-}
-
-/** Helper to check if text options are provided */
-function hasTextOptions(
-  fontSize: number | null | undefined,
-  fontFamily: string | null | undefined
-): boolean {
-  return (fontSize !== undefined && fontSize !== null) ||
-    (fontFamily !== undefined && fontFamily !== null)
 }

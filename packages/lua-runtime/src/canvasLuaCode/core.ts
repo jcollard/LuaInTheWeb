@@ -173,11 +173,25 @@ export const canvasLuaCoreCode = `
     function _canvas.draw_text(x, y, text, options)
       local fontSize = nil
       local fontFamily = nil
+      local maxWidth = nil
       if options then
         fontSize = options.font_size
         fontFamily = options.font_family
+        maxWidth = options.max_width
       end
-      __canvas_text(x, y, text, fontSize, fontFamily)
+      __canvas_text(x, y, text, fontSize, fontFamily, maxWidth)
+    end
+
+    function _canvas.stroke_text(x, y, text, options)
+      local fontSize = nil
+      local fontFamily = nil
+      local maxWidth = nil
+      if options then
+        fontSize = options.font_size
+        fontFamily = options.font_family
+        maxWidth = options.max_width
+      end
+      __canvas_strokeText(x, y, text, fontSize, fontFamily, maxWidth)
     end
 
     -- Image drawing
@@ -247,5 +261,27 @@ export const canvasLuaCoreCode = `
 
     function _canvas.get_time()
       return __canvas_getTime()
+    end
+
+    -- Capture canvas as data URL
+    function _canvas.capture(options)
+      local format = nil
+      local quality = nil
+      if options then
+        if options.format then
+          -- Convert short format names to MIME types
+          if options.format == "png" then
+            format = "image/png"
+          elseif options.format == "jpeg" or options.format == "jpg" then
+            format = "image/jpeg"
+          elseif options.format == "webp" then
+            format = "image/webp"
+          else
+            format = options.format
+          end
+        end
+        quality = options.quality
+      end
+      return __canvas_capture(format, quality)
     end
 `

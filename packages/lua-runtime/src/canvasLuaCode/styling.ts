@@ -131,4 +131,9 @@ export const canvasLuaStylingCode = `
     function _canvas.set_image_smoothing(enabled)
       __canvas_setImageSmoothing(enabled)
     end
+
+    -- CSS Filter
+    function _canvas.set_filter(filter)
+      __canvas_setFilter(filter)
+    end
 `
