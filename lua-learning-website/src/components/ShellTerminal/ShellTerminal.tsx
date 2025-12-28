@@ -33,9 +33,21 @@ export const ShellTerminal = forwardRef<ShellTerminalHandle, ShellTerminalProps>
   const prevVisibleRef = useRef(visible)
   const fitAddonRef = useRef<FitAddon | null>(null)
 
+  // Handle file downloads (for export command)
+  const handleTriggerDownload = useCallback((filename: string, blob: Blob) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }, [])
+
   const { executeCommand, executeCommandWithContext, cwd, history, commandNames, getPathCompletionsForTab } = useShell(
     fileSystem,
-    { canvasCallbacks, onFileMove, onRequestOpenFile, onFileSystemChange }
+    { canvasCallbacks, onFileMove, onRequestOpenFile, onFileSystemChange, onTriggerDownload: handleTriggerDownload }
   )
 
   // Store latest values in refs so handlers can access current data

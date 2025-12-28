@@ -28,5 +28,14 @@ export { LUA_SHELL_CODE } from './lua/shell.generated'
 // Canvas library export (auto-generated from canvas.lua)
 export { LUA_CANVAS_CODE } from './lua/canvas.generated'
 
+// Canvas Lua code modules (for bundling in exports)
+export {
+  canvasLuaCoreCode,
+  canvasLuaPathCode,
+  canvasLuaStylingCode,
+  canvasLuaTextCode,
+  canvasLuaInputCode,
+} from './canvasLuaCode'
+
 // Canvas controller for shell-based canvas (non-worker)
 export { CanvasController, type CanvasCallbacks } from './CanvasController'

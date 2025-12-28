@@ -77,4 +77,12 @@ export interface ShellContext {
    * Optional - when undefined, no notification is sent.
    */
   onFileSystemChange?: () => Promise<void> | void
+
+  /**
+   * Trigger a file download to the user's browser.
+   * Called by export command to save the generated ZIP file.
+   * @param filename - Suggested filename for the download
+   * @param blob - The file data as a Blob
+   */
+  onTriggerDownload?: (filename: string, blob: Blob) => void
 }

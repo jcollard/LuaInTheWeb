@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "copy:lua-libs": "node scripts/copy-lua-libs.js",
-    "predev": "npm run build -w @lua-learning/shell-core && npm run build -w @lua-learning/lua-runtime && npm run build -w @lua-learning/canvas-runtime && npm run copy:lua-libs",
+    "predev": "npm run build -w @lua-learning/shell-core && npm run build -w @lua-learning/lua-runtime && npm run build -w @lua-learning/canvas-runtime && npm run build -w @lua-learning/export && npm run copy:lua-libs",
     "dev": "vite",
-    "prebuild": "npm run build -w @lua-learning/shell-core && npm run build -w @lua-learning/lua-runtime && npm run build -w @lua-learning/canvas-runtime && npm run copy:lua-libs",
+    "prebuild": "npm run build -w @lua-learning/shell-core && npm run build -w @lua-learning/lua-runtime && npm run build -w @lua-learning/canvas-runtime && npm run build -w @lua-learning/export && npm run copy:lua-libs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -24,6 +24,7 @@
     "screenshots": "node scripts/capture-screenshots.js"
   },
   "dependencies": {
+    "@lua-learning/export": "*",
     "@lua-learning/lua-runtime": "*",
     "@lua-learning/shell-core": "*",
     "@monaco-editor/react": "^4.7.0",
