@@ -89,8 +89,8 @@ vi.mock('@lua-learning/canvas-runtime', () => {
       })
       resolvePath = vi.fn((path: string) => (path.startsWith('/') ? path : `/test/${path}`))
       scanDirectory = vi.fn().mockReturnValue([
-        { filename: 'player.png', fullPath: '/sprites/player.png', type: 'image' as const },
-        { filename: 'enemy.png', fullPath: '/sprites/enemy.png', type: 'image' as const },
+        { filename: 'player.png', fullPath: '/sprites/player.png', type: 'image' as const, basePath: 'sprites', relativePath: 'player.png' },
+        { filename: 'enemy.png', fullPath: '/sprites/enemy.png', type: 'image' as const, basePath: 'sprites', relativePath: 'enemy.png' },
       ])
       constructor(_fs: IFileSystem, _scriptDir: string) {
         setMockAssetLoaderInstance(this)

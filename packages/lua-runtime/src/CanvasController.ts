@@ -1138,13 +1138,15 @@ export class CanvasController {
       try {
         const files = loader.scanDirectory(path)
         for (const file of files) {
-          // Store by filename - first path wins on collision
-          if (!this.discoveredFiles.has(file.filename)) {
-            this.discoveredFiles.set(file.filename, file)
+          // Store by relativePath - supports both bare filenames and subdirectory paths
+          // e.g., "blue_ship.png" or "images/blue_ship.png"
+          // First path wins on collision
+          if (!this.discoveredFiles.has(file.relativePath)) {
+            this.discoveredFiles.set(file.relativePath, file)
           } else {
             console.warn(
-              `Asset file '${file.filename}' found in multiple paths. ` +
-              `Using ${this.discoveredFiles.get(file.filename)!.fullPath}, ` +
+              `Asset file '${file.relativePath}' found in multiple paths. ` +
+              `Using ${this.discoveredFiles.get(file.relativePath)!.fullPath}, ` +
               `ignoring ${file.fullPath}`
             )
           }

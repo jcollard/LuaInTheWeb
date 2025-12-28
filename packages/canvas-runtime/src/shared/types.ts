@@ -1119,6 +1119,12 @@ export interface DiscoveredFile {
   type: AssetFileType;
   /** The base path this file was discovered from */
   basePath: string;
+  /**
+   * Relative path from the base path to the file (e.g., "images/blue_ship.png").
+   * Allows loading files from subdirectories within a registered asset path.
+   * For files directly in the base path, this equals the filename.
+   */
+  relativePath: string;
 }
 
 /**

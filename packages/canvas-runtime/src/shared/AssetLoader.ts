@@ -117,15 +117,21 @@ export class AssetLoader {
       throw new Error(`Asset path is not a directory: ${path}`);
     }
 
-    return this.scanDirectoryRecursive(resolvedPath, path, recursive);
+    return this.scanDirectoryRecursive(resolvedPath, path, '', recursive);
   }
 
   /**
    * Internal recursive directory scanner.
+   *
+   * @param absolutePath - The absolute path of the directory to scan
+   * @param basePath - The original base path passed to scanDirectory
+   * @param relativePrefix - The relative path from basePath to the current directory
+   * @param recursive - Whether to scan subdirectories
    */
   private scanDirectoryRecursive(
     absolutePath: string,
     basePath: string,
+    relativePrefix: string,
     recursive: boolean
   ): DiscoveredFile[] {
     const discovered: DiscoveredFile[] = [];
@@ -140,16 +146,26 @@ export class AssetLoader {
 
         // Only include image and font files
         if (fileType === 'image' || fileType === 'font') {
+          // Compute relative path from base: prefix/filename or just filename
+          const relativePath = relativePrefix
+            ? `${relativePrefix}/${entry.name}`
+            : entry.name;
+
           discovered.push({
             filename: entry.name,
             fullPath: entry.path,
             type: fileType,
             basePath: basePath,
+            relativePath: relativePath,
           });
         }
       } else if (entry.type === 'directory' && recursive) {
+        // Compute the new relative prefix for this subdirectory
+        const newPrefix = relativePrefix
+          ? `${relativePrefix}/${entry.name}`
+          : entry.name;
         // Recursively scan subdirectories
-        const subFiles = this.scanDirectoryRecursive(entry.path, basePath, true);
+        const subFiles = this.scanDirectoryRecursive(entry.path, basePath, newPrefix, true);
         discovered.push(...subFiles);
       }
     }
