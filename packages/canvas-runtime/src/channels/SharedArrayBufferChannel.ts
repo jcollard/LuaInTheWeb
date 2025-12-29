@@ -1,5 +1,6 @@
 import type { IWorkerChannel, ChannelConfig } from './IWorkerChannel.js';
 import type {
+  AudioState,
   DrawCommand,
   GetImageDataRequest,
   GetImageDataResponse,
@@ -29,7 +30,13 @@ import type {
  * 1080-1083| 4B     | Canvas width
  * 1084-1087| 4B     | Canvas height
  * 1088-1091| 4B     | Mouse buttons pressed (bitmask)
- * 1092-2047| 956B   | Reserved for future use
+ * 1092-1095| 4B     | Audio muted (boolean as int)
+ * 1096-1103| 8B     | Audio master volume (Float64)
+ * 1104-1107| 4B     | Audio music playing (boolean as int)
+ * 1112-1119| 8B     | Audio music time (Float64)
+ * 1120-1127| 8B     | Audio music duration (Float64)
+ * 1128-1191| 64B    | Audio current music name
+ * 1192-2047| 856B   | Reserved for future use
  * 2048-65535| 63KB  | Draw commands ring buffer
  */
 
@@ -50,6 +57,13 @@ const OFFSET_KEYS_PRESSED_DATA = 568;
 const OFFSET_CANVAS_WIDTH = 1080;
 const OFFSET_CANVAS_HEIGHT = 1084;
 const OFFSET_MOUSE_BUTTONS_PRESSED = 1088;
+const OFFSET_AUDIO_MUTED = 1092;
+const OFFSET_AUDIO_MASTER_VOLUME = 1096;
+const OFFSET_AUDIO_MUSIC_PLAYING = 1104;
+const OFFSET_AUDIO_MUSIC_TIME = 1112;
+const OFFSET_AUDIO_MUSIC_DURATION = 1120;
+const OFFSET_AUDIO_MUSIC_NAME = 1128;
+const AUDIO_MUSIC_NAME_SIZE = 64;
 const OFFSET_DRAW_BUFFER = 2048;
 
 const MAX_KEYS = 32;
@@ -197,6 +211,50 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
 
     this.writeKeyArray(OFFSET_KEYS_DOWN_COUNT, OFFSET_KEYS_DOWN_DATA, state.keysDown);
     this.writeKeyArray(OFFSET_KEYS_PRESSED_COUNT, OFFSET_KEYS_PRESSED_DATA, state.keysPressed);
+  }
+
+  // Audio state
+
+  getAudioState(): AudioState {
+    const muted = Atomics.load(this.int32View, OFFSET_AUDIO_MUTED / 4) === 1;
+    const masterVolume = this.float64View[OFFSET_AUDIO_MASTER_VOLUME / 8];
+    const musicPlaying = Atomics.load(this.int32View, OFFSET_AUDIO_MUSIC_PLAYING / 4) === 1;
+    const musicTime = this.float64View[OFFSET_AUDIO_MUSIC_TIME / 8];
+    const musicDuration = this.float64View[OFFSET_AUDIO_MUSIC_DURATION / 8];
+
+    // Read music name
+    let nameEnd = OFFSET_AUDIO_MUSIC_NAME;
+    while (nameEnd < OFFSET_AUDIO_MUSIC_NAME + AUDIO_MUSIC_NAME_SIZE && this.uint8View[nameEnd] !== 0) {
+      nameEnd++;
+    }
+    const currentMusicName = nameEnd > OFFSET_AUDIO_MUSIC_NAME
+      ? this.textDecoder.decode(this.uint8View.slice(OFFSET_AUDIO_MUSIC_NAME, nameEnd))
+      : '';
+
+    return {
+      muted,
+      masterVolume: masterVolume || 1.0,
+      musicPlaying,
+      musicTime: musicTime || 0,
+      musicDuration: musicDuration || 0,
+      currentMusicName,
+    };
+  }
+
+  setAudioState(state: AudioState): void {
+    Atomics.store(this.int32View, OFFSET_AUDIO_MUTED / 4, state.muted ? 1 : 0);
+    this.float64View[OFFSET_AUDIO_MASTER_VOLUME / 8] = state.masterVolume;
+    Atomics.store(this.int32View, OFFSET_AUDIO_MUSIC_PLAYING / 4, state.musicPlaying ? 1 : 0);
+    this.float64View[OFFSET_AUDIO_MUSIC_TIME / 8] = state.musicTime;
+    this.float64View[OFFSET_AUDIO_MUSIC_DURATION / 8] = state.musicDuration;
+
+    // Write music name
+    this.uint8View.fill(0, OFFSET_AUDIO_MUSIC_NAME, OFFSET_AUDIO_MUSIC_NAME + AUDIO_MUSIC_NAME_SIZE);
+    if (state.currentMusicName) {
+      const encoded = this.textEncoder.encode(state.currentMusicName);
+      const copyLength = Math.min(encoded.length, AUDIO_MUSIC_NAME_SIZE - 1);
+      this.uint8View.set(encoded.subarray(0, copyLength), OFFSET_AUDIO_MUSIC_NAME);
+    }
   }
 
   private readKeyArray(countOffset: number, dataOffset: number): string[] {

@@ -12,6 +12,7 @@ import {
   canvasLuaStylingCode,
   canvasLuaTextCode,
   canvasLuaInputCode,
+  canvasLuaAudioCode,
 } from './canvasLuaCode'
 
 /**
@@ -23,4 +24,5 @@ export const canvasLuaCode =
   canvasLuaPathCode +
   canvasLuaStylingCode +
   canvasLuaTextCode +
-  canvasLuaInputCode
+  canvasLuaInputCode +
+  canvasLuaAudioCode

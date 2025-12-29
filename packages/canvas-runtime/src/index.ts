@@ -43,6 +43,7 @@ export type {
   AssetFileType,
   DiscoveredFile,
   AssetHandle,
+  AudioAssetHandle,
 } from './shared/index.js';
 
 export {
@@ -51,9 +52,11 @@ export {
   AssetLoader,
   VALID_IMAGE_EXTENSIONS,
   VALID_FONT_EXTENSIONS,
+  VALID_AUDIO_EXTENSIONS,
   // Asset path API utilities
   classifyFileType,
   isAssetHandle,
+  isAudioAssetHandle,
 } from './shared/index.js';
 
 // Channel interfaces

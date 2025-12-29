@@ -1,12 +1,13 @@
 import type { IWorkerChannel, ChannelConfig } from './IWorkerChannel.js';
 import type {
+  AudioState,
   DrawCommand,
   GetImageDataRequest,
   GetImageDataResponse,
   InputState,
   TimingInfo,
 } from '../shared/types.js';
-import { createEmptyInputState, createDefaultTimingInfo } from '../shared/types.js';
+import { createDefaultAudioState, createEmptyInputState, createDefaultTimingInfo } from '../shared/types.js';
 
 /**
  * Message types for PostMessage communication.
@@ -14,6 +15,7 @@ import { createEmptyInputState, createDefaultTimingInfo } from '../shared/types.
 type MessageType =
   | 'draw-commands'
   | 'input-state'
+  | 'audio-state'
   | 'timing-info'
   | 'canvas-size'
   | 'frame-ready'
@@ -57,6 +59,7 @@ export class PostMessageChannel implements IWorkerChannel {
   // State storage
   private pendingDrawCommands: DrawCommand[] = [];
   private inputState: InputState = createEmptyInputState();
+  private audioState: AudioState = createDefaultAudioState();
   private timingInfo: TimingInfo = createDefaultTimingInfo();
   private canvasSize: { width: number; height: number } = { width: 800, height: 600 };
 
@@ -92,6 +95,10 @@ export class PostMessageChannel implements IWorkerChannel {
 
       case 'input-state':
         this.inputState = payload as InputState;
+        break;
+
+      case 'audio-state':
+        this.audioState = payload as AudioState;
         break;
 
       case 'timing-info':
@@ -151,6 +158,14 @@ export class PostMessageChannel implements IWorkerChannel {
 
   setInputState(state: InputState): void {
     this.send('input-state', state);
+  }
+
+  getAudioState(): AudioState {
+    return this.audioState;
+  }
+
+  setAudioState(state: AudioState): void {
+    this.send('audio-state', state);
   }
 
   getDeltaTime(): number {

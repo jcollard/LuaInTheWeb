@@ -16,6 +16,7 @@ import {
 } from './LuaEngineFactory'
 import { CanvasController, type CanvasCallbacks } from './CanvasController'
 import { setupCanvasAPI } from './setupCanvasAPI'
+import { setupAudioAPI } from './setupAudioAPI'
 import { FileOperationsHandler } from './FileOperationsHandler'
 
 /**
@@ -413,8 +414,9 @@ export class LuaReplProcess implements IProcess {
     }
     this.canvasController = new CanvasController(callbacksWithError)
 
-    // Use shared setup function
+    // Use shared setup functions
     setupCanvasAPI(this.engine, () => this.canvasController)
+    setupAudioAPI(this.engine, () => this.canvasController?.getAudioEngine() ?? null)
   }
 
   /**

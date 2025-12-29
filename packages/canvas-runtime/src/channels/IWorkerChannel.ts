@@ -1,4 +1,5 @@
 import type {
+  AudioState,
   DrawCommand,
   GetImageDataRequest,
   GetImageDataResponse,
@@ -53,6 +54,22 @@ export interface IWorkerChannel {
    * @param state - New input state
    */
   setInputState(state: InputState): void;
+
+  /**
+   * Get the current audio state.
+   * Called by the worker to read audio system state.
+   *
+   * @returns Current audio state
+   */
+  getAudioState(): AudioState;
+
+  /**
+   * Update the audio state from the main thread.
+   * Called by the main thread to sync audio state to the worker.
+   *
+   * @param state - New audio state
+   */
+  setAudioState(state: AudioState): void;
 
   /**
    * Get the time elapsed since the last frame.

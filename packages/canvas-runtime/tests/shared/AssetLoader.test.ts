@@ -598,6 +598,48 @@ describe('AssetLoader', () => {
       expect(files.map(f => f.type)).toEqual(['image', 'image', 'font']);
     });
 
+    it('should discover audio files in a directory', () => {
+      mockFs = createMockFileSystem({
+        exists: vi.fn(() => true),
+        isFile: vi.fn(() => false), // It's a directory
+        listDirectory: vi.fn(() => [
+          { name: 'jump.mp3', path: '/assets/jump.mp3', type: 'file' as const },
+          { name: 'explosion.wav', path: '/assets/explosion.wav', type: 'file' as const },
+          { name: 'music.ogg', path: '/assets/music.ogg', type: 'file' as const },
+          { name: 'readme.txt', path: '/assets/readme.txt', type: 'file' as const },
+        ]),
+      });
+      loader = new AssetLoader(mockFs, '/my-files/games');
+
+      const files = loader.scanDirectory('assets');
+
+      expect(files).toHaveLength(3); // Should exclude readme.txt
+      expect(files.map(f => f.filename)).toEqual(['jump.mp3', 'explosion.wav', 'music.ogg']);
+      expect(files.map(f => f.type)).toEqual(['audio', 'audio', 'audio']);
+    });
+
+    it('should discover all asset types: images, fonts, and audio', () => {
+      mockFs = createMockFileSystem({
+        exists: vi.fn(() => true),
+        isFile: vi.fn(() => false),
+        listDirectory: vi.fn(() => [
+          { name: 'player.png', path: '/assets/player.png', type: 'file' as const },
+          { name: 'game.ttf', path: '/assets/game.ttf', type: 'file' as const },
+          { name: 'jump.mp3', path: '/assets/jump.mp3', type: 'file' as const },
+          { name: 'music.ogg', path: '/assets/music.ogg', type: 'file' as const },
+          { name: 'readme.txt', path: '/assets/readme.txt', type: 'file' as const },
+        ]),
+      });
+      loader = new AssetLoader(mockFs, '/my-files/games');
+
+      const files = loader.scanDirectory('assets');
+
+      expect(files).toHaveLength(4); // Should include image, font, and audio, exclude txt
+      expect(files.map(f => f.type)).toContain('image');
+      expect(files.map(f => f.type)).toContain('font');
+      expect(files.map(f => f.type)).toContain('audio');
+    });
+
     it('should compute relativePath as filename for files directly in base path', () => {
       mockFs = createMockFileSystem({
         exists: vi.fn(() => true),

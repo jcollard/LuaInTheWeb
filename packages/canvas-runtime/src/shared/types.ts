@@ -62,7 +62,17 @@ export type DrawCommandType =
   | 'putImageData'
   | 'fillPath'
   | 'strokePath'
-  | 'clipPath';
+  | 'clipPath'
+  // Audio commands
+  | 'playSound'
+  | 'playMusic'
+  | 'stopMusic'
+  | 'pauseMusic'
+  | 'resumeMusic'
+  | 'setMusicVolume'
+  | 'setMasterVolume'
+  | 'mute'
+  | 'unmute';
 
 /**
  * Base interface for all draw commands.
@@ -941,6 +951,87 @@ export interface ClipPathCommand extends DrawCommandBase {
   fillRule?: FillRule;
 }
 
+// ============================================================================
+// Audio Commands
+// ============================================================================
+
+/**
+ * Play a sound effect.
+ */
+export interface PlaySoundCommand extends DrawCommandBase {
+  type: 'playSound';
+  /** Name of the sound to play */
+  name: string;
+  /** Volume level from 0.0 to 1.0 */
+  volume: number;
+}
+
+/**
+ * Play background music.
+ */
+export interface PlayMusicCommand extends DrawCommandBase {
+  type: 'playMusic';
+  /** Name of the music track to play */
+  name: string;
+  /** Volume level from 0.0 to 1.0 */
+  volume: number;
+  /** Whether to loop the music */
+  loop: boolean;
+}
+
+/**
+ * Stop the currently playing music.
+ */
+export interface StopMusicCommand extends DrawCommandBase {
+  type: 'stopMusic';
+}
+
+/**
+ * Pause the currently playing music.
+ */
+export interface PauseMusicCommand extends DrawCommandBase {
+  type: 'pauseMusic';
+}
+
+/**
+ * Resume paused music.
+ */
+export interface ResumeMusicCommand extends DrawCommandBase {
+  type: 'resumeMusic';
+}
+
+/**
+ * Set the music volume.
+ */
+export interface SetMusicVolumeCommand extends DrawCommandBase {
+  type: 'setMusicVolume';
+  /** Volume level from 0.0 to 1.0 */
+  volume: number;
+}
+
+/**
+ * Set the master volume.
+ */
+export interface SetMasterVolumeCommand extends DrawCommandBase {
+  type: 'setMasterVolume';
+  /** Volume level from 0.0 to 1.0 */
+  volume: number;
+}
+
+/**
+ * Mute all audio.
+ */
+export interface MuteCommand extends DrawCommandBase {
+  type: 'mute';
+}
+
+/**
+ * Unmute all audio.
+ */
+export interface UnmuteCommand extends DrawCommandBase {
+  type: 'unmute';
+}
+
 /**
  * Union type of all draw commands.
  */
@@ -1005,7 +1096,17 @@ export type DrawCommand =
   | PutImageDataCommand
   | FillPathCommand
   | StrokePathCommand
-  | ClipPathCommand;
+  | ClipPathCommand
+  // Audio commands
+  | PlaySoundCommand
+  | PlayMusicCommand
+  | StopMusicCommand
+  | PauseMusicCommand
+  | ResumeMusicCommand
+  | SetMusicVolumeCommand
+  | SetMasterVolumeCommand
+  | MuteCommand
+  | UnmuteCommand;
 
 /**
  * Mouse button identifiers.
@@ -1029,6 +1130,38 @@ export interface InputState {
   mouseButtonsDown: number[];
   /** Mouse buttons pressed this frame */
   mouseButtonsPressed: number[];
+}
+
+/**
+ * State of audio system (synced from main thread to worker).
+ */
+export interface AudioState {
+  /** Whether audio is muted */
+  muted: boolean;
+  /** Master volume level (0.0 to 1.0) */
+  masterVolume: number;
+  /** Whether music is currently playing */
+  musicPlaying: boolean;
+  /** Current playback time of music in seconds */
+  musicTime: number;
+  /** Duration of current music track in seconds */
+  musicDuration: number;
+  /** Name of currently playing music track (empty if none) */
+  currentMusicName: string;
+}
+
+/**
+ * Create a default audio state.
+ */
+export function createDefaultAudioState(): AudioState {
+  return {
+    muted: false,
+    masterVolume: 1.0,
+    musicPlaying: false,
+    musicTime: 0,
+    musicDuration: 0,
+    currentMusicName: '',
+  };
 }
 
 /**
@@ -1081,6 +1214,12 @@ export const VALID_IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp',
 export const VALID_FONT_EXTENSIONS = ['.ttf', '.otf', '.woff', '.woff2'] as const;
 
 /**
+ * Valid audio file extensions for canvas assets.
+ * Supports common web-compatible audio formats.
+ */
+export const VALID_AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg'] as const;
+
+/**
  * Definition of an asset to be loaded.
  */
 export interface AssetDefinition {
@@ -1089,7 +1228,7 @@ export interface AssetDefinition {
   /** Path to the asset file (relative or absolute) */
   path: string;
   /** Type of asset */
-  type: 'image' | 'font';
+  type: 'image' | 'font' | 'audio';
 }
 
 /**
@@ -1104,7 +1243,7 @@ export type AssetManifest = Map<string, AssetDefinition>;
 /**
  * Type of asset file based on extension.
  */
-export type AssetFileType = 'image' | 'font' | 'unknown';
+export type AssetFileType = 'image' | 'font' | 'audio' | 'unknown';
 
 /**
  * Represents a file discovered from scanning an asset path directory.
@@ -1142,7 +1281,21 @@ export interface AssetHandle {
 }
 
 /**
- * Check if a value is an AssetHandle.
+ * Handle returned by canvas.assets.sound() or canvas.assets.music().
+ * Used to reference audio assets in playback functions.
+ * This interface matches the Lua table structure.
+ */
+export interface AudioAssetHandle {
+  /** Type discriminator for the handle: 'sound' for effects, 'music' for tracks */
+  _type: 'sound' | 'music';
+  /** The registered name for this asset */
+  _name: string;
+  /** The filename this handle maps to */
+  _file: string;
+}
+
+/**
+ * Check if a value is an AssetHandle (image or font).
  */
 export function isAssetHandle(value: unknown): value is AssetHandle {
   return (
@@ -1156,6 +1309,20 @@ export function isAssetHandle(value: unknown): value is AssetHandle {
 }
 
 /**
+ * Check if a value is an AudioAssetHandle (sound or music).
+ */
+export function isAudioAssetHandle(value: unknown): value is AudioAssetHandle {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    '_type' in value &&
+    '_name' in value &&
+    '_file' in value &&
+    (value._type === 'sound' || value._type === 'music')
+  );
+}
+
+/**
  * Classify a file by its extension to determine asset type.
  */
 export function classifyFileType(filename: string): AssetFileType {
@@ -1165,6 +1332,9 @@ export function classifyFileType(filename: string): AssetFileType {
   }
   if (VALID_FONT_EXTENSIONS.some(ext => lowerName.endsWith(ext))) {
     return 'font';
+  }
+  if (VALID_AUDIO_EXTENSIONS.some(ext => lowerName.endsWith(ext))) {
+    return 'audio';
   }
   return 'unknown';
 }
