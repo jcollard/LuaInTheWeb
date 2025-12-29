@@ -28,9 +28,8 @@ function createMockAudioEngine(): IAudioEngine {
   let masterVolume = 1
   let muted = false
   let musicPlaying = false
-  let musicVolume = 1
-  let musicTime = 0
-  let musicDuration = 10
+  const musicTime = 0
+  const musicDuration = 10
 
   return {
     initialize: vi.fn().mockResolvedValue(undefined),
@@ -52,9 +51,7 @@ function createMockAudioEngine(): IAudioEngine {
     resumeMusic: vi.fn().mockImplementation(() => {
       musicPlaying = true
     }),
-    setMusicVolume: vi.fn().mockImplementation((vol: number) => {
-      musicVolume = vol
-    }),
+    setMusicVolume: vi.fn(),
     isMusicPlaying: vi.fn().mockImplementation(() => musicPlaying),
     getMusicTime: vi.fn().mockImplementation(() => musicTime),
     getMusicDuration: vi.fn().mockImplementation(() => musicDuration),

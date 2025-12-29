@@ -5,7 +5,6 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { CanvasController, CanvasCallbacks } from '../src/CanvasController'
-import type { IAudioEngine, MusicHandle } from '../src/audio/IAudioEngine'
 
 // Mock Path2D for jsdom environment (which doesn't have Path2D)
 class MockPath2D {
@@ -98,55 +97,6 @@ vi.mock('@lua-learning/canvas-runtime', () => {
 
 // Import the isAudioAssetHandle after mocking
 import { isAudioAssetHandle } from '@lua-learning/canvas-runtime'
-
-// Mock IAudioEngine implementation
-function createMockAudioEngine(): IAudioEngine {
-  const decodedAudio = new Map<string, boolean>()
-  let masterVolume = 1
-  let muted = false
-  let musicPlaying = false
-
-  return {
-    initialize: vi.fn().mockResolvedValue(undefined),
-    isInitialized: vi.fn().mockReturnValue(true),
-    decodeAudio: vi.fn().mockImplementation((name: string) => {
-      decodedAudio.set(name, true)
-      return Promise.resolve()
-    }),
-    hasAudio: vi.fn().mockImplementation((name: string) => decodedAudio.has(name)),
-    playSound: vi.fn(),
-    getSoundDuration: vi.fn().mockReturnValue(2.5),
-    playMusic: vi.fn().mockImplementation(() => {
-      musicPlaying = true
-      return {} as MusicHandle
-    }),
-    stopMusic: vi.fn().mockImplementation(() => {
-      musicPlaying = false
-    }),
-    pauseMusic: vi.fn().mockImplementation(() => {
-      musicPlaying = false
-    }),
-    resumeMusic: vi.fn().mockImplementation(() => {
-      musicPlaying = true
-    }),
-    setMusicVolume: vi.fn(),
-    isMusicPlaying: vi.fn().mockImplementation(() => musicPlaying),
-    getMusicTime: vi.fn().mockReturnValue(0),
-    getMusicDuration: vi.fn().mockReturnValue(5),
-    setMasterVolume: vi.fn().mockImplementation((vol: number) => {
-      masterVolume = vol
-    }),
-    getMasterVolume: vi.fn().mockImplementation(() => masterVolume),
-    mute: vi.fn().mockImplementation(() => {
-      muted = true
-    }),
-    unmute: vi.fn().mockImplementation(() => {
-      muted = false
-    }),
-    isMuted: vi.fn().mockImplementation(() => muted),
-    dispose: vi.fn(),
-  }
-}
 
 describe('CanvasController Audio', () => {
   let controller: CanvasController

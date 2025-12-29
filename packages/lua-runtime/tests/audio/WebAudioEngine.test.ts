@@ -40,7 +40,7 @@ class MockAudioContext {
   createBufferSource = vi.fn(() => new MockAudioBufferSourceNode());
 
   decodeAudioData = vi.fn(
-    (data: ArrayBuffer): Promise<MockAudioBuffer> =>
+    (_data: ArrayBuffer): Promise<MockAudioBuffer> =>
       Promise.resolve(new MockAudioBuffer())
   );
 
@@ -57,10 +57,8 @@ class MockAudioContext {
 
 describe('WebAudioEngine', () => {
   let engine: WebAudioEngine;
-  let mockContext: MockAudioContext;
 
   beforeEach(() => {
-    mockContext = new MockAudioContext();
     // Mock the global AudioContext
     (globalThis as unknown as { AudioContext: typeof MockAudioContext }).AudioContext =
       MockAudioContext as unknown as typeof AudioContext;
