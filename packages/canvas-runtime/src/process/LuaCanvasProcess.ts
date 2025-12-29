@@ -18,6 +18,8 @@ import { CanvasRenderer } from '../renderer/CanvasRenderer.js';
 import { InputCapture } from '../renderer/InputCapture.js';
 import { ImageCache } from '../renderer/ImageCache.js';
 import { AssetLoader } from '../shared/AssetLoader.js';
+import { MainThreadAudioEngine } from '../audio/MainThreadAudioEngine.js';
+import type { DrawCommand } from '../shared/types.js';
 import type {
   WorkerToMainMessage,
   WorkerState,
@@ -71,6 +73,10 @@ export class LuaCanvasProcess implements IProcess {
   private inputCapture: InputCapture | null = null;
   private channelPairResult: ChannelPairResult | null = null;
   private imageCache: ImageCache | null = null;
+
+  // Audio
+  private audioEngine: MainThreadAudioEngine | null = null;
+  private audioInitPromise: Promise<void> | null = null;
 
   /**
    * Callback invoked when the process produces output.
@@ -145,6 +151,12 @@ export class LuaCanvasProcess implements IProcess {
     this.gameLoop = new GameLoopController(this.handleFrame.bind(this));
     this.inputCapture = new InputCapture(this.canvas);
 
+    // Create audio engine and start initialization
+    this.audioEngine = new MainThreadAudioEngine();
+    this.audioInitPromise = this.audioEngine.initialize().catch((error) => {
+      console.warn('Failed to initialize audio engine:', error);
+    });
+
     // Create the worker
     this.worker = this.createWorker();
 
@@ -193,6 +205,12 @@ export class LuaCanvasProcess implements IProcess {
     if (this.inputCapture) {
       this.inputCapture.dispose();
       this.inputCapture = null;
+    }
+
+    // Dispose audio engine
+    if (this.audioEngine) {
+      this.audioEngine.dispose();
+      this.audioEngine = null;
     }
 
     // Dispose the channel
@@ -291,6 +309,7 @@ export class LuaCanvasProcess implements IProcess {
    */
   private handleWorkerMessage(event: MessageEvent<WorkerToMainMessage>): void {
     const message = event.data;
+    console.log(`[Audio Debug] Worker message received:`, message.type, message);
 
     switch (message.type) {
       case 'ready':
@@ -333,6 +352,7 @@ export class LuaCanvasProcess implements IProcess {
    * Loads assets from the filesystem and sends them to the worker.
    */
   private async handleAssetsNeeded(assetRequests: AssetRequest[], assetPaths?: AssetPathRequest[]): Promise<void> {
+    console.log(`[Audio Debug] handleAssetsNeeded called - assetRequests: ${assetRequests.length}, assetPaths:`, assetPaths);
     if (!this.fileSystem) {
       this.handleError('Assets requested but no filesystem provided');
       return;
@@ -375,13 +395,16 @@ export class LuaCanvasProcess implements IProcess {
       }
 
       // Load new API assets (directory-based discovery)
+      console.log(`[Audio Debug] assetPaths:`, assetPaths);
       if (assetPaths && assetPaths.length > 0) {
         // Track loaded filenames to avoid duplicates
         const loadedFilenames = new Set<string>();
 
         for (const pathRequest of assetPaths) {
           // Scan the directory for asset files
+          console.log(`[Audio Debug] Scanning path: ${pathRequest.path}`);
           const discoveredFiles = assetLoader.scanDirectory(pathRequest.path);
+          console.log(`[Audio Debug] Discovered ${discoveredFiles.length} files:`, discoveredFiles.map(f => `${f.relativePath} (${f.type})`));
 
           for (const file of discoveredFiles) {
             // Skip if already loaded (in case of overlapping paths)
@@ -391,7 +414,30 @@ export class LuaCanvasProcess implements IProcess {
             }
             loadedFilenames.add(file.filename);
 
-            // Load the asset (scanDirectory only returns 'image' or 'font' types)
+            // Handle audio files separately - decode to main thread audio engine
+            if (file.type === 'audio') {
+              if (this.audioEngine) {
+                // Wait for audio engine to be initialized
+                if (this.audioInitPromise) {
+                  await this.audioInitPromise;
+                }
+                console.log(`[Audio] Loading audio file: ${file.relativePath}`);
+                const loaded = await assetLoader.loadAsset({
+                  name: file.relativePath,
+                  path: file.fullPath,
+                  type: 'audio',
+                });
+                // Decode audio on main thread using relativePath as key
+                // This matches the path used in Lua: canvas.assets.load_sound("name", "sfx/file.ogg")
+                console.log(`[Audio] Decoding audio: ${file.relativePath} (${loaded.data.byteLength} bytes)`);
+                await this.audioEngine.decodeAudio(file.relativePath, loaded.data);
+                console.log(`[Audio] Decoded successfully: ${file.relativePath}`);
+              }
+              // Audio assets don't need to be sent to worker
+              continue;
+            }
+
+            // Load the asset (image or font types)
             const loaded = await assetLoader.loadAsset({
               name: file.filename, // Use filename as the name for loading
               path: file.fullPath,
@@ -477,7 +523,15 @@ export class LuaCanvasProcess implements IProcess {
 
     // Send current input state to the worker
     if (this.inputCapture) {
-      this.channel.setInputState(this.inputCapture.getInputState());
+      const inputState = this.inputCapture.getInputState();
+      this.channel.setInputState(inputState);
+
+      // Resume AudioContext on first user interaction (browser autoplay policy)
+      if (this.audioEngine && (inputState.mouseButtonsPressed.length > 0 || inputState.keysPressed.length > 0)) {
+        this.audioEngine.resumeContext().catch(() => {
+          // Ignore errors - context may already be running
+        });
+      }
     }
 
     // Get draw commands from worker via channel
@@ -491,7 +545,15 @@ export class LuaCanvasProcess implements IProcess {
           this.channel.setCanvasSize(cmd.width, cmd.height);
         }
       }
+      // Process audio commands
+      this.processAudioCommands(commands);
+      // Render draw commands
       this.renderer.render(commands);
+    }
+
+    // Sync audio state to worker
+    if (this.audioEngine) {
+      this.channel.setAudioState(this.audioEngine.getAudioState());
     }
 
     // Process pixel data requests from worker
@@ -528,6 +590,48 @@ export class LuaCanvasProcess implements IProcess {
         height: request.height,
         data: Array.from(imageData.data),
       });
+    }
+  }
+
+  /**
+   * Process audio commands from the worker.
+   * Handles playSound, playMusic, etc.
+   */
+  private processAudioCommands(commands: DrawCommand[]): void {
+    if (!this.audioEngine) return;
+
+    for (const cmd of commands) {
+      switch (cmd.type) {
+        case 'playSound':
+          console.log(`[Audio] playSound command: ${cmd.name}, volume: ${cmd.volume}`);
+          this.audioEngine.playSound(cmd.name, cmd.volume);
+          break;
+        case 'playMusic':
+          console.log(`[Audio] playMusic command: ${cmd.name}, volume: ${cmd.volume}, loop: ${cmd.loop}`);
+          this.audioEngine.playMusic(cmd.name, cmd.volume, cmd.loop);
+          break;
+        case 'stopMusic':
+          this.audioEngine.stopMusic();
+          break;
+        case 'pauseMusic':
+          this.audioEngine.pauseMusic();
+          break;
+        case 'resumeMusic':
+          this.audioEngine.resumeMusic();
+          break;
+        case 'setMusicVolume':
+          this.audioEngine.setMusicVolume(cmd.volume);
+          break;
+        case 'setMasterVolume':
+          this.audioEngine.setMasterVolume(cmd.volume);
+          break;
+        case 'mute':
+          this.audioEngine.mute();
+          break;
+        case 'unmute':
+          this.audioEngine.unmute();
+          break;
+      }
     }
   }
 

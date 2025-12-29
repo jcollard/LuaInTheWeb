@@ -45,16 +45,22 @@ export type {
   AssetFileType,
   DiscoveredFile,
   AssetHandle,
+  AudioAssetHandle,
+  // Audio state
+  AudioState,
 } from './types.js';
 
 export {
   createEmptyInputState,
   createDefaultTimingInfo,
+  createDefaultAudioState,
   VALID_IMAGE_EXTENSIONS,
   VALID_FONT_EXTENSIONS,
+  VALID_AUDIO_EXTENSIONS,
   // Asset path API utilities
   classifyFileType,
   isAssetHandle,
+  isAudioAssetHandle,
 } from './types.js';
 
 export { AssetLoader } from './AssetLoader.js';

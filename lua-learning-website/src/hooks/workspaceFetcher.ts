@@ -19,8 +19,9 @@ export interface WorkspaceContent {
  * Binary file extensions - files with these extensions are fetched as binary.
  */
 const BINARY_EXTENSIONS = new Set([
-  '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.ico',
-  '.ttf', '.otf', '.woff', '.woff2'  // Font files
+  '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.ico',  // Images
+  '.ttf', '.otf', '.woff', '.woff2',  // Fonts
+  '.mp3', '.wav', '.ogg'  // Audio
 ])
 
 /**

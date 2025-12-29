@@ -35,7 +35,15 @@ export {
   canvasLuaStylingCode,
   canvasLuaTextCode,
   canvasLuaInputCode,
+  canvasLuaAudioCode,
 } from './canvasLuaCode'
+
+// Audio engine exports (for standalone runtime)
+export { WebAudioEngine } from './audio/WebAudioEngine'
+export type { IAudioEngine, MusicOptions, MusicHandle } from './audio/IAudioEngine'
+
+// Audio inline JS for HTML exports (auto-generated from audio-inline.js)
+export { AUDIO_INLINE_JS } from './audio/audio-inline.generated'
 
 // Canvas controller for shell-based canvas (non-worker)
 export { CanvasController, type CanvasCallbacks } from './CanvasController'

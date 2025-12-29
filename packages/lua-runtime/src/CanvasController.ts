@@ -32,10 +32,27 @@ import type {
   FillRule,
   DiscoveredFile,
   AssetHandle,
+  AudioAssetHandle,
 } from '@lua-learning/canvas-runtime'
 import { isAssetHandle } from '@lua-learning/canvas-runtime'
 import type { IFileSystem } from '@lua-learning/shell-core'
 import { formatOnDrawError, createImageFromData, createFontFromData } from './canvasErrorFormatter'
+import type { IAudioEngine } from './audio/IAudioEngine'
+import { WebAudioEngine } from './audio/WebAudioEngine'
+
+/**
+ * Audio asset definition for tracking registered sound/music assets.
+ */
+export interface AudioAssetDefinition {
+  name: string
+  filename: string
+  type: 'sound' | 'music'
+}
+
+/**
+ * Audio asset manifest: maps asset names to their definitions.
+ */
+export type AudioAssetManifest = Map<string, AudioAssetDefinition>
 
 /**
  * Callbacks for canvas tab management.
@@ -135,6 +152,12 @@ export class CanvasController {
   private measureCanvas: HTMLCanvasElement | null = null
   private measureCtx: CanvasRenderingContext2D | null = null
 
+  // Audio engine for sound effects and music
+  private audioEngine: IAudioEngine | null = null
+
+  // Audio asset manifest: registered audio asset definitions
+  private audioAssetManifest: AudioAssetManifest = new Map()
+
   constructor(callbacks: CanvasCallbacks, canvasId = 'canvas-main') {
     this.callbacks = callbacks
     this.canvasId = canvasId
@@ -172,7 +195,8 @@ export class CanvasController {
     this.startInProgress = true
 
     // Auto-load assets if they are registered but not yet loaded
-    if (this.assetManifest.size > 0 && !this.imageCache) {
+    const hasAssets = this.assetManifest.size > 0 || this.audioAssetManifest.size > 0
+    if (hasAssets && !this.imageCache) {
       if (!this.callbacks.fileSystem) {
         throw new Error('Assets were registered but no filesystem is available to load them')
       }
@@ -249,6 +273,12 @@ export class CanvasController {
     // Close the canvas tab
     this.callbacks.onCloseCanvasTab(this.canvasId)
     this.canvas = null
+
+    // Clean up audio engine
+    if (this.audioEngine) {
+      this.audioEngine.dispose()
+      this.audioEngine = null
+    }
 
     // Reset startInProgress flag
     this.startInProgress = false
@@ -1115,6 +1145,81 @@ export class CanvasController {
     return this.assetManifest
   }
 
+  // --- Audio Asset API ---
+
+  /**
+   * Create a named reference to a sound effect file discovered via add_path().
+   * Must be called before canvas.start().
+   *
+   * @param name - Unique name to reference this sound
+   * @param filename - Filename of the audio file (must exist in a scanned path)
+   * @returns AudioAssetHandle that can be used with play_sound()
+   * @throws Error if called after canvas.start()
+   */
+  loadSoundAsset(name: string, filename: string): AudioAssetHandle {
+    if (this.started) {
+      throw new Error('Cannot load audio assets after canvas.start()')
+    }
+
+    // Register in the audio manifest
+    this.audioAssetManifest.set(name, {
+      name,
+      filename,
+      type: 'sound',
+    })
+
+    // Return a handle
+    return {
+      _type: 'sound',
+      _name: name,
+      _file: filename,
+    }
+  }
+
+  /**
+   * Create a named reference to a music file discovered via add_path().
+   * Must be called before canvas.start().
+   *
+   * @param name - Unique name to reference this music track
+   * @param filename - Filename of the audio file (must exist in a scanned path)
+   * @returns AudioAssetHandle that can be used with play_music()
+   * @throws Error if called after canvas.start()
+   */
+  loadMusicAsset(name: string, filename: string): AudioAssetHandle {
+    if (this.started) {
+      throw new Error('Cannot load audio assets after canvas.start()')
+    }
+
+    // Register in the audio manifest
+    this.audioAssetManifest.set(name, {
+      name,
+      filename,
+      type: 'music',
+    })
+
+    // Return a handle
+    return {
+      _type: 'music',
+      _name: name,
+      _file: filename,
+    }
+  }
+
+  /**
+   * Get the audio engine for sound/music playback.
+   * Returns null if the canvas has not been started or has no audio assets.
+   */
+  getAudioEngine(): IAudioEngine | null {
+    return this.audioEngine
+  }
+
+  /**
+   * Get the audio asset manifest (definitions registered via loadSoundAsset/loadMusicAsset).
+   */
+  getAudioAssetManifest(): AudioAssetManifest {
+    return this.audioAssetManifest
+  }
+
   /**
    * Load all registered assets from the filesystem.
    *
@@ -1203,6 +1308,39 @@ export class CanvasController {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         throw new Error(`Failed to load asset '${definition.name}': ${message}`)
+      }
+    }
+
+    // Step 3: Load audio assets if any are registered
+    if (this.audioAssetManifest.size > 0) {
+      // Initialize the audio engine
+      this.audioEngine = new WebAudioEngine()
+      await this.audioEngine.initialize()
+
+      // Load each audio asset
+      for (const audioDef of this.audioAssetManifest.values()) {
+        // Resolve the audio file path from discovered files
+        const discovered = this.discoveredFiles.get(audioDef.filename)
+        if (!discovered) {
+          const scannedPaths = this.assetPaths.join(', ') || '(none)'
+          throw new Error(
+            `Audio file '${audioDef.filename}' not found in asset paths. Scanned paths: ${scannedPaths}`
+          )
+        }
+
+        try {
+          const loadedAsset = await loader.loadAsset({
+            name: audioDef.name,
+            path: discovered.fullPath,
+            type: 'audio',
+          })
+
+          // Decode the audio data
+          await this.audioEngine.decodeAudio(audioDef.name, loadedAsset.data)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error)
+          throw new Error(`Failed to load audio asset '${audioDef.name}': ${message}`)
+        }
       }
     }
   }

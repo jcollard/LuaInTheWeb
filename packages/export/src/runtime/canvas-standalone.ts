@@ -13,6 +13,8 @@ import {
   canvasLuaStylingCode,
   canvasLuaTextCode,
   canvasLuaInputCode,
+  canvasLuaAudioCode,
+  WebAudioEngine,
 } from '@lua-learning/lua-runtime'
 
 import type { LuaEngine } from 'wasmoon'
@@ -26,7 +28,8 @@ export const canvasLuaCode =
   canvasLuaPathCode +
   canvasLuaStylingCode +
   canvasLuaTextCode +
-  canvasLuaInputCode
+  canvasLuaInputCode +
+  canvasLuaAudioCode
 
 /**
  * Canvas runtime state for standalone execution.
@@ -48,6 +51,9 @@ export interface CanvasRuntimeState {
   currentFontSize: number
   currentFontFamily: string
   stopResolve: (() => void) | null
+  // Audio state
+  audioEngine: WebAudioEngine
+  audioAssets: Map<string, { name: string; filename: string; type: 'sound' | 'music' }>
 }
 
 /**
@@ -78,6 +84,8 @@ export function createCanvasRuntimeState(
     currentFontSize: 16,
     currentFontFamily: 'monospace',
     stopResolve: null,
+    audioEngine: new WebAudioEngine(),
+    audioAssets: new Map(),
   }
 }
 
@@ -203,7 +211,10 @@ export function setupCanvasBridge(
   // Lifecycle functions
   engine.global.set('__canvas_is_active', () => state.isRunning)
 
-  engine.global.set('__canvas_start', () => {
+  engine.global.set('__canvas_start', async () => {
+    // Initialize audio engine
+    await state.audioEngine.initialize()
+
     // Return a Promise that resolves when canvas.stop() is called
     return new Promise<void>((resolve) => {
       state.isRunning = true
@@ -878,4 +889,113 @@ export function setupCanvasBridge(
   engine.global.set('__canvas_clipPath', () => {})
   engine.global.set('__canvas_isPointInStoredPath', () => false)
   engine.global.set('__canvas_isPointInStoredStroke', () => false)
+
+  // --- Audio API ---
+
+  // Audio asset registration
+  engine.global.set(
+    '__canvas_assets_loadSound',
+    (name: string, filename: string) => {
+      state.audioAssets.set(name, { name, filename, type: 'sound' })
+      return { _type: 'sound', _name: name, _file: filename }
+    }
+  )
+
+  engine.global.set(
+    '__canvas_assets_loadMusic',
+    (name: string, filename: string) => {
+      state.audioAssets.set(name, { name, filename, type: 'music' })
+      return { _type: 'music', _name: name, _file: filename }
+    }
+  )
+
+  // Helper to extract audio name from handle or string
+  const extractAudioName = (nameOrHandle: unknown): string => {
+    if (typeof nameOrHandle === 'string') {
+      return nameOrHandle
+    }
+    if (
+      typeof nameOrHandle === 'object' &&
+      nameOrHandle !== null &&
+      '_name' in nameOrHandle
+    ) {
+      return (nameOrHandle as { _name: string })._name
+    }
+    throw new Error('Invalid audio asset reference')
+  }
+
+  // Sound effect functions
+  engine.global.set(
+    '__audio_playSound',
+    (nameOrHandle: unknown, volume?: number | null) => {
+      const name = extractAudioName(nameOrHandle)
+      state.audioEngine.playSound(name, volume ?? 1)
+    }
+  )
+
+  engine.global.set('__audio_getSoundDuration', (nameOrHandle: unknown) => {
+    const name = extractAudioName(nameOrHandle)
+    return state.audioEngine.getSoundDuration(name)
+  })
+
+  // Music functions
+  engine.global.set(
+    '__audio_playMusic',
+    (nameOrHandle: unknown, volume?: number | null, loop?: boolean | null) => {
+      const name = extractAudioName(nameOrHandle)
+      state.audioEngine.playMusic(name, {
+        volume: volume ?? 1,
+        loop: loop ?? false,
+      })
+    }
+  )
+
+  engine.global.set('__audio_stopMusic', () => {
+    state.audioEngine.stopMusic()
+  })
+
+  engine.global.set('__audio_pauseMusic', () => {
+    state.audioEngine.pauseMusic()
+  })
+
+  engine.global.set('__audio_resumeMusic', () => {
+    state.audioEngine.resumeMusic()
+  })
+
+  engine.global.set('__audio_setMusicVolume', (volume: number) => {
+    state.audioEngine.setMusicVolume(volume)
+  })
+
+  engine.global.set('__audio_isMusicPlaying', () => {
+    return state.audioEngine.isMusicPlaying()
+  })
+
+  engine.global.set('__audio_getMusicTime', () => {
+    return state.audioEngine.getMusicTime()
+  })
+
+  engine.global.set('__audio_getMusicDuration', () => {
+    return state.audioEngine.getMusicDuration()
+  })
+
+  // Global audio control
+  engine.global.set('__audio_setMasterVolume', (volume: number) => {
+    state.audioEngine.setMasterVolume(volume)
+  })
+
+  engine.global.set('__audio_getMasterVolume', () => {
+    return state.audioEngine.getMasterVolume()
+  })
+
+  engine.global.set('__audio_mute', () => {
+    state.audioEngine.mute()
+  })
+
+  engine.global.set('__audio_unmute', () => {
+    state.audioEngine.unmute()
+  })
+
+  engine.global.set('__audio_isMuted', () => {
+    return state.audioEngine.isMuted()
+  })
 }

@@ -38,6 +38,7 @@ local canvas = {}
 -- 22. Hit Testing API (is_point_in_path, is_point_in_stroke)
 -- 23. Path2D API (create_path, Path2D methods, fill/stroke/clip with Path2D)
 -- 24. Pixel Manipulation API (ImageData, create_image_data, get_image_data, put_image_data, clone_image_data)
+-- 25. Audio API (Sound effects, music, volume control)
 -- =============================================================================
 
 -- =============================================================================
@@ -1053,6 +1054,49 @@ function canvas.assets.load_image(name, filename) end
 ---@usage canvas.set_font_family("GameFont")  -- Use the name to set font
 function canvas.assets.load_font(name, filename) end
 
+---@class AudioAssetHandle
+---@field _type string Asset type: "sound" or "music"
+---@field _name string The registered name for this asset
+---@field _file string The source filename
+
+--- Create a named reference to a discovered sound effect file.
+--- Returns an audio asset handle that can be used with play_sound().
+--- The file must exist in a directory registered with add_path().
+--- Must be called BEFORE canvas.start().
+--- Supported formats: .mp3, .wav, .ogg
+---@param name string Unique name to reference this sound
+---@param filename string Relative path to the audio file within an asset directory
+---@return AudioAssetHandle handle Audio asset handle for use with play_sound()
+---@usage -- Register assets before start
+---@usage canvas.assets.add_path("assets")
+---@usage local explosion = canvas.assets.load_sound("explosion", "sfx/boom.wav")
+---@usage local jump = canvas.assets.load_sound("jump", "sfx/jump.mp3")
+---@usage canvas.start()
+---@usage
+---@usage -- Play sounds during the game
+---@usage canvas.play_sound("explosion")  -- Play by name
+---@usage canvas.play_sound(explosion)     -- Or use the handle
+function canvas.assets.load_sound(name, filename) end
+
+--- Create a named reference to a discovered music file.
+--- Returns an audio asset handle that can be used with play_music().
+--- The file must exist in a directory registered with add_path().
+--- Must be called BEFORE canvas.start().
+--- Supported formats: .mp3, .wav, .ogg
+---@param name string Unique name to reference this music track
+---@param filename string Relative path to the audio file within an asset directory
+---@return AudioAssetHandle handle Audio asset handle for use with play_music()
+---@usage -- Register music before start
+---@usage canvas.assets.add_path("assets")
+---@usage local bgm = canvas.assets.load_music("background", "music/background_music.mp3")
+---@usage local boss = canvas.assets.load_music("boss", "music/boss_theme.ogg")
+---@usage canvas.start()
+---@usage
+---@usage -- Play music during the game
+---@usage canvas.play_music("background", { loop = true })
+---@usage canvas.play_music(bgm, { loop = true })  -- Or use the handle
+function canvas.assets.load_music(name, filename) end
+
 -- -----------------------------------------------------------------------------
 -- Asset Dimensions
 -- -----------------------------------------------------------------------------
@@ -1803,5 +1847,148 @@ function canvas.put_image_data(image_data, dx, dy, options) end
 ---@usage canvas.put_image_data(original, 0, 0)    -- Original
 ---@usage canvas.put_image_data(clone, 110, 0)     -- Inverted clone
 function canvas.clone_image_data(image_data) end
+
+-- =============================================================================
+-- Audio API
+-- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- Sound Effects (can overlap - multiple sounds can play at once)
+-- -----------------------------------------------------------------------------
+
+--- Play a sound effect.
+--- Sound effects can overlap - calling play_sound multiple times will layer the sounds.
+--- The sound must be registered via canvas.assets.load_sound() before canvas.start().
+---@param nameOrHandle string|AudioAssetHandle Sound name or asset handle
+---@param volume? number Volume level from 0.0 to 1.0 (default: 1.0)
+---@return nil
+---@usage -- Play at full volume
+---@usage canvas.play_sound("explosion")
+---@usage canvas.play_sound(explosionHandle)
+---@usage
+---@usage -- Play at half volume
+---@usage canvas.play_sound("explosion", 0.5)
+---@usage
+---@usage -- Sounds can overlap
+---@usage canvas.play_sound("footstep")
+---@usage canvas.play_sound("footstep")  -- Another overlapping footstep
+function canvas.play_sound(nameOrHandle, volume) end
+
+--- Get the duration of a sound in seconds.
+---@param nameOrHandle string|AudioAssetHandle Sound name or asset handle
+---@return number duration Duration in seconds
+---@usage local duration = canvas.get_sound_duration("explosion")
+---@usage print("Sound is " .. duration .. " seconds long")
+function canvas.get_sound_duration(nameOrHandle) end
+
+-- -----------------------------------------------------------------------------
+-- Music Playback (one track at a time)
+-- -----------------------------------------------------------------------------
+
+---@class PlayMusicOptions
+---@field volume? number Volume level from 0.0 to 1.0 (default: 1.0)
+---@field loop? boolean Whether to loop the music (default: false)
+
+--- Play background music.
+--- Only one music track can play at a time - calling play_music will stop any current music.
+--- The music must be registered via canvas.assets.load_music() before canvas.start().
+---@param nameOrHandle string|AudioAssetHandle Music name or asset handle
+---@param options? PlayMusicOptions Playback options (volume, loop)
+---@return nil
+---@usage -- Play music once
+---@usage canvas.play_music("menu_theme")
+---@usage
+---@usage -- Play music on loop
+---@usage canvas.play_music("background", { loop = true })
+---@usage
+---@usage -- Play at reduced volume
+---@usage canvas.play_music("boss_theme", { volume = 0.7, loop = true })
+---@usage
+---@usage -- Switch tracks (stops current music)
+---@usage canvas.play_music("victory")  -- Stops previous music and plays this
+function canvas.play_music(nameOrHandle, options) end
+
+--- Stop the currently playing music.
+--- Completely stops the music - use pause_music() to pause instead.
+---@return nil
+---@usage canvas.stop_music()
+function canvas.stop_music() end
+
+--- Pause the currently playing music.
+--- The music can be resumed from the same position with resume_music().
+---@return nil
+---@usage canvas.pause_music()
+---@usage -- Later...
+---@usage canvas.resume_music()  -- Continues from where it was paused
+function canvas.pause_music() end
+
+--- Resume paused music.
+--- Continues playback from where it was paused.
+--- Has no effect if music is already playing or was never started.
+---@return nil
+---@usage canvas.resume_music()
+function canvas.resume_music() end
+
+--- Set the volume of the currently playing music.
+---@param volume number Volume level from 0.0 to 1.0
+---@return nil
+---@usage canvas.set_music_volume(0.5)  -- Half volume
+---@usage canvas.set_music_volume(1.0)  -- Full volume
+function canvas.set_music_volume(volume) end
+
+--- Check if music is currently playing.
+---@return boolean isPlaying True if music is playing, false if stopped or paused
+---@usage if not canvas.is_music_playing() then
+---@usage   canvas.play_music("background", { loop = true })
+---@usage end
+function canvas.is_music_playing() end
+
+--- Get the current playback position of the music in seconds.
+---@return number time Current playback position in seconds
+---@usage local pos = canvas.get_music_time()
+---@usage print("Music is at " .. pos .. " seconds")
+function canvas.get_music_time() end
+
+--- Get the total duration of the current music track in seconds.
+---@return number duration Total duration in seconds
+---@usage local duration = canvas.get_music_duration()
+---@usage local progress = canvas.get_music_time() / duration
+function canvas.get_music_duration() end
+
+-- -----------------------------------------------------------------------------
+-- Global Audio Control
+-- -----------------------------------------------------------------------------
+
+--- Set the master volume for all audio (sounds and music).
+---@param volume number Volume level from 0.0 to 1.0 (default: 1.0)
+---@return nil
+---@usage canvas.set_master_volume(0.5)  -- All audio at half volume
+---@usage canvas.set_master_volume(0)    -- Mute all audio
+function canvas.set_master_volume(volume) end
+
+--- Get the current master volume.
+---@return number volume Current master volume (0.0 to 1.0)
+---@usage local vol = canvas.get_master_volume()
+function canvas.get_master_volume() end
+
+--- Mute all audio.
+--- Silences all sounds and music. Use unmute() to restore audio.
+--- The previous volume level is remembered and restored on unmute.
+---@return nil
+---@usage canvas.mute()
+function canvas.mute() end
+
+--- Unmute all audio.
+--- Restores audio to the volume level before mute() was called.
+---@return nil
+---@usage canvas.unmute()
+function canvas.unmute() end
+
+--- Check if audio is currently muted.
+---@return boolean isMuted True if audio is muted
+---@usage if canvas.is_muted() then
+---@usage   print("Audio is muted")
+---@usage end
+function canvas.is_muted() end
 
 return canvas

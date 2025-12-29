@@ -16,7 +16,8 @@
   ],
   "scripts": {
     "build:lua": "node scripts/generate-lua-exports.js",
-    "prebuild": "npm run build:lua",
+    "build:audio": "node scripts/bundle-audio-inline.js",
+    "prebuild": "npm run build:lua && npm run build:audio",
     "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -40,6 +41,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
+    "esbuild": "^0.24.2",
     "@stryker-mutator/core": "^9.0.2",
     "@stryker-mutator/typescript-checker": "^9.0.2",
     "@stryker-mutator/vitest-runner": "^9.0.2",

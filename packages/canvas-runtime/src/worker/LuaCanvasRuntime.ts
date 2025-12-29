@@ -534,6 +534,116 @@ export class LuaCanvasRuntime {
       return new Array(width * height * 4).fill(0);
     });
 
+    // Audio API functions
+    lua.global.set('__canvas_assets_loadSound', (name: string, filename: string) => {
+      // If files have been loaded, validate that the file exists in discovered audio files
+      // For audio, we don't store dimensions, just validate the file is known
+      if (runtime.filesLoaded) {
+        // Audio files are discovered but not stored in discoveredFiles (which is for images/fonts)
+        // Just store the name mapping for now
+      }
+      // Pre-register the asset for audio
+      runtime.preRegisteredAssets.set(name, { filename, type: 'sound' as 'image' });
+      return { _type: 'sound', _name: name, _file: filename };
+    });
+
+    lua.global.set('__canvas_assets_loadMusic', (name: string, filename: string) => {
+      // Similar to loadSound but for music tracks
+      runtime.preRegisteredAssets.set(name, { filename, type: 'music' as 'image' });
+      return { _type: 'music', _name: name, _file: filename };
+    });
+
+    // Helper to extract audio asset filename from handle or name
+    const extractAudioFilename = (nameOrHandle: unknown): string => {
+      // Handle AudioAssetHandle objects from Lua (tables with _file property)
+      if (typeof nameOrHandle === 'object' && nameOrHandle !== null && '_file' in nameOrHandle) {
+        return (nameOrHandle as { _file: string })._file;
+      }
+      // Handle string - could be a registered name or a raw filename
+      if (typeof nameOrHandle === 'string') {
+        // Look up in preRegisteredAssets to get the filename
+        const registered = runtime.preRegisteredAssets.get(nameOrHandle);
+        if (registered) {
+          return registered.filename;
+        }
+        // Fall back to using the string as-is (raw filename)
+        return nameOrHandle;
+      }
+      throw new Error('Invalid audio reference: expected string name or audio asset handle');
+    };
+
+    lua.global.set('__audio_playSound', (nameOrHandle: unknown, volume?: number) => {
+      const name = extractAudioFilename(nameOrHandle);
+      runtime.frameCommands.push({
+        type: 'playSound',
+        name,
+        volume: volume ?? 1,
+      });
+    });
+
+    lua.global.set('__audio_playMusic', (nameOrHandle: unknown, volume?: number, loop?: boolean) => {
+      const name = extractAudioFilename(nameOrHandle);
+      runtime.frameCommands.push({
+        type: 'playMusic',
+        name,
+        volume: volume ?? 1,
+        loop: loop ?? false,
+      });
+    });
+
+    lua.global.set('__audio_stopMusic', () => {
+      runtime.frameCommands.push({ type: 'stopMusic' });
+    });
+
+    lua.global.set('__audio_pauseMusic', () => {
+      runtime.frameCommands.push({ type: 'pauseMusic' });
+    });
+
+    lua.global.set('__audio_resumeMusic', () => {
+      runtime.frameCommands.push({ type: 'resumeMusic' });
+    });
+
+    lua.global.set('__audio_setMusicVolume', (volume: number) => {
+      runtime.frameCommands.push({ type: 'setMusicVolume', volume });
+    });
+
+    lua.global.set('__audio_setMasterVolume', (volume: number) => {
+      runtime.frameCommands.push({ type: 'setMasterVolume', volume });
+    });
+
+    lua.global.set('__audio_mute', () => {
+      runtime.frameCommands.push({ type: 'mute' });
+    });
+
+    lua.global.set('__audio_unmute', () => {
+      runtime.frameCommands.push({ type: 'unmute' });
+    });
+
+    // Audio state query functions (read from channel)
+    lua.global.set('__audio_isMuted', () => {
+      return runtime.channel.getAudioState().muted;
+    });
+
+    lua.global.set('__audio_getMasterVolume', () => {
+      return runtime.channel.getAudioState().masterVolume;
+    });
+
+    lua.global.set('__audio_isMusicPlaying', () => {
+      return runtime.channel.getAudioState().musicPlaying;
+    });
+
+    lua.global.set('__audio_getMusicTime', () => {
+      return runtime.channel.getAudioState().musicTime;
+    });
+
+    lua.global.set('__audio_getMusicDuration', () => {
+      return runtime.channel.getAudioState().musicDuration;
+    });
+
+    lua.global.set('__audio_getCurrentMusicName', () => {
+      return runtime.channel.getAudioState().currentMusicName;
+    });
+
     // Set up the Lua-side canvas table with methods (using snake_case for Lua conventions)
     lua.doStringSync(`
       canvas = {}
@@ -832,6 +942,85 @@ export class LuaCanvasRuntime {
       -- Write pixel data to the canvas
       function canvas.put_image_data(image_data, dx, dy)
         __canvas_putImageData(image_data.data, image_data.width, image_data.height, dx, dy)
+      end
+
+      -- Audio asset loading
+      function canvas.assets.load_sound(name, filename)
+        return __canvas_assets_loadSound(name, filename)
+      end
+
+      function canvas.assets.load_music(name, filename)
+        return __canvas_assets_loadMusic(name, filename)
+      end
+
+      -- Sound effects
+      function canvas.play_sound(sound_handle, volume)
+        __audio_playSound(sound_handle, volume)
+      end
+
+      -- Music playback
+      function canvas.play_music(music_handle, options)
+        local volume = 1
+        local loop = false
+        if options then
+          if options.volume then volume = options.volume end
+          if options.loop then loop = options.loop end
+        end
+        __audio_playMusic(music_handle, volume, loop)
+      end
+
+      function canvas.stop_music()
+        __audio_stopMusic()
+      end
+
+      function canvas.pause_music()
+        __audio_pauseMusic()
+      end
+
+      function canvas.resume_music()
+        __audio_resumeMusic()
+      end
+
+      function canvas.set_music_volume(volume)
+        __audio_setMusicVolume(volume)
+      end
+
+      -- Global audio control
+      function canvas.set_master_volume(volume)
+        __audio_setMasterVolume(volume)
+      end
+
+      function canvas.get_master_volume()
+        return __audio_getMasterVolume()
+      end
+
+      function canvas.mute()
+        __audio_mute()
+      end
+
+      function canvas.unmute()
+        __audio_unmute()
+      end
+
+      function canvas.is_muted()
+        return __audio_isMuted()
+      end
+
+      -- Music state queries
+      function canvas.is_music_playing()
+        return __audio_isMusicPlaying()
+      end
+
+      function canvas.get_music_time()
+        return __audio_getMusicTime()
+      end
+
+      function canvas.get_music_duration()
+        return __audio_getMusicDuration()
+      end
+
+      function canvas.get_current_music_name()
+        return __audio_getCurrentMusicName()
       end
     `);
   }

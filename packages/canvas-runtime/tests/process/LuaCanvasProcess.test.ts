@@ -18,6 +18,40 @@ class MockErrorEvent {
 
 vi.stubGlobal('ErrorEvent', MockErrorEvent);
 
+// Mock AudioContext for Node.js environment
+class MockGainNode {
+  gain = { value: 1 };
+  connect = vi.fn();
+  disconnect = vi.fn();
+}
+
+class MockAudioContext {
+  state: 'suspended' | 'running' | 'closed' = 'suspended';
+  destination = { connect: vi.fn() };
+  currentTime = 0;
+  createGain = vi.fn(() => new MockGainNode());
+  createBufferSource = vi.fn(() => ({
+    buffer: null,
+    loop: false,
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    start: vi.fn(),
+    stop: vi.fn(),
+    onended: null,
+  }));
+  decodeAudioData = vi.fn(() => Promise.resolve({ duration: 1 }));
+  resume = vi.fn(() => {
+    this.state = 'running';
+    return Promise.resolve();
+  });
+  close = vi.fn(() => {
+    this.state = 'closed';
+    return Promise.resolve();
+  });
+}
+
+vi.stubGlobal('AudioContext', MockAudioContext);
+
 // Mock channel for testing draw command flow
 let mockDrawCommands: DrawCommand[] = [];
 
@@ -43,6 +77,9 @@ const mockMainChannel = {
   getPendingImageDataRequests: vi.fn(() => []),
   requestImageData: vi.fn(() => Promise.resolve({ type: 'getImageDataResponse' as const, requestId: 0, width: 0, height: 0, data: [] })),
   sendImageDataResponse: vi.fn(),
+  // Audio methods
+  setAudioState: vi.fn(),
+  getAudioState: vi.fn(() => ({ masterVolume: 1, muted: false })),
 };
 
 // Mock channelFactory - using a configurable mock that can switch modes

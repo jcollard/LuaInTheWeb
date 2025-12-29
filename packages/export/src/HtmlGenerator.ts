@@ -1,5 +1,6 @@
 import type { ProjectConfig, ExportOptions, CollectedFile, CollectedAsset } from './types'
 import { canvasLuaCode, shellLuaCode } from './runtime'
+import { AUDIO_INLINE_JS } from '@lua-learning/lua-runtime'
 
 /**
  * Generates standalone HTML files for exported projects.
@@ -213,8 +214,12 @@ export class HtmlGenerator {
 
     gameCanvas.addEventListener('mousemove', (e) => {
       const rect = gameCanvas.getBoundingClientRect();
-      state.mouseX = e.clientX - rect.left;
-      state.mouseY = e.clientY - rect.top;
+      // Get position relative to displayed element
+      const displayX = e.clientX - rect.left;
+      const displayY = e.clientY - rect.top;
+      // Scale from display coords to canvas logical coords
+      state.mouseX = displayX * (gameCanvas.width / rect.width);
+      state.mouseY = displayY * (gameCanvas.height / rect.height);
     });
 
     gameCanvas.addEventListener('mousedown', (e) => {
@@ -637,6 +642,10 @@ export class HtmlGenerator {
         engine.global.set('__canvas_clipPath', () => {});
         engine.global.set('__canvas_isPointInStoredPath', () => false);
         engine.global.set('__canvas_isPointInStoredStroke', () => false);
+
+        // === AUDIO API (generated from audio-inline.ts) ===
+        ${AUDIO_INLINE_JS}
+        globalThis.setupAudioBridge(engine, state, ASSET_MANIFEST);
 
         // Set up custom require to load from embedded modules
         engine.global.set('__load_module', (modulePath) => {

@@ -237,6 +237,22 @@ export function setupCanvasAPI(
     return controller.loadFontAsset(name, filename)
   })
 
+  engine.global.set('__canvas_assets_loadSound', (name: string, filename: string) => {
+    const controller = getController()
+    if (!controller) {
+      throw new Error('Canvas controller not available - is canvas support enabled?')
+    }
+    return controller.loadSoundAsset(name, filename)
+  })
+
+  engine.global.set('__canvas_assets_loadMusic', (name: string, filename: string) => {
+    const controller = getController()
+    if (!controller) {
+      throw new Error('Canvas controller not available - is canvas support enabled?')
+    }
+    return controller.loadMusicAsset(name, filename)
+  })
+
   // Helper to extract asset name from string or handle
   const extractAssetName = (nameOrHandle: unknown): string => {
     if (typeof nameOrHandle === 'string') {

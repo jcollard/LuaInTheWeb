@@ -15,6 +15,7 @@ import {
 import { resolvePath } from '@lua-learning/shell-core'
 import { CanvasController, type CanvasCallbacks } from './CanvasController'
 import { setupCanvasAPI } from './setupCanvasAPI'
+import { setupAudioAPI } from './setupAudioAPI'
 import { FileOperationsHandler } from './FileOperationsHandler'
 
 /**
@@ -404,8 +405,9 @@ __clear_execution_hook()
     }
     this.canvasController = new CanvasController(callbacksWithError)
 
-    // Use shared setup function
+    // Use shared setup functions
     setupCanvasAPI(this.engine, () => this.canvasController)
+    setupAudioAPI(this.engine, () => this.canvasController?.getAudioEngine() ?? null)
   }
 
 }
