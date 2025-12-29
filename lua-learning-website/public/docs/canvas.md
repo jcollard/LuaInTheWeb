@@ -78,6 +78,10 @@ canvas.start()
 
 - [**Keyboard & Mouse**](canvas/input.md) - Input handling, key constants, mouse position
 
+### Audio
+
+- [**Audio**](canvas/audio.md) - Sound effects, music playback, audio channels
+
 ### Advanced
 
 - [**Transformations**](canvas/transforms.md) - `translate()`, `rotate()`, `scale()`, `save()`/`restore()`
@@ -222,6 +226,48 @@ canvas.start()
 | `canvas.put_image_data(data, x, y, opts?)` | Write pixels to canvas (opts: dirty_x, dirty_y, dirty_width, dirty_height) |
 | `canvas.clone_image_data(data)` | Create independent copy of ImageData |
 | `canvas.capture(opts?)` | Capture canvas as data URL (opts: format, quality) |
+
+### Audio - Sound Effects
+| Function | Description |
+|----------|-------------|
+| `canvas.play_sound(name, volume?)` | Play a sound effect (can overlap) |
+| `canvas.get_sound_duration(name)` | Get sound duration in seconds |
+
+### Audio - Music
+| Function | Description |
+|----------|-------------|
+| `canvas.play_music(name, opts?)` | Play background music (opts: volume, loop) |
+| `canvas.stop_music()` | Stop music playback |
+| `canvas.pause_music()` | Pause music |
+| `canvas.resume_music()` | Resume paused music |
+| `canvas.set_music_volume(volume)` | Set music volume (0-1) |
+| `canvas.is_music_playing()` | Check if music is playing |
+| `canvas.get_music_time()` | Get playback position in seconds |
+| `canvas.get_music_duration()` | Get music duration in seconds |
+
+### Audio - Global Control
+| Function | Description |
+|----------|-------------|
+| `canvas.set_master_volume(volume)` | Set master volume (0-1) |
+| `canvas.get_master_volume()` | Get master volume |
+| `canvas.mute()` | Mute all audio |
+| `canvas.unmute()` | Unmute all audio |
+| `canvas.is_muted()` | Check if audio is muted |
+
+### Audio - Channels (Advanced)
+| Function | Description |
+|----------|-------------|
+| `canvas.channel_create(name)` | Create named audio channel |
+| `canvas.channel_destroy(name)` | Destroy channel |
+| `canvas.channel_play(ch, audio, opts?)` | Play on channel (opts: volume, loop) |
+| `canvas.channel_stop(ch)` | Stop channel |
+| `canvas.channel_pause(ch)` | Pause channel |
+| `canvas.channel_resume(ch)` | Resume channel |
+| `canvas.channel_set_volume(ch, vol)` | Set channel volume |
+| `canvas.channel_get_volume(ch)` | Get channel volume |
+| `canvas.channel_fade_to(ch, vol, dur)` | Fade channel over duration |
+| `canvas.channel_is_playing(ch)` | Check if channel is playing |
+| `canvas.channel_is_fading(ch)` | Check if channel is fading |
 
 ## Examples
 

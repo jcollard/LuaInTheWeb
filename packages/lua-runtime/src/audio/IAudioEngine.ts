@@ -153,4 +153,124 @@ export interface IAudioEngine {
    * Should be called when the audio engine is no longer needed.
    */
   dispose(): void;
+
+  // --- Channel API ---
+
+  /**
+   * Create a named audio channel.
+   * @param name - Unique channel name
+   * @param parentName - Optional parent channel name (defaults to master)
+   */
+  createChannel(name: string, parentName?: string): void;
+
+  /**
+   * Get the parent channel name.
+   * @param name - Channel name
+   * @returns Parent channel name, or null if connected to master
+   */
+  getChannelParent(name: string): string | null;
+
+  /**
+   * Set the parent channel (reparent).
+   * @param name - Channel name
+   * @param parentName - New parent name, or null for master
+   */
+  setChannelParent(name: string, parentName: string | null): void;
+
+  /**
+   * Get effective volume (this channel's volume * all ancestor volumes * master).
+   * @param name - Channel name
+   */
+  getEffectiveVolume(name: string): number;
+
+  /**
+   * Destroy an audio channel.
+   * @param name - Channel name to destroy
+   */
+  destroyChannel(name: string): void;
+
+  /**
+   * Play audio on a channel.
+   * @param channel - Channel name
+   * @param audioName - Audio asset name
+   * @param volume - Volume from 0 to 1
+   * @param loop - Whether to loop
+   * @param startTime - Start time in seconds (default: 0)
+   */
+  playOnChannel(
+    channel: string,
+    audioName: string,
+    volume?: number,
+    loop?: boolean,
+    startTime?: number
+  ): void;
+
+  /**
+   * Stop playback on a channel.
+   * @param channel - Channel name
+   */
+  stopChannel(channel: string): void;
+
+  /**
+   * Pause playback on a channel.
+   * @param channel - Channel name
+   */
+  pauseChannel(channel: string): void;
+
+  /**
+   * Resume playback on a channel.
+   * @param channel - Channel name
+   */
+  resumeChannel(channel: string): void;
+
+  /**
+   * Set channel volume immediately.
+   * @param channel - Channel name
+   * @param volume - Volume from 0 to 1
+   */
+  setChannelVolume(channel: string, volume: number): void;
+
+  /**
+   * Get channel volume.
+   * @param channel - Channel name
+   */
+  getChannelVolume(channel: string): number;
+
+  /**
+   * Fade channel volume over time.
+   * @param channel - Channel name
+   * @param targetVolume - Target volume from 0 to 1
+   * @param duration - Duration in seconds
+   */
+  fadeChannelTo(channel: string, targetVolume: number, duration: number): void;
+
+  /**
+   * Check if channel is playing.
+   * @param channel - Channel name
+   */
+  isChannelPlaying(channel: string): boolean;
+
+  /**
+   * Check if channel is fading.
+   * @param channel - Channel name
+   */
+  isChannelFading(channel: string): boolean;
+
+  /**
+   * Get channel playback time.
+   * @param channel - Channel name
+   */
+  getChannelTime(channel: string): number;
+
+  /**
+   * Get channel audio duration.
+   * @param channel - Channel name
+   */
+  getChannelDuration(channel: string): number;
+
+  /**
+   * Get name of audio currently on channel.
+   * @param channel - Channel name
+   */
+  getChannelAudio(channel: string): string;
 }

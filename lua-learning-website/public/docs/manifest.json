@@ -13,6 +13,8 @@
     "canvas/text.md",
     "canvas/hit-testing.md",
     "canvas/pixels.md",
+    "canvas/audio.md",
+    "audio_mixer.md",
     "lua/basics.md",
     "lua/string.md",
     "lua/table.md",

@@ -1991,4 +1991,121 @@ function canvas.unmute() end
 ---@usage end
 function canvas.is_muted() end
 
+-- -----------------------------------------------------------------------------
+-- Audio Channels (low-level API for audio-mixer library)
+-- -----------------------------------------------------------------------------
+-- These are low-level primitives for multi-channel audio management.
+-- For most use cases, prefer the higher-level audio-mixer library:
+--   local mixer = require("audio-mixer")
+--
+-- Channels provide:
+-- - Multiple named audio buses (e.g., "bgm", "sfx", "voice")
+-- - Per-channel volume control
+-- - Smooth fading via Web Audio linearRampToValueAtTime
+-- - Independent playback control per channel
+
+--- Create a named audio channel.
+--- Channels are independent audio buses that can play one sound at a time.
+--- Each channel has its own volume and playback state.
+---@param name string Unique channel name (e.g., "bgm", "sfx", "voice")
+---@return nil
+---@usage canvas.channel_create("bgm")
+---@usage canvas.channel_create("sfx")
+function canvas.channel_create(name) end
+
+--- Destroy an audio channel and free its resources.
+---@param name string Channel name to destroy
+---@return nil
+---@usage canvas.channel_destroy("bgm")
+function canvas.channel_destroy(name) end
+
+---@class ChannelPlayOptions
+---@field volume? number Volume level from 0.0 to 1.0 (default: 1.0)
+---@field loop? boolean Whether to loop the audio (default: false)
+
+--- Play audio on a channel.
+--- Stops any currently playing audio on this channel.
+---@param channel string Channel name
+---@param audio string|AudioAssetHandle Audio name or asset handle
+---@param options? ChannelPlayOptions Playback options
+---@return nil
+---@usage canvas.channel_play("bgm", "theme_music", { loop = true, volume = 0.8 })
+---@usage canvas.channel_play("sfx", explosionHandle)
+function canvas.channel_play(channel, audio, options) end
+
+--- Stop playback on a channel.
+---@param channel string Channel name
+---@return nil
+---@usage canvas.channel_stop("bgm")
+function canvas.channel_stop(channel) end
+
+--- Pause playback on a channel.
+---@param channel string Channel name
+---@return nil
+---@usage canvas.channel_pause("bgm")
+function canvas.channel_pause(channel) end
+
+--- Resume paused playback on a channel.
+---@param channel string Channel name
+---@return nil
+---@usage canvas.channel_resume("bgm")
+function canvas.channel_resume(channel) end
+
+--- Set the volume of a channel (immediate).
+---@param channel string Channel name
+---@param volume number Volume level from 0.0 to 1.0
+---@return nil
+---@usage canvas.channel_set_volume("bgm", 0.5)
+function canvas.channel_set_volume(channel, volume) end
+
+--- Get the current volume of a channel.
+---@param channel string Channel name
+---@return number volume Current volume (0.0 to 1.0)
+---@usage local vol = canvas.channel_get_volume("bgm")
+function canvas.channel_get_volume(channel) end
+
+--- Smoothly fade a channel's volume over time.
+--- Uses Web Audio linearRampToValueAtTime for frame-independent fading.
+---@param channel string Channel name
+---@param targetVolume number Target volume (0.0 to 1.0)
+---@param duration number Fade duration in seconds
+---@return nil
+---@usage canvas.channel_fade_to("bgm", 0, 2.0)  -- Fade out over 2 seconds
+---@usage canvas.channel_fade_to("bgm", 1.0, 1.0)  -- Fade in over 1 second
+function canvas.channel_fade_to(channel, targetVolume, duration) end
+
+--- Check if a channel is currently playing.
+---@param channel string Channel name
+---@return boolean isPlaying True if the channel is playing
+---@usage if canvas.channel_is_playing("bgm") then
+---@usage   print("Music is playing")
+---@usage end
+function canvas.channel_is_playing(channel) end
+
+--- Check if a channel is currently fading.
+---@param channel string Channel name
+---@return boolean isFading True if a fade is in progress
+---@usage if canvas.channel_is_fading("bgm") then
+---@usage   print("BGM is fading")
+---@usage end
+function canvas.channel_is_fading(channel) end
+
+--- Get the current playback time of a channel in seconds.
+---@param channel string Channel name
+---@return number time Current playback position in seconds
+---@usage local pos = canvas.channel_get_time("bgm")
+function canvas.channel_get_time(channel) end
+
+--- Get the duration of the audio currently loaded on a channel.
+---@param channel string Channel name
+---@return number duration Duration in seconds (0 if nothing loaded)
+---@usage local duration = canvas.channel_get_duration("bgm")
+function canvas.channel_get_duration(channel) end
+
+--- Get the name of the audio currently loaded on a channel.
+---@param channel string Channel name
+---@return string audioName Name of the current audio (empty string if none)
+---@usage local track = canvas.channel_get_audio("bgm")
+function canvas.channel_get_audio(channel) end
+
 return canvas

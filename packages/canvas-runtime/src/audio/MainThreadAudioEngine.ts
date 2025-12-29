@@ -3,7 +3,7 @@
  * Processes audio commands from the worker and manages playback.
  */
 
-import type { AudioState } from '../shared/types.js';
+import type { AudioState, ChannelAudioState } from '../shared/types.js';
 
 /**
  * Internal music state for tracking playback.
@@ -30,6 +30,42 @@ interface MusicState {
 }
 
 /**
+ * Internal state for a named audio channel.
+ */
+interface ChannelState {
+  /** Name of the channel */
+  name: string;
+  /** The audio buffer being played (null if none) */
+  buffer: AudioBuffer | null;
+  /** The current source node (null if not playing) */
+  source: AudioBufferSourceNode | null;
+  /** Gain node for channel volume control */
+  gainNode: GainNode;
+  /** Whether audio is currently playing on this channel */
+  isPlaying: boolean;
+  /** When playback started (for calculating current time) */
+  startTime: number;
+  /** Position when paused (for resuming) */
+  pausedAt: number;
+  /** Whether looping is enabled */
+  loop: boolean;
+  /** Current logical volume (0-1) before fades */
+  volume: number;
+  /** Name of the audio asset currently loaded */
+  currentAudioName: string;
+  /** Whether a fade is currently in progress */
+  isFading: boolean;
+  /** Start time of the current fade */
+  fadeStartTime: number;
+  /** Starting volume of the current fade */
+  fadeStartVolume: number;
+  /** Target volume of the current fade */
+  fadeTargetVolume: number;
+  /** Duration of the current fade in seconds */
+  fadeDuration: number;
+}
+
+/**
  * Main thread audio engine using Web Audio API.
  * Provides low-latency audio playback for games.
  */
@@ -38,6 +74,7 @@ export class MainThreadAudioEngine {
   private masterGainNode: GainNode | null = null;
   private audioBuffers: Map<string, AudioBuffer> = new Map();
   private musicState: MusicState | null = null;
+  private channels: Map<string, ChannelState> = new Map();
   private masterVolume = 1;
   private muted = false;
   private initialized = false;
@@ -348,6 +385,13 @@ export class MainThreadAudioEngine {
     if (this.musicState) {
       this.musicState.gainNode.gain.value = 0;
     }
+    // Mute all channels
+    for (const state of this.channels.values()) {
+      if (this.audioContext) {
+        state.gainNode.gain.cancelScheduledValues(this.audioContext.currentTime);
+        state.gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+      }
+    }
   }
 
   /**
@@ -362,6 +406,14 @@ export class MainThreadAudioEngine {
     if (this.musicState) {
       this.musicState.gainNode.gain.value = this.musicState.volume * this.masterVolume;
     }
+    // Unmute all channels
+    for (const state of this.channels.values()) {
+      if (this.audioContext) {
+        const effectiveVolume = state.volume * this.masterVolume;
+        state.gainNode.gain.cancelScheduledValues(this.audioContext.currentTime);
+        state.gainNode.gain.setValueAtTime(effectiveVolume, this.audioContext.currentTime);
+      }
+    }
   }
 
   /**
@@ -371,10 +423,360 @@ export class MainThreadAudioEngine {
     return this.muted;
   }
 
+  // ==========================================================================
+  // Audio Channel API
+  // ==========================================================================
+
+  /**
+   * Create a named audio channel.
+   * If the channel already exists, this is a no-op.
+   */
+  createChannel(name: string): void {
+    if (this.channels.has(name)) {
+      return; // Channel already exists
+    }
+
+    if (!this.audioContext || !this.masterGainNode) {
+      console.warn('Cannot create channel: audio engine not initialized');
+      return;
+    }
+
+    // Create gain node for this channel
+    const gainNode = this.audioContext.createGain();
+    gainNode.gain.value = this.muted ? 0 : 1;
+    gainNode.connect(this.masterGainNode);
+
+    const state: ChannelState = {
+      name,
+      buffer: null,
+      source: null,
+      gainNode,
+      isPlaying: false,
+      startTime: 0,
+      pausedAt: 0,
+      loop: false,
+      volume: 1,
+      currentAudioName: '',
+      isFading: false,
+      fadeStartTime: 0,
+      fadeStartVolume: 0,
+      fadeTargetVolume: 0,
+      fadeDuration: 0,
+    };
+
+    this.channels.set(name, state);
+  }
+
+  /**
+   * Destroy a named audio channel, stopping any audio on it.
+   */
+  destroyChannel(name: string): void {
+    const state = this.channels.get(name);
+    if (!state) {
+      return;
+    }
+
+    // Stop any playing audio
+    this.stopChannelInternal(state);
+
+    // Disconnect and remove
+    state.gainNode.disconnect();
+    this.channels.delete(name);
+  }
+
+  /**
+   * Stop audio on a channel (internal helper).
+   */
+  private stopChannelInternal(state: ChannelState): void {
+    if (state.source) {
+      try {
+        state.source.stop();
+      } catch {
+        // Source may already be stopped
+      }
+      state.source.disconnect();
+      state.source = null;
+    }
+    state.isPlaying = false;
+    state.pausedAt = 0;
+    state.isFading = false;
+  }
+
+  /**
+   * Play audio on a specific channel.
+   * Replaces any audio currently playing on that channel.
+   */
+  playOnChannel(channelName: string, audioName: string, volume = 1, loop = false): void {
+    const state = this.channels.get(channelName);
+    if (!state || !this.audioContext) {
+      console.warn(`Channel not found: ${channelName}`);
+      return;
+    }
+
+    const buffer = this.audioBuffers.get(audioName);
+    if (!buffer) {
+      console.warn(`Audio not found: ${audioName}`);
+      return;
+    }
+
+    // Stop any currently playing audio on this channel
+    this.stopChannelInternal(state);
+
+    // Update state
+    state.buffer = buffer;
+    state.volume = Math.max(0, Math.min(1, volume));
+    state.loop = loop;
+    state.currentAudioName = audioName;
+    state.isFading = false;
+
+    // Set gain (respecting mute and master volume)
+    const effectiveVolume = this.muted ? 0 : state.volume * this.masterVolume;
+    state.gainNode.gain.setValueAtTime(effectiveVolume, this.audioContext.currentTime);
+
+    // Create and configure source
+    const source = this.audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.loop = loop;
+    source.connect(state.gainNode);
+
+    // Set up ended callback
+    source.onended = () => {
+      if (state.source === source) {
+        state.isPlaying = false;
+      }
+    };
+
+    state.source = source;
+    state.isPlaying = true;
+    state.startTime = this.audioContext.currentTime;
+    state.pausedAt = 0;
+
+    // Start playback
+    source.start(0);
+  }
+
+  /**
+   * Stop audio on a specific channel.
+   */
+  stopChannel(channelName: string): void {
+    const state = this.channels.get(channelName);
+    if (state) {
+      this.stopChannelInternal(state);
+      state.buffer = null;
+      state.currentAudioName = '';
+    }
+  }
+
+  /**
+   * Pause audio on a specific channel.
+   */
+  pauseChannel(channelName: string): void {
+    const state = this.channels.get(channelName);
+    if (!state || !state.isPlaying || !this.audioContext) {
+      return;
+    }
+
+    // Calculate how far into the track we are
+    const elapsed = this.audioContext.currentTime - state.startTime;
+    if (state.buffer) {
+      state.pausedAt = elapsed % state.buffer.duration;
+    }
+    state.isPlaying = false;
+
+    // Stop the current source
+    if (state.source) {
+      try {
+        state.source.stop();
+      } catch {
+        // Source may already be stopped
+      }
+      state.source.disconnect();
+      state.source = null;
+    }
+  }
+
+  /**
+   * Resume paused audio on a specific channel.
+   */
+  resumeChannel(channelName: string): void {
+    const state = this.channels.get(channelName);
+    if (!state || state.isPlaying || !state.buffer || !this.audioContext) {
+      return;
+    }
+
+    // Create new source and start from paused position
+    const source = this.audioContext.createBufferSource();
+    source.buffer = state.buffer;
+    source.loop = state.loop;
+    source.connect(state.gainNode);
+
+    source.onended = () => {
+      if (state.source === source) {
+        state.isPlaying = false;
+      }
+    };
+
+    state.source = source;
+    state.isPlaying = true;
+    state.startTime = this.audioContext.currentTime - state.pausedAt;
+
+    source.start(0, state.pausedAt);
+  }
+
+  /**
+   * Set the volume on a specific channel (immediate).
+   */
+  setChannelVolume(channelName: string, volume: number): void {
+    const state = this.channels.get(channelName);
+    if (!state || !this.audioContext) {
+      return;
+    }
+
+    state.volume = Math.max(0, Math.min(1, volume));
+    const effectiveVolume = this.muted ? 0 : state.volume * this.masterVolume;
+
+    // Cancel any scheduled values and set immediately
+    state.gainNode.gain.cancelScheduledValues(this.audioContext.currentTime);
+    state.gainNode.gain.setValueAtTime(effectiveVolume, this.audioContext.currentTime);
+    state.isFading = false;
+  }
+
+  /**
+   * Get the current volume of a channel.
+   */
+  getChannelVolume(channelName: string): number {
+    const state = this.channels.get(channelName);
+    return state?.volume ?? 0;
+  }
+
+  /**
+   * Fade channel volume over time using Web Audio scheduling.
+   */
+  fadeChannelTo(channelName: string, targetVolume: number, duration: number): void {
+    const state = this.channels.get(channelName);
+    if (!state || !this.audioContext) {
+      return;
+    }
+
+    const now = this.audioContext.currentTime;
+    const currentGain = state.gainNode.gain.value;
+    const clampedTarget = Math.max(0, Math.min(1, targetVolume));
+
+    // Cancel any existing scheduled values
+    state.gainNode.gain.cancelScheduledValues(now);
+
+    // Set current value explicitly to avoid jumps
+    state.gainNode.gain.setValueAtTime(currentGain, now);
+
+    // Calculate effective target (respecting mute and master volume)
+    const effectiveTarget = this.muted ? 0 : clampedTarget * this.masterVolume;
+
+    // Schedule the ramp
+    state.gainNode.gain.linearRampToValueAtTime(effectiveTarget, now + duration);
+
+    // Track fade state
+    state.isFading = true;
+    state.fadeStartTime = now;
+    state.fadeStartVolume = state.volume;
+    state.fadeTargetVolume = clampedTarget;
+    state.fadeDuration = duration;
+
+    // Update logical volume to target
+    state.volume = clampedTarget;
+  }
+
+  /**
+   * Check if a channel is currently playing.
+   */
+  isChannelPlaying(channelName: string): boolean {
+    return this.channels.get(channelName)?.isPlaying ?? false;
+  }
+
+  /**
+   * Check if a channel is currently fading.
+   */
+  isChannelFading(channelName: string): boolean {
+    const state = this.channels.get(channelName);
+    if (!state || !state.isFading || !this.audioContext) {
+      return false;
+    }
+
+    // Check if fade has completed
+    const elapsed = this.audioContext.currentTime - state.fadeStartTime;
+    if (elapsed >= state.fadeDuration) {
+      state.isFading = false;
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Get the current playback time of a channel.
+   */
+  getChannelTime(channelName: string): number {
+    const state = this.channels.get(channelName);
+    if (!state || !this.audioContext || !state.buffer) {
+      return 0;
+    }
+
+    if (!state.isPlaying) {
+      return state.pausedAt;
+    }
+
+    const elapsed = this.audioContext.currentTime - state.startTime;
+    return elapsed % state.buffer.duration;
+  }
+
+  /**
+   * Get the duration of audio on a channel.
+   */
+  getChannelDuration(channelName: string): number {
+    return this.channels.get(channelName)?.buffer?.duration ?? 0;
+  }
+
+  /**
+   * Get the name of audio currently on a channel.
+   */
+  getChannelAudio(channelName: string): string {
+    return this.channels.get(channelName)?.currentAudioName ?? '';
+  }
+
+  /**
+   * Get the state of a channel for syncing to the worker.
+   */
+  private getChannelState(state: ChannelState): ChannelAudioState {
+    // Update fade state
+    if (state.isFading && this.audioContext) {
+      const elapsed = this.audioContext.currentTime - state.fadeStartTime;
+      if (elapsed >= state.fadeDuration) {
+        state.isFading = false;
+      }
+    }
+
+    return {
+      name: state.name,
+      isPlaying: state.isPlaying,
+      volume: state.volume,
+      currentTime: this.getChannelTime(state.name),
+      duration: state.buffer?.duration ?? 0,
+      currentAudioName: state.currentAudioName,
+      loop: state.loop,
+      isFading: state.isFading,
+      fadeTargetVolume: state.fadeTargetVolume,
+    };
+  }
+
   /**
    * Get the current audio state for syncing to the worker.
    */
   getAudioState(): AudioState {
+    // Build channel states
+    const channelStates: Record<string, ChannelAudioState> = {};
+    for (const [name, state] of this.channels) {
+      channelStates[name] = this.getChannelState(state);
+    }
+
     return {
       muted: this.muted,
       masterVolume: this.masterVolume,
@@ -382,6 +784,7 @@ export class MainThreadAudioEngine {
       musicTime: this.getMusicTime(),
       musicDuration: this.getMusicDuration(),
       currentMusicName: this.getCurrentMusicName(),
+      channels: channelStates,
     };
   }
 
@@ -401,6 +804,13 @@ export class MainThreadAudioEngine {
   dispose(): void {
     // Stop music
     this.stopMusicInternal();
+
+    // Stop and clean up all channels
+    for (const state of this.channels.values()) {
+      this.stopChannelInternal(state);
+      state.gainNode.disconnect();
+    }
+    this.channels.clear();
 
     // Clear buffers
     this.audioBuffers.clear();

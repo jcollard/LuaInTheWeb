@@ -1,6 +1,7 @@
 import type { IWorkerChannel, ChannelConfig } from './IWorkerChannel.js';
 import type {
   AudioState,
+  ChannelAudioState,
   DrawCommand,
   GetImageDataRequest,
   GetImageDataResponse,
@@ -94,6 +95,7 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
   private readonly uint8View: Uint8Array;
   private readonly textEncoder: TextEncoder;
   private readonly textDecoder: TextDecoder;
+  private channelStates: Record<string, ChannelAudioState> = {};
 
   constructor(_config: ChannelConfig, buffer: SharedArrayBuffer) {
     this.buffer = buffer;
@@ -238,6 +240,7 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
       musicTime: musicTime || 0,
       musicDuration: musicDuration || 0,
       currentMusicName,
+      channels: this.channelStates || {},
     };
   }
 
@@ -255,6 +258,9 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
       const copyLength = Math.min(encoded.length, AUDIO_MUSIC_NAME_SIZE - 1);
       this.uint8View.set(encoded.subarray(0, copyLength), OFFSET_AUDIO_MUSIC_NAME);
     }
+
+    // Store channel states (kept in JS memory, not SharedArrayBuffer)
+    this.channelStates = state.channels;
   }
 
   private readKeyArray(countOffset: number, dataOffset: number): string[] {

@@ -631,6 +631,31 @@ export class LuaCanvasProcess implements IProcess {
         case 'unmute':
           this.audioEngine.unmute();
           break;
+        // Audio channel commands
+        case 'channelCreate':
+          this.audioEngine.createChannel(cmd.channel);
+          break;
+        case 'channelDestroy':
+          this.audioEngine.destroyChannel(cmd.channel);
+          break;
+        case 'channelPlay':
+          this.audioEngine.playOnChannel(cmd.channel, cmd.audio, cmd.volume, cmd.loop);
+          break;
+        case 'channelStop':
+          this.audioEngine.stopChannel(cmd.channel);
+          break;
+        case 'channelPause':
+          this.audioEngine.pauseChannel(cmd.channel);
+          break;
+        case 'channelResume':
+          this.audioEngine.resumeChannel(cmd.channel);
+          break;
+        case 'channelSetVolume':
+          this.audioEngine.setChannelVolume(cmd.channel, cmd.volume);
+          break;
+        case 'channelFadeTo':
+          this.audioEngine.fadeChannelTo(cmd.channel, cmd.targetVolume, cmd.duration);
+          break;
       }
     }
   }

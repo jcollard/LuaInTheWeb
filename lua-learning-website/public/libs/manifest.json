@@ -2,6 +2,7 @@
   "name": "Lua Libraries",
   "files": [
     "shell.lua",
-    "canvas.lua"
+    "canvas.lua",
+    "audio_mixer.lua"
   ]
 }

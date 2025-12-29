@@ -137,4 +137,213 @@ export const canvasLuaInputCode = `
     package.preload['canvas'] = function()
       return _canvas
     end
+
+    -- Register audio_mixer module
+    package.preload['audio_mixer'] = function()
+      local canvas = require('canvas')
+      local mixer = {}
+      local Channel = {}
+      Channel.__index = Channel
+
+      -- Helper to sync channel and all ancestor volumes to the audio engine
+      -- This is needed because volume may be set before the engine exists
+      local function sync_volume_hierarchy(channel)
+        -- Collect all channels in the hierarchy (child to parent)
+        local chain = {}
+        local current = channel
+        while current do
+          table.insert(chain, current)
+          current = current._parent
+        end
+
+        -- Create and sync in reverse order (parent to child)
+        -- This ensures parent channels exist before children connect to them
+        for i = #chain, 1, -1 do
+          local ch = chain[i]
+          local parent_name = ch._parent and ch._parent.name or nil
+          canvas.channel_create(ch.name, { parent = parent_name })
+          canvas.channel_set_volume(ch.name, ch._volume)
+        end
+      end
+
+      -- Channel Creation
+      function mixer.create_channel(name, options)
+        local opts = options or {}
+        local parent_name = opts.parent and opts.parent.name or nil
+        canvas.channel_create(name, { parent = parent_name })
+        return setmetatable({
+          name = name,
+          _volume = 1.0,
+          _parent = opts.parent or nil,
+          _crossfade_pending = nil,
+          _is_group = false,
+        }, Channel)
+      end
+
+      -- Create a group channel (for volume grouping, no playback)
+      function mixer.create_group(name, options)
+        local opts = options or {}
+        local parent_name = opts.parent and opts.parent.name or nil
+        canvas.channel_create(name, { parent = parent_name })
+        return setmetatable({
+          name = name,
+          _volume = 1.0,
+          _parent = opts.parent or nil,
+          _crossfade_pending = nil,
+          _is_group = true,
+        }, Channel)
+      end
+
+      function mixer.destroy_channel(channel)
+        canvas.channel_destroy(channel.name)
+      end
+
+      -- Get effective volume (channel volume * all parent volumes * master)
+      function mixer.get_effective_volume(channel)
+        return canvas.channel_get_effective_volume(channel.name)
+      end
+
+      -- Playback Control
+      function mixer.play(channel, audio, options)
+        local opts = options or {}
+        local start_volume = opts.fade_in and 0 or (opts.volume or channel._volume)
+        local target_volume = opts.volume or channel._volume
+
+        canvas.channel_play(channel.name, audio, {
+          volume = start_volume,
+          loop = opts.loop or false,
+        })
+
+        -- Sync volume hierarchy to engine (needed if volumes were set before engine existed)
+        sync_volume_hierarchy(channel)
+
+        if opts.fade_in and opts.fade_in > 0 then
+          canvas.channel_fade_to(channel.name, target_volume, opts.fade_in)
+        end
+
+        channel._volume = target_volume
+      end
+
+      function mixer.stop(channel, options)
+        local opts = options or {}
+        if opts.fade_out and opts.fade_out > 0 then
+          canvas.channel_fade_to(channel.name, 0, opts.fade_out)
+        else
+          canvas.channel_stop(channel.name)
+        end
+      end
+
+      function mixer.pause(channel)
+        canvas.channel_pause(channel.name)
+      end
+
+      function mixer.resume(channel)
+        canvas.channel_resume(channel.name)
+      end
+
+      -- Volume Control
+      function mixer.set_volume(channel, volume)
+        channel._volume = volume
+        canvas.channel_set_volume(channel.name, volume)
+      end
+
+      function mixer.get_volume(channel)
+        -- Return locally tracked volume (works even before audio engine is initialized)
+        return channel._volume
+      end
+
+      function mixer.fade_to(channel, volume, duration)
+        canvas.channel_fade_to(channel.name, volume, duration)
+        channel._volume = volume
+      end
+
+      -- Crossfade
+      function mixer.crossfade(channel, audio, duration, options)
+        local opts = options or {}
+        local current_volume = channel._volume
+
+        -- Sync parent volume hierarchy (needed if volumes were set before engine existed)
+        if channel._parent then
+          sync_volume_hierarchy(channel._parent)
+        end
+
+        -- Fade out current audio on the main channel
+        canvas.channel_fade_to(channel.name, 0, duration)
+
+        -- Create a temporary crossfade channel (under same parent as main channel)
+        local xfade_channel = channel.name .. "_xfade"
+        local parent_name = canvas.channel_get_parent(channel.name)
+        canvas.channel_create(xfade_channel, { parent = parent_name })
+        canvas.channel_play(xfade_channel, audio, {
+          volume = 0,
+          loop = opts.loop or false,
+        })
+        canvas.channel_fade_to(xfade_channel, current_volume, duration)
+
+        -- Store crossfade info for cleanup
+        channel._crossfade_pending = {
+          temp_channel = xfade_channel,
+          new_audio = audio,
+          duration = duration,
+          started_at = canvas.get_time(),
+          loop = opts.loop or false,
+          target_volume = current_volume,
+        }
+      end
+
+      function mixer.update_crossfade(channel)
+        if not channel._crossfade_pending then
+          return false
+        end
+
+        local xf = channel._crossfade_pending
+        local elapsed = canvas.get_time() - xf.started_at
+
+        if elapsed >= xf.duration then
+          -- Crossfade complete - swap channels
+          -- Get the current playback position from the temp channel
+          local current_time = canvas.channel_get_time(xf.temp_channel)
+
+          canvas.channel_stop(channel.name)
+          canvas.channel_stop(xf.temp_channel)
+          canvas.channel_play(channel.name, xf.new_audio, {
+            volume = xf.target_volume,
+            loop = xf.loop,
+            start_time = current_time,
+          })
+          canvas.channel_destroy(xf.temp_channel)
+          channel._crossfade_pending = nil
+          return true
+        end
+
+        return false
+      end
+
+      function mixer.is_crossfading(channel)
+        return channel._crossfade_pending ~= nil
+      end
+
+      -- State Queries
+      function mixer.is_playing(channel)
+        return canvas.channel_is_playing(channel.name)
+      end
+
+      function mixer.is_fading(channel)
+        return canvas.channel_is_fading(channel.name)
+      end
+
+      function mixer.get_time(channel)
+        return canvas.channel_get_time(channel.name)
+      end
+
+      function mixer.get_duration(channel)
+        return canvas.channel_get_duration(channel.name)
+      end
+
+      function mixer.get_audio(channel)
+        return canvas.channel_get_audio(channel.name)
+      end
+
+      return mixer
+    end
 `
