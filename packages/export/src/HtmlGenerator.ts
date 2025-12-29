@@ -33,6 +33,93 @@ export class HtmlGenerator {
   }
 
   /**
+   * Generate CSS for canvas scaling mode.
+   */
+  private generateScaleCss(scale: 'full' | 'fit' | '1x', bgColor: string): string {
+    const baseCss = `
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: ${bgColor};
+    }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    canvas {
+      display: block;
+      image-rendering: pixelated;
+    }`
+
+    switch (scale) {
+      case 'full':
+      case 'fit':
+        // Both use JS for scaling, just need overflow hidden for full
+        return `${baseCss}
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }`
+
+      case '1x':
+        // Native size with scrollbars
+        return `${baseCss}
+    body {
+      overflow: auto;
+    }`
+
+      default:
+        return baseCss
+    }
+  }
+
+  /**
+   * Generate JavaScript for canvas scaling.
+   */
+  private generateScaleJs(scale: 'full' | 'fit' | '1x', width: number, height: number): string {
+    if (scale === '1x') {
+      return '' // No scaling needed
+    }
+
+    const scaleUp = scale === 'full' ? 'true' : 'false'
+
+    return `
+    // Canvas scaling
+    const NATIVE_WIDTH = ${width};
+    const NATIVE_HEIGHT = ${height};
+    const SCALE_UP = ${scaleUp};
+
+    function resizeCanvas() {
+      const canvas = document.getElementById('game-canvas');
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+      const aspectRatio = NATIVE_WIDTH / NATIVE_HEIGHT;
+
+      let displayWidth, displayHeight;
+
+      if (windowWidth / windowHeight > aspectRatio) {
+        // Window is wider than canvas aspect ratio
+        displayHeight = SCALE_UP ? windowHeight : Math.min(windowHeight, NATIVE_HEIGHT);
+        displayWidth = displayHeight * aspectRatio;
+      } else {
+        // Window is taller than canvas aspect ratio
+        displayWidth = SCALE_UP ? windowWidth : Math.min(windowWidth, NATIVE_WIDTH);
+        displayHeight = displayWidth / aspectRatio;
+      }
+
+      canvas.style.width = displayWidth + 'px';
+      canvas.style.height = displayHeight + 'px';
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+`
+  }
+
+  /**
    * Generate HTML for a canvas project.
    * @param config - Project configuration
    * @param luaFiles - Collected Lua source files
@@ -47,10 +134,13 @@ export class HtmlGenerator {
     const width = config.canvas?.width ?? 800
     const height = config.canvas?.height ?? 600
     const bgColor = config.canvas?.background_color ?? '#000000'
+    const scale = config.canvas?.scale ?? 'full'
 
     const luaModules = this.serializeLuaFiles(luaFiles)
     const assetManifest = this.serializeAssets(assets)
     const escapedCanvasLuaCode = this.escapeLuaForJs(canvasLuaCode)
+    const scaleCss = this.generateScaleCss(scale, bgColor)
+    const scaleJs = this.generateScaleJs(scale, width, height)
 
     // Stryker disable all: HTML template - mutations to string literals don't affect behavior
     return `<!DOCTYPE html>
@@ -59,25 +149,13 @@ export class HtmlGenerator {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${this.escapeHtml(config.name)}</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      background-color: ${bgColor};
-    }
-    canvas {
-      display: block;
-      image-rendering: pixelated;
-    }
+  <style>${scaleCss}
   </style>
 </head>
 <body>
   <canvas id="game-canvas" width="${width}" height="${height}"></canvas>
-
+  <script>${scaleJs}
+  </script>
   <script type="module">
     // Import wasmoon from CDN
     import { LuaFactory } from 'https://cdn.jsdelivr.net/npm/wasmoon@1.16.0/+esm';

@@ -45,6 +45,14 @@ export interface CanvasConfig {
 
   /** Background color (CSS color string) */
   background_color?: string
+
+  /**
+   * Canvas scaling mode (default: 'full')
+   * - 'full': Scale to fill window while maintaining aspect ratio
+   * - 'fit': Shrink if needed but don't grow beyond native size
+   * - '1x': Always use native size, add scrollbars if needed
+   */
+  scale?: 'full' | 'fit' | '1x'
 }
 
 /**

@@ -184,6 +184,7 @@ export class ExportCommand implements ICommand {
     width = 800,
     height = 600,
     background_color = "#000000",
+    scale = "full",  -- "full" | "fit" | "1x"
   },
   -- Uncomment to include asset directories:
   -- assets = { "images/", "sounds/" },
