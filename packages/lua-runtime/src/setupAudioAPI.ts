@@ -40,15 +40,10 @@ export function setupAudioAPI(
   engine.global.set(
     '__audio_playSound',
     (nameOrHandle: unknown, volume?: number | null) => {
-      console.log('[setupAudioAPI] __audio_playSound called:', nameOrHandle, volume);
       const engine = getAudioEngine();
-      if (!engine) {
-        console.log('[setupAudioAPI] No audio engine available!');
-        return;
-      }
+      if (!engine) return;
 
       const name = extractAudioName(nameOrHandle);
-      console.log('[setupAudioAPI] Playing sound:', name, 'volume:', volume ?? 1);
       engine.playSound(name, volume ?? 1);
     }
   );
@@ -66,15 +61,10 @@ export function setupAudioAPI(
   engine.global.set(
     '__audio_playMusic',
     (nameOrHandle: unknown, volume?: number | null, loop?: boolean | null) => {
-      console.log('[setupAudioAPI] __audio_playMusic called:', nameOrHandle, volume, loop);
       const engine = getAudioEngine();
-      if (!engine) {
-        console.log('[setupAudioAPI] No audio engine available!');
-        return;
-      }
+      if (!engine) return;
 
       const name = extractAudioName(nameOrHandle);
-      console.log('[setupAudioAPI] Playing music:', name, 'volume:', volume ?? 1, 'loop:', loop ?? false);
       engine.playMusic(name, {
         volume: volume ?? 1,
         loop: loop ?? false,

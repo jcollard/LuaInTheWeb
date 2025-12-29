@@ -1233,11 +1233,6 @@ export class CanvasController {
    * @throws Error if any asset fails to load
    */
   async loadAssets(fileSystem: IFileSystem, scriptDirectory: string): Promise<void> {
-    console.log('[CanvasController] loadAssets called, scriptDirectory:', scriptDirectory)
-    console.log('[CanvasController] assetManifest size:', this.assetManifest.size)
-    console.log('[CanvasController] audioAssetManifest size:', this.audioAssetManifest.size)
-    console.log('[CanvasController] assetPaths:', Array.from(this.assetPaths))
-
     // Create loader and caches
     const loader = new AssetLoader(fileSystem, scriptDirectory)
     this.imageCache = new ImageCache()
@@ -1317,13 +1312,10 @@ export class CanvasController {
     }
 
     // Step 3: Load audio assets if any are registered
-    console.log('[CanvasController] Audio manifest size:', this.audioAssetManifest.size)
     if (this.audioAssetManifest.size > 0) {
       // Initialize the audio engine
-      console.log('[CanvasController] Initializing WebAudioEngine...')
       this.audioEngine = new WebAudioEngine()
       await this.audioEngine.initialize()
-      console.log('[CanvasController] WebAudioEngine initialized')
 
       // Load each audio asset
       for (const audioDef of this.audioAssetManifest.values()) {
@@ -1344,9 +1336,7 @@ export class CanvasController {
           })
 
           // Decode the audio data
-          console.log('[CanvasController] Decoding audio:', audioDef.name, loadedAsset.data.byteLength, 'bytes')
           await this.audioEngine.decodeAudio(audioDef.name, loadedAsset.data)
-          console.log('[CanvasController] Audio decoded:', audioDef.name)
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error)
           throw new Error(`Failed to load audio asset '${audioDef.name}': ${message}`)

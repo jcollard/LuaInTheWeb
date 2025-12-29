@@ -90,18 +90,13 @@ export class WebAudioEngine implements IAudioEngine {
    * Play a sound effect.
    */
   playSound(name: string, volume = 1): void {
-    console.log('[WebAudioEngine] playSound called:', name, volume);
-    console.log('[WebAudioEngine] audioContext:', this.audioContext?.state);
-    console.log('[WebAudioEngine] Available buffers:', Array.from(this.audioBuffers.keys()));
-
     if (!this.audioContext || !this.masterGainNode) {
-      console.log('[WebAudioEngine] No audio context or master gain!');
       return;
     }
 
     const buffer = this.audioBuffers.get(name);
     if (!buffer) {
-      console.warn(`[WebAudioEngine] Sound not found: ${name}`);
+      console.warn(`Sound not found: ${name}`);
       return;
     }
 
