@@ -112,5 +112,6 @@
   },
   "enabledMcpjsonServers": [
     "code-index-mcp"
-  ]
+  ],
+  "enableAllProjectMcpServers": true
 }

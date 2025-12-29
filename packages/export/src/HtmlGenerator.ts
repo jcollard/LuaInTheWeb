@@ -213,8 +213,12 @@ export class HtmlGenerator {
 
     gameCanvas.addEventListener('mousemove', (e) => {
       const rect = gameCanvas.getBoundingClientRect();
-      state.mouseX = e.clientX - rect.left;
-      state.mouseY = e.clientY - rect.top;
+      // Get position relative to displayed element
+      const displayX = e.clientX - rect.left;
+      const displayY = e.clientY - rect.top;
+      // Scale from display coords to canvas logical coords
+      state.mouseX = displayX * (gameCanvas.width / rect.width);
+      state.mouseY = displayY * (gameCanvas.height / rect.height);
     });
 
     gameCanvas.addEventListener('mousedown', (e) => {
