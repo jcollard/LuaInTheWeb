@@ -928,14 +928,23 @@ export class HtmlGenerator {
   }
 
   /**
+   * Create a single asset manifest entry.
+   * @param asset - The asset to serialize
+   * @param includeData - Whether to include the dataUrl (single-file mode)
+   */
+  private createAssetManifestEntry(asset: CollectedAsset, includeData: boolean) {
+    return {
+      path: asset.path,
+      mimeType: asset.mimeType,
+      ...(includeData && { dataUrl: toDataUrl(asset.data, asset.mimeType) }),
+    }
+  }
+
+  /**
    * Serialize assets to JSON manifest.
    */
   private serializeAssets(assets: CollectedAsset[]): string {
-    const manifest = assets.map((asset) => ({
-      path: asset.path,
-      mimeType: asset.mimeType,
-      // Note: Binary data is stored in the ZIP, manifest only has metadata
-    }))
+    const manifest = assets.map((asset) => this.createAssetManifestEntry(asset, false))
     return JSON.stringify(manifest, null, 2)
   }
 
@@ -944,11 +953,7 @@ export class HtmlGenerator {
    * Each asset includes a dataUrl property with the base64-encoded data.
    */
   private serializeAssetsWithData(assets: CollectedAsset[]): string {
-    const manifest = assets.map((asset) => ({
-      path: asset.path,
-      mimeType: asset.mimeType,
-      dataUrl: toDataUrl(asset.data, asset.mimeType),
-    }))
+    const manifest = assets.map((asset) => this.createAssetManifestEntry(asset, true))
     return JSON.stringify(manifest, null, 2)
   }
 
