@@ -388,5 +388,35 @@ describe('HtmlGenerator', () => {
       expect(html).toContain('<!DOCTYPE html>')
       expect(html).toContain('ASSET_MANIFEST')
     })
+
+    it('should use dataUrl for image loading in single-file mode', () => {
+      const generator = new HtmlGenerator(createOptions({ singleFile: true }))
+      const config = createConfig()
+      const luaFiles: CollectedFile[] = []
+      const pngData = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
+      const assets: CollectedAsset[] = [
+        { path: 'player.png', data: pngData, mimeType: 'image/png' },
+      ]
+
+      const html = generator.generateCanvas(config, luaFiles, assets)
+
+      // Image loading should use dataUrl fallback
+      expect(html).toContain('assetPath.dataUrl || ')
+    })
+
+    it('should use dataUrl for font loading in single-file mode', () => {
+      const generator = new HtmlGenerator(createOptions({ singleFile: true }))
+      const config = createConfig()
+      const luaFiles: CollectedFile[] = []
+      const fontData = new Uint8Array([0, 1, 0, 0])
+      const assets: CollectedAsset[] = [
+        { path: 'custom.ttf', data: fontData, mimeType: 'font/ttf' },
+      ]
+
+      const html = generator.generateCanvas(config, luaFiles, assets)
+
+      // Font loading should use dataUrl fallback
+      expect(html).toContain('assetPath.dataUrl || ')
+    })
   })
 })

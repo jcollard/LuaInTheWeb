@@ -522,7 +522,7 @@ export class HtmlGenerator {
               reject(new Error(err));
             };
           });
-          img.src = 'assets/' + assetPath.path;
+          img.src = assetPath.dataUrl || ('assets/' + assetPath.path);
 
           // Store a placeholder until loaded
           loadedImages.set(name, { img, width: 0, height: 0, loading: loadPromise });
@@ -542,7 +542,7 @@ export class HtmlGenerator {
 
           // Load the font using FontFace API
           const fontFamily = 'CustomFont_' + name.replace(/[^a-zA-Z0-9]/g, '_');
-          const font = new FontFace(fontFamily, 'url(assets/' + assetPath.path + ')');
+          const font = new FontFace(fontFamily, 'url(' + (assetPath.dataUrl || ('assets/' + assetPath.path)) + ')');
           font.load().then(() => {
             document.fonts.add(font);
             loadedFonts.set(name, { family: fontFamily });

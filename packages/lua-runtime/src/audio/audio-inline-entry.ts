@@ -62,6 +62,10 @@ export function setupAudioBridge(
   state: CanvasState,
   assetManifest: AssetEntry[]
 ): void {
+  // Debug: log audio bridge initialization
+  console.log('[Audio Bridge] Initializing with', assetManifest.length, 'assets');
+  console.log('[Audio Bridge] Assets:', assetManifest.map(a => ({ path: a.path, hasDataUrl: !!a.dataUrl })));
+
   const audioEngine = new WebAudioEngine();
 
   // Track pending audio loads for proper cleanup
@@ -87,33 +91,42 @@ export function setupAudioBridge(
     name: string,
     filename: string
   ): Promise<void> {
+    console.log('[Audio Bridge] loadAudioAsset called:', name, filename);
     const assetPath = assetManifest.find((a) => a.path.endsWith(filename));
     if (!assetPath) {
-      console.error('Audio file not found:', filename);
+      console.error('[Audio Bridge] Audio file not found:', filename);
+      console.log('[Audio Bridge] Available paths:', assetManifest.map(a => a.path));
       return;
     }
+    console.log('[Audio Bridge] Found asset:', assetPath.path, 'hasDataUrl:', !!assetPath.dataUrl);
 
     try {
       // Initialize audio engine on first load (handles browser autoplay policy)
       if (!audioEngine.isInitialized()) {
+        console.log('[Audio Bridge] Initializing audio engine...');
         await audioEngine.initialize();
+        console.log('[Audio Bridge] Audio engine initialized');
       }
 
       let buffer: ArrayBuffer;
 
       // Check if we have embedded data URL (single-file mode)
       if (assetPath.dataUrl) {
+        console.log('[Audio Bridge] Decoding data URL for:', name);
         buffer = decodeDataUrl(assetPath.dataUrl);
+        console.log('[Audio Bridge] Decoded buffer size:', buffer.byteLength);
       } else {
         // Fetch from assets folder (ZIP mode)
+        console.log('[Audio Bridge] Fetching from assets folder:', assetPath.path);
         const response = await fetch('assets/' + assetPath.path);
         buffer = await response.arrayBuffer();
       }
 
+      console.log('[Audio Bridge] Decoding audio for:', name);
       await audioEngine.decodeAudio(name, buffer);
-      console.log('Loaded audio:', name);
+      console.log('[Audio Bridge] Loaded audio:', name);
     } catch (err) {
-      console.error('Failed to load audio:', name, err);
+      console.error('[Audio Bridge] Failed to load audio:', name, err);
     }
   }
 
