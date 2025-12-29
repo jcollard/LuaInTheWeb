@@ -1,6 +1,11 @@
 import type { ProjectConfig, ExportOptions, CollectedFile, CollectedAsset } from './types'
 import { canvasLuaCode, shellLuaCode } from './runtime'
-import { AUDIO_INLINE_JS } from '@lua-learning/lua-runtime'
+import {
+  AUDIO_INLINE_JS,
+  WASMOON_INLINE_JS,
+  XTERM_INLINE_JS,
+  XTERM_INLINE_CSS,
+} from '@lua-learning/lua-runtime'
 import { toDataUrl } from './base64'
 
 /**
@@ -153,10 +158,11 @@ export class HtmlGenerator {
   <canvas id="game-canvas" width="${width}" height="${height}"></canvas>
   <script>${scaleJs}
   </script>
+  <script>
+    // Wasmoon Lua runtime (bundled with embedded WASM)
+    ${WASMOON_INLINE_JS}
+  </script>
   <script type="module">
-    // Import wasmoon from CDN
-    import { LuaFactory } from 'https://cdn.jsdelivr.net/npm/wasmoon@1.16.0/+esm';
-
     // Lua module map
     const LUA_MODULES = ${luaModules};
 
@@ -722,7 +728,10 @@ export class HtmlGenerator {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${this.escapeHtml(config.name)}</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+  <style>
+    /* xterm.js CSS (bundled for offline use) */
+    ${XTERM_INLINE_CSS}
+  </style>
   <style>
     body {
       margin: 0;
@@ -742,11 +751,15 @@ export class HtmlGenerator {
 <body>
   <div id="terminal"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+  <script>
+    // xterm.js terminal emulator (bundled for offline use)
+    ${XTERM_INLINE_JS}
+  </script>
+  <script>
+    // Wasmoon Lua runtime (bundled with embedded WASM)
+    ${WASMOON_INLINE_JS}
+  </script>
   <script type="module">
-    // Import wasmoon from CDN
-    import { LuaFactory } from 'https://cdn.jsdelivr.net/npm/wasmoon@1.16.0/+esm';
-
     // Lua module map
     const LUA_MODULES = ${luaModules};
 

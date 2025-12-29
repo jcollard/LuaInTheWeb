@@ -17,7 +17,9 @@
   "scripts": {
     "build:lua": "node scripts/generate-lua-exports.js",
     "build:audio": "node scripts/bundle-audio-inline.js",
-    "prebuild": "npm run build:lua && npm run build:audio",
+    "build:wasmoon": "node scripts/bundle-wasmoon-inline.js",
+    "build:xterm": "node scripts/bundle-xterm-inline.js",
+    "prebuild": "npm run build:lua && npm run build:audio && npm run build:wasmoon && npm run build:xterm",
     "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -41,15 +43,16 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
-    "esbuild": "^0.24.2",
     "@stryker-mutator/core": "^9.0.2",
     "@stryker-mutator/typescript-checker": "^9.0.2",
     "@stryker-mutator/vitest-runner": "^9.0.2",
     "@types/luaparse": "^0.2.13",
+    "esbuild": "^0.24.2",
     "eslint": "^9.36.0",
     "globals": "^16.4.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.45.0",
-    "vitest": "^4.0.15"
+    "vitest": "^4.0.15",
+    "xterm": "^5.3.0"
   }
 }

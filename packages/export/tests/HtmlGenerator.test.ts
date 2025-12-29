@@ -418,4 +418,96 @@ describe('HtmlGenerator', () => {
       expect(html).toContain('assetPath.dataUrl || ')
     })
   })
+
+  describe('offline capability (no CDN URLs)', () => {
+    it('should not import from CDN in canvas export', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig({ type: 'canvas' })
+      const luaFiles: CollectedFile[] = [{ path: 'main.lua', content: 'print("hi")' }]
+      const assets: CollectedAsset[] = []
+
+      const html = generator.generate(config, luaFiles, assets)
+
+      // Should NOT import from CDN
+      expect(html).not.toMatch(/import\s+.*from\s+['"]https:\/\/cdn\.jsdelivr\.net/)
+      expect(html).not.toMatch(/import\s+.*from\s+['"]https:\/\/unpkg\.com/)
+      // Should NOT load scripts from CDN
+      expect(html).not.toMatch(/<script\s+src\s*=\s*['"]https:\/\/cdn\.jsdelivr\.net/)
+      expect(html).not.toMatch(/<script\s+src\s*=\s*['"]https:\/\/unpkg\.com/)
+      // Should NOT load stylesheets from CDN
+      expect(html).not.toMatch(/<link\s+rel\s*=\s*['"]stylesheet['"]\s+href\s*=\s*['"]https:\/\/cdn\.jsdelivr\.net/)
+    })
+
+    it('should not import from CDN in shell export', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig({
+        type: 'shell',
+        shell: { columns: 80, rows: 24 },
+        canvas: undefined,
+      })
+      const luaFiles: CollectedFile[] = [{ path: 'main.lua', content: 'print("hi")' }]
+      const assets: CollectedAsset[] = []
+
+      const html = generator.generate(config, luaFiles, assets)
+
+      // Should NOT import from CDN
+      expect(html).not.toMatch(/import\s+.*from\s+['"]https:\/\/cdn\.jsdelivr\.net/)
+      expect(html).not.toMatch(/import\s+.*from\s+['"]https:\/\/unpkg\.com/)
+      // Should NOT load scripts from CDN
+      expect(html).not.toMatch(/<script\s+src\s*=\s*['"]https:\/\/cdn\.jsdelivr\.net/)
+      expect(html).not.toMatch(/<script\s+src\s*=\s*['"]https:\/\/unpkg\.com/)
+      // Should NOT load stylesheets from CDN
+      expect(html).not.toMatch(/<link\s+rel\s*=\s*['"]stylesheet['"]\s+href\s*=\s*['"]https:\/\/cdn\.jsdelivr\.net/)
+    })
+
+    it('should include bundled wasmoon in canvas export', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig({ type: 'canvas' })
+      const luaFiles: CollectedFile[] = [{ path: 'main.lua', content: 'print("hi")' }]
+      const assets: CollectedAsset[] = []
+
+      const html = generator.generate(config, luaFiles, assets)
+
+      // Should contain inline wasmoon comment marker
+      expect(html).toContain('Wasmoon Lua runtime (bundled with embedded WASM)')
+      // Should contain LuaFactory (from wasmoon)
+      expect(html).toContain('LuaFactory')
+    })
+
+    it('should include bundled wasmoon in shell export', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig({
+        type: 'shell',
+        shell: { columns: 80, rows: 24 },
+        canvas: undefined,
+      })
+      const luaFiles: CollectedFile[] = [{ path: 'main.lua', content: 'print("hi")' }]
+      const assets: CollectedAsset[] = []
+
+      const html = generator.generate(config, luaFiles, assets)
+
+      // Should contain inline wasmoon comment marker
+      expect(html).toContain('Wasmoon Lua runtime (bundled with embedded WASM)')
+      // Should contain LuaFactory (from wasmoon)
+      expect(html).toContain('LuaFactory')
+    })
+
+    it('should include bundled xterm.js in shell export', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig({
+        type: 'shell',
+        shell: { columns: 80, rows: 24 },
+        canvas: undefined,
+      })
+      const luaFiles: CollectedFile[] = [{ path: 'main.lua', content: 'print("hi")' }]
+      const assets: CollectedAsset[] = []
+
+      const html = generator.generate(config, luaFiles, assets)
+
+      // Should contain inline xterm comment marker
+      expect(html).toContain('xterm.js terminal emulator (bundled for offline use)')
+      // Should contain xterm CSS comment marker
+      expect(html).toContain('xterm.js CSS (bundled for offline use)')
+    })
+  })
 })
