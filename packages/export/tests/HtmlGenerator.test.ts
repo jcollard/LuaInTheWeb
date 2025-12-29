@@ -19,7 +19,6 @@ function createConfig(overrides: Partial<ProjectConfig> = {}): ProjectConfig {
 
 function createOptions(overrides: Partial<ExportOptions> = {}): ExportOptions {
   return {
-    webWorkers: false,
     ...overrides,
   }
 }

@@ -17,13 +17,6 @@ export class HtmlGenerator {
   }
 
   /**
-   * Get the web workers option for future use.
-   */
-  get useWebWorkers(): boolean {
-    return this.options.webWorkers ?? false
-  }
-
-  /**
    * Escape Lua code for safe embedding in JavaScript string.
    * Handles backticks, backslashes, and template literal special chars.
    */

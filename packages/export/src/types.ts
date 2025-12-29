@@ -25,6 +25,9 @@ export interface ProjectConfig {
 
   /** Shell-specific settings */
   shell?: ShellConfig
+
+  /** Export settings */
+  export?: ExportConfig
 }
 
 /**
@@ -76,14 +79,23 @@ export interface ShellConfig {
 }
 
 /**
- * Export command options (from CLI flags)
+ * Export configuration (from project.lua)
+ */
+export interface ExportConfig {
+  /**
+   * Embed all assets as data URLs in a single HTML file (default: true)
+   * - true: Single self-contained HTML file that works offline
+   * - false: ZIP archive with separate assets folder (smaller file size)
+   */
+  singleFile?: boolean
+}
+
+/**
+ * Export command options (used internally for HTML generation)
  */
 export interface ExportOptions {
   /** Override runtime type */
   type?: 'canvas' | 'shell'
-
-  /** Enable/disable web workers (default: false for compatibility) */
-  webWorkers?: boolean
 
   /** Output filename (without extension) */
   outputName?: string
