@@ -12,6 +12,8 @@ import { WebAudioEngine } from './WebAudioEngine.js';
 /** Asset manifest entry */
 interface AssetEntry {
   path: string;
+  /** Data URL for single-file exports (base64-encoded asset) */
+  dataUrl?: string;
 }
 
 /** Canvas runtime state object */
@@ -65,8 +67,74 @@ export function setupAudioBridge(
   // Track pending audio loads for proper cleanup
   const pendingLoads = new Set<Promise<void>>();
 
+  // Store raw audio data until AudioContext is ready (browser autoplay policy)
+  const pendingAudioData = new Map<string, ArrayBuffer>();
+  let audioContextReady = false;
+
   /**
-   * Helper to load audio from the assets folder.
+   * Decode base64 data URL to ArrayBuffer.
+   */
+  function decodeDataUrl(dataUrl: string): ArrayBuffer {
+    const base64 = dataUrl.split(',')[1];
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  /**
+   * Ensure AudioContext is ready (must be called after user interaction).
+   */
+  async function ensureAudioContextReady(): Promise<boolean> {
+    if (audioContextReady) {
+      return true;
+    }
+
+    try {
+      if (!audioEngine.isInitialized()) {
+        await audioEngine.initialize();
+      }
+      audioContextReady = true;
+
+      // Process any pending audio data
+      for (const [name, buffer] of pendingAudioData) {
+        try {
+          await audioEngine.decodeAudio(name, buffer);
+        } catch (err) {
+          console.error('[Audio Bridge] Failed to decode pending audio:', name, err);
+        }
+      }
+      pendingAudioData.clear();
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  // Set up user interaction handler to unlock AudioContext
+  function setupUserInteractionHandler(): void {
+    const unlockAudio = async (): Promise<void> => {
+      const ready = await ensureAudioContextReady();
+      if (ready) {
+        document.removeEventListener('click', unlockAudio);
+        document.removeEventListener('touchstart', unlockAudio);
+        document.removeEventListener('keydown', unlockAudio);
+      }
+    };
+
+    document.addEventListener('click', unlockAudio, { once: false });
+    document.addEventListener('touchstart', unlockAudio, { once: false });
+    document.addEventListener('keydown', unlockAudio, { once: false });
+  }
+
+  // Set up the user interaction handler
+  setupUserInteractionHandler();
+
+  /**
+   * Helper to load audio from the assets folder or embedded data URL.
    */
   async function loadAudioAsset(
     name: string,
@@ -74,22 +142,33 @@ export function setupAudioBridge(
   ): Promise<void> {
     const assetPath = assetManifest.find((a) => a.path.endsWith(filename));
     if (!assetPath) {
-      console.error('Audio file not found:', filename);
+      console.error('[Audio Bridge] Audio file not found:', filename);
       return;
     }
 
     try {
-      // Initialize audio engine on first load (handles browser autoplay policy)
-      if (!audioEngine.isInitialized()) {
-        await audioEngine.initialize();
+      let buffer: ArrayBuffer;
+
+      // Check if we have embedded data URL (single-file mode)
+      if (assetPath.dataUrl) {
+        buffer = decodeDataUrl(assetPath.dataUrl);
+      } else {
+        // Fetch from assets folder (ZIP mode)
+        const response = await fetch('assets/' + assetPath.path);
+        buffer = await response.arrayBuffer();
       }
 
-      const response = await fetch('assets/' + assetPath.path);
-      const buffer = await response.arrayBuffer();
-      await audioEngine.decodeAudio(name, buffer);
-      console.log('Loaded audio:', name);
+      // Try to decode immediately if AudioContext is ready
+      if (audioContextReady) {
+        await audioEngine.decodeAudio(name, buffer);
+      } else {
+        // Store for later decoding after user interaction
+        pendingAudioData.set(name, buffer);
+        // Try to initialize (might work if user already interacted)
+        ensureAudioContextReady();
+      }
     } catch (err) {
-      console.error('Failed to load audio:', name, err);
+      console.error('[Audio Bridge] Failed to load audio:', name, err);
     }
   }
 

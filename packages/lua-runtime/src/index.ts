@@ -42,8 +42,14 @@ export {
 export { WebAudioEngine } from './audio/WebAudioEngine'
 export type { IAudioEngine, MusicOptions, MusicHandle } from './audio/IAudioEngine'
 
-// Audio inline JS for HTML exports (auto-generated from audio-inline.js)
+// Audio inline JS for HTML exports (auto-generated from audio-inline-entry.ts)
 export { AUDIO_INLINE_JS } from './audio/audio-inline.generated'
+
+// Wasmoon inline JS for HTML exports (auto-generated, includes embedded WASM)
+export { WASMOON_INLINE_JS } from './wasmoon-inline.generated'
+
+// Xterm inline JS and CSS for HTML shell exports (auto-generated)
+export { XTERM_INLINE_JS, XTERM_INLINE_CSS } from './xterm-inline.generated'
 
 // Canvas controller for shell-based canvas (non-worker)
 export { CanvasController, type CanvasCallbacks } from './CanvasController'

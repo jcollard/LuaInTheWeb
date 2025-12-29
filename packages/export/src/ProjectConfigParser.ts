@@ -1,6 +1,6 @@
 import * as luaparse from 'luaparse'
 import type { IFileSystem } from '@lua-learning/shell-core'
-import type { ProjectConfig, ParseOutcome, CanvasConfig, ShellConfig } from './types'
+import type { ProjectConfig, ParseOutcome, CanvasConfig, ShellConfig, ExportConfig } from './types'
 
 // luaparse AST node types
 interface LuaNode {
@@ -75,6 +75,13 @@ const DEFAULT_CANVAS_CONFIG: CanvasConfig = {
 const DEFAULT_SHELL_CONFIG: ShellConfig = {
   columns: 80,
   rows: 24,
+}
+
+/**
+ * Default export configuration values.
+ */
+const DEFAULT_EXPORT_CONFIG: ExportConfig = {
+  singleFile: true,
 }
 
 /**
@@ -277,6 +284,12 @@ export class ProjectConfigParser {
         ...DEFAULT_SHELL_CONFIG,
         ...config.shell,
       }
+    }
+
+    // Apply export defaults
+    result.export = {
+      ...DEFAULT_EXPORT_CONFIG,
+      ...config.export,
     }
 
     return result

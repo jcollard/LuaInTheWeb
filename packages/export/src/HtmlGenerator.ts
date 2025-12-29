@@ -1,6 +1,12 @@
 import type { ProjectConfig, ExportOptions, CollectedFile, CollectedAsset } from './types'
 import { canvasLuaCode, shellLuaCode } from './runtime'
-import { AUDIO_INLINE_JS } from '@lua-learning/lua-runtime'
+import {
+  AUDIO_INLINE_JS,
+  WASMOON_INLINE_JS,
+  XTERM_INLINE_JS,
+  XTERM_INLINE_CSS,
+} from '@lua-learning/lua-runtime'
+import { toDataUrl } from './base64'
 
 /**
  * Generates standalone HTML files for exported projects.
@@ -13,13 +19,6 @@ export class HtmlGenerator {
 
   constructor(options: ExportOptions) {
     this.options = options
-  }
-
-  /**
-   * Get the web workers option for future use.
-   */
-  get useWebWorkers(): boolean {
-    return this.options.webWorkers ?? false
   }
 
   /**
@@ -138,7 +137,9 @@ export class HtmlGenerator {
     const scale = config.canvas?.scale ?? 'full'
 
     const luaModules = this.serializeLuaFiles(luaFiles)
-    const assetManifest = this.serializeAssets(assets)
+    const assetManifest = this.options.singleFile
+      ? this.serializeAssetsWithData(assets)
+      : this.serializeAssets(assets)
     const escapedCanvasLuaCode = this.escapeLuaForJs(canvasLuaCode)
     const scaleCss = this.generateScaleCss(scale, bgColor)
     const scaleJs = this.generateScaleJs(scale, width, height)
@@ -157,10 +158,11 @@ export class HtmlGenerator {
   <canvas id="game-canvas" width="${width}" height="${height}"></canvas>
   <script>${scaleJs}
   </script>
+  <script>
+    // Wasmoon Lua runtime (bundled with embedded WASM)
+    ${WASMOON_INLINE_JS}
+  </script>
   <script type="module">
-    // Import wasmoon from CDN
-    import { LuaFactory } from 'https://cdn.jsdelivr.net/npm/wasmoon@1.16.0/+esm';
-
     // Lua module map
     const LUA_MODULES = ${luaModules};
 
@@ -519,7 +521,7 @@ export class HtmlGenerator {
               reject(new Error(err));
             };
           });
-          img.src = 'assets/' + assetPath.path;
+          img.src = assetPath.dataUrl || ('assets/' + assetPath.path);
 
           // Store a placeholder until loaded
           loadedImages.set(name, { img, width: 0, height: 0, loading: loadPromise });
@@ -539,7 +541,7 @@ export class HtmlGenerator {
 
           // Load the font using FontFace API
           const fontFamily = 'CustomFont_' + name.replace(/[^a-zA-Z0-9]/g, '_');
-          const font = new FontFace(fontFamily, 'url(assets/' + assetPath.path + ')');
+          const font = new FontFace(fontFamily, 'url(' + (assetPath.dataUrl || ('assets/' + assetPath.path)) + ')');
           font.load().then(() => {
             document.fonts.add(font);
             loadedFonts.set(name, { family: fontFamily });
@@ -726,7 +728,10 @@ export class HtmlGenerator {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${this.escapeHtml(config.name)}</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+  <style>
+    /* xterm.js CSS (bundled for offline use) */
+    ${XTERM_INLINE_CSS}
+  </style>
   <style>
     body {
       margin: 0;
@@ -746,11 +751,15 @@ export class HtmlGenerator {
 <body>
   <div id="terminal"></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+  <script>
+    // xterm.js terminal emulator (bundled for offline use)
+    ${XTERM_INLINE_JS}
+  </script>
+  <script>
+    // Wasmoon Lua runtime (bundled with embedded WASM)
+    ${WASMOON_INLINE_JS}
+  </script>
   <script type="module">
-    // Import wasmoon from CDN
-    import { LuaFactory } from 'https://cdn.jsdelivr.net/npm/wasmoon@1.16.0/+esm';
-
     // Lua module map
     const LUA_MODULES = ${luaModules};
 
@@ -925,14 +934,32 @@ export class HtmlGenerator {
   }
 
   /**
+   * Create a single asset manifest entry.
+   * @param asset - The asset to serialize
+   * @param includeData - Whether to include the dataUrl (single-file mode)
+   */
+  private createAssetManifestEntry(asset: CollectedAsset, includeData: boolean) {
+    return {
+      path: asset.path,
+      mimeType: asset.mimeType,
+      ...(includeData && { dataUrl: toDataUrl(asset.data, asset.mimeType) }),
+    }
+  }
+
+  /**
    * Serialize assets to JSON manifest.
    */
   private serializeAssets(assets: CollectedAsset[]): string {
-    const manifest = assets.map((asset) => ({
-      path: asset.path,
-      mimeType: asset.mimeType,
-      // Note: Binary data is stored in the ZIP, manifest only has metadata
-    }))
+    const manifest = assets.map((asset) => this.createAssetManifestEntry(asset, false))
+    return JSON.stringify(manifest, null, 2)
+  }
+
+  /**
+   * Serialize assets with embedded data URLs for single-file export.
+   * Each asset includes a dataUrl property with the base64-encoded data.
+   */
+  private serializeAssetsWithData(assets: CollectedAsset[]): string {
+    const manifest = assets.map((asset) => this.createAssetManifestEntry(asset, true))
     return JSON.stringify(manifest, null, 2)
   }
 

@@ -100,37 +100,12 @@ describe('ExportCommand', () => {
       )
     })
 
-    it('should default webWorkers to false', () => {
-      const command = new ExportCommand()
-      const result = command.parseArgs([], '/project')
-
-      expect(result.options.webWorkers).toBe(false)
-    })
-
-    it('should parse --web-workers=true option', () => {
-      const command = new ExportCommand()
-      const result = command.parseArgs(['--web-workers=true'], '/project')
-
-      expect(result.options.webWorkers).toBe(true)
-    })
-
-    it('should parse --web-workers=false option explicitly', () => {
-      const command = new ExportCommand()
-      const result = command.parseArgs(['--web-workers=false'], '/project')
-
-      expect(result.options.webWorkers).toBe(false)
-    })
-
     it('should handle multiple options together', () => {
       const command = new ExportCommand()
-      const result = command.parseArgs(
-        ['--type=canvas', '--web-workers=true', '/my/project'],
-        '/project'
-      )
+      const result = command.parseArgs(['--type=canvas', '/my/project'], '/project')
 
       expect(result.projectPath).toBe('/my/project')
       expect(result.options.type).toBe('canvas')
-      expect(result.options.webWorkers).toBe(true)
     })
   })
 
@@ -157,7 +132,7 @@ describe('ExportCommand', () => {
       expect(context.errors.join('')).toContain('Invalid')
     })
 
-    it('should export canvas project successfully', async () => {
+    it('should export canvas project as single HTML by default', async () => {
       const command = new ExportCommand()
       const filesystem = createMockFilesystem({
         '/project/project.lua': `return {
@@ -183,11 +158,11 @@ describe('ExportCommand', () => {
       await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(context.downloads.length).toBe(1)
-      expect(context.downloads[0].filename).toBe('My Game.zip')
-      expect(context.downloads[0].blob.type).toBe('application/zip')
+      expect(context.downloads[0].filename).toBe('My Game.html')
+      expect(context.downloads[0].blob.type).toBe('text/html')
     })
 
-    it('should export shell project successfully', async () => {
+    it('should export shell project as single HTML by default', async () => {
       const command = new ExportCommand()
       const filesystem = createMockFilesystem({
         '/project/project.lua': `return {
@@ -211,7 +186,7 @@ describe('ExportCommand', () => {
       await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(context.downloads.length).toBe(1)
-      expect(context.downloads[0].filename).toBe('My App.zip')
+      expect(context.downloads[0].filename).toBe('My App.html')
     })
 
     it('should output success message after export', async () => {
@@ -275,7 +250,7 @@ describe('ExportCommand', () => {
       await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(context.downloads.length).toBe(1)
-      expect(context.downloads[0].filename).toBe('Other.zip')
+      expect(context.downloads[0].filename).toBe('Other.html')
     })
 
     it('should override project type when --type is specified', async () => {
@@ -430,6 +405,32 @@ describe('ExportCommand', () => {
       expect(content).toContain('rows = 24')
     })
 
+    it('should include export section with singleFile in canvas template', () => {
+      const command = new ExportCommand()
+      const filesystem = createMockFilesystem({})
+      const context = createMockContext(filesystem)
+
+      command.execute(['--init'], context)
+
+      const writeCall = (filesystem.writeFile as ReturnType<typeof vi.fn>).mock.calls[0]
+      const content = writeCall[1] as string
+      expect(content).toContain('export = {')
+      expect(content).toContain('singleFile = true')
+    })
+
+    it('should include export section with singleFile in shell template', () => {
+      const command = new ExportCommand()
+      const filesystem = createMockFilesystem({})
+      const context = createMockContext(filesystem)
+
+      command.execute(['--init', '--type=shell'], context)
+
+      const writeCall = (filesystem.writeFile as ReturnType<typeof vi.fn>).mock.calls[0]
+      const content = writeCall[1] as string
+      expect(content).toContain('export = {')
+      expect(content).toContain('singleFile = true')
+    })
+
     it('should not require onTriggerDownload for --init', () => {
       const command = new ExportCommand()
       const filesystem = createMockFilesystem({})
@@ -440,6 +441,74 @@ describe('ExportCommand', () => {
 
       expect(filesystem.writeFile).toHaveBeenCalled()
       expect(context.errors.length).toBe(0)
+    })
+  })
+
+  describe('export config in project.lua', () => {
+    it('should export as HTML when export.singleFile is true', async () => {
+      const command = new ExportCommand()
+      const filesystem = createMockFilesystem({
+        '/project/project.lua': `return {
+          name = "My Game",
+          main = "main.lua",
+          type = "canvas",
+          canvas = { width = 800, height = 600 },
+          export = { singleFile = true }
+        }`,
+        '/project/main.lua': 'print("Hello")',
+      })
+      const context = createMockContext(filesystem)
+
+      command.execute([], context)
+
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      expect(context.downloads.length).toBe(1)
+      expect(context.downloads[0].filename).toBe('My Game.html')
+      expect(context.downloads[0].blob.type).toBe('text/html')
+    })
+
+    it('should export as ZIP when export.singleFile is false', async () => {
+      const command = new ExportCommand()
+      const filesystem = createMockFilesystem({
+        '/project/project.lua': `return {
+          name = "My Game",
+          main = "main.lua",
+          type = "canvas",
+          export = { singleFile = false }
+        }`,
+        '/project/main.lua': 'print("Hello")',
+      })
+      const context = createMockContext(filesystem)
+
+      command.execute([], context)
+
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      expect(context.downloads.length).toBe(1)
+      expect(context.downloads[0].filename).toBe('My Game.zip')
+      expect(context.downloads[0].blob.type).toBe('application/zip')
+    })
+
+    it('should default to HTML when export config is not specified', async () => {
+      const command = new ExportCommand()
+      const filesystem = createMockFilesystem({
+        '/project/project.lua': `return {
+          name = "Shell App",
+          main = "main.lua",
+          type = "shell"
+        }`,
+        '/project/main.lua': 'io.write("Hello")',
+      })
+      const context = createMockContext(filesystem)
+
+      command.execute([], context)
+
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      expect(context.downloads.length).toBe(1)
+      expect(context.downloads[0].filename).toBe('Shell App.html')
+      expect(context.downloads[0].blob.type).toBe('text/html')
     })
   })
 })

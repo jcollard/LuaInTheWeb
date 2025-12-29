@@ -8,13 +8,15 @@ import { ZipBundler } from './ZipBundler'
 /**
  * Shell command for exporting projects as standalone HTML packages.
  *
- * Usage: export [path] [--type=canvas|shell] [--web-workers=false] [--init]
+ * Usage: export [path] [--type=canvas|shell] [--init]
+ *
+ * Export settings are configured in project.lua's export section.
  */
 export class ExportCommand implements ICommand {
   // Stryker disable all: Command metadata - string mutations don't affect behavior
   readonly name = 'export'
   readonly description = 'Export project as standalone HTML/ZIP package'
-  readonly usage = 'export [path] [--type=canvas|shell] [--web-workers=false] [--init]'
+  readonly usage = 'export [path] [--type=canvas|shell] [--init]'
   // Stryker restore all
 
   execute(args: string[], context: ShellContext): IProcess | void {
@@ -62,20 +64,22 @@ export class ExportCommand implements ICommand {
 
     // Collect files and assets
     const collector = new AssetCollector(context.filesystem, projectPath)
+    const singleFile = config.export?.singleFile ?? true
     collector
       .collect(config)
       .then(({ files, assets }) => {
         // Generate HTML
-        const htmlGenerator = new HtmlGenerator(options)
+        const htmlGenerator = new HtmlGenerator({ singleFile })
         const html = htmlGenerator.generate(config, files, assets)
 
-        // Create ZIP bundle
+        // Create bundle (ZIP or single HTML file)
         const bundler = new ZipBundler()
-        return bundler.bundle({ html, luaFiles: files, assets })
+        return bundler.bundle({ html, luaFiles: files, assets }, { singleFile })
       })
       .then((blob) => {
-        // Trigger download
-        const filename = `${config.name}.zip`
+        // Trigger download with appropriate extension
+        const extension = singleFile ? 'html' : 'zip'
+        const filename = `${config.name}.${extension}`
         context.onTriggerDownload!(filename, blob)
         context.output(`Project "${config.name}" exported successfully as ${filename}\n`)
       })
@@ -94,7 +98,7 @@ export class ExportCommand implements ICommand {
     args: string[],
     cwd: string
   ): { projectPath: string; options: ExportOptions; init: boolean } {
-    const options: ExportOptions = { webWorkers: false }
+    const options: ExportOptions = {}
     let projectPath = cwd
     let init = false
 
@@ -107,10 +111,6 @@ export class ExportCommand implements ICommand {
           throw new Error(`Invalid type: ${type}. Must be 'canvas' or 'shell'`)
         }
         options.type = type
-      } else if (arg === '--web-workers=false') {
-        options.webWorkers = false
-      } else if (arg === '--web-workers=true') {
-        options.webWorkers = true
       } else if (!arg.startsWith('-')) {
         projectPath = arg.startsWith('/') ? arg : `${cwd}/${arg}`
       }
@@ -169,6 +169,12 @@ export class ExportCommand implements ICommand {
     font_family = "monospace",
     font_size = 14,
   },
+  -- Export settings
+  export = {
+    -- true: embed all assets as data URLs in a single HTML file (works offline)
+    -- false: create ZIP with separate assets folder (smaller file size)
+    singleFile = true,
+  },
 }
 `
       // Stryker restore all
@@ -185,6 +191,12 @@ export class ExportCommand implements ICommand {
     height = 600,
     background_color = "#000000",
     scale = "full",  -- "full" | "fit" | "1x"
+  },
+  -- Export settings
+  export = {
+    -- true: embed all assets as data URLs in a single HTML file (works offline)
+    -- false: create ZIP with separate assets folder (smaller file size)
+    singleFile = true,
   },
   -- Uncomment to include asset directories:
   -- assets = { "images/", "sounds/" },

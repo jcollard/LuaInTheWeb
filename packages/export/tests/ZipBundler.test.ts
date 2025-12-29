@@ -124,4 +124,61 @@ describe('ZipBundler', () => {
       expect(files).toContain('assets/test.png')
     })
   })
+
+  describe('single-file mode', () => {
+    it('should return HTML blob when singleFile is true', async () => {
+      const bundler = new ZipBundler()
+      const contents: BundleContents = {
+        html: '<!DOCTYPE html><html><body>Test</body></html>',
+        luaFiles: [],
+        assets: [],
+      }
+
+      const blob = await bundler.bundle(contents, { singleFile: true })
+
+      expect(blob).toBeInstanceOf(Blob)
+      expect(blob.type).toBe('text/html')
+    })
+
+    it('should return HTML content directly when singleFile is true', async () => {
+      const bundler = new ZipBundler()
+      const htmlContent = '<!DOCTYPE html><html><body>My Game</body></html>'
+      const contents: BundleContents = {
+        html: htmlContent,
+        luaFiles: [],
+        assets: [],
+      }
+
+      const blob = await bundler.bundle(contents, { singleFile: true })
+      const text = await blob.text()
+
+      expect(text).toBe(htmlContent)
+    })
+
+    it('should return ZIP blob when singleFile is false', async () => {
+      const bundler = new ZipBundler()
+      const contents: BundleContents = {
+        html: '<!DOCTYPE html><html></html>',
+        luaFiles: [],
+        assets: [],
+      }
+
+      const blob = await bundler.bundle(contents, { singleFile: false })
+
+      expect(blob.type).toBe('application/zip')
+    })
+
+    it('should return ZIP blob when singleFile is undefined', async () => {
+      const bundler = new ZipBundler()
+      const contents: BundleContents = {
+        html: '<!DOCTYPE html><html></html>',
+        luaFiles: [],
+        assets: [],
+      }
+
+      const blob = await bundler.bundle(contents, {})
+
+      expect(blob.type).toBe('application/zip')
+    })
+  })
 })
