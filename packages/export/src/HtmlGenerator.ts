@@ -643,9 +643,9 @@ export class HtmlGenerator {
         engine.global.set('__canvas_isPointInStoredPath', () => false);
         engine.global.set('__canvas_isPointInStoredStroke', () => false);
 
-        // === AUDIO API (generated from audio-inline.js) ===
+        // === AUDIO API (generated from audio-inline.ts) ===
         ${AUDIO_INLINE_JS}
-        setupAudioBridge(engine, state, ASSET_MANIFEST);
+        globalThis.setupAudioBridge(engine, state, ASSET_MANIFEST);
 
         // Set up custom require to load from embedded modules
         engine.global.set('__load_module', (modulePath) => {
