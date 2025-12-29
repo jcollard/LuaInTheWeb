@@ -62,9 +62,6 @@ export function setupAudioBridge(
   state: CanvasState,
   assetManifest: AssetEntry[]
 ): void {
-  // Debug: log audio bridge initialization
-  console.log('[Audio Bridge] Initializing with', assetManifest.length, 'assets');
-
   const audioEngine = new WebAudioEngine();
 
   // Track pending audio loads for proper cleanup
@@ -105,7 +102,6 @@ export function setupAudioBridge(
       for (const [name, buffer] of pendingAudioData) {
         try {
           await audioEngine.decodeAudio(name, buffer);
-          console.log('[Audio Bridge] Loaded pending audio:', name);
         } catch (err) {
           console.error('[Audio Bridge] Failed to decode pending audio:', name, err);
         }
@@ -113,8 +109,7 @@ export function setupAudioBridge(
       pendingAudioData.clear();
 
       return true;
-    } catch (err) {
-      console.warn('[Audio Bridge] AudioContext not ready yet:', err);
+    } catch {
       return false;
     }
   }
@@ -124,7 +119,6 @@ export function setupAudioBridge(
     const unlockAudio = async (): Promise<void> => {
       const ready = await ensureAudioContextReady();
       if (ready) {
-        console.log('[Audio Bridge] AudioContext unlocked by user interaction');
         document.removeEventListener('click', unlockAudio);
         document.removeEventListener('touchstart', unlockAudio);
         document.removeEventListener('keydown', unlockAudio);
@@ -167,12 +161,9 @@ export function setupAudioBridge(
       // Try to decode immediately if AudioContext is ready
       if (audioContextReady) {
         await audioEngine.decodeAudio(name, buffer);
-        console.log('[Audio Bridge] Loaded audio:', name);
       } else {
         // Store for later decoding after user interaction
         pendingAudioData.set(name, buffer);
-        console.log('[Audio Bridge] Queued audio for later:', name);
-
         // Try to initialize (might work if user already interacted)
         ensureAudioContextReady();
       }
