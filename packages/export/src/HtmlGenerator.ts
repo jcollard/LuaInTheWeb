@@ -232,6 +232,20 @@ export class HtmlGenerator {
         engine.global.set('__canvas_getWidth', () => gameCanvas.width);
         engine.global.set('__canvas_getHeight', () => gameCanvas.height);
 
+        // === ASSET MAPS (early declaration for font/image functions) ===
+        const loadedImages = new Map(); // name -> { img: HTMLImageElement, width, height }
+        const loadedFonts = new Map();  // name -> { family: string }
+        const assetErrors = [];
+
+        // Helper to translate font family names
+        function translateFontFamily(family) {
+          const fontData = loadedFonts.get(family);
+          if (fontData && fontData.family) {
+            return fontData.family;  // Return CustomFont_xxx
+          }
+          return family;  // Return original if not a loaded font
+        }
+
         // === DRAWING STATE ===
         engine.global.set('__canvas_clear', () => ctx.clearRect(0, 0, gameCanvas.width, gameCanvas.height));
         engine.global.set('__canvas_clearRect', (x, y, w, h) => ctx.clearRect(x, y, w, h));
@@ -245,11 +259,11 @@ export class HtmlGenerator {
         // === FONT STYLING ===
         engine.global.set('__canvas_setFontSize', (size) => {
           state.currentFontSize = size;
-          ctx.font = size + 'px ' + state.currentFontFamily;
+          ctx.font = size + 'px ' + translateFontFamily(state.currentFontFamily);
         });
         engine.global.set('__canvas_setFontFamily', (family) => {
           state.currentFontFamily = family;
-          ctx.font = state.currentFontSize + 'px ' + family;
+          ctx.font = state.currentFontSize + 'px ' + translateFontFamily(family);
         });
         engine.global.set('__canvas_getTextWidth', (text) => ctx.measureText(text).width);
 
@@ -265,7 +279,7 @@ export class HtmlGenerator {
           const savedFont = ctx.font;
           if (fontSize || fontFamily) {
             const size = fontSize ?? state.currentFontSize;
-            const family = fontFamily ?? state.currentFontFamily;
+            const family = translateFontFamily(fontFamily ?? state.currentFontFamily);
             ctx.font = size + 'px ' + family;
           }
           ctx.textBaseline = 'top';
@@ -275,7 +289,7 @@ export class HtmlGenerator {
         engine.global.set('__canvas_strokeText', (x, y, text, fontSize, fontFamily, maxWidth) => {
           const savedFont = ctx.font;
           if (fontSize || fontFamily) {
-            ctx.font = (fontSize ?? state.currentFontSize) + 'px ' + (fontFamily ?? state.currentFontFamily);
+            ctx.font = (fontSize ?? state.currentFontSize) + 'px ' + translateFontFamily(fontFamily ?? state.currentFontFamily);
           }
           if (maxWidth) { ctx.strokeText(text, x, y, maxWidth); } else { ctx.strokeText(text, x, y); }
           ctx.font = savedFont;
@@ -382,13 +396,133 @@ export class HtmlGenerator {
         engine.global.set('__canvas_setFillStyle', (style) => applyGradientStyle(style, 'fillStyle'));
         engine.global.set('__canvas_setStrokeStyle', (style) => applyGradientStyle(style, 'strokeStyle'));
 
-        // === ASSET STUBS (simplified for standalone) ===
-        engine.global.set('__canvas_assets_addPath', () => {});
-        engine.global.set('__canvas_assets_loadImage', (name, file) => ({ _type: 'image', _name: name, _file: file }));
-        engine.global.set('__canvas_assets_loadFont', (name, file) => ({ _type: 'font', _name: name, _file: file }));
-        engine.global.set('__canvas_assets_getWidth', () => 0);
-        engine.global.set('__canvas_assets_getHeight', () => 0);
-        engine.global.set('__canvas_drawImage', () => { console.warn('draw_image not fully supported in standalone export'); });
+        // === ASSET MANAGEMENT ===
+        // Helper to get asset name from string or handle
+        function extractAssetName(nameOrHandle) {
+          if (typeof nameOrHandle === 'string') return nameOrHandle;
+          if (typeof nameOrHandle === 'object' && nameOrHandle !== null && '_name' in nameOrHandle) {
+            return nameOrHandle._name;
+          }
+          throw new Error('Invalid asset reference: expected string name or asset handle');
+        }
+
+        engine.global.set('__canvas_assets_addPath', (path) => {
+          // In standalone mode, paths are pre-registered via ASSET_MANIFEST
+          console.log('Asset path registered:', path);
+        });
+
+        engine.global.set('__canvas_assets_loadImage', (name, filename) => {
+          // Find the asset in our manifest
+          const assetPath = ASSET_MANIFEST.find(a => a.path.endsWith(filename));
+          if (!assetPath) {
+            const err = 'Image file \\'' + filename + '\\' not found in exported assets';
+            console.error(err);
+            assetErrors.push(err);
+            return { _type: 'image', _name: name, _file: filename, _error: err };
+          }
+
+          // Load the image
+          const img = new Image();
+          const loadPromise = new Promise((resolve, reject) => {
+            img.onload = () => {
+              loadedImages.set(name, { img, width: img.naturalWidth, height: img.naturalHeight });
+              console.log('Loaded image:', name, img.naturalWidth + 'x' + img.naturalHeight);
+              resolve();
+            };
+            img.onerror = () => {
+              const err = 'Failed to load image: ' + filename;
+              console.error(err);
+              assetErrors.push(err);
+              reject(new Error(err));
+            };
+          });
+          img.src = 'assets/' + assetPath.path;
+
+          // Store a placeholder until loaded
+          loadedImages.set(name, { img, width: 0, height: 0, loading: loadPromise });
+
+          return { _type: 'image', _name: name, _file: filename };
+        });
+
+        engine.global.set('__canvas_assets_loadFont', (name, filename) => {
+          // Find the asset in our manifest
+          const assetPath = ASSET_MANIFEST.find(a => a.path.endsWith(filename));
+          if (!assetPath) {
+            const err = 'Font file \\'' + filename + '\\' not found in exported assets';
+            console.error(err);
+            assetErrors.push(err);
+            return { _type: 'font', _name: name, _file: filename, _error: err };
+          }
+
+          // Load the font using FontFace API
+          const fontFamily = 'CustomFont_' + name.replace(/[^a-zA-Z0-9]/g, '_');
+          const font = new FontFace(fontFamily, 'url(assets/' + assetPath.path + ')');
+          font.load().then(() => {
+            document.fonts.add(font);
+            loadedFonts.set(name, { family: fontFamily });
+            console.log('Loaded font:', name, 'as', fontFamily);
+          }).catch((err) => {
+            const errMsg = 'Failed to load font: ' + filename + ' - ' + err.message;
+            console.error(errMsg);
+            assetErrors.push(errMsg);
+          });
+
+          // Store immediately so it can be used (will fall back until loaded)
+          loadedFonts.set(name, { family: fontFamily });
+
+          return { _type: 'font', _name: name, _file: filename };
+        });
+
+        engine.global.set('__canvas_assets_getWidth', (nameOrHandle) => {
+          const name = extractAssetName(nameOrHandle);
+          const asset = loadedImages.get(name);
+          if (!asset) {
+            console.error('Unknown image asset:', name);
+            return 0;
+          }
+          return asset.width;
+        });
+
+        engine.global.set('__canvas_assets_getHeight', (nameOrHandle) => {
+          const name = extractAssetName(nameOrHandle);
+          const asset = loadedImages.get(name);
+          if (!asset) {
+            console.error('Unknown image asset:', name);
+            return 0;
+          }
+          return asset.height;
+        });
+
+        engine.global.set('__canvas_drawImage', (nameOrHandle, x, y, width, height, sx, sy, sw, sh) => {
+          const name = extractAssetName(nameOrHandle);
+          const asset = loadedImages.get(name);
+          if (!asset) {
+            console.error('Unknown image asset for drawing:', name);
+            return;
+          }
+          if (!asset.img.complete || asset.img.naturalWidth === 0) {
+            // Image not yet loaded, skip this frame
+            return;
+          }
+          try {
+            // Check for null OR undefined since Lua nil becomes null in JS
+            const hasSrcRect = sx != null && sy != null && sw != null && sh != null;
+            const hasDestSize = width != null && height != null;
+
+            if (hasSrcRect && hasDestSize) {
+              // Full 9-arg version: source rect + dest rect
+              ctx.drawImage(asset.img, sx, sy, sw, sh, x, y, width, height);
+            } else if (hasDestSize) {
+              // 5-arg version: dest pos + size
+              ctx.drawImage(asset.img, x, y, width, height);
+            } else {
+              // 3-arg version: just dest pos
+              ctx.drawImage(asset.img, x, y);
+            }
+          } catch (e) {
+            console.error('Error drawing image:', name, e);
+          }
+        });
 
         // === PIXEL MANIPULATION STUBS ===
         engine.global.set('__canvas_createImageData', (w, h) => ({ id: -1, width: w, height: h }));

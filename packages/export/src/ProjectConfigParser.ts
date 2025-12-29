@@ -264,6 +264,7 @@ export class ProjectConfigParser {
       type: config.type,
       version: config.version,
       description: config.description,
+      assets: config.assets,
     }
 
     if (config.type === 'canvas') {

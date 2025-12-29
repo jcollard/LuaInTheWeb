@@ -17,6 +17,9 @@ export interface ProjectConfig {
   /** Project description */
   description?: string
 
+  /** Asset directories to include (relative to project root) */
+  assets?: string[]
+
   /** Canvas-specific settings */
   canvas?: CanvasConfig
 

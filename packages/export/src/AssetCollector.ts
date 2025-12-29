@@ -67,11 +67,11 @@ export class AssetCollector {
     // Collect Lua files starting from main entry
     await this.collectLuaFiles(config.main, files, collectedPaths)
 
-    // Collect assets from asset directories (canvas projects only)
-    if (config.canvas?.assets) {
-      for (const assetDir of config.canvas.assets) {
-        await this.collectAssetsFromDir(assetDir, assets)
-      }
+    // Collect assets from asset directories
+    // Check both top-level assets and canvas.assets for backwards compatibility
+    const assetDirs = config.assets ?? config.canvas?.assets ?? []
+    for (const assetDir of assetDirs) {
+      await this.collectAssetsFromDir(assetDir, assets)
     }
 
     return { files, assets }
