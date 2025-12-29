@@ -14,7 +14,8 @@ export class ExportCommand implements ICommand {
   // Stryker disable all: Command metadata - string mutations don't affect behavior
   readonly name = 'export'
   readonly description = 'Export project as standalone HTML/ZIP package'
-  readonly usage = 'export [path] [--type=canvas|shell] [--web-workers=false] [--init]'
+  readonly usage =
+    'export [path] [--type=canvas|shell] [--web-workers=false] [--single-file] [--init]'
   // Stryker restore all
 
   execute(args: string[], context: ShellContext): IProcess | void {
@@ -69,13 +70,17 @@ export class ExportCommand implements ICommand {
         const htmlGenerator = new HtmlGenerator(options)
         const html = htmlGenerator.generate(config, files, assets)
 
-        // Create ZIP bundle
+        // Create bundle (ZIP or single HTML file)
         const bundler = new ZipBundler()
-        return bundler.bundle({ html, luaFiles: files, assets })
+        return bundler.bundle(
+          { html, luaFiles: files, assets },
+          { singleFile: options.singleFile }
+        )
       })
       .then((blob) => {
-        // Trigger download
-        const filename = `${config.name}.zip`
+        // Trigger download with appropriate extension
+        const extension = options.singleFile ? 'html' : 'zip'
+        const filename = `${config.name}.${extension}`
         context.onTriggerDownload!(filename, blob)
         context.output(`Project "${config.name}" exported successfully as ${filename}\n`)
       })
@@ -111,6 +116,8 @@ export class ExportCommand implements ICommand {
         options.webWorkers = false
       } else if (arg === '--web-workers=true') {
         options.webWorkers = true
+      } else if (arg === '--single-file') {
+        options.singleFile = true
       } else if (!arg.startsWith('-')) {
         projectPath = arg.startsWith('/') ? arg : `${cwd}/${arg}`
       }

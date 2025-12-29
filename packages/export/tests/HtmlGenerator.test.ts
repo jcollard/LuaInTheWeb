@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { HtmlGenerator } from '../src/HtmlGenerator'
 import type { ProjectConfig, ExportOptions, CollectedFile, CollectedAsset } from '../src/types'
+import { encodeBase64 } from '../src/base64'
 
 function createConfig(overrides: Partial<ProjectConfig> = {}): ProjectConfig {
   return {
@@ -270,6 +271,122 @@ describe('HtmlGenerator', () => {
       // Default font settings
       expect(html).toContain('monospace')
       expect(html).toContain('fontSize: 14')
+    })
+  })
+
+  describe('single-file mode', () => {
+    it('should embed images as data URLs when singleFile is true', () => {
+      const generator = new HtmlGenerator(createOptions({ singleFile: true }))
+      const config = createConfig()
+      const luaFiles: CollectedFile[] = []
+      // PNG header bytes
+      const pngData = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
+      const assets: CollectedAsset[] = [
+        { path: 'player.png', data: pngData, mimeType: 'image/png' },
+      ]
+
+      const html = generator.generateCanvas(config, luaFiles, assets)
+
+      // Should contain data URL with base64-encoded image
+      const expectedBase64 = encodeBase64(pngData)
+      expect(html).toContain(`data:image/png;base64,${expectedBase64}`)
+    })
+
+    it('should embed fonts as data URLs when singleFile is true', () => {
+      const generator = new HtmlGenerator(createOptions({ singleFile: true }))
+      const config = createConfig()
+      const luaFiles: CollectedFile[] = []
+      // TTF header bytes
+      const fontData = new Uint8Array([0, 1, 0, 0])
+      const assets: CollectedAsset[] = [
+        { path: 'custom.ttf', data: fontData, mimeType: 'font/ttf' },
+      ]
+
+      const html = generator.generateCanvas(config, luaFiles, assets)
+
+      // Should contain data URL with base64-encoded font
+      const expectedBase64 = encodeBase64(fontData)
+      expect(html).toContain(`data:font/ttf;base64,${expectedBase64}`)
+    })
+
+    it('should embed audio as data URLs when singleFile is true', () => {
+      const generator = new HtmlGenerator(createOptions({ singleFile: true }))
+      const config = createConfig()
+      const luaFiles: CollectedFile[] = []
+      // MP3 header bytes
+      const audioData = new Uint8Array([0xff, 0xfb, 0x90, 0x00])
+      const assets: CollectedAsset[] = [
+        { path: 'sounds/effect.mp3', data: audioData, mimeType: 'audio/mpeg' },
+      ]
+
+      const html = generator.generateCanvas(config, luaFiles, assets)
+
+      // Should contain data URL with base64-encoded audio
+      const expectedBase64 = encodeBase64(audioData)
+      expect(html).toContain(`data:audio/mpeg;base64,${expectedBase64}`)
+    })
+
+    it('should NOT embed assets as data URLs when singleFile is false', () => {
+      const generator = new HtmlGenerator(createOptions({ singleFile: false }))
+      const config = createConfig()
+      const luaFiles: CollectedFile[] = []
+      const pngData = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
+      const assets: CollectedAsset[] = [
+        { path: 'player.png', data: pngData, mimeType: 'image/png' },
+      ]
+
+      const html = generator.generateCanvas(config, luaFiles, assets)
+
+      // Should NOT contain data URL
+      expect(html).not.toContain('data:image/png;base64,')
+      // Should reference assets folder path
+      expect(html).toContain('assets/')
+    })
+
+    it('should NOT embed assets as data URLs when singleFile is undefined', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig()
+      const luaFiles: CollectedFile[] = []
+      const pngData = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
+      const assets: CollectedAsset[] = [
+        { path: 'player.png', data: pngData, mimeType: 'image/png' },
+      ]
+
+      const html = generator.generateCanvas(config, luaFiles, assets)
+
+      // Should NOT contain data URL
+      expect(html).not.toContain('data:image/png;base64,')
+    })
+
+    it('should handle multiple assets in single-file mode', () => {
+      const generator = new HtmlGenerator(createOptions({ singleFile: true }))
+      const config = createConfig()
+      const luaFiles: CollectedFile[] = []
+      const pngData = new Uint8Array([0x89, 0x50])
+      const mp3Data = new Uint8Array([0xff, 0xfb])
+      const assets: CollectedAsset[] = [
+        { path: 'player.png', data: pngData, mimeType: 'image/png' },
+        { path: 'sound.mp3', data: mp3Data, mimeType: 'audio/mpeg' },
+      ]
+
+      const html = generator.generateCanvas(config, luaFiles, assets)
+
+      // Both should be embedded
+      expect(html).toContain(`data:image/png;base64,${encodeBase64(pngData)}`)
+      expect(html).toContain(`data:audio/mpeg;base64,${encodeBase64(mp3Data)}`)
+    })
+
+    it('should handle empty assets in single-file mode', () => {
+      const generator = new HtmlGenerator(createOptions({ singleFile: true }))
+      const config = createConfig()
+      const luaFiles: CollectedFile[] = []
+      const assets: CollectedAsset[] = []
+
+      const html = generator.generateCanvas(config, luaFiles, assets)
+
+      // Should still generate valid HTML
+      expect(html).toContain('<!DOCTYPE html>')
+      expect(html).toContain('ASSET_MANIFEST')
     })
   })
 })

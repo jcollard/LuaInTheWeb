@@ -12,6 +12,8 @@ import { WebAudioEngine } from './WebAudioEngine.js';
 /** Asset manifest entry */
 interface AssetEntry {
   path: string;
+  /** Data URL for single-file exports (base64-encoded asset) */
+  dataUrl?: string;
 }
 
 /** Canvas runtime state object */
@@ -66,7 +68,20 @@ export function setupAudioBridge(
   const pendingLoads = new Set<Promise<void>>();
 
   /**
-   * Helper to load audio from the assets folder.
+   * Decode base64 data URL to ArrayBuffer.
+   */
+  function decodeDataUrl(dataUrl: string): ArrayBuffer {
+    const base64 = dataUrl.split(',')[1];
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  /**
+   * Helper to load audio from the assets folder or embedded data URL.
    */
   async function loadAudioAsset(
     name: string,
@@ -84,8 +99,17 @@ export function setupAudioBridge(
         await audioEngine.initialize();
       }
 
-      const response = await fetch('assets/' + assetPath.path);
-      const buffer = await response.arrayBuffer();
+      let buffer: ArrayBuffer;
+
+      // Check if we have embedded data URL (single-file mode)
+      if (assetPath.dataUrl) {
+        buffer = decodeDataUrl(assetPath.dataUrl);
+      } else {
+        // Fetch from assets folder (ZIP mode)
+        const response = await fetch('assets/' + assetPath.path);
+        buffer = await response.arrayBuffer();
+      }
+
       await audioEngine.decodeAudio(name, buffer);
       console.log('Loaded audio:', name);
     } catch (err) {

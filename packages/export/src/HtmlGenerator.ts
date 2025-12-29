@@ -1,6 +1,7 @@
 import type { ProjectConfig, ExportOptions, CollectedFile, CollectedAsset } from './types'
 import { canvasLuaCode, shellLuaCode } from './runtime'
 import { AUDIO_INLINE_JS } from '@lua-learning/lua-runtime'
+import { toDataUrl } from './base64'
 
 /**
  * Generates standalone HTML files for exported projects.
@@ -138,7 +139,9 @@ export class HtmlGenerator {
     const scale = config.canvas?.scale ?? 'full'
 
     const luaModules = this.serializeLuaFiles(luaFiles)
-    const assetManifest = this.serializeAssets(assets)
+    const assetManifest = this.options.singleFile
+      ? this.serializeAssetsWithData(assets)
+      : this.serializeAssets(assets)
     const escapedCanvasLuaCode = this.escapeLuaForJs(canvasLuaCode)
     const scaleCss = this.generateScaleCss(scale, bgColor)
     const scaleJs = this.generateScaleJs(scale, width, height)
@@ -932,6 +935,19 @@ export class HtmlGenerator {
       path: asset.path,
       mimeType: asset.mimeType,
       // Note: Binary data is stored in the ZIP, manifest only has metadata
+    }))
+    return JSON.stringify(manifest, null, 2)
+  }
+
+  /**
+   * Serialize assets with embedded data URLs for single-file export.
+   * Each asset includes a dataUrl property with the base64-encoded data.
+   */
+  private serializeAssetsWithData(assets: CollectedAsset[]): string {
+    const manifest = assets.map((asset) => ({
+      path: asset.path,
+      mimeType: asset.mimeType,
+      dataUrl: toDataUrl(asset.data, asset.mimeType),
     }))
     return JSON.stringify(manifest, null, 2)
   }

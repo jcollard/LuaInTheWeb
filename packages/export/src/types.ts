@@ -87,6 +87,9 @@ export interface ExportOptions {
 
   /** Output filename (without extension) */
   outputName?: string
+
+  /** Export as single self-contained HTML file with embedded assets */
+  singleFile?: boolean
 }
 
 /**
