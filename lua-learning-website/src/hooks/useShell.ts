@@ -13,6 +13,7 @@ import {
   type ShellContext,
 } from '@lua-learning/shell-core'
 import { LuaCommand } from '@lua-learning/lua-runtime'
+import { ExportCommand } from '@lua-learning/export'
 import type { UseFileSystemReturn } from './useFileSystem'
 
 /**
@@ -95,6 +96,8 @@ export interface UseShellOptions {
   onRequestOpenFile?: (filePath: string) => void
   /** Callback invoked when filesystem changes (for file tree refresh) */
   onFileSystemChange?: () => void
+  /** Callback to trigger a file download (for export command) */
+  onTriggerDownload?: (filename: string, blob: Blob) => void
 }
 
 /**
@@ -185,6 +188,8 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
     registerBuiltinCommands(reg)
     // Register Lua command for REPL and script execution
     reg.registerICommand(new LuaCommand())
+    // Register export command for standalone project packaging
+    reg.registerICommand(new ExportCommand())
     return reg
   }, [])
 
@@ -268,6 +273,8 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
               options.onFileSystemChange!()
             }
           : undefined,
+        // Download trigger for export command
+        onTriggerDownload: options?.onTriggerDownload,
       }
 
       // Execute the command using the new interface
