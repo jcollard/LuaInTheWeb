@@ -668,7 +668,7 @@ export class HtmlGenerator {
         }
 
         // Audio asset registration
-        engine.global.set('__audio_assets_loadSound', (name, filename) => {
+        engine.global.set('__canvas_assets_loadSound', (name, filename) => {
           const assetPath = ASSET_MANIFEST.find(a => a.path.endsWith(filename));
           if (!assetPath) {
             console.error('Sound file not found:', filename);
@@ -689,7 +689,7 @@ export class HtmlGenerator {
           return { _type: 'sound', _name: name, _file: filename };
         });
 
-        engine.global.set('__audio_assets_loadMusic', (name, filename) => {
+        engine.global.set('__canvas_assets_loadMusic', (name, filename) => {
           const assetPath = ASSET_MANIFEST.find(a => a.path.endsWith(filename));
           if (!assetPath) {
             console.error('Music file not found:', filename);

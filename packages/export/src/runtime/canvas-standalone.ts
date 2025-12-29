@@ -894,7 +894,7 @@ export function setupCanvasBridge(
 
   // Audio asset registration
   engine.global.set(
-    '__audio_assets_loadSound',
+    '__canvas_assets_loadSound',
     (name: string, filename: string) => {
       state.audioAssets.set(name, { name, filename, type: 'sound' })
       return { _type: 'sound', _name: name, _file: filename }
@@ -902,7 +902,7 @@ export function setupCanvasBridge(
   )
 
   engine.global.set(
-    '__audio_assets_loadMusic',
+    '__canvas_assets_loadMusic',
     (name: string, filename: string) => {
       state.audioAssets.set(name, { name, filename, type: 'music' })
       return { _type: 'music', _name: name, _file: filename }
