@@ -309,7 +309,6 @@ export class LuaCanvasProcess implements IProcess {
    */
   private handleWorkerMessage(event: MessageEvent<WorkerToMainMessage>): void {
     const message = event.data;
-    console.log(`[Audio Debug] Worker message received:`, message.type, message);
 
     switch (message.type) {
       case 'ready':
@@ -352,7 +351,6 @@ export class LuaCanvasProcess implements IProcess {
    * Loads assets from the filesystem and sends them to the worker.
    */
   private async handleAssetsNeeded(assetRequests: AssetRequest[], assetPaths?: AssetPathRequest[]): Promise<void> {
-    console.log(`[Audio Debug] handleAssetsNeeded called - assetRequests: ${assetRequests.length}, assetPaths:`, assetPaths);
     if (!this.fileSystem) {
       this.handleError('Assets requested but no filesystem provided');
       return;
@@ -395,16 +393,13 @@ export class LuaCanvasProcess implements IProcess {
       }
 
       // Load new API assets (directory-based discovery)
-      console.log(`[Audio Debug] assetPaths:`, assetPaths);
       if (assetPaths && assetPaths.length > 0) {
         // Track loaded filenames to avoid duplicates
         const loadedFilenames = new Set<string>();
 
         for (const pathRequest of assetPaths) {
           // Scan the directory for asset files
-          console.log(`[Audio Debug] Scanning path: ${pathRequest.path}`);
           const discoveredFiles = assetLoader.scanDirectory(pathRequest.path);
-          console.log(`[Audio Debug] Discovered ${discoveredFiles.length} files:`, discoveredFiles.map(f => `${f.relativePath} (${f.type})`));
 
           for (const file of discoveredFiles) {
             // Skip if already loaded (in case of overlapping paths)
@@ -421,7 +416,6 @@ export class LuaCanvasProcess implements IProcess {
                 if (this.audioInitPromise) {
                   await this.audioInitPromise;
                 }
-                console.log(`[Audio] Loading audio file: ${file.relativePath}`);
                 const loaded = await assetLoader.loadAsset({
                   name: file.relativePath,
                   path: file.fullPath,
@@ -429,9 +423,7 @@ export class LuaCanvasProcess implements IProcess {
                 });
                 // Decode audio on main thread using relativePath as key
                 // This matches the path used in Lua: canvas.assets.load_sound("name", "sfx/file.ogg")
-                console.log(`[Audio] Decoding audio: ${file.relativePath} (${loaded.data.byteLength} bytes)`);
                 await this.audioEngine.decodeAudio(file.relativePath, loaded.data);
-                console.log(`[Audio] Decoded successfully: ${file.relativePath}`);
               }
               // Audio assets don't need to be sent to worker
               continue;
@@ -603,11 +595,9 @@ export class LuaCanvasProcess implements IProcess {
     for (const cmd of commands) {
       switch (cmd.type) {
         case 'playSound':
-          console.log(`[Audio] playSound command: ${cmd.name}, volume: ${cmd.volume}`);
           this.audioEngine.playSound(cmd.name, cmd.volume);
           break;
         case 'playMusic':
-          console.log(`[Audio] playMusic command: ${cmd.name}, volume: ${cmd.volume}, loop: ${cmd.loop}`);
           this.audioEngine.playMusic(cmd.name, cmd.volume, cmd.loop);
           break;
         case 'stopMusic':
