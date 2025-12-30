@@ -2,9 +2,7 @@ module.exports = {
   packagerConfig: {
     name: 'Adventures in Lua',
     executableName: 'adventures-in-lua',
-    // Icon path - uses default Electron icon until custom icons are added
-    // To add custom icons, place: icon.icns (macOS), icon.ico (Windows), icon.png (Linux) in ./icons/
-    // icon: './icons/icon',
+    icon: './icons/icon',
     appBundleId: 'app.adventuresinlua.desktop',
     // Code signing deferred to future issue
     // osxSign: {},
@@ -16,6 +14,7 @@ module.exports = {
       name: '@electron-forge/maker-squirrel',
       config: {
         name: 'AdventuresInLua',
+        setupIcon: './icons/icon.ico',
         // Windows code signing deferred to future issue
         // certificateFile: '',
         // certificatePassword: '',

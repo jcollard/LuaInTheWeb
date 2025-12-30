@@ -1,15 +1,19 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, Menu } = require('electron');
 const path = require('path');
 
 const HOSTED_URL = 'https://adventuresinlua.web.app';
 const ALLOWED_HOST = 'adventuresinlua.web.app';
 
 function createWindow() {
+  // Remove the application menu
+  Menu.setApplicationMenu(null);
+
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 800,
     minHeight: 600,
+    show: false, // Don't show until maximized
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -17,7 +21,13 @@ function createWindow() {
     },
     // macOS: use hidden inset title bar
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    // Hide menu bar on Windows/Linux
+    autoHideMenuBar: true,
   });
+
+  // Maximize and show window
+  win.maximize();
+  win.show();
 
   // Load the hosted application
   win.loadURL(HOSTED_URL);

@@ -29,3 +29,5 @@ screenshots-review/
 !lua-learning-website/**/*.jpg
 !docs/**/*.png
 !docs/**/*.jpg
+!packages/electron-wrapper/icons/*.png
+!packages/electron-wrapper/icons/*.ico
