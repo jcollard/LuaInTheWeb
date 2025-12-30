@@ -1,3 +1,7 @@
+/* eslint-disable max-lines */
+// This file implements a complete audio engine with sound, music, and channel APIs.
+// Splitting would reduce cohesion without improving maintainability.
+
 import type { IAudioEngine, MusicOptions, MusicHandle } from './IAudioEngine.js';
 
 /**

@@ -2,8 +2,6 @@
 
 The canvas library provides audio playback for games and interactive applications. Play sound effects, background music, and use advanced channel-based audio mixing.
 
-**Tip**: For convenient audio management with fading and crossfading, see the [Audio Mixer Library](../audio_mixer.md).
-
 ## Loading Audio Assets
 
 Audio files must be registered before `canvas.start()`:
@@ -130,8 +128,6 @@ canvas.unmute()
 
 For more control, use named audio channels. Each channel is an independent audio bus with its own volume and playback state.
 
-**Note**: For most use cases, the [Audio Mixer Library](../audio_mixer.md) provides a more convenient API built on top of channels.
-
 ### Creating Channels
 
 ```lua
@@ -163,6 +159,35 @@ canvas.channel_fade_to("bgm", 1.0, 1.0)  -- Fade in over 1 second
 if canvas.channel_is_fading("bgm") then
   print("BGM is fading")
 end
+```
+
+### Crossfading Between Tracks
+
+To smoothly transition between two tracks, use two channels:
+
+```lua
+-- Create two channels for crossfading
+canvas.channel_create("bgm_a")
+canvas.channel_create("bgm_b")
+
+local current_channel = "bgm_a"
+
+function crossfade_to(new_track, duration)
+  local old_channel = current_channel
+  local new_channel = (current_channel == "bgm_a") and "bgm_b" or "bgm_a"
+
+  -- Start new track at zero volume
+  canvas.channel_play(new_channel, new_track, { volume = 0, loop = true })
+
+  -- Fade out old, fade in new
+  canvas.channel_fade_to(old_channel, 0, duration)
+  canvas.channel_fade_to(new_channel, 1, duration)
+
+  current_channel = new_channel
+end
+
+-- Usage
+crossfade_to("battle_theme", 2.0)  -- 2 second crossfade
 ```
 
 ### Channel Control
