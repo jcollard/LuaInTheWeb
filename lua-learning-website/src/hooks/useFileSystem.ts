@@ -630,8 +630,8 @@ export function useFileSystem(): UseFileSystemReturn {
       const now = Date.now()
       const newFile = { name: fileName, content, createdAt: now, updatedAt: now }
 
-      // Update ref only - no setState
-      filesRef.current = { ...filesRef.current, [normalizedPath]: newFile }
+      // Mutate ref directly - O(1) instead of O(n) spread
+      filesRef.current[normalizedPath] = newFile
     },
     []
   )
@@ -660,8 +660,8 @@ export function useFileSystem(): UseFileSystemReturn {
         updatedAt: now,
       }
 
-      // Update ref only - no setState
-      filesRef.current = { ...filesRef.current, [normalizedPath]: newFile }
+      // Mutate ref directly - O(1) instead of O(n) spread
+      filesRef.current[normalizedPath] = newFile
     },
     []
   )
@@ -683,10 +683,8 @@ export function useFileSystem(): UseFileSystemReturn {
         throw new Error(`Parent folder not found: ${parentPath}`)
       }
 
-      // Update ref only - no setState
-      const newFoldersRef = new Set(foldersRef.current)
-      newFoldersRef.add(normalizedPath)
-      foldersRef.current = newFoldersRef
+      // Mutate ref directly - O(1) instead of O(n) Set copy
+      foldersRef.current.add(normalizedPath)
     },
     []
   )
