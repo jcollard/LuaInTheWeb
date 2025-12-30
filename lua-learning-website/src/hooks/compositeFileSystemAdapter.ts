@@ -120,11 +120,20 @@ export interface AdaptedFileSystem {
   deleteFolder: (path: string) => void
   renameFolder: (oldPath: string, newPath: string) => void
 
+  // Binary file operations (for uploads)
+  writeBinaryFile: (path: string, content: Uint8Array) => void
+
   // Utilities
   exists: (path: string) => boolean
   isDirectory: (path: string) => boolean
   listDirectory: (path: string) => string[]
   getTree: () => TreeNode[]
+
+  // Async operations
+  flush: () => Promise<void>
+
+  // State version - increments on each operation, used for memoization
+  version: number
 }
 
 /**
@@ -180,10 +189,14 @@ export function createFileSystemAdapter(
   fs: IFileSystem,
   workspaces: Workspace[] = []
 ): AdaptedFileSystem {
+  // Version counter for memoization - increments on each mutation
+  let version = 0
+
   return {
     createFile: (path: string, content: string = '') => {
       fs.writeFile(path, content)
       flushIfSupported(fs)
+      version++
     },
 
     readFile: (path: string): string | null => {
@@ -200,11 +213,13 @@ export function createFileSystemAdapter(
     writeFile: (path: string, content: string) => {
       fs.writeFile(path, content)
       flushIfSupported(fs)
+      version++
     },
 
     deleteFile: (path: string) => {
       fs.delete(path)
       flushIfSupported(fs)
+      version++
     },
 
     renameFile: (oldPath: string, newPath: string) => {
@@ -212,6 +227,7 @@ export function createFileSystemAdapter(
       copyFileBinaryAware(fs, oldPath, newPath)
       fs.delete(oldPath)
       flushIfSupported(fs)
+      version++
     },
 
     moveFile: (sourcePath: string, targetFolderPath: string) => {
@@ -229,6 +245,7 @@ export function createFileSystemAdapter(
         fs.delete(sourcePath)
       }
       flushIfSupported(fs)
+      version++
     },
 
     copyFile: (sourcePath: string, targetFolderPath: string) => {
@@ -246,17 +263,20 @@ export function createFileSystemAdapter(
         copyFileBinaryAware(fs, sourcePath, newPath)
       }
       flushIfSupported(fs)
+      version++
     },
 
     createFolder: (path: string) => {
       fs.createDirectory(path)
       flushIfSupported(fs)
+      version++
     },
 
     deleteFolder: (path: string) => {
       // Recursively delete folder and all contents
       deleteDirectoryRecursive(fs, path)
       flushIfSupported(fs)
+      version++
     },
 
     renameFolder: (oldPath: string, newPath: string) => {
@@ -265,6 +285,19 @@ export function createFileSystemAdapter(
       copyDirectoryContents(fs, oldPath, newPath)
       deleteDirectoryRecursive(fs, oldPath)
       flushIfSupported(fs)
+      version++
+    },
+
+    writeBinaryFile: (path: string, content: Uint8Array) => {
+      if (supportsBinary(fs)) {
+        fs.writeBinaryFile(path, content)
+      } else {
+        // Fallback: encode as base64 string for filesystems without binary support
+        const base64 = btoa(String.fromCharCode(...content))
+        fs.writeFile(path, base64)
+      }
+      flushIfSupported(fs)
+      version++
     },
 
     exists: (path: string) => fs.exists(path),
@@ -277,6 +310,17 @@ export function createFileSystemAdapter(
     },
 
     getTree: () => buildTreeFromFileSystem(fs, '/', true, workspaces),
+
+    flush: async () => {
+      const flushable = fs as IFileSystem & { flush?: () => Promise<void> }
+      if (typeof flushable.flush === 'function') {
+        await flushable.flush()
+      }
+    },
+
+    get version() {
+      return version
+    },
   }
 }
 

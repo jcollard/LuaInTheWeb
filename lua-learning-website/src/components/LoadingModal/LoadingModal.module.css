@@ -1,0 +1,118 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background-color: var(--vscode-editor-background, #1e1e1e);
+  border: 1px solid var(--vscode-widget-border, #454545);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  min-width: 200px;
+  max-width: 350px;
+  padding: 24px;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--vscode-foreground, #cccccc);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--vscode-foreground, #cccccc);
+}
+
+.message {
+  margin: 0;
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground, #8b8b8b);
+  line-height: 1.4;
+}
+
+.progressSection {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.currentFile {
+  margin: 0;
+  font-size: 12px;
+  color: var(--vscode-foreground, #cccccc);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 280px;
+}
+
+.progressCount {
+  margin: 0;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground, #8b8b8b);
+}
+
+.progressBar {
+  width: 100%;
+  height: 4px;
+  background-color: var(--vscode-progressBar-background, #0e639c);
+  background-color: var(--vscode-widget-border, #454545);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: var(--vscode-progressBar-background, #0e639c);
+  transition: width 0.2s ease-out;
+}
+
+.cancelButton {
+  margin-top: 8px;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background-color: var(--vscode-button-secondaryBackground, #3a3d41);
+  color: var(--vscode-button-secondaryForeground, #cccccc);
+  transition: background-color 0.1s;
+}
+
+.cancelButton:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground, #45494e);
+}
+
+.cancelButton:focus {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: 1px;
+}

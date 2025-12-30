@@ -8,6 +8,10 @@ import type { TabInfo } from '../TabBar'
 import { useToast } from '../Toast'
 import { IDEContext } from './context'
 import { useIDEAutoSave } from './useIDEAutoSave'
+import { useUploadHandler } from './useUploadHandler'
+import { useShellFileMove } from './useShellFileMove'
+import { UploadConflictDialog } from '../UploadConflictDialog'
+import { LoadingModal } from '../LoadingModal'
 import type { IDEContextValue, IDEContextProviderProps, ActivityPanelType } from './types'
 
 export function IDEContextProvider({ children, initialCode = '', fileSystem: externalFileSystem, isPathReadOnly }: IDEContextProviderProps) {
@@ -50,6 +54,16 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   const [sidebarVisible, setSidebarVisible] = useState(true)
   // Version counter to trigger file tree refresh (incremented when shell modifies filesystem)
   const [fileTreeVersion, setFileTreeVersion] = useState(0)
+
+  // Upload handling (extracted to separate hook)
+  const uploadHandler = useUploadHandler({
+    filesystem,
+    externalFileSystem,
+    internalFilesystem,
+    showToast,
+    showError,
+    onTreeRefresh: useCallback(() => setFileTreeVersion(v => v + 1), []),
+  })
 
   const activeTab = tabBar.activeTab
   const tabs = tabBar.tabs
@@ -347,77 +361,14 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   // Refresh file tree by incrementing version counter (triggers re-render for shell commands)
   const refreshFileTree = useCallback(() => { setFileTreeVersion(v => v + 1) }, [])
 
-  // Handle file/directory moves from shell (mv command)
-  // Updates tabs to reflect new paths without losing editor state
-  const handleShellFileMove = useCallback((oldPath: string, newPath: string, isDirectory: boolean) => {
-    if (isDirectory) {
-      // For directories, update all tabs that are children of the old path
-      const affectedTabs = tabs.filter(t => t.path.startsWith(oldPath + '/') || t.path === oldPath)
-      for (const tab of affectedTabs) {
-        const relativePath = tab.path.slice(oldPath.length)
-        const newTabPath = newPath + relativePath
-        const newName = newTabPath.split('/').pop() || newTabPath
-        // Update content maps to preserve dirty state
-        setOriginalContent(prev => {
-          if (prev.has(tab.path)) {
-            const next = new Map(prev)
-            const content = next.get(tab.path)!
-            next.delete(tab.path)
-            next.set(newTabPath, content)
-            return next
-          }
-          return prev
-        })
-        setUnsavedContent(prev => {
-          if (prev.has(tab.path)) {
-            const next = new Map(prev)
-            const content = next.get(tab.path)!
-            next.delete(tab.path)
-            next.set(newTabPath, content)
-            return next
-          }
-          return prev
-        })
-        // Update tab path and name
-        tabBar.renameTab(tab.path, newTabPath, newName)
-      }
-    } else {
-      // For files, update the specific tab if it exists
-      const tabIndex = tabs.findIndex(t => t.path === oldPath)
-      if (tabIndex !== -1) {
-        const newName = newPath.split('/').pop() || newPath
-        // Update content maps to preserve dirty state
-        setOriginalContent(prev => {
-          if (prev.has(oldPath)) {
-            const next = new Map(prev)
-            const content = next.get(oldPath)!
-            next.delete(oldPath)
-            next.set(newPath, content)
-            return next
-          }
-          return prev
-        })
-        setUnsavedContent(prev => {
-          if (prev.has(oldPath)) {
-            const next = new Map(prev)
-            const content = next.get(oldPath)!
-            next.delete(oldPath)
-            next.set(newPath, content)
-            return next
-          }
-          return prev
-        })
-        // Update tab path and name
-        tabBar.renameTab(oldPath, newPath, newName)
-      }
-    }
-  }, [tabs, tabBar])
+  // Handle file/directory moves from shell (mv command) - extracted to separate hook
+  const handleShellFileMove = useShellFileMove({ tabs, tabBar, setOriginalContent, setUnsavedContent })
 
-  // File tree is computed fresh on each render (UI operations cause re-renders naturally)
-  // For shell commands, refreshFileTree is called to force a re-render via fileTreeVersion
-  // We need to read fileTreeVersion to ensure component re-renders when it changes
-  void fileTreeVersion
-  const fileTree = filesystem.getTree()
+  // File tree is memoized to prevent expensive rebuilds on unrelated re-renders
+  // Only recalculate when filesystem.version changes (increments on each filesystem operation)
+  // fileTreeVersion is kept for external refresh requests (e.g., shell commands)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- version props are intentional cache-busters
+  const fileTree = useMemo(() => filesystem.getTree(), [filesystem, filesystem.version, fileTreeVersion])
 
   // Load content for the initial active tab when restored from persistence
   // This runs after the filesystem is ready (when fileTree changes indicate data is loaded)
@@ -467,6 +418,8 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename, clearPendingNewFolder,
     recentFiles, clearRecentFiles, fileSystem: filesystem,
     autoSaveEnabled, toggleAutoSave, saveAllFiles,
+    uploadFiles: uploadHandler.uploadFiles,
+    uploadFolder: uploadHandler.uploadFolder,
   }), [
     engine, code, setCode, fileName, isDirty,
     activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
@@ -476,8 +429,24 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,
     clearPendingNewFolder, recentFiles, clearRecentFiles, filesystem,
-    autoSaveEnabled, toggleAutoSave, saveAllFiles,
+    autoSaveEnabled, toggleAutoSave, saveAllFiles, uploadHandler,
   ])
 
-  return <IDEContext.Provider value={value}>{children}</IDEContext.Provider>
+  return (
+    <IDEContext.Provider value={value}>
+      {children}
+      <UploadConflictDialog
+        isOpen={uploadHandler.uploadConflictDialogOpen}
+        conflictingFiles={uploadHandler.conflictingFileNames}
+        onConfirm={uploadHandler.handleUploadConflictConfirm}
+        onCancel={uploadHandler.handleUploadConflictCancel}
+      />
+      <LoadingModal
+        isOpen={uploadHandler.folderUploadModalOpen}
+        title="Uploading Folder"
+        progress={uploadHandler.folderUploadProgress}
+        onCancel={uploadHandler.handleFolderUploadCancel}
+      />
+    </IDEContext.Provider>
+  )
 }

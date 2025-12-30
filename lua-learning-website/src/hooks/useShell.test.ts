@@ -14,6 +14,7 @@ describe('useShell', () => {
     renameFile: vi.fn(),
     moveFile: vi.fn(),
     copyFile: vi.fn(),
+    writeBinaryFile: vi.fn(),
     createFolder: vi.fn(),
     deleteFolder: vi.fn(),
     renameFolder: vi.fn(),
@@ -21,6 +22,12 @@ describe('useShell', () => {
     isDirectory: vi.fn().mockReturnValue(true),
     listDirectory: vi.fn().mockReturnValue([]),
     getTree: vi.fn().mockReturnValue([]),
+    flush: vi.fn().mockResolvedValue(undefined),
+    createFileSilent: vi.fn(),
+    writeBinaryFileSilent: vi.fn(),
+    createFolderSilent: vi.fn(),
+    commitBatch: vi.fn(),
+    version: 0,
   })
 
   let mockFileSystem: UseFileSystemReturn

@@ -9,69 +9,7 @@
 
 import type { IFileSystem, FileEntry } from './types'
 import { resolvePath, joinPath, getParentPath, getBasename } from './pathUtils'
-
-/**
- * Binary file extensions - files with these extensions are treated as binary.
- */
-const BINARY_EXTENSIONS = new Set([
-  // Images
-  '.png',
-  '.jpg',
-  '.jpeg',
-  '.gif',
-  '.bmp',
-  '.webp',
-  '.ico',
-  '.svg',
-  // Audio
-  '.mp3',
-  '.wav',
-  '.ogg',
-  '.m4a',
-  '.flac',
-  '.aac',
-  // Video
-  '.mp4',
-  '.webm',
-  '.avi',
-  '.mov',
-  '.mkv',
-  // Fonts
-  '.woff',
-  '.woff2',
-  '.ttf',
-  '.otf',
-  '.eot',
-  // Archives
-  '.zip',
-  '.tar',
-  '.gz',
-  '.7z',
-  '.rar',
-  // Generic binary
-  '.bin',
-  '.dat',
-  '.exe',
-  '.dll',
-  '.so',
-  '.dylib',
-  // Documents (binary)
-  '.pdf',
-  '.doc',
-  '.docx',
-  '.xls',
-  '.xlsx',
-  '.ppt',
-  '.pptx',
-])
-
-/**
- * Check if a path has a binary file extension.
- */
-function isBinaryExtension(path: string): boolean {
-  const ext = path.toLowerCase().match(/\.[^.]+$/)?.[0] ?? ''
-  return BINARY_EXTENSIONS.has(ext)
-}
+import { isBinaryExtension } from './binaryExtensions'
 
 /**
  * Cached entry representing a file or directory in the filesystem.
@@ -137,29 +75,37 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
    * Must be called before using any other methods.
    */
   async initialize(): Promise<void> {
-    // Clear existing cache
-    this.cache.clear()
+    // Build new cache in temporary variable to avoid race conditions
+    // (exists() could be called while we're loading, seeing partial data)
+    const newCache = new Map<string, CachedEntry>()
 
-    // Add root directory to cache
-    this.cache.set('/', {
+    // Add root directory to new cache
+    newCache.set('/', {
       type: 'directory',
       handle: this.rootHandle,
       children: new Set(),
     })
 
-    // Recursively load directory structure
-    await this.loadDirectory('/', this.rootHandle)
+    // Recursively load directory structure into new cache
+    await this.loadDirectoryIntoCache('/', this.rootHandle, newCache)
+
+    // Atomic swap - only replace cache once fully loaded
+    this.cache = newCache
     this._initialized = true
   }
 
   /**
-   * Recursively load a directory's contents into the cache.
+   * Recursively load a directory's contents into a cache.
+   * @param path - The path being loaded
+   * @param handle - The directory handle
+   * @param targetCache - The cache to populate (allows atomic swap during initialize)
    */
-  private async loadDirectory(
+  private async loadDirectoryIntoCache(
     path: string,
-    handle: FileSystemDirectoryHandle
+    handle: FileSystemDirectoryHandle,
+    targetCache: Map<string, CachedEntry>
   ): Promise<void> {
-    const parentEntry = this.cache.get(path)
+    const parentEntry = targetCache.get(path)
     if (!parentEntry || parentEntry.type !== 'directory') {
       return
     }
@@ -176,7 +122,7 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
         if (isBinary) {
           // Load as binary
           const arrayBuffer = await file.arrayBuffer()
-          this.cache.set(childPath, {
+          targetCache.set(childPath, {
             type: 'file',
             handle: childHandle,
             binaryContent: new Uint8Array(arrayBuffer),
@@ -185,7 +131,7 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
         } else {
           // Load as text
           const content = await file.text()
-          this.cache.set(childPath, {
+          targetCache.set(childPath, {
             type: 'file',
             handle: childHandle,
             content,
@@ -194,7 +140,7 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
         }
         parentEntry.children?.add(name)
       } else if (childHandle.kind === 'directory') {
-        this.cache.set(childPath, {
+        targetCache.set(childPath, {
           type: 'directory',
           handle: childHandle,
           children: new Set(),
@@ -202,7 +148,7 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
         parentEntry.children?.add(name)
 
         // Recursively load subdirectory
-        await this.loadDirectory(childPath, childHandle as FileSystemDirectoryHandle)
+        await this.loadDirectoryIntoCache(childPath, childHandle as FileSystemDirectoryHandle, targetCache)
       }
     }
   }

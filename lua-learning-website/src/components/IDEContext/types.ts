@@ -97,6 +97,12 @@ export interface IDEContextValue {
 
   // Save all files
   saveAllFiles: () => void
+
+  // File upload
+  uploadFiles: (files: FileList, targetFolderPath: string) => Promise<void>
+
+  // Folder upload
+  uploadFolder: (files: FileList, targetFolderPath: string) => Promise<void>
 }
 
 /**

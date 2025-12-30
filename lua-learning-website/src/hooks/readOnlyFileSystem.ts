@@ -4,40 +4,7 @@
  */
 
 import type { IFileSystem, FileEntry } from '@lua-learning/shell-core'
-
-/**
- * Binary file extensions for automatic detection.
- */
-const BINARY_EXTENSIONS = new Set([
-  '.png',
-  '.jpg',
-  '.jpeg',
-  '.gif',
-  '.bmp',
-  '.webp',
-  '.ico',
-  '.mp3',
-  '.wav',
-  '.ogg',
-  '.mp4',
-  '.webm',
-  '.bin',
-  '.dat',
-  '.zip',
-  '.tar',
-  '.gz',
-  '.pdf',
-])
-
-/**
- * Check if a file path has a binary extension.
- */
-function isBinaryExtension(path: string): boolean {
-  const lastDot = path.lastIndexOf('.')
-  if (lastDot === -1) return false
-  const ext = path.slice(lastDot).toLowerCase()
-  return BINARY_EXTENSIONS.has(ext)
-}
+import { isBinaryExtension } from '../utils/binaryExtensions'
 
 /**
  * Create a read-only in-memory filesystem for library workspaces.

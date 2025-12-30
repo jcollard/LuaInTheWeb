@@ -4,6 +4,7 @@
  */
 import type { TreeNode } from '../../hooks/useFileSystem'
 import type { Workspace } from '../../hooks/workspaceTypes'
+import { isBinaryExtension } from '../../utils/binaryExtensions'
 
 export interface ExplorerPropsParams {
   fileTree: TreeNode[]
@@ -30,6 +31,10 @@ export interface ExplorerPropsParams {
   openBinaryViewer: (path: string) => void
   // Shell integration
   handleCdToLocation?: (path: string) => void
+  // File upload
+  uploadFiles?: (files: FileList, targetFolderPath: string) => Promise<void>
+  // Folder upload
+  uploadFolder?: (files: FileList, targetFolderPath: string) => Promise<void>
   // Workspace props
   workspaces: Workspace[]
   pendingWorkspaces: Set<string>
@@ -54,50 +59,12 @@ function isMarkdownFile(path: string): boolean {
   return path.toLowerCase().endsWith('.md')
 }
 
-/**
- * Binary file extensions that should open in the binary viewer
- */
-const BINARY_EXTENSIONS = new Set([
-  '.png',
-  '.jpg',
-  '.jpeg',
-  '.gif',
-  '.bmp',
-  '.webp',
-  '.ico',
-  '.svg',
-  '.mp3',
-  '.wav',
-  '.ogg',
-  '.mp4',
-  '.webm',
-  '.pdf',
-  '.zip',
-  '.tar',
-  '.gz',
-  '.bin',
-  '.exe',
-  '.dll',
-  '.so',
-  '.dylib',
-])
-
-/**
- * Check if a path is a binary file based on extension
- */
-function isBinaryFile(path: string): boolean {
-  const lastDot = path.lastIndexOf('.')
-  if (lastDot === -1) return false
-  const ext = path.slice(lastDot).toLowerCase()
-  return BINARY_EXTENSIONS.has(ext)
-}
-
 export function createExplorerProps(params: ExplorerPropsParams) {
   // Smart file opener that routes to appropriate viewer based on file type
   const smartOpenPreviewFile = (path: string) => {
     if (isMarkdownFile(path)) {
       params.openMarkdownPreview(path)
-    } else if (isBinaryFile(path)) {
+    } else if (isBinaryExtension(path)) {
       params.openBinaryViewer(path)
     } else {
       params.openPreviewFile(path)
@@ -108,7 +75,7 @@ export function createExplorerProps(params: ExplorerPropsParams) {
   // For markdown/binary files: make the preview tab permanent (keep as preview, don't edit)
   // For other files: open for editing
   const smartOpenFile = (path: string) => {
-    if (isMarkdownFile(path) || isBinaryFile(path)) {
+    if (isMarkdownFile(path) || isBinaryExtension(path)) {
       params.makeTabPermanent(path)
     } else {
       params.openFile(path)
@@ -135,6 +102,8 @@ export function createExplorerProps(params: ExplorerPropsParams) {
     onPreviewMarkdown: params.openMarkdownPreview,
     onEditMarkdown: params.openMarkdownEdit,
     onCdToLocation: params.handleCdToLocation,
+    onUploadFiles: params.uploadFiles,
+    onUploadFolder: params.uploadFolder,
     workspaceProps: {
       workspaces: params.workspaces,
       pendingWorkspaces: params.pendingWorkspaces,

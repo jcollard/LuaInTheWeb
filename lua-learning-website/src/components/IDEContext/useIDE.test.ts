@@ -99,6 +99,7 @@ describe('useIDE', () => {
           renameFile: vi.fn(),
           moveFile: vi.fn(),
           copyFile: vi.fn(),
+          writeBinaryFile: vi.fn(),
           createFolder: vi.fn(),
           deleteFolder: vi.fn(),
           renameFolder: vi.fn(),
@@ -106,10 +107,14 @@ describe('useIDE', () => {
           isDirectory: vi.fn(),
           listDirectory: vi.fn(),
           getTree: vi.fn(),
+          flush: vi.fn(),
+          version: 0,
         },
         autoSaveEnabled: false,
         toggleAutoSave: vi.fn(),
         saveAllFiles: vi.fn(),
+        uploadFiles: vi.fn(),
+        uploadFolder: vi.fn(),
       }
 
       const wrapper = ({ children }: { children: React.ReactNode }) =>
@@ -185,6 +190,7 @@ describe('useIDE', () => {
           renameFile: vi.fn(),
           moveFile: vi.fn(),
           copyFile: vi.fn(),
+          writeBinaryFile: vi.fn(),
           createFolder: vi.fn(),
           deleteFolder: vi.fn(),
           renameFolder: vi.fn(),
@@ -192,10 +198,14 @@ describe('useIDE', () => {
           isDirectory: vi.fn(),
           listDirectory: vi.fn(),
           getTree: vi.fn(),
+          flush: vi.fn(),
+          version: 0,
         },
         autoSaveEnabled: false,
         toggleAutoSave: vi.fn(),
         saveAllFiles: vi.fn(),
+        uploadFiles: vi.fn(),
+        uploadFolder: vi.fn(),
       }
 
       const wrapper = ({ children }: { children: React.ReactNode }) =>
