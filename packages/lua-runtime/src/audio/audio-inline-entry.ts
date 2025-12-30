@@ -8,6 +8,8 @@
  */
 
 import { WebAudioEngine } from './WebAudioEngine.js';
+import { setupAudioAPI } from '../setupAudioAPI.js';
+import type { LuaEngine } from 'wasmoon';
 
 /** Asset manifest entry */
 interface AssetEntry {
@@ -21,31 +23,6 @@ interface CanvasState {
   audioEngine?: {
     dispose: () => void;
   };
-}
-
-/** Wasmoon engine global interface */
-interface LuaEngineGlobal {
-  set: (name: string, value: unknown) => void;
-}
-
-/** Wasmoon engine interface */
-interface LuaEngine {
-  global: LuaEngineGlobal;
-}
-
-/**
- * Helper to extract audio name from a handle or string.
- */
-function extractAudioName(nameOrHandle: unknown): string {
-  if (typeof nameOrHandle === 'string') return nameOrHandle;
-  if (
-    typeof nameOrHandle === 'object' &&
-    nameOrHandle !== null &&
-    '_name' in nameOrHandle
-  ) {
-    return (nameOrHandle as { _name: string })._name;
-  }
-  throw new Error('Invalid audio reference');
 }
 
 /**
@@ -172,7 +149,7 @@ export function setupAudioBridge(
     }
   }
 
-  // === Asset Loading Functions ===
+  // === Asset Loading Functions (export-specific) ===
 
   engine.global.set(
     '__canvas_assets_loadSound',
@@ -198,80 +175,9 @@ export function setupAudioBridge(
     }
   );
 
-  // === Sound Effect Functions ===
-
-  engine.global.set(
-    '__audio_playSound',
-    (nameOrHandle: unknown, volume?: number) => {
-      const name = extractAudioName(nameOrHandle);
-      audioEngine.playSound(name, volume ?? 1);
-    }
-  );
-
-  engine.global.set('__audio_getSoundDuration', (nameOrHandle: unknown) => {
-    const name = extractAudioName(nameOrHandle);
-    return audioEngine.getSoundDuration(name);
-  });
-
-  // === Music Playback Functions ===
-
-  engine.global.set(
-    '__audio_playMusic',
-    (nameOrHandle: unknown, volume?: number, loop?: boolean) => {
-      const name = extractAudioName(nameOrHandle);
-      audioEngine.playMusic(name, { volume: volume ?? 1, loop: loop ?? false });
-    }
-  );
-
-  engine.global.set('__audio_stopMusic', () => {
-    audioEngine.stopMusic();
-  });
-
-  engine.global.set('__audio_pauseMusic', () => {
-    audioEngine.pauseMusic();
-  });
-
-  engine.global.set('__audio_resumeMusic', () => {
-    audioEngine.resumeMusic();
-  });
-
-  engine.global.set('__audio_setMusicVolume', (volume: number) => {
-    audioEngine.setMusicVolume(volume);
-  });
-
-  engine.global.set('__audio_isMusicPlaying', () => {
-    return audioEngine.isMusicPlaying();
-  });
-
-  engine.global.set('__audio_getMusicTime', () => {
-    return audioEngine.getMusicTime();
-  });
-
-  engine.global.set('__audio_getMusicDuration', () => {
-    return audioEngine.getMusicDuration();
-  });
-
-  // === Global Audio Controls ===
-
-  engine.global.set('__audio_setMasterVolume', (volume: number) => {
-    audioEngine.setMasterVolume(volume);
-  });
-
-  engine.global.set('__audio_getMasterVolume', () => {
-    return audioEngine.getMasterVolume();
-  });
-
-  engine.global.set('__audio_mute', () => {
-    audioEngine.mute();
-  });
-
-  engine.global.set('__audio_unmute', () => {
-    audioEngine.unmute();
-  });
-
-  engine.global.set('__audio_isMuted', () => {
-    return audioEngine.isMuted();
-  });
+  // === Use shared audio API bindings (no duplication!) ===
+  // This includes all sound, music, master volume, and channel functions
+  setupAudioAPI(engine, () => audioEngine);
 
   // === Store reference for cleanup ===
 

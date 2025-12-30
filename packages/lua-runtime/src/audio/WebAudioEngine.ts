@@ -69,16 +69,38 @@ export class WebAudioEngine implements IAudioEngine {
   private masterVolume = 1;
   private muted = false;
   private initialized = false;
+  /** Promise for in-progress initialization to prevent race conditions */
+  private initializePromise: Promise<void> | null = null;
 
   /**
    * Initialize the audio engine.
    * Creates the AudioContext and master gain node.
+   * Uses a promise to prevent race conditions from concurrent calls.
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
       return;
     }
 
+    // If initialization is already in progress, wait for it
+    if (this.initializePromise) {
+      return this.initializePromise;
+    }
+
+    // Start initialization and store the promise
+    this.initializePromise = this.doInitialize();
+
+    try {
+      await this.initializePromise;
+    } finally {
+      this.initializePromise = null;
+    }
+  }
+
+  /**
+   * Internal initialization logic.
+   */
+  private async doInitialize(): Promise<void> {
     // Create AudioContext
     this.audioContext = new AudioContext();
 
@@ -439,6 +461,7 @@ export class WebAudioEngine implements IAudioEngine {
     this.audioContext = null;
     this.masterGainNode = null;
     this.initialized = false;
+    this.initializePromise = null;
   }
 
   // --- Channel API ---
@@ -569,9 +592,9 @@ export class WebAudioEngine implements IAudioEngine {
       }
     };
 
-    // Set volume
-    const effectiveVolume = this.muted ? 0 : volume * this.masterVolume;
-    state.gainNode.gain.value = effectiveVolume;
+    // Set volume - just this channel's volume, hierarchy is handled by gain node chain
+    // Muting is handled by masterGainNode, not individual channels
+    state.gainNode.gain.value = volume;
 
     state.source = source;
     state.buffer = buffer;
@@ -649,8 +672,9 @@ export class WebAudioEngine implements IAudioEngine {
     if (!state) return;
 
     state.volume = Math.max(0, Math.min(1, volume));
-    const effectiveVolume = this.muted ? 0 : state.volume * this.masterVolume;
-    state.gainNode.gain.value = effectiveVolume;
+    // Just set this channel's volume - the gain node chain handles hierarchy
+    // masterVolume is applied at masterGainNode, muting handled there too
+    state.gainNode.gain.value = state.volume;
   }
 
   getChannelVolume(channel: string): number {
@@ -662,11 +686,11 @@ export class WebAudioEngine implements IAudioEngine {
     if (!state || !this.audioContext) return;
 
     const now = this.audioContext.currentTime;
-    const effectiveTarget = this.muted ? 0 : targetVolume * this.masterVolume;
+    // Fade to this channel's target volume - hierarchy and muting handled by gain node chain
 
     state.gainNode.gain.cancelScheduledValues(now);
     state.gainNode.gain.setValueAtTime(state.gainNode.gain.value, now);
-    state.gainNode.gain.linearRampToValueAtTime(effectiveTarget, now + duration);
+    state.gainNode.gain.linearRampToValueAtTime(targetVolume, now + duration);
 
     state.isFading = true;
     state.fadeStartTime = now;

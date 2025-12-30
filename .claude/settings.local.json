@@ -110,8 +110,8 @@
       "Bash(Remove-Item lua-learning-website/reports/mutation/.stryker-incremental.json)"
     ]
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "code-index-mcp"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }
