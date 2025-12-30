@@ -582,11 +582,9 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     }
   }, [tabs, tabBar])
 
-  // File tree is computed fresh on each render (UI operations cause re-renders naturally)
-  // For shell commands, refreshFileTree is called to force a re-render via fileTreeVersion
-  // We need to read fileTreeVersion to ensure component re-renders when it changes
-  void fileTreeVersion
-  const fileTree = filesystem.getTree()
+  // File tree is memoized to prevent expensive rebuilds on unrelated re-renders
+  // Only recalculate when fileTreeVersion changes (triggered by filesystem operations)
+  const fileTree = useMemo(() => filesystem.getTree(), [fileTreeVersion, filesystem])
 
   // Load content for the initial active tab when restored from persistence
   // This runs after the filesystem is ready (when fileTree changes indicate data is loaded)

@@ -38,9 +38,6 @@ export function LoadingModal({
   const titleId = useId()
   const descId = useId()
 
-  // Debug logging
-  console.log('[LoadingModal] Render - isOpen:', isOpen, 'title:', title)
-
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
       if (event.key === 'Escape' && onCancel) {
