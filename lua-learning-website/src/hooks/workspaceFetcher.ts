@@ -5,6 +5,8 @@
  * Supports both text files and binary files (images).
  */
 
+import { isBinaryExtension } from '../utils/binaryExtensions'
+
 export interface WorkspaceManifest {
   name: string
   files: string[]
@@ -13,23 +15,6 @@ export interface WorkspaceManifest {
 export interface WorkspaceContent {
   text: Record<string, string>
   binary: Record<string, Uint8Array>
-}
-
-/**
- * Binary file extensions - files with these extensions are fetched as binary.
- */
-const BINARY_EXTENSIONS = new Set([
-  '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.ico',  // Images
-  '.ttf', '.otf', '.woff', '.woff2',  // Fonts
-  '.mp3', '.wav', '.ogg'  // Audio
-])
-
-/**
- * Check if a filename has a binary extension.
- */
-function isBinaryFile(filename: string): boolean {
-  const ext = filename.slice(filename.lastIndexOf('.')).toLowerCase()
-  return BINARY_EXTENSIONS.has(ext)
 }
 
 /**
@@ -60,7 +45,7 @@ export async function fetchWorkspaceContent(basePath: string): Promise<Workspace
         try {
           const response = await fetch(`${basePath}/${filename}`)
           if (response.ok) {
-            if (isBinaryFile(filename)) {
+            if (isBinaryExtension(filename)) {
               const buffer = await response.arrayBuffer()
               result.binary[filename] = new Uint8Array(buffer)
             } else {
