@@ -264,6 +264,11 @@ export async function processFolderUploadBatch(params: FolderUploadBatchParams):
   // Track created directories to avoid redundant mkdir calls
   const createdDirs = new Set<string>()
 
+  // Batch progress updates to avoid UI thrashing with large uploads
+  // Update at most every 100ms, plus always report first and last file
+  const PROGRESS_INTERVAL_MS = 100
+  let lastProgressUpdate = 0
+
   for (let i = 0; i < fileArray.length; i++) {
     // Check for cancellation before processing each file
     if (cancelledRef.current) {
@@ -275,8 +280,13 @@ export async function processFolderUploadBatch(params: FolderUploadBatchParams):
     const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath
     if (!relativePath) continue
 
-    // Report progress
-    onProgress(i + 1, total, relativePath)
+    // Report progress (batched to avoid UI thrashing)
+    const now = Date.now()
+    const isFirstOrLast = i === 0 || i === total - 1
+    if (isFirstOrLast || now - lastProgressUpdate >= PROGRESS_INTERVAL_MS) {
+      onProgress(i + 1, total, relativePath)
+      lastProgressUpdate = now
+    }
 
     try {
       // Build target path
