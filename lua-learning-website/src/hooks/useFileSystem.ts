@@ -721,5 +721,7 @@ export function useFileSystem(): UseFileSystemReturn {
     writeBinaryFileSilent,
     createFolderSilent,
     commitBatch,
+    // State version for memoization
+    version: state.version,
   }
 }

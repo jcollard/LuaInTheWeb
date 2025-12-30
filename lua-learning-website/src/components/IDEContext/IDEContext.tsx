@@ -583,8 +583,10 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   }, [tabs, tabBar])
 
   // File tree is memoized to prevent expensive rebuilds on unrelated re-renders
-  // Only recalculate when fileTreeVersion changes (triggered by filesystem operations)
-  const fileTree = useMemo(() => filesystem.getTree(), [fileTreeVersion, filesystem])
+  // Only recalculate when filesystem.version changes (increments on each filesystem operation)
+  // fileTreeVersion is kept for external refresh requests (e.g., shell commands)
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- filesystem.version is intentional cache-buster
+  const fileTree = useMemo(() => filesystem.getTree(), [filesystem.version, fileTreeVersion])
 
   // Load content for the initial active tab when restored from persistence
   // This runs after the filesystem is ready (when fileTree changes indicate data is loaded)

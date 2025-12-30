@@ -73,6 +73,9 @@ export interface UseFileSystemReturn {
   writeBinaryFileSilent: (path: string, content: Uint8Array) => void
   createFolderSilent: (path: string) => void
   commitBatch: () => void
+
+  // State version - increments on each operation, used for memoization
+  version: number
 }
 
 export interface SerializedState {
