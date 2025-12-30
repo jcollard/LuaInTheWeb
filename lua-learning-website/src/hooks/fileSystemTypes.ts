@@ -66,6 +66,13 @@ export interface UseFileSystemReturn {
 
   // Async operations
   flush: () => Promise<void>
+
+  // Batch operations (for bulk uploads - avoids re-renders per file)
+  // These update refs only, call commitBatch() when done to sync state
+  createFileSilent: (path: string, content?: string) => void
+  writeBinaryFileSilent: (path: string, content: Uint8Array) => void
+  createFolderSilent: (path: string) => void
+  commitBatch: () => void
 }
 
 export interface SerializedState {

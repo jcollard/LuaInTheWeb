@@ -23,6 +23,10 @@ describe('useShell', () => {
     listDirectory: vi.fn().mockReturnValue([]),
     getTree: vi.fn().mockReturnValue([]),
     flush: vi.fn().mockResolvedValue(undefined),
+    createFileSilent: vi.fn(),
+    writeBinaryFileSilent: vi.fn(),
+    createFolderSilent: vi.fn(),
+    commitBatch: vi.fn(),
   })
 
   let mockFileSystem: UseFileSystemReturn

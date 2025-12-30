@@ -237,6 +237,8 @@ export interface FolderUploadBatchParams {
   onProgress: (current: number, total: number, currentFile: string) => void
   onComplete: (results: { success: number; failed: number; cancelled: boolean }) => void
   onError?: (fileName: string, error: string) => void
+  /** Optional: Call after all files are processed to commit batch changes (for silent operations) */
+  commitBatch?: () => void
 }
 
 /**
@@ -254,6 +256,7 @@ export async function processFolderUploadBatch(params: FolderUploadBatchParams):
     onProgress,
     onComplete,
     onError,
+    commitBatch,
   } = params
 
   const fileArray = Array.from(files)
@@ -323,10 +326,14 @@ export async function processFolderUploadBatch(params: FolderUploadBatchParams):
 
     // Check for cancellation after processing each file
     if (cancelledRef.current) {
+      // Commit any successful writes before reporting completion
+      commitBatch?.()
       onComplete({ success, failed, cancelled: true })
       return
     }
   }
 
+  // Commit all writes in one state update (avoids 6000 re-renders for 6000 files)
+  commitBatch?.()
   onComplete({ success, failed, cancelled: false })
 }

@@ -397,13 +397,24 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     setFolderUploadProgress({ current: 0, total: files.length })
     setFolderUploadModalOpen(true)
 
+    // Use silent batch functions for internal filesystem to avoid 6000+ re-renders
+    // for large uploads. External filesystems don't trigger React state per-write.
+    const useBatchMode = !externalFileSystem && internalFilesystem
+
     await processFolderUploadBatch({
       files,
       targetFolderPath,
       pathExists: (path) => filesystem.exists(path),
-      writeTextFile: (path, content) => filesystem.writeFile(path, content),
-      writeBinaryFile: (path, content) => filesystem.writeBinaryFile(path, content),
-      createDirectory: (path) => filesystem.createFolder(path),
+      writeTextFile: useBatchMode
+        ? (path, content) => internalFilesystem.createFileSilent(path, content)
+        : (path, content) => filesystem.writeFile(path, content),
+      writeBinaryFile: useBatchMode
+        ? (path, content) => internalFilesystem.writeBinaryFileSilent(path, content)
+        : (path, content) => filesystem.writeBinaryFile(path, content),
+      createDirectory: useBatchMode
+        ? (path) => internalFilesystem.createFolderSilent(path)
+        : (path) => filesystem.createFolder(path),
+      commitBatch: useBatchMode ? () => internalFilesystem.commitBatch() : undefined,
       cancelledRef: folderUploadCancelledRef,
       onProgress: (current, total, currentFile) => {
         setFolderUploadProgress({ current, total, currentFile })
@@ -430,7 +441,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
         console.error(`Failed to upload ${fileName}: ${error}`)
       },
     })
-  }, [filesystem, showToast])
+  }, [filesystem, showToast, externalFileSystem, internalFilesystem])
 
   // Handle conflict dialog confirm - proceed with upload (file or folder)
   const handleUploadConflictConfirm = useCallback(async () => {

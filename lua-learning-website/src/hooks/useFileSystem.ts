@@ -607,6 +607,100 @@ export function useFileSystem(): UseFileSystemReturn {
     return Promise.resolve()
   }, [])
 
+  // === Batch operations for bulk uploads ===
+  // These update refs only (no setState) to avoid re-renders per file.
+  // Call commitBatch() when done to sync refs to state in one update.
+
+  const createFileSilent = useCallback(
+    (path: string, content: string = ''): void => {
+      const normalizedPath = normalizePath(path)
+      const fileName = getFileName(normalizedPath)
+
+      validateFileName(fileName)
+
+      if (normalizedPath in filesRef.current || foldersRef.current.has(normalizedPath)) {
+        throw new Error(`File already exists: ${normalizedPath}`)
+      }
+
+      const parentPath = getParentPath(normalizedPath)
+      if (parentPath !== '/' && !foldersRef.current.has(parentPath)) {
+        throw new Error(`Parent folder not found: ${parentPath}`)
+      }
+
+      const now = Date.now()
+      const newFile = { name: fileName, content, createdAt: now, updatedAt: now }
+
+      // Update ref only - no setState
+      filesRef.current = { ...filesRef.current, [normalizedPath]: newFile }
+    },
+    []
+  )
+
+  const writeBinaryFileSilent = useCallback(
+    (path: string, content: Uint8Array): void => {
+      const normalizedPath = normalizePath(path)
+      const fileName = getFileName(normalizedPath)
+
+      validateFileName(fileName)
+
+      const parentPath = getParentPath(normalizedPath)
+      if (parentPath !== '/' && !foldersRef.current.has(parentPath)) {
+        throw new Error(`Parent folder not found: ${parentPath}`)
+      }
+
+      // Convert Uint8Array to base64 string for storage
+      const base64Content = btoa(String.fromCharCode(...content))
+      const now = Date.now()
+
+      const fileExists = normalizedPath in filesRef.current
+      const newFile = {
+        name: fileName,
+        content: base64Content,
+        createdAt: fileExists ? filesRef.current[normalizedPath].createdAt : now,
+        updatedAt: now,
+      }
+
+      // Update ref only - no setState
+      filesRef.current = { ...filesRef.current, [normalizedPath]: newFile }
+    },
+    []
+  )
+
+  const createFolderSilent = useCallback(
+    (path: string): void => {
+      const normalizedPath = normalizePath(path)
+      const folderName = getFileName(normalizedPath)
+
+      validateFileName(folderName)
+
+      if (normalizedPath in filesRef.current || foldersRef.current.has(normalizedPath)) {
+        // Silently ignore if folder already exists (common in batch operations)
+        return
+      }
+
+      const parentPath = getParentPath(normalizedPath)
+      if (parentPath !== '/' && !foldersRef.current.has(parentPath)) {
+        throw new Error(`Parent folder not found: ${parentPath}`)
+      }
+
+      // Update ref only - no setState
+      const newFoldersRef = new Set(foldersRef.current)
+      newFoldersRef.add(normalizedPath)
+      foldersRef.current = newFoldersRef
+    },
+    []
+  )
+
+  const commitBatch = useCallback((): void => {
+    // Sync refs to state in one update
+    setState((prev) => ({
+      ...prev,
+      version: prev.version + 1,
+      files: { ...filesRef.current },
+      folders: new Set(foldersRef.current),
+    }))
+  }, [])
+
   return {
     createFile,
     readFile,
@@ -624,5 +718,10 @@ export function useFileSystem(): UseFileSystemReturn {
     listDirectory,
     getTree,
     flush,
+    // Batch operations
+    createFileSilent,
+    writeBinaryFileSilent,
+    createFolderSilent,
+    commitBatch,
   }
 }
