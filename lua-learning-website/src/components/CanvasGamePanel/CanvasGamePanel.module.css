@@ -2,7 +2,8 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   background: var(--theme-editor-bg);
   color: var(--theme-editor-fg);
 }
@@ -101,11 +102,13 @@
 /* Auto-fit mode: canvas scales down to fit container, no scrollbars */
 .canvasContainerFit {
   overflow: hidden;
+  padding: 0;
 }
 
 /* Full mode: canvas scales to fill container (up or down), no scrollbars */
 .canvasContainerFull {
   overflow: hidden;
+  padding: 0;
 }
 
 /* Native mode: canvas at native size, scrollbars if needed */

@@ -289,6 +289,112 @@ test.describe('Canvas Scaling', () => {
     })
   })
 
+  test.describe('No Scrollbars in Fit/Full Modes', () => {
+    test('Fit mode should not show scrollbars', async ({ page }) => {
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
+
+      await page.evaluate(() => localStorage.removeItem('canvas-scaling:mode'))
+
+      await terminal.execute('lua')
+      await page.waitForTimeout(TIMEOUTS.ANIMATION)
+
+      const stopButton = page.getByRole('button', { name: /stop process/i })
+      await expect(stopButton).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      await terminal.type('canvas = require("canvas")')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      await terminal.type('canvas.tick(function() if canvas.get_time() > 10 then canvas.stop() end end)')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      await terminal.type('canvas.start()')
+      await terminal.press('Enter')
+
+      const canvasTab = page.locator('[class*="canvasTab"]').first()
+      await expect(canvasTab).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Ensure we're in Fit mode
+      const scalingSelector = page.getByRole('combobox', { name: /scale/i })
+      await expect(scalingSelector).toHaveValue('fit')
+
+      // Check that no container in the canvas hierarchy has scrollbars
+      // The outer container (IDELayout.canvasContainer) should not overflow
+      const canvasContainer = page.locator('[class*="canvasContainerFit"]')
+      await expect(canvasContainer).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Check the panel container (parent of canvasContainerFit)
+      const panelContainer = canvasContainer.locator('..')
+      const panelHasNoScrollbars = await panelContainer.evaluate((el) => {
+        return el.scrollHeight <= el.clientHeight && el.scrollWidth <= el.clientWidth
+      })
+      expect(panelHasNoScrollbars).toBe(true)
+
+      // Check the outer IDELayout canvas container (grandparent)
+      const outerContainer = panelContainer.locator('..')
+      const outerHasNoScrollbars = await outerContainer.evaluate((el) => {
+        return el.scrollHeight <= el.clientHeight && el.scrollWidth <= el.clientWidth
+      })
+      expect(outerHasNoScrollbars).toBe(true)
+
+      await stopButton.click()
+    })
+
+    test('Full mode should not show scrollbars', async ({ page }) => {
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
+
+      await page.evaluate(() => localStorage.removeItem('canvas-scaling:mode'))
+
+      await terminal.execute('lua')
+      await page.waitForTimeout(TIMEOUTS.ANIMATION)
+
+      const stopButton = page.getByRole('button', { name: /stop process/i })
+      await expect(stopButton).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      await terminal.type('canvas = require("canvas")')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      await terminal.type('canvas.tick(function() if canvas.get_time() > 10 then canvas.stop() end end)')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      await terminal.type('canvas.start()')
+      await terminal.press('Enter')
+
+      const canvasTab = page.locator('[class*="canvasTab"]').first()
+      await expect(canvasTab).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Switch to Full mode
+      const scalingSelector = page.getByRole('combobox', { name: /scale/i })
+      await scalingSelector.selectOption('full')
+      await expect(scalingSelector).toHaveValue('full')
+
+      // Check that no container in the canvas hierarchy has scrollbars
+      const canvasContainer = page.locator('[class*="canvasContainerFull"]')
+      await expect(canvasContainer).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Check the panel container (parent of canvasContainerFull)
+      const panelContainer = canvasContainer.locator('..')
+      const panelHasNoScrollbars = await panelContainer.evaluate((el) => {
+        return el.scrollHeight <= el.clientHeight && el.scrollWidth <= el.clientWidth
+      })
+      expect(panelHasNoScrollbars).toBe(true)
+
+      // Check the outer IDELayout canvas container (grandparent)
+      const outerContainer = panelContainer.locator('..')
+      const outerHasNoScrollbars = await outerContainer.evaluate((el) => {
+        return el.scrollHeight <= el.clientHeight && el.scrollWidth <= el.clientWidth
+      })
+      expect(outerHasNoScrollbars).toBe(true)
+
+      await stopButton.click()
+    })
+  })
+
   test.describe('localStorage Persistence', () => {
     test('saves scaling preference to localStorage', async ({ page }) => {
       const terminal = createTerminalHelper(page)
