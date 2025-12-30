@@ -137,6 +137,7 @@ describe('ShellTerminal - Process Key Routing', () => {
     writeBinaryFileSilent: vi.fn(),
     createFolderSilent: vi.fn(),
     commitBatch: vi.fn(),
+    version: 0,
   })
 
   let mockFileSystem: UseFileSystemReturn
