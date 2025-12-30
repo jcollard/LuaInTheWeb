@@ -564,6 +564,49 @@ export function useFileSystem(): UseFileSystemReturn {
     return buildTree(state.files, state.folders, '/')
   }, [state.files, state.folders])
 
+  // Write binary file - convert to base64 and store as text
+  // For the internal virtual filesystem, we store binary data as base64-encoded strings
+  const writeBinaryFile = useCallback(
+    (path: string, content: Uint8Array): void => {
+      const normalizedPath = normalizePath(path)
+      const fileName = getFileName(normalizedPath)
+
+      validateFileName(fileName)
+
+      const parentPath = getParentPath(normalizedPath)
+      if (parentPath !== '/' && !foldersRef.current.has(parentPath)) {
+        throw new Error(`Parent folder not found: ${parentPath}`)
+      }
+
+      // Convert Uint8Array to base64 string for storage
+      const base64Content = btoa(String.fromCharCode(...content))
+      const now = Date.now()
+
+      const fileExists = normalizedPath in filesRef.current
+      const newFile = { name: fileName, content: base64Content, createdAt: fileExists ? filesRef.current[normalizedPath].createdAt : now, updatedAt: now }
+
+      // Update ref synchronously
+      filesRef.current = { ...filesRef.current, [normalizedPath]: newFile }
+
+      setState((prev) => ({
+        ...prev,
+        version: prev.version + 1,
+        files: {
+          ...prev.files,
+          [normalizedPath]: newFile,
+        },
+      }))
+    },
+    []
+  )
+
+  // Flush is a no-op for the internal virtual filesystem
+  // The filesystem already saves to localStorage via debounced save effect
+  const flush = useCallback(async (): Promise<void> => {
+    // No-op - localStorage saves are handled by the debounced save effect
+    return Promise.resolve()
+  }, [])
+
   return {
     createFile,
     readFile,
@@ -572,6 +615,7 @@ export function useFileSystem(): UseFileSystemReturn {
     renameFile,
     moveFile,
     copyFile,
+    writeBinaryFile,
     createFolder,
     deleteFolder,
     renameFolder,
@@ -579,5 +623,6 @@ export function useFileSystem(): UseFileSystemReturn {
     isDirectory,
     listDirectory,
     getTree,
+    flush,
   }
 }

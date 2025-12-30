@@ -50,6 +50,9 @@ export interface UseFileSystemReturn {
   moveFile: (sourcePath: string, targetFolderPath: string) => void
   copyFile: (sourcePath: string, targetFolderPath: string) => void
 
+  // Binary file operations (for uploads)
+  writeBinaryFile: (path: string, content: Uint8Array) => void
+
   // Folder operations
   createFolder: (path: string) => void
   deleteFolder: (path: string) => void
@@ -60,6 +63,9 @@ export interface UseFileSystemReturn {
   isDirectory: (path: string) => boolean
   listDirectory: (path: string) => string[]
   getTree: () => TreeNode[]
+
+  // Async operations
+  flush: () => Promise<void>
 }
 
 export interface SerializedState {

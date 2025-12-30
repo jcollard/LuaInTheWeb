@@ -23,6 +23,7 @@ export const readOnlyMarkdownFileContextMenuItems: ContextMenuItem[] = [
 export const folderContextMenuItems: ContextMenuItem[] = [
   { id: 'new-file', label: 'New File' },
   { id: 'new-folder', label: 'New Folder' },
+  { id: 'upload-files', label: 'Upload Files...' },
   { id: 'divider', type: 'divider' },
   { id: 'open-in-terminal', label: 'Open in Shell' },
   { id: 'divider-terminal', type: 'divider' },
@@ -33,6 +34,7 @@ export const folderContextMenuItems: ContextMenuItem[] = [
 export const workspaceContextMenuItems: ContextMenuItem[] = [
   { id: 'new-file', label: 'New File' },
   { id: 'new-folder', label: 'New Folder' },
+  { id: 'upload-files', label: 'Upload Files...' },
   { id: 'divider', type: 'divider' },
   { id: 'open-in-terminal', label: 'Open in Shell' },
   { id: 'divider-terminal', type: 'divider' },

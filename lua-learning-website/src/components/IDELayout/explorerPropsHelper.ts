@@ -30,6 +30,8 @@ export interface ExplorerPropsParams {
   openBinaryViewer: (path: string) => void
   // Shell integration
   handleCdToLocation?: (path: string) => void
+  // File upload
+  uploadFiles?: (files: FileList, targetFolderPath: string) => Promise<void>
   // Workspace props
   workspaces: Workspace[]
   pendingWorkspaces: Set<string>
@@ -135,6 +137,7 @@ export function createExplorerProps(params: ExplorerPropsParams) {
     onPreviewMarkdown: params.openMarkdownPreview,
     onEditMarkdown: params.openMarkdownEdit,
     onCdToLocation: params.handleCdToLocation,
+    onUploadFiles: params.uploadFiles,
     workspaceProps: {
       workspaces: params.workspaces,
       pendingWorkspaces: params.pendingWorkspaces,

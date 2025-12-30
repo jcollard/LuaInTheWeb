@@ -132,6 +132,8 @@ function IDELayoutInner({
     autoSaveEnabled,
     toggleAutoSave,
     saveAllFiles,
+    // File upload
+    uploadFiles,
   } = useIDE()
 
   const [cursorLine, setCursorLine] = useState(1)
@@ -368,7 +370,7 @@ function IDELayoutInner({
     handleCreateFile, handleCreateFolder, renameFile, renameFolder,
     deleteFile, deleteFolder, openFile, openPreviewFile, moveFile, copyFile,
     clearPendingNewFile, clearPendingNewFolder, openMarkdownPreview, openMarkdownEdit: openFile,
-    makeTabPermanent, openBinaryViewer, handleCdToLocation, workspaces, pendingWorkspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
+    makeTabPermanent, openBinaryViewer, handleCdToLocation, uploadFiles, workspaces, pendingWorkspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
     addVirtualWorkspace, handleAddLocalWorkspace, handleRemoveWorkspace, refreshWorkspace,
     refreshFileTree, supportsRefresh, handleReconnectWorkspace, handleDisconnectWorkspace,
     handleRenameWorkspace, isFolderAlreadyMounted, getUniqueWorkspaceName,

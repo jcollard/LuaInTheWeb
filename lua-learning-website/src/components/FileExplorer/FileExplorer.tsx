@@ -1,10 +1,10 @@
- 
 import { useCallback, useEffect, useState, useMemo, type MouseEvent } from 'react'
 import { FileTree } from '../FileTree'
 import { ContextMenu } from '../ContextMenu'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { AddWorkspaceDialog } from '../AddWorkspaceDialog'
 import { useFileExplorer } from './useFileExplorer'
+import { useFileUpload } from './useFileUpload'
 import { NewFileIcon, NewFolderIcon, AddWorkspaceIcon } from './FileExplorerIcons'
 import { getContextMenuItems } from './contextMenuHelper'
 import {
@@ -43,6 +43,7 @@ export function FileExplorer({
   onPreviewMarkdown,
   onEditMarkdown,
   onCdToLocation,
+  onUploadFiles,
   className,
   workspaceProps,
 }: FileExplorerProps) {
@@ -63,6 +64,13 @@ export function FileExplorer({
     openConfirmDialog,
     closeConfirmDialog,
   } = useFileExplorer()
+
+  // File upload hook
+  const { fileInputRef, triggerUpload, handleFileSelect } = useFileUpload({
+    onFilesSelected: (files, targetPath) => {
+      onUploadFiles?.(files, targetPath)
+    },
+  })
 
   // Workspace management handlers
   const handleAddWorkspaceClick = useCallback(() => {
@@ -204,6 +212,9 @@ export function FileExplorer({
       case 'new-folder':
         onCreateFolder(targetPath)
         break
+      case 'upload-files':
+        triggerUpload(targetPath)
+        break
       case 'rename':
         startRename(targetPath)
         break
@@ -272,6 +283,7 @@ export function FileExplorer({
     onPreviewMarkdown,
     onEditMarkdown,
     onCdToLocation,
+    triggerUpload,
     workspaceProps,
   ])
 
@@ -454,6 +466,16 @@ export function FileExplorer({
           getUniqueWorkspaceName={workspaceProps.getUniqueWorkspaceName}
         />
       )}
+
+      {/* Hidden file input for uploads */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        style={{ display: 'none' }}
+        onChange={handleFileSelect}
+        data-testid="file-upload-input"
+      />
     </div>
   )
 }

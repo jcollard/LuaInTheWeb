@@ -8,6 +8,8 @@ import type { TabInfo } from '../TabBar'
 import { useToast } from '../Toast'
 import { IDEContext } from './context'
 import { useIDEAutoSave } from './useIDEAutoSave'
+import { processFileUploadBatch, findConflictingFiles } from '../FileExplorer/uploadHandler'
+import { UploadConflictDialog } from '../UploadConflictDialog'
 import type { IDEContextValue, IDEContextProviderProps, ActivityPanelType } from './types'
 
 export function IDEContextProvider({ children, initialCode = '', fileSystem: externalFileSystem, isPathReadOnly }: IDEContextProviderProps) {
@@ -50,6 +52,11 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   const [sidebarVisible, setSidebarVisible] = useState(true)
   // Version counter to trigger file tree refresh (incremented when shell modifies filesystem)
   const [fileTreeVersion, setFileTreeVersion] = useState(0)
+
+  // Upload conflict dialog state
+  const [uploadConflictDialogOpen, setUploadConflictDialogOpen] = useState(false)
+  const [conflictingFileNames, setConflictingFileNames] = useState<string[]>([])
+  const pendingUploadRef = useRef<{ files: FileList; targetFolderPath: string } | null>(null)
 
   const activeTab = tabBar.activeTab
   const tabs = tabBar.tabs
@@ -341,6 +348,64 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     catch (error) { showError(error instanceof Error ? error.message : 'Failed to copy file') }
   }, [filesystem, showError])
 
+  // Execute the actual file upload batch (called after conflict resolution or when no conflicts)
+  const executeUploadBatch = useCallback(async (files: FileList, targetFolderPath: string) => {
+    await processFileUploadBatch({
+      files,
+      targetFolderPath,
+      pathExists: (path) => filesystem.exists(path),
+      writeTextFile: (path, content) => filesystem.writeFile(path, content),
+      writeBinaryFile: (path, content) => filesystem.writeBinaryFile(path, content),
+      openConfirmDialog: () => {
+        // Individual file conflicts are handled by batch-level conflict dialog
+        // This is called per-file but we've already confirmed at batch level
+      },
+      closeConfirmDialog: () => {},
+      onComplete: async () => {
+        // Flush to ensure files are persisted to disk (important for local filesystems)
+        await filesystem.flush()
+        setFileTreeVersion(v => v + 1)
+      },
+      onError: (fileName, error) => {
+        showError(`Failed to upload ${fileName}: ${error}`)
+      },
+    })
+  }, [filesystem, showError])
+
+  // Handle conflict dialog confirm - proceed with upload
+  const handleUploadConflictConfirm = useCallback(async () => {
+    const pending = pendingUploadRef.current
+    if (pending) {
+      setUploadConflictDialogOpen(false)
+      setConflictingFileNames([])
+      await executeUploadBatch(pending.files, pending.targetFolderPath)
+      pendingUploadRef.current = null
+    }
+  }, [executeUploadBatch])
+
+  // Handle conflict dialog cancel - abort upload
+  const handleUploadConflictCancel = useCallback(() => {
+    setUploadConflictDialogOpen(false)
+    setConflictingFileNames([])
+    pendingUploadRef.current = null
+  }, [])
+
+  // Upload files to a target folder
+  const uploadFiles = useCallback(async (files: FileList, targetFolderPath: string) => {
+    // Check for conflicts first
+    const conflicts = findConflictingFiles(files, targetFolderPath, (path) => filesystem.exists(path))
+
+    if (conflicts.length > 0) {
+      // Store pending upload and show conflict dialog
+      pendingUploadRef.current = { files, targetFolderPath }
+      setConflictingFileNames(conflicts)
+      setUploadConflictDialogOpen(true)
+    } else {
+      // No conflicts - proceed directly
+      await executeUploadBatch(files, targetFolderPath)
+    }
+  }, [filesystem, executeUploadBatch])
+
   const toggleTerminal = useCallback(() => { setTerminalVisible(prev => !prev) }, [])
   const toggleSidebar = useCallback(() => { setSidebarVisible(prev => !prev) }, [])
 
@@ -467,6 +532,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename, clearPendingNewFolder,
     recentFiles, clearRecentFiles, fileSystem: filesystem,
     autoSaveEnabled, toggleAutoSave, saveAllFiles,
+    uploadFiles,
   }), [
     engine, code, setCode, fileName, isDirty,
     activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
@@ -476,8 +542,18 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,
     clearPendingNewFolder, recentFiles, clearRecentFiles, filesystem,
-    autoSaveEnabled, toggleAutoSave, saveAllFiles,
+    autoSaveEnabled, toggleAutoSave, saveAllFiles, uploadFiles,
   ])
 
-  return <IDEContext.Provider value={value}>{children}</IDEContext.Provider>
+  return (
+    <IDEContext.Provider value={value}>
+      {children}
+      <UploadConflictDialog
+        isOpen={uploadConflictDialogOpen}
+        conflictingFiles={conflictingFileNames}
+        onConfirm={handleUploadConflictConfirm}
+        onCancel={handleUploadConflictCancel}
+      />
+    </IDEContext.Provider>
+  )
 }

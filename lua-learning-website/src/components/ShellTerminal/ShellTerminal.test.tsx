@@ -132,6 +132,7 @@ describe('ShellTerminal', () => {
     renameFile: vi.fn(),
     moveFile: vi.fn(),
     copyFile: vi.fn(),
+    writeBinaryFile: vi.fn(),
     createFolder: vi.fn(),
     deleteFolder: vi.fn(),
     renameFolder: vi.fn(),
@@ -139,6 +140,7 @@ describe('ShellTerminal', () => {
     isDirectory: vi.fn().mockReturnValue(true),
     listDirectory: vi.fn().mockReturnValue([]),
     getTree: vi.fn().mockReturnValue([]),
+    flush: vi.fn().mockResolvedValue(undefined),
   })
 
   let mockFileSystem: UseFileSystemReturn

@@ -120,11 +120,17 @@ export interface AdaptedFileSystem {
   deleteFolder: (path: string) => void
   renameFolder: (oldPath: string, newPath: string) => void
 
+  // Binary file operations (for uploads)
+  writeBinaryFile: (path: string, content: Uint8Array) => void
+
   // Utilities
   exists: (path: string) => boolean
   isDirectory: (path: string) => boolean
   listDirectory: (path: string) => string[]
   getTree: () => TreeNode[]
+
+  // Async operations
+  flush: () => Promise<void>
 }
 
 /**
@@ -267,6 +273,17 @@ export function createFileSystemAdapter(
       flushIfSupported(fs)
     },
 
+    writeBinaryFile: (path: string, content: Uint8Array) => {
+      if (supportsBinary(fs)) {
+        fs.writeBinaryFile(path, content)
+      } else {
+        // Fallback: encode as base64 string for filesystems without binary support
+        const base64 = btoa(String.fromCharCode(...content))
+        fs.writeFile(path, base64)
+      }
+      flushIfSupported(fs)
+    },
+
     exists: (path: string) => fs.exists(path),
 
     isDirectory: (path: string) => fs.isDirectory(path),
@@ -277,6 +294,13 @@ export function createFileSystemAdapter(
     },
 
     getTree: () => buildTreeFromFileSystem(fs, '/', true, workspaces),
+
+    flush: async () => {
+      const flushable = fs as IFileSystem & { flush?: () => Promise<void> }
+      if (typeof flushable.flush === 'function') {
+        await flushable.flush()
+      }
+    },
   }
 }
 

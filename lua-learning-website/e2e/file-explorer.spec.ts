@@ -439,4 +439,105 @@ test.describe('File Explorer', () => {
   // functionality. When toast notifications are added for file validation errors,
   // new tests should be written to match the actual implementation.
   // See issue #414 for details.
+
+  test.describe('file upload', () => {
+    test('right-clicking folder shows "Upload Files..." option', async ({ page }) => {
+      // Arrange - Create a folder and complete rename
+      const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new folder/i }).click()
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
+      await expect(input).not.toBeVisible()
+
+      // Act - Right-click the folder (second treeitem after workspace)
+      const treeItem = page.getByRole('treeitem').nth(1)
+      await treeItem.click({ button: 'right' })
+
+      // Assert - Context menu should include "Upload Files..."
+      await expect(page.getByRole('menu')).toBeVisible()
+      await expect(page.getByText('Upload Files...')).toBeVisible()
+    })
+
+    test('uploading single file to folder adds it to the tree', async ({ page }) => {
+      // Arrange - Create a folder and complete rename
+      const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new folder/i }).click()
+      let input = sidebar.getByRole('textbox')
+      await input.fill('uploads')
+      await input.press('Enter')
+      await expect(input).not.toBeVisible()
+
+      // Expand the folder to see contents later
+      const folderItem = page.getByRole('treeitem', { name: /uploads/i })
+      await expect(folderItem).toBeVisible()
+
+      // Act - Right-click folder and select Upload Files
+      await folderItem.click({ button: 'right' })
+      await expect(page.getByRole('menu')).toBeVisible()
+      await page.getByText('Upload Files...').click()
+
+      // Simulate file selection via the hidden input
+      const fileInput = page.getByTestId('file-upload-input')
+      await fileInput.setInputFiles({
+        name: 'test-upload.lua',
+        mimeType: 'text/plain',
+        buffer: Buffer.from('print("uploaded!")'),
+      })
+
+      // Wait for file tree to update
+      await page.waitForTimeout(200)
+
+      // Expand the folder to see the uploaded file
+      const chevron = folderItem.getByTestId('folder-chevron')
+      await chevron.click()
+
+      // Assert - Uploaded file should appear in the tree
+      await expect(page.getByText('test-upload.lua')).toBeVisible()
+    })
+
+    test('uploading multiple files to folder adds them all to the tree', async ({ page }) => {
+      // Arrange - Create a folder and complete rename
+      const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new folder/i }).click()
+      let input = sidebar.getByRole('textbox')
+      await input.fill('multi-uploads')
+      await input.press('Enter')
+      await expect(input).not.toBeVisible()
+
+      // Find the folder
+      const folderItem = page.getByRole('treeitem', { name: /multi-uploads/i })
+      await expect(folderItem).toBeVisible()
+
+      // Act - Right-click folder and select Upload Files
+      await folderItem.click({ button: 'right' })
+      await expect(page.getByRole('menu')).toBeVisible()
+      await page.getByText('Upload Files...').click()
+
+      // Simulate multiple file selection via the hidden input
+      const fileInput = page.getByTestId('file-upload-input')
+      await fileInput.setInputFiles([
+        {
+          name: 'file1.lua',
+          mimeType: 'text/plain',
+          buffer: Buffer.from('print("file 1")'),
+        },
+        {
+          name: 'file2.lua',
+          mimeType: 'text/plain',
+          buffer: Buffer.from('print("file 2")'),
+        },
+      ])
+
+      // Wait for file tree to update
+      await page.waitForTimeout(200)
+
+      // Expand the folder to see the uploaded files
+      const chevron = folderItem.getByTestId('folder-chevron')
+      await chevron.click()
+
+      // Assert - Both uploaded files should appear in the tree
+      await expect(page.getByText('file1.lua')).toBeVisible()
+      await expect(page.getByText('file2.lua')).toBeVisible()
+    })
+  })
 })
