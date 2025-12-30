@@ -1,0 +1,95 @@
+name: Build Electron App
+
+on:
+  push:
+    branches: [main, 'epic-**']
+    paths:
+      - 'packages/electron-wrapper/**'
+      - '.github/workflows/electron-build.yml'
+  pull_request:
+    branches: [main, 'epic-**']
+    paths:
+      - 'packages/electron-wrapper/**'
+      - '.github/workflows/electron-build.yml'
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: packages/electron-wrapper
+
+      - name: Build for macOS ${{ matrix.arch }}
+        run: npm run make -- --arch=${{ matrix.arch }}
+        working-directory: packages/electron-wrapper
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-macos-${{ matrix.arch }}
+          path: packages/electron-wrapper/out/make/**/*
+          retention-days: 7
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: packages/electron-wrapper
+
+      - name: Build for Windows
+        run: npm run make
+        working-directory: packages/electron-wrapper
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-windows
+          path: packages/electron-wrapper/out/make/**/*
+          retention-days: 7
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: packages/electron-wrapper
+
+      - name: Build for Linux
+        run: npm run make
+        working-directory: packages/electron-wrapper
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-linux
+          path: packages/electron-wrapper/out/make/**/*
+          retention-days: 7
