@@ -62,44 +62,42 @@ export function setupAudioBridge(
   }
 
   /**
-   * Ensure AudioContext is ready (must be called after user interaction).
+   * Initialize AudioContext and decode all pending audio.
+   * Must be called from a user interaction event handler.
    */
-  async function ensureAudioContextReady(): Promise<boolean> {
+  async function initializeAudio(): Promise<void> {
     if (audioContextReady) {
-      return true;
+      return;
     }
 
     try {
-      if (!audioEngine.isInitialized()) {
-        await audioEngine.initialize();
-      }
+      await audioEngine.initialize();
       audioContextReady = true;
 
-      // Process any pending audio data
+      // Decode all pending audio data
       for (const [name, buffer] of pendingAudioData) {
         try {
           await audioEngine.decodeAudio(name, buffer);
         } catch (err) {
-          console.error('[Audio Bridge] Failed to decode pending audio:', name, err);
+          console.error('[Audio Bridge] Failed to decode audio:', name, err);
         }
       }
       pendingAudioData.clear();
-
-      return true;
-    } catch {
-      return false;
+    } catch (err) {
+      console.error('[Audio Bridge] Failed to initialize audio:', err);
     }
   }
 
-  // Set up user interaction handler to unlock AudioContext
+  // Set up user interaction handler to lazily initialize AudioContext
   function setupUserInteractionHandler(): void {
-    const unlockAudio = async (): Promise<void> => {
-      const ready = await ensureAudioContextReady();
-      if (ready) {
-        document.removeEventListener('click', unlockAudio);
-        document.removeEventListener('touchstart', unlockAudio);
-        document.removeEventListener('keydown', unlockAudio);
-      }
+    const unlockAudio = (): void => {
+      // Remove listeners immediately to prevent multiple calls
+      document.removeEventListener('click', unlockAudio);
+      document.removeEventListener('touchstart', unlockAudio);
+      document.removeEventListener('keydown', unlockAudio);
+
+      // Initialize audio (fire and forget - it's async but we don't need to wait)
+      initializeAudio();
     };
 
     document.addEventListener('click', unlockAudio, { once: false });
@@ -112,6 +110,7 @@ export function setupAudioBridge(
 
   /**
    * Helper to load audio from the assets folder or embedded data URL.
+   * Stores raw buffer data for later decoding when AudioContext is ready.
    */
   async function loadAudioAsset(
     name: string,
@@ -135,14 +134,16 @@ export function setupAudioBridge(
         buffer = await response.arrayBuffer();
       }
 
-      // Try to decode immediately if AudioContext is ready
+      // If AudioContext is already ready, decode immediately
       if (audioContextReady) {
-        await audioEngine.decodeAudio(name, buffer);
+        try {
+          await audioEngine.decodeAudio(name, buffer);
+        } catch (err) {
+          console.error('[Audio Bridge] Failed to decode audio:', name, err);
+        }
       } else {
-        // Store for later decoding after user interaction
+        // Store for later decoding when user interacts
         pendingAudioData.set(name, buffer);
-        // Try to initialize (might work if user already interacted)
-        ensureAudioContextReady();
       }
     } catch (err) {
       console.error('[Audio Bridge] Failed to load audio:', name, err);
