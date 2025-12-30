@@ -1,4 +1,42 @@
+/* eslint-disable max-lines */
+// This file implements a complete audio engine with sound, music, and channel APIs.
+// Splitting would reduce cohesion without improving maintainability.
+
 import type { IAudioEngine, MusicOptions, MusicHandle } from './IAudioEngine.js';
+
+/**
+ * Internal channel state for tracking channel playback.
+ */
+interface ChannelState {
+  /** The gain node for volume control */
+  gainNode: GainNode;
+  /** Current source node (null if stopped) */
+  source: AudioBufferSourceNode | null;
+  /** Current audio buffer */
+  buffer: AudioBuffer | null;
+  /** Whether the channel is currently playing */
+  isPlaying: boolean;
+  /** Current volume (0-1) */
+  volume: number;
+  /** Whether looping is enabled */
+  loop: boolean;
+  /** Name of current audio asset */
+  currentAudioName: string;
+  /** When playback started */
+  startTime: number;
+  /** Position when paused */
+  pausedAt: number;
+  /** Whether a fade is in progress */
+  isFading: boolean;
+  /** Fade target volume */
+  fadeTargetVolume: number;
+  /** Fade start time */
+  fadeStartTime: number;
+  /** Fade duration */
+  fadeDuration: number;
+  /** Parent channel name (null = connected to master) */
+  parentName: string | null;
+}
 
 /**
  * Internal music state for tracking playback.
@@ -31,19 +69,42 @@ export class WebAudioEngine implements IAudioEngine {
   private masterGainNode: GainNode | null = null;
   private audioBuffers: Map<string, AudioBuffer> = new Map();
   private musicState: MusicState | null = null;
+  private channels: Map<string, ChannelState> = new Map();
   private masterVolume = 1;
   private muted = false;
   private initialized = false;
+  /** Promise for in-progress initialization to prevent race conditions */
+  private initializePromise: Promise<void> | null = null;
 
   /**
    * Initialize the audio engine.
    * Creates the AudioContext and master gain node.
+   * Uses a promise to prevent race conditions from concurrent calls.
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
       return;
     }
 
+    // If initialization is already in progress, wait for it
+    if (this.initializePromise) {
+      return this.initializePromise;
+    }
+
+    // Start initialization and store the promise
+    this.initializePromise = this.doInitialize();
+
+    try {
+      await this.initializePromise;
+    } finally {
+      this.initializePromise = null;
+    }
+  }
+
+  /**
+   * Internal initialization logic.
+   */
+  private async doInitialize(): Promise<void> {
     // Create AudioContext
     this.audioContext = new AudioContext();
 
@@ -385,6 +446,12 @@ export class WebAudioEngine implements IAudioEngine {
     // Stop music
     this.stopMusicInternal();
 
+    // Stop all channels
+    for (const [name] of this.channels) {
+      this.destroyChannel(name);
+    }
+    this.channels.clear();
+
     // Clear buffers
     this.audioBuffers.clear();
 
@@ -398,5 +465,276 @@ export class WebAudioEngine implements IAudioEngine {
     this.audioContext = null;
     this.masterGainNode = null;
     this.initialized = false;
+    this.initializePromise = null;
+  }
+
+  // --- Channel API ---
+
+  createChannel(name: string, parentName?: string): void {
+    if (!this.audioContext || !this.masterGainNode || this.channels.has(name)) {
+      return;
+    }
+
+    // Determine parent gain node
+    const parentGain = parentName
+      ? this.channels.get(parentName)?.gainNode ?? this.masterGainNode
+      : this.masterGainNode;
+
+    const gainNode = this.audioContext.createGain();
+    gainNode.connect(parentGain);
+
+    this.channels.set(name, {
+      gainNode,
+      source: null,
+      buffer: null,
+      isPlaying: false,
+      volume: 1,
+      loop: false,
+      currentAudioName: '',
+      startTime: 0,
+      pausedAt: 0,
+      isFading: false,
+      fadeTargetVolume: 1,
+      fadeStartTime: 0,
+      fadeDuration: 0,
+      parentName: parentName ?? null,
+    });
+  }
+
+  getChannelParent(name: string): string | null {
+    return this.channels.get(name)?.parentName ?? null;
+  }
+
+  setChannelParent(name: string, parentName: string | null): void {
+    const state = this.channels.get(name);
+    if (!state || !this.masterGainNode) return;
+
+    const newParent = parentName
+      ? this.channels.get(parentName)?.gainNode ?? this.masterGainNode
+      : this.masterGainNode;
+
+    state.gainNode.disconnect();
+    state.gainNode.connect(newParent);
+    state.parentName = parentName;
+  }
+
+  getEffectiveVolume(name: string): number {
+    let volume = 1;
+    let currentName: string | null = name;
+
+    while (currentName) {
+      const state = this.channels.get(currentName);
+      if (!state) break;
+      volume *= state.volume;
+      currentName = state.parentName;
+    }
+
+    return volume * this.masterVolume;
+  }
+
+  destroyChannel(name: string): void {
+    const state = this.channels.get(name);
+    if (!state) return;
+
+    if (state.source) {
+      try {
+        state.source.stop();
+      } catch {
+        // Already stopped
+      }
+      state.source.disconnect();
+    }
+    state.gainNode.disconnect();
+    this.channels.delete(name);
+  }
+
+  playOnChannel(
+    channel: string,
+    audioName: string,
+    volume = 1,
+    loop = false,
+    startTime = 0
+  ): void {
+    // Auto-create channel if it doesn't exist (handles deferred creation)
+    if (!this.channels.has(channel)) {
+      this.createChannel(channel);
+    }
+
+    const state = this.channels.get(channel);
+    if (!state || !this.audioContext) return;
+
+    const buffer = this.audioBuffers.get(audioName);
+    if (!buffer) {
+      console.warn(`Audio not found: ${audioName}`);
+      return;
+    }
+
+    // Stop current playback
+    if (state.source) {
+      try {
+        state.source.stop();
+      } catch {
+        // Already stopped
+      }
+      state.source.disconnect();
+    }
+
+    // Normalize start time to be within buffer duration
+    const normalizedStartTime = loop
+      ? startTime % buffer.duration
+      : Math.min(startTime, buffer.duration);
+
+    // Create new source
+    const source = this.audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.loop = loop;
+    source.connect(state.gainNode);
+
+    source.onended = () => {
+      if (state.source === source) {
+        state.isPlaying = false;
+      }
+    };
+
+    // Set volume - just this channel's volume, hierarchy is handled by gain node chain
+    // Muting is handled by masterGainNode, not individual channels
+    state.gainNode.gain.value = volume;
+
+    state.source = source;
+    state.buffer = buffer;
+    state.isPlaying = true;
+    state.volume = volume;
+    state.loop = loop;
+    state.currentAudioName = audioName;
+    state.startTime = this.audioContext.currentTime - normalizedStartTime;
+    state.pausedAt = 0;
+
+    source.start(0, normalizedStartTime);
+  }
+
+  stopChannel(channel: string): void {
+    const state = this.channels.get(channel);
+    if (!state) return;
+
+    if (state.source) {
+      try {
+        state.source.stop();
+      } catch {
+        // Already stopped
+      }
+      state.source.disconnect();
+      state.source = null;
+    }
+    state.isPlaying = false;
+    state.currentAudioName = '';
+    state.buffer = null;
+  }
+
+  pauseChannel(channel: string): void {
+    const state = this.channels.get(channel);
+    if (!state || !state.isPlaying || !this.audioContext) return;
+
+    const elapsed = this.audioContext.currentTime - state.startTime;
+    state.pausedAt = state.buffer ? elapsed % state.buffer.duration : 0;
+    state.isPlaying = false;
+
+    if (state.source) {
+      try {
+        state.source.stop();
+      } catch {
+        // Already stopped
+      }
+      state.source.disconnect();
+      state.source = null;
+    }
+  }
+
+  resumeChannel(channel: string): void {
+    const state = this.channels.get(channel);
+    if (!state || state.isPlaying || !state.buffer || !this.audioContext) return;
+
+    const source = this.audioContext.createBufferSource();
+    source.buffer = state.buffer;
+    source.loop = state.loop;
+    source.connect(state.gainNode);
+
+    source.onended = () => {
+      if (state.source === source) {
+        state.isPlaying = false;
+      }
+    };
+
+    state.source = source;
+    state.isPlaying = true;
+    state.startTime = this.audioContext.currentTime - state.pausedAt;
+
+    source.start(0, state.pausedAt);
+  }
+
+  setChannelVolume(channel: string, volume: number): void {
+    const state = this.channels.get(channel);
+    if (!state) return;
+
+    state.volume = Math.max(0, Math.min(1, volume));
+    // Just set this channel's volume - the gain node chain handles hierarchy
+    // masterVolume is applied at masterGainNode, muting handled there too
+    state.gainNode.gain.value = state.volume;
+  }
+
+  getChannelVolume(channel: string): number {
+    return this.channels.get(channel)?.volume ?? 0;
+  }
+
+  fadeChannelTo(channel: string, targetVolume: number, duration: number): void {
+    const state = this.channels.get(channel);
+    if (!state || !this.audioContext) return;
+
+    const now = this.audioContext.currentTime;
+    // Fade to this channel's target volume - hierarchy and muting handled by gain node chain
+
+    state.gainNode.gain.cancelScheduledValues(now);
+    state.gainNode.gain.setValueAtTime(state.gainNode.gain.value, now);
+    state.gainNode.gain.linearRampToValueAtTime(targetVolume, now + duration);
+
+    state.isFading = true;
+    state.fadeStartTime = now;
+    state.fadeDuration = duration;
+    state.fadeTargetVolume = targetVolume;
+    state.volume = targetVolume;
+
+    // Clear fade flag after duration
+    setTimeout(() => {
+      if (state.fadeStartTime === now) {
+        state.isFading = false;
+      }
+    }, duration * 1000);
+  }
+
+  isChannelPlaying(channel: string): boolean {
+    return this.channels.get(channel)?.isPlaying ?? false;
+  }
+
+  isChannelFading(channel: string): boolean {
+    return this.channels.get(channel)?.isFading ?? false;
+  }
+
+  getChannelTime(channel: string): number {
+    const state = this.channels.get(channel);
+    if (!state || !this.audioContext) return 0;
+
+    if (!state.isPlaying) {
+      return state.pausedAt;
+    }
+
+    const elapsed = this.audioContext.currentTime - state.startTime;
+    return state.buffer ? elapsed % state.buffer.duration : 0;
+  }
+
+  getChannelDuration(channel: string): number {
+    return this.channels.get(channel)?.buffer?.duration ?? 0;
+  }
+
+  getChannelAudio(channel: string): string {
+    return this.channels.get(channel)?.currentAudioName ?? '';
   }
 }

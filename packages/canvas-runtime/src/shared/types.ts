@@ -72,7 +72,16 @@ export type DrawCommandType =
   | 'setMusicVolume'
   | 'setMasterVolume'
   | 'mute'
-  | 'unmute';
+  | 'unmute'
+  // Audio channel commands
+  | 'channelCreate'
+  | 'channelDestroy'
+  | 'channelPlay'
+  | 'channelStop'
+  | 'channelPause'
+  | 'channelResume'
+  | 'channelSetVolume'
+  | 'channelFadeTo';
 
 /**
  * Base interface for all draw commands.
@@ -1032,6 +1041,96 @@ export interface UnmuteCommand extends DrawCommandBase {
   type: 'unmute';
 }
 
+// ============================================================================
+// Audio Channel Commands
+// ============================================================================
+
+/**
+ * Create a named audio channel.
+ * Channels allow playing audio independently with per-channel volume and fading.
+ */
+export interface ChannelCreateCommand extends DrawCommandBase {
+  type: 'channelCreate';
+  /** Unique name for the channel */
+  channel: string;
+}
+
+/**
+ * Destroy a named audio channel, stopping any audio playing on it.
+ */
+export interface ChannelDestroyCommand extends DrawCommandBase {
+  type: 'channelDestroy';
+  /** Name of the channel to destroy */
+  channel: string;
+}
+
+/**
+ * Play audio on a specific channel.
+ * Replaces any audio currently playing on that channel.
+ */
+export interface ChannelPlayCommand extends DrawCommandBase {
+  type: 'channelPlay';
+  /** Name of the channel */
+  channel: string;
+  /** Name of the audio asset to play */
+  audio: string;
+  /** Volume level from 0.0 to 1.0 */
+  volume: number;
+  /** Whether to loop the audio */
+  loop: boolean;
+}
+
+/**
+ * Stop audio on a specific channel.
+ */
+export interface ChannelStopCommand extends DrawCommandBase {
+  type: 'channelStop';
+  /** Name of the channel */
+  channel: string;
+}
+
+/**
+ * Pause audio on a specific channel.
+ */
+export interface ChannelPauseCommand extends DrawCommandBase {
+  type: 'channelPause';
+  /** Name of the channel */
+  channel: string;
+}
+
+/**
+ * Resume paused audio on a specific channel.
+ */
+export interface ChannelResumeCommand extends DrawCommandBase {
+  type: 'channelResume';
+  /** Name of the channel */
+  channel: string;
+}
+
+/**
+ * Set the volume on a specific channel (immediate).
+ */
+export interface ChannelSetVolumeCommand extends DrawCommandBase {
+  type: 'channelSetVolume';
+  /** Name of the channel */
+  channel: string;
+  /** Volume level from 0.0 to 1.0 */
+  volume: number;
+}
+
+/**
+ * Fade channel volume over time using Web Audio scheduling.
+ */
+export interface ChannelFadeToCommand extends DrawCommandBase {
+  type: 'channelFadeTo';
+  /** Name of the channel */
+  channel: string;
+  /** Target volume level from 0.0 to 1.0 */
+  targetVolume: number;
+  /** Fade duration in seconds */
+  duration: number;
+}
+
 /**
  * Union type of all draw commands.
  */
@@ -1106,7 +1205,16 @@ export type DrawCommand =
   | SetMusicVolumeCommand
   | SetMasterVolumeCommand
   | MuteCommand
-  | UnmuteCommand;
+  | UnmuteCommand
+  // Audio channel commands
+  | ChannelCreateCommand
+  | ChannelDestroyCommand
+  | ChannelPlayCommand
+  | ChannelStopCommand
+  | ChannelPauseCommand
+  | ChannelResumeCommand
+  | ChannelSetVolumeCommand
+  | ChannelFadeToCommand;
 
 /**
  * Mouse button identifiers.
@@ -1133,6 +1241,30 @@ export interface InputState {
 }
 
 /**
+ * State of a single audio channel (synced from main thread to worker).
+ */
+export interface ChannelAudioState {
+  /** Name of the channel */
+  name: string;
+  /** Whether audio is currently playing on this channel */
+  isPlaying: boolean;
+  /** Current volume level (0.0 to 1.0) */
+  volume: number;
+  /** Current playback time in seconds */
+  currentTime: number;
+  /** Duration of current audio in seconds */
+  duration: number;
+  /** Name of current audio asset (empty if none) */
+  currentAudioName: string;
+  /** Whether audio is looping */
+  loop: boolean;
+  /** Whether a fade is currently in progress */
+  isFading: boolean;
+  /** Target volume for current fade (if fading) */
+  fadeTargetVolume: number;
+}
+
+/**
  * State of audio system (synced from main thread to worker).
  */
 export interface AudioState {
@@ -1148,6 +1280,8 @@ export interface AudioState {
   musicDuration: number;
   /** Name of currently playing music track (empty if none) */
   currentMusicName: string;
+  /** State of all audio channels, keyed by channel name */
+  channels: Record<string, ChannelAudioState>;
 }
 
 /**
@@ -1161,6 +1295,7 @@ export function createDefaultAudioState(): AudioState {
     musicTime: 0,
     musicDuration: 0,
     currentMusicName: '',
+    channels: {},
   };
 }
 

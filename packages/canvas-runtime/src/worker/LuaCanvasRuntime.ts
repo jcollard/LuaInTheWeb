@@ -644,6 +644,87 @@ export class LuaCanvasRuntime {
       return runtime.channel.getAudioState().currentMusicName;
     });
 
+    // =========================================================================
+    // Audio Channel API
+    // =========================================================================
+
+    // Command-emitting channel functions
+    lua.global.set('__audio_channelCreate', (name: string) => {
+      runtime.frameCommands.push({ type: 'channelCreate', channel: name });
+    });
+
+    lua.global.set('__audio_channelDestroy', (name: string) => {
+      runtime.frameCommands.push({ type: 'channelDestroy', channel: name });
+    });
+
+    lua.global.set(
+      '__audio_channelPlay',
+      (channel: string, audioNameOrHandle: unknown, volume?: number, loop?: boolean) => {
+        const audio = extractAudioFilename(audioNameOrHandle);
+        runtime.frameCommands.push({
+          type: 'channelPlay',
+          channel,
+          audio,
+          volume: volume ?? 1,
+          loop: loop ?? false,
+        });
+      }
+    );
+
+    lua.global.set('__audio_channelStop', (channel: string) => {
+      runtime.frameCommands.push({ type: 'channelStop', channel });
+    });
+
+    lua.global.set('__audio_channelPause', (channel: string) => {
+      runtime.frameCommands.push({ type: 'channelPause', channel });
+    });
+
+    lua.global.set('__audio_channelResume', (channel: string) => {
+      runtime.frameCommands.push({ type: 'channelResume', channel });
+    });
+
+    lua.global.set('__audio_channelSetVolume', (channel: string, volume: number) => {
+      runtime.frameCommands.push({ type: 'channelSetVolume', channel, volume });
+    });
+
+    lua.global.set(
+      '__audio_channelFadeTo',
+      (channel: string, targetVolume: number, duration: number) => {
+        runtime.frameCommands.push({ type: 'channelFadeTo', channel, targetVolume, duration });
+      }
+    );
+
+    // Channel state query functions (read from channel audio state)
+    lua.global.set('__audio_channelIsPlaying', (channel: string) => {
+      const state = runtime.channel.getAudioState().channels[channel];
+      return state?.isPlaying ?? false;
+    });
+
+    lua.global.set('__audio_channelIsFading', (channel: string) => {
+      const state = runtime.channel.getAudioState().channels[channel];
+      return state?.isFading ?? false;
+    });
+
+    lua.global.set('__audio_channelGetVolume', (channel: string) => {
+      const state = runtime.channel.getAudioState().channels[channel];
+      return state?.volume ?? 0;
+    });
+
+    lua.global.set('__audio_channelGetTime', (channel: string) => {
+      const state = runtime.channel.getAudioState().channels[channel];
+      return state?.currentTime ?? 0;
+    });
+
+    lua.global.set('__audio_channelGetDuration', (channel: string) => {
+      const state = runtime.channel.getAudioState().channels[channel];
+      return state?.duration ?? 0;
+    });
+
+    lua.global.set('__audio_channelGetAudio', (channel: string) => {
+      const state = runtime.channel.getAudioState().channels[channel];
+      return state?.currentAudioName ?? '';
+    });
+
     // Set up the Lua-side canvas table with methods (using snake_case for Lua conventions)
     lua.doStringSync(`
       canvas = {}
@@ -1021,6 +1102,270 @@ export class LuaCanvasRuntime {
 
       function canvas.get_current_music_name()
         return __audio_getCurrentMusicName()
+      end
+
+      -- ========================================================================
+      -- Audio Channel API
+      -- ========================================================================
+
+      --- Create a named audio channel.
+      --- Channels allow playing audio independently with per-channel volume and fading.
+      ---@param name string Unique name for the channel
+      function canvas.channel_create(name)
+        __audio_channelCreate(name)
+      end
+
+      --- Destroy a named channel, stopping any audio on it.
+      ---@param name string Channel name to destroy
+      function canvas.channel_destroy(name)
+        __audio_channelDestroy(name)
+      end
+
+      --- Play audio on a specific channel.
+      --- Replaces any audio currently playing on that channel.
+      ---@param channel string Channel name
+      ---@param audio string|AudioAssetHandle Audio to play
+      ---@param options? table { volume?: number, loop?: boolean }
+      function canvas.channel_play(channel, audio, options)
+        local volume = 1
+        local loop = false
+        if options then
+          if options.volume then volume = options.volume end
+          if options.loop then loop = options.loop end
+        end
+        -- Handle audio asset handles
+        local audio_name = audio
+        if type(audio) == "table" and audio._name then
+          audio_name = audio._name
+        end
+        __audio_channelPlay(channel, audio_name, volume, loop)
+      end
+
+      --- Stop audio on a specific channel.
+      ---@param channel string Channel name
+      function canvas.channel_stop(channel)
+        __audio_channelStop(channel)
+      end
+
+      --- Pause audio on a specific channel.
+      ---@param channel string Channel name
+      function canvas.channel_pause(channel)
+        __audio_channelPause(channel)
+      end
+
+      --- Resume audio on a specific channel.
+      ---@param channel string Channel name
+      function canvas.channel_resume(channel)
+        __audio_channelResume(channel)
+      end
+
+      --- Set volume on a channel (immediate).
+      ---@param channel string Channel name
+      ---@param volume number Volume from 0.0 to 1.0
+      function canvas.channel_set_volume(channel, volume)
+        __audio_channelSetVolume(channel, volume)
+      end
+
+      --- Get current volume of a channel.
+      ---@param channel string Channel name
+      ---@return number volume Current volume (0.0 to 1.0)
+      function canvas.channel_get_volume(channel)
+        return __audio_channelGetVolume(channel)
+      end
+
+      --- Fade channel volume over time.
+      ---@param channel string Channel name
+      ---@param target_volume number Target volume (0.0 to 1.0)
+      ---@param duration number Fade duration in seconds
+      function canvas.channel_fade_to(channel, target_volume, duration)
+        __audio_channelFadeTo(channel, target_volume, duration)
+      end
+
+      --- Check if a channel is currently playing.
+      ---@param channel string Channel name
+      ---@return boolean isPlaying
+      function canvas.channel_is_playing(channel)
+        return __audio_channelIsPlaying(channel)
+      end
+
+      --- Check if a channel is currently fading.
+      ---@param channel string Channel name
+      ---@return boolean isFading
+      function canvas.channel_is_fading(channel)
+        return __audio_channelIsFading(channel)
+      end
+
+      --- Get current playback time of channel audio.
+      ---@param channel string Channel name
+      ---@return number time Playback time in seconds
+      function canvas.channel_get_time(channel)
+        return __audio_channelGetTime(channel)
+      end
+
+      --- Get duration of audio on channel.
+      ---@param channel string Channel name
+      ---@return number duration Duration in seconds
+      function canvas.channel_get_duration(channel)
+        return __audio_channelGetDuration(channel)
+      end
+
+      --- Get name of audio currently on channel.
+      ---@param channel string Channel name
+      ---@return string audioName Name of current audio, or "" if none
+      function canvas.channel_get_audio(channel)
+        return __audio_channelGetAudio(channel)
+      end
+
+      -- ========================================================================
+      -- Audio Mixer Module (loadable via require('audio_mixer'))
+      -- ========================================================================
+      package.preload['audio_mixer'] = function()
+        local mixer = {}
+        local Channel = {}
+        Channel.__index = Channel
+
+        -- Channel Creation
+        function mixer.create_channel(name)
+          canvas.channel_create(name)
+          local channel = setmetatable({
+            name = name,
+            _volume = 1.0,
+            _crossfade_pending = nil,
+          }, Channel)
+          return channel
+        end
+
+        function mixer.destroy_channel(channel)
+          canvas.channel_destroy(channel.name)
+        end
+
+        -- Playback Control
+        function mixer.play(channel, audio, options)
+          local opts = options or {}
+          local start_volume = opts.fade_in and 0 or (opts.volume or channel._volume)
+          local target_volume = opts.volume or channel._volume
+
+          canvas.channel_play(channel.name, audio, {
+            volume = start_volume,
+            loop = opts.loop or false,
+          })
+
+          if opts.fade_in and opts.fade_in > 0 then
+            canvas.channel_fade_to(channel.name, target_volume, opts.fade_in)
+          end
+
+          channel._volume = target_volume
+        end
+
+        function mixer.stop(channel, options)
+          local opts = options or {}
+          if opts.fade_out and opts.fade_out > 0 then
+            canvas.channel_fade_to(channel.name, 0, opts.fade_out)
+          else
+            canvas.channel_stop(channel.name)
+          end
+        end
+
+        function mixer.pause(channel)
+          canvas.channel_pause(channel.name)
+        end
+
+        function mixer.resume(channel)
+          canvas.channel_resume(channel.name)
+        end
+
+        -- Volume Control
+        function mixer.set_volume(channel, volume)
+          channel._volume = volume
+          canvas.channel_set_volume(channel.name, volume)
+        end
+
+        function mixer.get_volume(channel)
+          return canvas.channel_get_volume(channel.name)
+        end
+
+        function mixer.fade_to(channel, volume, duration)
+          canvas.channel_fade_to(channel.name, volume, duration)
+          channel._volume = volume
+        end
+
+        -- Crossfade
+        function mixer.crossfade(channel, audio, duration, options)
+          local opts = options or {}
+          local current_volume = channel._volume
+
+          -- Fade out current audio on the main channel
+          canvas.channel_fade_to(channel.name, 0, duration)
+
+          -- Create a temporary crossfade channel
+          local xfade_channel = channel.name .. "_xfade"
+          canvas.channel_create(xfade_channel)
+          canvas.channel_play(xfade_channel, audio, {
+            volume = 0,
+            loop = opts.loop or false,
+          })
+          canvas.channel_fade_to(xfade_channel, current_volume, duration)
+
+          -- Store crossfade info for cleanup
+          channel._crossfade_pending = {
+            temp_channel = xfade_channel,
+            new_audio = audio,
+            duration = duration,
+            started_at = canvas.get_time(),
+            loop = opts.loop or false,
+            target_volume = current_volume,
+          }
+        end
+
+        function mixer.update_crossfade(channel)
+          if not channel._crossfade_pending then
+            return false
+          end
+
+          local xf = channel._crossfade_pending
+          local elapsed = canvas.get_time() - xf.started_at
+
+          if elapsed >= xf.duration then
+            -- Crossfade complete - swap channels
+            canvas.channel_stop(channel.name)
+            canvas.channel_play(channel.name, xf.new_audio, {
+              volume = xf.target_volume,
+              loop = xf.loop,
+            })
+            canvas.channel_destroy(xf.temp_channel)
+            channel._crossfade_pending = nil
+            return true
+          end
+
+          return false
+        end
+
+        function mixer.is_crossfading(channel)
+          return channel._crossfade_pending ~= nil
+        end
+
+        -- State Queries
+        function mixer.is_playing(channel)
+          return canvas.channel_is_playing(channel.name)
+        end
+
+        function mixer.is_fading(channel)
+          return canvas.channel_is_fading(channel.name)
+        end
+
+        function mixer.get_time(channel)
+          return canvas.channel_get_time(channel.name)
+        end
+
+        function mixer.get_duration(channel)
+          return canvas.channel_get_duration(channel.name)
+        end
+
+        function mixer.get_audio(channel)
+          return canvas.channel_get_audio(channel.name)
+        end
+
+        return mixer
       end
     `);
   }

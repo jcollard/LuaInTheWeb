@@ -121,4 +121,105 @@ export function setupAudioAPI(
   engine.global.set('__audio_isMuted', () => {
     return getAudioEngine()?.isMuted() ?? false;
   });
+
+  // --- Channel functions ---
+
+  engine.global.set(
+    '__audio_channelCreate',
+    (name: string, parentName?: string | null) => {
+      getAudioEngine()?.createChannel(name, parentName ?? undefined);
+    }
+  );
+
+  engine.global.set('__audio_channelGetParent', (name: string) => {
+    return getAudioEngine()?.getChannelParent(name) ?? null;
+  });
+
+  engine.global.set(
+    '__audio_channelSetParent',
+    (name: string, parentName: string | null) => {
+      getAudioEngine()?.setChannelParent(name, parentName);
+    }
+  );
+
+  engine.global.set('__audio_channelGetEffectiveVolume', (name: string) => {
+    return getAudioEngine()?.getEffectiveVolume(name) ?? 0;
+  });
+
+  engine.global.set('__audio_channelDestroy', (name: string) => {
+    getAudioEngine()?.destroyChannel(name);
+  });
+
+  engine.global.set(
+    '__audio_channelPlay',
+    (
+      channel: string,
+      nameOrHandle: unknown,
+      volume?: number | null,
+      loop?: boolean | null,
+      startTime?: number | null
+    ) => {
+      const audioEngine = getAudioEngine();
+      if (!audioEngine) return;
+
+      const audioName = extractAudioName(nameOrHandle);
+      audioEngine.playOnChannel(
+        channel,
+        audioName,
+        volume ?? 1,
+        loop ?? false,
+        startTime ?? 0
+      );
+    }
+  );
+
+  engine.global.set('__audio_channelStop', (channel: string) => {
+    getAudioEngine()?.stopChannel(channel);
+  });
+
+  engine.global.set('__audio_channelPause', (channel: string) => {
+    getAudioEngine()?.pauseChannel(channel);
+  });
+
+  engine.global.set('__audio_channelResume', (channel: string) => {
+    getAudioEngine()?.resumeChannel(channel);
+  });
+
+  engine.global.set(
+    '__audio_channelSetVolume',
+    (channel: string, volume: number) => {
+      getAudioEngine()?.setChannelVolume(channel, volume);
+    }
+  );
+
+  engine.global.set('__audio_channelGetVolume', (channel: string) => {
+    return getAudioEngine()?.getChannelVolume(channel) ?? 0;
+  });
+
+  engine.global.set(
+    '__audio_channelFadeTo',
+    (channel: string, targetVolume: number, duration: number) => {
+      getAudioEngine()?.fadeChannelTo(channel, targetVolume, duration);
+    }
+  );
+
+  engine.global.set('__audio_channelIsPlaying', (channel: string) => {
+    return getAudioEngine()?.isChannelPlaying(channel) ?? false;
+  });
+
+  engine.global.set('__audio_channelIsFading', (channel: string) => {
+    return getAudioEngine()?.isChannelFading(channel) ?? false;
+  });
+
+  engine.global.set('__audio_channelGetTime', (channel: string) => {
+    return getAudioEngine()?.getChannelTime(channel) ?? 0;
+  });
+
+  engine.global.set('__audio_channelGetDuration', (channel: string) => {
+    return getAudioEngine()?.getChannelDuration(channel) ?? 0;
+  });
+
+  engine.global.set('__audio_channelGetAudio', (channel: string) => {
+    return getAudioEngine()?.getChannelAudio(channel) ?? '';
+  });
 }
