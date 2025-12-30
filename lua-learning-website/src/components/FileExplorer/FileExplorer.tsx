@@ -1,26 +1,14 @@
-/* eslint-disable max-lines */
-// TODO: Refactor to reduce file size - extract dialog/context menu state to separate hook
-import { useCallback, useEffect, useState, useMemo, type MouseEvent } from 'react'
+import { useCallback, useEffect, useState, type MouseEvent } from 'react'
 import { FileTree } from '../FileTree'
 import { ContextMenu } from '../ContextMenu'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { AddWorkspaceDialog } from '../AddWorkspaceDialog'
 import { useFileExplorer } from './useFileExplorer'
 import { useFileUpload } from './useFileUpload'
+import { useTreeUtilities } from './useTreeUtilities'
+import { useRenameHandler } from './useRenameHandler'
 import { NewFileIcon, NewFolderIcon, AddWorkspaceIcon } from './FileExplorerIcons'
 import { getContextMenuItems } from './contextMenuHelper'
-import {
-  findNodeType as findNodeTypeUtil,
-  findNodeName as findNodeNameUtil,
-  pathExists as pathExistsUtil,
-  isWorkspaceRoot as isWorkspaceRootUtil,
-  isLibraryWorkspace as isLibraryWorkspaceUtil,
-  isDocsWorkspace as isDocsWorkspaceUtil,
-  isBookWorkspace as isBookWorkspaceUtil,
-  isExamplesWorkspace as isExamplesWorkspaceUtil,
-  getWorkspaceForPath as getWorkspaceForPathUtil,
-  isInReadOnlyWorkspace as isInReadOnlyWorkspaceUtil,
-} from './treeUtils'
 import { handleDropOperation } from './dropHandler'
 import type { FileExplorerProps } from './types'
 import styles from './FileExplorer.module.css'
@@ -122,6 +110,37 @@ export function FileExplorer({
   // Use controlled selected path if provided
   const selectedPath = controlledSelectedPath ?? internalSelectedPath
 
+  // Tree utility functions - memoized wrappers (extracted to separate hook)
+  const {
+    findNodeType,
+    findNodeName,
+    pathExists,
+    isWorkspaceRoot,
+    isLibraryWorkspace,
+    isDocsWorkspace,
+    isBookWorkspace,
+    isExamplesWorkspace,
+    getWorkspaceForPath,
+    isInReadOnlyWorkspace,
+  } = useTreeUtilities(tree)
+
+  // Rename handling (extracted to separate hook)
+  const { handleRenameSubmit, handleRenameCancel } = useRenameHandler({
+    findNodeType,
+    isWorkspaceRoot,
+    renamingPath,
+    cancelRename,
+    pendingNewFilePath,
+    pendingNewFolderPath,
+    onRenameFile,
+    onRenameFolder,
+    onDeleteFile,
+    onDeleteFolder,
+    onCancelPendingNewFile,
+    onCancelPendingNewFolder,
+    workspaceProps,
+  })
+
   // Start rename mode when a new file is pending
   useEffect(() => {
     if (pendingNewFilePath) {
@@ -135,44 +154,6 @@ export function FileExplorer({
       startRename(pendingNewFolderPath)
     }
   }, [pendingNewFolderPath, startRename])
-
-  // Tree utility functions - memoized wrappers around pure utilities
-  const findNodeType = useMemo(
-    () => (path: string) => findNodeTypeUtil(tree, path),
-    [tree]
-  )
-  const isWorkspaceRoot = useMemo(
-    () => (path: string) => isWorkspaceRootUtil(tree, path),
-    [tree]
-  )
-  const isLibraryWorkspace = useMemo(
-    () => (path: string) => isLibraryWorkspaceUtil(tree, path),
-    [tree]
-  )
-  const isDocsWorkspace = useMemo(
-    () => (path: string) => isDocsWorkspaceUtil(tree, path),
-    [tree]
-  )
-  const isBookWorkspace = useMemo(
-    () => (path: string) => isBookWorkspaceUtil(tree, path),
-    [tree]
-  )
-  const isExamplesWorkspace = useMemo(
-    () => (path: string) => isExamplesWorkspaceUtil(tree, path),
-    [tree]
-  )
-  const findNodeName = useMemo(
-    () => (path: string) => findNodeNameUtil(tree, path),
-    [tree]
-  )
-  const pathExists = useMemo(
-    () => (path: string) => pathExistsUtil(tree, path),
-    [tree]
-  )
-  const getWorkspaceForPath = useMemo(
-    () => (path: string) => getWorkspaceForPathUtil(tree, path),
-    [tree]
-  )
 
   const handleSelect = useCallback((path: string) => {
     selectPath(path)
@@ -306,50 +287,6 @@ export function FileExplorer({
     workspaceProps,
   ])
 
-  const handleRenameSubmit = useCallback((path: string, newName: string) => {
-    const type = findNodeType(path)
-    if (type === 'folder') {
-      // Check if this is a workspace root - use workspace rename instead of folder rename
-      if (isWorkspaceRoot(path) && workspaceProps?.onRenameWorkspace) {
-        workspaceProps.onRenameWorkspace(path, newName)
-      } else {
-        onRenameFolder(path, newName)
-      }
-    } else {
-      onRenameFile(path, newName)
-    }
-    // Clear pending new file if this was a pending file being renamed
-    if (path === pendingNewFilePath && onCancelPendingNewFile) {
-      onCancelPendingNewFile()
-    }
-    // Clear pending new folder if this was a pending folder being renamed
-    if (path === pendingNewFolderPath && onCancelPendingNewFolder) {
-      onCancelPendingNewFolder()
-    }
-    cancelRename()
-    // Stryker disable next-line all: React hooks dependency optimization
-  }, [findNodeType, isWorkspaceRoot, onRenameFile, onRenameFolder, cancelRename, pendingNewFilePath, onCancelPendingNewFile, pendingNewFolderPath, onCancelPendingNewFolder, workspaceProps])
-
-  // Handle rename cancel - delete pending new file/folder if applicable
-  const handleRenameCancel = useCallback(() => {
-    if (renamingPath === pendingNewFilePath && pendingNewFilePath) {
-      // Delete the pending file since rename was cancelled
-      onDeleteFile(pendingNewFilePath)
-      if (onCancelPendingNewFile) {
-        onCancelPendingNewFile()
-      }
-    }
-    if (renamingPath === pendingNewFolderPath && pendingNewFolderPath) {
-      // Delete the pending folder since rename was cancelled
-      onDeleteFolder(pendingNewFolderPath)
-      if (onCancelPendingNewFolder) {
-        onCancelPendingNewFolder()
-      }
-    }
-    cancelRename()
-    // Stryker disable next-line all: React hooks dependency optimization
-  }, [renamingPath, pendingNewFilePath, onDeleteFile, onCancelPendingNewFile, pendingNewFolderPath, onDeleteFolder, onCancelPendingNewFolder, cancelRename])
-
   const handleDeleteKey = useCallback((path: string) => {
     const type = findNodeType(path)
     if (!type) return
@@ -377,12 +314,6 @@ export function FileExplorer({
   const combinedClassName = className
     ? `${styles.explorer} ${className}`
     : styles.explorer
-
-  // Memoized wrapper for isInReadOnlyWorkspace
-  const isInReadOnlyWorkspace = useMemo(
-    () => (path: string) => isInReadOnlyWorkspaceUtil(tree, path, isLibraryWorkspace, isDocsWorkspace, isBookWorkspace),
-    [tree, isLibraryWorkspace, isDocsWorkspace, isBookWorkspace]
-  )
 
   // Build context menu items dynamically using the helper
   const contextMenuItems = getContextMenuItems({

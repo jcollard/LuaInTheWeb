@@ -1,5 +1,3 @@
-/* eslint-disable max-lines */
-// TODO: Refactor to reduce file size - extract upload logic to separate hook
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useLuaEngine } from '../../hooks/useLuaEngine'
 import { useFileSystem } from '../../hooks/useFileSystem'
@@ -10,12 +8,8 @@ import type { TabInfo } from '../TabBar'
 import { useToast } from '../Toast'
 import { IDEContext } from './context'
 import { useIDEAutoSave } from './useIDEAutoSave'
-import {
-  processFileUploadBatch,
-  findConflictingFiles,
-  processFolderUploadBatch,
-  findFolderConflictingFiles,
-} from '../FileExplorer/uploadHandler'
+import { useUploadHandler } from './useUploadHandler'
+import { useShellFileMove } from './useShellFileMove'
 import { UploadConflictDialog } from '../UploadConflictDialog'
 import { LoadingModal } from '../LoadingModal'
 import type { IDEContextValue, IDEContextProviderProps, ActivityPanelType } from './types'
@@ -61,20 +55,15 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   // Version counter to trigger file tree refresh (incremented when shell modifies filesystem)
   const [fileTreeVersion, setFileTreeVersion] = useState(0)
 
-  // Upload conflict dialog state
-  const [uploadConflictDialogOpen, setUploadConflictDialogOpen] = useState(false)
-  const [conflictingFileNames, setConflictingFileNames] = useState<string[]>([])
-  const pendingUploadRef = useRef<{ files: FileList; targetFolderPath: string } | null>(null)
-
-  // Folder upload loading modal state
-  const [folderUploadModalOpen, setFolderUploadModalOpen] = useState(false)
-  const [folderUploadProgress, setFolderUploadProgress] = useState<{
-    current: number
-    total: number
-    currentFile?: string
-  } | undefined>(undefined)
-  const folderUploadCancelledRef = useRef(false)
-  const pendingFolderUploadRef = useRef<{ files: FileList; targetFolderPath: string } | null>(null)
+  // Upload handling (extracted to separate hook)
+  const uploadHandler = useUploadHandler({
+    filesystem,
+    externalFileSystem,
+    internalFilesystem,
+    showToast,
+    showError,
+    onTreeRefresh: useCallback(() => setFileTreeVersion(v => v + 1), []),
+  })
 
   const activeTab = tabBar.activeTab
   const tabs = tabBar.tabs
@@ -366,227 +355,20 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     catch (error) { showError(error instanceof Error ? error.message : 'Failed to copy file') }
   }, [filesystem, showError])
 
-  // Execute the actual file upload batch (called after conflict resolution or when no conflicts)
-  const executeUploadBatch = useCallback(async (files: FileList, targetFolderPath: string) => {
-    await processFileUploadBatch({
-      files,
-      targetFolderPath,
-      pathExists: (path) => filesystem.exists(path),
-      writeTextFile: (path, content) => filesystem.writeFile(path, content),
-      writeBinaryFile: (path, content) => filesystem.writeBinaryFile(path, content),
-      openConfirmDialog: () => {
-        // Individual file conflicts are handled by batch-level conflict dialog
-        // This is called per-file but we've already confirmed at batch level
-      },
-      closeConfirmDialog: () => {},
-      onComplete: async () => {
-        // Flush to ensure files are persisted to disk (important for local filesystems)
-        await filesystem.flush()
-        setFileTreeVersion(v => v + 1)
-      },
-      onError: (fileName, error) => {
-        showError(`Failed to upload ${fileName}: ${error}`)
-      },
-    })
-  }, [filesystem, showError])
-
-  // Execute the actual folder upload batch with progress tracking
-  const executeFolderUploadBatch = useCallback(async (files: FileList, targetFolderPath: string) => {
-    // Reset cancel flag and show modal
-    folderUploadCancelledRef.current = false
-    setFolderUploadProgress({ current: 0, total: files.length })
-    setFolderUploadModalOpen(true)
-
-    // Use silent batch functions for internal filesystem to avoid 6000+ re-renders
-    // for large uploads. External filesystems don't trigger React state per-write.
-    const useBatchMode = !externalFileSystem && internalFilesystem
-
-    await processFolderUploadBatch({
-      files,
-      targetFolderPath,
-      pathExists: (path) => filesystem.exists(path),
-      writeTextFile: useBatchMode
-        ? (path, content) => internalFilesystem.createFileSilent(path, content)
-        : (path, content) => filesystem.writeFile(path, content),
-      writeBinaryFile: useBatchMode
-        ? (path, content) => internalFilesystem.writeBinaryFileSilent(path, content)
-        : (path, content) => filesystem.writeBinaryFile(path, content),
-      createDirectory: useBatchMode
-        ? (path) => internalFilesystem.createFolderSilent(path)
-        : (path) => filesystem.createFolder(path),
-      commitBatch: useBatchMode ? () => internalFilesystem.commitBatch() : undefined,
-      cancelledRef: folderUploadCancelledRef,
-      onProgress: (current, total, currentFile) => {
-        setFolderUploadProgress({ current, total, currentFile })
-      },
-      onComplete: async ({ success, failed, cancelled }) => {
-        // Close modal
-        setFolderUploadModalOpen(false)
-        setFolderUploadProgress(undefined)
-
-        // Flush to ensure files are persisted to disk
-        await filesystem.flush()
-        setFileTreeVersion(v => v + 1)
-
-        // Show completion toast
-        if (cancelled) {
-          showToast({ message: `Upload cancelled. ${success} files uploaded.`, type: 'info' })
-        } else if (failed > 0) {
-          showToast({ message: `Upload complete. ${success} succeeded, ${failed} failed.`, type: 'error' })
-        } else {
-          showToast({ message: `Successfully uploaded ${success} files.`, type: 'success' })
-        }
-      },
-      onError: (fileName, error) => {
-        console.error(`Failed to upload ${fileName}: ${error}`)
-      },
-    })
-  }, [filesystem, showToast, externalFileSystem, internalFilesystem])
-
-  // Handle conflict dialog confirm - proceed with upload (file or folder)
-  const handleUploadConflictConfirm = useCallback(async () => {
-    // Check for pending folder upload first
-    const pendingFolder = pendingFolderUploadRef.current
-    if (pendingFolder) {
-      setUploadConflictDialogOpen(false)
-      setConflictingFileNames([])
-      await executeFolderUploadBatch(pendingFolder.files, pendingFolder.targetFolderPath)
-      pendingFolderUploadRef.current = null
-      return
-    }
-
-    // Check for pending file upload
-    const pending = pendingUploadRef.current
-    if (pending) {
-      setUploadConflictDialogOpen(false)
-      setConflictingFileNames([])
-      await executeUploadBatch(pending.files, pending.targetFolderPath)
-      pendingUploadRef.current = null
-    }
-  }, [executeUploadBatch, executeFolderUploadBatch])
-
-  // Handle conflict dialog cancel - abort upload (file or folder)
-  const handleUploadConflictCancel = useCallback(() => {
-    setUploadConflictDialogOpen(false)
-    setConflictingFileNames([])
-    pendingUploadRef.current = null
-    pendingFolderUploadRef.current = null
-  }, [])
-
-  // Upload files to a target folder
-  const uploadFiles = useCallback(async (files: FileList, targetFolderPath: string) => {
-    // Check for conflicts first
-    const conflicts = findConflictingFiles(files, targetFolderPath, (path) => filesystem.exists(path))
-
-    if (conflicts.length > 0) {
-      // Store pending upload and show conflict dialog
-      pendingUploadRef.current = { files, targetFolderPath }
-      setConflictingFileNames(conflicts)
-      setUploadConflictDialogOpen(true)
-    } else {
-      // No conflicts - proceed directly
-      await executeUploadBatch(files, targetFolderPath)
-    }
-  }, [filesystem, executeUploadBatch])
-
-  // Handle cancel button on loading modal
-  const handleFolderUploadCancel = useCallback(() => {
-    folderUploadCancelledRef.current = true
-  }, [])
-
-  // Upload folder to a target folder
-  const uploadFolder = useCallback(async (files: FileList, targetFolderPath: string) => {
-    // Check for conflicts first
-    const conflicts = findFolderConflictingFiles(files, targetFolderPath, (path) => filesystem.exists(path))
-
-    if (conflicts.length > 0) {
-      // Store pending upload and show conflict dialog
-      pendingFolderUploadRef.current = { files, targetFolderPath }
-      setConflictingFileNames(conflicts)
-      setUploadConflictDialogOpen(true)
-    } else {
-      // No conflicts - proceed directly
-      await executeFolderUploadBatch(files, targetFolderPath)
-    }
-  }, [filesystem, executeFolderUploadBatch])
-
   const toggleTerminal = useCallback(() => { setTerminalVisible(prev => !prev) }, [])
   const toggleSidebar = useCallback(() => { setSidebarVisible(prev => !prev) }, [])
 
   // Refresh file tree by incrementing version counter (triggers re-render for shell commands)
   const refreshFileTree = useCallback(() => { setFileTreeVersion(v => v + 1) }, [])
 
-  // Handle file/directory moves from shell (mv command)
-  // Updates tabs to reflect new paths without losing editor state
-  const handleShellFileMove = useCallback((oldPath: string, newPath: string, isDirectory: boolean) => {
-    if (isDirectory) {
-      // For directories, update all tabs that are children of the old path
-      const affectedTabs = tabs.filter(t => t.path.startsWith(oldPath + '/') || t.path === oldPath)
-      for (const tab of affectedTabs) {
-        const relativePath = tab.path.slice(oldPath.length)
-        const newTabPath = newPath + relativePath
-        const newName = newTabPath.split('/').pop() || newTabPath
-        // Update content maps to preserve dirty state
-        setOriginalContent(prev => {
-          if (prev.has(tab.path)) {
-            const next = new Map(prev)
-            const content = next.get(tab.path)!
-            next.delete(tab.path)
-            next.set(newTabPath, content)
-            return next
-          }
-          return prev
-        })
-        setUnsavedContent(prev => {
-          if (prev.has(tab.path)) {
-            const next = new Map(prev)
-            const content = next.get(tab.path)!
-            next.delete(tab.path)
-            next.set(newTabPath, content)
-            return next
-          }
-          return prev
-        })
-        // Update tab path and name
-        tabBar.renameTab(tab.path, newTabPath, newName)
-      }
-    } else {
-      // For files, update the specific tab if it exists
-      const tabIndex = tabs.findIndex(t => t.path === oldPath)
-      if (tabIndex !== -1) {
-        const newName = newPath.split('/').pop() || newPath
-        // Update content maps to preserve dirty state
-        setOriginalContent(prev => {
-          if (prev.has(oldPath)) {
-            const next = new Map(prev)
-            const content = next.get(oldPath)!
-            next.delete(oldPath)
-            next.set(newPath, content)
-            return next
-          }
-          return prev
-        })
-        setUnsavedContent(prev => {
-          if (prev.has(oldPath)) {
-            const next = new Map(prev)
-            const content = next.get(oldPath)!
-            next.delete(oldPath)
-            next.set(newPath, content)
-            return next
-          }
-          return prev
-        })
-        // Update tab path and name
-        tabBar.renameTab(oldPath, newPath, newName)
-      }
-    }
-  }, [tabs, tabBar])
+  // Handle file/directory moves from shell (mv command) - extracted to separate hook
+  const handleShellFileMove = useShellFileMove({ tabs, tabBar, setOriginalContent, setUnsavedContent })
 
   // File tree is memoized to prevent expensive rebuilds on unrelated re-renders
   // Only recalculate when filesystem.version changes (increments on each filesystem operation)
   // fileTreeVersion is kept for external refresh requests (e.g., shell commands)
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- filesystem.version is intentional cache-buster
-  const fileTree = useMemo(() => filesystem.getTree(), [filesystem.version, fileTreeVersion])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- version props are intentional cache-busters
+  const fileTree = useMemo(() => filesystem.getTree(), [filesystem, filesystem.version, fileTreeVersion])
 
   // Load content for the initial active tab when restored from persistence
   // This runs after the filesystem is ready (when fileTree changes indicate data is loaded)
@@ -636,8 +418,8 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename, clearPendingNewFolder,
     recentFiles, clearRecentFiles, fileSystem: filesystem,
     autoSaveEnabled, toggleAutoSave, saveAllFiles,
-    uploadFiles,
-    uploadFolder,
+    uploadFiles: uploadHandler.uploadFiles,
+    uploadFolder: uploadHandler.uploadFolder,
   }), [
     engine, code, setCode, fileName, isDirty,
     activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
@@ -647,23 +429,23 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,
     clearPendingNewFolder, recentFiles, clearRecentFiles, filesystem,
-    autoSaveEnabled, toggleAutoSave, saveAllFiles, uploadFiles, uploadFolder,
+    autoSaveEnabled, toggleAutoSave, saveAllFiles, uploadHandler,
   ])
 
   return (
     <IDEContext.Provider value={value}>
       {children}
       <UploadConflictDialog
-        isOpen={uploadConflictDialogOpen}
-        conflictingFiles={conflictingFileNames}
-        onConfirm={handleUploadConflictConfirm}
-        onCancel={handleUploadConflictCancel}
+        isOpen={uploadHandler.uploadConflictDialogOpen}
+        conflictingFiles={uploadHandler.conflictingFileNames}
+        onConfirm={uploadHandler.handleUploadConflictConfirm}
+        onCancel={uploadHandler.handleUploadConflictCancel}
       />
       <LoadingModal
-        isOpen={folderUploadModalOpen}
+        isOpen={uploadHandler.folderUploadModalOpen}
         title="Uploading Folder"
-        progress={folderUploadProgress}
-        onCancel={handleFolderUploadCancel}
+        progress={uploadHandler.folderUploadProgress}
+        onCancel={uploadHandler.handleFolderUploadCancel}
       />
     </IDEContext.Provider>
   )
