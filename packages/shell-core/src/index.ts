@@ -75,3 +75,6 @@ export {
   getCompletionContext,
 } from './tabCompletion'
 export type { CompletionContext } from './tabCompletion'
+
+// Binary file utilities
+export { BINARY_EXTENSIONS, isBinaryExtension } from './binaryExtensions'
