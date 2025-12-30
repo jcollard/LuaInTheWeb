@@ -100,6 +100,9 @@ export interface IDEContextValue {
 
   // File upload
   uploadFiles: (files: FileList, targetFolderPath: string) => Promise<void>
+
+  // Folder upload
+  uploadFolder: (files: FileList, targetFolderPath: string) => Promise<void>
 }
 
 /**

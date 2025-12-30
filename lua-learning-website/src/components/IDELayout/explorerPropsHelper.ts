@@ -32,6 +32,8 @@ export interface ExplorerPropsParams {
   handleCdToLocation?: (path: string) => void
   // File upload
   uploadFiles?: (files: FileList, targetFolderPath: string) => Promise<void>
+  // Folder upload
+  uploadFolder?: (files: FileList, targetFolderPath: string) => Promise<void>
   // Workspace props
   workspaces: Workspace[]
   pendingWorkspaces: Set<string>
@@ -138,6 +140,7 @@ export function createExplorerProps(params: ExplorerPropsParams) {
     onEditMarkdown: params.openMarkdownEdit,
     onCdToLocation: params.handleCdToLocation,
     onUploadFiles: params.uploadFiles,
+    onUploadFolder: params.uploadFolder,
     workspaceProps: {
       workspaces: params.workspaces,
       pendingWorkspaces: params.pendingWorkspaces,

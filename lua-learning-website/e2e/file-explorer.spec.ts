@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+// Large E2E test file for comprehensive file explorer coverage
 import { test, expect } from '@playwright/test'
 
 test.describe('File Explorer', () => {
@@ -462,7 +464,7 @@ test.describe('File Explorer', () => {
       // Arrange - Create a folder and complete rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
-      let input = sidebar.getByRole('textbox')
+      const input = sidebar.getByRole('textbox')
       await input.fill('uploads')
       await input.press('Enter')
       await expect(input).not.toBeVisible()
@@ -499,7 +501,7 @@ test.describe('File Explorer', () => {
       // Arrange - Create a folder and complete rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
-      let input = sidebar.getByRole('textbox')
+      const input = sidebar.getByRole('textbox')
       await input.fill('multi-uploads')
       await input.press('Enter')
       await expect(input).not.toBeVisible()
@@ -538,6 +540,83 @@ test.describe('File Explorer', () => {
       // Assert - Both uploaded files should appear in the tree
       await expect(page.getByText('file1.lua')).toBeVisible()
       await expect(page.getByText('file2.lua')).toBeVisible()
+    })
+  })
+
+  test.describe('folder upload', () => {
+    test('right-clicking folder shows "Upload Folder..." option', async ({ page }) => {
+      // Arrange - Create a folder and complete rename
+      const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new folder/i }).click()
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
+      await expect(input).not.toBeVisible()
+
+      // Act - Right-click the folder (second treeitem after workspace)
+      const treeItem = page.getByRole('treeitem').nth(1)
+      await treeItem.click({ button: 'right' })
+
+      // Assert - Context menu should include "Upload Folder..."
+      await expect(page.getByRole('menu')).toBeVisible()
+      await expect(page.getByText('Upload Folder...')).toBeVisible()
+    })
+
+    test('folder upload input has webkitdirectory attribute', async ({ page }) => {
+      // Arrange - Create a folder and complete rename
+      const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new folder/i }).click()
+      const input = sidebar.getByRole('textbox')
+      await input.press('Enter') // Accept default name
+      await expect(input).not.toBeVisible()
+
+      // Act - Right-click folder and select Upload Folder
+      const treeItem = page.getByRole('treeitem').nth(1)
+      await treeItem.click({ button: 'right' })
+      await expect(page.getByRole('menu')).toBeVisible()
+      await page.getByText('Upload Folder...').click()
+
+      // Assert - Folder input should have webkitdirectory attribute
+      const folderInput = page.getByTestId('folder-upload-input')
+      await expect(folderInput).toHaveAttribute('webkitdirectory', '')
+    })
+
+    test('right-clicking workspace header shows "Upload Folder..." option', async ({ page }) => {
+      // Act - Right-click the workspace item (first treeitem which is the home workspace)
+      const treeItem = page.getByRole('treeitem').first()
+      await treeItem.click({ button: 'right' })
+
+      // Assert - Context menu should include "Upload Folder..."
+      await expect(page.getByRole('menu')).toBeVisible()
+      await expect(page.getByText('Upload Folder...')).toBeVisible()
+    })
+
+    // Note: Playwright requires a real directory path for webkitdirectory inputs,
+    // so we can't easily test the actual folder upload with mock files.
+    // The unit tests in uploadHandler.test.ts cover the folder upload logic.
+    // This test verifies the UI flow works up to triggering the file picker.
+    test('clicking Upload Folder shows folder picker (webkitdirectory input)', async ({ page }) => {
+      // Arrange - Create a folder and complete rename
+      const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new folder/i }).click()
+      const input = sidebar.getByRole('textbox')
+      await input.fill('folder-uploads')
+      await input.press('Enter')
+      await expect(input).not.toBeVisible()
+
+      // Find the folder
+      const folderItem = page.getByRole('treeitem', { name: /folder-uploads/i })
+      await expect(folderItem).toBeVisible()
+
+      // Act - Right-click folder and select Upload Folder
+      await folderItem.click({ button: 'right' })
+      await expect(page.getByRole('menu')).toBeVisible()
+      await page.getByText('Upload Folder...').click()
+
+      // Assert - The folder input should be present and configured correctly
+      const folderInput = page.getByTestId('folder-upload-input')
+      await expect(folderInput).toBeAttached()
+      await expect(folderInput).toHaveAttribute('type', 'file')
+      await expect(folderInput).toHaveAttribute('webkitdirectory', '')
     })
   })
 })

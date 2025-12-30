@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+// TODO: Refactor to reduce file size - extract dialog/context menu state to separate hook
 import { useCallback, useEffect, useState, useMemo, type MouseEvent } from 'react'
 import { FileTree } from '../FileTree'
 import { ContextMenu } from '../ContextMenu'
@@ -44,6 +46,7 @@ export function FileExplorer({
   onEditMarkdown,
   onCdToLocation,
   onUploadFiles,
+  onUploadFolder,
   className,
   workspaceProps,
 }: FileExplorerProps) {
@@ -65,11 +68,23 @@ export function FileExplorer({
     closeConfirmDialog,
   } = useFileExplorer()
 
-  // File upload hook
-  const { fileInputRef, triggerUpload, handleFileSelect } = useFileUpload({
+  // File and folder upload hook
+  const {
+    fileInputRef,
+    triggerUpload,
+    handleFileSelect,
+    folderInputRef,
+    triggerFolderUpload,
+    handleFolderSelect,
+  } = useFileUpload({
     onFilesSelected: (files, targetPath) => {
       onUploadFiles?.(files, targetPath)
     },
+    onFolderSelected: onUploadFolder
+      ? (files, targetPath) => {
+          onUploadFolder(files, targetPath)
+        }
+      : undefined,
   })
 
   // Workspace management handlers
@@ -215,6 +230,9 @@ export function FileExplorer({
       case 'upload-files':
         triggerUpload(targetPath)
         break
+      case 'upload-folder':
+        triggerFolderUpload?.(targetPath)
+        break
       case 'rename':
         startRename(targetPath)
         break
@@ -284,6 +302,7 @@ export function FileExplorer({
     onEditMarkdown,
     onCdToLocation,
     triggerUpload,
+    triggerFolderUpload,
     workspaceProps,
   ])
 
@@ -476,6 +495,19 @@ export function FileExplorer({
         onChange={handleFileSelect}
         data-testid="file-upload-input"
       />
+
+      {/* Hidden folder input for folder uploads */}
+      {folderInputRef && handleFolderSelect && (
+        <input
+          ref={folderInputRef}
+          type="file"
+          // @ts-expect-error - webkitdirectory is a non-standard but widely supported attribute
+          webkitdirectory=""
+          style={{ display: 'none' }}
+          onChange={handleFolderSelect}
+          data-testid="folder-upload-input"
+        />
+      )}
     </div>
   )
 }

@@ -113,6 +113,7 @@ describe('useIDE', () => {
         toggleAutoSave: vi.fn(),
         saveAllFiles: vi.fn(),
         uploadFiles: vi.fn(),
+        uploadFolder: vi.fn(),
       }
 
       const wrapper = ({ children }: { children: React.ReactNode }) =>
@@ -202,6 +203,7 @@ describe('useIDE', () => {
         toggleAutoSave: vi.fn(),
         saveAllFiles: vi.fn(),
         uploadFiles: vi.fn(),
+        uploadFolder: vi.fn(),
       }
 
       const wrapper = ({ children }: { children: React.ReactNode }) =>

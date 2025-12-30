@@ -1,5 +1,13 @@
-import { vi, describe, it, expect } from 'vitest'
-import { processFileUpload, processFileUploadBatch, findConflictingFiles } from './uploadHandler'
+/* eslint-disable max-lines */
+// Large test file for comprehensive upload handler coverage
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import {
+  processFileUpload,
+  processFileUploadBatch,
+  findConflictingFiles,
+  findFolderConflictingFiles,
+  processFolderUploadBatch,
+} from './uploadHandler'
 
 describe('uploadHandler', () => {
   /**
@@ -326,6 +334,310 @@ describe('uploadHandler', () => {
       const conflicts = findConflictingFiles(fileList, '/workspace', pathExists)
 
       expect(conflicts).toEqual(['a.lua', 'b.lua', 'c.lua'])
+    })
+  })
+
+  describe('findFolderConflictingFiles', () => {
+    /**
+     * Creates a mock File with webkitRelativePath for folder upload testing.
+     */
+    const createMockFolderFile = (relativePath: string, content = ''): File => {
+      const name = relativePath.split('/').pop() ?? relativePath
+      const data = new TextEncoder().encode(content)
+      return {
+        name,
+        webkitRelativePath: relativePath,
+        arrayBuffer: vi.fn().mockResolvedValue(data.buffer),
+      } as unknown as File
+    }
+
+    const createMockFolderFileList = (relativePaths: string[]): FileList => {
+      const files = relativePaths.map((path) => createMockFolderFile(path))
+      return {
+        length: files.length,
+        item: (i: number) => files[i],
+        [Symbol.iterator]: function* () {
+          for (const file of files) yield file
+        },
+      } as unknown as FileList
+    }
+
+    it('should return empty array when no conflicts', () => {
+      const fileList = createMockFolderFileList(['folder/new1.lua', 'folder/new2.lua'])
+      const pathExists = () => false
+
+      const conflicts = findFolderConflictingFiles(fileList, '/workspace', pathExists)
+
+      expect(conflicts).toEqual([])
+    })
+
+    it('should detect conflicts using full relative path', () => {
+      const fileList = createMockFolderFileList([
+        'myfolder/existing.lua',
+        'myfolder/new.lua',
+        'myfolder/sub/another-existing.lua',
+      ])
+      const pathExists = (path: string) => path.includes('existing')
+
+      const conflicts = findFolderConflictingFiles(fileList, '/workspace', pathExists)
+
+      expect(conflicts).toEqual(['myfolder/existing.lua', 'myfolder/sub/another-existing.lua'])
+    })
+
+    it('should handle nested folder structures', () => {
+      const fileList = createMockFolderFileList([
+        'project/src/main.lua',
+        'project/src/utils/helper.lua',
+        'project/README.md',
+      ])
+      const pathExists = (path: string) => path === '/workspace/project/src/main.lua'
+
+      const conflicts = findFolderConflictingFiles(fileList, '/workspace', pathExists)
+
+      expect(conflicts).toEqual(['project/src/main.lua'])
+    })
+
+    it('should handle root target folder', () => {
+      const fileList = createMockFolderFileList(['folder/test.lua'])
+      const pathExists = (path: string) => path === '/folder/test.lua'
+
+      const conflicts = findFolderConflictingFiles(fileList, '/', pathExists)
+
+      expect(conflicts).toEqual(['folder/test.lua'])
+    })
+  })
+
+  describe('processFolderUploadBatch', () => {
+    /**
+     * Creates a mock File with webkitRelativePath for folder upload testing.
+     */
+    const createMockFolderFile = (relativePath: string, content = 'content'): File => {
+      const name = relativePath.split('/').pop() ?? relativePath
+      const data = new TextEncoder().encode(content)
+      return {
+        name,
+        webkitRelativePath: relativePath,
+        arrayBuffer: vi.fn().mockResolvedValue(data.buffer),
+      } as unknown as File
+    }
+
+    const createMockFolderFileList = (relativePaths: string[]): FileList => {
+      const files = relativePaths.map((path) => createMockFolderFile(path))
+      return {
+        length: files.length,
+        item: (i: number) => files[i],
+        [Symbol.iterator]: function* () {
+          for (const file of files) yield file
+        },
+      } as unknown as FileList
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('should process files and call onProgress for each file', async () => {
+      const onProgress = vi.fn()
+      const onComplete = vi.fn()
+      const writeTextFile = vi.fn()
+      const createDirectory = vi.fn()
+      const fileList = createMockFolderFileList(['folder/file1.lua', 'folder/file2.lua'])
+
+      const promise = processFolderUploadBatch({
+        files: fileList,
+        targetFolderPath: '/workspace',
+        pathExists: () => false,
+        writeTextFile,
+        writeBinaryFile: vi.fn(),
+        createDirectory,
+        cancelledRef: { current: false },
+        onProgress,
+        onComplete,
+      })
+
+      // Run through all setTimeout(0) calls
+      await vi.runAllTimersAsync()
+      await promise
+
+      expect(onProgress).toHaveBeenCalledTimes(2)
+      expect(onProgress).toHaveBeenNthCalledWith(1, 1, 2, 'folder/file1.lua')
+      expect(onProgress).toHaveBeenNthCalledWith(2, 2, 2, 'folder/file2.lua')
+    })
+
+    it('should create parent directories before writing files', async () => {
+      const writeTextFile = vi.fn()
+      const createDirectory = vi.fn()
+      const fileList = createMockFolderFileList(['project/src/utils/helper.lua'])
+
+      const promise = processFolderUploadBatch({
+        files: fileList,
+        targetFolderPath: '/workspace',
+        pathExists: () => false,
+        writeTextFile,
+        writeBinaryFile: vi.fn(),
+        createDirectory,
+        cancelledRef: { current: false },
+        onProgress: vi.fn(),
+        onComplete: vi.fn(),
+      })
+
+      await vi.runAllTimersAsync()
+      await promise
+
+      // Should create each directory in the path
+      expect(createDirectory).toHaveBeenCalledWith('/workspace/project')
+      expect(createDirectory).toHaveBeenCalledWith('/workspace/project/src')
+      expect(createDirectory).toHaveBeenCalledWith('/workspace/project/src/utils')
+    })
+
+    it('should stop processing when cancelled', async () => {
+      const onProgress = vi.fn()
+      const onComplete = vi.fn()
+      const writeTextFile = vi.fn()
+      const cancelledRef = { current: false }
+      const fileList = createMockFolderFileList([
+        'folder/file1.lua',
+        'folder/file2.lua',
+        'folder/file3.lua',
+      ])
+
+      // Cancel after first file
+      writeTextFile.mockImplementation(() => {
+        cancelledRef.current = true
+      })
+
+      const promise = processFolderUploadBatch({
+        files: fileList,
+        targetFolderPath: '/workspace',
+        pathExists: () => false,
+        writeTextFile,
+        writeBinaryFile: vi.fn(),
+        createDirectory: vi.fn(),
+        cancelledRef,
+        onProgress,
+        onComplete,
+      })
+
+      await vi.runAllTimersAsync()
+      await promise
+
+      expect(writeTextFile).toHaveBeenCalledTimes(1)
+      expect(onComplete).toHaveBeenCalledWith({
+        success: 1,
+        failed: 0,
+        cancelled: true,
+      })
+    })
+
+    it('should continue on error and track failures', async () => {
+      const onProgress = vi.fn()
+      const onComplete = vi.fn()
+      const onError = vi.fn()
+      let callCount = 0
+      const writeTextFile = vi.fn(() => {
+        callCount++
+        if (callCount === 2) throw new Error('Write failed')
+      })
+      const fileList = createMockFolderFileList([
+        'folder/file1.lua',
+        'folder/file2.lua',
+        'folder/file3.lua',
+      ])
+
+      const promise = processFolderUploadBatch({
+        files: fileList,
+        targetFolderPath: '/workspace',
+        pathExists: () => false,
+        writeTextFile,
+        writeBinaryFile: vi.fn(),
+        createDirectory: vi.fn(),
+        cancelledRef: { current: false },
+        onProgress,
+        onComplete,
+        onError,
+      })
+
+      await vi.runAllTimersAsync()
+      await promise
+
+      expect(onComplete).toHaveBeenCalledWith({
+        success: 2,
+        failed: 1,
+        cancelled: false,
+      })
+      expect(onError).toHaveBeenCalledWith('folder/file2.lua', 'Write failed')
+    })
+
+    it('should handle binary files correctly', async () => {
+      const writeTextFile = vi.fn()
+      const writeBinaryFile = vi.fn()
+      const name = 'image.png'
+      const binaryContent = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
+      const file = {
+        name,
+        webkitRelativePath: 'folder/image.png',
+        arrayBuffer: vi.fn().mockResolvedValue(binaryContent.buffer),
+      } as unknown as File
+      const fileList = {
+        length: 1,
+        item: () => file,
+        [Symbol.iterator]: function* () {
+          yield file
+        },
+      } as unknown as FileList
+
+      const promise = processFolderUploadBatch({
+        files: fileList,
+        targetFolderPath: '/workspace',
+        pathExists: () => false,
+        writeTextFile,
+        writeBinaryFile,
+        createDirectory: vi.fn(),
+        cancelledRef: { current: false },
+        onProgress: vi.fn(),
+        onComplete: vi.fn(),
+      })
+
+      await vi.runAllTimersAsync()
+      await promise
+
+      expect(writeBinaryFile).toHaveBeenCalled()
+      expect(writeTextFile).not.toHaveBeenCalled()
+    })
+
+    it('should report complete results with success and failed counts', async () => {
+      const onComplete = vi.fn()
+      const writeTextFile = vi.fn()
+      const fileList = createMockFolderFileList([
+        'folder/file1.lua',
+        'folder/file2.lua',
+        'folder/file3.lua',
+      ])
+
+      const promise = processFolderUploadBatch({
+        files: fileList,
+        targetFolderPath: '/workspace',
+        pathExists: () => false,
+        writeTextFile,
+        writeBinaryFile: vi.fn(),
+        createDirectory: vi.fn(),
+        cancelledRef: { current: false },
+        onProgress: vi.fn(),
+        onComplete,
+      })
+
+      await vi.runAllTimersAsync()
+      await promise
+
+      expect(onComplete).toHaveBeenCalledWith({
+        success: 3,
+        failed: 0,
+        cancelled: false,
+      })
     })
   })
 })

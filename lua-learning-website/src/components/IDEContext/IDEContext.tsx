@@ -1,3 +1,5 @@
+/* eslint-disable max-lines */
+// TODO: Refactor to reduce file size - extract upload logic to separate hook
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useLuaEngine } from '../../hooks/useLuaEngine'
 import { useFileSystem } from '../../hooks/useFileSystem'
@@ -8,8 +10,14 @@ import type { TabInfo } from '../TabBar'
 import { useToast } from '../Toast'
 import { IDEContext } from './context'
 import { useIDEAutoSave } from './useIDEAutoSave'
-import { processFileUploadBatch, findConflictingFiles } from '../FileExplorer/uploadHandler'
+import {
+  processFileUploadBatch,
+  findConflictingFiles,
+  processFolderUploadBatch,
+  findFolderConflictingFiles,
+} from '../FileExplorer/uploadHandler'
 import { UploadConflictDialog } from '../UploadConflictDialog'
+import { LoadingModal } from '../LoadingModal'
 import type { IDEContextValue, IDEContextProviderProps, ActivityPanelType } from './types'
 
 export function IDEContextProvider({ children, initialCode = '', fileSystem: externalFileSystem, isPathReadOnly }: IDEContextProviderProps) {
@@ -57,6 +65,16 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   const [uploadConflictDialogOpen, setUploadConflictDialogOpen] = useState(false)
   const [conflictingFileNames, setConflictingFileNames] = useState<string[]>([])
   const pendingUploadRef = useRef<{ files: FileList; targetFolderPath: string } | null>(null)
+
+  // Folder upload loading modal state
+  const [folderUploadModalOpen, setFolderUploadModalOpen] = useState(false)
+  const [folderUploadProgress, setFolderUploadProgress] = useState<{
+    current: number
+    total: number
+    currentFile?: string
+  } | undefined>(undefined)
+  const folderUploadCancelledRef = useRef(false)
+  const pendingFolderUploadRef = useRef<{ files: FileList; targetFolderPath: string } | null>(null)
 
   const activeTab = tabBar.activeTab
   const tabs = tabBar.tabs
@@ -372,8 +390,61 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     })
   }, [filesystem, showError])
 
-  // Handle conflict dialog confirm - proceed with upload
+  // Execute the actual folder upload batch with progress tracking
+  const executeFolderUploadBatch = useCallback(async (files: FileList, targetFolderPath: string) => {
+    // Reset cancel flag and show modal
+    folderUploadCancelledRef.current = false
+    setFolderUploadProgress({ current: 0, total: files.length })
+    setFolderUploadModalOpen(true)
+
+    await processFolderUploadBatch({
+      files,
+      targetFolderPath,
+      pathExists: (path) => filesystem.exists(path),
+      writeTextFile: (path, content) => filesystem.writeFile(path, content),
+      writeBinaryFile: (path, content) => filesystem.writeBinaryFile(path, content),
+      createDirectory: (path) => filesystem.createFolder(path),
+      cancelledRef: folderUploadCancelledRef,
+      onProgress: (current, total, currentFile) => {
+        setFolderUploadProgress({ current, total, currentFile })
+      },
+      onComplete: async ({ success, failed, cancelled }) => {
+        // Close modal
+        setFolderUploadModalOpen(false)
+        setFolderUploadProgress(undefined)
+
+        // Flush to ensure files are persisted to disk
+        await filesystem.flush()
+        setFileTreeVersion(v => v + 1)
+
+        // Show completion toast
+        if (cancelled) {
+          showToast({ message: `Upload cancelled. ${success} files uploaded.`, type: 'info' })
+        } else if (failed > 0) {
+          showToast({ message: `Upload complete. ${success} succeeded, ${failed} failed.`, type: 'error' })
+        } else {
+          showToast({ message: `Successfully uploaded ${success} files.`, type: 'success' })
+        }
+      },
+      onError: (fileName, error) => {
+        console.error(`Failed to upload ${fileName}: ${error}`)
+      },
+    })
+  }, [filesystem, showToast])
+
+  // Handle conflict dialog confirm - proceed with upload (file or folder)
   const handleUploadConflictConfirm = useCallback(async () => {
+    // Check for pending folder upload first
+    const pendingFolder = pendingFolderUploadRef.current
+    if (pendingFolder) {
+      setUploadConflictDialogOpen(false)
+      setConflictingFileNames([])
+      await executeFolderUploadBatch(pendingFolder.files, pendingFolder.targetFolderPath)
+      pendingFolderUploadRef.current = null
+      return
+    }
+
+    // Check for pending file upload
     const pending = pendingUploadRef.current
     if (pending) {
       setUploadConflictDialogOpen(false)
@@ -381,13 +452,14 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
       await executeUploadBatch(pending.files, pending.targetFolderPath)
       pendingUploadRef.current = null
     }
-  }, [executeUploadBatch])
+  }, [executeUploadBatch, executeFolderUploadBatch])
 
-  // Handle conflict dialog cancel - abort upload
+  // Handle conflict dialog cancel - abort upload (file or folder)
   const handleUploadConflictCancel = useCallback(() => {
     setUploadConflictDialogOpen(false)
     setConflictingFileNames([])
     pendingUploadRef.current = null
+    pendingFolderUploadRef.current = null
   }, [])
 
   // Upload files to a target folder
@@ -405,6 +477,27 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
       await executeUploadBatch(files, targetFolderPath)
     }
   }, [filesystem, executeUploadBatch])
+
+  // Handle cancel button on loading modal
+  const handleFolderUploadCancel = useCallback(() => {
+    folderUploadCancelledRef.current = true
+  }, [])
+
+  // Upload folder to a target folder
+  const uploadFolder = useCallback(async (files: FileList, targetFolderPath: string) => {
+    // Check for conflicts first
+    const conflicts = findFolderConflictingFiles(files, targetFolderPath, (path) => filesystem.exists(path))
+
+    if (conflicts.length > 0) {
+      // Store pending upload and show conflict dialog
+      pendingFolderUploadRef.current = { files, targetFolderPath }
+      setConflictingFileNames(conflicts)
+      setUploadConflictDialogOpen(true)
+    } else {
+      // No conflicts - proceed directly
+      await executeFolderUploadBatch(files, targetFolderPath)
+    }
+  }, [filesystem, executeFolderUploadBatch])
 
   const toggleTerminal = useCallback(() => { setTerminalVisible(prev => !prev) }, [])
   const toggleSidebar = useCallback(() => { setSidebarVisible(prev => !prev) }, [])
@@ -533,6 +626,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     recentFiles, clearRecentFiles, fileSystem: filesystem,
     autoSaveEnabled, toggleAutoSave, saveAllFiles,
     uploadFiles,
+    uploadFolder,
   }), [
     engine, code, setCode, fileName, isDirty,
     activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
@@ -542,7 +636,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,
     clearPendingNewFolder, recentFiles, clearRecentFiles, filesystem,
-    autoSaveEnabled, toggleAutoSave, saveAllFiles, uploadFiles,
+    autoSaveEnabled, toggleAutoSave, saveAllFiles, uploadFiles, uploadFolder,
   ])
 
   return (
@@ -553,6 +647,12 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
         conflictingFiles={conflictingFileNames}
         onConfirm={handleUploadConflictConfirm}
         onCancel={handleUploadConflictCancel}
+      />
+      <LoadingModal
+        isOpen={folderUploadModalOpen}
+        title="Uploading Folder"
+        progress={folderUploadProgress}
+        onCancel={handleFolderUploadCancel}
       />
     </IDEContext.Provider>
   )
