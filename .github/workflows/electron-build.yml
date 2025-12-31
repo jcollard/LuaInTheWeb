@@ -32,11 +32,19 @@ jobs:
         run: npm run build:win
         working-directory: packages/electron-wrapper
 
+      - name: Rename artifact
+        run: |
+          cd packages/electron-wrapper/dist
+          for file in *.exe; do
+            mv "$file" "AdventuresInLua-portable-windows.exe"
+          done
+        shell: bash
+
       - name: Upload Windows portable artifact
         uses: actions/upload-artifact@v4
         with:
-          name: electron-windows-portable
-          path: packages/electron-wrapper/dist/*.exe
+          name: AdventuresInLua-portable-windows
+          path: packages/electron-wrapper/dist/AdventuresInLua-portable-windows.exe
           retention-days: 30
 
   build-macos:
@@ -61,11 +69,18 @@ jobs:
         run: npm run build:mac -- --${{ matrix.arch }}
         working-directory: packages/electron-wrapper
 
+      - name: Rename artifact
+        run: |
+          cd packages/electron-wrapper/dist
+          for file in *.zip; do
+            mv "$file" "AdventuresInLua-portable-macos-${{ matrix.arch }}.zip"
+          done
+
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: electron-macos-${{ matrix.arch }}
-          path: packages/electron-wrapper/dist/*.zip
+          name: AdventuresInLua-portable-macos-${{ matrix.arch }}
+          path: packages/electron-wrapper/dist/AdventuresInLua-portable-macos-${{ matrix.arch }}.zip
           retention-days: 30
 
   build-linux:
@@ -87,9 +102,68 @@ jobs:
         run: npm run build:linux
         working-directory: packages/electron-wrapper
 
+      - name: Rename artifact
+        run: |
+          cd packages/electron-wrapper/dist
+          for file in *.AppImage; do
+            mv "$file" "AdventuresInLua-portable-linux.AppImage"
+          done
+
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
-          name: electron-linux-appimage
-          path: packages/electron-wrapper/dist/*.AppImage
+          name: AdventuresInLua-portable-linux
+          path: packages/electron-wrapper/dist/AdventuresInLua-portable-linux.AppImage
           retention-days: 30
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version from package.json
+        id: version
+        run: |
+          VERSION=$(node -p "require('./packages/electron-wrapper/package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=desktop-v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f
+
+      - name: Create or update release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Adventures in Lua Desktop ${{ steps.version.outputs.version }}
+          body: |
+            ## Adventures in Lua Desktop App
+
+            Portable desktop application for Adventures in Lua. No installation required.
+
+            ### Downloads
+            - **Windows**: `AdventuresInLua-portable-windows.exe` - Run directly, no install needed
+            - **macOS (Intel)**: `AdventuresInLua-portable-macos-x64.zip` - Extract and run
+            - **macOS (Apple Silicon)**: `AdventuresInLua-portable-macos-arm64.zip` - Extract and run
+            - **Linux**: `AdventuresInLua-portable-linux.AppImage` - Make executable and run
+
+            ### Notes
+            - This app wraps the hosted web application at https://adventuresinlua.web.app
+            - Web updates are automatic - no need to download new versions for content updates
+          files: |
+            artifacts/AdventuresInLua-portable-windows/AdventuresInLua-portable-windows.exe
+            artifacts/AdventuresInLua-portable-macos-x64/AdventuresInLua-portable-macos-x64.zip
+            artifacts/AdventuresInLua-portable-macos-arm64/AdventuresInLua-portable-macos-arm64.zip
+            artifacts/AdventuresInLua-portable-linux/AdventuresInLua-portable-linux.AppImage
+          draft: false
+          prerelease: false
+          make_latest: true
