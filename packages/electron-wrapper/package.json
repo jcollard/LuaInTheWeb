@@ -19,7 +19,8 @@
   "license": "MIT",
   "devDependencies": {
     "electron": "28.3.3",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "sharp": "^0.34.5"
   },
   "build": {
     "appId": "app.adventuresinlua.desktop",
@@ -34,15 +35,16 @@
     "npmRebuild": false,
     "win": {
       "target": "portable",
-      "signAndEditExecutable": false
+      "signAndEditExecutable": false,
+      "icon": "icons/icon-512.png"
     },
     "mac": {
       "target": "zip",
-      "icon": "icons/icon.png"
+      "icon": "icons/icon-512.png"
     },
     "linux": {
       "target": "AppImage",
-      "icon": "icons/icon.png"
+      "icon": "icons/icon-512.png"
     },
     "portable": {
       "artifactName": "AdventuresInLua-${version}-portable.exe"
