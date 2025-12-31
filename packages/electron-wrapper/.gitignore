@@ -1,0 +1,6 @@
+# Build output
+out/
+dist/
+
+# Dependencies (use root-level node_modules)
+node_modules/
