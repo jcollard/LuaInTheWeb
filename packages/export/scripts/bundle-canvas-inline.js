@@ -3,9 +3,12 @@
  * Bundle the canvas-standalone.ts into a self-contained JavaScript string.
  *
  * This script uses esbuild to:
- * 1. Bundle canvas-standalone.ts with all dependencies (Lua code, audio engine)
+ * 1. Bundle canvas-standalone.ts with all dependencies (Lua code)
  * 2. Output an IIFE that exposes setupCanvasBridge, etc. globally
  * 3. Convert the bundled JS to a TypeScript string export
+ *
+ * Note: Audio is handled separately by AUDIO_INLINE_JS to properly handle
+ * browser autoplay policy via user interaction handlers.
  *
  * Following the pattern established by lua-runtime's bundle-audio-inline.js
  */
@@ -70,6 +73,7 @@ async function bundleCanvasInline() {
           }));
           build.onLoad({ filter: /.*/, namespace: 'lua-runtime-shim' }, () => ({
             // Re-export only what canvas-standalone needs, directly from source files
+            // Note: WebAudioEngine is handled by AUDIO_INLINE_JS separately
             contents: `
               export { canvasLuaCoreCode } from '${join(LUA_RUNTIME_SRC, 'canvasLuaCode/core.ts').replace(/\\/g, '/')}';
               export { canvasLuaPathCode } from '${join(LUA_RUNTIME_SRC, 'canvasLuaCode/path.ts').replace(/\\/g, '/')}';
@@ -77,7 +81,6 @@ async function bundleCanvasInline() {
               export { canvasLuaTextCode } from '${join(LUA_RUNTIME_SRC, 'canvasLuaCode/text.ts').replace(/\\/g, '/')}';
               export { canvasLuaInputCode } from '${join(LUA_RUNTIME_SRC, 'canvasLuaCode/input.ts').replace(/\\/g, '/')}';
               export { canvasLuaAudioCode } from '${join(LUA_RUNTIME_SRC, 'canvasLuaCode/audio.ts').replace(/\\/g, '/')}';
-              export { WebAudioEngine } from '${join(LUA_RUNTIME_SRC, 'audio/WebAudioEngine.ts').replace(/\\/g, '/')}';
             `,
             loader: 'ts',
             resolveDir: LUA_RUNTIME_SRC,
