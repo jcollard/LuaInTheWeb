@@ -30,7 +30,8 @@
     },
     "files": [
       "main.js",
-      "preload.js"
+      "preload.js",
+      "icons/**/*"
     ],
     "npmRebuild": false,
     "win": {
