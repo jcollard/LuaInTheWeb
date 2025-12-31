@@ -22,6 +22,9 @@ const ENTRY_FILE = join(__dirname, '..', 'src', 'runtime', 'canvas-inline-entry.
 const OUTPUT_DIR = join(__dirname, '..', 'src', 'runtime');
 const OUTPUT_TS = join(OUTPUT_DIR, 'canvas-inline.generated.ts');
 
+// Path to lua-runtime source for direct imports (bypasses package exports)
+const LUA_RUNTIME_SRC = join(__dirname, '..', '..', 'lua-runtime', 'src');
+
 async function bundleCanvasInline() {
   console.log('Bundling canvas-inline-entry.ts...');
 
@@ -36,9 +39,52 @@ async function bundleCanvasInline() {
     write: false, // Don't write to disk, capture output
     target: 'es2020',
     platform: 'browser',
-    // Externalize wasmoon - it's loaded separately via WASMOON_INLINE_JS
-    // The LuaEngine type is used but the actual wasmoon module is provided at runtime
-    external: ['wasmoon'],
+    plugins: [
+      {
+        // Plugin to handle wasmoon - we only use types from it, not runtime code
+        // The actual LuaEngine is provided by WASMOON_INLINE_JS at runtime
+        name: 'wasmoon-types-only',
+        setup(build) {
+          // Intercept imports of wasmoon and return empty module
+          // since we only use `import type` which is erased at compile time
+          build.onResolve({ filter: /^wasmoon$/ }, () => ({
+            path: 'wasmoon',
+            namespace: 'wasmoon-stub',
+          }));
+          build.onLoad({ filter: /.*/, namespace: 'wasmoon-stub' }, () => ({
+            contents: 'export default {}; export const LuaEngine = {};',
+            loader: 'js',
+          }));
+        },
+      },
+      {
+        // Plugin to resolve lua-runtime imports to specific source files
+        // This avoids pulling in LuaEngineFactory which imports wasmoon
+        name: 'lua-runtime-resolver',
+        setup(build) {
+          // Intercept the main lua-runtime import and redirect to a shim
+          // that only exports what canvas-standalone actually needs
+          build.onResolve({ filter: /^@lua-learning\/lua-runtime$/ }, () => ({
+            path: '@lua-learning/lua-runtime',
+            namespace: 'lua-runtime-shim',
+          }));
+          build.onLoad({ filter: /.*/, namespace: 'lua-runtime-shim' }, () => ({
+            // Re-export only what canvas-standalone needs, directly from source files
+            contents: `
+              export { canvasLuaCoreCode } from '${join(LUA_RUNTIME_SRC, 'canvasLuaCode/core.ts').replace(/\\/g, '/')}';
+              export { canvasLuaPathCode } from '${join(LUA_RUNTIME_SRC, 'canvasLuaCode/path.ts').replace(/\\/g, '/')}';
+              export { canvasLuaStylingCode } from '${join(LUA_RUNTIME_SRC, 'canvasLuaCode/styling.ts').replace(/\\/g, '/')}';
+              export { canvasLuaTextCode } from '${join(LUA_RUNTIME_SRC, 'canvasLuaCode/text.ts').replace(/\\/g, '/')}';
+              export { canvasLuaInputCode } from '${join(LUA_RUNTIME_SRC, 'canvasLuaCode/input.ts').replace(/\\/g, '/')}';
+              export { canvasLuaAudioCode } from '${join(LUA_RUNTIME_SRC, 'canvasLuaCode/audio.ts').replace(/\\/g, '/')}';
+              export { WebAudioEngine } from '${join(LUA_RUNTIME_SRC, 'audio/WebAudioEngine.ts').replace(/\\/g, '/')}';
+            `,
+            loader: 'ts',
+            resolveDir: LUA_RUNTIME_SRC,
+          }));
+        },
+      },
+    ],
   });
 
   if (result.outputFiles.length === 0) {
