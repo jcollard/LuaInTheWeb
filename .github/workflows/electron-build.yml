@@ -13,6 +13,32 @@ on:
       - '.github/workflows/electron-build.yml'
 
 jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: packages/electron-wrapper
+
+      - name: Build portable exe for Windows
+        run: npm run build:win
+        working-directory: packages/electron-wrapper
+
+      - name: Upload Windows portable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-windows-portable
+          path: packages/electron-wrapper/dist/*.exe
+          retention-days: 30
+
   build-macos:
     runs-on: macos-latest
     strategy:
@@ -32,41 +58,15 @@ jobs:
         working-directory: packages/electron-wrapper
 
       - name: Build for macOS ${{ matrix.arch }}
-        run: npm run make -- --arch=${{ matrix.arch }}
+        run: npm run build:mac -- --${{ matrix.arch }}
         working-directory: packages/electron-wrapper
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: electron-macos-${{ matrix.arch }}
-          path: packages/electron-wrapper/out/make/**/*
-          retention-days: 7
-
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-        working-directory: packages/electron-wrapper
-
-      - name: Build for Windows
-        run: npm run make
-        working-directory: packages/electron-wrapper
-
-      - name: Upload Windows artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: electron-windows
-          path: packages/electron-wrapper/out/make/**/*
-          retention-days: 7
+          path: packages/electron-wrapper/dist/*.zip
+          retention-days: 30
 
   build-linux:
     runs-on: ubuntu-latest
@@ -83,13 +83,13 @@ jobs:
         run: npm ci
         working-directory: packages/electron-wrapper
 
-      - name: Build for Linux
-        run: npm run make
+      - name: Build AppImage for Linux
+        run: npm run build:linux
         working-directory: packages/electron-wrapper
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
-          name: electron-linux
-          path: packages/electron-wrapper/out/make/**/*
-          retention-days: 7
+          name: electron-linux-appimage
+          path: packages/electron-wrapper/dist/*.AppImage
+          retention-days: 30

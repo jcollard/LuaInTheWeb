@@ -31,22 +31,28 @@ This launches the Electron app pointing to the production hosted URL.
 ### Build for distribution
 
 ```bash
-# Package the app (without creating installers)
-npm run package
+# Build portable Windows exe (no installation required)
+npm run build:win
 
-# Create platform-specific installers
-npm run make
+# Build macOS zip
+npm run build:mac
+
+# Build Linux AppImage
+npm run build:linux
+
+# Build all platforms
+npm run build
 ```
 
-Build artifacts are output to the `out/` directory.
+Build artifacts are output to the `dist/` directory.
 
 ## Platform Support
 
 | Platform | Format | Notes |
 |----------|--------|-------|
-| Windows | Squirrel (.exe) | Standard Windows installer |
-| macOS | DMG, ZIP | Supports x64 and arm64 |
-| Linux | ZIP | Portable archive |
+| Windows | Portable (.exe) | Single exe, no installation needed |
+| macOS | ZIP | Supports x64 and arm64 |
+| Linux | AppImage | Portable, no installation needed |
 
 ## Project Structure
 
@@ -54,9 +60,8 @@ Build artifacts are output to the `out/` directory.
 packages/electron-wrapper/
 ├── main.js           # Main process - window creation, URL loading
 ├── preload.js        # Preload script (placeholder for future OAuth)
-├── forge.config.js   # Electron Forge build configuration
-├── icons/            # App icons (icns, ico, png)
-└── package.json      # Dependencies and scripts
+├── icons/            # App icons (ico, png)
+└── package.json      # Dependencies, scripts, and electron-builder config
 ```
 
 ## Security
@@ -68,7 +73,6 @@ packages/electron-wrapper/
 
 ## Future Enhancements
 
-- Custom app icons
 - Google OAuth integration (via preload script)
 - Code signing for macOS and Windows
 - Auto-update functionality
