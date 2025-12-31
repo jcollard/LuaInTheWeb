@@ -14,7 +14,6 @@ import {
   canvasLuaTextCode,
   canvasLuaInputCode,
   canvasLuaAudioCode,
-  WebAudioEngine,
 } from '@lua-learning/lua-runtime'
 
 import type { LuaEngine } from 'wasmoon'
@@ -51,8 +50,8 @@ export interface CanvasRuntimeState {
   currentFontSize: number
   currentFontFamily: string
   stopResolve: (() => void) | null
-  // Audio state
-  audioEngine: WebAudioEngine
+  // Audio state - set by AUDIO_INLINE_JS's setupAudioBridge
+  audioEngine?: { dispose: () => void }
   audioAssets: Map<string, { name: string; filename: string; type: 'sound' | 'music' }>
 }
 
@@ -84,7 +83,7 @@ export function createCanvasRuntimeState(
     currentFontSize: 16,
     currentFontFamily: 'monospace',
     stopResolve: null,
-    audioEngine: new WebAudioEngine(),
+    // audioEngine is set by AUDIO_INLINE_JS's setupAudioBridge
     audioAssets: new Map(),
   }
 }
@@ -106,8 +105,12 @@ export function setupInputListeners(state: CanvasRuntimeState): () => void {
 
   const handleMouseMove = (e: MouseEvent) => {
     const rect = state.canvas.getBoundingClientRect()
-    state.mouseX = e.clientX - rect.left
-    state.mouseY = e.clientY - rect.top
+    // Get position relative to displayed element
+    const displayX = e.clientX - rect.left
+    const displayY = e.clientY - rect.top
+    // Scale from display coords to canvas logical coords (handles scaled canvas)
+    state.mouseX = displayX * (state.canvas.width / rect.width)
+    state.mouseY = displayY * (state.canvas.height / rect.height)
   }
 
   const handleMouseDown = (e: MouseEvent) => {
@@ -208,13 +211,15 @@ export function setupCanvasBridge(
 ): void {
   const { ctx, canvas } = state
 
+  // Set default font and text baseline (matching CanvasRenderer constructor behavior)
+  ctx.font = `${state.currentFontSize}px ${state.currentFontFamily}`
+  ctx.textBaseline = 'top'
+
   // Lifecycle functions
   engine.global.set('__canvas_is_active', () => state.isRunning)
 
   engine.global.set('__canvas_start', async () => {
-    // Initialize audio engine
-    await state.audioEngine.initialize()
-
+    // Audio is initialized by AUDIO_INLINE_JS via user interaction handlers
     // Return a Promise that resolves when canvas.stop() is called
     return new Promise<void>((resolve) => {
       state.isRunning = true
@@ -347,7 +352,7 @@ export function setupCanvasBridge(
         const family = fontFamily ?? state.currentFontFamily
         ctx.font = `${size}px ${family}`
       }
-      ctx.textBaseline = 'top'
+      // Note: textBaseline is set via __canvas_setTextBaseline (default 'top' in init)
       if (maxWidth) {
         ctx.fillText(text, x, y, maxWidth)
       } else {
@@ -909,93 +914,7 @@ export function setupCanvasBridge(
     }
   )
 
-  // Helper to extract audio name from handle or string
-  const extractAudioName = (nameOrHandle: unknown): string => {
-    if (typeof nameOrHandle === 'string') {
-      return nameOrHandle
-    }
-    if (
-      typeof nameOrHandle === 'object' &&
-      nameOrHandle !== null &&
-      '_name' in nameOrHandle
-    ) {
-      return (nameOrHandle as { _name: string })._name
-    }
-    throw new Error('Invalid audio asset reference')
-  }
-
-  // Sound effect functions
-  engine.global.set(
-    '__audio_playSound',
-    (nameOrHandle: unknown, volume?: number | null) => {
-      const name = extractAudioName(nameOrHandle)
-      state.audioEngine.playSound(name, volume ?? 1)
-    }
-  )
-
-  engine.global.set('__audio_getSoundDuration', (nameOrHandle: unknown) => {
-    const name = extractAudioName(nameOrHandle)
-    return state.audioEngine.getSoundDuration(name)
-  })
-
-  // Music functions
-  engine.global.set(
-    '__audio_playMusic',
-    (nameOrHandle: unknown, volume?: number | null, loop?: boolean | null) => {
-      const name = extractAudioName(nameOrHandle)
-      state.audioEngine.playMusic(name, {
-        volume: volume ?? 1,
-        loop: loop ?? false,
-      })
-    }
-  )
-
-  engine.global.set('__audio_stopMusic', () => {
-    state.audioEngine.stopMusic()
-  })
-
-  engine.global.set('__audio_pauseMusic', () => {
-    state.audioEngine.pauseMusic()
-  })
-
-  engine.global.set('__audio_resumeMusic', () => {
-    state.audioEngine.resumeMusic()
-  })
-
-  engine.global.set('__audio_setMusicVolume', (volume: number) => {
-    state.audioEngine.setMusicVolume(volume)
-  })
-
-  engine.global.set('__audio_isMusicPlaying', () => {
-    return state.audioEngine.isMusicPlaying()
-  })
-
-  engine.global.set('__audio_getMusicTime', () => {
-    return state.audioEngine.getMusicTime()
-  })
-
-  engine.global.set('__audio_getMusicDuration', () => {
-    return state.audioEngine.getMusicDuration()
-  })
-
-  // Global audio control
-  engine.global.set('__audio_setMasterVolume', (volume: number) => {
-    state.audioEngine.setMasterVolume(volume)
-  })
-
-  engine.global.set('__audio_getMasterVolume', () => {
-    return state.audioEngine.getMasterVolume()
-  })
-
-  engine.global.set('__audio_mute', () => {
-    state.audioEngine.mute()
-  })
-
-  engine.global.set('__audio_unmute', () => {
-    state.audioEngine.unmute()
-  })
-
-  engine.global.set('__audio_isMuted', () => {
-    return state.audioEngine.isMuted()
-  })
+  // Note: Audio playback functions (__audio_playSound, __audio_playMusic, etc.)
+  // are provided by AUDIO_INLINE_JS via setupAudioBridge, which handles
+  // browser autoplay policy with user interaction handlers.
 }

@@ -15,7 +15,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "npm run build:canvas && tsc",
+    "build:canvas": "node scripts/bundle-canvas-inline.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -42,6 +43,7 @@
     "@stryker-mutator/core": "^9.0.2",
     "@stryker-mutator/typescript-checker": "^9.0.2",
     "@stryker-mutator/vitest-runner": "^9.0.2",
+    "esbuild": "^0.25.4",
     "typescript": "~5.9.3",
     "vitest": "^4.0.15"
   }

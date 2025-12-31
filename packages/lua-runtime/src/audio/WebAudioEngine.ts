@@ -61,6 +61,17 @@ interface MusicState {
 }
 
 /**
+ * Pending channel operation for deferred execution.
+ * Used when channel operations are called before audio is initialized.
+ */
+interface PendingChannelOp {
+  type: 'create' | 'setParent' | 'setVolume';
+  name: string;
+  parentName?: string | null;
+  volume?: number;
+}
+
+/**
  * Web Audio API implementation of IAudioEngine.
  * Provides low-latency audio playback for games.
  */
@@ -75,6 +86,8 @@ export class WebAudioEngine implements IAudioEngine {
   private initialized = false;
   /** Promise for in-progress initialization to prevent race conditions */
   private initializePromise: Promise<void> | null = null;
+  /** Pending channel operations to replay after initialization */
+  private pendingChannelOps: PendingChannelOp[] = [];
 
   /**
    * Initialize the audio engine.
@@ -119,6 +132,25 @@ export class WebAudioEngine implements IAudioEngine {
     }
 
     this.initialized = true;
+
+    // Replay any pending channel operations that were queued before initialization
+    this.replayPendingChannelOps();
+  }
+
+  /**
+   * Replay pending channel operations that were queued before audio was initialized.
+   */
+  private replayPendingChannelOps(): void {
+    for (const op of this.pendingChannelOps) {
+      if (op.type === 'create') {
+        this.createChannel(op.name, op.parentName ?? undefined);
+      } else if (op.type === 'setParent') {
+        this.setChannelParent(op.name, op.parentName ?? null);
+      } else if (op.type === 'setVolume' && op.volume !== undefined) {
+        this.setChannelVolume(op.name, op.volume);
+      }
+    }
+    this.pendingChannelOps = [];
   }
 
   /**
@@ -471,6 +503,12 @@ export class WebAudioEngine implements IAudioEngine {
   // --- Channel API ---
 
   createChannel(name: string, parentName?: string): void {
+    // If audio not ready, queue the operation for later
+    if (!this.initialized) {
+      this.pendingChannelOps.push({ type: 'create', name, parentName });
+      return;
+    }
+
     if (!this.audioContext || !this.masterGainNode || this.channels.has(name)) {
       return;
     }
@@ -506,6 +544,12 @@ export class WebAudioEngine implements IAudioEngine {
   }
 
   setChannelParent(name: string, parentName: string | null): void {
+    // If audio not ready, queue the operation for later
+    if (!this.initialized) {
+      this.pendingChannelOps.push({ type: 'setParent', name, parentName });
+      return;
+    }
+
     const state = this.channels.get(name);
     if (!state || !this.masterGainNode) return;
 
@@ -672,6 +716,12 @@ export class WebAudioEngine implements IAudioEngine {
   }
 
   setChannelVolume(channel: string, volume: number): void {
+    // If audio not ready, queue the operation for later
+    if (!this.initialized) {
+      this.pendingChannelOps.push({ type: 'setVolume', name: channel, volume });
+      return;
+    }
+
     const state = this.channels.get(channel);
     if (!state) return;
 
