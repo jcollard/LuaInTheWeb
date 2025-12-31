@@ -106,8 +106,12 @@ export function setupInputListeners(state: CanvasRuntimeState): () => void {
 
   const handleMouseMove = (e: MouseEvent) => {
     const rect = state.canvas.getBoundingClientRect()
-    state.mouseX = e.clientX - rect.left
-    state.mouseY = e.clientY - rect.top
+    // Get position relative to displayed element
+    const displayX = e.clientX - rect.left
+    const displayY = e.clientY - rect.top
+    // Scale from display coords to canvas logical coords (handles scaled canvas)
+    state.mouseX = displayX * (state.canvas.width / rect.width)
+    state.mouseY = displayY * (state.canvas.height / rect.height)
   }
 
   const handleMouseDown = (e: MouseEvent) => {
@@ -207,6 +211,10 @@ export function setupCanvasBridge(
   state: CanvasRuntimeState
 ): void {
   const { ctx, canvas } = state
+
+  // Set default font and text baseline (matching CanvasRenderer constructor behavior)
+  ctx.font = `${state.currentFontSize}px ${state.currentFontFamily}`
+  ctx.textBaseline = 'top'
 
   // Lifecycle functions
   engine.global.set('__canvas_is_active', () => state.isRunning)
@@ -347,7 +355,7 @@ export function setupCanvasBridge(
         const family = fontFamily ?? state.currentFontFamily
         ctx.font = `${size}px ${family}`
       }
-      ctx.textBaseline = 'top'
+      // Note: textBaseline is set via __canvas_setTextBaseline (default 'top' in init)
       if (maxWidth) {
         ctx.fillText(text, x, y, maxWidth)
       } else {
