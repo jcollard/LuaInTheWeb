@@ -1,7 +1,8 @@
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useLuaEngine } from '../../hooks/useLuaEngine'
 import { useFileSystem } from '../../hooks/useFileSystem'
 import { useRecentFiles } from '../../hooks/useRecentFiles'
+import { useTabEditorManager } from '../../hooks/useTabEditorManager'
 import { getFileName, getParentPath } from '../../hooks/fileSystemUtils'
 import { useTabBar, useTabBarPersistence } from '../TabBar'
 import type { TabInfo } from '../TabBar'
@@ -14,7 +15,7 @@ import { UploadConflictDialog } from '../UploadConflictDialog'
 import { LoadingModal } from '../LoadingModal'
 import type { IDEContextValue, IDEContextProviderProps, ActivityPanelType } from './types'
 
-export function IDEContextProvider({ children, initialCode = '', fileSystem: externalFileSystem, isPathReadOnly }: IDEContextProviderProps) {
+export function IDEContextProvider({ children, initialCode: _initialCode = '', fileSystem: externalFileSystem, isPathReadOnly }: IDEContextProviderProps) {
   const internalFilesystem = useFileSystem()
   // Use external filesystem if provided (for workspace integration), otherwise use internal
   const filesystem = externalFileSystem ?? internalFilesystem
@@ -44,9 +45,6 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     showToast({ message, type: 'error' })
   }, [showToast])
 
-  const [code, setCodeState] = useState(initialCode)
-  const [originalContent, setOriginalContent] = useState<Map<string, string>>(new Map())
-  const [unsavedContent, setUnsavedContent] = useState<Map<string, string>>(new Map())
   const [pendingNewFilePath, setPendingNewFilePath] = useState<string | null>(null)
   const [pendingNewFolderPath, setPendingNewFolderPath] = useState<string | null>(null)
   const [activePanel, setActivePanel] = useState<ActivityPanelType>('explorer')
@@ -70,11 +68,19 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   const activeTabType = tabBar.getActiveTabType()
   const fileName = activeTab ? getFileName(activeTab) : null
 
-  const isDirty = useMemo(() => {
-    if (!activeTab) return code !== initialCode
-    const original = originalContent.get(activeTab)
-    return original !== undefined && code !== original
-  }, [activeTab, code, initialCode, originalContent])
+  // Per-tab editor content management
+  const tabEditorManager = useTabEditorManager({
+    tabs,
+    activeTab,
+    filesystem,
+    isPathReadOnly,
+    onDirtyChange: tabBar.setDirty,
+  })
+
+  // Get code from tabEditorManager (for backward compatibility with engine, format, etc.)
+  const code = tabEditorManager.getActiveContent()
+
+  const isDirty = activeTab ? tabEditorManager.isDirty(activeTab) : false
 
   const fileReader = useCallback((path: string): string | null => filesystem.readFile(path), [filesystem])
 
@@ -83,27 +89,10 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   })
 
   const setCode = useCallback((newCode: string) => {
-    setCodeState(newCode)
     if (activeTab) {
-      const original = originalContent.get(activeTab)
-      const isDirtyNow = original !== undefined && newCode !== original
-      tabBar.setDirty(activeTab, isDirtyNow)
-      if (isDirtyNow) {
-        setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, newCode); return next })
-      } else {
-        setUnsavedContent(prev => { if (prev.has(activeTab)) { const next = new Map(prev); next.delete(activeTab); return next } return prev })
-      }
+      tabEditorManager.updateContent(activeTab, newCode)
     }
-  }, [activeTab, originalContent, tabBar])
-
-  const loadContentForPath = useCallback((path: string) => {
-    const savedUnsaved = unsavedContent.get(path)
-    if (savedUnsaved !== undefined) { setCodeState(savedUnsaved) }
-    else { const content = filesystem.readFile(path); if (content !== null) setCodeState(content) }
-  }, [filesystem, unsavedContent])
-
-  // Track if we've loaded the initial content for a restored active tab
-  const initialContentLoadedRef = useRef(false)
+  }, [activeTab, tabEditorManager])
 
   const openFile = useCallback((path: string) => {
     const existingTab = tabBar.tabs.find(t => t.path === path)
@@ -112,40 +101,32 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
       if (existingTab.type === 'markdown' || existingTab.isPreview) {
         tabBar.convertToFileTab(path)
       }
-      if (activeTab && activeTab !== path && code !== originalContent.get(activeTab)) {
-        setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
-      }
-      tabBar.selectTab(path); loadContentForPath(path); addRecentFile(path); return
+      tabBar.selectTab(path)
+      addRecentFile(path)
+      return
     }
-    if (activeTab && code !== originalContent.get(activeTab)) {
-      setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
-    }
+    // Check if file exists before opening
     const content = filesystem.readFile(path)
     if (content !== null) {
-      setCodeState(content)
-      setOriginalContent(prev => { const next = new Map(prev); next.set(path, content); return next })
-      tabBar.openTab(path, getFileName(path)); addRecentFile(path)
+      tabBar.openTab(path, getFileName(path))
+      addRecentFile(path)
     }
-  }, [activeTab, addRecentFile, code, filesystem, loadContentForPath, originalContent, tabBar])
+  }, [addRecentFile, filesystem, tabBar])
 
   const openPreviewFile = useCallback((path: string) => {
     const existingTab = tabBar.tabs.find(t => t.path === path)
     if (existingTab) {
-      if (activeTab && activeTab !== path && code !== originalContent.get(activeTab)) {
-        setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
-      }
-      tabBar.selectTab(path); loadContentForPath(path); addRecentFile(path); return
+      tabBar.selectTab(path)
+      addRecentFile(path)
+      return
     }
-    if (activeTab && code !== originalContent.get(activeTab)) {
-      setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
-    }
+    // Check if file exists before opening
     const content = filesystem.readFile(path)
     if (content !== null) {
-      setCodeState(content)
-      setOriginalContent(prev => { const next = new Map(prev); next.set(path, content); return next })
-      tabBar.openPreviewTab(path, getFileName(path)); addRecentFile(path)
+      tabBar.openPreviewTab(path, getFileName(path))
+      addRecentFile(path)
     }
-  }, [activeTab, addRecentFile, code, filesystem, loadContentForPath, originalContent, tabBar])
+  }, [addRecentFile, filesystem, tabBar])
 
   const makeTabPermanent = useCallback((path: string) => {
     tabBar.makeTabPermanent(path)
@@ -158,82 +139,60 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
         showError('This file is read-only and cannot be saved')
         return
       }
-      filesystem.writeFile(activeTab, code)
-      setOriginalContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
-      setUnsavedContent(prev => { if (prev.has(activeTab)) { const next = new Map(prev); next.delete(activeTab); return next } return prev })
-      tabBar.setDirty(activeTab, false)
+      tabEditorManager.saveTab(activeTab)
     }
-  }, [activeTab, code, filesystem, isPathReadOnly, showError, tabBar])
+  }, [activeTab, isPathReadOnly, showError, tabEditorManager])
 
   // Auto-save integration (extracted to separate hook)
   const { autoSaveEnabled, toggleAutoSave, saveAllFiles } = useIDEAutoSave({
-    tabs, activeTab, code, unsavedContent, isDirty, isPathReadOnly, filesystem,
-    setOriginalContent, setUnsavedContent, setDirty: tabBar.setDirty,
+    tabs, isDirty, tabEditorManager,
   })
 
   const selectTab = useCallback((path: string) => {
-    if (activeTab && code !== originalContent.get(activeTab)) {
-      setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
-    }
-    tabBar.selectTab(path); loadContentForPath(path)
-  }, [activeTab, code, loadContentForPath, originalContent, tabBar])
+    // Just switch tabs - tabEditorManager handles content management
+    tabBar.selectTab(path)
+  }, [tabBar])
 
   const openCanvasTab = useCallback((id: string, name?: string) => {
-    // Save current file content if switching away from a file tab
-    if (activeTab && code !== originalContent.get(activeTab)) {
-      setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
-    }
     tabBar.openCanvasTab(id, name)
-  }, [activeTab, code, originalContent, tabBar])
+  }, [tabBar])
 
   const openMarkdownPreview = useCallback((path: string) => {
     const existingTab = tabBar.tabs.find(t => t.path === path)
     if (existingTab) {
-      if (activeTab && activeTab !== path && code !== originalContent.get(activeTab)) {
-        setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
-      }
       // Convert file tab to markdown preview if it's currently in edit mode
       if (existingTab.type === 'file') {
         tabBar.convertToMarkdownTab(path)
       }
-      tabBar.selectTab(path); loadContentForPath(path); addRecentFile(path); return
+      tabBar.selectTab(path)
+      addRecentFile(path)
+      return
     }
-    if (activeTab && code !== originalContent.get(activeTab)) {
-      setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
-    }
+    // Check if file exists before opening
     const content = filesystem.readFile(path)
     if (content !== null) {
-      setCodeState(content)
-      setOriginalContent(prev => { const next = new Map(prev); next.set(path, content); return next })
-      tabBar.openMarkdownPreviewTab(path, getFileName(path)); addRecentFile(path)
+      tabBar.openMarkdownPreviewTab(path, getFileName(path))
+      addRecentFile(path)
     }
-  }, [activeTab, addRecentFile, code, filesystem, loadContentForPath, originalContent, tabBar])
+  }, [addRecentFile, filesystem, tabBar])
 
   const openBinaryViewer = useCallback((path: string) => {
     const existingTab = tabBar.tabs.find(t => t.path === path)
     if (existingTab) {
-      if (activeTab && activeTab !== path && code !== originalContent.get(activeTab)) {
-        setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
-      }
-      tabBar.selectTab(path); addRecentFile(path); return
-    }
-    if (activeTab && code !== originalContent.get(activeTab)) {
-      setUnsavedContent(prev => { const next = new Map(prev); next.set(activeTab, code); return next })
+      tabBar.selectTab(path)
+      addRecentFile(path)
+      return
     }
     // Binary files don't load content into code state - the viewer reads directly from filesystem
-    tabBar.openBinaryPreviewTab(path, getFileName(path)); addRecentFile(path)
-  }, [activeTab, addRecentFile, code, originalContent, tabBar])
+    tabBar.openBinaryPreviewTab(path, getFileName(path))
+    addRecentFile(path)
+  }, [addRecentFile, tabBar])
 
   const closeTab = useCallback((path: string) => {
     tabBar.closeTab(path)
-    setOriginalContent(prev => { const next = new Map(prev); next.delete(path); return next })
-    setUnsavedContent(prev => { if (prev.has(path)) { const next = new Map(prev); next.delete(path); return next } return prev })
-    const remainingTabs = tabs.filter(t => t.path !== path)
-    if (remainingTabs.length > 0 && activeTab === path) {
-      const nextTab = remainingTabs[Math.min(tabs.findIndex(t => t.path === path), remainingTabs.length - 1)]
-      loadContentForPath(nextTab.path)
-    } else if (remainingTabs.length === 0) { setCodeState(initialCode) }
-  }, [activeTab, initialCode, loadContentForPath, tabBar, tabs])
+    tabEditorManager.disposeTab(path)
+    // tabEditorManager automatically handles content for the new activeTab
+  }, [tabBar, tabEditorManager])
 
   const createFile = useCallback((path: string, content: string = '') => {
     try { filesystem.createFile(path, content) }
@@ -315,18 +274,13 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
       const tabIndex = tabs.findIndex(t => t.path === oldPath)
       if (tabIndex !== -1) {
         filesystem.renameFile(oldPath, newPath)
-        setOriginalContent(prev => {
-          if (prev.has(oldPath)) {
-            const next = new Map(prev); const origContent = next.get(oldPath)!
-            next.delete(oldPath); next.set(newPath, origContent); return next
-          }
-          return prev
-        })
+        // Dispose old path content - new content will be loaded from filesystem at new path
+        tabEditorManager.disposeTab(oldPath)
         tabBar.renameTab(oldPath, newPath, newName)
       } else { filesystem.renameFile(oldPath, newPath) }
       setFileTreeVersion(v => v + 1)
     } catch (error) { showError(error instanceof Error ? error.message : 'Failed to rename file') }
-  }, [filesystem, showError, tabBar, tabs])
+  }, [filesystem, showError, tabBar, tabEditorManager, tabs])
 
   const renameFolder = useCallback((oldPath: string, newName: string) => {
     const parentPath = getParentPath(oldPath)
@@ -339,13 +293,26 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     catch (error) { showError(error instanceof Error ? error.message : 'Failed to rename folder') }
   }, [filesystem, showError])
 
+  // Handle file/directory moves - updates tabs when files are moved (used by shell mv and drag-drop)
+  const handleShellFileMove = useShellFileMove({ tabs, tabBar, tabEditorManager })
+
   const moveFile = useCallback((sourcePath: string, targetFolderPath: string) => {
     try {
+      // Calculate the new path for tab updates
+      const fileName = sourcePath.split('/').filter(Boolean).pop() || ''
+      const newPath = targetFolderPath === '/' ? `/${fileName}` : `${targetFolderPath}/${fileName}`
+      const isDirectory = filesystem.isDirectory(sourcePath)
+
+      // Move on filesystem
       filesystem.moveFile(sourcePath, targetFolderPath)
+
+      // Update tabs (same as shell mv)
+      handleShellFileMove(sourcePath, newPath, isDirectory)
+
       setFileTreeVersion(v => v + 1)
     }
     catch (error) { showError(error instanceof Error ? error.message : 'Failed to move file') }
-  }, [filesystem, showError])
+  }, [filesystem, handleShellFileMove, showError])
 
   const copyFile = useCallback((sourcePath: string, targetFolderPath: string) => {
     try {
@@ -361,38 +328,14 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
   // Refresh file tree by incrementing version counter (triggers re-render for shell commands)
   const refreshFileTree = useCallback(() => { setFileTreeVersion(v => v + 1) }, [])
 
-  // Handle file/directory moves from shell (mv command) - extracted to separate hook
-  const handleShellFileMove = useShellFileMove({ tabs, tabBar, setOriginalContent, setUnsavedContent })
-
   // File tree is memoized to prevent expensive rebuilds on unrelated re-renders
   // Only recalculate when filesystem.version changes (increments on each filesystem operation)
   // fileTreeVersion is kept for external refresh requests (e.g., shell commands)
   // eslint-disable-next-line react-hooks/exhaustive-deps -- version props are intentional cache-busters
   const fileTree = useMemo(() => filesystem.getTree(), [filesystem, filesystem.version, fileTreeVersion])
 
-  // Load content for the initial active tab when restored from persistence
-  // This runs after the filesystem is ready (when fileTree changes indicate data is loaded)
-  useEffect(() => {
-    // Only run once, and only if we have a persisted active tab that hasn't been loaded yet
-    if (initialContentLoadedRef.current) return
-    if (!activeTab) return
-
-    // Check if this is a file tab that needs content loaded
-    const tab = tabs.find(t => t.path === activeTab)
-    if (!tab || tab.type === 'canvas' || tab.type === 'binary') return
-
-    // Try to load the content - if file doesn't exist yet (async loading), we'll try again
-    const content = filesystem.readFile(activeTab)
-    if (content !== null) {
-      setCodeState(content)
-      setOriginalContent(prev => {
-        const next = new Map(prev)
-        next.set(activeTab, content)
-        return next
-      })
-      initialContentLoadedRef.current = true
-    }
-  }, [activeTab, tabs, filesystem, fileTree]) // fileTree changes when filesystem loads data
+  // Note: Initial content loading for persisted tabs is now handled automatically
+  // by useTabEditorManager when tabs/activeTab change
 
   const pinTab = useCallback((path: string) => { tabBar.pinTab(path) }, [tabBar])
   const unpinTab = useCallback((path: string) => { tabBar.unpinTab(path) }, [tabBar])
@@ -420,6 +363,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     autoSaveEnabled, toggleAutoSave, saveAllFiles,
     uploadFiles: uploadHandler.uploadFiles,
     uploadFolder: uploadHandler.uploadFolder,
+    tabEditorManager,
   }), [
     engine, code, setCode, fileName, isDirty,
     activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
@@ -429,7 +373,7 @@ export function IDEContextProvider({ children, initialCode = '', fileSystem: ext
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,
     clearPendingNewFolder, recentFiles, clearRecentFiles, filesystem,
-    autoSaveEnabled, toggleAutoSave, saveAllFiles, uploadHandler,
+    autoSaveEnabled, toggleAutoSave, saveAllFiles, uploadHandler, tabEditorManager,
   ])
 
   return (

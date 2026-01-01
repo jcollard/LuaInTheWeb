@@ -115,6 +115,17 @@ describe('useIDE', () => {
         saveAllFiles: vi.fn(),
         uploadFiles: vi.fn(),
         uploadFolder: vi.fn(),
+        tabEditorManager: {
+          mountedTabs: [],
+          getContent: vi.fn(() => ''),
+          getActiveContent: vi.fn(() => ''),
+          updateContent: vi.fn(),
+          isDirty: vi.fn(() => false),
+          saveTab: vi.fn(() => true),
+          saveAllTabs: vi.fn(),
+          disposeTab: vi.fn(),
+          refreshFromFilesystem: vi.fn(),
+        },
       }
 
       const wrapper = ({ children }: { children: React.ReactNode }) =>
@@ -206,6 +217,17 @@ describe('useIDE', () => {
         saveAllFiles: vi.fn(),
         uploadFiles: vi.fn(),
         uploadFolder: vi.fn(),
+        tabEditorManager: {
+          mountedTabs: [],
+          getContent: vi.fn(() => ''),
+          getActiveContent: vi.fn(() => ''),
+          updateContent: vi.fn(),
+          isDirty: vi.fn(() => false),
+          saveTab: vi.fn(() => true),
+          saveAllTabs: vi.fn(),
+          disposeTab: vi.fn(),
+          refreshFromFilesystem: vi.fn(),
+        },
       }
 
       const wrapper = ({ children }: { children: React.ReactNode }) =>
