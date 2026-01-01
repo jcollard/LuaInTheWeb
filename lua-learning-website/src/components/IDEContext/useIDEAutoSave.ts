@@ -1,20 +1,12 @@
 import { useCallback, useEffect } from 'react'
 import { useAutoSave } from '../../hooks/useAutoSave'
 import type { TabInfo } from '../TabBar'
-import type { UseFileSystemReturn } from '../../hooks/useFileSystem'
-import type { AdaptedFileSystem } from '../../hooks/compositeFileSystemAdapter'
+import type { UseTabEditorManagerReturn } from '../../hooks/useTabEditorManager'
 
 export interface UseIDEAutoSaveOptions {
   tabs: TabInfo[]
-  activeTab: string | null
-  code: string
-  unsavedContent: Map<string, string>
   isDirty: boolean
-  isPathReadOnly?: (path: string) => boolean
-  filesystem: UseFileSystemReturn | AdaptedFileSystem
-  setOriginalContent: React.Dispatch<React.SetStateAction<Map<string, string>>>
-  setUnsavedContent: React.Dispatch<React.SetStateAction<Map<string, string>>>
-  setDirty: (path: string, isDirty: boolean) => void
+  tabEditorManager: UseTabEditorManagerReturn
 }
 
 export interface UseIDEAutoSaveReturn {
@@ -26,34 +18,20 @@ export interface UseIDEAutoSaveReturn {
 
 /**
  * Hook that provides auto-save functionality for the IDE context.
- * Extracts auto-save logic to keep IDEContextProvider within line limits.
+ * Uses tabEditorManager for save operations.
  */
 export function useIDEAutoSave({
   tabs,
-  activeTab,
-  code,
-  unsavedContent,
   isDirty,
-  isPathReadOnly,
-  filesystem,
-  setOriginalContent,
-  setUnsavedContent,
-  setDirty,
+  tabEditorManager,
 }: UseIDEAutoSaveOptions): UseIDEAutoSaveReturn {
   // Save all dirty files at once
   const saveAllFiles = useCallback(() => {
     const dirtyTabs = tabs.filter(tab => tab.isDirty && tab.type === 'file')
-    for (const tab of dirtyTabs) {
-      if (isPathReadOnly?.(tab.path)) continue
-      const content = tab.path === activeTab ? code : unsavedContent.get(tab.path)
-      if (content !== undefined) {
-        filesystem.writeFile(tab.path, content)
-        setOriginalContent(prev => { const next = new Map(prev); next.set(tab.path, content); return next })
-        setUnsavedContent(prev => { if (prev.has(tab.path)) { const next = new Map(prev); next.delete(tab.path); return next } return prev })
-        setDirty(tab.path, false)
-      }
+    if (dirtyTabs.length > 0) {
+      tabEditorManager.saveAllTabs()
     }
-  }, [activeTab, code, filesystem, isPathReadOnly, tabs, setDirty, unsavedContent, setOriginalContent, setUnsavedContent])
+  }, [tabs, tabEditorManager])
 
   // Auto-save integration
   const { autoSaveEnabled, toggleAutoSave, notifyChange: notifyAutoSave } = useAutoSave({

@@ -4,7 +4,7 @@ import { IDEContextProvider, useIDE } from '../IDEContext'
 import { ActivityBar } from '../ActivityBar'
 import { StatusBar } from '../StatusBar'
 import { SidebarPanel } from '../SidebarPanel'
-import { EditorPanel } from '../EditorPanel'
+import { VirtualizedEditorPanel } from '../EditorPanel'
 import { BottomPanel, type ShellTerminalHandle } from '../BottomPanel'
 import { IDEPanelGroup } from '../IDEPanelGroup'
 import { IDEPanel } from '../IDEPanel'
@@ -77,8 +77,6 @@ function IDELayoutInner({
   const {
     code,
     setCode,
-    fileName,
-    isDirty,
     activePanel,
     setActivePanel,
     sidebarVisible,
@@ -135,10 +133,13 @@ function IDELayoutInner({
     // File upload
     uploadFiles,
     uploadFolder,
+    // Tab editor manager
+    tabEditorManager,
   } = useIDE()
 
-  const [cursorLine, setCursorLine] = useState(1)
-  const [cursorColumn, setCursorColumn] = useState(1)
+  // Cursor position - TODO: expose from VirtualizedEditorPanel when needed
+  const cursorLine = 1
+  const cursorColumn = 1
   const [pendingCloseTabPath, setPendingCloseTabPath] = useState<string | null>(null)
   const [isFormatting, setIsFormatting] = useState(false)
 
@@ -152,7 +153,7 @@ function IDELayoutInner({
   })
 
   // Editor extensions (diagnostics + hover documentation)
-  const { handleEditorReady } = useEditorExtensions({
+  const { handleEditorReady: handleEditorReadyWithPath } = useEditorExtensions({
     code,
     fileSystem: compositeFileSystem,
     currentFilePath: activeTab,
@@ -451,21 +452,13 @@ function IDELayoutInner({
                       {/* Editor panel - hidden when canvas, markdown, or binary tab is active */}
                       {/* Note: also show if hasCanvasTabs is false to handle race condition during canvas tab close */}
                       {(activeTabType !== 'canvas' || !hasCanvasTabs) && activeTabType !== 'markdown' && activeTabType !== 'binary' && (
-                        <EditorPanel
-                          code={code}
-                          onChange={setCode}
-                          fileName={fileName}
-                          isDirty={isDirty}
-                          cursorLine={cursorLine}
-                          cursorColumn={cursorColumn}
-                          onCursorChange={(line, col) => {
-                            setCursorLine(line)
-                            setCursorColumn(col)
-                          }}
+                        <VirtualizedEditorPanel
+                          tabEditorManager={tabEditorManager}
+                          activeTab={activeTab}
                           tabBarProps={tabBarProps}
                           onFormat={handleFormat}
                           isFormatting={isFormatting}
-                          onEditorReady={handleEditorReady}
+                          onEditorReady={handleEditorReadyWithPath}
                           autoSaveEnabled={autoSaveEnabled}
                           onToggleAutoSave={toggleAutoSave}
                           onSaveAllFiles={saveAllFiles}

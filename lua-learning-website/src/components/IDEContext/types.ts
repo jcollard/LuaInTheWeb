@@ -2,6 +2,7 @@ import type { UseLuaEngineReturn } from '../../hooks/types'
 import type { TreeNode, UseFileSystemReturn } from '../../hooks/useFileSystem'
 import type { AdaptedFileSystem } from '../../hooks/compositeFileSystemAdapter'
 import type { RecentFile } from '../../hooks/useRecentFiles'
+import type { UseTabEditorManagerReturn } from '../../hooks/useTabEditorManager'
 import type { TabInfo, TabType } from '../TabBar'
 import type { ToastData } from '../Toast'
 
@@ -103,6 +104,9 @@ export interface IDEContextValue {
 
   // Folder upload
   uploadFolder: (files: FileList, targetFolderPath: string) => Promise<void>
+
+  // Tab editor manager (for virtualized editor panel)
+  tabEditorManager: UseTabEditorManagerReturn
 }
 
 /**
