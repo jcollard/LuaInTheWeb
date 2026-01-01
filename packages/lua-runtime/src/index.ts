@@ -28,6 +28,9 @@ export { LUA_SHELL_CODE } from './lua/shell.generated'
 // Canvas library export (auto-generated from canvas.lua)
 export { LUA_CANVAS_CODE } from './lua/canvas.generated'
 
+// HC collision detection library export (auto-generated from hc.lua)
+export { LUA_HC_CODE } from './lua/hc.generated'
+
 // Canvas Lua code modules (for bundling in exports)
 export {
   canvasLuaCoreCode,

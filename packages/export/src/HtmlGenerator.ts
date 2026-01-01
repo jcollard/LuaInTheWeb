@@ -176,6 +176,9 @@ export class HtmlGenerator {
     // Canvas Lua API code (from bundled canvas-standalone)
     const CANVAS_LUA_CODE = globalThis.canvasLuaCode;
 
+    // HC collision detection library code (from bundled canvas-standalone)
+    const HC_LUA_CODE = globalThis.hcLuaCode;
+
     // Project configuration
     const PROJECT_CONFIG = {
       name: ${JSON.stringify(config.name)},
@@ -380,6 +383,13 @@ export class HtmlGenerator {
 
         // Execute the bundled canvas Lua API code
         await engine.doString(CANVAS_LUA_CODE);
+
+        // Register HC collision detection library as a preloadable module
+        if (HC_LUA_CODE) {
+          await engine.doString(
+            "package.preload['hc'] = function() " + HC_LUA_CODE + " end"
+          );
+        }
 
         // Get main module code
         const mainCode = LUA_MODULES[PROJECT_CONFIG.main];

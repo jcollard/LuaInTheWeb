@@ -6,6 +6,7 @@
 import { LuaFactory, type LuaEngine } from 'wasmoon'
 import { LUA_FORMATTER_CODE } from './lua/formatter'
 import { LUA_SHELL_CODE } from './lua/shell.generated'
+import { LUA_HC_CODE } from './lua/hc.generated'
 import { LUA_IO_CODE } from './lua/io'
 import { generateExecutionControlCode } from './lua/executionControl'
 import { transformLuaError } from './luaErrorTransformer'
@@ -579,6 +580,13 @@ export class LuaEngineFactory {
     await engine.doString(`
       package.preload['shell'] = function()
         ${LUA_SHELL_CODE}
+      end
+    `)
+
+    // Register HC collision detection library in package.preload for require('hc')
+    await engine.doString(`
+      package.preload['hc'] = function()
+        ${LUA_HC_CODE}
       end
     `)
 

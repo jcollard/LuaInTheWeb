@@ -3,6 +3,7 @@
   "files": [
     "shell.md",
     "canvas.md",
+    "hc.md",
     "canvas/lifecycle.md",
     "canvas/drawing.md",
     "canvas/path.md",
