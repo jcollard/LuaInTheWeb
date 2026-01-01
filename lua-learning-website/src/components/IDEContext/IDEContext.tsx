@@ -293,13 +293,26 @@ export function IDEContextProvider({ children, initialCode: _initialCode = '', f
     catch (error) { showError(error instanceof Error ? error.message : 'Failed to rename folder') }
   }, [filesystem, showError])
 
+  // Handle file/directory moves - updates tabs when files are moved (used by shell mv and drag-drop)
+  const handleShellFileMove = useShellFileMove({ tabs, tabBar, tabEditorManager })
+
   const moveFile = useCallback((sourcePath: string, targetFolderPath: string) => {
     try {
+      // Calculate the new path for tab updates
+      const fileName = sourcePath.split('/').filter(Boolean).pop() || ''
+      const newPath = targetFolderPath === '/' ? `/${fileName}` : `${targetFolderPath}/${fileName}`
+      const isDirectory = filesystem.isDirectory(sourcePath)
+
+      // Move on filesystem
       filesystem.moveFile(sourcePath, targetFolderPath)
+
+      // Update tabs (same as shell mv)
+      handleShellFileMove(sourcePath, newPath, isDirectory)
+
       setFileTreeVersion(v => v + 1)
     }
     catch (error) { showError(error instanceof Error ? error.message : 'Failed to move file') }
-  }, [filesystem, showError])
+  }, [filesystem, handleShellFileMove, showError])
 
   const copyFile = useCallback((sourcePath: string, targetFolderPath: string) => {
     try {
@@ -314,9 +327,6 @@ export function IDEContextProvider({ children, initialCode: _initialCode = '', f
 
   // Refresh file tree by incrementing version counter (triggers re-render for shell commands)
   const refreshFileTree = useCallback(() => { setFileTreeVersion(v => v + 1) }, [])
-
-  // Handle file/directory moves from shell (mv command) - extracted to separate hook
-  const handleShellFileMove = useShellFileMove({ tabs, tabBar, tabEditorManager })
 
   // File tree is memoized to prevent expensive rebuilds on unrelated re-renders
   // Only recalculate when filesystem.version changes (increments on each filesystem operation)

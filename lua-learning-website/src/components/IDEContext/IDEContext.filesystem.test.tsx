@@ -321,6 +321,75 @@ describe('IDEContext', () => {
       expect(result.current.activeTab).toBe('/new.lua')
     })
 
+    it('should update tab path when file is moved via moveFile', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Create folder and file
+      act(() => {
+        result.current.createFolder('/dest')
+        result.current.createFile('/test.lua', 'content')
+      })
+
+      act(() => {
+        result.current.openFile('/test.lua')
+      })
+
+      expect(result.current.tabs).toHaveLength(1)
+      expect(result.current.tabs[0].path).toBe('/test.lua')
+      expect(result.current.activeTab).toBe('/test.lua')
+
+      // Act - move file via moveFile (drag-and-drop)
+      act(() => {
+        result.current.moveFile('/test.lua', '/dest')
+      })
+
+      // Assert - tab should be updated to new path
+      expect(result.current.tabs).toHaveLength(1)
+      expect(result.current.tabs[0].path).toBe('/dest/test.lua')
+      expect(result.current.tabs[0].name).toBe('test.lua')
+      expect(result.current.activeTab).toBe('/dest/test.lua')
+    })
+
+    it('should update tabs for all files when folder is moved via moveFile', () => {
+      // Arrange
+      const { result } = renderHook(() => useIDE(), {
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
+      })
+
+      // Create folders and files
+      act(() => {
+        result.current.createFolder('/src')
+        result.current.createFolder('/dest')
+        result.current.createFile('/src/a.lua', 'content-a')
+        result.current.createFile('/src/b.lua', 'content-b')
+      })
+
+      // Open both files
+      act(() => {
+        result.current.openFile('/src/a.lua')
+      })
+      act(() => {
+        result.current.openFile('/src/b.lua')
+      })
+
+      expect(result.current.tabs).toHaveLength(2)
+      expect(result.current.tabs.map(t => t.path)).toContain('/src/a.lua')
+      expect(result.current.tabs.map(t => t.path)).toContain('/src/b.lua')
+
+      // Act - move folder via moveFile (drag-and-drop)
+      act(() => {
+        result.current.moveFile('/src', '/dest')
+      })
+
+      // Assert - all tabs should be updated to new paths
+      expect(result.current.tabs).toHaveLength(2)
+      expect(result.current.tabs.map(t => t.path)).toContain('/dest/src/a.lua')
+      expect(result.current.tabs.map(t => t.path)).toContain('/dest/src/b.lua')
+    })
+
     it('should show error toast and not save when file is read-only', () => {
       // Arrange - provide a mock isPathReadOnly function that marks /readonly-test.lua as read-only
       const isPathReadOnly = vi.fn((path: string) => path === '/readonly-test.lua')
