@@ -92,7 +92,7 @@ describe('useTabEditorManager', () => {
       expect(result.current.mountedTabs).toEqual(['/a.lua', '/b.lua', '/c.lua'])
     })
 
-    it('should limit mounted tabs to MAX_MOUNTED (5)', () => {
+    it('should limit mounted tabs to MAX_MOUNTED (10)', () => {
       const tabs: TabInfo[] = [
         { path: '/1.lua', name: '1.lua', isDirty: false, type: 'file', isPreview: false, isPinned: false },
         { path: '/2.lua', name: '2.lua', isDirty: false, type: 'file', isPreview: false, isPinned: false },
@@ -101,6 +101,11 @@ describe('useTabEditorManager', () => {
         { path: '/5.lua', name: '5.lua', isDirty: false, type: 'file', isPreview: false, isPinned: false },
         { path: '/6.lua', name: '6.lua', isDirty: false, type: 'file', isPreview: false, isPinned: false },
         { path: '/7.lua', name: '7.lua', isDirty: false, type: 'file', isPreview: false, isPinned: false },
+        { path: '/8.lua', name: '8.lua', isDirty: false, type: 'file', isPreview: false, isPinned: false },
+        { path: '/9.lua', name: '9.lua', isDirty: false, type: 'file', isPreview: false, isPinned: false },
+        { path: '/10.lua', name: '10.lua', isDirty: false, type: 'file', isPreview: false, isPinned: false },
+        { path: '/11.lua', name: '11.lua', isDirty: false, type: 'file', isPreview: false, isPinned: false },
+        { path: '/12.lua', name: '12.lua', isDirty: false, type: 'file', isPreview: false, isPinned: false },
       ]
 
       vi.mocked(mockFileSystem.readFile).mockReturnValue('')
@@ -122,8 +127,13 @@ describe('useTabEditorManager', () => {
       rerender({ activeTab: '/5.lua' })
       rerender({ activeTab: '/6.lua' })
       rerender({ activeTab: '/7.lua' })
+      rerender({ activeTab: '/8.lua' })
+      rerender({ activeTab: '/9.lua' })
+      rerender({ activeTab: '/10.lua' })
+      rerender({ activeTab: '/11.lua' })
+      rerender({ activeTab: '/12.lua' })
 
-      expect(result.current.mountedTabs.length).toBeLessThanOrEqual(5)
+      expect(result.current.mountedTabs.length).toBeLessThanOrEqual(10)
     })
 
     it('should exclude non-file tabs from mounted tabs', () => {

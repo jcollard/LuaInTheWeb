@@ -4,14 +4,12 @@ import { useEditorExtensions } from './useEditorExtensions'
 import type { EditorReadyInfo } from '../components/CodeEditor/types'
 import { useIDEDiagnostics } from './useIDEDiagnostics'
 import { useLuaHoverProvider } from './useLuaHoverProvider'
-import { useEditorScrollPersistence } from './useEditorScrollPersistence'
 
 // Create mock functions that we can inspect
 const mockDiagnosticsHandleEditorReady = vi.fn()
 const mockDiagnosticsSetError = vi.fn()
 const mockDiagnosticsClearErrors = vi.fn()
 const mockHoverHandleEditorReady = vi.fn()
-const mockScrollSetEditor = vi.fn()
 
 // Mock the dependencies
 vi.mock('./useIDEDiagnostics', () => ({
@@ -26,12 +24,6 @@ vi.mock('./useIDEDiagnostics', () => ({
 vi.mock('./useLuaHoverProvider', () => ({
   useLuaHoverProvider: vi.fn(() => ({
     handleEditorReady: mockHoverHandleEditorReady,
-  })),
-}))
-
-vi.mock('./useEditorScrollPersistence', () => ({
-  useEditorScrollPersistence: vi.fn(() => ({
-    setEditor: mockScrollSetEditor,
   })),
 }))
 
@@ -117,18 +109,7 @@ describe('useEditorExtensions', () => {
       expect(mockHoverHandleEditorReady).toHaveBeenCalledWith(mockInfo)
     })
 
-    it('should call scroll persistence setEditor with the editor', () => {
-      const { result } = renderHook(() => useEditorExtensions())
-
-      const mockInfo = createMockEditorInfo('/test.lua')
-
-      act(() => {
-        result.current.handleEditorReady('/test.lua', mockInfo)
-      })
-
-      expect(mockScrollSetEditor).toHaveBeenCalledTimes(1)
-      expect(mockScrollSetEditor).toHaveBeenCalledWith(mockInfo.editor)
-    })
+    // Note: Scroll persistence is now handled internally by CodeEditor
 
     it('should store the correct editor reference in the map', () => {
       const { result } = renderHook(() => useEditorExtensions())
@@ -297,23 +278,7 @@ describe('useEditorExtensions', () => {
       expect(useIDEDiagnostics).toHaveBeenCalledWith({ code: 'print("hello")' })
     })
 
-    it('should pass currentFilePath to useEditorScrollPersistence', () => {
-      renderHook(() => useEditorExtensions({ currentFilePath: '/test.lua' }))
-
-      expect(useEditorScrollPersistence).toHaveBeenCalledWith({ activeTab: '/test.lua' })
-    })
-
-    it('should pass null to useEditorScrollPersistence when currentFilePath is undefined', () => {
-      renderHook(() => useEditorExtensions({ currentFilePath: undefined }))
-
-      expect(useEditorScrollPersistence).toHaveBeenCalledWith({ activeTab: null })
-    })
-
-    it('should pass null to useEditorScrollPersistence when currentFilePath is null', () => {
-      renderHook(() => useEditorExtensions({ currentFilePath: null }))
-
-      expect(useEditorScrollPersistence).toHaveBeenCalledWith({ activeTab: null })
-    })
+    // Note: Scroll persistence is now handled internally by CodeEditor
 
     it('should pass currentFilePath to useLuaHoverProvider', () => {
       renderHook(() => useEditorExtensions({ currentFilePath: '/myfile.lua' }))
