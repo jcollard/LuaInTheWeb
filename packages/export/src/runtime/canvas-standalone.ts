@@ -14,6 +14,7 @@ import {
   canvasLuaTextCode,
   canvasLuaInputCode,
   canvasLuaAudioCode,
+  LUA_HC_CODE,
 } from '@lua-learning/lua-runtime'
 
 import type { LuaEngine } from 'wasmoon'
@@ -29,6 +30,12 @@ export const canvasLuaCode =
   canvasLuaTextCode +
   canvasLuaInputCode +
   canvasLuaAudioCode
+
+/**
+ * HC collision detection library Lua code.
+ * Used for games that require collision detection.
+ */
+export const hcLuaCode = LUA_HC_CODE
 
 /**
  * Canvas runtime state for standalone execution.

@@ -16,6 +16,7 @@ import {
   createCanvasRuntimeState,
   setupInputListeners,
   canvasLuaCode,
+  hcLuaCode,
 } from './canvas-standalone.js';
 
 // Expose globally for use in exported HTML
@@ -25,6 +26,7 @@ import {
   createCanvasRuntimeState,
   setupInputListeners,
   canvasLuaCode,
+  hcLuaCode,
 };
 
 // Also expose individual functions for backward compatibility
@@ -36,3 +38,5 @@ import {
 (globalThis as any).setupInputListeners = setupInputListeners;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).canvasLuaCode = canvasLuaCode;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).hcLuaCode = hcLuaCode;
