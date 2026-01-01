@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import type { TabInfo } from '../components/TabBar/types'
 
 /** Maximum number of editors to mount simultaneously */
-const MAX_MOUNTED = 5
+const MAX_MOUNTED = 10
 
 /** Per-tab content state */
 interface TabContentState {

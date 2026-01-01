@@ -442,16 +442,17 @@ function IDELayoutInner({
                         </div>
                       )}
                       {/* Markdown preview - shown when markdown tab is active */}
-                      {activeTabType === 'markdown' && (
-                        <MarkdownTabContent code={code} tabBarProps={tabBarProps} currentFilePath={activeTab} onOpenMarkdown={openMarkdownPreview} />
+                      {/* Note: Read directly from filesystem since tabEditorManager only tracks file tabs */}
+                      {activeTabType === 'markdown' && activeTab && (
+                        <MarkdownTabContent code={compositeFileSystem.readFile(activeTab) ?? ''} tabBarProps={tabBarProps} currentFilePath={activeTab} onOpenMarkdown={openMarkdownPreview} />
                       )}
                       {/* Binary file viewer - shown when binary tab is active */}
                       {activeTabType === 'binary' && activeTab && (
                         <BinaryTabContent filePath={activeTab} fileSystem={compositeFileSystem} tabBarProps={tabBarProps} />
                       )}
-                      {/* Editor panel - hidden when canvas, markdown, or binary tab is active */}
-                      {/* Note: also show if hasCanvasTabs is false to handle race condition during canvas tab close */}
-                      {(activeTabType !== 'canvas' || !hasCanvasTabs) && activeTabType !== 'markdown' && activeTabType !== 'binary' && (
+                      {/* Editor panel - hidden (not unmounted) when canvas, markdown, or binary tab is active */}
+                      {/* Uses display:none to preserve editor state including scroll position */}
+                      <div style={{ display: (activeTabType === 'file' || activeTabType === undefined || (activeTabType === 'canvas' && !hasCanvasTabs)) ? 'contents' : 'none' }}>
                         <VirtualizedEditorPanel
                           tabEditorManager={tabEditorManager}
                           activeTab={activeTab}
@@ -463,7 +464,7 @@ function IDELayoutInner({
                           onToggleAutoSave={toggleAutoSave}
                           onSaveAllFiles={saveAllFiles}
                         />
-                      )}
+                      </div>
                     </>
                   )}
                 </IDEPanel>

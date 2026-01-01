@@ -2,7 +2,6 @@ import { useCallback, useMemo, useRef } from 'react'
 import type { EditorReadyInfo } from '../components/CodeEditor/types'
 import { useIDEDiagnostics } from './useIDEDiagnostics'
 import { useLuaHoverProvider } from './useLuaHoverProvider'
-import { useEditorScrollPersistence } from './useEditorScrollPersistence'
 
 /** Monaco editor instance type */
 type MonacoEditor = EditorReadyInfo['editor']
@@ -83,11 +82,7 @@ export function useEditorExtensions(
     currentFilePath,
   })
 
-  // Scroll position persistence across tab switches
-  // Note: With virtualized editors, each maintains its own scroll, but we keep this for compatibility
-  const { setEditor } = useEditorScrollPersistence({
-    activeTab: currentFilePath ?? null,
-  })
+  // Note: Scroll persistence is now handled internally by each CodeEditor component
 
   // Get an editor by path
   const getEditor = useCallback((path: string): MonacoEditor | undefined => {
@@ -130,10 +125,9 @@ export function useEditorExtensions(
       // Initialize hover provider
       handleHoverReady(info)
 
-      // Set for scroll persistence (legacy support)
-      setEditor(info.editor)
+      // Note: Scroll persistence is now handled internally by CodeEditor
     },
-    [handleDiagnosticsReady, handleHoverReady, setEditor]
+    [handleDiagnosticsReady, handleHoverReady]
   )
 
   return {
