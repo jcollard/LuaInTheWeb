@@ -6,12 +6,28 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { CanvasGamePanel } from './CanvasGamePanel'
 
+// Mock window.matchMedia for DPR tracking
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+})
+
 // Mock the useCanvasGame hook
 const mockStartGame = vi.fn()
 const mockStopGame = vi.fn()
 const mockPauseGame = vi.fn()
 const mockResumeGame = vi.fn()
 const mockClearError = vi.fn()
+const mockSetDevicePixelRatio = vi.fn()
 
 vi.mock('../../hooks/useCanvasGame', () => ({
   useCanvasGame: vi.fn(() => ({
@@ -28,6 +44,7 @@ vi.mock('../../hooks/useCanvasGame', () => ({
     resumeGame: mockResumeGame,
     clearOutput: vi.fn(),
     clearError: mockClearError,
+    setDevicePixelRatio: mockSetDevicePixelRatio,
   })),
 }))
 
@@ -59,6 +76,7 @@ describe('CanvasGamePanel', () => {
         resumeGame: mockResumeGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
+        setDevicePixelRatio: mockSetDevicePixelRatio,
       })
 
       render(<CanvasGamePanel code="print('hello')" />)
@@ -81,6 +99,7 @@ describe('CanvasGamePanel', () => {
         resumeGame: mockResumeGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
+        setDevicePixelRatio: mockSetDevicePixelRatio,
       })
 
       render(<CanvasGamePanel code="print('hello')" />)
@@ -103,6 +122,7 @@ describe('CanvasGamePanel', () => {
         resumeGame: mockResumeGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
+        setDevicePixelRatio: mockSetDevicePixelRatio,
       })
 
       render(<CanvasGamePanel code="print('hello')" />)
@@ -125,6 +145,7 @@ describe('CanvasGamePanel', () => {
         resumeGame: mockResumeGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
+        setDevicePixelRatio: mockSetDevicePixelRatio,
       })
 
       render(<CanvasGamePanel code="print('hello')" />)
@@ -172,6 +193,7 @@ describe('CanvasGamePanel', () => {
         resumeGame: mockResumeGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
+        setDevicePixelRatio: mockSetDevicePixelRatio,
       })
 
       render(<CanvasGamePanel code="print('hello')" />)
@@ -195,6 +217,7 @@ describe('CanvasGamePanel', () => {
         resumeGame: mockResumeGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
+        setDevicePixelRatio: mockSetDevicePixelRatio,
       })
 
       render(<CanvasGamePanel code="print('hello')" />)
@@ -218,6 +241,7 @@ describe('CanvasGamePanel', () => {
         resumeGame: mockResumeGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
+        setDevicePixelRatio: mockSetDevicePixelRatio,
       })
 
       render(<CanvasGamePanel code="print('hello')" />)
@@ -244,6 +268,7 @@ describe('CanvasGamePanel', () => {
         resumeGame: mockResumeGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
+        setDevicePixelRatio: mockSetDevicePixelRatio,
       })
 
       render(<CanvasGamePanel code="print('hello')" autoStart />)
@@ -266,6 +291,7 @@ describe('CanvasGamePanel', () => {
         resumeGame: mockResumeGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
+        setDevicePixelRatio: mockSetDevicePixelRatio,
       })
 
       render(<CanvasGamePanel code="print('hello')" autoStart={false} />)
@@ -294,6 +320,7 @@ describe('CanvasGamePanel', () => {
           resumeGame: mockResumeGame,
           clearOutput: vi.fn(),
           clearError: mockClearError,
+          setDevicePixelRatio: mockSetDevicePixelRatio,
         }
       })
 

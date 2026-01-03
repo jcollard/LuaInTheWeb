@@ -78,6 +78,12 @@ export class LuaCanvasProcess implements IProcess {
   private audioEngine: MainThreadAudioEngine | null = null;
   private audioInitPromise: Promise<void> | null = null;
 
+  // DPR scaling state (Issue #515)
+  private currentDpr: number = 1;
+  // Track logical canvas size (before DPR scaling)
+  private logicalWidth: number;
+  private logicalHeight: number;
+
   /**
    * Callback invoked when the process produces output.
    */
@@ -115,6 +121,10 @@ export class LuaCanvasProcess implements IProcess {
     this.mode = options.mode ?? 'auto';
     this.fileSystem = options.fileSystem;
     this.scriptDirectory = options.scriptDirectory ?? '/';
+
+    // Initialize logical dimensions from canvas
+    this.logicalWidth = this.canvas.width;
+    this.logicalHeight = this.canvas.height;
   }
 
   /**
@@ -150,6 +160,12 @@ export class LuaCanvasProcess implements IProcess {
     this.renderer = new CanvasRenderer(this.canvas, this.imageCache);
     this.gameLoop = new GameLoopController(this.handleFrame.bind(this));
     this.inputCapture = new InputCapture(this.canvas);
+
+    // Apply DPR scaling if set (configures canvas physical size and context transform)
+    if (this.currentDpr !== 1) {
+      this.renderer.configureScaling(this.logicalWidth, this.logicalHeight, this.currentDpr);
+      this.inputCapture.setLogicalSize(this.logicalWidth, this.logicalHeight);
+    }
 
     // Create audio engine and start initialization
     this.audioEngine = new MainThreadAudioEngine();
@@ -267,6 +283,26 @@ export class LuaCanvasProcess implements IProcess {
    */
   isPaused(): boolean {
     return this.gameLoop?.isPaused() ?? false;
+  }
+
+  /**
+   * Set the device pixel ratio for HiDPI rendering.
+   * This scales the canvas physical resolution while maintaining logical coordinates.
+   *
+   * @param dpr - The device pixel ratio (e.g., 2 for retina displays)
+   */
+  setDevicePixelRatio(dpr: number): void {
+    this.currentDpr = dpr;
+
+    // If renderer exists, configure scaling immediately
+    if (this.renderer) {
+      this.renderer.configureScaling(this.logicalWidth, this.logicalHeight, dpr);
+    }
+
+    // If inputCapture exists, update logical size
+    if (this.inputCapture) {
+      this.inputCapture.setLogicalSize(this.logicalWidth, this.logicalHeight);
+    }
   }
 
   /**
@@ -533,8 +569,15 @@ export class LuaCanvasProcess implements IProcess {
     if (commands.length > 0) {
       for (const cmd of commands) {
         if (cmd.type === 'setSize') {
+          // Update logical dimensions for DPR scaling
+          this.logicalWidth = cmd.width;
+          this.logicalHeight = cmd.height;
           // Update channel's canvas size so get_width/get_height return correct values
           this.channel.setCanvasSize(cmd.width, cmd.height);
+          // Update InputCapture with new logical dimensions
+          if (this.inputCapture) {
+            this.inputCapture.setLogicalSize(cmd.width, cmd.height);
+          }
         }
       }
       // Process audio commands

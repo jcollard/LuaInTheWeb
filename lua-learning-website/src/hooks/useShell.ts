@@ -65,8 +65,8 @@ export type UseShellFileSystem = IFileSystem | UseFileSystemReturn
  * Canvas callbacks for shell-to-UI communication
  */
 export interface ShellCanvasCallbacks {
-  /** Request a canvas tab to be opened, returns the canvas element when ready */
-  onRequestCanvasTab: (canvasId: string) => Promise<HTMLCanvasElement>
+  /** Request a canvas tab to be opened, returns the canvas element and DPR when ready */
+  onRequestCanvasTab: (canvasId: string) => Promise<{ canvas: HTMLCanvasElement; devicePixelRatio: number }>
   /** Request a canvas tab to be closed */
   onCloseCanvasTab: (canvasId: string) => void
   /**

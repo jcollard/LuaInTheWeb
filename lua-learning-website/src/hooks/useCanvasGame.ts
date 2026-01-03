@@ -17,6 +17,14 @@ export interface UseCanvasGameOptions {
   onExit?: (code: number) => void
 }
 
+/**
+ * Options for starting a game.
+ */
+export interface StartGameOptions {
+  /** Device pixel ratio for HiDPI rendering (default: 1) */
+  devicePixelRatio?: number
+}
+
 export interface UseCanvasGameReturn {
   state: CanvasGameState
   isRunning: boolean
@@ -25,12 +33,14 @@ export interface UseCanvasGameReturn {
   output: string
   mode: CanvasGameMode
   process: LuaCanvasProcess | null
-  startGame: (code: string, canvas: HTMLCanvasElement) => void
+  startGame: (code: string, canvas: HTMLCanvasElement, options?: StartGameOptions) => void
   stopGame: () => void
   pauseGame: () => void
   resumeGame: () => void
   clearOutput: () => void
   clearError: () => void
+  /** Set the device pixel ratio for the current process */
+  setDevicePixelRatio: (dpr: number) => void
 }
 
 /**
@@ -55,7 +65,7 @@ export function useCanvasGame(
     : 'compatibility'
 
   const startGame = useCallback(
-    (code: string, canvas: HTMLCanvasElement) => {
+    (code: string, canvas: HTMLCanvasElement, options?: StartGameOptions) => {
       // Clean up any existing process
       if (processRef.current) {
         processRef.current.stop()
@@ -69,6 +79,11 @@ export function useCanvasGame(
         code,
         canvas,
       })
+
+      // Set device pixel ratio before start (if provided)
+      if (options?.devicePixelRatio && options.devicePixelRatio !== 1) {
+        process.setDevicePixelRatio(options.devicePixelRatio)
+      }
 
       // Wire up callbacks
       process.onOutput = (text: string) => {
@@ -133,6 +148,13 @@ export function useCanvasGame(
     }
   }, [state])
 
+  // Set device pixel ratio on the current process
+  const setDevicePixelRatio = useCallback((dpr: number) => {
+    if (processRef.current) {
+      processRef.current.setDevicePixelRatio(dpr)
+    }
+  }, [])
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -156,5 +178,6 @@ export function useCanvasGame(
     resumeGame,
     clearOutput,
     clearError,
+    setDevicePixelRatio,
   }
 }

@@ -35,11 +35,11 @@ export interface ShellContext {
 
   /**
    * Request a canvas tab to be opened.
-   * Returns the canvas element when the tab is ready.
+   * Returns the canvas element and device pixel ratio when the tab is ready.
    * @param canvasId - Unique identifier for the canvas tab
-   * @returns Promise resolving to the HTMLCanvasElement when ready
+   * @returns Promise resolving to the canvas element and DPR for HiDPI scaling
    */
-  onRequestCanvasTab?: (canvasId: string) => Promise<HTMLCanvasElement>
+  onRequestCanvasTab?: (canvasId: string) => Promise<{ canvas: HTMLCanvasElement; devicePixelRatio: number }>
 
   /**
    * Request a canvas tab to be closed.

@@ -2,7 +2,7 @@
  * CanvasGamePanel component.
  * Renders the canvas game and provides controls.
  */
-import { useRef, useEffect, useCallback, type ChangeEvent } from 'react'
+import { useRef, useEffect, useCallback, useMemo, useState, type ChangeEvent } from 'react'
 import { useCanvasGame } from '../../hooks/useCanvasGame'
 import type { CanvasScalingMode } from '../../hooks/useCanvasScaling'
 import styles from './CanvasGamePanel.module.css'
@@ -20,8 +20,8 @@ export interface CanvasGamePanelProps {
   className?: string
   /** Callback when process exits */
   onExit?: (code: number) => void
-  /** Callback when canvas element is ready (for shell integration) */
-  onCanvasReady?: (canvas: HTMLCanvasElement) => void
+  /** Callback when canvas element is ready (for shell integration), includes DPR for HiDPI scaling */
+  onCanvasReady?: (canvas: HTMLCanvasElement, devicePixelRatio: number) => void
   /** Canvas scaling mode: 'fit' (auto-fit to container) or 'native' (original size) */
   scalingMode?: CanvasScalingMode
   /** Callback when scaling mode is changed (enables the scaling selector UI) */
@@ -54,24 +54,64 @@ export function CanvasGamePanel({
     pauseGame,
     resumeGame,
     clearError,
+    setDevicePixelRatio,
   } = useCanvasGame({
     onExit,
   })
+
+  // Track window.devicePixelRatio for display switching support
+  // This state updates when window is moved between displays with different DPR
+  const [windowDpr, setWindowDpr] = useState(() =>
+    typeof window !== 'undefined' ? window.devicePixelRatio ?? 1 : 1
+  )
+
+  // Listen for DPR changes (e.g., window moved to display with different resolution)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (scalingMode === 'native') return // Native mode doesn't need DPR tracking
+
+    // Listen for DPR changes using matchMedia
+    const mql = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
+    const handleChange = () => {
+      setWindowDpr(window.devicePixelRatio ?? 1)
+    }
+    mql.addEventListener('change', handleChange)
+
+    return () => mql.removeEventListener('change', handleChange)
+  }, [scalingMode])
+
+  // Calculate device pixel ratio based on scaling mode
+  // Native mode: 1:1 pixel mapping (no DPR scaling)
+  // Fit/Full modes: Use actual DPR for HiDPI rendering
+  const devicePixelRatio = useMemo(() => {
+    if (scalingMode === 'native') {
+      return 1
+    }
+    return windowDpr
+  }, [scalingMode, windowDpr])
 
   // Auto-start game when mounted (only in standalone mode, not shell integration mode)
   // When onCanvasReady is provided, the shell manages the Lua execution
   useEffect(() => {
     if (autoStart && canvasRef.current && state === 'idle' && !onCanvasReady) {
-      startGame(code, canvasRef.current)
+      startGame(code, canvasRef.current, { devicePixelRatio })
     }
-  }, [autoStart, code, state, startGame, onCanvasReady])
+  }, [autoStart, code, state, startGame, onCanvasReady, devicePixelRatio])
+
+  // Update DPR when scaling mode changes (while game is running)
+  useEffect(() => {
+    if (isRunning) {
+      setDevicePixelRatio(devicePixelRatio)
+    }
+  }, [devicePixelRatio, isRunning, setDevicePixelRatio])
 
   // Notify when canvas element is ready (for shell integration)
+  // Passes the canvas element and current devicePixelRatio for HiDPI scaling
   useEffect(() => {
     if (canvasRef.current && onCanvasReady) {
-      onCanvasReady(canvasRef.current)
+      onCanvasReady(canvasRef.current, devicePixelRatio)
     }
-  }, [onCanvasReady])
+  }, [onCanvasReady, devicePixelRatio])
 
   // Auto-focus canvas when isActive becomes true
   useEffect(() => {

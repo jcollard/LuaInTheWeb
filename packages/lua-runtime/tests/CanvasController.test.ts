@@ -45,13 +45,37 @@ export function resetCapturedCallback() {
   lastRenderFn = null
 }
 
+// Track configureScaling calls for DPR tests
+let lastConfigureScalingCall: { width: number; height: number; dpr: number } | null = null
+let lastSetLogicalSizeCall: { width: number; height: number } | null = null
+
+// Helper to get the last configureScaling call
+export function getLastConfigureScalingCall() {
+  return lastConfigureScalingCall
+}
+
+// Helper to get the last setLogicalSize call
+export function getLastSetLogicalSizeCall() {
+  return lastSetLogicalSizeCall
+}
+
+// Reset configureScaling tracker
+export function resetConfigureScalingCall() {
+  lastConfigureScalingCall = null
+  lastSetLogicalSizeCall = null
+}
+
 // Mock the canvas-runtime imports using classes
 vi.mock('@lua-learning/canvas-runtime', () => {
   return {
     CanvasRenderer: class MockCanvasRenderer {
       render: ReturnType<typeof vi.fn>
+      configureScaling: ReturnType<typeof vi.fn>
       constructor() {
         this.render = vi.fn()
+        this.configureScaling = vi.fn((width: number, height: number, dpr: number) => {
+          lastConfigureScalingCall = { width, height, dpr }
+        })
         lastRenderFn = this.render
       }
     },
@@ -72,6 +96,9 @@ vi.mock('@lua-learning/canvas-runtime', () => {
       isMouseButtonPressed = vi.fn().mockReturnValue(false)
       update = vi.fn()
       dispose = vi.fn()
+      setLogicalSize = vi.fn((width: number, height: number) => {
+        lastSetLogicalSizeCall = { width, height }
+      })
     },
     GameLoopController: class MockGameLoopController {
       start = vi.fn()
@@ -113,9 +140,9 @@ describe('CanvasController', () => {
     mockCanvas.width = 800
     mockCanvas.height = 600
 
-    // Create mock callbacks
+    // Create mock callbacks with DPR (Issue #515)
     mockCallbacks = {
-      onRequestCanvasTab: vi.fn().mockResolvedValue(mockCanvas),
+      onRequestCanvasTab: vi.fn().mockResolvedValue({ canvas: mockCanvas, devicePixelRatio: 1 }),
       onCloseCanvasTab: vi.fn(),
     }
 
@@ -141,6 +168,7 @@ describe('CanvasController', () => {
     vi.clearAllMocks()
     global.Image = originalImage
     resetCapturedCallback()
+    resetConfigureScalingCall()
   })
 
   describe('isActive', () => {
@@ -424,6 +452,97 @@ describe('CanvasController', () => {
 
       // Cleanup
       controller.stop()
+      await startPromise
+    })
+  })
+
+  describe('HiDPI/DPR support (Issue #515)', () => {
+    it('should configure scaling with DPR from callback', async () => {
+      // Arrange - callback returns DPR of 2
+      const mockCallbacksWithDpr: CanvasCallbacks = {
+        onRequestCanvasTab: vi.fn().mockResolvedValue({ canvas: mockCanvas, devicePixelRatio: 2 }),
+        onCloseCanvasTab: vi.fn(),
+      }
+      const controllerWithDpr = new CanvasController(mockCallbacksWithDpr)
+
+      const startPromise = controllerWithDpr.start()
+
+      // Wait for start to initialize
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      // Assert - configureScaling should be called with DPR from callback
+      const scalingCall = getLastConfigureScalingCall()
+      expect(scalingCall).not.toBeNull()
+      expect(scalingCall!.width).toBe(800)  // Canvas logical width
+      expect(scalingCall!.height).toBe(600) // Canvas logical height
+      expect(scalingCall!.dpr).toBe(2)      // DPR from callback
+
+      // Cleanup
+      controllerWithDpr.stop()
+      await startPromise
+    })
+
+    it('should configure InputCapture with logical size', async () => {
+      // Arrange - callback returns DPR of 2
+      const mockCallbacksWithDpr: CanvasCallbacks = {
+        onRequestCanvasTab: vi.fn().mockResolvedValue({ canvas: mockCanvas, devicePixelRatio: 2 }),
+        onCloseCanvasTab: vi.fn(),
+      }
+      const controllerWithDpr = new CanvasController(mockCallbacksWithDpr)
+
+      const startPromise = controllerWithDpr.start()
+
+      // Wait for start to initialize
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      // Assert - setLogicalSize should be called with canvas dimensions
+      const logicalSizeCall = getLastSetLogicalSizeCall()
+      expect(logicalSizeCall).not.toBeNull()
+      expect(logicalSizeCall!.width).toBe(800)
+      expect(logicalSizeCall!.height).toBe(600)
+
+      // Cleanup
+      controllerWithDpr.stop()
+      await startPromise
+    })
+
+    it('should work with DPR of 1 (non-HiDPI)', async () => {
+      // Arrange - default callback has DPR of 1
+      const startPromise = controller.start()
+
+      // Wait for start to initialize
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      // Assert - configureScaling should be called with DPR of 1
+      const scalingCall = getLastConfigureScalingCall()
+      expect(scalingCall).not.toBeNull()
+      expect(scalingCall!.dpr).toBe(1)
+
+      // Cleanup
+      controller.stop()
+      await startPromise
+    })
+
+    it('should handle fractional DPR values', async () => {
+      // Arrange - callback returns fractional DPR (common on Windows)
+      const mockCallbacksWithFractionalDpr: CanvasCallbacks = {
+        onRequestCanvasTab: vi.fn().mockResolvedValue({ canvas: mockCanvas, devicePixelRatio: 1.5 }),
+        onCloseCanvasTab: vi.fn(),
+      }
+      const controllerWithFractionalDpr = new CanvasController(mockCallbacksWithFractionalDpr)
+
+      const startPromise = controllerWithFractionalDpr.start()
+
+      // Wait for start to initialize
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      // Assert - configureScaling should be called with fractional DPR
+      const scalingCall = getLastConfigureScalingCall()
+      expect(scalingCall).not.toBeNull()
+      expect(scalingCall!.dpr).toBe(1.5)
+
+      // Cleanup
+      controllerWithFractionalDpr.stop()
       await startPromise
     })
   })

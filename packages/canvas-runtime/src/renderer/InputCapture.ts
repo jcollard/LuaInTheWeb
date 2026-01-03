@@ -18,6 +18,12 @@ export class InputCapture {
   private mouseY = 0;
   private disposed = false;
 
+  // DPR scaling support (Issue #515): track logical size separately from canvas.width/height
+  // When DPR scaling is active, canvas.width/height are physical pixels (logical × DPR),
+  // but we need logical dimensions for coordinate mapping.
+  private logicalWidth: number | null = null;
+  private logicalHeight: number | null = null;
+
   // Bound event handlers for removal
   private readonly handleKeyDown: (e: KeyboardEvent) => void;
   private readonly handleKeyUp: (e: KeyboardEvent) => void;
@@ -118,6 +124,19 @@ export class InputCapture {
   }
 
   /**
+   * Set the logical canvas size for DPR-aware coordinate mapping.
+   * When DPR scaling is active, canvas.width/height are physical pixels,
+   * but input coordinates should use logical dimensions.
+   *
+   * @param width - Logical width in CSS pixels
+   * @param height - Logical height in CSS pixels
+   */
+  setLogicalSize(width: number, height: number): void {
+    this.logicalWidth = width;
+    this.logicalHeight = height;
+  }
+
+  /**
    * Reset all input state.
    */
   reset(): void {
@@ -164,8 +183,9 @@ export class InputCapture {
 
     // If target is a canvas, handle object-fit: contain letterboxing and scaling
     if (this.target instanceof HTMLCanvasElement) {
-      const canvasWidth = this.target.width;
-      const canvasHeight = this.target.height;
+      // Use logical dimensions if set (for DPR scaling), otherwise use canvas dimensions
+      const canvasWidth = this.logicalWidth ?? this.target.width;
+      const canvasHeight = this.logicalHeight ?? this.target.height;
       const rectWidth = rect.width;
       const rectHeight = rect.height;
 

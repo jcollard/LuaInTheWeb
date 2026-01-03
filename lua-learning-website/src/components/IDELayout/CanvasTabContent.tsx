@@ -21,7 +21,7 @@ export interface CanvasTabContentProps {
   /** Callback when the canvas game exits */
   onExit: (exitCode: number) => void
   /** Callback when canvas element is ready (for shell integration) */
-  onCanvasReady?: (canvasId: string, canvas: HTMLCanvasElement) => void
+  onCanvasReady?: (canvasId: string, canvas: HTMLCanvasElement, devicePixelRatio: number) => void
   /** Whether the canvas tab is active and should receive focus */
   isActive?: boolean
 }
@@ -66,7 +66,7 @@ export function CanvasTabContent({
       <CanvasGamePanel
         code={canvasCode}
         onExit={onExit}
-        onCanvasReady={activeTab && onCanvasReady ? (canvas) => onCanvasReady(activeTab, canvas) : undefined}
+        onCanvasReady={activeTab && onCanvasReady ? (canvas, dpr) => onCanvasReady(activeTab, canvas, dpr) : undefined}
         scalingMode={scalingMode}
         onScalingModeChange={setScalingMode}
         isActive={isActive}

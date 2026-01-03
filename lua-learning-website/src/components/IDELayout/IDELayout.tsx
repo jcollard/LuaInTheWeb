@@ -199,14 +199,15 @@ function IDELayoutInner({
 
   // Canvas tab request management for shell-based canvas.start()
   // Stores pending resolvers for canvas requests (canvasId -> resolver)
-  const pendingCanvasRequestsRef = useRef<Map<string, (canvas: HTMLCanvasElement) => void>>(new Map())
+  // Resolvers receive both the canvas element and device pixel ratio for HiDPI support
+  const pendingCanvasRequestsRef = useRef<Map<string, (result: { canvas: HTMLCanvasElement; devicePixelRatio: number }) => void>>(new Map())
 
   // Canvas close handler management for UI-initiated tab close
   // Stores handlers to call when a canvas tab is closed from UI (canvasId -> stopHandler)
   const canvasCloseHandlersRef = useRef<Map<string, () => void>>(new Map())
 
   // Handle canvas tab request from shell (canvas.start())
-  const handleRequestCanvasTab = useCallback(async (canvasId: string): Promise<HTMLCanvasElement> => {
+  const handleRequestCanvasTab = useCallback(async (canvasId: string): Promise<{ canvas: HTMLCanvasElement; devicePixelRatio: number }> => {
     // Tab path format: canvas://{canvasId}
     const tabPath = `canvas://${canvasId}`
 
@@ -215,7 +216,8 @@ function IDELayoutInner({
     openCanvasTab(canvasId, canvasId)
 
     // Return a Promise that will be resolved when the canvas element is ready
-    return new Promise<HTMLCanvasElement>((resolve) => {
+    // The resolver will receive both the canvas and devicePixelRatio for HiDPI scaling
+    return new Promise<{ canvas: HTMLCanvasElement; devicePixelRatio: number }>((resolve) => {
       pendingCanvasRequestsRef.current.set(tabPath, resolve)
     })
   }, [openCanvasTab])
@@ -233,10 +235,11 @@ function IDELayoutInner({
   }, [closeTab])
 
   // Callback when canvas element is ready (passed to CanvasTabContent)
-  const handleCanvasReady = useCallback((canvasId: string, canvas: HTMLCanvasElement) => {
+  // Receives the canvas element and devicePixelRatio for HiDPI scaling support
+  const handleCanvasReady = useCallback((canvasId: string, canvas: HTMLCanvasElement, devicePixelRatio: number) => {
     const resolver = pendingCanvasRequestsRef.current.get(canvasId)
     if (resolver) {
-      resolver(canvas)
+      resolver({ canvas, devicePixelRatio })
       pendingCanvasRequestsRef.current.delete(canvasId)
     }
   }, [])
