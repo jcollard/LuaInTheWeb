@@ -23,17 +23,6 @@ export const DEFAULT_INSTRUCTION_LIMIT = 10_000_000
 export const DEFAULT_INSTRUCTION_CHECK_INTERVAL = 1000
 
 /**
- * Get the directory portion of a file path.
- * @param filePath - Full file path (e.g., "/home/user/script.lua")
- * @returns Directory path (e.g., "/home/user")
- */
-function getDirectoryFromPath(filePath: string): string {
-  const lastSlash = filePath.lastIndexOf('/')
-  if (lastSlash <= 0) return '/'
-  return filePath.substring(0, lastSlash)
-}
-
-/**
  * Join path segments into a single path.
  * Handles leading/trailing slashes correctly.
  * @param segments - Path segments to join
@@ -81,6 +70,12 @@ export interface LuaEngineOptions {
    * If not provided, require() searches from root only.
    */
   scriptPath?: string
+  /**
+   * Current working directory for require() resolution.
+   * Searched FIRST, before scriptPath directory, per standard Lua behavior.
+   * If not provided, CWD is not searched (backward compatible).
+   */
+  cwd?: string
 }
 
 /**
@@ -431,9 +426,8 @@ export class LuaEngineFactory {
 
     // Setup require() with virtual file system support
     if (callbacks.fileReader) {
-      const scriptDir = options?.scriptPath
-        ? getDirectoryFromPath(options.scriptPath)
-        : '/'
+      // CWD for require resolution (standard Lua ./?.lua behavior)
+      const cwdDir = options?.cwd ?? null
 
       // Store fileReader in a ref so it's accessible from the closure
       const fileReaderRef = callbacks.fileReader
@@ -443,58 +437,44 @@ export class LuaEngineFactory {
       let lastModuleContent: string | null = null
       let lastModulePath: string | null = null
 
+      // Helper to try loading a module from a specific path
+      const tryPath = (fullPath: string): boolean => {
+        const content = fileReaderRef(fullPath)
+        if (content !== null) {
+          lastModuleContent = content
+          lastModulePath = fullPath
+          return true
+        }
+        return false
+      }
+
+      // Helper to try both .lua and /init.lua variants in a directory
+      const tryDirectory = (dir: string, modulePath: string): boolean => {
+        // Try dir/module.lua
+        if (tryPath(joinPath(dir, modulePath + '.lua'))) return true
+        // Try dir/module/init.lua
+        if (tryPath(joinPath(dir, modulePath, 'init.lua'))) return true
+        return false
+      }
+
       // Setup __js_require_lookup to find and store module data
+      // Standard Lua behavior: search CWD first, then root fallback
+      // No relative-to-calling-module search (matches standard Lua package.path)
       engine.global.set(
         '__js_require_lookup',
-        (moduleName: string, currentModulePath: string | undefined): boolean => {
-          // Determine the base directory for resolution
-          // If we're in a nested require, use the current module's directory
-          // Otherwise, use the script's directory
-          const baseDir =
-            currentModulePath !== undefined && currentModulePath !== ''
-              ? getDirectoryFromPath(currentModulePath)
-              : scriptDir
-
+        (moduleName: string, _currentModulePath: string | undefined): boolean => {
           // Convert module name to relative path
           // Support both "lib/utils" and "lib.utils" formats
           const modulePath = moduleName.replace(/\./g, '/')
 
-          // Try relative to current module/script directory first
-          const relativePath = joinPath(baseDir, modulePath + '.lua')
-          let content = fileReaderRef(relativePath)
-          if (content !== null) {
-            lastModuleContent = content
-            lastModulePath = relativePath
-            return true
+          // 1. Search CWD first (standard Lua ./?.lua behavior)
+          if (cwdDir !== null) {
+            if (tryDirectory(cwdDir, modulePath)) return true
           }
 
-          // Try init.lua for package directories
-          const initPath = joinPath(baseDir, modulePath, 'init.lua')
-          content = fileReaderRef(initPath)
-          if (content !== null) {
-            lastModuleContent = content
-            lastModulePath = initPath
-            return true
-          }
-
-          // Fall back to root if different from base
-          if (baseDir !== '/') {
-            const rootPath = '/' + modulePath + '.lua'
-            content = fileReaderRef(rootPath)
-            if (content !== null) {
-              lastModuleContent = content
-              lastModulePath = rootPath
-              return true
-            }
-
-            // Try root init.lua
-            const rootInitPath = '/' + modulePath + '/init.lua'
-            content = fileReaderRef(rootInitPath)
-            if (content !== null) {
-              lastModuleContent = content
-              lastModulePath = rootInitPath
-              return true
-            }
+          // 2. Fall back to root if different from CWD
+          if (cwdDir !== '/') {
+            if (tryDirectory('/', modulePath)) return true
           }
 
           lastModuleContent = null

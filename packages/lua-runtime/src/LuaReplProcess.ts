@@ -369,11 +369,24 @@ export class LuaReplProcess implements IProcess {
       onInstructionLimitReached: this.options.onInstructionLimitReached,
       // Enable io.open() to read/write files from the virtual file system if provided
       fileOperations: this.fileOpsHandler?.createCallbacks(),
+      // Enable require() to load modules from the virtual file system if provided
+      fileReader: this.options.fileSystem
+        ? (path: string): string | null => {
+            if (!this.options.fileSystem!.exists(path)) return null
+            if (this.options.fileSystem!.isDirectory(path)) return null
+            try {
+              return this.options.fileSystem!.readFile(path)
+            } catch {
+              return null
+            }
+          }
+        : undefined,
     }
 
     const engineOptions: LuaEngineOptions = {
       instructionLimit: this.options.instructionLimit,
       instructionCheckInterval: this.options.instructionCheckInterval,
+      cwd: this.options.cwd ?? '/',
     }
 
     try {
