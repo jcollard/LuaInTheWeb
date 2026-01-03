@@ -13,6 +13,12 @@ export interface ModuleResolverOptions {
   currentFilePath: string
   /** Function to check if a file exists at a given path */
   fileExists: (path: string) => boolean
+  /**
+   * Current working directory for require() resolution.
+   * Searched FIRST, before currentFilePath directory, per standard Lua behavior.
+   * If not provided, CWD is not searched (backward compatible).
+   */
+  cwd?: string
 }
 
 /**
@@ -23,17 +29,6 @@ export interface ResolvedModule {
   path: string
   /** Original module name */
   moduleName: string
-}
-
-/**
- * Get the directory portion of a file path.
- * @param filePath - Full file path (e.g., "/home/user/script.lua")
- * @returns Directory path (e.g., "/home/user")
- */
-function getDirectoryFromPath(filePath: string): string {
-  const lastSlash = filePath.lastIndexOf('/')
-  if (lastSlash <= 0) return '/'
-  return filePath.substring(0, lastSlash)
 }
 
 /**
@@ -56,69 +51,68 @@ function joinPath(...segments: string[]): string {
 /**
  * Resolve a module name to an absolute file path.
  *
- * Resolution order (matches runtime require behavior):
- * 1. {scriptDir}/{modulePath}.lua
- * 2. {scriptDir}/{modulePath}/init.lua
+ * Resolution order (matches standard Lua require behavior):
+ * 1. {cwd}/{modulePath}.lua (CWD first - standard Lua ./?.lua)
+ * 2. {cwd}/{modulePath}/init.lua (package in CWD)
  * 3. /{modulePath}.lua (root fallback)
  * 4. /{modulePath}/init.lua (root fallback)
+ *
+ * NOTE: Standard Lua does NOT search relative to the current file's directory.
+ * Users must use full paths like require('lib.helpers') not require('helpers').
  *
  * @param options - Resolution options
  * @returns Resolved module info, or null if not found
  *
  * @example
- * // Simple module in same directory
+ * // Module in CWD
  * resolveModulePath({
  *   moduleName: 'utils',
  *   currentFilePath: '/home/main.lua',
+ *   cwd: '/home',
  *   fileExists: (p) => p === '/home/utils.lua'
  * })
  * // Returns: { path: '/home/utils.lua', moduleName: 'utils' }
  *
  * @example
- * // Nested module with dot notation
+ * // Nested module with dot notation from root
  * resolveModulePath({
  *   moduleName: 'lib.helpers',
  *   currentFilePath: '/home/main.lua',
- *   fileExists: (p) => p === '/home/lib/helpers.lua'
+ *   cwd: '/',
+ *   fileExists: (p) => p === '/lib/helpers.lua'
  * })
- * // Returns: { path: '/home/lib/helpers.lua', moduleName: 'lib.helpers' }
+ * // Returns: { path: '/lib/helpers.lua', moduleName: 'lib.helpers' }
  */
 export function resolveModulePath(
   options: ModuleResolverOptions
 ): ResolvedModule | null {
-  const { moduleName, currentFilePath, fileExists } = options
-
-  // Get the directory of the current file
-  const baseDir = getDirectoryFromPath(currentFilePath)
+  const { moduleName, fileExists, cwd } = options
 
   // Convert module name to relative path
   // Support both "lib/utils" and "lib.utils" formats
   const modulePath = moduleName.replace(/\./g, '/')
 
-  // Try relative to current file's directory first
-  const relativePath = joinPath(baseDir, modulePath + '.lua')
-  if (fileExists(relativePath)) {
-    return { path: relativePath, moduleName }
+  // Helper to try both .lua and /init.lua variants in a directory
+  const tryDirectory = (dir: string): string | null => {
+    // Try dir/module.lua
+    const luaPath = joinPath(dir, modulePath + '.lua')
+    if (fileExists(luaPath)) return luaPath
+    // Try dir/module/init.lua
+    const initPath = joinPath(dir, modulePath, 'init.lua')
+    if (fileExists(initPath)) return initPath
+    return null
   }
 
-  // Try init.lua for package directories
-  const initPath = joinPath(baseDir, modulePath, 'init.lua')
-  if (fileExists(initPath)) {
-    return { path: initPath, moduleName }
+  // 1. Search CWD first (standard Lua ./?.lua behavior)
+  if (cwd) {
+    const found = tryDirectory(cwd)
+    if (found) return { path: found, moduleName }
   }
 
-  // Fall back to root if different from base
-  if (baseDir !== '/') {
-    const rootPath = '/' + modulePath + '.lua'
-    if (fileExists(rootPath)) {
-      return { path: rootPath, moduleName }
-    }
-
-    // Try root init.lua
-    const rootInitPath = '/' + modulePath + '/init.lua'
-    if (fileExists(rootInitPath)) {
-      return { path: rootInitPath, moduleName }
-    }
+  // 2. Fall back to root if different from CWD
+  if (cwd !== '/') {
+    const found = tryDirectory('/')
+    if (found) return { path: found, moduleName }
   }
 
   return null

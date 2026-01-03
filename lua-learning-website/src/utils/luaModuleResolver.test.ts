@@ -3,10 +3,11 @@ import { resolveModulePath } from './luaModuleResolver'
 
 describe('luaModuleResolver', () => {
   describe('resolveModulePath', () => {
-    it('should resolve simple module in same directory', () => {
+    it('should resolve simple module in CWD', () => {
       const result = resolveModulePath({
         moduleName: 'utils',
         currentFilePath: '/home/main.lua',
+        cwd: '/home',
         fileExists: (p) => p === '/home/utils.lua',
       })
 
@@ -20,6 +21,7 @@ describe('luaModuleResolver', () => {
       const result = resolveModulePath({
         moduleName: 'lib/helpers',
         currentFilePath: '/home/main.lua',
+        cwd: '/home',
         fileExists: (p) => p === '/home/lib/helpers.lua',
       })
 
@@ -33,6 +35,7 @@ describe('luaModuleResolver', () => {
       const result = resolveModulePath({
         moduleName: 'lib.helpers',
         currentFilePath: '/home/main.lua',
+        cwd: '/home',
         fileExists: (p) => p === '/home/lib/helpers.lua',
       })
 
@@ -46,6 +49,7 @@ describe('luaModuleResolver', () => {
       const result = resolveModulePath({
         moduleName: 'mylib',
         currentFilePath: '/home/main.lua',
+        cwd: '/home',
         fileExists: (p) => p === '/home/mylib/init.lua',
       })
 
@@ -59,6 +63,7 @@ describe('luaModuleResolver', () => {
       const result = resolveModulePath({
         moduleName: 'mylib',
         currentFilePath: '/home/main.lua',
+        cwd: '/home',
         fileExists: (p) =>
           p === '/home/mylib.lua' || p === '/home/mylib/init.lua',
       })
@@ -69,10 +74,11 @@ describe('luaModuleResolver', () => {
       })
     })
 
-    it('should fall back to root when not found in script directory', () => {
+    it('should fall back to root when not found in CWD', () => {
       const result = resolveModulePath({
         moduleName: 'shared',
         currentFilePath: '/home/project/main.lua',
+        cwd: '/home/project',
         fileExists: (p) => p === '/shared.lua',
       })
 
@@ -86,6 +92,7 @@ describe('luaModuleResolver', () => {
       const result = resolveModulePath({
         moduleName: 'shared',
         currentFilePath: '/home/project/main.lua',
+        cwd: '/home/project',
         fileExists: (p) => p === '/shared/init.lua',
       })
 
@@ -99,6 +106,7 @@ describe('luaModuleResolver', () => {
       const result = resolveModulePath({
         moduleName: 'nonexistent',
         currentFilePath: '/home/main.lua',
+        cwd: '/home',
         fileExists: () => false,
       })
 
@@ -109,6 +117,7 @@ describe('luaModuleResolver', () => {
       const result = resolveModulePath({
         moduleName: 'utils',
         currentFilePath: '/main.lua',
+        cwd: '/',
         fileExists: (p) => p === '/utils.lua',
       })
 
@@ -122,6 +131,7 @@ describe('luaModuleResolver', () => {
       const result = resolveModulePath({
         moduleName: 'a.b.c.d',
         currentFilePath: '/home/main.lua',
+        cwd: '/home',
         fileExists: (p) => p === '/home/a/b/c/d.lua',
       })
 
@@ -131,15 +141,31 @@ describe('luaModuleResolver', () => {
       })
     })
 
-    it('should handle nested current file path', () => {
+    it('should NOT search relative to current file (standard Lua behavior)', () => {
+      // When CWD is different from current file's directory,
+      // module should NOT be found if it only exists in current file's directory
       const result = resolveModulePath({
         moduleName: 'utils',
         currentFilePath: '/home/project/src/main.lua',
-        fileExists: (p) => p === '/home/project/src/utils.lua',
+        cwd: '/', // CWD is root, not the script's directory
+        fileExists: (p) => p === '/home/project/src/utils.lua', // Only in script's dir
       })
 
+      // Should NOT find it - standard Lua doesn't search relative to script
+      expect(result).toBeNull()
+    })
+
+    it('should search CWD first even when module exists in both CWD and root', () => {
+      const result = resolveModulePath({
+        moduleName: 'utils',
+        currentFilePath: '/home/main.lua',
+        cwd: '/projects',
+        fileExists: (p) => p === '/projects/utils.lua' || p === '/utils.lua',
+      })
+
+      // Should find in CWD first
       expect(result).toEqual({
-        path: '/home/project/src/utils.lua',
+        path: '/projects/utils.lua',
         moduleName: 'utils',
       })
     })

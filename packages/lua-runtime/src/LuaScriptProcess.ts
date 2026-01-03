@@ -233,6 +233,7 @@ export class LuaScriptProcess implements IProcess {
       instructionLimit: this.options.instructionLimit,
       instructionCheckInterval: this.options.instructionCheckInterval,
       scriptPath: filepath,
+      cwd: this.context.cwd,
     }
 
     try {

@@ -296,8 +296,9 @@ describe('LuaScriptProcess', () => {
       expect(onExit).toHaveBeenCalledWith(0)
     })
 
-    it('should find module in subdirectory relative to script', async () => {
+    it('should find module in subdirectory when CWD is set', async () => {
       // Setup: main.lua in /project requires lib/utils from /project/lib/utils.lua
+      // CWD is set to /project so require("lib/utils") finds /project/lib/utils.lua
       const readFileMock = mockFileSystem.readFile as ReturnType<typeof vi.fn>
       readFileMock.mockImplementation((path: string) => {
         if (path === '/project/main.lua') {
@@ -321,6 +322,9 @@ describe('LuaScriptProcess', () => {
       existsMock.mockImplementation((path: string) => {
         return path === '/project/main.lua' || path === '/project/lib/utils.lua'
       })
+
+      // Set CWD to /project so require can find lib/utils
+      context = { ...context, cwd: '/project' }
 
       process = new LuaScriptProcess('/project/main.lua', context)
       process.onOutput = onOutput
@@ -451,7 +455,7 @@ describe('LuaScriptProcess', () => {
     })
 
     it('should support dot notation for nested modules (utils.math)', async () => {
-      // Setup: require("lib.utils") should find lib/utils.lua
+      // Setup: require("lib.utils") should find lib/utils.lua when CWD is set
       const readFileMock = mockFileSystem.readFile as ReturnType<typeof vi.fn>
       readFileMock.mockImplementation((path: string) => {
         if (path === '/project/main.lua') {
@@ -476,6 +480,9 @@ describe('LuaScriptProcess', () => {
         return path === '/project/main.lua' || path === '/project/lib/utils.lua'
       })
 
+      // Set CWD to /project so require can find lib.utils
+      context = { ...context, cwd: '/project' }
+
       process = new LuaScriptProcess('/project/main.lua', context)
       process.onOutput = onOutput
       process.onError = onError
@@ -489,5 +496,7 @@ describe('LuaScriptProcess', () => {
       expect(onOutput).toHaveBeenCalledWith('12\n')
       expect(onExit).toHaveBeenCalledWith(0)
     })
+
+    // CWD-based require resolution tests are in LuaScriptProcess.requireCwd.test.ts
   })
 })
