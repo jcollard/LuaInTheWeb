@@ -175,6 +175,9 @@ function createMockCanvas(): {
     fillText: vi.fn(),
     save: vi.fn(),
     restore: vi.fn(),
+    // DPR scaling support (Issue #515)
+    setTransform: vi.fn(),
+    textBaseline: 'alphabetic' as CanvasTextBaseline,
     fillStyle: '',
     strokeStyle: '',
     lineWidth: 1,
@@ -755,6 +758,58 @@ describe('LuaCanvasProcess', () => {
 
       // cancelAnimationFrame should have been called
       expect(cancelAnimationFrame).toHaveBeenCalled();
+    });
+  });
+
+  // ============================================================================
+  // DPR Scaling Support (Issue #515)
+  // ============================================================================
+
+  describe('setDevicePixelRatio()', () => {
+    it('should have setDevicePixelRatio method', () => {
+      process = new LuaCanvasProcess({
+        code: 'canvas.onDraw(function() end)',
+        canvas: mockCanvas.canvas,
+      });
+
+      expect(process.setDevicePixelRatio).toBeInstanceOf(Function);
+    });
+
+    it('should configure renderer with DPR after start', () => {
+      process = new LuaCanvasProcess({
+        code: 'canvas.onDraw(function() end)',
+        canvas: mockCanvas.canvas,
+      });
+
+      process.start();
+      mockWorkerInstance.simulateMessage({ type: 'ready' });
+      mockWorkerInstance.simulateMessage({ type: 'stateChanged', state: 'running' });
+
+      // Set DPR after process is running
+      process.setDevicePixelRatio(2);
+
+      // Canvas should be scaled by DPR
+      expect(mockCanvas.canvas.width).toBe(1600); // 800 * 2
+      expect(mockCanvas.canvas.height).toBe(1200); // 600 * 2
+    });
+
+    it('should apply DPR before process is started (deferred)', () => {
+      process = new LuaCanvasProcess({
+        code: 'canvas.onDraw(function() end)',
+        canvas: mockCanvas.canvas,
+      });
+
+      // Set DPR before start
+      process.setDevicePixelRatio(2);
+
+      // Start the process
+      process.start();
+      mockWorkerInstance.simulateMessage({ type: 'ready' });
+      mockWorkerInstance.simulateMessage({ type: 'stateChanged', state: 'running' });
+
+      // Canvas should be scaled by DPR
+      expect(mockCanvas.canvas.width).toBe(1600); // 800 * 2
+      expect(mockCanvas.canvas.height).toBe(1200); // 600 * 2
     });
   });
 });

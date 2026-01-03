@@ -28,6 +28,7 @@ vi.mock('@lua-learning/canvas-runtime', () => {
   return {
     CanvasRenderer: class MockCanvasRenderer {
       render = vi.fn()
+      configureScaling = vi.fn()
     },
     InputCapture: class MockInputCapture {
       isKeyDown = vi.fn().mockReturnValue(false)
@@ -46,6 +47,7 @@ vi.mock('@lua-learning/canvas-runtime', () => {
       isMouseButtonPressed = vi.fn().mockReturnValue(false)
       update = vi.fn()
       dispose = vi.fn()
+      setLogicalSize = vi.fn()
     },
     GameLoopController: class MockGameLoopController {
       start = vi.fn()

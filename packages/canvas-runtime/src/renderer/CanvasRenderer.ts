@@ -17,6 +17,11 @@ export class CanvasRenderer {
   private currentFontSize: number = 16;
   private currentFontFamily: string = 'monospace';
 
+  // DPR scaling state (Issue #515)
+  private devicePixelRatio: number = 1;
+  private logicalWidth: number;
+  private logicalHeight: number;
+
   constructor(canvas: HTMLCanvasElement, imageCache?: ImageCache) {
     this.canvas = canvas;
     this.imageCache = imageCache;
@@ -28,9 +33,47 @@ export class CanvasRenderer {
     }
     this.ctx = ctx;
 
+    // Initialize logical dimensions from canvas
+    this.logicalWidth = canvas.width;
+    this.logicalHeight = canvas.height;
+
     // Set default font and text baseline
     this.updateFont();
     this.ctx.textBaseline = 'top';
+  }
+
+  /**
+   * Configure DPR-aware scaling for HiDPI displays.
+   * Sets the physical canvas size to logical × DPR and applies a scale transform
+   * so drawing coordinates remain logical.
+   *
+   * @param logicalWidth - The logical width in CSS pixels
+   * @param logicalHeight - The logical height in CSS pixels
+   * @param dpr - The device pixel ratio (e.g., 2 for retina displays)
+   */
+  configureScaling(logicalWidth: number, logicalHeight: number, dpr: number): void {
+    this.logicalWidth = logicalWidth;
+    this.logicalHeight = logicalHeight;
+    this.devicePixelRatio = dpr;
+
+    // Set physical canvas size (rounded to avoid sub-pixel issues)
+    this.canvas.width = Math.round(logicalWidth * dpr);
+    this.canvas.height = Math.round(logicalHeight * dpr);
+
+    // Apply DPR scale transform so drawing uses logical coordinates
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Reset default states after canvas resize (which clears context state)
+    this.ctx.textBaseline = 'top';
+    this.updateFont();
+  }
+
+  /**
+   * Get the logical canvas dimensions (not physical).
+   * These are the dimensions that Lua code sees and uses for drawing.
+   */
+  getLogicalSize(): { width: number; height: number } {
+    return { width: this.logicalWidth, height: this.logicalHeight };
   }
 
   /**
@@ -54,7 +97,8 @@ export class CanvasRenderer {
   private executeCommand(command: DrawCommand): void {
     switch (command.type) {
       case 'clear':
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        // Use logical dimensions (DPR transform is applied, so we draw in logical coords)
+        this.ctx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
         break;
 
       case 'clearRect':
@@ -80,8 +124,15 @@ export class CanvasRenderer {
         break;
 
       case 'setSize':
-        this.canvas.width = command.width;
-        this.canvas.height = command.height;
+        // Update logical dimensions and apply DPR scaling
+        this.logicalWidth = command.width;
+        this.logicalHeight = command.height;
+        this.canvas.width = Math.round(command.width * this.devicePixelRatio);
+        this.canvas.height = Math.round(command.height * this.devicePixelRatio);
+        // Reapply DPR transform (canvas resize clears context state)
+        this.ctx.setTransform(this.devicePixelRatio, 0, 0, this.devicePixelRatio, 0, 0);
+        this.ctx.textBaseline = 'top';
+        this.updateFont();
         break;
 
       case 'rect':

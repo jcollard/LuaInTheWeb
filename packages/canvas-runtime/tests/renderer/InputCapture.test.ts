@@ -450,6 +450,130 @@ describe('InputCapture', () => {
     });
   });
 
+  // ============================================================================
+  // DPR Scaling Support (Issue #515)
+  // ============================================================================
+
+  describe('setLogicalSize (DPR support)', () => {
+    it('should use logical size for coordinate mapping when set', () => {
+      // Canvas with physical size 1600x1200 but logical size 800x600 (2x DPR)
+      const canvas = document.createElement('canvas');
+      canvas.width = 1600;  // Physical width (2x)
+      canvas.height = 1200; // Physical height (2x)
+      document.body.appendChild(canvas);
+
+      const canvasInput = new InputCapture(canvas);
+      canvasInput.setLogicalSize(800, 600); // Logical size
+
+      // Mock getBoundingClientRect - displayed at logical CSS size
+      vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
+        left: 0,
+        top: 0,
+        right: 800,
+        bottom: 600,
+        width: 800,
+        height: 600,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      });
+
+      // Click at display center (400, 300)
+      const event = new MouseEvent('mousemove', {
+        clientX: 400,
+        clientY: 300,
+      });
+      canvas.dispatchEvent(event);
+
+      // Should map to logical center (400, 300), not physical (800, 600)
+      const pos = canvasInput.getMousePosition();
+      expect(pos.x).toBe(400);
+      expect(pos.y).toBe(300);
+
+      canvasInput.dispose();
+      document.body.removeChild(canvas);
+    });
+
+    it('should update logical size', () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 2048;
+      canvas.height = 1536;
+      document.body.appendChild(canvas);
+
+      const canvasInput = new InputCapture(canvas);
+
+      // Initially use canvas dimensions
+      vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
+        left: 0,
+        top: 0,
+        right: 2048,
+        bottom: 1536,
+        width: 2048,
+        height: 1536,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      });
+
+      // Set logical size to 1024x768
+      canvasInput.setLogicalSize(1024, 768);
+
+      const event = new MouseEvent('mousemove', {
+        clientX: 1024,
+        clientY: 768,
+      });
+      canvas.dispatchEvent(event);
+
+      // Center of display should map to center of logical canvas
+      const pos = canvasInput.getMousePosition();
+      expect(pos.x).toBe(512);
+      expect(pos.y).toBe(384);
+
+      canvasInput.dispose();
+      document.body.removeChild(canvas);
+    });
+
+    it('should handle letterboxing with logical size', () => {
+      // Canvas: physical 1600x1200, logical 800x600 (4:3)
+      // Container: 1200x600 (2:1) - wider, horizontal letterboxing
+      const canvas = document.createElement('canvas');
+      canvas.width = 1600;  // Physical (2x)
+      canvas.height = 1200;
+      document.body.appendChild(canvas);
+
+      const canvasInput = new InputCapture(canvas);
+      canvasInput.setLogicalSize(800, 600); // Logical 4:3
+
+      vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
+        left: 0,
+        top: 0,
+        right: 1200,
+        bottom: 600,
+        width: 1200,
+        height: 600,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      });
+
+      // Content: 800x600 centered (200px letterbox each side)
+      // Click at display center (600, 300)
+      const event = new MouseEvent('mousemove', {
+        clientX: 600,
+        clientY: 300,
+      });
+      canvas.dispatchEvent(event);
+
+      // Should map to logical center (400, 300)
+      const pos = canvasInput.getMousePosition();
+      expect(pos.x).toBeCloseTo(400, 0);
+      expect(pos.y).toBeCloseTo(300, 0);
+
+      canvasInput.dispose();
+      document.body.removeChild(canvas);
+    });
+  });
+
   describe('focus handling', () => {
     it('should clear keys on blur to prevent stuck keys', () => {
       target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));

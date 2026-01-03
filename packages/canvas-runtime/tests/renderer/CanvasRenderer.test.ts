@@ -2044,6 +2044,168 @@ describe('CanvasRenderer', () => {
     });
   });
 
+  // ============================================================================
+  // DPR (Device Pixel Ratio) Scaling - Issue #515
+  // ============================================================================
+
+  describe('DPR scaling', () => {
+    describe('configureScaling', () => {
+      it('should set physical canvas dimensions as logical × DPR', () => {
+        const freshCanvas = document.createElement('canvas');
+        const freshCtx = createMockContext();
+        vi.spyOn(freshCanvas, 'getContext').mockReturnValue(freshCtx);
+
+        const testRenderer = new CanvasRenderer(freshCanvas);
+        testRenderer.configureScaling(800, 600, 2);
+
+        expect(freshCanvas.width).toBe(1600);
+        expect(freshCanvas.height).toBe(1200);
+      });
+
+      it('should apply DPR scale transform to context', () => {
+        const freshCanvas = document.createElement('canvas');
+        const freshCtx = createMockContext();
+        vi.spyOn(freshCanvas, 'getContext').mockReturnValue(freshCtx);
+
+        const testRenderer = new CanvasRenderer(freshCanvas);
+        testRenderer.configureScaling(800, 600, 2);
+
+        expect(freshCtx.setTransform).toHaveBeenCalledWith(2, 0, 0, 2, 0, 0);
+      });
+
+      it('should handle fractional DPR with rounding', () => {
+        const freshCanvas = document.createElement('canvas');
+        const freshCtx = createMockContext();
+        vi.spyOn(freshCanvas, 'getContext').mockReturnValue(freshCtx);
+
+        const testRenderer = new CanvasRenderer(freshCanvas);
+        testRenderer.configureScaling(800, 600, 1.5);
+
+        // 800 × 1.5 = 1200, 600 × 1.5 = 900
+        expect(freshCanvas.width).toBe(1200);
+        expect(freshCanvas.height).toBe(900);
+      });
+
+      it('should reset textBaseline to top after configureScaling', () => {
+        const freshCanvas = document.createElement('canvas');
+        const freshCtx = createMockContext();
+        vi.spyOn(freshCanvas, 'getContext').mockReturnValue(freshCtx);
+
+        const testRenderer = new CanvasRenderer(freshCanvas);
+        testRenderer.configureScaling(400, 300, 2);
+
+        expect(freshCtx.textBaseline).toBe('top');
+      });
+
+      it('should preserve DPR of 1 (no scaling)', () => {
+        const freshCanvas = document.createElement('canvas');
+        const freshCtx = createMockContext();
+        vi.spyOn(freshCanvas, 'getContext').mockReturnValue(freshCtx);
+
+        const testRenderer = new CanvasRenderer(freshCanvas);
+        testRenderer.configureScaling(800, 600, 1);
+
+        expect(freshCanvas.width).toBe(800);
+        expect(freshCanvas.height).toBe(600);
+        expect(freshCtx.setTransform).toHaveBeenCalledWith(1, 0, 0, 1, 0, 0);
+      });
+    });
+
+    describe('getLogicalSize', () => {
+      it('should return the configured logical dimensions', () => {
+        const freshCanvas = document.createElement('canvas');
+        const freshCtx = createMockContext();
+        vi.spyOn(freshCanvas, 'getContext').mockReturnValue(freshCtx);
+
+        const testRenderer = new CanvasRenderer(freshCanvas);
+        testRenderer.configureScaling(800, 600, 2);
+
+        const size = testRenderer.getLogicalSize();
+        expect(size.width).toBe(800);
+        expect(size.height).toBe(600);
+      });
+
+      it('should return initial canvas dimensions before configureScaling', () => {
+        const freshCanvas = document.createElement('canvas');
+        freshCanvas.width = 1024;
+        freshCanvas.height = 768;
+        const freshCtx = createMockContext();
+        vi.spyOn(freshCanvas, 'getContext').mockReturnValue(freshCtx);
+
+        const testRenderer = new CanvasRenderer(freshCanvas);
+        const size = testRenderer.getLogicalSize();
+
+        expect(size.width).toBe(1024);
+        expect(size.height).toBe(768);
+      });
+    });
+
+    describe('setSize command with DPR', () => {
+      it('should apply DPR to setSize command', () => {
+        const freshCanvas = document.createElement('canvas');
+        const freshCtx = createMockContext();
+        vi.spyOn(freshCanvas, 'getContext').mockReturnValue(freshCtx);
+
+        const testRenderer = new CanvasRenderer(freshCanvas);
+        // First configure with DPR = 2
+        testRenderer.configureScaling(800, 600, 2);
+
+        // Then issue a setSize command
+        testRenderer.render([{ type: 'setSize', width: 400, height: 300 }]);
+
+        // Canvas should be 400 × 2 = 800, 300 × 2 = 600
+        expect(freshCanvas.width).toBe(800);
+        expect(freshCanvas.height).toBe(600);
+      });
+
+      it('should update logical size after setSize command', () => {
+        const freshCanvas = document.createElement('canvas');
+        const freshCtx = createMockContext();
+        vi.spyOn(freshCanvas, 'getContext').mockReturnValue(freshCtx);
+
+        const testRenderer = new CanvasRenderer(freshCanvas);
+        testRenderer.configureScaling(800, 600, 2);
+        testRenderer.render([{ type: 'setSize', width: 1024, height: 768 }]);
+
+        const size = testRenderer.getLogicalSize();
+        expect(size.width).toBe(1024);
+        expect(size.height).toBe(768);
+      });
+
+      it('should reapply DPR transform after setSize command', () => {
+        const freshCanvas = document.createElement('canvas');
+        const freshCtx = createMockContext();
+        vi.spyOn(freshCanvas, 'getContext').mockReturnValue(freshCtx);
+
+        const testRenderer = new CanvasRenderer(freshCanvas);
+        testRenderer.configureScaling(800, 600, 2);
+        vi.mocked(freshCtx.setTransform).mockClear();
+
+        testRenderer.render([{ type: 'setSize', width: 400, height: 300 }]);
+
+        expect(freshCtx.setTransform).toHaveBeenCalledWith(2, 0, 0, 2, 0, 0);
+      });
+    });
+
+    describe('clear command with DPR', () => {
+      it('should clear using logical dimensions not physical', () => {
+        const freshCanvas = document.createElement('canvas');
+        const freshCtx = createMockContext();
+        vi.spyOn(freshCanvas, 'getContext').mockReturnValue(freshCtx);
+
+        const testRenderer = new CanvasRenderer(freshCanvas);
+        testRenderer.configureScaling(800, 600, 2);
+        vi.mocked(freshCtx.clearRect).mockClear();
+
+        testRenderer.render([{ type: 'clear' }]);
+
+        // Should clear logical dimensions (800×600), not physical (1600×1200)
+        // because the DPR transform is applied
+        expect(freshCtx.clearRect).toHaveBeenCalledWith(0, 0, 800, 600);
+      });
+    });
+  });
+
   describe('setTextBaseline command', () => {
     it('should set textBaseline to top', () => {
       const commands: DrawCommand[] = [

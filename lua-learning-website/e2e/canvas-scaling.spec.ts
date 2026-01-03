@@ -395,6 +395,140 @@ test.describe('Canvas Scaling', () => {
     })
   })
 
+  test.describe('HiDPI Canvas Resolution (Issue #515)', () => {
+    // NOTE: Tests that verify DPR scaling via REPL/shell are skipped because
+    // the shell integration path doesn't yet pass devicePixelRatio to the canvas process.
+    // The DPR feature works correctly in standalone CanvasGamePanel mode (unit tested).
+    // TODO: Implement DPR support in shell-core/lua-runtime packages for full E2E coverage.
+
+    test('Native (1x) mode ignores devicePixelRatio', async ({ browser }) => {
+      // Create context with simulated HiDPI display (2x DPR)
+      const context = await browser.newContext({
+        deviceScaleFactor: 2,
+        viewport: { width: 1280, height: 720 },
+      })
+      const page = await context.newPage()
+
+      await page.goto('/editor')
+      await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
+      await expect(page.locator('[data-testid="shell-terminal-container"]')).toBeVisible({
+        timeout: TIMEOUTS.ELEMENT_VISIBLE,
+      })
+
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
+
+      await page.evaluate(() => localStorage.removeItem('canvas-scaling:mode'))
+
+      await terminal.execute('lua')
+      await page.waitForTimeout(TIMEOUTS.ANIMATION)
+
+      const stopButton = page.getByRole('button', { name: /stop process/i })
+      await expect(stopButton).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      await terminal.type('canvas = require("canvas")')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Set canvas size to 400x300 (logical)
+      await terminal.type('canvas.set_size(400, 300)')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      await terminal.type('canvas.tick(function() if canvas.get_time() > 10 then canvas.stop() end end)')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      await terminal.type('canvas.start()')
+      await terminal.press('Enter')
+
+      const canvasTab = page.locator('[class*="canvasTab"]').first()
+      await expect(canvasTab).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Switch to Native (1x) mode
+      const scalingSelector = page.getByRole('combobox', { name: /scale/i })
+      await scalingSelector.selectOption('native')
+
+      // Give the canvas time to reconfigure
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Verify canvas has physical dimensions = logical (1:1, ignoring DPR)
+      const canvas = page.locator('canvas[aria-label="Canvas game"]')
+      const dimensions = await canvas.evaluate((el: HTMLCanvasElement) => ({
+        width: el.width,
+        height: el.height,
+      }))
+
+      // In Native mode, canvas should be 400×300 (ignoring DPR)
+      expect(dimensions.width).toBe(400)
+      expect(dimensions.height).toBe(300)
+
+      await stopButton.click()
+      await context.close()
+    })
+
+    test('switching scaling modes changes canvas CSS classes', async ({ browser }) => {
+      // Test that mode switching correctly updates CSS classes (HiDPI support via CSS)
+      const context = await browser.newContext({
+        deviceScaleFactor: 2,
+        viewport: { width: 1280, height: 720 },
+      })
+      const page = await context.newPage()
+
+      await page.goto('/editor')
+      await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
+      await expect(page.locator('[data-testid="shell-terminal-container"]')).toBeVisible({
+        timeout: TIMEOUTS.ELEMENT_VISIBLE,
+      })
+
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
+
+      await page.evaluate(() => localStorage.removeItem('canvas-scaling:mode'))
+
+      await terminal.execute('lua')
+      await page.waitForTimeout(TIMEOUTS.ANIMATION)
+
+      const stopButton = page.getByRole('button', { name: /stop process/i })
+      await expect(stopButton).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      await terminal.type('canvas = require("canvas")')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      await terminal.type('canvas.tick(function() if canvas.get_time() > 10 then canvas.stop() end end)')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      await terminal.type('canvas.start()')
+      await terminal.press('Enter')
+
+      const canvasTab = page.locator('[class*="canvasTab"]').first()
+      await expect(canvasTab).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      const canvas = page.locator('canvas[aria-label="Canvas game"]')
+      const scalingSelector = page.getByRole('combobox', { name: /scale/i })
+
+      // Default: Fit mode
+      await expect(canvas).toHaveClass(/canvasFit/)
+
+      // Switch to Native
+      await scalingSelector.selectOption('native')
+      await expect(canvas).toHaveClass(/canvasNative/)
+
+      // Switch to Full
+      await scalingSelector.selectOption('full')
+      await expect(canvas).toHaveClass(/canvasFull/)
+
+      // Back to Fit
+      await scalingSelector.selectOption('fit')
+      await expect(canvas).toHaveClass(/canvasFit/)
+
+      await stopButton.click()
+      await context.close()
+    })
+  })
+
   test.describe('localStorage Persistence', () => {
     test('saves scaling preference to localStorage', async ({ page }) => {
       const terminal = createTerminalHelper(page)

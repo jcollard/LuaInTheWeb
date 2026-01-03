@@ -58,8 +58,8 @@ export type AudioAssetManifest = Map<string, AudioAssetDefinition>
  * Callbacks for canvas tab management.
  */
 export interface CanvasCallbacks {
-  /** Request a canvas tab to be opened, returns the canvas element when ready */
-  onRequestCanvasTab: (canvasId: string) => Promise<HTMLCanvasElement>
+  /** Request a canvas tab to be opened, returns the canvas element and DPR when ready */
+  onRequestCanvasTab: (canvasId: string) => Promise<{ canvas: HTMLCanvasElement; devicePixelRatio: number }>
   /** Request a canvas tab to be closed */
   onCloseCanvasTab: (canvasId: string) => void
   /** Report an error that occurred during canvas execution */
@@ -95,6 +95,7 @@ export class CanvasController {
   private renderer: CanvasRenderer | null = null
   private inputCapture: InputCapture | null = null
   private gameLoop: GameLoopController | null = null
+  private devicePixelRatio: number = 1
 
   // Frame state
   private frameCommands: DrawCommand[] = []
@@ -206,8 +207,10 @@ export class CanvasController {
       )
     }
 
-    // Request canvas tab from UI
-    this.canvas = await this.callbacks.onRequestCanvasTab(this.canvasId)
+    // Request canvas tab from UI (returns canvas element and DPR for HiDPI scaling)
+    const { canvas, devicePixelRatio } = await this.callbacks.onRequestCanvasTab(this.canvasId)
+    this.canvas = canvas
+    this.devicePixelRatio = devicePixelRatio
 
     // Register close handler so UI can stop us when tab is closed
     if (this.callbacks.registerCanvasCloseHandler) {
@@ -218,6 +221,13 @@ export class CanvasController {
     this.renderer = new CanvasRenderer(this.canvas, this.imageCache ?? undefined)
     this.inputCapture = new InputCapture(this.canvas)
     this.gameLoop = new GameLoopController(this.onFrame.bind(this))
+
+    // Configure HiDPI scaling (Issue #515)
+    // This scales the canvas buffer to match the display's device pixel ratio
+    const logicalWidth = this.canvas.width
+    const logicalHeight = this.canvas.height
+    this.renderer.configureScaling(logicalWidth, logicalHeight, this.devicePixelRatio)
+    this.inputCapture.setLogicalSize(logicalWidth, logicalHeight)
 
     // Process any commands added before start() (e.g., setSize)
     // This ensures pre-start configuration is applied before the game loop begins
