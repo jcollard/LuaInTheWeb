@@ -2881,17 +2881,22 @@ return setmetatable({
     const handleMouseUp = (e) => {
       state.mouseButtonsDown.delete(e.button);
     };
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+    };
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("keyup", handleKeyUp);
     state.canvas.addEventListener("mousemove", handleMouseMove);
     state.canvas.addEventListener("mousedown", handleMouseDown);
     state.canvas.addEventListener("mouseup", handleMouseUp);
+    state.canvas.addEventListener("contextmenu", handleContextMenu);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("keyup", handleKeyUp);
       state.canvas.removeEventListener("mousemove", handleMouseMove);
       state.canvas.removeEventListener("mousedown", handleMouseDown);
       state.canvas.removeEventListener("mouseup", handleMouseUp);
+      state.canvas.removeEventListener("contextmenu", handleContextMenu);
     };
   }
   function startGameLoop(state) {

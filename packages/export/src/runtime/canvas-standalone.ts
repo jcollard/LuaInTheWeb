@@ -131,11 +131,17 @@ export function setupInputListeners(state: CanvasRuntimeState): () => void {
     state.mouseButtonsDown.delete(e.button)
   }
 
+  const handleContextMenu = (e: MouseEvent) => {
+    // Prevent browser context menu so right-click can be used in games
+    e.preventDefault()
+  }
+
   document.addEventListener('keydown', handleKeyDown)
   document.addEventListener('keyup', handleKeyUp)
   state.canvas.addEventListener('mousemove', handleMouseMove)
   state.canvas.addEventListener('mousedown', handleMouseDown)
   state.canvas.addEventListener('mouseup', handleMouseUp)
+  state.canvas.addEventListener('contextmenu', handleContextMenu)
 
   // Return cleanup function
   return () => {
@@ -144,6 +150,7 @@ export function setupInputListeners(state: CanvasRuntimeState): () => void {
     state.canvas.removeEventListener('mousemove', handleMouseMove)
     state.canvas.removeEventListener('mousedown', handleMouseDown)
     state.canvas.removeEventListener('mouseup', handleMouseUp)
+    state.canvas.removeEventListener('contextmenu', handleContextMenu)
   }
 }
 
