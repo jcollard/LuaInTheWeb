@@ -37,34 +37,30 @@ export function useErrorRecovery(): UseErrorRecoveryReturn {
     window.location.reload()
   }, [])
 
-  const handleExportAndReset = useCallback(async () => {
+  const handleExport = useCallback(async () => {
     setIsExporting(true)
     setExportProgress(null)
 
     try {
-      // Export all data
       const blob = await exportAllData({
         onProgress: (progress) => {
           setExportProgress(progress)
         },
       })
-
-      // Trigger download
       triggerDownload(generateBackupFilename(), blob)
     } catch (error) {
       console.error('Failed to export data:', error)
+    } finally {
+      setIsExporting(false)
     }
+  }, [])
 
-    // Clear cache regardless of export success
+  const handleReset = useCallback(async () => {
     try {
       await clearAllCache()
     } catch (error) {
       console.error('Failed to clear cache:', error)
     }
-
-    setIsExporting(false)
-
-    // Reload page
     window.location.reload()
   }, [])
 
@@ -74,6 +70,7 @@ export function useErrorRecovery(): UseErrorRecoveryReturn {
     isExporting,
     exportProgress,
     handleReload,
-    handleExportAndReset,
+    handleExport,
+    handleReset,
   }
 }

@@ -64,7 +64,7 @@ describe('useErrorRecovery', () => {
     })
   })
 
-  describe('handleExportAndReset', () => {
+  describe('handleExport', () => {
     it('should start with isExporting as false', () => {
       const { result } = renderHook(() => useErrorRecovery())
       expect(result.current.isExporting).toBe(false)
@@ -80,7 +80,7 @@ describe('useErrorRecovery', () => {
 
       let exportPromise: Promise<void>
       act(() => {
-        exportPromise = result.current.handleExportAndReset()
+        exportPromise = result.current.handleExport()
       })
 
       expect(result.current.isExporting).toBe(true)
@@ -97,7 +97,7 @@ describe('useErrorRecovery', () => {
       const { result } = renderHook(() => useErrorRecovery())
 
       await act(async () => {
-        await result.current.handleExportAndReset()
+        await result.current.handleExport()
       })
 
       expect(exportAllData).toHaveBeenCalledWith(
@@ -117,10 +117,9 @@ describe('useErrorRecovery', () => {
       const { result } = renderHook(() => useErrorRecovery())
 
       await act(async () => {
-        await result.current.handleExportAndReset()
+        await result.current.handleExport()
       })
 
-      // Progress should be updated during export
       expect(result.current.exportProgress).toEqual({
         phase: 'complete',
         processed: 2,
@@ -135,7 +134,7 @@ describe('useErrorRecovery', () => {
       const { result } = renderHook(() => useErrorRecovery())
 
       await act(async () => {
-        await result.current.handleExportAndReset()
+        await result.current.handleExport()
       })
 
       expect(triggerDownload).toHaveBeenCalledWith(
@@ -144,24 +143,24 @@ describe('useErrorRecovery', () => {
       )
     })
 
-    it('should call clearAllCache after download', async () => {
+    it('should NOT call clearAllCache', async () => {
       const { result } = renderHook(() => useErrorRecovery())
 
       await act(async () => {
-        await result.current.handleExportAndReset()
+        await result.current.handleExport()
       })
 
-      expect(clearAllCache).toHaveBeenCalled()
+      expect(clearAllCache).not.toHaveBeenCalled()
     })
 
-    it('should reload page after clearing cache', async () => {
+    it('should NOT reload page', async () => {
       const { result } = renderHook(() => useErrorRecovery())
 
       await act(async () => {
-        await result.current.handleExportAndReset()
+        await result.current.handleExport()
       })
 
-      expect(mockReload).toHaveBeenCalled()
+      expect(mockReload).not.toHaveBeenCalled()
     })
 
     it('should handle export errors gracefully', async () => {
@@ -171,27 +170,75 @@ describe('useErrorRecovery', () => {
       const { result } = renderHook(() => useErrorRecovery())
 
       await act(async () => {
-        await result.current.handleExportAndReset()
+        await result.current.handleExport()
       })
 
-      // Should not throw, should log error
       expect(consoleError).toHaveBeenCalled()
       expect(result.current.isExporting).toBe(false)
 
       consoleError.mockRestore()
     })
 
-    it('should still clear cache even if export fails', async () => {
+    it('should set isExporting false after failed export', async () => {
       vi.spyOn(console, 'error').mockImplementation(() => {})
-      ;(exportAllData as Mock).mockRejectedValue(new Error('Export failed'))
+      ;(exportAllData as Mock).mockRejectedValue(new Error('fail'))
 
       const { result } = renderHook(() => useErrorRecovery())
 
       await act(async () => {
-        await result.current.handleExportAndReset()
+        await result.current.handleExport()
+      })
+
+      expect(result.current.isExporting).toBe(false)
+    })
+  })
+
+  describe('handleReset', () => {
+    it('should call clearAllCache', async () => {
+      const { result } = renderHook(() => useErrorRecovery())
+
+      await act(async () => {
+        await result.current.handleReset()
       })
 
       expect(clearAllCache).toHaveBeenCalled()
+    })
+
+    it('should reload page after clearing cache', async () => {
+      const { result } = renderHook(() => useErrorRecovery())
+
+      await act(async () => {
+        await result.current.handleReset()
+      })
+
+      expect(mockReload).toHaveBeenCalled()
+    })
+
+    it('should NOT call exportAllData', async () => {
+      const { result } = renderHook(() => useErrorRecovery())
+
+      await act(async () => {
+        await result.current.handleReset()
+      })
+
+      expect(exportAllData).not.toHaveBeenCalled()
+    })
+
+    it('should handle clearAllCache failure gracefully', async () => {
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+      ;(clearAllCache as Mock).mockRejectedValue(new Error('Cache clear failed'))
+
+      const { result } = renderHook(() => useErrorRecovery())
+
+      await act(async () => {
+        await result.current.handleReset()
+      })
+
+      expect(consoleError).toHaveBeenCalled()
+      // Page should still reload
+      expect(mockReload).toHaveBeenCalled()
+
+      consoleError.mockRestore()
     })
   })
 
@@ -211,15 +258,13 @@ describe('useErrorRecovery', () => {
 
       // First export
       await act(async () => {
-        await result.current.handleExportAndReset()
+        await result.current.handleExport()
       })
 
-      // exportProgress should have been updated
       expect(result.current.exportProgress).not.toBeNull()
 
       // Reset mock
       vi.clearAllMocks()
-      mockReload.mockClear()
 
       // Second export should reset progress
       ;(exportAllData as Mock).mockImplementation(async ({ onProgress }) => {
@@ -228,7 +273,7 @@ describe('useErrorRecovery', () => {
       })
 
       await act(async () => {
-        await result.current.handleExportAndReset()
+        await result.current.handleExport()
       })
     })
   })
@@ -241,65 +286,19 @@ describe('useErrorRecovery', () => {
       const { result } = renderHook(() => useErrorRecovery())
 
       await act(async () => {
-        await result.current.handleExportAndReset()
+        await result.current.handleExport()
       })
 
-      // Verify the filename format matches backup-YYYY-MM-DD.zip
       expect(triggerDownload).toHaveBeenCalledWith(
         expect.stringMatching(/^backup-\d{4}-\d{2}-\d{2}\.zip$/),
         mockBlob
       )
 
-      // Also verify it's a valid date
       const call = (triggerDownload as Mock).mock.calls[0]
       const filename = call[0] as string
       const dateStr = filename.replace('backup-', '').replace('.zip', '')
       const date = new Date(dateStr)
       expect(date.getTime()).toBeGreaterThan(0)
-    })
-  })
-
-  describe('state transitions', () => {
-    it('should set isExporting false after successful export', async () => {
-      const { result } = renderHook(() => useErrorRecovery())
-
-      await act(async () => {
-        await result.current.handleExportAndReset()
-      })
-
-      expect(result.current.isExporting).toBe(false)
-    })
-
-    it('should set isExporting false after failed export', async () => {
-      vi.spyOn(console, 'error').mockImplementation(() => {})
-      ;(exportAllData as Mock).mockRejectedValue(new Error('fail'))
-
-      const { result } = renderHook(() => useErrorRecovery())
-
-      await act(async () => {
-        await result.current.handleExportAndReset()
-      })
-
-      expect(result.current.isExporting).toBe(false)
-    })
-
-    it('should handle clearAllCache failure gracefully', async () => {
-      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
-      ;(clearAllCache as Mock).mockRejectedValue(new Error('Cache clear failed'))
-
-      const { result } = renderHook(() => useErrorRecovery())
-
-      await act(async () => {
-        await result.current.handleExportAndReset()
-      })
-
-      // Should still complete without throwing
-      expect(result.current.isExporting).toBe(false)
-      expect(consoleError).toHaveBeenCalled()
-      // Page should still reload
-      expect(mockReload).toHaveBeenCalled()
-
-      consoleError.mockRestore()
     })
   })
 })

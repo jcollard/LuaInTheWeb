@@ -37,8 +37,10 @@ export interface UseErrorRecoveryReturn {
   exportProgress: ExportProgress | null
   /** Reload the page */
   handleReload: () => void
-  /** Export data and optionally clear cache */
-  handleExportAndReset: () => Promise<void>
+  /** Export data as backup (does not clear cache) */
+  handleExport: () => Promise<void>
+  /** Clear cache and reload (does not export) */
+  handleReset: () => Promise<void>
 }
 
 /**
