@@ -33,6 +33,20 @@ function createWindow() {
   // Load the hosted application
   win.loadURL(HOSTED_URL);
 
+  // Handle keyboard shortcuts
+  win.webContents.on('before-input-event', (event, input) => {
+    // F12: Toggle DevTools
+    if (input.key === 'F12') {
+      win.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+    // F11: Toggle fullscreen
+    if (input.key === 'F11') {
+      win.setFullScreen(!win.isFullScreen());
+      event.preventDefault();
+    }
+  });
+
   // Restrict navigation to the app domain only
   win.webContents.on('will-navigate', (event, url) => {
     const parsedUrl = new URL(url);
