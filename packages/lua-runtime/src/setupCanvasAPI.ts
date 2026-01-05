@@ -212,6 +212,28 @@ export function setupCanvasAPI(
     return getController()?.isMouseButtonPressed(button) ?? false
   })
 
+  // --- Gamepad functions ---
+  // Note: Indices are 0-based here. Lua wrappers convert from 1-based.
+  engine.global.set('__canvas_getGamepadCount', () => {
+    return getController()?.getGamepadCount() ?? 0
+  })
+
+  engine.global.set('__canvas_isGamepadConnected', (index: number) => {
+    return getController()?.isGamepadConnected(index) ?? false
+  })
+
+  engine.global.set('__canvas_getGamepadButton', (gamepadIndex: number, buttonIndex: number) => {
+    return getController()?.getGamepadButton(gamepadIndex, buttonIndex) ?? 0
+  })
+
+  engine.global.set('__canvas_isGamepadButtonPressed', (gamepadIndex: number, buttonIndex: number) => {
+    return getController()?.isGamepadButtonPressed(gamepadIndex, buttonIndex) ?? false
+  })
+
+  engine.global.set('__canvas_getGamepadAxis', (gamepadIndex: number, axisIndex: number) => {
+    return getController()?.getGamepadAxis(gamepadIndex, axisIndex) ?? 0
+  })
+
   // --- Asset functions ---
   engine.global.set('__canvas_assets_addPath', (path: string) => {
     const controller = getController()

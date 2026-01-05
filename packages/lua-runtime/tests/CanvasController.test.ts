@@ -48,6 +48,20 @@ export function resetCapturedCallback() {
 // Mock the canvas-runtime imports using classes
 vi.mock('@lua-learning/canvas-runtime', () => {
   return {
+    createEmptyInputState: () => ({
+      keysDown: [],
+      keysPressed: [],
+      mouseX: 0,
+      mouseY: 0,
+      mouseButtonsDown: [],
+      mouseButtonsPressed: [],
+      gamepads: [
+        { connected: false, id: '', buttons: new Array(17).fill(0), buttonsPressed: [], axes: new Array(4).fill(0) },
+        { connected: false, id: '', buttons: new Array(17).fill(0), buttonsPressed: [], axes: new Array(4).fill(0) },
+        { connected: false, id: '', buttons: new Array(17).fill(0), buttonsPressed: [], axes: new Array(4).fill(0) },
+        { connected: false, id: '', buttons: new Array(17).fill(0), buttonsPressed: [], axes: new Array(4).fill(0) },
+      ],
+    }),
     CanvasRenderer: class MockCanvasRenderer {
       render: ReturnType<typeof vi.fn>
       constructor() {
@@ -66,10 +80,18 @@ vi.mock('@lua-learning/canvas-runtime', () => {
         mouseY: 0,
         mouseButtonsDown: [],
         mouseButtonsPressed: [],
+        gamepads: [
+          { connected: false, id: '', buttons: new Array(17).fill(0), buttonsPressed: [], axes: new Array(4).fill(0) },
+          { connected: false, id: '', buttons: new Array(17).fill(0), buttonsPressed: [], axes: new Array(4).fill(0) },
+          { connected: false, id: '', buttons: new Array(17).fill(0), buttonsPressed: [], axes: new Array(4).fill(0) },
+          { connected: false, id: '', buttons: new Array(17).fill(0), buttonsPressed: [], axes: new Array(4).fill(0) },
+        ],
       })
       getMousePosition = vi.fn().mockReturnValue({ x: 0, y: 0 })
       isMouseButtonDown = vi.fn().mockReturnValue(false)
       isMouseButtonPressed = vi.fn().mockReturnValue(false)
+      getConnectedGamepadCount = vi.fn().mockReturnValue(0)
+      pollGamepads = vi.fn()
       update = vi.fn()
       dispose = vi.fn()
     },
@@ -268,6 +290,12 @@ describe('CanvasController', () => {
         mouseY: 0,
         mouseButtonsDown: [],
         mouseButtonsPressed: [],
+        gamepads: [
+          { connected: false, id: '', buttons: new Array(17).fill(0), buttonsPressed: [], axes: new Array(4).fill(0) },
+          { connected: false, id: '', buttons: new Array(17).fill(0), buttonsPressed: [], axes: new Array(4).fill(0) },
+          { connected: false, id: '', buttons: new Array(17).fill(0), buttonsPressed: [], axes: new Array(4).fill(0) },
+          { connected: false, id: '', buttons: new Array(17).fill(0), buttonsPressed: [], axes: new Array(4).fill(0) },
+        ],
       })
     })
   })

@@ -14,6 +14,8 @@ export type {
   DrawCommand,
   MouseButton,
   InputState,
+  // Gamepad types
+  GamepadState,
   TimingInfo,
   AssetDefinition,
   AssetManifest,
@@ -57,6 +59,11 @@ export {
   VALID_IMAGE_EXTENSIONS,
   VALID_FONT_EXTENSIONS,
   VALID_AUDIO_EXTENSIONS,
+  // Gamepad constants and helpers
+  MAX_GAMEPADS,
+  GAMEPAD_BUTTONS,
+  GAMEPAD_AXES,
+  createEmptyGamepadState,
   // Asset path API utilities
   classifyFileType,
   isAssetHandle,

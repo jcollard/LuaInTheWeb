@@ -60,6 +60,8 @@ export interface CanvasRuntimeState {
   // Audio state - set by AUDIO_INLINE_JS's setupAudioBridge
   audioEngine?: { dispose: () => void }
   audioAssets: Map<string, { name: string; filename: string; type: 'sound' | 'music' }>
+  // Gamepad state for "just pressed" detection
+  previousGamepadButtons: number[][]
 }
 
 /**
@@ -92,6 +94,8 @@ export function createCanvasRuntimeState(
     stopResolve: null,
     // audioEngine is set by AUDIO_INLINE_JS's setupAudioBridge
     audioAssets: new Map(),
+    // Gamepad state for "just pressed" detection
+    previousGamepadButtons: [[], [], [], []],
   }
 }
 
@@ -186,6 +190,17 @@ function startGameLoop(state: CanvasRuntimeState): void {
     // Clear pressed states after processing
     state.keysPressed.clear()
     state.mouseButtonsPressed.clear()
+
+    // Update gamepad state for next frame's "just pressed" detection
+    const gamepads = navigator.getGamepads?.() ?? []
+    for (let i = 0; i < 4; i++) {
+      const gamepad = gamepads[i]
+      if (gamepad?.connected) {
+        state.previousGamepadButtons[i] = gamepad.buttons.map((b) => b.value)
+      } else {
+        state.previousGamepadButtons[i] = []
+      }
+    }
 
     // Continue loop
     if (state.isRunning) {
@@ -423,6 +438,50 @@ export function setupCanvasBridge(
   )
   engine.global.set('__canvas_isMousePressed', (button: number) =>
     state.mouseButtonsPressed.has(button)
+  )
+
+  // Gamepad input
+  engine.global.set('__canvas_getGamepadCount', () => {
+    const gamepads = navigator.getGamepads?.() ?? []
+    return Array.from(gamepads).filter((g) => g?.connected).length
+  })
+
+  engine.global.set('__canvas_isGamepadConnected', (index: number) => {
+    const gamepads = navigator.getGamepads?.() ?? []
+    return gamepads[index]?.connected ?? false
+  })
+
+  engine.global.set(
+    '__canvas_getGamepadButton',
+    (gamepadIndex: number, buttonIndex: number) => {
+      const gamepads = navigator.getGamepads?.() ?? []
+      const gamepad = gamepads[gamepadIndex]
+      if (!gamepad?.connected) return 0
+      return gamepad.buttons[buttonIndex]?.value ?? 0
+    }
+  )
+
+  engine.global.set(
+    '__canvas_isGamepadButtonPressed',
+    (gamepadIndex: number, buttonIndex: number) => {
+      const gamepads = navigator.getGamepads?.() ?? []
+      const gamepad = gamepads[gamepadIndex]
+      if (!gamepad?.connected) return false
+      const currentValue = gamepad.buttons[buttonIndex]?.value ?? 0
+      const prevValue =
+        state.previousGamepadButtons[gamepadIndex]?.[buttonIndex] ?? 0
+      return currentValue > 0 && prevValue === 0
+    }
+  )
+
+  engine.global.set(
+    '__canvas_getGamepadAxis',
+    (gamepadIndex: number, axisIndex: number) => {
+      const gamepads = navigator.getGamepads?.() ?? []
+      const gamepad = gamepads[gamepadIndex]
+      if (!gamepad?.connected) return 0
+      return gamepad.axes[axisIndex] ?? 0
+    }
   )
 
   // Transformations

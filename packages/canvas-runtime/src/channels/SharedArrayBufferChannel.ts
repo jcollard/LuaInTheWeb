@@ -3,11 +3,13 @@ import type {
   AudioState,
   ChannelAudioState,
   DrawCommand,
+  GamepadState,
   GetImageDataRequest,
   GetImageDataResponse,
   InputState,
   TimingInfo,
 } from '../shared/types.js';
+import { createEmptyGamepadState, MAX_GAMEPADS } from '../shared/types.js';
 
 /**
  * SharedArrayBuffer memory layout (64KB total):
@@ -37,8 +39,15 @@ import type {
  * 1112-1119| 8B     | Audio music time (Float64)
  * 1120-1127| 8B     | Audio music duration (Float64)
  * 1128-1191| 64B    | Audio current music name
- * 1192-2047| 856B   | Reserved for future use
+ * 1192-1559| 368B   | Gamepad data (4 gamepads × 92 bytes each)
+ * 1560-2047| 488B   | Reserved for future use
  * 2048-65535| 63KB  | Draw commands ring buffer
+ *
+ * Gamepad memory layout (92 bytes per gamepad):
+ * +0       | 4B     | connected (0 or 1)
+ * +4       | 68B    | buttons[17] (Float32 values)
+ * +72      | 4B     | buttonsPressed bitmask (17 bits)
+ * +76      | 16B    | axes[4] (Float32 values)
  */
 
 // Memory layout offsets
@@ -65,6 +74,13 @@ const OFFSET_AUDIO_MUSIC_TIME = 1112;
 const OFFSET_AUDIO_MUSIC_DURATION = 1120;
 const OFFSET_AUDIO_MUSIC_NAME = 1128;
 const AUDIO_MUSIC_NAME_SIZE = 64;
+const OFFSET_GAMEPAD_BASE = 1192;
+const GAMEPAD_SIZE = 92; // bytes per gamepad
+const GAMEPAD_OFFSET_BUTTONS = 4; // connected flag is at offset +0 (base)
+const GAMEPAD_BUTTONS_COUNT = 17;
+const GAMEPAD_OFFSET_BUTTONS_PRESSED = 72;
+const GAMEPAD_OFFSET_AXES = 76;
+const GAMEPAD_AXES_COUNT = 4;
 const OFFSET_DRAW_BUFFER = 2048;
 
 const MAX_KEYS = 32;
@@ -91,6 +107,7 @@ const MOUSE_RIGHT = 4;
 export class SharedArrayBufferChannel implements IWorkerChannel {
   private readonly buffer: SharedArrayBuffer;
   private readonly int32View: Int32Array;
+  private readonly float32View: Float32Array;
   private readonly float64View: Float64Array;
   private readonly uint8View: Uint8Array;
   private readonly textEncoder: TextEncoder;
@@ -100,6 +117,7 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
   constructor(_config: ChannelConfig, buffer: SharedArrayBuffer) {
     this.buffer = buffer;
     this.int32View = new Int32Array(buffer);
+    this.float32View = new Float32Array(buffer);
     this.float64View = new Float64Array(buffer);
     this.uint8View = new Uint8Array(buffer);
     this.textEncoder = new TextEncoder();
@@ -182,6 +200,7 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
 
     const keysDown = this.readKeyArray(OFFSET_KEYS_DOWN_COUNT, OFFSET_KEYS_DOWN_DATA);
     const keysPressed = this.readKeyArray(OFFSET_KEYS_PRESSED_COUNT, OFFSET_KEYS_PRESSED_DATA);
+    const gamepads = this.readGamepadStates();
 
     return {
       keysDown,
@@ -190,7 +209,96 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
       mouseY,
       mouseButtonsDown,
       mouseButtonsPressed,
+      gamepads,
     };
+  }
+
+  /**
+   * Read gamepad states from SharedArrayBuffer.
+   */
+  private readGamepadStates(): GamepadState[] {
+    const gamepads: GamepadState[] = [];
+
+    for (let i = 0; i < MAX_GAMEPADS; i++) {
+      const baseOffset = OFFSET_GAMEPAD_BASE + i * GAMEPAD_SIZE;
+
+      // Read connected flag
+      const connected = Atomics.load(this.int32View, baseOffset / 4) === 1;
+
+      // Read button values (17 Float32)
+      const buttons: number[] = [];
+      const buttonsBaseOffset = baseOffset + GAMEPAD_OFFSET_BUTTONS;
+      for (let b = 0; b < GAMEPAD_BUTTONS_COUNT; b++) {
+        buttons.push(this.float32View[(buttonsBaseOffset + b * 4) / 4]);
+      }
+
+      // Read buttonsPressed bitmask
+      const buttonsPressedMask = Atomics.load(
+        this.int32View,
+        (baseOffset + GAMEPAD_OFFSET_BUTTONS_PRESSED) / 4
+      );
+      const buttonsPressed: number[] = [];
+      for (let b = 0; b < GAMEPAD_BUTTONS_COUNT; b++) {
+        if (buttonsPressedMask & (1 << b)) {
+          buttonsPressed.push(b);
+        }
+      }
+
+      // Read axis values (4 Float32)
+      const axes: number[] = [];
+      const axesBaseOffset = baseOffset + GAMEPAD_OFFSET_AXES;
+      for (let a = 0; a < GAMEPAD_AXES_COUNT; a++) {
+        axes.push(this.float32View[(axesBaseOffset + a * 4) / 4]);
+      }
+
+      gamepads.push({
+        connected,
+        id: '', // ID is not stored in SAB (would require variable-length string handling)
+        buttons,
+        buttonsPressed,
+        axes,
+      });
+    }
+
+    return gamepads;
+  }
+
+  /**
+   * Write gamepad states to SharedArrayBuffer.
+   */
+  private writeGamepadStates(gamepads: GamepadState[]): void {
+    for (let i = 0; i < MAX_GAMEPADS; i++) {
+      const gamepad = gamepads[i] ?? createEmptyGamepadState();
+      const baseOffset = OFFSET_GAMEPAD_BASE + i * GAMEPAD_SIZE;
+
+      // Write connected flag
+      Atomics.store(this.int32View, baseOffset / 4, gamepad.connected ? 1 : 0);
+
+      // Write button values (17 Float32)
+      const buttonsBaseOffset = baseOffset + GAMEPAD_OFFSET_BUTTONS;
+      for (let b = 0; b < GAMEPAD_BUTTONS_COUNT; b++) {
+        this.float32View[(buttonsBaseOffset + b * 4) / 4] = gamepad.buttons[b] ?? 0;
+      }
+
+      // Write buttonsPressed as bitmask
+      let buttonsPressedMask = 0;
+      for (const button of gamepad.buttonsPressed) {
+        if (button >= 0 && button < GAMEPAD_BUTTONS_COUNT) {
+          buttonsPressedMask |= 1 << button;
+        }
+      }
+      Atomics.store(
+        this.int32View,
+        (baseOffset + GAMEPAD_OFFSET_BUTTONS_PRESSED) / 4,
+        buttonsPressedMask
+      );
+
+      // Write axis values (4 Float32)
+      const axesBaseOffset = baseOffset + GAMEPAD_OFFSET_AXES;
+      for (let a = 0; a < GAMEPAD_AXES_COUNT; a++) {
+        this.float32View[(axesBaseOffset + a * 4) / 4] = gamepad.axes[a] ?? 0;
+      }
+    }
   }
 
   setInputState(state: InputState): void {
@@ -213,6 +321,11 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
 
     this.writeKeyArray(OFFSET_KEYS_DOWN_COUNT, OFFSET_KEYS_DOWN_DATA, state.keysDown);
     this.writeKeyArray(OFFSET_KEYS_PRESSED_COUNT, OFFSET_KEYS_PRESSED_DATA, state.keysPressed);
+
+    // Write gamepad states
+    if (state.gamepads) {
+      this.writeGamepadStates(state.gamepads);
+    }
   }
 
   // Audio state

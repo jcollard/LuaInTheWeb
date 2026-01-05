@@ -1222,6 +1222,106 @@ export type DrawCommand =
 export type MouseButton = 'left' | 'middle' | 'right';
 
 /**
+ * Maximum number of gamepads supported (matches Web Gamepad API).
+ */
+export const MAX_GAMEPADS = 4;
+
+/**
+ * Standard gamepad button indices (W3C standard mapping).
+ * Includes position-based names (SOUTH, EAST, WEST, NORTH) as primary,
+ * with Xbox (A, B, X, Y) and PlayStation (CROSS, CIRCLE, SQUARE, TRIANGLE) aliases.
+ */
+export const GAMEPAD_BUTTONS = {
+  // Position-based (PRIMARY - platform agnostic)
+  SOUTH: 0, // Bottom face button
+  EAST: 1, // Right face button
+  WEST: 2, // Left face button
+  NORTH: 3, // Top face button
+
+  // Xbox aliases
+  A: 0,
+  B: 1,
+  X: 2,
+  Y: 3,
+  LB: 4,
+  RB: 5,
+  LT: 6,
+  RT: 7,
+
+  // PlayStation aliases
+  CROSS: 0,
+  CIRCLE: 1,
+  SQUARE: 2,
+  TRIANGLE: 3,
+  L1: 4,
+  R1: 5,
+  L2: 6,
+  R2: 7,
+  L3: 10,
+  R3: 11,
+  SELECT: 8,
+  OPTIONS: 9,
+  SHARE: 8,
+
+  // Generic names
+  LEFT_BUMPER: 4,
+  RIGHT_BUMPER: 5,
+  LEFT_TRIGGER: 6,
+  RIGHT_TRIGGER: 7,
+  BACK: 8,
+  START: 9,
+  LEFT_STICK: 10,
+  RIGHT_STICK: 11,
+  LS: 10,
+  RS: 11,
+  DPAD_UP: 12,
+  DPAD_DOWN: 13,
+  DPAD_LEFT: 14,
+  DPAD_RIGHT: 15,
+  HOME: 16,
+  GUIDE: 16,
+} as const;
+
+/**
+ * Standard gamepad axis indices.
+ */
+export const GAMEPAD_AXES = {
+  LEFT_STICK_X: 0, // -1 = left, 1 = right
+  LEFT_STICK_Y: 1, // -1 = up, 1 = down
+  RIGHT_STICK_X: 2,
+  RIGHT_STICK_Y: 3,
+} as const;
+
+/**
+ * State of a single connected gamepad.
+ */
+export interface GamepadState {
+  /** Whether this gamepad slot has a connected controller */
+  connected: boolean;
+  /** Gamepad ID string from the browser (e.g., "Xbox Controller") */
+  id: string;
+  /** Button values from 0.0 (not pressed) to 1.0 (fully pressed) - 17 buttons */
+  buttons: number[];
+  /** Indices of buttons pressed this frame (for edge detection) */
+  buttonsPressed: number[];
+  /** Axis values from -1.0 to 1.0 - 4 axes */
+  axes: number[];
+}
+
+/**
+ * Create an empty/disconnected gamepad state.
+ */
+export function createEmptyGamepadState(): GamepadState {
+  return {
+    connected: false,
+    id: '',
+    buttons: new Array(17).fill(0),
+    buttonsPressed: [],
+    axes: new Array(4).fill(0),
+  };
+}
+
+/**
  * State of keyboard and mouse input.
  * Uses arrays instead of Sets for channel serialization.
  */
@@ -1238,6 +1338,8 @@ export interface InputState {
   mouseButtonsDown: number[];
   /** Mouse buttons pressed this frame */
   mouseButtonsPressed: number[];
+  /** Gamepad states for up to MAX_GAMEPADS controllers */
+  gamepads: GamepadState[];
 }
 
 /**
@@ -1322,6 +1424,7 @@ export function createEmptyInputState(): InputState {
     mouseY: 0,
     mouseButtonsDown: [],
     mouseButtonsPressed: [],
+    gamepads: Array.from({ length: MAX_GAMEPADS }, () => createEmptyGamepadState()),
   };
 }
 

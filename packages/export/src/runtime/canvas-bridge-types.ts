@@ -52,6 +52,8 @@ export interface CanvasRuntimeState {
   currentFontSize: number
   currentFontFamily: string
   stopResolve: (() => void) | null
+  /** Previous gamepad button states for "just pressed" detection */
+  previousGamepadButtons: number[][]
 }
 
 /**

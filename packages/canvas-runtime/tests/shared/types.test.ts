@@ -6,8 +6,13 @@ import {
   VALID_IMAGE_EXTENSIONS,
   VALID_FONT_EXTENSIONS,
   VALID_AUDIO_EXTENSIONS,
+  createEmptyGamepadState,
+  createEmptyInputState,
+  GAMEPAD_BUTTONS,
+  GAMEPAD_AXES,
+  MAX_GAMEPADS,
 } from '../../src/shared/types.js';
-import type { AssetHandle, AudioAssetHandle } from '../../src/shared/types.js';
+import type { AssetHandle, AudioAssetHandle, GamepadState, InputState } from '../../src/shared/types.js';
 
 describe('types', () => {
   describe('VALID_AUDIO_EXTENSIONS', () => {
@@ -160,6 +165,172 @@ describe('types', () => {
     it('should return false for non-object values', () => {
       expect(isAudioAssetHandle('string')).toBe(false);
       expect(isAudioAssetHandle(123)).toBe(false);
+    });
+  });
+
+  describe('GAMEPAD_BUTTONS', () => {
+    it('should define position-based button constants', () => {
+      expect(GAMEPAD_BUTTONS.SOUTH).toBe(0);
+      expect(GAMEPAD_BUTTONS.EAST).toBe(1);
+      expect(GAMEPAD_BUTTONS.WEST).toBe(2);
+      expect(GAMEPAD_BUTTONS.NORTH).toBe(3);
+    });
+
+    it('should define Xbox button aliases', () => {
+      expect(GAMEPAD_BUTTONS.A).toBe(0);
+      expect(GAMEPAD_BUTTONS.B).toBe(1);
+      expect(GAMEPAD_BUTTONS.X).toBe(2);
+      expect(GAMEPAD_BUTTONS.Y).toBe(3);
+    });
+
+    it('should define PlayStation button aliases', () => {
+      expect(GAMEPAD_BUTTONS.CROSS).toBe(0);
+      expect(GAMEPAD_BUTTONS.CIRCLE).toBe(1);
+      expect(GAMEPAD_BUTTONS.SQUARE).toBe(2);
+      expect(GAMEPAD_BUTTONS.TRIANGLE).toBe(3);
+    });
+
+    it('should define shoulder and trigger buttons', () => {
+      expect(GAMEPAD_BUTTONS.LEFT_BUMPER).toBe(4);
+      expect(GAMEPAD_BUTTONS.RIGHT_BUMPER).toBe(5);
+      expect(GAMEPAD_BUTTONS.LEFT_TRIGGER).toBe(6);
+      expect(GAMEPAD_BUTTONS.RIGHT_TRIGGER).toBe(7);
+      // Xbox aliases
+      expect(GAMEPAD_BUTTONS.LB).toBe(4);
+      expect(GAMEPAD_BUTTONS.RB).toBe(5);
+      expect(GAMEPAD_BUTTONS.LT).toBe(6);
+      expect(GAMEPAD_BUTTONS.RT).toBe(7);
+      // PlayStation aliases
+      expect(GAMEPAD_BUTTONS.L1).toBe(4);
+      expect(GAMEPAD_BUTTONS.R1).toBe(5);
+      expect(GAMEPAD_BUTTONS.L2).toBe(6);
+      expect(GAMEPAD_BUTTONS.R2).toBe(7);
+    });
+
+    it('should define menu buttons', () => {
+      expect(GAMEPAD_BUTTONS.BACK).toBe(8);
+      expect(GAMEPAD_BUTTONS.START).toBe(9);
+      expect(GAMEPAD_BUTTONS.SELECT).toBe(8);
+      expect(GAMEPAD_BUTTONS.OPTIONS).toBe(9);
+      expect(GAMEPAD_BUTTONS.SHARE).toBe(8);
+    });
+
+    it('should define stick buttons', () => {
+      expect(GAMEPAD_BUTTONS.LEFT_STICK).toBe(10);
+      expect(GAMEPAD_BUTTONS.RIGHT_STICK).toBe(11);
+      expect(GAMEPAD_BUTTONS.L3).toBe(10);
+      expect(GAMEPAD_BUTTONS.R3).toBe(11);
+      expect(GAMEPAD_BUTTONS.LS).toBe(10);
+      expect(GAMEPAD_BUTTONS.RS).toBe(11);
+    });
+
+    it('should define D-pad buttons', () => {
+      expect(GAMEPAD_BUTTONS.DPAD_UP).toBe(12);
+      expect(GAMEPAD_BUTTONS.DPAD_DOWN).toBe(13);
+      expect(GAMEPAD_BUTTONS.DPAD_LEFT).toBe(14);
+      expect(GAMEPAD_BUTTONS.DPAD_RIGHT).toBe(15);
+    });
+
+    it('should define home/guide button', () => {
+      expect(GAMEPAD_BUTTONS.HOME).toBe(16);
+      expect(GAMEPAD_BUTTONS.GUIDE).toBe(16);
+    });
+  });
+
+  describe('GAMEPAD_AXES', () => {
+    it('should define left stick axes', () => {
+      expect(GAMEPAD_AXES.LEFT_STICK_X).toBe(0);
+      expect(GAMEPAD_AXES.LEFT_STICK_Y).toBe(1);
+    });
+
+    it('should define right stick axes', () => {
+      expect(GAMEPAD_AXES.RIGHT_STICK_X).toBe(2);
+      expect(GAMEPAD_AXES.RIGHT_STICK_Y).toBe(3);
+    });
+  });
+
+  describe('MAX_GAMEPADS', () => {
+    it('should be 4 (standard limit)', () => {
+      expect(MAX_GAMEPADS).toBe(4);
+    });
+  });
+
+  describe('createEmptyGamepadState', () => {
+    it('should return a disconnected gamepad state', () => {
+      const state = createEmptyGamepadState();
+      expect(state.connected).toBe(false);
+      expect(state.id).toBe('');
+    });
+
+    it('should have 17 button values initialized to 0', () => {
+      const state = createEmptyGamepadState();
+      expect(state.buttons).toHaveLength(17);
+      expect(state.buttons.every((v) => v === 0)).toBe(true);
+    });
+
+    it('should have empty buttonsPressed array', () => {
+      const state = createEmptyGamepadState();
+      expect(state.buttonsPressed).toEqual([]);
+    });
+
+    it('should have 4 axis values initialized to 0', () => {
+      const state = createEmptyGamepadState();
+      expect(state.axes).toHaveLength(4);
+      expect(state.axes.every((v) => v === 0)).toBe(true);
+    });
+
+    it('should return a new object each time', () => {
+      const state1 = createEmptyGamepadState();
+      const state2 = createEmptyGamepadState();
+      expect(state1).not.toBe(state2);
+      expect(state1.buttons).not.toBe(state2.buttons);
+      expect(state1.axes).not.toBe(state2.axes);
+    });
+  });
+
+  describe('createEmptyInputState', () => {
+    it('should include gamepads array', () => {
+      const state = createEmptyInputState();
+      expect(state.gamepads).toBeDefined();
+      expect(Array.isArray(state.gamepads)).toBe(true);
+    });
+
+    it('should have MAX_GAMEPADS entries', () => {
+      const state = createEmptyInputState();
+      expect(state.gamepads).toHaveLength(MAX_GAMEPADS);
+    });
+
+    it('should have all gamepads disconnected initially', () => {
+      const state = createEmptyInputState();
+      for (const gamepad of state.gamepads) {
+        expect(gamepad.connected).toBe(false);
+      }
+    });
+
+    it('should still include keyboard and mouse state', () => {
+      const state = createEmptyInputState();
+      expect(state.keysDown).toEqual([]);
+      expect(state.keysPressed).toEqual([]);
+      expect(state.mouseX).toBe(0);
+      expect(state.mouseY).toBe(0);
+      expect(state.mouseButtonsDown).toEqual([]);
+      expect(state.mouseButtonsPressed).toEqual([]);
+    });
+  });
+
+  describe('GamepadState type', () => {
+    it('should support connected gamepad with button values', () => {
+      const state: GamepadState = {
+        connected: true,
+        id: 'Xbox Controller',
+        buttons: [1, 0, 0.5, 0, 0, 0, 0.75, 0.8, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        buttonsPressed: [0, 6],
+        axes: [-0.5, 0.3, 0, 0],
+      };
+      expect(state.connected).toBe(true);
+      expect(state.buttons[GAMEPAD_BUTTONS.A]).toBe(1);
+      expect(state.buttons[GAMEPAD_BUTTONS.LEFT_TRIGGER]).toBe(0.75);
+      expect(state.axes[GAMEPAD_AXES.LEFT_STICK_X]).toBe(-0.5);
     });
   });
 });
