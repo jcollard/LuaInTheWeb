@@ -71,13 +71,25 @@ jobs:
 
       - name: Ad-hoc sign macOS app
         run: |
-          APP_PATH="packages/electron-wrapper/dist/mac-${{ matrix.arch }}/Adventures in Lua.app"
+          # electron-builder outputs to 'mac' for x64, 'mac-arm64' for arm64
+          if [ "${{ matrix.arch }}" = "x64" ]; then
+            APP_DIR="mac"
+          else
+            APP_DIR="mac-arm64"
+          fi
+          APP_PATH="packages/electron-wrapper/dist/${APP_DIR}/Adventures in Lua.app"
           echo "Signing app at: $APP_PATH"
           codesign --deep --force --verbose --sign - "$APP_PATH"
 
       - name: Create ZIP archive
         run: |
-          cd "packages/electron-wrapper/dist/mac-${{ matrix.arch }}"
+          # electron-builder outputs to 'mac' for x64, 'mac-arm64' for arm64
+          if [ "${{ matrix.arch }}" = "x64" ]; then
+            APP_DIR="mac"
+          else
+            APP_DIR="mac-arm64"
+          fi
+          cd "packages/electron-wrapper/dist/${APP_DIR}"
           zip -r "../AdventuresInLua-portable-macos-${{ matrix.arch }}.zip" "Adventures in Lua.app"
 
       - name: Upload macOS artifact
