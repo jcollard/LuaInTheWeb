@@ -200,9 +200,6 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
 
     const keysDown = this.readKeyArray(OFFSET_KEYS_DOWN_COUNT, OFFSET_KEYS_DOWN_DATA);
     const keysPressed = this.readKeyArray(OFFSET_KEYS_PRESSED_COUNT, OFFSET_KEYS_PRESSED_DATA);
-
-    // TODO: Read gamepad states from SharedArrayBuffer (task 3)
-    // For now, return empty gamepad states
     const gamepads = this.readGamepadStates();
 
     return {
