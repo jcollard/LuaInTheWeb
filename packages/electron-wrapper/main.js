@@ -89,6 +89,17 @@ function createWindow() {
     }
     return { action: 'allow' };
   });
+
+  // Handle window close - bypass beforeunload handlers from web content
+  // The web app may have unsaved changes warnings that block closing in Electron
+  win.on('close', (event) => {
+    event.preventDefault();
+    // Clear beforeunload handler and destroy window
+    win.webContents.executeJavaScript('window.onbeforeunload = null;', true)
+      .finally(() => {
+        win.destroy();
+      });
+  });
 }
 
 // Create window when app is ready
