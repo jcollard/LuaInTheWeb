@@ -23,6 +23,7 @@
     "canvas/drawing/clear-rect.lua",
     "canvas/drawing/sprite-sheet.lua",
     "canvas/input/demo.lua",
+    "canvas/gamepad/demo.lua",
     "canvas/transforms/rotating-square.lua",
     "canvas/transforms/spinning-shapes.lua",
     "canvas/transforms/mirror-effect.lua",

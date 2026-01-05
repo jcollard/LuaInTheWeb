@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { PostMessageChannel } from '../../src/channels/PostMessageChannel.js';
 import type { DrawCommand, InputState, TimingInfo } from '../../src/shared/types.js';
-import { createEmptyInputState, createDefaultTimingInfo } from '../../src/shared/types.js';
+import { createEmptyInputState, createDefaultTimingInfo, createEmptyGamepadState, MAX_GAMEPADS } from '../../src/shared/types.js';
 
 describe('PostMessageChannel', () => {
   let mainChannel: PostMessageChannel;
@@ -163,6 +163,7 @@ describe('PostMessageChannel', () => {
         mouseY: 20,
         mouseButtonsDown: [0],
         mouseButtonsPressed: [0],
+        gamepads: Array.from({ length: MAX_GAMEPADS }, () => createEmptyGamepadState()),
       });
 
       return new Promise<void>(resolve => {
@@ -175,6 +176,7 @@ describe('PostMessageChannel', () => {
             mouseY: 40,
             mouseButtonsDown: [2],
             mouseButtonsPressed: [2],
+            gamepads: Array.from({ length: MAX_GAMEPADS }, () => createEmptyGamepadState()),
           });
 
           setTimeout(() => {
@@ -187,6 +189,99 @@ describe('PostMessageChannel', () => {
             expect(received.mouseButtonsDown.includes(2)).toBe(true);
             resolve();
           }, 10);
+        }, 10);
+      });
+    });
+  });
+
+  describe('gamepad state', () => {
+    it('should return empty gamepad states initially', () => {
+      const state = workerChannel.getInputState();
+      expect(state.gamepads).toHaveLength(MAX_GAMEPADS);
+      for (let i = 0; i < MAX_GAMEPADS; i++) {
+        expect(state.gamepads[i].connected).toBe(false);
+        expect(state.gamepads[i].buttons).toHaveLength(17);
+        expect(state.gamepads[i].axes).toHaveLength(4);
+      }
+    });
+
+    it('should serialize and deserialize gamepad state', () => {
+      const gamepads = Array.from({ length: MAX_GAMEPADS }, () => createEmptyGamepadState());
+      gamepads[0].connected = true;
+      gamepads[0].id = 'Xbox Controller';
+      gamepads[0].buttons[0] = 1.0;
+      gamepads[0].buttons[6] = 0.5;
+      gamepads[0].buttonsPressed = [0, 3];
+      gamepads[0].axes[0] = -0.75;
+      gamepads[0].axes[1] = 0.5;
+
+      const inputState: InputState = {
+        keysDown: [],
+        keysPressed: [],
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtonsDown: [],
+        mouseButtonsPressed: [],
+        gamepads,
+      };
+
+      mainChannel.setInputState(inputState);
+
+      return new Promise<void>(resolve => {
+        setTimeout(() => {
+          const received = workerChannel.getInputState();
+
+          // Verify gamepad 0 is connected with correct data
+          expect(received.gamepads[0].connected).toBe(true);
+          expect(received.gamepads[0].id).toBe('Xbox Controller');
+          expect(received.gamepads[0].buttons[0]).toBe(1.0);
+          expect(received.gamepads[0].buttons[6]).toBe(0.5);
+          expect(received.gamepads[0].buttonsPressed).toEqual([0, 3]);
+          expect(received.gamepads[0].axes[0]).toBe(-0.75);
+          expect(received.gamepads[0].axes[1]).toBe(0.5);
+
+          // Verify other gamepads are not connected
+          expect(received.gamepads[1].connected).toBe(false);
+          expect(received.gamepads[2].connected).toBe(false);
+          expect(received.gamepads[3].connected).toBe(false);
+
+          resolve();
+        }, 10);
+      });
+    });
+
+    it('should handle multiple gamepads connected', () => {
+      const gamepads = Array.from({ length: MAX_GAMEPADS }, () => createEmptyGamepadState());
+
+      // Configure multiple gamepads
+      gamepads[0].connected = true;
+      gamepads[0].buttons[0] = 1.0;
+      gamepads[1].connected = true;
+      gamepads[1].axes[0] = 0.5;
+
+      const inputState: InputState = {
+        keysDown: [],
+        keysPressed: [],
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtonsDown: [],
+        mouseButtonsPressed: [],
+        gamepads,
+      };
+
+      mainChannel.setInputState(inputState);
+
+      return new Promise<void>(resolve => {
+        setTimeout(() => {
+          const received = workerChannel.getInputState();
+
+          expect(received.gamepads[0].connected).toBe(true);
+          expect(received.gamepads[0].buttons[0]).toBe(1.0);
+          expect(received.gamepads[1].connected).toBe(true);
+          expect(received.gamepads[1].axes[0]).toBe(0.5);
+          expect(received.gamepads[2].connected).toBe(false);
+
+          resolve();
         }, 10);
       });
     });

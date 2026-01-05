@@ -1012,6 +1012,63 @@ var CanvasInline = (() => {
       return __canvas_isMousePressed(button)
     end
 
+    -- Gamepad input
+    -- Note: Lua uses 1-based indexing, so we subtract 1 when calling JS functions
+
+    function _canvas.get_gamepad_count()
+      return __canvas_getGamepadCount()
+    end
+
+    function _canvas.is_gamepad_connected(index)
+      return __canvas_isGamepadConnected(index - 1)
+    end
+
+    function _canvas.get_gamepad_button(gamepad_index, button)
+      -- Both indices are 1-based in Lua, convert to 0-based for JS
+      return __canvas_getGamepadButton(gamepad_index - 1, button - 1)
+    end
+
+    function _canvas.is_gamepad_button_pressed(gamepad_index, button)
+      return __canvas_isGamepadButtonPressed(gamepad_index - 1, button - 1)
+    end
+
+    function _canvas.get_gamepad_axis(gamepad_index, axis)
+      return __canvas_getGamepadAxis(gamepad_index - 1, axis - 1)
+    end
+
+    -- Gamepad button constants (1-based for Lua)
+    -- Following W3C Standard Gamepad mapping with position-based names (SDL3/Unity convention)
+    _canvas.buttons = {
+      -- Position-based (PRIMARY - recommended for cross-platform code)
+      SOUTH = 1, EAST = 2, WEST = 3, NORTH = 4,
+
+      -- Xbox aliases
+      A = 1, B = 2, X = 3, Y = 4,
+      LB = 5, RB = 6, LT = 7, RT = 8,
+      BACK = 9, START = 10,
+
+      -- PlayStation aliases
+      CROSS = 1, CIRCLE = 2, SQUARE = 3, TRIANGLE = 4,
+      L1 = 5, R1 = 6, L2 = 7, R2 = 8,
+      SELECT = 9, OPTIONS = 10, SHARE = 9,
+      L3 = 11, R3 = 12,
+
+      -- Generic names
+      LEFT_BUMPER = 5, RIGHT_BUMPER = 6,
+      LEFT_TRIGGER = 7, RIGHT_TRIGGER = 8,
+      LEFT_STICK = 11, RIGHT_STICK = 12, LS = 11, RS = 12,
+      DPAD_UP = 13, DPAD_DOWN = 14, DPAD_LEFT = 15, DPAD_RIGHT = 16,
+      HOME = 17, GUIDE = 17,
+    }
+
+    -- Gamepad axis constants (1-based for Lua)
+    _canvas.axes = {
+      LEFT_STICK_X = 1,
+      LEFT_STICK_Y = 2,
+      RIGHT_STICK_X = 3,
+      RIGHT_STICK_Y = 4,
+    }
+
     -- Key constants for discoverability
     _canvas.keys = {
       -- Letters

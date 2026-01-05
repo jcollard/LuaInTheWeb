@@ -1,4 +1,5 @@
-import type { InputState } from '../shared/types.js';
+import type { InputState, GamepadState } from '../shared/types.js';
+import { createEmptyGamepadState, MAX_GAMEPADS } from '../shared/types.js';
 
 /**
  * Captures keyboard and mouse input from a target element.
@@ -18,6 +19,10 @@ export class InputCapture {
   private mouseY = 0;
   private disposed = false;
 
+  // Gamepad state tracking
+  private readonly gamepadStates: GamepadState[] = [];
+  private readonly previousGamepadButtons: number[][] = [];
+
   // Bound event handlers for removal
   private readonly handleKeyDown: (e: KeyboardEvent) => void;
   private readonly handleKeyUp: (e: KeyboardEvent) => void;
@@ -29,6 +34,12 @@ export class InputCapture {
 
   constructor(target: HTMLElement) {
     this.target = target;
+
+    // Initialize gamepad states
+    for (let i = 0; i < MAX_GAMEPADS; i++) {
+      this.gamepadStates.push(createEmptyGamepadState());
+      this.previousGamepadButtons.push([]);
+    }
 
     // Bind handlers
     this.handleKeyDown = this.onKeyDown.bind(this);
@@ -105,7 +116,95 @@ export class InputCapture {
       mouseY: this.mouseY,
       mouseButtonsDown: Array.from(this.mouseButtonsDown),
       mouseButtonsPressed: Array.from(this.mouseButtonsPressed),
+      gamepads: this.getGamepadStates(),
     };
+  }
+
+  /**
+   * Poll gamepad state from the Web Gamepad API.
+   * Must be called each frame before getInputState() to update gamepad data.
+   * The Gamepad API requires polling - there are no events for button/axis value changes.
+   */
+  pollGamepads(): void {
+    // navigator.getGamepads() may not exist in non-browser environments
+    if (typeof navigator === 'undefined' || !navigator.getGamepads) {
+      return;
+    }
+
+    const gamepads = navigator.getGamepads();
+
+    for (let i = 0; i < MAX_GAMEPADS; i++) {
+      const gamepad = gamepads[i];
+      const state = this.gamepadStates[i];
+
+      if (!gamepad) {
+        // No gamepad in this slot
+        if (state.connected) {
+          // Was connected, now disconnected - reset state
+          state.connected = false;
+          state.id = '';
+          state.buttons.fill(0);
+          state.buttonsPressed = [];
+          state.axes.fill(0);
+          this.previousGamepadButtons[i] = [];
+        }
+        continue;
+      }
+
+      // Update connection state
+      state.connected = gamepad.connected;
+      state.id = gamepad.id;
+
+      // Track which buttons were newly pressed this frame
+      const newlyPressed: number[] = [];
+
+      // Update button values
+      const buttonCount = Math.min(gamepad.buttons.length, state.buttons.length);
+      for (let b = 0; b < buttonCount; b++) {
+        const buttonValue = gamepad.buttons[b].value;
+        const wasPressed = (this.previousGamepadButtons[i][b] ?? 0) > 0;
+        const isPressed = buttonValue > 0;
+
+        state.buttons[b] = buttonValue;
+
+        // Detect just-pressed (edge trigger)
+        if (isPressed && !wasPressed) {
+          newlyPressed.push(b);
+        }
+      }
+
+      state.buttonsPressed = newlyPressed;
+
+      // Store current button state for next frame comparison
+      this.previousGamepadButtons[i] = [...state.buttons];
+
+      // Update axis values
+      const axisCount = Math.min(gamepad.axes.length, state.axes.length);
+      for (let a = 0; a < axisCount; a++) {
+        state.axes[a] = gamepad.axes[a];
+      }
+    }
+  }
+
+  /**
+   * Get the number of connected gamepads.
+   */
+  getConnectedGamepadCount(): number {
+    return this.gamepadStates.filter((g) => g.connected).length;
+  }
+
+  /**
+   * Get the current gamepad states.
+   * Returns copies of the internal gamepad states.
+   */
+  private getGamepadStates(): GamepadState[] {
+    return this.gamepadStates.map((g) => ({
+      connected: g.connected,
+      id: g.id,
+      buttons: [...g.buttons],
+      buttonsPressed: [...g.buttonsPressed],
+      axes: [...g.axes],
+    }));
   }
 
   /**

@@ -34,7 +34,7 @@ import type {
   AssetHandle,
   AudioAssetHandle,
 } from '@lua-learning/canvas-runtime'
-import { isAssetHandle } from '@lua-learning/canvas-runtime'
+import { isAssetHandle, createEmptyInputState } from '@lua-learning/canvas-runtime'
 import type { IFileSystem } from '@lua-learning/shell-core'
 import { formatOnDrawError, createImageFromData, createFontFromData } from './canvasErrorFormatter'
 import type { IAudioEngine } from './audio/IAudioEngine'
@@ -998,14 +998,82 @@ export class CanvasController {
    * Get the full input state.
    */
   getInputState(): InputState {
-    return this.inputCapture?.getInputState() ?? {
-      keysDown: [],
-      keysPressed: [],
-      mouseX: 0,
-      mouseY: 0,
-      mouseButtonsDown: [],
-      mouseButtonsPressed: [],
+    return this.inputCapture?.getInputState() ?? createEmptyInputState()
+  }
+
+  // --- Gamepad API ---
+
+  /**
+   * Get the number of connected gamepads.
+   */
+  getGamepadCount(): number {
+    return this.inputCapture?.getConnectedGamepadCount() ?? 0
+  }
+
+  /**
+   * Check if a gamepad is connected at the given index.
+   * @param index - Gamepad index (0-3)
+   */
+  isGamepadConnected(index: number): boolean {
+    const state = this.inputCapture?.getInputState()
+    if (!state || index < 0 || index >= state.gamepads.length) {
+      return false
     }
+    return state.gamepads[index].connected
+  }
+
+  /**
+   * Get the value of a gamepad button.
+   * @param gamepadIndex - Gamepad index (0-3)
+   * @param buttonIndex - Button index (0-16)
+   * @returns Button value (0.0-1.0) or 0 if not available
+   */
+  getGamepadButton(gamepadIndex: number, buttonIndex: number): number {
+    const state = this.inputCapture?.getInputState()
+    if (!state || gamepadIndex < 0 || gamepadIndex >= state.gamepads.length) {
+      return 0
+    }
+    const gamepad = state.gamepads[gamepadIndex]
+    if (!gamepad.connected || buttonIndex < 0 || buttonIndex >= gamepad.buttons.length) {
+      return 0
+    }
+    return gamepad.buttons[buttonIndex]
+  }
+
+  /**
+   * Check if a gamepad button was just pressed this frame.
+   * @param gamepadIndex - Gamepad index (0-3)
+   * @param buttonIndex - Button index (0-16)
+   * @returns true if button was just pressed
+   */
+  isGamepadButtonPressed(gamepadIndex: number, buttonIndex: number): boolean {
+    const state = this.inputCapture?.getInputState()
+    if (!state || gamepadIndex < 0 || gamepadIndex >= state.gamepads.length) {
+      return false
+    }
+    const gamepad = state.gamepads[gamepadIndex]
+    if (!gamepad.connected) {
+      return false
+    }
+    return gamepad.buttonsPressed.includes(buttonIndex)
+  }
+
+  /**
+   * Get the value of a gamepad axis.
+   * @param gamepadIndex - Gamepad index (0-3)
+   * @param axisIndex - Axis index (0-3)
+   * @returns Axis value (-1.0 to 1.0) or 0 if not available
+   */
+  getGamepadAxis(gamepadIndex: number, axisIndex: number): number {
+    const state = this.inputCapture?.getInputState()
+    if (!state || gamepadIndex < 0 || gamepadIndex >= state.gamepads.length) {
+      return 0
+    }
+    const gamepad = state.gamepads[gamepadIndex]
+    if (!gamepad.connected || axisIndex < 0 || axisIndex >= gamepad.axes.length) {
+      return 0
+    }
+    return gamepad.axes[axisIndex]
   }
 
   // --- Canvas dimensions ---
@@ -1702,6 +1770,9 @@ export class CanvasController {
 
     // Clear frame commands
     this.frameCommands = []
+
+    // Poll gamepads before calling onDraw so input is up-to-date
+    this.inputCapture?.pollGamepads()
 
     // Call the Lua onDraw callback
     if (this.onDrawCallback) {

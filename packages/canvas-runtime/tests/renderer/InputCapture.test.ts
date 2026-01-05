@@ -472,4 +472,203 @@ describe('InputCapture', () => {
       expect(inputCapture.isMouseButtonDown(2)).toBe(false);
     });
   });
+
+  describe('gamepad events', () => {
+    // Mock gamepad for testing
+    function createMockGamepad(
+      index: number,
+      connected: boolean,
+      buttons: { value: number; pressed: boolean }[],
+      axes: number[]
+    ): Gamepad {
+      return {
+        index,
+        id: `Mock Controller ${index}`,
+        connected,
+        buttons: buttons as GamepadButton[],
+        axes,
+        mapping: 'standard',
+        timestamp: performance.now(),
+        hapticActuators: [],
+        vibrationActuator: null,
+      };
+    }
+
+    function createEmptyButtons(): { value: number; pressed: boolean }[] {
+      return Array.from({ length: 17 }, () => ({ value: 0, pressed: false }));
+    }
+
+    describe('pollGamepads', () => {
+      let mockGetGamepads: ReturnType<typeof vi.fn>;
+
+      beforeEach(() => {
+        // jsdom doesn't have navigator.getGamepads, so we need to define it
+        mockGetGamepads = vi.fn().mockReturnValue([null, null, null, null]);
+        Object.defineProperty(navigator, 'getGamepads', {
+          value: mockGetGamepads,
+          configurable: true,
+          writable: true,
+        });
+      });
+
+      afterEach(() => {
+        vi.restoreAllMocks();
+      });
+
+      it('should detect connected gamepad', () => {
+        const buttons = createEmptyButtons();
+        const mockGamepad = createMockGamepad(0, true, buttons, [0, 0, 0, 0]);
+
+        mockGetGamepads.mockReturnValue([mockGamepad, null, null, null]);
+
+        inputCapture.pollGamepads();
+        const state = inputCapture.getInputState();
+
+        expect(state.gamepads[0].connected).toBe(true);
+        expect(state.gamepads[0].id).toBe('Mock Controller 0');
+        expect(state.gamepads[1].connected).toBe(false);
+      });
+
+      it('should read button values (analog)', () => {
+        const buttons = createEmptyButtons();
+        buttons[6] = { value: 0.75, pressed: true }; // Left trigger
+        buttons[7] = { value: 0.5, pressed: true };  // Right trigger
+        buttons[0] = { value: 1, pressed: true };    // A button
+
+        const mockGamepad = createMockGamepad(0, true, buttons, [0, 0, 0, 0]);
+        mockGetGamepads.mockReturnValue([mockGamepad, null, null, null]);
+
+        inputCapture.pollGamepads();
+        const state = inputCapture.getInputState();
+
+        expect(state.gamepads[0].buttons[6]).toBeCloseTo(0.75);
+        expect(state.gamepads[0].buttons[7]).toBeCloseTo(0.5);
+        expect(state.gamepads[0].buttons[0]).toBe(1);
+      });
+
+      it('should detect just-pressed buttons', () => {
+        const buttons1 = createEmptyButtons();
+        const mockGamepad1 = createMockGamepad(0, true, buttons1, [0, 0, 0, 0]);
+        mockGetGamepads.mockReturnValue([mockGamepad1, null, null, null]);
+
+        // First poll - no buttons pressed
+        inputCapture.pollGamepads();
+        expect(inputCapture.getInputState().gamepads[0].buttonsPressed).toEqual([]);
+
+        // Second poll - A button pressed
+        const buttons2 = createEmptyButtons();
+        buttons2[0] = { value: 1, pressed: true };
+        const mockGamepad2 = createMockGamepad(0, true, buttons2, [0, 0, 0, 0]);
+        mockGetGamepads.mockReturnValue([mockGamepad2, null, null, null]);
+
+        inputCapture.pollGamepads();
+        const state = inputCapture.getInputState();
+
+        expect(state.gamepads[0].buttonsPressed).toContain(0);
+      });
+
+      it('should not report button as pressed if already held', () => {
+        // First poll - A button pressed
+        const buttons1 = createEmptyButtons();
+        buttons1[0] = { value: 1, pressed: true };
+        const mockGamepad1 = createMockGamepad(0, true, buttons1, [0, 0, 0, 0]);
+        mockGetGamepads.mockReturnValue([mockGamepad1, null, null, null]);
+        inputCapture.pollGamepads();
+
+        expect(inputCapture.getInputState().gamepads[0].buttonsPressed).toContain(0);
+
+        // Second poll - A button still held
+        const buttons2 = createEmptyButtons();
+        buttons2[0] = { value: 1, pressed: true };
+        const mockGamepad2 = createMockGamepad(0, true, buttons2, [0, 0, 0, 0]);
+        mockGetGamepads.mockReturnValue([mockGamepad2, null, null, null]);
+        inputCapture.pollGamepads();
+
+        // Button still down but not "just pressed"
+        expect(inputCapture.getInputState().gamepads[0].buttons[0]).toBe(1);
+        expect(inputCapture.getInputState().gamepads[0].buttonsPressed).not.toContain(0);
+      });
+
+      it('should read axis values', () => {
+        const buttons = createEmptyButtons();
+        const axes = [-0.5, 0.8, 0.3, -0.2];
+        const mockGamepad = createMockGamepad(0, true, buttons, axes);
+        mockGetGamepads.mockReturnValue([mockGamepad, null, null, null]);
+
+        inputCapture.pollGamepads();
+        const state = inputCapture.getInputState();
+
+        expect(state.gamepads[0].axes[0]).toBeCloseTo(-0.5);
+        expect(state.gamepads[0].axes[1]).toBeCloseTo(0.8);
+        expect(state.gamepads[0].axes[2]).toBeCloseTo(0.3);
+        expect(state.gamepads[0].axes[3]).toBeCloseTo(-0.2);
+      });
+
+      it('should handle gamepad disconnect', () => {
+        // Connect gamepad
+        const buttons = createEmptyButtons();
+        const mockGamepad = createMockGamepad(0, true, buttons, [0, 0, 0, 0]);
+        mockGetGamepads.mockReturnValue([mockGamepad, null, null, null]);
+        inputCapture.pollGamepads();
+
+        expect(inputCapture.getInputState().gamepads[0].connected).toBe(true);
+
+        // Disconnect gamepad
+        mockGetGamepads.mockReturnValue([null, null, null, null]);
+        inputCapture.pollGamepads();
+
+        expect(inputCapture.getInputState().gamepads[0].connected).toBe(false);
+        expect(inputCapture.getInputState().gamepads[0].id).toBe('');
+      });
+
+      it('should support multiple gamepads', () => {
+        const buttons = createEmptyButtons();
+        const gamepad0 = createMockGamepad(0, true, buttons, [0, 0, 0, 0]);
+        const gamepad2 = createMockGamepad(2, true, buttons, [-1, 0, 0, 0]);
+
+        mockGetGamepads.mockReturnValue([gamepad0, null, gamepad2, null]);
+        inputCapture.pollGamepads();
+        const state = inputCapture.getInputState();
+
+        expect(state.gamepads[0].connected).toBe(true);
+        expect(state.gamepads[1].connected).toBe(false);
+        expect(state.gamepads[2].connected).toBe(true);
+        expect(state.gamepads[2].axes[0]).toBe(-1);
+        expect(state.gamepads[3].connected).toBe(false);
+      });
+    });
+
+    describe('getConnectedGamepadCount', () => {
+      let mockGetGamepads: ReturnType<typeof vi.fn>;
+
+      beforeEach(() => {
+        mockGetGamepads = vi.fn().mockReturnValue([null, null, null, null]);
+        Object.defineProperty(navigator, 'getGamepads', {
+          value: mockGetGamepads,
+          configurable: true,
+          writable: true,
+        });
+      });
+
+      afterEach(() => {
+        vi.restoreAllMocks();
+      });
+
+      it('should return 0 when no gamepads connected', () => {
+        inputCapture.pollGamepads();
+        expect(inputCapture.getConnectedGamepadCount()).toBe(0);
+      });
+
+      it('should return correct count', () => {
+        const buttons = createEmptyButtons();
+        const gamepad0 = createMockGamepad(0, true, buttons, [0, 0, 0, 0]);
+        const gamepad2 = createMockGamepad(2, true, buttons, [0, 0, 0, 0]);
+
+        mockGetGamepads.mockReturnValue([gamepad0, null, gamepad2, null]);
+        inputCapture.pollGamepads();
+
+        expect(inputCapture.getConnectedGamepadCount()).toBe(2);
+      });
+    });
+  });
 });

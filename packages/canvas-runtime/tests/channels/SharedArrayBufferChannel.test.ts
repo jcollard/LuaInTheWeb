@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { SharedArrayBufferChannel } from '../../src/channels/SharedArrayBufferChannel.js';
-import type { DrawCommand, InputState, TimingInfo } from '../../src/shared/types.js';
+import type { DrawCommand, GamepadState, InputState, TimingInfo } from '../../src/shared/types.js';
+import { createEmptyGamepadState, MAX_GAMEPADS } from '../../src/shared/types.js';
 
 describe('SharedArrayBufferChannel', () => {
   let sharedBuffer: SharedArrayBuffer;
@@ -357,6 +358,7 @@ describe('SharedArrayBufferChannel', () => {
         mouseY: 20,
         mouseButtonsDown: [0],
         mouseButtonsPressed: [0],
+        gamepads: Array.from({ length: MAX_GAMEPADS }, () => createEmptyGamepadState()),
       });
 
       let received = workerChannel.getInputState();
@@ -371,6 +373,7 @@ describe('SharedArrayBufferChannel', () => {
         mouseY: 200,
         mouseButtonsDown: [2],
         mouseButtonsPressed: [2],
+        gamepads: Array.from({ length: MAX_GAMEPADS }, () => createEmptyGamepadState()),
       });
 
       received = workerChannel.getInputState();
@@ -379,6 +382,313 @@ describe('SharedArrayBufferChannel', () => {
       expect(received.mouseX).toBe(100);
       expect(received.mouseButtonsDown.includes(0)).toBe(false);
       expect(received.mouseButtonsDown.includes(2)).toBe(true);
+    });
+  });
+
+  describe('gamepad state', () => {
+    it('should return empty gamepad states initially', () => {
+      const state = workerChannel.getInputState();
+      expect(state.gamepads).toHaveLength(MAX_GAMEPADS);
+      for (let i = 0; i < MAX_GAMEPADS; i++) {
+        expect(state.gamepads[i].connected).toBe(false);
+        expect(state.gamepads[i].id).toBe('');
+        expect(state.gamepads[i].buttons).toHaveLength(17);
+        expect(state.gamepads[i].buttonsPressed).toEqual([]);
+        expect(state.gamepads[i].axes).toHaveLength(4);
+      }
+    });
+
+    it('should set and get connected gamepad state', () => {
+      const gamepads = Array.from({ length: MAX_GAMEPADS }, () => createEmptyGamepadState());
+      gamepads[0].connected = true;
+      gamepads[0].id = 'Xbox Controller';
+
+      const inputState: InputState = {
+        keysDown: [],
+        keysPressed: [],
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtonsDown: [],
+        mouseButtonsPressed: [],
+        gamepads,
+      };
+
+      mainChannel.setInputState(inputState);
+      const received = workerChannel.getInputState();
+
+      expect(received.gamepads[0].connected).toBe(true);
+      expect(received.gamepads[1].connected).toBe(false);
+      expect(received.gamepads[2].connected).toBe(false);
+      expect(received.gamepads[3].connected).toBe(false);
+    });
+
+    it('should serialize and deserialize gamepad button values', () => {
+      const gamepads = Array.from({ length: MAX_GAMEPADS }, () => createEmptyGamepadState());
+      gamepads[0].connected = true;
+      gamepads[0].buttons[0] = 1.0; // A button fully pressed
+      gamepads[0].buttons[6] = 0.5; // LT half pressed (analog trigger)
+      gamepads[0].buttons[7] = 0.75; // RT 75% pressed
+
+      const inputState: InputState = {
+        keysDown: [],
+        keysPressed: [],
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtonsDown: [],
+        mouseButtonsPressed: [],
+        gamepads,
+      };
+
+      mainChannel.setInputState(inputState);
+      const received = workerChannel.getInputState();
+
+      expect(received.gamepads[0].buttons[0]).toBeCloseTo(1.0, 2);
+      expect(received.gamepads[0].buttons[6]).toBeCloseTo(0.5, 2);
+      expect(received.gamepads[0].buttons[7]).toBeCloseTo(0.75, 2);
+      expect(received.gamepads[0].buttons[1]).toBe(0); // Unpressed button
+    });
+
+    it('should serialize and deserialize buttonsPressed array', () => {
+      const gamepads = Array.from({ length: MAX_GAMEPADS }, () => createEmptyGamepadState());
+      gamepads[0].connected = true;
+      gamepads[0].buttonsPressed = [0, 3, 12]; // A, Y, and D-pad up just pressed
+
+      const inputState: InputState = {
+        keysDown: [],
+        keysPressed: [],
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtonsDown: [],
+        mouseButtonsPressed: [],
+        gamepads,
+      };
+
+      mainChannel.setInputState(inputState);
+      const received = workerChannel.getInputState();
+
+      expect(received.gamepads[0].buttonsPressed).toEqual(expect.arrayContaining([0, 3, 12]));
+      expect(received.gamepads[0].buttonsPressed).toHaveLength(3);
+    });
+
+    it('should serialize and deserialize axis values', () => {
+      const gamepads = Array.from({ length: MAX_GAMEPADS }, () => createEmptyGamepadState());
+      gamepads[0].connected = true;
+      gamepads[0].axes[0] = -0.75; // Left stick X (left)
+      gamepads[0].axes[1] = 0.5; // Left stick Y (down)
+      gamepads[0].axes[2] = 1.0; // Right stick X (full right)
+      gamepads[0].axes[3] = -1.0; // Right stick Y (full up)
+
+      const inputState: InputState = {
+        keysDown: [],
+        keysPressed: [],
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtonsDown: [],
+        mouseButtonsPressed: [],
+        gamepads,
+      };
+
+      mainChannel.setInputState(inputState);
+      const received = workerChannel.getInputState();
+
+      expect(received.gamepads[0].axes[0]).toBeCloseTo(-0.75, 2);
+      expect(received.gamepads[0].axes[1]).toBeCloseTo(0.5, 2);
+      expect(received.gamepads[0].axes[2]).toBeCloseTo(1.0, 2);
+      expect(received.gamepads[0].axes[3]).toBeCloseTo(-1.0, 2);
+    });
+
+    it('should handle multiple gamepads connected simultaneously', () => {
+      const gamepads = Array.from({ length: MAX_GAMEPADS }, () => createEmptyGamepadState());
+
+      // Configure gamepad 0
+      gamepads[0].connected = true;
+      gamepads[0].buttons[0] = 1.0;
+      gamepads[0].axes[0] = 0.5;
+
+      // Configure gamepad 1
+      gamepads[1].connected = true;
+      gamepads[1].buttons[1] = 1.0;
+      gamepads[1].axes[1] = -0.5;
+
+      // Configure gamepad 2
+      gamepads[2].connected = true;
+      gamepads[2].buttons[2] = 1.0;
+      gamepads[2].axes[2] = 0.25;
+
+      const inputState: InputState = {
+        keysDown: [],
+        keysPressed: [],
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtonsDown: [],
+        mouseButtonsPressed: [],
+        gamepads,
+      };
+
+      mainChannel.setInputState(inputState);
+      const received = workerChannel.getInputState();
+
+      // Verify gamepad 0
+      expect(received.gamepads[0].connected).toBe(true);
+      expect(received.gamepads[0].buttons[0]).toBeCloseTo(1.0, 2);
+      expect(received.gamepads[0].axes[0]).toBeCloseTo(0.5, 2);
+
+      // Verify gamepad 1
+      expect(received.gamepads[1].connected).toBe(true);
+      expect(received.gamepads[1].buttons[1]).toBeCloseTo(1.0, 2);
+      expect(received.gamepads[1].axes[1]).toBeCloseTo(-0.5, 2);
+
+      // Verify gamepad 2
+      expect(received.gamepads[2].connected).toBe(true);
+      expect(received.gamepads[2].buttons[2]).toBeCloseTo(1.0, 2);
+      expect(received.gamepads[2].axes[2]).toBeCloseTo(0.25, 2);
+
+      // Verify gamepad 3 is not connected
+      expect(received.gamepads[3].connected).toBe(false);
+    });
+
+    it('should handle gamepad disconnect (connected becomes false)', () => {
+      const gamepads = Array.from({ length: MAX_GAMEPADS }, () => createEmptyGamepadState());
+
+      // First, connect gamepad 0
+      gamepads[0].connected = true;
+      gamepads[0].buttons[0] = 1.0;
+
+      mainChannel.setInputState({
+        keysDown: [],
+        keysPressed: [],
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtonsDown: [],
+        mouseButtonsPressed: [],
+        gamepads,
+      });
+
+      let received = workerChannel.getInputState();
+      expect(received.gamepads[0].connected).toBe(true);
+
+      // Now disconnect gamepad 0
+      gamepads[0].connected = false;
+      gamepads[0].buttons[0] = 0;
+
+      mainChannel.setInputState({
+        keysDown: [],
+        keysPressed: [],
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtonsDown: [],
+        mouseButtonsPressed: [],
+        gamepads,
+      });
+
+      received = workerChannel.getInputState();
+      expect(received.gamepads[0].connected).toBe(false);
+    });
+
+    it('should write gamepad data starting at offset 1192', () => {
+      const int32View = new Int32Array(sharedBuffer);
+      const gamepads = Array.from({ length: MAX_GAMEPADS }, () => createEmptyGamepadState());
+      gamepads[0].connected = true;
+
+      mainChannel.setInputState({
+        keysDown: [],
+        keysPressed: [],
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtonsDown: [],
+        mouseButtonsPressed: [],
+        gamepads,
+      });
+
+      // OFFSET_GAMEPAD_BASE = 1192, index = 1192/4 = 298
+      // connected is at offset +0
+      expect(int32View[298]).toBe(1); // connected = true
+    });
+
+    it('should write gamepad 1 data at correct offset', () => {
+      const int32View = new Int32Array(sharedBuffer);
+      const gamepads = Array.from({ length: MAX_GAMEPADS }, () => createEmptyGamepadState());
+      gamepads[1].connected = true;
+
+      mainChannel.setInputState({
+        keysDown: [],
+        keysPressed: [],
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtonsDown: [],
+        mouseButtonsPressed: [],
+        gamepads,
+      });
+
+      // Gamepad 1 starts at 1192 + 92 = 1284, index = 1284/4 = 321
+      expect(int32View[321]).toBe(1); // connected = true
+    });
+
+    it('should handle buttonsPressed bitmask correctly', () => {
+      const int32View = new Int32Array(sharedBuffer);
+      const gamepads = Array.from({ length: MAX_GAMEPADS }, () => createEmptyGamepadState());
+      gamepads[0].connected = true;
+      gamepads[0].buttonsPressed = [0, 1, 4]; // Buttons 0, 1, and 4 pressed
+
+      mainChannel.setInputState({
+        keysDown: [],
+        keysPressed: [],
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtonsDown: [],
+        mouseButtonsPressed: [],
+        gamepads,
+      });
+
+      // buttonsPressed is at offset 1192 + 4 (connected) + 68 (buttons) = 1264
+      // index = 1264/4 = 316
+      // Bitmask: (1 << 0) | (1 << 1) | (1 << 4) = 1 | 2 | 16 = 19
+      expect(int32View[316]).toBe(19);
+    });
+
+    it('should not corrupt other data when writing gamepad state', () => {
+      const gamepads = Array.from({ length: MAX_GAMEPADS }, () => createEmptyGamepadState());
+      gamepads[0].connected = true;
+      gamepads[0].buttons[0] = 1.0;
+      gamepads[0].axes[0] = 0.5;
+
+      // Set timing first
+      mainChannel.setTimingInfo({
+        deltaTime: 0.016,
+        totalTime: 5.0,
+        frameNumber: 100,
+      });
+
+      // Set input state with gamepads
+      mainChannel.setInputState({
+        keysDown: ['a', 'b'],
+        keysPressed: ['a'],
+        mouseX: 200,
+        mouseY: 300,
+        mouseButtonsDown: [0, 2],
+        mouseButtonsPressed: [0],
+        gamepads,
+      });
+
+      // Verify timing wasn't corrupted
+      const timing = workerChannel.getTimingInfo();
+      expect(timing.deltaTime).toBeCloseTo(0.016, 5);
+      expect(timing.totalTime).toBeCloseTo(5.0, 5);
+      expect(timing.frameNumber).toBe(100);
+
+      // Verify other input state wasn't corrupted
+      const input = workerChannel.getInputState();
+      expect(input.mouseX).toBe(200);
+      expect(input.mouseY).toBe(300);
+      expect(input.keysDown).toContain('a');
+      expect(input.keysDown).toContain('b');
+      expect(input.mouseButtonsDown).toContain(0);
+      expect(input.mouseButtonsDown).toContain(2);
+
+      // Verify gamepad state is correct
+      expect(input.gamepads[0].connected).toBe(true);
+      expect(input.gamepads[0].buttons[0]).toBeCloseTo(1.0, 2);
+      expect(input.gamepads[0].axes[0]).toBeCloseTo(0.5, 2);
     });
   });
 
