@@ -356,7 +356,12 @@ export class HtmlGenerator {
           if (!filePath.endsWith('.lua')) {
             filePath = modulePath.replace(/[.]/g, '/') + '.lua';
           }
-          const code = LUA_MODULES[filePath];
+          let code = LUA_MODULES[filePath];
+          // Fallback to init.lua if direct file not found (standard Lua behavior)
+          if (!code && !modulePath.endsWith('.lua')) {
+            const initPath = modulePath.replace(/[.]/g, '/') + '/init.lua';
+            code = LUA_MODULES[initPath];
+          }
           if (!code) {
             throw new Error('module not found: ' + modulePath);
           }
@@ -553,7 +558,12 @@ export class HtmlGenerator {
           if (!filePath.endsWith('.lua')) {
             filePath = modulePath.replace(/[.]/g, '/') + '.lua';
           }
-          const code = LUA_MODULES[filePath];
+          let code = LUA_MODULES[filePath];
+          // Fallback to init.lua if direct file not found (standard Lua behavior)
+          if (!code && !modulePath.endsWith('.lua')) {
+            const initPath = modulePath.replace(/[.]/g, '/') + '/init.lua';
+            code = LUA_MODULES[initPath];
+          }
           if (!code) {
             throw new Error('module not found: ' + modulePath);
           }
