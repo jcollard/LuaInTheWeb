@@ -54,6 +54,20 @@ Build artifacts are output to the `dist/` directory.
 | macOS | ZIP | Supports x64 and arm64 |
 | Linux | AppImage | Portable, no installation needed |
 
+## macOS Installation
+
+The macOS app is ad-hoc signed but not notarized with Apple. On first launch, macOS may show a security warning for apps from unidentified developers.
+
+**To open the app for the first time:**
+
+1. Extract the downloaded ZIP file
+2. Move "Adventures in Lua.app" to your Applications folder (optional)
+3. **Right-click** (or Control-click) on the app
+4. Select **"Open"** from the context menu
+5. Click **"Open"** in the security dialog
+
+After the first launch, you can open the app normally by double-clicking.
+
 ## Project Structure
 
 ```

@@ -5,8 +5,36 @@ const HOSTED_URL = 'https://adventuresinlua.web.app';
 const ALLOWED_HOST = 'adventuresinlua.web.app';
 
 function createWindow() {
-  // Remove the application menu
-  Menu.setApplicationMenu(null);
+  // Set up application menu
+  if (process.platform === 'darwin') {
+    // macOS: Create minimal menu with standard options
+    const template = [
+      {
+        label: app.name,
+        submenu: [
+          { role: 'about' },
+          { type: 'separator' },
+          { role: 'quit' }
+        ]
+      },
+      {
+        label: 'Edit',
+        submenu: [
+          { role: 'undo' },
+          { role: 'redo' },
+          { type: 'separator' },
+          { role: 'cut' },
+          { role: 'copy' },
+          { role: 'paste' },
+          { role: 'selectAll' }
+        ]
+      }
+    ];
+    Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  } else {
+    // Windows/Linux: Remove menu bar
+    Menu.setApplicationMenu(null);
+  }
 
   const win = new BrowserWindow({
     width: 1200,
@@ -20,8 +48,6 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
     },
-    // macOS: use hidden inset title bar
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     // Hide menu bar on Windows/Linux
     autoHideMenuBar: true,
   });
@@ -62,6 +88,17 @@ function createWindow() {
       return { action: 'deny' };
     }
     return { action: 'allow' };
+  });
+
+  // Handle window close - bypass beforeunload handlers from web content
+  // The web app may have unsaved changes warnings that block closing in Electron
+  win.on('close', (event) => {
+    event.preventDefault();
+    // Clear beforeunload handler and destroy window
+    win.webContents.executeJavaScript('window.onbeforeunload = null;', true)
+      .finally(() => {
+        win.destroy();
+      });
   });
 }
 
