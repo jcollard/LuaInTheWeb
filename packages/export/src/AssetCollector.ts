@@ -85,17 +85,11 @@ export class AssetCollector {
     files: CollectedFile[],
     collected: Set<string>
   ): Promise<void> {
-    // Convert module path to file path
-    const filePath = this.moduleToFilePath(modulePath)
-    const absolutePath = this.resolvePath(filePath)
+    // Resolve module path to file path (tries both .lua and /init.lua)
+    const filePath = this.resolveModulePath(modulePath)
 
-    // Skip if already collected
-    if (collected.has(filePath)) {
-      return
-    }
-
-    // Check if file exists
-    if (!this.filesystem.exists(absolutePath)) {
+    // Check if module was found
+    if (filePath === null) {
       // If this is the main entry file, throw an error
       if (collected.size === 0) {
         throw new Error(`Entry file not found: ${modulePath}`)
@@ -104,10 +98,16 @@ export class AssetCollector {
       return
     }
 
+    // Skip if already collected
+    if (collected.has(filePath)) {
+      return
+    }
+
     // Mark as collected
     collected.add(filePath)
 
     // Read the file
+    const absolutePath = this.resolvePath(filePath)
     const content = this.filesystem.readFile(absolutePath)
     files.push({ path: filePath, content })
 
@@ -158,6 +158,39 @@ export class AssetCollector {
     }
     // Convert dots to slashes and add .lua extension
     return modulePath.replace(/\./g, '/') + '.lua'
+  }
+
+  /**
+   * Resolve a module path to a file path, trying both .lua and /init.lua variants.
+   * Returns null if neither variant exists.
+   *
+   * Resolution order (matches standard Lua behavior):
+   * 1. module.lua (e.g., "util" -> "util.lua")
+   * 2. module/init.lua (e.g., "util" -> "util/init.lua")
+   */
+  private resolveModulePath(modulePath: string): string | null {
+    // Try direct .lua file first (standard Lua behavior)
+    const directPath = this.moduleToFilePath(modulePath)
+    const directAbsolute = this.resolvePath(directPath)
+    if (this.filesystem.exists(directAbsolute)) {
+      return directPath
+    }
+
+    // If already ends with .lua, don't try init.lua fallback
+    if (modulePath.endsWith('.lua')) {
+      return null
+    }
+
+    // Fall back to init.lua in directory
+    const basePath = modulePath.replace(/\./g, '/')
+    const initPath = basePath + '/init.lua'
+    const initAbsolute = this.resolvePath(initPath)
+    if (this.filesystem.exists(initAbsolute)) {
+      return initPath
+    }
+
+    // Module not found
+    return null
   }
 
   /**

@@ -419,6 +419,57 @@ describe('HtmlGenerator', () => {
     })
   })
 
+  describe('module resolution with init.lua fallback', () => {
+    it('should generate __load_module with init.lua fallback logic in canvas export', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig({ type: 'canvas' })
+      const luaFiles: CollectedFile[] = [
+        { path: 'main.lua', content: 'local player = require("player")' },
+        { path: 'player/init.lua', content: 'return {}' },
+      ]
+      const assets: CollectedAsset[] = []
+
+      const html = generator.generateCanvas(config, luaFiles, assets)
+
+      // The __load_module function should contain init.lua fallback logic
+      // It should try modulePath/init.lua when modulePath.lua is not found
+      expect(html).toMatch(/initPath.*=.*\/init\.lua/)
+    })
+
+    it('should generate __load_module with init.lua fallback logic in shell export', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig({
+        type: 'shell',
+        shell: { columns: 80, rows: 24 },
+        canvas: undefined,
+      })
+      const luaFiles: CollectedFile[] = [
+        { path: 'main.lua', content: 'local player = require("player")' },
+        { path: 'player/init.lua', content: 'return {}' },
+      ]
+
+      const html = generator.generateShell(config, luaFiles)
+
+      // The __load_module function should contain init.lua fallback logic
+      expect(html).toMatch(/initPath.*=.*\/init\.lua/)
+    })
+
+    it('should embed init.lua files with correct path in LUA_MODULES', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig({ type: 'canvas' })
+      const luaFiles: CollectedFile[] = [
+        { path: 'main.lua', content: 'local player = require("player")' },
+        { path: 'player/init.lua', content: 'return { name = "player" }' },
+      ]
+      const assets: CollectedAsset[] = []
+
+      const html = generator.generateCanvas(config, luaFiles, assets)
+
+      // The file should be embedded with its full path
+      expect(html).toContain('"player/init.lua"')
+    })
+  })
+
   describe('offline capability (no CDN URLs)', () => {
     it('should not import from CDN in canvas export', () => {
       const generator = new HtmlGenerator(createOptions())
