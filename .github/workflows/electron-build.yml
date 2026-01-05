@@ -69,12 +69,16 @@ jobs:
         run: npm run build:mac -- --${{ matrix.arch }}
         working-directory: packages/electron-wrapper
 
-      - name: Rename artifact
+      - name: Ad-hoc sign macOS app
         run: |
-          cd packages/electron-wrapper/dist
-          for file in *.zip; do
-            mv "$file" "AdventuresInLua-portable-macos-${{ matrix.arch }}.zip"
-          done
+          APP_PATH="packages/electron-wrapper/dist/mac-${{ matrix.arch }}/Adventures in Lua.app"
+          echo "Signing app at: $APP_PATH"
+          codesign --deep --force --verbose --sign - "$APP_PATH"
+
+      - name: Create ZIP archive
+        run: |
+          cd "packages/electron-wrapper/dist/mac-${{ matrix.arch }}"
+          zip -r "../AdventuresInLua-portable-macos-${{ matrix.arch }}.zip" "Adventures in Lua.app"
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
@@ -155,6 +159,15 @@ jobs:
             - **macOS (Intel)**: `AdventuresInLua-portable-macos-x64.zip` - Extract and run
             - **macOS (Apple Silicon)**: `AdventuresInLua-portable-macos-arm64.zip` - Extract and run
             - **Linux**: `AdventuresInLua-portable-linux.AppImage` - Make executable and run
+
+            ### macOS First Launch
+            On first launch, macOS may show a security warning for apps from unidentified developers.
+            To open the app:
+            1. **Right-click** (or Control-click) on "Adventures in Lua.app"
+            2. Select **"Open"** from the context menu
+            3. Click **"Open"** in the dialog that appears
+
+            After the first launch, you can open the app normally by double-clicking.
 
             ### Notes
             - This app wraps the hosted web application at https://adventuresinlua.web.app

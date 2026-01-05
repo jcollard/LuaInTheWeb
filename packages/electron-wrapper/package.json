@@ -8,7 +8,7 @@
     "start": "electron .",
     "build": "electron-builder",
     "build:win": "electron-builder --win portable",
-    "build:mac": "electron-builder --mac zip",
+    "build:mac": "electron-builder --mac",
     "build:linux": "electron-builder --linux AppImage"
   },
   "keywords": [
@@ -40,7 +40,7 @@
       "icon": "icons/icon-512.png"
     },
     "mac": {
-      "target": "zip",
+      "target": "dir",
       "icon": "icons/icon-512.png"
     },
     "linux": {
