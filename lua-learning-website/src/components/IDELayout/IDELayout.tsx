@@ -16,6 +16,7 @@ import { CanvasTabContent } from './CanvasTabContent'
 import { MarkdownTabContent } from './MarkdownTabContent'
 import { BinaryTabContent } from './BinaryTabContent'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
+import { useBeforeUnloadWarning } from '../../hooks/useBeforeUnloadWarning'
 import { useCanvasTabManager } from '../../hooks/useCanvasTabManager'
 import { useWindowFocusRefresh } from '../../hooks/useWindowFocusRefresh'
 import { useWorkspaceManager } from '../../hooks/useWorkspaceManager'
@@ -193,6 +194,9 @@ function IDELayoutInner({
     saveFile,
     saveAllFiles,
   })
+
+  // Always warn users before leaving the page (browser will show generic "Leave site?" dialog)
+  useBeforeUnloadWarning()
 
   // Shell terminal ref for command injection (cd to location, etc.)
   const shellRef = useRef<ShellTerminalHandle>(null)

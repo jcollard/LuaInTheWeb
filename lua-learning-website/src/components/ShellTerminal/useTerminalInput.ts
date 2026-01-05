@@ -1,6 +1,7 @@
 import type { Terminal } from '@xterm/xterm'
 import type { MutableRefObject } from 'react'
 import type { TerminalCommand } from './useShellTerminal'
+import { hasModifierKey } from '../../utils/platformShortcuts'
 
 /**
  * Executes terminal commands on xterm.js terminal.
@@ -374,11 +375,12 @@ export function createInputHandler(deps: InputHandlerDeps): (data: string) => vo
 }
 
 /**
- * Creates a custom key event handler for Ctrl+V paste support.
+ * Creates a custom key event handler for Cmd/Ctrl+V paste support.
+ * Uses platform-appropriate modifier key (Cmd on Mac, Ctrl on Windows/Linux).
  */
 export function createPasteHandler(handleInput: (data: string) => void): (event: KeyboardEvent) => boolean {
   return (event: KeyboardEvent) => {
-    if (event.ctrlKey && (event.key === 'v' || event.key === 'V') && event.type === 'keydown') {
+    if (hasModifierKey(event) && (event.key === 'v' || event.key === 'V') && event.type === 'keydown') {
       navigator.clipboard.readText().then((text) => {
         if (text) {
           handleInput(text)
