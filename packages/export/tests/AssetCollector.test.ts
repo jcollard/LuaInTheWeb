@@ -372,5 +372,52 @@ describe('AssetCollector', () => {
       expect(result.files).toHaveLength(1)
       expect(result.assets).toHaveLength(0)
     })
+
+    it('should resolve init.lua for package directories', async () => {
+      const files = {
+        '/project/main.lua': 'local util = require("util")',
+        '/project/util/init.lua': 'return { name = "util" }',
+      }
+      const fs = createMockFileSystem(files)
+      const collector = new AssetCollector(fs, '/project')
+      const config = createConfig()
+
+      const result = await collector.collect(config)
+
+      expect(result.files).toHaveLength(2)
+      expect(result.files.map((f) => f.path)).toContain('util/init.lua')
+    })
+
+    it('should resolve nested module paths with init.lua', async () => {
+      const files = {
+        '/project/main.lua': 'local util = require("lib.util")',
+        '/project/lib/util/init.lua': 'return { name = "lib.util" }',
+      }
+      const fs = createMockFileSystem(files)
+      const collector = new AssetCollector(fs, '/project')
+      const config = createConfig()
+
+      const result = await collector.collect(config)
+
+      expect(result.files).toHaveLength(2)
+      expect(result.files.map((f) => f.path)).toContain('lib/util/init.lua')
+    })
+
+    it('should prefer direct .lua file over init.lua when both exist', async () => {
+      const files = {
+        '/project/main.lua': 'local util = require("util")',
+        '/project/util.lua': 'return { name = "util.lua" }',
+        '/project/util/init.lua': 'return { name = "util/init.lua" }',
+      }
+      const fs = createMockFileSystem(files)
+      const collector = new AssetCollector(fs, '/project')
+      const config = createConfig()
+
+      const result = await collector.collect(config)
+
+      expect(result.files).toHaveLength(2)
+      expect(result.files.map((f) => f.path)).toContain('util.lua')
+      expect(result.files.map((f) => f.path)).not.toContain('util/init.lua')
+    })
   })
 })
