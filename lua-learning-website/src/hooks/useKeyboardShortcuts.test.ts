@@ -353,4 +353,159 @@ describe('useKeyboardShortcuts', () => {
       expect(mockSaveFile).toHaveBeenCalledTimes(1)
     })
   })
+
+  describe('macOS shortcuts (Cmd key)', () => {
+    const originalPlatform = navigator.platform
+
+    beforeEach(() => {
+      Object.defineProperty(navigator, 'platform', {
+        value: 'MacIntel',
+        configurable: true,
+      })
+    })
+
+    afterEach(() => {
+      Object.defineProperty(navigator, 'platform', {
+        value: originalPlatform,
+        configurable: true,
+      })
+    })
+
+    it('should call saveFile when Cmd+S is pressed on macOS', () => {
+      // Arrange
+      renderHook(() =>
+        useKeyboardShortcuts({
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+        })
+      )
+
+      // Act
+      const event = new KeyboardEvent('keydown', {
+        key: 's',
+        metaKey: true,
+        bubbles: true,
+      })
+      document.dispatchEvent(event)
+
+      // Assert
+      expect(mockSaveFile).toHaveBeenCalledTimes(1)
+    })
+
+    it('should NOT call saveFile when Ctrl+S is pressed on macOS', () => {
+      // Arrange
+      renderHook(() =>
+        useKeyboardShortcuts({
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+        })
+      )
+
+      // Act
+      const event = new KeyboardEvent('keydown', {
+        key: 's',
+        ctrlKey: true, // Ctrl, not Cmd
+        bubbles: true,
+      })
+      document.dispatchEvent(event)
+
+      // Assert
+      expect(mockSaveFile).not.toHaveBeenCalled()
+    })
+
+    it('should call toggleSidebar when Cmd+B is pressed on macOS', () => {
+      // Arrange
+      renderHook(() =>
+        useKeyboardShortcuts({
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+        })
+      )
+
+      // Act
+      const event = new KeyboardEvent('keydown', {
+        key: 'b',
+        metaKey: true,
+        bubbles: true,
+      })
+      document.dispatchEvent(event)
+
+      // Assert
+      expect(mockToggleSidebar).toHaveBeenCalledTimes(1)
+    })
+
+    it('should call toggleTerminal when Cmd+` is pressed on macOS', () => {
+      // Arrange
+      renderHook(() =>
+        useKeyboardShortcuts({
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+        })
+      )
+
+      // Act
+      const event = new KeyboardEvent('keydown', {
+        key: '`',
+        metaKey: true,
+        bubbles: true,
+      })
+      document.dispatchEvent(event)
+
+      // Assert
+      expect(mockToggleTerminal).toHaveBeenCalledTimes(1)
+    })
+
+    it('should call saveAllFiles when Cmd+Shift+S is pressed on macOS', () => {
+      // Arrange
+      renderHook(() =>
+        useKeyboardShortcuts({
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+          saveAllFiles: mockSaveAllFiles,
+        })
+      )
+
+      // Act
+      const event = new KeyboardEvent('keydown', {
+        key: 's',
+        metaKey: true,
+        shiftKey: true,
+        bubbles: true,
+      })
+      document.dispatchEvent(event)
+
+      // Assert
+      expect(mockSaveAllFiles).toHaveBeenCalledTimes(1)
+      expect(mockSaveFile).not.toHaveBeenCalled()
+    })
+
+    it('should prevent default for Cmd+S on macOS to avoid browser save dialog', () => {
+      // Arrange
+      renderHook(() =>
+        useKeyboardShortcuts({
+          toggleTerminal: mockToggleTerminal,
+          toggleSidebar: mockToggleSidebar,
+          saveFile: mockSaveFile,
+        })
+      )
+
+      // Act
+      const event = new KeyboardEvent('keydown', {
+        key: 's',
+        metaKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+      document.dispatchEvent(event)
+
+      // Assert
+      expect(preventDefaultSpy).toHaveBeenCalled()
+    })
+  })
 })

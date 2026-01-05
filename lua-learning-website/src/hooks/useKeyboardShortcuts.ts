@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from 'react'
+import { hasModifierKey } from '../utils/platformShortcuts'
 
 export interface UseKeyboardShortcutsOptions {
   toggleTerminal: () => void
@@ -8,11 +9,11 @@ export interface UseKeyboardShortcutsOptions {
 }
 
 /**
- * Hook for IDE keyboard shortcuts
- * - Ctrl+`: Toggle terminal
- * - Ctrl+B: Toggle sidebar
- * - Ctrl+S: Save file
- * - Ctrl+Shift+S: Save all files
+ * Hook for IDE keyboard shortcuts (cross-platform: Cmd on Mac, Ctrl on Windows/Linux)
+ * - Cmd/Ctrl+`: Toggle terminal
+ * - Cmd/Ctrl+B: Toggle sidebar
+ * - Cmd/Ctrl+S: Save file
+ * - Cmd/Ctrl+Shift+S: Save all files
  */
 export function useKeyboardShortcuts({
   toggleTerminal,
@@ -22,8 +23,8 @@ export function useKeyboardShortcuts({
 }: UseKeyboardShortcutsOptions): void {
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      // Only handle shortcuts with Ctrl key
-      if (!event.ctrlKey) return
+      // Only handle shortcuts with platform modifier key (Cmd on Mac, Ctrl on Windows/Linux)
+      if (!hasModifierKey(event)) return
 
       switch (event.key) {
         case '`':
