@@ -1,8 +1,17 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow, Menu, dialog } = require('electron');
 const path = require('path');
 
 const HOSTED_URL = 'https://adventuresinlua.web.app';
 const ALLOWED_HOST = 'adventuresinlua.web.app';
+
+// Handle uncaught exceptions in main process
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception in main process:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled rejection in main process:', reason);
+});
 
 function createWindow() {
   // Set up application menu
@@ -58,6 +67,49 @@ function createWindow() {
 
   // Load the hosted application
   win.loadURL(HOSTED_URL);
+
+  // Handle renderer process crash
+  win.webContents.on('render-process-gone', (event, details) => {
+    console.error('Renderer process crashed:', details.reason);
+
+    // Attempt recovery for certain crash types
+    if (details.reason === 'crashed' || details.reason === 'oom' || details.reason === 'killed') {
+      dialog.showMessageBox(win, {
+        type: 'error',
+        title: 'Application Error',
+        message: 'The application encountered an error and needs to reload.',
+        buttons: ['Reload', 'Quit'],
+        defaultId: 0,
+      }).then((result) => {
+        if (result.response === 0) {
+          win.loadURL(HOSTED_URL);
+        } else {
+          app.quit();
+        }
+      });
+    }
+  });
+
+  // Handle unresponsive renderer
+  win.webContents.on('unresponsive', () => {
+    console.warn('Renderer became unresponsive');
+    dialog.showMessageBox(win, {
+      type: 'warning',
+      title: 'Application Not Responding',
+      message: 'The application is not responding. Would you like to wait or reload?',
+      buttons: ['Wait', 'Reload'],
+      defaultId: 0,
+    }).then((result) => {
+      if (result.response === 1) {
+        win.loadURL(HOSTED_URL);
+      }
+    });
+  });
+
+  // Log when renderer becomes responsive again
+  win.webContents.on('responsive', () => {
+    console.log('Renderer became responsive again');
+  });
 
   // Handle keyboard shortcuts
   win.webContents.on('before-input-event', (event, input) => {

@@ -77,6 +77,7 @@ export class LuaCanvasProcess implements IProcess {
   // Audio
   private audioEngine: MainThreadAudioEngine | null = null;
   private audioInitPromise: Promise<void> | null = null;
+  private audioAvailable = false;
 
   /**
    * Callback invoked when the process produces output.
@@ -153,9 +154,19 @@ export class LuaCanvasProcess implements IProcess {
 
     // Create audio engine and start initialization
     this.audioEngine = new MainThreadAudioEngine();
-    this.audioInitPromise = this.audioEngine.initialize().catch((error) => {
-      console.warn('Failed to initialize audio engine:', error);
-    });
+    this.audioInitPromise = this.audioEngine
+      .initialize()
+      .then(() => {
+        this.audioAvailable = this.audioEngine?.isAudioAvailable() ?? false;
+        if (!this.audioAvailable) {
+          this.onOutput('Audio disabled (initialization failed)\n');
+        }
+      })
+      .catch((error) => {
+        console.warn('Failed to initialize audio engine:', error);
+        this.audioAvailable = false;
+        this.onOutput('Audio disabled (initialization error)\n');
+      });
 
     // Create the worker
     this.worker = this.createWorker();
@@ -411,19 +422,24 @@ export class LuaCanvasProcess implements IProcess {
 
             // Handle audio files separately - decode to main thread audio engine
             if (file.type === 'audio') {
-              if (this.audioEngine) {
-                // Wait for audio engine to be initialized
-                if (this.audioInitPromise) {
-                  await this.audioInitPromise;
+              // Wait for audio engine to be initialized
+              if (this.audioInitPromise) {
+                await this.audioInitPromise;
+              }
+              // Only load audio if audio is available
+              if (this.audioEngine && this.audioAvailable) {
+                try {
+                  const loaded = await assetLoader.loadAsset({
+                    name: file.relativePath,
+                    path: file.fullPath,
+                    type: 'audio',
+                  });
+                  // Decode audio on main thread using relativePath as key
+                  // This matches the path used in Lua: canvas.assets.load_sound("name", "sfx/file.ogg")
+                  await this.audioEngine.decodeAudio(file.relativePath, loaded.data);
+                } catch (error) {
+                  console.warn(`Failed to load audio asset '${file.relativePath}':`, error);
                 }
-                const loaded = await assetLoader.loadAsset({
-                  name: file.relativePath,
-                  path: file.fullPath,
-                  type: 'audio',
-                });
-                // Decode audio on main thread using relativePath as key
-                // This matches the path used in Lua: canvas.assets.load_sound("name", "sfx/file.ogg")
-                await this.audioEngine.decodeAudio(file.relativePath, loaded.data);
               }
               // Audio assets don't need to be sent to worker
               continue;
