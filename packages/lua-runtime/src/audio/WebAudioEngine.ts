@@ -84,6 +84,7 @@ export class WebAudioEngine implements IAudioEngine {
   private masterVolume = 1;
   private muted = false;
   private initialized = false;
+  private audioAvailable = false;
   /** Promise for in-progress initialization to prevent race conditions */
   private initializePromise: Promise<void> | null = null;
   /** Pending channel operations to replay after initialization */
@@ -118,17 +119,26 @@ export class WebAudioEngine implements IAudioEngine {
    * Internal initialization logic.
    */
   private async doInitialize(): Promise<void> {
-    // Create AudioContext
-    this.audioContext = new AudioContext();
+    try {
+      // Create AudioContext
+      this.audioContext = new AudioContext();
 
-    // Create master gain node for global volume control
-    this.masterGainNode = this.audioContext.createGain();
-    this.masterGainNode.connect(this.audioContext.destination);
-    this.masterGainNode.gain.value = this.masterVolume;
+      // Create master gain node for global volume control
+      this.masterGainNode = this.audioContext.createGain();
+      this.masterGainNode.connect(this.audioContext.destination);
+      this.masterGainNode.gain.value = this.masterVolume;
 
-    // Resume context if suspended (browser autoplay policy)
-    if (this.audioContext.state === 'suspended') {
-      await this.audioContext.resume();
+      // Resume context if suspended (browser autoplay policy)
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+      }
+
+      this.audioAvailable = true;
+    } catch (error) {
+      console.warn('AudioContext creation failed:', error);
+      this.audioContext = null;
+      this.masterGainNode = null;
+      this.audioAvailable = false;
     }
 
     this.initialized = true;
@@ -161,11 +171,19 @@ export class WebAudioEngine implements IAudioEngine {
   }
 
   /**
+   * Check if audio is available and functional.
+   */
+  isAudioAvailable(): boolean {
+    return this.audioAvailable;
+  }
+
+  /**
    * Decode audio data and store it by name.
    */
   async decodeAudio(name: string, data: ArrayBuffer): Promise<void> {
     if (!this.audioContext) {
-      throw new Error('Audio engine not initialized');
+      // Audio not available - silently skip
+      return;
     }
 
     const audioBuffer = await this.audioContext.decodeAudioData(data);

@@ -6,6 +6,7 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "start:dev": "electron . --dev",
     "build": "electron-builder",
     "build:win": "electron-builder --win portable",
     "build:mac": "electron-builder --mac",
@@ -18,7 +19,7 @@
   ],
   "license": "MIT",
   "devDependencies": {
-    "electron": "28.3.3",
+    "electron": "^39.0.0",
     "electron-builder": "^25.1.8",
     "sharp": "^0.34.5"
   },

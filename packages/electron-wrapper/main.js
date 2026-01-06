@@ -1,8 +1,17 @@
 const { app, BrowserWindow, Menu, dialog } = require('electron');
 const path = require('path');
 
-const HOSTED_URL = 'https://adventuresinlua.web.app';
-const ALLOWED_HOST = 'adventuresinlua.web.app';
+// Audio configuration for Electron
+app.commandLine.appendSwitch('disable-features', 'AudioServiceOutOfProcess,AudioServiceSandbox');
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+
+// Dev mode: set ELECTRON_DEV=1 or pass --dev flag
+const isDev = process.env.ELECTRON_DEV === '1' || process.argv.includes('--dev');
+const DEV_URL = 'http://localhost:5173';
+const PROD_URL = 'https://adventuresinlua.web.app';
+
+const HOSTED_URL = isDev ? DEV_URL : PROD_URL;
+const ALLOWED_HOST = isDev ? 'localhost' : 'adventuresinlua.web.app';
 
 // Handle uncaught exceptions in main process
 process.on('uncaughtException', (error) => {
@@ -67,6 +76,11 @@ function createWindow() {
 
   // Load the hosted application
   win.loadURL(HOSTED_URL);
+
+  // Auto-open DevTools in dev mode
+  if (isDev) {
+    win.webContents.openDevTools();
+  }
 
   // Handle renderer process crash
   win.webContents.on('render-process-gone', (event, details) => {
@@ -156,6 +170,9 @@ function createWindow() {
 
 // Create window when app is ready
 app.whenReady().then(() => {
+  if (isDev) {
+    console.log('Running in DEV mode - connecting to', DEV_URL);
+  }
   createWindow();
 
   // macOS: re-create window when dock icon is clicked
