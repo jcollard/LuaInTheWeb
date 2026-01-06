@@ -99,8 +99,12 @@ export function useProcessManager(
       }
     }
 
-    pm.startProcess(process)
+    // Set running state BEFORE starting the process.
+    // This ensures that if the process exits immediately (e.g., file not found),
+    // the onProcessExit callback sets isProcessRunning to false AFTER this true,
+    // and React batches both updates with false winning (last update wins).
     setIsProcessRunning(true)
+    pm.startProcess(process)
   }, [])
 
   const stopProcess = useCallback((): void => {
