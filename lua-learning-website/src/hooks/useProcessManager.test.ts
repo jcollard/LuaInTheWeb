@@ -137,6 +137,29 @@ describe('useProcessManager', () => {
       expect(result.current.isProcessRunning).toBe(false)
     })
 
+    it('should handle process that exits immediately during start (file not found scenario)', () => {
+      // This tests the race condition fix: when a process exits synchronously
+      // during start() (e.g., file not found), isProcessRunning should be false
+      const { result } = renderHook(() => useProcessManager())
+
+      // Create a process that calls onExit immediately in start()
+      // This simulates LuaScriptProcess when file doesn't exist
+      const immediateExitProcess = createMockProcess({
+        start: vi.fn().mockImplementation(function (this: IProcess) {
+          // Simulate immediate exit (like file not found)
+          this.onExit(1)
+        }),
+      })
+
+      act(() => {
+        result.current.startProcess(immediateExitProcess)
+      })
+
+      // After the act, isProcessRunning should be false because the process exited immediately
+      expect(result.current.isProcessRunning).toBe(false)
+      expect(result.current.hasForegroundProcess()).toBe(false)
+    })
+
     it('should call onProcessExit callback when process exits', () => {
       const onProcessExit = vi.fn()
       const { result } = renderHook(() => useProcessManager({ onProcessExit }))
