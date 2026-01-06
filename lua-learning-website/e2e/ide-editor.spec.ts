@@ -340,6 +340,59 @@ test.describe('IDE Editor - Keyboard Shortcuts', () => {
     await expect(page.locator('[data-testid="bottom-panel"]')).toBeVisible()
   })
 
+  test('Editor expands to fill space when terminal is hidden', async ({ page }) => {
+    // Get the editor panel wrapper (contains both editor and terminal in vertical layout)
+    const editorPanel = page.locator('[data-testid="editor-panel"]')
+    await expect(editorPanel).toBeVisible()
+
+    // Get initial editor bounding box (Monaco editor area)
+    const monacoEditor = page.locator('.monaco-editor')
+    await expect(monacoEditor).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+    const initialEditorBox = await monacoEditor.boundingBox()
+    expect(initialEditorBox).toBeTruthy()
+    const initialEditorHeight = initialEditorBox!.height
+
+    // Get initial bottom panel bounding box
+    const bottomPanel = page.locator('[data-testid="bottom-panel"]')
+    await expect(bottomPanel).toBeVisible()
+    const bottomPanelBox = await bottomPanel.boundingBox()
+    expect(bottomPanelBox).toBeTruthy()
+    const terminalHeight = bottomPanelBox!.height
+
+    // Hide the terminal with Ctrl+`
+    await page.keyboard.press('Control+`')
+    await expect(bottomPanel).not.toBeVisible()
+
+    // Wait for layout to stabilize after terminal hides
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+    // Get new editor bounding box
+    const expandedEditorBox = await monacoEditor.boundingBox()
+    expect(expandedEditorBox).toBeTruthy()
+    const expandedEditorHeight = expandedEditorBox!.height
+
+    // Editor should have expanded to fill the space
+    // The expanded height should be significantly larger (at least 50% of terminal height gained)
+    const heightGain = expandedEditorHeight - initialEditorHeight
+    expect(heightGain).toBeGreaterThan(terminalHeight * 0.5)
+
+    // Show the terminal again
+    await page.keyboard.press('Control+`')
+    await expect(bottomPanel).toBeVisible()
+
+    // Wait for layout to stabilize
+    await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+    // Editor should return to approximately its original height
+    const restoredEditorBox = await monacoEditor.boundingBox()
+    expect(restoredEditorBox).toBeTruthy()
+    const restoredEditorHeight = restoredEditorBox!.height
+
+    // Restored height should be close to initial height (within 20% tolerance)
+    const tolerance = initialEditorHeight * 0.2
+    expect(Math.abs(restoredEditorHeight - initialEditorHeight)).toBeLessThan(tolerance)
+  })
+
   test('Ctrl+B toggles sidebar visibility', async ({ page }) => {
     // Initially sidebar should be visible
     await expect(page.locator('[data-testid="sidebar-panel"]')).toBeVisible()

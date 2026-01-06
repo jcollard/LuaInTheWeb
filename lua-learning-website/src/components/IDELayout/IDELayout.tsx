@@ -6,7 +6,7 @@ import { StatusBar } from '../StatusBar'
 import { SidebarPanel } from '../SidebarPanel'
 import { VirtualizedEditorPanel } from '../EditorPanel'
 import { BottomPanel, type ShellTerminalHandle } from '../BottomPanel'
-import { IDEPanelGroup } from '../IDEPanelGroup'
+import { IDEPanelGroup, type IDEPanelGroupHandle } from '../IDEPanelGroup'
 import { IDEPanel } from '../IDEPanel'
 import { IDEResizeHandle } from '../IDEResizeHandle'
 import { ConfirmDialog } from '../ConfirmDialog'
@@ -200,6 +200,50 @@ function IDELayoutInner({
 
   // Shell terminal ref for command injection (cd to location, etc.)
   const shellRef = useRef<ShellTerminalHandle>(null)
+
+  // Vertical panel group ref for programmatic layout control (terminal collapse/expand)
+  const verticalPanelGroupRef = useRef<IDEPanelGroupHandle>(null)
+  // Store layout before terminal collapse to restore on expand
+  const savedTerminalLayoutRef = useRef<number[] | null>(null)
+  // Track previous terminal visibility to detect actual changes (not initial mount)
+  const prevTerminalVisibleRef = useRef<boolean | null>(null)
+
+  // Handle terminal visibility changes - expand editor to 100% when terminal is hidden
+  useEffect(() => {
+    const panelGroup = verticalPanelGroupRef.current
+    if (!panelGroup) return
+
+    // Skip initial mount - only act on actual visibility changes
+    if (prevTerminalVisibleRef.current === null) {
+      prevTerminalVisibleRef.current = terminalVisible
+      return
+    }
+
+    // Skip if visibility hasn't actually changed
+    if (prevTerminalVisibleRef.current === terminalVisible) return
+    prevTerminalVisibleRef.current = terminalVisible
+
+    // Verify panel group has panels registered before modifying layout
+    const currentLayout = panelGroup.getLayout()
+    if (currentLayout.length !== 2) return
+
+    if (!terminalVisible) {
+      // Terminal is being hidden - save current layout and expand editor to 100%
+      if (currentLayout[1] > 0) {
+        savedTerminalLayoutRef.current = currentLayout
+      }
+      panelGroup.setLayout([100, 0])
+    } else {
+      // Terminal is being shown - restore previous layout or use default
+      const savedLayout = savedTerminalLayoutRef.current
+      if (savedLayout && savedLayout.length === 2) {
+        panelGroup.setLayout(savedLayout)
+      } else {
+        // Default: 70% editor, 30% terminal
+        panelGroup.setLayout([70, 30])
+      }
+    }
+  }, [terminalVisible])
 
   // Canvas tab request management for shell-based canvas.start()
   // Stores pending resolvers for canvas requests (canvasId -> resolver)
@@ -418,7 +462,7 @@ function IDELayoutInner({
               </>
             )}
             <IDEPanel defaultSize={sidebarVisible ? 80 : 100} minSize={40}>
-              <IDEPanelGroup direction="vertical" persistId="ide-editor">
+              <IDEPanelGroup ref={verticalPanelGroupRef} direction="vertical" persistId="ide-editor">
                 <IDEPanel defaultSize={70} minSize={30}>
                   {tabs.length === 0 ? (
                     <WelcomeScreen
