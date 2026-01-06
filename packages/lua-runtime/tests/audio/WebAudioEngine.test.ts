@@ -108,12 +108,12 @@ describe('WebAudioEngine', () => {
       expect(engine.hasAudio('nonexistent')).toBe(false);
     });
 
-    it('should throw when decoding before initialization', async () => {
+    it('should silently skip decoding when audio not available', async () => {
       const uninitializedEngine = new WebAudioEngine();
       const mockData = new ArrayBuffer(1024);
-      await expect(uninitializedEngine.decodeAudio('test', mockData)).rejects.toThrow(
-        'Audio engine not initialized'
-      );
+      // Should not throw - gracefully returns when audio not available
+      await uninitializedEngine.decodeAudio('test', mockData);
+      expect(uninitializedEngine.hasAudio('test')).toBe(false);
     });
   });
 

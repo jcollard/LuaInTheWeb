@@ -78,27 +78,39 @@ export class MainThreadAudioEngine {
   private masterVolume = 1;
   private muted = false;
   private initialized = false;
+  private audioAvailable = false;
 
   /**
    * Initialize the audio engine.
    * Creates the AudioContext and master gain node.
+   * If AudioContext creation fails, the engine will be initialized but audio will be unavailable.
    */
   async initialize(): Promise<void> {
     if (this.initialized) {
       return;
     }
 
-    // Create AudioContext
-    this.audioContext = new AudioContext();
+    try {
+      // Create AudioContext - may throw in restricted environments (e.g., Electron without audio)
+      this.audioContext = new AudioContext();
 
-    // Create master gain node for global volume control
-    this.masterGainNode = this.audioContext.createGain();
-    this.masterGainNode.connect(this.audioContext.destination);
-    this.masterGainNode.gain.value = this.masterVolume;
+      // Create master gain node for global volume control
+      this.masterGainNode = this.audioContext.createGain();
+      this.masterGainNode.connect(this.audioContext.destination);
+      this.masterGainNode.gain.value = this.masterVolume;
 
-    // Resume context if suspended (browser autoplay policy)
-    if (this.audioContext.state === 'suspended') {
-      await this.audioContext.resume();
+      // Resume context if suspended (browser autoplay policy)
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+      }
+
+      this.audioAvailable = true;
+    } catch (error) {
+      // AudioContext creation failed - audio will be disabled but app continues
+      console.warn('AudioContext creation failed, audio will be disabled:', error);
+      this.audioContext = null;
+      this.masterGainNode = null;
+      this.audioAvailable = false;
     }
 
     this.initialized = true;
@@ -112,15 +124,30 @@ export class MainThreadAudioEngine {
   }
 
   /**
+   * Check if audio is available and functional.
+   * Returns false if AudioContext creation failed.
+   */
+  isAudioAvailable(): boolean {
+    return this.audioAvailable;
+  }
+
+  /**
    * Decode audio data and store it by name.
+   * Silently returns if audio is not available.
    */
   async decodeAudio(name: string, data: ArrayBuffer): Promise<void> {
     if (!this.audioContext) {
-      throw new Error('Audio engine not initialized');
+      // Audio not available - silently skip decoding
+      console.warn(`Cannot decode audio '${name}': audio not available`);
+      return;
     }
 
-    const audioBuffer = await this.audioContext.decodeAudioData(data);
-    this.audioBuffers.set(name, audioBuffer);
+    try {
+      const audioBuffer = await this.audioContext.decodeAudioData(data);
+      this.audioBuffers.set(name, audioBuffer);
+    } catch (error) {
+      console.warn(`Failed to decode audio '${name}':`, error);
+    }
   }
 
   /**
@@ -825,5 +852,6 @@ export class MainThreadAudioEngine {
     this.audioContext = null;
     this.masterGainNode = null;
     this.initialized = false;
+    this.audioAvailable = false;
   }
 }
