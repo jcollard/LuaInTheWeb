@@ -1,6 +1,6 @@
 {
   "name": "@lua-learning/electron-wrapper",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Electron desktop wrapper for Adventures in Lua",
   "author": "Adventures in Lua",
   "main": "main.js",
