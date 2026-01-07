@@ -115,6 +115,19 @@ export interface CanvasCallbacks {
    * @param canvasId - The canvas ID
    */
   unregisterWindowReloadHandler?: (canvasId: string) => void
+  /**
+   * Register a handler to be called when a popup window is closed by the user.
+   * Called when canvas starts in window mode.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when the window is closed
+   */
+  registerWindowCloseHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Unregister the window close handler.
+   * Called when the canvas stops.
+   * @param canvasId - The canvas ID
+   */
+  unregisterWindowCloseHandler?: (canvasId: string) => void
 }
 
 /**

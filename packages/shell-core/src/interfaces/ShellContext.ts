@@ -124,6 +124,21 @@ export interface ShellContext {
   unregisterWindowReloadHandler?: (canvasId: string) => void
 
   /**
+   * Register a handler to be called when a popup window is closed by the user.
+   * Called when canvas starts in window mode.
+   * @param canvasId - Unique identifier for the canvas window
+   * @param handler - Function to call when the window is closed
+   */
+  registerWindowCloseHandler?: (canvasId: string, handler: () => void) => void
+
+  /**
+   * Unregister the window close handler.
+   * Called when the canvas stops.
+   * @param canvasId - Unique identifier for the canvas window
+   */
+  unregisterWindowCloseHandler?: (canvasId: string) => void
+
+  /**
    * Request a file to be opened in the editor.
    * Called by the 'open' command to integrate with an IDE or editor.
    * Optional - when undefined, the open command will report that

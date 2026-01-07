@@ -314,6 +314,9 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
         // Window reload handler registration for UI-triggered hot reload (popup windows)
         registerWindowReloadHandler: options?.canvasCallbacks?.registerWindowReloadHandler,
         unregisterWindowReloadHandler: options?.canvasCallbacks?.unregisterWindowReloadHandler,
+        // Window close handler registration for UI-initiated popup window close
+        registerWindowCloseHandler: options?.canvasCallbacks?.registerWindowCloseHandler,
+        unregisterWindowCloseHandler: options?.canvasCallbacks?.unregisterWindowCloseHandler,
         // Editor integration callback for 'open' command
         onRequestOpenFile: options?.onRequestOpenFile,
         // Filesystem change notification for UI refresh (e.g., file tree)

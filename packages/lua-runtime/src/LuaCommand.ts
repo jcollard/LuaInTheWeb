@@ -155,6 +155,9 @@ export class LuaCommand implements ICommand {
             // Window reload handler registration for UI-triggered hot reload (popup windows)
             registerWindowReloadHandler: context.registerWindowReloadHandler,
             unregisterWindowReloadHandler: context.unregisterWindowReloadHandler,
+            // Window close handler registration for UI-initiated popup window close
+            registerWindowCloseHandler: context.registerWindowCloseHandler,
+            unregisterWindowCloseHandler: context.unregisterWindowCloseHandler,
             fileSystem: context.filesystem,
             scriptDirectory,
           }

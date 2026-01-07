@@ -425,6 +425,15 @@ __clear_execution_hook()
         canvasMode === 'window' && originalCallbacks.onCloseCanvasWindow
           ? originalCallbacks.onCloseCanvasWindow
           : originalCallbacks.onCloseCanvasTab,
+      // Route close handlers: window mode uses registerWindowCloseHandler
+      registerCanvasCloseHandler:
+        canvasMode === 'window' && originalCallbacks.registerWindowCloseHandler
+          ? originalCallbacks.registerWindowCloseHandler
+          : originalCallbacks.registerCanvasCloseHandler,
+      unregisterCanvasCloseHandler:
+        canvasMode === 'window' && originalCallbacks.unregisterWindowCloseHandler
+          ? originalCallbacks.unregisterWindowCloseHandler
+          : originalCallbacks.unregisterCanvasCloseHandler,
       // Route reload handlers: window mode uses registerWindowReloadHandler
       registerCanvasReloadHandler:
         canvasMode === 'window' && originalCallbacks.registerWindowReloadHandler
