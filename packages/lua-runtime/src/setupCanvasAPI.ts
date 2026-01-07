@@ -25,6 +25,24 @@ export function setupCanvasAPI(
   engine: LuaEngine,
   getController: () => CanvasController | null
 ): void {
+  // --- File reading for hot reload ---
+  // Synchronously reads a file's content (used by canvas.reload() to detect changes)
+  engine.global.set('__canvas_read_file', (filepath: string) => {
+    const controller = getController()
+    const fileSystem = controller?.getFileSystem()
+    if (!fileSystem) {
+      return null
+    }
+    try {
+      if (!fileSystem.exists(filepath)) {
+        return null
+      }
+      return fileSystem.readFile(filepath)
+    } catch {
+      return null
+    }
+  })
+
   // --- Canvas lifecycle functions ---
   engine.global.set('__canvas_is_active', () => {
     return getController()?.isActive() ?? false

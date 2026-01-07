@@ -1357,6 +1357,14 @@ export class CanvasController {
   }
 
   /**
+   * Get the filesystem for file operations (used by hot reload).
+   * Returns null if no filesystem is available.
+   */
+  getFileSystem(): IFileSystem | null {
+    return this.callbacks.fileSystem ?? null
+  }
+
+  /**
    * Get the audio asset manifest (definitions registered via loadSoundAsset/loadMusicAsset).
    */
   getAudioAssetManifest(): AudioAssetManifest {

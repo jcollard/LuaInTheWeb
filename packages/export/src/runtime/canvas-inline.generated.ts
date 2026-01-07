@@ -325,7 +325,8 @@ var CanvasInline = (() => {
     ---@param module_name string The name of the module to reload
     ---@return any The reloaded module
     function __hot_reload(module_name)
-      local old = __loaded_modules[module_name]
+      local entry = __loaded_modules[module_name]
+      local old = entry and entry.module
 
       -- Clear from both caches to force re-loading
       __loaded_modules[module_name] = nil
@@ -345,7 +346,9 @@ var CanvasInline = (() => {
         end
 
         -- Re-cache the OLD table (with updated functions) to preserve identity
-        __loaded_modules[module_name] = old
+        -- Note: __loaded_modules entry was already updated by require() with new content
+        local newEntry = __loaded_modules[module_name]
+        newEntry.module = old
         package.loaded[module_name] = old
         return old
       end
@@ -369,24 +372,57 @@ var CanvasInline = (() => {
       ['HC.vector-light'] = true,
     }
 
-    -- Hot reload all user modules.
-    -- Iterates through all modules in __loaded_modules and reloads them.
+    -- Hot reload only modified user modules.
+    -- Compares current file content with cached content to detect changes.
     -- Built-in modules (canvas, shell, HC library) are skipped.
+    -- Large files (>50KB) are skipped with a warning.
     function _canvas.reload()
       local reloaded = {}
+      local skipped = {}
+      local large_files = {}
       local errors = {}
 
-      for modname, _ in pairs(__loaded_modules) do
+      for modname, entry in pairs(__loaded_modules) do
         -- Skip built-in modules
-        if not __builtin_modules[modname] then
-          local ok, err = pcall(function()
-            __hot_reload(modname)
-          end)
+        if not __builtin_modules[modname] and not entry.builtin then
+          -- Check if we have content tracking for this module
+          if entry.content == nil then
+            -- Large file - no content tracking
+            if entry.filepath then
+              table.insert(large_files, modname)
+            end
+          elseif entry.filepath then
+            -- Read current file content using JS binding (synchronous)
+            local currentContent = __canvas_read_file(entry.filepath)
 
-          if ok then
-            table.insert(reloaded, modname)
-          else
-            table.insert(errors, modname .. ": " .. tostring(err))
+            if currentContent then
+              if currentContent ~= entry.content then
+                -- Content changed - reload this module
+                local reload_ok, reload_err = pcall(function()
+                  __hot_reload(modname)
+                end)
+
+                if reload_ok then
+                  table.insert(reloaded, modname)
+                else
+                  table.insert(errors, modname .. ": " .. tostring(reload_err))
+                end
+              else
+                -- Content unchanged - skip
+                table.insert(skipped, modname)
+              end
+            else
+              -- Could not read file - try to reload anyway
+              local reload_ok, reload_err = pcall(function()
+                __hot_reload(modname)
+              end)
+
+              if reload_ok then
+                table.insert(reloaded, modname)
+              else
+                table.insert(errors, modname .. ": " .. tostring(reload_err))
+              end
+            end
           end
         end
       end
@@ -394,6 +430,14 @@ var CanvasInline = (() => {
       -- Report results
       if #reloaded > 0 then
         print("Hot reloaded: " .. table.concat(reloaded, ", "))
+      end
+
+      if #skipped > 0 then
+        print("Unchanged: " .. table.concat(skipped, ", "))
+      end
+
+      if #large_files > 0 then
+        print("Warning: Skipped large files (>50KB): " .. table.concat(large_files, ", "))
       end
 
       if #errors > 0 then
