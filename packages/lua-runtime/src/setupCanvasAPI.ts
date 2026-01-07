@@ -368,4 +368,20 @@ export function setupCanvasAPI(
   // --- Set up Lua-side canvas table ---
   // Canvas is NOT a global - it must be accessed via require('canvas')
   engine.doStringSync(canvasLuaCode)
+
+  // Set up reload callback - allows CanvasController.reload() to trigger canvas.reload() in Lua
+  // Note: canvas is accessed via require('canvas'), not as a global
+  const controller = getController()
+  if (controller) {
+    controller.setReloadCallback(() => {
+      try {
+        engine.doStringSync('require("canvas").reload()')
+      } catch (error) {
+        // Report reload errors through the controller's error callback
+        if (error instanceof Error) {
+          controller.reportError(`Hot reload error: ${error.message}`)
+        }
+      }
+    })
+  }
 }

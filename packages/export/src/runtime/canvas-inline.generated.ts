@@ -318,6 +318,92 @@ var CanvasInline = (() => {
       end
       return __canvas_capture(format, quality)
     end
+
+    -- Hot reload support
+    -- Reloads a module by clearing it from cache and re-requiring it.
+    -- Patches functions from new module into old table to preserve identity.
+    ---@param module_name string The name of the module to reload
+    ---@return any The reloaded module
+    function __hot_reload(module_name)
+      local old = __loaded_modules[module_name]
+
+      -- Clear from both caches to force re-loading
+      __loaded_modules[module_name] = nil
+      package.loaded[module_name] = nil
+
+      -- Re-require the module (will re-execute the file)
+      local new = require(module_name)
+
+      -- If both old and new are tables, patch functions from new into old
+      -- This preserves table identity so existing references see updated functions
+      if type(old) == 'table' and type(new) == 'table' then
+        -- Update functions in the old table
+        for key, value in pairs(new) do
+          if type(value) == 'function' then
+            old[key] = value
+          end
+        end
+
+        -- Re-cache the OLD table (with updated functions) to preserve identity
+        __loaded_modules[module_name] = old
+        package.loaded[module_name] = old
+        return old
+      end
+
+      -- If types don't match or not tables, return the new value
+      return new
+    end
+
+    -- Built-in modules that should not be hot-reloaded
+    local __builtin_modules = {
+      canvas = true,
+      shell = true,
+      -- HC collision library - has internal state that breaks on reload
+      hc = true,
+      HC = true,
+      ['HC.class'] = true,
+      ['HC.polygon'] = true,
+      ['HC.gjk'] = true,
+      ['HC.shapes'] = true,
+      ['HC.spatialhash'] = true,
+      ['HC.vector-light'] = true,
+    }
+
+    -- Hot reload all user modules.
+    -- Iterates through all modules in __loaded_modules and reloads them.
+    -- Built-in modules (canvas, shell, HC library) are skipped.
+    function _canvas.reload()
+      local reloaded = {}
+      local errors = {}
+
+      for modname, _ in pairs(__loaded_modules) do
+        -- Skip built-in modules
+        if not __builtin_modules[modname] then
+          local ok, err = pcall(function()
+            __hot_reload(modname)
+          end)
+
+          if ok then
+            table.insert(reloaded, modname)
+          else
+            table.insert(errors, modname .. ": " .. tostring(err))
+          end
+        end
+      end
+
+      -- Report results
+      if #reloaded > 0 then
+        print("Hot reloaded: " .. table.concat(reloaded, ", "))
+      end
+
+      if #errors > 0 then
+        for _, err in ipairs(errors) do
+          print("Reload error: " .. err)
+        end
+      end
+
+      return #errors == 0
+    end
 \`;
 
   // ../lua-runtime/src/canvasLuaCode/path.ts

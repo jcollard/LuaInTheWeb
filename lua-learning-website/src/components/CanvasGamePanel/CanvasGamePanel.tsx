@@ -22,6 +22,8 @@ export interface CanvasGamePanelProps {
   onExit?: (code: number) => void
   /** Callback when canvas element is ready (for shell integration) */
   onCanvasReady?: (canvas: HTMLCanvasElement) => void
+  /** Callback when reload is requested (for hot reload in shell integration mode) */
+  onReload?: () => void
   /** Canvas scaling mode: 'fit' (auto-fit to container) or 'native' (original size) */
   scalingMode?: CanvasScalingMode
   /** Callback when scaling mode is changed (enables the scaling selector UI) */
@@ -38,6 +40,7 @@ export function CanvasGamePanel({
   className,
   onExit,
   onCanvasReady,
+  onReload,
   scalingMode = 'fit',
   onScalingModeChange,
   isActive,
@@ -135,6 +138,7 @@ export function CanvasGamePanel({
     <div className={panelClassName}>
       {/* Toolbar */}
       <div className={styles.toolbar}>
+        {/* Mode indicator and pause - only in standalone mode (isRunning) */}
         {isRunning && (
           <>
             <span
@@ -166,6 +170,19 @@ export function CanvasGamePanel({
               {isPaused ? 'Resume' : 'Pause'}
             </button>
           </>
+        )}
+
+        {/* Reload button for shell integration mode */}
+        {!isRunning && onReload && (
+          <button
+            type="button"
+            className={styles.reloadButton}
+            onClick={onReload}
+            aria-label="Hot reload code"
+            title="Hot reload (update functions, preserve state)"
+          >
+            Reload
+          </button>
         )}
 
         {/* Scaling mode selector */}

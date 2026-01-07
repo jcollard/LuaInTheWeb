@@ -63,6 +63,21 @@ export interface ShellContext {
   unregisterCanvasCloseHandler?: (canvasId: string) => void
 
   /**
+   * Register a handler to reload the canvas (hot reload modules).
+   * Called when canvas starts, providing a function the UI can call to trigger reload.
+   * @param canvasId - Unique identifier for the canvas tab
+   * @param handler - Function to call when reload is requested
+   */
+  registerCanvasReloadHandler?: (canvasId: string, handler: () => void) => void
+
+  /**
+   * Unregister the reload handler for a canvas.
+   * Called when the canvas stops.
+   * @param canvasId - Unique identifier for the canvas tab
+   */
+  unregisterCanvasReloadHandler?: (canvasId: string) => void
+
+  /**
    * Request a file to be opened in the editor.
    * Called by the 'open' command to integrate with an IDE or editor.
    * Optional - when undefined, the open command will report that
