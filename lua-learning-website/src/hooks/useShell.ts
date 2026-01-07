@@ -11,6 +11,7 @@ import {
   type FileEntry,
   type IProcess,
   type ShellContext,
+  type ScreenMode,
 } from '@lua-learning/shell-core'
 import { LuaCommand } from '@lua-learning/lua-runtime'
 import { ExportCommand } from '@lua-learning/export'
@@ -69,6 +70,10 @@ export interface ShellCanvasCallbacks {
   onRequestCanvasTab: (canvasId: string) => Promise<HTMLCanvasElement>
   /** Request a canvas tab to be closed */
   onCloseCanvasTab: (canvasId: string) => void
+  /** Request a canvas window (popup) to be opened, returns the canvas element when ready */
+  onRequestCanvasWindow?: (canvasId: string, screenMode?: ScreenMode, noToolbar?: boolean) => Promise<HTMLCanvasElement>
+  /** Request a canvas window (popup) to be closed */
+  onCloseCanvasWindow?: (canvasId: string) => void
   /**
    * Register a handler to be called when the canvas tab is closed from the UI.
    * This allows the canvas process to be stopped when the user closes the tab manually.
@@ -83,6 +88,19 @@ export interface ShellCanvasCallbacks {
    */
   unregisterCanvasCloseHandler?: (canvasId: string) => void
   /**
+   * Register a handler to be called when the canvas window is closed from the UI.
+   * This allows the canvas process to be stopped when the user closes the popup manually.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when the window is closed
+   */
+  registerWindowCloseHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Unregister the window close handler for a canvas.
+   * Called when the canvas stops normally to prevent double-cleanup.
+   * @param canvasId - The canvas ID
+   */
+  unregisterWindowCloseHandler?: (canvasId: string) => void
+  /**
    * Register a handler to reload the canvas (hot reload modules).
    * Called by the shell when canvas starts, providing a function the UI can call to trigger reload.
    * @param canvasId - The canvas ID
@@ -95,6 +113,19 @@ export interface ShellCanvasCallbacks {
    * @param canvasId - The canvas ID
    */
   unregisterCanvasReloadHandler?: (canvasId: string) => void
+  /**
+   * Register a handler to be called when the reload button is clicked in a popup window.
+   * Called by the shell when canvas starts in window mode.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when reload is requested
+   */
+  registerWindowReloadHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Unregister the window reload handler for a canvas.
+   * Called when the canvas stops.
+   * @param canvasId - The canvas ID
+   */
+  unregisterWindowReloadHandler?: (canvasId: string) => void
 }
 
 /**
@@ -271,12 +302,21 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
         // Canvas callbacks for canvas.start()/stop() support
         onRequestCanvasTab: options?.canvasCallbacks?.onRequestCanvasTab,
         onCloseCanvasTab: options?.canvasCallbacks?.onCloseCanvasTab,
-        // Canvas close handler registration for UI-initiated tab close
+        // Canvas window callbacks for lua --canvas=window support
+        onRequestCanvasWindow: options?.canvasCallbacks?.onRequestCanvasWindow,
+        onCloseCanvasWindow: options?.canvasCallbacks?.onCloseCanvasWindow,
+        // Canvas close handler registration for UI-initiated tab/window close
         registerCanvasCloseHandler: options?.canvasCallbacks?.registerCanvasCloseHandler,
         unregisterCanvasCloseHandler: options?.canvasCallbacks?.unregisterCanvasCloseHandler,
-        // Canvas reload handler registration for UI-triggered hot reload
+        // Canvas reload handler registration for UI-triggered hot reload (tabs)
         registerCanvasReloadHandler: options?.canvasCallbacks?.registerCanvasReloadHandler,
         unregisterCanvasReloadHandler: options?.canvasCallbacks?.unregisterCanvasReloadHandler,
+        // Window reload handler registration for UI-triggered hot reload (popup windows)
+        registerWindowReloadHandler: options?.canvasCallbacks?.registerWindowReloadHandler,
+        unregisterWindowReloadHandler: options?.canvasCallbacks?.unregisterWindowReloadHandler,
+        // Window close handler registration for UI-initiated popup window close
+        registerWindowCloseHandler: options?.canvasCallbacks?.registerWindowCloseHandler,
+        unregisterWindowCloseHandler: options?.canvasCallbacks?.unregisterWindowCloseHandler,
         // Editor integration callback for 'open' command
         onRequestOpenFile: options?.onRequestOpenFile,
         // Filesystem change notification for UI refresh (e.g., file tree)

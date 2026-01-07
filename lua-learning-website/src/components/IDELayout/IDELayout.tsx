@@ -18,13 +18,14 @@ import { BinaryTabContent } from './BinaryTabContent'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useBeforeUnloadWarning } from '../../hooks/useBeforeUnloadWarning'
 import { useCanvasTabManager } from '../../hooks/useCanvasTabManager'
+import { useCanvasWindowManager } from '../../hooks/useCanvasWindowManager'
 import { useWindowFocusRefresh } from '../../hooks/useWindowFocusRefresh'
 import { useWorkspaceManager } from '../../hooks/useWorkspaceManager'
 import { useEditorExtensions } from '../../hooks/useEditorExtensions'
 import { createFileSystemAdapter } from '../../hooks/compositeFileSystemAdapter'
 import { initFormatter, formatLuaCode } from '../../utils/luaFormatter'
 import type { Workspace } from '../../hooks/workspaceTypes'
-import type { IFileSystem } from '@lua-learning/shell-core'
+import type { IFileSystem, ScreenMode } from '@lua-learning/shell-core'
 import styles from './IDELayout.module.css'
 import type { IDELayoutProps } from './types'
 import { createExplorerProps } from './explorerPropsHelper'
@@ -303,6 +304,35 @@ function IDELayoutInner({
     canvasCloseHandlersRef.current.delete(canvasId)
   }, [])
 
+  // Canvas window management for shell-based canvas.start() with --canvas=window
+  const {
+    openCanvasWindow,
+    closeCanvasWindow,
+    registerWindowCloseHandler,
+    unregisterWindowCloseHandler,
+    registerWindowReloadHandler,
+    unregisterWindowReloadHandler,
+  } = useCanvasWindowManager()
+
+  // Handle canvas window request from shell (lua --canvas=window)
+  const handleRequestCanvasWindow = useCallback(
+    async (
+      canvasId: string,
+      screenMode?: ScreenMode,
+      noToolbar?: boolean
+    ): Promise<HTMLCanvasElement> => {
+      // Register the close handler before opening the window
+      // The window manager will call this when user closes the popup
+      return openCanvasWindow(canvasId, screenMode, noToolbar)
+    },
+    [openCanvasWindow]
+  )
+
+  // Handle canvas window close from shell (canvas.stop() or Ctrl+C)
+  const handleCloseCanvasWindow = useCallback((canvasId: string) => {
+    closeCanvasWindow(canvasId)
+  }, [closeCanvasWindow])
+
   // Register a handler to be called when reload is requested from the UI
   const registerCanvasReloadHandler = useCallback((canvasId: string, handler: () => void) => {
     canvasReloadHandlersRef.current.set(canvasId, handler)
@@ -325,11 +355,30 @@ function IDELayoutInner({
   const canvasCallbacks = useMemo(() => ({
     onRequestCanvasTab: handleRequestCanvasTab,
     onCloseCanvasTab: handleCloseCanvasTab,
+    onRequestCanvasWindow: handleRequestCanvasWindow,
+    onCloseCanvasWindow: handleCloseCanvasWindow,
     registerCanvasCloseHandler,
     unregisterCanvasCloseHandler,
+    registerWindowCloseHandler,
+    unregisterWindowCloseHandler,
     registerCanvasReloadHandler,
     unregisterCanvasReloadHandler,
-  }), [handleRequestCanvasTab, handleCloseCanvasTab, registerCanvasCloseHandler, unregisterCanvasCloseHandler, registerCanvasReloadHandler, unregisterCanvasReloadHandler])
+    registerWindowReloadHandler,
+    unregisterWindowReloadHandler,
+  }), [
+    handleRequestCanvasTab,
+    handleCloseCanvasTab,
+    handleRequestCanvasWindow,
+    handleCloseCanvasWindow,
+    registerCanvasCloseHandler,
+    unregisterCanvasCloseHandler,
+    registerWindowCloseHandler,
+    unregisterWindowCloseHandler,
+    registerCanvasReloadHandler,
+    unregisterCanvasReloadHandler,
+    registerWindowReloadHandler,
+    unregisterWindowReloadHandler,
+  ])
 
   const combinedClassName = className
     ? `${styles.ideLayout} ${className}`

@@ -17,6 +17,7 @@ import { CanvasController, type CanvasCallbacks } from './CanvasController'
 import { setupCanvasAPI } from './setupCanvasAPI'
 import { setupAudioAPI } from './setupAudioAPI'
 import { FileOperationsHandler } from './FileOperationsHandler'
+import type { CanvasMode, ScreenMode } from './LuaCommand'
 
 /**
  * Options for configuring the Lua script process.
@@ -24,6 +25,12 @@ import { FileOperationsHandler } from './FileOperationsHandler'
 export interface LuaScriptProcessOptions extends ExecutionControlOptions {
   /** Callbacks for canvas tab management (enables canvas.start()/stop()) */
   canvasCallbacks?: CanvasCallbacks
+  /** Canvas display mode: 'tab' (default) or 'window' (popup) */
+  canvasMode?: CanvasMode
+  /** Screen mode for canvas window scaling */
+  screenMode?: ScreenMode
+  /** If true, hide the toolbar in canvas window mode */
+  noToolbar?: boolean
   /** Callback when filesystem changes (for UI refresh) */
   onFileSystemChange?: () => void
 }
@@ -393,18 +400,55 @@ __clear_execution_hook()
   /**
    * Set up the canvas API if canvas callbacks are provided.
    * This enables canvas.start(), canvas.stop(), and all drawing/input functions.
+   * Routes to tab or window callbacks based on canvasMode option.
    */
   private initCanvasAPI(): void {
     if (!this.engine || !this.options.canvasCallbacks) return
 
-    // Create canvas controller with error reporting wired to process onError
-    const callbacksWithError = {
-      ...this.options.canvasCallbacks,
+    const originalCallbacks = this.options.canvasCallbacks
+    const canvasMode = this.options.canvasMode ?? 'tab'
+    const screenMode = this.options.screenMode
+    const noToolbar = this.options.noToolbar ?? false
+
+    // Route callbacks based on canvas mode
+    // If mode is 'window', use window callbacks (with fallback to tab)
+    // If mode is 'tab', use tab callbacks
+    // When routing to window, inject the screenMode and noToolbar parameters
+    const routedCallbacks: CanvasCallbacks = {
+      ...originalCallbacks,
+      onRequestCanvasTab:
+        canvasMode === 'window' && originalCallbacks.onRequestCanvasWindow
+          ? (canvasId: string) =>
+              originalCallbacks.onRequestCanvasWindow!(canvasId, screenMode, noToolbar)
+          : originalCallbacks.onRequestCanvasTab,
+      onCloseCanvasTab:
+        canvasMode === 'window' && originalCallbacks.onCloseCanvasWindow
+          ? originalCallbacks.onCloseCanvasWindow
+          : originalCallbacks.onCloseCanvasTab,
+      // Route close handlers: window mode uses registerWindowCloseHandler
+      registerCanvasCloseHandler:
+        canvasMode === 'window' && originalCallbacks.registerWindowCloseHandler
+          ? originalCallbacks.registerWindowCloseHandler
+          : originalCallbacks.registerCanvasCloseHandler,
+      unregisterCanvasCloseHandler:
+        canvasMode === 'window' && originalCallbacks.unregisterWindowCloseHandler
+          ? originalCallbacks.unregisterWindowCloseHandler
+          : originalCallbacks.unregisterCanvasCloseHandler,
+      // Route reload handlers: window mode uses registerWindowReloadHandler
+      registerCanvasReloadHandler:
+        canvasMode === 'window' && originalCallbacks.registerWindowReloadHandler
+          ? originalCallbacks.registerWindowReloadHandler
+          : originalCallbacks.registerCanvasReloadHandler,
+      unregisterCanvasReloadHandler:
+        canvasMode === 'window' && originalCallbacks.unregisterWindowReloadHandler
+          ? originalCallbacks.unregisterWindowReloadHandler
+          : originalCallbacks.unregisterCanvasReloadHandler,
       onError: (error: string) => {
         this.onError(formatLuaError(error) + '\n')
       },
     }
-    this.canvasController = new CanvasController(callbacksWithError)
+
+    this.canvasController = new CanvasController(routedCallbacks)
 
     // Use shared setup functions
     setupCanvasAPI(this.engine, () => this.canvasController)

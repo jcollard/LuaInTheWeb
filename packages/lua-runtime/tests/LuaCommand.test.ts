@@ -177,4 +177,158 @@ describe('LuaCommand', () => {
       expect(mockFileSystem.exists).toHaveBeenCalled()
     })
   })
+
+  describe('--canvas flag', () => {
+    it('should return LuaScriptProcess with default tab mode when --canvas is not specified', () => {
+      const result = command.execute(['game.lua'], context)
+
+      expect(result).toBeInstanceOf(LuaScriptProcess)
+    })
+
+    it('should return LuaScriptProcess when --canvas=tab is specified', () => {
+      const result = command.execute(['--canvas=tab', 'game.lua'], context)
+
+      expect(result).toBeInstanceOf(LuaScriptProcess)
+    })
+
+    it('should return LuaScriptProcess when --canvas=window is specified', () => {
+      const result = command.execute(['--canvas=window', 'game.lua'], context)
+
+      expect(result).toBeInstanceOf(LuaScriptProcess)
+    })
+
+    it('should parse --canvas flag before filename', () => {
+      const result = command.execute(['--canvas=window', 'game.lua'], context) as LuaScriptProcess
+
+      result.onOutput = vi.fn()
+      result.onError = vi.fn()
+      result.onExit = vi.fn()
+      result.start()
+
+      // Should check for game.lua, not --canvas=window
+      expect(mockFileSystem.exists).toHaveBeenCalledWith('/home/game.lua')
+    })
+
+    it('should parse --canvas flag after filename', () => {
+      const result = command.execute(['game.lua', '--canvas=window'], context) as LuaScriptProcess
+
+      result.onOutput = vi.fn()
+      result.onError = vi.fn()
+      result.onExit = vi.fn()
+      result.start()
+
+      // Should check for game.lua
+      expect(mockFileSystem.exists).toHaveBeenCalledWith('/home/game.lua')
+    })
+
+    it('should ignore invalid --canvas values and use default tab mode', () => {
+      const result = command.execute(['--canvas=invalid', 'game.lua'], context)
+
+      // Should still return a process (invalid values are silently ignored)
+      expect(result).toBeInstanceOf(LuaScriptProcess)
+    })
+
+    it('should combine --lint and --canvas flags', () => {
+      mockFileSystem.readFile = vi.fn().mockReturnValue('print("hello")')
+
+      const result = command.execute(['--lint', '--canvas=window', 'test.lua'], context)
+
+      // --lint takes precedence and returns undefined
+      expect(result).toBeUndefined()
+      expect(context.error).not.toHaveBeenCalled()
+    })
+
+    it('should return REPL when only --canvas=window is specified without filename', () => {
+      const result = command.execute(['--canvas=window'], context)
+
+      // REPL is returned when no filename, canvas mode is ignored for REPL
+      expect(result).toBeInstanceOf(LuaReplProcess)
+    })
+  })
+
+  describe('--screen flag', () => {
+    it('should return LuaScriptProcess when --screen=1x is specified', () => {
+      const result = command.execute(['--screen=1x', 'game.lua'], context)
+
+      expect(result).toBeInstanceOf(LuaScriptProcess)
+    })
+
+    it('should return LuaScriptProcess when --screen=fit is specified', () => {
+      const result = command.execute(['--screen=fit', 'game.lua'], context)
+
+      expect(result).toBeInstanceOf(LuaScriptProcess)
+    })
+
+    it('should return LuaScriptProcess when --screen=full is specified', () => {
+      const result = command.execute(['--screen=full', 'game.lua'], context)
+
+      expect(result).toBeInstanceOf(LuaScriptProcess)
+    })
+
+    it('should parse --screen flag before filename', () => {
+      const result = command.execute(
+        ['--screen=fit', 'game.lua'],
+        context
+      ) as LuaScriptProcess
+
+      result.onOutput = vi.fn()
+      result.onError = vi.fn()
+      result.onExit = vi.fn()
+      result.start()
+
+      // Should check for game.lua, not --screen=fit
+      expect(mockFileSystem.exists).toHaveBeenCalledWith('/home/game.lua')
+    })
+
+    it('should parse --screen flag after filename', () => {
+      const result = command.execute(
+        ['game.lua', '--screen=full'],
+        context
+      ) as LuaScriptProcess
+
+      result.onOutput = vi.fn()
+      result.onError = vi.fn()
+      result.onExit = vi.fn()
+      result.start()
+
+      // Should check for game.lua
+      expect(mockFileSystem.exists).toHaveBeenCalledWith('/home/game.lua')
+    })
+
+    it('should ignore invalid --screen values', () => {
+      const result = command.execute(['--screen=invalid', 'game.lua'], context)
+
+      // Should still return a process (invalid values are silently ignored)
+      expect(result).toBeInstanceOf(LuaScriptProcess)
+    })
+
+    it('should combine --screen with --canvas=window flags', () => {
+      const result = command.execute(
+        ['--canvas=window', '--screen=fit', 'game.lua'],
+        context
+      )
+
+      expect(result).toBeInstanceOf(LuaScriptProcess)
+    })
+
+    it('should combine --lint and --screen flags', () => {
+      mockFileSystem.readFile = vi.fn().mockReturnValue('print("hello")')
+
+      const result = command.execute(
+        ['--lint', '--screen=full', 'test.lua'],
+        context
+      )
+
+      // --lint takes precedence and returns undefined
+      expect(result).toBeUndefined()
+      expect(context.error).not.toHaveBeenCalled()
+    })
+
+    it('should return REPL when only --screen is specified without filename', () => {
+      const result = command.execute(['--screen=1x'], context)
+
+      // REPL is returned when no filename, screen mode is ignored for REPL
+      expect(result).toBeInstanceOf(LuaReplProcess)
+    })
+  })
 })

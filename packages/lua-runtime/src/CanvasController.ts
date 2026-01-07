@@ -35,7 +35,7 @@ import type {
   AudioAssetHandle,
 } from '@lua-learning/canvas-runtime'
 import { isAssetHandle, createEmptyInputState } from '@lua-learning/canvas-runtime'
-import type { IFileSystem } from '@lua-learning/shell-core'
+import type { IFileSystem, ScreenMode } from '@lua-learning/shell-core'
 import { formatOnDrawError, createImageFromData, createFontFromData } from './canvasErrorFormatter'
 import type { IAudioEngine } from './audio/IAudioEngine'
 import { WebAudioEngine } from './audio/WebAudioEngine'
@@ -62,6 +62,14 @@ export interface CanvasCallbacks {
   onRequestCanvasTab: (canvasId: string) => Promise<HTMLCanvasElement>
   /** Request a canvas tab to be closed */
   onCloseCanvasTab: (canvasId: string) => void
+  /** Request a canvas window (popup) to be opened, returns the canvas element when ready */
+  onRequestCanvasWindow?: (
+    canvasId: string,
+    screenMode?: ScreenMode,
+    noToolbar?: boolean
+  ) => Promise<HTMLCanvasElement>
+  /** Request a canvas window (popup) to be closed */
+  onCloseCanvasWindow?: (canvasId: string) => void
   /** Report an error that occurred during canvas execution */
   onError?: (error: string) => void
   /** Filesystem for loading assets (optional, required for image support) */
@@ -94,6 +102,32 @@ export interface CanvasCallbacks {
    * @param canvasId - The canvas ID
    */
   unregisterCanvasReloadHandler?: (canvasId: string) => void
+  /**
+   * Register a handler to reload the canvas from a popup window.
+   * Called when canvas starts in window mode.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when reload is requested
+   */
+  registerWindowReloadHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Unregister the window reload handler.
+   * Called when the canvas stops.
+   * @param canvasId - The canvas ID
+   */
+  unregisterWindowReloadHandler?: (canvasId: string) => void
+  /**
+   * Register a handler to be called when a popup window is closed by the user.
+   * Called when canvas starts in window mode.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when the window is closed
+   */
+  registerWindowCloseHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Unregister the window close handler.
+   * Called when the canvas stops.
+   * @param canvasId - The canvas ID
+   */
+  unregisterWindowCloseHandler?: (canvasId: string) => void
 }
 
 /**

@@ -147,8 +147,25 @@ function createWindow() {
     }
   });
 
-  // Block new window creation to external domains
-  win.webContents.setWindowOpenHandler(({ url }) => {
+  // Handle new window creation
+  // Allow canvas popup windows (for lua --canvas=window) and same-host navigation
+  win.webContents.setWindowOpenHandler(({ url, frameName }) => {
+    // Allow canvas popup windows (blank URL with canvas-* frame name)
+    // These are created by useCanvasWindowManager for canvas games
+    if (frameName?.startsWith('canvas-') && (!url || url === 'about:blank')) {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          width: 816,
+          height: 639,
+          title: 'Canvas Game',
+          autoHideMenuBar: true,
+          resizable: true,
+        },
+      };
+    }
+
+    // Block external domains
     const parsedUrl = new URL(url);
     if (parsedUrl.host !== ALLOWED_HOST) {
       return { action: 'deny' };

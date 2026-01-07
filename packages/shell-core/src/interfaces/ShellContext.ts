@@ -6,6 +6,16 @@
 import type { IFileSystem } from '../types'
 
 /**
+ * Screen mode for canvas popup windows.
+ * Controls scaling behavior and toolbar visibility.
+ * - '1x': Native resolution, no scaling
+ * - 'fit': Scale to fit while maintaining aspect ratio
+ * - 'full': Scale to fill the entire window
+ * - undefined: Show toolbar with default 'full' scaling
+ */
+export type ScreenMode = '1x' | 'fit' | 'full' | undefined
+
+/**
  * Context provided to shell commands during execution.
  * Encapsulates the execution environment including filesystem access
  * and output handling.
@@ -48,6 +58,27 @@ export interface ShellContext {
   onCloseCanvasTab?: (canvasId: string) => void
 
   /**
+   * Request a canvas window to be opened (popup instead of tab).
+   * Returns the canvas element when the window is ready.
+   * Used when `lua --canvas=window` is specified.
+   * @param canvasId - Unique identifier for the canvas window
+   * @param screenMode - Optional screen mode for scaling
+   * @param noToolbar - If true, hide the toolbar entirely
+   * @returns Promise resolving to the HTMLCanvasElement when ready
+   */
+  onRequestCanvasWindow?: (
+    canvasId: string,
+    screenMode?: ScreenMode,
+    noToolbar?: boolean
+  ) => Promise<HTMLCanvasElement>
+
+  /**
+   * Request a canvas window to be closed.
+   * @param canvasId - Unique identifier for the canvas window to close
+   */
+  onCloseCanvasWindow?: (canvasId: string) => void
+
+  /**
    * Register a handler to be called when the canvas tab is closed from the UI.
    * This allows the canvas process to be stopped when the user closes the tab manually.
    * @param canvasId - Unique identifier for the canvas tab
@@ -76,6 +107,36 @@ export interface ShellContext {
    * @param canvasId - Unique identifier for the canvas tab
    */
   unregisterCanvasReloadHandler?: (canvasId: string) => void
+
+  /**
+   * Register a handler to reload the canvas from a popup window.
+   * Called when canvas starts in window mode.
+   * @param canvasId - Unique identifier for the canvas window
+   * @param handler - Function to call when reload is requested
+   */
+  registerWindowReloadHandler?: (canvasId: string, handler: () => void) => void
+
+  /**
+   * Unregister the window reload handler.
+   * Called when the canvas stops.
+   * @param canvasId - Unique identifier for the canvas window
+   */
+  unregisterWindowReloadHandler?: (canvasId: string) => void
+
+  /**
+   * Register a handler to be called when a popup window is closed by the user.
+   * Called when canvas starts in window mode.
+   * @param canvasId - Unique identifier for the canvas window
+   * @param handler - Function to call when the window is closed
+   */
+  registerWindowCloseHandler?: (canvasId: string, handler: () => void) => void
+
+  /**
+   * Unregister the window close handler.
+   * Called when the canvas stops.
+   * @param canvasId - Unique identifier for the canvas window
+   */
+  unregisterWindowCloseHandler?: (canvasId: string) => void
 
   /**
    * Request a file to be opened in the editor.
