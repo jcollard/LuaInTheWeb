@@ -31,14 +31,16 @@ local canvas = {}
 -- 15. Keyboard Input (is_key_down, is_key_pressed, get_keys_down, get_keys_pressed)
 -- 16. Key Constants (canvas.keys.*)
 -- 17. Mouse Input (get_mouse_x, get_mouse_y, is_mouse_down, is_mouse_pressed)
--- 18. Asset Management (add_path, load_image, load_font, image, font, get_width, get_height)
--- 19. Image Drawing (draw_image with source cropping support)
--- 20. Transformation Functions (translate, rotate, scale, save, restore, transform)
--- 21. Path API (begin_path, close_path, move_to, line_to, arc, bezier, ellipse, round_rect, rect, clip)
--- 22. Hit Testing API (is_point_in_path, is_point_in_stroke)
--- 23. Path2D API (create_path, Path2D methods, fill/stroke/clip with Path2D)
--- 24. Pixel Manipulation API (ImageData, create_image_data, get_image_data, put_image_data, clone_image_data)
--- 25. Audio API (Sound effects, music, volume control)
+-- 18. Gamepad Input (get_gamepad_count, is_gamepad_connected, get_gamepad_button, is_gamepad_button_pressed, get_gamepad_axis)
+-- 19. Gamepad Constants (canvas.buttons.*, canvas.axes.*)
+-- 20. Asset Management (add_path, load_image, load_font, image, font, get_width, get_height)
+-- 21. Image Drawing (draw_image with source cropping support)
+-- 22. Transformation Functions (translate, rotate, scale, save, restore, transform)
+-- 23. Path API (begin_path, close_path, move_to, line_to, arc, bezier, ellipse, round_rect, rect, clip)
+-- 24. Hit Testing API (is_point_in_path, is_point_in_stroke)
+-- 25. Path2D API (create_path, Path2D methods, fill/stroke/clip with Path2D)
+-- 26. Pixel Manipulation API (ImageData, create_image_data, get_image_data, put_image_data, clone_image_data)
+-- 27. Audio API (Sound effects, music, volume control)
 -- =============================================================================
 
 -- =============================================================================
@@ -987,6 +989,122 @@ function canvas.is_mouse_down(button) end
 ---   -- Left mouse button was just clicked
 --- end
 function canvas.is_mouse_pressed(button) end
+
+-- =============================================================================
+-- Gamepad Input
+-- =============================================================================
+
+--- Get the number of connected gamepads.
+---@return number count Number of connected gamepads (0-4)
+---@usage local count = canvas.get_gamepad_count()
+--- if count > 0 then
+---   -- At least one gamepad connected
+--- end
+function canvas.get_gamepad_count() end
+
+--- Check if a gamepad is connected at the given index.
+---@param index number Gamepad index (1-based, so 1-4)
+---@return boolean isConnected True if gamepad is connected
+---@usage if canvas.is_gamepad_connected(1) then
+---   -- First gamepad is connected
+--- end
+function canvas.is_gamepad_connected(index) end
+
+--- Get the value of a gamepad button (0.0 to 1.0 for pressure-sensitive).
+--- Returns 0 if button is not pressed, 1 if fully pressed.
+--- Analog triggers return values between 0 and 1.
+---@param gamepad_index number Gamepad index (1-based)
+---@param button number Button constant from canvas.buttons
+---@return number value Button value (0.0-1.0)
+---@usage local trigger = canvas.get_gamepad_button(1, canvas.buttons.RT)
+--- if trigger > 0.5 then
+---   -- Right trigger is more than half pressed
+--- end
+function canvas.get_gamepad_button(gamepad_index, button) end
+
+--- Check if a gamepad button was pressed this frame.
+--- Returns true only on the frame the button was first pressed.
+---@param gamepad_index number Gamepad index (1-based)
+---@param button number Button constant from canvas.buttons
+---@return boolean wasPressed True if button was just pressed
+---@usage if canvas.is_gamepad_button_pressed(1, canvas.buttons.A) then
+---   jump()
+--- end
+function canvas.is_gamepad_button_pressed(gamepad_index, button) end
+
+--- Get the value of a gamepad analog axis (-1.0 to 1.0).
+--- Left/Up returns negative values, Right/Down returns positive values.
+---@param gamepad_index number Gamepad index (1-based)
+---@param axis number Axis constant from canvas.axes
+---@return number value Axis value (-1.0 to 1.0)
+---@usage local move_x = canvas.get_gamepad_axis(1, canvas.axes.LEFT_STICK_X)
+--- local move_y = canvas.get_gamepad_axis(1, canvas.axes.LEFT_STICK_Y)
+--- x = x + move_x * speed * canvas.get_delta()
+--- y = y + move_y * speed * canvas.get_delta()
+function canvas.get_gamepad_axis(gamepad_index, axis) end
+
+-- =============================================================================
+-- Gamepad Constants
+-- =============================================================================
+
+--- Gamepad button constants for use with get_gamepad_button() and is_gamepad_button_pressed().
+--- Buttons use 1-based indexing for Lua consistency.
+--- Multiple naming conventions are provided for convenience:
+--- - Position-based (recommended for cross-platform): SOUTH, EAST, WEST, NORTH
+--- - Xbox-style: A, B, X, Y
+--- - PlayStation-style: CROSS, CIRCLE, SQUARE, TRIANGLE
+---@class canvas.buttons
+---@field SOUTH number Position-based: bottom button (Xbox A / PlayStation Cross)
+---@field EAST number Position-based: right button (Xbox B / PlayStation Circle)
+---@field WEST number Position-based: left button (Xbox X / PlayStation Square)
+---@field NORTH number Position-based: top button (Xbox Y / PlayStation Triangle)
+---@field A number Xbox: A button (same as SOUTH)
+---@field B number Xbox: B button (same as EAST)
+---@field X number Xbox: X button (same as WEST)
+---@field Y number Xbox: Y button (same as NORTH)
+---@field CROSS number PlayStation: Cross button (same as SOUTH)
+---@field CIRCLE number PlayStation: Circle button (same as EAST)
+---@field SQUARE number PlayStation: Square button (same as WEST)
+---@field TRIANGLE number PlayStation: Triangle button (same as NORTH)
+---@field LB number Xbox: Left bumper (same as L1)
+---@field RB number Xbox: Right bumper (same as R1)
+---@field LT number Xbox: Left trigger button (same as L2)
+---@field RT number Xbox: Right trigger button (same as R2)
+---@field L1 number PlayStation: L1 bumper
+---@field R1 number PlayStation: R1 bumper
+---@field L2 number PlayStation: L2 trigger
+---@field R2 number PlayStation: R2 trigger
+---@field LEFT_BUMPER number Left bumper
+---@field RIGHT_BUMPER number Right bumper
+---@field LEFT_TRIGGER number Left trigger button
+---@field RIGHT_TRIGGER number Right trigger button
+---@field BACK number Xbox: Back button (same as SELECT)
+---@field START number Start button (same as OPTIONS)
+---@field SELECT number PlayStation: Select button
+---@field OPTIONS number PlayStation: Options button
+---@field SHARE number PlayStation: Share button (same as SELECT)
+---@field L3 number Left stick click (same as LEFT_STICK)
+---@field R3 number Right stick click (same as RIGHT_STICK)
+---@field LEFT_STICK number Left stick button (click)
+---@field RIGHT_STICK number Right stick button (click)
+---@field LS number Left stick button (alias)
+---@field RS number Right stick button (alias)
+---@field DPAD_UP number D-pad up
+---@field DPAD_DOWN number D-pad down
+---@field DPAD_LEFT number D-pad left
+---@field DPAD_RIGHT number D-pad right
+---@field HOME number Home/Guide button
+---@field GUIDE number Guide button (same as HOME)
+canvas.buttons = {}
+
+--- Gamepad axis constants for use with get_gamepad_axis().
+--- Axes use 1-based indexing for Lua consistency.
+---@class canvas.axes
+---@field LEFT_STICK_X number Left stick horizontal axis (-1 left, +1 right)
+---@field LEFT_STICK_Y number Left stick vertical axis (-1 up, +1 down)
+---@field RIGHT_STICK_X number Right stick horizontal axis (-1 left, +1 right)
+---@field RIGHT_STICK_Y number Right stick vertical axis (-1 up, +1 down)
+canvas.axes = {}
 
 -- =============================================================================
 -- Asset Management
