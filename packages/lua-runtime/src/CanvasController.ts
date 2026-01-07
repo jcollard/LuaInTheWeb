@@ -62,6 +62,10 @@ export interface CanvasCallbacks {
   onRequestCanvasTab: (canvasId: string) => Promise<HTMLCanvasElement>
   /** Request a canvas tab to be closed */
   onCloseCanvasTab: (canvasId: string) => void
+  /** Request a canvas window (popup) to be opened, returns the canvas element when ready */
+  onRequestCanvasWindow?: (canvasId: string) => Promise<HTMLCanvasElement>
+  /** Request a canvas window (popup) to be closed */
+  onCloseCanvasWindow?: (canvasId: string) => void
   /** Report an error that occurred during canvas execution */
   onError?: (error: string) => void
   /** Filesystem for loading assets (optional, required for image support) */

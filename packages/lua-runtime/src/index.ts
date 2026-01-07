@@ -6,7 +6,7 @@
  */
 
 // Main command export
-export { LuaCommand } from './LuaCommand'
+export { LuaCommand, type CanvasMode } from './LuaCommand'
 
 // Process exports
 export { LuaReplProcess, type LuaReplProcessOptions } from './LuaReplProcess'

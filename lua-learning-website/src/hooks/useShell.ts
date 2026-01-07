@@ -69,6 +69,10 @@ export interface ShellCanvasCallbacks {
   onRequestCanvasTab: (canvasId: string) => Promise<HTMLCanvasElement>
   /** Request a canvas tab to be closed */
   onCloseCanvasTab: (canvasId: string) => void
+  /** Request a canvas window (popup) to be opened, returns the canvas element when ready */
+  onRequestCanvasWindow?: (canvasId: string) => Promise<HTMLCanvasElement>
+  /** Request a canvas window (popup) to be closed */
+  onCloseCanvasWindow?: (canvasId: string) => void
   /**
    * Register a handler to be called when the canvas tab is closed from the UI.
    * This allows the canvas process to be stopped when the user closes the tab manually.
@@ -82,6 +86,19 @@ export interface ShellCanvasCallbacks {
    * @param canvasId - The canvas ID
    */
   unregisterCanvasCloseHandler?: (canvasId: string) => void
+  /**
+   * Register a handler to be called when the canvas window is closed from the UI.
+   * This allows the canvas process to be stopped when the user closes the popup manually.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when the window is closed
+   */
+  registerWindowCloseHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Unregister the window close handler for a canvas.
+   * Called when the canvas stops normally to prevent double-cleanup.
+   * @param canvasId - The canvas ID
+   */
+  unregisterWindowCloseHandler?: (canvasId: string) => void
 }
 
 /**
@@ -258,7 +275,10 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
         // Canvas callbacks for canvas.start()/stop() support
         onRequestCanvasTab: options?.canvasCallbacks?.onRequestCanvasTab,
         onCloseCanvasTab: options?.canvasCallbacks?.onCloseCanvasTab,
-        // Canvas close handler registration for UI-initiated tab close
+        // Canvas window callbacks for lua --canvas=window support
+        onRequestCanvasWindow: options?.canvasCallbacks?.onRequestCanvasWindow,
+        onCloseCanvasWindow: options?.canvasCallbacks?.onCloseCanvasWindow,
+        // Canvas close handler registration for UI-initiated tab/window close
         registerCanvasCloseHandler: options?.canvasCallbacks?.registerCanvasCloseHandler,
         unregisterCanvasCloseHandler: options?.canvasCallbacks?.unregisterCanvasCloseHandler,
         // Editor integration callback for 'open' command

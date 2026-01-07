@@ -18,6 +18,7 @@ import { BinaryTabContent } from './BinaryTabContent'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useBeforeUnloadWarning } from '../../hooks/useBeforeUnloadWarning'
 import { useCanvasTabManager } from '../../hooks/useCanvasTabManager'
+import { useCanvasWindowManager } from '../../hooks/useCanvasWindowManager'
 import { useWindowFocusRefresh } from '../../hooks/useWindowFocusRefresh'
 import { useWorkspaceManager } from '../../hooks/useWorkspaceManager'
 import { useEditorExtensions } from '../../hooks/useEditorExtensions'
@@ -299,13 +300,46 @@ function IDELayoutInner({
     canvasCloseHandlersRef.current.delete(canvasId)
   }, [])
 
+  // Canvas window management for shell-based canvas.start() with --canvas=window
+  const {
+    openCanvasWindow,
+    closeCanvasWindow,
+    registerWindowCloseHandler,
+    unregisterWindowCloseHandler,
+  } = useCanvasWindowManager()
+
+  // Handle canvas window request from shell (lua --canvas=window)
+  const handleRequestCanvasWindow = useCallback(async (canvasId: string): Promise<HTMLCanvasElement> => {
+    // Register the close handler before opening the window
+    // The window manager will call this when user closes the popup
+    return openCanvasWindow(canvasId)
+  }, [openCanvasWindow])
+
+  // Handle canvas window close from shell (canvas.stop() or Ctrl+C)
+  const handleCloseCanvasWindow = useCallback((canvasId: string) => {
+    closeCanvasWindow(canvasId)
+  }, [closeCanvasWindow])
+
   // Canvas callbacks to pass to shell
   const canvasCallbacks = useMemo(() => ({
     onRequestCanvasTab: handleRequestCanvasTab,
     onCloseCanvasTab: handleCloseCanvasTab,
+    onRequestCanvasWindow: handleRequestCanvasWindow,
+    onCloseCanvasWindow: handleCloseCanvasWindow,
     registerCanvasCloseHandler,
     unregisterCanvasCloseHandler,
-  }), [handleRequestCanvasTab, handleCloseCanvasTab, registerCanvasCloseHandler, unregisterCanvasCloseHandler])
+    registerWindowCloseHandler,
+    unregisterWindowCloseHandler,
+  }), [
+    handleRequestCanvasTab,
+    handleCloseCanvasTab,
+    handleRequestCanvasWindow,
+    handleCloseCanvasWindow,
+    registerCanvasCloseHandler,
+    unregisterCanvasCloseHandler,
+    registerWindowCloseHandler,
+    unregisterWindowCloseHandler,
+  ])
 
   const combinedClassName = className
     ? `${styles.ideLayout} ${className}`

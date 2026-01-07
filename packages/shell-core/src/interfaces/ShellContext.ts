@@ -48,6 +48,21 @@ export interface ShellContext {
   onCloseCanvasTab?: (canvasId: string) => void
 
   /**
+   * Request a canvas window to be opened (popup instead of tab).
+   * Returns the canvas element when the window is ready.
+   * Used when `lua --canvas=window` is specified.
+   * @param canvasId - Unique identifier for the canvas window
+   * @returns Promise resolving to the HTMLCanvasElement when ready
+   */
+  onRequestCanvasWindow?: (canvasId: string) => Promise<HTMLCanvasElement>
+
+  /**
+   * Request a canvas window to be closed.
+   * @param canvasId - Unique identifier for the canvas window to close
+   */
+  onCloseCanvasWindow?: (canvasId: string) => void
+
+  /**
    * Register a handler to be called when the canvas tab is closed from the UI.
    * This allows the canvas process to be stopped when the user closes the tab manually.
    * @param canvasId - Unique identifier for the canvas tab
