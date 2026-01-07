@@ -25,7 +25,7 @@ import { useEditorExtensions } from '../../hooks/useEditorExtensions'
 import { createFileSystemAdapter } from '../../hooks/compositeFileSystemAdapter'
 import { initFormatter, formatLuaCode } from '../../utils/luaFormatter'
 import type { Workspace } from '../../hooks/workspaceTypes'
-import type { IFileSystem } from '@lua-learning/shell-core'
+import type { IFileSystem, ScreenMode } from '@lua-learning/shell-core'
 import styles from './IDELayout.module.css'
 import type { IDELayoutProps } from './types'
 import { createExplorerProps } from './explorerPropsHelper'
@@ -309,11 +309,17 @@ function IDELayoutInner({
   } = useCanvasWindowManager()
 
   // Handle canvas window request from shell (lua --canvas=window)
-  const handleRequestCanvasWindow = useCallback(async (canvasId: string): Promise<HTMLCanvasElement> => {
-    // Register the close handler before opening the window
-    // The window manager will call this when user closes the popup
-    return openCanvasWindow(canvasId)
-  }, [openCanvasWindow])
+  const handleRequestCanvasWindow = useCallback(
+    async (
+      canvasId: string,
+      screenMode?: ScreenMode
+    ): Promise<HTMLCanvasElement> => {
+      // Register the close handler before opening the window
+      // The window manager will call this when user closes the popup
+      return openCanvasWindow(canvasId, screenMode)
+    },
+    [openCanvasWindow]
+  )
 
   // Handle canvas window close from shell (canvas.stop() or Ctrl+C)
   const handleCloseCanvasWindow = useCallback((canvasId: string) => {

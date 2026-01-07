@@ -16,10 +16,21 @@ import { LuaLinter } from './LuaLinter'
 export type CanvasMode = 'tab' | 'window'
 
 /**
+ * Screen mode for canvas popup windows.
+ * Controls scaling behavior and toolbar visibility.
+ * - '1x': Native resolution, no scaling
+ * - 'fit': Scale to fit while maintaining aspect ratio
+ * - 'full': Scale to fill the entire window
+ * - undefined: Show toolbar with default 'full' scaling
+ */
+export type ScreenMode = '1x' | 'fit' | 'full' | undefined
+
+/**
  * Parsed options from lua command arguments.
  */
 interface ParsedLuaOptions {
   canvasMode: CanvasMode
+  screenMode: ScreenMode
   filename: string | null
   lint: boolean
 }
@@ -60,15 +71,16 @@ export class LuaCommand implements ICommand {
   /**
    * Usage pattern.
    */
-  readonly usage = 'lua [--lint] [--canvas=tab|window] [filename]'
+  readonly usage = 'lua [--lint] [--canvas=tab|window] [--screen=1x|fit|full] [filename]'
 
   /**
    * Parse command arguments into structured options.
    * @param args - Raw command arguments
-   * @returns Parsed options including canvasMode, filename, and lint flag
+   * @returns Parsed options including canvasMode, screenMode, filename, and lint flag
    */
   private parseArgs(args: string[]): ParsedLuaOptions {
     let canvasMode: CanvasMode = 'tab'
+    let screenMode: ScreenMode = undefined
     let filename: string | null = null
     let lint = false
 
@@ -81,6 +93,12 @@ export class LuaCommand implements ICommand {
           canvasMode = mode
         }
         // Invalid values are silently ignored, defaulting to 'tab'
+      } else if (arg.startsWith('--screen=')) {
+        const mode = arg.slice('--screen='.length)
+        if (mode === '1x' || mode === 'fit' || mode === 'full') {
+          screenMode = mode
+        }
+        // Invalid values are silently ignored, keeping undefined (shows toolbar)
       } else if (!arg.startsWith('-')) {
         // First non-flag argument is the filename
         if (filename === null) {
@@ -89,7 +107,7 @@ export class LuaCommand implements ICommand {
       }
     }
 
-    return { canvasMode, filename, lint }
+    return { canvasMode, screenMode, filename, lint }
   }
 
   /**
@@ -99,7 +117,7 @@ export class LuaCommand implements ICommand {
    * @returns IProcess for the Lua execution, or undefined for --lint
    */
   execute(args: string[], context: ShellContext): IProcess | undefined {
-    const { canvasMode, filename, lint } = this.parseArgs(args)
+    const { canvasMode, screenMode, filename, lint } = this.parseArgs(args)
 
     // Handle --lint flag
     if (lint) {
@@ -142,11 +160,12 @@ export class LuaCommand implements ICommand {
       })
     }
 
-    // Build options, including canvas callbacks and mode
+    // Build options, including canvas callbacks, mode, and screen mode
     const options = {
       ...DEFAULT_EXECUTION_OPTIONS,
       canvasCallbacks,
       canvasMode,
+      screenMode,
     }
 
     return new LuaScriptProcess(filename, context, options)

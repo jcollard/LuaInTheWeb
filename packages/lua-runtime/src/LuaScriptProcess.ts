@@ -17,7 +17,7 @@ import { CanvasController, type CanvasCallbacks } from './CanvasController'
 import { setupCanvasAPI } from './setupCanvasAPI'
 import { setupAudioAPI } from './setupAudioAPI'
 import { FileOperationsHandler } from './FileOperationsHandler'
-import type { CanvasMode } from './LuaCommand'
+import type { CanvasMode, ScreenMode } from './LuaCommand'
 
 /**
  * Options for configuring the Lua script process.
@@ -27,6 +27,8 @@ export interface LuaScriptProcessOptions extends ExecutionControlOptions {
   canvasCallbacks?: CanvasCallbacks
   /** Canvas display mode: 'tab' (default) or 'window' (popup) */
   canvasMode?: CanvasMode
+  /** Screen mode for canvas window scaling (undefined shows toolbar) */
+  screenMode?: ScreenMode
   /** Callback when filesystem changes (for UI refresh) */
   onFileSystemChange?: () => void
 }
@@ -403,15 +405,18 @@ __clear_execution_hook()
 
     const originalCallbacks = this.options.canvasCallbacks
     const canvasMode = this.options.canvasMode ?? 'tab'
+    const screenMode = this.options.screenMode
 
     // Route callbacks based on canvas mode
     // If mode is 'window', use window callbacks (with fallback to tab)
     // If mode is 'tab', use tab callbacks
+    // When routing to window, inject the screenMode parameter
     const routedCallbacks: CanvasCallbacks = {
       ...originalCallbacks,
       onRequestCanvasTab:
         canvasMode === 'window' && originalCallbacks.onRequestCanvasWindow
-          ? originalCallbacks.onRequestCanvasWindow
+          ? (canvasId: string) =>
+              originalCallbacks.onRequestCanvasWindow!(canvasId, screenMode)
           : originalCallbacks.onRequestCanvasTab,
       onCloseCanvasTab:
         canvasMode === 'window' && originalCallbacks.onCloseCanvasWindow

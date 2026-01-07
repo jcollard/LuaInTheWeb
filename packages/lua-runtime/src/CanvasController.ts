@@ -35,7 +35,7 @@ import type {
   AudioAssetHandle,
 } from '@lua-learning/canvas-runtime'
 import { isAssetHandle, createEmptyInputState } from '@lua-learning/canvas-runtime'
-import type { IFileSystem } from '@lua-learning/shell-core'
+import type { IFileSystem, ScreenMode } from '@lua-learning/shell-core'
 import { formatOnDrawError, createImageFromData, createFontFromData } from './canvasErrorFormatter'
 import type { IAudioEngine } from './audio/IAudioEngine'
 import { WebAudioEngine } from './audio/WebAudioEngine'
@@ -63,7 +63,10 @@ export interface CanvasCallbacks {
   /** Request a canvas tab to be closed */
   onCloseCanvasTab: (canvasId: string) => void
   /** Request a canvas window (popup) to be opened, returns the canvas element when ready */
-  onRequestCanvasWindow?: (canvasId: string) => Promise<HTMLCanvasElement>
+  onRequestCanvasWindow?: (
+    canvasId: string,
+    screenMode?: ScreenMode
+  ) => Promise<HTMLCanvasElement>
   /** Request a canvas window (popup) to be closed */
   onCloseCanvasWindow?: (canvasId: string) => void
   /** Report an error that occurred during canvas execution */

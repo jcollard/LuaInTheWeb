@@ -6,6 +6,16 @@
 import type { IFileSystem } from '../types'
 
 /**
+ * Screen mode for canvas popup windows.
+ * Controls scaling behavior and toolbar visibility.
+ * - '1x': Native resolution, no scaling
+ * - 'fit': Scale to fit while maintaining aspect ratio
+ * - 'full': Scale to fill the entire window
+ * - undefined: Show toolbar with default 'full' scaling
+ */
+export type ScreenMode = '1x' | 'fit' | 'full' | undefined
+
+/**
  * Context provided to shell commands during execution.
  * Encapsulates the execution environment including filesystem access
  * and output handling.
@@ -52,9 +62,13 @@ export interface ShellContext {
    * Returns the canvas element when the window is ready.
    * Used when `lua --canvas=window` is specified.
    * @param canvasId - Unique identifier for the canvas window
+   * @param screenMode - Optional screen mode for scaling (undefined shows toolbar)
    * @returns Promise resolving to the HTMLCanvasElement when ready
    */
-  onRequestCanvasWindow?: (canvasId: string) => Promise<HTMLCanvasElement>
+  onRequestCanvasWindow?: (
+    canvasId: string,
+    screenMode?: ScreenMode
+  ) => Promise<HTMLCanvasElement>
 
   /**
    * Request a canvas window to be closed.
