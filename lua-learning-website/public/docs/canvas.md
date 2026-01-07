@@ -76,7 +76,7 @@ canvas.start()
 
 ### Input
 
-- [**Keyboard & Mouse**](canvas/input.md) - Input handling, key constants, mouse position
+- [**Keyboard, Mouse & Gamepad**](canvas/input.md) - Input handling, key constants, mouse position, gamepad support
 
 ### Audio
 
@@ -194,6 +194,11 @@ canvas.start()
 | `canvas.get_mouse_y()` | Get mouse Y position |
 | `canvas.is_mouse_down(button)` | Check if mouse button is held |
 | `canvas.is_mouse_pressed(button)` | Check if button was just pressed |
+| `canvas.get_gamepad_count()` | Get number of connected gamepads |
+| `canvas.is_gamepad_connected(index)` | Check if gamepad at index is connected |
+| `canvas.get_gamepad_button(pad, btn)` | Get button value (0.0-1.0) |
+| `canvas.is_gamepad_button_pressed(pad, btn)` | Check if button was just pressed |
+| `canvas.get_gamepad_axis(pad, axis)` | Get analog axis value (-1.0 to 1.0) |
 
 ### Transformations
 | Function | Description |
