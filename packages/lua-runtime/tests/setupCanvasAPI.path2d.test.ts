@@ -106,6 +106,7 @@ describe('setupCanvasAPI Path2D API', () => {
       clipPath: vi.fn(),
       isPointInStoredPath: vi.fn(() => true),
       isPointInStoredStroke: vi.fn(() => false),
+      setReloadCallback: vi.fn(),
     } as unknown as CanvasController
   }
 

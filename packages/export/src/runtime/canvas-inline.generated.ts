@@ -318,6 +318,136 @@ var CanvasInline = (() => {
       end
       return __canvas_capture(format, quality)
     end
+
+    -- Hot reload support
+    -- Reloads a module by clearing it from cache and re-requiring it.
+    -- Patches functions from new module into old table to preserve identity.
+    ---@param module_name string The name of the module to reload
+    ---@return any The reloaded module
+    function __hot_reload(module_name)
+      local entry = __loaded_modules[module_name]
+      local old = entry and entry.module
+
+      -- Clear from both caches to force re-loading
+      __loaded_modules[module_name] = nil
+      package.loaded[module_name] = nil
+
+      -- Re-require the module (will re-execute the file)
+      local new = require(module_name)
+
+      -- If both old and new are tables, patch functions from new into old
+      -- This preserves table identity so existing references see updated functions
+      if type(old) == 'table' and type(new) == 'table' then
+        -- Update functions in the old table
+        for key, value in pairs(new) do
+          if type(value) == 'function' then
+            old[key] = value
+          end
+        end
+
+        -- Re-cache the OLD table (with updated functions) to preserve identity
+        -- Note: __loaded_modules entry was already updated by require() with new content
+        local newEntry = __loaded_modules[module_name]
+        newEntry.module = old
+        package.loaded[module_name] = old
+        return old
+      end
+
+      -- If types don't match or not tables, return the new value
+      return new
+    end
+
+    -- Built-in modules that should not be hot-reloaded
+    local __builtin_modules = {
+      canvas = true,
+      shell = true,
+      -- HC collision library - has internal state that breaks on reload
+      hc = true,
+      HC = true,
+      ['HC.class'] = true,
+      ['HC.polygon'] = true,
+      ['HC.gjk'] = true,
+      ['HC.shapes'] = true,
+      ['HC.spatialhash'] = true,
+      ['HC.vector-light'] = true,
+    }
+
+    -- Hot reload only modified user modules.
+    -- Compares current file content with cached content to detect changes.
+    -- Built-in modules (canvas, shell, HC library) are skipped.
+    -- Large files (>50KB) are skipped with a warning.
+    function _canvas.reload()
+      local reloaded = {}
+      local skipped = {}
+      local large_files = {}
+      local errors = {}
+
+      for modname, entry in pairs(__loaded_modules) do
+        -- Skip built-in modules
+        if not __builtin_modules[modname] and not entry.builtin then
+          -- Check if we have content tracking for this module
+          if entry.content == nil then
+            -- Large file - no content tracking
+            if entry.filepath then
+              table.insert(large_files, modname)
+            end
+          elseif entry.filepath then
+            -- Read current file content using JS binding (synchronous)
+            local currentContent = __canvas_read_file(entry.filepath)
+
+            if currentContent then
+              if currentContent ~= entry.content then
+                -- Content changed - reload this module
+                local reload_ok, reload_err = pcall(function()
+                  __hot_reload(modname)
+                end)
+
+                if reload_ok then
+                  table.insert(reloaded, modname)
+                else
+                  table.insert(errors, modname .. ": " .. tostring(reload_err))
+                end
+              else
+                -- Content unchanged - skip
+                table.insert(skipped, modname)
+              end
+            else
+              -- Could not read file - try to reload anyway
+              local reload_ok, reload_err = pcall(function()
+                __hot_reload(modname)
+              end)
+
+              if reload_ok then
+                table.insert(reloaded, modname)
+              else
+                table.insert(errors, modname .. ": " .. tostring(reload_err))
+              end
+            end
+          end
+        end
+      end
+
+      -- Report results
+      if #reloaded > 0 then
+        print("Hot reloaded: " .. table.concat(reloaded, ", "))
+      end
+
+      if #skipped > 0 then
+        print("Unchanged: " .. table.concat(skipped, ", "))
+      end
+
+      if #large_files > 0 then
+        print("Warning: Skipped large files (>50KB): " .. table.concat(large_files, ", "))
+      end
+
+      if #errors > 0 then
+        for _, err in ipairs(errors) do
+          print("Reload error: " .. err)
+        end
+      end
+
+      return #errors == 0
+    end
 \`;
 
   // ../lua-runtime/src/canvasLuaCode/path.ts

@@ -82,6 +82,7 @@ describe('setupCanvasAPI - asset API', () => {
       setTextBaseline: vi.fn(),
       setDirection: vi.fn(),
       setFilter: vi.fn(),
+      setReloadCallback: vi.fn(),
     } as unknown as CanvasController
   }
 

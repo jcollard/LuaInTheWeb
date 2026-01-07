@@ -25,6 +25,24 @@ export function setupCanvasAPI(
   engine: LuaEngine,
   getController: () => CanvasController | null
 ): void {
+  // --- File reading for hot reload ---
+  // Synchronously reads a file's content (used by canvas.reload() to detect changes)
+  engine.global.set('__canvas_read_file', (filepath: string) => {
+    const controller = getController()
+    const fileSystem = controller?.getFileSystem()
+    if (!fileSystem) {
+      return null
+    }
+    try {
+      if (!fileSystem.exists(filepath)) {
+        return null
+      }
+      return fileSystem.readFile(filepath)
+    } catch {
+      return null
+    }
+  })
+
   // --- Canvas lifecycle functions ---
   engine.global.set('__canvas_is_active', () => {
     return getController()?.isActive() ?? false
@@ -367,5 +385,23 @@ export function setupCanvasAPI(
 
   // --- Set up Lua-side canvas table ---
   // Canvas is NOT a global - it must be accessed via require('canvas')
+  // Initialize __loaded_modules if not already set (for tests that don't use LuaEngineFactory)
+  engine.doStringSync('if __loaded_modules == nil then __loaded_modules = {} end')
   engine.doStringSync(canvasLuaCode)
+
+  // Set up reload callback - allows CanvasController.reload() to trigger canvas.reload() in Lua
+  // Note: canvas is accessed via require('canvas'), not as a global
+  const controller = getController()
+  if (controller) {
+    controller.setReloadCallback(() => {
+      try {
+        engine.doStringSync('require("canvas").reload()')
+      } catch (error) {
+        // Report reload errors through the controller's error callback
+        if (error instanceof Error) {
+          controller.reportError(`Hot reload error: ${error.message}`)
+        }
+      }
+    })
+  }
 }

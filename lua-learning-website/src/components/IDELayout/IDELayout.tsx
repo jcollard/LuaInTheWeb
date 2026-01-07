@@ -253,6 +253,10 @@ function IDELayoutInner({
   // Stores handlers to call when a canvas tab is closed from UI (canvasId -> stopHandler)
   const canvasCloseHandlersRef = useRef<Map<string, () => void>>(new Map())
 
+  // Canvas reload handler management for UI-triggered hot reload
+  // Stores handlers to call when reload is requested from UI (canvasId -> reloadHandler)
+  const canvasReloadHandlersRef = useRef<Map<string, () => void>>(new Map())
+
   // Handle canvas tab request from shell (canvas.start())
   const handleRequestCanvasTab = useCallback(async (canvasId: string): Promise<HTMLCanvasElement> => {
     // Tab path format: canvas://{canvasId}
@@ -299,13 +303,33 @@ function IDELayoutInner({
     canvasCloseHandlersRef.current.delete(canvasId)
   }, [])
 
+  // Register a handler to be called when reload is requested from the UI
+  const registerCanvasReloadHandler = useCallback((canvasId: string, handler: () => void) => {
+    canvasReloadHandlersRef.current.set(canvasId, handler)
+  }, [])
+
+  // Unregister a canvas reload handler (called when canvas stops)
+  const unregisterCanvasReloadHandler = useCallback((canvasId: string) => {
+    canvasReloadHandlersRef.current.delete(canvasId)
+  }, [])
+
+  // Handle canvas reload request from UI (calls the registered reload handler)
+  const handleCanvasReload = useCallback((canvasId: string) => {
+    const reloadHandler = canvasReloadHandlersRef.current.get(canvasId)
+    if (reloadHandler) {
+      reloadHandler()
+    }
+  }, [])
+
   // Canvas callbacks to pass to shell
   const canvasCallbacks = useMemo(() => ({
     onRequestCanvasTab: handleRequestCanvasTab,
     onCloseCanvasTab: handleCloseCanvasTab,
     registerCanvasCloseHandler,
     unregisterCanvasCloseHandler,
-  }), [handleRequestCanvasTab, handleCloseCanvasTab, registerCanvasCloseHandler, unregisterCanvasCloseHandler])
+    registerCanvasReloadHandler,
+    unregisterCanvasReloadHandler,
+  }), [handleRequestCanvasTab, handleCloseCanvasTab, registerCanvasCloseHandler, unregisterCanvasCloseHandler, registerCanvasReloadHandler, unregisterCanvasReloadHandler])
 
   const combinedClassName = className
     ? `${styles.ideLayout} ${className}`
@@ -485,6 +509,7 @@ function IDELayoutInner({
                             onCloseTab={handleCloseTab}
                             onExit={handleCanvasExit}
                             onCanvasReady={handleCanvasReady}
+                            onReload={handleCanvasReload}
                             isActive={activeTabType === 'canvas'}
                           />
                         </div>

@@ -82,6 +82,7 @@ describe('setupCanvasAPI - set_direction', () => {
       setTextBaseline: vi.fn(),
       // New method being tested
       setDirection: vi.fn(),
+      setReloadCallback: vi.fn(),
     } as unknown as CanvasController
   }
 

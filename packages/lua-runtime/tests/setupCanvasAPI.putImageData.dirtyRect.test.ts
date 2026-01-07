@@ -62,6 +62,7 @@ describe('setupCanvasAPI - put_image_data dirty rect', () => {
       getTime: vi.fn().mockReturnValue(1.0),
       isKeyDown: vi.fn().mockReturnValue(false),
       isKeyPressed: vi.fn().mockReturnValue(false),
+      setReloadCallback: vi.fn(),
     } as unknown as CanvasController
   }
 

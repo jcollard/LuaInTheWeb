@@ -81,6 +81,19 @@ export interface CanvasCallbacks {
    * @param canvasId - The canvas ID
    */
   unregisterCanvasCloseHandler?: (canvasId: string) => void
+  /**
+   * Register a handler to reload the canvas (hot reload modules).
+   * Called when canvas starts, providing a function the UI can call to trigger reload.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when reload is requested
+   */
+  registerCanvasReloadHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Unregister the reload handler for a canvas.
+   * Called when the canvas stops.
+   * @param canvasId - The canvas ID
+   */
+  unregisterCanvasReloadHandler?: (canvasId: string) => void
 }
 
 /**
@@ -106,6 +119,9 @@ export class CanvasController {
 
   // onDraw callback from Lua
   private onDrawCallback: (() => void) | null = null
+
+  // Reload callback - calls canvas.reload() in Lua environment
+  private reloadCallback: (() => void) | null = null
 
   // Track whether start() has been called (prevents adding assets after start)
   private started = false
@@ -178,6 +194,32 @@ export class CanvasController {
   }
 
   /**
+   * Set the reload callback.
+   * This callback should execute canvas.reload() in the Lua environment.
+   */
+  setReloadCallback(callback: () => void): void {
+    this.reloadCallback = callback
+  }
+
+  /**
+   * Trigger a hot reload of user modules.
+   * Calls canvas.reload() in the Lua environment via the reload callback.
+   */
+  reload(): void {
+    if (this.reloadCallback) {
+      this.reloadCallback()
+    }
+  }
+
+  /**
+   * Report an error through the callbacks.
+   * Used for reporting errors from external sources (e.g., reload callback).
+   */
+  reportError(message: string): void {
+    this.callbacks.onError?.(message)
+  }
+
+  /**
    * Start the canvas and block until stop() is called.
    * Returns a Promise that resolves when the canvas is stopped.
    */
@@ -212,6 +254,11 @@ export class CanvasController {
     // Register close handler so UI can stop us when tab is closed
     if (this.callbacks.registerCanvasCloseHandler) {
       this.callbacks.registerCanvasCloseHandler(this.canvasId, () => this.stop())
+    }
+
+    // Register reload handler so UI can trigger hot reload
+    if (this.callbacks.registerCanvasReloadHandler) {
+      this.callbacks.registerCanvasReloadHandler(this.canvasId, () => this.reload())
     }
 
     // Initialize renderer with image cache (if assets were loaded), input capture, and game loop
@@ -268,6 +315,11 @@ export class CanvasController {
     // Unregister close handler to prevent double-cleanup
     if (this.callbacks.unregisterCanvasCloseHandler) {
       this.callbacks.unregisterCanvasCloseHandler(this.canvasId)
+    }
+
+    // Unregister reload handler
+    if (this.callbacks.unregisterCanvasReloadHandler) {
+      this.callbacks.unregisterCanvasReloadHandler(this.canvasId)
     }
 
     // Close the canvas tab
@@ -1107,14 +1159,17 @@ export class CanvasController {
    * @throws Error if called after canvas.start()
    */
   addAssetPath(path: string): void {
+    // During hot reload, paths may be re-added - just skip if already present
+    // This check MUST come before the started check to allow reload to work
+    if (this.assetPaths.includes(path)) {
+      return
+    }
+
     if (this.started) {
       throw new Error('Cannot add asset paths after canvas.start()')
     }
 
-    // Avoid duplicate paths
-    if (!this.assetPaths.includes(path)) {
-      this.assetPaths.push(path)
-    }
+    this.assetPaths.push(path)
   }
 
   /**
@@ -1225,6 +1280,16 @@ export class CanvasController {
    * @throws Error if called after canvas.start()
    */
   loadSoundAsset(name: string, filename: string): AudioAssetHandle {
+    // During hot reload, assets may be re-registered - return existing handle
+    const existing = this.audioAssetManifest.get(name)
+    if (existing && existing.filename === filename) {
+      return {
+        _type: 'sound',
+        _name: name,
+        _file: filename,
+      }
+    }
+
     if (this.started) {
       throw new Error('Cannot load audio assets after canvas.start()')
     }
@@ -1254,6 +1319,16 @@ export class CanvasController {
    * @throws Error if called after canvas.start()
    */
   loadMusicAsset(name: string, filename: string): AudioAssetHandle {
+    // During hot reload, assets may be re-registered - return existing handle
+    const existing = this.audioAssetManifest.get(name)
+    if (existing && existing.filename === filename) {
+      return {
+        _type: 'music',
+        _name: name,
+        _file: filename,
+      }
+    }
+
     if (this.started) {
       throw new Error('Cannot load audio assets after canvas.start()')
     }
@@ -1279,6 +1354,14 @@ export class CanvasController {
    */
   getAudioEngine(): IAudioEngine | null {
     return this.audioEngine
+  }
+
+  /**
+   * Get the filesystem for file operations (used by hot reload).
+   * Returns null if no filesystem is available.
+   */
+  getFileSystem(): IFileSystem | null {
+    return this.callbacks.fileSystem ?? null
   }
 
   /**

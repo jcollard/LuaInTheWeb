@@ -83,6 +83,7 @@ describe('setupCanvasAPI - set_filter', () => {
       setDirection: vi.fn(),
       // New method being tested
       setFilter: vi.fn(),
+      setReloadCallback: vi.fn(),
     } as unknown as CanvasController
   }
 
