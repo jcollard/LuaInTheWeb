@@ -26,6 +26,7 @@ import type {
   SerializedAsset,
   AssetRequest,
   AssetPathRequest,
+  ModuleContentResponseMessage,
 } from '../worker/WorkerMessages.js';
 
 /**
@@ -281,6 +282,16 @@ export class LuaCanvasProcess implements IProcess {
   }
 
   /**
+   * Trigger hot reload of all loaded Lua modules.
+   * Updates function definitions while preserving runtime state.
+   */
+  reload(): void {
+    if (!this.running || !this.worker) return;
+
+    this.worker.postMessage({ type: 'reload' });
+  }
+
+  /**
    * Handle input from the user.
    * Canvas games use keyboard/mouse input, not text input - this is a no-op.
    */
@@ -336,6 +347,10 @@ export class LuaCanvasProcess implements IProcess {
 
       case 'assetsNeeded':
         this.handleAssetsNeeded(message.assets, message.assetPaths);
+        break;
+
+      case 'moduleContentRequest':
+        this.handleModuleContentRequest(message.moduleName, message.modulePath);
         break;
     }
   }
@@ -484,6 +499,55 @@ export class LuaCanvasProcess implements IProcess {
         this.handleError('Failed to load assets');
       }
     }
+  }
+
+  /**
+   * Handle moduleContentRequest message from worker.
+   * Reads module file content from filesystem and sends it back to the worker.
+   */
+  private handleModuleContentRequest(moduleName: string, modulePath: string): void {
+    if (!this.worker) return;
+
+    let content: string | null = null;
+
+    if (this.fileSystem) {
+      try {
+        // Resolve the path relative to script directory if needed
+        const resolvedPath = this.resolveModulePath(modulePath);
+
+        if (this.fileSystem.exists(resolvedPath)) {
+          content = this.fileSystem.readFile(resolvedPath) ?? null;
+        }
+      } catch {
+        // File not found or read error - content stays null
+      }
+    }
+
+    const response: ModuleContentResponseMessage = {
+      type: 'moduleContentResponse',
+      moduleName,
+      modulePath,
+      content,
+    };
+
+    this.worker.postMessage(response);
+  }
+
+  /**
+   * Resolve a module path relative to the script directory.
+   * Handles both absolute paths (starting with /) and relative paths.
+   */
+  private resolveModulePath(path: string): string {
+    // If path is already absolute, use it as-is
+    if (path.startsWith('/')) {
+      return path;
+    }
+
+    // Otherwise, resolve relative to script directory
+    const baseDir = this.scriptDirectory.endsWith('/')
+      ? this.scriptDirectory
+      : this.scriptDirectory + '/';
+    return baseDir + path;
   }
 
   /**

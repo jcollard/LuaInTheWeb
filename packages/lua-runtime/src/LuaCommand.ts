@@ -139,10 +139,15 @@ export class LuaCommand implements ICommand {
         ? {
             onRequestCanvasTab: context.onRequestCanvasTab,
             onCloseCanvasTab: context.onCloseCanvasTab,
+            // Canvas window callbacks for popup mode
             onRequestCanvasWindow: context.onRequestCanvasWindow,
             onCloseCanvasWindow: context.onCloseCanvasWindow,
+            // Canvas close handler registration for UI-initiated tab close
             registerCanvasCloseHandler: context.registerCanvasCloseHandler,
             unregisterCanvasCloseHandler: context.unregisterCanvasCloseHandler,
+            // Canvas reload handler registration for UI-triggered hot reload
+            registerCanvasReloadHandler: context.registerCanvasReloadHandler,
+            unregisterCanvasReloadHandler: context.unregisterCanvasReloadHandler,
             fileSystem: context.filesystem,
             scriptDirectory,
           }

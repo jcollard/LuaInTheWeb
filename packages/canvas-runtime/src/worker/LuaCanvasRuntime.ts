@@ -58,6 +58,12 @@ export class LuaCanvasRuntime {
   // Pending pixel data requests waiting to be sent
   private pendingPixelRequests: Set<string> = new Set();
 
+  // Module loading state for require() support
+  // Callback to request module content from main thread
+  private moduleRequestCallback: ((moduleName: string, modulePath: string) => void) | null = null;
+  // Pending module content response (set by handleModuleContentResponse)
+  private pendingModuleContent: { moduleName: string; content: string | null } | null = null;
+
   constructor(channel: IWorkerChannel) {
     this.channel = channel;
   }
@@ -67,6 +73,39 @@ export class LuaCanvasRuntime {
    */
   getState(): WorkerState {
     return this.state;
+  }
+
+  /**
+   * Set the callback for requesting module content from main thread.
+   * This is called by the worker when setting up the runtime.
+   */
+  setModuleRequestCallback(callback: (moduleName: string, modulePath: string) => void): void {
+    this.moduleRequestCallback = callback;
+  }
+
+  /**
+   * Handle module content response from main thread.
+   * Called by the worker when it receives a moduleContentResponse message.
+   */
+  handleModuleContentResponse(moduleName: string, content: string | null): void {
+    this.pendingModuleContent = { moduleName, content };
+  }
+
+  /**
+   * Trigger hot reload of all loaded modules.
+   * Called by the worker when it receives a reload message from main thread.
+   */
+  triggerReload(): void {
+    if (!this.engine) return;
+
+    try {
+      // Call canvas.reload() in Lua
+      this.engine.doStringSync('canvas.reload()');
+    } catch (error) {
+      if (this.errorHandler && error instanceof Error) {
+        this.errorHandler(`Hot reload error: ${error.message}`);
+      }
+    }
   }
 
   /**
@@ -1367,7 +1406,213 @@ export class LuaCanvasRuntime {
 
         return mixer
       end
+
+      -- ========================================================================
+      -- Module Loading Infrastructure for Hot Reload
+      -- ========================================================================
+      -- Cache of loaded modules (key = module name, value = module result)
+      __loaded_modules = {}
+      -- Stack of module paths for nested requires (for path resolution)
+      __module_path_stack = {}
+
+      -- Store the original require function before we override it
+      local _original_require = require
+
+      -- Custom require function that tracks loaded modules
+      function require(modname)
+        -- Check our cache first
+        if __loaded_modules[modname] ~= nil then
+          return __loaded_modules[modname]
+        end
+
+        -- Check package.loaded (standard Lua cache)
+        if package.loaded[modname] ~= nil then
+          __loaded_modules[modname] = package.loaded[modname]
+          return package.loaded[modname]
+        end
+
+        -- Check package.preload (for built-in modules like 'audio_mixer')
+        if package.preload[modname] then
+          local result = package.preload[modname]()
+          __loaded_modules[modname] = result or true
+          package.loaded[modname] = __loaded_modules[modname]
+          return __loaded_modules[modname]
+        end
+
+        -- Try file-based module loading via JavaScript bridge
+        local found = __js_require_lookup(modname)
+        if found then
+          local content = __js_get_module_content()
+          local modulePath = __js_get_module_path()
+
+          -- Push path onto stack for nested requires
+          table.insert(__module_path_stack, modulePath)
+
+          -- Load and execute the module
+          local fn, err = load(content, modname)
+          if not fn then
+            table.remove(__module_path_stack)
+            error("error loading module '" .. modname .. "': " .. (err or "unknown error"))
+          end
+
+          local ok, result = pcall(fn)
+          table.remove(__module_path_stack)
+
+          if not ok then
+            error("error running module '" .. modname .. "': " .. tostring(result))
+          end
+
+          -- Cache the result
+          __loaded_modules[modname] = result or true
+          package.loaded[modname] = __loaded_modules[modname]
+          return __loaded_modules[modname]
+        end
+
+        -- Module not found
+        error("module '" .. modname .. "' not found")
+      end
+
+      --- Hot reload a module: re-execute module code and update function definitions.
+      -- Preserves runtime data (non-function values) while updating functions.
+      ---@param module_name string The name of the module to reload
+      ---@return any The reloaded module
+      function __hot_reload(module_name)
+        local old = __loaded_modules[module_name]
+
+        -- Clear from both caches to force re-loading
+        __loaded_modules[module_name] = nil
+        package.loaded[module_name] = nil
+
+        -- Re-require the module (will re-execute the file)
+        local new = require(module_name)
+
+        -- If both old and new are tables, patch functions from new into old
+        -- This preserves table identity so existing references see updated functions
+        if type(old) == 'table' and type(new) == 'table' then
+          -- Update functions in the old table
+          for key, value in pairs(new) do
+            if type(value) == 'function' then
+              old[key] = value
+            end
+          end
+
+          -- Re-cache the OLD table (with updated functions) to preserve identity
+          __loaded_modules[module_name] = old
+          package.loaded[module_name] = old
+          return old
+        end
+
+        -- If types don't match or not tables, return the new value
+        return new
+      end
+
+      -- Built-in modules that should not be hot-reloaded
+      local __builtin_modules = {
+        audio_mixer = true,
+      }
+
+      --- Hot reload all loaded user modules.
+      -- Iterates through all modules in __loaded_modules and reloads them.
+      -- Built-in modules (audio_mixer, etc.) are skipped.
+      function canvas.reload()
+        local reloaded = {}
+        local errors = {}
+
+        for modname, _ in pairs(__loaded_modules) do
+          -- Skip built-in modules
+          if not __builtin_modules[modname] then
+            local ok, err = pcall(function()
+              __hot_reload(modname)
+            end)
+
+            if ok then
+              table.insert(reloaded, modname)
+            else
+              table.insert(errors, modname .. ": " .. tostring(err))
+            end
+          end
+        end
+
+        -- Report results
+        if #reloaded > 0 then
+          print("Hot reloaded: " .. table.concat(reloaded, ", "))
+        end
+
+        if #errors > 0 then
+          for _, err in ipairs(errors) do
+            print("Reload error: " .. err)
+          end
+        end
+
+        return #errors == 0
+      end
     `);
+
+    // Set up JavaScript bridge functions for module loading
+    this.setupModuleLoadingBridge();
+  }
+
+  /**
+   * Set up JavaScript bridge functions for require() module loading.
+   */
+  private setupModuleLoadingBridge(): void {
+    if (!this.engine) return;
+
+    const lua = this.engine;
+    const runtime = this;
+
+    // Store last module lookup result
+    let lastModuleContent: string | null = null;
+    let lastModulePath: string | null = null;
+
+    // Synchronous module lookup - checks if content was pre-loaded
+    // For async loading, the worker handles the message round-trip
+    lua.global.set('__js_require_lookup', (moduleName: string): boolean => {
+      // Convert module name to path format
+      const modulePath = moduleName.replace(/\./g, '/');
+
+      // Try common paths
+      const pathsToTry = [
+        `/${modulePath}.lua`,
+        `/${modulePath}/init.lua`,
+        `${modulePath}.lua`,
+        `${modulePath}/init.lua`,
+      ];
+
+      // For now, return false - file-based require needs async message passing
+      // The worker will handle the actual loading via messages
+      lastModuleContent = null;
+      lastModulePath = null;
+
+      // Request module from main thread (this will be handled asynchronously)
+      if (runtime.moduleRequestCallback) {
+        // Use the first path to try
+        runtime.moduleRequestCallback(moduleName, pathsToTry[0]);
+      }
+
+      // Check if we have pending content from a previous response
+      if (runtime.pendingModuleContent && runtime.pendingModuleContent.moduleName === moduleName) {
+        if (runtime.pendingModuleContent.content !== null) {
+          lastModuleContent = runtime.pendingModuleContent.content;
+          lastModulePath = pathsToTry[0];
+          runtime.pendingModuleContent = null;
+          return true;
+        }
+        runtime.pendingModuleContent = null;
+      }
+
+      return false;
+    });
+
+    // Get module content from last successful lookup
+    lua.global.set('__js_get_module_content', (): string => {
+      return lastModuleContent ?? '';
+    });
+
+    // Get module path from last successful lookup
+    lua.global.set('__js_get_module_path', (): string => {
+      return lastModulePath ?? '';
+    });
   }
 
   /**

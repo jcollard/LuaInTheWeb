@@ -33,7 +33,9 @@ export type MainToWorkerMessage =
   | InitMessage
   | AssetsLoadedMessage
   | StartMessage
-  | StopMessage;
+  | StopMessage
+  | ReloadMessage
+  | ModuleContentResponseMessage;
 
 /**
  * Initialize the Lua engine with code.
@@ -70,6 +72,28 @@ export interface StopMessage {
 }
 
 /**
+ * Trigger hot reload of all loaded Lua modules.
+ * Updates function definitions while preserving runtime state.
+ */
+export interface ReloadMessage {
+  type: 'reload';
+}
+
+/**
+ * Response with module file content from main thread.
+ * Sent in response to a ModuleContentRequestMessage.
+ */
+export interface ModuleContentResponseMessage {
+  type: 'moduleContentResponse';
+  /** The module name that was requested */
+  moduleName: string;
+  /** The resolved path of the module file */
+  modulePath: string;
+  /** The file content, or null if not found */
+  content: string | null;
+}
+
+/**
  * Asset definition for requesting assets from main thread.
  */
 export interface AssetRequest {
@@ -94,7 +118,8 @@ export type WorkerToMainMessage =
   | ReadyMessage
   | ErrorMessage
   | StateChangedMessage
-  | AssetsNeededMessage;
+  | AssetsNeededMessage
+  | ModuleContentRequestMessage;
 
 /**
  * Worker is ready (Lua engine initialized).
@@ -130,4 +155,16 @@ export interface AssetsNeededMessage {
   assets: AssetRequest[];
   /** Array of directory paths to scan for assets (new API) */
   assetPaths?: AssetPathRequest[];
+}
+
+/**
+ * Worker requests module file content from main thread.
+ * Used by the require() implementation to load modules from the filesystem.
+ */
+export interface ModuleContentRequestMessage {
+  type: 'moduleContentRequest';
+  /** The module name being required (e.g., 'player', 'lib.utils') */
+  moduleName: string;
+  /** The resolved path to try (e.g., '/player.lua', '/lib/utils/init.lua') */
+  modulePath: string;
 }

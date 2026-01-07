@@ -11,6 +11,7 @@ const mockStartGame = vi.fn()
 const mockStopGame = vi.fn()
 const mockPauseGame = vi.fn()
 const mockResumeGame = vi.fn()
+const mockReloadGame = vi.fn()
 const mockClearError = vi.fn()
 
 vi.mock('../../hooks/useCanvasGame', () => ({
@@ -26,6 +27,7 @@ vi.mock('../../hooks/useCanvasGame', () => ({
     stopGame: mockStopGame,
     pauseGame: mockPauseGame,
     resumeGame: mockResumeGame,
+    reloadGame: mockReloadGame,
     clearOutput: vi.fn(),
     clearError: mockClearError,
   })),
@@ -57,6 +59,7 @@ describe('CanvasGamePanel', () => {
         stopGame: mockStopGame,
         pauseGame: mockPauseGame,
         resumeGame: mockResumeGame,
+        reloadGame: mockReloadGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
       })
@@ -79,6 +82,7 @@ describe('CanvasGamePanel', () => {
         stopGame: mockStopGame,
         pauseGame: mockPauseGame,
         resumeGame: mockResumeGame,
+        reloadGame: mockReloadGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
       })
@@ -101,6 +105,7 @@ describe('CanvasGamePanel', () => {
         stopGame: mockStopGame,
         pauseGame: mockPauseGame,
         resumeGame: mockResumeGame,
+        reloadGame: mockReloadGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
       })
@@ -123,6 +128,7 @@ describe('CanvasGamePanel', () => {
         stopGame: mockStopGame,
         pauseGame: mockPauseGame,
         resumeGame: mockResumeGame,
+        reloadGame: mockReloadGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
       })
@@ -170,6 +176,7 @@ describe('CanvasGamePanel', () => {
         stopGame: mockStopGame,
         pauseGame: mockPauseGame,
         resumeGame: mockResumeGame,
+        reloadGame: mockReloadGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
       })
@@ -193,6 +200,7 @@ describe('CanvasGamePanel', () => {
         stopGame: mockStopGame,
         pauseGame: mockPauseGame,
         resumeGame: mockResumeGame,
+        reloadGame: mockReloadGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
       })
@@ -200,6 +208,53 @@ describe('CanvasGamePanel', () => {
       render(<CanvasGamePanel code="print('hello')" />)
       fireEvent.click(screen.getByRole('button', { name: /resume/i }))
       expect(mockResumeGame).toHaveBeenCalled()
+    })
+
+    it('renders Reload button when game is running', async () => {
+      const { useCanvasGame } = await import('../../hooks/useCanvasGame')
+      vi.mocked(useCanvasGame).mockReturnValue({
+        state: 'running',
+        isRunning: true,
+        isPaused: false,
+        error: null,
+        output: '',
+        mode: 'performance',
+        process: null,
+        startGame: mockStartGame,
+        stopGame: mockStopGame,
+        pauseGame: mockPauseGame,
+        resumeGame: mockResumeGame,
+        reloadGame: mockReloadGame,
+        clearOutput: vi.fn(),
+        clearError: mockClearError,
+      })
+
+      render(<CanvasGamePanel code="print('hello')" />)
+      expect(screen.getByRole('button', { name: /reload/i })).toBeInTheDocument()
+    })
+
+    it('calls reloadGame when Reload button is clicked', async () => {
+      const { useCanvasGame } = await import('../../hooks/useCanvasGame')
+      vi.mocked(useCanvasGame).mockReturnValue({
+        state: 'running',
+        isRunning: true,
+        isPaused: false,
+        error: null,
+        output: '',
+        mode: 'performance',
+        process: null,
+        startGame: mockStartGame,
+        stopGame: mockStopGame,
+        pauseGame: mockPauseGame,
+        resumeGame: mockResumeGame,
+        reloadGame: mockReloadGame,
+        clearOutput: vi.fn(),
+        clearError: mockClearError,
+      })
+
+      render(<CanvasGamePanel code="print('hello')" />)
+      fireEvent.click(screen.getByRole('button', { name: /reload/i }))
+      expect(mockReloadGame).toHaveBeenCalled()
     })
 
     it('calls clearError when error is dismissed', async () => {
@@ -216,6 +271,7 @@ describe('CanvasGamePanel', () => {
         stopGame: mockStopGame,
         pauseGame: mockPauseGame,
         resumeGame: mockResumeGame,
+        reloadGame: mockReloadGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
       })
@@ -242,6 +298,7 @@ describe('CanvasGamePanel', () => {
         stopGame: mockStopGame,
         pauseGame: mockPauseGame,
         resumeGame: mockResumeGame,
+        reloadGame: mockReloadGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
       })
@@ -264,6 +321,7 @@ describe('CanvasGamePanel', () => {
         stopGame: mockStopGame,
         pauseGame: mockPauseGame,
         resumeGame: mockResumeGame,
+        reloadGame: mockReloadGame,
         clearOutput: vi.fn(),
         clearError: mockClearError,
       })
@@ -292,6 +350,7 @@ describe('CanvasGamePanel', () => {
           stopGame: mockStopGame,
           pauseGame: mockPauseGame,
           resumeGame: mockResumeGame,
+          reloadGame: mockReloadGame,
           clearOutput: vi.fn(),
           clearError: mockClearError,
         }

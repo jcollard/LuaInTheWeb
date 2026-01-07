@@ -88,6 +88,7 @@ describe('setupCanvasAPI - Pixel Manipulation', () => {
       lineTo: vi.fn(),
       fill: vi.fn(),
       stroke: vi.fn(),
+      setReloadCallback: vi.fn(),
     } as unknown as CanvasController
   }
 

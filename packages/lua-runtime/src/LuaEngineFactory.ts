@@ -494,21 +494,27 @@ export class LuaEngineFactory {
       })
 
       // Setup the Lua require function
+      // __loaded_modules stores: { module = result, filepath = path, content = source }
+      // This enables content-based hot reload (only reload if file changed)
       await engine.doString(`
         __loaded_modules = {}
         __module_path_stack = {}
 
+        -- Large file threshold for hot reload tracking (50KB)
+        __hot_reload_max_size = 50000
+
         function require(modname)
           -- Check cache first
           if __loaded_modules[modname] ~= nil then
-            return __loaded_modules[modname]
+            return __loaded_modules[modname].module
           end
 
           -- Check package.preload (for built-in modules like 'shell')
           if package.preload[modname] then
             local result = package.preload[modname]()
-            __loaded_modules[modname] = result or true
-            return __loaded_modules[modname]
+            -- Built-in modules don't need filepath/content tracking
+            __loaded_modules[modname] = { module = result or true, builtin = true }
+            return __loaded_modules[modname].module
           end
 
           -- Get current module path (top of stack) for relative resolution
@@ -544,9 +550,19 @@ export class LuaEngineFactory {
             error("error running module '" .. modname .. "': " .. tostring(result))
           end
 
-          -- Cache the result (use true if module returns nil)
-          __loaded_modules[modname] = result or true
-          return __loaded_modules[modname]
+          -- Cache the result with filepath and content for hot reload
+          -- Skip content tracking for large files to save memory
+          local contentToStore = nil
+          if #content <= __hot_reload_max_size then
+            contentToStore = content
+          end
+
+          __loaded_modules[modname] = {
+            module = result or true,
+            filepath = modulePath,
+            content = contentToStore
+          }
+          return __loaded_modules[modname].module
         end
       `)
     }

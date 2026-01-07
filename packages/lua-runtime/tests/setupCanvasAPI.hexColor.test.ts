@@ -65,6 +65,7 @@ describe('setupCanvasAPI hex color support', () => {
       drawImage: vi.fn(),
       getAssetWidth: vi.fn().mockReturnValue(64),
       getAssetHeight: vi.fn().mockReturnValue(64),
+      setReloadCallback: vi.fn(),
     } as unknown as CanvasController
   }
 

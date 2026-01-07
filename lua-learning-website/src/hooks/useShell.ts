@@ -99,6 +99,19 @@ export interface ShellCanvasCallbacks {
    * @param canvasId - The canvas ID
    */
   unregisterWindowCloseHandler?: (canvasId: string) => void
+  /**
+   * Register a handler to reload the canvas (hot reload modules).
+   * Called by the shell when canvas starts, providing a function the UI can call to trigger reload.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when reload is requested
+   */
+  registerCanvasReloadHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Unregister the reload handler for a canvas.
+   * Called when the canvas stops.
+   * @param canvasId - The canvas ID
+   */
+  unregisterCanvasReloadHandler?: (canvasId: string) => void
 }
 
 /**
@@ -281,6 +294,9 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
         // Canvas close handler registration for UI-initiated tab/window close
         registerCanvasCloseHandler: options?.canvasCallbacks?.registerCanvasCloseHandler,
         unregisterCanvasCloseHandler: options?.canvasCallbacks?.unregisterCanvasCloseHandler,
+        // Canvas reload handler registration for UI-triggered hot reload
+        registerCanvasReloadHandler: options?.canvasCallbacks?.registerCanvasReloadHandler,
+        unregisterCanvasReloadHandler: options?.canvasCallbacks?.unregisterCanvasReloadHandler,
         // Editor integration callback for 'open' command
         onRequestOpenFile: options?.onRequestOpenFile,
         // Filesystem change notification for UI refresh (e.g., file tree)

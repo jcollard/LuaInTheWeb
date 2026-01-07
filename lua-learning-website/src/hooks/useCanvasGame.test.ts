@@ -10,6 +10,9 @@ import { useCanvasGame } from './useCanvasGame'
 interface MockProcess {
   start: ReturnType<typeof vi.fn>
   stop: ReturnType<typeof vi.fn>
+  pause: ReturnType<typeof vi.fn>
+  resume: ReturnType<typeof vi.fn>
+  reload: ReturnType<typeof vi.fn>
   isRunning: ReturnType<typeof vi.fn>
   getCanvas: () => HTMLCanvasElement
   onOutput: ((text: string) => void) | null
@@ -26,6 +29,9 @@ vi.mock('@lua-learning/canvas-runtime', () => {
   class MockLuaCanvasProcess {
     start = vi.fn()
     stop = vi.fn()
+    pause = vi.fn()
+    resume = vi.fn()
+    reload = vi.fn()
     isRunning = vi.fn().mockReturnValue(false)
     _canvas: HTMLCanvasElement
     onOutput: ((text: string) => void) | null = null
@@ -503,6 +509,151 @@ describe('useCanvasGame', () => {
       })
 
       expect(result.current.state).toBe('idle')
+    })
+  })
+
+  describe('reloadGame', () => {
+    it('calls reload on the process', () => {
+      const { result } = renderHook(() => useCanvasGame())
+
+      act(() => {
+        result.current.startGame('print("hello")', mockCanvas)
+      })
+
+      const mockInstance = mockProcessInstances[0]
+
+      act(() => {
+        result.current.reloadGame()
+      })
+
+      expect(mockInstance.reload).toHaveBeenCalled()
+    })
+
+    it('does nothing if no process is running', () => {
+      const { result } = renderHook(() => useCanvasGame())
+
+      // Should not throw when no process exists
+      act(() => {
+        result.current.reloadGame()
+      })
+
+      expect(result.current.state).toBe('idle')
+    })
+
+    it('can be called multiple times', () => {
+      const { result } = renderHook(() => useCanvasGame())
+
+      act(() => {
+        result.current.startGame('print("hello")', mockCanvas)
+      })
+
+      const mockInstance = mockProcessInstances[0]
+
+      act(() => {
+        result.current.reloadGame()
+      })
+
+      act(() => {
+        result.current.reloadGame()
+      })
+
+      act(() => {
+        result.current.reloadGame()
+      })
+
+      expect(mockInstance.reload).toHaveBeenCalledTimes(3)
+    })
+
+    it('does not change running state', () => {
+      const { result } = renderHook(() => useCanvasGame())
+
+      act(() => {
+        result.current.startGame('print("hello")', mockCanvas)
+      })
+
+      expect(result.current.state).toBe('running')
+
+      act(() => {
+        result.current.reloadGame()
+      })
+
+      expect(result.current.state).toBe('running')
+    })
+  })
+
+  describe('pauseGame', () => {
+    it('calls pause on the process', () => {
+      const { result } = renderHook(() => useCanvasGame())
+
+      act(() => {
+        result.current.startGame('print("hello")', mockCanvas)
+      })
+
+      const mockInstance = mockProcessInstances[0]
+
+      act(() => {
+        result.current.pauseGame()
+      })
+
+      expect(mockInstance.pause).toHaveBeenCalled()
+    })
+
+    it('sets isPaused to true', () => {
+      const { result } = renderHook(() => useCanvasGame())
+
+      act(() => {
+        result.current.startGame('print("hello")', mockCanvas)
+      })
+
+      expect(result.current.isPaused).toBe(false)
+
+      act(() => {
+        result.current.pauseGame()
+      })
+
+      expect(result.current.isPaused).toBe(true)
+    })
+  })
+
+  describe('resumeGame', () => {
+    it('calls resume on the process', () => {
+      const { result } = renderHook(() => useCanvasGame())
+
+      act(() => {
+        result.current.startGame('print("hello")', mockCanvas)
+      })
+
+      const mockInstance = mockProcessInstances[0]
+
+      act(() => {
+        result.current.pauseGame()
+      })
+
+      act(() => {
+        result.current.resumeGame()
+      })
+
+      expect(mockInstance.resume).toHaveBeenCalled()
+    })
+
+    it('sets isPaused to false', () => {
+      const { result } = renderHook(() => useCanvasGame())
+
+      act(() => {
+        result.current.startGame('print("hello")', mockCanvas)
+      })
+
+      act(() => {
+        result.current.pauseGame()
+      })
+
+      expect(result.current.isPaused).toBe(true)
+
+      act(() => {
+        result.current.resumeGame()
+      })
+
+      expect(result.current.isPaused).toBe(false)
     })
   })
 })
