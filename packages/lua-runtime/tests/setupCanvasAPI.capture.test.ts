@@ -84,6 +84,7 @@ describe('setupCanvasAPI - capture', () => {
       setDirection: vi.fn(),
       // capture returns a data URL
       capture: vi.fn().mockReturnValue('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='),
+      setReloadCallback: vi.fn(),
     } as unknown as CanvasController
   }
 

@@ -85,6 +85,7 @@ describe('setupCanvasAPI Path API', () => {
       arcTo: vi.fn(),
       quadraticCurveTo: vi.fn(),
       bezierCurveTo: vi.fn(),
+      setReloadCallback: vi.fn(),
     } as unknown as CanvasController
   }
 

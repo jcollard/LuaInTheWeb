@@ -385,6 +385,8 @@ export function setupCanvasAPI(
 
   // --- Set up Lua-side canvas table ---
   // Canvas is NOT a global - it must be accessed via require('canvas')
+  // Initialize __loaded_modules if not already set (for tests that don't use LuaEngineFactory)
+  engine.doStringSync('if __loaded_modules == nil then __loaded_modules = {} end')
   engine.doStringSync(canvasLuaCode)
 
   // Set up reload callback - allows CanvasController.reload() to trigger canvas.reload() in Lua

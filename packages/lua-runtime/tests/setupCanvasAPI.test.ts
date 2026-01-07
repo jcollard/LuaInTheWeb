@@ -76,6 +76,8 @@ describe('setupCanvasAPI', () => {
       transform: vi.fn(),
       setTransform: vi.fn(),
       resetTransform: vi.fn(),
+      // Hot reload
+      setReloadCallback: vi.fn(),
       // Path API methods
       beginPath: vi.fn(),
       closePath: vi.fn(),

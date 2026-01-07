@@ -82,6 +82,7 @@ describe('setupCanvasAPI - stroke_text', () => {
       setTextAlign: vi.fn(),
       setTextBaseline: vi.fn(),
       setDirection: vi.fn(),
+      setReloadCallback: vi.fn(),
     } as unknown as CanvasController
   }
 
