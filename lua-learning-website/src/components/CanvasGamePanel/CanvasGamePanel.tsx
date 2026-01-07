@@ -53,6 +53,7 @@ export function CanvasGamePanel({
     startGame,
     pauseGame,
     resumeGame,
+    reloadGame,
     clearError,
   } = useCanvasGame({
     onExit,
@@ -146,6 +147,15 @@ export function CanvasGamePanel({
             >
               {mode === 'performance' ? 'Performance' : 'Compatibility'}
             </span>
+            <button
+              type="button"
+              className={styles.reloadButton}
+              onClick={reloadGame}
+              aria-label="Hot reload code"
+              title="Hot reload (update functions, preserve state)"
+            >
+              Reload
+            </button>
             <button
               type="button"
               className={styles.pauseButton}

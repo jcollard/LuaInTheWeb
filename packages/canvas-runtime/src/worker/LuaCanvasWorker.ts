@@ -21,6 +21,7 @@ import type {
   SerializedAsset,
   AssetRequest,
   AssetPathRequest,
+  ModuleContentRequestMessage,
 } from './WorkerMessages.js';
 
 // Declare self as DedicatedWorkerGlobalScope
@@ -51,6 +52,28 @@ function notifyError(message: string, stack?: string): void {
 }
 
 /**
+ * Request module content from main thread.
+ * Used by the runtime's require() implementation.
+ */
+function requestModuleContent(moduleName: string, modulePath: string): void {
+  const message: ModuleContentRequestMessage = {
+    type: 'moduleContentRequest',
+    moduleName,
+    modulePath,
+  };
+  self.postMessage(message);
+}
+
+/**
+ * Handle module content response from main thread.
+ */
+function handleModuleContentResponse(moduleName: string, content: string | null): void {
+  if (runtime) {
+    runtime.handleModuleContentResponse(moduleName, content);
+  }
+}
+
+/**
  * Handle INIT message - initialize the runtime with Lua code.
  */
 async function handleInit(code: string, sharedBuffer?: SharedArrayBuffer): Promise<void> {
@@ -69,6 +92,9 @@ async function handleInit(code: string, sharedBuffer?: SharedArrayBuffer): Promi
     runtime.onError((message) => {
       notifyError(message);
     });
+
+    // Set up module request callback for require() support
+    runtime.setModuleRequestCallback(requestModuleContent);
 
     notifyStateChange('initializing');
 
@@ -178,6 +204,24 @@ function handleStop(): void {
 }
 
 /**
+ * Handle RELOAD message - trigger hot reload of all loaded modules.
+ */
+function handleReload(): void {
+  if (!runtime) {
+    notifyError('Runtime not initialized');
+    return;
+  }
+
+  try {
+    runtime.triggerReload();
+  } catch (error) {
+    if (error instanceof Error) {
+      notifyError(error.message, error.stack);
+    }
+  }
+}
+
+/**
  * Handle incoming messages from the main thread.
  */
 self.onmessage = async (event: MessageEvent<MainToWorkerMessage & { buffer?: SharedArrayBuffer }>): Promise<void> => {
@@ -198,6 +242,14 @@ self.onmessage = async (event: MessageEvent<MainToWorkerMessage & { buffer?: Sha
 
     case 'stop':
       handleStop();
+      break;
+
+    case 'reload':
+      handleReload();
+      break;
+
+    case 'moduleContentResponse':
+      handleModuleContentResponse(message.moduleName, message.content);
       break;
 
     default:
