@@ -31,6 +31,7 @@ export type ScreenMode = '1x' | 'fit' | 'full' | undefined
 interface ParsedLuaOptions {
   canvasMode: CanvasMode
   screenMode: ScreenMode
+  noToolbar: boolean
   filename: string | null
   lint: boolean
 }
@@ -71,7 +72,7 @@ export class LuaCommand implements ICommand {
   /**
    * Usage pattern.
    */
-  readonly usage = 'lua [--lint] [--canvas=tab|window] [--screen=1x|fit|full] [filename]'
+  readonly usage = 'lua [--lint] [--canvas=tab|window] [--screen=1x|fit|full] [--no-toolbar] [filename]'
 
   /**
    * Parse command arguments into structured options.
@@ -81,12 +82,15 @@ export class LuaCommand implements ICommand {
   private parseArgs(args: string[]): ParsedLuaOptions {
     let canvasMode: CanvasMode = 'tab'
     let screenMode: ScreenMode = undefined
+    let noToolbar = false
     let filename: string | null = null
     let lint = false
 
     for (const arg of args) {
       if (arg === '--lint') {
         lint = true
+      } else if (arg === '--no-toolbar') {
+        noToolbar = true
       } else if (arg.startsWith('--canvas=')) {
         const mode = arg.slice('--canvas='.length)
         if (mode === 'tab' || mode === 'window') {
@@ -107,7 +111,7 @@ export class LuaCommand implements ICommand {
       }
     }
 
-    return { canvasMode, screenMode, filename, lint }
+    return { canvasMode, screenMode, noToolbar, filename, lint }
   }
 
   /**
@@ -117,7 +121,7 @@ export class LuaCommand implements ICommand {
    * @returns IProcess for the Lua execution, or undefined for --lint
    */
   execute(args: string[], context: ShellContext): IProcess | undefined {
-    const { canvasMode, screenMode, filename, lint } = this.parseArgs(args)
+    const { canvasMode, screenMode, noToolbar, filename, lint } = this.parseArgs(args)
 
     // Handle --lint flag
     if (lint) {
@@ -145,9 +149,12 @@ export class LuaCommand implements ICommand {
             // Canvas close handler registration for UI-initiated tab close
             registerCanvasCloseHandler: context.registerCanvasCloseHandler,
             unregisterCanvasCloseHandler: context.unregisterCanvasCloseHandler,
-            // Canvas reload handler registration for UI-triggered hot reload
+            // Canvas reload handler registration for UI-triggered hot reload (tabs)
             registerCanvasReloadHandler: context.registerCanvasReloadHandler,
             unregisterCanvasReloadHandler: context.unregisterCanvasReloadHandler,
+            // Window reload handler registration for UI-triggered hot reload (popup windows)
+            registerWindowReloadHandler: context.registerWindowReloadHandler,
+            unregisterWindowReloadHandler: context.unregisterWindowReloadHandler,
             fileSystem: context.filesystem,
             scriptDirectory,
           }
@@ -165,12 +172,13 @@ export class LuaCommand implements ICommand {
       })
     }
 
-    // Build options, including canvas callbacks, mode, and screen mode
+    // Build options, including canvas callbacks, mode, screen mode, and toolbar visibility
     const options = {
       ...DEFAULT_EXECUTION_OPTIONS,
       canvasCallbacks,
       canvasMode,
       screenMode,
+      noToolbar,
     }
 
     return new LuaScriptProcess(filename, context, options)

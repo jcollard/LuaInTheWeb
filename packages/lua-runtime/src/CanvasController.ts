@@ -65,7 +65,8 @@ export interface CanvasCallbacks {
   /** Request a canvas window (popup) to be opened, returns the canvas element when ready */
   onRequestCanvasWindow?: (
     canvasId: string,
-    screenMode?: ScreenMode
+    screenMode?: ScreenMode,
+    noToolbar?: boolean
   ) => Promise<HTMLCanvasElement>
   /** Request a canvas window (popup) to be closed */
   onCloseCanvasWindow?: (canvasId: string) => void
@@ -101,6 +102,19 @@ export interface CanvasCallbacks {
    * @param canvasId - The canvas ID
    */
   unregisterCanvasReloadHandler?: (canvasId: string) => void
+  /**
+   * Register a handler to reload the canvas from a popup window.
+   * Called when canvas starts in window mode.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when reload is requested
+   */
+  registerWindowReloadHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Unregister the window reload handler.
+   * Called when the canvas stops.
+   * @param canvasId - The canvas ID
+   */
+  unregisterWindowReloadHandler?: (canvasId: string) => void
 }
 
 /**

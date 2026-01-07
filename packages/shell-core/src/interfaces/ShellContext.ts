@@ -62,12 +62,14 @@ export interface ShellContext {
    * Returns the canvas element when the window is ready.
    * Used when `lua --canvas=window` is specified.
    * @param canvasId - Unique identifier for the canvas window
-   * @param screenMode - Optional screen mode for scaling (undefined shows toolbar)
+   * @param screenMode - Optional screen mode for scaling
+   * @param noToolbar - If true, hide the toolbar entirely
    * @returns Promise resolving to the HTMLCanvasElement when ready
    */
   onRequestCanvasWindow?: (
     canvasId: string,
-    screenMode?: ScreenMode
+    screenMode?: ScreenMode,
+    noToolbar?: boolean
   ) => Promise<HTMLCanvasElement>
 
   /**
@@ -105,6 +107,21 @@ export interface ShellContext {
    * @param canvasId - Unique identifier for the canvas tab
    */
   unregisterCanvasReloadHandler?: (canvasId: string) => void
+
+  /**
+   * Register a handler to reload the canvas from a popup window.
+   * Called when canvas starts in window mode.
+   * @param canvasId - Unique identifier for the canvas window
+   * @param handler - Function to call when reload is requested
+   */
+  registerWindowReloadHandler?: (canvasId: string, handler: () => void) => void
+
+  /**
+   * Unregister the window reload handler.
+   * Called when the canvas stops.
+   * @param canvasId - Unique identifier for the canvas window
+   */
+  unregisterWindowReloadHandler?: (canvasId: string) => void
 
   /**
    * Request a file to be opened in the editor.

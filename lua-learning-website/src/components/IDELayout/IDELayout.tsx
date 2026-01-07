@@ -310,17 +310,20 @@ function IDELayoutInner({
     closeCanvasWindow,
     registerWindowCloseHandler,
     unregisterWindowCloseHandler,
+    registerWindowReloadHandler,
+    unregisterWindowReloadHandler,
   } = useCanvasWindowManager()
 
   // Handle canvas window request from shell (lua --canvas=window)
   const handleRequestCanvasWindow = useCallback(
     async (
       canvasId: string,
-      screenMode?: ScreenMode
+      screenMode?: ScreenMode,
+      noToolbar?: boolean
     ): Promise<HTMLCanvasElement> => {
       // Register the close handler before opening the window
       // The window manager will call this when user closes the popup
-      return openCanvasWindow(canvasId, screenMode)
+      return openCanvasWindow(canvasId, screenMode, noToolbar)
     },
     [openCanvasWindow]
   )
@@ -360,6 +363,8 @@ function IDELayoutInner({
     unregisterWindowCloseHandler,
     registerCanvasReloadHandler,
     unregisterCanvasReloadHandler,
+    registerWindowReloadHandler,
+    unregisterWindowReloadHandler,
   }), [
     handleRequestCanvasTab,
     handleCloseCanvasTab,
@@ -371,6 +376,8 @@ function IDELayoutInner({
     unregisterWindowCloseHandler,
     registerCanvasReloadHandler,
     unregisterCanvasReloadHandler,
+    registerWindowReloadHandler,
+    unregisterWindowReloadHandler,
   ])
 
   const combinedClassName = className

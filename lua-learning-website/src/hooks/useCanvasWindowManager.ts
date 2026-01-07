@@ -18,7 +18,8 @@ export interface UseCanvasWindowManagerReturn {
   /** Open a canvas in a new popup window, returns the canvas element when ready */
   openCanvasWindow: (
     canvasId: string,
-    screenMode?: ScreenMode
+    screenMode?: ScreenMode,
+    noToolbar?: boolean
   ) => Promise<HTMLCanvasElement>
   /** Close a canvas popup window by ID */
   closeCanvasWindow: (canvasId: string) => void
@@ -28,16 +29,21 @@ export interface UseCanvasWindowManagerReturn {
   registerWindowCloseHandler: (canvasId: string, handler: () => void) => void
   /** Unregister a window close handler */
   unregisterWindowCloseHandler: (canvasId: string) => void
+  /** Register a handler to be called when the reload button is clicked */
+  registerWindowReloadHandler: (canvasId: string, handler: () => void) => void
+  /** Unregister a window reload handler */
+  unregisterWindowReloadHandler: (canvasId: string) => void
 }
 
 /**
  * Generate HTML content for the canvas popup window.
  * Creates a page with optional toolbar and canvas with scaling support.
- * @param screenMode - If set, hides toolbar and locks to that scaling mode
+ * @param screenMode - Initial screen mode (defaults to 'full')
+ * @param noToolbar - If true, hides the toolbar entirely
  */
-function generateCanvasWindowHTML(screenMode?: ScreenMode): string {
-  // Determine initial scale mode and toolbar visibility
-  const showToolbar = screenMode === undefined
+function generateCanvasWindowHTML(screenMode?: ScreenMode, noToolbar?: boolean): string {
+  // Toolbar is shown by default unless noToolbar is true
+  const showToolbar = !noToolbar
   const initialMode = screenMode ?? 'full'
   // Map screen mode to CSS class name
   const scaleClass =
@@ -94,6 +100,23 @@ function generateCanvasWindowHTML(screenMode?: ScreenMode): string {
       outline: none;
       border-color: #6d6d8c;
     }
+    .toolbar button {
+      background: #3d5afe;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 12px;
+      font-size: 13px;
+      font-family: system-ui, -apple-system, sans-serif;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .toolbar button:hover {
+      background: #536dfe;
+    }
+    .toolbar button:active {
+      background: #304ffe;
+    }
 
     /* Canvas container */
     .canvas-container {
@@ -132,6 +155,7 @@ function generateCanvasWindowHTML(screenMode?: ScreenMode): string {
 </head>
 <body>
   <div id="toolbar" class="toolbar${showToolbar ? '' : ' hidden'}">
+    <button id="reload-btn" type="button">Reload</button>
     <label for="scale-select">Scale:</label>
     <select id="scale-select">
       <option value="fit"${initialMode === 'fit' ? ' selected' : ''}>Fit</option>
@@ -146,6 +170,7 @@ function generateCanvasWindowHTML(screenMode?: ScreenMode): string {
     (function() {
       var select = document.getElementById('scale-select');
       var container = document.getElementById('canvas-container');
+      var reloadBtn = document.getElementById('reload-btn');
 
       if (select) {
         select.addEventListener('change', function() {
@@ -154,6 +179,15 @@ function generateCanvasWindowHTML(screenMode?: ScreenMode): string {
           // Add the selected scale class
           var mode = select.value;
           container.classList.add('scale-' + mode);
+        });
+      }
+
+      if (reloadBtn) {
+        reloadBtn.addEventListener('click', function() {
+          // Send message to parent window to trigger reload
+          if (window.opener) {
+            window.opener.postMessage({ type: 'canvas-reload' }, '*');
+          }
         });
       }
     })();
@@ -177,17 +211,21 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
   const windowsRef = useRef<Map<string, CanvasWindowState>>(new Map())
   // Map of canvasId -> close handler (called when user closes window)
   const closeHandlersRef = useRef<Map<string, () => void>>(new Map())
+  // Map of canvasId -> reload handler (called when reload button is clicked)
+  const reloadHandlersRef = useRef<Map<string, () => void>>(new Map())
 
   /**
    * Open a canvas in a new popup window.
    * Returns a Promise that resolves with the canvas element when ready.
    * @param canvasId - Unique identifier for the canvas
-   * @param screenMode - Optional screen mode (undefined shows toolbar, defaults to 'full')
+   * @param screenMode - Optional screen mode (defaults to 'full')
+   * @param noToolbar - If true, hides the toolbar entirely
    */
   const openCanvasWindow = useCallback(
     async (
       canvasId: string,
-      screenMode?: ScreenMode
+      screenMode?: ScreenMode,
+      noToolbar?: boolean
     ): Promise<HTMLCanvasElement> => {
       // Close existing window with same ID if any
       const existing = windowsRef.current.get(canvasId)
@@ -214,8 +252,8 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
         )
       }
 
-      // Write the HTML content with the appropriate screen mode
-      popup.document.write(generateCanvasWindowHTML(screenMode))
+      // Write the HTML content with the appropriate screen mode and toolbar visibility
+      popup.document.write(generateCanvasWindowHTML(screenMode, noToolbar))
       popup.document.close()
 
       // Get the canvas element
@@ -243,12 +281,34 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
         // Clean up our tracking
         windowsRef.current.delete(canvasId)
         closeHandlersRef.current.delete(canvasId)
+        reloadHandlersRef.current.delete(canvasId)
       }
 
       popup.addEventListener('beforeunload', handleBeforeUnload)
 
       // Also handle pagehide for Safari compatibility
       popup.addEventListener('pagehide', handleBeforeUnload)
+
+      // Listen for reload messages from the popup window
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data?.type === 'canvas-reload') {
+          const handler = reloadHandlersRef.current.get(canvasId)
+          if (handler) {
+            handler()
+          }
+        }
+      }
+      window.addEventListener('message', handleMessage)
+
+      // Store cleanup function reference so it can be removed when window is closed
+      // We use a closure to capture the handler for cleanup later
+      const originalCloseHandler = closeHandlersRef.current.get(canvasId)
+      closeHandlersRef.current.set(canvasId, () => {
+        window.removeEventListener('message', handleMessage)
+        if (originalCloseHandler) {
+          originalCloseHandler()
+        }
+      })
 
       return canvas
     },
@@ -269,6 +329,7 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
       }
       windowsRef.current.delete(canvasId)
       closeHandlersRef.current.delete(canvasId)
+      reloadHandlersRef.current.delete(canvasId)
     }
   }, [])
 
@@ -284,6 +345,7 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
         // Window may already be closed
       }
       closeHandlersRef.current.delete(canvasId)
+      reloadHandlersRef.current.delete(canvasId)
     }
     windowsRef.current.clear()
   }, [])
@@ -304,6 +366,22 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
     closeHandlersRef.current.delete(canvasId)
   }, [])
 
+  /**
+   * Register a handler to be called when the reload button is clicked.
+   * This is used to trigger hot reload from the popup window.
+   */
+  const registerWindowReloadHandler = useCallback((canvasId: string, handler: () => void) => {
+    reloadHandlersRef.current.set(canvasId, handler)
+  }, [])
+
+  /**
+   * Unregister a window reload handler.
+   * Called when the canvas stops.
+   */
+  const unregisterWindowReloadHandler = useCallback((canvasId: string) => {
+    reloadHandlersRef.current.delete(canvasId)
+  }, [])
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -317,5 +395,7 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
     closeAllWindows,
     registerWindowCloseHandler,
     unregisterWindowCloseHandler,
+    registerWindowReloadHandler,
+    unregisterWindowReloadHandler,
   }
 }
