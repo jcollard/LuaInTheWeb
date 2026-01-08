@@ -331,11 +331,14 @@ export const canvasLuaCoreCode = `
       -- If both old and new are tables, patch functions from new into old
       -- This preserves table identity so existing references see updated functions
       if type(old) == 'table' and type(new) == 'table' then
-        -- Update functions in the old table
+        -- Update functions and add new non-function fields to the old table
         for key, value in pairs(new) do
           if type(value) == 'function' then
-            old[key] = value
+            old[key] = value  -- Always update functions
+          elseif old[key] == nil then
+            old[key] = value  -- Add new non-function fields only
           end
+          -- Else: preserve existing runtime value
         end
 
         -- Re-cache the OLD table (with updated functions) to preserve identity
