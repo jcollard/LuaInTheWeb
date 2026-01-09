@@ -130,6 +130,11 @@ export interface CanvasCallbacks {
    * @param canvasId - The canvas ID
    */
   unregisterWindowCloseHandler?: (canvasId: string) => void
+  /**
+   * Flush buffered output.
+   * Called after each frame to ensure print() output appears immediately.
+   */
+  onFlushOutput?: () => void
 }
 
 /**
@@ -1905,6 +1910,9 @@ export class CanvasController {
         return
       }
     }
+
+    // Flush output buffer so print() output appears immediately
+    this.callbacks.onFlushOutput?.()
 
     // Render accumulated draw commands
     if (this.renderer && this.frameCommands.length > 0) {

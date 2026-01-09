@@ -449,6 +449,11 @@ __clear_execution_hook()
       onError: (error: string) => {
         this.onError(formatLuaError(error) + '\n')
       },
+      onFlushOutput: () => {
+        if (this.engine) {
+          LuaEngineFactory.flushOutput(this.engine)
+        }
+      },
     }
 
     this.canvasController = new CanvasController(routedCallbacks)
