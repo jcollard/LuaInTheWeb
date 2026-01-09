@@ -272,4 +272,144 @@ describe('useCanvasWindowManager', () => {
       expect(mockPopupWindow.close).toHaveBeenCalled()
     })
   })
+
+  describe('hot reload mode', () => {
+    it('should register reload handler with manual mode by default', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+      const reloadHandler = vi.fn()
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      act(() => {
+        result.current.registerWindowReloadHandler('test-canvas-1', reloadHandler)
+      })
+
+      // triggerAutoReload should NOT call manual mode handlers
+      act(() => {
+        result.current.triggerAutoReload()
+      })
+
+      expect(reloadHandler).not.toHaveBeenCalled()
+    })
+
+    it('should register reload handler with specified hot reload mode', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+      const reloadHandler = vi.fn()
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      act(() => {
+        result.current.registerWindowReloadHandler('test-canvas-1', reloadHandler, 'auto')
+      })
+
+      // triggerAutoReload should call auto mode handlers
+      act(() => {
+        result.current.triggerAutoReload()
+      })
+
+      expect(reloadHandler).toHaveBeenCalledTimes(1)
+    })
+
+    it('should call only auto mode handlers on triggerAutoReload', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+      const manualHandler = vi.fn()
+      const autoHandler = vi.fn()
+
+      await act(async () => {
+        await result.current.openCanvasWindow('canvas-1')
+      })
+
+      // Create a new mock for the second window
+      const secondMockWindow = {
+        ...mockPopupWindow,
+        close: vi.fn(),
+        document: {
+          write: vi.fn(),
+          close: vi.fn(),
+          getElementById: vi.fn().mockReturnValue(mockCanvas),
+        },
+        addEventListener: vi.fn(),
+      }
+      vi.spyOn(window, 'open').mockReturnValue(secondMockWindow as unknown as Window)
+
+      await act(async () => {
+        await result.current.openCanvasWindow('canvas-2')
+      })
+
+      act(() => {
+        result.current.registerWindowReloadHandler('canvas-1', manualHandler, 'manual')
+        result.current.registerWindowReloadHandler('canvas-2', autoHandler, 'auto')
+      })
+
+      act(() => {
+        result.current.triggerAutoReload()
+      })
+
+      expect(manualHandler).not.toHaveBeenCalled()
+      expect(autoHandler).toHaveBeenCalledTimes(1)
+    })
+
+    it('should call all auto mode handlers when multiple windows are in auto mode', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+      const autoHandler1 = vi.fn()
+      const autoHandler2 = vi.fn()
+
+      await act(async () => {
+        await result.current.openCanvasWindow('canvas-1')
+      })
+
+      // Create a new mock for the second window
+      const secondMockWindow = {
+        ...mockPopupWindow,
+        close: vi.fn(),
+        document: {
+          write: vi.fn(),
+          close: vi.fn(),
+          getElementById: vi.fn().mockReturnValue(mockCanvas),
+        },
+        addEventListener: vi.fn(),
+      }
+      vi.spyOn(window, 'open').mockReturnValue(secondMockWindow as unknown as Window)
+
+      await act(async () => {
+        await result.current.openCanvasWindow('canvas-2')
+      })
+
+      act(() => {
+        result.current.registerWindowReloadHandler('canvas-1', autoHandler1, 'auto')
+        result.current.registerWindowReloadHandler('canvas-2', autoHandler2, 'auto')
+      })
+
+      act(() => {
+        result.current.triggerAutoReload()
+      })
+
+      expect(autoHandler1).toHaveBeenCalledTimes(1)
+      expect(autoHandler2).toHaveBeenCalledTimes(1)
+    })
+
+    it('should not call handlers after unregister', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+      const reloadHandler = vi.fn()
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      act(() => {
+        result.current.registerWindowReloadHandler('test-canvas-1', reloadHandler, 'auto')
+        result.current.unregisterWindowReloadHandler('test-canvas-1')
+      })
+
+      act(() => {
+        result.current.triggerAutoReload()
+      })
+
+      expect(reloadHandler).not.toHaveBeenCalled()
+    })
+  })
 })

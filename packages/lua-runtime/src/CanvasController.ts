@@ -39,6 +39,7 @@ import type { IFileSystem, ScreenMode } from '@lua-learning/shell-core'
 import { formatOnDrawError, createImageFromData, createFontFromData } from './canvasErrorFormatter'
 import type { IAudioEngine } from './audio/IAudioEngine'
 import { WebAudioEngine } from './audio/WebAudioEngine'
+import type { HotReloadMode } from './LuaCommand'
 
 /**
  * Audio asset definition for tracking registered sound/music assets.
@@ -107,8 +108,9 @@ export interface CanvasCallbacks {
    * Called when canvas starts in window mode.
    * @param canvasId - The canvas ID
    * @param handler - Function to call when reload is requested
+   * @param hotReloadMode - Hot reload mode: 'manual' (default) or 'auto' (reload on save)
    */
-  registerWindowReloadHandler?: (canvasId: string, handler: () => void) => void
+  registerWindowReloadHandler?: (canvasId: string, handler: () => void, hotReloadMode?: HotReloadMode) => void
   /**
    * Unregister the window reload handler.
    * Called when the canvas stops.

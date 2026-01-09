@@ -312,7 +312,20 @@ function IDELayoutInner({
     unregisterWindowCloseHandler,
     registerWindowReloadHandler,
     unregisterWindowReloadHandler,
+    triggerAutoReload,
   } = useCanvasWindowManager()
+
+  // Listen for Lua file save events to trigger auto-reload on canvas windows
+  // This is dispatched by IDEContext.saveFile when a .lua file is saved
+  useEffect(() => {
+    const handleLuaFileSaved = () => {
+      triggerAutoReload()
+    }
+    window.addEventListener('lua-file-saved', handleLuaFileSaved)
+    return () => {
+      window.removeEventListener('lua-file-saved', handleLuaFileSaved)
+    }
+  }, [triggerAutoReload])
 
   // Handle canvas window request from shell (lua --canvas=window)
   const handleRequestCanvasWindow = useCallback(

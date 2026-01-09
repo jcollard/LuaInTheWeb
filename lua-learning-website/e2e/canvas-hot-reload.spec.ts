@@ -12,6 +12,11 @@ import { createTerminalHelper } from './helpers/terminal'
  *
  * These tests verify the shell-integrated canvas behavior where the canvas
  * itself is rendered but process control is handled by the shell.
+ *
+ * The --hot-reload flag tests verify:
+ * - The flag is accepted by the lua command
+ * - Saving a .lua file triggers the lua-file-saved event
+ * - The auto-reload mechanism correctly filters by hot reload mode
  */
 test.describe('Canvas Hot Reload', () => {
   test.beforeEach(async ({ page }) => {
@@ -104,6 +109,157 @@ test.describe('Canvas Hot Reload', () => {
 
       // Verify that canvas completed successfully (reload didn't crash it)
       await terminal.expectToContain('canvas done', { timeout: TIMEOUTS.ASYNC_OPERATION })
+    })
+  })
+
+  test.describe('Hot Reload Flag', () => {
+    test('--hot-reload=auto flag is accepted by lua command', async ({ page }) => {
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
+
+      // Create a simple Lua file via terminal
+      await terminal.execute('echo "print(\\"hello\\")" > test.lua')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Run lua with --hot-reload=auto flag (should not error)
+      await terminal.type('lua --hot-reload=auto test.lua')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.ASYNC_OPERATION)
+
+      // Should see the output (file executes successfully)
+      await terminal.expectToContain('hello', { timeout: TIMEOUTS.ASYNC_OPERATION })
+    })
+
+    test('--hot-reload=manual flag is accepted by lua command', async ({ page }) => {
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
+
+      // Create a simple Lua file via terminal
+      await terminal.execute('echo "print(\\"world\\")" > test2.lua')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Run lua with --hot-reload=manual flag (should not error)
+      await terminal.type('lua --hot-reload=manual test2.lua')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.ASYNC_OPERATION)
+
+      // Should see the output (file executes successfully)
+      await terminal.expectToContain('world', { timeout: TIMEOUTS.ASYNC_OPERATION })
+    })
+
+    test('invalid --hot-reload value defaults to manual (no error)', async ({ page }) => {
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
+
+      // Create a simple Lua file via terminal
+      await terminal.execute('echo "print(\\"test\\")" > test3.lua')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Run lua with invalid --hot-reload value (should not error, defaults to manual)
+      await terminal.type('lua --hot-reload=invalid test3.lua')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.ASYNC_OPERATION)
+
+      // Should see the output (file executes successfully)
+      await terminal.expectToContain('test', { timeout: TIMEOUTS.ASYNC_OPERATION })
+    })
+  })
+
+  test.describe('Lua File Save Event', () => {
+    test('saving a .lua file dispatches lua-file-saved event', async ({ page }) => {
+      // Set up event listener before any actions
+      const eventFired = page.evaluate(() => {
+        return new Promise<boolean>((resolve) => {
+          const handler = () => {
+            window.removeEventListener('lua-file-saved', handler)
+            resolve(true)
+          }
+          window.addEventListener('lua-file-saved', handler)
+          // Timeout after 5 seconds
+          setTimeout(() => {
+            window.removeEventListener('lua-file-saved', handler)
+            resolve(false)
+          }, 5000)
+        })
+      })
+
+      // Expand workspace folder
+      const workspaceChevron = page.getByTestId('folder-chevron').first()
+      await workspaceChevron.click()
+      await expect(page.getByRole('treeitem').nth(1)).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Create a new Lua file
+      const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new file/i }).click()
+      const input = sidebar.getByRole('textbox')
+      await expect(input).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+      await input.fill('test_save.lua')
+      await input.press('Enter')
+      await expect(input).not.toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Click the file to open it
+      await page.getByRole('treeitem', { name: /test_save\.lua/i }).click()
+      await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Type some content
+      await page.locator('.monaco-editor').click()
+      await page.keyboard.type('print("test")', { delay: 30 })
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Save with Ctrl+S
+      await page.keyboard.press('Control+s')
+
+      // Wait for event to fire
+      const didFire = await eventFired
+      expect(didFire).toBe(true)
+    })
+
+    test('saving a non-.lua file does not dispatch lua-file-saved event', async ({ page }) => {
+      // Set up event listener before any actions
+      const eventFired = page.evaluate(() => {
+        return new Promise<boolean>((resolve) => {
+          const handler = () => {
+            window.removeEventListener('lua-file-saved', handler)
+            resolve(true)
+          }
+          window.addEventListener('lua-file-saved', handler)
+          // Short timeout - we expect this NOT to fire
+          setTimeout(() => {
+            window.removeEventListener('lua-file-saved', handler)
+            resolve(false)
+          }, 1000)
+        })
+      })
+
+      // Expand workspace folder
+      const workspaceChevron = page.getByTestId('folder-chevron').first()
+      await workspaceChevron.click()
+      await expect(page.getByRole('treeitem').nth(1)).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Create a non-Lua file
+      const sidebar = page.getByTestId('sidebar-panel')
+      await sidebar.getByRole('button', { name: /new file/i }).click()
+      const input = sidebar.getByRole('textbox')
+      await expect(input).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+      await input.fill('test_save.txt')
+      await input.press('Enter')
+      await expect(input).not.toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Click the file to open it
+      await page.getByRole('treeitem', { name: /test_save\.txt/i }).click()
+      await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Type some content
+      await page.locator('.monaco-editor').click()
+      await page.keyboard.type('hello world', { delay: 30 })
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Save with Ctrl+S
+      await page.keyboard.press('Control+s')
+
+      // Wait and verify event did NOT fire
+      const didFire = await eventFired
+      expect(didFire).toBe(false)
     })
   })
 })

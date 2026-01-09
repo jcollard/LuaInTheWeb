@@ -18,7 +18,7 @@ export type {
 } from './types'
 
 // New interfaces for process-based command execution
-export type { ShellContext, ScreenMode } from './interfaces/ShellContext'
+export type { ShellContext, ScreenMode, HotReloadMode } from './interfaces/ShellContext'
 export type { IProcess, KeyModifiers } from './interfaces/IProcess'
 export type { ICommand } from './interfaces/ICommand'
 

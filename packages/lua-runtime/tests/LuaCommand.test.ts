@@ -331,4 +331,84 @@ describe('LuaCommand', () => {
       expect(result).toBeInstanceOf(LuaReplProcess)
     })
   })
+
+  describe('--hot-reload flag', () => {
+    it('should return LuaScriptProcess when --hot-reload=manual is specified', () => {
+      const result = command.execute(['--hot-reload=manual', 'game.lua'], context)
+
+      expect(result).toBeInstanceOf(LuaScriptProcess)
+    })
+
+    it('should return LuaScriptProcess when --hot-reload=auto is specified', () => {
+      const result = command.execute(['--hot-reload=auto', 'game.lua'], context)
+
+      expect(result).toBeInstanceOf(LuaScriptProcess)
+    })
+
+    it('should parse --hot-reload flag before filename', () => {
+      const result = command.execute(
+        ['--hot-reload=auto', 'game.lua'],
+        context
+      ) as LuaScriptProcess
+
+      result.onOutput = vi.fn()
+      result.onError = vi.fn()
+      result.onExit = vi.fn()
+      result.start()
+
+      // Should check for game.lua, not --hot-reload=auto
+      expect(mockFileSystem.exists).toHaveBeenCalledWith('/home/game.lua')
+    })
+
+    it('should parse --hot-reload flag after filename', () => {
+      const result = command.execute(
+        ['game.lua', '--hot-reload=auto'],
+        context
+      ) as LuaScriptProcess
+
+      result.onOutput = vi.fn()
+      result.onError = vi.fn()
+      result.onExit = vi.fn()
+      result.start()
+
+      // Should check for game.lua
+      expect(mockFileSystem.exists).toHaveBeenCalledWith('/home/game.lua')
+    })
+
+    it('should ignore invalid --hot-reload values and use default manual mode', () => {
+      const result = command.execute(['--hot-reload=invalid', 'game.lua'], context)
+
+      // Should still return a process (invalid values are silently ignored)
+      expect(result).toBeInstanceOf(LuaScriptProcess)
+    })
+
+    it('should combine --hot-reload with --canvas=window flags', () => {
+      const result = command.execute(
+        ['--canvas=window', '--hot-reload=auto', 'game.lua'],
+        context
+      )
+
+      expect(result).toBeInstanceOf(LuaScriptProcess)
+    })
+
+    it('should combine --lint and --hot-reload flags', () => {
+      mockFileSystem.readFile = vi.fn().mockReturnValue('print("hello")')
+
+      const result = command.execute(
+        ['--lint', '--hot-reload=auto', 'test.lua'],
+        context
+      )
+
+      // --lint takes precedence and returns undefined
+      expect(result).toBeUndefined()
+      expect(context.error).not.toHaveBeenCalled()
+    })
+
+    it('should return REPL when only --hot-reload is specified without filename', () => {
+      const result = command.execute(['--hot-reload=auto'], context)
+
+      // REPL is returned when no filename, hot-reload mode is ignored for REPL
+      expect(result).toBeInstanceOf(LuaReplProcess)
+    })
+  })
 })
