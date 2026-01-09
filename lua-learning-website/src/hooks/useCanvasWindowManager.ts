@@ -1,5 +1,15 @@
 import { useCallback, useRef, useEffect } from 'react'
-import type { ScreenMode } from '@lua-learning/shell-core'
+import type { ScreenMode, HotReloadMode } from '@lua-learning/shell-core'
+
+/**
+ * Reload handler info including the handler function and hot reload mode.
+ */
+interface ReloadHandlerInfo {
+  /** Function to call when reload is requested */
+  handler: () => void
+  /** Hot reload mode: 'manual' (default) or 'auto' (reload on save) */
+  hotReloadMode: HotReloadMode
+}
 
 /**
  * State for a single canvas popup window.
@@ -30,9 +40,11 @@ export interface UseCanvasWindowManagerReturn {
   /** Unregister a window close handler */
   unregisterWindowCloseHandler: (canvasId: string) => void
   /** Register a handler to be called when the reload button is clicked */
-  registerWindowReloadHandler: (canvasId: string, handler: () => void) => void
+  registerWindowReloadHandler: (canvasId: string, handler: () => void, hotReloadMode?: HotReloadMode) => void
   /** Unregister a window reload handler */
   unregisterWindowReloadHandler: (canvasId: string) => void
+  /** Trigger auto-reload for all windows in 'auto' mode (called on Lua file save) */
+  triggerAutoReload: () => void
 }
 
 /**
@@ -211,8 +223,8 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
   const windowsRef = useRef<Map<string, CanvasWindowState>>(new Map())
   // Map of canvasId -> close handler (called when user closes window)
   const closeHandlersRef = useRef<Map<string, () => void>>(new Map())
-  // Map of canvasId -> reload handler (called when reload button is clicked)
-  const reloadHandlersRef = useRef<Map<string, () => void>>(new Map())
+  // Map of canvasId -> reload handler info (handler + hot reload mode)
+  const reloadHandlersRef = useRef<Map<string, ReloadHandlerInfo>>(new Map())
 
   /**
    * Open a canvas in a new popup window.
@@ -292,9 +304,9 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
       // Listen for reload messages from the popup window
       const handleMessage = (event: MessageEvent) => {
         if (event.data?.type === 'canvas-reload') {
-          const handler = reloadHandlersRef.current.get(canvasId)
-          if (handler) {
-            handler()
+          const info = reloadHandlersRef.current.get(canvasId)
+          if (info) {
+            info.handler()
           }
         }
       }
@@ -369,9 +381,12 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
   /**
    * Register a handler to be called when the reload button is clicked.
    * This is used to trigger hot reload from the popup window.
+   * @param canvasId - Unique identifier for the canvas window
+   * @param handler - Function to call when reload is requested
+   * @param hotReloadMode - Hot reload mode: 'manual' (default) or 'auto' (reload on save)
    */
-  const registerWindowReloadHandler = useCallback((canvasId: string, handler: () => void) => {
-    reloadHandlersRef.current.set(canvasId, handler)
+  const registerWindowReloadHandler = useCallback((canvasId: string, handler: () => void, hotReloadMode: HotReloadMode = 'manual') => {
+    reloadHandlersRef.current.set(canvasId, { handler, hotReloadMode })
   }, [])
 
   /**
@@ -380,6 +395,18 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
    */
   const unregisterWindowReloadHandler = useCallback((canvasId: string) => {
     reloadHandlersRef.current.delete(canvasId)
+  }, [])
+
+  /**
+   * Trigger auto-reload for all windows in 'auto' mode.
+   * Called when a Lua file is saved (Ctrl+S).
+   */
+  const triggerAutoReload = useCallback(() => {
+    for (const info of reloadHandlersRef.current.values()) {
+      if (info.hotReloadMode === 'auto') {
+        info.handler()
+      }
+    }
   }, [])
 
   // Cleanup on unmount
@@ -397,5 +424,6 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
     unregisterWindowCloseHandler,
     registerWindowReloadHandler,
     unregisterWindowReloadHandler,
+    triggerAutoReload,
   }
 }

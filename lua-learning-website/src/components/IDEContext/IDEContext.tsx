@@ -139,7 +139,12 @@ export function IDEContextProvider({ children, initialCode: _initialCode = '', f
         showError('This file is read-only and cannot be saved')
         return
       }
-      tabEditorManager.saveTab(activeTab)
+      const success = tabEditorManager.saveTab(activeTab)
+      // Dispatch event when a .lua file is saved successfully
+      // This allows canvas windows with --hot-reload=auto to auto-reload
+      if (success && activeTab.endsWith('.lua')) {
+        window.dispatchEvent(new CustomEvent('lua-file-saved'))
+      }
     }
   }, [activeTab, isPathReadOnly, showError, tabEditorManager])
 

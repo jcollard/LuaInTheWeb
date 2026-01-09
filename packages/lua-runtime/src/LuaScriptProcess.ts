@@ -17,7 +17,7 @@ import { CanvasController, type CanvasCallbacks } from './CanvasController'
 import { setupCanvasAPI } from './setupCanvasAPI'
 import { setupAudioAPI } from './setupAudioAPI'
 import { FileOperationsHandler } from './FileOperationsHandler'
-import type { CanvasMode, ScreenMode } from './LuaCommand'
+import type { CanvasMode, ScreenMode, HotReloadMode } from './LuaCommand'
 
 /**
  * Options for configuring the Lua script process.
@@ -31,6 +31,8 @@ export interface LuaScriptProcessOptions extends ExecutionControlOptions {
   screenMode?: ScreenMode
   /** If true, hide the toolbar in canvas window mode */
   noToolbar?: boolean
+  /** Hot reload mode: 'manual' (default) or 'auto' (reload on save) */
+  hotReloadMode?: HotReloadMode
   /** Callback when filesystem changes (for UI refresh) */
   onFileSystemChange?: () => void
 }
@@ -434,10 +436,11 @@ __clear_execution_hook()
         canvasMode === 'window' && originalCallbacks.unregisterWindowCloseHandler
           ? originalCallbacks.unregisterWindowCloseHandler
           : originalCallbacks.unregisterCanvasCloseHandler,
-      // Route reload handlers: window mode uses registerWindowReloadHandler
+      // Route reload handlers: window mode uses registerWindowReloadHandler with hotReloadMode
       registerCanvasReloadHandler:
         canvasMode === 'window' && originalCallbacks.registerWindowReloadHandler
-          ? originalCallbacks.registerWindowReloadHandler
+          ? (canvasId: string, handler: () => void) =>
+              originalCallbacks.registerWindowReloadHandler!(canvasId, handler, this.options.hotReloadMode)
           : originalCallbacks.registerCanvasReloadHandler,
       unregisterCanvasReloadHandler:
         canvasMode === 'window' && originalCallbacks.unregisterWindowReloadHandler
@@ -445,6 +448,11 @@ __clear_execution_hook()
           : originalCallbacks.unregisterCanvasReloadHandler,
       onError: (error: string) => {
         this.onError(formatLuaError(error) + '\n')
+      },
+      onFlushOutput: () => {
+        if (this.engine) {
+          LuaEngineFactory.flushOutput(this.engine)
+        }
       },
     }
 

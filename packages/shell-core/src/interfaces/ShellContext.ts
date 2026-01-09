@@ -16,6 +16,14 @@ import type { IFileSystem } from '../types'
 export type ScreenMode = '1x' | 'fit' | 'full' | undefined
 
 /**
+ * Hot reload mode for canvas popup windows.
+ * Controls whether the canvas automatically reloads when Lua files are saved.
+ * - 'manual': User must click Reload button (default)
+ * - 'auto': Automatically reload when any .lua file is saved
+ */
+export type HotReloadMode = 'manual' | 'auto'
+
+/**
  * Context provided to shell commands during execution.
  * Encapsulates the execution environment including filesystem access
  * and output handling.
@@ -113,8 +121,9 @@ export interface ShellContext {
    * Called when canvas starts in window mode.
    * @param canvasId - Unique identifier for the canvas window
    * @param handler - Function to call when reload is requested
+   * @param hotReloadMode - Hot reload mode: 'manual' (default) or 'auto' (reload on save)
    */
-  registerWindowReloadHandler?: (canvasId: string, handler: () => void) => void
+  registerWindowReloadHandler?: (canvasId: string, handler: () => void, hotReloadMode?: HotReloadMode) => void
 
   /**
    * Unregister the window reload handler.
