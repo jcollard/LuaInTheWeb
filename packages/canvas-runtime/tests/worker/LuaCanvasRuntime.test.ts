@@ -605,6 +605,81 @@ describe('LuaCanvasRuntime', () => {
       // Should preserve wasmoon line info format (e.g., [string "..."]:N:)
       expect(errorMessage).toMatch(/:\d+:/);
     });
+
+    it('should not crash when error handler itself throws', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      // Set up an error handler that throws
+      const errorHandler = vi.fn(() => {
+        throw new Error('Error handler failed');
+      });
+      runtime.onError(errorHandler);
+
+      await runtime.loadCode(`
+        canvas.tick(function()
+          error("Test error from Lua")
+        end)
+      `);
+
+      runtime.start();
+      channel.signalFrameReady();
+
+      await vi.waitFor(() => {
+        return errorHandler.mock.calls.length > 0;
+      }, { timeout: 100 });
+
+      // Runtime should have stopped the loop gracefully and logged the error
+      // State remains 'running' since we didn't call stop(), but loop has stopped
+      expect(runtime.getState()).toBe('running');
+      expect(consoleSpy).toHaveBeenCalledWith('Error handler failed:', expect.any(Error));
+
+      // Verify loop is no longer running by trying to signal another frame
+      const initialCallCount = errorHandler.mock.calls.length;
+      channel.signalFrameReady();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      // Error handler should not be called again since loop stopped
+      expect(errorHandler.mock.calls.length).toBe(initialCallCount);
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should stop loop after runtime error (user bug reproduction)', async () => {
+      const errorHandler = vi.fn();
+      runtime.onError(errorHandler);
+
+      // Simulate user's exact scenario: attempt to concatenate nil
+      await runtime.loadCode(`
+        local obj = { y = 9 }
+        canvas.tick(function()
+          -- This should trigger error: attempt to concatenate a nil value
+          local result = obj.y .. nil
+        end)
+      `);
+
+      runtime.start();
+
+      // Signal first frame - should trigger error
+      channel.signalFrameReady();
+
+      // Wait for error handler to be called
+      await vi.waitFor(() => {
+        return errorHandler.mock.calls.length > 0;
+      }, { timeout: 100 });
+
+      // Verify error was reported
+      expect(errorHandler).toHaveBeenCalledWith(expect.stringContaining('attempt to concatenate'));
+
+      // Verify loop stopped by signaling another frame
+      const initialCallCount = errorHandler.mock.calls.length;
+      channel.signalFrameReady();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Error handler should NOT be called again - loop has stopped
+      expect(errorHandler.mock.calls.length).toBe(initialCallCount);
+
+      // Verify no deadlock - if we got here, worker didn't hang
+      expect(true).toBe(true);
+    });
   });
 
   describe('dispose', () => {

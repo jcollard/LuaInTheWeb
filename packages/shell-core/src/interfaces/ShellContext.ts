@@ -230,6 +230,19 @@ export interface ShellContext {
   updateCanvasControlState?: (canvasId: string, state: { isRunning: boolean; isPaused: boolean }) => void
 
   /**
+   * Show error overlay in a canvas window.
+   * @param canvasId - Unique identifier for the canvas window
+   * @param error - Error message to display
+   */
+  showErrorOverlay?: (canvasId: string, error: string) => void
+
+  /**
+   * Clear/hide error overlay in a canvas window.
+   * @param canvasId - Unique identifier for the canvas window
+   */
+  clearErrorOverlay?: (canvasId: string) => void
+
+  /**
    * Request a file to be opened in the editor.
    * Called by the 'open' command to integrate with an IDE or editor.
    * Optional - when undefined, the open command will report that

@@ -269,6 +269,9 @@ function IDELayoutInner({
   // Canvas tab control state (isRunning, isPaused) for UI updates
   const [canvasControlStates, setCanvasControlStates] = useState<Map<string, { isRunning: boolean; isPaused: boolean }>>(new Map())
 
+  // Canvas tab error state (canvasId -> error message)
+  const [canvasErrorStates, setCanvasErrorStates] = useState<Map<string, string>>(new Map())
+
   // Handle canvas tab request from shell (canvas.start())
   const handleRequestCanvasTab = useCallback(async (canvasId: string): Promise<HTMLCanvasElement> => {
     // Tab path format: canvas://{canvasId}
@@ -330,6 +333,8 @@ function IDELayoutInner({
     registerWindowStepHandler,
     unregisterWindowExecutionHandlers,
     updateWindowControlState,
+    showErrorOverlay,
+    clearErrorOverlay,
   } = useCanvasWindowManager()
 
   // Listen for Lua file save events to trigger auto-reload on canvas windows
@@ -374,13 +379,33 @@ function IDELayoutInner({
     canvasReloadHandlersRef.current.delete(canvasId)
   }, [])
 
+  // Show error overlay for canvas tab
+  const showCanvasTabError = useCallback((canvasId: string, error: string) => {
+    setCanvasErrorStates(prev => {
+      const next = new Map(prev)
+      next.set(canvasId, error)
+      return next
+    })
+  }, [])
+
+  // Clear error overlay for canvas tab
+  const clearCanvasTabError = useCallback((canvasId: string) => {
+    setCanvasErrorStates(prev => {
+      const next = new Map(prev)
+      next.delete(canvasId)
+      return next
+    })
+  }, [])
+
   // Handle canvas reload request from UI (calls the registered reload handler)
   const handleCanvasReload = useCallback((canvasId: string) => {
     const reloadHandler = canvasReloadHandlersRef.current.get(canvasId)
     if (reloadHandler) {
       reloadHandler()
     }
-  }, [])
+    // Clear error when reloading
+    clearCanvasTabError(canvasId)
+  }, [clearCanvasTabError])
 
   // Register canvas tab execution handlers
   const registerCanvasPauseHandler = useCallback((canvasId: string, handler: () => void) => {
@@ -433,7 +458,9 @@ function IDELayoutInner({
     if (handlers?.play) {
       handlers.play()
     }
-  }, [])
+    // Clear error when resuming
+    clearCanvasTabError(canvasId)
+  }, [clearCanvasTabError])
 
   const handleCanvasStop = useCallback((canvasId: string) => {
     const handlers = canvasExecutionHandlersRef.current.get(canvasId)
@@ -469,6 +496,16 @@ function IDELayoutInner({
     registerWindowStepHandler,
     unregisterWindowExecutionHandlers,
     updateWindowControlState,
+    showErrorOverlay: (canvasId: string, error: string) => {
+      // Route to both window and tab modes
+      showErrorOverlay(canvasId, error)
+      showCanvasTabError(canvasId, error)
+    },
+    clearErrorOverlay: (canvasId: string) => {
+      // Route to both window and tab modes
+      clearErrorOverlay(canvasId)
+      clearCanvasTabError(canvasId)
+    },
     // Canvas tab execution control handlers
     registerCanvasPauseHandler,
     registerCanvasPlayHandler,
@@ -495,6 +532,10 @@ function IDELayoutInner({
     registerWindowStepHandler,
     unregisterWindowExecutionHandlers,
     updateWindowControlState,
+    showErrorOverlay,
+    clearErrorOverlay,
+    showCanvasTabError,
+    clearCanvasTabError,
     registerCanvasPauseHandler,
     registerCanvasPlayHandler,
     registerCanvasStopHandler,
@@ -684,6 +725,7 @@ function IDELayoutInner({
                             onReload={handleCanvasReload}
                             isActive={activeTabType === 'canvas'}
                             canvasControlStates={canvasControlStates}
+                            canvasErrorStates={canvasErrorStates}
                             onPause={handleCanvasPause}
                             onPlay={handleCanvasPlay}
                             onStop={handleCanvasStop}

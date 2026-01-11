@@ -362,6 +362,10 @@ export class LuaCanvasProcess implements IProcess {
       case 'moduleContentRequest':
         this.handleModuleContentRequest(message.moduleName, message.modulePath);
         break;
+
+      case 'pauseRequested':
+        this.pause();
+        break;
     }
   }
 
@@ -565,7 +569,8 @@ export class LuaCanvasProcess implements IProcess {
    */
   private handleError(message: string): void {
     this.onError(message);
-    this.terminateWithError();
+    // Don't terminate - just report the error
+    // Termination will be triggered by state changes or explicit pause requests
   }
 
   /**

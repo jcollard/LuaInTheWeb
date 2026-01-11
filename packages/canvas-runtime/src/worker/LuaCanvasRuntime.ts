@@ -102,9 +102,16 @@ export class LuaCanvasRuntime {
       // Call canvas.reload() in Lua
       this.engine.doStringSync('canvas.reload()');
     } catch (error) {
-      if (this.errorHandler && error instanceof Error) {
-        this.errorHandler(`Hot reload error: ${error.message}`);
+      try {
+        if (this.errorHandler && error instanceof Error) {
+          this.errorHandler(`Hot reload error: ${error.message}`);
+        }
+      } catch (handlerError) {
+        // Error handler itself failed - log but don't crash
+        console.error('Error handler failed:', handlerError);
       }
+      // Stop loop after reload error
+      this.loopRunning = false;
     }
   }
 
@@ -177,7 +184,17 @@ export class LuaCanvasRuntime {
 
     this.state = 'running';
     this.loopRunning = true;
-    this.runLoop();
+    this.runLoop().catch((error) => {
+      console.error('runLoop failed:', error);
+      // Fallback: try to notify error even if loop crashed
+      try {
+        if (this.errorHandler) {
+          this.errorHandler(`Fatal error: ${error.message}`);
+        }
+      } catch (e) {
+        console.error('Failed to handle runLoop error:', e);
+      }
+    });
   }
 
   /**
@@ -1636,9 +1653,17 @@ export class LuaCanvasRuntime {
           try {
             this.onDrawCallback();
           } catch (error) {
-            if (this.errorHandler && error instanceof Error) {
-              this.errorHandler(`canvas.tick: ${error.message}`);
+            try {
+              if (this.errorHandler && error instanceof Error) {
+                this.errorHandler(`canvas.tick: ${error.message}`);
+              }
+            } catch (handlerError) {
+              // Error handler itself failed - log but don't crash
+              console.error('Error handler failed:', handlerError);
             }
+            // Stop loop after any error in tick callback
+            this.loopRunning = false;
+            break;
           }
         }
 
@@ -1647,9 +1672,17 @@ export class LuaCanvasRuntime {
           this.channel.sendDrawCommands(this.frameCommands);
         }
       } catch (error) {
-        if (this.errorHandler && error instanceof Error) {
-          this.errorHandler(`canvas.tick: ${error.message}`);
+        try {
+          if (this.errorHandler && error instanceof Error) {
+            this.errorHandler(`canvas.tick: ${error.message}`);
+          }
+        } catch (handlerError) {
+          // Error handler itself failed - log but don't crash
+          console.error('Error handler failed:', handlerError);
         }
+        // Stop loop after any error in frame processing
+        this.loopRunning = false;
+        break;
       }
     }
   }

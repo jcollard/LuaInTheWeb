@@ -80,6 +80,10 @@ export interface UseCanvasWindowManagerReturn {
   unregisterWindowExecutionHandlers: (canvasId: string) => void
   /** Update the control state (isRunning, isPaused) in a popup window */
   updateWindowControlState: (canvasId: string, state: CanvasControlState) => void
+  /** Show error overlay with error message in a popup window */
+  showErrorOverlay: (canvasId: string, error: string) => void
+  /** Clear/hide error overlay in a popup window */
+  clearErrorOverlay: (canvasId: string) => void
 }
 
 /**
@@ -399,6 +403,32 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
     }
   }, [])
 
+  /**
+   * Show error overlay with error message in a popup window.
+   */
+  const showErrorOverlay = useCallback((canvasId: string, error: string) => {
+    const windowState = windowsRef.current.get(canvasId)
+    if (windowState) {
+      windowState.window.postMessage(
+        { type: 'canvas-error', error },
+        '*'
+      )
+    }
+  }, [])
+
+  /**
+   * Clear/hide error overlay in a popup window.
+   */
+  const clearErrorOverlay = useCallback((canvasId: string) => {
+    const windowState = windowsRef.current.get(canvasId)
+    if (windowState) {
+      windowState.window.postMessage(
+        { type: 'canvas-error-clear' },
+        '*'
+      )
+    }
+  }, [])
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -422,5 +452,7 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
     registerWindowStepHandler,
     unregisterWindowExecutionHandlers,
     updateWindowControlState,
+    showErrorOverlay,
+    clearErrorOverlay,
   }
 }

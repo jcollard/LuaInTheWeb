@@ -185,6 +185,59 @@ export function generateCanvasWindowHTML(screenMode?: ScreenMode, noToolbar?: bo
       font-size: 13px !important;
       color: #6d6d8c;
     }
+    /* Error overlay */
+    .error-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+    }
+    .error-overlay.hidden {
+      display: none;
+    }
+    .error-content {
+      background: #2a1a1a;
+      border: 2px solid #cc3333;
+      border-radius: 8px;
+      padding: 24px;
+      max-width: 600px;
+      max-height: 400px;
+      overflow: auto;
+      font-family: 'Consolas', 'Monaco', monospace;
+    }
+    .error-title {
+      color: #ff4444;
+      font-size: 20px;
+      margin: 0 0 16px 0;
+      font-weight: bold;
+    }
+    .error-message {
+      color: #ffcccc;
+      font-size: 14px;
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.5;
+    }
+    .error-dismiss {
+      margin-top: 16px;
+      padding: 8px 16px;
+      background: #444;
+      color: #fff;
+      border: 1px solid #666;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .error-dismiss:hover {
+      background: #555;
+    }
     .toolbar button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
@@ -214,6 +267,13 @@ export function generateCanvasWindowHTML(screenMode?: ScreenMode, noToolbar?: bo
         <p class="disconnected-hint">Run a canvas script to reconnect</p>
       </div>
     </div>
+    <div id="error-overlay" class="error-overlay hidden">
+      <div class="error-content">
+        <h3 class="error-title">Runtime Error</h3>
+        <pre class="error-message" id="error-message"></pre>
+        <button class="error-dismiss" id="error-dismiss-btn">Dismiss</button>
+      </div>
+    </div>
   </div>
   <script>
     (function() {
@@ -225,6 +285,9 @@ export function generateCanvasWindowHTML(screenMode?: ScreenMode, noToolbar?: bo
       var stopBtn = document.getElementById('stop-btn');
       var stepBtn = document.getElementById('step-btn');
       var disconnectedOverlay = document.getElementById('disconnected-overlay');
+      var errorOverlay = document.getElementById('error-overlay');
+      var errorMessage = document.getElementById('error-message');
+      var errorDismissBtn = document.getElementById('error-dismiss-btn');
 
       if (select) {
         select.addEventListener('change', function() {
@@ -277,6 +340,13 @@ export function generateCanvasWindowHTML(screenMode?: ScreenMode, noToolbar?: bo
       }
 
       // Listen for control state updates from parent
+      // Dismiss error overlay
+      if (errorDismissBtn) {
+        errorDismissBtn.addEventListener('click', function() {
+          errorOverlay.classList.add('hidden');
+        });
+      }
+
       window.addEventListener('message', function(event) {
         if (event.data && event.data.type === 'canvas-control-state') {
           var isRunning = event.data.isRunning;
@@ -309,6 +379,17 @@ export function generateCanvasWindowHTML(screenMode?: ScreenMode, noToolbar?: bo
           playBtn.disabled = false;
           stopBtn.disabled = false;
           stepBtn.disabled = false;
+        } else if (event.data && event.data.type === 'canvas-error') {
+          // Show error overlay with message
+          if (errorMessage && errorOverlay) {
+            errorMessage.textContent = event.data.error || 'Unknown error';
+            errorOverlay.classList.remove('hidden');
+          }
+        } else if (event.data && event.data.type === 'canvas-error-clear') {
+          // Hide error overlay
+          if (errorOverlay) {
+            errorOverlay.classList.add('hidden');
+          }
         }
       });
     })();

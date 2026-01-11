@@ -34,6 +34,8 @@ export interface CanvasGamePanelProps {
   shellIsRunning?: boolean
   /** Shell-controlled paused state (for shell integration mode) */
   shellIsPaused?: boolean
+  /** Error from shell (for shell integration mode) */
+  shellError?: string
   /** Callback when pause is requested (shell integration mode) */
   onPause?: () => void
   /** Callback when play is requested (shell integration mode) */
@@ -58,6 +60,7 @@ export function CanvasGamePanel({
   isActive,
   shellIsRunning,
   shellIsPaused,
+  shellError,
   onPause,
   onPlay,
   onStop,
@@ -274,11 +277,11 @@ export function CanvasGamePanel({
         />
 
         {/* Error overlay */}
-        {error && (
+        {(shellError || error) && (
           <div className={styles.errorOverlay}>
             <div className={styles.errorContent}>
               <h3 className={styles.errorTitle}>Error</h3>
-              <p className={styles.errorMessage}>{error}</p>
+              <p className={styles.errorMessage}>{shellError || error}</p>
               <button
                 type="button"
                 className={styles.dismissButton}
