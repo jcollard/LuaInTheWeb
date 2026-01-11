@@ -258,6 +258,17 @@ function IDELayoutInner({
   // Stores handlers to call when reload is requested from UI (canvasId -> reloadHandler)
   const canvasReloadHandlersRef = useRef<Map<string, () => void>>(new Map())
 
+  // Canvas tab execution control handlers (pause/play/stop/step)
+  const canvasExecutionHandlersRef = useRef<Map<string, {
+    pause?: () => void
+    play?: () => void
+    stop?: () => void
+    step?: () => void
+  }>>(new Map())
+
+  // Canvas tab control state (isRunning, isPaused) for UI updates
+  const [canvasControlStates, setCanvasControlStates] = useState<Map<string, { isRunning: boolean; isPaused: boolean }>>(new Map())
+
   // Handle canvas tab request from shell (canvas.start())
   const handleRequestCanvasTab = useCallback(async (canvasId: string): Promise<HTMLCanvasElement> => {
     // Tab path format: canvas://{canvasId}
@@ -370,6 +381,73 @@ function IDELayoutInner({
     }
   }, [])
 
+  // Register canvas tab execution handlers
+  const registerCanvasPauseHandler = useCallback((canvasId: string, handler: () => void) => {
+    const existing = canvasExecutionHandlersRef.current.get(canvasId) ?? {}
+    canvasExecutionHandlersRef.current.set(canvasId, { ...existing, pause: handler })
+  }, [])
+
+  const registerCanvasPlayHandler = useCallback((canvasId: string, handler: () => void) => {
+    const existing = canvasExecutionHandlersRef.current.get(canvasId) ?? {}
+    canvasExecutionHandlersRef.current.set(canvasId, { ...existing, play: handler })
+  }, [])
+
+  const registerCanvasStopHandler = useCallback((canvasId: string, handler: () => void) => {
+    const existing = canvasExecutionHandlersRef.current.get(canvasId) ?? {}
+    canvasExecutionHandlersRef.current.set(canvasId, { ...existing, stop: handler })
+  }, [])
+
+  const registerCanvasStepHandler = useCallback((canvasId: string, handler: () => void) => {
+    const existing = canvasExecutionHandlersRef.current.get(canvasId) ?? {}
+    canvasExecutionHandlersRef.current.set(canvasId, { ...existing, step: handler })
+  }, [])
+
+  const unregisterCanvasExecutionHandlers = useCallback((canvasId: string) => {
+    canvasExecutionHandlersRef.current.delete(canvasId)
+    setCanvasControlStates(prev => {
+      const next = new Map(prev)
+      next.delete(canvasId)
+      return next
+    })
+  }, [])
+
+  const updateCanvasControlState = useCallback((canvasId: string, state: { isRunning: boolean; isPaused: boolean }) => {
+    setCanvasControlStates(prev => {
+      const next = new Map(prev)
+      next.set(canvasId, state)
+      return next
+    })
+  }, [])
+
+  // Handle canvas tab execution control from UI
+  const handleCanvasPause = useCallback((canvasId: string) => {
+    const handlers = canvasExecutionHandlersRef.current.get(canvasId)
+    if (handlers?.pause) {
+      handlers.pause()
+    }
+  }, [])
+
+  const handleCanvasPlay = useCallback((canvasId: string) => {
+    const handlers = canvasExecutionHandlersRef.current.get(canvasId)
+    if (handlers?.play) {
+      handlers.play()
+    }
+  }, [])
+
+  const handleCanvasStop = useCallback((canvasId: string) => {
+    const handlers = canvasExecutionHandlersRef.current.get(canvasId)
+    if (handlers?.stop) {
+      handlers.stop()
+    }
+  }, [])
+
+  const handleCanvasStep = useCallback((canvasId: string) => {
+    const handlers = canvasExecutionHandlersRef.current.get(canvasId)
+    if (handlers?.step) {
+      handlers.step()
+    }
+  }, [])
+
   // Canvas callbacks to pass to shell
   const canvasCallbacks = useMemo(() => ({
     onRequestCanvasTab: handleRequestCanvasTab,
@@ -390,6 +468,13 @@ function IDELayoutInner({
     registerWindowStepHandler,
     unregisterWindowExecutionHandlers,
     updateWindowControlState,
+    // Canvas tab execution control handlers
+    registerCanvasPauseHandler,
+    registerCanvasPlayHandler,
+    registerCanvasStopHandler,
+    registerCanvasStepHandler,
+    unregisterCanvasExecutionHandlers,
+    updateCanvasControlState,
   }), [
     handleRequestCanvasTab,
     handleCloseCanvasTab,
@@ -409,6 +494,12 @@ function IDELayoutInner({
     registerWindowStepHandler,
     unregisterWindowExecutionHandlers,
     updateWindowControlState,
+    registerCanvasPauseHandler,
+    registerCanvasPlayHandler,
+    registerCanvasStopHandler,
+    registerCanvasStepHandler,
+    unregisterCanvasExecutionHandlers,
+    updateCanvasControlState,
   ])
 
   const combinedClassName = className
@@ -591,6 +682,11 @@ function IDELayoutInner({
                             onCanvasReady={handleCanvasReady}
                             onReload={handleCanvasReload}
                             isActive={activeTabType === 'canvas'}
+                            canvasControlStates={canvasControlStates}
+                            onPause={handleCanvasPause}
+                            onPlay={handleCanvasPlay}
+                            onStop={handleCanvasStop}
+                            onStep={handleCanvasStep}
                           />
                         </div>
                       )}

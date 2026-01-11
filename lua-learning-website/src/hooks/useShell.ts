@@ -161,6 +161,41 @@ export interface ShellCanvasCallbacks {
    * @param state - The current control state
    */
   updateWindowControlState?: (canvasId: string, state: { isRunning: boolean; isPaused: boolean }) => void
+  /**
+   * Register a handler for the pause button in a canvas tab.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when pause is requested
+   */
+  registerCanvasPauseHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Register a handler for the play button in a canvas tab.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when play is requested
+   */
+  registerCanvasPlayHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Register a handler for the stop button in a canvas tab.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when stop is requested
+   */
+  registerCanvasStopHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Register a handler for the step button in a canvas tab.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when step is requested
+   */
+  registerCanvasStepHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Unregister all execution control handlers for a canvas tab.
+   * @param canvasId - The canvas ID
+   */
+  unregisterCanvasExecutionHandlers?: (canvasId: string) => void
+  /**
+   * Update the control state (isRunning, isPaused) in a canvas tab.
+   * @param canvasId - The canvas ID
+   * @param state - The current control state
+   */
+  updateCanvasControlState?: (canvasId: string, state: { isRunning: boolean; isPaused: boolean }) => void
 }
 
 /**
@@ -359,6 +394,13 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
         registerWindowStepHandler: options?.canvasCallbacks?.registerWindowStepHandler,
         unregisterWindowExecutionHandlers: options?.canvasCallbacks?.unregisterWindowExecutionHandlers,
         updateWindowControlState: options?.canvasCallbacks?.updateWindowControlState,
+        // Canvas tab execution control handlers
+        registerCanvasPauseHandler: options?.canvasCallbacks?.registerCanvasPauseHandler,
+        registerCanvasPlayHandler: options?.canvasCallbacks?.registerCanvasPlayHandler,
+        registerCanvasStopHandler: options?.canvasCallbacks?.registerCanvasStopHandler,
+        registerCanvasStepHandler: options?.canvasCallbacks?.registerCanvasStepHandler,
+        unregisterCanvasExecutionHandlers: options?.canvasCallbacks?.unregisterCanvasExecutionHandlers,
+        updateCanvasControlState: options?.canvasCallbacks?.updateCanvasControlState,
         // Editor integration callback for 'open' command
         onRequestOpenFile: options?.onRequestOpenFile,
         // Filesystem change notification for UI refresh (e.g., file tree)

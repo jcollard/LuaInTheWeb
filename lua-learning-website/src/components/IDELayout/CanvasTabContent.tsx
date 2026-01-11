@@ -26,6 +26,16 @@ export interface CanvasTabContentProps {
   onReload?: (canvasId: string) => void
   /** Whether the canvas tab is active and should receive focus */
   isActive?: boolean
+  /** Control state for each canvas (canvasId -> { isRunning, isPaused }) */
+  canvasControlStates?: Map<string, { isRunning: boolean; isPaused: boolean }>
+  /** Callback when pause is requested */
+  onPause?: (canvasId: string) => void
+  /** Callback when play is requested */
+  onPlay?: (canvasId: string) => void
+  /** Callback when stop is requested */
+  onStop?: (canvasId: string) => void
+  /** Callback when step is requested */
+  onStep?: (canvasId: string) => void
 }
 
 export function CanvasTabContent({
@@ -38,8 +48,19 @@ export function CanvasTabContent({
   onCanvasReady,
   onReload,
   isActive,
+  canvasControlStates,
+  onPause,
+  onPlay,
+  onStop,
+  onStep,
 }: CanvasTabContentProps) {
   const { scalingMode, setScalingMode } = useCanvasScaling()
+
+  // Get the canvasId from the active tab path
+  const activeCanvasId = activeTab?.replace('canvas://', '') ?? null
+
+  // Get the control state for the active canvas
+  const controlState = activeCanvasId ? canvasControlStates?.get(activeCanvasId) : undefined
 
   return (
     <div className={styles.canvasContainer}>
@@ -74,6 +95,12 @@ export function CanvasTabContent({
         scalingMode={scalingMode}
         onScalingModeChange={setScalingMode}
         isActive={isActive}
+        shellIsRunning={controlState?.isRunning}
+        shellIsPaused={controlState?.isPaused}
+        onPause={activeCanvasId && onPause ? () => onPause(activeCanvasId) : undefined}
+        onPlay={activeCanvasId && onPlay ? () => onPlay(activeCanvasId) : undefined}
+        onStop={activeCanvasId && onStop ? () => onStop(activeCanvasId) : undefined}
+        onStep={activeCanvasId && onStep ? () => onStep(activeCanvasId) : undefined}
       />
     </div>
   )

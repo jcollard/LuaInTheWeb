@@ -189,6 +189,47 @@ export interface ShellContext {
   updateWindowControlState?: (canvasId: string, state: { isRunning: boolean; isPaused: boolean }) => void
 
   /**
+   * Register a handler for the pause button in a canvas tab.
+   * @param canvasId - Unique identifier for the canvas tab
+   * @param handler - Function to call when pause is requested
+   */
+  registerCanvasPauseHandler?: (canvasId: string, handler: () => void) => void
+
+  /**
+   * Register a handler for the play button in a canvas tab.
+   * @param canvasId - Unique identifier for the canvas tab
+   * @param handler - Function to call when play is requested
+   */
+  registerCanvasPlayHandler?: (canvasId: string, handler: () => void) => void
+
+  /**
+   * Register a handler for the stop button in a canvas tab.
+   * @param canvasId - Unique identifier for the canvas tab
+   * @param handler - Function to call when stop is requested
+   */
+  registerCanvasStopHandler?: (canvasId: string, handler: () => void) => void
+
+  /**
+   * Register a handler for the step button in a canvas tab.
+   * @param canvasId - Unique identifier for the canvas tab
+   * @param handler - Function to call when step is requested
+   */
+  registerCanvasStepHandler?: (canvasId: string, handler: () => void) => void
+
+  /**
+   * Unregister all execution control handlers for a canvas tab.
+   * @param canvasId - Unique identifier for the canvas tab
+   */
+  unregisterCanvasExecutionHandlers?: (canvasId: string) => void
+
+  /**
+   * Update the control state (isRunning, isPaused) in a canvas tab.
+   * @param canvasId - Unique identifier for the canvas tab
+   * @param state - The current control state
+   */
+  updateCanvasControlState?: (canvasId: string, state: { isRunning: boolean; isPaused: boolean }) => void
+
+  /**
    * Request a file to be opened in the editor.
    * Called by the 'open' command to integrate with an IDE or editor.
    * Optional - when undefined, the open command will report that

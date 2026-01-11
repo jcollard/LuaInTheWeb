@@ -181,6 +181,13 @@ export class LuaCommand implements ICommand {
             registerWindowStepHandler: context.registerWindowStepHandler,
             unregisterWindowExecutionHandlers: context.unregisterWindowExecutionHandlers,
             updateWindowControlState: context.updateWindowControlState,
+            // Canvas tab execution control handlers (pause/play/stop/step)
+            registerCanvasPauseHandler: context.registerCanvasPauseHandler,
+            registerCanvasPlayHandler: context.registerCanvasPlayHandler,
+            registerCanvasStopHandler: context.registerCanvasStopHandler,
+            registerCanvasStepHandler: context.registerCanvasStepHandler,
+            unregisterCanvasExecutionHandlers: context.unregisterCanvasExecutionHandlers,
+            updateCanvasControlState: context.updateCanvasControlState,
             fileSystem: context.filesystem,
             scriptDirectory,
           }

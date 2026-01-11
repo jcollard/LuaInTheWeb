@@ -166,6 +166,41 @@ export interface CanvasCallbacks {
    */
   updateWindowControlState?: (canvasId: string, state: { isRunning: boolean; isPaused: boolean }) => void
   /**
+   * Register a handler for the pause button in a canvas tab.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when pause is requested
+   */
+  registerCanvasPauseHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Register a handler for the play button in a canvas tab.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when play is requested
+   */
+  registerCanvasPlayHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Register a handler for the stop button in a canvas tab.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when stop is requested
+   */
+  registerCanvasStopHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Register a handler for the step button in a canvas tab.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when step is requested
+   */
+  registerCanvasStepHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Unregister all execution control handlers for a canvas tab.
+   * @param canvasId - The canvas ID
+   */
+  unregisterCanvasExecutionHandlers?: (canvasId: string) => void
+  /**
+   * Update the control state in a canvas tab.
+   * @param canvasId - The canvas ID
+   * @param state - Object with isRunning and isPaused booleans
+   */
+  updateCanvasControlState?: (canvasId: string, state: { isRunning: boolean; isPaused: boolean }) => void
+  /**
    * Flush buffered output.
    * Called after each frame to ensure print() output appears immediately.
    */
@@ -299,13 +334,15 @@ export class CanvasController {
   }
 
   /**
-   * Update the control state in the popup window (if applicable).
+   * Update the control state in the popup window and canvas tab (if applicable).
    */
   private updateControlState(): void {
-    this.callbacks.updateWindowControlState?.(this.canvasId, {
+    const state = {
       isRunning: this.running,
       isPaused: this.isPaused(),
-    })
+    }
+    this.callbacks.updateWindowControlState?.(this.canvasId, state)
+    this.callbacks.updateCanvasControlState?.(this.canvasId, state)
   }
 
   /**
@@ -389,6 +426,12 @@ export class CanvasController {
     this.callbacks.registerWindowStopHandler?.(this.canvasId, () => this.stop())
     this.callbacks.registerWindowStepHandler?.(this.canvasId, () => this.step())
 
+    // Register execution control handlers for canvas tab controls
+    this.callbacks.registerCanvasPauseHandler?.(this.canvasId, () => this.pause())
+    this.callbacks.registerCanvasPlayHandler?.(this.canvasId, () => this.resume())
+    this.callbacks.registerCanvasStopHandler?.(this.canvasId, () => this.stop())
+    this.callbacks.registerCanvasStepHandler?.(this.canvasId, () => this.step())
+
     // Initialize renderer with image cache (if assets were loaded), input capture, and game loop
     this.renderer = new CanvasRenderer(this.canvas, this.imageCache ?? undefined)
     this.inputCapture = new InputCapture(this.canvas)
@@ -455,6 +498,7 @@ export class CanvasController {
 
     // Unregister execution control handlers
     this.callbacks.unregisterWindowExecutionHandlers?.(this.canvasId)
+    this.callbacks.unregisterCanvasExecutionHandlers?.(this.canvasId)
 
     // Close the canvas tab
     this.callbacks.onCloseCanvasTab(this.canvasId)

@@ -30,6 +30,18 @@ export interface CanvasGamePanelProps {
   onScalingModeChange?: (mode: CanvasScalingMode) => void
   /** Whether the canvas tab is active and should receive focus */
   isActive?: boolean
+  /** Shell-controlled running state (for shell integration mode) */
+  shellIsRunning?: boolean
+  /** Shell-controlled paused state (for shell integration mode) */
+  shellIsPaused?: boolean
+  /** Callback when pause is requested (shell integration mode) */
+  onPause?: () => void
+  /** Callback when play is requested (shell integration mode) */
+  onPlay?: () => void
+  /** Callback when stop is requested (shell integration mode) */
+  onStop?: () => void
+  /** Callback when step is requested (shell integration mode) */
+  onStep?: () => void
 }
 
 export function CanvasGamePanel({
@@ -44,6 +56,12 @@ export function CanvasGamePanel({
   scalingMode = 'fit',
   onScalingModeChange,
   isActive,
+  shellIsRunning,
+  shellIsPaused,
+  onPause,
+  onPlay,
+  onStop,
+  onStep,
 }: CanvasGamePanelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -132,26 +150,30 @@ export function CanvasGamePanel({
     <div className={panelClassName}>
       {/* Toolbar */}
       <div className={styles.toolbar}>
-        {/* Mode indicator and execution controls - only in standalone mode (isRunning) */}
-        {isRunning && (
+        {/* Mode indicator and execution controls - standalone mode or shell integration mode */}
+        {(isRunning || shellIsRunning) && (
           <>
-            <span
-              className={`${styles.modeIndicator} ${styles[mode]}`}
-              title={
-                mode === 'performance'
-                  ? 'Using SharedArrayBuffer for best performance'
-                  : 'Using postMessage fallback for compatibility'
-              }
-            >
-              {mode === 'performance' ? 'Performance' : 'Compatibility'}
-            </span>
+            {/* Mode indicator - only show in standalone mode */}
+            {isRunning && (
+              <span
+                className={`${styles.modeIndicator} ${styles[mode]}`}
+                title={
+                  mode === 'performance'
+                    ? 'Using SharedArrayBuffer for best performance'
+                    : 'Using postMessage fallback for compatibility'
+                }
+              >
+                {mode === 'performance' ? 'Performance' : 'Compatibility'}
+              </span>
+            )}
 
             {/* Play/Pause button - mutually exclusive */}
-            {isPaused ? (
+            {/* Use shell handlers when in shell mode, otherwise use standalone handlers */}
+            {(shellIsRunning ? shellIsPaused : isPaused) ? (
               <button
                 type="button"
                 className={styles.playButton}
-                onClick={resumeGame}
+                onClick={shellIsRunning ? onPlay : resumeGame}
                 aria-label="Play game"
                 title="Play (resume execution)"
               >
@@ -161,7 +183,7 @@ export function CanvasGamePanel({
               <button
                 type="button"
                 className={styles.pauseButton}
-                onClick={pauseGame}
+                onClick={shellIsRunning ? onPause : pauseGame}
                 aria-label="Pause game"
                 title="Pause (suspend execution)"
               >
@@ -173,7 +195,7 @@ export function CanvasGamePanel({
             <button
               type="button"
               className={styles.stopButton}
-              onClick={stopGame}
+              onClick={shellIsRunning ? onStop : stopGame}
               aria-label="Stop game"
               title="Stop (terminate process)"
             >
@@ -181,11 +203,11 @@ export function CanvasGamePanel({
             </button>
 
             {/* Step button - only visible when paused */}
-            {isPaused && (
+            {(shellIsRunning ? shellIsPaused : isPaused) && (
               <button
                 type="button"
                 className={styles.stepButton}
-                onClick={stepGame}
+                onClick={shellIsRunning ? onStep : stepGame}
                 aria-label="Step one frame"
                 title="Step (execute one frame)"
               >
@@ -193,10 +215,11 @@ export function CanvasGamePanel({
               </button>
             )}
 
+            {/* Reload button - use shell handler in shell mode */}
             <button
               type="button"
               className={styles.reloadButton}
-              onClick={reloadGame}
+              onClick={shellIsRunning ? onReload : reloadGame}
               aria-label="Hot reload code"
               title="Hot reload (update functions, preserve state)"
             >
@@ -205,8 +228,8 @@ export function CanvasGamePanel({
           </>
         )}
 
-        {/* Reload button for shell integration mode */}
-        {!isRunning && onReload && (
+        {/* Reload button for shell integration mode when not running */}
+        {!isRunning && !shellIsRunning && onReload && (
           <button
             type="button"
             className={styles.reloadButton}
