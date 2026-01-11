@@ -54,8 +54,10 @@ export function CanvasGamePanel({
     error,
     mode,
     startGame,
+    stopGame,
     pauseGame,
     resumeGame,
+    stepGame,
     reloadGame,
     clearError,
   } = useCanvasGame({
@@ -83,14 +85,6 @@ export function CanvasGamePanel({
       canvasRef.current.focus()
     }
   }, [isActive])
-
-  const handlePauseResume = useCallback(() => {
-    if (isPaused) {
-      resumeGame()
-    } else {
-      pauseGame()
-    }
-  }, [isPaused, pauseGame, resumeGame])
 
   const handleScalingModeChange = useCallback(
     (e: ChangeEvent<HTMLSelectElement>) => {
@@ -138,7 +132,7 @@ export function CanvasGamePanel({
     <div className={panelClassName}>
       {/* Toolbar */}
       <div className={styles.toolbar}>
-        {/* Mode indicator and pause - only in standalone mode (isRunning) */}
+        {/* Mode indicator and execution controls - only in standalone mode (isRunning) */}
         {isRunning && (
           <>
             <span
@@ -151,6 +145,54 @@ export function CanvasGamePanel({
             >
               {mode === 'performance' ? 'Performance' : 'Compatibility'}
             </span>
+
+            {/* Play/Pause button - mutually exclusive */}
+            {isPaused ? (
+              <button
+                type="button"
+                className={styles.playButton}
+                onClick={resumeGame}
+                aria-label="Play game"
+                title="Play (resume execution)"
+              >
+                Play
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={styles.pauseButton}
+                onClick={pauseGame}
+                aria-label="Pause game"
+                title="Pause (suspend execution)"
+              >
+                Pause
+              </button>
+            )}
+
+            {/* Stop button - always visible when running */}
+            <button
+              type="button"
+              className={styles.stopButton}
+              onClick={stopGame}
+              aria-label="Stop game"
+              title="Stop (terminate process)"
+            >
+              Stop
+            </button>
+
+            {/* Step button - only visible when paused */}
+            {isPaused && (
+              <button
+                type="button"
+                className={styles.stepButton}
+                onClick={stepGame}
+                aria-label="Step one frame"
+                title="Step (execute one frame)"
+              >
+                Step
+              </button>
+            )}
+
             <button
               type="button"
               className={styles.reloadButton}
@@ -159,15 +201,6 @@ export function CanvasGamePanel({
               title="Hot reload (update functions, preserve state)"
             >
               Reload
-            </button>
-            <button
-              type="button"
-              className={styles.pauseButton}
-              onClick={handlePauseResume}
-              aria-label={isPaused ? 'Resume game' : 'Pause game'}
-              title={isPaused ? 'Resume' : 'Pause'}
-            >
-              {isPaused ? 'Resume' : 'Pause'}
             </button>
           </>
         )}

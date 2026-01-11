@@ -313,6 +313,12 @@ function IDELayoutInner({
     registerWindowReloadHandler,
     unregisterWindowReloadHandler,
     triggerAutoReload,
+    registerWindowPauseHandler,
+    registerWindowPlayHandler,
+    registerWindowStopHandler,
+    registerWindowStepHandler,
+    unregisterWindowExecutionHandlers,
+    updateWindowControlState,
   } = useCanvasWindowManager()
 
   // Listen for Lua file save events to trigger auto-reload on canvas windows
@@ -378,6 +384,12 @@ function IDELayoutInner({
     unregisterCanvasReloadHandler,
     registerWindowReloadHandler,
     unregisterWindowReloadHandler,
+    registerWindowPauseHandler,
+    registerWindowPlayHandler,
+    registerWindowStopHandler,
+    registerWindowStepHandler,
+    unregisterWindowExecutionHandlers,
+    updateWindowControlState,
   }), [
     handleRequestCanvasTab,
     handleCloseCanvasTab,
@@ -391,6 +403,12 @@ function IDELayoutInner({
     unregisterCanvasReloadHandler,
     registerWindowReloadHandler,
     unregisterWindowReloadHandler,
+    registerWindowPauseHandler,
+    registerWindowPlayHandler,
+    registerWindowStopHandler,
+    registerWindowStepHandler,
+    unregisterWindowExecutionHandlers,
+    updateWindowControlState,
   ])
 
   const combinedClassName = className

@@ -89,6 +89,40 @@
   background: var(--theme-warning-hover-bg, #92400e);
 }
 
+.playButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 4px;
+  background: var(--theme-success-bg, #166534);
+  color: var(--theme-success-fg, #4ade80);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.playButton:hover {
+  background: var(--theme-success-hover-bg, #15803d);
+}
+
+.stepButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 4px;
+  background: var(--theme-info-bg, #1e3a5f);
+  color: var(--theme-info-fg, #60a5fa);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.stepButton:hover {
+  background: var(--theme-info-hover-bg, #1e40af);
+}
+
 .reloadButton {
   display: flex;
   align-items: center;

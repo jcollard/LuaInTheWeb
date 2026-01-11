@@ -24,6 +24,7 @@ export class GameLoopController {
   private running = false;
   private paused = false;
   private disposed = false;
+  private stepping = false;
   private animationFrameId: number | null = null;
   private targetFPS = 60;
 
@@ -74,6 +75,19 @@ export class GameLoopController {
    */
   resume(): void {
     if (!this.running || !this.paused) return;
+    this.paused = false;
+    this.lastTime = performance.now();
+    this.scheduleFrame();
+  }
+
+  /**
+   * Execute a single frame and return to paused state.
+   * Only works when the loop is running AND paused.
+   */
+  step(): void {
+    if (!this.running || !this.paused) return;
+
+    this.stepping = true;
     this.paused = false;
     this.lastTime = performance.now();
     this.scheduleFrame();
@@ -177,6 +191,13 @@ export class GameLoopController {
 
     // Call the frame callback
     this.frameCallback(timing);
+
+    // If stepping, pause after this frame
+    if (this.stepping) {
+      this.stepping = false;
+      this.paused = true;
+      return;
+    }
 
     // Schedule next frame
     this.scheduleFrame();

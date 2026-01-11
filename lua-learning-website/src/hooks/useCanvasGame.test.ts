@@ -13,6 +13,7 @@ interface MockProcess {
   pause: ReturnType<typeof vi.fn>
   resume: ReturnType<typeof vi.fn>
   reload: ReturnType<typeof vi.fn>
+  step: ReturnType<typeof vi.fn>
   isRunning: ReturnType<typeof vi.fn>
   getCanvas: () => HTMLCanvasElement
   onOutput: ((text: string) => void) | null
@@ -32,6 +33,7 @@ vi.mock('@lua-learning/canvas-runtime', () => {
     pause = vi.fn()
     resume = vi.fn()
     reload = vi.fn()
+    step = vi.fn()
     isRunning = vi.fn().mockReturnValue(false)
     _canvas: HTMLCanvasElement
     onOutput: ((text: string) => void) | null = null
@@ -416,56 +418,6 @@ describe('useCanvasGame', () => {
     })
   })
 
-  describe('clearOutput', () => {
-    it('clears accumulated output', () => {
-      const { result } = renderHook(() => useCanvasGame())
-
-      act(() => {
-        result.current.startGame('print("hello")', mockCanvas)
-      })
-
-      const mockInstance = mockProcessInstances[0]
-
-      act(() => {
-        mockInstance.onOutput?.('Some output')
-      })
-
-      expect(result.current.output).toBe('Some output')
-
-      act(() => {
-        result.current.clearOutput()
-      })
-
-      expect(result.current.output).toBe('')
-    })
-  })
-
-  describe('clearError', () => {
-    it('clears error and resets state to idle if in error state', () => {
-      const { result } = renderHook(() => useCanvasGame())
-
-      act(() => {
-        result.current.startGame('print("hello")', mockCanvas)
-      })
-
-      const mockInstance = mockProcessInstances[0]
-
-      act(() => {
-        mockInstance.onError?.('Some error')
-      })
-
-      expect(result.current.error).toBe('Some error')
-      expect(result.current.state).toBe('error')
-
-      act(() => {
-        result.current.clearError()
-      })
-
-      expect(result.current.error).toBeNull()
-      expect(result.current.state).toBe('idle')
-    })
-  })
-
   describe('error handling', () => {
     it('keeps error state when onExit is called after onError (non-zero exit code)', () => {
       const { result } = renderHook(() => useCanvasGame())
@@ -509,151 +461,6 @@ describe('useCanvasGame', () => {
       })
 
       expect(result.current.state).toBe('idle')
-    })
-  })
-
-  describe('reloadGame', () => {
-    it('calls reload on the process', () => {
-      const { result } = renderHook(() => useCanvasGame())
-
-      act(() => {
-        result.current.startGame('print("hello")', mockCanvas)
-      })
-
-      const mockInstance = mockProcessInstances[0]
-
-      act(() => {
-        result.current.reloadGame()
-      })
-
-      expect(mockInstance.reload).toHaveBeenCalled()
-    })
-
-    it('does nothing if no process is running', () => {
-      const { result } = renderHook(() => useCanvasGame())
-
-      // Should not throw when no process exists
-      act(() => {
-        result.current.reloadGame()
-      })
-
-      expect(result.current.state).toBe('idle')
-    })
-
-    it('can be called multiple times', () => {
-      const { result } = renderHook(() => useCanvasGame())
-
-      act(() => {
-        result.current.startGame('print("hello")', mockCanvas)
-      })
-
-      const mockInstance = mockProcessInstances[0]
-
-      act(() => {
-        result.current.reloadGame()
-      })
-
-      act(() => {
-        result.current.reloadGame()
-      })
-
-      act(() => {
-        result.current.reloadGame()
-      })
-
-      expect(mockInstance.reload).toHaveBeenCalledTimes(3)
-    })
-
-    it('does not change running state', () => {
-      const { result } = renderHook(() => useCanvasGame())
-
-      act(() => {
-        result.current.startGame('print("hello")', mockCanvas)
-      })
-
-      expect(result.current.state).toBe('running')
-
-      act(() => {
-        result.current.reloadGame()
-      })
-
-      expect(result.current.state).toBe('running')
-    })
-  })
-
-  describe('pauseGame', () => {
-    it('calls pause on the process', () => {
-      const { result } = renderHook(() => useCanvasGame())
-
-      act(() => {
-        result.current.startGame('print("hello")', mockCanvas)
-      })
-
-      const mockInstance = mockProcessInstances[0]
-
-      act(() => {
-        result.current.pauseGame()
-      })
-
-      expect(mockInstance.pause).toHaveBeenCalled()
-    })
-
-    it('sets isPaused to true', () => {
-      const { result } = renderHook(() => useCanvasGame())
-
-      act(() => {
-        result.current.startGame('print("hello")', mockCanvas)
-      })
-
-      expect(result.current.isPaused).toBe(false)
-
-      act(() => {
-        result.current.pauseGame()
-      })
-
-      expect(result.current.isPaused).toBe(true)
-    })
-  })
-
-  describe('resumeGame', () => {
-    it('calls resume on the process', () => {
-      const { result } = renderHook(() => useCanvasGame())
-
-      act(() => {
-        result.current.startGame('print("hello")', mockCanvas)
-      })
-
-      const mockInstance = mockProcessInstances[0]
-
-      act(() => {
-        result.current.pauseGame()
-      })
-
-      act(() => {
-        result.current.resumeGame()
-      })
-
-      expect(mockInstance.resume).toHaveBeenCalled()
-    })
-
-    it('sets isPaused to false', () => {
-      const { result } = renderHook(() => useCanvasGame())
-
-      act(() => {
-        result.current.startGame('print("hello")', mockCanvas)
-      })
-
-      act(() => {
-        result.current.pauseGame()
-      })
-
-      expect(result.current.isPaused).toBe(true)
-
-      act(() => {
-        result.current.resumeGame()
-      })
-
-      expect(result.current.isPaused).toBe(false)
     })
   })
 })

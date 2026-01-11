@@ -1,5 +1,6 @@
 import { useCallback, useRef, useEffect } from 'react'
 import type { ScreenMode, HotReloadMode } from '@lua-learning/shell-core'
+import { generateCanvasWindowHTML } from './canvasWindowTemplate'
 
 /**
  * Reload handler info including the handler function and hot reload mode.
@@ -9,6 +10,24 @@ interface ReloadHandlerInfo {
   handler: () => void
   /** Hot reload mode: 'manual' (default) or 'auto' (reload on save) */
   hotReloadMode: HotReloadMode
+}
+
+/**
+ * Execution control handlers for pause/play/stop/step.
+ */
+interface ExecutionControlHandlers {
+  pause?: () => void
+  play?: () => void
+  stop?: () => void
+  step?: () => void
+}
+
+/**
+ * Control state for syncing popup window button visibility.
+ */
+export interface CanvasControlState {
+  isRunning: boolean
+  isPaused: boolean
 }
 
 /**
@@ -45,168 +64,18 @@ export interface UseCanvasWindowManagerReturn {
   unregisterWindowReloadHandler: (canvasId: string) => void
   /** Trigger auto-reload for all windows in 'auto' mode (called on Lua file save) */
   triggerAutoReload: () => void
-}
-
-/**
- * Generate HTML content for the canvas popup window.
- * Creates a page with optional toolbar and canvas with scaling support.
- * @param screenMode - Initial screen mode (defaults to 'full')
- * @param noToolbar - If true, hides the toolbar entirely
- */
-function generateCanvasWindowHTML(screenMode?: ScreenMode, noToolbar?: boolean): string {
-  // Toolbar is shown by default unless noToolbar is true
-  const showToolbar = !noToolbar
-  const initialMode = screenMode ?? 'full'
-  // Map screen mode to CSS class name
-  const scaleClass =
-    initialMode === '1x' ? 'scale-native' : `scale-${initialMode}`
-
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Canvas Game</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body {
-      width: 100%;
-      height: 100%;
-      background: #1a1a2e;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Toolbar styling */
-    .toolbar {
-      background: #2d2d44;
-      padding: 6px 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      border-bottom: 1px solid #3d3d5c;
-      flex-shrink: 0;
-    }
-    .toolbar.hidden {
-      display: none;
-    }
-    .toolbar label {
-      color: #a0a0b0;
-      font-family: system-ui, -apple-system, sans-serif;
-      font-size: 13px;
-    }
-    .toolbar select {
-      background: #1a1a2e;
-      color: #e0e0e0;
-      border: 1px solid #3d3d5c;
-      border-radius: 4px;
-      padding: 4px 8px;
-      font-size: 13px;
-      font-family: system-ui, -apple-system, sans-serif;
-      cursor: pointer;
-    }
-    .toolbar select:hover {
-      border-color: #5d5d7c;
-    }
-    .toolbar select:focus {
-      outline: none;
-      border-color: #6d6d8c;
-    }
-    .toolbar button {
-      background: #3d5afe;
-      color: #fff;
-      border: none;
-      border-radius: 4px;
-      padding: 4px 12px;
-      font-size: 13px;
-      font-family: system-ui, -apple-system, sans-serif;
-      cursor: pointer;
-      transition: background 0.15s ease;
-    }
-    .toolbar button:hover {
-      background: #536dfe;
-    }
-    .toolbar button:active {
-      background: #304ffe;
-    }
-
-    /* Canvas container */
-    .canvas-container {
-      flex: 1;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      overflow: hidden;
-    }
-
-    /* Scaling modes */
-    .canvas-container.scale-fit canvas {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-    }
-    .canvas-container.scale-full canvas {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
-    .canvas-container.scale-native {
-      overflow: auto;
-      justify-content: flex-start;
-      align-items: flex-start;
-    }
-    .canvas-container.scale-native canvas {
-      /* Native size - no scaling */
-    }
-
-    canvas {
-      display: block;
-      background: #000;
-    }
-  </style>
-</head>
-<body>
-  <div id="toolbar" class="toolbar${showToolbar ? '' : ' hidden'}">
-    <button id="reload-btn" type="button">Reload</button>
-    <label for="scale-select">Scale:</label>
-    <select id="scale-select">
-      <option value="fit"${initialMode === 'fit' ? ' selected' : ''}>Fit</option>
-      <option value="full"${initialMode === 'full' ? ' selected' : ''}>Full</option>
-      <option value="native"${initialMode === '1x' ? ' selected' : ''}>1x</option>
-    </select>
-  </div>
-  <div id="canvas-container" class="canvas-container ${scaleClass}">
-    <canvas id="game-canvas" width="800" height="600" tabindex="0"></canvas>
-  </div>
-  <script>
-    (function() {
-      var select = document.getElementById('scale-select');
-      var container = document.getElementById('canvas-container');
-      var reloadBtn = document.getElementById('reload-btn');
-
-      if (select) {
-        select.addEventListener('change', function() {
-          // Remove all scale classes
-          container.classList.remove('scale-fit', 'scale-full', 'scale-native');
-          // Add the selected scale class
-          var mode = select.value;
-          container.classList.add('scale-' + mode);
-        });
-      }
-
-      if (reloadBtn) {
-        reloadBtn.addEventListener('click', function() {
-          // Send message to parent window to trigger reload
-          if (window.opener) {
-            window.opener.postMessage({ type: 'canvas-reload' }, '*');
-          }
-        });
-      }
-    })();
-  </script>
-</body>
-</html>
-`
+  /** Register a handler to be called when the pause button is clicked */
+  registerWindowPauseHandler: (canvasId: string, handler: () => void) => void
+  /** Register a handler to be called when the play button is clicked */
+  registerWindowPlayHandler: (canvasId: string, handler: () => void) => void
+  /** Register a handler to be called when the stop button is clicked */
+  registerWindowStopHandler: (canvasId: string, handler: () => void) => void
+  /** Register a handler to be called when the step button is clicked */
+  registerWindowStepHandler: (canvasId: string, handler: () => void) => void
+  /** Unregister all execution control handlers for a window */
+  unregisterWindowExecutionHandlers: (canvasId: string) => void
+  /** Update the control state (isRunning, isPaused) in a popup window */
+  updateWindowControlState: (canvasId: string, state: CanvasControlState) => void
 }
 
 /**
@@ -225,6 +94,8 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
   const closeHandlersRef = useRef<Map<string, () => void>>(new Map())
   // Map of canvasId -> reload handler info (handler + hot reload mode)
   const reloadHandlersRef = useRef<Map<string, ReloadHandlerInfo>>(new Map())
+  // Map of canvasId -> execution control handlers
+  const executionHandlersRef = useRef<Map<string, ExecutionControlHandlers>>(new Map())
 
   /**
    * Open a canvas in a new popup window.
@@ -294,6 +165,7 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
         windowsRef.current.delete(canvasId)
         closeHandlersRef.current.delete(canvasId)
         reloadHandlersRef.current.delete(canvasId)
+        executionHandlersRef.current.delete(canvasId)
       }
 
       popup.addEventListener('beforeunload', handleBeforeUnload)
@@ -301,12 +173,32 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
       // Also handle pagehide for Safari compatibility
       popup.addEventListener('pagehide', handleBeforeUnload)
 
-      // Listen for reload messages from the popup window
+      // Listen for messages from the popup window
       const handleMessage = (event: MessageEvent) => {
         if (event.data?.type === 'canvas-reload') {
           const info = reloadHandlersRef.current.get(canvasId)
           if (info) {
             info.handler()
+          }
+        } else if (event.data?.type === 'canvas-pause') {
+          const handlers = executionHandlersRef.current.get(canvasId)
+          if (handlers?.pause) {
+            handlers.pause()
+          }
+        } else if (event.data?.type === 'canvas-play') {
+          const handlers = executionHandlersRef.current.get(canvasId)
+          if (handlers?.play) {
+            handlers.play()
+          }
+        } else if (event.data?.type === 'canvas-stop') {
+          const handlers = executionHandlersRef.current.get(canvasId)
+          if (handlers?.stop) {
+            handlers.stop()
+          }
+        } else if (event.data?.type === 'canvas-step') {
+          const handlers = executionHandlersRef.current.get(canvasId)
+          if (handlers?.step) {
+            handlers.step()
           }
         }
       }
@@ -342,6 +234,7 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
       windowsRef.current.delete(canvasId)
       closeHandlersRef.current.delete(canvasId)
       reloadHandlersRef.current.delete(canvasId)
+      executionHandlersRef.current.delete(canvasId)
     }
   }, [])
 
@@ -358,6 +251,7 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
       }
       closeHandlersRef.current.delete(canvasId)
       reloadHandlersRef.current.delete(canvasId)
+      executionHandlersRef.current.delete(canvasId)
     }
     windowsRef.current.clear()
   }, [])
@@ -409,6 +303,59 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
     }
   }, [])
 
+  /**
+   * Register a handler for the pause button in the popup window.
+   */
+  const registerWindowPauseHandler = useCallback((canvasId: string, handler: () => void) => {
+    const existing = executionHandlersRef.current.get(canvasId) ?? {}
+    executionHandlersRef.current.set(canvasId, { ...existing, pause: handler })
+  }, [])
+
+  /**
+   * Register a handler for the play button in the popup window.
+   */
+  const registerWindowPlayHandler = useCallback((canvasId: string, handler: () => void) => {
+    const existing = executionHandlersRef.current.get(canvasId) ?? {}
+    executionHandlersRef.current.set(canvasId, { ...existing, play: handler })
+  }, [])
+
+  /**
+   * Register a handler for the stop button in the popup window.
+   */
+  const registerWindowStopHandler = useCallback((canvasId: string, handler: () => void) => {
+    const existing = executionHandlersRef.current.get(canvasId) ?? {}
+    executionHandlersRef.current.set(canvasId, { ...existing, stop: handler })
+  }, [])
+
+  /**
+   * Register a handler for the step button in the popup window.
+   */
+  const registerWindowStepHandler = useCallback((canvasId: string, handler: () => void) => {
+    const existing = executionHandlersRef.current.get(canvasId) ?? {}
+    executionHandlersRef.current.set(canvasId, { ...existing, step: handler })
+  }, [])
+
+  /**
+   * Unregister all execution control handlers for a window.
+   */
+  const unregisterWindowExecutionHandlers = useCallback((canvasId: string) => {
+    executionHandlersRef.current.delete(canvasId)
+  }, [])
+
+  /**
+   * Update the control state in a popup window.
+   * Sends a message to the popup to update button visibility.
+   */
+  const updateWindowControlState = useCallback((canvasId: string, state: CanvasControlState) => {
+    const windowState = windowsRef.current.get(canvasId)
+    if (windowState) {
+      windowState.window.postMessage(
+        { type: 'canvas-control-state', isRunning: state.isRunning, isPaused: state.isPaused },
+        '*'
+      )
+    }
+  }, [])
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -425,5 +372,11 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
     registerWindowReloadHandler,
     unregisterWindowReloadHandler,
     triggerAutoReload,
+    registerWindowPauseHandler,
+    registerWindowPlayHandler,
+    registerWindowStopHandler,
+    registerWindowStepHandler,
+    unregisterWindowExecutionHandlers,
+    updateWindowControlState,
   }
 }
