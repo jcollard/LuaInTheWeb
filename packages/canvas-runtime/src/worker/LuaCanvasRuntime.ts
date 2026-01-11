@@ -110,6 +110,8 @@ export class LuaCanvasRuntime {
         // Error handler itself failed - log but don't crash
         console.error('Error handler failed:', handlerError);
       }
+      // Stop loop after reload error
+      this.loopRunning = false;
     }
   }
 
@@ -1658,8 +1660,10 @@ export class LuaCanvasRuntime {
             } catch (handlerError) {
               // Error handler itself failed - log but don't crash
               console.error('Error handler failed:', handlerError);
-              this.loopRunning = false;
             }
+            // Stop loop after any error in tick callback
+            this.loopRunning = false;
+            break;
           }
         }
 
@@ -1675,8 +1679,10 @@ export class LuaCanvasRuntime {
         } catch (handlerError) {
           // Error handler itself failed - log but don't crash
           console.error('Error handler failed:', handlerError);
-          this.loopRunning = false;
         }
+        // Stop loop after any error in frame processing
+        this.loopRunning = false;
+        break;
       }
     }
   }

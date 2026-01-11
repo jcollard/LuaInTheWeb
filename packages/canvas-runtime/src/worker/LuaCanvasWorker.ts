@@ -97,13 +97,8 @@ async function handleInit(code: string, sharedBuffer?: SharedArrayBuffer): Promi
         console.error('Failed to notify error:', err);
       }
 
-      try {
-        if (runtime) {
-          runtime.stop();  // Stop the loop to prevent deadlock in waitForFrame()
-        }
-      } catch (err) {
-        console.error('Failed to stop runtime:', err);
-      }
+      // Note: Don't call runtime.stop() here - it causes deadlock!
+      // The runLoop will stop itself when loopRunning is set to false
 
       try {
         postMessage({ type: 'pauseRequested' });

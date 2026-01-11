@@ -642,6 +642,44 @@ describe('LuaCanvasRuntime', () => {
 
       consoleSpy.mockRestore();
     });
+
+    it('should stop loop after runtime error (user bug reproduction)', async () => {
+      const errorHandler = vi.fn();
+      runtime.onError(errorHandler);
+
+      // Simulate user's exact scenario: attempt to concatenate nil
+      await runtime.loadCode(`
+        local obj = { y = 9 }
+        canvas.tick(function()
+          -- This should trigger error: attempt to concatenate a nil value
+          local result = obj.y .. nil
+        end)
+      `);
+
+      runtime.start();
+
+      // Signal first frame - should trigger error
+      channel.signalFrameReady();
+
+      // Wait for error handler to be called
+      await vi.waitFor(() => {
+        return errorHandler.mock.calls.length > 0;
+      }, { timeout: 100 });
+
+      // Verify error was reported
+      expect(errorHandler).toHaveBeenCalledWith(expect.stringContaining('attempt to concatenate'));
+
+      // Verify loop stopped by signaling another frame
+      const initialCallCount = errorHandler.mock.calls.length;
+      channel.signalFrameReady();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // Error handler should NOT be called again - loop has stopped
+      expect(errorHandler.mock.calls.length).toBe(initialCallCount);
+
+      // Verify no deadlock - if we got here, worker didn't hang
+      expect(true).toBe(true);
+    });
   });
 
   describe('dispose', () => {
