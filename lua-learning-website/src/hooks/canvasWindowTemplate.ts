@@ -123,6 +123,7 @@ export function generateCanvasWindowHTML(screenMode?: ScreenMode, noToolbar?: bo
       justify-content: center;
       align-items: center;
       overflow: hidden;
+      position: relative;
     }
 
     /* Scaling modes */
@@ -149,6 +150,45 @@ export function generateCanvasWindowHTML(screenMode?: ScreenMode, noToolbar?: bo
       display: block;
       background: #000;
     }
+
+    /* Disconnected overlay */
+    .disconnected-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(26, 26, 46, 0.95);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+    .disconnected-overlay.hidden {
+      display: none;
+    }
+    .disconnected-message {
+      text-align: center;
+      color: #a0a0b0;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .disconnected-icon {
+      font-size: 48px;
+      display: block;
+      margin-bottom: 16px;
+    }
+    .disconnected-message p {
+      margin: 8px 0;
+      font-size: 18px;
+    }
+    .disconnected-hint {
+      font-size: 13px !important;
+      color: #6d6d8c;
+    }
+    .toolbar button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -167,6 +207,13 @@ export function generateCanvasWindowHTML(screenMode?: ScreenMode, noToolbar?: bo
   </div>
   <div id="canvas-container" class="canvas-container ${scaleClass}">
     <canvas id="game-canvas" width="800" height="600" tabindex="0"></canvas>
+    <div id="disconnected-overlay" class="disconnected-overlay hidden">
+      <div class="disconnected-message">
+        <span class="disconnected-icon">&#x23F8;</span>
+        <p>No canvas connected</p>
+        <p class="disconnected-hint">Run a canvas script to reconnect</p>
+      </div>
+    </div>
   </div>
   <script>
     (function() {
@@ -177,6 +224,7 @@ export function generateCanvasWindowHTML(screenMode?: ScreenMode, noToolbar?: bo
       var playBtn = document.getElementById('play-btn');
       var stopBtn = document.getElementById('stop-btn');
       var stepBtn = document.getElementById('step-btn');
+      var disconnectedOverlay = document.getElementById('disconnected-overlay');
 
       if (select) {
         select.addEventListener('change', function() {
@@ -245,6 +293,22 @@ export function generateCanvasWindowHTML(screenMode?: ScreenMode, noToolbar?: bo
             playBtn.classList.remove('hidden');
             stepBtn.classList.remove('hidden');
           }
+        } else if (event.data && event.data.type === 'canvas-disconnected') {
+          // Show overlay and disable toolbar buttons
+          disconnectedOverlay.classList.remove('hidden');
+          reloadBtn.disabled = true;
+          pauseBtn.disabled = true;
+          playBtn.disabled = true;
+          stopBtn.disabled = true;
+          stepBtn.disabled = true;
+        } else if (event.data && event.data.type === 'canvas-connected') {
+          // Hide overlay and re-enable toolbar buttons
+          disconnectedOverlay.classList.add('hidden');
+          reloadBtn.disabled = false;
+          pauseBtn.disabled = false;
+          playBtn.disabled = false;
+          stopBtn.disabled = false;
+          stepBtn.disabled = false;
         }
       });
     })();

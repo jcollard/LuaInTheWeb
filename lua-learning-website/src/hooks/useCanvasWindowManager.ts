@@ -38,6 +38,8 @@ interface CanvasWindowState {
   window: Window
   /** The canvas element in the popup */
   canvas: HTMLCanvasElement
+  /** Whether a canvas process is currently connected to this window */
+  isConnected: boolean
 }
 
 /**
@@ -52,6 +54,8 @@ export interface UseCanvasWindowManagerReturn {
   ) => Promise<HTMLCanvasElement>
   /** Close a canvas popup window by ID */
   closeCanvasWindow: (canvasId: string) => void
+  /** Disconnect a canvas process from a window without closing it. Shows "No canvas connected" overlay. */
+  disconnectCanvasWindow: (canvasId: string) => void
   /** Close all open canvas popup windows */
   closeAllWindows: () => void
   /** Register a handler to be called when a window is closed by the user */
@@ -110,14 +114,30 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
       screenMode?: ScreenMode,
       noToolbar?: boolean
     ): Promise<HTMLCanvasElement> => {
-      // Close existing window with same ID if any
+      // Check if we can reuse an existing window
       const existing = windowsRef.current.get(canvasId)
-      if (existing) {
-        try {
-          existing.window.close()
-        } catch {
-          // Window may already be closed
+      if (existing && !existing.window.closed) {
+        // Reuse existing window
+        existing.isConnected = true
+
+        // Clear the canvas for new use
+        const ctx = existing.canvas.getContext('2d')
+        if (ctx) {
+          ctx.clearRect(0, 0, existing.canvas.width, existing.canvas.height)
         }
+
+        // Send reconnect message to hide overlay
+        existing.window.postMessage({ type: 'canvas-connected' }, '*')
+
+        // Focus the window and canvas
+        existing.window.focus()
+        existing.canvas.focus()
+
+        return existing.canvas
+      }
+
+      // Clean up stale reference if window was closed by user
+      if (existing) {
         windowsRef.current.delete(canvasId)
       }
 
@@ -152,12 +172,14 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
       canvas.focus()
 
       // Track the window
-      windowsRef.current.set(canvasId, { window: popup, canvas })
+      windowsRef.current.set(canvasId, { window: popup, canvas, isConnected: true })
 
       // Handle window close by user (clicking X or closing tab)
       const handleBeforeUnload = () => {
+        const state = windowsRef.current.get(canvasId)
         const handler = closeHandlersRef.current.get(canvasId)
-        if (handler) {
+        // Only call close handler if connected (has active process to stop)
+        if (state?.isConnected && handler) {
           // Call the registered close handler (this will stop the canvas process)
           handler()
         }
@@ -232,6 +254,27 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
         // Window may already be closed
       }
       windowsRef.current.delete(canvasId)
+      closeHandlersRef.current.delete(canvasId)
+      reloadHandlersRef.current.delete(canvasId)
+      executionHandlersRef.current.delete(canvasId)
+    }
+  }, [])
+
+  /**
+   * Disconnect a canvas process from a window without closing it.
+   * The window stays open and shows "No canvas connected" overlay.
+   * Used to keep the window available for reuse when the process stops.
+   */
+  const disconnectCanvasWindow = useCallback((canvasId: string) => {
+    const state = windowsRef.current.get(canvasId)
+    if (state) {
+      // Mark as disconnected
+      state.isConnected = false
+
+      // Send disconnect message to popup to show overlay
+      state.window.postMessage({ type: 'canvas-disconnected' }, '*')
+
+      // Clear handlers (but keep window reference open)
       closeHandlersRef.current.delete(canvasId)
       reloadHandlersRef.current.delete(canvasId)
       executionHandlersRef.current.delete(canvasId)
@@ -366,6 +409,7 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
   return {
     openCanvasWindow,
     closeCanvasWindow,
+    disconnectCanvasWindow,
     closeAllWindows,
     registerWindowCloseHandler,
     unregisterWindowCloseHandler,

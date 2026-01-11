@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useCanvasWindowManager } from './useCanvasWindowManager'
@@ -13,6 +14,7 @@ describe('useCanvasWindowManager', () => {
     close: ReturnType<typeof vi.fn>
     closed: boolean
     postMessage: ReturnType<typeof vi.fn>
+    focus: ReturnType<typeof vi.fn>
   }
   let mockCanvas: HTMLCanvasElement
   let originalWindowOpen: typeof window.open
@@ -39,6 +41,7 @@ describe('useCanvasWindowManager', () => {
       close: vi.fn(),
       closed: false,
       postMessage: vi.fn(),
+      focus: vi.fn(),
     }
 
     // Store original window.open
@@ -142,7 +145,7 @@ describe('useCanvasWindowManager', () => {
       }).rejects.toThrow('Failed to create canvas element')
     })
 
-    it('should close existing window with same ID before opening new one', async () => {
+    it('should reuse existing window with same ID instead of creating a new one', async () => {
       const { result } = renderHook(() => useCanvasWindowManager())
 
       // Open first window
@@ -150,14 +153,17 @@ describe('useCanvasWindowManager', () => {
         await result.current.openCanvasWindow('test-canvas-1')
       })
 
-      const firstWindowClose = mockPopupWindow.close
+      const openCallsAfterFirst = (window.open as ReturnType<typeof vi.fn>).mock.calls.length
 
       // Open second window with same ID
       await act(async () => {
         await result.current.openCanvasWindow('test-canvas-1')
       })
 
-      expect(firstWindowClose).toHaveBeenCalled()
+      // Should NOT have opened a new window (reused existing)
+      expect((window.open as ReturnType<typeof vi.fn>).mock.calls.length).toBe(openCallsAfterFirst)
+      // Should NOT have closed the existing window
+      expect(mockPopupWindow.close).not.toHaveBeenCalled()
     })
   })
 
@@ -421,6 +427,379 @@ describe('useCanvasWindowManager', () => {
     })
   })
 
+  describe('disconnectCanvasWindow', () => {
+    it('should send canvas-disconnected message to popup window', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      act(() => {
+        result.current.disconnectCanvasWindow('test-canvas-1')
+      })
+
+      expect(mockPopupWindow.postMessage).toHaveBeenCalledWith(
+        { type: 'canvas-disconnected' },
+        '*'
+      )
+    })
+
+    it('should NOT close the popup window', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      // Clear any close calls from setup
+      mockPopupWindow.close.mockClear()
+
+      act(() => {
+        result.current.disconnectCanvasWindow('test-canvas-1')
+      })
+
+      expect(mockPopupWindow.close).not.toHaveBeenCalled()
+    })
+
+    it('should clear reload handlers', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+      const reloadHandler = vi.fn()
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      act(() => {
+        result.current.registerWindowReloadHandler('test-canvas-1', reloadHandler, 'auto')
+      })
+
+      act(() => {
+        result.current.disconnectCanvasWindow('test-canvas-1')
+      })
+
+      // triggerAutoReload should not call handler after disconnect
+      act(() => {
+        result.current.triggerAutoReload()
+      })
+
+      expect(reloadHandler).not.toHaveBeenCalled()
+    })
+
+    it('should clear execution handlers', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+      const pauseHandler = vi.fn()
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      act(() => {
+        result.current.registerWindowPauseHandler('test-canvas-1', pauseHandler)
+      })
+
+      act(() => {
+        result.current.disconnectCanvasWindow('test-canvas-1')
+      })
+
+      // Simulate pause message - should not be called after disconnect
+      const messageHandler = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls.find(
+        (call) => call[0] === 'message'
+      )?.[1]
+
+      act(() => {
+        messageHandler?.({ data: { type: 'canvas-pause' } })
+      })
+
+      expect(pauseHandler).not.toHaveBeenCalled()
+    })
+
+    it('should do nothing for non-existent window', () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+
+      expect(() => {
+        act(() => {
+          result.current.disconnectCanvasWindow('non-existent')
+        })
+      }).not.toThrow()
+    })
+  })
+
+  describe('window reuse', () => {
+    it('should reuse existing window when opening canvas with same ID', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+
+      // Open first window
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      // Disconnect it (instead of closing)
+      act(() => {
+        result.current.disconnectCanvasWindow('test-canvas-1')
+      })
+
+      // Clear mock calls
+      mockPopupWindow.close.mockClear()
+      const openCalls = (window.open as ReturnType<typeof vi.fn>).mock.calls.length
+
+      // Open same canvas ID again
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      // Should NOT have opened a new window
+      expect((window.open as ReturnType<typeof vi.fn>).mock.calls.length).toBe(openCalls)
+      // Should NOT have closed the existing window
+      expect(mockPopupWindow.close).not.toHaveBeenCalled()
+    })
+
+    it('should send canvas-connected message when reusing window', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      act(() => {
+        result.current.disconnectCanvasWindow('test-canvas-1')
+      })
+
+      // Clear postMessage calls
+      mockPopupWindow.postMessage.mockClear()
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      expect(mockPopupWindow.postMessage).toHaveBeenCalledWith(
+        { type: 'canvas-connected' },
+        '*'
+      )
+    })
+
+    it('should clear canvas content when reusing window', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+      const mockClearRect = vi.fn()
+      const mockGetContext = vi.fn().mockReturnValue({ clearRect: mockClearRect })
+      mockCanvas.getContext = mockGetContext
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      act(() => {
+        result.current.disconnectCanvasWindow('test-canvas-1')
+      })
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      expect(mockGetContext).toHaveBeenCalledWith('2d')
+      expect(mockClearRect).toHaveBeenCalledWith(0, 0, 800, 600)
+    })
+
+    it('should focus window and canvas when reusing', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+      const mockFocus = vi.fn()
+      mockPopupWindow.focus = mockFocus
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      act(() => {
+        result.current.disconnectCanvasWindow('test-canvas-1')
+      })
+
+      // Clear focus calls
+      mockFocus.mockClear()
+      ;(mockCanvas.focus as ReturnType<typeof vi.fn>).mockClear()
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      expect(mockFocus).toHaveBeenCalled()
+      expect(mockCanvas.focus).toHaveBeenCalled()
+    })
+
+    it('should create new window if existing window was manually closed', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      act(() => {
+        result.current.disconnectCanvasWindow('test-canvas-1')
+      })
+
+      // Simulate user manually closing the window
+      mockPopupWindow.closed = true
+
+      const openCallsBefore = (window.open as ReturnType<typeof vi.fn>).mock.calls.length
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      // Should have opened a new window
+      expect((window.open as ReturnType<typeof vi.fn>).mock.calls.length).toBe(openCallsBefore + 1)
+    })
+
+    it('should set isConnected to true when reusing window', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+      const closeHandler = vi.fn()
+
+      // Open window initially
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      // Disconnect it (sets isConnected = false)
+      act(() => {
+        result.current.disconnectCanvasWindow('test-canvas-1')
+      })
+
+      // Register a new close handler
+      act(() => {
+        result.current.registerWindowCloseHandler('test-canvas-1', closeHandler)
+      })
+
+      // Reopen the window (should set isConnected = true)
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      // Now if user closes window, handler SHOULD be called (because isConnected = true)
+      const beforeunloadHandler = mockPopupWindow.addEventListener.mock.calls.find(
+        (call) => call[0] === 'beforeunload'
+      )?.[1]
+
+      act(() => {
+        beforeunloadHandler?.()
+      })
+
+      expect(closeHandler).toHaveBeenCalled()
+    })
+
+    it('should handle null canvas context gracefully when reusing window', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+      mockCanvas.getContext = vi.fn().mockReturnValue(null)
+
+      // Open first window
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      // Disconnect it
+      act(() => {
+        result.current.disconnectCanvasWindow('test-canvas-1')
+      })
+
+      // Reopen should not throw even if getContext returns null
+      await expect(async () => {
+        await act(async () => {
+          await result.current.openCanvasWindow('test-canvas-1')
+        })
+      }).not.toThrow()
+    })
+
+    it('should clean up stale window reference when window was closed externally', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+
+      // Open first window
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      // Simulate external close (not via disconnect)
+      mockPopupWindow.closed = true
+
+      // Try to open again - should create new window and clean up stale reference
+      const newMockWindow = {
+        ...mockPopupWindow,
+        close: vi.fn(),
+        closed: false,
+        document: {
+          write: vi.fn(),
+          close: vi.fn(),
+          getElementById: vi.fn().mockReturnValue(mockCanvas),
+        },
+        addEventListener: vi.fn(),
+        postMessage: vi.fn(),
+        focus: vi.fn(),
+      }
+      vi.spyOn(window, 'open').mockReturnValue(newMockWindow as unknown as Window)
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      // Verify new window was created (not reused the stale one)
+      expect(newMockWindow.document.write).toHaveBeenCalled()
+    })
+  })
+
+  describe('beforeunload with connection state', () => {
+    it('should NOT call close handler when window is disconnected', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+      const closeHandler = vi.fn()
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      act(() => {
+        result.current.registerWindowCloseHandler('test-canvas-1', closeHandler)
+      })
+
+      // Disconnect the window (no active process)
+      act(() => {
+        result.current.disconnectCanvasWindow('test-canvas-1')
+      })
+
+      // Simulate user closing the window
+      const beforeunloadHandler = mockPopupWindow.addEventListener.mock.calls.find(
+        (call) => call[0] === 'beforeunload'
+      )?.[1]
+
+      act(() => {
+        beforeunloadHandler?.()
+      })
+
+      // Close handler should NOT be called since window was disconnected
+      expect(closeHandler).not.toHaveBeenCalled()
+    })
+
+    it('should call close handler when window is connected', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+      const closeHandler = vi.fn()
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      act(() => {
+        result.current.registerWindowCloseHandler('test-canvas-1', closeHandler)
+      })
+
+      // Window is connected (has active process)
+      // Simulate user closing the window
+      const beforeunloadHandler = mockPopupWindow.addEventListener.mock.calls.find(
+        (call) => call[0] === 'beforeunload'
+      )?.[1]
+
+      act(() => {
+        beforeunloadHandler?.()
+      })
+
+      expect(closeHandler).toHaveBeenCalled()
+    })
+  })
+
   describe('execution controls', () => {
     describe('handler registration', () => {
       it('should register pause handler', async () => {
@@ -592,6 +971,42 @@ describe('useCanvasWindowManager', () => {
           { type: 'canvas-control-state', isRunning: true, isPaused: true },
           '*'
         )
+      })
+    })
+
+    describe('HTML content includes disconnected overlay', () => {
+      it('should include disconnected overlay in popup HTML', async () => {
+        const { result } = renderHook(() => useCanvasWindowManager())
+
+        await act(async () => {
+          await result.current.openCanvasWindow('test-canvas-1')
+        })
+
+        const htmlWritten = mockPopupWindow.document.write.mock.calls[0]?.[0] as string
+        expect(htmlWritten).toContain('id="disconnected-overlay"')
+        expect(htmlWritten).toContain('No canvas connected')
+      })
+
+      it('should handle canvas-disconnected message', async () => {
+        const { result } = renderHook(() => useCanvasWindowManager())
+
+        await act(async () => {
+          await result.current.openCanvasWindow('test-canvas-1')
+        })
+
+        const htmlWritten = mockPopupWindow.document.write.mock.calls[0]?.[0] as string
+        expect(htmlWritten).toContain("event.data.type === 'canvas-disconnected'")
+      })
+
+      it('should handle canvas-connected message', async () => {
+        const { result } = renderHook(() => useCanvasWindowManager())
+
+        await act(async () => {
+          await result.current.openCanvasWindow('test-canvas-1')
+        })
+
+        const htmlWritten = mockPopupWindow.document.write.mock.calls[0]?.[0] as string
+        expect(htmlWritten).toContain("event.data.type === 'canvas-connected'")
       })
     })
 

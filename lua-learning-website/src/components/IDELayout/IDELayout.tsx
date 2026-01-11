@@ -318,7 +318,7 @@ function IDELayoutInner({
   // Canvas window management for shell-based canvas.start() with --canvas=window
   const {
     openCanvasWindow,
-    closeCanvasWindow,
+    disconnectCanvasWindow,
     registerWindowCloseHandler,
     unregisterWindowCloseHandler,
     registerWindowReloadHandler,
@@ -358,10 +358,11 @@ function IDELayoutInner({
     [openCanvasWindow]
   )
 
-  // Handle canvas window close from shell (canvas.stop() or Ctrl+C)
+  // Handle canvas window disconnect from shell (canvas.stop() or Ctrl+C)
+  // This keeps the window open with "No canvas connected" overlay for reuse
   const handleCloseCanvasWindow = useCallback((canvasId: string) => {
-    closeCanvasWindow(canvasId)
-  }, [closeCanvasWindow])
+    disconnectCanvasWindow(canvasId)
+  }, [disconnectCanvasWindow])
 
   // Register a handler to be called when reload is requested from the UI
   const registerCanvasReloadHandler = useCallback((canvasId: string, handler: () => void) => {
