@@ -91,6 +91,7 @@ async function handleInit(code: string, sharedBuffer?: SharedArrayBuffer): Promi
     // Set up error handler
     runtime.onError((message) => {
       notifyError(message);
+      runtime.stop();  // Stop the loop to prevent deadlock in waitForFrame()
       postMessage({ type: 'pauseRequested' });
     });
 
