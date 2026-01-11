@@ -2040,10 +2040,10 @@ export class CanvasController {
       try {
         this.onDrawCallback()
       } catch (error) {
-        // Errors in onDraw should stop the canvas and report to shell
+        // Errors in onDraw should pause the canvas and report to shell
         const errorMessage = formatOnDrawError(error)
         this.callbacks.onError?.(errorMessage)
-        this.stop()
+        this.pause()
         return
       }
     }
