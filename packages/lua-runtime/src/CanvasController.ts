@@ -205,6 +205,17 @@ export interface CanvasCallbacks {
    * Called after each frame to ensure print() output appears immediately.
    */
   onFlushOutput?: () => void
+  /**
+   * Show error overlay in a canvas window.
+   * @param canvasId - The canvas ID
+   * @param error - Error message to display
+   */
+  showErrorOverlay?: (canvasId: string, error: string) => void
+  /**
+   * Clear/hide error overlay in a canvas window.
+   * @param canvasId - The canvas ID
+   */
+  clearErrorOverlay?: (canvasId: string) => void
 }
 
 /**
@@ -321,6 +332,8 @@ export class CanvasController {
     if (this.gameLoop) {
       this.gameLoop.resume()
       this.updateControlState()
+      // Clear error overlay when resuming
+      this.callbacks.clearErrorOverlay?.(this.canvasId)
     }
   }
 
@@ -452,6 +465,9 @@ export class CanvasController {
 
     // Send initial control state to popup window (if applicable)
     this.updateControlState()
+
+    // Clear any error overlay when starting fresh
+    this.callbacks.clearErrorOverlay?.(this.canvasId)
 
     // Return a Promise that blocks until stop() is called
     return new Promise<void>((resolve) => {
@@ -2043,6 +2059,8 @@ export class CanvasController {
         // Errors in onDraw should pause the canvas and report to shell
         const errorMessage = formatOnDrawError(error)
         this.callbacks.onError?.(errorMessage)
+        // Show error overlay in canvas window
+        this.callbacks.showErrorOverlay?.(this.canvasId, errorMessage)
         this.pause()
         return
       }

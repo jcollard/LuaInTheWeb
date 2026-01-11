@@ -196,6 +196,17 @@ export interface ShellCanvasCallbacks {
    * @param state - The current control state
    */
   updateCanvasControlState?: (canvasId: string, state: { isRunning: boolean; isPaused: boolean }) => void
+  /**
+   * Show error overlay in a canvas window or tab.
+   * @param canvasId - The canvas ID
+   * @param error - Error message to display
+   */
+  showErrorOverlay?: (canvasId: string, error: string) => void
+  /**
+   * Clear/hide error overlay in a canvas window or tab.
+   * @param canvasId - The canvas ID
+   */
+  clearErrorOverlay?: (canvasId: string) => void
 }
 
 /**
@@ -401,6 +412,9 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
         registerCanvasStepHandler: options?.canvasCallbacks?.registerCanvasStepHandler,
         unregisterCanvasExecutionHandlers: options?.canvasCallbacks?.unregisterCanvasExecutionHandlers,
         updateCanvasControlState: options?.canvasCallbacks?.updateCanvasControlState,
+        // Error overlay callbacks for canvas windows and tabs
+        showErrorOverlay: options?.canvasCallbacks?.showErrorOverlay,
+        clearErrorOverlay: options?.canvasCallbacks?.clearErrorOverlay,
         // Editor integration callback for 'open' command
         onRequestOpenFile: options?.onRequestOpenFile,
         // Filesystem change notification for UI refresh (e.g., file tree)

@@ -28,6 +28,8 @@ export interface CanvasTabContentProps {
   isActive?: boolean
   /** Control state for each canvas (canvasId -> { isRunning, isPaused }) */
   canvasControlStates?: Map<string, { isRunning: boolean; isPaused: boolean }>
+  /** Error state for each canvas (canvasId -> error message) */
+  canvasErrorStates?: Map<string, string>
   /** Callback when pause is requested */
   onPause?: (canvasId: string) => void
   /** Callback when play is requested */
@@ -49,6 +51,7 @@ export function CanvasTabContent({
   onReload,
   isActive,
   canvasControlStates,
+  canvasErrorStates,
   onPause,
   onPlay,
   onStop,
@@ -61,6 +64,9 @@ export function CanvasTabContent({
 
   // Get the control state for the active canvas
   const controlState = activeCanvasId ? canvasControlStates?.get(activeCanvasId) : undefined
+
+  // Get the error for the active canvas
+  const shellError = activeCanvasId ? canvasErrorStates?.get(activeCanvasId) : undefined
 
   return (
     <div className={styles.canvasContainer}>
@@ -97,6 +103,7 @@ export function CanvasTabContent({
         isActive={isActive}
         shellIsRunning={controlState?.isRunning}
         shellIsPaused={controlState?.isPaused}
+        shellError={shellError}
         onPause={activeCanvasId && onPause ? () => onPause(activeCanvasId) : undefined}
         onPlay={activeCanvasId && onPlay ? () => onPlay(activeCanvasId) : undefined}
         onStop={activeCanvasId && onStop ? () => onStop(activeCanvasId) : undefined}
