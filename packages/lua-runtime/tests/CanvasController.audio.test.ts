@@ -51,6 +51,10 @@ vi.mock('@lua-learning/canvas-runtime', () => {
       start = vi.fn()
       stop = vi.fn()
       dispose = vi.fn()
+      isPaused = vi.fn().mockReturnValue(false)
+      pause = vi.fn()
+      resume = vi.fn()
+      step = vi.fn()
     },
     ImageCache: class MockImageCache {
       set = vi.fn()
