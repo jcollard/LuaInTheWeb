@@ -282,6 +282,16 @@ export class LuaCanvasProcess implements IProcess {
   }
 
   /**
+   * Execute a single frame while paused, then remain paused.
+   * Only works when the process is running and paused.
+   */
+  step(): void {
+    if (this.gameLoop) {
+      this.gameLoop.step();
+    }
+  }
+
+  /**
    * Trigger hot reload of all loaded Lua modules.
    * Updates function definitions while preserving runtime state.
    */

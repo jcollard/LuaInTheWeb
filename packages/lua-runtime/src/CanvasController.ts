@@ -131,6 +131,76 @@ export interface CanvasCallbacks {
    */
   unregisterWindowCloseHandler?: (canvasId: string) => void
   /**
+   * Register a handler for the pause button in the popup window.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when pause is requested
+   */
+  registerWindowPauseHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Register a handler for the play button in the popup window.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when play is requested
+   */
+  registerWindowPlayHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Register a handler for the stop button in the popup window.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when stop is requested
+   */
+  registerWindowStopHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Register a handler for the step button in the popup window.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when step is requested
+   */
+  registerWindowStepHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Unregister all execution control handlers for a window.
+   * @param canvasId - The canvas ID
+   */
+  unregisterWindowExecutionHandlers?: (canvasId: string) => void
+  /**
+   * Update the control state in a popup window.
+   * @param canvasId - The canvas ID
+   * @param state - Object with isRunning and isPaused booleans
+   */
+  updateWindowControlState?: (canvasId: string, state: { isRunning: boolean; isPaused: boolean }) => void
+  /**
+   * Register a handler for the pause button in a canvas tab.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when pause is requested
+   */
+  registerCanvasPauseHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Register a handler for the play button in a canvas tab.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when play is requested
+   */
+  registerCanvasPlayHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Register a handler for the stop button in a canvas tab.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when stop is requested
+   */
+  registerCanvasStopHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Register a handler for the step button in a canvas tab.
+   * @param canvasId - The canvas ID
+   * @param handler - Function to call when step is requested
+   */
+  registerCanvasStepHandler?: (canvasId: string, handler: () => void) => void
+  /**
+   * Unregister all execution control handlers for a canvas tab.
+   * @param canvasId - The canvas ID
+   */
+  unregisterCanvasExecutionHandlers?: (canvasId: string) => void
+  /**
+   * Update the control state in a canvas tab.
+   * @param canvasId - The canvas ID
+   * @param state - Object with isRunning and isPaused booleans
+   */
+  updateCanvasControlState?: (canvasId: string, state: { isRunning: boolean; isPaused: boolean }) => void
+  /**
    * Flush buffered output.
    * Called after each frame to ensure print() output appears immediately.
    */
@@ -228,6 +298,54 @@ export class CanvasController {
   }
 
   /**
+   * Check if the canvas is currently paused.
+   */
+  isPaused(): boolean {
+    return this.gameLoop?.isPaused() ?? false
+  }
+
+  /**
+   * Pause the canvas game loop.
+   */
+  pause(): void {
+    if (this.gameLoop) {
+      this.gameLoop.pause()
+      this.updateControlState()
+    }
+  }
+
+  /**
+   * Resume the canvas game loop.
+   */
+  resume(): void {
+    if (this.gameLoop) {
+      this.gameLoop.resume()
+      this.updateControlState()
+    }
+  }
+
+  /**
+   * Step one frame forward (when paused).
+   */
+  step(): void {
+    if (this.gameLoop) {
+      this.gameLoop.step()
+    }
+  }
+
+  /**
+   * Update the control state in the popup window and canvas tab (if applicable).
+   */
+  private updateControlState(): void {
+    const state = {
+      isRunning: this.running,
+      isPaused: this.isPaused(),
+    }
+    this.callbacks.updateWindowControlState?.(this.canvasId, state)
+    this.callbacks.updateCanvasControlState?.(this.canvasId, state)
+  }
+
+  /**
    * Set the onDraw callback from Lua.
    */
   setOnDrawCallback(callback: () => void): void {
@@ -302,6 +420,18 @@ export class CanvasController {
       this.callbacks.registerCanvasReloadHandler(this.canvasId, () => this.reload())
     }
 
+    // Register execution control handlers for popup window controls
+    this.callbacks.registerWindowPauseHandler?.(this.canvasId, () => this.pause())
+    this.callbacks.registerWindowPlayHandler?.(this.canvasId, () => this.resume())
+    this.callbacks.registerWindowStopHandler?.(this.canvasId, () => this.stop())
+    this.callbacks.registerWindowStepHandler?.(this.canvasId, () => this.step())
+
+    // Register execution control handlers for canvas tab controls
+    this.callbacks.registerCanvasPauseHandler?.(this.canvasId, () => this.pause())
+    this.callbacks.registerCanvasPlayHandler?.(this.canvasId, () => this.resume())
+    this.callbacks.registerCanvasStopHandler?.(this.canvasId, () => this.stop())
+    this.callbacks.registerCanvasStepHandler?.(this.canvasId, () => this.step())
+
     // Initialize renderer with image cache (if assets were loaded), input capture, and game loop
     this.renderer = new CanvasRenderer(this.canvas, this.imageCache ?? undefined)
     this.inputCapture = new InputCapture(this.canvas)
@@ -319,6 +449,9 @@ export class CanvasController {
 
     // Start the game loop
     this.gameLoop.start()
+
+    // Send initial control state to popup window (if applicable)
+    this.updateControlState()
 
     // Return a Promise that blocks until stop() is called
     return new Promise<void>((resolve) => {
@@ -362,6 +495,10 @@ export class CanvasController {
     if (this.callbacks.unregisterCanvasReloadHandler) {
       this.callbacks.unregisterCanvasReloadHandler(this.canvasId)
     }
+
+    // Unregister execution control handlers
+    this.callbacks.unregisterWindowExecutionHandlers?.(this.canvasId)
+    this.callbacks.unregisterCanvasExecutionHandlers?.(this.canvasId)
 
     // Close the canvas tab
     this.callbacks.onCloseCanvasTab(this.canvasId)

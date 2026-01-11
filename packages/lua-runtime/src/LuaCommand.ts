@@ -174,6 +174,20 @@ export class LuaCommand implements ICommand {
             // Window close handler registration for UI-initiated popup window close
             registerWindowCloseHandler: context.registerWindowCloseHandler,
             unregisterWindowCloseHandler: context.unregisterWindowCloseHandler,
+            // Window execution control handlers (pause/play/stop/step)
+            registerWindowPauseHandler: context.registerWindowPauseHandler,
+            registerWindowPlayHandler: context.registerWindowPlayHandler,
+            registerWindowStopHandler: context.registerWindowStopHandler,
+            registerWindowStepHandler: context.registerWindowStepHandler,
+            unregisterWindowExecutionHandlers: context.unregisterWindowExecutionHandlers,
+            updateWindowControlState: context.updateWindowControlState,
+            // Canvas tab execution control handlers (pause/play/stop/step)
+            registerCanvasPauseHandler: context.registerCanvasPauseHandler,
+            registerCanvasPlayHandler: context.registerCanvasPlayHandler,
+            registerCanvasStopHandler: context.registerCanvasStopHandler,
+            registerCanvasStepHandler: context.registerCanvasStepHandler,
+            unregisterCanvasExecutionHandlers: context.unregisterCanvasExecutionHandlers,
+            updateCanvasControlState: context.updateCanvasControlState,
             fileSystem: context.filesystem,
             scriptDirectory,
           }

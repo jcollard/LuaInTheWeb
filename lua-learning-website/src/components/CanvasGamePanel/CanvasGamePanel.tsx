@@ -30,6 +30,18 @@ export interface CanvasGamePanelProps {
   onScalingModeChange?: (mode: CanvasScalingMode) => void
   /** Whether the canvas tab is active and should receive focus */
   isActive?: boolean
+  /** Shell-controlled running state (for shell integration mode) */
+  shellIsRunning?: boolean
+  /** Shell-controlled paused state (for shell integration mode) */
+  shellIsPaused?: boolean
+  /** Callback when pause is requested (shell integration mode) */
+  onPause?: () => void
+  /** Callback when play is requested (shell integration mode) */
+  onPlay?: () => void
+  /** Callback when stop is requested (shell integration mode) */
+  onStop?: () => void
+  /** Callback when step is requested (shell integration mode) */
+  onStep?: () => void
 }
 
 export function CanvasGamePanel({
@@ -44,6 +56,12 @@ export function CanvasGamePanel({
   scalingMode = 'fit',
   onScalingModeChange,
   isActive,
+  shellIsRunning,
+  shellIsPaused,
+  onPause,
+  onPlay,
+  onStop,
+  onStep,
 }: CanvasGamePanelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -54,8 +72,10 @@ export function CanvasGamePanel({
     error,
     mode,
     startGame,
+    stopGame,
     pauseGame,
     resumeGame,
+    stepGame,
     reloadGame,
     clearError,
   } = useCanvasGame({
@@ -83,14 +103,6 @@ export function CanvasGamePanel({
       canvasRef.current.focus()
     }
   }, [isActive])
-
-  const handlePauseResume = useCallback(() => {
-    if (isPaused) {
-      resumeGame()
-    } else {
-      pauseGame()
-    }
-  }, [isPaused, pauseGame, resumeGame])
 
   const handleScalingModeChange = useCallback(
     (e: ChangeEvent<HTMLSelectElement>) => {
@@ -138,42 +150,86 @@ export function CanvasGamePanel({
     <div className={panelClassName}>
       {/* Toolbar */}
       <div className={styles.toolbar}>
-        {/* Mode indicator and pause - only in standalone mode (isRunning) */}
-        {isRunning && (
+        {/* Mode indicator and execution controls - standalone mode or shell integration mode */}
+        {(isRunning || shellIsRunning) && (
           <>
-            <span
-              className={`${styles.modeIndicator} ${styles[mode]}`}
-              title={
-                mode === 'performance'
-                  ? 'Using SharedArrayBuffer for best performance'
-                  : 'Using postMessage fallback for compatibility'
-              }
+            {/* Mode indicator - only show in standalone mode */}
+            {isRunning && (
+              <span
+                className={`${styles.modeIndicator} ${styles[mode]}`}
+                title={
+                  mode === 'performance'
+                    ? 'Using SharedArrayBuffer for best performance'
+                    : 'Using postMessage fallback for compatibility'
+                }
+              >
+                {mode === 'performance' ? 'Performance' : 'Compatibility'}
+              </span>
+            )}
+
+            {/* Play/Pause button - mutually exclusive */}
+            {/* Use shell handlers when in shell mode, otherwise use standalone handlers */}
+            {(shellIsRunning ? shellIsPaused : isPaused) ? (
+              <button
+                type="button"
+                className={styles.playButton}
+                onClick={shellIsRunning ? onPlay : resumeGame}
+                aria-label="Play game"
+                title="Play (resume execution)"
+              >
+                Play
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={styles.pauseButton}
+                onClick={shellIsRunning ? onPause : pauseGame}
+                aria-label="Pause game"
+                title="Pause (suspend execution)"
+              >
+                Pause
+              </button>
+            )}
+
+            {/* Stop button - always visible when running */}
+            <button
+              type="button"
+              className={styles.stopButton}
+              onClick={shellIsRunning ? onStop : stopGame}
+              aria-label="Stop game"
+              title="Stop (terminate process)"
             >
-              {mode === 'performance' ? 'Performance' : 'Compatibility'}
-            </span>
+              Stop
+            </button>
+
+            {/* Step button - only visible when paused */}
+            {(shellIsRunning ? shellIsPaused : isPaused) && (
+              <button
+                type="button"
+                className={styles.stepButton}
+                onClick={shellIsRunning ? onStep : stepGame}
+                aria-label="Step one frame"
+                title="Step (execute one frame)"
+              >
+                Step
+              </button>
+            )}
+
+            {/* Reload button - use shell handler in shell mode */}
             <button
               type="button"
               className={styles.reloadButton}
-              onClick={reloadGame}
+              onClick={shellIsRunning ? onReload : reloadGame}
               aria-label="Hot reload code"
               title="Hot reload (update functions, preserve state)"
             >
               Reload
             </button>
-            <button
-              type="button"
-              className={styles.pauseButton}
-              onClick={handlePauseResume}
-              aria-label={isPaused ? 'Resume game' : 'Pause game'}
-              title={isPaused ? 'Resume' : 'Pause'}
-            >
-              {isPaused ? 'Resume' : 'Pause'}
-            </button>
           </>
         )}
 
-        {/* Reload button for shell integration mode */}
-        {!isRunning && onReload && (
+        {/* Reload button for shell integration mode when not running */}
+        {!isRunning && !shellIsRunning && onReload && (
           <button
             type="button"
             className={styles.reloadButton}

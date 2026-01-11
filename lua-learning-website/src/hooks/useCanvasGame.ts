@@ -29,6 +29,7 @@ export interface UseCanvasGameReturn {
   stopGame: () => void
   pauseGame: () => void
   resumeGame: () => void
+  stepGame: () => void
   reloadGame: () => void
   clearOutput: () => void
   clearError: () => void
@@ -123,6 +124,12 @@ export function useCanvasGame(
     }
   }, [])
 
+  const stepGame = useCallback(() => {
+    if (processRef.current) {
+      processRef.current.step()
+    }
+  }, [])
+
   const reloadGame = useCallback(() => {
     if (processRef.current) {
       processRef.current.reload()
@@ -161,6 +168,7 @@ export function useCanvasGame(
     stopGame,
     pauseGame,
     resumeGame,
+    stepGame,
     reloadGame,
     clearOutput,
     clearError,

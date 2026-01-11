@@ -12,9 +12,11 @@ describe('useCanvasWindowManager', () => {
     addEventListener: ReturnType<typeof vi.fn>
     close: ReturnType<typeof vi.fn>
     closed: boolean
+    postMessage: ReturnType<typeof vi.fn>
   }
   let mockCanvas: HTMLCanvasElement
   let originalWindowOpen: typeof window.open
+  let originalWindowAddEventListener: typeof window.addEventListener
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -36,18 +38,24 @@ describe('useCanvasWindowManager', () => {
       addEventListener: vi.fn(),
       close: vi.fn(),
       closed: false,
+      postMessage: vi.fn(),
     }
 
     // Store original window.open
     originalWindowOpen = window.open
+    originalWindowAddEventListener = window.addEventListener
 
     // Mock window.open
     vi.spyOn(window, 'open').mockReturnValue(mockPopupWindow as unknown as Window)
+
+    // Mock window.addEventListener
+    vi.spyOn(window, 'addEventListener')
   })
 
   afterEach(() => {
-    // Restore window.open
+    // Restore window.open and addEventListener
     window.open = originalWindowOpen
+    window.addEventListener = originalWindowAddEventListener
   })
 
   describe('openCanvasWindow', () => {
@@ -410,6 +418,227 @@ describe('useCanvasWindowManager', () => {
       })
 
       expect(reloadHandler).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('execution controls', () => {
+    describe('handler registration', () => {
+      it('should register pause handler', async () => {
+        const { result } = renderHook(() => useCanvasWindowManager())
+        const pauseHandler = vi.fn()
+
+        await act(async () => {
+          await result.current.openCanvasWindow('test-canvas-1')
+        })
+
+        act(() => {
+          result.current.registerWindowPauseHandler('test-canvas-1', pauseHandler)
+        })
+
+        // Simulate pause message from popup
+        const messageHandler = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls.find(
+          (call) => call[0] === 'message'
+        )?.[1]
+
+        act(() => {
+          messageHandler?.({ data: { type: 'canvas-pause' } })
+        })
+
+        expect(pauseHandler).toHaveBeenCalled()
+      })
+
+      it('should register play handler', async () => {
+        const { result } = renderHook(() => useCanvasWindowManager())
+        const playHandler = vi.fn()
+
+        await act(async () => {
+          await result.current.openCanvasWindow('test-canvas-1')
+        })
+
+        act(() => {
+          result.current.registerWindowPlayHandler('test-canvas-1', playHandler)
+        })
+
+        // Simulate play message from popup
+        const messageHandler = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls.find(
+          (call) => call[0] === 'message'
+        )?.[1]
+
+        act(() => {
+          messageHandler?.({ data: { type: 'canvas-play' } })
+        })
+
+        expect(playHandler).toHaveBeenCalled()
+      })
+
+      it('should register stop handler', async () => {
+        const { result } = renderHook(() => useCanvasWindowManager())
+        const stopHandler = vi.fn()
+
+        await act(async () => {
+          await result.current.openCanvasWindow('test-canvas-1')
+        })
+
+        act(() => {
+          result.current.registerWindowStopHandler('test-canvas-1', stopHandler)
+        })
+
+        // Simulate stop message from popup
+        const messageHandler = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls.find(
+          (call) => call[0] === 'message'
+        )?.[1]
+
+        act(() => {
+          messageHandler?.({ data: { type: 'canvas-stop' } })
+        })
+
+        expect(stopHandler).toHaveBeenCalled()
+      })
+
+      it('should register step handler', async () => {
+        const { result } = renderHook(() => useCanvasWindowManager())
+        const stepHandler = vi.fn()
+
+        await act(async () => {
+          await result.current.openCanvasWindow('test-canvas-1')
+        })
+
+        act(() => {
+          result.current.registerWindowStepHandler('test-canvas-1', stepHandler)
+        })
+
+        // Simulate step message from popup
+        const messageHandler = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls.find(
+          (call) => call[0] === 'message'
+        )?.[1]
+
+        act(() => {
+          messageHandler?.({ data: { type: 'canvas-step' } })
+        })
+
+        expect(stepHandler).toHaveBeenCalled()
+      })
+    })
+
+    describe('handler unregistration', () => {
+      it('should not call pause handler after unregister', async () => {
+        const { result } = renderHook(() => useCanvasWindowManager())
+        const pauseHandler = vi.fn()
+
+        await act(async () => {
+          await result.current.openCanvasWindow('test-canvas-1')
+        })
+
+        act(() => {
+          result.current.registerWindowPauseHandler('test-canvas-1', pauseHandler)
+          result.current.unregisterWindowExecutionHandlers('test-canvas-1')
+        })
+
+        // Simulate pause message from popup
+        const messageHandler = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls.find(
+          (call) => call[0] === 'message'
+        )?.[1]
+
+        act(() => {
+          messageHandler?.({ data: { type: 'canvas-pause' } })
+        })
+
+        expect(pauseHandler).not.toHaveBeenCalled()
+      })
+    })
+
+    describe('control state updates', () => {
+      it('should send control state update to popup window', async () => {
+        const { result } = renderHook(() => useCanvasWindowManager())
+        const mockPostMessage = vi.fn()
+
+        await act(async () => {
+          await result.current.openCanvasWindow('test-canvas-1')
+        })
+
+        // Add postMessage to mock window
+        const windowState = (result.current as unknown as { windowsRef: { current: Map<string, { window: { postMessage: typeof mockPostMessage } }> } }).windowsRef?.current?.get?.('test-canvas-1')
+        if (windowState) {
+          windowState.window.postMessage = mockPostMessage
+        }
+        // Workaround: mock postMessage on the mock popup window
+        mockPopupWindow.postMessage = mockPostMessage
+
+        act(() => {
+          result.current.updateWindowControlState('test-canvas-1', { isRunning: true, isPaused: false })
+        })
+
+        expect(mockPostMessage).toHaveBeenCalledWith(
+          { type: 'canvas-control-state', isRunning: true, isPaused: false },
+          '*'
+        )
+      })
+
+      it('should send isPaused=true when game is paused', async () => {
+        const { result } = renderHook(() => useCanvasWindowManager())
+        const mockPostMessage = vi.fn()
+
+        await act(async () => {
+          await result.current.openCanvasWindow('test-canvas-1')
+        })
+
+        mockPopupWindow.postMessage = mockPostMessage
+
+        act(() => {
+          result.current.updateWindowControlState('test-canvas-1', { isRunning: true, isPaused: true })
+        })
+
+        expect(mockPostMessage).toHaveBeenCalledWith(
+          { type: 'canvas-control-state', isRunning: true, isPaused: true },
+          '*'
+        )
+      })
+    })
+
+    describe('HTML content includes execution controls', () => {
+      it('should include pause button in popup HTML', async () => {
+        const { result } = renderHook(() => useCanvasWindowManager())
+
+        await act(async () => {
+          await result.current.openCanvasWindow('test-canvas-1')
+        })
+
+        const htmlWritten = mockPopupWindow.document.write.mock.calls[0]?.[0] as string
+        expect(htmlWritten).toContain('id="pause-btn"')
+      })
+
+      it('should include play button in popup HTML', async () => {
+        const { result } = renderHook(() => useCanvasWindowManager())
+
+        await act(async () => {
+          await result.current.openCanvasWindow('test-canvas-1')
+        })
+
+        const htmlWritten = mockPopupWindow.document.write.mock.calls[0]?.[0] as string
+        expect(htmlWritten).toContain('id="play-btn"')
+      })
+
+      it('should include stop button in popup HTML', async () => {
+        const { result } = renderHook(() => useCanvasWindowManager())
+
+        await act(async () => {
+          await result.current.openCanvasWindow('test-canvas-1')
+        })
+
+        const htmlWritten = mockPopupWindow.document.write.mock.calls[0]?.[0] as string
+        expect(htmlWritten).toContain('id="stop-btn"')
+      })
+
+      it('should include step button in popup HTML', async () => {
+        const { result } = renderHook(() => useCanvasWindowManager())
+
+        await act(async () => {
+          await result.current.openCanvasWindow('test-canvas-1')
+        })
+
+        const htmlWritten = mockPopupWindow.document.write.mock.calls[0]?.[0] as string
+        expect(htmlWritten).toContain('id="step-btn"')
+      })
     })
   })
 })

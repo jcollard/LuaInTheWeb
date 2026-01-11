@@ -12,6 +12,12 @@ export type FrameCallback = (timing: TimingInfo) => void;
 const MAX_DELTA_TIME = 0.1; // 100ms
 
 /**
+ * Fixed delta time for step/resume operations.
+ * Provides consistent 60FPS timing (~16.67ms) for debugging.
+ */
+const FIXED_DT = 1 / 60;
+
+/**
  * Controls the game loop using requestAnimationFrame.
  *
  * GameLoopController manages the timing and execution of the game loop,
@@ -24,6 +30,8 @@ export class GameLoopController {
   private running = false;
   private paused = false;
   private disposed = false;
+  private stepping = false;
+  private useFixedDt = false;
   private animationFrameId: number | null = null;
   private targetFPS = 60;
 
@@ -75,6 +83,21 @@ export class GameLoopController {
   resume(): void {
     if (!this.running || !this.paused) return;
     this.paused = false;
+    this.useFixedDt = true;
+    this.lastTime = performance.now();
+    this.scheduleFrame();
+  }
+
+  /**
+   * Execute a single frame and return to paused state.
+   * Only works when the loop is running AND paused.
+   */
+  step(): void {
+    if (!this.running || !this.paused) return;
+
+    this.stepping = true;
+    this.paused = false;
+    this.useFixedDt = true;
     this.lastTime = performance.now();
     this.scheduleFrame();
   }
@@ -155,7 +178,14 @@ export class GameLoopController {
     if (this.disposed || !this.running || this.paused) return;
 
     // Calculate delta time in seconds
-    let deltaTime = (timestamp - this.lastTime) / 1000;
+    // Use fixed dt for step/resume to ensure consistent 60FPS timing
+    let deltaTime: number;
+    if (this.useFixedDt) {
+      deltaTime = FIXED_DT;
+      this.useFixedDt = false;
+    } else {
+      deltaTime = (timestamp - this.lastTime) / 1000;
+    }
     this.lastTime = timestamp;
 
     // Cap delta time to prevent spiral of death
@@ -177,6 +207,13 @@ export class GameLoopController {
 
     // Call the frame callback
     this.frameCallback(timing);
+
+    // If stepping, pause after this frame
+    if (this.stepping) {
+      this.stepping = false;
+      this.paused = true;
+      return;
+    }
 
     // Schedule next frame
     this.scheduleFrame();

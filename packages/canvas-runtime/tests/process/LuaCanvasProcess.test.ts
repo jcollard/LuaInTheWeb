@@ -757,4 +757,52 @@ describe('LuaCanvasProcess', () => {
       expect(cancelAnimationFrame).toHaveBeenCalled();
     });
   });
+
+  describe('step()', () => {
+    it('should call step on game loop when process is running and paused', () => {
+      process = new LuaCanvasProcess({
+        code: 'canvas.tick(function() canvas.clear() end)',
+        canvas: mockCanvas.canvas,
+      });
+
+      process.start();
+      mockWorkerInstance.simulateMessage({ type: 'ready' });
+      mockWorkerInstance.simulateMessage({ type: 'stateChanged', state: 'running' });
+
+      // Pause first
+      (process as import('../../src/process/LuaCanvasProcess.js').LuaCanvasProcess).pause();
+      expect((process as import('../../src/process/LuaCanvasProcess.js').LuaCanvasProcess).isPaused()).toBe(true);
+
+      // Step
+      (process as import('../../src/process/LuaCanvasProcess.js').LuaCanvasProcess).step();
+
+      // Trigger the frame callback to complete the step
+      if (rafCallback) {
+        (performance.now as ReturnType<typeof vi.fn>).mockReturnValue(16.67);
+        rafCallback(16.67);
+      }
+
+      // After step completes, should be paused again (game loop handles this)
+      expect((process as import('../../src/process/LuaCanvasProcess.js').LuaCanvasProcess).isPaused()).toBe(true);
+    });
+
+    it('should do nothing if process is not running', () => {
+      process = new LuaCanvasProcess({
+        code: 'canvas.tick(function() canvas.clear() end)',
+        canvas: mockCanvas.canvas,
+      });
+
+      // Should not throw when not running
+      expect(() => (process as import('../../src/process/LuaCanvasProcess.js').LuaCanvasProcess).step()).not.toThrow();
+    });
+
+    it('should have step method available', () => {
+      process = new LuaCanvasProcess({
+        code: 'canvas.tick(function() canvas.clear() end)',
+        canvas: mockCanvas.canvas,
+      });
+
+      expect((process as import('../../src/process/LuaCanvasProcess.js').LuaCanvasProcess).step).toBeInstanceOf(Function);
+    });
+  });
 });

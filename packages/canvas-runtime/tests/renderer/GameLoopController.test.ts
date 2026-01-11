@@ -273,4 +273,104 @@ describe('GameLoopController', () => {
       expect(timing.deltaTime).toBe(0);
     });
   });
+
+  describe('step', () => {
+    it('should execute one frame callback when paused', () => {
+      controller.start();
+      vi.advanceTimersToNextTimer(); // Initial frame
+      controller.pause();
+      frameCallback.mockClear();
+
+      controller.step();
+      vi.advanceTimersToNextTimer();
+
+      expect(frameCallback).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return to paused state after stepping', () => {
+      controller.start();
+      controller.pause();
+
+      controller.step();
+      vi.advanceTimersToNextTimer();
+
+      expect(controller.isPaused()).toBe(true);
+    });
+
+    it('should do nothing if not running', () => {
+      frameCallback.mockClear();
+
+      controller.step();
+      vi.advanceTimersToNextTimer();
+
+      expect(frameCallback).not.toHaveBeenCalled();
+    });
+
+    it('should do nothing if not paused', () => {
+      controller.start();
+      vi.advanceTimersToNextTimer(); // Initial frame
+      frameCallback.mockClear();
+
+      // Not paused - step should have no effect
+      controller.step();
+      vi.advanceTimersToNextTimer();
+
+      // Only normal frame should occur (step doesn't cause extra)
+      expect(frameCallback.mock.calls.length).toBeLessThanOrEqual(1);
+    });
+
+    it('should allow multiple steps', () => {
+      controller.start();
+      controller.pause();
+      frameCallback.mockClear();
+
+      controller.step();
+      vi.advanceTimersToNextTimer();
+
+      controller.step();
+      vi.advanceTimersToNextTimer();
+
+      controller.step();
+      vi.advanceTimersToNextTimer();
+
+      expect(frameCallback).toHaveBeenCalledTimes(3);
+    });
+
+    it('should increment frame number on each step', () => {
+      controller.start();
+      vi.advanceTimersToNextTimer(); // Frame 1
+      controller.pause();
+      frameCallback.mockClear();
+
+      controller.step();
+      vi.advanceTimersToNextTimer(); // Frame 2
+
+      const timing = frameCallback.mock.calls[0][0] as TimingInfo;
+      expect(timing.frameNumber).toBe(2);
+    });
+
+    it('should still be running after step', () => {
+      controller.start();
+      controller.pause();
+
+      controller.step();
+      vi.advanceTimersToNextTimer();
+
+      expect(controller.isRunning()).toBe(true);
+    });
+
+    it('should not schedule additional frames after step', () => {
+      controller.start();
+      controller.pause();
+      frameCallback.mockClear();
+
+      controller.step();
+      vi.advanceTimersToNextTimer();
+
+      // Wait more time - no additional frames should occur
+      vi.advanceTimersByTime(100);
+
+      expect(frameCallback).toHaveBeenCalledTimes(1);
+    });
+  });
 });
