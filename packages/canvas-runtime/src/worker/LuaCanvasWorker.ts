@@ -91,6 +91,7 @@ async function handleInit(code: string, sharedBuffer?: SharedArrayBuffer): Promi
     // Set up error handler
     runtime.onError((message) => {
       notifyError(message);
+      postMessage({ type: 'pauseRequested' });
     });
 
     // Set up module request callback for require() support

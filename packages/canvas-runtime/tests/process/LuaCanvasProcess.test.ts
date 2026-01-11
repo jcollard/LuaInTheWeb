@@ -462,7 +462,7 @@ describe('LuaCanvasProcess', () => {
       expect(onError).toHaveBeenCalledWith('Lua syntax error');
     });
 
-    it('should call onExit with code 1 on error', () => {
+    it('should call onExit with code 1 on initialization error', () => {
       const onExit = vi.fn();
       process = new LuaCanvasProcess({
         code: 'invalid lua code',
@@ -471,9 +471,10 @@ describe('LuaCanvasProcess', () => {
       process.onExit = onExit;
 
       process.start();
+      // Initialization errors trigger state change to 'error'
       mockWorkerInstance.simulateMessage({
-        type: 'error',
-        message: 'Lua syntax error',
+        type: 'stateChanged',
+        state: 'error',
       });
 
       expect(onExit).toHaveBeenCalledWith(1);
@@ -493,7 +494,7 @@ describe('LuaCanvasProcess', () => {
       expect(onError).toHaveBeenCalledWith('Worker crashed');
     });
 
-    it('should set isRunning to false on error', () => {
+    it('should set isRunning to false on initialization error', () => {
       process = new LuaCanvasProcess({
         code: 'invalid lua code',
         canvas: mockCanvas.canvas,
@@ -502,12 +503,142 @@ describe('LuaCanvasProcess', () => {
       process.start();
       expect(process.isRunning()).toBe(true);
 
+      // Initialization errors trigger state change to 'error'
       mockWorkerInstance.simulateMessage({
-        type: 'error',
-        message: 'Lua syntax error',
+        type: 'stateChanged',
+        state: 'error',
       });
 
       expect(process.isRunning()).toBe(false);
+    });
+  });
+
+  describe('pause on error', () => {
+    it('should pause process when pauseRequested message received', () => {
+      // Arrange
+      process = new LuaCanvasProcess({
+        code: 'canvas.tick(function() canvas.clear() end)',
+        canvas: mockCanvas.canvas,
+      });
+
+      process.start();
+      mockWorkerInstance.simulateMessage({ type: 'ready' });
+      mockWorkerInstance.simulateMessage({ type: 'stateChanged', state: 'running' });
+
+      expect(process.isRunning()).toBe(true);
+      expect((process as import('../../src/process/LuaCanvasProcess.js').LuaCanvasProcess).isPaused()).toBe(false);
+
+      // Act - simulate runtime error that triggers pause request
+      mockWorkerInstance.simulateMessage({ type: 'pauseRequested' });
+
+      // Assert
+      expect((process as import('../../src/process/LuaCanvasProcess.js').LuaCanvasProcess).isPaused()).toBe(true);
+      expect(process.isRunning()).toBe(true); // Still running, just paused
+    });
+
+    it('should display error message when error occurs before pausing', () => {
+      // Arrange
+      const onError = vi.fn();
+      process = new LuaCanvasProcess({
+        code: 'canvas.tick(function() error("runtime error") end)',
+        canvas: mockCanvas.canvas,
+      });
+      process.onError = onError;
+
+      process.start();
+      mockWorkerInstance.simulateMessage({ type: 'ready' });
+      mockWorkerInstance.simulateMessage({ type: 'stateChanged', state: 'running' });
+
+      // Act - error message followed by pause request
+      mockWorkerInstance.simulateMessage({
+        type: 'error',
+        message: 'canvas.tick: runtime error',
+      });
+      mockWorkerInstance.simulateMessage({ type: 'pauseRequested' });
+
+      // Assert - error displayed and process paused
+      expect(onError).toHaveBeenCalledWith('canvas.tick: runtime error');
+      expect((process as import('../../src/process/LuaCanvasProcess.js').LuaCanvasProcess).isPaused()).toBe(true);
+      expect(process.isRunning()).toBe(true);
+    });
+
+    it('should maintain paused state when multiple errors occur', () => {
+      // Arrange
+      const onError = vi.fn();
+      process = new LuaCanvasProcess({
+        code: 'canvas.tick(function() canvas.clear() end)',
+        canvas: mockCanvas.canvas,
+      });
+      process.onError = onError;
+
+      process.start();
+      mockWorkerInstance.simulateMessage({ type: 'ready' });
+      mockWorkerInstance.simulateMessage({ type: 'stateChanged', state: 'running' });
+
+      // Act - first error
+      mockWorkerInstance.simulateMessage({
+        type: 'error',
+        message: 'First error',
+      });
+      mockWorkerInstance.simulateMessage({ type: 'pauseRequested' });
+
+      expect((process as import('../../src/process/LuaCanvasProcess.js').LuaCanvasProcess).isPaused()).toBe(true);
+
+      // Act - second error while already paused
+      mockWorkerInstance.simulateMessage({
+        type: 'error',
+        message: 'Second error',
+      });
+      mockWorkerInstance.simulateMessage({ type: 'pauseRequested' });
+
+      // Assert - still paused, both errors reported
+      expect((process as import('../../src/process/LuaCanvasProcess.js').LuaCanvasProcess).isPaused()).toBe(true);
+      expect(process.isRunning()).toBe(true);
+      expect(onError).toHaveBeenCalledWith('First error');
+      expect(onError).toHaveBeenCalledWith('Second error');
+      expect(onError).toHaveBeenCalledTimes(2);
+    });
+
+    it('should pause on reload error', () => {
+      // Arrange
+      const onError = vi.fn();
+      process = new LuaCanvasProcess({
+        code: 'canvas.tick(function() canvas.clear() end)',
+        canvas: mockCanvas.canvas,
+      });
+      process.onError = onError;
+
+      process.start();
+      mockWorkerInstance.simulateMessage({ type: 'ready' });
+      mockWorkerInstance.simulateMessage({ type: 'stateChanged', state: 'running' });
+
+      // Act - reload error
+      mockWorkerInstance.simulateMessage({
+        type: 'error',
+        message: 'Hot reload error: module not found',
+      });
+      mockWorkerInstance.simulateMessage({ type: 'pauseRequested' });
+
+      // Assert
+      expect(onError).toHaveBeenCalledWith('Hot reload error: module not found');
+      expect((process as import('../../src/process/LuaCanvasProcess.js').LuaCanvasProcess).isPaused()).toBe(true);
+      expect(process.isRunning()).toBe(true);
+    });
+
+    it('should not pause when pauseRequested is sent before process is running', () => {
+      // Arrange
+      process = new LuaCanvasProcess({
+        code: 'canvas.tick(function() canvas.clear() end)',
+        canvas: mockCanvas.canvas,
+      });
+
+      process.start();
+
+      // Act - pause request before ready (shouldn't crash)
+      mockWorkerInstance.simulateMessage({ type: 'pauseRequested' });
+
+      // Assert - no crash, process not yet fully initialized
+      expect(process.isRunning()).toBe(true);
     });
   });
 

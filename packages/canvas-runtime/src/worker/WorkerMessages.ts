@@ -112,6 +112,13 @@ export interface AssetPathRequest {
 }
 
 /**
+ * Request to pause the canvas due to an error.
+ */
+export interface PauseRequestedMessage {
+  type: 'pauseRequested';
+}
+
+/**
  * Message from worker to main thread.
  */
 export type WorkerToMainMessage =
@@ -119,7 +126,8 @@ export type WorkerToMainMessage =
   | ErrorMessage
   | StateChangedMessage
   | AssetsNeededMessage
-  | ModuleContentRequestMessage;
+  | ModuleContentRequestMessage
+  | PauseRequestedMessage;
 
 /**
  * Worker is ready (Lua engine initialized).
