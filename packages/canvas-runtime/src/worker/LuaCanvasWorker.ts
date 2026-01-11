@@ -90,9 +90,26 @@ async function handleInit(code: string, sharedBuffer?: SharedArrayBuffer): Promi
 
     // Set up error handler
     runtime.onError((message) => {
-      notifyError(message);
-      runtime.stop();  // Stop the loop to prevent deadlock in waitForFrame()
-      postMessage({ type: 'pauseRequested' });
+      // Each operation wrapped independently to prevent crashes
+      try {
+        notifyError(message);
+      } catch (err) {
+        console.error('Failed to notify error:', err);
+      }
+
+      try {
+        if (runtime) {
+          runtime.stop();  // Stop the loop to prevent deadlock in waitForFrame()
+        }
+      } catch (err) {
+        console.error('Failed to stop runtime:', err);
+      }
+
+      try {
+        postMessage({ type: 'pauseRequested' });
+      } catch (err) {
+        console.error('Failed to send pause request:', err);
+      }
     });
 
     // Set up module request callback for require() support
