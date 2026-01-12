@@ -333,7 +333,16 @@ var CanvasInline = (() => {
       package.loaded[module_name] = nil
 
       -- Re-require the module (will re-execute the file)
-      local new = require(module_name)
+      -- Wrap in pcall to catch errors and restore module on failure
+      local ok, new = pcall(require, module_name)
+
+      -- If reload failed, restore the old entry to keep it in the watch list
+      if not ok then
+        __loaded_modules[module_name] = entry
+        package.loaded[module_name] = old
+        -- Re-throw the error so canvas.reload() can report it
+        error(new)
+      end
 
       -- If both old and new are tables, patch functions from new into old
       -- This preserves table identity so existing references see updated functions
@@ -429,21 +438,25 @@ var CanvasInline = (() => {
 
       -- Report results
       if #reloaded > 0 then
-        print("Hot reloaded: " .. table.concat(reloaded, ", "))
+        print("\\x1B[32mHot reloaded: " .. table.concat(reloaded, ", ") .. "\\x1B[0m")
+        __js_flush()
       end
 
       if #skipped > 0 then
         print("Unchanged: " .. table.concat(skipped, ", "))
+        __js_flush()
       end
 
       if #large_files > 0 then
         print("Warning: Skipped large files (>50KB): " .. table.concat(large_files, ", "))
+        __js_flush()
       end
 
       if #errors > 0 then
         for _, err in ipairs(errors) do
-          print("Reload error: " .. err)
+          print("\\x1B[31mReload error: " .. err .. "\\x1B[0m")
         end
+        __js_flush()
       end
 
       return #errors == 0
