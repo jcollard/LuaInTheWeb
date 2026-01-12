@@ -682,6 +682,133 @@ describe('LuaCanvasRuntime', () => {
     });
   });
 
+  describe('hot reload', () => {
+    beforeEach(async () => {
+      await runtime.initialize();
+    });
+
+    it('should keep module in reload list after parsing error', async () => {
+      // Arrange: Load initial code that creates a valid module
+      await runtime.loadCode(`
+        -- Create a test module with valid syntax
+        local test_module = { value = 42 }
+        function test_module.get_value()
+          return test_module.value
+        end
+
+        -- Register it as a loaded module (simulating require)
+        __loaded_modules['test_module'] = test_module
+        package.loaded['test_module'] = test_module
+
+        -- Add a tick callback so we can start
+        canvas.tick(function()
+          canvas.clear()
+        end)
+      `);
+
+      // Verify module is initially loaded
+      let moduleExists = await runtime.getGlobal('__loaded_modules');
+      expect(moduleExists).toBeDefined();
+
+      // Act: Simulate hot reload with parsing error
+      // Override require to simulate a parsing error for test_module
+      await runtime.loadCode(`
+        local original_require = require
+        function require(modname)
+          if modname == 'test_module' then
+            error('syntax error near end')
+          end
+          return original_require(modname)
+        end
+      `);
+
+      // Trigger hot reload which will hit the parsing error
+      // Use loadCode and store result in a global
+      await runtime.loadCode('reload_result = canvas.reload()');
+      const reloadResult = await runtime.getGlobal('reload_result');
+
+      // Assert: Module should still be in __loaded_modules after error
+      await runtime.loadCode(`
+        module_count = 0
+        for _ in pairs(__loaded_modules) do module_count = module_count + 1 end
+      `);
+      const modulesAfterError = await runtime.getGlobal('module_count');
+
+      expect(modulesAfterError).toBeGreaterThan(0);
+
+      // Verify the specific module is still there
+      await runtime.loadCode(`
+        test_module_exists = __loaded_modules['test_module'] ~= nil
+      `);
+      const testModuleExists = await runtime.getGlobal('test_module_exists');
+
+      expect(testModuleExists).toBe(true);
+    });
+
+    it('should successfully reload after fixing parsing error', async () => {
+      // Arrange: Load initial module
+      await runtime.loadCode(`
+        local test_module = { value = 1 }
+        function test_module.get_value()
+          return test_module.value
+        end
+
+        __loaded_modules['test_module'] = test_module
+        package.loaded['test_module'] = test_module
+
+        canvas.tick(function()
+          canvas.clear()
+        end)
+      `);
+
+      // Simulate reload with error, then success
+      await runtime.loadCode(`
+        local original_require = require
+        require_should_error = true
+
+        -- Store the updated module for the second reload
+        local updated_module = { value = 2 }
+        function updated_module.get_value()
+          return updated_module.value
+        end
+
+        function require(modname)
+          if modname == 'test_module' then
+            if require_should_error then
+              error('[string "test_module"]:1: syntax error')
+            else
+              -- Return the updated module on successful reload
+              return updated_module
+            end
+          end
+          return original_require(modname)
+        end
+      `);
+
+      // First reload fails
+      await runtime.loadCode('canvas.reload()');
+
+      // Act: Fix the error by setting the flag to false
+      await runtime.loadCode(`
+        require_should_error = false
+      `);
+
+      // Second reload should succeed
+      await runtime.loadCode('reload_result_2 = canvas.reload()');
+      const result = await runtime.getGlobal('reload_result_2');
+
+      // Assert: Reload should return true (success)
+      expect(result).toBe(true);
+
+      // Module should still be in the watch list
+      await runtime.loadCode(`
+        test_module_exists_2 = __loaded_modules['test_module'] ~= nil
+      `);
+      const testModuleExists = await runtime.getGlobal('test_module_exists_2');
+      expect(testModuleExists).toBe(true);
+    });
+  });
+
   describe('dispose', () => {
     it('should clean up resources', async () => {
       await runtime.initialize();

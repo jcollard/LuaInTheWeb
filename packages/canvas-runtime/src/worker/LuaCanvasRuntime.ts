@@ -1501,7 +1501,16 @@ export class LuaCanvasRuntime {
         package.loaded[module_name] = nil
 
         -- Re-require the module (will re-execute the file)
-        local new = require(module_name)
+        -- Wrap in pcall to catch errors and restore module on failure
+        local ok, new = pcall(require, module_name)
+
+        -- If reload failed, restore the old module to keep it in the watch list
+        if not ok then
+          __loaded_modules[module_name] = old
+          package.loaded[module_name] = old
+          -- Re-throw the error so canvas.reload() can report it
+          error(new)
+        end
 
         -- If both old and new are tables, patch functions from new into old
         -- This preserves table identity so existing references see updated functions
