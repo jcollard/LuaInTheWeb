@@ -430,11 +430,12 @@ describe('workspaceManagerHelpers', () => {
       const workspace = createExamplesWorkspace(mockTextFiles, mockBinaryFiles)
       const data = workspace.filesystem.readBinaryFile!('canvas/images/ship.png')
       expect(data).toBeInstanceOf(Uint8Array)
+      expect(data).not.toBeNull()
       // PNG magic bytes
-      expect(data[0]).toBe(0x89)
-      expect(data[1]).toBe(0x50)
-      expect(data[2]).toBe(0x4e)
-      expect(data[3]).toBe(0x47)
+      expect(data![0]).toBe(0x89)
+      expect(data![1]).toBe(0x50)
+      expect(data![2]).toBe(0x4e)
+      expect(data![3]).toBe(0x47)
     })
 
     it('filesystem lists files and directories correctly', () => {

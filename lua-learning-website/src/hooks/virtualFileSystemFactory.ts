@@ -65,7 +65,7 @@ export interface VirtualFileSystemExtended extends IFileSystem {
 
   // Override optional binary methods to be required
   isBinaryFile(path: string): boolean
-  readBinaryFile(path: string): Uint8Array
+  readBinaryFile(path: string): Uint8Array | null
   writeBinaryFile(path: string, content: Uint8Array): void
 }
 
