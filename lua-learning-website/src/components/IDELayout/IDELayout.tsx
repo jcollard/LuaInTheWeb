@@ -736,10 +736,19 @@ function IDELayoutInner({
                       {/* Markdown preview - shown when markdown tab is active */}
                       {/* Note: Read directly from filesystem since tabEditorManager only tracks file tabs */}
                       {activeTabType === 'markdown' && activeTab && (
-                        <MarkdownTabContent code={compositeFileSystem.readFile(activeTab) ?? ''} tabBarProps={tabBarProps} currentFilePath={activeTab} onOpenMarkdown={openMarkdownPreview} />
+                        <MarkdownTabContent
+                          code={
+                            compositeFileSystem.exists(activeTab)
+                              ? compositeFileSystem.readFile(activeTab)
+                              : ''
+                          }
+                          tabBarProps={tabBarProps}
+                          currentFilePath={activeTab}
+                          onOpenMarkdown={openMarkdownPreview}
+                        />
                       )}
                       {/* Binary file viewer - shown when binary tab is active */}
-                      {activeTabType === 'binary' && activeTab && (
+                      {activeTabType === 'binary' && activeTab && compositeFileSystem.exists(activeTab) && (
                         <BinaryTabContent filePath={activeTab} fileSystem={compositeFileSystem} tabBarProps={tabBarProps} />
                       )}
                       {/* Editor panel - hidden (not unmounted) when canvas, markdown, or binary tab is active */}

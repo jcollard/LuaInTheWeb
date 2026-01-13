@@ -231,6 +231,50 @@ test.describe('Tab Persistence', () => {
     })
   })
 
+  test.describe('Async Workspace Loading', () => {
+    test('should handle tabs for workspaces that load asynchronously', async ({ page }) => {
+      // This test verifies that the app doesn't crash when tabs are restored
+      // before their workspaces finish loading (race condition fix for #564)
+
+      // Navigate to docs page (docs workspace loads asynchronously)
+      await page.goto('/docs')
+      await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
+
+      // Wait for docs workspace to load and file tree to appear
+      await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible({ timeout: 5000 })
+
+      // Expand docs folder
+      const docsFolder = page.getByRole('treeitem', { name: /docs/i }).first()
+      if (await docsFolder.isVisible()) {
+        await docsFolder.click()
+        await expect(docsFolder).toHaveAttribute('aria-expanded', 'true')
+      }
+
+      // Try to find and open a docs file (e.g., lua folder)
+      const luaFolder = page.getByRole('treeitem', { name: /lua/i }).first()
+      if (await luaFolder.isVisible()) {
+        await luaFolder.dblclick()
+      }
+
+      // Wait for persistence
+      await page.waitForTimeout(PERSISTENCE_WAIT)
+
+      // Act - Reload the page
+      // This simulates the race condition: tabs restore from localStorage
+      // before the docs workspace finishes loading
+      await page.reload()
+
+      // Assert - App should not crash
+      await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
+
+      // Should not show error boundary
+      await expect(page.locator('[data-testid="error-boundary"]')).not.toBeVisible()
+
+      // Verify the app is functional
+      await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+    })
+  })
+
   test.describe('Canvas Tab Exclusion', () => {
     test('canvas tabs are not persisted', async ({ page }) => {
       // Arrange - Create a file and open it
