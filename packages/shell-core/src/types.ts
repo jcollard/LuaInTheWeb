@@ -112,10 +112,9 @@ export interface IFileSystem {
   /**
    * Read the contents of a binary file.
    * @param path - The file path to read
-   * @returns The file contents as a Uint8Array
-   * @throws Error if the path doesn't exist, isn't a file, or isn't a binary file
+   * @returns The file contents as a Uint8Array, or null if the file doesn't exist
    */
-  readBinaryFile?(path: string): Uint8Array
+  readBinaryFile?(path: string): Uint8Array | null
 
   /**
    * Write binary contents to a file.

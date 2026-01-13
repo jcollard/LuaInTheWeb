@@ -25,8 +25,8 @@ export function IDEContextProvider({ children, initialCode: _initialCode = '', f
   const tabPersistence = useTabBarPersistence()
 
   // Convert persisted tabs to TabInfo, filtering out tabs for missing files
-  const initialTabs: TabInfo[] = useMemo(() => {
-    if (!tabPersistence.savedState) return []
+  const { initialTabs, missingFileNames } = useMemo(() => {
+    if (!tabPersistence.savedState) return { initialTabs: [], missingFileNames: [] }
 
     const missingFiles: string[] = []
     const validTabs = tabPersistence.savedState.tabs.filter((tab) => {
@@ -42,19 +42,14 @@ export function IDEContextProvider({ children, initialCode: _initialCode = '', f
       return true
     })
 
-    // Show notification if files were filtered
-    if (missingFiles.length > 0) {
-      const message = missingFiles.length === 1
-        ? `Closed tab for missing file: ${missingFiles[0]}`
-        : `Closed ${missingFiles.length} tabs for missing files: ${missingFiles.join(', ')}`
-      showError(message)
+    return {
+      initialTabs: validTabs.map((tab) => ({
+        ...tab,
+        isDirty: false,
+      })),
+      missingFileNames: missingFiles
     }
-
-    return validTabs.map((tab) => ({
-      ...tab,
-      isDirty: false,
-    }))
-  }, [tabPersistence.savedState, filesystem, showError])
+  }, [tabPersistence.savedState, filesystem])
 
   const tabBar = useTabBar({
     initialTabs,
@@ -65,6 +60,16 @@ export function IDEContextProvider({ children, initialCode: _initialCode = '', f
   const showError = useCallback((message: string) => {
     showToast({ message, type: 'error' })
   }, [showToast])
+
+  // Show notification for missing files after component mounts
+  useEffect(() => {
+    if (missingFileNames.length > 0) {
+      const message = missingFileNames.length === 1
+        ? `Closed tab for missing file: ${missingFileNames[0]}`
+        : `Closed ${missingFileNames.length} tabs for missing files: ${missingFileNames.join(', ')}`
+      showError(message)
+    }
+  }, [missingFileNames, showError])
 
   const [pendingNewFilePath, setPendingNewFilePath] = useState<string | null>(null)
   const [pendingNewFolderPath, setPendingNewFolderPath] = useState<string | null>(null)

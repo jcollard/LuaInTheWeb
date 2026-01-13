@@ -23,7 +23,7 @@ describe('BinaryFileViewer', () => {
       writeFile: vi.fn(),
       createDirectory: vi.fn(),
       delete: vi.fn(),
-      readBinaryFile: vi.fn(),
+      readBinaryFile: vi.fn<[string], Uint8Array | null>(),
     }
 
     // Mock URL methods
