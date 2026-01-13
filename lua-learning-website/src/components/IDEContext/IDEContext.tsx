@@ -22,18 +22,39 @@ export function IDEContextProvider({ children, initialCode: _initialCode = '', f
   const { recentFiles, addRecentFile, clearRecentFiles } = useRecentFiles()
 
   // Tab persistence - load saved state and convert to TabInfo[]
-  // Note: We don't pass fileExists because the filesystem loads asynchronously.
-  // Missing file tabs will show an error when opened, which is a better UX than losing tabs.
   const tabPersistence = useTabBarPersistence()
 
-  // Convert persisted tabs to TabInfo (adding isDirty: false)
+  // Convert persisted tabs to TabInfo, filtering out tabs for missing files
   const initialTabs: TabInfo[] = useMemo(() => {
     if (!tabPersistence.savedState) return []
-    return tabPersistence.savedState.tabs.map((tab) => ({
+
+    const missingFiles: string[] = []
+    const validTabs = tabPersistence.savedState.tabs.filter((tab) => {
+      // Only validate file tabs (skip canvas tabs and other non-file types)
+      if (tab.type !== 'file' && tab.type !== 'binary') return true
+
+      // Check if file exists
+      const exists = filesystem.exists(tab.path)
+      if (!exists) {
+        missingFiles.push(tab.name)
+        return false
+      }
+      return true
+    })
+
+    // Show notification if files were filtered
+    if (missingFiles.length > 0) {
+      const message = missingFiles.length === 1
+        ? `Closed tab for missing file: ${missingFiles[0]}`
+        : `Closed ${missingFiles.length} tabs for missing files: ${missingFiles.join(', ')}`
+      showError(message)
+    }
+
+    return validTabs.map((tab) => ({
       ...tab,
       isDirty: false,
     }))
-  }, [tabPersistence.savedState])
+  }, [tabPersistence.savedState, filesystem, showError])
 
   const tabBar = useTabBar({
     initialTabs,

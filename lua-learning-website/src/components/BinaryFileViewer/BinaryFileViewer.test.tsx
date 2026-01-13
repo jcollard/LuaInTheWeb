@@ -202,11 +202,9 @@ describe('BinaryFileViewer', () => {
   })
 
   describe('error handling', () => {
-    it('should display error when file read fails', async () => {
+    it('should display error when readBinaryFile returns null', async () => {
       // Arrange
-      vi.mocked(mockFileSystem.readBinaryFile!).mockImplementation(() => {
-        throw new Error('File not found')
-      })
+      vi.mocked(mockFileSystem.readBinaryFile!).mockReturnValue(null)
 
       // Act
       render(
@@ -219,6 +217,26 @@ describe('BinaryFileViewer', () => {
       // Assert
       await waitFor(() => {
         expect(screen.getByText('File not found')).toBeInTheDocument()
+      })
+    })
+
+    it('should display error when file read throws', async () => {
+      // Arrange
+      vi.mocked(mockFileSystem.readBinaryFile!).mockImplementation(() => {
+        throw new Error('Read error')
+      })
+
+      // Act
+      render(
+        <BinaryFileViewer
+          filePath="/error.png"
+          fileSystem={mockFileSystem}
+        />
+      )
+
+      // Assert
+      await waitFor(() => {
+        expect(screen.getByText('Read error')).toBeInTheDocument()
       })
     })
 

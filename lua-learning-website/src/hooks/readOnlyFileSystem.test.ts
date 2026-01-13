@@ -162,10 +162,21 @@ describe('createReadOnlyFileSystem', () => {
       expect(entries.map((e) => e.name).sort()).toEqual(['logo.png', 'style.css'])
     })
 
-    it('throws file not found for non-existent binary file', () => {
+    it('returns null for non-existent binary file', () => {
       const fs = createReadOnlyFileSystem({})
 
-      expect(() => fs.readBinaryFile!('/missing.png')).toThrow('File not found')
+      expect(fs.readBinaryFile!('/missing.png')).toBeNull()
+    })
+
+    it('returns null instead of throwing for missing binary files', () => {
+      const fs = createReadOnlyFileSystem({}, { 'existing.png': new Uint8Array([0x89]) })
+
+      // Existing file should work
+      expect(fs.readBinaryFile!('/existing.png')).toBeTruthy()
+
+      // Missing file should return null
+      expect(fs.readBinaryFile!('/missing.png')).toBeNull()
+      expect(fs.readBinaryFile!('/not/found.jpg')).toBeNull()
     })
   })
 

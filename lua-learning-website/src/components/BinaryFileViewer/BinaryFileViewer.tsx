@@ -146,6 +146,10 @@ export function BinaryFileViewer({ filePath, fileSystem, className }: BinaryFile
       }
 
       const content = fileSystem.readBinaryFile(filePath)
+      if (content === null) {
+        setError('File not found')
+        return
+      }
       setFileSize(content.byteLength)
 
       if (isImage || isAudio) {

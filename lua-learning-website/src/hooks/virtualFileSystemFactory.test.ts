@@ -364,8 +364,17 @@ describe('createVirtualFileSystem', () => {
       expect(fs.readBinaryFile('/empty.bin')).toEqual(emptyBinary)
     })
 
-    it('throws when reading non-existent binary file', () => {
-      expect(() => fs.readBinaryFile('/nonexistent.bin')).toThrow('File not found')
+    it('returns null when reading non-existent binary file', () => {
+      expect(fs.readBinaryFile('/nonexistent.bin')).toBeNull()
+    })
+
+    it('returns null instead of throwing for missing binary files', () => {
+      // Ensure we don't have the file
+      expect(fs.exists('/missing.png')).toBe(false)
+
+      // Should return null, not throw
+      const result = fs.readBinaryFile('/missing.png')
+      expect(result).toBeNull()
     })
 
     it('throws when writing binary to non-existent parent', () => {

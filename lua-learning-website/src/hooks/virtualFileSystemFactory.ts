@@ -344,11 +344,11 @@ export function createVirtualFileSystem(workspaceId: string): VirtualFileSystemE
       return file.isBinary
     },
 
-    readBinaryFile(path: string): Uint8Array {
+    readBinaryFile(path: string): Uint8Array | null {
       const resolved = resolvePath(path)
       const file = files.get(resolved)
       if (!file) {
-        throw new Error(`File not found: ${resolved}`)
+        return null
       }
       if (!file.isBinary) {
         // Allow reading text files as binary (convert to Uint8Array)

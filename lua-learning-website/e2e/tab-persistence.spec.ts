@@ -197,11 +197,10 @@ test.describe('Tab Persistence', () => {
     })
   })
 
-  test.describe('Deleted File Behavior', () => {
-    test('tabs for deleted files are preserved on reload (error shown when opened)', async ({ page }) => {
-      // Note: We preserve tabs for deleted files rather than filtering them out.
-      // This is because the filesystem loads asynchronously, and it's better UX
-      // to show an error when a missing file is opened than to lose tabs unexpectedly.
+  test.describe('Missing File Recovery', () => {
+    test('tabs for missing files are automatically closed on reload with notification', async ({ page }) => {
+      // Note: Issue #564 - We now filter out missing file tabs and show a notification
+      // This prevents crashes when trying to open non-existent files, especially binary files.
 
       // Arrange - Create files and open them
       await createFile(page, 'keep.lua')
@@ -223,11 +222,117 @@ test.describe('Tab Persistence', () => {
       await page.reload()
       await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
 
-      // Assert - Both tabs should be restored (deleted file tab preserved)
+      // Assert - Only the existing file tab should be restored
       const restoredEditorPanel = page.getByTestId('editor-panel')
-      await expect(restoredEditorPanel.getByRole('tab')).toHaveCount(2)
+      await expect(restoredEditorPanel.getByRole('tab')).toHaveCount(1)
       await expect(restoredEditorPanel.getByRole('tab', { name: /keep\.lua/i })).toBeVisible()
-      await expect(restoredEditorPanel.getByRole('tab', { name: /deleted\.lua/i })).toBeVisible()
+      await expect(restoredEditorPanel.getByRole('tab', { name: /deleted\.lua/i })).not.toBeVisible()
+
+      // Assert - Error toast should appear with notification
+      const toast = page.locator('[role="alert"], [data-testid="toast"]')
+      await expect(toast).toBeVisible({ timeout: 2000 })
+      await expect(toast).toContainText(/closed tab for missing file/i)
+      await expect(toast).toContainText(/deleted\.lua/i)
+    })
+
+    test('multiple missing files show count in notification', async ({ page }) => {
+      // Arrange - Create and open multiple files
+      await createFile(page, 'keep.lua')
+      await createFile(page, 'deleted1.lua')
+      await createFile(page, 'deleted2.lua')
+
+      await openFilePermanent(page, 'keep.lua')
+      await openFilePermanent(page, 'deleted1.lua')
+      await openFilePermanent(page, 'deleted2.lua')
+
+      const editorPanel = page.getByTestId('editor-panel')
+      await expect(editorPanel.getByRole('tab')).toHaveCount(3)
+
+      // Wait for persistence
+      await page.waitForTimeout(PERSISTENCE_WAIT)
+
+      // Delete two files
+      await deleteFile(page, 'deleted1.lua')
+      await deleteFile(page, 'deleted2.lua')
+
+      // Act - Refresh
+      await page.reload()
+      await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
+
+      // Assert - Only keep.lua should remain
+      const restoredEditorPanel = page.getByTestId('editor-panel')
+      await expect(restoredEditorPanel.getByRole('tab')).toHaveCount(1)
+      await expect(restoredEditorPanel.getByRole('tab', { name: /keep\.lua/i })).toBeVisible()
+
+      // Assert - Toast should show count
+      const toast = page.locator('[role="alert"], [data-testid="toast"]')
+      await expect(toast).toBeVisible({ timeout: 2000 })
+      await expect(toast).toContainText(/closed 2 tabs for missing files/i)
+      await expect(toast).toContainText(/deleted1\.lua/i)
+      await expect(toast).toContainText(/deleted2\.lua/i)
+    })
+
+    test('app remains functional after closing missing file tabs', async ({ page }) => {
+      // Arrange - Create files and open them
+      await createFile(page, 'functional.lua')
+      await createFile(page, 'missing.lua')
+
+      await openFilePermanent(page, 'functional.lua')
+      await openFilePermanent(page, 'missing.lua')
+
+      // Wait for persistence
+      await page.waitForTimeout(PERSISTENCE_WAIT)
+
+      // Delete missing.lua
+      await deleteFile(page, 'missing.lua')
+
+      // Act - Refresh
+      await page.reload()
+      await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
+
+      // Assert - App should be functional
+      const restoredEditorPanel = page.getByTestId('editor-panel')
+      await expect(restoredEditorPanel.getByRole('tab', { name: /functional\.lua/i })).toBeVisible()
+
+      // Try to create a new file (test app functionality)
+      await createFile(page, 'new-file.lua')
+      await openFilePermanent(page, 'new-file.lua')
+
+      // New file should be visible
+      await expect(restoredEditorPanel.getByRole('tab', { name: /new-file\.lua/i })).toBeVisible()
+      await expect(restoredEditorPanel.getByRole('tab')).toHaveCount(2)
+    })
+
+    test('all files missing shows notification and empty tab bar', async ({ page }) => {
+      // Arrange - Create files and open them
+      await createFile(page, 'file1.lua')
+      await createFile(page, 'file2.lua')
+
+      await openFilePermanent(page, 'file1.lua')
+      await openFilePermanent(page, 'file2.lua')
+
+      const editorPanel = page.getByTestId('editor-panel')
+      await expect(editorPanel.getByRole('tab')).toHaveCount(2)
+
+      // Wait for persistence
+      await page.waitForTimeout(PERSISTENCE_WAIT)
+
+      // Delete all files
+      await deleteFile(page, 'file1.lua')
+      await deleteFile(page, 'file2.lua')
+
+      // Act - Refresh
+      await page.reload()
+      await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
+
+      // Assert - No tabs should be visible
+      const restoredEditorPanel = page.getByTestId('editor-panel')
+      await expect(restoredEditorPanel.getByRole('tab')).toHaveCount(0)
+
+      // Assert - Toast should appear
+      const toast = page.locator('[role="alert"], [data-testid="toast"]')
+      await expect(toast).toBeVisible({ timeout: 2000 })
+      await expect(toast).toContainText(/closed 2 tabs for missing files/i)
     })
   })
 

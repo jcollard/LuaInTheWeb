@@ -109,7 +109,7 @@ export function createReadOnlyFileSystem(
       // Check if explicitly in binaries or has binary extension
       return normalized in binaries || (normalized in files === false && isBinaryExtension(path))
     },
-    readBinaryFile: (path: string) => {
+    readBinaryFile: (path: string): Uint8Array | null => {
       const normalized = path.startsWith('/') ? path.slice(1) : path
       const content = binaries[normalized]
       if (content === undefined) {
@@ -117,7 +117,7 @@ export function createReadOnlyFileSystem(
         if (normalized in files) {
           throw new Error(`Cannot read text file as binary: ${path}`)
         }
-        throw new Error(`File not found: ${path}`)
+        return null
       }
       return content
     },

@@ -157,7 +157,7 @@ function supportsBinary(
   fs: IFileSystem
 ): fs is IFileSystem & {
   isBinaryFile: (path: string) => boolean
-  readBinaryFile: (path: string) => Uint8Array
+  readBinaryFile: (path: string) => Uint8Array | null
   writeBinaryFile: (path: string, content: Uint8Array) => void
 } {
   return (
@@ -173,6 +173,9 @@ function supportsBinary(
 function copyFileBinaryAware(fs: IFileSystem, sourcePath: string, targetPath: string): void {
   if (supportsBinary(fs) && fs.isBinaryFile(sourcePath)) {
     const content = fs.readBinaryFile(sourcePath)
+    if (content === null) {
+      throw new Error(`File not found: ${sourcePath}`)
+    }
     fs.writeBinaryFile(targetPath, content)
   } else {
     const content = fs.readFile(sourcePath)
