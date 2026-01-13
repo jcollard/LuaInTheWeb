@@ -234,6 +234,9 @@ export class AssetLoader {
 
     // Read binary data
     const binaryData = this.fileSystem.readBinaryFile(resolvedPath);
+    if (binaryData === null) {
+      throw new Error(`Asset file not found: ${resolvedPath}`);
+    }
 
     // Convert Uint8Array to ArrayBuffer, handling both ArrayBuffer and SharedArrayBuffer
     const arrayBuffer = new ArrayBuffer(binaryData.byteLength);
