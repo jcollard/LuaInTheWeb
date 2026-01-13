@@ -141,8 +141,10 @@ export class AssetCollector {
         // Collect binary file
         if (this.filesystem.isBinaryFile?.(absolutePath)) {
           const data = this.filesystem.readBinaryFile!(absolutePath)
-          const mimeType = this.getMimeType(entry.name)
-          assets.push({ path: relativePath, data, mimeType })
+          if (data !== null) {
+            const mimeType = this.getMimeType(entry.name)
+            assets.push({ path: relativePath, data, mimeType })
+          }
         }
       }
     }
