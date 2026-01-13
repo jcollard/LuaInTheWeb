@@ -330,7 +330,9 @@ describe('createVirtualFileSystem', () => {
       expect(fs.exists('/image.png')).toBe(true)
       expect(fs.isFile('/image.png')).toBe(true)
       expect(fs.isBinaryFile('/image.png')).toBe(true)
-      expect(fs.readBinaryFile('/image.png')).toEqual(binaryContent)
+      const readContent = fs.readBinaryFile('/image.png')
+      expect(readContent).not.toBeNull()
+      expect(readContent).toEqual(binaryContent)
     })
 
     it('detects binary files by extension', () => {
@@ -351,17 +353,20 @@ describe('createVirtualFileSystem', () => {
       fs.writeFile('/text.txt', 'Hello')
 
       const binary = fs.readBinaryFile('/text.txt')
+      expect(binary).not.toBeNull()
 
       // Check it's a Uint8Array-like object (may be different constructor in test env)
-      expect(binary.constructor.name).toBe('Uint8Array')
-      expect(new TextDecoder().decode(binary)).toBe('Hello')
+      expect(binary!.constructor.name).toBe('Uint8Array')
+      expect(new TextDecoder().decode(binary!)).toBe('Hello')
     })
 
     it('handles empty binary files', () => {
       const emptyBinary = new Uint8Array(0)
       fs.writeBinaryFile('/empty.bin', emptyBinary)
 
-      expect(fs.readBinaryFile('/empty.bin')).toEqual(emptyBinary)
+      const readContent = fs.readBinaryFile('/empty.bin')
+      expect(readContent).not.toBeNull()
+      expect(readContent).toEqual(emptyBinary)
     })
 
     it('returns null when reading non-existent binary file', () => {
