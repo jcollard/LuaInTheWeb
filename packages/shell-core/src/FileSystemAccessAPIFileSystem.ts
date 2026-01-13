@@ -529,7 +529,7 @@ export class FileSystemAccessAPIFileSystem implements IFileSystem {
     return entry.isBinary === true
   }
 
-  readBinaryFile(path: string): Uint8Array {
+  readBinaryFile(path: string): Uint8Array | null {
     const normalizedPath = resolvePath(this.cwd, path)
     const entry = this.cache.get(normalizedPath)
 

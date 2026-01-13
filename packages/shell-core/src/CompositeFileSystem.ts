@@ -417,7 +417,7 @@ export class CompositeFileSystem implements IFileSystem {
     return fs.isBinaryFile(mountInfo.relativePath)
   }
 
-  readBinaryFile(path: string): Uint8Array {
+  readBinaryFile(path: string): Uint8Array | null {
     const resolved = this.resolvePath(path)
 
     // Cannot read root as a file
