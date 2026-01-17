@@ -65,3 +65,6 @@ export { InputAPI, type IInputCapture } from './InputAPI'
 
 // Path2D registry for reusable path objects
 export { Path2DRegistry, type IPath2DRegistry, type IPath2DRenderer } from './Path2DRegistry'
+
+// Style API for line styles, fill/stroke, shadows, and compositing
+export { StyleAPI, type IStyleAPI } from './StyleAPI'
