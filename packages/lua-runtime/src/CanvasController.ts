@@ -20,6 +20,7 @@ import { InputAPI } from './InputAPI'
 import { AssetManager } from './AssetManager'
 import { Path2DRegistry } from './Path2DRegistry'
 import { StyleAPI } from './StyleAPI'
+import { PathAPI } from './PathAPI'
 import type {
   DrawCommand,
   InputState,
@@ -253,8 +254,8 @@ export class CanvasController {
   // Style API - handles line styles, fill/stroke, shadows, compositing
   private styleAPI: StyleAPI = new StyleAPI()
 
-  // Path2D for hit testing - tracks current path operations
-  private currentPath: Path2D = new Path2D()
+  // Path API - handles path operations, owns currentPath for hit testing
+  private pathAPI: PathAPI = new PathAPI()
 
   // Path2D registry for reusable path objects (exposed to Lua)
   private path2DRegistry: Path2DRegistry = new Path2DRegistry()
@@ -268,6 +269,8 @@ export class CanvasController {
     this.canvasId = canvasId
     // Set up StyleAPI callback immediately so style methods work before start()
     this.styleAPI.setAddDrawCommand((cmd) => this.addDrawCommand(cmd))
+    // Set up PathAPI callback immediately so path methods work before start()
+    this.pathAPI.setAddDrawCommand((cmd) => this.addDrawCommand(cmd))
   }
 
   /**
@@ -796,52 +799,48 @@ export class CanvasController {
     this.addDrawCommand({ type: 'resetTransform' })
   }
 
-  // --- Path API ---
+  // --- Path API (delegated to PathAPI) ---
 
   /**
    * Begin a new path, clearing any existing path data.
    */
   beginPath(): void {
-    this.currentPath = new Path2D()
-    this.addDrawCommand({ type: 'beginPath' })
+    this.pathAPI.beginPath()
   }
 
   /**
    * Close the current path by drawing a line to the starting point.
    */
   closePath(): void {
-    this.currentPath.closePath()
-    this.addDrawCommand({ type: 'closePath' })
+    this.pathAPI.closePath()
   }
 
   /**
    * Move the current point to a new position without drawing.
    */
   moveTo(x: number, y: number): void {
-    this.currentPath.moveTo(x, y)
-    this.addDrawCommand({ type: 'moveTo', x, y })
+    this.pathAPI.moveTo(x, y)
   }
 
   /**
    * Draw a line from the current point to a new position.
    */
   lineTo(x: number, y: number): void {
-    this.currentPath.lineTo(x, y)
-    this.addDrawCommand({ type: 'lineTo', x, y })
+    this.pathAPI.lineTo(x, y)
   }
 
   /**
    * Fill the current path with the current fill style.
    */
   fill(): void {
-    this.addDrawCommand({ type: 'fill' })
+    this.pathAPI.fill()
   }
 
   /**
    * Stroke the current path with the current stroke style.
    */
   stroke(): void {
-    this.addDrawCommand({ type: 'stroke' })
+    this.pathAPI.stroke()
   }
 
   /**
@@ -854,8 +853,7 @@ export class CanvasController {
    * @param counterclockwise - Draw counterclockwise (default: false)
    */
   arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, counterclockwise?: boolean): void {
-    this.currentPath.arc(x, y, radius, startAngle, endAngle, counterclockwise)
-    this.addDrawCommand({ type: 'arc', x, y, radius, startAngle, endAngle, counterclockwise })
+    this.pathAPI.arc(x, y, radius, startAngle, endAngle, counterclockwise)
   }
 
   /**
@@ -867,8 +865,7 @@ export class CanvasController {
    * @param radius - Arc radius
    */
   arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): void {
-    this.currentPath.arcTo(x1, y1, x2, y2, radius)
-    this.addDrawCommand({ type: 'arcTo', x1, y1, x2, y2, radius })
+    this.pathAPI.arcTo(x1, y1, x2, y2, radius)
   }
 
   /**
@@ -879,8 +876,7 @@ export class CanvasController {
    * @param y - Y coordinate of the end point
    */
   quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void {
-    this.currentPath.quadraticCurveTo(cpx, cpy, x, y)
-    this.addDrawCommand({ type: 'quadraticCurveTo', cpx, cpy, x, y })
+    this.pathAPI.quadraticCurveTo(cpx, cpy, x, y)
   }
 
   /**
@@ -893,8 +889,7 @@ export class CanvasController {
    * @param y - Y coordinate of the end point
    */
   bezierCurveTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number): void {
-    this.currentPath.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
-    this.addDrawCommand({ type: 'bezierCurveTo', cp1x, cp1y, cp2x, cp2y, x, y })
+    this.pathAPI.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
   }
 
   /**
@@ -918,18 +913,7 @@ export class CanvasController {
     endAngle: number,
     counterclockwise?: boolean
   ): void {
-    this.currentPath.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise)
-    this.addDrawCommand({
-      type: 'ellipse',
-      x,
-      y,
-      radiusX,
-      radiusY,
-      rotation,
-      startAngle,
-      endAngle,
-      counterclockwise,
-    })
+    this.pathAPI.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise)
   }
 
   /**
@@ -941,8 +925,7 @@ export class CanvasController {
    * @param radii - Corner radii (single value or array of 1-4 values)
    */
   roundRect(x: number, y: number, width: number, height: number, radii: number | number[]): void {
-    this.currentPath.roundRect(x, y, width, height, radii)
-    this.addDrawCommand({ type: 'roundRect', x, y, width, height, radii })
+    this.pathAPI.roundRect(x, y, width, height, radii)
   }
 
   /**
@@ -954,8 +937,7 @@ export class CanvasController {
    * @param height - Height of the rectangle
    */
   rectPath(x: number, y: number, width: number, height: number): void {
-    this.currentPath.rect(x, y, width, height)
-    this.addDrawCommand({ type: 'rectPath', x, y, width, height })
+    this.pathAPI.rectPath(x, y, width, height)
   }
 
   /**
@@ -964,7 +946,7 @@ export class CanvasController {
    * @param fillRule - Fill rule: "nonzero" (default) or "evenodd"
    */
   clip(fillRule?: 'nonzero' | 'evenodd'): void {
-    this.addDrawCommand({ type: 'clip', fillRule })
+    this.pathAPI.clip(fillRule)
   }
 
   // --- Line Style API (delegated to StyleAPI) ---
@@ -1472,7 +1454,7 @@ export class CanvasController {
    * @returns The current Path2D object
    */
   getCurrentPath(): Path2D {
-    return this.currentPath
+    return this.pathAPI.getCurrentPath()
   }
 
   /**
@@ -1484,7 +1466,7 @@ export class CanvasController {
    */
   isPointInPath(x: number, y: number, fillRule: FillRule = 'nonzero'): boolean {
     if (!this.renderer) return false
-    return this.renderer.isPointInPath(this.currentPath, x, y, fillRule)
+    return this.renderer.isPointInPath(this.pathAPI.getCurrentPath(), x, y, fillRule)
   }
 
   /**
@@ -1495,7 +1477,7 @@ export class CanvasController {
    */
   isPointInStroke(x: number, y: number): boolean {
     if (!this.renderer) return false
-    return this.renderer.isPointInStroke(this.currentPath, x, y)
+    return this.renderer.isPointInStroke(this.pathAPI.getCurrentPath(), x, y)
   }
 
   // ============================================================================
