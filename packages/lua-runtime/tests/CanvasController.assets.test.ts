@@ -33,6 +33,27 @@ class MockPath2D {
 }
 (globalThis as unknown as { Path2D: typeof MockPath2D }).Path2D = MockPath2D
 
+// Mock FontFace for jsdom environment (which doesn't have FontFace)
+class MockFontFace {
+  family: string
+  constructor(family: string, _source: ArrayBuffer | string) {
+    this.family = family
+  }
+  load() { return Promise.resolve(this) }
+}
+(globalThis as unknown as { FontFace: typeof MockFontFace }).FontFace = MockFontFace
+
+// Mock document.fonts for jsdom environment
+Object.defineProperty(document, 'fonts', {
+  value: {
+    add: vi.fn(),
+    delete: vi.fn(),
+    clear: vi.fn(),
+    has: vi.fn().mockReturnValue(false),
+  },
+  writable: true,
+})
+
 // Mock the canvas-runtime imports using classes
 vi.mock('@lua-learning/canvas-runtime', () => {
   return {
@@ -364,6 +385,108 @@ describe('CanvasController Assets', () => {
         sw: 32,
         sh: 32,
       })
+    })
+  })
+
+  describe('font data transfer', () => {
+    it('should return empty array when no fonts loaded', () => {
+      expect(controller.getFontDataForTransfer()).toEqual([])
+    })
+
+    it('should store font data for transfer when fonts are loaded', async () => {
+      const mockFileSystem = createMockFileSystem()
+
+      controller.addAssetPath('fonts')
+      controller.loadFontAsset('TestFont', 'test.ttf')
+
+      await controller.loadAssets(mockFileSystem, '/game')
+
+      // The default mock returns data, which should be stored for font transfer
+      const fontData = controller.getFontDataForTransfer()
+      expect(fontData).toHaveLength(1)
+      expect(fontData[0].name).toBe('TestFont')
+      // Verify it's a valid data URL format
+      expect(fontData[0].dataUrl).toMatch(/^data:[^;]+;base64,/)
+    })
+
+    it('should store multiple fonts for transfer', async () => {
+      const mockFileSystem = createMockFileSystem()
+
+      controller.addAssetPath('fonts')
+      controller.loadFontAsset('Font1', 'font1.ttf')
+      controller.loadFontAsset('Font2', 'font2.otf')
+
+      await controller.loadAssets(mockFileSystem, '/game')
+
+      const fontData = controller.getFontDataForTransfer()
+      expect(fontData).toHaveLength(2)
+      expect(fontData.map(f => f.name)).toContain('Font1')
+      expect(fontData.map(f => f.name)).toContain('Font2')
+    })
+
+    it('should include correct data URL structure', async () => {
+      const mockFileSystem = createMockFileSystem()
+
+      controller.addAssetPath('fonts')
+      controller.loadFontAsset('TestFont', 'test.ttf')
+
+      await controller.loadAssets(mockFileSystem, '/game')
+
+      const fontData = controller.getFontDataForTransfer()
+      expect(fontData).toHaveLength(1)
+      // Should have both name and dataUrl properties
+      expect(fontData[0]).toHaveProperty('name')
+      expect(fontData[0]).toHaveProperty('dataUrl')
+      expect(typeof fontData[0].name).toBe('string')
+      expect(typeof fontData[0].dataUrl).toBe('string')
+      // Data URL should start with 'data:' prefix
+      expect(fontData[0].dataUrl.startsWith('data:')).toBe(true)
+    })
+  })
+
+  describe('font transfer callback', () => {
+    it('should not call transferFontsToWindow when no fonts are loaded', async () => {
+      const transferFontsToWindow = vi.fn()
+
+      const controllerWithCallback = new CanvasController({
+        onRequestCanvasTab: vi.fn().mockResolvedValue(mockCanvas),
+        onCloseCanvasTab: vi.fn(),
+        transferFontsToWindow,
+      })
+
+      // Start without loading any fonts
+      const startPromise = controllerWithCallback.start()
+      await new Promise(resolve => setTimeout(resolve, 10))
+
+      expect(transferFontsToWindow).not.toHaveBeenCalled()
+
+      controllerWithCallback.stop()
+      await startPromise
+    })
+
+    it('should not call transferFontsToWindow when callback is not provided', async () => {
+      const mockFileSystem = createMockFileSystem()
+
+      // Controller without transferFontsToWindow callback
+      const controllerNoCallback = new CanvasController({
+        onRequestCanvasTab: vi.fn().mockResolvedValue(mockCanvas),
+        onCloseCanvasTab: vi.fn(),
+        // No transferFontsToWindow
+      })
+
+      controllerNoCallback.addAssetPath('fonts')
+      controllerNoCallback.loadFontAsset('TestFont', 'test.ttf')
+      await controllerNoCallback.loadAssets(mockFileSystem, '/game')
+
+      // Should not throw when starting without the callback
+      const startPromise = controllerNoCallback.start()
+      await new Promise(resolve => setTimeout(resolve, 10))
+
+      // Verify fonts were loaded but no error occurred
+      expect(controllerNoCallback.getFontDataForTransfer()).toHaveLength(1)
+
+      controllerNoCallback.stop()
+      await startPromise
     })
   })
 

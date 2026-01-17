@@ -184,6 +184,8 @@ export class LuaCommand implements ICommand {
             // Error overlay for canvas windows
             showErrorOverlay: context.showErrorOverlay,
             clearErrorOverlay: context.clearErrorOverlay,
+            // Font transfer for canvas windows (popup windows have isolated document.fonts)
+            transferFontsToWindow: context.transferFontsToWindow,
             // Canvas tab execution control handlers (pause/play/stop/step)
             registerCanvasPauseHandler: context.registerCanvasPauseHandler,
             registerCanvasPlayHandler: context.registerCanvasPlayHandler,

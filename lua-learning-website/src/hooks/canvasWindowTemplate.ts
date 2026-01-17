@@ -390,6 +390,18 @@ export function generateCanvasWindowHTML(screenMode?: ScreenMode, noToolbar?: bo
           if (errorOverlay) {
             errorOverlay.classList.add('hidden');
           }
+        } else if (event.data && event.data.type === 'canvas-fonts') {
+          // Load fonts transferred from main window (popup has isolated document.fonts)
+          (event.data.fonts || []).forEach(function(fontInfo) {
+            try {
+              var base64 = fontInfo.dataUrl.split(',')[1];
+              var binary = atob(base64);
+              var buffer = new ArrayBuffer(binary.length);
+              var view = new Uint8Array(buffer);
+              for (var i = 0; i < binary.length; i++) view[i] = binary.charCodeAt(i);
+              new FontFace(fontInfo.name, buffer).load().then(function(f) { document.fonts.add(f); });
+            } catch (e) { console.error('Failed to load font:', fontInfo.name, e); }
+          });
         }
       });
     })();

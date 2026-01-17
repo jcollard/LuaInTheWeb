@@ -84,6 +84,8 @@ export interface UseCanvasWindowManagerReturn {
   showErrorOverlay: (canvasId: string, error: string) => void
   /** Clear/hide error overlay in a popup window */
   clearErrorOverlay: (canvasId: string) => void
+  /** Transfer font data to a popup window for loading in its isolated document.fonts */
+  transferFontsToWindow: (canvasId: string, fonts: Array<{ name: string; dataUrl: string }>) => void
 }
 
 /**
@@ -429,6 +431,21 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
     }
   }, [])
 
+  /**
+   * Transfer font data to a popup window.
+   * Popup windows have isolated document.fonts collections, so fonts loaded
+   * in the main window need to be transferred and reloaded in the popup.
+   */
+  const transferFontsToWindow = useCallback((canvasId: string, fonts: Array<{ name: string; dataUrl: string }>) => {
+    const windowState = windowsRef.current.get(canvasId)
+    if (windowState) {
+      windowState.window.postMessage(
+        { type: 'canvas-fonts', fonts },
+        '*'
+      )
+    }
+  }, [])
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -454,5 +471,6 @@ export function useCanvasWindowManager(): UseCanvasWindowManagerReturn {
     updateWindowControlState,
     showErrorOverlay,
     clearErrorOverlay,
+    transferFontsToWindow,
   }
 }
