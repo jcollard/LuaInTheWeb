@@ -68,3 +68,6 @@ export { Path2DRegistry, type IPath2DRegistry, type IPath2DRenderer } from './Pa
 
 // Style API for line styles, fill/stroke, shadows, and compositing
 export { StyleAPI, type IStyleAPI } from './StyleAPI'
+
+// Path API for path operations, hit testing support
+export { PathAPI, type IPathAPI, type FillRule } from './PathAPI'
