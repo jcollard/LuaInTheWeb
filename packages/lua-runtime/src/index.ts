@@ -62,3 +62,6 @@ export { AssetManager, type IAssetManager, type AudioAssetManifest } from './Ass
 
 // Input API for keyboard, mouse, and gamepad input handling
 export { InputAPI, type IInputCapture } from './InputAPI'
+
+// Path2D registry for reusable path objects
+export { Path2DRegistry, type IPath2DRegistry, type IPath2DRenderer } from './Path2DRegistry'
