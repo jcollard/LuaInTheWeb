@@ -335,6 +335,7 @@ function IDELayoutInner({
     updateWindowControlState,
     showErrorOverlay,
     clearErrorOverlay,
+    transferFontsToWindow,
   } = useCanvasWindowManager()
 
   // Listen for Lua file save events to trigger auto-reload on canvas windows
@@ -506,6 +507,8 @@ function IDELayoutInner({
       clearErrorOverlay(canvasId)
       clearCanvasTabError(canvasId)
     },
+    // Transfer fonts to popup window (only needed for window mode)
+    transferFontsToWindow,
     // Canvas tab execution control handlers
     registerCanvasPauseHandler,
     registerCanvasPlayHandler,
@@ -536,6 +539,7 @@ function IDELayoutInner({
     clearErrorOverlay,
     showCanvasTabError,
     clearCanvasTabError,
+    transferFontsToWindow,
     registerCanvasPauseHandler,
     registerCanvasPlayHandler,
     registerCanvasStopHandler,

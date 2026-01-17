@@ -800,6 +800,60 @@ describe('useCanvasWindowManager', () => {
     })
   })
 
+  describe('transferFontsToWindow', () => {
+    it('should send canvas-fonts message to popup window with font data', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      const fonts = [
+        { name: 'TestFont', dataUrl: 'data:font/ttf;base64,ABC123' },
+        { name: 'AnotherFont', dataUrl: 'data:font/otf;base64,XYZ789' },
+      ]
+
+      act(() => {
+        result.current.transferFontsToWindow('test-canvas-1', fonts)
+      })
+
+      expect(mockPopupWindow.postMessage).toHaveBeenCalledWith(
+        { type: 'canvas-fonts', fonts },
+        '*'
+      )
+    })
+
+    it('should handle non-existent window gracefully', () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+
+      const fonts = [{ name: 'TestFont', dataUrl: 'data:font/ttf;base64,ABC123' }]
+
+      // Should not throw when window doesn't exist
+      expect(() => {
+        act(() => {
+          result.current.transferFontsToWindow('non-existent', fonts)
+        })
+      }).not.toThrow()
+    })
+
+    it('should handle empty font array', async () => {
+      const { result } = renderHook(() => useCanvasWindowManager())
+
+      await act(async () => {
+        await result.current.openCanvasWindow('test-canvas-1')
+      })
+
+      act(() => {
+        result.current.transferFontsToWindow('test-canvas-1', [])
+      })
+
+      expect(mockPopupWindow.postMessage).toHaveBeenCalledWith(
+        { type: 'canvas-fonts', fonts: [] },
+        '*'
+      )
+    })
+  })
+
   describe('execution controls', () => {
     describe('handler registration', () => {
       it('should register pause handler', async () => {
@@ -1007,6 +1061,33 @@ describe('useCanvasWindowManager', () => {
 
         const htmlWritten = mockPopupWindow.document.write.mock.calls[0]?.[0] as string
         expect(htmlWritten).toContain("event.data.type === 'canvas-connected'")
+      })
+
+      it('should handle canvas-fonts message for loading fonts', async () => {
+        const { result } = renderHook(() => useCanvasWindowManager())
+
+        await act(async () => {
+          await result.current.openCanvasWindow('test-canvas-1')
+        })
+
+        const htmlWritten = mockPopupWindow.document.write.mock.calls[0]?.[0] as string
+        expect(htmlWritten).toContain("event.data.type === 'canvas-fonts'")
+        expect(htmlWritten).toContain('FontFace')
+        expect(htmlWritten).toContain('document.fonts.add')
+      })
+
+      it('should convert base64 data URL to ArrayBuffer in font handler', async () => {
+        const { result } = renderHook(() => useCanvasWindowManager())
+
+        await act(async () => {
+          await result.current.openCanvasWindow('test-canvas-1')
+        })
+
+        const htmlWritten = mockPopupWindow.document.write.mock.calls[0]?.[0] as string
+        // Verify the base64 decoding logic is present
+        expect(htmlWritten).toContain('atob')
+        expect(htmlWritten).toContain('ArrayBuffer')
+        expect(htmlWritten).toContain('Uint8Array')
       })
     })
 

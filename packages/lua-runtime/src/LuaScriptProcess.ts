@@ -454,6 +454,12 @@ __clear_execution_hook()
           LuaEngineFactory.flushOutput(this.engine)
         }
       },
+      // Route font transfer to window callbacks when in window mode
+      // Tab mode doesn't need this - fonts are already in the same document
+      transferFontsToWindow:
+        canvasMode === 'window'
+          ? originalCallbacks.transferFontsToWindow
+          : undefined,
     }
 
     this.canvasController = new CanvasController(routedCallbacks)

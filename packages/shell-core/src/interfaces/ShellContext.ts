@@ -243,6 +243,15 @@ export interface ShellContext {
   clearErrorOverlay?: (canvasId: string) => void
 
   /**
+   * Transfer font data to a canvas window (popup).
+   * Popup windows have isolated document.fonts collections, so fonts loaded
+   * in the main window need to be transferred and reloaded in the popup.
+   * @param canvasId - Unique identifier for the canvas window
+   * @param fonts - Array of font data with name and base64 data URL
+   */
+  transferFontsToWindow?: (canvasId: string, fonts: Array<{ name: string; dataUrl: string }>) => void
+
+  /**
    * Request a file to be opened in the editor.
    * Called by the 'open' command to integrate with an IDE or editor.
    * Optional - when undefined, the open command will report that

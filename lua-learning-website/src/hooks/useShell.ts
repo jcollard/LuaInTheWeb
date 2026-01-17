@@ -207,6 +207,14 @@ export interface ShellCanvasCallbacks {
    * @param canvasId - The canvas ID
    */
   clearErrorOverlay?: (canvasId: string) => void
+  /**
+   * Transfer font data to a canvas window (popup).
+   * Popup windows have isolated document.fonts collections, so fonts loaded
+   * in the main window need to be transferred and reloaded in the popup.
+   * @param canvasId - The canvas ID
+   * @param fonts - Array of font data with name and base64 data URL
+   */
+  transferFontsToWindow?: (canvasId: string, fonts: Array<{ name: string; dataUrl: string }>) => void
 }
 
 /**
@@ -415,6 +423,8 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
         // Error overlay callbacks for canvas windows and tabs
         showErrorOverlay: options?.canvasCallbacks?.showErrorOverlay,
         clearErrorOverlay: options?.canvasCallbacks?.clearErrorOverlay,
+        // Font transfer for canvas windows (popup windows have isolated document.fonts)
+        transferFontsToWindow: options?.canvasCallbacks?.transferFontsToWindow,
         // Editor integration callback for 'open' command
         onRequestOpenFile: options?.onRequestOpenFile,
         // Filesystem change notification for UI refresh (e.g., file tree)

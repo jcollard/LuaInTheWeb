@@ -216,6 +216,14 @@ export interface CanvasCallbacks {
    * @param canvasId - The canvas ID
    */
   clearErrorOverlay?: (canvasId: string) => void
+  /**
+   * Transfer font data to a canvas window (popup).
+   * Fonts need to be loaded in the popup window's document because it has
+   * its own isolated document.fonts collection.
+   * @param canvasId - The canvas ID
+   * @param fonts - Array of font data with name and base64 data URL
+   */
+  transferFontsToWindow?: (canvasId: string, fonts: Array<{ name: string; dataUrl: string }>) => void
 }
 
 /**
@@ -268,6 +276,11 @@ export class CanvasController {
 
   // Font cache for loaded fonts
   private fontCache: FontCache | null = null
+
+  // Font data for transfer to popup windows (stores base64 data URLs)
+  // Popup windows have their own isolated document.fonts collection,
+  // so we need to transfer font data and reload fonts there
+  private fontDataForTransfer: Map<string, { name: string; dataUrl: string }> = new Map()
 
   // Asset dimensions: width/height for each loaded asset
   private assetDimensions: Map<string, { width: number; height: number }> = new Map()
@@ -422,6 +435,13 @@ export class CanvasController {
 
     // Request canvas tab from UI
     this.canvas = await this.callbacks.onRequestCanvasTab(this.canvasId)
+
+    // Transfer fonts to popup window if applicable
+    // Popup windows have isolated document.fonts collections, so fonts
+    // loaded in the main window need to be transferred and reloaded there
+    if (this.fontDataForTransfer.size > 0 && this.callbacks.transferFontsToWindow) {
+      this.callbacks.transferFontsToWindow(this.canvasId, this.getFontDataForTransfer())
+    }
 
     // Register close handler so UI can stop us when tab is closed
     if (this.callbacks.registerCanvasCloseHandler) {
@@ -1649,6 +1669,14 @@ export class CanvasController {
           // Load font using FontFace API and add to document
           const font = await createFontFromData(definition.name, loadedAsset.data)
           this.fontCache.set(definition.name, font)
+
+          // Store font data as base64 for transfer to popup windows
+          // Popup windows have isolated document.fonts and need fonts reloaded
+          const dataUrl = this.arrayBufferToDataUrl(loadedAsset.data, loadedAsset.mimeType ?? 'font/ttf')
+          this.fontDataForTransfer.set(definition.name, {
+            name: definition.name,
+            dataUrl,
+          })
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
@@ -2032,6 +2060,35 @@ export class CanvasController {
     const path = this.pathRegistry.get(pathId)
     if (!path) return false
     return this.renderer?.isPointInStroke(path, x, y) ?? false
+  }
+
+  // --- Font Transfer API (for popup windows) ---
+
+  /**
+   * Get font data for transfer to a popup window.
+   * Popup windows have isolated document.fonts collections, so fonts loaded
+   * in the main window need to be transferred and reloaded in the popup.
+   * @returns Array of font data with name and base64 data URL
+   */
+  getFontDataForTransfer(): Array<{ name: string; dataUrl: string }> {
+    return Array.from(this.fontDataForTransfer.values())
+  }
+
+  /**
+   * Convert an ArrayBuffer to a base64 data URL.
+   * Used for transferring font data to popup windows via postMessage.
+   * @param buffer - The binary data to convert
+   * @param mimeType - The MIME type for the data URL
+   * @returns Base64-encoded data URL
+   */
+  private arrayBufferToDataUrl(buffer: ArrayBuffer, mimeType: string): string {
+    const bytes = new Uint8Array(buffer)
+    let binary = ''
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i])
+    }
+    const base64 = btoa(binary)
+    return `data:${mimeType};base64,${base64}`
   }
 
   // --- Internal ---
