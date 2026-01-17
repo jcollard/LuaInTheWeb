@@ -57,5 +57,8 @@ export { XTERM_INLINE_JS, XTERM_INLINE_CSS } from './xterm-inline.generated'
 // Canvas controller for shell-based canvas (non-worker)
 export { CanvasController, type CanvasCallbacks } from './CanvasController'
 
+// Asset manager for asset registration, loading, and lifecycle
+export { AssetManager, type IAssetManager, type AudioAssetManifest } from './AssetManager'
+
 // Input API for keyboard, mouse, and gamepad input handling
 export { InputAPI, type IInputCapture } from './InputAPI'
