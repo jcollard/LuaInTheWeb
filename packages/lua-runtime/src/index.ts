@@ -56,3 +56,6 @@ export { XTERM_INLINE_JS, XTERM_INLINE_CSS } from './xterm-inline.generated'
 
 // Canvas controller for shell-based canvas (non-worker)
 export { CanvasController, type CanvasCallbacks } from './CanvasController'
+
+// Input API for keyboard, mouse, and gamepad input handling
+export { InputAPI, type IInputCapture } from './InputAPI'
