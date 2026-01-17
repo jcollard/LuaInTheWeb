@@ -21,6 +21,8 @@ import { AssetManager } from './AssetManager'
 import { Path2DRegistry } from './Path2DRegistry'
 import { StyleAPI } from './StyleAPI'
 import { PathAPI } from './PathAPI'
+import { DrawingAPI } from './DrawingAPI'
+import type { TextOptions } from './DrawingAPI'
 import type {
   DrawCommand,
   InputState,
@@ -260,6 +262,9 @@ export class CanvasController {
   // Path2D registry for reusable path objects (exposed to Lua)
   private path2DRegistry: Path2DRegistry = new Path2DRegistry()
 
+  // Drawing API - handles drawing primitives (clear, shapes, text)
+  private drawingAPI: DrawingAPI = new DrawingAPI()
+
   // Offscreen canvas for text measurement
   private measureCanvas: HTMLCanvasElement | null = null
   private measureCtx: CanvasRenderingContext2D | null = null
@@ -271,6 +276,8 @@ export class CanvasController {
     this.styleAPI.setAddDrawCommand((cmd) => this.addDrawCommand(cmd))
     // Set up PathAPI callback immediately so path methods work before start()
     this.pathAPI.setAddDrawCommand((cmd) => this.addDrawCommand(cmd))
+    // Set up DrawingAPI callback immediately so drawing methods work before start()
+    this.drawingAPI.setAddDrawCommand((cmd) => this.addDrawCommand(cmd))
   }
 
   /**
@@ -547,32 +554,28 @@ export class CanvasController {
    * Clear the canvas.
    */
   clear(): void {
-    this.addDrawCommand({ type: 'clear' })
+    this.drawingAPI.clear()
   }
 
   /**
    * Clear a rectangular area of the canvas to transparent.
    */
   clearRect(x: number, y: number, width: number, height: number): void {
-    this.addDrawCommand({ type: 'clearRect', x, y, width, height })
+    this.drawingAPI.clearRect(x, y, width, height)
   }
 
   /**
    * Set the drawing color.
    */
   setColor(r: number, g: number, b: number, a?: number): void {
-    const command: DrawCommand = { type: 'setColor', r, g, b }
-    if (a !== undefined && a !== null) {
-      (command as { type: 'setColor'; r: number; g: number; b: number; a?: number }).a = a
-    }
-    this.addDrawCommand(command)
+    this.drawingAPI.setColor(r, g, b, a)
   }
 
   /**
    * Set the line width.
    */
   setLineWidth(width: number): void {
-    this.addDrawCommand({ type: 'setLineWidth', width })
+    this.drawingAPI.setLineWidth(width)
   }
 
   /**
@@ -657,35 +660,35 @@ export class CanvasController {
    * Draw a rectangle outline.
    */
   drawRect(x: number, y: number, width: number, height: number): void {
-    this.addDrawCommand({ type: 'rect', x, y, width, height })
+    this.drawingAPI.drawRect(x, y, width, height)
   }
 
   /**
    * Draw a filled rectangle.
    */
   fillRect(x: number, y: number, width: number, height: number): void {
-    this.addDrawCommand({ type: 'fillRect', x, y, width, height })
+    this.drawingAPI.fillRect(x, y, width, height)
   }
 
   /**
    * Draw a circle outline.
    */
   drawCircle(x: number, y: number, radius: number): void {
-    this.addDrawCommand({ type: 'circle', x, y, radius })
+    this.drawingAPI.drawCircle(x, y, radius)
   }
 
   /**
    * Draw a filled circle.
    */
   fillCircle(x: number, y: number, radius: number): void {
-    this.addDrawCommand({ type: 'fillCircle', x, y, radius })
+    this.drawingAPI.fillCircle(x, y, radius)
   }
 
   /**
    * Draw a line.
    */
   drawLine(x1: number, y1: number, x2: number, y2: number): void {
-    this.addDrawCommand({ type: 'line', x1, y1, x2, y2 })
+    this.drawingAPI.drawLine(x1, y1, x2, y2)
   }
 
   /**
@@ -699,19 +702,9 @@ export class CanvasController {
     x: number,
     y: number,
     text: string,
-    options?: { fontSize?: number; fontFamily?: string; maxWidth?: number }
+    options?: TextOptions
   ): void {
-    const command: DrawCommand = { type: 'text', x, y, text }
-    if (options?.fontSize !== undefined) {
-      (command as { fontSize?: number }).fontSize = options.fontSize
-    }
-    if (options?.fontFamily !== undefined) {
-      (command as { fontFamily?: string }).fontFamily = options.fontFamily
-    }
-    if (options?.maxWidth !== undefined) {
-      (command as { maxWidth?: number }).maxWidth = options.maxWidth
-    }
-    this.addDrawCommand(command)
+    this.drawingAPI.drawText(x, y, text, options)
   }
 
   /**
@@ -725,19 +718,9 @@ export class CanvasController {
     x: number,
     y: number,
     text: string,
-    options?: { fontSize?: number; fontFamily?: string; maxWidth?: number }
+    options?: TextOptions
   ): void {
-    const command: DrawCommand = { type: 'strokeText', x, y, text }
-    if (options?.fontSize !== undefined) {
-      (command as { fontSize?: number }).fontSize = options.fontSize
-    }
-    if (options?.fontFamily !== undefined) {
-      (command as { fontFamily?: string }).fontFamily = options.fontFamily
-    }
-    if (options?.maxWidth !== undefined) {
-      (command as { maxWidth?: number }).maxWidth = options.maxWidth
-    }
-    this.addDrawCommand(command)
+    this.drawingAPI.strokeText(x, y, text, options)
   }
 
   // --- Transformation API ---
