@@ -18,6 +18,7 @@ import {
 } from '@lua-learning/canvas-runtime'
 import { InputAPI } from './InputAPI'
 import { AssetManager } from './AssetManager'
+import { Path2DRegistry } from './Path2DRegistry'
 import type {
   DrawCommand,
   InputState,
@@ -255,8 +256,7 @@ export class CanvasController {
   private currentPath: Path2D = new Path2D()
 
   // Path2D registry for reusable path objects (exposed to Lua)
-  private pathRegistry: Map<number, Path2D> = new Map()
-  private nextPathId = 1
+  private path2DRegistry: Path2DRegistry = new Path2DRegistry()
 
   // Offscreen canvas for text measurement
   private measureCanvas: HTMLCanvasElement | null = null
@@ -423,6 +423,8 @@ export class CanvasController {
     this.renderer = new CanvasRenderer(this.canvas, this.assetManager.getImageCache() ?? undefined)
     this.inputCapture = new InputCapture(this.canvas)
     this.inputAPI.setInputCapture(this.inputCapture)
+    this.path2DRegistry.setAddDrawCommand((cmd) => this.addDrawCommand(cmd))
+    this.path2DRegistry.setRenderer(this.renderer)
     this.gameLoop = new GameLoopController(this.onFrame.bind(this))
 
     // Process any commands added before start() (e.g., setSize)
@@ -474,6 +476,10 @@ export class CanvasController {
       this.inputCapture.dispose()
       this.inputCapture = null
     }
+
+    // Clean up path2D registry dependencies
+    this.path2DRegistry.setAddDrawCommand(null)
+    this.path2DRegistry.setRenderer(null)
 
     // Clear renderer reference (canvas may still exist in DOM)
     this.renderer = null
@@ -1578,143 +1584,114 @@ export class CanvasController {
     return this.renderer.capture(type, quality)
   }
 
-  // --- Reusable Path2D API ---
+  // --- Reusable Path2D API (delegated to Path2DRegistry) ---
 
   /**
    * Create a new Path2D object, optionally from an SVG path string.
-   * @param svgPath - Optional SVG path data string (e.g., "M10 10 L50 50 Z")
-   * @returns Object with `id` for referencing the path
+   * Delegates to Path2DRegistry.
    */
   createPath(svgPath?: string): { id: number } {
-    const path = svgPath ? new Path2D(svgPath) : new Path2D()
-    const id = this.nextPathId++
-    this.pathRegistry.set(id, path)
-    return { id }
+    return this.path2DRegistry.createPath(svgPath)
   }
 
   /**
    * Clone an existing Path2D object.
-   * @param pathId - ID of the path to clone
-   * @returns Object with `id` for the new path, or null if source not found
+   * Delegates to Path2DRegistry.
    */
   clonePath(pathId: number): { id: number } | null {
-    const source = this.pathRegistry.get(pathId)
-    if (!source) return null
-    const cloned = new Path2D(source)
-    const id = this.nextPathId++
-    this.pathRegistry.set(id, cloned)
-    return { id }
+    return this.path2DRegistry.clonePath(pathId)
   }
 
   /**
    * Dispose a Path2D object to free memory.
-   * @param pathId - ID of the path to dispose
+   * Delegates to Path2DRegistry.
    */
   disposePath(pathId: number): void {
-    this.pathRegistry.delete(pathId)
+    this.path2DRegistry.disposePath(pathId)
   }
 
-  // --- Path2D building methods ---
+  // --- Path2D building methods (delegated to Path2DRegistry) ---
 
   /** Move to a point on a stored path */
   pathMoveTo(pathId: number, x: number, y: number): void {
-    const path = this.pathRegistry.get(pathId)
-    if (path) path.moveTo(x, y)
+    this.path2DRegistry.pathMoveTo(pathId, x, y)
   }
 
   /** Draw line to a point on a stored path */
   pathLineTo(pathId: number, x: number, y: number): void {
-    const path = this.pathRegistry.get(pathId)
-    if (path) path.lineTo(x, y)
+    this.path2DRegistry.pathLineTo(pathId, x, y)
   }
 
   /** Close a stored path */
   pathClosePath(pathId: number): void {
-    const path = this.pathRegistry.get(pathId)
-    if (path) path.closePath()
+    this.path2DRegistry.pathClosePath(pathId)
   }
 
   /** Add a rectangle to a stored path */
   pathRect(pathId: number, x: number, y: number, width: number, height: number): void {
-    const path = this.pathRegistry.get(pathId)
-    if (path) path.rect(x, y, width, height)
+    this.path2DRegistry.pathRect(pathId, x, y, width, height)
   }
 
   /** Add a rounded rectangle to a stored path */
   pathRoundRect(pathId: number, x: number, y: number, width: number, height: number, radii: number | number[]): void {
-    const path = this.pathRegistry.get(pathId)
-    if (path) path.roundRect(x, y, width, height, radii)
+    this.path2DRegistry.pathRoundRect(pathId, x, y, width, height, radii)
   }
 
   /** Add an arc to a stored path */
   pathArc(pathId: number, x: number, y: number, radius: number, startAngle: number, endAngle: number, counterclockwise?: boolean): void {
-    const path = this.pathRegistry.get(pathId)
-    if (path) path.arc(x, y, radius, startAngle, endAngle, counterclockwise)
+    this.path2DRegistry.pathArc(pathId, x, y, radius, startAngle, endAngle, counterclockwise)
   }
 
   /** Add an arc to a stored path using control points */
   pathArcTo(pathId: number, x1: number, y1: number, x2: number, y2: number, radius: number): void {
-    const path = this.pathRegistry.get(pathId)
-    if (path) path.arcTo(x1, y1, x2, y2, radius)
+    this.path2DRegistry.pathArcTo(pathId, x1, y1, x2, y2, radius)
   }
 
   /** Add an ellipse to a stored path */
   pathEllipse(pathId: number, x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number, counterclockwise?: boolean): void {
-    const path = this.pathRegistry.get(pathId)
-    if (path) path.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise)
+    this.path2DRegistry.pathEllipse(pathId, x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise)
   }
 
   /** Add a quadratic curve to a stored path */
   pathQuadraticCurveTo(pathId: number, cpx: number, cpy: number, x: number, y: number): void {
-    const path = this.pathRegistry.get(pathId)
-    if (path) path.quadraticCurveTo(cpx, cpy, x, y)
+    this.path2DRegistry.pathQuadraticCurveTo(pathId, cpx, cpy, x, y)
   }
 
   /** Add a bezier curve to a stored path */
   pathBezierCurveTo(pathId: number, cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number): void {
-    const path = this.pathRegistry.get(pathId)
-    if (path) path.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
+    this.path2DRegistry.pathBezierCurveTo(pathId, cp1x, cp1y, cp2x, cp2y, x, y)
   }
 
   /** Add another path to a stored path */
   pathAddPath(pathId: number, sourcePathId: number): void {
-    const path = this.pathRegistry.get(pathId)
-    const source = this.pathRegistry.get(sourcePathId)
-    if (path && source) path.addPath(source)
+    this.path2DRegistry.pathAddPath(pathId, sourcePathId)
   }
 
-  // --- Path2D rendering methods ---
+  // --- Path2D rendering methods (delegated to Path2DRegistry) ---
 
   /** Fill a stored path - adds command to queue for proper rendering order */
   fillPath(pathId: number, fillRule?: FillRule): void {
-    if (!this.pathRegistry.has(pathId)) return
-    this.addDrawCommand({ type: 'fillPath', pathId, fillRule })
+    this.path2DRegistry.fillPath(pathId, fillRule)
   }
 
   /** Stroke a stored path - adds command to queue for proper rendering order */
   strokePath(pathId: number): void {
-    if (!this.pathRegistry.has(pathId)) return
-    this.addDrawCommand({ type: 'strokePath', pathId })
+    this.path2DRegistry.strokePath(pathId)
   }
 
   /** Clip to a stored path - adds command to queue for proper rendering order */
   clipPath(pathId: number, fillRule?: FillRule): void {
-    if (!this.pathRegistry.has(pathId)) return
-    this.addDrawCommand({ type: 'clipPath', pathId, fillRule })
+    this.path2DRegistry.clipPath(pathId, fillRule)
   }
 
   /** Check if a point is in a stored path */
   isPointInStoredPath(pathId: number, x: number, y: number, fillRule?: FillRule): boolean {
-    const path = this.pathRegistry.get(pathId)
-    if (!path) return false
-    return this.renderer?.isPointInPath(path, x, y, fillRule) ?? false
+    return this.path2DRegistry.isPointInStoredPath(pathId, x, y, fillRule)
   }
 
   /** Check if a point is in a stored path's stroke */
   isPointInStoredStroke(pathId: number, x: number, y: number): boolean {
-    const path = this.pathRegistry.get(pathId)
-    if (!path) return false
-    return this.renderer?.isPointInStroke(path, x, y) ?? false
+    return this.path2DRegistry.isPointInStoredStroke(pathId, x, y)
   }
 
   // --- Internal ---
@@ -1800,7 +1777,7 @@ export class CanvasController {
           regularBatch = []
         }
         // Process Path2D fill
-        const path = this.pathRegistry.get(command.pathId)
+        const path = this.path2DRegistry.getPath(command.pathId)
         if (path) {
           this.renderer.fillPath(path, command.fillRule)
         }
@@ -1811,7 +1788,7 @@ export class CanvasController {
           regularBatch = []
         }
         // Process Path2D stroke
-        const path = this.pathRegistry.get(command.pathId)
+        const path = this.path2DRegistry.getPath(command.pathId)
         if (path) {
           this.renderer.strokePath(path)
         }
@@ -1822,7 +1799,7 @@ export class CanvasController {
           regularBatch = []
         }
         // Process Path2D clip
-        const path = this.pathRegistry.get(command.pathId)
+        const path = this.path2DRegistry.getPath(command.pathId)
         if (path) {
           this.renderer.clipPath(path, command.fillRule)
         }

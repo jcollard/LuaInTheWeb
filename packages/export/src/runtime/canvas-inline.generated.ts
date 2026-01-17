@@ -3054,7 +3054,10 @@ return setmetatable({
       // audioEngine is set by AUDIO_INLINE_JS's setupAudioBridge
       audioAssets: /* @__PURE__ */ new Map(),
       // Gamepad state for "just pressed" detection
-      previousGamepadButtons: [[], [], [], []]
+      previousGamepadButtons: [[], [], [], []],
+      // Path2D registry state
+      pathRegistry: /* @__PURE__ */ new Map(),
+      nextPathId: 1
     };
   }
   function setupInputListeners(state) {
@@ -3697,40 +3700,132 @@ return setmetatable({
     engine.global.set("__canvas_putImageData", () => {
     });
     engine.global.set("__canvas_cloneImageData", () => null);
-    engine.global.set("__canvas_createPath", () => ({ id: -1 }));
-    engine.global.set("__canvas_clonePath", () => ({ id: -1 }));
-    engine.global.set("__canvas_disposePath", () => {
+    engine.global.set("__canvas_createPath", () => {
+      const id = state.nextPathId++;
+      state.pathRegistry.set(id, new Path2D());
+      return { id };
     });
-    engine.global.set("__canvas_pathMoveTo", () => {
+    engine.global.set("__canvas_clonePath", (pathId) => {
+      const sourcePath = state.pathRegistry.get(pathId);
+      if (!sourcePath) return { id: -1 };
+      const id = state.nextPathId++;
+      state.pathRegistry.set(id, new Path2D(sourcePath));
+      return { id };
     });
-    engine.global.set("__canvas_pathLineTo", () => {
+    engine.global.set("__canvas_disposePath", (pathId) => {
+      state.pathRegistry.delete(pathId);
     });
-    engine.global.set("__canvas_pathClosePath", () => {
+    engine.global.set("__canvas_pathMoveTo", (pathId, x, y) => {
+      const path = state.pathRegistry.get(pathId);
+      if (path) path.moveTo(x, y);
     });
-    engine.global.set("__canvas_pathRect", () => {
+    engine.global.set("__canvas_pathLineTo", (pathId, x, y) => {
+      const path = state.pathRegistry.get(pathId);
+      if (path) path.lineTo(x, y);
     });
-    engine.global.set("__canvas_pathRoundRect", () => {
+    engine.global.set("__canvas_pathClosePath", (pathId) => {
+      const path = state.pathRegistry.get(pathId);
+      if (path) path.closePath();
     });
-    engine.global.set("__canvas_pathArc", () => {
+    engine.global.set(
+      "__canvas_pathRect",
+      (pathId, x, y, width, height) => {
+        const path = state.pathRegistry.get(pathId);
+        if (path) path.rect(x, y, width, height);
+      }
+    );
+    engine.global.set(
+      "__canvas_pathRoundRect",
+      (pathId, x, y, width, height, radii) => {
+        const path = state.pathRegistry.get(pathId);
+        if (path) path.roundRect(x, y, width, height, radii);
+      }
+    );
+    engine.global.set(
+      "__canvas_pathArc",
+      (pathId, x, y, radius, startAngle, endAngle, counterclockwise) => {
+        const path = state.pathRegistry.get(pathId);
+        if (path) path.arc(x, y, radius, startAngle, endAngle, counterclockwise);
+      }
+    );
+    engine.global.set(
+      "__canvas_pathArcTo",
+      (pathId, x1, y1, x2, y2, radius) => {
+        const path = state.pathRegistry.get(pathId);
+        if (path) path.arcTo(x1, y1, x2, y2, radius);
+      }
+    );
+    engine.global.set(
+      "__canvas_pathEllipse",
+      (pathId, x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise) => {
+        const path = state.pathRegistry.get(pathId);
+        if (path) {
+          path.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise);
+        }
+      }
+    );
+    engine.global.set(
+      "__canvas_pathQuadraticCurveTo",
+      (pathId, cpx, cpy, x, y) => {
+        const path = state.pathRegistry.get(pathId);
+        if (path) path.quadraticCurveTo(cpx, cpy, x, y);
+      }
+    );
+    engine.global.set(
+      "__canvas_pathBezierCurveTo",
+      (pathId, cp1x, cp1y, cp2x, cp2y, x, y) => {
+        const path = state.pathRegistry.get(pathId);
+        if (path) path.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y);
+      }
+    );
+    engine.global.set("__canvas_pathAddPath", (pathId, sourcePathId) => {
+      const path = state.pathRegistry.get(pathId);
+      const sourcePath = state.pathRegistry.get(sourcePathId);
+      if (path && sourcePath) path.addPath(sourcePath);
     });
-    engine.global.set("__canvas_pathArcTo", () => {
+    engine.global.set("__canvas_fillPath", (pathId, fillRule) => {
+      const path = state.pathRegistry.get(pathId);
+      if (path) {
+        if (fillRule) {
+          ctx.fill(path, fillRule);
+        } else {
+          ctx.fill(path);
+        }
+      }
     });
-    engine.global.set("__canvas_pathEllipse", () => {
+    engine.global.set("__canvas_strokePath", (pathId) => {
+      const path = state.pathRegistry.get(pathId);
+      if (path) ctx.stroke(path);
     });
-    engine.global.set("__canvas_pathQuadraticCurveTo", () => {
+    engine.global.set("__canvas_clipPath", (pathId, fillRule) => {
+      const path = state.pathRegistry.get(pathId);
+      if (path) {
+        if (fillRule) {
+          ctx.clip(path, fillRule);
+        } else {
+          ctx.clip(path);
+        }
+      }
     });
-    engine.global.set("__canvas_pathBezierCurveTo", () => {
-    });
-    engine.global.set("__canvas_pathAddPath", () => {
-    });
-    engine.global.set("__canvas_fillPath", () => {
-    });
-    engine.global.set("__canvas_strokePath", () => {
-    });
-    engine.global.set("__canvas_clipPath", () => {
-    });
-    engine.global.set("__canvas_isPointInStoredPath", () => false);
-    engine.global.set("__canvas_isPointInStoredStroke", () => false);
+    engine.global.set(
+      "__canvas_isPointInStoredPath",
+      (pathId, x, y, fillRule) => {
+        const path = state.pathRegistry.get(pathId);
+        if (!path) return false;
+        if (fillRule) {
+          return ctx.isPointInPath(path, x, y, fillRule);
+        }
+        return ctx.isPointInPath(path, x, y);
+      }
+    );
+    engine.global.set(
+      "__canvas_isPointInStoredStroke",
+      (pathId, x, y) => {
+        const path = state.pathRegistry.get(pathId);
+        if (!path) return false;
+        return ctx.isPointInStroke(path, x, y);
+      }
+    );
     engine.global.set(
       "__canvas_assets_loadSound",
       (name, filename) => {

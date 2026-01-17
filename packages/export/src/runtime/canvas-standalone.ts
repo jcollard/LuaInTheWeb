@@ -62,6 +62,9 @@ export interface CanvasRuntimeState {
   audioAssets: Map<string, { name: string; filename: string; type: 'sound' | 'music' }>
   // Gamepad state for "just pressed" detection
   previousGamepadButtons: number[][]
+  // Path2D registry state
+  pathRegistry: Map<number, Path2D>
+  nextPathId: number
 }
 
 /**
@@ -96,6 +99,9 @@ export function createCanvasRuntimeState(
     audioAssets: new Map(),
     // Gamepad state for "just pressed" detection
     previousGamepadButtons: [[], [], [], []],
+    // Path2D registry state
+    pathRegistry: new Map(),
+    nextPathId: 1,
   }
 }
 
@@ -947,26 +953,184 @@ export function setupCanvasBridge(
 
   engine.global.set('__canvas_cloneImageData', () => null)
 
-  // Path2D stubs (would need proper implementation for full support)
-  engine.global.set('__canvas_createPath', () => ({ id: -1 }))
-  engine.global.set('__canvas_clonePath', () => ({ id: -1 }))
-  engine.global.set('__canvas_disposePath', () => {})
-  engine.global.set('__canvas_pathMoveTo', () => {})
-  engine.global.set('__canvas_pathLineTo', () => {})
-  engine.global.set('__canvas_pathClosePath', () => {})
-  engine.global.set('__canvas_pathRect', () => {})
-  engine.global.set('__canvas_pathRoundRect', () => {})
-  engine.global.set('__canvas_pathArc', () => {})
-  engine.global.set('__canvas_pathArcTo', () => {})
-  engine.global.set('__canvas_pathEllipse', () => {})
-  engine.global.set('__canvas_pathQuadraticCurveTo', () => {})
-  engine.global.set('__canvas_pathBezierCurveTo', () => {})
-  engine.global.set('__canvas_pathAddPath', () => {})
-  engine.global.set('__canvas_fillPath', () => {})
-  engine.global.set('__canvas_strokePath', () => {})
-  engine.global.set('__canvas_clipPath', () => {})
-  engine.global.set('__canvas_isPointInStoredPath', () => false)
-  engine.global.set('__canvas_isPointInStoredStroke', () => false)
+  // Path2D API - fully implemented for standalone export
+  engine.global.set('__canvas_createPath', () => {
+    const id = state.nextPathId++
+    state.pathRegistry.set(id, new Path2D())
+    return { id }
+  })
+
+  engine.global.set('__canvas_clonePath', (pathId: number) => {
+    const sourcePath = state.pathRegistry.get(pathId)
+    if (!sourcePath) return { id: -1 }
+    const id = state.nextPathId++
+    state.pathRegistry.set(id, new Path2D(sourcePath))
+    return { id }
+  })
+
+  engine.global.set('__canvas_disposePath', (pathId: number) => {
+    state.pathRegistry.delete(pathId)
+  })
+
+  engine.global.set('__canvas_pathMoveTo', (pathId: number, x: number, y: number) => {
+    const path = state.pathRegistry.get(pathId)
+    if (path) path.moveTo(x, y)
+  })
+
+  engine.global.set('__canvas_pathLineTo', (pathId: number, x: number, y: number) => {
+    const path = state.pathRegistry.get(pathId)
+    if (path) path.lineTo(x, y)
+  })
+
+  engine.global.set('__canvas_pathClosePath', (pathId: number) => {
+    const path = state.pathRegistry.get(pathId)
+    if (path) path.closePath()
+  })
+
+  engine.global.set(
+    '__canvas_pathRect',
+    (pathId: number, x: number, y: number, width: number, height: number) => {
+      const path = state.pathRegistry.get(pathId)
+      if (path) path.rect(x, y, width, height)
+    }
+  )
+
+  engine.global.set(
+    '__canvas_pathRoundRect',
+    (
+      pathId: number,
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+      radii: number | number[]
+    ) => {
+      const path = state.pathRegistry.get(pathId)
+      if (path) path.roundRect(x, y, width, height, radii)
+    }
+  )
+
+  engine.global.set(
+    '__canvas_pathArc',
+    (
+      pathId: number,
+      x: number,
+      y: number,
+      radius: number,
+      startAngle: number,
+      endAngle: number,
+      counterclockwise: boolean
+    ) => {
+      const path = state.pathRegistry.get(pathId)
+      if (path) path.arc(x, y, radius, startAngle, endAngle, counterclockwise)
+    }
+  )
+
+  engine.global.set(
+    '__canvas_pathArcTo',
+    (pathId: number, x1: number, y1: number, x2: number, y2: number, radius: number) => {
+      const path = state.pathRegistry.get(pathId)
+      if (path) path.arcTo(x1, y1, x2, y2, radius)
+    }
+  )
+
+  engine.global.set(
+    '__canvas_pathEllipse',
+    (
+      pathId: number,
+      x: number,
+      y: number,
+      radiusX: number,
+      radiusY: number,
+      rotation: number,
+      startAngle: number,
+      endAngle: number,
+      counterclockwise: boolean
+    ) => {
+      const path = state.pathRegistry.get(pathId)
+      if (path) {
+        path.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise)
+      }
+    }
+  )
+
+  engine.global.set(
+    '__canvas_pathQuadraticCurveTo',
+    (pathId: number, cpx: number, cpy: number, x: number, y: number) => {
+      const path = state.pathRegistry.get(pathId)
+      if (path) path.quadraticCurveTo(cpx, cpy, x, y)
+    }
+  )
+
+  engine.global.set(
+    '__canvas_pathBezierCurveTo',
+    (
+      pathId: number,
+      cp1x: number,
+      cp1y: number,
+      cp2x: number,
+      cp2y: number,
+      x: number,
+      y: number
+    ) => {
+      const path = state.pathRegistry.get(pathId)
+      if (path) path.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
+    }
+  )
+
+  engine.global.set('__canvas_pathAddPath', (pathId: number, sourcePathId: number) => {
+    const path = state.pathRegistry.get(pathId)
+    const sourcePath = state.pathRegistry.get(sourcePathId)
+    if (path && sourcePath) path.addPath(sourcePath)
+  })
+
+  engine.global.set('__canvas_fillPath', (pathId: number, fillRule?: CanvasFillRule) => {
+    const path = state.pathRegistry.get(pathId)
+    if (path) {
+      if (fillRule) {
+        ctx.fill(path, fillRule)
+      } else {
+        ctx.fill(path)
+      }
+    }
+  })
+
+  engine.global.set('__canvas_strokePath', (pathId: number) => {
+    const path = state.pathRegistry.get(pathId)
+    if (path) ctx.stroke(path)
+  })
+
+  engine.global.set('__canvas_clipPath', (pathId: number, fillRule?: CanvasFillRule) => {
+    const path = state.pathRegistry.get(pathId)
+    if (path) {
+      if (fillRule) {
+        ctx.clip(path, fillRule)
+      } else {
+        ctx.clip(path)
+      }
+    }
+  })
+
+  engine.global.set(
+    '__canvas_isPointInStoredPath',
+    (pathId: number, x: number, y: number, fillRule?: CanvasFillRule) => {
+      const path = state.pathRegistry.get(pathId)
+      if (!path) return false
+      if (fillRule) {
+        return ctx.isPointInPath(path, x, y, fillRule)
+      }
+      return ctx.isPointInPath(path, x, y)
+    }
+  )
+
+  engine.global.set(
+    '__canvas_isPointInStoredStroke',
+    (pathId: number, x: number, y: number) => {
+      const path = state.pathRegistry.get(pathId)
+      if (!path) return false
+      return ctx.isPointInStroke(path, x, y)
+    }
+  )
 
   // --- Audio API ---
 
