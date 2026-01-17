@@ -19,6 +19,7 @@ import {
 import { InputAPI } from './InputAPI'
 import { AssetManager } from './AssetManager'
 import { Path2DRegistry } from './Path2DRegistry'
+import { StyleAPI } from './StyleAPI'
 import type {
   DrawCommand,
   InputState,
@@ -249,8 +250,8 @@ export class CanvasController {
   private currentFontSize: number = 16
   private currentFontFamily: string = 'monospace'
 
-  // Line dash state
-  private lineDashSegments: number[] = []
+  // Style API - handles line styles, fill/stroke, shadows, compositing
+  private styleAPI: StyleAPI = new StyleAPI()
 
   // Path2D for hit testing - tracks current path operations
   private currentPath: Path2D = new Path2D()
@@ -265,6 +266,8 @@ export class CanvasController {
   constructor(callbacks: CanvasCallbacks, canvasId = 'canvas-main') {
     this.callbacks = callbacks
     this.canvasId = canvasId
+    // Set up StyleAPI callback immediately so style methods work before start()
+    this.styleAPI.setAddDrawCommand((cmd) => this.addDrawCommand(cmd))
   }
 
   /**
@@ -476,6 +479,9 @@ export class CanvasController {
       this.inputCapture.dispose()
       this.inputCapture = null
     }
+
+    // Note: StyleAPI callback is NOT cleared - it's set up in constructor
+    // and should remain available throughout the controller's lifecycle
 
     // Clean up path2D registry dependencies
     this.path2DRegistry.setAddDrawCommand(null)
@@ -961,14 +967,14 @@ export class CanvasController {
     this.addDrawCommand({ type: 'clip', fillRule })
   }
 
-  // --- Line Style API ---
+  // --- Line Style API (delegated to StyleAPI) ---
 
   /**
    * Set the line cap style for stroke endpoints.
    * @param cap - Line cap style: "butt" (default), "round", or "square"
    */
   setLineCap(cap: 'butt' | 'round' | 'square'): void {
-    this.addDrawCommand({ type: 'setLineCap', cap })
+    this.styleAPI.setLineCap(cap)
   }
 
   /**
@@ -976,7 +982,7 @@ export class CanvasController {
    * @param join - Line join style: "miter" (default), "round", or "bevel"
    */
   setLineJoin(join: 'miter' | 'round' | 'bevel'): void {
-    this.addDrawCommand({ type: 'setLineJoin', join })
+    this.styleAPI.setLineJoin(join)
   }
 
   /**
@@ -985,7 +991,7 @@ export class CanvasController {
    * @param limit - Miter limit value (default: 10)
    */
   setMiterLimit(limit: number): void {
-    this.addDrawCommand({ type: 'setMiterLimit', limit })
+    this.styleAPI.setMiterLimit(limit)
   }
 
   /**
@@ -994,8 +1000,7 @@ export class CanvasController {
    *                   Empty array resets to solid line.
    */
   setLineDash(segments: number[]): void {
-    this.lineDashSegments = [...segments]
-    this.addDrawCommand({ type: 'setLineDash', segments })
+    this.styleAPI.setLineDash(segments)
   }
 
   /**
@@ -1003,7 +1008,7 @@ export class CanvasController {
    * @returns Copy of the current dash pattern array
    */
   getLineDash(): number[] {
-    return [...this.lineDashSegments]
+    return this.styleAPI.getLineDash()
   }
 
   /**
@@ -1011,17 +1016,17 @@ export class CanvasController {
    * @param offset - Offset to shift the dash pattern (useful for marching ants animation)
    */
   setLineDashOffset(offset: number): void {
-    this.addDrawCommand({ type: 'setLineDashOffset', offset })
+    this.styleAPI.setLineDashOffset(offset)
   }
 
-  // --- Fill/Stroke Style API ---
+  // --- Fill/Stroke Style API (delegated to StyleAPI) ---
 
   /**
    * Set the fill style (color or gradient).
    * @param style - CSS color string or gradient definition
    */
   setFillStyle(style: FillStyle): void {
-    this.addDrawCommand({ type: 'setFillStyle', style })
+    this.styleAPI.setFillStyle(style)
   }
 
   /**
@@ -1029,17 +1034,17 @@ export class CanvasController {
    * @param style - CSS color string or gradient definition
    */
   setStrokeStyle(style: FillStyle): void {
-    this.addDrawCommand({ type: 'setStrokeStyle', style })
+    this.styleAPI.setStrokeStyle(style)
   }
 
-  // --- Shadow API ---
+  // --- Shadow API (delegated to StyleAPI) ---
 
   /**
    * Set the shadow color.
    * @param color - CSS color string
    */
   setShadowColor(color: string): void {
-    this.addDrawCommand({ type: 'setShadowColor', color })
+    this.styleAPI.setShadowColor(color)
   }
 
   /**
@@ -1047,7 +1052,7 @@ export class CanvasController {
    * @param blur - Blur radius in pixels
    */
   setShadowBlur(blur: number): void {
-    this.addDrawCommand({ type: 'setShadowBlur', blur })
+    this.styleAPI.setShadowBlur(blur)
   }
 
   /**
@@ -1055,7 +1060,7 @@ export class CanvasController {
    * @param offset - Offset in pixels
    */
   setShadowOffsetX(offset: number): void {
-    this.addDrawCommand({ type: 'setShadowOffsetX', offset })
+    this.styleAPI.setShadowOffsetX(offset)
   }
 
   /**
@@ -1063,7 +1068,7 @@ export class CanvasController {
    * @param offset - Offset in pixels
    */
   setShadowOffsetY(offset: number): void {
-    this.addDrawCommand({ type: 'setShadowOffsetY', offset })
+    this.styleAPI.setShadowOffsetY(offset)
   }
 
   /**
@@ -1074,24 +1079,24 @@ export class CanvasController {
    * @param offsetY - Vertical offset in pixels
    */
   setShadow(color: string, blur: number, offsetX: number, offsetY: number): void {
-    this.addDrawCommand({ type: 'setShadow', color, blur, offsetX, offsetY })
+    this.styleAPI.setShadow(color, blur, offsetX, offsetY)
   }
 
   /**
    * Clear all shadow properties.
    */
   clearShadow(): void {
-    this.addDrawCommand({ type: 'clearShadow' })
+    this.styleAPI.clearShadow()
   }
 
-  // --- Compositing API ---
+  // --- Compositing API (delegated to StyleAPI) ---
 
   /**
    * Set the global alpha (transparency) for all subsequent drawing.
    * @param alpha - Value from 0.0 (fully transparent) to 1.0 (fully opaque)
    */
   setGlobalAlpha(alpha: number): void {
-    this.addDrawCommand({ type: 'setGlobalAlpha', alpha })
+    this.styleAPI.setGlobalAlpha(alpha)
   }
 
   /**
@@ -1099,7 +1104,7 @@ export class CanvasController {
    * @param operation - The blend mode to use
    */
   setCompositeOperation(operation: GlobalCompositeOperation): void {
-    this.addDrawCommand({ type: 'setCompositeOperation', operation })
+    this.styleAPI.setCompositeOperation(operation)
   }
 
   /**
@@ -1108,7 +1113,7 @@ export class CanvasController {
    * @param enabled - Whether to enable image smoothing (default: true)
    */
   setImageSmoothing(enabled: boolean): void {
-    this.addDrawCommand({ type: 'setImageSmoothing', enabled })
+    this.styleAPI.setImageSmoothing(enabled)
   }
 
   // --- Text Alignment API ---
