@@ -19,6 +19,7 @@ import {
   FontCache,
   AssetLoader,
 } from '@lua-learning/canvas-runtime'
+import { InputAPI } from './InputAPI'
 import type {
   DrawCommand,
   InputState,
@@ -34,7 +35,7 @@ import type {
   AssetHandle,
   AudioAssetHandle,
 } from '@lua-learning/canvas-runtime'
-import { isAssetHandle, createEmptyInputState } from '@lua-learning/canvas-runtime'
+import { isAssetHandle } from '@lua-learning/canvas-runtime'
 import type { IFileSystem, ScreenMode } from '@lua-learning/shell-core'
 import { formatOnDrawError, createImageFromData, createFontFromData } from './canvasErrorFormatter'
 import type { IAudioEngine } from './audio/IAudioEngine'
@@ -237,6 +238,7 @@ export class CanvasController {
   private canvas: HTMLCanvasElement | null = null
   private renderer: CanvasRenderer | null = null
   private inputCapture: InputCapture | null = null
+  private inputAPI: InputAPI = new InputAPI()
   private gameLoop: GameLoopController | null = null
 
   // Frame state
@@ -468,6 +470,7 @@ export class CanvasController {
     // Initialize renderer with image cache (if assets were loaded), input capture, and game loop
     this.renderer = new CanvasRenderer(this.canvas, this.imageCache ?? undefined)
     this.inputCapture = new InputCapture(this.canvas)
+    this.inputAPI.setInputCapture(this.inputCapture)
     this.gameLoop = new GameLoopController(this.onFrame.bind(this))
 
     // Process any commands added before start() (e.g., setSize)
@@ -514,6 +517,7 @@ export class CanvasController {
     }
 
     // Clean up input capture
+    this.inputAPI.setInputCapture(null)
     if (this.inputCapture) {
       this.inputCapture.dispose()
       this.inputCapture = null
@@ -1199,81 +1203,78 @@ export class CanvasController {
     return this.currentTiming.totalTime
   }
 
-  // --- Input API ---
+  // --- Input API (delegated to InputAPI) ---
 
   /**
    * Check if a key is currently held down.
    */
   isKeyDown(code: string): boolean {
-    return this.inputCapture?.isKeyDown(code) ?? false
+    return this.inputAPI.isKeyDown(code)
   }
 
   /**
    * Check if a key was just pressed this frame.
    */
   isKeyPressed(code: string): boolean {
-    return this.inputCapture?.isKeyPressed(code) ?? false
+    return this.inputAPI.isKeyPressed(code)
   }
 
   /**
    * Get all keys currently held down.
    */
   getKeysDown(): string[] {
-    if (!this.inputCapture) return []
-    return Array.from(this.inputCapture.getKeysDown())
+    return this.inputAPI.getKeysDown()
   }
 
   /**
    * Get all keys pressed this frame.
    */
   getKeysPressed(): string[] {
-    if (!this.inputCapture) return []
-    const state = this.inputCapture.getInputState()
-    return state.keysPressed
+    return this.inputAPI.getKeysPressed()
   }
 
   /**
    * Get mouse X position.
    */
   getMouseX(): number {
-    return this.inputCapture?.getMousePosition().x ?? 0
+    return this.inputAPI.getMouseX()
   }
 
   /**
    * Get mouse Y position.
    */
   getMouseY(): number {
-    return this.inputCapture?.getMousePosition().y ?? 0
+    return this.inputAPI.getMouseY()
   }
 
   /**
    * Check if a mouse button is held down.
    */
   isMouseButtonDown(button: number): boolean {
-    return this.inputCapture?.isMouseButtonDown(button) ?? false
+    return this.inputAPI.isMouseButtonDown(button)
   }
 
   /**
    * Check if a mouse button was just pressed this frame.
    */
   isMouseButtonPressed(button: number): boolean {
-    return this.inputCapture?.isMouseButtonPressed(button) ?? false
+    return this.inputAPI.isMouseButtonPressed(button)
   }
 
   /**
    * Get the full input state.
    */
   getInputState(): InputState {
-    return this.inputCapture?.getInputState() ?? createEmptyInputState()
+    return this.inputAPI.getInputState()
   }
 
-  // --- Gamepad API ---
+  // --- Gamepad API (delegated to InputAPI) ---
 
   /**
    * Get the number of connected gamepads.
    */
   getGamepadCount(): number {
-    return this.inputCapture?.getConnectedGamepadCount() ?? 0
+    return this.inputAPI.getGamepadCount()
   }
 
   /**
@@ -1281,11 +1282,7 @@ export class CanvasController {
    * @param index - Gamepad index (0-3)
    */
   isGamepadConnected(index: number): boolean {
-    const state = this.inputCapture?.getInputState()
-    if (!state || index < 0 || index >= state.gamepads.length) {
-      return false
-    }
-    return state.gamepads[index].connected
+    return this.inputAPI.isGamepadConnected(index)
   }
 
   /**
@@ -1295,15 +1292,7 @@ export class CanvasController {
    * @returns Button value (0.0-1.0) or 0 if not available
    */
   getGamepadButton(gamepadIndex: number, buttonIndex: number): number {
-    const state = this.inputCapture?.getInputState()
-    if (!state || gamepadIndex < 0 || gamepadIndex >= state.gamepads.length) {
-      return 0
-    }
-    const gamepad = state.gamepads[gamepadIndex]
-    if (!gamepad.connected || buttonIndex < 0 || buttonIndex >= gamepad.buttons.length) {
-      return 0
-    }
-    return gamepad.buttons[buttonIndex]
+    return this.inputAPI.getGamepadButton(gamepadIndex, buttonIndex)
   }
 
   /**
@@ -1313,15 +1302,7 @@ export class CanvasController {
    * @returns true if button was just pressed
    */
   isGamepadButtonPressed(gamepadIndex: number, buttonIndex: number): boolean {
-    const state = this.inputCapture?.getInputState()
-    if (!state || gamepadIndex < 0 || gamepadIndex >= state.gamepads.length) {
-      return false
-    }
-    const gamepad = state.gamepads[gamepadIndex]
-    if (!gamepad.connected) {
-      return false
-    }
-    return gamepad.buttonsPressed.includes(buttonIndex)
+    return this.inputAPI.isGamepadButtonPressed(gamepadIndex, buttonIndex)
   }
 
   /**
@@ -1331,15 +1312,7 @@ export class CanvasController {
    * @returns Axis value (-1.0 to 1.0) or 0 if not available
    */
   getGamepadAxis(gamepadIndex: number, axisIndex: number): number {
-    const state = this.inputCapture?.getInputState()
-    if (!state || gamepadIndex < 0 || gamepadIndex >= state.gamepads.length) {
-      return 0
-    }
-    const gamepad = state.gamepads[gamepadIndex]
-    if (!gamepad.connected || axisIndex < 0 || axisIndex >= gamepad.axes.length) {
-      return 0
-    }
-    return gamepad.axes[axisIndex]
+    return this.inputAPI.getGamepadAxis(gamepadIndex, axisIndex)
   }
 
   // --- Canvas dimensions ---
