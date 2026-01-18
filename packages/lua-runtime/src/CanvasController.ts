@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 /**
  * Canvas controller for managing canvas lifecycle from within LuaScriptProcess.
  *
