@@ -71,3 +71,6 @@ export { StyleAPI, type IStyleAPI } from './StyleAPI'
 
 // Path API for path operations, hit testing support
 export { PathAPI, type IPathAPI, type FillRule } from './PathAPI'
+
+// Transform API for canvas transformations (translate, rotate, scale, etc.)
+export { TransformAPI, type ITransformAPI } from './TransformAPI'

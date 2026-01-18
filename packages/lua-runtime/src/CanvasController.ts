@@ -22,6 +22,7 @@ import { Path2DRegistry } from './Path2DRegistry'
 import { StyleAPI } from './StyleAPI'
 import { PathAPI } from './PathAPI'
 import { DrawingAPI } from './DrawingAPI'
+import { TransformAPI } from './TransformAPI'
 import type { TextOptions } from './DrawingAPI'
 import type {
   DrawCommand,
@@ -265,6 +266,9 @@ export class CanvasController {
   // Drawing API - handles drawing primitives (clear, shapes, text)
   private drawingAPI: DrawingAPI = new DrawingAPI()
 
+  // Transform API - handles transformation operations (translate, rotate, scale, etc.)
+  private transformAPI: TransformAPI = new TransformAPI()
+
   // Offscreen canvas for text measurement
   private measureCanvas: HTMLCanvasElement | null = null
   private measureCtx: CanvasRenderingContext2D | null = null
@@ -278,6 +282,8 @@ export class CanvasController {
     this.pathAPI.setAddDrawCommand((cmd) => this.addDrawCommand(cmd))
     // Set up DrawingAPI callback immediately so drawing methods work before start()
     this.drawingAPI.setAddDrawCommand((cmd) => this.addDrawCommand(cmd))
+    // Set up TransformAPI callback immediately so transform methods work before start()
+    this.transformAPI.setAddDrawCommand((cmd) => this.addDrawCommand(cmd))
   }
 
   /**
@@ -723,13 +729,13 @@ export class CanvasController {
     this.drawingAPI.strokeText(x, y, text, options)
   }
 
-  // --- Transformation API ---
+  // --- Transformation API (delegated to TransformAPI) ---
 
   /**
    * Translate (move) the canvas origin.
    */
   translate(dx: number, dy: number): void {
-    this.addDrawCommand({ type: 'translate', dx, dy })
+    this.transformAPI.translate(dx, dy)
   }
 
   /**
@@ -737,49 +743,49 @@ export class CanvasController {
    * @param angle - Rotation angle in radians
    */
   rotate(angle: number): void {
-    this.addDrawCommand({ type: 'rotate', angle })
+    this.transformAPI.rotate(angle)
   }
 
   /**
    * Scale the canvas from the current origin.
    */
   scale(sx: number, sy: number): void {
-    this.addDrawCommand({ type: 'scale', sx, sy })
+    this.transformAPI.scale(sx, sy)
   }
 
   /**
    * Save the current transformation state to the stack.
    */
   save(): void {
-    this.addDrawCommand({ type: 'save' })
+    this.transformAPI.save()
   }
 
   /**
    * Restore the most recently saved transformation state.
    */
   restore(): void {
-    this.addDrawCommand({ type: 'restore' })
+    this.transformAPI.restore()
   }
 
   /**
    * Multiply the current transformation matrix by the specified matrix.
    */
   transform(a: number, b: number, c: number, d: number, e: number, f: number): void {
-    this.addDrawCommand({ type: 'transform', a, b, c, d, e, f })
+    this.transformAPI.transform(a, b, c, d, e, f)
   }
 
   /**
    * Reset to identity matrix, then apply the specified transformation matrix.
    */
   setTransform(a: number, b: number, c: number, d: number, e: number, f: number): void {
-    this.addDrawCommand({ type: 'setTransform', a, b, c, d, e, f })
+    this.transformAPI.setTransform(a, b, c, d, e, f)
   }
 
   /**
    * Reset the transformation matrix to identity.
    */
   resetTransform(): void {
-    this.addDrawCommand({ type: 'resetTransform' })
+    this.transformAPI.resetTransform()
   }
 
   // --- Path API (delegated to PathAPI) ---
