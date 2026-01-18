@@ -53,4 +53,19 @@ export default defineConfig([
       ],
     },
   },
+  // Facade file exception: CanvasController delegates to 7 extracted APIs
+  // and requires ~1,100 lines of delegation methods for backward compatibility
+  {
+    files: ['**/packages/lua-runtime/src/CanvasController.ts'],
+    rules: {
+      'max-lines': [
+        'error',
+        {
+          max: 2000,
+          skipBlankLines: true,
+          skipComments: true,
+        },
+      ],
+    },
+  },
 ])
