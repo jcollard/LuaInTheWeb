@@ -20,6 +20,29 @@ import {
 import type { LuaEngine } from 'wasmoon'
 
 /**
+ * Cached gamepad state for a single gamepad.
+ * Polled once per frame for consistent input detection.
+ */
+export interface GamepadState {
+  connected: boolean
+  buttons: number[]
+  buttonsPressed: boolean[]
+  axes: number[]
+}
+
+/**
+ * Create an empty gamepad state.
+ */
+function createEmptyGamepadState(): GamepadState {
+  return {
+    connected: false,
+    buttons: [],
+    buttonsPressed: [],
+    axes: [],
+  }
+}
+
+/**
  * Combined Lua code for the canvas API.
  * This is the same code used in the website, just bundled together.
  */
@@ -62,6 +85,8 @@ export interface CanvasRuntimeState {
   audioAssets: Map<string, { name: string; filename: string; type: 'sound' | 'music' }>
   // Gamepad state for "just pressed" detection
   previousGamepadButtons: number[][]
+  // Cached gamepad states polled once per frame
+  currentGamepadStates: GamepadState[]
   // Path2D registry state
   pathRegistry: Map<number, Path2D>
   nextPathId: number
@@ -99,6 +124,13 @@ export function createCanvasRuntimeState(
     audioAssets: new Map(),
     // Gamepad state for "just pressed" detection
     previousGamepadButtons: [[], [], [], []],
+    // Cached gamepad states polled once per frame
+    currentGamepadStates: [
+      createEmptyGamepadState(),
+      createEmptyGamepadState(),
+      createEmptyGamepadState(),
+      createEmptyGamepadState(),
+    ],
     // Path2D registry state
     pathRegistry: new Map(),
     nextPathId: 1,
@@ -165,6 +197,43 @@ export function setupInputListeners(state: CanvasRuntimeState): () => void {
 }
 
 /**
+ * Poll gamepad state once per frame.
+ * Updates currentGamepadStates with fresh button/axis values and calculates
+ * which buttons were just pressed this frame.
+ */
+function pollGamepads(state: CanvasRuntimeState): void {
+  const gamepads = navigator.getGamepads?.() ?? []
+
+  for (let i = 0; i < 4; i++) {
+    const gamepad = gamepads[i]
+    const cached = state.currentGamepadStates[i]
+    const prevButtons = state.previousGamepadButtons[i]
+
+    if (gamepad?.connected) {
+      cached.connected = true
+      cached.buttons = gamepad.buttons.map((b) => b.value)
+      cached.axes = [...gamepad.axes]
+
+      // Calculate which buttons were just pressed this frame
+      cached.buttonsPressed = gamepad.buttons.map((b, buttonIndex) => {
+        const currentValue = b.value
+        const prevValue = prevButtons[buttonIndex] ?? 0
+        return currentValue > 0 && prevValue === 0
+      })
+
+      // Update previous state for next frame
+      state.previousGamepadButtons[i] = cached.buttons.slice()
+    } else {
+      cached.connected = false
+      cached.buttons = []
+      cached.buttonsPressed = []
+      cached.axes = []
+      state.previousGamepadButtons[i] = []
+    }
+  }
+}
+
+/**
  * Start the game loop.
  */
 function startGameLoop(state: CanvasRuntimeState): void {
@@ -177,6 +246,9 @@ function startGameLoop(state: CanvasRuntimeState): void {
     state.deltaTime = (timestamp - state.lastFrameTime) / 1000
     state.lastFrameTime = timestamp
     state.totalTime += state.deltaTime
+
+    // Poll gamepad state once at frame start (before Lua callback)
+    pollGamepads(state)
 
     // Call tick callback
     if (state.tickCallback) {
@@ -196,17 +268,6 @@ function startGameLoop(state: CanvasRuntimeState): void {
     // Clear pressed states after processing
     state.keysPressed.clear()
     state.mouseButtonsPressed.clear()
-
-    // Update gamepad state for next frame's "just pressed" detection
-    const gamepads = navigator.getGamepads?.() ?? []
-    for (let i = 0; i < 4; i++) {
-      const gamepad = gamepads[i]
-      if (gamepad?.connected) {
-        state.previousGamepadButtons[i] = gamepad.buttons.map((b) => b.value)
-      } else {
-        state.previousGamepadButtons[i] = []
-      }
-    }
 
     // Continue loop
     if (state.isRunning) {
@@ -446,47 +507,39 @@ export function setupCanvasBridge(
     state.mouseButtonsPressed.has(button)
   )
 
-  // Gamepad input
+  // Gamepad input - reads from cached state polled once per frame
   engine.global.set('__canvas_getGamepadCount', () => {
-    const gamepads = navigator.getGamepads?.() ?? []
-    return Array.from(gamepads).filter((g) => g?.connected).length
+    return state.currentGamepadStates.filter((g) => g.connected).length
   })
 
   engine.global.set('__canvas_isGamepadConnected', (index: number) => {
-    const gamepads = navigator.getGamepads?.() ?? []
-    return gamepads[index]?.connected ?? false
+    return state.currentGamepadStates[index]?.connected ?? false
   })
 
   engine.global.set(
     '__canvas_getGamepadButton',
     (gamepadIndex: number, buttonIndex: number) => {
-      const gamepads = navigator.getGamepads?.() ?? []
-      const gamepad = gamepads[gamepadIndex]
-      if (!gamepad?.connected) return 0
-      return gamepad.buttons[buttonIndex]?.value ?? 0
+      const cached = state.currentGamepadStates[gamepadIndex]
+      if (!cached?.connected) return 0
+      return cached.buttons[buttonIndex] ?? 0
     }
   )
 
   engine.global.set(
     '__canvas_isGamepadButtonPressed',
     (gamepadIndex: number, buttonIndex: number) => {
-      const gamepads = navigator.getGamepads?.() ?? []
-      const gamepad = gamepads[gamepadIndex]
-      if (!gamepad?.connected) return false
-      const currentValue = gamepad.buttons[buttonIndex]?.value ?? 0
-      const prevValue =
-        state.previousGamepadButtons[gamepadIndex]?.[buttonIndex] ?? 0
-      return currentValue > 0 && prevValue === 0
+      const cached = state.currentGamepadStates[gamepadIndex]
+      if (!cached?.connected) return false
+      return cached.buttonsPressed[buttonIndex] ?? false
     }
   )
 
   engine.global.set(
     '__canvas_getGamepadAxis',
     (gamepadIndex: number, axisIndex: number) => {
-      const gamepads = navigator.getGamepads?.() ?? []
-      const gamepad = gamepads[gamepadIndex]
-      if (!gamepad?.connected) return 0
-      return gamepad.axes[axisIndex] ?? 0
+      const cached = state.currentGamepadStates[gamepadIndex]
+      if (!cached?.connected) return 0
+      return cached.axes[axisIndex] ?? 0
     }
   )
 
