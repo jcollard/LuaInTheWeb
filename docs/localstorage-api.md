@@ -4,9 +4,14 @@ The `localstorage` API provides persistent key-value storage that survives page 
 
 ## Quick Start
 
-The `localstorage` table is available globally - no `require()` needed:
+Load the library with `require()`:
 
 ```lua
+local localstorage = require('localstorage')
+
+-- Set a prefix to namespace your keys (recommended)
+localstorage.set_prefix("my_game_")
+
 -- Save a value
 localstorage.set_item("player_name", "Hero")
 
@@ -19,6 +24,23 @@ print(localstorage.get_remaining_space())  -- bytes remaining
 ```
 
 ## API Reference
+
+### `localstorage.set_prefix(prefix)`
+
+Sets a prefix for all storage keys. Call this once at startup to namespace your keys by project. All subsequent `get_item`, `set_item`, `remove_item`, and `clear` calls will use this prefix.
+
+**Parameters:**
+- `prefix` (string): The prefix to prepend to all keys
+
+**Example:**
+```lua
+local localstorage = require('localstorage')
+localstorage.set_prefix("my_game_")
+
+-- Now all keys are automatically prefixed
+localstorage.set_item("score", "100")  -- stored as "my_game_score"
+localstorage.get_item("score")          -- reads from "my_game_score"
+```
 
 ### `localstorage.get_item(key)`
 
@@ -78,14 +100,27 @@ localstorage.remove_item("temporary_data")
 
 ### `localstorage.clear()`
 
-Removes ALL data from localStorage.
-
-> ⚠️ **Warning:** This clears all data stored by any script on the domain, not just your data. Use with caution!
+Removes items from storage that match the current prefix. If a prefix is set via `set_prefix()`, only keys with that prefix will be removed. If no prefix is set, ALL data on the domain will be cleared.
 
 **Example:**
 ```lua
--- Clear everything
-localstorage.clear()
+local localstorage = require('localstorage')
+localstorage.set_prefix("my_game_")
+localstorage.set_item("score", "100")    -- stored as "my_game_score"
+localstorage.set_item("level", "5")      -- stored as "my_game_level"
+
+localstorage.clear()  -- Only removes "my_game_*" keys
+```
+
+### `localstorage.clear_all()`
+
+Removes ALL data from storage, regardless of prefix.
+
+> ⚠️ **Warning:** This clears all data stored by any script on the domain, not just your data! Use `clear()` instead if you only want to remove your prefixed keys.
+
+**Example:**
+```lua
+localstorage.clear_all()  -- Clears everything
 ```
 
 ### `localstorage.get_remaining_space()`

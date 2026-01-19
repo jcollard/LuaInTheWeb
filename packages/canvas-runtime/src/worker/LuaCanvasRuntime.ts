@@ -1433,11 +1433,18 @@ export class LuaCanvasRuntime {
       package.preload['localstorage'] = function()
         local localstorage = {}
 
+        -- Internal prefix for namespacing keys
+        local _prefix = ""
+
+        function localstorage.set_prefix(prefix)
+          _prefix = prefix or ""
+        end
+
         function localstorage.get_item(key)
           if key == nil then
             return nil
           end
-          return __localstorage_getItem(tostring(key))
+          return __localstorage_getItem(_prefix .. tostring(key))
         end
 
         function localstorage.set_item(key, value)
@@ -1445,17 +1452,25 @@ export class LuaCanvasRuntime {
             return false, "Key cannot be nil"
           end
           local str_value = value == nil and "" or tostring(value)
-          local result = __localstorage_setItem(tostring(key), str_value)
+          local result = __localstorage_setItem(_prefix .. tostring(key), str_value)
           return result[1], result[2]
         end
 
         function localstorage.remove_item(key)
           if key ~= nil then
-            __localstorage_removeItem(tostring(key))
+            __localstorage_removeItem(_prefix .. tostring(key))
           end
         end
 
         function localstorage.clear()
+          if _prefix == "" then
+            __localstorage_clear()
+          else
+            __localstorage_clearWithPrefix(_prefix)
+          end
+        end
+
+        function localstorage.clear_all()
           __localstorage_clear()
         end
 
@@ -1745,6 +1760,23 @@ export class LuaCanvasRuntime {
         if (typeof localStorage !== 'undefined') {
           localStorage.clear();
         }
+      } catch {
+        // Silently ignore errors
+      }
+    });
+
+    // Clear localStorage keys with a specific prefix
+    lua.global.set('__localstorage_clearWithPrefix', (prefix: string): void => {
+      try {
+        if (typeof localStorage === 'undefined') return;
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(prefix)) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((key) => localStorage.removeItem(key));
       } catch {
         // Silently ignore errors
       }
