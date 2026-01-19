@@ -4,6 +4,9 @@
 local canvas = require("canvas")
 local localstorage = require("localstorage")
 
+-- Set a prefix to namespace our keys (prevents conflicts with other projects)
+localstorage.set_prefix("save_demo_")
+
 -- Game state that we'll persist
 local score = 0
 local high_score = 0
@@ -16,20 +19,20 @@ local message_timer = 0
 
 -- Load saved data on startup
 local function load_saved_data()
-    -- Load high score
-    local saved_high = localstorage.get_item("demo_high_score")
+    -- Load high score (prefix is automatically applied)
+    local saved_high = localstorage.get_item("high_score")
     if saved_high then
         high_score = tonumber(saved_high) or 0
     end
 
     -- Load games played
-    local saved_games = localstorage.get_item("demo_games_played")
+    local saved_games = localstorage.get_item("games_played")
     if saved_games then
         games_played = tonumber(saved_games) or 0
     end
 
     -- Load player name
-    local saved_name = localstorage.get_item("demo_player_name")
+    local saved_name = localstorage.get_item("player_name")
     if saved_name and saved_name ~= "" then
         player_name = saved_name
     end
@@ -40,15 +43,16 @@ end
 
 -- Save current game data
 local function save_data()
-    local success, err = localstorage.set_item("demo_high_score", tostring(high_score))
+    -- Prefix is automatically applied to all keys
+    local success, err = localstorage.set_item("high_score", tostring(high_score))
     if not success then
         message = "Save failed: " .. (err or "unknown error")
         message_timer = 3
         return
     end
 
-    localstorage.set_item("demo_games_played", tostring(games_played))
-    localstorage.set_item("demo_player_name", player_name)
+    localstorage.set_item("games_played", tostring(games_played))
+    localstorage.set_item("player_name", player_name)
 
     message = "Game saved!"
     message_timer = 2
@@ -56,9 +60,8 @@ end
 
 -- Clear all saved data
 local function clear_data()
-    localstorage.remove_item("demo_high_score")
-    localstorage.remove_item("demo_games_played")
-    localstorage.remove_item("demo_player_name")
+    -- clear() only removes keys with our prefix, leaving other apps' data intact
+    localstorage.clear()
 
     high_score = 0
     games_played = 0

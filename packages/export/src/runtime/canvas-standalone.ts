@@ -1305,6 +1305,23 @@ export function setupLocalStorageBridge(engine: LuaEngine): void {
     }
   })
 
+  // Clear localStorage keys with a specific prefix
+  engine.global.set('__localstorage_clearWithPrefix', (prefix: string): void => {
+    try {
+      if (typeof localStorage === 'undefined') return
+      const keysToRemove: string[] = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && key.startsWith(prefix)) {
+          keysToRemove.push(key)
+        }
+      }
+      keysToRemove.forEach((key) => localStorage.removeItem(key))
+    } catch {
+      // Silently ignore errors
+    }
+  })
+
   // Get remaining storage space in bytes
   engine.global.set('__localstorage_getRemainingSpace', (): number => {
     return getRemainingSpace()

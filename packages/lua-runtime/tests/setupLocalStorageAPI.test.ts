@@ -109,12 +109,14 @@ describe('localStorage bridge functions (via LuaEngineFactory)', () => {
     const setItem = engine.global.get('__localstorage_setItem')
     const removeItem = engine.global.get('__localstorage_removeItem')
     const clear = engine.global.get('__localstorage_clear')
+    const clearWithPrefix = engine.global.get('__localstorage_clearWithPrefix')
     const getRemainingSpace = engine.global.get('__localstorage_getRemainingSpace')
 
     expect(typeof getItem).toBe('function')
     expect(typeof setItem).toBe('function')
     expect(typeof removeItem).toBe('function')
     expect(typeof clear).toBe('function')
+    expect(typeof clearWithPrefix).toBe('function')
     expect(typeof getRemainingSpace).toBe('function')
   })
 
@@ -165,15 +167,16 @@ describe('localStorage bridge functions (via LuaEngineFactory)', () => {
     it('stores value and returns success', async () => {
       engine = await LuaEngineFactory.create(createTestCallbacks())
 
+      // Note: Return type uses undefined (not null) for wasmoon compatibility
       const setItem = engine.global.get('__localstorage_setItem') as (
         key: string,
         value: string
-      ) => [boolean, string | null]
+      ) => [boolean, string | undefined]
 
       const [success, error] = setItem('testKey', 'testValue')
 
       expect(success).toBe(true)
-      expect(error).toBeNull()
+      expect(error).toBeUndefined()
       expect(mockStorage.getItem('testKey')).toBe('testValue')
     })
 
@@ -184,7 +187,7 @@ describe('localStorage bridge functions (via LuaEngineFactory)', () => {
       const setItem = engine.global.get('__localstorage_setItem') as (
         key: string,
         value: string
-      ) => [boolean, string | null]
+      ) => [boolean, string | undefined]
 
       const [success] = setItem('testKey', 'newValue')
 
@@ -468,6 +471,199 @@ describe('localStorage bridge functions (via LuaEngineFactory)', () => {
 
       // Should still work without errors
       expect(getRemainingSpace()).toBeGreaterThan(0)
+    })
+  })
+
+  describe('__localstorage_clearWithPrefix', () => {
+    it('removes only keys with the specified prefix', async () => {
+      mockStorage.setItem('myapp_score', '100')
+      mockStorage.setItem('myapp_name', 'Player')
+      mockStorage.setItem('other_data', 'value')
+      mockStorage.setItem('unrelated', 'data')
+      engine = await LuaEngineFactory.create(createTestCallbacks())
+
+      const clearWithPrefix = engine.global.get('__localstorage_clearWithPrefix') as (
+        prefix: string
+      ) => void
+
+      clearWithPrefix('myapp_')
+
+      // Only prefixed keys should be removed
+      expect(mockStorage.getItem('myapp_score')).toBeNull()
+      expect(mockStorage.getItem('myapp_name')).toBeNull()
+      expect(mockStorage.getItem('other_data')).toBe('value')
+      expect(mockStorage.getItem('unrelated')).toBe('data')
+    })
+
+    it('does nothing when no keys match prefix', async () => {
+      mockStorage.setItem('other_key', 'value')
+      engine = await LuaEngineFactory.create(createTestCallbacks())
+
+      const clearWithPrefix = engine.global.get('__localstorage_clearWithPrefix') as (
+        prefix: string
+      ) => void
+
+      clearWithPrefix('myapp_')
+
+      expect(mockStorage.getItem('other_key')).toBe('value')
+    })
+
+    it('handles localStorage undefined silently', async () => {
+      engine = await LuaEngineFactory.create(createTestCallbacks())
+      const clearWithPrefix = engine.global.get('__localstorage_clearWithPrefix') as (
+        prefix: string
+      ) => void
+
+      delete (global as unknown as { localStorage?: Storage }).localStorage
+
+      expect(() => clearWithPrefix('myapp_')).not.toThrow()
+
+      ;(global as unknown as { localStorage: Storage }).localStorage = mockStorage
+    })
+
+    it('handles errors silently', async () => {
+      engine = await LuaEngineFactory.create(createTestCallbacks())
+      const clearWithPrefix = engine.global.get('__localstorage_clearWithPrefix') as (
+        prefix: string
+      ) => void
+
+      const throwingStorage = {
+        ...mockStorage,
+        key: () => {
+          throw new Error('Access denied')
+        },
+      }
+      ;(global as unknown as { localStorage: Storage }).localStorage = throwingStorage as Storage
+
+      expect(() => clearWithPrefix('myapp_')).not.toThrow()
+    })
+  })
+
+  describe('localstorage Lua library prefix functionality', () => {
+    it('set_prefix sets the prefix for subsequent operations', async () => {
+      engine = await LuaEngineFactory.create(createTestCallbacks())
+
+      await engine.doString(`
+        local ls = require('localstorage')
+        ls.set_prefix("game_")
+        ls.set_item("score", "100")
+      `)
+
+      // Key should be stored with prefix
+      expect(mockStorage.getItem('game_score')).toBe('100')
+    })
+
+    it('get_item uses prefix', async () => {
+      mockStorage.setItem('game_score', '200')
+      engine = await LuaEngineFactory.create(createTestCallbacks())
+
+      const result = await engine.doString(`
+        local ls = require('localstorage')
+        ls.set_prefix("game_")
+        return ls.get_item("score")
+      `)
+
+      expect(result).toBe('200')
+    })
+
+    it('remove_item uses prefix', async () => {
+      mockStorage.setItem('game_data', 'test')
+      mockStorage.setItem('other_data', 'keep')
+      engine = await LuaEngineFactory.create(createTestCallbacks())
+
+      await engine.doString(`
+        local ls = require('localstorage')
+        ls.set_prefix("game_")
+        ls.remove_item("data")
+      `)
+
+      expect(mockStorage.getItem('game_data')).toBeNull()
+      expect(mockStorage.getItem('other_data')).toBe('keep')
+    })
+
+    it('clear() only removes prefixed keys when prefix is set', async () => {
+      mockStorage.setItem('game_score', '100')
+      mockStorage.setItem('game_name', 'Player')
+      mockStorage.setItem('other_app_data', 'keep')
+      engine = await LuaEngineFactory.create(createTestCallbacks())
+
+      await engine.doString(`
+        local ls = require('localstorage')
+        ls.set_prefix("game_")
+        ls.clear()
+      `)
+
+      expect(mockStorage.getItem('game_score')).toBeNull()
+      expect(mockStorage.getItem('game_name')).toBeNull()
+      expect(mockStorage.getItem('other_app_data')).toBe('keep')
+    })
+
+    it('clear() clears all when no prefix is set', async () => {
+      mockStorage.setItem('key1', 'value1')
+      mockStorage.setItem('key2', 'value2')
+      engine = await LuaEngineFactory.create(createTestCallbacks())
+
+      await engine.doString(`
+        local ls = require('localstorage')
+        ls.clear()
+      `)
+
+      expect(mockStorage.length).toBe(0)
+    })
+
+    it('clear_all() clears all keys regardless of prefix', async () => {
+      mockStorage.setItem('game_score', '100')
+      mockStorage.setItem('other_data', 'value')
+      engine = await LuaEngineFactory.create(createTestCallbacks())
+
+      await engine.doString(`
+        local ls = require('localstorage')
+        ls.set_prefix("game_")
+        ls.clear_all()
+      `)
+
+      expect(mockStorage.length).toBe(0)
+    })
+
+    it('operations work correctly without prefix', async () => {
+      engine = await LuaEngineFactory.create(createTestCallbacks())
+
+      await engine.doString(`
+        local ls = require('localstorage')
+        ls.set_item("key", "value")
+      `)
+
+      expect(mockStorage.getItem('key')).toBe('value')
+    })
+
+    it('prefix can be changed mid-session', async () => {
+      engine = await LuaEngineFactory.create(createTestCallbacks())
+
+      await engine.doString(`
+        local ls = require('localstorage')
+        ls.set_prefix("app1_")
+        ls.set_item("data", "from_app1")
+        ls.set_prefix("app2_")
+        ls.set_item("data", "from_app2")
+      `)
+
+      expect(mockStorage.getItem('app1_data')).toBe('from_app1')
+      expect(mockStorage.getItem('app2_data')).toBe('from_app2')
+    })
+
+    it('prefix can be cleared by setting empty string', async () => {
+      engine = await LuaEngineFactory.create(createTestCallbacks())
+
+      await engine.doString(`
+        local ls = require('localstorage')
+        ls.set_prefix("game_")
+        ls.set_item("key1", "value1")
+        ls.set_prefix("")
+        ls.set_item("key2", "value2")
+      `)
+
+      expect(mockStorage.getItem('game_key1')).toBe('value1')
+      expect(mockStorage.getItem('key2')).toBe('value2')
     })
   })
 })

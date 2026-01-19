@@ -9,7 +9,10 @@ Load the library with `require()`:
 ```lua
 local localstorage = require('localstorage')
 
--- Save a value
+-- Set a prefix to namespace your keys (recommended)
+localstorage.set_prefix("my_game_")
+
+-- Save a value (stored as "my_game_player_name")
 localstorage.set_item("player_name", "Hero")
 
 -- Load a value
@@ -26,6 +29,21 @@ print(name)  -- prints "Hero"
 | Persistence | Until explicitly cleared |
 
 ## Functions
+
+### localstorage.set_prefix(prefix)
+
+Sets a prefix for all storage keys. Call this once at startup to namespace your keys by project. All subsequent `get_item`, `set_item`, `remove_item`, and `clear` calls will use this prefix.
+
+**Parameters:**
+- `prefix` (string): The prefix to prepend to all keys
+
+```lua
+localstorage.set_prefix("my_game_")
+
+-- Now all keys are automatically prefixed
+localstorage.set_item("score", "100")  -- stored as "my_game_score"
+localstorage.get_item("score")          -- reads from "my_game_score"
+```
 
 ### localstorage.get_item(key)
 
@@ -82,12 +100,24 @@ localstorage.remove_item("temporary_data")
 
 ### localstorage.clear()
 
-Removes ALL data from storage.
-
-> **Warning:** This clears all data on the domain, not just your data!
+Removes items from storage that match the current prefix. If a prefix is set via `set_prefix()`, only keys with that prefix will be removed. If no prefix is set, ALL data on the domain will be cleared.
 
 ```lua
-localstorage.clear()
+localstorage.set_prefix("my_game_")
+localstorage.set_item("score", "100")    -- stored as "my_game_score"
+localstorage.set_item("level", "5")      -- stored as "my_game_level"
+
+localstorage.clear()  -- Only removes "my_game_*" keys
+```
+
+### localstorage.clear_all()
+
+Removes ALL data from storage, regardless of prefix.
+
+> **Warning:** This clears all data on the domain, not just your data! Use `clear()` instead if you only want to remove your prefixed keys.
+
+```lua
+localstorage.clear_all()  -- Clears everything
 ```
 
 ### localstorage.get_remaining_space()
@@ -105,23 +135,20 @@ print("Storage remaining: " .. kb .. " KB")
 
 ## Best Practices
 
-### Use Key Prefixes
+### Use set_prefix()
 
-Avoid conflicts with other scripts by using unique prefixes:
+Avoid conflicts with other scripts by setting a unique prefix at startup:
 
 ```lua
-local PREFIX = "mygame_"
+local localstorage = require('localstorage')
 
-local function save(key, value)
-    return localstorage.set_item(PREFIX .. key, value)
-end
+-- Set prefix once at startup
+localstorage.set_prefix("mygame_")
 
-local function load(key)
-    return localstorage.get_item(PREFIX .. key)
-end
-
--- Usage
-save("score", 1000)  -- Stored as "mygame_score"
+-- Now all operations automatically use the prefix
+localstorage.set_item("score", 1000)     -- Stored as "mygame_score"
+local score = localstorage.get_item("score")  -- Reads "mygame_score"
+localstorage.clear()  -- Only clears "mygame_*" keys
 ```
 
 ### Handle Errors
@@ -152,6 +179,9 @@ local score = tonumber(localstorage.get_item("score")) or 0
 ```lua
 local localstorage = require('localstorage')
 
+-- Set a prefix to namespace your save data
+localstorage.set_prefix("mygame_")
+
 local function save_game()
     localstorage.set_item("level", tostring(current_level))
     localstorage.set_item("score", tostring(score))
@@ -166,17 +196,18 @@ local function load_game()
     print("Game loaded!")
 end
 
--- Save on game over
-save_game()
-
 -- Load on startup
 load_game()
+
+-- Save on game over
+save_game()
 ```
 
 ## Example: High Score Table
 
 ```lua
 local localstorage = require('localstorage')
+localstorage.set_prefix("mygame_")
 
 local function save_high_score(name, score)
     local current_high = tonumber(localstorage.get_item("high_score")) or 0
@@ -206,6 +237,7 @@ print(name .. ": " .. score)
 
 ```lua
 local localstorage = require('localstorage')
+localstorage.set_prefix("mygame_")
 
 local settings = {
     music = true,
@@ -214,15 +246,15 @@ local settings = {
 }
 
 local function save_settings()
-    localstorage.set_item("settings_music", tostring(settings.music))
-    localstorage.set_item("settings_sound", tostring(settings.sound))
-    localstorage.set_item("settings_difficulty", settings.difficulty)
+    localstorage.set_item("music", tostring(settings.music))
+    localstorage.set_item("sound", tostring(settings.sound))
+    localstorage.set_item("difficulty", settings.difficulty)
 end
 
 local function load_settings()
-    local music = localstorage.get_item("settings_music")
-    local sound = localstorage.get_item("settings_sound")
-    local diff = localstorage.get_item("settings_difficulty")
+    local music = localstorage.get_item("music")
+    local sound = localstorage.get_item("sound")
+    local diff = localstorage.get_item("difficulty")
 
     if music then settings.music = (music == "true") end
     if sound then settings.sound = (sound == "true") end

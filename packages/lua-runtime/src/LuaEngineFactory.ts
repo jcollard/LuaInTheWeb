@@ -676,6 +676,22 @@ export class LuaEngineFactory {
       }
     })
 
+    engine.global.set('__localstorage_clearWithPrefix', (prefix: string): void => {
+      try {
+        if (typeof localStorage === 'undefined') return
+        const keysToRemove: string[] = []
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i)
+          if (key && key.startsWith(prefix)) {
+            keysToRemove.push(key)
+          }
+        }
+        keysToRemove.forEach((key) => localStorage.removeItem(key))
+      } catch {
+        // Silently ignore errors
+      }
+    })
+
     engine.global.set('__localstorage_getRemainingSpace', (): number => {
       return getLocalStorageRemainingSpace()
     })
