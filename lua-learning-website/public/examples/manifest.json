@@ -218,6 +218,7 @@
     "audio/assets/music/level-1.ogg",
     "audio/assets/music/level-2.ogg",
     "audio/assets/music/level-3.ogg",
-    "audio/assets/music/ending.ogg"
+    "audio/assets/music/ending.ogg",
+    "storage/save_demo.lua"
   ]
 }

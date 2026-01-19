@@ -464,7 +464,7 @@ __clear_execution_hook()
 
     this.canvasController = new CanvasController(routedCallbacks)
 
-    // Use shared setup functions
+    // Use shared setup functions for canvas
     setupCanvasAPI(this.engine, () => this.canvasController)
     setupAudioAPI(this.engine, () => this.canvasController?.getAudioEngine() ?? null)
   }

@@ -15,6 +15,7 @@ import {
   canvasLuaInputCode,
   canvasLuaAudioCode,
   LUA_HC_CODE,
+  LUA_LOCALSTORAGE_CODE,
 } from '@lua-learning/lua-runtime'
 
 import type { LuaEngine } from 'wasmoon'
@@ -1207,4 +1208,111 @@ export function setupCanvasBridge(
   // Note: Audio playback functions (__audio_playSound, __audio_playMusic, etc.)
   // are provided by AUDIO_INLINE_JS via setupAudioBridge, which handles
   // browser autoplay policy with user interaction handlers.
+
+  // --- LocalStorage API ---
+  setupLocalStorageBridge(engine)
 }
+
+/**
+ * Estimate the remaining localStorage space in bytes.
+ */
+function getRemainingSpace(): number {
+  const STORAGE_LIMIT = 5 * 1024 * 1024 // 5MB typical limit
+  try {
+    if (typeof localStorage === 'undefined') {
+      return 0
+    }
+    let totalSize = 0
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key !== null) {
+        const value = localStorage.getItem(key)
+        totalSize += key.length * 2
+        if (value !== null) {
+          totalSize += value.length * 2
+        }
+      }
+    }
+    return Math.max(0, STORAGE_LIMIT - totalSize)
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * Set up localStorage bridge functions on a wasmoon engine.
+ */
+export function setupLocalStorageBridge(engine: LuaEngine): void {
+  // Get item from localStorage
+  // NOTE: We return `undefined` instead of `null` because wasmoon's PromiseTypeExtension
+  // tries to call .then() on return values to detect Promises, and null.then() throws.
+  // Both `undefined` and `null` become `nil` in Lua, so this is safe.
+  engine.global.set('__localstorage_getItem', (key: string): string | undefined => {
+    try {
+      if (typeof localStorage === 'undefined') {
+        return undefined
+      }
+      const value = localStorage.getItem(key)
+      return value === null ? undefined : value
+    } catch {
+      return undefined
+    }
+  })
+
+  // Set item in localStorage - returns [success, errorMessage?]
+  // NOTE: Return undefined instead of null for the error field (wasmoon issue)
+  engine.global.set(
+    '__localstorage_setItem',
+    (key: string, value: string): [boolean, string | undefined] => {
+      try {
+        if (typeof localStorage === 'undefined') {
+          return [false, 'localStorage not available']
+        }
+        localStorage.setItem(key, value)
+        return [true, undefined]
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          (error.name === 'QuotaExceededError' ||
+            error.message.includes('quota'))
+        ) {
+          return [false, 'Storage quota exceeded']
+        }
+        return [false, error instanceof Error ? error.message : 'Unknown error']
+      }
+    }
+  )
+
+  // Remove item from localStorage
+  engine.global.set('__localstorage_removeItem', (key: string): void => {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(key)
+      }
+    } catch {
+      // Silently ignore errors
+    }
+  })
+
+  // Clear all localStorage
+  engine.global.set('__localstorage_clear', (): void => {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.clear()
+      }
+    } catch {
+      // Silently ignore errors
+    }
+  })
+
+  // Get remaining storage space in bytes
+  engine.global.set('__localstorage_getRemainingSpace', (): number => {
+    return getRemainingSpace()
+  })
+}
+
+/**
+ * LocalStorage Lua code for package.preload registration.
+ * This allows users to load it with: local localstorage = require('localstorage')
+ */
+export const localStorageLuaCode = LUA_LOCALSTORAGE_CODE

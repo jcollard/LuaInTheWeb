@@ -61,4 +61,19 @@ export default defineConfig([
       ],
     },
   },
+  // Factory file exception: LuaEngineFactory registers all bridge functions
+  // (I/O, localStorage, canvas, audio, etc.) and requires extended line count
+  {
+    files: ['src/LuaEngineFactory.ts'],
+    rules: {
+      'max-lines': [
+        'error',
+        {
+          max: 600,
+          skipBlankLines: true,
+          skipComments: true,
+        },
+      ],
+    },
+  },
 ])

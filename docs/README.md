@@ -10,6 +10,10 @@ Welcome to the LuaInTheWeb developer documentation. This directory contains all 
 - [Testing Guide](./testing.md) - TDD practices and testing standards
 - [Contributing](./contributing.md) - How to contribute to the project
 
+## Lua API Documentation
+
+- [LocalStorage API](./localstorage-api.md) - Persistent key-value storage for saving game data
+
 ## Prerequisites
 
 Before getting started, ensure you have:
