@@ -1,6 +1,9 @@
 /**
  * Canvas Lua code module exports.
  * Each module contains a section of the Lua code for the canvas API.
+ *
+ * Note: localStorage is now a separate library loaded via require('localstorage').
+ * See lua/localstorage.lua and lua/localstorage.generated.ts for the implementation.
  */
 
 export { canvasLuaCoreCode } from './core'

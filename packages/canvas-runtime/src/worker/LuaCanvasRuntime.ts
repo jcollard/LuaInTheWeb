@@ -318,6 +318,9 @@ export class LuaCanvasRuntime {
     const lua = this.engine;
     const runtime = this;
 
+    // Set up localStorage API bridge functions first (needed for package.preload)
+    this.setupLocalStorageAPI();
+
     // Create the canvas table
     lua.global.set('canvas', {});
 
@@ -1425,6 +1428,60 @@ export class LuaCanvasRuntime {
       end
 
       -- ========================================================================
+      -- LocalStorage Module (loadable via require('localstorage'))
+      -- ========================================================================
+      package.preload['localstorage'] = function()
+        local localstorage = {}
+
+        -- Internal prefix for namespacing keys
+        local _prefix = ""
+
+        function localstorage.set_prefix(prefix)
+          _prefix = prefix or ""
+        end
+
+        function localstorage.get_item(key)
+          if key == nil then
+            return nil
+          end
+          return __localstorage_getItem(_prefix .. tostring(key))
+        end
+
+        function localstorage.set_item(key, value)
+          if key == nil then
+            return false, "Key cannot be nil"
+          end
+          local str_value = value == nil and "" or tostring(value)
+          local result = __localstorage_setItem(_prefix .. tostring(key), str_value)
+          return result[1], result[2]
+        end
+
+        function localstorage.remove_item(key)
+          if key ~= nil then
+            __localstorage_removeItem(_prefix .. tostring(key))
+          end
+        end
+
+        function localstorage.clear()
+          if _prefix == "" then
+            __localstorage_clear()
+          else
+            __localstorage_clearWithPrefix(_prefix)
+          end
+        end
+
+        function localstorage.clear_all()
+          __localstorage_clear()
+        end
+
+        function localstorage.get_remaining_space()
+          return __localstorage_getRemainingSpace()
+        end
+
+        return localstorage
+      end
+
+      -- ========================================================================
       -- Module Loading Infrastructure for Hot Reload
       -- ========================================================================
       -- Cache of loaded modules (key = module name, value = module result)
@@ -1535,6 +1592,7 @@ export class LuaCanvasRuntime {
       -- Built-in modules that should not be hot-reloaded
       local __builtin_modules = {
         audio_mixer = true,
+        localstorage = true,
       }
 
       --- Hot reload all loaded user modules.
@@ -1638,6 +1696,115 @@ export class LuaCanvasRuntime {
     // Get module path from last successful lookup
     lua.global.set('__js_get_module_path', (): string => {
       return lastModulePath ?? '';
+    });
+  }
+
+  /**
+   * Set up localStorage API bridge functions.
+   * These are needed by the localstorage module loaded via package.preload.
+   */
+  private setupLocalStorageAPI(): void {
+    if (!this.engine) return;
+
+    const lua = this.engine;
+
+    // Get item from localStorage
+    lua.global.set('__localstorage_getItem', (key: string): string | null => {
+      try {
+        if (typeof localStorage === 'undefined') {
+          return null;
+        }
+        return localStorage.getItem(key);
+      } catch {
+        return null;
+      }
+    });
+
+    // Set item in localStorage - returns [success, errorMessage?]
+    lua.global.set(
+      '__localstorage_setItem',
+      (key: string, value: string): [boolean, string | null] => {
+        try {
+          if (typeof localStorage === 'undefined') {
+            return [false, 'localStorage not available'];
+          }
+          localStorage.setItem(key, value);
+          return [true, null];
+        } catch (error) {
+          if (
+            error instanceof Error &&
+            (error.name === 'QuotaExceededError' ||
+              error.message.includes('quota'))
+          ) {
+            return [false, 'Storage quota exceeded'];
+          }
+          return [false, error instanceof Error ? error.message : 'Unknown error'];
+        }
+      }
+    );
+
+    // Remove item from localStorage
+    lua.global.set('__localstorage_removeItem', (key: string): void => {
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem(key);
+        }
+      } catch {
+        // Silently ignore errors
+      }
+    });
+
+    // Clear all localStorage
+    lua.global.set('__localstorage_clear', (): void => {
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.clear();
+        }
+      } catch {
+        // Silently ignore errors
+      }
+    });
+
+    // Clear localStorage keys with a specific prefix
+    lua.global.set('__localstorage_clearWithPrefix', (prefix: string): void => {
+      try {
+        if (typeof localStorage === 'undefined') return;
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(prefix)) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((key) => localStorage.removeItem(key));
+      } catch {
+        // Silently ignore errors
+      }
+    });
+
+    // Get remaining storage space in bytes
+    lua.global.set('__localstorage_getRemainingSpace', (): number => {
+      const STORAGE_LIMIT = 5 * 1024 * 1024; // 5MB typical limit
+      try {
+        if (typeof localStorage === 'undefined') {
+          return 0;
+        }
+        let totalSize = 0;
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key !== null) {
+            const value = localStorage.getItem(key);
+            // Each character is 2 bytes in JavaScript strings (UTF-16)
+            totalSize += key.length * 2;
+            if (value !== null) {
+              totalSize += value.length * 2;
+            }
+          }
+        }
+        return Math.max(0, STORAGE_LIMIT - totalSize);
+      } catch {
+        return 0;
+      }
     });
   }
 

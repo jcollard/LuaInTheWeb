@@ -7,6 +7,7 @@ import { LuaFactory, type LuaEngine } from 'wasmoon'
 import { LUA_FORMATTER_CODE } from './lua/formatter'
 import { LUA_SHELL_CODE } from './lua/shell.generated'
 import { LUA_HC_CODE } from './lua/hc.generated'
+import { LUA_LOCALSTORAGE_CODE } from './lua/localstorage.generated'
 import { LUA_IO_CODE } from './lua/io'
 import { generateExecutionControlCode } from './lua/executionControl'
 import { transformLuaError } from './luaErrorTransformer'
@@ -37,6 +38,34 @@ function joinPath(...segments: string[]): string {
     }
   }
   return '/' + parts.join('/')
+}
+
+/**
+ * Estimate the remaining localStorage space in bytes.
+ * Uses the 5MB typical limit and calculates usage from stored data.
+ */
+function getLocalStorageRemainingSpace(): number {
+  const STORAGE_LIMIT = 5 * 1024 * 1024 // 5MB typical limit
+  try {
+    if (typeof localStorage === 'undefined') {
+      return 0
+    }
+    let totalSize = 0
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key !== null) {
+        const value = localStorage.getItem(key)
+        // Each character is 2 bytes in JavaScript strings (UTF-16)
+        totalSize += key.length * 2
+        if (value !== null) {
+          totalSize += value.length * 2
+        }
+      }
+    }
+    return Math.max(0, STORAGE_LIMIT - totalSize)
+  } catch {
+    return 0
+  }
 }
 
 /**
@@ -583,6 +612,94 @@ export class LuaEngineFactory {
     await engine.doString(`
       package.preload['hc'] = function()
         ${LUA_HC_CODE}
+      end
+    `)
+
+    // Setup localStorage bridge functions (must be before package.preload['localstorage'])
+    // These are registered inside the factory to ensure consistent engine state,
+    // matching the pattern used for shell and other APIs.
+    //
+    // NOTE: We return `undefined` instead of `null` because wasmoon's PromiseTypeExtension
+    // tries to call .then() on return values to detect Promises, and null.then() throws.
+    // Both undefined and null become `nil` in Lua, so this is semantically equivalent.
+    engine.global.set('__localstorage_getItem', (key: string): string | undefined => {
+      try {
+        if (typeof localStorage === 'undefined') {
+          return undefined
+        }
+        const value = localStorage.getItem(key)
+        return value === null ? undefined : value
+      } catch {
+        return undefined
+      }
+    })
+
+    // NOTE: Return undefined instead of null for the error field (same wasmoon issue)
+    engine.global.set(
+      '__localstorage_setItem',
+      (key: string, value: string): [boolean, string | undefined] => {
+        try {
+          if (typeof localStorage === 'undefined') {
+            return [false, 'localStorage not available']
+          }
+          localStorage.setItem(key, value)
+          return [true, undefined]
+        } catch (error) {
+          if (
+            error instanceof Error &&
+            (error.name === 'QuotaExceededError' || error.message.includes('quota'))
+          ) {
+            return [false, 'Storage quota exceeded']
+          }
+          return [false, error instanceof Error ? error.message : 'Unknown error']
+        }
+      }
+    )
+
+    engine.global.set('__localstorage_removeItem', (key: string): void => {
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.removeItem(key)
+        }
+      } catch {
+        // Silently ignore errors
+      }
+    })
+
+    engine.global.set('__localstorage_clear', (): void => {
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.clear()
+        }
+      } catch {
+        // Silently ignore errors
+      }
+    })
+
+    engine.global.set('__localstorage_clearWithPrefix', (prefix: string): void => {
+      try {
+        if (typeof localStorage === 'undefined') return
+        const keysToRemove: string[] = []
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i)
+          if (key && key.startsWith(prefix)) {
+            keysToRemove.push(key)
+          }
+        }
+        keysToRemove.forEach((key) => localStorage.removeItem(key))
+      } catch {
+        // Silently ignore errors
+      }
+    })
+
+    engine.global.set('__localstorage_getRemainingSpace', (): number => {
+      return getLocalStorageRemainingSpace()
+    })
+
+    // Register localStorage library in package.preload for require('localstorage')
+    await engine.doString(`
+      package.preload['localstorage'] = function()
+        ${LUA_LOCALSTORAGE_CODE}
       end
     `)
 

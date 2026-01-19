@@ -179,6 +179,9 @@ export class HtmlGenerator {
     // HC collision detection library code (from bundled canvas-standalone)
     const HC_LUA_CODE = globalThis.hcLuaCode;
 
+    // LocalStorage library code (from bundled canvas-standalone)
+    const LOCALSTORAGE_LUA_CODE = globalThis.localStorageLuaCode;
+
     // Project configuration
     const PROJECT_CONFIG = {
       name: ${JSON.stringify(config.name)},
@@ -393,6 +396,13 @@ export class HtmlGenerator {
         if (HC_LUA_CODE) {
           await engine.doString(
             "package.preload['hc'] = function() " + HC_LUA_CODE + " end"
+          );
+        }
+
+        // Register localStorage library as a preloadable module
+        if (LOCALSTORAGE_LUA_CODE) {
+          await engine.doString(
+            "package.preload['localstorage'] = function() " + LOCALSTORAGE_LUA_CODE + " end"
           );
         }
 

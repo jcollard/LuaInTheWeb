@@ -427,7 +427,7 @@ export class LuaReplProcess implements IProcess {
     }
     this.canvasController = new CanvasController(callbacksWithError)
 
-    // Use shared setup functions
+    // Use shared setup functions for canvas
     setupCanvasAPI(this.engine, () => this.canvasController)
     setupAudioAPI(this.engine, () => this.canvasController?.getAudioEngine() ?? null)
   }

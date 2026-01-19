@@ -9,6 +9,8 @@
  * - createCanvasRuntimeState(canvas) - Create runtime state
  * - setupInputListeners(state) - Set up input listeners
  * - canvasLuaCode - Combined Lua code for canvas API
+ * - hcLuaCode - HC collision detection library
+ * - localStorageLuaCode - LocalStorage library for persistent storage
  */
 
 import {
@@ -17,6 +19,7 @@ import {
   setupInputListeners,
   canvasLuaCode,
   hcLuaCode,
+  localStorageLuaCode,
 } from './canvas-standalone.js';
 
 // Expose globally for use in exported HTML
@@ -27,6 +30,7 @@ import {
   setupInputListeners,
   canvasLuaCode,
   hcLuaCode,
+  localStorageLuaCode,
 };
 
 // Also expose individual functions for backward compatibility
@@ -40,3 +44,5 @@ import {
 (globalThis as any).canvasLuaCode = canvasLuaCode;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).hcLuaCode = hcLuaCode;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).localStorageLuaCode = localStorageLuaCode;

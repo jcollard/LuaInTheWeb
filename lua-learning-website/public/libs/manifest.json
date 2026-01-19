@@ -3,6 +3,7 @@
   "files": [
     "shell.lua",
     "canvas.lua",
-    "hc.lua"
+    "hc.lua",
+    "localstorage.lua"
   ]
 }
