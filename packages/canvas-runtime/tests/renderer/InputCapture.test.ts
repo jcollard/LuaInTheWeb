@@ -409,6 +409,118 @@ describe('InputCapture', () => {
       expect(state.mouseButtonsDown).toContain(0);
       expect(state.mouseButtonsPressed).toContain(0);
     });
+
+    describe('caching behavior (GC optimization)', () => {
+      it('should return the same object reference across multiple calls', () => {
+        const state1 = inputCapture.getInputState();
+        const state2 = inputCapture.getInputState();
+        const state3 = inputCapture.getInputState();
+
+        expect(state1).toBe(state2);
+        expect(state2).toBe(state3);
+      });
+
+      it('should reuse keysDown array (same reference)', () => {
+        target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
+
+        const state1 = inputCapture.getInputState();
+        const keysDown1 = state1.keysDown;
+
+        target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB' }));
+
+        const state2 = inputCapture.getInputState();
+        const keysDown2 = state2.keysDown;
+
+        // Arrays should be same reference, just with updated contents
+        expect(keysDown1).toBe(keysDown2);
+        expect(keysDown2).toContain('KeyA');
+        expect(keysDown2).toContain('KeyB');
+      });
+
+      it('should reuse keysPressed array (same reference)', () => {
+        target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
+
+        const state1 = inputCapture.getInputState();
+        const keysPressed1 = state1.keysPressed;
+
+        inputCapture.update();
+        target.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyA' }));
+        target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyB' }));
+
+        const state2 = inputCapture.getInputState();
+        const keysPressed2 = state2.keysPressed;
+
+        // Arrays should be same reference
+        expect(keysPressed1).toBe(keysPressed2);
+        expect(keysPressed2).toContain('KeyB');
+        expect(keysPressed2).not.toContain('KeyA');
+      });
+
+      it('should reuse mouseButtonsDown array (same reference)', () => {
+        target.dispatchEvent(new MouseEvent('mousedown', { button: 0 }));
+
+        const state1 = inputCapture.getInputState();
+        const buttonsDown1 = state1.mouseButtonsDown;
+
+        target.dispatchEvent(new MouseEvent('mousedown', { button: 2 }));
+
+        const state2 = inputCapture.getInputState();
+        const buttonsDown2 = state2.mouseButtonsDown;
+
+        expect(buttonsDown1).toBe(buttonsDown2);
+        expect(buttonsDown2).toContain(0);
+        expect(buttonsDown2).toContain(2);
+      });
+
+      it('should reuse gamepads array (same reference)', () => {
+        const state1 = inputCapture.getInputState();
+        const gamepads1 = state1.gamepads;
+
+        const state2 = inputCapture.getInputState();
+        const gamepads2 = state2.gamepads;
+
+        expect(gamepads1).toBe(gamepads2);
+      });
+
+      it('should only update array when dirty flag is set', () => {
+        // No input - arrays empty
+        const state1 = inputCapture.getInputState();
+        expect(state1.keysDown).toEqual([]);
+
+        // Press a key - dirty flag should be set
+        target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
+
+        const state2 = inputCapture.getInputState();
+        expect(state2.keysDown).toEqual(['KeyA']);
+
+        // Call again without any change - should not reallocate
+        const state3 = inputCapture.getInputState();
+        expect(state3.keysDown).toBe(state2.keysDown);
+        expect(state3.keysDown).toEqual(['KeyA']);
+      });
+
+      it('should update mouse position without affecting array caching', () => {
+        vi.spyOn(target, 'getBoundingClientRect').mockReturnValue({
+          left: 0, top: 0, right: 800, bottom: 600,
+          width: 800, height: 600, x: 0, y: 0, toJSON: () => ({}),
+        });
+
+        target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
+        const state1 = inputCapture.getInputState();
+        const keysDown1 = state1.keysDown;
+
+        // Move mouse without pressing keys
+        target.dispatchEvent(new MouseEvent('mousemove', { clientX: 100, clientY: 200 }));
+        const state2 = inputCapture.getInputState();
+
+        // Mouse position should update
+        expect(state2.mouseX).toBe(100);
+        expect(state2.mouseY).toBe(200);
+
+        // keysDown array should still be same reference (no re-sync needed)
+        expect(state2.keysDown).toBe(keysDown1);
+      });
+    });
   });
 
   describe('reset', () => {

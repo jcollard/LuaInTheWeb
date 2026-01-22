@@ -54,6 +54,17 @@ export interface CanvasRuntimeState {
   stopResolve: (() => void) | null
   /** Previous gamepad button states for "just pressed" detection */
   previousGamepadButtons: number[][]
+
+  // Cached arrays to avoid allocation on every getKeysDown/getKeysPressed call.
+  // These arrays are reused and should not be mutated by callers.
+  /** Cached array of keys currently held down */
+  keysDownArray: string[]
+  /** Cached array of keys pressed this frame */
+  keysPressedArray: string[]
+  /** Dirty flag for keysDownArray */
+  keysDownDirty: boolean
+  /** Dirty flag for keysPressedArray */
+  keysPressedDirty: boolean
 }
 
 /**
