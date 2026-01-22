@@ -224,13 +224,16 @@ canvas.start()
 | `canvas.is_point_in_stroke(x, y)` | Check if point is on stroke |
 
 ### Pixel Manipulation
-| Function | Description |
-|----------|-------------|
-| `canvas.create_image_data(w, h)` | Create empty pixel buffer |
-| `canvas.get_image_data(x, y, w, h)` | Read pixels from canvas |
-| `canvas.put_image_data(data, x, y, opts?)` | Write pixels to canvas (opts: dirty_x, dirty_y, dirty_width, dirty_height) |
-| `canvas.clone_image_data(data)` | Create independent copy of ImageData |
-| `canvas.capture(opts?)` | Capture canvas as data URL (opts: format, quality) |
+| Function | Description | Allocations |
+|----------|-------------|-------------|
+| `canvas.create_image_data(w, h)` | Create empty pixel buffer | New buffer |
+| `canvas.get_image_data(x, y, w, h)` | Read pixels from canvas | New buffer |
+| `canvas.put_image_data(data, x, y, opts?)` | Write pixels to canvas | None |
+| `img:get_pixel(x, y)` | Read RGBA values | None |
+| `img:set_pixel(x, y, r, g, b, a?)` | Write RGBA values | None |
+| `canvas.clone_image_data(data)` | Create independent copy of ImageData | Full copy |
+| `img:dispose()` | Free ImageData memory | Frees memory |
+| `canvas.capture(opts?)` | Capture canvas as data URL (opts: format, quality) | New string |
 
 ### Audio - Sound Effects
 | Function | Description |

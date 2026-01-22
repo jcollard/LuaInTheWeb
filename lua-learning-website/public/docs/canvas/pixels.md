@@ -29,6 +29,8 @@ Get the RGBA values of a pixel at the specified coordinates. Coordinates are 0-i
 
 Returns `0, 0, 0, 0` for out-of-bounds coordinates.
 
+**Allocations:** Minimal - returns 4 values. **Time: O(1)**
+
 ```lua
 local img = canvas.get_image_data(0, 0, 100, 100)
 local r, g, b, a = img:get_pixel(50, 50)
@@ -49,6 +51,8 @@ Set the RGBA values of a pixel at the specified coordinates. Coordinates are 0-i
 
 Does nothing for out-of-bounds coordinates.
 
+**Allocations:** None - direct array mutation. **Time: O(1)**
+
 ```lua
 local img = canvas.create_image_data(100, 100)
 img:set_pixel(50, 50, 255, 0, 0)       -- Opaque red pixel
@@ -67,6 +71,8 @@ Create a new empty ImageData buffer filled with transparent black.
 
 **Returns:**
 - (ImageData): New ImageData filled with transparent black (0, 0, 0, 0)
+
+**Allocations:** Creates a new pixel buffer of size `width × height × 4` bytes. Call once and reuse the ImageData object when possible.
 
 ```lua
 -- Create a gradient texture procedurally
@@ -94,6 +100,8 @@ Read pixel data from a region of the canvas.
 **Returns:**
 - (ImageData|nil): Pixel data, or nil if canvas not ready
 
+**Allocations:** Creates a new pixel buffer of size `width × height × 4` bytes. Avoid calling every frame for large regions.
+
 ```lua
 -- Read a region of the canvas
 local img = canvas.get_image_data(100, 100, 50, 50)
@@ -120,6 +128,8 @@ Write pixel data to the canvas at the specified position. Optionally specify a "
 | `dirty_y` | number | Y offset within the image data |
 | `dirty_width` | number | Width of region to copy |
 | `dirty_height` | number | Height of region to copy |
+
+**Allocations:** Minimal - uses existing pixel buffer directly. Safe to call every frame.
 
 ```lua
 -- Copy a region to another location
@@ -254,6 +264,57 @@ end
 canvas.put_image_data(img, 0, 0)
 ```
 
+### canvas.clone_image_data(image_data)
+
+Create an independent copy of an ImageData object. Changes to the clone won't affect the original.
+
+**Parameters:**
+- `image_data` (ImageData): The ImageData to clone
+
+**Returns:**
+- (ImageData|nil): A new ImageData with copied pixel data, or nil if invalid
+
+**Allocations:** Creates a new pixel buffer (full copy). Use sparingly for large images.
+
+```lua
+local original = canvas.get_image_data(0, 0, 100, 100)
+local copy = canvas.clone_image_data(original)
+
+-- Modify copy without affecting original
+for y = 0, 99 do
+  for x = 0, 99 do
+    local r, g, b, a = copy:get_pixel(x, y)
+    copy:set_pixel(x, y, 255 - r, 255 - g, 255 - b, a)
+  end
+end
+```
+
+### ImageData:dispose()
+
+Explicitly release the memory used by an ImageData object. Call this when you're done with an ImageData to free memory immediately rather than waiting for garbage collection.
+
+**Allocations:** None - frees memory.
+
+```lua
+local img = canvas.get_image_data(0, 0, 400, 400)
+-- Process image...
+canvas.put_image_data(img, 0, 0)
+img:dispose()  -- Free memory immediately
+```
+
+## Memory Management
+
+ImageData objects hold pixel buffers that can be large (a 400×400 image uses 640KB). For best performance:
+
+| Operation | Memory Impact | Recommendation |
+|-----------|--------------|----------------|
+| `create_image_data` | Allocates new buffer | Reuse when possible |
+| `get_image_data` | Allocates new buffer | Cache results, avoid per-frame calls |
+| `put_image_data` | No allocation | Safe for every frame |
+| `get_pixel` / `set_pixel` | No allocation | O(1), use freely |
+| `clone_image_data` | Full buffer copy | Use only when independent copy needed |
+| `dispose` | Frees memory | Call when done with large images |
+
 ## Performance Tips
 
 - **Keep images small**: Pixel manipulation can be slow for large images. For real-time effects, keep image sizes small (e.g., 100x100 or less) or process only portions of the canvas.
@@ -278,6 +339,7 @@ canvas.put_image_data(grayscale, 0, 0)  -- O(1) operation
 
 - [Pixel Manipulation](../../examples/canvas/pixels/pixel-manipulation.lua) - Image data and pixel effects
 - [Dirty Rectangle Demo](../../examples/canvas/pixels/dirty-rect-demo.lua) - Efficient partial updates
+- [Clone Image Data](../../examples/canvas/pixels/clone-image-data.lua) - Cloning and image processing effects
 
 ---
 

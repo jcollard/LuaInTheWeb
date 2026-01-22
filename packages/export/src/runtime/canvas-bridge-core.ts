@@ -857,8 +857,16 @@ export class CoreCanvasBridge implements CanvasBridge {
     )
 
     // === PIXEL MANIPULATION (full implementation - Issue #603 pattern) ===
+    // Uses ID-based registry to store Uint8ClampedArray on JS side, avoiding
+    // expensive Array.from() conversions and enabling O(1) put_image_data.
 
-    // create_image_data: Creates empty pixel buffer
+    /**
+     * create_image_data: Creates empty pixel buffer
+     * Allocations per call:
+     *   1× Uint8ClampedArray(width × height × 4) - pixel buffer (required)
+     *   1× Object { data, width, height }        - storage entry
+     *   1× Object { id, width, height }          - return value
+     */
     engine.global.set('__canvas_createImageData', (width: number, height: number) => {
       const data = new Uint8ClampedArray(width * height * 4)
       const id = state.nextImageDataId++
@@ -866,12 +874,18 @@ export class CoreCanvasBridge implements CanvasBridge {
       return { id, width, height }
     })
 
-    // get_image_data: Captures canvas region, stores Uint8ClampedArray directly
+    /**
+     * get_image_data: Captures canvas region, stores Uint8ClampedArray directly
+     * Allocations per call:
+     *   1× Uint8ClampedArray (copy of canvas data) - required
+     *   1× Object { data, width, height }          - storage entry
+     *   1× Object { id, width, height }            - return value
+     * Note: Does NOT use Array.from() - stores typed array directly to avoid GC pressure
+     */
     engine.global.set(
       '__canvas_getImageData',
       (x: number, y: number, width: number, height: number) => {
         const imageData = ctx.getImageData(x, y, width, height)
-        // Store Uint8ClampedArray directly - NO Array.from()!
         const id = state.nextImageDataId++
         state.imageDataStore.set(id, {
           data: new Uint8ClampedArray(imageData.data),
@@ -882,7 +896,12 @@ export class CoreCanvasBridge implements CanvasBridge {
       }
     )
 
-    // get_pixel: Read from stored array by index - O(1)
+    /**
+     * get_pixel: Read from stored array by index
+     * Allocations per call:
+     *   1× Array [r, g, b, a] - return value (4 elements, unavoidable)
+     * Time complexity: O(1)
+     */
     engine.global.set('__canvas_imageDataGetPixel', (id: number, x: number, y: number) => {
       const stored = state.imageDataStore.get(id)
       if (!stored || x < 0 || x >= stored.width || y < 0 || y >= stored.height) {
@@ -892,7 +911,11 @@ export class CoreCanvasBridge implements CanvasBridge {
       return [stored.data[idx], stored.data[idx + 1], stored.data[idx + 2], stored.data[idx + 3]]
     })
 
-    // set_pixel: Write to stored array by index - O(1)
+    /**
+     * set_pixel: Write to stored array by index
+     * Allocations per call: 0 (direct array mutation)
+     * Time complexity: O(1)
+     */
     engine.global.set(
       '__canvas_imageDataSetPixel',
       (id: number, x: number, y: number, r: number, g: number, b: number, a: number) => {
@@ -906,7 +929,13 @@ export class CoreCanvasBridge implements CanvasBridge {
       }
     )
 
-    // put_image_data: Uses stored Uint8ClampedArray directly - O(1), no allocation!
+    /**
+     * put_image_data: Writes stored pixel data to canvas
+     * Allocations per call:
+     *   1× ImageData wrapper - wraps existing Uint8ClampedArray (no pixel data copy)
+     * Time complexity: O(1) for wrapper creation, O(n) for canvas write (browser internal)
+     * Note: ImageData constructor with typed array creates a view, not a copy
+     */
     engine.global.set(
       '__canvas_putImageData',
       (
@@ -933,7 +962,13 @@ export class CoreCanvasBridge implements CanvasBridge {
       }
     )
 
-    // clone_image_data: Creates independent copy
+    /**
+     * clone_image_data: Creates independent copy of pixel data
+     * Allocations per call:
+     *   1× Uint8ClampedArray (deep copy of pixel data) - required for clone
+     *   1× Object { data, width, height }              - storage entry
+     *   1× Object { id, width, height }                - return value
+     */
     engine.global.set('__canvas_cloneImageData', (id: number) => {
       const stored = state.imageDataStore.get(id)
       if (!stored) return null
@@ -943,7 +978,10 @@ export class CoreCanvasBridge implements CanvasBridge {
       return { id: newId, width: stored.width, height: stored.height }
     })
 
-    // dispose: Memory cleanup
+    /**
+     * dispose: Releases ImageData from memory
+     * Allocations per call: 0 (Map.delete only)
+     */
     engine.global.set('__canvas_imageDataDispose', (id: number) => {
       state.imageDataStore.delete(id)
     })
