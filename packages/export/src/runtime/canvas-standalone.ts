@@ -353,6 +353,44 @@ function colorToCss(
 }
 
 /**
+ * Serialize gradient color stops from either a Lua table proxy or JS array.
+ * Handles both 0-indexed (JS arrays) and 1-indexed (Lua tables) indexing.
+ * This avoids JSON.stringify issues with Lua proxy objects.
+ * NOTE: Lua table proxies from wasmoon don't have .length property.
+ */
+function serializeStops(stops: unknown): string {
+  if (!stops || typeof stops !== 'object') return ''
+  const stopsObj = stops as Record<number, { offset: number; color: string }>
+  const parts: string[] = []
+  // Detect indexing style: JS arrays have element at [0], Lua tables at [1]
+  const startIndex = stopsObj[0] !== undefined ? 0 : 1
+  let i = startIndex
+  while (stopsObj[i] !== undefined) {
+    const stop = stopsObj[i]
+    parts.push(`${stop.offset}:${stop.color}`)
+    i++
+  }
+  return parts.join(',')
+}
+
+/**
+ * Build a deterministic cache key for gradient styles.
+ * Uses individual property access instead of JSON.stringify to handle
+ * Lua table proxies correctly (Issue #605).
+ */
+function buildGradientCacheKey(style: Record<string, unknown>): string {
+  const stops = serializeStops(style.stops)
+  if (style.type === 'linear') {
+    return `linear|${style.x0}|${style.y0}|${style.x1}|${style.y1}|${stops}`
+  } else if (style.type === 'radial') {
+    return `radial|${style.x0}|${style.y0}|${style.r0}|${style.x1}|${style.y1}|${style.r1}|${stops}`
+  } else if (style.type === 'conic') {
+    return `conic|${style.startAngle}|${style.x}|${style.y}|${stops}`
+  }
+  return ''
+}
+
+/**
  * Set up all canvas bridge functions on a wasmoon engine.
  */
 export function setupCanvasBridge(
@@ -931,12 +969,15 @@ export function setupCanvasBridge(
         return
       }
 
-      // Check gradient cache using JSON.stringify key
-      const cacheKey = JSON.stringify(style)
-      const cached = state.gradientCache.get(cacheKey)
-      if (cached) {
-        ctx.fillStyle = cached
-        return
+      // Build deterministic cache key from individual properties (Issue #605)
+      // JSON.stringify doesn't work correctly on Lua table proxies
+      const cacheKey = buildGradientCacheKey(style)
+      if (cacheKey) {
+        const cached = state.gradientCache.get(cacheKey)
+        if (cached) {
+          ctx.fillStyle = cached
+          return
+        }
       }
 
       // Create gradient based on type
@@ -967,14 +1008,22 @@ export function setupCanvasBridge(
         return // Unknown type, do nothing
       }
 
-      // Add color stops
-      const stops = style.stops as Array<{ offset: number; color: string }>
-      for (const stop of stops) {
+      // Add color stops - handle both JS arrays (0-indexed) and Lua tables (1-indexed)
+      // NOTE: Lua table proxies from wasmoon don't have .length property
+      const stopsObj = style.stops as Record<number, { offset: number; color: string }>
+      // Detect indexing style: JS arrays have element at [0], Lua tables at [1]
+      const startIndex = stopsObj[0] !== undefined ? 0 : 1
+      let i = startIndex
+      while (stopsObj[i] !== undefined) {
+        const stop = stopsObj[i]
         gradient.addColorStop(stop.offset, stop.color)
+        i++
       }
 
       // Cache and apply
-      state.gradientCache.set(cacheKey, gradient)
+      if (cacheKey) {
+        state.gradientCache.set(cacheKey, gradient)
+      }
       ctx.fillStyle = gradient
     }
   )
@@ -987,12 +1036,15 @@ export function setupCanvasBridge(
         return
       }
 
-      // Check gradient cache using JSON.stringify key
-      const cacheKey = JSON.stringify(style)
-      const cached = state.gradientCache.get(cacheKey)
-      if (cached) {
-        ctx.strokeStyle = cached
-        return
+      // Build deterministic cache key from individual properties (Issue #605)
+      // JSON.stringify doesn't work correctly on Lua table proxies
+      const cacheKey = buildGradientCacheKey(style)
+      if (cacheKey) {
+        const cached = state.gradientCache.get(cacheKey)
+        if (cached) {
+          ctx.strokeStyle = cached
+          return
+        }
       }
 
       // Create gradient based on type
@@ -1023,14 +1075,22 @@ export function setupCanvasBridge(
         return // Unknown type, do nothing
       }
 
-      // Add color stops
-      const stops = style.stops as Array<{ offset: number; color: string }>
-      for (const stop of stops) {
+      // Add color stops - handle both JS arrays (0-indexed) and Lua tables (1-indexed)
+      // NOTE: Lua table proxies from wasmoon don't have .length property
+      const stopsObj = style.stops as Record<number, { offset: number; color: string }>
+      // Detect indexing style: JS arrays have element at [0], Lua tables at [1]
+      const startIndex = stopsObj[0] !== undefined ? 0 : 1
+      let i = startIndex
+      while (stopsObj[i] !== undefined) {
+        const stop = stopsObj[i]
         gradient.addColorStop(stop.offset, stop.color)
+        i++
       }
 
       // Cache and apply
-      state.gradientCache.set(cacheKey, gradient)
+      if (cacheKey) {
+        state.gradientCache.set(cacheKey, gradient)
+      }
       ctx.strokeStyle = gradient
     }
   )

@@ -3318,6 +3318,30 @@ return localstorage
     }
     return \`#\${toHex(r)}\${toHex(g)}\${toHex(b)}\`;
   }
+  function serializeStops(stops) {
+    if (!stops || typeof stops !== "object") return "";
+    const stopsObj = stops;
+    const parts = [];
+    const startIndex = stopsObj[0] !== void 0 ? 0 : 1;
+    let i = startIndex;
+    while (stopsObj[i] !== void 0) {
+      const stop = stopsObj[i];
+      parts.push(\`\${stop.offset}:\${stop.color}\`);
+      i++;
+    }
+    return parts.join(",");
+  }
+  function buildGradientCacheKey(style) {
+    const stops = serializeStops(style.stops);
+    if (style.type === "linear") {
+      return \`linear|\${style.x0}|\${style.y0}|\${style.x1}|\${style.y1}|\${stops}\`;
+    } else if (style.type === "radial") {
+      return \`radial|\${style.x0}|\${style.y0}|\${style.r0}|\${style.x1}|\${style.y1}|\${style.r1}|\${stops}\`;
+    } else if (style.type === "conic") {
+      return \`conic|\${style.startAngle}|\${style.x}|\${style.y}|\${stops}\`;
+    }
+    return "";
+  }
   function setupCanvasBridge(engine, state) {
     const { ctx, canvas } = state;
     ctx.font = \`\${state.currentFontSize}px \${state.currentFontFamily}\`;
@@ -3750,11 +3774,13 @@ return localstorage
           ctx.fillStyle = style;
           return;
         }
-        const cacheKey = JSON.stringify(style);
-        const cached = state.gradientCache.get(cacheKey);
-        if (cached) {
-          ctx.fillStyle = cached;
-          return;
+        const cacheKey = buildGradientCacheKey(style);
+        if (cacheKey) {
+          const cached = state.gradientCache.get(cacheKey);
+          if (cached) {
+            ctx.fillStyle = cached;
+            return;
+          }
         }
         let gradient;
         if (style.type === "linear") {
@@ -3782,11 +3808,17 @@ return localstorage
         } else {
           return;
         }
-        const stops = style.stops;
-        for (const stop of stops) {
+        const stopsObj = style.stops;
+        const startIndex = stopsObj[0] !== void 0 ? 0 : 1;
+        let i = startIndex;
+        while (stopsObj[i] !== void 0) {
+          const stop = stopsObj[i];
           gradient.addColorStop(stop.offset, stop.color);
+          i++;
         }
-        state.gradientCache.set(cacheKey, gradient);
+        if (cacheKey) {
+          state.gradientCache.set(cacheKey, gradient);
+        }
         ctx.fillStyle = gradient;
       }
     );
@@ -3797,11 +3829,13 @@ return localstorage
           ctx.strokeStyle = style;
           return;
         }
-        const cacheKey = JSON.stringify(style);
-        const cached = state.gradientCache.get(cacheKey);
-        if (cached) {
-          ctx.strokeStyle = cached;
-          return;
+        const cacheKey = buildGradientCacheKey(style);
+        if (cacheKey) {
+          const cached = state.gradientCache.get(cacheKey);
+          if (cached) {
+            ctx.strokeStyle = cached;
+            return;
+          }
         }
         let gradient;
         if (style.type === "linear") {
@@ -3829,11 +3863,17 @@ return localstorage
         } else {
           return;
         }
-        const stops = style.stops;
-        for (const stop of stops) {
+        const stopsObj = style.stops;
+        const startIndex = stopsObj[0] !== void 0 ? 0 : 1;
+        let i = startIndex;
+        while (stopsObj[i] !== void 0) {
+          const stop = stopsObj[i];
           gradient.addColorStop(stop.offset, stop.color);
+          i++;
         }
-        state.gradientCache.set(cacheKey, gradient);
+        if (cacheKey) {
+          state.gradientCache.set(cacheKey, gradient);
+        }
         ctx.strokeStyle = gradient;
       }
     );
