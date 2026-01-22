@@ -101,6 +101,8 @@ export interface CanvasRuntimeState {
   // ImageData registry state (Issue #603 - avoid GC pressure)
   imageDataStore: Map<number, { data: Uint8ClampedArray; width: number; height: number }>
   nextImageDataId: number
+  // Gradient cache for GC pressure reduction (Issue #605)
+  gradientCache: Map<string, CanvasGradient>
 }
 
 /**
@@ -153,6 +155,8 @@ export function createCanvasRuntimeState(
     // ImageData registry state (Issue #603 - avoid GC pressure)
     imageDataStore: new Map(),
     nextImageDataId: 1,
+    // Gradient cache for GC pressure reduction (Issue #605)
+    gradientCache: new Map(),
   }
 }
 
@@ -404,6 +408,8 @@ export function setupCanvasBridge(
   // Drawing state
   engine.global.set('__canvas_clear', () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
+    // Clear gradient cache to allow new gradients when canvas is cleared (Issue #605)
+    state.gradientCache.clear()
   })
 
   engine.global.set(
@@ -916,25 +922,34 @@ export function setupCanvasBridge(
   )
 
   // Fill/stroke style (for gradients and patterns)
+  // Gradient caching for GC pressure reduction (Issue #605)
   engine.global.set(
     '__canvas_setFillStyle',
     (style: string | Record<string, unknown>) => {
       if (typeof style === 'string') {
         ctx.fillStyle = style
-      } else if (style.type === 'linear') {
-        const gradient = ctx.createLinearGradient(
+        return
+      }
+
+      // Check gradient cache using JSON.stringify key
+      const cacheKey = JSON.stringify(style)
+      const cached = state.gradientCache.get(cacheKey)
+      if (cached) {
+        ctx.fillStyle = cached
+        return
+      }
+
+      // Create gradient based on type
+      let gradient: CanvasGradient
+      if (style.type === 'linear') {
+        gradient = ctx.createLinearGradient(
           style.x0 as number,
           style.y0 as number,
           style.x1 as number,
           style.y1 as number
         )
-        const stops = style.stops as Array<{ offset: number; color: string }>
-        for (const stop of stops) {
-          gradient.addColorStop(stop.offset, stop.color)
-        }
-        ctx.fillStyle = gradient
       } else if (style.type === 'radial') {
-        const gradient = ctx.createRadialGradient(
+        gradient = ctx.createRadialGradient(
           style.x0 as number,
           style.y0 as number,
           style.r0 as number,
@@ -942,23 +957,25 @@ export function setupCanvasBridge(
           style.y1 as number,
           style.r1 as number
         )
-        const stops = style.stops as Array<{ offset: number; color: string }>
-        for (const stop of stops) {
-          gradient.addColorStop(stop.offset, stop.color)
-        }
-        ctx.fillStyle = gradient
       } else if (style.type === 'conic') {
-        const gradient = ctx.createConicGradient(
+        gradient = ctx.createConicGradient(
           style.startAngle as number,
           style.x as number,
           style.y as number
         )
-        const stops = style.stops as Array<{ offset: number; color: string }>
-        for (const stop of stops) {
-          gradient.addColorStop(stop.offset, stop.color)
-        }
-        ctx.fillStyle = gradient
+      } else {
+        return // Unknown type, do nothing
       }
+
+      // Add color stops
+      const stops = style.stops as Array<{ offset: number; color: string }>
+      for (const stop of stops) {
+        gradient.addColorStop(stop.offset, stop.color)
+      }
+
+      // Cache and apply
+      state.gradientCache.set(cacheKey, gradient)
+      ctx.fillStyle = gradient
     }
   )
 
@@ -967,20 +984,28 @@ export function setupCanvasBridge(
     (style: string | Record<string, unknown>) => {
       if (typeof style === 'string') {
         ctx.strokeStyle = style
-      } else if (style.type === 'linear') {
-        const gradient = ctx.createLinearGradient(
+        return
+      }
+
+      // Check gradient cache using JSON.stringify key
+      const cacheKey = JSON.stringify(style)
+      const cached = state.gradientCache.get(cacheKey)
+      if (cached) {
+        ctx.strokeStyle = cached
+        return
+      }
+
+      // Create gradient based on type
+      let gradient: CanvasGradient
+      if (style.type === 'linear') {
+        gradient = ctx.createLinearGradient(
           style.x0 as number,
           style.y0 as number,
           style.x1 as number,
           style.y1 as number
         )
-        const stops = style.stops as Array<{ offset: number; color: string }>
-        for (const stop of stops) {
-          gradient.addColorStop(stop.offset, stop.color)
-        }
-        ctx.strokeStyle = gradient
       } else if (style.type === 'radial') {
-        const gradient = ctx.createRadialGradient(
+        gradient = ctx.createRadialGradient(
           style.x0 as number,
           style.y0 as number,
           style.r0 as number,
@@ -988,23 +1013,25 @@ export function setupCanvasBridge(
           style.y1 as number,
           style.r1 as number
         )
-        const stops = style.stops as Array<{ offset: number; color: string }>
-        for (const stop of stops) {
-          gradient.addColorStop(stop.offset, stop.color)
-        }
-        ctx.strokeStyle = gradient
       } else if (style.type === 'conic') {
-        const gradient = ctx.createConicGradient(
+        gradient = ctx.createConicGradient(
           style.startAngle as number,
           style.x as number,
           style.y as number
         )
-        const stops = style.stops as Array<{ offset: number; color: string }>
-        for (const stop of stops) {
-          gradient.addColorStop(stop.offset, stop.color)
-        }
-        ctx.strokeStyle = gradient
+      } else {
+        return // Unknown type, do nothing
       }
+
+      // Add color stops
+      const stops = style.stops as Array<{ offset: number; color: string }>
+      for (const stop of stops) {
+        gradient.addColorStop(stop.offset, stop.color)
+      }
+
+      // Cache and apply
+      state.gradientCache.set(cacheKey, gradient)
+      ctx.strokeStyle = gradient
     }
   )
 

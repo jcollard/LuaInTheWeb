@@ -17,6 +17,10 @@ export class CanvasRenderer {
   private currentFontSize: number = 16;
   private currentFontFamily: string = 'monospace';
 
+  // Style caches for GC pressure reduction (Issue #605)
+  private gradientCache: Map<string, CanvasGradient> = new Map();
+  private patternCache: Map<string, CanvasPattern> = new Map();
+
   constructor(canvas: HTMLCanvasElement, imageCache?: ImageCache) {
     this.canvas = canvas;
     this.imageCache = imageCache;
@@ -55,6 +59,7 @@ export class CanvasRenderer {
     switch (command.type) {
       case 'clear':
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.clearStyleCaches();
         break;
 
       case 'clearRect':
@@ -476,8 +481,18 @@ export class CanvasRenderer {
 
   /**
    * Create a CanvasGradient from a gradient definition.
+   * Uses caching to avoid repeated allocations for identical definitions (GC pressure fix #605).
    */
   private createGradient(def: GradientDef): CanvasGradient {
+    // Generate cache key from the full definition
+    const cacheKey = JSON.stringify(def);
+
+    // Check cache first
+    const cached = this.gradientCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     let gradient: CanvasGradient;
     if (def.type === 'linear') {
       gradient = this.ctx.createLinearGradient(def.x0, def.y0, def.x1, def.y1);
@@ -490,18 +505,46 @@ export class CanvasRenderer {
     for (const stop of def.stops) {
       gradient.addColorStop(stop.offset, stop.color);
     }
+
+    // Store in cache
+    this.gradientCache.set(cacheKey, gradient);
     return gradient;
   }
 
   /**
    * Create a CanvasPattern from a pattern definition.
+   * Uses caching to avoid repeated allocations for identical definitions (GC pressure fix #605).
    */
   private createPattern(def: PatternDef): CanvasPattern | null {
     const image = this.imageCache?.get(def.imageName);
     if (!image) {
       return null;
     }
-    return this.ctx.createPattern(image, def.repetition);
+
+    // Generate cache key from imageName and repetition
+    const cacheKey = `${def.imageName}|${def.repetition}`;
+
+    // Check cache first
+    const cached = this.patternCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const pattern = this.ctx.createPattern(image, def.repetition);
+    if (pattern) {
+      // Store in cache (only cache successful patterns)
+      this.patternCache.set(cacheKey, pattern);
+    }
+    return pattern;
+  }
+
+  /**
+   * Clear the style caches (gradients and patterns).
+   * Called on full canvas clear to prevent unbounded memory growth.
+   */
+  private clearStyleCaches(): void {
+    this.gradientCache.clear();
+    this.patternCache.clear();
   }
 
   /**
