@@ -11,6 +11,7 @@ import type {
   CanvasRuntimeState,
   AssetHandler,
   CanvasBridge,
+  StoredImageData,
 } from './canvas-bridge-types.js'
 
 /**
@@ -51,6 +52,9 @@ export function createCanvasRuntimeState(
     keysPressedArray: [],
     keysDownDirty: false,
     keysPressedDirty: false,
+    // ImageData registry state (Issue #603 - avoid GC pressure)
+    imageDataStore: new Map<number, StoredImageData>(),
+    nextImageDataId: 1,
   }
 }
 
@@ -216,6 +220,8 @@ export class CoreCanvasBridge implements CanvasBridge {
 
     engine.global.set('__canvas_stop', () => {
       state.isRunning = false
+      // Clear imageDataStore to prevent memory leaks
+      state.imageDataStore.clear()
       if (state.stopResolve) {
         state.stopResolve()
         state.stopResolve = null
@@ -850,46 +856,135 @@ export class CoreCanvasBridge implements CanvasBridge {
       }
     )
 
-    // === PIXEL MANIPULATION (stubs) ===
-    engine.global.set(
-      '__canvas_createImageData',
-      (width: number, height: number) => {
-        return { id: -1, width, height }
-      }
-    )
+    // === PIXEL MANIPULATION (full implementation - Issue #603 pattern) ===
+    // Uses ID-based registry to store Uint8ClampedArray on JS side, avoiding
+    // expensive Array.from() conversions and enabling O(1) put_image_data.
 
+    /**
+     * create_image_data: Creates empty pixel buffer
+     * Allocations per call:
+     *   1× Uint8ClampedArray(width × height × 4) - pixel buffer (required)
+     *   1× Object { data, width, height }        - storage entry
+     *   1× Object { id, width, height }          - return value
+     */
+    engine.global.set('__canvas_createImageData', (width: number, height: number) => {
+      const data = new Uint8ClampedArray(width * height * 4)
+      const id = state.nextImageDataId++
+      state.imageDataStore.set(id, { data, width, height })
+      return { id, width, height }
+    })
+
+    /**
+     * get_image_data: Captures canvas region, stores Uint8ClampedArray directly
+     * Allocations per call:
+     *   1× Uint8ClampedArray (copy of canvas data) - required
+     *   1× Object { data, width, height }          - storage entry
+     *   1× Object { id, width, height }            - return value
+     * Note: Does NOT use Array.from() - stores typed array directly to avoid GC pressure
+     */
     engine.global.set(
       '__canvas_getImageData',
       (x: number, y: number, width: number, height: number) => {
         const imageData = ctx.getImageData(x, y, width, height)
-        return { id: -1, width, height, data: Array.from(imageData.data) }
+        const id = state.nextImageDataId++
+        state.imageDataStore.set(id, {
+          data: new Uint8ClampedArray(imageData.data),
+          width,
+          height,
+        })
+        return { id, width, height }
       }
     )
 
+    /**
+     * get_pixel: Read from stored array by index
+     * Allocations per call:
+     *   1× Array [r, g, b, a] - return value (4 elements, unavoidable)
+     * Time complexity: O(1)
+     */
+    engine.global.set('__canvas_imageDataGetPixel', (id: number, x: number, y: number) => {
+      const stored = state.imageDataStore.get(id)
+      if (!stored || x < 0 || x >= stored.width || y < 0 || y >= stored.height) {
+        return [0, 0, 0, 0]
+      }
+      const idx = (y * stored.width + x) * 4
+      return [stored.data[idx], stored.data[idx + 1], stored.data[idx + 2], stored.data[idx + 3]]
+    })
+
+    /**
+     * set_pixel: Write to stored array by index
+     * Allocations per call: 0 (direct array mutation)
+     * Time complexity: O(1)
+     */
     engine.global.set(
-      '__canvas_imageDataGetPixel',
-      (
-        _id: number,
-        x: number,
-        y: number,
-        data?: number[],
-        width?: number
-      ) => {
-        if (!data || !width) return [0, 0, 0, 0]
-        const i = (y * width + x) * 4
-        return [data[i], data[i + 1], data[i + 2], data[i + 3]]
+      '__canvas_imageDataSetPixel',
+      (id: number, x: number, y: number, r: number, g: number, b: number, a: number) => {
+        const stored = state.imageDataStore.get(id)
+        if (!stored || x < 0 || x >= stored.width || y < 0 || y >= stored.height) return
+        const idx = (y * stored.width + x) * 4
+        stored.data[idx] = r
+        stored.data[idx + 1] = g
+        stored.data[idx + 2] = b
+        stored.data[idx + 3] = a
       }
     )
 
-    engine.global.set('__canvas_imageDataSetPixel', () => {
-      // Simplified - would need proper implementation
+    /**
+     * put_image_data: Writes stored pixel data to canvas
+     * Allocations per call:
+     *   1× ImageData wrapper - wraps existing Uint8ClampedArray (no pixel data copy)
+     * Time complexity: O(1) for wrapper creation, O(n) for canvas write (browser internal)
+     * Note: ImageData constructor with typed array creates a view, not a copy
+     */
+    engine.global.set(
+      '__canvas_putImageData',
+      (
+        id: number,
+        dx: number,
+        dy: number,
+        dirtyX?: number | null,
+        dirtyY?: number | null,
+        dirtyWidth?: number | null,
+        dirtyHeight?: number | null
+      ) => {
+        const stored = state.imageDataStore.get(id)
+        if (!stored) return
+        const imageData = new ImageData(
+          stored.data as Uint8ClampedArray<ArrayBuffer>,
+          stored.width,
+          stored.height
+        )
+        if (dirtyX != null && dirtyY != null && dirtyWidth != null && dirtyHeight != null) {
+          ctx.putImageData(imageData, dx, dy, dirtyX, dirtyY, dirtyWidth, dirtyHeight)
+        } else {
+          ctx.putImageData(imageData, dx, dy)
+        }
+      }
+    )
+
+    /**
+     * clone_image_data: Creates independent copy of pixel data
+     * Allocations per call:
+     *   1× Uint8ClampedArray (deep copy of pixel data) - required for clone
+     *   1× Object { data, width, height }              - storage entry
+     *   1× Object { id, width, height }                - return value
+     */
+    engine.global.set('__canvas_cloneImageData', (id: number) => {
+      const stored = state.imageDataStore.get(id)
+      if (!stored) return null
+      const newData = new Uint8ClampedArray(stored.data)
+      const newId = state.nextImageDataId++
+      state.imageDataStore.set(newId, { data: newData, width: stored.width, height: stored.height })
+      return { id: newId, width: stored.width, height: stored.height }
     })
 
-    engine.global.set('__canvas_putImageData', () => {
-      // Simplified - would need proper implementation
+    /**
+     * dispose: Releases ImageData from memory
+     * Allocations per call: 0 (Map.delete only)
+     */
+    engine.global.set('__canvas_imageDataDispose', (id: number) => {
+      state.imageDataStore.delete(id)
     })
-
-    engine.global.set('__canvas_cloneImageData', () => null)
 
     // === PATH2D (stubs) ===
     engine.global.set('__canvas_createPath', () => ({ id: -1 }))

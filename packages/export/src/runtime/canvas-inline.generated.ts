@@ -3180,7 +3180,10 @@ return localstorage
       ],
       // Path2D registry state
       pathRegistry: /* @__PURE__ */ new Map(),
-      nextPathId: 1
+      nextPathId: 1,
+      // ImageData registry state (Issue #603 - avoid GC pressure)
+      imageDataStore: /* @__PURE__ */ new Map(),
+      nextImageDataId: 1
     };
   }
   function setupInputListeners(state) {
@@ -3327,6 +3330,7 @@ return localstorage
     });
     engine.global.set("__canvas_stop", () => {
       state.isRunning = false;
+      state.imageDataStore.clear();
       if (state.stopResolve) {
         state.stopResolve();
         state.stopResolve = null;
@@ -3848,32 +3852,73 @@ return localstorage
         console.warn("draw_image not fully supported in standalone export");
       }
     );
-    engine.global.set(
-      "__canvas_createImageData",
-      (width, height) => {
-        return { id: -1, width, height };
-      }
-    );
+    engine.global.set("__canvas_createImageData", (width, height) => {
+      const data = new Uint8ClampedArray(width * height * 4);
+      const id = state.nextImageDataId++;
+      state.imageDataStore.set(id, { data, width, height });
+      return { id, width, height };
+    });
     engine.global.set(
       "__canvas_getImageData",
       (x, y, width, height) => {
         const imageData = ctx.getImageData(x, y, width, height);
-        return { id: -1, width, height, data: Array.from(imageData.data) };
+        const id = state.nextImageDataId++;
+        state.imageDataStore.set(id, {
+          data: new Uint8ClampedArray(imageData.data),
+          width,
+          height
+        });
+        return { id, width, height };
+      }
+    );
+    engine.global.set("__canvas_imageDataGetPixel", (id, x, y) => {
+      const stored = state.imageDataStore.get(id);
+      if (!stored || x < 0 || x >= stored.width || y < 0 || y >= stored.height) {
+        return [0, 0, 0, 0];
+      }
+      const idx = (y * stored.width + x) * 4;
+      return [stored.data[idx], stored.data[idx + 1], stored.data[idx + 2], stored.data[idx + 3]];
+    });
+    engine.global.set(
+      "__canvas_imageDataSetPixel",
+      (id, x, y, r, g, b, a) => {
+        const stored = state.imageDataStore.get(id);
+        if (!stored || x < 0 || x >= stored.width || y < 0 || y >= stored.height) return;
+        const idx = (y * stored.width + x) * 4;
+        stored.data[idx] = r;
+        stored.data[idx + 1] = g;
+        stored.data[idx + 2] = b;
+        stored.data[idx + 3] = a;
       }
     );
     engine.global.set(
-      "__canvas_imageDataGetPixel",
-      (_id, x, y, data, width) => {
-        if (!data || !width) return [0, 0, 0, 0];
-        const i = (y * width + x) * 4;
-        return [data[i], data[i + 1], data[i + 2], data[i + 3]];
+      "__canvas_putImageData",
+      (id, dx, dy, dirtyX, dirtyY, dirtyWidth, dirtyHeight) => {
+        const stored = state.imageDataStore.get(id);
+        if (!stored) return;
+        const imageData = new ImageData(
+          stored.data,
+          stored.width,
+          stored.height
+        );
+        if (dirtyX != null && dirtyY != null && dirtyWidth != null && dirtyHeight != null) {
+          ctx.putImageData(imageData, dx, dy, dirtyX, dirtyY, dirtyWidth, dirtyHeight);
+        } else {
+          ctx.putImageData(imageData, dx, dy);
+        }
       }
     );
-    engine.global.set("__canvas_imageDataSetPixel", () => {
+    engine.global.set("__canvas_cloneImageData", (id) => {
+      const stored = state.imageDataStore.get(id);
+      if (!stored) return null;
+      const newData = new Uint8ClampedArray(stored.data);
+      const newId = state.nextImageDataId++;
+      state.imageDataStore.set(newId, { data: newData, width: stored.width, height: stored.height });
+      return { id: newId, width: stored.width, height: stored.height };
     });
-    engine.global.set("__canvas_putImageData", () => {
+    engine.global.set("__canvas_imageDataDispose", (id) => {
+      state.imageDataStore.delete(id);
     });
-    engine.global.set("__canvas_cloneImageData", () => null);
     engine.global.set("__canvas_createPath", () => {
       const id = state.nextPathId++;
       state.pathRegistry.set(id, new Path2D());

@@ -67,6 +67,7 @@ export function setupPixelBindings(
 
   // put_image_data: Uses stored array by ID - O(1) no copy needed!
   // Supports optional dirty rect parameters for sub-region drawing
+  // Optimization: Pass Uint8ClampedArray directly to avoid GC pressure (Issue #603)
   engine.global.set('__canvas_putImageData', (
     id: number,
     dx: number,
@@ -79,7 +80,7 @@ export function setupPixelBindings(
     const stored = imageDataStore.get(id)
     if (!stored) return
     getController()?.putImageData(
-      Array.from(stored.data),
+      stored.data,  // Pass Uint8ClampedArray directly - no Array.from() needed
       stored.width,
       stored.height,
       dx,
