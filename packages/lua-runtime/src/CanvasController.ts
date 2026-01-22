@@ -231,6 +231,7 @@ export class CanvasController {
 
   // Frame state
   private frameCommands: DrawCommand[] = []
+  private renderBatch: DrawCommand[] = []  // Pre-allocated for Path2D rendering to avoid GC pressure
   private currentTiming: TimingInfo = { deltaTime: 0, totalTime: 0, frameNumber: 0 }
 
   // Blocking state for start()
@@ -449,7 +450,7 @@ export class CanvasController {
     // This ensures pre-start configuration is applied before the game loop begins
     if (this.frameCommands.length > 0) {
       this.renderer.render(this.frameCommands)
-      this.frameCommands = []
+      this.frameCommands.length = 0  // Clear in-place to avoid GC pressure
     }
 
     // Set running state
@@ -1479,7 +1480,7 @@ export class CanvasController {
   private flushCommands(): void {
     if (this.renderer && this.frameCommands.length > 0) {
       this.renderer.render(this.frameCommands)
-      this.frameCommands = []
+      this.frameCommands.length = 0  // Clear in-place to avoid GC pressure
     }
   }
 
@@ -1680,8 +1681,8 @@ export class CanvasController {
     // Store timing for API access
     this.currentTiming = timing
 
-    // Clear frame commands
-    this.frameCommands = []
+    // Clear frame commands in-place to avoid GC pressure
+    this.frameCommands.length = 0
 
     // Poll gamepads before calling onDraw so input is up-to-date
     this.inputCapture?.pollGamepads()
@@ -1720,73 +1721,48 @@ export class CanvasController {
   private renderFrameCommands(): void {
     if (!this.renderer) return
 
-    // Separate Path2D commands from regular commands
-    const regularCommands: DrawCommand[] = []
-    const path2dCommands: { index: number; command: DrawCommand }[] = []
+    // Fast check: any Path2D commands? (no array allocation)
+    const hasPath2D = this.frameCommands.some(cmd =>
+      cmd.type === 'fillPath' || cmd.type === 'strokePath' || cmd.type === 'clipPath'
+    )
 
-    for (let i = 0; i < this.frameCommands.length; i++) {
-      const command = this.frameCommands[i]
-      if (command.type === 'fillPath' || command.type === 'strokePath' || command.type === 'clipPath') {
-        path2dCommands.push({ index: i, command })
-      } else {
-        regularCommands.push(command)
-      }
-    }
-
-    // If no Path2D commands, render all at once (fast path)
-    if (path2dCommands.length === 0) {
+    // Fast path: no Path2D commands - render all at once
+    if (!hasPath2D) {
       this.renderer.render(this.frameCommands)
       return
     }
 
     // Process commands in order, handling Path2D commands specially
-    let regularBatch: DrawCommand[] = []
+    this.renderBatch.length = 0  // Clear in-place, reuse capacity
 
     for (let i = 0; i < this.frameCommands.length; i++) {
       const command = this.frameCommands[i]
 
-      if (command.type === 'fillPath') {
+      if (command.type === 'fillPath' || command.type === 'strokePath' || command.type === 'clipPath') {
         // Flush regular commands first
-        if (regularBatch.length > 0) {
-          this.renderer.render(regularBatch)
-          regularBatch = []
+        if (this.renderBatch.length > 0) {
+          this.renderer.render(this.renderBatch)
+          this.renderBatch.length = 0  // Clear in-place
         }
-        // Process Path2D fill
+        // Process Path2D command
         const path = this.path2DRegistry.getPath(command.pathId)
         if (path) {
-          this.renderer.fillPath(path, command.fillRule)
-        }
-      } else if (command.type === 'strokePath') {
-        // Flush regular commands first
-        if (regularBatch.length > 0) {
-          this.renderer.render(regularBatch)
-          regularBatch = []
-        }
-        // Process Path2D stroke
-        const path = this.path2DRegistry.getPath(command.pathId)
-        if (path) {
-          this.renderer.strokePath(path)
-        }
-      } else if (command.type === 'clipPath') {
-        // Flush regular commands first
-        if (regularBatch.length > 0) {
-          this.renderer.render(regularBatch)
-          regularBatch = []
-        }
-        // Process Path2D clip
-        const path = this.path2DRegistry.getPath(command.pathId)
-        if (path) {
-          this.renderer.clipPath(path, command.fillRule)
+          if (command.type === 'fillPath') {
+            this.renderer.fillPath(path, command.fillRule)
+          } else if (command.type === 'strokePath') {
+            this.renderer.strokePath(path)
+          } else {
+            this.renderer.clipPath(path, command.fillRule)
+          }
         }
       } else {
-        // Regular command - batch it
-        regularBatch.push(command)
+        this.renderBatch.push(command)
       }
     }
 
-    // Flush any remaining regular commands
-    if (regularBatch.length > 0) {
-      this.renderer.render(regularBatch)
+    // Flush remaining
+    if (this.renderBatch.length > 0) {
+      this.renderer.render(this.renderBatch)
     }
   }
 }
