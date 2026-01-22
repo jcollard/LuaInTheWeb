@@ -32,6 +32,13 @@ export interface LoadedFont {
   family: string
 }
 
+/** Stored ImageData for efficient pixel manipulation (Issue #603 pattern) */
+export interface StoredImageData {
+  data: Uint8ClampedArray
+  width: number
+  height: number
+}
+
 /**
  * Canvas runtime state shared between implementations.
  */
@@ -65,6 +72,10 @@ export interface CanvasRuntimeState {
   keysDownDirty: boolean
   /** Dirty flag for keysPressedArray */
   keysPressedDirty: boolean
+  /** ImageData registry for pixel manipulation - stores Uint8ClampedArray directly */
+  imageDataStore: Map<number, StoredImageData>
+  /** Next ID for imageData registry */
+  nextImageDataId: number
 }
 
 /**
