@@ -12,6 +12,7 @@ vi.mock('@lua-learning/lua-runtime', () => ({
   canvasLuaInputCode: '',
   canvasLuaAudioCode: '',
   LUA_HC_CODE: '',
+  LUA_LOCALSTORAGE_CODE: '',
 }))
 
 import {
@@ -42,6 +43,10 @@ describe('canvas-standalone', () => {
         totalTime: 0,
         keysDown: new Set<string>(),
         keysPressed: new Set<string>(),
+        keysDownArray: [],
+        keysPressedArray: [],
+        keysDownDirty: true,
+        keysPressedDirty: true,
         mouseX: 0,
         mouseY: 0,
         mouseButtonsDown: new Set<number>(),
@@ -50,6 +55,15 @@ describe('canvas-standalone', () => {
         currentFontFamily: 'monospace',
         stopResolve: null,
         audioAssets: new Map(),
+        previousGamepadButtons: [[], [], [], []],
+        currentGamepadStates: [
+          { connected: false, id: '', buttons: [], buttonsPressed: [], axes: [] },
+          { connected: false, id: '', buttons: [], buttonsPressed: [], axes: [] },
+          { connected: false, id: '', buttons: [], buttonsPressed: [], axes: [] },
+          { connected: false, id: '', buttons: [], buttonsPressed: [], axes: [] },
+        ],
+        pathRegistry: new Map(),
+        nextPathId: 1,
       }
     })
 

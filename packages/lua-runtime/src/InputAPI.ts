@@ -17,7 +17,7 @@ import { createEmptyInputState } from '@lua-learning/canvas-runtime'
 export interface IInputCapture {
   isKeyDown(code: string): boolean
   isKeyPressed(code: string): boolean
-  getKeysDown(): Set<string>
+  getKeysDown(): string[]
   getInputState(): InputState
   getMousePosition(): { x: number; y: number }
   isMouseButtonDown(button: number): boolean
@@ -70,11 +70,16 @@ export class InputAPI {
 
   /**
    * Get all keys currently held down.
+   *
+   * IMPORTANT: The returned array is cached and reused across calls.
+   * Callers must NOT mutate the returned array. This design eliminates
+   * GC pressure from input handling.
+   *
    * @returns Array of key codes, or empty array if InputCapture is null
    */
   getKeysDown(): string[] {
     if (!this.inputCapture) return []
-    return Array.from(this.inputCapture.getKeysDown())
+    return this.inputCapture.getKeysDown()
   }
 
   /**

@@ -106,9 +106,14 @@ export class InputCapture {
 
   /**
    * Get all keys currently held down.
+   *
+   * IMPORTANT: The returned array is cached and reused across calls.
+   * Callers must NOT mutate the returned array. This design eliminates
+   * GC pressure from input handling.
    */
-  getKeysDown(): Set<string> {
-    return new Set(this.keysDown);
+  getKeysDown(): string[] {
+    this.syncKeysDownArray();
+    return this.keysDownArray;
   }
 
   /**
@@ -281,9 +286,14 @@ export class InputCapture {
 
   /**
    * Get the number of connected gamepads.
+   * GC Optimization: Uses counting loop instead of .filter() to avoid allocation.
    */
   getConnectedGamepadCount(): number {
-    return this.gamepadStates.filter((g) => g.connected).length;
+    let count = 0;
+    for (const g of this.gamepadStates) {
+      if (g.connected) count++;
+    }
+    return count;
   }
 
   /**
