@@ -19,6 +19,23 @@ export class InputCapture {
   private mouseY = 0;
   private disposed = false;
 
+  // Cached arrays to avoid allocation on every getInputState() call.
+  // These arrays are reused and should not be mutated by callers.
+  private keysDownArray: string[] = [];
+  private keysPressedArray: string[] = [];
+  private mouseButtonsDownArray: number[] = [];
+  private mouseButtonsPressedArray: number[] = [];
+
+  // Dirty flags track when Sets have changed and arrays need re-syncing
+  private keysDownDirty = false;
+  private keysPressedDirty = false;
+  private mouseButtonsDownDirty = false;
+  private mouseButtonsPressedDirty = false;
+
+  // Cached InputState object to avoid allocation on every getInputState() call.
+  // Callers should not mutate the returned object or its arrays.
+  private readonly cachedInputState: InputState;
+
   // Gamepad state tracking
   private readonly gamepadStates: GamepadState[] = [];
   private readonly previousGamepadButtons: number[][] = [];
@@ -35,11 +52,23 @@ export class InputCapture {
   constructor(target: HTMLElement) {
     this.target = target;
 
-    // Initialize gamepad states
+    // Initialize gamepad states with pre-allocated arrays
     for (let i = 0; i < MAX_GAMEPADS; i++) {
       this.gamepadStates.push(createEmptyGamepadState());
       this.previousGamepadButtons.push([]);
     }
+
+    // Initialize cached InputState object with references to our cached arrays.
+    // The gamepads array is a reference that we'll update each frame.
+    this.cachedInputState = {
+      keysDown: this.keysDownArray,
+      keysPressed: this.keysPressedArray,
+      mouseX: 0,
+      mouseY: 0,
+      mouseButtonsDown: this.mouseButtonsDownArray,
+      mouseButtonsPressed: this.mouseButtonsPressedArray,
+      gamepads: this.gamepadStates,
+    };
 
     // Bind handlers
     this.handleKeyDown = this.onKeyDown.bind(this);
@@ -107,23 +136,82 @@ export class InputCapture {
 
   /**
    * Get the full input state for transmission over a channel.
+   *
+   * IMPORTANT: The returned object and its arrays are cached and reused
+   * across calls. Callers must NOT mutate the returned object or its arrays.
+   * This design eliminates GC pressure from input handling.
    */
   getInputState(): InputState {
-    return {
-      keysDown: Array.from(this.keysDown),
-      keysPressed: Array.from(this.keysPressed),
-      mouseX: this.mouseX,
-      mouseY: this.mouseY,
-      mouseButtonsDown: Array.from(this.mouseButtonsDown),
-      mouseButtonsPressed: Array.from(this.mouseButtonsPressed),
-      gamepads: this.getGamepadStates(),
-    };
+    // Sync cached arrays from Sets only if they've changed
+    this.syncKeysDownArray();
+    this.syncKeysPressedArray();
+    this.syncMouseButtonsDownArray();
+    this.syncMouseButtonsPressedArray();
+
+    // Update scalar values in cached state
+    this.cachedInputState.mouseX = this.mouseX;
+    this.cachedInputState.mouseY = this.mouseY;
+
+    // gamepadStates are already referenced by cachedInputState and updated in-place
+    return this.cachedInputState;
+  }
+
+  /**
+   * Sync keysDownArray from keysDown Set only when dirty.
+   */
+  private syncKeysDownArray(): void {
+    if (!this.keysDownDirty) return;
+    this.keysDownArray.length = 0;
+    for (const key of this.keysDown) {
+      this.keysDownArray.push(key);
+    }
+    this.keysDownDirty = false;
+  }
+
+  /**
+   * Sync keysPressedArray from keysPressed Set only when dirty.
+   */
+  private syncKeysPressedArray(): void {
+    if (!this.keysPressedDirty) return;
+    this.keysPressedArray.length = 0;
+    for (const key of this.keysPressed) {
+      this.keysPressedArray.push(key);
+    }
+    this.keysPressedDirty = false;
+  }
+
+  /**
+   * Sync mouseButtonsDownArray from mouseButtonsDown Set only when dirty.
+   */
+  private syncMouseButtonsDownArray(): void {
+    if (!this.mouseButtonsDownDirty) return;
+    this.mouseButtonsDownArray.length = 0;
+    for (const button of this.mouseButtonsDown) {
+      this.mouseButtonsDownArray.push(button);
+    }
+    this.mouseButtonsDownDirty = false;
+  }
+
+  /**
+   * Sync mouseButtonsPressedArray from mouseButtonsPressed Set only when dirty.
+   */
+  private syncMouseButtonsPressedArray(): void {
+    if (!this.mouseButtonsPressedDirty) return;
+    this.mouseButtonsPressedArray.length = 0;
+    for (const button of this.mouseButtonsPressed) {
+      this.mouseButtonsPressedArray.push(button);
+    }
+    this.mouseButtonsPressedDirty = false;
   }
 
   /**
    * Poll gamepad state from the Web Gamepad API.
    * Must be called each frame before getInputState() to update gamepad data.
    * The Gamepad API requires polling - there are no events for button/axis value changes.
+   *
+   * This method is optimized to avoid allocations in the hot path by:
+   * - Reusing buttonsPressed array (clearing and refilling in-place)
+   * - Using in-place copy for previousGamepadButtons
    */
   pollGamepads(): void {
     // navigator.getGamepads() may not exist in non-browser environments
@@ -144,9 +232,9 @@ export class InputCapture {
           state.connected = false;
           state.id = '';
           state.buttons.fill(0);
-          state.buttonsPressed = [];
+          state.buttonsPressed.length = 0;
           state.axes.fill(0);
-          this.previousGamepadButtons[i] = [];
+          this.previousGamepadButtons[i].length = 0;
         }
         continue;
       }
@@ -155,28 +243,33 @@ export class InputCapture {
       state.connected = gamepad.connected;
       state.id = gamepad.id;
 
-      // Track which buttons were newly pressed this frame
-      const newlyPressed: number[] = [];
+      // Clear buttonsPressed array in-place (reuse, no allocation)
+      state.buttonsPressed.length = 0;
 
       // Update button values
       const buttonCount = Math.min(gamepad.buttons.length, state.buttons.length);
+      const prevButtons = this.previousGamepadButtons[i];
       for (let b = 0; b < buttonCount; b++) {
         const buttonValue = gamepad.buttons[b].value;
-        const wasPressed = (this.previousGamepadButtons[i][b] ?? 0) > 0;
+        const wasPressed = (prevButtons[b] ?? 0) > 0;
         const isPressed = buttonValue > 0;
 
         state.buttons[b] = buttonValue;
 
         // Detect just-pressed (edge trigger)
         if (isPressed && !wasPressed) {
-          newlyPressed.push(b);
+          state.buttonsPressed.push(b);
         }
       }
 
-      state.buttonsPressed = newlyPressed;
-
-      // Store current button state for next frame comparison
-      this.previousGamepadButtons[i] = [...state.buttons];
+      // Copy current button state for next frame comparison (in-place, no spread)
+      // Ensure previousGamepadButtons array is long enough
+      if (prevButtons.length < buttonCount) {
+        prevButtons.length = buttonCount;
+      }
+      for (let b = 0; b < buttonCount; b++) {
+        prevButtons[b] = state.buttons[b];
+      }
 
       // Update axis values
       const axisCount = Math.min(gamepad.axes.length, state.axes.length);
@@ -194,36 +287,40 @@ export class InputCapture {
   }
 
   /**
-   * Get the current gamepad states.
-   * Returns copies of the internal gamepad states.
-   */
-  private getGamepadStates(): GamepadState[] {
-    return this.gamepadStates.map((g) => ({
-      connected: g.connected,
-      id: g.id,
-      buttons: [...g.buttons],
-      buttonsPressed: [...g.buttonsPressed],
-      axes: [...g.axes],
-    }));
-  }
-
-  /**
    * Update called at the end of each frame.
    * Clears the "just pressed" state for keys and buttons.
    */
   update(): void {
-    this.keysPressed.clear();
-    this.mouseButtonsPressed.clear();
+    if (this.keysPressed.size > 0) {
+      this.keysPressed.clear();
+      this.keysPressedDirty = true;
+    }
+    if (this.mouseButtonsPressed.size > 0) {
+      this.mouseButtonsPressed.clear();
+      this.mouseButtonsPressedDirty = true;
+    }
   }
 
   /**
    * Reset all input state.
    */
   reset(): void {
-    this.keysDown.clear();
-    this.keysPressed.clear();
-    this.mouseButtonsDown.clear();
-    this.mouseButtonsPressed.clear();
+    if (this.keysDown.size > 0) {
+      this.keysDown.clear();
+      this.keysDownDirty = true;
+    }
+    if (this.keysPressed.size > 0) {
+      this.keysPressed.clear();
+      this.keysPressedDirty = true;
+    }
+    if (this.mouseButtonsDown.size > 0) {
+      this.mouseButtonsDown.clear();
+      this.mouseButtonsDownDirty = true;
+    }
+    if (this.mouseButtonsPressed.size > 0) {
+      this.mouseButtonsPressed.clear();
+      this.mouseButtonsPressedDirty = true;
+    }
     this.mouseX = 0;
     this.mouseY = 0;
   }
@@ -247,12 +344,15 @@ export class InputCapture {
   private onKeyDown(event: KeyboardEvent): void {
     if (!this.keysDown.has(event.code)) {
       this.keysPressed.add(event.code);
+      this.keysPressedDirty = true;
     }
     this.keysDown.add(event.code);
+    this.keysDownDirty = true;
   }
 
   private onKeyUp(event: KeyboardEvent): void {
     this.keysDown.delete(event.code);
+    this.keysDownDirty = true;
   }
 
   private onMouseMove(event: MouseEvent): void {
@@ -308,12 +408,15 @@ export class InputCapture {
   private onMouseDown(event: MouseEvent): void {
     if (!this.mouseButtonsDown.has(event.button)) {
       this.mouseButtonsPressed.add(event.button);
+      this.mouseButtonsPressedDirty = true;
     }
     this.mouseButtonsDown.add(event.button);
+    this.mouseButtonsDownDirty = true;
   }
 
   private onMouseUp(event: MouseEvent): void {
     this.mouseButtonsDown.delete(event.button);
+    this.mouseButtonsDownDirty = true;
   }
 
   private onContextMenu(event: MouseEvent): void {
@@ -323,9 +426,21 @@ export class InputCapture {
 
   private onBlur(): void {
     // Clear all input state on blur to prevent stuck keys/buttons
-    this.keysDown.clear();
-    this.keysPressed.clear();
-    this.mouseButtonsDown.clear();
-    this.mouseButtonsPressed.clear();
+    if (this.keysDown.size > 0) {
+      this.keysDown.clear();
+      this.keysDownDirty = true;
+    }
+    if (this.keysPressed.size > 0) {
+      this.keysPressed.clear();
+      this.keysPressedDirty = true;
+    }
+    if (this.mouseButtonsDown.size > 0) {
+      this.mouseButtonsDown.clear();
+      this.mouseButtonsDownDirty = true;
+    }
+    if (this.mouseButtonsPressed.size > 0) {
+      this.mouseButtonsPressed.clear();
+      this.mouseButtonsPressedDirty = true;
+    }
   }
 }

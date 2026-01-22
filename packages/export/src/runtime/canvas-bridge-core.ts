@@ -46,6 +46,11 @@ export function createCanvasRuntimeState(
     currentFontFamily: 'monospace',
     stopResolve: null,
     previousGamepadButtons: [[], [], [], []], // 4 gamepads max
+    // Cached arrays to avoid allocation on every getKeysDown/getKeysPressed call
+    keysDownArray: [],
+    keysPressedArray: [],
+    keysDownDirty: false,
+    keysPressedDirty: false,
   }
 }
 
@@ -56,12 +61,15 @@ export function setupInputListeners(state: CanvasRuntimeState): () => void {
   const handleKeyDown = (e: KeyboardEvent) => {
     if (!state.keysDown.has(e.code)) {
       state.keysPressed.add(e.code)
+      state.keysPressedDirty = true
     }
     state.keysDown.add(e.code)
+    state.keysDownDirty = true
   }
 
   const handleKeyUp = (e: KeyboardEvent) => {
     state.keysDown.delete(e.code)
+    state.keysDownDirty = true
   }
 
   const handleMouseMove = (e: MouseEvent) => {
@@ -131,17 +139,27 @@ function startGameLoop(state: CanvasRuntimeState): void {
     }
 
     // Clear pressed states after processing
-    state.keysPressed.clear()
+    if (state.keysPressed.size > 0) {
+      state.keysPressed.clear()
+      state.keysPressedDirty = true
+    }
     state.mouseButtonsPressed.clear()
 
-    // Update previous gamepad button states for next frame
+    // Update previous gamepad button states for next frame (in-place, no allocation)
     const gamepads = navigator.getGamepads?.() ?? []
     for (let i = 0; i < 4; i++) {
       const gamepad = gamepads[i]
+      const prevButtons = state.previousGamepadButtons[i]
       if (gamepad?.connected) {
-        state.previousGamepadButtons[i] = gamepad.buttons.map((b) => b.value)
+        const buttonCount = gamepad.buttons.length
+        // Ensure array matches button count
+        prevButtons.length = buttonCount
+        // Copy button values in-place
+        for (let b = 0; b < buttonCount; b++) {
+          prevButtons[b] = gamepad.buttons[b].value
+        }
       } else {
-        state.previousGamepadButtons[i] = []
+        prevButtons.length = 0
       }
     }
 
@@ -366,10 +384,28 @@ export class CoreCanvasBridge implements CanvasBridge {
     engine.global.set('__canvas_isKeyPressed', (key: string) =>
       state.keysPressed.has(key)
     )
-    engine.global.set('__canvas_getKeysDown', () => Array.from(state.keysDown))
-    engine.global.set('__canvas_getKeysPressed', () =>
-      Array.from(state.keysPressed)
-    )
+    engine.global.set('__canvas_getKeysDown', () => {
+      // Sync cached array from Set only when dirty
+      if (state.keysDownDirty) {
+        state.keysDownArray.length = 0
+        for (const key of state.keysDown) {
+          state.keysDownArray.push(key)
+        }
+        state.keysDownDirty = false
+      }
+      return state.keysDownArray
+    })
+    engine.global.set('__canvas_getKeysPressed', () => {
+      // Sync cached array from Set only when dirty
+      if (state.keysPressedDirty) {
+        state.keysPressedArray.length = 0
+        for (const key of state.keysPressed) {
+          state.keysPressedArray.push(key)
+        }
+        state.keysPressedDirty = false
+      }
+      return state.keysPressedArray
+    })
     engine.global.set('__canvas_getMouseX', () => state.mouseX)
     engine.global.set('__canvas_getMouseY', () => state.mouseY)
     engine.global.set('__canvas_isMouseDown', (button: number) =>
