@@ -902,8 +902,8 @@ export interface SetFilterCommand extends DrawCommandBase {
  */
 export interface PutImageDataCommand extends DrawCommandBase {
   type: 'putImageData';
-  /** Pixel data as flat RGBA array */
-  data: number[];
+  /** Pixel data as flat RGBA array (number[] or Uint8ClampedArray for zero-copy optimization) */
+  data: number[] | Uint8ClampedArray;
   /** Width of the image data */
   width: number;
   /** Height of the image data */

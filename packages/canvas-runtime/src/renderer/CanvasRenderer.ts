@@ -324,9 +324,12 @@ export class CanvasRenderer {
    * Write pixel data to the canvas from a raw RGBA array.
    * Used by the putImageData DrawCommand.
    * Supports optional dirty rect parameters to draw only a sub-region.
+   *
+   * Optimization: If data is already a Uint8ClampedArray, use it directly
+   * to avoid unnecessary allocation (Issue #603 GC pressure fix).
    */
   private putImageDataFromArray(
-    data: number[],
+    data: number[] | Uint8ClampedArray,
     width: number,
     height: number,
     dx: number,
@@ -336,7 +339,14 @@ export class CanvasRenderer {
     dirtyWidth?: number,
     dirtyHeight?: number
   ): void {
-    const imageData = new ImageData(new Uint8ClampedArray(data), width, height);
+    // Use Uint8ClampedArray directly if already the right type, otherwise convert
+    // Note: Type assertion needed because Uint8ClampedArray<ArrayBufferLike> is not assignable
+    // to the ImageData constructor's expected Uint8ClampedArray<ArrayBuffer>, but our pixel data
+    // never uses SharedArrayBuffer, so this is safe.
+    const pixelData = data instanceof Uint8ClampedArray
+      ? (data as Uint8ClampedArray<ArrayBuffer>)
+      : new Uint8ClampedArray(data);
+    const imageData = new ImageData(pixelData, width, height);
     // Use dirty rect if any dirty parameter is provided
     if (dirtyX !== undefined || dirtyY !== undefined || dirtyWidth !== undefined || dirtyHeight !== undefined) {
       this.ctx.putImageData(

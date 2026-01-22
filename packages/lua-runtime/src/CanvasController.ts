@@ -1502,7 +1502,7 @@ export class CanvasController {
 
   /**
    * Write pixel data to the canvas.
-   * @param data - Array of RGBA values
+   * @param data - Array of RGBA values (number[] or Uint8ClampedArray for zero-copy optimization)
    * @param width - Width of the image data
    * @param height - Height of the image data
    * @param dx - Destination X coordinate
@@ -1513,7 +1513,7 @@ export class CanvasController {
    * @param dirtyHeight - Optional dirty rect height (sub-region to draw)
    */
   putImageData(
-    data: number[],
+    data: number[] | Uint8ClampedArray,
     width: number,
     height: number,
     dx: number,

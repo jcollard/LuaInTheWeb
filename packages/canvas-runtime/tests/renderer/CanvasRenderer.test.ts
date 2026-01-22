@@ -2281,4 +2281,107 @@ describe('CanvasRenderer', () => {
       expect(result).toBe(mockImageData);
     });
   });
+
+  // ============================================================================
+  // putImageData Command Tests (Issue #603 - GC Pressure Optimization)
+  // ============================================================================
+
+  describe('putImageData command', () => {
+    beforeEach(() => {
+      (mockCtx as unknown as { putImageData: ReturnType<typeof vi.fn> }).putImageData = vi.fn();
+    });
+
+    it('should accept number[] data and create ImageData for ctx.putImageData', () => {
+      // 2x2 red pixels
+      const data = [255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255];
+      const commands: DrawCommand[] = [
+        { type: 'putImageData', data, width: 2, height: 2, dx: 10, dy: 20 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.putImageData).toHaveBeenCalledTimes(1);
+      const call = (mockCtx.putImageData as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(call[0]).toBeInstanceOf(ImageData);
+      expect(call[0].width).toBe(2);
+      expect(call[0].height).toBe(2);
+      expect(call[1]).toBe(10);
+      expect(call[2]).toBe(20);
+    });
+
+    it('should accept Uint8ClampedArray data and create ImageData for ctx.putImageData', () => {
+      // 2x2 green pixels
+      const data = new Uint8ClampedArray([0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255]);
+      const commands: DrawCommand[] = [
+        { type: 'putImageData', data, width: 2, height: 2, dx: 30, dy: 40 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.putImageData).toHaveBeenCalledTimes(1);
+      const call = (mockCtx.putImageData as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(call[0]).toBeInstanceOf(ImageData);
+      expect(call[0].width).toBe(2);
+      expect(call[0].height).toBe(2);
+      expect(call[1]).toBe(30);
+      expect(call[2]).toBe(40);
+    });
+
+    it('should preserve pixel values when using Uint8ClampedArray', () => {
+      // Specific pixel pattern to verify data integrity
+      const data = new Uint8ClampedArray([100, 150, 200, 255, 50, 60, 70, 80]);
+      const commands: DrawCommand[] = [
+        { type: 'putImageData', data, width: 2, height: 1, dx: 0, dy: 0 },
+      ];
+
+      renderer.render(commands);
+
+      const call = (mockCtx.putImageData as ReturnType<typeof vi.fn>).mock.calls[0];
+      const imageData = call[0] as ImageData;
+      // Verify pixel values are preserved
+      expect(imageData.data[0]).toBe(100);
+      expect(imageData.data[1]).toBe(150);
+      expect(imageData.data[2]).toBe(200);
+      expect(imageData.data[3]).toBe(255);
+      expect(imageData.data[4]).toBe(50);
+      expect(imageData.data[5]).toBe(60);
+      expect(imageData.data[6]).toBe(70);
+      expect(imageData.data[7]).toBe(80);
+    });
+
+    it('should handle dirty rect parameters with number[] data', () => {
+      const data = [255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255, 255, 0, 0, 255];
+      const commands: DrawCommand[] = [
+        { type: 'putImageData', data, width: 2, height: 2, dx: 10, dy: 20, dirtyX: 0, dirtyY: 0, dirtyWidth: 1, dirtyHeight: 1 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.putImageData).toHaveBeenCalledTimes(1);
+      const call = (mockCtx.putImageData as ReturnType<typeof vi.fn>).mock.calls[0];
+      // With dirty rect, putImageData is called with 7 arguments
+      expect(call.length).toBe(7);
+      expect(call[3]).toBe(0); // dirtyX
+      expect(call[4]).toBe(0); // dirtyY
+      expect(call[5]).toBe(1); // dirtyWidth
+      expect(call[6]).toBe(1); // dirtyHeight
+    });
+
+    it('should handle dirty rect parameters with Uint8ClampedArray data', () => {
+      const data = new Uint8ClampedArray([0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255, 0, 255]);
+      const commands: DrawCommand[] = [
+        { type: 'putImageData', data, width: 2, height: 2, dx: 5, dy: 10, dirtyX: 1, dirtyY: 1, dirtyWidth: 1, dirtyHeight: 1 },
+      ];
+
+      renderer.render(commands);
+
+      expect(mockCtx.putImageData).toHaveBeenCalledTimes(1);
+      const call = (mockCtx.putImageData as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(call.length).toBe(7);
+      expect(call[3]).toBe(1); // dirtyX
+      expect(call[4]).toBe(1); // dirtyY
+      expect(call[5]).toBe(1); // dirtyWidth
+      expect(call[6]).toBe(1); // dirtyHeight
+    });
+  });
 });
