@@ -79,7 +79,21 @@ export interface IPathAPI {
  */
 export class PathAPI implements IPathAPI {
   private currentPath: Path2D = new Path2D()
+  private needsNewPath = false
   private addDrawCommand: ((cmd: DrawCommand) => void) | null = null
+
+  /**
+   * Ensure currentPath is ready for use.
+   * Creates a new Path2D lazily if needed (after beginPath was called).
+   * This reduces GC pressure by avoiding Path2D creation when beginPath
+   * is called but no path operations follow.
+   */
+  private ensurePath(): void {
+    if (this.needsNewPath) {
+      this.currentPath = new Path2D()
+      this.needsNewPath = false
+    }
+  }
 
   /**
    * Set the callback for adding draw commands.
@@ -96,9 +110,11 @@ export class PathAPI implements IPathAPI {
 
   /**
    * Begin a new path, clearing any existing path data.
+   * Uses lazy Path2D creation to reduce GC pressure - the new Path2D
+   * is only created when a path operation is actually performed.
    */
   beginPath(): void {
-    this.currentPath = new Path2D()
+    this.needsNewPath = true
     this.addDrawCommand?.({ type: 'beginPath' })
   }
 
@@ -106,6 +122,7 @@ export class PathAPI implements IPathAPI {
    * Close the current path by drawing a line to the starting point.
    */
   closePath(): void {
+    this.ensurePath()
     this.currentPath.closePath()
     this.addDrawCommand?.({ type: 'closePath' })
   }
@@ -120,6 +137,7 @@ export class PathAPI implements IPathAPI {
    * @param y - Y coordinate
    */
   moveTo(x: number, y: number): void {
+    this.ensurePath()
     this.currentPath.moveTo(x, y)
     this.addDrawCommand?.({ type: 'moveTo', x, y })
   }
@@ -130,6 +148,7 @@ export class PathAPI implements IPathAPI {
    * @param y - Y coordinate
    */
   lineTo(x: number, y: number): void {
+    this.ensurePath()
     this.currentPath.lineTo(x, y)
     this.addDrawCommand?.({ type: 'lineTo', x, y })
   }
@@ -151,6 +170,7 @@ export class PathAPI implements IPathAPI {
     endAngle: number,
     counterclockwise?: boolean
   ): void {
+    this.ensurePath()
     this.currentPath.arc(x, y, radius, startAngle, endAngle, counterclockwise)
     this.addDrawCommand?.({ type: 'arc', x, y, radius, startAngle, endAngle, counterclockwise })
   }
@@ -164,6 +184,7 @@ export class PathAPI implements IPathAPI {
    * @param radius - Arc radius
    */
   arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): void {
+    this.ensurePath()
     this.currentPath.arcTo(x1, y1, x2, y2, radius)
     this.addDrawCommand?.({ type: 'arcTo', x1, y1, x2, y2, radius })
   }
@@ -176,6 +197,7 @@ export class PathAPI implements IPathAPI {
    * @param y - Y coordinate of the end point
    */
   quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void {
+    this.ensurePath()
     this.currentPath.quadraticCurveTo(cpx, cpy, x, y)
     this.addDrawCommand?.({ type: 'quadraticCurveTo', cpx, cpy, x, y })
   }
@@ -197,6 +219,7 @@ export class PathAPI implements IPathAPI {
     x: number,
     y: number
   ): void {
+    this.ensurePath()
     this.currentPath.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x, y)
     this.addDrawCommand?.({ type: 'bezierCurveTo', cp1x, cp1y, cp2x, cp2y, x, y })
   }
@@ -222,6 +245,7 @@ export class PathAPI implements IPathAPI {
     endAngle: number,
     counterclockwise?: boolean
   ): void {
+    this.ensurePath()
     this.currentPath.ellipse(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise)
     this.addDrawCommand?.({
       type: 'ellipse',
@@ -245,6 +269,7 @@ export class PathAPI implements IPathAPI {
    * @param radii - Corner radii (single value or array of 1-4 values)
    */
   roundRect(x: number, y: number, width: number, height: number, radii: number | number[]): void {
+    this.ensurePath()
     this.currentPath.roundRect(x, y, width, height, radii)
     this.addDrawCommand?.({ type: 'roundRect', x, y, width, height, radii })
   }
@@ -258,6 +283,7 @@ export class PathAPI implements IPathAPI {
    * @param height - Height of the rectangle
    */
   rectPath(x: number, y: number, width: number, height: number): void {
+    this.ensurePath()
     this.currentPath.rect(x, y, width, height)
     this.addDrawCommand?.({ type: 'rectPath', x, y, width, height })
   }
@@ -295,9 +321,11 @@ export class PathAPI implements IPathAPI {
 
   /**
    * Get the current path for hit testing.
+   * Triggers lazy Path2D creation if needed.
    * @returns The current Path2D object
    */
   getCurrentPath(): Path2D {
+    this.ensurePath()
     return this.currentPath
   }
 }

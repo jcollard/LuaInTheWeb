@@ -6,9 +6,15 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+// Track Path2D instantiations for lazy creation tests
+let path2DInstantiationCount = 0
+function resetPath2DInstantiationCount() { path2DInstantiationCount = 0 }
+function getPath2DInstantiationCount() { return path2DInstantiationCount }
+
 // Mock Path2D for jsdom environment (which doesn't have Path2D)
 class MockPath2D {
   commands: unknown[] = []
+  constructor() { path2DInstantiationCount++ }
   moveTo(x: number, y: number) { this.commands.push(['moveTo', x, y]) }
   lineTo(x: number, y: number) { this.commands.push(['lineTo', x, y]) }
   closePath() { this.commands.push(['closePath']) }
@@ -32,6 +38,7 @@ describe('PathAPI', () => {
   let mockAddDrawCommand: ReturnType<typeof vi.fn<[DrawCommand], void>>
 
   beforeEach(() => {
+    resetPath2DInstantiationCount()
     pathAPI = new PathAPI()
     mockAddDrawCommand = vi.fn()
   })
@@ -89,9 +96,11 @@ describe('PathAPI', () => {
         expect(mockAddDrawCommand).toHaveBeenCalledWith({ type: 'beginPath' })
       })
 
-      it('should create a new Path2D instance', () => {
+      it('should create a new Path2D instance after first path operation (lazy creation)', () => {
         const oldPath = pathAPI.getCurrentPath()
         pathAPI.beginPath()
+        // Path operation triggers lazy creation
+        pathAPI.moveTo(0, 0)
         const newPath = pathAPI.getCurrentPath()
         expect(newPath).not.toBe(oldPath)
         expect(newPath).toBeInstanceOf(Path2D)
@@ -497,12 +506,86 @@ describe('PathAPI', () => {
       expect(path1).toBe(path2)
     })
 
-    it('should return a new Path2D after beginPath', () => {
+    it('should return a new Path2D after beginPath (lazy creation triggered by getCurrentPath)', () => {
       pathAPI.setAddDrawCommand(mockAddDrawCommand)
       const path1 = pathAPI.getCurrentPath()
       pathAPI.beginPath()
+      // getCurrentPath triggers lazy creation
       const path2 = pathAPI.getCurrentPath()
       expect(path1).not.toBe(path2)
+    })
+  })
+
+  describe('lazy Path2D creation (GC pressure reduction)', () => {
+    beforeEach(() => {
+      pathAPI.setAddDrawCommand(mockAddDrawCommand)
+    })
+
+    it('should not create a new Path2D immediately on beginPath()', () => {
+      const initialCount = getPath2DInstantiationCount()
+      pathAPI.beginPath()
+      // No new Path2D should be created yet
+      expect(getPath2DInstantiationCount()).toBe(initialCount)
+    })
+
+    it('should create Path2D lazily on first path operation after beginPath()', () => {
+      const initialCount = getPath2DInstantiationCount()
+      pathAPI.beginPath()
+      expect(getPath2DInstantiationCount()).toBe(initialCount)
+      pathAPI.moveTo(10, 20)
+      // Now a new Path2D should be created
+      expect(getPath2DInstantiationCount()).toBe(initialCount + 1)
+    })
+
+    it('should not create additional Path2D on subsequent path operations', () => {
+      pathAPI.beginPath()
+      pathAPI.moveTo(0, 0)
+      const countAfterFirst = getPath2DInstantiationCount()
+      pathAPI.lineTo(10, 10)
+      pathAPI.lineTo(20, 20)
+      pathAPI.arc(50, 50, 25, 0, Math.PI)
+      // No additional Path2D should be created
+      expect(getPath2DInstantiationCount()).toBe(countAfterFirst)
+    })
+
+    it('should avoid allocations for multiple beginPath() calls without operations', () => {
+      const initialCount = getPath2DInstantiationCount()
+      pathAPI.beginPath()
+      pathAPI.beginPath()
+      pathAPI.beginPath()
+      // No Path2D created - all lazy
+      expect(getPath2DInstantiationCount()).toBe(initialCount)
+    })
+
+    it('should create Path2D when getCurrentPath() is called', () => {
+      const initialCount = getPath2DInstantiationCount()
+      pathAPI.beginPath()
+      expect(getPath2DInstantiationCount()).toBe(initialCount)
+      pathAPI.getCurrentPath()
+      // getCurrentPath triggers lazy creation
+      expect(getPath2DInstantiationCount()).toBe(initialCount + 1)
+    })
+
+    it('should trigger lazy creation for each path building method', () => {
+      const pathOps = [
+        () => pathAPI.moveTo(0, 0),
+        () => pathAPI.lineTo(10, 10),
+        () => pathAPI.arc(50, 50, 25, 0, Math.PI),
+        () => pathAPI.arcTo(10, 20, 30, 40, 15),
+        () => pathAPI.quadraticCurveTo(10, 10, 20, 20),
+        () => pathAPI.bezierCurveTo(10, 10, 20, 20, 30, 30),
+        () => pathAPI.ellipse(50, 50, 30, 20, 0, 0, Math.PI * 2),
+        () => pathAPI.roundRect(0, 0, 100, 50, 5),
+        () => pathAPI.rectPath(0, 0, 100, 100),
+        () => pathAPI.closePath(),
+      ]
+
+      for (const op of pathOps) {
+        pathAPI.beginPath()
+        const countBefore = getPath2DInstantiationCount()
+        op()
+        expect(getPath2DInstantiationCount()).toBe(countBefore + 1)
+      }
     })
   })
 
