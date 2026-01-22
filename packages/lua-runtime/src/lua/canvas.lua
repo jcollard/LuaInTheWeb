@@ -1838,6 +1838,7 @@ function canvas.create_path(arg) end
 --- Get the RGBA values of a pixel at the specified coordinates.
 --- Coordinates are 0-indexed (x: 0 to width-1, y: 0 to height-1).
 --- Returns 0, 0, 0, 0 for out-of-bounds coordinates.
+--- Allocations: Minimal (returns 4 values). Time: O(1).
 ---@param x number X coordinate (0-indexed)
 ---@param y number Y coordinate (0-indexed)
 ---@return number r Red component (0-255)
@@ -1851,6 +1852,7 @@ function ImageData:get_pixel(x, y) end
 --- Set the RGBA values of a pixel at the specified coordinates.
 --- Coordinates are 0-indexed (x: 0 to width-1, y: 0 to height-1).
 --- Does nothing for out-of-bounds coordinates.
+--- Allocations: None (direct array mutation). Time: O(1).
 ---@param x number X coordinate (0-indexed)
 ---@param y number Y coordinate (0-indexed)
 ---@param r number Red component (0-255)
@@ -1863,8 +1865,21 @@ function ImageData:get_pixel(x, y) end
 ---@usage img:set_pixel(51, 50, 0, 255, 0, 128)  -- Semi-transparent green
 function ImageData:set_pixel(x, y, r, g, b, a) end
 
+--- Explicitly release the memory used by this ImageData object.
+--- Call this when you're done with an ImageData to free memory immediately
+--- rather than waiting for garbage collection.
+--- Allocations: None (frees memory).
+---@return nil
+---@usage local img = canvas.get_image_data(0, 0, 400, 400)
+---@usage -- Process image...
+---@usage canvas.put_image_data(img, 0, 0)
+---@usage img:dispose()  -- Free memory immediately
+function ImageData:dispose() end
+
 --- Create a new empty ImageData buffer filled with transparent black.
 --- Use this to create pixel data for procedural generation.
+--- Allocations: Creates a new pixel buffer of size width × height × 4 bytes.
+--- Call once and reuse the ImageData object when possible.
 ---@param width number Width in pixels
 ---@param height number Height in pixels
 ---@return ImageData image_data New ImageData filled with transparent black (0, 0, 0, 0)
@@ -1883,6 +1898,8 @@ function canvas.create_image_data(width, height) end
 --- Read pixel data from a region of the canvas.
 --- Returns an ImageData object containing the pixel values from the specified region.
 --- Use :get_pixel() to access individual pixels.
+--- Allocations: Creates a new pixel buffer of size width × height × 4 bytes.
+--- Avoid calling every frame for large regions.
 ---@param x number X coordinate of the top-left corner
 ---@param y number Y coordinate of the top-left corner
 ---@param width number Width of the region to read
@@ -1915,6 +1932,7 @@ function canvas.get_image_data(x, y, width, height) end
 --- Write pixel data to the canvas at the specified position.
 --- Draws the ImageData buffer to the canvas at coordinates (dx, dy).
 --- Optionally specify a "dirty rectangle" to only write a portion of the image data.
+--- Allocations: Minimal - uses existing pixel buffer directly. Safe to call every frame.
 ---@param image_data ImageData The pixel data to write
 ---@param dx number Destination X coordinate
 ---@param dy number Destination Y coordinate
@@ -1947,6 +1965,7 @@ function canvas.put_image_data(image_data, dx, dy, options) end
 --- The cloned object has independent pixel data - modifications to the clone
 --- do not affect the original, and vice versa.
 --- Useful for caching pixel effects or creating variations of an image.
+--- Allocations: Creates a full copy of the pixel buffer. Use sparingly for large images.
 ---@param image_data ImageData The ImageData to clone
 ---@return ImageData|nil cloned_data New ImageData with copied pixel values, or nil if input is invalid
 ---@usage -- Clone and apply different effects
