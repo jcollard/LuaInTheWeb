@@ -118,16 +118,18 @@ describe('InputCapture', () => {
     });
 
     describe('getKeysDown', () => {
-      it('should return empty set when no keys pressed', () => {
-        expect(inputCapture.getKeysDown()).toEqual(new Set());
+      it('should return empty array when no keys pressed', () => {
+        expect(inputCapture.getKeysDown()).toEqual([]);
       });
 
-      it('should return set of all pressed keys', () => {
+      it('should return array of all pressed keys', () => {
         target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
         target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
 
         const keysDown = inputCapture.getKeysDown();
-        expect(keysDown).toEqual(new Set(['KeyA', 'KeyW']));
+        expect(keysDown).toHaveLength(2);
+        expect(keysDown).toContain('KeyA');
+        expect(keysDown).toContain('KeyW');
       });
     });
   });
@@ -535,7 +537,7 @@ describe('InputCapture', () => {
 
       expect(inputCapture.isKeyDown('KeyA')).toBe(false);
       expect(inputCapture.isMouseButtonDown(0)).toBe(false);
-      expect(inputCapture.getKeysDown()).toEqual(new Set());
+      expect(inputCapture.getKeysDown()).toEqual([]);
     });
   });
 

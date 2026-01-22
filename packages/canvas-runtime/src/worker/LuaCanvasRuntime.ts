@@ -179,7 +179,7 @@ export class LuaCanvasRuntime {
     // Send any initialization commands (like set_size called at top level)
     if (this.frameCommands.length > 0) {
       this.channel.sendDrawCommands(this.frameCommands);
-      this.frameCommands = [];
+      this.frameCommands.length = 0; // Clear in-place to avoid GC pressure
     }
 
     this.state = 'running';
@@ -1821,8 +1821,8 @@ export class LuaCanvasRuntime {
           break;
         }
 
-        // Clear frame commands
-        this.frameCommands = [];
+        // Clear frame commands in-place to avoid GC pressure
+        this.frameCommands.length = 0;
 
         // Execute the onDraw callback
         if (this.onDrawCallback) {

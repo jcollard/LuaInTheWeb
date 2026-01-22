@@ -172,15 +172,15 @@ describe('InputAPI', () => {
         expect(inputAPI.getKeysDown()).toEqual([])
       })
 
-      it('should convert Set to array from InputCapture', () => {
+      it('should return array from InputCapture', () => {
         const inputAPI = new InputAPI(mockInputCapture)
-        mockInputCapture.getKeysDown.mockReturnValue(new Set(['KeyA', 'KeyB']))
+        mockInputCapture.getKeysDown.mockReturnValue(['KeyA', 'KeyB'])
         expect(inputAPI.getKeysDown()).toEqual(['KeyA', 'KeyB'])
       })
 
       it('should return empty array when no keys are down', () => {
         const inputAPI = new InputAPI(mockInputCapture)
-        mockInputCapture.getKeysDown.mockReturnValue(new Set())
+        mockInputCapture.getKeysDown.mockReturnValue([])
         expect(inputAPI.getKeysDown()).toEqual([])
       })
     })

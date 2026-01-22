@@ -26,6 +26,7 @@ import type { LuaEngine } from 'wasmoon'
  */
 export interface GamepadState {
   connected: boolean
+  id: string
   buttons: number[]
   buttonsPressed: boolean[]
   axes: number[]
@@ -37,6 +38,7 @@ export interface GamepadState {
 function createEmptyGamepadState(): GamepadState {
   return {
     connected: false,
+    id: '',
     buttons: [],
     buttonsPressed: [],
     axes: [],
@@ -74,6 +76,11 @@ export interface CanvasRuntimeState {
   totalTime: number
   keysDown: Set<string>
   keysPressed: Set<string>
+  // Cached arrays for getKeysDown/getKeysPressed - rebuilt only when dirty
+  keysDownArray: string[]
+  keysPressedArray: string[]
+  keysDownDirty: boolean
+  keysPressedDirty: boolean
   mouseX: number
   mouseY: number
   mouseButtonsDown: Set<number>
@@ -114,6 +121,11 @@ export function createCanvasRuntimeState(
     totalTime: 0,
     keysDown: new Set(),
     keysPressed: new Set(),
+    // Cached arrays for getKeysDown/getKeysPressed - rebuilt only when dirty
+    keysDownArray: [],
+    keysPressedArray: [],
+    keysDownDirty: true,
+    keysPressedDirty: true,
     mouseX: 0,
     mouseY: 0,
     mouseButtonsDown: new Set(),
@@ -145,12 +157,15 @@ export function setupInputListeners(state: CanvasRuntimeState): () => void {
   const handleKeyDown = (e: KeyboardEvent) => {
     if (!state.keysDown.has(e.code)) {
       state.keysPressed.add(e.code)
+      state.keysPressedDirty = true
     }
     state.keysDown.add(e.code)
+    state.keysDownDirty = true
   }
 
   const handleKeyUp = (e: KeyboardEvent) => {
     state.keysDown.delete(e.code)
+    state.keysDownDirty = true
   }
 
   const handleMouseMove = (e: MouseEvent) => {
@@ -201,6 +216,8 @@ export function setupInputListeners(state: CanvasRuntimeState): () => void {
  * Poll gamepad state once per frame.
  * Updates currentGamepadStates with fresh button/axis values and calculates
  * which buttons were just pressed this frame.
+ *
+ * GC Optimization: Uses in-place array updates instead of creating new arrays.
  */
 function pollGamepads(state: CanvasRuntimeState): void {
   const gamepads = navigator.getGamepads?.() ?? []
@@ -210,26 +227,49 @@ function pollGamepads(state: CanvasRuntimeState): void {
     const cached = state.currentGamepadStates[i]
     const prevButtons = state.previousGamepadButtons[i]
 
-    if (gamepad?.connected) {
-      cached.connected = true
-      cached.buttons = gamepad.buttons.map((b) => b.value)
-      cached.axes = [...gamepad.axes]
+    if (!gamepad?.connected) {
+      if (cached.connected) {
+        cached.connected = false
+        cached.id = ''
+        // Clear in-place instead of = []
+        cached.buttons.length = 0
+        cached.buttonsPressed.length = 0
+        cached.axes.length = 0
+        prevButtons.length = 0
+      }
+      continue
+    }
 
-      // Calculate which buttons were just pressed this frame
-      cached.buttonsPressed = gamepad.buttons.map((b, buttonIndex) => {
-        const currentValue = b.value
-        const prevValue = prevButtons[buttonIndex] ?? 0
-        return currentValue > 0 && prevValue === 0
-      })
+    cached.connected = true
+    cached.id = gamepad.id
 
-      // Update previous state for next frame
-      state.previousGamepadButtons[i] = cached.buttons.slice()
-    } else {
-      cached.connected = false
-      cached.buttons = []
-      cached.buttonsPressed = []
-      cached.axes = []
-      state.previousGamepadButtons[i] = []
+    const buttonCount = gamepad.buttons.length
+    const axisCount = gamepad.axes.length
+
+    // Resize arrays to match gamepad (in-place)
+    cached.buttons.length = buttonCount
+    cached.buttonsPressed.length = buttonCount
+    cached.axes.length = axisCount
+
+    // Ensure prevButtons has correct size
+    if (prevButtons.length !== buttonCount) {
+      prevButtons.length = buttonCount
+      for (let b = 0; b < buttonCount; b++) {
+        prevButtons[b] = 0
+      }
+    }
+
+    // Update in-place (no new arrays)
+    for (let b = 0; b < buttonCount; b++) {
+      const value = gamepad.buttons[b].value
+      cached.buttons[b] = value
+      // Button just pressed if value > 0 and wasn't before
+      cached.buttonsPressed[b] = value > 0 && prevButtons[b] === 0
+      prevButtons[b] = value
+    }
+
+    for (let a = 0; a < axisCount; a++) {
+      cached.axes[a] = gamepad.axes[a]
     }
   }
 }
@@ -267,7 +307,10 @@ function startGameLoop(state: CanvasRuntimeState): void {
     }
 
     // Clear pressed states after processing
-    state.keysPressed.clear()
+    if (state.keysPressed.size > 0) {
+      state.keysPressed.clear()
+      state.keysPressedDirty = true
+    }
     state.mouseButtonsPressed.clear()
 
     // Continue loop
@@ -495,10 +538,27 @@ export function setupCanvasBridge(
   engine.global.set('__canvas_isKeyPressed', (key: string) =>
     state.keysPressed.has(key)
   )
-  engine.global.set('__canvas_getKeysDown', () => Array.from(state.keysDown))
-  engine.global.set('__canvas_getKeysPressed', () =>
-    Array.from(state.keysPressed)
-  )
+  // GC Optimization: Use cached arrays, rebuilt only when dirty
+  engine.global.set('__canvas_getKeysDown', () => {
+    if (state.keysDownDirty) {
+      state.keysDownArray.length = 0
+      for (const key of state.keysDown) {
+        state.keysDownArray.push(key)
+      }
+      state.keysDownDirty = false
+    }
+    return state.keysDownArray
+  })
+  engine.global.set('__canvas_getKeysPressed', () => {
+    if (state.keysPressedDirty) {
+      state.keysPressedArray.length = 0
+      for (const key of state.keysPressed) {
+        state.keysPressedArray.push(key)
+      }
+      state.keysPressedDirty = false
+    }
+    return state.keysPressedArray
+  })
   engine.global.set('__canvas_getMouseX', () => state.mouseX)
   engine.global.set('__canvas_getMouseY', () => state.mouseY)
   engine.global.set('__canvas_isMouseDown', (button: number) =>
@@ -509,8 +569,13 @@ export function setupCanvasBridge(
   )
 
   // Gamepad input - reads from cached state polled once per frame
+  // GC Optimization: Use counting loop instead of filter
   engine.global.set('__canvas_getGamepadCount', () => {
-    return state.currentGamepadStates.filter((g) => g.connected).length
+    let count = 0
+    for (const g of state.currentGamepadStates) {
+      if (g.connected) count++
+    }
+    return count
   })
 
   engine.global.set('__canvas_isGamepadConnected', (index: number) => {
