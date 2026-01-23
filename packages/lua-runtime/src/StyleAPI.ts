@@ -54,6 +54,7 @@ export interface IStyleAPI {
 export class StyleAPI implements IStyleAPI {
   private addDrawCommand: ((cmd: DrawCommand) => void) | null = null
   private lineDashSegments: number[] = []
+  private lineDashCache: number[] | null = null
 
   /**
    * Set the callback for adding draw commands.
@@ -100,15 +101,20 @@ export class StyleAPI implements IStyleAPI {
    */
   setLineDash(segments: number[]): void {
     this.lineDashSegments = [...segments]
-    this.addDrawCommand?.({ type: 'setLineDash', segments })
+    this.lineDashCache = null
+    this.addDrawCommand?.({ type: 'setLineDash', segments: this.lineDashSegments })
   }
 
   /**
    * Get the current line dash pattern.
-   * @returns Copy of the current dash pattern array
+   * Uses lazy caching to reduce GC pressure in animation loops.
+   * @returns Cached copy of the current dash pattern array
    */
   getLineDash(): number[] {
-    return [...this.lineDashSegments]
+    if (this.lineDashCache === null) {
+      this.lineDashCache = [...this.lineDashSegments]
+    }
+    return this.lineDashCache
   }
 
   /**

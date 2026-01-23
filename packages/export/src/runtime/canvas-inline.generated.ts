@@ -3185,7 +3185,10 @@ return localstorage
       imageDataStore: /* @__PURE__ */ new Map(),
       nextImageDataId: 1,
       // Gradient cache for GC pressure reduction (Issue #605)
-      gradientCache: /* @__PURE__ */ new Map()
+      gradientCache: /* @__PURE__ */ new Map(),
+      // Line dash caching for GC pressure reduction (Issue #607)
+      lineDashCache: null,
+      lineDashSegments: []
     };
   }
   function setupInputListeners(state) {
@@ -3330,6 +3333,19 @@ return localstorage
       i++;
     }
     return parts.join(",");
+  }
+  function toNumberArray(segments) {
+    if (Array.isArray(segments)) {
+      return [...segments];
+    }
+    const result = [];
+    const startIndex = segments[0] !== void 0 ? 0 : 1;
+    let i = startIndex;
+    while (segments[i] !== void 0) {
+      result.push(segments[i]);
+      i++;
+    }
+    return result;
   }
   function buildGradientCacheKey(style) {
     const stops = serializeStops(style.stops);
@@ -3679,10 +3695,15 @@ return localstorage
       ctx.miterLimit = limit;
     });
     engine.global.set("__canvas_setLineDash", (segments) => {
-      ctx.setLineDash(segments);
+      state.lineDashSegments = toNumberArray(segments);
+      state.lineDashCache = null;
+      ctx.setLineDash(state.lineDashSegments);
     });
     engine.global.set("__canvas_getLineDash", () => {
-      return ctx.getLineDash();
+      if (state.lineDashCache === null) {
+        state.lineDashCache = [...state.lineDashSegments];
+      }
+      return state.lineDashCache;
     });
     engine.global.set("__canvas_setLineDashOffset", (offset) => {
       ctx.lineDashOffset = offset;
