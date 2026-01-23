@@ -55,6 +55,10 @@ export function createCanvasRuntimeState(
     // ImageData registry state (Issue #603 - avoid GC pressure)
     imageDataStore: new Map<number, StoredImageData>(),
     nextImageDataId: 1,
+    // Text font override cache for GC pressure reduction (Issue #606)
+    cachedOverrideFontSize: null,
+    cachedOverrideFontFamily: null,
+    cachedOverrideFont: '',
   }
 }
 
@@ -340,7 +344,13 @@ export class CoreCanvasBridge implements CanvasBridge {
           const family = assetHandler.translateFontFamily(
             fontFamily ?? state.currentFontFamily
           )
-          ctx.font = `${size}px ${family}`
+          // GC optimization (Issue #606): Cache override font string
+          if (size !== state.cachedOverrideFontSize || family !== state.cachedOverrideFontFamily) {
+            state.cachedOverrideFontSize = size
+            state.cachedOverrideFontFamily = family
+            state.cachedOverrideFont = `${size}px ${family}`
+          }
+          ctx.font = state.cachedOverrideFont
         }
         // Note: textBaseline is set via __canvas_setTextBaseline (default 'top' in init)
         if (maxWidth) {
@@ -368,7 +378,13 @@ export class CoreCanvasBridge implements CanvasBridge {
           const family = assetHandler.translateFontFamily(
             fontFamily ?? state.currentFontFamily
           )
-          ctx.font = `${size}px ${family}`
+          // GC optimization (Issue #606): Cache override font string
+          if (size !== state.cachedOverrideFontSize || family !== state.cachedOverrideFontFamily) {
+            state.cachedOverrideFontSize = size
+            state.cachedOverrideFontFamily = family
+            state.cachedOverrideFont = `${size}px ${family}`
+          }
+          ctx.font = state.cachedOverrideFont
         }
         if (maxWidth) {
           ctx.strokeText(text, x, y, maxWidth)

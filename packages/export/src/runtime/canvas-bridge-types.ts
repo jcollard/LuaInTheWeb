@@ -76,6 +76,10 @@ export interface CanvasRuntimeState {
   imageDataStore: Map<number, StoredImageData>
   /** Next ID for imageData registry */
   nextImageDataId: number
+  // Text font override cache for GC pressure reduction (Issue #606)
+  cachedOverrideFontSize: number | null
+  cachedOverrideFontFamily: string | null
+  cachedOverrideFont: string
 }
 
 /**

@@ -13,6 +13,19 @@ import { setupPixelBindings, clearImageDataStore } from './setupCanvasAPIPixels'
 // Re-export for backward compatibility
 export { clearImageDataStore }
 
+// Pre-allocated text options objects (GC optimization - Issue #606)
+// These objects are reused across calls to avoid creating new objects on every text render
+const textOptions: { fontSize: number | undefined; fontFamily: string | undefined; maxWidth: number | undefined } = {
+  fontSize: undefined,
+  fontFamily: undefined,
+  maxWidth: undefined,
+}
+const strokeTextOptions: { fontSize: number | undefined; fontFamily: string | undefined; maxWidth: number | undefined } = {
+  fontSize: undefined,
+  fontFamily: undefined,
+  maxWidth: undefined,
+}
+
 /**
  * Set up canvas API functions in the Lua engine.
  * This registers all the JS functions and Lua wrapper code needed for
@@ -148,14 +161,15 @@ export function setupCanvasAPI(
     const hasOptions = (fontSize !== undefined && fontSize !== null) ||
                        (fontFamily !== undefined && fontFamily !== null) ||
                        (maxWidth !== undefined && maxWidth !== null)
-    const options = hasOptions
-      ? {
-          fontSize: fontSize ?? undefined,
-          fontFamily: fontFamily ?? undefined,
-          maxWidth: maxWidth ?? undefined
-        }
-      : undefined
-    getController()?.drawText(x, y, text, options)
+    if (hasOptions) {
+      // Reuse pre-allocated object (GC optimization - Issue #606)
+      textOptions.fontSize = fontSize ?? undefined
+      textOptions.fontFamily = fontFamily ?? undefined
+      textOptions.maxWidth = maxWidth ?? undefined
+      getController()?.drawText(x, y, text, textOptions)
+    } else {
+      getController()?.drawText(x, y, text, undefined)
+    }
   })
 
   engine.global.set('__canvas_strokeText', (
@@ -169,14 +183,15 @@ export function setupCanvasAPI(
     const hasOptions = (fontSize !== undefined && fontSize !== null) ||
                        (fontFamily !== undefined && fontFamily !== null) ||
                        (maxWidth !== undefined && maxWidth !== null)
-    const options = hasOptions
-      ? {
-          fontSize: fontSize ?? undefined,
-          fontFamily: fontFamily ?? undefined,
-          maxWidth: maxWidth ?? undefined
-        }
-      : undefined
-    getController()?.strokeText(x, y, text, options)
+    if (hasOptions) {
+      // Reuse pre-allocated object (GC optimization - Issue #606)
+      strokeTextOptions.fontSize = fontSize ?? undefined
+      strokeTextOptions.fontFamily = fontFamily ?? undefined
+      strokeTextOptions.maxWidth = maxWidth ?? undefined
+      getController()?.strokeText(x, y, text, strokeTextOptions)
+    } else {
+      getController()?.strokeText(x, y, text, undefined)
+    }
   })
 
   // --- Timing functions ---
