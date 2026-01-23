@@ -2286,6 +2286,343 @@ describe('CanvasRenderer', () => {
   // putImageData Command Tests (Issue #603 - GC Pressure Optimization)
   // ============================================================================
 
+  // ============================================================================
+  // Gradient/Pattern Caching Tests (Issue #605 - GC Pressure Optimization)
+  // ============================================================================
+
+  describe('gradient caching', () => {
+    it('should return cached gradient for same linear gradient definition', () => {
+      const mockGradient = createMockGradient();
+      (mockCtx.createLinearGradient as ReturnType<typeof vi.fn>).mockReturnValue(mockGradient);
+
+      const gradientDef = {
+        type: 'linear' as const,
+        x0: 0, y0: 0,
+        x1: 100, y1: 0,
+        stops: [
+          { offset: 0, color: '#ff0000' },
+          { offset: 1, color: '#0000ff' },
+        ],
+      };
+
+      const commands: DrawCommand[] = [
+        { type: 'setFillStyle', style: gradientDef },
+        { type: 'setFillStyle', style: gradientDef },
+        { type: 'setFillStyle', style: gradientDef },
+      ];
+
+      renderer.render(commands);
+
+      // Should only create gradient once due to caching
+      expect(mockCtx.createLinearGradient).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return cached gradient for same radial gradient definition', () => {
+      const mockGradient = createMockGradient();
+      (mockCtx.createRadialGradient as ReturnType<typeof vi.fn>).mockReturnValue(mockGradient);
+
+      const gradientDef = {
+        type: 'radial' as const,
+        x0: 100, y0: 100, r0: 0,
+        x1: 100, y1: 100, r1: 50,
+        stops: [
+          { offset: 0, color: 'white' },
+          { offset: 1, color: 'black' },
+        ],
+      };
+
+      const commands: DrawCommand[] = [
+        { type: 'setFillStyle', style: gradientDef },
+        { type: 'setStrokeStyle', style: gradientDef },
+      ];
+
+      renderer.render(commands);
+
+      // Should only create gradient once due to caching
+      expect(mockCtx.createRadialGradient).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return cached gradient for same conic gradient definition', () => {
+      const mockGradient = createMockGradient();
+      (mockCtx.createConicGradient as ReturnType<typeof vi.fn>).mockReturnValue(mockGradient);
+
+      const gradientDef = {
+        type: 'conic' as const,
+        startAngle: 0,
+        x: 200, y: 200,
+        stops: [
+          { offset: 0, color: 'red' },
+          { offset: 1, color: 'blue' },
+        ],
+      };
+
+      const commands: DrawCommand[] = [
+        { type: 'setFillStyle', style: gradientDef },
+        { type: 'setFillStyle', style: gradientDef },
+      ];
+
+      renderer.render(commands);
+
+      // Should only create gradient once due to caching
+      expect(mockCtx.createConicGradient).toHaveBeenCalledTimes(1);
+    });
+
+    it('should create new gradient for different definitions', () => {
+      const mockGradient1 = createMockGradient();
+      const mockGradient2 = createMockGradient();
+      (mockCtx.createLinearGradient as ReturnType<typeof vi.fn>)
+        .mockReturnValueOnce(mockGradient1)
+        .mockReturnValueOnce(mockGradient2);
+
+      const commands: DrawCommand[] = [
+        {
+          type: 'setFillStyle',
+          style: {
+            type: 'linear',
+            x0: 0, y0: 0,
+            x1: 100, y1: 0,
+            stops: [{ offset: 0, color: 'red' }, { offset: 1, color: 'blue' }],
+          },
+        },
+        {
+          type: 'setFillStyle',
+          style: {
+            type: 'linear',
+            x0: 0, y0: 0,
+            x1: 200, y1: 0, // Different x1
+            stops: [{ offset: 0, color: 'red' }, { offset: 1, color: 'blue' }],
+          },
+        },
+      ];
+
+      renderer.render(commands);
+
+      // Should create two different gradients
+      expect(mockCtx.createLinearGradient).toHaveBeenCalledTimes(2);
+    });
+
+    it('should create new gradient when stops differ', () => {
+      const mockGradient1 = createMockGradient();
+      const mockGradient2 = createMockGradient();
+      (mockCtx.createLinearGradient as ReturnType<typeof vi.fn>)
+        .mockReturnValueOnce(mockGradient1)
+        .mockReturnValueOnce(mockGradient2);
+
+      const commands: DrawCommand[] = [
+        {
+          type: 'setFillStyle',
+          style: {
+            type: 'linear',
+            x0: 0, y0: 0,
+            x1: 100, y1: 0,
+            stops: [{ offset: 0, color: 'red' }, { offset: 1, color: 'blue' }],
+          },
+        },
+        {
+          type: 'setFillStyle',
+          style: {
+            type: 'linear',
+            x0: 0, y0: 0,
+            x1: 100, y1: 0,
+            stops: [{ offset: 0, color: 'green' }, { offset: 1, color: 'yellow' }], // Different colors
+          },
+        },
+      ];
+
+      renderer.render(commands);
+
+      // Should create two different gradients
+      expect(mockCtx.createLinearGradient).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('pattern caching', () => {
+    let imageCache: ImageCache;
+    let rendererWithCache: CanvasRenderer;
+    let mockImage: HTMLImageElement;
+
+    beforeEach(() => {
+      imageCache = new ImageCache();
+      mockImage = new Image();
+      mockImage.width = 32;
+      mockImage.height = 32;
+      imageCache.set('tiles', mockImage);
+      rendererWithCache = new CanvasRenderer(canvas, imageCache);
+    });
+
+    it('should return cached pattern for same pattern definition', () => {
+      const mockPattern = createMockPattern();
+      (mockCtx.createPattern as ReturnType<typeof vi.fn>).mockReturnValue(mockPattern);
+
+      const patternDef = {
+        type: 'pattern' as const,
+        imageName: 'tiles',
+        repetition: 'repeat' as const,
+      };
+
+      const commands: DrawCommand[] = [
+        { type: 'setFillStyle', style: patternDef },
+        { type: 'setFillStyle', style: patternDef },
+        { type: 'setStrokeStyle', style: patternDef },
+      ];
+
+      rendererWithCache.render(commands);
+
+      // Should only create pattern once due to caching
+      expect(mockCtx.createPattern).toHaveBeenCalledTimes(1);
+    });
+
+    it('should create new pattern for different repetition', () => {
+      const mockPattern1 = createMockPattern();
+      const mockPattern2 = createMockPattern();
+      (mockCtx.createPattern as ReturnType<typeof vi.fn>)
+        .mockReturnValueOnce(mockPattern1)
+        .mockReturnValueOnce(mockPattern2);
+
+      const commands: DrawCommand[] = [
+        {
+          type: 'setFillStyle',
+          style: { type: 'pattern', imageName: 'tiles', repetition: 'repeat' },
+        },
+        {
+          type: 'setFillStyle',
+          style: { type: 'pattern', imageName: 'tiles', repetition: 'repeat-x' },
+        },
+      ];
+
+      rendererWithCache.render(commands);
+
+      // Should create two different patterns
+      expect(mockCtx.createPattern).toHaveBeenCalledTimes(2);
+    });
+
+    it('should create new pattern for different image', () => {
+      const mockImage2 = new Image();
+      mockImage2.width = 64;
+      mockImage2.height = 64;
+      imageCache.set('bricks', mockImage2);
+
+      const mockPattern1 = createMockPattern();
+      const mockPattern2 = createMockPattern();
+      (mockCtx.createPattern as ReturnType<typeof vi.fn>)
+        .mockReturnValueOnce(mockPattern1)
+        .mockReturnValueOnce(mockPattern2);
+
+      const commands: DrawCommand[] = [
+        {
+          type: 'setFillStyle',
+          style: { type: 'pattern', imageName: 'tiles', repetition: 'repeat' },
+        },
+        {
+          type: 'setFillStyle',
+          style: { type: 'pattern', imageName: 'bricks', repetition: 'repeat' },
+        },
+      ];
+
+      rendererWithCache.render(commands);
+
+      // Should create two different patterns
+      expect(mockCtx.createPattern).toHaveBeenCalledTimes(2);
+    });
+
+    it('should not cache null patterns (missing images)', () => {
+      (mockCtx.createPattern as ReturnType<typeof vi.fn>).mockReturnValue(null);
+
+      const commands: DrawCommand[] = [
+        {
+          type: 'setFillStyle',
+          style: { type: 'pattern', imageName: 'nonexistent', repetition: 'repeat' },
+        },
+        {
+          type: 'setFillStyle',
+          style: { type: 'pattern', imageName: 'nonexistent', repetition: 'repeat' },
+        },
+      ];
+
+      // Should not throw
+      expect(() => rendererWithCache.render(commands)).not.toThrow();
+      // Should not have called createPattern (image not in cache)
+      expect(mockCtx.createPattern).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('style cache clearing', () => {
+    it('should clear gradient cache on clear command', () => {
+      const mockGradient = createMockGradient();
+      (mockCtx.createLinearGradient as ReturnType<typeof vi.fn>).mockReturnValue(mockGradient);
+
+      const gradientDef = {
+        type: 'linear' as const,
+        x0: 0, y0: 0,
+        x1: 100, y1: 0,
+        stops: [{ offset: 0, color: 'red' }, { offset: 1, color: 'blue' }],
+      };
+
+      const commands: DrawCommand[] = [
+        { type: 'setFillStyle', style: gradientDef },
+        { type: 'clear' },
+        { type: 'setFillStyle', style: gradientDef },
+      ];
+
+      renderer.render(commands);
+
+      // Should create gradient twice because cache was cleared
+      expect(mockCtx.createLinearGradient).toHaveBeenCalledTimes(2);
+    });
+
+    it('should clear pattern cache on clear command', () => {
+      const imageCache = new ImageCache();
+      const mockImage = new Image();
+      mockImage.width = 32;
+      mockImage.height = 32;
+      imageCache.set('tiles', mockImage);
+      const rendererWithCache = new CanvasRenderer(canvas, imageCache);
+
+      const mockPattern = createMockPattern();
+      (mockCtx.createPattern as ReturnType<typeof vi.fn>).mockReturnValue(mockPattern);
+
+      const patternDef = {
+        type: 'pattern' as const,
+        imageName: 'tiles',
+        repetition: 'repeat' as const,
+      };
+
+      const commands: DrawCommand[] = [
+        { type: 'setFillStyle', style: patternDef },
+        { type: 'clear' },
+        { type: 'setFillStyle', style: patternDef },
+      ];
+
+      rendererWithCache.render(commands);
+
+      // Should create pattern twice because cache was cleared
+      expect(mockCtx.createPattern).toHaveBeenCalledTimes(2);
+    });
+
+    it('should not clear gradient cache on clearRect command', () => {
+      const mockGradient = createMockGradient();
+      (mockCtx.createLinearGradient as ReturnType<typeof vi.fn>).mockReturnValue(mockGradient);
+
+      const gradientDef = {
+        type: 'linear' as const,
+        x0: 0, y0: 0,
+        x1: 100, y1: 0,
+        stops: [{ offset: 0, color: 'red' }, { offset: 1, color: 'blue' }],
+      };
+
+      const commands: DrawCommand[] = [
+        { type: 'setFillStyle', style: gradientDef },
+        { type: 'clearRect', x: 0, y: 0, width: 100, height: 100 },
+        { type: 'setFillStyle', style: gradientDef },
+      ];
+
+      renderer.render(commands);
+
+      // Should only create gradient once (clearRect doesn't clear cache)
+      expect(mockCtx.createLinearGradient).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('putImageData command', () => {
     beforeEach(() => {
       (mockCtx as unknown as { putImageData: ReturnType<typeof vi.fn> }).putImageData = vi.fn();

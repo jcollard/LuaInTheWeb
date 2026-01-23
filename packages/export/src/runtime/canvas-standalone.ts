@@ -101,6 +101,8 @@ export interface CanvasRuntimeState {
   // ImageData registry state (Issue #603 - avoid GC pressure)
   imageDataStore: Map<number, { data: Uint8ClampedArray; width: number; height: number }>
   nextImageDataId: number
+  // Gradient cache for GC pressure reduction (Issue #605)
+  gradientCache: Map<string, CanvasGradient>
 }
 
 /**
@@ -153,6 +155,8 @@ export function createCanvasRuntimeState(
     // ImageData registry state (Issue #603 - avoid GC pressure)
     imageDataStore: new Map(),
     nextImageDataId: 1,
+    // Gradient cache for GC pressure reduction (Issue #605)
+    gradientCache: new Map(),
   }
 }
 
@@ -349,6 +353,44 @@ function colorToCss(
 }
 
 /**
+ * Serialize gradient color stops from either a Lua table proxy or JS array.
+ * Handles both 0-indexed (JS arrays) and 1-indexed (Lua tables) indexing.
+ * This avoids JSON.stringify issues with Lua proxy objects.
+ * NOTE: Lua table proxies from wasmoon don't have .length property.
+ */
+function serializeStops(stops: unknown): string {
+  if (!stops || typeof stops !== 'object') return ''
+  const stopsObj = stops as Record<number, { offset: number; color: string }>
+  const parts: string[] = []
+  // Detect indexing style: JS arrays have element at [0], Lua tables at [1]
+  const startIndex = stopsObj[0] !== undefined ? 0 : 1
+  let i = startIndex
+  while (stopsObj[i] !== undefined) {
+    const stop = stopsObj[i]
+    parts.push(`${stop.offset}:${stop.color}`)
+    i++
+  }
+  return parts.join(',')
+}
+
+/**
+ * Build a deterministic cache key for gradient styles.
+ * Uses individual property access instead of JSON.stringify to handle
+ * Lua table proxies correctly (Issue #605).
+ */
+function buildGradientCacheKey(style: Record<string, unknown>): string {
+  const stops = serializeStops(style.stops)
+  if (style.type === 'linear') {
+    return `linear|${style.x0}|${style.y0}|${style.x1}|${style.y1}|${stops}`
+  } else if (style.type === 'radial') {
+    return `radial|${style.x0}|${style.y0}|${style.r0}|${style.x1}|${style.y1}|${style.r1}|${stops}`
+  } else if (style.type === 'conic') {
+    return `conic|${style.startAngle}|${style.x}|${style.y}|${stops}`
+  }
+  return ''
+}
+
+/**
  * Set up all canvas bridge functions on a wasmoon engine.
  */
 export function setupCanvasBridge(
@@ -404,6 +446,8 @@ export function setupCanvasBridge(
   // Drawing state
   engine.global.set('__canvas_clear', () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height)
+    // Clear gradient cache to allow new gradients when canvas is cleared (Issue #605)
+    state.gradientCache.clear()
   })
 
   engine.global.set(
@@ -916,25 +960,37 @@ export function setupCanvasBridge(
   )
 
   // Fill/stroke style (for gradients and patterns)
+  // Gradient caching for GC pressure reduction (Issue #605)
   engine.global.set(
     '__canvas_setFillStyle',
     (style: string | Record<string, unknown>) => {
       if (typeof style === 'string') {
         ctx.fillStyle = style
-      } else if (style.type === 'linear') {
-        const gradient = ctx.createLinearGradient(
+        return
+      }
+
+      // Build deterministic cache key from individual properties (Issue #605)
+      // JSON.stringify doesn't work correctly on Lua table proxies
+      const cacheKey = buildGradientCacheKey(style)
+      if (cacheKey) {
+        const cached = state.gradientCache.get(cacheKey)
+        if (cached) {
+          ctx.fillStyle = cached
+          return
+        }
+      }
+
+      // Create gradient based on type
+      let gradient: CanvasGradient
+      if (style.type === 'linear') {
+        gradient = ctx.createLinearGradient(
           style.x0 as number,
           style.y0 as number,
           style.x1 as number,
           style.y1 as number
         )
-        const stops = style.stops as Array<{ offset: number; color: string }>
-        for (const stop of stops) {
-          gradient.addColorStop(stop.offset, stop.color)
-        }
-        ctx.fillStyle = gradient
       } else if (style.type === 'radial') {
-        const gradient = ctx.createRadialGradient(
+        gradient = ctx.createRadialGradient(
           style.x0 as number,
           style.y0 as number,
           style.r0 as number,
@@ -942,23 +998,33 @@ export function setupCanvasBridge(
           style.y1 as number,
           style.r1 as number
         )
-        const stops = style.stops as Array<{ offset: number; color: string }>
-        for (const stop of stops) {
-          gradient.addColorStop(stop.offset, stop.color)
-        }
-        ctx.fillStyle = gradient
       } else if (style.type === 'conic') {
-        const gradient = ctx.createConicGradient(
+        gradient = ctx.createConicGradient(
           style.startAngle as number,
           style.x as number,
           style.y as number
         )
-        const stops = style.stops as Array<{ offset: number; color: string }>
-        for (const stop of stops) {
-          gradient.addColorStop(stop.offset, stop.color)
-        }
-        ctx.fillStyle = gradient
+      } else {
+        return // Unknown type, do nothing
       }
+
+      // Add color stops - handle both JS arrays (0-indexed) and Lua tables (1-indexed)
+      // NOTE: Lua table proxies from wasmoon don't have .length property
+      const stopsObj = style.stops as Record<number, { offset: number; color: string }>
+      // Detect indexing style: JS arrays have element at [0], Lua tables at [1]
+      const startIndex = stopsObj[0] !== undefined ? 0 : 1
+      let i = startIndex
+      while (stopsObj[i] !== undefined) {
+        const stop = stopsObj[i]
+        gradient.addColorStop(stop.offset, stop.color)
+        i++
+      }
+
+      // Cache and apply
+      if (cacheKey) {
+        state.gradientCache.set(cacheKey, gradient)
+      }
+      ctx.fillStyle = gradient
     }
   )
 
@@ -967,20 +1033,31 @@ export function setupCanvasBridge(
     (style: string | Record<string, unknown>) => {
       if (typeof style === 'string') {
         ctx.strokeStyle = style
-      } else if (style.type === 'linear') {
-        const gradient = ctx.createLinearGradient(
+        return
+      }
+
+      // Build deterministic cache key from individual properties (Issue #605)
+      // JSON.stringify doesn't work correctly on Lua table proxies
+      const cacheKey = buildGradientCacheKey(style)
+      if (cacheKey) {
+        const cached = state.gradientCache.get(cacheKey)
+        if (cached) {
+          ctx.strokeStyle = cached
+          return
+        }
+      }
+
+      // Create gradient based on type
+      let gradient: CanvasGradient
+      if (style.type === 'linear') {
+        gradient = ctx.createLinearGradient(
           style.x0 as number,
           style.y0 as number,
           style.x1 as number,
           style.y1 as number
         )
-        const stops = style.stops as Array<{ offset: number; color: string }>
-        for (const stop of stops) {
-          gradient.addColorStop(stop.offset, stop.color)
-        }
-        ctx.strokeStyle = gradient
       } else if (style.type === 'radial') {
-        const gradient = ctx.createRadialGradient(
+        gradient = ctx.createRadialGradient(
           style.x0 as number,
           style.y0 as number,
           style.r0 as number,
@@ -988,23 +1065,33 @@ export function setupCanvasBridge(
           style.y1 as number,
           style.r1 as number
         )
-        const stops = style.stops as Array<{ offset: number; color: string }>
-        for (const stop of stops) {
-          gradient.addColorStop(stop.offset, stop.color)
-        }
-        ctx.strokeStyle = gradient
       } else if (style.type === 'conic') {
-        const gradient = ctx.createConicGradient(
+        gradient = ctx.createConicGradient(
           style.startAngle as number,
           style.x as number,
           style.y as number
         )
-        const stops = style.stops as Array<{ offset: number; color: string }>
-        for (const stop of stops) {
-          gradient.addColorStop(stop.offset, stop.color)
-        }
-        ctx.strokeStyle = gradient
+      } else {
+        return // Unknown type, do nothing
       }
+
+      // Add color stops - handle both JS arrays (0-indexed) and Lua tables (1-indexed)
+      // NOTE: Lua table proxies from wasmoon don't have .length property
+      const stopsObj = style.stops as Record<number, { offset: number; color: string }>
+      // Detect indexing style: JS arrays have element at [0], Lua tables at [1]
+      const startIndex = stopsObj[0] !== undefined ? 0 : 1
+      let i = startIndex
+      while (stopsObj[i] !== undefined) {
+        const stop = stopsObj[i]
+        gradient.addColorStop(stop.offset, stop.color)
+        i++
+      }
+
+      // Cache and apply
+      if (cacheKey) {
+        state.gradientCache.set(cacheKey, gradient)
+      }
+      ctx.strokeStyle = gradient
     }
   )
 

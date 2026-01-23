@@ -3183,7 +3183,9 @@ return localstorage
       nextPathId: 1,
       // ImageData registry state (Issue #603 - avoid GC pressure)
       imageDataStore: /* @__PURE__ */ new Map(),
-      nextImageDataId: 1
+      nextImageDataId: 1,
+      // Gradient cache for GC pressure reduction (Issue #605)
+      gradientCache: /* @__PURE__ */ new Map()
     };
   }
   function setupInputListeners(state) {
@@ -3316,6 +3318,30 @@ return localstorage
     }
     return \`#\${toHex(r)}\${toHex(g)}\${toHex(b)}\`;
   }
+  function serializeStops(stops) {
+    if (!stops || typeof stops !== "object") return "";
+    const stopsObj = stops;
+    const parts = [];
+    const startIndex = stopsObj[0] !== void 0 ? 0 : 1;
+    let i = startIndex;
+    while (stopsObj[i] !== void 0) {
+      const stop = stopsObj[i];
+      parts.push(\`\${stop.offset}:\${stop.color}\`);
+      i++;
+    }
+    return parts.join(",");
+  }
+  function buildGradientCacheKey(style) {
+    const stops = serializeStops(style.stops);
+    if (style.type === "linear") {
+      return \`linear|\${style.x0}|\${style.y0}|\${style.x1}|\${style.y1}|\${stops}\`;
+    } else if (style.type === "radial") {
+      return \`radial|\${style.x0}|\${style.y0}|\${style.r0}|\${style.x1}|\${style.y1}|\${style.r1}|\${stops}\`;
+    } else if (style.type === "conic") {
+      return \`conic|\${style.startAngle}|\${style.x}|\${style.y}|\${stops}\`;
+    }
+    return "";
+  }
   function setupCanvasBridge(engine, state) {
     const { ctx, canvas } = state;
     ctx.font = \`\${state.currentFontSize}px \${state.currentFontFamily}\`;
@@ -3350,6 +3376,7 @@ return localstorage
     engine.global.set("__canvas_getHeight", () => canvas.height);
     engine.global.set("__canvas_clear", () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      state.gradientCache.clear();
     });
     engine.global.set(
       "__canvas_clearRect",
@@ -3745,20 +3772,26 @@ return localstorage
       (style) => {
         if (typeof style === "string") {
           ctx.fillStyle = style;
-        } else if (style.type === "linear") {
-          const gradient = ctx.createLinearGradient(
+          return;
+        }
+        const cacheKey = buildGradientCacheKey(style);
+        if (cacheKey) {
+          const cached = state.gradientCache.get(cacheKey);
+          if (cached) {
+            ctx.fillStyle = cached;
+            return;
+          }
+        }
+        let gradient;
+        if (style.type === "linear") {
+          gradient = ctx.createLinearGradient(
             style.x0,
             style.y0,
             style.x1,
             style.y1
           );
-          const stops = style.stops;
-          for (const stop of stops) {
-            gradient.addColorStop(stop.offset, stop.color);
-          }
-          ctx.fillStyle = gradient;
         } else if (style.type === "radial") {
-          const gradient = ctx.createRadialGradient(
+          gradient = ctx.createRadialGradient(
             style.x0,
             style.y0,
             style.r0,
@@ -3766,23 +3799,27 @@ return localstorage
             style.y1,
             style.r1
           );
-          const stops = style.stops;
-          for (const stop of stops) {
-            gradient.addColorStop(stop.offset, stop.color);
-          }
-          ctx.fillStyle = gradient;
         } else if (style.type === "conic") {
-          const gradient = ctx.createConicGradient(
+          gradient = ctx.createConicGradient(
             style.startAngle,
             style.x,
             style.y
           );
-          const stops = style.stops;
-          for (const stop of stops) {
-            gradient.addColorStop(stop.offset, stop.color);
-          }
-          ctx.fillStyle = gradient;
+        } else {
+          return;
         }
+        const stopsObj = style.stops;
+        const startIndex = stopsObj[0] !== void 0 ? 0 : 1;
+        let i = startIndex;
+        while (stopsObj[i] !== void 0) {
+          const stop = stopsObj[i];
+          gradient.addColorStop(stop.offset, stop.color);
+          i++;
+        }
+        if (cacheKey) {
+          state.gradientCache.set(cacheKey, gradient);
+        }
+        ctx.fillStyle = gradient;
       }
     );
     engine.global.set(
@@ -3790,20 +3827,26 @@ return localstorage
       (style) => {
         if (typeof style === "string") {
           ctx.strokeStyle = style;
-        } else if (style.type === "linear") {
-          const gradient = ctx.createLinearGradient(
+          return;
+        }
+        const cacheKey = buildGradientCacheKey(style);
+        if (cacheKey) {
+          const cached = state.gradientCache.get(cacheKey);
+          if (cached) {
+            ctx.strokeStyle = cached;
+            return;
+          }
+        }
+        let gradient;
+        if (style.type === "linear") {
+          gradient = ctx.createLinearGradient(
             style.x0,
             style.y0,
             style.x1,
             style.y1
           );
-          const stops = style.stops;
-          for (const stop of stops) {
-            gradient.addColorStop(stop.offset, stop.color);
-          }
-          ctx.strokeStyle = gradient;
         } else if (style.type === "radial") {
-          const gradient = ctx.createRadialGradient(
+          gradient = ctx.createRadialGradient(
             style.x0,
             style.y0,
             style.r0,
@@ -3811,23 +3854,27 @@ return localstorage
             style.y1,
             style.r1
           );
-          const stops = style.stops;
-          for (const stop of stops) {
-            gradient.addColorStop(stop.offset, stop.color);
-          }
-          ctx.strokeStyle = gradient;
         } else if (style.type === "conic") {
-          const gradient = ctx.createConicGradient(
+          gradient = ctx.createConicGradient(
             style.startAngle,
             style.x,
             style.y
           );
-          const stops = style.stops;
-          for (const stop of stops) {
-            gradient.addColorStop(stop.offset, stop.color);
-          }
-          ctx.strokeStyle = gradient;
+        } else {
+          return;
         }
+        const stopsObj = style.stops;
+        const startIndex = stopsObj[0] !== void 0 ? 0 : 1;
+        let i = startIndex;
+        while (stopsObj[i] !== void 0) {
+          const stop = stopsObj[i];
+          gradient.addColorStop(stop.offset, stop.color);
+          i++;
+        }
+        if (cacheKey) {
+          state.gradientCache.set(cacheKey, gradient);
+        }
+        ctx.strokeStyle = gradient;
       }
     );
     engine.global.set("__canvas_assets_addPath", () => {

@@ -17,8 +17,39 @@ vi.mock('@lua-learning/lua-runtime', () => ({
 
 import {
   setupInputListeners,
+  setupCanvasBridge,
+  createCanvasRuntimeState,
   type CanvasRuntimeState,
 } from '../../src/runtime/canvas-standalone'
+
+// Mock CanvasGradient for caching tests
+function createMockGradient(): CanvasGradient {
+  return {
+    addColorStop: vi.fn(),
+  } as unknown as CanvasGradient
+}
+
+// Mock LuaEngine
+interface MockLuaEngine {
+  global: {
+    set: ReturnType<typeof vi.fn>
+    get: ReturnType<typeof vi.fn>
+  }
+  registeredFunctions: Map<string, (...args: unknown[]) => unknown>
+}
+
+function createMockLuaEngine(): MockLuaEngine {
+  const registeredFunctions = new Map<string, (...args: unknown[]) => unknown>()
+  return {
+    global: {
+      set: vi.fn((name: string, fn: (...args: unknown[]) => unknown) => {
+        registeredFunctions.set(name, fn)
+      }),
+      get: vi.fn((name: string) => registeredFunctions.get(name)),
+    },
+    registeredFunctions,
+  }
+}
 
 describe('canvas-standalone', () => {
   describe('setupInputListeners', () => {
@@ -64,6 +95,9 @@ describe('canvas-standalone', () => {
         ],
         pathRegistry: new Map(),
         nextPathId: 1,
+        imageDataStore: new Map(),
+        nextImageDataId: 1,
+        gradientCache: new Map(),
       }
     })
 
@@ -99,6 +133,287 @@ describe('canvas-standalone', () => {
 
         // preventDefault should NOT be called after cleanup
         expect(preventDefaultSpy).not.toHaveBeenCalled()
+      })
+    })
+  })
+
+  describe('gradient caching (Issue #605)', () => {
+    let canvas: HTMLCanvasElement
+    let state: CanvasRuntimeState
+    let mockEngine: MockLuaEngine
+    let mockCtx: CanvasRenderingContext2D
+
+    beforeEach(() => {
+      // Create a mock canvas element
+      canvas = document.createElement('canvas')
+      canvas.width = 800
+      canvas.height = 600
+
+      // Create mock context with spied gradient creation methods
+      mockCtx = {
+        clearRect: vi.fn(),
+        fillRect: vi.fn(),
+        strokeRect: vi.fn(),
+        beginPath: vi.fn(),
+        arc: vi.fn(),
+        fill: vi.fn(),
+        stroke: vi.fn(),
+        moveTo: vi.fn(),
+        lineTo: vi.fn(),
+        fillText: vi.fn(),
+        strokeText: vi.fn(),
+        measureText: vi.fn().mockReturnValue({ width: 100 }),
+        fillStyle: '',
+        strokeStyle: '',
+        lineWidth: 1,
+        font: '16px monospace',
+        textBaseline: 'top' as CanvasTextBaseline,
+        textAlign: 'start' as CanvasTextAlign,
+        direction: 'ltr' as CanvasDirection,
+        lineCap: 'butt' as CanvasLineCap,
+        lineJoin: 'miter' as CanvasLineJoin,
+        miterLimit: 10,
+        lineDashOffset: 0,
+        setLineDash: vi.fn(),
+        getLineDash: vi.fn().mockReturnValue([]),
+        translate: vi.fn(),
+        rotate: vi.fn(),
+        scale: vi.fn(),
+        save: vi.fn(),
+        restore: vi.fn(),
+        transform: vi.fn(),
+        setTransform: vi.fn(),
+        resetTransform: vi.fn(),
+        closePath: vi.fn(),
+        arcTo: vi.fn(),
+        quadraticCurveTo: vi.fn(),
+        bezierCurveTo: vi.fn(),
+        ellipse: vi.fn(),
+        roundRect: vi.fn(),
+        rect: vi.fn(),
+        clip: vi.fn(),
+        isPointInPath: vi.fn().mockReturnValue(false),
+        isPointInStroke: vi.fn().mockReturnValue(false),
+        shadowColor: 'transparent',
+        shadowBlur: 0,
+        shadowOffsetX: 0,
+        shadowOffsetY: 0,
+        globalAlpha: 1,
+        globalCompositeOperation: 'source-over' as GlobalCompositeOperation,
+        imageSmoothingEnabled: true,
+        filter: 'none',
+        getImageData: vi.fn().mockReturnValue({
+          data: new Uint8ClampedArray(16),
+          width: 2,
+          height: 2,
+        }),
+        putImageData: vi.fn(),
+        createLinearGradient: vi.fn(),
+        createRadialGradient: vi.fn(),
+        createConicGradient: vi.fn(),
+        createPattern: vi.fn(),
+      } as unknown as CanvasRenderingContext2D
+
+      // Mock canvas.getContext to return our mock context
+      vi.spyOn(canvas, 'getContext').mockReturnValue(mockCtx)
+
+      // Create state using the factory function
+      state = createCanvasRuntimeState(canvas)
+
+      // Create mock engine
+      mockEngine = createMockLuaEngine()
+
+      // Setup the canvas bridge
+      setupCanvasBridge(mockEngine as unknown as import('wasmoon').LuaEngine, state)
+    })
+
+    describe('linear gradient caching', () => {
+      it('should cache linear gradients with same definition', () => {
+        const mockGradient = createMockGradient()
+        ;(mockCtx.createLinearGradient as ReturnType<typeof vi.fn>).mockReturnValue(mockGradient)
+
+        const gradientDef = {
+          type: 'linear',
+          x0: 0,
+          y0: 0,
+          x1: 100,
+          y1: 0,
+          stops: [
+            { offset: 0, color: '#ff0000' },
+            { offset: 1, color: '#0000ff' },
+          ],
+        }
+
+        const setFillStyle = mockEngine.registeredFunctions.get('__canvas_setFillStyle')!
+
+        // Call setFillStyle multiple times with same gradient
+        setFillStyle(gradientDef)
+        setFillStyle(gradientDef)
+        setFillStyle(gradientDef)
+
+        // Should only create gradient once due to caching
+        expect(mockCtx.createLinearGradient).toHaveBeenCalledTimes(1)
+      })
+
+      it('should create new gradient for different linear gradient definitions', () => {
+        const mockGradient1 = createMockGradient()
+        const mockGradient2 = createMockGradient()
+        ;(mockCtx.createLinearGradient as ReturnType<typeof vi.fn>)
+          .mockReturnValueOnce(mockGradient1)
+          .mockReturnValueOnce(mockGradient2)
+
+        const setFillStyle = mockEngine.registeredFunctions.get('__canvas_setFillStyle')!
+
+        setFillStyle({
+          type: 'linear',
+          x0: 0,
+          y0: 0,
+          x1: 100,
+          y1: 0,
+          stops: [{ offset: 0, color: 'red' }, { offset: 1, color: 'blue' }],
+        })
+
+        setFillStyle({
+          type: 'linear',
+          x0: 0,
+          y0: 0,
+          x1: 200, // Different x1
+          y1: 0,
+          stops: [{ offset: 0, color: 'red' }, { offset: 1, color: 'blue' }],
+        })
+
+        // Should create two different gradients
+        expect(mockCtx.createLinearGradient).toHaveBeenCalledTimes(2)
+      })
+    })
+
+    describe('radial gradient caching', () => {
+      it('should cache radial gradients with same definition', () => {
+        const mockGradient = createMockGradient()
+        ;(mockCtx.createRadialGradient as ReturnType<typeof vi.fn>).mockReturnValue(mockGradient)
+
+        const gradientDef = {
+          type: 'radial',
+          x0: 100,
+          y0: 100,
+          r0: 0,
+          x1: 100,
+          y1: 100,
+          r1: 50,
+          stops: [
+            { offset: 0, color: 'white' },
+            { offset: 1, color: 'black' },
+          ],
+        }
+
+        const setFillStyle = mockEngine.registeredFunctions.get('__canvas_setFillStyle')!
+        const setStrokeStyle = mockEngine.registeredFunctions.get('__canvas_setStrokeStyle')!
+
+        // Call with same gradient on both fill and stroke
+        setFillStyle(gradientDef)
+        setStrokeStyle(gradientDef)
+
+        // Should only create gradient once due to caching
+        expect(mockCtx.createRadialGradient).toHaveBeenCalledTimes(1)
+      })
+    })
+
+    describe('conic gradient caching', () => {
+      it('should cache conic gradients with same definition', () => {
+        const mockGradient = createMockGradient()
+        ;(mockCtx.createConicGradient as ReturnType<typeof vi.fn>).mockReturnValue(mockGradient)
+
+        const gradientDef = {
+          type: 'conic',
+          startAngle: 0,
+          x: 200,
+          y: 200,
+          stops: [
+            { offset: 0, color: 'red' },
+            { offset: 1, color: 'blue' },
+          ],
+        }
+
+        const setFillStyle = mockEngine.registeredFunctions.get('__canvas_setFillStyle')!
+
+        setFillStyle(gradientDef)
+        setFillStyle(gradientDef)
+
+        // Should only create gradient once due to caching
+        expect(mockCtx.createConicGradient).toHaveBeenCalledTimes(1)
+      })
+    })
+
+    describe('cache clearing', () => {
+      it('should clear gradient cache on __canvas_clear', () => {
+        const mockGradient = createMockGradient()
+        ;(mockCtx.createLinearGradient as ReturnType<typeof vi.fn>).mockReturnValue(mockGradient)
+
+        const gradientDef = {
+          type: 'linear',
+          x0: 0,
+          y0: 0,
+          x1: 100,
+          y1: 0,
+          stops: [
+            { offset: 0, color: 'red' },
+            { offset: 1, color: 'blue' },
+          ],
+        }
+
+        const setFillStyle = mockEngine.registeredFunctions.get('__canvas_setFillStyle')!
+        const clear = mockEngine.registeredFunctions.get('__canvas_clear')!
+
+        // Set gradient, clear, then set same gradient again
+        setFillStyle(gradientDef)
+        clear()
+        setFillStyle(gradientDef)
+
+        // Should create gradient twice because cache was cleared
+        expect(mockCtx.createLinearGradient).toHaveBeenCalledTimes(2)
+      })
+
+      it('should not clear gradient cache on __canvas_clearRect', () => {
+        const mockGradient = createMockGradient()
+        ;(mockCtx.createLinearGradient as ReturnType<typeof vi.fn>).mockReturnValue(mockGradient)
+
+        const gradientDef = {
+          type: 'linear',
+          x0: 0,
+          y0: 0,
+          x1: 100,
+          y1: 0,
+          stops: [
+            { offset: 0, color: 'red' },
+            { offset: 1, color: 'blue' },
+          ],
+        }
+
+        const setFillStyle = mockEngine.registeredFunctions.get('__canvas_setFillStyle')!
+        const clearRect = mockEngine.registeredFunctions.get('__canvas_clearRect')!
+
+        // Set gradient, clearRect, then set same gradient again
+        setFillStyle(gradientDef)
+        clearRect(0, 0, 100, 100)
+        setFillStyle(gradientDef)
+
+        // Should only create gradient once (clearRect doesn't clear cache)
+        expect(mockCtx.createLinearGradient).toHaveBeenCalledTimes(1)
+      })
+    })
+
+    describe('string styles', () => {
+      it('should handle string styles without caching', () => {
+        const setFillStyle = mockEngine.registeredFunctions.get('__canvas_setFillStyle')!
+        const setStrokeStyle = mockEngine.registeredFunctions.get('__canvas_setStrokeStyle')!
+
+        setFillStyle('#ff0000')
+        setStrokeStyle('blue')
+
+        // String styles should just set directly without gradient creation
+        expect(mockCtx.createLinearGradient).not.toHaveBeenCalled()
+        expect(mockCtx.createRadialGradient).not.toHaveBeenCalled()
+        expect(mockCtx.createConicGradient).not.toHaveBeenCalled()
       })
     })
   })

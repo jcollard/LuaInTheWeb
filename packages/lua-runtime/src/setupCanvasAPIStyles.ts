@@ -41,13 +41,14 @@ function convertLuaStyleToJS(style: unknown): FillStyle {
     const luaStops = luaTable.stops as Record<number, { offset: number; color: string }> | undefined
     const stops: Array<{ offset: number; color: string }> = []
     if (luaStops) {
-      // Lua arrays are 1-indexed; iterate using length
-      const len = (luaStops as { length?: number }).length ?? 0
-      for (let i = 1; i <= len; i++) {
+      // Lua table proxies from wasmoon don't have .length property.
+      // Detect indexing style: JS arrays have element at [0], Lua tables at [1]
+      const startIndex = luaStops[0] !== undefined ? 0 : 1
+      let i = startIndex
+      while (luaStops[i] !== undefined) {
         const stop = luaStops[i]
-        if (stop) {
-          stops.push({ offset: stop.offset, color: stop.color })
-        }
+        stops.push({ offset: stop.offset, color: stop.color })
+        i++
       }
     }
 
@@ -110,12 +111,16 @@ export function setupStyleBindings(
     // Convert Lua table proxy to native JavaScript array
     const jsArray: number[] = []
     if (segments && typeof segments === 'object') {
-      const len = (segments as { length?: number }).length ?? 0
-      for (let i = 1; i <= len; i++) {
-        const val = (segments as Record<number, number>)[i]
-        if (typeof val === 'number') {
-          jsArray.push(val)
+      const luaSegments = segments as Record<number, number>
+      // Lua table proxies from wasmoon don't have .length property.
+      // Detect indexing style: JS arrays have element at [0], Lua tables at [1]
+      const startIndex = luaSegments[0] !== undefined ? 0 : 1
+      let i = startIndex
+      while (luaSegments[i] !== undefined) {
+        if (typeof luaSegments[i] === 'number') {
+          jsArray.push(luaSegments[i])
         }
+        i++
       }
     }
     getController()?.setLineDash(jsArray)
