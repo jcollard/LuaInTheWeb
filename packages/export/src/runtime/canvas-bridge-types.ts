@@ -76,6 +76,10 @@ export interface CanvasRuntimeState {
   imageDataStore: Map<number, StoredImageData>
   /** Next ID for imageData registry */
   nextImageDataId: number
+  /** Cached line dash array returned to callers (Issue #607) */
+  lineDashCache: number[] | null
+  /** Stored line dash segments - source of truth (Issue #607) */
+  lineDashSegments: number[]
 }
 
 /**

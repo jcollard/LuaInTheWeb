@@ -19,6 +19,7 @@ import {
 } from '@lua-learning/lua-runtime'
 
 import type { LuaEngine } from 'wasmoon'
+import { toNumberArray } from './canvas-bridge-utils.js'
 
 /**
  * Cached gamepad state for a single gamepad.
@@ -103,6 +104,11 @@ export interface CanvasRuntimeState {
   nextImageDataId: number
   // Gradient cache for GC pressure reduction (Issue #605)
   gradientCache: Map<string, CanvasGradient>
+  // Line dash caching for GC pressure reduction (Issue #607)
+  /** Cached line dash array returned to callers */
+  lineDashCache: number[] | null
+  /** Stored line dash segments (source of truth) */
+  lineDashSegments: number[]
 }
 
 /**
@@ -157,6 +163,9 @@ export function createCanvasRuntimeState(
     nextImageDataId: 1,
     // Gradient cache for GC pressure reduction (Issue #605)
     gradientCache: new Map(),
+    // Line dash caching for GC pressure reduction (Issue #607)
+    lineDashCache: null,
+    lineDashSegments: [],
   }
 }
 
@@ -372,6 +381,7 @@ function serializeStops(stops: unknown): string {
   }
   return parts.join(',')
 }
+
 
 /**
  * Build a deterministic cache key for gradient styles.
@@ -848,12 +858,18 @@ export function setupCanvasBridge(
     ctx.miterLimit = limit
   })
 
-  engine.global.set('__canvas_setLineDash', (segments: number[]) => {
-    ctx.setLineDash(segments)
+  // Line dash caching for GC pressure reduction (Issue #607)
+  engine.global.set('__canvas_setLineDash', (segments: number[] | Record<number, number>) => {
+    state.lineDashSegments = toNumberArray(segments)
+    state.lineDashCache = null
+    ctx.setLineDash(state.lineDashSegments)
   })
 
   engine.global.set('__canvas_getLineDash', () => {
-    return ctx.getLineDash()
+    if (state.lineDashCache === null) {
+      state.lineDashCache = [...state.lineDashSegments]
+    }
+    return state.lineDashCache
   })
 
   engine.global.set('__canvas_setLineDashOffset', (offset: number) => {

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /**
  * Tests for StyleAPI class - Facade for canvas style operations.
  * @vitest-environment jsdom
@@ -137,6 +138,16 @@ describe('StyleAPI', () => {
         expect(mockAddDrawCommand).toHaveBeenCalledWith({ type: 'setLineDash', segments: [10, 5, 2, 5] })
         expect(styleAPI.getLineDash()).toEqual([10, 5, 2, 5])
       })
+
+      it('should pass stored copy to command, not original array', () => {
+        const segments = [10, 5]
+        styleAPI.setLineDash(segments)
+        const call = mockAddDrawCommand.mock.calls[0][0]
+        expect(call.type).toBe('setLineDash')
+        // The segments passed to command should be a copy, not the original
+        expect((call as { type: 'setLineDash'; segments: number[] }).segments).not.toBe(segments)
+        expect((call as { type: 'setLineDash'; segments: number[] }).segments).toEqual([10, 5])
+      })
     })
 
     describe('getLineDash', () => {
@@ -144,19 +155,12 @@ describe('StyleAPI', () => {
         expect(styleAPI.getLineDash()).toEqual([])
       })
 
-      it('should return a defensive copy', () => {
+      it('should return same cached instance on consecutive calls', () => {
         styleAPI.setLineDash([10, 5])
         const dash1 = styleAPI.getLineDash()
         const dash2 = styleAPI.getLineDash()
-        expect(dash1).not.toBe(dash2)
-        expect(dash1).toEqual(dash2)
-      })
-
-      it('should not be affected by modifying the returned array', () => {
-        styleAPI.setLineDash([10, 5])
-        const dash = styleAPI.getLineDash()
-        dash.push(100)
-        expect(styleAPI.getLineDash()).toEqual([10, 5])
+        expect(dash1).toBe(dash2)
+        expect(dash1).toEqual([10, 5])
       })
 
       it('should not be affected by modifying the input array', () => {
@@ -164,6 +168,23 @@ describe('StyleAPI', () => {
         styleAPI.setLineDash(segments)
         segments.push(100)
         expect(styleAPI.getLineDash()).toEqual([10, 5])
+      })
+
+      it('should invalidate cache when setLineDash is called', () => {
+        styleAPI.setLineDash([10, 5])
+        const dash1 = styleAPI.getLineDash()
+        styleAPI.setLineDash([20, 10])
+        const dash2 = styleAPI.getLineDash()
+        expect(dash1).not.toBe(dash2)
+        expect(dash2).toEqual([20, 10])
+      })
+
+      it('should return same cached instance for empty arrays', () => {
+        styleAPI.setLineDash([])
+        const dash1 = styleAPI.getLineDash()
+        const dash2 = styleAPI.getLineDash()
+        expect(dash1).toBe(dash2)
+        expect(dash1).toEqual([])
       })
     })
 

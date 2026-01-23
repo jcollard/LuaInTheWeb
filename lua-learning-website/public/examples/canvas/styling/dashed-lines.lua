@@ -11,7 +11,7 @@ canvas.tick(function()
   canvas.clear()
 
   -- ===========================================
-  -- DASH PATTERNS
+  -- DASH PATTERNS (static, no animation)
   -- ===========================================
 
   canvas.set_color(80, 80, 80)
@@ -19,6 +19,7 @@ canvas.tick(function()
   canvas.draw_text(20, 25, "Dash Patterns")
 
   canvas.set_line_width(3)
+  canvas.set_line_dash_offset(0)  -- Reset offset for static patterns
 
   -- Simple dashed line
   canvas.set_line_dash({10, 5})

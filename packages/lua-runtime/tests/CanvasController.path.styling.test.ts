@@ -166,14 +166,6 @@ describe('CanvasController Path API - Styling', () => {
 
       expect(controller.getLineDash()).toEqual([10, 5])
     })
-
-    it('should return copy of internal array', () => {
-      controller.setLineDash([10, 5])
-      const result = controller.getLineDash()
-      result.push(99)
-
-      expect(controller.getLineDash()).toEqual([10, 5])
-    })
   })
 
   describe('setLineDashOffset', () => {

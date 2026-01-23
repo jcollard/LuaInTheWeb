@@ -13,6 +13,7 @@ import type {
   CanvasBridge,
   StoredImageData,
 } from './canvas-bridge-types.js'
+import { toNumberArray } from './canvas-bridge-utils.js'
 
 /**
  * Create a new canvas runtime state.
@@ -55,6 +56,9 @@ export function createCanvasRuntimeState(
     // ImageData registry state (Issue #603 - avoid GC pressure)
     imageDataStore: new Map<number, StoredImageData>(),
     nextImageDataId: 1,
+    // Line dash caching for GC pressure reduction (Issue #607)
+    lineDashCache: null,
+    lineDashSegments: [],
   }
 }
 
@@ -183,6 +187,7 @@ function toHex(value: number): string {
   const hex = Math.max(0, Math.min(255, Math.round(value))).toString(16)
   return hex.length === 1 ? '0' + hex : hex
 }
+
 
 function colorToCss(
   r: number,
@@ -652,12 +657,18 @@ export class CoreCanvasBridge implements CanvasBridge {
       ctx.miterLimit = limit
     })
 
-    engine.global.set('__canvas_setLineDash', (segments: number[]) => {
-      ctx.setLineDash(segments)
+    // Line dash caching for GC pressure reduction (Issue #607)
+    engine.global.set('__canvas_setLineDash', (segments: number[] | Record<number, number>) => {
+      state.lineDashSegments = toNumberArray(segments)
+      state.lineDashCache = null
+      ctx.setLineDash(state.lineDashSegments)
     })
 
     engine.global.set('__canvas_getLineDash', () => {
-      return ctx.getLineDash()
+      if (state.lineDashCache === null) {
+        state.lineDashCache = [...state.lineDashSegments]
+      }
+      return state.lineDashCache
     })
 
     engine.global.set('__canvas_setLineDashOffset', (offset: number) => {
