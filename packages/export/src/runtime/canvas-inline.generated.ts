@@ -1120,22 +1120,49 @@ var CanvasInline = (() => {
       return __canvas_isKeyPressed(normalize_key(key))
     end
 
-    -- Helper to convert JS array proxy to plain Lua table
-    -- This ensures proper Lua errors with line numbers instead of JS TypeErrors
-    local function to_lua_array(js_array)
-      local t = {}
-      for i = 1, #js_array do
-        t[i] = js_array[i]
-      end
-      return t
-    end
+    -- Cache for keys_down Lua table (reduces GC pressure #608)
+    local _keys_down_cache = {}
+    local _keys_down_last_ref = nil
+
+    -- Cache for keys_pressed Lua table (reduces GC pressure #608)
+    local _keys_pressed_cache = {}
+    local _keys_pressed_last_ref = nil
 
     function _canvas.get_keys_down()
-      return to_lua_array(__canvas_getKeysDown())
+      local js_array = __canvas_getKeysDown()
+      -- JS returns same reference if unchanged (issue #597)
+      if js_array ~= _keys_down_last_ref then
+        _keys_down_last_ref = js_array
+        -- Clear and repopulate cache table (reuse allocation)
+        local i = 1
+        while i <= #js_array do
+          _keys_down_cache[i] = js_array[i]
+          i = i + 1
+        end
+        -- Clear any extra entries from previous larger arrays
+        while _keys_down_cache[i] ~= nil do
+          _keys_down_cache[i] = nil
+          i = i + 1
+        end
+      end
+      return _keys_down_cache
     end
 
     function _canvas.get_keys_pressed()
-      return to_lua_array(__canvas_getKeysPressed())
+      local js_array = __canvas_getKeysPressed()
+      if js_array ~= _keys_pressed_last_ref then
+        _keys_pressed_last_ref = js_array
+        local i = 1
+        while i <= #js_array do
+          _keys_pressed_cache[i] = js_array[i]
+          i = i + 1
+        end
+        while _keys_pressed_cache[i] ~= nil do
+          _keys_pressed_cache[i] = nil
+          i = i + 1
+        end
+      end
+      return _keys_pressed_cache
     end
 
     -- Mouse input
@@ -3128,6 +3155,21 @@ end
 return localstorage
 \`;
 
+  // src/runtime/canvas-bridge-utils.ts
+  function toNumberArray(segments) {
+    if (Array.isArray(segments)) {
+      return [...segments];
+    }
+    const result = [];
+    const startIndex = segments[0] !== void 0 ? 0 : 1;
+    let i = startIndex;
+    while (segments[i] !== void 0) {
+      result.push(segments[i]);
+      i++;
+    }
+    return result;
+  }
+
   // src/runtime/canvas-standalone.ts
   function createEmptyGamepadState() {
     return {
@@ -3333,19 +3375,6 @@ return localstorage
       i++;
     }
     return parts.join(",");
-  }
-  function toNumberArray(segments) {
-    if (Array.isArray(segments)) {
-      return [...segments];
-    }
-    const result = [];
-    const startIndex = segments[0] !== void 0 ? 0 : 1;
-    let i = startIndex;
-    while (segments[i] !== void 0) {
-      result.push(segments[i]);
-      i++;
-    }
-    return result;
   }
   function buildGradientCacheKey(style) {
     const stops = serializeStops(style.stops);
