@@ -63,6 +63,80 @@ end
 canvas.tick(game)
 ```
 
+## Start Screen (Browser Audio Policy)
+
+Modern browsers require user interaction before playing audio. When running games with the `--start-screen` flag (or in exported games with audio), a "Click to Start" overlay is shown before the game runs.
+
+### canvas.set_start_screen(callback)
+
+Set a custom start screen callback for rendering an overlay. If `callback` is `nil`, the default "Click to Start" overlay is shown.
+
+The callback is called each frame until the user clicks or presses a key.
+
+**Parameters:**
+- `callback` (function|nil): Custom render callback, or nil for default overlay
+
+```lua
+-- Custom animated start screen
+local pulse = 0
+
+canvas.set_start_screen(function()
+  pulse = pulse + canvas.get_delta() * 3
+  local alpha = math.abs(math.sin(pulse))
+
+  canvas.clear()
+  canvas.set_color(20, 20, 40)
+  canvas.fill_rect(0, 0, canvas.get_width(), canvas.get_height())
+
+  canvas.set_color(255, 255, 255, 255 * alpha)
+  canvas.set_font_size(32)
+  canvas.draw_text(150, 140, "Click to Start")
+
+  canvas.set_color(150, 150, 150)
+  canvas.set_font_size(16)
+  canvas.draw_text(120, 180, "Audio requires user interaction")
+end)
+```
+
+### canvas.is_waiting_for_interaction()
+
+Check if the canvas is waiting for user interaction. Returns `true` if the start screen is being shown (user hasn't clicked yet).
+
+**Returns:**
+- (boolean): True if waiting for user interaction
+
+```lua
+-- Useful for conditional logic
+if canvas.is_waiting_for_interaction() then
+  -- Show preview or instructions
+else
+  -- Normal game loop
+end
+```
+
+### Use Cases
+
+#### Games with Audio
+
+When your game uses `canvas.play_sound()` or `canvas.play_music()`, browsers may block audio until the user interacts. Use `--start-screen` to ensure audio works:
+
+```bash
+lua --start-screen my-game.lua
+```
+
+#### Custom Branding
+
+Replace the default overlay with your game's branding:
+
+```lua
+canvas.set_start_screen(function()
+  canvas.clear()
+  canvas.draw_image("logo", 100, 50)
+  canvas.set_color(255, 255, 255)
+  canvas.draw_text(150, 200, "Press any key")
+end)
+```
+
 ## Canvas Configuration
 
 ### canvas.set_size(width, height)
@@ -193,6 +267,7 @@ The format is: `data:image/<format>;base64,<encoded-data>`
 - [Rotating Square](../../examples/canvas/transforms/rotating-square.lua) - Animation using get_delta()
 - [Analog Clock](../../examples/canvas/transforms/analog-clock.lua) - Using get_time() for real-time display
 - [Capture Demo](../../examples/canvas/capture/capture-demo.lua) - Canvas capture as data URL
+- [Custom Start Screen](../../examples/canvas/start-screen/custom-overlay.lua) - Custom start screen overlay
 
 ---
 

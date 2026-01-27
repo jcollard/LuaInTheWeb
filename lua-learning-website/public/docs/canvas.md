@@ -96,6 +96,8 @@ canvas.start()
 | `canvas.start()` | Start the canvas and run the game loop |
 | `canvas.stop()` | Stop the canvas and return control |
 | `canvas.tick(callback)` | Register the frame callback function |
+| `canvas.set_start_screen(callback)` | Set custom start screen overlay (for audio policy) |
+| `canvas.is_waiting_for_interaction()` | Check if waiting for user to click/press key |
 
 ### Configuration
 | Function | Description |

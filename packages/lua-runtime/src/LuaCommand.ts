@@ -41,6 +41,7 @@ interface ParsedLuaOptions {
   screenMode: ScreenMode
   noToolbar: boolean
   hotReloadMode: HotReloadMode
+  startScreen: boolean
   filename: string | null
   lint: boolean
 }
@@ -81,7 +82,7 @@ export class LuaCommand implements ICommand {
   /**
    * Usage pattern.
    */
-  readonly usage = 'lua [--lint] [--canvas=tab|window] [--screen=1x|fit|full] [--no-toolbar] [--hot-reload=manual|auto] [filename]'
+  readonly usage = 'lua [--lint] [--canvas=tab|window] [--screen=1x|fit|full] [--no-toolbar] [--hot-reload=manual|auto] [--start-screen] [filename]'
 
   /**
    * Parse command arguments into structured options.
@@ -93,6 +94,7 @@ export class LuaCommand implements ICommand {
     let screenMode: ScreenMode = undefined
     let noToolbar = false
     let hotReloadMode: HotReloadMode = 'manual'
+    let startScreen = false
     let filename: string | null = null
     let lint = false
 
@@ -101,6 +103,8 @@ export class LuaCommand implements ICommand {
         lint = true
       } else if (arg === '--no-toolbar') {
         noToolbar = true
+      } else if (arg === '--start-screen') {
+        startScreen = true
       } else if (arg.startsWith('--canvas=')) {
         const mode = arg.slice('--canvas='.length)
         if (mode === 'tab' || mode === 'window') {
@@ -127,7 +131,7 @@ export class LuaCommand implements ICommand {
       }
     }
 
-    return { canvasMode, screenMode, noToolbar, hotReloadMode, filename, lint }
+    return { canvasMode, screenMode, noToolbar, hotReloadMode, startScreen, filename, lint }
   }
 
   /**
@@ -137,7 +141,7 @@ export class LuaCommand implements ICommand {
    * @returns IProcess for the Lua execution, or undefined for --lint
    */
   execute(args: string[], context: ShellContext): IProcess | undefined {
-    const { canvasMode, screenMode, noToolbar, hotReloadMode, filename, lint } = this.parseArgs(args)
+    const { canvasMode, screenMode, noToolbar, hotReloadMode, startScreen, filename, lint } = this.parseArgs(args)
 
     // Handle --lint flag
     if (lint) {
@@ -210,7 +214,7 @@ export class LuaCommand implements ICommand {
       })
     }
 
-    // Build options, including canvas callbacks, mode, screen mode, toolbar visibility, and hot reload mode
+    // Build options, including canvas callbacks, mode, screen mode, toolbar visibility, hot reload mode, and start screen
     const options = {
       ...DEFAULT_EXECUTION_OPTIONS,
       canvasCallbacks,
@@ -218,6 +222,7 @@ export class LuaCommand implements ICommand {
       screenMode,
       noToolbar,
       hotReloadMode,
+      startScreen,
     }
 
     return new LuaScriptProcess(filename, context, options)

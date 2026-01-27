@@ -80,6 +80,9 @@ const mockMainChannel = {
   // Audio methods
   setAudioState: vi.fn(),
   getAudioState: vi.fn(() => ({ masterVolume: 1, muted: false })),
+  // Start screen methods
+  isWaitingForInteraction: vi.fn(() => false),
+  setWaitingForInteraction: vi.fn(),
 };
 
 // Mock channelFactory - using a configurable mock that can switch modes

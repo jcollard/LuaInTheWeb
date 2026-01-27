@@ -64,6 +64,9 @@ export class LuaCanvasRuntime {
   // Pending module content response (set by handleModuleContentResponse)
   private pendingModuleContent: { moduleName: string; content: string | null } | null = null;
 
+  // Start screen callback for custom start screen rendering
+  private startScreenCallback: (() => void) | null = null;
+
   constructor(channel: IWorkerChannel) {
     this.channel = channel;
   }
@@ -784,6 +787,18 @@ export class LuaCanvasRuntime {
       return state?.currentAudioName ?? '';
     });
 
+    // Start screen callback for custom start screen rendering
+    lua.global.set('__canvas_setStartScreen', (callback: (() => void) | null) => {
+      runtime.startScreenCallback = callback;
+      // Notify the channel that we have a custom start screen
+      runtime.channel.setHasCustomStartScreen(callback !== null);
+    });
+
+    // Check if waiting for interaction (for runLoop to check)
+    lua.global.set('__canvas_isWaitingForInteraction', () => {
+      return runtime.channel.isWaitingForInteraction();
+    });
+
     // Set up the Lua-side canvas table with methods (using snake_case for Lua conventions)
     lua.doStringSync(`
       canvas = {}
@@ -1161,6 +1176,26 @@ export class LuaCanvasRuntime {
 
       function canvas.get_current_music_name()
         return __audio_getCurrentMusicName()
+      end
+
+      -- ========================================================================
+      -- Start Screen API
+      -- ========================================================================
+
+      --- Set a custom start screen callback.
+      --- When audio is pending (AudioContext suspended), this callback is called
+      --- instead of the normal tick callback until the user clicks to enable audio.
+      --- If no callback is set, a default "Click to Start" overlay is shown.
+      ---@param callback function|nil The callback to render the start screen, or nil to use default
+      function canvas.set_start_screen(callback)
+        __canvas_setStartScreen(callback)
+      end
+
+      --- Check if the canvas is waiting for user interaction.
+      --- Returns true if audio is pending and the user hasn't clicked yet.
+      ---@return boolean
+      function canvas.is_waiting_for_interaction()
+        return __canvas_isWaitingForInteraction()
       end
 
       -- ========================================================================
@@ -1824,24 +1859,46 @@ export class LuaCanvasRuntime {
         // Clear frame commands in-place to avoid GC pressure
         this.frameCommands.length = 0;
 
-        // Execute the onDraw callback
-        if (this.onDrawCallback) {
+        // Check if waiting for user interaction (start screen)
+        const isWaiting = this.channel.isWaitingForInteraction();
+
+        if (isWaiting && this.startScreenCallback) {
+          // Render custom start screen
           try {
-            this.onDrawCallback();
+            this.startScreenCallback();
           } catch (error) {
             try {
               if (this.errorHandler && error instanceof Error) {
-                this.errorHandler(`canvas.tick: ${error.message}`);
+                this.errorHandler(`canvas.set_start_screen callback: ${error.message}`);
               }
             } catch (handlerError) {
-              // Error handler itself failed - log but don't crash
               console.error('Error handler failed:', handlerError);
             }
-            // Stop loop after any error in tick callback
-            this.loopRunning = false;
-            break;
+            // On error, clear the callback so default is used
+            this.startScreenCallback = null;
+            this.channel.setHasCustomStartScreen(false);
+          }
+        } else if (!isWaiting) {
+          // Execute the normal onDraw callback
+          if (this.onDrawCallback) {
+            try {
+              this.onDrawCallback();
+            } catch (error) {
+              try {
+                if (this.errorHandler && error instanceof Error) {
+                  this.errorHandler(`canvas.tick: ${error.message}`);
+                }
+              } catch (handlerError) {
+                // Error handler itself failed - log but don't crash
+                console.error('Error handler failed:', handlerError);
+              }
+              // Stop loop after any error in tick callback
+              this.loopRunning = false;
+              break;
+            }
           }
         }
+        // If isWaiting && no custom callback, we skip frame - main thread renders default
 
         // Send draw commands to main thread
         if (this.frameCommands.length > 0) {

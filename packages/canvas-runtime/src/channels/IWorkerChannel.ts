@@ -165,6 +165,38 @@ export interface IWorkerChannel {
   sendImageDataResponse(response: GetImageDataResponse): void;
 
   /**
+   * Check if the canvas is waiting for user interaction (start screen).
+   * Called by the worker to determine if it should show the start screen.
+   *
+   * @returns True if waiting for user interaction
+   */
+  isWaitingForInteraction(): boolean;
+
+  /**
+   * Set whether the canvas is waiting for user interaction.
+   * Called by the main thread when audio is pending and no user interaction yet.
+   *
+   * @param waiting - Whether to show the start screen
+   */
+  setWaitingForInteraction(waiting: boolean): void;
+
+  /**
+   * Check if the worker has a custom start screen callback.
+   * Called by the main thread to decide whether to render the default overlay.
+   *
+   * @returns True if worker has a custom start screen callback
+   */
+  hasCustomStartScreen(): boolean;
+
+  /**
+   * Set whether the worker has a custom start screen callback.
+   * Called by the worker when canvas.set_start_screen() is used.
+   *
+   * @param hasCustom - Whether a custom callback is registered
+   */
+  setHasCustomStartScreen(hasCustom: boolean): void;
+
+  /**
    * Clean up resources when the channel is no longer needed.
    */
   dispose(): void;

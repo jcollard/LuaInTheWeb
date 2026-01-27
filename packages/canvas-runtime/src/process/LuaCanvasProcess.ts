@@ -80,6 +80,10 @@ export class LuaCanvasProcess implements IProcess {
   private audioInitPromise: Promise<void> | null = null;
   private audioAvailable = false;
 
+  // Start screen state
+  private audioCommandsSeen = false;
+  private userHasInteracted = false;
+
   /**
    * Callback invoked when the process produces output.
    */
@@ -613,13 +617,28 @@ export class LuaCanvasProcess implements IProcess {
       const inputState = this.inputCapture.getInputState();
       this.channel.setInputState(inputState);
 
-      // Resume AudioContext on first user interaction (browser autoplay policy)
-      if (this.audioEngine && (inputState.mouseButtonsPressed.length > 0 || inputState.keysPressed.length > 0)) {
-        this.audioEngine.resumeContext().catch(() => {
-          // Ignore errors - context may already be running
-        });
+      // Detect user interaction (mouse click or key press)
+      const hasInteraction = inputState.mouseButtonsPressed.length > 0 || inputState.keysPressed.length > 0;
+
+      if (hasInteraction && !this.userHasInteracted) {
+        this.userHasInteracted = true;
+
+        // Resume AudioContext on first user interaction (browser autoplay policy)
+        if (this.audioEngine) {
+          this.audioEngine.resumeContext().catch(() => {
+            // Ignore errors - context may already be running
+          });
+        }
       }
     }
+
+    // Determine if we need to show the start screen
+    const needsStartScreen = this.audioCommandsSeen &&
+      !this.userHasInteracted &&
+      this.audioEngine?.isContextSuspended() === true;
+
+    // Update channel state so worker knows whether to show start screen
+    this.channel.setWaitingForInteraction(needsStartScreen);
 
     // Get draw commands from worker via channel
     const commands = this.channel.getDrawCommands();
@@ -632,10 +651,15 @@ export class LuaCanvasProcess implements IProcess {
           this.channel.setCanvasSize(cmd.width, cmd.height);
         }
       }
-      // Process audio commands
+      // Process audio commands (this also tracks audioCommandsSeen)
       this.processAudioCommands(commands);
       // Render draw commands
       this.renderer.render(commands);
+    }
+
+    // If showing start screen and no custom callback, render default overlay
+    if (needsStartScreen && !this.channel.hasCustomStartScreen()) {
+      this.renderer.renderStartScreenOverlay();
     }
 
     // Sync audio state to worker
@@ -690,9 +714,11 @@ export class LuaCanvasProcess implements IProcess {
     for (const cmd of commands) {
       switch (cmd.type) {
         case 'playSound':
+          this.audioCommandsSeen = true;
           this.audioEngine.playSound(cmd.name, cmd.volume);
           break;
         case 'playMusic':
+          this.audioCommandsSeen = true;
           this.audioEngine.playMusic(cmd.name, cmd.volume, cmd.loop);
           break;
         case 'stopMusic':
@@ -724,6 +750,7 @@ export class LuaCanvasProcess implements IProcess {
           this.audioEngine.destroyChannel(cmd.channel);
           break;
         case 'channelPlay':
+          this.audioCommandsSeen = true;
           this.audioEngine.playOnChannel(cmd.channel, cmd.audio, cmd.volume, cmd.loop);
           break;
         case 'channelStop':
