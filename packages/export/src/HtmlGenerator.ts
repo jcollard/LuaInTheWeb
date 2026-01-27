@@ -421,8 +421,56 @@ export class HtmlGenerator {
       }
     }
 
-    // Start the runtime
-    initLua();
+    // Render start screen overlay
+    function renderStartScreen() {
+      const ctx = gameCanvas.getContext('2d');
+      const width = gameCanvas.width;
+      const height = gameCanvas.height;
+
+      // Semi-transparent dark background
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.fillRect(0, 0, width, height);
+
+      // Center "Click to Start" text
+      const text = 'Click to Start';
+      const fontSize = Math.max(24, Math.min(48, width / 12));
+      ctx.font = 'bold ' + fontSize + 'px sans-serif';
+      ctx.fillStyle = 'white';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, width / 2, height / 2);
+    }
+
+    // Show start screen and wait for user interaction before starting Lua
+    renderStartScreen();
+
+    async function startGame() {
+      document.removeEventListener('click', startGame);
+      document.removeEventListener('keydown', startGame);
+      document.removeEventListener('touchstart', startGame);
+
+      state.userHasInteracted = true;
+      state.forceStartScreen = false;
+
+      // Create AudioContext synchronously in gesture handler (Issue #617)
+      // Browser autoplay policy requires this before any await
+      try {
+        const audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        state.preUnlockedAudioContext = audioCtx;
+      } catch (e) {
+        console.warn('Could not pre-unlock AudioContext:', e);
+      }
+
+      await initLua();
+    }
+
+    // Wait for user interaction before starting
+    document.addEventListener('click', startGame);
+    document.addEventListener('keydown', startGame);
+    document.addEventListener('touchstart', startGame);
   </script>
 </body>
 </html>`

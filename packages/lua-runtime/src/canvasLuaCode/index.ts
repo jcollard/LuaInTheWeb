@@ -7,6 +7,7 @@
  */
 
 export { canvasLuaCoreCode } from './core'
+export { canvasLuaLifecycleCode } from './lifecycle'
 export { canvasLuaPathCode } from './path'
 export { canvasLuaStylingCode } from './styling'
 export { canvasLuaTextCode } from './text'

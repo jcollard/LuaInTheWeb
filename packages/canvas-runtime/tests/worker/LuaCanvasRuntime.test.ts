@@ -71,6 +71,7 @@ function createMockChannel(): IWorkerChannel {
         frameReadyResolver = null;
       }
     }),
+    isWaitingForInteraction: vi.fn(() => false),
     dispose: vi.fn(),
   };
 }

@@ -812,7 +812,15 @@ export class MainThreadAudioEngine {
       musicDuration: this.getMusicDuration(),
       currentMusicName: this.getCurrentMusicName(),
       channels: channelStates,
+      contextSuspended: this.isContextSuspended(),
     };
+  }
+
+  /**
+   * Check if the AudioContext is suspended (awaiting user interaction).
+   */
+  isContextSuspended(): boolean {
+    return this.audioContext?.state === 'suspended';
   }
 
   /**

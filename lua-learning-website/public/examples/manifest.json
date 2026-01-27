@@ -62,6 +62,7 @@
     "canvas/pixels/dirty-rect-demo.lua",
     "canvas/styling/filter-effects.lua",
     "canvas/capture/capture-demo.lua",
+    "canvas/start-screen/custom-overlay.lua",
     "canvas/assets/images/kenney_tinytown_spritesheet.png",
     "canvas/assets/fonts/10px-Bitfantasy.ttf",
     "canvas/assets/fonts/10px-CelticTime.ttf",

@@ -94,8 +94,12 @@ export class WebAudioEngine implements IAudioEngine {
    * Initialize the audio engine.
    * Creates the AudioContext and master gain node.
    * Uses a promise to prevent race conditions from concurrent calls.
+   *
+   * @param existingContext - Optional pre-created AudioContext to use instead of creating a new one.
+   *                          This is useful for ensuring AudioContext is created synchronously
+   *                          within a user gesture handler (browser autoplay policy).
    */
-  async initialize(): Promise<void> {
+  async initialize(existingContext?: AudioContext): Promise<void> {
     if (this.initialized) {
       return;
     }
@@ -106,7 +110,7 @@ export class WebAudioEngine implements IAudioEngine {
     }
 
     // Start initialization and store the promise
-    this.initializePromise = this.doInitialize();
+    this.initializePromise = this.doInitialize(existingContext);
 
     try {
       await this.initializePromise;
@@ -118,10 +122,10 @@ export class WebAudioEngine implements IAudioEngine {
   /**
    * Internal initialization logic.
    */
-  private async doInitialize(): Promise<void> {
+  private async doInitialize(existingContext?: AudioContext): Promise<void> {
     try {
-      // Create AudioContext
-      this.audioContext = new AudioContext();
+      // Use existing context if provided, otherwise create new one
+      this.audioContext = existingContext ?? new AudioContext();
 
       // Create master gain node for global volume control
       this.masterGainNode = this.audioContext.createGain();

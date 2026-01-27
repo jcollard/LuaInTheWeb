@@ -33,6 +33,8 @@ export interface LuaScriptProcessOptions extends ExecutionControlOptions {
   noToolbar?: boolean
   /** Hot reload mode: 'manual' (default) or 'auto' (reload on save) */
   hotReloadMode?: HotReloadMode
+  /** If true, show start screen overlay before game runs (for audio browser policy) */
+  startScreen?: boolean
   /** Callback when filesystem changes (for UI refresh) */
   onFileSystemChange?: () => void
 }
@@ -462,7 +464,11 @@ __clear_execution_hook()
           : undefined,
     }
 
-    this.canvasController = new CanvasController(routedCallbacks)
+    this.canvasController = new CanvasController(
+      routedCallbacks,
+      'canvas-main',
+      this.options.startScreen ?? false
+    )
 
     // Use shared setup functions for canvas
     setupCanvasAPI(this.engine, () => this.canvasController)

@@ -8,6 +8,7 @@
 
 import {
   canvasLuaCoreCode,
+  canvasLuaLifecycleCode,
   canvasLuaPathCode,
   canvasLuaStylingCode,
   canvasLuaTextCode,
@@ -21,6 +22,7 @@ import {
  */
 export const canvasLuaCode =
   canvasLuaCoreCode +
+  canvasLuaLifecycleCode +
   canvasLuaPathCode +
   canvasLuaStylingCode +
   canvasLuaTextCode +

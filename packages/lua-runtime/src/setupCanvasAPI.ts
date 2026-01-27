@@ -68,6 +68,15 @@ export function setupCanvasAPI(
     getController()?.setOnDrawCallback(callback)
   })
 
+  // --- Start screen functions (for browser audio autoplay policy) ---
+  engine.global.set('__canvas_setStartScreen', (callback: (() => void) | null) => {
+    getController()?.setStartScreenCallback(callback)
+  })
+
+  engine.global.set('__canvas_isWaitingForInteraction', () => {
+    return getController()?.isWaitingForInteraction() ?? false
+  })
+
   // --- Drawing functions ---
   engine.global.set('__canvas_clear', () => {
     getController()?.clear()

@@ -273,9 +273,15 @@ export class CanvasController {
   private measureCanvas: HTMLCanvasElement | null = null
   private measureCtx: CanvasRenderingContext2D | null = null
 
-  constructor(callbacks: CanvasCallbacks, canvasId = 'canvas-main') {
+  // Start screen state (for browser audio autoplay policy)
+  private forceStartScreen = false
+  private userHasInteracted = false
+  private startScreenCallback: (() => void) | null = null
+
+  constructor(callbacks: CanvasCallbacks, canvasId = 'canvas-main', forceStartScreen = false) {
     this.callbacks = callbacks
     this.canvasId = canvasId
+    this.forceStartScreen = forceStartScreen
     // Set up StyleAPI callback immediately so style methods work before start()
     this.styleAPI.setAddDrawCommand((cmd) => this.addDrawCommand(cmd))
     // Set up PathAPI callback immediately so path methods work before start()
@@ -366,6 +372,23 @@ export class CanvasController {
     if (this.reloadCallback) {
       this.reloadCallback()
     }
+  }
+
+  /**
+   * Set the start screen callback from Lua.
+   * If set, this callback will be called to render a custom start screen overlay.
+   * If null, the default "Click to Start" overlay will be used.
+   */
+  setStartScreenCallback(callback: (() => void) | null): void {
+    this.startScreenCallback = callback
+  }
+
+  /**
+   * Check if the canvas is waiting for user interaction before starting.
+   * Returns true if forceStartScreen is enabled and user hasn't interacted yet.
+   */
+  isWaitingForInteraction(): boolean {
+    return this.forceStartScreen && !this.userHasInteracted
   }
 
   /**
@@ -1687,28 +1710,68 @@ export class CanvasController {
     // Poll gamepads before calling onDraw so input is up-to-date
     this.inputCapture?.pollGamepads()
 
-    // Call the Lua onDraw callback
-    if (this.onDrawCallback) {
-      try {
-        this.onDrawCallback()
-      } catch (error) {
-        // Errors in onDraw should pause the canvas and report to shell
-        const errorMessage = formatOnDrawError(error)
-        this.callbacks.onError?.(errorMessage)
-        // Show error overlay in canvas window
-        this.callbacks.showErrorOverlay?.(this.canvasId, errorMessage)
-        this.pause()
-        return
+    // Detect user interaction for start screen dismissal
+    if (this.forceStartScreen && !this.userHasInteracted) {
+      const inputState = this.inputCapture?.getInputState()
+      if (inputState) {
+        const hasInteraction = inputState.keysPressed.length > 0 ||
+          inputState.mouseButtonsPressed.length > 0
+        if (hasInteraction) {
+          this.userHasInteracted = true
+        }
+      }
+    }
+
+    // Check if we need to show start screen
+    const showingStartScreen = this.forceStartScreen && !this.userHasInteracted
+
+    if (showingStartScreen) {
+      // Show start screen - either custom callback or default overlay
+      if (this.startScreenCallback) {
+        try {
+          this.startScreenCallback()
+        } catch (error) {
+          // On error, clear callback so default is used next frame
+          const errorMessage = formatOnDrawError(error)
+          this.callbacks.onError?.(errorMessage)
+          this.startScreenCallback = null
+        }
+      }
+
+      // Render any frame commands from custom callback, then overlay
+      if (this.renderer) {
+        if (this.frameCommands.length > 0) {
+          this.renderFrameCommands()
+        }
+        // If no custom callback (or it errored), show default overlay
+        if (!this.startScreenCallback) {
+          this.renderer.renderStartScreenOverlay()
+        }
+      }
+    } else {
+      // Normal game loop - call the Lua onDraw callback
+      if (this.onDrawCallback) {
+        try {
+          this.onDrawCallback()
+        } catch (error) {
+          // Errors in onDraw should pause the canvas and report to shell
+          const errorMessage = formatOnDrawError(error)
+          this.callbacks.onError?.(errorMessage)
+          // Show error overlay in canvas window
+          this.callbacks.showErrorOverlay?.(this.canvasId, errorMessage)
+          this.pause()
+          return
+        }
+      }
+
+      // Render accumulated draw commands
+      if (this.renderer && this.frameCommands.length > 0) {
+        this.renderFrameCommands()
       }
     }
 
     // Flush output buffer so print() output appears immediately
     this.callbacks.onFlushOutput?.()
-
-    // Render accumulated draw commands
-    if (this.renderer && this.frameCommands.length > 0) {
-      this.renderFrameCommands()
-    }
 
     // Update input capture (clear "just pressed" state)
     this.inputCapture?.update()

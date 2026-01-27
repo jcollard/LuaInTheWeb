@@ -16,6 +16,7 @@ local canvas = {}
 -- =============================================================================
 -- 1.  Canvas Lifecycle (start, stop)
 -- 2.  Game Loop (tick)
+-- 2b. Start Screen (set_start_screen, is_waiting_for_interaction)
 -- 3.  Canvas Configuration (set_size, get_width, get_height)
 -- 4.  Drawing State (clear, clear_rect, set_color, set_line_width)
 -- 5.  Line Styling (set_line_cap, set_line_join, set_miter_limit)
@@ -83,6 +84,36 @@ function canvas.stop() end
 ---   canvas.fill_rect(10, 10, 50, 50)
 --- end)
 function canvas.tick(callback) end
+
+-- =============================================================================
+-- Start Screen (Browser Audio Policy)
+-- =============================================================================
+
+--- Set a custom start screen callback for rendering an overlay.
+--- When the --start-screen flag is used, the canvas shows a "Click to Start"
+--- overlay before the game runs. Use this to customize that overlay.
+--- If callback is nil, the default overlay is shown.
+--- The callback is called each frame until the user clicks or presses a key.
+---@param callback fun()|nil Custom render callback, or nil for default overlay
+---@return nil
+---@usage -- Custom start screen
+--- canvas.set_start_screen(function()
+---   canvas.clear()
+---   canvas.set_color(0, 0, 0)
+---   canvas.fill_rect(0, 0, canvas.get_width(), canvas.get_height())
+---   canvas.set_color(255, 255, 255)
+---   canvas.draw_text(200, 150, "Press any key to begin!")
+--- end)
+function canvas.set_start_screen(callback) end
+
+--- Check if the canvas is waiting for user interaction.
+--- Returns true if the start screen is being shown (user hasn't clicked yet).
+--- Useful for conditional logic during the start screen phase.
+---@return boolean waiting True if waiting for user interaction
+---@usage if canvas.is_waiting_for_interaction() then
+---   -- Show instructions or preview
+--- end
+function canvas.is_waiting_for_interaction() end
 
 -- =============================================================================
 -- Canvas Configuration

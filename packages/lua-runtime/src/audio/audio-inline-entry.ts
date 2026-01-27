@@ -23,6 +23,13 @@ interface CanvasState {
   audioEngine?: {
     dispose: () => void;
   };
+  // Audio loading state (Issue #617)
+  /** Promise that resolves when audio is initialized */
+  audioInitPromise?: Promise<void>;
+  /** Function to wait for all pending audio loads to complete */
+  waitForAudioLoads?: () => Promise<void>;
+  /** Pre-unlocked AudioContext created synchronously in user gesture handler */
+  preUnlockedAudioContext?: AudioContext;
 }
 
 /**
@@ -63,7 +70,7 @@ export function setupAudioBridge(
 
   /**
    * Initialize AudioContext and decode all pending audio.
-   * Must be called from a user interaction event handler.
+   * Uses pre-unlocked AudioContext if available (Issue #617).
    */
   async function initializeAudio(): Promise<void> {
     if (audioContextReady) {
@@ -71,10 +78,10 @@ export function setupAudioBridge(
     }
 
     try {
-      await audioEngine.initialize();
+      await audioEngine.initialize(state.preUnlockedAudioContext);
       audioContextReady = true;
 
-      // Decode all pending audio data
+      // Decode all pending audio data (for any audio loaded during init)
       for (const [name, buffer] of pendingAudioData) {
         try {
           await audioEngine.decodeAudio(name, buffer);
@@ -88,25 +95,16 @@ export function setupAudioBridge(
     }
   }
 
-  // Set up user interaction handler to lazily initialize AudioContext
-  function setupUserInteractionHandler(): void {
-    const unlockAudio = (): void => {
-      // Remove listeners immediately to prevent multiple calls
-      document.removeEventListener('click', unlockAudio);
-      document.removeEventListener('touchstart', unlockAudio);
-      document.removeEventListener('keydown', unlockAudio);
+  // Initialize audio immediately (user already clicked start screen in HtmlGenerator.ts)
+  state.audioInitPromise = initializeAudio();
 
-      // Initialize audio (fire and forget - it's async but we don't need to wait)
-      initializeAudio();
-    };
-
-    document.addEventListener('click', unlockAudio, { once: false });
-    document.addEventListener('touchstart', unlockAudio, { once: false });
-    document.addEventListener('keydown', unlockAudio, { once: false });
-  }
-
-  // Set up the user interaction handler
-  setupUserInteractionHandler();
+  // Expose a function to wait for all pending audio loads to complete
+  state.waitForAudioLoads = async () => {
+    await state.audioInitPromise;
+    if (pendingLoads.size > 0) {
+      await Promise.all(pendingLoads);
+    }
+  };
 
   /**
    * Helper to load audio from the assets folder or embedded data URL.
