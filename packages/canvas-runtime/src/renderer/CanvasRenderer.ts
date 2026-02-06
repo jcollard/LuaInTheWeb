@@ -672,4 +672,39 @@ export class CanvasRenderer {
   clipPath(path: Path2D, fillRule?: 'nonzero' | 'evenodd'): void {
     this.ctx.clip(path, fillRule ?? 'nonzero');
   }
+
+  // ============================================================================
+  // Start Screen Overlay
+  // ============================================================================
+
+  /**
+   * Render the default "Click to Start" overlay.
+   * Used when audio is pending and the game has no custom start screen callback.
+   * Saves and restores canvas state to avoid affecting game rendering.
+   */
+  renderStartScreenOverlay(): void {
+    const { width, height } = this.canvas;
+
+    // Save current state
+    this.ctx.save();
+
+    // Reset transform to ensure overlay covers entire canvas
+    this.ctx.resetTransform();
+
+    // Semi-transparent dark background
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    this.ctx.fillRect(0, 0, width, height);
+
+    // Center "Click to Start" text
+    const text = 'Click to Start';
+    const fontSize = Math.max(24, Math.min(48, width / 12));
+    this.ctx.font = `bold ${fontSize}px sans-serif`;
+    this.ctx.fillStyle = 'white';
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillText(text, width / 2, height / 2);
+
+    // Restore state
+    this.ctx.restore();
+  }
 }

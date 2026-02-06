@@ -109,6 +109,13 @@ export interface CanvasRuntimeState {
   lineDashCache: number[] | null
   /** Stored line dash segments (source of truth) */
   lineDashSegments: number[]
+  // Audio state (Issue #617)
+  /** Promise that resolves when audio is initialized */
+  audioInitPromise?: Promise<void>
+  /** Function to wait for all pending audio loads to complete */
+  waitForAudioLoads?: () => Promise<void>
+  /** Pre-unlocked AudioContext created synchronously in user gesture handler */
+  preUnlockedAudioContext?: AudioContext
 }
 
 /**
@@ -417,7 +424,11 @@ export function setupCanvasBridge(
   engine.global.set('__canvas_is_active', () => state.isRunning)
 
   engine.global.set('__canvas_start', async () => {
-    // Audio is initialized by AUDIO_INLINE_JS via user interaction handlers
+    // Wait for audio assets to load before starting game loop (Issue #617)
+    if (state.waitForAudioLoads) {
+      await state.waitForAudioLoads()
+    }
+
     // Return a Promise that resolves when canvas.stop() is called
     return new Promise<void>((resolve) => {
       state.isRunning = true

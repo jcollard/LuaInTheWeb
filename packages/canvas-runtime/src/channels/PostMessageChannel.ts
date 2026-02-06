@@ -20,7 +20,9 @@ type MessageType =
   | 'canvas-size'
   | 'frame-ready'
   | 'image-data-request'
-  | 'image-data-response';
+  | 'image-data-response'
+  | 'waiting-for-interaction'
+  | 'has-custom-start-screen';
 
 /**
  * Message structure for PostMessage communication.
@@ -72,6 +74,10 @@ export class PostMessageChannel implements IWorkerChannel {
 
   // Frame synchronization
   private frameReadyResolver: (() => void) | null = null;
+
+  // Start screen state
+  private waitingForInteraction = false;
+  private customStartScreen = false;
 
   constructor(_config: ChannelConfig, target: PostMessageTarget) {
     this.target = target;
@@ -129,6 +135,14 @@ export class PostMessageChannel implements IWorkerChannel {
         }
         break;
       }
+
+      case 'waiting-for-interaction':
+        this.waitingForInteraction = payload as boolean;
+        break;
+
+      case 'has-custom-start-screen':
+        this.customStartScreen = payload as boolean;
+        break;
     }
   }
 
@@ -235,6 +249,26 @@ export class PostMessageChannel implements IWorkerChannel {
 
   sendImageDataResponse(response: GetImageDataResponse): void {
     this.send('image-data-response', response);
+  }
+
+  // Start screen state
+
+  isWaitingForInteraction(): boolean {
+    return this.waitingForInteraction;
+  }
+
+  setWaitingForInteraction(waiting: boolean): void {
+    this.waitingForInteraction = waiting;
+    this.send('waiting-for-interaction', waiting);
+  }
+
+  hasCustomStartScreen(): boolean {
+    return this.customStartScreen;
+  }
+
+  setHasCustomStartScreen(hasCustom: boolean): void {
+    this.customStartScreen = hasCustom;
+    this.send('has-custom-start-screen', hasCustom);
   }
 
   dispose(): void {

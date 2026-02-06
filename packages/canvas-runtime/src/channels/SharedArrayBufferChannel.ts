@@ -40,7 +40,10 @@ import { createEmptyGamepadState, MAX_GAMEPADS } from '../shared/types.js';
  * 1120-1127| 8B     | Audio music duration (Float64)
  * 1128-1191| 64B    | Audio current music name
  * 1192-1559| 368B   | Gamepad data (4 gamepads × 92 bytes each)
- * 1560-2047| 488B   | Reserved for future use
+ * 1560-1563| 4B     | Waiting for interaction flag (start screen)
+ * 1564-1567| 4B     | Has custom start screen flag
+ * 1568-1571| 4B     | AudioContext suspended flag
+ * 1572-2047| 476B   | Reserved for future use
  * 2048-65535| 63KB  | Draw commands ring buffer
  *
  * Gamepad memory layout (92 bytes per gamepad):
@@ -81,6 +84,9 @@ const GAMEPAD_BUTTONS_COUNT = 17;
 const GAMEPAD_OFFSET_BUTTONS_PRESSED = 72;
 const GAMEPAD_OFFSET_AXES = 76;
 const GAMEPAD_AXES_COUNT = 4;
+const OFFSET_WAITING_FOR_INTERACTION = 1560;
+const OFFSET_HAS_CUSTOM_START_SCREEN = 1564;
+const OFFSET_AUDIO_CONTEXT_SUSPENDED = 1568;
 const OFFSET_DRAW_BUFFER = 2048;
 
 const MAX_KEYS = 32;
@@ -346,6 +352,9 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
       ? this.textDecoder.decode(this.uint8View.slice(OFFSET_AUDIO_MUSIC_NAME, nameEnd))
       : '';
 
+    // Read context suspended flag
+    const contextSuspended = Atomics.load(this.int32View, OFFSET_AUDIO_CONTEXT_SUSPENDED / 4) === 1;
+
     return {
       muted,
       masterVolume: masterVolume || 1.0,
@@ -354,6 +363,7 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
       musicDuration: musicDuration || 0,
       currentMusicName,
       channels: this.channelStates || {},
+      contextSuspended,
     };
   }
 
@@ -371,6 +381,9 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
       const copyLength = Math.min(encoded.length, AUDIO_MUSIC_NAME_SIZE - 1);
       this.uint8View.set(encoded.subarray(0, copyLength), OFFSET_AUDIO_MUSIC_NAME);
     }
+
+    // Store context suspended flag
+    Atomics.store(this.int32View, OFFSET_AUDIO_CONTEXT_SUSPENDED / 4, state.contextSuspended ? 1 : 0);
 
     // Store channel states (kept in JS memory, not SharedArrayBuffer)
     this.channelStates = state.channels;
@@ -512,6 +525,24 @@ export class SharedArrayBufferChannel implements IWorkerChannel {
 
   sendImageDataResponse(_response: GetImageDataResponse): void {
     // No-op in SAB mode (not supported)
+  }
+
+  // Start screen state
+
+  isWaitingForInteraction(): boolean {
+    return Atomics.load(this.int32View, OFFSET_WAITING_FOR_INTERACTION / 4) === 1;
+  }
+
+  setWaitingForInteraction(waiting: boolean): void {
+    Atomics.store(this.int32View, OFFSET_WAITING_FOR_INTERACTION / 4, waiting ? 1 : 0);
+  }
+
+  hasCustomStartScreen(): boolean {
+    return Atomics.load(this.int32View, OFFSET_HAS_CUSTOM_START_SCREEN / 4) === 1;
+  }
+
+  setHasCustomStartScreen(hasCustom: boolean): void {
+    Atomics.store(this.int32View, OFFSET_HAS_CUSTOM_START_SCREEN / 4, hasCustom ? 1 : 0);
   }
 
   dispose(): void {

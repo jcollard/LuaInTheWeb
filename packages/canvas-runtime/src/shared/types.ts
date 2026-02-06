@@ -1384,6 +1384,8 @@ export interface AudioState {
   currentMusicName: string;
   /** State of all audio channels, keyed by channel name */
   channels: Record<string, ChannelAudioState>;
+  /** Whether the AudioContext is suspended (awaiting user interaction) */
+  contextSuspended: boolean;
 }
 
 /**
@@ -1398,6 +1400,7 @@ export function createDefaultAudioState(): AudioState {
     musicDuration: 0,
     currentMusicName: '',
     channels: {},
+    contextSuspended: true,
   };
 }
 

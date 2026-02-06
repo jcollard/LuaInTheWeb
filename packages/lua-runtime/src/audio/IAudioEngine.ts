@@ -39,9 +39,12 @@ export interface IAudioEngine {
   /**
    * Initialize the audio engine.
    * May need to be called after user interaction due to browser autoplay policies.
+   * @param existingContext - Optional pre-created AudioContext to use instead of creating a new one.
+   *                          This is useful for ensuring AudioContext is created synchronously
+   *                          within a user gesture handler (browser autoplay policy).
    * @returns Promise that resolves when initialization is complete
    */
-  initialize(): Promise<void>;
+  initialize(existingContext?: AudioContext): Promise<void>;
 
   /**
    * Check if the audio engine is initialized and ready.
