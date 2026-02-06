@@ -3274,6 +3274,7 @@ return localstorage
       state.mouseY = displayY * (state.canvas.height / rect.height);
     };
     const handleMouseDown = (e) => {
+      e.preventDefault();
       if (!state.mouseButtonsDown.has(e.button)) {
         state.mouseButtonsPressed.add(e.button);
       }
@@ -3285,12 +3286,16 @@ return localstorage
     const handleContextMenu = (e) => {
       e.preventDefault();
     };
+    const handleDragStart = (e) => {
+      e.preventDefault();
+    };
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("keyup", handleKeyUp);
     state.canvas.addEventListener("mousemove", handleMouseMove);
     state.canvas.addEventListener("mousedown", handleMouseDown);
     state.canvas.addEventListener("mouseup", handleMouseUp);
     state.canvas.addEventListener("contextmenu", handleContextMenu);
+    state.canvas.addEventListener("dragstart", handleDragStart);
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("keyup", handleKeyUp);
@@ -3298,6 +3303,7 @@ return localstorage
       state.canvas.removeEventListener("mousedown", handleMouseDown);
       state.canvas.removeEventListener("mouseup", handleMouseUp);
       state.canvas.removeEventListener("contextmenu", handleContextMenu);
+      state.canvas.removeEventListener("dragstart", handleDragStart);
     };
   }
   function pollGamepads(state) {

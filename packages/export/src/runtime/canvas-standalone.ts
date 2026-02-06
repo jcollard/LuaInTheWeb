@@ -205,6 +205,7 @@ export function setupInputListeners(state: CanvasRuntimeState): () => void {
   }
 
   const handleMouseDown = (e: MouseEvent) => {
+    e.preventDefault()
     if (!state.mouseButtonsDown.has(e.button)) {
       state.mouseButtonsPressed.add(e.button)
     }
@@ -220,12 +221,18 @@ export function setupInputListeners(state: CanvasRuntimeState): () => void {
     e.preventDefault()
   }
 
+  const handleDragStart = (e: Event) => {
+    // Prevent browser drag-and-drop so click-and-drag works in games
+    e.preventDefault()
+  }
+
   document.addEventListener('keydown', handleKeyDown)
   document.addEventListener('keyup', handleKeyUp)
   state.canvas.addEventListener('mousemove', handleMouseMove)
   state.canvas.addEventListener('mousedown', handleMouseDown)
   state.canvas.addEventListener('mouseup', handleMouseUp)
   state.canvas.addEventListener('contextmenu', handleContextMenu)
+  state.canvas.addEventListener('dragstart', handleDragStart)
 
   // Return cleanup function
   return () => {
@@ -235,6 +242,7 @@ export function setupInputListeners(state: CanvasRuntimeState): () => void {
     state.canvas.removeEventListener('mousedown', handleMouseDown)
     state.canvas.removeEventListener('mouseup', handleMouseUp)
     state.canvas.removeEventListener('contextmenu', handleContextMenu)
+    state.canvas.removeEventListener('dragstart', handleDragStart)
   }
 }
 

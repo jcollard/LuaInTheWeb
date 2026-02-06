@@ -47,6 +47,7 @@ export class InputCapture {
   private readonly handleMouseDown: (e: MouseEvent) => void;
   private readonly handleMouseUp: (e: MouseEvent) => void;
   private readonly handleContextMenu: (e: MouseEvent) => void;
+  private readonly handleDragStart: (e: Event) => void;
   private readonly handleBlur: () => void;
 
   constructor(target: HTMLElement) {
@@ -77,6 +78,7 @@ export class InputCapture {
     this.handleMouseDown = this.onMouseDown.bind(this);
     this.handleMouseUp = this.onMouseUp.bind(this);
     this.handleContextMenu = this.onContextMenu.bind(this);
+    this.handleDragStart = this.onDragStart.bind(this);
     this.handleBlur = this.onBlur.bind(this);
 
     // Add event listeners
@@ -86,6 +88,7 @@ export class InputCapture {
     target.addEventListener('mousedown', this.handleMouseDown);
     target.addEventListener('mouseup', this.handleMouseUp);
     target.addEventListener('contextmenu', this.handleContextMenu);
+    target.addEventListener('dragstart', this.handleDragStart);
     target.addEventListener('blur', this.handleBlur);
   }
 
@@ -348,6 +351,7 @@ export class InputCapture {
     this.target.removeEventListener('mousedown', this.handleMouseDown);
     this.target.removeEventListener('mouseup', this.handleMouseUp);
     this.target.removeEventListener('contextmenu', this.handleContextMenu);
+    this.target.removeEventListener('dragstart', this.handleDragStart);
     this.target.removeEventListener('blur', this.handleBlur);
   }
 
@@ -416,6 +420,7 @@ export class InputCapture {
   }
 
   private onMouseDown(event: MouseEvent): void {
+    event.preventDefault();
     if (!this.mouseButtonsDown.has(event.button)) {
       this.mouseButtonsPressed.add(event.button);
       this.mouseButtonsPressedDirty = true;
@@ -431,6 +436,11 @@ export class InputCapture {
 
   private onContextMenu(event: MouseEvent): void {
     // Prevent browser context menu so right-click can be used in games
+    event.preventDefault();
+  }
+
+  private onDragStart(event: Event): void {
+    // Prevent browser drag-and-drop so click-and-drag works in games
     event.preventDefault();
   }
 

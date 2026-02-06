@@ -171,6 +171,8 @@
   border: 1px solid var(--theme-border);
   background: #000;
   outline: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 /* Auto-fit mode: scale canvas down to fit while maintaining aspect ratio (never scales up) */

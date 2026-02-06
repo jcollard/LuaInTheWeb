@@ -53,6 +53,8 @@ export class HtmlGenerator {
     canvas {
       display: block;
       image-rendering: pixelated;
+      user-select: none;
+      -webkit-user-drag: none;
     }`
 
     switch (scale) {

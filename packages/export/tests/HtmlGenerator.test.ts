@@ -164,6 +164,18 @@ describe('HtmlGenerator', () => {
       expect(html).toContain('#000000')
     })
 
+    it('should include drag prevention CSS on canvas element', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig()
+      const luaFiles: CollectedFile[] = []
+      const assets: CollectedAsset[] = []
+
+      const html = generator.generateCanvas(config, luaFiles, assets)
+
+      expect(html).toContain('user-select: none')
+      expect(html).toContain('-webkit-user-drag: none')
+    })
+
     it('should use default dimensions when canvas config is undefined', () => {
       const generator = new HtmlGenerator(createOptions())
       const config: ProjectConfig = {
