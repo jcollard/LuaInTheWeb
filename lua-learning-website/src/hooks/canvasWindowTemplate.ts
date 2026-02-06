@@ -149,6 +149,8 @@ export function generateCanvasWindowHTML(screenMode?: ScreenMode, noToolbar?: bo
     canvas {
       display: block;
       background: #000;
+      user-select: none;
+      -webkit-user-drag: none;
     }
 
     /* Disconnected overlay */

@@ -564,6 +564,63 @@ describe('InputCapture', () => {
     });
   });
 
+  describe('drag prevention', () => {
+    it('should prevent default on mousedown', () => {
+      const event = new MouseEvent('mousedown', {
+        button: 0,
+        bubbles: true,
+        cancelable: true,
+      });
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+
+      target.dispatchEvent(event);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it('should prevent default on dragstart', () => {
+      const event = new Event('dragstart', {
+        bubbles: true,
+        cancelable: true,
+      });
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+
+      target.dispatchEvent(event);
+
+      expect(preventDefaultSpy).toHaveBeenCalled();
+    });
+
+    it('should remove dragstart listener on dispose', () => {
+      const newCapture = new InputCapture(target);
+      newCapture.dispose();
+
+      const event = new Event('dragstart', {
+        bubbles: true,
+        cancelable: true,
+      });
+      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+
+      target.dispatchEvent(event);
+
+      // The default InputCapture from beforeEach still listens,
+      // but newCapture should not. We verify by creating a fresh target.
+      const freshTarget = document.createElement('div');
+      document.body.appendChild(freshTarget);
+      const freshCapture = new InputCapture(freshTarget);
+      freshCapture.dispose();
+
+      const freshEvent = new Event('dragstart', {
+        bubbles: true,
+        cancelable: true,
+      });
+      const freshSpy = vi.spyOn(freshEvent, 'preventDefault');
+      freshTarget.dispatchEvent(freshEvent);
+
+      expect(freshSpy).not.toHaveBeenCalled();
+      document.body.removeChild(freshTarget);
+    });
+  });
+
   describe('focus handling', () => {
     it('should clear keys on blur to prevent stuck keys', () => {
       target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));

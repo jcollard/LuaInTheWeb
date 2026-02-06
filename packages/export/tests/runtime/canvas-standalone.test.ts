@@ -103,6 +103,53 @@ describe('canvas-standalone', () => {
       }
     })
 
+    describe('drag prevention', () => {
+      it('should prevent default on mousedown', () => {
+        setupInputListeners(state)
+
+        const event = new MouseEvent('mousedown', {
+          button: 0,
+          bubbles: true,
+          cancelable: true,
+        })
+        const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+
+        canvas.dispatchEvent(event)
+
+        expect(preventDefaultSpy).toHaveBeenCalled()
+      })
+
+      it('should prevent default on dragstart', () => {
+        setupInputListeners(state)
+
+        const event = new Event('dragstart', {
+          bubbles: true,
+          cancelable: true,
+        })
+        const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+
+        canvas.dispatchEvent(event)
+
+        expect(preventDefaultSpy).toHaveBeenCalled()
+      })
+
+      it('should remove dragstart listener on cleanup', () => {
+        const cleanup = setupInputListeners(state)
+
+        cleanup()
+
+        const event = new Event('dragstart', {
+          bubbles: true,
+          cancelable: true,
+        })
+        const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+
+        canvas.dispatchEvent(event)
+
+        expect(preventDefaultSpy).not.toHaveBeenCalled()
+      })
+    })
+
     describe('contextmenu handling', () => {
       it('should prevent the browser context menu on right-click', () => {
         setupInputListeners(state)
