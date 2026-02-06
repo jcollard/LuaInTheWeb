@@ -129,12 +129,20 @@ describe('LuaScriptProcess - Execution Control', () => {
       const process = new LuaScriptProcess('test.lua', mockContext)
       process.onOutput = onOutput
       process.onError = onError
-      process.onExit = onExit
+
+      // Wait for the exit event using a promise
+      const exitPromise = new Promise<number>((resolve) => {
+        process.onExit = (code: number) => {
+          onExit(code)
+          resolve(code)
+        }
+      })
 
       process.start()
-      await new Promise((resolve) => setTimeout(resolve, 200))
+      const exitCode = await exitPromise
 
       expect(onOutput).toHaveBeenCalledWith('hello\n')
+      expect(exitCode).toBe(0)
       expect(onExit).toHaveBeenCalledWith(0)
     })
   })
