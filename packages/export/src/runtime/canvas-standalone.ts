@@ -181,6 +181,9 @@ export function createCanvasRuntimeState(
  */
 export function setupInputListeners(state: CanvasRuntimeState): () => void {
   const handleKeyDown = (e: KeyboardEvent) => {
+    if (!e.ctrlKey && !e.metaKey) {
+      e.preventDefault()
+    }
     if (!state.keysDown.has(e.code)) {
       state.keysPressed.add(e.code)
       state.keysPressedDirty = true
@@ -190,6 +193,9 @@ export function setupInputListeners(state: CanvasRuntimeState): () => void {
   }
 
   const handleKeyUp = (e: KeyboardEvent) => {
+    if (!e.ctrlKey && !e.metaKey) {
+      e.preventDefault()
+    }
     state.keysDown.delete(e.code)
     state.keysDownDirty = true
   }

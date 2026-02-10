@@ -102,6 +102,17 @@ describe('InputCapture', () => {
         expect(inputCapture.isKeyPressed('KeyA')).toBe(false);
       });
 
+      it('should not re-trigger pressed on auto-repeat keydown', () => {
+        target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
+        expect(inputCapture.isKeyPressed('KeyA')).toBe(true);
+
+        inputCapture.update();
+
+        // Simulate auto-repeat: keydown fires again while key still held
+        target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
+        expect(inputCapture.isKeyPressed('KeyA')).toBe(false);
+      });
+
       it('should return true again after key released and pressed again', () => {
         target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
         expect(inputCapture.isKeyPressed('KeyA')).toBe(true);
@@ -130,6 +141,20 @@ describe('InputCapture', () => {
         expect(keysDown).toHaveLength(2);
         expect(keysDown).toContain('KeyA');
         expect(keysDown).toContain('KeyW');
+      });
+
+      it('should remove key from array after keyup', () => {
+        target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
+        target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
+
+        expect(inputCapture.getKeysDown()).toHaveLength(2);
+
+        target.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyA' }));
+
+        const keysDown = inputCapture.getKeysDown();
+        expect(keysDown).toHaveLength(1);
+        expect(keysDown).toContain('KeyW');
+        expect(keysDown).not.toContain('KeyA');
       });
     });
   });
@@ -255,6 +280,18 @@ describe('InputCapture', () => {
         expect(centerPos.x).toBeCloseTo(250, 0); // Center of canvas
         expect(centerPos.y).toBeCloseTo(210, 0); // Center of canvas
 
+        // Non-center point to verify letterbox content width calculation
+        // contentWidth = rectHeight * canvasAspect = 600 * (500/420) ≈ 714.29
+        // offsetX = (1200 - 714.29) / 2 ≈ 242.86
+        // At x=350: contentX = 350 - 242.86 = 107.14, canvasX = 107.14 * (500/714.29) ≈ 75
+        const offCenterEvent = new MouseEvent('mousemove', {
+          clientX: 350,
+          clientY: 300,
+        });
+        canvas.dispatchEvent(offCenterEvent);
+        const offCenterPos = canvasInput.getMousePosition();
+        expect(offCenterPos.x).toBeCloseTo(75, 0);
+
         canvasInput.dispose();
         document.body.removeChild(canvas);
       });
@@ -355,6 +392,21 @@ describe('InputCapture', () => {
         expect(inputCapture.isMouseButtonDown(0)).toBe(true);
         expect(inputCapture.isMouseButtonDown(2)).toBe(true);
       });
+
+      it('should update mouseButtonsDown array after mouseup', () => {
+        target.dispatchEvent(new MouseEvent('mousedown', { button: 0 }));
+        target.dispatchEvent(new MouseEvent('mousedown', { button: 2 }));
+
+        const state1 = inputCapture.getInputState();
+        expect(state1.mouseButtonsDown).toContain(0);
+        expect(state1.mouseButtonsDown).toContain(2);
+
+        target.dispatchEvent(new MouseEvent('mouseup', { button: 0 }));
+
+        const state2 = inputCapture.getInputState();
+        expect(state2.mouseButtonsDown).not.toContain(0);
+        expect(state2.mouseButtonsDown).toContain(2);
+      });
     });
 
     describe('isMouseButtonPressed (just pressed this frame)', () => {
@@ -377,10 +429,27 @@ describe('InputCapture', () => {
         expect(inputCapture.isMouseButtonDown(0)).toBe(true);
         expect(inputCapture.isMouseButtonPressed(0)).toBe(false);
       });
+
+      it('should not re-trigger pressed on duplicate mousedown', () => {
+        target.dispatchEvent(new MouseEvent('mousedown', { button: 0 }));
+        expect(inputCapture.isMouseButtonPressed(0)).toBe(true);
+
+        inputCapture.update();
+
+        // Second mousedown while still held should not re-trigger pressed
+        target.dispatchEvent(new MouseEvent('mousedown', { button: 0 }));
+        expect(inputCapture.isMouseButtonPressed(0)).toBe(false);
+      });
     });
   });
 
   describe('getInputState', () => {
+    it('should return empty pressed arrays before any events', () => {
+      const state = inputCapture.getInputState();
+      expect(state.keysPressed).toEqual([]);
+      expect(state.mouseButtonsPressed).toEqual([]);
+    });
+
     it('should return full input state for channel transmission', () => {
       // Set up some input state
       vi.spyOn(target, 'getBoundingClientRect').mockReturnValue({
@@ -525,6 +594,26 @@ describe('InputCapture', () => {
     });
   });
 
+  describe('update', () => {
+    it('should clear keysPressed in getInputState after update', () => {
+      target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
+      target.dispatchEvent(new MouseEvent('mousedown', { button: 0 }));
+
+      const state1 = inputCapture.getInputState();
+      expect(state1.keysPressed).toContain('KeyA');
+      expect(state1.mouseButtonsPressed).toContain(0);
+
+      inputCapture.update();
+
+      const state2 = inputCapture.getInputState();
+      expect(state2.keysPressed).toEqual([]);
+      expect(state2.mouseButtonsPressed).toEqual([]);
+      // Down arrays should still have values
+      expect(state2.keysDown).toContain('KeyA');
+      expect(state2.mouseButtonsDown).toContain(0);
+    });
+  });
+
   describe('reset', () => {
     it('should clear all input state', () => {
       target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
@@ -538,6 +627,23 @@ describe('InputCapture', () => {
       expect(inputCapture.isKeyDown('KeyA')).toBe(false);
       expect(inputCapture.isMouseButtonDown(0)).toBe(false);
       expect(inputCapture.getKeysDown()).toEqual([]);
+    });
+
+    it('should clear all arrays in getInputState after reset', () => {
+      target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
+      target.dispatchEvent(new MouseEvent('mousedown', { button: 0 }));
+
+      const state1 = inputCapture.getInputState();
+      expect(state1.keysDown.length).toBeGreaterThan(0);
+      expect(state1.mouseButtonsDown.length).toBeGreaterThan(0);
+
+      inputCapture.reset();
+
+      const state2 = inputCapture.getInputState();
+      expect(state2.keysDown).toEqual([]);
+      expect(state2.keysPressed).toEqual([]);
+      expect(state2.mouseButtonsDown).toEqual([]);
+      expect(state2.mouseButtonsPressed).toEqual([]);
     });
   });
 
@@ -561,6 +667,24 @@ describe('InputCapture', () => {
         newCapture.dispose();
         newCapture.dispose();
       }).not.toThrow();
+    });
+
+    it('should remove blur listener on dispose', () => {
+      const freshTarget = document.createElement('div');
+      document.body.appendChild(freshTarget);
+      const freshCapture = new InputCapture(freshTarget);
+
+      freshTarget.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
+      expect(freshCapture.isKeyDown('KeyA')).toBe(true);
+
+      freshCapture.dispose();
+
+      // Blur should no longer clear state after dispose
+      freshTarget.dispatchEvent(new FocusEvent('blur'));
+      // KeyA is still tracked because blur handler was removed
+      expect(freshCapture.isKeyDown('KeyA')).toBe(true);
+
+      document.body.removeChild(freshTarget);
     });
   });
 
@@ -621,6 +745,84 @@ describe('InputCapture', () => {
     });
   });
 
+  describe('keyboard preventDefault', () => {
+    it('should prevent default on keydown for regular keys', () => {
+      const keys = ['Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Escape', 'Space', 'KeyA'];
+      for (const code of keys) {
+        const event = new KeyboardEvent('keydown', {
+          code,
+          bubbles: true,
+          cancelable: true,
+        });
+        const spy = vi.spyOn(event, 'preventDefault');
+        target.dispatchEvent(event);
+        expect(spy).toHaveBeenCalled();
+      }
+    });
+
+    it('should prevent default on keyup for regular keys', () => {
+      const keys = ['Tab', 'ArrowUp', 'Escape', 'Space', 'KeyA'];
+      for (const code of keys) {
+        const event = new KeyboardEvent('keyup', {
+          code,
+          bubbles: true,
+          cancelable: true,
+        });
+        const spy = vi.spyOn(event, 'preventDefault');
+        target.dispatchEvent(event);
+        expect(spy).toHaveBeenCalled();
+      }
+    });
+
+    it('should NOT prevent default when ctrlKey is true', () => {
+      const event = new KeyboardEvent('keydown', {
+        code: 'KeyS',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      const spy = vi.spyOn(event, 'preventDefault');
+      target.dispatchEvent(event);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('should NOT prevent default when metaKey is true', () => {
+      const event = new KeyboardEvent('keydown', {
+        code: 'KeyR',
+        metaKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      const spy = vi.spyOn(event, 'preventDefault');
+      target.dispatchEvent(event);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('should NOT prevent default on keyup when ctrlKey is true', () => {
+      const event = new KeyboardEvent('keyup', {
+        code: 'KeyS',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      const spy = vi.spyOn(event, 'preventDefault');
+      target.dispatchEvent(event);
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('should NOT prevent default on keyup when metaKey is true', () => {
+      const event = new KeyboardEvent('keyup', {
+        code: 'KeyR',
+        metaKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      const spy = vi.spyOn(event, 'preventDefault');
+      target.dispatchEvent(event);
+      expect(spy).not.toHaveBeenCalled();
+    });
+  });
+
   describe('focus handling', () => {
     it('should clear keys on blur to prevent stuck keys', () => {
       target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
@@ -641,6 +843,25 @@ describe('InputCapture', () => {
 
       expect(inputCapture.isMouseButtonDown(0)).toBe(false);
       expect(inputCapture.isMouseButtonDown(2)).toBe(false);
+    });
+
+    it('should clear all arrays in getInputState on blur', () => {
+      target.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
+      target.dispatchEvent(new MouseEvent('mousedown', { button: 0 }));
+
+      const state1 = inputCapture.getInputState();
+      expect(state1.keysDown).toContain('KeyA');
+      expect(state1.keysPressed).toContain('KeyA');
+      expect(state1.mouseButtonsDown).toContain(0);
+      expect(state1.mouseButtonsPressed).toContain(0);
+
+      target.dispatchEvent(new FocusEvent('blur'));
+
+      const state2 = inputCapture.getInputState();
+      expect(state2.keysDown).toEqual([]);
+      expect(state2.keysPressed).toEqual([]);
+      expect(state2.mouseButtonsDown).toEqual([]);
+      expect(state2.mouseButtonsPressed).toEqual([]);
     });
   });
 
@@ -773,6 +994,38 @@ describe('InputCapture', () => {
         expect(state.gamepads[0].axes[1]).toBeCloseTo(0.8);
         expect(state.gamepads[0].axes[2]).toBeCloseTo(0.3);
         expect(state.gamepads[0].axes[3]).toBeCloseTo(-0.2);
+      });
+
+      it('should handle gamepad with fewer buttons than standard', () => {
+        // Create a gamepad with only 4 buttons (less than standard 17)
+        const buttons = Array.from({ length: 4 }, () => ({ value: 0, pressed: false }));
+        buttons[0] = { value: 1, pressed: true };
+        const mockGamepad = createMockGamepad(0, true, buttons, [0, 0]);
+        mockGetGamepads.mockReturnValue([mockGamepad, null, null, null]);
+
+        inputCapture.pollGamepads();
+        const state = inputCapture.getInputState();
+
+        expect(state.gamepads[0].connected).toBe(true);
+        expect(state.gamepads[0].buttons[0]).toBe(1);
+        // Buttons beyond the gamepad's count should remain 0
+        expect(state.gamepads[0].buttons[4]).toBe(0);
+      });
+
+      it('should handle gamepad with fewer axes than standard', () => {
+        const buttons = createEmptyButtons();
+        // Only 2 axes instead of standard 4
+        const mockGamepad = createMockGamepad(0, true, buttons, [0.5, -0.3]);
+        mockGetGamepads.mockReturnValue([mockGamepad, null, null, null]);
+
+        inputCapture.pollGamepads();
+        const state = inputCapture.getInputState();
+
+        expect(state.gamepads[0].axes[0]).toBeCloseTo(0.5);
+        expect(state.gamepads[0].axes[1]).toBeCloseTo(-0.3);
+        // Axes beyond the gamepad's count should remain 0
+        expect(state.gamepads[0].axes[2]).toBe(0);
+        expect(state.gamepads[0].axes[3]).toBe(0);
       });
 
       it('should handle gamepad disconnect', () => {

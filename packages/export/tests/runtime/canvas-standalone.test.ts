@@ -55,6 +55,12 @@ describe('canvas-standalone', () => {
   describe('setupInputListeners', () => {
     let canvas: HTMLCanvasElement
     let state: CanvasRuntimeState
+    let cleanup: (() => void) | null = null
+
+    afterEach(() => {
+      cleanup?.()
+      cleanup = null
+    })
 
     beforeEach(() => {
       // Create a mock canvas element
@@ -105,7 +111,7 @@ describe('canvas-standalone', () => {
 
     describe('drag prevention', () => {
       it('should prevent default on mousedown', () => {
-        setupInputListeners(state)
+        cleanup = setupInputListeners(state)
 
         const event = new MouseEvent('mousedown', {
           button: 0,
@@ -120,7 +126,7 @@ describe('canvas-standalone', () => {
       })
 
       it('should prevent default on dragstart', () => {
-        setupInputListeners(state)
+        cleanup = setupInputListeners(state)
 
         const event = new Event('dragstart', {
           bubbles: true,
@@ -134,9 +140,10 @@ describe('canvas-standalone', () => {
       })
 
       it('should remove dragstart listener on cleanup', () => {
-        const cleanup = setupInputListeners(state)
+        cleanup = setupInputListeners(state)
 
         cleanup()
+        cleanup = null
 
         const event = new Event('dragstart', {
           bubbles: true,
@@ -150,9 +157,123 @@ describe('canvas-standalone', () => {
       })
     })
 
+    describe('keyboard preventDefault', () => {
+      it('should call preventDefault on keydown for regular keys', () => {
+        cleanup = setupInputListeners(state)
+
+        const event = new KeyboardEvent('keydown', {
+          code: 'ArrowDown',
+          bubbles: true,
+          cancelable: true,
+        })
+        const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+
+        document.dispatchEvent(event)
+
+        expect(preventDefaultSpy).toHaveBeenCalled()
+      })
+
+      it('should call preventDefault on keyup for regular keys', () => {
+        cleanup = setupInputListeners(state)
+
+        const event = new KeyboardEvent('keyup', {
+          code: 'ArrowDown',
+          bubbles: true,
+          cancelable: true,
+        })
+        const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+
+        document.dispatchEvent(event)
+
+        expect(preventDefaultSpy).toHaveBeenCalled()
+      })
+
+      it('should NOT call preventDefault on keydown when ctrlKey is true', () => {
+        cleanup = setupInputListeners(state)
+
+        const event = new KeyboardEvent('keydown', {
+          code: 'KeyA',
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        })
+        const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+
+        document.dispatchEvent(event)
+
+        expect(preventDefaultSpy).not.toHaveBeenCalled()
+      })
+
+      it('should NOT call preventDefault on keydown when metaKey is true', () => {
+        cleanup = setupInputListeners(state)
+
+        const event = new KeyboardEvent('keydown', {
+          code: 'KeyA',
+          metaKey: true,
+          bubbles: true,
+          cancelable: true,
+        })
+        const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+
+        document.dispatchEvent(event)
+
+        expect(preventDefaultSpy).not.toHaveBeenCalled()
+      })
+
+      it('should NOT call preventDefault on keyup when ctrlKey is true', () => {
+        cleanup = setupInputListeners(state)
+
+        const event = new KeyboardEvent('keyup', {
+          code: 'KeyA',
+          ctrlKey: true,
+          bubbles: true,
+          cancelable: true,
+        })
+        const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+
+        document.dispatchEvent(event)
+
+        expect(preventDefaultSpy).not.toHaveBeenCalled()
+      })
+
+      it('should NOT call preventDefault on keyup when metaKey is true', () => {
+        cleanup = setupInputListeners(state)
+
+        const event = new KeyboardEvent('keyup', {
+          code: 'KeyA',
+          metaKey: true,
+          bubbles: true,
+          cancelable: true,
+        })
+        const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+
+        document.dispatchEvent(event)
+
+        expect(preventDefaultSpy).not.toHaveBeenCalled()
+      })
+
+      it('should not call preventDefault on keydown after cleanup', () => {
+        cleanup = setupInputListeners(state)
+
+        cleanup()
+        cleanup = null
+
+        const event = new KeyboardEvent('keydown', {
+          code: 'Tab',
+          bubbles: true,
+          cancelable: true,
+        })
+        const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+
+        document.dispatchEvent(event)
+
+        expect(preventDefaultSpy).not.toHaveBeenCalled()
+      })
+    })
+
     describe('contextmenu handling', () => {
       it('should prevent the browser context menu on right-click', () => {
-        setupInputListeners(state)
+        cleanup = setupInputListeners(state)
 
         const event = new MouseEvent('contextmenu', {
           bubbles: true,
@@ -166,10 +287,11 @@ describe('canvas-standalone', () => {
       })
 
       it('should remove contextmenu listener when cleanup is called', () => {
-        const cleanup = setupInputListeners(state)
+        cleanup = setupInputListeners(state)
 
         // Call cleanup
         cleanup()
+        cleanup = null
 
         // Create a new event after cleanup
         const event = new MouseEvent('contextmenu', {
