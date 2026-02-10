@@ -644,6 +644,77 @@ describe('InputCapture', () => {
     });
   });
 
+  describe('keyboard event prevention', () => {
+    it('should prevent default on regular keydown', () => {
+      const keys = ['Tab', 'ArrowUp', 'Escape', 'KeyA'];
+      for (const code of keys) {
+        const event = new KeyboardEvent('keydown', {
+          code,
+          bubbles: true,
+          cancelable: true,
+        });
+        const spy = vi.spyOn(event, 'preventDefault');
+        target.dispatchEvent(event);
+        expect(spy).toHaveBeenCalled();
+      }
+    });
+
+    it('should prevent default on regular keyup', () => {
+      const event = new KeyboardEvent('keyup', {
+        code: 'Tab',
+        bubbles: true,
+        cancelable: true,
+      });
+      const spy = vi.spyOn(event, 'preventDefault');
+      target.dispatchEvent(event);
+      expect(spy).toHaveBeenCalled();
+    });
+
+    it('should not prevent default when Ctrl is held', () => {
+      const keydown = new KeyboardEvent('keydown', {
+        code: 'KeyS',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      const keydownSpy = vi.spyOn(keydown, 'preventDefault');
+      target.dispatchEvent(keydown);
+      expect(keydownSpy).not.toHaveBeenCalled();
+
+      const keyup = new KeyboardEvent('keyup', {
+        code: 'KeyS',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      const keyupSpy = vi.spyOn(keyup, 'preventDefault');
+      target.dispatchEvent(keyup);
+      expect(keyupSpy).not.toHaveBeenCalled();
+    });
+
+    it('should not prevent default when Meta is held', () => {
+      const keydown = new KeyboardEvent('keydown', {
+        code: 'KeyS',
+        metaKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      const keydownSpy = vi.spyOn(keydown, 'preventDefault');
+      target.dispatchEvent(keydown);
+      expect(keydownSpy).not.toHaveBeenCalled();
+
+      const keyup = new KeyboardEvent('keyup', {
+        code: 'KeyS',
+        metaKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      const keyupSpy = vi.spyOn(keyup, 'preventDefault');
+      target.dispatchEvent(keyup);
+      expect(keyupSpy).not.toHaveBeenCalled();
+    });
+  });
+
   describe('gamepad events', () => {
     // Mock gamepad for testing
     function createMockGamepad(

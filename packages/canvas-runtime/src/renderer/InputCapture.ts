@@ -356,6 +356,11 @@ export class InputCapture {
   }
 
   private onKeyDown(event: KeyboardEvent): void {
+    // Prevent browser defaults (TAB focus change, arrow scroll, Alt menu, etc.)
+    // Allow Ctrl/Cmd combos through for IDE shortcuts
+    if (!event.ctrlKey && !event.metaKey) {
+      event.preventDefault();
+    }
     if (!this.keysDown.has(event.code)) {
       this.keysPressed.add(event.code);
       this.keysPressedDirty = true;
@@ -365,6 +370,9 @@ export class InputCapture {
   }
 
   private onKeyUp(event: KeyboardEvent): void {
+    if (!event.ctrlKey && !event.metaKey) {
+      event.preventDefault();
+    }
     this.keysDown.delete(event.code);
     this.keysDownDirty = true;
   }

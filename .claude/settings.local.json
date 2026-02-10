@@ -93,7 +93,7 @@
       "Bash(gh repo view:*)",
       "mcp__code-index-mcp__search_code_advanced",
       "mcp__code-index-mcp__find_files",
-      "Bash(git show:*)"
+      "mcp__code-index-mcp__get_symbol_body"
     ],
     "deny": [
       "Bash(npm run dev)",
