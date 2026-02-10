@@ -3255,6 +3255,9 @@ return localstorage
   }
   function setupInputListeners(state) {
     const handleKeyDown = (e) => {
+      if (!e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+      }
       if (!state.keysDown.has(e.code)) {
         state.keysPressed.add(e.code);
         state.keysPressedDirty = true;
@@ -3263,6 +3266,9 @@ return localstorage
       state.keysDownDirty = true;
     };
     const handleKeyUp = (e) => {
+      if (!e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+      }
       state.keysDown.delete(e.code);
       state.keysDownDirty = true;
     };
