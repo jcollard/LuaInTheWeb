@@ -252,6 +252,42 @@ describe('canvas-standalone', () => {
         expect(preventDefaultSpy).not.toHaveBeenCalled()
       })
 
+      it('should NOT call preventDefault on keydown for browser-reserved keys (F11, F12)', () => {
+        cleanup = setupInputListeners(state)
+
+        const keys = ['F11', 'F12']
+        for (const code of keys) {
+          const event = new KeyboardEvent('keydown', {
+            code,
+            bubbles: true,
+            cancelable: true,
+          })
+          const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+
+          document.dispatchEvent(event)
+
+          expect(preventDefaultSpy).not.toHaveBeenCalled()
+        }
+      })
+
+      it('should NOT call preventDefault on keyup for browser-reserved keys (F11, F12)', () => {
+        cleanup = setupInputListeners(state)
+
+        const keys = ['F11', 'F12']
+        for (const code of keys) {
+          const event = new KeyboardEvent('keyup', {
+            code,
+            bubbles: true,
+            cancelable: true,
+          })
+          const preventDefaultSpy = vi.spyOn(event, 'preventDefault')
+
+          document.dispatchEvent(event)
+
+          expect(preventDefaultSpy).not.toHaveBeenCalled()
+        }
+      })
+
       it('should not call preventDefault on keydown after cleanup', () => {
         cleanup = setupInputListeners(state)
 

@@ -821,6 +821,34 @@ describe('InputCapture', () => {
       target.dispatchEvent(event);
       expect(spy).not.toHaveBeenCalled();
     });
+
+    it('should NOT prevent default on keydown for browser-reserved keys (F11, F12)', () => {
+      const keys = ['F11', 'F12'];
+      for (const code of keys) {
+        const event = new KeyboardEvent('keydown', {
+          code,
+          bubbles: true,
+          cancelable: true,
+        });
+        const spy = vi.spyOn(event, 'preventDefault');
+        target.dispatchEvent(event);
+        expect(spy).not.toHaveBeenCalled();
+      }
+    });
+
+    it('should NOT prevent default on keyup for browser-reserved keys (F11, F12)', () => {
+      const keys = ['F11', 'F12'];
+      for (const code of keys) {
+        const event = new KeyboardEvent('keyup', {
+          code,
+          bubbles: true,
+          cancelable: true,
+        });
+        const spy = vi.spyOn(event, 'preventDefault');
+        target.dispatchEvent(event);
+        expect(spy).not.toHaveBeenCalled();
+      }
+    });
   });
 
   describe('focus handling', () => {
