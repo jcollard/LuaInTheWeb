@@ -100,12 +100,16 @@ export function CanvasGamePanel({
     }
   }, [onCanvasReady])
 
-  // Auto-focus canvas when isActive becomes true
+  // Auto-focus canvas when isActive becomes true or game starts
   useEffect(() => {
     if (isActive && canvasRef.current) {
       canvasRef.current.focus()
     }
-  }, [isActive])
+  }, [isActive, isRunning, shellIsRunning])
+
+  const handleCanvasMouseDown = useCallback(() => {
+    canvasRef.current?.focus()
+  }, [])
 
   const handleScalingModeChange = useCallback(
     (e: ChangeEvent<HTMLSelectElement>) => {
@@ -274,6 +278,7 @@ export function CanvasGamePanel({
           height={height}
           tabIndex={0}
           aria-label="Canvas game"
+          onMouseDown={handleCanvasMouseDown}
         />
 
         {/* Error overlay */}

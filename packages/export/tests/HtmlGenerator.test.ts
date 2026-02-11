@@ -98,6 +98,29 @@ describe('HtmlGenerator', () => {
       expect(html).toContain('height="768"')
     })
 
+    it('should include tabindex="0" on canvas element for keyboard focus', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig()
+      const luaFiles: CollectedFile[] = []
+      const assets: CollectedAsset[] = []
+
+      const html = generator.generateCanvas(config, luaFiles, assets)
+
+      expect(html).toContain('tabindex="0"')
+    })
+
+    it('should focus canvas after game initialization', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig()
+      const luaFiles: CollectedFile[] = []
+      const assets: CollectedAsset[] = []
+
+      const html = generator.generateCanvas(config, luaFiles, assets)
+
+      // After initLua(), the canvas should be focused
+      expect(html).toContain('gameCanvas.focus()')
+    })
+
     it('should embed Lua files as JSON', () => {
       const generator = new HtmlGenerator(createOptions())
       const config = createConfig()

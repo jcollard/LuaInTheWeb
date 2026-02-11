@@ -109,6 +109,23 @@ describe('canvas-standalone', () => {
       }
     })
 
+    describe('focus on mousedown', () => {
+      it('should call canvas.focus() on mousedown to grab keyboard focus', () => {
+        cleanup = setupInputListeners(state)
+        const focusSpy = vi.spyOn(state.canvas, 'focus')
+
+        const event = new MouseEvent('mousedown', {
+          button: 0,
+          bubbles: true,
+          cancelable: true,
+        })
+
+        canvas.dispatchEvent(event)
+
+        expect(focusSpy).toHaveBeenCalled()
+      })
+    })
+
     describe('drag prevention', () => {
       it('should prevent default on mousedown', () => {
         cleanup = setupInputListeners(state)

@@ -215,6 +215,7 @@ export function setupInputListeners(state: CanvasRuntimeState): () => void {
 
   const handleMouseDown = (e: MouseEvent) => {
     e.preventDefault()
+    state.canvas.focus()
     if (!state.mouseButtonsDown.has(e.button)) {
       state.mouseButtonsPressed.add(e.button)
     }

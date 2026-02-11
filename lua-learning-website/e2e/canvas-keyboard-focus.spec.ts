@@ -114,6 +114,67 @@ test.describe('Canvas Keyboard Focus', () => {
     })
   })
 
+  test.describe('Click-to-Focus', () => {
+    test('clicking canvas gives it keyboard focus', async ({ page }) => {
+      const terminal = createTerminalHelper(page)
+      await terminal.focus()
+
+      // Start Lua REPL
+      await terminal.execute('lua')
+      await page.waitForTimeout(TIMEOUTS.ANIMATION)
+
+      // Wait for REPL to be ready
+      const stopButton = page.getByRole('button', { name: /stop process/i })
+      await expect(stopButton).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Require canvas module
+      await terminal.type('canvas = require("canvas")')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Track whether key 'a' is detected after clicking canvas
+      await terminal.type('key_detected = false')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Set up canvas that checks for 'a' key press
+      await terminal.type(
+        'canvas.tick(function() canvas.clear() canvas.set_color(100, 100, 100) canvas.fill_rect(0, 0, 100, 100) if canvas.is_key_pressed("a") then key_detected = true canvas.stop() end if canvas.get_time() > 5 then canvas.stop() end end)',
+      )
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      // Start canvas
+      await terminal.type('canvas.start()')
+      await terminal.press('Enter')
+
+      // Canvas tab should appear
+      const canvasTab = page.locator('[class*="canvasTab"]').first()
+      await expect(canvasTab).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
+
+      // Wait for canvas to render
+      await page.waitForTimeout(TIMEOUTS.ANIMATION)
+
+      // Click on the canvas to ensure it gets focus
+      const canvasElement = page.locator('canvas[tabindex="0"]')
+      await canvasElement.click()
+      await page.waitForTimeout(TIMEOUTS.BRIEF)
+
+      // Press 'a' - canvas should receive it after click-to-focus
+      await page.keyboard.press('a')
+
+      // Wait for canvas to process the key and stop
+      await expect(canvasTab).not.toBeVisible({ timeout: TIMEOUTS.ASYNC_OPERATION })
+
+      // Verify the key was detected (proves click gave focus)
+      await terminal.type('print(key_detected)')
+      await terminal.press('Enter')
+      await page.waitForTimeout(TIMEOUTS.TRANSITION)
+
+      await terminal.expectToContain('true', { timeout: TIMEOUTS.ASYNC_OPERATION })
+    })
+  })
+
   test.describe('Focus Retention on Special Keys', () => {
     test('canvas retains focus after pressing Tab and Arrow keys', async ({ page }) => {
       const terminal = createTerminalHelper(page)

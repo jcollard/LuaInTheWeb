@@ -3282,6 +3282,7 @@ return localstorage
     };
     const handleMouseDown = (e) => {
       e.preventDefault();
+      state.canvas.focus();
       if (!state.mouseButtonsDown.has(e.button)) {
         state.mouseButtonsPressed.add(e.button);
       }
