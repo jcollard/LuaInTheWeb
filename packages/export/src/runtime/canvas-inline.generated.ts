@@ -3253,9 +3253,10 @@ return localstorage
       lineDashSegments: []
     };
   }
+  var BROWSER_RESERVED_KEYS = /* @__PURE__ */ new Set(["F11", "F12"]);
   function setupInputListeners(state) {
     const handleKeyDown = (e) => {
-      if (!e.ctrlKey && !e.metaKey) {
+      if (!e.ctrlKey && !e.metaKey && !BROWSER_RESERVED_KEYS.has(e.code)) {
         e.preventDefault();
       }
       if (!state.keysDown.has(e.code)) {
@@ -3266,7 +3267,7 @@ return localstorage
       state.keysDownDirty = true;
     };
     const handleKeyUp = (e) => {
-      if (!e.ctrlKey && !e.metaKey) {
+      if (!e.ctrlKey && !e.metaKey && !BROWSER_RESERVED_KEYS.has(e.code)) {
         e.preventDefault();
       }
       state.keysDown.delete(e.code);

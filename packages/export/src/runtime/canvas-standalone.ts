@@ -176,12 +176,15 @@ export function createCanvasRuntimeState(
   }
 }
 
+/** Keys that should always pass through to the browser (e.g., F11 fullscreen, F12 DevTools). */
+const BROWSER_RESERVED_KEYS = new Set(['F11', 'F12'])
+
 /**
  * Set up input event listeners for the canvas.
  */
 export function setupInputListeners(state: CanvasRuntimeState): () => void {
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (!e.ctrlKey && !e.metaKey) {
+    if (!e.ctrlKey && !e.metaKey && !BROWSER_RESERVED_KEYS.has(e.code)) {
       e.preventDefault()
     }
     if (!state.keysDown.has(e.code)) {
@@ -193,7 +196,7 @@ export function setupInputListeners(state: CanvasRuntimeState): () => void {
   }
 
   const handleKeyUp = (e: KeyboardEvent) => {
-    if (!e.ctrlKey && !e.metaKey) {
+    if (!e.ctrlKey && !e.metaKey && !BROWSER_RESERVED_KEYS.has(e.code)) {
       e.preventDefault()
     }
     state.keysDown.delete(e.code)

@@ -355,8 +355,11 @@ export class InputCapture {
     this.target.removeEventListener('blur', this.handleBlur);
   }
 
+  /** Keys that should always pass through to the browser (e.g., F11 fullscreen, F12 DevTools). */
+  private static readonly BROWSER_RESERVED_KEYS = new Set(['F11', 'F12']);
+
   private onKeyDown(event: KeyboardEvent): void {
-    if (!event.ctrlKey && !event.metaKey) {
+    if (!event.ctrlKey && !event.metaKey && !InputCapture.BROWSER_RESERVED_KEYS.has(event.code)) {
       event.preventDefault();
     }
     if (!this.keysDown.has(event.code)) {
@@ -368,7 +371,7 @@ export class InputCapture {
   }
 
   private onKeyUp(event: KeyboardEvent): void {
-    if (!event.ctrlKey && !event.metaKey) {
+    if (!event.ctrlKey && !event.metaKey && !InputCapture.BROWSER_RESERVED_KEYS.has(event.code)) {
       event.preventDefault();
     }
     this.keysDown.delete(event.code);
