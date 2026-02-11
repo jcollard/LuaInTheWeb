@@ -193,51 +193,35 @@ Examples of valid suggestions:
 
 ---
 
-## Step 9: Offer to Apply Changes and STOP
+## Step 9: Display Evaluation
 
-End with available actions and **STOP immediately**:
-
-```
----
-
-**Actions available:**
-- **Apply estimates**: I can update the issue's project fields with these estimates
-- **Update description**: I can apply the suggested improvements to the issue body
-- **Add labels**: I can add appropriate labels based on the type
-
-Would you like me to apply any of these changes?
-```
-
-**IMPORTANT**: After displaying this message, STOP and wait for user response. Do NOT proceed to implementation.
+Show the complete evaluation table and any improvements from Steps 4-8. Then proceed immediately to Step 10.
 
 ---
 
-## Step 10: Applying Changes (if requested)
+## Step 10: Apply Changes to GitHub
 
-If user wants to apply estimates, update the project board fields:
+Automatically apply the evaluation results:
 
-```bash
-# Get project item ID
-gh project item-list 3 --owner jcollard --format json
+1. **If Step 5 suggested an improved description**, write the improved body to `.tmp/issue-<number>-description.txt`
 
-# Update Priority field (field ID: PVTSSF_lADOCQkuPc4A4Q2PzgfZvgI)
-gh project item-edit --project-id <project-id> --id <item-id> --field-id PVTSSF_lADOCQkuPc4A4Q2PzgfZvgI --single-select-option-id <priority-option-id>
-
-# Update Effort field
-gh project item-edit --project-id <project-id> --id <item-id> --field-id <effort-field-id> --single-select-option-id <effort-option-id>
-
-# Update Type field
-gh project item-edit --project-id <project-id> --id <item-id> --field-id <type-field-id> --single-select-option-id <type-option-id>
-```
-
-If user wants to update the description:
+2. **Run the apply script:**
 
 ```bash
-gh issue edit <number> --body "<updated body>"
+python scripts/issue-eval-apply.py <number> --priority "<priority>" --effort "<effort>" --type "<type>" [--update-body-file ".tmp/issue-<number>-description.txt"]
 ```
 
-If user wants to add labels:
+Where:
+- `<priority>` is one of: P0-Critical, P1-High, P2-Medium, P3-Low
+- `<effort>` is one of: XS, S, M, L, XL
+- `<type>` is one of: Feature, Bug, Tech Debt, Docs
+- Include `--update-body-file` only if Step 5 produced an improved description
 
-```bash
-gh issue edit <number> --add-label "<type>"
+3. **Display success summary** with the applied values.
+
+4. **Show next steps:**
 ```
+Next: `/issue <number> begin` to start implementation
+```
+
+5. **STOP** — do not proceed to implementation planning.

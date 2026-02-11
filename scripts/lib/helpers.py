@@ -36,6 +36,8 @@ def run(cmd, capture=True, check=True, cwd=None):
         shell=True,
         capture_output=capture,
         text=True,
+        encoding='utf-8',
+        errors='replace',
         cwd=cwd
     )
     if check and result.returncode != 0:
