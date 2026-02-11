@@ -144,6 +144,8 @@ All work happens in isolated worktrees. `/issue <n> begin` auto-creates worktree
 - **CSS Modules**: Use CSS modules for style isolation; REUSE existing modules before creating new ones
 - **Strict TypeScript**: No `any`, explicit types, prefer interfaces
 
+- **Canvas Consistency**: Changes to canvas behavior must be applied to BOTH the editor (`packages/canvas-runtime`) AND export (`packages/export/src/runtime`). Use shared code where possible; when not possible, implement in both and link the paired implementations.
+
 See [docs/coding-standards.md](docs/coding-standards.md) for detailed guidelines.
 
 ### TDD is MANDATORY

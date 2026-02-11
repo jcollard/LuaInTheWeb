@@ -428,6 +428,20 @@ If a file grows beyond the limit:
 // src/hooks/useFileSystem.ts       - Main hook (imports from above)
 ```
 
+## Canvas Editor / Export Consistency
+
+The canvas system runs in two environments: the **editor** (`packages/canvas-runtime`) and **export** (`packages/export/src/runtime`). These must stay in sync.
+
+### Rules
+
+1. **Any canvas change must be applied to both editor and export.** If you add a drawing operation, input handler, or behavior change, it must work in both environments.
+2. **Use shared libraries where possible.** Extract common logic into shared types, utilities, or packages rather than implementing the same thing twice.
+3. **When sharing isn't possible** (e.g., different thread models), implement in both places and add a comment linking the paired implementation:
+   ```typescript
+   // Paired with: packages/export/src/runtime/canvas-bridge-core.ts:setupInputListeners
+   ```
+4. **Test both paths.** A feature working in the editor does not guarantee it works in exported games.
+
 ## Checklist
 
 Before submitting code:
@@ -444,3 +458,4 @@ Before submitting code:
 - [ ] Tests written for components (rendering)
 - [ ] Source files under 400 lines (excluding blanks/comments)
 - [ ] Test files under 500 lines (excluding blanks/comments)
+- [ ] Canvas changes applied to both editor and export runtimes
