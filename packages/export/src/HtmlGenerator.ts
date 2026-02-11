@@ -55,6 +55,7 @@ export class HtmlGenerator {
       image-rendering: pixelated;
       user-select: none;
       -webkit-user-drag: none;
+      outline: none;
     }`
 
     switch (scale) {
