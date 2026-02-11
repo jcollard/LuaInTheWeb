@@ -51,6 +51,51 @@ LuaInTheWeb/
     └── package.json
 ```
 
+## Canvas System
+
+The canvas system has two runtime environments that must stay consistent:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Canvas System                         │
+├──────────────────────────┬──────────────────────────────┤
+│   Editor Canvas          │   Export Canvas               │
+│   (packages/canvas-      │   (packages/export/           │
+│    runtime/)             │    src/runtime/)              │
+├──────────────────────────┼──────────────────────────────┤
+│ CanvasRenderer.ts        │ canvas-bridge-core.ts         │
+│ GameLoopController.ts    │ (single source of truth)      │
+│ InputCapture.ts          │                               │
+│ ImageCache.ts            │ canvas-bridge-types.ts        │
+│ FontCache.ts             │ canvas-bridge-utils.ts        │
+│                          │ asset-bridge.ts               │
+├──────────────────────────┼──────────────────────────────┤
+│ Worker thread + main     │ Single-threaded main thread   │
+│ thread rendering         │                               │
+│ DrawCommand queue        │ Direct JS bridge              │
+├──────────────────────────┴──────────────────────────────┤
+│ Shared: packages/lua-runtime/src/CanvasController.ts     │
+│ (High-level controller, Lua API bindings)                │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Editor vs Export Consistency
+
+**Any change to canvas behavior must be applied to both the editor and export runtimes.** The two environments implement the same canvas API surface but with different execution models:
+
+| Aspect | Editor (`canvas-runtime`) | Export (`packages/export`) |
+|--------|--------------------------|---------------------------|
+| Thread model | Worker + main thread | Single-threaded |
+| Rendering | DrawCommand batch queue | Direct JS bridge calls |
+| Input handling | `InputCapture` class | `setupInputListeners` |
+| Asset loading | `ImageCache` / `FontCache` | Pluggable `AssetHandler` |
+
+When adding or modifying canvas features (drawing operations, input handling, audio, etc.):
+
+1. **Prefer shared code** in `packages/canvas-runtime/` or shared type/utility files
+2. **If shared code isn't possible** (due to different thread models), implement in both and document the pairing
+3. **Test both paths** — a feature working in the editor doesn't guarantee it works in export
+
 ## Core Components
 
 ### App.tsx
