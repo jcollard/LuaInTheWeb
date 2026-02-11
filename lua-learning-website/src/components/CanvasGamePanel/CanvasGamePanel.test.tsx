@@ -433,5 +433,78 @@ describe('CanvasGamePanel', () => {
       // Without isActive prop, canvas should not auto-focus
       expect(canvas).not.toHaveFocus()
     })
+
+    it('focuses canvas when game starts while tab is already active (standalone mode)', async () => {
+      const { useCanvasGame } = await import('../../hooks/useCanvasGame')
+      // Initially not running but active
+      vi.mocked(useCanvasGame).mockReturnValue({
+        state: 'idle',
+        isRunning: false,
+        isPaused: false,
+        error: null,
+        output: '',
+        mode: 'performance',
+        process: null,
+        startGame: mockStartGame,
+        stopGame: mockStopGame,
+        pauseGame: mockPauseGame,
+        resumeGame: mockResumeGame,
+        stepGame: mockStepGame,
+        reloadGame: mockReloadGame,
+        clearOutput: vi.fn(),
+        clearError: mockClearError,
+      })
+
+      const { rerender } = render(
+        <CanvasGamePanel code="print('hello')" isActive autoStart={false} />
+      )
+      const canvas = document.querySelector('canvas') as HTMLCanvasElement
+      canvas.blur()
+
+      // Game starts while tab is already active
+      vi.mocked(useCanvasGame).mockReturnValue({
+        state: 'running',
+        isRunning: true,
+        isPaused: false,
+        error: null,
+        output: '',
+        mode: 'performance',
+        process: null,
+        startGame: mockStartGame,
+        stopGame: mockStopGame,
+        pauseGame: mockPauseGame,
+        resumeGame: mockResumeGame,
+        stepGame: mockStepGame,
+        reloadGame: mockReloadGame,
+        clearOutput: vi.fn(),
+        clearError: mockClearError,
+      })
+
+      rerender(<CanvasGamePanel code="print('hello')" isActive autoStart={false} />)
+      expect(canvas).toHaveFocus()
+    })
+
+    it('focuses canvas when shell game starts while tab is already active', async () => {
+      const { rerender } = render(
+        <CanvasGamePanel code="print('hello')" isActive shellIsRunning={false} autoStart={false} />
+      )
+      const canvas = document.querySelector('canvas') as HTMLCanvasElement
+      canvas.blur()
+
+      // Shell game starts
+      rerender(
+        <CanvasGamePanel code="print('hello')" isActive shellIsRunning autoStart={false} />
+      )
+      expect(canvas).toHaveFocus()
+    })
+
+    it('focuses canvas when mousedown event is fired', () => {
+      render(<CanvasGamePanel code="print('hello')" />)
+      const canvas = document.querySelector('canvas') as HTMLCanvasElement
+      canvas.blur()
+
+      fireEvent.mouseDown(canvas)
+      expect(canvas).toHaveFocus()
+    })
   })
 })

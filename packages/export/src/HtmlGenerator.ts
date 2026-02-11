@@ -55,6 +55,7 @@ export class HtmlGenerator {
       image-rendering: pixelated;
       user-select: none;
       -webkit-user-drag: none;
+      outline: none;
     }`
 
     switch (scale) {
@@ -157,7 +158,7 @@ export class HtmlGenerator {
   </style>
 </head>
 <body>
-  <canvas id="game-canvas" width="${width}" height="${height}"></canvas>
+  <canvas id="game-canvas" width="${width}" height="${height}" tabindex="0"></canvas>
   <script>${scaleJs}
   </script>
   <script>
@@ -467,6 +468,7 @@ export class HtmlGenerator {
       }
 
       await initLua();
+      gameCanvas.focus();
     }
 
     // Wait for user interaction before starting
