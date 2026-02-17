@@ -3,7 +3,7 @@ import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG } from './ty
 
 let nextLayerId = 1
 
-function rgbEqual(a: RGBColor, b: RGBColor): boolean {
+export function rgbEqual(a: RGBColor, b: RGBColor): boolean {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2]
 }
 

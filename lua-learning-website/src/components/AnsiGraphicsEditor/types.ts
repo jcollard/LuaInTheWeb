@@ -8,9 +8,9 @@ export interface AnsiCell {
 
 export type AnsiGrid = AnsiCell[][]
 
-export type BrushMode = 'brush' | 'pixel'
+export type BrushMode = 'brush' | 'pixel' | 'eraser'
 
-export type DrawTool = 'pencil' | 'line' | 'rect-outline' | 'rect-filled'
+export type DrawTool = 'pencil' | 'line' | 'rect-outline' | 'rect-filled' | 'flood-fill'
 
 export const HALF_BLOCK = '\u2580'
 

@@ -289,4 +289,52 @@ describe('AnsiEditorToolbar', () => {
       expect(screen.getByTestId('char-input')).toBeTruthy()
     })
   })
+
+  describe('eraser mode', () => {
+    it('should render eraser mode button', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      expect(screen.getByTestId('mode-eraser')).toBeTruthy()
+    })
+
+    it('should call onSetMode with eraser when eraser button is clicked', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      fireEvent.click(screen.getByTestId('mode-eraser'))
+      expect(handlers.onSetMode).toHaveBeenCalledWith('eraser')
+    })
+
+    it('should show eraser button as active when brush.mode is eraser', () => {
+      const eraserBrush = { ...defaultBrush, mode: 'eraser' as BrushMode }
+      render(<AnsiEditorToolbar brush={eraserBrush} {...handlers} />)
+      expect(screen.getByTestId('mode-eraser').getAttribute('aria-pressed')).toBe('true')
+      expect(screen.getByTestId('mode-brush').getAttribute('aria-pressed')).toBe('false')
+      expect(screen.getByTestId('mode-pixel').getAttribute('aria-pressed')).toBe('false')
+    })
+
+    it('should hide BG palette and Char input in eraser mode', () => {
+      const eraserBrush = { ...defaultBrush, mode: 'eraser' as BrushMode }
+      render(<AnsiEditorToolbar brush={eraserBrush} {...handlers} />)
+      expect(screen.queryByTestId('palette-bg')).toBeNull()
+      expect(screen.queryByTestId('char-input')).toBeNull()
+    })
+  })
+
+  describe('flood fill tool', () => {
+    it('should render flood fill button', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      expect(screen.getByTestId('tool-flood-fill')).toBeTruthy()
+    })
+
+    it('should call onSetTool with flood-fill when clicked', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      fireEvent.click(screen.getByTestId('tool-flood-fill'))
+      expect(handlers.onSetTool).toHaveBeenCalledWith('flood-fill')
+    })
+
+    it('should show flood fill as active when brush.tool is flood-fill', () => {
+      const fillBrush = { ...defaultBrush, tool: 'flood-fill' as DrawTool }
+      render(<AnsiEditorToolbar brush={fillBrush} {...handlers} />)
+      expect(screen.getByTestId('tool-flood-fill').getAttribute('aria-pressed')).toBe('true')
+      expect(screen.getByTestId('tool-pencil').getAttribute('aria-pressed')).toBe('false')
+    })
+  })
 })

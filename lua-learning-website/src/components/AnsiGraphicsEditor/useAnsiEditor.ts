@@ -4,7 +4,7 @@ import type { AnsiCell, BrushMode, DrawTool, BrushSettings, RGBColor, LayerState
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG } from './types'
 import {
   createEmptyGrid, writeCellToTerminal, renderFullGrid,
-  isInBounds, getCellHalfFromMouse, computePixelCell, computeLineCells, computeRectCells, parseCellKey,
+  isInBounds, getCellHalfFromMouse, computePixelCell, computeErasePixelCell, computeLineCells, computeRectCells, computeFloodFillCells, parseCellKey,
 } from './gridUtils'
 import type { CellHalf } from './gridUtils'
 import { compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState } from './layerUtils'
@@ -178,7 +178,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       const minRow = Math.min(start.row, end.row)
       const maxRow = Math.max(start.row, end.row)
       let w: number, h: number
-      if (brushRef.current.mode === 'pixel') {
+      if (brushRef.current.mode !== 'brush') {
         const py0 = start.row * 2 + (start.isTopHalf ? 0 : 1)
         const py1 = end.row * 2 + (end.isTopHalf ? 0 : 1)
         w = maxCol - minCol + 1
@@ -203,11 +203,14 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     }
 
     function cursorHalf(cell: { isTopHalf: boolean }): boolean | undefined {
-      return brushRef.current.mode === 'pixel' ? cell.isTopHalf : undefined
+      return brushRef.current.mode !== 'brush' ? cell.isTopHalf : undefined
     }
 
     function paintAt(row: number, col: number, isTopHalf: boolean): void {
-      if (brushRef.current.mode === 'pixel') paintPixel(row, col, isTopHalf)
+      if (brushRef.current.mode === 'eraser') {
+        if (!isInBounds(row, col)) return
+        applyCell(row, col, computeErasePixelCell(getActiveGrid()[row][col], isTopHalf))
+      } else if (brushRef.current.mode === 'pixel') paintPixel(row, col, isTopHalf)
       else paintCell(row, col)
     }
 
@@ -338,6 +341,16 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           renderRectPreview(cell)
           break
         }
+        case 'flood-fill': {
+          if (!cell) return
+          const fills = computeFloodFillCells(
+            cell.row, cell.col, brushRef.current, getActiveGrid(), cell.isTopHalf,
+          )
+          if (fills.size === 0) return
+          pushSnapshot()
+          commitCells(fills)
+          break
+        }
       }
       if (cell) positionCursor(cell.row, cell.col, cursorHalf(cell))
       document.addEventListener('mouseup', onDocumentMouseUp)
@@ -352,7 +365,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         case 'pencil': {
           if (!paintingRef.current) return
           const last = lastCellRef.current
-          const current = brushRef.current.mode === 'pixel' ? cell : { row: cell.row, col: cell.col }
+          const current = brushRef.current.mode !== 'brush' ? cell : { row: cell.row, col: cell.col }
           if (last && isSameCell(last, current)) return
           lastCellRef.current = current
           paintAt(cell.row, cell.col, cell.isTopHalf)

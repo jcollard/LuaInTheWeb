@@ -82,6 +82,15 @@ export function AnsiEditorToolbar({
             </button>
           </div>
         </div>
+        <button
+          type="button"
+          className={`${styles.modeButton} ${brush.tool === 'flood-fill' ? styles.modeButtonActive : ''}`}
+          aria-pressed={brush.tool === 'flood-fill'}
+          onClick={() => onSetTool('flood-fill')}
+          data-testid="tool-flood-fill"
+        >
+          Fill
+        </button>
       </div>
       <div className={styles.modeGroup}>
         <span className={styles.modeLabel}>Mode</span>
@@ -102,6 +111,15 @@ export function AnsiEditorToolbar({
           data-testid="mode-pixel"
         >
           ▀
+        </button>
+        <button
+          type="button"
+          className={`${styles.modeButton} ${brush.mode === 'eraser' ? styles.modeButtonActive : ''}`}
+          aria-pressed={brush.mode === 'eraser'}
+          onClick={() => onSetMode('eraser')}
+          data-testid="mode-eraser"
+        >
+          ⌫
         </button>
       </div>
       <ColorPalette label="FG" selected={brush.fg} onSelect={onSetFg} />

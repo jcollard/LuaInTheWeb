@@ -1,7 +1,8 @@
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { AnsiCell, AnsiGrid, BrushSettings, RGBColor } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, HALF_BLOCK } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_CELL, HALF_BLOCK } from './types'
 import { bresenhamLine } from './lineAlgorithm'
+import { rgbEqual } from './layerUtils'
 
 export function cloneGrid(grid: AnsiGrid): AnsiGrid {
   return grid.map(row => row.map(cell => ({ ...cell, fg: [...cell.fg] as RGBColor, bg: [...cell.bg] as RGBColor })))
@@ -60,6 +61,21 @@ export function computePixelCell(existingCell: AnsiCell, paintColor: RGBColor, i
   }
 }
 
+export function computeErasePixelCell(existingCell: AnsiCell, isTopHalf: boolean): AnsiCell {
+  const isPixelCell = existingCell.char === HALF_BLOCK
+  const existingTop: RGBColor = isPixelCell ? [...existingCell.fg] as RGBColor : [...existingCell.bg] as RGBColor
+  const existingBottom: RGBColor = [...existingCell.bg] as RGBColor
+
+  const newTop = isTopHalf ? [...DEFAULT_BG] as RGBColor : existingTop
+  const newBottom = isTopHalf ? existingBottom : [...DEFAULT_BG] as RGBColor
+
+  if (rgbEqual(newTop, DEFAULT_BG) && rgbEqual(newBottom, DEFAULT_BG)) {
+    return { ...DEFAULT_CELL }
+  }
+
+  return { char: HALF_BLOCK, fg: newTop, bg: newBottom }
+}
+
 export type LineBrush = Omit<BrushSettings, 'tool'>
 
 export interface CellHalf {
@@ -82,7 +98,7 @@ export function computeRectCells(
 ): Map<string, AnsiCell> {
   const cells = new Map<string, AnsiCell>()
 
-  if (brush.mode === 'pixel') {
+  if (brush.mode !== 'brush') {
     const py0 = start.row * 2 + (start.isTopHalf ? 0 : 1)
     const py1 = end.row * 2 + (end.isTopHalf ? 0 : 1)
     const minPY = Math.min(py0, py1)
@@ -99,7 +115,9 @@ export function computeRectCells(
         const isTop = py % 2 === 0
         const key = `${row},${cx}`
         const existing = cells.get(key) ?? baseGrid[row][cx]
-        cells.set(key, computePixelCell(existing, brush.fg, isTop))
+        cells.set(key, brush.mode === 'eraser'
+          ? computeErasePixelCell(existing, isTop)
+          : computePixelCell(existing, brush.fg, isTop))
       }
     }
   } else {
@@ -130,7 +148,7 @@ export function computeLineCells(
 ): Map<string, AnsiCell> {
   const cells = new Map<string, AnsiCell>()
 
-  if (brush.mode === 'pixel') {
+  if (brush.mode !== 'brush') {
     const py0 = start.row * 2 + (start.isTopHalf ? 0 : 1)
     const py1 = end.row * 2 + (end.isTopHalf ? 0 : 1)
     const points = bresenhamLine(start.col, py0, end.col, py1)
@@ -141,7 +159,9 @@ export function computeLineCells(
       const isTop = pixelY % 2 === 0
       const key = `${row},${col}`
       const existing = cells.get(key) ?? baseGrid[row][col]
-      cells.set(key, computePixelCell(existing, brush.fg, isTop))
+      cells.set(key, brush.mode === 'eraser'
+        ? computeErasePixelCell(existing, isTop)
+        : computePixelCell(existing, brush.fg, isTop))
     }
   } else {
     const points = bresenhamLine(start.col, start.row, end.col, end.row)
@@ -150,6 +170,123 @@ export function computeLineCells(
       if (!isInBounds(row, col)) continue
       const key = `${row},${col}`
       cells.set(key, { char: brush.char, fg: [...brush.fg] as RGBColor, bg: [...brush.bg] as RGBColor })
+    }
+  }
+
+  return cells
+}
+
+function readPixelColor(grid: AnsiGrid, row: number, col: number, isTopHalf: boolean): RGBColor {
+  const cell = grid[row][col]
+  if (cell.char === HALF_BLOCK) {
+    return isTopHalf ? cell.fg : cell.bg
+  }
+  return cell.bg
+}
+
+export function computeFloodFillCells(
+  startRow: number, startCol: number,
+  brush: LineBrush,
+  baseGrid: AnsiGrid,
+  isTopHalf?: boolean,
+): Map<string, AnsiCell> {
+  const cells = new Map<string, AnsiCell>()
+  const rows = baseGrid.length
+  const cols = baseGrid[0].length
+
+  if (brush.mode !== 'brush') {
+    const startCell = baseGrid[startRow][startCol]
+
+    if (startCell.char !== HALF_BLOCK) {
+      // Cell-level BFS: match non-half-block cells by full identity (char+fg+bg)
+      if (brush.mode === 'eraser' && startCell.char === DEFAULT_CELL.char
+        && rgbEqual(startCell.fg, DEFAULT_CELL.fg) && rgbEqual(startCell.bg, DEFAULT_CELL.bg)) return cells
+
+      const visited = new Set<string>()
+      const queue: [number, number][] = [[startRow, startCol]]
+      visited.add(`${startRow},${startCol}`)
+
+      while (queue.length > 0) {
+        const [r, c] = queue.shift()!
+        const cell = baseGrid[r][c]
+        if (cell.char === HALF_BLOCK || cell.char !== startCell.char
+          || !rgbEqual(cell.fg, startCell.fg) || !rgbEqual(cell.bg, startCell.bg)) continue
+
+        const key = `${r},${c}`
+        let result = brush.mode === 'eraser'
+          ? computeErasePixelCell(cell, true) : computePixelCell(cell, brush.fg, true)
+        result = brush.mode === 'eraser'
+          ? computeErasePixelCell(result, false) : computePixelCell(result, brush.fg, false)
+        cells.set(key, result)
+
+        const neighbors: [number, number][] = [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]]
+        for (const [nr, nc] of neighbors) {
+          if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue
+          const nk = `${nr},${nc}`
+          if (visited.has(nk)) continue
+          visited.add(nk)
+          queue.push([nr, nc])
+        }
+      }
+    } else {
+      // Pixel-level BFS for half-block starting cell
+      const startPY = startRow * 2 + (isTopHalf ? 0 : 1)
+      const maxPY = rows * 2
+      const targetColor = readPixelColor(baseGrid, startRow, startCol, !!isTopHalf)
+      const noopColor = brush.mode === 'eraser' ? DEFAULT_BG : brush.fg
+      if (rgbEqual(targetColor, noopColor)) return cells
+
+      const visited = new Set<string>()
+      const queue: [number, number][] = [[startPY, startCol]]
+      visited.add(`${startPY},${startCol}`)
+
+      while (queue.length > 0) {
+        const [py, cx] = queue.shift()!
+        const row = Math.floor(py / 2)
+        const isTop = py % 2 === 0
+        const color = readPixelColor(baseGrid, row, cx, isTop)
+        if (!rgbEqual(color, targetColor)) continue
+
+        const key = `${row},${cx}`
+        const existing = cells.get(key) ?? baseGrid[row][cx]
+        cells.set(key, brush.mode === 'eraser'
+          ? computeErasePixelCell(existing, isTop)
+          : computePixelCell(existing, brush.fg, isTop))
+
+        const neighbors: [number, number][] = [[py - 1, cx], [py + 1, cx], [py, cx - 1], [py, cx + 1]]
+        for (const [ny, nx] of neighbors) {
+          if (ny < 0 || ny >= maxPY || nx < 0 || nx >= cols) continue
+          const nk = `${ny},${nx}`
+          if (visited.has(nk)) continue
+          visited.add(nk)
+          queue.push([ny, nx])
+        }
+      }
+    }
+  } else {
+    const target = baseGrid[startRow][startCol]
+    if (target.char === brush.char && rgbEqual(target.fg, brush.fg) && rgbEqual(target.bg, brush.bg)) return cells
+
+    const visited = new Set<string>()
+    const queue: [number, number][] = [[startRow, startCol]]
+    visited.add(`${startRow},${startCol}`)
+
+    while (queue.length > 0) {
+      const [r, c] = queue.shift()!
+      const cell = baseGrid[r][c]
+      if (cell.char !== target.char || !rgbEqual(cell.fg, target.fg) || !rgbEqual(cell.bg, target.bg)) continue
+
+      const key = `${r},${c}`
+      cells.set(key, { char: brush.char, fg: [...brush.fg] as RGBColor, bg: [...brush.bg] as RGBColor })
+
+      const neighbors: [number, number][] = [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]]
+      for (const [nr, nc] of neighbors) {
+        if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue
+        const nk = `${nr},${nc}`
+        if (visited.has(nk)) continue
+        visited.add(nk)
+        queue.push([nr, nc])
+      }
     }
   }
 
