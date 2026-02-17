@@ -155,6 +155,102 @@ describe('rectangle tool', () => {
     })
   })
 
+  describe('dimension label', () => {
+    it('should show dimensions during rect preview in brush mode', () => {
+      const { result } = renderHook(() => useAnsiEditor())
+      const container = createMockContainer()
+      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const dimEl = document.createElement('div')
+      result.current.dimensionRef.current = dimEl
+      act(() => result.current.onTerminalReady(handle))
+      act(() => result.current.setTool('rect-outline'))
+
+      // Draw from (0,0) to (2,3) → 4 cols wide, 3 rows tall → 4×6 pixels
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
+      act(() => { container.dispatchEvent(mouseAt('mousemove', 3, 2)) })
+
+      expect(dimEl.style.display).toBe('block')
+      expect(dimEl.textContent).toBe('4×6')
+    })
+
+    it('should show dimensions during rect preview in pixel mode', () => {
+      const { result } = renderHook(() => useAnsiEditor())
+      const container = createMockContainer()
+      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const dimEl = document.createElement('div')
+      result.current.dimensionRef.current = dimEl
+      act(() => result.current.onTerminalReady(handle))
+      act(() => result.current.setTool('rect-outline'))
+      act(() => result.current.setBrushMode('pixel'))
+
+      // Draw from row 0 top-half to row 1 bottom-half, col 0 to col 2
+      // pixelY 0 to pixelY 3 → height 4, width 3
+      // clientY=4 → fractionalRow=0.2 → row 0, isTopHalf=true (py=0)
+      act(() => {
+        container.dispatchEvent(new MouseEvent('mousedown', {
+          clientX: 0 * 10 + 5, clientY: 4, bubbles: true,
+        }))
+      })
+      // clientY=35 → fractionalRow=1.75 → row 1, isTopHalf=false (py=3)
+      act(() => {
+        container.dispatchEvent(new MouseEvent('mousemove', {
+          clientX: 2 * 10 + 5, clientY: 1 * 20 + 15, bubbles: true,
+        }))
+      })
+
+      expect(dimEl.style.display).toBe('block')
+      expect(dimEl.textContent).toBe('3×4')
+    })
+
+    it('should hide dimension label on commit', () => {
+      const { result } = renderHook(() => useAnsiEditor())
+      const container = createMockContainer()
+      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const dimEl = document.createElement('div')
+      result.current.dimensionRef.current = dimEl
+      act(() => result.current.onTerminalReady(handle))
+      act(() => result.current.setTool('rect-outline'))
+
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
+      act(() => { container.dispatchEvent(mouseAt('mousemove', 3, 2)) })
+      expect(dimEl.style.display).toBe('block')
+
+      act(() => { document.dispatchEvent(mouseAt('mouseup', 3, 2)) })
+      expect(dimEl.style.display).toBe('none')
+    })
+
+    it('should hide dimension label on cancel', () => {
+      const { result } = renderHook(() => useAnsiEditor())
+      const container = createMockContainer()
+      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const dimEl = document.createElement('div')
+      result.current.dimensionRef.current = dimEl
+      act(() => result.current.onTerminalReady(handle))
+      act(() => result.current.setTool('rect-outline'))
+
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
+      act(() => { container.dispatchEvent(mouseAt('mousemove', 3, 2)) })
+      expect(dimEl.style.display).toBe('block')
+
+      act(() => { document.dispatchEvent(mouseOutside('mouseup')) })
+      expect(dimEl.style.display).toBe('none')
+    })
+
+    it('should show 1×2 for a single-cell brush rect', () => {
+      const { result } = renderHook(() => useAnsiEditor())
+      const container = createMockContainer()
+      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const dimEl = document.createElement('div')
+      result.current.dimensionRef.current = dimEl
+      act(() => result.current.onTerminalReady(handle))
+      act(() => result.current.setTool('rect-outline'))
+
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 5, 5)) })
+
+      expect(dimEl.textContent).toBe('1×2')
+    })
+  })
+
   describe('no-flash commit', () => {
     it('should not flash originals during rect commit', () => {
       const { result } = renderHook(() => useAnsiEditor())

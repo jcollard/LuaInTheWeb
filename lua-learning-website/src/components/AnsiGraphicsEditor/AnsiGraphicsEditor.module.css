@@ -34,6 +34,23 @@
   box-sizing: border-box;
 }
 
+.dimensionLabel {
+  position: fixed;
+  display: none;
+  pointer-events: none;
+  z-index: 11;
+  font-family: 'IBM VGA 8x16', monospace;
+  font-size: 12px;
+  color: white;
+  text-shadow:
+    -1px -1px 0 black,
+     1px -1px 0 black,
+    -1px  1px 0 black,
+     1px  1px 0 black;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+
 /* Palette */
 .paletteGroup {
   display: flex;

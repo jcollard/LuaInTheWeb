@@ -25,6 +25,7 @@ export interface UseAnsiEditorReturn {
   markClean: () => void
   onTerminalReady: (handle: AnsiTerminalHandle | null) => void
   cursorRef: React.RefObject<HTMLDivElement | null>
+  dimensionRef: React.RefObject<HTMLDivElement | null>
   isSaveDialogOpen: boolean
   openSaveDialog: () => void
   closeSaveDialog: () => void
@@ -58,6 +59,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const paintingRef = useRef(false)
   const lastCellRef = useRef<{ row: number; col: number; isTopHalf?: boolean } | null>(null)
   const cursorRef = useRef<HTMLDivElement | null>(null)
+  const dimensionRef = useRef<HTMLDivElement | null>(null)
   const lineStartRef = useRef<CellHalf | null>(null)
   const previewCellsRef = useRef<Map<string, AnsiCell>>(new Map())
   const cleanupRef = useRef<(() => void) | null>(null)
@@ -147,6 +149,39 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       if (el) el.style.display = 'none'
     }
 
+    function showDimension(start: CellHalf, end: CellHalf): void {
+      const el = dimensionRef.current
+      if (!el) return
+      const rect = container.getBoundingClientRect()
+      const cellW = rect.width / ANSI_COLS
+      const cellH = rect.height / ANSI_ROWS
+      const minCol = Math.min(start.col, end.col)
+      const maxCol = Math.max(start.col, end.col)
+      const minRow = Math.min(start.row, end.row)
+      const maxRow = Math.max(start.row, end.row)
+      let w: number, h: number
+      if (brushRef.current.mode === 'pixel') {
+        const py0 = start.row * 2 + (start.isTopHalf ? 0 : 1)
+        const py1 = end.row * 2 + (end.isTopHalf ? 0 : 1)
+        w = maxCol - minCol + 1
+        h = Math.abs(py1 - py0) + 1
+      } else {
+        w = maxCol - minCol + 1
+        h = (maxRow - minRow + 1) * 2
+      }
+      el.textContent = `${w}\u00D7${h}`
+      const cx = rect.left + (minCol + maxCol + 1) * cellW / 2
+      const cy = rect.top + (minRow + maxRow + 1) * cellH / 2
+      el.style.display = 'block'
+      el.style.left = `${cx}px`
+      el.style.top = `${cy}px`
+    }
+
+    function hideDimension(): void {
+      const el = dimensionRef.current
+      if (el) el.style.display = 'none'
+    }
+
     function isSameCell(
       a: { row: number; col: number; isTopHalf?: boolean },
       b: { row: number; col: number; isTopHalf?: boolean },
@@ -229,8 +264,9 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     }
 
     function renderRectPreview(end: CellHalf): void {
+      const start = lineStartRef.current
       const rectCells = getRectCells(end)
-      if (!rectCells) return
+      if (!rectCells || !start) return
       const handle = handleRef.current
       if (!handle) return
       for (const [key, cell] of rectCells) {
@@ -240,6 +276,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         }
         writeCellToTerminal(handle, r, c, cell)
       }
+      showDimension(start, end)
     }
 
     function commitRect(end: CellHalf): void {
@@ -262,11 +299,13 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         }
       }
       lineStartRef.current = null
+      hideDimension()
     }
 
     function cancelRect(): void {
       restorePreview()
       lineStartRef.current = null
+      hideDimension()
     }
 
     function onMouseDown(e: MouseEvent): void {
@@ -385,7 +424,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
 
   return {
     grid, brush, setBrushFg, setBrushBg, setBrushChar, setBrushMode, setTool,
-    clearGrid, isDirty, markClean, onTerminalReady, cursorRef,
+    clearGrid, isDirty, markClean, onTerminalReady, cursorRef, dimensionRef,
     isSaveDialogOpen, openSaveDialog, closeSaveDialog, undo, redo, canUndo, canRedo,
   }
 }

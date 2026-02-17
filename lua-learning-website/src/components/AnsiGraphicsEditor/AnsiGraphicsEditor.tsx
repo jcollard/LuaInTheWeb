@@ -40,6 +40,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     markClean,
     onTerminalReady,
     cursorRef,
+    dimensionRef,
     isSaveDialogOpen,
     openSaveDialog,
     closeSaveDialog,
@@ -115,6 +116,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
         />
       </div>
       <div ref={cursorRef} className={styles.cellCursor} />
+      <div ref={dimensionRef} className={styles.dimensionLabel} />
       <SaveAsDialog
         isOpen={isSaveDialogOpen}
         tree={fileTree}
