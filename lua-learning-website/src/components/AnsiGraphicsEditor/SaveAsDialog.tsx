@@ -25,7 +25,6 @@ export function SaveAsDialog({ isOpen, tree, onSave, onCancel }: SaveAsDialogPro
   const [error, setError] = useState('')
 
   const filenameInputRef = useRef<HTMLInputElement>(null)
-  const cancelButtonRef = useRef<HTMLButtonElement>(null)
   const saveButtonRef = useRef<HTMLButtonElement>(null)
 
   const titleId = useId()
@@ -74,9 +73,6 @@ export function SaveAsDialog({ isOpen, tree, onSave, onCancel }: SaveAsDialogPro
           handleSave()
         }
         break
-      case 'Tab':
-        // Let tab work naturally between elements
-        break
     }
   }, [onCancel, handleSave])
 
@@ -123,7 +119,6 @@ export function SaveAsDialog({ isOpen, tree, onSave, onCancel }: SaveAsDialogPro
         </div>
         <div className={styles.footer}>
           <button
-            ref={cancelButtonRef}
             type="button"
             className={`${styles.button} ${styles.cancelButton}`}
             onClick={onCancel}

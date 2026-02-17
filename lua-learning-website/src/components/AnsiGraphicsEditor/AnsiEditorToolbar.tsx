@@ -39,7 +39,7 @@ export function AnsiEditorToolbar({ brush, onSetFg, onSetBg, onSetChar, onClear,
       </div>
       <button
         type="button"
-        className={styles.clearButton}
+        className={styles.toolbarButton}
         onClick={onClear}
         data-testid="clear-button"
       >
@@ -47,7 +47,7 @@ export function AnsiEditorToolbar({ brush, onSetFg, onSetBg, onSetChar, onClear,
       </button>
       <button
         type="button"
-        className={styles.saveButton}
+        className={styles.toolbarButton}
         onClick={onSave}
         data-testid="save-button"
       >
@@ -55,7 +55,7 @@ export function AnsiEditorToolbar({ brush, onSetFg, onSetBg, onSetChar, onClear,
       </button>
       <button
         type="button"
-        className={styles.saveButton}
+        className={styles.toolbarButton}
         onClick={onSaveAs}
         data-testid="save-as-button"
       >

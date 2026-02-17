@@ -21,8 +21,11 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     if (!filePath || filePath.startsWith('ansi-editor://')) return undefined
     const content = fileSystem.readFile(filePath)
     if (content === null) return undefined
-    try { return deserializeGrid(content) }
-    catch { return undefined }
+    try {
+      return deserializeGrid(content)
+    } catch {
+      return undefined
+    }
   }, [filePath, fileSystem])
 
   const {
@@ -40,6 +43,15 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     closeSaveDialog,
   } = useAnsiEditor({ initialGrid })
 
+  const finishSaveAs = useCallback(async (savedPath: string) => {
+    await fileSystem.flush()
+    refreshFileTree()
+    closeSaveDialog()
+    if (filePath) {
+      updateAnsiEditorTabPath(filePath, savedPath)
+    }
+  }, [fileSystem, refreshFileTree, closeSaveDialog, filePath, updateAnsiEditorTabPath])
+
   const handleSaveAs = useCallback(async (folderPath: string, fileName: string) => {
     const fullPath = folderPath === '/' ? `/${fileName}` : `${folderPath}/${fileName}`
     const content = serializeGrid(grid)
@@ -48,25 +60,15 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
       return
     }
     fileSystem.createFile(fullPath, content)
-    await fileSystem.flush()
-    refreshFileTree()
-    closeSaveDialog()
-    if (filePath) {
-      updateAnsiEditorTabPath(filePath, fullPath)
-    }
-  }, [grid, fileSystem, refreshFileTree, closeSaveDialog, filePath, updateAnsiEditorTabPath])
+    await finishSaveAs(fullPath)
+  }, [grid, fileSystem, finishSaveAs])
 
   const handleConfirmOverwrite = useCallback(async () => {
     if (!pendingSave) return
     fileSystem.writeFile(pendingSave.path, pendingSave.content)
-    await fileSystem.flush()
-    refreshFileTree()
-    closeSaveDialog()
-    if (filePath) {
-      updateAnsiEditorTabPath(filePath, pendingSave.path)
-    }
+    await finishSaveAs(pendingSave.path)
     setPendingSave(null)
-  }, [pendingSave, fileSystem, refreshFileTree, closeSaveDialog, filePath, updateAnsiEditorTabPath])
+  }, [pendingSave, fileSystem, finishSaveAs])
 
   const handleCancelOverwrite = useCallback(() => {
     setPendingSave(null)
