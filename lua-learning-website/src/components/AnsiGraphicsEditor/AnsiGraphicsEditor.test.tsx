@@ -154,6 +154,54 @@ describe('AnsiEditorToolbar', () => {
       fireEvent.click(screen.getByTestId('tool-line'))
       expect(handlers.onSetTool).toHaveBeenCalledWith('line')
     })
+
+    it('should render Rect button', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      expect(screen.getByTestId('tool-rect')).toBeTruthy()
+    })
+
+    it('should show Rect as active when brush.tool is rect-outline', () => {
+      const rectBrush = { ...defaultBrush, tool: 'rect-outline' as DrawTool }
+      render(<AnsiEditorToolbar brush={rectBrush} {...handlers} />)
+      expect(screen.getByTestId('tool-rect').getAttribute('aria-pressed')).toBe('true')
+    })
+
+    it('should show Rect as active when brush.tool is rect-filled', () => {
+      const rectBrush = { ...defaultBrush, tool: 'rect-filled' as DrawTool }
+      render(<AnsiEditorToolbar brush={rectBrush} {...handlers} />)
+      expect(screen.getByTestId('tool-rect').getAttribute('aria-pressed')).toBe('true')
+    })
+
+    it('should render flyout with outline and filled options', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      expect(screen.getByTestId('rect-flyout')).toBeTruthy()
+      expect(screen.getByTestId('tool-rect-outline')).toBeTruthy()
+      expect(screen.getByTestId('tool-rect-filled')).toBeTruthy()
+    })
+
+    it('should call onSetTool with rect-outline when outline option clicked', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      fireEvent.click(screen.getByTestId('tool-rect-outline'))
+      expect(handlers.onSetTool).toHaveBeenCalledWith('rect-outline')
+    })
+
+    it('should call onSetTool with rect-filled when filled option clicked', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      fireEvent.click(screen.getByTestId('tool-rect-filled'))
+      expect(handlers.onSetTool).toHaveBeenCalledWith('rect-filled')
+    })
+
+    it('should show ▭ on rect button when rect-outline is selected', () => {
+      const rectBrush = { ...defaultBrush, tool: 'rect-outline' as DrawTool }
+      render(<AnsiEditorToolbar brush={rectBrush} {...handlers} />)
+      expect(screen.getByTestId('tool-rect').textContent).toContain('▭')
+    })
+
+    it('should show ■ on rect button when rect-filled is selected', () => {
+      const rectBrush = { ...defaultBrush, tool: 'rect-filled' as DrawTool }
+      render(<AnsiEditorToolbar brush={rectBrush} {...handlers} />)
+      expect(screen.getByTestId('tool-rect').textContent).toContain('■')
+    })
   })
 
   describe('undo/redo buttons', () => {

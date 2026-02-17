@@ -156,3 +156,48 @@
 .toolbarButton:hover {
   background-color: var(--theme-bg-hover);
 }
+
+/* Tool flyout (rect tool variants) */
+.toolFlyoutWrapper {
+  position: relative;
+}
+
+.toolFlyout {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  background-color: var(--theme-bg-primary);
+  border: 1px solid var(--theme-border);
+  border-radius: 3px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
+  padding: 2px;
+  white-space: nowrap;
+}
+
+.toolFlyoutWrapper:hover .toolFlyout {
+  display: flex;
+  flex-direction: column;
+}
+
+.flyoutOption {
+  padding: 4px 12px;
+  font-size: 12px;
+  background-color: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.flyoutOption:hover {
+  background-color: var(--theme-bg-hover);
+}
+
+.flyoutOptionActive {
+  background-color: var(--theme-accent-primary);
+  color: var(--theme-bg-primary);
+}

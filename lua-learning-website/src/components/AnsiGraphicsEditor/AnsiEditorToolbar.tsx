@@ -23,6 +23,8 @@ export function AnsiEditorToolbar({
   brush, onSetFg, onSetBg, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onUndo, onRedo, canUndo, canRedo,
 }: AnsiEditorToolbarProps) {
+  const isRectActive = brush.tool === 'rect-outline' || brush.tool === 'rect-filled'
+
   const handleCharChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     if (val.length > 0) {
@@ -52,6 +54,34 @@ export function AnsiEditorToolbar({
         >
           ╱
         </button>
+        <div className={styles.toolFlyoutWrapper}>
+          <button
+            type="button"
+            className={`${styles.modeButton} ${isRectActive ? styles.modeButtonActive : ''}`}
+            aria-pressed={isRectActive}
+            data-testid="tool-rect"
+          >
+            {brush.tool === 'rect-filled' ? '■' : '▭'}
+          </button>
+          <div className={styles.toolFlyout} data-testid="rect-flyout">
+            <button
+              type="button"
+              className={`${styles.flyoutOption} ${brush.tool === 'rect-outline' ? styles.flyoutOptionActive : ''}`}
+              onClick={() => onSetTool('rect-outline')}
+              data-testid="tool-rect-outline"
+            >
+              ▭ Outline
+            </button>
+            <button
+              type="button"
+              className={`${styles.flyoutOption} ${brush.tool === 'rect-filled' ? styles.flyoutOptionActive : ''}`}
+              onClick={() => onSetTool('rect-filled')}
+              data-testid="tool-rect-filled"
+            >
+              ■ Filled
+            </button>
+          </div>
+        </div>
       </div>
       <div className={styles.modeGroup}>
         <span className={styles.modeLabel}>Mode</span>

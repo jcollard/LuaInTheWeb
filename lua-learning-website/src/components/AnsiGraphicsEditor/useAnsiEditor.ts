@@ -4,7 +4,7 @@ import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, RGBColor }
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG } from './types'
 import {
   cloneGrid, createEmptyGrid, writeCellToTerminal, renderFullGrid,
-  isInBounds, getCellHalfFromMouse, computePixelCell, computeLineCells, parseCellKey,
+  isInBounds, getCellHalfFromMouse, computePixelCell, computeLineCells, computeRectCells, parseCellKey,
 } from './gridUtils'
 import type { CellHalf } from './gridUtils'
 
@@ -220,6 +220,55 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       lineStartRef.current = null
     }
 
+    function getRectCells(end: CellHalf): Map<string, AnsiCell> | null {
+      const start = lineStartRef.current
+      if (!start) return null
+      restorePreview()
+      const filled = brushRef.current.tool === 'rect-filled'
+      return computeRectCells(start, end, brushRef.current, gridRef.current, filled)
+    }
+
+    function renderRectPreview(end: CellHalf): void {
+      const rectCells = getRectCells(end)
+      if (!rectCells) return
+      const handle = handleRef.current
+      if (!handle) return
+      for (const [key, cell] of rectCells) {
+        const [r, c] = parseCellKey(key)
+        if (!previewCellsRef.current.has(key)) {
+          previewCellsRef.current.set(key, gridRef.current[r][c])
+        }
+        writeCellToTerminal(handle, r, c, cell)
+      }
+    }
+
+    function commitRect(end: CellHalf): void {
+      const start = lineStartRef.current
+      if (!start) return
+      const affectedKeys = new Set(previewCellsRef.current.keys())
+      previewCellsRef.current.clear()
+      const filled = brushRef.current.tool === 'rect-filled'
+      const rectCells = computeRectCells(start, end, brushRef.current, gridRef.current, filled)
+      for (const [key, cell] of rectCells) {
+        const [r, c] = parseCellKey(key)
+        applyCell(r, c, cell)
+        affectedKeys.add(key)
+      }
+      const handle = handleRef.current
+      if (handle) {
+        for (const key of affectedKeys) {
+          const [r, c] = parseCellKey(key)
+          writeCellToTerminal(handle, r, c, gridRef.current[r][c])
+        }
+      }
+      lineStartRef.current = null
+    }
+
+    function cancelRect(): void {
+      restorePreview()
+      lineStartRef.current = null
+    }
+
     function onMouseDown(e: MouseEvent): void {
       e.preventDefault()
       const cell = getCellHalfFromMouse(e, container)
@@ -239,6 +288,15 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           lineStartRef.current = cell
           previewCellsRef.current.clear()
           renderLinePreview(cell)
+          break
+        }
+        case 'rect-outline':
+        case 'rect-filled': {
+          if (!cell) return
+          pushSnapshot()
+          lineStartRef.current = cell
+          previewCellsRef.current.clear()
+          renderRectPreview(cell)
           break
         }
       }
@@ -265,6 +323,11 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           if (lineStartRef.current) renderLinePreview(cell)
           break
         }
+        case 'rect-outline':
+        case 'rect-filled': {
+          if (lineStartRef.current) renderRectPreview(cell)
+          break
+        }
       }
     }
 
@@ -280,6 +343,14 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           const cell = getCellHalfFromMouse(e, container)
           if (cell) commitLine(cell)
           else cancelLine()
+          break
+        }
+        case 'rect-outline':
+        case 'rect-filled': {
+          if (!lineStartRef.current) break
+          const cell = getCellHalfFromMouse(e, container)
+          if (cell) commitRect(cell)
+          else cancelRect()
           break
         }
       }

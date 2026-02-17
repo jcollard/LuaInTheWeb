@@ -73,6 +73,55 @@ export function parseCellKey(key: string): [number, number] {
   return [r, c]
 }
 
+export function computeRectCells(
+  start: CellHalf,
+  end: CellHalf,
+  brush: LineBrush,
+  baseGrid: AnsiGrid,
+  filled: boolean,
+): Map<string, AnsiCell> {
+  const cells = new Map<string, AnsiCell>()
+
+  if (brush.mode === 'pixel') {
+    const py0 = start.row * 2 + (start.isTopHalf ? 0 : 1)
+    const py1 = end.row * 2 + (end.isTopHalf ? 0 : 1)
+    const minPY = Math.min(py0, py1)
+    const maxPY = Math.max(py0, py1)
+    const minCX = Math.min(start.col, end.col)
+    const maxCX = Math.max(start.col, end.col)
+
+    for (let py = minPY; py <= maxPY; py++) {
+      for (let cx = minCX; cx <= maxCX; cx++) {
+        const isPerimeter = py === minPY || py === maxPY || cx === minCX || cx === maxCX
+        if (!filled && !isPerimeter) continue
+        const row = Math.floor(py / 2)
+        if (!isInBounds(row, cx)) continue
+        const isTop = py % 2 === 0
+        const key = `${row},${cx}`
+        const existing = cells.get(key) ?? baseGrid[row][cx]
+        cells.set(key, computePixelCell(existing, brush.fg, isTop))
+      }
+    }
+  } else {
+    const minRow = Math.min(start.row, end.row)
+    const maxRow = Math.max(start.row, end.row)
+    const minCol = Math.min(start.col, end.col)
+    const maxCol = Math.max(start.col, end.col)
+
+    for (let r = minRow; r <= maxRow; r++) {
+      for (let c = minCol; c <= maxCol; c++) {
+        const isPerimeter = r === minRow || r === maxRow || c === minCol || c === maxCol
+        if (!filled && !isPerimeter) continue
+        if (!isInBounds(r, c)) continue
+        const key = `${r},${c}`
+        cells.set(key, { char: brush.char, fg: [...brush.fg] as RGBColor, bg: [...brush.bg] as RGBColor })
+      }
+    }
+  }
+
+  return cells
+}
+
 export function computeLineCells(
   start: CellHalf,
   end: CellHalf,
