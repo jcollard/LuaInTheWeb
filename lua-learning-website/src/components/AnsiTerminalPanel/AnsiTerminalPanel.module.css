@@ -15,6 +15,16 @@
 
 .terminalWrapper {
   transform-origin: center center;
+  outline: none;
+  border-radius: 0;
+}
+
+.terminalWrapper :global(.xterm) {
+  border-radius: 0;
+}
+
+.terminalWrapper :global(.xterm-viewport) {
+  border-radius: 0;
 }
 
 .terminalWrapper :global(.xterm-viewport) {

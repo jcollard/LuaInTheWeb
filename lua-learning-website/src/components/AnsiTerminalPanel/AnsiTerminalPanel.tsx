@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { Terminal } from '@xterm/xterm'
 import '@xterm/xterm/css/xterm.css'
 import styles from './AnsiTerminalPanel.module.css'
@@ -26,7 +26,7 @@ export interface AnsiTerminalPanelProps {
   onTerminalReady?: (handle: AnsiTerminalHandle | null) => void
 }
 
-export function AnsiTerminalPanel({ isActive: _isActive, onTerminalReady }: AnsiTerminalPanelProps) {
+export function AnsiTerminalPanel({ isActive, onTerminalReady }: AnsiTerminalPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const terminalRef = useRef<Terminal | null>(null)
@@ -49,10 +49,13 @@ export function AnsiTerminalPanel({ isActive: _isActive, onTerminalReady }: Ansi
       rows: ROWS,
       fontSize: FONT_SIZE,
       fontFamily: FONT_FAMILY,
+      lineHeight: 1,
+      letterSpacing: 0,
       cursorBlink: false,
       disableStdin: true,
       scrollback: 0,
       overviewRulerWidth: 0,
+      allowTransparency: false,
       theme: {
         background: '#000000',
         foreground: '#AAAAAA',
@@ -95,7 +98,20 @@ export function AnsiTerminalPanel({ isActive: _isActive, onTerminalReady }: Ansi
     }
   }, [onTerminalReady])
 
-  // Scale terminal to fit container
+  // Auto-focus wrapper when tab becomes active so InputCapture receives keyboard events.
+  useEffect(() => {
+    if (isActive && wrapperRef.current) {
+      wrapperRef.current.focus()
+    }
+  }, [isActive])
+
+  // Re-focus wrapper when user clicks on the terminal area.
+  const handleMouseDown = useCallback(() => {
+    wrapperRef.current?.focus()
+  }, [])
+
+  // Scale terminal to fit container using integer-only scale factors.
+  // Integer scales avoid sub-pixel gaps between xterm.js DOM cells.
   useEffect(() => {
     const container = containerRef.current
     const wrapper = wrapperRef.current
@@ -104,12 +120,12 @@ export function AnsiTerminalPanel({ isActive: _isActive, onTerminalReady }: Ansi
     const observer = new ResizeObserver(() => {
       const containerW = container.clientWidth
       const containerH = container.clientHeight
-      // Get the terminal's natural rendered size
       const terminalW = wrapper.scrollWidth
       const terminalH = wrapper.scrollHeight
       if (terminalW === 0 || terminalH === 0) return
 
-      const scale = Math.min(containerW / terminalW, containerH / terminalH)
+      const exactScale = Math.min(containerW / terminalW, containerH / terminalH)
+      const scale = Math.max(1, Math.floor(exactScale))
       wrapper.style.transform = `scale(${scale})`
     })
 
@@ -121,7 +137,7 @@ export function AnsiTerminalPanel({ isActive: _isActive, onTerminalReady }: Ansi
   }, [])
 
   return (
-    <div ref={containerRef} className={styles.container}>
+    <div ref={containerRef} className={styles.container} onMouseDown={handleMouseDown}>
       <div ref={wrapperRef} className={styles.terminalWrapper} tabIndex={0} />
     </div>
   )
