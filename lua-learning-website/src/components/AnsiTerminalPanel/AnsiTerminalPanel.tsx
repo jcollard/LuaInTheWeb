@@ -63,6 +63,9 @@ export function AnsiTerminalPanel({ isActive, onTerminalReady }: AnsiTerminalPan
       },
     })
 
+    // Clear any residual DOM from previous terminal (e.g., React Strict Mode
+    // double-mount: dispose() cleans up internal state but doesn't remove DOM)
+    wrapper.replaceChildren()
     terminal.open(wrapper)
     terminalRef.current = terminal
 
