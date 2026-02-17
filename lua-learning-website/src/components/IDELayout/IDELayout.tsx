@@ -163,10 +163,6 @@ function IDELayoutInner({
   const hasAnsiTabs = tabs.some(t => t.type === 'ansi')
   const hasAnsiEditorTabs = tabs.some(t => t.type === 'ansi-editor')
 
-  const handleOpenAnsiEditor = useCallback(() => {
-    openAnsiEditorTab()
-  }, [openAnsiEditorTab])
-
   // ANSI tab request management (ansiId -> resolver for terminal handle)
   const pendingAnsiRequestsRef = useRef<Map<string, (handle: AnsiTerminalHandle) => void>>(new Map())
 
@@ -776,7 +772,7 @@ function IDELayoutInner({
                   <SidebarPanel
                     activePanel={activePanel}
                     explorerProps={explorerProps}
-                    onOpenAnsiEditor={handleOpenAnsiEditor}
+                    onOpenAnsiEditor={openAnsiEditorTab}
                   />
                 </IDEPanel>
                 <IDEResizeHandle />

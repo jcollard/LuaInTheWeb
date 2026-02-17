@@ -1,11 +1,3 @@
-/**
- * Data model and constants for the ANSI Graphics Editor.
- *
- * The editor maintains its own backing cell buffer (AnsiGrid) as the
- * source of truth. xterm.js is used purely as a render target — we
- * write escape sequences to it but never read cell data back.
- */
-
 export type RGBColor = [number, number, number]
 
 export interface AnsiCell {
@@ -14,10 +6,6 @@ export interface AnsiCell {
   bg: RGBColor
 }
 
-/**
- * Backing buffer: 25 rows x 80 cols, 0-based indexing.
- * This is the authoritative state for all cell data.
- */
 export type AnsiGrid = AnsiCell[][]
 
 export interface BrushSettings {
@@ -38,10 +26,7 @@ export const DEFAULT_CELL: AnsiCell = {
   bg: DEFAULT_BG,
 }
 
-/**
- * Standard CGA/VGA 16-color palette matching `ansi.colors` from the Lua runtime.
- * Layout: dark row (0-7) then bright row (8-15).
- */
+/** Standard CGA/VGA 16-color palette matching `ansi.colors` from the Lua runtime. */
 export const CGA_PALETTE: { name: string; rgb: RGBColor }[] = [
   { name: 'Black',          rgb: [0, 0, 0] },
   { name: 'Blue',           rgb: [0, 0, 170] },

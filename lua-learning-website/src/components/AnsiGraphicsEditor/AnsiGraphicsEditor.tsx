@@ -29,7 +29,6 @@ export function AnsiGraphicsEditor() {
           onTerminalReady={onTerminalReady}
         />
       </div>
-      {/* Cell cursor overlay — positioned imperatively by useAnsiEditor via fixed coordinates */}
       <div ref={cursorRef} className={styles.cellCursor} />
     </div>
   )

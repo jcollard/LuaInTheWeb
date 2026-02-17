@@ -30,19 +30,14 @@ export function AnsiTerminalPanel({ isActive, onTerminalReady }: AnsiTerminalPan
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const terminalRef = useRef<Terminal | null>(null)
-  // Stable proxy handle — delegates write through terminalRef so it survives
-  // React Strict Mode's effect cleanup/re-run cycle. The DOM element (wrapper)
-  // is the same across strict mode re-runs since React doesn't recreate DOM nodes.
+  // Stable proxy handle that survives Strict Mode re-runs via terminalRef indirection
   const handleRef = useRef<AnsiTerminalHandle | null>(null)
   const onTerminalReadyRef = useRef(onTerminalReady)
   onTerminalReadyRef.current = onTerminalReady
 
-  // Create terminal on mount after the IBM VGA font is loaded. Waiting for
-  // the font ensures xterm.js measures cell dimensions correctly on first
-  // render and the integer-scaling ResizeObserver gets accurate metrics.
-  // In React Strict Mode, effects run, clean up, and re-run. The handle
-  // uses terminalRef indirection so it automatically delegates to whichever
-  // terminal instance is currently alive.
+  // Wait for the IBM VGA font before opening the terminal so xterm.js
+  // measures cell dimensions correctly and the ResizeObserver gets accurate metrics.
+  // The handle uses terminalRef indirection to survive Strict Mode re-runs.
   useEffect(() => {
     const wrapper = wrapperRef.current
     if (!wrapper) return
@@ -50,7 +45,6 @@ export function AnsiTerminalPanel({ isActive, onTerminalReady }: AnsiTerminalPan
     let disposed = false
 
     const init = async () => {
-      // Ensure the IBM VGA font is available before opening the terminal
       await document.fonts.load(`${FONT_SIZE}px ${FONT_FAMILY}`)
       if (disposed) return
 
@@ -73,15 +67,13 @@ export function AnsiTerminalPanel({ isActive, onTerminalReady }: AnsiTerminalPan
         },
       })
 
-      // Clear any residual DOM from previous terminal (e.g., React Strict Mode
-      // double-mount: dispose() cleans up internal state but doesn't remove DOM)
+      // Clear residual DOM from Strict Mode double-mount
       wrapper.replaceChildren()
       terminal.open(wrapper)
       terminalRef.current = terminal
 
-      // Create the stable proxy handle on first mount only.
-      // The write method delegates through terminalRef, so even if the terminal
-      // is disposed and recreated (strict mode), the handle remains valid.
+      // Create stable proxy handle on first mount; delegates through terminalRef
+      // so it survives Strict Mode disposal/recreation.
       if (!handleRef.current) {
         handleRef.current = {
           write: (data: string) => terminalRef.current?.write(data),
@@ -92,7 +84,6 @@ export function AnsiTerminalPanel({ isActive, onTerminalReady }: AnsiTerminalPan
         }
       }
 
-      // Notify parent that handle is available
       onTerminalReadyRef.current?.(handleRef.current)
     }
 
@@ -104,33 +95,30 @@ export function AnsiTerminalPanel({ isActive, onTerminalReady }: AnsiTerminalPan
         terminalRef.current.dispose()
         terminalRef.current = null
       }
-      // Don't null handleRef — the proxy handle survives strict mode re-runs.
-      // It becomes a no-op (terminalRef is null) until the next terminal is created.
+      // Don't null handleRef -- proxy survives re-runs via terminalRef indirection
     }
   }, [])
 
-  // Notify parent when callback changes (e.g., new tab request triggers re-render)
-  // This follows the same pattern as CanvasGamePanel's onCanvasReady effect.
+  // Notify parent when callback identity changes
   useEffect(() => {
     if (handleRef.current && onTerminalReady) {
       onTerminalReady(handleRef.current)
     }
   }, [onTerminalReady])
 
-  // Auto-focus wrapper when tab becomes active so InputCapture receives keyboard events.
+  // Auto-focus wrapper when tab becomes active
   useEffect(() => {
     if (isActive && wrapperRef.current) {
       wrapperRef.current.focus()
     }
   }, [isActive])
 
-  // Re-focus wrapper when user clicks on the terminal area.
+  // Re-focus wrapper on click
   const handleMouseDown = useCallback(() => {
     wrapperRef.current?.focus()
   }, [])
 
-  // Scale terminal to fit container using integer-only scale factors.
-  // Integer scales avoid sub-pixel gaps between xterm.js DOM cells.
+  // Scale terminal to fit container using integer scale factors to avoid sub-pixel gaps
   useEffect(() => {
     const container = containerRef.current
     const wrapper = wrapperRef.current
