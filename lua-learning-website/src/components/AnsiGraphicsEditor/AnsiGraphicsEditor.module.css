@@ -107,6 +107,41 @@
   outline: none;
 }
 
+/* Mode selector */
+.modeGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.modeLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--theme-text-secondary);
+  min-width: 20px;
+}
+
+.modeButton {
+  padding: 4px 12px;
+  font-size: 12px;
+  background-color: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+  border: 1px solid var(--theme-border);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.modeButton:hover {
+  background-color: var(--theme-bg-hover);
+}
+
+.modeButtonActive {
+  background-color: var(--theme-accent-primary);
+  border-color: var(--theme-accent-primary);
+  color: var(--theme-bg-primary);
+}
+
 /* Toolbar buttons (Clear, Save, Save As) */
 .toolbarButton {
   padding: 4px 12px;

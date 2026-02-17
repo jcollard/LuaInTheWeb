@@ -8,10 +8,15 @@ export interface AnsiCell {
 
 export type AnsiGrid = AnsiCell[][]
 
+export type BrushMode = 'brush' | 'pixel'
+
+export const HALF_BLOCK = '\u2580'
+
 export interface BrushSettings {
   char: string
   fg: RGBColor
   bg: RGBColor
+  mode: BrushMode
 }
 
 export const ANSI_COLS = 80

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useAnsiEditor } from './useAnsiEditor'
-import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG } from './types'
-import type { AnsiGrid, RGBColor } from './types'
+import { useAnsiEditor, computePixelCell } from './useAnsiEditor'
+import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG, HALF_BLOCK } from './types'
+import type { AnsiCell, AnsiGrid, RGBColor } from './types'
 
 describe('useAnsiEditor', () => {
   describe('grid initialization', () => {
@@ -165,5 +165,76 @@ describe('useAnsiEditor', () => {
       act(() => result.current.closeSaveDialog())
       expect(result.current.isSaveDialogOpen).toBe(false)
     })
+  })
+
+  describe('setBrushMode', () => {
+    it('should default to brush mode', () => {
+      const { result } = renderHook(() => useAnsiEditor())
+      expect(result.current.brush.mode).toBe('brush')
+    })
+
+    it('should switch to pixel mode', () => {
+      const { result } = renderHook(() => useAnsiEditor())
+      act(() => result.current.setBrushMode('pixel'))
+      expect(result.current.brush.mode).toBe('pixel')
+    })
+
+    it('should switch back to brush mode', () => {
+      const { result } = renderHook(() => useAnsiEditor())
+      act(() => result.current.setBrushMode('pixel'))
+      act(() => result.current.setBrushMode('brush'))
+      expect(result.current.brush.mode).toBe('brush')
+    })
+  })
+})
+
+describe('computePixelCell', () => {
+  const red: RGBColor = [255, 0, 0]
+  const green: RGBColor = [0, 255, 0]
+  const blue: RGBColor = [0, 0, 255]
+
+  it('should paint top half of an empty cell', () => {
+    const empty: AnsiCell = { char: ' ', fg: DEFAULT_FG, bg: DEFAULT_BG }
+    const result = computePixelCell(empty, red, true)
+    expect(result.char).toBe(HALF_BLOCK)
+    expect(result.fg).toEqual(red)
+    expect(result.bg).toEqual(DEFAULT_BG)
+  })
+
+  it('should paint bottom half of an empty cell', () => {
+    const empty: AnsiCell = { char: ' ', fg: DEFAULT_FG, bg: DEFAULT_BG }
+    const result = computePixelCell(empty, red, false)
+    expect(result.char).toBe(HALF_BLOCK)
+    expect(result.fg).toEqual(DEFAULT_BG)
+    expect(result.bg).toEqual(red)
+  })
+
+  it('should preserve bottom half when painting top of a pixel cell', () => {
+    const existing: AnsiCell = { char: HALF_BLOCK, fg: green, bg: blue }
+    const result = computePixelCell(existing, red, true)
+    expect(result.char).toBe(HALF_BLOCK)
+    expect(result.fg).toEqual(red)
+    expect(result.bg).toEqual(blue)
+  })
+
+  it('should preserve top half when painting bottom of a pixel cell', () => {
+    const existing: AnsiCell = { char: HALF_BLOCK, fg: green, bg: blue }
+    const result = computePixelCell(existing, red, false)
+    expect(result.char).toBe(HALF_BLOCK)
+    expect(result.fg).toEqual(green)
+    expect(result.bg).toEqual(red)
+  })
+
+  it('should convert a non-pixel cell treating both halves as bg', () => {
+    const nonPixel: AnsiCell = { char: '#', fg: green, bg: blue }
+    const resultTop = computePixelCell(nonPixel, red, true)
+    expect(resultTop.char).toBe(HALF_BLOCK)
+    expect(resultTop.fg).toEqual(red)
+    expect(resultTop.bg).toEqual(blue)
+
+    const resultBottom = computePixelCell(nonPixel, red, false)
+    expect(resultBottom.char).toBe(HALF_BLOCK)
+    expect(resultBottom.fg).toEqual(blue)
+    expect(resultBottom.bg).toEqual(red)
   })
 })

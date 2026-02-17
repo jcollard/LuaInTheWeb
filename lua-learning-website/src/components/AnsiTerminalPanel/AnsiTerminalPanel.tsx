@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { Terminal } from '@xterm/xterm'
+import { CanvasAddon } from '@xterm/addon-canvas'
 import '@xterm/xterm/css/xterm.css'
 import styles from './AnsiTerminalPanel.module.css'
 
@@ -39,10 +40,12 @@ export function AnsiTerminalPanel({ isActive, onTerminalReady }: AnsiTerminalPan
   // measures cell dimensions correctly and the ResizeObserver gets accurate metrics.
   // The handle uses terminalRef indirection to survive Strict Mode re-runs.
   useEffect(() => {
+    const container = containerRef.current
     const wrapper = wrapperRef.current
-    if (!wrapper) return
+    if (!container || !wrapper) return
 
     let disposed = false
+    let resizeObserver: ResizeObserver | null = null
 
     const init = async () => {
       await document.fonts.load(`${FONT_SIZE}px ${FONT_FAMILY}`)
@@ -70,7 +73,32 @@ export function AnsiTerminalPanel({ isActive, onTerminalReady }: AnsiTerminalPan
       // Clear residual DOM from Strict Mode double-mount
       wrapper.replaceChildren()
       terminal.open(wrapper)
+      // Use the canvas renderer for pixel-perfect block element rendering.
+      // The default DOM renderer rasterizes font glyphs with anti-aliasing,
+      // which causes visible tearing at half-block (▀) boundaries.
+      terminal.loadAddon(new CanvasAddon())
       terminalRef.current = terminal
+
+      // Capture base terminal dimensions at FONT_SIZE for scale calculations.
+      // Instead of CSS transform (which blurs the canvas), we multiply the
+      // font size by an integer factor so xterm.js renders at native resolution.
+      const baseW = wrapper.scrollWidth
+      const baseH = wrapper.scrollHeight
+      let currentScale = 1
+
+      const updateScale = () => {
+        if (baseW === 0 || baseH === 0) return
+        const containerW = container.clientWidth
+        const containerH = container.clientHeight
+        const newScale = Math.max(1, Math.floor(Math.min(containerW / baseW, containerH / baseH)))
+        if (newScale === currentScale) return
+        currentScale = newScale
+        terminal.options.fontSize = FONT_SIZE * newScale
+      }
+
+      resizeObserver = new ResizeObserver(updateScale)
+      resizeObserver.observe(container)
+      updateScale()
 
       // Create stable proxy handle on first mount; delegates through terminalRef
       // so it survives Strict Mode disposal/recreation.
@@ -91,6 +119,7 @@ export function AnsiTerminalPanel({ isActive, onTerminalReady }: AnsiTerminalPan
 
     return () => {
       disposed = true
+      resizeObserver?.disconnect()
       if (terminalRef.current) {
         terminalRef.current.dispose()
         terminalRef.current = null
@@ -116,31 +145,6 @@ export function AnsiTerminalPanel({ isActive, onTerminalReady }: AnsiTerminalPan
   // Re-focus wrapper on click
   const handleMouseDown = useCallback(() => {
     wrapperRef.current?.focus()
-  }, [])
-
-  // Scale terminal to fit container using integer scale factors to avoid sub-pixel gaps
-  useEffect(() => {
-    const container = containerRef.current
-    const wrapper = wrapperRef.current
-    if (!container || !wrapper) return
-
-    const observer = new ResizeObserver(() => {
-      const containerW = container.clientWidth
-      const containerH = container.clientHeight
-      const terminalW = wrapper.scrollWidth
-      const terminalH = wrapper.scrollHeight
-      if (terminalW === 0 || terminalH === 0) return
-
-      const exactScale = Math.min(containerW / terminalW, containerH / terminalH)
-      const scale = Math.max(1, Math.floor(exactScale))
-      wrapper.style.transform = `scale(${scale})`
-    })
-
-    observer.observe(container)
-
-    return () => {
-      observer.disconnect()
-    }
   }, [])
 
   return (

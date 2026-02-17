@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { ColorPalette } from './ColorPalette'
 import { AnsiEditorToolbar, type AnsiEditorToolbarProps } from './AnsiEditorToolbar'
 import { CGA_PALETTE, DEFAULT_FG, DEFAULT_BG } from './types'
-import type { RGBColor } from './types'
+import type { BrushMode, RGBColor } from './types'
 
 // Mock AnsiTerminalPanel since it depends on xterm.js
 vi.mock('../AnsiTerminalPanel/AnsiTerminalPanel', () => ({
@@ -48,8 +48,8 @@ describe('ColorPalette', () => {
 })
 
 describe('AnsiEditorToolbar', () => {
-  const defaultBrush = { char: '#', fg: DEFAULT_FG as RGBColor, bg: DEFAULT_BG as RGBColor }
-  let handlers: Pick<AnsiEditorToolbarProps, 'onSetFg' | 'onSetBg' | 'onSetChar' | 'onClear' | 'onSave' | 'onSaveAs'>
+  const defaultBrush = { char: '#', fg: DEFAULT_FG as RGBColor, bg: DEFAULT_BG as RGBColor, mode: 'brush' as BrushMode }
+  let handlers: Pick<AnsiEditorToolbarProps, 'onSetFg' | 'onSetBg' | 'onSetChar' | 'onClear' | 'onSave' | 'onSaveAs' | 'onSetMode'>
 
   beforeEach(() => {
     handlers = {
@@ -59,6 +59,7 @@ describe('AnsiEditorToolbar', () => {
       onClear: vi.fn<() => void>(),
       onSave: vi.fn<() => void>(),
       onSaveAs: vi.fn<() => void>(),
+      onSetMode: vi.fn<(mode: BrushMode) => void>(),
     }
   })
 
@@ -114,5 +115,45 @@ describe('AnsiEditorToolbar', () => {
     render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
     fireEvent.click(screen.getByTestId('save-as-button'))
     expect(handlers.onSaveAs).toHaveBeenCalledOnce()
+  })
+
+  describe('mode selector', () => {
+    it('should render both mode buttons', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      expect(screen.getByTestId('mode-brush')).toBeTruthy()
+      expect(screen.getByTestId('mode-pixel')).toBeTruthy()
+    })
+
+    it('should show brush mode as active by default', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      expect(screen.getByTestId('mode-brush').getAttribute('aria-pressed')).toBe('true')
+      expect(screen.getByTestId('mode-pixel').getAttribute('aria-pressed')).toBe('false')
+    })
+
+    it('should call onSetMode with pixel when pixel button is clicked', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      fireEvent.click(screen.getByTestId('mode-pixel'))
+      expect(handlers.onSetMode).toHaveBeenCalledWith('pixel')
+    })
+
+    it('should call onSetMode with brush when brush button is clicked', () => {
+      const pixelBrush = { ...defaultBrush, mode: 'pixel' as BrushMode }
+      render(<AnsiEditorToolbar brush={pixelBrush} {...handlers} />)
+      fireEvent.click(screen.getByTestId('mode-brush'))
+      expect(handlers.onSetMode).toHaveBeenCalledWith('brush')
+    })
+
+    it('should hide BG palette and Char input in pixel mode', () => {
+      const pixelBrush = { ...defaultBrush, mode: 'pixel' as BrushMode }
+      render(<AnsiEditorToolbar brush={pixelBrush} {...handlers} />)
+      expect(screen.queryByTestId('palette-bg')).toBeNull()
+      expect(screen.queryByTestId('char-input')).toBeNull()
+    })
+
+    it('should show BG palette and Char input in brush mode', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      expect(screen.getByTestId('palette-bg')).toBeTruthy()
+      expect(screen.getByTestId('char-input')).toBeTruthy()
+    })
   })
 })
