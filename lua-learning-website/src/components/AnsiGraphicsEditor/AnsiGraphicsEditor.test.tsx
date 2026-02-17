@@ -49,7 +49,7 @@ describe('ColorPalette', () => {
 
 describe('AnsiEditorToolbar', () => {
   const defaultBrush = { char: '#', fg: DEFAULT_FG as RGBColor, bg: DEFAULT_BG as RGBColor, mode: 'brush' as BrushMode, tool: 'pencil' as DrawTool }
-  let handlers: Pick<AnsiEditorToolbarProps, 'onSetFg' | 'onSetBg' | 'onSetChar' | 'onClear' | 'onSave' | 'onSaveAs' | 'onSetMode' | 'onSetTool'>
+  let handlers: Pick<AnsiEditorToolbarProps, 'onSetFg' | 'onSetBg' | 'onSetChar' | 'onClear' | 'onSave' | 'onSaveAs' | 'onSetMode' | 'onSetTool' | 'onUndo' | 'onRedo'>
 
   beforeEach(() => {
     handlers = {
@@ -61,6 +61,8 @@ describe('AnsiEditorToolbar', () => {
       onSaveAs: vi.fn<() => void>(),
       onSetMode: vi.fn<(mode: BrushMode) => void>(),
       onSetTool: vi.fn<(tool: DrawTool) => void>(),
+      onUndo: vi.fn<() => void>(),
+      onRedo: vi.fn<() => void>(),
     }
   })
 
@@ -151,6 +153,50 @@ describe('AnsiEditorToolbar', () => {
       render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
       fireEvent.click(screen.getByTestId('tool-line'))
       expect(handlers.onSetTool).toHaveBeenCalledWith('line')
+    })
+  })
+
+  describe('undo/redo buttons', () => {
+    it('should render undo button', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} canUndo={false} canRedo={false} {...handlers} />)
+      expect(screen.getByTestId('undo-button')).toBeTruthy()
+    })
+
+    it('should render redo button', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} canUndo={false} canRedo={false} {...handlers} />)
+      expect(screen.getByTestId('redo-button')).toBeTruthy()
+    })
+
+    it('should call onUndo when undo button is clicked', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} canUndo={true} canRedo={false} {...handlers} />)
+      fireEvent.click(screen.getByTestId('undo-button'))
+      expect(handlers.onUndo).toHaveBeenCalledOnce()
+    })
+
+    it('should call onRedo when redo button is clicked', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} canUndo={false} canRedo={true} {...handlers} />)
+      fireEvent.click(screen.getByTestId('redo-button'))
+      expect(handlers.onRedo).toHaveBeenCalledOnce()
+    })
+
+    it('should disable undo button when canUndo is false', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} canUndo={false} canRedo={false} {...handlers} />)
+      expect((screen.getByTestId('undo-button') as HTMLButtonElement).disabled).toBe(true)
+    })
+
+    it('should disable redo button when canRedo is false', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} canUndo={false} canRedo={false} {...handlers} />)
+      expect((screen.getByTestId('redo-button') as HTMLButtonElement).disabled).toBe(true)
+    })
+
+    it('should enable undo button when canUndo is true', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} canUndo={true} canRedo={false} {...handlers} />)
+      expect((screen.getByTestId('undo-button') as HTMLButtonElement).disabled).toBe(false)
+    })
+
+    it('should enable redo button when canRedo is true', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} canUndo={false} canRedo={true} {...handlers} />)
+      expect((screen.getByTestId('redo-button') as HTMLButtonElement).disabled).toBe(false)
     })
   })
 

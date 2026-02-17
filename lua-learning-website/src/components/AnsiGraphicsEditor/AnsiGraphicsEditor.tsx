@@ -43,6 +43,10 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     isSaveDialogOpen,
     openSaveDialog,
     closeSaveDialog,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
   } = useAnsiEditor({ initialGrid })
 
   const finishSaveAs = useCallback(async (savedPath: string) => {
@@ -99,6 +103,10 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
         onClear={clearGrid}
         onSave={handleSave}
         onSaveAs={openSaveDialog}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
       />
       <div className={styles.canvas}>
         <AnsiTerminalPanel

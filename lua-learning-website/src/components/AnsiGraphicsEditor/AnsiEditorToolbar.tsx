@@ -13,10 +13,15 @@ export interface AnsiEditorToolbarProps {
   onClear: () => void
   onSave: () => void
   onSaveAs: () => void
+  onUndo: () => void
+  onRedo: () => void
+  canUndo: boolean
+  canRedo: boolean
 }
 
 export function AnsiEditorToolbar({
   brush, onSetFg, onSetBg, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
+  onUndo, onRedo, canUndo, canRedo,
 }: AnsiEditorToolbarProps) {
   const handleCharChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
@@ -110,6 +115,24 @@ export function AnsiEditorToolbar({
         data-testid="save-as-button"
       >
         Save As
+      </button>
+      <button
+        type="button"
+        className={styles.toolbarButton}
+        onClick={onUndo}
+        disabled={!canUndo}
+        data-testid="undo-button"
+      >
+        ↶
+      </button>
+      <button
+        type="button"
+        className={styles.toolbarButton}
+        onClick={onRedo}
+        disabled={!canRedo}
+        data-testid="redo-button"
+      >
+        ↷
       </button>
     </div>
   )
