@@ -3,10 +3,11 @@ import { AnsiTerminalPanel } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { useIDE } from '../IDEContext/useIDE'
 import { AnsiEditorToolbar } from './AnsiEditorToolbar'
+import { LayersPanel } from './LayersPanel'
 import { SaveAsDialog } from './SaveAsDialog'
 import { useAnsiEditor } from './useAnsiEditor'
-import { serializeGrid, deserializeGrid } from './serialization'
-import type { AnsiGrid } from './types'
+import { serializeLayers, deserializeLayers } from './serialization'
+import type { LayerState } from './types'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface AnsiGraphicsEditorProps {
@@ -17,19 +18,18 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
   const { fileSystem, fileTree, refreshFileTree, updateAnsiEditorTabPath } = useIDE()
   const [pendingSave, setPendingSave] = useState<{ path: string; content: string } | null>(null)
 
-  const initialGrid = useMemo((): AnsiGrid | undefined => {
+  const initialLayerState = useMemo((): LayerState | undefined => {
     if (!filePath || filePath.startsWith('ansi-editor://')) return undefined
     const content = fileSystem.readFile(filePath)
     if (content === null) return undefined
     try {
-      return deserializeGrid(content)
+      return deserializeLayers(content)
     } catch {
       return undefined
     }
   }, [filePath, fileSystem])
 
   const {
-    grid,
     brush,
     setBrushFg,
     setBrushBg,
@@ -48,7 +48,16 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     redo,
     canUndo,
     canRedo,
-  } = useAnsiEditor({ initialGrid })
+    layers,
+    activeLayerId,
+    addLayer,
+    removeLayer,
+    renameLayer,
+    setActiveLayer,
+    moveLayerUp,
+    moveLayerDown,
+    toggleVisibility,
+  } = useAnsiEditor({ initialLayerState })
 
   const finishSaveAs = useCallback(async (savedPath: string) => {
     await fileSystem.flush()
@@ -61,14 +70,14 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
 
   const handleSaveAs = useCallback(async (folderPath: string, fileName: string) => {
     const fullPath = folderPath === '/' ? `/${fileName}` : `${folderPath}/${fileName}`
-    const content = serializeGrid(grid)
+    const content = serializeLayers({ layers, activeLayerId })
     if (fileSystem.exists(fullPath)) {
       setPendingSave({ path: fullPath, content })
       return
     }
     fileSystem.createFile(fullPath, content)
     await finishSaveAs(fullPath)
-  }, [grid, fileSystem, finishSaveAs])
+  }, [layers, activeLayerId, fileSystem, finishSaveAs])
 
   const handleConfirmOverwrite = useCallback(async () => {
     if (!pendingSave) return
@@ -83,14 +92,14 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
 
   const handleSave = useCallback(async () => {
     if (filePath && !filePath.startsWith('ansi-editor://')) {
-      const content = serializeGrid(grid)
+      const content = serializeLayers({ layers, activeLayerId })
       fileSystem.writeFile(filePath, content)
       await fileSystem.flush()
       markClean()
     } else {
       openSaveDialog()
     }
-  }, [filePath, grid, fileSystem, markClean, openSaveDialog])
+  }, [filePath, layers, activeLayerId, fileSystem, markClean, openSaveDialog])
 
   return (
     <div className={styles.editor} data-testid="ansi-graphics-editor">
@@ -109,10 +118,23 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
         canUndo={canUndo}
         canRedo={canRedo}
       />
-      <div className={styles.canvas}>
-        <AnsiTerminalPanel
-          isActive={true}
-          onTerminalReady={onTerminalReady}
+      <div className={styles.editorBody}>
+        <div className={styles.canvas}>
+          <AnsiTerminalPanel
+            isActive={true}
+            onTerminalReady={onTerminalReady}
+          />
+        </div>
+        <LayersPanel
+          layers={layers}
+          activeLayerId={activeLayerId}
+          onSetActive={setActiveLayer}
+          onToggleVisibility={toggleVisibility}
+          onRename={renameLayer}
+          onMoveUp={moveLayerUp}
+          onMoveDown={moveLayerDown}
+          onAdd={addLayer}
+          onRemove={removeLayer}
         />
       </div>
       <div ref={cursorRef} className={styles.cellCursor} />

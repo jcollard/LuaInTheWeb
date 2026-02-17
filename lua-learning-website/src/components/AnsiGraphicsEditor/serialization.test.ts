@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { serializeGrid, deserializeGrid } from './serialization'
+import { serializeGrid, deserializeGrid, serializeLayers, deserializeLayers } from './serialization'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG } from './types'
-import type { AnsiGrid } from './types'
+import type { AnsiGrid, LayerState } from './types'
+import { createLayer } from './layerUtils'
 
 function createTestGrid(): AnsiGrid {
   return Array.from({ length: ANSI_ROWS }, () =>
@@ -79,5 +80,65 @@ describe('deserializeGrid', () => {
 
   it('should throw when grid is a string not an array', () => {
     expect(() => deserializeGrid('return {["version"] = 1, ["width"] = 80, ["height"] = 25, ["grid"] = "not-array"}')).toThrow('Missing grid field')
+  })
+})
+
+describe('serializeLayers', () => {
+  it('produces a Lua table with version 2', () => {
+    const layer = createLayer('Background', 'bg-1')
+    const state: LayerState = { layers: [layer], activeLayerId: 'bg-1' }
+    const lua = serializeLayers(state)
+    expect(lua).toContain('["version"] = 2')
+  })
+
+  it('includes layer metadata (id, name, visible)', () => {
+    const layer = createLayer('My Layer', 'layer-1')
+    const state: LayerState = { layers: [layer], activeLayerId: 'layer-1' }
+    const lua = serializeLayers(state)
+    expect(lua).toContain('["id"] = "layer-1"')
+    expect(lua).toContain('["name"] = "My Layer"')
+    expect(lua).toContain('["visible"] = true')
+  })
+
+  it('includes activeLayerId', () => {
+    const layer = createLayer('BG', 'bg-1')
+    const state: LayerState = { layers: [layer], activeLayerId: 'bg-1' }
+    const lua = serializeLayers(state)
+    expect(lua).toContain('["activeLayerId"] = "bg-1"')
+  })
+})
+
+describe('deserializeLayers', () => {
+  it('round-trips a v2 layer state', () => {
+    const layer1 = createLayer('Background', 'bg')
+    layer1.grid[0][0] = { char: 'A', fg: [255, 0, 0], bg: [0, 0, 0] }
+    const layer2 = createLayer('Foreground', 'fg')
+    layer2.visible = false
+    const state: LayerState = { layers: [layer1, layer2], activeLayerId: 'fg' }
+    const lua = serializeLayers(state)
+    const result = deserializeLayers(lua)
+    expect(result.layers).toHaveLength(2)
+    expect(result.layers[0].id).toBe('bg')
+    expect(result.layers[0].name).toBe('Background')
+    expect(result.layers[0].grid[0][0].char).toBe('A')
+    expect(result.layers[1].id).toBe('fg')
+    expect(result.layers[1].visible).toBe(false)
+    expect(result.activeLayerId).toBe('fg')
+  })
+
+  it('deserializes v1 format into a single Background layer', () => {
+    const grid = createTestGrid()
+    grid[3][5] = { char: '#', fg: [255, 0, 0], bg: [0, 0, 0] }
+    const lua = serializeGrid(grid)
+    const result = deserializeLayers(lua)
+    expect(result.layers).toHaveLength(1)
+    expect(result.layers[0].name).toBe('Background')
+    expect(result.layers[0].visible).toBe(true)
+    expect(result.layers[0].grid[3][5].char).toBe('#')
+    expect(result.activeLayerId).toBe(result.layers[0].id)
+  })
+
+  it('throws on unsupported version', () => {
+    expect(() => deserializeLayers('return {["version"] = 99}')).toThrow()
   })
 })

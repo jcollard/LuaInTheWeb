@@ -34,6 +34,18 @@ export const DEFAULT_CELL: AnsiCell = {
   bg: DEFAULT_BG,
 }
 
+export interface Layer {
+  id: string
+  name: string
+  visible: boolean
+  grid: AnsiGrid
+}
+
+export interface LayerState {
+  layers: Layer[]         // ordered bottom-to-top (index 0 = bottom)
+  activeLayerId: string
+}
+
 /** Standard CGA/VGA 16-color palette matching `ansi.colors` from the Lua runtime. */
 export const CGA_PALETTE: { name: string; rgb: RGBColor }[] = [
   { name: 'Black',          rgb: [0, 0, 0] },

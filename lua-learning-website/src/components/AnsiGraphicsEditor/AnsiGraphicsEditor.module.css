@@ -17,6 +17,13 @@
   flex-wrap: wrap;
 }
 
+.editorBody {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  overflow: hidden;
+}
+
 .canvas {
   flex: 1;
   overflow: hidden;
@@ -217,4 +224,119 @@
 .flyoutOptionActive {
   background-color: var(--theme-accent-primary);
   color: var(--theme-bg-primary);
+}
+
+/* Layers panel */
+.layersPanel {
+  width: 180px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--theme-bg-secondary);
+  border-left: 1px solid var(--theme-border);
+  overflow-y: auto;
+}
+
+.layersPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.layersPanelTitle {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--theme-text-primary);
+}
+
+.layersPanelAdd {
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+  line-height: 1;
+  background: none;
+  border: 1px solid var(--theme-border);
+  border-radius: 3px;
+  color: var(--theme-text-primary);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.layersPanelAdd:hover {
+  background-color: var(--theme-bg-hover);
+}
+
+.layersList {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.layerRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--theme-border);
+  font-size: 13px;
+  color: var(--theme-text-primary);
+}
+
+.layerRow:hover {
+  background-color: var(--theme-bg-hover);
+}
+
+.layerRowActive {
+  background-color: var(--theme-accent-primary);
+  color: #ffffff;
+}
+
+.layerVisibility {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+  line-height: 1;
+  color: inherit;
+}
+
+.layerName {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.layerNameInput {
+  width: 100%;
+  font-size: 13px;
+  background-color: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+  border: 1px solid var(--theme-accent-primary);
+  border-radius: 2px;
+  padding: 0 2px;
+  outline: none;
+}
+
+.layerBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0 2px;
+  color: inherit;
+  line-height: 1;
+}
+
+.layerBtn:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
