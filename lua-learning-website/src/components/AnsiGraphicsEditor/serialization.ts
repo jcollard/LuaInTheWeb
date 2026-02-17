@@ -1,5 +1,5 @@
 import { stringify, parse } from '@kilcekru/lua-table'
-import type { AnsiGrid, LayerState } from './types'
+import type { AnsiGrid, Layer, LayerState } from './types'
 import { ANSI_COLS, ANSI_ROWS } from './types'
 
 export function serializeGrid(grid: AnsiGrid): string {
@@ -25,12 +25,7 @@ export function serializeLayers(state: LayerState): string {
     width: ANSI_COLS,
     height: ANSI_ROWS,
     activeLayerId: state.activeLayerId,
-    layers: state.layers.map(l => ({
-      id: l.id,
-      name: l.name,
-      visible: l.visible,
-      grid: l.grid,
-    })),
+    layers: state.layers,
   }
   return 'return ' + stringify(data)
 }
@@ -57,7 +52,7 @@ export function deserializeLayers(lua: string): LayerState {
   }
 
   if (version === 2) {
-    const layers = data.layers as Array<{ id: string; name: string; visible: boolean; grid: AnsiGrid }>
+    const layers = data.layers as Layer[]
     return {
       layers,
       activeLayerId: data.activeLayerId as string,

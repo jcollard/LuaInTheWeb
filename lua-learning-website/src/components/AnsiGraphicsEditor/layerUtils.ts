@@ -3,12 +3,12 @@ import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG } from './ty
 
 let nextLayerId = 1
 
+function rgbEqual(a: RGBColor, b: RGBColor): boolean {
+  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2]
+}
+
 export function isDefaultCell(cell: AnsiCell): boolean {
-  return (
-    cell.char === ' ' &&
-    cell.fg[0] === DEFAULT_FG[0] && cell.fg[1] === DEFAULT_FG[1] && cell.fg[2] === DEFAULT_FG[2] &&
-    cell.bg[0] === DEFAULT_BG[0] && cell.bg[1] === DEFAULT_BG[1] && cell.bg[2] === DEFAULT_BG[2]
-  )
+  return cell.char === ' ' && rgbEqual(cell.fg, DEFAULT_FG) && rgbEqual(cell.bg, DEFAULT_BG)
 }
 
 export function createLayer(name: string, id?: string): Layer {

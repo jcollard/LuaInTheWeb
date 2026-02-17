@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
-import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, RGBColor, Layer, LayerState } from './types'
+import type { AnsiCell, BrushMode, DrawTool, BrushSettings, RGBColor, LayerState, UseAnsiEditorReturn, UseAnsiEditorOptions } from './types'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG } from './types'
 import {
   createEmptyGrid, writeCellToTerminal, renderFullGrid,
@@ -13,25 +13,6 @@ import { useLayerState } from './useLayerState'
 export { computePixelCell, computeLineCells } from './gridUtils'
 
 const MAX_HISTORY = 50
-
-export interface UseAnsiEditorReturn {
-  grid: AnsiGrid; brush: BrushSettings
-  setBrushFg: (color: RGBColor) => void; setBrushBg: (color: RGBColor) => void
-  setBrushChar: (char: string) => void; setBrushMode: (mode: BrushMode) => void
-  setTool: (tool: DrawTool) => void; clearGrid: () => void
-  isDirty: boolean; markClean: () => void
-  onTerminalReady: (handle: AnsiTerminalHandle | null) => void
-  cursorRef: React.RefObject<HTMLDivElement | null>; dimensionRef: React.RefObject<HTMLDivElement | null>
-  isSaveDialogOpen: boolean; openSaveDialog: () => void; closeSaveDialog: () => void
-  undo: () => void; redo: () => void; canUndo: boolean; canRedo: boolean
-  layers: Layer[]; activeLayerId: string
-  addLayer: () => void; removeLayer: (id: string) => void
-  renameLayer: (id: string, name: string) => void; setActiveLayer: (id: string) => void
-  moveLayerUp: (id: string) => void; moveLayerDown: (id: string) => void
-  toggleVisibility: (id: string) => void
-}
-
-export interface UseAnsiEditorOptions { initialGrid?: AnsiGrid; initialLayerState?: LayerState }
 
 export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorReturn {
   const initialState = useMemo((): LayerState | undefined => {
@@ -48,9 +29,14 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   }, [])
 
   const layerState = useLayerState(initialState)
-  // Destructure stable refs/callbacks (identity-stable across renders) for dependency arrays.
-  const { layersRef, activeLayerIdRef, applyToActiveLayer, getActiveGrid, restoreLayerState: restoreLS,
-    addLayer, removeLayer: removeLyr, moveLayerUp: moveLyrUp, moveLayerDown: moveLyrDown, toggleVisibility: toggleVis,
+  // Destructure identity-stable refs/callbacks for use in dependency arrays.
+  // Layer mutation functions are aliased with "raw" prefix because we wrap them
+  // with undo snapshots below before exposing them as addLayer, removeLayer, etc.
+  const {
+    layersRef, activeLayerIdRef, applyToActiveLayer, getActiveGrid, restoreLayerState,
+    addLayer: rawAddLayer, removeLayer: rawRemoveLayer,
+    moveLayerUp: rawMoveLayerUp, moveLayerDown: rawMoveLayerDown,
+    toggleVisibility: rawToggleVisibility,
   } = layerState
 
   const grid = useMemo(() => compositeGrid(layerState.layers), [layerState.layers])
@@ -89,7 +75,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     if (from.length === 0) return
     to.push(cloneLayerState({ layers: layersRef.current, activeLayerId: activeLayerIdRef.current }))
     const snapshot = from.pop()!
-    restoreLS(snapshot)
+    restoreLayerState(snapshot)
     setIsDirty(true)
     setCanUndo(undoStackRef.current.length > 0)
     setCanRedo(redoStackRef.current.length > 0)
@@ -97,7 +83,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       const composited = compositeGrid(snapshot.layers)
       renderFullGrid(handleRef.current, composited)
     }
-  }, [layersRef, activeLayerIdRef, restoreLS])
+  }, [layersRef, activeLayerIdRef, restoreLayerState])
 
   const undo = useCallback(() => restoreSnapshot(undoStackRef.current, redoStackRef.current), [restoreSnapshot])
   const redo = useCallback(() => restoreSnapshot(redoStackRef.current, undoStackRef.current), [restoreSnapshot])
@@ -134,13 +120,13 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     pushSnapshot()
     const emptyGrid = createEmptyGrid()
     const id = 'clear-bg-' + Date.now()
-    restoreLS({
+    restoreLayerState({
       layers: [{ id, name: 'Background', visible: true, grid: emptyGrid }],
       activeLayerId: id,
     })
     setIsDirty(false)
     if (handleRef.current) renderFullGrid(handleRef.current, emptyGrid)
-  }, [pushSnapshot, restoreLS])
+  }, [pushSnapshot, restoreLayerState])
 
   // Helper: wrap a layer mutation with undo snapshot + deferred re-render
   const withLayerUndo = useCallback((action: () => void, needsRerender = true) => {
@@ -156,11 +142,11 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     }
   }, [pushSnapshot, layersRef])
 
-  const addLayerWithUndo = useCallback(() => withLayerUndo(() => addLayer(), false), [withLayerUndo, addLayer])
-  const removeLayerWithUndo = useCallback((id: string) => withLayerUndo(() => removeLyr(id)), [withLayerUndo, removeLyr])
-  const moveLayerUpWithUndo = useCallback((id: string) => withLayerUndo(() => moveLyrUp(id)), [withLayerUndo, moveLyrUp])
-  const moveLayerDownWithUndo = useCallback((id: string) => withLayerUndo(() => moveLyrDown(id)), [withLayerUndo, moveLyrDown])
-  const toggleVisibilityWithUndo = useCallback((id: string) => withLayerUndo(() => toggleVis(id)), [withLayerUndo, toggleVis])
+  const addLayerWithUndo = useCallback(() => withLayerUndo(rawAddLayer, false), [withLayerUndo, rawAddLayer])
+  const removeLayerWithUndo = useCallback((id: string) => withLayerUndo(() => rawRemoveLayer(id)), [withLayerUndo, rawRemoveLayer])
+  const moveLayerUpWithUndo = useCallback((id: string) => withLayerUndo(() => rawMoveLayerUp(id)), [withLayerUndo, rawMoveLayerUp])
+  const moveLayerDownWithUndo = useCallback((id: string) => withLayerUndo(() => rawMoveLayerDown(id)), [withLayerUndo, rawMoveLayerDown])
+  const toggleVisibilityWithUndo = useCallback((id: string) => withLayerUndo(() => rawToggleVisibility(id)), [withLayerUndo, rawToggleVisibility])
 
   const attachMouseListeners = useCallback((container: HTMLElement) => {
     function positionCursor(row: number, col: number, isTopHalf?: boolean): void {
@@ -215,14 +201,15 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     function isSameCell(a: CellPos, b: CellPos): boolean {
       return a.row === b.row && a.col === b.col && a.isTopHalf === b.isTopHalf
     }
+
     function cursorHalf(cell: { isTopHalf: boolean }): boolean | undefined {
       return brushRef.current.mode === 'pixel' ? cell.isTopHalf : undefined
     }
+
     function paintAt(row: number, col: number, isTopHalf: boolean): void {
       if (brushRef.current.mode === 'pixel') paintPixel(row, col, isTopHalf)
       else paintCell(row, col)
     }
-    function getActiveGridFn(): AnsiGrid { return getActiveGrid() }
 
     function restorePreview(): void {
       const handle = handleRef.current
@@ -233,11 +220,12 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       }
       previewCellsRef.current.clear()
     }
+
     function getLineCells(end: CellHalf): Map<string, AnsiCell> | null {
       const start = lineStartRef.current
       if (!start) return null
       restorePreview()
-      return computeLineCells(start, end, brushRef.current, getActiveGridFn())
+      return computeLineCells(start, end, brushRef.current, getActiveGrid())
     }
 
     function writePreviewCells(cells: Map<string, AnsiCell>): void {
@@ -280,7 +268,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     function commitLine(end: CellHalf): void {
       const start = lineStartRef.current
       if (!start) return
-      commitCells(computeLineCells(start, end, brushRef.current, getActiveGridFn()))
+      commitCells(computeLineCells(start, end, brushRef.current, getActiveGrid()))
       lineStartRef.current = null
     }
 
@@ -294,7 +282,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       if (!start) return null
       restorePreview()
       const filled = brushRef.current.tool === 'rect-filled'
-      return computeRectCells(start, end, brushRef.current, getActiveGridFn(), filled)
+      return computeRectCells(start, end, brushRef.current, getActiveGrid(), filled)
     }
 
     function renderRectPreview(end: CellHalf): void {
@@ -309,7 +297,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       const start = lineStartRef.current
       if (!start) return
       const filled = brushRef.current.tool === 'rect-filled'
-      commitCells(computeRectCells(start, end, brushRef.current, getActiveGridFn(), filled))
+      commitCells(computeRectCells(start, end, brushRef.current, getActiveGrid(), filled))
       lineStartRef.current = null
       hideDimension()
     }
@@ -420,7 +408,9 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     }
   }, [paintCell, paintPixel, applyCell, pushSnapshot, layersRef, activeLayerIdRef, getActiveGrid])
 
-  const markClean = useCallback(() => setIsDirty(false), []), openSaveDialog = useCallback(() => setIsSaveDialogOpen(true), []), closeSaveDialog = useCallback(() => setIsSaveDialogOpen(false), [])
+  const markClean = useCallback(() => setIsDirty(false), [])
+  const openSaveDialog = useCallback(() => setIsSaveDialogOpen(true), [])
+  const closeSaveDialog = useCallback(() => setIsSaveDialogOpen(false), [])
 
   const onTerminalReady = useCallback((handle: AnsiTerminalHandle | null) => {
     cleanupRef.current?.()

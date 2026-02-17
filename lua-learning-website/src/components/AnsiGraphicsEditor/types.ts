@@ -46,6 +46,50 @@ export interface LayerState {
   activeLayerId: string
 }
 
+import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
+
+export interface UseAnsiEditorReturn {
+  // Canvas state
+  grid: AnsiGrid
+  brush: BrushSettings
+  setBrushFg: (color: RGBColor) => void
+  setBrushBg: (color: RGBColor) => void
+  setBrushChar: (char: string) => void
+  setBrushMode: (mode: BrushMode) => void
+  setTool: (tool: DrawTool) => void
+  clearGrid: () => void
+  // Persistence
+  isDirty: boolean
+  markClean: () => void
+  isSaveDialogOpen: boolean
+  openSaveDialog: () => void
+  closeSaveDialog: () => void
+  // Terminal
+  onTerminalReady: (handle: AnsiTerminalHandle | null) => void
+  cursorRef: React.RefObject<HTMLDivElement | null>
+  dimensionRef: React.RefObject<HTMLDivElement | null>
+  // History
+  undo: () => void
+  redo: () => void
+  canUndo: boolean
+  canRedo: boolean
+  // Layers
+  layers: Layer[]
+  activeLayerId: string
+  addLayer: () => void
+  removeLayer: (id: string) => void
+  renameLayer: (id: string, name: string) => void
+  setActiveLayer: (id: string) => void
+  moveLayerUp: (id: string) => void
+  moveLayerDown: (id: string) => void
+  toggleVisibility: (id: string) => void
+}
+
+export interface UseAnsiEditorOptions {
+  initialGrid?: AnsiGrid
+  initialLayerState?: LayerState
+}
+
 /** Standard CGA/VGA 16-color palette matching `ansi.colors` from the Lua runtime. */
 export const CGA_PALETTE: { name: string; rgb: RGBColor }[] = [
   { name: 'Black',          rgb: [0, 0, 0] },
