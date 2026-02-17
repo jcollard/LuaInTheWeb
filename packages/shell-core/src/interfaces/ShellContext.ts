@@ -252,6 +252,12 @@ export interface ShellContext {
   transferFontsToWindow?: (canvasId: string, fonts: Array<{ name: string; dataUrl: string }>) => void
 
   /**
+   * Request an ANSI terminal tab to be opened.
+   * @param ansiId - Unique identifier for the ANSI tab
+   */
+  onRequestAnsiTab?: (ansiId: string) => void
+
+  /**
    * Request a file to be opened in the editor.
    * Called by the 'open' command to integrate with an IDE or editor.
    * Optional - when undefined, the open command will report that

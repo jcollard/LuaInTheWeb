@@ -13,6 +13,7 @@ import { ConfirmDialog } from '../ConfirmDialog'
 import { ToastContainer } from '../Toast'
 import { WelcomeScreen } from '../WelcomeScreen'
 import { CanvasTabContent } from './CanvasTabContent'
+import { AnsiTabContent } from './AnsiTabContent'
 import { MarkdownTabContent } from './MarkdownTabContent'
 import { BinaryTabContent } from './BinaryTabContent'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
@@ -115,6 +116,7 @@ function IDELayoutInner({
     selectTab,
     closeTab,
     openCanvasTab,
+    openAnsiTab,
     makeTabPermanent,
     pinTab,
     unpinTab,
@@ -153,6 +155,13 @@ function IDELayoutInner({
     activeTabType,
     openCanvasTab,
   })
+
+  // ANSI tab management
+  const hasAnsiTabs = tabs.some(t => t.type === 'ansi')
+
+  const handleRequestAnsiTab = useCallback((ansiId: string) => {
+    openAnsiTab(ansiId, 'ANSI Terminal')
+  }, [openAnsiTab])
 
   // Editor extensions (diagnostics + hover documentation)
   const { handleEditorReady: handleEditorReadyWithPath } = useEditorExtensions({
@@ -516,6 +525,8 @@ function IDELayoutInner({
     registerCanvasStepHandler,
     unregisterCanvasExecutionHandlers,
     updateCanvasControlState,
+    // ANSI tab callback
+    onRequestAnsiTab: handleRequestAnsiTab,
   }), [
     handleRequestCanvasTab,
     handleCloseCanvasTab,
@@ -546,6 +557,7 @@ function IDELayoutInner({
     registerCanvasStepHandler,
     unregisterCanvasExecutionHandlers,
     updateCanvasControlState,
+    handleRequestAnsiTab,
   ])
 
   const combinedClassName = className
@@ -569,6 +581,11 @@ function IDELayoutInner({
       // Show confirmation dialog
       setPendingCloseTabPath(path)
     } else {
+      // If this is an ANSI tab, just close it (no controller to stop)
+      if (path.startsWith('ansi://')) {
+        closeTab(path)
+        return
+      }
       // If this is a canvas tab, invoke the close handler to stop the canvas process
       if (path.startsWith('canvas://')) {
         const canvasId = path.replace('canvas://', '')
@@ -734,6 +751,18 @@ function IDELayoutInner({
                             onPlay={handleCanvasPlay}
                             onStop={handleCanvasStop}
                             onStep={handleCanvasStep}
+                          />
+                        </div>
+                      )}
+                      {/* ANSI terminal - always mounted when ansi tabs exist */}
+                      {hasAnsiTabs && (
+                        <div style={{ display: activeTabType === 'ansi' ? 'contents' : 'none' }}>
+                          <AnsiTabContent
+                            tabs={tabs}
+                            activeTab={activeTab}
+                            onSelectTab={selectTab}
+                            onCloseTab={handleCloseTab}
+                            isActive={activeTabType === 'ansi'}
                           />
                         </div>
                       )}

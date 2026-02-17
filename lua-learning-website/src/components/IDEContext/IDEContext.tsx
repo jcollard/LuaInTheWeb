@@ -162,6 +162,10 @@ export function IDEContextProvider({ children, initialCode: _initialCode = '', f
     tabBar.openCanvasTab(id, name)
   }, [tabBar])
 
+  const openAnsiTab = useCallback((id: string, name?: string) => {
+    tabBar.openAnsiTab(id, name)
+  }, [tabBar])
+
   const openMarkdownPreview = useCallback((path: string) => {
     const existingTab = tabBar.tabs.find(t => t.path === path)
     if (existingTab) {
@@ -359,7 +363,7 @@ export function IDEContextProvider({ children, initialCode: _initialCode = '', f
     terminalVisible, toggleTerminal, sidebarVisible, toggleSidebar,
     fileTree, refreshFileTree, handleShellFileMove,
     createFile, createFolder, deleteFile, deleteFolder, renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, openBinaryViewer, saveFile,
-    tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, makeTabPermanent,
+    tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, openAnsiTab, makeTabPermanent,
     pinTab, unpinTab, reorderTab, closeToRight, closeOthers,
     toasts, showError, dismissToast,
     pendingNewFilePath, generateUniqueFileName, createFileWithRename, clearPendingNewFile,
@@ -373,7 +377,7 @@ export function IDEContextProvider({ children, initialCode: _initialCode = '', f
     engine, code, setCode, fileName, isDirty,
     activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
     fileTree, refreshFileTree, handleShellFileMove, createFile, createFolder, deleteFile, deleteFolder,
-    renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, openBinaryViewer, saveFile, tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, makeTabPermanent,
+    renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, openBinaryViewer, saveFile, tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, openAnsiTab, makeTabPermanent,
     pinTab, unpinTab, reorderTab, closeToRight, closeOthers,
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,
