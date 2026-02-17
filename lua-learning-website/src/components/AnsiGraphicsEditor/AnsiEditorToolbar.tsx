@@ -47,21 +47,21 @@ export function AnsiEditorToolbar({ brush, onSetFg, onSetBg, onSetChar, onSetMod
       </div>
       <ColorPalette label="FG" selected={brush.fg} onSelect={onSetFg} />
       {brush.mode === 'brush' && (
-        <ColorPalette label="BG" selected={brush.bg} onSelect={onSetBg} />
-      )}
-      {brush.mode === 'brush' && (
-        <div className={styles.charGroup}>
-          <label className={styles.charLabel} htmlFor="ansi-editor-char">Char</label>
-          <input
-            id="ansi-editor-char"
-            className={styles.charInput}
-            type="text"
-            value={brush.char}
-            onChange={handleCharChange}
-            maxLength={1}
-            data-testid="char-input"
-          />
-        </div>
+        <>
+          <ColorPalette label="BG" selected={brush.bg} onSelect={onSetBg} />
+          <div className={styles.charGroup}>
+            <label className={styles.charLabel} htmlFor="ansi-editor-char">Char</label>
+            <input
+              id="ansi-editor-char"
+              className={styles.charInput}
+              type="text"
+              value={brush.char}
+              onChange={handleCharChange}
+              maxLength={1}
+              data-testid="char-input"
+            />
+          </div>
+        </>
       )}
       <button
         type="button"

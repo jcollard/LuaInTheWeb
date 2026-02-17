@@ -73,15 +73,12 @@ export function AnsiTerminalPanel({ isActive, onTerminalReady }: AnsiTerminalPan
       // Clear residual DOM from Strict Mode double-mount
       wrapper.replaceChildren()
       terminal.open(wrapper)
-      // Use the canvas renderer for pixel-perfect block element rendering.
-      // The default DOM renderer rasterizes font glyphs with anti-aliasing,
-      // which causes visible tearing at half-block (▀) boundaries.
+      // Canvas renderer avoids anti-aliasing artifacts at half-block (▀) boundaries.
       terminal.loadAddon(new CanvasAddon())
       terminalRef.current = terminal
 
-      // Capture base terminal dimensions at FONT_SIZE for scale calculations.
-      // Instead of CSS transform (which blurs the canvas), we multiply the
-      // font size by an integer factor so xterm.js renders at native resolution.
+      // Scale by integer font-size multiples instead of CSS transform to keep
+      // the canvas at native resolution (no blur at 2x/3x).
       const baseW = wrapper.scrollWidth
       const baseH = wrapper.scrollHeight
       let currentScale = 1

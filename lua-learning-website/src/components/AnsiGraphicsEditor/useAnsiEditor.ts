@@ -30,14 +30,6 @@ function renderFullGrid(handle: AnsiTerminalHandle, grid: AnsiGrid): void {
   }
 }
 
-function getCellFromMouse(e: MouseEvent, container: HTMLElement): { row: number; col: number } | null {
-  const rect = container.getBoundingClientRect()
-  const col = Math.floor((e.clientX - rect.left) * ANSI_COLS / rect.width)
-  const row = Math.floor((e.clientY - rect.top) * ANSI_ROWS / rect.height)
-  if (row < 0 || row >= ANSI_ROWS || col < 0 || col >= ANSI_COLS) return null
-  return { row, col }
-}
-
 function getCellHalfFromMouse(e: MouseEvent, container: HTMLElement): { row: number; col: number; isTopHalf: boolean } | null {
   const rect = container.getBoundingClientRect()
   const col = Math.floor((e.clientX - rect.left) * ANSI_COLS / rect.width)
@@ -49,24 +41,15 @@ function getCellHalfFromMouse(e: MouseEvent, container: HTMLElement): { row: num
 }
 
 export function computePixelCell(existingCell: AnsiCell, paintColor: RGBColor, isTopHalf: boolean): AnsiCell {
-  let topColor: RGBColor
-  let bottomColor: RGBColor
+  const isPixelCell = existingCell.char === HALF_BLOCK
+  const existingTop: RGBColor = isPixelCell ? [...existingCell.fg] as RGBColor : [...existingCell.bg] as RGBColor
+  const existingBottom: RGBColor = [...existingCell.bg] as RGBColor
 
-  if (existingCell.char === HALF_BLOCK) {
-    topColor = [...existingCell.fg] as RGBColor
-    bottomColor = [...existingCell.bg] as RGBColor
-  } else {
-    topColor = [...existingCell.bg] as RGBColor
-    bottomColor = [...existingCell.bg] as RGBColor
+  return {
+    char: HALF_BLOCK,
+    fg: isTopHalf ? [...paintColor] as RGBColor : existingTop,
+    bg: isTopHalf ? existingBottom : [...paintColor] as RGBColor,
   }
-
-  if (isTopHalf) {
-    topColor = [...paintColor] as RGBColor
-  } else {
-    bottomColor = [...paintColor] as RGBColor
-  }
-
-  return { char: HALF_BLOCK, fg: topColor, bg: bottomColor }
 }
 
 export interface UseAnsiEditorReturn {
@@ -129,42 +112,29 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     setBrush(prev => ({ ...prev, mode }))
   }, [])
 
-  const paintPixel = useCallback((row: number, col: number, isTopHalf: boolean) => {
-    if (row < 0 || row >= ANSI_ROWS || col < 0 || col >= ANSI_COLS) return
-
-    const currentBrush = brushRef.current
-    const existingCell = gridRef.current[row][col]
-    const newCell = computePixelCell(existingCell, currentBrush.fg, isTopHalf)
-
+  const applyCell = useCallback((row: number, col: number, cell: AnsiCell) => {
     setGrid(prev => {
       const newGrid = prev.map(r => [...r])
-      newGrid[row][col] = newCell
+      newGrid[row][col] = cell
       return newGrid
     })
     setIsDirty(true)
-
     if (handleRef.current) {
-      writeCellToTerminal(handleRef.current, row, col, newCell)
+      writeCellToTerminal(handleRef.current, row, col, cell)
     }
   }, [])
+
+  const paintPixel = useCallback((row: number, col: number, isTopHalf: boolean) => {
+    if (row < 0 || row >= ANSI_ROWS || col < 0 || col >= ANSI_COLS) return
+    const newCell = computePixelCell(gridRef.current[row][col], brushRef.current.fg, isTopHalf)
+    applyCell(row, col, newCell)
+  }, [applyCell])
 
   const paintCell = useCallback((row: number, col: number) => {
     if (row < 0 || row >= ANSI_ROWS || col < 0 || col >= ANSI_COLS) return
-
-    const currentBrush = brushRef.current
-    const newCell = { char: currentBrush.char, fg: [...currentBrush.fg] as RGBColor, bg: [...currentBrush.bg] as RGBColor }
-
-    setGrid(prev => {
-      const newGrid = prev.map(r => [...r])
-      newGrid[row][col] = newCell
-      return newGrid
-    })
-    setIsDirty(true)
-
-    if (handleRef.current) {
-      writeCellToTerminal(handleRef.current, row, col, newCell)
-    }
-  }, [])
+    const { char, fg, bg } = brushRef.current
+    applyCell(row, col, { char, fg: [...fg] as RGBColor, bg: [...bg] as RGBColor })
+  }, [applyCell])
 
   const clearGrid = useCallback(() => {
     const newGrid = createEmptyGrid()
@@ -178,31 +148,20 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   // Attach mouse listeners directly when terminal handle arrives, avoiding
   // the extra state flag + useEffect indirection.
   const attachMouseListeners = useCallback((container: HTMLElement) => {
-    function positionCursor(row: number, col: number): void {
+    function positionCursor(row: number, col: number, isTopHalf?: boolean): void {
       const el = cursorRef.current
       if (!el) return
       const rect = container.getBoundingClientRect()
       const cellW = rect.width / ANSI_COLS
       const cellH = rect.height / ANSI_ROWS
+      const isHalf = isTopHalf !== undefined
+      const cursorH = isHalf ? cellH / 2 : cellH
+      const offsetY = isHalf && !isTopHalf ? cellH / 2 : 0
       el.style.display = 'block'
       el.style.left = `${rect.left + col * cellW}px`
-      el.style.top = `${rect.top + row * cellH}px`
+      el.style.top = `${rect.top + row * cellH + offsetY}px`
       el.style.width = `${cellW}px`
-      el.style.height = `${cellH}px`
-    }
-
-    function positionPixelCursor(row: number, col: number, isTopHalf: boolean): void {
-      const el = cursorRef.current
-      if (!el) return
-      const rect = container.getBoundingClientRect()
-      const cellW = rect.width / ANSI_COLS
-      const cellH = rect.height / ANSI_ROWS
-      const halfH = cellH / 2
-      el.style.display = 'block'
-      el.style.left = `${rect.left + col * cellW}px`
-      el.style.top = `${rect.top + row * cellH + (isTopHalf ? 0 : halfH)}px`
-      el.style.width = `${cellW}px`
-      el.style.height = `${halfH}px`
+      el.style.height = `${cursorH}px`
     }
 
     function hideCursor(): void {
@@ -210,56 +169,44 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       if (el) el.style.display = 'none'
     }
 
+    function isSameCell(a: { row: number; col: number; isTopHalf?: boolean }, b: { row: number; col: number; isTopHalf?: boolean }): boolean {
+      return a.row === b.row && a.col === b.col && a.isTopHalf === b.isTopHalf
+    }
+
+    function paintAt(row: number, col: number, isTopHalf: boolean): void {
+      if (brushRef.current.mode === 'pixel') {
+        paintPixel(row, col, isTopHalf)
+      } else {
+        paintCell(row, col)
+      }
+    }
+
     function onMouseDown(e: MouseEvent): void {
       e.preventDefault()
       paintingRef.current = true
       lastCellRef.current = null
 
-      if (brushRef.current.mode === 'pixel') {
-        const cell = getCellHalfFromMouse(e, container)
-        if (cell) {
-          lastCellRef.current = cell
-          paintPixel(cell.row, cell.col, cell.isTopHalf)
-          positionPixelCursor(cell.row, cell.col, cell.isTopHalf)
-        }
-      } else {
-        const cell = getCellFromMouse(e, container)
-        if (cell) {
-          lastCellRef.current = cell
-          paintCell(cell.row, cell.col)
-          positionCursor(cell.row, cell.col)
-        }
-      }
+      const cell = getCellHalfFromMouse(e, container)
+      if (!cell) return
+      lastCellRef.current = cell
+      paintAt(cell.row, cell.col, cell.isTopHalf)
+      positionCursor(cell.row, cell.col, brushRef.current.mode === 'pixel' ? cell.isTopHalf : undefined)
     }
 
     function onMouseMove(e: MouseEvent): void {
-      if (brushRef.current.mode === 'pixel') {
-        const cell = getCellHalfFromMouse(e, container)
-        if (cell) {
-          positionPixelCursor(cell.row, cell.col, cell.isTopHalf)
-        } else {
-          hideCursor()
-        }
-
-        if (!paintingRef.current || !cell) return
-        const last = lastCellRef.current
-        if (last && last.row === cell.row && last.col === cell.col && last.isTopHalf === cell.isTopHalf) return
-        lastCellRef.current = cell
-        paintPixel(cell.row, cell.col, cell.isTopHalf)
+      const cell = getCellHalfFromMouse(e, container)
+      if (cell) {
+        positionCursor(cell.row, cell.col, brushRef.current.mode === 'pixel' ? cell.isTopHalf : undefined)
       } else {
-        const cell = getCellFromMouse(e, container)
-        if (cell) {
-          positionCursor(cell.row, cell.col)
-        } else {
-          hideCursor()
-        }
-
-        if (!paintingRef.current || !cell) return
-        const last = lastCellRef.current
-        if (last && last.row === cell.row && last.col === cell.col) return
-        lastCellRef.current = cell
-        paintCell(cell.row, cell.col)
+        hideCursor()
       }
+
+      if (!paintingRef.current || !cell) return
+      const last = lastCellRef.current
+      const current = brushRef.current.mode === 'pixel' ? cell : { row: cell.row, col: cell.col }
+      if (last && isSameCell(last, current)) return
+      lastCellRef.current = current
+      paintAt(cell.row, cell.col, cell.isTopHalf)
     }
 
     function onMouseUp(): void {
