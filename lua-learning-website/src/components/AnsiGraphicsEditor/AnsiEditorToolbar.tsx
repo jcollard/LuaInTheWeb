@@ -15,7 +15,9 @@ export interface AnsiEditorToolbarProps {
   onSaveAs: () => void
 }
 
-export function AnsiEditorToolbar({ brush, onSetFg, onSetBg, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs }: AnsiEditorToolbarProps) {
+export function AnsiEditorToolbar({
+  brush, onSetFg, onSetBg, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
+}: AnsiEditorToolbarProps) {
   const handleCharChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     if (val.length > 0) {

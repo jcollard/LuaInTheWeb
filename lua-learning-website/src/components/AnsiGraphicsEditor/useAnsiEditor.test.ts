@@ -415,6 +415,71 @@ describe('mouse drag off canvas', () => {
     expect(result.current.grid[0][0].char).toBe(' ')
   })
 
+  it('line tool: redraws committed cells from grid after commit', () => {
+    const { result } = renderHook(() => useAnsiEditor())
+    const container = createMockContainer()
+    const handle = { write: vi.fn(), container, dispose: vi.fn() }
+    act(() => result.current.onTerminalReady(handle))
+
+    // Draw a cell at (0,0) with pencil
+    act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
+    act(() => { document.dispatchEvent(mouseAt('mouseup', 0, 0)) })
+    expect(result.current.grid[0][0].char).toBe('#')
+
+    // Switch to line tool, draw line from (0,2) to (0,4)
+    act(() => result.current.setTool('line'))
+    act(() => { container.dispatchEvent(mouseAt('mousedown', 2, 0)) })
+    act(() => { container.dispatchEvent(mouseAt('mousemove', 4, 0)) })
+
+    // Clear write history to isolate the commit writes
+    handle.write.mockClear()
+    act(() => { document.dispatchEvent(mouseAt('mouseup', 4, 0)) })
+
+    // Grid should have both pencil content and line
+    expect(result.current.grid[0][0].char).toBe('#')
+    expect(result.current.grid[0][2].char).toBe('#')
+    expect(result.current.grid[0][3].char).toBe('#')
+    expect(result.current.grid[0][4].char).toBe('#')
+
+    // Terminal should have been written with the committed line cells
+    const writes = handle.write.mock.calls.map((c: string[]) => c[0]).join('')
+    // Each committed cell (cols 2,3,4) should appear in terminal writes
+    expect(writes).toContain('\x1b[1;3H')  // row 1, col 3 (0-indexed → 1-indexed)
+    expect(writes).toContain('\x1b[1;4H')
+    expect(writes).toContain('\x1b[1;5H')
+  })
+
+  it('line tool: no flash of originals during commit', () => {
+    const { result } = renderHook(() => useAnsiEditor())
+    const container = createMockContainer()
+    const handle = { write: vi.fn(), container, dispose: vi.fn() }
+    act(() => result.current.onTerminalReady(handle))
+    act(() => result.current.setTool('line'))
+
+    act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
+    act(() => { container.dispatchEvent(mouseAt('mousemove', 3, 0)) })
+
+    handle.write.mockClear()
+    act(() => { document.dispatchEvent(mouseAt('mouseup', 3, 0)) })
+
+    // Grid should have line from (0,0) to (0,3)
+    for (let c = 0; c <= 3; c++) {
+      expect(result.current.grid[0][c].char).toBe('#')
+    }
+
+    // During commit, terminal writes should only contain '#' for line cells,
+    // never a space (which would indicate restoring originals before overwriting)
+    const writes = handle.write.mock.calls.map((c: string[]) => c[0])
+    const linePositions = ['\x1b[1;1H', '\x1b[1;2H', '\x1b[1;3H', '\x1b[1;4H']
+    for (const pos of linePositions) {
+      const posWrites = writes.filter(w => w.includes(pos))
+      // Every write to a line cell position should contain '#', never ' '
+      for (const w of posWrites) {
+        expect(w).toContain('#')
+      }
+    }
+  })
+
   it('pencil: stops painting on mouseup outside canvas', () => {
     const { result } = renderHook(() => useAnsiEditor())
     const container = createMockContainer()

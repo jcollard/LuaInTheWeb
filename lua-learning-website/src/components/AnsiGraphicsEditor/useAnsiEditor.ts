@@ -31,12 +31,16 @@ function renderFullGrid(handle: AnsiTerminalHandle, grid: AnsiGrid): void {
   }
 }
 
+function isInBounds(row: number, col: number): boolean {
+  return row >= 0 && row < ANSI_ROWS && col >= 0 && col < ANSI_COLS
+}
+
 function getCellHalfFromMouse(e: MouseEvent, container: HTMLElement): { row: number; col: number; isTopHalf: boolean } | null {
   const rect = container.getBoundingClientRect()
   const col = Math.floor((e.clientX - rect.left) * ANSI_COLS / rect.width)
   const fractionalRow = (e.clientY - rect.top) * ANSI_ROWS / rect.height
   const row = Math.floor(fractionalRow)
-  if (row < 0 || row >= ANSI_ROWS || col < 0 || col >= ANSI_COLS) return null
+  if (!isInBounds(row, col)) return null
   const isTopHalf = (fractionalRow - row) < 0.5
   return { row, col, isTopHalf }
 }
@@ -66,6 +70,11 @@ interface CellHalf {
   isTopHalf: boolean
 }
 
+function parseCellKey(key: string): [number, number] {
+  const [r, c] = key.split(',').map(Number)
+  return [r, c]
+}
+
 export function computeLineCells(
   start: CellHalf,
   end: CellHalf,
@@ -81,7 +90,7 @@ export function computeLineCells(
 
     for (const { x: col, y: pixelY } of points) {
       const row = Math.floor(pixelY / 2)
-      if (row < 0 || row >= ANSI_ROWS || col < 0 || col >= ANSI_COLS) continue
+      if (!isInBounds(row, col)) continue
       const isTop = pixelY % 2 === 0
       const key = `${row},${col}`
       const existing = cells.get(key) ?? baseGrid[row][col]
@@ -91,7 +100,7 @@ export function computeLineCells(
     const points = bresenhamLine(start.col, start.row, end.col, end.row)
 
     for (const { x: col, y: row } of points) {
-      if (row < 0 || row >= ANSI_ROWS || col < 0 || col >= ANSI_COLS) continue
+      if (!isInBounds(row, col)) continue
       const key = `${row},${col}`
       cells.set(key, { char: brush.char, fg: [...brush.fg] as RGBColor, bg: [...brush.bg] as RGBColor })
     }
@@ -182,13 +191,13 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   }, [])
 
   const paintPixel = useCallback((row: number, col: number, isTopHalf: boolean) => {
-    if (row < 0 || row >= ANSI_ROWS || col < 0 || col >= ANSI_COLS) return
+    if (!isInBounds(row, col)) return
     const newCell = computePixelCell(gridRef.current[row][col], brushRef.current.fg, isTopHalf)
     applyCell(row, col, newCell)
   }, [applyCell])
 
   const paintCell = useCallback((row: number, col: number) => {
-    if (row < 0 || row >= ANSI_ROWS || col < 0 || col >= ANSI_COLS) return
+    if (!isInBounds(row, col)) return
     const { char, fg, bg } = brushRef.current
     applyCell(row, col, { char, fg: [...fg] as RGBColor, bg: [...bg] as RGBColor })
   }, [applyCell])
@@ -230,6 +239,10 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       return a.row === b.row && a.col === b.col && a.isTopHalf === b.isTopHalf
     }
 
+    function cursorHalf(cell: { isTopHalf: boolean }): boolean | undefined {
+      return brushRef.current.mode === 'pixel' ? cell.isTopHalf : undefined
+    }
+
     function paintAt(row: number, col: number, isTopHalf: boolean): void {
       if (brushRef.current.mode === 'pixel') {
         paintPixel(row, col, isTopHalf)
@@ -242,22 +255,26 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       const handle = handleRef.current
       if (!handle) return
       for (const [key, cell] of previewCellsRef.current) {
-        const [r, c] = key.split(',').map(Number)
+        const [r, c] = parseCellKey(key)
         writeCellToTerminal(handle, r, c, cell)
       }
       previewCellsRef.current.clear()
     }
 
-    function renderLinePreview(end: CellHalf): void {
+    function getLineCells(end: CellHalf): Map<string, AnsiCell> | null {
       const start = lineStartRef.current
-      if (!start) return
+      if (!start) return null
       restorePreview()
+      return computeLineCells(start, end, brushRef.current, gridRef.current)
+    }
+
+    function renderLinePreview(end: CellHalf): void {
+      const lineCells = getLineCells(end)
+      if (!lineCells) return
       const handle = handleRef.current
       if (!handle) return
-      const b = brushRef.current
-      const lineCells = computeLineCells(start, end, b, gridRef.current)
       for (const [key, cell] of lineCells) {
-        const [r, c] = key.split(',').map(Number)
+        const [r, c] = parseCellKey(key)
         if (!previewCellsRef.current.has(key)) {
           previewCellsRef.current.set(key, gridRef.current[r][c])
         }
@@ -268,12 +285,23 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     function commitLine(end: CellHalf): void {
       const start = lineStartRef.current
       if (!start) return
-      restorePreview()
-      const b = brushRef.current
-      const lineCells = computeLineCells(start, end, b, gridRef.current)
+      // Collect all cells visually affected by the preview
+      const affectedKeys = new Set(previewCellsRef.current.keys())
+      previewCellsRef.current.clear()
+      // Compute and commit line cells to grid
+      const lineCells = computeLineCells(start, end, brushRef.current, gridRef.current)
       for (const [key, cell] of lineCells) {
-        const [r, c] = key.split(',').map(Number)
+        const [r, c] = parseCellKey(key)
         applyCell(r, c, cell)
+        affectedKeys.add(key)
+      }
+      // Redraw all affected cells from the authoritative grid state
+      const handle = handleRef.current
+      if (handle) {
+        for (const key of affectedKeys) {
+          const [r, c] = parseCellKey(key)
+          writeCellToTerminal(handle, r, c, gridRef.current[r][c])
+        }
       }
       lineStartRef.current = null
     }
@@ -304,7 +332,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         }
       }
       if (cell) {
-        positionCursor(cell.row, cell.col, brushRef.current.mode === 'pixel' ? cell.isTopHalf : undefined)
+        positionCursor(cell.row, cell.col, cursorHalf(cell))
       }
       document.addEventListener('mouseup', onDocumentMouseUp)
     }
@@ -312,7 +340,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     function onMouseMove(e: MouseEvent): void {
       const cell = getCellHalfFromMouse(e, container)
       if (cell) {
-        positionCursor(cell.row, cell.col, brushRef.current.mode === 'pixel' ? cell.isTopHalf : undefined)
+        positionCursor(cell.row, cell.col, cursorHalf(cell))
       } else {
         hideCursor()
       }
