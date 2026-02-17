@@ -35,6 +35,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     setBrushBg,
     setBrushChar,
     setBrushMode,
+    setTool,
     clearGrid,
     markClean,
     onTerminalReady,
@@ -94,6 +95,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
         onSetBg={setBrushBg}
         onSetChar={setBrushChar}
         onSetMode={setBrushMode}
+        onSetTool={setTool}
         onClear={clearGrid}
         onSave={handleSave}
         onSaveAs={openSaveDialog}

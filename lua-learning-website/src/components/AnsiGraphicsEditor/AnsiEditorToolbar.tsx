@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import type { BrushMode, BrushSettings, RGBColor } from './types'
+import type { BrushMode, DrawTool, BrushSettings, RGBColor } from './types'
 import { ColorPalette } from './ColorPalette'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -9,12 +9,13 @@ export interface AnsiEditorToolbarProps {
   onSetBg: (color: RGBColor) => void
   onSetChar: (char: string) => void
   onSetMode: (mode: BrushMode) => void
+  onSetTool: (tool: DrawTool) => void
   onClear: () => void
   onSave: () => void
   onSaveAs: () => void
 }
 
-export function AnsiEditorToolbar({ brush, onSetFg, onSetBg, onSetChar, onSetMode, onClear, onSave, onSaveAs }: AnsiEditorToolbarProps) {
+export function AnsiEditorToolbar({ brush, onSetFg, onSetBg, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs }: AnsiEditorToolbarProps) {
   const handleCharChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     if (val.length > 0) {
@@ -24,6 +25,27 @@ export function AnsiEditorToolbar({ brush, onSetFg, onSetBg, onSetChar, onSetMod
 
   return (
     <div className={styles.toolbar} data-testid="ansi-editor-toolbar">
+      <div className={styles.modeGroup}>
+        <span className={styles.modeLabel}>Tool</span>
+        <button
+          type="button"
+          className={`${styles.modeButton} ${brush.tool === 'pencil' ? styles.modeButtonActive : ''}`}
+          aria-pressed={brush.tool === 'pencil'}
+          onClick={() => onSetTool('pencil')}
+          data-testid="tool-pencil"
+        >
+          ✏
+        </button>
+        <button
+          type="button"
+          className={`${styles.modeButton} ${brush.tool === 'line' ? styles.modeButtonActive : ''}`}
+          aria-pressed={brush.tool === 'line'}
+          onClick={() => onSetTool('line')}
+          data-testid="tool-line"
+        >
+          ╱
+        </button>
+      </div>
       <div className={styles.modeGroup}>
         <span className={styles.modeLabel}>Mode</span>
         <button

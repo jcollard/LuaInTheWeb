@@ -10,6 +10,8 @@ export type AnsiGrid = AnsiCell[][]
 
 export type BrushMode = 'brush' | 'pixel'
 
+export type DrawTool = 'pencil' | 'line'
+
 export const HALF_BLOCK = '\u2580'
 
 export interface BrushSettings {
@@ -17,6 +19,7 @@ export interface BrushSettings {
   fg: RGBColor
   bg: RGBColor
   mode: BrushMode
+  tool: DrawTool
 }
 
 export const ANSI_COLS = 80

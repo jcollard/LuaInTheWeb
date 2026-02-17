@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { ColorPalette } from './ColorPalette'
 import { AnsiEditorToolbar, type AnsiEditorToolbarProps } from './AnsiEditorToolbar'
 import { CGA_PALETTE, DEFAULT_FG, DEFAULT_BG } from './types'
-import type { BrushMode, RGBColor } from './types'
+import type { BrushMode, DrawTool, RGBColor } from './types'
 
 // Mock AnsiTerminalPanel since it depends on xterm.js
 vi.mock('../AnsiTerminalPanel/AnsiTerminalPanel', () => ({
@@ -48,8 +48,8 @@ describe('ColorPalette', () => {
 })
 
 describe('AnsiEditorToolbar', () => {
-  const defaultBrush = { char: '#', fg: DEFAULT_FG as RGBColor, bg: DEFAULT_BG as RGBColor, mode: 'brush' as BrushMode }
-  let handlers: Pick<AnsiEditorToolbarProps, 'onSetFg' | 'onSetBg' | 'onSetChar' | 'onClear' | 'onSave' | 'onSaveAs' | 'onSetMode'>
+  const defaultBrush = { char: '#', fg: DEFAULT_FG as RGBColor, bg: DEFAULT_BG as RGBColor, mode: 'brush' as BrushMode, tool: 'pencil' as DrawTool }
+  let handlers: Pick<AnsiEditorToolbarProps, 'onSetFg' | 'onSetBg' | 'onSetChar' | 'onClear' | 'onSave' | 'onSaveAs' | 'onSetMode' | 'onSetTool'>
 
   beforeEach(() => {
     handlers = {
@@ -60,6 +60,7 @@ describe('AnsiEditorToolbar', () => {
       onSave: vi.fn<() => void>(),
       onSaveAs: vi.fn<() => void>(),
       onSetMode: vi.fn<(mode: BrushMode) => void>(),
+      onSetTool: vi.fn<(tool: DrawTool) => void>(),
     }
   })
 
@@ -115,6 +116,42 @@ describe('AnsiEditorToolbar', () => {
     render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
     fireEvent.click(screen.getByTestId('save-as-button'))
     expect(handlers.onSaveAs).toHaveBeenCalledOnce()
+  })
+
+  describe('tool selector', () => {
+    it('should render Pencil button', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      expect(screen.getByTestId('tool-pencil')).toBeTruthy()
+    })
+
+    it('should show Pencil as active by default', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      expect(screen.getByTestId('tool-pencil').getAttribute('aria-pressed')).toBe('true')
+    })
+
+    it('should call onSetTool when Pencil button is clicked', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      fireEvent.click(screen.getByTestId('tool-pencil'))
+      expect(handlers.onSetTool).toHaveBeenCalledWith('pencil')
+    })
+
+    it('should render Line button', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      expect(screen.getByTestId('tool-line')).toBeTruthy()
+    })
+
+    it('should show Line as active when brush.tool is line', () => {
+      const lineBrush = { ...defaultBrush, tool: 'line' as DrawTool }
+      render(<AnsiEditorToolbar brush={lineBrush} {...handlers} />)
+      expect(screen.getByTestId('tool-line').getAttribute('aria-pressed')).toBe('true')
+      expect(screen.getByTestId('tool-pencil').getAttribute('aria-pressed')).toBe('false')
+    })
+
+    it('should call onSetTool with line when Line button is clicked', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      fireEvent.click(screen.getByTestId('tool-line'))
+      expect(handlers.onSetTool).toHaveBeenCalledWith('line')
+    })
   })
 
   describe('mode selector', () => {

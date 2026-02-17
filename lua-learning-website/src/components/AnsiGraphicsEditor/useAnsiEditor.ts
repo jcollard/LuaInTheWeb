@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
-import type { AnsiCell, AnsiGrid, BrushMode, BrushSettings, RGBColor } from './types'
+import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, RGBColor } from './types'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, HALF_BLOCK } from './types'
+import { bresenhamLine } from './lineAlgorithm'
 
 function createEmptyGrid(): AnsiGrid {
   return Array.from({ length: ANSI_ROWS }, () =>
@@ -52,6 +53,53 @@ export function computePixelCell(existingCell: AnsiCell, paintColor: RGBColor, i
   }
 }
 
+interface LineBrush {
+  char: string
+  fg: RGBColor
+  bg: RGBColor
+  mode: BrushMode
+}
+
+interface CellHalf {
+  row: number
+  col: number
+  isTopHalf: boolean
+}
+
+export function computeLineCells(
+  start: CellHalf,
+  end: CellHalf,
+  brush: LineBrush,
+  baseGrid: AnsiGrid,
+): Map<string, AnsiCell> {
+  const cells = new Map<string, AnsiCell>()
+
+  if (brush.mode === 'pixel') {
+    const py0 = start.row * 2 + (start.isTopHalf ? 0 : 1)
+    const py1 = end.row * 2 + (end.isTopHalf ? 0 : 1)
+    const points = bresenhamLine(start.col, py0, end.col, py1)
+
+    for (const { x: col, y: pixelY } of points) {
+      const row = Math.floor(pixelY / 2)
+      if (row < 0 || row >= ANSI_ROWS || col < 0 || col >= ANSI_COLS) continue
+      const isTop = pixelY % 2 === 0
+      const key = `${row},${col}`
+      const existing = cells.get(key) ?? baseGrid[row][col]
+      cells.set(key, computePixelCell(existing, brush.fg, isTop))
+    }
+  } else {
+    const points = bresenhamLine(start.col, start.row, end.col, end.row)
+
+    for (const { x: col, y: row } of points) {
+      if (row < 0 || row >= ANSI_ROWS || col < 0 || col >= ANSI_COLS) continue
+      const key = `${row},${col}`
+      cells.set(key, { char: brush.char, fg: [...brush.fg] as RGBColor, bg: [...brush.bg] as RGBColor })
+    }
+  }
+
+  return cells
+}
+
 export interface UseAnsiEditorReturn {
   grid: AnsiGrid
   brush: BrushSettings
@@ -59,6 +107,7 @@ export interface UseAnsiEditorReturn {
   setBrushBg: (color: RGBColor) => void
   setBrushChar: (char: string) => void
   setBrushMode: (mode: BrushMode) => void
+  setTool: (tool: DrawTool) => void
   clearGrid: () => void
   isDirty: boolean
   markClean: () => void
@@ -80,6 +129,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     fg: DEFAULT_FG,
     bg: DEFAULT_BG,
     mode: 'brush',
+    tool: 'pencil',
   })
   const [isDirty, setIsDirty] = useState(false)
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
@@ -92,6 +142,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const paintingRef = useRef(false)
   const lastCellRef = useRef<{ row: number; col: number; isTopHalf?: boolean } | null>(null)
   const cursorRef = useRef<HTMLDivElement | null>(null)
+  const lineStartRef = useRef<CellHalf | null>(null)
+  const previewCellsRef = useRef<Map<string, AnsiCell>>(new Map())
   const cleanupRef = useRef<(() => void) | null>(null)
 
   const setBrushFg = useCallback((color: RGBColor) => {
@@ -112,12 +164,17 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     setBrush(prev => ({ ...prev, mode }))
   }, [])
 
+  const setTool = useCallback((tool: DrawTool) => {
+    setBrush(prev => ({ ...prev, tool }))
+  }, [])
+
   const applyCell = useCallback((row: number, col: number, cell: AnsiCell) => {
-    setGrid(prev => {
-      const newGrid = prev.map(r => [...r])
-      newGrid[row][col] = cell
-      return newGrid
-    })
+    const newRow = [...gridRef.current[row]]
+    newRow[col] = cell
+    const newGrid = [...gridRef.current] as AnsiGrid
+    newGrid[row] = newRow
+    gridRef.current = newGrid
+    setGrid(newGrid)
     setIsDirty(true)
     if (handleRef.current) {
       writeCellToTerminal(handleRef.current, row, col, cell)
@@ -181,16 +238,75 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       }
     }
 
+    function restorePreview(): void {
+      const handle = handleRef.current
+      if (!handle) return
+      for (const [key, cell] of previewCellsRef.current) {
+        const [r, c] = key.split(',').map(Number)
+        writeCellToTerminal(handle, r, c, cell)
+      }
+      previewCellsRef.current.clear()
+    }
+
+    function renderLinePreview(end: CellHalf): void {
+      const start = lineStartRef.current
+      if (!start) return
+      restorePreview()
+      const handle = handleRef.current
+      if (!handle) return
+      const b = brushRef.current
+      const lineCells = computeLineCells(start, end, b, gridRef.current)
+      for (const [key, cell] of lineCells) {
+        const [r, c] = key.split(',').map(Number)
+        if (!previewCellsRef.current.has(key)) {
+          previewCellsRef.current.set(key, gridRef.current[r][c])
+        }
+        writeCellToTerminal(handle, r, c, cell)
+      }
+    }
+
+    function commitLine(end: CellHalf): void {
+      const start = lineStartRef.current
+      if (!start) return
+      restorePreview()
+      const b = brushRef.current
+      const lineCells = computeLineCells(start, end, b, gridRef.current)
+      for (const [key, cell] of lineCells) {
+        const [r, c] = key.split(',').map(Number)
+        applyCell(r, c, cell)
+      }
+      lineStartRef.current = null
+    }
+
+    function cancelLine(): void {
+      restorePreview()
+      lineStartRef.current = null
+    }
+
     function onMouseDown(e: MouseEvent): void {
       e.preventDefault()
-      paintingRef.current = true
-      lastCellRef.current = null
-
       const cell = getCellHalfFromMouse(e, container)
-      if (!cell) return
-      lastCellRef.current = cell
-      paintAt(cell.row, cell.col, cell.isTopHalf)
-      positionCursor(cell.row, cell.col, brushRef.current.mode === 'pixel' ? cell.isTopHalf : undefined)
+      switch (brushRef.current.tool) {
+        case 'pencil': {
+          paintingRef.current = true
+          lastCellRef.current = null
+          if (!cell) return
+          lastCellRef.current = cell
+          paintAt(cell.row, cell.col, cell.isTopHalf)
+          break
+        }
+        case 'line': {
+          if (!cell) return
+          lineStartRef.current = cell
+          previewCellsRef.current.clear()
+          renderLinePreview(cell)
+          break
+        }
+      }
+      if (cell) {
+        positionCursor(cell.row, cell.col, brushRef.current.mode === 'pixel' ? cell.isTopHalf : undefined)
+      }
+      document.addEventListener('mouseup', onDocumentMouseUp)
     }
 
     function onMouseMove(e: MouseEvent): void {
@@ -201,37 +317,61 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         hideCursor()
       }
 
-      if (!paintingRef.current || !cell) return
-      const last = lastCellRef.current
-      const current = brushRef.current.mode === 'pixel' ? cell : { row: cell.row, col: cell.col }
-      if (last && isSameCell(last, current)) return
-      lastCellRef.current = current
-      paintAt(cell.row, cell.col, cell.isTopHalf)
+      if (!cell) return
+      switch (brushRef.current.tool) {
+        case 'pencil': {
+          if (!paintingRef.current) return
+          const last = lastCellRef.current
+          const current = brushRef.current.mode === 'pixel' ? cell : { row: cell.row, col: cell.col }
+          if (last && isSameCell(last, current)) return
+          lastCellRef.current = current
+          paintAt(cell.row, cell.col, cell.isTopHalf)
+          break
+        }
+        case 'line': {
+          if (lineStartRef.current) {
+            renderLinePreview(cell)
+          }
+          break
+        }
+      }
     }
 
-    function onMouseUp(): void {
-      paintingRef.current = false
-      lastCellRef.current = null
+    function onDocumentMouseUp(e: MouseEvent): void {
+      document.removeEventListener('mouseup', onDocumentMouseUp)
+      switch (brushRef.current.tool) {
+        case 'pencil':
+          paintingRef.current = false
+          lastCellRef.current = null
+          break
+        case 'line': {
+          if (!lineStartRef.current) break
+          const cell = getCellHalfFromMouse(e, container)
+          if (cell) {
+            commitLine(cell)
+          } else {
+            cancelLine()
+          }
+          break
+        }
+      }
     }
 
     function onMouseLeave(): void {
-      paintingRef.current = false
-      lastCellRef.current = null
       hideCursor()
     }
 
     container.addEventListener('mousedown', onMouseDown)
     container.addEventListener('mousemove', onMouseMove)
-    container.addEventListener('mouseup', onMouseUp)
     container.addEventListener('mouseleave', onMouseLeave)
 
     return () => {
       container.removeEventListener('mousedown', onMouseDown)
       container.removeEventListener('mousemove', onMouseMove)
-      container.removeEventListener('mouseup', onMouseUp)
       container.removeEventListener('mouseleave', onMouseLeave)
+      document.removeEventListener('mouseup', onDocumentMouseUp)
     }
-  }, [paintCell, paintPixel])
+  }, [paintCell, paintPixel, applyCell])
 
   const markClean = useCallback(() => setIsDirty(false), [])
 
@@ -257,6 +397,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     setBrushBg,
     setBrushChar,
     setBrushMode,
+    setTool,
     clearGrid,
     isDirty,
     markClean,
