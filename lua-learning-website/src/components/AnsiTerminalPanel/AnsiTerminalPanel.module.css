@@ -17,16 +17,19 @@
   transform-origin: center center;
   outline: none;
   border-radius: 0;
+  cursor: default;
+  user-select: none;
 }
 
 .terminalWrapper :global(.xterm) {
   border-radius: 0;
+  cursor: default;
+  /* Let mouse events pass through xterm's DOM to the wrapper where
+     InputCapture listens. Prevents xterm's internal selection handling. */
+  pointer-events: none;
 }
 
 .terminalWrapper :global(.xterm-viewport) {
   border-radius: 0;
-}
-
-.terminalWrapper :global(.xterm-viewport) {
   overflow: hidden !important;
 }

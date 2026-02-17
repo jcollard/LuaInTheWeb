@@ -281,6 +281,86 @@ export class AnsiController {
     return this.inputAPI.getKeysPressed()
   }
 
+  // --- Mouse Input API ---
+
+  private static readonly COLS = 80
+  private static readonly ROWS = 25
+
+  /**
+   * Get the mouse column in 1-based cell coordinates, clamped to 1–COLS.
+   */
+  getMouseCol(): number {
+    if (!this.handle) return 0
+    const rect = this.handle.container.getBoundingClientRect()
+    if (rect.width === 0) return 0
+    const mouseX = this.inputAPI.getMouseX()
+    const col = Math.floor(mouseX / rect.width * AnsiController.COLS) + 1
+    return Math.max(1, Math.min(AnsiController.COLS, col))
+  }
+
+  /**
+   * Get the mouse row in 1-based cell coordinates, clamped to 1–ROWS.
+   */
+  getMouseRow(): number {
+    if (!this.handle) return 0
+    const rect = this.handle.container.getBoundingClientRect()
+    if (rect.height === 0) return 0
+    const mouseY = this.inputAPI.getMouseY()
+    const row = Math.floor(mouseY / rect.height * AnsiController.ROWS) + 1
+    return Math.max(1, Math.min(AnsiController.ROWS, row))
+  }
+
+  /**
+   * Check if the mouse cursor is in the top half of the current cell.
+   * Useful for half-block rendering at effective 80x50 resolution.
+   */
+  isMouseTopHalf(): boolean {
+    if (!this.handle) return false
+    const rect = this.handle.container.getBoundingClientRect()
+    if (rect.height === 0) return false
+    const mouseY = this.inputAPI.getMouseY()
+    const cellFraction = (mouseY / rect.height * AnsiController.ROWS) % 1
+    return cellFraction < 0.5
+  }
+
+  /**
+   * Get the raw unscaled pixel X coordinate.
+   */
+  getMouseX(): number {
+    if (!this.handle) return 0
+    const rect = this.handle.container.getBoundingClientRect()
+    if (rect.width === 0) return 0
+    const scale = rect.width / this.handle.container.scrollWidth
+    return this.inputAPI.getMouseX() / scale
+  }
+
+  /**
+   * Get the raw unscaled pixel Y coordinate.
+   */
+  getMouseY(): number {
+    if (!this.handle) return 0
+    const rect = this.handle.container.getBoundingClientRect()
+    if (rect.height === 0) return 0
+    const scale = rect.height / this.handle.container.scrollHeight
+    return this.inputAPI.getMouseY() / scale
+  }
+
+  /**
+   * Check if a mouse button is currently held down.
+   * @param button - 0 = left, 1 = middle, 2 = right
+   */
+  isMouseButtonDown(button: number): boolean {
+    return this.inputAPI.isMouseButtonDown(button)
+  }
+
+  /**
+   * Check if a mouse button was just pressed this frame.
+   * @param button - 0 = left, 1 = middle, 2 = right
+   */
+  isMouseButtonPressed(button: number): boolean {
+    return this.inputAPI.isMouseButtonPressed(button)
+  }
+
   // --- Internal ---
 
   /**

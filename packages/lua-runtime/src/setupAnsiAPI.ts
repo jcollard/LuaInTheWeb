@@ -95,6 +95,35 @@ export function setupAnsiAPI(
     return getController()?.getKeysPressed() ?? []
   })
 
+  // --- Mouse input functions ---
+  engine.global.set('__ansi_getMouseCol', () => {
+    return getController()?.getMouseCol() ?? 0
+  })
+
+  engine.global.set('__ansi_getMouseRow', () => {
+    return getController()?.getMouseRow() ?? 0
+  })
+
+  engine.global.set('__ansi_isMouseTopHalf', () => {
+    return getController()?.isMouseTopHalf() ?? false
+  })
+
+  engine.global.set('__ansi_getMouseX', () => {
+    return getController()?.getMouseX() ?? 0
+  })
+
+  engine.global.set('__ansi_getMouseY', () => {
+    return getController()?.getMouseY() ?? 0
+  })
+
+  engine.global.set('__ansi_isMouseDown', (button: number) => {
+    return getController()?.isMouseButtonDown(button) ?? false
+  })
+
+  engine.global.set('__ansi_isMousePressed', (button: number) => {
+    return getController()?.isMouseButtonPressed(button) ?? false
+  })
+
   // --- Set up Lua-side ansi table ---
   // ANSI is NOT a global - it must be accessed via require('ansi')
   engine.doStringSync(ansiLuaCode)

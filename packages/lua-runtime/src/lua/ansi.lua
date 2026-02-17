@@ -21,8 +21,9 @@ local ansi = {}
 -- 5.  Color Constants (ansi.colors.*)
 -- 6.  Timing Functions (get_delta, get_time)
 -- 7.  Keyboard Input (is_key_down, is_key_pressed, get_keys_down, get_keys_pressed)
--- 8.  Key Constants (ansi.keys.*)
--- 9.  Terminal Dimensions (COLS, ROWS)
+-- 8.  Mouse Input (is_mouse_down, is_mouse_pressed, get_mouse_col, get_mouse_row, etc.)
+-- 9.  Key Constants (ansi.keys.*)
+-- 10. Terminal Dimensions (COLS, ROWS)
 -- =============================================================================
 
 -- =============================================================================
@@ -146,6 +147,41 @@ function ansi.get_keys_down() end
 --- Get all keys pressed this frame.
 ---@return string[] keys Array of key codes
 function ansi.get_keys_pressed() end
+
+-- =============================================================================
+-- Mouse Input
+-- =============================================================================
+
+--- Check if a mouse button is currently held down.
+---@param button? number Button index (0 = left, 1 = middle, 2 = right). Defaults to 0.
+---@return boolean down True if the button is currently held down
+function ansi.is_mouse_down(button) end
+
+--- Check if a mouse button was just pressed this frame.
+---@param button? number Button index (0 = left, 1 = middle, 2 = right). Defaults to 0.
+---@return boolean pressed True if the button was pressed this frame
+function ansi.is_mouse_pressed(button) end
+
+--- Get the mouse column in cell coordinates (1-based, clamped to 1–80).
+---@return number col Column number (1 = leftmost)
+function ansi.get_mouse_col() end
+
+--- Get the mouse row in cell coordinates (1-based, clamped to 1–25).
+---@return number row Row number (1 = topmost)
+function ansi.get_mouse_row() end
+
+--- Check if the mouse cursor is in the top half of the current cell.
+--- Useful for half-block rendering at effective 80x50 resolution.
+---@return boolean top True if cursor is in the top half of the cell
+function ansi.is_mouse_top_half() end
+
+--- Get the raw unscaled pixel X coordinate of the mouse.
+---@return number x Pixel X coordinate (0 to terminal width)
+function ansi.get_mouse_x() end
+
+--- Get the raw unscaled pixel Y coordinate of the mouse.
+---@return number y Pixel Y coordinate (0 to terminal height)
+function ansi.get_mouse_y() end
 
 -- =============================================================================
 -- Key Constants

@@ -82,6 +82,35 @@ export const ansiLuaInputCode = `
       return _ansi_keys_pressed_cache
     end
 
+    -- Mouse input
+    function _ansi.is_mouse_down(button)
+      return __ansi_isMouseDown(button or 0)
+    end
+
+    function _ansi.is_mouse_pressed(button)
+      return __ansi_isMousePressed(button or 0)
+    end
+
+    function _ansi.get_mouse_col()
+      return __ansi_getMouseCol()
+    end
+
+    function _ansi.get_mouse_row()
+      return __ansi_getMouseRow()
+    end
+
+    function _ansi.is_mouse_top_half()
+      return __ansi_isMouseTopHalf()
+    end
+
+    function _ansi.get_mouse_x()
+      return __ansi_getMouseX()
+    end
+
+    function _ansi.get_mouse_y()
+      return __ansi_getMouseY()
+    end
+
     -- Key constants (same as canvas.keys)
     _ansi.keys = {
       -- Letters
