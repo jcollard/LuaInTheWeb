@@ -1,0 +1,123 @@
+.editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 12px;
+  background-color: var(--theme-bg-secondary);
+  border-bottom: 1px solid var(--theme-border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.canvas {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Cell cursor overlay — uses position:fixed and is positioned imperatively
+   by useAnsiEditor so that no React re-renders are needed on mouse movement. */
+.cellCursor {
+  position: fixed;
+  display: none;
+  pointer-events: none;
+  background-color: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  z-index: 10;
+  box-sizing: border-box;
+}
+
+/* Palette */
+.paletteGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.paletteLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--theme-text-secondary);
+  min-width: 20px;
+}
+
+.paletteGrid {
+  display: grid;
+  grid-template-columns: repeat(8, 18px);
+  grid-template-rows: repeat(2, 18px);
+  gap: 2px;
+}
+
+.paletteSwatch {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--theme-border);
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+}
+
+.paletteSwatch:hover {
+  border-color: var(--theme-text-primary);
+}
+
+.paletteSwatchSelected {
+  border: 2px solid var(--theme-text-primary);
+  box-shadow: 0 0 0 1px var(--theme-bg-primary);
+}
+
+/* Char input */
+.charGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.charLabel {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--theme-text-secondary);
+}
+
+.charInput {
+  width: 28px;
+  height: 24px;
+  text-align: center;
+  font-family: 'IBM VGA 8x16', monospace;
+  font-size: 14px;
+  background-color: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+  border: 1px solid var(--theme-border);
+  border-radius: 3px;
+  padding: 0;
+}
+
+.charInput:focus {
+  border-color: var(--theme-accent-primary);
+  outline: none;
+}
+
+/* Clear button */
+.clearButton {
+  padding: 4px 12px;
+  font-size: 12px;
+  background-color: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+  border: 1px solid var(--theme-border);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.clearButton:hover {
+  background-color: var(--theme-bg-hover);
+}

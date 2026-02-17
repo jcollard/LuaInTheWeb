@@ -11,4 +11,6 @@ export interface SidebarPanelProps {
   className?: string
   /** Props for FileExplorer when explorer panel is active */
   explorerProps?: Omit<FileExplorerProps, 'className'>
+  /** Callback to open the ANSI Graphics Editor tab */
+  onOpenAnsiEditor?: () => void
 }

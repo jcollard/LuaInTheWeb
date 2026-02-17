@@ -37,57 +37,73 @@ export function AnsiTerminalPanel({ isActive, onTerminalReady }: AnsiTerminalPan
   const onTerminalReadyRef = useRef(onTerminalReady)
   onTerminalReadyRef.current = onTerminalReady
 
-  // Create terminal on mount. In React Strict Mode, effects run, clean up,
-  // and re-run. The handle uses terminalRef indirection so it automatically
-  // delegates to whichever terminal instance is currently alive.
+  // Create terminal on mount after the IBM VGA font is loaded. Waiting for
+  // the font ensures xterm.js measures cell dimensions correctly on first
+  // render and the integer-scaling ResizeObserver gets accurate metrics.
+  // In React Strict Mode, effects run, clean up, and re-run. The handle
+  // uses terminalRef indirection so it automatically delegates to whichever
+  // terminal instance is currently alive.
   useEffect(() => {
     const wrapper = wrapperRef.current
     if (!wrapper) return
 
-    const terminal = new Terminal({
-      cols: COLS,
-      rows: ROWS,
-      fontSize: FONT_SIZE,
-      fontFamily: FONT_FAMILY,
-      lineHeight: 1,
-      letterSpacing: 0,
-      cursorBlink: false,
-      disableStdin: true,
-      scrollback: 0,
-      overviewRulerWidth: 0,
-      allowTransparency: false,
-      theme: {
-        background: '#000000',
-        foreground: '#AAAAAA',
-        cursor: '#AAAAAA',
-      },
-    })
+    let disposed = false
 
-    // Clear any residual DOM from previous terminal (e.g., React Strict Mode
-    // double-mount: dispose() cleans up internal state but doesn't remove DOM)
-    wrapper.replaceChildren()
-    terminal.open(wrapper)
-    terminalRef.current = terminal
+    const init = async () => {
+      // Ensure the IBM VGA font is available before opening the terminal
+      await document.fonts.load(`${FONT_SIZE}px ${FONT_FAMILY}`)
+      if (disposed) return
 
-    // Create the stable proxy handle on first mount only.
-    // The write method delegates through terminalRef, so even if the terminal
-    // is disposed and recreated (strict mode), the handle remains valid.
-    if (!handleRef.current) {
-      handleRef.current = {
-        write: (data: string) => terminalRef.current?.write(data),
-        container: wrapper,
-        dispose: () => {
-          // No-op - terminal lifecycle managed by this component's cleanup
+      const terminal = new Terminal({
+        cols: COLS,
+        rows: ROWS,
+        fontSize: FONT_SIZE,
+        fontFamily: FONT_FAMILY,
+        lineHeight: 1,
+        letterSpacing: 0,
+        cursorBlink: false,
+        disableStdin: true,
+        scrollback: 0,
+        overviewRulerWidth: 0,
+        allowTransparency: false,
+        theme: {
+          background: '#000000',
+          foreground: '#AAAAAA',
+          cursor: '#AAAAAA',
         },
+      })
+
+      // Clear any residual DOM from previous terminal (e.g., React Strict Mode
+      // double-mount: dispose() cleans up internal state but doesn't remove DOM)
+      wrapper.replaceChildren()
+      terminal.open(wrapper)
+      terminalRef.current = terminal
+
+      // Create the stable proxy handle on first mount only.
+      // The write method delegates through terminalRef, so even if the terminal
+      // is disposed and recreated (strict mode), the handle remains valid.
+      if (!handleRef.current) {
+        handleRef.current = {
+          write: (data: string) => terminalRef.current?.write(data),
+          container: wrapper,
+          dispose: () => {
+            // No-op - terminal lifecycle managed by this component's cleanup
+          },
+        }
       }
+
+      // Notify parent that handle is available
+      onTerminalReadyRef.current?.(handleRef.current)
     }
 
-    // Notify parent that handle is available
-    onTerminalReadyRef.current?.(handleRef.current)
+    init()
 
     return () => {
-      terminal.dispose()
-      terminalRef.current = null
+      disposed = true
+      if (terminalRef.current) {
+        terminalRef.current.dispose()
+        terminalRef.current = null
+      }
       // Don't null handleRef — the proxy handle survives strict mode re-runs.
       // It becomes a no-op (terminalRef is null) until the next terminal is created.
     }

@@ -56,6 +56,7 @@ export interface IDEContextValue {
   closeTab: (path: string) => void
   openCanvasTab: (id: string, name?: string) => void
   openAnsiTab: (id: string, name?: string) => void
+  openAnsiEditorTab: () => void
   makeTabPermanent: (path: string) => void
   pinTab: (path: string) => void
   unpinTab: (path: string) => void

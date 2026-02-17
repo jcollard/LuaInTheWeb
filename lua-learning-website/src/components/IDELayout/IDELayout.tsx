@@ -14,6 +14,8 @@ import { ToastContainer } from '../Toast'
 import { WelcomeScreen } from '../WelcomeScreen'
 import { CanvasTabContent } from './CanvasTabContent'
 import { AnsiTabContent } from './AnsiTabContent'
+import { AnsiEditorTabContent } from './AnsiEditorTabContent'
+import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import { MarkdownTabContent } from './MarkdownTabContent'
 import { BinaryTabContent } from './BinaryTabContent'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
@@ -117,6 +119,7 @@ function IDELayoutInner({
     closeTab,
     openCanvasTab,
     openAnsiTab,
+    openAnsiEditorTab,
     makeTabPermanent,
     pinTab,
     unpinTab,
@@ -158,30 +161,23 @@ function IDELayoutInner({
 
   // ANSI tab management
   const hasAnsiTabs = tabs.some(t => t.type === 'ansi')
+  const hasAnsiEditorTabs = tabs.some(t => t.type === 'ansi-editor')
+
+  const handleOpenAnsiEditor = useCallback(() => {
+    openAnsiEditorTab()
+  }, [openAnsiEditorTab])
 
   // ANSI tab request management (ansiId -> resolver for terminal handle)
-  const pendingAnsiRequestsRef = useRef<Map<string, (handle: {
-    write: (data: string) => void
-    container: HTMLElement
-    dispose: () => void
-  }) => void>>(new Map())
+  const pendingAnsiRequestsRef = useRef<Map<string, (handle: AnsiTerminalHandle) => void>>(new Map())
 
   // ANSI close handler management for UI-initiated tab close
   const ansiCloseHandlersRef = useRef<Map<string, () => void>>(new Map())
 
-  // Cached ANSI terminal handle — allows immediate resolution when the terminal is already mounted
-  const ansiTerminalHandleRef = useRef<{
-    write: (data: string) => void
-    container: HTMLElement
-    dispose: () => void
-  } | null>(null)
+  // Cached ANSI terminal handle -- allows immediate resolution when the terminal is already mounted
+  const ansiTerminalHandleRef = useRef<AnsiTerminalHandle | null>(null)
 
   // Handle ANSI tab request from shell (ansi.start())
-  const handleRequestAnsiTab = useCallback(async (ansiId: string): Promise<{
-    write: (data: string) => void
-    container: HTMLElement
-    dispose: () => void
-  }> => {
+  const handleRequestAnsiTab = useCallback(async (ansiId: string): Promise<AnsiTerminalHandle> => {
     const tabPath = `ansi://${ansiId}`
     openAnsiTab(ansiId, 'ANSI Terminal')
 
@@ -205,11 +201,7 @@ function IDELayoutInner({
   }, [closeTab])
 
   // Callback when ANSI terminal is ready (passed to AnsiTabContent)
-  const handleAnsiTerminalReady = useCallback((_ansiId: string, handle: {
-    write: (data: string) => void
-    container: HTMLElement
-    dispose: () => void
-  } | null) => {
+  const handleAnsiTerminalReady = useCallback((_ansiId: string, handle: AnsiTerminalHandle | null) => {
     // Cache the handle for immediate resolution of future requests
     ansiTerminalHandleRef.current = handle
 
@@ -659,24 +651,13 @@ function IDELayoutInner({
       // If this is an ANSI tab, invoke the close handler to stop the ANSI process
       if (path.startsWith('ansi://')) {
         const ansiId = path.replace('ansi://', '')
-        const closeHandler = ansiCloseHandlersRef.current.get(ansiId)
-        if (closeHandler) {
-          closeHandler()
-          // Handler will clean itself up via unregisterAnsiCloseHandler
-        }
-        closeTab(path)
-        return
+        ansiCloseHandlersRef.current.get(ansiId)?.()
       }
       // If this is a canvas tab, invoke the close handler to stop the canvas process
       if (path.startsWith('canvas://')) {
         const canvasId = path.replace('canvas://', '')
-        const closeHandler = canvasCloseHandlersRef.current.get(canvasId)
-        if (closeHandler) {
-          closeHandler()
-          // Handler will clean itself up via unregisterCanvasCloseHandler
-        }
+        canvasCloseHandlersRef.current.get(canvasId)?.()
       }
-      // Close immediately
       closeTab(path)
     }
   }, [tabs, closeTab])
@@ -795,6 +776,7 @@ function IDELayoutInner({
                   <SidebarPanel
                     activePanel={activePanel}
                     explorerProps={explorerProps}
+                    onOpenAnsiEditor={handleOpenAnsiEditor}
                   />
                 </IDEPanel>
                 <IDEResizeHandle />
@@ -847,6 +829,10 @@ function IDELayoutInner({
                             onTerminalReady={handleAnsiTerminalReady}
                           />
                         </div>
+                      )}
+                      {/* ANSI Graphics Editor - shown when ansi-editor tab is active */}
+                      {hasAnsiEditorTabs && activeTabType === 'ansi-editor' && (
+                        <AnsiEditorTabContent tabBarProps={tabBarProps} />
                       )}
                       {/* Markdown preview - shown when markdown tab is active */}
                       {/* Note: Read directly from filesystem since tabEditorManager only tracks file tabs */}

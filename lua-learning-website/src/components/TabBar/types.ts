@@ -1,7 +1,7 @@
 /**
  * Type of tab - file for code editor, canvas for game canvas, markdown for markdown preview, binary for binary file viewer
  */
-export type TabType = 'file' | 'canvas' | 'markdown' | 'binary' | 'ansi'
+export type TabType = 'file' | 'canvas' | 'markdown' | 'binary' | 'ansi' | 'ansi-editor'
 
 export interface TabInfo {
   path: string
@@ -32,6 +32,7 @@ export interface UseTabBarReturn {
   openPreviewTab: (path: string, name: string) => void
   openCanvasTab: (id: string, name?: string) => void
   openAnsiTab: (id: string, name?: string) => void
+  openAnsiEditorTab: () => void
   openMarkdownPreviewTab: (path: string, name: string) => void
   openBinaryPreviewTab: (path: string, name: string) => void
   closeTab: (path: string) => void

@@ -1,6 +1,7 @@
 import styles from './SidebarPanel.module.css'
 import type { SidebarPanelProps } from './types'
 import { FileExplorer } from '../FileExplorer'
+import { ExtensionsPanel } from '../ExtensionsPanel'
 
 const panelTitles = {
   explorer: 'Explorer',
@@ -12,7 +13,7 @@ const panelTitles = {
  * Sidebar panel that shows content based on active panel type
  * Renders FileExplorer when explorer panel is active
  */
-export function SidebarPanel({ activePanel, className, explorerProps }: SidebarPanelProps) {
+export function SidebarPanel({ activePanel, className, explorerProps, onOpenAnsiEditor }: SidebarPanelProps) {
   const combinedClassName = className
     ? `${styles.sidebarPanel} ${className}`
     : styles.sidebarPanel
@@ -22,6 +23,10 @@ export function SidebarPanel({ activePanel, className, explorerProps }: SidebarP
   const renderContent = () => {
     if (activePanel === 'explorer' && explorerProps) {
       return <FileExplorer {...explorerProps} />
+    }
+
+    if (activePanel === 'extensions' && onOpenAnsiEditor) {
+      return <ExtensionsPanel onOpenAnsiEditor={onOpenAnsiEditor} />
     }
 
     return (
