@@ -16,6 +16,8 @@ import { resolvePath } from '@lua-learning/shell-core'
 import { CanvasController, type CanvasCallbacks } from './CanvasController'
 import { setupCanvasAPI } from './setupCanvasAPI'
 import { setupAudioAPI } from './setupAudioAPI'
+import { AnsiController, type AnsiCallbacks } from './AnsiController'
+import { setupAnsiAPI } from './setupAnsiAPI'
 import { FileOperationsHandler } from './FileOperationsHandler'
 import type { CanvasMode, ScreenMode, HotReloadMode } from './LuaCommand'
 
@@ -37,6 +39,8 @@ export interface LuaScriptProcessOptions extends ExecutionControlOptions {
   startScreen?: boolean
   /** Callback when filesystem changes (for UI refresh) */
   onFileSystemChange?: () => void
+  /** Callbacks for ANSI terminal tab management (enables ansi.start()/stop()) */
+  ansiCallbacks?: AnsiCallbacks
 }
 
 /**
@@ -54,6 +58,7 @@ export class LuaScriptProcess implements IProcess {
   private hasError = false
   private readonly options: LuaScriptProcessOptions
   private canvasController: CanvasController | null = null
+  private ansiController: AnsiController | null = null
 
   /** File operations handler for io.open() support */
   private fileOpsHandler: FileOperationsHandler | null = null
@@ -119,6 +124,12 @@ export class LuaScriptProcess implements IProcess {
       this.canvasController.stop()
     }
     this.canvasController = null
+
+    // Stop any running ANSI terminal
+    if (this.ansiController?.isActive()) {
+      this.ansiController.stop()
+    }
+    this.ansiController = null
 
     // Request stop from any running Lua code via debug hook
     // This sets a flag that the debug hook checks periodically
@@ -253,6 +264,9 @@ export class LuaScriptProcess implements IProcess {
       // Set up canvas API if callbacks are provided
       this.initCanvasAPI()
 
+      // Set up ANSI terminal API if callbacks are provided
+      this.initAnsiAPI()
+
       // Set up a helper function to execute script content with hooks
       // Using load() allows scripts to have top-level return statements
       this.engine.global.set('__script_content', scriptContent)
@@ -348,6 +362,12 @@ __clear_execution_hook()
       this.canvasController.stop()
     }
     this.canvasController = null
+
+    // Stop any running ANSI terminal
+    if (this.ansiController?.isActive()) {
+      this.ansiController.stop()
+    }
+    this.ansiController = null
 
     const engineToClose = this.engine
     this.engine = null
@@ -473,6 +493,29 @@ __clear_execution_hook()
     // Use shared setup functions for canvas
     setupCanvasAPI(this.engine, () => this.canvasController)
     setupAudioAPI(this.engine, () => this.canvasController?.getAudioEngine() ?? null)
+  }
+
+  /**
+   * Set up the ANSI terminal API if ANSI callbacks are provided.
+   * This enables ansi.start(), ansi.stop(), and all terminal/input functions.
+   */
+  private initAnsiAPI(): void {
+    if (!this.engine || !this.options.ansiCallbacks) return
+
+    const ansiCallbacks: AnsiCallbacks = {
+      ...this.options.ansiCallbacks,
+      onError: (error: string) => {
+        this.onError(formatLuaError(error) + '\n')
+      },
+      onFlushOutput: () => {
+        if (this.engine) {
+          LuaEngineFactory.flushOutput(this.engine)
+        }
+      },
+    }
+
+    this.ansiController = new AnsiController(ansiCallbacks, 'ansi-main')
+    setupAnsiAPI(this.engine, () => this.ansiController)
   }
 
 }

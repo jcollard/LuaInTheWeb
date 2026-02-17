@@ -214,6 +214,17 @@ export class LuaCommand implements ICommand {
       })
     }
 
+    // Build ANSI callbacks if available in context
+    const ansiCallbacks =
+      context.onRequestAnsiTab && context.onCloseAnsiTab
+        ? {
+            onRequestAnsiTab: context.onRequestAnsiTab,
+            onCloseAnsiTab: context.onCloseAnsiTab,
+            registerAnsiCloseHandler: context.registerAnsiCloseHandler,
+            unregisterAnsiCloseHandler: context.unregisterAnsiCloseHandler,
+          }
+        : undefined
+
     // Build options, including canvas callbacks, mode, screen mode, toolbar visibility, hot reload mode, and start screen
     const options = {
       ...DEFAULT_EXECUTION_OPTIONS,
@@ -223,6 +234,7 @@ export class LuaCommand implements ICommand {
       noToolbar,
       hotReloadMode,
       startScreen,
+      ansiCallbacks,
     }
 
     return new LuaScriptProcess(filename, context, options)

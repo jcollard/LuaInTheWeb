@@ -4,6 +4,7 @@
     "shell.lua",
     "canvas.lua",
     "hc.lua",
-    "localstorage.lua"
+    "localstorage.lua",
+    "ansi.lua"
   ]
 }

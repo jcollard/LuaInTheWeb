@@ -215,8 +215,18 @@ export interface ShellCanvasCallbacks {
    * @param fonts - Array of font data with name and base64 data URL
    */
   transferFontsToWindow?: (canvasId: string, fonts: Array<{ name: string; dataUrl: string }>) => void
-  /** Request an ANSI terminal tab to be opened */
-  onRequestAnsiTab?: (ansiId: string) => void
+  /** Request an ANSI terminal tab to be opened, returns terminal handle when ready */
+  onRequestAnsiTab?: (ansiId: string) => Promise<{
+    write: (data: string) => void
+    container: HTMLElement
+    dispose: () => void
+  }>
+  /** Request an ANSI terminal tab to be closed */
+  onCloseAnsiTab?: (ansiId: string) => void
+  /** Register a handler for when ANSI tab is closed from UI */
+  registerAnsiCloseHandler?: (ansiId: string, handler: () => void) => void
+  /** Unregister the ANSI close handler */
+  unregisterAnsiCloseHandler?: (ansiId: string) => void
 }
 
 /**
@@ -427,8 +437,11 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
         clearErrorOverlay: options?.canvasCallbacks?.clearErrorOverlay,
         // Font transfer for canvas windows (popup windows have isolated document.fonts)
         transferFontsToWindow: options?.canvasCallbacks?.transferFontsToWindow,
-        // ANSI tab callback for ansi-test command
+        // ANSI terminal callbacks
         onRequestAnsiTab: options?.canvasCallbacks?.onRequestAnsiTab,
+        onCloseAnsiTab: options?.canvasCallbacks?.onCloseAnsiTab,
+        registerAnsiCloseHandler: options?.canvasCallbacks?.registerAnsiCloseHandler,
+        unregisterAnsiCloseHandler: options?.canvasCallbacks?.unregisterAnsiCloseHandler,
         // Editor integration callback for 'open' command
         onRequestOpenFile: options?.onRequestOpenFile,
         // Filesystem change notification for UI refresh (e.g., file tree)

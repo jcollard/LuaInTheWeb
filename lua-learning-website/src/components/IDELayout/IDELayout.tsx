@@ -159,9 +159,78 @@ function IDELayoutInner({
   // ANSI tab management
   const hasAnsiTabs = tabs.some(t => t.type === 'ansi')
 
-  const handleRequestAnsiTab = useCallback((ansiId: string) => {
+  // ANSI tab request management (ansiId -> resolver for terminal handle)
+  const pendingAnsiRequestsRef = useRef<Map<string, (handle: {
+    write: (data: string) => void
+    container: HTMLElement
+    dispose: () => void
+  }) => void>>(new Map())
+
+  // ANSI close handler management for UI-initiated tab close
+  const ansiCloseHandlersRef = useRef<Map<string, () => void>>(new Map())
+
+  // Cached ANSI terminal handle — allows immediate resolution when the terminal is already mounted
+  const ansiTerminalHandleRef = useRef<{
+    write: (data: string) => void
+    container: HTMLElement
+    dispose: () => void
+  } | null>(null)
+
+  // Handle ANSI tab request from shell (ansi.start())
+  const handleRequestAnsiTab = useCallback(async (ansiId: string): Promise<{
+    write: (data: string) => void
+    container: HTMLElement
+    dispose: () => void
+  }> => {
+    const tabPath = `ansi://${ansiId}`
     openAnsiTab(ansiId, 'ANSI Terminal')
+
+    // If terminal handle is already available (panel already mounted), resolve immediately
+    if (ansiTerminalHandleRef.current) {
+      return ansiTerminalHandleRef.current
+    }
+
+    // Otherwise wait for the terminal panel to mount and call onTerminalReady
+    return new Promise((resolve) => {
+      pendingAnsiRequestsRef.current.set(tabPath, resolve)
+    })
   }, [openAnsiTab])
+
+  // Handle ANSI tab close from shell (ansi.stop() or Ctrl+C)
+  const handleCloseAnsiTab = useCallback((ansiId: string) => {
+    const tabPath = `ansi://${ansiId}`
+    pendingAnsiRequestsRef.current.delete(tabPath)
+    ansiTerminalHandleRef.current = null
+    closeTab(tabPath)
+  }, [closeTab])
+
+  // Callback when ANSI terminal is ready (passed to AnsiTabContent)
+  const handleAnsiTerminalReady = useCallback((_ansiId: string, handle: {
+    write: (data: string) => void
+    container: HTMLElement
+    dispose: () => void
+  } | null) => {
+    // Cache the handle for immediate resolution of future requests
+    ansiTerminalHandleRef.current = handle
+
+    // Resolve any pending request (use first pending key since there's one shared terminal)
+    if (handle) {
+      for (const [key, resolver] of pendingAnsiRequestsRef.current.entries()) {
+        resolver(handle)
+        pendingAnsiRequestsRef.current.delete(key)
+      }
+    }
+  }, [])
+
+  // Register a handler to be called when an ANSI tab is closed from the UI
+  const registerAnsiCloseHandler = useCallback((ansiId: string, handler: () => void) => {
+    ansiCloseHandlersRef.current.set(ansiId, handler)
+  }, [])
+
+  // Unregister an ANSI close handler
+  const unregisterAnsiCloseHandler = useCallback((ansiId: string) => {
+    ansiCloseHandlersRef.current.delete(ansiId)
+  }, [])
 
   // Editor extensions (diagnostics + hover documentation)
   const { handleEditorReady: handleEditorReadyWithPath } = useEditorExtensions({
@@ -525,8 +594,11 @@ function IDELayoutInner({
     registerCanvasStepHandler,
     unregisterCanvasExecutionHandlers,
     updateCanvasControlState,
-    // ANSI tab callback
+    // ANSI terminal callbacks
     onRequestAnsiTab: handleRequestAnsiTab,
+    onCloseAnsiTab: handleCloseAnsiTab,
+    registerAnsiCloseHandler,
+    unregisterAnsiCloseHandler,
   }), [
     handleRequestCanvasTab,
     handleCloseCanvasTab,
@@ -558,6 +630,9 @@ function IDELayoutInner({
     unregisterCanvasExecutionHandlers,
     updateCanvasControlState,
     handleRequestAnsiTab,
+    handleCloseAnsiTab,
+    registerAnsiCloseHandler,
+    unregisterAnsiCloseHandler,
   ])
 
   const combinedClassName = className
@@ -581,8 +656,14 @@ function IDELayoutInner({
       // Show confirmation dialog
       setPendingCloseTabPath(path)
     } else {
-      // If this is an ANSI tab, just close it (no controller to stop)
+      // If this is an ANSI tab, invoke the close handler to stop the ANSI process
       if (path.startsWith('ansi://')) {
+        const ansiId = path.replace('ansi://', '')
+        const closeHandler = ansiCloseHandlersRef.current.get(ansiId)
+        if (closeHandler) {
+          closeHandler()
+          // Handler will clean itself up via unregisterAnsiCloseHandler
+        }
         closeTab(path)
         return
       }
@@ -763,6 +844,7 @@ function IDELayoutInner({
                             onSelectTab={selectTab}
                             onCloseTab={handleCloseTab}
                             isActive={activeTabType === 'ansi'}
+                            onTerminalReady={handleAnsiTerminalReady}
                           />
                         </div>
                       )}
