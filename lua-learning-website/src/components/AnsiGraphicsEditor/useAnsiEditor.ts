@@ -71,34 +71,20 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     setCanRedo(false)
   }, [])
 
-  const pushSnapshotRef = useRef(pushSnapshot)
-  pushSnapshotRef.current = pushSnapshot
-
-  const undo = useCallback(() => {
-    const stack = undoStackRef.current
-    if (stack.length === 0) return
-    redoStackRef.current.push(cloneGrid(gridRef.current))
-    const prev = stack.pop()!
-    gridRef.current = prev
-    setGrid(prev)
+  const restoreSnapshot = useCallback((from: AnsiGrid[], to: AnsiGrid[]) => {
+    if (from.length === 0) return
+    to.push(cloneGrid(gridRef.current))
+    const snapshot = from.pop()!
+    gridRef.current = snapshot
+    setGrid(snapshot)
     setIsDirty(true)
-    setCanUndo(stack.length > 0)
-    setCanRedo(true)
-    if (handleRef.current) renderFullGrid(handleRef.current, prev)
+    setCanUndo(undoStackRef.current.length > 0)
+    setCanRedo(redoStackRef.current.length > 0)
+    if (handleRef.current) renderFullGrid(handleRef.current, snapshot)
   }, [])
 
-  const redo = useCallback(() => {
-    const stack = redoStackRef.current
-    if (stack.length === 0) return
-    undoStackRef.current.push(cloneGrid(gridRef.current))
-    const next = stack.pop()!
-    gridRef.current = next
-    setGrid(next)
-    setIsDirty(true)
-    setCanUndo(true)
-    setCanRedo(stack.length > 0)
-    if (handleRef.current) renderFullGrid(handleRef.current, next)
-  }, [])
+  const undo = useCallback(() => restoreSnapshot(undoStackRef.current, redoStackRef.current), [restoreSnapshot])
+  const redo = useCallback(() => restoreSnapshot(redoStackRef.current, undoStackRef.current), [restoreSnapshot])
 
   const setBrushFg = useCallback((color: RGBColor) => setBrush(prev => ({ ...prev, fg: color })), [])
   const setBrushBg = useCallback((color: RGBColor) => setBrush(prev => ({ ...prev, bg: color })), [])
@@ -239,7 +225,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       const cell = getCellHalfFromMouse(e, container)
       switch (brushRef.current.tool) {
         case 'pencil': {
-          pushSnapshotRef.current()
+          pushSnapshot()
           paintingRef.current = true
           lastCellRef.current = null
           if (!cell) return
@@ -249,7 +235,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         }
         case 'line': {
           if (!cell) return
-          pushSnapshotRef.current()
+          pushSnapshot()
           lineStartRef.current = cell
           previewCellsRef.current.clear()
           renderLinePreview(cell)
@@ -310,7 +296,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       container.removeEventListener('mouseleave', onMouseLeave)
       document.removeEventListener('mouseup', onDocumentMouseUp)
     }
-  }, [paintCell, paintPixel, applyCell])
+  }, [paintCell, paintPixel, applyCell, pushSnapshot])
 
   const markClean = useCallback(() => setIsDirty(false), [])
   const openSaveDialog = useCallback(() => setIsSaveDialogOpen(true), [])

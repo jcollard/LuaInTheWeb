@@ -1,5 +1,5 @@
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
-import type { AnsiCell, AnsiGrid, BrushMode, RGBColor } from './types'
+import type { AnsiCell, AnsiGrid, BrushSettings, RGBColor } from './types'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, HALF_BLOCK } from './types'
 import { bresenhamLine } from './lineAlgorithm'
 
@@ -60,12 +60,7 @@ export function computePixelCell(existingCell: AnsiCell, paintColor: RGBColor, i
   }
 }
 
-export interface LineBrush {
-  char: string
-  fg: RGBColor
-  bg: RGBColor
-  mode: BrushMode
-}
+export type LineBrush = Omit<BrushSettings, 'tool'>
 
 export interface CellHalf {
   row: number
