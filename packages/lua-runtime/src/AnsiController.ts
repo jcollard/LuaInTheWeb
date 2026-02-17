@@ -287,26 +287,32 @@ export class AnsiController {
   private static readonly ROWS = 25
 
   /**
-   * Get the mouse column in 1-based cell coordinates, clamped to 1–COLS.
+   * Get the container's bounding rect, or null if unavailable or zero-sized.
+   */
+  private getContainerRect(): DOMRect | null {
+    if (!this.handle) return null
+    const rect = this.handle.container.getBoundingClientRect()
+    if (rect.width === 0 || rect.height === 0) return null
+    return rect
+  }
+
+  /**
+   * Get the mouse column in 1-based cell coordinates, clamped to 1-COLS.
    */
   getMouseCol(): number {
-    if (!this.handle) return 0
-    const rect = this.handle.container.getBoundingClientRect()
-    if (rect.width === 0) return 0
-    const mouseX = this.inputAPI.getMouseX()
-    const col = Math.floor(mouseX / rect.width * AnsiController.COLS) + 1
+    const rect = this.getContainerRect()
+    if (!rect) return 0
+    const col = Math.floor(this.inputAPI.getMouseX() / rect.width * AnsiController.COLS) + 1
     return Math.max(1, Math.min(AnsiController.COLS, col))
   }
 
   /**
-   * Get the mouse row in 1-based cell coordinates, clamped to 1–ROWS.
+   * Get the mouse row in 1-based cell coordinates, clamped to 1-ROWS.
    */
   getMouseRow(): number {
-    if (!this.handle) return 0
-    const rect = this.handle.container.getBoundingClientRect()
-    if (rect.height === 0) return 0
-    const mouseY = this.inputAPI.getMouseY()
-    const row = Math.floor(mouseY / rect.height * AnsiController.ROWS) + 1
+    const rect = this.getContainerRect()
+    if (!rect) return 0
+    const row = Math.floor(this.inputAPI.getMouseY() / rect.height * AnsiController.ROWS) + 1
     return Math.max(1, Math.min(AnsiController.ROWS, row))
   }
 
@@ -315,11 +321,9 @@ export class AnsiController {
    * Useful for half-block rendering at effective 80x50 resolution.
    */
   isMouseTopHalf(): boolean {
-    if (!this.handle) return false
-    const rect = this.handle.container.getBoundingClientRect()
-    if (rect.height === 0) return false
-    const mouseY = this.inputAPI.getMouseY()
-    const cellFraction = (mouseY / rect.height * AnsiController.ROWS) % 1
+    const rect = this.getContainerRect()
+    if (!rect) return false
+    const cellFraction = (this.inputAPI.getMouseY() / rect.height * AnsiController.ROWS) % 1
     return cellFraction < 0.5
   }
 
@@ -327,10 +331,9 @@ export class AnsiController {
    * Get the raw unscaled pixel X coordinate.
    */
   getMouseX(): number {
-    if (!this.handle) return 0
-    const rect = this.handle.container.getBoundingClientRect()
-    if (rect.width === 0) return 0
-    const scale = rect.width / this.handle.container.scrollWidth
+    const rect = this.getContainerRect()
+    if (!rect) return 0
+    const scale = rect.width / this.handle!.container.scrollWidth
     return this.inputAPI.getMouseX() / scale
   }
 
@@ -338,10 +341,9 @@ export class AnsiController {
    * Get the raw unscaled pixel Y coordinate.
    */
   getMouseY(): number {
-    if (!this.handle) return 0
-    const rect = this.handle.container.getBoundingClientRect()
-    if (rect.height === 0) return 0
-    const scale = rect.height / this.handle.container.scrollHeight
+    const rect = this.getContainerRect()
+    if (!rect) return 0
+    const scale = rect.height / this.handle!.container.scrollHeight
     return this.inputAPI.getMouseY() / scale
   }
 

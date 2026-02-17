@@ -121,3 +121,18 @@
 .clearButton:hover {
   background-color: var(--theme-bg-hover);
 }
+
+/* Save As button */
+.saveButton {
+  padding: 4px 12px;
+  font-size: 12px;
+  background-color: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+  border: 1px solid var(--theme-border);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.saveButton:hover {
+  background-color: var(--theme-bg-hover);
+}

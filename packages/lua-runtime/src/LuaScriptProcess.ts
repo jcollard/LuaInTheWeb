@@ -114,23 +114,6 @@ export class LuaScriptProcess implements IProcess {
   stop(): void {
     if (!this.running) return
 
-    this.running = false
-
-    // Close all open file handles (flushes pending writes)
-    this.fileOpsHandler?.closeAll()
-
-    // Stop any running canvas first
-    if (this.canvasController?.isActive()) {
-      this.canvasController.stop()
-    }
-    this.canvasController = null
-
-    // Stop any running ANSI terminal
-    if (this.ansiController?.isActive()) {
-      this.ansiController.stop()
-    }
-    this.ansiController = null
-
     // Request stop from any running Lua code via debug hook
     // This sets a flag that the debug hook checks periodically
     if (this.engine) {
@@ -147,11 +130,7 @@ export class LuaScriptProcess implements IProcess {
     }
     this.inputQueue = []
 
-    const engineToClose = this.engine
-    this.engine = null
-    LuaEngineFactory.closeDeferred(engineToClose)
-
-    this.onExit(0)
+    this.cleanup(0)
   }
 
   /**
@@ -169,11 +148,9 @@ export class LuaScriptProcess implements IProcess {
     if (!this.running) return
 
     // If there's a pending io.read(), resolve it
-    if (this.inputQueue.length > 0) {
-      const pending = this.inputQueue.shift()
-      if (pending) {
-        pending.resolve(input)
-      }
+    const pending = this.inputQueue.shift()
+    if (pending) {
+      pending.resolve(input)
     }
   }
 
@@ -352,6 +329,14 @@ __clear_execution_hook()
    * Exit the process with the given code.
    */
   private exitWithCode(code: number): void {
+    this.cleanup(code)
+  }
+
+  /**
+   * Shared cleanup for both stop() and exitWithCode().
+   * Tears down controllers, closes file handles, and disposes the engine.
+   */
+  private cleanup(exitCode: number): void {
     this.running = false
 
     // Close all open file handles (flushes pending writes)
@@ -373,7 +358,7 @@ __clear_execution_hook()
     this.engine = null
     LuaEngineFactory.closeDeferred(engineToClose)
 
-    this.onExit(code)
+    this.onExit(exitCode)
   }
 
   /**

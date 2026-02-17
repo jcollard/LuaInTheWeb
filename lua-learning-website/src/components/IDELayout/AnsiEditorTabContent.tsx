@@ -4,9 +4,10 @@ import styles from './IDELayout.module.css'
 
 export interface AnsiEditorTabContentProps {
   tabBarProps?: TabBarProps
+  filePath?: string
 }
 
-export function AnsiEditorTabContent({ tabBarProps }: AnsiEditorTabContentProps) {
+export function AnsiEditorTabContent({ tabBarProps, filePath }: AnsiEditorTabContentProps) {
   return (
     <div className={styles.canvasContainer}>
       {tabBarProps && (
@@ -34,7 +35,7 @@ export function AnsiEditorTabContent({ tabBarProps }: AnsiEditorTabContentProps)
           </div>
         </div>
       )}
-      <AnsiGraphicsEditor />
+      <AnsiGraphicsEditor key={filePath} filePath={filePath} />
     </div>
   )
 }

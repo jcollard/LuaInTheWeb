@@ -9,9 +9,11 @@ export interface AnsiEditorToolbarProps {
   onSetBg: (color: RGBColor) => void
   onSetChar: (char: string) => void
   onClear: () => void
+  onSave: () => void
+  onSaveAs: () => void
 }
 
-export function AnsiEditorToolbar({ brush, onSetFg, onSetBg, onSetChar, onClear }: AnsiEditorToolbarProps) {
+export function AnsiEditorToolbar({ brush, onSetFg, onSetBg, onSetChar, onClear, onSave, onSaveAs }: AnsiEditorToolbarProps) {
   const handleCharChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     if (val.length > 0) {
@@ -42,6 +44,22 @@ export function AnsiEditorToolbar({ brush, onSetFg, onSetBg, onSetChar, onClear 
         data-testid="clear-button"
       >
         Clear
+      </button>
+      <button
+        type="button"
+        className={styles.saveButton}
+        onClick={onSave}
+        data-testid="save-button"
+      >
+        Save
+      </button>
+      <button
+        type="button"
+        className={styles.saveButton}
+        onClick={onSaveAs}
+        data-testid="save-as-button"
+      >
+        Save As
       </button>
     </div>
   )

@@ -120,6 +120,7 @@ function IDELayoutInner({
     openCanvasTab,
     openAnsiTab,
     openAnsiEditorTab,
+    openAnsiEditorFile,
     makeTabPermanent,
     pinTab,
     unpinTab,
@@ -692,7 +693,9 @@ function IDELayoutInner({
   // Routes to appropriate viewer based on file type
   const handleRequestOpenFile = useCallback((filePath: string) => {
     const lowerPath = filePath.toLowerCase()
-    if (lowerPath.endsWith('.md')) {
+    if (lowerPath.endsWith('.ansi.lua')) {
+      openAnsiEditorFile(filePath)
+    } else if (lowerPath.endsWith('.md')) {
       openMarkdownPreview(filePath)
     } else if (
       lowerPath.endsWith('.png') || lowerPath.endsWith('.jpg') ||
@@ -711,7 +714,7 @@ function IDELayoutInner({
     } else {
       openFile(filePath)
     }
-  }, [openFile, openMarkdownPreview, openBinaryViewer])
+  }, [openFile, openAnsiEditorFile, openMarkdownPreview, openBinaryViewer])
 
   // Format the current code
   const handleFormat = useCallback(() => {
@@ -736,7 +739,7 @@ function IDELayoutInner({
     handleCreateFile, handleCreateFolder, renameFile, renameFolder,
     deleteFile, deleteFolder, openFile, openPreviewFile, moveFile, copyFile,
     clearPendingNewFile, clearPendingNewFolder, openMarkdownPreview, openMarkdownEdit: openFile,
-    makeTabPermanent, openBinaryViewer, handleCdToLocation, uploadFiles, uploadFolder, workspaces, pendingWorkspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
+    makeTabPermanent, openBinaryViewer, openAnsiEditorFile, handleCdToLocation, uploadFiles, uploadFolder, workspaces, pendingWorkspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
     addVirtualWorkspace, handleAddLocalWorkspace, handleRemoveWorkspace, refreshWorkspace,
     refreshFileTree, supportsRefresh, handleReconnectWorkspace, handleDisconnectWorkspace,
     handleRenameWorkspace, isFolderAlreadyMounted, getUniqueWorkspaceName,
@@ -828,7 +831,7 @@ function IDELayoutInner({
                       )}
                       {/* ANSI Graphics Editor - shown when ansi-editor tab is active */}
                       {hasAnsiEditorTabs && activeTabType === 'ansi-editor' && (
-                        <AnsiEditorTabContent tabBarProps={tabBarProps} />
+                        <AnsiEditorTabContent tabBarProps={tabBarProps} filePath={activeTab ?? undefined} />
                       )}
                       {/* Markdown preview - shown when markdown tab is active */}
                       {/* Note: Read directly from filesystem since tabEditorManager only tracks file tabs */}

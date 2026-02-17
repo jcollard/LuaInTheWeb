@@ -29,6 +29,8 @@ export interface ExplorerPropsParams {
   makeTabPermanent: (path: string) => void
   // Binary file handler
   openBinaryViewer: (path: string) => void
+  // ANSI art file handler
+  openAnsiEditorFile: (path: string) => void
   // Shell integration
   handleCdToLocation?: (path: string) => void
   // File upload
@@ -59,10 +61,19 @@ function isMarkdownFile(path: string): boolean {
   return path.toLowerCase().endsWith('.md')
 }
 
+/**
+ * Check if a path is an ANSI art file (.ansi.lua)
+ */
+function isAnsiArtFile(path: string): boolean {
+  return path.toLowerCase().endsWith('.ansi.lua')
+}
+
 export function createExplorerProps(params: ExplorerPropsParams) {
   // Smart file opener that routes to appropriate viewer based on file type
   const smartOpenPreviewFile = (path: string) => {
-    if (isMarkdownFile(path)) {
+    if (isAnsiArtFile(path)) {
+      params.openAnsiEditorFile(path)
+    } else if (isMarkdownFile(path)) {
       params.openMarkdownPreview(path)
     } else if (isBinaryExtension(path)) {
       params.openBinaryViewer(path)
@@ -73,9 +84,12 @@ export function createExplorerProps(params: ExplorerPropsParams) {
 
   // Smart file opener for double-click
   // For markdown/binary files: make the preview tab permanent (keep as preview, don't edit)
+  // For ANSI art files: open in editor (same as single-click since they're always permanent)
   // For other files: open for editing
   const smartOpenFile = (path: string) => {
-    if (isMarkdownFile(path) || isBinaryExtension(path)) {
+    if (isAnsiArtFile(path)) {
+      params.openAnsiEditorFile(path)
+    } else if (isMarkdownFile(path) || isBinaryExtension(path)) {
       params.makeTabPermanent(path)
     } else {
       params.openFile(path)

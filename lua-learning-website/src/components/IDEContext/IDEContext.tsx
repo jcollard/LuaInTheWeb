@@ -170,6 +170,22 @@ export function IDEContextProvider({ children, initialCode: _initialCode = '', f
     tabBar.openAnsiEditorTab()
   }, [tabBar])
 
+  const updateAnsiEditorTabPath = useCallback((oldPath: string, newPath: string) => {
+    tabBar.renameTab(oldPath, newPath, getFileName(newPath))
+  }, [tabBar])
+
+  const openAnsiEditorFile = useCallback((path: string) => {
+    const existingTab = tabBar.tabs.find(t => t.path === path)
+    if (existingTab) {
+      tabBar.selectTab(path)
+      return
+    }
+    const content = filesystem.readFile(path)
+    if (content !== null) {
+      tabBar.openTab(path, getFileName(path), 'ansi-editor')
+    }
+  }, [filesystem, tabBar])
+
   const openMarkdownPreview = useCallback((path: string) => {
     const existingTab = tabBar.tabs.find(t => t.path === path)
     if (existingTab) {
@@ -367,7 +383,7 @@ export function IDEContextProvider({ children, initialCode: _initialCode = '', f
     terminalVisible, toggleTerminal, sidebarVisible, toggleSidebar,
     fileTree, refreshFileTree, handleShellFileMove,
     createFile, createFolder, deleteFile, deleteFolder, renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, openBinaryViewer, saveFile,
-    tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, openAnsiTab, openAnsiEditorTab, makeTabPermanent,
+    tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, openAnsiTab, openAnsiEditorTab, openAnsiEditorFile, updateAnsiEditorTabPath, makeTabPermanent,
     pinTab, unpinTab, reorderTab, closeToRight, closeOthers,
     toasts, showError, dismissToast,
     pendingNewFilePath, generateUniqueFileName, createFileWithRename, clearPendingNewFile,
@@ -381,7 +397,7 @@ export function IDEContextProvider({ children, initialCode: _initialCode = '', f
     engine, code, setCode, fileName, isDirty,
     activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
     fileTree, refreshFileTree, handleShellFileMove, createFile, createFolder, deleteFile, deleteFolder,
-    renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, openBinaryViewer, saveFile, tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, openAnsiTab, openAnsiEditorTab, makeTabPermanent,
+    renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, openBinaryViewer, saveFile, tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, openAnsiTab, openAnsiEditorTab, openAnsiEditorFile, updateAnsiEditorTabPath, makeTabPermanent,
     pinTab, unpinTab, reorderTab, closeToRight, closeOthers,
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,

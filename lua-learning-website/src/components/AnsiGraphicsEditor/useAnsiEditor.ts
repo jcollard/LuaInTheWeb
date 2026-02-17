@@ -46,18 +46,27 @@ export interface UseAnsiEditorReturn {
   setBrushChar: (char: string) => void
   clearGrid: () => void
   isDirty: boolean
+  markClean: () => void
   onTerminalReady: (handle: AnsiTerminalHandle | null) => void
   cursorRef: React.RefObject<HTMLDivElement | null>
+  isSaveDialogOpen: boolean
+  openSaveDialog: () => void
+  closeSaveDialog: () => void
 }
 
-export function useAnsiEditor(): UseAnsiEditorReturn {
-  const [grid, setGrid] = useState<AnsiGrid>(createEmptyGrid)
+export interface UseAnsiEditorOptions {
+  initialGrid?: AnsiGrid
+}
+
+export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorReturn {
+  const [grid, setGrid] = useState<AnsiGrid>(() => options?.initialGrid ?? createEmptyGrid())
   const [brush, setBrush] = useState<BrushSettings>({
     char: '#',
     fg: DEFAULT_FG,
     bg: DEFAULT_BG,
   })
   const [isDirty, setIsDirty] = useState(false)
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
 
   const handleRef = useRef<AnsiTerminalHandle | null>(null)
   const gridRef = useRef(grid)
@@ -182,6 +191,11 @@ export function useAnsiEditor(): UseAnsiEditorReturn {
     }
   }, [paintCell])
 
+  const markClean = useCallback(() => setIsDirty(false), [])
+
+  const openSaveDialog = useCallback(() => setIsSaveDialogOpen(true), [])
+  const closeSaveDialog = useCallback(() => setIsSaveDialogOpen(false), [])
+
   const onTerminalReady = useCallback((handle: AnsiTerminalHandle | null) => {
     // Clean up previous listeners before attaching new ones
     cleanupRef.current?.()
@@ -202,7 +216,11 @@ export function useAnsiEditor(): UseAnsiEditorReturn {
     setBrushChar,
     clearGrid,
     isDirty,
+    markClean,
     onTerminalReady,
     cursorRef,
+    isSaveDialogOpen,
+    openSaveDialog,
+    closeSaveDialog,
   }
 }

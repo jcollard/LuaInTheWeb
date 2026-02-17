@@ -49,7 +49,7 @@ describe('ColorPalette', () => {
 
 describe('AnsiEditorToolbar', () => {
   const defaultBrush = { char: '#', fg: DEFAULT_FG as RGBColor, bg: DEFAULT_BG as RGBColor }
-  let handlers: Pick<AnsiEditorToolbarProps, 'onSetFg' | 'onSetBg' | 'onSetChar' | 'onClear'>
+  let handlers: Pick<AnsiEditorToolbarProps, 'onSetFg' | 'onSetBg' | 'onSetChar' | 'onClear' | 'onSave' | 'onSaveAs'>
 
   beforeEach(() => {
     handlers = {
@@ -57,6 +57,8 @@ describe('AnsiEditorToolbar', () => {
       onSetBg: vi.fn<(color: RGBColor) => void>(),
       onSetChar: vi.fn<(char: string) => void>(),
       onClear: vi.fn<() => void>(),
+      onSave: vi.fn<() => void>(),
+      onSaveAs: vi.fn<() => void>(),
     }
   })
 
@@ -90,5 +92,27 @@ describe('AnsiEditorToolbar', () => {
     render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
     fireEvent.click(screen.getByTestId('clear-button'))
     expect(handlers.onClear).toHaveBeenCalledOnce()
+  })
+
+  it('should render Save button', () => {
+    render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+    expect(screen.getByTestId('save-button')).toBeTruthy()
+  })
+
+  it('should call onSave when Save button is clicked', () => {
+    render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+    fireEvent.click(screen.getByTestId('save-button'))
+    expect(handlers.onSave).toHaveBeenCalledOnce()
+  })
+
+  it('should render Save As button', () => {
+    render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+    expect(screen.getByTestId('save-as-button')).toBeTruthy()
+  })
+
+  it('should call onSaveAs when Save As button is clicked', () => {
+    render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+    fireEvent.click(screen.getByTestId('save-as-button'))
+    expect(handlers.onSaveAs).toHaveBeenCalledOnce()
   })
 })

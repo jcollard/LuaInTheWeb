@@ -24,6 +24,7 @@
     "screenshots": "node scripts/capture-screenshots.js"
   },
   "dependencies": {
+    "@kilcekru/lua-table": "^1.1.2",
     "@lua-learning/export": "*",
     "@lua-learning/lua-runtime": "*",
     "@lua-learning/shell-core": "*",
