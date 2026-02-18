@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import type { RGBColor, PaletteEntry } from './types'
-import { simplifyPalette } from './colorUtils'
+import { simplifyPalette, rgbStyle } from './colorUtils'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface SimplifyPaletteModalProps {
@@ -59,7 +59,7 @@ export function SimplifyPaletteModal({ palette, scope, onApply, onClose }: Simpl
               <div
                 key={i}
                 className={styles.colorSwatch}
-                style={{ backgroundColor: `rgb(${entry.rgb[0]},${entry.rgb[1]},${entry.rgb[2]})` }}
+                style={{ backgroundColor: rgbStyle(entry.rgb) }}
                 title={entry.name}
               />
             ))}

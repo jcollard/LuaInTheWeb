@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import type { RGBColor, PaletteType, StaticPaletteType, Layer } from './types'
+import type { RGBColor, PaletteEntry, PaletteType, StaticPaletteType, Layer } from './types'
 import { PALETTES } from './types'
 import { rgbEqual } from './layerUtils'
-import { hsvToRgb, rgbToHsv, rgbToHex, hexToRgb, extractGridColors, extractAllLayerColors } from './colorUtils'
+import { hsvToRgb, rgbToHsv, rgbToHex, hexToRgb, rgbStyle, extractGridColors, extractAllLayerColors } from './colorUtils'
 import { SimplifyPaletteModal } from './SimplifyPaletteModal'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -34,6 +34,27 @@ const STATIC_GRID_CLASS: Record<StaticPaletteType, string> = {
   vga: styles.colorGridVga,
 }
 
+function isDynamicPalette(type: PaletteType): type is 'current' | 'layer' {
+  return type === 'current' || type === 'layer'
+}
+
+function resolvePalette(
+  type: PaletteType,
+  currentPalette: PaletteEntry[],
+  layerPalette: PaletteEntry[],
+): PaletteEntry[] {
+  if (type === 'current') return currentPalette
+  if (type === 'layer') return layerPalette
+  return PALETTES[type]
+}
+
+function resolveGridClass(type: PaletteType, paletteLength: number): string {
+  if (isDynamicPalette(type)) {
+    return paletteLength <= 64 ? styles.colorGridEga : styles.colorGridVga
+  }
+  return STATIC_GRID_CLASS[type]
+}
+
 function colorAtPosition(canvas: HTMLCanvasElement, hue: number, clientX: number, clientY: number): RGBColor {
   const rect = canvas.getBoundingClientRect()
   const x = clientX - rect.left
@@ -53,11 +74,16 @@ function drawSvGradient(canvas: HTMLCanvasElement | null, hue: number) {
     for (let y = 0; y < h; y++) {
       const s = x / (w - 1)
       const v = 1 - y / (h - 1)
-      const [r, g, b] = hsvToRgb(hue, s, v)
-      ctx.fillStyle = `rgb(${r},${g},${b})`
+      ctx.fillStyle = rgbStyle(hsvToRgb(hue, s, v))
       ctx.fillRect(x, y, 1, 1)
     }
   }
+}
+
+function hueFromCanvasY(canvas: HTMLCanvasElement, clientY: number): number {
+  const rect = canvas.getBoundingClientRect()
+  const y = clientY - rect.top
+  return Math.max(0, Math.min(360, (y / (canvas.height - 1)) * 360))
 }
 
 function drawHueBar(canvas: HTMLCanvasElement | null) {
@@ -67,8 +93,7 @@ function drawHueBar(canvas: HTMLCanvasElement | null) {
   const h = canvas.height
   for (let y = 0; y < h; y++) {
     const hueVal = (y / (h - 1)) * 360
-    const [r, g, b] = hsvToRgb(hueVal, 1, 1)
-    ctx.fillStyle = `rgb(${r},${g},${b})`
+    ctx.fillStyle = rgbStyle(hsvToRgb(hueVal, 1, 1))
     ctx.fillRect(0, y, canvas.width, 1)
   }
 }
@@ -82,19 +107,12 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplif
   const activeLayer = layers.find(l => l.id === activeLayerId)
   const layerPalette = useMemo(() => activeLayer ? extractGridColors(activeLayer.grid) : [], [activeLayer])
 
-  // Palette resolution (needed early for simplify logic)
-  const palette = paletteType === 'current' ? currentPalette
-    : paletteType === 'layer' ? layerPalette
-    : PALETTES[paletteType as StaticPaletteType]
-
-  const gridClass = paletteType === 'current' || paletteType === 'layer'
-    ? (palette.length <= 64 ? styles.colorGridEga : styles.colorGridVga)
-    : STATIC_GRID_CLASS[paletteType as StaticPaletteType]
+  const palette = resolvePalette(paletteType, currentPalette, layerPalette)
+  const gridClass = resolveGridClass(paletteType, palette.length)
 
   // Simplify palette state
   const [simplifyOpen, setSimplifyOpen] = useState(false)
-  const isDynamicTab = paletteType === 'current' || paletteType === 'layer'
-  const showSimplifyBtn = isDynamicTab && palette.length > 1
+  const showSimplifyBtn = isDynamicPalette(paletteType) && palette.length > 1
 
   // Inline picker state
   const [hue, setHue] = useState(0)
@@ -185,10 +203,7 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplif
 
   // --- Inline hue bar: mousedown + drag ---
   const handleHueMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = e.currentTarget
-    const rect = canvas.getBoundingClientRect()
-    const y = e.clientY - rect.top
-    setHue(Math.max(0, Math.min(360, (y / (canvas.height - 1)) * 360)))
+    setHue(hueFromCanvasY(e.currentTarget, e.clientY))
     setHueDragging(true)
   }, [])
 
@@ -197,9 +212,7 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplif
     const onMove = (e: MouseEvent) => {
       const canvas = hueCanvasRef.current
       if (!canvas) return
-      const rect = canvas.getBoundingClientRect()
-      const y = e.clientY - rect.top
-      setHue(Math.max(0, Math.min(360, (y / (canvas.height - 1)) * 360)))
+      setHue(hueFromCanvasY(canvas, e.clientY))
     }
     const onUp = () => setHueDragging(false)
     window.addEventListener('mousemove', onMove)
@@ -234,10 +247,7 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplif
 
   // --- Modal hue bar: mousedown + drag ---
   const handleModalHueMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = e.currentTarget
-    const rect = canvas.getBoundingClientRect()
-    const y = e.clientY - rect.top
-    setModalHue(Math.max(0, Math.min(360, (y / (canvas.height - 1)) * 360)))
+    setModalHue(hueFromCanvasY(e.currentTarget, e.clientY))
     setModalHueDragging(true)
   }, [])
 
@@ -246,9 +256,7 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplif
     const onMove = (e: MouseEvent) => {
       const canvas = modalHueRef.current
       if (!canvas) return
-      const rect = canvas.getBoundingClientRect()
-      const y = e.clientY - rect.top
-      setModalHue(Math.max(0, Math.min(360, (y / (canvas.height - 1)) * 360)))
+      setModalHue(hueFromCanvasY(canvas, e.clientY))
     }
     const onUp = () => setModalHueDragging(false)
     window.addEventListener('mousemove', onMove)
@@ -304,7 +312,7 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplif
         className={`${styles.colorGrid} ${gridClass}`}
         data-testid="color-grid"
       >
-        {palette.length === 0 && (paletteType === 'current' || paletteType === 'layer') ? (
+        {palette.length === 0 && isDynamicPalette(paletteType) ? (
           <div className={styles.emptyPalette} data-testid="empty-palette">No colors in use</div>
         ) : palette.map((entry, i) => {
           const isFg = rgbEqual(selectedFg, entry.rgb)
@@ -314,7 +322,7 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplif
               key={`${paletteType}-${i}`}
               type="button"
               className={`${styles.colorSwatch} ${isFg ? styles.swatchFgSelected : ''} ${isBg ? styles.swatchBgSelected : ''}`}
-              style={{ backgroundColor: `rgb(${entry.rgb[0]},${entry.rgb[1]},${entry.rgb[2]})` }}
+              style={{ backgroundColor: rgbStyle(entry.rgb) }}
               title={entry.name}
               aria-label={entry.name}
               onClick={() => onSetFg(entry.rgb)}
@@ -405,7 +413,7 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplif
         <button
           type="button"
           className={styles.fgBgButton}
-          style={{ backgroundColor: `rgb(${selectedFg[0]},${selectedFg[1]},${selectedFg[2]})` }}
+          style={{ backgroundColor: rgbStyle(selectedFg) }}
           onClick={() => openPicker('fg')}
           data-testid="fg-color-btn"
           title="Foreground color"
@@ -415,7 +423,7 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplif
         <button
           type="button"
           className={styles.fgBgButton}
-          style={{ backgroundColor: `rgb(${selectedBg[0]},${selectedBg[1]},${selectedBg[2]})` }}
+          style={{ backgroundColor: rgbStyle(selectedBg) }}
           onClick={() => openPicker('bg')}
           data-testid="bg-color-btn"
           title="Background color"

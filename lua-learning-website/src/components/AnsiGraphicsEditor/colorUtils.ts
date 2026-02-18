@@ -2,6 +2,16 @@ import type { RGBColor, AnsiGrid, Layer, PaletteEntry } from './types'
 import { TRANSPARENT_HALF } from './types'
 import { isDefaultCell, rgbEqual } from './layerUtils'
 
+/** Format an RGB color as a comma-separated key string (e.g. "255,0,128"). */
+export function rgbKey(color: RGBColor): string {
+  return `${color[0]},${color[1]},${color[2]}`
+}
+
+/** Format an RGB color as a CSS rgb() string (e.g. "rgb(255,0,128)"). */
+export function rgbStyle(color: RGBColor): string {
+  return `rgb(${color[0]},${color[1]},${color[2]})`
+}
+
 /** Convert HSV (h: 0-360, s: 0-1, v: 0-1) to RGB (each 0-255). */
 export function hsvToRgb(h: number, s: number, v: number): RGBColor {
   h = ((h % 360) + 360) % 360
@@ -60,39 +70,18 @@ export function hexToRgb(hex: string): RGBColor | null {
   ]
 }
 
-/** Extract all unique colors used in a single grid, sorted by hex. */
-export function extractGridColors(grid: AnsiGrid): PaletteEntry[] {
+/** Collect all unique non-default, non-transparent colors from the given grids, sorted by hex. */
+function collectUniqueColors(grids: AnsiGrid[]): PaletteEntry[] {
   const seen = new Set<string>()
   const entries: PaletteEntry[] = []
 
-  for (const row of grid) {
-    for (const cell of row) {
-      if (isDefaultCell(cell)) continue
-      for (const color of [cell.fg, cell.bg]) {
-        if (rgbEqual(color, TRANSPARENT_HALF)) continue
-        const key = `${color[0]},${color[1]},${color[2]}`
-        if (seen.has(key)) continue
-        seen.add(key)
-        entries.push({ name: rgbToHex(color), rgb: [...color] as RGBColor })
-      }
-    }
-  }
-
-  return entries.sort((a, b) => a.name.localeCompare(b.name))
-}
-
-/** Extract all unique colors from all layers, sorted by hex. */
-export function extractAllLayerColors(layers: Layer[]): PaletteEntry[] {
-  const seen = new Set<string>()
-  const entries: PaletteEntry[] = []
-
-  for (const layer of layers) {
-    for (const row of layer.grid) {
+  for (const grid of grids) {
+    for (const row of grid) {
       for (const cell of row) {
         if (isDefaultCell(cell)) continue
         for (const color of [cell.fg, cell.bg]) {
           if (rgbEqual(color, TRANSPARENT_HALF)) continue
-          const key = `${color[0]},${color[1]},${color[2]}`
+          const key = rgbKey(color)
           if (seen.has(key)) continue
           seen.add(key)
           entries.push({ name: rgbToHex(color), rgb: [...color] as RGBColor })
@@ -102,6 +91,16 @@ export function extractAllLayerColors(layers: Layer[]): PaletteEntry[] {
   }
 
   return entries.sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/** Extract all unique colors used in a single grid, sorted by hex. */
+export function extractGridColors(grid: AnsiGrid): PaletteEntry[] {
+  return collectUniqueColors([grid])
+}
+
+/** Extract all unique colors from all layers, sorted by hex. */
+export function extractAllLayerColors(layers: Layer[]): PaletteEntry[] {
+  return collectUniqueColors(layers.map(l => l.grid))
 }
 
 /** Squared Euclidean distance between two RGB colors. */
@@ -169,8 +168,7 @@ export function simplifyPalette(
     for (const origIdx of w.origIndices) {
       const orig = colors[origIdx].rgb
       if (!rgbEqual(orig, w.rgb)) {
-        const key = `${orig[0]},${orig[1]},${orig[2]}`
-        mapping.set(key, w.rgb)
+        mapping.set(rgbKey(orig), w.rgb)
       }
     }
   }
@@ -188,10 +186,8 @@ export function replaceColorsInGrid(
 ): AnsiGrid {
   return grid.map(row =>
     row.map(cell => {
-      const fgKey = `${cell.fg[0]},${cell.fg[1]},${cell.fg[2]}`
-      const bgKey = `${cell.bg[0]},${cell.bg[1]},${cell.bg[2]}`
-      const newFg = mapping.get(fgKey)
-      const newBg = mapping.get(bgKey)
+      const newFg = mapping.get(rgbKey(cell.fg))
+      const newBg = mapping.get(rgbKey(cell.bg))
       if (!newFg && !newBg) return cell
       return {
         char: cell.char,
