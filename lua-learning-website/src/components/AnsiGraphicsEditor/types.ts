@@ -93,6 +93,7 @@ export interface UseAnsiEditorReturn {
   moveLayerDown: (id: string) => void
   toggleVisibility: (id: string) => void
   importPngAsLayer: (file: File) => Promise<void>
+  simplifyColors: (mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => void
 }
 
 export interface UseAnsiEditorOptions {

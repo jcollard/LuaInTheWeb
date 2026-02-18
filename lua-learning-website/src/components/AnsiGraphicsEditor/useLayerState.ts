@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import type { AnsiCell, AnsiGrid, Layer, LayerState, RGBColor } from './types'
 import { createLayer, cloneLayerState, syncLayerIds } from './layerUtils'
+import { replaceColorsInGrid } from './colorUtils'
 
 export interface UseLayerStateReturn {
   layers: Layer[]
@@ -18,6 +19,7 @@ export interface UseLayerStateReturn {
   toggleVisibility: (id: string) => void
   applyToActiveLayer: (row: number, col: number, cell: AnsiCell) => void
   getActiveGrid: () => Layer['grid']
+  replaceColors: (mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => void
   getLayerState: () => LayerState
   restoreLayerState: (state: LayerState) => void
 }
@@ -118,6 +120,16 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     setLayers(newLayers)
   }, [])
 
+  const replaceColors = useCallback((mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => {
+    const activeId = activeLayerIdRef.current
+    const newLayers = layersRef.current.map(l => {
+      if (scope === 'layer' && l.id !== activeId) return l
+      return { ...l, grid: replaceColorsInGrid(l.grid, mapping) }
+    })
+    layersRef.current = newLayers
+    setLayers(newLayers)
+  }, [])
+
   const getActiveGrid = useCallback(() => {
     const activeId = activeLayerIdRef.current
     const layer = layersRef.current.find(l => l.id === activeId)
@@ -151,6 +163,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     moveLayerDown,
     toggleVisibility,
     applyToActiveLayer,
+    replaceColors,
     getActiveGrid,
     getLayerState,
     restoreLayerState,

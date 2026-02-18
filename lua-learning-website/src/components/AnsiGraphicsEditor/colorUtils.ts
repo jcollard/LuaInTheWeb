@@ -103,3 +103,101 @@ export function extractAllLayerColors(layers: Layer[]): PaletteEntry[] {
 
   return entries.sort((a, b) => a.name.localeCompare(b.name))
 }
+
+/** Squared Euclidean distance between two RGB colors. */
+function colorDistanceSq(a: RGBColor, b: RGBColor): number {
+  const dr = a[0] - b[0]
+  const dg = a[1] - b[1]
+  const db = a[2] - b[2]
+  return dr * dr + dg * dg + db * db
+}
+
+/**
+ * Reduce a palette to targetCount colors by iteratively merging closest pairs.
+ * Returns the reduced palette and a mapping from original "r,g,b" keys to new colors.
+ * Only changed colors appear in the mapping.
+ */
+export function simplifyPalette(
+  colors: PaletteEntry[],
+  targetCount: number,
+): { reduced: PaletteEntry[]; mapping: Map<string, RGBColor> } {
+  if (colors.length === 0) return { reduced: [], mapping: new Map() }
+  const target = Math.max(1, targetCount)
+  if (target >= colors.length) return { reduced: [...colors], mapping: new Map() }
+
+  // Working list: each entry tracks which original indices map to it
+  const working: { rgb: RGBColor; origIndices: number[] }[] = colors.map((c, i) => ({
+    rgb: [...c.rgb] as RGBColor,
+    origIndices: [i],
+  }))
+
+  while (working.length > target) {
+    // Find closest pair
+    let bestDist = Infinity
+    let bestI = 0
+    let bestJ = 1
+    for (let i = 0; i < working.length; i++) {
+      for (let j = i + 1; j < working.length; j++) {
+        const d = colorDistanceSq(working[i].rgb, working[j].rgb)
+        if (d < bestDist) {
+          bestDist = d
+          bestI = i
+          bestJ = j
+        }
+      }
+    }
+    // Merge: average the two colors
+    const a = working[bestI]
+    const b = working[bestJ]
+    const merged: RGBColor = [
+      Math.round((a.rgb[0] + b.rgb[0]) / 2),
+      Math.round((a.rgb[1] + b.rgb[1]) / 2),
+      Math.round((a.rgb[2] + b.rgb[2]) / 2),
+    ]
+    working[bestI] = { rgb: merged, origIndices: [...a.origIndices, ...b.origIndices] }
+    working.splice(bestJ, 1)
+  }
+
+  // Build reduced palette and mapping
+  const reduced: PaletteEntry[] = working.map(w => ({
+    name: rgbToHex(w.rgb),
+    rgb: w.rgb,
+  }))
+
+  const mapping = new Map<string, RGBColor>()
+  for (const w of working) {
+    for (const origIdx of w.origIndices) {
+      const orig = colors[origIdx].rgb
+      if (!rgbEqual(orig, w.rgb)) {
+        const key = `${orig[0]},${orig[1]},${orig[2]}`
+        mapping.set(key, w.rgb)
+      }
+    }
+  }
+
+  return { reduced, mapping }
+}
+
+/**
+ * Return a new grid with fg/bg colors replaced according to the mapping.
+ * Mapping keys are "r,g,b" strings.
+ */
+export function replaceColorsInGrid(
+  grid: AnsiGrid,
+  mapping: Map<string, RGBColor>,
+): AnsiGrid {
+  return grid.map(row =>
+    row.map(cell => {
+      const fgKey = `${cell.fg[0]},${cell.fg[1]},${cell.fg[2]}`
+      const bgKey = `${cell.bg[0]},${cell.bg[1]},${cell.bg[2]}`
+      const newFg = mapping.get(fgKey)
+      const newBg = mapping.get(bgKey)
+      if (!newFg && !newBg) return cell
+      return {
+        char: cell.char,
+        fg: newFg ? [...newFg] as RGBColor : [...cell.fg] as RGBColor,
+        bg: newBg ? [...newBg] as RGBColor : [...cell.bg] as RGBColor,
+      }
+    })
+  )
+}

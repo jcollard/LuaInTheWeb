@@ -39,6 +39,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     addLayer: rawAddLayer, addLayerWithGrid: rawAddLayerWithGrid, removeLayer: rawRemoveLayer,
     moveLayerUp: rawMoveLayerUp, moveLayerDown: rawMoveLayerDown,
     toggleVisibility: rawToggleVisibility,
+    replaceColors: rawReplaceColors,
   } = layerState
 
   const grid = useMemo(() => compositeGrid(layerState.layers), [layerState.layers])
@@ -150,6 +151,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     const name = file.name.replace(/\.\w+$/, '')
     withLayerUndo(() => rawAddLayerWithGrid(name, rgbaToAnsiGrid(px.rgba, px.width, px.height)))
   }, [withLayerUndo, rawAddLayerWithGrid])
+
+  const simplifyColors = useCallback((mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => withLayerUndo(() => rawReplaceColors(mapping, scope)), [withLayerUndo, rawReplaceColors])
 
   const attachMouseListeners = useCallback((container: HTMLElement) => {
     function positionCursor(row: number, col: number, isTopHalf?: boolean): void {
@@ -420,9 +423,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     }
   }, [paintCell, paintPixel, applyCell, pushSnapshot, layersRef, activeLayerIdRef, getActiveGrid])
 
-  const markClean = useCallback(() => setIsDirty(false), [])
-  const openSaveDialog = useCallback(() => setIsSaveDialogOpen(true), [])
-  const closeSaveDialog = useCallback(() => setIsSaveDialogOpen(false), [])
+  const markClean = useCallback(() => setIsDirty(false), []), openSaveDialog = useCallback(() => setIsSaveDialogOpen(true), []), closeSaveDialog = useCallback(() => setIsSaveDialogOpen(false), [])
 
   const onTerminalReady = useCallback((handle: AnsiTerminalHandle | null) => {
     cleanupRef.current?.()
@@ -442,6 +443,6 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     addLayer: addLayerWithUndo, removeLayer: removeLayerWithUndo,
     renameLayer: layerState.renameLayer, setActiveLayer: layerState.setActiveLayer,
     moveLayerUp: moveLayerUpWithUndo, moveLayerDown: moveLayerDownWithUndo,
-    toggleVisibility: toggleVisibilityWithUndo, importPngAsLayer,
+    toggleVisibility: toggleVisibilityWithUndo, importPngAsLayer, simplifyColors,
   }
 }

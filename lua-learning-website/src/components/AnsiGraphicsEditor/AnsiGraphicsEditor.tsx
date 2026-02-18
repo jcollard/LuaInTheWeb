@@ -59,6 +59,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     moveLayerDown,
     toggleVisibility,
     importPngAsLayer,
+    simplifyColors,
     selectionRef,
   } = useAnsiEditor({ initialLayerState })
 
@@ -140,6 +141,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
           selectedBg={brush.bg}
           onSetFg={setBrushFg}
           onSetBg={setBrushBg}
+          onSimplifyColors={simplifyColors}
           layers={layers}
           activeLayerId={activeLayerId}
         />

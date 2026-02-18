@@ -3,6 +3,7 @@ import type { RGBColor, PaletteType, StaticPaletteType, Layer } from './types'
 import { PALETTES } from './types'
 import { rgbEqual } from './layerUtils'
 import { hsvToRgb, rgbToHsv, rgbToHex, hexToRgb, extractGridColors, extractAllLayerColors } from './colorUtils'
+import { SimplifyPaletteModal } from './SimplifyPaletteModal'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface ColorPanelProps {
@@ -10,6 +11,7 @@ export interface ColorPanelProps {
   selectedBg: RGBColor
   onSetFg: (color: RGBColor) => void
   onSetBg: (color: RGBColor) => void
+  onSimplifyColors: (mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => void
   layers: Layer[]
   activeLayerId: string
 }
@@ -71,7 +73,7 @@ function drawHueBar(canvas: HTMLCanvasElement | null) {
   }
 }
 
-export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, layers, activeLayerId }: ColorPanelProps) {
+export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplifyColors, layers, activeLayerId }: ColorPanelProps) {
   const [paletteType, setPaletteType] = useState<PaletteType>('cga')
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null)
 
@@ -79,6 +81,20 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, layers, a
   const currentPalette = useMemo(() => extractAllLayerColors(layers), [layers])
   const activeLayer = layers.find(l => l.id === activeLayerId)
   const layerPalette = useMemo(() => activeLayer ? extractGridColors(activeLayer.grid) : [], [activeLayer])
+
+  // Palette resolution (needed early for simplify logic)
+  const palette = paletteType === 'current' ? currentPalette
+    : paletteType === 'layer' ? layerPalette
+    : PALETTES[paletteType as StaticPaletteType]
+
+  const gridClass = paletteType === 'current' || paletteType === 'layer'
+    ? (palette.length <= 64 ? styles.colorGridEga : styles.colorGridVga)
+    : STATIC_GRID_CLASS[paletteType as StaticPaletteType]
+
+  // Simplify palette state
+  const [simplifyOpen, setSimplifyOpen] = useState(false)
+  const isDynamicTab = paletteType === 'current' || paletteType === 'layer'
+  const showSimplifyBtn = isDynamicTab && palette.length > 1
 
   // Inline picker state
   const [hue, setHue] = useState(0)
@@ -245,14 +261,6 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, layers, a
     if (rgb) modalApply(rgb)
   }, [hexValue, modalApply])
 
-  const palette = paletteType === 'current' ? currentPalette
-    : paletteType === 'layer' ? layerPalette
-    : PALETTES[paletteType as StaticPaletteType]
-
-  const gridClass = paletteType === 'current' || paletteType === 'layer'
-    ? (palette.length <= 64 ? styles.colorGridEga : styles.colorGridVga)
-    : STATIC_GRID_CLASS[paletteType as StaticPaletteType]
-
   return (
     <div className={styles.colorPanel} data-testid="color-panel">
       <header className={styles.colorPanelHeader}>
@@ -272,6 +280,26 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, layers, a
           </button>
         ))}
       </div>
+      {showSimplifyBtn && (
+        <div className={styles.simplifyRow}>
+          <button
+            type="button"
+            className={styles.simplifyBtn}
+            onClick={() => setSimplifyOpen(true)}
+            data-testid="simplify-btn"
+          >
+            Simplify Palette
+          </button>
+        </div>
+      )}
+      {simplifyOpen && (
+        <SimplifyPaletteModal
+          palette={palette}
+          scope={paletteType as 'current' | 'layer'}
+          onApply={onSimplifyColors}
+          onClose={() => setSimplifyOpen(false)}
+        />
+      )}
       <div
         className={`${styles.colorGrid} ${gridClass}`}
         data-testid="color-grid"

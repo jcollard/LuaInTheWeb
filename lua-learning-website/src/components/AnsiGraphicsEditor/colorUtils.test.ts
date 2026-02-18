@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { hsvToRgb, rgbToHsv, rgbToHex, hexToRgb, extractGridColors, extractAllLayerColors } from './colorUtils'
+import { hsvToRgb, rgbToHsv, rgbToHex, hexToRgb, extractGridColors, extractAllLayerColors, simplifyPalette, replaceColorsInGrid } from './colorUtils'
 import { createLayer } from './layerUtils'
-import { DEFAULT_BG, TRANSPARENT_HALF, HALF_BLOCK } from './types'
-import type { RGBColor, Layer } from './types'
+import { DEFAULT_BG, DEFAULT_FG, TRANSPARENT_HALF, HALF_BLOCK } from './types'
+import type { RGBColor, Layer, PaletteEntry } from './types'
 
 describe('hsvToRgb', () => {
   it('converts pure red', () => {
@@ -236,5 +236,157 @@ describe('extractAllLayerColors', () => {
 
   it('returns empty array for empty layers array', () => {
     expect(extractAllLayerColors([])).toEqual([])
+  })
+})
+
+describe('simplifyPalette', () => {
+  it('returns original colors when targetCount >= colors.length', () => {
+    const colors: PaletteEntry[] = [
+      { name: '#ff0000', rgb: [255, 0, 0] },
+      { name: '#00ff00', rgb: [0, 255, 0] },
+    ]
+    const result = simplifyPalette(colors, 5)
+    expect(result.reduced).toHaveLength(2)
+    expect(result.mapping.size).toBe(0)
+  })
+
+  it('returns original colors when targetCount equals colors.length', () => {
+    const colors: PaletteEntry[] = [
+      { name: '#ff0000', rgb: [255, 0, 0] },
+      { name: '#00ff00', rgb: [0, 255, 0] },
+    ]
+    const result = simplifyPalette(colors, 2)
+    expect(result.reduced).toHaveLength(2)
+    expect(result.mapping.size).toBe(0)
+  })
+
+  it('reduces 4 colors to 2 by merging closest pairs', () => {
+    const colors: PaletteEntry[] = [
+      { name: '#ff0000', rgb: [255, 0, 0] },
+      { name: '#fe0000', rgb: [254, 0, 0] },
+      { name: '#0000ff', rgb: [0, 0, 255] },
+      { name: '#0000fe', rgb: [0, 0, 254] },
+    ]
+    const result = simplifyPalette(colors, 2)
+    expect(result.reduced).toHaveLength(2)
+    // The two reds should merge, the two blues should merge
+    expect(result.mapping.size).toBeGreaterThan(0)
+  })
+
+  it('mapping only contains colors that actually changed', () => {
+    const colors: PaletteEntry[] = [
+      { name: '#ff0000', rgb: [255, 0, 0] },
+      { name: '#fe0000', rgb: [254, 0, 0] },
+    ]
+    const result = simplifyPalette(colors, 1)
+    // Both originals should map to the merged average
+    for (const [, newColor] of result.mapping) {
+      expect(newColor).toHaveLength(3)
+      // The merged color should be close to 254-255
+      expect(newColor[0]).toBeGreaterThanOrEqual(254)
+    }
+  })
+
+  it('clamps targetCount to 1 when given 0', () => {
+    const colors: PaletteEntry[] = [
+      { name: '#ff0000', rgb: [255, 0, 0] },
+      { name: '#00ff00', rgb: [0, 255, 0] },
+    ]
+    const result = simplifyPalette(colors, 0)
+    expect(result.reduced).toHaveLength(1)
+  })
+
+  it('clamps targetCount to 1 when given negative', () => {
+    const colors: PaletteEntry[] = [
+      { name: '#ff0000', rgb: [255, 0, 0] },
+      { name: '#00ff00', rgb: [0, 255, 0] },
+    ]
+    const result = simplifyPalette(colors, -5)
+    expect(result.reduced).toHaveLength(1)
+  })
+
+  it('handles single color input', () => {
+    const colors: PaletteEntry[] = [
+      { name: '#ff0000', rgb: [255, 0, 0] },
+    ]
+    const result = simplifyPalette(colors, 1)
+    expect(result.reduced).toHaveLength(1)
+    expect(result.mapping.size).toBe(0)
+  })
+
+  it('handles empty input', () => {
+    const result = simplifyPalette([], 5)
+    expect(result.reduced).toHaveLength(0)
+    expect(result.mapping.size).toBe(0)
+  })
+
+  it('reduced palette entries have hex names', () => {
+    const colors: PaletteEntry[] = [
+      { name: '#ff0000', rgb: [255, 0, 0] },
+      { name: '#fe0000', rgb: [254, 0, 0] },
+    ]
+    const result = simplifyPalette(colors, 1)
+    for (const entry of result.reduced) {
+      expect(entry.name).toMatch(/^#[0-9a-f]{6}$/)
+    }
+  })
+})
+
+describe('replaceColorsInGrid', () => {
+  it('replaces matching fg colors', () => {
+    const layer = createLayer('test', 'test-replace-fg')
+    const red: RGBColor = [255, 0, 0]
+    const blue: RGBColor = [0, 0, 255]
+    layer.grid[0][0] = { char: 'A', fg: red, bg: DEFAULT_BG }
+    const mapping = new Map<string, RGBColor>([['255,0,0', blue]])
+    const result = replaceColorsInGrid(layer.grid, mapping)
+    expect(result[0][0].fg).toEqual(blue)
+  })
+
+  it('replaces matching bg colors', () => {
+    const layer = createLayer('test', 'test-replace-bg')
+    const red: RGBColor = [255, 0, 0]
+    const green: RGBColor = [0, 255, 0]
+    layer.grid[0][0] = { char: 'A', fg: DEFAULT_FG, bg: red }
+    const mapping = new Map<string, RGBColor>([['255,0,0', green]])
+    const result = replaceColorsInGrid(layer.grid, mapping)
+    expect(result[0][0].bg).toEqual(green)
+  })
+
+  it('leaves non-matching cells unchanged', () => {
+    const layer = createLayer('test', 'test-replace-nomatch')
+    const blue: RGBColor = [0, 0, 255]
+    const green: RGBColor = [0, 255, 0]
+    layer.grid[0][0] = { char: 'A', fg: blue, bg: DEFAULT_BG }
+    const mapping = new Map<string, RGBColor>([['255,0,0', green]])
+    const result = replaceColorsInGrid(layer.grid, mapping)
+    expect(result[0][0].fg).toEqual(blue)
+  })
+
+  it('returns a new grid (not the same reference)', () => {
+    const layer = createLayer('test', 'test-replace-ref')
+    const mapping = new Map<string, RGBColor>()
+    const result = replaceColorsInGrid(layer.grid, mapping)
+    expect(result).not.toBe(layer.grid)
+  })
+
+  it('handles empty mapping', () => {
+    const layer = createLayer('test', 'test-replace-empty')
+    const red: RGBColor = [255, 0, 0]
+    layer.grid[0][0] = { char: 'A', fg: red, bg: DEFAULT_BG }
+    const mapping = new Map<string, RGBColor>()
+    const result = replaceColorsInGrid(layer.grid, mapping)
+    expect(result[0][0].fg).toEqual(red)
+  })
+
+  it('deep-copies replaced RGB arrays', () => {
+    const layer = createLayer('test', 'test-replace-copy')
+    const red: RGBColor = [255, 0, 0]
+    const blue: RGBColor = [0, 0, 255]
+    layer.grid[0][0] = { char: 'A', fg: red, bg: DEFAULT_BG }
+    const mapping = new Map<string, RGBColor>([['255,0,0', blue]])
+    const result = replaceColorsInGrid(layer.grid, mapping)
+    expect(result[0][0].fg).not.toBe(blue)
+    expect(result[0][0].fg).toEqual(blue)
   })
 })
