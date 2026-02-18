@@ -83,6 +83,7 @@ export interface UseAnsiEditorReturn {
   moveLayerUp: (id: string) => void
   moveLayerDown: (id: string) => void
   toggleVisibility: (id: string) => void
+  importPngAsLayer: (file: File) => Promise<void>
 }
 
 export interface UseAnsiEditorOptions {

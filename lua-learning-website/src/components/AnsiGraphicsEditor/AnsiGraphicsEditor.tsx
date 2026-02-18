@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { AnsiTerminalPanel } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { useIDE } from '../IDEContext/useIDE'
@@ -57,7 +57,22 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     moveLayerUp,
     moveLayerDown,
     toggleVisibility,
+    importPngAsLayer,
   } = useAnsiEditor({ initialLayerState })
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleImportPngClick = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [])
+
+  const handleFileSelected = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      importPngAsLayer(file)
+    }
+    e.target.value = ''
+  }, [importPngAsLayer])
 
   const finishSaveAs = useCallback(async (savedPath: string) => {
     await fileSystem.flush()
@@ -113,6 +128,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
         onClear={clearGrid}
         onSave={handleSave}
         onSaveAs={openSaveDialog}
+        onImportPng={handleImportPngClick}
         onUndo={undo}
         onRedo={redo}
         canUndo={canUndo}
@@ -144,6 +160,14 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
         tree={fileTree}
         onSave={handleSaveAs}
         onCancel={closeSaveDialog}
+      />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png,image/*"
+        style={{ display: 'none' }}
+        onChange={handleFileSelected}
+        data-testid="png-file-input"
       />
       <ConfirmDialog
         isOpen={pendingSave !== null}

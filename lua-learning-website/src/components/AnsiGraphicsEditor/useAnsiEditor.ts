@@ -9,6 +9,7 @@ import {
 import type { CellHalf } from './gridUtils'
 import { compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState } from './layerUtils'
 import { useLayerState } from './useLayerState'
+import { loadPngPixels, rgbaToAnsiGrid } from './pngImport'
 
 export { computePixelCell, computeLineCells } from './gridUtils'
 
@@ -34,7 +35,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   // with undo snapshots below before exposing them as addLayer, removeLayer, etc.
   const {
     layersRef, activeLayerIdRef, applyToActiveLayer, getActiveGrid, restoreLayerState,
-    addLayer: rawAddLayer, removeLayer: rawRemoveLayer,
+    addLayer: rawAddLayer, addLayerWithGrid: rawAddLayerWithGrid, removeLayer: rawRemoveLayer,
     moveLayerUp: rawMoveLayerUp, moveLayerDown: rawMoveLayerDown,
     toggleVisibility: rawToggleVisibility,
   } = layerState
@@ -79,10 +80,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     setIsDirty(true)
     setCanUndo(undoStackRef.current.length > 0)
     setCanRedo(redoStackRef.current.length > 0)
-    if (handleRef.current) {
-      const composited = compositeGrid(snapshot.layers)
-      renderFullGrid(handleRef.current, composited)
-    }
+    if (handleRef.current) renderFullGrid(handleRef.current, compositeGrid(snapshot.layers))
   }, [layersRef, activeLayerIdRef, restoreLayerState])
 
   const undo = useCallback(() => restoreSnapshot(undoStackRef.current, redoStackRef.current), [restoreSnapshot])
@@ -97,17 +95,13 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const applyCell = useCallback((row: number, col: number, cell: AnsiCell) => {
     applyToActiveLayer(row, col, cell)
     setIsDirty(true)
-    if (handleRef.current) {
-      // layersRef is already updated synchronously by applyToActiveLayer
-      const display = compositeCell(layersRef.current, row, col)
-      writeCellToTerminal(handleRef.current, row, col, display)
-    }
+    // layersRef is already updated synchronously by applyToActiveLayer
+    if (handleRef.current) writeCellToTerminal(handleRef.current, row, col, compositeCell(layersRef.current, row, col))
   }, [applyToActiveLayer, layersRef])
 
   const paintPixel = useCallback((row: number, col: number, isTopHalf: boolean) => {
     if (!isInBounds(row, col)) return
-    const activeGrid = getActiveGrid()
-    applyCell(row, col, computePixelCell(activeGrid[row][col], brushRef.current.fg, isTopHalf))
+    applyCell(row, col, computePixelCell(getActiveGrid()[row][col], brushRef.current.fg, isTopHalf))
   }, [applyCell, getActiveGrid])
 
   const paintCell = useCallback((row: number, col: number) => {
@@ -120,10 +114,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     pushSnapshot()
     const emptyGrid = createEmptyGrid()
     const id = 'clear-bg-' + Date.now()
-    restoreLayerState({
-      layers: [{ id, name: 'Background', visible: true, grid: emptyGrid }],
-      activeLayerId: id,
-    })
+    restoreLayerState({ layers: [{ id, name: 'Background', visible: true, grid: emptyGrid }], activeLayerId: id })
     setIsDirty(false)
     if (handleRef.current) renderFullGrid(handleRef.current, emptyGrid)
   }, [pushSnapshot, restoreLayerState])
@@ -147,6 +138,12 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const moveLayerUpWithUndo = useCallback((id: string) => withLayerUndo(() => rawMoveLayerUp(id)), [withLayerUndo, rawMoveLayerUp])
   const moveLayerDownWithUndo = useCallback((id: string) => withLayerUndo(() => rawMoveLayerDown(id)), [withLayerUndo, rawMoveLayerDown])
   const toggleVisibilityWithUndo = useCallback((id: string) => withLayerUndo(() => rawToggleVisibility(id)), [withLayerUndo, rawToggleVisibility])
+
+  const importPngAsLayer = useCallback(async (file: File) => {
+    const px = await loadPngPixels(file)
+    const name = file.name.replace(/\.\w+$/, '')
+    withLayerUndo(() => rawAddLayerWithGrid(name, rgbaToAnsiGrid(px.rgba, px.width, px.height)))
+  }, [withLayerUndo, rawAddLayerWithGrid])
 
   const attachMouseListeners = useCallback((container: HTMLElement) => {
     function positionCursor(row: number, col: number, isTopHalf?: boolean): void {
@@ -430,8 +427,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     cleanupRef.current = null
     handleRef.current = handle
     if (handle) {
-      const composited = compositeGrid(layersRef.current)
-      renderFullGrid(handle, composited)
+      renderFullGrid(handle, compositeGrid(layersRef.current))
       cleanupRef.current = attachMouseListeners(handle.container)
     }
   }, [attachMouseListeners, layersRef])
@@ -444,6 +440,6 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     addLayer: addLayerWithUndo, removeLayer: removeLayerWithUndo,
     renameLayer: layerState.renameLayer, setActiveLayer: layerState.setActiveLayer,
     moveLayerUp: moveLayerUpWithUndo, moveLayerDown: moveLayerDownWithUndo,
-    toggleVisibility: toggleVisibilityWithUndo,
+    toggleVisibility: toggleVisibilityWithUndo, importPngAsLayer,
   }
 }

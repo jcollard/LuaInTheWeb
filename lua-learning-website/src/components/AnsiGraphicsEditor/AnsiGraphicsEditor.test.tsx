@@ -49,7 +49,7 @@ describe('ColorPalette', () => {
 
 describe('AnsiEditorToolbar', () => {
   const defaultBrush = { char: '#', fg: DEFAULT_FG as RGBColor, bg: DEFAULT_BG as RGBColor, mode: 'brush' as BrushMode, tool: 'pencil' as DrawTool }
-  let handlers: Pick<AnsiEditorToolbarProps, 'onSetFg' | 'onSetBg' | 'onSetChar' | 'onClear' | 'onSave' | 'onSaveAs' | 'onSetMode' | 'onSetTool' | 'onUndo' | 'onRedo' | 'canUndo' | 'canRedo'>
+  let handlers: Pick<AnsiEditorToolbarProps, 'onSetFg' | 'onSetBg' | 'onSetChar' | 'onClear' | 'onSave' | 'onSaveAs' | 'onImportPng' | 'onSetMode' | 'onSetTool' | 'onUndo' | 'onRedo' | 'canUndo' | 'canRedo'>
 
   beforeEach(() => {
     handlers = {
@@ -59,6 +59,7 @@ describe('AnsiEditorToolbar', () => {
       onClear: vi.fn<() => void>(),
       onSave: vi.fn<() => void>(),
       onSaveAs: vi.fn<() => void>(),
+      onImportPng: vi.fn<() => void>(),
       onSetMode: vi.fn<(mode: BrushMode) => void>(),
       onSetTool: vi.fn<(tool: DrawTool) => void>(),
       onUndo: vi.fn<() => void>(),

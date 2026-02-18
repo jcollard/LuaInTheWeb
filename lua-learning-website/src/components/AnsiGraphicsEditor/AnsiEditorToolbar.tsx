@@ -13,6 +13,7 @@ export interface AnsiEditorToolbarProps {
   onClear: () => void
   onSave: () => void
   onSaveAs: () => void
+  onImportPng: () => void
   onUndo: () => void
   onRedo: () => void
   canUndo: boolean
@@ -21,7 +22,7 @@ export interface AnsiEditorToolbarProps {
 
 export function AnsiEditorToolbar({
   brush, onSetFg, onSetBg, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
-  onUndo, onRedo, canUndo, canRedo,
+  onImportPng, onUndo, onRedo, canUndo, canRedo,
 }: AnsiEditorToolbarProps) {
   const isRectActive = brush.tool === 'rect-outline' || brush.tool === 'rect-filled'
 
@@ -163,6 +164,14 @@ export function AnsiEditorToolbar({
         data-testid="save-as-button"
       >
         Save As
+      </button>
+      <button
+        type="button"
+        className={styles.toolbarButton}
+        onClick={onImportPng}
+        data-testid="import-png-button"
+      >
+        Load PNG
       </button>
       <button
         type="button"

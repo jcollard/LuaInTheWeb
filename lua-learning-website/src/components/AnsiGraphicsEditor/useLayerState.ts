@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import type { AnsiCell, Layer, LayerState, RGBColor } from './types'
+import type { AnsiCell, AnsiGrid, Layer, LayerState, RGBColor } from './types'
 import { createLayer, cloneLayerState, syncLayerIds } from './layerUtils'
 
 export interface UseLayerStateReturn {
@@ -9,6 +9,7 @@ export interface UseLayerStateReturn {
   activeLayerIdRef: React.RefObject<string>
   activeLayer: Layer
   addLayer: () => void
+  addLayerWithGrid: (name: string, grid: AnsiGrid) => void
   removeLayer: (id: string) => void
   renameLayer: (id: string, name: string) => void
   setActiveLayer: (id: string) => void
@@ -45,6 +46,15 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
   const addLayer = useCallback(() => {
     layerCountRef.current++
     const layer = createLayer(`Layer ${layerCountRef.current}`)
+    setLayers(prev => [...prev, layer])
+    setActiveLayerId(layer.id)
+  }, [])
+
+  const addLayerWithGrid = useCallback((name: string, grid: AnsiGrid) => {
+    layerCountRef.current++
+    const layer = createLayer(`Layer ${layerCountRef.current}`)
+    layer.name = name
+    layer.grid = grid
     setLayers(prev => [...prev, layer])
     setActiveLayerId(layer.id)
   }, [])
@@ -133,6 +143,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     activeLayerIdRef,
     activeLayer,
     addLayer,
+    addLayerWithGrid,
     removeLayer,
     renameLayer,
     setActiveLayer,
