@@ -181,7 +181,77 @@
   filter: drop-shadow(0 0 1px black);
 }
 
-/* Custom color picker — pinned to bottom of panel */
+/* FG/BG color buttons — pinned to bottom of panel */
+.fgBgButtonSection {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border-top: 1px solid var(--theme-border);
+}
+
+.fgBgButton {
+  width: 100%;
+  padding: 6px 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  text-shadow:
+    -1px -1px 0 rgba(0, 0, 0, 0.7),
+     1px -1px 0 rgba(0, 0, 0, 0.7),
+    -1px  1px 0 rgba(0, 0, 0, 0.7),
+     1px  1px 0 rgba(0, 0, 0, 0.7);
+  border: 1px solid var(--theme-border);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.fgBgButton:hover {
+  border-color: var(--theme-text-primary);
+}
+
+/* Color picker popover (above FG/BG buttons) */
+.pickerBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+}
+
+.pickerPopover {
+  position: fixed;
+  z-index: 1000;
+  background-color: var(--theme-bg-secondary);
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+  padding: 8px;
+}
+
+.pickerModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--theme-text-primary);
+}
+
+.pickerModalClose {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--theme-text-secondary);
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.pickerModalClose:hover {
+  color: var(--theme-text-primary);
+}
+
+/* Custom color picker — always visible above FG/BG buttons */
 .customPickerSection {
   margin-top: auto;
   padding: 8px;
@@ -191,10 +261,10 @@
 .customPickerCanvases {
   display: flex;
   gap: 4px;
-  margin-bottom: 6px;
 }
 
 .svGradient {
+  flex: 1;
   cursor: crosshair;
   border: 1px solid var(--theme-border);
   border-radius: 2px;
@@ -215,8 +285,8 @@
 .hexInput {
   flex: 1;
   min-width: 0;
-  height: 22px;
-  font-size: 11px;
+  height: 24px;
+  font-size: 12px;
   font-family: monospace;
   background-color: var(--theme-bg-primary);
   color: var(--theme-text-primary);
@@ -231,8 +301,8 @@
 }
 
 .hexApplyBtn {
-  padding: 2px 6px;
-  font-size: 10px;
+  padding: 4px 10px;
+  font-size: 11px;
   font-weight: 600;
   background-color: var(--theme-bg-primary);
   color: var(--theme-text-primary);

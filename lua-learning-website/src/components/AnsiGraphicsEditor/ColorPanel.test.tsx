@@ -68,7 +68,6 @@ describe('ColorPanel', () => {
   })
 
   it('marks FG-selected swatch with data-fg-selected', () => {
-    // DEFAULT_FG is [170,170,170] = Light Gray, index 7
     render(<ColorPanel {...props} />)
     const grid = screen.getByTestId('color-grid')
     const swatches = grid.querySelectorAll('button')
@@ -77,7 +76,6 @@ describe('ColorPanel', () => {
   })
 
   it('marks BG-selected swatch with data-bg-selected', () => {
-    // DEFAULT_BG is [0,0,0] = Black, index 0
     render(<ColorPanel {...props} />)
     const grid = screen.getByTestId('color-grid')
     const swatches = grid.querySelectorAll('button')
@@ -115,7 +113,6 @@ describe('ColorPanel', () => {
   it('swatch has correct background color style', () => {
     render(<ColorPanel {...props} />)
     const grid = screen.getByTestId('color-grid')
-    // Second swatch is Blue [0,0,170]
     const blueSwatch = grid.querySelectorAll('button')[1]
     expect(blueSwatch.style.backgroundColor).toBe('rgb(0, 0, 170)')
   })
@@ -130,21 +127,6 @@ describe('ColorPanel', () => {
   it('VGA palette button is not active by default', () => {
     render(<ColorPanel {...props} />)
     expect(screen.getByTestId('palette-btn-vga').getAttribute('aria-pressed')).toBe('false')
-  })
-
-  it('does not call onSetBg with invalid hex', () => {
-    render(<ColorPanel {...props} />)
-    const hexInput = screen.getByTestId('hex-input') as HTMLInputElement
-    fireEvent.change(hexInput, { target: { value: 'xyz' } })
-    fireEvent.click(screen.getByTestId('apply-bg-btn'))
-    expect(props.onSetBg).not.toHaveBeenCalled()
-  })
-
-  it('hex input updates when selectedFg changes', () => {
-    const { rerender } = render(<ColorPanel {...props} />)
-    rerender(<ColorPanel {...props} selectedFg={[0, 0, 255]} />)
-    const hexInput = screen.getByTestId('hex-input') as HTMLInputElement
-    expect(hexInput.value).toBe('#0000ff')
   })
 
   it('clicking second swatch calls onSetFg with correct color', () => {
@@ -163,10 +145,9 @@ describe('ColorPanel', () => {
     expect(props.onSetBg).toHaveBeenCalledWith(CGA_PALETTE[1].rgb)
   })
 
-  it('non-selected swatch does not have swatchFgSelected or swatchBgSelected classes', () => {
+  it('non-selected swatch does not have data-fg-selected or data-bg-selected', () => {
     render(<ColorPanel {...props} />)
     const grid = screen.getByTestId('color-grid')
-    // Index 1 (Blue) is neither FG nor BG
     const swatch = grid.querySelectorAll('button')[1]
     expect(swatch.getAttribute('data-fg-selected')).toBeNull()
     expect(swatch.getAttribute('data-bg-selected')).toBeNull()
@@ -180,56 +161,134 @@ describe('ColorPanel', () => {
     expect(grid.querySelectorAll('button')).toHaveLength(16)
   })
 
-  describe('custom color picker', () => {
-    it('renders hex input', () => {
+  describe('FG/BG color buttons', () => {
+    it('renders FG button with current foreground color', () => {
       render(<ColorPanel {...props} />)
-      expect(screen.getByTestId('hex-input')).toBeTruthy()
+      const fgBtn = screen.getByTestId('fg-color-btn')
+      expect(fgBtn).toBeTruthy()
+      expect(fgBtn.style.backgroundColor).toBe('rgb(170, 170, 170)')
     })
 
-    it('renders FG and BG apply buttons', () => {
+    it('renders BG button with current background color', () => {
       render(<ColorPanel {...props} />)
-      expect(screen.getByTestId('apply-fg-btn')).toBeTruthy()
-      expect(screen.getByTestId('apply-bg-btn')).toBeTruthy()
+      const bgBtn = screen.getByTestId('bg-color-btn')
+      expect(bgBtn).toBeTruthy()
+      expect(bgBtn.style.backgroundColor).toBe('rgb(0, 0, 0)')
     })
 
-    it('FG apply button calls onSetFg with hex color', () => {
-      render(<ColorPanel {...props} />)
-      const hexInput = screen.getByTestId('hex-input') as HTMLInputElement
-      fireEvent.change(hexInput, { target: { value: '#ff0000' } })
-      fireEvent.click(screen.getByTestId('apply-fg-btn'))
-      expect(props.onSetFg).toHaveBeenCalledWith([255, 0, 0])
+    it('FG button updates color when selectedFg changes', () => {
+      const { rerender } = render(<ColorPanel {...props} />)
+      rerender(<ColorPanel {...props} selectedFg={[255, 0, 0]} />)
+      expect(screen.getByTestId('fg-color-btn').style.backgroundColor).toBe('rgb(255, 0, 0)')
     })
 
-    it('BG apply button calls onSetBg with hex color', () => {
+    it('BG button updates color when selectedBg changes', () => {
+      const { rerender } = render(<ColorPanel {...props} />)
+      rerender(<ColorPanel {...props} selectedBg={[0, 255, 0]} />)
+      expect(screen.getByTestId('bg-color-btn').style.backgroundColor).toBe('rgb(0, 255, 0)')
+    })
+  })
+
+  describe('color picker modal', () => {
+    it('does not show modal by default', () => {
       render(<ColorPanel {...props} />)
-      const hexInput = screen.getByTestId('hex-input') as HTMLInputElement
-      fireEvent.change(hexInput, { target: { value: '#00ff00' } })
-      fireEvent.click(screen.getByTestId('apply-bg-btn'))
-      expect(props.onSetBg).toHaveBeenCalledWith([0, 255, 0])
+      expect(screen.queryByTestId('color-picker-modal')).toBeNull()
     })
 
-    it('does not call onSetFg with invalid hex', () => {
+    it('opens modal when FG button is clicked', () => {
       render(<ColorPanel {...props} />)
-      const hexInput = screen.getByTestId('hex-input') as HTMLInputElement
-      fireEvent.change(hexInput, { target: { value: 'xyz' } })
-      fireEvent.click(screen.getByTestId('apply-fg-btn'))
-      expect(props.onSetFg).not.toHaveBeenCalled()
+      fireEvent.click(screen.getByTestId('fg-color-btn'))
+      expect(screen.getByTestId('color-picker-modal')).toBeTruthy()
     })
 
-    it('renders hue bar canvas', () => {
+    it('opens modal when BG button is clicked', () => {
       render(<ColorPanel {...props} />)
-      expect(screen.getByTestId('hue-bar')).toBeTruthy()
+      fireEvent.click(screen.getByTestId('bg-color-btn'))
+      expect(screen.getByTestId('color-picker-modal')).toBeTruthy()
     })
 
-    it('renders SV gradient canvas', () => {
+    it('shows "Foreground Color" title when opened via FG button', () => {
       render(<ColorPanel {...props} />)
-      expect(screen.getByTestId('sv-gradient')).toBeTruthy()
+      fireEvent.click(screen.getByTestId('fg-color-btn'))
+      expect(screen.getByText('Foreground Color')).toBeTruthy()
+    })
+
+    it('shows "Background Color" title when opened via BG button', () => {
+      render(<ColorPanel {...props} />)
+      fireEvent.click(screen.getByTestId('bg-color-btn'))
+      expect(screen.getByText('Background Color')).toBeTruthy()
+    })
+
+    it('closes modal when close button is clicked', () => {
+      render(<ColorPanel {...props} />)
+      fireEvent.click(screen.getByTestId('fg-color-btn'))
+      expect(screen.getByTestId('color-picker-modal')).toBeTruthy()
+      fireEvent.click(screen.getByTestId('picker-close-btn'))
+      expect(screen.queryByTestId('color-picker-modal')).toBeNull()
+    })
+
+    it('closes modal when clicking the backdrop', () => {
+      render(<ColorPanel {...props} />)
+      fireEvent.click(screen.getByTestId('fg-color-btn'))
+      expect(screen.getByTestId('color-picker-modal')).toBeTruthy()
+      fireEvent.click(screen.getByTestId('picker-backdrop'))
+      expect(screen.queryByTestId('color-picker-modal')).toBeNull()
+    })
+
+    it('renders SV gradient and hue bar inside modal', () => {
+      render(<ColorPanel {...props} />)
+      fireEvent.click(screen.getByTestId('fg-color-btn'))
+      expect(screen.getByTestId('modal-sv-gradient')).toBeTruthy()
+      expect(screen.getByTestId('modal-hue-bar')).toBeTruthy()
     })
 
     it('renders hex input pre-filled with current FG color', () => {
       render(<ColorPanel {...props} selectedFg={[255, 0, 0]} />)
+      fireEvent.click(screen.getByTestId('fg-color-btn'))
       const hexInput = screen.getByTestId('hex-input') as HTMLInputElement
       expect(hexInput.value).toBe('#ff0000')
+    })
+
+    it('renders hex input pre-filled with current BG color', () => {
+      render(<ColorPanel {...props} selectedBg={[0, 255, 0]} />)
+      fireEvent.click(screen.getByTestId('bg-color-btn'))
+      const hexInput = screen.getByTestId('hex-input') as HTMLInputElement
+      expect(hexInput.value).toBe('#00ff00')
+    })
+
+    it('apply button calls onSetFg when opened via FG', () => {
+      render(<ColorPanel {...props} />)
+      fireEvent.click(screen.getByTestId('fg-color-btn'))
+      const hexInput = screen.getByTestId('hex-input') as HTMLInputElement
+      fireEvent.change(hexInput, { target: { value: '#ff0000' } })
+      fireEvent.click(screen.getByTestId('hex-apply-btn'))
+      expect(props.onSetFg).toHaveBeenCalledWith([255, 0, 0])
+    })
+
+    it('apply button calls onSetBg when opened via BG', () => {
+      render(<ColorPanel {...props} />)
+      fireEvent.click(screen.getByTestId('bg-color-btn'))
+      const hexInput = screen.getByTestId('hex-input') as HTMLInputElement
+      fireEvent.change(hexInput, { target: { value: '#0000ff' } })
+      fireEvent.click(screen.getByTestId('hex-apply-btn'))
+      expect(props.onSetBg).toHaveBeenCalledWith([0, 0, 255])
+    })
+
+    it('does not apply invalid hex value', () => {
+      render(<ColorPanel {...props} />)
+      fireEvent.click(screen.getByTestId('fg-color-btn'))
+      const hexInput = screen.getByTestId('hex-input') as HTMLInputElement
+      fireEvent.change(hexInput, { target: { value: 'xyz' } })
+      fireEvent.click(screen.getByTestId('hex-apply-btn'))
+      expect(props.onSetFg).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('inline color picker', () => {
+    it('renders SV gradient and hue bar always visible', () => {
+      render(<ColorPanel {...props} />)
+      expect(screen.getByTestId('sv-gradient')).toBeTruthy()
+      expect(screen.getByTestId('hue-bar')).toBeTruthy()
     })
   })
 })
