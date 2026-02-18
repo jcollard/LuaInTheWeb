@@ -319,6 +319,26 @@ describe('AnsiEditorToolbar', () => {
     })
   })
 
+  describe('select tool', () => {
+    it('should render select button', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      expect(screen.getByTestId('tool-select')).toBeTruthy()
+    })
+
+    it('should call onSetTool with select when clicked', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      fireEvent.click(screen.getByTestId('tool-select'))
+      expect(handlers.onSetTool).toHaveBeenCalledWith('select')
+    })
+
+    it('should show select as active when brush.tool is select', () => {
+      const selectBrush = { ...defaultBrush, tool: 'select' as DrawTool }
+      render(<AnsiEditorToolbar brush={selectBrush} {...handlers} />)
+      expect(screen.getByTestId('tool-select').getAttribute('aria-pressed')).toBe('true')
+      expect(screen.getByTestId('tool-pencil').getAttribute('aria-pressed')).toBe('false')
+    })
+  })
+
   describe('flood fill tool', () => {
     it('should render flood fill button', () => {
       render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)

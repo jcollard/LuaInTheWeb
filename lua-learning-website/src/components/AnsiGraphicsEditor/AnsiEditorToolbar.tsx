@@ -92,6 +92,15 @@ export function AnsiEditorToolbar({
         >
           Fill
         </button>
+        <button
+          type="button"
+          className={`${styles.modeButton} ${brush.tool === 'select' ? styles.modeButtonActive : ''}`}
+          aria-pressed={brush.tool === 'select'}
+          onClick={() => onSetTool('select')}
+          data-testid="tool-select"
+        >
+          ⬚
+        </button>
       </div>
       <div className={styles.modeGroup}>
         <span className={styles.modeLabel}>Mode</span>

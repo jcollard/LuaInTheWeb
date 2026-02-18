@@ -58,6 +58,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     moveLayerDown,
     toggleVisibility,
     importPngAsLayer,
+    selectionRef,
   } = useAnsiEditor({ initialLayerState })
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -155,6 +156,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
       </div>
       <div ref={cursorRef} className={styles.cellCursor} />
       <div ref={dimensionRef} className={styles.dimensionLabel} />
+      <div ref={selectionRef} className={styles.selectionOverlay} />
       <SaveAsDialog
         isOpen={isSaveDialogOpen}
         tree={fileTree}

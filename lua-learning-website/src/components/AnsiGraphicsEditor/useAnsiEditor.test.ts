@@ -480,6 +480,148 @@ describe('mouse drag off canvas', () => {
     }
   })
 
+  describe('select tool', () => {
+    it('should not modify grid when selecting a region (mousedown + move + mouseup)', () => {
+      const { result } = renderHook(() => useAnsiEditor())
+      const container = createMockContainer()
+      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      act(() => result.current.onTerminalReady(handle))
+
+      // Paint some cells first with pencil
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
+      act(() => { document.dispatchEvent(mouseAt('mouseup', 0, 0)) })
+      expect(result.current.grid[0][0].char).toBe('#')
+
+      // Switch to select tool
+      act(() => result.current.setTool('select'))
+      const gridBefore = result.current.grid.map(row => row.map(cell => ({ ...cell })))
+
+      // Select a region: mousedown at (0,0), move to (1,1), mouseup
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
+      act(() => { container.dispatchEvent(mouseAt('mousemove', 1, 0)) })
+      act(() => { document.dispatchEvent(mouseAt('mouseup', 1, 0)) })
+
+      // Grid should be unchanged (selection only, no paint)
+      for (let r = 0; r < gridBefore.length; r++) {
+        for (let c = 0; c < gridBefore[r].length; c++) {
+          expect(result.current.grid[r][c].char).toBe(gridBefore[r][c].char)
+        }
+      }
+    })
+
+    it('should move cells when dragging inside selection', () => {
+      const { result } = renderHook(() => useAnsiEditor())
+      const container = createMockContainer()
+      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      act(() => result.current.onTerminalReady(handle))
+
+      // Paint cell at (0,0) with pencil
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
+      act(() => { document.dispatchEvent(mouseAt('mouseup', 0, 0)) })
+      expect(result.current.grid[0][0].char).toBe('#')
+
+      // Switch to select
+      act(() => result.current.setTool('select'))
+
+      // Select region (0,0) to (0,0)
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
+      act(() => { document.dispatchEvent(mouseAt('mouseup', 0, 0)) })
+
+      // Drag inside selection: mousedown at (0,0), move to (0,2), mouseup
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
+      act(() => { container.dispatchEvent(mouseAt('mousemove', 2, 0)) })
+      act(() => { document.dispatchEvent(mouseAt('mouseup', 2, 0)) })
+
+      // Grid should NOT be committed yet (still in 'selected' phase, just preview)
+      // Click outside to commit
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 5, 5)) })
+      act(() => { document.dispatchEvent(mouseAt('mouseup', 5, 5)) })
+
+      // Now the move should be committed: (0,0) cleared, (0,2) has '#'
+      expect(result.current.grid[0][0].char).toBe(' ')
+      expect(result.current.grid[0][2].char).toBe('#')
+    })
+
+    it('should not push undo when clicking outside without moving', () => {
+      const { result } = renderHook(() => useAnsiEditor())
+      const container = createMockContainer()
+      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      act(() => result.current.onTerminalReady(handle))
+      act(() => result.current.setTool('select'))
+
+      // Select region
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
+      act(() => { container.dispatchEvent(mouseAt('mousemove', 1, 0)) })
+      act(() => { document.dispatchEvent(mouseAt('mouseup', 1, 0)) })
+
+      const undoBefore = result.current.canUndo
+
+      // Click outside without having moved
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 5, 5)) })
+      act(() => { document.dispatchEvent(mouseAt('mouseup', 5, 5)) })
+
+      expect(result.current.canUndo).toBe(undoBefore)
+    })
+
+    it('should commit pending selection when changing tool', () => {
+      const { result } = renderHook(() => useAnsiEditor())
+      const container = createMockContainer()
+      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      act(() => result.current.onTerminalReady(handle))
+
+      // Paint cell at (0,0)
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
+      act(() => { document.dispatchEvent(mouseAt('mouseup', 0, 0)) })
+
+      act(() => result.current.setTool('select'))
+
+      // Select (0,0), drag to (0,2)
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
+      act(() => { document.dispatchEvent(mouseAt('mouseup', 0, 0)) })
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
+      act(() => { container.dispatchEvent(mouseAt('mousemove', 2, 0)) })
+      act(() => { document.dispatchEvent(mouseAt('mouseup', 2, 0)) })
+
+      // Change tool → should commit
+      act(() => result.current.setTool('pencil'))
+
+      expect(result.current.grid[0][0].char).toBe(' ')
+      expect(result.current.grid[0][2].char).toBe('#')
+    })
+
+    it('should undo after commit reverses the move', () => {
+      const { result } = renderHook(() => useAnsiEditor())
+      const container = createMockContainer()
+      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      act(() => result.current.onTerminalReady(handle))
+
+      // Paint cell at (0,0)
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
+      act(() => { document.dispatchEvent(mouseAt('mouseup', 0, 0)) })
+      expect(result.current.grid[0][0].char).toBe('#')
+
+      act(() => result.current.setTool('select'))
+
+      // Select (0,0), drag to (0,2), click outside to commit
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
+      act(() => { document.dispatchEvent(mouseAt('mouseup', 0, 0)) })
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
+      act(() => { container.dispatchEvent(mouseAt('mousemove', 2, 0)) })
+      act(() => { document.dispatchEvent(mouseAt('mouseup', 2, 0)) })
+      act(() => { container.dispatchEvent(mouseAt('mousedown', 5, 5)) })
+      act(() => { document.dispatchEvent(mouseAt('mouseup', 5, 5)) })
+
+      // After commit: (0,0) cleared, (0,2) has '#'
+      expect(result.current.grid[0][0].char).toBe(' ')
+      expect(result.current.grid[0][2].char).toBe('#')
+
+      // Undo should reverse the move
+      act(() => result.current.undo())
+      expect(result.current.grid[0][0].char).toBe('#')
+      expect(result.current.grid[0][2].char).toBe(' ')
+    })
+  })
+
   it('pencil: stops painting on mouseup outside canvas', () => {
     const { result } = renderHook(() => useAnsiEditor())
     const container = createMockContainer()

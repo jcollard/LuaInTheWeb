@@ -10,6 +10,7 @@ import type { CellHalf } from './gridUtils'
 import { compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState } from './layerUtils'
 import { useLayerState } from './useLayerState'
 import { loadPngPixels, rgbaToAnsiGrid } from './pngImport'
+import { createSelectionHandlers } from './selectionTool'
 
 export { computePixelCell, computeLineCells } from './gridUtils'
 
@@ -62,6 +63,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const lineStartRef = useRef<CellHalf | null>(null)
   const previewCellsRef = useRef<Map<string, AnsiCell>>(new Map())
   const cleanupRef = useRef<(() => void) | null>(null)
+  const selectionRef = useRef<HTMLDivElement | null>(null)
+  const commitPendingSelectionRef = useRef<(() => void) | null>(null)
 
   const pushSnapshot = useCallback(() => {
     const stack = undoStackRef.current
@@ -90,7 +93,10 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const setBrushBg = useCallback((color: RGBColor) => setBrush(p => ({ ...p, bg: color })), [])
   const setBrushChar = useCallback((c: string) => { if (c.length === 1) setBrush(p => ({ ...p, char: c })) }, [])
   const setBrushMode = useCallback((mode: BrushMode) => setBrush(p => ({ ...p, mode })), [])
-  const setTool = useCallback((tool: DrawTool) => setBrush(p => ({ ...p, tool })), [])
+  const setTool = useCallback((tool: DrawTool) => {
+    commitPendingSelectionRef.current?.()
+    setBrush(p => ({ ...p, tool }))
+  }, [])
 
   const applyCell = useCallback((row: number, col: number, cell: AnsiCell) => {
     applyToActiveLayer(row, col, cell)
@@ -221,13 +227,6 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       previewCellsRef.current.clear()
     }
 
-    function getLineCells(end: CellHalf): Map<string, AnsiCell> | null {
-      const start = lineStartRef.current
-      if (!start) return null
-      restorePreview()
-      return computeLineCells(start, end, brushRef.current, getActiveGrid())
-    }
-
     function writePreviewCells(cells: Map<string, AnsiCell>): void {
       const handle = handleRef.current
       if (!handle) return
@@ -261,8 +260,10 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     }
 
     function renderLinePreview(end: CellHalf): void {
-      const lineCells = getLineCells(end)
-      if (lineCells) writePreviewCells(lineCells)
+      const start = lineStartRef.current
+      if (!start) return
+      restorePreview()
+      writePreviewCells(computeLineCells(start, end, brushRef.current, getActiveGrid()))
     }
 
     function commitLine(end: CellHalf): void {
@@ -272,23 +273,12 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       lineStartRef.current = null
     }
 
-    function cancelLine(): void {
-      restorePreview()
-      lineStartRef.current = null
-    }
-
-    function getRectCells(end: CellHalf): Map<string, AnsiCell> | null {
-      const start = lineStartRef.current
-      if (!start) return null
-      restorePreview()
-      const filled = brushRef.current.tool === 'rect-filled'
-      return computeRectCells(start, end, brushRef.current, getActiveGrid(), filled)
-    }
-
     function renderRectPreview(end: CellHalf): void {
       const start = lineStartRef.current
-      const rectCells = getRectCells(end)
-      if (!rectCells || !start) return
+      if (!start) return
+      restorePreview()
+      const filled = brushRef.current.tool === 'rect-filled'
+      const rectCells = computeRectCells(start, end, brushRef.current, getActiveGrid(), filled)
       writePreviewCells(rectCells)
       showDimension(start, end)
     }
@@ -302,11 +292,10 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       hideDimension()
     }
 
-    function cancelRect(): void {
-      restorePreview()
-      lineStartRef.current = null
-      hideDimension()
-    }
+    const sel = createSelectionHandlers({
+      container, selectionRef, commitPendingRef: commitPendingSelectionRef,
+      restorePreview, writePreviewCells, commitCells, pushSnapshot, getActiveGrid, hideDimension,
+    })
 
     function onMouseDown(e: MouseEvent): void {
       e.preventDefault()
@@ -348,6 +337,11 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           commitCells(fills)
           break
         }
+        case 'select': {
+          if (!cell) return
+          sel.onMouseDown(cell.row, cell.col)
+          break
+        }
       }
       if (cell) positionCursor(cell.row, cell.col, cursorHalf(cell))
       document.addEventListener('mouseup', onDocumentMouseUp)
@@ -377,6 +371,10 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           if (lineStartRef.current) renderRectPreview(cell)
           break
         }
+        case 'select': {
+          sel.onMouseMove(cell.row, cell.col)
+          break
+        }
       }
     }
 
@@ -391,7 +389,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           if (!lineStartRef.current) break
           const cell = getCellHalfFromMouse(e, container)
           if (cell) commitLine(cell)
-          else cancelLine()
+          else { restorePreview(); lineStartRef.current = null }
           break
         }
         case 'rect-outline':
@@ -399,7 +397,11 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           if (!lineStartRef.current) break
           const cell = getCellHalfFromMouse(e, container)
           if (cell) commitRect(cell)
-          else cancelRect()
+          else { restorePreview(); lineStartRef.current = null; hideDimension() }
+          break
+        }
+        case 'select': {
+          sel.onMouseUp()
           break
         }
       }
@@ -434,7 +436,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
 
   return {
     grid, brush, setBrushFg, setBrushBg, setBrushChar, setBrushMode, setTool, clearGrid,
-    isDirty, markClean, onTerminalReady, cursorRef, dimensionRef,
+    isDirty, markClean, onTerminalReady, cursorRef, dimensionRef, selectionRef,
     isSaveDialogOpen, openSaveDialog, closeSaveDialog, undo, redo, canUndo, canRedo,
     layers: layerState.layers, activeLayerId: layerState.activeLayerId,
     addLayer: addLayerWithUndo, removeLayer: removeLayerWithUndo,

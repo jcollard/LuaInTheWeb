@@ -10,7 +10,7 @@ export type AnsiGrid = AnsiCell[][]
 
 export type BrushMode = 'brush' | 'pixel' | 'eraser'
 
-export type DrawTool = 'pencil' | 'line' | 'rect-outline' | 'rect-filled' | 'flood-fill'
+export type DrawTool = 'pencil' | 'line' | 'rect-outline' | 'rect-filled' | 'flood-fill' | 'select'
 
 export const HALF_BLOCK = '\u2580'
 
@@ -76,6 +76,7 @@ export interface UseAnsiEditorReturn {
   onTerminalReady: (handle: AnsiTerminalHandle | null) => void
   cursorRef: React.RefObject<HTMLDivElement | null>
   dimensionRef: React.RefObject<HTMLDivElement | null>
+  selectionRef: React.RefObject<HTMLDivElement | null>
   // History
   undo: () => void
   redo: () => void
