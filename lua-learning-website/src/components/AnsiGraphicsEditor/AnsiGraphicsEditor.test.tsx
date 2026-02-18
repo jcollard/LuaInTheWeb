@@ -339,6 +339,32 @@ describe('AnsiEditorToolbar', () => {
     })
   })
 
+  describe('hover tooltips', () => {
+    it('should have title attributes on all tool buttons', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      const expected: Record<string, string> = {
+        'tool-pencil': 'Pencil',
+        'tool-line': 'Line',
+        'tool-rect': 'Rectangle',
+        'tool-flood-fill': 'Flood Fill',
+        'tool-select': 'Select',
+        'mode-brush': 'Brush',
+        'mode-pixel': 'Pixel',
+        'mode-eraser': 'Eraser',
+        'clear-button': 'Clear canvas',
+        'save-button': 'Save',
+        'save-as-button': 'Save As',
+        'import-png-button': 'Import PNG as layer',
+        'undo-button': 'Undo',
+        'redo-button': 'Redo',
+      }
+      for (const [testId, title] of Object.entries(expected)) {
+        const el = screen.getByTestId(testId)
+        expect(el.getAttribute('title'), `${testId} should have title="${title}"`).toBe(title)
+      }
+    })
+  })
+
   describe('flood fill tool', () => {
     it('should render flood fill button', () => {
       render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)

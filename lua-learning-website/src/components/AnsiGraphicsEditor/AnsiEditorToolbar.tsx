@@ -42,6 +42,7 @@ export function AnsiEditorToolbar({
           className={`${styles.modeButton} ${brush.tool === 'pencil' ? styles.modeButtonActive : ''}`}
           aria-pressed={brush.tool === 'pencil'}
           onClick={() => onSetTool('pencil')}
+          title="Pencil"
           data-testid="tool-pencil"
         >
           ✏
@@ -51,6 +52,7 @@ export function AnsiEditorToolbar({
           className={`${styles.modeButton} ${brush.tool === 'line' ? styles.modeButtonActive : ''}`}
           aria-pressed={brush.tool === 'line'}
           onClick={() => onSetTool('line')}
+          title="Line"
           data-testid="tool-line"
         >
           ╱
@@ -60,6 +62,7 @@ export function AnsiEditorToolbar({
             type="button"
             className={`${styles.modeButton} ${isRectActive ? styles.modeButtonActive : ''}`}
             aria-pressed={isRectActive}
+            title="Rectangle"
             data-testid="tool-rect"
           >
             {brush.tool === 'rect-filled' ? '■' : '▭'}
@@ -88,6 +91,7 @@ export function AnsiEditorToolbar({
           className={`${styles.modeButton} ${brush.tool === 'flood-fill' ? styles.modeButtonActive : ''}`}
           aria-pressed={brush.tool === 'flood-fill'}
           onClick={() => onSetTool('flood-fill')}
+          title="Flood Fill"
           data-testid="tool-flood-fill"
         >
           Fill
@@ -97,6 +101,7 @@ export function AnsiEditorToolbar({
           className={`${styles.modeButton} ${brush.tool === 'select' ? styles.modeButtonActive : ''}`}
           aria-pressed={brush.tool === 'select'}
           onClick={() => onSetTool('select')}
+          title="Select"
           data-testid="tool-select"
         >
           ⬚
@@ -109,6 +114,7 @@ export function AnsiEditorToolbar({
           className={`${styles.modeButton} ${brush.mode === 'brush' ? styles.modeButtonActive : ''}`}
           aria-pressed={brush.mode === 'brush'}
           onClick={() => onSetMode('brush')}
+          title="Brush"
           data-testid="mode-brush"
         >
           #
@@ -118,6 +124,7 @@ export function AnsiEditorToolbar({
           className={`${styles.modeButton} ${brush.mode === 'pixel' ? styles.modeButtonActive : ''}`}
           aria-pressed={brush.mode === 'pixel'}
           onClick={() => onSetMode('pixel')}
+          title="Pixel"
           data-testid="mode-pixel"
         >
           ▀
@@ -127,6 +134,7 @@ export function AnsiEditorToolbar({
           className={`${styles.modeButton} ${brush.mode === 'eraser' ? styles.modeButtonActive : ''}`}
           aria-pressed={brush.mode === 'eraser'}
           onClick={() => onSetMode('eraser')}
+          title="Eraser"
           data-testid="mode-eraser"
         >
           ⌫
@@ -154,6 +162,7 @@ export function AnsiEditorToolbar({
         type="button"
         className={styles.toolbarButton}
         onClick={onClear}
+        title="Clear canvas"
         data-testid="clear-button"
       >
         Clear
@@ -162,6 +171,7 @@ export function AnsiEditorToolbar({
         type="button"
         className={styles.toolbarButton}
         onClick={onSave}
+        title="Save"
         data-testid="save-button"
       >
         Save
@@ -170,6 +180,7 @@ export function AnsiEditorToolbar({
         type="button"
         className={styles.toolbarButton}
         onClick={onSaveAs}
+        title="Save As"
         data-testid="save-as-button"
       >
         Save As
@@ -178,6 +189,7 @@ export function AnsiEditorToolbar({
         type="button"
         className={styles.toolbarButton}
         onClick={onImportPng}
+        title="Import PNG as layer"
         data-testid="import-png-button"
       >
         Load PNG
@@ -187,6 +199,7 @@ export function AnsiEditorToolbar({
         className={styles.toolbarButton}
         onClick={onUndo}
         disabled={!canUndo}
+        title="Undo"
         data-testid="undo-button"
       >
         ↶
@@ -196,6 +209,7 @@ export function AnsiEditorToolbar({
         className={styles.toolbarButton}
         onClick={onRedo}
         disabled={!canRedo}
+        title="Redo"
         data-testid="redo-button"
       >
         ↷

@@ -56,6 +56,7 @@ export function LayersPanel({
           className={styles.layersPanelAdd}
           onClick={onAdd}
           aria-label="Add layer"
+          title="Add layer"
         >
           +
         </button>
@@ -75,6 +76,7 @@ export function LayersPanel({
                 className={styles.layerVisibility}
                 onClick={e => { e.stopPropagation(); onToggleVisibility(layer.id) }}
                 aria-label="Toggle visibility"
+                title="Toggle visibility"
               >
                 {layer.visible ? '\u{1F441}' : '\u{1F441}\u{200D}\u{1F5E8}'}
               </button>
@@ -104,6 +106,7 @@ export function LayersPanel({
                 className={styles.layerBtn}
                 onClick={e => { e.stopPropagation(); onMoveUp(layer.id) }}
                 aria-label="Move up"
+                title="Move up"
               >
                 ▲
               </button>
@@ -111,6 +114,7 @@ export function LayersPanel({
                 className={styles.layerBtn}
                 onClick={e => { e.stopPropagation(); onMoveDown(layer.id) }}
                 aria-label="Move down"
+                title="Move down"
               >
                 ▼
               </button>
@@ -118,6 +122,7 @@ export function LayersPanel({
                 className={styles.layerBtn}
                 onClick={e => { e.stopPropagation(); onRemove(layer.id) }}
                 aria-label="Delete layer"
+                title="Delete layer"
                 disabled={singleLayer}
               >
                 &#x1F5D1;
