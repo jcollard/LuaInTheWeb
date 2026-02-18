@@ -100,7 +100,8 @@ export interface UseAnsiEditorOptions {
   initialLayerState?: LayerState
 }
 
-export type PaletteType = 'cga' | 'ega' | 'vga'
+export type StaticPaletteType = 'cga' | 'ega' | 'vga'
+export type PaletteType = StaticPaletteType | 'current' | 'layer'
 
 export interface PaletteEntry {
   name: string
@@ -161,7 +162,7 @@ export const VGA_PALETTE: PaletteEntry[] = (() => {
   return entries
 })()
 
-export const PALETTES: Record<PaletteType, PaletteEntry[]> = {
+export const PALETTES: Record<StaticPaletteType, PaletteEntry[]> = {
   cga: CGA_PALETTE,
   ega: EGA_PALETTE,
   vga: VGA_PALETTE,

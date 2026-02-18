@@ -140,6 +140,14 @@
   grid-template-columns: repeat(16, 11px);
 }
 
+.emptyPalette {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 11px;
+  color: var(--theme-text-secondary);
+  padding: 12px 0;
+}
+
 .colorSwatch {
   aspect-ratio: 1;
   border: 1px solid var(--theme-border);

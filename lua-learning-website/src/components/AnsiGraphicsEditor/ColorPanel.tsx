@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
-import type { RGBColor, PaletteType } from './types'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import type { RGBColor, PaletteType, StaticPaletteType, Layer } from './types'
 import { PALETTES } from './types'
 import { rgbEqual } from './layerUtils'
-import { hsvToRgb, rgbToHsv, rgbToHex, hexToRgb } from './colorUtils'
+import { hsvToRgb, rgbToHsv, rgbToHex, hexToRgb, extractGridColors, extractAllLayerColors } from './colorUtils'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface ColorPanelProps {
@@ -10,11 +10,23 @@ export interface ColorPanelProps {
   selectedBg: RGBColor
   onSetFg: (color: RGBColor) => void
   onSetBg: (color: RGBColor) => void
+  layers: Layer[]
+  activeLayerId: string
 }
 
 type PickerTarget = 'fg' | 'bg'
 
-const GRID_CLASS: Record<PaletteType, string> = {
+const ALL_PALETTE_TYPES: PaletteType[] = ['cga', 'ega', 'vga', 'current', 'layer']
+
+const TAB_LABELS: Record<PaletteType, string> = {
+  cga: 'CGA',
+  ega: 'EGA',
+  vga: 'VGA',
+  current: 'Current',
+  layer: 'Layer',
+}
+
+const STATIC_GRID_CLASS: Record<StaticPaletteType, string> = {
   cga: styles.colorGridCga,
   ega: styles.colorGridEga,
   vga: styles.colorGridVga,
@@ -59,9 +71,14 @@ function drawHueBar(canvas: HTMLCanvasElement | null) {
   }
 }
 
-export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg }: ColorPanelProps) {
+export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, layers, activeLayerId }: ColorPanelProps) {
   const [paletteType, setPaletteType] = useState<PaletteType>('cga')
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null)
+
+  // Dynamic palette computation
+  const currentPalette = useMemo(() => extractAllLayerColors(layers), [layers])
+  const activeLayer = layers.find(l => l.id === activeLayerId)
+  const layerPalette = useMemo(() => activeLayer ? extractGridColors(activeLayer.grid) : [], [activeLayer])
 
   // Inline picker state
   const [hue, setHue] = useState(0)
@@ -228,7 +245,13 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg }: ColorPa
     if (rgb) modalApply(rgb)
   }, [hexValue, modalApply])
 
-  const palette = PALETTES[paletteType]
+  const palette = paletteType === 'current' ? currentPalette
+    : paletteType === 'layer' ? layerPalette
+    : PALETTES[paletteType as StaticPaletteType]
+
+  const gridClass = paletteType === 'current' || paletteType === 'layer'
+    ? (palette.length <= 64 ? styles.colorGridEga : styles.colorGridVga)
+    : STATIC_GRID_CLASS[paletteType as StaticPaletteType]
 
   return (
     <div className={styles.colorPanel} data-testid="color-panel">
@@ -236,7 +259,7 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg }: ColorPa
         <span className={styles.colorPanelTitle}>Colors</span>
       </header>
       <div className={styles.paletteSelectorRow}>
-        {(['cga', 'ega', 'vga'] as PaletteType[]).map(pt => (
+        {ALL_PALETTE_TYPES.map(pt => (
           <button
             key={pt}
             type="button"
@@ -245,15 +268,17 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg }: ColorPa
             onClick={() => setPaletteType(pt)}
             data-testid={`palette-btn-${pt}`}
           >
-            {pt.toUpperCase()}
+            {TAB_LABELS[pt]}
           </button>
         ))}
       </div>
       <div
-        className={`${styles.colorGrid} ${GRID_CLASS[paletteType]}`}
+        className={`${styles.colorGrid} ${gridClass}`}
         data-testid="color-grid"
       >
-        {palette.map((entry, i) => {
+        {palette.length === 0 && (paletteType === 'current' || paletteType === 'layer') ? (
+          <div className={styles.emptyPalette} data-testid="empty-palette">No colors in use</div>
+        ) : palette.map((entry, i) => {
           const isFg = rgbEqual(selectedFg, entry.rgb)
           const isBg = rgbEqual(selectedBg, entry.rgb)
           return (

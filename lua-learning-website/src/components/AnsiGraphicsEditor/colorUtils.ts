@@ -1,4 +1,6 @@
-import type { RGBColor } from './types'
+import type { RGBColor, AnsiGrid, Layer, PaletteEntry } from './types'
+import { TRANSPARENT_HALF } from './types'
+import { isDefaultCell, rgbEqual } from './layerUtils'
 
 /** Convert HSV (h: 0-360, s: 0-1, v: 0-1) to RGB (each 0-255). */
 export function hsvToRgb(h: number, s: number, v: number): RGBColor {
@@ -56,4 +58,48 @@ export function hexToRgb(hex: string): RGBColor | null {
     parseInt(h.slice(2, 4), 16),
     parseInt(h.slice(4, 6), 16),
   ]
+}
+
+/** Extract all unique colors used in a single grid, sorted by hex. */
+export function extractGridColors(grid: AnsiGrid): PaletteEntry[] {
+  const seen = new Set<string>()
+  const entries: PaletteEntry[] = []
+
+  for (const row of grid) {
+    for (const cell of row) {
+      if (isDefaultCell(cell)) continue
+      for (const color of [cell.fg, cell.bg]) {
+        if (rgbEqual(color, TRANSPARENT_HALF)) continue
+        const key = `${color[0]},${color[1]},${color[2]}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        entries.push({ name: rgbToHex(color), rgb: [...color] as RGBColor })
+      }
+    }
+  }
+
+  return entries.sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/** Extract all unique colors from all layers, sorted by hex. */
+export function extractAllLayerColors(layers: Layer[]): PaletteEntry[] {
+  const seen = new Set<string>()
+  const entries: PaletteEntry[] = []
+
+  for (const layer of layers) {
+    for (const row of layer.grid) {
+      for (const cell of row) {
+        if (isDefaultCell(cell)) continue
+        for (const color of [cell.fg, cell.bg]) {
+          if (rgbEqual(color, TRANSPARENT_HALF)) continue
+          const key = `${color[0]},${color[1]},${color[2]}`
+          if (seen.has(key)) continue
+          seen.add(key)
+          entries.push({ name: rgbToHex(color), rgb: [...color] as RGBColor })
+        }
+      }
+    }
+  }
+
+  return entries.sort((a, b) => a.name.localeCompare(b.name))
 }

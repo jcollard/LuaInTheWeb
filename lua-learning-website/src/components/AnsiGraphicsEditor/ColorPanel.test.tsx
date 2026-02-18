@@ -3,16 +3,20 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { ColorPanel, type ColorPanelProps } from './ColorPanel'
 import { CGA_PALETTE, DEFAULT_FG, DEFAULT_BG } from './types'
 import type { RGBColor } from './types'
+import { createLayer } from './layerUtils'
 
 describe('ColorPanel', () => {
   let props: ColorPanelProps
 
   beforeEach(() => {
+    const layer = createLayer('Layer 1', 'layer-default')
     props = {
       selectedFg: DEFAULT_FG,
       selectedBg: DEFAULT_BG,
       onSetFg: vi.fn(),
       onSetBg: vi.fn(),
+      layers: [layer],
+      activeLayerId: layer.id,
     }
   })
 
@@ -289,6 +293,90 @@ describe('ColorPanel', () => {
       render(<ColorPanel {...props} />)
       expect(screen.getByTestId('sv-gradient')).toBeTruthy()
       expect(screen.getByTestId('hue-bar')).toBeTruthy()
+    })
+  })
+
+  describe('Current palette tab', () => {
+    it('renders Current and Layer tab buttons', () => {
+      render(<ColorPanel {...props} />)
+      expect(screen.getByTestId('palette-btn-current')).toBeTruthy()
+      expect(screen.getByTestId('palette-btn-layer')).toBeTruthy()
+    })
+
+    it('tab buttons display correct labels', () => {
+      render(<ColorPanel {...props} />)
+      expect(screen.getByTestId('palette-btn-current').textContent).toBe('Current')
+      expect(screen.getByTestId('palette-btn-layer').textContent).toBe('Layer')
+    })
+
+    it('shows empty state when no colors are in use', () => {
+      render(<ColorPanel {...props} />)
+      fireEvent.click(screen.getByTestId('palette-btn-current'))
+      expect(screen.getByTestId('empty-palette')).toBeTruthy()
+      expect(screen.getByText('No colors in use')).toBeTruthy()
+    })
+
+    it('shows colors from all layers in Current tab', () => {
+      const l1 = createLayer('L1', 'l1')
+      const l2 = createLayer('L2', 'l2')
+      const red: RGBColor = [255, 0, 0]
+      const blue: RGBColor = [0, 0, 255]
+      l1.grid[0][0] = { char: 'A', fg: red, bg: DEFAULT_BG }
+      l2.grid[0][0] = { char: 'B', fg: blue, bg: DEFAULT_BG }
+      render(<ColorPanel {...props} layers={[l1, l2]} activeLayerId="l1" />)
+      fireEvent.click(screen.getByTestId('palette-btn-current'))
+      const grid = screen.getByTestId('color-grid')
+      const swatches = grid.querySelectorAll('button')
+      expect(swatches.length).toBeGreaterThanOrEqual(2)
+    })
+
+    it('left-click on Current tab swatch calls onSetFg', () => {
+      const layer = createLayer('L1', 'l1')
+      const red: RGBColor = [255, 0, 0]
+      layer.grid[0][0] = { char: 'A', fg: red, bg: DEFAULT_BG }
+      render(<ColorPanel {...props} layers={[layer]} activeLayerId="l1" />)
+      fireEvent.click(screen.getByTestId('palette-btn-current'))
+      const grid = screen.getByTestId('color-grid')
+      const swatch = grid.querySelectorAll('button')[0]
+      fireEvent.click(swatch)
+      expect(props.onSetFg).toHaveBeenCalled()
+    })
+  })
+
+  describe('Layer palette tab', () => {
+    it('shows empty state for blank layer', () => {
+      render(<ColorPanel {...props} />)
+      fireEvent.click(screen.getByTestId('palette-btn-layer'))
+      expect(screen.getByTestId('empty-palette')).toBeTruthy()
+    })
+
+    it('shows only colors from the active layer', () => {
+      const l1 = createLayer('L1', 'l1')
+      const l2 = createLayer('L2', 'l2')
+      const red: RGBColor = [255, 0, 0]
+      const blue: RGBColor = [0, 0, 255]
+      l1.grid[0][0] = { char: 'A', fg: red, bg: red }
+      l2.grid[0][0] = { char: 'B', fg: blue, bg: blue }
+      // Active layer is l1, which only has red (fg and bg are same)
+      render(<ColorPanel {...props} layers={[l1, l2]} activeLayerId="l1" />)
+      fireEvent.click(screen.getByTestId('palette-btn-layer'))
+      const grid = screen.getByTestId('color-grid')
+      const swatches = grid.querySelectorAll('button')
+      // Only red should appear (not blue from l2)
+      expect(swatches).toHaveLength(1)
+      expect(swatches[0].getAttribute('title')).toBe('#ff0000')
+    })
+
+    it('right-click on Layer tab swatch calls onSetBg', () => {
+      const layer = createLayer('L1', 'l1')
+      const green: RGBColor = [0, 255, 0]
+      layer.grid[0][0] = { char: 'A', fg: green, bg: DEFAULT_BG }
+      render(<ColorPanel {...props} layers={[layer]} activeLayerId="l1" />)
+      fireEvent.click(screen.getByTestId('palette-btn-layer'))
+      const grid = screen.getByTestId('color-grid')
+      const swatch = grid.querySelectorAll('button')[0]
+      fireEvent.contextMenu(swatch)
+      expect(props.onSetBg).toHaveBeenCalled()
     })
   })
 })

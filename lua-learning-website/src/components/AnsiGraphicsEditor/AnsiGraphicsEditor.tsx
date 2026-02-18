@@ -140,6 +140,8 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
           selectedBg={brush.bg}
           onSetFg={setBrushFg}
           onSetBg={setBrushBg}
+          layers={layers}
+          activeLayerId={activeLayerId}
         />
         <div className={styles.canvas}>
           <AnsiTerminalPanel
