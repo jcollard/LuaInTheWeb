@@ -204,19 +204,13 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     function hideDimension(): void { if (dimensionRef.current) dimensionRef.current.style.display = 'none' }
 
     type CellPos = { row: number; col: number; isTopHalf?: boolean }
-    function isSameCell(a: CellPos, b: CellPos): boolean {
-      return a.row === b.row && a.col === b.col && a.isTopHalf === b.isTopHalf
-    }
-
-    function cursorHalf(cell: { isTopHalf: boolean }): boolean | undefined {
-      return brushRef.current.mode !== 'brush' ? cell.isTopHalf : undefined
-    }
+    function isSameCell(a: CellPos, b: CellPos) { return a.row === b.row && a.col === b.col && a.isTopHalf === b.isTopHalf }
+    function cursorHalf(cell: { isTopHalf: boolean }) { return brushRef.current.mode !== 'brush' ? cell.isTopHalf : undefined }
 
     function paintAt(row: number, col: number, isTopHalf: boolean): void {
-      if (brushRef.current.mode === 'eraser') {
-        if (!isInBounds(row, col)) return
-        applyCell(row, col, computeErasePixelCell(getActiveGrid()[row][col], isTopHalf))
-      } else if (brushRef.current.mode === 'pixel') paintPixel(row, col, isTopHalf)
+      const mode = brushRef.current.mode
+      if (mode === 'eraser') { if (isInBounds(row, col)) applyCell(row, col, computeErasePixelCell(getActiveGrid()[row][col], isTopHalf)) }
+      else if (mode === 'pixel') paintPixel(row, col, isTopHalf)
       else paintCell(row, col)
     }
 
@@ -233,8 +227,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     function writePreviewCells(cells: Map<string, AnsiCell>): void {
       const handle = handleRef.current
       if (!handle) return
-      const layers = layersRef.current
-      const activeId = activeLayerIdRef.current
+      const layers = layersRef.current, activeId = activeLayerIdRef.current
       for (const [key, cell] of cells) {
         const [r, c] = parseCellKey(key)
         if (!previewCellsRef.current.has(key)) {
@@ -252,45 +245,35 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         applyCell(r, c, cell)
         affectedKeys.add(key)
       }
-      const handle = handleRef.current
-      if (handle) {
-        const layers = layersRef.current
-        for (const key of affectedKeys) {
-          const [r, c] = parseCellKey(key)
-          writeCellToTerminal(handle, r, c, compositeCell(layers, r, c))
-        }
+      const handle = handleRef.current, layers = layersRef.current
+      if (handle) for (const key of affectedKeys) {
+        const [r, c] = parseCellKey(key)
+        writeCellToTerminal(handle, r, c, compositeCell(layers, r, c))
       }
     }
 
-    function renderLinePreview(end: CellHalf): void {
-      const start = lineStartRef.current
-      if (!start) return
-      restorePreview()
-      writePreviewCells(computeLineCells(start, end, brushRef.current, getActiveGrid()))
-    }
+    function lineCells(end: CellHalf) { return computeLineCells(lineStartRef.current!, end, brushRef.current, getActiveGrid()) }
+    function rectCells(end: CellHalf) { return computeRectCells(lineStartRef.current!, end, brushRef.current, getActiveGrid(), brushRef.current.tool === 'rect-filled') }
 
+    function renderLinePreview(end: CellHalf): void {
+      if (!lineStartRef.current) return
+      restorePreview()
+      writePreviewCells(lineCells(end))
+    }
     function commitLine(end: CellHalf): void {
-      const start = lineStartRef.current
-      if (!start) return
-      commitCells(computeLineCells(start, end, brushRef.current, getActiveGrid()))
+      if (!lineStartRef.current) return
+      commitCells(lineCells(end))
       lineStartRef.current = null
     }
-
     function renderRectPreview(end: CellHalf): void {
-      const start = lineStartRef.current
-      if (!start) return
+      if (!lineStartRef.current) return
       restorePreview()
-      const filled = brushRef.current.tool === 'rect-filled'
-      const rectCells = computeRectCells(start, end, brushRef.current, getActiveGrid(), filled)
-      writePreviewCells(rectCells)
-      showDimension(start, end)
+      writePreviewCells(rectCells(end))
+      showDimension(lineStartRef.current!, end)
     }
-
     function commitRect(end: CellHalf): void {
-      const start = lineStartRef.current
-      if (!start) return
-      const filled = brushRef.current.tool === 'rect-filled'
-      commitCells(computeRectCells(start, end, brushRef.current, getActiveGrid(), filled))
+      if (!lineStartRef.current) return
+      commitCells(rectCells(end))
       lineStartRef.current = null
       hideDimension()
     }
@@ -300,9 +283,20 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       restorePreview, writePreviewCells, commitCells, pushSnapshot, getActiveGrid, hideDimension,
     })
 
+    function sampleCell(e: MouseEvent, cell: CellHalf): boolean {
+      const s = compositeCell(layersRef.current, cell.row, cell.col)
+      if (brushRef.current.tool === 'eyedropper' || e.ctrlKey) {
+        setBrush(p => e.button === 2 ? ({ ...p, bg: [...s.bg] as RGBColor }) : ({ ...p, fg: [...s.fg] as RGBColor }))
+        return true
+      }
+      if (e.button === 2) { setBrush(p => ({ ...p, char: s.char })); return true }
+      return false
+    }
+
     function onMouseDown(e: MouseEvent): void {
       e.preventDefault()
       const cell = getCellHalfFromMouse(e, container)
+      if (cell && sampleCell(e, cell)) { positionCursor(cell.row, cell.col, cursorHalf(cell)); return }
       switch (brushRef.current.tool) {
         case 'pencil': {
           pushSnapshot()
@@ -412,13 +406,17 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
 
     function onMouseLeave(): void { hideCursor() }
 
+    function onContextMenu(e: MouseEvent): void { e.preventDefault() }
+
     container.addEventListener('mousedown', onMouseDown)
     container.addEventListener('mousemove', onMouseMove)
     container.addEventListener('mouseleave', onMouseLeave)
+    container.addEventListener('contextmenu', onContextMenu)
     return () => {
       container.removeEventListener('mousedown', onMouseDown)
       container.removeEventListener('mousemove', onMouseMove)
       container.removeEventListener('mouseleave', onMouseLeave)
+      container.removeEventListener('contextmenu', onContextMenu)
       document.removeEventListener('mouseup', onDocumentMouseUp)
     }
   }, [paintCell, paintPixel, applyCell, pushSnapshot, layersRef, activeLayerIdRef, getActiveGrid])

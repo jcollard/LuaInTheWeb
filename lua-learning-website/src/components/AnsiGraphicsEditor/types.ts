@@ -10,7 +10,7 @@ export type AnsiGrid = AnsiCell[][]
 
 export type BrushMode = 'brush' | 'pixel' | 'eraser'
 
-export type DrawTool = 'pencil' | 'line' | 'rect-outline' | 'rect-filled' | 'flood-fill' | 'select'
+export type DrawTool = 'pencil' | 'line' | 'rect-outline' | 'rect-filled' | 'flood-fill' | 'select' | 'eyedropper'
 
 export const HALF_BLOCK = '\u2580'
 

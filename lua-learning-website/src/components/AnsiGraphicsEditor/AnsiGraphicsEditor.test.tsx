@@ -306,6 +306,7 @@ describe('AnsiEditorToolbar', () => {
         'tool-rect': 'Rectangle',
         'tool-flood-fill': 'Flood Fill',
         'tool-select': 'Select',
+        'tool-eyedropper': 'Eyedropper',
         'mode-brush': 'Brush',
         'mode-pixel': 'Pixel',
         'mode-eraser': 'Eraser',
@@ -320,6 +321,26 @@ describe('AnsiEditorToolbar', () => {
         const el = screen.getByTestId(testId)
         expect(el.getAttribute('title'), `${testId} should have title="${title}"`).toBe(title)
       }
+    })
+  })
+
+  describe('eyedropper tool', () => {
+    it('should render eyedropper button', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      expect(screen.getByTestId('tool-eyedropper')).toBeTruthy()
+    })
+
+    it('should call onSetTool with eyedropper when clicked', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+      fireEvent.click(screen.getByTestId('tool-eyedropper'))
+      expect(handlers.onSetTool).toHaveBeenCalledWith('eyedropper')
+    })
+
+    it('should show eyedropper as active when brush.tool is eyedropper', () => {
+      const eyedropperBrush = { ...defaultBrush, tool: 'eyedropper' as DrawTool }
+      render(<AnsiEditorToolbar brush={eyedropperBrush} {...handlers} />)
+      expect(screen.getByTestId('tool-eyedropper').getAttribute('aria-pressed')).toBe('true')
+      expect(screen.getByTestId('tool-pencil').getAttribute('aria-pressed')).toBe('false')
     })
   })
 
