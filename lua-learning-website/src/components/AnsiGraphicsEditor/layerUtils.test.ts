@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isDefaultCell, createLayer, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState } from './layerUtils'
+import { isDefaultCell, createLayer, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, syncLayerIds } from './layerUtils'
 import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, ANSI_ROWS, ANSI_COLS } from './types'
 import type { AnsiCell, RGBColor, Layer, LayerState } from './types'
 
@@ -226,5 +226,40 @@ describe('cloneLayerState', () => {
     const clone = cloneLayerState(state)
     state.layers[0].grid[0][0].fg[0] = 0
     expect(clone.layers[0].grid[0][0].fg[0]).toBe(100)
+  })
+})
+
+describe('syncLayerIds', () => {
+  it('updates counter past the highest layer-N id', () => {
+    const layers: Layer[] = [
+      createLayer('A', 'layer-5'),
+      createLayer('B', 'layer-10'),
+      createLayer('C', 'layer-3'),
+    ]
+    syncLayerIds(layers)
+    const newLayer = createLayer('New')
+    // Next ID should be layer-11 or higher (past layer-10)
+    const match = newLayer.id.match(/^layer-(\d+)$/)
+    expect(match).not.toBeNull()
+    expect(parseInt(match![1], 10)).toBeGreaterThanOrEqual(11)
+  })
+
+  it('ignores non-numeric ids like clear-bg-* or v1-background', () => {
+    const layers: Layer[] = [
+      createLayer('A', 'clear-bg-1'),
+      createLayer('B', 'v1-background'),
+      createLayer('C', 'custom-id'),
+    ]
+    // Should not throw and should not change counter in a way
+    // that breaks createLayer
+    syncLayerIds(layers)
+    const newLayer = createLayer('New')
+    expect(newLayer.id).toMatch(/^layer-\d+$/)
+  })
+
+  it('handles empty layer array without error', () => {
+    syncLayerIds([])
+    const newLayer = createLayer('New')
+    expect(newLayer.id).toMatch(/^layer-\d+$/)
   })
 })

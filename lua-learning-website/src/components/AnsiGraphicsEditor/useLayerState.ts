@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import type { AnsiCell, Layer, LayerState, RGBColor } from './types'
-import { createLayer, cloneLayerState } from './layerUtils'
+import { createLayer, cloneLayerState, syncLayerIds } from './layerUtils'
 
 export interface UseLayerStateReturn {
   layers: Layer[]
@@ -23,7 +23,10 @@ export interface UseLayerStateReturn {
 
 export function useLayerState(initial?: LayerState): UseLayerStateReturn {
   const [layers, setLayers] = useState<Layer[]>(() => {
-    if (initial) return initial.layers
+    if (initial) {
+      syncLayerIds(initial.layers)
+      return initial.layers
+    }
     return [createLayer('Background')]
   })
   const [activeLayerId, setActiveLayerId] = useState<string>(() => {
@@ -35,7 +38,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
   layersRef.current = layers
   const activeLayerIdRef = useRef(activeLayerId)
   activeLayerIdRef.current = activeLayerId
-  const layerCountRef = useRef(1)
+  const layerCountRef = useRef(initial ? initial.layers.length : 1)
 
   const activeLayer = layers.find(l => l.id === activeLayerId) ?? layers[0]
 
@@ -116,6 +119,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
   }, [])
 
   const restoreLayerState = useCallback((state: LayerState) => {
+    syncLayerIds(state.layers)
     layersRef.current = state.layers
     activeLayerIdRef.current = state.activeLayerId
     setLayers(state.layers)

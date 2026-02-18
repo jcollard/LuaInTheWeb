@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useLayerState } from './useLayerState'
-import type { RGBColor } from './types'
+import { createLayer } from './layerUtils'
+import type { LayerState, RGBColor } from './types'
 
 describe('useLayerState', () => {
   describe('initialization', () => {
@@ -231,6 +232,76 @@ describe('useLayerState', () => {
       const firstId = result.current.layers[0].id
       act(() => result.current.setActiveLayer(firstId))
       expect(result.current.activeLayerIdRef.current).toBe(firstId)
+    })
+  })
+
+  describe('syncLayerIds on init', () => {
+    it('adding a layer after init with pre-existing IDs produces a unique ID', () => {
+      const initial: LayerState = {
+        layers: [
+          createLayer('Background', 'layer-1'),
+          createLayer('Foreground', 'layer-2'),
+          createLayer('Details', 'layer-3'),
+        ],
+        activeLayerId: 'layer-1',
+      }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.addLayer())
+      const ids = result.current.layers.map(l => l.id)
+      const uniqueIds = new Set(ids)
+      expect(uniqueIds.size).toBe(ids.length)
+    })
+
+    it('new layer ID is greater than highest existing ID after init', () => {
+      const initial: LayerState = {
+        layers: [
+          createLayer('A', 'layer-5'),
+          createLayer('B', 'layer-10'),
+        ],
+        activeLayerId: 'layer-5',
+      }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.addLayer())
+      const newLayer = result.current.layers[result.current.layers.length - 1]
+      const match = newLayer.id.match(/^layer-(\d+)$/)
+      expect(match).not.toBeNull()
+      expect(parseInt(match![1], 10)).toBeGreaterThanOrEqual(11)
+    })
+  })
+
+  describe('syncLayerIds on restore', () => {
+    it('adding a layer after restoreLayerState with pre-existing IDs produces a unique ID', () => {
+      const { result } = renderHook(() => useLayerState())
+      const snapshot: LayerState = {
+        layers: [
+          createLayer('Background', 'layer-1'),
+          createLayer('Foreground', 'layer-2'),
+          createLayer('Details', 'layer-3'),
+        ],
+        activeLayerId: 'layer-1',
+      }
+      act(() => result.current.restoreLayerState(snapshot))
+      act(() => result.current.addLayer())
+      const ids = result.current.layers.map(l => l.id)
+      const uniqueIds = new Set(ids)
+      expect(uniqueIds.size).toBe(ids.length)
+    })
+  })
+
+  describe('layerCountRef sync on init', () => {
+    it('new layer display name is correct after init with existing layers', () => {
+      const initial: LayerState = {
+        layers: [
+          createLayer('Background', 'layer-1'),
+          createLayer('Layer 2', 'layer-2'),
+          createLayer('Layer 3', 'layer-3'),
+        ],
+        activeLayerId: 'layer-1',
+      }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.addLayer())
+      const newLayer = result.current.layers[result.current.layers.length - 1]
+      expect(newLayer.name).toBe('Layer 4')
     })
   })
 })
