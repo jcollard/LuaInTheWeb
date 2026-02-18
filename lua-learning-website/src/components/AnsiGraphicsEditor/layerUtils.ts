@@ -1,5 +1,5 @@
-import type { AnsiCell, AnsiGrid, Layer, LayerState, RGBColor } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, HALF_BLOCK, TRANSPARENT_HALF } from './types'
+import type { AnsiCell, AnsiGrid, DrawnLayer, Layer, LayerState, RGBColor, TextLayer } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG } from './types'
 
 let nextLayerId = 1
 
@@ -21,11 +21,12 @@ export function isDefaultCell(cell: AnsiCell): boolean {
   return cell.char === ' ' && rgbEqual(cell.fg, DEFAULT_FG) && rgbEqual(cell.bg, DEFAULT_BG)
 }
 
-export function createLayer(name: string, id?: string): Layer {
+export function createLayer(name: string, id?: string): DrawnLayer {
   const grid: AnsiGrid = Array.from({ length: ANSI_ROWS }, () =>
     Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
   )
   return {
+    type: 'drawn',
     id: id ?? `layer-${nextLayerId++}`,
     name,
     visible: true,
@@ -33,25 +34,56 @@ export function createLayer(name: string, id?: string): Layer {
   }
 }
 
+function isTransparentBg(color: RGBColor): boolean {
+  return color[0] === TRANSPARENT_BG[0] && color[1] === TRANSPARENT_BG[1] && color[2] === TRANSPARENT_BG[2]
+}
+
 function compositeCellCore(layers: Layer[], getCell: (layer: Layer) => AnsiCell | null): AnsiCell {
   let topColor: RGBColor | null = null
   let bottomColor: RGBColor | null = null
+  // Pending text cell: char+fg from a TRANSPARENT_BG cell waiting for a bg source
+  let pendingChar: string | null = null
+  let pendingFg: RGBColor | null = null
 
   for (let i = layers.length - 1; i >= 0; i--) {
     const cell = getCell(layers[i])
     if (cell === null || isDefaultCell(cell)) continue
 
+    // TRANSPARENT_BG cells: space = fully transparent (skip), non-space = pending text
+    if (isTransparentBg(cell.bg)) {
+      if (cell.char === ' ') continue
+      if (pendingChar === null) {
+        pendingChar = cell.char
+        pendingFg = cell.fg
+      }
+      continue
+    }
+
     if (cell.char === HALF_BLOCK) {
       if (topColor === null && !rgbEqual(cell.fg, TRANSPARENT_HALF)) topColor = cell.fg
       if (bottomColor === null && !rgbEqual(cell.bg, TRANSPARENT_HALF)) bottomColor = cell.bg
     } else {
+      if (pendingChar !== null) {
+        // Found a bg source for the pending text cell
+        return { char: pendingChar, fg: pendingFg!, bg: cell.bg }
+      }
       // Non-HALF_BLOCK cell is fully opaque
       if (topColor === null && bottomColor === null) return cell
       if (topColor === null) topColor = cell.bg
       if (bottomColor === null) bottomColor = cell.bg
     }
 
+    if (pendingChar !== null && cell.char === HALF_BLOCK) {
+      // Use the half-block's bg as text bg
+      return { char: pendingChar, fg: pendingFg!, bg: cell.bg }
+    }
+
     if (topColor !== null && bottomColor !== null) break
+  }
+
+  // If we have a pending text cell but no bg source, use DEFAULT_BG
+  if (pendingChar !== null) {
+    return { char: pendingChar, fg: pendingFg!, bg: [...DEFAULT_BG] as RGBColor }
   }
 
   if (topColor === null && bottomColor === null) return DEFAULT_CELL
@@ -82,20 +114,40 @@ export function compositeCellWithOverride(
   })
 }
 
+function cloneGrid(grid: AnsiGrid): AnsiGrid {
+  return grid.map(row =>
+    row.map(cell => ({
+      ...cell,
+      fg: [...cell.fg] as RGBColor,
+      bg: [...cell.bg] as RGBColor,
+    }))
+  )
+}
+
+function cloneLayer(layer: Layer): Layer {
+  const base = {
+    id: layer.id,
+    name: layer.name,
+    visible: layer.visible,
+    grid: cloneGrid(layer.grid),
+  }
+  if (layer.type === 'text') {
+    return {
+      ...base,
+      type: 'text',
+      text: layer.text,
+      bounds: { ...layer.bounds },
+      textFg: [...layer.textFg] as RGBColor,
+      textFgColors: layer.textFgColors?.map(c => [...c] as RGBColor),
+      textAlign: layer.textAlign,
+    } satisfies TextLayer
+  }
+  return { ...base, type: 'drawn' } satisfies DrawnLayer
+}
+
 export function cloneLayerState(state: LayerState): LayerState {
   return {
     activeLayerId: state.activeLayerId,
-    layers: state.layers.map(layer => ({
-      id: layer.id,
-      name: layer.name,
-      visible: layer.visible,
-      grid: layer.grid.map(row =>
-        row.map(cell => ({
-          ...cell,
-          fg: [...cell.fg] as RGBColor,
-          bg: [...cell.bg] as RGBColor,
-        }))
-      ),
-    })),
+    layers: state.layers.map(cloneLayer),
   }
 }

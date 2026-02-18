@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { LayersPanel } from './LayersPanel'
-import type { Layer } from './types'
+import type { Layer, TextLayer } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL } from './types'
 import { createLayer } from './layerUtils'
 
 function makeLayers(...names: string[]): Layer[] {
@@ -171,5 +172,31 @@ describe('LayersPanel', () => {
     renderPanel({ onSetActive })
     fireEvent.click(screen.getByText('Background'))
     expect(onSetActive).toHaveBeenCalledWith('layer-0')
+  })
+
+  it('shows T badge on text layer rows', () => {
+    const drawnLayer = createLayer('Background', 'layer-0')
+    const emptyGrid = Array.from({ length: ANSI_ROWS }, () =>
+      Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
+    )
+    const textLayer: TextLayer = {
+      type: 'text',
+      id: 'text-1',
+      name: 'My Text',
+      visible: true,
+      text: 'Hello',
+      bounds: { r0: 0, c0: 0, r1: 2, c1: 10 },
+      textFg: [255, 255, 255],
+      grid: emptyGrid,
+    }
+    renderPanel({ layers: [drawnLayer, textLayer] })
+    const textRow = screen.getByTestId('layer-row-text-1')
+    const textBadge = textRow.querySelector('[data-testid="text-layer-badge"]')
+    expect(textBadge).not.toBeNull()
+    expect(textBadge!.textContent).toBe('T')
+    // Drawn layer should not have T badge
+    const drawnRow = screen.getByTestId('layer-row-layer-0')
+    const drawnBadge = drawnRow.querySelector('[data-testid="text-layer-badge"]')
+    expect(drawnBadge).toBeNull()
   })
 })

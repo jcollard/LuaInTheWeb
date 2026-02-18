@@ -80,6 +80,9 @@ export function LayersPanel({
               >
                 {layer.visible ? '\u{1F441}' : '\u{1F441}\u{200D}\u{1F5E8}'}
               </button>
+              {layer.type === 'text' && (
+                <span className={styles.layerTypeBadge} data-testid="text-layer-badge">T</span>
+              )}
               <span
                 className={styles.layerName}
                 onDoubleClick={e => { e.stopPropagation(); startRename(layer.id, layer.name) }}

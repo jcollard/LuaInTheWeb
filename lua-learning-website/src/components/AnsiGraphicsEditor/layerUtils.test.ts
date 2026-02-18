@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { isDefaultCell, createLayer, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, syncLayerIds } from './layerUtils'
-import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF } from './types'
+import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG } from './types'
 import type { AnsiCell, RGBColor, Layer, LayerState } from './types'
 
 describe('isDefaultCell', () => {
@@ -95,7 +95,7 @@ describe('compositeCell', () => {
 
   function makeLayer(name: string, overrides?: Partial<Layer>): Layer {
     const layer = createLayer(name)
-    return { ...layer, ...overrides }
+    return { ...layer, ...overrides } as Layer
   }
 
   it('returns DEFAULT_CELL when all layers are empty', () => {
@@ -335,6 +335,108 @@ describe('cloneLayerState', () => {
   })
 })
 
+describe('cloneLayerState with textFgColors', () => {
+  it('preserves textFgColors in cloned text layer', () => {
+    const textLayer: Layer = {
+      type: 'text',
+      id: 'text-1',
+      name: 'Text',
+      visible: true,
+      text: 'Hi',
+      bounds: { r0: 0, c0: 0, r1: 0, c1: 10 },
+      textFg: [255, 255, 255],
+      textFgColors: [[255, 0, 0], [0, 255, 0]],
+      grid: Array.from({ length: ANSI_ROWS }, () =>
+        Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
+      ),
+    }
+    const state: LayerState = { layers: [textLayer], activeLayerId: 'text-1' }
+    const clone = cloneLayerState(state)
+    const cloned = clone.layers[0] as import('./types').TextLayer
+    expect(cloned.textFgColors).toEqual([[255, 0, 0], [0, 255, 0]])
+  })
+
+  it('deep-copies textFgColors so mutation does not affect original', () => {
+    const textLayer: Layer = {
+      type: 'text',
+      id: 'text-1',
+      name: 'Text',
+      visible: true,
+      text: 'Hi',
+      bounds: { r0: 0, c0: 0, r1: 0, c1: 10 },
+      textFg: [255, 255, 255],
+      textFgColors: [[255, 0, 0], [0, 255, 0]],
+      grid: Array.from({ length: ANSI_ROWS }, () =>
+        Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
+      ),
+    }
+    const state: LayerState = { layers: [textLayer], activeLayerId: 'text-1' }
+    const clone = cloneLayerState(state)
+    const cloned = clone.layers[0] as import('./types').TextLayer
+    cloned.textFgColors![0][0] = 0
+    const original = state.layers[0] as import('./types').TextLayer
+    expect(original.textFgColors![0][0]).toBe(255)
+  })
+
+  it('preserves textAlign in cloned text layer', () => {
+    const textLayer: Layer = {
+      type: 'text',
+      id: 'text-1',
+      name: 'Text',
+      visible: true,
+      text: 'Hi',
+      bounds: { r0: 0, c0: 0, r1: 0, c1: 10 },
+      textFg: [255, 255, 255],
+      textAlign: 'center',
+      grid: Array.from({ length: ANSI_ROWS }, () =>
+        Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
+      ),
+    }
+    const state: LayerState = { layers: [textLayer], activeLayerId: 'text-1' }
+    const clone = cloneLayerState(state)
+    const cloned = clone.layers[0] as import('./types').TextLayer
+    expect(cloned.textAlign).toBe('center')
+  })
+
+  it('handles text layer without textAlign (undefined)', () => {
+    const textLayer: Layer = {
+      type: 'text',
+      id: 'text-1',
+      name: 'Text',
+      visible: true,
+      text: 'Hi',
+      bounds: { r0: 0, c0: 0, r1: 0, c1: 10 },
+      textFg: [255, 255, 255],
+      grid: Array.from({ length: ANSI_ROWS }, () =>
+        Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
+      ),
+    }
+    const state: LayerState = { layers: [textLayer], activeLayerId: 'text-1' }
+    const clone = cloneLayerState(state)
+    const cloned = clone.layers[0] as import('./types').TextLayer
+    expect(cloned.textAlign).toBeUndefined()
+  })
+
+  it('handles text layer without textFgColors (undefined)', () => {
+    const textLayer: Layer = {
+      type: 'text',
+      id: 'text-1',
+      name: 'Text',
+      visible: true,
+      text: '',
+      bounds: { r0: 0, c0: 0, r1: 0, c1: 10 },
+      textFg: [255, 255, 255],
+      grid: Array.from({ length: ANSI_ROWS }, () =>
+        Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
+      ),
+    }
+    const state: LayerState = { layers: [textLayer], activeLayerId: 'text-1' }
+    const clone = cloneLayerState(state)
+    const cloned = clone.layers[0] as import('./types').TextLayer
+    expect(cloned.textFgColors).toBeUndefined()
+  })
+})
+
 describe('syncLayerIds', () => {
   it('updates counter past the highest layer-N id', () => {
     const layers: Layer[] = [
@@ -367,5 +469,67 @@ describe('syncLayerIds', () => {
     syncLayerIds([])
     const newLayer = createLayer('New')
     expect(newLayer.id).toMatch(/^layer-\d+$/)
+  })
+})
+
+describe('TRANSPARENT_BG compositing', () => {
+  const red: RGBColor = [255, 0, 0]
+  const blue: RGBColor = [0, 0, 255]
+  const green: RGBColor = [0, 170, 0]
+  const white: RGBColor = [255, 255, 255]
+
+  function makeLayer(name: string, overrides?: Partial<Layer>): Layer {
+    const layer = createLayer(name)
+    return { ...layer, ...overrides } as Layer
+  }
+
+  it('text cell above opaque cell gets bg from opaque cell', () => {
+    const bottom = makeLayer('bg')
+    bottom.grid[0][0] = { char: '#', fg: white, bg: blue }
+    const top = makeLayer('text')
+    top.grid[0][0] = { char: 'A', fg: red, bg: TRANSPARENT_BG }
+    expect(compositeCell([bottom, top], 0, 0)).toEqual({ char: 'A', fg: red, bg: blue })
+  })
+
+  it('text cell above HALF_BLOCK gets bg from half-block bg', () => {
+    const bottom = makeLayer('bg')
+    bottom.grid[0][0] = { char: HALF_BLOCK, fg: green, bg: blue }
+    const top = makeLayer('text')
+    top.grid[0][0] = { char: 'T', fg: red, bg: TRANSPARENT_BG }
+    expect(compositeCell([bottom, top], 0, 0)).toEqual({ char: 'T', fg: red, bg: blue })
+  })
+
+  it('text cell above nothing gets DEFAULT_BG', () => {
+    const layer = makeLayer('text')
+    layer.grid[0][0] = { char: 'X', fg: red, bg: TRANSPARENT_BG }
+    expect(compositeCell([layer], 0, 0)).toEqual({ char: 'X', fg: red, bg: DEFAULT_BG })
+  })
+
+  it('stacked text cells: topmost char+fg wins, bg from below both', () => {
+    const bottom = makeLayer('bg')
+    bottom.grid[0][0] = { char: '#', fg: white, bg: green }
+    const mid = makeLayer('text1')
+    mid.grid[0][0] = { char: 'M', fg: blue, bg: TRANSPARENT_BG }
+    const top = makeLayer('text2')
+    top.grid[0][0] = { char: 'T', fg: red, bg: TRANSPARENT_BG }
+    expect(compositeCell([bottom, mid, top], 0, 0)).toEqual({ char: 'T', fg: red, bg: green })
+  })
+
+  it('text cell above default cell gets DEFAULT_BG', () => {
+    const bottom = makeLayer('bg')
+    // bottom[0][0] is default
+    const top = makeLayer('text')
+    top.grid[0][0] = { char: 'Z', fg: red, bg: TRANSPARENT_BG }
+    expect(compositeCell([bottom, top], 0, 0)).toEqual({ char: 'Z', fg: red, bg: DEFAULT_BG })
+  })
+
+  it('TRANSPARENT_BG cell is skipped when it has space char (default cell with transparent bg)', () => {
+    const bottom = makeLayer('bg')
+    bottom.grid[0][0] = { char: '#', fg: white, bg: blue }
+    const top = makeLayer('text')
+    // Space with TRANSPARENT_BG should be treated as "no content" — fall through
+    top.grid[0][0] = { char: ' ', fg: DEFAULT_FG, bg: TRANSPARENT_BG }
+    const result = compositeCell([bottom, top], 0, 0)
+    expect(result).toEqual({ char: '#', fg: white, bg: blue })
   })
 })

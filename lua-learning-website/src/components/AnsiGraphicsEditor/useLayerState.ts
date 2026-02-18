@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef } from 'react'
-import type { AnsiCell, AnsiGrid, Layer, LayerState, RGBColor } from './types'
+import type { AnsiCell, AnsiGrid, Layer, LayerState, RGBColor, Rect, TextAlign, TextLayer } from './types'
 import { createLayer, cloneLayerState, syncLayerIds } from './layerUtils'
 import { replaceColorsInGrid } from './colorUtils'
+import { renderTextLayerGrid } from './textLayerGrid'
 
 export interface UseLayerStateReturn {
   layers: Layer[]
@@ -11,6 +12,8 @@ export interface UseLayerStateReturn {
   activeLayer: Layer
   addLayer: () => void
   addLayerWithGrid: (name: string, grid: AnsiGrid) => void
+  addTextLayer: (name: string, bounds: Rect, textFg: RGBColor) => void
+  updateTextLayer: (id: string, updates: { text?: string; bounds?: Rect; textFg?: RGBColor; textFgColors?: RGBColor[]; textAlign?: TextAlign }) => void
   removeLayer: (id: string) => void
   renameLayer: (id: string, name: string) => void
   setActiveLayer: (id: string) => void
@@ -61,6 +64,43 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     setActiveLayerId(layer.id)
   }, [])
 
+  const addTextLayer = useCallback((name: string, bounds: Rect, textFg: RGBColor) => {
+    layerCountRef.current++
+    const base = createLayer(name)
+    const textLayer: TextLayer = {
+      ...base,
+      type: 'text',
+      text: '',
+      bounds,
+      textFg,
+      textFgColors: [],
+      grid: renderTextLayerGrid('', bounds, textFg),
+    }
+    const newLayers = [...layersRef.current, textLayer]
+    layersRef.current = newLayers
+    activeLayerIdRef.current = textLayer.id
+    setLayers(newLayers)
+    setActiveLayerId(textLayer.id)
+  }, [])
+
+  const updateTextLayer = useCallback((id: string, updates: { text?: string; bounds?: Rect; textFg?: RGBColor; textFgColors?: RGBColor[]; textAlign?: TextAlign }) => {
+    const newLayers = layersRef.current.map(l => {
+      if (l.id !== id || l.type !== 'text') return l
+      const updated: TextLayer = {
+        ...l,
+        text: updates.text ?? l.text,
+        bounds: updates.bounds ?? l.bounds,
+        textFg: updates.textFg ?? l.textFg,
+        textFgColors: updates.textFgColors !== undefined ? updates.textFgColors : l.textFgColors,
+        textAlign: updates.textAlign !== undefined ? updates.textAlign : l.textAlign,
+      }
+      updated.grid = renderTextLayerGrid(updated.text, updated.bounds, updated.textFg, updated.textFgColors, updated.textAlign)
+      return updated
+    })
+    layersRef.current = newLayers
+    setLayers(newLayers)
+  }, [layersRef])
+
   const removeLayer = useCallback((id: string) => {
     setLayers(prev => {
       if (prev.length <= 1) return prev
@@ -79,6 +119,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
   }, [])
 
   const setActiveLayer = useCallback((id: string) => {
+    activeLayerIdRef.current = id
     setActiveLayerId(id)
   }, [])
 
@@ -108,6 +149,8 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
 
   const applyToActiveLayer = useCallback((row: number, col: number, cell: AnsiCell) => {
     const activeId = activeLayerIdRef.current
+    const active = layersRef.current.find(l => l.id === activeId)
+    if (active?.type === 'text') return // no-op for text layers
     const newLayers = layersRef.current.map(l => {
       if (l.id !== activeId) return l
       const newRow = [...l.grid[row]]
@@ -156,6 +199,8 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     activeLayer,
     addLayer,
     addLayerWithGrid,
+    addTextLayer,
+    updateTextLayer,
     removeLayer,
     renameLayer,
     setActiveLayer,

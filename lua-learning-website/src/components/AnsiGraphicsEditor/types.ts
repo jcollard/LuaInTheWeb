@@ -10,7 +10,7 @@ export type AnsiGrid = AnsiCell[][]
 
 export type BrushMode = 'brush' | 'pixel' | 'eraser'
 
-export type DrawTool = 'pencil' | 'line' | 'rect-outline' | 'rect-filled' | 'flood-fill' | 'select' | 'eyedropper'
+export type DrawTool = 'pencil' | 'line' | 'rect-outline' | 'rect-filled' | 'flood-fill' | 'select' | 'eyedropper' | 'text'
 
 export const HALF_BLOCK = '\u2580'
 
@@ -36,18 +36,49 @@ export const DEFAULT_BG: RGBColor = [0, 0, 0]
  */
 export const TRANSPARENT_HALF: RGBColor = [-1, -1, -1]
 
+/**
+ * Sentinel value marking a transparent background in text layer cells.
+ * Text layer characters use this so the background from layers below shows through.
+ * Must never reach rendering code — the compositing layer resolves it before output.
+ */
+export const TRANSPARENT_BG: RGBColor = [-2, -2, -2]
+
 export const DEFAULT_CELL: AnsiCell = {
   char: ' ',
   fg: DEFAULT_FG,
   bg: DEFAULT_BG,
 }
 
-export interface Layer {
+export interface Rect {
+  r0: number
+  c0: number
+  r1: number
+  c1: number
+}
+
+interface BaseLayer {
   id: string
   name: string
   visible: boolean
   grid: AnsiGrid
 }
+
+export interface DrawnLayer extends BaseLayer {
+  type: 'drawn'
+}
+
+export type TextAlign = 'left' | 'center' | 'right' | 'justify'
+
+export interface TextLayer extends BaseLayer {
+  type: 'text'
+  text: string
+  bounds: Rect
+  textFg: RGBColor
+  textFgColors?: RGBColor[]
+  textAlign?: TextAlign
+}
+
+export type Layer = DrawnLayer | TextLayer
 
 export interface LayerState {
   layers: Layer[]         // ordered bottom-to-top (index 0 = bottom)
@@ -77,6 +108,8 @@ export interface UseAnsiEditorReturn {
   cursorRef: React.RefObject<HTMLDivElement | null>
   dimensionRef: React.RefObject<HTMLDivElement | null>
   selectionRef: React.RefObject<HTMLDivElement | null>
+  textBoundsRef: React.RefObject<HTMLDivElement | null>
+  textCursorRef: React.RefObject<HTMLDivElement | null>
   // History
   undo: () => void
   redo: () => void
@@ -94,6 +127,7 @@ export interface UseAnsiEditorReturn {
   toggleVisibility: (id: string) => void
   importPngAsLayer: (file: File) => Promise<void>
   simplifyColors: (mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => void
+  setTextAlign: (align: TextAlign) => void
 }
 
 export interface UseAnsiEditorOptions {

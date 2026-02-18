@@ -1,8 +1,6 @@
-import type { AnsiCell, AnsiGrid } from './types'
+import type { AnsiCell, AnsiGrid, Rect } from './types'
 import { ANSI_COLS, ANSI_ROWS } from './types'
 import { extractRegionCells, computeSelectionMoveCells } from './gridUtils'
-
-interface Rect { r0: number; c0: number; r1: number; c1: number }
 
 export interface SelectionDeps {
   container: HTMLElement

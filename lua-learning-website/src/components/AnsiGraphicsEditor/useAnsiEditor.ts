@@ -1,16 +1,15 @@
 import { useState, useCallback, useRef, useMemo } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
-import type { AnsiCell, BrushMode, DrawTool, BrushSettings, RGBColor, LayerState, UseAnsiEditorReturn, UseAnsiEditorOptions } from './types'
+import type { AnsiCell, BrushMode, DrawTool, BrushSettings, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions } from './types'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG } from './types'
-import {
-  createEmptyGrid, writeCellToTerminal, renderFullGrid,
-  isInBounds, getCellHalfFromMouse, computePixelCell, computeErasePixelCell, computeLineCells, computeRectCells, computeFloodFillCells, parseCellKey,
-} from './gridUtils'
+import { createEmptyGrid, writeCellToTerminal, renderFullGrid, isInBounds, getCellHalfFromMouse, computePixelCell, computeFloodFillCells } from './gridUtils'
 import type { CellHalf } from './gridUtils'
-import { compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState } from './layerUtils'
+import { compositeCell, compositeGrid, cloneLayerState } from './layerUtils'
 import { useLayerState } from './useLayerState'
 import { loadPngPixels, rgbaToAnsiGrid } from './pngImport'
+import { createDrawHelpers } from './drawHelpers'
 import { createSelectionHandlers } from './selectionTool'
+import { createTextToolHandlers, type TextToolHandlers } from './textTool'
 
 export { computePixelCell, computeLineCells } from './gridUtils'
 
@@ -22,7 +21,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     if (options?.initialGrid) {
       const id = 'initial-bg'
       return {
-        layers: [{ id, name: 'Background', visible: true, grid: options.initialGrid }],
+        layers: [{ type: 'drawn' as const, id, name: 'Background', visible: true, grid: options.initialGrid }],
         activeLayerId: id,
       }
     }
@@ -40,6 +39,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     moveLayerUp: rawMoveLayerUp, moveLayerDown: rawMoveLayerDown,
     toggleVisibility: rawToggleVisibility,
     replaceColors: rawReplaceColors,
+    addTextLayer: rawAddTextLayer,
+    updateTextLayer: rawUpdateTextLayer,
   } = layerState
 
   const grid = useMemo(() => compositeGrid(layerState.layers), [layerState.layers])
@@ -52,20 +53,19 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
 
-  const undoStackRef = useRef<LayerState[]>([])
-  const redoStackRef = useRef<LayerState[]>([])
+  const undoStackRef = useRef<LayerState[]>([]), redoStackRef = useRef<LayerState[]>([])
   const handleRef = useRef<AnsiTerminalHandle | null>(null)
   const brushRef = useRef(brush)
   brushRef.current = brush
   const paintingRef = useRef(false)
   const lastCellRef = useRef<{ row: number; col: number; isTopHalf?: boolean } | null>(null)
-  const cursorRef = useRef<HTMLDivElement | null>(null)
-  const dimensionRef = useRef<HTMLDivElement | null>(null)
-  const lineStartRef = useRef<CellHalf | null>(null)
-  const previewCellsRef = useRef<Map<string, AnsiCell>>(new Map())
-  const cleanupRef = useRef<(() => void) | null>(null)
-  const selectionRef = useRef<HTMLDivElement | null>(null)
-  const commitPendingSelectionRef = useRef<(() => void) | null>(null)
+  const cursorRef = useRef<HTMLDivElement | null>(null), dimensionRef = useRef<HTMLDivElement | null>(null)
+  const lineStartRef = useRef<CellHalf | null>(null), previewCellsRef = useRef<Map<string, AnsiCell>>(new Map())
+  const cleanupRef = useRef<(() => void) | null>(null), selectionRef = useRef<HTMLDivElement | null>(null)
+  const textBoundsRef = useRef<HTMLDivElement | null>(null), textCursorRef = useRef<HTMLDivElement | null>(null)
+  const commitPendingSelectionRef = useRef<(() => void) | null>(null), commitPendingTextRef = useRef<(() => void) | null>(null)
+  const containerRef = useRef<HTMLElement | null>(null), textToolRef = useRef<TextToolHandlers | null>(null)
+  const updateTextBoundsDisplayRef = useRef<(() => void) | null>(null)
 
   const pushSnapshot = useCallback(() => {
     const stack = undoStackRef.current
@@ -90,12 +90,15 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const undo = useCallback(() => restoreSnapshot(undoStackRef.current, redoStackRef.current), [restoreSnapshot])
   const redo = useCallback(() => restoreSnapshot(redoStackRef.current, undoStackRef.current), [restoreSnapshot])
 
-  const setBrushFg = useCallback((color: RGBColor) => setBrush(p => ({ ...p, fg: color })), [])
+  const setBrushFg = useCallback((color: RGBColor) => {
+    setBrush(p => ({ ...p, fg: color }))
+  }, [])
   const setBrushBg = useCallback((color: RGBColor) => setBrush(p => ({ ...p, bg: color })), [])
   const setBrushChar = useCallback((c: string) => { if (c.length === 1) setBrush(p => ({ ...p, char: c })) }, [])
   const setBrushMode = useCallback((mode: BrushMode) => setBrush(p => ({ ...p, mode })), [])
   const setTool = useCallback((tool: DrawTool) => {
     commitPendingSelectionRef.current?.()
+    commitPendingTextRef.current?.()
     setBrush(p => ({ ...p, tool }))
   }, [])
 
@@ -121,22 +124,18 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     pushSnapshot()
     const emptyGrid = createEmptyGrid()
     const id = 'clear-bg-' + Date.now()
-    restoreLayerState({ layers: [{ id, name: 'Background', visible: true, grid: emptyGrid }], activeLayerId: id })
+    restoreLayerState({ layers: [{ type: 'drawn', id, name: 'Background', visible: true, grid: emptyGrid }], activeLayerId: id })
     setIsDirty(false)
     if (handleRef.current) renderFullGrid(handleRef.current, emptyGrid)
   }, [pushSnapshot, restoreLayerState])
 
-  // Helper: wrap a layer mutation with undo snapshot + deferred re-render
   const withLayerUndo = useCallback((action: () => void, needsRerender = true) => {
-    pushSnapshot()
-    action()
+    pushSnapshot(); action()
     if (needsRerender) {
       setIsDirty(true)
-      if (handleRef.current) {
-        setTimeout(() => {
-          if (handleRef.current) renderFullGrid(handleRef.current, compositeGrid(layersRef.current))
-        }, 0)
-      }
+      if (handleRef.current) setTimeout(() => {
+        if (handleRef.current) renderFullGrid(handleRef.current, compositeGrid(layersRef.current))
+      }, 0)
     }
   }, [pushSnapshot, layersRef])
 
@@ -155,133 +154,58 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const simplifyColors = useCallback((mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => withLayerUndo(() => rawReplaceColors(mapping, scope)), [withLayerUndo, rawReplaceColors])
 
   const attachMouseListeners = useCallback((container: HTMLElement) => {
-    function positionCursor(row: number, col: number, isTopHalf?: boolean): void {
-      const el = cursorRef.current
-      if (!el) return
-      const rect = container.getBoundingClientRect()
-      const cellW = rect.width / ANSI_COLS
-      const cellH = rect.height / ANSI_ROWS
-      const isHalf = isTopHalf !== undefined
-      const cursorH = isHalf ? cellH / 2 : cellH
-      const offsetY = isHalf && !isTopHalf ? cellH / 2 : 0
-      el.style.display = 'block'
-      el.style.left = `${rect.left + col * cellW}px`
-      el.style.top = `${rect.top + row * cellH + offsetY}px`
-      el.style.width = `${cellW}px`
-      el.style.height = `${cursorH}px`
-    }
-
-    function hideCursor(): void { if (cursorRef.current) cursorRef.current.style.display = 'none' }
-
-    function showDimension(start: CellHalf, end: CellHalf): void {
-      const el = dimensionRef.current
-      if (!el) return
-      const rect = container.getBoundingClientRect()
-      const cellW = rect.width / ANSI_COLS
-      const cellH = rect.height / ANSI_ROWS
-      const minCol = Math.min(start.col, end.col)
-      const maxCol = Math.max(start.col, end.col)
-      const minRow = Math.min(start.row, end.row)
-      const maxRow = Math.max(start.row, end.row)
-      let w: number, h: number
-      if (brushRef.current.mode !== 'brush') {
-        const py0 = start.row * 2 + (start.isTopHalf ? 0 : 1)
-        const py1 = end.row * 2 + (end.isTopHalf ? 0 : 1)
-        w = maxCol - minCol + 1
-        h = Math.abs(py1 - py0) + 1
-      } else {
-        w = maxCol - minCol + 1
-        h = (maxRow - minRow + 1) * 2
-      }
-      el.textContent = `${w}\u00D7${h}`
-      const cx = rect.left + (minCol + maxCol + 1) * cellW / 2
-      const cy = rect.top + (minRow + maxRow + 1) * cellH / 2
-      el.style.display = 'block'
-      el.style.left = `${cx}px`
-      el.style.top = `${cy}px`
-    }
-
-    function hideDimension(): void { if (dimensionRef.current) dimensionRef.current.style.display = 'none' }
-
-    type CellPos = { row: number; col: number; isTopHalf?: boolean }
-    function isSameCell(a: CellPos, b: CellPos) { return a.row === b.row && a.col === b.col && a.isTopHalf === b.isTopHalf }
-    function cursorHalf(cell: { isTopHalf: boolean }) { return brushRef.current.mode !== 'brush' ? cell.isTopHalf : undefined }
-
-    function paintAt(row: number, col: number, isTopHalf: boolean): void {
-      const mode = brushRef.current.mode
-      if (mode === 'eraser') { if (isInBounds(row, col)) applyCell(row, col, computeErasePixelCell(getActiveGrid()[row][col], isTopHalf)) }
-      else if (mode === 'pixel') paintPixel(row, col, isTopHalf)
-      else paintCell(row, col)
-    }
-
-    function restorePreview(): void {
-      const handle = handleRef.current
-      if (!handle) return
-      for (const [key, cell] of previewCellsRef.current) {
-        const [r, c] = parseCellKey(key)
-        writeCellToTerminal(handle, r, c, cell)
-      }
-      previewCellsRef.current.clear()
-    }
-
-    function writePreviewCells(cells: Map<string, AnsiCell>): void {
-      const handle = handleRef.current
-      if (!handle) return
-      const layers = layersRef.current, activeId = activeLayerIdRef.current
-      for (const [key, cell] of cells) {
-        const [r, c] = parseCellKey(key)
-        if (!previewCellsRef.current.has(key)) {
-          previewCellsRef.current.set(key, compositeCell(layers, r, c))
-        }
-        writeCellToTerminal(handle, r, c, compositeCellWithOverride(layers, r, c, activeId, cell))
-      }
-    }
-
-    function commitCells(cells: Map<string, AnsiCell>): void {
-      const affectedKeys = new Set(previewCellsRef.current.keys())
-      previewCellsRef.current.clear()
-      for (const [key, cell] of cells) {
-        const [r, c] = parseCellKey(key)
-        applyCell(r, c, cell)
-        affectedKeys.add(key)
-      }
-      const handle = handleRef.current, layers = layersRef.current
-      if (handle) for (const key of affectedKeys) {
-        const [r, c] = parseCellKey(key)
-        writeCellToTerminal(handle, r, c, compositeCell(layers, r, c))
-      }
-    }
-
-    function lineCells(end: CellHalf) { return computeLineCells(lineStartRef.current!, end, brushRef.current, getActiveGrid()) }
-    function rectCells(end: CellHalf) { return computeRectCells(lineStartRef.current!, end, brushRef.current, getActiveGrid(), brushRef.current.tool === 'rect-filled') }
-
-    function renderLinePreview(end: CellHalf): void {
-      if (!lineStartRef.current) return
-      restorePreview()
-      writePreviewCells(lineCells(end))
-    }
-    function commitLine(end: CellHalf): void {
-      if (!lineStartRef.current) return
-      commitCells(lineCells(end))
-      lineStartRef.current = null
-    }
-    function renderRectPreview(end: CellHalf): void {
-      if (!lineStartRef.current) return
-      restorePreview()
-      writePreviewCells(rectCells(end))
-      showDimension(lineStartRef.current!, end)
-    }
-    function commitRect(end: CellHalf): void {
-      if (!lineStartRef.current) return
-      commitCells(rectCells(end))
-      lineStartRef.current = null
-      hideDimension()
-    }
+    const draw = createDrawHelpers({
+      container, cursorRef, dimensionRef, handleRef, brushRef,
+      layersRef, activeLayerIdRef, previewCellsRef, lineStartRef,
+      getActiveGrid, applyCell, paintPixel, paintCell,
+    })
 
     const sel = createSelectionHandlers({
       container, selectionRef, commitPendingRef: commitPendingSelectionRef,
-      restorePreview, writePreviewCells, commitCells, pushSnapshot, getActiveGrid, hideDimension,
+      restorePreview: draw.restorePreview, writePreviewCells: draw.writePreviewCells,
+      commitCells: draw.commitCells, pushSnapshot, getActiveGrid, hideDimension: draw.hideDimension,
     })
+
+    containerRef.current = container
+
+    function updateTextBoundsDisplay(): void {
+      if (textToolRef.current && textToolRef.current.getPhase() !== 'idle') return
+      const activeLayer = layersRef.current.find(l => l.id === activeLayerIdRef.current)
+      if (activeLayer?.type === 'text') {
+        const el = textBoundsRef.current
+        if (!el) return
+        const { bounds } = activeLayer
+        const rect = container.getBoundingClientRect()
+        const cellW = rect.width / ANSI_COLS, cellH = rect.height / ANSI_ROWS
+        el.style.display = 'block'
+        el.style.left = `${rect.left + bounds.c0 * cellW}px`
+        el.style.top = `${rect.top + bounds.r0 * cellH}px`
+        el.style.width = `${(bounds.c1 - bounds.c0 + 1) * cellW}px`
+        el.style.height = `${(bounds.r1 - bounds.r0 + 1) * cellH}px`
+      } else if (textBoundsRef.current) {
+        textBoundsRef.current.style.display = 'none'
+      }
+    }
+    updateTextBoundsDisplayRef.current = updateTextBoundsDisplay
+
+    const textTool = createTextToolHandlers({
+      layersRef, activeLayerIdRef, brushRef,
+      addTextLayer: rawAddTextLayer,
+      updateTextLayer: rawUpdateTextLayer,
+      pushSnapshot,
+      rerenderGrid: () => {
+        if (handleRef.current) renderFullGrid(handleRef.current, compositeGrid(layersRef.current))
+      },
+      textBoundsRef, textCursorRef, containerRef,
+      onExitEditing: updateTextBoundsDisplay,
+    })
+    textToolRef.current = textTool
+    commitPendingTextRef.current = () => textTool.commitIfEditing()
+
+    function onKeyDown(e: KeyboardEvent): void {
+      if (brushRef.current.tool === 'text') textTool.onKeyDown(e)
+    }
+    document.addEventListener('keydown', onKeyDown)
 
     function pixelColor(c: AnsiCell, top: boolean): RGBColor { return c.char === ' ' ? c.bg : top ? c.fg : c.bg }
     function sampleCell(e: MouseEvent, cell: CellHalf): boolean {
@@ -299,7 +223,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     function onMouseDown(e: MouseEvent): void {
       e.preventDefault()
       const cell = getCellHalfFromMouse(e, container)
-      if (cell && sampleCell(e, cell)) { positionCursor(cell.row, cell.col, cursorHalf(cell)); return }
+      if (cell && sampleCell(e, cell)) { draw.positionCursor(cell.row, cell.col, draw.cursorHalf(cell)); return }
       switch (brushRef.current.tool) {
         case 'pencil': {
           pushSnapshot()
@@ -307,7 +231,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           lastCellRef.current = null
           if (!cell) return
           lastCellRef.current = cell
-          paintAt(cell.row, cell.col, cell.isTopHalf)
+          draw.paintAt(cell.row, cell.col, cell.isTopHalf)
           break
         }
         case 'line': {
@@ -315,7 +239,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           pushSnapshot()
           lineStartRef.current = cell
           previewCellsRef.current.clear()
-          renderLinePreview(cell)
+          draw.renderLinePreview(cell)
           break
         }
         case 'rect-outline':
@@ -324,7 +248,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           pushSnapshot()
           lineStartRef.current = cell
           previewCellsRef.current.clear()
-          renderRectPreview(cell)
+          draw.renderRectPreview(cell)
           break
         }
         case 'flood-fill': {
@@ -334,7 +258,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           )
           if (fills.size === 0) return
           pushSnapshot()
-          commitCells(fills)
+          draw.commitCells(fills)
           break
         }
         case 'select': {
@@ -342,37 +266,46 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           sel.onMouseDown(cell.row, cell.col)
           break
         }
+        case 'text': {
+          if (!cell) return
+          textTool.onMouseDown(cell.row, cell.col)
+          break
+        }
       }
-      if (cell) positionCursor(cell.row, cell.col, cursorHalf(cell))
+      if (cell) draw.positionCursor(cell.row, cell.col, draw.cursorHalf(cell))
       document.addEventListener('mouseup', onDocumentMouseUp)
     }
 
     function onMouseMove(e: MouseEvent): void {
       const cell = getCellHalfFromMouse(e, container)
-      if (cell) positionCursor(cell.row, cell.col, cursorHalf(cell))
-      else hideCursor()
+      if (cell) draw.positionCursor(cell.row, cell.col, draw.cursorHalf(cell))
+      else draw.hideCursor()
       if (!cell) return
       switch (brushRef.current.tool) {
         case 'pencil': {
           if (!paintingRef.current) return
           const last = lastCellRef.current
           const current = brushRef.current.mode !== 'brush' ? cell : { row: cell.row, col: cell.col }
-          if (last && isSameCell(last, current)) return
+          if (last && draw.isSameCell(last, current)) return
           lastCellRef.current = current
-          paintAt(cell.row, cell.col, cell.isTopHalf)
+          draw.paintAt(cell.row, cell.col, cell.isTopHalf)
           break
         }
         case 'line': {
-          if (lineStartRef.current) renderLinePreview(cell)
+          if (lineStartRef.current) draw.renderLinePreview(cell)
           break
         }
         case 'rect-outline':
         case 'rect-filled': {
-          if (lineStartRef.current) renderRectPreview(cell)
+          if (lineStartRef.current) draw.renderRectPreview(cell)
           break
         }
         case 'select': {
           sel.onMouseMove(cell.row, cell.col)
+          break
+        }
+        case 'text': {
+          textTool.onMouseMove(cell.row, cell.col)
           break
         }
       }
@@ -388,26 +321,30 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         case 'line': {
           if (!lineStartRef.current) break
           const cell = getCellHalfFromMouse(e, container)
-          if (cell) commitLine(cell)
-          else { restorePreview(); lineStartRef.current = null }
+          if (cell) draw.commitLine(cell)
+          else { draw.restorePreview(); lineStartRef.current = null }
           break
         }
         case 'rect-outline':
         case 'rect-filled': {
           if (!lineStartRef.current) break
           const cell = getCellHalfFromMouse(e, container)
-          if (cell) commitRect(cell)
-          else { restorePreview(); lineStartRef.current = null; hideDimension() }
+          if (cell) draw.commitRect(cell)
+          else { draw.restorePreview(); lineStartRef.current = null; draw.hideDimension() }
           break
         }
         case 'select': {
           sel.onMouseUp()
           break
         }
+        case 'text': {
+          textTool.onMouseUp()
+          break
+        }
       }
     }
 
-    function onMouseLeave(): void { hideCursor() }
+    function onMouseLeave(): void { draw.hideCursor() }
 
     function onContextMenu(e: MouseEvent): void { e.preventDefault() }
 
@@ -421,8 +358,34 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       container.removeEventListener('mouseleave', onMouseLeave)
       container.removeEventListener('contextmenu', onContextMenu)
       document.removeEventListener('mouseup', onDocumentMouseUp)
+      document.removeEventListener('keydown', onKeyDown)
+      textTool.commitIfEditing()
     }
-  }, [paintCell, paintPixel, applyCell, pushSnapshot, layersRef, activeLayerIdRef, getActiveGrid])
+  }, [paintCell, paintPixel, applyCell, pushSnapshot, layersRef, activeLayerIdRef, getActiveGrid, rawAddTextLayer, rawUpdateTextLayer])
+
+  const setActiveLayerWithBounds = useCallback((id: string) => {
+    commitPendingTextRef.current?.()
+    layerState.setActiveLayer(id)
+    const layer = layersRef.current.find(l => l.id === id)
+    if (layer?.type === 'text') {
+      setBrush(p => p.tool === 'text' ? p : ({ ...p, tool: 'text' }))
+    } else if (brushRef.current.tool === 'text') {
+      setBrush(p => ({ ...p, tool: 'pencil' }))
+    }
+    updateTextBoundsDisplayRef.current?.()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layerState.setActiveLayer, layersRef])
+
+  const setTextAlign = useCallback((align: TextAlign) => {
+    const activeId = activeLayerIdRef.current
+    const active = layersRef.current.find(l => l.id === activeId)
+    if (!active || active.type !== 'text') return
+    pushSnapshot()
+    rawUpdateTextLayer(activeId, { textAlign: align })
+    setIsDirty(true)
+    if (handleRef.current) renderFullGrid(handleRef.current, compositeGrid(layersRef.current))
+    textToolRef.current?.refreshOverlays()
+  }, [pushSnapshot, rawUpdateTextLayer, layersRef, activeLayerIdRef])
 
   const markClean = useCallback(() => setIsDirty(false), []), openSaveDialog = useCallback(() => setIsSaveDialogOpen(true), []), closeSaveDialog = useCallback(() => setIsSaveDialogOpen(false), [])
 
@@ -433,17 +396,18 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     if (handle) {
       renderFullGrid(handle, compositeGrid(layersRef.current))
       cleanupRef.current = attachMouseListeners(handle.container)
+      updateTextBoundsDisplayRef.current?.()
     }
   }, [attachMouseListeners, layersRef])
 
   return {
     grid, brush, setBrushFg, setBrushBg, setBrushChar, setBrushMode, setTool, clearGrid,
-    isDirty, markClean, onTerminalReady, cursorRef, dimensionRef, selectionRef,
+    isDirty, markClean, onTerminalReady, cursorRef, dimensionRef, selectionRef, textBoundsRef, textCursorRef,
     isSaveDialogOpen, openSaveDialog, closeSaveDialog, undo, redo, canUndo, canRedo,
     layers: layerState.layers, activeLayerId: layerState.activeLayerId,
     addLayer: addLayerWithUndo, removeLayer: removeLayerWithUndo,
-    renameLayer: layerState.renameLayer, setActiveLayer: layerState.setActiveLayer,
+    renameLayer: layerState.renameLayer, setActiveLayer: setActiveLayerWithBounds,
     moveLayerUp: moveLayerUpWithUndo, moveLayerDown: moveLayerDownWithUndo,
-    toggleVisibility: toggleVisibilityWithUndo, importPngAsLayer, simplifyColors,
+    toggleVisibility: toggleVisibilityWithUndo, importPngAsLayer, simplifyColors, setTextAlign,
   }
 }

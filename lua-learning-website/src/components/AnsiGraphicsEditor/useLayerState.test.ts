@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useLayerState } from './useLayerState'
 import { createLayer } from './layerUtils'
-import type { LayerState, RGBColor } from './types'
+import type { LayerState, RGBColor, Rect, TextLayer } from './types'
+import { TRANSPARENT_BG } from './types'
 
 describe('useLayerState', () => {
   describe('initialization', () => {
@@ -97,6 +98,19 @@ describe('useLayerState', () => {
       const firstId = result.current.layers[0].id
       act(() => result.current.setActiveLayer(firstId))
       expect(result.current.activeLayerId).toBe(firstId)
+    })
+
+    it('updates activeLayerIdRef synchronously', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addLayer())
+      const firstId = result.current.layers[0].id
+      // Read the ref immediately after calling setActiveLayer (inside act but before re-render)
+      let refValueDuringCall: string | undefined
+      act(() => {
+        result.current.setActiveLayer(firstId)
+        refValueDuringCall = result.current.activeLayerIdRef.current
+      })
+      expect(refValueDuringCall).toBe(firstId)
     })
   })
 
@@ -302,6 +316,159 @@ describe('useLayerState', () => {
       act(() => result.current.addLayer())
       const newLayer = result.current.layers[result.current.layers.length - 1]
       expect(newLayer.name).toBe('Layer 4')
+    })
+  })
+
+  describe('addTextLayer', () => {
+    const red: RGBColor = [255, 0, 0]
+    const bounds: Rect = { r0: 0, c0: 0, r1: 2, c1: 10 }
+
+    it('creates a text layer with the given name, bounds, and fg', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addTextLayer('Text 1', bounds, red))
+      expect(result.current.layers).toHaveLength(2)
+      const textLayer = result.current.layers[1] as TextLayer
+      expect(textLayer.type).toBe('text')
+      expect(textLayer.name).toBe('Text 1')
+      expect(textLayer.bounds).toEqual(bounds)
+      expect(textLayer.textFg).toEqual(red)
+      expect(textLayer.text).toBe('')
+    })
+
+    it('sets the new text layer as active', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addTextLayer('Text 1', bounds, red))
+      expect(result.current.activeLayerId).toBe(result.current.layers[1].id)
+    })
+
+    it('syncs layersRef and activeLayerIdRef synchronously', () => {
+      const { result } = renderHook(() => useLayerState())
+      let refLayers: number | undefined
+      let refActiveId: string | undefined
+      act(() => {
+        result.current.addTextLayer('Text 1', bounds, red)
+        refLayers = result.current.layersRef.current.length
+        refActiveId = result.current.activeLayerIdRef.current
+      })
+      // Refs should be updated synchronously, not waiting for re-render
+      expect(refLayers).toBe(2)
+      const textLayer = result.current.layersRef.current[1]
+      expect(textLayer.type).toBe('text')
+      expect(refActiveId).toBe(textLayer.id)
+    })
+
+    it('initializes grid with default cells for empty text', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addTextLayer('Text 1', bounds, red))
+      const textLayer = result.current.layers[1] as TextLayer
+      expect(textLayer.grid[0][0].char).toBe(' ') // empty text = all default cells
+    })
+
+    it('initializes textFgColors as empty array', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addTextLayer('Text 1', bounds, red))
+      const textLayer = result.current.layers[1] as TextLayer
+      expect(textLayer.textFgColors).toEqual([])
+    })
+  })
+
+  describe('updateTextLayer', () => {
+    const red: RGBColor = [255, 0, 0]
+    const blue: RGBColor = [0, 0, 255]
+    const bounds: Rect = { r0: 0, c0: 0, r1: 2, c1: 10 }
+
+    it('updates text and re-renders grid', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addTextLayer('Text 1', bounds, red))
+      const id = result.current.layers[1].id
+      act(() => result.current.updateTextLayer(id, { text: 'Hello' }))
+      const textLayer = result.current.layers[1] as TextLayer
+      expect(textLayer.text).toBe('Hello')
+      expect(textLayer.grid[0][0].char).toBe('H')
+      expect(textLayer.grid[0][0].bg).toEqual(TRANSPARENT_BG)
+    })
+
+    it('updates bounds and re-renders grid', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addTextLayer('Text 1', bounds, red))
+      const id = result.current.layers[1].id
+      act(() => result.current.updateTextLayer(id, { text: 'AB' }))
+      const newBounds: Rect = { r0: 5, c0: 5, r1: 5, c1: 10 }
+      act(() => result.current.updateTextLayer(id, { bounds: newBounds }))
+      const textLayer = result.current.layers[1] as TextLayer
+      expect(textLayer.bounds).toEqual(newBounds)
+      expect(textLayer.grid[5][5].char).toBe('A')
+      expect(textLayer.grid[0][0].char).toBe(' ') // old position cleared
+    })
+
+    it('updates textFg and re-renders grid', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addTextLayer('Text 1', bounds, red))
+      const id = result.current.layers[1].id
+      act(() => result.current.updateTextLayer(id, { text: 'X', textFg: blue }))
+      const textLayer = result.current.layers[1] as TextLayer
+      expect(textLayer.textFg).toEqual(blue)
+      expect(textLayer.grid[0][0].fg).toEqual(blue)
+    })
+
+    it('is a no-op for non-existent layer id', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addTextLayer('Text 1', bounds, red))
+      act(() => result.current.updateTextLayer('nonexistent', { text: 'X' }))
+      const textLayer = result.current.layers[1] as TextLayer
+      expect(textLayer.text).toBe('')
+    })
+
+    it('updates textAlign and re-renders grid with alignment', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addTextLayer('Text 1', bounds, red))
+      const id = result.current.layers[1].id
+      // Write "Hi" into a 10-wide bounds, then set center alignment
+      const wideBounds: Rect = { r0: 0, c0: 0, r1: 0, c1: 9 }
+      act(() => result.current.updateTextLayer(id, { text: 'Hi', bounds: wideBounds, textAlign: 'center' }))
+      const textLayer = result.current.layers[1] as TextLayer
+      expect(textLayer.textAlign).toBe('center')
+      // "Hi" centered in width 10: offset = floor((10-2)/2) = 4
+      expect(textLayer.grid[0][4].char).toBe('H')
+      expect(textLayer.grid[0][5].char).toBe('i')
+    })
+
+    it('preserves textAlign when updating other fields', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addTextLayer('Text 1', bounds, red))
+      const id = result.current.layers[1].id
+      act(() => result.current.updateTextLayer(id, { textAlign: 'right' }))
+      act(() => result.current.updateTextLayer(id, { text: 'AB' }))
+      const textLayer = result.current.layers[1] as TextLayer
+      expect(textLayer.textAlign).toBe('right')
+    })
+
+    it('stores textFgColors and passes to renderTextLayerGrid', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addTextLayer('Text 1', bounds, red))
+      const id = result.current.layers[1].id
+      const colors: RGBColor[] = [red, blue]
+      act(() => result.current.updateTextLayer(id, { text: 'AB', textFgColors: colors }))
+      const textLayer = result.current.layers[1] as TextLayer
+      expect(textLayer.textFgColors).toEqual([red, blue])
+      // Grid should use per-char colors
+      expect(textLayer.grid[0][0].fg).toEqual(red)
+      expect(textLayer.grid[0][1].fg).toEqual(blue)
+    })
+  })
+
+  describe('applyToActiveLayer guard for text layers', () => {
+    it('is a no-op when active layer is a text layer', () => {
+      const { result } = renderHook(() => useLayerState())
+      const red: RGBColor = [255, 0, 0]
+      const bounds: Rect = { r0: 0, c0: 0, r1: 2, c1: 10 }
+      act(() => result.current.addTextLayer('Text 1', bounds, red))
+      // Active layer is now the text layer
+      const textLayer = result.current.layers[1] as TextLayer
+      const gridBefore = textLayer.grid[0][0]
+      act(() => result.current.applyToActiveLayer(0, 0, { char: '#', fg: [255, 0, 0], bg: [0, 0, 0] }))
+      // Should be unchanged — applyToActiveLayer no-ops for text layers
+      expect(result.current.layers[1].grid[0][0]).toEqual(gridBefore)
     })
   })
 })

@@ -8,7 +8,7 @@ import { LayersPanel } from './LayersPanel'
 import { SaveAsDialog } from './SaveAsDialog'
 import { useAnsiEditor } from './useAnsiEditor'
 import { serializeLayers, deserializeLayers } from './serialization'
-import type { LayerState } from './types'
+import type { LayerState, TextLayer } from './types'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface AnsiGraphicsEditorProps {
@@ -61,7 +61,13 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     importPngAsLayer,
     simplifyColors,
     selectionRef,
+    textBoundsRef,
+    textCursorRef,
+    setTextAlign,
   } = useAnsiEditor({ initialLayerState })
+
+  const activeLayer = layers.find(l => l.id === activeLayerId)
+  const activeTextAlign = activeLayer?.type === 'text' ? (activeLayer as TextLayer).textAlign : undefined
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -134,6 +140,8 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
         onRedo={redo}
         canUndo={canUndo}
         canRedo={canRedo}
+        textAlign={activeTextAlign}
+        onSetTextAlign={setTextAlign}
       />
       <div className={styles.editorBody}>
         <ColorPanel
@@ -166,6 +174,8 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
       <div ref={cursorRef} className={styles.cellCursor} />
       <div ref={dimensionRef} className={styles.dimensionLabel} />
       <div ref={selectionRef} className={styles.selectionOverlay} />
+      <div ref={textBoundsRef} className={styles.textBoundsOverlay} />
+      <div ref={textCursorRef} className={styles.textCursor} />
       <SaveAsDialog
         isOpen={isSaveDialogOpen}
         tree={fileTree}

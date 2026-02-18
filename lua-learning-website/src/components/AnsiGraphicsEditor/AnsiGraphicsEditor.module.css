@@ -68,6 +68,30 @@
   box-sizing: border-box;
 }
 
+.textBoundsOverlay {
+  position: fixed;
+  display: none;
+  pointer-events: none;
+  border: 1px dashed black;
+  outline: 1px dashed white;
+  z-index: 10;
+  box-sizing: border-box;
+}
+
+.textCursor {
+  position: fixed;
+  display: none;
+  pointer-events: none;
+  background-color: #aaaaaa;
+  mix-blend-mode: difference;
+  z-index: 11;
+  animation: textCursorBlink 1s step-start infinite;
+}
+
+@keyframes textCursorBlink {
+  50% { opacity: 0; }
+}
+
 /* Color panel (left sidebar) */
 .colorPanel {
   width: 200px;
@@ -684,4 +708,14 @@
 .layerBtn:disabled {
   opacity: 0.3;
   cursor: default;
+}
+
+.layerTypeBadge {
+  font-size: 9px;
+  font-weight: 700;
+  background-color: var(--theme-accent-primary);
+  color: var(--theme-bg-primary);
+  border-radius: 2px;
+  padding: 0 3px;
+  line-height: 14px;
 }

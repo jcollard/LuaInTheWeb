@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import type { BrushMode, DrawTool, BrushSettings } from './types'
+import type { BrushMode, DrawTool, BrushSettings, TextAlign } from './types'
 import { CharPaletteModal } from './CharPaletteModal'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -16,11 +16,13 @@ export interface AnsiEditorToolbarProps {
   onRedo: () => void
   canUndo: boolean
   canRedo: boolean
+  textAlign?: TextAlign
+  onSetTextAlign?: (align: TextAlign) => void
 }
 
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
-  onImportPng, onUndo, onRedo, canUndo, canRedo,
+  onImportPng, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
 }: AnsiEditorToolbarProps) {
   const isRectActive = brush.tool === 'rect-outline' || brush.tool === 'rect-filled'
   const [charPaletteOpen, setCharPaletteOpen] = useState(false)
@@ -109,6 +111,16 @@ export function AnsiEditorToolbar({
         >
           ⚗
         </button>
+        <button
+          type="button"
+          className={`${styles.modeButton} ${brush.tool === 'text' ? styles.modeButtonActive : ''}`}
+          aria-pressed={brush.tool === 'text'}
+          onClick={() => onSetTool('text')}
+          title="Text"
+          data-testid="tool-text"
+        >
+          T
+        </button>
       </div>
       <div className={styles.modeGroup}>
         <span className={styles.modeLabel}>Mode</span>
@@ -143,6 +155,51 @@ export function AnsiEditorToolbar({
           ⌫
         </button>
       </div>
+      {brush.tool === 'text' && onSetTextAlign && (
+        <div className={styles.modeGroup}>
+          <span className={styles.modeLabel}>Align</span>
+          <button
+            type="button"
+            className={`${styles.modeButton} ${(textAlign ?? 'left') === 'left' ? styles.modeButtonActive : ''}`}
+            aria-pressed={(textAlign ?? 'left') === 'left'}
+            onClick={() => onSetTextAlign('left')}
+            title="Align Left"
+            data-testid="align-left"
+          >
+            {'≡L'}
+          </button>
+          <button
+            type="button"
+            className={`${styles.modeButton} ${textAlign === 'center' ? styles.modeButtonActive : ''}`}
+            aria-pressed={textAlign === 'center'}
+            onClick={() => onSetTextAlign('center')}
+            title="Align Center"
+            data-testid="align-center"
+          >
+            {'≡C'}
+          </button>
+          <button
+            type="button"
+            className={`${styles.modeButton} ${textAlign === 'right' ? styles.modeButtonActive : ''}`}
+            aria-pressed={textAlign === 'right'}
+            onClick={() => onSetTextAlign('right')}
+            title="Align Right"
+            data-testid="align-right"
+          >
+            {'≡R'}
+          </button>
+          <button
+            type="button"
+            className={`${styles.modeButton} ${textAlign === 'justify' ? styles.modeButtonActive : ''}`}
+            aria-pressed={textAlign === 'justify'}
+            onClick={() => onSetTextAlign('justify')}
+            title="Justify"
+            data-testid="align-justify"
+          >
+            {'≡J'}
+          </button>
+        </div>
+      )}
       {brush.mode === 'brush' && (
         <div className={styles.charGroup}>
           <span className={styles.charLabel}>Char</span>
