@@ -283,12 +283,15 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       restorePreview, writePreviewCells, commitCells, pushSnapshot, getActiveGrid, hideDimension,
     })
 
+    function pixelColor(c: AnsiCell, top: boolean): RGBColor { return c.char === ' ' ? c.bg : top ? c.fg : c.bg }
     function sampleCell(e: MouseEvent, cell: CellHalf): boolean {
       const s = compositeCell(layersRef.current, cell.row, cell.col)
-      if (brushRef.current.tool === 'eyedropper' || e.ctrlKey) {
-        setBrush(p => e.button === 2 ? ({ ...p, bg: [...s.bg] as RGBColor }) : ({ ...p, fg: [...s.fg] as RGBColor }))
+      if (brushRef.current.tool === 'eyedropper') {
+        const c = pixelColor(s, cell.isTopHalf)
+        setBrush(p => e.button === 2 ? ({ ...p, bg: [...c] as RGBColor }) : ({ ...p, fg: [...c] as RGBColor }))
         return true
       }
+      if (e.ctrlKey) { setBrush(p => e.button === 2 ? ({ ...p, bg: [...s.bg] as RGBColor }) : ({ ...p, fg: [...s.fg] as RGBColor })); return true }
       if (e.button === 2) { setBrush(p => ({ ...p, char: s.char })); return true }
       return false
     }
