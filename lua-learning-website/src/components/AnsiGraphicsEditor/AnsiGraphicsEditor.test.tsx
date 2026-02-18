@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { ColorPalette } from './ColorPalette'
 import { AnsiEditorToolbar, type AnsiEditorToolbarProps } from './AnsiEditorToolbar'
-import { CGA_PALETTE, DEFAULT_FG, DEFAULT_BG } from './types'
+import { DEFAULT_FG, DEFAULT_BG } from './types'
 import type { BrushMode, DrawTool, RGBColor } from './types'
 
 // Mock AnsiTerminalPanel since it depends on xterm.js
@@ -14,47 +13,12 @@ vi.mock('../AnsiTerminalPanel/AnsiTerminalPanel', () => ({
   },
 }))
 
-describe('ColorPalette', () => {
-  it('should render 16 color swatches', () => {
-    const onSelect = vi.fn()
-    render(<ColorPalette label="FG" selected={DEFAULT_FG} onSelect={onSelect} />)
-    const palette = screen.getByTestId('palette-fg')
-    const buttons = palette.querySelectorAll('button')
-    expect(buttons).toHaveLength(16)
-  })
-
-  it('should render label', () => {
-    render(<ColorPalette label="FG" selected={DEFAULT_FG} onSelect={vi.fn()} />)
-    expect(screen.getByText('FG')).toBeTruthy()
-  })
-
-  it('should call onSelect when a swatch is clicked', () => {
-    const onSelect = vi.fn()
-    render(<ColorPalette label="FG" selected={DEFAULT_FG} onSelect={onSelect} />)
-    const palette = screen.getByTestId('palette-fg')
-    const firstButton = palette.querySelectorAll('button')[0]
-    fireEvent.click(firstButton)
-    expect(onSelect).toHaveBeenCalledWith(CGA_PALETTE[0].rgb)
-  })
-
-  it('should mark selected color with aria-pressed', () => {
-    render(<ColorPalette label="BG" selected={DEFAULT_BG} onSelect={vi.fn()} />)
-    const palette = screen.getByTestId('palette-bg')
-    const buttons = palette.querySelectorAll('button')
-    // Black (0,0,0) is DEFAULT_BG and first in CGA_PALETTE
-    expect(buttons[0].getAttribute('aria-pressed')).toBe('true')
-    expect(buttons[1].getAttribute('aria-pressed')).toBe('false')
-  })
-})
-
 describe('AnsiEditorToolbar', () => {
   const defaultBrush = { char: '#', fg: DEFAULT_FG as RGBColor, bg: DEFAULT_BG as RGBColor, mode: 'brush' as BrushMode, tool: 'pencil' as DrawTool }
-  let handlers: Pick<AnsiEditorToolbarProps, 'onSetFg' | 'onSetBg' | 'onSetChar' | 'onClear' | 'onSave' | 'onSaveAs' | 'onImportPng' | 'onSetMode' | 'onSetTool' | 'onUndo' | 'onRedo' | 'canUndo' | 'canRedo'>
+  let handlers: Pick<AnsiEditorToolbarProps, 'onSetChar' | 'onClear' | 'onSave' | 'onSaveAs' | 'onImportPng' | 'onSetMode' | 'onSetTool' | 'onUndo' | 'onRedo' | 'canUndo' | 'canRedo'>
 
   beforeEach(() => {
     handlers = {
-      onSetFg: vi.fn<(color: RGBColor) => void>(),
-      onSetBg: vi.fn<(color: RGBColor) => void>(),
       onSetChar: vi.fn<(char: string) => void>(),
       onClear: vi.fn<() => void>(),
       onSave: vi.fn<() => void>(),
@@ -69,11 +33,9 @@ describe('AnsiEditorToolbar', () => {
     }
   })
 
-  it('should render toolbar with FG and BG palettes', () => {
+  it('should render toolbar', () => {
     render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
     expect(screen.getByTestId('ansi-editor-toolbar')).toBeTruthy()
-    expect(screen.getByTestId('palette-fg')).toBeTruthy()
-    expect(screen.getByTestId('palette-bg')).toBeTruthy()
   })
 
   it('should render character input with current brush char', () => {
@@ -277,16 +239,14 @@ describe('AnsiEditorToolbar', () => {
       expect(handlers.onSetMode).toHaveBeenCalledWith('brush')
     })
 
-    it('should hide BG palette and Char input in pixel mode', () => {
+    it('should hide Char input in pixel mode', () => {
       const pixelBrush = { ...defaultBrush, mode: 'pixel' as BrushMode }
       render(<AnsiEditorToolbar brush={pixelBrush} {...handlers} />)
-      expect(screen.queryByTestId('palette-bg')).toBeNull()
       expect(screen.queryByTestId('char-input')).toBeNull()
     })
 
-    it('should show BG palette and Char input in brush mode', () => {
+    it('should show Char input in brush mode', () => {
       render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      expect(screen.getByTestId('palette-bg')).toBeTruthy()
       expect(screen.getByTestId('char-input')).toBeTruthy()
     })
   })
@@ -311,10 +271,9 @@ describe('AnsiEditorToolbar', () => {
       expect(screen.getByTestId('mode-pixel').getAttribute('aria-pressed')).toBe('false')
     })
 
-    it('should hide BG palette and Char input in eraser mode', () => {
+    it('should hide Char input in eraser mode', () => {
       const eraserBrush = { ...defaultBrush, mode: 'eraser' as BrushMode }
       render(<AnsiEditorToolbar brush={eraserBrush} {...handlers} />)
-      expect(screen.queryByTestId('palette-bg')).toBeNull()
       expect(screen.queryByTestId('char-input')).toBeNull()
     })
   })

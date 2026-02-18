@@ -100,8 +100,15 @@ export interface UseAnsiEditorOptions {
   initialLayerState?: LayerState
 }
 
+export type PaletteType = 'cga' | 'ega' | 'vga'
+
+export interface PaletteEntry {
+  name: string
+  rgb: RGBColor
+}
+
 /** Standard CGA/VGA 16-color palette matching `ansi.colors` from the Lua runtime. */
-export const CGA_PALETTE: { name: string; rgb: RGBColor }[] = [
+export const CGA_PALETTE: PaletteEntry[] = [
   { name: 'Black',          rgb: [0, 0, 0] },
   { name: 'Blue',           rgb: [0, 0, 170] },
   { name: 'Green',          rgb: [0, 170, 0] },
@@ -119,3 +126,43 @@ export const CGA_PALETTE: { name: string; rgb: RGBColor }[] = [
   { name: 'Yellow',         rgb: [255, 255, 85] },
   { name: 'White',          rgb: [255, 255, 255] },
 ]
+
+/** EGA 64-color palette: 4 intensity levels (0, 85, 170, 255) per channel. */
+export const EGA_PALETTE: PaletteEntry[] = (() => {
+  const levels = [0, 85, 170, 255]
+  const entries: PaletteEntry[] = []
+  for (const r of levels) {
+    for (const g of levels) {
+      for (const b of levels) {
+        entries.push({ name: `rgb(${r},${g},${b})`, rgb: [r, g, b] })
+      }
+    }
+  }
+  return entries
+})()
+
+/** VGA 256-color palette: 16 CGA + 216 color cube (6x6x6) + 24 grayscale. */
+export const VGA_PALETTE: PaletteEntry[] = (() => {
+  const entries: PaletteEntry[] = CGA_PALETTE.map(e => ({ ...e }))
+  // 216 color cube: 6 levels per channel
+  const cubeLevels = [0, 51, 102, 153, 204, 255]
+  for (const r of cubeLevels) {
+    for (const g of cubeLevels) {
+      for (const b of cubeLevels) {
+        entries.push({ name: `rgb(${r},${g},${b})`, rgb: [r, g, b] })
+      }
+    }
+  }
+  // 24 grayscale ramp (8..238 in steps of 10)
+  for (let i = 0; i < 24; i++) {
+    const v = 8 + i * 10
+    entries.push({ name: `gray(${v})`, rgb: [v, v, v] })
+  }
+  return entries
+})()
+
+export const PALETTES: Record<PaletteType, PaletteEntry[]> = {
+  cga: CGA_PALETTE,
+  ega: EGA_PALETTE,
+  vga: VGA_PALETTE,
+}

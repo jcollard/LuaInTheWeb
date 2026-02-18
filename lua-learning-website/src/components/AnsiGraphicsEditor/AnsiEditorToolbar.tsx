@@ -1,12 +1,9 @@
 import { useCallback } from 'react'
-import type { BrushMode, DrawTool, BrushSettings, RGBColor } from './types'
-import { ColorPalette } from './ColorPalette'
+import type { BrushMode, DrawTool, BrushSettings } from './types'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface AnsiEditorToolbarProps {
   brush: BrushSettings
-  onSetFg: (color: RGBColor) => void
-  onSetBg: (color: RGBColor) => void
   onSetChar: (char: string) => void
   onSetMode: (mode: BrushMode) => void
   onSetTool: (tool: DrawTool) => void
@@ -21,7 +18,7 @@ export interface AnsiEditorToolbarProps {
 }
 
 export function AnsiEditorToolbar({
-  brush, onSetFg, onSetBg, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
+  brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onImportPng, onUndo, onRedo, canUndo, canRedo,
 }: AnsiEditorToolbarProps) {
   const isRectActive = brush.tool === 'rect-outline' || brush.tool === 'rect-filled'
@@ -140,23 +137,19 @@ export function AnsiEditorToolbar({
           ⌫
         </button>
       </div>
-      <ColorPalette label="FG" selected={brush.fg} onSelect={onSetFg} />
       {brush.mode === 'brush' && (
-        <>
-          <ColorPalette label="BG" selected={brush.bg} onSelect={onSetBg} />
-          <div className={styles.charGroup}>
-            <label className={styles.charLabel} htmlFor="ansi-editor-char">Char</label>
-            <input
-              id="ansi-editor-char"
-              className={styles.charInput}
-              type="text"
-              value={brush.char}
-              onChange={handleCharChange}
-              maxLength={1}
-              data-testid="char-input"
-            />
-          </div>
-        </>
+        <div className={styles.charGroup}>
+          <label className={styles.charLabel} htmlFor="ansi-editor-char">Char</label>
+          <input
+            id="ansi-editor-char"
+            className={styles.charInput}
+            type="text"
+            value={brush.char}
+            onChange={handleCharChange}
+            maxLength={1}
+            data-testid="char-input"
+          />
+        </div>
       )}
       <button
         type="button"

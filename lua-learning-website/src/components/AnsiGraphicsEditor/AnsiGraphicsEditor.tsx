@@ -3,6 +3,7 @@ import { AnsiTerminalPanel } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { useIDE } from '../IDEContext/useIDE'
 import { AnsiEditorToolbar } from './AnsiEditorToolbar'
+import { ColorPanel } from './ColorPanel'
 import { LayersPanel } from './LayersPanel'
 import { SaveAsDialog } from './SaveAsDialog'
 import { useAnsiEditor } from './useAnsiEditor'
@@ -121,8 +122,6 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     <div className={styles.editor} data-testid="ansi-graphics-editor">
       <AnsiEditorToolbar
         brush={brush}
-        onSetFg={setBrushFg}
-        onSetBg={setBrushBg}
         onSetChar={setBrushChar}
         onSetMode={setBrushMode}
         onSetTool={setTool}
@@ -136,6 +135,12 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
         canRedo={canRedo}
       />
       <div className={styles.editorBody}>
+        <ColorPanel
+          selectedFg={brush.fg}
+          selectedBg={brush.bg}
+          onSetFg={setBrushFg}
+          onSetBg={setBrushBg}
+        />
         <div className={styles.canvas}>
           <AnsiTerminalPanel
             isActive={true}
