@@ -38,17 +38,16 @@ describe('AnsiEditorToolbar', () => {
     expect(screen.getByTestId('ansi-editor-toolbar')).toBeTruthy()
   })
 
-  it('should render character input with current brush char', () => {
+  it('should render character button with current brush char', () => {
     render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-    const charInput = screen.getByTestId('char-input') as HTMLInputElement
-    expect(charInput.value).toBe('#')
+    const charButton = screen.getByTestId('char-button')
+    expect(charButton.textContent).toBe('#')
   })
 
-  it('should call onSetChar when character input changes', () => {
+  it('should open character palette on button click', () => {
     render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-    const charInput = screen.getByTestId('char-input')
-    fireEvent.change(charInput, { target: { value: '@' } })
-    expect(handlers.onSetChar).toHaveBeenCalledWith('@')
+    fireEvent.click(screen.getByTestId('char-button'))
+    expect(screen.getByTestId('char-palette-modal')).toBeTruthy()
   })
 
   it('should render clear button', () => {
@@ -239,15 +238,15 @@ describe('AnsiEditorToolbar', () => {
       expect(handlers.onSetMode).toHaveBeenCalledWith('brush')
     })
 
-    it('should hide Char input in pixel mode', () => {
+    it('should hide Char button in pixel mode', () => {
       const pixelBrush = { ...defaultBrush, mode: 'pixel' as BrushMode }
       render(<AnsiEditorToolbar brush={pixelBrush} {...handlers} />)
-      expect(screen.queryByTestId('char-input')).toBeNull()
+      expect(screen.queryByTestId('char-button')).toBeNull()
     })
 
-    it('should show Char input in brush mode', () => {
+    it('should show Char button in brush mode', () => {
       render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      expect(screen.getByTestId('char-input')).toBeTruthy()
+      expect(screen.getByTestId('char-button')).toBeTruthy()
     })
   })
 
@@ -271,10 +270,10 @@ describe('AnsiEditorToolbar', () => {
       expect(screen.getByTestId('mode-pixel').getAttribute('aria-pressed')).toBe('false')
     })
 
-    it('should hide Char input in eraser mode', () => {
+    it('should hide Char button in eraser mode', () => {
       const eraserBrush = { ...defaultBrush, mode: 'eraser' as BrushMode }
       render(<AnsiEditorToolbar brush={eraserBrush} {...handlers} />)
-      expect(screen.queryByTestId('char-input')).toBeNull()
+      expect(screen.queryByTestId('char-button')).toBeNull()
     })
   })
 

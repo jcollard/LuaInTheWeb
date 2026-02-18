@@ -1,5 +1,6 @@
-import { useCallback } from 'react'
+import { useRef, useState } from 'react'
 import type { BrushMode, DrawTool, BrushSettings } from './types'
+import { CharPaletteModal } from './CharPaletteModal'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface AnsiEditorToolbarProps {
@@ -22,13 +23,8 @@ export function AnsiEditorToolbar({
   onImportPng, onUndo, onRedo, canUndo, canRedo,
 }: AnsiEditorToolbarProps) {
   const isRectActive = brush.tool === 'rect-outline' || brush.tool === 'rect-filled'
-
-  const handleCharChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    if (val.length > 0) {
-      onSetChar(val[val.length - 1])
-    }
-  }, [onSetChar])
+  const [charPaletteOpen, setCharPaletteOpen] = useState(false)
+  const charButtonRef = useRef<HTMLButtonElement>(null)
 
   return (
     <div className={styles.toolbar} data-testid="ansi-editor-toolbar">
@@ -139,16 +135,23 @@ export function AnsiEditorToolbar({
       </div>
       {brush.mode === 'brush' && (
         <div className={styles.charGroup}>
-          <label className={styles.charLabel} htmlFor="ansi-editor-char">Char</label>
-          <input
-            id="ansi-editor-char"
-            className={styles.charInput}
-            type="text"
-            value={brush.char}
-            onChange={handleCharChange}
-            maxLength={1}
-            data-testid="char-input"
-          />
+          <span className={styles.charLabel}>Char</span>
+          <button
+            ref={charButtonRef}
+            type="button"
+            className={styles.charButton}
+            onClick={() => setCharPaletteOpen(true)}
+            data-testid="char-button"
+          >
+            {brush.char}
+          </button>
+          {charPaletteOpen && (
+            <CharPaletteModal
+              anchorRect={charButtonRef.current?.getBoundingClientRect()}
+              onSelect={onSetChar}
+              onClose={() => setCharPaletteOpen(false)}
+            />
+          )}
         </div>
       )}
       <button
