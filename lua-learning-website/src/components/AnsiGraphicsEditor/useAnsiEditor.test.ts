@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useAnsiEditor, computePixelCell, computeLineCells } from './useAnsiEditor'
-import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG, HALF_BLOCK } from './types'
+import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG, HALF_BLOCK, TRANSPARENT_HALF } from './types'
 import type { AnsiCell, AnsiGrid, RGBColor } from './types'
 
 describe('useAnsiEditor', () => {
@@ -217,14 +217,14 @@ describe('computePixelCell', () => {
     const result = computePixelCell(empty, red, true)
     expect(result.char).toBe(HALF_BLOCK)
     expect(result.fg).toEqual(red)
-    expect(result.bg).toEqual(DEFAULT_BG)
+    expect(result.bg).toEqual(TRANSPARENT_HALF)
   })
 
   it('should paint bottom half of an empty cell', () => {
     const empty: AnsiCell = { char: ' ', fg: DEFAULT_FG, bg: DEFAULT_BG }
     const result = computePixelCell(empty, red, false)
     expect(result.char).toBe(HALF_BLOCK)
-    expect(result.fg).toEqual(DEFAULT_BG)
+    expect(result.fg).toEqual(TRANSPARENT_HALF)
     expect(result.bg).toEqual(red)
   })
 
@@ -244,16 +244,16 @@ describe('computePixelCell', () => {
     expect(result.bg).toEqual(red)
   })
 
-  it('should convert a non-pixel cell treating both halves as bg', () => {
+  it('should convert a non-pixel cell with transparent unpainted halves', () => {
     const nonPixel: AnsiCell = { char: '#', fg: green, bg: blue }
     const resultTop = computePixelCell(nonPixel, red, true)
     expect(resultTop.char).toBe(HALF_BLOCK)
     expect(resultTop.fg).toEqual(red)
-    expect(resultTop.bg).toEqual(blue)
+    expect(resultTop.bg).toEqual(TRANSPARENT_HALF)
 
     const resultBottom = computePixelCell(nonPixel, red, false)
     expect(resultBottom.char).toBe(HALF_BLOCK)
-    expect(resultBottom.fg).toEqual(blue)
+    expect(resultBottom.fg).toEqual(TRANSPARENT_HALF)
     expect(resultBottom.bg).toEqual(red)
   })
 })
@@ -319,7 +319,7 @@ describe('computeLineCells', () => {
         expect(cell).toBeDefined()
         expect(cell!.char).toBe(HALF_BLOCK)
         expect(cell!.fg).toEqual(red) // top half painted
-        expect(cell!.bg).toEqual(DEFAULT_BG) // bottom half unchanged
+        expect(cell!.bg).toEqual(TRANSPARENT_HALF) // bottom half transparent
       }
     })
 

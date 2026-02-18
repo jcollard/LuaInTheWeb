@@ -1,6 +1,6 @@
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { AnsiCell, AnsiGrid, BrushSettings, RGBColor } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_CELL, HALF_BLOCK } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_CELL, DEFAULT_FG, HALF_BLOCK, TRANSPARENT_HALF } from './types'
 import { bresenhamLine } from './lineAlgorithm'
 import { rgbEqual } from './layerUtils'
 
@@ -51,8 +51,8 @@ export function getCellHalfFromMouse(e: MouseEvent, container: HTMLElement): { r
 
 export function computePixelCell(existingCell: AnsiCell, paintColor: RGBColor, isTopHalf: boolean): AnsiCell {
   const isPixelCell = existingCell.char === HALF_BLOCK
-  const existingTop: RGBColor = isPixelCell ? [...existingCell.fg] as RGBColor : [...existingCell.bg] as RGBColor
-  const existingBottom: RGBColor = [...existingCell.bg] as RGBColor
+  const existingTop: RGBColor = isPixelCell ? [...existingCell.fg] as RGBColor : [...TRANSPARENT_HALF] as RGBColor
+  const existingBottom: RGBColor = isPixelCell ? [...existingCell.bg] as RGBColor : [...TRANSPARENT_HALF] as RGBColor
 
   return {
     char: HALF_BLOCK,
@@ -62,14 +62,19 @@ export function computePixelCell(existingCell: AnsiCell, paintColor: RGBColor, i
 }
 
 export function computeErasePixelCell(existingCell: AnsiCell, isTopHalf: boolean): AnsiCell {
+  // Erasing a default cell is a no-op
+  if (existingCell.char === ' ' && rgbEqual(existingCell.fg, DEFAULT_FG) && rgbEqual(existingCell.bg, DEFAULT_BG)) {
+    return { ...DEFAULT_CELL }
+  }
+
   const isPixelCell = existingCell.char === HALF_BLOCK
   const existingTop: RGBColor = isPixelCell ? [...existingCell.fg] as RGBColor : [...existingCell.bg] as RGBColor
   const existingBottom: RGBColor = [...existingCell.bg] as RGBColor
 
-  const newTop = isTopHalf ? [...DEFAULT_BG] as RGBColor : existingTop
-  const newBottom = isTopHalf ? existingBottom : [...DEFAULT_BG] as RGBColor
+  const newTop = isTopHalf ? [...TRANSPARENT_HALF] as RGBColor : existingTop
+  const newBottom = isTopHalf ? existingBottom : [...TRANSPARENT_HALF] as RGBColor
 
-  if (rgbEqual(newTop, DEFAULT_BG) && rgbEqual(newBottom, DEFAULT_BG)) {
+  if (rgbEqual(newTop, TRANSPARENT_HALF) && rgbEqual(newBottom, TRANSPARENT_HALF)) {
     return { ...DEFAULT_CELL }
   }
 
@@ -233,7 +238,7 @@ export function computeFloodFillCells(
       const startPY = startRow * 2 + (isTopHalf ? 0 : 1)
       const maxPY = rows * 2
       const targetColor = readPixelColor(baseGrid, startRow, startCol, !!isTopHalf)
-      const noopColor = brush.mode === 'eraser' ? DEFAULT_BG : brush.fg
+      const noopColor = brush.mode === 'eraser' ? TRANSPARENT_HALF : brush.fg
       if (rgbEqual(targetColor, noopColor)) return cells
 
       const visited = new Set<string>()

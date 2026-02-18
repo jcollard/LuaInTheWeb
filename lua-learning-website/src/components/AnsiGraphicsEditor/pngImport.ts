@@ -1,5 +1,5 @@
 import type { AnsiGrid, RGBColor } from './types'
-import { ANSI_COLS, ANSI_ROWS, HALF_BLOCK, DEFAULT_CELL, DEFAULT_BG } from './types'
+import { ANSI_COLS, ANSI_ROWS, HALF_BLOCK, DEFAULT_CELL, TRANSPARENT_HALF } from './types'
 import { rgbEqual } from './layerUtils'
 
 /** Maximum pixel dimensions of the canvas (80 wide x 50 tall). */
@@ -30,8 +30,8 @@ export function computeScaledSize(
 /**
  * Convert an RGBA pixel buffer to an AnsiGrid using HALF_BLOCK encoding.
  * Each cell encodes two vertical pixels: fg = top pixel, bg = bottom pixel.
- * Pixels with alpha < 128 are treated as transparent (DEFAULT_BG).
- * Cells where both halves are DEFAULT_BG become DEFAULT_CELL (transparent in layer system).
+ * Pixels with alpha < 128 are treated as transparent (TRANSPARENT_HALF).
+ * Cells where both halves are transparent become DEFAULT_CELL (transparent in layer system).
  */
 export function rgbaToAnsiGrid(rgba: Uint8ClampedArray, width: number, height: number): AnsiGrid {
   const grid: AnsiGrid = Array.from({ length: ANSI_ROWS }, () =>
@@ -48,9 +48,9 @@ export function rgbaToAnsiGrid(rgba: Uint8ClampedArray, width: number, height: n
       const topAlpha = rgba[topIdx + 3]
       const topColor: RGBColor = topAlpha >= 128
         ? [rgba[topIdx], rgba[topIdx + 1], rgba[topIdx + 2]]
-        : [...DEFAULT_BG]
+        : [...TRANSPARENT_HALF]
 
-      let bottomColor: RGBColor = [...DEFAULT_BG]
+      let bottomColor: RGBColor = [...TRANSPARENT_HALF]
       if (py + 1 < height) {
         const botIdx = ((py + 1) * width + px) * 4
         const botAlpha = rgba[botIdx + 3]
@@ -59,7 +59,7 @@ export function rgbaToAnsiGrid(rgba: Uint8ClampedArray, width: number, height: n
         }
       }
 
-      if (rgbEqual(topColor, DEFAULT_BG) && rgbEqual(bottomColor, DEFAULT_BG)) {
+      if (rgbEqual(topColor, TRANSPARENT_HALF) && rgbEqual(bottomColor, TRANSPARENT_HALF)) {
         continue // leave as DEFAULT_CELL
       }
 

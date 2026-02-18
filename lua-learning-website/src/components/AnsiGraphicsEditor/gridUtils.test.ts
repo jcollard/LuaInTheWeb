@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { computeRectCells, computeFloodFillCells, computeErasePixelCell, computeLineCells } from './gridUtils'
 import type { AnsiCell, AnsiGrid, RGBColor } from './types'
-import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG, DEFAULT_CELL, HALF_BLOCK } from './types'
+import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG, DEFAULT_CELL, HALF_BLOCK, TRANSPARENT_HALF } from './types'
 
 function makeGrid(): AnsiGrid {
   return Array.from({ length: ANSI_ROWS }, () =>
@@ -422,26 +422,26 @@ describe('computeErasePixelCell', () => {
     const cell: AnsiCell = { char: HALF_BLOCK, fg: [...red] as RGBColor, bg: [...blue] as RGBColor }
     const result = computeErasePixelCell(cell, true)
     expect(result.char).toBe(HALF_BLOCK)
-    expect(result.fg).toEqual(DEFAULT_BG) // top erased
-    expect(result.bg).toEqual(blue)       // bottom preserved
+    expect(result.fg).toEqual(TRANSPARENT_HALF) // top erased
+    expect(result.bg).toEqual(blue)             // bottom preserved
   })
 
   it('should erase bottom half of a half-block cell, preserving top', () => {
     const cell: AnsiCell = { char: HALF_BLOCK, fg: [...red] as RGBColor, bg: [...blue] as RGBColor }
     const result = computeErasePixelCell(cell, false)
     expect(result.char).toBe(HALF_BLOCK)
-    expect(result.fg).toEqual(red)        // top preserved
-    expect(result.bg).toEqual(DEFAULT_BG) // bottom erased
+    expect(result.fg).toEqual(red)              // top preserved
+    expect(result.bg).toEqual(TRANSPARENT_HALF) // bottom erased
   })
 
-  it('should revert to DEFAULT_CELL when erasing top and bottom is already DEFAULT_BG', () => {
-    const cell: AnsiCell = { char: HALF_BLOCK, fg: [...red] as RGBColor, bg: [...DEFAULT_BG] as RGBColor }
+  it('should revert to DEFAULT_CELL when erasing top and bottom is already transparent', () => {
+    const cell: AnsiCell = { char: HALF_BLOCK, fg: [...red] as RGBColor, bg: [...TRANSPARENT_HALF] as RGBColor }
     const result = computeErasePixelCell(cell, true)
     expect(result).toEqual(DEFAULT_CELL)
   })
 
-  it('should revert to DEFAULT_CELL when erasing bottom and top is already DEFAULT_BG', () => {
-    const cell: AnsiCell = { char: HALF_BLOCK, fg: [...DEFAULT_BG] as RGBColor, bg: [...blue] as RGBColor }
+  it('should revert to DEFAULT_CELL when erasing bottom and top is already transparent', () => {
+    const cell: AnsiCell = { char: HALF_BLOCK, fg: [...TRANSPARENT_HALF] as RGBColor, bg: [...blue] as RGBColor }
     const result = computeErasePixelCell(cell, false)
     expect(result).toEqual(DEFAULT_CELL)
   })
@@ -451,8 +451,8 @@ describe('computeErasePixelCell', () => {
     // Non-half-block: both halves treated as bg color (blue)
     const result = computeErasePixelCell(cell, true)
     expect(result.char).toBe(HALF_BLOCK)
-    expect(result.fg).toEqual(DEFAULT_BG) // top erased
-    expect(result.bg).toEqual(blue)       // bottom = original bg
+    expect(result.fg).toEqual(TRANSPARENT_HALF) // top erased
+    expect(result.bg).toEqual(blue)             // bottom = original bg
   })
 
   it('should be idempotent on DEFAULT_CELL', () => {
@@ -488,14 +488,14 @@ describe('computeRectCells — eraser mode', () => {
     // → top erased, bottom preserved (blue)
     const r0c1 = cells.get('0,1')!
     expect(r0c1.char).toBe(HALF_BLOCK)
-    expect(r0c1.fg).toEqual(DEFAULT_BG) // top erased
-    expect(r0c1.bg).toEqual(blue)       // bottom preserved (interior)
+    expect(r0c1.fg).toEqual(TRANSPARENT_HALF) // top erased
+    expect(r0c1.bg).toEqual(blue)             // bottom preserved (interior)
   })
 
   it('should revert fully-erased cells to DEFAULT_CELL', () => {
     const grid = makeGrid()
-    // Cell at (0,0) has top=red, bottom=DEFAULT_BG
-    grid[0][0] = { char: HALF_BLOCK, fg: [...red] as RGBColor, bg: [...DEFAULT_BG] as RGBColor }
+    // Cell at (0,0) has top=red, bottom=transparent
+    grid[0][0] = { char: HALF_BLOCK, fg: [...red] as RGBColor, bg: [...TRANSPARENT_HALF] as RGBColor }
 
     const brush = { char: '#', fg: red, bg: DEFAULT_BG, mode: 'eraser' as const }
     // Erase just the top half at (0,0)
@@ -543,8 +543,8 @@ describe('computeLineCells — eraser mode', () => {
     expect(cells.size).toBe(4)
     for (const [, cell] of cells) {
       expect(cell.char).toBe(HALF_BLOCK)
-      expect(cell.fg).toEqual(DEFAULT_BG) // top erased
-      expect(cell.bg).toEqual(blue)       // bottom preserved
+      expect(cell.fg).toEqual(TRANSPARENT_HALF) // top erased
+      expect(cell.bg).toEqual(blue)             // bottom preserved
     }
   })
 })
@@ -559,7 +559,7 @@ describe('computeFloodFillCells — eraser mode', () => {
     expect(cells.size).toBeGreaterThan(0)
     for (const [, cell] of cells) {
       expect(cell.char).toBe(HALF_BLOCK)
-      expect(cell.fg).toEqual(DEFAULT_BG) // top erased
+      expect(cell.fg).toEqual(TRANSPARENT_HALF) // top erased
     }
   })
 

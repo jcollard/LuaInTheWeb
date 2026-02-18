@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { isDefaultCell, createLayer, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, syncLayerIds } from './layerUtils'
-import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, ANSI_ROWS, ANSI_COLS } from './types'
+import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF } from './types'
 import type { AnsiCell, RGBColor, Layer, LayerState } from './types'
 
 describe('isDefaultCell', () => {
@@ -138,6 +138,93 @@ describe('compositeCell', () => {
     const b = makeLayer('b')
     expect(compositeCell([a, b], 5, 5)).toEqual(DEFAULT_CELL)
   })
+
+  it('merges top-half from upper layer with bottom-half from lower', () => {
+    const bottom = makeLayer('bottom')
+    bottom.grid[0][0] = { char: HALF_BLOCK, fg: [...TRANSPARENT_HALF] as RGBColor, bg: blue }
+    const top = makeLayer('top')
+    top.grid[0][0] = { char: HALF_BLOCK, fg: red, bg: [...TRANSPARENT_HALF] as RGBColor }
+    expect(compositeCell([bottom, top], 0, 0)).toEqual({ char: HALF_BLOCK, fg: red, bg: blue })
+  })
+
+  it('three layers: halves from layers 1 and 3, layer 2 default', () => {
+    const green: RGBColor = [0, 170, 0]
+    const l1 = makeLayer('l1')
+    l1.grid[0][0] = { char: HALF_BLOCK, fg: [...TRANSPARENT_HALF] as RGBColor, bg: green }
+    const l2 = makeLayer('l2')
+    // l2[0][0] is DEFAULT_CELL
+    const l3 = makeLayer('l3')
+    l3.grid[0][0] = { char: HALF_BLOCK, fg: red, bg: [...TRANSPARENT_HALF] as RGBColor }
+    expect(compositeCell([l1, l2, l3], 0, 0)).toEqual({ char: HALF_BLOCK, fg: red, bg: green })
+  })
+
+  it('fully opaque HALF_BLOCK blocks lower layers', () => {
+    const green: RGBColor = [0, 170, 0]
+    const bottom = makeLayer('bottom')
+    bottom.grid[0][0] = { char: HALF_BLOCK, fg: green, bg: green }
+    const top = makeLayer('top')
+    top.grid[0][0] = { char: HALF_BLOCK, fg: red, bg: blue }
+    expect(compositeCell([bottom, top], 0, 0)).toEqual({ char: HALF_BLOCK, fg: red, bg: blue })
+  })
+
+  it('transparent half falls through to brush cell bg', () => {
+    const bottom = makeLayer('bottom')
+    bottom.grid[0][0] = { char: '#', fg: [255, 255, 255], bg: blue }
+    const top = makeLayer('top')
+    top.grid[0][0] = { char: HALF_BLOCK, fg: red, bg: [...TRANSPARENT_HALF] as RGBColor }
+    expect(compositeCell([bottom, top], 0, 0)).toEqual({ char: HALF_BLOCK, fg: red, bg: blue })
+  })
+
+  it('brush cell over HALF_BLOCK wins entirely', () => {
+    const green: RGBColor = [0, 170, 0]
+    const white: RGBColor = [255, 255, 255]
+    const bottom = makeLayer('bottom')
+    bottom.grid[0][0] = { char: HALF_BLOCK, fg: red, bg: blue }
+    const top = makeLayer('top')
+    top.grid[0][0] = { char: '#', fg: white, bg: green }
+    expect(compositeCell([bottom, top], 0, 0)).toEqual({ char: '#', fg: white, bg: green })
+  })
+
+  it('single layer top-half only', () => {
+    const layer = makeLayer('l')
+    layer.grid[0][0] = { char: HALF_BLOCK, fg: red, bg: [...TRANSPARENT_HALF] as RGBColor }
+    expect(compositeCell([layer], 0, 0)).toEqual({ char: HALF_BLOCK, fg: red, bg: [...DEFAULT_BG] as RGBColor })
+  })
+
+  it('single layer bottom-half only', () => {
+    const layer = makeLayer('l')
+    layer.grid[0][0] = { char: HALF_BLOCK, fg: [...TRANSPARENT_HALF] as RGBColor, bg: blue }
+    expect(compositeCell([layer], 0, 0)).toEqual({ char: HALF_BLOCK, fg: [...DEFAULT_BG] as RGBColor, bg: blue })
+  })
+
+  it('both layers bottom-only: top layer wins bottom', () => {
+    const green: RGBColor = [0, 170, 0]
+    const bottom = makeLayer('bottom')
+    bottom.grid[0][0] = { char: HALF_BLOCK, fg: [...TRANSPARENT_HALF] as RGBColor, bg: green }
+    const top = makeLayer('top')
+    top.grid[0][0] = { char: HALF_BLOCK, fg: [...TRANSPARENT_HALF] as RGBColor, bg: blue }
+    expect(compositeCell([bottom, top], 0, 0)).toEqual({ char: HALF_BLOCK, fg: [...DEFAULT_BG] as RGBColor, bg: blue })
+  })
+
+  it('hidden layer halves are skipped', () => {
+    const green: RGBColor = [0, 170, 0]
+    const bottom = makeLayer('bottom')
+    bottom.grid[0][0] = { char: HALF_BLOCK, fg: green, bg: green }
+    const middle = makeLayer('middle', { visible: false })
+    middle.grid[0][0] = { char: HALF_BLOCK, fg: red, bg: red }
+    const top = makeLayer('top')
+    top.grid[0][0] = { char: HALF_BLOCK, fg: [...TRANSPARENT_HALF] as RGBColor, bg: blue }
+    expect(compositeCell([bottom, middle, top], 0, 0)).toEqual({ char: HALF_BLOCK, fg: green, bg: blue })
+  })
+
+  it('black half-pixel is opaque, not transparent', () => {
+    const bottom = makeLayer('bottom')
+    bottom.grid[0][0] = { char: HALF_BLOCK, fg: red, bg: [...TRANSPARENT_HALF] as RGBColor }
+    const top = makeLayer('top')
+    top.grid[0][0] = { char: HALF_BLOCK, fg: [...DEFAULT_BG] as RGBColor, bg: [...TRANSPARENT_HALF] as RGBColor }
+    // Black top-half ([0,0,0]) on top layer should block red from bottom layer
+    expect(compositeCell([bottom, top], 0, 0)).toEqual({ char: HALF_BLOCK, fg: [...DEFAULT_BG] as RGBColor, bg: [...DEFAULT_BG] as RGBColor })
+  })
 })
 
 describe('compositeGrid', () => {
@@ -192,6 +279,25 @@ describe('compositeCellWithOverride', () => {
     const result = compositeCellWithOverride([hidden, visible], 0, 0, 'v', override)
     // Active layer has default override, hidden layer is skipped → DEFAULT_CELL
     expect(isDefaultCell(result)).toBe(true)
+  })
+
+  it('override HALF_BLOCK merges with lower layer', () => {
+    const green: RGBColor = [0, 170, 0]
+    const bottom = createLayer('bottom', 'bot')
+    bottom.grid[0][0] = { char: HALF_BLOCK, fg: [...TRANSPARENT_HALF] as RGBColor, bg: green }
+    const top = createLayer('top', 'top-1')
+    const override: AnsiCell = { char: HALF_BLOCK, fg: red, bg: [...TRANSPARENT_HALF] as RGBColor }
+    const result = compositeCellWithOverride([bottom, top], 0, 0, 'top-1', override)
+    expect(result).toEqual({ char: HALF_BLOCK, fg: red, bg: green })
+  })
+
+  it('override transparent bottom shows brush cell bg', () => {
+    const bottom = createLayer('bottom', 'bot')
+    bottom.grid[0][0] = { char: '#', fg: [255, 255, 255], bg: blue }
+    const top = createLayer('top', 'top-1')
+    const override: AnsiCell = { char: HALF_BLOCK, fg: red, bg: [...TRANSPARENT_HALF] as RGBColor }
+    const result = compositeCellWithOverride([bottom, top], 0, 0, 'top-1', override)
+    expect(result).toEqual({ char: HALF_BLOCK, fg: red, bg: blue })
   })
 })
 

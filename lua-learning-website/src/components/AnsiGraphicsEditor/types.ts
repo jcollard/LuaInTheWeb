@@ -28,6 +28,14 @@ export const ANSI_ROWS = 25
 export const DEFAULT_FG: RGBColor = [170, 170, 170]
 export const DEFAULT_BG: RGBColor = [0, 0, 0]
 
+/**
+ * Sentinel value marking a transparent half-pixel in HALF_BLOCK cells.
+ * Uses values outside valid RGB range so it cannot be confused with any
+ * real color (including black).  Must never reach rendering code — the
+ * compositing layer resolves it to DEFAULT_BG before output.
+ */
+export const TRANSPARENT_HALF: RGBColor = [-1, -1, -1]
+
 export const DEFAULT_CELL: AnsiCell = {
   char: ' ',
   fg: DEFAULT_FG,

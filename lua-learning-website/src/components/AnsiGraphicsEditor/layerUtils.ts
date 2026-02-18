@@ -1,5 +1,5 @@
 import type { AnsiCell, AnsiGrid, Layer, LayerState, RGBColor } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, HALF_BLOCK, TRANSPARENT_HALF } from './types'
 
 let nextLayerId = 1
 
@@ -33,14 +33,37 @@ export function createLayer(name: string, id?: string): Layer {
   }
 }
 
-export function compositeCell(layers: Layer[], row: number, col: number): AnsiCell {
+function compositeCellCore(layers: Layer[], getCell: (layer: Layer) => AnsiCell | null): AnsiCell {
+  let topColor: RGBColor | null = null
+  let bottomColor: RGBColor | null = null
+
   for (let i = layers.length - 1; i >= 0; i--) {
-    const layer = layers[i]
-    if (!layer.visible) continue
-    const cell = layer.grid[row][col]
-    if (!isDefaultCell(cell)) return cell
+    const cell = getCell(layers[i])
+    if (cell === null || isDefaultCell(cell)) continue
+
+    if (cell.char === HALF_BLOCK) {
+      if (topColor === null && !rgbEqual(cell.fg, TRANSPARENT_HALF)) topColor = cell.fg
+      if (bottomColor === null && !rgbEqual(cell.bg, TRANSPARENT_HALF)) bottomColor = cell.bg
+    } else {
+      // Non-HALF_BLOCK cell is fully opaque
+      if (topColor === null && bottomColor === null) return cell
+      if (topColor === null) topColor = cell.bg
+      if (bottomColor === null) bottomColor = cell.bg
+    }
+
+    if (topColor !== null && bottomColor !== null) break
   }
-  return DEFAULT_CELL
+
+  if (topColor === null && bottomColor === null) return DEFAULT_CELL
+  return {
+    char: HALF_BLOCK,
+    fg: topColor ?? [...DEFAULT_BG] as RGBColor,
+    bg: bottomColor ?? [...DEFAULT_BG] as RGBColor,
+  }
+}
+
+export function compositeCell(layers: Layer[], row: number, col: number): AnsiCell {
+  return compositeCellCore(layers, (layer) => layer.visible ? layer.grid[row][col] : null)
 }
 
 export function compositeGrid(layers: Layer[]): AnsiGrid {
@@ -53,13 +76,10 @@ export function compositeCellWithOverride(
   layers: Layer[], row: number, col: number,
   activeLayerId: string, overrideCell: AnsiCell,
 ): AnsiCell {
-  for (let i = layers.length - 1; i >= 0; i--) {
-    const layer = layers[i]
-    if (!layer.visible) continue
-    const cell = layer.id === activeLayerId ? overrideCell : layer.grid[row][col]
-    if (!isDefaultCell(cell)) return cell
-  }
-  return DEFAULT_CELL
+  return compositeCellCore(layers, (layer) => {
+    if (!layer.visible) return null
+    return layer.id === activeLayerId ? overrideCell : layer.grid[row][col]
+  })
 }
 
 export function cloneLayerState(state: LayerState): LayerState {

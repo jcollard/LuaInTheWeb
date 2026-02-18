@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { computeScaledSize, rgbaToAnsiGrid } from './pngImport'
-import { ANSI_COLS, ANSI_ROWS, HALF_BLOCK, DEFAULT_CELL, DEFAULT_BG } from './types'
-import type { RGBColor } from './types'
+import { ANSI_COLS, ANSI_ROWS, HALF_BLOCK, DEFAULT_CELL, TRANSPARENT_HALF } from './types'
 
 /** Helper: create an RGBA buffer filled with a single color (or transparent). */
 function makeRgba(
@@ -83,13 +82,13 @@ describe('rgbaToAnsiGrid', () => {
     }
   })
 
-  it('converts a single pixel (1x1) to a HALF_BLOCK cell with fg=color, bg=DEFAULT_BG', () => {
+  it('converts a single pixel (1x1) to a HALF_BLOCK cell with fg=color, bg=TRANSPARENT_HALF', () => {
     const rgba = makeRgba(1, 1, [255, 0, 0, 255])
     const grid = rgbaToAnsiGrid(rgba, 1, 1)
     const cell = grid[0][0]
     expect(cell.char).toBe(HALF_BLOCK)
     expect(cell.fg).toEqual([255, 0, 0])
-    expect(cell.bg).toEqual(DEFAULT_BG)
+    expect(cell.bg).toEqual(TRANSPARENT_HALF)
   })
 
   it('converts two vertical pixels (1x2) to one cell with fg=top, bg=bottom', () => {
@@ -142,15 +141,16 @@ describe('rgbaToAnsiGrid', () => {
     expect(grid[1][0]).toEqual(DEFAULT_CELL)
   })
 
-  it('produces DEFAULT_CELL when both halves are DEFAULT_BG (not HALF_BLOCK with black/black)', () => {
-    // Create a 1x2 image where both pixels are DEFAULT_BG color but opaque
+  it('preserves opaque black pixels as HALF_BLOCK (black is a real color)', () => {
+    // Create a 1x2 image where both pixels are opaque black
     const rgba = new Uint8ClampedArray(1 * 2 * 4)
-    const [dr, dg, db] = DEFAULT_BG as RGBColor
-    setPixel(rgba, 1, 0, 0, [dr, dg, db, 255])
-    setPixel(rgba, 1, 0, 1, [dr, dg, db, 255])
+    setPixel(rgba, 1, 0, 0, [0, 0, 0, 255])
+    setPixel(rgba, 1, 0, 1, [0, 0, 0, 255])
     const grid = rgbaToAnsiGrid(rgba, 1, 2)
-    // Should be DEFAULT_CELL, not a HALF_BLOCK with black fg and bg
-    expect(grid[0][0]).toEqual(DEFAULT_CELL)
+    // Opaque black should produce a visible HALF_BLOCK cell, not DEFAULT_CELL
+    expect(grid[0][0].char).toBe(HALF_BLOCK)
+    expect(grid[0][0].fg).toEqual([0, 0, 0])
+    expect(grid[0][0].bg).toEqual([0, 0, 0])
   })
 
   it('handles an odd-height image (last row has only a top pixel)', () => {
@@ -160,10 +160,10 @@ describe('rgbaToAnsiGrid', () => {
     expect(grid[0][0].char).toBe(HALF_BLOCK)
     expect(grid[0][0].fg).toEqual([0, 0, 255])
     expect(grid[0][0].bg).toEqual([0, 0, 255])
-    // Row 1: top pixel y=2, no bottom pixel → bg=DEFAULT_BG
+    // Row 1: top pixel y=2, no bottom pixel → bg=TRANSPARENT_HALF
     expect(grid[1][0].char).toBe(HALF_BLOCK)
     expect(grid[1][0].fg).toEqual([0, 0, 255])
-    expect(grid[1][0].bg).toEqual(DEFAULT_BG)
+    expect(grid[1][0].bg).toEqual(TRANSPARENT_HALF)
   })
 
   it('handles zero-size image gracefully', () => {
@@ -185,6 +185,6 @@ describe('rgbaToAnsiGrid', () => {
     const cell = grid[0][0]
     expect(cell.char).toBe(HALF_BLOCK)
     expect(cell.fg).toEqual([255, 0, 0])
-    expect(cell.bg).toEqual(DEFAULT_BG)
+    expect(cell.bg).toEqual(TRANSPARENT_HALF)
   })
 })
