@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { CHAR_PALETTE_CATEGORIES, type CharCategory } from './charPaletteData'
+import { CHAR_PALETTE_CATEGORIES } from './charPaletteData'
 
-function charsOf(cat: CharCategory): string[] {
-  return cat.chars.map(e => e.char)
+function charsOfCategory(id: string): string[] {
+  const category = CHAR_PALETTE_CATEGORIES.find(c => c.id === id)
+  if (!category) throw new Error(`Category "${id}" not found`)
+  return category.chars.map(e => e.char)
 }
 
 describe('CHAR_PALETTE_CATEGORIES', () => {
@@ -11,12 +13,12 @@ describe('CHAR_PALETTE_CATEGORIES', () => {
   })
 
   it('should have categories in expected order: ascii, blocks, borders, geometric, arrows, symbols', () => {
-    const ids = CHAR_PALETTE_CATEGORIES.map((c: CharCategory) => c.id)
+    const ids = CHAR_PALETTE_CATEGORIES.map(c => c.id)
     expect(ids).toEqual(['ascii', 'blocks', 'borders', 'geometric', 'arrows', 'symbols'])
   })
 
   it('should have unique category ids', () => {
-    const ids = CHAR_PALETTE_CATEGORIES.map((c: CharCategory) => c.id)
+    const ids = CHAR_PALETTE_CATEGORIES.map(c => c.id)
     expect(new Set(ids).size).toBe(ids.length)
   })
 
@@ -44,7 +46,7 @@ describe('CHAR_PALETTE_CATEGORIES', () => {
 
   it('should have no duplicate chars within a category', () => {
     for (const cat of CHAR_PALETTE_CATEGORIES) {
-      const chars = charsOf(cat)
+      const chars = cat.chars.map(e => e.char)
       const unique = new Set(chars)
       expect(unique.size, `${cat.id} should have no duplicate chars`).toBe(chars.length)
     }
@@ -58,16 +60,14 @@ describe('CHAR_PALETTE_CATEGORIES', () => {
   })
 
   it('should contain expected ASCII chars', () => {
-    const ascii = CHAR_PALETTE_CATEGORIES.find((c: CharCategory) => c.id === 'ascii')!
-    const chars = charsOf(ascii)
+    const chars = charsOfCategory('ascii')
     expect(chars).toContain('#')
     expect(chars).toContain('@')
     expect(chars).toContain('*')
   })
 
   it('should contain expected block chars including fractional fills', () => {
-    const blocks = CHAR_PALETTE_CATEGORIES.find((c: CharCategory) => c.id === 'blocks')!
-    const chars = charsOf(blocks)
+    const chars = charsOfCategory('blocks')
     expect(chars).toContain('░')
     expect(chars).toContain('▒')
     expect(chars).toContain('▓')
@@ -89,8 +89,7 @@ describe('CHAR_PALETTE_CATEGORIES', () => {
   })
 
   it('should contain quadrant block chars', () => {
-    const blocks = CHAR_PALETTE_CATEGORIES.find((c: CharCategory) => c.id === 'blocks')!
-    const chars = charsOf(blocks)
+    const chars = charsOfCategory('blocks')
     expect(chars).toContain('▘')
     expect(chars).toContain('▝')
     expect(chars).toContain('▖')
@@ -104,8 +103,7 @@ describe('CHAR_PALETTE_CATEGORIES', () => {
   })
 
   it('should contain light, heavy, rounded, and double border chars', () => {
-    const borders = CHAR_PALETTE_CATEGORIES.find((c: CharCategory) => c.id === 'borders')!
-    const chars = charsOf(borders)
+    const chars = charsOfCategory('borders')
     // Light
     expect(chars).toContain('─')
     expect(chars).toContain('│')
@@ -126,8 +124,7 @@ describe('CHAR_PALETTE_CATEGORIES', () => {
   })
 
   it('should contain mixed and dashed border chars', () => {
-    const borders = CHAR_PALETTE_CATEGORIES.find((c: CharCategory) => c.id === 'borders')!
-    const chars = charsOf(borders)
+    const chars = charsOfCategory('borders')
     // Mixed T-pieces
     expect(chars).toContain('╞')
     expect(chars).toContain('╡')
@@ -143,8 +140,7 @@ describe('CHAR_PALETTE_CATEGORIES', () => {
   })
 
   it('should contain black and white geometric variants', () => {
-    const geo = CHAR_PALETTE_CATEGORIES.find((c: CharCategory) => c.id === 'geometric')!
-    const chars = charsOf(geo)
+    const chars = charsOfCategory('geometric')
     expect(chars).toContain('■')
     expect(chars).toContain('□')
     expect(chars).toContain('▲')
@@ -157,8 +153,7 @@ describe('CHAR_PALETTE_CATEGORIES', () => {
   })
 
   it('should contain cardinal, diagonal, and double arrows', () => {
-    const arrows = CHAR_PALETTE_CATEGORIES.find((c: CharCategory) => c.id === 'arrows')!
-    const chars = charsOf(arrows)
+    const chars = charsOfCategory('arrows')
     // Cardinal
     expect(chars).toContain('↑')
     expect(chars).toContain('↓')
@@ -176,8 +171,7 @@ describe('CHAR_PALETTE_CATEGORIES', () => {
   })
 
   it('should contain currency, math, and fraction symbols', () => {
-    const syms = CHAR_PALETTE_CATEGORIES.find((c: CharCategory) => c.id === 'symbols')!
-    const chars = charsOf(syms)
+    const chars = charsOfCategory('symbols')
     // Currency
     expect(chars).toContain('¢')
     expect(chars).toContain('£')
