@@ -309,6 +309,69 @@ describe('selectionTool drag-to-move', () => {
   })
 })
 
+describe('selectionTool isPasted after drag', () => {
+  it('paste + drag + flip should not double-offset', () => {
+    const deps = makeDeps()
+    const handlers = createSelectionHandlers(deps)
+    selectRegion(handlers) // select (0,0)-(1,1) with A,B,C,D
+
+    // Copy then paste (floating at 0,0 with relative keys)
+    handlers.onKeyDown(keyEvent('c', true))
+    handlers.onKeyDown(keyEvent('v', true))
+
+    // Drag pasted selection to (5,5)
+    handlers.onMouseDown(0, 0) // inside paste region → dragging
+    handlers.onMouseMove(5, 5) // delta = (5,5)
+    handlers.onMouseUp()       // commits move, re-extracts captured
+
+    // Now flip — should NOT double-offset
+    const commitsBefore = deps.committed.length
+    handlers.flipHorizontal()
+
+    const flipCommit = deps.committed[commitsBefore]
+    // All committed keys must be within (5,5)-(6,6)
+    for (const key of flipCommit.keys()) {
+      const [r, c] = parseCellKey(key)
+      expect(r).toBeGreaterThanOrEqual(5)
+      expect(r).toBeLessThanOrEqual(6)
+      expect(c).toBeGreaterThanOrEqual(5)
+      expect(c).toBeLessThanOrEqual(6)
+    }
+    // Verify flip actually happened: columns swapped within 5-6
+    expect(flipCommit.get('5,5')!.char).toBe('B')
+    expect(flipCommit.get('5,6')!.char).toBe('A')
+  })
+
+  it('paste + drag + commitIfNeeded should not double-offset', () => {
+    const deps = makeDeps()
+    const handlers = createSelectionHandlers(deps)
+    selectRegion(handlers) // select (0,0)-(1,1) with A,B,C,D
+
+    // Copy then paste
+    handlers.onKeyDown(keyEvent('c', true))
+    handlers.onKeyDown(keyEvent('v', true))
+
+    // Drag pasted selection to (5,5)
+    handlers.onMouseDown(0, 0)
+    handlers.onMouseMove(5, 5)
+    handlers.onMouseUp()
+
+    // Click outside to trigger commitIfNeeded
+    handlers.onMouseDown(20, 20)
+
+    // Should have committed — check no extra commits beyond what's expected
+    // All committed keys from the click-away commit must be within bounds
+    // (commitIfNeeded should NOT take the isPasted path after drag)
+    const lastCommit = deps.committed[deps.committed.length - 1]
+    for (const key of lastCommit.keys()) {
+      const [r, c] = parseCellKey(key)
+      // If isPasted was stale, this would write at (10,10) — way out of range
+      expect(r).toBeLessThan(ANSI_ROWS)
+      expect(c).toBeLessThan(ANSI_COLS)
+    }
+  })
+})
+
 describe('selectionTool flipHorizontal', () => {
   it('should commit flipped cells immediately when selected', () => {
     const deps = makeDeps()
@@ -413,5 +476,183 @@ describe('selectionTool flipHorizontal', () => {
     handlers.flipHorizontal()
     expect(deps.snapshots).toBe(2)
     expect(deps.committed.length).toBe(2)
+  })
+})
+
+describe('selectionTool flipVertical', () => {
+  it('should commit flipped cells immediately when selected', () => {
+    const deps = makeDeps()
+    const handlers = createSelectionHandlers(deps)
+    selectRegion(handlers)
+
+    handlers.flipVertical()
+
+    expect(deps.snapshots).toBe(1)
+    expect(deps.committed.length).toBe(1)
+    const committed = deps.committed[0]
+    // (0,0) had 'A', (1,0) had 'C' — after vertical flip rows swap
+    expect(committed.get('0,0')!.char).toBe('C')
+    expect(committed.get('1,0')!.char).toBe('A')
+    // Columns stay the same
+    expect(committed.get('0,1')!.char).toBe('D')
+    expect(committed.get('1,1')!.char).toBe('B')
+  })
+
+  it('should be a no-op when idle', () => {
+    const deps = makeDeps()
+    const handlers = createSelectionHandlers(deps)
+
+    handlers.flipVertical()
+
+    expect(deps.snapshots).toBe(0)
+    expect(deps.committed.length).toBe(0)
+  })
+
+  it('double flip restores original', () => {
+    const deps = makeDeps()
+    const handlers = createSelectionHandlers(deps)
+    selectRegion(handlers)
+
+    handlers.flipVertical()
+    const afterFirst = deps.committed[0]
+
+    handlers.flipVertical()
+    const afterSecond = deps.committed[1]
+
+    // First flip swaps rows, second restores
+    expect(afterFirst.get('0,0')!.char).toBe('C')
+    expect(afterSecond.get('0,0')!.char).toBe('A')
+  })
+
+  it('should commit flipped cells at selection position, not top-left', () => {
+    const grid = Array.from({ length: ANSI_ROWS }, () =>
+      Array.from({ length: ANSI_COLS }, (): AnsiCell => ({
+        ...DEFAULT_CELL, fg: [...DEFAULT_FG] as RGBColor, bg: [...DEFAULT_BG] as RGBColor,
+      }))
+    )
+    grid[2][3] = makeCell('T')
+    grid[2][4] = makeCell('U')
+    grid[3][3] = makeCell('V')
+    grid[3][4] = makeCell('W')
+
+    const deps = makeDeps(grid)
+    const handlers = createSelectionHandlers(deps)
+
+    handlers.onMouseDown(2, 3)
+    handlers.onMouseMove(3, 4)
+    handlers.onMouseUp()
+
+    handlers.flipVertical()
+
+    const committed = deps.committed[0]
+    // Flipped cells must remain at rows 2-3
+    expect(committed.has('2,3')).toBe(true)
+    expect(committed.has('3,3')).toBe(true)
+    expect(committed.get('2,3')!.char).toBe('V') // was at row 3, now at row 2
+    expect(committed.get('3,3')!.char).toBe('T') // was at row 2, now at row 3
+    expect(committed.has('0,0')).toBe(false)
+  })
+
+  it('should commit flipped cells for pasted content at paste position', () => {
+    const deps = makeDeps()
+    const handlers = createSelectionHandlers(deps)
+    selectRegion(handlers)
+
+    handlers.onKeyDown(keyEvent('c', true))
+    handlers.onKeyDown(keyEvent('v', true))
+
+    handlers.flipVertical()
+
+    const committed = deps.committed[0]
+    // Pasted at (0,0)-(1,1), flip should swap rows
+    expect(committed.get('0,0')!.char).toBe('C')
+    expect(committed.get('1,0')!.char).toBe('A')
+  })
+
+  it('selection remains active after flip for further operations', () => {
+    const deps = makeDeps()
+    const handlers = createSelectionHandlers(deps)
+    selectRegion(handlers)
+
+    handlers.flipVertical()
+
+    handlers.flipVertical()
+    expect(deps.snapshots).toBe(2)
+    expect(deps.committed.length).toBe(2)
+  })
+})
+
+describe('selectionTool flip OOB guard', () => {
+  it('flip on selection dragged near edge clips OOB cells', () => {
+    // Build a grid with 4-wide content at row 0, cols 0-3
+    const grid = Array.from({ length: ANSI_ROWS }, () =>
+      Array.from({ length: ANSI_COLS }, (): AnsiCell => ({
+        ...DEFAULT_CELL, fg: [...DEFAULT_FG] as RGBColor, bg: [...DEFAULT_BG] as RGBColor,
+      }))
+    )
+    grid[0][0] = makeCell('A')
+    grid[0][1] = makeCell('B')
+    grid[0][2] = makeCell('C')
+    grid[0][3] = makeCell('D')
+
+    const deps = makeDeps(grid)
+    const handlers = createSelectionHandlers(deps)
+
+    // Select 1x4 region at (0,0)-(0,3)
+    handlers.onMouseDown(0, 0)
+    handlers.onMouseMove(0, 3)
+    handlers.onMouseUp()
+
+    // Drag to far right edge: col ANSI_COLS-2 (so cols span ANSI_COLS-2 to ANSI_COLS+1)
+    handlers.onMouseDown(0, 1) // inside selection
+    handlers.onMouseMove(0, ANSI_COLS - 1) // delta = ANSI_COLS-2
+    handlers.onMouseUp()
+
+    // Flip — should not write any key with col >= ANSI_COLS
+    const commitsBefore = deps.committed.length
+    handlers.flipHorizontal()
+
+    const flipCommit = deps.committed[commitsBefore]
+    for (const key of flipCommit.keys()) {
+      const [r, c] = parseCellKey(key)
+      expect(r).toBeGreaterThanOrEqual(0)
+      expect(r).toBeLessThan(ANSI_ROWS)
+      expect(c).toBeGreaterThanOrEqual(0)
+      expect(c).toBeLessThan(ANSI_COLS)
+    }
+  })
+})
+
+describe('selectionTool consecutive mixed flips', () => {
+  it('flipHorizontal then flipVertical produces 180° rotation', () => {
+    const deps = makeDeps()
+    const handlers = createSelectionHandlers(deps)
+    selectRegion(handlers) // (0,0)-(1,1) with A,B / C,D
+
+    handlers.flipHorizontal() // → B,A / D,C
+    handlers.flipVertical()   // → D,C / B,A (180° rotation)
+
+    const grid = deps.getActiveGrid()
+    expect(grid[0][0].char).toBe('D')
+    expect(grid[0][1].char).toBe('C')
+    expect(grid[1][0].char).toBe('B')
+    expect(grid[1][1].char).toBe('A')
+  })
+
+  it('flip H + flip V + flip H + flip V restores original', () => {
+    const deps = makeDeps()
+    const handlers = createSelectionHandlers(deps)
+    selectRegion(handlers) // A,B / C,D
+
+    handlers.flipHorizontal()
+    handlers.flipVertical()
+    handlers.flipHorizontal()
+    handlers.flipVertical()
+
+    const grid = deps.getActiveGrid()
+    expect(grid[0][0].char).toBe('A')
+    expect(grid[0][1].char).toBe('B')
+    expect(grid[1][0].char).toBe('C')
+    expect(grid[1][1].char).toBe('D')
   })
 })

@@ -20,6 +20,7 @@ export interface AnsiEditorToolbarProps {
   textAlign?: TextAlign
   onSetTextAlign?: (align: TextAlign) => void
   onFlipHorizontal?: () => void
+  onFlipVertical?: () => void
   cgaPreview?: boolean
   onToggleCgaPreview?: () => void
 }
@@ -27,7 +28,7 @@ export interface AnsiEditorToolbarProps {
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onImportPng, onExportAns, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
-  onFlipHorizontal, cgaPreview, onToggleCgaPreview,
+  onFlipHorizontal, onFlipVertical, cgaPreview, onToggleCgaPreview,
 }: AnsiEditorToolbarProps) {
   const isRectActive = brush.tool === 'rect-outline' || brush.tool === 'rect-filled'
   const isOvalActive = brush.tool === 'oval-outline' || brush.tool === 'oval-filled'
@@ -235,18 +236,31 @@ export function AnsiEditorToolbar({
           </button>
         </div>
       )}
-      {brush.tool === 'select' && onFlipHorizontal && (
+      {brush.tool === 'select' && (onFlipHorizontal || onFlipVertical) && (
         <div className={styles.modeGroup}>
           <span className={styles.modeLabel}>Flip</span>
-          <button
-            type="button"
-            className={styles.modeButton}
-            onClick={onFlipHorizontal}
-            title="Flip Horizontal"
-            data-testid="flip-horizontal"
-          >
-            ↔
-          </button>
+          {onFlipHorizontal && (
+            <button
+              type="button"
+              className={styles.modeButton}
+              onClick={onFlipHorizontal}
+              title="Flip Horizontal"
+              data-testid="flip-horizontal"
+            >
+              ↔
+            </button>
+          )}
+          {onFlipVertical && (
+            <button
+              type="button"
+              className={styles.modeButton}
+              onClick={onFlipVertical}
+              title="Flip Vertical"
+              data-testid="flip-vertical"
+            >
+              ↕
+            </button>
+          )}
         </div>
       )}
       {brush.mode === 'brush' && (

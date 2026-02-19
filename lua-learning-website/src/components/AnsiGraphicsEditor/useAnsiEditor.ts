@@ -416,9 +416,15 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     colorTransformRef.current = on ? cgaQuantize : undefined
     if (handleRef.current) renderFullGrid(handleRef.current, compositeGrid(layersRef.current), colorTransformRef.current)
   }, [layersRef])
+
   const flipSelectionHorizontal = useCallback(() => {
     selHandlersRef.current?.flipHorizontal()
   }, [])
+
+  const flipSelectionVertical = useCallback(() => {
+    selHandlersRef.current?.flipVertical()
+  }, [])
+
   const markClean = useCallback(() => setIsDirty(false), [])
   const openSaveDialog = useCallback(() => setIsSaveDialogOpen(true), []), closeSaveDialog = useCallback(() => setIsSaveDialogOpen(false), [])
 
@@ -442,7 +448,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     renameLayer: layerState.renameLayer, setActiveLayer: setActiveLayerWithBounds,
     moveLayerUp: moveLayerUpWithUndo, moveLayerDown: moveLayerDownWithUndo,
     toggleVisibility: toggleVisibilityWithUndo, mergeDown: mergeDownWithUndo,
-    importPngAsLayer, simplifyColors, setTextAlign, flipSelectionHorizontal,
+    importPngAsLayer, simplifyColors, setTextAlign, flipSelectionHorizontal, flipSelectionVertical,
     cgaPreview, setCgaPreview,
   }
 }

@@ -130,6 +130,7 @@ export interface UseAnsiEditorReturn {
   simplifyColors: (mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => void
   setTextAlign: (align: TextAlign) => void
   flipSelectionHorizontal: () => void
+  flipSelectionVertical: () => void
   // CGA Preview
   cgaPreview: boolean
   setCgaPreview: (on: boolean) => void
