@@ -280,6 +280,35 @@ describe('selectionTool onKeyDown', () => {
   })
 })
 
+describe('selectionTool drag-to-move', () => {
+  it('second drag should start from new position, not snap back', () => {
+    const deps = makeDeps()
+    const handlers = createSelectionHandlers(deps)
+    selectRegion(handlers) // select (0,0)-(1,1) with A,B,C,D
+
+    // First drag: move selection down by 2 rows
+    handlers.onMouseDown(0, 0) // inside selection → dragging
+    handlers.onMouseMove(2, 0) // delta = (2,0)
+    handlers.onMouseUp()
+
+    // Second drag: move selection right by 2 cols from its NEW position
+    handlers.onMouseDown(2, 0) // inside new position → dragging
+    handlers.onMouseMove(2, 2) // delta = (0,2) from drag start
+    handlers.onMouseUp()
+
+    // The grid should have A,B,C,D at (2,2)-(3,3), NOT snapped back to row 0
+    const grid = deps.getActiveGrid()
+    expect(grid[2][2].char).toBe('A')
+    expect(grid[2][3].char).toBe('B')
+    expect(grid[3][2].char).toBe('C')
+    expect(grid[3][3].char).toBe('D')
+
+    // Original position should be cleared
+    expect(grid[0][0].char).toBe(DEFAULT_CELL.char)
+    expect(grid[0][1].char).toBe(DEFAULT_CELL.char)
+  })
+})
+
 describe('selectionTool flipHorizontal', () => {
   it('should commit flipped cells immediately when selected', () => {
     const deps = makeDeps()
@@ -354,33 +383,6 @@ describe('selectionTool flipHorizontal', () => {
     expect(committed.get('2,4')!.char).toBe('L') // was at col 3, now at col 4
     // Verify NO cells were written to (0,0)
     expect(committed.has('0,0')).toBe(false)
-  })
-
-  it('second drag should start from new position, not snap back', () => {
-    const deps = makeDeps()
-    const handlers = createSelectionHandlers(deps)
-    selectRegion(handlers) // select (0,0)-(1,1) with A,B,C,D
-
-    // First drag: move selection down by 2 rows
-    handlers.onMouseDown(0, 0) // inside selection → dragging
-    handlers.onMouseMove(2, 0) // delta = (2,0)
-    handlers.onMouseUp()
-
-    // Second drag: move selection right by 2 cols from its NEW position
-    handlers.onMouseDown(2, 0) // inside new position → dragging
-    handlers.onMouseMove(2, 2) // delta = (0,2) from drag start
-    handlers.onMouseUp()
-
-    // The grid should have A,B,C,D at (2,2)-(3,3), NOT snapped back to row 0
-    const grid = deps.getActiveGrid()
-    expect(grid[2][2].char).toBe('A')
-    expect(grid[2][3].char).toBe('B')
-    expect(grid[3][2].char).toBe('C')
-    expect(grid[3][3].char).toBe('D')
-
-    // Original position should be cleared
-    expect(grid[0][0].char).toBe(DEFAULT_CELL.char)
-    expect(grid[0][1].char).toBe(DEFAULT_CELL.char)
   })
 
   it('should commit flipped cells for pasted content at paste position', () => {

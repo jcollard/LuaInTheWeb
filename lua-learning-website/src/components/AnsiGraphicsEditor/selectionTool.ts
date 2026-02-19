@@ -71,6 +71,10 @@ export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers 
     return row >= minR && row <= maxR && col >= minC && col <= maxC
   }
 
+  function rectsEqual(a: Rect, b: Rect): boolean {
+    return a.r0 === b.r0 && a.c0 === b.c0 && a.r1 === b.r1 && a.c1 === b.c1
+  }
+
   function clear(): void {
     phase = 'idle'
     selRect = null
@@ -83,8 +87,7 @@ export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers 
 
   function commitIfNeeded(): void {
     if (!selRect || !selOrigRect) { clear(); return }
-    const moved = selRect.r0 !== selOrigRect.r0 || selRect.c0 !== selOrigRect.c0
-      || selRect.r1 !== selOrigRect.r1 || selRect.c1 !== selOrigRect.c1
+    const moved = !rectsEqual(selRect, selOrigRect)
     if (moved || isPasted) {
       restorePreview()
       pushSnapshot()
@@ -156,9 +159,7 @@ export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers 
       positionOverlay(nr.r0, nr.c0, nr.r1, nr.c1)
       hideDimension()
     } else if (phase === 'dragging' && selRect && selOrigRect) {
-      const moved = selRect.r0 !== selOrigRect.r0 || selRect.c0 !== selOrigRect.c0
-        || selRect.r1 !== selOrigRect.r1 || selRect.c1 !== selOrigRect.c1
-      if (moved) {
+      if (!rectsEqual(selRect, selOrigRect)) {
         restorePreview()
         pushSnapshot()
         commitCells(computeSelectionMoveCells(
