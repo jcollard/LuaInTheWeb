@@ -249,6 +249,24 @@ export function computeSelectionMoveCells(
   return result
 }
 
+export function toRelativeKeys(cells: Map<string, AnsiCell>, originR: number, originC: number): Map<string, AnsiCell> {
+  const result = new Map<string, AnsiCell>()
+  for (const [key, cell] of cells) {
+    const [r, c] = parseCellKey(key)
+    result.set(`${r - originR},${c - originC}`, { char: cell.char, fg: [...cell.fg] as RGBColor, bg: [...cell.bg] as RGBColor })
+  }
+  return result
+}
+
+export function toAbsoluteKeys(cells: Map<string, AnsiCell>, originR: number, originC: number): Map<string, AnsiCell> {
+  const result = new Map<string, AnsiCell>()
+  for (const [key, cell] of cells) {
+    const [r, c] = parseCellKey(key)
+    result.set(`${r + originR},${c + originC}`, { char: cell.char, fg: [...cell.fg] as RGBColor, bg: [...cell.bg] as RGBColor })
+  }
+  return result
+}
+
 export function computeFloodFillCells(
   startRow: number, startCol: number,
   brush: LineBrush,

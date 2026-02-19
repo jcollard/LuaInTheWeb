@@ -2,10 +2,9 @@ import { useState, useCallback, useRef, useMemo } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { AnsiCell, BrushMode, DrawTool, BrushSettings, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions } from './types'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG } from './types'
-import type { ColorTransform } from './gridUtils'
+import type { ColorTransform, CellHalf } from './gridUtils'
 import { createEmptyGrid, writeCellToTerminal, renderFullGrid, isInBounds, getCellHalfFromMouse, computePixelCell, computeFloodFillCells } from './gridUtils'
 import { cgaQuantize } from './ansExport'
-import type { CellHalf } from './gridUtils'
 import { compositeCell, compositeGrid, cloneLayerState } from './layerUtils'
 import { useLayerState } from './useLayerState'
 import { loadPngPixels, rgbaToAnsiGrid } from './pngImport'
@@ -206,6 +205,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
 
     function onKeyDown(e: KeyboardEvent): void {
       if (brushRef.current.tool === 'text') textTool.onKeyDown(e)
+      else if (brushRef.current.tool === 'select') sel.onKeyDown(e)
     }
     document.addEventListener('keydown', onKeyDown)
 

@@ -1,6 +1,18 @@
-import type { AnsiCell, AnsiGrid, Rect } from './types'
-import { ANSI_COLS, ANSI_ROWS } from './types'
-import { extractRegionCells, computeSelectionMoveCells } from './gridUtils'
+import type { AnsiCell, AnsiGrid, Rect, RGBColor } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL } from './types'
+import { extractRegionCells, computeSelectionMoveCells, toRelativeKeys, toAbsoluteKeys } from './gridUtils'
+
+// Module-level clipboard (persists across clear() calls and tool switches)
+let clipboard: Map<string, AnsiCell> | null = null
+let clipboardWidth = 0
+let clipboardHeight = 0
+
+/** Reset clipboard state — exposed for testing */
+export function clearClipboard(): void {
+  clipboard = null
+  clipboardWidth = 0
+  clipboardHeight = 0
+}
 
 export interface SelectionDeps {
   container: HTMLElement
@@ -18,6 +30,7 @@ export interface SelectionHandlers {
   onMouseDown: (row: number, col: number) => void
   onMouseMove: (row: number, col: number) => void
   onMouseUp: () => void
+  onKeyDown: (e: KeyboardEvent) => void
 }
 
 export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers {
@@ -29,6 +42,7 @@ export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers 
   let selOrigRect: Rect | null = null
   let captured = new Map<string, AnsiCell>()
   let dragStart: { row: number; col: number } | null = null
+  let isPasted = false
 
   function positionOverlay(r0: number, c0: number, r1: number, c1: number): void {
     const el = selectionRef.current
@@ -62,6 +76,7 @@ export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers 
     selOrigRect = null
     captured = new Map()
     dragStart = null
+    isPasted = false
     hideOverlay()
   }
 
@@ -69,12 +84,17 @@ export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers 
     if (!selRect || !selOrigRect) { clear(); return }
     const moved = selRect.r0 !== selOrigRect.r0 || selRect.c0 !== selOrigRect.c0
       || selRect.r1 !== selOrigRect.r1 || selRect.c1 !== selOrigRect.c1
-    if (moved) {
+    if (moved || isPasted) {
       restorePreview()
       pushSnapshot()
-      commitCells(computeSelectionMoveCells(
-        captured, selOrigRect.r0, selOrigRect.c0, selRect.r0, selRect.c0, ANSI_ROWS, ANSI_COLS,
-      ))
+      if (isPasted && !moved) {
+        // Pasted but not dragged — write captured cells at their current position
+        commitCells(toAbsoluteKeys(captured, selRect.r0, selRect.c0))
+      } else {
+        commitCells(computeSelectionMoveCells(
+          captured, selOrigRect.r0, selOrigRect.c0, selRect.r0, selRect.c0, ANSI_ROWS, ANSI_COLS,
+        ))
+      }
     } else {
       restorePreview()
     }
@@ -139,5 +159,66 @@ export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers 
     }
   }
 
-  return { onMouseDown, onMouseMove, onMouseUp }
+  function onKeyDown(e: KeyboardEvent): void {
+    const ctrl = e.ctrlKey || e.metaKey
+
+    if (ctrl && e.key === 'c') {
+      if (phase !== 'selected') return
+      e.preventDefault()
+      clipboard = toRelativeKeys(captured, selRect!.r0, selRect!.c0)
+      clipboardWidth = selRect!.c1 - selRect!.c0 + 1
+      clipboardHeight = selRect!.r1 - selRect!.r0 + 1
+      return
+    }
+
+    if (ctrl && e.key === 'x') {
+      if (phase !== 'selected') return
+      e.preventDefault()
+      clipboard = toRelativeKeys(captured, selRect!.r0, selRect!.c0)
+      clipboardWidth = selRect!.c1 - selRect!.c0 + 1
+      clipboardHeight = selRect!.r1 - selRect!.r0 + 1
+      restorePreview()
+      pushSnapshot()
+      const clearCells = new Map<string, AnsiCell>()
+      for (const key of captured.keys()) {
+        clearCells.set(key, { ...DEFAULT_CELL, fg: [...DEFAULT_CELL.fg] as RGBColor, bg: [...DEFAULT_CELL.bg] as RGBColor })
+      }
+      commitCells(clearCells)
+      clear()
+      return
+    }
+
+    if (ctrl && e.key === 'v') {
+      if (!clipboard) return
+      e.preventDefault()
+      commitIfNeeded()
+      // Set up floating paste preview at (0,0)
+      captured = new Map<string, AnsiCell>()
+      for (const [key, cell] of clipboard) {
+        captured.set(key, { char: cell.char, fg: [...cell.fg] as RGBColor, bg: [...cell.bg] as RGBColor })
+      }
+      selRect = { r0: 0, c0: 0, r1: clipboardHeight - 1, c1: clipboardWidth - 1 }
+      selOrigRect = { ...selRect }
+      isPasted = true
+      phase = 'selected'
+      renderPreview()
+      positionOverlay(selRect.r0, selRect.c0, selRect.r1, selRect.c1)
+      return
+    }
+
+    if (e.key === 'Delete') {
+      if (phase !== 'selected') return
+      e.preventDefault()
+      restorePreview()
+      pushSnapshot()
+      const clearCells = new Map<string, AnsiCell>()
+      for (const key of captured.keys()) {
+        clearCells.set(key, { ...DEFAULT_CELL, fg: [...DEFAULT_CELL.fg] as RGBColor, bg: [...DEFAULT_CELL.bg] as RGBColor })
+      }
+      commitCells(clearCells)
+      clear()
+    }
+  }
+
+  return { onMouseDown, onMouseMove, onMouseUp, onKeyDown }
 }

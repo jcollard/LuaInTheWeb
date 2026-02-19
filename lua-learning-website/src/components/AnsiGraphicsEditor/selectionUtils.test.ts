@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { extractRegionCells, computeSelectionMoveCells } from './gridUtils'
+import { extractRegionCells, computeSelectionMoveCells, toRelativeKeys, toAbsoluteKeys } from './gridUtils'
 import type { AnsiCell, AnsiGrid, RGBColor } from './types'
 import { DEFAULT_FG, DEFAULT_BG } from './types'
 
@@ -96,5 +96,64 @@ describe('computeSelectionMoveCells', () => {
     const result = computeSelectionMoveCells(captured, 0, 0, 0, 10, 3, 3)
     expect(result.size).toBe(1)
     expect(result.get('0,0')!.char).toBe(' ')
+  })
+})
+
+describe('toRelativeKeys', () => {
+  it('should convert absolute keys to relative keys based on origin', () => {
+    const cells = new Map<string, AnsiCell>()
+    cells.set('5,10', { char: 'A', fg: [...red] as RGBColor, bg: [...blue] as RGBColor })
+    cells.set('6,11', { char: 'B', fg: [...red] as RGBColor, bg: [...blue] as RGBColor })
+
+    const result = toRelativeKeys(cells, 5, 10)
+    expect(result.size).toBe(2)
+    expect(result.get('0,0')!.char).toBe('A')
+    expect(result.get('1,1')!.char).toBe('B')
+  })
+
+  it('should deep-clone cells (modifying result does not affect input)', () => {
+    const cells = new Map<string, AnsiCell>()
+    cells.set('2,3', { char: 'X', fg: [...red] as RGBColor, bg: [...blue] as RGBColor })
+
+    const result = toRelativeKeys(cells, 2, 3)
+    result.get('0,0')!.fg[0] = 0
+    expect(cells.get('2,3')!.fg[0]).toBe(255)
+  })
+})
+
+describe('toAbsoluteKeys', () => {
+  it('should convert relative keys to absolute keys at target origin', () => {
+    const cells = new Map<string, AnsiCell>()
+    cells.set('0,0', { char: 'A', fg: [...red] as RGBColor, bg: [...blue] as RGBColor })
+    cells.set('1,1', { char: 'B', fg: [...red] as RGBColor, bg: [...blue] as RGBColor })
+
+    const result = toAbsoluteKeys(cells, 3, 7)
+    expect(result.size).toBe(2)
+    expect(result.get('3,7')!.char).toBe('A')
+    expect(result.get('4,8')!.char).toBe('B')
+  })
+
+  it('should deep-clone cells (modifying result does not affect input)', () => {
+    const cells = new Map<string, AnsiCell>()
+    cells.set('0,0', { char: 'X', fg: [...red] as RGBColor, bg: [...blue] as RGBColor })
+
+    const result = toAbsoluteKeys(cells, 1, 1)
+    result.get('1,1')!.fg[0] = 0
+    expect(cells.get('0,0')!.fg[0]).toBe(255)
+  })
+
+  it('should roundtrip correctly with toRelativeKeys', () => {
+    const cells = new Map<string, AnsiCell>()
+    cells.set('5,10', { char: 'A', fg: [...red] as RGBColor, bg: [...blue] as RGBColor })
+    cells.set('6,12', { char: 'B', fg: [...blue] as RGBColor, bg: [...red] as RGBColor })
+
+    const relative = toRelativeKeys(cells, 5, 10)
+    const absolute = toAbsoluteKeys(relative, 5, 10)
+
+    expect(absolute.size).toBe(2)
+    expect(absolute.get('5,10')!.char).toBe('A')
+    expect(absolute.get('6,12')!.char).toBe('B')
+    expect(absolute.get('5,10')!.fg).toEqual(red)
+    expect(absolute.get('6,12')!.fg).toEqual(blue)
   })
 })
