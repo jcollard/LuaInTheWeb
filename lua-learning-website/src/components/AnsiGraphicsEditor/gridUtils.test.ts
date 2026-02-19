@@ -1,7 +1,9 @@
-import { describe, it, expect } from 'vitest'
-import { computeRectCells, computeFloodFillCells, computeErasePixelCell, computeLineCells } from './gridUtils'
+import { describe, it, expect, vi } from 'vitest'
+import { computeRectCells, computeFloodFillCells, computeErasePixelCell, computeLineCells, writeCellToTerminal, renderFullGrid } from './gridUtils'
+import type { ColorTransform } from './gridUtils'
 import type { AnsiCell, AnsiGrid, RGBColor } from './types'
 import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG, DEFAULT_CELL, HALF_BLOCK, TRANSPARENT_HALF } from './types'
+import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 
 function makeGrid(): AnsiGrid {
   return Array.from({ length: ANSI_ROWS }, () =>
@@ -586,5 +588,49 @@ describe('computeFloodFillCells — eraser mode', () => {
     const brush = { char: HALF_BLOCK, fg: red, bg: [...DEFAULT_BG] as RGBColor, mode: 'eraser' as const }
     const cells = computeFloodFillCells(0, 0, brush, grid, true)
     expect(cells.size).toBe(0)
+  })
+})
+
+function mockHandle(): AnsiTerminalHandle {
+  return { write: vi.fn(), container: document.createElement('div') } as unknown as AnsiTerminalHandle
+}
+
+describe('writeCellToTerminal with colorTransform', () => {
+  it('should apply colorTransform to fg and bg before writing', () => {
+    const handle = mockHandle()
+    const transform: ColorTransform = () => [0, 0, 0]
+    const cell = { char: 'A', fg: [255, 0, 0] as RGBColor, bg: [0, 255, 0] as RGBColor }
+    writeCellToTerminal(handle, 0, 0, cell, transform)
+    // The written string should contain rgb(0,0,0) for both fg and bg
+    const written = (handle.write as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
+    expect(written).toContain('38;2;0;0;0')
+    expect(written).toContain('48;2;0;0;0')
+    expect(written).not.toContain('38;2;255;0;0')
+  })
+
+  it('should pass colors through unchanged when no transform is provided', () => {
+    const handle = mockHandle()
+    const cell = { char: 'A', fg: [255, 0, 0] as RGBColor, bg: [0, 255, 0] as RGBColor }
+    writeCellToTerminal(handle, 0, 0, cell)
+    const written = (handle.write as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
+    expect(written).toContain('38;2;255;0;0')
+    expect(written).toContain('48;2;0;255;0')
+  })
+})
+
+describe('renderFullGrid with colorTransform', () => {
+  it('should pass colorTransform through to writeCellToTerminal calls', () => {
+    const handle = mockHandle()
+    const grid = makeSmallGrid(ANSI_ROWS, ANSI_COLS)
+    grid[0][0] = { char: 'X', fg: [255, 0, 0] as RGBColor, bg: [0, 0, 255] as RGBColor }
+    const transform: ColorTransform = (c) => [c[0], c[1], 0]
+    renderFullGrid(handle, grid, transform)
+    const calls = (handle.write as ReturnType<typeof vi.fn>).mock.calls
+    const allWritten = calls.map((c: unknown[]) => c[0] as string).join('')
+    // The red fg should become [255,0,0] → [255,0,0] (unchanged r,g but b=0)
+    expect(allWritten).toContain('38;2;255;0;0')
+    // The blue bg [0,0,255] should become [0,0,0]
+    expect(allWritten).toContain('48;2;0;0;0')
+    expect(allWritten).not.toContain('48;2;0;0;255')
   })
 })

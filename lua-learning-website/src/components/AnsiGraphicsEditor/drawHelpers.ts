@@ -2,6 +2,7 @@ import type { AnsiCell, AnsiGrid, BrushSettings, Layer } from './types'
 import { ANSI_COLS, ANSI_ROWS } from './types'
 import type { CellHalf } from './gridUtils'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
+import type { ColorTransform } from './gridUtils'
 import {
   writeCellToTerminal, parseCellKey, isInBounds,
   computeErasePixelCell, computeLineCells, computeRectCells,
@@ -18,6 +19,7 @@ export interface DrawHelperDeps {
   activeLayerIdRef: React.RefObject<string>
   previewCellsRef: React.MutableRefObject<Map<string, AnsiCell>>
   lineStartRef: React.MutableRefObject<CellHalf | null>
+  colorTransformRef: React.RefObject<ColorTransform | undefined>
   getActiveGrid: () => AnsiGrid
   applyCell: (row: number, col: number, cell: AnsiCell) => void
   paintPixel: (row: number, col: number, isTopHalf: boolean) => void
@@ -30,7 +32,7 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
   const {
     container, cursorRef, dimensionRef, handleRef, brushRef,
     layersRef, activeLayerIdRef, previewCellsRef, lineStartRef,
-    getActiveGrid, applyCell, paintPixel, paintCell,
+    colorTransformRef, getActiveGrid, applyCell, paintPixel, paintCell,
   } = deps
 
   function positionCursor(row: number, col: number, isTopHalf?: boolean): void {
@@ -111,7 +113,7 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
     if (!handle) return
     for (const [key, cell] of previewCellsRef.current) {
       const [r, c] = parseCellKey(key)
-      writeCellToTerminal(handle, r, c, cell)
+      writeCellToTerminal(handle, r, c, cell, colorTransformRef.current)
     }
     previewCellsRef.current.clear()
   }
@@ -126,7 +128,7 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
       if (!previewCellsRef.current.has(key)) {
         previewCellsRef.current.set(key, compositeCell(layers, r, c))
       }
-      writeCellToTerminal(handle, r, c, compositeCellWithOverride(layers, r, c, activeId, cell))
+      writeCellToTerminal(handle, r, c, compositeCellWithOverride(layers, r, c, activeId, cell), colorTransformRef.current)
     }
   }
 
@@ -143,7 +145,7 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
     if (handle) {
       for (const key of affectedKeys) {
         const [r, c] = parseCellKey(key)
-        writeCellToTerminal(handle, r, c, compositeCell(layers, r, c))
+        writeCellToTerminal(handle, r, c, compositeCell(layers, r, c), colorTransformRef.current)
       }
     }
   }

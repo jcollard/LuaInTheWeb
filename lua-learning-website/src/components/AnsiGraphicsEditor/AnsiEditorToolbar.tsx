@@ -12,17 +12,21 @@ export interface AnsiEditorToolbarProps {
   onSave: () => void
   onSaveAs: () => void
   onImportPng: () => void
+  onExportAns: () => void
   onUndo: () => void
   onRedo: () => void
   canUndo: boolean
   canRedo: boolean
   textAlign?: TextAlign
   onSetTextAlign?: (align: TextAlign) => void
+  cgaPreview?: boolean
+  onToggleCgaPreview?: () => void
 }
 
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
-  onImportPng, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
+  onImportPng, onExportAns, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
+  cgaPreview, onToggleCgaPreview,
 }: AnsiEditorToolbarProps) {
   const isRectActive = brush.tool === 'rect-outline' || brush.tool === 'rect-filled'
   const [charPaletteOpen, setCharPaletteOpen] = useState(false)
@@ -260,6 +264,15 @@ export function AnsiEditorToolbar({
       <button
         type="button"
         className={styles.toolbarButton}
+        onClick={onExportAns}
+        title="Export as ANS file"
+        data-testid="export-ans-button"
+      >
+        Export ANS
+      </button>
+      <button
+        type="button"
+        className={styles.toolbarButton}
         onClick={onUndo}
         disabled={!canUndo}
         title="Undo"
@@ -277,6 +290,17 @@ export function AnsiEditorToolbar({
       >
         ↷
       </button>
+      {onToggleCgaPreview && (
+        <label className={styles.toolbarButton} title="CGA Preview">
+          <input
+            type="checkbox"
+            checked={cgaPreview ?? false}
+            onChange={onToggleCgaPreview}
+            data-testid="cga-preview-checkbox"
+          />
+          CGA
+        </label>
+      )}
     </div>
   )
 }

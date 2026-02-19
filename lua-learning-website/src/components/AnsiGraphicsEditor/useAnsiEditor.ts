@@ -2,7 +2,9 @@ import { useState, useCallback, useRef, useMemo } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { AnsiCell, BrushMode, DrawTool, BrushSettings, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions } from './types'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG } from './types'
+import type { ColorTransform } from './gridUtils'
 import { createEmptyGrid, writeCellToTerminal, renderFullGrid, isInBounds, getCellHalfFromMouse, computePixelCell, computeFloodFillCells } from './gridUtils'
+import { cgaQuantize } from './ansExport'
 import type { CellHalf } from './gridUtils'
 import { compositeCell, compositeGrid, cloneLayerState } from './layerUtils'
 import { useLayerState } from './useLayerState'
@@ -53,25 +55,22 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
 
-  const undoStackRef = useRef<LayerState[]>([])
-  const redoStackRef = useRef<LayerState[]>([])
+  const undoStackRef = useRef<LayerState[]>([]), redoStackRef = useRef<LayerState[]>([])
   const handleRef = useRef<AnsiTerminalHandle | null>(null)
   const brushRef = useRef(brush); brushRef.current = brush
   const paintingRef = useRef(false)
   const lastCellRef = useRef<{ row: number; col: number; isTopHalf?: boolean } | null>(null)
-  const cursorRef = useRef<HTMLDivElement | null>(null)
-  const dimensionRef = useRef<HTMLDivElement | null>(null)
+  const cursorRef = useRef<HTMLDivElement | null>(null), dimensionRef = useRef<HTMLDivElement | null>(null)
   const lineStartRef = useRef<CellHalf | null>(null)
   const previewCellsRef = useRef<Map<string, AnsiCell>>(new Map())
   const cleanupRef = useRef<(() => void) | null>(null)
-  const selectionRef = useRef<HTMLDivElement | null>(null)
-  const textBoundsRef = useRef<HTMLDivElement | null>(null)
+  const selectionRef = useRef<HTMLDivElement | null>(null), textBoundsRef = useRef<HTMLDivElement | null>(null)
   const textCursorRef = useRef<HTMLDivElement | null>(null)
-  const commitPendingSelectionRef = useRef<(() => void) | null>(null)
-  const commitPendingTextRef = useRef<(() => void) | null>(null)
-  const containerRef = useRef<HTMLElement | null>(null)
-  const textToolRef = useRef<TextToolHandlers | null>(null)
+  const commitPendingSelectionRef = useRef<(() => void) | null>(null), commitPendingTextRef = useRef<(() => void) | null>(null)
+  const containerRef = useRef<HTMLElement | null>(null), textToolRef = useRef<TextToolHandlers | null>(null)
   const updateTextBoundsDisplayRef = useRef<(() => void) | null>(null)
+  const [cgaPreview, setCgaPreviewRaw] = useState(false)
+  const colorTransformRef = useRef<ColorTransform | undefined>(undefined); colorTransformRef.current = cgaPreview ? cgaQuantize : undefined
 
   const pushSnapshot = useCallback(() => {
     const stack = undoStackRef.current
@@ -88,29 +87,23 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     const snapshot = from.pop()!
     restoreLayerState(snapshot)
     setIsDirty(true)
-    setCanUndo(undoStackRef.current.length > 0)
-    setCanRedo(redoStackRef.current.length > 0)
-    if (handleRef.current) renderFullGrid(handleRef.current, compositeGrid(snapshot.layers))
+    setCanUndo(undoStackRef.current.length > 0); setCanRedo(redoStackRef.current.length > 0)
+    if (handleRef.current) renderFullGrid(handleRef.current, compositeGrid(snapshot.layers), colorTransformRef.current)
   }, [layersRef, activeLayerIdRef, restoreLayerState])
 
   const undo = useCallback(() => restoreSnapshot(undoStackRef.current, redoStackRef.current), [restoreSnapshot])
   const redo = useCallback(() => restoreSnapshot(redoStackRef.current, undoStackRef.current), [restoreSnapshot])
-
   const setBrushFg = useCallback((color: RGBColor) => setBrush(p => ({ ...p, fg: color })), [])
   const setBrushBg = useCallback((color: RGBColor) => setBrush(p => ({ ...p, bg: color })), [])
   const setBrushChar = useCallback((c: string) => { if (c.length === 1) setBrush(p => ({ ...p, char: c })) }, [])
   const setBrushMode = useCallback((mode: BrushMode) => setBrush(p => ({ ...p, mode })), [])
   const setTool = useCallback((tool: DrawTool) => {
-    commitPendingSelectionRef.current?.()
-    commitPendingTextRef.current?.()
-    setBrush(p => ({ ...p, tool }))
+    commitPendingSelectionRef.current?.(); commitPendingTextRef.current?.(); setBrush(p => ({ ...p, tool }))
   }, [])
 
   const applyCell = useCallback((row: number, col: number, cell: AnsiCell) => {
-    applyToActiveLayer(row, col, cell)
-    setIsDirty(true)
-    // layersRef is already updated synchronously by applyToActiveLayer
-    if (handleRef.current) writeCellToTerminal(handleRef.current, row, col, compositeCell(layersRef.current, row, col))
+    applyToActiveLayer(row, col, cell); setIsDirty(true)
+    if (handleRef.current) writeCellToTerminal(handleRef.current, row, col, compositeCell(layersRef.current, row, col), colorTransformRef.current)
   }, [applyToActiveLayer, layersRef])
 
   const paintPixel = useCallback((row: number, col: number, isTopHalf: boolean) => {
@@ -130,7 +123,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     const id = 'clear-bg-' + Date.now()
     restoreLayerState({ layers: [{ type: 'drawn', id, name: 'Background', visible: true, grid: emptyGrid }], activeLayerId: id })
     setIsDirty(false)
-    if (handleRef.current) renderFullGrid(handleRef.current, emptyGrid)
+    if (handleRef.current) renderFullGrid(handleRef.current, emptyGrid, colorTransformRef.current)
   }, [pushSnapshot, restoreLayerState])
 
   const withLayerUndo = useCallback((action: () => void, needsRerender = true) => {
@@ -139,7 +132,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     if (needsRerender) {
       setIsDirty(true)
       if (handleRef.current) setTimeout(() => {
-        if (handleRef.current) renderFullGrid(handleRef.current, compositeGrid(layersRef.current))
+        if (handleRef.current) renderFullGrid(handleRef.current, compositeGrid(layersRef.current), colorTransformRef.current)
       }, 0)
     }
   }, [pushSnapshot, layersRef])
@@ -165,7 +158,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     const draw = createDrawHelpers({
       container, cursorRef, dimensionRef, handleRef, brushRef,
       layersRef, activeLayerIdRef, previewCellsRef, lineStartRef,
-      getActiveGrid, applyCell, paintPixel, paintCell,
+      colorTransformRef, getActiveGrid, applyCell, paintPixel, paintCell,
     })
 
     const sel = createSelectionHandlers({
@@ -203,7 +196,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       updateTextLayer: rawUpdateTextLayer,
       pushSnapshot,
       rerenderGrid: () => {
-        if (handleRef.current) renderFullGrid(handleRef.current, compositeGrid(layersRef.current))
+        if (handleRef.current) renderFullGrid(handleRef.current, compositeGrid(layersRef.current), colorTransformRef.current)
       },
       textBoundsRef, textCursorRef, containerRef,
       onExitEditing: updateTextBoundsDisplay,
@@ -411,10 +404,15 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     pushSnapshot()
     rawUpdateTextLayer(activeId, { textAlign: align })
     setIsDirty(true)
-    if (handleRef.current) renderFullGrid(handleRef.current, compositeGrid(layersRef.current))
+    if (handleRef.current) renderFullGrid(handleRef.current, compositeGrid(layersRef.current), colorTransformRef.current)
     textToolRef.current?.refreshOverlays()
   }, [pushSnapshot, rawUpdateTextLayer, layersRef, activeLayerIdRef])
 
+  const setCgaPreview = useCallback((on: boolean) => {
+    setCgaPreviewRaw(on)
+    colorTransformRef.current = on ? cgaQuantize : undefined
+    if (handleRef.current) renderFullGrid(handleRef.current, compositeGrid(layersRef.current), colorTransformRef.current)
+  }, [layersRef])
   const markClean = useCallback(() => setIsDirty(false), [])
   const openSaveDialog = useCallback(() => setIsSaveDialogOpen(true), []), closeSaveDialog = useCallback(() => setIsSaveDialogOpen(false), [])
 
@@ -423,7 +421,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     cleanupRef.current = null
     handleRef.current = handle
     if (handle) {
-      renderFullGrid(handle, compositeGrid(layersRef.current))
+      renderFullGrid(handle, compositeGrid(layersRef.current), colorTransformRef.current)
       cleanupRef.current = attachMouseListeners(handle.container)
       updateTextBoundsDisplayRef.current?.()
     }
@@ -438,5 +436,6 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     renameLayer: layerState.renameLayer, setActiveLayer: setActiveLayerWithBounds,
     moveLayerUp: moveLayerUpWithUndo, moveLayerDown: moveLayerDownWithUndo,
     toggleVisibility: toggleVisibilityWithUndo, importPngAsLayer, simplifyColors, setTextAlign,
+    cgaPreview, setCgaPreview,
   }
 }

@@ -14,23 +14,28 @@ export function createEmptyGrid(): AnsiGrid {
   )
 }
 
+export type ColorTransform = (c: RGBColor) => RGBColor
+
 export function writeCellToTerminal(
   handle: AnsiTerminalHandle,
   row: number,
   col: number,
   cell: { char: string; fg: RGBColor; bg: RGBColor },
+  colorTransform?: ColorTransform,
 ): void {
+  const fg = colorTransform ? colorTransform(cell.fg) : cell.fg
+  const bg = colorTransform ? colorTransform(cell.bg) : cell.bg
   const posSeq = `\x1b[${row + 1};${col + 1}H`
-  const fgSeq = `\x1b[38;2;${cell.fg[0]};${cell.fg[1]};${cell.fg[2]}m`
-  const bgSeq = `\x1b[48;2;${cell.bg[0]};${cell.bg[1]};${cell.bg[2]}m`
+  const fgSeq = `\x1b[38;2;${fg[0]};${fg[1]};${fg[2]}m`
+  const bgSeq = `\x1b[48;2;${bg[0]};${bg[1]};${bg[2]}m`
   handle.write(`${posSeq}${fgSeq}${bgSeq}${cell.char}\x1b[0m`)
 }
 
-export function renderFullGrid(handle: AnsiTerminalHandle, grid: AnsiGrid): void {
+export function renderFullGrid(handle: AnsiTerminalHandle, grid: AnsiGrid, colorTransform?: ColorTransform): void {
   handle.write('\x1b[2J\x1b[?25l')
   for (let r = 0; r < ANSI_ROWS; r++) {
     for (let c = 0; c < ANSI_COLS; c++) {
-      writeCellToTerminal(handle, r, c, grid[r][c])
+      writeCellToTerminal(handle, r, c, grid[r][c], colorTransform)
     }
   }
 }

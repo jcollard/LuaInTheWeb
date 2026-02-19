@@ -128,6 +128,9 @@ export interface UseAnsiEditorReturn {
   importPngAsLayer: (file: File) => Promise<void>
   simplifyColors: (mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => void
   setTextAlign: (align: TextAlign) => void
+  // CGA Preview
+  cgaPreview: boolean
+  setCgaPreview: (on: boolean) => void
 }
 
 export interface UseAnsiEditorOptions {

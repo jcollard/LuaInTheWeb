@@ -15,7 +15,7 @@ vi.mock('../AnsiTerminalPanel/AnsiTerminalPanel', () => ({
 
 describe('AnsiEditorToolbar', () => {
   const defaultBrush = { char: '#', fg: DEFAULT_FG as RGBColor, bg: DEFAULT_BG as RGBColor, mode: 'brush' as BrushMode, tool: 'pencil' as DrawTool }
-  let handlers: Pick<AnsiEditorToolbarProps, 'onSetChar' | 'onClear' | 'onSave' | 'onSaveAs' | 'onImportPng' | 'onSetMode' | 'onSetTool' | 'onUndo' | 'onRedo' | 'canUndo' | 'canRedo'>
+  let handlers: Pick<AnsiEditorToolbarProps, 'onSetChar' | 'onClear' | 'onSave' | 'onSaveAs' | 'onImportPng' | 'onExportAns' | 'onSetMode' | 'onSetTool' | 'onUndo' | 'onRedo' | 'canUndo' | 'canRedo'>
 
   beforeEach(() => {
     handlers = {
@@ -24,6 +24,7 @@ describe('AnsiEditorToolbar', () => {
       onSave: vi.fn<() => void>(),
       onSaveAs: vi.fn<() => void>(),
       onImportPng: vi.fn<() => void>(),
+      onExportAns: vi.fn<() => void>(),
       onSetMode: vi.fn<(mode: BrushMode) => void>(),
       onSetTool: vi.fn<(tool: DrawTool) => void>(),
       onUndo: vi.fn<() => void>(),
@@ -362,6 +363,32 @@ describe('AnsiEditorToolbar', () => {
       render(<AnsiEditorToolbar brush={textBrush} {...handlers} />)
       expect(screen.getByTestId('tool-text').getAttribute('aria-pressed')).toBe('true')
       expect(screen.getByTestId('tool-pencil').getAttribute('aria-pressed')).toBe('false')
+    })
+  })
+
+  describe('CGA preview checkbox', () => {
+    it('should render CGA preview checkbox', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} cgaPreview={false} onToggleCgaPreview={vi.fn()} />)
+      expect(screen.getByTestId('cga-preview-checkbox')).toBeTruthy()
+    })
+
+    it('should show checkbox as unchecked when cgaPreview is false', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} cgaPreview={false} onToggleCgaPreview={vi.fn()} />)
+      const checkbox = screen.getByTestId('cga-preview-checkbox') as HTMLInputElement
+      expect(checkbox.checked).toBe(false)
+    })
+
+    it('should show checkbox as checked when cgaPreview is true', () => {
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} cgaPreview={true} onToggleCgaPreview={vi.fn()} />)
+      const checkbox = screen.getByTestId('cga-preview-checkbox') as HTMLInputElement
+      expect(checkbox.checked).toBe(true)
+    })
+
+    it('should call onToggleCgaPreview when checkbox is clicked', () => {
+      const toggle = vi.fn()
+      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} cgaPreview={false} onToggleCgaPreview={toggle} />)
+      fireEvent.click(screen.getByTestId('cga-preview-checkbox'))
+      expect(toggle).toHaveBeenCalledOnce()
     })
   })
 

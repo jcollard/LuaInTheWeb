@@ -7,7 +7,9 @@ import { ColorPanel } from './ColorPanel'
 import { LayersPanel } from './LayersPanel'
 import { SaveAsDialog } from './SaveAsDialog'
 import { useAnsiEditor } from './useAnsiEditor'
+import { exportAnsFile } from './ansExport'
 import { serializeLayers, deserializeLayers } from './serialization'
+import { compositeGrid } from './layerUtils'
 import type { LayerState } from './types'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -64,7 +66,11 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     textBoundsRef,
     textCursorRef,
     setTextAlign,
+    cgaPreview,
+    setCgaPreview,
   } = useAnsiEditor({ initialLayerState })
+
+  const handleToggleCgaPreview = useCallback(() => setCgaPreview(!cgaPreview), [cgaPreview, setCgaPreview])
 
   const activeLayer = layers.find(l => l.id === activeLayerId)
   const activeTextAlign = activeLayer?.type === 'text' ? activeLayer.textAlign : undefined
@@ -125,6 +131,25 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     }
   }, [filePath, layers, activeLayerId, fileSystem, markClean, openSaveDialog])
 
+  const handleExportAns = useCallback(() => {
+    const grid = compositeGrid(layers)
+    let filename = 'untitled.ans'
+    if (filePath && !filePath.startsWith('ansi-editor://')) {
+      const base = filePath.split('/').pop() ?? 'untitled'
+      filename = base.replace(/\.ansi\.lua$/, '.ans')
+      if (!filename.endsWith('.ans')) filename = base + '.ans'
+    }
+    const title = filename.replace(/\.ans$/, '')
+    const data = exportAnsFile(grid, title)
+    const blob = new Blob([new Uint8Array(data)], { type: 'application/octet-stream' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [layers, filePath])
+
   return (
     <div className={styles.editor} data-testid="ansi-graphics-editor">
       <AnsiEditorToolbar
@@ -136,12 +161,15 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
         onSave={handleSave}
         onSaveAs={openSaveDialog}
         onImportPng={handleImportPngClick}
+        onExportAns={handleExportAns}
         onUndo={undo}
         onRedo={redo}
         canUndo={canUndo}
         canRedo={canRedo}
         textAlign={activeTextAlign}
         onSetTextAlign={setTextAlign}
+        cgaPreview={cgaPreview}
+        onToggleCgaPreview={handleToggleCgaPreview}
       />
       <div className={styles.editorBody}>
         <ColorPanel
