@@ -67,6 +67,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     textBoundsRef,
     textCursorRef,
     setTextAlign,
+    flipSelectionHorizontal,
     cgaPreview,
     setCgaPreview,
   } = useAnsiEditor({ initialLayerState })
@@ -169,6 +170,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
         canRedo={canRedo}
         textAlign={activeTextAlign}
         onSetTextAlign={setTextAlign}
+        onFlipHorizontal={flipSelectionHorizontal}
         cgaPreview={cgaPreview}
         onToggleCgaPreview={handleToggleCgaPreview}
       />

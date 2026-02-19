@@ -10,7 +10,7 @@ import { compositeCell, compositeGrid, cloneLayerState } from './layerUtils'
 import { useLayerState } from './useLayerState'
 import { loadPngPixels, rgbaToAnsiGrid } from './pngImport'
 import { createDrawHelpers } from './drawHelpers'
-import { createSelectionHandlers } from './selectionTool'
+import { createSelectionHandlers, type SelectionHandlers } from './selectionTool'
 import { createTextToolHandlers, type TextToolHandlers } from './textTool'
 
 export { computePixelCell, computeLineCells } from './gridUtils'
@@ -67,7 +67,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const selectionRef = useRef<HTMLDivElement | null>(null), textBoundsRef = useRef<HTMLDivElement | null>(null)
   const textCursorRef = useRef<HTMLDivElement | null>(null)
   const commitPendingSelectionRef = useRef<(() => void) | null>(null), commitPendingTextRef = useRef<(() => void) | null>(null)
-  const containerRef = useRef<HTMLElement | null>(null), textToolRef = useRef<TextToolHandlers | null>(null)
+  const containerRef = useRef<HTMLElement | null>(null), textToolRef = useRef<TextToolHandlers | null>(null), selHandlersRef = useRef<SelectionHandlers | null>(null)
   const updateTextBoundsDisplayRef = useRef<(() => void) | null>(null)
   const [cgaPreview, setCgaPreviewRaw] = useState(false)
   const colorTransformRef = useRef<ColorTransform | undefined>(undefined); colorTransformRef.current = cgaPreview ? cgaQuantize : undefined
@@ -168,6 +168,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       commitCells: draw.commitCells, pushSnapshot, getActiveGrid, hideDimension: draw.hideDimension,
     })
 
+    selHandlersRef.current = sel
     containerRef.current = container
 
     function updateTextBoundsDisplay(): void {
@@ -415,6 +416,9 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     colorTransformRef.current = on ? cgaQuantize : undefined
     if (handleRef.current) renderFullGrid(handleRef.current, compositeGrid(layersRef.current), colorTransformRef.current)
   }, [layersRef])
+  const flipSelectionHorizontal = useCallback(() => {
+    selHandlersRef.current?.flipHorizontal()
+  }, [])
   const markClean = useCallback(() => setIsDirty(false), [])
   const openSaveDialog = useCallback(() => setIsSaveDialogOpen(true), []), closeSaveDialog = useCallback(() => setIsSaveDialogOpen(false), [])
 
@@ -438,7 +442,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     renameLayer: layerState.renameLayer, setActiveLayer: setActiveLayerWithBounds,
     moveLayerUp: moveLayerUpWithUndo, moveLayerDown: moveLayerDownWithUndo,
     toggleVisibility: toggleVisibilityWithUndo, mergeDown: mergeDownWithUndo,
-    importPngAsLayer, simplifyColors, setTextAlign,
+    importPngAsLayer, simplifyColors, setTextAlign, flipSelectionHorizontal,
     cgaPreview, setCgaPreview,
   }
 }

@@ -19,6 +19,7 @@ export interface AnsiEditorToolbarProps {
   canRedo: boolean
   textAlign?: TextAlign
   onSetTextAlign?: (align: TextAlign) => void
+  onFlipHorizontal?: () => void
   cgaPreview?: boolean
   onToggleCgaPreview?: () => void
 }
@@ -26,7 +27,7 @@ export interface AnsiEditorToolbarProps {
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onImportPng, onExportAns, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
-  cgaPreview, onToggleCgaPreview,
+  onFlipHorizontal, cgaPreview, onToggleCgaPreview,
 }: AnsiEditorToolbarProps) {
   const isRectActive = brush.tool === 'rect-outline' || brush.tool === 'rect-filled'
   const isOvalActive = brush.tool === 'oval-outline' || brush.tool === 'oval-filled'
@@ -231,6 +232,20 @@ export function AnsiEditorToolbar({
             data-testid="align-justify"
           >
             {'≡J'}
+          </button>
+        </div>
+      )}
+      {brush.tool === 'select' && onFlipHorizontal && (
+        <div className={styles.modeGroup}>
+          <span className={styles.modeLabel}>Flip</span>
+          <button
+            type="button"
+            className={styles.modeButton}
+            onClick={onFlipHorizontal}
+            title="Flip Horizontal"
+            data-testid="flip-horizontal"
+          >
+            ↔
           </button>
         </div>
       )}

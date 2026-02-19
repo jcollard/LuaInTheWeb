@@ -1,6 +1,6 @@
 import type { AnsiCell, AnsiGrid, Rect } from './types'
 import { ANSI_COLS, ANSI_ROWS } from './types'
-import { cloneCell, cloneDefaultCell, extractRegionCells, computeSelectionMoveCells, toRelativeKeys, toAbsoluteKeys } from './gridUtils'
+import { cloneCell, cloneDefaultCell, extractRegionCells, computeSelectionMoveCells, toRelativeKeys, toAbsoluteKeys, flipCellsHorizontal } from './gridUtils'
 
 // Module-level clipboard (persists across clear() calls and tool switches)
 let clipboard: Map<string, AnsiCell> | null = null
@@ -31,6 +31,7 @@ export interface SelectionHandlers {
   onMouseMove: (row: number, col: number) => void
   onMouseUp: () => void
   onKeyDown: (e: KeyboardEvent) => void
+  flipHorizontal: () => void
 }
 
 export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers {
@@ -223,5 +224,22 @@ export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers 
     }
   }
 
-  return { onMouseDown, onMouseMove, onMouseUp, onKeyDown }
+  function flipHorizontal(): void {
+    if (phase !== 'selected' || !selRect) return
+    restorePreview()
+    pushSnapshot()
+    // Flip and commit directly to the grid
+    const flipped = flipCellsHorizontal(captured)
+    if (isPasted) {
+      commitCells(toAbsoluteKeys(flipped, selRect.r0, selRect.c0))
+    } else {
+      commitCells(flipped)
+    }
+    // Re-extract captured from the now-updated grid so keys are always absolute
+    captured = extractRegionCells(getActiveGrid(), selRect.r0, selRect.c0, selRect.r1, selRect.c1)
+    selOrigRect = { ...selRect }
+    isPasted = false
+  }
+
+  return { onMouseDown, onMouseMove, onMouseUp, onKeyDown, flipHorizontal }
 }

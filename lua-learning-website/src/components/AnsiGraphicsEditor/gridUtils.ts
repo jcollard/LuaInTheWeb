@@ -340,6 +340,24 @@ export function toAbsoluteKeys(cells: Map<string, AnsiCell>, originR: number, or
   return remapKeys(cells, originR, originC)
 }
 
+export function flipCellsHorizontal(
+  cells: Map<string, AnsiCell>,
+): Map<string, AnsiCell> {
+  if (cells.size === 0) return new Map()
+  let minC = Infinity, maxC = -Infinity
+  for (const key of cells.keys()) {
+    const [, c] = parseCellKey(key)
+    if (c < minC) minC = c
+    if (c > maxC) maxC = c
+  }
+  const result = new Map<string, AnsiCell>()
+  for (const [key, cell] of cells) {
+    const [r, c] = parseCellKey(key)
+    result.set(`${r},${minC + maxC - c}`, cloneCell(cell))
+  }
+  return result
+}
+
 export function computeFloodFillCells(
   startRow: number, startCol: number,
   brush: LineBrush,

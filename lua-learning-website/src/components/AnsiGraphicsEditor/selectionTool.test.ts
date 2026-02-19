@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { AnsiCell, RGBColor } from './types'
 import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, ANSI_ROWS, ANSI_COLS } from './types'
 import { createSelectionHandlers, type SelectionDeps, clearClipboard } from './selectionTool'
+import { parseCellKey } from './gridUtils'
 
 const red: RGBColor = [255, 0, 0]
 const blue: RGBColor = [0, 0, 255]
@@ -44,7 +45,15 @@ function makeDeps(gridOverride?: AnsiCell[][]): SelectionDeps & {
     commitPendingRef: { current: null },
     restorePreview: () => { restoreCount++ },
     writePreviewCells: (cells) => { previews.push(cells) },
-    commitCells: (cells) => { committed.push(cells) },
+    commitCells: (cells) => {
+      committed.push(cells)
+      for (const [key, cell] of cells) {
+        const [r, c] = parseCellKey(key)
+        if (r >= 0 && r < grid.length && c >= 0 && c < grid[0].length) {
+          grid[r][c] = { char: cell.char, fg: [...cell.fg] as RGBColor, bg: [...cell.bg] as RGBColor }
+        }
+      }
+    },
     pushSnapshot: () => { snapshots++ },
     getActiveGrid: () => grid,
     hideDimension: () => {},
@@ -268,5 +277,95 @@ describe('selectionTool onKeyDown', () => {
       handlers.onKeyDown(keyEvent('v', true))
       expect(deps.committed.length).toBeGreaterThan(commitsBefore)
     })
+  })
+})
+
+describe('selectionTool flipHorizontal', () => {
+  it('should commit flipped cells immediately when selected', () => {
+    const deps = makeDeps()
+    const handlers = createSelectionHandlers(deps)
+    selectRegion(handlers)
+
+    handlers.flipHorizontal()
+
+    // Flip commits immediately (like eraseSelection)
+    expect(deps.snapshots).toBe(1)
+    expect(deps.committed.length).toBe(1)
+    const committed = deps.committed[0]
+    // (0,0) had 'A', (0,1) had 'B' — after flip they swap
+    expect(committed.get('0,0')!.char).toBe('B')
+    expect(committed.get('0,1')!.char).toBe('A')
+  })
+
+  it('should be a no-op when idle', () => {
+    const deps = makeDeps()
+    const handlers = createSelectionHandlers(deps)
+    // Don't select — still idle
+
+    handlers.flipHorizontal()
+
+    expect(deps.snapshots).toBe(0)
+    expect(deps.committed.length).toBe(0)
+  })
+
+  it('double flip restores original', () => {
+    const deps = makeDeps()
+    const handlers = createSelectionHandlers(deps)
+    selectRegion(handlers)
+
+    handlers.flipHorizontal()
+    const afterFirst = deps.committed[0]
+
+    handlers.flipHorizontal()
+    const afterSecond = deps.committed[1]
+
+    // First flip swaps A↔B, second flip restores
+    expect(afterFirst.get('0,0')!.char).toBe('B')
+    expect(afterSecond.get('0,0')!.char).toBe('A')
+  })
+
+  it('should commit flipped cells at selection position, not top-left', () => {
+    // Use a grid with content at rows 2-3, cols 3-4 (non-zero origin)
+    const grid = Array.from({ length: ANSI_ROWS }, () =>
+      Array.from({ length: ANSI_COLS }, (): AnsiCell => ({
+        ...DEFAULT_CELL, fg: [...DEFAULT_FG] as RGBColor, bg: [...DEFAULT_BG] as RGBColor,
+      }))
+    )
+    grid[2][3] = makeCell('L')
+    grid[2][4] = makeCell('R')
+    grid[3][3] = makeCell('X')
+    grid[3][4] = makeCell('Y')
+
+    const deps = makeDeps(grid)
+    const handlers = createSelectionHandlers(deps)
+
+    // Select region at (2,3)-(3,4)
+    handlers.onMouseDown(2, 3)
+    handlers.onMouseMove(3, 4)
+    handlers.onMouseUp()
+
+    handlers.flipHorizontal()
+
+    const committed = deps.committed[0]
+    // Flipped cells must remain at columns 3-4
+    expect(committed.has('2,3')).toBe(true)
+    expect(committed.has('2,4')).toBe(true)
+    expect(committed.get('2,3')!.char).toBe('R') // was at col 4, now at col 3
+    expect(committed.get('2,4')!.char).toBe('L') // was at col 3, now at col 4
+    // Verify NO cells were written to (0,0)
+    expect(committed.has('0,0')).toBe(false)
+  })
+
+  it('selection remains active after flip for further operations', () => {
+    const deps = makeDeps()
+    const handlers = createSelectionHandlers(deps)
+    selectRegion(handlers)
+
+    handlers.flipHorizontal()
+
+    // Should still be in selected phase — another flip should work
+    handlers.flipHorizontal()
+    expect(deps.snapshots).toBe(2)
+    expect(deps.committed.length).toBe(2)
   })
 })
