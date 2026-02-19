@@ -372,9 +372,7 @@ export function flipCellsVertical(cells: Map<string, AnsiCell>): Map<string, Ans
     const cloned = cloneCell(cell)
     // For half-block cells, swap fg (top half) and bg (bottom half)
     if (cloned.char === HALF_BLOCK) {
-      const tmp = cloned.fg
-      cloned.fg = cloned.bg
-      cloned.bg = tmp
+      ;[cloned.fg, cloned.bg] = [cloned.bg, cloned.fg]
     }
     result.set(`${minR + maxR - r},${c}`, cloned)
   }

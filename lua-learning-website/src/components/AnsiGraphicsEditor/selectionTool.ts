@@ -249,30 +249,20 @@ export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers 
     }
   }
 
-  function flipHorizontal(): void {
+  function applyFlip(flipFn: (cells: Map<string, AnsiCell>) => Map<string, AnsiCell>): void {
     if (phase !== 'selected' || !selRect) return
     restorePreview()
     pushSnapshot()
-    const flipped = flipCellsHorizontal(captured)
+    const flipped = flipFn(captured)
     const cells = isPasted ? toAbsoluteKeys(flipped, selRect.r0, selRect.c0) : flipped
     commitCells(filterInBounds(cells))
-    // Re-extract so captured keys reflect absolute grid positions
     captured = extractRegionCells(getActiveGrid(), selRect.r0, selRect.c0, selRect.r1, selRect.c1)
     selOrigRect = { ...selRect }
     isPasted = false
   }
 
-  function flipVertical(): void {
-    if (phase !== 'selected' || !selRect) return
-    restorePreview()
-    pushSnapshot()
-    const flipped = flipCellsVertical(captured)
-    const cells = isPasted ? toAbsoluteKeys(flipped, selRect.r0, selRect.c0) : flipped
-    commitCells(filterInBounds(cells))
-    captured = extractRegionCells(getActiveGrid(), selRect.r0, selRect.c0, selRect.r1, selRect.c1)
-    selOrigRect = { ...selRect }
-    isPasted = false
-  }
+  function flipHorizontal(): void { applyFlip(flipCellsHorizontal) }
+  function flipVertical(): void { applyFlip(flipCellsVertical) }
 
   return { onMouseDown, onMouseMove, onMouseUp, onKeyDown, flipHorizontal, flipVertical }
 }
