@@ -719,3 +719,43 @@
   padding: 0 3px;
   line-height: 14px;
 }
+
+/* Layer context menu */
+.layerContextBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+}
+
+.layerContextMenu {
+  position: fixed;
+  z-index: 1000;
+  background-color: var(--theme-bg-primary);
+  border: 1px solid var(--theme-border);
+  border-radius: 3px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
+  padding: 2px;
+  min-width: 120px;
+}
+
+.layerContextMenuItem {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 12px;
+  background: none;
+  color: var(--theme-text-primary);
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.layerContextMenuItem:hover:not(:disabled) {
+  background-color: var(--theme-bg-hover);
+}
+
+.layerContextMenuItem:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import type { AnsiCell, AnsiGrid, Layer, LayerState, RGBColor, Rect, TextAlign, TextLayer } from './types'
-import { createLayer, cloneLayerState, syncLayerIds } from './layerUtils'
+import { createLayer, cloneLayerState, syncLayerIds, mergeLayerDown } from './layerUtils'
 import { replaceColorsInGrid } from './colorUtils'
 import { renderTextLayerGrid } from './textLayerGrid'
 
@@ -22,6 +22,7 @@ export interface UseLayerStateReturn {
   toggleVisibility: (id: string) => void
   applyToActiveLayer: (row: number, col: number, cell: AnsiCell) => void
   getActiveGrid: () => Layer['grid']
+  mergeDown: (id: string) => void
   replaceColors: (mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => void
   getLayerState: () => LayerState
   restoreLayerState: (state: LayerState) => void
@@ -147,6 +148,16 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     setLayers(prev => prev.map(l => l.id === id ? { ...l, visible: !l.visible } : l))
   }, [])
 
+  const mergeDown = useCallback((id: string) => {
+    setLayers(prev => {
+      const result = mergeLayerDown(prev, id)
+      if (!result) return prev
+      const idx = prev.findIndex(l => l.id === id)
+      setActiveLayerId(prevActive => prevActive === id ? prev[idx - 1].id : prevActive)
+      return result
+    })
+  }, [])
+
   const applyToActiveLayer = useCallback((row: number, col: number, cell: AnsiCell) => {
     const activeId = activeLayerIdRef.current
     const active = layersRef.current.find(l => l.id === activeId)
@@ -207,6 +218,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     moveLayerUp,
     moveLayerDown,
     toggleVisibility,
+    mergeDown,
     applyToActiveLayer,
     replaceColors,
     getActiveGrid,

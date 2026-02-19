@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import type { Layer } from './types'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -12,6 +12,7 @@ export interface LayersPanelProps {
   onMoveDown: (id: string) => void
   onAdd: () => void
   onRemove: (id: string) => void
+  onMergeDown: (id: string) => void
 }
 
 export function LayersPanel({
@@ -24,9 +25,11 @@ export function LayersPanel({
   onMoveDown,
   onAdd,
   onRemove,
+  onMergeDown,
 }: LayersPanelProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
+  const [contextMenu, setContextMenu] = useState<{ layerId: string; x: number; y: number } | null>(null)
 
   const startRename = useCallback((id: string, currentName: string) => {
     setEditingId(id)
@@ -43,6 +46,15 @@ export function LayersPanel({
   const cancelRename = useCallback(() => {
     setEditingId(null)
   }, [])
+
+  useEffect(() => {
+    if (!contextMenu) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setContextMenu(null)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [contextMenu])
 
   // Display layers in reverse order: topmost layer first in the list
   const reversed = [...layers].reverse()
@@ -71,6 +83,11 @@ export function LayersPanel({
               data-testid={`layer-row-${layer.id}`}
               className={`${styles.layerRow} ${isActive ? styles.layerRowActive : ''}`}
               onClick={() => onSetActive(layer.id)}
+              onContextMenu={e => {
+                e.preventDefault()
+                e.stopPropagation()
+                setContextMenu({ layerId: layer.id, x: e.clientX, y: e.clientY })
+              }}
             >
               <button
                 className={styles.layerVisibility}
@@ -134,6 +151,29 @@ export function LayersPanel({
           )
         })}
       </div>
+      {contextMenu && (
+        <>
+          <div
+            className={styles.layerContextBackdrop}
+            data-testid="layer-context-backdrop"
+            onClick={() => setContextMenu(null)}
+          />
+          <div
+            className={styles.layerContextMenu}
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+            data-testid="layer-context-menu"
+          >
+            <button
+              className={styles.layerContextMenuItem}
+              data-testid="context-merge-down"
+              onClick={() => { onMergeDown(contextMenu.layerId); setContextMenu(null) }}
+              disabled={layers.findIndex(l => l.id === contextMenu.layerId) === 0}
+            >
+              Merge Down
+            </button>
+          </div>
+        </>
+      )}
     </div>
   )
 }

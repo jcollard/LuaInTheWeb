@@ -22,6 +22,7 @@ describe('LayersPanel', () => {
     onMoveDown?: (id: string) => void
     onAdd?: () => void
     onRemove?: (id: string) => void
+    onMergeDown?: (id: string) => void
   }) {
     const layers = overrides?.layers ?? makeLayers('Background', 'Foreground')
     return render(
@@ -35,6 +36,7 @@ describe('LayersPanel', () => {
         onMoveDown={overrides?.onMoveDown ?? noop}
         onAdd={overrides?.onAdd ?? noop}
         onRemove={overrides?.onRemove ?? noop}
+        onMergeDown={overrides?.onMergeDown ?? noop}
       />
     )
   }
@@ -198,5 +200,77 @@ describe('LayersPanel', () => {
     const drawnRow = screen.getByTestId('layer-row-layer-0')
     const drawnBadge = drawnRow.querySelector('[data-testid="text-layer-badge"]')
     expect(drawnBadge).toBeNull()
+  })
+
+  describe('context menu', () => {
+    it('opens context menu on right-click of a layer row', () => {
+      renderPanel()
+      const row = screen.getByTestId('layer-row-layer-1')
+      fireEvent.contextMenu(row)
+      expect(screen.getByTestId('layer-context-menu')).toBeTruthy()
+    })
+
+    it('shows "Merge Down" option in context menu', () => {
+      renderPanel()
+      const row = screen.getByTestId('layer-row-layer-1')
+      fireEvent.contextMenu(row)
+      expect(screen.getByTestId('context-merge-down')).toBeTruthy()
+      expect(screen.getByTestId('context-merge-down').textContent).toBe('Merge Down')
+    })
+
+    it('clicking "Merge Down" calls onMergeDown with the layer id', () => {
+      const onMergeDown = vi.fn()
+      renderPanel({ onMergeDown })
+      const row = screen.getByTestId('layer-row-layer-1')
+      fireEvent.contextMenu(row)
+      fireEvent.click(screen.getByTestId('context-merge-down'))
+      expect(onMergeDown).toHaveBeenCalledWith('layer-1')
+    })
+
+    it('closes context menu after clicking "Merge Down"', () => {
+      renderPanel()
+      const row = screen.getByTestId('layer-row-layer-1')
+      fireEvent.contextMenu(row)
+      fireEvent.click(screen.getByTestId('context-merge-down'))
+      expect(screen.queryByTestId('layer-context-menu')).toBeNull()
+    })
+
+    it('disables "Merge Down" for the bottom layer', () => {
+      renderPanel()
+      // layer-0 is the bottom layer. In reversed display, it's last.
+      const row = screen.getByTestId('layer-row-layer-0')
+      fireEvent.contextMenu(row)
+      expect(screen.getByTestId('context-merge-down')).toBeDisabled()
+    })
+
+    it('"Merge Down" is enabled for non-bottom layer', () => {
+      renderPanel()
+      const row = screen.getByTestId('layer-row-layer-1')
+      fireEvent.contextMenu(row)
+      expect(screen.getByTestId('context-merge-down')).not.toBeDisabled()
+    })
+
+    it('closes context menu on Escape key', () => {
+      renderPanel()
+      const row = screen.getByTestId('layer-row-layer-1')
+      fireEvent.contextMenu(row)
+      expect(screen.getByTestId('layer-context-menu')).toBeTruthy()
+      fireEvent.keyDown(document, { key: 'Escape' })
+      expect(screen.queryByTestId('layer-context-menu')).toBeNull()
+    })
+
+    it('closes context menu on backdrop click', () => {
+      renderPanel()
+      const row = screen.getByTestId('layer-row-layer-1')
+      fireEvent.contextMenu(row)
+      expect(screen.getByTestId('layer-context-menu')).toBeTruthy()
+      fireEvent.click(screen.getByTestId('layer-context-backdrop'))
+      expect(screen.queryByTestId('layer-context-menu')).toBeNull()
+    })
+
+    it('does not show context menu initially', () => {
+      renderPanel()
+      expect(screen.queryByTestId('layer-context-menu')).toBeNull()
+    })
   })
 })

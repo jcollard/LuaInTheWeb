@@ -60,6 +60,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     moveLayerUp,
     moveLayerDown,
     toggleVisibility,
+    mergeDown,
     importPngAsLayer,
     simplifyColors,
     selectionRef,
@@ -197,6 +198,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
           onMoveDown={moveLayerDown}
           onAdd={addLayer}
           onRemove={removeLayer}
+          onMergeDown={mergeDown}
         />
       </div>
       <div ref={cursorRef} className={styles.cellCursor} />

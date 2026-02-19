@@ -457,6 +457,56 @@ describe('useLayerState', () => {
     })
   })
 
+  describe('mergeDown', () => {
+    it('merges upper layer into lower and removes upper', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addLayer())
+      const red: RGBColor = [255, 0, 0]
+      // Paint on the top layer
+      act(() => result.current.applyToActiveLayer(0, 0, { char: 'X', fg: red, bg: [0, 0, 0] }))
+      const topId = result.current.layers[1].id
+      act(() => result.current.mergeDown(topId))
+      expect(result.current.layers).toHaveLength(1)
+      expect(result.current.layers[0].grid[0][0].char).toBe('X')
+    })
+
+    it('switches active to merged layer when active was the upper layer', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addLayer())
+      const topId = result.current.layers[1].id
+      const bottomId = result.current.layers[0].id
+      // Active is the top layer (added most recently)
+      expect(result.current.activeLayerId).toBe(topId)
+      act(() => result.current.mergeDown(topId))
+      expect(result.current.activeLayerId).toBe(bottomId)
+    })
+
+    it('is a no-op for the bottom layer', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addLayer())
+      const bottomId = result.current.layers[0].id
+      act(() => result.current.mergeDown(bottomId))
+      expect(result.current.layers).toHaveLength(2)
+    })
+
+    it('preserves active layer when merging a non-active layer', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addLayer())
+      act(() => result.current.addLayer())
+      // 3 layers: [0]=Background, [1]=Layer 2, [2]=Layer 3
+      // Active is Layer 3 (last added)
+      const activeId = result.current.layers[2].id
+      const mergeId = result.current.layers[1].id
+      // Switch active to layer 3 explicitly
+      act(() => result.current.setActiveLayer(activeId))
+      // Merge Layer 2 down into Background
+      act(() => result.current.mergeDown(mergeId))
+      expect(result.current.layers).toHaveLength(2)
+      // Active should still be layer 3
+      expect(result.current.activeLayerId).toBe(activeId)
+    })
+  })
+
   describe('applyToActiveLayer guard for text layers', () => {
     it('is a no-op when active layer is a text layer', () => {
       const { result } = renderHook(() => useLayerState())

@@ -1,7 +1,8 @@
+/* eslint-disable max-lines */
 import { describe, it, expect } from 'vitest'
-import { isDefaultCell, createLayer, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, syncLayerIds } from './layerUtils'
+import { isDefaultCell, createLayer, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, syncLayerIds, mergeLayerDown } from './layerUtils'
 import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG } from './types'
-import type { AnsiCell, RGBColor, Layer, LayerState } from './types'
+import type { AnsiCell, RGBColor, Layer, LayerState, TextLayer } from './types'
 
 describe('isDefaultCell', () => {
   it('returns true for DEFAULT_CELL', () => {
@@ -531,5 +532,121 @@ describe('TRANSPARENT_BG compositing', () => {
     top.grid[0][0] = { char: ' ', fg: DEFAULT_FG, bg: TRANSPARENT_BG }
     const result = compositeCell([bottom, top], 0, 0)
     expect(result).toEqual({ char: '#', fg: white, bg: blue })
+  })
+})
+
+describe('mergeLayerDown', () => {
+  const red: RGBColor = [255, 0, 0]
+  const blue: RGBColor = [0, 0, 255]
+  const green: RGBColor = [0, 170, 0]
+  const white: RGBColor = [255, 255, 255]
+
+  it('returns null for bottom layer (index 0)', () => {
+    const layers = [createLayer('Bottom', 'b'), createLayer('Top', 't')]
+    expect(mergeLayerDown(layers, 'b')).toBeNull()
+  })
+
+  it('returns null for non-existent layer id', () => {
+    const layers = [createLayer('Bottom', 'b'), createLayer('Top', 't')]
+    expect(mergeLayerDown(layers, 'nonexistent')).toBeNull()
+  })
+
+  it('merges two drawn layers: upper content composited onto lower', () => {
+    const bottom = createLayer('Bottom', 'b')
+    bottom.grid[0][0] = { char: '#', fg: red, bg: DEFAULT_BG }
+    const top = createLayer('Top', 't')
+    top.grid[0][1] = { char: 'X', fg: blue, bg: DEFAULT_BG }
+    const result = mergeLayerDown([bottom, top], 't')!
+    expect(result).toHaveLength(1)
+    // Merged layer keeps lower layer's id and name
+    expect(result[0].id).toBe('b')
+    expect(result[0].name).toBe('Bottom')
+    expect(result[0].type).toBe('drawn')
+    // Both cells should be present in merged grid
+    expect(result[0].grid[0][0]).toEqual({ char: '#', fg: red, bg: DEFAULT_BG })
+    expect(result[0].grid[0][1]).toEqual({ char: 'X', fg: blue, bg: DEFAULT_BG })
+  })
+
+  it('upper layer content overwrites lower layer content at same position', () => {
+    const bottom = createLayer('Bottom', 'b')
+    bottom.grid[0][0] = { char: 'A', fg: red, bg: green }
+    const top = createLayer('Top', 't')
+    top.grid[0][0] = { char: 'B', fg: blue, bg: white }
+    const result = mergeLayerDown([bottom, top], 't')!
+    // Top layer cell wins (opaque on top)
+    expect(result[0].grid[0][0]).toEqual({ char: 'B', fg: blue, bg: white })
+  })
+
+  it('merges text layer onto drawn layer', () => {
+    const bottom = createLayer('Bottom', 'b')
+    bottom.grid[0][0] = { char: '#', fg: white, bg: blue }
+    const textLayer: TextLayer = {
+      type: 'text',
+      id: 'txt',
+      name: 'Text',
+      visible: true,
+      text: 'A',
+      bounds: { r0: 0, c0: 0, r1: 0, c1: 10 },
+      textFg: red,
+      grid: Array.from({ length: ANSI_ROWS }, () =>
+        Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
+      ),
+    }
+    // Place a text cell with TRANSPARENT_BG
+    textLayer.grid[0][0] = { char: 'A', fg: red, bg: TRANSPARENT_BG }
+    const result = mergeLayerDown([bottom, textLayer], 'txt')!
+    expect(result).toHaveLength(1)
+    expect(result[0].type).toBe('drawn')
+    // Text 'A' should get bg from lower layer's cell
+    expect(result[0].grid[0][0]).toEqual({ char: 'A', fg: red, bg: blue })
+  })
+
+  it('preserves other layers untouched', () => {
+    const l1 = createLayer('L1', 'l1')
+    const l2 = createLayer('L2', 'l2')
+    l2.grid[0][0] = { char: 'A', fg: red, bg: DEFAULT_BG }
+    const l3 = createLayer('L3', 'l3')
+    l3.grid[0][1] = { char: 'B', fg: blue, bg: DEFAULT_BG }
+    const l4 = createLayer('L4', 'l4')
+    const result = mergeLayerDown([l1, l2, l3, l4], 'l3')!
+    expect(result).toHaveLength(3)
+    // l1 and l4 should be untouched
+    expect(result[0].id).toBe('l1')
+    expect(result[2].id).toBe('l4')
+    // merged layer replaces l2, with content from both l2 and l3
+    expect(result[1].id).toBe('l2')
+    expect(result[1].grid[0][0]).toEqual({ char: 'A', fg: red, bg: DEFAULT_BG })
+    expect(result[1].grid[0][1]).toEqual({ char: 'B', fg: blue, bg: DEFAULT_BG })
+  })
+
+  it('merged result matches compositeCell output for the two layers', () => {
+    const bottom = createLayer('Bottom', 'b')
+    bottom.grid[0][0] = { char: HALF_BLOCK, fg: [...TRANSPARENT_HALF] as RGBColor, bg: green }
+    const top = createLayer('Top', 't')
+    top.grid[0][0] = { char: HALF_BLOCK, fg: red, bg: [...TRANSPARENT_HALF] as RGBColor }
+    const result = mergeLayerDown([bottom, top], 't')!
+    const expected = compositeCell([bottom, top], 0, 0)
+    expect(result[0].grid[0][0]).toEqual(expected)
+  })
+
+  it('keeps lower layer visibility', () => {
+    const bottom = createLayer('Bottom', 'b')
+    bottom.visible = false
+    const top = createLayer('Top', 't')
+    const result = mergeLayerDown([bottom, top], 't')!
+    expect(result[0].visible).toBe(false)
+  })
+
+  it('composites both layers regardless of visibility (uses raw grid data)', () => {
+    const bottom = createLayer('Bottom', 'b')
+    bottom.visible = false
+    bottom.grid[0][0] = { char: 'A', fg: red, bg: DEFAULT_BG }
+    const top = createLayer('Top', 't')
+    top.visible = false
+    top.grid[0][1] = { char: 'B', fg: blue, bg: DEFAULT_BG }
+    const result = mergeLayerDown([bottom, top], 't')!
+    // Both cells should be present even though layers were hidden
+    expect(result[0].grid[0][0].char).toBe('A')
+    expect(result[0].grid[0][1].char).toBe('B')
   })
 })

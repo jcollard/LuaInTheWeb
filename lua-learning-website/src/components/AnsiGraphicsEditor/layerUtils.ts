@@ -144,6 +144,36 @@ function cloneLayer(layer: Layer): Layer {
   return { ...base, type: 'drawn' } satisfies DrawnLayer
 }
 
+export function mergeLayerDown(layers: Layer[], layerId: string): Layer[] | null {
+  const idx = layers.findIndex(l => l.id === layerId)
+  if (idx <= 0) return null // bottom layer or not found — can't merge down
+
+  const upper = layers[idx]
+  const lower = layers[idx - 1]
+
+  // Composite just the two layers (lower on bottom, upper on top) into a new grid.
+  // Both layers are treated as visible regardless of their actual visibility.
+  const pair: Layer[] = [
+    { ...lower, visible: true },
+    { ...upper, visible: true },
+  ]
+  const mergedGrid: AnsiGrid = Array.from({ length: ANSI_ROWS }, (_, r) =>
+    Array.from({ length: ANSI_COLS }, (_, c) =>
+      compositeCell(pair, r, c)
+    )
+  )
+
+  const merged: DrawnLayer = {
+    type: 'drawn',
+    id: lower.id,
+    name: lower.name,
+    visible: lower.visible,
+    grid: mergedGrid,
+  }
+
+  return layers.map((l, i) => i === idx - 1 ? merged : l).filter((_, i) => i !== idx)
+}
+
 export function cloneLayerState(state: LayerState): LayerState {
   return {
     activeLayerId: state.activeLayerId,

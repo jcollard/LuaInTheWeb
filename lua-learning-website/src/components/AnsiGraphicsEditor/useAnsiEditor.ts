@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { useState, useCallback, useRef, useMemo } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { AnsiCell, BrushMode, DrawTool, BrushSettings, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions } from './types'
@@ -38,7 +39,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     layersRef, activeLayerIdRef, applyToActiveLayer, getActiveGrid, restoreLayerState,
     addLayer: rawAddLayer, addLayerWithGrid: rawAddLayerWithGrid, removeLayer: rawRemoveLayer,
     moveLayerUp: rawMoveLayerUp, moveLayerDown: rawMoveLayerDown,
-    toggleVisibility: rawToggleVisibility,
+    toggleVisibility: rawToggleVisibility, mergeDown: rawMergeDown,
     replaceColors: rawReplaceColors,
     addTextLayer: rawAddTextLayer,
     updateTextLayer: rawUpdateTextLayer,
@@ -141,6 +142,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const moveLayerUpWithUndo = useCallback((id: string) => withLayerUndo(() => rawMoveLayerUp(id)), [withLayerUndo, rawMoveLayerUp])
   const moveLayerDownWithUndo = useCallback((id: string) => withLayerUndo(() => rawMoveLayerDown(id)), [withLayerUndo, rawMoveLayerDown])
   const toggleVisibilityWithUndo = useCallback((id: string) => withLayerUndo(() => rawToggleVisibility(id)), [withLayerUndo, rawToggleVisibility])
+  const mergeDownWithUndo = useCallback((id: string) => withLayerUndo(() => rawMergeDown(id)), [withLayerUndo, rawMergeDown])
 
   const importPngAsLayer = useCallback(async (file: File) => {
     const px = await loadPngPixels(file)
@@ -435,7 +437,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     addLayer: addLayerWithUndo, removeLayer: removeLayerWithUndo,
     renameLayer: layerState.renameLayer, setActiveLayer: setActiveLayerWithBounds,
     moveLayerUp: moveLayerUpWithUndo, moveLayerDown: moveLayerDownWithUndo,
-    toggleVisibility: toggleVisibilityWithUndo, importPngAsLayer, simplifyColors, setTextAlign,
+    toggleVisibility: toggleVisibilityWithUndo, mergeDown: mergeDownWithUndo,
+    importPngAsLayer, simplifyColors, setTextAlign,
     cgaPreview, setCgaPreview,
   }
 }
