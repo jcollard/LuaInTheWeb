@@ -122,8 +122,7 @@ export interface UseAnsiEditorReturn {
   removeLayer: (id: string) => void
   renameLayer: (id: string, name: string) => void
   setActiveLayer: (id: string) => void
-  moveLayerUp: (id: string) => void
-  moveLayerDown: (id: string) => void
+  reorderLayer: (id: string, newIndex: number) => void
   toggleVisibility: (id: string) => void
   mergeDown: (id: string) => void
   importPngAsLayer: (file: File) => Promise<void>

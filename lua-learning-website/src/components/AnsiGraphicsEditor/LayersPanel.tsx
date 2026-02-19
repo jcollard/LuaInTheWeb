@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, Fragment } from 'react'
 import type { Layer } from './types'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -8,8 +8,7 @@ export interface LayersPanelProps {
   onSetActive: (id: string) => void
   onToggleVisibility: (id: string) => void
   onRename: (id: string, name: string) => void
-  onMoveUp: (id: string) => void
-  onMoveDown: (id: string) => void
+  onReorder: (id: string, newIndex: number) => void
   onAdd: () => void
   onRemove: (id: string) => void
   onMergeDown: (id: string) => void
@@ -21,8 +20,7 @@ export function LayersPanel({
   onSetActive,
   onToggleVisibility,
   onRename,
-  onMoveUp,
-  onMoveDown,
+  onReorder,
   onAdd,
   onRemove,
   onMergeDown,
@@ -30,6 +28,8 @@ export function LayersPanel({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [contextMenu, setContextMenu] = useState<{ layerId: string; x: number; y: number } | null>(null)
+  const [draggedId, setDraggedId] = useState<string | null>(null)
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null)
 
   const startRename = useCallback((id: string, currentName: string) => {
     setEditingId(id)
@@ -49,6 +49,36 @@ export function LayersPanel({
 
   const closeContextMenu = useCallback(() => setContextMenu(null), [])
 
+  const handleDragStart = useCallback((e: React.DragEvent, id: string) => {
+    e.dataTransfer.setData('text/plain', id)
+    e.dataTransfer.effectAllowed = 'move'
+    // Defer state update so the browser captures the drag image
+    // before React re-renders and collapses the row
+    requestAnimationFrame(() => setDraggedId(id))
+  }, [])
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedId(null)
+    setDropTargetId(null)
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent, id: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDropTargetId(id)
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent, targetLayerId: string) => {
+    e.preventDefault()
+    const sourceId = e.dataTransfer.getData('text/plain')
+    const targetArrayIdx = layers.findIndex(l => l.id === targetLayerId)
+    if (sourceId && targetArrayIdx >= 0) {
+      onReorder(sourceId, targetArrayIdx)
+    }
+    setDraggedId(null)
+    setDropTargetId(null)
+  }, [layers, onReorder])
+
   useEffect(() => {
     if (!contextMenu) return
     function onKeyDown(e: KeyboardEvent): void {
@@ -61,6 +91,7 @@ export function LayersPanel({
   // Display layers in reverse order: topmost layer first in the list
   const reversed = [...layers].reverse()
   const singleLayer = layers.length <= 1
+  const draggedVisualIdx = draggedId ? reversed.findIndex(l => l.id === draggedId) : -1
 
   return (
     <div className={styles.layersPanel} data-testid="layers-panel">
@@ -76,80 +107,93 @@ export function LayersPanel({
         </button>
       </div>
       <div className={styles.layersList}>
-        {reversed.map(layer => {
+        {reversed.map((layer, visualIdx) => {
+          const isDragged = draggedId === layer.id
           const isActive = layer.id === activeLayerId
           const isEditing = editingId === layer.id
-          return (
+          const isDropTarget = !isDragged && dropTargetId === layer.id && draggedId !== null
+          const showPlaceholderBefore = isDropTarget && draggedVisualIdx > visualIdx
+          const showPlaceholderAfter = isDropTarget && draggedVisualIdx < visualIdx
+
+          const placeholder = (
             <div
-              key={layer.id}
-              data-testid={`layer-row-${layer.id}`}
-              className={`${styles.layerRow} ${isActive ? styles.layerRowActive : ''}`}
-              onClick={() => onSetActive(layer.id)}
-              onContextMenu={e => {
-                e.preventDefault()
-                e.stopPropagation()
-                setContextMenu({ layerId: layer.id, x: e.clientX, y: e.clientY })
-              }}
-            >
-              <button
-                className={styles.layerVisibility}
-                onClick={e => { e.stopPropagation(); onToggleVisibility(layer.id) }}
-                aria-label="Toggle visibility"
-                title="Toggle visibility"
+              className={styles.layerDropPlaceholder}
+              data-testid="layer-drop-placeholder"
+              onDragOver={e => handleDragOver(e, layer.id)}
+              onDrop={e => handleDrop(e, layer.id)}
+            />
+          )
+
+          return (
+            <Fragment key={layer.id}>
+              {showPlaceholderBefore && placeholder}
+              <div
+                data-testid={`layer-row-${layer.id}`}
+                className={`${styles.layerRow} ${isActive ? styles.layerRowActive : ''} ${isDragged ? styles.layerRowDragging : ''}`}
+                onClick={() => onSetActive(layer.id)}
+                onContextMenu={e => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setContextMenu({ layerId: layer.id, x: e.clientX, y: e.clientY })
+                }}
+                onDragOver={e => handleDragOver(e, layer.id)}
+                onDrop={e => handleDrop(e, layer.id)}
               >
-                {layer.visible ? '\u{1F441}' : '\u{1F441}\u{200D}\u{1F5E8}'}
-              </button>
-              {layer.type === 'text' && (
-                <span className={styles.layerTypeBadge} data-testid="text-layer-badge">T</span>
-              )}
-              <span
-                className={styles.layerName}
-                onDoubleClick={e => { e.stopPropagation(); startRename(layer.id, layer.name) }}
-              >
-                {isEditing ? (
-                  <input
-                    role="textbox"
-                    className={styles.layerNameInput}
-                    value={editValue}
-                    onChange={e => setEditValue(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') commitRename()
-                      if (e.key === 'Escape') cancelRename()
-                    }}
-                    onBlur={commitRename}
-                    autoFocus
-                    onClick={e => e.stopPropagation()}
-                  />
-                ) : (
-                  layer.name
+                {!singleLayer && (
+                  <span
+                    className={styles.layerDragHandle}
+                    data-testid={`layer-grip-${layer.id}`}
+                    draggable
+                    onDragStart={e => { e.stopPropagation(); handleDragStart(e, layer.id) }}
+                    onDragEnd={handleDragEnd}
+                    title="Drag to reorder"
+                  >&#x2630;</span>
                 )}
-              </span>
-              <button
-                className={styles.layerBtn}
-                onClick={e => { e.stopPropagation(); onMoveUp(layer.id) }}
-                aria-label="Move up"
-                title="Move up"
-              >
-                ▲
-              </button>
-              <button
-                className={styles.layerBtn}
-                onClick={e => { e.stopPropagation(); onMoveDown(layer.id) }}
-                aria-label="Move down"
-                title="Move down"
-              >
-                ▼
-              </button>
-              <button
-                className={styles.layerBtn}
-                onClick={e => { e.stopPropagation(); onRemove(layer.id) }}
-                aria-label="Delete layer"
-                title="Delete layer"
-                disabled={singleLayer}
-              >
-                &#x1F5D1;
-              </button>
-            </div>
+                <button
+                  className={styles.layerVisibility}
+                  onClick={e => { e.stopPropagation(); onToggleVisibility(layer.id) }}
+                  aria-label="Toggle visibility"
+                  title="Toggle visibility"
+                >
+                  {layer.visible ? '\u{1F441}' : '\u{1F441}\u{200D}\u{1F5E8}'}
+                </button>
+                {layer.type === 'text' && (
+                  <span className={styles.layerTypeBadge} data-testid="text-layer-badge">T</span>
+                )}
+                <span
+                  className={styles.layerName}
+                  onDoubleClick={e => { e.stopPropagation(); startRename(layer.id, layer.name) }}
+                >
+                  {isEditing ? (
+                    <input
+                      role="textbox"
+                      className={styles.layerNameInput}
+                      value={editValue}
+                      onChange={e => setEditValue(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') commitRename()
+                        if (e.key === 'Escape') cancelRename()
+                      }}
+                      onBlur={commitRename}
+                      autoFocus
+                      onClick={e => e.stopPropagation()}
+                    />
+                  ) : (
+                    layer.name
+                  )}
+                </span>
+                <button
+                  className={styles.layerBtn}
+                  onClick={e => { e.stopPropagation(); onRemove(layer.id) }}
+                  aria-label="Delete layer"
+                  title="Delete layer"
+                  disabled={singleLayer}
+                >
+                  &#x1F5D1;
+                </button>
+              </div>
+              {showPlaceholderAfter && placeholder}
+            </Fragment>
           )
         })}
       </div>

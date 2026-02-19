@@ -57,8 +57,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     removeLayer,
     renameLayer,
     setActiveLayer,
-    moveLayerUp,
-    moveLayerDown,
+    reorderLayer,
     toggleVisibility,
     mergeDown,
     importPngAsLayer,
@@ -198,8 +197,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
           onSetActive={setActiveLayer}
           onToggleVisibility={toggleVisibility}
           onRename={renameLayer}
-          onMoveUp={moveLayerUp}
-          onMoveDown={moveLayerDown}
+          onReorder={reorderLayer}
           onAdd={addLayer}
           onRemove={removeLayer}
           onMergeDown={mergeDown}

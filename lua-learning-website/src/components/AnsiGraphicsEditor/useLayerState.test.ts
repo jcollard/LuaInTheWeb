@@ -114,37 +114,63 @@ describe('useLayerState', () => {
     })
   })
 
-  describe('moveLayerUp / moveLayerDown', () => {
-    it('moveLayerUp moves a layer higher in the stack', () => {
+  describe('reorderLayer', () => {
+    it('moves a layer to index 0 (bottom)', () => {
       const { result } = renderHook(() => useLayerState())
       act(() => result.current.addLayer())
-      const bottomId = result.current.layers[0].id
-      act(() => result.current.moveLayerUp(bottomId))
-      expect(result.current.layers[1].id).toBe(bottomId)
-    })
-
-    it('moveLayerDown moves a layer lower in the stack', () => {
-      const { result } = renderHook(() => useLayerState())
       act(() => result.current.addLayer())
-      const topId = result.current.layers[1].id
-      act(() => result.current.moveLayerDown(topId))
+      // [Background, Layer 2, Layer 3]
+      const topId = result.current.layers[2].id
+      act(() => result.current.reorderLayer(topId, 0))
       expect(result.current.layers[0].id).toBe(topId)
     })
 
-    it('moveLayerUp on topmost layer is a no-op', () => {
+    it('moves a layer to the last index (top)', () => {
       const { result } = renderHook(() => useLayerState())
       act(() => result.current.addLayer())
-      const topId = result.current.layers[1].id
-      act(() => result.current.moveLayerUp(topId))
-      expect(result.current.layers[1].id).toBe(topId)
+      act(() => result.current.addLayer())
+      const bottomId = result.current.layers[0].id
+      act(() => result.current.reorderLayer(bottomId, 2))
+      expect(result.current.layers[2].id).toBe(bottomId)
     })
 
-    it('moveLayerDown on bottom layer is a no-op', () => {
+    it('is a no-op when newIndex equals current index', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addLayer())
+      const layersBefore = result.current.layers
+      act(() => result.current.reorderLayer(layersBefore[0].id, 0))
+      expect(result.current.layers).toBe(layersBefore)
+    })
+
+    it('is a no-op for an invalid id', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addLayer())
+      const layersBefore = result.current.layers
+      act(() => result.current.reorderLayer('nonexistent', 0))
+      expect(result.current.layers).toBe(layersBefore)
+    })
+
+    it('clamps newIndex above array length', () => {
       const { result } = renderHook(() => useLayerState())
       act(() => result.current.addLayer())
       const bottomId = result.current.layers[0].id
-      act(() => result.current.moveLayerDown(bottomId))
-      expect(result.current.layers[0].id).toBe(bottomId)
+      act(() => result.current.reorderLayer(bottomId, 999))
+      expect(result.current.layers[1].id).toBe(bottomId)
+    })
+
+    it('clamps negative newIndex to 0', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addLayer())
+      const topId = result.current.layers[1].id
+      act(() => result.current.reorderLayer(topId, -5))
+      expect(result.current.layers[0].id).toBe(topId)
+    })
+
+    it('is a no-op with a single layer', () => {
+      const { result } = renderHook(() => useLayerState())
+      const layersBefore = result.current.layers
+      act(() => result.current.reorderLayer(layersBefore[0].id, 0))
+      expect(result.current.layers).toBe(layersBefore)
     })
   })
 

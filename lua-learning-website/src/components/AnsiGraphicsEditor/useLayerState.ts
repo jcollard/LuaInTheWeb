@@ -17,8 +17,7 @@ export interface UseLayerStateReturn {
   removeLayer: (id: string) => void
   renameLayer: (id: string, name: string) => void
   setActiveLayer: (id: string) => void
-  moveLayerUp: (id: string) => void
-  moveLayerDown: (id: string) => void
+  reorderLayer: (id: string, newIndex: number) => void
   toggleVisibility: (id: string) => void
   applyToActiveLayer: (row: number, col: number, cell: AnsiCell) => void
   getActiveGrid: () => Layer['grid']
@@ -124,22 +123,15 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     setActiveLayerId(id)
   }, [])
 
-  const moveLayerUp = useCallback((id: string) => {
+  const reorderLayer = useCallback((id: string, newIndex: number) => {
     setLayers(prev => {
-      const idx = prev.findIndex(l => l.id === id)
-      if (idx < 0 || idx >= prev.length - 1) return prev
+      const currentIndex = prev.findIndex(l => l.id === id)
+      if (currentIndex < 0) return prev
+      const clamped = Math.max(0, Math.min(prev.length - 1, newIndex))
+      if (currentIndex === clamped) return prev
       const next = [...prev]
-      ;[next[idx], next[idx + 1]] = [next[idx + 1], next[idx]]
-      return next
-    })
-  }, [])
-
-  const moveLayerDown = useCallback((id: string) => {
-    setLayers(prev => {
-      const idx = prev.findIndex(l => l.id === id)
-      if (idx <= 0) return prev
-      const next = [...prev]
-      ;[next[idx - 1], next[idx]] = [next[idx], next[idx - 1]]
+      const [removed] = next.splice(currentIndex, 1)
+      next.splice(clamped, 0, removed)
       return next
     })
   }, [])
@@ -216,8 +208,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     removeLayer,
     renameLayer,
     setActiveLayer,
-    moveLayerUp,
-    moveLayerDown,
+    reorderLayer,
     toggleVisibility,
     mergeDown,
     applyToActiveLayer,

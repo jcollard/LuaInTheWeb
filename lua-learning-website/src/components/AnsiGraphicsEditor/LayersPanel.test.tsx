@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { LayersPanel } from './LayersPanel'
 import type { Layer, TextLayer } from './types'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL } from './types'
@@ -18,8 +18,7 @@ describe('LayersPanel', () => {
     onSetActive?: (id: string) => void
     onToggleVisibility?: (id: string) => void
     onRename?: (id: string, name: string) => void
-    onMoveUp?: (id: string) => void
-    onMoveDown?: (id: string) => void
+    onReorder?: (id: string, newIndex: number) => void
     onAdd?: () => void
     onRemove?: (id: string) => void
     onMergeDown?: (id: string) => void
@@ -32,8 +31,7 @@ describe('LayersPanel', () => {
         onSetActive={overrides?.onSetActive ?? noop}
         onToggleVisibility={overrides?.onToggleVisibility ?? noop}
         onRename={overrides?.onRename ?? noop}
-        onMoveUp={overrides?.onMoveUp ?? noop}
-        onMoveDown={overrides?.onMoveDown ?? noop}
+        onReorder={overrides?.onReorder ?? noop}
         onAdd={overrides?.onAdd ?? noop}
         onRemove={overrides?.onRemove ?? noop}
         onMergeDown={overrides?.onMergeDown ?? noop}
@@ -68,22 +66,6 @@ describe('LayersPanel', () => {
     const toggles = screen.getAllByRole('button', { name: /visibility/i })
     fireEvent.click(toggles[0])
     expect(onToggleVisibility).toHaveBeenCalled()
-  })
-
-  it('up button calls onMoveUp', () => {
-    const onMoveUp = vi.fn()
-    renderPanel({ onMoveUp })
-    const upButtons = screen.getAllByRole('button', { name: /move up/i })
-    fireEvent.click(upButtons[0])
-    expect(onMoveUp).toHaveBeenCalled()
-  })
-
-  it('down button calls onMoveDown', () => {
-    const onMoveDown = vi.fn()
-    renderPanel({ onMoveDown })
-    const downButtons = screen.getAllByRole('button', { name: /move down/i })
-    fireEvent.click(downButtons[0])
-    expect(onMoveDown).toHaveBeenCalled()
   })
 
   it('add button calls onAdd', () => {
@@ -200,6 +182,102 @@ describe('LayersPanel', () => {
     const drawnRow = screen.getByTestId('layer-row-layer-0')
     const drawnBadge = drawnRow.querySelector('[data-testid="text-layer-badge"]')
     expect(drawnBadge).toBeNull()
+  })
+
+  describe('drag-and-drop reordering', () => {
+    beforeEach(() => { vi.useFakeTimers() })
+    afterEach(() => { vi.useRealTimers() })
+
+    /** Fire dragStart and flush the deferred requestAnimationFrame. */
+    function startDrag(grip: HTMLElement): void {
+      fireEvent.dragStart(grip, { dataTransfer: { setData: vi.fn(), effectAllowed: '' } })
+      act(() => { vi.runAllTimers() })
+    }
+
+    it('renders a drag grip for each layer when multiple layers exist', () => {
+      renderPanel()
+      expect(screen.getByTestId('layer-grip-layer-0')).toBeTruthy()
+      expect(screen.getByTestId('layer-grip-layer-1')).toBeTruthy()
+    })
+
+    it('drag grip has draggable attribute', () => {
+      renderPanel()
+      const grip = screen.getByTestId('layer-grip-layer-0')
+      expect(grip.getAttribute('draggable')).toBe('true')
+    })
+
+    it('does not render drag grip when only one layer exists', () => {
+      const layers = makeLayers('Background')
+      renderPanel({ layers })
+      expect(screen.queryByTestId('layer-grip-layer-0')).toBeNull()
+    })
+
+    it('dragging a layer onto another calls onReorder with target array index', () => {
+      const onReorder = vi.fn()
+      const layers = makeLayers('Background', 'Middle', 'Top')
+      renderPanel({ layers, onReorder })
+      const gripTop = screen.getByTestId('layer-grip-layer-2')
+      const rowBottom = screen.getByTestId('layer-row-layer-0')
+      startDrag(gripTop)
+      fireEvent.dragOver(rowBottom, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
+      fireEvent.drop(rowBottom, { dataTransfer: { getData: () => 'layer-2' }, preventDefault: vi.fn() })
+      expect(onReorder).toHaveBeenCalledWith('layer-2', 0)
+    })
+
+    it('hides the dragged row during drag', () => {
+      renderPanel()
+      const grip = screen.getByTestId('layer-grip-layer-1')
+      startDrag(grip)
+      const row = screen.getByTestId('layer-row-layer-1')
+      expect(row.className).toContain('Dragging')
+    })
+
+    it('shows placeholder when dragging over a row (moving up)', () => {
+      const layers = makeLayers('Bot', 'Mid', 'Top')
+      renderPanel({ layers })
+      const gripBot = screen.getByTestId('layer-grip-layer-0')
+      const rowTop = screen.getByTestId('layer-row-layer-2')
+      startDrag(gripBot)
+      fireEvent.dragOver(rowTop, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
+      const placeholder = screen.getByTestId('layer-drop-placeholder')
+      expect(placeholder).toBeTruthy()
+      expect(placeholder.nextElementSibling).toBe(rowTop)
+    })
+
+    it('shows placeholder when dragging over a row (moving down)', () => {
+      const layers = makeLayers('Bot', 'Mid', 'Top')
+      renderPanel({ layers })
+      const gripTop = screen.getByTestId('layer-grip-layer-2')
+      const rowBot = screen.getByTestId('layer-row-layer-0')
+      startDrag(gripTop)
+      fireEvent.dragOver(rowBot, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
+      const placeholder = screen.getByTestId('layer-drop-placeholder')
+      expect(placeholder).toBeTruthy()
+      expect(rowBot.nextElementSibling).toBe(placeholder)
+    })
+
+    it('dropping on placeholder calls onReorder', () => {
+      const onReorder = vi.fn()
+      const layers = makeLayers('Bot', 'Mid', 'Top')
+      renderPanel({ layers, onReorder })
+      const gripBot = screen.getByTestId('layer-grip-layer-0')
+      const rowTop = screen.getByTestId('layer-row-layer-2')
+      startDrag(gripBot)
+      fireEvent.dragOver(rowTop, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
+      const placeholder = screen.getByTestId('layer-drop-placeholder')
+      fireEvent.drop(placeholder, { dataTransfer: { getData: () => 'layer-0' }, preventDefault: vi.fn() })
+      expect(onReorder).toHaveBeenCalledWith('layer-0', 2)
+    })
+
+    it('clears drag state on dragEnd', () => {
+      renderPanel()
+      const grip = screen.getByTestId('layer-grip-layer-1')
+      startDrag(grip)
+      expect(screen.getByTestId('layer-row-layer-1').className).toContain('Dragging')
+      fireEvent.dragEnd(grip)
+      expect(screen.getByTestId('layer-row-layer-1').className).not.toContain('Dragging')
+      expect(screen.queryByTestId('layer-drop-placeholder')).toBeNull()
+    })
   })
 
   describe('context menu', () => {

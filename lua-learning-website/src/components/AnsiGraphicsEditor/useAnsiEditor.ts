@@ -38,7 +38,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const {
     layersRef, activeLayerIdRef, applyToActiveLayer, getActiveGrid, restoreLayerState,
     addLayer: rawAddLayer, addLayerWithGrid: rawAddLayerWithGrid, removeLayer: rawRemoveLayer,
-    moveLayerUp: rawMoveLayerUp, moveLayerDown: rawMoveLayerDown,
+    reorderLayer: rawReorderLayer,
     toggleVisibility: rawToggleVisibility, mergeDown: rawMergeDown,
     replaceColors: rawReplaceColors,
     addTextLayer: rawAddTextLayer,
@@ -139,8 +139,10 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
 
   const addLayerWithUndo = useCallback(() => withLayerUndo(rawAddLayer, false), [withLayerUndo, rawAddLayer])
   const removeLayerWithUndo = useCallback((id: string) => withLayerUndo(() => rawRemoveLayer(id)), [withLayerUndo, rawRemoveLayer])
-  const moveLayerUpWithUndo = useCallback((id: string) => withLayerUndo(() => rawMoveLayerUp(id)), [withLayerUndo, rawMoveLayerUp])
-  const moveLayerDownWithUndo = useCallback((id: string) => withLayerUndo(() => rawMoveLayerDown(id)), [withLayerUndo, rawMoveLayerDown])
+  const reorderLayerWithUndo = useCallback(
+    (id: string, newIndex: number) => withLayerUndo(() => rawReorderLayer(id, newIndex)),
+    [withLayerUndo, rawReorderLayer],
+  )
   const toggleVisibilityWithUndo = useCallback((id: string) => withLayerUndo(() => rawToggleVisibility(id)), [withLayerUndo, rawToggleVisibility])
   const mergeDownWithUndo = useCallback((id: string) => withLayerUndo(() => rawMergeDown(id)), [withLayerUndo, rawMergeDown])
 
@@ -446,7 +448,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     layers: layerState.layers, activeLayerId: layerState.activeLayerId,
     addLayer: addLayerWithUndo, removeLayer: removeLayerWithUndo,
     renameLayer: layerState.renameLayer, setActiveLayer: setActiveLayerWithBounds,
-    moveLayerUp: moveLayerUpWithUndo, moveLayerDown: moveLayerDownWithUndo,
+    reorderLayer: reorderLayerWithUndo,
     toggleVisibility: toggleVisibilityWithUndo, mergeDown: mergeDownWithUndo,
     importPngAsLayer, simplifyColors, setTextAlign, flipSelectionHorizontal, flipSelectionVertical,
     cgaPreview, setCgaPreview,
