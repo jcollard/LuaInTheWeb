@@ -115,6 +115,12 @@ export function LayersPanel({
           const showPlaceholderBefore = isDropTarget && draggedVisualIdx > visualIdx
           const showPlaceholderAfter = isDropTarget && draggedVisualIdx < visualIdx
 
+          const rowClassName = [
+            styles.layerRow,
+            isActive && styles.layerRowActive,
+            isDragged && styles.layerRowDragging,
+          ].filter(Boolean).join(' ')
+
           const placeholder = (
             <div
               className={styles.layerDropPlaceholder}
@@ -129,7 +135,7 @@ export function LayersPanel({
               {showPlaceholderBefore && placeholder}
               <div
                 data-testid={`layer-row-${layer.id}`}
-                className={`${styles.layerRow} ${isActive ? styles.layerRowActive : ''} ${isDragged ? styles.layerRowDragging : ''}`}
+                className={rowClassName}
                 onClick={() => onSetActive(layer.id)}
                 onContextMenu={e => {
                   e.preventDefault()
