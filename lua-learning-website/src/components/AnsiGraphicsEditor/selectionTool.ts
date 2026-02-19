@@ -155,7 +155,18 @@ export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers 
       phase = 'selected'
       positionOverlay(nr.r0, nr.c0, nr.r1, nr.c1)
       hideDimension()
-    } else if (phase === 'dragging') {
+    } else if (phase === 'dragging' && selRect && selOrigRect) {
+      const moved = selRect.r0 !== selOrigRect.r0 || selRect.c0 !== selOrigRect.c0
+        || selRect.r1 !== selOrigRect.r1 || selRect.c1 !== selOrigRect.c1
+      if (moved) {
+        restorePreview()
+        pushSnapshot()
+        commitCells(computeSelectionMoveCells(
+          captured, selOrigRect.r0, selOrigRect.c0, selRect.r0, selRect.c0, ANSI_ROWS, ANSI_COLS,
+        ))
+        captured = extractRegionCells(getActiveGrid(), selRect.r0, selRect.c0, selRect.r1, selRect.c1)
+        selOrigRect = { ...selRect }
+      }
       phase = 'selected'
     }
   }
@@ -228,14 +239,9 @@ export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers 
     if (phase !== 'selected' || !selRect) return
     restorePreview()
     pushSnapshot()
-    // Flip and commit directly to the grid
     const flipped = flipCellsHorizontal(captured)
-    if (isPasted) {
-      commitCells(toAbsoluteKeys(flipped, selRect.r0, selRect.c0))
-    } else {
-      commitCells(flipped)
-    }
-    // Re-extract captured from the now-updated grid so keys are always absolute
+    commitCells(isPasted ? toAbsoluteKeys(flipped, selRect.r0, selRect.c0) : flipped)
+    // Re-extract so captured keys reflect absolute grid positions
     captured = extractRegionCells(getActiveGrid(), selRect.r0, selRect.c0, selRect.r1, selRect.c1)
     selOrigRect = { ...selRect }
     isPasted = false
