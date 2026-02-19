@@ -1,8 +1,10 @@
-import type { Layer, Rect, RGBColor, TextLayer } from './types'
+import type { Layer, Rect, RGBColor, TextAlign, TextLayer } from './types'
 import { ANSI_COLS, ANSI_ROWS } from './types'
 import { cursorPosToVisual } from './textLayerGrid'
 
 type Handle = 'top-left' | 'top' | 'top-right' | 'left' | 'right' | 'bottom-left' | 'bottom' | 'bottom-right' | 'inside' | 'outside'
+
+const CORNER_HANDLES: ReadonlySet<Handle> = new Set(['top-left', 'top-right', 'bottom-left', 'bottom-right'])
 
 export function detectHandle(row: number, col: number, bounds: Rect): Handle {
   const { r0, c0, r1, c1 } = bounds
@@ -29,7 +31,7 @@ export interface TextToolDeps {
   activeLayerIdRef: React.RefObject<string>
   brushRef: React.RefObject<{ fg: RGBColor }>
   addTextLayer: (name: string, bounds: Rect, textFg: RGBColor) => void
-  updateTextLayer: (id: string, updates: { text?: string; bounds?: Rect; textFg?: RGBColor; textFgColors?: RGBColor[]; textAlign?: import('./types').TextAlign }) => void
+  updateTextLayer: (id: string, updates: { text?: string; bounds?: Rect; textFg?: RGBColor; textFgColors?: RGBColor[]; textAlign?: TextAlign }) => void
   pushSnapshot: () => void
   rerenderGrid: () => void
   textBoundsRef: React.RefObject<HTMLDivElement | null>
@@ -182,8 +184,7 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
         return
       }
 
-      const isCorner = handle === 'top-left' || handle === 'top-right' || handle === 'bottom-left' || handle === 'bottom-right'
-      if (!isCorner) {
+      if (!CORNER_HANDLES.has(handle)) {
         // Inside or edge — move
         phase = 'moving'
         dragStart = { row, col }
@@ -269,6 +270,13 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
     }
   }
 
+  /** Apply a text+color mutation and rerender. */
+  function applyTextEdit(text: string, textFgColors: RGBColor[]): void {
+    deps.updateTextLayer(editingLayerId!, { text, textFgColors })
+    deps.rerenderGrid()
+    positionCursorOverlay()
+  }
+
   function onKeyDown(e: KeyboardEvent): void {
     if (phase !== 'editing') return
     if (!editingLayerId) return
@@ -289,9 +297,7 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
         const colors = [...(layer.textFgColors ?? [])]
         colors.splice(cursorPos - 1, 1)
         cursorPos--
-        deps.updateTextLayer(editingLayerId, { text: newText, textFgColors: colors })
-        deps.rerenderGrid()
-        positionCursorOverlay()
+        applyTextEdit(newText, colors)
       }
       return
     }
@@ -301,9 +307,7 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
         const newText = layer.text.slice(0, cursorPos) + layer.text.slice(cursorPos + 1)
         const colors = [...(layer.textFgColors ?? [])]
         colors.splice(cursorPos, 1)
-        deps.updateTextLayer(editingLayerId, { text: newText, textFgColors: colors })
-        deps.rerenderGrid()
-        positionCursorOverlay()
+        applyTextEdit(newText, colors)
       }
       return
     }
@@ -313,9 +317,7 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
       const colors = [...(layer.textFgColors ?? [])]
       colors.splice(cursorPos, 0, [...deps.brushRef.current.fg] as RGBColor)
       cursorPos++
-      deps.updateTextLayer(editingLayerId, { text: newText, textFgColors: colors })
-      deps.rerenderGrid()
-      positionCursorOverlay()
+      applyTextEdit(newText, colors)
       return
     }
 
@@ -332,7 +334,6 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
     }
 
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-      // Simple up/down navigation
       positionCursorOverlay()
       return
     }
@@ -343,9 +344,7 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
       const colors = [...(layer.textFgColors ?? [])]
       colors.splice(cursorPos, 0, [...deps.brushRef.current.fg] as RGBColor)
       cursorPos++
-      deps.updateTextLayer(editingLayerId, { text: newText, textFgColors: colors })
-      deps.rerenderGrid()
-      positionCursorOverlay()
+      applyTextEdit(newText, colors)
     }
   }
 

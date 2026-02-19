@@ -49,7 +49,9 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
     el.style.height = `${cursorH}px`
   }
 
-  function hideCursor(): void { if (cursorRef.current) cursorRef.current.style.display = 'none' }
+  function hideCursor(): void {
+    if (cursorRef.current) cursorRef.current.style.display = 'none'
+  }
 
   function showDimension(start: CellHalf, end: CellHalf): void {
     const el = dimensionRef.current
@@ -79,16 +81,29 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
     el.style.top = `${cy}px`
   }
 
-  function hideDimension(): void { if (dimensionRef.current) dimensionRef.current.style.display = 'none' }
+  function hideDimension(): void {
+    if (dimensionRef.current) dimensionRef.current.style.display = 'none'
+  }
 
-  function isSameCell(a: CellPos, b: CellPos) { return a.row === b.row && a.col === b.col && a.isTopHalf === b.isTopHalf }
-  function cursorHalf(cell: { isTopHalf: boolean }) { return brushRef.current.mode !== 'brush' ? cell.isTopHalf : undefined }
+  function isSameCell(a: CellPos, b: CellPos): boolean {
+    return a.row === b.row && a.col === b.col && a.isTopHalf === b.isTopHalf
+  }
+
+  function cursorHalf(cell: { isTopHalf: boolean }): boolean | undefined {
+    return brushRef.current.mode !== 'brush' ? cell.isTopHalf : undefined
+  }
 
   function paintAt(row: number, col: number, isTopHalf: boolean): void {
     const mode = brushRef.current.mode
-    if (mode === 'eraser') { if (isInBounds(row, col)) applyCell(row, col, computeErasePixelCell(getActiveGrid()[row][col], isTopHalf)) }
-    else if (mode === 'pixel') paintPixel(row, col, isTopHalf)
-    else paintCell(row, col)
+    if (mode === 'eraser') {
+      if (isInBounds(row, col)) {
+        applyCell(row, col, computeErasePixelCell(getActiveGrid()[row][col], isTopHalf))
+      }
+    } else if (mode === 'pixel') {
+      paintPixel(row, col, isTopHalf)
+    } else {
+      paintCell(row, col)
+    }
   }
 
   function restorePreview(): void {
@@ -104,7 +119,8 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
   function writePreviewCells(cells: Map<string, AnsiCell>): void {
     const handle = handleRef.current
     if (!handle) return
-    const layers = layersRef.current, activeId = activeLayerIdRef.current
+    const layers = layersRef.current
+    const activeId = activeLayerIdRef.current
     for (const [key, cell] of cells) {
       const [r, c] = parseCellKey(key)
       if (!previewCellsRef.current.has(key)) {
@@ -122,32 +138,43 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
       applyCell(r, c, cell)
       affectedKeys.add(key)
     }
-    const handle = handleRef.current, layers = layersRef.current
-    if (handle) for (const key of affectedKeys) {
-      const [r, c] = parseCellKey(key)
-      writeCellToTerminal(handle, r, c, compositeCell(layers, r, c))
+    const handle = handleRef.current
+    const layers = layersRef.current
+    if (handle) {
+      for (const key of affectedKeys) {
+        const [r, c] = parseCellKey(key)
+        writeCellToTerminal(handle, r, c, compositeCell(layers, r, c))
+      }
     }
   }
 
-  function lineCells(end: CellHalf) { return computeLineCells(lineStartRef.current!, end, brushRef.current, getActiveGrid()) }
-  function rectCells(end: CellHalf) { return computeRectCells(lineStartRef.current!, end, brushRef.current, getActiveGrid(), brushRef.current.tool === 'rect-filled') }
+  function lineCells(end: CellHalf): Map<string, AnsiCell> {
+    return computeLineCells(lineStartRef.current!, end, brushRef.current, getActiveGrid())
+  }
+
+  function rectCells(end: CellHalf): Map<string, AnsiCell> {
+    return computeRectCells(lineStartRef.current!, end, brushRef.current, getActiveGrid(), brushRef.current.tool === 'rect-filled')
+  }
 
   function renderLinePreview(end: CellHalf): void {
     if (!lineStartRef.current) return
     restorePreview()
     writePreviewCells(lineCells(end))
   }
+
   function commitLine(end: CellHalf): void {
     if (!lineStartRef.current) return
     commitCells(lineCells(end))
     lineStartRef.current = null
   }
+
   function renderRectPreview(end: CellHalf): void {
     if (!lineStartRef.current) return
     restorePreview()
     writePreviewCells(rectCells(end))
     showDimension(lineStartRef.current!, end)
   }
+
   function commitRect(end: CellHalf): void {
     if (!lineStartRef.current) return
     commitCells(rectCells(end))

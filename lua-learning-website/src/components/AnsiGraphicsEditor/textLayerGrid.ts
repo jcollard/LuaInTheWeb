@@ -2,6 +2,23 @@ import type { AnsiGrid, RGBColor, Rect, TextAlign } from './types'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, TRANSPARENT_BG } from './types'
 
 /**
+ * Computes the length of the next wrapped-line segment starting at `paraOff`
+ * within a paragraph, and how many characters to skip after it (0 or 1 for
+ * the consumed space at a word-break).
+ */
+function computeLineSegment(para: string, paraOff: number, width: number): { lineLen: number; skip: number } {
+  if (paraOff + width >= para.length) {
+    return { lineLen: para.length - paraOff, skip: 0 }
+  }
+  for (let i = paraOff + width; i > paraOff; i--) {
+    if (para[i] === ' ') {
+      return { lineLen: i - paraOff, skip: 1 }
+    }
+  }
+  return { lineLen: width, skip: 0 }
+}
+
+/**
  * Greedy word-wrap: splits text into lines that fit within `width` columns.
  * - `\n` forces a line break
  * - Words longer than `width` are broken by character
@@ -14,27 +31,10 @@ export function wrapText(text: string, width: number): string[] {
     if (para === '') { lines.push(''); continue }
     let pos = 0
     while (pos < para.length) {
-      if (pos + width >= para.length) {
-        // Rest fits on one line
-        lines.push(para.slice(pos))
-        pos = para.length
-      } else {
-        // Find last space within width to break at
-        let breakAt = -1
-        for (let i = pos + width; i > pos; i--) {
-          if (para[i] === ' ') { breakAt = i; break }
-        }
-        if (breakAt > pos) {
-          lines.push(para.slice(pos, breakAt))
-          pos = breakAt + 1 // skip the space
-        } else {
-          // No space found — break by character
-          lines.push(para.slice(pos, pos + width))
-          pos += width
-        }
-      }
+      const { lineLen, skip } = computeLineSegment(para, pos, width)
+      lines.push(para.slice(pos, pos + lineLen))
+      pos += lineLen + skip
     }
-    if (pos === 0) lines.push('') // empty paragraph handled above, but defensive
   }
   return lines
 }
@@ -68,23 +68,7 @@ export function cursorPosToVisual(text: string, width: number, cursorPos: number
 
     let paraOff = 0
     while (paraOff < para.length) {
-      let lineLen: number
-      let skip = 0
-      if (paraOff + width >= para.length) {
-        lineLen = para.length - paraOff
-      } else {
-        let breakAt = -1
-        for (let i = paraOff + width; i > paraOff; i--) {
-          if (para[i] === ' ') { breakAt = i; break }
-        }
-        if (breakAt > paraOff) {
-          lineLen = breakAt - paraOff
-          skip = 1 // consumed space
-        } else {
-          lineLen = width
-        }
-      }
-
+      const { lineLen, skip } = computeLineSegment(para, paraOff, width)
       const lineStart = rawPos + paraOff
       const lineEnd = lineStart + lineLen
       const nextParaOff = paraOff + lineLen + skip
@@ -94,10 +78,10 @@ export function cursorPosToVisual(text: string, width: number, cursorPos: number
         if (cursorPos <= lineEnd) return { row: visualRow, col: applyOffset(cursorPos - lineStart, lineLen) }
       } else {
         if (cursorPos < lineEnd) return { row: visualRow, col: applyOffset(cursorPos - lineStart, lineLen) }
-        // Cursor is on the consumed space — move to next line start
+        // Cursor is on the consumed space -- move to next line start
         if (cursorPos < lineStart + lineLen + skip) {
-          const nextLineLen = computeNextLineLen(para, nextParaOff, width)
-          return { row: visualRow + 1, col: applyOffset(0, nextLineLen) }
+          const next = computeLineSegment(para, nextParaOff, width)
+          return { row: visualRow + 1, col: applyOffset(0, next.lineLen) }
         }
       }
 
@@ -108,16 +92,6 @@ export function cursorPosToVisual(text: string, width: number, cursorPos: number
   }
 
   return { row: visualRow, col: 0 }
-}
-
-function computeNextLineLen(para: string, paraOff: number, width: number): number {
-  if (paraOff + width >= para.length) return para.length - paraOff
-  let breakAt = -1
-  for (let i = paraOff + width; i > paraOff; i--) {
-    if (para[i] === ' ') { breakAt = i; break }
-  }
-  if (breakAt > paraOff) return breakAt - paraOff
-  return width
 }
 
 /**
@@ -137,29 +111,12 @@ function buildRawIndexMap(text: string, width: number): number[][] {
 
     let paraOff = 0
     while (paraOff < para.length) {
-      let lineLen: number
-      let skip = 0
-      if (paraOff + width >= para.length) {
-        lineLen = para.length - paraOff
-      } else {
-        let breakAt = -1
-        for (let i = paraOff + width; i > paraOff; i--) {
-          if (para[i] === ' ') { breakAt = i; break }
-        }
-        if (breakAt > paraOff) {
-          lineLen = breakAt - paraOff
-          skip = 1
-        } else {
-          lineLen = width
-        }
-      }
-
+      const { lineLen, skip } = computeLineSegment(para, paraOff, width)
       const indices: number[] = []
       for (let i = 0; i < lineLen; i++) {
         indices.push(rawPos + paraOff + i)
       }
       result.push(indices)
-
       paraOff += lineLen + skip
     }
     rawPos += para.length
@@ -191,7 +148,7 @@ export function justifyLine(line: string, width: number): string {
 }
 
 /**
- * Renders text into an 80×25 AnsiGrid within the given bounds.
+ * Renders text into an 80x25 AnsiGrid within the given bounds.
  * Characters use `{ char, fg: textFg, bg: TRANSPARENT_BG }`.
  * Text is word-wrapped to bounds width. Overflow is truncated.
  *
@@ -211,11 +168,10 @@ export function renderTextLayerGrid(text: string, bounds: Rect, textFg: RGBColor
   const align = textAlign ?? 'left'
 
   // Determine which lines are "last in their paragraph" for justify
-  const paragraphs = text.split('\n')
   const lastLineOfParagraph = new Set<number>()
   if (align === 'justify') {
     let visualLine = 0
-    for (const para of paragraphs) {
+    for (const para of text.split('\n')) {
       if (para === '') { lastLineOfParagraph.add(visualLine); visualLine++; continue }
       const paraLines = wrapText(para, width)
       visualLine += paraLines.length
@@ -245,7 +201,7 @@ export function renderTextLayerGrid(text: string, bounds: Rect, textFg: RGBColor
     for (let charIdx = 0; charIdx < Math.min(line.length, width); charIdx++) {
       const col = bounds.c0 + offset + charIdx
       if (col < 0 || col >= ANSI_COLS) continue
-      // For justify, expanded spaces are visual-only — use textFg, not per-char color
+      // For justify, expanded spaces are visual-only -- use textFg, not per-char color
       const fg = (textFgColors && rawIndices && charIdx < rawIndices.length)
         ? textFgColors[rawIndices[charIdx]] ?? textFg
         : textFg

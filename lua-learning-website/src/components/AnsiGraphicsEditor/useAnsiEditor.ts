@@ -53,18 +53,24 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
 
-  const undoStackRef = useRef<LayerState[]>([]), redoStackRef = useRef<LayerState[]>([])
+  const undoStackRef = useRef<LayerState[]>([])
+  const redoStackRef = useRef<LayerState[]>([])
   const handleRef = useRef<AnsiTerminalHandle | null>(null)
-  const brushRef = useRef(brush)
-  brushRef.current = brush
+  const brushRef = useRef(brush); brushRef.current = brush
   const paintingRef = useRef(false)
   const lastCellRef = useRef<{ row: number; col: number; isTopHalf?: boolean } | null>(null)
-  const cursorRef = useRef<HTMLDivElement | null>(null), dimensionRef = useRef<HTMLDivElement | null>(null)
-  const lineStartRef = useRef<CellHalf | null>(null), previewCellsRef = useRef<Map<string, AnsiCell>>(new Map())
-  const cleanupRef = useRef<(() => void) | null>(null), selectionRef = useRef<HTMLDivElement | null>(null)
-  const textBoundsRef = useRef<HTMLDivElement | null>(null), textCursorRef = useRef<HTMLDivElement | null>(null)
-  const commitPendingSelectionRef = useRef<(() => void) | null>(null), commitPendingTextRef = useRef<(() => void) | null>(null)
-  const containerRef = useRef<HTMLElement | null>(null), textToolRef = useRef<TextToolHandlers | null>(null)
+  const cursorRef = useRef<HTMLDivElement | null>(null)
+  const dimensionRef = useRef<HTMLDivElement | null>(null)
+  const lineStartRef = useRef<CellHalf | null>(null)
+  const previewCellsRef = useRef<Map<string, AnsiCell>>(new Map())
+  const cleanupRef = useRef<(() => void) | null>(null)
+  const selectionRef = useRef<HTMLDivElement | null>(null)
+  const textBoundsRef = useRef<HTMLDivElement | null>(null)
+  const textCursorRef = useRef<HTMLDivElement | null>(null)
+  const commitPendingSelectionRef = useRef<(() => void) | null>(null)
+  const commitPendingTextRef = useRef<(() => void) | null>(null)
+  const containerRef = useRef<HTMLElement | null>(null)
+  const textToolRef = useRef<TextToolHandlers | null>(null)
   const updateTextBoundsDisplayRef = useRef<(() => void) | null>(null)
 
   const pushSnapshot = useCallback(() => {
@@ -90,9 +96,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const undo = useCallback(() => restoreSnapshot(undoStackRef.current, redoStackRef.current), [restoreSnapshot])
   const redo = useCallback(() => restoreSnapshot(redoStackRef.current, undoStackRef.current), [restoreSnapshot])
 
-  const setBrushFg = useCallback((color: RGBColor) => {
-    setBrush(p => ({ ...p, fg: color }))
-  }, [])
+  const setBrushFg = useCallback((color: RGBColor) => setBrush(p => ({ ...p, fg: color })), [])
   const setBrushBg = useCallback((color: RGBColor) => setBrush(p => ({ ...p, bg: color })), [])
   const setBrushChar = useCallback((c: string) => { if (c.length === 1) setBrush(p => ({ ...p, char: c })) }, [])
   const setBrushMode = useCallback((mode: BrushMode) => setBrush(p => ({ ...p, mode })), [])
@@ -130,7 +134,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   }, [pushSnapshot, restoreLayerState])
 
   const withLayerUndo = useCallback((action: () => void, needsRerender = true) => {
-    pushSnapshot(); action()
+    pushSnapshot()
+    action()
     if (needsRerender) {
       setIsDirty(true)
       if (handleRef.current) setTimeout(() => {
@@ -151,7 +156,10 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     withLayerUndo(() => rawAddLayerWithGrid(name, rgbaToAnsiGrid(px.rgba, px.width, px.height)))
   }, [withLayerUndo, rawAddLayerWithGrid])
 
-  const simplifyColors = useCallback((mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => withLayerUndo(() => rawReplaceColors(mapping, scope)), [withLayerUndo, rawReplaceColors])
+  const simplifyColors = useCallback(
+    (mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => withLayerUndo(() => rawReplaceColors(mapping, scope)),
+    [withLayerUndo, rawReplaceColors],
+  )
 
   const attachMouseListeners = useCallback((container: HTMLElement) => {
     const draw = createDrawHelpers({
@@ -176,7 +184,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         if (!el) return
         const { bounds } = activeLayer
         const rect = container.getBoundingClientRect()
-        const cellW = rect.width / ANSI_COLS, cellH = rect.height / ANSI_ROWS
+        const cellW = rect.width / ANSI_COLS
+        const cellH = rect.height / ANSI_ROWS
         el.style.display = 'block'
         el.style.left = `${rect.left + bounds.c0 * cellW}px`
         el.style.top = `${rect.top + bounds.r0 * cellH}px`
@@ -207,23 +216,34 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     }
     document.addEventListener('keydown', onKeyDown)
 
-    function pixelColor(c: AnsiCell, top: boolean): RGBColor { return c.char === ' ' ? c.bg : top ? c.fg : c.bg }
+    function pixelColor(c: AnsiCell, isTopHalf: boolean): RGBColor {
+      if (c.char === ' ') return c.bg
+      return isTopHalf ? c.fg : c.bg
+    }
+
     function sampleCell(e: MouseEvent, cell: CellHalf): boolean {
       const s = compositeCell(layersRef.current, cell.row, cell.col)
+      const isRight = e.button === 2
       if (brushRef.current.tool === 'eyedropper') {
         const c = pixelColor(s, cell.isTopHalf)
-        setBrush(p => e.button === 2 ? ({ ...p, bg: [...c] as RGBColor }) : ({ ...p, fg: [...c] as RGBColor }))
+        setBrush(p => isRight ? { ...p, bg: [...c] as RGBColor } : { ...p, fg: [...c] as RGBColor })
         return true
       }
-      if (e.ctrlKey) { setBrush(p => e.button === 2 ? ({ ...p, bg: [...s.bg] as RGBColor }) : ({ ...p, fg: [...s.fg] as RGBColor })); return true }
-      if (e.button === 2) { setBrush(p => ({ ...p, char: s.char })); return true }
+      if (e.ctrlKey) {
+        setBrush(p => isRight ? { ...p, bg: [...s.bg] as RGBColor } : { ...p, fg: [...s.fg] as RGBColor })
+        return true
+      }
+      if (isRight) { setBrush(p => ({ ...p, char: s.char })); return true }
       return false
     }
 
     function onMouseDown(e: MouseEvent): void {
       e.preventDefault()
       const cell = getCellHalfFromMouse(e, container)
-      if (cell && sampleCell(e, cell)) { draw.positionCursor(cell.row, cell.col, draw.cursorHalf(cell)); return }
+      if (cell && sampleCell(e, cell)) {
+        draw.positionCursor(cell.row, cell.col, draw.cursorHalf(cell))
+        return
+      }
       switch (brushRef.current.tool) {
         case 'pencil': {
           pushSnapshot()
@@ -321,16 +341,25 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         case 'line': {
           if (!lineStartRef.current) break
           const cell = getCellHalfFromMouse(e, container)
-          if (cell) draw.commitLine(cell)
-          else { draw.restorePreview(); lineStartRef.current = null }
+          if (cell) {
+            draw.commitLine(cell)
+          } else {
+            draw.restorePreview()
+            lineStartRef.current = null
+          }
           break
         }
         case 'rect-outline':
         case 'rect-filled': {
           if (!lineStartRef.current) break
           const cell = getCellHalfFromMouse(e, container)
-          if (cell) draw.commitRect(cell)
-          else { draw.restorePreview(); lineStartRef.current = null; draw.hideDimension() }
+          if (cell) {
+            draw.commitRect(cell)
+          } else {
+            draw.restorePreview()
+            lineStartRef.current = null
+            draw.hideDimension()
+          }
           break
         }
         case 'select': {
@@ -345,7 +374,6 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     }
 
     function onMouseLeave(): void { draw.hideCursor() }
-
     function onContextMenu(e: MouseEvent): void { e.preventDefault() }
 
     container.addEventListener('mousedown', onMouseDown)
@@ -387,7 +415,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     textToolRef.current?.refreshOverlays()
   }, [pushSnapshot, rawUpdateTextLayer, layersRef, activeLayerIdRef])
 
-  const markClean = useCallback(() => setIsDirty(false), []), openSaveDialog = useCallback(() => setIsSaveDialogOpen(true), []), closeSaveDialog = useCallback(() => setIsSaveDialogOpen(false), [])
+  const markClean = useCallback(() => setIsDirty(false), [])
+  const openSaveDialog = useCallback(() => setIsSaveDialogOpen(true), []), closeSaveDialog = useCallback(() => setIsSaveDialogOpen(false), [])
 
   const onTerminalReady = useCallback((handle: AnsiTerminalHandle | null) => {
     cleanupRef.current?.()

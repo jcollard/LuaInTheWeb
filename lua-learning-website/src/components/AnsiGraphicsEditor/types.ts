@@ -1,3 +1,5 @@
+import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
+
 export type RGBColor = [number, number, number]
 
 export interface AnsiCell {
@@ -84,8 +86,6 @@ export interface LayerState {
   layers: Layer[]         // ordered bottom-to-top (index 0 = bottom)
   activeLayerId: string
 }
-
-import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 
 export interface UseAnsiEditorReturn {
   // Canvas state

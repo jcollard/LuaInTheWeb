@@ -8,7 +8,7 @@ import { LayersPanel } from './LayersPanel'
 import { SaveAsDialog } from './SaveAsDialog'
 import { useAnsiEditor } from './useAnsiEditor'
 import { serializeLayers, deserializeLayers } from './serialization'
-import type { LayerState, TextLayer } from './types'
+import type { LayerState } from './types'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface AnsiGraphicsEditorProps {
@@ -67,7 +67,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
   } = useAnsiEditor({ initialLayerState })
 
   const activeLayer = layers.find(l => l.id === activeLayerId)
-  const activeTextAlign = activeLayer?.type === 'text' ? (activeLayer as TextLayer).textAlign : undefined
+  const activeTextAlign = activeLayer?.type === 'text' ? activeLayer.textAlign : undefined
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 

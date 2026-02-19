@@ -60,22 +60,21 @@ function compositeCellCore(layers: Layer[], getCell: (layer: Layer) => AnsiCell 
     }
 
     if (cell.char === HALF_BLOCK) {
+      // Pending text cell can use the half-block's bg as its background
+      if (pendingChar !== null) {
+        return { char: pendingChar, fg: pendingFg!, bg: cell.bg }
+      }
       if (topColor === null && !rgbEqual(cell.fg, TRANSPARENT_HALF)) topColor = cell.fg
       if (bottomColor === null && !rgbEqual(cell.bg, TRANSPARENT_HALF)) bottomColor = cell.bg
     } else {
+      // Pending text cell uses this opaque cell's bg
       if (pendingChar !== null) {
-        // Found a bg source for the pending text cell
         return { char: pendingChar, fg: pendingFg!, bg: cell.bg }
       }
       // Non-HALF_BLOCK cell is fully opaque
       if (topColor === null && bottomColor === null) return cell
       if (topColor === null) topColor = cell.bg
       if (bottomColor === null) bottomColor = cell.bg
-    }
-
-    if (pendingChar !== null && cell.char === HALF_BLOCK) {
-      // Use the half-block's bg as text bg
-      return { char: pendingChar, fg: pendingFg!, bg: cell.bg }
     }
 
     if (topColor !== null && bottomColor !== null) break
