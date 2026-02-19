@@ -29,6 +29,7 @@ export function AnsiEditorToolbar({
   cgaPreview, onToggleCgaPreview,
 }: AnsiEditorToolbarProps) {
   const isRectActive = brush.tool === 'rect-outline' || brush.tool === 'rect-filled'
+  const isOvalActive = brush.tool === 'oval-outline' || brush.tool === 'oval-filled'
   const [charPaletteOpen, setCharPaletteOpen] = useState(false)
   const charButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -82,6 +83,35 @@ export function AnsiEditorToolbar({
               data-testid="tool-rect-filled"
             >
               ■ Filled
+            </button>
+          </div>
+        </div>
+        <div className={styles.toolFlyoutWrapper}>
+          <button
+            type="button"
+            className={`${styles.modeButton} ${isOvalActive ? styles.modeButtonActive : ''}`}
+            aria-pressed={isOvalActive}
+            title="Oval"
+            data-testid="tool-oval"
+          >
+            {brush.tool === 'oval-filled' ? '●' : '○'}
+          </button>
+          <div className={styles.toolFlyout} data-testid="oval-flyout">
+            <button
+              type="button"
+              className={`${styles.flyoutOption} ${brush.tool === 'oval-outline' ? styles.flyoutOptionActive : ''}`}
+              onClick={() => onSetTool('oval-outline')}
+              data-testid="tool-oval-outline"
+            >
+              ○ Outline
+            </button>
+            <button
+              type="button"
+              className={`${styles.flyoutOption} ${brush.tool === 'oval-filled' ? styles.flyoutOptionActive : ''}`}
+              onClick={() => onSetTool('oval-filled')}
+              data-testid="tool-oval-filled"
+            >
+              ● Filled
             </button>
           </div>
         </div>

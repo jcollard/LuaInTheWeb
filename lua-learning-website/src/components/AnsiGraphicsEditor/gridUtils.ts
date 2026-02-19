@@ -1,7 +1,7 @@
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { AnsiCell, AnsiGrid, BrushSettings, RGBColor } from './types'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_CELL, DEFAULT_FG, HALF_BLOCK, TRANSPARENT_HALF } from './types'
-import { bresenhamLine } from './lineAlgorithm'
+import { bresenhamLine, midpointEllipse } from './lineAlgorithm'
 import { rgbEqual } from './layerUtils'
 
 export function cloneCell(cell: AnsiCell): AnsiCell {
@@ -155,6 +155,73 @@ export function computeRectCells(
     }
   }
 
+  return cells
+}
+
+function insideEllipse(dx: number, dy: number, a: number, b: number): boolean {
+  return a === 0 || b === 0 || (dx * dx) / (a * a) + (dy * dy) / (b * b) <= 1
+}
+
+export function computeOvalCells(
+  start: CellHalf, end: CellHalf, brush: LineBrush, baseGrid: AnsiGrid, filled: boolean,
+): Map<string, AnsiCell> {
+  const cells = new Map<string, AnsiCell>()
+
+  if (brush.mode !== 'brush') {
+    const py0 = start.row * 2 + (start.isTopHalf ? 0 : 1)
+    const py1 = end.row * 2 + (end.isTopHalf ? 0 : 1)
+    const minPY = Math.min(py0, py1)
+    const maxPY = Math.max(py0, py1)
+    const minCX = Math.min(start.col, end.col)
+    const maxCX = Math.max(start.col, end.col)
+    const cx = (minCX + maxCX) / 2
+    const cy = (minPY + maxPY) / 2
+    const a = (maxCX - minCX) / 2
+    const b = (maxPY - minPY) / 2
+
+    function paintPixel(col: number, py: number): void {
+      const row = Math.floor(py / 2)
+      if (!isInBounds(row, col)) return
+      const isTop = py % 2 === 0
+      const key = `${row},${col}`
+      const existing = cells.get(key) ?? baseGrid[row][col]
+      cells.set(key, brush.mode === 'eraser'
+        ? computeErasePixelCell(existing, isTop) : computePixelCell(existing, brush.fg, isTop))
+    }
+
+    if (filled) {
+      for (let py = minPY; py <= maxPY; py++) {
+        for (let col = minCX; col <= maxCX; col++) {
+          if (insideEllipse(col - cx, py - cy, a, b)) paintPixel(col, py)
+        }
+      }
+    }
+    for (const { x: col, y: py } of midpointEllipse(cx, cy, a, b)) paintPixel(col, py)
+  } else {
+    const minRow = Math.min(start.row, end.row)
+    const maxRow = Math.max(start.row, end.row)
+    const minCol = Math.min(start.col, end.col)
+    const maxCol = Math.max(start.col, end.col)
+    const cx = (minCol + maxCol) / 2
+    const cy = (minRow + maxRow) / 2
+    const a = (maxCol - minCol) / 2
+    const b = (maxRow - minRow) / 2
+
+    function makeBrushCell(): AnsiCell {
+      return { char: brush.char, fg: [...brush.fg] as RGBColor, bg: [...brush.bg] as RGBColor }
+    }
+
+    if (filled) {
+      for (let r = minRow; r <= maxRow; r++) {
+        for (let c = minCol; c <= maxCol; c++) {
+          if (insideEllipse(c - cx, r - cy, a, b) && isInBounds(r, c)) cells.set(`${r},${c}`, makeBrushCell())
+        }
+      }
+    }
+    for (const { x: c, y: r } of midpointEllipse(cx, cy, a, b)) {
+      if (isInBounds(r, c)) cells.set(`${r},${c}`, makeBrushCell())
+    }
+  }
   return cells
 }
 

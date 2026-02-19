@@ -5,7 +5,7 @@ import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { ColorTransform } from './gridUtils'
 import {
   writeCellToTerminal, parseCellKey, isInBounds,
-  computeErasePixelCell, computeLineCells, computeRectCells,
+  computeErasePixelCell, computeLineCells, computeRectCells, computeOvalCells,
 } from './gridUtils'
 import { compositeCell, compositeCellWithOverride } from './layerUtils'
 
@@ -154,10 +154,6 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
     return computeLineCells(lineStartRef.current!, end, brushRef.current, getActiveGrid())
   }
 
-  function rectCells(end: CellHalf): Map<string, AnsiCell> {
-    return computeRectCells(lineStartRef.current!, end, brushRef.current, getActiveGrid(), brushRef.current.tool === 'rect-filled')
-  }
-
   function renderLinePreview(end: CellHalf): void {
     if (!lineStartRef.current) return
     restorePreview()
@@ -170,16 +166,26 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
     lineStartRef.current = null
   }
 
-  function renderRectPreview(end: CellHalf): void {
+  function shapeCells(end: CellHalf): Map<string, AnsiCell> {
+    const tool = brushRef.current.tool
+    const start = lineStartRef.current!
+    const grid = getActiveGrid()
+    if (tool === 'oval-outline' || tool === 'oval-filled') {
+      return computeOvalCells(start, end, brushRef.current, grid, tool === 'oval-filled')
+    }
+    return computeRectCells(start, end, brushRef.current, grid, tool === 'rect-filled')
+  }
+
+  function renderShapePreview(end: CellHalf): void {
     if (!lineStartRef.current) return
     restorePreview()
-    writePreviewCells(rectCells(end))
+    writePreviewCells(shapeCells(end))
     showDimension(lineStartRef.current!, end)
   }
 
-  function commitRect(end: CellHalf): void {
+  function commitShape(end: CellHalf): void {
     if (!lineStartRef.current) return
-    commitCells(rectCells(end))
+    commitCells(shapeCells(end))
     lineStartRef.current = null
     hideDimension()
   }
@@ -188,6 +194,7 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
     positionCursor, hideCursor, showDimension, hideDimension,
     isSameCell, cursorHalf, paintAt,
     restorePreview, writePreviewCells, commitCells,
-    renderLinePreview, commitLine, renderRectPreview, commitRect,
+    renderLinePreview, commitLine,
+    renderShapePreview, commitShape,
   }
 }

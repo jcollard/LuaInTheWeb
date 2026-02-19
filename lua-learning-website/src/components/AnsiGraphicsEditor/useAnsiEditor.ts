@@ -256,12 +256,14 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           break
         }
         case 'rect-outline':
-        case 'rect-filled': {
+        case 'rect-filled':
+        case 'oval-outline':
+        case 'oval-filled': {
           if (!cell) return
           pushSnapshot()
           lineStartRef.current = cell
           previewCellsRef.current.clear()
-          draw.renderRectPreview(cell)
+          draw.renderShapePreview(cell)
           break
         }
         case 'flood-fill': {
@@ -304,23 +306,21 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           draw.paintAt(cell.row, cell.col, cell.isTopHalf)
           break
         }
-        case 'line': {
+        case 'line':
           if (lineStartRef.current) draw.renderLinePreview(cell)
           break
-        }
         case 'rect-outline':
-        case 'rect-filled': {
-          if (lineStartRef.current) draw.renderRectPreview(cell)
+        case 'rect-filled':
+        case 'oval-outline':
+        case 'oval-filled':
+          if (lineStartRef.current) draw.renderShapePreview(cell)
           break
-        }
-        case 'select': {
+        case 'select':
           sel.onMouseMove(cell.row, cell.col)
           break
-        }
-        case 'text': {
+        case 'text':
           textTool.onMouseMove(cell.row, cell.col)
           break
-        }
       }
     }
 
@@ -343,11 +343,13 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           break
         }
         case 'rect-outline':
-        case 'rect-filled': {
+        case 'rect-filled':
+        case 'oval-outline':
+        case 'oval-filled': {
           if (!lineStartRef.current) break
           const cell = getCellHalfFromMouse(e, container)
           if (cell) {
-            draw.commitRect(cell)
+            draw.commitShape(cell)
           } else {
             draw.restorePreview()
             lineStartRef.current = null
@@ -355,14 +357,12 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           }
           break
         }
-        case 'select': {
+        case 'select':
           sel.onMouseUp()
           break
-        }
-        case 'text': {
+        case 'text':
           textTool.onMouseUp()
           break
-        }
       }
     }
 
