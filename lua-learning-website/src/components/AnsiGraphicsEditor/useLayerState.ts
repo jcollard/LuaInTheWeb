@@ -150,9 +150,10 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
 
   const mergeDown = useCallback((id: string) => {
     setLayers(prev => {
+      const idx = prev.findIndex(l => l.id === id)
+      if (idx <= 0) return prev
       const result = mergeLayerDown(prev, id)
       if (!result) return prev
-      const idx = prev.findIndex(l => l.id === id)
       setActiveLayerId(prevActive => prevActive === id ? prev[idx - 1].id : prevActive)
       return result
     })

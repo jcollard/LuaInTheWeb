@@ -47,9 +47,11 @@ export function LayersPanel({
     setEditingId(null)
   }, [])
 
+  const closeContextMenu = useCallback(() => setContextMenu(null), [])
+
   useEffect(() => {
     if (!contextMenu) return
-    const onKeyDown = (e: KeyboardEvent) => {
+    function onKeyDown(e: KeyboardEvent): void {
       if (e.key === 'Escape') setContextMenu(null)
     }
     document.addEventListener('keydown', onKeyDown)
@@ -156,7 +158,7 @@ export function LayersPanel({
           <div
             className={styles.layerContextBackdrop}
             data-testid="layer-context-backdrop"
-            onClick={() => setContextMenu(null)}
+            onClick={closeContextMenu}
           />
           <div
             className={styles.layerContextMenu}
@@ -167,7 +169,7 @@ export function LayersPanel({
               className={styles.layerContextMenuItem}
               data-testid="context-merge-down"
               onClick={() => { onMergeDown(contextMenu.layerId); setContextMenu(null) }}
-              disabled={layers.findIndex(l => l.id === contextMenu.layerId) === 0}
+              disabled={contextMenu.layerId === layers[0]?.id}
             >
               Merge Down
             </button>
