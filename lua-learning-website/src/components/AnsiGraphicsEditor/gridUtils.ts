@@ -4,8 +4,16 @@ import { ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_CELL, DEFAULT_FG, HALF_BLOCK,
 import { bresenhamLine } from './lineAlgorithm'
 import { rgbEqual } from './layerUtils'
 
+export function cloneCell(cell: AnsiCell): AnsiCell {
+  return { char: cell.char, fg: [...cell.fg] as RGBColor, bg: [...cell.bg] as RGBColor }
+}
+
+export function cloneDefaultCell(): AnsiCell {
+  return { ...DEFAULT_CELL, fg: [...DEFAULT_CELL.fg] as RGBColor, bg: [...DEFAULT_CELL.bg] as RGBColor }
+}
+
 export function cloneGrid(grid: AnsiGrid): AnsiGrid {
-  return grid.map(row => row.map(cell => ({ ...cell, fg: [...cell.fg] as RGBColor, bg: [...cell.bg] as RGBColor })))
+  return grid.map(row => row.map(cloneCell))
 }
 
 export function createEmptyGrid(): AnsiGrid {
@@ -207,8 +215,7 @@ export function extractRegionCells(
   if (r0 > r1 || c0 > c1) return cells
   for (let r = minR; r <= maxR; r++) {
     for (let c = minC; c <= maxC; c++) {
-      const cell = grid[r][c]
-      cells.set(`${r},${c}`, { char: cell.char, fg: [...cell.fg] as RGBColor, bg: [...cell.bg] as RGBColor })
+      cells.set(`${r},${c}`, cloneCell(grid[r][c]))
     }
   }
   return cells
@@ -227,14 +234,14 @@ export function computeSelectionMoveCells(
   // If no movement, just return the captured cells at their original positions
   if (dr === 0 && dc === 0) {
     for (const [key, cell] of captured) {
-      result.set(key, { char: cell.char, fg: [...cell.fg] as RGBColor, bg: [...cell.bg] as RGBColor })
+      result.set(key, cloneCell(cell))
     }
     return result
   }
 
   // Clear source positions
   for (const key of captured.keys()) {
-    result.set(key, { ...DEFAULT_CELL, fg: [...DEFAULT_CELL.fg] as RGBColor, bg: [...DEFAULT_CELL.bg] as RGBColor })
+    result.set(key, cloneDefaultCell())
   }
 
   // Write destination positions (overwrites source if overlapping)
@@ -243,28 +250,27 @@ export function computeSelectionMoveCells(
     const newR = r + dr
     const newC = c + dc
     if (newR < 0 || newR >= gridRows || newC < 0 || newC >= gridCols) continue
-    result.set(`${newR},${newC}`, { char: cell.char, fg: [...cell.fg] as RGBColor, bg: [...cell.bg] as RGBColor })
+    result.set(`${newR},${newC}`, cloneCell(cell))
   }
 
+  return result
+}
+
+function remapKeys(cells: Map<string, AnsiCell>, dr: number, dc: number): Map<string, AnsiCell> {
+  const result = new Map<string, AnsiCell>()
+  for (const [key, cell] of cells) {
+    const [r, c] = parseCellKey(key)
+    result.set(`${r + dr},${c + dc}`, cloneCell(cell))
+  }
   return result
 }
 
 export function toRelativeKeys(cells: Map<string, AnsiCell>, originR: number, originC: number): Map<string, AnsiCell> {
-  const result = new Map<string, AnsiCell>()
-  for (const [key, cell] of cells) {
-    const [r, c] = parseCellKey(key)
-    result.set(`${r - originR},${c - originC}`, { char: cell.char, fg: [...cell.fg] as RGBColor, bg: [...cell.bg] as RGBColor })
-  }
-  return result
+  return remapKeys(cells, -originR, -originC)
 }
 
 export function toAbsoluteKeys(cells: Map<string, AnsiCell>, originR: number, originC: number): Map<string, AnsiCell> {
-  const result = new Map<string, AnsiCell>()
-  for (const [key, cell] of cells) {
-    const [r, c] = parseCellKey(key)
-    result.set(`${r + originR},${c + originC}`, { char: cell.char, fg: [...cell.fg] as RGBColor, bg: [...cell.bg] as RGBColor })
-  }
-  return result
+  return remapKeys(cells, originR, originC)
 }
 
 export function computeFloodFillCells(
