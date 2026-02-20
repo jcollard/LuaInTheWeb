@@ -301,7 +301,7 @@ export class AnsiController {
    */
   getMouseCol(): number {
     const rect = this.getContainerRect()
-    if (!rect) return 0
+    if (!rect) return 1
     const col = Math.floor(this.inputAPI.getMouseX() / rect.width * AnsiController.COLS) + 1
     return Math.max(1, Math.min(AnsiController.COLS, col))
   }
@@ -311,7 +311,7 @@ export class AnsiController {
    */
   getMouseRow(): number {
     const rect = this.getContainerRect()
-    if (!rect) return 0
+    if (!rect) return 1
     const row = Math.floor(this.inputAPI.getMouseY() / rect.height * AnsiController.ROWS) + 1
     return Math.max(1, Math.min(AnsiController.ROWS, row))
   }

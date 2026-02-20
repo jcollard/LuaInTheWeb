@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { flipCellsHorizontal, flipCellsVertical, cloneCell } from './gridUtils'
+import { cloneCell } from './gridUtils'
+import { flipCellsHorizontal, flipCellsVertical } from './flipUtils'
 import type { AnsiCell } from './types'
 import { HALF_BLOCK } from './types'
 

@@ -1,6 +1,8 @@
 import type { AnsiCell, AnsiGrid, Rect } from './types'
 import { ANSI_COLS, ANSI_ROWS } from './types'
-import { cloneCell, cloneDefaultCell, extractRegionCells, computeSelectionMoveCells, toRelativeKeys, toAbsoluteKeys, flipCellsHorizontal, flipCellsVertical, parseCellKey } from './gridUtils'
+import { cloneCell, cloneDefaultCell, parseCellKey } from './gridUtils'
+import { extractRegionCells, computeSelectionMoveCells, toRelativeKeys, toAbsoluteKeys } from './selectionGridUtils'
+import { flipCellsHorizontal, flipCellsVertical } from './flipUtils'
 
 // Module-level clipboard (persists across clear() calls and tool switches)
 let clipboard: Map<string, AnsiCell> | null = null

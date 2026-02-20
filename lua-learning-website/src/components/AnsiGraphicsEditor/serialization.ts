@@ -105,8 +105,14 @@ export function deserializeLayers(lua: string): LayerState {
 
   if (version === 3) {
     const rawLayers = data.layers as RawLayer[]
-    const layers: Layer[] = rawLayers.map(l => {
+    const layers: Layer[] = rawLayers.map((l, i) => {
+      if (!l.id || !l.name || l.visible === undefined) {
+        throw new Error(`Invalid layer at index ${i}: missing required fields (id, name, visible)`)
+      }
       if (l.type === 'text') {
+        if (!l.text || !l.bounds || !l.textFg) {
+          throw new Error(`Invalid text layer "${l.name}": missing text, bounds, or textFg`)
+        }
         const textFgColors = l.textFgColors && l.textFgColors.length > 0 ? l.textFgColors : undefined
         const textAlign = l.textAlign as TextAlign | undefined
         const textLayer: TextLayer = {
@@ -114,21 +120,24 @@ export function deserializeLayers(lua: string): LayerState {
           id: l.id,
           name: l.name,
           visible: l.visible,
-          text: l.text!,
-          bounds: l.bounds!,
-          textFg: l.textFg!,
+          text: l.text,
+          bounds: l.bounds,
+          textFg: l.textFg,
           textFgColors,
           textAlign,
-          grid: renderTextLayerGrid(l.text!, l.bounds!, l.textFg!, textFgColors, textAlign),
+          grid: renderTextLayerGrid(l.text, l.bounds, l.textFg, textFgColors, textAlign),
         }
         return textLayer
+      }
+      if (!l.grid) {
+        throw new Error(`Invalid drawn layer "${l.name}": missing grid`)
       }
       return {
         type: 'drawn' as const,
         id: l.id,
         name: l.name,
         visible: l.visible,
-        grid: l.grid!,
+        grid: l.grid,
       }
     })
     return {

@@ -81,7 +81,13 @@ export interface PngPixels {
  * Uses createImageBitmap + OffscreenCanvas for browser-native decoding.
  */
 export async function loadPngPixels(file: File): Promise<PngPixels> {
-  const bitmap = await createImageBitmap(file)
+  let bitmap: ImageBitmap
+  try {
+    bitmap = await createImageBitmap(file)
+  } catch {
+    throw new Error(`Failed to decode image "${file.name}". The file may be corrupted or not a supported image format.`)
+  }
+
   const { width, height } = computeScaledSize(bitmap.width, bitmap.height, MAX_PX_W, MAX_PX_H)
 
   if (width === 0 || height === 0) {
@@ -90,7 +96,11 @@ export async function loadPngPixels(file: File): Promise<PngPixels> {
   }
 
   const canvas = new OffscreenCanvas(width, height)
-  const ctx = canvas.getContext('2d')!
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    bitmap.close()
+    throw new Error('Failed to create 2D canvas context for image processing.')
+  }
   ctx.drawImage(bitmap, 0, 0, width, height)
   bitmap.close()
 

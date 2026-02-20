@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { extractRegionCells, computeSelectionMoveCells, toRelativeKeys, toAbsoluteKeys } from './gridUtils'
+import { extractRegionCells, computeSelectionMoveCells, toRelativeKeys, toAbsoluteKeys } from './selectionGridUtils'
 import type { AnsiCell, AnsiGrid, RGBColor } from './types'
 import { DEFAULT_FG, DEFAULT_BG } from './types'
 
