@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import type { RGBColor, PaletteEntry, PaletteType, StaticPaletteType, Layer } from './types'
-import { PALETTES } from './types'
+import { PALETTES, isDrawableLayer } from './types'
 import { rgbEqual } from './layerUtils'
 import { hsvToRgb, rgbToHsv, rgbToHex, hexToRgb, rgbStyle, extractGridColors, extractAllLayerColors } from './colorUtils'
 import { SimplifyPaletteModal } from './SimplifyPaletteModal'
@@ -105,7 +105,7 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplif
   // Dynamic palette computation
   const currentPalette = useMemo(() => extractAllLayerColors(layers), [layers])
   const activeLayer = layers.find(l => l.id === activeLayerId)
-  const layerPalette = useMemo(() => activeLayer ? extractGridColors(activeLayer.grid) : [], [activeLayer])
+  const layerPalette = useMemo(() => activeLayer && isDrawableLayer(activeLayer) ? extractGridColors(activeLayer.grid) : [], [activeLayer])
 
   const palette = resolvePalette(paletteType, currentPalette, layerPalette)
   const gridClass = resolveGridClass(paletteType, palette.length)

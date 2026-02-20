@@ -60,6 +60,9 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     reorderLayer,
     toggleVisibility,
     mergeDown,
+    wrapInGroup,
+    removeFromGroup,
+    toggleGroupCollapsed,
     importPngAsLayer,
     simplifyColors,
     selectionRef,
@@ -70,6 +73,8 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     flipSelectionVertical,
     cgaPreview,
     setCgaPreview,
+    activeLayerIsGroup,
+    isMoveDragging,
   } = useAnsiEditor({ initialLayerState })
 
   const handleToggleCgaPreview = useCallback(() => setCgaPreview(!cgaPreview), [cgaPreview, setCgaPreview])
@@ -174,6 +179,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
         onFlipVertical={flipSelectionVertical}
         cgaPreview={cgaPreview}
         onToggleCgaPreview={handleToggleCgaPreview}
+        activeLayerIsGroup={activeLayerIsGroup}
       />
       <div className={styles.editorBody}>
         <ColorPanel
@@ -185,7 +191,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
           layers={layers}
           activeLayerId={activeLayerId}
         />
-        <div className={styles.canvas}>
+        <div className={[styles.canvas, brush.tool === 'move' && (isMoveDragging ? styles.canvasMoveDragging : styles.canvasMove)].filter(Boolean).join(' ')}>
           <AnsiTerminalPanel
             isActive={true}
             onTerminalReady={onTerminalReady}
@@ -201,6 +207,9 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
           onAdd={addLayer}
           onRemove={removeLayer}
           onMergeDown={mergeDown}
+          onWrapInGroup={wrapInGroup}
+          onRemoveFromGroup={removeFromGroup}
+          onToggleGroupCollapsed={toggleGroupCollapsed}
         />
       </div>
       <div ref={cursorRef} className={styles.cellCursor} />

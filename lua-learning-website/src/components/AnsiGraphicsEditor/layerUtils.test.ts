@@ -1,8 +1,8 @@
 /* eslint-disable max-lines */
 import { describe, it, expect } from 'vitest'
-import { isDefaultCell, createLayer, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, syncLayerIds, mergeLayerDown } from './layerUtils'
-import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG } from './types'
-import type { AnsiCell, RGBColor, Layer, LayerState, TextLayer } from './types'
+import { isDefaultCell, createLayer, createGroup, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, syncLayerIds, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf } from './layerUtils'
+import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer } from './types'
+import type { AnsiCell, DrawableLayer, DrawnLayer, RGBColor, Layer, LayerState, TextLayer, GroupLayer } from './types'
 
 describe('isDefaultCell', () => {
   it('returns true for DEFAULT_CELL', () => {
@@ -94,9 +94,9 @@ describe('compositeCell', () => {
   const red: RGBColor = [255, 0, 0]
   const blue: RGBColor = [0, 0, 255]
 
-  function makeLayer(name: string, overrides?: Partial<Layer>): Layer {
+  function makeLayer(name: string, overrides?: Partial<DrawnLayer>): DrawnLayer {
     const layer = createLayer(name)
-    return { ...layer, ...overrides } as Layer
+    return { ...layer, ...overrides }
   }
 
   it('returns DEFAULT_CELL when all layers are empty', () => {
@@ -320,9 +320,9 @@ describe('cloneLayerState', () => {
     layer.grid[0][0] = { char: 'Z', fg: [255, 0, 0], bg: [0, 0, 0] }
     const state: LayerState = { layers: [layer], activeLayerId: 'id-1' }
     const clone = cloneLayerState(state)
-    clone.layers[0].grid[0][0].char = 'Q'
+    ;(clone.layers[0] as DrawableLayer).grid[0][0].char = 'Q'
     clone.layers[0].name = 'modified'
-    expect(state.layers[0].grid[0][0].char).toBe('Z')
+    expect((state.layers[0] as DrawableLayer).grid[0][0].char).toBe('Z')
     expect(state.layers[0].name).toBe('bg')
   })
 
@@ -331,8 +331,8 @@ describe('cloneLayerState', () => {
     layer.grid[0][0] = { char: 'X', fg: [100, 100, 100], bg: [50, 50, 50] }
     const state: LayerState = { layers: [layer], activeLayerId: 'id-1' }
     const clone = cloneLayerState(state)
-    state.layers[0].grid[0][0].fg[0] = 0
-    expect(clone.layers[0].grid[0][0].fg[0]).toBe(100)
+    ;(state.layers[0] as DrawableLayer).grid[0][0].fg[0] = 0
+    expect((clone.layers[0] as DrawableLayer).grid[0][0].fg[0]).toBe(100)
   })
 })
 
@@ -479,9 +479,9 @@ describe('TRANSPARENT_BG compositing', () => {
   const green: RGBColor = [0, 170, 0]
   const white: RGBColor = [255, 255, 255]
 
-  function makeLayer(name: string, overrides?: Partial<Layer>): Layer {
+  function makeLayer(name: string, overrides?: Partial<DrawnLayer>): DrawnLayer {
     const layer = createLayer(name)
-    return { ...layer, ...overrides } as Layer
+    return { ...layer, ...overrides }
   }
 
   it('text cell above opaque cell gets bg from opaque cell', () => {
@@ -563,8 +563,8 @@ describe('mergeLayerDown', () => {
     expect(result[0].name).toBe('Bottom')
     expect(result[0].type).toBe('drawn')
     // Both cells should be present in merged grid
-    expect(result[0].grid[0][0]).toEqual({ char: '#', fg: red, bg: DEFAULT_BG })
-    expect(result[0].grid[0][1]).toEqual({ char: 'X', fg: blue, bg: DEFAULT_BG })
+    expect((result[0] as DrawableLayer).grid[0][0]).toEqual({ char: '#', fg: red, bg: DEFAULT_BG })
+    expect((result[0] as DrawableLayer).grid[0][1]).toEqual({ char: 'X', fg: blue, bg: DEFAULT_BG })
   })
 
   it('upper layer content overwrites lower layer content at same position', () => {
@@ -574,7 +574,7 @@ describe('mergeLayerDown', () => {
     top.grid[0][0] = { char: 'B', fg: blue, bg: white }
     const result = mergeLayerDown([bottom, top], 't')!
     // Top layer cell wins (opaque on top)
-    expect(result[0].grid[0][0]).toEqual({ char: 'B', fg: blue, bg: white })
+    expect((result[0] as DrawableLayer).grid[0][0]).toEqual({ char: 'B', fg: blue, bg: white })
   })
 
   it('merges text layer onto drawn layer', () => {
@@ -598,7 +598,7 @@ describe('mergeLayerDown', () => {
     expect(result).toHaveLength(1)
     expect(result[0].type).toBe('drawn')
     // Text 'A' should get bg from lower layer's cell
-    expect(result[0].grid[0][0]).toEqual({ char: 'A', fg: red, bg: blue })
+    expect((result[0] as DrawableLayer).grid[0][0]).toEqual({ char: 'A', fg: red, bg: blue })
   })
 
   it('preserves other layers untouched', () => {
@@ -615,8 +615,8 @@ describe('mergeLayerDown', () => {
     expect(result[2].id).toBe('l4')
     // merged layer replaces l2, with content from both l2 and l3
     expect(result[1].id).toBe('l2')
-    expect(result[1].grid[0][0]).toEqual({ char: 'A', fg: red, bg: DEFAULT_BG })
-    expect(result[1].grid[0][1]).toEqual({ char: 'B', fg: blue, bg: DEFAULT_BG })
+    expect((result[1] as DrawableLayer).grid[0][0]).toEqual({ char: 'A', fg: red, bg: DEFAULT_BG })
+    expect((result[1] as DrawableLayer).grid[0][1]).toEqual({ char: 'B', fg: blue, bg: DEFAULT_BG })
   })
 
   it('merged result matches compositeCell output for the two layers', () => {
@@ -626,7 +626,7 @@ describe('mergeLayerDown', () => {
     top.grid[0][0] = { char: HALF_BLOCK, fg: red, bg: [...TRANSPARENT_HALF] as RGBColor }
     const result = mergeLayerDown([bottom, top], 't')!
     const expected = compositeCell([bottom, top], 0, 0)
-    expect(result[0].grid[0][0]).toEqual(expected)
+    expect((result[0] as DrawableLayer).grid[0][0]).toEqual(expected)
   })
 
   it('keeps lower layer visibility', () => {
@@ -646,7 +646,355 @@ describe('mergeLayerDown', () => {
     top.grid[0][1] = { char: 'B', fg: blue, bg: DEFAULT_BG }
     const result = mergeLayerDown([bottom, top], 't')!
     // Both cells should be present even though layers were hidden
-    expect(result[0].grid[0][0].char).toBe('A')
-    expect(result[0].grid[0][1].char).toBe('B')
+    expect((result[0] as DrawableLayer).grid[0][0].char).toBe('A')
+    expect((result[0] as DrawableLayer).grid[0][1].char).toBe('B')
+  })
+
+  it('returns null when upper layer is a group', () => {
+    const bottom = createLayer('Bottom', 'b')
+    const group = createGroup('Group', 'g')
+    expect(mergeLayerDown([bottom, group], 'g')).toBeNull()
+  })
+
+  it('returns null when lower layer is a group', () => {
+    const group = createGroup('Group', 'g')
+    const top = createLayer('Top', 't')
+    expect(mergeLayerDown([group, top], 't')).toBeNull()
+  })
+})
+
+describe('createGroup', () => {
+  it('creates a group layer with the given name', () => {
+    const group = createGroup('My Group')
+    expect(group.type).toBe('group')
+    expect(group.name).toBe('My Group')
+    expect(group.visible).toBe(true)
+    expect(group.collapsed).toBe(false)
+  })
+
+  it('generates a unique id starting with group-', () => {
+    const g1 = createGroup('G1')
+    const g2 = createGroup('G2')
+    expect(g1.id).toMatch(/^group-\d+$/)
+    expect(g2.id).toMatch(/^group-\d+$/)
+    expect(g1.id).not.toBe(g2.id)
+  })
+
+  it('uses provided id when given', () => {
+    const group = createGroup('Test', 'custom-group-id')
+    expect(group.id).toBe('custom-group-id')
+  })
+})
+
+describe('isGroupLayer', () => {
+  it('returns true for group layers', () => {
+    const group = createGroup('G')
+    expect(isGroupLayer(group)).toBe(true)
+  })
+
+  it('returns false for drawn layers', () => {
+    const layer = createLayer('L')
+    expect(isGroupLayer(layer)).toBe(false)
+  })
+})
+
+describe('isDrawableLayer', () => {
+  it('returns true for drawn layers', () => {
+    const layer = createLayer('L')
+    expect(isDrawableLayer(layer)).toBe(true)
+  })
+
+  it('returns false for group layers', () => {
+    const group = createGroup('G')
+    expect(isDrawableLayer(group)).toBe(false)
+  })
+})
+
+describe('visibleDrawableLayers', () => {
+  it('returns only drawable layers, skipping groups', () => {
+    const group = createGroup('G', 'g1')
+    const child = createLayer('Child', 'c1')
+    child.parentId = 'g1'
+    const root = createLayer('Root', 'r1')
+    const result = visibleDrawableLayers([root, group, child])
+    expect(result).toHaveLength(2)
+    expect(result[0].id).toBe('r1')
+    expect(result[1].id).toBe('c1')
+  })
+
+  it('skips children of hidden groups', () => {
+    const group = createGroup('G', 'g1')
+    group.visible = false
+    const child = createLayer('Child', 'c1')
+    child.parentId = 'g1'
+    const root = createLayer('Root', 'r1')
+    const result = visibleDrawableLayers([root, group, child])
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('r1')
+  })
+
+  it('includes children of visible groups', () => {
+    const group = createGroup('G', 'g1')
+    group.visible = true
+    const child = createLayer('Child', 'c1')
+    child.parentId = 'g1'
+    const result = visibleDrawableLayers([group, child])
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('c1')
+  })
+})
+
+describe('compositing with groups', () => {
+  const red: RGBColor = [255, 0, 0]
+  const blue: RGBColor = [0, 0, 255]
+
+  it('skips children of hidden groups in compositeCell', () => {
+    const group = createGroup('G', 'g1')
+    group.visible = false
+    const child = createLayer('Child', 'c1')
+    child.parentId = 'g1'
+    child.grid[0][0] = { char: 'X', fg: red, bg: DEFAULT_BG }
+    const bottom = createLayer('Bottom', 'b1')
+    bottom.grid[0][0] = { char: 'A', fg: blue, bg: DEFAULT_BG }
+    expect(compositeCell([bottom, group, child], 0, 0).char).toBe('A')
+  })
+
+  it('includes children of visible groups in compositeCell', () => {
+    const group = createGroup('G', 'g1')
+    group.visible = true
+    const child = createLayer('Child', 'c1')
+    child.parentId = 'g1'
+    child.grid[0][0] = { char: 'X', fg: red, bg: DEFAULT_BG }
+    const bottom = createLayer('Bottom', 'b1')
+    bottom.grid[0][0] = { char: 'A', fg: blue, bg: DEFAULT_BG }
+    expect(compositeCell([bottom, group, child], 0, 0).char).toBe('X')
+  })
+
+  it('hidden group hides children in compositeGrid', () => {
+    const group = createGroup('G', 'g1')
+    group.visible = false
+    const child = createLayer('Child', 'c1')
+    child.parentId = 'g1'
+    child.grid[0][0] = { char: 'Z', fg: red, bg: DEFAULT_BG }
+    const grid = compositeGrid([group, child])
+    expect(grid[0][0]).toEqual(DEFAULT_CELL)
+  })
+})
+
+describe('cloneLayerState with groups', () => {
+  it('clones group layers correctly', () => {
+    const group = createGroup('G', 'g1')
+    const child = createLayer('Child', 'c1')
+    child.parentId = 'g1'
+    const state: LayerState = { layers: [group, child], activeLayerId: 'c1' }
+    const clone = cloneLayerState(state)
+    expect(clone.layers).toHaveLength(2)
+    const clonedGroup = clone.layers[0] as GroupLayer
+    expect(clonedGroup.type).toBe('group')
+    expect(clonedGroup.collapsed).toBe(false)
+    expect(clonedGroup.visible).toBe(true)
+    const clonedChild = clone.layers[1]
+    expect(isDrawableLayer(clonedChild) && clonedChild.parentId).toBe('g1')
+  })
+
+  it('preserves collapsed state in cloned group', () => {
+    const group = createGroup('G', 'g1')
+    group.collapsed = true
+    const state: LayerState = { layers: [group, createLayer('L', 'l1')], activeLayerId: 'l1' }
+    const clone = cloneLayerState(state)
+    const clonedGroup = clone.layers[0] as GroupLayer
+    expect(clonedGroup.collapsed).toBe(true)
+  })
+
+  it('mutating cloned group does not affect original', () => {
+    const group = createGroup('G', 'g1')
+    const state: LayerState = { layers: [group, createLayer('L', 'l1')], activeLayerId: 'l1' }
+    const clone = cloneLayerState(state)
+    const clonedGroup = clone.layers[0] as GroupLayer
+    clonedGroup.name = 'Modified'
+    clonedGroup.collapsed = true
+    expect(group.name).toBe('G')
+    expect(group.collapsed).toBe(false)
+  })
+})
+
+describe('syncLayerIds with groups', () => {
+  it('updates group counter past the highest group-N id', () => {
+    const layers: Layer[] = [
+      createGroup('G1', 'group-5'),
+      createGroup('G2', 'group-10'),
+      createLayer('L', 'layer-1'),
+    ]
+    syncLayerIds(layers)
+    const newGroup = createGroup('New')
+    const match = newGroup.id.match(/^group-(\d+)$/)
+    expect(match).not.toBeNull()
+    expect(parseInt(match![1], 10)).toBeGreaterThanOrEqual(11)
+  })
+})
+
+describe('getAncestorGroupIds', () => {
+  it('returns empty array for root layer', () => {
+    const layer = createLayer('L', 'l1')
+    expect(getAncestorGroupIds(layer, [layer])).toEqual([])
+  })
+
+  it('returns single ancestor for direct child', () => {
+    const group = createGroup('G', 'g1')
+    const child = createLayer('Child', 'c1')
+    child.parentId = 'g1'
+    expect(getAncestorGroupIds(child, [group, child])).toEqual(['g1'])
+  })
+
+  it('returns multi-level ancestors', () => {
+    const outer = createGroup('Outer', 'g-outer')
+    const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-outer' }
+    const leaf = createLayer('Leaf', 'l1')
+    leaf.parentId = 'g-inner'
+    const layers: Layer[] = [outer, inner, leaf]
+    const ancestors = getAncestorGroupIds(leaf, layers)
+    expect(ancestors).toEqual(['g-inner', 'g-outer'])
+  })
+
+  it('prevents infinite loops from corrupted parentId cycles', () => {
+    const g1: GroupLayer = { ...createGroup('G1', 'g1'), parentId: 'g2' }
+    const g2: GroupLayer = { ...createGroup('G2', 'g2'), parentId: 'g1' }
+    const child = createLayer('C', 'c1')
+    child.parentId = 'g1'
+    const ancestors = getAncestorGroupIds(child, [g1, g2, child])
+    // Should terminate without infinite loop; order may vary, just ensure it terminates
+    expect(ancestors.length).toBeLessThanOrEqual(3)
+  })
+})
+
+describe('getGroupDescendantLayers', () => {
+  it('returns direct drawable children', () => {
+    const group = createGroup('G', 'g1')
+    const child = createLayer('Child', 'c1')
+    child.parentId = 'g1'
+    const result = getGroupDescendantLayers('g1', [group, child])
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('c1')
+  })
+
+  it('returns recursive descendants through sub-groups', () => {
+    const outer = createGroup('Outer', 'g-outer')
+    const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-outer' }
+    const leaf = createLayer('Leaf', 'l1')
+    leaf.parentId = 'g-inner'
+    const directChild = createLayer('Direct', 'l2')
+    directChild.parentId = 'g-outer'
+    const layers: Layer[] = [outer, inner, leaf, directChild]
+    const result = getGroupDescendantLayers('g-outer', layers)
+    expect(result).toHaveLength(2)
+    const ids = result.map(l => l.id).sort()
+    expect(ids).toEqual(['l1', 'l2'])
+  })
+
+  it('returns empty array when group has no children', () => {
+    const group = createGroup('G', 'g1')
+    expect(getGroupDescendantLayers('g1', [group])).toEqual([])
+  })
+})
+
+describe('getGroupDescendantIds', () => {
+  it('returns all descendant IDs including sub-groups', () => {
+    const outer = createGroup('Outer', 'g-outer')
+    const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-outer' }
+    const leaf = createLayer('Leaf', 'l1')
+    leaf.parentId = 'g-inner'
+    const directChild = createLayer('Direct', 'l2')
+    directChild.parentId = 'g-outer'
+    const ids = getGroupDescendantIds('g-outer', [outer, inner, leaf, directChild])
+    expect(ids).toEqual(new Set(['g-inner', 'l1', 'l2']))
+  })
+})
+
+describe('getNestingDepth', () => {
+  it('returns 0 for root layer', () => {
+    const layer = createLayer('L', 'l1')
+    expect(getNestingDepth(layer, [layer])).toBe(0)
+  })
+
+  it('returns 1 for direct child of a group', () => {
+    const group = createGroup('G', 'g1')
+    const child = createLayer('C', 'c1')
+    child.parentId = 'g1'
+    expect(getNestingDepth(child, [group, child])).toBe(1)
+  })
+
+  it('returns 2 for grandchild', () => {
+    const outer = createGroup('Outer', 'g-outer')
+    const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-outer' }
+    const leaf = createLayer('Leaf', 'l1')
+    leaf.parentId = 'g-inner'
+    expect(getNestingDepth(leaf, [outer, inner, leaf])).toBe(2)
+  })
+})
+
+describe('isAncestorOf', () => {
+  it('returns true when candidateAncestorId is a direct parent', () => {
+    const group = createGroup('G', 'g1')
+    const child = createLayer('C', 'c1')
+    child.parentId = 'g1'
+    expect(isAncestorOf('c1', 'g1', [group, child])).toBe(true)
+  })
+
+  it('returns true when candidateAncestorId is a grandparent', () => {
+    const outer = createGroup('Outer', 'g-outer')
+    const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-outer' }
+    const leaf = createLayer('Leaf', 'l1')
+    leaf.parentId = 'g-inner'
+    expect(isAncestorOf('l1', 'g-outer', [outer, inner, leaf])).toBe(true)
+  })
+
+  it('returns false when not an ancestor', () => {
+    const g1 = createGroup('G1', 'g1')
+    const g2 = createGroup('G2', 'g2')
+    const child = createLayer('C', 'c1')
+    child.parentId = 'g1'
+    expect(isAncestorOf('c1', 'g2', [g1, g2, child])).toBe(false)
+  })
+
+  it('returns false when layerId is same as candidateAncestorId', () => {
+    const group = createGroup('G', 'g1')
+    expect(isAncestorOf('g1', 'g1', [group])).toBe(false)
+  })
+})
+
+describe('hiddenGroupIds propagation to nested sub-groups', () => {
+  it('hides deeply nested layers when ancestor group is hidden', () => {
+    const outer = createGroup('Outer', 'g-outer')
+    outer.visible = false
+    const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-outer' }
+    const leaf = createLayer('Leaf', 'l1')
+    leaf.parentId = 'g-inner'
+    const root = createLayer('Root', 'r1')
+    const result = visibleDrawableLayers([root, outer, inner, leaf])
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('r1')
+  })
+
+  it('shows nested layers when all ancestor groups are visible', () => {
+    const outer = createGroup('Outer', 'g-outer')
+    const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-outer' }
+    const leaf = createLayer('Leaf', 'l1')
+    leaf.parentId = 'g-inner'
+    const result = visibleDrawableLayers([outer, inner, leaf])
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('l1')
+  })
+})
+
+describe('cloneLayerState preserves parentId on groups', () => {
+  it('preserves parentId on cloned group layer', () => {
+    const outer = createGroup('Outer', 'g-outer')
+    const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-outer' }
+    const leaf = createLayer('Leaf', 'l1')
+    leaf.parentId = 'g-inner'
+    const state: LayerState = { layers: [outer, inner, leaf], activeLayerId: 'l1' }
+    const clone = cloneLayerState(state)
+    const clonedInner = clone.layers[1] as GroupLayer
+    expect(clonedInner.parentId).toBe('g-outer')
   })
 })

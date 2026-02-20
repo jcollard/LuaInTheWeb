@@ -1,5 +1,5 @@
 import type { RGBColor, AnsiGrid, Layer, PaletteEntry } from './types'
-import { TRANSPARENT_HALF } from './types'
+import { TRANSPARENT_HALF, isDrawableLayer } from './types'
 import { isDefaultCell, rgbEqual } from './layerUtils'
 
 /** Format an RGB color as a comma-separated key string (e.g. "255,0,128"). */
@@ -100,7 +100,7 @@ export function extractGridColors(grid: AnsiGrid): PaletteEntry[] {
 
 /** Extract all unique colors from all layers, sorted by hex. */
 export function extractAllLayerColors(layers: Layer[]): PaletteEntry[] {
-  return collectUniqueColors(layers.map(l => l.grid))
+  return collectUniqueColors(layers.filter(isDrawableLayer).map(l => l.grid))
 }
 
 /** Squared Euclidean distance between two RGB colors. */

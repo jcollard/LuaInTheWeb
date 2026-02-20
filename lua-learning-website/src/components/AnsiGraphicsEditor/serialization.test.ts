@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { serializeGrid, deserializeGrid, serializeLayers, deserializeLayers } from './serialization'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, TRANSPARENT_BG } from './types'
-import type { AnsiGrid, LayerState, TextLayer, RGBColor, Rect } from './types'
-import { createLayer } from './layerUtils'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, TRANSPARENT_BG, isDrawableLayer } from './types'
+import type { AnsiGrid, DrawableLayer, LayerState, TextLayer, GroupLayer, RGBColor, Rect } from './types'
+import { createLayer, createGroup } from './layerUtils'
 import { renderTextLayerGrid } from './textLayerGrid'
 
 function createTestGrid(): AnsiGrid {
@@ -121,7 +121,7 @@ describe('deserializeLayers', () => {
     expect(result.layers).toHaveLength(2)
     expect(result.layers[0].id).toBe('bg')
     expect(result.layers[0].name).toBe('Background')
-    expect(result.layers[0].grid[0][0].char).toBe('A')
+    expect((result.layers[0] as DrawableLayer).grid[0][0].char).toBe('A')
     expect(result.layers[1].id).toBe('fg')
     expect(result.layers[1].visible).toBe(false)
     expect(result.activeLayerId).toBe('fg')
@@ -135,7 +135,7 @@ describe('deserializeLayers', () => {
     expect(result.layers).toHaveLength(1)
     expect(result.layers[0].name).toBe('Background')
     expect(result.layers[0].visible).toBe(true)
-    expect(result.layers[0].grid[3][5].char).toBe('#')
+    expect((result.layers[0] as DrawableLayer).grid[3][5].char).toBe('#')
     expect(result.activeLayerId).toBe(result.layers[0].id)
   })
 
@@ -199,7 +199,7 @@ describe('v3 serialization with text layers', () => {
 
     // Drawn layer
     expect(result.layers[0].type).toBe('drawn')
-    expect(result.layers[0].grid[0][0].char).toBe('X')
+    expect((result.layers[0] as DrawableLayer).grid[0][0].char).toBe('X')
 
     // Text layer: grid recomputed from text+bounds+fg
     const tl = result.layers[1] as TextLayer
@@ -320,5 +320,139 @@ describe('v3 serialization with text layers', () => {
     // Should load without textFgColors (undefined)
     expect(tl.textFgColors).toBeUndefined()
     expect(tl.grid[1][2].fg).toEqual(red)
+  })
+})
+
+describe('v4 serialization with groups', () => {
+  it('serializes as v4 when groups are present', () => {
+    const group = createGroup('G', 'g1')
+    const child = createLayer('Child', 'c1')
+    child.parentId = 'g1'
+    const state: LayerState = { layers: [group, child], activeLayerId: 'c1' }
+    const lua = serializeLayers(state)
+    expect(lua).toContain('["version"] = 4')
+  })
+
+  it('serializes as v3 when no groups are present', () => {
+    const layer = createLayer('Background', 'bg')
+    const state: LayerState = { layers: [layer], activeLayerId: 'bg' }
+    const lua = serializeLayers(state)
+    expect(lua).toContain('["version"] = 3')
+  })
+
+  it('serializes as v4 when parentId is present even without group layer', () => {
+    const layer = createLayer('Child', 'c1')
+    layer.parentId = 'g1'
+    const state: LayerState = { layers: [layer], activeLayerId: 'c1' }
+    const lua = serializeLayers(state)
+    expect(lua).toContain('["version"] = 4')
+  })
+
+  it('round-trips groups with collapsed and parentId', () => {
+    const group = createGroup('Characters', 'g1')
+    group.collapsed = true
+    const child1 = createLayer('Hero', 'c1')
+    child1.parentId = 'g1'
+    const child2 = createLayer('Enemy', 'c2')
+    child2.parentId = 'g1'
+    const root = createLayer('Background', 'bg')
+    const state: LayerState = {
+      layers: [root, group, child1, child2],
+      activeLayerId: 'c1',
+    }
+    const lua = serializeLayers(state)
+    const result = deserializeLayers(lua)
+
+    expect(result.layers).toHaveLength(4)
+    expect(result.activeLayerId).toBe('c1')
+
+    // Root layer
+    expect(result.layers[0].type).toBe('drawn')
+    expect(result.layers[0].id).toBe('bg')
+
+    // Group layer
+    const g = result.layers[1] as GroupLayer
+    expect(g.type).toBe('group')
+    expect(g.id).toBe('g1')
+    expect(g.name).toBe('Characters')
+    expect(g.visible).toBe(true)
+    expect(g.collapsed).toBe(true)
+
+    // Children with parentId
+    expect(isDrawableLayer(result.layers[2]) && result.layers[2].parentId).toBe('g1')
+    expect(isDrawableLayer(result.layers[3]) && result.layers[3].parentId).toBe('g1')
+  })
+
+  it('deserializes group with collapsed=false by default', () => {
+    const group = createGroup('G', 'g1')
+    // collapsed defaults to false
+    const layer = createLayer('L', 'l1')
+    const state: LayerState = { layers: [group, layer], activeLayerId: 'l1' }
+    const lua = serializeLayers(state)
+    const result = deserializeLayers(lua)
+    const g = result.layers[0] as GroupLayer
+    expect(g.collapsed).toBe(false)
+  })
+
+  it('v3 backward compat still works (no groups)', () => {
+    const layer1 = createLayer('Background', 'bg')
+    layer1.grid[0][0] = { char: 'A', fg: [255, 0, 0], bg: [0, 0, 0] }
+    const state: LayerState = { layers: [layer1], activeLayerId: 'bg' }
+    const lua = serializeLayers(state)
+    // Should be v3 (no groups)
+    expect(lua).toContain('["version"] = 3')
+    const result = deserializeLayers(lua)
+    expect(result.layers).toHaveLength(1)
+    expect(result.layers[0].type).toBe('drawn')
+  })
+
+  it('serializes group layer with visibility flag', () => {
+    const group = createGroup('G', 'g1')
+    group.visible = false
+    const layer = createLayer('L', 'l1')
+    const state: LayerState = { layers: [group, layer], activeLayerId: 'l1' }
+    const lua = serializeLayers(state)
+    const result = deserializeLayers(lua)
+    const g = result.layers[0] as GroupLayer
+    expect(g.visible).toBe(false)
+  })
+
+  it('does not serialize parentId for root layers', () => {
+    const group = createGroup('G', 'g1')
+    const root = createLayer('Root', 'r1')
+    // root has no parentId
+    const state: LayerState = { layers: [group, root], activeLayerId: 'r1' }
+    const lua = serializeLayers(state)
+    // The root layer entry should not contain parentId
+    // The only parentId in the output should be absent for root
+    expect(lua).not.toContain('"parentId"')
+  })
+
+  it('round-trips nested groups with group parentId', () => {
+    const outer = createGroup('Outer', 'g-outer')
+    const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-outer' }
+    const leaf = createLayer('Leaf', 'l1')
+    leaf.parentId = 'g-inner'
+    const state: LayerState = { layers: [outer, inner, leaf], activeLayerId: 'l1' }
+    const lua = serializeLayers(state)
+    const result = deserializeLayers(lua)
+    expect(result.layers).toHaveLength(3)
+    const restoredInner = result.layers[1] as GroupLayer
+    expect(restoredInner.type).toBe('group')
+    expect(restoredInner.parentId).toBe('g-outer')
+    const restoredLeaf = result.layers[2]
+    expect(isDrawableLayer(restoredLeaf) && restoredLeaf.parentId).toBe('g-inner')
+  })
+
+  it('backward compat: v4 without group parentId still loads', () => {
+    // Create a simple group without parentId
+    const group = createGroup('G', 'g1')
+    const child = createLayer('Child', 'c1')
+    child.parentId = 'g1'
+    const state: LayerState = { layers: [group, child], activeLayerId: 'c1' }
+    const lua = serializeLayers(state)
+    const result = deserializeLayers(lua)
+    const g = result.layers[0] as GroupLayer
+    expect(g.parentId).toBeUndefined()
   })
 })

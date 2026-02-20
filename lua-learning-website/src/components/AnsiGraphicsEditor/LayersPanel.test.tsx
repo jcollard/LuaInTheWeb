@@ -227,7 +227,7 @@ describe('LayersPanel', () => {
       startDrag(gripTop)
       fireEvent.dragOver(zone, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
       fireEvent.drop(zone, { dataTransfer: { getData: () => 'layer-2' }, preventDefault: vi.fn() })
-      expect(onReorder).toHaveBeenCalledWith('layer-2', 0)
+      expect(onReorder).toHaveBeenCalledWith('layer-2', 1)
     })
 
     it('hides the dragged row during drag', () => {
@@ -267,7 +267,73 @@ describe('LayersPanel', () => {
       startDrag(gripBot)
       fireEvent.dragOver(zoneTop, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
       fireEvent.drop(zoneTop, { dataTransfer: { getData: () => 'layer-0' }, preventDefault: vi.fn() })
-      expect(onReorder).toHaveBeenCalledWith('layer-0', 2)
+      expect(onReorder).toHaveBeenCalledWith('layer-0', 3)
+    })
+
+    it('within-group reorder: drop zone passes targetGroupId for range-aware positioning', () => {
+      const onReorder = vi.fn()
+      const group = createGroup('Group', 'g1')
+      const a = createLayer('A', 'a'); a.parentId = 'g1'
+      const b = createLayer('B', 'b'); b.parentId = 'g1'
+      const c = createLayer('C', 'c'); c.parentId = 'g1'
+      // Array [group, a, b, c] — visual top-to-bottom: Group, C, B, A
+      renderPanel({ layers: [group, a, b, c], onReorder, activeLayerId: 'a' })
+      // Drag C to drop-zone-a (above A visually = after A in array index 1 → insertIdx 2)
+      startDrag(screen.getByTestId('layer-grip-c'))
+      const zoneA = screen.getByTestId('layer-drop-zone-a')
+      fireEvent.dragOver(zoneA, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
+      fireEvent.drop(zoneA, { dataTransfer: { getData: () => 'c' }, preventDefault: vi.fn() })
+      // Within-group reorder: passes group id for range-aware positioning
+      expect(onReorder).toHaveBeenCalledWith('c', 2, 'g1')
+    })
+
+    it('cross-group: dragging a child to a root zone passes null targetGroupId', () => {
+      const onReorder = vi.fn()
+      const group = createGroup('Group', 'g1')
+      const child = createLayer('Child', 'c1'); child.parentId = 'g1'
+      const root = createLayer('Root', 'r1')
+      // Array: [root, group, child]
+      renderPanel({ layers: [root, group, child], onReorder, activeLayerId: 'c1' })
+      // Drag child to drop-zone-r1 (root layer zone) — cross-group: child→root
+      startDrag(screen.getByTestId('layer-grip-c1'))
+      const zoneRoot = screen.getByTestId('layer-drop-zone-r1')
+      fireEvent.dragOver(zoneRoot, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
+      fireEvent.drop(zoneRoot, { dataTransfer: { getData: () => 'c1' }, preventDefault: vi.fn() })
+      // Should pass null to move to root
+      expect(onReorder).toHaveBeenCalledWith('c1', 1, null)
+    })
+
+    it('cross-group: dragging a root layer to a grouped zone passes the group id', () => {
+      const onReorder = vi.fn()
+      const group = createGroup('Group', 'g1')
+      const child = createLayer('Child', 'c1'); child.parentId = 'g1'
+      const root = createLayer('Root', 'r1')
+      // Array: [root, group, child]
+      renderPanel({ layers: [root, group, child], onReorder, activeLayerId: 'r1' })
+      // Drag root to drop-zone-c1 (grouped child zone) — cross-group: root→g1
+      startDrag(screen.getByTestId('layer-grip-r1'))
+      const zoneChild = screen.getByTestId('layer-drop-zone-c1')
+      fireEvent.dragOver(zoneChild, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
+      fireEvent.drop(zoneChild, { dataTransfer: { getData: () => 'r1' }, preventDefault: vi.fn() })
+      // Should pass 'g1' to move into group
+      expect(onReorder).toHaveBeenCalledWith('r1', 3, 'g1')
+    })
+
+    it('nested group reorder: preserves parent group context', () => {
+      const onReorder = vi.fn()
+      const outer = createGroup('Outer', 'g-outer')
+      const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-outer' }
+      const child = createLayer('Child', 'c1'); child.parentId = 'g-outer'
+      // Array: [outer, inner, child] — inner and child are siblings in outer
+      renderPanel({ layers: [outer, inner, child], onReorder, activeLayerId: 'c1' })
+      // Drag inner group to drop-zone-child (within same parent group)
+      startDrag(screen.getByTestId('layer-grip-g-inner'))
+      const zone = screen.getByTestId('layer-drop-zone-c1')
+      fireEvent.dragOver(zone, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
+      fireEvent.drop(zone, { dataTransfer: { getData: () => 'g-inner' }, preventDefault: vi.fn() })
+      // Should pass parent group id, NOT null (which would deparent)
+      // child is at array index 2, so insertIdx = 3
+      expect(onReorder).toHaveBeenCalledWith('g-inner', 3, 'g-outer')
     })
 
     it('clears drag state on dragEnd', () => {
@@ -357,17 +423,17 @@ describe('LayersPanel', () => {
     })
   })
 
-  describe('group layers', () => {
-    function makeGroupedLayers(): Layer[] {
-      const group = createGroup('Characters', 'g1')
-      const child1 = createLayer('Hero', 'c1')
-      child1.parentId = 'g1'
-      const child2 = createLayer('Enemy', 'c2')
-      child2.parentId = 'g1'
-      const root = createLayer('Background', 'bg')
-      return [root, group, child1, child2]
-    }
+  function makeGroupedLayers(): Layer[] {
+    const group = createGroup('Characters', 'g1')
+    const child1 = createLayer('Hero', 'c1')
+    child1.parentId = 'g1'
+    const child2 = createLayer('Enemy', 'c2')
+    child2.parentId = 'g1'
+    const root = createLayer('Background', 'bg')
+    return [root, group, child1, child2]
+  }
 
+  describe('group layers', () => {
     it('renders group rows with folder badge', () => {
       renderPanel({ layers: makeGroupedLayers(), activeLayerId: 'c1' })
       const groupRow = screen.getByTestId('layer-row-g1')
@@ -429,14 +495,6 @@ describe('LayersPanel', () => {
   })
 
   describe('group context menu', () => {
-    function makeGroupedLayers(): Layer[] {
-      const group = createGroup('Characters', 'g1')
-      const child = createLayer('Hero', 'c1')
-      child.parentId = 'g1'
-      const root = createLayer('Background', 'bg')
-      return [root, group, child]
-    }
-
     it('shows "Group with new folder" for root drawable layers', () => {
       renderPanel({ layers: makeGroupedLayers(), activeLayerId: 'bg' })
       const row = screen.getByTestId('layer-row-bg')

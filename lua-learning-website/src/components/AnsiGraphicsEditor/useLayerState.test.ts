@@ -1,9 +1,10 @@
+/* eslint-disable max-lines */
 import { describe, it, expect } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useLayerState } from './useLayerState'
-import { createLayer } from './layerUtils'
-import type { LayerState, RGBColor, Rect, TextLayer } from './types'
-import { TRANSPARENT_BG } from './types'
+import { createLayer, createGroup } from './layerUtils'
+import type { DrawableLayer, LayerState, RGBColor, Rect, TextLayer, GroupLayer } from './types'
+import { TRANSPARENT_BG, isGroupLayer, isDrawableLayer } from './types'
 
 describe('useLayerState', () => {
   describe('initialization', () => {
@@ -206,8 +207,8 @@ describe('useLayerState', () => {
       const { result } = renderHook(() => useLayerState())
       const red: RGBColor = [255, 0, 0]
       act(() => result.current.applyToActiveLayer(0, 0, { char: '#', fg: red, bg: [0, 0, 0] }))
-      expect(result.current.activeLayer.grid[0][0].char).toBe('#')
-      expect(result.current.activeLayer.grid[0][0].fg).toEqual(red)
+      expect((result.current.activeLayer as DrawableLayer).grid[0][0].char).toBe('#')
+      expect((result.current.activeLayer as DrawableLayer).grid[0][0].fg).toEqual(red)
     })
 
     it('only modifies the active layer, not other layers', () => {
@@ -215,8 +216,8 @@ describe('useLayerState', () => {
       act(() => result.current.addLayer())
       // Active layer is now layer 2
       act(() => result.current.applyToActiveLayer(0, 0, { char: 'X', fg: [255, 0, 0], bg: [0, 0, 0] }))
-      expect(result.current.layers[0].grid[0][0].char).toBe(' ')
-      expect(result.current.layers[1].grid[0][0].char).toBe('X')
+      expect((result.current.layers[0] as DrawableLayer).grid[0][0].char).toBe(' ')
+      expect((result.current.layers[1] as DrawableLayer).grid[0][0].char).toBe('X')
     })
   })
 
@@ -235,7 +236,7 @@ describe('useLayerState', () => {
       // Restore
       act(() => result.current.restoreLayerState(snapshot))
       expect(result.current.layers).toHaveLength(2)
-      expect(result.current.layers[1].grid[5][5].char).toBe('X')
+      expect((result.current.layers[1] as DrawableLayer).grid[5][5].char).toBe('X')
     })
 
     it('getLayerState returns a deep clone (mutating it does not affect state)', () => {
@@ -493,7 +494,7 @@ describe('useLayerState', () => {
       const topId = result.current.layers[1].id
       act(() => result.current.mergeDown(topId))
       expect(result.current.layers).toHaveLength(1)
-      expect(result.current.layers[0].grid[0][0].char).toBe('X')
+      expect((result.current.layers[0] as DrawableLayer).grid[0][0].char).toBe('X')
     })
 
     it('switches active to merged layer when active was the upper layer', () => {
@@ -544,7 +545,387 @@ describe('useLayerState', () => {
       const gridBefore = textLayer.grid[0][0]
       act(() => result.current.applyToActiveLayer(0, 0, { char: '#', fg: [255, 0, 0], bg: [0, 0, 0] }))
       // Should be unchanged — applyToActiveLayer no-ops for text layers
-      expect(result.current.layers[1].grid[0][0]).toEqual(gridBefore)
+      expect((result.current.layers[1] as TextLayer).grid[0][0]).toEqual(gridBefore)
+    })
+  })
+
+  describe('wrapInGroup', () => {
+    it('wraps a root drawable layer in a new group', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addLayer())
+      const layerId = result.current.layers[1].id
+      act(() => result.current.wrapInGroup(layerId))
+      // Should now have 3 items: Background, Group, Layer 2 (as child)
+      expect(result.current.layers).toHaveLength(3)
+      const group = result.current.layers[1]
+      expect(isGroupLayer(group)).toBe(true)
+      expect(group.name).toBe('Group')
+      const child = result.current.layers[2]
+      expect(isDrawableLayer(child) && child.parentId).toBe(group.id)
+    })
+
+    it('wraps an already-grouped layer, creating nesting', () => {
+      const group = createGroup('G', 'g1')
+      const child = createLayer('Child', 'c1')
+      child.parentId = 'g1'
+      const initial: LayerState = { layers: [group, child], activeLayerId: 'c1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.wrapInGroup('c1'))
+      // Should have 3 items: original group, new wrapper group (inheriting g1 parentId), child
+      expect(result.current.layers).toHaveLength(3)
+      const newGroup = result.current.layers[1]
+      expect(isGroupLayer(newGroup)).toBe(true)
+      if (isGroupLayer(newGroup)) {
+        expect(newGroup.parentId).toBe('g1')
+      }
+      const updatedChild = result.current.layers[2]
+      expect(isDrawableLayer(updatedChild) && updatedChild.parentId).toBe(newGroup.id)
+    })
+
+    it('wraps a group layer (creates nesting)', () => {
+      const group = createGroup('G', 'g1')
+      const child = createLayer('Child', 'c1')
+      child.parentId = 'g1'
+      const layer = createLayer('L', 'l1')
+      const initial: LayerState = { layers: [group, child, layer], activeLayerId: 'l1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.wrapInGroup('g1'))
+      // Should have wrapper group, g1 (now as child), c1, l1
+      const g1 = result.current.layers.find(l => l.id === 'g1')
+      expect(g1 && isGroupLayer(g1) && g1.parentId).toBeTruthy()
+    })
+  })
+
+  describe('removeFromGroup', () => {
+    it('removes a layer from its parent group', () => {
+      const group = createGroup('G', 'g1')
+      const child = createLayer('Child', 'c1')
+      child.parentId = 'g1'
+      const initial: LayerState = { layers: [group, child], activeLayerId: 'c1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.removeFromGroup('c1'))
+      const updated = result.current.layers.find(l => l.id === 'c1')
+      expect(isDrawableLayer(updated!) && updated!.parentId).toBeFalsy()
+    })
+
+    it('is a no-op for a root layer (no parentId)', () => {
+      const { result } = renderHook(() => useLayerState())
+      const id = result.current.layers[0].id
+      const layersBefore = result.current.layers
+      act(() => result.current.removeFromGroup(id))
+      expect(result.current.layers).toBe(layersBefore)
+    })
+  })
+
+  describe('toggleGroupCollapsed', () => {
+    it('toggles collapsed state of a group', () => {
+      const group = createGroup('G', 'g1')
+      const layer = createLayer('L', 'l1')
+      const initial: LayerState = { layers: [group, layer], activeLayerId: 'l1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      expect((result.current.layers[0] as GroupLayer).collapsed).toBe(false)
+      act(() => result.current.toggleGroupCollapsed('g1'))
+      expect((result.current.layers[0] as GroupLayer).collapsed).toBe(true)
+      act(() => result.current.toggleGroupCollapsed('g1'))
+      expect((result.current.layers[0] as GroupLayer).collapsed).toBe(false)
+    })
+  })
+
+  describe('setActiveLayer with groups', () => {
+    it('allows setting a group as active', () => {
+      const group = createGroup('G', 'g1')
+      const layer = createLayer('L', 'l1')
+      const initial: LayerState = { layers: [group, layer], activeLayerId: 'l1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.setActiveLayer('g1'))
+      expect(result.current.activeLayerId).toBe('g1')
+    })
+  })
+
+  describe('removeLayer with groups', () => {
+    it('promotes children to root when removing a group', () => {
+      const group = createGroup('G', 'g1')
+      const child1 = createLayer('Child1', 'c1')
+      child1.parentId = 'g1'
+      const child2 = createLayer('Child2', 'c2')
+      child2.parentId = 'g1'
+      const initial: LayerState = { layers: [group, child1, child2], activeLayerId: 'c1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.removeLayer('g1'))
+      // Group removed, children remain without parentId
+      expect(result.current.layers).toHaveLength(2)
+      expect(result.current.layers.every(l => isDrawableLayer(l) && !l.parentId)).toBe(true)
+    })
+
+    it('does not delete children when removing a group', () => {
+      const group = createGroup('G', 'g1')
+      const child = createLayer('Child', 'c1')
+      child.parentId = 'g1'
+      const initial: LayerState = { layers: [group, child], activeLayerId: 'c1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.removeLayer('g1'))
+      expect(result.current.layers).toHaveLength(1)
+      expect(result.current.layers[0].id).toBe('c1')
+    })
+  })
+
+  describe('reorderLayer with targetGroupId', () => {
+    it('moves a layer into a group when targetGroupId is provided', () => {
+      const group = createGroup('G', 'g1')
+      const root = createLayer('Root', 'r1')
+      const initial: LayerState = { layers: [group, root], activeLayerId: 'r1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.reorderLayer('r1', 0, 'g1'))
+      const moved = result.current.layers.find(l => l.id === 'r1')
+      expect(isDrawableLayer(moved!) && moved!.parentId).toBe('g1')
+    })
+
+    it('inserts at newIndex when within the target group child range', () => {
+      const group = createGroup('G', 'g1')
+      const a = createLayer('A', 'a'); a.parentId = 'g1'
+      const b = createLayer('B', 'b'); b.parentId = 'g1'
+      const root = createLayer('Root', 'r1')
+      // Array: [group, a, b, root]
+      const initial: LayerState = { layers: [group, a, b, root], activeLayerId: 'r1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      // Move root into g1, newIndex=2 (between a and b in the group range [1..2])
+      act(() => result.current.reorderLayer('r1', 2, 'g1'))
+      // Should insert at position 2 (between a and b), not appended to end
+      const ids = result.current.layers.map(l => l.id)
+      expect(ids).toEqual(['g1', 'a', 'r1', 'b'])
+      const moved = result.current.layers.find(l => l.id === 'r1')
+      expect(isDrawableLayer(moved!) && moved!.parentId).toBe('g1')
+    })
+
+    it('appends to end of group when newIndex is outside the group range', () => {
+      const group = createGroup('G', 'g1')
+      const a = createLayer('A', 'a'); a.parentId = 'g1'
+      const b = createLayer('B', 'b'); b.parentId = 'g1'
+      const root = createLayer('Root', 'r1')
+      // Array: [group, a, b, root]
+      const initial: LayerState = { layers: [group, a, b, root], activeLayerId: 'r1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      // Move root into g1 with newIndex=0 (outside group range [1..2]) — like handleDropOnGroup
+      act(() => result.current.reorderLayer('r1', 0, 'g1'))
+      // Should append to end of group (after b)
+      const ids = result.current.layers.map(l => l.id)
+      expect(ids).toEqual(['g1', 'a', 'b', 'r1'])
+      const moved = result.current.layers.find(l => l.id === 'r1')
+      expect(isDrawableLayer(moved!) && moved!.parentId).toBe('g1')
+    })
+
+    it('within-group reorder with targetGroupId preserves contiguity near group boundary', () => {
+      const root1 = createLayer('Root1', 'r1')
+      const group = createGroup('G', 'g1')
+      const a = createLayer('A', 'a'); a.parentId = 'g1'
+      const b = createLayer('B', 'b'); b.parentId = 'g1'
+      const c = createLayer('C', 'c'); c.parentId = 'g1'
+      const root2 = createLayer('Root2', 'r2')
+      // Array: [r1, group, a, b, c, r2] — c is the last child before root2
+      const initial: LayerState = { layers: [root1, group, a, b, c, root2], activeLayerId: 'a' }
+      const { result } = renderHook(() => useLayerState(initial))
+      // Move a to after c (insertIdx=5) using targetGroupId to stay within group
+      act(() => result.current.reorderLayer('a', 5, 'g1'))
+      const ids = result.current.layers.map(l => l.id)
+      // a should be at the end of the group, BEFORE root2
+      expect(ids).toEqual(['r1', 'g1', 'b', 'c', 'a', 'r2'])
+      const moved = result.current.layers.find(l => l.id === 'a')
+      expect(isDrawableLayer(moved!) && moved!.parentId).toBe('g1')
+    })
+
+    it('moves a layer to root when targetGroupId is null', () => {
+      const group = createGroup('G', 'g1')
+      const child = createLayer('Child', 'c1')
+      child.parentId = 'g1'
+      const initial: LayerState = { layers: [group, child], activeLayerId: 'c1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.reorderLayer('c1', 0, null))
+      const moved = result.current.layers.find(l => l.id === 'c1')
+      expect(isDrawableLayer(moved!) && moved!.parentId).toBeFalsy()
+    })
+  })
+
+  describe('mergeDown with groups', () => {
+    it('is a no-op when adjacent layer is a group', () => {
+      const group = createGroup('G', 'g1')
+      const layer = createLayer('L', 'l1')
+      const initial: LayerState = { layers: [group, layer], activeLayerId: 'l1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.mergeDown('l1'))
+      // Should still have 2 layers — merge was blocked
+      expect(result.current.layers).toHaveLength(2)
+    })
+  })
+
+  describe('removeLayer with nested groups', () => {
+    it('promotes children to the deleted group parentId (not root)', () => {
+      const outer = createGroup('Outer', 'g-outer')
+      const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-outer' }
+      const leaf = createLayer('Leaf', 'l1')
+      leaf.parentId = 'g-inner'
+      const initial: LayerState = { layers: [outer, inner, leaf], activeLayerId: 'l1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.removeLayer('g-inner'))
+      // Inner group removed; leaf promoted to outer group
+      expect(result.current.layers).toHaveLength(2)
+      const updatedLeaf = result.current.layers.find(l => l.id === 'l1')
+      expect(isDrawableLayer(updatedLeaf!) && updatedLeaf!.parentId).toBe('g-outer')
+    })
+
+    it('promotes nested sub-groups to the deleted group parentId', () => {
+      const outer = createGroup('Outer', 'g-outer')
+      const middle: GroupLayer = { ...createGroup('Middle', 'g-mid'), parentId: 'g-outer' }
+      const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-mid' }
+      const leaf = createLayer('Leaf', 'l1')
+      leaf.parentId = 'g-inner'
+      const initial: LayerState = { layers: [outer, middle, inner, leaf], activeLayerId: 'l1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.removeLayer('g-mid'))
+      // Middle removed; inner promoted to outer
+      const updatedInner = result.current.layers.find(l => l.id === 'g-inner')
+      expect(updatedInner && isGroupLayer(updatedInner) && updatedInner.parentId).toBe('g-outer')
+    })
+  })
+
+  describe('removeFromGroup with groups', () => {
+    it('moves a group and its descendants out', () => {
+      const outer = createGroup('Outer', 'g-outer')
+      const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-outer' }
+      const leaf = createLayer('Leaf', 'l1')
+      leaf.parentId = 'g-inner'
+      const initial: LayerState = { layers: [outer, inner, leaf], activeLayerId: 'l1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.removeFromGroup('g-inner'))
+      const updatedInner = result.current.layers.find(l => l.id === 'g-inner')
+      // Inner's parentId should be cleared
+      expect(updatedInner && isGroupLayer(updatedInner) && updatedInner.parentId).toBeFalsy()
+      // Leaf's parentId should still be g-inner (unchanged)
+      const updatedLeaf = result.current.layers.find(l => l.id === 'l1')
+      expect(isDrawableLayer(updatedLeaf!) && updatedLeaf!.parentId).toBe('g-inner')
+    })
+  })
+
+  describe('reorderLayer with nested groups', () => {
+    it('allows moving a group into another group', () => {
+      const g1 = createGroup('G1', 'g1')
+      const g2 = createGroup('G2', 'g2')
+      const layer = createLayer('L', 'l1')
+      const initial: LayerState = { layers: [g1, g2, layer], activeLayerId: 'l1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.reorderLayer('g2', 0, 'g1'))
+      const movedG2 = result.current.layers.find(l => l.id === 'g2')
+      expect(movedG2 && isGroupLayer(movedG2) && movedG2.parentId).toBe('g1')
+    })
+
+    it('prevents circular nesting (moving group into its own descendant)', () => {
+      const outer = createGroup('Outer', 'g-outer')
+      const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-outer' }
+      const leaf = createLayer('Leaf', 'l1')
+      leaf.parentId = 'g-inner'
+      const initial: LayerState = { layers: [outer, inner, leaf], activeLayerId: 'l1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      const layersBefore = result.current.layers
+      // Try to move outer into inner — this would create a cycle
+      act(() => result.current.reorderLayer('g-outer', 0, 'g-inner'))
+      expect(result.current.layers).toBe(layersBefore)
+    })
+
+    it('move into outer group appends after full nested block', () => {
+      const outer = createGroup('Outer', 'g-outer')
+      const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-outer' }
+      const innerChild = createLayer('InnerChild', 'ic')
+      innerChild.parentId = 'g-inner'
+      const root = createLayer('Root', 'r1')
+      // Array: [outer, inner, innerChild, root]
+      const initial: LayerState = { layers: [outer, inner, innerChild, root], activeLayerId: 'r1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      // Drop root onto outer group (newIndex=0, outside range → append)
+      act(() => result.current.reorderLayer('r1', 0, 'g-outer'))
+      const ids = result.current.layers.map(l => l.id)
+      // root should be after innerChild (end of outer's full nested block)
+      expect(ids).toEqual(['g-outer', 'g-inner', 'ic', 'r1'])
+      const moved = result.current.layers.find(l => l.id === 'r1')
+      expect(isDrawableLayer(moved!) && moved!.parentId).toBe('g-outer')
+    })
+
+    it('within-group reorder in outer group respects nested block boundary', () => {
+      const outer = createGroup('Outer', 'g-outer')
+      const direct = createLayer('Direct', 'd1')
+      direct.parentId = 'g-outer'
+      const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-outer' }
+      const innerChild = createLayer('InnerChild', 'ic')
+      innerChild.parentId = 'g-inner'
+      const root = createLayer('Root', 'r1')
+      // Array: [outer, direct, inner, innerChild, root]
+      const initial: LayerState = { layers: [outer, direct, inner, innerChild, root], activeLayerId: 'd1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      // Move direct to end of outer group (insertIdx=5, within-group with targetGroupId)
+      act(() => result.current.reorderLayer('d1', 5, 'g-outer'))
+      const ids = result.current.layers.map(l => l.id)
+      // direct should move to end of outer block, BEFORE root
+      expect(ids).toEqual(['g-outer', 'g-inner', 'ic', 'd1', 'r1'])
+      const moved = result.current.layers.find(l => l.id === 'd1')
+      expect(isDrawableLayer(moved!) && moved!.parentId).toBe('g-outer')
+    })
+
+    it('within-group reorder does not split a nested sub-group block', () => {
+      const outer = createGroup('Outer', 'g-outer')
+      const direct = createLayer('Direct', 'd1')
+      direct.parentId = 'g-outer'
+      const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-outer' }
+      const innerChild = createLayer('InnerChild', 'ic')
+      innerChild.parentId = 'g-inner'
+      const root = createLayer('Root', 'r1')
+      // Array: [outer, direct, inner, innerChild, root]
+      // indices:  0       1      2       3          4
+      const initial: LayerState = { layers: [outer, direct, inner, innerChild, root], activeLayerId: 'd1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      // Move direct with insertIdx=3 (between inner and innerChild in the original array).
+      // After removing direct: [outer, inner, innerChild, root] (indices 0,1,2,3)
+      // adjusted = 3 - 1 = 2, which is between inner(1) and innerChild(2)
+      // This would split inner's block. It should snap past to index 3 instead.
+      act(() => result.current.reorderLayer('d1', 3, 'g-outer'))
+      const ids = result.current.layers.map(l => l.id)
+      // direct should land AFTER innerChild, not between inner and innerChild
+      expect(ids).toEqual(['g-outer', 'g-inner', 'ic', 'd1', 'r1'])
+      const moved = result.current.layers.find(l => l.id === 'd1')
+      expect(isDrawableLayer(moved!) && moved!.parentId).toBe('g-outer')
+    })
+
+    it('moves group block with all recursive descendants', () => {
+      const g1 = createGroup('G1', 'g1')
+      const child = createLayer('Child', 'c1')
+      child.parentId = 'g1'
+      const bottom = createLayer('Bottom', 'b1')
+      const initial: LayerState = { layers: [bottom, g1, child], activeLayerId: 'c1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      // Move g1 block to index 0
+      act(() => result.current.reorderLayer('g1', 0))
+      expect(result.current.layers[0].id).toBe('g1')
+      expect(result.current.layers[1].id).toBe('c1')
+      expect(result.current.layers[2].id).toBe('b1')
+    })
+  })
+
+  describe('applyMoveGrids', () => {
+    it('batch-updates multiple layer grids', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addLayer())
+      const l1 = result.current.layers[0] as DrawableLayer
+      const l2 = result.current.layers[1] as DrawableLayer
+      const red: RGBColor = [255, 0, 0]
+      const blue: RGBColor = [0, 0, 255]
+      // Create modified grids
+      const grid1 = l1.grid.map(row => row.map(c => ({ ...c })))
+      grid1[0][0] = { char: 'A', fg: red, bg: [0, 0, 0] }
+      const grid2 = l2.grid.map(row => row.map(c => ({ ...c })))
+      grid2[0][0] = { char: 'B', fg: blue, bg: [0, 0, 0] }
+      const updates = new Map<string, typeof grid1>()
+      updates.set(l1.id, grid1)
+      updates.set(l2.id, grid2)
+      act(() => result.current.applyMoveGrids(updates))
+      expect((result.current.layers[0] as DrawableLayer).grid[0][0].char).toBe('A')
+      expect((result.current.layers[1] as DrawableLayer).grid[0][0].char).toBe('B')
     })
   })
 })

@@ -96,14 +96,23 @@ export function LayersPanel({
     const sourceId = e.dataTransfer.getData('text/plain')
     const targetArrayIdx = layers.findIndex(l => l.id === targetLayerId)
     if (sourceId && targetArrayIdx >= 0) {
-      // Check if source is a group — don't allow dropping group into another group
+      // Drop zones sit visually above their layer. "Above X visually" means
+      // "after X in the flat array" (which is ordered bottom-to-top), so we
+      // insert at targetArrayIdx + 1.
+      const insertIdx = targetArrayIdx + 1
       const source = layers.find(l => l.id === sourceId)
       const target = layers.find(l => l.id === targetLayerId)
-      if (source && isGroupLayer(source) && target && isDrawableLayer(target) && target.parentId) {
-        // Dropping group near a grouped child — just reorder to root
-        onReorder(sourceId, targetArrayIdx, null)
+      const targetContext = target ? getParentId(target) : undefined
+      const sourceContext = source ? getParentId(source) : undefined
+      if (targetContext !== sourceContext) {
+        // Cross-group: explicitly set the new parent (null for root)
+        onReorder(sourceId, insertIdx, targetContext ?? null)
+      } else if (targetContext !== undefined) {
+        // Within-group: pass group id for range-aware positioning
+        onReorder(sourceId, insertIdx, targetContext)
       } else {
-        onReorder(sourceId, targetArrayIdx)
+        // Both root: simple positional reorder
+        onReorder(sourceId, insertIdx)
       }
     }
     clearDragState()

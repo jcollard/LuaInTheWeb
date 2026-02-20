@@ -23,12 +23,13 @@ export interface AnsiEditorToolbarProps {
   onFlipVertical?: () => void
   cgaPreview?: boolean
   onToggleCgaPreview?: () => void
+  activeLayerIsGroup?: boolean
 }
 
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onImportPng, onExportAns, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
-  onFlipHorizontal, onFlipVertical, cgaPreview, onToggleCgaPreview,
+  onFlipHorizontal, onFlipVertical, cgaPreview, onToggleCgaPreview, activeLayerIsGroup,
 }: AnsiEditorToolbarProps) {
   const isRectActive = brush.tool === 'rect-outline' || brush.tool === 'rect-filled'
   const isOvalActive = brush.tool === 'oval-outline' || brush.tool === 'oval-filled'
@@ -46,6 +47,7 @@ export function AnsiEditorToolbar({
           onClick={() => onSetTool('pencil')}
           title="Pencil"
           data-testid="tool-pencil"
+          disabled={activeLayerIsGroup}
         >
           ✏
         </button>
@@ -56,6 +58,7 @@ export function AnsiEditorToolbar({
           onClick={() => onSetTool('line')}
           title="Line"
           data-testid="tool-line"
+          disabled={activeLayerIsGroup}
         >
           ╱
         </button>
@@ -124,6 +127,7 @@ export function AnsiEditorToolbar({
           onClick={() => onSetTool('flood-fill')}
           title="Flood Fill"
           data-testid="tool-flood-fill"
+          disabled={activeLayerIsGroup}
         >
           Fill
         </button>
@@ -134,6 +138,7 @@ export function AnsiEditorToolbar({
           onClick={() => onSetTool('select')}
           title="Select"
           data-testid="tool-select"
+          disabled={activeLayerIsGroup}
         >
           ⬚
         </button>
@@ -144,6 +149,7 @@ export function AnsiEditorToolbar({
           onClick={() => onSetTool('eyedropper')}
           title="Eyedropper"
           data-testid="tool-eyedropper"
+          disabled={activeLayerIsGroup}
         >
           ⚗
         </button>
@@ -154,43 +160,56 @@ export function AnsiEditorToolbar({
           onClick={() => onSetTool('text')}
           title="Text"
           data-testid="tool-text"
+          disabled={activeLayerIsGroup}
         >
           T
         </button>
-      </div>
-      <div className={styles.modeGroup}>
-        <span className={styles.modeLabel}>Mode</span>
         <button
           type="button"
-          className={`${styles.modeButton} ${brush.mode === 'brush' ? styles.modeButtonActive : ''}`}
-          aria-pressed={brush.mode === 'brush'}
-          onClick={() => onSetMode('brush')}
-          title="Brush"
-          data-testid="mode-brush"
+          className={`${styles.modeButton} ${brush.tool === 'move' ? styles.modeButtonActive : ''}`}
+          aria-pressed={brush.tool === 'move'}
+          onClick={() => onSetTool('move')}
+          title="Move"
+          data-testid="tool-move"
         >
-          #
-        </button>
-        <button
-          type="button"
-          className={`${styles.modeButton} ${brush.mode === 'pixel' ? styles.modeButtonActive : ''}`}
-          aria-pressed={brush.mode === 'pixel'}
-          onClick={() => onSetMode('pixel')}
-          title="Pixel"
-          data-testid="mode-pixel"
-        >
-          ▀
-        </button>
-        <button
-          type="button"
-          className={`${styles.modeButton} ${brush.mode === 'eraser' ? styles.modeButtonActive : ''}`}
-          aria-pressed={brush.mode === 'eraser'}
-          onClick={() => onSetMode('eraser')}
-          title="Eraser"
-          data-testid="mode-eraser"
-        >
-          ⌫
+          ✥
         </button>
       </div>
+      {!activeLayerIsGroup && (
+        <div className={styles.modeGroup}>
+          <span className={styles.modeLabel}>Mode</span>
+          <button
+            type="button"
+            className={`${styles.modeButton} ${brush.mode === 'brush' ? styles.modeButtonActive : ''}`}
+            aria-pressed={brush.mode === 'brush'}
+            onClick={() => onSetMode('brush')}
+            title="Brush"
+            data-testid="mode-brush"
+          >
+            #
+          </button>
+          <button
+            type="button"
+            className={`${styles.modeButton} ${brush.mode === 'pixel' ? styles.modeButtonActive : ''}`}
+            aria-pressed={brush.mode === 'pixel'}
+            onClick={() => onSetMode('pixel')}
+            title="Pixel"
+            data-testid="mode-pixel"
+          >
+            ▀
+          </button>
+          <button
+            type="button"
+            className={`${styles.modeButton} ${brush.mode === 'eraser' ? styles.modeButtonActive : ''}`}
+            aria-pressed={brush.mode === 'eraser'}
+            onClick={() => onSetMode('eraser')}
+            title="Eraser"
+            data-testid="mode-eraser"
+          >
+            ⌫
+          </button>
+        </div>
+      )}
       {brush.tool === 'text' && onSetTextAlign && (
         <div className={styles.modeGroup}>
           <span className={styles.modeLabel}>Align</span>
@@ -263,7 +282,7 @@ export function AnsiEditorToolbar({
           )}
         </div>
       )}
-      {brush.mode === 'brush' && (
+      {brush.mode === 'brush' && !activeLayerIsGroup && (
         <div className={styles.charGroup}>
           <span className={styles.charLabel}>Char</span>
           <button

@@ -1,6 +1,6 @@
 import { stringify, parse } from '@kilcekru/lua-table'
-import type { AnsiGrid, Layer, LayerState, TextLayer, TextAlign, RGBColor, Rect } from './types'
-import { ANSI_COLS, ANSI_ROWS } from './types'
+import type { AnsiGrid, Layer, LayerState, TextLayer, TextAlign, RGBColor, Rect, GroupLayer } from './types'
+import { ANSI_COLS, ANSI_ROWS, isGroupLayer, isDrawableLayer } from './types'
 import { renderTextLayerGrid } from './textLayerGrid'
 
 export function serializeGrid(grid: AnsiGrid): string {
@@ -21,8 +21,25 @@ export function deserializeGrid(lua: string): AnsiGrid {
 }
 
 export function serializeLayers(state: LayerState): string {
-  const version = 3
+  const hasGroups = state.layers.some(isGroupLayer)
+  const hasParentId = state.layers.some(l => {
+    if (isDrawableLayer(l) && l.parentId) return true
+    if (isGroupLayer(l) && l.parentId) return true
+    return false
+  })
+  const version = (hasGroups || hasParentId) ? 4 : 3
   const layers = state.layers.map(layer => {
+    if (isGroupLayer(layer)) {
+      const serialized: Record<string, unknown> = {
+        type: 'group',
+        id: layer.id,
+        name: layer.name,
+        visible: layer.visible,
+        collapsed: layer.collapsed,
+      }
+      if (layer.parentId) serialized.parentId = layer.parentId
+      return serialized
+    }
     if (layer.type === 'text') {
       const serialized: Record<string, unknown> = {
         type: 'text',
@@ -40,15 +57,18 @@ export function serializeLayers(state: LayerState): string {
       if (layer.textAlign && layer.textAlign !== 'left') {
         serialized.textAlign = layer.textAlign
       }
+      if (layer.parentId) serialized.parentId = layer.parentId
       return serialized
     }
-    return {
+    const serialized: Record<string, unknown> = {
       type: 'drawn',
       id: layer.id,
       name: layer.name,
       visible: layer.visible,
       grid: layer.grid,
     }
+    if (layer.parentId) serialized.parentId = layer.parentId
+    return serialized
   })
   const data = {
     version,
@@ -71,6 +91,8 @@ interface RawLayer {
   textFg?: RGBColor
   textFgColors?: RGBColor[]
   textAlign?: string
+  parentId?: string
+  collapsed?: boolean
 }
 
 export function deserializeLayers(lua: string): LayerState {
@@ -96,18 +118,31 @@ export function deserializeLayers(lua: string): LayerState {
   }
 
   if (version === 2) {
-    const layers = (data.layers as Layer[]).map(l => ({ ...l, type: 'drawn' as const }))
+    // v2 only had drawn layers (no groups or text layers)
+    const rawLayers = data.layers as Array<{ id: string; name: string; visible: boolean; grid: AnsiGrid }>
+    const layers: Layer[] = rawLayers.map(l => ({ ...l, type: 'drawn' as const }))
     return {
       layers,
       activeLayerId: data.activeLayerId as string,
     }
   }
 
-  if (version === 3) {
+  if (version === 3 || version === 4) {
     const rawLayers = data.layers as RawLayer[]
     const layers: Layer[] = rawLayers.map((l, i) => {
       if (!l.id || !l.name || l.visible === undefined) {
         throw new Error(`Invalid layer at index ${i}: missing required fields (id, name, visible)`)
+      }
+      if (l.type === 'group') {
+        const groupLayer: GroupLayer = {
+          type: 'group',
+          id: l.id,
+          name: l.name,
+          visible: l.visible,
+          collapsed: l.collapsed ?? false,
+          parentId: l.parentId,
+        }
+        return groupLayer
       }
       if (l.type === 'text') {
         if (!l.text || !l.bounds || !l.textFg) {
@@ -126,6 +161,7 @@ export function deserializeLayers(lua: string): LayerState {
           textFgColors,
           textAlign,
           grid: renderTextLayerGrid(l.text, l.bounds, l.textFg, textFgColors, textAlign),
+          parentId: l.parentId,
         }
         return textLayer
       }
@@ -138,6 +174,7 @@ export function deserializeLayers(lua: string): LayerState {
         name: l.name,
         visible: l.visible,
         grid: l.grid,
+        parentId: l.parentId,
       }
     })
     return {

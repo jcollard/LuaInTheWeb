@@ -160,6 +160,36 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
 
       const layer = prev[currentIndex]
 
+      // Find the end index (exclusive) of a group's full nested block,
+      // including all recursive descendants (not just direct children).
+      function findGroupBlockEnd(arr: Layer[], groupId: string, startIdx: number): number {
+        let end = startIdx + 1
+        const tracked = new Set([groupId])
+        for (let i = startIdx + 1; i < arr.length; i++) {
+          const pid = getParentId(arr[i])
+          if (pid !== undefined && tracked.has(pid)) {
+            end = i + 1
+            if (isGroupLayer(arr[i])) tracked.add(arr[i].id)
+          } else {
+            break
+          }
+        }
+        return end
+      }
+
+      // If insertAt falls strictly inside a nested sub-group's block, snap it
+      // to the end of that block so we never split a sub-group's contiguous range.
+      function snapPastSubBlocks(arr: Layer[], pos: number, gIdx: number, rangeEnd: number): number {
+        for (let i = gIdx + 1; i < rangeEnd; i++) {
+          if (isGroupLayer(arr[i])) {
+            const subEnd = findGroupBlockEnd(arr, arr[i].id, i)
+            if (pos > i && pos < subEnd) return subEnd
+            i = subEnd - 1 // skip past this sub-block
+          }
+        }
+        return pos
+      }
+
       // If dragging a group, move entire block (group + ALL recursive descendants)
       if (isGroupLayer(layer) && targetGroupId === undefined) {
         const descendantIds = getGroupDescendantIds(layer.id, prev)
@@ -220,16 +250,11 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
             if (l.id === id && isGroupLayer(l)) return { ...l, parentId: targetGroupId }
             return l
           })
-          // Find insert position after group's last child in rest
           const gIdx = rest.findIndex(l => l.id === targetGroupId)
-          let insertIdx = gIdx + 1
-          for (let i = gIdx + 1; i < rest.length; i++) {
-            const child = rest[i]
-            const pid = getParentId(child)
-            if (pid === targetGroupId) insertIdx = i + 1
-            else break
-          }
-          rest.splice(insertIdx, 0, ...updatedBlock)
+          const rangeEnd = findGroupBlockEnd(rest, targetGroupId, gIdx)
+          const adjusted = newIndex > currentIndex ? newIndex - 1 : newIndex
+          const rawInsert = (adjusted >= gIdx + 1 && adjusted <= rangeEnd) ? adjusted : rangeEnd
+          rest.splice(snapPastSubBlocks(rest, rawInsert, gIdx, rangeEnd), 0, ...updatedBlock)
           return rest
         }
 
@@ -237,14 +262,10 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
         const next = [...prev]
         const [removed] = next.splice(currentIndex, 1)
         const gIdx = next.findIndex(l => l.id === targetGroupId)
-        let insertIdx = gIdx + 1
-        for (let i = gIdx + 1; i < next.length; i++) {
-          const child = next[i]
-          const pid = getParentId(child)
-          if (pid === targetGroupId) insertIdx = i + 1
-          else break
-        }
-        next.splice(insertIdx, 0, { ...removed, parentId: targetGroupId })
+        const rangeEnd = findGroupBlockEnd(next, targetGroupId, gIdx)
+        const adjusted = newIndex > currentIndex ? newIndex - 1 : newIndex
+        const rawInsert = (adjusted >= gIdx + 1 && adjusted <= rangeEnd) ? adjusted : rangeEnd
+        next.splice(snapPastSubBlocks(next, rawInsert, gIdx, rangeEnd), 0, { ...removed, parentId: targetGroupId })
         return next
       }
 

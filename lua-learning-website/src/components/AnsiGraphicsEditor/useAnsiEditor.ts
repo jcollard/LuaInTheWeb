@@ -1,12 +1,12 @@
 /* eslint-disable max-lines */
 import { useState, useCallback, useRef, useMemo } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
-import type { AnsiCell, BrushMode, DrawTool, BrushSettings, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG } from './types'
+import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions, DrawableLayer } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, isGroupLayer, isDrawableLayer } from './types'
 import type { ColorTransform, CellHalf } from './gridUtils'
 import { createEmptyGrid, writeCellToTerminal, renderFullGrid, isInBounds, getCellHalfFromMouse, computePixelCell, computeFloodFillCells } from './gridUtils'
 import { cgaQuantize } from './ansExport'
-import { compositeCell, compositeGrid, cloneLayerState } from './layerUtils'
+import { compositeCell, compositeGrid, cloneLayerState, isDefaultCell, getGroupDescendantLayers } from './layerUtils'
 import { useLayerState } from './useLayerState'
 import { loadPngPixels, rgbaToAnsiGrid } from './pngImport'
 import { createDrawHelpers } from './drawHelpers'
@@ -43,6 +43,10 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     replaceColors: rawReplaceColors,
     addTextLayer: rawAddTextLayer,
     updateTextLayer: rawUpdateTextLayer,
+    wrapInGroup: rawWrapInGroup,
+    removeFromGroup: rawRemoveFromGroup,
+    toggleGroupCollapsed: rawToggleGroupCollapsed,
+    applyMoveGrids: rawApplyMoveGrids,
   } = layerState
 
   const grid = useMemo(() => compositeGrid(layerState.layers), [layerState.layers])
@@ -69,7 +73,11 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const commitPendingSelectionRef = useRef<(() => void) | null>(null), commitPendingTextRef = useRef<(() => void) | null>(null)
   const containerRef = useRef<HTMLElement | null>(null), textToolRef = useRef<TextToolHandlers | null>(null), selHandlersRef = useRef<SelectionHandlers | null>(null)
   const updateTextBoundsDisplayRef = useRef<(() => void) | null>(null)
+  const moveStartRef = useRef<CellHalf | null>(null)
+  const moveCapturedRef = useRef<Map<string, Map<string, AnsiCell>>>(new Map())
+  const moveOrigGridsRef = useRef<Map<string, AnsiGrid>>(new Map())
   const [cgaPreview, setCgaPreviewRaw] = useState(false)
+  const [isMoveDragging, setIsMoveDragging] = useState(false)
   const colorTransformRef = useRef<ColorTransform | undefined>(undefined); colorTransformRef.current = cgaPreview ? cgaQuantize : undefined
 
   const pushSnapshot = useCallback(() => {
@@ -140,11 +148,14 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const addLayerWithUndo = useCallback(() => withLayerUndo(rawAddLayer, false), [withLayerUndo, rawAddLayer])
   const removeLayerWithUndo = useCallback((id: string) => withLayerUndo(() => rawRemoveLayer(id)), [withLayerUndo, rawRemoveLayer])
   const reorderLayerWithUndo = useCallback(
-    (id: string, newIndex: number) => withLayerUndo(() => rawReorderLayer(id, newIndex)),
+    (id: string, newIndex: number, targetGroupId?: string | null) => withLayerUndo(() => rawReorderLayer(id, newIndex, targetGroupId)),
     [withLayerUndo, rawReorderLayer],
   )
   const toggleVisibilityWithUndo = useCallback((id: string) => withLayerUndo(() => rawToggleVisibility(id)), [withLayerUndo, rawToggleVisibility])
   const mergeDownWithUndo = useCallback((id: string) => withLayerUndo(() => rawMergeDown(id)), [withLayerUndo, rawMergeDown])
+  const wrapInGroupWithUndo = useCallback((id: string) => withLayerUndo(() => rawWrapInGroup(id), false), [withLayerUndo, rawWrapInGroup])
+  const removeFromGroupWithUndo = useCallback((id: string) => withLayerUndo(() => rawRemoveFromGroup(id), false), [withLayerUndo, rawRemoveFromGroup])
+  const toggleGroupCollapsedNoUndo = useCallback((id: string) => rawToggleGroupCollapsed(id), [rawToggleGroupCollapsed])
 
   const importPngAsLayer = useCallback(async (file: File) => {
     const px = await loadPngPixels(file)
@@ -211,6 +222,13 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     function onKeyDown(e: KeyboardEvent): void {
       if (brushRef.current.tool === 'text') textTool.onKeyDown(e)
       else if (brushRef.current.tool === 'select') sel.onKeyDown(e)
+      else if (brushRef.current.tool === 'move' && e.key === 'Escape' && moveStartRef.current) {
+        moveStartRef.current = null
+        moveCapturedRef.current = new Map()
+        moveOrigGridsRef.current = new Map()
+        setIsMoveDragging(false)
+        undo()
+      }
     }
     document.addEventListener('keydown', onKeyDown)
 
@@ -291,6 +309,31 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           textTool.onMouseDown(cell.row, cell.col)
           break
         }
+        case 'move': {
+          if (!cell) return
+          pushSnapshot()
+          setIsMoveDragging(true)
+          moveStartRef.current = cell
+          moveCapturedRef.current = new Map()
+          moveOrigGridsRef.current = new Map()
+          const activeId = activeLayerIdRef.current
+          const activeLayer = layersRef.current.find(l => l.id === activeId)
+          const targets: DrawableLayer[] = activeLayer && isGroupLayer(activeLayer)
+            ? getGroupDescendantLayers(activeId, layersRef.current)
+            : layersRef.current.filter((l): l is DrawableLayer => isDrawableLayer(l) && l.id === activeId)
+          for (const target of targets) {
+            const captured = new Map<string, AnsiCell>()
+            for (let r = 0; r < ANSI_ROWS; r++) {
+              for (let c = 0; c < ANSI_COLS; c++) {
+                const cell = target.grid[r][c]
+                if (!isDefaultCell(cell)) captured.set(`${r},${c}`, cell)
+              }
+            }
+            moveCapturedRef.current.set(target.id, captured)
+            moveOrigGridsRef.current.set(target.id, target.grid.map(row => row.map(c => ({ ...c, fg: [...c.fg] as RGBColor, bg: [...c.bg] as RGBColor }))))
+          }
+          break
+        }
       }
       if (cell) draw.positionCursor(cell.row, cell.col, draw.cursorHalf(cell))
       document.addEventListener('mouseup', onDocumentMouseUp)
@@ -326,6 +369,29 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         case 'text':
           textTool.onMouseMove(cell.row, cell.col)
           break
+        case 'move': {
+          if (!moveStartRef.current) break
+          const dr = cell.row - moveStartRef.current.row
+          const dc = cell.col - moveStartRef.current.col
+          const updatedGrids = new Map<string, AnsiGrid>()
+          for (const [layerId, captured] of moveCapturedRef.current) {
+            const orig = moveOrigGridsRef.current.get(layerId)
+            if (!orig) continue
+            const newGrid: AnsiGrid = orig.map(row => row.map(() => ({ char: ' ', fg: [...DEFAULT_FG] as RGBColor, bg: [...DEFAULT_BG] as RGBColor })))
+            for (const [key, cellVal] of captured) {
+              const [rStr, cStr] = key.split(',')
+              const nr = parseInt(rStr, 10) + dr
+              const nc = parseInt(cStr, 10) + dc
+              if (nr >= 0 && nr < ANSI_ROWS && nc >= 0 && nc < ANSI_COLS) {
+                newGrid[nr][nc] = { char: cellVal.char, fg: [...cellVal.fg] as RGBColor, bg: [...cellVal.bg] as RGBColor }
+              }
+            }
+            updatedGrids.set(layerId, newGrid)
+          }
+          rawApplyMoveGrids(updatedGrids)
+          if (handleRef.current) renderFullGrid(handleRef.current, compositeGrid(layersRef.current), colorTransformRef.current)
+          break
+        }
       }
     }
 
@@ -368,6 +434,37 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         case 'text':
           textTool.onMouseUp()
           break
+        case 'move': {
+          if (!moveStartRef.current) break
+          const endCell = getCellHalfFromMouse(e, container)
+          const dr = endCell ? endCell.row - moveStartRef.current.row : 0
+          const dc = endCell ? endCell.col - moveStartRef.current.col : 0
+          if (dr === 0 && dc === 0) {
+            // No movement — pop undo snapshot
+            undo()
+          } else {
+            // Update text layer bounds for any moved text layers
+            for (const [layerId] of moveCapturedRef.current) {
+              const layer = layersRef.current.find(l => l.id === layerId)
+              if (layer?.type === 'text') {
+                rawUpdateTextLayer(layerId, {
+                  bounds: {
+                    r0: layer.bounds.r0 + dr,
+                    c0: layer.bounds.c0 + dc,
+                    r1: layer.bounds.r1 + dr,
+                    c1: layer.bounds.c1 + dc,
+                  },
+                })
+              }
+            }
+            setIsDirty(true)
+          }
+          moveStartRef.current = null
+          moveCapturedRef.current = new Map()
+          moveOrigGridsRef.current = new Map()
+          setIsMoveDragging(false)
+          break
+        }
       }
     }
 
@@ -387,20 +484,25 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       document.removeEventListener('keydown', onKeyDown)
       textTool.commitIfEditing()
     }
-  }, [paintCell, paintPixel, applyCell, pushSnapshot, layersRef, activeLayerIdRef, getActiveGrid, rawAddTextLayer, rawUpdateTextLayer])
+  }, [paintCell, paintPixel, applyCell, pushSnapshot, layersRef, activeLayerIdRef, getActiveGrid, rawAddTextLayer, rawUpdateTextLayer, undo, rawApplyMoveGrids])
 
   const setActiveLayerWithBounds = useCallback((id: string) => {
     commitPendingTextRef.current?.()
+    const prevLayer = layersRef.current.find(l => l.id === activeLayerIdRef.current)
     layerState.setActiveLayer(id)
     const layer = layersRef.current.find(l => l.id === id)
-    if (layer?.type === 'text') {
+    if (layer && isGroupLayer(layer)) {
+      setBrush(p => p.tool === 'move' ? p : ({ ...p, tool: 'move' }))
+    } else if (layer?.type === 'text') {
       setBrush(p => p.tool === 'text' ? p : ({ ...p, tool: 'text' }))
+    } else if (brushRef.current.tool === 'move' && prevLayer && isGroupLayer(prevLayer)) {
+      setBrush(p => ({ ...p, tool: 'pencil' }))
     } else if (brushRef.current.tool === 'text') {
       setBrush(p => ({ ...p, tool: 'pencil' }))
     }
     updateTextBoundsDisplayRef.current?.()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layerState.setActiveLayer, layersRef])
+  }, [layerState.setActiveLayer, layersRef, activeLayerIdRef])
 
   const setTextAlign = useCallback((align: TextAlign) => {
     const activeId = activeLayerIdRef.current
@@ -441,6 +543,9 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     }
   }, [attachMouseListeners, layersRef])
 
+  const activeLayer = layerState.layers.find(l => l.id === layerState.activeLayerId)
+  const activeLayerIsGroup = activeLayer ? isGroupLayer(activeLayer) : false
+
   return {
     grid, brush, setBrushFg, setBrushBg, setBrushChar, setBrushMode, setTool, clearGrid,
     isDirty, markClean, onTerminalReady, cursorRef, dimensionRef, selectionRef, textBoundsRef, textCursorRef,
@@ -450,7 +555,10 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     renameLayer: layerState.renameLayer, setActiveLayer: setActiveLayerWithBounds,
     reorderLayer: reorderLayerWithUndo,
     toggleVisibility: toggleVisibilityWithUndo, mergeDown: mergeDownWithUndo,
+    wrapInGroup: wrapInGroupWithUndo, removeFromGroup: removeFromGroupWithUndo,
+    toggleGroupCollapsed: toggleGroupCollapsedNoUndo,
     importPngAsLayer, simplifyColors, setTextAlign, flipSelectionHorizontal, flipSelectionVertical,
+    activeLayerIsGroup, isMoveDragging,
     cgaPreview, setCgaPreview,
   }
 }
