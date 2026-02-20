@@ -45,16 +45,21 @@ function buildShiftedGrids(
   return result
 }
 
+function singleLayerState(id: string, grid: AnsiGrid): LayerState {
+  return {
+    layers: [{
+      type: 'drawn', id, name: 'Background', visible: true,
+      grid, frames: [grid], currentFrameIndex: 0, frameDurationMs: DEFAULT_FRAME_DURATION_MS,
+    }],
+    activeLayerId: id,
+  }
+}
+
 export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorReturn {
   const initialState = useMemo((): LayerState | undefined => {
     if (options?.initialLayerState) return options.initialLayerState
     if (options?.initialGrid) {
-      const id = 'initial-bg'
-      const grid = options.initialGrid
-      return {
-        layers: [{ type: 'drawn' as const, id, name: 'Background', visible: true, grid, frames: [grid], currentFrameIndex: 0, frameDurationMs: DEFAULT_FRAME_DURATION_MS }],
-        activeLayerId: id,
-      }
+      return singleLayerState('initial-bg', options.initialGrid)
     }
     return undefined
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -175,8 +180,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const clearGrid = useCallback(() => {
     pushSnapshot()
     const emptyGrid = createEmptyGrid()
-    const id = 'clear-bg-' + Date.now()
-    restoreLayerState({ layers: [{ type: 'drawn', id, name: 'Background', visible: true, grid: emptyGrid, frames: [emptyGrid], currentFrameIndex: 0, frameDurationMs: DEFAULT_FRAME_DURATION_MS }], activeLayerId: id })
+    restoreLayerState(singleLayerState('clear-bg-' + Date.now(), emptyGrid))
     setIsDirty(false)
     terminalBufferRef.current.flush(emptyGrid, colorTransformRef.current)
   }, [pushSnapshot, restoreLayerState])
@@ -213,7 +217,6 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     terminalBufferRef.current.flush(compositeGrid(layersRef.current), colorTransformRef.current)
   }, [rawSetCurrentFrame, layersRef])
   const reorderFrameWithUndo = useCallback((from: number, to: number) => withLayerUndo(() => rawReorderFrame(from, to)), [withLayerUndo, rawReorderFrame])
-  const setFrameDurationNoUndo = useCallback((ms: number) => rawSetFrameDuration(ms), [rawSetFrameDuration])
 
   const stopPlayback = useCallback(() => {
     if (playbackTimerRef.current !== null) {
@@ -663,7 +666,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     cgaPreview, setCgaPreview,
     addFrame: addFrameWithUndo, duplicateFrame: duplicateFrameWithUndo,
     removeFrame: removeFrameWithUndo, setCurrentFrame: setCurrentFrameWithUndo,
-    reorderFrame: reorderFrameWithUndo, setFrameDuration: setFrameDurationNoUndo,
+    reorderFrame: reorderFrameWithUndo, setFrameDuration: rawSetFrameDuration,
     isPlaying, togglePlayback,
     activeLayerFrameCount, activeLayerCurrentFrame, activeLayerFrameDuration,
   }

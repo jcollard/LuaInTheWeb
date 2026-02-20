@@ -31,7 +31,9 @@ export function serializeLayers(state: LayerState): string {
     if (isGroupLayer(l) && l.parentId) return true
     return false
   })
-  const version = needsV5(state) ? 5 : (hasGroups || hasParentId) ? 4 : 3
+  let version = 3
+  if (needsV5(state)) version = 5
+  else if (hasGroups || hasParentId) version = 4
   const layers = state.layers.map(layer => {
     if (isGroupLayer(layer)) {
       const serialized: Record<string, unknown> = {

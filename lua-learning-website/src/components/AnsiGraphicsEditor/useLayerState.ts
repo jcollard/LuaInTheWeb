@@ -7,6 +7,13 @@ import { createEmptyGrid, cloneGrid } from './gridUtils'
 import { replaceColorsInGrid } from './colorUtils'
 import { renderTextLayerGrid } from './textLayerGrid'
 
+/** Return a new DrawnLayer with its current frame replaced by newGrid, keeping frames in sync. */
+function withUpdatedFrame(layer: DrawnLayer, newGrid: AnsiGrid): DrawnLayer {
+  const newFrames = [...layer.frames]
+  newFrames[layer.currentFrameIndex] = newGrid
+  return { ...layer, grid: newGrid, frames: newFrames }
+}
+
 /** Compute the clamped insertion position within a group's contiguous block. */
 function computeGroupInsertPos(
   layers: Layer[], targetGroupId: string, rawNewIndex: number, sourceIndex: number,
@@ -333,9 +340,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
       if (l.type !== 'drawn') return l
       const newGrid = layerGrids.get(l.id)
       if (!newGrid) return l
-      const newFrames = [...l.frames]
-      newFrames[l.currentFrameIndex] = newGrid
-      return { ...l, grid: newGrid, frames: newFrames }
+      return withUpdatedFrame(l, newGrid)
     })
   }, [layersRef])
 
@@ -355,9 +360,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
       newRow[col] = { ...cell, fg: [...cell.fg] as RGBColor, bg: [...cell.bg] as RGBColor }
       const newGrid = [...l.grid]
       newGrid[row] = newRow
-      const newFrames = [...l.frames]
-      newFrames[l.currentFrameIndex] = newGrid
-      return { ...l, grid: newGrid, frames: newFrames }
+      return withUpdatedFrame(l, newGrid)
     })
     layersRef.current = newLayers // sync update for compositing in same handler
     setLayers(newLayers)
@@ -369,11 +372,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
       if (!isDrawableLayer(l)) return l
       if (scope === 'layer' && l.id !== activeId) return l
       const newGrid = replaceColorsInGrid(l.grid, mapping)
-      if (l.type === 'drawn') {
-        const newFrames = [...l.frames]
-        newFrames[l.currentFrameIndex] = newGrid
-        return { ...l, grid: newGrid, frames: newFrames }
-      }
+      if (l.type === 'drawn') return withUpdatedFrame(l, newGrid)
       return { ...l, grid: newGrid }
     })
     layersRef.current = newLayers
@@ -400,68 +399,58 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     setActiveLayerId(state.activeLayerId)
   }, [])
 
-  const addFrame = useCallback(() => {
+  const updateActiveDrawnLayer = useCallback((updater: (layer: DrawnLayer) => DrawnLayer) => {
     const activeId = activeLayerIdRef.current
     const newLayers = layersRef.current.map(l => {
       if (l.id !== activeId || l.type !== 'drawn') return l
-      const newGrid = createEmptyGrid()
-      const newFrames = [...l.frames, newGrid]
-      const newIndex = newFrames.length - 1
-      return { ...l, grid: newGrid, frames: newFrames, currentFrameIndex: newIndex } satisfies DrawnLayer
+      return updater(l)
     })
     layersRef.current = newLayers
     setLayers(newLayers)
   }, [])
 
+  const addFrame = useCallback(() => {
+    updateActiveDrawnLayer(l => {
+      const newGrid = createEmptyGrid()
+      const newFrames = [...l.frames, newGrid]
+      return { ...l, grid: newGrid, frames: newFrames, currentFrameIndex: newFrames.length - 1 }
+    })
+  }, [updateActiveDrawnLayer])
+
   const duplicateFrame = useCallback(() => {
-    const activeId = activeLayerIdRef.current
-    const newLayers = layersRef.current.map(l => {
-      if (l.id !== activeId || l.type !== 'drawn') return l
+    updateActiveDrawnLayer(l => {
       const cloned = cloneGrid(l.frames[l.currentFrameIndex])
       const newFrames = [...l.frames]
       const newIndex = l.currentFrameIndex + 1
       newFrames.splice(newIndex, 0, cloned)
-      return { ...l, grid: cloned, frames: newFrames, currentFrameIndex: newIndex } satisfies DrawnLayer
+      return { ...l, grid: cloned, frames: newFrames, currentFrameIndex: newIndex }
     })
-    layersRef.current = newLayers
-    setLayers(newLayers)
-  }, [])
+  }, [updateActiveDrawnLayer])
 
   const removeFrame = useCallback(() => {
-    const activeId = activeLayerIdRef.current
-    const newLayers = layersRef.current.map(l => {
-      if (l.id !== activeId || l.type !== 'drawn') return l
+    updateActiveDrawnLayer(l => {
       if (l.frames.length <= 1) return l
       const newFrames = [...l.frames]
       newFrames.splice(l.currentFrameIndex, 1)
       const newIndex = Math.min(l.currentFrameIndex, newFrames.length - 1)
-      return { ...l, grid: newFrames[newIndex], frames: newFrames, currentFrameIndex: newIndex } satisfies DrawnLayer
+      return { ...l, grid: newFrames[newIndex], frames: newFrames, currentFrameIndex: newIndex }
     })
-    layersRef.current = newLayers
-    setLayers(newLayers)
-  }, [])
+  }, [updateActiveDrawnLayer])
 
   const setCurrentFrame = useCallback((index: number) => {
-    const activeId = activeLayerIdRef.current
-    const newLayers = layersRef.current.map(l => {
-      if (l.id !== activeId || l.type !== 'drawn') return l
+    updateActiveDrawnLayer(l => {
       const clamped = Math.max(0, Math.min(l.frames.length - 1, index))
       if (clamped === l.currentFrameIndex) return l
-      return { ...l, grid: l.frames[clamped], currentFrameIndex: clamped } satisfies DrawnLayer
+      return { ...l, grid: l.frames[clamped], currentFrameIndex: clamped }
     })
-    layersRef.current = newLayers
-    setLayers(newLayers)
-  }, [])
+  }, [updateActiveDrawnLayer])
 
   const reorderFrame = useCallback((from: number, to: number) => {
-    const activeId = activeLayerIdRef.current
-    const newLayers = layersRef.current.map(l => {
-      if (l.id !== activeId || l.type !== 'drawn') return l
+    updateActiveDrawnLayer(l => {
       if (from < 0 || from >= l.frames.length || to < 0 || to >= l.frames.length || from === to) return l
       const newFrames = [...l.frames]
       const [moved] = newFrames.splice(from, 1)
       newFrames.splice(to, 0, moved)
-      // Adjust currentFrameIndex to follow the currently selected frame
       let newIndex = l.currentFrameIndex
       if (l.currentFrameIndex === from) {
         newIndex = to
@@ -470,22 +459,14 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
       } else if (from > l.currentFrameIndex && to <= l.currentFrameIndex) {
         newIndex = l.currentFrameIndex + 1
       }
-      return { ...l, grid: newFrames[newIndex], frames: newFrames, currentFrameIndex: newIndex } satisfies DrawnLayer
+      return { ...l, grid: newFrames[newIndex], frames: newFrames, currentFrameIndex: newIndex }
     })
-    layersRef.current = newLayers
-    setLayers(newLayers)
-  }, [])
+  }, [updateActiveDrawnLayer])
 
   const setFrameDuration = useCallback((ms: number) => {
-    const activeId = activeLayerIdRef.current
     const clamped = Math.max(MIN_FRAME_DURATION_MS, Math.min(MAX_FRAME_DURATION_MS, ms))
-    const newLayers = layersRef.current.map(l => {
-      if (l.id !== activeId || l.type !== 'drawn') return l
-      return { ...l, frameDurationMs: clamped } satisfies DrawnLayer
-    })
-    layersRef.current = newLayers
-    setLayers(newLayers)
-  }, [])
+    updateActiveDrawnLayer(l => ({ ...l, frameDurationMs: clamped }))
+  }, [updateActiveDrawnLayer])
 
   return {
     layers,

@@ -35,6 +35,7 @@ export function AnsiEditorToolbar({
   onImportPng, onExportAns, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
   onFlipHorizontal, onFlipVertical, onSetBorderStyle, cgaPreview, onToggleCgaPreview, activeLayerIsGroup, isPlaying,
 }: AnsiEditorToolbarProps) {
+  const toolsDisabled = activeLayerIsGroup || isPlaying
   const isRectActive = brush.tool === 'rect-outline' || brush.tool === 'rect-filled'
   const isOvalActive = brush.tool === 'oval-outline' || brush.tool === 'oval-filled'
   const isBorderActive = brush.tool === 'border'
@@ -52,7 +53,7 @@ export function AnsiEditorToolbar({
           onClick={() => onSetTool('pencil')}
           title="Pencil"
           data-testid="tool-pencil"
-          disabled={activeLayerIsGroup || isPlaying}
+          disabled={toolsDisabled}
         >
           ✏
         </button>
@@ -63,7 +64,7 @@ export function AnsiEditorToolbar({
           onClick={() => onSetTool('line')}
           title="Line"
           data-testid="tool-line"
-          disabled={activeLayerIsGroup || isPlaying}
+          disabled={toolsDisabled}
         >
           ╱
         </button>
@@ -163,7 +164,7 @@ export function AnsiEditorToolbar({
           onClick={() => onSetTool('flood-fill')}
           title="Flood Fill"
           data-testid="tool-flood-fill"
-          disabled={activeLayerIsGroup || isPlaying}
+          disabled={toolsDisabled}
         >
           Fill
         </button>
@@ -174,7 +175,7 @@ export function AnsiEditorToolbar({
           onClick={() => onSetTool('select')}
           title="Select"
           data-testid="tool-select"
-          disabled={activeLayerIsGroup || isPlaying}
+          disabled={toolsDisabled}
         >
           ⬚
         </button>
@@ -185,7 +186,7 @@ export function AnsiEditorToolbar({
           onClick={() => onSetTool('eyedropper')}
           title="Eyedropper"
           data-testid="tool-eyedropper"
-          disabled={activeLayerIsGroup || isPlaying}
+          disabled={toolsDisabled}
         >
           ⚗
         </button>
@@ -196,7 +197,7 @@ export function AnsiEditorToolbar({
           onClick={() => onSetTool('text')}
           title="Text"
           data-testid="tool-text"
-          disabled={activeLayerIsGroup || isPlaying}
+          disabled={toolsDisabled}
         >
           T
         </button>

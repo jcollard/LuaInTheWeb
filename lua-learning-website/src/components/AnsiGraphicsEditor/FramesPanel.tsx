@@ -81,7 +81,7 @@ export function FramesPanel({
             key={i}
             type="button"
             className={`${styles.frameCell} ${i === currentFrame ? styles.frameCellActive : ''}`}
-            onClick={() => { if (!isPlaying) onSelectFrame(i) }}
+            onClick={() => onSelectFrame(i)}
             disabled={isPlaying}
             data-testid={`frame-cell-${i}`}
           >
