@@ -1,7 +1,8 @@
-import { useState, useCallback, useEffect, Fragment } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import type { Layer } from './types'
 import { isGroupLayer, isDrawableLayer, getParentId } from './types'
-import { getAncestorGroupIds, getGroupDescendantIds, getNestingDepth, isAncestorOf } from './layerUtils'
+import { getAncestorGroupIds, getGroupDescendantIds, getNestingDepth, isAncestorOf, buildDisplayOrder } from './layerUtils'
+import { LayerRow } from './LayerRow'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface LayersPanelProps {
@@ -149,28 +150,7 @@ export function LayersPanel({
   }
 
   // Display layers in reverse order with recursive tree-walk
-  // Build parentId → children[] map from reversed array
-  const childrenMap = new Map<string | undefined, Layer[]>()
-  const rawReversed = [...layers].reverse()
-  for (const layer of rawReversed) {
-    const pid = getParentId(layer)
-    const existing = childrenMap.get(pid) ?? []
-    existing.push(layer)
-    childrenMap.set(pid, existing)
-  }
-  // DFS from roots, emitting group before its children at each level
-  const reversed: Layer[] = []
-  function buildDisplayOrder(parentId: string | undefined): void {
-    const children = childrenMap.get(parentId)
-    if (!children) return
-    for (const layer of children) {
-      reversed.push(layer)
-      if (isGroupLayer(layer)) {
-        buildDisplayOrder(layer.id)
-      }
-    }
-  }
-  buildDisplayOrder(undefined)
+  const reversed = buildDisplayOrder(layers)
   const drawableCount = layers.filter(isDrawableLayer).length
   const singleDrawable = drawableCount <= 1
   const singleLayer = layers.length <= 1
@@ -236,156 +216,36 @@ export function LayersPanel({
             />
           )
 
-          if (isGroup) {
-            return (
-              <Fragment key={layer.id}>
-                {dropZone}
-                <div
-                  data-testid={`layer-row-${layer.id}`}
-                  className={rowClassName}
-                  style={depthStyle}
-                  onClick={() => onSetActive(layer.id)}
-                  onContextMenu={e => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    setContextMenu({ layerId: layer.id, x: e.clientX, y: e.clientY })
-                  }}
-                  onDragOver={e => handleDragOverGroup(e, layer.id)}
-                  onDrop={e => handleDropOnGroup(e, layer.id)}
-                >
-                  {!singleLayer && (
-                    <span
-                      className={styles.layerDragHandle}
-                      data-testid={`layer-grip-${layer.id}`}
-                      draggable
-                      onDragStart={e => { e.stopPropagation(); handleDragStart(e, layer.id) }}
-                      onDragEnd={handleDragEnd}
-                      title="Drag to reorder"
-                    >&#x2630;</span>
-                  )}
-                  <button
-                    className={styles.layerGroupToggle}
-                    data-testid={`group-toggle-${layer.id}`}
-                    onClick={e => { e.stopPropagation(); onToggleGroupCollapsed(layer.id) }}
-                    aria-label={layer.collapsed ? 'Expand group' : 'Collapse group'}
-                    title={layer.collapsed ? 'Expand group' : 'Collapse group'}
-                  >
-                    {layer.collapsed ? '\u25B6' : '\u25BC'}
-                  </button>
-                  <button
-                    className={styles.layerVisibility}
-                    onClick={e => { e.stopPropagation(); onToggleVisibility(layer.id) }}
-                    aria-label="Toggle visibility"
-                    title="Toggle visibility"
-                  >
-                    {layer.visible ? '\u{1F441}' : '\u{1F441}\u{200D}\u{1F5E8}'}
-                  </button>
-                  <span className={styles.layerTypeBadge} data-testid="group-layer-badge">
-                    {'\uD83D\uDCC1'}
-                  </span>
-                  <span
-                    className={styles.layerName}
-                    onDoubleClick={e => { e.stopPropagation(); startRename(layer.id, layer.name) }}
-                  >
-                    {isEditing ? (
-                      <input
-                        role="textbox"
-                        className={styles.layerNameInput}
-                        value={editValue}
-                        onChange={e => setEditValue(e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') commitRename()
-                          if (e.key === 'Escape') cancelRename()
-                        }}
-                        onBlur={commitRename}
-                        autoFocus
-                        onClick={e => e.stopPropagation()}
-                      />
-                    ) : (
-                      layer.name
-                    )}
-                  </span>
-                  <button
-                    className={styles.layerBtn}
-                    onClick={e => { e.stopPropagation(); onRemove(layer.id) }}
-                    aria-label="Delete group"
-                    title="Delete group (children promoted to root)"
-                  >
-                    &#x1F5D1;
-                  </button>
-                </div>
-              </Fragment>
-            )
-          }
-
           return (
-            <Fragment key={layer.id}>
-              {dropZone}
-              <div
-                data-testid={`layer-row-${layer.id}`}
-                className={rowClassName}
-                style={depthStyle}
-                onClick={() => onSetActive(layer.id)}
-                onContextMenu={e => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  setContextMenu({ layerId: layer.id, x: e.clientX, y: e.clientY })
-                }}
-              >
-                {!singleLayer && (
-                  <span
-                    className={styles.layerDragHandle}
-                    data-testid={`layer-grip-${layer.id}`}
-                    draggable
-                    onDragStart={e => { e.stopPropagation(); handleDragStart(e, layer.id) }}
-                    onDragEnd={handleDragEnd}
-                    title="Drag to reorder"
-                  >&#x2630;</span>
-                )}
-                <button
-                  className={styles.layerVisibility}
-                  onClick={e => { e.stopPropagation(); onToggleVisibility(layer.id) }}
-                  aria-label="Toggle visibility"
-                  title="Toggle visibility"
-                >
-                  {layer.visible ? '\u{1F441}' : '\u{1F441}\u{200D}\u{1F5E8}'}
-                </button>
-                {layer.type === 'text' && (
-                  <span className={styles.layerTypeBadge} data-testid="text-layer-badge">T</span>
-                )}
-                <span
-                  className={styles.layerName}
-                  onDoubleClick={e => { e.stopPropagation(); startRename(layer.id, layer.name) }}
-                >
-                  {isEditing ? (
-                    <input
-                      role="textbox"
-                      className={styles.layerNameInput}
-                      value={editValue}
-                      onChange={e => setEditValue(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') commitRename()
-                        if (e.key === 'Escape') cancelRename()
-                      }}
-                      onBlur={commitRename}
-                      autoFocus
-                      onClick={e => e.stopPropagation()}
-                    />
-                  ) : (
-                    layer.name
-                  )}
-                </span>
-                <button
-                  className={styles.layerBtn}
-                  onClick={e => { e.stopPropagation(); onRemove(layer.id) }}
-                  aria-label="Delete layer"
-                  title="Delete layer"
-                  disabled={singleDrawable}
-                >
-                  &#x1F5D1;
-                </button>
-              </div>
-            </Fragment>
+            <LayerRow
+              key={layer.id}
+              layer={layer}
+              isActive={isActive}
+              isEditing={isEditing}
+              singleLayer={singleLayer}
+              singleDrawable={singleDrawable}
+              depthStyle={depthStyle}
+              rowClassName={rowClassName}
+              editValue={editValue}
+              dropZone={dropZone}
+              onSetActive={() => onSetActive(layer.id)}
+              onContextMenu={e => {
+                e.preventDefault()
+                e.stopPropagation()
+                setContextMenu({ layerId: layer.id, x: e.clientX, y: e.clientY })
+              }}
+              onToggleVisibility={() => onToggleVisibility(layer.id)}
+              onRemove={() => onRemove(layer.id)}
+              onDragStart={e => handleDragStart(e, layer.id)}
+              onDragEnd={handleDragEnd}
+              onStartRename={() => startRename(layer.id, layer.name)}
+              onEditChange={setEditValue}
+              onCommitRename={commitRename}
+              onCancelRename={cancelRename}
+              onDragOverGroup={isGroup ? e => handleDragOverGroup(e, layer.id) : undefined}
+              onDropOnGroup={isGroup ? e => handleDropOnGroup(e, layer.id) : undefined}
+              onToggleCollapsed={isGroup ? () => onToggleGroupCollapsed(layer.id) : undefined}
+            />
           )
         })}
       </div>

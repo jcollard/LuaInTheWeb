@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import { describe, it, expect } from 'vitest'
-import { isDefaultCell, createLayer, createGroup, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, syncLayerIds, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf } from './layerUtils'
+import { isDefaultCell, createLayer, createGroup, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, syncLayerIds, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, buildDisplayOrder, assertContiguousBlocks } from './layerUtils'
 import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer } from './types'
 import type { AnsiCell, DrawableLayer, DrawnLayer, RGBColor, Layer, LayerState, TextLayer, GroupLayer } from './types'
 
@@ -996,5 +996,174 @@ describe('cloneLayerState preserves parentId on groups', () => {
     const clone = cloneLayerState(state)
     const clonedInner = clone.layers[1] as GroupLayer
     expect(clonedInner.parentId).toBe('g-outer')
+  })
+})
+
+describe('findGroupBlockEnd', () => {
+  it('returns startIdx+1 for a group with no children', () => {
+    const g = createGroup('G', 'g1')
+    const l = createLayer('L', 'l1')
+    const layers: Layer[] = [l, g]
+    expect(findGroupBlockEnd(layers, 'g1', 1)).toBe(2)
+  })
+
+  it('includes direct children in the block', () => {
+    const g = createGroup('G', 'g1')
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g1' }
+    const l2 = { ...createLayer('L2', 'l2'), parentId: 'g1' }
+    const layers: Layer[] = [g, l1, l2]
+    expect(findGroupBlockEnd(layers, 'g1', 0)).toBe(3)
+  })
+
+  it('includes nested sub-groups and their children', () => {
+    const g = createGroup('G', 'g1')
+    const sub: GroupLayer = { ...createGroup('Sub', 'g2'), parentId: 'g1' }
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g2' }
+    const layers: Layer[] = [g, sub, l1]
+    expect(findGroupBlockEnd(layers, 'g1', 0)).toBe(3)
+  })
+
+  it('stops at a layer not belonging to the group', () => {
+    const g = createGroup('G', 'g1')
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g1' }
+    const l2 = createLayer('L2', 'l2')
+    const layers: Layer[] = [g, l1, l2]
+    expect(findGroupBlockEnd(layers, 'g1', 0)).toBe(2)
+  })
+})
+
+describe('snapPastSubBlocks', () => {
+  it('returns pos unchanged when not inside a sub-group block', () => {
+    const g = createGroup('G', 'g1')
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g1' }
+    const layers: Layer[] = [g, l1]
+    expect(snapPastSubBlocks(layers, 1, 0, 2)).toBe(1)
+  })
+
+  it('snaps past sub-group block when pos falls inside it', () => {
+    const g = createGroup('G', 'g1')
+    const sub: GroupLayer = { ...createGroup('Sub', 'g2'), parentId: 'g1' }
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g2' }
+    const l2 = { ...createLayer('L2', 'l2'), parentId: 'g1' }
+    const layers: Layer[] = [g, sub, l1, l2]
+    // pos=2 falls inside sub-group [1,3), should snap to 3
+    expect(snapPastSubBlocks(layers, 2, 0, 4)).toBe(3)
+  })
+
+  it('returns pos when pos is at sub-group start (not strictly inside)', () => {
+    const g = createGroup('G', 'g1')
+    const sub: GroupLayer = { ...createGroup('Sub', 'g2'), parentId: 'g1' }
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g2' }
+    const layers: Layer[] = [g, sub, l1]
+    // pos=1 is AT the sub-group, not strictly inside it
+    expect(snapPastSubBlocks(layers, 1, 0, 3)).toBe(1)
+  })
+})
+
+describe('extractGroupBlock', () => {
+  it('extracts a group and all its descendants', () => {
+    const g = createGroup('G', 'g1')
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g1' }
+    const l2 = createLayer('L2', 'l2')
+    const layers: Layer[] = [l2, g, l1]
+    const { block, rest } = extractGroupBlock(layers, 'g1')
+    expect(block.map(l => l.id)).toEqual(['g1', 'l1'])
+    expect(rest.map(l => l.id)).toEqual(['l2'])
+  })
+
+  it('includes nested sub-groups in the block', () => {
+    const g = createGroup('G', 'g1')
+    const sub: GroupLayer = { ...createGroup('Sub', 'g2'), parentId: 'g1' }
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g2' }
+    const l2 = createLayer('L2', 'l2')
+    const layers: Layer[] = [l2, g, sub, l1]
+    const { block, rest } = extractGroupBlock(layers, 'g1')
+    expect(block.map(l => l.id)).toEqual(['g1', 'g2', 'l1'])
+    expect(rest.map(l => l.id)).toEqual(['l2'])
+  })
+
+  it('preserves relative order within block and rest', () => {
+    const l0 = createLayer('L0', 'l0')
+    const g = createGroup('G', 'g1')
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g1' }
+    const l2 = { ...createLayer('L2', 'l2'), parentId: 'g1' }
+    const l3 = createLayer('L3', 'l3')
+    const layers: Layer[] = [l0, g, l1, l2, l3]
+    const { block, rest } = extractGroupBlock(layers, 'g1')
+    expect(block.map(l => l.id)).toEqual(['g1', 'l1', 'l2'])
+    expect(rest.map(l => l.id)).toEqual(['l0', 'l3'])
+  })
+})
+
+describe('buildDisplayOrder', () => {
+  it('returns root-only layers in reverse order', () => {
+    const l1 = createLayer('L1', 'l1')
+    const l2 = createLayer('L2', 'l2')
+    const layers: Layer[] = [l1, l2]
+    const result = buildDisplayOrder(layers)
+    expect(result.map(l => l.id)).toEqual(['l2', 'l1'])
+  })
+
+  it('places group children directly after the group (reversed)', () => {
+    const l0 = createLayer('L0', 'l0')
+    const g = createGroup('G', 'g1')
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g1' }
+    const l2 = { ...createLayer('L2', 'l2'), parentId: 'g1' }
+    const layers: Layer[] = [l0, g, l1, l2]
+    const result = buildDisplayOrder(layers)
+    // Display order reverses the array but keeps tree structure
+    // Reversed: [l2(g1), l1(g1), g1, l0] → DFS: g1 → l2, l1; then l0
+    expect(result.map(l => l.id)).toEqual(['g1', 'l2', 'l1', 'l0'])
+  })
+
+  it('handles nested groups', () => {
+    const l0 = createLayer('L0', 'l0')
+    const g1 = createGroup('G1', 'g1')
+    const g2: GroupLayer = { ...createGroup('G2', 'g2'), parentId: 'g1' }
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g2' }
+    const layers: Layer[] = [l0, g1, g2, l1]
+    const result = buildDisplayOrder(layers)
+    // Reversed: [l1(g2), g2(g1), g1, l0] → DFS: g1 → g2 → l1; then l0
+    expect(result.map(l => l.id)).toEqual(['g1', 'g2', 'l1', 'l0'])
+  })
+
+  it('returns empty array for empty input', () => {
+    expect(buildDisplayOrder([])).toEqual([])
+  })
+
+  it('handles multiple root groups', () => {
+    const g1 = createGroup('G1', 'g1')
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g1' }
+    const g2 = createGroup('G2', 'g2')
+    const l2 = { ...createLayer('L2', 'l2'), parentId: 'g2' }
+    const layers: Layer[] = [g1, l1, g2, l2]
+    const result = buildDisplayOrder(layers)
+    // Reversed: [l2(g2), g2, l1(g1), g1] → DFS: g2 → l2; g1 → l1
+    expect(result.map(l => l.id)).toEqual(['g2', 'l2', 'g1', 'l1'])
+  })
+})
+
+describe('assertContiguousBlocks', () => {
+  it('does not throw for valid contiguous blocks', () => {
+    const g = createGroup('G', 'g1')
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g1' }
+    const l2 = createLayer('L2', 'l2')
+    const layers: Layer[] = [l2, g, l1]
+    expect(() => assertContiguousBlocks(layers)).not.toThrow()
+  })
+
+  it('does not throw for root-only layers', () => {
+    const l1 = createLayer('L1', 'l1')
+    const l2 = createLayer('L2', 'l2')
+    expect(() => assertContiguousBlocks([l1, l2])).not.toThrow()
+  })
+
+  it('throws when a group child is separated from its group', () => {
+    const g = createGroup('G', 'g1')
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g1' }
+    const l2 = createLayer('L2', 'l2')
+    // l1 is separated from g by l2
+    const layers: Layer[] = [g, l2, l1]
+    expect(() => assertContiguousBlocks(layers)).toThrow()
   })
 })

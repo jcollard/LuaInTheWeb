@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import type { AnsiCell, AnsiGrid, DrawableLayer, Layer, LayerState, RGBColor, Rect, TextAlign, TextLayer } from './types'
 import { isGroupLayer, isDrawableLayer, getParentId } from './types'
-import { createLayer, createGroup, cloneLayerState, syncLayerIds, mergeLayerDown, getGroupDescendantIds, isAncestorOf } from './layerUtils'
+import { createLayer, createGroup, cloneLayerState, syncLayerIds, mergeLayerDown, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, assertContiguousBlocks } from './layerUtils'
 import { replaceColorsInGrid } from './colorUtils'
 import { renderTextLayerGrid } from './textLayerGrid'
 
@@ -155,127 +155,87 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
 
   const reorderLayer = useCallback((id: string, newIndex: number, targetGroupId?: string | null) => {
     setLayers(prev => {
-      const currentIndex = prev.findIndex(l => l.id === id)
-      if (currentIndex < 0) return prev
+      const result = ((): Layer[] => {
+        const currentIndex = prev.findIndex(l => l.id === id)
+        if (currentIndex < 0) return prev
 
-      const layer = prev[currentIndex]
+        const layer = prev[currentIndex]
 
-      // Find the end index (exclusive) of a group's full nested block,
-      // including all recursive descendants (not just direct children).
-      function findGroupBlockEnd(arr: Layer[], groupId: string, startIdx: number): number {
-        let end = startIdx + 1
-        const tracked = new Set([groupId])
-        for (let i = startIdx + 1; i < arr.length; i++) {
-          const pid = getParentId(arr[i])
-          if (pid !== undefined && tracked.has(pid)) {
-            end = i + 1
-            if (isGroupLayer(arr[i])) tracked.add(arr[i].id)
-          } else {
-            break
-          }
-        }
-        return end
-      }
-
-      // If insertAt falls strictly inside a nested sub-group's block, snap it
-      // to the end of that block so we never split a sub-group's contiguous range.
-      function snapPastSubBlocks(arr: Layer[], pos: number, gIdx: number, rangeEnd: number): number {
-        for (let i = gIdx + 1; i < rangeEnd; i++) {
-          if (isGroupLayer(arr[i])) {
-            const subEnd = findGroupBlockEnd(arr, arr[i].id, i)
-            if (pos > i && pos < subEnd) return subEnd
-            i = subEnd - 1 // skip past this sub-block
-          }
-        }
-        return pos
-      }
-
-      // If dragging a group, move entire block (group + ALL recursive descendants)
-      if (isGroupLayer(layer) && targetGroupId === undefined) {
-        const descendantIds = getGroupDescendantIds(layer.id, prev)
-        const blockIds = new Set([layer.id, ...descendantIds])
-        const block = prev.filter(l => blockIds.has(l.id))
-        const rest = prev.filter(l => !blockIds.has(l.id))
-        // Clamp target in the remaining array
-        const restIndex = rest.findIndex(l => l.id === prev[newIndex]?.id)
-        const target = Math.max(0, Math.min(rest.length, restIndex >= 0 ? restIndex : (newIndex > currentIndex ? rest.length : 0)))
-        rest.splice(target, 0, ...block)
-        return rest
-      }
-
-      // Handle targetGroupId for moving in/out of groups
-      if (targetGroupId !== undefined) {
-        if (targetGroupId === null) {
-          // Move to root — clear parentId
-          if (isGroupLayer(layer)) {
-            // Moving a group block to root
-            const descendantIds = getGroupDescendantIds(layer.id, prev)
-            const blockIds = new Set([layer.id, ...descendantIds])
-            const block = prev.filter(l => blockIds.has(l.id))
-            const rest = prev.filter(l => !blockIds.has(l.id))
-            const updatedBlock = block.map(l => {
-              if (l.id === id && isGroupLayer(l)) return { ...l, parentId: undefined }
-              return l
-            })
-            const clamped = Math.max(0, Math.min(rest.length, newIndex))
-            rest.splice(clamped, 0, ...updatedBlock)
-            return rest
-          }
-          const next = [...prev]
-          const [removed] = next.splice(currentIndex, 1)
-          const updated = isDrawableLayer(removed) ? { ...removed, parentId: undefined } : removed
-          const clamped = Math.max(0, Math.min(next.length, newIndex))
-          next.splice(clamped, 0, updated)
-          return next
-        }
-
-        // Move into group — set parentId, insert after group's last child
-        // Check for circular nesting: prevent moving a group into its own descendant
-        if (isAncestorOf(targetGroupId, id, prev)) return prev
-        // Also prevent moving into self
-        if (id === targetGroupId) return prev
-
-        const groupIdx = prev.findIndex(l => l.id === targetGroupId)
-        if (groupIdx < 0) return prev
-        const group = prev[groupIdx]
-        if (!isGroupLayer(group)) return prev
-
-        if (isGroupLayer(layer)) {
-          // Moving a group into another group
-          const descendantIds = getGroupDescendantIds(layer.id, prev)
-          const blockIds = new Set([layer.id, ...descendantIds])
-          const block = prev.filter(l => blockIds.has(l.id))
-          const rest = prev.filter(l => !blockIds.has(l.id))
-          const updatedBlock = block.map(l => {
-            if (l.id === id && isGroupLayer(l)) return { ...l, parentId: targetGroupId }
-            return l
-          })
-          const gIdx = rest.findIndex(l => l.id === targetGroupId)
-          const rangeEnd = findGroupBlockEnd(rest, targetGroupId, gIdx)
-          const adjusted = newIndex > currentIndex ? newIndex - 1 : newIndex
-          const rawInsert = (adjusted >= gIdx + 1 && adjusted <= rangeEnd) ? adjusted : rangeEnd
-          rest.splice(snapPastSubBlocks(rest, rawInsert, gIdx, rangeEnd), 0, ...updatedBlock)
+        // If dragging a group, move entire block (group + ALL recursive descendants)
+        if (isGroupLayer(layer) && targetGroupId === undefined) {
+          const { block, rest } = extractGroupBlock(prev, layer.id)
+          const restIndex = rest.findIndex(l => l.id === prev[newIndex]?.id)
+          const target = Math.max(0, Math.min(rest.length, restIndex >= 0 ? restIndex : (newIndex > currentIndex ? rest.length : 0)))
+          rest.splice(target, 0, ...block)
           return rest
         }
 
-        if (!isDrawableLayer(layer)) return prev
+        // Handle targetGroupId for moving in/out of groups
+        if (targetGroupId !== undefined) {
+          if (targetGroupId === null) {
+            // Move to root — clear parentId
+            if (isGroupLayer(layer)) {
+              const { block, rest } = extractGroupBlock(prev, layer.id)
+              const updatedBlock = block.map(l => {
+                if (l.id === id && isGroupLayer(l)) return { ...l, parentId: undefined }
+                return l
+              })
+              const clamped = Math.max(0, Math.min(rest.length, newIndex))
+              rest.splice(clamped, 0, ...updatedBlock)
+              return rest
+            }
+            const next = [...prev]
+            const [removed] = next.splice(currentIndex, 1)
+            const updated = isDrawableLayer(removed) ? { ...removed, parentId: undefined } : removed
+            const clamped = Math.max(0, Math.min(next.length, newIndex))
+            next.splice(clamped, 0, updated)
+            return next
+          }
+
+          // Move into group — set parentId, insert after group's last child
+          if (isAncestorOf(targetGroupId, id, prev)) return prev
+          if (id === targetGroupId) return prev
+
+          const groupIdx = prev.findIndex(l => l.id === targetGroupId)
+          if (groupIdx < 0) return prev
+          const group = prev[groupIdx]
+          if (!isGroupLayer(group)) return prev
+
+          if (isGroupLayer(layer)) {
+            const { block, rest } = extractGroupBlock(prev, layer.id)
+            const updatedBlock = block.map(l => {
+              if (l.id === id && isGroupLayer(l)) return { ...l, parentId: targetGroupId }
+              return l
+            })
+            const gIdx = rest.findIndex(l => l.id === targetGroupId)
+            const rangeEnd = findGroupBlockEnd(rest, targetGroupId, gIdx)
+            const adjusted = newIndex > currentIndex ? newIndex - 1 : newIndex
+            const rawInsert = (adjusted >= gIdx + 1 && adjusted <= rangeEnd) ? adjusted : rangeEnd
+            rest.splice(snapPastSubBlocks(rest, rawInsert, gIdx, rangeEnd), 0, ...updatedBlock)
+            return rest
+          }
+
+          if (!isDrawableLayer(layer)) return prev
+          const next = [...prev]
+          const [removed] = next.splice(currentIndex, 1)
+          const gIdx = next.findIndex(l => l.id === targetGroupId)
+          const rangeEnd = findGroupBlockEnd(next, targetGroupId, gIdx)
+          const adjusted = newIndex > currentIndex ? newIndex - 1 : newIndex
+          const rawInsert = (adjusted >= gIdx + 1 && adjusted <= rangeEnd) ? adjusted : rangeEnd
+          next.splice(snapPastSubBlocks(next, rawInsert, gIdx, rangeEnd), 0, { ...removed, parentId: targetGroupId })
+          return next
+        }
+
+        // Simple reorder (no group change)
+        const clamped = Math.max(0, Math.min(prev.length - 1, newIndex))
+        if (currentIndex === clamped) return prev
         const next = [...prev]
         const [removed] = next.splice(currentIndex, 1)
-        const gIdx = next.findIndex(l => l.id === targetGroupId)
-        const rangeEnd = findGroupBlockEnd(next, targetGroupId, gIdx)
-        const adjusted = newIndex > currentIndex ? newIndex - 1 : newIndex
-        const rawInsert = (adjusted >= gIdx + 1 && adjusted <= rangeEnd) ? adjusted : rangeEnd
-        next.splice(snapPastSubBlocks(next, rawInsert, gIdx, rangeEnd), 0, { ...removed, parentId: targetGroupId })
+        next.splice(clamped, 0, removed)
         return next
-      }
-
-      // Simple reorder (no group change)
-      const clamped = Math.max(0, Math.min(prev.length - 1, newIndex))
-      if (currentIndex === clamped) return prev
-      const next = [...prev]
-      const [removed] = next.splice(currentIndex, 1)
-      next.splice(clamped, 0, removed)
-      return next
+      })()
+      if (import.meta.env.DEV && result !== prev) assertContiguousBlocks(result)
+      return result
     })
   }, [])
 
@@ -301,76 +261,55 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
       if (idx < 0) return prev
       const layer = prev[idx]
       const group = createGroup('Group')
-      // Inherit parentId from the wrapped layer (for nesting)
       const existingParentId = getParentId(layer)
       if (existingParentId) {
         group.parentId = existingParentId
       }
       const next = [...prev]
       next.splice(idx, 1, group, { ...layer, parentId: group.id })
+      if (import.meta.env.DEV) assertContiguousBlocks(next)
       return next
     })
   }, [])
 
   const removeFromGroup = useCallback((layerId: string) => {
     setLayers(prev => {
-      const idx = prev.findIndex(l => l.id === layerId)
-      if (idx < 0) return prev
-      const layer = prev[idx]
-      // Get parentId from either drawable or group layer
-      const parentId = getParentId(layer)
-      if (!parentId) return prev
-      const groupId = parentId
+      const result = ((): Layer[] => {
+        const idx = prev.findIndex(l => l.id === layerId)
+        if (idx < 0) return prev
+        const layer = prev[idx]
+        const parentId = getParentId(layer)
+        if (!parentId) return prev
+        const groupId = parentId
 
-      if (isGroupLayer(layer)) {
-        // Moving a group out: collect the group + its entire descendant block
-        const descendantIds = getGroupDescendantIds(layerId, prev)
-        const blockIds = new Set([layerId, ...descendantIds])
-        // Find the parent group's block end
-        const parentGroupIdx = prev.findIndex(l => l.id === groupId)
-        if (parentGroupIdx < 0) return prev
+        if (isGroupLayer(layer)) {
+          const parentGroupIdx = prev.findIndex(l => l.id === groupId)
+          if (parentGroupIdx < 0) return prev
 
-        // Remove the entire block from prev
-        const block = prev.filter(l => blockIds.has(l.id))
-        const rest = prev.filter(l => !blockIds.has(l.id))
+          const { block, rest } = extractGroupBlock(prev, layerId)
+          const updatedBlock = block.map(l => {
+            if (l.id === layerId && isGroupLayer(l)) return { ...l, parentId: undefined }
+            return l
+          })
 
-        // Clear only the group's own parentId; descendant parentIds stay unchanged
-        const updatedBlock = block.map(l => {
-          if (l.id === layerId && isGroupLayer(l)) return { ...l, parentId: undefined }
-          return l
-        })
-
-        // Find where parent group's block ends in rest
-        const parentIdxInRest = rest.findIndex(l => l.id === groupId)
-        let insertIdx = parentIdxInRest + 1
-        for (let i = parentIdxInRest + 1; i < rest.length; i++) {
-          const child = rest[i]
-          const pid = getParentId(child)
-          if (pid === groupId) insertIdx = i + 1
-          else break
+          const parentIdxInRest = rest.findIndex(l => l.id === groupId)
+          const insertIdx = findGroupBlockEnd(rest, groupId, parentIdxInRest)
+          rest.splice(insertIdx, 0, ...updatedBlock)
+          return rest
         }
-        rest.splice(insertIdx, 0, ...updatedBlock)
-        return rest
-      }
 
-      if (!isDrawableLayer(layer)) return prev
+        if (!isDrawableLayer(layer)) return prev
 
-      // Find the group's block end
-      const groupIdx = prev.findIndex(l => l.id === groupId)
-      if (groupIdx < 0) return prev
-      let groupEnd = groupIdx
-      for (let i = groupIdx + 1; i < prev.length; i++) {
-        const child = prev[i]
-        const pid = getParentId(child)
-        if (pid === groupId) groupEnd = i
-        else break
-      }
-      // Remove from current position, clear parentId, insert after group's last child
-      const next = prev.filter(l => l.id !== layerId)
-      // groupEnd might have shifted by 1 if the layer was before groupEnd
-      const insertIdx = idx <= groupEnd ? groupEnd : groupEnd + 1
-      next.splice(insertIdx, 0, { ...layer, parentId: undefined })
-      return next
+        const groupIdx = prev.findIndex(l => l.id === groupId)
+        if (groupIdx < 0) return prev
+        const groupEnd = findGroupBlockEnd(prev, groupId, groupIdx)
+        const next = prev.filter(l => l.id !== layerId)
+        const insertIdx = idx < groupEnd ? groupEnd - 1 : groupEnd
+        next.splice(insertIdx, 0, { ...layer, parentId: undefined })
+        return next
+      })()
+      if (import.meta.env.DEV && result !== prev) assertContiguousBlocks(result)
+      return result
     })
   }, [])
 

@@ -310,6 +310,99 @@ export function mergeLayerDown(layers: Layer[], layerId: string): Layer[] | null
   return [...layers.slice(0, idx - 1), merged, ...layers.slice(idx + 1)]
 }
 
+/**
+ * Find the end index (exclusive) of a group's contiguous nested block,
+ * including all recursive descendants (not just direct children).
+ */
+export function findGroupBlockEnd(layers: Layer[], groupId: string, startIdx: number): number {
+  let end = startIdx + 1
+  const tracked = new Set([groupId])
+  for (let i = startIdx + 1; i < layers.length; i++) {
+    const pid = getParentId(layers[i])
+    if (pid !== undefined && tracked.has(pid)) {
+      end = i + 1
+      if (isGroupLayer(layers[i])) tracked.add(layers[i].id)
+    } else {
+      break
+    }
+  }
+  return end
+}
+
+/**
+ * If insertAt falls strictly inside a nested sub-group's block, snap it
+ * to the end of that block so we never split a sub-group's contiguous range.
+ */
+export function snapPastSubBlocks(layers: Layer[], pos: number, groupIdx: number, rangeEnd: number): number {
+  for (let i = groupIdx + 1; i < rangeEnd; i++) {
+    if (isGroupLayer(layers[i])) {
+      const subEnd = findGroupBlockEnd(layers, layers[i].id, i)
+      if (pos > i && pos < subEnd) return subEnd
+      i = subEnd - 1 // skip past this sub-block
+    }
+  }
+  return pos
+}
+
+/**
+ * Extract a group and all its descendants from the layers array.
+ * Returns { block, rest } where block contains the group + descendants
+ * in their original order, and rest contains everything else.
+ */
+export function extractGroupBlock(layers: Layer[], groupId: string): { block: Layer[]; rest: Layer[] } {
+  const descendantIds = getGroupDescendantIds(groupId, layers)
+  const blockIds = new Set([groupId, ...descendantIds])
+  const block = layers.filter(l => blockIds.has(l.id))
+  const rest = layers.filter(l => !blockIds.has(l.id))
+  return { block, rest }
+}
+
+/**
+ * Convert a flat layers array (bottom-to-top) into visual display order
+ * by reversing and performing a DFS tree-walk. Groups appear before their children.
+ */
+export function buildDisplayOrder(layers: Layer[]): Layer[] {
+  const childrenMap = new Map<string | undefined, Layer[]>()
+  const rawReversed = [...layers].reverse()
+  for (const layer of rawReversed) {
+    const pid = getParentId(layer)
+    const existing = childrenMap.get(pid) ?? []
+    existing.push(layer)
+    childrenMap.set(pid, existing)
+  }
+  const result: Layer[] = []
+  function walk(parentId: string | undefined): void {
+    const children = childrenMap.get(parentId)
+    if (!children) return
+    for (const layer of children) {
+      result.push(layer)
+      if (isGroupLayer(layer)) walk(layer.id)
+    }
+  }
+  walk(undefined)
+  return result
+}
+
+/**
+ * Debug-only assertion: verifies that all group children form contiguous blocks.
+ * Throws if a child is separated from its group by an unrelated layer.
+ */
+export function assertContiguousBlocks(layers: Layer[]): void {
+  for (let i = 0; i < layers.length; i++) {
+    if (!isGroupLayer(layers[i])) continue
+    const groupId = layers[i].id
+    const blockEnd = findGroupBlockEnd(layers, groupId, i)
+    // Every descendant of this group must be within [i+1, blockEnd)
+    const descendantIds = getGroupDescendantIds(groupId, layers)
+    for (const dId of descendantIds) {
+      const dIdx = layers.findIndex(l => l.id === dId)
+      if (dIdx < i + 1 || dIdx >= blockEnd) {
+        throw new Error(`Contiguity violation: layer "${dId}" (descendant of group "${groupId}") is at index ${dIdx}, outside block [${i + 1}, ${blockEnd})`)
+      }
+    }
+  }
+}
+
 export function cloneLayerState(state: LayerState): LayerState {
   return {
     activeLayerId: state.activeLayerId,
