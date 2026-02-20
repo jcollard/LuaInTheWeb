@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import type { AnsiCell, AnsiGrid, DrawableLayer, Layer, LayerState, RGBColor, Rect, TextAlign, TextLayer } from './types'
 import { isGroupLayer, isDrawableLayer, getParentId } from './types'
-import { createLayer, createGroup, cloneLayerState, syncLayerIds, mergeLayerDown, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, assertContiguousBlocks } from './layerUtils'
+import { createLayer, createGroup, cloneLayerState, syncLayerIds, mergeLayerDown, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, assertContiguousBlocks, findSafeInsertPos } from './layerUtils'
 import { replaceColorsInGrid } from './colorUtils'
 import { renderTextLayerGrid } from './textLayerGrid'
 
@@ -171,8 +171,8 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
         if (isGroupLayer(layer) && targetGroupId === undefined) {
           const { block, rest } = extractGroupBlock(prev, layer.id)
           const restIndex = rest.findIndex(l => l.id === prev[newIndex]?.id)
-          const target = Math.max(0, Math.min(rest.length, restIndex >= 0 ? restIndex : (newIndex > currentIndex ? rest.length : 0)))
-          rest.splice(target, 0, ...block)
+          const raw = Math.max(0, Math.min(rest.length, restIndex >= 0 ? restIndex : (newIndex > currentIndex ? rest.length : 0)))
+          rest.splice(findSafeInsertPos(rest, raw), 0, ...block)
           return rest
         }
 
@@ -187,14 +187,14 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
                 return l
               })
               const clamped = Math.max(0, Math.min(rest.length, newIndex))
-              rest.splice(clamped, 0, ...updatedBlock)
+              rest.splice(findSafeInsertPos(rest, clamped), 0, ...updatedBlock)
               return rest
             }
             const next = [...prev]
             const [removed] = next.splice(currentIndex, 1)
             const updated = isDrawableLayer(removed) ? { ...removed, parentId: undefined } : removed
             const clamped = Math.max(0, Math.min(next.length, newIndex))
-            next.splice(clamped, 0, updated)
+            next.splice(findSafeInsertPos(next, clamped), 0, updated)
             return next
           }
 
@@ -231,7 +231,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
         if (currentIndex === clamped) return prev
         const next = [...prev]
         const [removed] = next.splice(currentIndex, 1)
-        next.splice(clamped, 0, removed)
+        next.splice(findSafeInsertPos(next, clamped), 0, removed)
         return next
       })()
       if (import.meta.env.DEV && result !== prev) assertContiguousBlocks(result)

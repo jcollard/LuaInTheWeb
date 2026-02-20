@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { Layer } from './types'
 import { isGroupLayer, isDrawableLayer, getParentId } from './types'
-import { getAncestorGroupIds, getGroupDescendantIds, isAncestorOf, buildDisplayOrder } from './layerUtils'
+import { getAncestorGroupIds, getGroupDescendantIds, isAncestorOf, buildDisplayOrder, findGroupBlockEnd } from './layerUtils'
 import { LayerRow } from './LayerRow'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -90,17 +90,29 @@ export function LayersPanel({
     setDropOnGroup(null)
   }, [])
 
+  const handleDropOnBottomZone = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    const sourceId = e.dataTransfer.getData('text/plain')
+    if (sourceId) {
+      // Bottom visually = index 0 in the flat array
+      onReorder(sourceId, 0)
+    }
+    clearDragState()
+  }, [onReorder, clearDragState])
+
   const handleDropOnZone = useCallback((e: React.DragEvent, targetLayerId: string) => {
     e.preventDefault()
     const sourceId = e.dataTransfer.getData('text/plain')
     const targetArrayIdx = layers.findIndex(l => l.id === targetLayerId)
     if (sourceId && targetArrayIdx >= 0) {
       // Drop zones sit visually above their layer. "Above X visually" means
-      // "after X in the flat array" (which is ordered bottom-to-top), so we
-      // insert at targetArrayIdx + 1.
-      const insertIdx = targetArrayIdx + 1
+      // "after X in the flat array" (which is ordered bottom-to-top).
+      // For groups, skip past the entire block to avoid splitting it.
+      const target = layers[targetArrayIdx]
+      const insertIdx = target && isGroupLayer(target)
+        ? findGroupBlockEnd(layers, target.id, targetArrayIdx)
+        : targetArrayIdx + 1
       const source = layers.find(l => l.id === sourceId)
-      const target = layers.find(l => l.id === targetLayerId)
       const targetContext = target ? getParentId(target) : undefined
       const sourceContext = source ? getParentId(source) : undefined
       if (targetContext !== sourceContext) {
@@ -241,6 +253,17 @@ export function LayersPanel({
             />
           )
         })}
+        {draggedId && (
+          <div
+            className={[
+              styles.layerDropZone,
+              dropZoneTargetId === '__bottom__' && styles.layerDropZoneActive,
+            ].filter(Boolean).join(' ')}
+            data-testid="layer-drop-zone-bottom"
+            onDragOver={e => handleDragOverZone(e, '__bottom__')}
+            onDrop={handleDropOnBottomZone}
+          />
+        )}
       </div>
       {contextMenu && (
         <>

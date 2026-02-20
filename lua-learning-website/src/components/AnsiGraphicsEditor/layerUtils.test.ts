@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import { describe, it, expect } from 'vitest'
-import { isDefaultCell, createLayer, createGroup, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, syncLayerIds, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, buildDisplayOrder, assertContiguousBlocks } from './layerUtils'
+import { isDefaultCell, createLayer, createGroup, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, syncLayerIds, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, buildDisplayOrder, assertContiguousBlocks, findSafeInsertPos } from './layerUtils'
 import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer } from './types'
 import type { AnsiCell, DrawableLayer, DrawnLayer, RGBColor, Layer, LayerState, TextLayer, GroupLayer } from './types'
 
@@ -1165,5 +1165,54 @@ describe('assertContiguousBlocks', () => {
     // l1 is separated from g by l2
     const layers: Layer[] = [g, l2, l1]
     expect(() => assertContiguousBlocks(layers)).toThrow()
+  })
+})
+
+describe('findSafeInsertPos', () => {
+  it('returns pos unchanged when not inside any group block', () => {
+    const l1 = createLayer('L1', 'l1')
+    const l2 = createLayer('L2', 'l2')
+    expect(findSafeInsertPos([l1, l2], 1)).toBe(1)
+  })
+
+  it('snaps past a group block when pos falls inside it', () => {
+    const l0 = createLayer('L0', 'l0')
+    const g = createGroup('G', 'g1')
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g1' }
+    const l2 = { ...createLayer('L2', 'l2'), parentId: 'g1' }
+    // [l0, g1, l1(g1), l2(g1)] — pos=2 is inside g1's block [1,4)
+    const layers: Layer[] = [l0, g, l1, l2]
+    expect(findSafeInsertPos(layers, 2)).toBe(4)
+  })
+
+  it('snaps past nested group blocks', () => {
+    const g1 = createGroup('G1', 'g1')
+    const g2: GroupLayer = { ...createGroup('G2', 'g2'), parentId: 'g1' }
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g2' }
+    const l2 = createLayer('L2', 'l2')
+    // [g1, g2(g1), l1(g2), l2] — pos=2 is inside g1's block [0,3)
+    const layers: Layer[] = [g1, g2, l1, l2]
+    expect(findSafeInsertPos(layers, 2)).toBe(3)
+  })
+
+  it('returns pos at boundary (right after group block)', () => {
+    const g = createGroup('G', 'g1')
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g1' }
+    const l2 = createLayer('L2', 'l2')
+    // [g1, l1(g1), l2] — pos=2 is right after g1's block, safe
+    const layers: Layer[] = [g, l1, l2]
+    expect(findSafeInsertPos(layers, 2)).toBe(2)
+  })
+
+  it('returns pos at array start', () => {
+    const g = createGroup('G', 'g1')
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g1' }
+    expect(findSafeInsertPos([g, l1], 0)).toBe(0)
+  })
+
+  it('returns pos at array end', () => {
+    const g = createGroup('G', 'g1')
+    const l1 = { ...createLayer('L1', 'l1'), parentId: 'g1' }
+    expect(findSafeInsertPos([g, l1], 2)).toBe(2)
   })
 })

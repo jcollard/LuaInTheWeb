@@ -358,6 +358,20 @@ export function extractGroupBlock(layers: Layer[], groupId: string): { block: La
 }
 
 /**
+ * If pos falls inside any group's contiguous block, snap it to the end
+ * of that block. Prevents root-level insertions from splitting group blocks.
+ */
+export function findSafeInsertPos(layers: Layer[], pos: number): number {
+  for (let i = 0; i < layers.length && i < pos; i++) {
+    if (!isGroupLayer(layers[i])) continue
+    const blockEnd = findGroupBlockEnd(layers, layers[i].id, i)
+    if (pos > i && pos < blockEnd) return blockEnd
+    i = blockEnd - 1
+  }
+  return pos
+}
+
+/**
  * Convert a flat layers array (bottom-to-top) into visual display order
  * by reversing and performing a DFS tree-walk. Groups appear before their children.
  */
