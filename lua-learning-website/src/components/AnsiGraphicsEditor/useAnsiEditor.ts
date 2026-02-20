@@ -18,6 +18,33 @@ export { computePixelCell, computeLineCells } from './gridUtils'
 
 const MAX_HISTORY = 50
 
+/** Reset each pre-allocated grid to DEFAULT_CELL, then place captured cells shifted by (dr, dc). */
+function buildShiftedGrids(
+  capturedMap: Map<string, Map<string, AnsiCell>>,
+  blankGrids: Map<string, AnsiGrid>,
+  dr: number,
+  dc: number,
+): Map<string, AnsiGrid> {
+  const result = new Map<string, AnsiGrid>()
+  for (const [layerId, captured] of capturedMap) {
+    const grid = blankGrids.get(layerId)
+    if (!grid) continue
+    for (let r = 0; r < ANSI_ROWS; r++)
+      for (let c = 0; c < ANSI_COLS; c++)
+        grid[r][c] = DEFAULT_CELL
+    for (const [key, cellVal] of captured) {
+      const [rStr, cStr] = key.split(',')
+      const nr = parseInt(rStr, 10) + dr
+      const nc = parseInt(cStr, 10) + dc
+      if (nr >= 0 && nr < ANSI_ROWS && nc >= 0 && nc < ANSI_COLS) {
+        grid[nr][nc] = cellVal
+      }
+    }
+    result.set(layerId, grid)
+  }
+  return result
+}
+
 export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorReturn {
   const initialState = useMemo((): LayerState | undefined => {
     if (options?.initialLayerState) return options.initialLayerState
@@ -78,7 +105,6 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const updateTextBoundsDisplayRef = useRef<(() => void) | null>(null)
   const moveStartRef = useRef<CellHalf | null>(null)
   const moveCapturedRef = useRef<Map<string, Map<string, AnsiCell>>>(new Map())
-  const moveOrigGridsRef = useRef<Map<string, AnsiGrid>>(new Map())
   const moveRafRef = useRef<number | null>(null)
   const moveLatestCellRef = useRef<CellHalf | null>(null)
   const moveBlankGridsRef = useRef<Map<string, AnsiGrid>>(new Map())
@@ -230,20 +256,23 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     textToolRef.current = textTool
     commitPendingTextRef.current = () => textTool.commitIfEditing()
 
+    function endMoveDrag(): void {
+      if (moveRafRef.current !== null) {
+        cancelAnimationFrame(moveRafRef.current)
+        moveRafRef.current = null
+      }
+      moveStartRef.current = null
+      moveCapturedRef.current = new Map()
+      moveBlankGridsRef.current = new Map()
+      moveLatestCellRef.current = null
+      setIsMoveDragging(false)
+    }
+
     function onKeyDown(e: KeyboardEvent): void {
       if (brushRef.current.tool === 'text') textTool.onKeyDown(e)
       else if (brushRef.current.tool === 'select') sel.onKeyDown(e)
       else if (brushRef.current.tool === 'move' && e.key === 'Escape' && moveStartRef.current) {
-        if (moveRafRef.current !== null) {
-          cancelAnimationFrame(moveRafRef.current)
-          moveRafRef.current = null
-        }
-        moveStartRef.current = null
-        moveCapturedRef.current = new Map()
-        moveOrigGridsRef.current = new Map()
-        moveBlankGridsRef.current = new Map()
-        moveLatestCellRef.current = null
-        setIsMoveDragging(false)
+        endMoveDrag()
         undo()
       }
     }
@@ -333,7 +362,6 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           setIsMoveDragging(true)
           moveStartRef.current = cell
           moveCapturedRef.current = new Map()
-          moveOrigGridsRef.current = new Map()
           moveBlankGridsRef.current = new Map()
           moveLatestCellRef.current = null
           const activeId = activeLayerIdRef.current
@@ -350,7 +378,6 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
               }
             }
             moveCapturedRef.current.set(target.id, captured)
-            moveOrigGridsRef.current.set(target.id, target.grid.map(row => row.map(c => ({ ...c, fg: [...c.fg] as RGBColor, bg: [...c.bg] as RGBColor }))))
             moveBlankGridsRef.current.set(target.id, createEmptyGrid())
           }
           break
@@ -401,26 +428,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
               if (!target || !moveStartRef.current) return
               const dr = target.row - moveStartRef.current.row
               const dc = target.col - moveStartRef.current.col
-              const updatedGrids = new Map<string, AnsiGrid>()
-              for (const [layerId, captured] of moveCapturedRef.current) {
-                const grid = moveBlankGridsRef.current.get(layerId)
-                if (!grid) continue
-                // Reset grid to default cells
-                for (let r = 0; r < ANSI_ROWS; r++)
-                  for (let c = 0; c < ANSI_COLS; c++)
-                    grid[r][c] = DEFAULT_CELL
-                // Place shifted cells (captured cells are immutable snapshots)
-                for (const [key, cellVal] of captured) {
-                  const [rStr, cStr] = key.split(',')
-                  const nr = parseInt(rStr, 10) + dr
-                  const nc = parseInt(cStr, 10) + dc
-                  if (nr >= 0 && nr < ANSI_ROWS && nc >= 0 && nc < ANSI_COLS) {
-                    grid[nr][nc] = cellVal
-                  }
-                }
-                updatedGrids.set(layerId, grid)
-              }
-              rawApplyMoveGridsImmediate(updatedGrids)
+              rawApplyMoveGridsImmediate(buildShiftedGrids(moveCapturedRef.current, moveBlankGridsRef.current, dr, dc))
               terminalBufferRef.current.flush(compositeGrid(layersRef.current), colorTransformRef.current)
             })
           }
@@ -470,37 +478,16 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           textTool.onMouseUp()
           break
         case 'move': {
-          if (moveRafRef.current !== null) {
-            cancelAnimationFrame(moveRafRef.current)
-            moveRafRef.current = null
-          }
-          if (!moveStartRef.current) break
+          if (!moveStartRef.current) { endMoveDrag(); break }
           const endCell = getCellHalfFromMouse(e, container)
           const dr = endCell ? endCell.row - moveStartRef.current.row : 0
           const dc = endCell ? endCell.col - moveStartRef.current.col : 0
           if (dr === 0 && dc === 0) {
-            // No movement — pop undo snapshot
+            // No movement -- pop undo snapshot
             undo()
           } else {
             // Apply final position and sync to React state
-            const finalGrids = new Map<string, AnsiGrid>()
-            for (const [layerId, captured] of moveCapturedRef.current) {
-              const grid = moveBlankGridsRef.current.get(layerId)
-              if (!grid) continue
-              for (let r = 0; r < ANSI_ROWS; r++)
-                for (let c = 0; c < ANSI_COLS; c++)
-                  grid[r][c] = DEFAULT_CELL
-              for (const [key, cellVal] of captured) {
-                const [rStr, cStr] = key.split(',')
-                const nr = parseInt(rStr, 10) + dr
-                const nc = parseInt(cStr, 10) + dc
-                if (nr >= 0 && nr < ANSI_ROWS && nc >= 0 && nc < ANSI_COLS) {
-                  grid[nr][nc] = cellVal
-                }
-              }
-              finalGrids.set(layerId, grid)
-            }
-            rawApplyMoveGrids(finalGrids)
+            rawApplyMoveGrids(buildShiftedGrids(moveCapturedRef.current, moveBlankGridsRef.current, dr, dc))
             // Update text layer bounds for any moved text layers
             for (const [layerId] of moveCapturedRef.current) {
               const layer = layersRef.current.find(l => l.id === layerId)
@@ -517,12 +504,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
             }
             setIsDirty(true)
           }
-          moveStartRef.current = null
-          moveCapturedRef.current = new Map()
-          moveOrigGridsRef.current = new Map()
-          moveBlankGridsRef.current = new Map()
-          moveLatestCellRef.current = null
-          setIsMoveDragging(false)
+          endMoveDrag()
           break
         }
       }

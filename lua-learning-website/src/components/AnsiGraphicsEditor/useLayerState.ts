@@ -42,7 +42,6 @@ export interface UseLayerStateReturn {
   toggleGroupCollapsed: (groupId: string) => void
   applyMoveGrids: (layerGrids: Map<string, AnsiGrid>) => void
   applyMoveGridsImmediate: (layerGrids: Map<string, AnsiGrid>) => void
-  syncLayers: () => void
 }
 
 export function useLayerState(initial?: LayerState): UseLayerStateReturn {
@@ -320,17 +319,6 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     ))
   }, [])
 
-  const applyMoveGrids = useCallback((layerGrids: Map<string, AnsiGrid>) => {
-    const newLayers = layersRef.current.map(l => {
-      if (!isDrawableLayer(l)) return l
-      const newGrid = layerGrids.get(l.id)
-      if (!newGrid) return l
-      return { ...l, grid: newGrid }
-    })
-    layersRef.current = newLayers
-    setLayers(newLayers)
-  }, [layersRef])
-
   const applyMoveGridsImmediate = useCallback((layerGrids: Map<string, AnsiGrid>) => {
     layersRef.current = layersRef.current.map(l => {
       if (!isDrawableLayer(l)) return l
@@ -340,9 +328,10 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     })
   }, [layersRef])
 
-  const syncLayers = useCallback(() => {
+  const applyMoveGrids = useCallback((layerGrids: Map<string, AnsiGrid>) => {
+    applyMoveGridsImmediate(layerGrids)
     setLayers(layersRef.current)
-  }, [layersRef])
+  }, [applyMoveGridsImmediate, layersRef])
 
   const applyToActiveLayer = useCallback((row: number, col: number, cell: AnsiCell) => {
     const activeId = activeLayerIdRef.current
@@ -418,6 +407,5 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     toggleGroupCollapsed,
     applyMoveGrids,
     applyMoveGridsImmediate,
-    syncLayers,
   }
 }
