@@ -4,6 +4,7 @@ import { ConfirmDialog } from '../ConfirmDialog'
 import { useIDE } from '../IDEContext/useIDE'
 import { AnsiEditorToolbar } from './AnsiEditorToolbar'
 import { ColorPanel } from './ColorPanel'
+import { FramesPanel } from './FramesPanel'
 import { LayersPanel } from './LayersPanel'
 import { SaveAsDialog } from './SaveAsDialog'
 import { useAnsiEditor } from './useAnsiEditor'
@@ -76,12 +77,23 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     setBorderStyle,
     activeLayerIsGroup,
     isMoveDragging,
+    addFrame,
+    duplicateFrame,
+    removeFrame,
+    setCurrentFrame,
+    setFrameDuration,
+    isPlaying,
+    togglePlayback,
+    activeLayerFrameCount,
+    activeLayerCurrentFrame,
+    activeLayerFrameDuration,
   } = useAnsiEditor({ initialLayerState })
 
   const handleToggleCgaPreview = useCallback(() => setCgaPreview(!cgaPreview), [cgaPreview, setCgaPreview])
 
   const activeLayer = layers.find(l => l.id === activeLayerId)
   const activeTextAlign = activeLayer?.type === 'text' ? activeLayer.textAlign : undefined
+  const activeLayerIsDrawn = activeLayer?.type === 'drawn'
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -182,6 +194,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
         cgaPreview={cgaPreview}
         onToggleCgaPreview={handleToggleCgaPreview}
         activeLayerIsGroup={activeLayerIsGroup}
+        isPlaying={isPlaying}
       />
       <div className={styles.editorBody}>
         <ColorPanel
@@ -193,11 +206,27 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
           layers={layers}
           activeLayerId={activeLayerId}
         />
-        <div className={[styles.canvas, brush.tool === 'move' && (isMoveDragging ? styles.canvasMoveDragging : styles.canvasMove)].filter(Boolean).join(' ')}>
-          <AnsiTerminalPanel
-            isActive={true}
-            onTerminalReady={onTerminalReady}
-          />
+        <div className={styles.canvasAndFrames}>
+          <div className={[styles.canvas, brush.tool === 'move' && (isMoveDragging ? styles.canvasMoveDragging : styles.canvasMove)].filter(Boolean).join(' ')}>
+            <AnsiTerminalPanel
+              isActive={true}
+              onTerminalReady={onTerminalReady}
+            />
+          </div>
+          {activeLayerIsDrawn && (
+            <FramesPanel
+              frameCount={activeLayerFrameCount}
+              currentFrame={activeLayerCurrentFrame}
+              frameDuration={activeLayerFrameDuration}
+              isPlaying={isPlaying}
+              onSelectFrame={setCurrentFrame}
+              onAddFrame={addFrame}
+              onDuplicateFrame={duplicateFrame}
+              onRemoveFrame={removeFrame}
+              onSetDuration={setFrameDuration}
+              onTogglePlayback={togglePlayback}
+            />
+          )}
         </div>
         <LayersPanel
           layers={layers}

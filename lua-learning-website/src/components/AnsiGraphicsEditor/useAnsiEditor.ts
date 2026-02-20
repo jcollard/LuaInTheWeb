@@ -1,8 +1,8 @@
 /* eslint-disable max-lines */
 import { useState, useCallback, useRef, useMemo } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
-import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, BorderStyle, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions, DrawableLayer } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, DEFAULT_CELL, BORDER_PRESETS, isGroupLayer, isDrawableLayer } from './types'
+import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, BorderStyle, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions, DrawableLayer, DrawnLayer } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, DEFAULT_CELL, DEFAULT_FRAME_DURATION_MS, BORDER_PRESETS, isGroupLayer, isDrawableLayer } from './types'
 import type { CellHalf, ColorTransform } from './gridUtils'
 import { createEmptyGrid, isInBounds, getCellHalfFromMouse, computePixelCell, computeFloodFillCells } from './gridUtils'
 import { TerminalBuffer } from './terminalBuffer'
@@ -50,8 +50,9 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     if (options?.initialLayerState) return options.initialLayerState
     if (options?.initialGrid) {
       const id = 'initial-bg'
+      const grid = options.initialGrid
       return {
-        layers: [{ type: 'drawn' as const, id, name: 'Background', visible: true, grid: options.initialGrid }],
+        layers: [{ type: 'drawn' as const, id, name: 'Background', visible: true, grid, frames: [grid], currentFrameIndex: 0, frameDurationMs: DEFAULT_FRAME_DURATION_MS }],
         activeLayerId: id,
       }
     }
@@ -76,6 +77,12 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     toggleGroupCollapsed: rawToggleGroupCollapsed,
     applyMoveGrids: rawApplyMoveGrids,
     applyMoveGridsImmediate: rawApplyMoveGridsImmediate,
+    addFrame: rawAddFrame,
+    duplicateFrame: rawDuplicateFrame,
+    removeFrame: rawRemoveFrame,
+    setCurrentFrame: rawSetCurrentFrame,
+    reorderFrame: rawReorderFrame,
+    setFrameDuration: rawSetFrameDuration,
   } = layerState
 
   const grid = useMemo(() => compositeGrid(layerState.layers), [layerState.layers])
@@ -110,6 +117,9 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const moveBlankGridsRef = useRef<Map<string, AnsiGrid>>(new Map())
   const [cgaPreview, setCgaPreviewRaw] = useState(false)
   const [isMoveDragging, setIsMoveDragging] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const playbackTimerRef = useRef<number | null>(null)
+  const isPlayingRef = useRef(false); isPlayingRef.current = isPlaying
   const colorTransformRef = useRef<ColorTransform | undefined>(undefined); colorTransformRef.current = cgaPreview ? cgaQuantize : undefined
 
   const pushSnapshot = useCallback(() => {
@@ -166,7 +176,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     pushSnapshot()
     const emptyGrid = createEmptyGrid()
     const id = 'clear-bg-' + Date.now()
-    restoreLayerState({ layers: [{ type: 'drawn', id, name: 'Background', visible: true, grid: emptyGrid }], activeLayerId: id })
+    restoreLayerState({ layers: [{ type: 'drawn', id, name: 'Background', visible: true, grid: emptyGrid, frames: [emptyGrid], currentFrameIndex: 0, frameDurationMs: DEFAULT_FRAME_DURATION_MS }], activeLayerId: id })
     setIsDirty(false)
     terminalBufferRef.current.flush(emptyGrid, colorTransformRef.current)
   }, [pushSnapshot, restoreLayerState])
@@ -193,6 +203,48 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const wrapInGroupWithUndo = useCallback((id: string) => withLayerUndo(() => rawWrapInGroup(id), false), [withLayerUndo, rawWrapInGroup])
   const removeFromGroupWithUndo = useCallback((id: string) => withLayerUndo(() => rawRemoveFromGroup(id), false), [withLayerUndo, rawRemoveFromGroup])
   const toggleGroupCollapsedNoUndo = useCallback((id: string) => rawToggleGroupCollapsed(id), [rawToggleGroupCollapsed])
+
+  // Frame operations with undo
+  const addFrameWithUndo = useCallback(() => withLayerUndo(rawAddFrame), [withLayerUndo, rawAddFrame])
+  const duplicateFrameWithUndo = useCallback(() => withLayerUndo(rawDuplicateFrame), [withLayerUndo, rawDuplicateFrame])
+  const removeFrameWithUndo = useCallback(() => withLayerUndo(rawRemoveFrame), [withLayerUndo, rawRemoveFrame])
+  const setCurrentFrameWithUndo = useCallback((index: number) => {
+    rawSetCurrentFrame(index)
+    terminalBufferRef.current.flush(compositeGrid(layersRef.current), colorTransformRef.current)
+  }, [rawSetCurrentFrame, layersRef])
+  const reorderFrameWithUndo = useCallback((from: number, to: number) => withLayerUndo(() => rawReorderFrame(from, to)), [withLayerUndo, rawReorderFrame])
+  const setFrameDurationNoUndo = useCallback((ms: number) => rawSetFrameDuration(ms), [rawSetFrameDuration])
+
+  const stopPlayback = useCallback(() => {
+    if (playbackTimerRef.current !== null) {
+      clearTimeout(playbackTimerRef.current)
+      playbackTimerRef.current = null
+    }
+    setIsPlaying(false)
+  }, [])
+
+  const togglePlayback = useCallback(() => {
+    if (isPlaying) {
+      stopPlayback()
+      return
+    }
+    setIsPlaying(true)
+    function tick(): void {
+      const layers = layersRef.current
+      let minDuration = Infinity
+      for (const l of layers) {
+        if (l.type !== 'drawn' || l.frames.length <= 1) continue
+        const nextIndex = (l.currentFrameIndex + 1) % l.frames.length
+        ;(l as DrawnLayer).currentFrameIndex = nextIndex
+        ;(l as DrawnLayer).grid = l.frames[nextIndex]
+        if (l.frameDurationMs < minDuration) minDuration = l.frameDurationMs
+      }
+      if (minDuration === Infinity) minDuration = DEFAULT_FRAME_DURATION_MS
+      terminalBufferRef.current.flush(compositeGrid(layers), colorTransformRef.current)
+      playbackTimerRef.current = window.setTimeout(tick, minDuration)
+    }
+    tick()
+  }, [isPlaying, stopPlayback, layersRef])
 
   const importPngAsLayer = useCallback(async (file: File) => {
     const px = await loadPngPixels(file)
@@ -301,6 +353,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
 
     function onMouseDown(e: MouseEvent): void {
       e.preventDefault()
+      if (isPlayingRef.current) return
       const cell = getCellHalfFromMouse(e, container)
       if (cell && sampleCell(e, cell)) {
         draw.positionCursor(cell.row, cell.col, draw.cursorHalf(cell))
@@ -590,6 +643,9 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
 
   const activeLayer = layerState.layers.find(l => l.id === layerState.activeLayerId)
   const activeLayerIsGroup = activeLayer ? isGroupLayer(activeLayer) : false
+  const activeLayerFrameCount = activeLayer?.type === 'drawn' ? activeLayer.frames.length : 1
+  const activeLayerCurrentFrame = activeLayer?.type === 'drawn' ? activeLayer.currentFrameIndex : 0
+  const activeLayerFrameDuration = activeLayer?.type === 'drawn' ? activeLayer.frameDurationMs : DEFAULT_FRAME_DURATION_MS
 
   return {
     grid, brush, setBrushFg, setBrushBg, setBrushChar, setBrushMode, setTool, setBorderStyle, clearGrid,
@@ -605,5 +661,10 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     importPngAsLayer, simplifyColors, setTextAlign, flipSelectionHorizontal, flipSelectionVertical,
     activeLayerIsGroup, isMoveDragging,
     cgaPreview, setCgaPreview,
+    addFrame: addFrameWithUndo, duplicateFrame: duplicateFrameWithUndo,
+    removeFrame: removeFrameWithUndo, setCurrentFrame: setCurrentFrameWithUndo,
+    reorderFrame: reorderFrameWithUndo, setFrameDuration: setFrameDurationNoUndo,
+    isPlaying, togglePlayback,
+    activeLayerFrameCount, activeLayerCurrentFrame, activeLayerFrameDuration,
   }
 }

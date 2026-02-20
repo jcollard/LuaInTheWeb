@@ -1,6 +1,6 @@
 import { stringify, parse } from '@kilcekru/lua-table'
 import type { AnsiGrid, Layer, LayerState, TextLayer, TextAlign, RGBColor, Rect, GroupLayer } from './types'
-import { ANSI_COLS, ANSI_ROWS, isGroupLayer, isDrawableLayer } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_FRAME_DURATION_MS, isGroupLayer, isDrawableLayer } from './types'
 import { renderTextLayerGrid } from './textLayerGrid'
 
 export function serializeGrid(grid: AnsiGrid): string {
@@ -20,6 +20,10 @@ export function deserializeGrid(lua: string): AnsiGrid {
   return data.grid as AnsiGrid
 }
 
+function needsV5(state: LayerState): boolean {
+  return state.layers.some(l => l.type === 'drawn' && l.frames.length > 1)
+}
+
 export function serializeLayers(state: LayerState): string {
   const hasGroups = state.layers.some(isGroupLayer)
   const hasParentId = state.layers.some(l => {
@@ -27,7 +31,7 @@ export function serializeLayers(state: LayerState): string {
     if (isGroupLayer(l) && l.parentId) return true
     return false
   })
-  const version = (hasGroups || hasParentId) ? 4 : 3
+  const version = needsV5(state) ? 5 : (hasGroups || hasParentId) ? 4 : 3
   const layers = state.layers.map(layer => {
     if (isGroupLayer(layer)) {
       const serialized: Record<string, unknown> = {
@@ -67,6 +71,11 @@ export function serializeLayers(state: LayerState): string {
       visible: layer.visible,
       grid: layer.grid,
     }
+    if (layer.frames.length > 1) {
+      serialized.frames = layer.frames
+      serialized.currentFrameIndex = layer.currentFrameIndex
+      serialized.frameDurationMs = layer.frameDurationMs
+    }
     if (layer.parentId) serialized.parentId = layer.parentId
     return serialized
   })
@@ -86,6 +95,9 @@ interface RawLayer {
   name: string
   visible: boolean
   grid?: AnsiGrid
+  frames?: AnsiGrid[]
+  currentFrameIndex?: number
+  frameDurationMs?: number
   text?: string
   bounds?: Rect
   textFg?: RGBColor
@@ -105,13 +117,17 @@ export function deserializeLayers(lua: string): LayerState {
       throw new Error('Missing grid field')
     }
     const id = 'v1-background'
+    const grid = data.grid as AnsiGrid
     return {
       layers: [{
         type: 'drawn' as const,
         id,
         name: 'Background',
         visible: true,
-        grid: data.grid as AnsiGrid,
+        grid,
+        frames: [grid],
+        currentFrameIndex: 0,
+        frameDurationMs: DEFAULT_FRAME_DURATION_MS,
       }],
       activeLayerId: id,
     }
@@ -120,14 +136,17 @@ export function deserializeLayers(lua: string): LayerState {
   if (version === 2) {
     // v2 only had drawn layers (no groups or text layers)
     const rawLayers = data.layers as Array<{ id: string; name: string; visible: boolean; grid: AnsiGrid }>
-    const layers: Layer[] = rawLayers.map(l => ({ ...l, type: 'drawn' as const }))
+    const layers: Layer[] = rawLayers.map(l => ({
+      ...l, type: 'drawn' as const,
+      frames: [l.grid], currentFrameIndex: 0, frameDurationMs: DEFAULT_FRAME_DURATION_MS,
+    }))
     return {
       layers,
       activeLayerId: data.activeLayerId as string,
     }
   }
 
-  if (version === 3 || version === 4) {
+  if (version === 3 || version === 4 || version === 5) {
     const rawLayers = data.layers as RawLayer[]
     const layers: Layer[] = rawLayers.map((l, i) => {
       if (!l.id || !l.name || l.visible === undefined) {
@@ -165,15 +184,21 @@ export function deserializeLayers(lua: string): LayerState {
         }
         return textLayer
       }
-      if (!l.grid) {
+      if (!l.grid && (!l.frames || l.frames.length === 0)) {
         throw new Error(`Invalid drawn layer "${l.name}": missing grid`)
       }
+      const frames = l.frames && l.frames.length > 0 ? l.frames : [l.grid!]
+      const currentFrameIndex = l.currentFrameIndex ?? 0
+      const grid = frames[currentFrameIndex]
       return {
         type: 'drawn' as const,
         id: l.id,
         name: l.name,
         visible: l.visible,
-        grid: l.grid,
+        grid,
+        frames,
+        currentFrameIndex,
+        frameDurationMs: l.frameDurationMs ?? DEFAULT_FRAME_DURATION_MS,
         parentId: l.parentId,
       }
     })

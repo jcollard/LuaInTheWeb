@@ -27,12 +27,13 @@ export interface AnsiEditorToolbarProps {
   cgaPreview?: boolean
   onToggleCgaPreview?: () => void
   activeLayerIsGroup?: boolean
+  isPlaying?: boolean
 }
 
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onImportPng, onExportAns, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
-  onFlipHorizontal, onFlipVertical, onSetBorderStyle, cgaPreview, onToggleCgaPreview, activeLayerIsGroup,
+  onFlipHorizontal, onFlipVertical, onSetBorderStyle, cgaPreview, onToggleCgaPreview, activeLayerIsGroup, isPlaying,
 }: AnsiEditorToolbarProps) {
   const isRectActive = brush.tool === 'rect-outline' || brush.tool === 'rect-filled'
   const isOvalActive = brush.tool === 'oval-outline' || brush.tool === 'oval-filled'
@@ -51,7 +52,7 @@ export function AnsiEditorToolbar({
           onClick={() => onSetTool('pencil')}
           title="Pencil"
           data-testid="tool-pencil"
-          disabled={activeLayerIsGroup}
+          disabled={activeLayerIsGroup || isPlaying}
         >
           ✏
         </button>
@@ -62,7 +63,7 @@ export function AnsiEditorToolbar({
           onClick={() => onSetTool('line')}
           title="Line"
           data-testid="tool-line"
-          disabled={activeLayerIsGroup}
+          disabled={activeLayerIsGroup || isPlaying}
         >
           ╱
         </button>
@@ -162,7 +163,7 @@ export function AnsiEditorToolbar({
           onClick={() => onSetTool('flood-fill')}
           title="Flood Fill"
           data-testid="tool-flood-fill"
-          disabled={activeLayerIsGroup}
+          disabled={activeLayerIsGroup || isPlaying}
         >
           Fill
         </button>
@@ -173,7 +174,7 @@ export function AnsiEditorToolbar({
           onClick={() => onSetTool('select')}
           title="Select"
           data-testid="tool-select"
-          disabled={activeLayerIsGroup}
+          disabled={activeLayerIsGroup || isPlaying}
         >
           ⬚
         </button>
@@ -184,7 +185,7 @@ export function AnsiEditorToolbar({
           onClick={() => onSetTool('eyedropper')}
           title="Eyedropper"
           data-testid="tool-eyedropper"
-          disabled={activeLayerIsGroup}
+          disabled={activeLayerIsGroup || isPlaying}
         >
           ⚗
         </button>
@@ -195,7 +196,7 @@ export function AnsiEditorToolbar({
           onClick={() => onSetTool('text')}
           title="Text"
           data-testid="tool-text"
-          disabled={activeLayerIsGroup}
+          disabled={activeLayerIsGroup || isPlaying}
         >
           T
         </button>

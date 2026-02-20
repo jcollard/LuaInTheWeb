@@ -1,7 +1,7 @@
 /* eslint-disable max-lines */
 import { describe, it, expect } from 'vitest'
 import { isDefaultCell, createLayer, createGroup, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, syncLayerIds, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, buildDisplayOrder, assertContiguousBlocks, findSafeInsertPos } from './layerUtils'
-import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer } from './types'
+import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer } from './types'
 import type { AnsiCell, DrawableLayer, DrawnLayer, RGBColor, Layer, LayerState, TextLayer, GroupLayer } from './types'
 
 describe('isDefaultCell', () => {
@@ -87,6 +87,22 @@ describe('createLayer', () => {
     const a = createLayer('A')
     const b = createLayer('B')
     expect(a.id).not.toBe(b.id)
+  })
+
+  it('initializes frames with single frame aliased to grid', () => {
+    const layer = createLayer('Test')
+    expect(layer.frames).toHaveLength(1)
+    expect(layer.frames[0]).toBe(layer.grid)
+  })
+
+  it('initializes currentFrameIndex to 0', () => {
+    const layer = createLayer('Test')
+    expect(layer.currentFrameIndex).toBe(0)
+  })
+
+  it('initializes frameDurationMs to DEFAULT_FRAME_DURATION_MS', () => {
+    const layer = createLayer('Test')
+    expect(layer.frameDurationMs).toBe(DEFAULT_FRAME_DURATION_MS)
   })
 })
 
@@ -333,6 +349,32 @@ describe('cloneLayerState', () => {
     const clone = cloneLayerState(state)
     ;(state.layers[0] as DrawableLayer).grid[0][0].fg[0] = 0
     expect((clone.layers[0] as DrawableLayer).grid[0][0].fg[0]).toBe(100)
+  })
+})
+
+describe('cloneLayerState with frames', () => {
+  it('deep-clones all frames and preserves grid/frames alias', () => {
+    const layer = createLayer('bg', 'id-1')
+    // Add a second frame with distinct content
+    const frame2 = Array.from({ length: ANSI_ROWS }, () =>
+      Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
+    )
+    frame2[0][0] = { char: 'F', fg: [255, 0, 0] as RGBColor, bg: [0, 0, 0] as RGBColor }
+    layer.frames.push(frame2)
+    layer.currentFrameIndex = 1
+    layer.grid = layer.frames[1]
+
+    const state: LayerState = { layers: [layer], activeLayerId: 'id-1' }
+    const clone = cloneLayerState(state)
+    const clonedLayer = clone.layers[0] as DrawnLayer
+
+    expect(clonedLayer.frames).toHaveLength(2)
+    expect(clonedLayer.currentFrameIndex).toBe(1)
+    // grid should alias the correct frame
+    expect(clonedLayer.grid).toBe(clonedLayer.frames[1])
+    // Verify deep clone - mutating clone frame doesn't affect original
+    clonedLayer.frames[1][0][0].char = 'X'
+    expect(layer.frames[1][0][0].char).toBe('F')
   })
 })
 

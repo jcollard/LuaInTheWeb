@@ -1,7 +1,9 @@
+/* eslint-disable max-lines */
 import { useState, useCallback, useRef } from 'react'
-import type { AnsiCell, AnsiGrid, DrawableLayer, Layer, LayerState, RGBColor, Rect, TextAlign, TextLayer } from './types'
-import { isGroupLayer, isDrawableLayer, getParentId } from './types'
+import type { AnsiCell, AnsiGrid, DrawableLayer, DrawnLayer, Layer, LayerState, RGBColor, Rect, TextAlign, TextLayer } from './types'
+import { MIN_FRAME_DURATION_MS, MAX_FRAME_DURATION_MS, isGroupLayer, isDrawableLayer, getParentId } from './types'
 import { createLayer, createGroup, cloneLayerState, syncLayerIds, mergeLayerDown, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, assertContiguousBlocks, findSafeInsertPos } from './layerUtils'
+import { createEmptyGrid, cloneGrid } from './gridUtils'
 import { replaceColorsInGrid } from './colorUtils'
 import { renderTextLayerGrid } from './textLayerGrid'
 
@@ -42,6 +44,12 @@ export interface UseLayerStateReturn {
   toggleGroupCollapsed: (groupId: string) => void
   applyMoveGrids: (layerGrids: Map<string, AnsiGrid>) => void
   applyMoveGridsImmediate: (layerGrids: Map<string, AnsiGrid>) => void
+  addFrame: () => void
+  duplicateFrame: () => void
+  removeFrame: () => void
+  setCurrentFrame: (index: number) => void
+  reorderFrame: (from: number, to: number) => void
+  setFrameDuration: (ms: number) => void
 }
 
 export function useLayerState(initial?: LayerState): UseLayerStateReturn {
@@ -77,6 +85,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     const layer = createLayer(`Layer ${layerCountRef.current}`)
     layer.name = name
     layer.grid = grid
+    layer.frames = [grid]
     setLayers(prev => [...prev, layer])
     setActiveLayerId(layer.id)
   }, [])
@@ -321,10 +330,12 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
 
   const applyMoveGridsImmediate = useCallback((layerGrids: Map<string, AnsiGrid>) => {
     layersRef.current = layersRef.current.map(l => {
-      if (!isDrawableLayer(l)) return l
+      if (l.type !== 'drawn') return l
       const newGrid = layerGrids.get(l.id)
       if (!newGrid) return l
-      return { ...l, grid: newGrid }
+      const newFrames = [...l.frames]
+      newFrames[l.currentFrameIndex] = newGrid
+      return { ...l, grid: newGrid, frames: newFrames }
     })
   }, [layersRef])
 
@@ -339,12 +350,14 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     if (!active || !isDrawableLayer(active)) return // no-op for text/group layers
     if (active.type === 'text') return
     const newLayers = layersRef.current.map(l => {
-      if (l.id !== activeId || !isDrawableLayer(l)) return l
+      if (l.id !== activeId || l.type !== 'drawn') return l
       const newRow = [...l.grid[row]]
       newRow[col] = { ...cell, fg: [...cell.fg] as RGBColor, bg: [...cell.bg] as RGBColor }
       const newGrid = [...l.grid]
       newGrid[row] = newRow
-      return { ...l, grid: newGrid }
+      const newFrames = [...l.frames]
+      newFrames[l.currentFrameIndex] = newGrid
+      return { ...l, grid: newGrid, frames: newFrames }
     })
     layersRef.current = newLayers // sync update for compositing in same handler
     setLayers(newLayers)
@@ -355,7 +368,13 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     const newLayers = layersRef.current.map(l => {
       if (!isDrawableLayer(l)) return l
       if (scope === 'layer' && l.id !== activeId) return l
-      return { ...l, grid: replaceColorsInGrid(l.grid, mapping) }
+      const newGrid = replaceColorsInGrid(l.grid, mapping)
+      if (l.type === 'drawn') {
+        const newFrames = [...l.frames]
+        newFrames[l.currentFrameIndex] = newGrid
+        return { ...l, grid: newGrid, frames: newFrames }
+      }
+      return { ...l, grid: newGrid }
     })
     layersRef.current = newLayers
     setLayers(newLayers)
@@ -379,6 +398,93 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     activeLayerIdRef.current = state.activeLayerId
     setLayers(state.layers)
     setActiveLayerId(state.activeLayerId)
+  }, [])
+
+  const addFrame = useCallback(() => {
+    const activeId = activeLayerIdRef.current
+    const newLayers = layersRef.current.map(l => {
+      if (l.id !== activeId || l.type !== 'drawn') return l
+      const newGrid = createEmptyGrid()
+      const newFrames = [...l.frames, newGrid]
+      const newIndex = newFrames.length - 1
+      return { ...l, grid: newGrid, frames: newFrames, currentFrameIndex: newIndex } satisfies DrawnLayer
+    })
+    layersRef.current = newLayers
+    setLayers(newLayers)
+  }, [])
+
+  const duplicateFrame = useCallback(() => {
+    const activeId = activeLayerIdRef.current
+    const newLayers = layersRef.current.map(l => {
+      if (l.id !== activeId || l.type !== 'drawn') return l
+      const cloned = cloneGrid(l.frames[l.currentFrameIndex])
+      const newFrames = [...l.frames]
+      const newIndex = l.currentFrameIndex + 1
+      newFrames.splice(newIndex, 0, cloned)
+      return { ...l, grid: cloned, frames: newFrames, currentFrameIndex: newIndex } satisfies DrawnLayer
+    })
+    layersRef.current = newLayers
+    setLayers(newLayers)
+  }, [])
+
+  const removeFrame = useCallback(() => {
+    const activeId = activeLayerIdRef.current
+    const newLayers = layersRef.current.map(l => {
+      if (l.id !== activeId || l.type !== 'drawn') return l
+      if (l.frames.length <= 1) return l
+      const newFrames = [...l.frames]
+      newFrames.splice(l.currentFrameIndex, 1)
+      const newIndex = Math.min(l.currentFrameIndex, newFrames.length - 1)
+      return { ...l, grid: newFrames[newIndex], frames: newFrames, currentFrameIndex: newIndex } satisfies DrawnLayer
+    })
+    layersRef.current = newLayers
+    setLayers(newLayers)
+  }, [])
+
+  const setCurrentFrame = useCallback((index: number) => {
+    const activeId = activeLayerIdRef.current
+    const newLayers = layersRef.current.map(l => {
+      if (l.id !== activeId || l.type !== 'drawn') return l
+      const clamped = Math.max(0, Math.min(l.frames.length - 1, index))
+      if (clamped === l.currentFrameIndex) return l
+      return { ...l, grid: l.frames[clamped], currentFrameIndex: clamped } satisfies DrawnLayer
+    })
+    layersRef.current = newLayers
+    setLayers(newLayers)
+  }, [])
+
+  const reorderFrame = useCallback((from: number, to: number) => {
+    const activeId = activeLayerIdRef.current
+    const newLayers = layersRef.current.map(l => {
+      if (l.id !== activeId || l.type !== 'drawn') return l
+      if (from < 0 || from >= l.frames.length || to < 0 || to >= l.frames.length || from === to) return l
+      const newFrames = [...l.frames]
+      const [moved] = newFrames.splice(from, 1)
+      newFrames.splice(to, 0, moved)
+      // Adjust currentFrameIndex to follow the currently selected frame
+      let newIndex = l.currentFrameIndex
+      if (l.currentFrameIndex === from) {
+        newIndex = to
+      } else if (from < l.currentFrameIndex && to >= l.currentFrameIndex) {
+        newIndex = l.currentFrameIndex - 1
+      } else if (from > l.currentFrameIndex && to <= l.currentFrameIndex) {
+        newIndex = l.currentFrameIndex + 1
+      }
+      return { ...l, grid: newFrames[newIndex], frames: newFrames, currentFrameIndex: newIndex } satisfies DrawnLayer
+    })
+    layersRef.current = newLayers
+    setLayers(newLayers)
+  }, [])
+
+  const setFrameDuration = useCallback((ms: number) => {
+    const activeId = activeLayerIdRef.current
+    const clamped = Math.max(MIN_FRAME_DURATION_MS, Math.min(MAX_FRAME_DURATION_MS, ms))
+    const newLayers = layersRef.current.map(l => {
+      if (l.id !== activeId || l.type !== 'drawn') return l
+      return { ...l, frameDurationMs: clamped } satisfies DrawnLayer
+    })
+    layersRef.current = newLayers
+    setLayers(newLayers)
   }, [])
 
   return {
@@ -407,5 +513,11 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     toggleGroupCollapsed,
     applyMoveGrids,
     applyMoveGridsImmediate,
+    addFrame,
+    duplicateFrame,
+    removeFrame,
+    setCurrentFrame,
+    reorderFrame,
+    setFrameDuration,
   }
 }

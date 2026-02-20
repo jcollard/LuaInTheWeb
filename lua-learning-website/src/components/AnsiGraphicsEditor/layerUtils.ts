@@ -1,5 +1,5 @@
 import type { AnsiCell, AnsiGrid, DrawableLayer, DrawnLayer, GroupLayer, Layer, LayerState, RGBColor, TextLayer } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer, getParentId } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer, getParentId } from './types'
 
 /** Walk parentId chain collecting ancestor group IDs. Uses a visited set to prevent infinite loops. */
 export function getAncestorGroupIds(layer: Layer, layers: Layer[]): string[] {
@@ -104,6 +104,9 @@ export function createLayer(name: string, id?: string): DrawnLayer {
     name,
     visible: true,
     grid,
+    frames: [grid],
+    currentFrameIndex: 0,
+    frameDurationMs: DEFAULT_FRAME_DURATION_MS,
   }
 }
 
@@ -273,7 +276,15 @@ function cloneLayer(layer: Layer): Layer {
       textAlign: layer.textAlign,
     } satisfies TextLayer
   }
-  return { ...base, type: 'drawn' } satisfies DrawnLayer
+  const clonedFrames = layer.frames.map(cloneGrid)
+  return {
+    ...base,
+    type: 'drawn',
+    grid: clonedFrames[layer.currentFrameIndex],
+    frames: clonedFrames,
+    currentFrameIndex: layer.currentFrameIndex,
+    frameDurationMs: layer.frameDurationMs,
+  } satisfies DrawnLayer
 }
 
 export function mergeLayerDown(layers: Layer[], layerId: string): Layer[] | null {
@@ -304,6 +315,9 @@ export function mergeLayerDown(layers: Layer[], layerId: string): Layer[] | null
     name: lower.name,
     visible: lower.visible,
     grid: mergedGrid,
+    frames: [mergedGrid],
+    currentFrameIndex: 0,
+    frameDurationMs: DEFAULT_FRAME_DURATION_MS,
   }
 
   // Replace the lower layer with the merged result, remove the upper layer

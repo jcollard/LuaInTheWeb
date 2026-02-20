@@ -91,8 +91,15 @@ interface BaseLayer {
   parentId?: string
 }
 
+export const DEFAULT_FRAME_DURATION_MS = 100
+export const MIN_FRAME_DURATION_MS = 16
+export const MAX_FRAME_DURATION_MS = 10000
+
 export interface DrawnLayer extends BaseLayer {
   type: 'drawn'
+  frames: AnsiGrid[]
+  currentFrameIndex: number
+  frameDurationMs: number
 }
 
 export type TextAlign = 'left' | 'center' | 'right' | 'justify'
@@ -192,6 +199,18 @@ export interface UseAnsiEditorReturn {
   // CGA Preview
   cgaPreview: boolean
   setCgaPreview: (on: boolean) => void
+  // Frame animation
+  addFrame: () => void
+  duplicateFrame: () => void
+  removeFrame: () => void
+  setCurrentFrame: (index: number) => void
+  reorderFrame: (from: number, to: number) => void
+  setFrameDuration: (ms: number) => void
+  isPlaying: boolean
+  togglePlayback: () => void
+  activeLayerFrameCount: number
+  activeLayerCurrentFrame: number
+  activeLayerFrameDuration: number
 }
 
 export interface UseAnsiEditorOptions {

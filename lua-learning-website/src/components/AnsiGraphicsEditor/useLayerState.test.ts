@@ -3,8 +3,8 @@ import { describe, it, expect } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useLayerState } from './useLayerState'
 import { createLayer, createGroup } from './layerUtils'
-import type { DrawableLayer, LayerState, RGBColor, Rect, TextLayer, GroupLayer } from './types'
-import { TRANSPARENT_BG, isGroupLayer, isDrawableLayer } from './types'
+import type { DrawableLayer, DrawnLayer, LayerState, RGBColor, Rect, TextLayer, GroupLayer } from './types'
+import { MIN_FRAME_DURATION_MS, MAX_FRAME_DURATION_MS, TRANSPARENT_BG, isGroupLayer, isDrawableLayer } from './types'
 
 describe('useLayerState', () => {
   describe('initialization', () => {
@@ -926,6 +926,108 @@ describe('useLayerState', () => {
       act(() => result.current.applyMoveGrids(updates))
       expect((result.current.layers[0] as DrawableLayer).grid[0][0].char).toBe('A')
       expect((result.current.layers[1] as DrawableLayer).grid[0][0].char).toBe('B')
+    })
+  })
+
+  describe('frame operations', () => {
+    it('addFrame appends an empty frame and switches to it', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addFrame())
+      const layer = result.current.layers[0] as DrawnLayer
+      expect(layer.frames).toHaveLength(2)
+      expect(layer.currentFrameIndex).toBe(1)
+      expect(layer.grid).toBe(layer.frames[1])
+    })
+
+    it('duplicateFrame clones the current frame and inserts after', () => {
+      const { result } = renderHook(() => useLayerState())
+      // Paint something on frame 0
+      act(() => result.current.applyToActiveLayer(0, 0, { char: 'X', fg: [255, 0, 0], bg: [0, 0, 0] }))
+      act(() => result.current.duplicateFrame())
+      const layer = result.current.layers[0] as DrawnLayer
+      expect(layer.frames).toHaveLength(2)
+      expect(layer.currentFrameIndex).toBe(1)
+      // Content should be duplicated
+      expect(layer.frames[1][0][0].char).toBe('X')
+      // But it should be a deep copy
+      expect(layer.frames[1]).not.toBe(layer.frames[0])
+    })
+
+    it('removeFrame removes the current frame', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addFrame())
+      act(() => result.current.addFrame())
+      // Now 3 frames, on frame 2
+      act(() => result.current.setCurrentFrame(1))
+      act(() => result.current.removeFrame())
+      const layer = result.current.layers[0] as DrawnLayer
+      expect(layer.frames).toHaveLength(2)
+      expect(layer.currentFrameIndex).toBe(1)
+    })
+
+    it('removeFrame is no-op when only one frame', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.removeFrame())
+      const layer = result.current.layers[0] as DrawnLayer
+      expect(layer.frames).toHaveLength(1)
+    })
+
+    it('setCurrentFrame switches grid alias', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addFrame())
+      act(() => result.current.setCurrentFrame(0))
+      const layer = result.current.layers[0] as DrawnLayer
+      expect(layer.currentFrameIndex).toBe(0)
+      expect(layer.grid).toBe(layer.frames[0])
+    })
+
+    it('setCurrentFrame clamps out-of-range index', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addFrame())
+      act(() => result.current.setCurrentFrame(99))
+      const layer = result.current.layers[0] as DrawnLayer
+      expect(layer.currentFrameIndex).toBe(1)
+    })
+
+    it('reorderFrame moves frame and adjusts currentFrameIndex', () => {
+      const { result } = renderHook(() => useLayerState())
+      // Add 3 frames total
+      act(() => result.current.addFrame()) // frame 1
+      act(() => result.current.addFrame()) // frame 2
+      // Paint unique marker on frame 0
+      act(() => result.current.setCurrentFrame(0))
+      act(() => result.current.applyToActiveLayer(0, 0, { char: 'A', fg: [255, 0, 0], bg: [0, 0, 0] }))
+      // Move frame 0 to position 2
+      act(() => result.current.reorderFrame(0, 2))
+      const layer = result.current.layers[0] as DrawnLayer
+      expect(layer.frames).toHaveLength(3)
+      // The frame with 'A' should now be at index 2
+      expect(layer.frames[2][0][0].char).toBe('A')
+      expect(layer.currentFrameIndex).toBe(2)
+    })
+
+    it('setFrameDuration clamps to valid range', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.setFrameDuration(5))
+      expect((result.current.layers[0] as DrawnLayer).frameDurationMs).toBe(MIN_FRAME_DURATION_MS)
+      act(() => result.current.setFrameDuration(99999))
+      expect((result.current.layers[0] as DrawnLayer).frameDurationMs).toBe(MAX_FRAME_DURATION_MS)
+      act(() => result.current.setFrameDuration(250))
+      expect((result.current.layers[0] as DrawnLayer).frameDurationMs).toBe(250)
+    })
+
+    it('drawing on one frame does not affect others', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addFrame())
+      // Paint on frame 1
+      act(() => result.current.applyToActiveLayer(0, 0, { char: 'Z', fg: [0, 255, 0], bg: [0, 0, 0] }))
+      // Switch to frame 0
+      act(() => result.current.setCurrentFrame(0))
+      const layer = result.current.layers[0] as DrawnLayer
+      // Frame 0 should be untouched
+      expect(layer.grid[0][0].char).toBe(' ')
+      // Frame 1 should have the paint
+      expect(layer.frames[1][0][0].char).toBe('Z')
     })
   })
 })

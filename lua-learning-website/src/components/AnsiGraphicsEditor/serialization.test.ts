@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { serializeGrid, deserializeGrid, serializeLayers, deserializeLayers } from './serialization'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, TRANSPARENT_BG, isDrawableLayer } from './types'
-import type { AnsiGrid, DrawableLayer, LayerState, TextLayer, GroupLayer, RGBColor, Rect } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, TRANSPARENT_BG, isDrawableLayer } from './types'
+import type { AnsiGrid, DrawableLayer, DrawnLayer, LayerState, TextLayer, GroupLayer, RGBColor, Rect } from './types'
 import { createLayer, createGroup } from './layerUtils'
 import { renderTextLayerGrid } from './textLayerGrid'
 
@@ -454,5 +454,73 @@ describe('v4 serialization with groups', () => {
     const result = deserializeLayers(lua)
     const g = result.layers[0] as GroupLayer
     expect(g.parentId).toBeUndefined()
+  })
+})
+
+describe('v5 serialization (frames)', () => {
+  it('single-frame layers serialize as v3 (no frames field)', () => {
+    const layer = createLayer('BG', 'l1')
+    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
+    const lua = serializeLayers(state)
+    expect(lua).toContain('["version"] = 3')
+    expect(lua).not.toContain('"frames"')
+  })
+
+  it('multi-frame layers serialize as v5 with frames', () => {
+    const layer = createLayer('BG', 'l1')
+    const frame2 = createTestGrid()
+    frame2[0][0] = { char: 'A', fg: [255, 0, 0] as RGBColor, bg: [0, 0, 0] as RGBColor }
+    layer.frames.push(frame2)
+    layer.currentFrameIndex = 1
+    layer.grid = layer.frames[1]
+    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
+    const lua = serializeLayers(state)
+    expect(lua).toContain('["version"] = 5')
+    expect(lua).toContain('["frames"]')
+    expect(lua).toContain('["currentFrameIndex"]')
+    expect(lua).toContain('["frameDurationMs"]')
+  })
+
+  it('round-trips multi-frame layers', () => {
+    const layer = createLayer('BG', 'l1')
+    const frame2 = createTestGrid()
+    frame2[0][0] = { char: 'B', fg: [0, 255, 0] as RGBColor, bg: [0, 0, 0] as RGBColor }
+    layer.frames.push(frame2)
+    layer.currentFrameIndex = 1
+    layer.grid = layer.frames[1]
+    layer.frameDurationMs = 200
+    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
+    const lua = serializeLayers(state)
+    const result = deserializeLayers(lua)
+    const loaded = result.layers[0] as DrawnLayer
+    expect(loaded.frames).toHaveLength(2)
+    expect(loaded.currentFrameIndex).toBe(1)
+    expect(loaded.frameDurationMs).toBe(200)
+    expect(loaded.grid).toBe(loaded.frames[1])
+    expect(loaded.frames[1][0][0].char).toBe('B')
+  })
+
+  it('v3/v4 files load with frames: [grid] and defaults', () => {
+    const layer = createLayer('BG', 'l1')
+    // Serialize as v3 (single frame)
+    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
+    const lua = serializeLayers(state)
+    const result = deserializeLayers(lua)
+    const loaded = result.layers[0] as DrawnLayer
+    expect(loaded.frames).toHaveLength(1)
+    expect(loaded.frames[0]).toBe(loaded.grid)
+    expect(loaded.currentFrameIndex).toBe(0)
+    expect(loaded.frameDurationMs).toBe(DEFAULT_FRAME_DURATION_MS)
+  })
+
+  it('v1 files load with frames: [grid] and defaults', () => {
+    const grid = createTestGrid()
+    grid[0][0] = { char: 'V', fg: [1, 2, 3] as RGBColor, bg: [4, 5, 6] as RGBColor }
+    const luaV1 = serializeGrid(grid)
+    const result = deserializeLayers(luaV1)
+    const loaded = result.layers[0] as DrawnLayer
+    expect(loaded.frames).toHaveLength(1)
+    expect(loaded.frames[0]).toBe(loaded.grid)
+    expect(loaded.currentFrameIndex).toBe(0)
   })
 })
