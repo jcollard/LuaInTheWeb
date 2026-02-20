@@ -18,6 +18,10 @@ function cellsEqual(a: BufferCell, b: BufferCell): boolean {
     && a.bg[0] === b.bg[0] && a.bg[1] === b.bg[1] && a.bg[2] === b.bg[2]
 }
 
+function cloneBufferCell(cell: BufferCell): BufferCell {
+  return { char: cell.char, fg: [...cell.fg] as RGBColor, bg: [...cell.bg] as RGBColor }
+}
+
 function formatCell(row: number, col: number, fg: RGBColor, bg: RGBColor, char: string): string {
   return `\x1b[${row + 1};${col + 1}H\x1b[38;2;${fg[0]};${fg[1]};${fg[2]}m\x1b[48;2;${bg[0]};${bg[1]};${bg[2]}m${char}\x1b[0m`
 }
@@ -40,15 +44,14 @@ export class TerminalBuffer {
 
   private createSentinelGrid(): BufferCell[][] {
     return Array.from({ length: ANSI_ROWS }, () =>
-      Array.from({ length: ANSI_COLS }, () => ({ ...SENTINEL, fg: [...SENTINEL.fg] as RGBColor, bg: [...SENTINEL.bg] as RGBColor }))
+      Array.from({ length: ANSI_COLS }, () => cloneBufferCell(SENTINEL))
     )
   }
 
   /** Bind to a terminal handle. Marks the buffer dirty so next flush writes everything. */
   attach(handle: AnsiTerminalHandle): void {
     this.handle = handle
-    this.dirty = true
-    this.shadow = this.createSentinelGrid()
+    this.invalidate()
   }
 
   /** Unbind from the terminal handle. Prevents further writes. */
@@ -74,7 +77,7 @@ export class TerminalBuffer {
 
     if (cellsEqual(this.shadow[row][col], transformed)) return
 
-    this.shadow[row][col] = { char: transformed.char, fg: [...transformed.fg] as RGBColor, bg: [...transformed.bg] as RGBColor }
+    this.shadow[row][col] = cloneBufferCell(transformed)
     this.handle.write(formatCell(row, col, fg, bg, cell.char))
   }
 
@@ -95,7 +98,7 @@ export class TerminalBuffer {
 
         if (!this.dirty && cellsEqual(this.shadow[r][c], transformed)) continue
 
-        this.shadow[r][c] = { char: transformed.char, fg: [...transformed.fg] as RGBColor, bg: [...transformed.bg] as RGBColor }
+        this.shadow[r][c] = cloneBufferCell(transformed)
         batch += formatCell(r, c, fg, bg, cell.char)
       }
     }

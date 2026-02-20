@@ -1,7 +1,6 @@
 import type { AnsiCell, AnsiGrid, BrushSettings, Layer } from './types'
 import { ANSI_COLS, ANSI_ROWS } from './types'
-import type { CellHalf } from './gridUtils'
-import type { ColorTransform } from './gridUtils'
+import type { CellHalf, ColorTransform } from './gridUtils'
 import {
   parseCellKey, isInBounds,
   computeErasePixelCell, computeLineCells, computeRectCells, computeOvalCells, computeBorderCells,

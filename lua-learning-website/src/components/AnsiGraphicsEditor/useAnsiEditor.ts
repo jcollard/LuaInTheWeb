@@ -3,9 +3,8 @@ import { useState, useCallback, useRef, useMemo } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, BorderStyle, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions, DrawableLayer } from './types'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, BORDER_PRESETS, isGroupLayer, isDrawableLayer } from './types'
-import type { CellHalf } from './gridUtils'
+import type { CellHalf, ColorTransform } from './gridUtils'
 import { createEmptyGrid, isInBounds, getCellHalfFromMouse, computePixelCell, computeFloodFillCells } from './gridUtils'
-import type { ColorTransform } from './gridUtils'
 import { TerminalBuffer } from './terminalBuffer'
 import { cgaQuantize } from './ansExport'
 import { compositeCell, compositeGrid, cloneLayerState, isDefaultCell, getGroupDescendantLayers } from './layerUtils'
@@ -63,7 +62,6 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const [canRedo, setCanRedo] = useState(false)
 
   const undoStackRef = useRef<LayerState[]>([]), redoStackRef = useRef<LayerState[]>([])
-  const handleRef = useRef<AnsiTerminalHandle | null>(null)
   const terminalBufferRef = useRef(new TerminalBuffer())
   const brushRef = useRef(brush); brushRef.current = brush
   const paintingRef = useRef(false)
@@ -548,7 +546,6 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const onTerminalReady = useCallback((handle: AnsiTerminalHandle | null) => {
     cleanupRef.current?.()
     cleanupRef.current = null
-    handleRef.current = handle
     if (handle) {
       terminalBufferRef.current.attach(handle)
       terminalBufferRef.current.flush(compositeGrid(layersRef.current), colorTransformRef.current)
