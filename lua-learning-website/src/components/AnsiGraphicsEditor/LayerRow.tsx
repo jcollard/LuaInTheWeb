@@ -1,11 +1,9 @@
-import { Fragment } from 'react'
 import type { Layer, GroupLayer } from './types'
 import { isGroupLayer } from './types'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface LayerRowProps {
   layer: Layer
-  isActive: boolean
   isEditing: boolean
   singleLayer: boolean
   singleDrawable: boolean
@@ -30,7 +28,6 @@ export interface LayerRowProps {
 
 export function LayerRow({
   layer,
-  isActive: _isActive,
   isEditing,
   singleLayer,
   singleDrawable,
@@ -53,9 +50,11 @@ export function LayerRow({
   onToggleCollapsed,
 }: LayerRowProps) {
   const isGroup = isGroupLayer(layer)
+  const groupLayer = isGroup ? (layer as GroupLayer) : null
+  const collapsedLabel = groupLayer?.collapsed ? 'Expand group' : 'Collapse group'
 
   return (
-    <Fragment>
+    <>
       {dropZone}
       <div
         data-testid={`layer-row-${layer.id}`}
@@ -63,7 +62,8 @@ export function LayerRow({
         style={depthStyle}
         onClick={onSetActive}
         onContextMenu={onContextMenu}
-        {...(isGroup ? { onDragOver: onDragOverGroup, onDrop: onDropOnGroup } : {})}
+        onDragOver={isGroup ? onDragOverGroup : undefined}
+        onDrop={isGroup ? onDropOnGroup : undefined}
       >
         {!singleLayer && (
           <span
@@ -75,15 +75,15 @@ export function LayerRow({
             title="Drag to reorder"
           >&#x2630;</span>
         )}
-        {isGroup && (
+        {groupLayer && (
           <button
             className={styles.layerGroupToggle}
             data-testid={`group-toggle-${layer.id}`}
             onClick={e => { e.stopPropagation(); onToggleCollapsed?.() }}
-            aria-label={(layer as GroupLayer).collapsed ? 'Expand group' : 'Collapse group'}
-            title={(layer as GroupLayer).collapsed ? 'Expand group' : 'Collapse group'}
+            aria-label={collapsedLabel}
+            title={collapsedLabel}
           >
-            {(layer as GroupLayer).collapsed ? '\u25B6' : '\u25BC'}
+            {groupLayer.collapsed ? '\u25B6' : '\u25BC'}
           </button>
         )}
         <button
@@ -134,6 +134,6 @@ export function LayerRow({
           &#x1F5D1;
         </button>
       </div>
-    </Fragment>
+    </>
   )
 }

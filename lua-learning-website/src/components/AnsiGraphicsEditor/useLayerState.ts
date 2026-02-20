@@ -5,6 +5,17 @@ import { createLayer, createGroup, cloneLayerState, syncLayerIds, mergeLayerDown
 import { replaceColorsInGrid } from './colorUtils'
 import { renderTextLayerGrid } from './textLayerGrid'
 
+/** Compute the clamped insertion position within a group's contiguous block. */
+function computeGroupInsertPos(
+  layers: Layer[], targetGroupId: string, rawNewIndex: number, sourceIndex: number,
+): number {
+  const gIdx = layers.findIndex(l => l.id === targetGroupId)
+  const rangeEnd = findGroupBlockEnd(layers, targetGroupId, gIdx)
+  const adjusted = rawNewIndex > sourceIndex ? rawNewIndex - 1 : rawNewIndex
+  const rawInsert = (adjusted >= gIdx + 1 && adjusted <= rangeEnd) ? adjusted : rangeEnd
+  return snapPastSubBlocks(layers, rawInsert, gIdx, rangeEnd)
+}
+
 export interface UseLayerStateReturn {
   layers: Layer[]
   activeLayerId: string
@@ -115,12 +126,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
         // Promote children (drawables and sub-groups) to the deleted group's parentId
         const promotedParentId = target.parentId
         const next = prev.filter(l => l.id !== id).map(l => {
-          if (isDrawableLayer(l) && l.parentId === id) {
-            return { ...l, parentId: promotedParentId }
-          }
-          if (isGroupLayer(l) && l.parentId === id) {
-            return { ...l, parentId: promotedParentId }
-          }
+          if (getParentId(l) === id) return { ...l, parentId: promotedParentId }
           return l
         })
         // Don't allow deleting if it would leave no drawable layers
@@ -207,22 +213,16 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
               if (l.id === id && isGroupLayer(l)) return { ...l, parentId: targetGroupId }
               return l
             })
-            const gIdx = rest.findIndex(l => l.id === targetGroupId)
-            const rangeEnd = findGroupBlockEnd(rest, targetGroupId, gIdx)
-            const adjusted = newIndex > currentIndex ? newIndex - 1 : newIndex
-            const rawInsert = (adjusted >= gIdx + 1 && adjusted <= rangeEnd) ? adjusted : rangeEnd
-            rest.splice(snapPastSubBlocks(rest, rawInsert, gIdx, rangeEnd), 0, ...updatedBlock)
+            const insertPos = computeGroupInsertPos(rest, targetGroupId, newIndex, currentIndex)
+            rest.splice(insertPos, 0, ...updatedBlock)
             return rest
           }
 
           if (!isDrawableLayer(layer)) return prev
           const next = [...prev]
           const [removed] = next.splice(currentIndex, 1)
-          const gIdx = next.findIndex(l => l.id === targetGroupId)
-          const rangeEnd = findGroupBlockEnd(next, targetGroupId, gIdx)
-          const adjusted = newIndex > currentIndex ? newIndex - 1 : newIndex
-          const rawInsert = (adjusted >= gIdx + 1 && adjusted <= rangeEnd) ? adjusted : rangeEnd
-          next.splice(snapPastSubBlocks(next, rawInsert, gIdx, rangeEnd), 0, { ...removed, parentId: targetGroupId })
+          const insertPos = computeGroupInsertPos(next, targetGroupId, newIndex, currentIndex)
+          next.splice(insertPos, 0, { ...removed, parentId: targetGroupId })
           return next
         }
 
@@ -278,13 +278,12 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
         const idx = prev.findIndex(l => l.id === layerId)
         if (idx < 0) return prev
         const layer = prev[idx]
-        const parentId = getParentId(layer)
-        if (!parentId) return prev
-        const groupId = parentId
+        const groupId = getParentId(layer)
+        if (!groupId) return prev
 
         if (isGroupLayer(layer)) {
-          const parentGroupIdx = prev.findIndex(l => l.id === groupId)
-          if (parentGroupIdx < 0) return prev
+          const groupIdx = prev.findIndex(l => l.id === groupId)
+          if (groupIdx < 0) return prev
 
           const { block, rest } = extractGroupBlock(prev, layerId)
           const updatedBlock = block.map(l => {
@@ -292,8 +291,8 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
             return l
           })
 
-          const parentIdxInRest = rest.findIndex(l => l.id === groupId)
-          const insertIdx = findGroupBlockEnd(rest, groupId, parentIdxInRest)
+          const groupIdxInRest = rest.findIndex(l => l.id === groupId)
+          const insertIdx = findGroupBlockEnd(rest, groupId, groupIdxInRest)
           rest.splice(insertIdx, 0, ...updatedBlock)
           return rest
         }

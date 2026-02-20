@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { Layer } from './types'
 import { isGroupLayer, isDrawableLayer, getParentId } from './types'
-import { getAncestorGroupIds, getGroupDescendantIds, getNestingDepth, isAncestorOf, buildDisplayOrder } from './layerUtils'
+import { getAncestorGroupIds, getGroupDescendantIds, isAncestorOf, buildDisplayOrder } from './layerUtils'
 import { LayerRow } from './LayerRow'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -73,9 +73,7 @@ export function LayersPanel({
     requestAnimationFrame(() => setDraggedId(id))
   }, [])
 
-  const handleDragEnd = useCallback(() => {
-    clearDragState()
-  }, [clearDragState])
+  const handleDragEnd = useCallback(clearDragState, [clearDragState])
 
   const handleDragOverGroup = useCallback((e: React.DragEvent, groupId: string) => {
     e.preventDefault()
@@ -143,11 +141,9 @@ export function LayersPanel({
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [contextMenu])
 
-  // Build a set of collapsed group IDs for hiding children
-  const collapsedGroups = new Set<string>()
-  for (const layer of layers) {
-    if (isGroupLayer(layer) && layer.collapsed) collapsedGroups.add(layer.id)
-  }
+  const collapsedGroups = new Set(
+    layers.filter(l => isGroupLayer(l) && l.collapsed).map(l => l.id)
+  )
 
   // Display layers in reverse order with recursive tree-walk
   const reversed = buildDisplayOrder(layers)
@@ -159,10 +155,9 @@ export function LayersPanel({
     ? getGroupDescendantIds(draggedId, layers)
     : new Set<string>()
 
-  // Context menu layer info
-  const contextLayer = contextMenu ? layers.find(l => l.id === contextMenu.layerId) : null
-  const contextIsGroup = contextLayer ? isGroupLayer(contextLayer) : false
-  const contextHasParentId = contextLayer ? !!getParentId(contextLayer) : false
+  const contextLayer = contextMenu ? layers.find(l => l.id === contextMenu.layerId) : undefined
+  const contextIsGroup = contextLayer != null && isGroupLayer(contextLayer)
+  const contextHasParentId = contextLayer != null && getParentId(contextLayer) != null
 
   return (
     <div className={styles.layersPanel} data-testid="layers-panel">
@@ -185,14 +180,13 @@ export function LayersPanel({
           const isEditing = editingId === layer.id
           const isGroupDropTarget = !isDragged && dropOnGroup === layer.id && draggedId !== null
 
-          // Hide children of collapsed groups — check if ANY ancestor is collapsed
+          // Hide children of collapsed groups
           const ancestors = getAncestorGroupIds(layer, layers)
           if (ancestors.some(aid => collapsedGroups.has(aid))) {
             return null
           }
 
-          const depth = getNestingDepth(layer, layers)
-          const depthStyle = depth > 0 ? { paddingLeft: `${depth * 28}px` } : undefined
+          const depthStyle = ancestors.length > 0 ? { paddingLeft: `${ancestors.length * 28}px` } : undefined
 
           const rowClassName = [
             styles.layerRow,
@@ -220,7 +214,6 @@ export function LayersPanel({
             <LayerRow
               key={layer.id}
               layer={layer}
-              isActive={isActive}
               isEditing={isEditing}
               singleLayer={singleLayer}
               singleDrawable={singleDrawable}

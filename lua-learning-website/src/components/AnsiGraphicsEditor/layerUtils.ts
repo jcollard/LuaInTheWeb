@@ -5,14 +5,14 @@ import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, HALF_BLOCK,
 export function getAncestorGroupIds(layer: Layer, layers: Layer[]): string[] {
   const ancestors: string[] = []
   const visited = new Set<string>()
-  let parentId = getParentId(layer)
   const layerMap = new Map(layers.map(l => [l.id, l]))
+  let parentId = getParentId(layer)
   while (parentId) {
     if (visited.has(parentId)) break
     visited.add(parentId)
     ancestors.push(parentId)
     const parent = layerMap.get(parentId)
-    parentId = parent && isGroupLayer(parent) ? parent.parentId : undefined
+    parentId = parent ? getParentId(parent) : undefined
   }
   return ancestors
 }
