@@ -12,7 +12,7 @@ export type AnsiGrid = AnsiCell[][]
 
 export type BrushMode = 'brush' | 'pixel' | 'eraser'
 
-export type DrawTool = 'pencil' | 'line' | 'rect-outline' | 'rect-filled' | 'oval-outline' | 'oval-filled' | 'flood-fill' | 'select' | 'eyedropper' | 'text'
+export type DrawTool = 'pencil' | 'line' | 'rect-outline' | 'rect-filled' | 'oval-outline' | 'oval-filled' | 'flood-fill' | 'select' | 'eyedropper' | 'text' | 'move'
 
 export const HALF_BLOCK = '\u2580'
 
@@ -63,6 +63,7 @@ interface BaseLayer {
   name: string
   visible: boolean
   grid: AnsiGrid
+  parentId?: string
 }
 
 export interface DrawnLayer extends BaseLayer {
@@ -80,7 +81,33 @@ export interface TextLayer extends BaseLayer {
   textAlign?: TextAlign
 }
 
-export type Layer = DrawnLayer | TextLayer
+export interface GroupLayer {
+  type: 'group'
+  id: string
+  name: string
+  visible: boolean
+  collapsed: boolean
+  parentId?: string
+}
+
+export type DrawableLayer = DrawnLayer | TextLayer
+
+export type Layer = DrawnLayer | TextLayer | GroupLayer
+
+export function isGroupLayer(layer: Layer): layer is GroupLayer {
+  return layer.type === 'group'
+}
+
+export function isDrawableLayer(layer: Layer): layer is DrawableLayer {
+  return layer.type === 'drawn' || layer.type === 'text'
+}
+
+/** Extract parentId from any Layer variant. All layer types carry an optional parentId. */
+export function getParentId(layer: Layer): string | undefined {
+  if (isGroupLayer(layer)) return layer.parentId
+  if (isDrawableLayer(layer)) return layer.parentId
+  return undefined
+}
 
 export interface LayerState {
   layers: Layer[]         // ordered bottom-to-top (index 0 = bottom)
@@ -122,14 +149,20 @@ export interface UseAnsiEditorReturn {
   removeLayer: (id: string) => void
   renameLayer: (id: string, name: string) => void
   setActiveLayer: (id: string) => void
-  reorderLayer: (id: string, newIndex: number) => void
+  reorderLayer: (id: string, newIndex: number, targetGroupId?: string | null) => void
   toggleVisibility: (id: string) => void
   mergeDown: (id: string) => void
+  wrapInGroup: (layerId: string) => void
+  removeFromGroup: (layerId: string) => void
+  toggleGroupCollapsed: (groupId: string) => void
   importPngAsLayer: (file: File) => Promise<void>
   simplifyColors: (mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => void
   setTextAlign: (align: TextAlign) => void
   flipSelectionHorizontal: () => void
   flipSelectionVertical: () => void
+  // Move tool
+  activeLayerIsGroup: boolean
+  isMoveDragging: boolean
   // CGA Preview
   cgaPreview: boolean
   setCgaPreview: (on: boolean) => void

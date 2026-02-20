@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, Fragment } from 'react'
 import type { Layer } from './types'
-import { isGroupLayer, isDrawableLayer } from './types'
+import { isGroupLayer, isDrawableLayer, getParentId } from './types'
 import { getAncestorGroupIds, getGroupDescendantIds, getNestingDepth, isAncestorOf } from './layerUtils'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -58,6 +58,12 @@ export function LayersPanel({
 
   const closeContextMenu = useCallback(() => setContextMenu(null), [])
 
+  const clearDragState = useCallback(() => {
+    setDraggedId(null)
+    setDropZoneTargetId(null)
+    setDropOnGroup(null)
+  }, [])
+
   const handleDragStart = useCallback((e: React.DragEvent, id: string) => {
     e.dataTransfer.setData('text/plain', id)
     e.dataTransfer.effectAllowed = 'move'
@@ -67,10 +73,8 @@ export function LayersPanel({
   }, [])
 
   const handleDragEnd = useCallback(() => {
-    setDraggedId(null)
-    setDropZoneTargetId(null)
-    setDropOnGroup(null)
-  }, [])
+    clearDragState()
+  }, [clearDragState])
 
   const handleDragOverGroup = useCallback((e: React.DragEvent, groupId: string) => {
     e.preventDefault()
@@ -102,10 +106,8 @@ export function LayersPanel({
         onReorder(sourceId, targetArrayIdx)
       }
     }
-    setDraggedId(null)
-    setDropZoneTargetId(null)
-    setDropOnGroup(null)
-  }, [layers, onReorder])
+    clearDragState()
+  }, [layers, onReorder, clearDragState])
 
   const handleDropOnGroup = useCallback((e: React.DragEvent, groupId: string) => {
     e.preventDefault()
@@ -119,10 +121,8 @@ export function LayersPanel({
     if (groupIdx >= 0) {
       onReorder(sourceId, groupIdx, groupId)
     }
-    setDraggedId(null)
-    setDropZoneTargetId(null)
-    setDropOnGroup(null)
-  }, [layers, onReorder])
+    clearDragState()
+  }, [layers, onReorder, clearDragState])
 
   useEffect(() => {
     if (!contextMenu) return
@@ -144,7 +144,7 @@ export function LayersPanel({
   const childrenMap = new Map<string | undefined, Layer[]>()
   const rawReversed = [...layers].reverse()
   for (const layer of rawReversed) {
-    const pid = isGroupLayer(layer) ? layer.parentId : (isDrawableLayer(layer) ? layer.parentId : undefined)
+    const pid = getParentId(layer)
     const existing = childrenMap.get(pid) ?? []
     existing.push(layer)
     childrenMap.set(pid, existing)
@@ -173,7 +173,7 @@ export function LayersPanel({
   // Context menu layer info
   const contextLayer = contextMenu ? layers.find(l => l.id === contextMenu.layerId) : null
   const contextIsGroup = contextLayer ? isGroupLayer(contextLayer) : false
-  const contextHasParentId = contextLayer ? (isGroupLayer(contextLayer) ? !!contextLayer.parentId : (isDrawableLayer(contextLayer) ? !!contextLayer.parentId : false)) : false
+  const contextHasParentId = contextLayer ? !!getParentId(contextLayer) : false
 
   return (
     <div className={styles.layersPanel} data-testid="layers-panel">
@@ -214,9 +214,13 @@ export function LayersPanel({
           ].filter(Boolean).join(' ')
 
           const isZoneActive = dropZoneTargetId === layer.id && draggedId !== null && !isDragged
+          const dropZoneClassName = [
+            styles.layerDropZone,
+            isZoneActive && styles.layerDropZoneActive,
+          ].filter(Boolean).join(' ')
           const dropZone = (
             <div
-              className={`${styles.layerDropZone} ${isZoneActive ? styles.layerDropZoneActive : ''}`}
+              className={dropZoneClassName}
               data-testid={`layer-drop-zone-${layer.id}`}
               onDragOver={e => handleDragOverZone(e, layer.id)}
               onDrop={e => handleDropOnZone(e, layer.id)}
