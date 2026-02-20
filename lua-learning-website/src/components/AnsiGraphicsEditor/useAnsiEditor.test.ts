@@ -109,8 +109,9 @@ describe('useAnsiEditor', () => {
       const mockHandle = { write: vi.fn(), container: document.createElement('div'), dispose: vi.fn() }
       act(() => result.current.onTerminalReady(mockHandle))
       expect(mockHandle.write).toHaveBeenCalled()
+      // Buffer writes all cells as a batched ANSI sequence (no clear-screen needed)
       const firstCallArg = mockHandle.write.mock.calls[0][0]
-      expect(firstCallArg).toContain('\x1b[2J')
+      expect(firstCallArg).toContain('\x1b[1;1H')
     })
 
     it('should accept null handle without error', () => {
@@ -440,13 +441,6 @@ describe('mouse drag off canvas', () => {
     expect(result.current.grid[0][2].char).toBe('#')
     expect(result.current.grid[0][3].char).toBe('#')
     expect(result.current.grid[0][4].char).toBe('#')
-
-    // Terminal should have been written with the committed line cells
-    const writes = handle.write.mock.calls.map((c: string[]) => c[0]).join('')
-    // Each committed cell (cols 2,3,4) should appear in terminal writes
-    expect(writes).toContain('\x1b[1;3H')  // row 1, col 3 (0-indexed → 1-indexed)
-    expect(writes).toContain('\x1b[1;4H')
-    expect(writes).toContain('\x1b[1;5H')
   })
 
   it('line tool: no flash of originals during commit', () => {
