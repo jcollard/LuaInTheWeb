@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { LayersPanel } from './LayersPanel'
-import type { Layer, TextLayer } from './types'
+import type { Layer, TextLayer, GroupLayer } from './types'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL } from './types'
-import { createLayer } from './layerUtils'
+import { createLayer, createGroup } from './layerUtils'
 
 function makeLayers(...names: string[]): Layer[] {
   return names.map((name, i) => createLayer(name, `layer-${i}`))
@@ -18,10 +18,13 @@ describe('LayersPanel', () => {
     onSetActive?: (id: string) => void
     onToggleVisibility?: (id: string) => void
     onRename?: (id: string, name: string) => void
-    onReorder?: (id: string, newIndex: number) => void
+    onReorder?: (id: string, newIndex: number, targetGroupId?: string | null) => void
     onAdd?: () => void
     onRemove?: (id: string) => void
     onMergeDown?: (id: string) => void
+    onWrapInGroup?: (layerId: string) => void
+    onRemoveFromGroup?: (layerId: string) => void
+    onToggleGroupCollapsed?: (groupId: string) => void
   }) {
     const layers = overrides?.layers ?? makeLayers('Background', 'Foreground')
     return render(
@@ -35,6 +38,9 @@ describe('LayersPanel', () => {
         onAdd={overrides?.onAdd ?? noop}
         onRemove={overrides?.onRemove ?? noop}
         onMergeDown={overrides?.onMergeDown ?? noop}
+        onWrapInGroup={overrides?.onWrapInGroup ?? noop}
+        onRemoveFromGroup={overrides?.onRemoveFromGroup ?? noop}
+        onToggleGroupCollapsed={overrides?.onToggleGroupCollapsed ?? noop}
       />
     )
   }
@@ -212,15 +218,15 @@ describe('LayersPanel', () => {
       expect(screen.queryByTestId('layer-grip-layer-0')).toBeNull()
     })
 
-    it('dragging a layer onto another calls onReorder with target array index', () => {
+    it('dragging a layer onto a drop zone calls onReorder with target array index', () => {
       const onReorder = vi.fn()
       const layers = makeLayers('Background', 'Middle', 'Top')
       renderPanel({ layers, onReorder })
       const gripTop = screen.getByTestId('layer-grip-layer-2')
-      const rowBottom = screen.getByTestId('layer-row-layer-0')
+      const zone = screen.getByTestId('layer-drop-zone-layer-0')
       startDrag(gripTop)
-      fireEvent.dragOver(rowBottom, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
-      fireEvent.drop(rowBottom, { dataTransfer: { getData: () => 'layer-2' }, preventDefault: vi.fn() })
+      fireEvent.dragOver(zone, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
+      fireEvent.drop(zone, { dataTransfer: { getData: () => 'layer-2' }, preventDefault: vi.fn() })
       expect(onReorder).toHaveBeenCalledWith('layer-2', 0)
     })
 
@@ -232,40 +238,35 @@ describe('LayersPanel', () => {
       expect(row.className).toContain('Dragging')
     })
 
-    it('shows placeholder when dragging over a row (moving up)', () => {
+    it('drop zone gets active class when dragging over it (moving up)', () => {
       const layers = makeLayers('Bot', 'Mid', 'Top')
       renderPanel({ layers })
       const gripBot = screen.getByTestId('layer-grip-layer-0')
-      const rowTop = screen.getByTestId('layer-row-layer-2')
+      const zoneTop = screen.getByTestId('layer-drop-zone-layer-2')
       startDrag(gripBot)
-      fireEvent.dragOver(rowTop, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
-      const placeholder = screen.getByTestId('layer-drop-placeholder')
-      expect(placeholder).toBeTruthy()
-      expect(placeholder.nextElementSibling).toBe(rowTop)
+      fireEvent.dragOver(zoneTop, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
+      expect(zoneTop.className).toContain('Active')
     })
 
-    it('shows placeholder when dragging over a row (moving down)', () => {
+    it('drop zone gets active class when dragging over it (moving down)', () => {
       const layers = makeLayers('Bot', 'Mid', 'Top')
       renderPanel({ layers })
       const gripTop = screen.getByTestId('layer-grip-layer-2')
-      const rowBot = screen.getByTestId('layer-row-layer-0')
+      const zoneBot = screen.getByTestId('layer-drop-zone-layer-0')
       startDrag(gripTop)
-      fireEvent.dragOver(rowBot, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
-      const placeholder = screen.getByTestId('layer-drop-placeholder')
-      expect(placeholder).toBeTruthy()
-      expect(rowBot.nextElementSibling).toBe(placeholder)
+      fireEvent.dragOver(zoneBot, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
+      expect(zoneBot.className).toContain('Active')
     })
 
-    it('dropping on placeholder calls onReorder', () => {
+    it('dropping on drop zone calls onReorder', () => {
       const onReorder = vi.fn()
       const layers = makeLayers('Bot', 'Mid', 'Top')
       renderPanel({ layers, onReorder })
       const gripBot = screen.getByTestId('layer-grip-layer-0')
-      const rowTop = screen.getByTestId('layer-row-layer-2')
+      const zoneTop = screen.getByTestId('layer-drop-zone-layer-2')
       startDrag(gripBot)
-      fireEvent.dragOver(rowTop, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
-      const placeholder = screen.getByTestId('layer-drop-placeholder')
-      fireEvent.drop(placeholder, { dataTransfer: { getData: () => 'layer-0' }, preventDefault: vi.fn() })
+      fireEvent.dragOver(zoneTop, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
+      fireEvent.drop(zoneTop, { dataTransfer: { getData: () => 'layer-0' }, preventDefault: vi.fn() })
       expect(onReorder).toHaveBeenCalledWith('layer-0', 2)
     })
 
@@ -274,9 +275,13 @@ describe('LayersPanel', () => {
       const grip = screen.getByTestId('layer-grip-layer-1')
       startDrag(grip)
       expect(screen.getByTestId('layer-row-layer-1').className).toContain('Dragging')
+      // Hover a drop zone to activate it
+      const zone = screen.getByTestId('layer-drop-zone-layer-0')
+      fireEvent.dragOver(zone, { dataTransfer: { dropEffect: '' }, preventDefault: vi.fn() })
+      expect(zone.className).toContain('Active')
       fireEvent.dragEnd(grip)
       expect(screen.getByTestId('layer-row-layer-1').className).not.toContain('Dragging')
-      expect(screen.queryByTestId('layer-drop-placeholder')).toBeNull()
+      expect(zone.className).not.toContain('Active')
     })
   })
 
@@ -349,6 +354,208 @@ describe('LayersPanel', () => {
     it('does not show context menu initially', () => {
       renderPanel()
       expect(screen.queryByTestId('layer-context-menu')).toBeNull()
+    })
+  })
+
+  describe('group layers', () => {
+    function makeGroupedLayers(): Layer[] {
+      const group = createGroup('Characters', 'g1')
+      const child1 = createLayer('Hero', 'c1')
+      child1.parentId = 'g1'
+      const child2 = createLayer('Enemy', 'c2')
+      child2.parentId = 'g1'
+      const root = createLayer('Background', 'bg')
+      return [root, group, child1, child2]
+    }
+
+    it('renders group rows with folder badge', () => {
+      renderPanel({ layers: makeGroupedLayers(), activeLayerId: 'c1' })
+      const groupRow = screen.getByTestId('layer-row-g1')
+      expect(groupRow).toBeTruthy()
+      const badge = groupRow.querySelector('[data-testid="group-layer-badge"]')
+      expect(badge).not.toBeNull()
+    })
+
+    it('renders collapse toggle on group rows', () => {
+      renderPanel({ layers: makeGroupedLayers(), activeLayerId: 'c1' })
+      expect(screen.getByTestId('group-toggle-g1')).toBeTruthy()
+    })
+
+    it('clicking collapse toggle calls onToggleGroupCollapsed', () => {
+      const onToggleGroupCollapsed = vi.fn()
+      renderPanel({ layers: makeGroupedLayers(), activeLayerId: 'c1', onToggleGroupCollapsed })
+      fireEvent.click(screen.getByTestId('group-toggle-g1'))
+      expect(onToggleGroupCollapsed).toHaveBeenCalledWith('g1')
+    })
+
+    it('hides children when group is collapsed', () => {
+      const layers = makeGroupedLayers()
+      const group = layers[1] as GroupLayer
+      group.collapsed = true
+      renderPanel({ layers, activeLayerId: 'bg' })
+      // Children should be hidden
+      expect(screen.queryByTestId('layer-row-c1')).toBeNull()
+      expect(screen.queryByTestId('layer-row-c2')).toBeNull()
+      // Group should still be visible
+      expect(screen.getByTestId('layer-row-g1')).toBeTruthy()
+    })
+
+    it('shows children when group is expanded', () => {
+      const layers = makeGroupedLayers()
+      renderPanel({ layers, activeLayerId: 'c1' })
+      expect(screen.getByTestId('layer-row-c1')).toBeTruthy()
+      expect(screen.getByTestId('layer-row-c2')).toBeTruthy()
+    })
+
+    it('child rows have indent via inline style', () => {
+      renderPanel({ layers: makeGroupedLayers(), activeLayerId: 'c1' })
+      const childRow = screen.getByTestId('layer-row-c1')
+      expect(childRow.style.paddingLeft).toBe('28px')
+    })
+
+    it('group row gets active styling when active', () => {
+      renderPanel({ layers: makeGroupedLayers(), activeLayerId: 'g1' })
+      const groupRow = screen.getByTestId('layer-row-g1')
+      expect(groupRow.className).toContain('Active')
+    })
+
+    it('clicking group row calls onSetActive', () => {
+      const onSetActive = vi.fn()
+      renderPanel({ layers: makeGroupedLayers(), activeLayerId: 'c1', onSetActive })
+      const groupRow = screen.getByTestId('layer-row-g1')
+      fireEvent.click(groupRow)
+      expect(onSetActive).toHaveBeenCalledWith('g1')
+    })
+  })
+
+  describe('group context menu', () => {
+    function makeGroupedLayers(): Layer[] {
+      const group = createGroup('Characters', 'g1')
+      const child = createLayer('Hero', 'c1')
+      child.parentId = 'g1'
+      const root = createLayer('Background', 'bg')
+      return [root, group, child]
+    }
+
+    it('shows "Group with new folder" for root drawable layers', () => {
+      renderPanel({ layers: makeGroupedLayers(), activeLayerId: 'bg' })
+      const row = screen.getByTestId('layer-row-bg')
+      fireEvent.contextMenu(row)
+      expect(screen.getByTestId('context-wrap-in-group')).toBeTruthy()
+      expect(screen.getByTestId('context-wrap-in-group').textContent).toBe('Group with new folder')
+    })
+
+    it('shows "Group with new folder" for grouped layers (enables nesting)', () => {
+      renderPanel({ layers: makeGroupedLayers(), activeLayerId: 'c1' })
+      const row = screen.getByTestId('layer-row-c1')
+      fireEvent.contextMenu(row)
+      expect(screen.getByTestId('context-wrap-in-group')).toBeTruthy()
+    })
+
+    it('shows "Remove from group" for grouped layers', () => {
+      renderPanel({ layers: makeGroupedLayers(), activeLayerId: 'c1' })
+      const row = screen.getByTestId('layer-row-c1')
+      fireEvent.contextMenu(row)
+      expect(screen.getByTestId('context-remove-from-group')).toBeTruthy()
+    })
+
+    it('does not show "Remove from group" for root layers', () => {
+      renderPanel({ layers: makeGroupedLayers(), activeLayerId: 'bg' })
+      const row = screen.getByTestId('layer-row-bg')
+      fireEvent.contextMenu(row)
+      expect(screen.queryByTestId('context-remove-from-group')).toBeNull()
+    })
+
+    it('does not show "Merge Down" for group rows', () => {
+      renderPanel({ layers: makeGroupedLayers(), activeLayerId: 'c1' })
+      const row = screen.getByTestId('layer-row-g1')
+      fireEvent.contextMenu(row)
+      expect(screen.queryByTestId('context-merge-down')).toBeNull()
+    })
+
+    it('clicking "Group with new folder" calls onWrapInGroup', () => {
+      const onWrapInGroup = vi.fn()
+      renderPanel({ layers: makeGroupedLayers(), activeLayerId: 'bg', onWrapInGroup })
+      const row = screen.getByTestId('layer-row-bg')
+      fireEvent.contextMenu(row)
+      fireEvent.click(screen.getByTestId('context-wrap-in-group'))
+      expect(onWrapInGroup).toHaveBeenCalledWith('bg')
+    })
+
+    it('clicking "Remove from group" calls onRemoveFromGroup', () => {
+      const onRemoveFromGroup = vi.fn()
+      renderPanel({ layers: makeGroupedLayers(), activeLayerId: 'c1', onRemoveFromGroup })
+      const row = screen.getByTestId('layer-row-c1')
+      fireEvent.contextMenu(row)
+      fireEvent.click(screen.getByTestId('context-remove-from-group'))
+      expect(onRemoveFromGroup).toHaveBeenCalledWith('c1')
+    })
+
+    it('shows "Remove from group" for groups with parentId', () => {
+      const outer = createGroup('Outer', 'g-outer')
+      const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-outer' }
+      const leaf = createLayer('Leaf', 'l1')
+      leaf.parentId = 'g-inner'
+      renderPanel({ layers: [outer, inner, leaf], activeLayerId: 'l1' })
+      const row = screen.getByTestId('layer-row-g-inner')
+      fireEvent.contextMenu(row)
+      expect(screen.getByTestId('context-remove-from-group')).toBeTruthy()
+    })
+
+    it('shows "Group with new folder" for group layers', () => {
+      const group = createGroup('G', 'g1')
+      const layer = createLayer('L', 'l1')
+      renderPanel({ layers: [group, layer], activeLayerId: 'l1' })
+      const row = screen.getByTestId('layer-row-g1')
+      fireEvent.contextMenu(row)
+      expect(screen.getByTestId('context-wrap-in-group')).toBeTruthy()
+    })
+  })
+
+  describe('nested groups', () => {
+    function makeNestedLayers(): Layer[] {
+      const outer = createGroup('Outer', 'g-outer')
+      const inner: GroupLayer = { ...createGroup('Inner', 'g-inner'), parentId: 'g-outer' }
+      const leaf = createLayer('Leaf', 'l1')
+      leaf.parentId = 'g-inner'
+      const directChild = createLayer('Direct', 'l2')
+      directChild.parentId = 'g-outer'
+      return [outer, inner, leaf, directChild]
+    }
+
+    it('renders multi-level indentation', () => {
+      renderPanel({ layers: makeNestedLayers(), activeLayerId: 'l1' })
+      const innerRow = screen.getByTestId('layer-row-g-inner')
+      // Inner group is depth 1
+      expect(innerRow.style.paddingLeft).toBe('28px')
+      const leafRow = screen.getByTestId('layer-row-l1')
+      // Leaf is depth 2
+      expect(leafRow.style.paddingLeft).toBe('56px')
+      const directRow = screen.getByTestId('layer-row-l2')
+      // Direct child is depth 1
+      expect(directRow.style.paddingLeft).toBe('28px')
+    })
+
+    it('hides grandchildren when ancestor is collapsed', () => {
+      const layers = makeNestedLayers()
+      const outer = layers[0] as GroupLayer
+      outer.collapsed = true
+      renderPanel({ layers, activeLayerId: 'l1' })
+      // All children/grandchildren should be hidden
+      expect(screen.queryByTestId('layer-row-g-inner')).toBeNull()
+      expect(screen.queryByTestId('layer-row-l1')).toBeNull()
+      expect(screen.queryByTestId('layer-row-l2')).toBeNull()
+    })
+
+    it('hides only inner collapsed group children', () => {
+      const layers = makeNestedLayers()
+      const inner = layers[1] as GroupLayer
+      inner.collapsed = true
+      renderPanel({ layers, activeLayerId: 'l2' })
+      // Inner group should be visible, leaf should be hidden, direct child visible
+      expect(screen.getByTestId('layer-row-g-inner')).toBeTruthy()
+      expect(screen.queryByTestId('layer-row-l1')).toBeNull()
+      expect(screen.getByTestId('layer-row-l2')).toBeTruthy()
     })
   })
 })
