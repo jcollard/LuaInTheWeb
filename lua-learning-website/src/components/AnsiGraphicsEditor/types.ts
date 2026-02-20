@@ -25,6 +25,11 @@ export interface BorderStyle {
   br: string
 }
 
+export function borderStyleEqual(a: BorderStyle, b: BorderStyle): boolean {
+  return a.tl === b.tl && a.t === b.t && a.tr === b.tr && a.l === b.l
+    && a.r === b.r && a.bl === b.bl && a.b === b.b && a.br === b.br
+}
+
 export const BORDER_PRESETS: { name: string; style: BorderStyle }[] = [
   { name: 'ASCII',   style: { tl: '+', t: '-', tr: '+', l: '|', r: '|', bl: '+', b: '-', br: '+' } },
   { name: 'Single',  style: { tl: '┌', t: '─', tr: '┐', l: '│', r: '│', bl: '└', b: '─', br: '┘' } },

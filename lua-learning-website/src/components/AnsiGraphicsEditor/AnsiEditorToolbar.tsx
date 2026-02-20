@@ -1,7 +1,7 @@
 /* eslint-disable max-lines */
 import { useRef, useState } from 'react'
 import type { BrushMode, DrawTool, BrushSettings, BorderStyle, TextAlign } from './types'
-import { BORDER_PRESETS } from './types'
+import { BORDER_PRESETS, borderStyleEqual } from './types'
 import { CharPaletteModal } from './CharPaletteModal'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -137,13 +137,8 @@ export function AnsiEditorToolbar({
             </button>
             <div className={styles.toolFlyout} data-testid="border-flyout">
               {BORDER_PRESETS.map(preset => {
-                const s = preset.style
-                const bs = brush.borderStyle
-                const isActive = isBorderActive && !!bs
-                  && bs.tl === s.tl && bs.t === s.t
-                  && bs.tr === s.tr && bs.l === s.l
-                  && bs.r === s.r && bs.bl === s.bl
-                  && bs.b === s.b && bs.br === s.br
+                const isActive = isBorderActive && !!brush.borderStyle
+                  && borderStyleEqual(brush.borderStyle, preset.style)
                 return (
                   <button
                     key={preset.name}
@@ -153,7 +148,7 @@ export function AnsiEditorToolbar({
                     onClick={() => { onSetBorderStyle(preset.style); onSetTool('border') }}
                     data-testid={`border-preset-${preset.name}`}
                   >
-                    {`${s.tl}${s.t}${s.tr} ${preset.name}`}
+                    {`${preset.style.tl}${preset.style.t}${preset.style.tr} ${preset.name}`}
                   </button>
                 )
               })}
