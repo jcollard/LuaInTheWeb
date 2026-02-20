@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
-import { computeRectCells, computeFloodFillCells, computeErasePixelCell, computeLineCells, writeCellToTerminal, renderFullGrid } from './gridUtils'
+import { computeRectCells, computeFloodFillCells, computeErasePixelCell, computeLineCells, computeBorderCells, writeCellToTerminal, renderFullGrid } from './gridUtils'
 import type { ColorTransform } from './gridUtils'
 import type { AnsiCell, AnsiGrid, RGBColor } from './types'
-import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG, DEFAULT_CELL, HALF_BLOCK, TRANSPARENT_HALF } from './types'
+import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG, DEFAULT_CELL, HALF_BLOCK, TRANSPARENT_HALF, BORDER_PRESETS } from './types'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 
 function makeGrid(): AnsiGrid {
@@ -632,5 +632,143 @@ describe('renderFullGrid with colorTransform', () => {
     // The blue bg [0,0,255] should become [0,0,0]
     expect(allWritten).toContain('48;2;0;0;0')
     expect(allWritten).not.toContain('48;2;0;0;255')
+  })
+})
+
+describe('computeBorderCells', () => {
+  const ascii = BORDER_PRESETS[0].style
+  const double = BORDER_PRESETS[2].style
+
+  it('should produce correct positional chars for a 3×4 border', () => {
+    const grid = makeGrid()
+    const brush = { char: '#', fg: red, bg: blue, mode: 'brush' as const, borderStyle: ascii }
+    const start = { row: 1, col: 2, isTopHalf: true }
+    const end = { row: 3, col: 5, isTopHalf: true }
+    const cells = computeBorderCells(start, end, brush, grid)
+
+    // 3 rows × 4 cols outline = 10 cells (same as rect-outline)
+    expect(cells.size).toBe(10)
+
+    // Corners
+    expect(cells.get('1,2')!.char).toBe('+') // TL
+    expect(cells.get('1,5')!.char).toBe('+') // TR
+    expect(cells.get('3,2')!.char).toBe('+') // BL
+    expect(cells.get('3,5')!.char).toBe('+') // BR
+
+    // Top edge
+    expect(cells.get('1,3')!.char).toBe('-') // T
+    expect(cells.get('1,4')!.char).toBe('-') // T
+
+    // Bottom edge
+    expect(cells.get('3,3')!.char).toBe('-') // B
+    expect(cells.get('3,4')!.char).toBe('-') // B
+
+    // Left/Right edges
+    expect(cells.get('2,2')!.char).toBe('|') // L
+    expect(cells.get('2,5')!.char).toBe('|') // R
+
+    // Interior should not be present
+    expect(cells.has('2,3')).toBe(false)
+    expect(cells.has('2,4')).toBe(false)
+
+    // Verify colors
+    const tl = cells.get('1,2')!
+    expect(tl.fg).toEqual(red)
+    expect(tl.bg).toEqual(blue)
+  })
+
+  it('should produce a single TL char for 1×1 border', () => {
+    const grid = makeGrid()
+    const brush = { char: '#', fg: red, bg: blue, mode: 'brush' as const, borderStyle: double }
+    const point = { row: 5, col: 10, isTopHalf: true }
+    const cells = computeBorderCells(point, point, brush, grid)
+
+    expect(cells.size).toBe(1)
+    expect(cells.get('5,10')!.char).toBe('╔') // TL
+  })
+
+  it('should produce TL, T..., TR for single-row border', () => {
+    const grid = makeGrid()
+    const brush = { char: '#', fg: red, bg: blue, mode: 'brush' as const, borderStyle: ascii }
+    const start = { row: 3, col: 1, isTopHalf: true }
+    const end = { row: 3, col: 5, isTopHalf: true }
+    const cells = computeBorderCells(start, end, brush, grid)
+
+    expect(cells.size).toBe(5)
+    expect(cells.get('3,1')!.char).toBe('+') // TL
+    expect(cells.get('3,2')!.char).toBe('-') // T
+    expect(cells.get('3,3')!.char).toBe('-') // T
+    expect(cells.get('3,4')!.char).toBe('-') // T
+    expect(cells.get('3,5')!.char).toBe('+') // TR
+  })
+
+  it('should produce TL, L..., BL for single-column border', () => {
+    const grid = makeGrid()
+    const brush = { char: '#', fg: red, bg: blue, mode: 'brush' as const, borderStyle: ascii }
+    const start = { row: 1, col: 4, isTopHalf: true }
+    const end = { row: 4, col: 4, isTopHalf: true }
+    const cells = computeBorderCells(start, end, brush, grid)
+
+    expect(cells.size).toBe(4)
+    expect(cells.get('1,4')!.char).toBe('+') // TL
+    expect(cells.get('2,4')!.char).toBe('|') // L
+    expect(cells.get('3,4')!.char).toBe('|') // L
+    expect(cells.get('4,4')!.char).toBe('+') // BL
+  })
+
+  it('should produce 4 corners for 2×2 border', () => {
+    const grid = makeGrid()
+    const brush = { char: '#', fg: red, bg: blue, mode: 'brush' as const, borderStyle: double }
+    const start = { row: 0, col: 0, isTopHalf: true }
+    const end = { row: 1, col: 1, isTopHalf: true }
+    const cells = computeBorderCells(start, end, brush, grid)
+
+    expect(cells.size).toBe(4)
+    expect(cells.get('0,0')!.char).toBe('╔') // TL
+    expect(cells.get('0,1')!.char).toBe('╗') // TR
+    expect(cells.get('1,0')!.char).toBe('╚') // BL
+    expect(cells.get('1,1')!.char).toBe('╝') // BR
+  })
+
+  it('should fall back to rect-outline in pixel mode', () => {
+    const grid = makeGrid()
+    const brush = { char: '#', fg: red, bg: blue, mode: 'pixel' as const, borderStyle: ascii }
+    const start = { row: 0, col: 0, isTopHalf: true }
+    const end = { row: 1, col: 2, isTopHalf: true }
+    const borderCells = computeBorderCells(start, end, brush, grid)
+    const rectCells = computeRectCells(start, end, brush, grid, false)
+
+    expect(borderCells.size).toBe(rectCells.size)
+    for (const [key, cell] of borderCells) {
+      expect(rectCells.has(key)).toBe(true)
+      expect(cell.char).toBe(rectCells.get(key)!.char)
+    }
+  })
+
+  it('should fall back to rect-outline in eraser mode', () => {
+    const grid = makeGrid()
+    grid[0][0] = { char: HALF_BLOCK, fg: [...red] as RGBColor, bg: [...blue] as RGBColor }
+    const brush = { char: '#', fg: red, bg: blue, mode: 'eraser' as const, borderStyle: ascii }
+    const start = { row: 0, col: 0, isTopHalf: true }
+    const end = { row: 1, col: 2, isTopHalf: true }
+    const borderCells = computeBorderCells(start, end, brush, grid)
+    const rectCells = computeRectCells(start, end, brush, grid, false)
+
+    expect(borderCells.size).toBe(rectCells.size)
+  })
+
+  it('should handle reversed start/end coordinates', () => {
+    const grid = makeGrid()
+    const brush = { char: '#', fg: red, bg: blue, mode: 'brush' as const, borderStyle: ascii }
+    const start = { row: 3, col: 5, isTopHalf: true }
+    const end = { row: 1, col: 2, isTopHalf: true }
+    const cells = computeBorderCells(start, end, brush, grid)
+
+    expect(cells.size).toBe(10)
+    // Corners should still be at the correct positions
+    expect(cells.get('1,2')!.char).toBe('+') // TL
+    expect(cells.get('1,5')!.char).toBe('+') // TR
+    expect(cells.get('3,2')!.char).toBe('+') // BL
+    expect(cells.get('3,5')!.char).toBe('+') // BR
   })
 })

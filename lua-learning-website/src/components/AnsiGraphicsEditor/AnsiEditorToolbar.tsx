@@ -1,5 +1,7 @@
+/* eslint-disable max-lines */
 import { useRef, useState } from 'react'
-import type { BrushMode, DrawTool, BrushSettings, TextAlign } from './types'
+import type { BrushMode, DrawTool, BrushSettings, BorderStyle, TextAlign } from './types'
+import { BORDER_PRESETS } from './types'
 import { CharPaletteModal } from './CharPaletteModal'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -21,6 +23,7 @@ export interface AnsiEditorToolbarProps {
   onSetTextAlign?: (align: TextAlign) => void
   onFlipHorizontal?: () => void
   onFlipVertical?: () => void
+  onSetBorderStyle?: (style: BorderStyle) => void
   cgaPreview?: boolean
   onToggleCgaPreview?: () => void
   activeLayerIsGroup?: boolean
@@ -29,10 +32,11 @@ export interface AnsiEditorToolbarProps {
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onImportPng, onExportAns, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
-  onFlipHorizontal, onFlipVertical, cgaPreview, onToggleCgaPreview, activeLayerIsGroup,
+  onFlipHorizontal, onFlipVertical, onSetBorderStyle, cgaPreview, onToggleCgaPreview, activeLayerIsGroup,
 }: AnsiEditorToolbarProps) {
   const isRectActive = brush.tool === 'rect-outline' || brush.tool === 'rect-filled'
   const isOvalActive = brush.tool === 'oval-outline' || brush.tool === 'oval-filled'
+  const isBorderActive = brush.tool === 'border'
   const [charPaletteOpen, setCharPaletteOpen] = useState(false)
   const charButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -120,6 +124,42 @@ export function AnsiEditorToolbar({
             </button>
           </div>
         </div>
+        {onSetBorderStyle && (
+          <div className={styles.toolFlyoutWrapper}>
+            <button
+              type="button"
+              className={`${styles.modeButton} ${isBorderActive ? styles.modeButtonActive : ''}`}
+              aria-pressed={isBorderActive}
+              title="Border"
+              data-testid="tool-border"
+            >
+              ╔
+            </button>
+            <div className={styles.toolFlyout} data-testid="border-flyout">
+              {BORDER_PRESETS.map(preset => {
+                const s = preset.style
+                const bs = brush.borderStyle
+                const isActive = isBorderActive && !!bs
+                  && bs.tl === s.tl && bs.t === s.t
+                  && bs.tr === s.tr && bs.l === s.l
+                  && bs.r === s.r && bs.bl === s.bl
+                  && bs.b === s.b && bs.br === s.br
+                return (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    className={`${styles.flyoutOption} ${isActive ? styles.flyoutOptionActive : ''}`}
+                    aria-pressed={isActive}
+                    onClick={() => { onSetBorderStyle(preset.style); onSetTool('border') }}
+                    data-testid={`border-preset-${preset.name}`}
+                  >
+                    {`${s.tl}${s.t}${s.tr} ${preset.name}`}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
         <button
           type="button"
           className={`${styles.modeButton} ${brush.tool === 'flood-fill' ? styles.modeButtonActive : ''}`}
@@ -195,6 +235,7 @@ export function AnsiEditorToolbar({
             onClick={() => onSetMode('pixel')}
             title="Pixel"
             data-testid="mode-pixel"
+            disabled={isBorderActive}
           >
             ▀
           </button>
@@ -205,6 +246,7 @@ export function AnsiEditorToolbar({
             onClick={() => onSetMode('eraser')}
             title="Eraser"
             data-testid="mode-eraser"
+            disabled={isBorderActive}
           >
             ⌫
           </button>

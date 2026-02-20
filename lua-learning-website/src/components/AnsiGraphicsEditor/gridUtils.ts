@@ -158,6 +158,49 @@ export function computeRectCells(
   return cells
 }
 
+export function computeBorderCells(
+  start: CellHalf,
+  end: CellHalf,
+  brush: LineBrush,
+  baseGrid: AnsiGrid,
+): Map<string, AnsiCell> {
+  if (brush.mode !== 'brush' || !brush.borderStyle) {
+    return computeRectCells(start, end, brush, baseGrid, false)
+  }
+
+  const cells = new Map<string, AnsiCell>()
+  const minRow = Math.min(start.row, end.row)
+  const maxRow = Math.max(start.row, end.row)
+  const minCol = Math.min(start.col, end.col)
+  const maxCol = Math.max(start.col, end.col)
+  const { tl, t, tr, l, r, bl, b, br } = brush.borderStyle
+
+  for (let row = minRow; row <= maxRow; row++) {
+    for (let col = minCol; col <= maxCol; col++) {
+      const isTop = row === minRow
+      const isBottom = row === maxRow
+      const isLeft = col === minCol
+      const isRight = col === maxCol
+
+      let char: string | null = null
+      if (isTop && isLeft) char = tl
+      else if (isTop && isRight) char = tr
+      else if (isBottom && isLeft) char = bl
+      else if (isBottom && isRight) char = br
+      else if (isTop) char = t
+      else if (isBottom) char = b
+      else if (isLeft) char = l
+      else if (isRight) char = r
+
+      if (char === null) continue
+      if (!isInBounds(row, col)) continue
+      cells.set(`${row},${col}`, { char, fg: [...brush.fg] as RGBColor, bg: [...brush.bg] as RGBColor })
+    }
+  }
+
+  return cells
+}
+
 function insideEllipse(dx: number, dy: number, a: number, b: number): boolean {
   return a === 0 || b === 0 || (dx * dx) / (a * a) + (dy * dy) / (b * b) <= 1
 }

@@ -5,7 +5,7 @@ import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { ColorTransform } from './gridUtils'
 import {
   writeCellToTerminal, parseCellKey, isInBounds,
-  computeErasePixelCell, computeLineCells, computeRectCells, computeOvalCells,
+  computeErasePixelCell, computeLineCells, computeRectCells, computeOvalCells, computeBorderCells,
 } from './gridUtils'
 import { compositeCell, compositeCellWithOverride } from './layerUtils'
 
@@ -172,6 +172,9 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
     const grid = getActiveGrid()
     if (tool === 'oval-outline' || tool === 'oval-filled') {
       return computeOvalCells(start, end, brushRef.current, grid, tool === 'oval-filled')
+    }
+    if (tool === 'border') {
+      return computeBorderCells(start, end, brushRef.current, grid)
     }
     return computeRectCells(start, end, brushRef.current, grid, tool === 'rect-filled')
   }

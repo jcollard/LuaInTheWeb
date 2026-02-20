@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { AnsiEditorToolbar, type AnsiEditorToolbarProps } from './AnsiEditorToolbar'
-import { DEFAULT_FG, DEFAULT_BG } from './types'
+import { DEFAULT_FG, DEFAULT_BG, BORDER_PRESETS } from './types'
 import type { BrushMode, DrawTool, RGBColor } from './types'
 
 // Mock AnsiTerminalPanel since it depends on xterm.js
@@ -14,7 +14,7 @@ vi.mock('../AnsiTerminalPanel/AnsiTerminalPanel', () => ({
 }))
 
 describe('AnsiEditorToolbar', () => {
-  const defaultBrush = { char: '#', fg: DEFAULT_FG as RGBColor, bg: DEFAULT_BG as RGBColor, mode: 'brush' as BrushMode, tool: 'pencil' as DrawTool }
+  const defaultBrush = { char: '#', fg: DEFAULT_FG as RGBColor, bg: DEFAULT_BG as RGBColor, mode: 'brush' as BrushMode, tool: 'pencil' as DrawTool, borderStyle: BORDER_PRESETS[0].style }
   let handlers: Pick<AnsiEditorToolbarProps, 'onSetChar' | 'onClear' | 'onSave' | 'onSaveAs' | 'onImportPng' | 'onExportAns' | 'onSetMode' | 'onSetTool' | 'onUndo' | 'onRedo' | 'canUndo' | 'canRedo'>
 
   beforeEach(() => {

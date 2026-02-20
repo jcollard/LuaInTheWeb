@@ -12,7 +12,26 @@ export type AnsiGrid = AnsiCell[][]
 
 export type BrushMode = 'brush' | 'pixel' | 'eraser'
 
-export type DrawTool = 'pencil' | 'line' | 'rect-outline' | 'rect-filled' | 'oval-outline' | 'oval-filled' | 'flood-fill' | 'select' | 'eyedropper' | 'text' | 'move'
+export type DrawTool = 'pencil' | 'line' | 'rect-outline' | 'rect-filled' | 'oval-outline' | 'oval-filled' | 'border' | 'flood-fill' | 'select' | 'eyedropper' | 'text' | 'move'
+
+export interface BorderStyle {
+  tl: string
+  t: string
+  tr: string
+  l: string
+  r: string
+  bl: string
+  b: string
+  br: string
+}
+
+export const BORDER_PRESETS: { name: string; style: BorderStyle }[] = [
+  { name: 'ASCII',   style: { tl: '+', t: '-', tr: '+', l: '|', r: '|', bl: '+', b: '-', br: '+' } },
+  { name: 'Single',  style: { tl: '┌', t: '─', tr: '┐', l: '│', r: '│', bl: '└', b: '─', br: '┘' } },
+  { name: 'Double',  style: { tl: '╔', t: '═', tr: '╗', l: '║', r: '║', bl: '╚', b: '═', br: '╝' } },
+  { name: 'Rounded', style: { tl: '╭', t: '─', tr: '╮', l: '│', r: '│', bl: '╰', b: '─', br: '╯' } },
+  { name: 'Heavy',   style: { tl: '┏', t: '━', tr: '┓', l: '┃', r: '┃', bl: '┗', b: '━', br: '┛' } },
+]
 
 export const HALF_BLOCK = '\u2580'
 
@@ -22,6 +41,7 @@ export interface BrushSettings {
   bg: RGBColor
   mode: BrushMode
   tool: DrawTool
+  borderStyle?: BorderStyle
 }
 
 export const ANSI_COLS = 80
@@ -123,6 +143,7 @@ export interface UseAnsiEditorReturn {
   setBrushChar: (char: string) => void
   setBrushMode: (mode: BrushMode) => void
   setTool: (tool: DrawTool) => void
+  setBorderStyle: (style: BorderStyle) => void
   clearGrid: () => void
   // Persistence
   isDirty: boolean

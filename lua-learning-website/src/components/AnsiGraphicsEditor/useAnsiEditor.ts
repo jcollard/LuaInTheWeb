@@ -1,8 +1,8 @@
 /* eslint-disable max-lines */
 import { useState, useCallback, useRef, useMemo } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
-import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions, DrawableLayer } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, isGroupLayer, isDrawableLayer } from './types'
+import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, BorderStyle, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions, DrawableLayer } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, BORDER_PRESETS, isGroupLayer, isDrawableLayer } from './types'
 import type { ColorTransform, CellHalf } from './gridUtils'
 import { createEmptyGrid, writeCellToTerminal, renderFullGrid, isInBounds, getCellHalfFromMouse, computePixelCell, computeFloodFillCells } from './gridUtils'
 import { cgaQuantize } from './ansExport'
@@ -53,6 +53,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
 
   const [brush, setBrush] = useState<BrushSettings>({
     char: '#', fg: DEFAULT_FG, bg: DEFAULT_BG, mode: 'brush', tool: 'pencil',
+    borderStyle: BORDER_PRESETS[0].style,
   })
   const [isDirty, setIsDirty] = useState(false)
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
@@ -104,10 +105,15 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const setBrushFg = useCallback((color: RGBColor) => setBrush(p => ({ ...p, fg: color })), [])
   const setBrushBg = useCallback((color: RGBColor) => setBrush(p => ({ ...p, bg: color })), [])
   const setBrushChar = useCallback((c: string) => { if (c.length === 1) setBrush(p => ({ ...p, char: c })) }, [])
-  const setBrushMode = useCallback((mode: BrushMode) => setBrush(p => ({ ...p, mode })), [])
+  const setBrushMode = useCallback((mode: BrushMode) => setBrush(p => {
+    if (p.tool === 'border' && mode !== 'brush') return p
+    return { ...p, mode }
+  }), [])
   const setTool = useCallback((tool: DrawTool) => {
-    commitPendingSelectionRef.current?.(); commitPendingTextRef.current?.(); setBrush(p => ({ ...p, tool }))
+    commitPendingSelectionRef.current?.(); commitPendingTextRef.current?.()
+    setBrush(p => tool === 'border' ? { ...p, tool, mode: 'brush' } : { ...p, tool })
   }, [])
+  const setBorderStyle = useCallback((style: BorderStyle) => setBrush(p => ({ ...p, borderStyle: style })), [])
 
   const applyCell = useCallback((row: number, col: number, cell: AnsiCell) => {
     applyToActiveLayer(row, col, cell); setIsDirty(true)
@@ -281,7 +287,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         case 'rect-outline':
         case 'rect-filled':
         case 'oval-outline':
-        case 'oval-filled': {
+        case 'oval-filled':
+        case 'border': {
           if (!cell) return
           pushSnapshot()
           lineStartRef.current = cell
@@ -361,6 +368,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         case 'rect-filled':
         case 'oval-outline':
         case 'oval-filled':
+        case 'border':
           if (lineStartRef.current) draw.renderShapePreview(cell)
           break
         case 'select':
@@ -416,7 +424,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         case 'rect-outline':
         case 'rect-filled':
         case 'oval-outline':
-        case 'oval-filled': {
+        case 'oval-filled':
+        case 'border': {
           if (!lineStartRef.current) break
           const cell = getCellHalfFromMouse(e, container)
           if (cell) {
@@ -547,7 +556,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const activeLayerIsGroup = activeLayer ? isGroupLayer(activeLayer) : false
 
   return {
-    grid, brush, setBrushFg, setBrushBg, setBrushChar, setBrushMode, setTool, clearGrid,
+    grid, brush, setBrushFg, setBrushBg, setBrushChar, setBrushMode, setTool, setBorderStyle, clearGrid,
     isDirty, markClean, onTerminalReady, cursorRef, dimensionRef, selectionRef, textBoundsRef, textCursorRef,
     isSaveDialogOpen, openSaveDialog, closeSaveDialog, undo, redo, canUndo, canRedo,
     layers: layerState.layers, activeLayerId: layerState.activeLayerId,

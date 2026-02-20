@@ -3,18 +3,22 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AnsiEditorToolbar, type AnsiEditorToolbarProps } from './AnsiEditorToolbar'
 import type { BrushSettings } from './types'
+import { BORDER_PRESETS } from './types'
+
+const defaultBorderStyle = BORDER_PRESETS[0].style
 
 const selectBrush: BrushSettings = {
-  char: '#', fg: [170, 170, 170], bg: [0, 0, 0], mode: 'brush', tool: 'select',
+  char: '#', fg: [170, 170, 170], bg: [0, 0, 0], mode: 'brush', tool: 'select', borderStyle: defaultBorderStyle,
 }
 
 const pencilBrush: BrushSettings = {
-  char: '#', fg: [170, 170, 170], bg: [0, 0, 0], mode: 'brush', tool: 'pencil',
+  char: '#', fg: [170, 170, 170], bg: [0, 0, 0], mode: 'brush', tool: 'pencil', borderStyle: defaultBorderStyle,
 }
 
 function defaultProps(overrides?: Partial<AnsiEditorToolbarProps>): AnsiEditorToolbarProps {
   const brush: BrushSettings = {
     char: '#', fg: [170, 170, 170], bg: [0, 0, 0], mode: 'brush', tool: 'pencil',
+    borderStyle: defaultBorderStyle,
     ...overrides?.brush as Partial<BrushSettings>,
   }
   return {
@@ -88,5 +92,51 @@ describe('AnsiEditorToolbar flip vertical button', () => {
     render(<AnsiEditorToolbar {...props} />)
     await userEvent.click(screen.getByTestId('flip-vertical'))
     expect(onFlip).toHaveBeenCalledOnce()
+  })
+})
+
+describe('AnsiEditorToolbar border flyout', () => {
+  it('renders the border flyout with preset options', () => {
+    const onSetBorderStyle = vi.fn()
+    const props = defaultProps({ onSetBorderStyle })
+    render(<AnsiEditorToolbar {...props} />)
+    const flyout = screen.getByTestId('border-flyout')
+    expect(flyout).toBeTruthy()
+    for (const preset of BORDER_PRESETS) {
+      expect(screen.getByTestId(`border-preset-${preset.name}`)).toBeTruthy()
+    }
+  })
+
+  it('calls onSetTool and onSetBorderStyle when a preset is clicked', async () => {
+    const onSetTool = vi.fn()
+    const onSetBorderStyle = vi.fn()
+    const props = defaultProps({ onSetTool, onSetBorderStyle })
+    render(<AnsiEditorToolbar {...props} />)
+    await userEvent.click(screen.getByTestId('border-preset-Double'))
+    expect(onSetBorderStyle).toHaveBeenCalledWith(BORDER_PRESETS[2].style)
+    expect(onSetTool).toHaveBeenCalledWith('border')
+  })
+
+  it('highlights the active preset', () => {
+    const doubleBrush: BrushSettings = {
+      ...pencilBrush, tool: 'border', borderStyle: BORDER_PRESETS[2].style,
+    }
+    const props = defaultProps({ brush: doubleBrush, onSetBorderStyle: vi.fn() })
+    render(<AnsiEditorToolbar {...props} />)
+    const doubleBtn = screen.getByTestId('border-preset-Double')
+    expect(doubleBtn.getAttribute('aria-pressed')).toBe('true')
+    const asciiBtn = screen.getByTestId('border-preset-ASCII')
+    expect(asciiBtn.getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('disables pixel and eraser mode buttons when border tool is active', () => {
+    const borderBrush: BrushSettings = {
+      ...pencilBrush, tool: 'border',
+    }
+    const props = defaultProps({ brush: borderBrush, onSetBorderStyle: vi.fn() })
+    render(<AnsiEditorToolbar {...props} />)
+    expect(screen.getByTestId('mode-pixel').hasAttribute('disabled')).toBe(true)
+    expect(screen.getByTestId('mode-eraser').hasAttribute('disabled')).toBe(true)
+    expect(screen.getByTestId('mode-brush').hasAttribute('disabled')).toBe(false)
   })
 })

@@ -73,6 +73,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     flipSelectionVertical,
     cgaPreview,
     setCgaPreview,
+    setBorderStyle,
     activeLayerIsGroup,
     isMoveDragging,
   } = useAnsiEditor({ initialLayerState })
@@ -177,6 +178,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
         onSetTextAlign={setTextAlign}
         onFlipHorizontal={flipSelectionHorizontal}
         onFlipVertical={flipSelectionVertical}
+        onSetBorderStyle={setBorderStyle}
         cgaPreview={cgaPreview}
         onToggleCgaPreview={handleToggleCgaPreview}
         activeLayerIsGroup={activeLayerIsGroup}
