@@ -2,6 +2,7 @@
 import { useState, useCallback, useRef, useMemo } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, BorderStyle, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions, DrawableLayer, DrawnLayer } from './types'
+import { blendRgb } from './colorUtils'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, DEFAULT_CELL, DEFAULT_FRAME_DURATION_MS, BORDER_PRESETS, isGroupLayer, isDrawableLayer } from './types'
 import type { CellHalf, ColorTransform } from './gridUtils'
 import { createEmptyGrid, isInBounds, getCellHalfFromMouse, computePixelCell, computeFloodFillCells } from './gridUtils'
@@ -175,6 +176,12 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     applyCell(row, col, computePixelCell(getActiveGrid()[row][col], brushRef.current.fg, isTopHalf))
   }, [applyCell, getActiveGrid])
 
+  const paintBlendPixel = useCallback((row: number, col: number, isTopHalf: boolean) => {
+    if (!isInBounds(row, col)) return
+    const { fg, bg } = brushRef.current
+    applyCell(row, col, computePixelCell(getActiveGrid()[row][col], blendRgb(fg, bg, 0.25), isTopHalf))
+  }, [applyCell, getActiveGrid])
+
   const paintCell = useCallback((row: number, col: number) => {
     if (!isInBounds(row, col)) return
     const { char, fg, bg } = brushRef.current
@@ -268,7 +275,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     const draw = createDrawHelpers({
       container, cursorRef, dimensionRef, terminalBuffer: terminalBufferRef.current, brushRef,
       layersRef, activeLayerIdRef, previewCellsRef, lineStartRef,
-      colorTransformRef, getActiveGrid, applyCell, paintPixel, paintCell,
+      colorTransformRef, getActiveGrid, applyCell, paintPixel, paintBlendPixel, paintCell,
     })
 
     const sel = createSelectionHandlers({
@@ -648,7 +655,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       document.removeEventListener('keydown', onKeyDown)
       textTool.commitIfEditing()
     }
-  }, [paintCell, paintPixel, applyCell, pushSnapshot, layersRef, activeLayerIdRef, getActiveGrid, rawAddTextLayer, rawUpdateTextLayer, undo, redo, rawApplyMoveGrids, rawApplyMoveGridsImmediate, rawSetCurrentFrame, setTool, setBrushMode, togglePlayback])
+  }, [paintCell, paintPixel, paintBlendPixel, applyCell, pushSnapshot, layersRef, activeLayerIdRef, getActiveGrid, rawAddTextLayer, rawUpdateTextLayer, undo, redo, rawApplyMoveGrids, rawApplyMoveGridsImmediate, rawSetCurrentFrame, setTool, setBrushMode, togglePlayback])
 
   const setActiveLayerWithBounds = useCallback((id: string) => {
     commitPendingTextRef.current?.()

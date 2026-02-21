@@ -274,6 +274,17 @@ export function AnsiEditorToolbar({
           </button>
           <button
             type="button"
+            className={`${styles.modeButton} ${brush.mode === 'blend-pixel' ? styles.modeButtonActive : ''}`}
+            aria-pressed={brush.mode === 'blend-pixel'}
+            onClick={() => onSetMode('blend-pixel')}
+            title={tooltipWithShortcut('Blend Pixel', MODE_SHORTCUTS['blend-pixel'])}
+            data-testid="mode-blend-pixel"
+            disabled={isBorderActive}
+          >
+            ░
+          </button>
+          <button
+            type="button"
             className={`${styles.modeButton} ${brush.mode === 'eraser' ? styles.modeButtonActive : ''}`}
             aria-pressed={brush.mode === 'eraser'}
             onClick={() => onSetMode('eraser')}

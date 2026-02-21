@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { hsvToRgb, rgbToHsv, rgbToHex, hexToRgb, extractGridColors, extractAllLayerColors, simplifyPalette, replaceColorsInGrid } from './colorUtils'
+import { hsvToRgb, rgbToHsv, rgbToHex, hexToRgb, blendRgb, extractGridColors, extractAllLayerColors, simplifyPalette, replaceColorsInGrid } from './colorUtils'
 import { createLayer } from './layerUtils'
 import { DEFAULT_BG, DEFAULT_FG, TRANSPARENT_HALF, HALF_BLOCK } from './types'
 import type { RGBColor, Layer, PaletteEntry } from './types'
@@ -132,6 +132,32 @@ describe('hexToRgb', () => {
   it('is case-insensitive', () => {
     expect(hexToRgb('#AA5500')).toEqual([170, 85, 0])
     expect(hexToRgb('#Ff0000')).toEqual([255, 0, 0])
+  })
+})
+
+describe('blendRgb', () => {
+  it('returns color a when ratio is 0', () => {
+    expect(blendRgb([255, 0, 0], [0, 0, 255], 0)).toEqual([255, 0, 0])
+  })
+
+  it('returns color b when ratio is 1', () => {
+    expect(blendRgb([255, 0, 0], [0, 0, 255], 1)).toEqual([0, 0, 255])
+  })
+
+  it('returns midpoint at ratio 0.5', () => {
+    expect(blendRgb([0, 0, 0], [200, 100, 50], 0.5)).toEqual([100, 50, 25])
+  })
+
+  it('blends at 0.25 ratio matching shade character visual', () => {
+    expect(blendRgb([255, 0, 0], [0, 0, 255], 0.25)).toEqual([191, 0, 64])
+  })
+
+  it('rounds to nearest integer', () => {
+    expect(blendRgb([0, 0, 0], [1, 1, 1], 0.5)).toEqual([1, 1, 1])
+  })
+
+  it('handles identical colors', () => {
+    expect(blendRgb([128, 128, 128], [128, 128, 128], 0.5)).toEqual([128, 128, 128])
   })
 })
 

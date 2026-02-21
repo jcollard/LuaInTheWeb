@@ -10,7 +10,7 @@ export interface AnsiCell {
 
 export type AnsiGrid = AnsiCell[][]
 
-export type BrushMode = 'brush' | 'pixel' | 'eraser'
+export type BrushMode = 'brush' | 'pixel' | 'blend-pixel' | 'eraser'
 
 export type DrawTool = 'pencil' | 'line' | 'rect-outline' | 'rect-filled' | 'oval-outline' | 'oval-filled' | 'border' | 'flood-fill' | 'select' | 'eyedropper' | 'text' | 'move'
 

@@ -96,6 +96,36 @@ describe('AnsiEditorToolbar flip vertical button', () => {
   })
 })
 
+describe('AnsiEditorToolbar blend-pixel mode button', () => {
+  it('renders blend-pixel button in mode group', () => {
+    const props = defaultProps()
+    render(<AnsiEditorToolbar {...props} />)
+    expect(screen.getByTestId('mode-blend-pixel')).toBeTruthy()
+  })
+
+  it('shows active state when blend-pixel mode is selected', () => {
+    const blendBrush: BrushSettings = { ...pencilBrush, mode: 'blend-pixel' }
+    const props = defaultProps({ brush: blendBrush })
+    render(<AnsiEditorToolbar {...props} />)
+    expect(screen.getByTestId('mode-blend-pixel').getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('calls onSetMode with blend-pixel when clicked', async () => {
+    const onSetMode = vi.fn()
+    const props = defaultProps({ onSetMode })
+    render(<AnsiEditorToolbar {...props} />)
+    await userEvent.click(screen.getByTestId('mode-blend-pixel'))
+    expect(onSetMode).toHaveBeenCalledWith('blend-pixel')
+  })
+
+  it('is disabled when border tool is active', () => {
+    const borderBrush: BrushSettings = { ...pencilBrush, tool: 'border' }
+    const props = defaultProps({ brush: borderBrush, onSetBorderStyle: vi.fn() })
+    render(<AnsiEditorToolbar {...props} />)
+    expect(screen.getByTestId('mode-blend-pixel').hasAttribute('disabled')).toBe(true)
+  })
+})
+
 describe('AnsiEditorToolbar border flyout', () => {
   it('renders the border flyout with preset options', () => {
     const onSetBorderStyle = vi.fn()

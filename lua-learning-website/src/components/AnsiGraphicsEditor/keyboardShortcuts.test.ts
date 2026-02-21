@@ -77,6 +77,10 @@ describe('keyboardShortcuts', () => {
     it('defines pixel with key "n"', () => {
       expect(MODE_SHORTCUTS['pixel']?.key).toBe('n')
     })
+
+    it('defines blend-pixel with key "j"', () => {
+      expect(MODE_SHORTCUTS['blend-pixel']?.key).toBe('j')
+    })
   })
 
   describe('MODE_KEY_MAP', () => {
@@ -86,6 +90,10 @@ describe('keyboardShortcuts', () => {
 
     it('maps "n" to pixel', () => {
       expect(MODE_KEY_MAP['n']).toBe('pixel')
+    })
+
+    it('maps "j" to blend-pixel', () => {
+      expect(MODE_KEY_MAP['j']).toBe('blend-pixel')
     })
   })
 

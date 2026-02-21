@@ -22,6 +22,7 @@ export interface DrawHelperDeps {
   getActiveGrid: () => AnsiGrid
   applyCell: (row: number, col: number, cell: AnsiCell) => void
   paintPixel: (row: number, col: number, isTopHalf: boolean) => void
+  paintBlendPixel: (row: number, col: number, isTopHalf: boolean) => void
   paintCell: (row: number, col: number) => void
 }
 
@@ -31,7 +32,7 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
   const {
     container, cursorRef, dimensionRef, terminalBuffer, brushRef,
     layersRef, activeLayerIdRef, previewCellsRef, lineStartRef,
-    colorTransformRef, getActiveGrid, applyCell, paintPixel, paintCell,
+    colorTransformRef, getActiveGrid, applyCell, paintPixel, paintBlendPixel, paintCell,
   } = deps
 
   function positionCursor(row: number, col: number, isTopHalf?: boolean): void {
@@ -102,6 +103,8 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
       }
     } else if (mode === 'pixel') {
       paintPixel(row, col, isTopHalf)
+    } else if (mode === 'blend-pixel') {
+      paintBlendPixel(row, col, isTopHalf)
     } else {
       paintCell(row, col)
     }

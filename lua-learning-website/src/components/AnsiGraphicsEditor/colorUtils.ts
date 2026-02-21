@@ -2,6 +2,15 @@ import type { RGBColor, AnsiGrid, Layer, PaletteEntry } from './types'
 import { TRANSPARENT_HALF, isDrawableLayer } from './types'
 import { isDefaultCell, rgbEqual } from './layerUtils'
 
+/** Linearly interpolate between two RGB colors. ratio=0 returns a, ratio=1 returns b. */
+export function blendRgb(a: RGBColor, b: RGBColor, ratio: number): RGBColor {
+  return [
+    Math.round(a[0] + (b[0] - a[0]) * ratio),
+    Math.round(a[1] + (b[1] - a[1]) * ratio),
+    Math.round(a[2] + (b[2] - a[2]) * ratio),
+  ]
+}
+
 /** Format an RGB color as a comma-separated key string (e.g. "255,0,128"). */
 export function rgbKey(color: RGBColor): string {
   return `${color[0]},${color[1]},${color[2]}`

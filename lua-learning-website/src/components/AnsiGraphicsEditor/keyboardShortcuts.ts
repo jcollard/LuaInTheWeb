@@ -24,8 +24,9 @@ export const TOOL_SHORTCUTS: Record<DrawTool, ShortcutDef> = {
 }
 
 export const MODE_SHORTCUTS: Partial<Record<BrushMode, ShortcutDef>> = {
-  'eraser': { key: 'e', label: 'E', description: 'Eraser' },
-  'pixel':  { key: 'n', label: 'N', description: 'Pixel' },
+  'eraser':      { key: 'e', label: 'E', description: 'Eraser' },
+  'pixel':       { key: 'n', label: 'N', description: 'Pixel' },
+  'blend-pixel': { key: 'j', label: 'J', description: 'Blend Pixel' },
 }
 
 export const ACTION_SHORTCUTS = {
