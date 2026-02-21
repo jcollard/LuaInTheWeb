@@ -51,7 +51,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     layersRef, activeLayerIdRef, applyToActiveLayer, getActiveGrid, restoreLayerState,
     addLayer: rawAddLayer, addLayerWithGrid: rawAddLayerWithGrid, removeLayer: rawRemoveLayer,
     reorderLayer: rawReorderLayer,
-    toggleVisibility: rawToggleVisibility, mergeDown: rawMergeDown,
+    toggleVisibility: rawToggleVisibility, setLayerVisibility: rawSetLayerVisibility,
+    mergeDown: rawMergeDown,
     replaceColors: rawReplaceColors,
     addTextLayer: rawAddTextLayer,
     updateTextLayer: rawUpdateTextLayer,
@@ -205,6 +206,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     [withLayerUndo, rawReorderLayer],
   )
   const toggleVisibilityWithUndo = useCallback((id: string) => withLayerUndo(() => rawToggleVisibility(id)), [withLayerUndo, rawToggleVisibility])
+  const setLayerVisibilityWithUndo = useCallback((ids: string[], visible: boolean) => withLayerUndo(() => rawSetLayerVisibility(ids, visible)), [withLayerUndo, rawSetLayerVisibility])
   const mergeDownWithUndo = useCallback((id: string) => withLayerUndo(() => rawMergeDown(id)), [withLayerUndo, rawMergeDown])
   const wrapInGroupWithUndo = useCallback((id: string) => withLayerUndo(() => rawWrapInGroup(id), false), [withLayerUndo, rawWrapInGroup])
   const removeFromGroupWithUndo = useCallback((id: string) => withLayerUndo(() => rawRemoveFromGroup(id), false), [withLayerUndo, rawRemoveFromGroup])
@@ -792,7 +794,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     addLayer: addLayerWithUndo, removeLayer: removeLayerWithUndo,
     renameLayer: layerState.renameLayer, setActiveLayer: setActiveLayerWithBounds,
     reorderLayer: reorderLayerWithUndo,
-    toggleVisibility: toggleVisibilityWithUndo, mergeDown: mergeDownWithUndo,
+    toggleVisibility: toggleVisibilityWithUndo, setLayerVisibility: setLayerVisibilityWithUndo,
+    mergeDown: mergeDownWithUndo,
     wrapInGroup: wrapInGroupWithUndo, removeFromGroup: removeFromGroupWithUndo,
     duplicateLayer: duplicateLayerWithUndo, toggleGroupCollapsed: toggleGroupCollapsedNoUndo,
     importPngAsLayer, simplifyColors, setTextAlign, flipSelectionHorizontal, flipSelectionVertical,

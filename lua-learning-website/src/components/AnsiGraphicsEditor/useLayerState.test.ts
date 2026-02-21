@@ -1031,6 +1031,45 @@ describe('useLayerState', () => {
     })
   })
 
+  describe('setLayerVisibility', () => {
+    it('sets specified layers to visible', () => {
+      const l1 = createLayer('A', 'l1'); l1.visible = false
+      const l2 = createLayer('B', 'l2'); l2.visible = false
+      const initial: LayerState = { layers: [l1, l2], activeLayerId: 'l1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.setLayerVisibility(['l1', 'l2'], true))
+      expect(result.current.layers[0].visible).toBe(true)
+      expect(result.current.layers[1].visible).toBe(true)
+    })
+
+    it('sets specified layers to hidden', () => {
+      const l1 = createLayer('A', 'l1')
+      const l2 = createLayer('B', 'l2')
+      const initial: LayerState = { layers: [l1, l2], activeLayerId: 'l1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.setLayerVisibility(['l1', 'l2'], false))
+      expect(result.current.layers[0].visible).toBe(false)
+      expect(result.current.layers[1].visible).toBe(false)
+    })
+
+    it('does not affect layers not in the id list', () => {
+      const l1 = createLayer('A', 'l1')
+      const l2 = createLayer('B', 'l2')
+      const initial: LayerState = { layers: [l1, l2], activeLayerId: 'l1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.setLayerVisibility(['l1'], false))
+      expect(result.current.layers[0].visible).toBe(false)
+      expect(result.current.layers[1].visible).toBe(true)
+    })
+
+    it('handles empty id list as a no-op', () => {
+      const { result } = renderHook(() => useLayerState())
+      const layersBefore = result.current.layers
+      act(() => result.current.setLayerVisibility([], false))
+      expect(result.current.layers).toBe(layersBefore)
+    })
+  })
+
   describe('tag management', () => {
     it('initializes availableTags as empty array by default', () => {
       const { result } = renderHook(() => useLayerState())

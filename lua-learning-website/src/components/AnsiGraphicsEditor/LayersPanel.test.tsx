@@ -18,6 +18,7 @@ describe('LayersPanel', () => {
     activeLayerId?: string
     onSetActive?: (id: string) => void
     onToggleVisibility?: (id: string) => void
+    onSetLayerVisibility?: (ids: string[], visible: boolean) => void
     onRename?: (id: string, name: string) => void
     onReorder?: (id: string, newIndex: number, targetGroupId?: string | null) => void
     onAdd?: () => void
@@ -41,6 +42,7 @@ describe('LayersPanel', () => {
         activeLayerId={overrides?.activeLayerId ?? layers[0].id}
         onSetActive={overrides?.onSetActive ?? noop}
         onToggleVisibility={overrides?.onToggleVisibility ?? noop}
+        onSetLayerVisibility={overrides?.onSetLayerVisibility ?? noop}
         onRename={overrides?.onRename ?? noop}
         onReorder={overrides?.onReorder ?? noop}
         onAdd={overrides?.onAdd ?? noop}

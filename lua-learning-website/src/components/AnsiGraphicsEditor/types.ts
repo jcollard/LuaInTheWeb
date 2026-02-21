@@ -189,6 +189,7 @@ export interface UseAnsiEditorReturn {
   setActiveLayer: (id: string) => void
   reorderLayer: (id: string, newIndex: number, targetGroupId?: string | null) => void
   toggleVisibility: (id: string) => void
+  setLayerVisibility: (ids: string[], visible: boolean) => void
   mergeDown: (id: string) => void
   wrapInGroup: (layerId: string) => void
   removeFromGroup: (layerId: string) => void

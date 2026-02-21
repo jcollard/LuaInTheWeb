@@ -11,6 +11,7 @@ export interface TagsTabContentProps {
   onDeleteTag: (tag: string) => void
   onRenameTag: (oldTag: string, newTag: string) => void
   onToggleVisibility: (id: string) => void
+  onSetLayerVisibility: (ids: string[], visible: boolean) => void
   onRenameLayer: (id: string, name: string) => void
 }
 
@@ -23,6 +24,7 @@ export function TagsTabContent({
   onDeleteTag,
   onRenameTag,
   onToggleVisibility,
+  onSetLayerVisibility,
   onRenameLayer,
 }: TagsTabContentProps) {
   const [newTagValue, setNewTagValue] = useState('')
@@ -115,6 +117,19 @@ export function TagsTabContent({
                 onDoubleClick={() => startRenameTag(tag)}
               >
                 <span>{isCollapsed ? '\u25B6' : '\u25BC'}</span>
+                <button
+                  className={styles.layerVisibility}
+                  data-testid={`tag-visibility-${tag}`}
+                  onClick={e => {
+                    e.stopPropagation()
+                    const allVisible = tagLayers.every(l => l.visible)
+                    onSetLayerVisibility(tagLayers.map(l => l.id), !allVisible)
+                  }}
+                  aria-label="Toggle tag visibility"
+                  title="Toggle tag visibility"
+                >
+                  {tagLayers.every(l => l.visible) ? '\u{1F441}' : '\u{1F441}\u{200D}\u{1F5E8}'}
+                </button>
                 {isEditing ? (
                   <input
                     className={styles.tagNewInput}

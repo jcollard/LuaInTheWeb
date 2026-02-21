@@ -45,6 +45,7 @@ export interface UseLayerStateReturn {
   setActiveLayer: (id: string) => void
   reorderLayer: (id: string, newIndex: number, targetGroupId?: string | null) => void
   toggleVisibility: (id: string) => void
+  setLayerVisibility: (ids: string[], visible: boolean) => void
   applyToActiveLayer: (row: number, col: number, cell: AnsiCell) => void
   getActiveGrid: () => AnsiGrid
   mergeDown: (id: string) => void
@@ -276,6 +277,12 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
 
   const toggleVisibility = useCallback((id: string) => {
     setLayers(prev => prev.map(l => l.id === id ? { ...l, visible: !l.visible } : l))
+  }, [])
+
+  const setLayerVisibility = useCallback((ids: string[], visible: boolean) => {
+    if (ids.length === 0) return
+    const idSet = new Set(ids)
+    setLayers(prev => prev.map(l => idSet.has(l.id) ? { ...l, visible } : l))
   }, [])
 
   const mergeDown = useCallback((id: string) => {
@@ -552,6 +559,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     setActiveLayer,
     reorderLayer,
     toggleVisibility,
+    setLayerVisibility,
     mergeDown,
     applyToActiveLayer,
     replaceColors,

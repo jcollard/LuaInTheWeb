@@ -11,6 +11,7 @@ export interface LayersPanelProps {
   activeLayerId: string
   onSetActive: (id: string) => void
   onToggleVisibility: (id: string) => void
+  onSetLayerVisibility: (ids: string[], visible: boolean) => void
   onRename: (id: string, name: string) => void
   onReorder: (id: string, newIndex: number, targetGroupId?: string | null) => void
   onAdd: () => void
@@ -33,6 +34,7 @@ export function LayersPanel({
   activeLayerId,
   onSetActive,
   onToggleVisibility,
+  onSetLayerVisibility,
   onRename,
   onReorder,
   onAdd,
@@ -256,6 +258,7 @@ export function LayersPanel({
           onDeleteTag={onDeleteTag}
           onRenameTag={onRenameTag}
           onToggleVisibility={onToggleVisibility}
+          onSetLayerVisibility={onSetLayerVisibility}
           onRenameLayer={onRename}
         />
       ) : (

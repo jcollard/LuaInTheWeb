@@ -114,6 +114,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     setActiveLayer,
     reorderLayer,
     toggleVisibility,
+    setLayerVisibility,
     mergeDown,
     wrapInGroup,
     removeFromGroup,
@@ -323,6 +324,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
           activeLayerId={activeLayerId}
           onSetActive={setActiveLayer}
           onToggleVisibility={toggleVisibility}
+          onSetLayerVisibility={setLayerVisibility}
           onRename={renameLayer}
           onReorder={reorderLayer}
           onAdd={addLayer}
