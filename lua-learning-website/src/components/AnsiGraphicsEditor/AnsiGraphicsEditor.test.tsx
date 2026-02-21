@@ -15,7 +15,7 @@ vi.mock('../AnsiTerminalPanel/AnsiTerminalPanel', () => ({
 
 describe('AnsiEditorToolbar', () => {
   const defaultBrush = { char: '#', fg: DEFAULT_FG as RGBColor, bg: DEFAULT_BG as RGBColor, mode: 'brush' as BrushMode, tool: 'pencil' as DrawTool, borderStyle: BORDER_PRESETS[0].style }
-  let handlers: Pick<AnsiEditorToolbarProps, 'onSetChar' | 'onClear' | 'onSave' | 'onSaveAs' | 'onImportPng' | 'onExportAns' | 'onSetMode' | 'onSetTool' | 'onUndo' | 'onRedo' | 'canUndo' | 'canRedo'>
+  let handlers: Pick<AnsiEditorToolbarProps, 'onSetChar' | 'onClear' | 'onSave' | 'onSaveAs' | 'onImportPng' | 'onExportAns' | 'onExportSh' | 'onSetMode' | 'onSetTool' | 'onUndo' | 'onRedo' | 'canUndo' | 'canRedo'>
 
   beforeEach(() => {
     handlers = {
@@ -25,6 +25,7 @@ describe('AnsiEditorToolbar', () => {
       onSaveAs: vi.fn<() => void>(),
       onImportPng: vi.fn<() => void>(),
       onExportAns: vi.fn<() => void>(),
+      onExportSh: vi.fn<() => void>(),
       onSetMode: vi.fn<(mode: BrushMode) => void>(),
       onSetTool: vi.fn<(tool: DrawTool) => void>(),
       onUndo: vi.fn<() => void>(),

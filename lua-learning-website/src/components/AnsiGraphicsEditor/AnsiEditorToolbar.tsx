@@ -15,6 +15,7 @@ export interface AnsiEditorToolbarProps {
   onSaveAs: () => void
   onImportPng: () => void
   onExportAns: () => void
+  onExportSh: () => void
   onUndo: () => void
   onRedo: () => void
   canUndo: boolean
@@ -32,7 +33,7 @@ export interface AnsiEditorToolbarProps {
 
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
-  onImportPng, onExportAns, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
+  onImportPng, onExportAns, onExportSh, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
   onFlipHorizontal, onFlipVertical, onSetBorderStyle, cgaPreview, onToggleCgaPreview, activeLayerIsGroup, isPlaying,
 }: AnsiEditorToolbarProps) {
   const toolsDisabled = activeLayerIsGroup || isPlaying
@@ -386,6 +387,15 @@ export function AnsiEditorToolbar({
         data-testid="export-ans-button"
       >
         Export ANS
+      </button>
+      <button
+        type="button"
+        className={styles.toolbarButton}
+        onClick={onExportSh}
+        title="Export as bash script"
+        data-testid="export-sh-button"
+      >
+        Export .sh
       </button>
       <button
         type="button"

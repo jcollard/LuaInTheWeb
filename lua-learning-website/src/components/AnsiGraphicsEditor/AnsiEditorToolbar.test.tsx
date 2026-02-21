@@ -31,6 +31,7 @@ function defaultProps(overrides?: Partial<AnsiEditorToolbarProps>): AnsiEditorTo
     onSaveAs: vi.fn(),
     onImportPng: vi.fn(),
     onExportAns: vi.fn(),
+    onExportSh: vi.fn(),
     onUndo: vi.fn(),
     onRedo: vi.fn(),
     canUndo: false,

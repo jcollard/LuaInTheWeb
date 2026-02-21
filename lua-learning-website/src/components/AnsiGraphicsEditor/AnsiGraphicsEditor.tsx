@@ -9,10 +9,38 @@ import { LayersPanel } from './LayersPanel'
 import { SaveAsDialog } from './SaveAsDialog'
 import { useAnsiEditor } from './useAnsiEditor'
 import { exportAnsFile } from './ansExport'
+import { exportShFile, exportAnimatedShFile } from './shExport'
 import { serializeLayers, deserializeLayers } from './serialization'
-import { compositeGrid } from './layerUtils'
-import type { LayerState } from './types'
+import { compositeGrid, visibleDrawableLayers } from './layerUtils'
+import type { AnsiGrid, Layer, LayerState } from './types'
 import styles from './AnsiGraphicsEditor.module.css'
+
+/** Find the maximum frame count across all visible drawn layers. */
+function getMaxFrameCount(layers: Layer[]): number {
+  const drawable = visibleDrawableLayers(layers)
+  let max = 1
+  for (const layer of drawable) {
+    if (layer.type === 'drawn' && layer.frames.length > max) {
+      max = layer.frames.length
+    }
+  }
+  return max
+}
+
+/** Composite each frame index across all layers, clamping single-frame layers to frame 0. */
+function allFrameComposites(layers: Layer[], frameCount: number): AnsiGrid[] {
+  const frames: AnsiGrid[] = []
+  for (let f = 0; f < frameCount; f++) {
+    // Temporarily set each drawn layer's grid to the frame at index f (clamped)
+    const snapshotLayers = layers.map(layer => {
+      if (layer.type !== 'drawn') return layer
+      const frameIdx = Math.min(f, layer.frames.length - 1)
+      return { ...layer, grid: layer.frames[frameIdx] }
+    })
+    frames.push(compositeGrid(snapshotLayers))
+  }
+  return frames
+}
 
 export interface AnsiGraphicsEditorProps {
   filePath?: string
@@ -170,6 +198,38 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     URL.revokeObjectURL(url)
   }, [layers, filePath])
 
+  const handleExportSh = useCallback(() => {
+    let filename = 'untitled.sh'
+    if (filePath && !filePath.startsWith('ansi-editor://')) {
+      const base = filePath.split('/').pop() ?? 'untitled'
+      filename = base.replace(/\.ansi\.lua$/, '.sh')
+      if (!filename.endsWith('.sh')) filename = base + '.sh'
+    }
+
+    // Check if any visible drawn layer has multiple frames
+    const maxFrames = getMaxFrameCount(layers)
+
+    let script: string
+    if (maxFrames > 1) {
+      const frames = allFrameComposites(layers, maxFrames)
+      const drawable = visibleDrawableLayers(layers)
+      const drawnLayer = drawable.find(l => l.type === 'drawn' && l.frames.length > 1)
+      const durationMs = drawnLayer?.type === 'drawn' ? drawnLayer.frameDurationMs : 100
+      script = exportAnimatedShFile(frames, durationMs)
+    } else {
+      const grid = compositeGrid(layers)
+      script = exportShFile(grid)
+    }
+
+    const blob = new Blob([script], { type: 'text/x-shellscript' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [layers, filePath])
+
   return (
     <div className={styles.editor} data-testid="ansi-graphics-editor">
       <AnsiEditorToolbar
@@ -182,6 +242,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
         onSaveAs={openSaveDialog}
         onImportPng={handleImportPngClick}
         onExportAns={handleExportAns}
+        onExportSh={handleExportSh}
         onUndo={undo}
         onRedo={redo}
         canUndo={canUndo}
