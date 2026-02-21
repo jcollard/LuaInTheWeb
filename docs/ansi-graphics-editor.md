@@ -2,6 +2,8 @@
 
 The ANSI Graphics Editor is a full-featured art editor for creating ANSI-style artwork using the terminal's 80x25 character grid. It supports multiple layer types, animation frames, pixel-level drawing, and export to multiple formats.
 
+For usage instructions, see the [User Guide](./ansi/editor.md).
+
 **Location:** `lua-learning-website/src/components/AnsiGraphicsEditor/` (~92 files, ~25k lines)
 
 ## Component Hierarchy

@@ -12,6 +12,7 @@ Welcome to the LuaInTheWeb developer documentation. This directory contains all 
 
 ## ANSI Graphics Editor
 
+- [Editor User Guide](./ansi/editor.md) - Features, tools, and how to use the editor
 - [Editor Architecture](./ansi-graphics-editor.md) - Component hierarchy, state management, rendering pipeline
 - [Editor Development Guide](./ansi-editor-development.md) - Adding tools, extending layers, testing patterns
 
