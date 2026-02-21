@@ -52,6 +52,7 @@ export interface UseLayerStateReturn {
   duplicateLayer: (id: string) => void
   applyMoveGrids: (layerGrids: Map<string, AnsiGrid>) => void
   applyMoveGridsImmediate: (layerGrids: Map<string, AnsiGrid>) => void
+  applyLayerTransform: (transform: (layer: Layer) => Layer) => void
   addFrame: () => void
   duplicateFrame: () => void
   removeFrame: () => void
@@ -486,6 +487,12 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     updateActiveDrawnLayer(l => ({ ...l, frameDurationMs: clamped }))
   }, [updateActiveDrawnLayer])
 
+  const applyLayerTransform = useCallback((transform: (layer: Layer) => Layer) => {
+    const newLayers = layersRef.current.map(transform)
+    layersRef.current = newLayers
+    setLayers(newLayers)
+  }, [])
+
   return {
     layers,
     activeLayerId,
@@ -513,6 +520,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     duplicateLayer,
     applyMoveGrids,
     applyMoveGridsImmediate,
+    applyLayerTransform,
     addFrame,
     duplicateFrame,
     removeFrame,

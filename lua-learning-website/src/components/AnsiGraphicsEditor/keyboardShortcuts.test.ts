@@ -170,8 +170,12 @@ describe('keyboardShortcuts', () => {
       expect(toolTooltip('text')).toBe('Text (T)')
     })
 
-    it('returns "Move (V)" for move', () => {
-      expect(toolTooltip('move')).toBe('Move (V)')
+    it('returns "Move / Flip (V)" for move', () => {
+      expect(toolTooltip('move')).toBe('Move / Flip (V)')
+    })
+
+    it('returns "Move / Flip (V)" for flip', () => {
+      expect(toolTooltip('flip')).toBe('Move / Flip (V)')
     })
 
     it('returns "Border (K)" for border', () => {

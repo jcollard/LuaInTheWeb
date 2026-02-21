@@ -21,6 +21,7 @@ export const TOOL_SHORTCUTS: Record<DrawTool, ShortcutDef> = {
   'eyedropper':   { key: 'i', label: 'I',       description: 'Eyedropper' },
   'text':         { key: 't', label: 'T',       description: 'Text' },
   'move':         { key: 'v', label: 'V',       description: 'Move' },
+  'flip':         { key: 'v', shift: true, label: 'Shift+V', description: 'Flip' },
 }
 
 export const MODE_SHORTCUTS: Partial<Record<BrushMode, ShortcutDef>> = {
@@ -75,6 +76,9 @@ export function toolTooltip(tool: DrawTool): string {
   }
   if (tool === 'oval-outline' || tool === 'oval-filled') {
     return tooltipWithShortcut('Oval', TOOL_SHORTCUTS['oval-outline'])
+  }
+  if (tool === 'move' || tool === 'flip') {
+    return tooltipWithShortcut('Move / Flip', TOOL_SHORTCUTS['move'])
   }
   const def = TOOL_SHORTCUTS[tool]
   return tooltipWithShortcut(def.description, def)

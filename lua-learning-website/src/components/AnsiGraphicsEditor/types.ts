@@ -12,7 +12,7 @@ export type AnsiGrid = AnsiCell[][]
 
 export type BrushMode = 'brush' | 'pixel' | 'blend-pixel' | 'eraser'
 
-export type DrawTool = 'pencil' | 'line' | 'rect-outline' | 'rect-filled' | 'oval-outline' | 'oval-filled' | 'border' | 'flood-fill' | 'select' | 'eyedropper' | 'text' | 'move'
+export type DrawTool = 'pencil' | 'line' | 'rect-outline' | 'rect-filled' | 'oval-outline' | 'oval-filled' | 'border' | 'flood-fill' | 'select' | 'eyedropper' | 'text' | 'move' | 'flip'
 
 export interface BorderStyle {
   tl: string
@@ -201,6 +201,11 @@ export interface UseAnsiEditorReturn {
   // Move tool
   activeLayerIsGroup: boolean
   isMoveDragging: boolean
+  // Flip tool
+  flipOriginOverlayRef: React.RefObject<HTMLDivElement | null>
+  flipOrigin: { row: number; col: number }
+  flipLayerHorizontal: () => void
+  flipLayerVertical: () => void
   // CGA Preview
   cgaPreview: boolean
   setCgaPreview: (on: boolean) => void

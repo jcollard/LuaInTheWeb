@@ -1,7 +1,7 @@
 /* eslint-disable max-lines */
 import { useState, useCallback, useRef, useMemo } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
-import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, BorderStyle, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions, DrawableLayer, DrawnLayer } from './types'
+import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, BorderStyle, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions, DrawableLayer, DrawnLayer, Layer } from './types'
 import { blendRgb } from './colorUtils'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, DEFAULT_BLEND_RATIO, DEFAULT_CELL, DEFAULT_FRAME_DURATION_MS, BORDER_PRESETS, isGroupLayer, isDrawableLayer } from './types'
 import type { CellHalf, ColorTransform } from './gridUtils'
@@ -15,6 +15,7 @@ import { createDrawHelpers } from './drawHelpers'
 import { createSelectionHandlers, type SelectionHandlers } from './selectionTool'
 import { createTextToolHandlers, type TextToolHandlers } from './textTool'
 import { TOOL_KEY_MAP, TOOL_SHIFT_KEY_MAP, MODE_KEY_MAP, TOOL_SHORTCUTS, MODE_SHORTCUTS, ACTION_SHORTCUTS } from './keyboardShortcuts'
+import { flipDrawnLayerHorizontal, flipDrawnLayerVertical, flipTextLayerHorizontal, flipTextLayerVertical } from './flipUtils'
 
 export { computePixelCell, computeLineCells } from './gridUtils'
 
@@ -85,6 +86,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     duplicateLayer: rawDuplicateLayer,
     applyMoveGrids: rawApplyMoveGrids,
     applyMoveGridsImmediate: rawApplyMoveGridsImmediate,
+    applyLayerTransform: rawApplyLayerTransform,
     addFrame: rawAddFrame,
     duplicateFrame: rawDuplicateFrame,
     removeFrame: rawRemoveFrame,
@@ -125,6 +127,11 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const moveBlankGridsRef = useRef<Map<string, AnsiGrid>>(new Map())
   const [cgaPreview, setCgaPreviewRaw] = useState(false)
   const [isMoveDragging, setIsMoveDragging] = useState(false)
+  const flipOriginRef = useRef<{ row: number; col: number }>({ row: 12, col: 40 })
+  const [flipOrigin, setFlipOrigin] = useState<{ row: number; col: number }>({ row: 12, col: 40 })
+  const flipOriginOverlayRef = useRef<HTMLDivElement | null>(null)
+  const flipLayerHorizontalRef = useRef<() => void>(() => {})
+  const flipLayerVerticalRef = useRef<() => void>(() => {})
   const [isPlaying, setIsPlaying] = useState(false)
   const playbackTimerRef = useRef<number | null>(null)
   const isPlayingRef = useRef(false); isPlayingRef.current = isPlaying
@@ -354,6 +361,17 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       terminalBufferRef.current.flush(compositeGrid(layersRef.current), colorTransformRef.current)
     }
 
+    function positionFlipOriginOverlay(row: number, col: number): void {
+      const el = flipOriginOverlayRef.current
+      if (!el) return
+      const rect = container.getBoundingClientRect()
+      const cellW = rect.width / ANSI_COLS
+      const cellH = rect.height / ANSI_ROWS
+      el.style.display = 'block'
+      el.style.left = `${rect.left + (col + 0.5) * cellW}px`
+      el.style.top = `${rect.top + (row + 0.5) * cellH}px`
+    }
+
     function onKeyDown(e: KeyboardEvent): void {
       const ctrl = e.ctrlKey || e.metaKey
       const shift = e.shiftKey
@@ -379,6 +397,10 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         endMoveDrag()
         undo()
         return
+      }
+      if (brushRef.current.tool === 'flip') {
+        if (shift && key === 'h') { flipLayerHorizontalRef.current(); notify?.('Flip Horizontal'); return }
+        if (shift && key === 'v') { flipLayerVerticalRef.current(); notify?.('Flip Vertical'); return }
       }
 
       // --- Single-key shortcuts (never during text editing — already returned above) ---
@@ -521,6 +543,13 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
             moveCapturedRef.current.set(target.id, captured)
             moveBlankGridsRef.current.set(target.id, createEmptyGrid())
           }
+          break
+        }
+        case 'flip': {
+          if (!cell) return
+          flipOriginRef.current = { row: cell.row, col: cell.col }
+          setFlipOrigin({ row: cell.row, col: cell.col })
+          positionFlipOriginOverlay(cell.row, cell.col)
           break
         }
       }
@@ -675,7 +704,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     layerState.setActiveLayer(id)
     const layer = layersRef.current.find(l => l.id === id)
     if (layer && isGroupLayer(layer)) {
-      setBrush(p => p.tool === 'move' ? p : ({ ...p, tool: 'move' }))
+      setBrush(p => (p.tool === 'move' || p.tool === 'flip') ? p : ({ ...p, tool: 'move' }))
     } else if (layer?.type === 'text') {
       setBrush(p => p.tool === 'text' ? p : ({ ...p, tool: 'text' }))
     } else if (brushRef.current.tool === 'move' && prevLayer && isGroupLayer(prevLayer)) {
@@ -713,6 +742,46 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     selHandlersRef.current?.flipVertical()
   }, [])
 
+  const flipLayerHorizontal = useCallback(() => {
+    const activeId = activeLayerIdRef.current
+    const activeLayer = layersRef.current.find(l => l.id === activeId)
+    if (!activeLayer) return
+    const targetIds = new Set(
+      isGroupLayer(activeLayer)
+        ? getGroupDescendantLayers(activeId, layersRef.current).map(l => l.id)
+        : [activeId],
+    )
+    if (targetIds.size === 0) return
+    const col = flipOriginRef.current.col
+    withLayerUndo(() => rawApplyLayerTransform((l: Layer) => {
+      if (!targetIds.has(l.id)) return l
+      if (l.type === 'drawn') return flipDrawnLayerHorizontal(l, col)
+      if (l.type === 'text') return flipTextLayerHorizontal(l, col)
+      return l
+    }))
+  }, [withLayerUndo, rawApplyLayerTransform, layersRef, activeLayerIdRef])
+
+  const flipLayerVertical = useCallback(() => {
+    const activeId = activeLayerIdRef.current
+    const activeLayer = layersRef.current.find(l => l.id === activeId)
+    if (!activeLayer) return
+    const targetIds = new Set(
+      isGroupLayer(activeLayer)
+        ? getGroupDescendantLayers(activeId, layersRef.current).map(l => l.id)
+        : [activeId],
+    )
+    if (targetIds.size === 0) return
+    const row = flipOriginRef.current.row
+    withLayerUndo(() => rawApplyLayerTransform((l: Layer) => {
+      if (!targetIds.has(l.id)) return l
+      if (l.type === 'drawn') return flipDrawnLayerVertical(l, row)
+      if (l.type === 'text') return flipTextLayerVertical(l, row)
+      return l
+    }))
+  }, [withLayerUndo, rawApplyLayerTransform, layersRef, activeLayerIdRef])
+  flipLayerHorizontalRef.current = flipLayerHorizontal
+  flipLayerVerticalRef.current = flipLayerVertical
+
   const markClean = useCallback(() => setIsDirty(false), [])
   const openSaveDialog = useCallback(() => setIsSaveDialogOpen(true), []), closeSaveDialog = useCallback(() => setIsSaveDialogOpen(false), [])
 
@@ -748,6 +817,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     duplicateLayer: duplicateLayerWithUndo, toggleGroupCollapsed: toggleGroupCollapsedNoUndo,
     importPngAsLayer, simplifyColors, setTextAlign, flipSelectionHorizontal, flipSelectionVertical,
     activeLayerIsGroup, isMoveDragging,
+    flipOriginOverlayRef, flipOrigin, flipLayerHorizontal, flipLayerVertical,
     cgaPreview, setCgaPreview,
     addFrame: addFrameWithUndo, duplicateFrame: duplicateFrameWithUndo,
     removeFrame: removeFrameWithUndo, setCurrentFrame: setCurrentFrameWithUndo,

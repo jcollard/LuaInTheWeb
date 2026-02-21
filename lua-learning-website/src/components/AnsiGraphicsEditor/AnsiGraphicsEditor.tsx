@@ -132,6 +132,10 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     setBorderStyle,
     activeLayerIsGroup,
     isMoveDragging,
+    flipOriginOverlayRef,
+    flipOrigin,
+    flipLayerHorizontal,
+    flipLayerVertical,
     addFrame,
     duplicateFrame,
     removeFrame,
@@ -263,6 +267,9 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
         onSetTextAlign={setTextAlign}
         onFlipHorizontal={flipSelectionHorizontal}
         onFlipVertical={flipSelectionVertical}
+        onFlipLayerHorizontal={flipLayerHorizontal}
+        onFlipLayerVertical={flipLayerVertical}
+        flipOrigin={flipOrigin}
         onSetBorderStyle={setBorderStyle}
         onSetBlendRatio={setBlendRatio}
         cgaPreview={cgaPreview}
@@ -283,7 +290,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
           activeLayerId={activeLayerId}
         />
         <div className={styles.canvasAndFrames}>
-          <div className={[styles.canvas, brush.tool === 'move' && (isMoveDragging ? styles.canvasMoveDragging : styles.canvasMove)].filter(Boolean).join(' ')}>
+          <div className={[styles.canvas, brush.tool === 'move' && (isMoveDragging ? styles.canvasMoveDragging : styles.canvasMove), brush.tool === 'flip' && styles.canvasFlip].filter(Boolean).join(' ')}>
             <AnsiTerminalPanel
               isActive={true}
               onTerminalReady={onTerminalReady}
@@ -326,6 +333,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
       <div ref={selectionRef} className={styles.selectionOverlay} />
       <div ref={textBoundsRef} className={styles.textBoundsOverlay} />
       <div ref={textCursorRef} className={styles.textCursor} />
+      <div ref={flipOriginOverlayRef} className={styles.flipOriginOverlay} />
       <SaveAsDialog
         isOpen={isSaveDialogOpen}
         tree={fileTree}

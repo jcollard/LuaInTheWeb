@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { useRef, useState } from 'react'
 import type { BrushMode, DrawTool, BrushSettings, BorderStyle, TextAlign } from './types'
 import { BORDER_PRESETS, DEFAULT_BLEND_RATIO, borderStyleEqual } from './types'
@@ -25,6 +26,9 @@ export interface AnsiEditorToolbarProps {
   onSetTextAlign?: (align: TextAlign) => void
   onFlipHorizontal?: () => void
   onFlipVertical?: () => void
+  onFlipLayerHorizontal?: () => void
+  onFlipLayerVertical?: () => void
+  flipOrigin?: { row: number; col: number }
   onSetBorderStyle?: (style: BorderStyle) => void
   onSetBlendRatio?: (ratio: number) => void
   cgaPreview?: boolean
@@ -38,12 +42,13 @@ export interface AnsiEditorToolbarProps {
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onImportPng, onExportAns, onExportSh, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
-  onFlipHorizontal, onFlipVertical, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, activeLayerIsGroup, isPlaying,
+  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, activeLayerIsGroup, isPlaying,
   fileMenuOpen: controlledFileMenuOpen, onSetFileMenuOpen,
 }: AnsiEditorToolbarProps) {
   const toolsDisabled = activeLayerIsGroup || isPlaying
   const isRectActive = brush.tool === 'rect-outline' || brush.tool === 'rect-filled'
   const isOvalActive = brush.tool === 'oval-outline' || brush.tool === 'oval-filled'
+  const isMoveOrFlipActive = brush.tool === 'move' || brush.tool === 'flip'
   const isBorderActive = brush.tool === 'border'
   const blendPercent = Math.round((brush.blendRatio ?? DEFAULT_BLEND_RATIO) * 100)
   const [charPaletteOpen, setCharPaletteOpen] = useState(false)
@@ -239,16 +244,36 @@ export function AnsiEditorToolbar({
         >
           T
         </button>
-        <button
-          type="button"
-          className={`${styles.modeButton} ${brush.tool === 'move' ? styles.modeButtonActive : ''}`}
-          aria-pressed={brush.tool === 'move'}
-          onClick={() => onSetTool('move')}
-          title={toolTooltip('move')}
-          data-testid="tool-move"
-        >
-          ✥
-        </button>
+        <div className={styles.toolFlyoutWrapper}>
+          <button
+            type="button"
+            className={`${styles.modeButton} ${isMoveOrFlipActive ? styles.modeButtonActive : ''}`}
+            aria-pressed={isMoveOrFlipActive}
+            onClick={() => onSetTool(brush.tool === 'flip' ? 'flip' : 'move')}
+            title={toolTooltip('move')}
+            data-testid="tool-move"
+          >
+            {brush.tool === 'flip' ? '⇔' : '✥'}
+          </button>
+          <div className={styles.toolFlyout} data-testid="move-flyout">
+            <button
+              type="button"
+              className={`${styles.flyoutOption} ${brush.tool === 'move' ? styles.flyoutOptionActive : ''}`}
+              onClick={() => onSetTool('move')}
+              data-testid="tool-move-option"
+            >
+              ✥ Move
+            </button>
+            <button
+              type="button"
+              className={`${styles.flyoutOption} ${brush.tool === 'flip' ? styles.flyoutOptionActive : ''}`}
+              onClick={() => onSetTool('flip')}
+              data-testid="tool-flip-option"
+            >
+              ⇔ Flip
+            </button>
+          </div>
+        </div>
       </div>
       {!activeLayerIsGroup && (
         <div className={styles.modeGroup}>
@@ -380,6 +405,34 @@ export function AnsiEditorToolbar({
             >
               ↕
             </button>
+          )}
+        </div>
+      )}
+      {brush.tool === 'flip' && (
+        <div className={styles.modeGroup}>
+          <span className={styles.modeLabel}>Flip</span>
+          <button
+            type="button"
+            className={styles.modeButton}
+            onClick={onFlipLayerHorizontal}
+            title="Flip Layer Horizontal (Shift+H)"
+            data-testid="flip-layer-horizontal"
+          >
+            ↔
+          </button>
+          <button
+            type="button"
+            className={styles.modeButton}
+            onClick={onFlipLayerVertical}
+            title="Flip Layer Vertical (Shift+V)"
+            data-testid="flip-layer-vertical"
+          >
+            ↕
+          </button>
+          {flipOrigin && (
+            <span className={styles.modeLabel} data-testid="flip-origin-display">
+              Origin: ({flipOrigin.col}, {flipOrigin.row})
+            </span>
           )}
         </div>
       )}

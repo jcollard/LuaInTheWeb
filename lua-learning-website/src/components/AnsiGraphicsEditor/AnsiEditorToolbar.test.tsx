@@ -126,6 +126,106 @@ describe('AnsiEditorToolbar blend-pixel mode button', () => {
   })
 })
 
+const flipBrush: BrushSettings = {
+  char: '#', fg: [170, 170, 170], bg: [0, 0, 0], mode: 'brush', tool: 'flip', borderStyle: defaultBorderStyle,
+}
+
+describe('AnsiEditorToolbar move/flip flyout', () => {
+  it('renders move flyout with move and flip options', () => {
+    const props = defaultProps()
+    render(<AnsiEditorToolbar {...props} />)
+    expect(screen.getByTestId('move-flyout')).toBeTruthy()
+    expect(screen.getByTestId('tool-move-option')).toBeTruthy()
+    expect(screen.getByTestId('tool-flip-option')).toBeTruthy()
+  })
+
+  it('shows flip icon when flip tool is active', () => {
+    const props = defaultProps({ brush: flipBrush })
+    render(<AnsiEditorToolbar {...props} />)
+    const btn = screen.getByTestId('tool-move')
+    expect(btn.textContent).toContain('⇔')
+  })
+
+  it('shows move icon when move tool is active', () => {
+    const moveBrush: BrushSettings = { ...pencilBrush, tool: 'move' }
+    const props = defaultProps({ brush: moveBrush })
+    render(<AnsiEditorToolbar {...props} />)
+    const btn = screen.getByTestId('tool-move')
+    expect(btn.textContent).toContain('✥')
+  })
+
+  it('calls onSetTool with flip when flip option is clicked', async () => {
+    const onSetTool = vi.fn()
+    const props = defaultProps({ onSetTool })
+    render(<AnsiEditorToolbar {...props} />)
+    await userEvent.click(screen.getByTestId('tool-flip-option'))
+    expect(onSetTool).toHaveBeenCalledWith('flip')
+  })
+})
+
+describe('AnsiEditorToolbar flip layer buttons', () => {
+  it('shows flip layer buttons when tool is flip', () => {
+    const props = defaultProps({
+      brush: flipBrush,
+      onFlipLayerHorizontal: vi.fn(),
+      onFlipLayerVertical: vi.fn(),
+      flipOrigin: { row: 12, col: 40 },
+    })
+    render(<AnsiEditorToolbar {...props} />)
+    expect(screen.getByTestId('flip-layer-horizontal')).toBeTruthy()
+    expect(screen.getByTestId('flip-layer-vertical')).toBeTruthy()
+  })
+
+  it('hides flip layer buttons when tool is not flip', () => {
+    const props = defaultProps({
+      brush: pencilBrush,
+      onFlipLayerHorizontal: vi.fn(),
+      onFlipLayerVertical: vi.fn(),
+    })
+    render(<AnsiEditorToolbar {...props} />)
+    expect(screen.queryByTestId('flip-layer-horizontal')).toBeNull()
+    expect(screen.queryByTestId('flip-layer-vertical')).toBeNull()
+  })
+
+  it('calls onFlipLayerHorizontal when clicked', async () => {
+    const onFlip = vi.fn()
+    const props = defaultProps({
+      brush: flipBrush,
+      onFlipLayerHorizontal: onFlip,
+      onFlipLayerVertical: vi.fn(),
+      flipOrigin: { row: 12, col: 40 },
+    })
+    render(<AnsiEditorToolbar {...props} />)
+    await userEvent.click(screen.getByTestId('flip-layer-horizontal'))
+    expect(onFlip).toHaveBeenCalledOnce()
+  })
+
+  it('calls onFlipLayerVertical when clicked', async () => {
+    const onFlip = vi.fn()
+    const props = defaultProps({
+      brush: flipBrush,
+      onFlipLayerHorizontal: vi.fn(),
+      onFlipLayerVertical: onFlip,
+      flipOrigin: { row: 12, col: 40 },
+    })
+    render(<AnsiEditorToolbar {...props} />)
+    await userEvent.click(screen.getByTestId('flip-layer-vertical'))
+    expect(onFlip).toHaveBeenCalledOnce()
+  })
+
+  it('displays the origin coordinates', () => {
+    const props = defaultProps({
+      brush: flipBrush,
+      onFlipLayerHorizontal: vi.fn(),
+      onFlipLayerVertical: vi.fn(),
+      flipOrigin: { row: 5, col: 20 },
+    })
+    render(<AnsiEditorToolbar {...props} />)
+    expect(screen.getByTestId('flip-origin-display').textContent).toContain('20')
+    expect(screen.getByTestId('flip-origin-display').textContent).toContain('5')
+  })
+})
+
 describe('AnsiEditorToolbar border flyout', () => {
   it('renders the border flyout with preset options', () => {
     const onSetBorderStyle = vi.fn()
