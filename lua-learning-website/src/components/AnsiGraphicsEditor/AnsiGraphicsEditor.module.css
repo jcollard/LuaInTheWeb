@@ -540,7 +540,13 @@
 .modeButtonActive {
   background-color: var(--theme-accent-primary);
   border-color: var(--theme-accent-primary);
-  color: var(--theme-bg-primary);
+  color: var(--theme-text-inverse);
+}
+
+.modeButtonActive:hover {
+  background-color: var(--theme-accent-hover);
+  border-color: var(--theme-accent-hover);
+  color: var(--theme-text-inverse);
 }
 
 /* Toolbar buttons (File, Undo, Redo) */

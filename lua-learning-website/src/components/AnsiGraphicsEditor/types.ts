@@ -216,6 +216,9 @@ export interface UseAnsiEditorReturn {
 export interface UseAnsiEditorOptions {
   initialGrid?: AnsiGrid
   initialLayerState?: LayerState
+  onSave?: () => void
+  onSaveAs?: () => void
+  onOpenFileMenu?: () => void
 }
 
 export type StaticPaletteType = 'cga' | 'ega' | 'vga'

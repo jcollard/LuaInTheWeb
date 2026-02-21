@@ -1,9 +1,9 @@
-/* eslint-disable max-lines */
 import { useRef, useState } from 'react'
 import type { BrushMode, DrawTool, BrushSettings, BorderStyle, TextAlign } from './types'
 import { BORDER_PRESETS, borderStyleEqual } from './types'
 import { CharPaletteModal } from './CharPaletteModal'
 import { FileOptionsModal } from './FileOptionsModal'
+import { toolTooltip, tooltipWithShortcut, MODE_SHORTCUTS, ACTION_SHORTCUTS } from './keyboardShortcuts'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface AnsiEditorToolbarProps {
@@ -30,19 +30,24 @@ export interface AnsiEditorToolbarProps {
   onToggleCgaPreview?: () => void
   activeLayerIsGroup?: boolean
   isPlaying?: boolean
+  fileMenuOpen?: boolean
+  onSetFileMenuOpen?: (open: boolean) => void
 }
 
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onImportPng, onExportAns, onExportSh, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
   onFlipHorizontal, onFlipVertical, onSetBorderStyle, cgaPreview, onToggleCgaPreview, activeLayerIsGroup, isPlaying,
+  fileMenuOpen: controlledFileMenuOpen, onSetFileMenuOpen,
 }: AnsiEditorToolbarProps) {
   const toolsDisabled = activeLayerIsGroup || isPlaying
   const isRectActive = brush.tool === 'rect-outline' || brush.tool === 'rect-filled'
   const isOvalActive = brush.tool === 'oval-outline' || brush.tool === 'oval-filled'
   const isBorderActive = brush.tool === 'border'
   const [charPaletteOpen, setCharPaletteOpen] = useState(false)
-  const [fileOptionsOpen, setFileOptionsOpen] = useState(false)
+  const [internalFileMenuOpen, setInternalFileMenuOpen] = useState(false)
+  const fileOptionsOpen = controlledFileMenuOpen ?? internalFileMenuOpen
+  const setFileOptionsOpen = onSetFileMenuOpen ?? setInternalFileMenuOpen
   const charButtonRef = useRef<HTMLButtonElement>(null)
 
   return (
@@ -51,7 +56,7 @@ export function AnsiEditorToolbar({
         type="button"
         className={styles.toolbarButton}
         onClick={() => setFileOptionsOpen(true)}
-        title="File options"
+        title={tooltipWithShortcut('File', ACTION_SHORTCUTS.fileMenu)}
         data-testid="file-options-button"
       >
         File
@@ -76,7 +81,7 @@ export function AnsiEditorToolbar({
           className={`${styles.modeButton} ${brush.tool === 'pencil' ? styles.modeButtonActive : ''}`}
           aria-pressed={brush.tool === 'pencil'}
           onClick={() => onSetTool('pencil')}
-          title="Pencil"
+          title={toolTooltip('pencil')}
           data-testid="tool-pencil"
           disabled={toolsDisabled}
         >
@@ -87,7 +92,7 @@ export function AnsiEditorToolbar({
           className={`${styles.modeButton} ${brush.tool === 'line' ? styles.modeButtonActive : ''}`}
           aria-pressed={brush.tool === 'line'}
           onClick={() => onSetTool('line')}
-          title="Line"
+          title={toolTooltip('line')}
           data-testid="tool-line"
           disabled={toolsDisabled}
         >
@@ -98,8 +103,10 @@ export function AnsiEditorToolbar({
             type="button"
             className={`${styles.modeButton} ${isRectActive ? styles.modeButtonActive : ''}`}
             aria-pressed={isRectActive}
-            title="Rectangle"
+            onClick={() => onSetTool('rect-outline')}
+            title={toolTooltip('rect-outline')}
             data-testid="tool-rect"
+            disabled={toolsDisabled}
           >
             {brush.tool === 'rect-filled' ? '■' : '▭'}
           </button>
@@ -127,8 +134,10 @@ export function AnsiEditorToolbar({
             type="button"
             className={`${styles.modeButton} ${isOvalActive ? styles.modeButtonActive : ''}`}
             aria-pressed={isOvalActive}
-            title="Oval"
+            onClick={() => onSetTool('oval-outline')}
+            title={toolTooltip('oval-outline')}
             data-testid="tool-oval"
+            disabled={toolsDisabled}
           >
             {brush.tool === 'oval-filled' ? '●' : '○'}
           </button>
@@ -157,8 +166,10 @@ export function AnsiEditorToolbar({
               type="button"
               className={`${styles.modeButton} ${isBorderActive ? styles.modeButtonActive : ''}`}
               aria-pressed={isBorderActive}
-              title="Border"
+              onClick={() => onSetTool('border')}
+              title={toolTooltip('border')}
               data-testid="tool-border"
+              disabled={toolsDisabled}
             >
               ╔
             </button>
@@ -187,7 +198,7 @@ export function AnsiEditorToolbar({
           className={`${styles.modeButton} ${brush.tool === 'flood-fill' ? styles.modeButtonActive : ''}`}
           aria-pressed={brush.tool === 'flood-fill'}
           onClick={() => onSetTool('flood-fill')}
-          title="Flood Fill"
+          title={toolTooltip('flood-fill')}
           data-testid="tool-flood-fill"
           disabled={toolsDisabled}
         >
@@ -198,7 +209,7 @@ export function AnsiEditorToolbar({
           className={`${styles.modeButton} ${brush.tool === 'select' ? styles.modeButtonActive : ''}`}
           aria-pressed={brush.tool === 'select'}
           onClick={() => onSetTool('select')}
-          title="Select"
+          title={toolTooltip('select')}
           data-testid="tool-select"
           disabled={toolsDisabled}
         >
@@ -209,7 +220,7 @@ export function AnsiEditorToolbar({
           className={`${styles.modeButton} ${brush.tool === 'eyedropper' ? styles.modeButtonActive : ''}`}
           aria-pressed={brush.tool === 'eyedropper'}
           onClick={() => onSetTool('eyedropper')}
-          title="Eyedropper"
+          title={toolTooltip('eyedropper')}
           data-testid="tool-eyedropper"
           disabled={toolsDisabled}
         >
@@ -220,7 +231,7 @@ export function AnsiEditorToolbar({
           className={`${styles.modeButton} ${brush.tool === 'text' ? styles.modeButtonActive : ''}`}
           aria-pressed={brush.tool === 'text'}
           onClick={() => onSetTool('text')}
-          title="Text"
+          title={toolTooltip('text')}
           data-testid="tool-text"
           disabled={toolsDisabled}
         >
@@ -231,7 +242,7 @@ export function AnsiEditorToolbar({
           className={`${styles.modeButton} ${brush.tool === 'move' ? styles.modeButtonActive : ''}`}
           aria-pressed={brush.tool === 'move'}
           onClick={() => onSetTool('move')}
-          title="Move"
+          title={toolTooltip('move')}
           data-testid="tool-move"
         >
           ✥
@@ -255,7 +266,7 @@ export function AnsiEditorToolbar({
             className={`${styles.modeButton} ${brush.mode === 'pixel' ? styles.modeButtonActive : ''}`}
             aria-pressed={brush.mode === 'pixel'}
             onClick={() => onSetMode('pixel')}
-            title="Pixel"
+            title={tooltipWithShortcut('Pixel', MODE_SHORTCUTS['pixel'])}
             data-testid="mode-pixel"
             disabled={isBorderActive}
           >
@@ -266,7 +277,7 @@ export function AnsiEditorToolbar({
             className={`${styles.modeButton} ${brush.mode === 'eraser' ? styles.modeButtonActive : ''}`}
             aria-pressed={brush.mode === 'eraser'}
             onClick={() => onSetMode('eraser')}
-            title="Eraser"
+            title={tooltipWithShortcut('Eraser', MODE_SHORTCUTS['eraser'])}
             data-testid="mode-eraser"
             disabled={isBorderActive}
           >
@@ -327,7 +338,7 @@ export function AnsiEditorToolbar({
               type="button"
               className={styles.modeButton}
               onClick={onFlipHorizontal}
-              title="Flip Horizontal"
+              title={tooltipWithShortcut('Flip Horizontal', ACTION_SHORTCUTS.flipH)}
               data-testid="flip-horizontal"
             >
               ↔
@@ -338,7 +349,7 @@ export function AnsiEditorToolbar({
               type="button"
               className={styles.modeButton}
               onClick={onFlipVertical}
-              title="Flip Vertical"
+              title={tooltipWithShortcut('Flip Vertical', ACTION_SHORTCUTS.flipV)}
               data-testid="flip-vertical"
             >
               ↕
@@ -372,7 +383,7 @@ export function AnsiEditorToolbar({
         className={styles.toolbarButton}
         onClick={onUndo}
         disabled={!canUndo}
-        title="Undo"
+        title={tooltipWithShortcut('Undo', ACTION_SHORTCUTS.undo)}
         data-testid="undo-button"
       >
         ↶
@@ -382,7 +393,7 @@ export function AnsiEditorToolbar({
         className={styles.toolbarButton}
         onClick={onRedo}
         disabled={!canRedo}
-        title="Redo"
+        title={tooltipWithShortcut('Redo', ACTION_SHORTCUTS.redo)}
         data-testid="redo-button"
       >
         ↷

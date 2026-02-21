@@ -281,19 +281,19 @@ describe('AnsiEditorToolbar', () => {
     it('should have title attributes on all tool buttons', () => {
       render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
       const expected: Record<string, string> = {
-        'tool-pencil': 'Pencil',
-        'tool-line': 'Line',
-        'tool-rect': 'Rectangle',
-        'tool-flood-fill': 'Flood Fill',
-        'tool-select': 'Select',
-        'tool-eyedropper': 'Eyedropper',
-        'tool-text': 'Text',
+        'tool-pencil': 'Pencil (B)',
+        'tool-line': 'Line (L)',
+        'tool-rect': 'Rectangle (U)',
+        'tool-flood-fill': 'Flood Fill (G)',
+        'tool-select': 'Select (M)',
+        'tool-eyedropper': 'Eyedropper (I)',
+        'tool-text': 'Text (T)',
         'mode-brush': 'Brush',
-        'mode-pixel': 'Pixel',
-        'mode-eraser': 'Eraser',
-        'file-options-button': 'File options',
-        'undo-button': 'Undo',
-        'redo-button': 'Redo',
+        'mode-pixel': 'Pixel (N)',
+        'mode-eraser': 'Eraser (E)',
+        'file-options-button': 'File (F)',
+        'undo-button': 'Undo (Ctrl+Z)',
+        'redo-button': 'Redo (Ctrl+Shift+Z)',
       }
       for (const [testId, title] of Object.entries(expected)) {
         const el = screen.getByTestId(testId)

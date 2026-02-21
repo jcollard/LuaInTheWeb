@@ -66,6 +66,11 @@ export interface AnsiGraphicsEditorProps {
 export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
   const { fileSystem, fileTree, refreshFileTree, updateAnsiEditorTabPath } = useIDE()
   const [pendingSave, setPendingSave] = useState<{ path: string; content: string } | null>(null)
+  const [fileMenuOpen, setFileMenuOpen] = useState(false)
+
+  const handleSaveRef = useRef<() => void>(() => {})
+  const handleOpenFileMenuRef = useRef<() => void>(() => {})
+  const handleOpenSaveDialogRef = useRef<() => void>(() => {})
 
   const initialLayerState = useMemo((): LayerState | undefined => {
     if (!filePath || filePath.startsWith('ansi-editor://')) return undefined
@@ -132,7 +137,12 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     activeLayerFrameCount,
     activeLayerCurrentFrame,
     activeLayerFrameDuration,
-  } = useAnsiEditor({ initialLayerState })
+  } = useAnsiEditor({
+    initialLayerState,
+    onSave: () => handleSaveRef.current(),
+    onSaveAs: () => handleOpenSaveDialogRef.current(),
+    onOpenFileMenu: () => handleOpenFileMenuRef.current(),
+  })
 
   const handleToggleCgaPreview = useCallback(() => setCgaPreview(!cgaPreview), [cgaPreview, setCgaPreview])
 
@@ -196,6 +206,10 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     }
   }, [filePath, layers, activeLayerId, fileSystem, markClean, openSaveDialog])
 
+  handleSaveRef.current = handleSave
+  handleOpenSaveDialogRef.current = openSaveDialog
+  handleOpenFileMenuRef.current = useCallback(() => setFileMenuOpen(true), [])
+
   const handleExportAns = useCallback(() => {
     const grid = compositeGrid(layers)
     const filename = deriveExportFilename(filePath, 'ans')
@@ -248,6 +262,8 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
         onToggleCgaPreview={handleToggleCgaPreview}
         activeLayerIsGroup={activeLayerIsGroup}
         isPlaying={isPlaying}
+        fileMenuOpen={fileMenuOpen}
+        onSetFileMenuOpen={setFileMenuOpen}
       />
       <div className={styles.editorBody}>
         <ColorPanel

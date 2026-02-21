@@ -13,6 +13,7 @@ import { loadPngPixels, rgbaToAnsiGrid } from './pngImport'
 import { createDrawHelpers } from './drawHelpers'
 import { createSelectionHandlers, type SelectionHandlers } from './selectionTool'
 import { createTextToolHandlers, type TextToolHandlers } from './textTool'
+import { TOOL_KEY_MAP, TOOL_SHIFT_KEY_MAP } from './keyboardShortcuts'
 
 export { computePixelCell, computeLineCells } from './gridUtils'
 
@@ -126,6 +127,9 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const playbackTimerRef = useRef<number | null>(null)
   const isPlayingRef = useRef(false); isPlayingRef.current = isPlaying
   const colorTransformRef = useRef<ColorTransform | undefined>(undefined); colorTransformRef.current = cgaPreview ? cgaQuantize : undefined
+  const saveRef = useRef<(() => void) | undefined>(options?.onSave); saveRef.current = options?.onSave
+  const saveAsRef = useRef<(() => void) | undefined>(options?.onSaveAs); saveAsRef.current = options?.onSaveAs
+  const openFileMenuRef = useRef<(() => void) | undefined>(options?.onOpenFileMenu); openFileMenuRef.current = options?.onOpenFileMenu
 
   const pushSnapshot = useCallback(() => {
     const stack = undoStackRef.current
@@ -323,13 +327,73 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       setIsMoveDragging(false)
     }
 
+    function prevFrame(): void {
+      const layer = layersRef.current.find(l => l.id === activeLayerIdRef.current)
+      if (layer?.type !== 'drawn' || layer.frames.length <= 1) return
+      const idx = layer.currentFrameIndex > 0 ? layer.currentFrameIndex - 1 : layer.frames.length - 1
+      rawSetCurrentFrame(idx)
+      terminalBufferRef.current.flush(compositeGrid(layersRef.current), colorTransformRef.current)
+    }
+
+    function nextFrame(): void {
+      const layer = layersRef.current.find(l => l.id === activeLayerIdRef.current)
+      if (layer?.type !== 'drawn' || layer.frames.length <= 1) return
+      const idx = (layer.currentFrameIndex + 1) % layer.frames.length
+      rawSetCurrentFrame(idx)
+      terminalBufferRef.current.flush(compositeGrid(layersRef.current), colorTransformRef.current)
+    }
+
     function onKeyDown(e: KeyboardEvent): void {
-      if (brushRef.current.tool === 'text') textTool.onKeyDown(e)
-      else if (brushRef.current.tool === 'select') sel.onKeyDown(e)
-      else if (brushRef.current.tool === 'move' && e.key === 'Escape' && moveStartRef.current) {
+      const ctrl = e.ctrlKey || e.metaKey
+      const shift = e.shiftKey
+      const key = e.key.toLowerCase()
+
+      // --- Ctrl shortcuts (safe during text editing — text tool ignores Ctrl combos) ---
+      if (ctrl && key === 'z' && !shift) { e.preventDefault(); undo(); return }
+      if (ctrl && key === 'z' && shift) { e.preventDefault(); redo(); return }
+      if (ctrl && key === 's' && !shift) { e.preventDefault(); saveRef.current?.(); return }
+      if (ctrl && key === 's' && shift) { e.preventDefault(); saveAsRef.current?.(); return }
+
+      // --- Existing tool-specific routing ---
+      if (brushRef.current.tool === 'text') { textTool.onKeyDown(e); return }
+      if (brushRef.current.tool === 'select') {
+        if (shift && key === 'h') { sel.flipHorizontal(); return }
+        if (shift && key === 'v') { sel.flipVertical(); return }
+        sel.onKeyDown(e)
+        // Fall through to single-key shortcuts only if select didn't consume
+      }
+      if (brushRef.current.tool === 'move' && e.key === 'Escape' && moveStartRef.current) {
         endMoveDrag()
         undo()
+        return
       }
+
+      // --- Single-key shortcuts (never during text editing — already returned above) ---
+      if (ctrl) return // Don't intercept other Ctrl combos
+
+      // Shifted tool keys (Shift+U → rect-filled, Shift+O → oval-filled)
+      if (shift) {
+        const shiftedTool = TOOL_SHIFT_KEY_MAP[key]
+        if (shiftedTool) { setTool(shiftedTool); return }
+      }
+
+      // Non-shifted tool keys
+      if (!shift) {
+        const toolForKey = TOOL_KEY_MAP[key]
+        if (toolForKey) { setTool(toolForKey); return }
+      }
+
+      // Mode keys
+      if (!shift && key === 'e') { setBrushMode('eraser'); return }
+      if (!shift && key === 'n') { setBrushMode('pixel'); return }
+
+      // File menu
+      if (!shift && key === 'f') { openFileMenuRef.current?.(); return }
+
+      // Animation
+      if (e.key === ' ') { e.preventDefault(); togglePlayback(); return }
+      if (e.key === '[') { prevFrame(); return }
+      if (e.key === ']') { nextFrame(); return }
     }
     document.addEventListener('keydown', onKeyDown)
 
@@ -582,7 +646,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       document.removeEventListener('keydown', onKeyDown)
       textTool.commitIfEditing()
     }
-  }, [paintCell, paintPixel, applyCell, pushSnapshot, layersRef, activeLayerIdRef, getActiveGrid, rawAddTextLayer, rawUpdateTextLayer, undo, rawApplyMoveGrids, rawApplyMoveGridsImmediate])
+  }, [paintCell, paintPixel, applyCell, pushSnapshot, layersRef, activeLayerIdRef, getActiveGrid, rawAddTextLayer, rawUpdateTextLayer, undo, redo, rawApplyMoveGrids, rawApplyMoveGridsImmediate, rawSetCurrentFrame, setTool, setBrushMode, togglePlayback])
 
   const setActiveLayerWithBounds = useCallback((id: string) => {
     commitPendingTextRef.current?.()

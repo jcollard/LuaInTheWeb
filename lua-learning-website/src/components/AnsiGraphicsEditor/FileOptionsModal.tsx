@@ -1,4 +1,5 @@
 import type { KeyboardEvent } from 'react'
+import { tooltipWithShortcut, ACTION_SHORTCUTS } from './keyboardShortcuts'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface FileOptionsModalProps {
@@ -29,7 +30,7 @@ export function FileOptionsModal({
   onExportSh,
   cgaPreview,
   onToggleCgaPreview,
-}: FileOptionsModalProps): JSX.Element {
+}: FileOptionsModalProps) {
   function handleKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
       event.preventDefault()
@@ -43,8 +44,8 @@ export function FileOptionsModal({
   }
 
   const actions: ActionItem[] = [
-    { label: 'Save', testId: 'file-save', action: onSave },
-    { label: 'Save As', testId: 'file-save-as', action: onSaveAs },
+    { label: tooltipWithShortcut('Save', ACTION_SHORTCUTS.save), testId: 'file-save', action: onSave },
+    { label: tooltipWithShortcut('Save As', ACTION_SHORTCUTS.saveAs), testId: 'file-save-as', action: onSaveAs },
     { label: 'Load PNG', testId: 'file-import-png', action: onImportPng },
     { label: 'Export ANS', testId: 'file-export-ans', action: onExportAns },
     { label: 'Export .sh', testId: 'file-export-sh', action: onExportSh },
