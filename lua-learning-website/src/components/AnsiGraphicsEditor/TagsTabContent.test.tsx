@@ -166,145 +166,124 @@ describe('TagsTabContent', () => {
     expect(screen.getByTestId('tag-layer-row-Characters-l1').className).toContain('Active')
   })
 
+  // --- Helpers for tagged layer tests ---
+
+  function renderTaggedHeroRow(
+    layerOverrides?: Partial<Layer>,
+    propOverrides?: Omit<Parameters<typeof renderTags>[0], 'layers' | 'availableTags'>,
+  ): HTMLElement {
+    const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'], ...layerOverrides }
+    renderTags({ layers: [layer], availableTags: ['Characters'], ...propOverrides })
+    return screen.getByTestId('tag-layer-row-Characters-l1')
+  }
+
+  function getVisibilityButton(row: HTMLElement): Element {
+    return row.querySelector('[aria-label="Toggle visibility"]')!
+  }
+
+  function startLayerRename(row: HTMLElement): void {
+    const nameSpan = row.querySelector('span')!
+    fireEvent.doubleClick(nameSpan)
+  }
+
+  function getRenameInput(): HTMLInputElement {
+    return screen.getByTestId<HTMLInputElement>('tag-layer-rename-input-l1')
+  }
+
   // --- Visibility toggle tests ---
 
   it('layer row shows visibility toggle button', () => {
-    const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
-    renderTags({ layers: [layer], availableTags: ['Characters'] })
-    const row = screen.getByTestId('tag-layer-row-Characters-l1')
-    const btn = row.querySelector('[aria-label="Toggle visibility"]')
-    expect(btn).toBeTruthy()
+    const row = renderTaggedHeroRow()
+    expect(getVisibilityButton(row)).toBeTruthy()
   })
 
   it('shows eye icon for visible layer', () => {
-    const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'], visible: true }
-    renderTags({ layers: [layer], availableTags: ['Characters'] })
-    const row = screen.getByTestId('tag-layer-row-Characters-l1')
-    const btn = row.querySelector('[aria-label="Toggle visibility"]')!
-    expect(btn.textContent).toBe('\u{1F441}')
+    const row = renderTaggedHeroRow({ visible: true })
+    expect(getVisibilityButton(row).textContent).toBe('\u{1F441}')
   })
 
   it('shows hidden icon for hidden layer', () => {
-    const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'], visible: false }
-    renderTags({ layers: [layer], availableTags: ['Characters'] })
-    const row = screen.getByTestId('tag-layer-row-Characters-l1')
-    const btn = row.querySelector('[aria-label="Toggle visibility"]')!
-    expect(btn.textContent).toBe('\u{1F441}\u{200D}\u{1F5E8}')
+    const row = renderTaggedHeroRow({ visible: false })
+    expect(getVisibilityButton(row).textContent).toBe('\u{1F441}\u{200D}\u{1F5E8}')
   })
 
   it('clicking visibility toggle calls onToggleVisibility', () => {
     const onToggleVisibility = vi.fn()
-    const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
-    renderTags({ layers: [layer], availableTags: ['Characters'], onToggleVisibility })
-    const row = screen.getByTestId('tag-layer-row-Characters-l1')
-    const btn = row.querySelector('[aria-label="Toggle visibility"]')!
-    fireEvent.click(btn)
+    const row = renderTaggedHeroRow(undefined, { onToggleVisibility })
+    fireEvent.click(getVisibilityButton(row))
     expect(onToggleVisibility).toHaveBeenCalledWith('l1')
   })
 
   it('clicking visibility toggle does NOT trigger onSetActive', () => {
     const onSetActive = vi.fn()
-    const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
-    renderTags({ layers: [layer], availableTags: ['Characters'], onSetActive })
-    const row = screen.getByTestId('tag-layer-row-Characters-l1')
-    const btn = row.querySelector('[aria-label="Toggle visibility"]')!
-    fireEvent.click(btn)
+    const row = renderTaggedHeroRow(undefined, { onSetActive })
+    fireEvent.click(getVisibilityButton(row))
     expect(onSetActive).not.toHaveBeenCalled()
   })
 
   // --- Layer rename tests ---
 
   it('double-clicking layer row starts rename with input', () => {
-    const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
-    renderTags({ layers: [layer], availableTags: ['Characters'] })
-    const row = screen.getByTestId('tag-layer-row-Characters-l1')
-    const nameSpan = row.querySelector('span')!
-    fireEvent.doubleClick(nameSpan)
+    const row = renderTaggedHeroRow()
+    startLayerRename(row)
     expect(screen.getByTestId('tag-layer-rename-input-l1')).toBeTruthy()
   })
 
   it('rename input is prefilled with current name', () => {
-    const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
-    renderTags({ layers: [layer], availableTags: ['Characters'] })
-    const row = screen.getByTestId('tag-layer-row-Characters-l1')
-    const nameSpan = row.querySelector('span')!
-    fireEvent.doubleClick(nameSpan)
-    expect(screen.getByTestId<HTMLInputElement>('tag-layer-rename-input-l1').value).toBe('Hero')
+    const row = renderTaggedHeroRow()
+    startLayerRename(row)
+    expect(getRenameInput().value).toBe('Hero')
   })
 
   it('Enter commits rename and calls onRenameLayer', () => {
     const onRenameLayer = vi.fn()
-    const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
-    renderTags({ layers: [layer], availableTags: ['Characters'], onRenameLayer })
-    const row = screen.getByTestId('tag-layer-row-Characters-l1')
-    const nameSpan = row.querySelector('span')!
-    fireEvent.doubleClick(nameSpan)
-    const input = screen.getByTestId('tag-layer-rename-input-l1')
-    fireEvent.change(input, { target: { value: 'Warrior' } })
-    fireEvent.keyDown(input, { key: 'Enter' })
+    const row = renderTaggedHeroRow(undefined, { onRenameLayer })
+    startLayerRename(row)
+    fireEvent.change(getRenameInput(), { target: { value: 'Warrior' } })
+    fireEvent.keyDown(getRenameInput(), { key: 'Enter' })
     expect(onRenameLayer).toHaveBeenCalledWith('l1', 'Warrior')
   })
 
   it('Escape cancels rename without calling onRenameLayer', () => {
     const onRenameLayer = vi.fn()
-    const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
-    renderTags({ layers: [layer], availableTags: ['Characters'], onRenameLayer })
-    const row = screen.getByTestId('tag-layer-row-Characters-l1')
-    const nameSpan = row.querySelector('span')!
-    fireEvent.doubleClick(nameSpan)
-    const input = screen.getByTestId('tag-layer-rename-input-l1')
-    fireEvent.change(input, { target: { value: 'Warrior' } })
-    fireEvent.keyDown(input, { key: 'Escape' })
+    const row = renderTaggedHeroRow(undefined, { onRenameLayer })
+    startLayerRename(row)
+    fireEvent.change(getRenameInput(), { target: { value: 'Warrior' } })
+    fireEvent.keyDown(getRenameInput(), { key: 'Escape' })
     expect(onRenameLayer).not.toHaveBeenCalled()
   })
 
   it('blur commits rename', () => {
     const onRenameLayer = vi.fn()
-    const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
-    renderTags({ layers: [layer], availableTags: ['Characters'], onRenameLayer })
-    const row = screen.getByTestId('tag-layer-row-Characters-l1')
-    const nameSpan = row.querySelector('span')!
-    fireEvent.doubleClick(nameSpan)
-    const input = screen.getByTestId('tag-layer-rename-input-l1')
-    fireEvent.change(input, { target: { value: 'Warrior' } })
-    fireEvent.blur(input)
+    const row = renderTaggedHeroRow(undefined, { onRenameLayer })
+    startLayerRename(row)
+    fireEvent.change(getRenameInput(), { target: { value: 'Warrior' } })
+    fireEvent.blur(getRenameInput())
     expect(onRenameLayer).toHaveBeenCalledWith('l1', 'Warrior')
   })
 
   it('does not commit rename if name unchanged', () => {
     const onRenameLayer = vi.fn()
-    const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
-    renderTags({ layers: [layer], availableTags: ['Characters'], onRenameLayer })
-    const row = screen.getByTestId('tag-layer-row-Characters-l1')
-    const nameSpan = row.querySelector('span')!
-    fireEvent.doubleClick(nameSpan)
-    const input = screen.getByTestId('tag-layer-rename-input-l1')
-    fireEvent.keyDown(input, { key: 'Enter' })
+    const row = renderTaggedHeroRow(undefined, { onRenameLayer })
+    startLayerRename(row)
+    fireEvent.keyDown(getRenameInput(), { key: 'Enter' })
     expect(onRenameLayer).not.toHaveBeenCalled()
   })
 
   it('does not commit rename if name is whitespace', () => {
     const onRenameLayer = vi.fn()
-    const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
-    renderTags({ layers: [layer], availableTags: ['Characters'], onRenameLayer })
-    const row = screen.getByTestId('tag-layer-row-Characters-l1')
-    const nameSpan = row.querySelector('span')!
-    fireEvent.doubleClick(nameSpan)
-    const input = screen.getByTestId('tag-layer-rename-input-l1')
-    fireEvent.change(input, { target: { value: '   ' } })
-    fireEvent.keyDown(input, { key: 'Enter' })
+    const row = renderTaggedHeroRow(undefined, { onRenameLayer })
+    startLayerRename(row)
+    fireEvent.change(getRenameInput(), { target: { value: '   ' } })
+    fireEvent.keyDown(getRenameInput(), { key: 'Enter' })
     expect(onRenameLayer).not.toHaveBeenCalled()
   })
 
   it('clicking rename input does NOT trigger onSetActive', () => {
     const onSetActive = vi.fn()
-    const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
-    renderTags({ layers: [layer], availableTags: ['Characters'], onSetActive })
-    const row = screen.getByTestId('tag-layer-row-Characters-l1')
-    const nameSpan = row.querySelector('span')!
-    fireEvent.doubleClick(nameSpan)
-    const input = screen.getByTestId('tag-layer-rename-input-l1')
-    fireEvent.click(input)
+    const row = renderTaggedHeroRow(undefined, { onSetActive })
+    startLayerRename(row)
+    fireEvent.click(getRenameInput())
     expect(onSetActive).not.toHaveBeenCalled()
   })
 })

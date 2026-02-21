@@ -31,18 +31,21 @@ export function TagsTabContent({
   const [editTagValue, setEditTagValue] = useState('')
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null)
   const [editLayerValue, setEditLayerValue] = useState('')
+  const [editLayerOriginal, setEditLayerOriginal] = useState('')
 
   const startRenameLayer = useCallback((id: string, currentName: string) => {
     setEditingLayerId(id)
     setEditLayerValue(currentName)
+    setEditLayerOriginal(currentName)
   }, [])
 
   const commitRenameLayer = useCallback(() => {
-    if (editingLayerId && editLayerValue.trim() && editLayerValue.trim() !== layers.find(l => l.id === editingLayerId)?.name) {
-      onRenameLayer(editingLayerId, editLayerValue.trim())
+    const trimmed = editLayerValue.trim()
+    if (editingLayerId && trimmed && trimmed !== editLayerOriginal) {
+      onRenameLayer(editingLayerId, trimmed)
     }
     setEditingLayerId(null)
-  }, [editingLayerId, editLayerValue, layers, onRenameLayer])
+  }, [editingLayerId, editLayerValue, editLayerOriginal, onRenameLayer])
 
   const handleCreateTag = useCallback(() => {
     const trimmed = newTagValue.trim()
