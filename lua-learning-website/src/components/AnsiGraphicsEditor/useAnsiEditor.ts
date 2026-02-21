@@ -14,7 +14,7 @@ import { loadPngPixels, rgbaToAnsiGrid } from './pngImport'
 import { createDrawHelpers } from './drawHelpers'
 import { createSelectionHandlers, type SelectionHandlers } from './selectionTool'
 import { createTextToolHandlers, type TextToolHandlers } from './textTool'
-import { TOOL_KEY_MAP, TOOL_SHIFT_KEY_MAP, MODE_KEY_MAP } from './keyboardShortcuts'
+import { TOOL_KEY_MAP, TOOL_SHIFT_KEY_MAP, MODE_KEY_MAP, TOOL_SHORTCUTS, MODE_SHORTCUTS, ACTION_SHORTCUTS } from './keyboardShortcuts'
 
 export { computePixelCell, computeLineCells } from './gridUtils'
 
@@ -131,6 +131,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const saveRef = useRef<(() => void) | undefined>(options?.onSave); saveRef.current = options?.onSave
   const saveAsRef = useRef<(() => void) | undefined>(options?.onSaveAs); saveAsRef.current = options?.onSaveAs
   const openFileMenuRef = useRef<(() => void) | undefined>(options?.onOpenFileMenu); openFileMenuRef.current = options?.onOpenFileMenu
+  const showToastRef = useRef<((msg: string) => void) | undefined>(options?.onShowToast); showToastRef.current = options?.onShowToast
 
   const pushSnapshot = useCallback(() => {
     const stack = undoStackRef.current
@@ -356,17 +357,19 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       const shift = e.shiftKey
       const key = e.key.toLowerCase()
 
+      const toast = showToastRef.current
+
       // --- Ctrl shortcuts (safe during text editing — text tool ignores Ctrl combos) ---
-      if (ctrl && key === 'z' && !shift) { e.preventDefault(); undo(); return }
-      if (ctrl && key === 'z' && shift) { e.preventDefault(); redo(); return }
-      if (ctrl && key === 's' && !shift) { e.preventDefault(); saveRef.current?.(); return }
-      if (ctrl && key === 's' && shift) { e.preventDefault(); saveAsRef.current?.(); return }
+      if (ctrl && key === 'z' && !shift) { e.preventDefault(); undo(); toast?.(ACTION_SHORTCUTS.undo.description); return }
+      if (ctrl && key === 'z' && shift) { e.preventDefault(); redo(); toast?.(ACTION_SHORTCUTS.redo.description); return }
+      if (ctrl && key === 's' && !shift) { e.preventDefault(); saveRef.current?.(); toast?.(ACTION_SHORTCUTS.save.description); return }
+      if (ctrl && key === 's' && shift) { e.preventDefault(); saveAsRef.current?.(); toast?.(ACTION_SHORTCUTS.saveAs.description); return }
 
       // --- Existing tool-specific routing ---
       if (brushRef.current.tool === 'text') { textTool.onKeyDown(e); return }
       if (brushRef.current.tool === 'select') {
-        if (shift && key === 'h') { sel.flipHorizontal(); return }
-        if (shift && key === 'v') { sel.flipVertical(); return }
+        if (shift && key === 'h') { sel.flipHorizontal(); toast?.(ACTION_SHORTCUTS.flipH.description); return }
+        if (shift && key === 'v') { sel.flipVertical(); toast?.(ACTION_SHORTCUTS.flipV.description); return }
         sel.onKeyDown(e)
         // Fall through to single-key shortcuts only if select didn't consume
       }
@@ -382,28 +385,28 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       // Shifted tool keys (Shift+U → rect-filled, Shift+O → oval-filled)
       if (shift) {
         const shiftedTool = TOOL_SHIFT_KEY_MAP[key]
-        if (shiftedTool) { setTool(shiftedTool); return }
+        if (shiftedTool) { setTool(shiftedTool); toast?.(TOOL_SHORTCUTS[shiftedTool].description); return }
       }
 
       // Non-shifted tool keys
       if (!shift) {
         const toolForKey = TOOL_KEY_MAP[key]
-        if (toolForKey) { setTool(toolForKey); return }
+        if (toolForKey) { setTool(toolForKey); toast?.(TOOL_SHORTCUTS[toolForKey].description); return }
       }
 
       // Mode keys
       if (!shift) {
         const modeForKey = MODE_KEY_MAP[key]
-        if (modeForKey) { setBrushMode(modeForKey); return }
+        if (modeForKey) { setBrushMode(modeForKey); toast?.(MODE_SHORTCUTS[modeForKey]!.description); return }
       }
 
-      // File menu
+      // File menu (no toast — modal opening is visual feedback)
       if (!shift && key === 'f') { openFileMenuRef.current?.(); return }
 
       // Animation
-      if (e.key === ' ') { e.preventDefault(); togglePlayback(); return }
-      if (e.key === '[') { prevFrame(); return }
-      if (e.key === ']') { nextFrame(); return }
+      if (e.key === ' ') { e.preventDefault(); const wasPlaying = isPlayingRef.current; togglePlayback(); toast?.(wasPlaying ? 'Pause' : 'Play'); return }
+      if (e.key === '[') { prevFrame(); toast?.(ACTION_SHORTCUTS.prevFrame.description); return }
+      if (e.key === ']') { nextFrame(); toast?.(ACTION_SHORTCUTS.nextFrame.description); return }
     }
     document.addEventListener('keydown', onKeyDown)
 

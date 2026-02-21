@@ -223,6 +223,7 @@ export interface UseAnsiEditorOptions {
   onSave?: () => void
   onSaveAs?: () => void
   onOpenFileMenu?: () => void
+  onShowToast?: (message: string) => void
 }
 
 export type StaticPaletteType = 'cga' | 'ega' | 'vga'

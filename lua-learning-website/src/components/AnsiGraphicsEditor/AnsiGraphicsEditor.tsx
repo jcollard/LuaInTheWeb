@@ -8,6 +8,8 @@ import { FramesPanel } from './FramesPanel'
 import { LayersPanel } from './LayersPanel'
 import { SaveAsDialog } from './SaveAsDialog'
 import { useAnsiEditor } from './useAnsiEditor'
+import { useToast } from './useToast'
+import { ToastContainer } from './ToastContainer'
 import { exportAnsFile } from './ansExport'
 import { exportShFile, exportAnimatedShFile } from './shExport'
 import { serializeLayers, deserializeLayers } from './serialization'
@@ -68,6 +70,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
   const [pendingSave, setPendingSave] = useState<{ path: string; content: string } | null>(null)
   const [fileMenuOpen, setFileMenuOpen] = useState(false)
 
+  const { toasts, showToast } = useToast()
   const handleSaveRef = useRef<() => void>(() => {})
   const handleOpenFileMenuRef = useRef<() => void>(() => {})
   const handleOpenSaveDialogRef = useRef<() => void>(() => {})
@@ -143,6 +146,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     onSave: () => handleSaveRef.current(),
     onSaveAs: () => handleOpenSaveDialogRef.current(),
     onOpenFileMenu: () => handleOpenFileMenuRef.current(),
+    onShowToast: showToast,
   })
 
   const handleToggleCgaPreview = useCallback(() => setCgaPreview(!cgaPreview), [cgaPreview, setCgaPreview])
@@ -298,6 +302,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
               onTogglePlayback={togglePlayback}
             />
           )}
+          <ToastContainer toasts={toasts} />
         </div>
         <LayersPanel
           layers={layers}
