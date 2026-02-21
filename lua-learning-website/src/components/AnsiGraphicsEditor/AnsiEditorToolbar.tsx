@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import type { BrushMode, DrawTool, BrushSettings, BorderStyle, TextAlign } from './types'
 import { BORDER_PRESETS, borderStyleEqual } from './types'
 import { CharPaletteModal } from './CharPaletteModal'
+import { FileOptionsModal } from './FileOptionsModal'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface AnsiEditorToolbarProps {
@@ -41,10 +42,34 @@ export function AnsiEditorToolbar({
   const isOvalActive = brush.tool === 'oval-outline' || brush.tool === 'oval-filled'
   const isBorderActive = brush.tool === 'border'
   const [charPaletteOpen, setCharPaletteOpen] = useState(false)
+  const [fileOptionsOpen, setFileOptionsOpen] = useState(false)
   const charButtonRef = useRef<HTMLButtonElement>(null)
 
   return (
     <div className={styles.toolbar} data-testid="ansi-editor-toolbar">
+      <button
+        type="button"
+        className={styles.toolbarButton}
+        onClick={() => setFileOptionsOpen(true)}
+        title="File options"
+        data-testid="file-options-button"
+      >
+        File
+      </button>
+      {fileOptionsOpen && (
+        <FileOptionsModal
+          isOpen={fileOptionsOpen}
+          onClose={() => setFileOptionsOpen(false)}
+          onClear={onClear}
+          onSave={onSave}
+          onSaveAs={onSaveAs}
+          onImportPng={onImportPng}
+          onExportAns={onExportAns}
+          onExportSh={onExportSh}
+          cgaPreview={cgaPreview ?? false}
+          onToggleCgaPreview={onToggleCgaPreview!}
+        />
+      )}
       <div className={styles.modeGroup}>
         <span className={styles.modeLabel}>Tool</span>
         <button
@@ -346,60 +371,6 @@ export function AnsiEditorToolbar({
       <button
         type="button"
         className={styles.toolbarButton}
-        onClick={onClear}
-        title="Clear canvas"
-        data-testid="clear-button"
-      >
-        Clear
-      </button>
-      <button
-        type="button"
-        className={styles.toolbarButton}
-        onClick={onSave}
-        title="Save"
-        data-testid="save-button"
-      >
-        Save
-      </button>
-      <button
-        type="button"
-        className={styles.toolbarButton}
-        onClick={onSaveAs}
-        title="Save As"
-        data-testid="save-as-button"
-      >
-        Save As
-      </button>
-      <button
-        type="button"
-        className={styles.toolbarButton}
-        onClick={onImportPng}
-        title="Import PNG as layer"
-        data-testid="import-png-button"
-      >
-        Load PNG
-      </button>
-      <button
-        type="button"
-        className={styles.toolbarButton}
-        onClick={onExportAns}
-        title="Export as ANS file"
-        data-testid="export-ans-button"
-      >
-        Export ANS
-      </button>
-      <button
-        type="button"
-        className={styles.toolbarButton}
-        onClick={onExportSh}
-        title="Export as bash script"
-        data-testid="export-sh-button"
-      >
-        Export .sh
-      </button>
-      <button
-        type="button"
-        className={styles.toolbarButton}
         onClick={onUndo}
         disabled={!canUndo}
         title="Undo"
@@ -417,17 +388,6 @@ export function AnsiEditorToolbar({
       >
         ↷
       </button>
-      {onToggleCgaPreview && (
-        <label className={styles.toolbarButton} title="CGA Preview">
-          <input
-            type="checkbox"
-            checked={cgaPreview ?? false}
-            onChange={onToggleCgaPreview}
-            data-testid="cga-preview-checkbox"
-          />
-          CGA
-        </label>
-      )}
     </div>
   )
 }

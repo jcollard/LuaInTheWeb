@@ -52,37 +52,42 @@ describe('AnsiEditorToolbar', () => {
     expect(screen.getByTestId('char-palette-modal')).toBeTruthy()
   })
 
-  it('should render clear button', () => {
+  it('should render clear button inside File Options modal', () => {
     render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-    const clearBtn = screen.getByTestId('clear-button')
-    expect(clearBtn).toBeTruthy()
+    fireEvent.click(screen.getByTestId('file-options-button'))
+    expect(screen.getByTestId('file-clear')).toBeTruthy()
   })
 
-  it('should call onClear when clear button is clicked', () => {
+  it('should call onClear when clear button is clicked in modal', () => {
     render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-    fireEvent.click(screen.getByTestId('clear-button'))
+    fireEvent.click(screen.getByTestId('file-options-button'))
+    fireEvent.click(screen.getByTestId('file-clear'))
     expect(handlers.onClear).toHaveBeenCalledOnce()
   })
 
-  it('should render Save button', () => {
+  it('should render Save button inside File Options modal', () => {
     render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-    expect(screen.getByTestId('save-button')).toBeTruthy()
+    fireEvent.click(screen.getByTestId('file-options-button'))
+    expect(screen.getByTestId('file-save')).toBeTruthy()
   })
 
-  it('should call onSave when Save button is clicked', () => {
+  it('should call onSave when Save button is clicked in modal', () => {
     render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-    fireEvent.click(screen.getByTestId('save-button'))
+    fireEvent.click(screen.getByTestId('file-options-button'))
+    fireEvent.click(screen.getByTestId('file-save'))
     expect(handlers.onSave).toHaveBeenCalledOnce()
   })
 
-  it('should render Save As button', () => {
+  it('should render Save As button inside File Options modal', () => {
     render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-    expect(screen.getByTestId('save-as-button')).toBeTruthy()
+    fireEvent.click(screen.getByTestId('file-options-button'))
+    expect(screen.getByTestId('file-save-as')).toBeTruthy()
   })
 
-  it('should call onSaveAs when Save As button is clicked', () => {
+  it('should call onSaveAs when Save As button is clicked in modal', () => {
     render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-    fireEvent.click(screen.getByTestId('save-as-button'))
+    fireEvent.click(screen.getByTestId('file-options-button'))
+    fireEvent.click(screen.getByTestId('file-save-as'))
     expect(handlers.onSaveAs).toHaveBeenCalledOnce()
   })
 
@@ -313,10 +318,7 @@ describe('AnsiEditorToolbar', () => {
         'mode-brush': 'Brush',
         'mode-pixel': 'Pixel',
         'mode-eraser': 'Eraser',
-        'clear-button': 'Clear canvas',
-        'save-button': 'Save',
-        'save-as-button': 'Save As',
-        'import-png-button': 'Import PNG as layer',
+        'file-options-button': 'File options',
         'undo-button': 'Undo',
         'redo-button': 'Redo',
       }
@@ -367,28 +369,32 @@ describe('AnsiEditorToolbar', () => {
     })
   })
 
-  describe('CGA preview checkbox', () => {
-    it('should render CGA preview checkbox', () => {
+  describe('CGA preview checkbox (via File Options modal)', () => {
+    it('should render CGA preview checkbox inside File Options modal', () => {
       render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} cgaPreview={false} onToggleCgaPreview={vi.fn()} />)
-      expect(screen.getByTestId('cga-preview-checkbox')).toBeTruthy()
+      fireEvent.click(screen.getByTestId('file-options-button'))
+      expect(screen.getByTestId('file-cga-preview')).toBeTruthy()
     })
 
     it('should show checkbox as unchecked when cgaPreview is false', () => {
       render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} cgaPreview={false} onToggleCgaPreview={vi.fn()} />)
-      const checkbox = screen.getByTestId('cga-preview-checkbox') as HTMLInputElement
+      fireEvent.click(screen.getByTestId('file-options-button'))
+      const checkbox = screen.getByTestId('file-cga-preview') as HTMLInputElement
       expect(checkbox.checked).toBe(false)
     })
 
     it('should show checkbox as checked when cgaPreview is true', () => {
       render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} cgaPreview={true} onToggleCgaPreview={vi.fn()} />)
-      const checkbox = screen.getByTestId('cga-preview-checkbox') as HTMLInputElement
+      fireEvent.click(screen.getByTestId('file-options-button'))
+      const checkbox = screen.getByTestId('file-cga-preview') as HTMLInputElement
       expect(checkbox.checked).toBe(true)
     })
 
     it('should call onToggleCgaPreview when checkbox is clicked', () => {
       const toggle = vi.fn()
       render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} cgaPreview={false} onToggleCgaPreview={toggle} />)
-      fireEvent.click(screen.getByTestId('cga-preview-checkbox'))
+      fireEvent.click(screen.getByTestId('file-options-button'))
+      fireEvent.click(screen.getByTestId('file-cga-preview'))
       expect(toggle).toHaveBeenCalledOnce()
     })
   })

@@ -911,3 +911,78 @@
   border-color: var(--theme-accent-primary, #0078d4);
   color: #fff;
 }
+
+/* File Options Modal */
+.fileOptionsOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.fileOptionsDialog {
+  background-color: var(--vscode-editor-background, #1e1e1e);
+  border: 1px solid var(--vscode-widget-border, #454545);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  min-width: 220px;
+  outline: none;
+}
+
+.fileOptionsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 8px;
+}
+
+.fileOptionsTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vscode-foreground, #cccccc);
+}
+
+.fileOptionsClose {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--vscode-foreground, #cccccc);
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.fileOptionsClose:hover {
+  color: var(--vscode-errorForeground, #f14c4c);
+}
+
+.fileOptionsBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 16px 16px;
+}
+
+.fileOptionsAction {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 14px;
+  font-size: 13px;
+  background-color: var(--vscode-button-secondaryBackground, #3a3d41);
+  color: var(--vscode-button-secondaryForeground, #ffffff);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.fileOptionsAction:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground, #45494e);
+}
