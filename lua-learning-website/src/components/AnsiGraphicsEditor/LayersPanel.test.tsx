@@ -437,28 +437,27 @@ describe('LayersPanel', () => {
       expect(screen.queryByTestId('layer-context-menu')).toBeNull()
     })
 
+    /** Stub document.elementFromPoint for the duration of `fn`, then restore it. */
+    function withElementFromPoint(stub: Element, fn: () => void): void {
+      const original = document.elementFromPoint
+      document.elementFromPoint = () => stub
+      try { fn() } finally { document.elementFromPoint = original }
+    }
+
     it('right-clicking backdrop over another layer reopens context menu for that layer', () => {
       renderPanel()
-      // Open context menu on layer-1
       fireEvent.contextMenu(screen.getByTestId('layer-row-layer-1'))
       expect(screen.getByTestId('layer-context-menu')).toBeTruthy()
 
-      // Simulate right-click on backdrop with elementFromPoint returning layer-0 row
-      const targetRow = screen.getByTestId('layer-row-layer-0')
-      const originalElementFromPoint = document.elementFromPoint
-      document.elementFromPoint = () => targetRow
-      try {
+      withElementFromPoint(screen.getByTestId('layer-row-layer-0'), () => {
         fireEvent.contextMenu(screen.getByTestId('layer-context-backdrop'), {
           clientX: 100,
           clientY: 200,
         })
-      } finally {
-        document.elementFromPoint = originalElementFromPoint
-      }
+      })
 
       // Context menu should still be open, now for layer-0
       expect(screen.getByTestId('layer-context-menu')).toBeTruthy()
-      // Merge Down should be disabled for the bottom layer
       expect(screen.getByTestId('context-merge-down')).toBeDisabled()
     })
 
@@ -467,16 +466,12 @@ describe('LayersPanel', () => {
       fireEvent.contextMenu(screen.getByTestId('layer-row-layer-1'))
       expect(screen.getByTestId('layer-context-menu')).toBeTruthy()
 
-      const originalElementFromPoint = document.elementFromPoint
-      document.elementFromPoint = () => document.body
-      try {
+      withElementFromPoint(document.body, () => {
         fireEvent.contextMenu(screen.getByTestId('layer-context-backdrop'), {
           clientX: 100,
           clientY: 200,
         })
-      } finally {
-        document.elementFromPoint = originalElementFromPoint
-      }
+      })
 
       expect(screen.queryByTestId('layer-context-menu')).toBeNull()
     })

@@ -87,6 +87,23 @@ export function LayersPanel({
     setTagsSubmenuFlipped(false)
   }, [])
 
+  const handleBackdropContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const backdrop = e.currentTarget as HTMLElement
+    backdrop.style.pointerEvents = 'none'
+    const el = document.elementFromPoint(e.clientX, e.clientY)
+    backdrop.style.pointerEvents = ''
+    const row = el?.closest<HTMLElement>('[data-layer-id]')
+    if (row?.dataset.layerId) {
+      setTagsSubmenuOpen(false)
+      setTagsSubmenuFlipped(false)
+      setContextMenu({ layerId: row.dataset.layerId, x: e.clientX, y: e.clientY })
+    } else {
+      closeContextMenu()
+    }
+  }, [closeContextMenu])
+
   const clearDragState = useCallback(() => {
     setDraggedId(null)
     setDropZoneTargetId(null)
@@ -328,22 +345,7 @@ export function LayersPanel({
             className={styles.layerContextBackdrop}
             data-testid="layer-context-backdrop"
             onClick={closeContextMenu}
-            onContextMenu={e => {
-              e.preventDefault()
-              e.stopPropagation()
-              const backdrop = e.currentTarget as HTMLElement
-              backdrop.style.pointerEvents = 'none'
-              const el = document.elementFromPoint(e.clientX, e.clientY)
-              backdrop.style.pointerEvents = ''
-              const row = el?.closest<HTMLElement>('[data-layer-id]')
-              if (row?.dataset.layerId) {
-                setTagsSubmenuOpen(false)
-                setTagsSubmenuFlipped(false)
-                setContextMenu({ layerId: row.dataset.layerId, x: e.clientX, y: e.clientY })
-              } else {
-                closeContextMenu()
-              }
-            }}
+            onContextMenu={handleBackdropContextMenu}
           />
           <div
             className={styles.layerContextMenu}
