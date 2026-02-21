@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { LayersPanel } from './LayersPanel'
@@ -26,6 +27,12 @@ describe('LayersPanel', () => {
     onRemoveFromGroup?: (layerId: string) => void
     onDuplicate?: (id: string) => void
     onToggleGroupCollapsed?: (groupId: string) => void
+    availableTags?: string[]
+    onAddTagToLayer?: (layerId: string, tag: string) => void
+    onRemoveTagFromLayer?: (layerId: string, tag: string) => void
+    onCreateTag?: (tag: string) => void
+    onDeleteTag?: (tag: string) => void
+    onRenameTag?: (oldTag: string, newTag: string) => void
   }) {
     const layers = overrides?.layers ?? makeLayers('Background', 'Foreground')
     return render(
@@ -43,6 +50,12 @@ describe('LayersPanel', () => {
         onRemoveFromGroup={overrides?.onRemoveFromGroup ?? noop}
         onDuplicate={overrides?.onDuplicate ?? noop}
         onToggleGroupCollapsed={overrides?.onToggleGroupCollapsed ?? noop}
+        availableTags={overrides?.availableTags ?? []}
+        onAddTagToLayer={overrides?.onAddTagToLayer ?? noop}
+        onRemoveTagFromLayer={overrides?.onRemoveTagFromLayer ?? noop}
+        onCreateTag={overrides?.onCreateTag ?? noop}
+        onDeleteTag={overrides?.onDeleteTag ?? noop}
+        onRenameTag={overrides?.onRenameTag ?? noop}
       />
     )
   }
@@ -645,6 +658,127 @@ describe('LayersPanel', () => {
       fireEvent.click(screen.getByTestId('context-duplicate'))
       expect(onDuplicate).toHaveBeenCalledWith('layer-0')
       expect(screen.queryByTestId('layer-context-menu')).toBeNull()
+    })
+  })
+
+  describe('tabs', () => {
+    it('renders Layers and Tags tabs', () => {
+      renderPanel()
+      expect(screen.getByTestId('tab-layers')).toBeTruthy()
+      expect(screen.getByTestId('tab-tags')).toBeTruthy()
+    })
+
+    it('shows layers list by default (Layers tab active)', () => {
+      renderPanel()
+      expect(screen.getByTestId('tab-layers').className).toContain('Active')
+      expect(screen.getByText('Background')).toBeTruthy()
+    })
+
+    it('switches to Tags tab when clicked', () => {
+      renderPanel()
+      fireEvent.click(screen.getByTestId('tab-tags'))
+      expect(screen.getByTestId('tab-tags').className).toContain('Active')
+      expect(screen.getByTestId('tags-tab-content')).toBeTruthy()
+    })
+
+    it('switches back to Layers tab', () => {
+      renderPanel()
+      fireEvent.click(screen.getByTestId('tab-tags'))
+      fireEvent.click(screen.getByTestId('tab-layers'))
+      expect(screen.getByText('Background')).toBeTruthy()
+    })
+
+    it('hides add button on Tags tab', () => {
+      renderPanel()
+      fireEvent.click(screen.getByTestId('tab-tags'))
+      expect(screen.queryByRole('button', { name: /add layer/i })).toBeNull()
+    })
+
+    it('shows add button on Layers tab', () => {
+      renderPanel()
+      expect(screen.getByRole('button', { name: /add layer/i })).toBeTruthy()
+    })
+  })
+
+  describe('context menu tags submenu', () => {
+    it('shows Tags submenu item in context menu', () => {
+      renderPanel({ availableTags: ['Characters'] })
+      fireEvent.contextMenu(screen.getByTestId('layer-row-layer-0'))
+      expect(screen.getByTestId('context-tags-submenu-trigger')).toBeTruthy()
+    })
+
+    it('shows "No tags created" when no tags available', () => {
+      renderPanel({ availableTags: [] })
+      fireEvent.contextMenu(screen.getByTestId('layer-row-layer-0'))
+      const trigger = screen.getByTestId('context-tags-submenu-trigger')
+      fireEvent.mouseEnter(trigger)
+      expect(screen.getByTestId('tags-submenu-empty')).toBeTruthy()
+    })
+
+    it('shows checkboxes for each available tag', () => {
+      renderPanel({ availableTags: ['Characters', 'Props'] })
+      fireEvent.contextMenu(screen.getByTestId('layer-row-layer-0'))
+      fireEvent.mouseEnter(screen.getByTestId('context-tags-submenu-trigger'))
+      expect(screen.getByTestId('tag-checkbox-Characters')).toBeTruthy()
+      expect(screen.getByTestId('tag-checkbox-Props')).toBeTruthy()
+    })
+
+    it('checks tags that the layer already has', () => {
+      const layers = makeLayers('Background', 'Foreground')
+      layers[0] = { ...layers[0], tags: ['Characters'] }
+      renderPanel({ layers, availableTags: ['Characters', 'Props'] })
+      fireEvent.contextMenu(screen.getByTestId('layer-row-layer-0'))
+      fireEvent.mouseEnter(screen.getByTestId('context-tags-submenu-trigger'))
+      const charBox = screen.getByTestId('tag-checkbox-Characters') as HTMLInputElement
+      const propsBox = screen.getByTestId('tag-checkbox-Props') as HTMLInputElement
+      expect(charBox.checked).toBe(true)
+      expect(propsBox.checked).toBe(false)
+    })
+
+    it('clicking unchecked tag calls onAddTagToLayer', () => {
+      const onAddTagToLayer = vi.fn()
+      renderPanel({ availableTags: ['Characters'], onAddTagToLayer })
+      fireEvent.contextMenu(screen.getByTestId('layer-row-layer-0'))
+      fireEvent.mouseEnter(screen.getByTestId('context-tags-submenu-trigger'))
+      fireEvent.click(screen.getByTestId('tag-checkbox-Characters'))
+      expect(onAddTagToLayer).toHaveBeenCalledWith('layer-0', 'Characters')
+    })
+
+    it('clicking checked tag calls onRemoveTagFromLayer', () => {
+      const onRemoveTagFromLayer = vi.fn()
+      const layers = makeLayers('Background')
+      layers[0] = { ...layers[0], tags: ['Characters'] }
+      renderPanel({ layers, availableTags: ['Characters'], onRemoveTagFromLayer })
+      fireEvent.contextMenu(screen.getByTestId('layer-row-layer-0'))
+      fireEvent.mouseEnter(screen.getByTestId('context-tags-submenu-trigger'))
+      fireEvent.click(screen.getByTestId('tag-checkbox-Characters'))
+      expect(onRemoveTagFromLayer).toHaveBeenCalledWith('layer-0', 'Characters')
+    })
+
+    it('flips submenu to left when it would overflow viewport', () => {
+      renderPanel({ availableTags: ['Characters'] })
+      fireEvent.contextMenu(screen.getByTestId('layer-row-layer-0'))
+      const trigger = screen.getByTestId('context-tags-submenu-trigger')
+      // Mock getBoundingClientRect to simulate off-screen right edge
+      const origGetBCR = Element.prototype.getBoundingClientRect
+      Element.prototype.getBoundingClientRect = function () {
+        if (this.getAttribute('data-testid') === 'tags-submenu') {
+          return { left: 900, right: window.innerWidth + 50, top: 100, bottom: 200, width: 150, height: 100, x: 900, y: 100, toJSON() {} } as DOMRect
+        }
+        return origGetBCR.call(this)
+      }
+      fireEvent.mouseEnter(trigger)
+      const submenu = screen.getByTestId('tags-submenu')
+      expect(submenu.className).toContain('Flipped')
+      Element.prototype.getBoundingClientRect = origGetBCR
+    })
+
+    it('does not flip submenu when it fits in viewport', () => {
+      renderPanel({ availableTags: ['Characters'] })
+      fireEvent.contextMenu(screen.getByTestId('layer-row-layer-0'))
+      fireEvent.mouseEnter(screen.getByTestId('context-tags-submenu-trigger'))
+      const submenu = screen.getByTestId('tags-submenu')
+      expect(submenu.className).not.toContain('Flipped')
     })
   })
 })

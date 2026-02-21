@@ -68,6 +68,11 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     setCurrentFrame: rawSetCurrentFrame,
     reorderFrame: rawReorderFrame,
     setFrameDuration: rawSetFrameDuration,
+    addTagToLayer: rawAddTagToLayer,
+    removeTagFromLayer: rawRemoveTagFromLayer,
+    createTag: rawCreateTag,
+    deleteTag: rawDeleteTag,
+    renameTag: rawRenameTag,
   } = layerState
 
   const grid = useMemo(() => compositeGrid(layerState.layers), [layerState.layers])
@@ -205,6 +210,12 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const removeFromGroupWithUndo = useCallback((id: string) => withLayerUndo(() => rawRemoveFromGroup(id), false), [withLayerUndo, rawRemoveFromGroup])
   const duplicateLayerWithUndo = useCallback((id: string) => withLayerUndo(() => rawDuplicateLayer(id)), [withLayerUndo, rawDuplicateLayer])
   const toggleGroupCollapsedNoUndo = useCallback((id: string) => rawToggleGroupCollapsed(id), [rawToggleGroupCollapsed])
+
+  // Tag operations
+  const addTagToLayerWithUndo = useCallback((layerId: string, tag: string) => withLayerUndo(() => rawAddTagToLayer(layerId, tag), false), [withLayerUndo, rawAddTagToLayer])
+  const removeTagFromLayerWithUndo = useCallback((layerId: string, tag: string) => withLayerUndo(() => rawRemoveTagFromLayer(layerId, tag), false), [withLayerUndo, rawRemoveTagFromLayer])
+  const deleteTagWithUndo = useCallback((tag: string) => withLayerUndo(() => rawDeleteTag(tag), false), [withLayerUndo, rawDeleteTag])
+  const renameTagWithUndo = useCallback((oldTag: string, newTag: string) => withLayerUndo(() => rawRenameTag(oldTag, newTag), false), [withLayerUndo, rawRenameTag])
 
   // Frame operations with undo
   const addFrameWithUndo = useCallback(() => withLayerUndo(rawAddFrame), [withLayerUndo, rawAddFrame])
@@ -357,6 +368,9 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       if (ctrl && key === 'z' && shift) { e.preventDefault(); redo(); notify?.(ACTION_SHORTCUTS.redo.description); return }
       if (ctrl && key === 's' && !shift) { e.preventDefault(); saveRef.current?.(); notify?.(ACTION_SHORTCUTS.save.description); return }
       if (ctrl && key === 's' && shift) { e.preventDefault(); saveAsRef.current?.(); notify?.(ACTION_SHORTCUTS.saveAs.description); return }
+
+      // --- Suppress non-Ctrl hotkeys when an input/textarea has focus ---
+      if (document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement) return
 
       // --- Existing tool-specific routing ---
       if (brushRef.current.tool === 'text') { textTool.onKeyDown(e); return }
@@ -790,5 +804,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     reorderFrame: reorderFrameWithUndo, setFrameDuration: rawSetFrameDuration,
     isPlaying, togglePlayback,
     activeLayerFrameCount, activeLayerCurrentFrame, activeLayerFrameDuration,
+    availableTags: layerState.availableTags,
+    addTagToLayer: addTagToLayerWithUndo, removeTagFromLayer: removeTagFromLayerWithUndo,
+    createTag: rawCreateTag, deleteTag: deleteTagWithUndo, renameTag: renameTagWithUndo,
   }
 }

@@ -3,6 +3,7 @@ import type { Layer } from './types'
 import { isGroupLayer, isDrawableLayer, getParentId } from './types'
 import { getAncestorGroupIds, getGroupDescendantIds, isAncestorOf, buildDisplayOrder, findGroupBlockEnd } from './layerUtils'
 import { LayerRow } from './LayerRow'
+import { TagsTabContent } from './TagsTabContent'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface LayersPanelProps {
@@ -19,6 +20,12 @@ export interface LayersPanelProps {
   onRemoveFromGroup: (layerId: string) => void
   onDuplicate: (id: string) => void
   onToggleGroupCollapsed: (groupId: string) => void
+  availableTags: string[]
+  onAddTagToLayer: (layerId: string, tag: string) => void
+  onRemoveTagFromLayer: (layerId: string, tag: string) => void
+  onCreateTag: (tag: string) => void
+  onDeleteTag: (tag: string) => void
+  onRenameTag: (oldTag: string, newTag: string) => void
 }
 
 export function LayersPanel({
@@ -35,13 +42,28 @@ export function LayersPanel({
   onRemoveFromGroup,
   onDuplicate,
   onToggleGroupCollapsed,
+  availableTags,
+  onAddTagToLayer,
+  onRemoveTagFromLayer,
+  onCreateTag,
+  onDeleteTag,
+  onRenameTag,
 }: LayersPanelProps) {
+  const [activeTab, setActiveTab] = useState<'layers' | 'tags'>('layers')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [contextMenu, setContextMenu] = useState<{ layerId: string; x: number; y: number } | null>(null)
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dropZoneTargetId, setDropZoneTargetId] = useState<string | null>(null)
   const [dropOnGroup, setDropOnGroup] = useState<string | null>(null)
+  const [tagsSubmenuOpen, setTagsSubmenuOpen] = useState(false)
+  const [tagsSubmenuFlipped, setTagsSubmenuFlipped] = useState(false)
+
+  const tagsSubmenuRef = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    setTagsSubmenuFlipped(rect.right > window.innerWidth)
+  }, [])
 
   const startRename = useCallback((id: string, currentName: string) => {
     setEditingId(id)
@@ -59,7 +81,7 @@ export function LayersPanel({
     setEditingId(null)
   }, [])
 
-  const closeContextMenu = useCallback(() => setContextMenu(null), [])
+  const closeContextMenu = useCallback(() => { setContextMenu(null); setTagsSubmenuOpen(false); setTagsSubmenuFlipped(false) }, [])
 
   const clearDragState = useCallback(() => {
     setDraggedId(null)
@@ -176,16 +198,46 @@ export function LayersPanel({
   return (
     <div className={styles.layersPanel} data-testid="layers-panel">
       <div className={styles.layersPanelHeader}>
-        <span className={styles.layersPanelTitle}>Layers</span>
-        <button
-          className={styles.layersPanelAdd}
-          onClick={onAdd}
-          aria-label="Add layer"
-          title="Add layer"
-        >
-          +
-        </button>
+        <div className={styles.layersPanelTabs}>
+          <button
+            className={[styles.layersPanelTab, activeTab === 'layers' && styles.layersPanelTabActive].filter(Boolean).join(' ')}
+            data-testid="tab-layers"
+            onClick={() => setActiveTab('layers')}
+          >
+            Layers
+          </button>
+          <button
+            className={[styles.layersPanelTab, activeTab === 'tags' && styles.layersPanelTabActive].filter(Boolean).join(' ')}
+            data-testid="tab-tags"
+            onClick={() => setActiveTab('tags')}
+          >
+            Tags
+          </button>
+        </div>
+        {activeTab === 'layers' && (
+          <button
+            className={styles.layersPanelAdd}
+            onClick={onAdd}
+            aria-label="Add layer"
+            title="Add layer"
+          >
+            +
+          </button>
+        )}
       </div>
+      {activeTab === 'tags' ? (
+        <TagsTabContent
+          layers={layers}
+          availableTags={availableTags}
+          activeLayerId={activeLayerId}
+          onSetActive={onSetActive}
+          onAddTagToLayer={onAddTagToLayer}
+          onRemoveTagFromLayer={onRemoveTagFromLayer}
+          onCreateTag={onCreateTag}
+          onDeleteTag={onDeleteTag}
+          onRenameTag={onRenameTag}
+        />
+      ) : (
       <div className={styles.layersList}>
         {reversed.map((layer) => {
           const isGroup = isGroupLayer(layer)
@@ -267,6 +319,7 @@ export function LayersPanel({
           />
         )}
       </div>
+      )}
       {contextMenu && (
         <>
           <div
@@ -312,6 +365,42 @@ export function LayersPanel({
                 Remove from group
               </button>
             )}
+            <div
+              className={[styles.layerContextMenuItem, styles.layerContextMenuItemSubmenu].filter(Boolean).join(' ')}
+              data-testid="context-tags-submenu-trigger"
+              onMouseEnter={() => setTagsSubmenuOpen(true)}
+              onMouseLeave={() => setTagsSubmenuOpen(false)}
+            >
+              Tags &gt;
+              {tagsSubmenuOpen && (
+                <div ref={tagsSubmenuRef} className={[styles.layerTagsSubmenu, tagsSubmenuFlipped && styles.layerTagsSubmenuFlipped].filter(Boolean).join(' ')} data-testid="tags-submenu">
+                  {availableTags.length === 0 ? (
+                    <div className={styles.layerTagsSubmenuEmpty} data-testid="tags-submenu-empty">No tags created</div>
+                  ) : (
+                    availableTags.map(tag => {
+                      const hasTag = contextLayer?.tags?.includes(tag) ?? false
+                      return (
+                        <label key={tag} className={styles.layerTagsSubmenuItem}>
+                          <input
+                            type="checkbox"
+                            data-testid={`tag-checkbox-${tag}`}
+                            checked={hasTag}
+                            onChange={() => {
+                              if (hasTag) {
+                                onRemoveTagFromLayer(contextMenu.layerId, tag)
+                              } else {
+                                onAddTagToLayer(contextMenu.layerId, tag)
+                              }
+                            }}
+                          />
+                          {tag}
+                        </label>
+                      )
+                    })
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}

@@ -146,6 +146,12 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     activeLayerFrameCount,
     activeLayerCurrentFrame,
     activeLayerFrameDuration,
+    availableTags,
+    addTagToLayer,
+    removeTagFromLayer,
+    createTag,
+    deleteTag,
+    renameTag,
   } = useAnsiEditor({
     initialLayerState,
     onSave: () => handleSaveRef.current(),
@@ -185,14 +191,14 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
 
   const handleSaveAs = useCallback(async (folderPath: string, fileName: string) => {
     const fullPath = folderPath === '/' ? `/${fileName}` : `${folderPath}/${fileName}`
-    const content = serializeLayers({ layers, activeLayerId })
+    const content = serializeLayers({ layers, activeLayerId }, availableTags)
     if (fileSystem.exists(fullPath)) {
       setPendingSave({ path: fullPath, content })
       return
     }
     fileSystem.createFile(fullPath, content)
     await finishSaveAs(fullPath)
-  }, [layers, activeLayerId, fileSystem, finishSaveAs])
+  }, [layers, activeLayerId, availableTags, fileSystem, finishSaveAs])
 
   const handleConfirmOverwrite = useCallback(async () => {
     if (!pendingSave) return
@@ -207,14 +213,14 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
 
   const handleSave = useCallback(async () => {
     if (filePath && !filePath.startsWith('ansi-editor://')) {
-      const content = serializeLayers({ layers, activeLayerId })
+      const content = serializeLayers({ layers, activeLayerId }, availableTags)
       fileSystem.writeFile(filePath, content)
       await fileSystem.flush()
       markClean()
     } else {
       openSaveDialog()
     }
-  }, [filePath, layers, activeLayerId, fileSystem, markClean, openSaveDialog])
+  }, [filePath, layers, activeLayerId, availableTags, fileSystem, markClean, openSaveDialog])
 
   handleSaveRef.current = handleSave
   handleOpenSaveDialogRef.current = openSaveDialog
@@ -326,6 +332,12 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
           onRemoveFromGroup={removeFromGroup}
           onDuplicate={duplicateLayer}
           onToggleGroupCollapsed={toggleGroupCollapsed}
+          availableTags={availableTags}
+          onAddTagToLayer={addTagToLayer}
+          onRemoveTagFromLayer={removeTagFromLayer}
+          onCreateTag={createTag}
+          onDeleteTag={deleteTag}
+          onRenameTag={renameTag}
         />
       </div>
       <div ref={cursorRef} className={styles.cellCursor} />

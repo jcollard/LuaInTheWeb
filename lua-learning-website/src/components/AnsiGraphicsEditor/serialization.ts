@@ -24,7 +24,12 @@ function needsV5(state: LayerState): boolean {
   return state.layers.some(l => l.type === 'drawn' && l.frames.length > 1)
 }
 
-export function serializeLayers(state: LayerState): string {
+function needsV6(state: LayerState, availableTags?: string[]): boolean {
+  if (availableTags && availableTags.length > 0) return true
+  return state.layers.some(l => l.tags && l.tags.length > 0)
+}
+
+export function serializeLayers(state: LayerState, availableTags?: string[]): string {
   const hasGroups = state.layers.some(isGroupLayer)
   const hasParentId = state.layers.some(l => {
     if (isDrawableLayer(l) && l.parentId) return true
@@ -32,7 +37,8 @@ export function serializeLayers(state: LayerState): string {
     return false
   })
   let version = 3
-  if (needsV5(state)) version = 5
+  if (needsV6(state, availableTags)) version = 6
+  else if (needsV5(state)) version = 5
   else if (hasGroups || hasParentId) version = 4
   const layers = state.layers.map(layer => {
     if (isGroupLayer(layer)) {
@@ -44,6 +50,7 @@ export function serializeLayers(state: LayerState): string {
         collapsed: layer.collapsed,
       }
       if (layer.parentId) serialized.parentId = layer.parentId
+      if (layer.tags && layer.tags.length > 0) serialized.tags = layer.tags
       return serialized
     }
     if (layer.type === 'text') {
@@ -64,6 +71,7 @@ export function serializeLayers(state: LayerState): string {
         serialized.textAlign = layer.textAlign
       }
       if (layer.parentId) serialized.parentId = layer.parentId
+      if (layer.tags && layer.tags.length > 0) serialized.tags = layer.tags
       return serialized
     }
     const serialized: Record<string, unknown> = {
@@ -79,14 +87,18 @@ export function serializeLayers(state: LayerState): string {
       serialized.frameDurationMs = layer.frameDurationMs
     }
     if (layer.parentId) serialized.parentId = layer.parentId
+    if (layer.tags && layer.tags.length > 0) serialized.tags = layer.tags
     return serialized
   })
-  const data = {
+  const data: Record<string, unknown> = {
     version,
     width: ANSI_COLS,
     height: ANSI_ROWS,
     activeLayerId: state.activeLayerId,
     layers,
+  }
+  if (availableTags && availableTags.length > 0) {
+    data.availableTags = availableTags
   }
   return 'return ' + stringify(data)
 }
@@ -107,6 +119,7 @@ interface RawLayer {
   textAlign?: string
   parentId?: string
   collapsed?: boolean
+  tags?: string[]
 }
 
 export function deserializeLayers(lua: string): LayerState {
@@ -148,12 +161,14 @@ export function deserializeLayers(lua: string): LayerState {
     }
   }
 
-  if (version === 3 || version === 4 || version === 5) {
+  if (version === 3 || version === 4 || version === 5 || version === 6) {
     const rawLayers = data.layers as RawLayer[]
+    const rawAvailableTags = data.availableTags as string[] | undefined
     const layers: Layer[] = rawLayers.map((l, i) => {
       if (!l.id || !l.name || l.visible === undefined) {
         throw new Error(`Invalid layer at index ${i}: missing required fields (id, name, visible)`)
       }
+      const tags = l.tags && l.tags.length > 0 ? l.tags : undefined
       if (l.type === 'group') {
         const groupLayer: GroupLayer = {
           type: 'group',
@@ -162,6 +177,7 @@ export function deserializeLayers(lua: string): LayerState {
           visible: l.visible,
           collapsed: l.collapsed ?? false,
           parentId: l.parentId,
+          tags,
         }
         return groupLayer
       }
@@ -183,6 +199,7 @@ export function deserializeLayers(lua: string): LayerState {
           textAlign,
           grid: renderTextLayerGrid(l.text, l.bounds, l.textFg, textFgColors, textAlign),
           parentId: l.parentId,
+          tags,
         }
         return textLayer
       }
@@ -202,12 +219,17 @@ export function deserializeLayers(lua: string): LayerState {
         currentFrameIndex,
         frameDurationMs: l.frameDurationMs ?? DEFAULT_FRAME_DURATION_MS,
         parentId: l.parentId,
+        tags,
       }
     })
-    return {
+    const result: LayerState = {
       layers,
       activeLayerId: data.activeLayerId as string,
     }
+    if (rawAvailableTags && rawAvailableTags.length > 0) {
+      result.availableTags = rawAvailableTags
+    }
+    return result
   }
 
   throw new Error(`Unsupported version: ${version}`)

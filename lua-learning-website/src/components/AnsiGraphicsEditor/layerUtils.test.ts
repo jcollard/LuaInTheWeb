@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import { describe, it, expect } from 'vitest'
-import { isDefaultCell, createLayer, createGroup, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, syncLayerIds, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, buildDisplayOrder, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock } from './layerUtils'
+import { isDefaultCell, createLayer, createGroup, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, syncLayerIds, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, buildDisplayOrder, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock, addTagToLayer, removeTagFromLayer } from './layerUtils'
 import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer } from './types'
 import type { AnsiCell, DrawableLayer, DrawnLayer, RGBColor, Layer, LayerState, TextLayer, GroupLayer } from './types'
 
@@ -1404,5 +1404,138 @@ describe('duplicateLayerBlock', () => {
     const insertIdx = findGroupBlockEnd(layers, 'group-400', 0)
     const combined = [...layers.slice(0, insertIdx), ...dupes, ...layers.slice(insertIdx)]
     expect(() => assertContiguousBlocks(combined)).not.toThrow()
+  })
+})
+
+describe('addTagToLayer', () => {
+  it('adds a tag to a layer with no tags', () => {
+    const layer = createLayer('L', 'l1')
+    const result = addTagToLayer(layer, 'Characters')
+    expect(result.tags).toEqual(['Characters'])
+  })
+
+  it('adds a tag to a layer with existing tags', () => {
+    const layer = { ...createLayer('L', 'l1'), tags: ['Props'] }
+    const result = addTagToLayer(layer, 'Characters')
+    expect(result.tags).toEqual(['Props', 'Characters'])
+  })
+
+  it('does not duplicate an existing tag', () => {
+    const layer = { ...createLayer('L', 'l1'), tags: ['Characters'] }
+    const result = addTagToLayer(layer, 'Characters')
+    expect(result.tags).toEqual(['Characters'])
+    expect(result).toBe(layer)
+  })
+
+  it('works with group layers', () => {
+    const group = createGroup('G', 'g1')
+    const result = addTagToLayer(group, 'UI')
+    expect(result.tags).toEqual(['UI'])
+  })
+
+  it('works with text layers', () => {
+    const textLayer: TextLayer = {
+      type: 'text', id: 'txt-1', name: 'Text', visible: true,
+      text: 'Hi', bounds: { r0: 0, c0: 0, r1: 0, c1: 10 }, textFg: [255, 255, 255],
+      grid: Array.from({ length: ANSI_ROWS }, () =>
+        Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
+      ),
+    }
+    const result = addTagToLayer(textLayer, 'Labels')
+    expect(result.tags).toEqual(['Labels'])
+  })
+})
+
+describe('removeTagFromLayer', () => {
+  it('removes a tag from a layer', () => {
+    const layer = { ...createLayer('L', 'l1'), tags: ['Characters', 'Props'] }
+    const result = removeTagFromLayer(layer, 'Characters')
+    expect(result.tags).toEqual(['Props'])
+  })
+
+  it('sets tags to undefined when last tag is removed', () => {
+    const layer = { ...createLayer('L', 'l1'), tags: ['Characters'] }
+    const result = removeTagFromLayer(layer, 'Characters')
+    expect(result.tags).toBeUndefined()
+  })
+
+  it('returns same layer when tag not present', () => {
+    const layer = { ...createLayer('L', 'l1'), tags: ['Props'] }
+    const result = removeTagFromLayer(layer, 'Characters')
+    expect(result).toBe(layer)
+  })
+
+  it('returns same layer when tags is undefined', () => {
+    const layer = createLayer('L', 'l1')
+    const result = removeTagFromLayer(layer, 'Characters')
+    expect(result).toBe(layer)
+  })
+
+  it('works with group layers', () => {
+    const group = { ...createGroup('G', 'g1'), tags: ['UI'] }
+    const result = removeTagFromLayer(group, 'UI')
+    expect(result.tags).toBeUndefined()
+  })
+})
+
+describe('cloneLayer preserves tags', () => {
+  it('preserves tags on drawn layers', () => {
+    const layer = { ...createLayer('L', 'l1'), tags: ['Characters'] }
+    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
+    const clone = cloneLayerState(state)
+    expect(clone.layers[0].tags).toEqual(['Characters'])
+  })
+
+  it('preserves tags on group layers', () => {
+    const group = { ...createGroup('G', 'g1'), tags: ['UI'] }
+    const layer = createLayer('L', 'l1')
+    const state: LayerState = { layers: [group, layer], activeLayerId: 'l1' }
+    const clone = cloneLayerState(state)
+    expect(clone.layers[0].tags).toEqual(['UI'])
+  })
+
+  it('preserves tags on text layers', () => {
+    const textLayer: Layer = {
+      type: 'text', id: 'txt-1', name: 'Text', visible: true,
+      text: 'Hi', bounds: { r0: 0, c0: 0, r1: 0, c1: 10 }, textFg: [255, 255, 255],
+      tags: ['Labels'],
+      grid: Array.from({ length: ANSI_ROWS }, () =>
+        Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
+      ),
+    }
+    const state: LayerState = { layers: [textLayer], activeLayerId: 'txt-1' }
+    const clone = cloneLayerState(state)
+    expect(clone.layers[0].tags).toEqual(['Labels'])
+  })
+
+  it('deep-clones tags so mutation does not affect original', () => {
+    const layer = { ...createLayer('L', 'l1'), tags: ['Characters'] }
+    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
+    const clone = cloneLayerState(state)
+    clone.layers[0].tags!.push('Props')
+    expect(layer.tags).toEqual(['Characters'])
+  })
+
+  it('preserves undefined tags', () => {
+    const layer = createLayer('L', 'l1')
+    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
+    const clone = cloneLayerState(state)
+    expect(clone.layers[0].tags).toBeUndefined()
+  })
+})
+
+describe('duplicateLayerBlock preserves tags', () => {
+  it('preserves tags when duplicating a drawn layer', () => {
+    const layer = { ...createLayer('L', 'layer-900'), tags: ['Characters'] }
+    const dupes = duplicateLayerBlock([layer], 'layer-900')
+    expect(dupes[0].tags).toEqual(['Characters'])
+  })
+
+  it('preserves tags when duplicating a group with children', () => {
+    const group = { ...createGroup('G', 'group-500'), tags: ['UI'] }
+    const child: Layer = { ...createLayer('C', 'layer-901'), parentId: 'group-500', tags: ['Props'] }
+    const dupes = duplicateLayerBlock([group, child], 'group-500')
+    expect(dupes[0].tags).toEqual(['UI'])
+    expect(dupes[1].tags).toEqual(['Props'])
   })
 })

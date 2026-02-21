@@ -1030,4 +1030,87 @@ describe('useLayerState', () => {
       expect(layer.frames[1][0][0].char).toBe('Z')
     })
   })
+
+  describe('tag management', () => {
+    it('initializes availableTags as empty array by default', () => {
+      const { result } = renderHook(() => useLayerState())
+      expect(result.current.availableTags).toEqual([])
+    })
+
+    it('initializes availableTags from initial state', () => {
+      const layer = createLayer('BG', 'l1')
+      const initial: LayerState = { layers: [layer], activeLayerId: 'l1', availableTags: ['Characters', 'Props'] }
+      const { result } = renderHook(() => useLayerState(initial))
+      expect(result.current.availableTags).toEqual(['Characters', 'Props'])
+    })
+
+    it('createTag adds a new tag to availableTags', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.createTag('Characters'))
+      expect(result.current.availableTags).toEqual(['Characters'])
+    })
+
+    it('createTag does not add duplicate tags', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.createTag('Characters'))
+      act(() => result.current.createTag('Characters'))
+      expect(result.current.availableTags).toEqual(['Characters'])
+    })
+
+    it('deleteTag removes a tag from availableTags', () => {
+      const layer = createLayer('BG', 'l1')
+      const initial: LayerState = { layers: [layer], activeLayerId: 'l1', availableTags: ['Characters', 'Props'] }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.deleteTag('Characters'))
+      expect(result.current.availableTags).toEqual(['Props'])
+    })
+
+    it('deleteTag also removes the tag from all layers', () => {
+      const layer = { ...createLayer('BG', 'l1'), tags: ['Characters', 'Props'] }
+      const initial: LayerState = { layers: [layer], activeLayerId: 'l1', availableTags: ['Characters', 'Props'] }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.deleteTag('Characters'))
+      expect(result.current.layers[0].tags).toEqual(['Props'])
+    })
+
+    it('renameTag renames in both availableTags and layers', () => {
+      const layer = { ...createLayer('BG', 'l1'), tags: ['Characters'] }
+      const initial: LayerState = { layers: [layer], activeLayerId: 'l1', availableTags: ['Characters'] }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.renameTag('Characters', 'Actors'))
+      expect(result.current.availableTags).toEqual(['Actors'])
+      expect(result.current.layers[0].tags).toEqual(['Actors'])
+    })
+
+    it('addTagToLayer adds a tag to a specific layer', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.createTag('Characters'))
+      const id = result.current.layers[0].id
+      act(() => result.current.addTagToLayer(id, 'Characters'))
+      expect(result.current.layers[0].tags).toEqual(['Characters'])
+    })
+
+    it('addTagToLayer auto-adds new tag to availableTags', () => {
+      const { result } = renderHook(() => useLayerState())
+      const id = result.current.layers[0].id
+      act(() => result.current.addTagToLayer(id, 'Characters'))
+      expect(result.current.availableTags).toContain('Characters')
+    })
+
+    it('removeTagFromLayer removes a tag from a specific layer', () => {
+      const layer = { ...createLayer('BG', 'l1'), tags: ['Characters', 'Props'] }
+      const initial: LayerState = { layers: [layer], activeLayerId: 'l1', availableTags: ['Characters', 'Props'] }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.removeTagFromLayer('l1', 'Characters'))
+      expect(result.current.layers[0].tags).toEqual(['Props'])
+    })
+
+    it('removeTagFromLayer sets tags to undefined when last tag removed', () => {
+      const layer = { ...createLayer('BG', 'l1'), tags: ['Characters'] }
+      const initial: LayerState = { layers: [layer], activeLayerId: 'l1', availableTags: ['Characters'] }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.removeTagFromLayer('l1', 'Characters'))
+      expect(result.current.layers[0].tags).toBeUndefined()
+    })
+  })
 })

@@ -92,6 +92,7 @@ interface BaseLayer {
   visible: boolean
   grid: AnsiGrid
   parentId?: string
+  tags?: string[]
 }
 
 export const DEFAULT_FRAME_DURATION_MS = 100
@@ -123,6 +124,7 @@ export interface GroupLayer {
   visible: boolean
   collapsed: boolean
   parentId?: string
+  tags?: string[]
 }
 
 export type DrawableLayer = DrawnLayer | TextLayer
@@ -147,6 +149,7 @@ export function getParentId(layer: Layer): string | undefined {
 export interface LayerState {
   layers: Layer[]         // ordered bottom-to-top (index 0 = bottom)
   activeLayerId: string
+  availableTags?: string[]
 }
 
 export interface UseAnsiEditorReturn {
@@ -221,6 +224,13 @@ export interface UseAnsiEditorReturn {
   activeLayerFrameCount: number
   activeLayerCurrentFrame: number
   activeLayerFrameDuration: number
+  // Tags
+  availableTags: string[]
+  addTagToLayer: (layerId: string, tag: string) => void
+  removeTagFromLayer: (layerId: string, tag: string) => void
+  createTag: (tag: string) => void
+  deleteTag: (tag: string) => void
+  renameTag: (oldTag: string, newTag: string) => void
 }
 
 export interface UseAnsiEditorOptions {

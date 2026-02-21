@@ -524,3 +524,101 @@ describe('v5 serialization (frames)', () => {
     expect(loaded.currentFrameIndex).toBe(0)
   })
 })
+
+describe('v6 serialization (tags)', () => {
+  it('serializes as v6 when layers have tags', () => {
+    const layer = { ...createLayer('L', 'l1'), tags: ['Characters'] }
+    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
+    const lua = serializeLayers(state, ['Characters'])
+    expect(lua).toContain('["version"] = 6')
+  })
+
+  it('serializes as v6 when availableTags is non-empty', () => {
+    const layer = createLayer('L', 'l1')
+    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
+    const lua = serializeLayers(state, ['Characters', 'Props'])
+    expect(lua).toContain('["version"] = 6')
+  })
+
+  it('does not serialize as v6 when no tags present', () => {
+    const layer = createLayer('L', 'l1')
+    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
+    const lua = serializeLayers(state)
+    expect(lua).not.toContain('["version"] = 6')
+  })
+
+  it('round-trips tags on drawn layers', () => {
+    const layer = { ...createLayer('L', 'l1'), tags: ['Characters', 'Props'] }
+    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
+    const lua = serializeLayers(state, ['Characters', 'Props'])
+    const result = deserializeLayers(lua)
+    expect(result.layers[0].tags).toEqual(['Characters', 'Props'])
+  })
+
+  it('round-trips tags on group layers', () => {
+    const group = { ...createGroup('G', 'g1'), tags: ['UI'] }
+    const child = createLayer('C', 'c1')
+    child.parentId = 'g1'
+    const state: LayerState = { layers: [group, child], activeLayerId: 'c1' }
+    const lua = serializeLayers(state, ['UI'])
+    const result = deserializeLayers(lua)
+    expect((result.layers[0] as GroupLayer).tags).toEqual(['UI'])
+  })
+
+  it('round-trips tags on text layers', () => {
+    const red: RGBColor = [255, 0, 0]
+    const b: Rect = { r0: 1, c0: 2, r1: 3, c1: 12 }
+    const text: TextLayer = {
+      type: 'text', id: 'text-1', name: 'Text', visible: true,
+      text: 'Hi', bounds: b, textFg: red, tags: ['Labels'],
+      grid: renderTextLayerGrid('Hi', b, red),
+    }
+    const state: LayerState = { layers: [text], activeLayerId: 'text-1' }
+    const lua = serializeLayers(state, ['Labels'])
+    const result = deserializeLayers(lua)
+    expect(result.layers[0].tags).toEqual(['Labels'])
+  })
+
+  it('round-trips availableTags', () => {
+    const layer = createLayer('L', 'l1')
+    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
+    const lua = serializeLayers(state, ['Characters', 'Props', 'UI'])
+    const result = deserializeLayers(lua)
+    expect(result.availableTags).toEqual(['Characters', 'Props', 'UI'])
+  })
+
+  it('omits tags field when layer has no tags', () => {
+    const layer = createLayer('L', 'l1')
+    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
+    const lua = serializeLayers(state, ['Characters'])
+    // Should not contain tags for the layer itself
+    expect(lua).not.toContain('["tags"]')
+    // But should contain availableTags at top level
+    expect(lua).toContain('["availableTags"]')
+  })
+
+  it('v1-v5 backward compat: loads without tags', () => {
+    const layer = createLayer('L', 'l1')
+    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
+    const lua = serializeLayers(state)
+    const result = deserializeLayers(lua)
+    expect(result.layers[0].tags).toBeUndefined()
+    expect(result.availableTags).toBeUndefined()
+  })
+
+  it('v6 with both tags and frames', () => {
+    const layer = { ...createLayer('L', 'l1'), tags: ['Characters'] }
+    const frame2 = createTestGrid()
+    frame2[0][0] = { char: 'A', fg: [255, 0, 0] as RGBColor, bg: [0, 0, 0] as RGBColor }
+    layer.frames.push(frame2)
+    layer.currentFrameIndex = 1
+    layer.grid = layer.frames[1]
+    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
+    const lua = serializeLayers(state, ['Characters'])
+    expect(lua).toContain('["version"] = 6')
+    const result = deserializeLayers(lua)
+    const loaded = result.layers[0] as DrawnLayer
+    expect(loaded.frames).toHaveLength(2)
+    expect(loaded.tags).toEqual(['Characters'])
+  })
+})

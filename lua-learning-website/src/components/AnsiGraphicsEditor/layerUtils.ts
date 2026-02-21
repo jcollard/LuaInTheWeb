@@ -237,6 +237,17 @@ export function compositeCellWithOverride(
   })
 }
 
+export function addTagToLayer<T extends Layer>(layer: T, tag: string): T {
+  if (layer.tags?.includes(tag)) return layer
+  return { ...layer, tags: [...(layer.tags ?? []), tag] }
+}
+
+export function removeTagFromLayer<T extends Layer>(layer: T, tag: string): T {
+  if (!layer.tags || !layer.tags.includes(tag)) return layer
+  const remaining = layer.tags.filter(t => t !== tag)
+  return { ...layer, tags: remaining.length > 0 ? remaining : undefined }
+}
+
 function cloneGrid(grid: AnsiGrid): AnsiGrid {
   return grid.map(row =>
     row.map(cell => ({
@@ -256,6 +267,7 @@ function cloneLayer(layer: Layer): Layer {
       visible: layer.visible,
       collapsed: layer.collapsed,
       parentId: layer.parentId,
+      tags: layer.tags ? [...layer.tags] : undefined,
     } satisfies GroupLayer
   }
   const base = {
@@ -264,6 +276,7 @@ function cloneLayer(layer: Layer): Layer {
     visible: layer.visible,
     grid: cloneGrid(layer.grid),
     parentId: layer.parentId,
+    tags: layer.tags ? [...layer.tags] : undefined,
   }
   if (layer.type === 'text') {
     return {

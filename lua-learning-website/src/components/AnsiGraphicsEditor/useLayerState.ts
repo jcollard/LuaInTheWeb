@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef } from 'react'
 import type { AnsiCell, AnsiGrid, DrawableLayer, DrawnLayer, Layer, LayerState, RGBColor, Rect, TextAlign, TextLayer } from './types'
 import { MIN_FRAME_DURATION_MS, MAX_FRAME_DURATION_MS, isGroupLayer, isDrawableLayer, getParentId } from './types'
-import { createLayer, createGroup, cloneLayerState, syncLayerIds, mergeLayerDown, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock } from './layerUtils'
+import { createLayer, createGroup, cloneLayerState, syncLayerIds, mergeLayerDown, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock, addTagToLayer as addTagToLayerUtil, removeTagFromLayer as removeTagFromLayerUtil } from './layerUtils'
 import { createEmptyGrid, cloneGrid } from './gridUtils'
 import { replaceColorsInGrid } from './colorUtils'
 import { renderTextLayerGrid } from './textLayerGrid'
@@ -64,6 +64,13 @@ export interface UseLayerStateReturn {
   setCurrentFrame: (index: number) => void
   reorderFrame: (from: number, to: number) => void
   setFrameDuration: (ms: number) => void
+  availableTags: string[]
+  availableTagsRef: React.RefObject<string[]>
+  addTagToLayer: (layerId: string, tag: string) => void
+  removeTagFromLayer: (layerId: string, tag: string) => void
+  createTag: (tag: string) => void
+  deleteTag: (tag: string) => void
+  renameTag: (oldTag: string, newTag: string) => void
 }
 
 export function useLayerState(initial?: LayerState): UseLayerStateReturn {
@@ -84,6 +91,10 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
   const activeLayerIdRef = useRef(activeLayerId)
   activeLayerIdRef.current = activeLayerId
   const layerCountRef = useRef(initial ? initial.layers.length : 1)
+
+  const [availableTags, setAvailableTags] = useState<string[]>(() => initial?.availableTags ?? [])
+  const availableTagsRef = useRef(availableTags)
+  availableTagsRef.current = availableTags
 
   const activeLayer = layers.find(l => l.id === activeLayerId) ?? layers.find(isDrawableLayer) ?? layers[0]
 
@@ -499,6 +510,33 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     setLayers(newLayers)
   }, [])
 
+  const addTagToLayerCb = useCallback((layerId: string, tag: string) => {
+    setLayers(prev => prev.map(l => l.id === layerId ? addTagToLayerUtil(l, tag) : l))
+    // Auto-add to availableTags if new
+    setAvailableTags(prev => prev.includes(tag) ? prev : [...prev, tag])
+  }, [])
+
+  const removeTagFromLayerCb = useCallback((layerId: string, tag: string) => {
+    setLayers(prev => prev.map(l => l.id === layerId ? removeTagFromLayerUtil(l, tag) : l))
+  }, [])
+
+  const createTag = useCallback((tag: string) => {
+    setAvailableTags(prev => prev.includes(tag) ? prev : [...prev, tag])
+  }, [])
+
+  const deleteTag = useCallback((tag: string) => {
+    setAvailableTags(prev => prev.filter(t => t !== tag))
+    setLayers(prev => prev.map(l => removeTagFromLayerUtil(l, tag)))
+  }, [])
+
+  const renameTag = useCallback((oldTag: string, newTag: string) => {
+    setAvailableTags(prev => prev.map(t => t === oldTag ? newTag : t))
+    setLayers(prev => prev.map(l => {
+      if (!l.tags?.includes(oldTag)) return l
+      return { ...l, tags: l.tags.map(t => t === oldTag ? newTag : t) }
+    }))
+  }, [])
+
   return {
     layers,
     activeLayerId,
@@ -533,5 +571,12 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     setCurrentFrame,
     reorderFrame,
     setFrameDuration,
+    availableTags,
+    availableTagsRef,
+    addTagToLayer: addTagToLayerCb,
+    removeTagFromLayer: removeTagFromLayerCb,
+    createTag,
+    deleteTag,
+    renameTag,
   }
 }

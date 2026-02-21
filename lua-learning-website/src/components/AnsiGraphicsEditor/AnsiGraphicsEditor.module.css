@@ -872,6 +872,185 @@
   box-shadow: inset 0 0 0 2px var(--theme-accent-primary);
 }
 
+/* ---- Tabs ---- */
+.layersPanelTabs {
+  display: flex;
+  gap: 0;
+}
+
+.layersPanelTab {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+}
+
+.layersPanelTab:hover {
+  color: var(--theme-text-primary);
+}
+
+.layersPanelTabActive {
+  color: var(--theme-text-primary);
+  border-bottom-color: var(--theme-accent-primary);
+}
+
+/* ---- Tags Tab ---- */
+.tagsTabContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.tagNewRow {
+  display: flex;
+  gap: 4px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.tagNewInput {
+  flex: 1;
+  font-size: 12px;
+  background-color: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+  border: 1px solid var(--theme-border);
+  border-radius: 2px;
+  padding: 2px 4px;
+  outline: none;
+}
+
+.tagNewInput:focus {
+  border-color: var(--theme-accent-primary);
+}
+
+.tagHeading {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--theme-text-primary);
+  cursor: pointer;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.tagHeading:hover {
+  background-color: var(--theme-bg-hover);
+}
+
+.tagHeadingName {
+  flex: 1;
+}
+
+.tagLayerCount {
+  font-weight: 400;
+  color: var(--theme-text-secondary);
+  font-size: 11px;
+}
+
+.tagDeleteBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--theme-text-secondary);
+  font-size: 14px;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.tagDeleteBtn:hover {
+  color: var(--theme-text-primary);
+}
+
+.tagLayerRow {
+  padding: 4px 8px 4px 24px;
+  font-size: 12px;
+  color: var(--theme-text-primary);
+  cursor: pointer;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.tagLayerRow:hover {
+  background-color: var(--theme-bg-hover);
+}
+
+.tagLayerRowActive {
+  background-color: var(--theme-accent-primary);
+  color: #ffffff;
+}
+
+.tagsEmpty {
+  padding: 16px 8px;
+  font-size: 12px;
+  color: var(--theme-text-secondary);
+  text-align: center;
+}
+
+/* ---- Context Menu Tags Submenu ---- */
+.layerContextMenuItemSubmenu {
+  position: relative;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  font-size: 12px;
+  background: none;
+  color: var(--theme-text-primary);
+  border: none;
+  border-radius: 3px;
+  text-align: left;
+}
+
+.layerContextMenuItemSubmenu:hover {
+  background-color: var(--theme-bg-hover);
+}
+
+.layerTagsSubmenu {
+  position: absolute;
+  left: 100%;
+  top: 0;
+  background-color: var(--theme-bg-primary);
+  border: 1px solid var(--theme-border);
+  border-radius: 3px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
+  padding: 4px;
+  min-width: 120px;
+  z-index: 1001;
+}
+
+.layerTagsSubmenuFlipped {
+  left: auto;
+  right: 100%;
+}
+
+.layerTagsSubmenuItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 2px;
+  color: var(--theme-text-primary);
+}
+
+.layerTagsSubmenuItem:hover {
+  background-color: var(--theme-bg-hover);
+}
+
+.layerTagsSubmenuEmpty {
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--theme-text-secondary);
+  font-style: italic;
+}
+
 /* ---- Frames Panel ---- */
 
 .canvasAndFrames {
