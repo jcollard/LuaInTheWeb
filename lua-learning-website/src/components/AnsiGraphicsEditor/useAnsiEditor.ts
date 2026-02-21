@@ -1,7 +1,7 @@
 /* eslint-disable max-lines */
 import { useState, useCallback, useRef, useMemo } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
-import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, BorderStyle, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions, DrawableLayer, DrawnLayer, Layer } from './types'
+import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, BorderStyle, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions, DrawableLayer, Layer } from './types'
 import { blendRgb } from './colorUtils'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, DEFAULT_BLEND_RATIO, DEFAULT_FRAME_DURATION_MS, BORDER_PRESETS, isGroupLayer, isDrawableLayer } from './types'
 import type { CellHalf, ColorTransform } from './gridUtils'
@@ -17,6 +17,8 @@ import { createTextToolHandlers, type TextToolHandlers } from './textTool'
 import { TOOL_KEY_MAP, TOOL_SHIFT_KEY_MAP, MODE_KEY_MAP, TOOL_SHORTCUTS, MODE_SHORTCUTS, ACTION_SHORTCUTS } from './keyboardShortcuts'
 import { flipDrawnLayerHorizontal, flipDrawnLayerVertical, flipTextLayerHorizontal, flipTextLayerVertical } from './flipUtils'
 import { buildAllShiftedFrames, captureNonDefaultCells } from './moveUtils'
+import type { LayerSchedule } from './playbackEngine'
+import { initSchedule, computePlaybackTick } from './playbackEngine'
 
 export { computePixelCell, computeLineCells } from './gridUtils'
 
@@ -108,6 +110,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const flipLayerVerticalRef = useRef<() => void>(() => {})
   const [isPlaying, setIsPlaying] = useState(false)
   const playbackTimerRef = useRef<number | null>(null)
+  const playbackScheduleRef = useRef<LayerSchedule>(new Map())
   const isPlayingRef = useRef(false); isPlayingRef.current = isPlaying
   const colorTransformRef = useRef<ColorTransform | undefined>(undefined); colorTransformRef.current = cgaPreview ? cgaQuantize : undefined
   const saveRef = useRef<(() => void) | undefined>(options?.onSave); saveRef.current = options?.onSave
@@ -219,6 +222,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       clearTimeout(playbackTimerRef.current)
       playbackTimerRef.current = null
     }
+    playbackScheduleRef.current.clear()
     setIsPlaying(false)
   }, [])
 
@@ -228,19 +232,15 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       return
     }
     setIsPlaying(true)
+    const schedule = initSchedule(layersRef.current, performance.now())
+    playbackScheduleRef.current = schedule
     function tick(): void {
       const layers = layersRef.current
-      let minDuration = Infinity
-      for (const l of layers) {
-        if (l.type !== 'drawn' || l.frames.length <= 1) continue
-        const nextIndex = (l.currentFrameIndex + 1) % l.frames.length
-        ;(l as DrawnLayer).currentFrameIndex = nextIndex
-        ;(l as DrawnLayer).grid = l.frames[nextIndex]
-        if (l.frameDurationMs < minDuration) minDuration = l.frameDurationMs
+      const { changed, nextDelayMs } = computePlaybackTick(layers, schedule, performance.now())
+      if (changed) {
+        terminalBufferRef.current.flush(compositeGrid(layers), colorTransformRef.current)
       }
-      if (minDuration === Infinity) minDuration = DEFAULT_FRAME_DURATION_MS
-      terminalBufferRef.current.flush(compositeGrid(layers), colorTransformRef.current)
-      playbackTimerRef.current = window.setTimeout(tick, minDuration)
+      playbackTimerRef.current = window.setTimeout(tick, nextDelayMs)
     }
     tick()
   }, [isPlaying, stopPlayback, layersRef])
