@@ -289,6 +289,66 @@ describe('ColorPanel', () => {
     })
   })
 
+  describe('brightness adjustment', () => {
+    it('renders brightness buttons for FG and BG', () => {
+      render(<ColorPanel {...props} />)
+      expect(screen.getByTestId('fg-darken-btn')).toBeTruthy()
+      expect(screen.getByTestId('fg-lighten-btn')).toBeTruthy()
+      expect(screen.getByTestId('bg-darken-btn')).toBeTruthy()
+      expect(screen.getByTestId('bg-lighten-btn')).toBeTruthy()
+    })
+
+    it('lighten FG button calls onSetFg with brighter color', () => {
+      render(<ColorPanel {...props} selectedFg={[128, 0, 0]} />)
+      fireEvent.click(screen.getByTestId('fg-lighten-btn'))
+      expect(props.onSetFg).toHaveBeenCalledTimes(1)
+      const result = (props.onSetFg as ReturnType<typeof vi.fn>).mock.calls[0][0] as RGBColor
+      // Red channel should increase (brightness goes up)
+      expect(result[0]).toBeGreaterThan(128)
+    })
+
+    it('darken FG button calls onSetFg with darker color', () => {
+      render(<ColorPanel {...props} selectedFg={[128, 0, 0]} />)
+      fireEvent.click(screen.getByTestId('fg-darken-btn'))
+      expect(props.onSetFg).toHaveBeenCalledTimes(1)
+      const result = (props.onSetFg as ReturnType<typeof vi.fn>).mock.calls[0][0] as RGBColor
+      // Red channel should decrease (brightness goes down)
+      expect(result[0]).toBeLessThan(128)
+    })
+
+    it('lighten BG button calls onSetBg with brighter color', () => {
+      render(<ColorPanel {...props} selectedBg={[0, 128, 0]} />)
+      fireEvent.click(screen.getByTestId('bg-lighten-btn'))
+      expect(props.onSetBg).toHaveBeenCalledTimes(1)
+      const result = (props.onSetBg as ReturnType<typeof vi.fn>).mock.calls[0][0] as RGBColor
+      expect(result[1]).toBeGreaterThan(128)
+    })
+
+    it('darken BG button calls onSetBg with darker color', () => {
+      render(<ColorPanel {...props} selectedBg={[0, 128, 0]} />)
+      fireEvent.click(screen.getByTestId('bg-darken-btn'))
+      expect(props.onSetBg).toHaveBeenCalledTimes(1)
+      const result = (props.onSetBg as ReturnType<typeof vi.fn>).mock.calls[0][0] as RGBColor
+      expect(result[1]).toBeLessThan(128)
+    })
+
+    it('does not exceed max brightness (white stays white)', () => {
+      render(<ColorPanel {...props} selectedFg={[255, 255, 255]} />)
+      fireEvent.click(screen.getByTestId('fg-lighten-btn'))
+      const result = (props.onSetFg as ReturnType<typeof vi.fn>).mock.calls[0][0] as RGBColor
+      expect(result[0]).toBeLessThanOrEqual(255)
+      expect(result[1]).toBeLessThanOrEqual(255)
+      expect(result[2]).toBeLessThanOrEqual(255)
+    })
+
+    it('does not go below zero brightness (black stays black)', () => {
+      render(<ColorPanel {...props} selectedFg={[0, 0, 0]} />)
+      fireEvent.click(screen.getByTestId('fg-darken-btn'))
+      const result = (props.onSetFg as ReturnType<typeof vi.fn>).mock.calls[0][0] as RGBColor
+      expect(result).toEqual([0, 0, 0])
+    })
+  })
+
   describe('inline color picker', () => {
     it('renders SV gradient and hue bar always visible', () => {
       render(<ColorPanel {...props} />)

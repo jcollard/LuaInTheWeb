@@ -315,6 +315,37 @@
   border-color: var(--theme-text-primary);
 }
 
+.brightnessRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.brightnessLabel {
+  flex: 1;
+  font-size: 10px;
+  color: var(--theme-text-secondary);
+}
+
+.brightnessBtn {
+  width: 22px;
+  height: 18px;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  background-color: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+  border: 1px solid var(--theme-border);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.brightnessBtn:hover {
+  background-color: var(--theme-bg-hover);
+}
+
 /* Color picker popover (above FG/BG buttons) */
 .pickerBackdrop {
   position: fixed;

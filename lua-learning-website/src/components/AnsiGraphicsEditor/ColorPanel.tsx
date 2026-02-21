@@ -64,7 +64,7 @@ function colorAtPosition(canvas: HTMLCanvasElement, hue: number, clientX: number
   return hsvToRgb(hue, s, v)
 }
 
-function drawSvGradient(canvas: HTMLCanvasElement | null, hue: number) {
+function drawSvGradient(canvas: HTMLCanvasElement | null, hue: number, marker?: { s: number; v: number }) {
   if (!canvas) return
   const ctx = canvas.getContext('2d')
   if (!ctx) return
@@ -78,6 +78,20 @@ function drawSvGradient(canvas: HTMLCanvasElement | null, hue: number) {
       ctx.fillRect(x, y, 1, 1)
     }
   }
+  if (marker) {
+    const mx = marker.s * (w - 1)
+    const my = (1 - marker.v) * (h - 1)
+    ctx.beginPath()
+    ctx.arc(mx, my, 5, 0, Math.PI * 2)
+    ctx.strokeStyle = '#000'
+    ctx.lineWidth = 2
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.arc(mx, my, 5, 0, Math.PI * 2)
+    ctx.strokeStyle = '#fff'
+    ctx.lineWidth = 1
+    ctx.stroke()
+  }
 }
 
 function hueFromCanvasY(canvas: HTMLCanvasElement, clientY: number): number {
@@ -86,7 +100,7 @@ function hueFromCanvasY(canvas: HTMLCanvasElement, clientY: number): number {
   return Math.max(0, Math.min(360, (y / (canvas.height - 1)) * 360))
 }
 
-function drawHueBar(canvas: HTMLCanvasElement | null) {
+function drawHueBar(canvas: HTMLCanvasElement | null, markerHue?: number) {
   if (!canvas) return
   const ctx = canvas.getContext('2d')
   if (!ctx) return
@@ -95,6 +109,21 @@ function drawHueBar(canvas: HTMLCanvasElement | null) {
     const hueVal = (y / (h - 1)) * 360
     ctx.fillStyle = rgbStyle(hsvToRgb(hueVal, 1, 1))
     ctx.fillRect(0, y, canvas.width, 1)
+  }
+  if (markerHue !== undefined) {
+    const my = (markerHue / 360) * (h - 1)
+    ctx.beginPath()
+    ctx.moveTo(0, my)
+    ctx.lineTo(canvas.width, my)
+    ctx.strokeStyle = '#000'
+    ctx.lineWidth = 3
+    ctx.stroke()
+    ctx.beginPath()
+    ctx.moveTo(0, my)
+    ctx.lineTo(canvas.width, my)
+    ctx.strokeStyle = '#fff'
+    ctx.lineWidth = 1
+    ctx.stroke()
   }
 }
 
@@ -158,20 +187,32 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplif
 
   const modalApply = pickerTarget === 'fg' ? onSetFg : onSetBg
 
+  const adjustBrightness = useCallback((target: 'fg' | 'bg', delta: number) => {
+    const color = target === 'fg' ? selectedFg : selectedBg
+    const setter = target === 'fg' ? onSetFg : onSetBg
+    const [h, s, v] = rgbToHsv(color[0], color[1], color[2])
+    setter(hsvToRgb(h, s, Math.max(0, Math.min(1, v + delta))))
+  }, [selectedFg, selectedBg, onSetFg, onSetBg])
+
   // --- Inline picker drawing ---
-  useEffect(() => { drawSvGradient(svCanvasRef.current, hue) }, [hue])
-  useEffect(() => { drawHueBar(hueCanvasRef.current) }, [])
+  useEffect(() => {
+    const [, s, v] = rgbToHsv(selectedFg[0], selectedFg[1], selectedFg[2])
+    drawSvGradient(svCanvasRef.current, hue, { s, v })
+  }, [hue, selectedFg])
+  useEffect(() => { drawHueBar(hueCanvasRef.current, hue) }, [hue])
 
   // --- Modal picker drawing ---
   useEffect(() => {
     if (pickerTarget === null) return
-    drawSvGradient(modalSvRef.current, modalHue)
-  }, [modalHue, pickerTarget])
+    const color = pickerTarget === 'fg' ? selectedFg : selectedBg
+    const [, s, v] = rgbToHsv(color[0], color[1], color[2])
+    drawSvGradient(modalSvRef.current, modalHue, { s, v })
+  }, [modalHue, pickerTarget, selectedFg, selectedBg])
 
   useEffect(() => {
     if (pickerTarget === null) return
-    drawHueBar(modalHueRef.current)
-  }, [pickerTarget])
+    drawHueBar(modalHueRef.current, modalHue)
+  }, [pickerTarget, modalHue])
 
   // --- Inline SV: mousedown + drag ---
   const handleSvMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -420,6 +461,11 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplif
         >
           FG
         </button>
+        <div className={styles.brightnessRow} data-testid="fg-brightness-row">
+          <span className={styles.brightnessLabel}>Brightness</span>
+          <button type="button" className={styles.brightnessBtn} onClick={() => adjustBrightness('fg', -0.01)} data-testid="fg-darken-btn" title="Darken foreground">−</button>
+          <button type="button" className={styles.brightnessBtn} onClick={() => adjustBrightness('fg', 0.01)} data-testid="fg-lighten-btn" title="Lighten foreground">+</button>
+        </div>
         <button
           type="button"
           className={styles.fgBgButton}
@@ -430,6 +476,11 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplif
         >
           BG
         </button>
+        <div className={styles.brightnessRow} data-testid="bg-brightness-row">
+          <span className={styles.brightnessLabel}>Brightness</span>
+          <button type="button" className={styles.brightnessBtn} onClick={() => adjustBrightness('bg', -0.01)} data-testid="bg-darken-btn" title="Darken background">−</button>
+          <button type="button" className={styles.brightnessBtn} onClick={() => adjustBrightness('bg', 0.01)} data-testid="bg-lighten-btn" title="Lighten background">+</button>
+        </div>
       </div>
     </div>
   )
