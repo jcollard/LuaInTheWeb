@@ -17,6 +17,7 @@ export interface LayersPanelProps {
   onMergeDown: (id: string) => void
   onWrapInGroup: (layerId: string) => void
   onRemoveFromGroup: (layerId: string) => void
+  onDuplicate: (id: string) => void
   onToggleGroupCollapsed: (groupId: string) => void
 }
 
@@ -32,6 +33,7 @@ export function LayersPanel({
   onMergeDown,
   onWrapInGroup,
   onRemoveFromGroup,
+  onDuplicate,
   onToggleGroupCollapsed,
 }: LayersPanelProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -293,6 +295,13 @@ export function LayersPanel({
               onClick={() => { onWrapInGroup(contextMenu.layerId); setContextMenu(null) }}
             >
               Group with new folder
+            </button>
+            <button
+              className={styles.layerContextMenuItem}
+              data-testid="context-duplicate"
+              onClick={() => { onDuplicate(contextMenu.layerId); setContextMenu(null) }}
+            >
+              Duplicate
             </button>
             {contextHasParentId && (
               <button

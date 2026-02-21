@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef } from 'react'
 import type { AnsiCell, AnsiGrid, DrawableLayer, DrawnLayer, Layer, LayerState, RGBColor, Rect, TextAlign, TextLayer } from './types'
 import { MIN_FRAME_DURATION_MS, MAX_FRAME_DURATION_MS, isGroupLayer, isDrawableLayer, getParentId } from './types'
-import { createLayer, createGroup, cloneLayerState, syncLayerIds, mergeLayerDown, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, assertContiguousBlocks, findSafeInsertPos } from './layerUtils'
+import { createLayer, createGroup, cloneLayerState, syncLayerIds, mergeLayerDown, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock } from './layerUtils'
 import { createEmptyGrid, cloneGrid } from './gridUtils'
 import { replaceColorsInGrid } from './colorUtils'
 import { renderTextLayerGrid } from './textLayerGrid'
@@ -49,6 +49,7 @@ export interface UseLayerStateReturn {
   wrapInGroup: (layerId: string) => void
   removeFromGroup: (layerId: string) => void
   toggleGroupCollapsed: (groupId: string) => void
+  duplicateLayer: (id: string) => void
   applyMoveGrids: (layerGrids: Map<string, AnsiGrid>) => void
   applyMoveGridsImmediate: (layerGrids: Map<string, AnsiGrid>) => void
   addFrame: () => void
@@ -335,6 +336,27 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     ))
   }, [])
 
+  const duplicateLayer = useCallback((id: string) => {
+    setLayers(prev => {
+      const target = prev.find(l => l.id === id)
+      if (!target) return prev
+      const dupes = duplicateLayerBlock(prev, id)
+      if (dupes.length === 0) return prev
+
+      let insertIdx: number
+      if (isGroupLayer(target)) {
+        const idx = prev.findIndex(l => l.id === id)
+        insertIdx = findGroupBlockEnd(prev, id, idx)
+      } else {
+        insertIdx = prev.findIndex(l => l.id === id) + 1
+      }
+
+      const next = [...prev.slice(0, insertIdx), ...dupes, ...prev.slice(insertIdx)]
+      if (import.meta.env.DEV) assertContiguousBlocks(next)
+      return next
+    })
+  }, [])
+
   const applyMoveGridsImmediate = useCallback((layerGrids: Map<string, AnsiGrid>) => {
     layersRef.current = layersRef.current.map(l => {
       if (l.type !== 'drawn') return l
@@ -492,6 +514,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     wrapInGroup,
     removeFromGroup,
     toggleGroupCollapsed,
+    duplicateLayer,
     applyMoveGrids,
     applyMoveGridsImmediate,
     addFrame,

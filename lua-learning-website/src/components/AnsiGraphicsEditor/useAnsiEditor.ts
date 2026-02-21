@@ -82,6 +82,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     wrapInGroup: rawWrapInGroup,
     removeFromGroup: rawRemoveFromGroup,
     toggleGroupCollapsed: rawToggleGroupCollapsed,
+    duplicateLayer: rawDuplicateLayer,
     applyMoveGrids: rawApplyMoveGrids,
     applyMoveGridsImmediate: rawApplyMoveGridsImmediate,
     addFrame: rawAddFrame,
@@ -219,6 +220,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const mergeDownWithUndo = useCallback((id: string) => withLayerUndo(() => rawMergeDown(id)), [withLayerUndo, rawMergeDown])
   const wrapInGroupWithUndo = useCallback((id: string) => withLayerUndo(() => rawWrapInGroup(id), false), [withLayerUndo, rawWrapInGroup])
   const removeFromGroupWithUndo = useCallback((id: string) => withLayerUndo(() => rawRemoveFromGroup(id), false), [withLayerUndo, rawRemoveFromGroup])
+  const duplicateLayerWithUndo = useCallback((id: string) => withLayerUndo(() => rawDuplicateLayer(id)), [withLayerUndo, rawDuplicateLayer])
   const toggleGroupCollapsedNoUndo = useCallback((id: string) => rawToggleGroupCollapsed(id), [rawToggleGroupCollapsed])
 
   // Frame operations with undo
@@ -743,7 +745,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     reorderLayer: reorderLayerWithUndo,
     toggleVisibility: toggleVisibilityWithUndo, mergeDown: mergeDownWithUndo,
     wrapInGroup: wrapInGroupWithUndo, removeFromGroup: removeFromGroupWithUndo,
-    toggleGroupCollapsed: toggleGroupCollapsedNoUndo,
+    duplicateLayer: duplicateLayerWithUndo, toggleGroupCollapsed: toggleGroupCollapsedNoUndo,
     importPngAsLayer, simplifyColors, setTextAlign, flipSelectionHorizontal, flipSelectionVertical,
     activeLayerIsGroup, isMoveDragging,
     cgaPreview, setCgaPreview,

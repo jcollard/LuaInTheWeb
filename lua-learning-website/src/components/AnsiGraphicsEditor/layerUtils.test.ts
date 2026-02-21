@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import { describe, it, expect } from 'vitest'
-import { isDefaultCell, createLayer, createGroup, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, syncLayerIds, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, buildDisplayOrder, assertContiguousBlocks, findSafeInsertPos } from './layerUtils'
+import { isDefaultCell, createLayer, createGroup, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, syncLayerIds, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, buildDisplayOrder, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock } from './layerUtils'
 import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer } from './types'
 import type { AnsiCell, DrawableLayer, DrawnLayer, RGBColor, Layer, LayerState, TextLayer, GroupLayer } from './types'
 
@@ -1256,5 +1256,153 @@ describe('findSafeInsertPos', () => {
     const g = createGroup('G', 'g1')
     const l1 = { ...createLayer('L1', 'l1'), parentId: 'g1' }
     expect(findSafeInsertPos([g, l1], 2)).toBe(2)
+  })
+})
+
+describe('duplicateLayerBlock', () => {
+  it('returns empty array for non-existent layer', () => {
+    const layers = [createLayer('L1', 'layer-100')]
+    expect(duplicateLayerBlock(layers, 'no-such-id')).toEqual([])
+  })
+
+  it('duplicates a single drawn layer with fresh id and (Copy) name', () => {
+    const layer = createLayer('Background', 'layer-200')
+    layer.grid[0][0] = { char: '#', fg: [255, 0, 0], bg: [0, 0, 255] }
+    const dupes = duplicateLayerBlock([layer], 'layer-200')
+    expect(dupes).toHaveLength(1)
+    expect(dupes[0].id).not.toBe('layer-200')
+    expect(dupes[0].name).toBe('Background (Copy)')
+    expect(dupes[0].type).toBe('drawn')
+    // Grid data is deep-cloned
+    const dupe = dupes[0] as DrawnLayer
+    expect(dupe.grid[0][0].char).toBe('#')
+    expect(dupe.grid[0][0].fg).toEqual([255, 0, 0])
+    // Ensure deep copy (not shared reference)
+    dupe.grid[0][0].fg[0] = 0
+    expect(layer.grid[0][0].fg[0]).toBe(255)
+  })
+
+  it('duplicates a text layer with fresh id and (Copy) name', () => {
+    const base = createLayer('Text', 'layer-300')
+    const textLayer: TextLayer = {
+      ...base,
+      type: 'text',
+      text: 'hello',
+      bounds: { r0: 0, c0: 0, r1: 5, c1: 10 },
+      textFg: [255, 255, 255],
+    }
+    const dupes = duplicateLayerBlock([textLayer], 'layer-300')
+    expect(dupes).toHaveLength(1)
+    expect(dupes[0].id).not.toBe('layer-300')
+    expect(dupes[0].name).toBe('Text (Copy)')
+    expect(dupes[0].type).toBe('text')
+    const dupe = dupes[0] as TextLayer
+    expect(dupe.text).toBe('hello')
+    expect(dupe.bounds).toEqual({ r0: 0, c0: 0, r1: 5, c1: 10 })
+  })
+
+  it('duplicates a group with all descendants', () => {
+    const group = createGroup('Folder', 'group-100')
+    const child1: Layer = { ...createLayer('C1', 'layer-400'), parentId: 'group-100' }
+    const child2: Layer = { ...createLayer('C2', 'layer-401'), parentId: 'group-100' }
+    const layers: Layer[] = [group, child1, child2]
+
+    const dupes = duplicateLayerBlock(layers, 'group-100')
+    expect(dupes).toHaveLength(3)
+
+    // Root group gets (Copy) name
+    const dupGroup = dupes[0]
+    expect(isGroupLayer(dupGroup)).toBe(true)
+    expect(dupGroup.name).toBe('Folder (Copy)')
+    expect(dupGroup.id).not.toBe('group-100')
+
+    // Children keep original names
+    expect(dupes[1].name).toBe('C1')
+    expect(dupes[2].name).toBe('C2')
+
+    // Children point to the new group
+    expect((dupes[1] as DrawnLayer).parentId).toBe(dupGroup.id)
+    expect((dupes[2] as DrawnLayer).parentId).toBe(dupGroup.id)
+
+    // All IDs are fresh
+    const originalIds = new Set(['group-100', 'layer-400', 'layer-401'])
+    for (const d of dupes) {
+      expect(originalIds.has(d.id)).toBe(false)
+    }
+  })
+
+  it('duplicates nested sub-groups with remapped parentIds', () => {
+    const g1 = createGroup('G1', 'group-200')
+    const g2: GroupLayer = { ...createGroup('G2', 'group-201'), parentId: 'group-200' }
+    const child: Layer = { ...createLayer('C', 'layer-500'), parentId: 'group-201' }
+    const layers: Layer[] = [g1, g2, child]
+
+    const dupes = duplicateLayerBlock(layers, 'group-200')
+    expect(dupes).toHaveLength(3)
+
+    const dupG1 = dupes[0]
+    const dupG2 = dupes[1]
+    const dupChild = dupes[2]
+
+    // G1 root gets (Copy)
+    expect(dupG1.name).toBe('G1 (Copy)')
+    // G2 keeps original name
+    expect(dupG2.name).toBe('G2')
+    // Child keeps original name
+    expect(dupChild.name).toBe('C')
+
+    // Sub-group's parentId remapped to new G1
+    expect((dupG2 as GroupLayer).parentId).toBe(dupG1.id)
+    // Child's parentId remapped to new G2
+    expect((dupChild as DrawnLayer).parentId).toBe(dupG2.id)
+  })
+
+  it('preserves root parentId for layer inside a group', () => {
+    const group = createGroup('G', 'group-300')
+    const child: Layer = { ...createLayer('C', 'layer-600'), parentId: 'group-300' }
+    const layers: Layer[] = [group, child]
+
+    // Duplicate just the child (not the group)
+    const dupes = duplicateLayerBlock(layers, 'layer-600')
+    expect(dupes).toHaveLength(1)
+    expect(dupes[0].name).toBe('C (Copy)')
+    // parentId is preserved (still points to original group)
+    expect((dupes[0] as DrawnLayer).parentId).toBe('group-300')
+  })
+
+  it('duplicates animation frames, currentFrameIndex, and frameDurationMs', () => {
+    const layer = createLayer('Anim', 'layer-800') as DrawnLayer
+    // Add a second frame with distinct content
+    const frame2 = layer.grid.map(row => row.map(cell => ({ ...cell })))
+    frame2[0][0] = { char: 'X', fg: [255, 0, 0], bg: [0, 255, 0] }
+    layer.frames = [layer.grid, frame2]
+    layer.currentFrameIndex = 1
+    layer.frameDurationMs = 250
+
+    const dupes = duplicateLayerBlock([layer], 'layer-800')
+    expect(dupes).toHaveLength(1)
+    const dupe = dupes[0] as DrawnLayer
+    expect(dupe.frames).toHaveLength(2)
+    expect(dupe.currentFrameIndex).toBe(1)
+    expect(dupe.frameDurationMs).toBe(250)
+    // grid points to the correct cloned frame
+    expect(dupe.grid).toBe(dupe.frames[1])
+    // Frame content is deep-cloned
+    expect(dupe.frames[1][0][0].char).toBe('X')
+    dupe.frames[1][0][0].char = 'Y'
+    expect(frame2[0][0].char).toBe('X') // original untouched
+  })
+
+  it('produces layers that pass assertContiguousBlocks when inserted', () => {
+    const group = createGroup('G', 'group-400')
+    const c1: Layer = { ...createLayer('C1', 'layer-700'), parentId: 'group-400' }
+    const c2: Layer = { ...createLayer('C2', 'layer-701'), parentId: 'group-400' }
+    const layers: Layer[] = [group, c1, c2]
+
+    const dupes = duplicateLayerBlock(layers, 'group-400')
+    // Insert after the original group block
+    const insertIdx = findGroupBlockEnd(layers, 'group-400', 0)
+    const combined = [...layers.slice(0, insertIdx), ...dupes, ...layers.slice(insertIdx)]
+    expect(() => assertContiguousBlocks(combined)).not.toThrow()
   })
 })

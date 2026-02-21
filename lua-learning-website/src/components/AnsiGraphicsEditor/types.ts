@@ -191,6 +191,7 @@ export interface UseAnsiEditorReturn {
   mergeDown: (id: string) => void
   wrapInGroup: (layerId: string) => void
   removeFromGroup: (layerId: string) => void
+  duplicateLayer: (id: string) => void
   toggleGroupCollapsed: (groupId: string) => void
   importPngAsLayer: (file: File) => Promise<void>
   simplifyColors: (mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => void

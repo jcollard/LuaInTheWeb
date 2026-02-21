@@ -24,6 +24,7 @@ describe('LayersPanel', () => {
     onMergeDown?: (id: string) => void
     onWrapInGroup?: (layerId: string) => void
     onRemoveFromGroup?: (layerId: string) => void
+    onDuplicate?: (id: string) => void
     onToggleGroupCollapsed?: (groupId: string) => void
   }) {
     const layers = overrides?.layers ?? makeLayers('Background', 'Foreground')
@@ -40,6 +41,7 @@ describe('LayersPanel', () => {
         onMergeDown={overrides?.onMergeDown ?? noop}
         onWrapInGroup={overrides?.onWrapInGroup ?? noop}
         onRemoveFromGroup={overrides?.onRemoveFromGroup ?? noop}
+        onDuplicate={overrides?.onDuplicate ?? noop}
         onToggleGroupCollapsed={overrides?.onToggleGroupCollapsed ?? noop}
       />
     )
@@ -614,6 +616,35 @@ describe('LayersPanel', () => {
       expect(screen.getByTestId('layer-row-g-inner')).toBeTruthy()
       expect(screen.queryByTestId('layer-row-l1')).toBeNull()
       expect(screen.getByTestId('layer-row-l2')).toBeTruthy()
+    })
+  })
+
+  describe('context menu duplicate', () => {
+    it('shows Duplicate button in context menu for a drawable layer', () => {
+      renderPanel()
+      const row = screen.getByTestId('layer-row-layer-0')
+      fireEvent.contextMenu(row)
+      expect(screen.getByTestId('context-duplicate')).toBeTruthy()
+      expect(screen.getByTestId('context-duplicate').textContent).toBe('Duplicate')
+    })
+
+    it('shows Duplicate button in context menu for a group layer', () => {
+      const group = createGroup('Folder', 'group-1')
+      const child = { ...createLayer('Child', 'layer-10'), parentId: 'group-1' }
+      renderPanel({ layers: [group, child], activeLayerId: 'layer-10' })
+      const row = screen.getByTestId('layer-row-group-1')
+      fireEvent.contextMenu(row)
+      expect(screen.getByTestId('context-duplicate')).toBeTruthy()
+    })
+
+    it('calls onDuplicate with the layer id and closes the menu', () => {
+      const onDuplicate = vi.fn()
+      renderPanel({ onDuplicate })
+      const row = screen.getByTestId('layer-row-layer-0')
+      fireEvent.contextMenu(row)
+      fireEvent.click(screen.getByTestId('context-duplicate'))
+      expect(onDuplicate).toHaveBeenCalledWith('layer-0')
+      expect(screen.queryByTestId('layer-context-menu')).toBeNull()
     })
   })
 })

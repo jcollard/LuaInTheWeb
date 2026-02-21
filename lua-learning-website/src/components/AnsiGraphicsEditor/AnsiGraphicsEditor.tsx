@@ -117,6 +117,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     mergeDown,
     wrapInGroup,
     removeFromGroup,
+    duplicateLayer,
     toggleGroupCollapsed,
     importPngAsLayer,
     simplifyColors,
@@ -316,6 +317,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
           onMergeDown={mergeDown}
           onWrapInGroup={wrapInGroup}
           onRemoveFromGroup={removeFromGroup}
+          onDuplicate={duplicateLayer}
           onToggleGroupCollapsed={toggleGroupCollapsed}
         />
       </div>

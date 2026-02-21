@@ -372,6 +372,42 @@ export function extractGroupBlock(layers: Layer[], groupId: string): { block: La
 }
 
 /**
+ * Duplicate a layer (or group + all descendants) with fresh IDs.
+ * Only the root element gets " (Copy)" appended to its name;
+ * children of a duplicated group keep original names.
+ * Returns the cloned layers with remapped parentIds.
+ */
+export function duplicateLayerBlock(layers: Layer[], layerId: string): Layer[] {
+  const target = layers.find(l => l.id === layerId)
+  if (!target) return []
+
+  if (!isGroupLayer(target)) {
+    const cloned = cloneLayer(target)
+    const newId = `layer-${nextLayerId++}`
+    return [{ ...cloned, id: newId, name: `${target.name} (Copy)` }]
+  }
+
+  const { block } = extractGroupBlock(layers, layerId)
+  const idMap = new Map<string, string>()
+
+  for (const layer of block) {
+    const newId = isGroupLayer(layer)
+      ? `group-${nextGroupId++}`
+      : `layer-${nextLayerId++}`
+    idMap.set(layer.id, newId)
+  }
+
+  return block.map(layer => {
+    const cloned = cloneLayer(layer)
+    const newId = idMap.get(layer.id)!
+    const parentId = getParentId(layer)
+    const newParentId = parentId ? (idMap.get(parentId) ?? parentId) : parentId
+    const name = layer.id === layerId ? `${layer.name} (Copy)` : layer.name
+    return { ...cloned, id: newId, name, parentId: newParentId } as Layer
+  })
+}
+
+/**
  * If pos falls inside any group's contiguous block, snap it to the end
  * of that block. Prevents root-level insertions from splitting group blocks.
  */
