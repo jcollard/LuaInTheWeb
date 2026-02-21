@@ -8,7 +8,12 @@ export interface Toast {
 export const TOAST_DURATION_MS = 1500
 export const MAX_TOASTS = 3
 
-export function useToast() {
+export interface UseToastReturn {
+  toasts: Toast[]
+  showToast: (message: string) => void
+}
+
+export function useToast(): UseToastReturn {
   const [toasts, setToasts] = useState<Toast[]>([])
   const nextId = useRef(0)
 
