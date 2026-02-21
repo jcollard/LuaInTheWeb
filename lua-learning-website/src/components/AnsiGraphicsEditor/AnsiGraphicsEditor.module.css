@@ -4,6 +4,7 @@
   height: 100%;
   background-color: var(--theme-bg-primary);
   color: var(--theme-text-primary);
+  user-select: none;
 }
 
 .toolbar {
@@ -751,6 +752,7 @@
   border-radius: 2px;
   padding: 0 2px;
   outline: none;
+  user-select: text;
 }
 
 .layerDragHandle {
@@ -922,6 +924,7 @@
   border-radius: 2px;
   padding: 2px 4px;
   outline: none;
+  user-select: text;
 }
 
 .tagNewInput:focus {

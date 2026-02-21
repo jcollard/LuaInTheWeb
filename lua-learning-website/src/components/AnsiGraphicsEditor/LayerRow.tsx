@@ -58,6 +58,7 @@ export function LayerRow({
       {dropZone}
       <div
         data-testid={`layer-row-${layer.id}`}
+        data-layer-id={layer.id}
         className={rowClassName}
         style={depthStyle}
         onClick={onSetActive}

@@ -436,6 +436,50 @@ describe('LayersPanel', () => {
       renderPanel()
       expect(screen.queryByTestId('layer-context-menu')).toBeNull()
     })
+
+    it('right-clicking backdrop over another layer reopens context menu for that layer', () => {
+      renderPanel()
+      // Open context menu on layer-1
+      fireEvent.contextMenu(screen.getByTestId('layer-row-layer-1'))
+      expect(screen.getByTestId('layer-context-menu')).toBeTruthy()
+
+      // Simulate right-click on backdrop with elementFromPoint returning layer-0 row
+      const targetRow = screen.getByTestId('layer-row-layer-0')
+      const originalElementFromPoint = document.elementFromPoint
+      document.elementFromPoint = () => targetRow
+      try {
+        fireEvent.contextMenu(screen.getByTestId('layer-context-backdrop'), {
+          clientX: 100,
+          clientY: 200,
+        })
+      } finally {
+        document.elementFromPoint = originalElementFromPoint
+      }
+
+      // Context menu should still be open, now for layer-0
+      expect(screen.getByTestId('layer-context-menu')).toBeTruthy()
+      // Merge Down should be disabled for the bottom layer
+      expect(screen.getByTestId('context-merge-down')).toBeDisabled()
+    })
+
+    it('right-clicking backdrop over non-layer area closes context menu', () => {
+      renderPanel()
+      fireEvent.contextMenu(screen.getByTestId('layer-row-layer-1'))
+      expect(screen.getByTestId('layer-context-menu')).toBeTruthy()
+
+      const originalElementFromPoint = document.elementFromPoint
+      document.elementFromPoint = () => document.body
+      try {
+        fireEvent.contextMenu(screen.getByTestId('layer-context-backdrop'), {
+          clientX: 100,
+          clientY: 200,
+        })
+      } finally {
+        document.elementFromPoint = originalElementFromPoint
+      }
+
+      expect(screen.queryByTestId('layer-context-menu')).toBeNull()
+    })
   })
 
   function makeGroupedLayers(): Layer[] {

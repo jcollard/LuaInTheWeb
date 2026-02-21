@@ -253,7 +253,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
   }, [layers, filePath])
 
   return (
-    <div className={styles.editor} data-testid="ansi-graphics-editor">
+    <div className={styles.editor} data-testid="ansi-graphics-editor" onContextMenu={e => e.preventDefault()}>
       <AnsiEditorToolbar
         brush={brush}
         onSetChar={setBrushChar}

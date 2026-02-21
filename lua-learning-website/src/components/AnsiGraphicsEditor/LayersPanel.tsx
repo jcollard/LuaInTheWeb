@@ -328,6 +328,22 @@ export function LayersPanel({
             className={styles.layerContextBackdrop}
             data-testid="layer-context-backdrop"
             onClick={closeContextMenu}
+            onContextMenu={e => {
+              e.preventDefault()
+              e.stopPropagation()
+              const backdrop = e.currentTarget as HTMLElement
+              backdrop.style.pointerEvents = 'none'
+              const el = document.elementFromPoint(e.clientX, e.clientY)
+              backdrop.style.pointerEvents = ''
+              const row = el?.closest<HTMLElement>('[data-layer-id]')
+              if (row?.dataset.layerId) {
+                setTagsSubmenuOpen(false)
+                setTagsSubmenuFlipped(false)
+                setContextMenu({ layerId: row.dataset.layerId, x: e.clientX, y: e.clientY })
+              } else {
+                closeContextMenu()
+              }
+            }}
           />
           <div
             className={styles.layerContextMenu}
