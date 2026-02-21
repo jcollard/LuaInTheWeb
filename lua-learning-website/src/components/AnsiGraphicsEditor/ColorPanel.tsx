@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import { Fragment, useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import type { RGBColor, PaletteEntry, PaletteType, StaticPaletteType, Layer } from './types'
 import { PALETTES, isDrawableLayer } from './types'
 import { rgbEqual } from './layerUtils'
@@ -64,6 +64,21 @@ function colorAtPosition(canvas: HTMLCanvasElement, hue: number, clientX: number
   return hsvToRgb(hue, s, v)
 }
 
+function strokeWithContrast(
+  ctx: CanvasRenderingContext2D,
+  drawPath: () => void,
+  outerWidth: number,
+): void {
+  drawPath()
+  ctx.strokeStyle = '#000'
+  ctx.lineWidth = outerWidth
+  ctx.stroke()
+  drawPath()
+  ctx.strokeStyle = '#fff'
+  ctx.lineWidth = 1
+  ctx.stroke()
+}
+
 function drawSvGradient(canvas: HTMLCanvasElement | null, hue: number, marker?: { s: number; v: number }) {
   if (!canvas) return
   const ctx = canvas.getContext('2d')
@@ -81,16 +96,7 @@ function drawSvGradient(canvas: HTMLCanvasElement | null, hue: number, marker?: 
   if (marker) {
     const mx = marker.s * (w - 1)
     const my = (1 - marker.v) * (h - 1)
-    ctx.beginPath()
-    ctx.arc(mx, my, 5, 0, Math.PI * 2)
-    ctx.strokeStyle = '#000'
-    ctx.lineWidth = 2
-    ctx.stroke()
-    ctx.beginPath()
-    ctx.arc(mx, my, 5, 0, Math.PI * 2)
-    ctx.strokeStyle = '#fff'
-    ctx.lineWidth = 1
-    ctx.stroke()
+    strokeWithContrast(ctx, () => { ctx.beginPath(); ctx.arc(mx, my, 5, 0, Math.PI * 2) }, 2)
   }
 }
 
@@ -112,18 +118,7 @@ function drawHueBar(canvas: HTMLCanvasElement | null, markerHue?: number) {
   }
   if (markerHue !== undefined) {
     const my = (markerHue / 360) * (h - 1)
-    ctx.beginPath()
-    ctx.moveTo(0, my)
-    ctx.lineTo(canvas.width, my)
-    ctx.strokeStyle = '#000'
-    ctx.lineWidth = 3
-    ctx.stroke()
-    ctx.beginPath()
-    ctx.moveTo(0, my)
-    ctx.lineTo(canvas.width, my)
-    ctx.strokeStyle = '#fff'
-    ctx.lineWidth = 1
-    ctx.stroke()
+    strokeWithContrast(ctx, () => { ctx.beginPath(); ctx.moveTo(0, my); ctx.lineTo(canvas.width, my) }, 3)
   }
 }
 
@@ -451,36 +446,28 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplif
         </>
       )}
       <div className={styles.fgBgButtonSection} ref={fgBgSectionRef}>
-        <button
-          type="button"
-          className={styles.fgBgButton}
-          style={{ backgroundColor: rgbStyle(selectedFg) }}
-          onClick={() => openPicker('fg')}
-          data-testid="fg-color-btn"
-          title="Foreground color"
-        >
-          FG
-        </button>
-        <div className={styles.brightnessRow} data-testid="fg-brightness-row">
-          <span className={styles.brightnessLabel}>Brightness</span>
-          <button type="button" className={styles.brightnessBtn} onClick={() => adjustBrightness('fg', -0.01)} data-testid="fg-darken-btn" title="Darken foreground">−</button>
-          <button type="button" className={styles.brightnessBtn} onClick={() => adjustBrightness('fg', 0.01)} data-testid="fg-lighten-btn" title="Lighten foreground">+</button>
-        </div>
-        <button
-          type="button"
-          className={styles.fgBgButton}
-          style={{ backgroundColor: rgbStyle(selectedBg) }}
-          onClick={() => openPicker('bg')}
-          data-testid="bg-color-btn"
-          title="Background color"
-        >
-          BG
-        </button>
-        <div className={styles.brightnessRow} data-testid="bg-brightness-row">
-          <span className={styles.brightnessLabel}>Brightness</span>
-          <button type="button" className={styles.brightnessBtn} onClick={() => adjustBrightness('bg', -0.01)} data-testid="bg-darken-btn" title="Darken background">−</button>
-          <button type="button" className={styles.brightnessBtn} onClick={() => adjustBrightness('bg', 0.01)} data-testid="bg-lighten-btn" title="Lighten background">+</button>
-        </div>
+        {([
+          { target: 'fg' as const, label: 'FG', fullLabel: 'Foreground', color: selectedFg },
+          { target: 'bg' as const, label: 'BG', fullLabel: 'Background', color: selectedBg },
+        ]).map(({ target, label, fullLabel, color }) => (
+          <Fragment key={target}>
+            <button
+              type="button"
+              className={styles.fgBgButton}
+              style={{ backgroundColor: rgbStyle(color) }}
+              onClick={() => openPicker(target)}
+              data-testid={`${target}-color-btn`}
+              title={`${fullLabel} color`}
+            >
+              {label}
+            </button>
+            <div className={styles.brightnessRow} data-testid={`${target}-brightness-row`}>
+              <span className={styles.brightnessLabel}>Brightness</span>
+              <button type="button" className={styles.brightnessBtn} onClick={() => adjustBrightness(target, -0.01)} data-testid={`${target}-darken-btn`} title={`Darken ${fullLabel.toLowerCase()}`}>−</button>
+              <button type="button" className={styles.brightnessBtn} onClick={() => adjustBrightness(target, 0.01)} data-testid={`${target}-lighten-btn`} title={`Lighten ${fullLabel.toLowerCase()}`}>+</button>
+            </div>
+          </Fragment>
+        ))}
       </div>
     </div>
   )
