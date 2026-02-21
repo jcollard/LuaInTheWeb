@@ -38,8 +38,6 @@ export function computePlaybackTick(
 ): PlaybackTickResult {
   let changed = false
   let soonest = Infinity
-
-  // Track which layer IDs are valid animated layers
   const animatedIds = new Set<string>()
 
   for (const layer of layers) {
@@ -52,12 +50,11 @@ export function computePlaybackTick(
     if (advanceAt === undefined) {
       advanceAt = now + layer.frameDurationMs
       schedule.set(layer.id, advanceAt)
-      if (advanceAt < soonest) soonest = advanceAt
+      soonest = Math.min(soonest, advanceAt)
       continue
     }
 
     if (now >= advanceAt) {
-      // Advance frame
       const nextIndex = (layer.currentFrameIndex + 1) % layer.frames.length
       layer.currentFrameIndex = nextIndex
       layer.grid = layer.frames[nextIndex]
@@ -68,13 +65,12 @@ export function computePlaybackTick(
         ? now + layer.frameDurationMs
         : advanceAt + layer.frameDurationMs
       schedule.set(layer.id, nextAdvance)
-      if (nextAdvance < soonest) soonest = nextAdvance
+      soonest = Math.min(soonest, nextAdvance)
     } else {
-      if (advanceAt < soonest) soonest = advanceAt
+      soonest = Math.min(soonest, advanceAt)
     }
   }
 
-  // Clean up schedule entries for removed or non-animated layers
   for (const id of schedule.keys()) {
     if (!animatedIds.has(id)) {
       schedule.delete(id)

@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { initSchedule, computePlaybackTick } from './playbackEngine'
-import type { LayerSchedule } from './playbackEngine'
+import { initSchedule, computePlaybackTick, type LayerSchedule } from './playbackEngine'
 import type { Layer, DrawnLayer } from './types'
 import { DEFAULT_FRAME_DURATION_MS } from './types'
 import { createEmptyGrid } from './gridUtils'
