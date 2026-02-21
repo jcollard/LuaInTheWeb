@@ -742,16 +742,22 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     selHandlersRef.current?.flipVertical()
   }, [])
 
-  const flipLayerHorizontal = useCallback(() => {
+  /** Resolve the set of layer IDs affected by a flip (active layer, or all descendants if group). */
+  const getFlipTargetIds = useCallback((): Set<string> | null => {
     const activeId = activeLayerIdRef.current
     const activeLayer = layersRef.current.find(l => l.id === activeId)
-    if (!activeLayer) return
-    const targetIds = new Set(
+    if (!activeLayer) return null
+    const ids = new Set(
       isGroupLayer(activeLayer)
         ? getGroupDescendantLayers(activeId, layersRef.current).map(l => l.id)
         : [activeId],
     )
-    if (targetIds.size === 0) return
+    return ids.size === 0 ? null : ids
+  }, [layersRef, activeLayerIdRef])
+
+  const flipLayerHorizontal = useCallback(() => {
+    const targetIds = getFlipTargetIds()
+    if (!targetIds) return
     const col = flipOriginRef.current.col
     withLayerUndo(() => rawApplyLayerTransform((l: Layer) => {
       if (!targetIds.has(l.id)) return l
@@ -759,18 +765,11 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       if (l.type === 'text') return flipTextLayerHorizontal(l, col)
       return l
     }))
-  }, [withLayerUndo, rawApplyLayerTransform, layersRef, activeLayerIdRef])
+  }, [getFlipTargetIds, withLayerUndo, rawApplyLayerTransform])
 
   const flipLayerVertical = useCallback(() => {
-    const activeId = activeLayerIdRef.current
-    const activeLayer = layersRef.current.find(l => l.id === activeId)
-    if (!activeLayer) return
-    const targetIds = new Set(
-      isGroupLayer(activeLayer)
-        ? getGroupDescendantLayers(activeId, layersRef.current).map(l => l.id)
-        : [activeId],
-    )
-    if (targetIds.size === 0) return
+    const targetIds = getFlipTargetIds()
+    if (!targetIds) return
     const row = flipOriginRef.current.row
     withLayerUndo(() => rawApplyLayerTransform((l: Layer) => {
       if (!targetIds.has(l.id)) return l
@@ -778,7 +777,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       if (l.type === 'text') return flipTextLayerVertical(l, row)
       return l
     }))
-  }, [withLayerUndo, rawApplyLayerTransform, layersRef, activeLayerIdRef])
+  }, [getFlipTargetIds, withLayerUndo, rawApplyLayerTransform])
   flipLayerHorizontalRef.current = flipLayerHorizontal
   flipLayerVerticalRef.current = flipLayerVertical
 

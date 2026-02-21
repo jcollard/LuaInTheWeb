@@ -1,8 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { flipGridHorizontal, flipGridVertical, flipDrawnLayerHorizontal, flipDrawnLayerVertical, flipTextLayerHorizontal, flipTextLayerVertical } from './flipUtils'
-import type { AnsiCell, RGBColor } from './types'
+import type { AnsiCell, RGBColor, DrawnLayer, TextLayer } from './types'
 import { DEFAULT_FG, DEFAULT_BG, HALF_BLOCK, DEFAULT_FRAME_DURATION_MS } from './types'
-import type { DrawnLayer, TextLayer } from './types'
 import { createEmptyGrid } from './gridUtils'
 
 function makeCell(char: string, fg: RGBColor, bg: RGBColor): AnsiCell {

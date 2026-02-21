@@ -415,7 +415,7 @@ export function AnsiEditorToolbar({
             type="button"
             className={styles.modeButton}
             onClick={onFlipLayerHorizontal}
-            title="Flip Layer Horizontal (Shift+H)"
+            title={tooltipWithShortcut('Flip Layer Horizontal', ACTION_SHORTCUTS.flipH)}
             data-testid="flip-layer-horizontal"
           >
             ↔
@@ -424,7 +424,7 @@ export function AnsiEditorToolbar({
             type="button"
             className={styles.modeButton}
             onClick={onFlipLayerVertical}
-            title="Flip Layer Vertical (Shift+V)"
+            title={tooltipWithShortcut('Flip Layer Vertical', ACTION_SHORTCUTS.flipV)}
             data-testid="flip-layer-vertical"
           >
             ↕
