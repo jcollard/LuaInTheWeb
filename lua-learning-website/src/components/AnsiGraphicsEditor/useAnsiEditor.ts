@@ -13,7 +13,7 @@ import { loadPngPixels, rgbaToAnsiGrid } from './pngImport'
 import { createDrawHelpers } from './drawHelpers'
 import { createSelectionHandlers, type SelectionHandlers } from './selectionTool'
 import { createTextToolHandlers, type TextToolHandlers } from './textTool'
-import { TOOL_KEY_MAP, TOOL_SHIFT_KEY_MAP } from './keyboardShortcuts'
+import { TOOL_KEY_MAP, TOOL_SHIFT_KEY_MAP, MODE_KEY_MAP } from './keyboardShortcuts'
 
 export { computePixelCell, computeLineCells } from './gridUtils'
 
@@ -384,8 +384,10 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       }
 
       // Mode keys
-      if (!shift && key === 'e') { setBrushMode('eraser'); return }
-      if (!shift && key === 'n') { setBrushMode('pixel'); return }
+      if (!shift) {
+        const modeForKey = MODE_KEY_MAP[key]
+        if (modeForKey) { setBrushMode(modeForKey); return }
+      }
 
       // File menu
       if (!shift && key === 'f') { openFileMenuRef.current?.(); return }

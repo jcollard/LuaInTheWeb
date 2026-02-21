@@ -41,23 +41,27 @@ export const ACTION_SHORTCUTS = {
   nextFrame: { key: ']', label: ']', description: 'Next Frame' },
 } as const satisfies Record<string, ShortcutDef>
 
-/**
- * Pre-built lookup: lowercase key → DrawTool (non-shift variants only).
- * Shift variants (rect-filled, oval-filled) are handled separately.
- */
-export const TOOL_KEY_MAP: Record<string, DrawTool> = {}
-for (const [tool, def] of Object.entries(TOOL_SHORTCUTS)) {
-  if (!def.shift) {
-    TOOL_KEY_MAP[def.key] = tool as DrawTool
+/** Build a key → DrawTool lookup from TOOL_SHORTCUTS, filtered by shift state. */
+function buildToolKeyMap(shifted: boolean): Record<string, DrawTool> {
+  const map: Record<string, DrawTool> = {}
+  for (const [tool, def] of Object.entries(TOOL_SHORTCUTS)) {
+    if (Boolean(def.shift) === shifted) {
+      map[def.key] = tool as DrawTool
+    }
   }
+  return map
 }
 
+/** Lowercase key → DrawTool (non-shift variants only). */
+export const TOOL_KEY_MAP: Record<string, DrawTool> = buildToolKeyMap(false)
+
 /** Shift+key → DrawTool for shifted tool shortcuts. */
-export const TOOL_SHIFT_KEY_MAP: Record<string, DrawTool> = {}
-for (const [tool, def] of Object.entries(TOOL_SHORTCUTS)) {
-  if (def.shift) {
-    TOOL_SHIFT_KEY_MAP[def.key] = tool as DrawTool
-  }
+export const TOOL_SHIFT_KEY_MAP: Record<string, DrawTool> = buildToolKeyMap(true)
+
+/** Lowercase key → BrushMode for single-key mode shortcuts. */
+export const MODE_KEY_MAP: Record<string, BrushMode> = {}
+for (const [mode, def] of Object.entries(MODE_SHORTCUTS)) {
+  if (def) MODE_KEY_MAP[def.key] = mode as BrushMode
 }
 
 export function tooltipWithShortcut(name: string, shortcut?: ShortcutDef): string {
@@ -65,12 +69,12 @@ export function tooltipWithShortcut(name: string, shortcut?: ShortcutDef): strin
 }
 
 export function toolTooltip(tool: DrawTool): string {
-  const shortcut = TOOL_SHORTCUTS[tool]
   if (tool === 'rect-outline' || tool === 'rect-filled') {
     return tooltipWithShortcut('Rectangle', TOOL_SHORTCUTS['rect-outline'])
   }
   if (tool === 'oval-outline' || tool === 'oval-filled') {
     return tooltipWithShortcut('Oval', TOOL_SHORTCUTS['oval-outline'])
   }
-  return tooltipWithShortcut(shortcut.description, shortcut)
+  const def = TOOL_SHORTCUTS[tool]
+  return tooltipWithShortcut(def.description, def)
 }

@@ -5,6 +5,7 @@ import {
   TOOL_KEY_MAP,
   TOOL_SHIFT_KEY_MAP,
   MODE_SHORTCUTS,
+  MODE_KEY_MAP,
   ACTION_SHORTCUTS,
   tooltipWithShortcut,
   toolTooltip,
@@ -75,6 +76,16 @@ describe('keyboardShortcuts', () => {
 
     it('defines pixel with key "n"', () => {
       expect(MODE_SHORTCUTS['pixel']?.key).toBe('n')
+    })
+  })
+
+  describe('MODE_KEY_MAP', () => {
+    it('maps "e" to eraser', () => {
+      expect(MODE_KEY_MAP['e']).toBe('eraser')
+    })
+
+    it('maps "n" to pixel', () => {
+      expect(MODE_KEY_MAP['n']).toBe('pixel')
     })
   })
 
