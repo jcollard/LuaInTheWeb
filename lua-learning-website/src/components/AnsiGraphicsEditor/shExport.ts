@@ -1,4 +1,4 @@
-import type { AnsiGrid, RGBColor } from './types'
+import type { AnsiCell, AnsiGrid, RGBColor } from './types'
 
 /**
  * Escape a character for safe embedding inside a single-quoted printf argument.
@@ -18,36 +18,39 @@ function rgbEqual(a: RGBColor, b: RGBColor): boolean {
 }
 
 /**
+ * Render a single row of cells as a printf-safe escape string.
+ * Skips redundant fg/bg SGR codes and appends `\033[0m\n`.
+ */
+function renderRow(row: AnsiCell[]): string {
+  const parts: string[] = []
+  let curFg: RGBColor | null = null
+  let curBg: RGBColor | null = null
+
+  for (let c = 0; c < row.length; c++) {
+    const cell = row[c]
+
+    if (curFg === null || !rgbEqual(curFg, cell.fg)) {
+      parts.push(`\\033[38;2;${cell.fg[0]};${cell.fg[1]};${cell.fg[2]}m`)
+      curFg = cell.fg
+    }
+    if (curBg === null || !rgbEqual(curBg, cell.bg)) {
+      parts.push(`\\033[48;2;${cell.bg[0]};${cell.bg[1]};${cell.bg[2]}m`)
+      curBg = cell.bg
+    }
+
+    parts.push(escapeChar(cell.char))
+  }
+
+  parts.push('\\033[0m\\n')
+  return parts.join('')
+}
+
+/**
  * Convert an AnsiGrid to a string of printf-safe escape sequences using 24-bit truecolor.
  * Each row ends with `\033[0m\n`. Redundant fg/bg SGR codes are skipped.
  */
 export function gridToShString(grid: AnsiGrid): string {
-  const parts: string[] = []
-
-  for (let r = 0; r < grid.length; r++) {
-    const row = grid[r]
-    let curFg: RGBColor | null = null
-    let curBg: RGBColor | null = null
-
-    for (let c = 0; c < row.length; c++) {
-      const cell = row[c]
-
-      if (curFg === null || !rgbEqual(curFg, cell.fg)) {
-        parts.push(`\\033[38;2;${cell.fg[0]};${cell.fg[1]};${cell.fg[2]}m`)
-        curFg = cell.fg
-      }
-      if (curBg === null || !rgbEqual(curBg, cell.bg)) {
-        parts.push(`\\033[48;2;${cell.bg[0]};${cell.bg[1]};${cell.bg[2]}m`)
-        curBg = cell.bg
-      }
-
-      parts.push(escapeChar(cell.char))
-    }
-
-    parts.push('\\033[0m\\n')
-  }
-
-  return parts.join('')
+  return grid.map(renderRow).join('')
 }
 
 /** Generate a static bash script that displays the grid using printf. */
@@ -57,29 +60,8 @@ export function exportShFile(grid: AnsiGrid): string {
     "printf '\\033[2J\\033[H'",
   ]
 
-  for (let r = 0; r < grid.length; r++) {
-    const row = grid[r]
-    const rowParts: string[] = []
-    let curFg: RGBColor | null = null
-    let curBg: RGBColor | null = null
-
-    for (let c = 0; c < row.length; c++) {
-      const cell = row[c]
-
-      if (curFg === null || !rgbEqual(curFg, cell.fg)) {
-        rowParts.push(`\\033[38;2;${cell.fg[0]};${cell.fg[1]};${cell.fg[2]}m`)
-        curFg = cell.fg
-      }
-      if (curBg === null || !rgbEqual(curBg, cell.bg)) {
-        rowParts.push(`\\033[48;2;${cell.bg[0]};${cell.bg[1]};${cell.bg[2]}m`)
-        curBg = cell.bg
-      }
-
-      rowParts.push(escapeChar(cell.char))
-    }
-
-    rowParts.push('\\033[0m\\n')
-    lines.push(`printf '${rowParts.join('')}'`)
+  for (const row of grid) {
+    lines.push(`printf '${renderRow(row)}'`)
   }
 
   lines.push("printf '\\033[0m'")
@@ -106,29 +88,8 @@ export function exportAnimatedShFile(frames: AnsiGrid[], durationMs: number): st
 
   for (const frame of frames) {
     lines.push("  printf '\\033[H'")
-    for (let r = 0; r < frame.length; r++) {
-      const row = frame[r]
-      const rowParts: string[] = []
-      let curFg: RGBColor | null = null
-      let curBg: RGBColor | null = null
-
-      for (let c = 0; c < row.length; c++) {
-        const cell = row[c]
-
-        if (curFg === null || !rgbEqual(curFg, cell.fg)) {
-          rowParts.push(`\\033[38;2;${cell.fg[0]};${cell.fg[1]};${cell.fg[2]}m`)
-          curFg = cell.fg
-        }
-        if (curBg === null || !rgbEqual(curBg, cell.bg)) {
-          rowParts.push(`\\033[48;2;${cell.bg[0]};${cell.bg[1]};${cell.bg[2]}m`)
-          curBg = cell.bg
-        }
-
-        rowParts.push(escapeChar(cell.char))
-      }
-
-      rowParts.push('\\033[0m\\n')
-      lines.push(`  printf '${rowParts.join('')}'`)
+    for (const row of frame) {
+      lines.push(`  printf '${renderRow(row)}'`)
     }
     lines.push(`  sleep ${sleepSec}`)
   }

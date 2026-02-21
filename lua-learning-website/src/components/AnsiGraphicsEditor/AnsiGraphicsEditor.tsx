@@ -31,7 +31,6 @@ function getMaxFrameCount(layers: Layer[]): number {
 function allFrameComposites(layers: Layer[], frameCount: number): AnsiGrid[] {
   const frames: AnsiGrid[] = []
   for (let f = 0; f < frameCount; f++) {
-    // Temporarily set each drawn layer's grid to the frame at index f (clamped)
     const snapshotLayers = layers.map(layer => {
       if (layer.type !== 'drawn') return layer
       const frameIdx = Math.min(f, layer.frames.length - 1)
@@ -40,6 +39,24 @@ function allFrameComposites(layers: Layer[], frameCount: number): AnsiGrid[] {
     frames.push(compositeGrid(snapshotLayers))
   }
   return frames
+}
+
+/** Derive an export filename from the editor's filePath, replacing the extension. */
+function deriveExportFilename(filePath: string | undefined, ext: string): string {
+  if (!filePath || filePath.startsWith('ansi-editor://')) return `untitled.${ext}`
+  const base = filePath.split('/').pop() ?? 'untitled'
+  const replaced = base.replace(/\.ansi\.lua$/, `.${ext}`)
+  return replaced.endsWith(`.${ext}`) ? replaced : `${base}.${ext}`
+}
+
+/** Trigger a browser download for the given blob. */
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 export interface AnsiGraphicsEditorProps {
@@ -181,32 +198,14 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
 
   const handleExportAns = useCallback(() => {
     const grid = compositeGrid(layers)
-    let filename = 'untitled.ans'
-    if (filePath && !filePath.startsWith('ansi-editor://')) {
-      const base = filePath.split('/').pop() ?? 'untitled'
-      filename = base.replace(/\.ansi\.lua$/, '.ans')
-      if (!filename.endsWith('.ans')) filename = base + '.ans'
-    }
+    const filename = deriveExportFilename(filePath, 'ans')
     const title = filename.replace(/\.ans$/, '')
     const data = exportAnsFile(grid, title)
-    const blob = new Blob([new Uint8Array(data)], { type: 'application/octet-stream' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadBlob(new Blob([new Uint8Array(data)], { type: 'application/octet-stream' }), filename)
   }, [layers, filePath])
 
   const handleExportSh = useCallback(() => {
-    let filename = 'untitled.sh'
-    if (filePath && !filePath.startsWith('ansi-editor://')) {
-      const base = filePath.split('/').pop() ?? 'untitled'
-      filename = base.replace(/\.ansi\.lua$/, '.sh')
-      if (!filename.endsWith('.sh')) filename = base + '.sh'
-    }
-
-    // Check if any visible drawn layer has multiple frames
+    const filename = deriveExportFilename(filePath, 'sh')
     const maxFrames = getMaxFrameCount(layers)
 
     let script: string
@@ -217,17 +216,10 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
       const durationMs = drawnLayer?.type === 'drawn' ? drawnLayer.frameDurationMs : 100
       script = exportAnimatedShFile(frames, durationMs)
     } else {
-      const grid = compositeGrid(layers)
-      script = exportShFile(grid)
+      script = exportShFile(compositeGrid(layers))
     }
 
-    const blob = new Blob([script], { type: 'text/x-shellscript' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadBlob(new Blob([script], { type: 'text/x-shellscript' }), filename)
   }, [layers, filePath])
 
   return (
