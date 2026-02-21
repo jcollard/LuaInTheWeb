@@ -58,7 +58,6 @@ export function AnsiEditorToolbar({
       </button>
       {fileOptionsOpen && (
         <FileOptionsModal
-          isOpen={fileOptionsOpen}
           onClose={() => setFileOptionsOpen(false)}
           onClear={onClear}
           onSave={onSave}

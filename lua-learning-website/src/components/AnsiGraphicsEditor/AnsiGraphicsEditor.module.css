@@ -543,7 +543,7 @@
   color: var(--theme-bg-primary);
 }
 
-/* Toolbar buttons (Clear, Save, Save As) */
+/* Toolbar buttons (File, Undo, Redo) */
 .toolbarButton {
   padding: 4px 12px;
   font-size: 12px;
@@ -915,10 +915,7 @@
 /* File Options Modal */
 .fileOptionsOverlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
@@ -927,8 +924,8 @@
 }
 
 .fileOptionsDialog {
-  background-color: var(--vscode-editor-background, #1e1e1e);
-  border: 1px solid var(--vscode-widget-border, #454545);
+  background-color: var(--theme-bg-secondary);
+  border: 1px solid var(--theme-border);
   border-radius: 6px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   min-width: 220px;
@@ -945,7 +942,7 @@
 .fileOptionsTitle {
   font-size: 14px;
   font-weight: 600;
-  color: var(--vscode-foreground, #cccccc);
+  color: var(--theme-text-primary);
 }
 
 .fileOptionsClose {
@@ -953,13 +950,13 @@
   border: none;
   cursor: pointer;
   font-size: 14px;
-  color: var(--vscode-foreground, #cccccc);
+  color: var(--theme-text-secondary);
   padding: 0 2px;
   line-height: 1;
 }
 
 .fileOptionsClose:hover {
-  color: var(--vscode-errorForeground, #f14c4c);
+  color: var(--theme-text-primary);
 }
 
 .fileOptionsBody {
@@ -976,13 +973,13 @@
   width: 100%;
   padding: 6px 14px;
   font-size: 13px;
-  background-color: var(--vscode-button-secondaryBackground, #3a3d41);
-  color: var(--vscode-button-secondaryForeground, #ffffff);
-  border: 1px solid transparent;
+  background-color: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+  border: 1px solid var(--theme-border);
   border-radius: 4px;
   cursor: pointer;
 }
 
 .fileOptionsAction:hover {
-  background-color: var(--vscode-button-secondaryHoverBackground, #45494e);
+  background-color: var(--theme-bg-hover);
 }

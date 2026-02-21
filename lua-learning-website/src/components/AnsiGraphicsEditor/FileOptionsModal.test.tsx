@@ -4,7 +4,6 @@ import { FileOptionsModal, type FileOptionsModalProps } from './FileOptionsModal
 
 function defaultProps(overrides?: Partial<FileOptionsModalProps>): FileOptionsModalProps {
   return {
-    isOpen: true,
     onClose: vi.fn(),
     onClear: vi.fn(),
     onSave: vi.fn(),
@@ -19,69 +18,26 @@ function defaultProps(overrides?: Partial<FileOptionsModalProps>): FileOptionsMo
 }
 
 describe('FileOptionsModal', () => {
-  it('returns null when isOpen is false', () => {
-    const { container } = render(<FileOptionsModal {...defaultProps({ isOpen: false })} />)
-    expect(container.innerHTML).toBe('')
-  })
-
-  it('renders dialog with correct role and aria-modal when open', () => {
+  it('renders dialog with correct role and aria-modal', () => {
     render(<FileOptionsModal {...defaultProps()} />)
     const dialog = screen.getByRole('dialog')
     expect(dialog).toBeTruthy()
     expect(dialog.getAttribute('aria-modal')).toBe('true')
   })
 
-  it('fires onSave and onClose when Save is clicked', () => {
-    const onSave = vi.fn()
+  it.each([
+    ['onSave', 'file-save'],
+    ['onSaveAs', 'file-save-as'],
+    ['onClear', 'file-clear'],
+    ['onImportPng', 'file-import-png'],
+    ['onExportAns', 'file-export-ans'],
+    ['onExportSh', 'file-export-sh'],
+  ] as const)('fires %s and onClose when %s is clicked', (handlerName, testId) => {
+    const handler = vi.fn()
     const onClose = vi.fn()
-    render(<FileOptionsModal {...defaultProps({ onSave, onClose })} />)
-    fireEvent.click(screen.getByTestId('file-save'))
-    expect(onSave).toHaveBeenCalledOnce()
-    expect(onClose).toHaveBeenCalledOnce()
-  })
-
-  it('fires onSaveAs and onClose when Save As is clicked', () => {
-    const onSaveAs = vi.fn()
-    const onClose = vi.fn()
-    render(<FileOptionsModal {...defaultProps({ onSaveAs, onClose })} />)
-    fireEvent.click(screen.getByTestId('file-save-as'))
-    expect(onSaveAs).toHaveBeenCalledOnce()
-    expect(onClose).toHaveBeenCalledOnce()
-  })
-
-  it('fires onClear and onClose when Clear is clicked', () => {
-    const onClear = vi.fn()
-    const onClose = vi.fn()
-    render(<FileOptionsModal {...defaultProps({ onClear, onClose })} />)
-    fireEvent.click(screen.getByTestId('file-clear'))
-    expect(onClear).toHaveBeenCalledOnce()
-    expect(onClose).toHaveBeenCalledOnce()
-  })
-
-  it('fires onImportPng and onClose when Load PNG is clicked', () => {
-    const onImportPng = vi.fn()
-    const onClose = vi.fn()
-    render(<FileOptionsModal {...defaultProps({ onImportPng, onClose })} />)
-    fireEvent.click(screen.getByTestId('file-import-png'))
-    expect(onImportPng).toHaveBeenCalledOnce()
-    expect(onClose).toHaveBeenCalledOnce()
-  })
-
-  it('fires onExportAns and onClose when Export ANS is clicked', () => {
-    const onExportAns = vi.fn()
-    const onClose = vi.fn()
-    render(<FileOptionsModal {...defaultProps({ onExportAns, onClose })} />)
-    fireEvent.click(screen.getByTestId('file-export-ans'))
-    expect(onExportAns).toHaveBeenCalledOnce()
-    expect(onClose).toHaveBeenCalledOnce()
-  })
-
-  it('fires onExportSh and onClose when Export .sh is clicked', () => {
-    const onExportSh = vi.fn()
-    const onClose = vi.fn()
-    render(<FileOptionsModal {...defaultProps({ onExportSh, onClose })} />)
-    fireEvent.click(screen.getByTestId('file-export-sh'))
-    expect(onExportSh).toHaveBeenCalledOnce()
+    render(<FileOptionsModal {...defaultProps({ [handlerName]: handler, onClose })} />)
+    fireEvent.click(screen.getByTestId(testId))
+    expect(handler).toHaveBeenCalledOnce()
     expect(onClose).toHaveBeenCalledOnce()
   })
 

@@ -2,7 +2,6 @@ import type { KeyboardEvent } from 'react'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface FileOptionsModalProps {
-  isOpen: boolean
   onClose: () => void
   onClear: () => void
   onSave: () => void
@@ -14,8 +13,13 @@ export interface FileOptionsModalProps {
   onToggleCgaPreview: () => void
 }
 
+interface ActionItem {
+  label: string
+  testId: string
+  action: () => void
+}
+
 export function FileOptionsModal({
-  isOpen,
   onClose,
   onClear,
   onSave,
@@ -25,22 +29,26 @@ export function FileOptionsModal({
   onExportSh,
   cgaPreview,
   onToggleCgaPreview,
-}: FileOptionsModalProps) {
-  if (!isOpen) {
-    return null
-  }
-
-  const handleKeyDown = (event: KeyboardEvent) => {
+}: FileOptionsModalProps): JSX.Element {
+  function handleKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
       event.preventDefault()
       onClose()
     }
   }
 
-  const handleAction = (action: () => void) => {
+  function handleAction(action: () => void): void {
     action()
     onClose()
   }
+
+  const actions: ActionItem[] = [
+    { label: 'Save', testId: 'file-save', action: onSave },
+    { label: 'Save As', testId: 'file-save-as', action: onSaveAs },
+    { label: 'Load PNG', testId: 'file-import-png', action: onImportPng },
+    { label: 'Export ANS', testId: 'file-export-ans', action: onExportAns },
+    { label: 'Export .sh', testId: 'file-export-sh', action: onExportSh },
+  ]
 
   return (
     <div
@@ -67,46 +75,17 @@ export function FileOptionsModal({
           </button>
         </div>
         <div className={styles.fileOptionsBody}>
-          <button
-            type="button"
-            className={styles.fileOptionsAction}
-            onClick={() => handleAction(onSave)}
-            data-testid="file-save"
-          >
-            Save
-          </button>
-          <button
-            type="button"
-            className={styles.fileOptionsAction}
-            onClick={() => handleAction(onSaveAs)}
-            data-testid="file-save-as"
-          >
-            Save As
-          </button>
-          <button
-            type="button"
-            className={styles.fileOptionsAction}
-            onClick={() => handleAction(onImportPng)}
-            data-testid="file-import-png"
-          >
-            Load PNG
-          </button>
-          <button
-            type="button"
-            className={styles.fileOptionsAction}
-            onClick={() => handleAction(onExportAns)}
-            data-testid="file-export-ans"
-          >
-            Export ANS
-          </button>
-          <button
-            type="button"
-            className={styles.fileOptionsAction}
-            onClick={() => handleAction(onExportSh)}
-            data-testid="file-export-sh"
-          >
-            Export .sh
-          </button>
+          {actions.map(({ label, testId, action }) => (
+            <button
+              key={testId}
+              type="button"
+              className={styles.fileOptionsAction}
+              onClick={() => handleAction(action)}
+              data-testid={testId}
+            >
+              {label}
+            </button>
+          ))}
           <label className={styles.fileOptionsAction}>
             <input
               type="checkbox"

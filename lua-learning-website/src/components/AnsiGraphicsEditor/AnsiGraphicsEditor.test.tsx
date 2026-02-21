@@ -52,43 +52,16 @@ describe('AnsiEditorToolbar', () => {
     expect(screen.getByTestId('char-palette-modal')).toBeTruthy()
   })
 
-  it('should render clear button inside File Options modal', () => {
+  it.each([
+    ['file-clear', 'onClear'],
+    ['file-save', 'onSave'],
+    ['file-save-as', 'onSaveAs'],
+  ] as const)('should render %s inside File Options modal and call %s on click', (testId, handlerName) => {
     render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
     fireEvent.click(screen.getByTestId('file-options-button'))
-    expect(screen.getByTestId('file-clear')).toBeTruthy()
-  })
-
-  it('should call onClear when clear button is clicked in modal', () => {
-    render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-    fireEvent.click(screen.getByTestId('file-options-button'))
-    fireEvent.click(screen.getByTestId('file-clear'))
-    expect(handlers.onClear).toHaveBeenCalledOnce()
-  })
-
-  it('should render Save button inside File Options modal', () => {
-    render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-    fireEvent.click(screen.getByTestId('file-options-button'))
-    expect(screen.getByTestId('file-save')).toBeTruthy()
-  })
-
-  it('should call onSave when Save button is clicked in modal', () => {
-    render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-    fireEvent.click(screen.getByTestId('file-options-button'))
-    fireEvent.click(screen.getByTestId('file-save'))
-    expect(handlers.onSave).toHaveBeenCalledOnce()
-  })
-
-  it('should render Save As button inside File Options modal', () => {
-    render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-    fireEvent.click(screen.getByTestId('file-options-button'))
-    expect(screen.getByTestId('file-save-as')).toBeTruthy()
-  })
-
-  it('should call onSaveAs when Save As button is clicked in modal', () => {
-    render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-    fireEvent.click(screen.getByTestId('file-options-button'))
-    fireEvent.click(screen.getByTestId('file-save-as'))
-    expect(handlers.onSaveAs).toHaveBeenCalledOnce()
+    expect(screen.getByTestId(testId)).toBeTruthy()
+    fireEvent.click(screen.getByTestId(testId))
+    expect(handlers[handlerName]).toHaveBeenCalledOnce()
   })
 
   describe('tool selector', () => {
