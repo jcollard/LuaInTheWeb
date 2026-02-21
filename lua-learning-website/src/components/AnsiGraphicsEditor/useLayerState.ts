@@ -338,18 +338,14 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
 
   const duplicateLayer = useCallback((id: string) => {
     setLayers(prev => {
-      const target = prev.find(l => l.id === id)
-      if (!target) return prev
+      const idx = prev.findIndex(l => l.id === id)
+      if (idx < 0) return prev
       const dupes = duplicateLayerBlock(prev, id)
       if (dupes.length === 0) return prev
 
-      let insertIdx: number
-      if (isGroupLayer(target)) {
-        const idx = prev.findIndex(l => l.id === id)
-        insertIdx = findGroupBlockEnd(prev, id, idx)
-      } else {
-        insertIdx = prev.findIndex(l => l.id === id) + 1
-      }
+      const insertIdx = isGroupLayer(prev[idx])
+        ? findGroupBlockEnd(prev, id, idx)
+        : idx + 1
 
       const next = [...prev.slice(0, insertIdx), ...dupes, ...prev.slice(insertIdx)]
       if (import.meta.env.DEV) assertContiguousBlocks(next)
