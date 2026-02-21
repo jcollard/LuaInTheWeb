@@ -7,8 +7,6 @@ export interface TagsTabContentProps {
   availableTags: string[]
   activeLayerId: string
   onSetActive: (id: string) => void
-  onAddTagToLayer: (layerId: string, tag: string) => void
-  onRemoveTagFromLayer: (layerId: string, tag: string) => void
   onCreateTag: (tag: string) => void
   onDeleteTag: (tag: string) => void
   onRenameTag: (oldTag: string, newTag: string) => void

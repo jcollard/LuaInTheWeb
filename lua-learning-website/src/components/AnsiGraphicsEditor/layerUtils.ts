@@ -243,7 +243,7 @@ export function addTagToLayer<T extends Layer>(layer: T, tag: string): T {
 }
 
 export function removeTagFromLayer<T extends Layer>(layer: T, tag: string): T {
-  if (!layer.tags || !layer.tags.includes(tag)) return layer
+  if (!layer.tags?.includes(tag)) return layer
   const remaining = layer.tags.filter(t => t !== tag)
   return { ...layer, tags: remaining.length > 0 ? remaining : undefined }
 }

@@ -141,9 +141,7 @@ export function isDrawableLayer(layer: Layer): layer is DrawableLayer {
 
 /** Extract parentId from any Layer variant. All layer types carry an optional parentId. */
 export function getParentId(layer: Layer): string | undefined {
-  if (isGroupLayer(layer)) return layer.parentId
-  if (isDrawableLayer(layer)) return layer.parentId
-  return undefined
+  return layer.parentId
 }
 
 export interface LayerState {

@@ -1,6 +1,6 @@
 import { stringify, parse } from '@kilcekru/lua-table'
 import type { AnsiGrid, Layer, LayerState, TextLayer, TextAlign, RGBColor, Rect, GroupLayer } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_FRAME_DURATION_MS, isGroupLayer, isDrawableLayer } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_FRAME_DURATION_MS, isGroupLayer, getParentId } from './types'
 import { renderTextLayerGrid } from './textLayerGrid'
 
 export function serializeGrid(grid: AnsiGrid): string {
@@ -29,17 +29,23 @@ function needsV6(state: LayerState, availableTags?: string[]): boolean {
   return state.layers.some(l => l.tags && l.tags.length > 0)
 }
 
-export function serializeLayers(state: LayerState, availableTags?: string[]): string {
+/** Apply optional parentId and tags fields common to all layer types. */
+function addOptionalFields(serialized: Record<string, unknown>, layer: Layer): void {
+  if (layer.parentId) serialized.parentId = layer.parentId
+  if (layer.tags && layer.tags.length > 0) serialized.tags = layer.tags
+}
+
+function computeVersion(state: LayerState, availableTags?: string[]): number {
+  if (needsV6(state, availableTags)) return 6
+  if (needsV5(state)) return 5
   const hasGroups = state.layers.some(isGroupLayer)
-  const hasParentId = state.layers.some(l => {
-    if (isDrawableLayer(l) && l.parentId) return true
-    if (isGroupLayer(l) && l.parentId) return true
-    return false
-  })
-  let version = 3
-  if (needsV6(state, availableTags)) version = 6
-  else if (needsV5(state)) version = 5
-  else if (hasGroups || hasParentId) version = 4
+  const hasParentId = state.layers.some(l => getParentId(l) != null)
+  if (hasGroups || hasParentId) return 4
+  return 3
+}
+
+export function serializeLayers(state: LayerState, availableTags?: string[]): string {
+  const version = computeVersion(state, availableTags)
   const layers = state.layers.map(layer => {
     if (isGroupLayer(layer)) {
       const serialized: Record<string, unknown> = {
@@ -49,8 +55,7 @@ export function serializeLayers(state: LayerState, availableTags?: string[]): st
         visible: layer.visible,
         collapsed: layer.collapsed,
       }
-      if (layer.parentId) serialized.parentId = layer.parentId
-      if (layer.tags && layer.tags.length > 0) serialized.tags = layer.tags
+      addOptionalFields(serialized, layer)
       return serialized
     }
     if (layer.type === 'text') {
@@ -70,8 +75,7 @@ export function serializeLayers(state: LayerState, availableTags?: string[]): st
       if (layer.textAlign && layer.textAlign !== 'left') {
         serialized.textAlign = layer.textAlign
       }
-      if (layer.parentId) serialized.parentId = layer.parentId
-      if (layer.tags && layer.tags.length > 0) serialized.tags = layer.tags
+      addOptionalFields(serialized, layer)
       return serialized
     }
     const serialized: Record<string, unknown> = {
@@ -86,8 +90,7 @@ export function serializeLayers(state: LayerState, availableTags?: string[]): st
       serialized.currentFrameIndex = layer.currentFrameIndex
       serialized.frameDurationMs = layer.frameDurationMs
     }
-    if (layer.parentId) serialized.parentId = layer.parentId
-    if (layer.tags && layer.tags.length > 0) serialized.tags = layer.tags
+    addOptionalFields(serialized, layer)
     return serialized
   })
   const data: Record<string, unknown> = {

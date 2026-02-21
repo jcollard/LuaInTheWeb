@@ -81,7 +81,11 @@ export function LayersPanel({
     setEditingId(null)
   }, [])
 
-  const closeContextMenu = useCallback(() => { setContextMenu(null); setTagsSubmenuOpen(false); setTagsSubmenuFlipped(false) }, [])
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null)
+    setTagsSubmenuOpen(false)
+    setTagsSubmenuFlipped(false)
+  }, [])
 
   const clearDragState = useCallback(() => {
     setDraggedId(null)
@@ -231,8 +235,6 @@ export function LayersPanel({
           availableTags={availableTags}
           activeLayerId={activeLayerId}
           onSetActive={onSetActive}
-          onAddTagToLayer={onAddTagToLayer}
-          onRemoveTagFromLayer={onRemoveTagFromLayer}
           onCreateTag={onCreateTag}
           onDeleteTag={onDeleteTag}
           onRenameTag={onRenameTag}
