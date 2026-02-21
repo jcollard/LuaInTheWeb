@@ -10,6 +10,11 @@ Welcome to the LuaInTheWeb developer documentation. This directory contains all 
 - [Testing Guide](./testing.md) - TDD practices and testing standards
 - [Contributing](./contributing.md) - How to contribute to the project
 
+## ANSI Graphics Editor
+
+- [Editor Architecture](./ansi-graphics-editor.md) - Component hierarchy, state management, rendering pipeline
+- [Editor Development Guide](./ansi-editor-development.md) - Adding tools, extending layers, testing patterns
+
 ## Lua API Documentation
 
 - [LocalStorage API](./localstorage-api.md) - Persistent key-value storage for saving game data
