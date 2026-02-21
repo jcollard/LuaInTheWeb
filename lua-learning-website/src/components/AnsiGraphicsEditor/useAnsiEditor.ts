@@ -96,7 +96,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
 
   const [brush, setBrush] = useState<BrushSettings>({
     char: '#', fg: DEFAULT_FG, bg: DEFAULT_BG, mode: 'brush', tool: 'pencil',
-    borderStyle: BORDER_PRESETS[0].style,
+    borderStyle: BORDER_PRESETS[0].style, blendRatio: 0.25,
   })
   const [isDirty, setIsDirty] = useState(false)
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
@@ -156,6 +156,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const setBrushFg = useCallback((color: RGBColor) => setBrush(p => ({ ...p, fg: color })), [])
   const setBrushBg = useCallback((color: RGBColor) => setBrush(p => ({ ...p, bg: color })), [])
   const setBrushChar = useCallback((c: string) => { if (c.length === 1) setBrush(p => ({ ...p, char: c })) }, [])
+  const setBlendRatio = useCallback((r: number) => setBrush(p => ({ ...p, blendRatio: r })), [])
   const setBrushMode = useCallback((mode: BrushMode) => setBrush(p => {
     if (p.tool === 'border' && mode !== 'brush') return p
     return { ...p, mode }
@@ -178,8 +179,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
 
   const paintBlendPixel = useCallback((row: number, col: number, isTopHalf: boolean) => {
     if (!isInBounds(row, col)) return
-    const { fg, bg } = brushRef.current
-    applyCell(row, col, computePixelCell(getActiveGrid()[row][col], blendRgb(fg, bg, 0.25), isTopHalf))
+    const { fg, bg, blendRatio } = brushRef.current
+    applyCell(row, col, computePixelCell(getActiveGrid()[row][col], blendRgb(bg, fg, blendRatio ?? 0.25), isTopHalf))
   }, [applyCell, getActiveGrid])
 
   const paintCell = useCallback((row: number, col: number) => {
@@ -724,7 +725,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const activeLayerFrameDuration = activeLayer?.type === 'drawn' ? activeLayer.frameDurationMs : DEFAULT_FRAME_DURATION_MS
 
   return {
-    grid, brush, setBrushFg, setBrushBg, setBrushChar, setBrushMode, setTool, setBorderStyle, clearGrid,
+    grid, brush, setBrushFg, setBrushBg, setBrushChar, setBrushMode, setBlendRatio, setTool, setBorderStyle, clearGrid,
     isDirty, markClean, onTerminalReady, cursorRef, dimensionRef, selectionRef, textBoundsRef, textCursorRef,
     isSaveDialogOpen, openSaveDialog, closeSaveDialog, undo, redo, canUndo, canRedo,
     layers: layerState.layers, activeLayerId: layerState.activeLayerId,

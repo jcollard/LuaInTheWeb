@@ -89,6 +89,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     setBrushBg,
     setBrushChar,
     setBrushMode,
+    setBlendRatio,
     setTool,
     clearGrid,
     markClean,
@@ -258,6 +259,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
         onFlipHorizontal={flipSelectionHorizontal}
         onFlipVertical={flipSelectionVertical}
         onSetBorderStyle={setBorderStyle}
+        onSetBlendRatio={setBlendRatio}
         cgaPreview={cgaPreview}
         onToggleCgaPreview={handleToggleCgaPreview}
         activeLayerIsGroup={activeLayerIsGroup}

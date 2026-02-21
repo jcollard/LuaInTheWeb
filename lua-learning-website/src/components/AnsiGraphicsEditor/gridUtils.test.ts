@@ -645,7 +645,19 @@ describe('computeRectCells — blend-pixel mode', () => {
     const cells = computeRectCells(start, end, brush, grid, true)
     const cell = cells.get('0,0')!
     expect(cell.char).toBe(HALF_BLOCK)
-    expect(cell.fg).toEqual([191, 0, 64]) // blended color in top half
+    expect(cell.fg).toEqual([64, 0, 191]) // blended color in top half
+  })
+
+  it('should use custom blendRatio when provided', () => {
+    const grid = makeGrid()
+    // blendRgb([0,0,255], [255,0,0], 0.5) = [128,0,128]
+    const brush = { char: '#', fg: red, bg: blue, mode: 'blend-pixel' as const, blendRatio: 0.5 }
+    const start = { row: 0, col: 0, isTopHalf: true }
+    const end = { row: 0, col: 0, isTopHalf: true }
+    const cells = computeRectCells(start, end, brush, grid, true)
+    const cell = cells.get('0,0')!
+    expect(cell.char).toBe(HALF_BLOCK)
+    expect(cell.fg).toEqual([128, 0, 128])
   })
 })
 
@@ -658,7 +670,19 @@ describe('computeLineCells — blend-pixel mode', () => {
     const cells = computeLineCells(start, end, brush, grid)
     for (const [, cell] of cells) {
       expect(cell.char).toBe(HALF_BLOCK)
-      expect(cell.fg).toEqual([191, 0, 64])
+      expect(cell.fg).toEqual([64, 0, 191])
+    }
+  })
+
+  it('should use custom blendRatio when provided', () => {
+    const grid = makeGrid()
+    const brush = { char: '#', fg: red, bg: blue, mode: 'blend-pixel' as const, blendRatio: 0.5 }
+    const start = { row: 0, col: 0, isTopHalf: true }
+    const end = { row: 0, col: 2, isTopHalf: true }
+    const cells = computeLineCells(start, end, brush, grid)
+    for (const [, cell] of cells) {
+      expect(cell.char).toBe(HALF_BLOCK)
+      expect(cell.fg).toEqual([128, 0, 128])
     }
   })
 })
@@ -672,17 +696,28 @@ describe('computeFloodFillCells — blend-pixel mode', () => {
     const cells = computeFloodFillCells(0, 0, brush, grid, true)
     expect(cells.size).toBeGreaterThan(0)
     for (const [, cell] of cells) {
-      expect(cell.fg).toEqual([191, 0, 64])
+      expect(cell.fg).toEqual([64, 0, 191])
     }
   })
 
   it('should treat noopColor as the blended color', () => {
     // If target color already equals the blended color, should be no-op
-    const blended: RGBColor = [191, 0, 64]
+    const blended: RGBColor = [64, 0, 191]
     const grid = makeSmallGrid(2, 2, { char: HALF_BLOCK, fg: blended, bg: blue })
     const brush = { char: HALF_BLOCK, fg: red, bg: blue, mode: 'blend-pixel' as const }
     const cells = computeFloodFillCells(0, 0, brush, grid, true)
     expect(cells.size).toBe(0)
+  })
+
+  it('should use custom blendRatio when provided', () => {
+    const grid = makeSmallGrid(2, 2, { char: HALF_BLOCK, fg: red, bg: blue })
+    // blendRgb([0,0,255], [255,0,0], 0.75) = [191,0,64]
+    const brush = { char: HALF_BLOCK, fg: red, bg: blue, mode: 'blend-pixel' as const, blendRatio: 0.75 }
+    const cells = computeFloodFillCells(0, 0, brush, grid, true)
+    expect(cells.size).toBeGreaterThan(0)
+    for (const [, cell] of cells) {
+      expect(cell.fg).toEqual([191, 0, 64])
+    }
   })
 })
 

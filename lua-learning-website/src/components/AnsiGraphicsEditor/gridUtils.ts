@@ -98,7 +98,7 @@ export function computeErasePixelCell(existingCell: AnsiCell, isTopHalf: boolean
 export type LineBrush = Omit<BrushSettings, 'tool'>
 
 function effectivePaintColor(brush: LineBrush): RGBColor {
-  return brush.mode === 'blend-pixel' ? blendRgb(brush.fg, brush.bg, 0.25) : brush.fg
+  return brush.mode === 'blend-pixel' ? blendRgb(brush.bg, brush.fg, brush.blendRatio ?? 0.25) : brush.fg
 }
 
 export interface CellHalf {

@@ -47,6 +47,7 @@ export interface BrushSettings {
   mode: BrushMode
   tool: DrawTool
   borderStyle?: BorderStyle
+  blendRatio?: number  // 0..1, default 0.25
 }
 
 export const ANSI_COLS = 80
@@ -154,6 +155,7 @@ export interface UseAnsiEditorReturn {
   setBrushBg: (color: RGBColor) => void
   setBrushChar: (char: string) => void
   setBrushMode: (mode: BrushMode) => void
+  setBlendRatio: (ratio: number) => void
   setTool: (tool: DrawTool) => void
   setBorderStyle: (style: BorderStyle) => void
   clearGrid: () => void

@@ -451,6 +451,19 @@
   background-color: var(--theme-bg-hover);
 }
 
+/* Blend ratio slider */
+.blendRatioGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--theme-text-primary);
+}
+
+.blendRatioGroup input[type="range"] {
+  flex: 1;
+}
+
 /* Char input */
 .charGroup {
   display: flex;

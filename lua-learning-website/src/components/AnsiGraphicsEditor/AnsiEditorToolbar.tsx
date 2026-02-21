@@ -26,6 +26,7 @@ export interface AnsiEditorToolbarProps {
   onFlipHorizontal?: () => void
   onFlipVertical?: () => void
   onSetBorderStyle?: (style: BorderStyle) => void
+  onSetBlendRatio?: (ratio: number) => void
   cgaPreview?: boolean
   onToggleCgaPreview?: () => void
   activeLayerIsGroup?: boolean
@@ -37,7 +38,7 @@ export interface AnsiEditorToolbarProps {
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onImportPng, onExportAns, onExportSh, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
-  onFlipHorizontal, onFlipVertical, onSetBorderStyle, cgaPreview, onToggleCgaPreview, activeLayerIsGroup, isPlaying,
+  onFlipHorizontal, onFlipVertical, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, activeLayerIsGroup, isPlaying,
   fileMenuOpen: controlledFileMenuOpen, onSetFileMenuOpen,
 }: AnsiEditorToolbarProps) {
   const toolsDisabled = activeLayerIsGroup || isPlaying
@@ -294,6 +295,19 @@ export function AnsiEditorToolbar({
           >
             ⌫
           </button>
+        </div>
+      )}
+      {brush.mode === 'blend-pixel' && !activeLayerIsGroup && (
+        <div className={styles.blendRatioGroup}>
+          <span className={styles.modeLabel}>Blend</span>
+          <input
+            type="range"
+            min={0} max={100} step={1}
+            value={Math.round((brush.blendRatio ?? 0.25) * 100)}
+            onChange={e => onSetBlendRatio?.(Number(e.target.value) / 100)}
+            data-testid="blend-ratio-slider"
+          />
+          <span data-testid="blend-ratio-value">{Math.round((brush.blendRatio ?? 0.25) * 100)}%</span>
         </div>
       )}
       {brush.tool === 'text' && onSetTextAlign && (
