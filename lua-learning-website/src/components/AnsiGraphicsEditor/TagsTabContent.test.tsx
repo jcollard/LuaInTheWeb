@@ -291,64 +291,55 @@ describe('TagsTabContent', () => {
 
   // --- Tag heading visibility toggle tests ---
 
+  /** Create a tagged layer with the given visibility for use in tag-visibility tests. */
+  function taggedLayer(name: string, id: string, visible: boolean): Layer {
+    return { ...createLayer(name, id), tags: ['Characters'], visible } as Layer
+  }
+
   it('tag heading shows visibility toggle', () => {
     renderTags({ availableTags: ['Characters'] })
     expect(screen.getByTestId('tag-visibility-Characters')).toBeTruthy()
   })
 
   it('tag heading shows eye icon when all layers visible', () => {
-    const l1 = { ...createLayer('Hero', 'l1'), tags: ['Characters'], visible: true }
-    const l2 = { ...createLayer('Villain', 'l2'), tags: ['Characters'], visible: true }
-    renderTags({ layers: [l1, l2], availableTags: ['Characters'] })
+    renderTags({ layers: [taggedLayer('Hero', 'l1', true), taggedLayer('Villain', 'l2', true)], availableTags: ['Characters'] })
     expect(screen.getByTestId('tag-visibility-Characters').textContent).toBe('\u{1F441}')
   })
 
   it('tag heading shows hidden icon when all layers hidden', () => {
-    const l1 = { ...createLayer('Hero', 'l1'), tags: ['Characters'], visible: false }
-    const l2 = { ...createLayer('Villain', 'l2'), tags: ['Characters'], visible: false }
-    renderTags({ layers: [l1, l2], availableTags: ['Characters'] })
+    renderTags({ layers: [taggedLayer('Hero', 'l1', false), taggedLayer('Villain', 'l2', false)], availableTags: ['Characters'] })
     expect(screen.getByTestId('tag-visibility-Characters').textContent).toBe('\u{1F441}\u{200D}\u{1F5E8}')
   })
 
   it('tag heading shows hidden icon when mixed visibility', () => {
-    const l1 = { ...createLayer('Hero', 'l1'), tags: ['Characters'], visible: true }
-    const l2 = { ...createLayer('Villain', 'l2'), tags: ['Characters'], visible: false }
-    renderTags({ layers: [l1, l2], availableTags: ['Characters'] })
+    renderTags({ layers: [taggedLayer('Hero', 'l1', true), taggedLayer('Villain', 'l2', false)], availableTags: ['Characters'] })
     expect(screen.getByTestId('tag-visibility-Characters').textContent).toBe('\u{1F441}\u{200D}\u{1F5E8}')
   })
 
   it('clicking tag visibility when all visible calls onSetLayerVisibility with false', () => {
     const onSetLayerVisibility = vi.fn()
-    const l1 = { ...createLayer('Hero', 'l1'), tags: ['Characters'], visible: true }
-    const l2 = { ...createLayer('Villain', 'l2'), tags: ['Characters'], visible: true }
-    renderTags({ layers: [l1, l2], availableTags: ['Characters'], onSetLayerVisibility })
+    renderTags({ layers: [taggedLayer('Hero', 'l1', true), taggedLayer('Villain', 'l2', true)], availableTags: ['Characters'], onSetLayerVisibility })
     fireEvent.click(screen.getByTestId('tag-visibility-Characters'))
     expect(onSetLayerVisibility).toHaveBeenCalledWith(['l1', 'l2'], false)
   })
 
   it('clicking tag visibility when any hidden calls onSetLayerVisibility with true', () => {
     const onSetLayerVisibility = vi.fn()
-    const l1 = { ...createLayer('Hero', 'l1'), tags: ['Characters'], visible: true }
-    const l2 = { ...createLayer('Villain', 'l2'), tags: ['Characters'], visible: false }
-    renderTags({ layers: [l1, l2], availableTags: ['Characters'], onSetLayerVisibility })
+    renderTags({ layers: [taggedLayer('Hero', 'l1', true), taggedLayer('Villain', 'l2', false)], availableTags: ['Characters'], onSetLayerVisibility })
     fireEvent.click(screen.getByTestId('tag-visibility-Characters'))
     expect(onSetLayerVisibility).toHaveBeenCalledWith(['l1', 'l2'], true)
   })
 
   it('clicking tag visibility when all hidden calls onSetLayerVisibility with true', () => {
     const onSetLayerVisibility = vi.fn()
-    const l1 = { ...createLayer('Hero', 'l1'), tags: ['Characters'], visible: false }
-    const l2 = { ...createLayer('Villain', 'l2'), tags: ['Characters'], visible: false }
-    renderTags({ layers: [l1, l2], availableTags: ['Characters'], onSetLayerVisibility })
+    renderTags({ layers: [taggedLayer('Hero', 'l1', false), taggedLayer('Villain', 'l2', false)], availableTags: ['Characters'], onSetLayerVisibility })
     fireEvent.click(screen.getByTestId('tag-visibility-Characters'))
     expect(onSetLayerVisibility).toHaveBeenCalledWith(['l1', 'l2'], true)
   })
 
   it('clicking tag visibility does NOT trigger collapse toggle', () => {
-    const l1 = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
-    renderTags({ layers: [l1], availableTags: ['Characters'] })
+    renderTags({ layers: [taggedLayer('Hero', 'l1', true)], availableTags: ['Characters'] })
     fireEvent.click(screen.getByTestId('tag-visibility-Characters'))
-    // Layer rows should still be visible (not collapsed)
     expect(screen.getByTestId('tag-layer-row-Characters-l1')).toBeTruthy()
   })
 

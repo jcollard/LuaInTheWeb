@@ -108,6 +108,7 @@ export function TagsTabContent({
           const tagLayers = layersForTag(tag)
           const isCollapsed = collapsedTags.has(tag)
           const isEditing = editingTag === tag
+          const allVisible = tagLayers.every(l => l.visible)
           return (
             <div key={tag} data-testid={`tag-section-${tag}`}>
               <div
@@ -122,13 +123,12 @@ export function TagsTabContent({
                   data-testid={`tag-visibility-${tag}`}
                   onClick={e => {
                     e.stopPropagation()
-                    const allVisible = tagLayers.every(l => l.visible)
                     onSetLayerVisibility(tagLayers.map(l => l.id), !allVisible)
                   }}
                   aria-label="Toggle tag visibility"
                   title="Toggle tag visibility"
                 >
-                  {tagLayers.every(l => l.visible) ? '\u{1F441}' : '\u{1F441}\u{200D}\u{1F5E8}'}
+                  {allVisible ? '\u{1F441}' : '\u{1F441}\u{200D}\u{1F5E8}'}
                 </button>
                 {isEditing ? (
                   <input
