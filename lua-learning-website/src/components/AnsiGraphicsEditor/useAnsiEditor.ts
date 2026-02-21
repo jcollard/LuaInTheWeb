@@ -8,7 +8,7 @@ import type { CellHalf, ColorTransform } from './gridUtils'
 import { createEmptyGrid, isInBounds, getCellHalfFromMouse, computePixelCell, computeFloodFillCells } from './gridUtils'
 import { TerminalBuffer } from './terminalBuffer'
 import { cgaQuantize } from './ansExport'
-import { compositeCell, compositeGrid, cloneLayerState, isDefaultCell, getGroupDescendantLayers } from './layerUtils'
+import { compositeCell, compositeGrid, cloneLayerState, getGroupDescendantLayers } from './layerUtils'
 import { useLayerState } from './useLayerState'
 import { loadPngPixels, rgbaToAnsiGrid } from './pngImport'
 import { createDrawHelpers } from './drawHelpers'
@@ -16,7 +16,7 @@ import { createSelectionHandlers, type SelectionHandlers } from './selectionTool
 import { createTextToolHandlers, type TextToolHandlers } from './textTool'
 import { TOOL_KEY_MAP, TOOL_SHIFT_KEY_MAP, MODE_KEY_MAP, TOOL_SHORTCUTS, MODE_SHORTCUTS, ACTION_SHORTCUTS } from './keyboardShortcuts'
 import { flipDrawnLayerHorizontal, flipDrawnLayerVertical, flipTextLayerHorizontal, flipTextLayerVertical } from './flipUtils'
-import { buildAllShiftedFrames } from './moveUtils'
+import { buildAllShiftedFrames, captureNonDefaultCells } from './moveUtils'
 
 export { computePixelCell, computeLineCells } from './gridUtils'
 
@@ -507,30 +507,9 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
             ? getGroupDescendantLayers(activeId, layersRef.current)
             : layersRef.current.filter((l): l is DrawableLayer => isDrawableLayer(l) && l.id === activeId)
           for (const target of targets) {
-            if (target.type === 'drawn') {
-              const frameCaps: Map<string, AnsiCell>[] = []
-              for (const frame of target.frames) {
-                const captured = new Map<string, AnsiCell>()
-                for (let r = 0; r < ANSI_ROWS; r++)
-                  for (let c = 0; c < ANSI_COLS; c++) {
-                    const cell = frame[r][c]
-                    if (!isDefaultCell(cell)) captured.set(`${r},${c}`, cell)
-                  }
-                frameCaps.push(captured)
-              }
-              moveCapturedRef.current.set(target.id, frameCaps)
-              moveBlankGridsRef.current.set(target.id, target.frames.map(() => createEmptyGrid()))
-            } else {
-              // Text layer — single grid
-              const captured = new Map<string, AnsiCell>()
-              for (let r = 0; r < ANSI_ROWS; r++)
-                for (let c = 0; c < ANSI_COLS; c++) {
-                  const cell = target.grid[r][c]
-                  if (!isDefaultCell(cell)) captured.set(`${r},${c}`, cell)
-                }
-              moveCapturedRef.current.set(target.id, [captured])
-              moveBlankGridsRef.current.set(target.id, [createEmptyGrid()])
-            }
+            const grids = target.type === 'drawn' ? target.frames : [target.grid]
+            moveCapturedRef.current.set(target.id, grids.map(captureNonDefaultCells))
+            moveBlankGridsRef.current.set(target.id, grids.map(() => createEmptyGrid()))
           }
           break
         }

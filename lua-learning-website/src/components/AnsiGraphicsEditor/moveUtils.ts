@@ -1,5 +1,18 @@
 import type { AnsiCell, AnsiGrid } from './types'
 import { ANSI_ROWS, ANSI_COLS, DEFAULT_CELL } from './types'
+import { isInBounds } from './gridUtils'
+import { isDefaultCell } from './layerUtils'
+
+/** Scan a grid and return a map of "row,col" -> cell for all non-default cells. */
+export function captureNonDefaultCells(grid: AnsiGrid): Map<string, AnsiCell> {
+  const captured = new Map<string, AnsiCell>()
+  for (let r = 0; r < ANSI_ROWS; r++)
+    for (let c = 0; c < ANSI_COLS; c++) {
+      const cell = grid[r][c]
+      if (!isDefaultCell(cell)) captured.set(`${r},${c}`, cell)
+    }
+  return captured
+}
 
 /**
  * For each layer, shift captured cells by (dr, dc) across ALL frames.
@@ -19,17 +32,14 @@ export function buildAllShiftedFrames(
     for (let f = 0; f < frameCaps.length; f++) {
       const grid = blanks[f]
       if (!grid) continue
-      // Reset blank grid
       for (let r = 0; r < ANSI_ROWS; r++)
         for (let c = 0; c < ANSI_COLS; c++)
           grid[r][c] = DEFAULT_CELL
-      // Place shifted cells
       for (const [key, cell] of frameCaps[f]) {
         const [rStr, cStr] = key.split(',')
         const nr = parseInt(rStr, 10) + dr
         const nc = parseInt(cStr, 10) + dc
-        if (nr >= 0 && nr < ANSI_ROWS && nc >= 0 && nc < ANSI_COLS)
-          grid[nr][nc] = cell
+        if (isInBounds(nr, nc)) grid[nr][nc] = cell
       }
       shifted.push(grid)
     }

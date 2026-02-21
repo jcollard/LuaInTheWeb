@@ -1,11 +1,35 @@
 import { describe, it, expect } from 'vitest'
-import { buildAllShiftedFrames } from './moveUtils'
+import { buildAllShiftedFrames, captureNonDefaultCells } from './moveUtils'
 import type { AnsiCell, AnsiGrid } from './types'
 import { ANSI_ROWS, ANSI_COLS, DEFAULT_CELL } from './types'
 import { createEmptyGrid } from './gridUtils'
 
 const cellA: AnsiCell = { char: 'A', fg: [255, 0, 0], bg: [0, 0, 255] }
 const cellB: AnsiCell = { char: 'B', fg: [0, 255, 0], bg: [255, 255, 0] }
+
+describe('captureNonDefaultCells', () => {
+  it('returns empty map for an empty grid', () => {
+    const result = captureNonDefaultCells(createEmptyGrid())
+    expect(result.size).toBe(0)
+  })
+
+  it('captures non-default cells with correct keys', () => {
+    const grid = createEmptyGrid()
+    grid[2][3] = cellA
+    grid[10][15] = cellB
+    const result = captureNonDefaultCells(grid)
+    expect(result.size).toBe(2)
+    expect(result.get('2,3')).toEqual(cellA)
+    expect(result.get('10,15')).toEqual(cellB)
+  })
+
+  it('ignores default cells', () => {
+    const grid = createEmptyGrid()
+    grid[0][0] = DEFAULT_CELL
+    const result = captureNonDefaultCells(grid)
+    expect(result.size).toBe(0)
+  })
+})
 
 describe('buildAllShiftedFrames', () => {
   it('shifts cells by (dr, dc) in a single frame', () => {
