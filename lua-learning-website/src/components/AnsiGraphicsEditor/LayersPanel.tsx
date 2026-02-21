@@ -255,6 +255,8 @@ export function LayersPanel({
           onCreateTag={onCreateTag}
           onDeleteTag={onDeleteTag}
           onRenameTag={onRenameTag}
+          onToggleVisibility={onToggleVisibility}
+          onRenameLayer={onRename}
         />
       ) : (
       <div className={styles.layersList}>

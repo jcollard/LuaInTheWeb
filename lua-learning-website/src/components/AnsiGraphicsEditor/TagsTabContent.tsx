@@ -10,6 +10,8 @@ export interface TagsTabContentProps {
   onCreateTag: (tag: string) => void
   onDeleteTag: (tag: string) => void
   onRenameTag: (oldTag: string, newTag: string) => void
+  onToggleVisibility: (id: string) => void
+  onRenameLayer: (id: string, name: string) => void
 }
 
 export function TagsTabContent({
@@ -20,11 +22,27 @@ export function TagsTabContent({
   onCreateTag,
   onDeleteTag,
   onRenameTag,
+  onToggleVisibility,
+  onRenameLayer,
 }: TagsTabContentProps) {
   const [newTagValue, setNewTagValue] = useState('')
   const [collapsedTags, setCollapsedTags] = useState<Set<string>>(new Set())
   const [editingTag, setEditingTag] = useState<string | null>(null)
   const [editTagValue, setEditTagValue] = useState('')
+  const [editingLayerId, setEditingLayerId] = useState<string | null>(null)
+  const [editLayerValue, setEditLayerValue] = useState('')
+
+  const startRenameLayer = useCallback((id: string, currentName: string) => {
+    setEditingLayerId(id)
+    setEditLayerValue(currentName)
+  }, [])
+
+  const commitRenameLayer = useCallback(() => {
+    if (editingLayerId && editLayerValue.trim() && editLayerValue.trim() !== layers.find(l => l.id === editingLayerId)?.name) {
+      onRenameLayer(editingLayerId, editLayerValue.trim())
+    }
+    setEditingLayerId(null)
+  }, [editingLayerId, editLayerValue, layers, onRenameLayer])
 
   const handleCreateTag = useCallback(() => {
     const trimmed = newTagValue.trim()
@@ -128,7 +146,37 @@ export function TagsTabContent({
                   data-testid={`tag-layer-row-${tag}-${layer.id}`}
                   onClick={() => onSetActive(layer.id)}
                 >
-                  {layer.name}
+                  <button
+                    className={styles.layerVisibility}
+                    onClick={e => { e.stopPropagation(); onToggleVisibility(layer.id) }}
+                    onDoubleClick={e => e.stopPropagation()}
+                    aria-label="Toggle visibility"
+                    title="Toggle visibility"
+                  >
+                    {layer.visible ? '\u{1F441}' : '\u{1F441}\u{200D}\u{1F5E8}'}
+                  </button>
+                  <span
+                    className={styles.layerName}
+                    onDoubleClick={e => { e.stopPropagation(); startRenameLayer(layer.id, layer.name) }}
+                  >
+                    {editingLayerId === layer.id ? (
+                      <input
+                        className={styles.layerNameInput}
+                        data-testid={`tag-layer-rename-input-${layer.id}`}
+                        value={editLayerValue}
+                        onChange={e => setEditLayerValue(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') commitRenameLayer()
+                          if (e.key === 'Escape') setEditingLayerId(null)
+                        }}
+                        onBlur={commitRenameLayer}
+                        onClick={e => e.stopPropagation()}
+                        autoFocus
+                      />
+                    ) : (
+                      layer.name
+                    )}
+                  </span>
                 </div>
               ))}
             </div>
