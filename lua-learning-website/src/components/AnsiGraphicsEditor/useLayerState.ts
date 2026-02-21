@@ -14,6 +14,11 @@ function withUpdatedFrame(layer: DrawnLayer, newGrid: AnsiGrid): DrawnLayer {
   return { ...layer, grid: newGrid, frames: newFrames }
 }
 
+/** Replace ALL frames of a DrawnLayer, keeping currentFrameIndex pointing to the right grid. */
+function withUpdatedAllFrames(layer: DrawnLayer, newFrames: AnsiGrid[]): DrawnLayer {
+  return { ...layer, grid: newFrames[layer.currentFrameIndex], frames: newFrames }
+}
+
 /** Compute the clamped insertion position within a group's contiguous block. */
 function computeGroupInsertPos(
   layers: Layer[], targetGroupId: string, rawNewIndex: number, sourceIndex: number,
@@ -50,8 +55,8 @@ export interface UseLayerStateReturn {
   removeFromGroup: (layerId: string) => void
   toggleGroupCollapsed: (groupId: string) => void
   duplicateLayer: (id: string) => void
-  applyMoveGrids: (layerGrids: Map<string, AnsiGrid>) => void
-  applyMoveGridsImmediate: (layerGrids: Map<string, AnsiGrid>) => void
+  applyMoveGrids: (layerFrames: Map<string, AnsiGrid[]>) => void
+  applyMoveGridsImmediate: (layerFrames: Map<string, AnsiGrid[]>) => void
   applyLayerTransform: (transform: (layer: Layer) => Layer) => void
   addFrame: () => void
   duplicateFrame: () => void
@@ -354,17 +359,18 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     })
   }, [])
 
-  const applyMoveGridsImmediate = useCallback((layerGrids: Map<string, AnsiGrid>) => {
+  const applyMoveGridsImmediate = useCallback((layerFrames: Map<string, AnsiGrid[]>) => {
     layersRef.current = layersRef.current.map(l => {
-      if (l.type !== 'drawn') return l
-      const newGrid = layerGrids.get(l.id)
-      if (!newGrid) return l
-      return withUpdatedFrame(l, newGrid)
+      const frames = layerFrames.get(l.id)
+      if (!frames) return l
+      if (l.type === 'drawn') return withUpdatedAllFrames(l, frames)
+      if (l.type === 'text') return { ...l, grid: frames[0] }
+      return l
     })
   }, [layersRef])
 
-  const applyMoveGrids = useCallback((layerGrids: Map<string, AnsiGrid>) => {
-    applyMoveGridsImmediate(layerGrids)
+  const applyMoveGrids = useCallback((layerFrames: Map<string, AnsiGrid[]>) => {
+    applyMoveGridsImmediate(layerFrames)
     setLayers(layersRef.current)
   }, [applyMoveGridsImmediate, layersRef])
 

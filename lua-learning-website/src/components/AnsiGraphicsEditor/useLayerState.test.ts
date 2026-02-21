@@ -920,9 +920,9 @@ describe('useLayerState', () => {
       grid1[0][0] = { char: 'A', fg: red, bg: [0, 0, 0] }
       const grid2 = l2.grid.map(row => row.map(c => ({ ...c })))
       grid2[0][0] = { char: 'B', fg: blue, bg: [0, 0, 0] }
-      const updates = new Map<string, typeof grid1>()
-      updates.set(l1.id, grid1)
-      updates.set(l2.id, grid2)
+      const updates = new Map<string, (typeof grid1)[]>()
+      updates.set(l1.id, [grid1])
+      updates.set(l2.id, [grid2])
       act(() => result.current.applyMoveGrids(updates))
       expect((result.current.layers[0] as DrawableLayer).grid[0][0].char).toBe('A')
       expect((result.current.layers[1] as DrawableLayer).grid[0][0].char).toBe('B')
