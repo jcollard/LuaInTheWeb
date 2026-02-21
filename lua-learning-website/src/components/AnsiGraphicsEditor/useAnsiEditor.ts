@@ -3,7 +3,7 @@ import { useState, useCallback, useRef, useMemo } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, BorderStyle, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions, DrawableLayer, DrawnLayer } from './types'
 import { blendRgb } from './colorUtils'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, DEFAULT_CELL, DEFAULT_FRAME_DURATION_MS, BORDER_PRESETS, isGroupLayer, isDrawableLayer } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, DEFAULT_BLEND_RATIO, DEFAULT_CELL, DEFAULT_FRAME_DURATION_MS, BORDER_PRESETS, isGroupLayer, isDrawableLayer } from './types'
 import type { CellHalf, ColorTransform } from './gridUtils'
 import { createEmptyGrid, isInBounds, getCellHalfFromMouse, computePixelCell, computeFloodFillCells } from './gridUtils'
 import { TerminalBuffer } from './terminalBuffer'
@@ -96,7 +96,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
 
   const [brush, setBrush] = useState<BrushSettings>({
     char: '#', fg: DEFAULT_FG, bg: DEFAULT_BG, mode: 'brush', tool: 'pencil',
-    borderStyle: BORDER_PRESETS[0].style, blendRatio: 0.25,
+    borderStyle: BORDER_PRESETS[0].style, blendRatio: DEFAULT_BLEND_RATIO,
   })
   const [isDirty, setIsDirty] = useState(false)
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false)
@@ -180,7 +180,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const paintBlendPixel = useCallback((row: number, col: number, isTopHalf: boolean) => {
     if (!isInBounds(row, col)) return
     const { fg, bg, blendRatio } = brushRef.current
-    applyCell(row, col, computePixelCell(getActiveGrid()[row][col], blendRgb(bg, fg, blendRatio ?? 0.25), isTopHalf))
+    applyCell(row, col, computePixelCell(getActiveGrid()[row][col], blendRgb(bg, fg, blendRatio ?? DEFAULT_BLEND_RATIO), isTopHalf))
   }, [applyCell, getActiveGrid])
 
   const paintCell = useCallback((row: number, col: number) => {

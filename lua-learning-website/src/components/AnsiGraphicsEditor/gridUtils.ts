@@ -1,6 +1,6 @@
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { AnsiCell, AnsiGrid, BrushSettings, RGBColor } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_CELL, DEFAULT_FG, HALF_BLOCK, TRANSPARENT_HALF } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_BLEND_RATIO, DEFAULT_CELL, DEFAULT_FG, HALF_BLOCK, TRANSPARENT_HALF } from './types'
 import { bresenhamLine, midpointEllipse } from './lineAlgorithm'
 import { rgbEqual } from './layerUtils'
 import { blendRgb } from './colorUtils'
@@ -98,7 +98,7 @@ export function computeErasePixelCell(existingCell: AnsiCell, isTopHalf: boolean
 export type LineBrush = Omit<BrushSettings, 'tool'>
 
 function effectivePaintColor(brush: LineBrush): RGBColor {
-  return brush.mode === 'blend-pixel' ? blendRgb(brush.bg, brush.fg, brush.blendRatio ?? 0.25) : brush.fg
+  return brush.mode === 'blend-pixel' ? blendRgb(brush.bg, brush.fg, brush.blendRatio ?? DEFAULT_BLEND_RATIO) : brush.fg
 }
 
 export interface CellHalf {

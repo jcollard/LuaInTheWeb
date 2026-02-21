@@ -40,6 +40,8 @@ export const BORDER_PRESETS: { name: string; style: BorderStyle }[] = [
 
 export const HALF_BLOCK = '\u2580'
 
+export const DEFAULT_BLEND_RATIO = 0.25
+
 export interface BrushSettings {
   char: string
   fg: RGBColor
@@ -47,7 +49,7 @@ export interface BrushSettings {
   mode: BrushMode
   tool: DrawTool
   borderStyle?: BorderStyle
-  blendRatio?: number  // 0..1, default 0.25
+  blendRatio?: number  // 0..1, defaults to DEFAULT_BLEND_RATIO
 }
 
 export const ANSI_COLS = 80

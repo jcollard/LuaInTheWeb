@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import type { BrushMode, DrawTool, BrushSettings, BorderStyle, TextAlign } from './types'
-import { BORDER_PRESETS, borderStyleEqual } from './types'
+import { BORDER_PRESETS, DEFAULT_BLEND_RATIO, borderStyleEqual } from './types'
 import { CharPaletteModal } from './CharPaletteModal'
 import { FileOptionsModal } from './FileOptionsModal'
 import { toolTooltip, tooltipWithShortcut, MODE_SHORTCUTS, ACTION_SHORTCUTS } from './keyboardShortcuts'
@@ -45,6 +45,7 @@ export function AnsiEditorToolbar({
   const isRectActive = brush.tool === 'rect-outline' || brush.tool === 'rect-filled'
   const isOvalActive = brush.tool === 'oval-outline' || brush.tool === 'oval-filled'
   const isBorderActive = brush.tool === 'border'
+  const blendPercent = Math.round((brush.blendRatio ?? DEFAULT_BLEND_RATIO) * 100)
   const [charPaletteOpen, setCharPaletteOpen] = useState(false)
   const [internalFileMenuOpen, setInternalFileMenuOpen] = useState(false)
   const fileOptionsOpen = controlledFileMenuOpen ?? internalFileMenuOpen
@@ -303,11 +304,11 @@ export function AnsiEditorToolbar({
           <input
             type="range"
             min={0} max={100} step={1}
-            value={Math.round((brush.blendRatio ?? 0.25) * 100)}
+            value={blendPercent}
             onChange={e => onSetBlendRatio?.(Number(e.target.value) / 100)}
             data-testid="blend-ratio-slider"
           />
-          <span data-testid="blend-ratio-value">{Math.round((brush.blendRatio ?? 0.25) * 100)}%</span>
+          <span data-testid="blend-ratio-value">{blendPercent}%</span>
         </div>
       )}
       {brush.tool === 'text' && onSetTextAlign && (
