@@ -74,6 +74,26 @@ describe('useToast', () => {
     expect(result.current.showToast).toBe(first)
   })
 
+  it('should clear pending timers on unmount', () => {
+    const { result, unmount } = renderHook(() => useToast())
+    act(() => result.current.showToast('Undo'))
+    expect(result.current.toasts).toHaveLength(1)
+    // Spy on clearTimeout before unmount
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout')
+    unmount()
+    expect(clearTimeoutSpy.mock.calls.length).toBeGreaterThanOrEqual(1)
+    clearTimeoutSpy.mockRestore()
+  })
+
+  it('should not fire setState after unmount', () => {
+    const { result, unmount } = renderHook(() => useToast())
+    act(() => result.current.showToast('Toast 1'))
+    act(() => result.current.showToast('Toast 2'))
+    unmount()
+    // Advancing timers after unmount should not throw or fire
+    act(() => { vi.advanceTimersByTime(TOAST_DURATION_MS) })
+  })
+
   it('should dismiss only the specific toast after its timeout', () => {
     const { result } = renderHook(() => useToast())
     act(() => result.current.showToast('First'))

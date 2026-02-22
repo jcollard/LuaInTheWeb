@@ -127,15 +127,14 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
       textFgColors: [],
       grid: renderTextLayerGrid('', bounds, textFg),
     }
-    const newLayers = [...layersRef.current, textLayer]
-    layersRef.current = newLayers
+    layersRef.current = [...layersRef.current, textLayer]
     activeLayerIdRef.current = textLayer.id
-    setLayers(newLayers)
+    setLayers(prev => [...prev, textLayer])
     setActiveLayerId(textLayer.id)
   }, [])
 
   const updateTextLayer = useCallback((id: string, updates: { text?: string; bounds?: Rect; textFg?: RGBColor; textFgColors?: RGBColor[]; textAlign?: TextAlign }) => {
-    const newLayers = layersRef.current.map(l => {
+    const mapLayer = (l: Layer): Layer => {
       if (l.id !== id || l.type !== 'text') return l
       const updated: TextLayer = {
         ...l,
@@ -147,10 +146,10 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
       }
       updated.grid = renderTextLayerGrid(updated.text, updated.bounds, updated.textFg, updated.textFgColors, updated.textAlign)
       return updated
-    })
-    layersRef.current = newLayers
-    setLayers(newLayers)
-  }, [layersRef])
+    }
+    layersRef.current = layersRef.current.map(mapLayer)
+    setLayers(prev => prev.map(mapLayer))
+  }, [])
 
   const removeLayer = useCallback((id: string) => {
     setLayers(prev => {

@@ -399,6 +399,22 @@ describe('useLayerState', () => {
     })
   })
 
+  describe('addTextLayer batching', () => {
+    it('calling addTextLayer twice in a single act results in both layers present', () => {
+      const red: RGBColor = [255, 0, 0]
+      const bounds: Rect = { r0: 0, c0: 0, r1: 2, c1: 10 }
+      const { result } = renderHook(() => useLayerState())
+      act(() => {
+        result.current.addTextLayer('Text 1', bounds, red)
+        result.current.addTextLayer('Text 2', bounds, red)
+      })
+      // Should have Background + 2 text layers = 3
+      expect(result.current.layers).toHaveLength(3)
+      expect(result.current.layers[1].name).toBe('Text 1')
+      expect(result.current.layers[2].name).toBe('Text 2')
+    })
+  })
+
   describe('updateTextLayer', () => {
     const red: RGBColor = [255, 0, 0]
     const blue: RGBColor = [0, 0, 255]

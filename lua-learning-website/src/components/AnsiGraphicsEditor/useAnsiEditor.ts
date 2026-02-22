@@ -682,7 +682,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       container.removeEventListener('contextmenu', onContextMenu)
       document.removeEventListener('mouseup', onDocumentMouseUp)
       document.removeEventListener('keydown', onKeyDown)
-      textTool.commitIfEditing()
+      textTool.reset()
     }
   }, [paintCell, paintPixel, paintBlendPixel, applyCell, pushSnapshot, layersRef, activeLayerIdRef, getActiveGrid, rawAddTextLayer, rawUpdateTextLayer, undo, redo, rawApplyMoveGrids, rawApplyMoveGridsImmediate, rawSetCurrentFrame, setTool, setBrushMode, togglePlayback])
 

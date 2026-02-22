@@ -46,6 +46,7 @@ export interface TextToolHandlers {
   onMouseUp: () => void
   onKeyDown: (e: KeyboardEvent) => void
   commitIfEditing: () => void
+  reset: () => void
   getPhase: () => TextToolPhase
   refreshOverlays: () => void
 }
@@ -354,6 +355,19 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
     }
   }
 
+  function reset(): void {
+    phase = 'idle'
+    editingLayerId = null
+    cursorPos = 0
+    drawStart = null
+    drawEnd = null
+    dragStart = null
+    dragBoundsStart = null
+    resizeHandle = null
+    hideBoundsOverlay()
+    hideCursorOverlay()
+  }
+
   function getPhase(): TextToolPhase {
     return phase
   }
@@ -366,7 +380,7 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
     positionCursorOverlay()
   }
 
-  return { onMouseDown, onMouseMove, onMouseUp, onKeyDown, commitIfEditing, getPhase, refreshOverlays }
+  return { onMouseDown, onMouseMove, onMouseUp, onKeyDown, commitIfEditing, reset, getPhase, refreshOverlays }
 }
 
 function computeResizedBounds(original: Rect, handle: Handle, dr: number, dc: number): Rect {

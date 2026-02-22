@@ -367,6 +367,56 @@ describe('createTextToolHandlers', () => {
     })
   })
 
+  describe('reset', () => {
+    it('clears all state when in drawing phase (where commitIfEditing is a no-op)', () => {
+      deps.layersRef.current = []
+      handlers = createTextToolHandlers(deps)
+      // Enter drawing phase
+      handlers.onMouseDown(5, 10)
+      expect(handlers.getPhase()).toBe('drawing')
+      // commitIfEditing does nothing for drawing phase
+      handlers.commitIfEditing()
+      expect(handlers.getPhase()).toBe('drawing')
+      // reset() should unconditionally reset
+      handlers.reset()
+      expect(handlers.getPhase()).toBe('idle')
+    })
+
+    it('clears state when in editing phase', () => {
+      const textLayer = makeTextLayer({ bounds: { r0: 2, c0: 5, r1: 6, c1: 20 } })
+      deps.layersRef.current = [textLayer]
+      deps.activeLayerIdRef.current = 'text-1'
+      handlers = createTextToolHandlers(deps)
+      handlers.onMouseDown(4, 10) // enter editing
+      expect(handlers.getPhase()).toBe('editing')
+      handlers.reset()
+      expect(handlers.getPhase()).toBe('idle')
+    })
+
+    it('does not call onExitEditing', () => {
+      const onExitEditing = vi.fn()
+      const textLayer = makeTextLayer({ bounds: { r0: 2, c0: 5, r1: 6, c1: 20 } })
+      deps.layersRef.current = [textLayer]
+      deps.activeLayerIdRef.current = 'text-1'
+      deps.onExitEditing = onExitEditing
+      handlers = createTextToolHandlers(deps)
+      handlers.onMouseDown(4, 10) // enter editing
+      handlers.reset()
+      expect(onExitEditing).not.toHaveBeenCalled()
+    })
+
+    it('hides overlay elements', () => {
+      const textLayer = makeTextLayer({ bounds: { r0: 2, c0: 5, r1: 6, c1: 20 } })
+      deps.layersRef.current = [textLayer]
+      deps.activeLayerIdRef.current = 'text-1'
+      handlers = createTextToolHandlers(deps)
+      handlers.onMouseDown(4, 10) // enter editing
+      handlers.reset()
+      expect(deps.textBoundsRef.current!.style.display).toBe('none')
+      expect(deps.textCursorRef.current!.style.display).toBe('none')
+    })
+  })
+
   describe('resizing', () => {
     it('resizes bounds on drag from corner', () => {
       const textLayer = makeTextLayer({ bounds: { r0: 2, c0: 5, r1: 6, c1: 20 } })
