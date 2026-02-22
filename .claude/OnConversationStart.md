@@ -165,7 +165,7 @@ Use `/tdd` for detailed TDD guidelines, `/mutation-test` for mutation testing gu
 
 **At MILESTONEs**: Run `/milestone` for E2E testing
 
-**Before PR**: All tests, mutation, lint, build, E2E pass
+**Before PR**: All tests, mutation, lint, type-check, build, E2E pass
 
 ## Commands
 
@@ -183,6 +183,16 @@ npm run build                # Build for production
 npm run lint                 # Run linter
 npm run test:e2e             # Run E2E tests (Playwright)
 ```
+
+### Type Checking (REQUIRED before PR)
+
+`npm run build` may fail locally due to pre-existing `@lua-learning/*` package issues. **You must still type-check** using:
+
+```bash
+npx tsc -p lua-learning-website/tsconfig.app.json --noEmit 2>&1 | grep -v "@lua-learning/"
+```
+
+This must produce **no output**. Any output means real type errors that CI will catch. Common cause: adding a property to a shared interface (e.g., `IDEContextValue`) without updating all test mocks that construct that interface.
 
 ## Special Commands
 
