@@ -633,4 +633,5 @@ describe('mouse drag off canvas', () => {
     act(() => { container.dispatchEvent(mouseAt('mousemove', 5, 0)) })
     expect(result.current.grid[0][5].char).toBe(' ')
   })
+
 })

@@ -829,9 +829,11 @@ function IDELayoutInner({
                           />
                         </div>
                       )}
-                      {/* ANSI Graphics Editor - shown when ansi-editor tab is active */}
-                      {hasAnsiEditorTabs && activeTabType === 'ansi-editor' && (
-                        <AnsiEditorTabContent tabBarProps={tabBarProps} filePath={activeTab ?? undefined} />
+                      {/* ANSI Graphics Editor - always mounted when ansi-editor tabs exist to preserve state */}
+                      {hasAnsiEditorTabs && (
+                        <div style={{ display: activeTabType === 'ansi-editor' ? 'contents' : 'none' }}>
+                          <AnsiEditorTabContent tabBarProps={tabBarProps} filePath={activeTab ?? undefined} />
+                        </div>
                       )}
                       {/* Markdown preview - shown when markdown tab is active */}
                       {/* Note: Read directly from filesystem since tabEditorManager only tracks file tabs */}

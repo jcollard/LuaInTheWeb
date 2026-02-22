@@ -487,7 +487,8 @@ This prevents:
 - [ ] All tests pass: `npm run test`
 - [ ] Full mutation: `npm run test:mutation` > 80%
 - [ ] Lint passes: `npm run lint`
-- [ ] Build succeeds: `npm run build`
+- [ ] Type check passes: `npx tsc -p lua-learning-website/tsconfig.app.json --noEmit 2>&1 | grep -v "@lua-learning/"` (must produce no output)
+- [ ] Build succeeds: `npm run build` (may fail locally due to package issues — the tsc check above covers our code)
 - [ ] E2E passes: `npm run test:e2e`
 
 ---

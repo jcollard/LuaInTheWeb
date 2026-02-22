@@ -65,6 +65,7 @@ export interface IDEContextValue {
   reorderTab: (path: string, newIndex: number) => void
   closeToRight: (path: string) => void
   closeOthers: (path: string) => void
+  setTabDirty: (path: string, isDirty: boolean) => void
 
   // Toast notifications
   toasts: ToastData[]
