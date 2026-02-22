@@ -13,6 +13,9 @@ import { ConfirmDialog } from '../ConfirmDialog'
 import { ToastContainer } from '../Toast'
 import { WelcomeScreen } from '../WelcomeScreen'
 import { CanvasTabContent } from './CanvasTabContent'
+import { AnsiTabContent } from './AnsiTabContent'
+import { AnsiEditorTabContent } from './AnsiEditorTabContent'
+import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import { MarkdownTabContent } from './MarkdownTabContent'
 import { BinaryTabContent } from './BinaryTabContent'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
@@ -115,6 +118,9 @@ function IDELayoutInner({
     selectTab,
     closeTab,
     openCanvasTab,
+    openAnsiTab,
+    openAnsiEditorTab,
+    openAnsiEditorFile,
     makeTabPermanent,
     pinTab,
     unpinTab,
@@ -153,6 +159,67 @@ function IDELayoutInner({
     activeTabType,
     openCanvasTab,
   })
+
+  // ANSI tab management
+  const hasAnsiTabs = tabs.some(t => t.type === 'ansi')
+  const hasAnsiEditorTabs = tabs.some(t => t.type === 'ansi-editor')
+
+  // ANSI tab request management (ansiId -> resolver for terminal handle)
+  const pendingAnsiRequestsRef = useRef<Map<string, (handle: AnsiTerminalHandle) => void>>(new Map())
+
+  // ANSI close handler management for UI-initiated tab close
+  const ansiCloseHandlersRef = useRef<Map<string, () => void>>(new Map())
+
+  // Cached ANSI terminal handle -- allows immediate resolution when the terminal is already mounted
+  const ansiTerminalHandleRef = useRef<AnsiTerminalHandle | null>(null)
+
+  // Handle ANSI tab request from shell (ansi.start())
+  const handleRequestAnsiTab = useCallback(async (ansiId: string): Promise<AnsiTerminalHandle> => {
+    const tabPath = `ansi://${ansiId}`
+    openAnsiTab(ansiId, 'ANSI Terminal')
+
+    // If terminal handle is already available (panel already mounted), resolve immediately
+    if (ansiTerminalHandleRef.current) {
+      return ansiTerminalHandleRef.current
+    }
+
+    // Otherwise wait for the terminal panel to mount and call onTerminalReady
+    return new Promise((resolve) => {
+      pendingAnsiRequestsRef.current.set(tabPath, resolve)
+    })
+  }, [openAnsiTab])
+
+  // Handle ANSI tab close from shell (ansi.stop() or Ctrl+C)
+  const handleCloseAnsiTab = useCallback((ansiId: string) => {
+    const tabPath = `ansi://${ansiId}`
+    pendingAnsiRequestsRef.current.delete(tabPath)
+    ansiTerminalHandleRef.current = null
+    closeTab(tabPath)
+  }, [closeTab])
+
+  // Callback when ANSI terminal is ready (passed to AnsiTabContent)
+  const handleAnsiTerminalReady = useCallback((_ansiId: string, handle: AnsiTerminalHandle | null) => {
+    // Cache the handle for immediate resolution of future requests
+    ansiTerminalHandleRef.current = handle
+
+    // Resolve any pending request (use first pending key since there's one shared terminal)
+    if (handle) {
+      for (const [key, resolver] of pendingAnsiRequestsRef.current.entries()) {
+        resolver(handle)
+        pendingAnsiRequestsRef.current.delete(key)
+      }
+    }
+  }, [])
+
+  // Register a handler to be called when an ANSI tab is closed from the UI
+  const registerAnsiCloseHandler = useCallback((ansiId: string, handler: () => void) => {
+    ansiCloseHandlersRef.current.set(ansiId, handler)
+  }, [])
+
+  // Unregister an ANSI close handler
+  const unregisterAnsiCloseHandler = useCallback((ansiId: string) => {
+    ansiCloseHandlersRef.current.delete(ansiId)
+  }, [])
 
   // Editor extensions (diagnostics + hover documentation)
   const { handleEditorReady: handleEditorReadyWithPath } = useEditorExtensions({
@@ -516,6 +583,11 @@ function IDELayoutInner({
     registerCanvasStepHandler,
     unregisterCanvasExecutionHandlers,
     updateCanvasControlState,
+    // ANSI terminal callbacks
+    onRequestAnsiTab: handleRequestAnsiTab,
+    onCloseAnsiTab: handleCloseAnsiTab,
+    registerAnsiCloseHandler,
+    unregisterAnsiCloseHandler,
   }), [
     handleRequestCanvasTab,
     handleCloseCanvasTab,
@@ -546,6 +618,10 @@ function IDELayoutInner({
     registerCanvasStepHandler,
     unregisterCanvasExecutionHandlers,
     updateCanvasControlState,
+    handleRequestAnsiTab,
+    handleCloseAnsiTab,
+    registerAnsiCloseHandler,
+    unregisterAnsiCloseHandler,
   ])
 
   const combinedClassName = className
@@ -569,16 +645,16 @@ function IDELayoutInner({
       // Show confirmation dialog
       setPendingCloseTabPath(path)
     } else {
+      // If this is an ANSI tab, invoke the close handler to stop the ANSI process
+      if (path.startsWith('ansi://')) {
+        const ansiId = path.replace('ansi://', '')
+        ansiCloseHandlersRef.current.get(ansiId)?.()
+      }
       // If this is a canvas tab, invoke the close handler to stop the canvas process
       if (path.startsWith('canvas://')) {
         const canvasId = path.replace('canvas://', '')
-        const closeHandler = canvasCloseHandlersRef.current.get(canvasId)
-        if (closeHandler) {
-          closeHandler()
-          // Handler will clean itself up via unregisterCanvasCloseHandler
-        }
+        canvasCloseHandlersRef.current.get(canvasId)?.()
       }
-      // Close immediately
       closeTab(path)
     }
   }, [tabs, closeTab])
@@ -617,7 +693,9 @@ function IDELayoutInner({
   // Routes to appropriate viewer based on file type
   const handleRequestOpenFile = useCallback((filePath: string) => {
     const lowerPath = filePath.toLowerCase()
-    if (lowerPath.endsWith('.md')) {
+    if (lowerPath.endsWith('.ansi.lua')) {
+      openAnsiEditorFile(filePath)
+    } else if (lowerPath.endsWith('.md')) {
       openMarkdownPreview(filePath)
     } else if (
       lowerPath.endsWith('.png') || lowerPath.endsWith('.jpg') ||
@@ -636,7 +714,7 @@ function IDELayoutInner({
     } else {
       openFile(filePath)
     }
-  }, [openFile, openMarkdownPreview, openBinaryViewer])
+  }, [openFile, openAnsiEditorFile, openMarkdownPreview, openBinaryViewer])
 
   // Format the current code
   const handleFormat = useCallback(() => {
@@ -661,7 +739,7 @@ function IDELayoutInner({
     handleCreateFile, handleCreateFolder, renameFile, renameFolder,
     deleteFile, deleteFolder, openFile, openPreviewFile, moveFile, copyFile,
     clearPendingNewFile, clearPendingNewFolder, openMarkdownPreview, openMarkdownEdit: openFile,
-    makeTabPermanent, openBinaryViewer, handleCdToLocation, uploadFiles, uploadFolder, workspaces, pendingWorkspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
+    makeTabPermanent, openBinaryViewer, openAnsiEditorFile, handleCdToLocation, uploadFiles, uploadFolder, workspaces, pendingWorkspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
     addVirtualWorkspace, handleAddLocalWorkspace, handleRemoveWorkspace, refreshWorkspace,
     refreshFileTree, supportsRefresh, handleReconnectWorkspace, handleDisconnectWorkspace,
     handleRenameWorkspace, isFolderAlreadyMounted, getUniqueWorkspaceName,
@@ -697,6 +775,7 @@ function IDELayoutInner({
                   <SidebarPanel
                     activePanel={activePanel}
                     explorerProps={explorerProps}
+                    onOpenAnsiEditor={openAnsiEditorTab}
                   />
                 </IDEPanel>
                 <IDEResizeHandle />
@@ -736,6 +815,23 @@ function IDELayoutInner({
                             onStep={handleCanvasStep}
                           />
                         </div>
+                      )}
+                      {/* ANSI terminal - always mounted when ansi tabs exist */}
+                      {hasAnsiTabs && (
+                        <div style={{ display: activeTabType === 'ansi' ? 'contents' : 'none' }}>
+                          <AnsiTabContent
+                            tabs={tabs}
+                            activeTab={activeTab}
+                            onSelectTab={selectTab}
+                            onCloseTab={handleCloseTab}
+                            isActive={activeTabType === 'ansi'}
+                            onTerminalReady={handleAnsiTerminalReady}
+                          />
+                        </div>
+                      )}
+                      {/* ANSI Graphics Editor - shown when ansi-editor tab is active */}
+                      {hasAnsiEditorTabs && activeTabType === 'ansi-editor' && (
+                        <AnsiEditorTabContent tabBarProps={tabBarProps} filePath={activeTab ?? undefined} />
                       )}
                       {/* Markdown preview - shown when markdown tab is active */}
                       {/* Note: Read directly from filesystem since tabEditorManager only tracks file tabs */}

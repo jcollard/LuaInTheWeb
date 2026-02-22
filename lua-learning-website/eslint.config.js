@@ -68,4 +68,17 @@ export default defineConfig([
       ],
     },
   },
+  // AnsiGraphicsEditor hooks: splitting tracked for follow-up PR
+  {
+    files: ['**/AnsiGraphicsEditor/useAnsiEditor.ts'],
+    rules: { 'max-lines': ['error', { max: 850, skipBlankLines: true, skipComments: true }] },
+  },
+  {
+    files: ['**/AnsiGraphicsEditor/useLayerState.ts'],
+    rules: { 'max-lines': ['error', { max: 600, skipBlankLines: true, skipComments: true }] },
+  },
+  {
+    files: ['**/AnsiGraphicsEditor/AnsiEditorToolbar.tsx'],
+    rules: { 'max-lines': ['error', { max: 500, skipBlankLines: true, skipComments: true }] },
+  },
 ])

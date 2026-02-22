@@ -131,6 +131,15 @@
   color: var(--theme-text-primary);
 }
 
+.canvasLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--theme-text-secondary);
+  font-size: 14px;
+}
+
 /* Mobile responsive styles */
 @media (max-width: 768px) {
   .activityBar {

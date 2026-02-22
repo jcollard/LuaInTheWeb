@@ -96,6 +96,20 @@ When adding or modifying canvas features (drawing operations, input handling, au
 2. **If shared code isn't possible** (due to different thread models), implement in both and document the pairing
 3. **Test both paths** — a feature working in the editor doesn't guarantee it works in export
 
+## ANSI Graphics Editor
+
+The ANSI Graphics Editor is a full-featured art editor for creating ANSI-style artwork using the terminal's character grid (80x25). It supports multiple layer types, animation frames, drawing tools, and export formats.
+
+- **Architecture**: [ANSI Graphics Editor](./ansi-graphics-editor.md)
+- **Development Guide**: [ANSI Editor Development Guide](./ansi-editor-development.md)
+- **Location**: `src/components/AnsiGraphicsEditor/` (~92 files)
+
+Key architectural notes:
+- All business logic lives in `useAnsiEditor` and `useLayerState` hooks
+- UI components are pure — receive props, fire callbacks
+- Uses `TerminalBuffer` for double-buffered rendering to xterm.js
+- Snapshot-based undo/redo (not command pattern)
+
 ## Core Components
 
 ### App.tsx

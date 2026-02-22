@@ -34,6 +34,9 @@ export { LUA_HC_CODE } from './lua/hc.generated'
 // LocalStorage library export (auto-generated from localstorage.lua)
 export { LUA_LOCALSTORAGE_CODE } from './lua/localstorage.generated'
 
+// ANSI library export (auto-generated from ansi.lua)
+export { LUA_ANSI_CODE } from './lua/ansi.generated'
+
 // Canvas Lua code modules (for bundling in exports)
 export {
   canvasLuaCoreCode,
@@ -59,6 +62,12 @@ export { XTERM_INLINE_JS, XTERM_INLINE_CSS } from './xterm-inline.generated'
 
 // Canvas controller for shell-based canvas (non-worker)
 export { CanvasController, type CanvasCallbacks } from './CanvasController'
+
+// ANSI terminal controller for shell-based ANSI terminal
+export { AnsiController, type AnsiCallbacks, type AnsiTerminalHandle } from './AnsiController'
+
+// ANSI terminal Lua code modules (for bundling in exports)
+export { ansiLuaCoreCode, ansiLuaInputCode } from './ansiLuaCode'
 
 // Asset manager for asset registration, loading, and lifecycle
 export { AssetManager, type IAssetManager, type AudioAssetManifest } from './AssetManager'

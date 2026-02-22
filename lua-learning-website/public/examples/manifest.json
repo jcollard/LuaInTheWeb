@@ -220,6 +220,10 @@
     "audio/assets/music/level-2.ogg",
     "audio/assets/music/level-3.ogg",
     "audio/assets/music/ending.ogg",
-    "storage/save_demo.lua"
+    "storage/save_demo.lua",
+    "ansi/hello.lua",
+    "ansi/input_demo.lua",
+    "ansi/mouse_demo.lua",
+    "ansi/color_palette.lua"
   ]
 }

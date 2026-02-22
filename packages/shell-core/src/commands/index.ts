@@ -14,6 +14,7 @@ import { touch } from './touch'
 import { cp } from './cp'
 import { mv } from './mv'
 import { OpenCommand } from './open'
+import { AnsiTestCommand } from './ansiTest'
 
 // Export individual commands
 export { pwd } from './pwd'
@@ -26,6 +27,7 @@ export { touch } from './touch'
 export { cp } from './cp'
 export { mv } from './mv'
 export { OpenCommand } from './open'
+export { AnsiTestCommand } from './ansiTest'
 
 /**
  * Register all built-in commands with a registry.
@@ -44,6 +46,7 @@ export function registerBuiltinCommands(registry: CommandRegistry): CommandRegis
   registry.register(createHelpCommand(registry))
   // Register ICommand implementations
   registry.registerICommand(new OpenCommand())
+  registry.registerICommand(new AnsiTestCommand())
   return registry
 }
 

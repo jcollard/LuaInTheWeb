@@ -252,6 +252,37 @@ export interface ShellContext {
   transferFontsToWindow?: (canvasId: string, fonts: Array<{ name: string; dataUrl: string }>) => void
 
   /**
+   * Request an ANSI terminal tab to be opened.
+   * Returns the terminal handle when the tab is ready.
+   * @param ansiId - Unique identifier for the ANSI tab
+   * @returns Promise resolving to the terminal handle when ready
+   */
+  onRequestAnsiTab?: (ansiId: string) => Promise<{
+    write: (data: string) => void
+    container: HTMLElement
+    dispose: () => void
+  }>
+
+  /**
+   * Request an ANSI terminal tab to be closed.
+   * @param ansiId - Unique identifier for the ANSI tab to close
+   */
+  onCloseAnsiTab?: (ansiId: string) => void
+
+  /**
+   * Register a handler to be called when the ANSI tab is closed from the UI.
+   * @param ansiId - Unique identifier for the ANSI tab
+   * @param handler - Function to call when the tab is closed
+   */
+  registerAnsiCloseHandler?: (ansiId: string, handler: () => void) => void
+
+  /**
+   * Unregister the close handler for an ANSI terminal.
+   * @param ansiId - Unique identifier for the ANSI tab
+   */
+  unregisterAnsiCloseHandler?: (ansiId: string) => void
+
+  /**
    * Request a file to be opened in the editor.
    * Called by the 'open' command to integrate with an IDE or editor.
    * Optional - when undefined, the open command will report that

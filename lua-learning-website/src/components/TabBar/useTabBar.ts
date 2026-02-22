@@ -136,6 +136,28 @@ export function useTabBar(options: UseTabBarOptions = {}): UseTabBarReturn {
     setActiveTab(path)
   }, [])
 
+  const openAnsiTab = useCallback((id: string, name: string = 'ANSI Terminal') => {
+    const path = `ansi://${id}`
+    setTabs((prev) => {
+      if (prev.some((tab) => tab.path === path)) {
+        return prev
+      }
+      return [...prev, { path, name, isDirty: false, type: 'ansi' as const, isPreview: false, isPinned: false }]
+    })
+    setActiveTab(path)
+  }, [])
+
+  const openAnsiEditorTab = useCallback(() => {
+    const path = 'ansi-editor://main'
+    setTabs((prev) => {
+      if (prev.some((tab) => tab.path === path)) {
+        return prev
+      }
+      return [...prev, { path, name: 'ANSI Graphics Editor', isDirty: false, type: 'ansi-editor' as const, isPreview: false, isPinned: false }]
+    })
+    setActiveTab(path)
+  }, [])
+
   const openMarkdownPreviewTab = useCallback((path: string, name: string) => {
     setTabs((prev) => {
       // Check if tab already exists
@@ -187,6 +209,8 @@ export function useTabBar(options: UseTabBarOptions = {}): UseTabBarReturn {
     if (tab) return tab.type
     // Fallback: infer type from path prefix (handles race condition during tab creation)
     if (activeTab.startsWith('canvas://')) return 'canvas'
+    if (activeTab.startsWith('ansi://')) return 'ansi'
+    if (activeTab.startsWith('ansi-editor://')) return 'ansi-editor'
     return 'file'
   }, [activeTab, tabs])
 
@@ -293,6 +317,8 @@ export function useTabBar(options: UseTabBarOptions = {}): UseTabBarReturn {
     openTab,
     openPreviewTab,
     openCanvasTab,
+    openAnsiTab,
+    openAnsiEditorTab,
     openMarkdownPreviewTab,
     openBinaryPreviewTab,
     closeTab,
