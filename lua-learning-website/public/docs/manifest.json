@@ -20,6 +20,7 @@
     "lua/string.md",
     "lua/table.md",
     "lua/math.md",
-    "lua/io.md"
+    "lua/io.md",
+    "ansi/editor.md"
   ]
 }
