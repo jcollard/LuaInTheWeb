@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/session_start.py",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/session_start.py\"",
             "timeout": 10
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/prompt_commands.py",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/prompt_commands.py\"",
             "timeout": 10
           }
         ]
@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/file_protection.py",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/file_protection.py\"",
             "timeout": 10
           }
         ]
@@ -38,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/command_audit.py",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/command_audit.py\"",
             "timeout": 5
           }
         ]
@@ -48,7 +48,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/auto_approve.py",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/auto_approve.py\"",
             "timeout": 5
           }
         ]
@@ -59,7 +59,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python .claude/hooks/session_end.py",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/session_end.py\"",
             "timeout": 10
           }
         ]
