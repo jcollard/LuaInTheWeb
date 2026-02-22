@@ -12,6 +12,8 @@ export type AnsiGrid = AnsiCell[][]
 
 export type BrushMode = 'brush' | 'pixel' | 'blend-pixel' | 'eraser'
 
+export type ScaleMode = 'integer-auto' | 'integer-1x' | 'integer-2x' | 'integer-3x' | 'fit' | 'fill'
+
 export type DrawTool = 'pencil' | 'line' | 'rect-outline' | 'rect-filled' | 'oval-outline' | 'oval-filled' | 'border' | 'flood-fill' | 'select' | 'eyedropper' | 'text' | 'move' | 'flip'
 
 export interface BorderStyle {

@@ -1,4 +1,5 @@
 import { AnsiGraphicsEditor } from '../AnsiGraphicsEditor'
+import { useIDE } from '../IDEContext/useIDE'
 import type { TabBarProps } from '../TabBar'
 import styles from './IDELayout.module.css'
 
@@ -8,6 +9,11 @@ export interface AnsiEditorTabContentProps {
 }
 
 export function AnsiEditorTabContent({ tabBarProps, filePath }: AnsiEditorTabContentProps) {
+  const { fileSystem } = useIDE()
+
+  const isNewFile = !filePath || filePath.startsWith('ansi-editor://')
+  const fileReady = isNewFile || fileSystem.readFile(filePath) !== null
+
   return (
     <div className={styles.canvasContainer}>
       {tabBarProps && (
@@ -35,7 +41,11 @@ export function AnsiEditorTabContent({ tabBarProps, filePath }: AnsiEditorTabCon
           </div>
         </div>
       )}
-      <AnsiGraphicsEditor key={filePath} filePath={filePath} />
+      {fileReady ? (
+        <AnsiGraphicsEditor key={filePath} filePath={filePath} />
+      ) : (
+        <div className={styles.canvasLoading}>Loading...</div>
+      )}
     </div>
   )
 }

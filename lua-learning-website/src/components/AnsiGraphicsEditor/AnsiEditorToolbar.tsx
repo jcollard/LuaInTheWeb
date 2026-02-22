@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import type { BrushMode, DrawTool, BrushSettings, BorderStyle, TextAlign } from './types'
+import type { BrushMode, DrawTool, BrushSettings, BorderStyle, TextAlign, ScaleMode } from './types'
 import { BORDER_PRESETS, DEFAULT_BLEND_RATIO, borderStyleEqual } from './types'
 import { CharPaletteModal } from './CharPaletteModal'
 import { FileOptionsModal } from './FileOptionsModal'
@@ -32,6 +32,8 @@ export interface AnsiEditorToolbarProps {
   onSetBlendRatio?: (ratio: number) => void
   cgaPreview?: boolean
   onToggleCgaPreview?: () => void
+  scaleMode?: ScaleMode
+  onSetScaleMode?: (mode: ScaleMode) => void
   activeLayerIsGroup?: boolean
   isPlaying?: boolean
   fileMenuOpen?: boolean
@@ -41,7 +43,7 @@ export interface AnsiEditorToolbarProps {
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onImportPng, onExportAns, onExportSh, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
-  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, activeLayerIsGroup, isPlaying,
+  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, scaleMode, onSetScaleMode, activeLayerIsGroup, isPlaying,
   fileMenuOpen: controlledFileMenuOpen, onSetFileMenuOpen,
 }: AnsiEditorToolbarProps) {
   const toolsDisabled = activeLayerIsGroup || isPlaying
@@ -78,6 +80,8 @@ export function AnsiEditorToolbar({
           onExportSh={onExportSh}
           cgaPreview={cgaPreview ?? false}
           onToggleCgaPreview={onToggleCgaPreview!}
+          scaleMode={scaleMode ?? 'integer-auto'}
+          onSetScaleMode={onSetScaleMode!}
         />
       )}
       <div className={styles.modeGroup}>

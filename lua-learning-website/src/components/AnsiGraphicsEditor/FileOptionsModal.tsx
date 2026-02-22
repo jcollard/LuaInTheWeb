@@ -1,4 +1,5 @@
 import type { KeyboardEvent } from 'react'
+import type { ScaleMode } from './types'
 import { tooltipWithShortcut, ACTION_SHORTCUTS } from './keyboardShortcuts'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -12,6 +13,8 @@ export interface FileOptionsModalProps {
   onExportSh: () => void
   cgaPreview: boolean
   onToggleCgaPreview: () => void
+  scaleMode: ScaleMode
+  onSetScaleMode: (mode: ScaleMode) => void
 }
 
 interface ActionItem {
@@ -30,6 +33,8 @@ export function FileOptionsModal({
   onExportSh,
   cgaPreview,
   onToggleCgaPreview,
+  scaleMode,
+  onSetScaleMode,
 }: FileOptionsModalProps) {
   function handleKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
@@ -95,6 +100,22 @@ export function FileOptionsModal({
               data-testid="file-cga-preview"
             />
             CGA Preview
+          </label>
+          <label className={styles.fileOptionsAction}>
+            Scale:
+            <select
+              value={scaleMode}
+              onChange={e => onSetScaleMode(e.target.value as ScaleMode)}
+              data-testid="file-scale-mode"
+              className={styles.fileOptionsSelect}
+            >
+              <option value="integer-auto">Integer Auto</option>
+              <option value="integer-1x">Integer 1x</option>
+              <option value="integer-2x">Integer 2x</option>
+              <option value="integer-3x">Integer 3x</option>
+              <option value="fit">Fit</option>
+              <option value="fill">Fill</option>
+            </select>
           </label>
           <button
             type="button"

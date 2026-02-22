@@ -14,7 +14,7 @@ import { exportAnsFile } from './ansExport'
 import { exportShFile, exportAnimatedShFile } from './shExport'
 import { serializeLayers, deserializeLayers } from './serialization'
 import { compositeGrid, visibleDrawableLayers } from './layerUtils'
-import type { AnsiGrid, Layer, LayerState } from './types'
+import type { AnsiGrid, Layer, LayerState, ScaleMode } from './types'
 import styles from './AnsiGraphicsEditor.module.css'
 
 /** Find the maximum frame count across all visible drawn layers. */
@@ -69,6 +69,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
   const { fileSystem, fileTree, refreshFileTree, updateAnsiEditorTabPath } = useIDE()
   const [pendingSave, setPendingSave] = useState<{ path: string; content: string } | null>(null)
   const [fileMenuOpen, setFileMenuOpen] = useState(false)
+  const [scaleMode, setScaleMode] = useState<ScaleMode>('fit')
 
   const { toasts, showToast } = useToast()
   const handleSaveRef = useRef<() => void>(() => {})
@@ -281,6 +282,8 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
         onSetBlendRatio={setBlendRatio}
         cgaPreview={cgaPreview}
         onToggleCgaPreview={handleToggleCgaPreview}
+        scaleMode={scaleMode}
+        onSetScaleMode={setScaleMode}
         activeLayerIsGroup={activeLayerIsGroup}
         isPlaying={isPlaying}
         fileMenuOpen={fileMenuOpen}
@@ -300,6 +303,7 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
           <div className={[styles.canvas, brush.tool === 'move' && (isMoveDragging ? styles.canvasMoveDragging : styles.canvasMove), brush.tool === 'flip' && styles.canvasFlip].filter(Boolean).join(' ')}>
             <AnsiTerminalPanel
               isActive={true}
+              scaleMode={scaleMode}
               onTerminalReady={onTerminalReady}
             />
           </div>

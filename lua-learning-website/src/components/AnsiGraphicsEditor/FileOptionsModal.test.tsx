@@ -13,6 +13,8 @@ function defaultProps(overrides?: Partial<FileOptionsModalProps>): FileOptionsMo
     onExportSh: vi.fn(),
     cgaPreview: false,
     onToggleCgaPreview: vi.fn(),
+    scaleMode: 'integer-auto',
+    onSetScaleMode: vi.fn(),
     ...overrides,
   }
 }
@@ -78,5 +80,20 @@ describe('FileOptionsModal', () => {
     render(<FileOptionsModal {...defaultProps({ onClose })} />)
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
     expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('renders scale mode select with correct initial value', () => {
+    render(<FileOptionsModal {...defaultProps({ scaleMode: 'fit' })} />)
+    const select = screen.getByTestId('file-scale-mode') as HTMLSelectElement
+    expect(select.value).toBe('fit')
+  })
+
+  it('calls onSetScaleMode on change and does NOT close modal', () => {
+    const onSetScaleMode = vi.fn()
+    const onClose = vi.fn()
+    render(<FileOptionsModal {...defaultProps({ onSetScaleMode, onClose })} />)
+    fireEvent.change(screen.getByTestId('file-scale-mode'), { target: { value: 'integer-2x' } })
+    expect(onSetScaleMode).toHaveBeenCalledWith('integer-2x')
+    expect(onClose).not.toHaveBeenCalled()
   })
 })

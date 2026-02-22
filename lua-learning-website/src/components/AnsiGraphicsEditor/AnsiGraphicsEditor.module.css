@@ -1,7 +1,9 @@
 .editor {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   background-color: var(--theme-bg-primary);
   color: var(--theme-text-primary);
   user-select: none;
@@ -1218,6 +1220,16 @@
 
 .fileOptionsAction:hover {
   background-color: var(--theme-bg-hover);
+}
+
+.fileOptionsSelect {
+  flex: 1;
+  padding: 4px 6px;
+  font-size: 13px;
+  background-color: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+  border: 1px solid var(--theme-border);
+  border-radius: 4px;
 }
 
 /* ---- Toast Notifications ---- */

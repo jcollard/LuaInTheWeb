@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
+import type { ScaleMode } from '../AnsiGraphicsEditor/types'
 import { Terminal } from '@xterm/xterm'
 import { CanvasAddon } from '@xterm/addon-canvas'
 import '@xterm/xterm/css/xterm.css'
@@ -20,6 +21,7 @@ export interface AnsiTerminalHandle {
 
 export interface AnsiTerminalPanelProps {
   isActive?: boolean
+  scaleMode?: ScaleMode
   /**
    * Callback when the terminal handle becomes available or is disposed.
    * Called with the handle on mount, and with null on unmount.
@@ -27,7 +29,7 @@ export interface AnsiTerminalPanelProps {
   onTerminalReady?: (handle: AnsiTerminalHandle | null) => void
 }
 
-export function AnsiTerminalPanel({ isActive, onTerminalReady }: AnsiTerminalPanelProps) {
+export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady }: AnsiTerminalPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const terminalRef = useRef<Terminal | null>(null)
@@ -35,6 +37,10 @@ export function AnsiTerminalPanel({ isActive, onTerminalReady }: AnsiTerminalPan
   const handleRef = useRef<AnsiTerminalHandle | null>(null)
   const onTerminalReadyRef = useRef(onTerminalReady)
   onTerminalReadyRef.current = onTerminalReady
+  const scaleModeRef = useRef(scaleMode)
+  scaleModeRef.current = scaleMode
+  const currentScaleRef = useRef(-1)
+  const updateScaleRef = useRef<(() => void) | null>(null)
 
   // Wait for the IBM VGA font before opening the terminal so xterm.js
   // measures cell dimensions correctly and the ResizeObserver gets accurate metrics.
@@ -81,17 +87,26 @@ export function AnsiTerminalPanel({ isActive, onTerminalReady }: AnsiTerminalPan
       // the canvas at native resolution (no blur at 2x/3x).
       const baseW = wrapper.scrollWidth
       const baseH = wrapper.scrollHeight
-      let currentScale = 1
-
       const updateScale = () => {
         if (baseW === 0 || baseH === 0) return
         const containerW = container.clientWidth
         const containerH = container.clientHeight
-        const newScale = Math.max(1, Math.floor(Math.min(containerW / baseW, containerH / baseH)))
-        if (newScale === currentScale) return
-        currentScale = newScale
+        const mode = scaleModeRef.current
+        let newScale: number
+        switch (mode) {
+          case 'integer-1x': newScale = 1; break
+          case 'integer-2x': newScale = 2; break
+          case 'integer-3x': newScale = 3; break
+          case 'fit': newScale = Math.min(containerW / baseW, containerH / baseH); break
+          case 'fill': newScale = Math.max(containerW / baseW, containerH / baseH); break
+          default: // 'integer-auto'
+            newScale = Math.max(1, Math.floor(Math.min(containerW / baseW, containerH / baseH)))
+        }
+        if (newScale === currentScaleRef.current) return
+        currentScaleRef.current = newScale
         terminal.options.fontSize = FONT_SIZE * newScale
       }
+      updateScaleRef.current = updateScale
 
       resizeObserver = new ResizeObserver(updateScale)
       resizeObserver.observe(container)
@@ -124,6 +139,12 @@ export function AnsiTerminalPanel({ isActive, onTerminalReady }: AnsiTerminalPan
       // Don't null handleRef -- proxy survives re-runs via terminalRef indirection
     }
   }, [])
+
+  // Re-evaluate scale when scaleMode prop changes
+  useEffect(() => {
+    currentScaleRef.current = -1
+    updateScaleRef.current?.()
+  }, [scaleMode])
 
   // Notify parent when callback identity changes
   useEffect(() => {
