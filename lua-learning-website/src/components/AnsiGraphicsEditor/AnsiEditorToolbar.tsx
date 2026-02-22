@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import { useRef, useState } from 'react'
 import type { BrushMode, DrawTool, BrushSettings, BorderStyle, TextAlign } from './types'
 import { BORDER_PRESETS, DEFAULT_BLEND_RATIO, borderStyleEqual } from './types'

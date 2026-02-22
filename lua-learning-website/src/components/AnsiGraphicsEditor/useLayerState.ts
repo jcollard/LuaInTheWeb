@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import { useState, useCallback, useRef } from 'react'
 import type { AnsiCell, AnsiGrid, DrawableLayer, DrawnLayer, Layer, LayerState, RGBColor, Rect, TextAlign, TextLayer } from './types'
 import { MIN_FRAME_DURATION_MS, MAX_FRAME_DURATION_MS, isGroupLayer, isDrawableLayer, getParentId } from './types'

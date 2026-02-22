@@ -165,11 +165,15 @@ export function deserializeLayers(lua: string): LayerState {
   }
 
   if (version === 3 || version === 4 || version === 5 || version === 6) {
+    const VALID_LAYER_TYPES = new Set(['drawn', 'text', 'group'])
     const rawLayers = data.layers as RawLayer[]
     const rawAvailableTags = data.availableTags as string[] | undefined
     const layers: Layer[] = rawLayers.map((l, i) => {
       if (!l.id || !l.name || l.visible === undefined) {
         throw new Error(`Invalid layer at index ${i}: missing required fields (id, name, visible)`)
+      }
+      if (l.type !== undefined && !VALID_LAYER_TYPES.has(l.type)) {
+        throw new Error(`Invalid layer at index ${i}: unknown layer type "${l.type}"`)
       }
       const tags = l.tags && l.tags.length > 0 ? l.tags : undefined
       if (l.type === 'group') {

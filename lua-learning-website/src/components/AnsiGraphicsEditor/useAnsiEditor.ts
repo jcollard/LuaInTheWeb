@@ -1,5 +1,4 @@
-/* eslint-disable max-lines */
-import { useState, useCallback, useRef, useMemo } from 'react'
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, BorderStyle, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions, DrawableLayer, Layer } from './types'
 import { blendRgb } from './colorUtils'
@@ -257,10 +256,16 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     tick()
   }, [isPlaying, stopPlayback, layersRef])
 
+  useEffect(() => () => stopPlayback(), [stopPlayback])
+
   const importPngAsLayer = useCallback(async (file: File) => {
-    const px = await loadPngPixels(file)
-    const name = file.name.replace(/\.\w+$/, '')
-    withLayerUndo(() => rawAddLayerWithGrid(name, rgbaToAnsiGrid(px.rgba, px.width, px.height)))
+    try {
+      const px = await loadPngPixels(file)
+      const name = file.name.replace(/\.\w+$/, '')
+      withLayerUndo(() => rawAddLayerWithGrid(name, rgbaToAnsiGrid(px.rgba, px.width, px.height)))
+    } catch {
+      showToastRef.current?.('Failed to import image')
+    }
   }, [withLayerUndo, rawAddLayerWithGrid])
 
   const simplifyColors = useCallback(

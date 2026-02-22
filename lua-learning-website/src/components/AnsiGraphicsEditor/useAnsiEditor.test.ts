@@ -4,6 +4,7 @@ import { useAnsiEditor, computePixelCell, computeLineCells } from './useAnsiEdit
 import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG, HALF_BLOCK, TRANSPARENT_HALF } from './types'
 import type { AnsiCell, AnsiGrid, RGBColor } from './types'
 
+
 describe('useAnsiEditor', () => {
   describe('grid initialization', () => {
     it('should create a grid with correct dimensions', () => {
@@ -206,6 +207,7 @@ describe('useAnsiEditor', () => {
       expect(result.current.brush.mode).toBe('brush')
     })
   })
+
 })
 
 describe('computePixelCell', () => {
