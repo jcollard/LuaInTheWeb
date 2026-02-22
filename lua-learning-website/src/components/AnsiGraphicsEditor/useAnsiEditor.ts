@@ -121,6 +121,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const saveAsRef = useRef<(() => void) | undefined>(options?.onSaveAs); saveAsRef.current = options?.onSaveAs
   const openFileMenuRef = useRef<(() => void) | undefined>(options?.onOpenFileMenu); openFileMenuRef.current = options?.onOpenFileMenu
   const showToastRef = useRef<((msg: string) => void) | undefined>(options?.onShowToast); showToastRef.current = options?.onShowToast
+  const isActiveRef = useRef(options?.isActive ?? true); isActiveRef.current = options?.isActive ?? true
 
   const pushSnapshot = useCallback(() => {
     const stack = undoStackRef.current
@@ -365,6 +366,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     }
 
     function onKeyDown(e: KeyboardEvent): void {
+      if (isActiveRef.current === false) return
       const ctrl = e.ctrlKey || e.metaKey
       const shift = e.shiftKey
       const key = e.key.toLowerCase()

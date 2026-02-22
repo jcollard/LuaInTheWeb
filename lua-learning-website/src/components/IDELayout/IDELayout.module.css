@@ -68,6 +68,11 @@
   border-bottom: 2px solid var(--theme-indicator-active);
 }
 
+.canvasTabDirty {
+  color: var(--theme-text-muted);
+  font-size: 12px;
+}
+
 .canvasTabClose {
   display: flex;
   align-items: center;

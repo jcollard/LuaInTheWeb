@@ -67,4 +67,15 @@ describe('AnsiGraphicsEditor', () => {
     render(<AnsiGraphicsEditor />)
     expect(screen.getByTestId('png-file-input')).toBeTruthy()
   })
+
+  it('should accept onDirtyChange and isActive props without crashing', () => {
+    const onDirtyChange = vi.fn()
+    render(<AnsiGraphicsEditor isActive={true} onDirtyChange={onDirtyChange} />)
+    expect(screen.getByTestId('ansi-graphics-editor')).toBeTruthy()
+  })
+
+  it('should accept isActive=false without crashing', () => {
+    render(<AnsiGraphicsEditor isActive={false} />)
+    expect(screen.getByTestId('ansi-graphics-editor')).toBeTruthy()
+  })
 })

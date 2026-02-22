@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnsiTerminalPanel } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { useIDE } from '../IDEContext/useIDE'
@@ -16,9 +16,11 @@ import styles from './AnsiGraphicsEditor.module.css'
 
 export interface AnsiGraphicsEditorProps {
   filePath?: string
+  onDirtyChange?: (isDirty: boolean) => void
+  isActive?: boolean
 }
 
-export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
+export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGraphicsEditorProps) {
   const { fileSystem, fileTree, refreshFileTree, updateAnsiEditorTabPath } = useIDE()
   const [fileMenuOpen, setFileMenuOpen] = useState(false)
   const [scaleMode, setScaleMode] = useState<ScaleMode>('fit')
@@ -115,15 +117,21 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     createTag,
     deleteTag,
     renameTag,
+    isDirty,
   } = useAnsiEditor({
     initialLayerState,
     onSave: () => handleSaveRef.current(),
     onSaveAs: () => handleOpenSaveDialogRef.current(),
     onOpenFileMenu: () => handleOpenFileMenuRef.current(),
     onShowToast: showToast,
+    isActive,
   })
 
   closeSaveDialogRef.current = closeSaveDialog
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty)
+  }, [isDirty, onDirtyChange])
 
   const handleToggleCgaPreview = useCallback(() => setCgaPreview(!cgaPreview), [cgaPreview, setCgaPreview])
 
