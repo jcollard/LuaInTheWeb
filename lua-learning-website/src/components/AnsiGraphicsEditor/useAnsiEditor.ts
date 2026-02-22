@@ -227,6 +227,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     terminalBufferRef.current.flush(compositeGrid(layersRef.current), colorTransformRef.current)
   }, [rawSetCurrentFrame, layersRef])
   const reorderFrameWithUndo = useCallback((from: number, to: number) => withLayerUndo(() => rawReorderFrame(from, to)), [withLayerUndo, rawReorderFrame])
+  const setFrameDurationWithUndo = useCallback((ms: number) => withLayerUndo(() => rawSetFrameDuration(ms)), [withLayerUndo, rawSetFrameDuration])
 
   const stopPlayback = useCallback(() => {
     if (playbackTimerRef.current !== null) {
@@ -238,7 +239,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   }, [])
 
   const togglePlayback = useCallback(() => {
-    if (isPlaying) {
+    if (isPlayingRef.current) {
       stopPlayback()
       return
     }
@@ -254,7 +255,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       playbackTimerRef.current = window.setTimeout(tick, nextDelayMs)
     }
     tick()
-  }, [isPlaying, stopPlayback, layersRef])
+  }, [stopPlayback, layersRef])
 
   useEffect(() => () => stopPlayback(), [stopPlayback])
 
@@ -686,6 +687,18 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     }
   }, [paintCell, paintPixel, paintBlendPixel, applyCell, pushSnapshot, layersRef, activeLayerIdRef, getActiveGrid, rawAddTextLayer, rawUpdateTextLayer, undo, redo, rawApplyMoveGrids, rawApplyMoveGridsImmediate, rawSetCurrentFrame, setTool, setBrushMode, togglePlayback])
 
+  const attachMouseListenersRef = useRef(attachMouseListeners)
+  attachMouseListenersRef.current = attachMouseListeners
+
+  // Re-attach mouse listeners when attachMouseListeners identity changes
+  // (which happens when any of its dependencies change).
+  useEffect(() => {
+    const handle = containerRef.current
+    if (!handle) return
+    cleanupRef.current?.()
+    cleanupRef.current = attachMouseListeners(handle as HTMLElement)
+  }, [attachMouseListeners])
+
   const setActiveLayerWithBounds = useCallback((id: string) => {
     commitPendingTextRef.current?.()
     const prevLayer = layersRef.current.find(l => l.id === activeLayerIdRef.current)
@@ -778,12 +791,14 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     if (handle) {
       terminalBufferRef.current.attach(handle)
       terminalBufferRef.current.flush(compositeGrid(layersRef.current), colorTransformRef.current)
-      cleanupRef.current = attachMouseListeners(handle.container)
+      containerRef.current = handle.container
+      cleanupRef.current = attachMouseListenersRef.current(handle.container)
       updateTextBoundsDisplayRef.current?.()
     } else {
+      containerRef.current = null
       terminalBufferRef.current.detach()
     }
-  }, [attachMouseListeners, layersRef])
+  }, [layersRef])
 
   const activeLayer = layerState.layers.find(l => l.id === layerState.activeLayerId)
   const activeLayerIsGroup = activeLayer ? isGroupLayer(activeLayer) : false
@@ -809,7 +824,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     cgaPreview, setCgaPreview,
     addFrame: addFrameWithUndo, duplicateFrame: duplicateFrameWithUndo,
     removeFrame: removeFrameWithUndo, setCurrentFrame: setCurrentFrameWithUndo,
-    reorderFrame: reorderFrameWithUndo, setFrameDuration: rawSetFrameDuration,
+    reorderFrame: reorderFrameWithUndo, setFrameDuration: setFrameDurationWithUndo,
     isPlaying, togglePlayback,
     activeLayerFrameCount, activeLayerCurrentFrame, activeLayerFrameDuration,
     availableTags: layerState.availableTags,

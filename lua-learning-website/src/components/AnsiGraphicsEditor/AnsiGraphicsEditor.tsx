@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { AnsiTerminalPanel } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { useIDE } from '../IDEContext/useIDE'
@@ -9,57 +9,10 @@ import { LayersPanel } from './LayersPanel'
 import { SaveAsDialog } from './SaveAsDialog'
 import { ToastContainer } from './ToastContainer'
 import { useAnsiEditor } from './useAnsiEditor'
+import { useAnsiEditorFile } from './useAnsiEditorFile'
 import { useToast } from './useToast'
-import { exportAnsFile } from './ansExport'
-import { exportShFile, exportAnimatedShFile } from './shExport'
-import { serializeLayers, deserializeLayers } from './serialization'
-import { compositeGrid, visibleDrawableLayers } from './layerUtils'
-import type { AnsiGrid, Layer, LayerState, ScaleMode } from './types'
+import type { ScaleMode } from './types'
 import styles from './AnsiGraphicsEditor.module.css'
-
-/** Find the maximum frame count across all visible drawn layers. */
-function getMaxFrameCount(layers: Layer[]): number {
-  const drawable = visibleDrawableLayers(layers)
-  let max = 1
-  for (const layer of drawable) {
-    if (layer.type === 'drawn' && layer.frames.length > max) {
-      max = layer.frames.length
-    }
-  }
-  return max
-}
-
-/** Composite each frame index across all layers, clamping single-frame layers to frame 0. */
-function allFrameComposites(layers: Layer[], frameCount: number): AnsiGrid[] {
-  const frames: AnsiGrid[] = []
-  for (let f = 0; f < frameCount; f++) {
-    const snapshotLayers = layers.map(layer => {
-      if (layer.type !== 'drawn') return layer
-      const frameIdx = Math.min(f, layer.frames.length - 1)
-      return { ...layer, grid: layer.frames[frameIdx] }
-    })
-    frames.push(compositeGrid(snapshotLayers))
-  }
-  return frames
-}
-
-/** Derive an export filename from the editor's filePath, replacing the extension. */
-function deriveExportFilename(filePath: string | undefined, ext: string): string {
-  if (!filePath || filePath.startsWith('ansi-editor://')) return `untitled.${ext}`
-  const base = filePath.split('/').pop() ?? 'untitled'
-  const replaced = base.replace(/\.ansi\.lua$/, `.${ext}`)
-  return replaced.endsWith(`.${ext}`) ? replaced : `${base}.${ext}`
-}
-
-/** Trigger a browser download for the given blob. */
-function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
-}
 
 export interface AnsiGraphicsEditorProps {
   filePath?: string
@@ -67,7 +20,6 @@ export interface AnsiGraphicsEditorProps {
 
 export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
   const { fileSystem, fileTree, refreshFileTree, updateAnsiEditorTabPath } = useIDE()
-  const [pendingSave, setPendingSave] = useState<{ path: string; content: string } | null>(null)
   const [fileMenuOpen, setFileMenuOpen] = useState(false)
   const [scaleMode, setScaleMode] = useState<ScaleMode>('fit')
 
@@ -76,16 +28,25 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
   const handleOpenFileMenuRef = useRef<() => void>(() => {})
   const handleOpenSaveDialogRef = useRef<() => void>(() => {})
 
-  const initialLayerState = useMemo((): LayerState | undefined => {
-    if (!filePath || filePath.startsWith('ansi-editor://')) return undefined
-    const content = fileSystem.readFile(filePath)
-    if (content === null) return undefined
-    try {
-      return deserializeLayers(content)
-    } catch {
-      return undefined
-    }
-  }, [filePath, fileSystem])
+  // closeSaveDialog is defined after useAnsiEditor, so use a ref to break the cycle
+  const closeSaveDialogRef = useRef<() => void>(() => {})
+
+  const {
+    initialLayerState,
+    pendingSave,
+    handleSave: fileHandleSave,
+    handleSaveAs: fileHandleSaveAs,
+    handleConfirmOverwrite,
+    handleCancelOverwrite,
+    handleExportAns: fileHandleExportAns,
+    handleExportSh: fileHandleExportSh,
+  } = useAnsiEditorFile({
+    filePath,
+    fileSystem,
+    refreshFileTree,
+    updateAnsiEditorTabPath,
+    closeSaveDialog: useCallback(() => closeSaveDialogRef.current(), []),
+  })
 
   const {
     brush,
@@ -162,6 +123,8 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     onShowToast: showToast,
   })
 
+  closeSaveDialogRef.current = closeSaveDialog
+
   const handleToggleCgaPreview = useCallback(() => setCgaPreview(!cgaPreview), [cgaPreview, setCgaPreview])
 
   const activeLayer = layers.find(l => l.id === activeLayerId)
@@ -182,77 +145,20 @@ export function AnsiGraphicsEditor({ filePath }: AnsiGraphicsEditorProps) {
     e.target.value = ''
   }, [importPngAsLayer])
 
-  const finishSaveAs = useCallback(async (savedPath: string) => {
-    await fileSystem.flush()
-    refreshFileTree()
-    closeSaveDialog()
-    if (filePath) {
-      updateAnsiEditorTabPath(filePath, savedPath)
-    }
-  }, [fileSystem, refreshFileTree, closeSaveDialog, filePath, updateAnsiEditorTabPath])
-
   const handleSaveAs = useCallback(async (folderPath: string, fileName: string) => {
-    const fullPath = folderPath === '/' ? `/${fileName}` : `${folderPath}/${fileName}`
-    const content = serializeLayers({ layers, activeLayerId }, availableTags)
-    if (fileSystem.exists(fullPath)) {
-      setPendingSave({ path: fullPath, content })
-      return
-    }
-    fileSystem.createFile(fullPath, content)
-    await finishSaveAs(fullPath)
-  }, [layers, activeLayerId, availableTags, fileSystem, finishSaveAs])
-
-  const handleConfirmOverwrite = useCallback(async () => {
-    if (!pendingSave) return
-    fileSystem.writeFile(pendingSave.path, pendingSave.content)
-    await finishSaveAs(pendingSave.path)
-    setPendingSave(null)
-  }, [pendingSave, fileSystem, finishSaveAs])
-
-  const handleCancelOverwrite = useCallback(() => {
-    setPendingSave(null)
-  }, [])
+    await fileHandleSaveAs(folderPath, fileName, layers, activeLayerId, availableTags)
+  }, [fileHandleSaveAs, layers, activeLayerId, availableTags])
 
   const handleSave = useCallback(async () => {
-    if (filePath && !filePath.startsWith('ansi-editor://')) {
-      const content = serializeLayers({ layers, activeLayerId }, availableTags)
-      fileSystem.writeFile(filePath, content)
-      await fileSystem.flush()
-      markClean()
-    } else {
-      openSaveDialog()
-    }
-  }, [filePath, layers, activeLayerId, availableTags, fileSystem, markClean, openSaveDialog])
+    await fileHandleSave(layers, activeLayerId, availableTags, markClean, openSaveDialog)
+  }, [fileHandleSave, layers, activeLayerId, availableTags, markClean, openSaveDialog])
 
   handleSaveRef.current = handleSave
   handleOpenSaveDialogRef.current = openSaveDialog
   handleOpenFileMenuRef.current = useCallback(() => setFileMenuOpen(true), [])
 
-  const handleExportAns = useCallback(() => {
-    const grid = compositeGrid(layers)
-    const filename = deriveExportFilename(filePath, 'ans')
-    const title = filename.replace(/\.ans$/, '')
-    const data = exportAnsFile(grid, title)
-    downloadBlob(new Blob([new Uint8Array(data)], { type: 'application/octet-stream' }), filename)
-  }, [layers, filePath])
-
-  const handleExportSh = useCallback(() => {
-    const filename = deriveExportFilename(filePath, 'sh')
-    const maxFrames = getMaxFrameCount(layers)
-
-    let script: string
-    if (maxFrames > 1) {
-      const frames = allFrameComposites(layers, maxFrames)
-      const drawable = visibleDrawableLayers(layers)
-      const drawnLayer = drawable.find(l => l.type === 'drawn' && l.frames.length > 1)
-      const durationMs = drawnLayer?.type === 'drawn' ? drawnLayer.frameDurationMs : 100
-      script = exportAnimatedShFile(frames, durationMs)
-    } else {
-      script = exportShFile(compositeGrid(layers))
-    }
-
-    downloadBlob(new Blob([script], { type: 'text/x-shellscript' }), filename)
-  }, [layers, filePath])
+  const handleExportAns = useCallback(() => fileHandleExportAns(layers), [fileHandleExportAns, layers])
+  const handleExportSh = useCallback(() => fileHandleExportSh(layers), [fileHandleExportSh, layers])
 
   return (
     <div className={styles.editor} data-testid="ansi-graphics-editor" onContextMenu={e => e.preventDefault()}>

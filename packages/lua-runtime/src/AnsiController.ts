@@ -204,7 +204,9 @@ export class AnsiController {
    * @param col - Column (1-based)
    */
   setCursor(row: number, col: number): void {
-    this.handle?.write(`\x1b[${row};${col}H`)
+    const r = Math.max(1, Math.min(AnsiController.ROWS, Math.floor(row)))
+    const c = Math.max(1, Math.min(AnsiController.COLS, Math.floor(col)))
+    this.handle?.write(`\x1b[${r};${c}H`)
   }
 
   /**
@@ -214,18 +216,28 @@ export class AnsiController {
     this.handle?.write('\x1b[2J\x1b[H')
   }
 
+  private static clampRgb(val: number): number {
+    return Math.max(0, Math.min(255, Math.floor(val)))
+  }
+
   /**
    * Set foreground (text) color using 24-bit true color escape sequence.
    */
   setForeground(r: number, g: number, b: number): void {
-    this.handle?.write(`\x1b[38;2;${r};${g};${b}m`)
+    const cr = AnsiController.clampRgb(r)
+    const cg = AnsiController.clampRgb(g)
+    const cb = AnsiController.clampRgb(b)
+    this.handle?.write(`\x1b[38;2;${cr};${cg};${cb}m`)
   }
 
   /**
    * Set background color using 24-bit true color escape sequence.
    */
   setBackground(r: number, g: number, b: number): void {
-    this.handle?.write(`\x1b[48;2;${r};${g};${b}m`)
+    const cr = AnsiController.clampRgb(r)
+    const cg = AnsiController.clampRgb(g)
+    const cb = AnsiController.clampRgb(b)
+    this.handle?.write(`\x1b[48;2;${cr};${cg};${cb}m`)
   }
 
   /**

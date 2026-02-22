@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { Layer } from './types'
 import { isGroupLayer, isDrawableLayer, getParentId } from './types'
-import { getAncestorGroupIds, getGroupDescendantIds, isAncestorOf, buildDisplayOrder, findGroupBlockEnd } from './layerUtils'
+import { getAncestorGroupIds, buildDisplayOrder } from './layerUtils'
 import { LayerRow } from './LayerRow'
 import { TagsTabContent } from './TagsTabContent'
+import { useLayerDragDrop } from './useLayerDragDrop'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface LayersPanelProps {
@@ -55,11 +56,14 @@ export function LayersPanel({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [contextMenu, setContextMenu] = useState<{ layerId: string; x: number; y: number } | null>(null)
-  const [draggedId, setDraggedId] = useState<string | null>(null)
-  const [dropZoneTargetId, setDropZoneTargetId] = useState<string | null>(null)
-  const [dropOnGroup, setDropOnGroup] = useState<string | null>(null)
   const [tagsSubmenuOpen, setTagsSubmenuOpen] = useState(false)
   const [tagsSubmenuFlipped, setTagsSubmenuFlipped] = useState(false)
+
+  const {
+    draggedId, dropZoneTargetId, dropOnGroup, draggedGroupChildIds,
+    handleDragStart, handleDragEnd, handleDragOverGroup, handleDragOverZone,
+    handleDropOnBottomZone, handleDropOnZone, handleDropOnGroup,
+  } = useLayerDragDrop(layers, onReorder)
 
   const tagsSubmenuRef = useCallback((el: HTMLDivElement | null) => {
     if (!el) return
@@ -106,91 +110,6 @@ export function LayersPanel({
     }
   }, [closeContextMenu])
 
-  const clearDragState = useCallback(() => {
-    setDraggedId(null)
-    setDropZoneTargetId(null)
-    setDropOnGroup(null)
-  }, [])
-
-  const handleDragStart = useCallback((e: React.DragEvent, id: string) => {
-    e.dataTransfer.setData('text/plain', id)
-    e.dataTransfer.effectAllowed = 'move'
-    // Defer state update so the browser captures the drag image
-    // before React re-renders and collapses the row
-    requestAnimationFrame(() => setDraggedId(id))
-  }, [])
-
-  const handleDragEnd = useCallback(clearDragState, [clearDragState])
-
-  const handleDragOverGroup = useCallback((e: React.DragEvent, groupId: string) => {
-    e.preventDefault()
-    e.stopPropagation()
-    e.dataTransfer.dropEffect = 'move'
-    setDropOnGroup(groupId)
-    setDropZoneTargetId(null)
-  }, [])
-
-  const handleDragOverZone = useCallback((e: React.DragEvent, layerId: string) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-    setDropZoneTargetId(layerId)
-    setDropOnGroup(null)
-  }, [])
-
-  const handleDropOnBottomZone = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    const sourceId = e.dataTransfer.getData('text/plain')
-    if (sourceId) {
-      // Bottom visually = index 0 in the flat array
-      onReorder(sourceId, 0)
-    }
-    clearDragState()
-  }, [onReorder, clearDragState])
-
-  const handleDropOnZone = useCallback((e: React.DragEvent, targetLayerId: string) => {
-    e.preventDefault()
-    const sourceId = e.dataTransfer.getData('text/plain')
-    const targetArrayIdx = layers.findIndex(l => l.id === targetLayerId)
-    if (sourceId && targetArrayIdx >= 0) {
-      // Drop zones sit visually above their layer. "Above X visually" means
-      // "after X in the flat array" (which is ordered bottom-to-top).
-      // For groups, skip past the entire block to avoid splitting it.
-      const target = layers[targetArrayIdx]
-      const insertIdx = target && isGroupLayer(target)
-        ? findGroupBlockEnd(layers, target.id, targetArrayIdx)
-        : targetArrayIdx + 1
-      const source = layers.find(l => l.id === sourceId)
-      const targetContext = target ? getParentId(target) : undefined
-      const sourceContext = source ? getParentId(source) : undefined
-      if (targetContext !== sourceContext) {
-        // Cross-group: explicitly set the new parent (null for root)
-        onReorder(sourceId, insertIdx, targetContext ?? null)
-      } else if (targetContext !== undefined) {
-        // Within-group: pass group id for range-aware positioning
-        onReorder(sourceId, insertIdx, targetContext)
-      } else {
-        // Both root: simple positional reorder
-        onReorder(sourceId, insertIdx)
-      }
-    }
-    clearDragState()
-  }, [layers, onReorder, clearDragState])
-
-  const handleDropOnGroup = useCallback((e: React.DragEvent, groupId: string) => {
-    e.preventDefault()
-    e.stopPropagation()
-    const sourceId = e.dataTransfer.getData('text/plain')
-    if (!sourceId) return
-    // Prevent circular nesting
-    if (isAncestorOf(groupId, sourceId, layers)) return
-    if (sourceId === groupId) return
-    const groupIdx = layers.findIndex(l => l.id === groupId)
-    if (groupIdx >= 0) {
-      onReorder(sourceId, groupIdx, groupId)
-    }
-    clearDragState()
-  }, [layers, onReorder, clearDragState])
-
   useEffect(() => {
     if (!contextMenu) return
     function onKeyDown(e: KeyboardEvent): void {
@@ -209,10 +128,6 @@ export function LayersPanel({
   const drawableCount = layers.filter(isDrawableLayer).length
   const singleDrawable = drawableCount <= 1
   const singleLayer = layers.length <= 1
-
-  const draggedGroupChildIds = draggedId && layers.find(l => l.id === draggedId && isGroupLayer(l))
-    ? getGroupDescendantIds(draggedId, layers)
-    : new Set<string>()
 
   const contextLayer = contextMenu ? layers.find(l => l.id === contextMenu.layerId) : undefined
   const contextIsGroup = contextLayer != null && isGroupLayer(contextLayer)

@@ -2,7 +2,6 @@
 
 The ANSI Graphics Editor is an art editor for creating ANSI-style artwork on an 80-column by 25-row character grid. You can draw with characters, half-block pixels, box-drawing borders, and full RGB colors. The editor supports multiple layers, animation frames, and export to several formats.
 
-![Editor overview](images/editor-overview.png)
 
 ## Interface Overview
 
@@ -13,7 +12,6 @@ The editor is divided into four areas:
 - **Canvas** (center) — the 80x25 drawing surface
 - **Layers panel** (right) — layer list and tag organization
 
-![Interface layout](images/interface-layout.png)
 
 ## Getting Started
 
@@ -36,7 +34,6 @@ The Save As dialog lets you pick a directory and enter a filename. The `.ansi.lu
 
 Tools are selected from the toolbar or with keyboard shortcuts. The active tool determines what happens when you click or drag on the canvas.
 
-![Toolbar](images/toolbar.png)
 
 ### Pencil (B)
 
@@ -123,7 +120,6 @@ Paints full character cells. Each cell gets the current character, foreground co
 
 Paints half-block pixels using the `▀` (upper half block) character. Each character cell is split into an upper and lower pixel, giving an effective resolution of 160x50.
 
-![Pixel mode comparison](images/pixel-mode.png)
 
 ### Blend Pixel (J)
 
@@ -155,7 +151,6 @@ The color panel has five palette tabs:
 | Current | Dynamic | All colors currently used in the artwork |
 | Layer | Dynamic | Colors used in the active layer only |
 
-![Color panel](images/color-panel.png)
 
 ### Picking Colors
 
@@ -186,7 +181,6 @@ Click the character button in the toolbar (it shows the current brush character)
 
 Click a character to select it as the current brush character.
 
-![Character palette](images/char-palette.png)
 
 ## Layers
 
@@ -224,7 +218,6 @@ Tags let you organize layers across groups:
 - Double-click a tag name to rename it
 - Click **x** to delete a tag
 
-![Layers panel](images/layers-panel.png)
 
 ## Animation
 
@@ -248,7 +241,6 @@ When a drawn layer is active, the Frames panel appears below the canvas:
 
 Each layer can have a different frame rate, allowing independent animation timing across layers.
 
-![Animation frames](images/frames-panel.png)
 
 ## Import & Export
 

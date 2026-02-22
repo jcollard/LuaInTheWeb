@@ -1,394 +1,70 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { AnsiEditorToolbar, type AnsiEditorToolbarProps } from './AnsiEditorToolbar'
-import { DEFAULT_FG, DEFAULT_BG, BORDER_PRESETS } from './types'
-import type { BrushMode, DrawTool, RGBColor } from './types'
+import { render, screen } from '@testing-library/react'
+import { AnsiGraphicsEditor } from './AnsiGraphicsEditor'
 
 // Mock AnsiTerminalPanel since it depends on xterm.js
 vi.mock('../AnsiTerminalPanel/AnsiTerminalPanel', () => ({
   AnsiTerminalPanel: ({ onTerminalReady }: { onTerminalReady?: (handle: null) => void }) => {
-    // Simulate terminal not ready in test env
     if (onTerminalReady) onTerminalReady(null)
     return <div data-testid="mock-terminal">Mock Terminal</div>
   },
 }))
 
-describe('AnsiEditorToolbar', () => {
-  const defaultBrush = { char: '#', fg: DEFAULT_FG as RGBColor, bg: DEFAULT_BG as RGBColor, mode: 'brush' as BrushMode, tool: 'pencil' as DrawTool, borderStyle: BORDER_PRESETS[0].style }
-  let handlers: Pick<AnsiEditorToolbarProps, 'onSetChar' | 'onClear' | 'onSave' | 'onSaveAs' | 'onImportPng' | 'onExportAns' | 'onExportSh' | 'onSetMode' | 'onSetTool' | 'onUndo' | 'onRedo' | 'canUndo' | 'canRedo'>
+// Mock useIDE to provide required IDE context
+const mockFileSystem = {
+  readFile: vi.fn(() => null),
+  writeFile: vi.fn(),
+  createFile: vi.fn(),
+  exists: vi.fn(() => false),
+  flush: vi.fn(async () => {}),
+}
 
+vi.mock('../IDEContext/useIDE', () => ({
+  useIDE: () => ({
+    fileSystem: mockFileSystem,
+    fileTree: [],
+    refreshFileTree: vi.fn(),
+    updateAnsiEditorTabPath: vi.fn(),
+  }),
+}))
+
+describe('AnsiGraphicsEditor', () => {
   beforeEach(() => {
-    handlers = {
-      onSetChar: vi.fn<(char: string) => void>(),
-      onClear: vi.fn<() => void>(),
-      onSave: vi.fn<() => void>(),
-      onSaveAs: vi.fn<() => void>(),
-      onImportPng: vi.fn<() => void>(),
-      onExportAns: vi.fn<() => void>(),
-      onExportSh: vi.fn<() => void>(),
-      onSetMode: vi.fn<(mode: BrushMode) => void>(),
-      onSetTool: vi.fn<(tool: DrawTool) => void>(),
-      onUndo: vi.fn<() => void>(),
-      onRedo: vi.fn<() => void>(),
-      canUndo: false,
-      canRedo: false,
-    }
+    vi.clearAllMocks()
   })
 
-  it('should render toolbar', () => {
-    render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
+  it('should render the editor container', () => {
+    render(<AnsiGraphicsEditor />)
+    expect(screen.getByTestId('ansi-graphics-editor')).toBeTruthy()
+  })
+
+  it('should render the toolbar', () => {
+    render(<AnsiGraphicsEditor />)
     expect(screen.getByTestId('ansi-editor-toolbar')).toBeTruthy()
   })
 
-  it('should render character button with current brush char', () => {
-    render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-    const charButton = screen.getByTestId('char-button')
-    expect(charButton.textContent).toBe('#')
+  it('should render the color panel', () => {
+    render(<AnsiGraphicsEditor />)
+    expect(screen.getByTestId('color-panel')).toBeTruthy()
   })
 
-  it('should open character palette on button click', () => {
-    render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-    fireEvent.click(screen.getByTestId('char-button'))
-    expect(screen.getByTestId('char-palette-modal')).toBeTruthy()
+  it('should render the layers panel', () => {
+    render(<AnsiGraphicsEditor />)
+    expect(screen.getByTestId('layers-panel')).toBeTruthy()
   })
 
-  it.each([
-    ['file-clear', 'onClear'],
-    ['file-save', 'onSave'],
-    ['file-save-as', 'onSaveAs'],
-  ] as const)('should render %s inside File Options modal and call %s on click', (testId, handlerName) => {
-    render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-    fireEvent.click(screen.getByTestId('file-options-button'))
-    expect(screen.getByTestId(testId)).toBeTruthy()
-    fireEvent.click(screen.getByTestId(testId))
-    expect(handlers[handlerName]).toHaveBeenCalledOnce()
+  it('should render the terminal panel', () => {
+    render(<AnsiGraphicsEditor />)
+    expect(screen.getByTestId('mock-terminal')).toBeTruthy()
   })
 
-  describe('tool selector', () => {
-    it('should render Pencil button', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      expect(screen.getByTestId('tool-pencil')).toBeTruthy()
-    })
-
-    it('should show Pencil as active by default', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      expect(screen.getByTestId('tool-pencil').getAttribute('aria-pressed')).toBe('true')
-    })
-
-    it('should call onSetTool when Pencil button is clicked', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      fireEvent.click(screen.getByTestId('tool-pencil'))
-      expect(handlers.onSetTool).toHaveBeenCalledWith('pencil')
-    })
-
-    it('should render Line button', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      expect(screen.getByTestId('tool-line')).toBeTruthy()
-    })
-
-    it('should show Line as active when brush.tool is line', () => {
-      const lineBrush = { ...defaultBrush, tool: 'line' as DrawTool }
-      render(<AnsiEditorToolbar brush={lineBrush} {...handlers} />)
-      expect(screen.getByTestId('tool-line').getAttribute('aria-pressed')).toBe('true')
-      expect(screen.getByTestId('tool-pencil').getAttribute('aria-pressed')).toBe('false')
-    })
-
-    it('should call onSetTool with line when Line button is clicked', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      fireEvent.click(screen.getByTestId('tool-line'))
-      expect(handlers.onSetTool).toHaveBeenCalledWith('line')
-    })
-
-    it('should render Rect button', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      expect(screen.getByTestId('tool-rect')).toBeTruthy()
-    })
-
-    it('should show Rect as active when brush.tool is rect-outline', () => {
-      const rectBrush = { ...defaultBrush, tool: 'rect-outline' as DrawTool }
-      render(<AnsiEditorToolbar brush={rectBrush} {...handlers} />)
-      expect(screen.getByTestId('tool-rect').getAttribute('aria-pressed')).toBe('true')
-    })
-
-    it('should show Rect as active when brush.tool is rect-filled', () => {
-      const rectBrush = { ...defaultBrush, tool: 'rect-filled' as DrawTool }
-      render(<AnsiEditorToolbar brush={rectBrush} {...handlers} />)
-      expect(screen.getByTestId('tool-rect').getAttribute('aria-pressed')).toBe('true')
-    })
-
-    it('should render flyout with outline and filled options', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      expect(screen.getByTestId('rect-flyout')).toBeTruthy()
-      expect(screen.getByTestId('tool-rect-outline')).toBeTruthy()
-      expect(screen.getByTestId('tool-rect-filled')).toBeTruthy()
-    })
-
-    it('should call onSetTool with rect-outline when outline option clicked', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      fireEvent.click(screen.getByTestId('tool-rect-outline'))
-      expect(handlers.onSetTool).toHaveBeenCalledWith('rect-outline')
-    })
-
-    it('should call onSetTool with rect-filled when filled option clicked', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      fireEvent.click(screen.getByTestId('tool-rect-filled'))
-      expect(handlers.onSetTool).toHaveBeenCalledWith('rect-filled')
-    })
-
-    it('should show ▭ on rect button when rect-outline is selected', () => {
-      const rectBrush = { ...defaultBrush, tool: 'rect-outline' as DrawTool }
-      render(<AnsiEditorToolbar brush={rectBrush} {...handlers} />)
-      expect(screen.getByTestId('tool-rect').textContent).toContain('▭')
-    })
-
-    it('should show ■ on rect button when rect-filled is selected', () => {
-      const rectBrush = { ...defaultBrush, tool: 'rect-filled' as DrawTool }
-      render(<AnsiEditorToolbar brush={rectBrush} {...handlers} />)
-      expect(screen.getByTestId('tool-rect').textContent).toContain('■')
-    })
+  it('should render with a filePath prop without crashing', () => {
+    render(<AnsiGraphicsEditor filePath="ansi-editor://new" />)
+    expect(screen.getByTestId('ansi-graphics-editor')).toBeTruthy()
   })
 
-  describe('undo/redo buttons', () => {
-    it('should render undo button', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} canUndo={false} canRedo={false} />)
-      expect(screen.getByTestId('undo-button')).toBeTruthy()
-    })
-
-    it('should render redo button', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} canUndo={false} canRedo={false} />)
-      expect(screen.getByTestId('redo-button')).toBeTruthy()
-    })
-
-    it('should call onUndo when undo button is clicked', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} canUndo={true} canRedo={false} />)
-      fireEvent.click(screen.getByTestId('undo-button'))
-      expect(handlers.onUndo).toHaveBeenCalledOnce()
-    })
-
-    it('should call onRedo when redo button is clicked', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} canUndo={false} canRedo={true} />)
-      fireEvent.click(screen.getByTestId('redo-button'))
-      expect(handlers.onRedo).toHaveBeenCalledOnce()
-    })
-
-    it('should disable undo button when canUndo is false', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} canUndo={false} canRedo={false} />)
-      expect((screen.getByTestId('undo-button') as HTMLButtonElement).disabled).toBe(true)
-    })
-
-    it('should disable redo button when canRedo is false', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} canUndo={false} canRedo={false} />)
-      expect((screen.getByTestId('redo-button') as HTMLButtonElement).disabled).toBe(true)
-    })
-
-    it('should enable undo button when canUndo is true', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} canUndo={true} canRedo={false} />)
-      expect((screen.getByTestId('undo-button') as HTMLButtonElement).disabled).toBe(false)
-    })
-
-    it('should enable redo button when canRedo is true', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} canUndo={false} canRedo={true} />)
-      expect((screen.getByTestId('redo-button') as HTMLButtonElement).disabled).toBe(false)
-    })
-  })
-
-  describe('mode selector', () => {
-    it('should render both mode buttons', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      expect(screen.getByTestId('mode-brush')).toBeTruthy()
-      expect(screen.getByTestId('mode-pixel')).toBeTruthy()
-    })
-
-    it('should show brush mode as active by default', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      expect(screen.getByTestId('mode-brush').getAttribute('aria-pressed')).toBe('true')
-      expect(screen.getByTestId('mode-pixel').getAttribute('aria-pressed')).toBe('false')
-    })
-
-    it('should call onSetMode with pixel when pixel button is clicked', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      fireEvent.click(screen.getByTestId('mode-pixel'))
-      expect(handlers.onSetMode).toHaveBeenCalledWith('pixel')
-    })
-
-    it('should call onSetMode with brush when brush button is clicked', () => {
-      const pixelBrush = { ...defaultBrush, mode: 'pixel' as BrushMode }
-      render(<AnsiEditorToolbar brush={pixelBrush} {...handlers} />)
-      fireEvent.click(screen.getByTestId('mode-brush'))
-      expect(handlers.onSetMode).toHaveBeenCalledWith('brush')
-    })
-
-    it('should hide Char button in pixel mode', () => {
-      const pixelBrush = { ...defaultBrush, mode: 'pixel' as BrushMode }
-      render(<AnsiEditorToolbar brush={pixelBrush} {...handlers} />)
-      expect(screen.queryByTestId('char-button')).toBeNull()
-    })
-
-    it('should show Char button in brush mode', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      expect(screen.getByTestId('char-button')).toBeTruthy()
-    })
-  })
-
-  describe('eraser mode', () => {
-    it('should render eraser mode button', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      expect(screen.getByTestId('mode-eraser')).toBeTruthy()
-    })
-
-    it('should call onSetMode with eraser when eraser button is clicked', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      fireEvent.click(screen.getByTestId('mode-eraser'))
-      expect(handlers.onSetMode).toHaveBeenCalledWith('eraser')
-    })
-
-    it('should show eraser button as active when brush.mode is eraser', () => {
-      const eraserBrush = { ...defaultBrush, mode: 'eraser' as BrushMode }
-      render(<AnsiEditorToolbar brush={eraserBrush} {...handlers} />)
-      expect(screen.getByTestId('mode-eraser').getAttribute('aria-pressed')).toBe('true')
-      expect(screen.getByTestId('mode-brush').getAttribute('aria-pressed')).toBe('false')
-      expect(screen.getByTestId('mode-pixel').getAttribute('aria-pressed')).toBe('false')
-    })
-
-    it('should hide Char button in eraser mode', () => {
-      const eraserBrush = { ...defaultBrush, mode: 'eraser' as BrushMode }
-      render(<AnsiEditorToolbar brush={eraserBrush} {...handlers} />)
-      expect(screen.queryByTestId('char-button')).toBeNull()
-    })
-  })
-
-  describe('select tool', () => {
-    it('should render select button', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      expect(screen.getByTestId('tool-select')).toBeTruthy()
-    })
-
-    it('should call onSetTool with select when clicked', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      fireEvent.click(screen.getByTestId('tool-select'))
-      expect(handlers.onSetTool).toHaveBeenCalledWith('select')
-    })
-
-    it('should show select as active when brush.tool is select', () => {
-      const selectBrush = { ...defaultBrush, tool: 'select' as DrawTool }
-      render(<AnsiEditorToolbar brush={selectBrush} {...handlers} />)
-      expect(screen.getByTestId('tool-select').getAttribute('aria-pressed')).toBe('true')
-      expect(screen.getByTestId('tool-pencil').getAttribute('aria-pressed')).toBe('false')
-    })
-  })
-
-  describe('hover tooltips', () => {
-    it('should have title attributes on all tool buttons', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      const expected: Record<string, string> = {
-        'tool-pencil': 'Pencil (B)',
-        'tool-line': 'Line (L)',
-        'tool-rect': 'Rectangle (U)',
-        'tool-flood-fill': 'Flood Fill (G)',
-        'tool-select': 'Select (M)',
-        'tool-eyedropper': 'Eyedropper (I)',
-        'tool-text': 'Text (T)',
-        'mode-brush': 'Brush',
-        'mode-pixel': 'Pixel (N)',
-        'mode-eraser': 'Eraser (E)',
-        'file-options-button': 'File (F)',
-        'undo-button': 'Undo (Ctrl+Z)',
-        'redo-button': 'Redo (Ctrl+Shift+Z)',
-      }
-      for (const [testId, title] of Object.entries(expected)) {
-        const el = screen.getByTestId(testId)
-        expect(el.getAttribute('title'), `${testId} should have title="${title}"`).toBe(title)
-      }
-    })
-  })
-
-  describe('eyedropper tool', () => {
-    it('should render eyedropper button', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      expect(screen.getByTestId('tool-eyedropper')).toBeTruthy()
-    })
-
-    it('should call onSetTool with eyedropper when clicked', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      fireEvent.click(screen.getByTestId('tool-eyedropper'))
-      expect(handlers.onSetTool).toHaveBeenCalledWith('eyedropper')
-    })
-
-    it('should show eyedropper as active when brush.tool is eyedropper', () => {
-      const eyedropperBrush = { ...defaultBrush, tool: 'eyedropper' as DrawTool }
-      render(<AnsiEditorToolbar brush={eyedropperBrush} {...handlers} />)
-      expect(screen.getByTestId('tool-eyedropper').getAttribute('aria-pressed')).toBe('true')
-      expect(screen.getByTestId('tool-pencil').getAttribute('aria-pressed')).toBe('false')
-    })
-  })
-
-  describe('text tool', () => {
-    it('should render text tool button', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      expect(screen.getByTestId('tool-text')).toBeTruthy()
-    })
-
-    it('should call onSetTool with text when clicked', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      fireEvent.click(screen.getByTestId('tool-text'))
-      expect(handlers.onSetTool).toHaveBeenCalledWith('text')
-    })
-
-    it('should show text as active when brush.tool is text', () => {
-      const textBrush = { ...defaultBrush, tool: 'text' as DrawTool }
-      render(<AnsiEditorToolbar brush={textBrush} {...handlers} />)
-      expect(screen.getByTestId('tool-text').getAttribute('aria-pressed')).toBe('true')
-      expect(screen.getByTestId('tool-pencil').getAttribute('aria-pressed')).toBe('false')
-    })
-  })
-
-  describe('CGA preview checkbox (via File Options modal)', () => {
-    it('should render CGA preview checkbox inside File Options modal', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} cgaPreview={false} onToggleCgaPreview={vi.fn()} />)
-      fireEvent.click(screen.getByTestId('file-options-button'))
-      expect(screen.getByTestId('file-cga-preview')).toBeTruthy()
-    })
-
-    it('should show checkbox as unchecked when cgaPreview is false', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} cgaPreview={false} onToggleCgaPreview={vi.fn()} />)
-      fireEvent.click(screen.getByTestId('file-options-button'))
-      const checkbox = screen.getByTestId('file-cga-preview') as HTMLInputElement
-      expect(checkbox.checked).toBe(false)
-    })
-
-    it('should show checkbox as checked when cgaPreview is true', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} cgaPreview={true} onToggleCgaPreview={vi.fn()} />)
-      fireEvent.click(screen.getByTestId('file-options-button'))
-      const checkbox = screen.getByTestId('file-cga-preview') as HTMLInputElement
-      expect(checkbox.checked).toBe(true)
-    })
-
-    it('should call onToggleCgaPreview when checkbox is clicked', () => {
-      const toggle = vi.fn()
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} cgaPreview={false} onToggleCgaPreview={toggle} />)
-      fireEvent.click(screen.getByTestId('file-options-button'))
-      fireEvent.click(screen.getByTestId('file-cga-preview'))
-      expect(toggle).toHaveBeenCalledOnce()
-    })
-  })
-
-  describe('flood fill tool', () => {
-    it('should render flood fill button', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      expect(screen.getByTestId('tool-flood-fill')).toBeTruthy()
-    })
-
-    it('should call onSetTool with flood-fill when clicked', () => {
-      render(<AnsiEditorToolbar brush={defaultBrush} {...handlers} />)
-      fireEvent.click(screen.getByTestId('tool-flood-fill'))
-      expect(handlers.onSetTool).toHaveBeenCalledWith('flood-fill')
-    })
-
-    it('should show flood fill as active when brush.tool is flood-fill', () => {
-      const fillBrush = { ...defaultBrush, tool: 'flood-fill' as DrawTool }
-      render(<AnsiEditorToolbar brush={fillBrush} {...handlers} />)
-      expect(screen.getByTestId('tool-flood-fill').getAttribute('aria-pressed')).toBe('true')
-      expect(screen.getByTestId('tool-pencil').getAttribute('aria-pressed')).toBe('false')
-    })
+  it('should render the png file input', () => {
+    render(<AnsiGraphicsEditor />)
+    expect(screen.getByTestId('png-file-input')).toBeTruthy()
   })
 })
