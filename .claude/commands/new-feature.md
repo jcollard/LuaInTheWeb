@@ -130,4 +130,4 @@ Before the feature is complete:
 - [ ] Tests colocated with component
 - [ ] No `any` types
 - [ ] Props interfaces defined
-- [ ] TDD workflow followed (see `!tdd`)
+- [ ] TDD workflow followed (see `/tdd`)

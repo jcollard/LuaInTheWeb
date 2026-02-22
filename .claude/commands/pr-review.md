@@ -884,7 +884,7 @@ Parsed tasks:
 
 ### 9d. Create Rework Task List
 
-Use TodoWrite to create a task list:
+Use TaskCreate to create a task list:
 
 ```
 ## PR #<number> Rejected - Rework Required
@@ -898,7 +898,7 @@ Use TodoWrite to create a task list:
 
 ### Rework Tasks
 
-[TodoWrite creates:]
+[TaskCreate creates:]
 1. [ ] <parsed task 1>
 2. [ ] <parsed task 2>
 3. [ ] <parsed task 3>
@@ -1104,7 +1104,7 @@ User types: `yes`
 
 ### Rework Tasks
 
-[TodoWrite creates:]
+[TaskCreate creates:]
 1. [ ] Add error handling for file not found case
 2. [ ] Add tests for empty input edge case
 3. [ ] Run scoped mutation tests on changes

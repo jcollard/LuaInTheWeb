@@ -180,7 +180,7 @@ This command:
 
 **On Reject:**
 - Parse feedback into actionable rework tasks
-- Create TodoWrite task list
+- Create TaskCreate task list
 - Agent works through rework
 - Returns to `/issue <n> review` when done
 
