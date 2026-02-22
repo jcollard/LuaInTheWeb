@@ -61,16 +61,44 @@ Before using Claude Code with this project, ensure you have:
 
 ## Project Structure
 
+This is a monorepo with workspace packages that must be built in dependency order.
+
 ```
-lua-learning-website/
-├── src/
-│   ├── components/     # React components (LuaPlayground, LuaRepl, BashTerminal)
-│   ├── hooks/          # Custom React hooks
-│   ├── utils/          # Utility functions
-│   ├── types/          # TypeScript type definitions
-│   └── __tests__/      # Test files
-├── public/             # Static assets
-└── package.json        # Dependencies
+LuaInTheWeb/
+├── packages/
+│   ├── shell-core/         # Shell utilities (no deps)
+│   ├── canvas-runtime/     # Canvas rendering (depends on shell-core)
+│   ├── lua-runtime/        # Lua engine + canvas controller (depends on canvas-runtime, shell-core)
+│   └── export/             # Single-file HTML export (depends on lua-runtime)
+├── lua-learning-website/   # Main React app (depends on lua-runtime, canvas-runtime)
+│   ├── src/
+│   │   ├── components/     # React components (LuaPlayground, LuaRepl, BashTerminal)
+│   │   ├── hooks/          # Custom React hooks
+│   │   ├── utils/          # Utility functions
+│   │   ├── types/          # TypeScript type definitions
+│   │   └── __tests__/      # Test files
+│   ├── public/             # Static assets
+│   └── package.json        # Dependencies
+└── package.json            # Root workspace config
+```
+
+### Package Build Order (CRITICAL)
+
+Packages **must** be built in this order due to TypeScript type dependencies:
+
+```
+shell-core → canvas-runtime → lua-runtime → export → lua-learning-website
+```
+
+To build all packages: `npm run build` (from repo root — uses correct order).
+
+To build individually (must respect order):
+```bash
+npm run build -w @lua-learning/shell-core
+npm run build -w @lua-learning/canvas-runtime
+npm run build -w @lua-learning/lua-runtime
+npm run build -w @lua-learning/export
+npm run build -w lua-learning-website
 ```
 
 ## Documentation
@@ -184,9 +212,7 @@ npm --prefix lua-learning-website run test:e2e             # Run E2E tests (Play
 
 ## Pre-PR Type Checking
 
-`npm run build` may fail locally due to pre-existing `@lua-learning/*` package issues. **This does not mean you can skip type checking.**
-
-Before committing, always run:
+Before committing, always type-check the main app:
 
 ```bash
 npx tsc -p lua-learning-website/tsconfig.app.json --noEmit 2>&1 | grep -v "@lua-learning/"
