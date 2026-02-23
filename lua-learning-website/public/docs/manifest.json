@@ -21,6 +21,7 @@
     "lua/table.md",
     "lua/math.md",
     "lua/io.md",
-    "ansi/editor.md"
+    "ansi/editor.md",
+    "ansi.md"
   ]
 }
