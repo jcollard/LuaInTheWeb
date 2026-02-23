@@ -182,6 +182,11 @@ export class AnsiController {
     // Unregister close handler to prevent double-cleanup
     this.callbacks.unregisterAnsiCloseHandler?.(this.ansiId)
 
+    // Clear screen state
+    this.screens.clear()
+    this.activeScreenId = null
+    this.nextScreenId = 1
+
     // Dispose and close the tab
     if (this.handle) {
       this.handle.dispose()

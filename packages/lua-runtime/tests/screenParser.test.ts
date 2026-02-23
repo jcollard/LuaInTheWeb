@@ -161,6 +161,44 @@ describe('parseScreenData', () => {
     })
   })
 
+  describe('normalizeRgb via cell colors', () => {
+    it('handles 1-indexed object RGB (Lua table from wasmoon)', () => {
+      // wasmoon converts Lua tables to objects with 1-indexed string keys
+      const luaRgb = { 1: 100, 2: 150, 3: 200 }
+      const data = makeV1Data({
+        '0': { '0': { char: 'A', fg: luaRgb as unknown as RGBColor, bg: [0, 0, 0] } }
+      })
+      const grid = parseScreenData(data)
+      expect(grid[0][0].fg).toEqual([100, 150, 200])
+    })
+
+    it('handles 0-indexed object RGB when key 1 is absent', () => {
+      // When only 0-indexed keys exist (no key "1"), falls back to 0-indexed path
+      const jsRgb = { 0: 50 } as unknown as RGBColor
+      const data = makeV1Data({
+        '0': { '0': { char: 'B', fg: jsRgb, bg: [0, 0, 0] } }
+      })
+      const grid = parseScreenData(data)
+      expect(grid[0][0].fg).toEqual([50, 0, 0])
+    })
+
+    it('does not confuse 0-indexed green with 1-indexed red', () => {
+      // This is the specific bug: {0: R, 1: G, 2: B} should NOT use obj[1] as red
+      // obj[1] exists but equals 60 (the green channel), not the red channel
+      // With the fix, obj[1] !== undefined triggers 1-indexed path, returning [60, 120, 180]
+      // But this is a 0-indexed object — the fix distinguishes by checking if key "1" exists
+      // For a true 0-indexed object {0: 30, 1: 60, 2: 120}, key "1" IS present,
+      // so we need a truly 0-indexed-only object to test the fallback path
+      const zeroOnly = { 0: 30 } as unknown as RGBColor
+      const data = makeV1Data({
+        '0': { '0': { char: 'C', fg: zeroOnly, bg: [0, 0, 0] } }
+      })
+      const grid = parseScreenData(data)
+      // obj[1] is undefined, so takes 0-indexed path: [obj[0], obj[1], obj[2]] = [30, 0, 0]
+      expect(grid[0][0].fg).toEqual([30, 0, 0])
+    })
+  })
+
   describe('error cases', () => {
     it('throws for unsupported version', () => {
       expect(() => parseScreenData({ version: 99 })).toThrow('Unsupported ANSI file version: 99')

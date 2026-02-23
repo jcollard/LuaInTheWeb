@@ -5,16 +5,17 @@ import type { RGBColor } from '../src/screenTypes'
 import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG } from '../src/screenTypes'
 
 // Mock canvas-runtime to avoid DOM dependencies
+// Uses `function` (not arrow) so mocks work as constructors with `new`
 vi.mock('@lua-learning/canvas-runtime', () => ({
-  InputCapture: vi.fn().mockImplementation(() => ({
-    dispose: vi.fn(),
-    update: vi.fn(),
-  })),
-  GameLoopController: vi.fn().mockImplementation(() => ({
-    start: vi.fn(),
-    stop: vi.fn(),
-    dispose: vi.fn(),
-  })),
+  InputCapture: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+    this.dispose = vi.fn()
+    this.update = vi.fn()
+  }),
+  GameLoopController: vi.fn().mockImplementation(function (this: Record<string, unknown>) {
+    this.start = vi.fn()
+    this.stop = vi.fn()
+    this.dispose = vi.fn()
+  }),
 }))
 
 function makeMinimalV1Data(): Record<string, unknown> {
@@ -76,11 +77,38 @@ describe('AnsiController screen state', () => {
     expect(() => controller.setScreen(999)).toThrow('Screen ID 999 not found')
   })
 
-  it('createScreen generates a non-empty ANSI string', () => {
+  it('createScreen stores screen and allows setScreen', () => {
     const data = makeMinimalV1Data()
     const id = controller.createScreen(data)
     // Internally the screen is stored as a string - verify by setting it
     controller.setScreen(id)
     expect(controller.getActiveScreenId()).toBe(id)
+  })
+
+  it('stop clears screen state', async () => {
+    const callbacks = makeCallbacks()
+    const ctrl = new AnsiController(callbacks)
+
+    // start() blocks until stop(). Fire-and-forget; let async setup complete.
+    const startPromise = ctrl.start()
+    // Flush microtask queue so the awaited mock resolves and start() finishes setup
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    const data = makeMinimalV1Data()
+    const id1 = ctrl.createScreen(data)
+    ctrl.createScreen(data) // id2 = 2
+    ctrl.setScreen(id1)
+    expect(ctrl.getActiveScreenId()).toBe(id1)
+
+    ctrl.stop()
+    await startPromise
+
+    // Screen state should be fully cleared
+    expect(ctrl.getActiveScreenId()).toBeNull()
+    // Old screen ID should no longer be valid
+    expect(() => ctrl.setScreen(id1)).toThrow('Screen ID 1 not found')
+    // IDs should reset - next createScreen should start at 1 again
+    const newId = ctrl.createScreen(data)
+    expect(newId).toBe(1)
   })
 })

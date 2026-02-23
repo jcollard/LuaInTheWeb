@@ -72,7 +72,9 @@ function normalizeRgb(raw: unknown): RGBColor {
   if (Array.isArray(raw)) return [raw[0] ?? 0, raw[1] ?? 0, raw[2] ?? 0]
   if (raw && typeof raw === 'object') {
     const obj = raw as Record<string, number>
-    return [obj[1] ?? obj[0] ?? 0, obj[2] ?? obj[1] ?? 0, obj[3] ?? obj[2] ?? 0]
+    // Lua tables from wasmoon use 1-indexed string keys ("1", "2", "3")
+    if (obj[1] !== undefined) return [obj[1], obj[2] ?? 0, obj[3] ?? 0]
+    return [obj[0] ?? 0, obj[1] ?? 0, obj[2] ?? 0]
   }
   return [0, 0, 0]
 }
