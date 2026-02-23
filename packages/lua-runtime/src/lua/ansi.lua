@@ -24,6 +24,7 @@ local ansi = {}
 -- 8.  Mouse Input (is_mouse_down, is_mouse_pressed, get_mouse_col, get_mouse_row, etc.)
 -- 9.  Key Constants (ansi.keys.*)
 -- 10. Terminal Dimensions (COLS, ROWS)
+-- 11. Screen Display (create_screen, set_screen)
 -- =============================================================================
 
 -- =============================================================================
@@ -182,6 +183,28 @@ function ansi.get_mouse_x() end
 --- Get the raw unscaled pixel Y coordinate of the mouse.
 ---@return number y Pixel Y coordinate (0 to terminal height)
 function ansi.get_mouse_y() end
+
+-- =============================================================================
+-- Screen Display
+-- =============================================================================
+
+--- Create a screen from .ansi.lua file data.
+--- Parses and composites all layers into a pre-rendered screen image.
+--- The returned screen ID can be passed to ansi.set_screen() to display it.
+---@param data table The data table from a .ansi.lua file (loaded via require or dofile)
+---@return number screen_id A numeric ID for the created screen
+---@usage local screen = ansi.create_screen(require("my_image.ansi"))
+function ansi.create_screen(data) end
+
+--- Set the active background screen.
+--- When a screen is active, it is rendered as the terminal background each frame,
+--- before the tick callback runs. Use ansi.print() to draw on top of it.
+--- Pass nil to clear the active screen.
+---@param screen number|nil The screen ID from create_screen(), or nil to clear
+---@return nil
+---@usage ansi.set_screen(screen)   -- display the screen
+---@usage ansi.set_screen(nil)      -- clear the background
+function ansi.set_screen(screen) end
 
 -- =============================================================================
 -- Key Constants

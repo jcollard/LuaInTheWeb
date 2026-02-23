@@ -16,6 +16,8 @@ import {
 } from '@lua-learning/canvas-runtime'
 import { InputAPI } from './InputAPI'
 import type { TimingInfo } from '@lua-learning/canvas-runtime'
+import { parseScreenData } from './screenParser'
+import { renderGridToAnsiString } from './ansiStringRenderer'
 
 /**
  * Handle to a running ANSI terminal instance.
@@ -90,6 +92,11 @@ export class AnsiController {
 
   // onTick callback from Lua
   private onTickCallback: (() => void) | null = null
+
+  // Screen state
+  private nextScreenId = 1
+  private screens: Map<number, string> = new Map()
+  private activeScreenId: number | null = null
 
   constructor(callbacks: AnsiCallbacks, ansiId = 'ansi-main') {
     this.callbacks = callbacks
@@ -174,6 +181,11 @@ export class AnsiController {
 
     // Unregister close handler to prevent double-cleanup
     this.callbacks.unregisterAnsiCloseHandler?.(this.ansiId)
+
+    // Clear screen state
+    this.screens.clear()
+    this.activeScreenId = null
+    this.nextScreenId = 1
 
     // Dispose and close the tab
     if (this.handle) {
@@ -375,6 +387,43 @@ export class AnsiController {
     return this.inputAPI.isMouseButtonPressed(button)
   }
 
+  // --- Screen API ---
+
+  /**
+   * Create a screen from ANSI file data.
+   * Parses the data, composites layers, renders to an ANSI escape string,
+   * stores it with a numeric ID, and returns the ID.
+   */
+  createScreen(data: Record<string, unknown>): number {
+    const grid = parseScreenData(data)
+    const ansiString = renderGridToAnsiString(grid)
+    const id = this.nextScreenId++
+    this.screens.set(id, ansiString)
+    return id
+  }
+
+  /**
+   * Set the active background screen.
+   * Pass null to clear the active screen.
+   */
+  setScreen(id: number | null): void {
+    if (id === null) {
+      this.activeScreenId = null
+      return
+    }
+    if (!this.screens.has(id)) {
+      throw new Error(`Screen ID ${id} not found. Create a screen first with ansi.create_screen().`)
+    }
+    this.activeScreenId = id
+  }
+
+  /**
+   * Get the active screen ID, or null if no screen is active.
+   */
+  getActiveScreenId(): number | null {
+    return this.activeScreenId
+  }
+
   // --- Internal ---
 
   /**
@@ -385,6 +434,14 @@ export class AnsiController {
 
     // Store timing for API access
     this.currentTiming = timing
+
+    // Render active screen background before tick callback
+    if (this.activeScreenId !== null) {
+      const screenString = this.screens.get(this.activeScreenId)
+      if (screenString) {
+        this.handle?.write(screenString)
+      }
+    }
 
     // Call the Lua onTick callback
     if (this.onTickCallback) {

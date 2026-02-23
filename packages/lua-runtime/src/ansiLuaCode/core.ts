@@ -129,6 +129,21 @@ export const ansiLuaCoreCode = `
       return __ansi_getTime()
     end
 
+    -- Screen Display
+    function _ansi.create_screen(data)
+      if type(data) ~= 'table' then
+        error("ansi.create_screen() expects a table, got " .. type(data))
+      end
+      return __ansi_createScreen(data)
+    end
+
+    function _ansi.set_screen(screen)
+      if screen ~= nil and type(screen) ~= 'number' then
+        error("ansi.set_screen() expects a number or nil, got " .. type(screen))
+      end
+      __ansi_setScreen(screen)
+    end
+
     -- Standard CGA/VGA color palette
     _ansi.colors = {
       BLACK         = {0, 0, 0},

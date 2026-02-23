@@ -5,7 +5,7 @@
  * documentation parsing for both built-in and user-created modules.
  */
 
-import { LUA_SHELL_CODE, LUA_CANVAS_CODE, LUA_LOCALSTORAGE_CODE } from '@lua-learning/lua-runtime'
+import { LUA_SHELL_CODE, LUA_CANVAS_CODE, LUA_LOCALSTORAGE_CODE, LUA_ANSI_CODE } from '@lua-learning/lua-runtime'
 
 /**
  * Registry mapping library names to their Lua source code.
@@ -14,6 +14,7 @@ const registry = new Map<string, string>([
   ['shell', LUA_SHELL_CODE],
   ['canvas', LUA_CANVAS_CODE],
   ['localstorage', LUA_LOCALSTORAGE_CODE],
+  ['ansi', LUA_ANSI_CODE],
 ])
 
 /**
