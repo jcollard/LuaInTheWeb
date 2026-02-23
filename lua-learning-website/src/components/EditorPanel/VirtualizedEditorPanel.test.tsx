@@ -39,6 +39,7 @@ describe('VirtualizedEditorPanel', () => {
       saveTab: vi.fn().mockReturnValue(true),
       saveAllTabs: vi.fn(),
       disposeTab: vi.fn(),
+      renameTabContent: vi.fn(),
       refreshFromFilesystem: vi.fn(),
     }
   })

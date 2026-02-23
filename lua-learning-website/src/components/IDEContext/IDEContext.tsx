@@ -303,8 +303,8 @@ export function IDEContextProvider({ children, initialCode: _initialCode = '', f
       const tabIndex = tabs.findIndex(t => t.path === oldPath)
       if (tabIndex !== -1) {
         filesystem.renameFile(oldPath, newPath)
-        // Dispose old path content - new content will be loaded from filesystem at new path
-        tabEditorManager.disposeTab(oldPath)
+        // Transfer content to new path (preserves dirty state)
+        tabEditorManager.renameTabContent(oldPath, newPath)
         tabBar.renameTab(oldPath, newPath, newName)
       } else { filesystem.renameFile(oldPath, newPath) }
       setFileTreeVersion(v => v + 1)

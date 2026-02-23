@@ -10,8 +10,7 @@ export interface UseShellFileMoveParams {
 
 /**
  * Hook for handling file/directory moves from shell commands (mv).
- * Updates tabs to reflect new paths. Content will be reloaded from
- * the new filesystem path.
+ * Updates tabs to reflect new paths, preserving dirty content.
  */
 export function useShellFileMove({
   tabs,
@@ -26,8 +25,8 @@ export function useShellFileMove({
         const relativePath = tab.path.slice(oldPath.length)
         const newTabPath = newPath + relativePath
         const newName = newTabPath.split('/').pop() || newTabPath
-        // Dispose old content - new content will be loaded from new path
-        tabEditorManager.disposeTab(tab.path)
+        // Transfer content to new path (preserves dirty state)
+        tabEditorManager.renameTabContent(tab.path, newTabPath)
         // Update tab path and name
         tabBar.renameTab(tab.path, newTabPath, newName)
       }
@@ -36,8 +35,8 @@ export function useShellFileMove({
       const tabIndex = tabs.findIndex(t => t.path === oldPath)
       if (tabIndex !== -1) {
         const newName = newPath.split('/').pop() || newPath
-        // Dispose old content - new content will be loaded from new path
-        tabEditorManager.disposeTab(oldPath)
+        // Transfer content to new path (preserves dirty state)
+        tabEditorManager.renameTabContent(oldPath, newPath)
         // Update tab path and name
         tabBar.renameTab(oldPath, newPath, newName)
       }

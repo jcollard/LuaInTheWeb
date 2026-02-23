@@ -129,6 +129,7 @@ describe('useIDE', () => {
           saveTab: vi.fn(() => true),
           saveAllTabs: vi.fn(),
           disposeTab: vi.fn(),
+          renameTabContent: vi.fn(),
           refreshFromFilesystem: vi.fn(),
         },
       }
@@ -236,6 +237,7 @@ describe('useIDE', () => {
           saveTab: vi.fn(() => true),
           saveAllTabs: vi.fn(),
           disposeTab: vi.fn(),
+          renameTabContent: vi.fn(),
           refreshFromFilesystem: vi.fn(),
         },
       }

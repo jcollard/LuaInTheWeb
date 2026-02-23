@@ -48,6 +48,8 @@ export interface UseTabEditorManagerReturn {
   saveAllTabs: () => void
   /** Dispose a tab (remove from memory and MRU) */
   disposeTab: (path: string) => void
+  /** Rename tab content: transfer content from old path to new path, preserving dirty state */
+  renameTabContent: (oldPath: string, newPath: string) => void
   /** Reload content from filesystem (for non-dirty tabs only) */
   refreshFromFilesystem: (path: string) => void
 }
@@ -81,6 +83,11 @@ export function useTabEditorManager({
   // Ref to track previous dirty states for callback
   const dirtyStatesRef = useRef<Map<string, boolean>>(new Map())
 
+  // Use ref for filesystem to avoid re-creating callbacks when useFileSystem()
+  // returns a new object reference (it doesn't useMemo its return value)
+  const filesystemRef = useRef(filesystem)
+  filesystemRef.current = filesystem
+
   // Filter for file tabs only (exclude canvas, markdown, binary)
   const isFileTab = useCallback((tab: TabInfo): boolean => {
     return tab.type === 'file'
@@ -91,7 +98,7 @@ export function useTabEditorManager({
     (path: string) => {
       if (loadedTabsRef.current.has(path)) return
 
-      const content = filesystem.readFile(path)
+      const content = filesystemRef.current.readFile(path)
       if (content !== null) {
         setTabContents((prev) => {
           const next = new Map(prev)
@@ -101,7 +108,7 @@ export function useTabEditorManager({
         loadedTabsRef.current.add(path)
       }
     },
-    [filesystem]
+    []
   )
 
   // Update MRU when active tab changes
@@ -117,6 +124,8 @@ export function useTabEditorManager({
 
     // Update MRU list - move active tab to front
     setMruList((prev) => {
+      // Bail out if already at front to avoid unnecessary re-renders
+      if (prev[0] === activeTab) return prev
       const filtered = prev.filter((p) => p !== activeTab)
       return [activeTab, ...filtered]
     })
@@ -168,7 +177,7 @@ export function useTabEditorManager({
         const existing = prev.get(path)
         if (!existing) {
           // Tab not loaded yet - load it first
-          const originalContent = filesystem.readFile(path) ?? ''
+          const originalContent = filesystemRef.current.readFile(path) ?? ''
           const next = new Map(prev)
           next.set(path, { content, originalContent })
           return next
@@ -190,7 +199,7 @@ export function useTabEditorManager({
         }
       }
     },
-    [filesystem, onDirtyChange, tabContents]
+    [onDirtyChange, tabContents]
   )
 
   // Check if a tab has unsaved changes
@@ -214,7 +223,7 @@ export function useTabEditorManager({
       const state = tabContents.get(path)
       if (!state) return false
 
-      filesystem.writeFile(path, state.content)
+      filesystemRef.current.writeFile(path, state.content)
 
       // Update original content to match current
       setTabContents((prev) => {
@@ -234,7 +243,7 @@ export function useTabEditorManager({
 
       return true
     },
-    [filesystem, isPathReadOnly, onDirtyChange, tabContents]
+    [isPathReadOnly, onDirtyChange, tabContents]
   )
 
   // Save all dirty tabs
@@ -263,6 +272,31 @@ export function useTabEditorManager({
     dirtyStatesRef.current.delete(path)
   }, [])
 
+  // Rename tab content: transfer content from old path to new path, preserving dirty state
+  const renameTabContent = useCallback((oldPath: string, newPath: string) => {
+    setTabContents((prev) => {
+      const existing = prev.get(oldPath)
+      if (!existing) return prev
+      const next = new Map(prev)
+      next.delete(oldPath)
+      next.set(newPath, existing)
+      return next
+    })
+
+    setMruList((prev) => prev.map((p) => (p === oldPath ? newPath : p)))
+
+    if (loadedTabsRef.current.has(oldPath)) {
+      loadedTabsRef.current.delete(oldPath)
+      loadedTabsRef.current.add(newPath)
+    }
+
+    const dirtyState = dirtyStatesRef.current.get(oldPath)
+    if (dirtyState !== undefined) {
+      dirtyStatesRef.current.delete(oldPath)
+      dirtyStatesRef.current.set(newPath, dirtyState)
+    }
+  }, [])
+
   // Reload content from filesystem (for non-dirty tabs only)
   const refreshFromFilesystem = useCallback(
     (path: string) => {
@@ -272,7 +306,7 @@ export function useTabEditorManager({
         return
       }
 
-      const content = filesystem.readFile(path)
+      const content = filesystemRef.current.readFile(path)
       if (content !== null) {
         setTabContents((prev) => {
           const next = new Map(prev)
@@ -281,7 +315,7 @@ export function useTabEditorManager({
         })
       }
     },
-    [filesystem, tabContents]
+    [tabContents]
   )
 
   return {
@@ -293,6 +327,7 @@ export function useTabEditorManager({
     saveTab,
     saveAllTabs,
     disposeTab,
+    renameTabContent,
     refreshFromFilesystem,
   }
 }

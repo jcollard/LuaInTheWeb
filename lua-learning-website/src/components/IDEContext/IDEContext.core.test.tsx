@@ -82,7 +82,11 @@ describe('IDEContext', () => {
   })
 
   describe('code state', () => {
-    it('should provide code state with initial empty string', () => {
+    beforeEach(() => {
+      localStorage.clear()
+    })
+
+    it('should provide empty code when no tab is open', () => {
       // Arrange & Act
       const { result } = renderHook(() => useIDE(), {
         wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
@@ -92,23 +96,28 @@ describe('IDEContext', () => {
       expect(result.current.code).toBe('')
     })
 
-    it('should provide code state with initial value from props', () => {
-      // Arrange & Act
+    it('should provide file content as code when tab is open', () => {
+      // Arrange
       const { result } = renderHook(() => useIDE(), {
-        wrapper: ({ children }) => (
-          <IDEContextProvider initialCode="print('hello')">{children}</IDEContextProvider>
-        ),
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
       })
+
+      // Act - create and open a file with content
+      act(() => { result.current.createFile('/hello.lua', "print('hello')") })
+      act(() => { result.current.openFile('/hello.lua') })
 
       // Assert
       expect(result.current.code).toBe("print('hello')")
     })
 
-    it('should update code when setCode is called', () => {
+    it('should update code when setCode is called with active tab', () => {
       // Arrange
       const { result } = renderHook(() => useIDE(), {
         wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
       })
+
+      act(() => { result.current.createFile('/test.lua', '') })
+      act(() => { result.current.openFile('/test.lua') })
 
       // Act
       act(() => {
@@ -119,13 +128,14 @@ describe('IDEContext', () => {
       expect(result.current.code).toBe('new code')
     })
 
-    it('should track isDirty when code changes from initial', () => {
+    it('should track isDirty when code changes from saved content', () => {
       // Arrange
       const { result } = renderHook(() => useIDE(), {
-        wrapper: ({ children }) => (
-          <IDEContextProvider initialCode="initial">{children}</IDEContextProvider>
-        ),
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
       })
+
+      act(() => { result.current.createFile('/test.lua', 'initial') })
+      act(() => { result.current.openFile('/test.lua') })
       expect(result.current.isDirty).toBe(false)
 
       // Act
@@ -137,13 +147,14 @@ describe('IDEContext', () => {
       expect(result.current.isDirty).toBe(true)
     })
 
-    it('should reset isDirty when code returns to initial value', () => {
+    it('should reset isDirty when code returns to saved content', () => {
       // Arrange
       const { result } = renderHook(() => useIDE(), {
-        wrapper: ({ children }) => (
-          <IDEContextProvider initialCode="initial">{children}</IDEContextProvider>
-        ),
+        wrapper: ({ children }) => <IDEContextProvider>{children}</IDEContextProvider>,
       })
+
+      act(() => { result.current.createFile('/test.lua', 'initial') })
+      act(() => { result.current.openFile('/test.lua') })
 
       // Modify code
       act(() => {
