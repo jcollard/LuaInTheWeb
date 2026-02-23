@@ -369,7 +369,7 @@ This ensures the TDD cycle (Red-Green-Refactor-Mutate) guidelines are loaded.
 
 ### 5.4. Create Task List and Begin Implementation
 
-Use the **approved plan** from Step 2 to create a TodoWrite task list:
+Use the **approved plan** from Step 2 to create a TaskCreate task list:
 
 ```
 ## Starting Issue #<number>
@@ -379,7 +379,7 @@ Use the **approved plan** from Step 2 to create a TodoWrite task list:
 ### Implementation Tasks
 ```
 
-Use TodoWrite to create tasks based on the approved implementation steps.
+Use TaskCreate to create tasks based on the approved implementation steps.
 
 Then begin implementation following TDD:
 
@@ -438,7 +438,7 @@ This script is **auto-approved** and will:
 6. Update project status to "Needs Review"
 
 **When to trigger automatic review:**
-- All TodoWrite tasks are marked as completed
+- All tasks are marked as completed (via TaskUpdate)
 - All checklist items above pass
 - No blocking issues or errors remain
 

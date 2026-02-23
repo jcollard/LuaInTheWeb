@@ -39,7 +39,7 @@ Store this information for Step 2.
 
 Before running the review script, gather a brief summary and test plan from the work completed.
 
-Based on the completed TodoWrite tasks and implementation work, prepare:
+Based on the completed tasks and implementation work, prepare:
 
 1. **Summary**: 1-3 bullet points describing what was implemented
 2. **Test plan**: How the changes were verified (tests added, manual testing done)
