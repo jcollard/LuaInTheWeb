@@ -3,6 +3,8 @@ import { renderGridToAnsiString } from '../src/ansiStringRenderer'
 import type { AnsiGrid, AnsiCell, RGBColor } from '../src/screenTypes'
 import { DEFAULT_FG, DEFAULT_BG, HALF_BLOCK, ANSI_ROWS, ANSI_COLS } from '../src/screenTypes'
 
+const ESC = '\x1b'
+
 function makeCell(char: string, fg: RGBColor, bg: RGBColor): AnsiCell {
   return { char, fg, bg }
 }
@@ -13,17 +15,28 @@ function makeGrid(rows: number, cols: number, fill: AnsiCell): AnsiGrid {
   )
 }
 
+/** Count occurrences of a literal substring in a string. */
+function countOccurrences(haystack: string, needle: string): number {
+  let count = 0
+  let pos = 0
+  while ((pos = haystack.indexOf(needle, pos)) !== -1) {
+    count++
+    pos += needle.length
+  }
+  return count
+}
+
 describe('renderGridToAnsiString', () => {
   it('renders a 1x1 grid with correct escape sequences', () => {
     const grid: AnsiGrid = [[makeCell('A', [255, 0, 0], [0, 0, 255])]]
     const result = renderGridToAnsiString(grid)
 
-    expect(result).toContain('\x1b[H\x1b[0m')       // cursor home + reset
-    expect(result).toContain('\x1b[1;1H')            // row 1 positioning
-    expect(result).toContain('\x1b[38;2;255;0;0m')   // fg red
-    expect(result).toContain('\x1b[48;2;0;0;255m')   // bg blue
-    expect(result).toContain('A')                     // character
-    expect(result).toMatch(/\x1b\[0m$/)              // reset at end
+    expect(result).toContain(`${ESC}[H${ESC}[0m`)       // cursor home + reset
+    expect(result).toContain(`${ESC}[1;1H`)              // row 1 positioning
+    expect(result).toContain(`${ESC}[38;2;255;0;0m`)     // fg red
+    expect(result).toContain(`${ESC}[48;2;0;0;255m`)     // bg blue
+    expect(result).toContain('A')                         // character
+    expect(result.endsWith(`${ESC}[0m`)).toBe(true)       // reset at end
   })
 
   it('skips redundant color changes for consecutive same-color cells', () => {
@@ -32,16 +45,13 @@ describe('renderGridToAnsiString', () => {
     const result = renderGridToAnsiString(grid)
 
     // Count fg color sequences - should only appear once
-    const fgMatches = result.match(/\x1b\[38;2;100;200;50m/g)
-    expect(fgMatches).toHaveLength(1)
+    expect(countOccurrences(result, `${ESC}[38;2;100;200;50m`)).toBe(1)
 
     // Count bg color sequences - should only appear once
-    const bgMatches = result.match(/\x1b\[48;2;10;20;30m/g)
-    expect(bgMatches).toHaveLength(1)
+    expect(countOccurrences(result, `${ESC}[48;2;10;20;30m`)).toBe(1)
 
     // Should have 3 X characters
-    const xMatches = result.match(/X/g)
-    expect(xMatches).toHaveLength(3)
+    expect(countOccurrences(result, 'X')).toBe(3)
   })
 
   it('emits new color codes when colors change between cells', () => {
@@ -51,11 +61,10 @@ describe('renderGridToAnsiString', () => {
     ]]
     const result = renderGridToAnsiString(grid)
 
-    expect(result).toContain('\x1b[38;2;255;0;0m')
-    expect(result).toContain('\x1b[38;2;0;255;0m')
+    expect(result).toContain(`${ESC}[38;2;255;0;0m`)
+    expect(result).toContain(`${ESC}[38;2;0;255;0m`)
     // bg should only appear once since both are the same
-    const bgMatches = result.match(/\x1b\[48;2;0;0;0m/g)
-    expect(bgMatches).toHaveLength(1)
+    expect(countOccurrences(result, `${ESC}[48;2;0;0;0m`)).toBe(1)
   })
 
   it('handles HALF_BLOCK characters', () => {
@@ -68,9 +77,9 @@ describe('renderGridToAnsiString', () => {
     const grid = makeGrid(3, 2, makeCell(' ', DEFAULT_FG, DEFAULT_BG))
     const result = renderGridToAnsiString(grid)
 
-    expect(result).toContain('\x1b[1;1H')
-    expect(result).toContain('\x1b[2;1H')
-    expect(result).toContain('\x1b[3;1H')
+    expect(result).toContain(`${ESC}[1;1H`)
+    expect(result).toContain(`${ESC}[2;1H`)
+    expect(result).toContain(`${ESC}[3;1H`)
   })
 
   it('clamps to ANSI_ROWS x ANSI_COLS', () => {
@@ -79,20 +88,19 @@ describe('renderGridToAnsiString', () => {
     const result = renderGridToAnsiString(grid)
 
     // Should not have row 26 positioning
-    expect(result).not.toContain('\x1b[26;1H')
+    expect(result).not.toContain(`${ESC}[26;1H`)
     // Should have row 25
-    expect(result).toContain('\x1b[25;1H')
+    expect(result).toContain(`${ESC}[25;1H`)
     // Count Z characters: 25 rows * 80 cols = 2000
-    const zCount = (result.match(/Z/g) ?? []).length
-    expect(zCount).toBe(ANSI_ROWS * ANSI_COLS)
+    expect(countOccurrences(result, 'Z')).toBe(ANSI_ROWS * ANSI_COLS)
   })
 
   it('handles empty grid', () => {
     const grid: AnsiGrid = []
     const result = renderGridToAnsiString(grid)
     // Should still have initial positioning and reset
-    expect(result).toContain('\x1b[H\x1b[0m')
-    expect(result).toMatch(/\x1b\[0m$/)
+    expect(result).toContain(`${ESC}[H${ESC}[0m`)
+    expect(result.endsWith(`${ESC}[0m`)).toBe(true)
   })
 
   it('resets colors between rows', () => {
@@ -102,7 +110,6 @@ describe('renderGridToAnsiString', () => {
     ]
     const result = renderGridToAnsiString(grid)
     // fg color set once (same across rows), should not repeat
-    const fgMatches = result.match(/\x1b\[38;2;255;0;0m/g)
-    expect(fgMatches).toHaveLength(1)
+    expect(countOccurrences(result, `${ESC}[38;2;255;0;0m`)).toBe(1)
   })
 })

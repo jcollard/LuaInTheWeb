@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { parseScreenData } from '../src/screenParser'
 import type { RGBColor } from '../src/screenTypes'
-import { ANSI_ROWS, ANSI_COLS, DEFAULT_CELL, DEFAULT_BG, DEFAULT_FG, TRANSPARENT_BG } from '../src/screenTypes'
+import { ANSI_ROWS, ANSI_COLS, DEFAULT_BG, DEFAULT_FG } from '../src/screenTypes'
 
 function makeV1Data(gridOverrides?: Record<string, Record<string, { char: string; fg: RGBColor; bg: RGBColor }>>): Record<string, unknown> {
   // Create a minimal v1 grid (25 rows, 80 cols)

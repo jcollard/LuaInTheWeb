@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { hiddenGroupIds, visibleDrawableLayers, compositeCellCore, compositeGrid } from '../src/screenCompositor'
-import type { AnsiCell, AnsiGrid, DrawableLayerData, DrawnLayerData, GroupLayerData, LayerData, RGBColor, TextLayerData } from '../src/screenTypes'
+import type { AnsiCell, AnsiGrid, DrawableLayerData, DrawnLayerData, GroupLayerData, LayerData, RGBColor } from '../src/screenTypes'
 import {
-  ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_CELL, DEFAULT_FG,
+  ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_CELL,
   DEFAULT_FRAME_DURATION_MS, HALF_BLOCK, TRANSPARENT_BG, TRANSPARENT_HALF,
 } from '../src/screenTypes'
 
