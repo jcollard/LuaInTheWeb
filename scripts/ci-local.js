@@ -51,10 +51,11 @@ try {
   console.log('✅ Lint passed')
 
   // Step 2: Build all packages (in dependency order)
-  // Order: shell-core → canvas-runtime → lua-runtime → export → lua-learning-website
+  // Order: shell-core → canvas-runtime → ansi-shared → lua-runtime → export → lua-learning-website
   section('🔨', 'Building packages...')
   run('npm run build', path.join(ROOT_DIR, 'packages/shell-core'))
   run('npm run build', path.join(ROOT_DIR, 'packages/canvas-runtime'))
+  run('npm run build', path.join(ROOT_DIR, 'packages/ansi-shared'))
   run('npm run build', path.join(ROOT_DIR, 'packages/lua-runtime'))
   run('npm run build', path.join(ROOT_DIR, 'packages/export'))
   run('npm run build', path.join(ROOT_DIR, 'lua-learning-website'))
@@ -64,6 +65,7 @@ try {
   section('🧪', 'Running unit tests...')
   run('npm run test', path.join(ROOT_DIR, 'packages/shell-core'))
   run('npm run test', path.join(ROOT_DIR, 'packages/canvas-runtime'))
+  run('npm run test', path.join(ROOT_DIR, 'packages/ansi-shared'))
   run('npm run test', path.join(ROOT_DIR, 'packages/lua-runtime'))
   run('npm run test', path.join(ROOT_DIR, 'lua-learning-website'))
   console.log('✅ Unit tests passed')

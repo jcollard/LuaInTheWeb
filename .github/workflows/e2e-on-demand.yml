@@ -56,6 +56,14 @@ jobs:
         run: npm run build
         working-directory: packages/shell-core
 
+      - name: Build canvas-runtime
+        run: npm run build
+        working-directory: packages/canvas-runtime
+
+      - name: Build ansi-shared
+        run: npm run build
+        working-directory: packages/ansi-shared
+
       - name: Build lua-runtime
         run: npm run build
         working-directory: packages/lua-runtime
