@@ -949,6 +949,10 @@ export class LuaCanvasRuntime {
         if #key == 1 and key:match('[a-zA-Z]') then
           return 'Key' .. key:upper()
         end
+        -- Single digit keys: '1' -> 'Digit1'
+        if #key == 1 and key:match('[0-9]') then
+          return 'Digit' .. key
+        end
         -- Arrow keys: 'up', 'down', 'left', 'right' -> 'ArrowUp', etc.
         local arrows = { up = 'ArrowUp', down = 'ArrowDown', left = 'ArrowLeft', right = 'ArrowRight' }
         if arrows[key:lower()] then
