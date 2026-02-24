@@ -264,6 +264,7 @@ TypeScript test mocks that construct the full interface will fail `tsc` if a req
 - `/e2e` - E2E testing guidelines
 - `/mutation-test` - Mutation testing guidelines
 - `/code-review` - Code review checklist
+- `/ansi` - ANSI subsystem architecture, DRY relationships, and change impact guide
 
 ## Conventions
 
