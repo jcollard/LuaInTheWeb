@@ -174,6 +174,8 @@ All work happens in isolated worktrees. `/issue <n> begin` auto-creates worktree
 
 - **Canvas Consistency**: Changes to canvas behavior must be applied to BOTH the editor (`packages/canvas-runtime`) AND export (`packages/export/src/runtime`). Use shared code where possible; when not possible, implement in both and link the paired implementations.
 
+- **ANSI Consistency**: The ANSI editor and runtime share duplicated logic (compositing, text rasterization, types, serialization). **Run `/ansi` before making any changes** to files in `AnsiGraphicsEditor/`, `packages/lua-runtime/src/screen*`, `packages/lua-runtime/src/ansi*`, `packages/lua-runtime/src/textLayerGrid.ts`, or `packages/ansi-shared/`.
+
 See [docs/coding-standards.md](docs/coding-standards.md) for detailed guidelines.
 
 ### TDD is MANDATORY
