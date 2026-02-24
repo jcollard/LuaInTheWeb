@@ -311,6 +311,105 @@ describe('AnsiController layer visibility', () => {
     })
   })
 
+  describe('nested group visibility', () => {
+    /**
+     * Hierarchy:
+     *   bg      (drawn, no parent)
+     *   g1      (group, no parent)  — "Decorations"
+     *     ├─ d1 (drawn, parent=g1)  — "Title"
+     *     └─ g2 (group, parent=g1)  — "Details"
+     *        └─ d2 (drawn, parent=g2) — "Status"
+     *   fg      (drawn, no parent)
+     */
+    function makeNestedGroupData(): Record<string, unknown> {
+      function makeGrid(char: string): Record<number, Record<number, { char: string; fg: RGBColor; bg: RGBColor }>> {
+        const grid: Record<number, Record<number, { char: string; fg: RGBColor; bg: RGBColor }>> = {}
+        for (let r = 0; r < ANSI_ROWS; r++) {
+          const row: Record<number, { char: string; fg: RGBColor; bg: RGBColor }> = {}
+          for (let c = 0; c < ANSI_COLS; c++) {
+            row[c + 1] = { char: ' ', fg: [...DEFAULT_FG] as RGBColor, bg: [...DEFAULT_BG] as RGBColor }
+          }
+          grid[r + 1] = row
+        }
+        grid[1][1] = { char, fg: [255, 0, 0], bg: [0, 0, 255] }
+        return grid
+      }
+      return {
+        version: 4, width: ANSI_COLS, height: ANSI_ROWS, activeLayerId: 'bg',
+        layers: {
+          1: { type: 'drawn', id: 'bg', name: 'Background', visible: true, grid: makeGrid('A') },
+          2: { type: 'group', id: 'g1', name: 'Decorations', visible: true, collapsed: false },
+          3: { type: 'drawn', id: 'd1', name: 'Title', visible: true, grid: makeGrid('B'), parentId: 'g1' },
+          4: { type: 'group', id: 'g2', name: 'Details', visible: true, collapsed: false, parentId: 'g1' },
+          5: { type: 'drawn', id: 'd2', name: 'Status', visible: true, grid: makeGrid('C'), parentId: 'g2' },
+          6: { type: 'drawn', id: 'fg', name: 'Foreground', visible: true, grid: makeGrid('D') },
+        },
+      }
+    }
+
+    it('hiding top group cascades to all descendants', () => {
+      const id = controller.createScreen(makeNestedGroupData())
+      controller.setScreenLayerVisible(id, 'g1', false)
+      const layers = controller.getScreenLayers(id)
+
+      // Groups are marked hidden
+      expect(layers.find((l: LayerInfo) => l.id === 'g1')!.visible).toBe(false)
+      // Child group retains its own visible flag
+      expect(layers.find((l: LayerInfo) => l.id === 'g2')!.visible).toBe(true)
+      // Drawables retain their own visible flags
+      expect(layers.find((l: LayerInfo) => l.id === 'd1')!.visible).toBe(true)
+      expect(layers.find((l: LayerInfo) => l.id === 'd2')!.visible).toBe(true)
+
+      // Non-group layers are unaffected
+      expect(layers.find((l: LayerInfo) => l.id === 'bg')!.visible).toBe(true)
+      expect(layers.find((l: LayerInfo) => l.id === 'fg')!.visible).toBe(true)
+    })
+
+    it('hiding sub-group only affects its subtree', () => {
+      const id = controller.createScreen(makeNestedGroupData())
+      controller.setScreenLayerVisible(id, 'g2', false)
+      const layers = controller.getScreenLayers(id)
+
+      // g2 is hidden, g1 is still visible
+      expect(layers.find((l: LayerInfo) => l.id === 'g1')!.visible).toBe(true)
+      expect(layers.find((l: LayerInfo) => l.id === 'g2')!.visible).toBe(false)
+      // d1 (child of g1) is unaffected, d2 (child of g2) retains visible=true
+      expect(layers.find((l: LayerInfo) => l.id === 'd1')!.visible).toBe(true)
+      expect(layers.find((l: LayerInfo) => l.id === 'd2')!.visible).toBe(true)
+    })
+
+    it('toggle sub-group while parent hidden leaves sub-group hidden after parent restored', () => {
+      const id = controller.createScreen(makeNestedGroupData())
+      // Hide top group
+      controller.setScreenLayerVisible(id, 'g1', false)
+      // Toggle g2 off while g1 is already hidden
+      controller.toggleScreenLayer(id, 'g2')
+      // Now re-show g1
+      controller.setScreenLayerVisible(id, 'g1', true)
+
+      const layers = controller.getScreenLayers(id)
+      // g2 was toggled off, so it should be hidden
+      expect(layers.find((l: LayerInfo) => l.id === 'g2')!.visible).toBe(false)
+      // d1 (direct child of g1) should be visible
+      expect(layers.find((l: LayerInfo) => l.id === 'd1')!.visible).toBe(true)
+      // d2 (child of g2) retains visible=true but g2 is hidden so compositing skips it
+      expect(layers.find((l: LayerInfo) => l.id === 'd2')!.visible).toBe(true)
+    })
+
+    it('re-showing parent restores all descendants to compositing', () => {
+      const id = controller.createScreen(makeNestedGroupData())
+      controller.setScreenLayerVisible(id, 'g1', false)
+      controller.setScreenLayerVisible(id, 'g1', true)
+
+      const layers = controller.getScreenLayers(id)
+      // All layers should be visible
+      expect(layers.find((l: LayerInfo) => l.id === 'g1')!.visible).toBe(true)
+      expect(layers.find((l: LayerInfo) => l.id === 'g2')!.visible).toBe(true)
+      expect(layers.find((l: LayerInfo) => l.id === 'd1')!.visible).toBe(true)
+      expect(layers.find((l: LayerInfo) => l.id === 'd2')!.visible).toBe(true)
+    })
+  })
+
   describe('stop clears layer state', () => {
     it('layer state is cleared after stop', async () => {
       const callbacks = makeCallbacks()

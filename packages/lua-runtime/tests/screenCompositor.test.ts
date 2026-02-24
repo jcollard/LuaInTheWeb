@@ -62,6 +62,30 @@ describe('hiddenGroupIds', () => {
     expect(hidden.has('g2')).toBe(false)
     expect(hidden.has('g3')).toBe(true)
   })
+
+  it('cascades through 3 levels of nesting', () => {
+    const layers: LayerData[] = [
+      makeGroup('g1', false),
+      makeGroup('g2', true, 'g1'),
+      makeGroup('g3', true, 'g2'),
+    ]
+    const hidden = hiddenGroupIds(layers)
+    expect(hidden.has('g1')).toBe(true)
+    expect(hidden.has('g2')).toBe(true)
+    expect(hidden.has('g3')).toBe(true)
+  })
+
+  it('hides only the sub-branch when mid-level group is hidden', () => {
+    const layers: LayerData[] = [
+      makeGroup('g1', true),
+      makeGroup('g2', false, 'g1'),
+      makeGroup('g3', true, 'g2'),
+    ]
+    const hidden = hiddenGroupIds(layers)
+    expect(hidden.has('g1')).toBe(false)
+    expect(hidden.has('g2')).toBe(true)
+    expect(hidden.has('g3')).toBe(true)
+  })
 })
 
 describe('visibleDrawableLayers', () => {
@@ -86,6 +110,30 @@ describe('visibleDrawableLayers', () => {
     const result = visibleDrawableLayers(layers)
     expect(result).toHaveLength(1)
     expect(result[0].id).toBe('l2')
+  })
+
+  it('excludes grandchild drawable when top-level group is hidden', () => {
+    const grid = makeEmptyGrid()
+    const layers: LayerData[] = [
+      makeGroup('g1', false),
+      makeGroup('g2', true, 'g1'),
+      makeDrawnLayer('l1', true, grid, 'g2'),
+    ]
+    const result = visibleDrawableLayers(layers)
+    expect(result).toHaveLength(0)
+  })
+
+  it('hides sub-group drawable but keeps sibling drawable visible', () => {
+    const grid = makeEmptyGrid()
+    const layers: LayerData[] = [
+      makeGroup('g1', true),
+      makeDrawnLayer('l1', true, grid, 'g1'),
+      makeGroup('g2', false, 'g1'),
+      makeDrawnLayer('l2', true, grid, 'g2'),
+    ]
+    const result = visibleDrawableLayers(layers)
+    expect(result).toHaveLength(1)
+    expect(result[0].id).toBe('l1')
   })
 })
 
@@ -210,6 +258,23 @@ describe('compositeGrid', () => {
       makeDrawnLayer('l1', true, grid1),
       makeGroup('g1', false),
       makeDrawnLayer('l2', true, grid2, 'g1'),
+    ]
+    const result = compositeGrid(layers)
+    expect(result[0][0].char).toBe('A')
+  })
+
+  it('hides drawable nested 2 levels deep when top group is hidden', () => {
+    const grid1 = makeEmptyGrid()
+    grid1[0][0] = makeCell('A', [255, 0, 0], [0, 0, 255])
+
+    const grid2 = makeEmptyGrid()
+    grid2[0][0] = makeCell('B', [0, 255, 0], [255, 0, 0])
+
+    const layers: LayerData[] = [
+      makeDrawnLayer('l1', true, grid1),
+      makeGroup('g1', false),
+      makeGroup('g2', true, 'g1'),
+      makeDrawnLayer('l2', true, grid2, 'g2'),
     ]
     const result = compositeGrid(layers)
     expect(result[0][0].char).toBe('A')
