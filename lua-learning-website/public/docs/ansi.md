@@ -12,10 +12,10 @@ Load and display `.ansi.lua` images created with the ANSI Graphics Editor.
 
 ### `ansi.create_screen(data)`
 
-Parse and composite an `.ansi.lua` file into a pre-rendered screen image.
+Parse and composite an `.ansi.lua` file into a screen object with layer control methods.
 
 - **data** — The data table from a `.ansi.lua` file (loaded via `require` or `dofile`)
-- **Returns** — A numeric screen ID
+- **Returns** — A screen object (also accepted by `ansi.set_screen()`)
 
 ```lua
 local image_data = require("my_image.ansi")
@@ -26,7 +26,7 @@ local screen = ansi.create_screen(image_data)
 
 Set the active background screen. When active, the screen is rendered each frame before `tick()` runs. Use `ansi.print()` to draw on top.
 
-- **screen** — Screen ID from `create_screen()`, or `nil` to clear
+- **screen** — Screen object from `create_screen()`, a numeric screen ID, or `nil` to clear
 
 ```lua
 ansi.set_screen(screen)   -- display background
@@ -56,12 +56,90 @@ end)
 ansi.start()
 ```
 
+## Layer Visibility
+
+Control the visibility of individual layers in a screen image at runtime. Layers are identified by their ID, name, or tag.
+
+### `screen:get_layers()`
+
+Get information about all layers in the screen.
+
+- **Returns** — An array of layer info tables, each with: `id`, `name`, `type`, `visible`, `tags`
+
+```lua
+local screen = ansi.create_screen(data)
+local layers = screen:get_layers()
+for i, layer in ipairs(layers) do
+  print(layer.name, layer.type, layer.visible)
+end
+```
+
+### `screen:layer_on(identifier)`
+
+Show layer(s) matching the identifier. Resolves by layer ID first, then by name, then by tag.
+
+- **identifier** — Layer ID, name, or tag (string or number)
+
+```lua
+screen:layer_on("Background")    -- show by name
+screen:layer_on("ui")            -- show all layers tagged "ui"
+```
+
+### `screen:layer_off(identifier)`
+
+Hide layer(s) matching the identifier. Resolves by layer ID first, then by name, then by tag.
+
+- **identifier** — Layer ID, name, or tag (string or number)
+
+```lua
+screen:layer_off("Background")   -- hide by name
+screen:layer_off("ui")           -- hide all layers tagged "ui"
+```
+
+### `screen:layer_toggle(identifier)`
+
+Toggle visibility of layer(s) matching the identifier. Resolves by layer ID first, then by name, then by tag.
+
+- **identifier** — Layer ID, name, or tag (string or number)
+
+```lua
+screen:layer_toggle("Background")  -- toggle visibility
+```
+
+### Example: Toggle layers with keyboard
+
+```lua
+local ansi = require("ansi")
+
+local data = require("my_scene.ansi")
+local screen = ansi.create_screen(data)
+ansi.set_screen(screen)
+
+ansi.tick(function()
+  if ansi.is_key_pressed("1") then
+    screen:layer_toggle("Background")
+  end
+  if ansi.is_key_pressed("2") then
+    screen:layer_toggle("Foreground")
+  end
+  if ansi.is_key_pressed("escape") then
+    ansi.stop()
+  end
+end)
+
+ansi.start()
+```
+
 ## Quick Reference
 
 | Function | Description |
 |----------|-------------|
-| `ansi.create_screen(data)` | Parse `.ansi.lua` data into a screen (returns ID) |
-| `ansi.set_screen(id)` | Set background screen (`nil` to clear) |
+| `ansi.create_screen(data)` | Parse `.ansi.lua` data into a screen object |
+| `ansi.set_screen(screen)` | Set background screen (`nil` to clear) |
+| `screen:get_layers()` | Get layer info (id, name, type, visible, tags) |
+| `screen:layer_on(id)` | Show layer(s) by ID, name, or tag |
+| `screen:layer_off(id)` | Hide layer(s) by ID, name, or tag |
+| `screen:layer_toggle(id)` | Toggle layer(s) by ID, name, or tag |
 | `ansi.start()` | Start terminal (blocks until `stop()`) |
 | `ansi.stop()` | Stop terminal |
 | `ansi.tick(fn)` | Register per-frame callback |

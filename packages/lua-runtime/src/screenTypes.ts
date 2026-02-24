@@ -56,6 +56,7 @@ interface BaseLayerData {
   visible: boolean
   grid: AnsiGrid
   parentId?: string
+  tags: string[]
 }
 
 export interface DrawnLayerData extends BaseLayerData {
@@ -81,6 +82,7 @@ export interface GroupLayerData {
   visible: boolean
   collapsed: boolean
   parentId?: string
+  tags: string[]
 }
 
 export type DrawableLayerData = DrawnLayerData | TextLayerData

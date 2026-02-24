@@ -141,6 +141,39 @@ export function setupAnsiAPI(
     controller.setScreen(id)
   })
 
+  // --- Layer visibility functions ---
+  engine.global.set('__ansi_screenGetLayers', (id: number) => {
+    const controller = getController()
+    if (!controller) {
+      throw new Error('ANSI terminal not available')
+    }
+    return controller.getScreenLayers(id)
+  })
+
+  engine.global.set('__ansi_screenLayerOn', (id: number, identifier: string) => {
+    const controller = getController()
+    if (!controller) {
+      throw new Error('ANSI terminal not available')
+    }
+    controller.setScreenLayerVisible(id, identifier, true)
+  })
+
+  engine.global.set('__ansi_screenLayerOff', (id: number, identifier: string) => {
+    const controller = getController()
+    if (!controller) {
+      throw new Error('ANSI terminal not available')
+    }
+    controller.setScreenLayerVisible(id, identifier, false)
+  })
+
+  engine.global.set('__ansi_screenLayerToggle', (id: number, identifier: string) => {
+    const controller = getController()
+    if (!controller) {
+      throw new Error('ANSI terminal not available')
+    }
+    controller.toggleScreenLayer(id, identifier)
+  })
+
   // --- Set up Lua-side ansi table ---
   // ANSI is NOT a global - it must be accessed via require('ansi')
   engine.doStringSync(ansiLuaCode)

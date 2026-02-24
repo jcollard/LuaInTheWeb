@@ -1090,6 +1090,10 @@ var CanvasInline = (() => {
       if #key == 1 and key:match('%a') then
         return 'Key' .. key:upper()
       end
+      -- Single digit keys: '1' -> 'Digit1'
+      if #key == 1 and key:match('%d') then
+        return 'Digit' .. key
+      end
       -- Arrow keys
       local arrows = { up = 'ArrowUp', down = 'ArrowDown', left = 'ArrowLeft', right = 'ArrowRight' }
       if arrows[key:lower()] then
