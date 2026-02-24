@@ -36,6 +36,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@lua-learning/ansi-shared": "*",
     "@lua-learning/canvas-runtime": "*",
     "@lua-learning/shell-core": "*",
     "luaparse": "^0.3.1",

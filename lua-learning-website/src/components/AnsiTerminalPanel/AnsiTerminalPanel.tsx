@@ -81,6 +81,9 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
       terminal.open(wrapper)
       // Canvas renderer avoids anti-aliasing artifacts at half-block (▀) boundaries.
       terminal.loadAddon(new CanvasAddon())
+      // Prevent xterm.js from processing keyboard events (and calling preventDefault).
+      // This terminal is display-only; input capture is handled separately by InputCapture.
+      terminal.attachCustomKeyEventHandler(() => false)
       terminalRef.current = terminal
 
       // Scale by integer font-size multiples instead of CSS transform to keep

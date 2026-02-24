@@ -226,6 +226,7 @@
     "ansi/mouse_demo.lua",
     "ansi/color_palette.lua",
     "ansi/image_demo.lua",
-    "ansi/layers_demo.lua"
+    "ansi/layers_demo.lua",
+    "ansi/animation_demo.lua"
   ]
 }

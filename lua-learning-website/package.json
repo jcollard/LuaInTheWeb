@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "copy:lua-libs": "node scripts/copy-lua-libs.js",
-    "predev": "npm run build -w @lua-learning/shell-core && npm run build -w @lua-learning/lua-runtime && npm run build -w @lua-learning/canvas-runtime && npm run build -w @lua-learning/export && npm run copy:lua-libs",
+    "predev": "npm run build -w @lua-learning/shell-core && npm run build -w @lua-learning/canvas-runtime && npm run build -w @lua-learning/ansi-shared && npm run build -w @lua-learning/lua-runtime && npm run build -w @lua-learning/export && npm run copy:lua-libs",
     "dev": "vite",
-    "prebuild": "npm run build -w @lua-learning/shell-core && npm run build -w @lua-learning/lua-runtime && npm run build -w @lua-learning/canvas-runtime && npm run build -w @lua-learning/export && npm run copy:lua-libs",
+    "prebuild": "npm run build -w @lua-learning/shell-core && npm run build -w @lua-learning/canvas-runtime && npm run build -w @lua-learning/ansi-shared && npm run build -w @lua-learning/lua-runtime && npm run build -w @lua-learning/export && npm run copy:lua-libs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@kilcekru/lua-table": "^1.1.2",
+    "@lua-learning/ansi-shared": "*",
     "@lua-learning/export": "*",
     "@lua-learning/lua-runtime": "*",
     "@lua-learning/shell-core": "*",

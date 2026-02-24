@@ -40,6 +40,12 @@ echo "-----------------------"
 echo "  → Building shell-core..."
 cd packages/shell-core && npm run build && cd "$ROOT_DIR"
 
+echo "  → Building canvas-runtime..."
+cd packages/canvas-runtime && npm run build && cd "$ROOT_DIR"
+
+echo "  → Building ansi-shared..."
+cd packages/ansi-shared && npm run build && cd "$ROOT_DIR"
+
 echo "  → Building lua-runtime..."
 cd packages/lua-runtime && npm run build && cd "$ROOT_DIR"
 
@@ -55,6 +61,9 @@ echo "------------------------"
 
 echo "  → Testing shell-core..."
 cd packages/shell-core && npm run test && cd "$ROOT_DIR"
+
+echo "  → Testing ansi-shared..."
+cd packages/ansi-shared && npm run test && cd "$ROOT_DIR"
 
 echo "  → Testing lua-runtime..."
 cd packages/lua-runtime && npm run test && cd "$ROOT_DIR"

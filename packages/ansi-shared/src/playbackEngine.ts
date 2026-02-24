@@ -1,5 +1,32 @@
-import type { Layer, DrawnLayer } from './types'
-import { DEFAULT_FRAME_DURATION_MS } from './types'
+/**
+ * Shared animation playback engine for ANSI screens.
+ *
+ * Uses minimal structural interfaces so both the website's Layer types
+ * and lua-runtime's LayerData types satisfy them without explicit casting.
+ */
+
+export const DEFAULT_FRAME_DURATION_MS = 100
+
+/**
+ * Minimal interface for any layer type.
+ * Both the website's Layer and lua-runtime's LayerData satisfy this structurally.
+ */
+export interface PlayableLayer {
+  readonly type: string
+  readonly id: string
+}
+
+/**
+ * Animated drawn layer — both DrawnLayer (website) and DrawnLayerData (runtime) satisfy this.
+ * The `frames` and `grid` use `unknown` so callers don't need to cast their grid types.
+ */
+export interface AnimatedDrawnLayer extends PlayableLayer {
+  readonly type: 'drawn'
+  readonly frames: ArrayLike<unknown> & { length: number }
+  currentFrameIndex: number
+  readonly frameDurationMs: number
+  grid: unknown
+}
 
 /** Maps layerId to the absolute time (ms) at which it should next advance. */
 export type LayerSchedule = Map<string, number>
@@ -9,15 +36,17 @@ export interface PlaybackTickResult {
   nextDelayMs: number
 }
 
-function isAnimatedDrawn(layer: Layer): layer is DrawnLayer {
-  return layer.type === 'drawn' && layer.frames.length > 1
+function isAnimatedDrawn(layer: PlayableLayer): layer is AnimatedDrawnLayer {
+  return layer.type === 'drawn'
+    && 'frames' in layer
+    && (layer as AnimatedDrawnLayer).frames.length > 1
 }
 
 /**
  * Create an initial schedule for all animated layers.
  * Each layer's first advance is at `now + frameDurationMs`.
  */
-export function initSchedule(layers: readonly Layer[], now: number): LayerSchedule {
+export function initSchedule(layers: readonly PlayableLayer[], now: number): LayerSchedule {
   const schedule: LayerSchedule = new Map()
   for (const layer of layers) {
     if (isAnimatedDrawn(layer)) {
@@ -32,7 +61,7 @@ export function initSchedule(layers: readonly Layer[], now: number): LayerSchedu
  * Mutates layer frame state and the schedule map in place.
  */
 export function computePlaybackTick(
-  layers: Layer[],
+  layers: PlayableLayer[],
   schedule: LayerSchedule,
   now: number,
 ): PlaybackTickResult {

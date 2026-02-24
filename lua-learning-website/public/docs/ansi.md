@@ -130,6 +130,65 @@ end)
 ansi.start()
 ```
 
+## Animation Playback
+
+Control animation playback for screens with animated layers (drawn layers with multiple frames). Screens with animated layers auto-play when set as the active screen via `ansi.set_screen()`.
+
+### `screen:play()`
+
+Start or resume animation playback. Animated layers will advance frames automatically based on their `frameDurationMs`.
+
+```lua
+screen:play()
+```
+
+### `screen:pause()`
+
+Pause animation playback. Animated layers freeze on their current frame.
+
+```lua
+screen:pause()
+```
+
+### `screen:is_playing()`
+
+Check if animation is currently playing.
+
+- **Returns** — `true` if animation is playing, `false` otherwise
+
+```lua
+if screen:is_playing() then
+  screen:pause()
+else
+  screen:play()
+end
+```
+
+### Example: Toggle animation with SPACE
+
+```lua
+local ansi = require("ansi")
+
+local data = require("my_animation.ansi")
+local screen = ansi.create_screen(data)
+ansi.set_screen(screen)  -- auto-plays if animated
+
+ansi.tick(function()
+  if ansi.is_key_pressed("space") then
+    if screen:is_playing() then
+      screen:pause()
+    else
+      screen:play()
+    end
+  end
+  if ansi.is_key_pressed("escape") then
+    ansi.stop()
+  end
+end)
+
+ansi.start()
+```
+
 ## Quick Reference
 
 | Function | Description |
@@ -140,6 +199,9 @@ ansi.start()
 | `screen:layer_on(id)` | Show layer(s) by ID, name, or tag |
 | `screen:layer_off(id)` | Hide layer(s) by ID, name, or tag |
 | `screen:layer_toggle(id)` | Toggle layer(s) by ID, name, or tag |
+| `screen:play()` | Start/resume animation playback |
+| `screen:pause()` | Pause animation playback |
+| `screen:is_playing()` | Check if animation is playing |
 | `ansi.start()` | Start terminal (blocks until `stop()`) |
 | `ansi.stop()` | Stop terminal |
 | `ansi.tick(fn)` | Register per-frame callback |

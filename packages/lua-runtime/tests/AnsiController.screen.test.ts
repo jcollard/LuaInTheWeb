@@ -427,3 +427,152 @@ describe('AnsiController layer visibility', () => {
     })
   })
 })
+
+function makeAnimatedV4Data(frameCount = 3, frameDurationMs = 100): Record<string, unknown> {
+  function makeGrid(char: string): Record<number, Record<number, { char: string; fg: RGBColor; bg: RGBColor }>> {
+    const grid: Record<number, Record<number, { char: string; fg: RGBColor; bg: RGBColor }>> = {}
+    for (let r = 0; r < ANSI_ROWS; r++) {
+      const row: Record<number, { char: string; fg: RGBColor; bg: RGBColor }> = {}
+      for (let c = 0; c < ANSI_COLS; c++) {
+        row[c + 1] = { char: ' ', fg: [...DEFAULT_FG] as RGBColor, bg: [...DEFAULT_BG] as RGBColor }
+      }
+      grid[r + 1] = row
+    }
+    grid[1][1] = { char, fg: [255, 0, 0], bg: [0, 0, 255] }
+    return grid
+  }
+  const chars = 'ABCDEFGHIJ'
+  const frames: Record<number, unknown> = {}
+  for (let i = 0; i < frameCount; i++) {
+    frames[i + 1] = makeGrid(chars[i % chars.length])
+  }
+  return {
+    version: 4,
+    width: ANSI_COLS,
+    height: ANSI_ROWS,
+    activeLayerId: 'anim',
+    layers: {
+      1: {
+        type: 'drawn',
+        id: 'anim',
+        name: 'Animated',
+        visible: true,
+        grid: frames[1],
+        frames,
+        currentFrameIndex: 0,
+        frameDurationMs,
+      },
+    },
+  }
+}
+
+function makeStaticV4Data(): Record<string, unknown> {
+  const grid: Record<number, Record<number, { char: string; fg: RGBColor; bg: RGBColor }>> = {}
+  for (let r = 0; r < ANSI_ROWS; r++) {
+    const row: Record<number, { char: string; fg: RGBColor; bg: RGBColor }> = {}
+    for (let c = 0; c < ANSI_COLS; c++) {
+      row[c + 1] = { char: ' ', fg: [...DEFAULT_FG] as RGBColor, bg: [...DEFAULT_BG] as RGBColor }
+    }
+    grid[r + 1] = row
+  }
+  return {
+    version: 4,
+    width: ANSI_COLS,
+    height: ANSI_ROWS,
+    activeLayerId: 'static',
+    layers: {
+      1: {
+        type: 'drawn',
+        id: 'static',
+        name: 'Static',
+        visible: true,
+        grid,
+        frames: { 1: grid },
+        currentFrameIndex: 0,
+        frameDurationMs: 100,
+      },
+    },
+  }
+}
+
+describe('AnsiController animation playback', () => {
+  let controller: AnsiController
+
+  beforeEach(() => {
+    controller = new AnsiController(makeCallbacks())
+  })
+
+  describe('screenPlay / screenPause / screenIsPlaying', () => {
+    it('screenIsPlaying returns false by default', () => {
+      const id = controller.createScreen(makeAnimatedV4Data())
+      expect(controller.screenIsPlaying(id)).toBe(false)
+    })
+
+    it('screenPlay sets playing to true', () => {
+      const id = controller.createScreen(makeAnimatedV4Data())
+      controller.screenPlay(id)
+      expect(controller.screenIsPlaying(id)).toBe(true)
+    })
+
+    it('screenPause sets playing to false', () => {
+      const id = controller.createScreen(makeAnimatedV4Data())
+      controller.screenPlay(id)
+      controller.screenPause(id)
+      expect(controller.screenIsPlaying(id)).toBe(false)
+    })
+
+    it('screenPlay throws for invalid screen ID', () => {
+      expect(() => controller.screenPlay(999)).toThrow('Screen ID 999 not found')
+    })
+
+    it('screenPause throws for invalid screen ID', () => {
+      expect(() => controller.screenPause(999)).toThrow('Screen ID 999 not found')
+    })
+
+    it('screenIsPlaying returns false for non-existent screen', () => {
+      expect(controller.screenIsPlaying(999)).toBe(false)
+    })
+  })
+
+  describe('setScreen auto-play', () => {
+    it('auto-starts playback for screens with animated layers', () => {
+      const id = controller.createScreen(makeAnimatedV4Data())
+      controller.setScreen(id)
+      expect(controller.screenIsPlaying(id)).toBe(true)
+    })
+
+    it('does not auto-start playback for static screens', () => {
+      const id = controller.createScreen(makeStaticV4Data())
+      controller.setScreen(id)
+      expect(controller.screenIsPlaying(id)).toBe(false)
+    })
+
+    it('does not restart playback if screen was explicitly paused', () => {
+      const id = controller.createScreen(makeAnimatedV4Data())
+      controller.screenPlay(id)
+      controller.screenPause(id)
+      // Now set screen — should not restart since screenPlaying.has(id) is true
+      controller.setScreen(id)
+      expect(controller.screenIsPlaying(id)).toBe(false)
+    })
+  })
+
+  describe('stop clears playback state', () => {
+    it('playback state is cleared after stop', async () => {
+      const callbacks = makeCallbacks()
+      const ctrl = new AnsiController(callbacks)
+      const startPromise = ctrl.start()
+      await new Promise(resolve => setTimeout(resolve, 0))
+
+      const id = ctrl.createScreen(makeAnimatedV4Data())
+      ctrl.screenPlay(id)
+      expect(ctrl.screenIsPlaying(id)).toBe(true)
+
+      ctrl.stop()
+      await startPromise
+
+      // After stop, isPlaying should return false (state cleared)
+      expect(ctrl.screenIsPlaying(id)).toBe(false)
+    })
+  })
+})
