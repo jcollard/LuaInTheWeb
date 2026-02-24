@@ -8,6 +8,7 @@ import { useLayerDragDrop } from './useLayerDragDrop'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface LayersPanelProps {
+  filePath?: string
   layers: Layer[]
   activeLayerId: string
   onSetActive: (id: string) => void
@@ -31,7 +32,20 @@ export interface LayersPanelProps {
   onRenameTag: (oldTag: string, newTag: string) => void
 }
 
+const EXPANDED_TAGS_PREFIX = 'ansi-expanded-tags:'
+
+function loadExpandedTags(filePath?: string): Set<string> {
+  if (!filePath) return new Set()
+  try {
+    const raw = localStorage.getItem(`${EXPANDED_TAGS_PREFIX}${filePath}`)
+    const parsed = raw ? JSON.parse(raw) : null
+    if (Array.isArray(parsed) && parsed.every((s: unknown) => typeof s === 'string')) return new Set(parsed as string[])
+  } catch { /* ignore corrupt data */ }
+  return new Set()
+}
+
 export function LayersPanel({
+  filePath,
   layers,
   activeLayerId,
   onSetActive,
@@ -63,16 +77,21 @@ export function LayersPanel({
   const [contextMenu, setContextMenu] = useState<{ layerId: string; x: number; y: number } | null>(null)
   const [tagsSubmenuOpen, setTagsSubmenuOpen] = useState(false)
   const [tagsSubmenuFlipped, setTagsSubmenuFlipped] = useState(false)
-  const [expandedTags, setExpandedTags] = useState<Set<string>>(new Set())
+  const [expandedTags, setExpandedTags] = useState<Set<string>>(() => loadExpandedTags(filePath))
 
   const toggleTagExpanded = useCallback((tag: string) => {
     setExpandedTags(prev => {
       const next = new Set(prev)
       if (next.has(tag)) next.delete(tag)
       else next.add(tag)
+      if (filePath) {
+        try {
+          localStorage.setItem(`${EXPANDED_TAGS_PREFIX}${filePath}`, JSON.stringify([...next]))
+        } catch { /* quota exceeded, etc. */ }
+      }
       return next
     })
-  }, [])
+  }, [filePath])
 
   const {
     draggedId, dropZoneTargetId, dropOnGroup, draggedGroupChildIds,

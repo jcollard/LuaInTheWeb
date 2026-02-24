@@ -14,6 +14,7 @@ describe('LayersPanel', () => {
   const noop = () => {}
 
   function renderPanel(overrides?: {
+    filePath?: string
     layers?: Layer[]
     activeLayerId?: string
     onSetActive?: (id: string) => void
@@ -39,6 +40,7 @@ describe('LayersPanel', () => {
     const layers = overrides?.layers ?? makeLayers('Background', 'Foreground')
     return render(
       <LayersPanel
+        filePath={overrides?.filePath}
         layers={layers}
         activeLayerId={overrides?.activeLayerId ?? layers[0].id}
         onSetActive={overrides?.onSetActive ?? noop}
@@ -926,6 +928,62 @@ describe('LayersPanel', () => {
       fireEvent.contextMenu(screen.getByTestId('layer-row-layer-0'))
       fireEvent.click(screen.getByTestId('context-copy-layer-id'))
       expect(writeText).toHaveBeenCalledWith('layer-0')
+    })
+  })
+
+  describe('expandedTags persistence', () => {
+    beforeEach(() => {
+      localStorage.clear()
+    })
+
+    it('loads expanded tags from localStorage on mount when filePath is provided', () => {
+      localStorage.setItem('ansi-expanded-tags:test.ansi', JSON.stringify(['Characters']))
+      renderPanel({ filePath: 'test.ansi', availableTags: ['Characters'] })
+      fireEvent.click(screen.getByTestId('tab-tags'))
+      // The "Characters" tag heading should show expanded arrow (▼) not collapsed (▶)
+      const heading = screen.getByTestId('tag-heading-Characters')
+      expect(heading.textContent).toContain('\u25BC')
+    })
+
+    it('saves expanded tags to localStorage after toggle when filePath is provided', () => {
+      renderPanel({ filePath: 'test.ansi', availableTags: ['Characters'] })
+      fireEvent.click(screen.getByTestId('tab-tags'))
+      // Click heading to expand 'Characters' tag (default is collapsed)
+      fireEvent.click(screen.getByTestId('tag-heading-Characters'))
+      const stored = localStorage.getItem('ansi-expanded-tags:test.ansi')
+      expect(stored).not.toBeNull()
+      const parsed = JSON.parse(stored!)
+      expect(parsed).toContain('Characters')
+    })
+
+    it('does not access localStorage when filePath is undefined', () => {
+      const getItemSpy = vi.spyOn(Storage.prototype, 'getItem')
+      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem')
+      renderPanel({ availableTags: ['Characters'] })
+      // getItem should not have been called with our prefix
+      const expandedTagCalls = getItemSpy.mock.calls.filter(
+        c => typeof c[0] === 'string' && c[0].startsWith('ansi-expanded-tags:')
+      )
+      expect(expandedTagCalls).toHaveLength(0)
+      // Toggle a tag and verify no setItem call
+      fireEvent.click(screen.getByTestId('tab-tags'))
+      fireEvent.click(screen.getByTestId('tag-heading-Characters'))
+      const setCalls = setItemSpy.mock.calls.filter(
+        c => typeof c[0] === 'string' && c[0].startsWith('ansi-expanded-tags:')
+      )
+      expect(setCalls).toHaveLength(0)
+      getItemSpy.mockRestore()
+      setItemSpy.mockRestore()
+    })
+
+    it('handles corrupt localStorage data gracefully', () => {
+      localStorage.setItem('ansi-expanded-tags:test.ansi', 'not-valid-json{{{')
+      // Should not throw, falls back to empty set
+      renderPanel({ filePath: 'test.ansi', availableTags: ['Characters'] })
+      fireEvent.click(screen.getByTestId('tab-tags'))
+      // All tags should be collapsed (default state) — arrow should be ▶
+      const heading = screen.getByTestId('tag-heading-Characters')
+      expect(heading.textContent).toContain('\u25B6')
     })
   })
 })

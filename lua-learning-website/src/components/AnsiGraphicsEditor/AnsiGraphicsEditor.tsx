@@ -239,6 +239,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
           <ToastContainer toasts={toasts} />
         </div>
         <LayersPanel
+          filePath={filePath}
           layers={layers}
           activeLayerId={activeLayerId}
           onSetActive={setActiveLayer}
