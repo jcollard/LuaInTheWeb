@@ -2,6 +2,13 @@ import type { Layer, GroupLayer } from './types'
 import { isGroupLayer } from './types'
 import styles from './AnsiGraphicsEditor.module.css'
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+
+function formatLayerId(id: string): string {
+  if (UUID_PATTERN.test(id)) return id.slice(0, 8) + '...'
+  return id
+}
+
 export interface LayerRowProps {
   layer: Layer
   isEditing: boolean
@@ -24,6 +31,13 @@ export interface LayerRowProps {
   onDragOverGroup?: (e: React.DragEvent) => void
   onDropOnGroup?: (e: React.DragEvent) => void
   onToggleCollapsed?: () => void
+  isEditingId?: boolean
+  editIdValue?: string
+  idError?: string
+  onStartEditId?: () => void
+  onEditIdChange?: (value: string) => void
+  onCommitEditId?: () => void
+  onCancelEditId?: () => void
 }
 
 export function LayerRow({
@@ -48,6 +62,13 @@ export function LayerRow({
   onDragOverGroup,
   onDropOnGroup,
   onToggleCollapsed,
+  isEditingId,
+  editIdValue,
+  idError,
+  onStartEditId,
+  onEditIdChange,
+  onCommitEditId,
+  onCancelEditId,
 }: LayerRowProps) {
   const isGroup = isGroupLayer(layer)
   const groupLayer = isGroup ? (layer as GroupLayer) : null
@@ -103,26 +124,55 @@ export function LayerRow({
         {!isGroup && layer.type === 'text' && (
           <span className={styles.layerTypeBadge} data-testid="text-layer-badge">T</span>
         )}
-        <span
-          className={styles.layerName}
-          onDoubleClick={e => { e.stopPropagation(); onStartRename() }}
-        >
-          {isEditing ? (
-            <input
-              role="textbox"
-              className={styles.layerNameInput}
-              value={editValue}
-              onChange={e => onEditChange(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') onCommitRename()
-                if (e.key === 'Escape') onCancelRename()
-              }}
-              onBlur={onCommitRename}
-              autoFocus
-              onClick={e => e.stopPropagation()}
-            />
+        <span className={styles.layerNameColumn}>
+          <span
+            className={styles.layerName}
+            onDoubleClick={e => { e.stopPropagation(); onStartRename() }}
+          >
+            {isEditing ? (
+              <input
+                role="textbox"
+                className={styles.layerNameInput}
+                value={editValue}
+                onChange={e => onEditChange(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') onCommitRename()
+                  if (e.key === 'Escape') onCancelRename()
+                }}
+                onBlur={onCommitRename}
+                autoFocus
+                onClick={e => e.stopPropagation()}
+              />
+            ) : (
+              layer.name
+            )}
+          </span>
+          {isEditingId ? (
+            <span className={styles.layerIdSubtitle}>
+              <input
+                data-testid={`layer-id-input-${layer.id}`}
+                className={[styles.layerIdInput, idError && styles.layerIdInputError].filter(Boolean).join(' ')}
+                value={editIdValue}
+                onChange={e => onEditIdChange?.(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') onCommitEditId?.()
+                  if (e.key === 'Escape') onCancelEditId?.()
+                }}
+                onBlur={onCommitEditId}
+                autoFocus
+                onClick={e => e.stopPropagation()}
+              />
+              {idError && <span className={styles.layerIdError} data-testid="layer-id-error">{idError}</span>}
+            </span>
           ) : (
-            layer.name
+            <span
+              className={styles.layerIdSubtitle}
+              data-testid={`layer-id-${layer.id}`}
+              title={layer.id}
+              onDoubleClick={e => { e.stopPropagation(); onStartEditId?.() }}
+            >
+              id: {formatLayerId(layer.id)}
+            </span>
           )}
         </span>
         <button

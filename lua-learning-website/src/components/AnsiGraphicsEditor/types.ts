@@ -188,6 +188,7 @@ export interface UseAnsiEditorReturn {
   addLayer: () => void
   removeLayer: (id: string) => void
   renameLayer: (id: string, name: string) => void
+  changeLayerId: (oldId: string, newId: string) => { success: boolean; error?: string }
   setActiveLayer: (id: string) => void
   reorderLayer: (id: string, newIndex: number, targetGroupId?: string | null) => void
   toggleVisibility: (id: string) => void

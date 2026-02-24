@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useLayerState } from './useLayerState'
 import { createLayer, createGroup } from './layerUtils'
-import type { DrawableLayer, DrawnLayer, LayerState, RGBColor, Rect, TextLayer, GroupLayer } from './types'
+import type { DrawableLayer, DrawnLayer, Layer, LayerState, RGBColor, Rect, TextLayer, GroupLayer } from './types'
 import { MIN_FRAME_DURATION_MS, MAX_FRAME_DURATION_MS, TRANSPARENT_BG, isGroupLayer, isDrawableLayer } from './types'
 
 describe('useLayerState', () => {
@@ -89,6 +89,80 @@ describe('useLayerState', () => {
       const firstId = result.current.layers[0].id
       act(() => result.current.renameLayer(firstId, 'Renamed'))
       expect(result.current.layers[1].name).toBe('Layer 2')
+    })
+  })
+
+  describe('changeLayerId', () => {
+    it('updates a layer id', () => {
+      const { result } = renderHook(() => useLayerState())
+      const oldId = result.current.layers[0].id
+      let res: { success: boolean; error?: string } = { success: false }
+      act(() => { res = result.current.changeLayerId(oldId, 'my-custom-id') })
+      expect(res.success).toBe(true)
+      expect(result.current.layers[0].id).toBe('my-custom-id')
+    })
+
+    it('updates activeLayerId when changing the active layer id', () => {
+      const { result } = renderHook(() => useLayerState())
+      const oldId = result.current.layers[0].id
+      act(() => { result.current.changeLayerId(oldId, 'new-id') })
+      expect(result.current.activeLayerId).toBe('new-id')
+    })
+
+    it('updates parentId references across all child layers', () => {
+      const initial: LayerState = {
+        layers: [
+          createGroup('G', 'group-1'),
+          { ...createLayer('C1', 'child-1'), parentId: 'group-1' } as Layer,
+          { ...createLayer('C2', 'child-2'), parentId: 'group-1' } as Layer,
+        ],
+        activeLayerId: 'group-1',
+      }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => { result.current.changeLayerId('group-1', 'my-group') })
+      expect(result.current.layers[0].id).toBe('my-group')
+      expect((result.current.layers[1] as DrawableLayer).parentId).toBe('my-group')
+      expect((result.current.layers[2] as DrawableLayer).parentId).toBe('my-group')
+    })
+
+    it('rejects duplicate id with error', () => {
+      const { result } = renderHook(() => useLayerState())
+      act(() => result.current.addLayer())
+      const firstId = result.current.layers[0].id
+      const secondId = result.current.layers[1].id
+      let res: { success: boolean; error?: string } = { success: false }
+      act(() => { res = result.current.changeLayerId(firstId, secondId) })
+      expect(res.success).toBe(false)
+      expect(res.error).toMatch(/duplicate/i)
+      // Original id unchanged
+      expect(result.current.layers[0].id).toBe(firstId)
+    })
+
+    it('rejects empty id with error', () => {
+      const { result } = renderHook(() => useLayerState())
+      const oldId = result.current.layers[0].id
+      let res: { success: boolean; error?: string } = { success: false }
+      act(() => { res = result.current.changeLayerId(oldId, '   ') })
+      expect(res.success).toBe(false)
+      expect(res.error).toMatch(/empty/i)
+      expect(result.current.layers[0].id).toBe(oldId)
+    })
+
+    it('returns success for unchanged id (oldId === newId)', () => {
+      const { result } = renderHook(() => useLayerState())
+      const oldId = result.current.layers[0].id
+      let res: { success: boolean; error?: string } = { success: false }
+      act(() => { res = result.current.changeLayerId(oldId, oldId) })
+      expect(res.success).toBe(true)
+      expect(result.current.layers[0].id).toBe(oldId)
+    })
+
+    it('returns error when layer not found', () => {
+      const { result } = renderHook(() => useLayerState())
+      let res: { success: boolean; error?: string } = { success: false }
+      act(() => { res = result.current.changeLayerId('nonexistent', 'new-id') })
+      expect(res.success).toBe(false)
+      expect(res.error).toMatch(/not found/i)
     })
   })
 
@@ -276,8 +350,8 @@ describe('useLayerState', () => {
     })
   })
 
-  describe('syncLayerIds on init', () => {
-    it('adding a layer after init with pre-existing IDs produces a unique ID', () => {
+  describe('UUID IDs on init', () => {
+    it('adding a layer after init with pre-existing IDs produces a unique UUID', () => {
       const initial: LayerState = {
         layers: [
           createLayer('Background', 'layer-1'),
@@ -293,7 +367,7 @@ describe('useLayerState', () => {
       expect(uniqueIds.size).toBe(ids.length)
     })
 
-    it('new layer ID is greater than highest existing ID after init', () => {
+    it('new layer ID is a valid UUID after init', () => {
       const initial: LayerState = {
         layers: [
           createLayer('A', 'layer-5'),
@@ -304,14 +378,12 @@ describe('useLayerState', () => {
       const { result } = renderHook(() => useLayerState(initial))
       act(() => result.current.addLayer())
       const newLayer = result.current.layers[result.current.layers.length - 1]
-      const match = newLayer.id.match(/^layer-(\d+)$/)
-      expect(match).not.toBeNull()
-      expect(parseInt(match![1], 10)).toBeGreaterThanOrEqual(11)
+      expect(newLayer.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
     })
   })
 
-  describe('syncLayerIds on restore', () => {
-    it('adding a layer after restoreLayerState with pre-existing IDs produces a unique ID', () => {
+  describe('UUID IDs on restore', () => {
+    it('adding a layer after restoreLayerState produces a unique UUID', () => {
       const { result } = renderHook(() => useLayerState())
       const snapshot: LayerState = {
         layers: [

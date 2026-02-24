@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import { describe, it, expect } from 'vitest'
-import { isDefaultCell, createLayer, createGroup, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, syncLayerIds, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, buildDisplayOrder, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock, addTagToLayer, removeTagFromLayer } from './layerUtils'
+import { isDefaultCell, createLayer, createGroup, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, buildDisplayOrder, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock, addTagToLayer, removeTagFromLayer } from './layerUtils'
 import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer } from './types'
 import type { AnsiCell, DrawableLayer, DrawnLayer, RGBColor, Layer, LayerState, TextLayer, GroupLayer } from './types'
 
@@ -87,6 +87,11 @@ describe('createLayer', () => {
     const a = createLayer('A')
     const b = createLayer('B')
     expect(a.id).not.toBe(b.id)
+  })
+
+  it('generates a valid UUID-format id', () => {
+    const layer = createLayer('Test')
+    expect(layer.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
   })
 
   it('initializes frames with single frame aliased to grid', () => {
@@ -480,40 +485,6 @@ describe('cloneLayerState with textFgColors', () => {
   })
 })
 
-describe('syncLayerIds', () => {
-  it('updates counter past the highest layer-N id', () => {
-    const layers: Layer[] = [
-      createLayer('A', 'layer-5'),
-      createLayer('B', 'layer-10'),
-      createLayer('C', 'layer-3'),
-    ]
-    syncLayerIds(layers)
-    const newLayer = createLayer('New')
-    // Next ID should be layer-11 or higher (past layer-10)
-    const match = newLayer.id.match(/^layer-(\d+)$/)
-    expect(match).not.toBeNull()
-    expect(parseInt(match![1], 10)).toBeGreaterThanOrEqual(11)
-  })
-
-  it('ignores non-numeric ids like clear-bg-* or v1-background', () => {
-    const layers: Layer[] = [
-      createLayer('A', 'clear-bg-1'),
-      createLayer('B', 'v1-background'),
-      createLayer('C', 'custom-id'),
-    ]
-    // Should not throw and should not change counter in a way
-    // that breaks createLayer
-    syncLayerIds(layers)
-    const newLayer = createLayer('New')
-    expect(newLayer.id).toMatch(/^layer-\d+$/)
-  })
-
-  it('handles empty layer array without error', () => {
-    syncLayerIds([])
-    const newLayer = createLayer('New')
-    expect(newLayer.id).toMatch(/^layer-\d+$/)
-  })
-})
 
 describe('TRANSPARENT_BG compositing', () => {
   const red: RGBColor = [255, 0, 0]
@@ -714,11 +685,11 @@ describe('createGroup', () => {
     expect(group.collapsed).toBe(false)
   })
 
-  it('generates a unique id starting with group-', () => {
+  it('generates unique UUID ids', () => {
     const g1 = createGroup('G1')
     const g2 = createGroup('G2')
-    expect(g1.id).toMatch(/^group-\d+$/)
-    expect(g2.id).toMatch(/^group-\d+$/)
+    expect(g1.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
+    expect(g2.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
     expect(g1.id).not.toBe(g2.id)
   })
 
@@ -860,20 +831,6 @@ describe('cloneLayerState with groups', () => {
   })
 })
 
-describe('syncLayerIds with groups', () => {
-  it('updates group counter past the highest group-N id', () => {
-    const layers: Layer[] = [
-      createGroup('G1', 'group-5'),
-      createGroup('G2', 'group-10'),
-      createLayer('L', 'layer-1'),
-    ]
-    syncLayerIds(layers)
-    const newGroup = createGroup('New')
-    const match = newGroup.id.match(/^group-(\d+)$/)
-    expect(match).not.toBeNull()
-    expect(parseInt(match![1], 10)).toBeGreaterThanOrEqual(11)
-  })
-})
 
 describe('getAncestorGroupIds', () => {
   it('returns empty array for root layer', () => {
@@ -1391,6 +1348,21 @@ describe('duplicateLayerBlock', () => {
     expect(dupe.frames[1][0][0].char).toBe('X')
     dupe.frames[1][0][0].char = 'Y'
     expect(frame2[0][0].char).toBe('X') // original untouched
+  })
+
+  it('generates UUID ids for duplicated layers', () => {
+    const layer = createLayer('Test', 'layer-200')
+    const dupes = duplicateLayerBlock([layer], 'layer-200')
+    expect(dupes[0].id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
+  })
+
+  it('generates UUID ids for duplicated groups and children', () => {
+    const group = createGroup('Folder', 'group-100')
+    const child: Layer = { ...createLayer('C1', 'layer-400'), parentId: 'group-100' }
+    const dupes = duplicateLayerBlock([group, child], 'group-100')
+    for (const d of dupes) {
+      expect(d.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
+    }
   })
 
   it('produces layers that pass assertContiguousBlocks when inserted', () => {

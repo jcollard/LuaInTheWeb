@@ -75,6 +75,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
     addLayer,
     removeLayer,
     renameLayer,
+    changeLayerId,
     setActiveLayer,
     reorderLayer,
     toggleVisibility,
@@ -244,6 +245,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
           onToggleVisibility={toggleVisibility}
           onSetLayerVisibility={setLayerVisibility}
           onRename={renameLayer}
+          onChangeLayerId={changeLayerId}
           onReorder={reorderLayer}
           onAdd={addLayer}
           onRemove={removeLayer}

@@ -20,6 +20,7 @@ describe('LayersPanel', () => {
     onToggleVisibility?: (id: string) => void
     onSetLayerVisibility?: (ids: string[], visible: boolean) => void
     onRename?: (id: string, name: string) => void
+    onChangeLayerId?: (oldId: string, newId: string) => { success: boolean; error?: string }
     onReorder?: (id: string, newIndex: number, targetGroupId?: string | null) => void
     onAdd?: () => void
     onRemove?: (id: string) => void
@@ -44,6 +45,7 @@ describe('LayersPanel', () => {
         onToggleVisibility={overrides?.onToggleVisibility ?? noop}
         onSetLayerVisibility={overrides?.onSetLayerVisibility ?? noop}
         onRename={overrides?.onRename ?? noop}
+        onChangeLayerId={overrides?.onChangeLayerId ?? (() => ({ success: true }))}
         onReorder={overrides?.onReorder ?? noop}
         onAdd={overrides?.onAdd ?? noop}
         onRemove={overrides?.onRemove ?? noop}
@@ -820,6 +822,110 @@ describe('LayersPanel', () => {
       fireEvent.mouseEnter(screen.getByTestId('context-tags-submenu-trigger'))
       const submenu = screen.getByTestId('tags-submenu')
       expect(submenu.className).not.toContain('Flipped')
+    })
+  })
+
+  describe('layer ID display', () => {
+    it('displays layer IDs as subtitles', () => {
+      renderPanel()
+      expect(screen.getByTestId('layer-id-layer-0')).toBeTruthy()
+      expect(screen.getByTestId('layer-id-layer-1')).toBeTruthy()
+    })
+
+    it('shows truncated UUID with ellipsis for UUID-format IDs', () => {
+      const layers = [createLayer('BG', 'a1b2c3d4-e5f6-7890-abcd-ef1234567890')]
+      renderPanel({ layers, activeLayerId: layers[0].id })
+      const idEl = screen.getByTestId('layer-id-a1b2c3d4-e5f6-7890-abcd-ef1234567890')
+      expect(idEl.textContent).toContain('a1b2c3d4...')
+    })
+
+    it('shows full custom ID for non-UUID IDs', () => {
+      const layers = [createLayer('BG', 'hero-sprite')]
+      renderPanel({ layers, activeLayerId: layers[0].id })
+      const idEl = screen.getByTestId('layer-id-hero-sprite')
+      expect(idEl.textContent).toContain('hero-sprite')
+    })
+
+    it('shows full ID in title tooltip', () => {
+      const fullId = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+      const layers = [createLayer('BG', fullId)]
+      renderPanel({ layers, activeLayerId: layers[0].id })
+      const idEl = screen.getByTestId(`layer-id-${fullId}`)
+      expect(idEl.getAttribute('title')).toBe(fullId)
+    })
+  })
+
+  describe('layer ID editing', () => {
+    it('double-click on ID subtitle enters edit mode', () => {
+      renderPanel()
+      const idEl = screen.getByTestId('layer-id-layer-0')
+      fireEvent.doubleClick(idEl)
+      const input = screen.getByDisplayValue('layer-0')
+      expect(input).toBeTruthy()
+    })
+
+    it('Enter commits the ID change', () => {
+      const onChangeLayerId = vi.fn().mockReturnValue({ success: true })
+      renderPanel({ onChangeLayerId })
+      const idEl = screen.getByTestId('layer-id-layer-0')
+      fireEvent.doubleClick(idEl)
+      const input = screen.getByDisplayValue('layer-0')
+      fireEvent.change(input, { target: { value: 'my-bg' } })
+      fireEvent.keyDown(input, { key: 'Enter' })
+      expect(onChangeLayerId).toHaveBeenCalledWith('layer-0', 'my-bg')
+    })
+
+    it('Escape cancels the edit', () => {
+      renderPanel()
+      const idEl = screen.getByTestId('layer-id-layer-0')
+      fireEvent.doubleClick(idEl)
+      const input = screen.getByDisplayValue('layer-0')
+      fireEvent.change(input, { target: { value: 'changed' } })
+      fireEvent.keyDown(input, { key: 'Escape' })
+      // Should exit edit mode and show original ID
+      expect(screen.getByTestId('layer-id-layer-0')).toBeTruthy()
+      expect(screen.queryByDisplayValue('changed')).toBeNull()
+    })
+
+    it('duplicate ID shows error message', () => {
+      const onChangeLayerId = vi.fn().mockReturnValue({ success: false, error: 'Duplicate ID already exists' })
+      renderPanel({ onChangeLayerId })
+      const idEl = screen.getByTestId('layer-id-layer-0')
+      fireEvent.doubleClick(idEl)
+      const input = screen.getByDisplayValue('layer-0')
+      fireEvent.change(input, { target: { value: 'layer-1' } })
+      fireEvent.keyDown(input, { key: 'Enter' })
+      expect(screen.getByTestId('layer-id-error')).toBeTruthy()
+      expect(screen.getByTestId('layer-id-error').textContent).toContain('Duplicate')
+    })
+
+    it('empty ID shows error', () => {
+      const onChangeLayerId = vi.fn().mockReturnValue({ success: false, error: 'ID cannot be empty' })
+      renderPanel({ onChangeLayerId })
+      const idEl = screen.getByTestId('layer-id-layer-0')
+      fireEvent.doubleClick(idEl)
+      const input = screen.getByDisplayValue('layer-0')
+      fireEvent.change(input, { target: { value: '   ' } })
+      fireEvent.keyDown(input, { key: 'Enter' })
+      expect(screen.getByTestId('layer-id-error')).toBeTruthy()
+    })
+  })
+
+  describe('Copy Layer ID context menu', () => {
+    it('renders Copy Layer ID button in context menu', () => {
+      renderPanel()
+      fireEvent.contextMenu(screen.getByTestId('layer-row-layer-0'))
+      expect(screen.getByTestId('context-copy-layer-id')).toBeTruthy()
+      expect(screen.getByTestId('context-copy-layer-id').textContent).toBe('Copy Layer ID')
+    })
+
+    it('copies layer ID to clipboard on click', async () => {
+      const writeText = vi.fn().mockResolvedValue(undefined)
+      Object.assign(navigator, { clipboard: { writeText } })
+      renderPanel()
+      fireEvent.contextMenu(screen.getByTestId('layer-row-layer-0'))
+      fireEvent.click(screen.getByTestId('context-copy-layer-id'))
+      expect(writeText).toHaveBeenCalledWith('layer-0')
     })
   })
 })
