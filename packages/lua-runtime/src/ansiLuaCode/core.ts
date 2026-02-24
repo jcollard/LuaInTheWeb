@@ -148,6 +148,15 @@ export const ansiLuaCoreCode = `
       function screen:layer_toggle(identifier)
         __ansi_screenLayerToggle(self.id, tostring(identifier))
       end
+      function screen:play()
+        __ansi_screenPlay(self.id)
+      end
+      function screen:pause()
+        __ansi_screenPause(self.id)
+      end
+      function screen:is_playing()
+        return __ansi_screenIsPlaying(self.id)
+      end
       return screen
     end
 

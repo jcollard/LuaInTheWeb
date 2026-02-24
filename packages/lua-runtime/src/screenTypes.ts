@@ -46,7 +46,7 @@ export const TRANSPARENT_BG: RGBColor = [-2, -2, -2]
 
 export const HALF_BLOCK = '\u2580'
 
-export const DEFAULT_FRAME_DURATION_MS = 100
+export { DEFAULT_FRAME_DURATION_MS } from '@lua-learning/ansi-shared'
 
 // --- Layer interfaces ---
 

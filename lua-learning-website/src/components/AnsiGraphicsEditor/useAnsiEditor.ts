@@ -16,7 +16,7 @@ import { createTextToolHandlers, type TextToolHandlers } from './textTool'
 import { TOOL_KEY_MAP, TOOL_SHIFT_KEY_MAP, MODE_KEY_MAP, TOOL_SHORTCUTS, MODE_SHORTCUTS, ACTION_SHORTCUTS } from './keyboardShortcuts'
 import { flipDrawnLayerHorizontal, flipDrawnLayerVertical, flipTextLayerHorizontal, flipTextLayerVertical } from './flipUtils'
 import { buildAllShiftedFrames, captureNonDefaultCells } from './moveUtils'
-import { initSchedule, computePlaybackTick, type LayerSchedule } from './playbackEngine'
+import { initSchedule, computePlaybackTick, type LayerSchedule } from '@lua-learning/ansi-shared'
 
 export { computePixelCell, computeLineCells } from './gridUtils'
 

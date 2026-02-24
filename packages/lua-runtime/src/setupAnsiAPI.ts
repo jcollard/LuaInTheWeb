@@ -174,6 +174,31 @@ export function setupAnsiAPI(
     controller.toggleScreenLayer(id, identifier)
   })
 
+  // --- Animation playback functions ---
+  engine.global.set('__ansi_screenPlay', (id: number) => {
+    const controller = getController()
+    if (!controller) {
+      throw new Error('ANSI terminal not available')
+    }
+    controller.screenPlay(id)
+  })
+
+  engine.global.set('__ansi_screenPause', (id: number) => {
+    const controller = getController()
+    if (!controller) {
+      throw new Error('ANSI terminal not available')
+    }
+    controller.screenPause(id)
+  })
+
+  engine.global.set('__ansi_screenIsPlaying', (id: number) => {
+    const controller = getController()
+    if (!controller) {
+      throw new Error('ANSI terminal not available')
+    }
+    return controller.screenIsPlaying(id)
+  })
+
   // --- Set up Lua-side ansi table ---
   // ANSI is NOT a global - it must be accessed via require('ansi')
   engine.doStringSync(ansiLuaCode)

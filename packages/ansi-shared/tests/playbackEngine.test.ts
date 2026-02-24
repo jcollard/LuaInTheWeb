@@ -1,31 +1,33 @@
 import { describe, it, expect } from 'vitest'
-import { initSchedule, computePlaybackTick, type LayerSchedule } from './playbackEngine'
-import type { Layer, DrawnLayer } from './types'
-import { DEFAULT_FRAME_DURATION_MS } from './types'
-import { createEmptyGrid } from './gridUtils'
+import {
+  initSchedule,
+  computePlaybackTick,
+  DEFAULT_FRAME_DURATION_MS,
+  type LayerSchedule,
+  type PlayableLayer,
+  type AnimatedDrawnLayer,
+} from '../src/playbackEngine'
 
 function makeDrawnLayer(
   id: string,
   frameCount: number,
   frameDurationMs = DEFAULT_FRAME_DURATION_MS,
   currentFrameIndex = 0,
-): DrawnLayer {
-  const frames = Array.from({ length: frameCount }, () => createEmptyGrid())
+): AnimatedDrawnLayer {
+  const frames = Array.from({ length: frameCount }, (_, i) => ({ frameIndex: i }))
   return {
     type: 'drawn',
     id,
-    name: id,
-    visible: true,
-    grid: frames[currentFrameIndex],
     frames,
     currentFrameIndex,
     frameDurationMs,
+    grid: frames[currentFrameIndex],
   }
 }
 
 describe('initSchedule', () => {
   it('creates correct initial schedule for animated layers', () => {
-    const layers: Layer[] = [
+    const layers: PlayableLayer[] = [
       makeDrawnLayer('a', 3, 100),
       makeDrawnLayer('b', 2, 200),
     ]
@@ -35,7 +37,7 @@ describe('initSchedule', () => {
   })
 
   it('ignores single-frame layers', () => {
-    const layers: Layer[] = [
+    const layers: PlayableLayer[] = [
       makeDrawnLayer('static', 1, 100),
       makeDrawnLayer('anim', 2, 100),
     ]
@@ -45,8 +47,8 @@ describe('initSchedule', () => {
   })
 
   it('ignores non-drawn layers', () => {
-    const layers: Layer[] = [
-      { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false },
+    const layers: PlayableLayer[] = [
+      { type: 'group', id: 'g1' },
     ]
     const schedule = initSchedule(layers, 500)
     expect(schedule.size).toBe(0)
@@ -56,7 +58,7 @@ describe('initSchedule', () => {
 describe('computePlaybackTick', () => {
   it('advances a single layer when now >= advanceAt', () => {
     const layer = makeDrawnLayer('a', 3, 100, 0)
-    const layers: Layer[] = [layer]
+    const layers: PlayableLayer[] = [layer]
     const schedule: LayerSchedule = new Map([['a', 1100]])
 
     const result = computePlaybackTick(layers, schedule, 1100)
@@ -67,7 +69,7 @@ describe('computePlaybackTick', () => {
 
   it('does NOT advance a layer before its time', () => {
     const layer = makeDrawnLayer('a', 3, 100, 0)
-    const layers: Layer[] = [layer]
+    const layers: PlayableLayer[] = [layer]
     const schedule: LayerSchedule = new Map([['a', 1100]])
 
     const result = computePlaybackTick(layers, schedule, 1050)
@@ -78,7 +80,7 @@ describe('computePlaybackTick', () => {
   it('advances only the fast layer at its interval when two layers have different rates', () => {
     const fast = makeDrawnLayer('fast', 3, 100, 0)
     const slow = makeDrawnLayer('slow', 3, 200, 0)
-    const layers: Layer[] = [fast, slow]
+    const layers: PlayableLayer[] = [fast, slow]
     const schedule: LayerSchedule = new Map([['fast', 1100], ['slow', 1200]])
 
     const result = computePlaybackTick(layers, schedule, 1100)
@@ -90,7 +92,7 @@ describe('computePlaybackTick', () => {
   it('advances both layers when both are due', () => {
     const a = makeDrawnLayer('a', 3, 100, 0)
     const b = makeDrawnLayer('b', 3, 200, 0)
-    const layers: Layer[] = [a, b]
+    const layers: PlayableLayer[] = [a, b]
     const schedule: LayerSchedule = new Map([['a', 1100], ['b', 1100]])
 
     const result = computePlaybackTick(layers, schedule, 1100)
@@ -102,7 +104,7 @@ describe('computePlaybackTick', () => {
   it('200ms layer plays at half the rate of 100ms layer over multiple ticks', () => {
     const fast = makeDrawnLayer('fast', 4, 100, 0)
     const slow = makeDrawnLayer('slow', 4, 200, 0)
-    const layers: Layer[] = [fast, slow]
+    const layers: PlayableLayer[] = [fast, slow]
     const schedule: LayerSchedule = new Map([['fast', 1100], ['slow', 1200]])
 
     // Tick at 1100: fast advances, slow does not
@@ -129,7 +131,7 @@ describe('computePlaybackTick', () => {
   it('ignores single-frame layers', () => {
     const single = makeDrawnLayer('single', 1, 100)
     const anim = makeDrawnLayer('anim', 3, 100, 0)
-    const layers: Layer[] = [single, anim]
+    const layers: PlayableLayer[] = [single, anim]
     const schedule: LayerSchedule = new Map([['anim', 1100]])
 
     const result = computePlaybackTick(layers, schedule, 1100)
@@ -139,7 +141,7 @@ describe('computePlaybackTick', () => {
 
   it('returns changed=false when no layer is due', () => {
     const layer = makeDrawnLayer('a', 3, 100, 0)
-    const layers: Layer[] = [layer]
+    const layers: PlayableLayer[] = [layer]
     const schedule: LayerSchedule = new Map([['a', 1200]])
 
     const result = computePlaybackTick(layers, schedule, 1100)
@@ -148,7 +150,7 @@ describe('computePlaybackTick', () => {
 
   it('returns changed=true when at least one layer advances', () => {
     const layer = makeDrawnLayer('a', 3, 100, 0)
-    const layers: Layer[] = [layer]
+    const layers: PlayableLayer[] = [layer]
     const schedule: LayerSchedule = new Map([['a', 1100]])
 
     const result = computePlaybackTick(layers, schedule, 1100)
@@ -156,7 +158,7 @@ describe('computePlaybackTick', () => {
   })
 
   it('defaults nextDelayMs to DEFAULT_FRAME_DURATION_MS when no animated layers', () => {
-    const layers: Layer[] = [makeDrawnLayer('static', 1, 100)]
+    const layers: PlayableLayer[] = [makeDrawnLayer('static', 1, 100)]
     const schedule: LayerSchedule = new Map()
 
     const result = computePlaybackTick(layers, schedule, 1000)
@@ -165,7 +167,7 @@ describe('computePlaybackTick', () => {
 
   it('applies drift correction when very late tick snaps schedule forward', () => {
     const layer = makeDrawnLayer('a', 3, 100, 0)
-    const layers: Layer[] = [layer]
+    const layers: PlayableLayer[] = [layer]
     // Layer was scheduled at 1100 but we tick at 1500 (400ms late — more than one full period)
     const schedule: LayerSchedule = new Map([['a', 1100]])
 
@@ -176,7 +178,7 @@ describe('computePlaybackTick', () => {
   })
 
   it('removes schedule entries for deleted layers', () => {
-    const layers: Layer[] = [makeDrawnLayer('a', 3, 100, 0)]
+    const layers: PlayableLayer[] = [makeDrawnLayer('a', 3, 100, 0)]
     const schedule: LayerSchedule = new Map([['a', 1100], ['deleted', 1200]])
 
     computePlaybackTick(layers, schedule, 1050)
@@ -185,7 +187,7 @@ describe('computePlaybackTick', () => {
 
   it('removes schedule entries for layers reduced to 1 frame', () => {
     const single = makeDrawnLayer('single', 1, 100)
-    const layers: Layer[] = [single]
+    const layers: PlayableLayer[] = [single]
     const schedule: LayerSchedule = new Map([['single', 1100]])
 
     computePlaybackTick(layers, schedule, 1050)
@@ -195,7 +197,7 @@ describe('computePlaybackTick', () => {
   it('auto-initializes new layers appearing mid-playback', () => {
     const existing = makeDrawnLayer('existing', 3, 100, 0)
     const newLayer = makeDrawnLayer('new', 3, 200, 0)
-    const layers: Layer[] = [existing, newLayer]
+    const layers: PlayableLayer[] = [existing, newLayer]
     // Only 'existing' is in the schedule; 'new' was added mid-playback
     const schedule: LayerSchedule = new Map([['existing', 1100]])
 
@@ -209,7 +211,7 @@ describe('computePlaybackTick', () => {
 
   it('wraps from last frame back to frame 0', () => {
     const layer = makeDrawnLayer('a', 3, 100, 2) // on last frame
-    const layers: Layer[] = [layer]
+    const layers: PlayableLayer[] = [layer]
     const schedule: LayerSchedule = new Map([['a', 1100]])
 
     computePlaybackTick(layers, schedule, 1100)
@@ -219,20 +221,17 @@ describe('computePlaybackTick', () => {
 
   it('ensures nextDelayMs is at least 1ms', () => {
     const layer = makeDrawnLayer('a', 3, 100, 0)
-    const layers: Layer[] = [layer]
-    // Schedule is at 1100 and we tick at 1200 (late), next schedule will be 1300
-    // But nextDelayMs should be max(1, soonest - now)
+    const layers: PlayableLayer[] = [layer]
     const schedule: LayerSchedule = new Map([['a', 1100]])
 
     const result = computePlaybackTick(layers, schedule, 1200)
-    // After advance, next is 1300. delay = 1300 - 1200 = 100
     expect(result.nextDelayMs).toBeGreaterThanOrEqual(1)
   })
 
   it('returns nextDelayMs based on soonest scheduled advance', () => {
     const fast = makeDrawnLayer('fast', 3, 100, 0)
     const slow = makeDrawnLayer('slow', 3, 300, 0)
-    const layers: Layer[] = [fast, slow]
+    const layers: PlayableLayer[] = [fast, slow]
     const schedule: LayerSchedule = new Map([['fast', 1100], ['slow', 1300]])
 
     // Neither due yet at 1050
@@ -243,7 +242,7 @@ describe('computePlaybackTick', () => {
   it('nextDelayMs reflects auto-initialized layer schedule', () => {
     // New layer added mid-playback with 150ms duration, no other layers
     const newLayer = makeDrawnLayer('new', 3, 150, 0)
-    const layers: Layer[] = [newLayer]
+    const layers: PlayableLayer[] = [newLayer]
     const schedule: LayerSchedule = new Map() // empty — layer not yet scheduled
 
     const result = computePlaybackTick(layers, schedule, 2000)
@@ -253,7 +252,7 @@ describe('computePlaybackTick', () => {
 
   it('nextDelayMs after advancing reflects new schedule (not-late case)', () => {
     const layer = makeDrawnLayer('a', 3, 200, 0)
-    const layers: Layer[] = [layer]
+    const layers: PlayableLayer[] = [layer]
     // Scheduled at 1200, tick exactly on time
     const schedule: LayerSchedule = new Map([['a', 1200]])
 
@@ -266,7 +265,7 @@ describe('computePlaybackTick', () => {
 
   it('drift correction uses now + duration (not advanceAt + duration) when very late', () => {
     const layer = makeDrawnLayer('a', 3, 100, 0)
-    const layers: Layer[] = [layer]
+    const layers: PlayableLayer[] = [layer]
     // Scheduled at 1100 but tick at 1250 (150ms late, > 1 full period of 100ms)
     const schedule: LayerSchedule = new Map([['a', 1100]])
 
@@ -279,7 +278,7 @@ describe('computePlaybackTick', () => {
 
   it('no drift correction when slightly late (less than one period)', () => {
     const layer = makeDrawnLayer('a', 3, 100, 0)
-    const layers: Layer[] = [layer]
+    const layers: PlayableLayer[] = [layer]
     // Scheduled at 1100, tick at 1150 (50ms late, < 100ms period)
     const schedule: LayerSchedule = new Map([['a', 1100]])
 
@@ -292,7 +291,7 @@ describe('computePlaybackTick', () => {
 
   it('nextDelayMs from not-yet-due layer when it is the only animated layer', () => {
     const layer = makeDrawnLayer('a', 3, 300, 0)
-    const layers: Layer[] = [layer]
+    const layers: PlayableLayer[] = [layer]
     const schedule: LayerSchedule = new Map([['a', 2000]])
 
     const result = computePlaybackTick(layers, schedule, 1800)
@@ -303,7 +302,7 @@ describe('computePlaybackTick', () => {
   it('nextDelayMs picks soonest among auto-initialized and existing layers', () => {
     const existing = makeDrawnLayer('existing', 3, 500, 0)
     const newLayer = makeDrawnLayer('new', 3, 50, 0)
-    const layers: Layer[] = [existing, newLayer]
+    const layers: PlayableLayer[] = [existing, newLayer]
     // existing is scheduled far in the future; new is auto-initialized
     const schedule: LayerSchedule = new Map([['existing', 3000]])
 

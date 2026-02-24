@@ -26,6 +26,7 @@ local ansi = {}
 -- 10. Terminal Dimensions (COLS, ROWS)
 -- 11. Screen Display (create_screen, set_screen)
 -- 12. Layer Visibility Control (Screen:get_layers, layer_on, layer_off, layer_toggle)
+-- 13. Animation Playback (Screen:play, Screen:pause, Screen:is_playing)
 -- =============================================================================
 
 -- =============================================================================
@@ -222,6 +223,23 @@ function Screen:layer_off(identifier) end
 ---@return nil
 ---@usage screen:layer_toggle("Background")
 function Screen:layer_toggle(identifier) end
+
+--- Start or resume animation playback for this screen.
+--- Animated layers (drawn layers with multiple frames) will advance automatically.
+---@return nil
+---@usage screen:play()
+function Screen:play() end
+
+--- Pause animation playback for this screen.
+--- Animated layers will freeze on their current frame.
+---@return nil
+---@usage screen:pause()
+function Screen:pause() end
+
+--- Check if animation is currently playing for this screen.
+---@return boolean playing True if animation is playing
+---@usage if screen:is_playing() then screen:pause() end
+function Screen:is_playing() end
 
 --- Create a screen from .ansi.lua file data.
 --- Parses and composites all layers into a pre-rendered screen image.
