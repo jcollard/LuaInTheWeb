@@ -11,7 +11,7 @@ describe('TagsTabContent', () => {
     layers?: Layer[]
     availableTags?: string[]
     activeLayerId?: string
-    collapsedTags?: Set<string>
+    expandedTags?: Set<string>
     onSetActive?: (id: string) => void
     onCreateTag?: (tag: string) => void
     onDeleteTag?: (tag: string) => void
@@ -19,15 +19,16 @@ describe('TagsTabContent', () => {
     onToggleVisibility?: (id: string) => void
     onSetLayerVisibility?: (ids: string[], visible: boolean) => void
     onRenameLayer?: (id: string, name: string) => void
-    onToggleCollapse?: (tag: string) => void
+    onToggleExpanded?: (tag: string) => void
   }) {
     const layers = overrides?.layers ?? [createLayer('BG', 'l1')]
+    const tags = overrides?.availableTags ?? []
     return render(
       <TagsTabContent
         layers={layers}
-        availableTags={overrides?.availableTags ?? []}
+        availableTags={tags}
         activeLayerId={overrides?.activeLayerId ?? layers[0].id}
-        collapsedTags={overrides?.collapsedTags ?? new Set()}
+        expandedTags={overrides?.expandedTags ?? new Set(tags)}
         onSetActive={overrides?.onSetActive ?? noop}
         onCreateTag={overrides?.onCreateTag ?? noop}
         onDeleteTag={overrides?.onDeleteTag ?? noop}
@@ -35,7 +36,7 @@ describe('TagsTabContent', () => {
         onToggleVisibility={overrides?.onToggleVisibility ?? noop}
         onSetLayerVisibility={overrides?.onSetLayerVisibility ?? noop}
         onRenameLayer={overrides?.onRenameLayer ?? noop}
-        onToggleCollapse={overrides?.onToggleCollapse ?? noop}
+        onToggleExpanded={overrides?.onToggleExpanded ?? noop}
       />
     )
   }
@@ -113,32 +114,32 @@ describe('TagsTabContent', () => {
     expect(onSetActive).toHaveBeenCalledWith('l1')
   })
 
-  it('calls onToggleCollapse with tag name when heading is clicked', () => {
-    const onToggleCollapse = vi.fn()
+  it('calls onToggleExpanded with tag name when heading is clicked', () => {
+    const onToggleExpanded = vi.fn()
     const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
-    renderTags({ layers: [layer], availableTags: ['Characters'], onToggleCollapse })
+    renderTags({ layers: [layer], availableTags: ['Characters'], onToggleExpanded })
     fireEvent.click(screen.getByTestId('tag-heading-Characters'))
-    expect(onToggleCollapse).toHaveBeenCalledWith('Characters')
+    expect(onToggleExpanded).toHaveBeenCalledWith('Characters')
   })
 
-  it('calls onToggleCollapse on each click', () => {
-    const onToggleCollapse = vi.fn()
+  it('calls onToggleExpanded on each click', () => {
+    const onToggleExpanded = vi.fn()
     const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
-    renderTags({ layers: [layer], availableTags: ['Characters'], onToggleCollapse })
+    renderTags({ layers: [layer], availableTags: ['Characters'], onToggleExpanded })
     fireEvent.click(screen.getByTestId('tag-heading-Characters'))
     fireEvent.click(screen.getByTestId('tag-heading-Characters'))
-    expect(onToggleCollapse).toHaveBeenCalledTimes(2)
+    expect(onToggleExpanded).toHaveBeenCalledTimes(2)
   })
 
-  it('renders layers hidden when tag is in collapsedTags prop', () => {
+  it('renders layers hidden when tag is not in expandedTags prop', () => {
     const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
-    renderTags({ layers: [layer], availableTags: ['Characters'], collapsedTags: new Set(['Characters']) })
+    renderTags({ layers: [layer], availableTags: ['Characters'], expandedTags: new Set() })
     expect(screen.queryByTestId('tag-layer-row-Characters-l1')).toBeNull()
   })
 
-  it('renders layers visible when tag is not in collapsedTags prop', () => {
+  it('renders layers visible when tag is in expandedTags prop', () => {
     const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
-    renderTags({ layers: [layer], availableTags: ['Characters'], collapsedTags: new Set() })
+    renderTags({ layers: [layer], availableTags: ['Characters'], expandedTags: new Set(['Characters']) })
     expect(screen.getByTestId('tag-layer-row-Characters-l1')).toBeTruthy()
   })
 

@@ -6,7 +6,7 @@ export interface TagsTabContentProps {
   layers: Layer[]
   availableTags: string[]
   activeLayerId: string
-  collapsedTags: Set<string>
+  expandedTags: Set<string>
   onSetActive: (id: string) => void
   onCreateTag: (tag: string) => void
   onDeleteTag: (tag: string) => void
@@ -14,14 +14,14 @@ export interface TagsTabContentProps {
   onToggleVisibility: (id: string) => void
   onSetLayerVisibility: (ids: string[], visible: boolean) => void
   onRenameLayer: (id: string, name: string) => void
-  onToggleCollapse: (tag: string) => void
+  onToggleExpanded: (tag: string) => void
 }
 
 export function TagsTabContent({
   layers,
   availableTags,
   activeLayerId,
-  collapsedTags,
+  expandedTags,
   onSetActive,
   onCreateTag,
   onDeleteTag,
@@ -29,7 +29,7 @@ export function TagsTabContent({
   onToggleVisibility,
   onSetLayerVisibility,
   onRenameLayer,
-  onToggleCollapse,
+  onToggleExpanded,
 }: TagsTabContentProps) {
   const [newTagValue, setNewTagValue] = useState('')
   const [editingTag, setEditingTag] = useState<string | null>(null)
@@ -100,7 +100,7 @@ export function TagsTabContent({
       ) : (
         availableTags.map(tag => {
           const tagLayers = layersForTag(tag)
-          const isCollapsed = collapsedTags.has(tag)
+          const isCollapsed = !expandedTags.has(tag)
           const isEditing = editingTag === tag
           const allVisible = tagLayers.every(l => l.visible)
           return (
@@ -108,7 +108,7 @@ export function TagsTabContent({
               <div
                 className={styles.tagHeading}
                 data-testid={`tag-heading-${tag}`}
-                onClick={() => onToggleCollapse(tag)}
+                onClick={() => onToggleExpanded(tag)}
                 onDoubleClick={() => startRenameTag(tag)}
               >
                 <span>{isCollapsed ? '\u25B6' : '\u25BC'}</span>
