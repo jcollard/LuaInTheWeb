@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import type { AnsiCell, AnsiGrid, DrawableLayer, DrawnLayer, Layer, LayerState, RGBColor, Rect, TextAlign, TextLayer } from './types'
 import { MIN_FRAME_DURATION_MS, MAX_FRAME_DURATION_MS, isGroupLayer, isDrawableLayer, getParentId } from './types'
-import { createLayer, createGroup, cloneLayerState, syncLayerIds, mergeLayerDown, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock, addTagToLayer as addTagToLayerUtil, removeTagFromLayer as removeTagFromLayerUtil } from './layerUtils'
+import { createLayer, createGroup, cloneLayerState, mergeLayerDown, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock, addTagToLayer as addTagToLayerUtil, removeTagFromLayer as removeTagFromLayerUtil } from './layerUtils'
 import { createEmptyGrid, cloneGrid } from './gridUtils'
 import { replaceColorsInGrid } from './colorUtils'
 import { renderTextLayerGrid } from './textLayerGrid'
@@ -41,6 +41,7 @@ export interface UseLayerStateReturn {
   updateTextLayer: (id: string, updates: { text?: string; bounds?: Rect; textFg?: RGBColor; textFgColors?: RGBColor[]; textAlign?: TextAlign }) => void
   removeLayer: (id: string) => void
   renameLayer: (id: string, name: string) => void
+  changeLayerId: (oldId: string, newId: string) => { success: boolean; error?: string }
   setActiveLayer: (id: string) => void
   reorderLayer: (id: string, newIndex: number, targetGroupId?: string | null) => void
   toggleVisibility: (id: string) => void
@@ -76,7 +77,6 @@ export interface UseLayerStateReturn {
 export function useLayerState(initial?: LayerState): UseLayerStateReturn {
   const [layers, setLayers] = useState<Layer[]>(() => {
     if (initial) {
-      syncLayerIds(initial.layers)
       return initial.layers
     }
     return [createLayer('Background')]
@@ -186,6 +186,32 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
 
   const renameLayer = useCallback((id: string, name: string) => {
     setLayers(prev => prev.map(l => l.id === id ? { ...l, name } : l))
+  }, [])
+
+  const changeLayerId = useCallback((oldId: string, newId: string): { success: boolean; error?: string } => {
+    const trimmed = newId.trim()
+    if (trimmed.length === 0) return { success: false, error: 'ID cannot be empty' }
+    if (oldId === trimmed) return { success: true }
+
+    const currentLayers = layersRef.current
+    const target = currentLayers.find(l => l.id === oldId)
+    if (!target) return { success: false, error: 'Layer not found' }
+    if (currentLayers.some(l => l.id === trimmed)) return { success: false, error: 'Duplicate ID already exists' }
+
+    const newLayers = currentLayers.map(l => {
+      if (l.id === oldId) return { ...l, id: trimmed }
+      if (getParentId(l) === oldId) return { ...l, parentId: trimmed }
+      return l
+    })
+    layersRef.current = newLayers
+    setLayers(newLayers)
+
+    if (activeLayerIdRef.current === oldId) {
+      activeLayerIdRef.current = trimmed
+      setActiveLayerId(trimmed)
+    }
+
+    return { success: true }
   }, [])
 
   const setActiveLayer = useCallback((id: string) => {
@@ -433,7 +459,6 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
   }, [])
 
   const restoreLayerState = useCallback((state: LayerState) => {
-    syncLayerIds(state.layers)
     layersRef.current = state.layers
     activeLayerIdRef.current = state.activeLayerId
     setLayers(state.layers)
@@ -554,6 +579,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     updateTextLayer,
     removeLayer,
     renameLayer,
+    changeLayerId,
     setActiveLayer,
     reorderLayer,
     toggleVisibility,

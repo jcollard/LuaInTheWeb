@@ -14,6 +14,7 @@ export interface LayersPanelProps {
   onToggleVisibility: (id: string) => void
   onSetLayerVisibility: (ids: string[], visible: boolean) => void
   onRename: (id: string, name: string) => void
+  onChangeLayerId: (oldId: string, newId: string) => { success: boolean; error?: string }
   onReorder: (id: string, newIndex: number, targetGroupId?: string | null) => void
   onAdd: () => void
   onRemove: (id: string) => void
@@ -37,6 +38,7 @@ export function LayersPanel({
   onToggleVisibility,
   onSetLayerVisibility,
   onRename,
+  onChangeLayerId,
   onReorder,
   onAdd,
   onRemove,
@@ -55,6 +57,9 @@ export function LayersPanel({
   const [activeTab, setActiveTab] = useState<'layers' | 'tags'>('layers')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
+  const [editingIdFor, setEditingIdFor] = useState<string | null>(null)
+  const [editIdValue, setEditIdValue] = useState('')
+  const [idError, setIdError] = useState<string | null>(null)
   const [contextMenu, setContextMenu] = useState<{ layerId: string; x: number; y: number } | null>(null)
   const [tagsSubmenuOpen, setTagsSubmenuOpen] = useState(false)
   const [tagsSubmenuFlipped, setTagsSubmenuFlipped] = useState(false)
@@ -85,6 +90,34 @@ export function LayersPanel({
 
   const cancelRename = useCallback(() => {
     setEditingId(null)
+  }, [])
+
+  const startEditId = useCallback((layerId: string) => {
+    setEditingIdFor(layerId)
+    setEditIdValue(layerId)
+    setIdError(null)
+  }, [])
+
+  const commitEditId = useCallback(() => {
+    if (!editingIdFor) return
+    const trimmed = editIdValue.trim()
+    if (trimmed === editingIdFor) {
+      setEditingIdFor(null)
+      setIdError(null)
+      return
+    }
+    const result = onChangeLayerId(editingIdFor, trimmed)
+    if (result.success) {
+      setEditingIdFor(null)
+      setIdError(null)
+    } else {
+      setIdError(result.error ?? 'Invalid ID')
+    }
+  }, [editingIdFor, editIdValue, onChangeLayerId])
+
+  const cancelEditId = useCallback(() => {
+    setEditingIdFor(null)
+    setIdError(null)
   }, [])
 
   const closeContextMenu = useCallback(() => {
@@ -243,6 +276,13 @@ export function LayersPanel({
               onDragOverGroup={isGroup ? e => handleDragOverGroup(e, layer.id) : undefined}
               onDropOnGroup={isGroup ? e => handleDropOnGroup(e, layer.id) : undefined}
               onToggleCollapsed={isGroup ? () => onToggleGroupCollapsed(layer.id) : undefined}
+              isEditingId={editingIdFor === layer.id}
+              editIdValue={editIdValue}
+              idError={editingIdFor === layer.id ? (idError ?? undefined) : undefined}
+              onStartEditId={() => startEditId(layer.id)}
+              onEditIdChange={setEditIdValue}
+              onCommitEditId={commitEditId}
+              onCancelEditId={cancelEditId}
             />
           )
         })}
@@ -305,6 +345,13 @@ export function LayersPanel({
                 Remove from group
               </button>
             )}
+            <button
+              className={styles.layerContextMenuItem}
+              data-testid="context-copy-layer-id"
+              onClick={() => { void navigator.clipboard.writeText(contextMenu.layerId); closeContextMenu() }}
+            >
+              Copy Layer ID
+            </button>
             <div
               className={[styles.layerContextMenuItem, styles.layerContextMenuItemSubmenu].filter(Boolean).join(' ')}
               data-testid="context-tags-submenu-trigger"

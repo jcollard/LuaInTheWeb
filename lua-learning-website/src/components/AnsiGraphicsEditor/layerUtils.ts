@@ -68,23 +68,6 @@ export function isAncestorOf(layerId: string, candidateAncestorId: string, layer
   return getAncestorGroupIds(layer, layers).includes(candidateAncestorId)
 }
 
-let nextLayerId = 1
-let nextGroupId = 1
-
-export function syncLayerIds(layers: Layer[]): void {
-  for (const layer of layers) {
-    const layerMatch = layer.id.match(/^layer-(\d+)$/)
-    if (layerMatch) {
-      const num = parseInt(layerMatch[1], 10)
-      if (num >= nextLayerId) nextLayerId = num + 1
-    }
-    const groupMatch = layer.id.match(/^group-(\d+)$/)
-    if (groupMatch) {
-      const num = parseInt(groupMatch[1], 10)
-      if (num >= nextGroupId) nextGroupId = num + 1
-    }
-  }
-}
 
 export function rgbEqual(a: RGBColor, b: RGBColor): boolean {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2]
@@ -100,7 +83,7 @@ export function createLayer(name: string, id?: string): DrawnLayer {
   )
   return {
     type: 'drawn',
-    id: id ?? `layer-${nextLayerId++}`,
+    id: id ?? crypto.randomUUID(),
     name,
     visible: true,
     grid,
@@ -113,7 +96,7 @@ export function createLayer(name: string, id?: string): DrawnLayer {
 export function createGroup(name: string, id?: string): GroupLayer {
   return {
     type: 'group',
-    id: id ?? `group-${nextGroupId++}`,
+    id: id ?? crypto.randomUUID(),
     name,
     visible: true,
     collapsed: false,
@@ -396,7 +379,7 @@ export function duplicateLayerBlock(layers: Layer[], layerId: string): Layer[] {
 
   if (!isGroupLayer(target)) {
     const cloned = cloneLayer(target)
-    const newId = `layer-${nextLayerId++}`
+    const newId = crypto.randomUUID()
     return [{ ...cloned, id: newId, name: `${target.name} (Copy)` }]
   }
 
@@ -404,10 +387,7 @@ export function duplicateLayerBlock(layers: Layer[], layerId: string): Layer[] {
   const idMap = new Map<string, string>()
 
   for (const layer of block) {
-    const newId = isGroupLayer(layer)
-      ? `group-${nextGroupId++}`
-      : `layer-${nextLayerId++}`
-    idMap.set(layer.id, newId)
+    idMap.set(layer.id, crypto.randomUUID())
   }
 
   return block.map(layer => {

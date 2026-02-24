@@ -814,7 +814,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     isSaveDialogOpen, openSaveDialog, closeSaveDialog, undo, redo, canUndo, canRedo,
     layers: layerState.layers, activeLayerId: layerState.activeLayerId,
     addLayer: addLayerWithUndo, removeLayer: removeLayerWithUndo,
-    renameLayer: layerState.renameLayer, setActiveLayer: setActiveLayerWithBounds,
+    renameLayer: layerState.renameLayer, changeLayerId: layerState.changeLayerId, setActiveLayer: setActiveLayerWithBounds,
     reorderLayer: reorderLayerWithUndo,
     toggleVisibility: toggleVisibilityWithUndo, setLayerVisibility: setLayerVisibilityWithUndo,
     mergeDown: mergeDownWithUndo,
