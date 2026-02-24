@@ -64,7 +64,7 @@ export { XTERM_INLINE_JS, XTERM_INLINE_CSS } from './xterm-inline.generated'
 export { CanvasController, type CanvasCallbacks } from './CanvasController'
 
 // ANSI terminal controller for shell-based ANSI terminal
-export { AnsiController, type AnsiCallbacks, type AnsiTerminalHandle } from './AnsiController'
+export { AnsiController, type AnsiCallbacks, type AnsiTerminalHandle, type LayerInfo } from './AnsiController'
 
 // ANSI terminal Lua code modules (for bundling in exports)
 export { ansiLuaCoreCode, ansiLuaInputCode } from './ansiLuaCode'

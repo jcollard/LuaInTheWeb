@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseScreenData } from '../src/screenParser'
+import { parseScreenData, parseScreenLayers } from '../src/screenParser'
 import type { RGBColor } from '../src/screenTypes'
 import { ANSI_ROWS, ANSI_COLS, DEFAULT_BG, DEFAULT_FG } from '../src/screenTypes'
 
@@ -207,5 +207,112 @@ describe('parseScreenData', () => {
     it('throws for NaN version', () => {
       expect(() => parseScreenData({ version: 'abc' })).toThrow('Unsupported ANSI file version: NaN')
     })
+  })
+})
+
+describe('parseScreenLayers', () => {
+  it('returns a single drawn layer for V1 data', () => {
+    const data = makeV1Data()
+    const layers = parseScreenLayers(data)
+    expect(layers).toHaveLength(1)
+    expect(layers[0].type).toBe('drawn')
+    expect(layers[0].id).toBe('v1-background')
+    expect(layers[0].name).toBe('Background')
+    expect(layers[0].visible).toBe(true)
+  })
+
+  it('returns drawn layers for V2 data', () => {
+    const layerGrid = makeV1Data()['grid']
+    const data: Record<string, unknown> = {
+      version: 2,
+      width: ANSI_COLS,
+      height: ANSI_ROWS,
+      activeLayerId: 'l1',
+      layers: {
+        1: { id: 'l1', name: 'Layer 1', visible: true, grid: layerGrid },
+        2: { id: 'l2', name: 'Layer 2', visible: false, grid: layerGrid },
+      },
+    }
+    const layers = parseScreenLayers(data)
+    expect(layers).toHaveLength(2)
+    expect(layers[0].id).toBe('l1')
+    expect(layers[1].id).toBe('l2')
+    expect(layers[1].visible).toBe(false)
+  })
+
+  it('returns mixed layer types for V3+ data', () => {
+    const v1 = makeV1Data()
+    const data: Record<string, unknown> = {
+      version: 4,
+      width: ANSI_COLS,
+      height: ANSI_ROWS,
+      activeLayerId: 'l1',
+      layers: {
+        1: { type: 'drawn', id: 'l1', name: 'Bottom', visible: true, grid: v1.grid },
+        2: { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false },
+        3: { type: 'drawn', id: 'l2', name: 'Top', visible: true, grid: v1.grid, parentId: 'g1' },
+      },
+    }
+    const layers = parseScreenLayers(data)
+    expect(layers).toHaveLength(3)
+    expect(layers[0].type).toBe('drawn')
+    expect(layers[1].type).toBe('group')
+    expect(layers[2].type).toBe('drawn')
+    expect(layers[2].parentId).toBe('g1')
+  })
+
+  it('parses tags when present on V3+ layers', () => {
+    const v1 = makeV1Data()
+    const data: Record<string, unknown> = {
+      version: 4,
+      width: ANSI_COLS,
+      height: ANSI_ROWS,
+      activeLayerId: 'l1',
+      layers: {
+        1: { type: 'drawn', id: 'l1', name: 'BG', visible: true, grid: v1.grid, tags: { 1: 'background', 2: 'static' } },
+        2: { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false, tags: { 1: 'ui' } },
+      },
+    }
+    const layers = parseScreenLayers(data)
+    expect(layers[0].tags).toEqual(['background', 'static'])
+    expect(layers[1].tags).toEqual(['ui'])
+  })
+
+  it('defaults tags to empty array when absent', () => {
+    const data = makeV1Data()
+    const layers = parseScreenLayers(data)
+    expect(layers[0].tags).toEqual([])
+  })
+
+  it('defaults tags to empty array for V2 layers', () => {
+    const layerGrid = makeV1Data()['grid']
+    const data: Record<string, unknown> = {
+      version: 2,
+      width: ANSI_COLS,
+      height: ANSI_ROWS,
+      activeLayerId: 'l1',
+      layers: { 1: { id: 'l1', name: 'Layer 1', visible: true, grid: layerGrid } },
+    }
+    const layers = parseScreenLayers(data)
+    expect(layers[0].tags).toEqual([])
+  })
+
+  it('defaults tags to empty array for V3+ layers without tags', () => {
+    const v1 = makeV1Data()
+    const data: Record<string, unknown> = {
+      version: 3,
+      width: ANSI_COLS,
+      height: ANSI_ROWS,
+      activeLayerId: 'l1',
+      layers: {
+        1: { type: 'drawn', id: 'l1', name: 'Layer 1', visible: true, grid: v1.grid },
+      },
+    }
+    const layers = parseScreenLayers(data)
+    expect(layers[0].tags).toEqual([])
+  })
+
+  it('throws for unsupported version', () => {
+    expect(() => parseScreenLayers({ version: 99 })).toThrow('Unsupported ANSI file version: 99')
   })
 })

@@ -134,14 +134,32 @@ export const ansiLuaCoreCode = `
       if type(data) ~= 'table' then
         error("ansi.create_screen() expects a table, got " .. type(data))
       end
-      return __ansi_createScreen(data)
+      local id = __ansi_createScreen(data)
+      local screen = { id = id }
+      function screen:get_layers()
+        return __ansi_screenGetLayers(self.id)
+      end
+      function screen:layer_on(identifier)
+        __ansi_screenLayerOn(self.id, tostring(identifier))
+      end
+      function screen:layer_off(identifier)
+        __ansi_screenLayerOff(self.id, tostring(identifier))
+      end
+      function screen:layer_toggle(identifier)
+        __ansi_screenLayerToggle(self.id, tostring(identifier))
+      end
+      return screen
     end
 
     function _ansi.set_screen(screen)
-      if screen ~= nil and type(screen) ~= 'number' then
-        error("ansi.set_screen() expects a number or nil, got " .. type(screen))
+      local id = screen
+      if type(screen) == 'table' then
+        id = screen.id
       end
-      __ansi_setScreen(screen)
+      if id ~= nil and type(id) ~= 'number' then
+        error("ansi.set_screen() expects a screen, number, or nil")
+      end
+      __ansi_setScreen(id)
     end
 
     -- Standard CGA/VGA color palette

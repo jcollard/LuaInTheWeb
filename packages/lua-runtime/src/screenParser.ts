@@ -31,6 +31,7 @@ interface RawLayer {
   textAlign?: string
   parentId?: string
   collapsed?: boolean
+  tags?: unknown
 }
 
 /**
@@ -94,6 +95,11 @@ function normalizeRgbArray(raw: unknown): RGBColor[] | undefined {
   return arr.map(normalizeRgb)
 }
 
+function parseTags(raw: unknown): string[] {
+  if (!raw) return []
+  return luaArrayToJsArray<string>(raw).map(String)
+}
+
 function parseV1(data: Record<string, unknown>): LayerData[] {
   const grid = normalizeGrid(data.grid)
   return [{
@@ -105,6 +111,7 @@ function parseV1(data: Record<string, unknown>): LayerData[] {
     frames: [grid],
     currentFrameIndex: 0,
     frameDurationMs: DEFAULT_FRAME_DURATION_MS,
+    tags: [],
   }]
 }
 
@@ -121,6 +128,7 @@ function parseV2(data: Record<string, unknown>): LayerData[] {
       frames: [grid],
       currentFrameIndex: 0,
       frameDurationMs: DEFAULT_FRAME_DURATION_MS,
+      tags: [],
     }
   })
 }
@@ -136,6 +144,7 @@ function parseV3to6(data: Record<string, unknown>): LayerData[] {
         visible: l.visible,
         collapsed: l.collapsed ?? false,
         parentId: l.parentId,
+        tags: parseTags(l.tags),
       }
       return group
     }
@@ -158,6 +167,7 @@ function parseV3to6(data: Record<string, unknown>): LayerData[] {
         textAlign,
         grid,
         parentId: l.parentId,
+        tags: parseTags(l.tags),
       }
       return textLayer
     }
@@ -179,9 +189,30 @@ function parseV3to6(data: Record<string, unknown>): LayerData[] {
       currentFrameIndex,
       frameDurationMs: l.frameDurationMs ?? DEFAULT_FRAME_DURATION_MS,
       parentId: l.parentId,
+      tags: parseTags(l.tags),
     }
     return drawn
   })
+}
+
+/**
+ * Parse a data table (from wasmoon) into an array of LayerData.
+ *
+ * @param data - The parsed data object (version, grid/layers, etc.)
+ * @returns The parsed layers (not yet composited)
+ */
+export function parseScreenLayers(data: Record<string, unknown>): LayerData[] {
+  const version = Number(data.version)
+
+  if (version === 1) {
+    return parseV1(data)
+  } else if (version === 2) {
+    return parseV2(data)
+  } else if (version >= 3 && version <= 6) {
+    return parseV3to6(data)
+  } else {
+    throw new Error(`Unsupported ANSI file version: ${version}`)
+  }
 }
 
 /**
@@ -191,18 +222,5 @@ function parseV3to6(data: Record<string, unknown>): LayerData[] {
  * @returns The composited AnsiGrid ready for rendering
  */
 export function parseScreenData(data: Record<string, unknown>): AnsiGrid {
-  const version = Number(data.version)
-  let layers: LayerData[]
-
-  if (version === 1) {
-    layers = parseV1(data)
-  } else if (version === 2) {
-    layers = parseV2(data)
-  } else if (version >= 3 && version <= 6) {
-    layers = parseV3to6(data)
-  } else {
-    throw new Error(`Unsupported ANSI file version: ${version}`)
-  }
-
-  return compositeGrid(layers)
+  return compositeGrid(parseScreenLayers(data))
 }

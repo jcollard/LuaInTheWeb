@@ -25,6 +25,7 @@ local ansi = {}
 -- 9.  Key Constants (ansi.keys.*)
 -- 10. Terminal Dimensions (COLS, ROWS)
 -- 11. Screen Display (create_screen, set_screen)
+-- 12. Layer Visibility Control (Screen:get_layers, layer_on, layer_off, layer_toggle)
 -- =============================================================================
 
 -- =============================================================================
@@ -188,19 +189,55 @@ function ansi.get_mouse_y() end
 -- Screen Display
 -- =============================================================================
 
+---@class Screen
+---@field id number The numeric screen ID
+local Screen = {}
+
+--- Get information about all layers in this screen.
+--- Returns a table of layer info objects with id, name, type, visible, and tags fields.
+---@return table[] layers Array of {id, name, type, visible, tags} tables
+---@usage local layers = screen:get_layers()
+---@usage for i, layer in ipairs(layers) do
+---@usage   print(layer.name, layer.visible)
+---@usage end
+function Screen:get_layers() end
+
+--- Show layer(s) matching the identifier.
+--- Resolves by layer ID first, then by name, then by tag.
+---@param identifier string|number Layer ID, name, or tag
+---@return nil
+---@usage screen:layer_on("Background")
+function Screen:layer_on(identifier) end
+
+--- Hide layer(s) matching the identifier.
+--- Resolves by layer ID first, then by name, then by tag.
+---@param identifier string|number Layer ID, name, or tag
+---@return nil
+---@usage screen:layer_off("Background")
+function Screen:layer_off(identifier) end
+
+--- Toggle visibility of layer(s) matching the identifier.
+--- Resolves by layer ID first, then by name, then by tag.
+---@param identifier string|number Layer ID, name, or tag
+---@return nil
+---@usage screen:layer_toggle("Background")
+function Screen:layer_toggle(identifier) end
+
 --- Create a screen from .ansi.lua file data.
 --- Parses and composites all layers into a pre-rendered screen image.
---- The returned screen ID can be passed to ansi.set_screen() to display it.
+--- The returned screen object can be passed to ansi.set_screen() to display it,
+--- and provides methods for controlling layer visibility.
 ---@param data table The data table from a .ansi.lua file (loaded via require or dofile)
----@return number screen_id A numeric ID for the created screen
+---@return Screen screen A screen object with layer control methods
 ---@usage local screen = ansi.create_screen(require("my_image.ansi"))
+---@usage screen:layer_off("Background")
 function ansi.create_screen(data) end
 
 --- Set the active background screen.
 --- When a screen is active, it is rendered as the terminal background each frame,
 --- before the tick callback runs. Use ansi.print() to draw on top of it.
 --- Pass nil to clear the active screen.
----@param screen number|nil The screen ID from create_screen(), or nil to clear
+---@param screen Screen|number|nil A screen object, screen ID, or nil to clear
 ---@return nil
 ---@usage ansi.set_screen(screen)   -- display the screen
 ---@usage ansi.set_screen(nil)      -- clear the background

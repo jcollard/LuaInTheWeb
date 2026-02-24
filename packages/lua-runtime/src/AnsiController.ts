@@ -16,8 +16,10 @@ import {
 } from '@lua-learning/canvas-runtime'
 import { InputAPI } from './InputAPI'
 import type { TimingInfo } from '@lua-learning/canvas-runtime'
-import { parseScreenData } from './screenParser'
+import { parseScreenLayers } from './screenParser'
+import { compositeGrid } from './screenCompositor'
 import { renderGridToAnsiString } from './ansiStringRenderer'
+import type { LayerData } from './screenTypes'
 
 /**
  * Handle to a running ANSI terminal instance.
@@ -61,6 +63,17 @@ export interface AnsiCallbacks {
 }
 
 /**
+ * Layer information returned by getScreenLayers().
+ */
+export interface LayerInfo {
+  id: string
+  name: string
+  type: string
+  visible: boolean
+  tags: string[]
+}
+
+/**
  * Format an onTick error for display.
  */
 function formatOnTickError(error: unknown): string {
@@ -96,6 +109,7 @@ export class AnsiController {
   // Screen state
   private nextScreenId = 1
   private screens: Map<number, string> = new Map()
+  private screenLayers: Map<number, LayerData[]> = new Map()
   private activeScreenId: number | null = null
 
   constructor(callbacks: AnsiCallbacks, ansiId = 'ansi-main') {
@@ -184,6 +198,7 @@ export class AnsiController {
 
     // Clear screen state
     this.screens.clear()
+    this.screenLayers.clear()
     this.activeScreenId = null
     this.nextScreenId = 1
 
@@ -391,14 +406,14 @@ export class AnsiController {
 
   /**
    * Create a screen from ANSI file data.
-   * Parses the data, composites layers, renders to an ANSI escape string,
-   * stores it with a numeric ID, and returns the ID.
+   * Parses the data, stores layers for later manipulation,
+   * composites and renders to an ANSI escape string, and returns the ID.
    */
   createScreen(data: Record<string, unknown>): number {
-    const grid = parseScreenData(data)
-    const ansiString = renderGridToAnsiString(grid)
+    const layers = parseScreenLayers(data)
     const id = this.nextScreenId++
-    this.screens.set(id, ansiString)
+    this.screenLayers.set(id, layers)
+    this.recompositeScreen(id)
     return id
   }
 
@@ -422,6 +437,89 @@ export class AnsiController {
    */
   getActiveScreenId(): number | null {
     return this.activeScreenId
+  }
+
+  // --- Layer Visibility API ---
+
+  /**
+   * Get layer information for a screen.
+   */
+  getScreenLayers(id: number): LayerInfo[] {
+    const layers = this.screenLayers.get(id)
+    if (!layers) {
+      throw new Error(`Screen ID ${id} not found. Create a screen first with ansi.create_screen().`)
+    }
+    return layers.map(layer => ({
+      id: layer.id,
+      name: layer.name,
+      type: layer.type,
+      visible: layer.visible,
+      tags: layer.tags,
+    }))
+  }
+
+  /**
+   * Set layer visibility by identifier (ID, name, or tag) and re-composite.
+   */
+  setScreenLayerVisible(id: number, identifier: string, visible: boolean): void {
+    const layers = this.screenLayers.get(id)
+    if (!layers) {
+      throw new Error(`Screen ID ${id} not found. Create a screen first with ansi.create_screen().`)
+    }
+    const matched = this.resolveLayersByIdentifier(layers, identifier)
+    if (matched.length === 0) {
+      throw new Error(`No layers match identifier "${identifier}" in screen ${id}.`)
+    }
+    for (const layer of matched) {
+      layer.visible = visible
+    }
+    this.recompositeScreen(id)
+  }
+
+  /**
+   * Toggle layer visibility by identifier (ID, name, or tag) and re-composite.
+   */
+  toggleScreenLayer(id: number, identifier: string): void {
+    const layers = this.screenLayers.get(id)
+    if (!layers) {
+      throw new Error(`Screen ID ${id} not found. Create a screen first with ansi.create_screen().`)
+    }
+    const matched = this.resolveLayersByIdentifier(layers, identifier)
+    if (matched.length === 0) {
+      throw new Error(`No layers match identifier "${identifier}" in screen ${id}.`)
+    }
+    for (const layer of matched) {
+      layer.visible = !layer.visible
+    }
+    this.recompositeScreen(id)
+  }
+
+  /**
+   * Resolve layers by identifier: first try exact ID match, then name match, then tag match.
+   */
+  private resolveLayersByIdentifier(layers: LayerData[], identifier: string): LayerData[] {
+    // Try exact ID match
+    const byId = layers.filter(l => l.id === identifier)
+    if (byId.length > 0) return byId
+
+    // Try name match
+    const byName = layers.filter(l => l.name === identifier)
+    if (byName.length > 0) return byName
+
+    // Try tag match
+    const byTag = layers.filter(l => l.tags.includes(identifier))
+    return byTag
+  }
+
+  /**
+   * Re-composite a screen's layers and update the stored ANSI string.
+   */
+  private recompositeScreen(id: number): void {
+    const layers = this.screenLayers.get(id)
+    if (!layers) return
+    const grid = compositeGrid(layers)
+    const ansiString = renderGridToAnsiString(grid)
+    this.screens.set(id, ansiString)
   }
 
   // --- Internal ---
