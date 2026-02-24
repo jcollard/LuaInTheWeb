@@ -11,6 +11,17 @@ Review a GitHub pull request for code quality, testing, and adherence to project
 /pr-review <number> reject "feedback"  # Create rework tasks from feedback
 ```
 
+## CRITICAL: Review is READ-ONLY
+
+**The review process (Steps 0–7) is strictly read-only.** You must NEVER:
+- Edit, write, or create any source files
+- Create commits or push to any branch
+- Checkout branches or switch worktrees
+- Run `npm install`, build commands, or any command that modifies the repo
+- Implement fixes for issues you discover
+
+Your job is to **analyze and report only**. If you find blocking issues, describe them in the review report so the author can fix them. The most you may do is submit a review comment to GitHub via `gh pr review`.
+
 ## Arguments
 
 - `$ARGUMENTS` contains the PR number/URL and optional subcommand with feedback
@@ -373,6 +384,8 @@ Output a structured review report:
 ---
 
 ## Step 7: Optionally Submit Review to GitHub
+
+> **Reminder: Do NOT implement any fixes.** Your review is complete after this step. If blocking issues were found, the author is responsible for fixing them.
 
 After generating the report, ask if the user wants to submit the review to GitHub:
 
