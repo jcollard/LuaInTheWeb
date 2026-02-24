@@ -63,6 +63,16 @@ export function LayersPanel({
   const [contextMenu, setContextMenu] = useState<{ layerId: string; x: number; y: number } | null>(null)
   const [tagsSubmenuOpen, setTagsSubmenuOpen] = useState(false)
   const [tagsSubmenuFlipped, setTagsSubmenuFlipped] = useState(false)
+  const [collapsedTags, setCollapsedTags] = useState<Set<string>>(new Set())
+
+  const toggleTagCollapse = useCallback((tag: string) => {
+    setCollapsedTags(prev => {
+      const next = new Set(prev)
+      if (next.has(tag)) next.delete(tag)
+      else next.add(tag)
+      return next
+    })
+  }, [])
 
   const {
     draggedId, dropZoneTargetId, dropOnGroup, draggedGroupChildIds,
@@ -201,6 +211,7 @@ export function LayersPanel({
           layers={layers}
           availableTags={availableTags}
           activeLayerId={activeLayerId}
+          collapsedTags={collapsedTags}
           onSetActive={onSetActive}
           onCreateTag={onCreateTag}
           onDeleteTag={onDeleteTag}
@@ -208,6 +219,7 @@ export function LayersPanel({
           onToggleVisibility={onToggleVisibility}
           onSetLayerVisibility={onSetLayerVisibility}
           onRenameLayer={onRename}
+          onToggleCollapse={toggleTagCollapse}
         />
       ) : (
       <div className={styles.layersList}>
