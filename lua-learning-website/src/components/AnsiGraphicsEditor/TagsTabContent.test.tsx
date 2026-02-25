@@ -11,6 +11,7 @@ describe('TagsTabContent', () => {
     layers?: Layer[]
     availableTags?: string[]
     activeLayerId?: string
+    expandedTags?: Set<string>
     onSetActive?: (id: string) => void
     onCreateTag?: (tag: string) => void
     onDeleteTag?: (tag: string) => void
@@ -18,13 +19,16 @@ describe('TagsTabContent', () => {
     onToggleVisibility?: (id: string) => void
     onSetLayerVisibility?: (ids: string[], visible: boolean) => void
     onRenameLayer?: (id: string, name: string) => void
+    onToggleExpanded?: (tag: string) => void
   }) {
     const layers = overrides?.layers ?? [createLayer('BG', 'l1')]
+    const tags = overrides?.availableTags ?? []
     return render(
       <TagsTabContent
         layers={layers}
-        availableTags={overrides?.availableTags ?? []}
+        availableTags={tags}
         activeLayerId={overrides?.activeLayerId ?? layers[0].id}
+        expandedTags={overrides?.expandedTags ?? new Set(tags)}
         onSetActive={overrides?.onSetActive ?? noop}
         onCreateTag={overrides?.onCreateTag ?? noop}
         onDeleteTag={overrides?.onDeleteTag ?? noop}
@@ -32,6 +36,7 @@ describe('TagsTabContent', () => {
         onToggleVisibility={overrides?.onToggleVisibility ?? noop}
         onSetLayerVisibility={overrides?.onSetLayerVisibility ?? noop}
         onRenameLayer={overrides?.onRenameLayer ?? noop}
+        onToggleExpanded={overrides?.onToggleExpanded ?? noop}
       />
     )
   }
@@ -109,18 +114,32 @@ describe('TagsTabContent', () => {
     expect(onSetActive).toHaveBeenCalledWith('l1')
   })
 
-  it('collapses tag section when heading is clicked', () => {
+  it('calls onToggleExpanded with tag name when heading is clicked', () => {
+    const onToggleExpanded = vi.fn()
     const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
-    renderTags({ layers: [layer], availableTags: ['Characters'] })
+    renderTags({ layers: [layer], availableTags: ['Characters'], onToggleExpanded })
     fireEvent.click(screen.getByTestId('tag-heading-Characters'))
+    expect(onToggleExpanded).toHaveBeenCalledWith('Characters')
+  })
+
+  it('calls onToggleExpanded on each click', () => {
+    const onToggleExpanded = vi.fn()
+    const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
+    renderTags({ layers: [layer], availableTags: ['Characters'], onToggleExpanded })
+    fireEvent.click(screen.getByTestId('tag-heading-Characters'))
+    fireEvent.click(screen.getByTestId('tag-heading-Characters'))
+    expect(onToggleExpanded).toHaveBeenCalledTimes(2)
+  })
+
+  it('renders layers hidden when tag is not in expandedTags prop', () => {
+    const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
+    renderTags({ layers: [layer], availableTags: ['Characters'], expandedTags: new Set() })
     expect(screen.queryByTestId('tag-layer-row-Characters-l1')).toBeNull()
   })
 
-  it('expands tag section when clicked again', () => {
+  it('renders layers visible when tag is in expandedTags prop', () => {
     const layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
-    renderTags({ layers: [layer], availableTags: ['Characters'] })
-    fireEvent.click(screen.getByTestId('tag-heading-Characters'))
-    fireEvent.click(screen.getByTestId('tag-heading-Characters'))
+    renderTags({ layers: [layer], availableTags: ['Characters'], expandedTags: new Set(['Characters']) })
     expect(screen.getByTestId('tag-layer-row-Characters-l1')).toBeTruthy()
   })
 

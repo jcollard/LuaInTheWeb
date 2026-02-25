@@ -6,6 +6,7 @@ export interface TagsTabContentProps {
   layers: Layer[]
   availableTags: string[]
   activeLayerId: string
+  expandedTags: Set<string>
   onSetActive: (id: string) => void
   onCreateTag: (tag: string) => void
   onDeleteTag: (tag: string) => void
@@ -13,12 +14,14 @@ export interface TagsTabContentProps {
   onToggleVisibility: (id: string) => void
   onSetLayerVisibility: (ids: string[], visible: boolean) => void
   onRenameLayer: (id: string, name: string) => void
+  onToggleExpanded: (tag: string) => void
 }
 
 export function TagsTabContent({
   layers,
   availableTags,
   activeLayerId,
+  expandedTags,
   onSetActive,
   onCreateTag,
   onDeleteTag,
@@ -26,9 +29,9 @@ export function TagsTabContent({
   onToggleVisibility,
   onSetLayerVisibility,
   onRenameLayer,
+  onToggleExpanded,
 }: TagsTabContentProps) {
   const [newTagValue, setNewTagValue] = useState('')
-  const [collapsedTags, setCollapsedTags] = useState<Set<string>>(new Set())
   const [editingTag, setEditingTag] = useState<string | null>(null)
   const [editTagValue, setEditTagValue] = useState('')
   const [editingLayerId, setEditingLayerId] = useState<string | null>(null)
@@ -56,15 +59,6 @@ export function TagsTabContent({
       setNewTagValue('')
     }
   }, [newTagValue, availableTags, onCreateTag])
-
-  const toggleCollapse = useCallback((tag: string) => {
-    setCollapsedTags(prev => {
-      const next = new Set(prev)
-      if (next.has(tag)) next.delete(tag)
-      else next.add(tag)
-      return next
-    })
-  }, [])
 
   const startRenameTag = useCallback((tag: string) => {
     setEditingTag(tag)
@@ -106,7 +100,7 @@ export function TagsTabContent({
       ) : (
         availableTags.map(tag => {
           const tagLayers = layersForTag(tag)
-          const isCollapsed = collapsedTags.has(tag)
+          const isCollapsed = !expandedTags.has(tag)
           const isEditing = editingTag === tag
           const allVisible = tagLayers.every(l => l.visible)
           return (
@@ -114,7 +108,7 @@ export function TagsTabContent({
               <div
                 className={styles.tagHeading}
                 data-testid={`tag-heading-${tag}`}
-                onClick={() => toggleCollapse(tag)}
+                onClick={() => onToggleExpanded(tag)}
                 onDoubleClick={() => startRenameTag(tag)}
               >
                 <span>{isCollapsed ? '\u25B6' : '\u25BC'}</span>
