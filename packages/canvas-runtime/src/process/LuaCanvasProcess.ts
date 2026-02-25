@@ -529,15 +529,25 @@ export class LuaCanvasProcess implements IProcess {
     let content: string | null = null;
 
     if (this.fileSystem) {
-      try {
-        // Resolve the path relative to script directory if needed
-        const resolvedPath = this.resolveModulePath(modulePath);
+      // Build list of paths to try, with literal dots first (compound extensions like .ansi.lua)
+      const slashPath = moduleName.replace(/\./g, '/');
+      const pathsToTry: string[] = [];
+      if (moduleName.includes('.')) {
+        pathsToTry.push('/' + moduleName + '.lua');
+      }
+      pathsToTry.push('/' + slashPath + '.lua');
+      pathsToTry.push('/' + slashPath + '/init.lua');
 
-        if (this.fileSystem.exists(resolvedPath)) {
-          content = this.fileSystem.readFile(resolvedPath) ?? null;
+      for (const tryPath of pathsToTry) {
+        try {
+          const resolvedPath = this.resolveModulePath(tryPath);
+          if (this.fileSystem.exists(resolvedPath)) {
+            content = this.fileSystem.readFile(resolvedPath) ?? null;
+            if (content !== null) break;
+          }
+        } catch {
+          // File not found or read error - try next path
         }
-      } catch {
-        // File not found or read error - content stays null
       }
     }
 

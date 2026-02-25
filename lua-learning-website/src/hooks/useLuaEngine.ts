@@ -52,7 +52,14 @@ export function useLuaEngine(options: UseLuaEngineOptions): UseLuaEngineReturn {
       lua.global.set('__js_require', (moduleName: string): string | null => {
         if (!fileReaderRef.current) return null
 
-        // Try module.lua first
+        // Try literal dots preserved first (compound extensions like .ansi.lua)
+        if (moduleName.includes('.')) {
+          const literalPath = '/' + moduleName + '.lua'
+          const literalContent = fileReaderRef.current(literalPath)
+          if (literalContent !== null) return literalContent
+        }
+
+        // Try standard dot-to-slash: module.lua
         const modulePath = moduleNameToPath(moduleName)
         let content = fileReaderRef.current(modulePath)
 

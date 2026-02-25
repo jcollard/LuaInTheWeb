@@ -169,7 +169,16 @@ export class AssetCollector {
    * 2. module/init.lua (e.g., "util" -> "util/init.lua")
    */
   private resolveModulePath(modulePath: string): string | null {
-    // Try direct .lua file first (standard Lua behavior)
+    // Try literal dots preserved first (compound extensions like .ansi.lua)
+    if (!modulePath.endsWith('.lua') && modulePath.includes('.')) {
+      const literalPath = modulePath + '.lua'
+      const literalAbsolute = this.resolvePath(literalPath)
+      if (this.filesystem.exists(literalAbsolute)) {
+        return literalPath
+      }
+    }
+
+    // Try standard dot-to-slash .lua file (standard Lua behavior)
     const directPath = this.moduleToFilePath(modulePath)
     const directAbsolute = this.resolvePath(directPath)
     if (this.filesystem.exists(directAbsolute)) {

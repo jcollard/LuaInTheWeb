@@ -1694,13 +1694,16 @@ export class LuaCanvasRuntime {
       // Convert module name to path format
       const modulePath = moduleName.replace(/\./g, '/');
 
-      // Try common paths
-      const pathsToTry = [
-        `/${modulePath}.lua`,
-        `/${modulePath}/init.lua`,
-        `${modulePath}.lua`,
-        `${modulePath}/init.lua`,
-      ];
+      // Build paths to try, with literal dots first (compound extensions like .ansi.lua)
+      const pathsToTry: string[] = [];
+      if (moduleName.includes('.')) {
+        pathsToTry.push(`/${moduleName}.lua`);
+        pathsToTry.push(`${moduleName}.lua`);
+      }
+      pathsToTry.push(`/${modulePath}.lua`);
+      pathsToTry.push(`/${modulePath}/init.lua`);
+      pathsToTry.push(`${modulePath}.lua`);
+      pathsToTry.push(`${modulePath}/init.lua`);
 
       // For now, return false - file-based require needs async message passing
       // The worker will handle the actual loading via messages

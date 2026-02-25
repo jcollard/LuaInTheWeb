@@ -169,5 +169,113 @@ describe('luaModuleResolver', () => {
         moduleName: 'utils',
       })
     })
+
+    describe('compound extension resolution (.ansi.lua)', () => {
+      it('should resolve compound extension file when it exists', () => {
+        const result = resolveModulePath({
+          moduleName: 'my_image.ansi',
+          currentFilePath: '/home/main.lua',
+          cwd: '/home',
+          fileExists: (p) => p === '/home/my_image.ansi.lua',
+        })
+
+        expect(result).toEqual({
+          path: '/home/my_image.ansi.lua',
+          moduleName: 'my_image.ansi',
+        })
+      })
+
+      it('should fall back to dot-to-slash when compound extension file does not exist', () => {
+        const result = resolveModulePath({
+          moduleName: 'my_image.ansi',
+          currentFilePath: '/home/main.lua',
+          cwd: '/home',
+          fileExists: (p) => p === '/home/my_image/ansi.lua',
+        })
+
+        expect(result).toEqual({
+          path: '/home/my_image/ansi.lua',
+          moduleName: 'my_image.ansi',
+        })
+      })
+
+      it('should prefer compound extension file over dot-to-slash when both exist', () => {
+        const result = resolveModulePath({
+          moduleName: 'my_image.ansi',
+          currentFilePath: '/home/main.lua',
+          cwd: '/home',
+          fileExists: (p) =>
+            p === '/home/my_image.ansi.lua' || p === '/home/my_image/ansi.lua',
+        })
+
+        expect(result).toEqual({
+          path: '/home/my_image.ansi.lua',
+          moduleName: 'my_image.ansi',
+        })
+      })
+
+      it('should resolve compound extension from root fallback', () => {
+        const result = resolveModulePath({
+          moduleName: 'title-screen.ansi',
+          currentFilePath: '/home/main.lua',
+          cwd: '/home',
+          fileExists: (p) => p === '/title-screen.ansi.lua',
+        })
+
+        expect(result).toEqual({
+          path: '/title-screen.ansi.lua',
+          moduleName: 'title-screen.ansi',
+        })
+      })
+
+      it('should resolve deeply dotted module as compound extension', () => {
+        const result = resolveModulePath({
+          moduleName: 'a.b.c',
+          currentFilePath: '/home/main.lua',
+          cwd: '/home',
+          fileExists: (p) => p === '/home/a.b.c.lua',
+        })
+
+        expect(result).toEqual({
+          path: '/home/a.b.c.lua',
+          moduleName: 'a.b.c',
+        })
+      })
+
+      it('should not change behavior for simple module names without dots', () => {
+        const result = resolveModulePath({
+          moduleName: 'utils',
+          currentFilePath: '/home/main.lua',
+          cwd: '/home',
+          fileExists: (p) => p === '/home/utils.lua',
+        })
+
+        expect(result).toEqual({
+          path: '/home/utils.lua',
+          moduleName: 'utils',
+        })
+      })
+
+      it('should not search root twice when cwd is root', () => {
+        const checked: string[] = []
+        const result = resolveModulePath({
+          moduleName: 'screen.ansi',
+          currentFilePath: '/main.lua',
+          cwd: '/',
+          fileExists: (p) => {
+            checked.push(p)
+            return p === '/screen.ansi.lua'
+          },
+        })
+
+        expect(result).toEqual({
+          path: '/screen.ansi.lua',
+          moduleName: 'screen.ansi',
+        })
+        // Should not check the same paths twice (root searched only once)
+        const uniqueChecked = [...new Set(checked)]
+        expect(checked).toEqual(uniqueChecked)
+      })
+    })
   })
 })

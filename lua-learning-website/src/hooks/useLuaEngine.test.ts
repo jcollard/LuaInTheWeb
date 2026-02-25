@@ -373,8 +373,11 @@ describe('useLuaEngine', () => {
     })
 
     it('should call fileReader with folder path for require("folder.module")', async () => {
-      // Arrange
-      const fileReader = vi.fn().mockReturnValue('return {}')
+      // Arrange - only return content for the slash-converted path
+      const fileReader = vi.fn().mockImplementation((path: string) => {
+        if (path === '/utils/math.lua') return 'return {}'
+        return null
+      })
       const { result } = renderHook(() => useLuaEngine({ fileReader }))
       await waitFor(() => expect(result.current.isReady).toBe(true))
 
@@ -384,10 +387,11 @@ describe('useLuaEngine', () => {
       )?.[1] as ((moduleName: string) => string | null) | undefined
 
       // Act
-      jsRequireFn?.('utils.math')
+      const content = jsRequireFn?.('utils.math')
 
       // Assert
       expect(fileReader).toHaveBeenCalledWith('/utils/math.lua')
+      expect(content).toBe('return {}')
     })
 
     it('should try init.lua for folder when module.lua not found', async () => {
@@ -441,6 +445,49 @@ describe('useLuaEngine', () => {
         (call: unknown[]) => typeof call[0] === 'string' && (call[0] as string).includes('__loaded_modules')
       )
       expect(requireSetupCall).toBeDefined()
+    })
+
+    it('should try literal dot path first for compound extensions like .ansi.lua', async () => {
+      // Arrange - fileReader returns content for literal dot path
+      const fileReader = vi.fn().mockImplementation((path: string) => {
+        if (path === '/my_image.ansi.lua') return 'return {type="ansi"}'
+        return null
+      })
+      const { result } = renderHook(() => useLuaEngine({ fileReader }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Get the __js_require function
+      const jsRequireFn = mockGlobalSet.mock.calls.find(
+        (call: unknown[]) => call[0] === '__js_require'
+      )?.[1] as ((moduleName: string) => string | null) | undefined
+
+      // Act
+      const content = jsRequireFn?.('my_image.ansi')
+
+      // Assert - should find literal dot path first
+      expect(fileReader).toHaveBeenCalledWith('/my_image.ansi.lua')
+      expect(content).toBe('return {type="ansi"}')
+    })
+
+    it('should fall back to dot-to-slash when literal dot file does not exist', async () => {
+      // Arrange - fileReader returns null for literal dot, content for slash path
+      const fileReader = vi.fn().mockImplementation((path: string) => {
+        if (path === '/my_image/ansi.lua') return 'return {type="directory"}'
+        return null
+      })
+      const { result } = renderHook(() => useLuaEngine({ fileReader }))
+      await waitFor(() => expect(result.current.isReady).toBe(true))
+
+      // Get the __js_require function
+      const jsRequireFn = mockGlobalSet.mock.calls.find(
+        (call: unknown[]) => call[0] === '__js_require'
+      )?.[1] as ((moduleName: string) => string | null) | undefined
+
+      // Act
+      const content = jsRequireFn?.('my_image.ansi')
+
+      // Assert - should fall back to slash path
+      expect(content).toBe('return {type="directory"}')
     })
   })
 })

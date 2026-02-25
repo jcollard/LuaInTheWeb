@@ -358,11 +358,19 @@ export class HtmlGenerator {
 
         // Set up custom require to load from embedded modules
         engine.global.set('__load_module', (modulePath) => {
-          let filePath = modulePath;
-          if (!filePath.endsWith('.lua')) {
-            filePath = modulePath.replace(/[.]/g, '/') + '.lua';
+          let code;
+          // Try literal dots preserved first (compound extensions like .ansi.lua)
+          if (!modulePath.endsWith('.lua') && modulePath.includes('.')) {
+            code = LUA_MODULES[modulePath + '.lua'];
           }
-          let code = LUA_MODULES[filePath];
+          // Try standard dot-to-slash conversion
+          if (!code) {
+            let filePath = modulePath;
+            if (!filePath.endsWith('.lua')) {
+              filePath = modulePath.replace(/[.]/g, '/') + '.lua';
+            }
+            code = LUA_MODULES[filePath];
+          }
           // Fallback to init.lua if direct file not found (standard Lua behavior)
           if (!code && !modulePath.endsWith('.lua')) {
             const initPath = modulePath.replace(/[.]/g, '/') + '/init.lua';
@@ -616,11 +624,19 @@ export class HtmlGenerator {
 
         // Set up custom require to load from embedded modules
         engine.global.set('__load_module', (modulePath) => {
-          let filePath = modulePath;
-          if (!filePath.endsWith('.lua')) {
-            filePath = modulePath.replace(/[.]/g, '/') + '.lua';
+          let code;
+          // Try literal dots preserved first (compound extensions like .ansi.lua)
+          if (!modulePath.endsWith('.lua') && modulePath.includes('.')) {
+            code = LUA_MODULES[modulePath + '.lua'];
           }
-          let code = LUA_MODULES[filePath];
+          // Try standard dot-to-slash conversion
+          if (!code) {
+            let filePath = modulePath;
+            if (!filePath.endsWith('.lua')) {
+              filePath = modulePath.replace(/[.]/g, '/') + '.lua';
+            }
+            code = LUA_MODULES[filePath];
+          }
           // Fallback to init.lua if direct file not found (standard Lua behavior)
           if (!code && !modulePath.endsWith('.lua')) {
             const initPath = modulePath.replace(/[.]/g, '/') + '/init.lua';

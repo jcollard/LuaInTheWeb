@@ -495,14 +495,18 @@ export class LuaEngineFactory {
           // Convert module name to relative path
           // Support both "lib/utils" and "lib.utils" formats
           const modulePath = moduleName.replace(/\./g, '/')
+          const hasLiteralDots = moduleName.includes('.')
 
           // 1. Search CWD first (standard Lua ./?.lua behavior)
           if (cwdDir !== null) {
+            // Try literal dots preserved first (compound extensions like .ansi.lua)
+            if (hasLiteralDots && tryPath(joinPath(cwdDir, moduleName + '.lua'))) return true
             if (tryDirectory(cwdDir, modulePath)) return true
           }
 
           // 2. Fall back to root if different from CWD
           if (cwdDir !== '/') {
+            if (hasLiteralDots && tryPath(joinPath('/', moduleName + '.lua'))) return true
             if (tryDirectory('/', modulePath)) return true
           }
 

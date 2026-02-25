@@ -92,12 +92,17 @@ export function resolveModulePath(
   // Support both "lib/utils" and "lib.utils" formats
   const modulePath = moduleName.replace(/\./g, '/')
 
-  // Helper to try both .lua and /init.lua variants in a directory
+  // Helper to try all resolution variants in a directory
   const tryDirectory = (dir: string): string | null => {
-    // Try dir/module.lua
+    // Try literal dots preserved: foo.bar.lua (compound extension like .ansi.lua)
+    if (moduleName.includes('.')) {
+      const literalPath = joinPath(dir, moduleName + '.lua')
+      if (fileExists(literalPath)) return literalPath
+    }
+    // Try standard dot-to-slash: foo/bar.lua
     const luaPath = joinPath(dir, modulePath + '.lua')
     if (fileExists(luaPath)) return luaPath
-    // Try dir/module/init.lua
+    // Try init.lua: foo/bar/init.lua
     const initPath = joinPath(dir, modulePath, 'init.lua')
     if (fileExists(initPath)) return initPath
     return null
