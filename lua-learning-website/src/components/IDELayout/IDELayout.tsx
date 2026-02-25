@@ -29,6 +29,7 @@ import { useEditorExtensions } from '../../hooks/useEditorExtensions'
 import { useCloneProject } from '../../hooks/useCloneProject'
 import { createFileSystemAdapter } from '../../hooks/compositeFileSystemAdapter'
 import { initFormatter, formatLuaCode } from '../../utils/luaFormatter'
+import { downloadSingleFile, downloadDirectoryAsZip } from '../../utils/downloadHelper'
 import type { Workspace } from '../../hooks/workspaceTypes'
 import type { IFileSystem, ScreenMode } from '@lua-learning/shell-core'
 import styles from './IDELayout.module.css'
@@ -748,6 +749,24 @@ function IDELayoutInner({
     showError,
   })
 
+  // Download handlers for context menu
+  const handleDownloadFile = useCallback(async (path: string) => {
+    try {
+      await downloadSingleFile(compositeFileSystem, path)
+    } catch (err) {
+      showError(`Download failed: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }, [compositeFileSystem, showError])
+
+  const handleDownloadAsZip = useCallback(async (path: string) => {
+    try {
+      const zipName = path.split('/').filter(Boolean).pop() || 'download'
+      await downloadDirectoryAsZip(compositeFileSystem, path, zipName)
+    } catch (err) {
+      showError(`Download failed: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }, [compositeFileSystem, showError])
+
   // Explorer props for FileExplorer
   const explorerProps = createExplorerProps({
     fileTree, activeTab, pendingNewFilePath, pendingNewFolderPath,
@@ -760,6 +779,8 @@ function IDELayoutInner({
     refreshFileTree, supportsRefresh, handleReconnectWorkspace, handleDisconnectWorkspace,
     handleRenameWorkspace, isFolderAlreadyMounted, getUniqueWorkspaceName,
     handleCloneProject,
+    onDownloadFile: handleDownloadFile,
+    onDownloadAsZip: handleDownloadAsZip,
   })
 
   // Tab bar props for EditorPanel (only when tabs exist)
