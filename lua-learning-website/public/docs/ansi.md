@@ -10,23 +10,35 @@ local ansi = require("ansi")
 
 Load and display `.ansi.lua` images created with the ANSI Graphics Editor.
 
+### `ansi.load_screen(path)`
+
+Load an `.ansi.lua` file by path and return a screen object. This is the recommended way to load ANSI screen files.
+
+- **path** — File path to the `.ansi.lua` file (relative to project or absolute)
+- **Returns** — A screen object with layer control methods
+
+```lua
+local screen = ansi.load_screen("my_image.ansi.lua")
+```
+
+Relative paths are resolved from the current working directory, with a fallback to the project root.
+
 ### `ansi.create_screen(data)`
 
-Parse and composite an `.ansi.lua` file into a screen object with layer control methods.
+Create a screen from a data table programmatically. Use this when building screen data in code rather than loading from a file.
 
-- **data** — The data table from a `.ansi.lua` file (loaded via `require` or `dofile`)
+- **data** — A table matching the `.ansi.lua` file format (version, grid/layers)
 - **Returns** — A screen object (also accepted by `ansi.set_screen()`)
 
 ```lua
-local image_data = require("my_image.ansi")
-local screen = ansi.create_screen(image_data)
+local screen = ansi.create_screen({ version = 1, width = 80, height = 25, grid = my_grid })
 ```
 
 ### `ansi.set_screen(screen)`
 
 Set the active background screen. When active, the screen is rendered each frame before `tick()` runs. Use `ansi.print()` to draw on top.
 
-- **screen** — Screen object from `create_screen()`, a numeric screen ID, or `nil` to clear
+- **screen** — Screen object from `load_screen()` or `create_screen()`, a numeric screen ID, or `nil` to clear
 
 ```lua
 ansi.set_screen(screen)   -- display background
@@ -38,9 +50,8 @@ ansi.set_screen(nil)      -- clear background
 ```lua
 local ansi = require("ansi")
 
--- Load the image data
-local data = require("my_art.ansi")
-local screen = ansi.create_screen(data)
+-- Load an ANSI screen file
+local screen = ansi.load_screen("my_art.ansi.lua")
 
 -- Display it
 ansi.set_screen(screen)
@@ -111,8 +122,7 @@ screen:layer_toggle("Background")  -- toggle visibility
 ```lua
 local ansi = require("ansi")
 
-local data = require("my_scene.ansi")
-local screen = ansi.create_screen(data)
+local screen = ansi.load_screen("my_scene.ansi.lua")
 ansi.set_screen(screen)
 
 ansi.tick(function()
@@ -169,8 +179,7 @@ end
 ```lua
 local ansi = require("ansi")
 
-local data = require("my_animation.ansi")
-local screen = ansi.create_screen(data)
+local screen = ansi.load_screen("my_animation.ansi.lua")
 ansi.set_screen(screen)  -- auto-plays if animated
 
 ansi.tick(function()
@@ -193,7 +202,8 @@ ansi.start()
 
 | Function | Description |
 |----------|-------------|
-| `ansi.create_screen(data)` | Parse `.ansi.lua` data into a screen object |
+| `ansi.load_screen(path)` | Load `.ansi.lua` file into a screen object |
+| `ansi.create_screen(data)` | Create screen from a data table |
 | `ansi.set_screen(screen)` | Set background screen (`nil` to clear) |
 | `screen:get_layers()` | Get layer info (id, name, type, visible, tags) |
 | `screen:layer_on(id)` | Show layer(s) by ID, name, or tag |

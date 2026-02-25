@@ -7,7 +7,7 @@ local ansi = require("ansi")
 
 -- Build a simple gradient image as a V1 format data table.
 -- In real usage, you would load a .ansi.lua file:
---   local data = require("my_art.ansi")
+--   local screen = ansi.load_screen("my_art.ansi.lua")
 local grid = {}
 for row = 1, 25 do
   grid[row] = {}
