@@ -1090,10 +1090,6 @@ var CanvasInline = (() => {
       if #key == 1 and key:match('%a') then
         return 'Key' .. key:upper()
       end
-      -- Single digit keys: '1' -> 'Digit1'
-      if #key == 1 and key:match('%d') then
-        return 'Digit' .. key
-      end
       -- Arrow keys
       local arrows = { up = 'ArrowUp', down = 'ArrowDown', left = 'ArrowLeft', right = 'ArrowRight' }
       if arrows[key:lower()] then
@@ -1381,26 +1377,6 @@ var CanvasInline = (() => {
 
     function _canvas.is_muted()
       return __audio_isMuted()
-    end
-
-    -- ========================================================================
-    -- Start Screen API (for exported games with audio)
-    -- ========================================================================
-
-    --- Set a custom start screen callback.
-    --- When audio is pending (AudioContext suspended), this callback is called
-    --- instead of the normal tick callback until the user clicks to enable audio.
-    --- If no callback is set, a default "Click to Start" overlay is shown.
-    ---@param callback function|nil The callback to render the start screen, or nil to use default
-    function _canvas.set_start_screen(callback)
-      __canvas_setStartScreen(callback)
-    end
-
-    --- Check if the canvas is waiting for user interaction.
-    --- Returns true if audio is pending and the user hasn't clicked yet.
-    ---@return boolean
-    function _canvas.is_waiting_for_interaction()
-      return __canvas_isWaitingForInteraction()
     end
 
     -- ========================================================================

@@ -461,13 +461,22 @@ export class AnsiController {
   // --- Layer Visibility API ---
 
   /**
-   * Get layer information for a screen.
+   * Validate that a screen exists and return its layers.
+   * @throws Error if the screen ID is not found.
    */
-  getScreenLayers(id: number): LayerInfo[] {
+  private validateScreenExists(id: number): LayerData[] {
     const layers = this.screenLayers.get(id)
     if (!layers) {
       throw new Error(`Screen ID ${id} not found. Create a screen first with ansi.create_screen().`)
     }
+    return layers
+  }
+
+  /**
+   * Get layer information for a screen.
+   */
+  getScreenLayers(id: number): LayerInfo[] {
+    const layers = this.validateScreenExists(id)
     return layers.map(layer => ({
       id: layer.id,
       name: layer.name,
@@ -481,10 +490,7 @@ export class AnsiController {
    * Set layer visibility by identifier (ID, name, or tag) and re-composite.
    */
   setScreenLayerVisible(id: number, identifier: string, visible: boolean): void {
-    const layers = this.screenLayers.get(id)
-    if (!layers) {
-      throw new Error(`Screen ID ${id} not found. Create a screen first with ansi.create_screen().`)
-    }
+    const layers = this.validateScreenExists(id)
     const matched = this.resolveLayersByIdentifier(layers, identifier)
     if (matched.length === 0) {
       throw new Error(`No layers match identifier "${identifier}" in screen ${id}.`)
@@ -499,10 +505,7 @@ export class AnsiController {
    * Toggle layer visibility by identifier (ID, name, or tag) and re-composite.
    */
   toggleScreenLayer(id: number, identifier: string): void {
-    const layers = this.screenLayers.get(id)
-    if (!layers) {
-      throw new Error(`Screen ID ${id} not found. Create a screen first with ansi.create_screen().`)
-    }
+    const layers = this.validateScreenExists(id)
     const matched = this.resolveLayersByIdentifier(layers, identifier)
     if (matched.length === 0) {
       throw new Error(`No layers match identifier "${identifier}" in screen ${id}.`)
@@ -517,6 +520,10 @@ export class AnsiController {
    * Resolve layers by identifier: first try exact ID match, then name match, then tag match.
    */
   private resolveLayersByIdentifier(layers: LayerData[], identifier: string): LayerData[] {
+    if (identifier === '') {
+      throw new Error('Layer identifier must not be empty.')
+    }
+
     // Try exact ID match
     const byId = layers.filter(l => l.id === identifier)
     if (byId.length > 0) return byId
@@ -536,9 +543,7 @@ export class AnsiController {
    * Start or resume animation playback for a screen.
    */
   screenPlay(id: number): void {
-    if (!this.screenLayers.has(id)) {
-      throw new Error(`Screen ID ${id} not found. Create a screen first with ansi.create_screen().`)
-    }
+    this.validateScreenExists(id)
     this.screenPlaying.set(id, true)
   }
 
@@ -546,9 +551,7 @@ export class AnsiController {
    * Pause animation playback for a screen.
    */
   screenPause(id: number): void {
-    if (!this.screenLayers.has(id)) {
-      throw new Error(`Screen ID ${id} not found. Create a screen first with ansi.create_screen().`)
-    }
+    this.validateScreenExists(id)
     this.screenPlaying.set(id, false)
     // Clear schedule so it re-initializes on next play
     this.screenSchedules.delete(id)

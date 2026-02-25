@@ -83,6 +83,8 @@ const mockMainChannel = {
   // Start screen methods
   isWaitingForInteraction: vi.fn(() => false),
   setWaitingForInteraction: vi.fn(),
+  hasCustomStartScreen: vi.fn(() => false),
+  setHasCustomStartScreen: vi.fn(),
 };
 
 // Mock channelFactory - using a configurable mock that can switch modes
