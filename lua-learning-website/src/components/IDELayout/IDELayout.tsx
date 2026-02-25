@@ -26,6 +26,7 @@ import { useCanvasWindowManager } from '../../hooks/useCanvasWindowManager'
 import { useWindowFocusRefresh } from '../../hooks/useWindowFocusRefresh'
 import { useWorkspaceManager } from '../../hooks/useWorkspaceManager'
 import { useEditorExtensions } from '../../hooks/useEditorExtensions'
+import { useCloneProject } from '../../hooks/useCloneProject'
 import { createFileSystemAdapter } from '../../hooks/compositeFileSystemAdapter'
 import { initFormatter, formatLuaCode } from '../../utils/luaFormatter'
 import type { Workspace } from '../../hooks/workspaceTypes'
@@ -738,64 +739,13 @@ function IDELayoutInner({
     }, 0)
   }, [code, setCode, showError])
 
-  // Clone a project from the projects workspace into a new editable workspace
-  const handleCloneProject = useCallback(
-    async (projectPath: string, workspaceName: string, type: 'virtual' | 'local', handle?: FileSystemDirectoryHandle) => {
-      try {
-        // Create the new workspace
-        let newWorkspace: Workspace
-        if (type === 'local' && handle) {
-          newWorkspace = await addLocalWorkspace(workspaceName, handle)
-        } else {
-          newWorkspace = await addVirtualWorkspace(workspaceName)
-        }
-
-        // Copy files from project subfolder directly to the new workspace's filesystem.
-        // We read from compositeFileSystem (source — projects mount exists) but write
-        // directly to newWorkspace.filesystem to avoid the stale-closure issue where
-        // compositeFileSystem doesn't yet include the newly created workspace mount.
-        const sourceFs = compositeFileSystem
-        const targetFs = newWorkspace.filesystem
-
-        // Duck-type binary support on source and target independently
-        const sourceBinary = sourceFs as IFileSystem & {
-          isBinaryFile?: (path: string) => boolean
-          readBinaryFile?: (path: string) => Uint8Array
-        }
-        const targetBinary = targetFs as IFileSystem & {
-          writeBinaryFile?: (path: string, content: Uint8Array) => void
-        }
-
-        const copyRecursive = (sourcePath: string, targetRelPath: string) => {
-          const entries = sourceFs.listDirectory(sourcePath)
-          for (const entry of entries) {
-            const entryRelPath = `${targetRelPath}/${entry.name}`
-            if (entry.type === 'directory') {
-              targetFs.createDirectory(entryRelPath)
-              copyRecursive(entry.path, entryRelPath)
-            } else if (
-              typeof sourceBinary.isBinaryFile === 'function' &&
-              sourceBinary.isBinaryFile(entry.path) &&
-              typeof sourceBinary.readBinaryFile === 'function' &&
-              typeof targetBinary.writeBinaryFile === 'function'
-            ) {
-              const content = sourceBinary.readBinaryFile(entry.path)
-              targetBinary.writeBinaryFile(entryRelPath, content)
-            } else {
-              const content = sourceFs.readFile(entry.path)
-              targetFs.writeFile(entryRelPath, content)
-            }
-          }
-        }
-
-        copyRecursive(projectPath, '')
-        refreshFileTree()
-      } catch (err) {
-        console.error('Failed to clone project:', err)
-      }
-    },
-    [compositeFileSystem, addVirtualWorkspace, addLocalWorkspace, refreshFileTree]
-  )
+  const { handleCloneProject } = useCloneProject({
+    compositeFileSystem,
+    addVirtualWorkspace,
+    addLocalWorkspace,
+    refreshFileTree,
+    showError,
+  })
 
   // Explorer props for FileExplorer
   const explorerProps = createExplorerProps({

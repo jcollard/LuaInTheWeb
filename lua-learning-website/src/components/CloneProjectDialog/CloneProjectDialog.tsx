@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useId, useCallback, type KeyboardEvent, type FormEvent } from 'react'
-import type { CloneProjectDialogProps, CloneTargetType } from './types'
+import { useRef, useId, useEffect } from 'react'
+import type { CloneProjectDialogProps } from './types'
+import { useCloneProjectForm } from './useCloneProjectForm'
 import styles from './CloneProjectDialog.module.css'
 
 export function CloneProjectDialog({
@@ -11,101 +12,36 @@ export function CloneProjectDialog({
   isFolderAlreadyMounted,
   getUniqueWorkspaceName,
 }: CloneProjectDialogProps) {
-  const defaultType: CloneTargetType = isFileSystemAccessSupported ? 'local' : 'virtual'
-  const [cloneType, setCloneType] = useState<CloneTargetType>(defaultType)
-  const [workspaceName, setWorkspaceName] = useState('')
-  const [selectedHandle, setSelectedHandle] = useState<FileSystemDirectoryHandle | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [isSelectingFolder, setIsSelectingFolder] = useState(false)
   const cancelButtonRef = useRef<HTMLButtonElement>(null)
   const titleId = useId()
 
-  // Reset form when dialog opens
+  const {
+    cloneType,
+    workspaceName,
+    selectedHandle,
+    error,
+    isSelectingFolder,
+    isFormValid,
+    setWorkspaceName,
+    handleSelectFolder,
+    handleSubmit,
+    handleKeyDown,
+    handleTypeChange,
+  } = useCloneProjectForm({
+    isOpen,
+    projectName,
+    isFileSystemAccessSupported,
+    onClone,
+    onCancel,
+    isFolderAlreadyMounted,
+    getUniqueWorkspaceName,
+  })
+
   useEffect(() => {
     if (isOpen) {
-      const type = isFileSystemAccessSupported ? 'local' : 'virtual'
-      setCloneType(type)
-      const uniqueName = getUniqueWorkspaceName
-        ? getUniqueWorkspaceName(projectName)
-        : projectName
-      setWorkspaceName(uniqueName)
-      setSelectedHandle(null)
-      setError(null)
-      setIsSelectingFolder(false)
       cancelButtonRef.current?.focus()
     }
-  }, [isOpen, projectName, isFileSystemAccessSupported, getUniqueWorkspaceName])
-
-  const isFormValid = cloneType === 'virtual'
-    ? workspaceName.trim().length > 0
-    : selectedHandle !== null && workspaceName.trim().length > 0
-
-  const handleSelectFolder = useCallback(async () => {
-    setError(null)
-    setIsSelectingFolder(true)
-
-    try {
-      const handle = await window.showDirectoryPicker({
-        mode: 'readwrite',
-      })
-
-      if (isFolderAlreadyMounted) {
-        const isDuplicate = await isFolderAlreadyMounted(handle)
-        if (isDuplicate) {
-          setError('This folder is already mounted as a workspace.')
-          setIsSelectingFolder(false)
-          return
-        }
-      }
-
-      setSelectedHandle(handle)
-
-      const baseName = handle.name
-      const uniqueName = getUniqueWorkspaceName
-        ? getUniqueWorkspaceName(baseName)
-        : baseName
-      setWorkspaceName(uniqueName)
-    } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
-        setError('Failed to select folder. Please try again.')
-      }
-    } finally {
-      setIsSelectingFolder(false)
-    }
-  }, [isFolderAlreadyMounted, getUniqueWorkspaceName])
-
-  const handleSubmit = useCallback(
-    (event?: FormEvent) => {
-      event?.preventDefault()
-      if (!isFormValid) return
-
-      const trimmedName = workspaceName.trim()
-      if (cloneType === 'virtual') {
-        onClone(trimmedName, 'virtual')
-      } else if (selectedHandle) {
-        onClone(trimmedName, 'local', selectedHandle)
-      }
-    },
-    [cloneType, workspaceName, selectedHandle, isFormValid, onClone]
-  )
-
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        onCancel()
-      }
-    },
-    [onCancel]
-  )
-
-  const handleTypeChange = useCallback((type: CloneTargetType) => {
-    setCloneType(type)
-    if (type === 'virtual') {
-      setSelectedHandle(null)
-    }
-    setError(null)
-  }, [])
+  }, [isOpen])
 
   if (!isOpen) {
     return null

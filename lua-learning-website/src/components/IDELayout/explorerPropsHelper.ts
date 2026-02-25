@@ -5,6 +5,7 @@
 import type { TreeNode } from '../../hooks/useFileSystem'
 import type { Workspace } from '../../hooks/workspaceTypes'
 import { isBinaryExtension } from '../../utils/binaryExtensions'
+import { isHtmlFile } from '../FileExplorer/treeUtils'
 
 export interface ExplorerPropsParams {
   fileTree: TreeNode[]
@@ -71,14 +72,6 @@ function isMarkdownFile(path: string): boolean {
  */
 function isAnsiArtFile(path: string): boolean {
   return path.toLowerCase().endsWith('.ansi.lua')
-}
-
-/**
- * Check if a path is an HTML file
- */
-function isHtmlFile(path: string): boolean {
-  const lower = path.toLowerCase()
-  return lower.endsWith('.html') || lower.endsWith('.htm')
 }
 
 export function createExplorerProps(params: ExplorerPropsParams) {

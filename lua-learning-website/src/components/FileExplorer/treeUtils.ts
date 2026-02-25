@@ -182,10 +182,7 @@ export function isHtmlFile(path: string): boolean {
  */
 export function isInReadOnlyWorkspace(
   tree: TreeNode[],
-  path: string,
-  _isLibraryWorkspaceCheck: (path: string) => boolean,
-  _isDocsWorkspaceCheck: (path: string) => boolean,
-  _isBookWorkspaceCheck: (path: string) => boolean
+  path: string
 ): boolean {
   // Check if path starts with a read-only workspace root
   const workspaceRoot = tree.find(node => path.startsWith(node.path))

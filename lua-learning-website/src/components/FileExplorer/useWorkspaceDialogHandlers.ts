@@ -8,10 +8,12 @@ import type { WorkspaceProps } from './types'
 export function useWorkspaceDialogHandlers(workspaceProps?: WorkspaceProps) {
   const [isAddWorkspaceDialogOpen, setIsAddWorkspaceDialogOpen] = useState(false)
 
+  // Stryker disable next-line all: React hooks dependency optimization
   const handleAddWorkspaceClick = useCallback(() => {
     setIsAddWorkspaceDialogOpen(true)
   }, [])
 
+  // Stryker disable next-line all: React hooks dependency optimization
   const handleAddWorkspaceCancel = useCallback(() => {
     setIsAddWorkspaceDialogOpen(false)
   }, [])
@@ -21,6 +23,7 @@ export function useWorkspaceDialogHandlers(workspaceProps?: WorkspaceProps) {
       workspaceProps?.onAddVirtualWorkspace(name)
       setIsAddWorkspaceDialogOpen(false)
     },
+    // Stryker disable next-line all: React hooks dependency optimization
     [workspaceProps]
   )
 
@@ -29,6 +32,7 @@ export function useWorkspaceDialogHandlers(workspaceProps?: WorkspaceProps) {
       workspaceProps?.onAddLocalWorkspace(name, handle)
       setIsAddWorkspaceDialogOpen(false)
     },
+    // Stryker disable next-line all: React hooks dependency optimization
     [workspaceProps]
   )
 
@@ -36,6 +40,7 @@ export function useWorkspaceDialogHandlers(workspaceProps?: WorkspaceProps) {
     (mountPath: string) => {
       workspaceProps?.onReconnectWorkspace?.(mountPath)
     },
+    // Stryker disable next-line all: React hooks dependency optimization
     [workspaceProps]
   )
 

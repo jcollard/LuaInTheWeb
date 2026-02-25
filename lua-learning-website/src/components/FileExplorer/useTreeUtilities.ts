@@ -80,8 +80,8 @@ export function useTreeUtilities(tree: TreeNode[]): UseTreeUtilitiesReturn {
     [tree]
   )
   const isInReadOnlyWorkspace = useMemo(
-    () => (path: string) => isInReadOnlyWorkspaceUtil(tree, path, isLibraryWorkspace, isDocsWorkspace, isBookWorkspace),
-    [tree, isLibraryWorkspace, isDocsWorkspace, isBookWorkspace]
+    () => (path: string) => isInReadOnlyWorkspaceUtil(tree, path),
+    [tree]
   )
 
   return {

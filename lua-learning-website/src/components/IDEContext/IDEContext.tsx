@@ -230,7 +230,7 @@ export function IDEContextProvider({ children, initialCode: _initialCode = '', f
       const blob = new Blob([content], { type: 'text/html' })
       const url = URL.createObjectURL(blob)
       window.open(url, '_blank')
-      setTimeout(() => URL.revokeObjectURL(url), 5000)
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
     }
   }, [filesystem])
 

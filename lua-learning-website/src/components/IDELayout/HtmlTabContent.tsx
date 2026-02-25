@@ -14,11 +14,11 @@ interface HtmlTabContentProps {
  */
 export function HtmlTabContent({ content, tabBarProps }: HtmlTabContentProps) {
   return (
-    <div className={styles.markdownContainer}>
+    <div className={styles.previewContainer}>
       <div className={styles.toolbar}>
         {tabBarProps && <TabBar {...tabBarProps} />}
       </div>
-      <HtmlViewer content={content} className={styles.markdownContent} />
+      <HtmlViewer content={content} className={styles.previewContent} />
     </div>
   )
 }

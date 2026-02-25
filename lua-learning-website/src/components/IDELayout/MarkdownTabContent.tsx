@@ -35,13 +35,13 @@ export function MarkdownTabContent({ code, tabBarProps, currentFilePath, onOpenM
   }, [onOpenMarkdown])
 
   return (
-    <div className={styles.markdownContainer}>
+    <div className={styles.previewContainer}>
       <div className={styles.toolbar}>
         {tabBarProps && <TabBar {...tabBarProps} />}
       </div>
       <MarkdownViewer
         content={code}
-        className={styles.markdownContent}
+        className={styles.previewContent}
         basePath={basePath}
         onLinkClick={handleLinkClick}
         filePath={currentFilePath ?? undefined}
