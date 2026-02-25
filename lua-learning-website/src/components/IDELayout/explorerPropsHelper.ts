@@ -37,6 +37,7 @@ export interface ExplorerPropsParams {
   openHtmlInBrowser: (path: string) => void
   // Shell integration
   handleCdToLocation?: (path: string) => void
+  handleRunLuaFile?: (path: string) => void
   // File upload
   uploadFiles?: (files: FileList, targetFolderPath: string) => Promise<void>
   // Folder upload
@@ -133,6 +134,7 @@ export function createExplorerProps(params: ExplorerPropsParams) {
     onEditHtml: params.openFile,
     onOpenHtmlInBrowser: params.openHtmlInBrowser,
     onCdToLocation: params.handleCdToLocation,
+    onRunLuaFile: params.handleRunLuaFile,
     onUploadFiles: params.uploadFiles,
     onUploadFolder: params.uploadFolder,
     onCloneProject: params.handleCloneProject,

@@ -178,6 +178,13 @@ export function isHtmlFile(path: string): boolean {
 }
 
 /**
+ * Check if a path is a Lua file (.lua extension).
+ */
+export function isLuaFile(path: string): boolean {
+  return path.toLowerCase().endsWith('.lua')
+}
+
+/**
  * Check if a path is in a read-only workspace (library, docs, book, examples, or projects).
  */
 export function isInReadOnlyWorkspace(

@@ -63,6 +63,8 @@ export interface FileExplorerProps {
   onOpenHtmlInBrowser?: (path: string) => void
   /** Open a folder/workspace in terminal (cd to location) */
   onCdToLocation?: (path: string) => void
+  /** Run a Lua file (cd to directory + lua filename) */
+  onRunLuaFile?: (path: string) => void
   /** Upload files to a folder */
   onUploadFiles?: (files: FileList, targetFolderPath: string) => void
   /** Upload folder (directory with files) to a target folder */

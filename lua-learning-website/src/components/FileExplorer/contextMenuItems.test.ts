@@ -3,6 +3,7 @@ import {
   folderContextMenuItems,
   workspaceContextMenuItems,
   buildConnectedWorkspaceMenuItems,
+  luaFileContextMenuItems,
 } from './contextMenuItems'
 
 describe('contextMenuItems', () => {
@@ -24,6 +25,21 @@ describe('contextMenuItems', () => {
       const uploadItem = items.find((item) => item.id === 'upload-files')
       expect(uploadItem).toBeDefined()
       expect(uploadItem?.label).toBe('Upload Files...')
+    })
+  })
+
+  describe('luaFileContextMenuItems', () => {
+    it('should include run-lua option as the first item', () => {
+      const runItem = luaFileContextMenuItems[0]
+      expect(runItem.id).toBe('run-lua')
+      expect(runItem.label).toBe('Run')
+    })
+
+    it('should include rename and delete after a divider', () => {
+      const ids = luaFileContextMenuItems.map((item) => item.id)
+      expect(ids).toContain('divider-lua')
+      expect(ids).toContain('rename')
+      expect(ids).toContain('delete')
     })
   })
 })

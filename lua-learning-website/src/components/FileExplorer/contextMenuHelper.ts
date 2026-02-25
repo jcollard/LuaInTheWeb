@@ -6,6 +6,7 @@ import {
   readOnlyMarkdownFileContextMenuItems,
   htmlFileContextMenuItems,
   readOnlyHtmlFileContextMenuItems,
+  luaFileContextMenuItems,
   folderContextMenuItems,
   workspaceContextMenuItems,
   libraryWorkspaceContextMenuItems,
@@ -16,7 +17,7 @@ import {
   projectSubfolderContextMenuItems,
   buildConnectedWorkspaceMenuItems,
 } from './contextMenuItems'
-import { isMarkdownFile, isHtmlFile } from './treeUtils'
+import { isMarkdownFile, isHtmlFile, isLuaFile } from './treeUtils'
 
 interface GetContextMenuItemsParams {
   contextMenu: ContextMenuState
@@ -71,6 +72,10 @@ export function getContextMenuItems(params: GetContextMenuItemsParams): ContextM
     // Check if it's a markdown file
     if (targetPath && isMarkdownFile(targetPath)) {
       return markdownFileContextMenuItems
+    }
+    // Check if it's a Lua file
+    if (targetPath && isLuaFile(targetPath)) {
+      return luaFileContextMenuItems
     }
     return fileContextMenuItems
   }

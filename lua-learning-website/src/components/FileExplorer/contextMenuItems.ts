@@ -36,6 +36,13 @@ export const readOnlyHtmlFileContextMenuItems: ContextMenuItem[] = [
   { id: 'edit-html', label: 'Edit HTML' },
 ]
 
+export const luaFileContextMenuItems: ContextMenuItem[] = [
+  { id: 'run-lua', label: 'Run' },
+  { id: 'divider-lua', type: 'divider' },
+  { id: 'rename', label: 'Rename' },
+  { id: 'delete', label: 'Delete' },
+]
+
 export const folderContextMenuItems: ContextMenuItem[] = [
   { id: 'new-file', label: 'New File' },
   { id: 'new-folder', label: 'New Folder' },
