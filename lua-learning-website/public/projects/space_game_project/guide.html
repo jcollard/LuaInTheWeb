@@ -475,7 +475,23 @@ canvas.assets.load_image("ship", "blue_ship.png")</code></pre>
 
     <!-- Step 2 (CHALLENGE) -->
     <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 2: Add UP movement</div>
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 2: Draw the ship</div>
+        <div class="step-location">Where: DRAW section, between the background rectangle and the HUD</div>
+        <div class="step-task">Use <code>canvas.draw_image()</code> to draw the ship image at its current position and size.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>The <code>canvas.draw_image()</code> function needs 5 arguments: the image name, x, y, width, and height.</div>
+            <div class="hint" hidden>Use the string <code>"ship"</code> (the name you gave it when loading) and the ship position/size variables: <code>ship_x</code>, <code>ship_y</code>, <code>ship_w</code>, <code>ship_h</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">canvas.draw_image("ship", ship_x, ship_y, ship_w, ship_h)</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 3 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 3: Add UP movement</div>
         <div class="step-location">Where: USER INPUT section, after the RIGHT movement <code>if</code> block</div>
         <div class="step-task">Add an <code>if</code> block that checks for the UP arrow key. When UP is held, subtract <code>ship_speed * dt</code> from <code>ship_y</code>.</div>
         <div class="hints-container">
@@ -491,9 +507,9 @@ end</code></pre>
         <button class="btn-solution" hidden>Show Solution</button>
     </div>
 
-    <!-- Step 3 (CHALLENGE) -->
+    <!-- Step 4 (CHALLENGE) -->
     <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 3: Add DOWN movement</div>
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 4: Add DOWN movement</div>
         <div class="step-location">Where: USER INPUT section, right after your UP movement code</div>
         <div class="step-task">Add another <code>if</code> block for the DOWN arrow key. This one should <strong>add</strong> <code>ship_speed * dt</code> to <code>ship_y</code>.</div>
         <div class="hints-container">
@@ -505,22 +521,6 @@ end</code></pre>
             <pre class="code-block"><code class="lua">if canvas.is_key_down(canvas.keys.DOWN) then
     ship_y = ship_y + ship_speed * dt
 end</code></pre>
-        </div>
-        <button class="btn-solution" hidden>Show Solution</button>
-    </div>
-
-    <!-- Step 4 (CHALLENGE) -->
-    <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 4: Draw the ship</div>
-        <div class="step-location">Where: DRAW section, between the background rectangle and the HUD</div>
-        <div class="step-task">Use <code>canvas.draw_image()</code> to draw the ship image at its current position and size.</div>
-        <div class="hints-container">
-            <div class="hint" hidden>The <code>canvas.draw_image()</code> function needs 5 arguments: the image name, x, y, width, and height.</div>
-            <div class="hint" hidden>Use the string <code>"ship"</code> (the name you gave it when loading) and the ship position/size variables: <code>ship_x</code>, <code>ship_y</code>, <code>ship_w</code>, <code>ship_h</code>.</div>
-        </div>
-        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
-        <div class="solution" hidden>
-            <pre class="code-block"><code class="lua">canvas.draw_image("ship", ship_x, ship_y, ship_w, ship_h)</code></pre>
         </div>
         <button class="btn-solution" hidden>Show Solution</button>
     </div>
@@ -670,7 +670,26 @@ local laser_active = false</code></pre>
 
     <!-- Step 3 (CHALLENGE) -->
     <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 3: Fire the laser on SPACE</div>
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 3: Draw the laser</div>
+        <div class="step-location">Where: DRAW section, <strong>before</strong> the ship drawing line (so the laser appears behind the ship)</div>
+        <div class="step-task">If the laser is active, draw the <code>"laser"</code> image at <code>laser_x</code>, <code>laser_y</code> with size <code>laser_w</code> by <code>laser_h</code>.</div>
+        <div class="step-note">Note: The laser starts inactive (<code>laser_active = false</code>), so it won't be visible on screen until you complete the firing step.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Only draw the laser when <code>laser_active</code> is true. Use the same <code>canvas.draw_image()</code> pattern you used for the ship.</div>
+            <div class="hint" hidden>The image name is <code>"laser"</code>, and the position/size variables are <code>laser_x</code>, <code>laser_y</code>, <code>laser_w</code>, <code>laser_h</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">if laser_active then
+    canvas.draw_image("laser", laser_x, laser_y, laser_w, laser_h)
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 4 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 4: Fire the laser on SPACE</div>
         <div class="step-location">Where: USER INPUT section, after all the movement <code>if</code> blocks (before <code>end</code>)</div>
         <div class="step-task">When SPACE is pressed <strong>and</strong> the laser is not already active: set <code>laser_active</code> to <code>true</code>, center the laser on the ship, and position it at the ship's y.</div>
         <div class="hints-container">
@@ -689,9 +708,9 @@ end</code></pre>
         <button class="btn-solution" hidden>Show Solution</button>
     </div>
 
-    <!-- Step 4 (CHALLENGE) -->
+    <!-- Step 5 (CHALLENGE) -->
     <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 4: Move the laser upward</div>
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 5: Move the laser upward</div>
         <div class="step-location">Where: UPDATE section. First, add <code>local dt = canvas.get_delta()</code> at the very top of the function (before the clamp lines). Then add your laser movement code after the ship clamping lines.</div>
         <div class="step-task">If the laser is active, subtract <code>laser_speed * dt</code> from <code>laser_y</code> to move it upward.</div>
         <div class="hints-container">
@@ -711,9 +730,9 @@ end</code></pre>
         <button class="btn-solution" hidden>Show Solution</button>
     </div>
 
-    <!-- Step 5 (CHALLENGE) -->
+    <!-- Step 6 (CHALLENGE) -->
     <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 5: Deactivate the laser off-screen</div>
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 6: Deactivate the laser off-screen</div>
         <div class="step-location">Where: UPDATE section, right after your laser movement code</div>
         <div class="step-task">If the bottom of the laser (<code>laser_y + laser_h</code>) is less than <code>0</code>, set <code>laser_active</code> to <code>false</code>.</div>
         <div class="hints-container">
@@ -724,24 +743,6 @@ end</code></pre>
         <div class="solution" hidden>
             <pre class="code-block"><code class="lua">if laser_y + laser_h &lt; 0 then
     laser_active = false
-end</code></pre>
-        </div>
-        <button class="btn-solution" hidden>Show Solution</button>
-    </div>
-
-    <!-- Step 6 (CHALLENGE) -->
-    <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 6: Draw the laser</div>
-        <div class="step-location">Where: DRAW section, <strong>before</strong> the ship drawing line (so the laser appears behind the ship)</div>
-        <div class="step-task">If the laser is active, draw the <code>"laser"</code> image at <code>laser_x</code>, <code>laser_y</code> with size <code>laser_w</code> by <code>laser_h</code>.</div>
-        <div class="hints-container">
-            <div class="hint" hidden>Only draw the laser when <code>laser_active</code> is true. Use the same <code>canvas.draw_image()</code> pattern you used for the ship.</div>
-            <div class="hint" hidden>The image name is <code>"laser"</code>, and the position/size variables are <code>laser_x</code>, <code>laser_y</code>, <code>laser_w</code>, <code>laser_h</code>.</div>
-        </div>
-        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
-        <div class="solution" hidden>
-            <pre class="code-block"><code class="lua">if laser_active then
-    canvas.draw_image("laser", laser_x, laser_y, laser_w, laser_h)
 end</code></pre>
         </div>
         <button class="btn-solution" hidden>Show Solution</button>
@@ -928,7 +929,25 @@ local meteor_speed = 150</code></pre>
 
     <!-- Step 3 (CHALLENGE) -->
     <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 3: Move the meteor downward</div>
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 3: Draw the meteor</div>
+        <div class="step-location">Where: DRAW section, after the laser drawing code and <strong>before</strong> the ship drawing line</div>
+        <div class="step-task">Draw the <code>"meteor"</code> image at <code>meteor_x</code>, <code>meteor_y</code> with size <code>meteor_w</code> by <code>meteor_h</code>.</div>
+        <div class="step-note">Note: The meteor starts above the screen (<code>y = -48</code>), so it won't appear until you add the downward movement in the next step.</div>
+        <div class="step-note">Unlike the laser, the meteor is always visible &mdash; no <code>if</code> check needed.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>The meteor is always on screen (it respawns immediately), so just call <code>canvas.draw_image()</code> directly &mdash; no <code>if</code> needed.</div>
+            <div class="hint" hidden>Use <code>canvas.draw_image("meteor", meteor_x, meteor_y, meteor_w, meteor_h)</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">canvas.draw_image("meteor", meteor_x, meteor_y, meteor_w, meteor_h)</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 4 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 4: Move the meteor downward</div>
         <div class="step-location">Where: UPDATE section, after the laser deactivation code</div>
         <div class="step-task">Add <code>meteor_speed * dt</code> to <code>meteor_y</code> each frame.</div>
         <div class="hints-container">
@@ -942,9 +961,9 @@ local meteor_speed = 150</code></pre>
         <button class="btn-solution" hidden>Show Solution</button>
     </div>
 
-    <!-- Step 4 (CHALLENGE) -->
+    <!-- Step 5 (CHALLENGE) -->
     <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 4: Respawn the meteor</div>
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 5: Respawn the meteor</div>
         <div class="step-location">Where: UPDATE section, right after the meteor movement line</div>
         <div class="step-task">If <code>meteor_y</code> is greater than <code>SCREEN_H</code> (the meteor went off the bottom), set <code>meteor_x</code> to a random position using <code>math.random(0, SCREEN_W - meteor_w)</code> and set <code>meteor_y</code> to <code>-meteor_h</code> (just above the screen).</div>
         <div class="hints-container">
@@ -957,23 +976,6 @@ local meteor_speed = 150</code></pre>
     meteor_x = math.random(0, SCREEN_W - meteor_w)
     meteor_y = -meteor_h
 end</code></pre>
-        </div>
-        <button class="btn-solution" hidden>Show Solution</button>
-    </div>
-
-    <!-- Step 5 (CHALLENGE) -->
-    <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 5: Draw the meteor</div>
-        <div class="step-location">Where: DRAW section, after the laser drawing code and <strong>before</strong> the ship drawing line</div>
-        <div class="step-task">Draw the <code>"meteor"</code> image at <code>meteor_x</code>, <code>meteor_y</code> with size <code>meteor_w</code> by <code>meteor_h</code>.</div>
-        <div class="step-note">Unlike the laser, the meteor is always visible &mdash; no <code>if</code> check needed.</div>
-        <div class="hints-container">
-            <div class="hint" hidden>The meteor is always on screen (it respawns immediately), so just call <code>canvas.draw_image()</code> directly &mdash; no <code>if</code> needed.</div>
-            <div class="hint" hidden>Use <code>canvas.draw_image("meteor", meteor_x, meteor_y, meteor_w, meteor_h)</code>.</div>
-        </div>
-        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
-        <div class="solution" hidden>
-            <pre class="code-block"><code class="lua">canvas.draw_image("meteor", meteor_x, meteor_y, meteor_w, meteor_h)</code></pre>
         </div>
         <button class="btn-solution" hidden>Show Solution</button>
     </div>
@@ -1540,7 +1542,25 @@ end</code></pre>
 
     <!-- Step 4 (CHALLENGE) -->
     <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 4: Write the spawn timer</div>
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 4: Replace meteor drawing</div>
+        <div class="step-location">Where: DRAW section. Find and delete the single <code>canvas.draw_image("meteor", ...)</code> line. Write a loop in its place.</div>
+        <div class="step-task">Use a <strong>forward loop</strong> with <code>ipairs</code> to draw every meteor in the list.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Use <code>for i, meteor in ipairs(meteors) do</code> to loop through the list. Each <code>meteor</code> has <code>.x</code> and <code>.y</code> fields.</div>
+            <div class="hint" hidden>Inside the loop: <code>canvas.draw_image("meteor", meteor.x, meteor.y, meteor_w, meteor_h)</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">for i, meteor in ipairs(meteors) do
+    canvas.draw_image("meteor", meteor.x, meteor.y, meteor_w, meteor_h)
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 5 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 5: Write the spawn timer</div>
         <div class="step-location">Where: UPDATE section, after the laser deactivation code (where you just deleted the old code)</div>
         <div class="step-task">Each frame: add <code>dt</code> to <code>spawn_timer</code>. When <code>spawn_timer &gt;= spawn_interval</code>, call <code>spawn_meteor()</code> and reset <code>spawn_timer</code> to <code>0</code>.</div>
         <div class="hints-container">
@@ -1558,9 +1578,9 @@ end</code></pre>
         <button class="btn-solution" hidden>Show Solution</button>
     </div>
 
-    <!-- Step 5 (CHALLENGE) -->
+    <!-- Step 6 (CHALLENGE) -->
     <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 5: Move meteors and remove off-screen ones</div>
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 6: Move meteors and remove off-screen ones</div>
         <div class="step-location">Where: UPDATE section, right after your spawn timer code</div>
         <div class="step-task">Use a <strong>reverse loop</strong> over the <code>meteors</code> table. Inside: move each meteor down, and remove it if it goes off-screen.</div>
         <div class="hints-container">
@@ -1579,9 +1599,9 @@ end</code></pre>
         <button class="btn-solution" hidden>Show Solution</button>
     </div>
 
-    <!-- Step 6 (CHALLENGE) -->
+    <!-- Step 7 (CHALLENGE) -->
     <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 6: Write laser-vs-meteor collision</div>
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 7: Write laser-vs-meteor collision</div>
         <div class="step-location">Where: UPDATE section, after the meteor movement loop</div>
         <div class="step-task">Only check if <code>laser_active</code> is true. Use a <strong>reverse loop</strong> over meteors. Check collision, and if hit: deactivate laser, remove meteor, add to score, and <code>break</code>.</div>
         <div class="hints-container">
@@ -1600,24 +1620,6 @@ end</code></pre>
             break
         end
     end
-end</code></pre>
-        </div>
-        <button class="btn-solution" hidden>Show Solution</button>
-    </div>
-
-    <!-- Step 7 (CHALLENGE) -->
-    <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 7: Replace meteor drawing</div>
-        <div class="step-location">Where: DRAW section. Find and delete the single <code>canvas.draw_image("meteor", ...)</code> line. Write a loop in its place.</div>
-        <div class="step-task">Use a <strong>forward loop</strong> with <code>ipairs</code> to draw every meteor in the list.</div>
-        <div class="hints-container">
-            <div class="hint" hidden>Use <code>for i, meteor in ipairs(meteors) do</code> to loop through the list. Each <code>meteor</code> has <code>.x</code> and <code>.y</code> fields.</div>
-            <div class="hint" hidden>Inside the loop: <code>canvas.draw_image("meteor", meteor.x, meteor.y, meteor_w, meteor_h)</code>.</div>
-        </div>
-        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
-        <div class="solution" hidden>
-            <pre class="code-block"><code class="lua">for i, meteor in ipairs(meteors) do
-    canvas.draw_image("meteor", meteor.x, meteor.y, meteor_w, meteor_h)
 end</code></pre>
         </div>
         <button class="btn-solution" hidden>Show Solution</button>
@@ -1908,37 +1910,7 @@ end</code></pre>
 
     <!-- Step 5 (COPY) -->
     <div class="step step-copy">
-        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 5: Stop updating when game is over</div>
-        <div class="step-location">Where: UPDATE section, at the very first line of the function (before <code>local dt</code>)</div>
-        <pre class="code-block"><code class="lua">    if game_over then return end</code></pre>
-        <div class="step-desc">This one line prevents all game logic from running when the game is over.</div>
-    </div>
-
-    <!-- Step 6 (CHALLENGE) -->
-    <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 6: Check ship-vs-meteor collision</div>
-        <div class="step-location">Where: UPDATE section, at the very end (after the laser-vs-meteor collision loop, before <code>end</code>)</div>
-        <div class="step-task">Loop through all meteors. Check if the ship collides with each meteor. If they collide, set <code>game_over</code> to <code>true</code> and <code>return</code>.</div>
-        <div class="hints-container">
-            <div class="hint" hidden>Loop through all meteors with a forward loop using <code>ipairs</code>. Check if the ship collides with each one using <code>check_collision()</code>.</div>
-            <div class="hint" hidden>Use <code>for i, meteor in ipairs(meteors) do</code>. Check <code>check_collision(ship_x, ship_y, ship_w, ship_h, meteor.x, meteor.y, meteor_w, meteor_h)</code>. On hit, set <code>game_over = true</code> and <code>return</code>.</div>
-        </div>
-        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
-        <div class="solution" hidden>
-            <pre class="code-block"><code class="lua">for i, meteor in ipairs(meteors) do
-    if check_collision(ship_x, ship_y, ship_w, ship_h,
-                       meteor.x, meteor.y, meteor_w, meteor_h) then
-        game_over = true
-        return
-    end
-end</code></pre>
-        </div>
-        <button class="btn-solution" hidden>Show Solution</button>
-    </div>
-
-    <!-- Step 7 (COPY) -->
-    <div class="step step-copy">
-        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 7: Add the game-over overlay</div>
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 5: Add the game-over overlay</div>
         <div class="step-location">Where: DRAW section, at the very end of the function (after the HUD text, before the final <code>end</code>)</div>
         <pre class="code-block"><code class="lua">    -- Game over overlay
     if game_over then
@@ -1946,11 +1918,12 @@ end</code></pre>
         canvas.set_color(0, 0, 0, 180)
         canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
     end</code></pre>
+        <div class="step-note">Note: The game-over overlay won't be visible until you complete the collision check in the final step, which sets <code>game_over = true</code>.</div>
     </div>
 
-    <!-- Step 8 (CHALLENGE) -->
+    <!-- Step 6 (CHALLENGE) -->
     <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 8: Draw the game-over text</div>
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 6: Draw the game-over text</div>
         <div class="step-location">Where: Inside the <code>if game_over then</code> block you just added (after the dark overlay, before <code>end</code>)</div>
         <div class="step-task">Draw three pieces of centered text: <strong>"GAME OVER"</strong> in red (size 48), <strong>"Score: " .. score</strong> in white (size 24), and <strong>"Press ENTER to restart"</strong> in white (size 24).</div>
         <div class="hints-container">
@@ -1975,6 +1948,36 @@ canvas.draw_text((SCREEN_W - score_w) / 2, SCREEN_H / 2, score_text)
 local restart = "Press ENTER to restart"
 local restart_w = canvas.get_text_width(restart)
 canvas.draw_text((SCREEN_W - restart_w) / 2, SCREEN_H / 2 + 40, restart)</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 7 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 7: Stop updating when game is over</div>
+        <div class="step-location">Where: UPDATE section, at the very first line of the function (before <code>local dt</code>)</div>
+        <pre class="code-block"><code class="lua">    if game_over then return end</code></pre>
+        <div class="step-desc">This one line prevents all game logic from running when the game is over.</div>
+    </div>
+
+    <!-- Step 8 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 8: Check ship-vs-meteor collision</div>
+        <div class="step-location">Where: UPDATE section, at the very end (after the laser-vs-meteor collision loop, before <code>end</code>)</div>
+        <div class="step-task">Loop through all meteors. Check if the ship collides with each meteor. If they collide, set <code>game_over</code> to <code>true</code> and <code>return</code>.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Loop through all meteors with a forward loop using <code>ipairs</code>. Check if the ship collides with each one using <code>check_collision()</code>.</div>
+            <div class="hint" hidden>Use <code>for i, meteor in ipairs(meteors) do</code>. Check <code>check_collision(ship_x, ship_y, ship_w, ship_h, meteor.x, meteor.y, meteor_w, meteor_h)</code>. On hit, set <code>game_over = true</code> and <code>return</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">for i, meteor in ipairs(meteors) do
+    if check_collision(ship_x, ship_y, ship_w, ship_h,
+                       meteor.x, meteor.y, meteor_w, meteor_h) then
+        game_over = true
+        return
+    end
+end</code></pre>
         </div>
         <button class="btn-solution" hidden>Show Solution</button>
     </div>
@@ -2309,7 +2312,32 @@ end</code></pre>
 
     <!-- Step 4 (CHALLENGE) -->
     <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 4: Update the firing code</div>
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 4: Replace laser drawing</div>
+        <div class="step-location">Where: DRAW section. Find and <strong>delete</strong> this block:</div>
+        <div class="delete-block">
+            <div class="delete-label">Delete this block:</div>
+            <pre class="code-block"><code class="lua">    -- Laser
+    if laser_active then
+        canvas.draw_image("laser", laser_x, laser_y, laser_w, laser_h)
+    end</code></pre>
+        </div>
+        <div class="step-task">Use the same <code>ipairs</code> forward loop pattern you used for meteors to draw every laser.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Same pattern as meteor drawing: <code>for i, laser in ipairs(lasers) do</code> and draw each one.</div>
+            <div class="hint" hidden><code>for i, laser in ipairs(lasers) do canvas.draw_image("laser", laser.x, laser.y, laser_w, laser_h) end</code></div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">for i, laser in ipairs(lasers) do
+    canvas.draw_image("laser", laser.x, laser.y, laser_w, laser_h)
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 5 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 5: Update the firing code</div>
         <div class="step-location">Where: USER INPUT section. Find and <strong>delete</strong> the entire old firing block:</div>
         <div class="delete-block">
             <div class="delete-label">Delete this block:</div>
@@ -2333,9 +2361,9 @@ end</code></pre>
         <button class="btn-solution" hidden>Show Solution</button>
     </div>
 
-    <!-- Step 5 (COPY) -->
+    <!-- Step 6 (COPY) -->
     <div class="step step-copy">
-        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 5: Delete old laser movement code</div>
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 6: Delete old laser movement code</div>
         <div class="step-location">Where: UPDATE section.</div>
         <div class="step-desc">Find and <strong>delete</strong> both of these blocks:</div>
         <div class="delete-block">
@@ -2351,9 +2379,9 @@ end</code></pre>
         <div class="step-desc">We'll write new laser movement in the next step.</div>
     </div>
 
-    <!-- Step 6 (CHALLENGE) -->
+    <!-- Step 7 (CHALLENGE) -->
     <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 6: Move lasers with a reverse loop</div>
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 7: Move lasers with a reverse loop</div>
         <div class="step-location">Where: UPDATE section, where the old laser code was (after ship clamping, before spawn timer)</div>
         <div class="step-task">Use the same pattern as meteor movement but lasers move <strong>up</strong> and are removed past the <strong>top</strong> of the screen.</div>
         <div class="hints-container">
@@ -2372,9 +2400,9 @@ end</code></pre>
         <button class="btn-solution" hidden>Show Solution</button>
     </div>
 
-    <!-- Step 7 (CHALLENGE) -->
+    <!-- Step 8 (CHALLENGE) -->
     <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 7: Write nested collision loops</div>
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 8: Write nested collision loops</div>
         <div class="step-location">Where: UPDATE section. Find and <strong>delete</strong> the old collision block:</div>
         <div class="delete-block">
             <div class="delete-label">Delete this block:</div>
@@ -2409,31 +2437,6 @@ end</code></pre>
             break
         end
     end
-end</code></pre>
-        </div>
-        <button class="btn-solution" hidden>Show Solution</button>
-    </div>
-
-    <!-- Step 8 (CHALLENGE) -->
-    <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 8: Replace laser drawing</div>
-        <div class="step-location">Where: DRAW section. Find and <strong>delete</strong> this block:</div>
-        <div class="delete-block">
-            <div class="delete-label">Delete this block:</div>
-            <pre class="code-block"><code class="lua">    -- Laser
-    if laser_active then
-        canvas.draw_image("laser", laser_x, laser_y, laser_w, laser_h)
-    end</code></pre>
-        </div>
-        <div class="step-task">Use the same <code>ipairs</code> forward loop pattern you used for meteors to draw every laser.</div>
-        <div class="hints-container">
-            <div class="hint" hidden>Same pattern as meteor drawing: <code>for i, laser in ipairs(lasers) do</code> and draw each one.</div>
-            <div class="hint" hidden><code>for i, laser in ipairs(lasers) do canvas.draw_image("laser", laser.x, laser.y, laser_w, laser_h) end</code></div>
-        </div>
-        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
-        <div class="solution" hidden>
-            <pre class="code-block"><code class="lua">for i, laser in ipairs(lasers) do
-    canvas.draw_image("laser", laser.x, laser.y, laser_w, laser_h)
 end</code></pre>
         </div>
         <button class="btn-solution" hidden>Show Solution</button>
@@ -2801,7 +2804,27 @@ end</code></pre>
 
     <!-- Step 5 (CHALLENGE) -->
     <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 5: Update star positions</div>
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 5: Draw the stars</div>
+        <div class="step-location">Where: DRAW section, right after the background rectangle, BEFORE the lasers</div>
+        <div class="step-task">Loop through all stars. Set the color using the star's brightness (same value for red, green, and blue makes gray/white). Draw a small filled rectangle.</div>
+        <div class="step-note">Note: The stars will appear but remain static until you add star movement in the next step.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Use <code>for i, star in ipairs(stars) do</code>. Set color with brightness for all 3 channels, then draw with <code>fill_rect</code>.</div>
+            <div class="hint" hidden><code>canvas.set_color(star.brightness, star.brightness, star.brightness)</code> then <code>canvas.fill_rect(star.x, star.y, star.size, star.size)</code></div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">for i, star in ipairs(stars) do
+    canvas.set_color(star.brightness, star.brightness, star.brightness)
+    canvas.fill_rect(star.x, star.y, star.size, star.size)
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 6 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 6: Update star positions</div>
         <div class="step-location">Where: UPDATE section, at the very end (after the ship-vs-meteor collision loop, before the function's closing <code>end</code>)</div>
         <div class="step-task">Move each star downward. When a star goes past the bottom of the screen, respawn it at the top with a new random x position.</div>
         <div class="hints-container">
@@ -2816,25 +2839,6 @@ end</code></pre>
         star.x = math.random(0, SCREEN_W)
         star.y = -star.size
     end
-end</code></pre>
-        </div>
-        <button class="btn-solution" hidden>Show Solution</button>
-    </div>
-
-    <!-- Step 6 (CHALLENGE) -->
-    <div class="step step-challenge">
-        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 6: Draw the stars</div>
-        <div class="step-location">Where: DRAW section, right after the background rectangle, BEFORE the lasers</div>
-        <div class="step-task">Loop through all stars. Set the color using the star's brightness (same value for red, green, and blue makes gray/white). Draw a small filled rectangle.</div>
-        <div class="hints-container">
-            <div class="hint" hidden>Use <code>for i, star in ipairs(stars) do</code>. Set color with brightness for all 3 channels, then draw with <code>fill_rect</code>.</div>
-            <div class="hint" hidden><code>canvas.set_color(star.brightness, star.brightness, star.brightness)</code> then <code>canvas.fill_rect(star.x, star.y, star.size, star.size)</code></div>
-        </div>
-        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
-        <div class="solution" hidden>
-            <pre class="code-block"><code class="lua">for i, star in ipairs(stars) do
-    canvas.set_color(star.brightness, star.brightness, star.brightness)
-    canvas.fill_rect(star.x, star.y, star.size, star.size)
 end</code></pre>
         </div>
         <button class="btn-solution" hidden>Show Solution</button>
