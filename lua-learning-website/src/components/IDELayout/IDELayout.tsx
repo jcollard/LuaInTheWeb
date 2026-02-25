@@ -887,9 +887,12 @@ function IDELayoutInner({
                           onOpenMarkdown={openMarkdownPreview}
                         />
                       )}
-                      {/* HTML preview - display-toggled to preserve iframe state across tab switches */}
+                      {/* HTML preview - positioned off-screen when hidden to preserve iframe browsing context */}
                       {htmlTabPath && (
-                        <div style={{ display: activeTabType === 'html' ? 'contents' : 'none' }}>
+                        <div style={activeTabType === 'html'
+                          ? { display: 'contents' }
+                          : { position: 'absolute', width: 0, height: 0, overflow: 'hidden', opacity: 0, pointerEvents: 'none' as const }
+                        }>
                           <HtmlTabContent
                             content={
                               compositeFileSystem.exists(htmlTabPath)
