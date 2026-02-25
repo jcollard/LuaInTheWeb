@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { getContextMenuItems } from './contextMenuHelper'
-import { luaFileContextMenuItems, fileContextMenuItems } from './contextMenuItems'
+import { luaFileContextMenuItems, readOnlyLuaFileContextMenuItems, fileContextMenuItems } from './contextMenuItems'
 
 describe('getContextMenuItems', () => {
   const defaultParams = {
@@ -41,5 +41,14 @@ describe('getContextMenuItems', () => {
     }
     const result = getContextMenuItems(params)
     expect(result).not.toBe(luaFileContextMenuItems)
+  })
+
+  it('returns readOnlyLuaFileContextMenuItems for .lua files in read-only workspaces', () => {
+    const params = {
+      ...defaultParams,
+      isInReadOnlyWorkspace: vi.fn().mockReturnValue(true),
+    }
+    const result = getContextMenuItems(params)
+    expect(result).toBe(readOnlyLuaFileContextMenuItems)
   })
 })

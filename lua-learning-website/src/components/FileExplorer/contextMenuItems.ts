@@ -51,6 +51,13 @@ export const readOnlyFileContextMenuItems: ContextMenuItem[] = [
   { id: 'download', label: 'Download' },
 ]
 
+// Read-only Lua files (in examples/library/docs/book/projects workspaces)
+export const readOnlyLuaFileContextMenuItems: ContextMenuItem[] = [
+  { id: 'run-lua', label: 'Run' },
+  { id: 'divider-lua', type: 'divider' },
+  { id: 'download', label: 'Download' },
+]
+
 export const luaFileContextMenuItems: ContextMenuItem[] = [
   { id: 'run-lua', label: 'Run' },
   { id: 'divider-lua', type: 'divider' },

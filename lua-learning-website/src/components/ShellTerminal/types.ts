@@ -38,4 +38,6 @@ export interface ShellOutputLine {
 export interface ShellTerminalHandle {
   /** Execute a command in the shell as if the user typed it */
   executeCommand: (command: string) => void
+  /** Stop the currently running process (if any) */
+  stopCurrentProcess: () => void
 }

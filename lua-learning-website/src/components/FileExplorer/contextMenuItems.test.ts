@@ -6,6 +6,7 @@ import {
   htmlFileContextMenuItems,
   readOnlyHtmlFileContextMenuItems,
   readOnlyFileContextMenuItems,
+  readOnlyLuaFileContextMenuItems,
   folderContextMenuItems,
   workspaceContextMenuItems,
   libraryWorkspaceContextMenuItems,
@@ -55,6 +56,21 @@ describe('contextMenuItems', () => {
     })
   })
 
+  describe('readOnlyLuaFileContextMenuItems', () => {
+    it('should include run-lua option as the first item', () => {
+      const runItem = readOnlyLuaFileContextMenuItems[0]
+      expect(runItem.id).toBe('run-lua')
+      expect(runItem.label).toBe('Run')
+    })
+
+    it('should include download but not rename or delete', () => {
+      const ids = readOnlyLuaFileContextMenuItems.map((item) => item.id)
+      expect(ids).toContain('download')
+      expect(ids).not.toContain('rename')
+      expect(ids).not.toContain('delete')
+    })
+  })
+
   describe('download menu items', () => {
     it('fileContextMenuItems includes download', () => {
       const item = fileContextMenuItems.find((i) => i.id === 'download')
@@ -88,6 +104,12 @@ describe('contextMenuItems', () => {
 
     it('readOnlyFileContextMenuItems includes download', () => {
       const item = readOnlyFileContextMenuItems.find((i) => i.id === 'download')
+      expect(item).toBeDefined()
+      expect(item?.label).toBe('Download')
+    })
+
+    it('readOnlyLuaFileContextMenuItems includes download', () => {
+      const item = readOnlyLuaFileContextMenuItems.find((i) => i.id === 'download')
       expect(item).toBeDefined()
       expect(item?.label).toBe('Download')
     })

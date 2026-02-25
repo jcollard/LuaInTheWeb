@@ -701,6 +701,8 @@ function IDELayoutInner({
     if (!terminalVisible) {
       toggleTerminal()
     }
+    // Stop any currently running process before executing new one
+    shellRef.current?.stopCurrentProcess()
     // Extract directory and filename from path
     const lastSlash = path.lastIndexOf('/')
     const dir = lastSlash > 0 ? path.substring(0, lastSlash) : '/'

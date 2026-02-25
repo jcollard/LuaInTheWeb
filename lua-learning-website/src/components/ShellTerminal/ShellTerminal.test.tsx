@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, act } from '@testing-library/react'
+import { createRef } from 'react'
 import { ShellTerminal } from './ShellTerminal'
+import type { ShellTerminalHandle } from './types'
 import type { UseFileSystemReturn } from '../../hooks/useFileSystem'
 
 // Store terminal instances for testing
@@ -648,6 +650,25 @@ describe('ShellTerminal', () => {
     })
 
     // Arrow key routing to process tests are in ShellTerminal.processKeys.test.tsx
+  })
+
+  describe('imperative handle', () => {
+    it('should expose stopCurrentProcess on the ref', () => {
+      const ref = createRef<ShellTerminalHandle>()
+      render(<ShellTerminal ref={ref} fileSystem={mockFileSystem} />)
+
+      expect(ref.current).not.toBeNull()
+      expect(ref.current?.stopCurrentProcess).toBeInstanceOf(Function)
+    })
+
+    it('should call stopProcess when stopCurrentProcess is called', () => {
+      const ref = createRef<ShellTerminalHandle>()
+      render(<ShellTerminal ref={ref} fileSystem={mockFileSystem} />)
+
+      ref.current?.stopCurrentProcess()
+
+      expect(mockStopProcess).toHaveBeenCalledTimes(1)
+    })
   })
 
   describe('focus management', () => {
