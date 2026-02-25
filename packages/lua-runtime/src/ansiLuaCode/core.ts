@@ -171,6 +171,29 @@ export const ansiLuaCoreCode = `
       __ansi_setScreen(id)
     end
 
+    -- Load screen from file
+    function _ansi.load_screen(path)
+      if type(path) ~= 'string' then
+        error("ansi.load_screen() expects a string path, got " .. type(path))
+      end
+      if type(__ansi_readFile) ~= 'function' then
+        error("ansi.load_screen() is not available in this context")
+      end
+      local content = __ansi_readFile(path)
+      local fn, err = load(content, "@" .. path)
+      if not fn then
+        error("Failed to parse ANSI file '" .. path .. "': " .. tostring(err))
+      end
+      local ok, data = pcall(fn)
+      if not ok then
+        error("Failed to execute ANSI file '" .. path .. "': " .. tostring(data))
+      end
+      if type(data) ~= 'table' then
+        error("ANSI file '" .. path .. "' did not return a table")
+      end
+      return _ansi.create_screen(data)
+    end
+
     -- Standard CGA/VGA color palette
     _ansi.colors = {
       BLACK         = {0, 0, 0},

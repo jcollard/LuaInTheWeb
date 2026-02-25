@@ -24,7 +24,7 @@ local ansi = {}
 -- 8.  Mouse Input (is_mouse_down, is_mouse_pressed, get_mouse_col, get_mouse_row, etc.)
 -- 9.  Key Constants (ansi.keys.*)
 -- 10. Terminal Dimensions (COLS, ROWS)
--- 11. Screen Display (create_screen, set_screen)
+-- 11. Screen Display (load_screen, create_screen, set_screen)
 -- 12. Layer Visibility Control (Screen:get_layers, layer_on, layer_off, layer_toggle)
 -- 13. Animation Playback (Screen:play, Screen:pause, Screen:is_playing)
 -- =============================================================================
@@ -241,14 +241,22 @@ function Screen:pause() end
 ---@usage if screen:is_playing() then screen:pause() end
 function Screen:is_playing() end
 
---- Create a screen from .ansi.lua file data.
---- Parses and composites all layers into a pre-rendered screen image.
+--- Load a .ansi.lua file by path and return a screen object.
+--- This is the recommended way to load ANSI screen files created with the editor.
+--- Relative paths are resolved from the current working directory, with root fallback.
+---@param path string Path to the .ansi.lua file (e.g., "my_art.ansi.lua")
+---@return Screen screen A screen object with layer control methods
+---@usage local screen = ansi.load_screen("my_art.ansi.lua")
+---@usage ansi.set_screen(screen)
+function ansi.load_screen(path) end
+
+--- Create a screen from a data table programmatically.
+--- Use this when building screen data in code rather than loading from a file.
 --- The returned screen object can be passed to ansi.set_screen() to display it,
 --- and provides methods for controlling layer visibility.
----@param data table The data table from a .ansi.lua file (loaded via require or dofile)
+---@param data table A table matching the .ansi.lua file format (version, grid/layers)
 ---@return Screen screen A screen object with layer control methods
----@usage local screen = ansi.create_screen(require("my_image.ansi"))
----@usage screen:layer_off("Background")
+---@usage local screen = ansi.create_screen({ version = 1, width = 80, height = 25, grid = my_grid })
 function ansi.create_screen(data) end
 
 --- Set the active background screen.

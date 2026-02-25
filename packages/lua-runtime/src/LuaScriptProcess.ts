@@ -500,7 +500,14 @@ __clear_execution_hook()
     }
 
     this.ansiController = new AnsiController(ansiCallbacks, 'ansi-main')
-    setupAnsiAPI(this.engine, () => this.ansiController)
+    setupAnsiAPI(this.engine, () => this.ansiController, {
+      fileReader: (path: string): string | null => {
+        if (!this.context.filesystem.exists(path)) return null
+        if (this.context.filesystem.isDirectory(path)) return null
+        try { return this.context.filesystem.readFile(path) } catch { return null }
+      },
+      cwd: this.context.cwd,
+    })
   }
 
 }
