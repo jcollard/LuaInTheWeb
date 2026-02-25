@@ -58,6 +58,9 @@ export interface ExplorerPropsParams {
   getUniqueWorkspaceName: (baseName: string) => string
   // Clone project handler
   handleCloneProject?: (projectPath: string, workspaceName: string, type: 'virtual' | 'local', handle?: FileSystemDirectoryHandle) => void
+  // Download handlers
+  onDownloadFile?: (path: string) => void
+  onDownloadAsZip?: (path: string) => void
 }
 
 /**
@@ -136,6 +139,8 @@ export function createExplorerProps(params: ExplorerPropsParams) {
     onUploadFiles: params.uploadFiles,
     onUploadFolder: params.uploadFolder,
     onCloneProject: params.handleCloneProject,
+    onDownloadFile: params.onDownloadFile,
+    onDownloadAsZip: params.onDownloadAsZip,
     workspaceProps: {
       workspaces: params.workspaces,
       pendingWorkspaces: params.pendingWorkspaces,

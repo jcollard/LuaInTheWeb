@@ -6,6 +6,7 @@ import {
   readOnlyMarkdownFileContextMenuItems,
   htmlFileContextMenuItems,
   readOnlyHtmlFileContextMenuItems,
+  readOnlyFileContextMenuItems,
   folderContextMenuItems,
   workspaceContextMenuItems,
   libraryWorkspaceContextMenuItems,
@@ -61,8 +62,8 @@ export function getContextMenuItems(params: GetContextMenuItemsParams): ContextM
       if (isMarkdownFile(targetPath)) {
         return readOnlyMarkdownFileContextMenuItems
       }
-      // No context menu for other files in read-only workspaces
-      return []
+      // Generic files in read-only workspaces still get Download
+      return readOnlyFileContextMenuItems
     }
     // Check if it's an HTML file
     if (targetPath && isHtmlFile(targetPath)) {
