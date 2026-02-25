@@ -9,6 +9,8 @@ import {
   isDocsWorkspace as isDocsWorkspaceUtil,
   isBookWorkspace as isBookWorkspaceUtil,
   isExamplesWorkspace as isExamplesWorkspaceUtil,
+  isProjectsWorkspace as isProjectsWorkspaceUtil,
+  isProjectSubfolder as isProjectSubfolderUtil,
   getWorkspaceForPath as getWorkspaceForPathUtil,
   isInReadOnlyWorkspace as isInReadOnlyWorkspaceUtil,
 } from './treeUtils'
@@ -22,6 +24,8 @@ export interface UseTreeUtilitiesReturn {
   isDocsWorkspace: (path: string) => boolean
   isBookWorkspace: (path: string) => boolean
   isExamplesWorkspace: (path: string) => boolean
+  isProjectsWorkspace: (path: string) => boolean
+  isProjectSubfolder: (path: string) => boolean
   getWorkspaceForPath: (path: string) => string | null
   isInReadOnlyWorkspace: (path: string) => boolean
 }
@@ -55,6 +59,14 @@ export function useTreeUtilities(tree: TreeNode[]): UseTreeUtilitiesReturn {
     () => (path: string) => isExamplesWorkspaceUtil(tree, path),
     [tree]
   )
+  const isProjectsWorkspace = useMemo(
+    () => (path: string) => isProjectsWorkspaceUtil(tree, path),
+    [tree]
+  )
+  const isProjectSubfolder = useMemo(
+    () => (path: string) => isProjectSubfolderUtil(tree, path),
+    [tree]
+  )
   const findNodeName = useMemo(
     () => (path: string) => findNodeNameUtil(tree, path),
     [tree]
@@ -81,6 +93,8 @@ export function useTreeUtilities(tree: TreeNode[]): UseTreeUtilitiesReturn {
     isDocsWorkspace,
     isBookWorkspace,
     isExamplesWorkspace,
+    isProjectsWorkspace,
+    isProjectSubfolder,
     getWorkspaceForPath,
     isInReadOnlyWorkspace,
   }

@@ -1,0 +1,10 @@
+{
+  "name": "Projects",
+  "files": [
+    "space_game_project/game.lua",
+    "space_game_project/guide.html",
+    "space_game_project/images/blue_ship.png",
+    "space_game_project/images/laser.png",
+    "space_game_project/images/meteor.png"
+  ]
+}

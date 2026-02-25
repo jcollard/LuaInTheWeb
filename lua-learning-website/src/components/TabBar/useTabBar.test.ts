@@ -621,4 +621,100 @@ describe('useTabBar', () => {
       expect(result.current.activeTab).toBeNull()
     })
   })
+
+  describe('html tabs', () => {
+    it('should open an html file as preview with type html', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      // Act
+      act(() => {
+        result.current.openHtmlPreviewTab('/test/guide.html', 'guide.html')
+      })
+
+      // Assert
+      expect(result.current.tabs).toHaveLength(1)
+      expect(result.current.tabs[0]).toEqual({
+        path: '/test/guide.html',
+        name: 'guide.html',
+        isDirty: false,
+        type: 'html',
+        isPreview: true,
+        isPinned: false,
+      })
+    })
+
+    it('should replace existing html preview when opening new html preview', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      act(() => {
+        result.current.openHtmlPreviewTab('/test/file1.html', 'file1.html')
+      })
+
+      expect(result.current.tabs).toHaveLength(1)
+
+      // Act
+      act(() => {
+        result.current.openHtmlPreviewTab('/test/file2.html', 'file2.html')
+      })
+
+      // Assert - should replace the preview
+      expect(result.current.tabs).toHaveLength(1)
+      expect(result.current.tabs[0].path).toBe('/test/file2.html')
+      expect(result.current.tabs[0].type).toBe('html')
+    })
+
+    it('should not replace existing permanent html tab', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      act(() => {
+        result.current.openHtmlPreviewTab('/test/file1.html', 'file1.html')
+        result.current.makeTabPermanent('/test/file1.html')
+      })
+
+      expect(result.current.tabs[0].isPreview).toBe(false)
+
+      // Act
+      act(() => {
+        result.current.openHtmlPreviewTab('/test/file2.html', 'file2.html')
+      })
+
+      // Assert - should add new tab, not replace
+      expect(result.current.tabs).toHaveLength(2)
+    })
+
+    it('should return html type from getActiveTabType for html tabs', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      act(() => {
+        result.current.openHtmlPreviewTab('/test/guide.html', 'guide.html')
+      })
+
+      // Assert
+      expect(result.current.getActiveTabType()).toBe('html')
+    })
+
+    it('should convert file tab to html tab with convertToHtmlTab', () => {
+      // Arrange
+      const { result } = renderHook(() => useTabBar())
+
+      act(() => {
+        result.current.openTab('/test/guide.html', 'guide.html')
+      })
+
+      expect(result.current.tabs[0].type).toBe('file')
+
+      // Act
+      act(() => {
+        result.current.convertToHtmlTab('/test/guide.html')
+      })
+
+      // Assert
+      expect(result.current.tabs[0].type).toBe('html')
+      expect(result.current.tabs[0].isPreview).toBe(false)
+    })
+  })
 })

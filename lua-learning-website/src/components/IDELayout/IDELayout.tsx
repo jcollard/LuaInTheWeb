@@ -17,6 +17,7 @@ import { AnsiTabContent } from './AnsiTabContent'
 import { AnsiEditorTabContent } from './AnsiEditorTabContent'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import { MarkdownTabContent } from './MarkdownTabContent'
+import { HtmlTabContent } from './HtmlTabContent'
 import { BinaryTabContent } from './BinaryTabContent'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useBeforeUnloadWarning } from '../../hooks/useBeforeUnloadWarning'
@@ -42,7 +43,7 @@ interface IDELayoutInnerProps {
   compositeFileSystem: IFileSystem
   workspaces: Workspace[]
   pendingWorkspaces: Set<string>
-  addVirtualWorkspace: (name: string) => void
+  addVirtualWorkspace: (name: string) => Promise<Workspace>
   addLocalWorkspace: (name: string, handle: FileSystemDirectoryHandle) => Promise<Workspace>
   removeWorkspace: (workspaceId: string) => void
   isFileSystemAccessSupported: () => boolean
@@ -101,6 +102,8 @@ function IDELayoutInner({
     openFile,
     openPreviewFile,
     openMarkdownPreview,
+    openHtmlPreview,
+    openHtmlInBrowser,
     openBinaryViewer,
     saveFile,
     // New file creation
@@ -697,6 +700,8 @@ function IDELayoutInner({
       openAnsiEditorFile(filePath)
     } else if (lowerPath.endsWith('.md')) {
       openMarkdownPreview(filePath)
+    } else if (lowerPath.endsWith('.html') || lowerPath.endsWith('.htm')) {
+      openHtmlPreview(filePath)
     } else if (
       lowerPath.endsWith('.png') || lowerPath.endsWith('.jpg') ||
       lowerPath.endsWith('.jpeg') || lowerPath.endsWith('.gif') ||
@@ -714,7 +719,7 @@ function IDELayoutInner({
     } else {
       openFile(filePath)
     }
-  }, [openFile, openAnsiEditorFile, openMarkdownPreview, openBinaryViewer])
+  }, [openFile, openAnsiEditorFile, openMarkdownPreview, openHtmlPreview, openBinaryViewer])
 
   // Format the current code
   const handleFormat = useCallback(() => {
@@ -733,16 +738,77 @@ function IDELayoutInner({
     }, 0)
   }, [code, setCode, showError])
 
+  // Clone a project from the projects workspace into a new editable workspace
+  const handleCloneProject = useCallback(
+    async (projectPath: string, workspaceName: string, type: 'virtual' | 'local', handle?: FileSystemDirectoryHandle) => {
+      try {
+        // Create the new workspace
+        let newWorkspace: Workspace
+        if (type === 'local' && handle) {
+          newWorkspace = await addLocalWorkspace(workspaceName, handle)
+        } else {
+          newWorkspace = await addVirtualWorkspace(workspaceName)
+        }
+
+        // Copy files from project subfolder directly to the new workspace's filesystem.
+        // We read from compositeFileSystem (source — projects mount exists) but write
+        // directly to newWorkspace.filesystem to avoid the stale-closure issue where
+        // compositeFileSystem doesn't yet include the newly created workspace mount.
+        const sourceFs = compositeFileSystem
+        const targetFs = newWorkspace.filesystem
+
+        // Duck-type binary support on source and target independently
+        const sourceBinary = sourceFs as IFileSystem & {
+          isBinaryFile?: (path: string) => boolean
+          readBinaryFile?: (path: string) => Uint8Array
+        }
+        const targetBinary = targetFs as IFileSystem & {
+          writeBinaryFile?: (path: string, content: Uint8Array) => void
+        }
+
+        const copyRecursive = (sourcePath: string, targetRelPath: string) => {
+          const entries = sourceFs.listDirectory(sourcePath)
+          for (const entry of entries) {
+            const entryRelPath = `${targetRelPath}/${entry.name}`
+            if (entry.type === 'directory') {
+              targetFs.createDirectory(entryRelPath)
+              copyRecursive(entry.path, entryRelPath)
+            } else if (
+              typeof sourceBinary.isBinaryFile === 'function' &&
+              sourceBinary.isBinaryFile(entry.path) &&
+              typeof sourceBinary.readBinaryFile === 'function' &&
+              typeof targetBinary.writeBinaryFile === 'function'
+            ) {
+              const content = sourceBinary.readBinaryFile(entry.path)
+              targetBinary.writeBinaryFile(entryRelPath, content)
+            } else {
+              const content = sourceFs.readFile(entry.path)
+              targetFs.writeFile(entryRelPath, content)
+            }
+          }
+        }
+
+        copyRecursive(projectPath, '')
+        refreshFileTree()
+      } catch (err) {
+        console.error('Failed to clone project:', err)
+      }
+    },
+    [compositeFileSystem, addVirtualWorkspace, addLocalWorkspace, refreshFileTree]
+  )
+
   // Explorer props for FileExplorer
   const explorerProps = createExplorerProps({
     fileTree, activeTab, pendingNewFilePath, pendingNewFolderPath,
     handleCreateFile, handleCreateFolder, renameFile, renameFolder,
     deleteFile, deleteFolder, openFile, openPreviewFile, moveFile, copyFile,
     clearPendingNewFile, clearPendingNewFolder, openMarkdownPreview, openMarkdownEdit: openFile,
-    makeTabPermanent, openBinaryViewer, openAnsiEditorFile, handleCdToLocation, uploadFiles, uploadFolder, workspaces, pendingWorkspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
+    makeTabPermanent, openBinaryViewer, openAnsiEditorFile, openHtmlPreview, openHtmlInBrowser,
+    handleCdToLocation, uploadFiles, uploadFolder, workspaces, pendingWorkspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
     addVirtualWorkspace, handleAddLocalWorkspace, handleRemoveWorkspace, refreshWorkspace,
     refreshFileTree, supportsRefresh, handleReconnectWorkspace, handleDisconnectWorkspace,
     handleRenameWorkspace, isFolderAlreadyMounted, getUniqueWorkspaceName,
+    handleCloneProject,
   })
 
   // Tab bar props for EditorPanel (only when tabs exist)
@@ -847,6 +913,17 @@ function IDELayoutInner({
                           tabBarProps={tabBarProps}
                           currentFilePath={activeTab}
                           onOpenMarkdown={openMarkdownPreview}
+                        />
+                      )}
+                      {/* HTML preview - shown when html tab is active */}
+                      {activeTabType === 'html' && activeTab && (
+                        <HtmlTabContent
+                          content={
+                            compositeFileSystem.exists(activeTab)
+                              ? compositeFileSystem.readFile(activeTab)
+                              : ''
+                          }
+                          tabBarProps={tabBarProps}
                         />
                       )}
                       {/* Binary file viewer - shown when binary tab is active */}

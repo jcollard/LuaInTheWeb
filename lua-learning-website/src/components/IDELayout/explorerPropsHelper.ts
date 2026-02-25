@@ -31,6 +31,9 @@ export interface ExplorerPropsParams {
   openBinaryViewer: (path: string) => void
   // ANSI art file handler
   openAnsiEditorFile: (path: string) => void
+  // HTML file handlers
+  openHtmlPreview: (path: string) => void
+  openHtmlInBrowser: (path: string) => void
   // Shell integration
   handleCdToLocation?: (path: string) => void
   // File upload
@@ -52,6 +55,8 @@ export interface ExplorerPropsParams {
   handleRenameWorkspace: (mountPath: string, newName: string) => void
   isFolderAlreadyMounted: (handle: FileSystemDirectoryHandle) => Promise<boolean>
   getUniqueWorkspaceName: (baseName: string) => string
+  // Clone project handler
+  handleCloneProject?: (projectPath: string, workspaceName: string, type: 'virtual' | 'local', handle?: FileSystemDirectoryHandle) => void
 }
 
 /**
@@ -68,9 +73,21 @@ function isAnsiArtFile(path: string): boolean {
   return path.toLowerCase().endsWith('.ansi.lua')
 }
 
+/**
+ * Check if a path is an HTML file
+ */
+function isHtmlFile(path: string): boolean {
+  const lower = path.toLowerCase()
+  return lower.endsWith('.html') || lower.endsWith('.htm')
+}
+
 export function createExplorerProps(params: ExplorerPropsParams) {
   // Smart file opener that routes to appropriate viewer based on file type
   const smartOpenPreviewFile = (path: string) => {
+    if (isHtmlFile(path)) {
+      params.openHtmlPreview(path)
+      return
+    }
     if (isAnsiArtFile(path)) {
       params.openAnsiEditorFile(path)
     } else if (isMarkdownFile(path)) {
@@ -87,6 +104,10 @@ export function createExplorerProps(params: ExplorerPropsParams) {
   // For ANSI art files: open in editor (same as single-click since they're always permanent)
   // For other files: open for editing
   const smartOpenFile = (path: string) => {
+    if (isHtmlFile(path)) {
+      params.makeTabPermanent(path)
+      return
+    }
     if (isAnsiArtFile(path)) {
       params.openAnsiEditorFile(path)
     } else if (isMarkdownFile(path) || isBinaryExtension(path)) {
@@ -115,9 +136,13 @@ export function createExplorerProps(params: ExplorerPropsParams) {
     onCancelPendingNewFolder: params.clearPendingNewFolder,
     onPreviewMarkdown: params.openMarkdownPreview,
     onEditMarkdown: params.openMarkdownEdit,
+    onPreviewHtml: params.openHtmlPreview,
+    onEditHtml: params.openFile,
+    onOpenHtmlInBrowser: params.openHtmlInBrowser,
     onCdToLocation: params.handleCdToLocation,
     onUploadFiles: params.uploadFiles,
     onUploadFolder: params.uploadFolder,
+    onCloneProject: params.handleCloneProject,
     workspaceProps: {
       workspaces: params.workspaces,
       pendingWorkspaces: params.pendingWorkspaces,

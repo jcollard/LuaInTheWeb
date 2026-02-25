@@ -49,6 +49,7 @@ import { useBookWorkspaceLoader } from './useBookWorkspaceLoader'
 import { useDocsWorkspaceLoader } from './useDocsWorkspaceLoader'
 import { useExamplesWorkspaceLoader } from './useExamplesWorkspaceLoader'
 import { useLibsWorkspaceLoader } from './useLibsWorkspaceLoader'
+import { useProjectsWorkspaceLoader } from './useProjectsWorkspaceLoader'
 
 // Re-export for backwards compatibility
 export { WORKSPACE_STORAGE_KEY, DEFAULT_WORKSPACE_ID } from './workspaceManagerHelpers'
@@ -77,7 +78,8 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
         w.type !== 'library' &&
         w.type !== 'docs' &&
         w.type !== 'book' &&
-        w.type !== 'examples'
+        w.type !== 'examples' &&
+        w.type !== 'projects'
     )
     saveWorkspaces(persistableWorkspaces)
   }, [state])
@@ -115,6 +117,9 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
 
   // Fetch and add libs workspace on mount
   useLibsWorkspaceLoader(setState)
+
+  // Fetch and add projects workspace on mount
+  useProjectsWorkspaceLoader(setState)
 
   // Auto-reconnect disconnected local workspaces on mount
   useEffect(() => {

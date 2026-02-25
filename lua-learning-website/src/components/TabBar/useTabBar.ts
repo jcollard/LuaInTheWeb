@@ -74,6 +74,14 @@ export function useTabBar(options: UseTabBarOptions = {}): UseTabBarReturn {
     )
   }, [])
 
+  const convertToHtmlTab = useCallback((path: string) => {
+    setTabs((prev) =>
+      prev.map((tab) =>
+        tab.path === path ? { ...tab, type: 'html', isPreview: false } : tab
+      )
+    )
+  }, [])
+
   const closeTab = useCallback((path: string) => {
     // Use ref to get current activeTab value (avoids stale closure issue)
     const currentActiveTab = activeTabRef.current
@@ -176,6 +184,28 @@ export function useTabBar(options: UseTabBarOptions = {}): UseTabBarReturn {
       }
       // No existing preview, add new preview tab
       return [...prev, { path, name, isDirty: false, type: 'markdown', isPreview: true, isPinned: false }]
+    })
+    setActiveTab(path)
+  }, [])
+
+  const openHtmlPreviewTab = useCallback((path: string, name: string) => {
+    setTabs((prev) => {
+      // Check if tab already exists
+      const existingTab = prev.find((tab) => tab.path === path)
+      if (existingTab) {
+        // Just activate it, don't change preview state
+        return prev
+      }
+      // Replace existing preview tab if there is one (any type of preview)
+      const existingPreviewIndex = prev.findIndex((tab) => tab.isPreview)
+      if (existingPreviewIndex !== -1) {
+        // Replace the preview tab
+        const newTabs = [...prev]
+        newTabs[existingPreviewIndex] = { path, name, isDirty: false, type: 'html', isPreview: true, isPinned: false }
+        return newTabs
+      }
+      // No existing preview, add new preview tab
+      return [...prev, { path, name, isDirty: false, type: 'html', isPreview: true, isPinned: false }]
     })
     setActiveTab(path)
   }, [])
@@ -321,6 +351,7 @@ export function useTabBar(options: UseTabBarOptions = {}): UseTabBarReturn {
     openAnsiEditorTab,
     openMarkdownPreviewTab,
     openBinaryPreviewTab,
+    openHtmlPreviewTab,
     closeTab,
     selectTab,
     setDirty,
@@ -329,6 +360,7 @@ export function useTabBar(options: UseTabBarOptions = {}): UseTabBarReturn {
     makeTabPermanent,
     convertToFileTab,
     convertToMarkdownTab,
+    convertToHtmlTab,
     pinTab,
     unpinTab,
     reorderTab,
