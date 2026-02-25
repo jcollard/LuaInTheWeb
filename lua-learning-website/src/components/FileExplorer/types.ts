@@ -71,6 +71,10 @@ export interface FileExplorerProps {
   onUploadFolder?: (files: FileList, targetFolderPath: string) => void
   /** Clone a project from the projects workspace into a new editable workspace */
   onCloneProject?: (projectPath: string, workspaceName: string, type: 'virtual' | 'local', handle?: FileSystemDirectoryHandle) => void
+  /** Download a single file */
+  onDownloadFile?: (path: string) => void
+  /** Download a folder as a ZIP archive */
+  onDownloadAsZip?: (path: string) => void
   className?: string
   /** Optional workspace management props. When provided, workspace tabs are shown. */
   workspaceProps?: WorkspaceProps

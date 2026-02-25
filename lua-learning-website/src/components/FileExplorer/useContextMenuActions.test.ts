@@ -33,6 +33,8 @@ describe('useContextMenuActions', () => {
     triggerUpload: vi.fn(),
     triggerFolderUpload: vi.fn(),
     openCloneDialog: vi.fn(),
+    onDownloadFile: vi.fn(),
+    onDownloadAsZip: vi.fn(),
     workspaceProps: {
       workspaces: [],
       pendingWorkspaces: new Set<string>(),
@@ -238,6 +240,24 @@ describe('useContextMenuActions', () => {
         act(() => { result.current.handleContextMenuSelect('clone-project') })
 
         expect(defaultParams.openCloneDialog).toHaveBeenCalledWith('/workspace/file.lua')
+      })
+    })
+
+    describe('download actions', () => {
+      it('dispatches download action', () => {
+        const { result } = renderHook(() => useContextMenuActions(defaultParams))
+
+        act(() => { result.current.handleContextMenuSelect('download') })
+
+        expect(defaultParams.onDownloadFile).toHaveBeenCalledWith('/workspace/file.lua')
+      })
+
+      it('dispatches download-zip action', () => {
+        const { result } = renderHook(() => useContextMenuActions(defaultParams))
+
+        act(() => { result.current.handleContextMenuSelect('download-zip') })
+
+        expect(defaultParams.onDownloadAsZip).toHaveBeenCalledWith('/workspace/file.lua')
       })
     })
 

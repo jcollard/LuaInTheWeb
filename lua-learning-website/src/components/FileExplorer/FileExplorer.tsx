@@ -44,6 +44,8 @@ export function FileExplorer({
   onUploadFiles,
   onUploadFolder,
   onCloneProject,
+  onDownloadFile,
+  onDownloadAsZip,
   className,
   workspaceProps,
 }: FileExplorerProps) {
@@ -196,6 +198,8 @@ export function FileExplorer({
     triggerUpload,
     triggerFolderUpload,
     openCloneDialog,
+    onDownloadFile,
+    onDownloadAsZip,
     workspaceProps,
   })
 

@@ -23,6 +23,8 @@ interface UseContextMenuActionsParams {
   triggerUpload: (targetPath: string) => void
   triggerFolderUpload?: (targetPath: string) => void
   openCloneDialog: (projectPath: string) => void
+  onDownloadFile?: (path: string) => void
+  onDownloadAsZip?: (path: string) => void
   workspaceProps?: WorkspaceProps
 }
 
@@ -52,6 +54,8 @@ export function useContextMenuActions({
   triggerUpload,
   triggerFolderUpload,
   openCloneDialog,
+  onDownloadFile,
+  onDownloadAsZip,
   workspaceProps,
 }: UseContextMenuActionsParams) {
   const handleContextMenuSelect = useCallback((action: string) => {
@@ -127,6 +131,12 @@ export function useContextMenuActions({
       case 'clone-project':
         openCloneDialog(targetPath)
         break
+      case 'download':
+        onDownloadFile?.(targetPath)
+        break
+      case 'download-zip':
+        onDownloadAsZip?.(targetPath)
+        break
       case 'delete': {
         const name = findNodeName(targetPath)
         const isFolder = targetType === 'folder'
@@ -172,6 +182,8 @@ export function useContextMenuActions({
     triggerUpload,
     triggerFolderUpload,
     openCloneDialog,
+    onDownloadFile,
+    onDownloadAsZip,
     workspaceProps,
   ])
 
