@@ -55,12 +55,20 @@ export interface FileExplorerProps {
   onPreviewMarkdown?: (path: string) => void
   /** Open a markdown file in edit mode (raw text) */
   onEditMarkdown?: (path: string) => void
+  /** Open an HTML file in preview mode (sandboxed iframe) */
+  onPreviewHtml?: (path: string) => void
+  /** Open an HTML file in edit mode (raw text) */
+  onEditHtml?: (path: string) => void
+  /** Open an HTML file in a new browser tab */
+  onOpenHtmlInBrowser?: (path: string) => void
   /** Open a folder/workspace in terminal (cd to location) */
   onCdToLocation?: (path: string) => void
   /** Upload files to a folder */
   onUploadFiles?: (files: FileList, targetFolderPath: string) => void
   /** Upload folder (directory with files) to a target folder */
   onUploadFolder?: (files: FileList, targetFolderPath: string) => void
+  /** Clone a project from the projects workspace into a new editable workspace */
+  onCloneProject?: (projectPath: string, workspaceName: string, type: 'virtual' | 'local', handle?: FileSystemDirectoryHandle) => void
   className?: string
   /** Optional workspace management props. When provided, workspace tabs are shown. */
   workspaceProps?: WorkspaceProps

@@ -20,6 +20,22 @@ export const readOnlyMarkdownFileContextMenuItems: ContextMenuItem[] = [
   { id: 'edit-markdown', label: 'Edit Markdown' },
 ]
 
+export const htmlFileContextMenuItems: ContextMenuItem[] = [
+  { id: 'preview-html', label: 'Preview HTML' },
+  { id: 'open-in-browser', label: 'Open in Browser Tab' },
+  { id: 'edit-html', label: 'Edit HTML' },
+  { id: 'divider-html', type: 'divider' },
+  { id: 'rename', label: 'Rename' },
+  { id: 'delete', label: 'Delete' },
+]
+
+// Read-only HTML files (in library/docs/book/projects workspaces)
+export const readOnlyHtmlFileContextMenuItems: ContextMenuItem[] = [
+  { id: 'preview-html', label: 'Preview HTML' },
+  { id: 'open-in-browser', label: 'Open in Browser Tab' },
+  { id: 'edit-html', label: 'Edit HTML' },
+]
+
 export const folderContextMenuItems: ContextMenuItem[] = [
   { id: 'new-file', label: 'New File' },
   { id: 'new-folder', label: 'New Folder' },
@@ -55,6 +71,14 @@ export const bookWorkspaceContextMenuItems: ContextMenuItem[] = []
 
 // Examples workspaces are read-only and cannot be modified
 export const examplesWorkspaceContextMenuItems: ContextMenuItem[] = []
+
+// Projects workspace root is read-only and cannot be modified
+export const projectsWorkspaceContextMenuItems: ContextMenuItem[] = []
+
+// Project subfolder (e.g., space_shooter) can be cloned
+export const projectSubfolderContextMenuItems: ContextMenuItem[] = [
+  { id: 'clone-project', label: 'Clone Project' },
+]
 // Stryker restore all
 
 /**

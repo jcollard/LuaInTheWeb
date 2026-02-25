@@ -1,0 +1,3415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Space Shooter Tutorial</title>
+<style>
+/* ============================================================
+   BASE / RESET
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background: #0a0e27;
+    color: #e0e6ff;
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* ============================================================
+   HEADER + TABS
+   ============================================================ */
+header {
+    background: #101538;
+    border-bottom: 2px solid #1a2050;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-title {
+    text-align: center;
+    padding: 12px 16px 0;
+    font-size: 1.3em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #a0a8e0;
+}
+
+.tab-bar {
+    display: flex;
+    gap: 4px;
+    padding: 8px 16px 0;
+    overflow-x: auto;
+}
+
+.tab-bar button {
+    background: transparent;
+    border: none;
+    color: #808cc0;
+    padding: 10px 18px;
+    font-size: 0.95em;
+    font-family: inherit;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.tab-bar button:hover {
+    color: #b0b8f0;
+}
+
+.tab-bar button.active {
+    color: #e0e6ff;
+    border-bottom-color: #6c63ff;
+    font-weight: 600;
+}
+
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
+main {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+}
+
+.part { display: none; }
+.part.active { display: block; }
+
+.part > h1 {
+    font-size: 1.8em;
+    margin-bottom: 4px;
+    color: #fff;
+}
+
+.part > .subtitle {
+    font-size: 1.1em;
+    color: #8890c0;
+    margin-bottom: 28px;
+}
+
+/* ============================================================
+   CONCEPTS SECTION
+   ============================================================ */
+.concepts {
+    background: #121640;
+    border: 1px solid #1e2460;
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 32px;
+}
+
+.concepts h2 {
+    font-size: 1.15em;
+    color: #a0a8e0;
+    margin-bottom: 12px;
+}
+
+.concepts p, .concepts li {
+    margin-bottom: 8px;
+    color: #c0c8f0;
+}
+
+.concepts ul, .concepts ol {
+    padding-left: 24px;
+    margin-bottom: 8px;
+}
+
+.concepts strong { color: #e0e6ff; }
+
+.concepts .concept-code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    background: #0d1030;
+    color: #82aaff;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.92em;
+}
+
+/* ============================================================
+   STEPS
+   ============================================================ */
+.step {
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    border-left: 4px solid;
+}
+
+.step-copy {
+    background: #0d1a2c;
+    border-left-color: #00bcd4;
+}
+
+.step-challenge {
+    background: #1a1510;
+    border-left-color: #ff9800;
+}
+
+.step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #e0e6ff;
+}
+
+.badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.72em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.badge-copy {
+    background: #00bcd4;
+    color: #001820;
+}
+
+.badge-challenge {
+    background: #ff9800;
+    color: #1a0e00;
+}
+
+.step-location {
+    font-size: 0.9em;
+    color: #8890c0;
+    margin-bottom: 10px;
+    font-style: italic;
+}
+
+.step-desc, .step-task {
+    margin-bottom: 12px;
+    color: #c0c8f0;
+}
+
+.step-desc strong, .step-task strong { color: #e0e6ff; }
+
+.step-note {
+    background: #0a1028;
+    border-left: 3px solid #2196f3;
+    padding: 8px 14px;
+    margin-top: 10px;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.92em;
+    color: #90a0d0;
+}
+
+/* ============================================================
+   CODE BLOCKS
+   ============================================================ */
+pre.code-block {
+    background: #0d1030;
+    border: 1px solid #1a2050;
+    border-radius: 6px;
+    padding: 14px 18px;
+    overflow-x: auto;
+    margin: 8px 0;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+pre.code-block code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.92em;
+    line-height: 1.55;
+    color: #eeffff;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Inline code in descriptions */
+.step-desc code, .step-task code, .step-note code,
+.concepts code, .hint code, p code, li code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    background: #0d1030;
+    color: #82aaff;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+/* ============================================================
+   SYNTAX HIGHLIGHTING
+   ============================================================ */
+.kw  { color: #c792ea; }   /* keywords */
+.str { color: #c3e88d; }   /* strings */
+.cm  { color: #809aa5; }   /* comments */
+.num { color: #f78c6c; }   /* numbers */
+.fn  { color: #82aaff; }   /* function calls */
+
+/* ============================================================
+   HINTS + SOLUTIONS
+   ============================================================ */
+.hints-container {
+    margin: 8px 0;
+}
+
+.hint {
+    background: #141028;
+    border: 1px solid #2a2060;
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin: 8px 0;
+    color: #b0b8e0;
+    font-size: 0.95em;
+}
+
+.hint strong { color: #e0e6ff; }
+
+.solution {
+    margin: 8px 0;
+}
+
+.btn-hint, .btn-solution {
+    border: none;
+    padding: 8px 18px;
+    border-radius: 5px;
+    font-size: 0.9em;
+    font-family: inherit;
+    cursor: pointer;
+    margin: 6px 6px 6px 0;
+    font-weight: 600;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.btn-hint:active, .btn-solution:active {
+    transform: scale(0.97);
+}
+
+.btn-hint {
+    background: #6c63ff;
+    color: #fff;
+}
+
+.btn-hint:hover { background: #7d75ff; }
+
+.btn-solution {
+    background: #ff9800;
+    color: #1a0e00;
+}
+
+.btn-solution:hover { background: #ffad33; }
+
+/* ============================================================
+   CHECK YOUR WORK + STUCK
+   ============================================================ */
+.check-work {
+    background: #0d1830;
+    border: 1px solid #1a2850;
+    border-radius: 8px;
+    padding: 18px 24px;
+    margin-top: 32px;
+}
+
+.check-work h2 {
+    font-size: 1.1em;
+    color: #4caf50;
+    margin-bottom: 10px;
+}
+
+.check-work ul {
+    padding-left: 24px;
+}
+
+.check-work li {
+    margin-bottom: 6px;
+    color: #b0c0d0;
+}
+
+.stuck {
+    margin-top: 16px;
+    padding: 12px 18px;
+    background: #10101a;
+    border-radius: 6px;
+    color: #7880a0;
+    font-size: 0.9em;
+}
+
+.stuck code {
+    color: #82aaff;
+}
+
+.btn-stuck {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0;
+}
+
+.btn-stuck:hover {
+    color: #a0a8d0;
+}
+
+.btn-stuck code {
+    color: #82aaff;
+}
+
+.stuck-code {
+    margin-top: 12px;
+    max-height: 600px;
+    overflow-y: auto;
+    border-radius: 6px;
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+#toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #ff9800;
+    color: #1a0e00;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.95em;
+    opacity: 0;
+    transition: transform 0.3s, opacity 0.3s;
+    z-index: 200;
+    pointer-events: none;
+}
+
+#toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+/* ============================================================
+   SEPARATOR
+   ============================================================ */
+.sep {
+    border: none;
+    border-top: 1px solid #1a2050;
+    margin: 24px 0;
+}
+
+/* ============================================================
+   DELETE INSTRUCTION
+   ============================================================ */
+.delete-block {
+    background: #1a0d0d;
+    border: 1px solid #3a1515;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 8px 0;
+}
+
+.delete-block .delete-label {
+    color: #e05050;
+    font-weight: 700;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+}
+
+.delete-block pre.code-block {
+    border-color: #3a1515;
+    opacity: 0.7;
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     HEADER + TAB BAR
+     ============================================================ -->
+<header>
+    <div class="header-title">SPACE SHOOTER TUTORIAL</div>
+    <nav class="tab-bar">
+        <button class="active" data-part="0">Part 0: Ship</button>
+        <button data-part="1">Part 1: Laser</button>
+        <button data-part="2">Part 2: Meteor</button>
+        <button data-part="3">Part 3: Collision</button>
+        <button data-part="4">Part 4: Multi-Meteor</button>
+        <button data-part="5">Part 5: Game Over</button>
+        <button data-part="6">Part 6: Multi-Laser</button>
+        <button data-part="7">Part 7: Stars</button>
+    </nav>
+</header>
+
+<main>
+
+<!-- ============================================================
+     PART 0: PLAYER SHIP
+     ============================================================ -->
+<div class="part active" id="part-0">
+    <h1>Part 0: Player Ship</h1>
+    <p class="subtitle">A spaceship that moves in all four directions using the arrow keys.</p>
+
+    <div class="concepts">
+        <h2>New Concepts</h2>
+        <ul>
+            <li><code>canvas.assets.load_image(name, filename)</code> &mdash; loads an image file so you can draw it later</li>
+            <li><code>canvas.draw_image(name, x, y, width, height)</code> &mdash; draws a loaded image on screen</li>
+            <li><code>canvas.is_key_down(key)</code> &mdash; returns <code>true</code> every frame the key is held down (smooth movement)</li>
+        </ul>
+    </div>
+
+    <!-- Step 1 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 1: Load the ship image</div>
+        <div class="step-location">Where: GAME STATE section, after the <code>ship_speed</code> line</div>
+        <pre class="code-block"><code class="lua">-- Load images
+canvas.assets.load_image("ship", "blue_ship.png")</code></pre>
+        <div class="step-desc">This loads the <code>blue_ship.png</code> file from the <code>images/</code> folder and gives it the name <code>"ship"</code> so we can draw it later.</div>
+    </div>
+
+    <!-- Step 2 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 2: Add UP movement</div>
+        <div class="step-location">Where: USER INPUT section, after the RIGHT movement <code>if</code> block</div>
+        <div class="step-task">Add an <code>if</code> block that checks for the UP arrow key. When UP is held, subtract <code>ship_speed * dt</code> from <code>ship_y</code>.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Look at the existing LEFT and RIGHT movement blocks. UP movement follows the same pattern, but uses a different key and changes a different position variable.</div>
+            <div class="hint" hidden>Use <code>canvas.is_key_down(canvas.keys.UP)</code> to detect the key. Change <code>ship_y</code> instead of <code>ship_x</code>. Since y=0 is the TOP of the screen, you need to <strong>subtract</strong> to move upward.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">if canvas.is_key_down(canvas.keys.UP) then
+    ship_y = ship_y - ship_speed * dt
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 3 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 3: Add DOWN movement</div>
+        <div class="step-location">Where: USER INPUT section, right after your UP movement code</div>
+        <div class="step-task">Add another <code>if</code> block for the DOWN arrow key. This one should <strong>add</strong> <code>ship_speed * dt</code> to <code>ship_y</code>.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>This is almost identical to your UP movement code, but goes in the opposite direction.</div>
+            <div class="hint" hidden>Use <code>canvas.keys.DOWN</code> and <strong>add</strong> <code>ship_speed * dt</code> to <code>ship_y</code> instead of subtracting.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">if canvas.is_key_down(canvas.keys.DOWN) then
+    ship_y = ship_y + ship_speed * dt
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 4 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 4: Draw the ship</div>
+        <div class="step-location">Where: DRAW section, between the background rectangle and the HUD</div>
+        <div class="step-task">Use <code>canvas.draw_image()</code> to draw the ship image at its current position and size.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>The <code>canvas.draw_image()</code> function needs 5 arguments: the image name, x, y, width, and height.</div>
+            <div class="hint" hidden>Use the string <code>"ship"</code> (the name you gave it when loading) and the ship position/size variables: <code>ship_x</code>, <code>ship_y</code>, <code>ship_w</code>, <code>ship_h</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">canvas.draw_image("ship", ship_x, ship_y, ship_w, ship_h)</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>Run <code>game.lua</code>. You should see:</p>
+        <ul>
+            <li>A blue spaceship near the bottom of the screen</li>
+            <li>The ship moves in all four directions with the arrow keys</li>
+            <li>The ship stops at the screen edges (it can't go off-screen)</li>
+        </ul>
+    </div>
+    <div class="stuck">
+        <button class="btn-stuck">Stuck? Compare your code with <code>solutions/part_0.lua</code></button>
+        <div class="stuck-code" hidden>
+            <pre class="code-block"><code class="lua">-- ============================================================
+-- Space Shooter — Part 0: Player Ship
+-- Move your ship around the screen with the arrow keys!
+-- ============================================================
+
+local canvas = require("canvas")
+canvas.assets.add_path("images")
+canvas.set_size(800, 600)
+
+local SCREEN_W = 800
+local SCREEN_H = 600
+
+-- ============================================================
+-- GAME STATE
+-- ============================================================
+
+local ship_x = 370
+local ship_y = 500
+local ship_w = 60
+local ship_h = 48
+local ship_speed = 300
+
+-- Load images
+canvas.assets.load_image("ship", "blue_ship.png")
+
+-- ============================================================
+-- USER INPUT
+-- ============================================================
+
+local function user_input()
+    local dt = canvas.get_delta()
+
+    if canvas.is_key_down(canvas.keys.LEFT) then
+        ship_x = ship_x - ship_speed * dt
+    end
+    if canvas.is_key_down(canvas.keys.RIGHT) then
+        ship_x = ship_x + ship_speed * dt
+    end
+    if canvas.is_key_down(canvas.keys.UP) then
+        ship_y = ship_y - ship_speed * dt
+    end
+    if canvas.is_key_down(canvas.keys.DOWN) then
+        ship_y = ship_y + ship_speed * dt
+    end
+end
+
+-- ============================================================
+-- UPDATE
+-- ============================================================
+
+local function update()
+    ship_x = math.max(0, math.min(SCREEN_W - ship_w, ship_x))
+    ship_y = math.max(0, math.min(SCREEN_H - ship_h, ship_y))
+end
+
+-- ============================================================
+-- DRAW
+-- ============================================================
+
+local function draw()
+    canvas.clear()
+
+    -- Dark space background
+    canvas.set_color(10, 10, 30)
+    canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
+
+    -- Ship
+    canvas.draw_image("ship", ship_x, ship_y, ship_w, ship_h)
+
+    -- HUD
+    canvas.set_color(255, 255, 255)
+    canvas.set_font_size(16)
+    canvas.draw_text(10, 10, "Arrow keys: Move")
+end
+
+-- ============================================================
+-- GAME LOOP
+-- ============================================================
+
+local function game()
+    user_input()
+    update()
+    draw()
+end
+
+canvas.tick(game)
+canvas.start()</code></pre>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     PART 1: FIRING A LASER
+     ============================================================ -->
+<div class="part" id="part-1">
+    <h1>Part 1: Firing a Laser</h1>
+    <p class="subtitle">A laser that fires upward when you press SPACE.</p>
+
+    <div class="concepts">
+        <h2>New Concepts</h2>
+        <ul>
+            <li><code>canvas.is_key_pressed(key)</code> &mdash; returns <code>true</code> only on the <strong>first frame</strong> a key goes down (not while held)
+                <ul>
+                    <li>Use <code>is_key_down</code> for movement (smooth, continuous)</li>
+                    <li>Use <code>is_key_pressed</code> for firing (one shot per press)</li>
+                </ul>
+            </li>
+            <li><strong>Boolean flags</strong> &mdash; a variable like <code>laser_active</code> that's <code>true</code> or <code>false</code> to track whether something exists on screen</li>
+        </ul>
+    </div>
+
+    <!-- Step 1 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 1: Add laser variables</div>
+        <div class="step-location">Where: GAME STATE section, after the ship variables (after <code>ship_speed</code>), before <code>-- Load images</code></div>
+        <pre class="code-block"><code class="lua">-- Laser
+local laser_x = 0
+local laser_y = 0
+local laser_w = 9
+local laser_h = 30
+local laser_speed = 500
+local laser_active = false</code></pre>
+    </div>
+
+    <!-- Step 2 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 2: Load the laser image</div>
+        <div class="step-location">Where: Right after the <code>load_image("ship", ...)</code> line</div>
+        <pre class="code-block"><code class="lua">canvas.assets.load_image("laser", "laser.png")</code></pre>
+    </div>
+
+    <!-- Step 3 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 3: Fire the laser on SPACE</div>
+        <div class="step-location">Where: USER INPUT section, after all the movement <code>if</code> blocks (before <code>end</code>)</div>
+        <div class="step-task">When SPACE is pressed <strong>and</strong> the laser is not already active: set <code>laser_active</code> to <code>true</code>, center the laser on the ship, and position it at the ship's y.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>You need two conditions combined with <code>and</code>: the SPACE key was just pressed, AND the laser is not already active. Use <code>is_key_pressed</code> (not <code>is_key_down</code>!) for a single-press action.</div>
+            <div class="hint" hidden>The condition is: <code>canvas.is_key_pressed(canvas.keys.SPACE) and not laser_active</code>. Inside the if block, you need to set three things: activate the laser, set its x, and set its y.</div>
+            <div class="hint" hidden>Set <code>laser_active = true</code>, center the laser on the ship with <code>laser_x = ship_x + ship_w / 2 - laser_w / 2</code>, and set <code>laser_y = ship_y</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">if canvas.is_key_pressed(canvas.keys.SPACE) and not laser_active then
+    laser_active = true
+    laser_x = ship_x + ship_w / 2 - laser_w / 2
+    laser_y = ship_y
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 4 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 4: Move the laser upward</div>
+        <div class="step-location">Where: UPDATE section. First, add <code>local dt = canvas.get_delta()</code> at the very top of the function (before the clamp lines). Then add your laser movement code after the ship clamping lines.</div>
+        <div class="step-task">If the laser is active, subtract <code>laser_speed * dt</code> from <code>laser_y</code> to move it upward.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>First, add <code>local dt = canvas.get_delta()</code> at the very top of the <code>update()</code> function. Then check if the laser is active before moving it.</div>
+            <div class="hint" hidden>If <code>laser_active</code> is true, subtract <code>laser_speed * dt</code> from <code>laser_y</code>. Subtracting from y moves things upward on screen.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- At the top of update():
+local dt = canvas.get_delta()
+
+-- After the ship clamping lines:
+if laser_active then
+    laser_y = laser_y - laser_speed * dt
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 5 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 5: Deactivate the laser off-screen</div>
+        <div class="step-location">Where: UPDATE section, right after your laser movement code</div>
+        <div class="step-task">If the bottom of the laser (<code>laser_y + laser_h</code>) is less than <code>0</code>, set <code>laser_active</code> to <code>false</code>.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>The laser should disappear when it goes above the top of the screen. The top of the screen is y = 0.</div>
+            <div class="hint" hidden>Check if the bottom edge of the laser (<code>laser_y + laser_h</code>) has gone above 0. If so, set <code>laser_active</code> to <code>false</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">if laser_y + laser_h &lt; 0 then
+    laser_active = false
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 6 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 6: Draw the laser</div>
+        <div class="step-location">Where: DRAW section, <strong>before</strong> the ship drawing line (so the laser appears behind the ship)</div>
+        <div class="step-task">If the laser is active, draw the <code>"laser"</code> image at <code>laser_x</code>, <code>laser_y</code> with size <code>laser_w</code> by <code>laser_h</code>.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Only draw the laser when <code>laser_active</code> is true. Use the same <code>canvas.draw_image()</code> pattern you used for the ship.</div>
+            <div class="hint" hidden>The image name is <code>"laser"</code>, and the position/size variables are <code>laser_x</code>, <code>laser_y</code>, <code>laser_w</code>, <code>laser_h</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">if laser_active then
+    canvas.draw_image("laser", laser_x, laser_y, laser_w, laser_h)
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 7 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 7: Update the HUD text</div>
+        <div class="step-location">Where: DRAW section, find the <code>draw_text</code> line and replace it</div>
+        <pre class="code-block"><code class="lua">canvas.draw_text(10, 10, "Arrow keys: Move | SPACE: Shoot")</code></pre>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>Run <code>game.lua</code>. You should see:</p>
+        <ul>
+            <li>Press SPACE to fire a laser upward from the ship</li>
+            <li>Only one laser can be on-screen at a time</li>
+            <li>The laser disappears when it goes past the top of the screen</li>
+            <li>You can fire again once the laser is gone</li>
+        </ul>
+    </div>
+    <div class="stuck">
+        <button class="btn-stuck">Stuck? Compare your code with <code>solutions/part_1.lua</code></button>
+        <div class="stuck-code" hidden>
+            <pre class="code-block"><code class="lua">-- ============================================================
+-- Space Shooter — Part 1: Firing a Laser
+-- Press SPACE to fire a laser upward!
+-- ============================================================
+
+local canvas = require("canvas")
+canvas.assets.add_path("images")
+canvas.set_size(800, 600)
+
+local SCREEN_W = 800
+local SCREEN_H = 600
+
+-- ============================================================
+-- GAME STATE
+-- ============================================================
+
+-- Ship
+local ship_x = 370
+local ship_y = 500
+local ship_w = 60
+local ship_h = 48
+local ship_speed = 300
+
+-- Laser
+local laser_x = 0
+local laser_y = 0
+local laser_w = 9
+local laser_h = 30
+local laser_speed = 500
+local laser_active = false
+
+-- Load images
+canvas.assets.load_image("ship", "blue_ship.png")
+canvas.assets.load_image("laser", "laser.png")
+
+-- ============================================================
+-- USER INPUT
+-- ============================================================
+
+local function user_input()
+    local dt = canvas.get_delta()
+
+    -- Ship movement
+    if canvas.is_key_down(canvas.keys.LEFT) then ship_x = ship_x - ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.RIGHT) then ship_x = ship_x + ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.UP) then ship_y = ship_y - ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.DOWN) then ship_y = ship_y + ship_speed * dt end
+
+    -- Fire laser
+    if canvas.is_key_pressed(canvas.keys.SPACE) and not laser_active then
+        laser_active = true
+        laser_x = ship_x + ship_w / 2 - laser_w / 2
+        laser_y = ship_y
+    end
+end
+
+-- ============================================================
+-- UPDATE
+-- ============================================================
+
+local function update()
+    local dt = canvas.get_delta()
+
+    -- Clamp ship to screen
+    ship_x = math.max(0, math.min(SCREEN_W - ship_w, ship_x))
+    ship_y = math.max(0, math.min(SCREEN_H - ship_h, ship_y))
+
+    -- Move laser upward
+    if laser_active then
+        laser_y = laser_y - laser_speed * dt
+    end
+
+    -- Deactivate laser when it leaves the screen
+    if laser_y + laser_h &lt; 0 then
+        laser_active = false
+    end
+end
+
+-- ============================================================
+-- DRAW
+-- ============================================================
+
+local function draw()
+    canvas.clear()
+
+    -- Dark space background
+    canvas.set_color(10, 10, 30)
+    canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
+
+    -- Laser (draw behind ship)
+    if laser_active then
+        canvas.draw_image("laser", laser_x, laser_y, laser_w, laser_h)
+    end
+
+    -- Ship
+    canvas.draw_image("ship", ship_x, ship_y, ship_w, ship_h)
+
+    -- HUD
+    canvas.set_color(255, 255, 255)
+    canvas.set_font_size(16)
+    canvas.draw_text(10, 10, "Arrow keys: Move | SPACE: Shoot")
+end
+
+-- ============================================================
+-- GAME LOOP
+-- ============================================================
+
+local function game()
+    user_input()
+    update()
+    draw()
+end
+
+canvas.tick(game)
+canvas.start()</code></pre>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     PART 2: A SINGLE METEOR
+     ============================================================ -->
+<div class="part" id="part-2">
+    <h1>Part 2: A Single Meteor</h1>
+    <p class="subtitle">A meteor that falls from the sky and respawns at a random position.</p>
+
+    <div class="concepts">
+        <h2>New Concepts</h2>
+        <ul>
+            <li><code>math.random(min, max)</code> &mdash; returns a random whole number between <code>min</code> and <code>max</code> (inclusive)
+                <ul>
+                    <li><code>math.random(1, 10)</code> &rarr; a number from 1 to 10</li>
+                    <li><code>math.random(0, 752)</code> &rarr; a number from 0 to 752</li>
+                </ul>
+            </li>
+            <li><strong>Respawning</strong> &mdash; when an object goes off-screen, reset its position so it appears again</li>
+        </ul>
+    </div>
+
+    <!-- Step 1 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 1: Add meteor variables</div>
+        <div class="step-location">Where: GAME STATE section, after the laser variables (after <code>laser_active</code>), before <code>-- Load images</code></div>
+        <pre class="code-block"><code class="lua">-- Meteor
+local meteor_x = 376
+local meteor_y = -48
+local meteor_w = 48
+local meteor_h = 48
+local meteor_speed = 150</code></pre>
+        <div class="step-desc">The meteor starts above the screen (<code>y = -48</code>) so it falls into view when the game begins.</div>
+    </div>
+
+    <!-- Step 2 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 2: Load the meteor image</div>
+        <div class="step-location">Where: Right after the <code>load_image("laser", ...)</code> line</div>
+        <pre class="code-block"><code class="lua">canvas.assets.load_image("meteor", "meteor.png")</code></pre>
+    </div>
+
+    <!-- Step 3 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 3: Move the meteor downward</div>
+        <div class="step-location">Where: UPDATE section, after the laser deactivation code</div>
+        <div class="step-task">Add <code>meteor_speed * dt</code> to <code>meteor_y</code> each frame.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>To make the meteor fall, increase its y position each frame. Remember: positive y goes DOWN on screen.</div>
+            <div class="hint" hidden>Add <code>meteor_speed * dt</code> to <code>meteor_y</code>. This is a single line of code, similar to how you moved the laser (but adding instead of subtracting).</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">meteor_y = meteor_y + meteor_speed * dt</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 4 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 4: Respawn the meteor</div>
+        <div class="step-location">Where: UPDATE section, right after the meteor movement line</div>
+        <div class="step-task">If <code>meteor_y</code> is greater than <code>SCREEN_H</code> (the meteor went off the bottom), set <code>meteor_x</code> to a random position using <code>math.random(0, SCREEN_W - meteor_w)</code> and set <code>meteor_y</code> to <code>-meteor_h</code> (just above the screen).</div>
+        <div class="hints-container">
+            <div class="hint" hidden>When the meteor goes below the bottom of the screen, reset its position. Use <code>SCREEN_H</code> to detect when it's gone off-screen.</div>
+            <div class="hint" hidden>Check <code>if meteor_y &gt; SCREEN_H</code>. Inside, set <code>meteor_x = math.random(0, SCREEN_W - meteor_w)</code> and <code>meteor_y = -meteor_h</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">if meteor_y &gt; SCREEN_H then
+    meteor_x = math.random(0, SCREEN_W - meteor_w)
+    meteor_y = -meteor_h
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 5 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 5: Draw the meteor</div>
+        <div class="step-location">Where: DRAW section, after the laser drawing code and <strong>before</strong> the ship drawing line</div>
+        <div class="step-task">Draw the <code>"meteor"</code> image at <code>meteor_x</code>, <code>meteor_y</code> with size <code>meteor_w</code> by <code>meteor_h</code>.</div>
+        <div class="step-note">Unlike the laser, the meteor is always visible &mdash; no <code>if</code> check needed.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>The meteor is always on screen (it respawns immediately), so just call <code>canvas.draw_image()</code> directly &mdash; no <code>if</code> needed.</div>
+            <div class="hint" hidden>Use <code>canvas.draw_image("meteor", meteor_x, meteor_y, meteor_w, meteor_h)</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">canvas.draw_image("meteor", meteor_x, meteor_y, meteor_w, meteor_h)</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>Run <code>game.lua</code>. You should see:</p>
+        <ul>
+            <li>A meteor falls from the top of the screen</li>
+            <li>When it goes off the bottom, it reappears at the top at a random horizontal position</li>
+            <li>The meteor falls continuously &mdash; it never stops</li>
+            <li>You can shoot at it, but nothing happens yet (that's Part 3!)</li>
+        </ul>
+    </div>
+    <div class="stuck">
+        <button class="btn-stuck">Stuck? Compare your code with <code>solutions/part_2.lua</code></button>
+        <div class="stuck-code" hidden>
+            <pre class="code-block"><code class="lua">-- ============================================================
+-- Space Shooter — Part 2: A Single Meteor
+-- A meteor falls from the top and respawns at a random spot!
+-- ============================================================
+
+local canvas = require("canvas")
+canvas.assets.add_path("images")
+canvas.set_size(800, 600)
+
+local SCREEN_W = 800
+local SCREEN_H = 600
+
+-- ============================================================
+-- GAME STATE
+-- ============================================================
+
+-- Ship
+local ship_x = 370
+local ship_y = 500
+local ship_w = 60
+local ship_h = 48
+local ship_speed = 300
+
+-- Laser
+local laser_x = 0
+local laser_y = 0
+local laser_w = 9
+local laser_h = 30
+local laser_speed = 500
+local laser_active = false
+
+-- Meteor
+local meteor_x = 376
+local meteor_y = -48
+local meteor_w = 48
+local meteor_h = 48
+local meteor_speed = 150
+
+-- Load images
+canvas.assets.load_image("ship", "blue_ship.png")
+canvas.assets.load_image("laser", "laser.png")
+canvas.assets.load_image("meteor", "meteor.png")
+
+-- ============================================================
+-- USER INPUT
+-- ============================================================
+
+local function user_input()
+    local dt = canvas.get_delta()
+
+    -- Ship movement
+    if canvas.is_key_down(canvas.keys.LEFT) then ship_x = ship_x - ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.RIGHT) then ship_x = ship_x + ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.UP) then ship_y = ship_y - ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.DOWN) then ship_y = ship_y + ship_speed * dt end
+
+    -- Fire laser
+    if canvas.is_key_pressed(canvas.keys.SPACE) and not laser_active then
+        laser_active = true
+        laser_x = ship_x + ship_w / 2 - laser_w / 2
+        laser_y = ship_y
+    end
+end
+
+-- ============================================================
+-- UPDATE
+-- ============================================================
+
+local function update()
+    local dt = canvas.get_delta()
+
+    -- Clamp ship to screen
+    ship_x = math.max(0, math.min(SCREEN_W - ship_w, ship_x))
+    ship_y = math.max(0, math.min(SCREEN_H - ship_h, ship_y))
+
+    -- Move laser
+    if laser_active then
+        laser_y = laser_y - laser_speed * dt
+    end
+    if laser_y + laser_h &lt; 0 then
+        laser_active = false
+    end
+
+    -- Move meteor downward
+    meteor_y = meteor_y + meteor_speed * dt
+
+    -- Respawn meteor at top with random x when it goes off the bottom
+    if meteor_y &gt; SCREEN_H then
+        meteor_x = math.random(0, SCREEN_W - meteor_w)
+        meteor_y = -meteor_h
+    end
+end
+
+-- ============================================================
+-- DRAW
+-- ============================================================
+
+local function draw()
+    canvas.clear()
+
+    -- Dark space background
+    canvas.set_color(10, 10, 30)
+    canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
+
+    -- Laser
+    if laser_active then
+        canvas.draw_image("laser", laser_x, laser_y, laser_w, laser_h)
+    end
+
+    -- Meteor
+    canvas.draw_image("meteor", meteor_x, meteor_y, meteor_w, meteor_h)
+
+    -- Ship
+    canvas.draw_image("ship", ship_x, ship_y, ship_w, ship_h)
+
+    -- HUD
+    canvas.set_color(255, 255, 255)
+    canvas.set_font_size(16)
+    canvas.draw_text(10, 10, "Arrow keys: Move | SPACE: Shoot")
+end
+
+-- ============================================================
+-- GAME LOOP
+-- ============================================================
+
+local function game()
+    user_input()
+    update()
+    draw()
+end
+
+canvas.tick(game)
+canvas.start()</code></pre>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     PART 3: LASER-METEOR COLLISION
+     ============================================================ -->
+<div class="part" id="part-3">
+    <h1>Part 3: Laser-Meteor Collision</h1>
+    <p class="subtitle">Collision detection &mdash; shoot the meteor to score points!</p>
+
+    <div class="concepts">
+        <h2>New Concepts</h2>
+        <p><strong>AABB Collision Detection</strong> (Axis-Aligned Bounding Box)</p>
+        <p>Imagine each object has an invisible rectangle around it. Two rectangles overlap when ALL four of these are true:</p>
+        <ol>
+            <li>a's left edge is left of b's right edge: <code>a_x &lt; b_x + b_w</code></li>
+            <li>a's right edge is right of b's left edge: <code>a_x + a_w &gt; b_x</code></li>
+            <li>a's top edge is above b's bottom edge: <code>a_y &lt; b_y + b_h</code></li>
+            <li>a's bottom edge is below b's top edge: <code>a_y + a_h &gt; b_y</code></li>
+        </ol>
+        <p>If any one of these is false, the rectangles are NOT overlapping.</p>
+    </div>
+
+    <!-- Step 1 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 1: Add a score variable</div>
+        <div class="step-location">Where: GAME STATE section, after the meteor variables, before <code>-- Load images</code></div>
+        <pre class="code-block"><code class="lua">-- Score
+local score = 0</code></pre>
+    </div>
+
+    <!-- Step 2 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 2: Add the collision function</div>
+        <div class="step-location">Where: Between the <code>-- Load images</code> lines and the <code>-- USER INPUT</code> section. Add a new section here.</div>
+        <pre class="code-block"><code class="lua">-- ============================================================
+-- COLLISION DETECTION
+-- ============================================================
+
+local function check_collision(a_x, a_y, a_w, a_h, b_x, b_y, b_w, b_h)
+    -- You will fill this in next!
+end</code></pre>
+    </div>
+
+    <!-- Step 3 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 3: Write the AABB collision check</div>
+        <div class="step-location">Where: Inside the <code>check_collision</code> function (replace the comment)</div>
+        <div class="step-task">Return <code>true</code> when all four AABB conditions are true at the same time. Use <code>and</code> to combine them in a single <code>return</code> statement.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>You need all four AABB conditions from the New Concepts section to be true. Write a single <code>return</code> statement with all four conditions connected by <code>and</code>.</div>
+            <div class="hint" hidden>The four conditions check edges: a's left vs b's right, a's right vs b's left, a's top vs b's bottom, a's bottom vs b's top. Use <code>&lt;</code> and <code>&gt;</code> comparisons.</div>
+            <div class="hint" hidden>Start with <code>return a_x &lt; b_x + b_w and a_x + a_w &gt; b_x and ...</code> &mdash; add the same pattern for the y-axis using <code>a_y</code>, <code>a_h</code>, <code>b_y</code>, <code>b_h</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">return a_x &lt; b_x + b_w
+   and a_x + a_w &gt; b_x
+   and a_y &lt; b_y + b_h
+   and a_y + a_h &gt; b_y</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 4 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 4: Add the respawn helper function</div>
+        <div class="step-location">Where: Right after the <code>check_collision</code> function, add a new section</div>
+        <pre class="code-block"><code class="lua">-- ============================================================
+-- HELPER: Respawn meteor at a random position above the screen
+-- ============================================================
+
+local function respawn_meteor()
+    meteor_x = math.random(0, SCREEN_W - meteor_w)
+    meteor_y = -meteor_h
+end</code></pre>
+        <div class="step-desc">Now go back to your UPDATE section and <strong>simplify</strong> your meteor respawn code. Replace the two lines inside the <code>if meteor_y &gt; SCREEN_H</code> block with a single call:</div>
+        <pre class="code-block"><code class="lua">if meteor_y &gt; SCREEN_H then
+    respawn_meteor()
+end</code></pre>
+    </div>
+
+    <!-- Step 5 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 5: Check laser-vs-meteor collision</div>
+        <div class="step-location">Where: UPDATE section, after the meteor movement/respawn code</div>
+        <div class="step-task">If the laser is active, check if it collides with the meteor. If they collide: destroy the laser, respawn the meteor, and add 1 to <code>score</code>.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Only check for collision when <code>laser_active</code> is true. Use <code>check_collision()</code> with the laser and meteor positions/sizes as arguments.</div>
+            <div class="hint" hidden>If they collide: set <code>laser_active = false</code>, call <code>respawn_meteor()</code>, and add 1 to <code>score</code>. That's three lines inside the collision check.</div>
+            <div class="hint" hidden>The collision call is: <code>check_collision(laser_x, laser_y, laser_w, laser_h, meteor_x, meteor_y, meteor_w, meteor_h)</code>. Wrap it in <code>if laser_active then if check_collision(...) then</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">if laser_active then
+    if check_collision(laser_x, laser_y, laser_w, laser_h,
+                       meteor_x, meteor_y, meteor_w, meteor_h) then
+        laser_active = false
+        respawn_meteor()
+        score = score + 1
+    end
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 6 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 6: Display the score in the HUD</div>
+        <div class="step-location">Where: DRAW section, replace the existing <code>draw_text</code> line</div>
+        <pre class="code-block"><code class="lua">canvas.draw_text(10, 10, "Score: " .. score)
+canvas.draw_text(10, 30, "Arrow keys: Move | SPACE: Shoot")</code></pre>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>Run <code>game.lua</code>. You should see:</p>
+        <ul>
+            <li>Shoot the meteor with the laser &mdash; it disappears and respawns at the top</li>
+            <li>Your score increases by 1 each time you hit the meteor</li>
+            <li>The score displays in the top-left corner</li>
+            <li>Missing the meteor has no effect &mdash; the laser just flies off-screen</li>
+        </ul>
+    </div>
+    <div class="stuck">
+        <button class="btn-stuck">Stuck? Compare your code with <code>solutions/part_3.lua</code></button>
+        <div class="stuck-code" hidden>
+            <pre class="code-block"><code class="lua">-- ============================================================
+-- Space Shooter — Part 3: Laser-Meteor Collision
+-- Shoot the meteor to score points!
+-- ============================================================
+
+local canvas = require("canvas")
+canvas.assets.add_path("images")
+canvas.set_size(800, 600)
+
+local SCREEN_W = 800
+local SCREEN_H = 600
+
+-- ============================================================
+-- GAME STATE
+-- ============================================================
+
+-- Ship
+local ship_x = 370
+local ship_y = 500
+local ship_w = 60
+local ship_h = 48
+local ship_speed = 300
+
+-- Laser
+local laser_x = 0
+local laser_y = 0
+local laser_w = 9
+local laser_h = 30
+local laser_speed = 500
+local laser_active = false
+
+-- Meteor
+local meteor_x = 376
+local meteor_y = -48
+local meteor_w = 48
+local meteor_h = 48
+local meteor_speed = 150
+
+-- Score
+local score = 0
+
+-- Load images
+canvas.assets.load_image("ship", "blue_ship.png")
+canvas.assets.load_image("laser", "laser.png")
+canvas.assets.load_image("meteor", "meteor.png")
+
+-- ============================================================
+-- COLLISION DETECTION
+-- ============================================================
+
+local function check_collision(a_x, a_y, a_w, a_h, b_x, b_y, b_w, b_h)
+    return a_x &lt; b_x + b_w
+       and a_x + a_w &gt; b_x
+       and a_y &lt; b_y + b_h
+       and a_y + a_h &gt; b_y
+end
+
+-- ============================================================
+-- HELPER: Respawn meteor at a random position above the screen
+-- ============================================================
+
+local function respawn_meteor()
+    meteor_x = math.random(0, SCREEN_W - meteor_w)
+    meteor_y = -meteor_h
+end
+
+-- ============================================================
+-- USER INPUT
+-- ============================================================
+
+local function user_input()
+    local dt = canvas.get_delta()
+
+    -- Ship movement
+    if canvas.is_key_down(canvas.keys.LEFT) then ship_x = ship_x - ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.RIGHT) then ship_x = ship_x + ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.UP) then ship_y = ship_y - ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.DOWN) then ship_y = ship_y + ship_speed * dt end
+
+    -- Fire laser
+    if canvas.is_key_pressed(canvas.keys.SPACE) and not laser_active then
+        laser_active = true
+        laser_x = ship_x + ship_w / 2 - laser_w / 2
+        laser_y = ship_y
+    end
+end
+
+-- ============================================================
+-- UPDATE
+-- ============================================================
+
+local function update()
+    local dt = canvas.get_delta()
+
+    -- Clamp ship to screen
+    ship_x = math.max(0, math.min(SCREEN_W - ship_w, ship_x))
+    ship_y = math.max(0, math.min(SCREEN_H - ship_h, ship_y))
+
+    -- Move laser
+    if laser_active then
+        laser_y = laser_y - laser_speed * dt
+    end
+    if laser_y + laser_h &lt; 0 then
+        laser_active = false
+    end
+
+    -- Move meteor
+    meteor_y = meteor_y + meteor_speed * dt
+    if meteor_y &gt; SCREEN_H then
+        respawn_meteor()
+    end
+
+    -- Laser vs meteor collision
+    if laser_active then
+        if check_collision(laser_x, laser_y, laser_w, laser_h,
+                           meteor_x, meteor_y, meteor_w, meteor_h) then
+            laser_active = false
+            respawn_meteor()
+            score = score + 1
+        end
+    end
+end
+
+-- ============================================================
+-- DRAW
+-- ============================================================
+
+local function draw()
+    canvas.clear()
+
+    -- Dark space background
+    canvas.set_color(10, 10, 30)
+    canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
+
+    -- Laser
+    if laser_active then
+        canvas.draw_image("laser", laser_x, laser_y, laser_w, laser_h)
+    end
+
+    -- Meteor
+    canvas.draw_image("meteor", meteor_x, meteor_y, meteor_w, meteor_h)
+
+    -- Ship
+    canvas.draw_image("ship", ship_x, ship_y, ship_w, ship_h)
+
+    -- HUD
+    canvas.set_color(255, 255, 255)
+    canvas.set_font_size(16)
+    canvas.draw_text(10, 10, "Score: " .. score)
+    canvas.draw_text(10, 30, "Arrow keys: Move | SPACE: Shoot")
+end
+
+-- ============================================================
+-- GAME LOOP
+-- ============================================================
+
+local function game()
+    user_input()
+    update()
+    draw()
+end
+
+canvas.tick(game)
+canvas.start()</code></pre>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     PART 4: MULTIPLE METEORS
+     ============================================================ -->
+<div class="part" id="part-4">
+    <h1>Part 4: Multiple Meteors</h1>
+    <p class="subtitle">Instead of one meteor, many meteors spawn over time. This is the biggest part!</p>
+
+    <div class="step-note" style="margin-bottom: 24px;">Your code won't run during some of these steps because we're replacing old code with new code. That's expected! It will work again once you finish all the steps.</div>
+
+    <div class="concepts">
+        <h2>New Concepts</h2>
+
+        <p><strong>Tables (Lists)</strong></p>
+        <p>A table is like a list that holds multiple items:</p>
+        <pre class="code-block"><code class="lua">local fruits = {"apple", "banana", "cherry"}</code></pre>
+        <p>Each item has an index (position number) starting at 1:</p>
+        <pre class="code-block"><code class="lua">fruits[1]   -- "apple"
+fruits[2]   -- "banana"
+#fruits     -- 3 (the length)</code></pre>
+        <p>Adding and removing:</p>
+        <pre class="code-block"><code class="lua">table.insert(fruits, "grape")    -- adds "grape" to the end
+table.remove(fruits, 2)          -- removes item at index 2</code></pre>
+
+        <p style="margin-top: 16px;"><strong>Loops</strong></p>
+        <p>A <code>for</code> loop repeats code for each item in a list.</p>
+        <p><strong>Forward loop</strong> with <code>ipairs</code> (good for drawing):</p>
+        <pre class="code-block"><code class="lua">for i, fruit in ipairs(fruits) do
+    print(i, fruit)    -- prints: 1 apple, 2 banana, etc.
+end</code></pre>
+        <p><strong>Reverse loop</strong> (REQUIRED when removing items):</p>
+        <pre class="code-block"><code class="lua">for i = #fruits, 1, -1 do
+    if fruits[i] == "banana" then
+        table.remove(fruits, i)
+    end
+end</code></pre>
+        <p><strong>Why reverse?</strong> If you remove item 2 in a forward loop, item 3 shifts down to index 2 and gets <strong>skipped</strong>. Going backwards avoids this problem.</p>
+    </div>
+
+    <!-- Step 1 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 1: Replace meteor variables with a table</div>
+        <div class="step-location">Where: GAME STATE section. Find and <strong>delete</strong> the <code>-- Meteor</code> comment and the <code>meteor_x</code> and <code>meteor_y</code> lines.</div>
+        <div class="delete-block">
+            <div class="delete-label">Find and delete these lines:</div>
+            <pre class="code-block"><code class="lua">-- Meteor
+local meteor_x = 376
+local meteor_y = -48</code></pre>
+        </div>
+        <div class="step-desc"><strong>Replace with:</strong></div>
+        <pre class="code-block"><code class="lua">-- Meteors
+local meteors = {}</code></pre>
+        <div class="step-desc">Keep <code>meteor_w</code>, <code>meteor_h</code>, and <code>meteor_speed</code> &mdash; they stay the same.</div>
+        <div class="step-desc">Then, right after <code>meteor_speed</code>, <strong>add these new lines:</strong></div>
+        <pre class="code-block"><code class="lua">-- Spawn timer
+local spawn_timer = 0
+local spawn_interval = 2.0</code></pre>
+    </div>
+
+    <!-- Step 2 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 2: Replace respawn_meteor with spawn_meteor</div>
+        <div class="step-location">Where: Find the entire <code>respawn_meteor</code> function and its section header comment.</div>
+        <div class="delete-block">
+            <div class="delete-label">Find and delete everything from the HELPER comment through the function's end:</div>
+            <pre class="code-block"><code class="lua">-- ============================================================
+-- HELPER: Respawn meteor at a random position above the screen
+-- ============================================================
+
+local function respawn_meteor()
+    meteor_x = math.random(0, SCREEN_W - meteor_w)
+    meteor_y = -meteor_h
+end</code></pre>
+        </div>
+        <div class="step-desc"><strong>Add this in its place:</strong></div>
+        <pre class="code-block"><code class="lua">-- ============================================================
+-- SPAWN METEOR
+-- Creates a new meteor table and adds it to the meteors list.
+-- ============================================================
+
+local function spawn_meteor()
+    local meteor = {
+        x = math.random(0, SCREEN_W - meteor_w),
+        y = -meteor_h
+    }
+    table.insert(meteors, meteor)
+end</code></pre>
+        <div class="step-desc">Each meteor is now a small table with <code>x</code> and <code>y</code> fields. <code>table.insert</code> adds it to the end of the <code>meteors</code> list.</div>
+    </div>
+
+    <!-- Step 3 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 3: Delete old meteor code in update()</div>
+        <div class="step-location">Where: UPDATE section</div>
+        <div class="step-desc">Find and <strong>delete</strong> the old meteor movement and respawn code:</div>
+        <div class="delete-block">
+            <div class="delete-label">Delete this block:</div>
+            <pre class="code-block"><code class="lua">    -- Move meteor
+    meteor_y = meteor_y + meteor_speed * dt
+    if meteor_y &gt; SCREEN_H then
+        respawn_meteor()
+    end</code></pre>
+        </div>
+        <div class="step-desc">Also find and <strong>delete</strong> the old laser-vs-meteor collision code:</div>
+        <div class="delete-block">
+            <div class="delete-label">Delete this block:</div>
+            <pre class="code-block"><code class="lua">    -- Laser vs meteor collision
+    if laser_active then
+        if check_collision(laser_x, laser_y, laser_w, laser_h,
+                           meteor_x, meteor_y, meteor_w, meteor_h) then
+            laser_active = false
+            respawn_meteor()
+            score = score + 1
+        end
+    end</code></pre>
+        </div>
+        <div class="step-desc">We'll write new versions of both in the next steps.</div>
+    </div>
+
+    <!-- Step 4 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 4: Write the spawn timer</div>
+        <div class="step-location">Where: UPDATE section, after the laser deactivation code (where you just deleted the old code)</div>
+        <div class="step-task">Each frame: add <code>dt</code> to <code>spawn_timer</code>. When <code>spawn_timer &gt;= spawn_interval</code>, call <code>spawn_meteor()</code> and reset <code>spawn_timer</code> to <code>0</code>.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Each frame, accumulate time by adding <code>dt</code> to <code>spawn_timer</code>. When the timer reaches the interval, it's time to spawn a meteor and reset.</div>
+            <div class="hint" hidden><code>spawn_timer = spawn_timer + dt</code>, then check <code>if spawn_timer &gt;= spawn_interval then</code> &mdash; call <code>spawn_meteor()</code> and set <code>spawn_timer = 0</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">spawn_timer = spawn_timer + dt
+if spawn_timer &gt;= spawn_interval then
+    spawn_meteor()
+    spawn_timer = 0
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 5 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 5: Move meteors and remove off-screen ones</div>
+        <div class="step-location">Where: UPDATE section, right after your spawn timer code</div>
+        <div class="step-task">Use a <strong>reverse loop</strong> over the <code>meteors</code> table. Inside: move each meteor down, and remove it if it goes off-screen.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Use a REVERSE loop (<code>for i = #meteors, 1, -1 do</code>) because you might remove items. Inside: move each meteor down and remove it if it's past <code>SCREEN_H</code>.</div>
+            <div class="hint" hidden>Move: <code>meteors[i].y = meteors[i].y + meteor_speed * dt</code>. Remove condition: <code>if meteors[i].y &gt; SCREEN_H then table.remove(meteors, i) end</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">for i = #meteors, 1, -1 do
+    meteors[i].y = meteors[i].y + meteor_speed * dt
+    if meteors[i].y &gt; SCREEN_H then
+        table.remove(meteors, i)
+    end
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 6 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 6: Write laser-vs-meteor collision</div>
+        <div class="step-location">Where: UPDATE section, after the meteor movement loop</div>
+        <div class="step-task">Only check if <code>laser_active</code> is true. Use a <strong>reverse loop</strong> over meteors. Check collision, and if hit: deactivate laser, remove meteor, add to score, and <code>break</code>.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Wrap everything in <code>if laser_active then</code>. Inside, use a reverse loop. Use <code>break</code> after a hit &mdash; the laser is gone so no need to keep checking.</div>
+            <div class="hint" hidden>Call <code>check_collision</code> with the laser and each <code>meteors[i]</code>. On collision: set <code>laser_active = false</code>, <code>table.remove(meteors, i)</code>, add 1 to <code>score</code>, and <code>break</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">if laser_active then
+    for i = #meteors, 1, -1 do
+        if check_collision(laser_x, laser_y, laser_w, laser_h,
+                           meteors[i].x, meteors[i].y, meteor_w, meteor_h) then
+            laser_active = false
+            table.remove(meteors, i)
+            score = score + 1
+            break
+        end
+    end
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 7 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 7: Replace meteor drawing</div>
+        <div class="step-location">Where: DRAW section. Find and delete the single <code>canvas.draw_image("meteor", ...)</code> line. Write a loop in its place.</div>
+        <div class="step-task">Use a <strong>forward loop</strong> with <code>ipairs</code> to draw every meteor in the list.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Use <code>for i, meteor in ipairs(meteors) do</code> to loop through the list. Each <code>meteor</code> has <code>.x</code> and <code>.y</code> fields.</div>
+            <div class="hint" hidden>Inside the loop: <code>canvas.draw_image("meteor", meteor.x, meteor.y, meteor_w, meteor_h)</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">for i, meteor in ipairs(meteors) do
+    canvas.draw_image("meteor", meteor.x, meteor.y, meteor_w, meteor_h)
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>Run <code>game.lua</code>. You should see:</p>
+        <ul>
+            <li>A new meteor spawns every 2 seconds</li>
+            <li>Multiple meteors fall at the same time</li>
+            <li>Meteors disappear when they go off the bottom</li>
+            <li>Shooting a meteor destroys it and adds to your score</li>
+            <li>The laser stops after hitting one meteor</li>
+        </ul>
+    </div>
+    <div class="stuck">
+        <button class="btn-stuck">Stuck? Compare your code with <code>solutions/part_4.lua</code></button>
+        <div class="stuck-code" hidden>
+            <pre class="code-block"><code class="lua">-- ============================================================
+-- Space Shooter — Part 4: Multiple Meteors
+-- Many meteors fall from the sky! Destroy them all!
+-- ============================================================
+
+local canvas = require("canvas")
+canvas.assets.add_path("images")
+canvas.set_size(800, 600)
+
+local SCREEN_W = 800
+local SCREEN_H = 600
+
+-- ============================================================
+-- GAME STATE
+-- ============================================================
+
+-- Ship
+local ship_x = 370
+local ship_y = 500
+local ship_w = 60
+local ship_h = 48
+local ship_speed = 300
+
+-- Laser
+local laser_x = 0
+local laser_y = 0
+local laser_w = 9
+local laser_h = 30
+local laser_speed = 500
+local laser_active = false
+
+-- Meteors (now a table/list instead of single variables!)
+local meteors = {}
+local meteor_w = 48
+local meteor_h = 48
+local meteor_speed = 150
+
+-- Spawn timer
+local spawn_timer = 0
+local spawn_interval = 2.0
+
+-- Score
+local score = 0
+
+-- Load images
+canvas.assets.load_image("ship", "blue_ship.png")
+canvas.assets.load_image("laser", "laser.png")
+canvas.assets.load_image("meteor", "meteor.png")
+
+-- ============================================================
+-- COLLISION DETECTION
+-- ============================================================
+
+local function check_collision(a_x, a_y, a_w, a_h, b_x, b_y, b_w, b_h)
+    return a_x &lt; b_x + b_w
+       and a_x + a_w &gt; b_x
+       and a_y &lt; b_y + b_h
+       and a_y + a_h &gt; b_y
+end
+
+-- ============================================================
+-- SPAWN METEOR
+-- Creates a new meteor table and adds it to the meteors list.
+-- ============================================================
+
+local function spawn_meteor()
+    local meteor = {
+        x = math.random(0, SCREEN_W - meteor_w),
+        y = -meteor_h
+    }
+    table.insert(meteors, meteor)
+end
+
+-- ============================================================
+-- USER INPUT
+-- ============================================================
+
+local function user_input()
+    local dt = canvas.get_delta()
+
+    -- Ship movement
+    if canvas.is_key_down(canvas.keys.LEFT) then ship_x = ship_x - ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.RIGHT) then ship_x = ship_x + ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.UP) then ship_y = ship_y - ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.DOWN) then ship_y = ship_y + ship_speed * dt end
+
+    -- Fire laser
+    if canvas.is_key_pressed(canvas.keys.SPACE) and not laser_active then
+        laser_active = true
+        laser_x = ship_x + ship_w / 2 - laser_w / 2
+        laser_y = ship_y
+    end
+end
+
+-- ============================================================
+-- UPDATE
+-- ============================================================
+
+local function update()
+    local dt = canvas.get_delta()
+
+    -- Clamp ship to screen
+    ship_x = math.max(0, math.min(SCREEN_W - ship_w, ship_x))
+    ship_y = math.max(0, math.min(SCREEN_H - ship_h, ship_y))
+
+    -- Move laser
+    if laser_active then
+        laser_y = laser_y - laser_speed * dt
+    end
+    if laser_y + laser_h &lt; 0 then
+        laser_active = false
+    end
+
+    -- Spawn timer: add a new meteor every spawn_interval seconds
+    spawn_timer = spawn_timer + dt
+    if spawn_timer &gt;= spawn_interval then
+        spawn_meteor()
+        spawn_timer = 0
+    end
+
+    -- Move meteors and remove off-screen ones (REVERSE loop)
+    for i = #meteors, 1, -1 do
+        meteors[i].y = meteors[i].y + meteor_speed * dt
+        if meteors[i].y &gt; SCREEN_H then
+            table.remove(meteors, i)
+        end
+    end
+
+    -- Laser vs meteor collision (REVERSE loop)
+    if laser_active then
+        for i = #meteors, 1, -1 do
+            if check_collision(laser_x, laser_y, laser_w, laser_h,
+                               meteors[i].x, meteors[i].y, meteor_w, meteor_h) then
+                laser_active = false
+                table.remove(meteors, i)
+                score = score + 1
+                break
+            end
+        end
+    end
+end
+
+-- ============================================================
+-- DRAW
+-- ============================================================
+
+local function draw()
+    canvas.clear()
+
+    -- Dark space background
+    canvas.set_color(10, 10, 30)
+    canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
+
+    -- Laser
+    if laser_active then
+        canvas.draw_image("laser", laser_x, laser_y, laser_w, laser_h)
+    end
+
+    -- Meteors (FORWARD loop)
+    for i, meteor in ipairs(meteors) do
+        canvas.draw_image("meteor", meteor.x, meteor.y, meteor_w, meteor_h)
+    end
+
+    -- Ship
+    canvas.draw_image("ship", ship_x, ship_y, ship_w, ship_h)
+
+    -- HUD
+    canvas.set_color(255, 255, 255)
+    canvas.set_font_size(16)
+    canvas.draw_text(10, 10, "Score: " .. score)
+    canvas.draw_text(10, 30, "Arrow keys: Move | SPACE: Shoot")
+end
+
+-- ============================================================
+-- GAME LOOP
+-- ============================================================
+
+local function game()
+    user_input()
+    update()
+    draw()
+end
+
+canvas.tick(game)
+canvas.start()</code></pre>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     PART 5: PLAYER COLLISION + GAME OVER
+     ============================================================ -->
+<div class="part" id="part-5">
+    <h1>Part 5: Player Collision + Game Over</h1>
+    <p class="subtitle">If a meteor hits your ship, it's game over! Press ENTER to play again.</p>
+
+    <div class="concepts">
+        <h2>New Concepts</h2>
+        <ul>
+            <li><strong>Game state flags</strong> &mdash; a boolean like <code>game_over</code> can pause the entire game</li>
+            <li><strong>Early return</strong> &mdash; using <code>return</code> in the middle of a function to skip the rest of it</li>
+            <li><code>canvas.get_text_width(text)</code> &mdash; returns the pixel width of a string so you can center it on screen</li>
+        </ul>
+    </div>
+
+    <!-- Step 1 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 1: Add the game-over variable</div>
+        <div class="step-location">Where: GAME STATE section, after the score variable, before <code>-- Load images</code></div>
+        <pre class="code-block"><code class="lua">-- Game over
+local game_over = false</code></pre>
+    </div>
+
+    <!-- Step 2 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 2: Add the reset function</div>
+        <div class="step-location">Where: Between the <code>spawn_meteor</code> function and the USER INPUT section. Add a new section.</div>
+        <pre class="code-block"><code class="lua">-- ============================================================
+-- RESET GAME
+-- ============================================================
+
+local function reset_game()
+    -- You will fill this in next!
+end</code></pre>
+    </div>
+
+    <!-- Step 3 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 3: Write the reset_game body</div>
+        <div class="step-location">Where: Inside the <code>reset_game</code> function (replace the comment)</div>
+        <div class="step-task">Set all game state variables back to their starting values: ship position, laser state, meteors list, spawn timer, score, and game_over flag.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Think about every game state variable and what value it started with at the very beginning of the program. You need to reset them ALL.</div>
+            <div class="hint" hidden>Reset these 7 variables: <code>ship_x = 370</code>, <code>ship_y = 500</code>, <code>laser_active = false</code>, <code>meteors = {}</code>, <code>spawn_timer = 0</code>, <code>score = 0</code>, <code>game_over = false</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">ship_x = 370
+ship_y = 500
+laser_active = false
+meteors = {}
+spawn_timer = 0
+score = 0
+game_over = false</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 4 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 4: Handle restart input</div>
+        <div class="step-location">Where: USER INPUT section, at the very top of the function (after <code>local dt = canvas.get_delta()</code>, before ship movement)</div>
+        <div class="step-task">If <code>game_over</code> is true: check if ENTER was pressed. If so, call <code>reset_game()</code>. Then <code>return</code> (skip the rest of input &mdash; no moving or shooting while game over).</div>
+        <div class="hints-container">
+            <div class="hint" hidden>At the top of the input function, check if <code>game_over</code> is true. If so, only check for the ENTER key, then use <code>return</code> to skip everything else.</div>
+            <div class="hint" hidden>Use nested ifs: outer <code>if game_over then</code>, inner <code>if canvas.is_key_pressed(canvas.keys.ENTER) then reset_game() end</code>. Put <code>return</code> after the inner if but inside the outer if.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">if game_over then
+    if canvas.is_key_pressed(canvas.keys.ENTER) then
+        reset_game()
+    end
+    return
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 5 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 5: Stop updating when game is over</div>
+        <div class="step-location">Where: UPDATE section, at the very first line of the function (before <code>local dt</code>)</div>
+        <pre class="code-block"><code class="lua">    if game_over then return end</code></pre>
+        <div class="step-desc">This one line prevents all game logic from running when the game is over.</div>
+    </div>
+
+    <!-- Step 6 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 6: Check ship-vs-meteor collision</div>
+        <div class="step-location">Where: UPDATE section, at the very end (after the laser-vs-meteor collision loop, before <code>end</code>)</div>
+        <div class="step-task">Loop through all meteors. Check if the ship collides with each meteor. If they collide, set <code>game_over</code> to <code>true</code> and <code>return</code>.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Loop through all meteors with a forward loop using <code>ipairs</code>. Check if the ship collides with each one using <code>check_collision()</code>.</div>
+            <div class="hint" hidden>Use <code>for i, meteor in ipairs(meteors) do</code>. Check <code>check_collision(ship_x, ship_y, ship_w, ship_h, meteor.x, meteor.y, meteor_w, meteor_h)</code>. On hit, set <code>game_over = true</code> and <code>return</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">for i, meteor in ipairs(meteors) do
+    if check_collision(ship_x, ship_y, ship_w, ship_h,
+                       meteor.x, meteor.y, meteor_w, meteor_h) then
+        game_over = true
+        return
+    end
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 7 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 7: Add the game-over overlay</div>
+        <div class="step-location">Where: DRAW section, at the very end of the function (after the HUD text, before the final <code>end</code>)</div>
+        <pre class="code-block"><code class="lua">    -- Game over overlay
+    if game_over then
+        -- Dark overlay
+        canvas.set_color(0, 0, 0, 180)
+        canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
+    end</code></pre>
+    </div>
+
+    <!-- Step 8 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 8: Draw the game-over text</div>
+        <div class="step-location">Where: Inside the <code>if game_over then</code> block you just added (after the dark overlay, before <code>end</code>)</div>
+        <div class="step-task">Draw three pieces of centered text: <strong>"GAME OVER"</strong> in red (size 48), <strong>"Score: " .. score</strong> in white (size 24), and <strong>"Press ENTER to restart"</strong> in white (size 24).</div>
+        <div class="hints-container">
+            <div class="hint" hidden>For each text line: set the font size, set the color, measure the text width with <code>canvas.get_text_width()</code>, then draw at the centered x position.</div>
+            <div class="hint" hidden>To center text horizontally: <code>x = (SCREEN_W - text_width) / 2</code>. Use font size 48 for "GAME OVER" (red: <code>255, 50, 50</code>) and size 24 for the other two lines (white: <code>255, 255, 255</code>).</div>
+            <div class="hint" hidden>Position the three lines at different y values: "GAME OVER" at <code>SCREEN_H / 2 - 60</code>, the score at <code>SCREEN_H / 2</code>, and "Press ENTER to restart" at <code>SCREEN_H / 2 + 40</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">canvas.set_font_size(48)
+canvas.set_color(255, 50, 50)
+local title = "GAME OVER"
+local title_w = canvas.get_text_width(title)
+canvas.draw_text((SCREEN_W - title_w) / 2, SCREEN_H / 2 - 60, title)
+
+canvas.set_font_size(24)
+canvas.set_color(255, 255, 255)
+local score_text = "Score: " .. score
+local score_w = canvas.get_text_width(score_text)
+canvas.draw_text((SCREEN_W - score_w) / 2, SCREEN_H / 2, score_text)
+
+local restart = "Press ENTER to restart"
+local restart_w = canvas.get_text_width(restart)
+canvas.draw_text((SCREEN_W - restart_w) / 2, SCREEN_H / 2 + 40, restart)</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>Run <code>game.lua</code>. You should see:</p>
+        <ul>
+            <li>Meteors that hit your ship trigger a game-over screen</li>
+            <li>A dark overlay appears with "GAME OVER", your score, and a restart prompt</li>
+            <li>Pressing ENTER resets everything and starts a new game</li>
+            <li>During game over, the ship can't move and no new meteors spawn</li>
+        </ul>
+        <p style="margin-top: 12px; color: #4caf50; font-weight: 600;">The core game is complete! Next up: power upgrades.</p>
+    </div>
+    <div class="stuck">
+        <button class="btn-stuck">Stuck? Compare your code with <code>solutions/part_5.lua</code></button>
+        <div class="stuck-code" hidden>
+            <pre class="code-block"><code class="lua">-- ============================================================
+-- Space Shooter — Part 5: Player Collision + Game Over
+-- Dodge the meteors! If one hits your ship, it's game over!
+-- ============================================================
+
+local canvas = require("canvas")
+canvas.assets.add_path("images")
+canvas.set_size(800, 600)
+
+local SCREEN_W = 800
+local SCREEN_H = 600
+
+-- ============================================================
+-- GAME STATE
+-- ============================================================
+
+-- Ship
+local ship_x = 370
+local ship_y = 500
+local ship_w = 60
+local ship_h = 48
+local ship_speed = 300
+
+-- Laser
+local laser_x = 0
+local laser_y = 0
+local laser_w = 9
+local laser_h = 30
+local laser_speed = 500
+local laser_active = false
+
+-- Meteors
+local meteors = {}
+local meteor_w = 48
+local meteor_h = 48
+local meteor_speed = 150
+
+-- Spawn timer
+local spawn_timer = 0
+local spawn_interval = 2.0
+
+-- Score
+local score = 0
+
+-- Game over
+local game_over = false
+
+-- Load images
+canvas.assets.load_image("ship", "blue_ship.png")
+canvas.assets.load_image("laser", "laser.png")
+canvas.assets.load_image("meteor", "meteor.png")
+
+-- ============================================================
+-- COLLISION DETECTION
+-- ============================================================
+
+local function check_collision(a_x, a_y, a_w, a_h, b_x, b_y, b_w, b_h)
+    return a_x &lt; b_x + b_w
+       and a_x + a_w &gt; b_x
+       and a_y &lt; b_y + b_h
+       and a_y + a_h &gt; b_y
+end
+
+-- ============================================================
+-- SPAWN METEOR
+-- ============================================================
+
+local function spawn_meteor()
+    local meteor = {
+        x = math.random(0, SCREEN_W - meteor_w),
+        y = -meteor_h
+    }
+    table.insert(meteors, meteor)
+end
+
+-- ============================================================
+-- RESET GAME
+-- ============================================================
+
+local function reset_game()
+    ship_x = 370
+    ship_y = 500
+    laser_active = false
+    meteors = {}
+    spawn_timer = 0
+    score = 0
+    game_over = false
+end
+
+-- ============================================================
+-- USER INPUT
+-- ============================================================
+
+local function user_input()
+    local dt = canvas.get_delta()
+
+    -- Restart on ENTER when game is over
+    if game_over then
+        if canvas.is_key_pressed(canvas.keys.ENTER) then
+            reset_game()
+        end
+        return
+    end
+
+    -- Ship movement
+    if canvas.is_key_down(canvas.keys.LEFT) then ship_x = ship_x - ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.RIGHT) then ship_x = ship_x + ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.UP) then ship_y = ship_y - ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.DOWN) then ship_y = ship_y + ship_speed * dt end
+
+    -- Fire laser
+    if canvas.is_key_pressed(canvas.keys.SPACE) and not laser_active then
+        laser_active = true
+        laser_x = ship_x + ship_w / 2 - laser_w / 2
+        laser_y = ship_y
+    end
+end
+
+-- ============================================================
+-- UPDATE
+-- ============================================================
+
+local function update()
+    if game_over then return end
+
+    local dt = canvas.get_delta()
+
+    -- Clamp ship to screen
+    ship_x = math.max(0, math.min(SCREEN_W - ship_w, ship_x))
+    ship_y = math.max(0, math.min(SCREEN_H - ship_h, ship_y))
+
+    -- Move laser
+    if laser_active then
+        laser_y = laser_y - laser_speed * dt
+    end
+    if laser_y + laser_h &lt; 0 then
+        laser_active = false
+    end
+
+    -- Spawn timer
+    spawn_timer = spawn_timer + dt
+    if spawn_timer &gt;= spawn_interval then
+        spawn_meteor()
+        spawn_timer = 0
+    end
+
+    -- Move meteors and remove off-screen ones
+    for i = #meteors, 1, -1 do
+        meteors[i].y = meteors[i].y + meteor_speed * dt
+        if meteors[i].y &gt; SCREEN_H then
+            table.remove(meteors, i)
+        end
+    end
+
+    -- Laser vs meteor collision
+    if laser_active then
+        for i = #meteors, 1, -1 do
+            if check_collision(laser_x, laser_y, laser_w, laser_h,
+                               meteors[i].x, meteors[i].y, meteor_w, meteor_h) then
+                laser_active = false
+                table.remove(meteors, i)
+                score = score + 1
+                break
+            end
+        end
+    end
+
+    -- Ship vs meteor collision
+    for i, meteor in ipairs(meteors) do
+        if check_collision(ship_x, ship_y, ship_w, ship_h,
+                           meteor.x, meteor.y, meteor_w, meteor_h) then
+            game_over = true
+            return
+        end
+    end
+end
+
+-- ============================================================
+-- DRAW
+-- ============================================================
+
+local function draw()
+    canvas.clear()
+
+    -- Dark space background
+    canvas.set_color(10, 10, 30)
+    canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
+
+    -- Laser
+    if laser_active then
+        canvas.draw_image("laser", laser_x, laser_y, laser_w, laser_h)
+    end
+
+    -- Meteors
+    for i, meteor in ipairs(meteors) do
+        canvas.draw_image("meteor", meteor.x, meteor.y, meteor_w, meteor_h)
+    end
+
+    -- Ship
+    canvas.draw_image("ship", ship_x, ship_y, ship_w, ship_h)
+
+    -- HUD
+    canvas.set_color(255, 255, 255)
+    canvas.set_font_size(16)
+    canvas.draw_text(10, 10, "Score: " .. score)
+    canvas.draw_text(10, 30, "Arrow keys: Move | SPACE: Shoot")
+
+    -- Game over overlay
+    if game_over then
+        -- Dark overlay
+        canvas.set_color(0, 0, 0, 180)
+        canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
+
+        -- "GAME OVER" text (red)
+        canvas.set_font_size(48)
+        canvas.set_color(255, 50, 50)
+        local title = "GAME OVER"
+        local title_w = canvas.get_text_width(title)
+        canvas.draw_text((SCREEN_W - title_w) / 2, SCREEN_H / 2 - 60, title)
+
+        -- Score text (white)
+        canvas.set_font_size(24)
+        canvas.set_color(255, 255, 255)
+        local score_text = "Score: " .. score
+        local score_w = canvas.get_text_width(score_text)
+        canvas.draw_text((SCREEN_W - score_w) / 2, SCREEN_H / 2, score_text)
+
+        -- Restart prompt (white)
+        local restart_text = "Press ENTER to restart"
+        local restart_w = canvas.get_text_width(restart_text)
+        canvas.draw_text((SCREEN_W - restart_w) / 2, SCREEN_H / 2 + 40, restart_text)
+    end
+end
+
+-- ============================================================
+-- GAME LOOP
+-- ============================================================
+
+local function game()
+    user_input()
+    update()
+    draw()
+end
+
+canvas.tick(game)
+canvas.start()</code></pre>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     PART 6: MULTIPLE LASERS
+     ============================================================ -->
+<div class="part" id="part-6">
+    <h1>Part 6: Multiple Lasers</h1>
+    <p class="subtitle">Remove the "one laser at a time" limit &mdash; rapid-fire!</p>
+
+    <div class="step-note" style="margin-bottom: 24px;">Your code won't run during some of these steps because we're replacing old code with new code. That's expected! It will work again once you finish all the steps.</div>
+
+    <div class="concepts">
+        <h2>New Concepts</h2>
+        <ul>
+            <li><strong>Applying a known pattern</strong> &mdash; you already converted a single meteor into a table of meteors in Part 4. Now you'll do the exact same thing for lasers.</li>
+            <li><strong>Nested reverse loops</strong> &mdash; when two collections interact (lasers vs meteors), you need a loop inside a loop. Both must be reverse loops since you might remove from either.</li>
+        </ul>
+    </div>
+
+    <!-- Step 1 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 1: Replace laser variables with a table</div>
+        <div class="step-location">Where: GAME STATE section. Find and <strong>delete</strong> these three lines:</div>
+        <div class="delete-block">
+            <div class="delete-label">Find and delete these lines:</div>
+            <pre class="code-block"><code class="lua">local laser_x = 0
+local laser_y = 0
+local laser_active = false</code></pre>
+        </div>
+        <div class="step-desc"><strong>Replace with:</strong></div>
+        <pre class="code-block"><code class="lua">-- Lasers
+local lasers = {}</code></pre>
+        <div class="step-desc">Keep <code>laser_w</code>, <code>laser_h</code>, and <code>laser_speed</code> &mdash; they stay the same.</div>
+    </div>
+
+    <!-- Step 2 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 2: Add the spawn_laser function</div>
+        <div class="step-location">Where: Between the <code>spawn_meteor</code> function and the RESET GAME section. Add a new section.</div>
+        <pre class="code-block"><code class="lua">-- ============================================================
+-- SPAWN LASER
+-- ============================================================
+
+local function spawn_laser(x, y)
+    local laser = {
+        x = x,
+        y = y
+    }
+    table.insert(lasers, laser)
+end</code></pre>
+        <div class="step-desc">Unlike <code>spawn_meteor</code>, this function takes <code>x</code> and <code>y</code> as parameters because the laser's starting position depends on where the ship is.</div>
+    </div>
+
+    <!-- Step 3 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 3: Update reset_game</div>
+        <div class="step-location">Where: Inside the <code>reset_game</code> function.</div>
+        <div class="step-desc">Find this line:</div>
+        <div class="delete-block">
+            <div class="delete-label">Find and replace this line:</div>
+            <pre class="code-block"><code class="lua">laser_active = false</code></pre>
+        </div>
+        <div class="step-desc"><strong>Replace it with:</strong></div>
+        <pre class="code-block"><code class="lua">lasers = {}</code></pre>
+    </div>
+
+    <!-- Step 4 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 4: Update the firing code</div>
+        <div class="step-location">Where: USER INPUT section. Find and <strong>delete</strong> the entire old firing block:</div>
+        <div class="delete-block">
+            <div class="delete-label">Delete this block:</div>
+            <pre class="code-block"><code class="lua">    if canvas.is_key_pressed(canvas.keys.SPACE) and not laser_active then
+        laser_active = true
+        laser_x = ship_x + ship_w / 2 - laser_w / 2
+        laser_y = ship_y
+    end</code></pre>
+        </div>
+        <div class="step-task">Now every SPACE press spawns a new laser &mdash; no need to check if one already exists. Write the new firing code yourself.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>You only need to check <code>canvas.is_key_pressed(canvas.keys.SPACE)</code> &mdash; no <code>not laser_active</code> check needed. Just call <code>spawn_laser()</code>.</div>
+            <div class="hint" hidden>The x position centers the laser on the ship: <code>ship_x + ship_w / 2 - laser_w / 2</code>. The y position is <code>ship_y</code>. Call: <code>spawn_laser(ship_x + ship_w/2 - laser_w/2, ship_y)</code></div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">if canvas.is_key_pressed(canvas.keys.SPACE) then
+    spawn_laser(ship_x + ship_w / 2 - laser_w / 2, ship_y)
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 5 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 5: Delete old laser movement code</div>
+        <div class="step-location">Where: UPDATE section.</div>
+        <div class="step-desc">Find and <strong>delete</strong> both of these blocks:</div>
+        <div class="delete-block">
+            <div class="delete-label">Delete this block:</div>
+            <pre class="code-block"><code class="lua">    -- Move laser
+    if laser_active then
+        laser_y = laser_y - laser_speed * dt
+    end
+    if laser_y + laser_h &lt; 0 then
+        laser_active = false
+    end</code></pre>
+        </div>
+        <div class="step-desc">We'll write new laser movement in the next step.</div>
+    </div>
+
+    <!-- Step 6 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 6: Move lasers with a reverse loop</div>
+        <div class="step-location">Where: UPDATE section, where the old laser code was (after ship clamping, before spawn timer)</div>
+        <div class="step-task">Use the same pattern as meteor movement but lasers move <strong>up</strong> and are removed past the <strong>top</strong> of the screen.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Same pattern as meteor movement (Part 4) but lasers move UP: subtract speed instead of adding it. Remove when past the TOP: <code>lasers[i].y + laser_h &lt; 0</code>.</div>
+            <div class="hint" hidden>Movement: <code>lasers[i].y = lasers[i].y - laser_speed * dt</code>. Remove condition: <code>if lasers[i].y + laser_h &lt; 0 then table.remove(lasers, i) end</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">for i = #lasers, 1, -1 do
+    lasers[i].y = lasers[i].y - laser_speed * dt
+    if lasers[i].y + laser_h &lt; 0 then
+        table.remove(lasers, i)
+    end
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 7 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 7: Write nested collision loops</div>
+        <div class="step-location">Where: UPDATE section. Find and <strong>delete</strong> the old collision block:</div>
+        <div class="delete-block">
+            <div class="delete-label">Delete this block:</div>
+            <pre class="code-block"><code class="lua">    -- Laser vs meteor collision
+    if laser_active then
+        for i = #meteors, 1, -1 do
+            if check_collision(laser_x, laser_y, laser_w, laser_h,
+                               meteors[i].x, meteors[i].y, meteor_w, meteor_h) then
+                laser_active = false
+                table.remove(meteors, i)
+                score = score + 1
+                break
+            end
+        end
+    end</code></pre>
+        </div>
+        <div class="step-task">Now both lasers AND meteors are tables. Write a nested loop: outer loop over lasers, inner loop over meteors.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Outer reverse loop over <code>lasers</code>, inner reverse loop over <code>meteors</code>. Use <code>break</code> after a hit &mdash; it exits only the inner loop.</div>
+            <div class="hint" hidden>Check: <code>check_collision(lasers[i].x, lasers[i].y, laser_w, laser_h, meteors[j].x, meteors[j].y, meteor_w, meteor_h)</code>. On hit: remove meteor, remove laser, score++, break.</div>
+            <div class="hint" hidden>The <code>break</code> is required &mdash; without it, the code would try to access <code>lasers[i]</code> on the next iteration after removing it, which would crash. Remove inner item first (<code>meteors[j]</code>), then outer (<code>lasers[i]</code>), then break.</div>
+        </div>
+        <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">for i = #lasers, 1, -1 do
+    for j = #meteors, 1, -1 do
+        if check_collision(lasers[i].x, lasers[i].y, laser_w, laser_h,
+                           meteors[j].x, meteors[j].y, meteor_w, meteor_h) then
+            table.remove(meteors, j)
+            table.remove(lasers, i)
+            score = score + 1
+            break
+        end
+    end
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 8 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 8: Replace laser drawing</div>
+        <div class="step-location">Where: DRAW section. Find and <strong>delete</strong> this block:</div>
+        <div class="delete-block">
+            <div class="delete-label">Delete this block:</div>
+            <pre class="code-block"><code class="lua">    -- Laser
+    if laser_active then
+        canvas.draw_image("laser", laser_x, laser_y, laser_w, laser_h)
+    end</code></pre>
+        </div>
+        <div class="step-task">Use the same <code>ipairs</code> forward loop pattern you used for meteors to draw every laser.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Same pattern as meteor drawing: <code>for i, laser in ipairs(lasers) do</code> and draw each one.</div>
+            <div class="hint" hidden><code>for i, laser in ipairs(lasers) do canvas.draw_image("laser", laser.x, laser.y, laser_w, laser_h) end</code></div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">for i, laser in ipairs(lasers) do
+    canvas.draw_image("laser", laser.x, laser.y, laser_w, laser_h)
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>Run <code>game.lua</code>. You should see:</p>
+        <ul>
+            <li>You can rapid-fire multiple lasers by pressing SPACE repeatedly</li>
+            <li>Each laser flies upward independently</li>
+            <li>Each laser destroys one meteor on contact</li>
+            <li>Score increases for each destroyed meteor</li>
+            <li>Game over and restart still work correctly</li>
+        </ul>
+        <p style="margin-top: 12px; color: #4caf50; font-weight: 600;">Rapid-fire unlocked! One more part to go.</p>
+    </div>
+    <div class="stuck">
+        <button class="btn-stuck">Stuck? Compare your code with <code>solutions/part_6.lua</code></button>
+        <div class="stuck-code" hidden>
+            <pre class="code-block"><code class="lua">-- ============================================================
+-- Space Shooter — Part 6: Multiple Lasers
+-- Rapid-fire! No more "one laser at a time" limit.
+-- ============================================================
+
+local canvas = require("canvas")
+canvas.assets.add_path("images")
+canvas.set_size(800, 600)
+
+local SCREEN_W = 800
+local SCREEN_H = 600
+
+-- ============================================================
+-- GAME STATE
+-- ============================================================
+
+-- Ship
+local ship_x = 370
+local ship_y = 500
+local ship_w = 60
+local ship_h = 48
+local ship_speed = 300
+
+-- Lasers
+local lasers = {}
+local laser_w = 9
+local laser_h = 30
+local laser_speed = 500
+
+-- Meteors
+local meteors = {}
+local meteor_w = 48
+local meteor_h = 48
+local meteor_speed = 150
+
+-- Spawn timer
+local spawn_timer = 0
+local spawn_interval = 2.0
+
+-- Score
+local score = 0
+
+-- Game over
+local game_over = false
+
+-- Load images
+canvas.assets.load_image("ship", "blue_ship.png")
+canvas.assets.load_image("laser", "laser.png")
+canvas.assets.load_image("meteor", "meteor.png")
+
+-- ============================================================
+-- COLLISION DETECTION
+-- ============================================================
+
+local function check_collision(a_x, a_y, a_w, a_h, b_x, b_y, b_w, b_h)
+    return a_x &lt; b_x + b_w
+       and a_x + a_w &gt; b_x
+       and a_y &lt; b_y + b_h
+       and a_y + a_h &gt; b_y
+end
+
+-- ============================================================
+-- SPAWN METEOR
+-- ============================================================
+
+local function spawn_meteor()
+    local meteor = {
+        x = math.random(0, SCREEN_W - meteor_w),
+        y = -meteor_h
+    }
+    table.insert(meteors, meteor)
+end
+
+-- ============================================================
+-- SPAWN LASER
+-- ============================================================
+
+local function spawn_laser(x, y)
+    local laser = {
+        x = x,
+        y = y
+    }
+    table.insert(lasers, laser)
+end
+
+-- ============================================================
+-- RESET GAME
+-- ============================================================
+
+local function reset_game()
+    ship_x = 370
+    ship_y = 500
+    lasers = {}
+    meteors = {}
+    spawn_timer = 0
+    score = 0
+    game_over = false
+end
+
+-- ============================================================
+-- USER INPUT
+-- ============================================================
+
+local function user_input()
+    local dt = canvas.get_delta()
+
+    -- Restart on ENTER when game is over
+    if game_over then
+        if canvas.is_key_pressed(canvas.keys.ENTER) then
+            reset_game()
+        end
+        return
+    end
+
+    -- Ship movement
+    if canvas.is_key_down(canvas.keys.LEFT) then ship_x = ship_x - ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.RIGHT) then ship_x = ship_x + ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.UP) then ship_y = ship_y - ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.DOWN) then ship_y = ship_y + ship_speed * dt end
+
+    -- Fire laser
+    if canvas.is_key_pressed(canvas.keys.SPACE) then
+        spawn_laser(ship_x + ship_w / 2 - laser_w / 2, ship_y)
+    end
+end
+
+-- ============================================================
+-- UPDATE
+-- ============================================================
+
+local function update()
+    if game_over then return end
+
+    local dt = canvas.get_delta()
+
+    -- Clamp ship to screen
+    ship_x = math.max(0, math.min(SCREEN_W - ship_w, ship_x))
+    ship_y = math.max(0, math.min(SCREEN_H - ship_h, ship_y))
+
+    -- Move lasers and remove off-screen ones
+    for i = #lasers, 1, -1 do
+        lasers[i].y = lasers[i].y - laser_speed * dt
+        if lasers[i].y + laser_h &lt; 0 then
+            table.remove(lasers, i)
+        end
+    end
+
+    -- Spawn timer
+    spawn_timer = spawn_timer + dt
+    if spawn_timer &gt;= spawn_interval then
+        spawn_meteor()
+        spawn_timer = 0
+    end
+
+    -- Move meteors and remove off-screen ones
+    for i = #meteors, 1, -1 do
+        meteors[i].y = meteors[i].y + meteor_speed * dt
+        if meteors[i].y &gt; SCREEN_H then
+            table.remove(meteors, i)
+        end
+    end
+
+    -- Laser vs meteor collision
+    for i = #lasers, 1, -1 do
+        for j = #meteors, 1, -1 do
+            if check_collision(lasers[i].x, lasers[i].y, laser_w, laser_h,
+                               meteors[j].x, meteors[j].y, meteor_w, meteor_h) then
+                table.remove(meteors, j)
+                table.remove(lasers, i)
+                score = score + 1
+                break
+            end
+        end
+    end
+
+    -- Ship vs meteor collision
+    for i, meteor in ipairs(meteors) do
+        if check_collision(ship_x, ship_y, ship_w, ship_h,
+                           meteor.x, meteor.y, meteor_w, meteor_h) then
+            game_over = true
+            return
+        end
+    end
+end
+
+-- ============================================================
+-- DRAW
+-- ============================================================
+
+local function draw()
+    canvas.clear()
+
+    -- Dark space background
+    canvas.set_color(10, 10, 30)
+    canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
+
+    -- Lasers
+    for i, laser in ipairs(lasers) do
+        canvas.draw_image("laser", laser.x, laser.y, laser_w, laser_h)
+    end
+
+    -- Meteors
+    for i, meteor in ipairs(meteors) do
+        canvas.draw_image("meteor", meteor.x, meteor.y, meteor_w, meteor_h)
+    end
+
+    -- Ship
+    canvas.draw_image("ship", ship_x, ship_y, ship_w, ship_h)
+
+    -- HUD
+    canvas.set_color(255, 255, 255)
+    canvas.set_font_size(16)
+    canvas.draw_text(10, 10, "Score: " .. score)
+    canvas.draw_text(10, 30, "Arrow keys: Move | SPACE: Shoot")
+
+    -- Game over overlay
+    if game_over then
+        -- Dark overlay
+        canvas.set_color(0, 0, 0, 180)
+        canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
+
+        -- "GAME OVER" text (red)
+        canvas.set_font_size(48)
+        canvas.set_color(255, 50, 50)
+        local title = "GAME OVER"
+        local title_w = canvas.get_text_width(title)
+        canvas.draw_text((SCREEN_W - title_w) / 2, SCREEN_H / 2 - 60, title)
+
+        -- Score text (white)
+        canvas.set_font_size(24)
+        canvas.set_color(255, 255, 255)
+        local score_text = "Score: " .. score
+        local score_w = canvas.get_text_width(score_text)
+        canvas.draw_text((SCREEN_W - score_w) / 2, SCREEN_H / 2, score_text)
+
+        -- Restart prompt (white)
+        local restart_text = "Press ENTER to restart"
+        local restart_w = canvas.get_text_width(restart_text)
+        canvas.draw_text((SCREEN_W - restart_w) / 2, SCREEN_H / 2 + 40, restart_text)
+    end
+end
+
+-- ============================================================
+-- GAME LOOP
+-- ============================================================
+
+local function game()
+    user_input()
+    update()
+    draw()
+end
+
+canvas.tick(game)
+canvas.start()</code></pre>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     PART 7: STAR FIELD BACKGROUND
+     ============================================================ -->
+<div class="part" id="part-7">
+    <h1>Part 7: Star Field Background</h1>
+    <p class="subtitle">Add a scrolling parallax star field to bring space to life.</p>
+
+    <div class="concepts">
+        <h2>New Concepts</h2>
+
+        <p><strong>Parallax Effect</strong></p>
+        <p>Objects at different distances move at different speeds. Smaller stars are farther away (slower, dimmer). Larger stars are closer (faster, brighter). This creates a sense of depth.</p>
+
+        <p style="margin-top: 16px;"><strong>Procedural Generation</strong></p>
+        <p>Instead of manually setting each star's properties, we use math formulas to derive speed and brightness from a random size value:</p>
+        <pre class="code-block"><code class="lua">-- Size 1 (far):  speed = 30,  brightness = 100 (dim)
+-- Size 2 (mid):  speed = 60,  brightness = 160
+-- Size 3 (near): speed = 90,  brightness = 220 (bright)</code></pre>
+    </div>
+
+    <!-- Step 1 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 1: Add star variables</div>
+        <div class="step-location">Where: GAME STATE section, after <code>game_over</code>, before <code>-- Load images</code></div>
+        <pre class="code-block"><code class="lua">-- Stars
+local stars = {}
+local STAR_COUNT = 60</code></pre>
+    </div>
+
+    <!-- Step 2 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 2: Add the generate_star function</div>
+        <div class="step-location">Where: Between the <code>load_image</code> calls and the COLLISION DETECTION section. Add a new section.</div>
+        <pre class="code-block"><code class="lua">-- ============================================================
+-- GENERATE STAR
+-- ============================================================
+
+local function generate_star()
+    local size = math.random(1, 3)
+    local speed = size * 30
+    local brightness = size * 60 + 40
+    return {
+        x = math.random(0, SCREEN_W),
+        y = math.random(0, SCREEN_H),
+        size = size,
+        speed = speed,
+        brightness = brightness
+    }
+end</code></pre>
+        <div class="step-desc">Each star is a table with five fields. The <code>size</code> is random, and <code>speed</code> and <code>brightness</code> are calculated from it &mdash; bigger stars move faster and shine brighter.</div>
+    </div>
+
+    <!-- Step 3 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 3: Write the init_stars function</div>
+        <div class="step-location">Where: Right after the <code>generate_star</code> function. Add a new section.</div>
+        <div class="step-task">Create a function called <code>init_stars</code> that resets the <code>stars</code> table and fills it with <code>STAR_COUNT</code> stars.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Create the function, set <code>stars = {}</code>, then use <code>for i = 1, STAR_COUNT do</code> to loop.</div>
+            <div class="hint" hidden>Inside the loop: <code>table.insert(stars, generate_star())</code></div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- ============================================================
+-- INIT STARS
+-- ============================================================
+
+local function init_stars()
+    stars = {}
+    for i = 1, STAR_COUNT do
+        table.insert(stars, generate_star())
+    end
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 4 (COPY) -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 4: Call init_stars</div>
+        <div class="step-location">Where: Two places</div>
+        <div class="step-desc"><strong>First:</strong> Right after the <code>init_stars</code> function definition (top-level call, not inside any function):</div>
+        <pre class="code-block"><code class="lua">init_stars()</code></pre>
+        <div class="step-desc"><strong>Second:</strong> Inside <code>reset_game</code>, after <code>game_over = false</code>:</div>
+        <pre class="code-block"><code class="lua">    init_stars()</code></pre>
+    </div>
+
+    <!-- Step 5 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 5: Update star positions</div>
+        <div class="step-location">Where: UPDATE section, at the very end (after the ship-vs-meteor collision loop, before the function's closing <code>end</code>)</div>
+        <div class="step-task">Move each star downward. When a star goes past the bottom of the screen, respawn it at the top with a new random x position.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Use <code>for i, star in ipairs(stars) do</code>. Move with <code>star.y = star.y + star.speed * dt</code>. Check if <code>star.y &gt; SCREEN_H</code>.</div>
+            <div class="hint" hidden>On respawn: set <code>star.x = math.random(0, SCREEN_W)</code> and <code>star.y = -star.size</code>. Do NOT call <code>generate_star()</code> &mdash; just reset the position, keeping the same size, speed, and brightness.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">for i, star in ipairs(stars) do
+    star.y = star.y + star.speed * dt
+    if star.y &gt; SCREEN_H then
+        star.x = math.random(0, SCREEN_W)
+        star.y = -star.size
+    end
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Step 6 (CHALLENGE) -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 6: Draw the stars</div>
+        <div class="step-location">Where: DRAW section, right after the background rectangle, BEFORE the lasers</div>
+        <div class="step-task">Loop through all stars. Set the color using the star's brightness (same value for red, green, and blue makes gray/white). Draw a small filled rectangle.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Use <code>for i, star in ipairs(stars) do</code>. Set color with brightness for all 3 channels, then draw with <code>fill_rect</code>.</div>
+            <div class="hint" hidden><code>canvas.set_color(star.brightness, star.brightness, star.brightness)</code> then <code>canvas.fill_rect(star.x, star.y, star.size, star.size)</code></div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">for i, star in ipairs(stars) do
+    canvas.set_color(star.brightness, star.brightness, star.brightness)
+    canvas.fill_rect(star.x, star.y, star.size, star.size)
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>Run <code>game.lua</code>. You should see:</p>
+        <ul>
+            <li>Small dots scrolling down behind everything</li>
+            <li>Bigger dots move faster and are brighter (parallax effect)</li>
+            <li>Stars freeze during game over (because update stops)</li>
+            <li>Stars reset when you restart the game</li>
+        </ul>
+        <p style="margin-top: 12px; color: #4caf50; font-weight: 600;">Congratulations &mdash; you built a complete space shooter!</p>
+    </div>
+    <div class="stuck">
+        <button class="btn-stuck">Stuck? Compare your code with <code>solutions/part_7.lua</code></button>
+        <div class="stuck-code" hidden>
+            <pre class="code-block"><code class="lua">-- ============================================================
+-- Space Shooter — Part 7: Star Field Background
+-- Scrolling parallax stars bring space to life!
+-- ============================================================
+
+local canvas = require("canvas")
+canvas.assets.add_path("images")
+canvas.set_size(800, 600)
+
+local SCREEN_W = 800
+local SCREEN_H = 600
+
+-- ============================================================
+-- GAME STATE
+-- ============================================================
+
+-- Ship
+local ship_x = 370
+local ship_y = 500
+local ship_w = 60
+local ship_h = 48
+local ship_speed = 300
+
+-- Lasers
+local lasers = {}
+local laser_w = 9
+local laser_h = 30
+local laser_speed = 500
+
+-- Meteors
+local meteors = {}
+local meteor_w = 48
+local meteor_h = 48
+local meteor_speed = 150
+
+-- Spawn timer
+local spawn_timer = 0
+local spawn_interval = 2.0
+
+-- Score
+local score = 0
+
+-- Game over
+local game_over = false
+
+-- Stars
+local stars = {}
+local STAR_COUNT = 60
+
+-- Load images
+canvas.assets.load_image("ship", "blue_ship.png")
+canvas.assets.load_image("laser", "laser.png")
+canvas.assets.load_image("meteor", "meteor.png")
+
+-- ============================================================
+-- GENERATE STAR
+-- ============================================================
+
+local function generate_star()
+    local size = math.random(1, 3)
+    local speed = size * 30
+    local brightness = size * 60 + 40
+    return {
+        x = math.random(0, SCREEN_W),
+        y = math.random(0, SCREEN_H),
+        size = size,
+        speed = speed,
+        brightness = brightness
+    }
+end
+
+-- ============================================================
+-- INIT STARS
+-- ============================================================
+
+local function init_stars()
+    stars = {}
+    for i = 1, STAR_COUNT do
+        table.insert(stars, generate_star())
+    end
+end
+
+init_stars()
+
+-- ============================================================
+-- COLLISION DETECTION
+-- ============================================================
+
+local function check_collision(a_x, a_y, a_w, a_h, b_x, b_y, b_w, b_h)
+    return a_x &lt; b_x + b_w
+       and a_x + a_w &gt; b_x
+       and a_y &lt; b_y + b_h
+       and a_y + a_h &gt; b_y
+end
+
+-- ============================================================
+-- SPAWN METEOR
+-- ============================================================
+
+local function spawn_meteor()
+    local meteor = {
+        x = math.random(0, SCREEN_W - meteor_w),
+        y = -meteor_h
+    }
+    table.insert(meteors, meteor)
+end
+
+-- ============================================================
+-- SPAWN LASER
+-- ============================================================
+
+local function spawn_laser(x, y)
+    local laser = {
+        x = x,
+        y = y
+    }
+    table.insert(lasers, laser)
+end
+
+-- ============================================================
+-- RESET GAME
+-- ============================================================
+
+local function reset_game()
+    ship_x = 370
+    ship_y = 500
+    lasers = {}
+    meteors = {}
+    spawn_timer = 0
+    score = 0
+    game_over = false
+    init_stars()
+end
+
+-- ============================================================
+-- USER INPUT
+-- ============================================================
+
+local function user_input()
+    local dt = canvas.get_delta()
+
+    -- Restart on ENTER when game is over
+    if game_over then
+        if canvas.is_key_pressed(canvas.keys.ENTER) then
+            reset_game()
+        end
+        return
+    end
+
+    -- Ship movement
+    if canvas.is_key_down(canvas.keys.LEFT) then ship_x = ship_x - ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.RIGHT) then ship_x = ship_x + ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.UP) then ship_y = ship_y - ship_speed * dt end
+    if canvas.is_key_down(canvas.keys.DOWN) then ship_y = ship_y + ship_speed * dt end
+
+    -- Fire laser
+    if canvas.is_key_pressed(canvas.keys.SPACE) then
+        spawn_laser(ship_x + ship_w / 2 - laser_w / 2, ship_y)
+    end
+end
+
+-- ============================================================
+-- UPDATE
+-- ============================================================
+
+local function update()
+    if game_over then return end
+
+    local dt = canvas.get_delta()
+
+    -- Clamp ship to screen
+    ship_x = math.max(0, math.min(SCREEN_W - ship_w, ship_x))
+    ship_y = math.max(0, math.min(SCREEN_H - ship_h, ship_y))
+
+    -- Move lasers and remove off-screen ones
+    for i = #lasers, 1, -1 do
+        lasers[i].y = lasers[i].y - laser_speed * dt
+        if lasers[i].y + laser_h &lt; 0 then
+            table.remove(lasers, i)
+        end
+    end
+
+    -- Spawn timer
+    spawn_timer = spawn_timer + dt
+    if spawn_timer &gt;= spawn_interval then
+        spawn_meteor()
+        spawn_timer = 0
+    end
+
+    -- Move meteors and remove off-screen ones
+    for i = #meteors, 1, -1 do
+        meteors[i].y = meteors[i].y + meteor_speed * dt
+        if meteors[i].y &gt; SCREEN_H then
+            table.remove(meteors, i)
+        end
+    end
+
+    -- Laser vs meteor collision
+    for i = #lasers, 1, -1 do
+        for j = #meteors, 1, -1 do
+            if check_collision(lasers[i].x, lasers[i].y, laser_w, laser_h,
+                               meteors[j].x, meteors[j].y, meteor_w, meteor_h) then
+                table.remove(meteors, j)
+                table.remove(lasers, i)
+                score = score + 1
+                break
+            end
+        end
+    end
+
+    -- Ship vs meteor collision
+    for i, meteor in ipairs(meteors) do
+        if check_collision(ship_x, ship_y, ship_w, ship_h,
+                           meteor.x, meteor.y, meteor_w, meteor_h) then
+            game_over = true
+            return
+        end
+    end
+
+    -- Move stars
+    for i, star in ipairs(stars) do
+        star.y = star.y + star.speed * dt
+        if star.y &gt; SCREEN_H then
+            star.x = math.random(0, SCREEN_W)
+            star.y = -star.size
+        end
+    end
+end
+
+-- ============================================================
+-- DRAW
+-- ============================================================
+
+local function draw()
+    canvas.clear()
+
+    -- Dark space background
+    canvas.set_color(10, 10, 30)
+    canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
+
+    -- Stars
+    for i, star in ipairs(stars) do
+        canvas.set_color(star.brightness, star.brightness, star.brightness)
+        canvas.fill_rect(star.x, star.y, star.size, star.size)
+    end
+
+    -- Lasers
+    for i, laser in ipairs(lasers) do
+        canvas.draw_image("laser", laser.x, laser.y, laser_w, laser_h)
+    end
+
+    -- Meteors
+    for i, meteor in ipairs(meteors) do
+        canvas.draw_image("meteor", meteor.x, meteor.y, meteor_w, meteor_h)
+    end
+
+    -- Ship
+    canvas.draw_image("ship", ship_x, ship_y, ship_w, ship_h)
+
+    -- HUD
+    canvas.set_color(255, 255, 255)
+    canvas.set_font_size(16)
+    canvas.draw_text(10, 10, "Score: " .. score)
+    canvas.draw_text(10, 30, "Arrow keys: Move | SPACE: Shoot")
+
+    -- Game over overlay
+    if game_over then
+        -- Dark overlay
+        canvas.set_color(0, 0, 0, 180)
+        canvas.fill_rect(0, 0, SCREEN_W, SCREEN_H)
+
+        -- "GAME OVER" text (red)
+        canvas.set_font_size(48)
+        canvas.set_color(255, 50, 50)
+        local title = "GAME OVER"
+        local title_w = canvas.get_text_width(title)
+        canvas.draw_text((SCREEN_W - title_w) / 2, SCREEN_H / 2 - 60, title)
+
+        -- Score text (white)
+        canvas.set_font_size(24)
+        canvas.set_color(255, 255, 255)
+        local score_text = "Score: " .. score
+        local score_w = canvas.get_text_width(score_text)
+        canvas.draw_text((SCREEN_W - score_w) / 2, SCREEN_H / 2, score_text)
+
+        -- Restart prompt (white)
+        local restart_text = "Press ENTER to restart"
+        local restart_w = canvas.get_text_width(restart_text)
+        canvas.draw_text((SCREEN_W - restart_w) / 2, SCREEN_H / 2 + 40, restart_text)
+    end
+end
+
+-- ============================================================
+-- GAME LOOP
+-- ============================================================
+
+local function game()
+    user_input()
+    update()
+    draw()
+end
+
+canvas.tick(game)
+canvas.start()</code></pre>
+        </div>
+    </div>
+</div>
+
+</main>
+
+<!-- Toast notification for blocked copy -->
+<div id="toast">Type it out! You'll remember it better.</div>
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+(function() {
+    'use strict';
+
+    // ============================================================
+    // TAB SWITCHING
+    // ============================================================
+
+    var tabs = document.querySelectorAll('.tab-bar button');
+    var parts = document.querySelectorAll('.part');
+
+    tabs.forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            var partId = 'part-' + tab.getAttribute('data-part');
+
+            tabs.forEach(function(t) { t.classList.remove('active'); });
+            parts.forEach(function(p) { p.classList.remove('active'); });
+
+            tab.classList.add('active');
+            document.getElementById(partId).classList.add('active');
+
+            // Scroll to top of content
+            window.scrollTo(0, 0);
+        });
+    });
+
+    // ============================================================
+    // HINT REVEAL
+    // ============================================================
+
+    document.querySelectorAll('.btn-hint').forEach(function(btn) {
+        var step = btn.closest('.step');
+        var hints = step.querySelectorAll('.hints-container .hint');
+        var total = parseInt(btn.getAttribute('data-total'), 10);
+        var revealed = 0;
+
+        btn.addEventListener('click', function() {
+            if (revealed < total) {
+                hints[revealed].removeAttribute('hidden');
+                revealed++;
+
+                if (revealed < total) {
+                    btn.textContent = 'Show Hint (' + (revealed + 1) + '/' + total + ')';
+                } else {
+                    // All hints revealed — hide hint button, show solution button
+                    btn.setAttribute('hidden', '');
+                    var solBtn = step.querySelector('.btn-solution');
+                    if (solBtn) solBtn.removeAttribute('hidden');
+                }
+            }
+        });
+    });
+
+    // ============================================================
+    // SOLUTION REVEAL
+    // ============================================================
+
+    document.querySelectorAll('.btn-solution').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var step = btn.closest('.step');
+            var sol = step.querySelector('.solution');
+            if (sol) {
+                var isHidden = sol.hasAttribute('hidden');
+                if (isHidden) {
+                    sol.removeAttribute('hidden');
+                    btn.textContent = 'Hide Solution';
+                    // Re-highlight any code blocks that were hidden
+                    sol.querySelectorAll('code.lua').forEach(highlightElement);
+                } else {
+                    sol.setAttribute('hidden', '');
+                    btn.textContent = 'Show Solution';
+                }
+            }
+        });
+    });
+
+    // ============================================================
+    // STUCK CODE TOGGLE
+    // ============================================================
+
+    document.querySelectorAll('.btn-stuck').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var stuck = btn.closest('.stuck');
+            var codeDiv = stuck.querySelector('.stuck-code');
+            if (codeDiv) {
+                var isHidden = codeDiv.hasAttribute('hidden');
+                if (isHidden) {
+                    codeDiv.removeAttribute('hidden');
+                    codeDiv.querySelectorAll('code.lua').forEach(highlightElement);
+                } else {
+                    codeDiv.setAttribute('hidden', '');
+                }
+            }
+        });
+    });
+
+    // ============================================================
+    // LUA SYNTAX HIGHLIGHTING
+    // ============================================================
+
+    var LUA_KEYWORDS = ['local','function','end','if','then','else','elseif',
+        'for','do','while','return','break','and','or','not','in',
+        'true','false','nil','repeat','until'];
+    var kwSet = {};
+    LUA_KEYWORDS.forEach(function(k) { kwSet[k] = true; });
+
+    function escapeHTML(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function highlightLua(code) {
+        var result = '';
+        var i = 0;
+        var len = code.length;
+
+        while (i < len) {
+            // Comment
+            if (code[i] === '-' && i + 1 < len && code[i + 1] === '-') {
+                var end = code.indexOf('\n', i);
+                if (end === -1) end = len;
+                result += '<span class="cm">' + escapeHTML(code.substring(i, end)) + '</span>';
+                i = end;
+            }
+            // String (double quote)
+            else if (code[i] === '"') {
+                var j = i + 1;
+                while (j < len && code[j] !== '"' && code[j] !== '\n') {
+                    if (code[j] === '\\') j++;
+                    j++;
+                }
+                if (j < len && code[j] === '"') j++;
+                result += '<span class="str">' + escapeHTML(code.substring(i, j)) + '</span>';
+                i = j;
+            }
+            // String (single quote)
+            else if (code[i] === "'") {
+                var j = i + 1;
+                while (j < len && code[j] !== "'" && code[j] !== '\n') {
+                    if (code[j] === '\\') j++;
+                    j++;
+                }
+                if (j < len && code[j] === "'") j++;
+                result += '<span class="str">' + escapeHTML(code.substring(i, j)) + '</span>';
+                i = j;
+            }
+            // Number (not preceded by word char)
+            else if (/[0-9]/.test(code[i]) && (i === 0 || !/[a-zA-Z_]/.test(code[i - 1]))) {
+                var j = i;
+                while (j < len && /[0-9.]/.test(code[j])) j++;
+                result += '<span class="num">' + code.substring(i, j) + '</span>';
+                i = j;
+            }
+            // Identifier / keyword
+            else if (/[a-zA-Z_]/.test(code[i])) {
+                var j = i;
+                while (j < len && /[a-zA-Z0-9_]/.test(code[j])) j++;
+                var word = code.substring(i, j);
+                if (kwSet[word]) {
+                    result += '<span class="kw">' + word + '</span>';
+                } else {
+                    // Check for function call (skip whitespace, look for '(')
+                    var k = j;
+                    while (k < len && code[k] === ' ') k++;
+                    if (k < len && code[k] === '(') {
+                        result += '<span class="fn">' + word + '</span>';
+                    } else {
+                        result += word;
+                    }
+                }
+                i = j;
+            }
+            // Dot accessor — check if next word is a function call
+            else if (code[i] === '.' && i + 1 < len && /[a-zA-Z_]/.test(code[i + 1])) {
+                result += '.';
+                i++;
+            }
+            // Other character
+            else {
+                result += escapeHTML(code[i]);
+                i++;
+            }
+        }
+        return result;
+    }
+
+    function highlightElement(el) {
+        var raw = el.textContent;
+        el.innerHTML = highlightLua(raw);
+    }
+
+    // Highlight all visible code blocks on load
+    document.querySelectorAll('code.lua').forEach(function(el) {
+        // Only highlight if the element is not inside a hidden container
+        var parent = el.closest('[hidden]');
+        if (!parent) {
+            highlightElement(el);
+        }
+    });
+
+    // ============================================================
+    // ANTI-COPY-PASTE
+    // ============================================================
+
+    var toast = document.getElementById('toast');
+    var toastTimer = null;
+
+    function showToast() {
+        toast.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(function() {
+            toast.classList.remove('show');
+        }, 2000);
+    }
+
+    // Block copy/cut on code blocks
+    document.querySelectorAll('pre.code-block').forEach(function(block) {
+        block.addEventListener('copy', function(e) {
+            e.preventDefault();
+            showToast();
+        });
+        block.addEventListener('cut', function(e) {
+            e.preventDefault();
+            showToast();
+        });
+    });
+
+    // Also block on the whole document for code elements
+    document.addEventListener('copy', function(e) {
+        var sel = window.getSelection();
+        if (sel && sel.anchorNode) {
+            var node = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentNode : sel.anchorNode;
+            if (node && node.closest && node.closest('pre.code-block')) {
+                e.preventDefault();
+                showToast();
+            }
+        }
+    });
+
+})();
+</script>
+
+</body>
+</html>

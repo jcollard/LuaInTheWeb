@@ -24,6 +24,8 @@ function createMockParams(overrides?: Partial<ExplorerPropsParams>): ExplorerPro
     makeTabPermanent: vi.fn(),
     openBinaryViewer: vi.fn(),
     openAnsiEditorFile: vi.fn(),
+    openHtmlPreview: vi.fn(),
+    openHtmlInBrowser: vi.fn(),
     refreshFileTree: vi.fn(),
     workspaces: [],
     pendingWorkspaces: new Set<string>(),
@@ -85,6 +87,80 @@ describe('explorerPropsHelper', () => {
 
       expect(openAnsiEditorFile).not.toHaveBeenCalled()
       expect(params.openPreviewFile).toHaveBeenCalledWith('/scripts/main.lua')
+    })
+  })
+
+  describe('.html routing', () => {
+    it('should route .html files to openHtmlPreview on single click', () => {
+      const openHtmlPreview = vi.fn()
+      const params = createMockParams({ openHtmlPreview })
+      const props = createExplorerProps(params)
+
+      props.onSelectFile('/docs/guide.html')
+
+      expect(openHtmlPreview).toHaveBeenCalledWith('/docs/guide.html')
+      expect(params.openPreviewFile).not.toHaveBeenCalled()
+    })
+
+    it('should route .htm files to openHtmlPreview on single click', () => {
+      const openHtmlPreview = vi.fn()
+      const params = createMockParams({ openHtmlPreview })
+      const props = createExplorerProps(params)
+
+      props.onSelectFile('/docs/page.htm')
+
+      expect(openHtmlPreview).toHaveBeenCalledWith('/docs/page.htm')
+    })
+
+    it('should route .HTML files case-insensitively', () => {
+      const openHtmlPreview = vi.fn()
+      const params = createMockParams({ openHtmlPreview })
+      const props = createExplorerProps(params)
+
+      props.onSelectFile('/docs/Guide.HTML')
+
+      expect(openHtmlPreview).toHaveBeenCalledWith('/docs/Guide.HTML')
+    })
+
+    it('should make html tab permanent on double click', () => {
+      const makeTabPermanent = vi.fn()
+      const params = createMockParams({ makeTabPermanent })
+      const props = createExplorerProps(params)
+
+      props.onDoubleClickFile('/docs/guide.html')
+
+      expect(makeTabPermanent).toHaveBeenCalledWith('/docs/guide.html')
+      expect(params.openFile).not.toHaveBeenCalled()
+    })
+
+    it('should return onPreviewHtml mapped to openHtmlPreview', () => {
+      const openHtmlPreview = vi.fn()
+      const params = createMockParams({ openHtmlPreview })
+      const props = createExplorerProps(params)
+
+      props.onPreviewHtml?.('/docs/guide.html')
+
+      expect(openHtmlPreview).toHaveBeenCalledWith('/docs/guide.html')
+    })
+
+    it('should return onEditHtml mapped to openFile', () => {
+      const openFile = vi.fn()
+      const params = createMockParams({ openFile })
+      const props = createExplorerProps(params)
+
+      props.onEditHtml?.('/docs/guide.html')
+
+      expect(openFile).toHaveBeenCalledWith('/docs/guide.html')
+    })
+
+    it('should return onOpenHtmlInBrowser mapped to openHtmlInBrowser', () => {
+      const openHtmlInBrowser = vi.fn()
+      const params = createMockParams({ openHtmlInBrowser })
+      const props = createExplorerProps(params)
+
+      props.onOpenHtmlInBrowser?.('/docs/guide.html')
+
+      expect(openHtmlInBrowser).toHaveBeenCalledWith('/docs/guide.html')
     })
   })
 })

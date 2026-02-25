@@ -4,15 +4,19 @@ import {
   fileContextMenuItems,
   markdownFileContextMenuItems,
   readOnlyMarkdownFileContextMenuItems,
+  htmlFileContextMenuItems,
+  readOnlyHtmlFileContextMenuItems,
   folderContextMenuItems,
   workspaceContextMenuItems,
   libraryWorkspaceContextMenuItems,
   docsWorkspaceContextMenuItems,
   bookWorkspaceContextMenuItems,
   examplesWorkspaceContextMenuItems,
+  projectsWorkspaceContextMenuItems,
+  projectSubfolderContextMenuItems,
   buildConnectedWorkspaceMenuItems,
 } from './contextMenuItems'
-import { isMarkdownFile } from './treeUtils'
+import { isMarkdownFile, isHtmlFile } from './treeUtils'
 
 interface GetContextMenuItemsParams {
   contextMenu: ContextMenuState
@@ -21,6 +25,8 @@ interface GetContextMenuItemsParams {
   isDocsWorkspace: (path: string) => boolean
   isBookWorkspace: (path: string) => boolean
   isExamplesWorkspace: (path: string) => boolean
+  isProjectsWorkspace: (path: string) => boolean
+  isProjectSubfolder: (path: string) => boolean
   isInReadOnlyWorkspace: (path: string) => boolean
   supportsRefresh?: (path: string) => boolean
 }
@@ -36,6 +42,8 @@ export function getContextMenuItems(params: GetContextMenuItemsParams): ContextM
     isDocsWorkspace,
     isBookWorkspace,
     isExamplesWorkspace,
+    isProjectsWorkspace,
+    isProjectSubfolder,
     isInReadOnlyWorkspace,
     supportsRefresh,
   } = params
@@ -43,12 +51,25 @@ export function getContextMenuItems(params: GetContextMenuItemsParams): ContextM
   const targetPath = contextMenu.targetPath
 
   if (contextMenu.targetType !== 'folder') {
-    // Check if it's a markdown file
-    if (targetPath && isMarkdownFile(targetPath)) {
-      // Use read-only menu for files in read-only workspaces
-      if (isInReadOnlyWorkspace(targetPath)) {
+    // Files in projects workspace have no context menu (read-only, non-markdown/html)
+    if (targetPath && isInReadOnlyWorkspace(targetPath)) {
+      // Check if it's an HTML file in a read-only workspace
+      if (isHtmlFile(targetPath)) {
+        return readOnlyHtmlFileContextMenuItems
+      }
+      // Check if it's a markdown file in a read-only workspace
+      if (isMarkdownFile(targetPath)) {
         return readOnlyMarkdownFileContextMenuItems
       }
+      // No context menu for other files in read-only workspaces
+      return []
+    }
+    // Check if it's an HTML file
+    if (targetPath && isHtmlFile(targetPath)) {
+      return htmlFileContextMenuItems
+    }
+    // Check if it's a markdown file
+    if (targetPath && isMarkdownFile(targetPath)) {
       return markdownFileContextMenuItems
     }
     return fileContextMenuItems
@@ -72,12 +93,21 @@ export function getContextMenuItems(params: GetContextMenuItemsParams): ContextM
     if (isExamplesWorkspace(targetPath)) {
       return examplesWorkspaceContextMenuItems
     }
+    // Projects workspaces have no context menu options at root (read-only)
+    if (isProjectsWorkspace(targetPath)) {
+      return projectsWorkspaceContextMenuItems
+    }
     // Add "Refresh" and "Disconnect" options for connected local workspaces
     const isConnectedLocalWorkspace = supportsRefresh?.(targetPath)
     if (isConnectedLocalWorkspace) {
       return buildConnectedWorkspaceMenuItems()
     }
     return workspaceContextMenuItems
+  }
+
+  // Project subfolders (e.g., space_shooter) can be cloned
+  if (targetPath && isProjectSubfolder(targetPath)) {
+    return projectSubfolderContextMenuItems
   }
 
   return folderContextMenuItems

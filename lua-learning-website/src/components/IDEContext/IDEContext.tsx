@@ -205,6 +205,35 @@ export function IDEContextProvider({ children, initialCode: _initialCode = '', f
     }
   }, [addRecentFile, filesystem, tabBar])
 
+  const openHtmlPreview = useCallback((path: string) => {
+    const existingTab = tabBar.tabs.find(t => t.path === path)
+    if (existingTab) {
+      // Convert file tab to html preview if it's currently in edit mode
+      if (existingTab.type === 'file') {
+        tabBar.convertToHtmlTab(path)
+      }
+      tabBar.selectTab(path)
+      addRecentFile(path)
+      return
+    }
+    // Check if file exists before opening
+    const content = filesystem.readFile(path)
+    if (content !== null) {
+      tabBar.openHtmlPreviewTab(path, getFileName(path))
+      addRecentFile(path)
+    }
+  }, [addRecentFile, filesystem, tabBar])
+
+  const openHtmlInBrowser = useCallback((path: string) => {
+    const content = filesystem.readFile(path)
+    if (content !== null) {
+      const blob = new Blob([content], { type: 'text/html' })
+      const url = URL.createObjectURL(blob)
+      window.open(url, '_blank')
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
+    }
+  }, [filesystem])
+
   const openBinaryViewer = useCallback((path: string) => {
     const existingTab = tabBar.tabs.find(t => t.path === path)
     if (existingTab) {
@@ -382,7 +411,7 @@ export function IDEContextProvider({ children, initialCode: _initialCode = '', f
     activePanel, setActivePanel,
     terminalVisible, toggleTerminal, sidebarVisible, toggleSidebar,
     fileTree, refreshFileTree, handleShellFileMove,
-    createFile, createFolder, deleteFile, deleteFolder, renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, openBinaryViewer, saveFile,
+    createFile, createFolder, deleteFile, deleteFolder, renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, openHtmlPreview, openHtmlInBrowser, openBinaryViewer, saveFile,
     tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, openAnsiTab, openAnsiEditorTab, openAnsiEditorFile, updateAnsiEditorTabPath, makeTabPermanent,
     pinTab, unpinTab, reorderTab, closeToRight, closeOthers,
     setTabDirty: tabBar.setDirty,
@@ -398,7 +427,7 @@ export function IDEContextProvider({ children, initialCode: _initialCode = '', f
     engine, code, setCode, fileName, isDirty,
     activePanel, terminalVisible, sidebarVisible, toggleTerminal, toggleSidebar,
     fileTree, refreshFileTree, handleShellFileMove, createFile, createFolder, deleteFile, deleteFolder,
-    renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, openBinaryViewer, saveFile, tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, openAnsiTab, openAnsiEditorTab, openAnsiEditorFile, updateAnsiEditorTabPath, makeTabPermanent,
+    renameFile, renameFolder, moveFile, copyFile, openFile, openPreviewFile, openMarkdownPreview, openHtmlPreview, openHtmlInBrowser, openBinaryViewer, saveFile, tabs, activeTab, activeTabType, selectTab, closeTab, openCanvasTab, openAnsiTab, openAnsiEditorTab, openAnsiEditorFile, updateAnsiEditorTabPath, makeTabPermanent,
     pinTab, unpinTab, reorderTab, closeToRight, closeOthers, tabBar.setDirty,
     toasts, showError, dismissToast, pendingNewFilePath, generateUniqueFileName, createFileWithRename,
     clearPendingNewFile, pendingNewFolderPath, generateUniqueFolderName, createFolderWithRename,

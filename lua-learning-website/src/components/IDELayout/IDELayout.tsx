@@ -17,6 +17,7 @@ import { AnsiTabContent } from './AnsiTabContent'
 import { AnsiEditorTabContent } from './AnsiEditorTabContent'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import { MarkdownTabContent } from './MarkdownTabContent'
+import { HtmlTabContent } from './HtmlTabContent'
 import { BinaryTabContent } from './BinaryTabContent'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useBeforeUnloadWarning } from '../../hooks/useBeforeUnloadWarning'
@@ -25,6 +26,7 @@ import { useCanvasWindowManager } from '../../hooks/useCanvasWindowManager'
 import { useWindowFocusRefresh } from '../../hooks/useWindowFocusRefresh'
 import { useWorkspaceManager } from '../../hooks/useWorkspaceManager'
 import { useEditorExtensions } from '../../hooks/useEditorExtensions'
+import { useCloneProject } from '../../hooks/useCloneProject'
 import { createFileSystemAdapter } from '../../hooks/compositeFileSystemAdapter'
 import { initFormatter, formatLuaCode } from '../../utils/luaFormatter'
 import type { Workspace } from '../../hooks/workspaceTypes'
@@ -42,7 +44,7 @@ interface IDELayoutInnerProps {
   compositeFileSystem: IFileSystem
   workspaces: Workspace[]
   pendingWorkspaces: Set<string>
-  addVirtualWorkspace: (name: string) => void
+  addVirtualWorkspace: (name: string) => Promise<Workspace>
   addLocalWorkspace: (name: string, handle: FileSystemDirectoryHandle) => Promise<Workspace>
   removeWorkspace: (workspaceId: string) => void
   isFileSystemAccessSupported: () => boolean
@@ -101,6 +103,8 @@ function IDELayoutInner({
     openFile,
     openPreviewFile,
     openMarkdownPreview,
+    openHtmlPreview,
+    openHtmlInBrowser,
     openBinaryViewer,
     saveFile,
     // New file creation
@@ -697,6 +701,8 @@ function IDELayoutInner({
       openAnsiEditorFile(filePath)
     } else if (lowerPath.endsWith('.md')) {
       openMarkdownPreview(filePath)
+    } else if (lowerPath.endsWith('.html') || lowerPath.endsWith('.htm')) {
+      openHtmlPreview(filePath)
     } else if (
       lowerPath.endsWith('.png') || lowerPath.endsWith('.jpg') ||
       lowerPath.endsWith('.jpeg') || lowerPath.endsWith('.gif') ||
@@ -714,7 +720,7 @@ function IDELayoutInner({
     } else {
       openFile(filePath)
     }
-  }, [openFile, openAnsiEditorFile, openMarkdownPreview, openBinaryViewer])
+  }, [openFile, openAnsiEditorFile, openMarkdownPreview, openHtmlPreview, openBinaryViewer])
 
   // Format the current code
   const handleFormat = useCallback(() => {
@@ -733,16 +739,26 @@ function IDELayoutInner({
     }, 0)
   }, [code, setCode, showError])
 
+  const { handleCloneProject } = useCloneProject({
+    compositeFileSystem,
+    addVirtualWorkspace,
+    addLocalWorkspace,
+    refreshFileTree,
+    showError,
+  })
+
   // Explorer props for FileExplorer
   const explorerProps = createExplorerProps({
     fileTree, activeTab, pendingNewFilePath, pendingNewFolderPath,
     handleCreateFile, handleCreateFolder, renameFile, renameFolder,
     deleteFile, deleteFolder, openFile, openPreviewFile, moveFile, copyFile,
     clearPendingNewFile, clearPendingNewFolder, openMarkdownPreview, openMarkdownEdit: openFile,
-    makeTabPermanent, openBinaryViewer, openAnsiEditorFile, handleCdToLocation, uploadFiles, uploadFolder, workspaces, pendingWorkspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
+    makeTabPermanent, openBinaryViewer, openAnsiEditorFile, openHtmlPreview, openHtmlInBrowser,
+    handleCdToLocation, uploadFiles, uploadFolder, workspaces, pendingWorkspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
     addVirtualWorkspace, handleAddLocalWorkspace, handleRemoveWorkspace, refreshWorkspace,
     refreshFileTree, supportsRefresh, handleReconnectWorkspace, handleDisconnectWorkspace,
     handleRenameWorkspace, isFolderAlreadyMounted, getUniqueWorkspaceName,
+    handleCloneProject,
   })
 
   // Tab bar props for EditorPanel (only when tabs exist)
@@ -847,6 +863,17 @@ function IDELayoutInner({
                           tabBarProps={tabBarProps}
                           currentFilePath={activeTab}
                           onOpenMarkdown={openMarkdownPreview}
+                        />
+                      )}
+                      {/* HTML preview - shown when html tab is active */}
+                      {activeTabType === 'html' && activeTab && (
+                        <HtmlTabContent
+                          content={
+                            compositeFileSystem.exists(activeTab)
+                              ? compositeFileSystem.readFile(activeTab)
+                              : ''
+                          }
+                          tabBarProps={tabBarProps}
                         />
                       )}
                       {/* Binary file viewer - shown when binary tab is active */}
