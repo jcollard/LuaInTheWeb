@@ -167,6 +167,7 @@ function IDELayoutInner({
   // ANSI tab management
   const hasAnsiTabs = tabs.some(t => t.type === 'ansi')
   const hasAnsiEditorTabs = tabs.some(t => t.type === 'ansi-editor')
+  const hasHtmlTabs = tabs.some(t => t.type === 'html')
 
   // ANSI tab request management (ansiId -> resolver for terminal handle)
   const pendingAnsiRequestsRef = useRef<Map<string, (handle: AnsiTerminalHandle) => void>>(new Map())
@@ -865,16 +866,18 @@ function IDELayoutInner({
                           onOpenMarkdown={openMarkdownPreview}
                         />
                       )}
-                      {/* HTML preview - shown when html tab is active */}
-                      {activeTabType === 'html' && activeTab && (
-                        <HtmlTabContent
-                          content={
-                            compositeFileSystem.exists(activeTab)
-                              ? compositeFileSystem.readFile(activeTab)
-                              : ''
-                          }
-                          tabBarProps={tabBarProps}
-                        />
+                      {/* HTML preview - display-toggled to preserve iframe state across tab switches */}
+                      {hasHtmlTabs && (
+                        <div style={{ display: activeTabType === 'html' ? 'contents' : 'none' }}>
+                          <HtmlTabContent
+                            content={
+                              activeTab && compositeFileSystem.exists(activeTab)
+                                ? compositeFileSystem.readFile(activeTab)
+                                : ''
+                            }
+                            tabBarProps={tabBarProps}
+                          />
+                        </div>
                       )}
                       {/* Binary file viewer - shown when binary tab is active */}
                       {activeTabType === 'binary' && activeTab && compositeFileSystem.exists(activeTab) && (
