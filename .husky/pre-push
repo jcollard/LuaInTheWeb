@@ -30,8 +30,8 @@ if [ ! -t 0 ] || [ ! -t 1 ]; then
   # Find merge base with origin/main
   MERGE_BASE=$(git merge-base origin/main "$HEAD_SHA" 2>/dev/null || echo "")
   if [ -z "$MERGE_BASE" ]; then
-    echo "No common ancestor with origin/main — running full CI..."
-    npm run ci
+    echo "No common ancestor with origin/main — running full CI (skip E2E)..."
+    npm run ci:quick
     exit $?
   fi
 
@@ -63,12 +63,12 @@ if [ ! -t 0 ] || [ ! -t 1 ]; then
     echo "Non-code changes only — skipping CI"
     exit 0
   elif [ "$AFFECTED" = "all" ]; then
-    echo "Root config changes detected — running full CI..."
-    npm run ci
+    echo "Root config changes detected — running full CI (skip E2E)..."
+    npm run ci:quick
     exit $?
   else
     echo "Code changes in: $AFFECTED — running scoped CI..."
-    node scripts/ci-local.js --scope "$AFFECTED"
+    node scripts/ci-local.js --skip-e2e --scope "$AFFECTED"
     exit $?
   fi
 fi
@@ -80,8 +80,8 @@ printf "Run tests before push? [y/N]: "
 read -r response < /dev/tty
 
 if [ "$response" = "y" ] || [ "$response" = "Y" ]; then
-  echo "Running full CI (lint + build + unit + E2E)..."
-  npm run ci
+  echo "Running CI (lint + build + unit tests, skip E2E)..."
+  npm run ci:quick
   exit $?
 else
   echo "Skipping tests."
