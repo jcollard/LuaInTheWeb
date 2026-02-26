@@ -7,6 +7,7 @@ This module contains common utilities used across multiple scripts:
 - Build/test runners
 """
 
+import re
 import subprocess
 from pathlib import Path
 
@@ -205,6 +206,51 @@ def run_build(npm_dir):
         text=True
     )
     return result.returncode == 0, result.stdout + result.stderr
+
+
+def slugify(title):
+    """Convert an issue title to a URL-friendly slug for branch names.
+
+    Removes common prefixes like [Tech Debt], [BUG], etc.
+    Truncates to 50 characters.
+    """
+    clean = re.sub(r'^\[(Tech Debt|Roadmap|BUG)\]\s*', '', title, flags=re.IGNORECASE)
+    slug = clean.lower()
+    slug = re.sub(r'[^a-z0-9]+', '-', slug)
+    slug = slug.strip('-')
+    return slug[:50]
+
+
+def find_worktree_for_issue(issue_number):
+    """Find worktree path and branch for an issue number.
+
+    Args:
+        issue_number: Issue number as string
+
+    Returns:
+        Tuple of (worktree_path, branch_name). Both None if not found.
+    """
+    worktree_list, _ = run('git worktree list --porcelain')
+    if not worktree_list:
+        return None, None
+
+    lines = worktree_list.split('\n')
+    current_path = None
+    current_branch = None
+
+    for line in lines:
+        if line.startswith('worktree '):
+            current_path = line[9:]
+        elif line.startswith('branch '):
+            current_branch = line[7:]
+            if (f"issue-{issue_number}" in current_path or
+                    re.match(rf'refs/heads/{issue_number}-', current_branch)):
+                branch_name = current_branch.replace('refs/heads/', '')
+                return current_path, branch_name
+            current_path = None
+            current_branch = None
+
+    return None, None
 
 
 def stage_all_changes():

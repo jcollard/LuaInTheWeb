@@ -288,23 +288,15 @@ Write the file:
 
 ## Step 6: Update Project Board Status
 
-Update the epic issue status to "In Progress" in the GitHub Project:
+Update the epic issue status to "In Progress" using the shared Python module:
 
 ```bash
-# Get the project item ID for this epic
-gh project item-list 3 --owner jcollard --format json --limit 100
-```
-
-Find the item matching the epic issue number, then update:
-
-```bash
-# Project configuration
-# - Status field ID: PVTSSF_lAHOADXapM4BKKH8zg6G6Vo
-# - "In Progress" option ID: 47fc9ee4
-
-gh project item-edit --project-id PVT_kwHOADXapM4BKKH8 --id <item-id> \
-  --field-id PVTSSF_lAHOADXapM4BKKH8zg6G6Vo \
-  --single-select-option-id 47fc9ee4
+python3 -c "
+import sys; sys.path.insert(0, '.')
+from scripts.lib.project_board import update_project_status
+success, msg = update_project_status('<epic-number>', 'In Progress')
+print(msg)
+"
 ```
 
 ---

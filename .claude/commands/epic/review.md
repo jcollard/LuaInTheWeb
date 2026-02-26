@@ -250,19 +250,15 @@ EOF
 
 ## Step 7: Update Project Board
 
-Update epic issue status to "Needs Review":
+Update epic issue status to "Needs Review" using the shared Python module:
 
 ```bash
-# Get project item ID
-gh project item-list 3 --owner jcollard --format json --limit 100
-
-# Update status
-# Status field ID: PVTSSF_lAHOADXapM4BKKH8zg6G6Vo
-# "Needs Review" option ID: 44687678
-
-gh project item-edit --project-id PVT_kwHOADXapM4BKKH8 --id <item-id> \
-  --field-id PVTSSF_lAHOADXapM4BKKH8zg6G6Vo \
-  --single-select-option-id 44687678
+python3 -c "
+import sys; sys.path.insert(0, '.')
+from scripts.lib.project_board import update_project_status
+success, msg = update_project_status('<epic-number>', 'Needs Review')
+print(msg)
+"
 ```
 
 ---

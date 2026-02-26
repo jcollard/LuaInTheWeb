@@ -12,135 +12,18 @@ This script:
 """
 
 import argparse
-import json
 import sys
 import os
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from scripts.lib.helpers import run, get_temp_dir, RED, GREEN, BLUE, YELLOW, NC
-
-# Project configuration
-PROJECT_NUMBER = 3
-PROJECT_OWNER = "jcollard"
-PROJECT_ID = "PVT_kwHOADXapM4BKKH8"
-
-# Field IDs and option mappings
-PRIORITY_FIELD_ID = "PVTSSF_lAHOADXapM4BKKH8zg6G6Y4"
-PRIORITY_OPTIONS = {
-    "P0-Critical": "6959573a",
-    "P1-High": "1aaa3eba",
-    "P2-Medium": "db5c9ee4",
-    "P3-Low": "05293cbc",
-}
-
-EFFORT_FIELD_ID = "PVTSSF_lAHOADXapM4BKKH8zg6G6Y8"
-EFFORT_OPTIONS = {
-    "XS": "cec6e7fb",
-    "S": "cd99538a",
-    "M": "fe8d3824",
-    "L": "526971d0",
-    "XL": "c4a28a01",
-}
-
-TYPE_FIELD_ID = "PVTSSF_lAHOADXapM4BKKH8zg6G6ZA"
-TYPE_OPTIONS = {
-    "Feature": "f719849f",
-    "Bug": "ff58b733",
-    "Tech Debt": "7ab66055",
-    "Docs": "b7c57bb8",
-}
-
-TYPE_LABELS = {
-    "Feature": "enhancement",
-    "Bug": "bug",
-    "Tech Debt": "tech-debt",
-    "Docs": "documentation",
-}
-
-
-def find_project_item(issue_number):
-    """Find the project item ID for an issue, adding it to the project if needed."""
-    items_json, err = run(
-        f'gh project item-list {PROJECT_NUMBER} --owner {PROJECT_OWNER} --format json --limit 500',
-        check=False
-    )
-
-    if not items_json:
-        return None, f"Could not fetch project items: {err}"
-
-    try:
-        data = json.loads(items_json)
-        items = data.get('items', [])
-    except json.JSONDecodeError:
-        return None, "Invalid JSON from project"
-
-    # Find the item for this issue
-    for item in items:
-        content = item.get('content', {})
-        if content.get('number') == int(issue_number):
-            return item.get('id'), None
-
-    # Issue not in project, try to add it
-    print(f"  {YELLOW}Issue not in project, adding...{NC}")
-    add_result, err = run(
-        f'gh project item-add {PROJECT_NUMBER} --owner {PROJECT_OWNER} '
-        f'--url "https://github.com/{PROJECT_OWNER}/LuaInTheWeb/issues/{issue_number}"',
-        check=False
-    )
-    if add_result is None:
-        return None, f"Could not add issue to project: {err}"
-
-    # Fetch items again to get the new item ID
-    items_json, _ = run(
-        f'gh project item-list {PROJECT_NUMBER} --owner {PROJECT_OWNER} --format json --limit 500',
-        check=False
-    )
-    if items_json:
-        try:
-            data = json.loads(items_json)
-            for item in data.get('items', []):
-                if item.get('content', {}).get('number') == int(issue_number):
-                    return item.get('id'), None
-        except json.JSONDecodeError:
-            pass
-
-    return None, "Could not find project item ID after adding"
-
-
-def get_project_id():
-    """Get the project ID from GitHub."""
-    project_json, err = run(
-        f'gh project list --owner {PROJECT_OWNER} --format json',
-        check=False
-    )
-
-    if not project_json:
-        return None, f"Could not fetch projects: {err}"
-
-    try:
-        projects = json.loads(project_json)
-        for proj in projects.get('projects', []):
-            if proj.get('number') == PROJECT_NUMBER:
-                return proj.get('id'), None
-    except json.JSONDecodeError:
-        return None, "Invalid JSON from project list"
-
-    return None, "Could not find project"
-
-
-def update_field(project_id, item_id, field_id, option_id, field_name):
-    """Update a single-select field on a project item."""
-    result, err = run(
-        f'gh project item-edit --project-id {project_id} --id {item_id} '
-        f'--field-id {field_id} --single-select-option-id {option_id}',
-        check=False
-    )
-    if result is None:
-        print(f"  {RED}Failed to update {field_name}: {err}{NC}")
-        return False
-    print(f"  {GREEN}{field_name} updated{NC}")
-    return True
+from scripts.lib.helpers import run, RED, GREEN, BLUE, YELLOW, NC
+from scripts.lib.project_config import (
+    PRIORITY_FIELD_ID, PRIORITY_OPTIONS,
+    EFFORT_FIELD_ID, EFFORT_OPTIONS,
+    TYPE_FIELD_ID, TYPE_OPTIONS, TYPE_LABELS,
+)
+from scripts.lib.project_board import find_project_item, get_project_id, update_field
 
 
 def add_label(issue_number, type_value):

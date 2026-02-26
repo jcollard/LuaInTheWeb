@@ -335,27 +335,18 @@ git checkout <number>-<issue-title-slug>
 
 ### 5.2. Update Project Status
 
-Update the issue status to "In Progress" in the GitHub Project:
+Update the issue status to "In Progress" using the shared Python module:
 
 ```bash
-# Get the project item ID for this issue
-gh project item-list 3 --owner jcollard --format json
-
-# Find the item matching the issue number, then update its status
-# Use gh project item-edit with the item ID and field ID
+python3 -c "
+import sys; sys.path.insert(0, '.')
+from scripts.lib.project_board import update_project_status
+success, msg = update_project_status('<number>', 'In Progress')
+print(msg)
+"
 ```
 
-The project uses these Status values (field ID: `PVTSSF_lAHOADXapM4BKKH8zg6G6Vo`):
-- `Concept` (id: f53885f8) - Needs more definition
-- `Todo` (id: f75ad846) - Ready to work on
-- `In Progress` (id: 47fc9ee4) - Actively being worked on
-- `Needs Review` (id: 44687678) - PR created, awaiting review
-- `Done` (id: 98236657) - Completed
-
-**Note**: Project field updates require knowing the item ID. If the issue isn't in the project yet, add it first:
-```bash
-gh project item-add 3 --owner jcollard --url "https://github.com/jcollard/LuaInTheWeb/issues/<number>"
-```
+This handles finding/adding the project item and updating the status field.
 
 ### 5.3. Inject Development Context
 
