@@ -22,11 +22,52 @@ while read local_ref local_sha remote_ref remote_sha; do
   fi
 done
 
-# Non-interactive mode (agent/CI) - run tests automatically
+# Non-interactive mode (agent/CI) - detect changes and run scoped CI
 if [ ! -t 0 ] || [ ! -t 1 ]; then
-  echo "Non-interactive mode detected. Running full CI..."
-  npm run ci
-  exit $?
+  # Find merge base with origin/main
+  MERGE_BASE=$(git merge-base origin/main HEAD 2>/dev/null || echo "")
+  if [ -z "$MERGE_BASE" ]; then
+    echo "No common ancestor with origin/main — running full CI..."
+    npm run ci
+    exit $?
+  fi
+
+  CHANGED_FILES=$(git diff --name-only "$MERGE_BASE" HEAD)
+
+  if [ -z "$CHANGED_FILES" ]; then
+    echo "No changes detected — skipping CI"
+    exit 0
+  fi
+
+  # Detect affected packages from changed files
+  AFFECTED=""
+  echo "$CHANGED_FILES" | grep -q '^packages/shell-core/' && AFFECTED="$AFFECTED,shell-core"
+  echo "$CHANGED_FILES" | grep -q '^packages/canvas-runtime/' && AFFECTED="$AFFECTED,canvas-runtime"
+  echo "$CHANGED_FILES" | grep -q '^packages/ansi-shared/' && AFFECTED="$AFFECTED,ansi-shared"
+  echo "$CHANGED_FILES" | grep -q '^packages/lua-runtime/' && AFFECTED="$AFFECTED,lua-runtime"
+  echo "$CHANGED_FILES" | grep -q '^packages/export/' && AFFECTED="$AFFECTED,export"
+  echo "$CHANGED_FILES" | grep -q '^lua-learning-website/' && AFFECTED="$AFFECTED,lua-learning-website"
+
+  # Root config changes → full CI
+  if echo "$CHANGED_FILES" | grep -qE '^(package\.json|package-lock\.json|tsconfig\.json|\.github/)'; then
+    AFFECTED="all"
+  fi
+
+  # Remove leading comma
+  AFFECTED=$(echo "$AFFECTED" | sed 's/^,//')
+
+  if [ -z "$AFFECTED" ]; then
+    echo "Non-code changes only — skipping CI"
+    exit 0
+  elif [ "$AFFECTED" = "all" ]; then
+    echo "Root config changes detected — running full CI..."
+    npm run ci
+    exit $?
+  else
+    echo "Code changes in: $AFFECTED — running scoped CI..."
+    node scripts/ci-local.js --scope "$AFFECTED"
+    exit $?
+  fi
 fi
 
 # Interactive mode (human) - prompt
