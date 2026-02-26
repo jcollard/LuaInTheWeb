@@ -31,3 +31,22 @@ screenshots-review/
 !docs/**/*.jpg
 !packages/electron-wrapper/icons/*.png
 !packages/electron-wrapper/icons/*.ico
+
+# Claude Code sandbox artifacts (read-only placeholders created by denyWithinAllow)
+/HEAD
+/config
+/hooks
+/objects
+/refs
+/.bash_profile
+/.bashrc
+/.gitconfig
+/.gitmodules
+/.profile
+/.ripgreprc
+/.zprofile
+/.zshrc
+/.idea
+/.vscode
+/.claude/agents
+/.claude/skills
