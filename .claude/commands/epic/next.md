@@ -34,19 +34,14 @@ If path does NOT contain `epic-<number>`:
 The `/epic next` command must be run from the epic worktree.
 
 **Current location**: <current-path>
-**Expected**: ../LuaInTheWeb-epic-<number>
+**Expected**: .claude/worktrees/epic-<number>
 
 <If epic worktree exists:>
-Switch to the epic worktree:
-```bash
-cd ../LuaInTheWeb-epic-<number>
-claude
-```
+Switch to the epic worktree using `EnterWorktree` with name `epic-<number>`.
 
 <If epic not started:>
 Start the epic first:
 ```bash
-cd ../LuaInTheWeb
 /epic <number> begin
 ```
 ```
@@ -197,11 +192,7 @@ Then STOP.
 There's already an active sub-issue: #<sub> - <title>
 
 **Options:**
-1. Continue working on #<sub>:
-   ```bash
-   cd ../LuaInTheWeb-issue-<sub>
-   claude
-   ```
+1. Continue working on #<sub> (switch to its worktree at `.claude/worktrees/issue-<sub>`)
 
 2. If #<sub> is complete, close it first:
    ```bash

@@ -35,13 +35,9 @@ If NOT in `epic-<number>` worktree:
 The `/epic review` command must be run from the epic worktree.
 
 **Current location**: <current-path>
-**Expected**: ../LuaInTheWeb-epic-<number>
+**Expected**: .claude/worktrees/epic-<number>
 
-Switch to the epic worktree:
-```bash
-cd ../LuaInTheWeb-epic-<number>
-claude
-```
+Switch to the epic worktree using `EnterWorktree` with name `epic-<number>`.
 ```
 
 Then STOP.
@@ -131,19 +127,17 @@ Then STOP and wait for user to resolve.
 ## Step 4: Run Full Test Suite
 
 ```bash
-cd lua-learning-website
-
 # Run all tests
-npm run test
+npm --prefix lua-learning-website run test
 
 # Run linter
-npm run lint
+npm --prefix lua-learning-website run lint
 
 # Run build
-npm run build
+npm --prefix lua-learning-website run build
 
 # Run E2E tests
-npm run test:e2e
+npm --prefix lua-learning-website run test:e2e
 ```
 
 **If any check fails:**

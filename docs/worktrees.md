@@ -13,42 +13,39 @@ Git worktrees allow you to have multiple working directories attached to a singl
 
 ## Directory Structure
 
+Worktrees are created inside the repo at `.claude/worktrees/` (gitignored):
+
 ```
-/home/user/git/
-├── LuaInTheWeb/                    # Main worktree (main branch)
-│   ├── .git/                       # Shared git directory
-│   ├── lua-learning-website/
+LuaInTheWeb/                            # Main worktree (main branch)
+├── .git/                               # Shared git directory
+├── .claude/
+│   ├── worktrees/                      # All worktrees live here (gitignored)
+│   │   ├── issue-42/                   # Worktree for issue #42
+│   │   │   ├── lua-learning-website/
+│   │   │   └── ...
+│   │   └── issue-15/                   # Worktree for issue #15
+│   │       ├── lua-learning-website/
+│   │       └── ...
 │   └── ...
-│
-├── LuaInTheWeb-issue-42/           # Worktree for issue #42
-│   ├── lua-learning-website/
-│   └── ...
-│
-└── LuaInTheWeb-issue-15/           # Worktree for issue #15
-    ├── lua-learning-website/
-    └── ...
+├── lua-learning-website/
+└── ...
 ```
 
 ## Quick Start
 
 ### Create a Worktree for an Issue
 
-```bash
-# Recommended: Use the Python script (handles everything automatically)
-python3 scripts/worktree-create.py 42
+The recommended approach uses Claude's built-in `EnterWorktree` tool via the `/worktree` command:
 
-# Or use the slash command in Claude Code
+```bash
+# Use the slash command in Claude Code (recommended)
 /worktree create 42
 
-# Or manually with git
-git worktree add ../LuaInTheWeb-issue-42 -b 42-feature-name
+# This calls EnterWorktree which:
+# - Creates worktree at .claude/worktrees/issue-42/
+# - Switches your session to the worktree automatically
+# - No need to open a new session!
 ```
-
-The Python script automatically:
-- Fetches the issue title from GitHub
-- Creates a properly named branch (`42-feature-name-slug`)
-- Installs npm dependencies
-- Seeds the mutation test cache from main
 
 ### List Active Worktrees
 
@@ -62,17 +59,12 @@ git worktree list
 ### Remove a Worktree When Done
 
 ```bash
-# Recommended: Use the Python script
-python3 scripts/worktree-remove.py 42
-
-# Keep the branch (don't delete it)
-python3 scripts/worktree-remove.py 42 --keep-branch
-
-# Or use the slash command in Claude Code
+# Use the slash command in Claude Code
 /worktree remove 42
 
 # Or manually with git
-git worktree remove ../LuaInTheWeb-issue-42
+git worktree remove .claude/worktrees/issue-42 --force
+git worktree prune
 ```
 
 ## Workflow for Multiple Agents
@@ -83,14 +75,9 @@ git worktree remove ../LuaInTheWeb-issue-42
    ```bash
    /worktree create <issue-number>
    ```
+   The session automatically switches to the worktree directory.
 
-2. **Open a new Claude Code session** in the worktree directory:
-   ```bash
-   cd ../LuaInTheWeb-issue-<number>
-   claude
-   ```
-
-3. **Work on the issue** using standard commands:
+2. **Work on the issue** using standard commands:
    ```bash
    /issue <number> begin
    ```
@@ -104,12 +91,12 @@ Agent 1 (Main worktree):
   Task: Reviewing PRs, managing project
 
 Agent 2 (Issue 42 worktree):
-  Working directory: LuaInTheWeb-issue-42/
+  Working directory: LuaInTheWeb/.claude/worktrees/issue-42/
   Branch: 42-add-dark-mode
   Task: Implementing dark mode feature
 
 Agent 3 (Issue 15 worktree):
-  Working directory: LuaInTheWeb-issue-15/
+  Working directory: LuaInTheWeb/.claude/worktrees/issue-15/
   Branch: 15-fix-repl-bug
   Task: Fixing REPL bug
 ```
@@ -121,8 +108,7 @@ Agent 3 (Issue 15 worktree):
 Each worktree needs its own `node_modules`:
 
 ```bash
-cd ../LuaInTheWeb-issue-42/lua-learning-website
-npm install
+npm --prefix lua-learning-website install
 ```
 
 This adds ~200MB per worktree but ensures complete isolation.
@@ -136,8 +122,6 @@ Each worktree has its own independent code index:
   - The file watcher detects changes automatically
   - For major branch changes, run a manual rebuild if needed
 - **Performance**: First index build takes a few seconds; subsequent updates are incremental
-
-**Note**: This is why testing MCP with worktrees (issue #394) was important - to ensure indexing works correctly across multiple worktree contexts.
 
 ### Build Artifacts
 
@@ -156,7 +140,7 @@ Approximate space per worktree:
 ### Branch Naming Convention
 
 Worktrees follow the issue branch naming convention:
-- Worktree directory: `LuaInTheWeb-issue-<number>`
+- Worktree directory: `.claude/worktrees/issue-<number>`
 - Branch name: `<number>-<issue-title-slug>`
 
 ## Commands Reference
@@ -170,12 +154,10 @@ Worktrees follow the issue branch naming convention:
 
 ## Integration with Issue Workflow
 
-The `/issue` command is worktree-aware:
-
 ### In Main Worktree
 ```bash
 /issue 42 begin
-# Suggests creating a worktree OR creates branch in current worktree
+# Creates worktree via EnterWorktree, switches session, and begins work
 ```
 
 ### In Issue Worktree
@@ -219,44 +201,3 @@ Each worktree is independent. Resolve conflicts in each worktree separately, or 
 git fetch origin
 git rebase origin/main
 ```
-
-## Python Scripts Reference
-
-The `scripts/` directory contains Python scripts for worktree management:
-
-### worktree-create.py
-
-Creates a worktree with full setup for an issue.
-
-```bash
-python3 scripts/worktree-create.py <issue-number>
-```
-
-**What it does:**
-1. Fetches issue title from GitHub
-2. Creates a slug from the title (e.g., `6-file-explorer-improve-mutation-test`)
-3. Creates branch `<number>-<slug>`
-4. Creates worktree at `../LuaInTheWeb-issue-<number>`
-5. Runs `npm install` in the worktree
-6. Copies mutation test cache from main worktree
-7. Updates issue status to "In Progress" in GitHub Project
-
-### worktree-remove.py
-
-Removes a worktree and optionally its branch.
-
-```bash
-python3 scripts/worktree-remove.py <issue-number> [--keep-branch] [--headless]
-```
-
-**Options:**
-- `--keep-branch`: Don't delete the branch after removing the worktree
-- `--headless`: Run without interactive prompts (auto-force-deletes unmerged branches)
-
-**What it does:**
-1. Finds the worktree for the issue
-2. Removes the worktree directory
-3. Deletes the branch (unless `--keep-branch` is specified)
-4. If branch isn't merged:
-   - In interactive mode: prompts for confirmation before force-deleting
-   - In headless mode: automatically force-deletes

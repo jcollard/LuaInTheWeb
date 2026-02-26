@@ -1,5 +1,8 @@
 # Session-specific files (ephemeral)
 SessionCleanup/
 
+# Built-in worktrees (created by EnterWorktree)
+worktrees/
+
 # Local settings overrides
 settings.local.json

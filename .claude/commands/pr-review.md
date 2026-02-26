@@ -446,12 +446,12 @@ Run `/code-review` to see full test results and fix issues before merging.
 2. **Check if worktree exists** for this issue:
    ```bash
    git worktree list
-   # Look for worktree matching pattern: *-issue-<issue-number>
+   # Look for worktree matching pattern: issue-<issue-number> (at .claude/worktrees/issue-<n>)
    ```
 
 3. **If worktree exists, check for uncommitted changes:**
    ```bash
-   # Get the worktree path (e.g., ../LuaInTheWeb-issue-149)
+   # Get the worktree path (e.g., .claude/worktrees/issue-149)
    git -C "<worktree-path>" status --porcelain
    ```
 
@@ -471,15 +471,16 @@ Run `/code-review` to see full test results and fix issues before merging.
 
    If user types "abort", stop the accept process.
 
-5. **Remove the worktree** (using `--keep-branch` since merge will handle branch deletion):
+5. **Remove the worktree** (keep branch since merge will handle branch deletion):
    ```bash
-   python3 scripts/worktree-remove.py <issue-number> --keep-branch --headless
+   git worktree remove .claude/worktrees/issue-<issue-number> --force
+   git worktree prune
    ```
 
    Output:
    ```
    ### Pre-Merge Worktree Cleanup
-   - ✅ Removed worktree: <worktree-path>
+   - ✅ Removed worktree: .claude/worktrees/issue-<issue-number>
    - ℹ️ Branch kept (will be deleted by merge)
    ```
 
@@ -503,7 +504,7 @@ gh pr merge <number> --merge --delete-branch
 
 1. Navigate to epic worktree:
    ```bash
-   cd ../LuaInTheWeb-epic-<epic-number>
+   # Epic worktree is at .claude/worktrees/epic-<epic-number>
    ```
 
 2. Update the sub-issue row in EPIC-<n>.md to mark as complete:
@@ -704,8 +705,11 @@ gh issue close <linked-issue-number> --reason completed
 If the worktree directory still exists (e.g., directory deletion can sometimes fail):
 
 ```bash
-# Check if orphaned directory exists
-python3 scripts/worktree-remove.py <issue-number> --orphan --headless
+# Check if orphaned directory exists and clean up
+if [ -d ".claude/worktrees/issue-<issue-number>" ]; then
+  rm -rf .claude/worktrees/issue-<issue-number>
+  git worktree prune
+fi
 ```
 
 This handles cleanup of directories that weren't fully removed in Step 8c.5.
@@ -986,7 +990,7 @@ Found: Fixes #7
 - Branch up to date: ✅
 
 ### Pre-Merge Worktree Cleanup
-- ✅ Removed worktree: /home/user/git/LuaInTheWeb-issue-7
+- ✅ Removed worktree: .claude/worktrees/issue-7
 - ℹ️ Branch kept (will be deleted by merge)
 
 ### Merging...

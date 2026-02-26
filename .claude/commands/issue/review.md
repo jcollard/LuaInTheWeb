@@ -203,7 +203,7 @@ See the workflow documentation for more details on the Visual Verification forma
 
 1. Navigate to epic worktree (if not already there):
    ```bash
-   cd ../LuaInTheWeb-epic-<epic-number>
+   # Epic worktree is at .claude/worktrees/epic-<epic-number>
    ```
 
 2. Update the sub-issue row in EPIC-<n>.md:
