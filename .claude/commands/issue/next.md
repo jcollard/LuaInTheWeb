@@ -200,7 +200,7 @@ When a clear issue is found:
 Automatically proceed to create the worktree using the Python script:
 
 ```bash
-python scripts/worktree-create.py <number>
+python3 scripts/worktree-create.py <number>
 ```
 
 The script handles:

@@ -362,7 +362,7 @@ All work happens in isolated worktrees for parallel development.
 ### Structure
 
 ```
-C:\Users\User\git\jcollard\
+/home/user/git/
 ├── LuaInTheWeb/                    # Main worktree (main branch)
 ├── LuaInTheWeb-issue-42/           # Worktree for issue #42
 └── LuaInTheWeb-issue-15/           # Worktree for issue #15
@@ -526,15 +526,6 @@ These issues **block PR creation** in `/issue <n> review`:
 
 To proceed despite blocking issues, type: `continue without fixing tests`
 
-### Standalone Analysis
-
-Run `/test-value-analysis` anytime during development to check test quality:
-
-```
-/test-value-analysis              # Check all new tests vs main
-/test-value-analysis src/hooks    # Check tests at specific path
-```
-
 ---
 
 ## Quick Reference
@@ -560,7 +551,7 @@ Run `/test-value-analysis` anytime during development to check test quality:
 | See full workflow | `/workflow` |
 | See TDD guidelines | `/tdd` |
 | See mutation testing guide | `/mutation-test` |
-| Analyze test quality | `/test-value-analysis` |
+| View tech debt | `/tech-debt` |
 | List worktrees | `/worktree list` |
 
 ---
@@ -603,4 +594,4 @@ Run `/test-value-analysis` anytime during development to check test quality:
 - `/e2e` - E2E testing guidelines
 - `/code-review` - Code review checklist
 - `/milestone` - E2E checkpoint
-- `/test-value-analysis` - Analyze test quality and value
+- `/tech-debt` - View and manage tech debt items

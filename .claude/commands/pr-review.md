@@ -36,65 +36,6 @@ Parse the arguments:
 
 ---
 
-## Step 0: Pre-Review Confirmation (Required)
-
-> **IMPORTANT:** Before starting the review, you MUST display the review criteria and get user confirmation.
-
-Output this confirmation message:
-
-```
-## Review Criteria Checklist
-
-I will review PR #<number> against the following criteria:
-
-**Diff Coverage (MANDATORY):**
-- [ ] Read the ENTIRE diff - every line of every changed file
-- [ ] Do NOT skip any files regardless of diff size
-- [ ] If diff is large, process it in chunks but cover 100%
-
-**Code Quality:**
-- [ ] Verify tests perform real testing (not just coverage)
-- [ ] Check best practices are followed
-- [ ] Identify DRY violations (duplicate code)
-- [ ] Identify SOLID principle violations
-
-**Architecture:**
-- [ ] UI components are pure (no business logic)
-- [ ] All logic extracted into custom hooks
-- [ ] Proper separation of concerns
-
-**TypeScript:**
-- [ ] No `any` types
-- [ ] Explicit return types on public functions
-- [ ] Props interfaces defined
-
-**Testing:**
-- [ ] Tests accompany code changes
-- [ ] AAA pattern used (Arrange-Act-Assert)
-- [ ] Edge cases and error cases covered
-- [ ] Tests are colocated with components
-- [ ] Mutation score >= 80% on changed code
-
-**Security:**
-- [ ] No user input rendered as HTML without sanitization
-- [ ] No secrets in code
-- [ ] Input validation present at boundaries
-
-**Additional Checks:**
-- [ ] Error handling is explicit with user-friendly messages
-- [ ] Performance considerations (unnecessary re-renders, memory leaks)
-- [ ] Accessibility (ARIA labels, keyboard navigation)
-- [ ] Naming is clear and intention-revealing
-
-Shall I proceed with the review?
-```
-
-**Wait for user confirmation before continuing to Step 1.**
-
-If user says no or wants to modify criteria, discuss and adjust as needed.
-
----
-
 ## Step 1: Fetch PR Details
 
 ```bash
@@ -480,7 +421,7 @@ Before merging, verify the branch is ready:
 git fetch origin
 
 # Verify tests pass (quick check)
-cd lua-learning-website && npm run test 2>&1 | tail -5
+npm --prefix lua-learning-website run test 2>&1 | tail -5
 ```
 
 If tests fail:
@@ -532,7 +473,7 @@ Run `/code-review` to see full test results and fix issues before merging.
 
 5. **Remove the worktree** (using `--keep-branch` since merge will handle branch deletion):
    ```bash
-   python scripts/worktree-remove.py <issue-number> --keep-branch --headless
+   python3 scripts/worktree-remove.py <issue-number> --keep-branch --headless
    ```
 
    Output:
@@ -738,13 +679,12 @@ gh project item-list 3 --owner jcollard --format json --limit 100
 Find the item matching the linked issue number, then update its status:
 
 ```bash
-# Project configuration
-# - Status field ID: PVTSSF_lAHOADXapM4BKKH8zg6G6Vo
-# - "Done" option ID: 98236657
-
-gh project item-edit --project-id <project-id> --id <item-id> \
-  --field-id PVTSSF_lAHOADXapM4BKKH8zg6G6Vo \
-  --single-select-option-id 98236657
+python3 -c "
+import sys; sys.path.insert(0, '.')
+from scripts.lib.project_board import update_project_status
+success, msg = update_project_status('<issue-number>', 'Done')
+print(msg)
+"
 ```
 
 **Note**: If the project has GitHub automation enabled with "Item closed" → "Done", this may happen automatically.
@@ -761,11 +701,11 @@ gh issue close <linked-issue-number> --reason completed
 
 **Note:** Worktree cleanup was performed in Step 8c.5 (before merge). This step verifies cleanup was successful.
 
-If the worktree directory still exists (e.g., on Windows where directory deletion can fail):
+If the worktree directory still exists (e.g., directory deletion can sometimes fail):
 
 ```bash
 # Check if orphaned directory exists
-python scripts/worktree-remove.py <issue-number> --orphan --headless
+python3 scripts/worktree-remove.py <issue-number> --orphan --headless
 ```
 
 This handles cleanup of directories that weren't fully removed in Step 8c.5.
@@ -1046,7 +986,7 @@ Found: Fixes #7
 - Branch up to date: ✅
 
 ### Pre-Merge Worktree Cleanup
-- ✅ Removed worktree: C:\Users\User\git\jcollard\LuaInTheWeb-issue-7
+- ✅ Removed worktree: /home/user/git/LuaInTheWeb-issue-7
 - ℹ️ Branch kept (will be deleted by merge)
 
 ### Merging...

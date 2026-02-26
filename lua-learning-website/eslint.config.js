@@ -24,6 +24,9 @@ export default defineConfig([
         'error',
         { argsIgnorePattern: '^_' },
       ],
+      'complexity': ['warn', { max: 15 }],
+      'max-params': ['warn', { max: 4 }],
+      'max-depth': ['warn', { max: 4 }],
     },
   },
   {

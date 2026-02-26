@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 PreToolUse Hook: File Protection
 Parses .claude-ignore file and blocks Read/Edit operations on matching files.

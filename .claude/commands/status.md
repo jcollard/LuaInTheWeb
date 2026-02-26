@@ -146,7 +146,7 @@ gh issue list --label "tech-debt" --limit 5 --json number,title
 
 ### Current Worktree
 - **Type**: Main
-- **Path**: C:\Users\User\git\jcollard\LuaInTheWeb
+- **Path**: /home/user/git/LuaInTheWeb
 - **Branch**: main
 - **State**: Clean
 - **vs Main**: Up to date

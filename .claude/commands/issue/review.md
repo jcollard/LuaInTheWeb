@@ -153,12 +153,12 @@ Use the automated review script which handles:
 
 **For regular issues (target main):**
 ```bash
-python scripts/issue-review.py <number> --summary "<summary>" --test-plan "<test-plan>"
+python3 scripts/issue-review.py <number> --summary "<summary>" --test-plan "<test-plan>"
 ```
 
 **For sub-issues (target epic branch):**
 ```bash
-python scripts/issue-review.py <number> --summary "<summary>" --test-plan "<test-plan>" --base epic-<epic-number>
+python3 scripts/issue-review.py <number> --summary "<summary>" --test-plan "<test-plan>" --base epic-<epic-number>
 ```
 
 **Parameters:**
@@ -280,7 +280,7 @@ If the script fails, report the error and suggest fixes.
 
 Gathering summary from completed tasks...
 
-python scripts/issue-review.py 13 --summary "- Added unit tests for useContextMenu hook\n- Added tests for useTabBar hook" --test-plan "- All new tests pass\n- Mutation score > 80%"
+python3 scripts/issue-review.py 13 --summary "- Added unit tests for useContextMenu hook\n- Added tests for useTabBar hook" --test-plan "- All new tests pass\n- Mutation score > 80%"
 
 [Script output showing validation, commit, push, PR creation]
 

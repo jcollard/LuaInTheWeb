@@ -254,7 +254,7 @@ After user approves, if in main worktree, create the issue worktree using the Py
 **Delegate to Python script:**
 
 ```bash
-python scripts/worktree-create.py <number>
+python3 scripts/worktree-create.py <number>
 ```
 
 The script handles:
@@ -335,27 +335,18 @@ git checkout <number>-<issue-title-slug>
 
 ### 5.2. Update Project Status
 
-Update the issue status to "In Progress" in the GitHub Project:
+Update the issue status to "In Progress" using the shared Python module:
 
 ```bash
-# Get the project item ID for this issue
-gh project item-list 3 --owner jcollard --format json
-
-# Find the item matching the issue number, then update its status
-# Use gh project item-edit with the item ID and field ID
+python3 -c "
+import sys; sys.path.insert(0, '.')
+from scripts.lib.project_board import update_project_status
+success, msg = update_project_status('<number>', 'In Progress')
+print(msg)
+"
 ```
 
-The project uses these Status values (field ID: `PVTSSF_lAHOADXapM4BKKH8zg6G6Vo`):
-- `Concept` (id: f53885f8) - Needs more definition
-- `Todo` (id: f75ad846) - Ready to work on
-- `In Progress` (id: 47fc9ee4) - Actively being worked on
-- `Needs Review` (id: 44687678) - PR created, awaiting review
-- `Done` (id: 98236657) - Completed
-
-**Note**: Project field updates require knowing the item ID. If the issue isn't in the project yet, add it first:
-```bash
-gh project item-add 3 --owner jcollard --url "https://github.com/jcollard/LuaInTheWeb/issues/<number>"
-```
+This handles finding/adding the project item and updating the status field.
 
 ### 5.3. Inject Development Context
 
@@ -421,10 +412,10 @@ npm run test:mutation:scope "src/components/AffectedComponent/**"
 # This directory is automatically created by the scripts if needed
 
 # Recommended approach - use file-based inputs:
-python scripts/issue-review.py <number> --summary-file .tmp/summary.txt --test-plan-file .tmp/test-plan.txt
+python3 scripts/issue-review.py <number> --summary-file .tmp/summary.txt --test-plan-file .tmp/test-plan.txt
 
 # Or use inline arguments (may have shell escaping issues):
-python scripts/issue-review.py <number> --summary "summary text" --test-plan "test plan"
+python3 scripts/issue-review.py <number> --summary "summary text" --test-plan "test plan"
 ```
 
 **Note**: The `.tmp/` directory is gitignored, so temp files won't be committed.
@@ -463,21 +454,21 @@ If changes are requested after PR creation, use `update-pr.py` to add commits:
 
 ```bash
 # Add additional commits to the PR (runs checks by default)
-python scripts/update-pr.py <pr-number> commit --message "fix: Address review feedback"
+python3 scripts/update-pr.py <pr-number> commit --message "fix: Address review feedback"
 
 # Or use file-based message (recommended for agents)
-python scripts/update-pr.py <pr-number> commit --message-file .tmp/commit-msg.txt
+python3 scripts/update-pr.py <pr-number> commit --message-file .tmp/commit-msg.txt
 
 # Skip checks if needed (not recommended)
-python scripts/update-pr.py <pr-number> commit --message "fix: Quick typo fix" --skip-checks
+python3 scripts/update-pr.py <pr-number> commit --message "fix: Quick typo fix" --skip-checks
 
 # Update PR description
-python scripts/update-pr.py <pr-number> update-body --body "Updated description"
-python scripts/update-pr.py <pr-number> update-body --body-file .tmp/pr-body.txt
+python3 scripts/update-pr.py <pr-number> update-body --body "Updated description"
+python3 scripts/update-pr.py <pr-number> update-body --body-file .tmp/pr-body.txt
 
 # Add a comment to the PR
-python scripts/update-pr.py <pr-number> comment --body "Ready for re-review"
-python scripts/update-pr.py <pr-number> comment --body-file .tmp/comment.txt
+python3 scripts/update-pr.py <pr-number> comment --body "Ready for re-review"
+python3 scripts/update-pr.py <pr-number> comment --body-file .tmp/comment.txt
 ```
 
 **Note**: Use the local `.tmp/` directory for file-based inputs (gitignored).

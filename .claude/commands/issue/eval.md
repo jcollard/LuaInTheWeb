@@ -208,7 +208,7 @@ Automatically apply the evaluation results:
 2. **Run the apply script:**
 
 ```bash
-python scripts/issue-eval-apply.py <number> --priority "<priority>" --effort "<effort>" --type "<type>" [--update-body-file ".tmp/issue-<number>-description.txt"]
+python3 scripts/issue-eval-apply.py <number> --priority "<priority>" --effort "<effort>" --type "<type>" [--update-body-file ".tmp/issue-<number>-description.txt"]
 ```
 
 Where:
