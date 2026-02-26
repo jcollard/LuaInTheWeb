@@ -1,16 +1,9 @@
 /* eslint-disable max-lines */
 // Large E2E test file for comprehensive file explorer coverage
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 test.describe('File Explorer', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start with clean state
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for file tree to render
-    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+  test.beforeEach(async ({ explorerPage: page }) => {
     // Wait for async workspaces to load before interacting
     await expect(page.getByRole('treeitem', { name: 'libs' })).toBeVisible()
     await expect(page.getByRole('treeitem', { name: 'docs' })).toBeVisible()
@@ -21,12 +14,12 @@ test.describe('File Explorer', () => {
   })
 
   test.describe('initial state', () => {
-    test('displays file explorer panel', async ({ page }) => {
+    test('displays file explorer panel', async ({ explorerPage: page }) => {
       // Assert - File tree should be visible
       await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
     })
 
-    test('displays New File and New Folder buttons', async ({ page }) => {
+    test('displays New File and New Folder buttons', async ({ explorerPage: page }) => {
       // Assert - Toolbar buttons should be visible in sidebar
       const sidebar = page.getByTestId('sidebar-panel')
       await expect(sidebar.getByRole('button', { name: /new file/i })).toBeVisible()
@@ -35,7 +28,7 @@ test.describe('File Explorer', () => {
   })
 
   test.describe('file creation', () => {
-    test('clicking New File button creates a new file', async ({ page }) => {
+    test('clicking New File button creates a new file', async ({ explorerPage: page }) => {
       // Act - Click New File button in sidebar
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
@@ -48,7 +41,7 @@ test.describe('File Explorer', () => {
   })
 
   test.describe('file selection', () => {
-    test('clicking a file selects it', async ({ page }) => {
+    test('clicking a file selects it', async ({ explorerPage: page }) => {
       // Arrange - Create a file first and complete the rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
@@ -66,7 +59,7 @@ test.describe('File Explorer', () => {
   })
 
   test.describe('keyboard navigation', () => {
-    test('arrow keys navigate between items', async ({ page }) => {
+    test('arrow keys navigate between items', async ({ explorerPage: page }) => {
       // Arrange - Create a folder and a file (so we have 2 items)
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
@@ -98,7 +91,7 @@ test.describe('File Explorer', () => {
   })
 
   test.describe('context menu', () => {
-    test('right-clicking file opens context menu', async ({ page }) => {
+    test('right-clicking file opens context menu', async ({ explorerPage: page }) => {
       // Arrange - Create a file and complete rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
@@ -116,7 +109,7 @@ test.describe('File Explorer', () => {
       await expect(page.getByText('Delete')).toBeVisible()
     })
 
-    test('right-clicking folder shows "Open in Shell" option', async ({ page }) => {
+    test('right-clicking folder shows "Open in Shell" option', async ({ explorerPage: page }) => {
       // Arrange - Create a folder and complete rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
@@ -133,7 +126,7 @@ test.describe('File Explorer', () => {
       await expect(page.getByText('Open in Shell')).toBeVisible()
     })
 
-    test('clicking rename in context menu shows rename input', async ({ page }) => {
+    test('clicking rename in context menu shows rename input', async ({ explorerPage: page }) => {
       // Arrange - Create a file and open context menu
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
@@ -152,7 +145,7 @@ test.describe('File Explorer', () => {
       await expect(input).toBeVisible()
     })
 
-    test('clicking delete in context menu shows confirmation dialog', async ({ page }) => {
+    test('clicking delete in context menu shows confirmation dialog', async ({ explorerPage: page }) => {
       // Arrange - Create a file and open context menu
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
@@ -173,7 +166,7 @@ test.describe('File Explorer', () => {
   })
 
   test.describe('F2 rename shortcut', () => {
-    test('pressing F2 on selected file enters rename mode', async ({ page }) => {
+    test('pressing F2 on selected file enters rename mode', async ({ explorerPage: page }) => {
       // Arrange - Create a file, complete rename, and select it
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
@@ -196,7 +189,7 @@ test.describe('File Explorer', () => {
   })
 
   test.describe('Delete key shortcut', () => {
-    test('pressing Delete on selected file shows confirmation dialog', async ({ page }) => {
+    test('pressing Delete on selected file shows confirmation dialog', async ({ explorerPage: page }) => {
       // Arrange - Create a file, complete rename, and select it
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
@@ -217,7 +210,7 @@ test.describe('File Explorer', () => {
       await expect(page.getByText(/are you sure you want to delete/i)).toBeVisible()
     })
 
-    test('confirming delete removes the file', async ({ page }) => {
+    test('confirming delete removes the file', async ({ explorerPage: page }) => {
       // Arrange - Create a file, complete rename, and select it
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
@@ -245,7 +238,7 @@ test.describe('File Explorer', () => {
   })
 
   test.describe('folder operations', () => {
-    test('clicking New Folder button creates a new folder', async ({ page }) => {
+    test('clicking New Folder button creates a new folder', async ({ explorerPage: page }) => {
       // Get initial chevron count (workspaces vary based on what's loaded)
       const initialChevronCount = await page.getByTestId('folder-chevron').count()
 
@@ -260,7 +253,7 @@ test.describe('File Explorer', () => {
       await expect(chevrons).toHaveCount(initialChevronCount + 1)
     })
 
-    test('clicking folder expands/collapses it', async ({ page }) => {
+    test('clicking folder expands/collapses it', async ({ explorerPage: page }) => {
       // Arrange - Create a folder and complete rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
@@ -281,13 +274,13 @@ test.describe('File Explorer', () => {
   })
 
   test.describe('empty state', () => {
-    test('shows Welcome Screen when no file is open', async ({ page }) => {
+    test('shows Welcome Screen when no file is open', async ({ explorerPage: page }) => {
       // Assert - Welcome Screen should be visible when no file is open
       await expect(page.locator('[data-testid="welcome-screen"]')).toBeVisible()
       await expect(page.getByText('Welcome to Lua IDE')).toBeVisible()
     })
 
-    test('hides Welcome Screen after opening a file', async ({ page }) => {
+    test('hides Welcome Screen after opening a file', async ({ explorerPage: page }) => {
       // Arrange - Create a file and complete rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
@@ -307,7 +300,7 @@ test.describe('File Explorer', () => {
   })
 
   test.describe('new file inline rename', () => {
-    test('new file immediately enters rename mode', async ({ page }) => {
+    test('new file immediately enters rename mode', async ({ explorerPage: page }) => {
       // Act - Click New File button in sidebar
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
@@ -316,7 +309,7 @@ test.describe('File Explorer', () => {
       await expect(sidebar.getByRole('textbox')).toBeVisible()
     })
 
-    test('can rename new file by typing and pressing Enter', async ({ page }) => {
+    test('can rename new file by typing and pressing Enter', async ({ explorerPage: page }) => {
       // Act - Click New File button and rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
@@ -333,7 +326,7 @@ test.describe('File Explorer', () => {
       await expect(page.getByText('my-script.lua')).toBeVisible()
     })
 
-    test('pressing Escape on new file deletes it', async ({ page }) => {
+    test('pressing Escape on new file deletes it', async ({ explorerPage: page }) => {
       // Act - Click New File button and cancel with Escape
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
@@ -350,7 +343,7 @@ test.describe('File Explorer', () => {
   })
 
   test.describe('new folder inline rename', () => {
-    test('new folder immediately enters rename mode', async ({ page }) => {
+    test('new folder immediately enters rename mode', async ({ explorerPage: page }) => {
       // Act - Click New Folder button in sidebar
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
@@ -359,7 +352,7 @@ test.describe('File Explorer', () => {
       await expect(sidebar.getByRole('textbox')).toBeVisible()
     })
 
-    test('can rename new folder by typing and pressing Enter', async ({ page }) => {
+    test('can rename new folder by typing and pressing Enter', async ({ explorerPage: page }) => {
       // Act - Click New Folder button and rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
@@ -376,7 +369,7 @@ test.describe('File Explorer', () => {
       await expect(page.getByText('my-scripts')).toBeVisible()
     })
 
-    test('pressing Escape on new folder deletes it', async ({ page }) => {
+    test('pressing Escape on new folder deletes it', async ({ explorerPage: page }) => {
       // Act - Click New Folder button and cancel with Escape
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
@@ -391,7 +384,7 @@ test.describe('File Explorer', () => {
       await expect(page.getByText('new-folder')).not.toBeVisible()
     })
 
-    test('accepting default folder name creates folder in tree', async ({ page }) => {
+    test('accepting default folder name creates folder in tree', async ({ explorerPage: page }) => {
       // Act - Create folder and accept default name
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
@@ -410,7 +403,7 @@ test.describe('File Explorer', () => {
   })
 
   test.describe('drag and drop', () => {
-    test('file items are draggable', async ({ page }) => {
+    test('file items are draggable', async ({ explorerPage: page }) => {
       // Arrange - Create a file and complete rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
@@ -423,7 +416,7 @@ test.describe('File Explorer', () => {
       await expect(treeItem).toHaveAttribute('draggable', 'true')
     })
 
-    test('folder items are draggable', async ({ page }) => {
+    test('folder items are draggable', async ({ explorerPage: page }) => {
       // Arrange - Create a folder and complete rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
@@ -443,7 +436,7 @@ test.describe('File Explorer', () => {
   // See issue #414 for details.
 
   test.describe('file upload', () => {
-    test('right-clicking folder shows "Upload Files..." option', async ({ page }) => {
+    test('right-clicking folder shows "Upload Files..." option', async ({ explorerPage: page }) => {
       // Arrange - Create a folder and complete rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
@@ -460,7 +453,7 @@ test.describe('File Explorer', () => {
       await expect(page.getByText('Upload Files...')).toBeVisible()
     })
 
-    test('uploading single file to folder adds it to the tree', async ({ page }) => {
+    test('uploading single file to folder adds it to the tree', async ({ explorerPage: page }) => {
       // Arrange - Create a folder and complete rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
@@ -497,7 +490,7 @@ test.describe('File Explorer', () => {
       await expect(page.getByText('test-upload.lua')).toBeVisible()
     })
 
-    test('uploading multiple files to folder adds them all to the tree', async ({ page }) => {
+    test('uploading multiple files to folder adds them all to the tree', async ({ explorerPage: page }) => {
       // Arrange - Create a folder and complete rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
@@ -544,7 +537,7 @@ test.describe('File Explorer', () => {
   })
 
   test.describe('folder upload', () => {
-    test('right-clicking folder shows "Upload Folder..." option', async ({ page }) => {
+    test('right-clicking folder shows "Upload Folder..." option', async ({ explorerPage: page }) => {
       // Arrange - Create a folder and complete rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
@@ -561,7 +554,7 @@ test.describe('File Explorer', () => {
       await expect(page.getByText('Upload Folder...')).toBeVisible()
     })
 
-    test('folder upload input has webkitdirectory attribute', async ({ page }) => {
+    test('folder upload input has webkitdirectory attribute', async ({ explorerPage: page }) => {
       // Arrange - Create a folder and complete rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()
@@ -580,7 +573,7 @@ test.describe('File Explorer', () => {
       await expect(folderInput).toHaveAttribute('webkitdirectory', '')
     })
 
-    test('right-clicking workspace header shows "Upload Folder..." option', async ({ page }) => {
+    test('right-clicking workspace header shows "Upload Folder..." option', async ({ explorerPage: page }) => {
       // Act - Right-click the workspace item (first treeitem which is the home workspace)
       const treeItem = page.getByRole('treeitem').first()
       await treeItem.click({ button: 'right' })
@@ -594,7 +587,7 @@ test.describe('File Explorer', () => {
     // so we can't easily test the actual folder upload with mock files.
     // The unit tests in uploadHandler.test.ts cover the folder upload logic.
     // This test verifies the UI flow works up to triggering the file picker.
-    test('clicking Upload Folder shows folder picker (webkitdirectory input)', async ({ page }) => {
+    test('clicking Upload Folder shows folder picker (webkitdirectory input)', async ({ explorerPage: page }) => {
       // Arrange - Create a folder and complete rename
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new folder/i }).click()

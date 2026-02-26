@@ -1,16 +1,8 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 test.describe('Theme Toggle UI Control', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start fresh
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-  })
-
   test('theme toggle button is visible in the activity bar', async ({
-    page,
+    cleanEditorPage: page,
   }) => {
     // The theme toggle should be in the activity bar's bottom section
     const activityBar = page.locator('nav[aria-label="Activity Bar"]')
@@ -23,7 +15,7 @@ test.describe('Theme Toggle UI Control', () => {
     await expect(themeToggle).toBeVisible()
   })
 
-  test('theme toggle shows moon icon in dark mode', async ({ page }) => {
+  test('theme toggle shows moon icon in dark mode', async ({ cleanEditorPage: page }) => {
     // Set dark theme
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'dark'))
     await page.reload()
@@ -37,7 +29,7 @@ test.describe('Theme Toggle UI Control', () => {
     await expect(themeToggle).toBeVisible()
   })
 
-  test('theme toggle shows sun icon in light mode', async ({ page }) => {
+  test('theme toggle shows sun icon in light mode', async ({ cleanEditorPage: page }) => {
     // Set light theme
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'light'))
     await page.reload()
@@ -52,7 +44,7 @@ test.describe('Theme Toggle UI Control', () => {
   })
 
   test('clicking theme toggle switches from dark to light', async ({
-    page,
+    cleanEditorPage: page,
   }) => {
     // Start in dark theme
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'dark'))
@@ -85,7 +77,7 @@ test.describe('Theme Toggle UI Control', () => {
   })
 
   test('clicking theme toggle switches from light to dark', async ({
-    page,
+    cleanEditorPage: page,
   }) => {
     // Start in light theme
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'light'))
@@ -117,7 +109,7 @@ test.describe('Theme Toggle UI Control', () => {
     ).toBeVisible()
   })
 
-  test('theme toggle is keyboard accessible', async ({ page }) => {
+  test('theme toggle is keyboard accessible', async ({ cleanEditorPage: page }) => {
     // Start in dark theme
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'dark'))
     await page.reload()
@@ -140,7 +132,7 @@ test.describe('Theme Toggle UI Control', () => {
     expect(theme).toBe('light')
   })
 
-  test('theme toggle persists choice to localStorage', async ({ page }) => {
+  test('theme toggle persists choice to localStorage', async ({ cleanEditorPage: page }) => {
     // Start in dark theme
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'dark'))
     await page.reload()
@@ -169,7 +161,7 @@ test.describe('Theme Toggle UI Control', () => {
     expect(theme).toBe('light')
   })
 
-  test('theme toggle has tooltip', async ({ page }) => {
+  test('theme toggle has tooltip', async ({ cleanEditorPage: page }) => {
     // Start in dark theme
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'dark'))
     await page.reload()

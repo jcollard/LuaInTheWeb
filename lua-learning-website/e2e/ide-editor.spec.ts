@@ -1,46 +1,9 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
-
-// Helper to create and open a file so Monaco editor is visible
-async function createAndOpenFile(page: import('@playwright/test').Page) {
-  const sidebar = page.getByTestId('sidebar-panel')
-
-  // First, expand the workspace folder by clicking its chevron
-  const workspaceChevron = page.getByTestId('folder-chevron').first()
-  await workspaceChevron.click()
-  // Wait for folder to expand by checking for child items
-  await expect(page.getByRole('treeitem').nth(1)).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-
-  // Now click New File button - the file will be created inside the expanded workspace
-  await sidebar.getByRole('button', { name: /new file/i }).click()
-
-  const input = sidebar.getByRole('textbox')
-  await expect(input).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE }) // Wait for rename input to appear
-  await input.press('Enter') // Accept default name
-  await expect(input).not.toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE }) // Wait for rename to complete
-
-  // Click the newly created file to open it (should be second treeitem after workspace)
-  const fileItems = page.getByRole('treeitem')
-  const count = await fileItems.count()
-  if (count > 1) {
-    await fileItems.nth(1).click() // Click the file inside the workspace
-  } else {
-    // Fallback: click first item
-    await fileItems.first().click()
-  }
-  // Wait for Monaco editor to be visible after file click
-  await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-}
+import { createAndOpenFile, createAndOpenFileWithName } from './helpers/editor'
 
 test.describe('IDE Editor - Tab Overflow Navigation', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start with clean state
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for file tree to render (ensures workspace is ready)
-    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+  test.beforeEach(async ({ explorerPage: page }) => {
     // Expand the workspace folder so files are visible
     const workspaceChevron = page.getByTestId('folder-chevron').first()
     await workspaceChevron.click()
@@ -48,28 +11,7 @@ test.describe('IDE Editor - Tab Overflow Navigation', () => {
     await expect(page.getByRole('treeitem').nth(1)).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
   })
 
-  // Helper to create and open a file with a specific name (scoped to sidebar)
-  async function createAndOpenFileWithName(page: import('@playwright/test').Page, filename: string) {
-    // Click New File button in sidebar (scoped to avoid Welcome Screen button)
-    const sidebar = page.getByTestId('sidebar-panel')
-    await sidebar.getByRole('button', { name: /new file/i }).click()
-
-    // Find the input field in the sidebar and type the filename
-    const input = sidebar.getByRole('textbox')
-    await expect(input).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-    await input.fill(filename)
-    await input.press('Enter')
-    await expect(input).not.toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-
-    // Double-click the file to open it as a permanent tab (not preview)
-    const treeItem = page.getByRole('treeitem', { name: new RegExp(filename) })
-    await treeItem.dblclick()
-    // Wait for tab to be visible instead of hardcoded timeout
-    const editorPanel = page.getByTestId('editor-panel')
-    await expect(editorPanel.getByRole('tab', { name: new RegExp(filename) })).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-  }
-
-  test('scroll arrows appear and work when tabs overflow', async ({ page }) => {
+  test('scroll arrows appear and work when tabs overflow', async ({ explorerPage: page }) => {
     // Create multiple files with longer names
     const filenames = ['component.lua', 'utilities.lua', 'functions.lua', 'handlers.lua', 'services.lua', 'constants.lua', 'helpers.lua', 'managers.lua', 'factories.lua', 'providers.lua']
 
@@ -119,7 +61,7 @@ test.describe('IDE Editor - Tab Overflow Navigation', () => {
     // If no overflow, test still passes - the feature is working correctly for the given viewport
   })
 
-  test('no scroll arrows when tabs fit', async ({ page }) => {
+  test('no scroll arrows when tabs fit', async ({ explorerPage: page }) => {
     // Set a wide viewport
     await page.setViewportSize({ width: 1400, height: 800 })
 
@@ -141,7 +83,7 @@ test.describe('IDE Editor - Tab Overflow Navigation', () => {
     await expect(leftArrow).not.toBeVisible()
   })
 
-  test('tablist container renders tabs correctly', async ({ page }) => {
+  test('tablist container renders tabs correctly', async ({ explorerPage: page }) => {
     // Create some files
     await createAndOpenFileWithName(page, 'test1.lua')
     await createAndOpenFileWithName(page, 'test2.lua')
@@ -158,18 +100,12 @@ test.describe('IDE Editor - Tab Overflow Navigation', () => {
 })
 
 test.describe('IDE Editor', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/editor')
-    // Wait for the IDE layout to render
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-  })
-
-  test('loads IDE layout at /editor route', async ({ page }) => {
+  test('loads IDE layout at /editor route', async ({ editorPage: page }) => {
     // Assert - IDE layout should be visible
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
   })
 
-  test('displays activity bar with icons', async ({ page }) => {
+  test('displays activity bar with icons', async ({ editorPage: page }) => {
     // Assert - Activity bar with navigation should be visible
     const activityBar = page.locator('nav[aria-label="Activity Bar"]')
     await expect(activityBar).toBeVisible()
@@ -180,7 +116,7 @@ test.describe('IDE Editor', () => {
     await expect(page.getByRole('button', { name: /extensions/i })).toBeVisible()
   })
 
-  test('displays sidebar panel', async ({ page }) => {
+  test('displays sidebar panel', async ({ editorPage: page }) => {
     // Assert - Sidebar should be visible
     await expect(page.locator('[data-testid="sidebar-panel"]')).toBeVisible()
 
@@ -188,7 +124,7 @@ test.describe('IDE Editor', () => {
     await expect(page.locator('[data-testid="sidebar-panel"]').getByText('Explorer', { exact: true })).toBeVisible()
   })
 
-  test('clicking activity bar icon changes sidebar header', async ({ page }) => {
+  test('clicking activity bar icon changes sidebar header', async ({ editorPage: page }) => {
     // Click on Search icon
     await page.getByRole('button', { name: /search/i }).click()
 
@@ -202,7 +138,7 @@ test.describe('IDE Editor', () => {
     await expect(page.getByText('Extensions coming soon...')).toBeVisible()
   })
 
-  test('displays Welcome Screen when no file is open', async ({ page }) => {
+  test('displays Welcome Screen when no file is open', async ({ editorPage: page }) => {
     // Assert - Welcome screen should be visible (not editor panel)
     await expect(page.locator('[data-testid="welcome-screen"]')).toBeVisible()
 
@@ -215,7 +151,7 @@ test.describe('IDE Editor', () => {
     await expect(welcomeScreen.getByRole('button', { name: /open shell/i })).toBeVisible()
   })
 
-  test('displays bottom panel with Shell tab', async ({ page }) => {
+  test('displays bottom panel with Shell tab', async ({ editorPage: page }) => {
     // Assert - Bottom panel should be visible
     await expect(page.locator('[data-testid="bottom-panel"]')).toBeVisible()
 
@@ -223,7 +159,7 @@ test.describe('IDE Editor', () => {
     await expect(page.getByRole('tab', { name: /shell/i })).toBeVisible()
   })
 
-  test('displays status bar with line/column info', async ({ page }) => {
+  test('displays status bar with line/column info', async ({ editorPage: page }) => {
     // Assert - Status bar should be visible
     const statusBar = page.getByRole('status')
     await expect(statusBar).toBeVisible()
@@ -238,13 +174,13 @@ test.describe('IDE Editor', () => {
     await expect(statusBar.getByText('UTF-8')).toBeVisible()
   })
 
-  test('panel resize handles are visible', async ({ page }) => {
+  test('panel resize handles are visible', async ({ editorPage: page }) => {
     // Assert - Resize handles should be present
     const resizeHandles = page.locator('[role="separator"]')
     await expect(resizeHandles.first()).toBeVisible()
   })
 
-  test('root URL redirects to /editor', async ({ page }) => {
+  test('root URL redirects to /editor', async ({ editorPage: page }) => {
     // Navigate to root
     await page.goto('/')
 
@@ -255,7 +191,7 @@ test.describe('IDE Editor', () => {
     await expect(page).toHaveURL(/\/editor/)
   })
 
-  test('editor is interactable and accepts input', async ({ page }) => {
+  test('editor is interactable and accepts input', async ({ editorPage: page }) => {
     // Arrange - Create and open a file so editor is visible
     await createAndOpenFile(page)
 
@@ -286,7 +222,7 @@ test.describe('IDE Editor', () => {
     await expect(viewLines).toContainText('x=1', { timeout: TIMEOUTS.ELEMENT_VISIBLE })
   })
 
-  test('editor fills available space', async ({ page }) => {
+  test('editor fills available space', async ({ editorPage: page }) => {
     // Arrange - Create and open a file so editor is visible
     await createAndOpenFile(page)
 
@@ -314,16 +250,14 @@ test.describe('IDE Editor', () => {
 })
 
 test.describe('IDE Editor - Keyboard Shortcuts', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/editor')
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
+  test.beforeEach(async ({ editorPage: page }) => {
     // Create and open a file so Monaco editor is visible
     await createAndOpenFile(page)
     // Wait for Monaco to load
     await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 10000 })
   })
 
-  test('Ctrl+` toggles terminal visibility', async ({ page }) => {
+  test('Ctrl+` toggles terminal visibility', async ({ editorPage: page }) => {
     // Initially terminal should be visible
     await expect(page.locator('[data-testid="bottom-panel"]')).toBeVisible()
 
@@ -340,7 +274,7 @@ test.describe('IDE Editor - Keyboard Shortcuts', () => {
     await expect(page.locator('[data-testid="bottom-panel"]')).toBeVisible()
   })
 
-  test('Editor expands to fill space when terminal is hidden', async ({ page }) => {
+  test('Editor expands to fill space when terminal is hidden', async ({ editorPage: page }) => {
     // Get the editor panel wrapper (contains both editor and terminal in vertical layout)
     const editorPanel = page.locator('[data-testid="editor-panel"]')
     await expect(editorPanel).toBeVisible()
@@ -393,7 +327,7 @@ test.describe('IDE Editor - Keyboard Shortcuts', () => {
     expect(Math.abs(restoredEditorHeight - initialEditorHeight)).toBeLessThan(tolerance)
   })
 
-  test('Ctrl+B toggles sidebar visibility', async ({ page }) => {
+  test('Ctrl+B toggles sidebar visibility', async ({ editorPage: page }) => {
     // Initially sidebar should be visible
     await expect(page.locator('[data-testid="sidebar-panel"]')).toBeVisible()
 

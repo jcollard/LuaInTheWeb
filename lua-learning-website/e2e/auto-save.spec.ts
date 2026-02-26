@@ -1,33 +1,6 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
-
-// Helper to create and open a file so Monaco editor is visible
-async function createAndOpenFile(page: import('@playwright/test').Page) {
-  const sidebar = page.getByTestId('sidebar-panel')
-
-  // Expand the workspace folder by clicking its chevron
-  const workspaceChevron = page.getByTestId('folder-chevron').first()
-  await workspaceChevron.click()
-  await expect(page.getByRole('treeitem').nth(1)).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-
-  // Click New File button
-  await sidebar.getByRole('button', { name: /new file/i }).click()
-
-  const input = sidebar.getByRole('textbox')
-  await expect(input).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-  await input.press('Enter')
-  await expect(input).not.toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-
-  // Click the newly created file to open it
-  const fileItems = page.getByRole('treeitem')
-  const count = await fileItems.count()
-  if (count > 1) {
-    await fileItems.nth(1).click()
-  } else {
-    await fileItems.first().click()
-  }
-  await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-}
+import { createAndOpenFile } from './helpers/editor'
 
 // Helper to open command palette
 async function openCommandPalette(page: import('@playwright/test').Page) {
@@ -40,18 +13,12 @@ async function openCommandPalette(page: import('@playwright/test').Page) {
 }
 
 test.describe('Auto-Save and Save All', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start with clean state
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+  test.beforeEach(async ({ explorerPage: page }) => {
     // Wait for async workspaces to finish loading to avoid race conditions
     await expect(page.getByTestId('library-workspace-icon')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
   })
 
-  test('command palette shows "Turn On Auto-Save" when auto-save is disabled', async ({ page }) => {
+  test('command palette shows "Turn On Auto-Save" when auto-save is disabled', async ({ explorerPage: page }) => {
     // Create and open a file
     await createAndOpenFile(page)
 
@@ -66,7 +33,7 @@ test.describe('Auto-Save and Save All', () => {
     await expect(option).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
   })
 
-  test('toggling auto-save changes command palette label', async ({ page }) => {
+  test('toggling auto-save changes command palette label', async ({ explorerPage: page }) => {
     // Create and open a file
     await createAndOpenFile(page)
 
@@ -87,7 +54,7 @@ test.describe('Auto-Save and Save All', () => {
     await expect(option).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
   })
 
-  test('command palette shows "Save All Files" action', async ({ page }) => {
+  test('command palette shows "Save All Files" action', async ({ explorerPage: page }) => {
     // Create and open a file
     await createAndOpenFile(page)
 
@@ -102,7 +69,7 @@ test.describe('Auto-Save and Save All', () => {
     await expect(option).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
   })
 
-  test('auto-save persists preference to localStorage', async ({ page }) => {
+  test('auto-save persists preference to localStorage', async ({ explorerPage: page }) => {
     // Create and open a file
     await createAndOpenFile(page)
 
@@ -119,7 +86,7 @@ test.describe('Auto-Save and Save All', () => {
     expect(autoSaveEnabled).toBe('true')
   })
 
-  test('Ctrl+Shift+S saves all files via keyboard shortcut', async ({ page }) => {
+  test('Ctrl+Shift+S saves all files via keyboard shortcut', async ({ explorerPage: page }) => {
     // Create and open a file
     await createAndOpenFile(page)
 

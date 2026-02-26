@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
 import { createTerminalHelper } from './helpers/terminal'
 
@@ -19,17 +19,8 @@ import { createTerminalHelper } from './helpers/terminal'
  * - The auto-reload mechanism correctly filters by hot reload mode
  */
 test.describe('Canvas Hot Reload', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/editor')
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for the shell terminal to initialize
-    await expect(page.locator('[data-testid="shell-terminal-container"]')).toBeVisible({
-      timeout: TIMEOUTS.ELEMENT_VISIBLE,
-    })
-  })
-
   test.describe('Canvas Tab Behavior', () => {
-    test('canvas tab opens when canvas.start() is called', async ({ page }) => {
+    test('canvas tab opens when canvas.start() is called', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -63,7 +54,7 @@ test.describe('Canvas Hot Reload', () => {
       await expect(canvasTab).not.toBeVisible({ timeout: TIMEOUTS.ASYNC_OPERATION })
     })
 
-    test('canvas.reload() can be called without error', async ({ page }) => {
+    test('canvas.reload() can be called without error', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -113,7 +104,7 @@ test.describe('Canvas Hot Reload', () => {
   })
 
   test.describe('Hot Reload Flag', () => {
-    test('--hot-reload=auto flag is accepted by lua command', async ({ page }) => {
+    test('--hot-reload=auto flag is accepted by lua command', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -130,7 +121,7 @@ test.describe('Canvas Hot Reload', () => {
       await terminal.expectToContain('hello', { timeout: TIMEOUTS.ASYNC_OPERATION })
     })
 
-    test('--hot-reload=manual flag is accepted by lua command', async ({ page }) => {
+    test('--hot-reload=manual flag is accepted by lua command', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -147,7 +138,7 @@ test.describe('Canvas Hot Reload', () => {
       await terminal.expectToContain('world', { timeout: TIMEOUTS.ASYNC_OPERATION })
     })
 
-    test('invalid --hot-reload value defaults to manual (no error)', async ({ page }) => {
+    test('invalid --hot-reload value defaults to manual (no error)', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -166,7 +157,7 @@ test.describe('Canvas Hot Reload', () => {
   })
 
   test.describe('Lua File Save Event', () => {
-    test('saving a .lua file dispatches lua-file-saved event', async ({ page }) => {
+    test('saving a .lua file dispatches lua-file-saved event', async ({ shellPage: page }) => {
       // Set up event listener before any actions
       const eventFired = page.evaluate(() => {
         return new Promise<boolean>((resolve) => {
@@ -214,7 +205,7 @@ test.describe('Canvas Hot Reload', () => {
       expect(didFire).toBe(true)
     })
 
-    test('saving a non-.lua file does not dispatch lua-file-saved event', async ({ page }) => {
+    test('saving a non-.lua file does not dispatch lua-file-saved event', async ({ shellPage: page }) => {
       // Set up event listener before any actions
       const eventFired = page.evaluate(() => {
         return new Promise<boolean>((resolve) => {

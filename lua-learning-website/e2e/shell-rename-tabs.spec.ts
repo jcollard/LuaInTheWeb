@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
 import { createTerminalHelper } from './helpers/terminal'
 
@@ -12,17 +12,7 @@ import { createTerminalHelper } from './helpers/terminal'
  * are covered by unit tests in IDEContext.test.tsx and mv.test.ts.
  */
 test.describe('Shell Rename Tab Updates', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start with clean state
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible({
-      timeout: TIMEOUTS.ELEMENT_VISIBLE,
-    })
-
-    // Wait for file tree to render
-    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+  test.beforeEach(async ({ explorerPage: page }) => {
     // Expand the workspace folder so new files/folders are visible
     const workspaceChevron = page.getByTestId('folder-chevron').first()
     await workspaceChevron.click()
@@ -45,7 +35,7 @@ test.describe('Shell Rename Tab Updates', () => {
   })
 
   test.describe('tab updates when file renamed via mv', () => {
-    test('open tab updates name when file is renamed via mv', async ({ page }) => {
+    test('open tab updates name when file is renamed via mv', async ({ explorerPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -79,7 +69,7 @@ test.describe('Shell Rename Tab Updates', () => {
       await expect(editorPanel.getByRole('tab', { name: /original\.lua/i })).not.toBeVisible()
     })
 
-    test('renaming file not open in tab does not crash', async ({ page }) => {
+    test('renaming file not open in tab does not crash', async ({ explorerPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 

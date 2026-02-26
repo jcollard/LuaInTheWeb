@@ -1,22 +1,15 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
 
 test.describe('Markdown Viewer', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start with clean state
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for file tree to render
-    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+  test.beforeEach(async ({ explorerPage: page }) => {
     // Wait for async workspaces to fully load (docs and libs are used in these tests)
     await expect(page.getByTestId('docs-workspace-icon')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
     await expect(page.getByTestId('library-workspace-icon')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
   })
 
   test.describe('markdown file preview', () => {
-    test('clicking on .md file shows rendered markdown', async ({ page }) => {
+    test('clicking on .md file shows rendered markdown', async ({ explorerPage: page }) => {
       // Arrange - Expand docs workspace
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
@@ -29,7 +22,7 @@ test.describe('Markdown Viewer', () => {
       await expect(page.getByTestId('markdown-viewer')).toBeVisible()
     })
 
-    test('markdown viewer renders headers as HTML', async ({ page }) => {
+    test('markdown viewer renders headers as HTML', async ({ explorerPage: page }) => {
       // Arrange - Expand docs workspace and click shell.md
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
@@ -42,7 +35,7 @@ test.describe('Markdown Viewer', () => {
       await expect(markdownViewer.locator('h1, h2').first()).toBeVisible()
     })
 
-    test('markdown viewer renders code blocks', async ({ page }) => {
+    test('markdown viewer renders code blocks', async ({ explorerPage: page }) => {
       // Arrange - Expand docs workspace and click shell.md
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
@@ -54,7 +47,7 @@ test.describe('Markdown Viewer', () => {
       await expect(markdownViewer.locator('pre code').first()).toBeVisible()
     })
 
-    test('markdown preview shows tab in tab bar', async ({ page }) => {
+    test('markdown preview shows tab in tab bar', async ({ explorerPage: page }) => {
       // Arrange - Expand docs workspace and click shell.md
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
@@ -70,7 +63,7 @@ test.describe('Markdown Viewer', () => {
   })
 
   test.describe('markdown context menu', () => {
-    test('right-click on .md file shows Preview Markdown option', async ({ page }) => {
+    test('right-click on .md file shows Preview Markdown option', async ({ explorerPage: page }) => {
       // Arrange - Expand docs workspace
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
@@ -83,7 +76,7 @@ test.describe('Markdown Viewer', () => {
       await expect(page.getByRole('menuitem', { name: /preview markdown/i })).toBeVisible()
     })
 
-    test('Preview Markdown option opens markdown viewer', async ({ page }) => {
+    test('Preview Markdown option opens markdown viewer', async ({ explorerPage: page }) => {
       // Arrange - Expand docs workspace and right-click shell.md
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
@@ -99,7 +92,7 @@ test.describe('Markdown Viewer', () => {
   })
 
   test.describe('markdown edit mode', () => {
-    test('double-click on .md file in editable workspace opens preview', async ({ page }) => {
+    test('double-click on .md file in editable workspace opens preview', async ({ explorerPage: page }) => {
       // Expand workspace first
       const workspaceChevron = page.getByTestId('folder-chevron').first()
       await workspaceChevron.click()
@@ -128,7 +121,7 @@ test.describe('Markdown Viewer', () => {
       await expect(page.getByTestId('markdown-viewer')).toBeVisible()
     })
 
-    test('right-click on editable .md file shows Edit Markdown option', async ({ page }) => {
+    test('right-click on editable .md file shows Edit Markdown option', async ({ explorerPage: page }) => {
       // Expand workspace first
       const workspaceChevron = page.getByTestId('folder-chevron').first()
       await workspaceChevron.click()
@@ -153,7 +146,7 @@ test.describe('Markdown Viewer', () => {
       await expect(page.getByRole('menuitem', { name: /edit markdown/i })).toBeVisible()
     })
 
-    test('Edit Markdown option opens Monaco editor', async ({ page }) => {
+    test('Edit Markdown option opens Monaco editor', async ({ explorerPage: page }) => {
       // Expand workspace first
       const workspaceChevron = page.getByTestId('folder-chevron').first()
       await workspaceChevron.click()
@@ -181,7 +174,7 @@ test.describe('Markdown Viewer', () => {
   })
 
   test.describe('read-only workspace markdown', () => {
-    test('docs workspace .md file has both Preview and Edit options in context menu', async ({ page }) => {
+    test('docs workspace .md file has both Preview and Edit options in context menu', async ({ explorerPage: page }) => {
       // Arrange - Expand docs workspace
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
@@ -195,7 +188,7 @@ test.describe('Markdown Viewer', () => {
       await expect(page.getByRole('menuitem', { name: /edit markdown/i })).toBeVisible()
     })
 
-    test('read-only .md files do not show rename or delete options', async ({ page }) => {
+    test('read-only .md files do not show rename or delete options', async ({ explorerPage: page }) => {
       // Arrange - Expand docs workspace
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
@@ -211,7 +204,7 @@ test.describe('Markdown Viewer', () => {
   })
 
   test.describe('markdown viewer styling', () => {
-    test('markdown viewer has appropriate styling for dark theme', async ({ page }) => {
+    test('markdown viewer has appropriate styling for dark theme', async ({ explorerPage: page }) => {
       // Arrange - Open a markdown file
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
@@ -230,7 +223,7 @@ test.describe('Markdown Viewer', () => {
       }
     })
 
-    test('markdown viewer renders inline code with styling', async ({ page }) => {
+    test('markdown viewer renders inline code with styling', async ({ explorerPage: page }) => {
       // Arrange - Open shell.md which has inline code
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
@@ -250,7 +243,7 @@ test.describe('Markdown Viewer', () => {
   })
 
   test.describe('scroll position persistence', () => {
-    test('editor scroll position is preserved when switching from markdown to editor tab', async ({ page }) => {
+    test('editor scroll position is preserved when switching from markdown to editor tab', async ({ explorerPage: page }) => {
       // This test exposes a bug where switching from markdown preview back to
       // an editor tab resets the scroll position to the top
 
@@ -316,7 +309,7 @@ test.describe('Markdown Viewer', () => {
       expect(Math.abs(scrollAfterSwitch - scrollBeforeSwitch)).toBeLessThan(50)
     })
 
-    test('editor scroll position is preserved when switching between two editor tabs', async ({ page }) => {
+    test('editor scroll position is preserved when switching between two editor tabs', async ({ explorerPage: page }) => {
       // Open libs folder
       const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })
       await libsWorkspace.getByTestId('folder-chevron').click()
@@ -361,7 +354,7 @@ test.describe('Markdown Viewer', () => {
   })
 
   test.describe('markdown tab switching', () => {
-    test('can switch between markdown preview and editor tabs', async ({ page }) => {
+    test('can switch between markdown preview and editor tabs', async ({ explorerPage: page }) => {
       // Expand workspace first
       const workspaceChevron = page.getByTestId('folder-chevron').first()
       await workspaceChevron.click()

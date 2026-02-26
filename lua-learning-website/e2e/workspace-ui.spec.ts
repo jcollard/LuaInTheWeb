@@ -1,38 +1,30 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
 
 test.describe('Workspace UI', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start with clean state
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-  })
-
   test.describe('workspace display', () => {
-    test('displays default workspace as root folder in tree', async ({ page }) => {
+    test('displays default workspace as root folder in tree', async ({ cleanEditorPage: page }) => {
       // Assert - Default workspace (home) should be visible in the file tree
       // Workspaces appear as root-level folders with workspace icon
       await expect(page.getByRole('treeitem', { name: /home/i })).toBeVisible()
     })
 
-    test('shows workspace icon for workspace folders', async ({ page }) => {
+    test('shows workspace icon for workspace folders', async ({ cleanEditorPage: page }) => {
       // Assert - Workspace should have the workspace icon (virtual for default workspace)
       await expect(page.getByTestId('virtual-workspace-icon')).toBeVisible()
     })
 
-    test('displays add workspace button in toolbar', async ({ page }) => {
+    test('displays add workspace button in toolbar', async ({ cleanEditorPage: page }) => {
       // Assert - Add workspace button should be visible in the toolbar
       await expect(page.getByRole('button', { name: /add workspace/i })).toBeVisible()
     })
 
-    test('shows divider separating user workspaces from read-only workspaces', async ({ page }) => {
+    test('shows divider separating user workspaces from read-only workspaces', async ({ cleanEditorPage: page }) => {
       // Assert - Divider should be visible between home and libs/docs
       await expect(page.getByTestId('read-only-divider')).toBeVisible()
     })
 
-    test('displays read-only workspaces after user workspaces', async ({ page }) => {
+    test('displays read-only workspaces after user workspaces', async ({ cleanEditorPage: page }) => {
       // Wait for async workspaces to fully load (icons appear when loaded)
       await expect(page.getByTestId('library-workspace-icon')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
       await expect(page.getByTestId('docs-workspace-icon')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
@@ -57,7 +49,7 @@ test.describe('Workspace UI', () => {
   })
 
   test.describe('add workspace dialog', () => {
-    test('opens add workspace dialog when add button is clicked', async ({ page }) => {
+    test('opens add workspace dialog when add button is clicked', async ({ cleanEditorPage: page }) => {
       // Act - Click add workspace button
       await page.getByRole('button', { name: /add workspace/i }).click()
 
@@ -66,7 +58,7 @@ test.describe('Workspace UI', () => {
       await expect(page.getByText('Add Workspace')).toBeVisible()
     })
 
-    test('dialog has virtual workspace option selected by default', async ({ page }) => {
+    test('dialog has virtual workspace option selected by default', async ({ cleanEditorPage: page }) => {
       // Act - Open dialog
       await page.getByRole('button', { name: /add workspace/i }).click()
 
@@ -76,7 +68,7 @@ test.describe('Workspace UI', () => {
       await expect(virtualRadio).toBeChecked()
     })
 
-    test('can close dialog with cancel button', async ({ page }) => {
+    test('can close dialog with cancel button', async ({ cleanEditorPage: page }) => {
       // Arrange - Open dialog
       await page.getByRole('button', { name: /add workspace/i }).click()
       await expect(page.getByRole('dialog')).toBeVisible()
@@ -88,7 +80,7 @@ test.describe('Workspace UI', () => {
       await expect(page.getByRole('dialog')).not.toBeVisible()
     })
 
-    test('can close dialog with escape key', async ({ page }) => {
+    test('can close dialog with escape key', async ({ cleanEditorPage: page }) => {
       // Arrange - Open dialog
       await page.getByRole('button', { name: /add workspace/i }).click()
       await expect(page.getByRole('dialog')).toBeVisible()
@@ -100,7 +92,7 @@ test.describe('Workspace UI', () => {
       await expect(page.getByRole('dialog')).not.toBeVisible()
     })
 
-    test('can create virtual workspace', async ({ page }) => {
+    test('can create virtual workspace', async ({ cleanEditorPage: page }) => {
       // Act - Open dialog, enter name, create
       await page.getByRole('button', { name: /add workspace/i }).click()
 
@@ -114,7 +106,7 @@ test.describe('Workspace UI', () => {
       await expect(page.getByRole('treeitem', { name: /my-test/i })).toBeVisible()
     })
 
-    test('create button is disabled when name is empty', async ({ page }) => {
+    test('create button is disabled when name is empty', async ({ cleanEditorPage: page }) => {
       // Act - Open dialog and clear name
       await page.getByRole('button', { name: /add workspace/i }).click()
 
@@ -127,7 +119,7 @@ test.describe('Workspace UI', () => {
   })
 
   test.describe('workspace management', () => {
-    test('can add multiple workspaces', async ({ page }) => {
+    test('can add multiple workspaces', async ({ cleanEditorPage: page }) => {
       // Act - Add two workspaces
       await page.getByRole('button', { name: /add workspace/i }).click()
       let input = page.getByLabel(/workspace name/i)
@@ -146,7 +138,7 @@ test.describe('Workspace UI', () => {
       await expect(page.getByRole('treeitem', { name: /workspace-2/i })).toBeVisible()
     })
 
-    test('workspaces display with workspace icon', async ({ page }) => {
+    test('workspaces display with workspace icon', async ({ cleanEditorPage: page }) => {
       // Arrange - Add a new workspace
       await page.getByRole('button', { name: /add workspace/i }).click()
       const input = page.getByLabel(/workspace name/i)
@@ -161,16 +153,16 @@ test.describe('Workspace UI', () => {
   })
 
   test.describe('accessibility', () => {
-    test('file tree uses tree role', async ({ page }) => {
+    test('file tree uses tree role', async ({ cleanEditorPage: page }) => {
       await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
     })
 
-    test('workspaces use treeitem role', async ({ page }) => {
+    test('workspaces use treeitem role', async ({ cleanEditorPage: page }) => {
       // Default workspace should be a treeitem
       await expect(page.getByRole('treeitem', { name: /home/i })).toBeVisible()
     })
 
-    test('add workspace dialog is accessible', async ({ page }) => {
+    test('add workspace dialog is accessible', async ({ cleanEditorPage: page }) => {
       // Open dialog
       await page.getByRole('button', { name: /add workspace/i }).click()
 
@@ -186,7 +178,7 @@ test.describe('Workspace UI', () => {
 
   test.describe('workspace context menu', () => {
     test('right-click on workspace shows context menu with Rename and Remove options', async ({
-      page,
+      cleanEditorPage: page,
     }) => {
       // Act - Right-click on default workspace
       const workspace = page.getByRole('treeitem', { name: /home/i })
@@ -199,7 +191,7 @@ test.describe('Workspace UI', () => {
   })
 
   test.describe('workspace file operations', () => {
-    test('can create file inside workspace via context menu', async ({ page }) => {
+    test('can create file inside workspace via context menu', async ({ cleanEditorPage: page }) => {
       // Arrange - Expand workspace by clicking on it
       const workspace = page.getByRole('treeitem', { name: /home/i })
       await workspace.click()
@@ -223,7 +215,7 @@ test.describe('Workspace UI', () => {
       expect(hasInput || hasNewFile).toBe(true)
     })
 
-    test('can create folder inside workspace via context menu', async ({ page }) => {
+    test('can create folder inside workspace via context menu', async ({ cleanEditorPage: page }) => {
       // Arrange - Expand workspace by clicking on it
       const workspace = page.getByRole('treeitem', { name: /home/i })
       await workspace.click()

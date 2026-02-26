@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
 import { createTerminalHelper } from './helpers/terminal'
 
@@ -13,17 +13,8 @@ import { createTerminalHelper } from './helpers/terminal'
  * - Button visibility changes based on execution state
  */
 test.describe('Canvas Execution Controls', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/editor')
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for the shell terminal to initialize
-    await expect(page.locator('[data-testid="shell-terminal-container"]')).toBeVisible({
-      timeout: TIMEOUTS.ELEMENT_VISIBLE,
-    })
-  })
-
   test.describe('Button Visibility', () => {
-    test('shows Pause and Stop buttons when canvas is running', async ({ page }) => {
+    test('shows Pause and Stop buttons when canvas is running', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -67,7 +58,7 @@ test.describe('Canvas Execution Controls', () => {
       await stopButton.click()
     })
 
-    test('shows Play and Step buttons when canvas is paused', async ({ page }) => {
+    test('shows Play and Step buttons when canvas is paused', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -116,7 +107,7 @@ test.describe('Canvas Execution Controls', () => {
   })
 
   test.describe('Pause and Resume', () => {
-    test('pause suspends animation and play resumes it', async ({ page }) => {
+    test('pause suspends animation and play resumes it', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -174,7 +165,7 @@ test.describe('Canvas Execution Controls', () => {
   })
 
   test.describe('Stop', () => {
-    test('stop button terminates the canvas', async ({ page }) => {
+    test('stop button terminates the canvas', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -212,7 +203,7 @@ test.describe('Canvas Execution Controls', () => {
   })
 
   test.describe('Step', () => {
-    test('step button advances one frame when paused', async ({ page }) => {
+    test('step button advances one frame when paused', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 

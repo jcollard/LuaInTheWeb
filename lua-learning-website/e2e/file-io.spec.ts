@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
 import { createTerminalHelper } from './helpers/terminal'
 
@@ -12,20 +12,10 @@ import { createTerminalHelper } from './helpers/terminal'
  * pre-populating the filesystem, to properly test the integration.
  */
 test.describe('Lua File I/O', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to the editor
-    await page.goto('/editor')
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible({
-      timeout: TIMEOUTS.ELEMENT_VISIBLE,
-    })
-
+  test.beforeEach(async ({ shellPage: page }) => {
     // Switch to Shell tab (in the bottom panel)
     await page.getByRole('tab', { name: /shell/i }).click()
     await page.waitForTimeout(TIMEOUTS.UI_STABLE)
-
-    // Wait for the Shell terminal to initialize
-    const shellContainer = page.locator('[data-testid="shell-terminal-container"]')
-    await expect(shellContainer).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
     // Wait for xterm to initialize
     await expect(
@@ -36,7 +26,7 @@ test.describe('Lua File I/O', () => {
   })
 
   test.describe('io.open() for reading', () => {
-    test('should read file content with io.open and file:read("a")', async ({ page }) => {
+    test('should read file content with io.open and file:read("a")', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -76,7 +66,7 @@ test.describe('Lua File I/O', () => {
       await terminal.press('Enter')
     })
 
-    test('should return nil and error for non-existent file', async ({ page }) => {
+    test('should return nil and error for non-existent file', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -106,7 +96,7 @@ test.describe('Lua File I/O', () => {
   })
 
   test.describe('io.open() for writing', () => {
-    test('should write content to a new file', async ({ page }) => {
+    test('should write content to a new file', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -153,7 +143,7 @@ test.describe('Lua File I/O', () => {
       await terminal.press('Enter')
     })
 
-    test('should support file:write chaining', async ({ page }) => {
+    test('should support file:write chaining', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -191,7 +181,7 @@ test.describe('Lua File I/O', () => {
   })
 
   test.describe('io.lines()', () => {
-    test('should iterate over file lines', async ({ page }) => {
+    test('should iterate over file lines', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -231,7 +221,7 @@ test.describe('Lua File I/O', () => {
       await terminal.expectToContain('TOTAL:3')
     })
 
-    test('should error for non-existent file in io.lines()', async ({ page }) => {
+    test('should error for non-existent file in io.lines()', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -250,7 +240,7 @@ test.describe('Lua File I/O', () => {
   })
 
   test.describe('file:read() formats', () => {
-    test('should read line by line with "l" format', async ({ page }) => {
+    test('should read line by line with "l" format', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -291,7 +281,7 @@ test.describe('Lua File I/O', () => {
       await terminal.press('Enter')
     })
 
-    test('should read n characters with numeric format', async ({ page }) => {
+    test('should read n characters with numeric format', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -328,7 +318,7 @@ test.describe('Lua File I/O', () => {
   })
 
   test.describe('io.close()', () => {
-    test('should close file with file:close()', async ({ page }) => {
+    test('should close file with file:close()', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -357,7 +347,7 @@ test.describe('Lua File I/O', () => {
       await terminal.expectToContain('true')
     })
 
-    test('should close file with io.close(file)', async ({ page }) => {
+    test('should close file with io.close(file)', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -388,7 +378,7 @@ test.describe('Lua File I/O', () => {
   })
 
   test.describe('append mode', () => {
-    test('should append to existing file with "a" mode', async ({ page }) => {
+    test('should append to existing file with "a" mode', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 

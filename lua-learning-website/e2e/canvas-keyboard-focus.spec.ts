@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
 import { createTerminalHelper } from './helpers/terminal'
 
@@ -12,17 +12,8 @@ import { createTerminalHelper } from './helpers/terminal'
  * requiring the user to click on the canvas first.
  */
 test.describe('Canvas Keyboard Focus', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/editor')
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for the shell terminal to initialize
-    await expect(page.locator('[data-testid="shell-terminal-container"]')).toBeVisible({
-      timeout: TIMEOUTS.ELEMENT_VISIBLE,
-    })
-  })
-
   test.describe('Auto-focus on Canvas Tab Open', () => {
-    test('canvas element is focusable with tabIndex', async ({ page }) => {
+    test('canvas element is focusable with tabIndex', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -60,7 +51,7 @@ test.describe('Canvas Keyboard Focus', () => {
       await expect(canvasTab).not.toBeVisible({ timeout: TIMEOUTS.ASYNC_OPERATION })
     })
 
-    test('canvas receives keyboard events when tab opens', async ({ page }) => {
+    test('canvas receives keyboard events when tab opens', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -115,7 +106,7 @@ test.describe('Canvas Keyboard Focus', () => {
   })
 
   test.describe('Click-to-Focus', () => {
-    test('clicking canvas gives it keyboard focus', async ({ page }) => {
+    test('clicking canvas gives it keyboard focus', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -176,7 +167,7 @@ test.describe('Canvas Keyboard Focus', () => {
   })
 
   test.describe('Focus Retention on Special Keys', () => {
-    test('canvas retains focus after pressing Tab and Arrow keys', async ({ page }) => {
+    test('canvas retains focus after pressing Tab and Arrow keys', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
