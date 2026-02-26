@@ -362,7 +362,7 @@ All work happens in isolated worktrees for parallel development.
 ### Structure
 
 ```
-C:\Users\User\git\jcollard\
+/home/user/git/
 ├── LuaInTheWeb/                    # Main worktree (main branch)
 ├── LuaInTheWeb-issue-42/           # Worktree for issue #42
 └── LuaInTheWeb-issue-15/           # Worktree for issue #15

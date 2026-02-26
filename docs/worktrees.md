@@ -14,7 +14,7 @@ Git worktrees allow you to have multiple working directories attached to a singl
 ## Directory Structure
 
 ```
-C:\Users\User\git\jcollard\
+/home/user/git/
 ├── LuaInTheWeb/                    # Main worktree (main branch)
 │   ├── .git/                       # Shared git directory
 │   ├── lua-learning-website/
@@ -35,7 +35,7 @@ C:\Users\User\git\jcollard\
 
 ```bash
 # Recommended: Use the Python script (handles everything automatically)
-python scripts/worktree-create.py 42
+python3 scripts/worktree-create.py 42
 
 # Or use the slash command in Claude Code
 /worktree create 42
@@ -63,10 +63,10 @@ git worktree list
 
 ```bash
 # Recommended: Use the Python script
-python scripts/worktree-remove.py 42
+python3 scripts/worktree-remove.py 42
 
 # Keep the branch (don't delete it)
-python scripts/worktree-remove.py 42 --keep-branch
+python3 scripts/worktree-remove.py 42 --keep-branch
 
 # Or use the slash command in Claude Code
 /worktree remove 42
@@ -229,7 +229,7 @@ The `scripts/` directory contains Python scripts for worktree management:
 Creates a worktree with full setup for an issue.
 
 ```bash
-python scripts/worktree-create.py <issue-number>
+python3 scripts/worktree-create.py <issue-number>
 ```
 
 **What it does:**
@@ -246,7 +246,7 @@ python scripts/worktree-create.py <issue-number>
 Removes a worktree and optionally its branch.
 
 ```bash
-python scripts/worktree-remove.py <issue-number> [--keep-branch] [--headless]
+python3 scripts/worktree-remove.py <issue-number> [--keep-branch] [--headless]
 ```
 
 **Options:**

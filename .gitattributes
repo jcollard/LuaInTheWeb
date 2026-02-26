@@ -26,4 +26,7 @@
 *.woff binary
 *.woff2 binary
 *.ttf binary
+*.ogg binary
+*.mp3 binary
+*.wav binary
 *.wasm binary

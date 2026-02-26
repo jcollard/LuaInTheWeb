@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Remove a git worktree for a GitHub issue.
 
-Usage: python scripts/worktree-remove.py <issue-number> [--keep-branch] [--headless] [--orphan]
+Usage: python3 scripts/worktree-remove.py <issue-number> [--keep-branch] [--headless] [--orphan]
 
 This script:
 1. Finds the worktree for the given issue number
@@ -99,7 +99,7 @@ def main():
 
     if len(args) < 1:
         print(f"{RED}Error: Issue number required{NC}")
-        print(f"Usage: python {sys.argv[0]} <issue-number> [--keep-branch] [--headless] [--orphan]")
+        print(f"Usage: python3 {sys.argv[0]} <issue-number> [--keep-branch] [--headless] [--orphan]")
         sys.exit(1)
 
     issue_number = args[0]
@@ -117,7 +117,7 @@ def main():
         print(f"{RED}Error: Cannot remove worktree while inside it{NC}")
         print(f"Please run this command from the main repository:")
         print(f"  {BLUE}cd ../LuaInTheWeb{NC}")
-        print(f"  {BLUE}python scripts/worktree-remove.py {issue_number}{NC}")
+        print(f"  {BLUE}python3 scripts/worktree-remove.py {issue_number}{NC}")
         sys.exit(1)
 
     # Find the worktree
@@ -148,7 +148,7 @@ def main():
         if orphan_dir:
             print(f"\n{YELLOW}Found orphaned directory: {orphan_dir}{NC}")
             print(f"Use {BLUE}--orphan{NC} flag to remove it:")
-            print(f"  {BLUE}python scripts/worktree-remove.py {issue_number} --orphan{NC}")
+            print(f"  {BLUE}python3 scripts/worktree-remove.py {issue_number} --orphan{NC}")
         else:
             # List available worktrees
             worktree_list = run('git worktree list')
@@ -170,7 +170,7 @@ def main():
         print(f"{YELLOW}Worktree remove failed, trying to prune...{NC}")
         run('git worktree prune')
 
-    # Clean up directory if it still exists (Windows often leaves directories behind)
+    # Clean up directory if it still exists
     worktree_dir = Path(worktree_path)
     if worktree_dir.exists():
         print(f"{YELLOW}Directory still exists, cleaning up...{NC}")

@@ -480,7 +480,7 @@ Before merging, verify the branch is ready:
 git fetch origin
 
 # Verify tests pass (quick check)
-cd lua-learning-website && npm run test 2>&1 | tail -5
+npm --prefix lua-learning-website run test 2>&1 | tail -5
 ```
 
 If tests fail:
@@ -532,7 +532,7 @@ Run `/code-review` to see full test results and fix issues before merging.
 
 5. **Remove the worktree** (using `--keep-branch` since merge will handle branch deletion):
    ```bash
-   python scripts/worktree-remove.py <issue-number> --keep-branch --headless
+   python3 scripts/worktree-remove.py <issue-number> --keep-branch --headless
    ```
 
    Output:
@@ -761,11 +761,11 @@ gh issue close <linked-issue-number> --reason completed
 
 **Note:** Worktree cleanup was performed in Step 8c.5 (before merge). This step verifies cleanup was successful.
 
-If the worktree directory still exists (e.g., on Windows where directory deletion can fail):
+If the worktree directory still exists (e.g., directory deletion can sometimes fail):
 
 ```bash
 # Check if orphaned directory exists
-python scripts/worktree-remove.py <issue-number> --orphan --headless
+python3 scripts/worktree-remove.py <issue-number> --orphan --headless
 ```
 
 This handles cleanup of directories that weren't fully removed in Step 8c.5.
@@ -1046,7 +1046,7 @@ Found: Fixes #7
 - Branch up to date: ✅
 
 ### Pre-Merge Worktree Cleanup
-- ✅ Removed worktree: C:\Users\User\git\jcollard\LuaInTheWeb-issue-7
+- ✅ Removed worktree: /home/user/git/LuaInTheWeb-issue-7
 - ℹ️ Branch kept (will be deleted by merge)
 
 ### Merging...

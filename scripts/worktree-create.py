@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Create a git worktree for a GitHub issue.
 
-Usage: python scripts/worktree-create.py <issue-number>
+Usage: python3 scripts/worktree-create.py <issue-number>
 
 This script:
 1. Fetches the issue title from GitHub

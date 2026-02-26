@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/file_protection.py\"",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/file_protection.py\"",
             "timeout": 10
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/command_audit.py\"",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/command_audit.py\"",
             "timeout": 5
           }
         ]

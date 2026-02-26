@@ -86,7 +86,7 @@ Output:
 **Delegate to Python script:**
 
 ```bash
-python scripts/worktree-create.py <n>
+python3 scripts/worktree-create.py <n>
 ```
 
 The script handles:
@@ -124,7 +124,7 @@ Then run:
 **Delegate to Python script:**
 
 ```bash
-python scripts/worktree-remove.py <n> --headless
+python3 scripts/worktree-remove.py <n> --headless
 ```
 
 The script handles:
@@ -139,7 +139,7 @@ The script handles:
 To keep the branch after removing:
 
 ```bash
-python scripts/worktree-remove.py <n> --keep-branch --headless
+python3 scripts/worktree-remove.py <n> --keep-branch --headless
 ```
 
 ---
@@ -166,9 +166,9 @@ python scripts/worktree-remove.py <n> --keep-branch --headless
 
 | Path | Branch | Status |
 |------|--------|--------|
-| C:\Users\User\git\jcollard\LuaInTheWeb | main | primary |
-| C:\Users\User\git\jcollard\LuaInTheWeb-issue-42 | 42-add-dark-mode | worktree |
-| C:\Users\User\git\jcollard\LuaInTheWeb-issue-15 | 15-fix-repl-bug | worktree |
+| /home/user/git/LuaInTheWeb | main | primary |
+| /home/user/git/LuaInTheWeb-issue-42 | 42-add-dark-mode | worktree |
+| /home/user/git/LuaInTheWeb-issue-15 | 15-fix-repl-bug | worktree |
 
 **Total**: 3 worktrees
 ```
@@ -183,14 +183,14 @@ python scripts/worktree-remove.py <n> --keep-branch --headless
 ## Worktree Created for Issue #42
 
 **Issue**: #42 - Add dark mode toggle
-**Path**: C:\Users\User\git\jcollard\LuaInTheWeb-issue-42
+**Path**: /home/user/git/LuaInTheWeb-issue-42
 **Branch**: 42-add-dark-mode-toggle
 
 ### Next Steps
 
 Open a new Claude Code session in the worktree:
 ```bash
-cd C:\Users\User\git\jcollard\LuaInTheWeb-issue-42
+cd /home/user/git/LuaInTheWeb-issue-42
 claude
 ```
 

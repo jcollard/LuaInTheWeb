@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Create a commit, push, and open a PR for a GitHub issue.
 
-Usage: python scripts/issue-review.py <issue-number> [options]
+Usage: python3 scripts/issue-review.py <issue-number> [options]
 
 Options:
   --summary "..."       PR summary text (inline)

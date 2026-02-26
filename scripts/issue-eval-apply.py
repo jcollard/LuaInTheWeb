@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Apply issue evaluation results to GitHub project board.
 
-Usage: python scripts/issue-eval-apply.py <issue-number> --priority "P2-Medium" --effort "S" --type "Bug" [--update-body-file path]
+Usage: python3 scripts/issue-eval-apply.py <issue-number> --priority "P2-Medium" --effort "S" --type "Bug" [--update-body-file path]
 
 This script:
 1. Finds the project item for the issue (adds to project if needed)

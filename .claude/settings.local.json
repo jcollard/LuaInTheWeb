@@ -33,7 +33,7 @@
       "Bash(gh project:*)",
       "Bash(gh api:*)",
       "Bash(gh repo view:*)",
-      "Bash(python scripts/:*)",
+      "Bash(python3 scripts/:*)",
       "Bash(node scripts/:*)",
       "Bash(mkdir:*)",
       "Bash(date)",
@@ -45,21 +45,22 @@
     "deny": [
       "Bash(npm run dev)",
       "Bash(rm -rf:*)",
-      "Bash(npm publish:*)",
-      "Bash(python3:*)"
+      "Bash(npm publish:*)"
     ],
     "ask": [
       "SlashCommand(/accept-review)",
       "Bash(git push:*)",
       "Bash(git commit:*)",
       "Bash(gh pr merge:*)",
-      "Bash(rm lua-learning-website/reports/mutation/.stryker-incremental.json)",
-      "Bash(del lua-learning-website/reports/mutation/.stryker-incremental.json)",
-      "Bash(Remove-Item lua-learning-website/reports/mutation/.stryker-incremental.json)"
+      "Bash(rm lua-learning-website/reports/mutation/.stryker-incremental.json)"
     ]
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "code-index-mcp"
-  ]
+  ],
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  }
 }

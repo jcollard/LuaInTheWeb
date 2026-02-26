@@ -1,12 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Update an existing GitHub pull request.
 
 Usage:
-  python scripts/update-pr.py <pr-number> commit [options]     # Add commits to PR
-  python scripts/update-pr.py <pr-number> update-body [options] # Update PR description
-  python scripts/update-pr.py <pr-number> comment [options]     # Add comment to PR
-  python scripts/update-pr.py <pr-number> update-manual-testing # Regenerate manual testing section
+  python3 scripts/update-pr.py <pr-number> commit [options]     # Add commits to PR
+  python3 scripts/update-pr.py <pr-number> update-body [options] # Update PR description
+  python3 scripts/update-pr.py <pr-number> comment [options]     # Add comment to PR
+  python3 scripts/update-pr.py <pr-number> update-manual-testing # Regenerate manual testing section
 
 Subcommands:
   commit               Stage all changes, create commit, and push to PR branch
