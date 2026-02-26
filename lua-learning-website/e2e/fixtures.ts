@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks -- Playwright's `use` is not a React hook */
 import { test as base, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { TIMEOUTS } from './constants'

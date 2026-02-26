@@ -1,5 +1,3 @@
-/* eslint-disable max-lines */
-// Large E2E test file for comprehensive file explorer coverage
 import { test, expect } from './fixtures'
 
 test.describe('File Explorer', () => {
