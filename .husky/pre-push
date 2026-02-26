@@ -24,15 +24,18 @@ done
 
 # Non-interactive mode (agent/CI) - detect changes and run scoped CI
 if [ ! -t 0 ] || [ ! -t 1 ]; then
+  # Resolve HEAD to a SHA to avoid ambiguity with files named "HEAD"
+  HEAD_SHA=$(git rev-parse HEAD)
+
   # Find merge base with origin/main
-  MERGE_BASE=$(git merge-base origin/main HEAD 2>/dev/null || echo "")
+  MERGE_BASE=$(git merge-base origin/main "$HEAD_SHA" 2>/dev/null || echo "")
   if [ -z "$MERGE_BASE" ]; then
     echo "No common ancestor with origin/main — running full CI..."
     npm run ci
     exit $?
   fi
 
-  CHANGED_FILES=$(git diff --name-only "$MERGE_BASE" HEAD)
+  CHANGED_FILES=$(git diff --name-only "$MERGE_BASE" "$HEAD_SHA")
 
   if [ -z "$CHANGED_FILES" ]; then
     echo "No changes detected — skipping CI"
