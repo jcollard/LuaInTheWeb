@@ -6,6 +6,8 @@ import {
   readOnlyMarkdownFileContextMenuItems,
   htmlFileContextMenuItems,
   readOnlyHtmlFileContextMenuItems,
+  luaFileContextMenuItems,
+  readOnlyLuaFileContextMenuItems,
   readOnlyFileContextMenuItems,
   folderContextMenuItems,
   workspaceContextMenuItems,
@@ -17,7 +19,7 @@ import {
   projectSubfolderContextMenuItems,
   buildConnectedWorkspaceMenuItems,
 } from './contextMenuItems'
-import { isMarkdownFile, isHtmlFile } from './treeUtils'
+import { isMarkdownFile, isHtmlFile, isLuaFile } from './treeUtils'
 
 interface GetContextMenuItemsParams {
   contextMenu: ContextMenuState
@@ -62,6 +64,10 @@ export function getContextMenuItems(params: GetContextMenuItemsParams): ContextM
       if (isMarkdownFile(targetPath)) {
         return readOnlyMarkdownFileContextMenuItems
       }
+      // Check if it's a Lua file in a read-only workspace
+      if (isLuaFile(targetPath)) {
+        return readOnlyLuaFileContextMenuItems
+      }
       // Generic files in read-only workspaces still get Download
       return readOnlyFileContextMenuItems
     }
@@ -72,6 +78,10 @@ export function getContextMenuItems(params: GetContextMenuItemsParams): ContextM
     // Check if it's a markdown file
     if (targetPath && isMarkdownFile(targetPath)) {
       return markdownFileContextMenuItems
+    }
+    // Check if it's a Lua file
+    if (targetPath && isLuaFile(targetPath)) {
+      return luaFileContextMenuItems
     }
     return fileContextMenuItems
   }

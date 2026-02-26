@@ -695,6 +695,23 @@ function IDELayoutInner({
     shellRef.current?.executeCommand(`cd "${path}"`)
   }, [terminalVisible, toggleTerminal])
 
+  // Handle "Run" for Lua files from file explorer context menu
+  const handleRunLuaFile = useCallback((path: string) => {
+    // Show terminal if hidden
+    if (!terminalVisible) {
+      toggleTerminal()
+    }
+    // Stop any currently running process before executing new one
+    shellRef.current?.stopCurrentProcess()
+    // Extract directory and filename from path
+    const lastSlash = path.lastIndexOf('/')
+    const dir = lastSlash > 0 ? path.substring(0, lastSlash) : '/'
+    const filename = path.substring(lastSlash + 1)
+    // cd to directory, then run lua file
+    shellRef.current?.executeCommand(`cd "${dir}"`)
+    shellRef.current?.executeCommand(`lua "${filename}"`)
+  }, [terminalVisible, toggleTerminal])
+
   // Handle file open request from shell's 'open' command
   // Routes to appropriate viewer based on file type
   const handleRequestOpenFile = useCallback((filePath: string) => {
@@ -774,7 +791,7 @@ function IDELayoutInner({
     deleteFile, deleteFolder, openFile, openPreviewFile, moveFile, copyFile,
     clearPendingNewFile, clearPendingNewFolder, openMarkdownPreview, openMarkdownEdit: openFile,
     makeTabPermanent, openBinaryViewer, openAnsiEditorFile, openHtmlPreview, openHtmlInBrowser,
-    handleCdToLocation, uploadFiles, uploadFolder, workspaces, pendingWorkspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
+    handleCdToLocation, handleRunLuaFile, uploadFiles, uploadFolder, workspaces, pendingWorkspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
     addVirtualWorkspace, handleAddLocalWorkspace, handleRemoveWorkspace, refreshWorkspace,
     refreshFileTree, supportsRefresh, handleReconnectWorkspace, handleDisconnectWorkspace,
     handleRenameWorkspace, isFolderAlreadyMounted, getUniqueWorkspaceName,

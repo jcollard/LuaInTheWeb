@@ -6,6 +6,7 @@ import {
   htmlFileContextMenuItems,
   readOnlyHtmlFileContextMenuItems,
   readOnlyFileContextMenuItems,
+  readOnlyLuaFileContextMenuItems,
   folderContextMenuItems,
   workspaceContextMenuItems,
   libraryWorkspaceContextMenuItems,
@@ -15,6 +16,7 @@ import {
   projectsWorkspaceContextMenuItems,
   projectSubfolderContextMenuItems,
   buildConnectedWorkspaceMenuItems,
+  luaFileContextMenuItems,
 } from './contextMenuItems'
 
 describe('contextMenuItems', () => {
@@ -36,6 +38,36 @@ describe('contextMenuItems', () => {
       const uploadItem = items.find((item) => item.id === 'upload-files')
       expect(uploadItem).toBeDefined()
       expect(uploadItem?.label).toBe('Upload Files...')
+    })
+  })
+
+  describe('luaFileContextMenuItems', () => {
+    it('should include run-lua option as the first item', () => {
+      const runItem = luaFileContextMenuItems[0]
+      expect(runItem.id).toBe('run-lua')
+      expect(runItem.label).toBe('Run')
+    })
+
+    it('should include rename and delete after a divider', () => {
+      const ids = luaFileContextMenuItems.map((item) => item.id)
+      expect(ids).toContain('divider-lua')
+      expect(ids).toContain('rename')
+      expect(ids).toContain('delete')
+    })
+  })
+
+  describe('readOnlyLuaFileContextMenuItems', () => {
+    it('should include run-lua option as the first item', () => {
+      const runItem = readOnlyLuaFileContextMenuItems[0]
+      expect(runItem.id).toBe('run-lua')
+      expect(runItem.label).toBe('Run')
+    })
+
+    it('should include download but not rename or delete', () => {
+      const ids = readOnlyLuaFileContextMenuItems.map((item) => item.id)
+      expect(ids).toContain('download')
+      expect(ids).not.toContain('rename')
+      expect(ids).not.toContain('delete')
     })
   })
 
@@ -72,6 +104,12 @@ describe('contextMenuItems', () => {
 
     it('readOnlyFileContextMenuItems includes download', () => {
       const item = readOnlyFileContextMenuItems.find((i) => i.id === 'download')
+      expect(item).toBeDefined()
+      expect(item?.label).toBe('Download')
+    })
+
+    it('readOnlyLuaFileContextMenuItems includes download', () => {
+      const item = readOnlyLuaFileContextMenuItems.find((i) => i.id === 'download')
       expect(item).toBeDefined()
       expect(item?.label).toBe('Download')
     })

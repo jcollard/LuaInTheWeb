@@ -650,6 +650,8 @@ describe('ShellTerminal', () => {
     // Arrow key routing to process tests are in ShellTerminal.processKeys.test.tsx
   })
 
+  // Imperative handle tests are in ShellTerminal.handle.test.tsx
+
   describe('focus management', () => {
     it('should focus terminal when visible prop changes from false to true', async () => {
       const { rerender } = render(

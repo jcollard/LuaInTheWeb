@@ -19,6 +19,7 @@ interface UseContextMenuActionsParams {
   onEditHtml?: (path: string) => void
   onOpenHtmlInBrowser?: (path: string) => void
   onCdToLocation?: (path: string) => void
+  onRunLuaFile?: (path: string) => void
   triggerUpload: (targetPath: string) => void
   triggerFolderUpload?: (targetPath: string) => void
   openCloneDialog: (projectPath: string) => void
@@ -49,6 +50,7 @@ export function useContextMenuActions({
   onEditHtml,
   onOpenHtmlInBrowser,
   onCdToLocation,
+  onRunLuaFile,
   triggerUpload,
   triggerFolderUpload,
   openCloneDialog,
@@ -80,6 +82,9 @@ export function useContextMenuActions({
         break
       case 'open-in-terminal':
         onCdToLocation?.(targetPath)
+        break
+      case 'run-lua':
+        onRunLuaFile?.(targetPath)
         break
       case 'new-file':
         onCreateFile(targetPath)
@@ -173,6 +178,7 @@ export function useContextMenuActions({
     onEditHtml,
     onOpenHtmlInBrowser,
     onCdToLocation,
+    onRunLuaFile,
     triggerUpload,
     triggerFolderUpload,
     openCloneDialog,

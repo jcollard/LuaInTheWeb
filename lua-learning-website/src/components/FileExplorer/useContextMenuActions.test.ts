@@ -29,6 +29,7 @@ describe('useContextMenuActions', () => {
     onEditHtml: vi.fn(),
     onOpenHtmlInBrowser: vi.fn(),
     onCdToLocation: vi.fn(),
+    onRunLuaFile: vi.fn(),
     triggerUpload: vi.fn(),
     triggerFolderUpload: vi.fn(),
     openCloneDialog: vi.fn(),
@@ -123,6 +124,14 @@ describe('useContextMenuActions', () => {
         act(() => { result.current.handleContextMenuSelect('open-in-terminal') })
 
         expect(defaultParams.onCdToLocation).toHaveBeenCalledWith('/workspace/file.lua')
+      })
+
+      it('dispatches run-lua action', () => {
+        const { result } = renderHook(() => useContextMenuActions(defaultParams))
+
+        act(() => { result.current.handleContextMenuSelect('run-lua') })
+
+        expect(defaultParams.onRunLuaFile).toHaveBeenCalledWith('/workspace/file.lua')
       })
     })
 
