@@ -240,6 +240,9 @@ export const ShellTerminal = forwardRef<ShellTerminalHandle, ShellTerminalProps>
       // Execute the command
       handleCommand(command)
     },
+    stopCurrentProcess: () => {
+      stopProcessRef.current()
+    },
   }), [handleCommand])
 
   // Use the shell terminal hook for input handling

@@ -1,7 +1,7 @@
 /**
- * Type of tab - file for code editor, canvas for game canvas, markdown for markdown preview, binary for binary file viewer
+ * Type of tab - file for code editor, canvas for game canvas, markdown for markdown preview, binary for binary file viewer, html for HTML preview
  */
-export type TabType = 'file' | 'canvas' | 'markdown' | 'binary' | 'ansi' | 'ansi-editor'
+export type TabType = 'file' | 'canvas' | 'markdown' | 'binary' | 'ansi' | 'ansi-editor' | 'html'
 
 export interface TabInfo {
   path: string
@@ -35,6 +35,7 @@ export interface UseTabBarReturn {
   openAnsiEditorTab: () => void
   openMarkdownPreviewTab: (path: string, name: string) => void
   openBinaryPreviewTab: (path: string, name: string) => void
+  openHtmlPreviewTab: (path: string, name: string) => void
   closeTab: (path: string) => void
   selectTab: (path: string) => void
   setDirty: (path: string, isDirty: boolean) => void
@@ -43,6 +44,7 @@ export interface UseTabBarReturn {
   makeTabPermanent: (path: string) => void
   convertToFileTab: (path: string) => void
   convertToMarkdownTab: (path: string) => void
+  convertToHtmlTab: (path: string) => void
   pinTab: (path: string) => void
   unpinTab: (path: string) => void
   reorderTab: (path: string, newIndex: number) => void

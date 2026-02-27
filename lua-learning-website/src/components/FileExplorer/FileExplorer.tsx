@@ -1,9 +1,13 @@
-import { useCallback, useEffect, useState, type MouseEvent } from 'react'
+import { useCallback, useEffect, type MouseEvent } from 'react'
 import { FileTree } from '../FileTree'
 import { ContextMenu } from '../ContextMenu'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { AddWorkspaceDialog } from '../AddWorkspaceDialog'
+import { CloneProjectDialog } from '../CloneProjectDialog'
 import { useFileExplorer } from './useFileExplorer'
+import { useCloneDialog } from './useCloneDialog'
+import { useWorkspaceDialogHandlers } from './useWorkspaceDialogHandlers'
+import { useContextMenuActions } from './useContextMenuActions'
 import { useFileUpload } from './useFileUpload'
 import { useTreeUtilities } from './useTreeUtilities'
 import { useRenameHandler } from './useRenameHandler'
@@ -32,13 +36,28 @@ export function FileExplorer({
   onCancelPendingNewFolder,
   onPreviewMarkdown,
   onEditMarkdown,
+  onPreviewHtml,
+  onEditHtml,
+  onOpenHtmlInBrowser,
   onCdToLocation,
+  onRunLuaFile,
   onUploadFiles,
   onUploadFolder,
+  onCloneProject,
+  onDownloadFile,
+  onDownloadAsZip,
   className,
   workspaceProps,
 }: FileExplorerProps) {
-  const [isAddWorkspaceDialogOpen, setIsAddWorkspaceDialogOpen] = useState(false)
+  const {
+    isAddWorkspaceDialogOpen,
+    handleAddWorkspaceClick,
+    handleAddWorkspaceCancel,
+    handleCreateVirtualWorkspace,
+    handleCreateLocalWorkspace,
+    handleReconnectWorkspace,
+  } = useWorkspaceDialogHandlers(workspaceProps)
+  const { cloneDialogState, openCloneDialog, handleCloneDialogCancel, handleCloneProject } = useCloneDialog(onCloneProject)
 
   const {
     selectedPath: internalSelectedPath,
@@ -75,38 +94,6 @@ export function FileExplorer({
       : undefined,
   })
 
-  // Workspace management handlers
-  const handleAddWorkspaceClick = useCallback(() => {
-    setIsAddWorkspaceDialogOpen(true)
-  }, [])
-
-  const handleAddWorkspaceCancel = useCallback(() => {
-    setIsAddWorkspaceDialogOpen(false)
-  }, [])
-
-  const handleCreateVirtualWorkspace = useCallback(
-    (name: string) => {
-      workspaceProps?.onAddVirtualWorkspace(name)
-      setIsAddWorkspaceDialogOpen(false)
-    },
-    [workspaceProps]
-  )
-
-  const handleCreateLocalWorkspace = useCallback(
-    (name: string, handle: FileSystemDirectoryHandle) => {
-      workspaceProps?.onAddLocalWorkspace(name, handle)
-      setIsAddWorkspaceDialogOpen(false)
-    },
-    [workspaceProps]
-  )
-
-  const handleReconnectWorkspace = useCallback(
-    (mountPath: string) => {
-      workspaceProps?.onReconnectWorkspace?.(mountPath)
-    },
-    [workspaceProps]
-  )
-
   // Use controlled selected path if provided
   const selectedPath = controlledSelectedPath ?? internalSelectedPath
 
@@ -120,6 +107,8 @@ export function FileExplorer({
     isDocsWorkspace,
     isBookWorkspace,
     isExamplesWorkspace,
+    isProjectsWorkspace,
+    isProjectSubfolder,
     getWorkspaceForPath,
     isInReadOnlyWorkspace,
   } = useTreeUtilities(tree)
@@ -186,90 +175,10 @@ export function FileExplorer({
     // Stryker disable next-line all: React hooks dependency optimization
   }, [findNodeType, openContextMenu])
 
-  const handleContextMenuSelect = useCallback((action: string) => {
-    const { targetPath, targetType } = contextMenu
-
-    if (!targetPath) return
-
-    // Stryker disable next-line StringLiteral: switch case IDs tested via behavior
-    switch (action) {
-      case 'preview-markdown':
-        onPreviewMarkdown?.(targetPath)
-        break
-      case 'edit-markdown':
-        onEditMarkdown?.(targetPath)
-        break
-      case 'open-in-terminal':
-        onCdToLocation?.(targetPath)
-        break
-      case 'new-file':
-        onCreateFile(targetPath)
-        break
-      case 'new-folder':
-        onCreateFolder(targetPath)
-        break
-      case 'upload-files':
-        triggerUpload(targetPath)
-        break
-      case 'upload-folder':
-        triggerFolderUpload?.(targetPath)
-        break
-      case 'rename':
-        startRename(targetPath)
-        break
-      case 'rename-workspace':
-        // Rename workspace uses the same rename mechanism as folders
-        startRename(targetPath)
-        break
-      case 'refresh':
-        // Refresh workspace - fire and forget
-        workspaceProps?.onRefreshWorkspace(targetPath)
-        break
-      case 'disconnect-workspace':
-        // Disconnect workspace without removing it
-        workspaceProps?.onDisconnectWorkspace?.(targetPath)
-        break
-      case 'remove-workspace': {
-        const name = findNodeName(targetPath)
-        openConfirmDialog({
-          // Stryker disable next-line StringLiteral: dialog text is display-only
-          title: 'Remove Workspace',
-          // Stryker disable next-line StringLiteral: dialog text is display-only
-          message: `Are you sure you want to remove the workspace "${name}"? This will not delete any files.`,
-          variant: 'danger',
-          onConfirm: () => {
-            workspaceProps?.onRemoveWorkspace(targetPath)
-            closeConfirmDialog()
-          },
-        })
-        break
-      }
-      case 'delete': {
-        const name = findNodeName(targetPath)
-        const isFolder = targetType === 'folder'
-        openConfirmDialog({
-          // Stryker disable next-line StringLiteral: dialog text is display-only
-          title: `Delete ${isFolder ? 'Folder' : 'File'}`,
-          // Stryker disable next-line StringLiteral: dialog text is display-only
-          message: `Are you sure you want to delete "${name}"?${isFolder ? ' This will also delete all contents.' : ''}`,
-          variant: 'danger',
-          onConfirm: () => {
-            if (isFolder) {
-              onDeleteFolder(targetPath)
-            } else {
-              onDeleteFile(targetPath)
-            }
-            closeConfirmDialog()
-          },
-        })
-        break
-      }
-    }
-
-    closeContextMenu()
-    // Stryker disable next-line all: React hooks dependency optimization
-  }, [
+  // Context menu action dispatch and delete-key handler (extracted to separate hook)
+  const { handleContextMenuSelect, handleDeleteKey } = useContextMenuActions({
     contextMenu,
+    findNodeType,
     findNodeName,
     startRename,
     openConfirmDialog,
@@ -281,35 +190,18 @@ export function FileExplorer({
     onDeleteFolder,
     onPreviewMarkdown,
     onEditMarkdown,
+    onPreviewHtml,
+    onEditHtml,
+    onOpenHtmlInBrowser,
     onCdToLocation,
+    onRunLuaFile,
     triggerUpload,
     triggerFolderUpload,
+    openCloneDialog,
+    onDownloadFile,
+    onDownloadAsZip,
     workspaceProps,
-  ])
-
-  const handleDeleteKey = useCallback((path: string) => {
-    const type = findNodeType(path)
-    if (!type) return
-
-    const name = findNodeName(path)
-    const isFolder = type === 'folder'
-    openConfirmDialog({
-      // Stryker disable next-line StringLiteral: dialog text is display-only
-      title: `Delete ${isFolder ? 'Folder' : 'File'}`,
-      // Stryker disable next-line StringLiteral: dialog text is display-only
-      message: `Are you sure you want to delete "${name}"?${isFolder ? ' This will also delete all contents.' : ''}`,
-      variant: 'danger',
-      onConfirm: () => {
-        if (isFolder) {
-          onDeleteFolder(path)
-        } else {
-          onDeleteFile(path)
-        }
-        closeConfirmDialog()
-      },
-    })
-    // Stryker disable next-line all: React hooks dependency optimization
-  }, [findNodeType, findNodeName, openConfirmDialog, closeConfirmDialog, onDeleteFile, onDeleteFolder])
+  })
 
   const combinedClassName = className
     ? `${styles.explorer} ${className}`
@@ -323,6 +215,8 @@ export function FileExplorer({
     isDocsWorkspace,
     isBookWorkspace,
     isExamplesWorkspace,
+    isProjectsWorkspace,
+    isProjectSubfolder,
     isInReadOnlyWorkspace,
     supportsRefresh: workspaceProps?.supportsRefresh,
   })
@@ -416,6 +310,17 @@ export function FileExplorer({
           getUniqueWorkspaceName={workspaceProps.getUniqueWorkspaceName}
         />
       )}
+
+      {/* Clone Project Dialog */}
+      <CloneProjectDialog
+        isOpen={cloneDialogState.isOpen}
+        projectName={cloneDialogState.projectName}
+        isFileSystemAccessSupported={workspaceProps?.isFileSystemAccessSupported ?? false}
+        onClone={handleCloneProject}
+        onCancel={handleCloneDialogCancel}
+        isFolderAlreadyMounted={workspaceProps?.isFolderAlreadyMounted}
+        getUniqueWorkspaceName={workspaceProps?.getUniqueWorkspaceName}
+      />
 
       {/* Hidden file input for uploads */}
       <input

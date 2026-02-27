@@ -153,12 +153,12 @@ Use the automated review script which handles:
 
 **For regular issues (target main):**
 ```bash
-python scripts/issue-review.py <number> --summary "<summary>" --test-plan "<test-plan>"
+python3 scripts/issue-review.py <number> --summary "<summary>" --test-plan "<test-plan>"
 ```
 
 **For sub-issues (target epic branch):**
 ```bash
-python scripts/issue-review.py <number> --summary "<summary>" --test-plan "<test-plan>" --base epic-<epic-number>
+python3 scripts/issue-review.py <number> --summary "<summary>" --test-plan "<test-plan>" --base epic-<epic-number>
 ```
 
 **Parameters:**
@@ -203,7 +203,7 @@ See the workflow documentation for more details on the Visual Verification forma
 
 1. Navigate to epic worktree (if not already there):
    ```bash
-   cd ../LuaInTheWeb-epic-<epic-number>
+   # Epic worktree is at .claude/worktrees/epic-<epic-number>
    ```
 
 2. Update the sub-issue row in EPIC-<n>.md:
@@ -242,6 +242,8 @@ After the script completes successfully, output:
 The PR is linked to issue #<number> and will auto-close it when merged.
 
 **Next steps:**
+- Run E2E tests locally: `npm --prefix lua-learning-website run test:e2e`
+- Comment `/e2e-verified` on the PR to unblock merge
 - Run `/pr-review <pr-number>` for code review
 - Address any feedback
 - Merge when approved
@@ -280,7 +282,7 @@ If the script fails, report the error and suggest fixes.
 
 Gathering summary from completed tasks...
 
-python scripts/issue-review.py 13 --summary "- Added unit tests for useContextMenu hook\n- Added tests for useTabBar hook" --test-plan "- All new tests pass\n- Mutation score > 80%"
+python3 scripts/issue-review.py 13 --summary "- Added unit tests for useContextMenu hook\n- Added tests for useTabBar hook" --test-plan "- All new tests pass\n- Mutation score > 80%"
 
 [Script output showing validation, commit, push, PR creation]
 

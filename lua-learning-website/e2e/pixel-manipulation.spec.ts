@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { createTerminalHelper } from './helpers/terminal'
 import { TIMEOUTS } from './constants'
 
@@ -8,15 +8,7 @@ import { TIMEOUTS } from './constants'
  */
 
 test.describe('Pixel Manipulation', () => {
-  test('should apply invert effect to image data', async ({ page }) => {
-    // Navigate to editor
-    await page.goto('/editor')
-
-    // Wait for the shell terminal to initialize
-    await expect(page.locator('[data-testid="shell-terminal-container"]')).toBeVisible({
-      timeout: TIMEOUTS.ELEMENT_VISIBLE,
-    })
-
+  test('should apply invert effect to image data', async ({ shellPage: page }) => {
     const terminal = createTerminalHelper(page)
     await terminal.focus()
 
@@ -125,13 +117,7 @@ test.describe('Pixel Manipulation', () => {
     expect(output).toContain('PIXEL_TEST_PASSED')
   })
 
-  test('should create_image_data work', async ({ page }) => {
-    await page.goto('/editor')
-
-    await expect(page.locator('[data-testid="shell-terminal-container"]')).toBeVisible({
-      timeout: TIMEOUTS.ELEMENT_VISIBLE,
-    })
-
+  test('should create_image_data work', async ({ shellPage: page }) => {
     const terminal = createTerminalHelper(page)
     await terminal.focus()
 
@@ -217,13 +203,7 @@ test.describe('Pixel Manipulation', () => {
     expect(output).toContain('CREATE_TEST_PASSED')
   })
 
-  test('should cache and reuse ImageData across frames', async ({ page }) => {
-    await page.goto('/editor')
-
-    await expect(page.locator('[data-testid="shell-terminal-container"]')).toBeVisible({
-      timeout: TIMEOUTS.ELEMENT_VISIBLE,
-    })
-
+  test('should cache and reuse ImageData across frames', async ({ shellPage: page }) => {
     const terminal = createTerminalHelper(page)
     await terminal.focus()
 
@@ -368,13 +348,7 @@ test.describe('Pixel Manipulation', () => {
     expect(output).toContain('CACHE_TEST_PASSED')
   })
 
-  test('should put_image_data work with cached ImageData', async ({ page }) => {
-    await page.goto('/editor')
-
-    await expect(page.locator('[data-testid="shell-terminal-container"]')).toBeVisible({
-      timeout: TIMEOUTS.ELEMENT_VISIBLE,
-    })
-
+  test('should put_image_data work with cached ImageData', async ({ shellPage: page }) => {
     const terminal = createTerminalHelper(page)
     await terminal.focus()
 

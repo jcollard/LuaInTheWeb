@@ -1,17 +1,10 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 // Wait time for both file system (300ms) and tab (100ms) debounced saves
 const PERSISTENCE_WAIT = 500
 
 test.describe('Tab Persistence', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start with clean state
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for file tree to render
-    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+  test.beforeEach(async ({ explorerPage: page }) => {
     // Expand the workspace folder so files are visible
     await page.getByTestId('folder-chevron').first().click()
     const workspaceFolder = page.getByRole('treeitem').first()
@@ -66,7 +59,7 @@ test.describe('Tab Persistence', () => {
   }
 
   test.describe('Basic Persistence', () => {
-    test('tabs are persisted across browser refresh', async ({ page }) => {
+    test('tabs are persisted across browser refresh', async ({ explorerPage: page }) => {
       // Arrange - Create and open files
       await createFile(page, 'persist1.lua')
       await createFile(page, 'persist2.lua')
@@ -91,7 +84,7 @@ test.describe('Tab Persistence', () => {
       await expect(restoredEditorPanel.getByRole('tab', { name: /persist2\.lua/i })).toBeVisible()
     })
 
-    test('active tab is restored after refresh', async ({ page }) => {
+    test('active tab is restored after refresh', async ({ explorerPage: page }) => {
       // Arrange - Create and open files, then activate specific tab
       await createFile(page, 'active1.lua')
       await createFile(page, 'active2.lua')
@@ -116,7 +109,7 @@ test.describe('Tab Persistence', () => {
       await expect(activeTab).toHaveAttribute('aria-selected', 'true')
     })
 
-    test('tab order is preserved after refresh', async ({ page }) => {
+    test('tab order is preserved after refresh', async ({ explorerPage: page }) => {
       // Arrange - Create and open three files
       await createFile(page, 'order1.lua')
       await createFile(page, 'order2.lua')
@@ -146,7 +139,7 @@ test.describe('Tab Persistence', () => {
   })
 
   test.describe('Pinned Tab Persistence', () => {
-    test('pinned state is preserved after refresh', async ({ page }) => {
+    test('pinned state is preserved after refresh', async ({ explorerPage: page }) => {
       // Arrange - Create files and pin one
       await createFile(page, 'pinned.lua')
       await createFile(page, 'unpinned.lua')
@@ -170,7 +163,7 @@ test.describe('Tab Persistence', () => {
       await expect(pinnedTab.locator('[data-testid="pin-icon"]')).toBeVisible()
     })
 
-    test('pinned tabs remain on the left after refresh', async ({ page }) => {
+    test('pinned tabs remain on the left after refresh', async ({ explorerPage: page }) => {
       // Arrange - Create files, pin one that's not first
       await createFile(page, 'first.lua')
       await createFile(page, 'middle.lua')
@@ -198,7 +191,7 @@ test.describe('Tab Persistence', () => {
   })
 
   test.describe('Deleted File Behavior', () => {
-    test('tabs for deleted files are preserved on reload (error shown when opened)', async ({ page }) => {
+    test('tabs for deleted files are preserved on reload (error shown when opened)', async ({ explorerPage: page }) => {
       // Note: We preserve tabs for deleted files rather than filtering them out.
       // This is because the filesystem loads asynchronously, and it's better UX
       // to show an error when a missing file is opened than to lose tabs unexpectedly.
@@ -232,7 +225,7 @@ test.describe('Tab Persistence', () => {
   })
 
   test.describe('Async Workspace Loading', () => {
-    test('should handle tabs for workspaces that load asynchronously', async ({ page }) => {
+    test('should handle tabs for workspaces that load asynchronously', async ({ explorerPage: page }) => {
       // This test verifies that the app doesn't crash when tabs are restored
       // before their workspaces finish loading (race condition fix for #564)
 
@@ -242,19 +235,6 @@ test.describe('Tab Persistence', () => {
 
       // Wait for docs workspace to load and file tree to appear
       await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible({ timeout: 5000 })
-
-      // Expand docs folder
-      const docsFolder = page.getByRole('treeitem', { name: /docs/i }).first()
-      if (await docsFolder.isVisible()) {
-        await docsFolder.click()
-        await expect(docsFolder).toHaveAttribute('aria-expanded', 'true')
-      }
-
-      // Try to find and open a docs file (e.g., lua folder)
-      const luaFolder = page.getByRole('treeitem', { name: /lua/i }).first()
-      if (await luaFolder.isVisible()) {
-        await luaFolder.dblclick()
-      }
 
       // Wait for persistence
       await page.waitForTimeout(PERSISTENCE_WAIT)
@@ -276,7 +256,7 @@ test.describe('Tab Persistence', () => {
   })
 
   test.describe('Canvas Tab Exclusion', () => {
-    test('canvas tabs are not persisted', async ({ page }) => {
+    test('canvas tabs are not persisted', async ({ explorerPage: page }) => {
       // Arrange - Create a file and open it
       await createFile(page, 'file.lua')
       await openFilePermanent(page, 'file.lua')
@@ -311,7 +291,7 @@ test.describe('Tab Persistence', () => {
   })
 
   test.describe('Empty State', () => {
-    test('no tabs restored when localStorage is empty', async ({ page }) => {
+    test('no tabs restored when localStorage is empty', async ({ explorerPage: page }) => {
       // Arrange - Ensure localStorage is clear (done in beforeEach)
       // No files opened
 

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
 import { createTerminalHelper } from './helpers/terminal'
 
@@ -13,17 +13,8 @@ import { createTerminalHelper } from './helpers/terminal'
  * - Apply correct CSS classes for each scaling mode
  */
 test.describe('Canvas Scaling', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/editor')
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for the shell terminal to initialize
-    await expect(page.locator('[data-testid="shell-terminal-container"]')).toBeVisible({
-      timeout: TIMEOUTS.ELEMENT_VISIBLE,
-    })
-  })
-
   test.describe('Scaling Mode Selector', () => {
-    test('displays scaling mode selector in canvas panel', async ({ page }) => {
+    test('displays scaling mode selector in canvas panel', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -63,7 +54,7 @@ test.describe('Canvas Scaling', () => {
       await stopButton.click()
     })
 
-    test('defaults to Fit mode', async ({ page }) => {
+    test('defaults to Fit mode', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -98,7 +89,7 @@ test.describe('Canvas Scaling', () => {
       await stopButton.click()
     })
 
-    test('can switch to 1x mode', async ({ page }) => {
+    test('can switch to 1x mode', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -134,7 +125,7 @@ test.describe('Canvas Scaling', () => {
       await stopButton.click()
     })
 
-    test('can switch to Full mode', async ({ page }) => {
+    test('can switch to Full mode', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -172,7 +163,7 @@ test.describe('Canvas Scaling', () => {
   })
 
   test.describe('CSS Classes', () => {
-    test('applies fit CSS class in fit mode', async ({ page }) => {
+    test('applies fit CSS class in fit mode', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -208,7 +199,7 @@ test.describe('Canvas Scaling', () => {
       await stopButton.click()
     })
 
-    test('applies native CSS class in 1x mode', async ({ page }) => {
+    test('applies native CSS class in 1x mode', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -248,7 +239,7 @@ test.describe('Canvas Scaling', () => {
       await stopButton.click()
     })
 
-    test('applies full CSS class in Full mode', async ({ page }) => {
+    test('applies full CSS class in Full mode', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -290,7 +281,7 @@ test.describe('Canvas Scaling', () => {
   })
 
   test.describe('No Scrollbars in Fit/Full Modes', () => {
-    test('Fit mode should not show scrollbars', async ({ page }) => {
+    test('Fit mode should not show scrollbars', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -342,7 +333,7 @@ test.describe('Canvas Scaling', () => {
       await stopButton.click()
     })
 
-    test('Full mode should not show scrollbars', async ({ page }) => {
+    test('Full mode should not show scrollbars', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -396,7 +387,7 @@ test.describe('Canvas Scaling', () => {
   })
 
   test.describe('localStorage Persistence', () => {
-    test('saves scaling preference to localStorage', async ({ page }) => {
+    test('saves scaling preference to localStorage', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -433,7 +424,7 @@ test.describe('Canvas Scaling', () => {
       await stopButton.click()
     })
 
-    test('restores scaling preference on page reload', async ({ page }) => {
+    test('restores scaling preference on page reload', async ({ shellPage: page }) => {
       // Set preference directly in localStorage
       await page.evaluate(() => localStorage.setItem('canvas-scaling:mode', 'native'))
 

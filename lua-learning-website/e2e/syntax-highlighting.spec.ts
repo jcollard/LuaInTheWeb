@@ -1,41 +1,6 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
-
-// Helper to create and open a file so Monaco editor is visible
-async function createAndOpenFile(page: import('@playwright/test').Page) {
-  const sidebar = page.getByTestId('sidebar-panel')
-
-  // First, expand the workspace folder by clicking its chevron
-  const workspaceChevron = page.getByTestId('folder-chevron').first()
-  await workspaceChevron.click()
-  // Wait for folder to expand by checking for child items
-  await expect(page.getByRole('treeitem').nth(1)).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-
-  // Now click New File button - the file will be created inside the expanded workspace
-  await sidebar.getByRole('button', { name: /new file/i }).click()
-
-  const input = sidebar.getByRole('textbox')
-  await expect(input).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE }) // Wait for rename input to appear
-  await input.press('Enter') // Accept default name
-  await expect(input).not.toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE }) // Wait for rename to complete
-
-  // Click the newly created file to open it (should be second treeitem after workspace)
-  const fileItems = page.getByRole('treeitem')
-  const count = await fileItems.count()
-  if (count > 1) {
-    await fileItems.nth(1).click() // Click the file inside the workspace
-  } else {
-    // Fallback: click first item
-    await fileItems.first().click()
-  }
-
-  // Wait for Monaco to load
-  const monacoEditor = page.locator('.monaco-editor')
-  await expect(monacoEditor).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-  // Wait for Monaco to fully initialize
-  await page.waitForTimeout(TIMEOUTS.UI_STABLE)
-  return monacoEditor
-}
+import { createAndOpenFile } from './helpers/editor'
 
 // Helper to type text slowly with delays (to avoid character dropping)
 async function typeSlowly(page: import('@playwright/test').Page, text: string) {
@@ -46,19 +11,12 @@ async function typeSlowly(page: import('@playwright/test').Page, text: string) {
 }
 
 test.describe('Syntax Highlighting', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start with clean state
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for file tree to render (ensures workspace is ready)
-    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+  test.beforeEach(async ({ explorerPage: page }) => {
     // Wait for UI to fully stabilize before test
     await page.waitForTimeout(TIMEOUTS.UI_STABLE)
   })
 
-  test('highlights Lua keywords correctly', async ({ page }) => {
+  test('highlights Lua keywords correctly', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -70,7 +28,7 @@ test.describe('Syntax Highlighting', () => {
     await expect(viewLines).toContainText('nil')
   })
 
-  test('highlights string literals correctly', async ({ page }) => {
+  test('highlights string literals correctly', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -80,7 +38,7 @@ test.describe('Syntax Highlighting', () => {
     await expect(viewLines).toContainText('"hi"')
   })
 
-  test('highlights numbers correctly', async ({ page }) => {
+  test('highlights numbers correctly', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -90,7 +48,7 @@ test.describe('Syntax Highlighting', () => {
     await expect(viewLines).toContainText('42')
   })
 
-  test('highlights comments correctly', async ({ page }) => {
+  test('highlights comments correctly', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -100,7 +58,7 @@ test.describe('Syntax Highlighting', () => {
     await expect(viewLines).toContainText('-- test')
   })
 
-  test('highlights multi-line strings correctly', async ({ page }) => {
+  test('highlights multi-line strings correctly', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -110,7 +68,7 @@ test.describe('Syntax Highlighting', () => {
     await expect(viewLines).toContainText('[[hi]]')
   })
 
-  test('editor renders syntax tokens with color classes', async ({ page }) => {
+  test('editor renders syntax tokens with color classes', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -124,7 +82,7 @@ test.describe('Syntax Highlighting', () => {
     expect(tokenCount).toBeGreaterThan(0)
   })
 
-  test('highlights function keyword correctly', async ({ page }) => {
+  test('highlights function keyword correctly', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -135,7 +93,7 @@ test.describe('Syntax Highlighting', () => {
     await expect(viewLines).toContainText('end')
   })
 
-  test('highlights hex numbers correctly', async ({ page }) => {
+  test('highlights hex numbers correctly', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -145,7 +103,7 @@ test.describe('Syntax Highlighting', () => {
     await expect(viewLines).toContainText('0xFF')
   })
 
-  test('highlights boolean literals correctly', async ({ page }) => {
+  test('highlights boolean literals correctly', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -155,7 +113,7 @@ test.describe('Syntax Highlighting', () => {
     await expect(viewLines).toContainText('true')
   })
 
-  test('highlights table constructor correctly', async ({ page }) => {
+  test('highlights table constructor correctly', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -166,7 +124,7 @@ test.describe('Syntax Highlighting', () => {
   })
 
   test('multiple variable assignment should highlight all variables identically', async ({
-    page,
+    explorerPage: page,
   }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
@@ -197,7 +155,7 @@ test.describe('Syntax Highlighting', () => {
     expect(variableColors.y).toBe(variableColors.z)
   })
 
-  test('table keys should be highlighted as properties', async ({ page }) => {
+  test('table keys should be highlighted as properties', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -231,7 +189,7 @@ test.describe('Syntax Highlighting', () => {
   })
 
   test('keywords inside multi-line strings should not be highlighted as keywords', async ({
-    page,
+    explorerPage: page,
   }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()

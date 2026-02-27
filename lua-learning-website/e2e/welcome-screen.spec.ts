@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 // Helper to expand workspace folder so files can be created/selected
 async function expandWorkspace(page: import('@playwright/test').Page) {
@@ -8,18 +8,8 @@ async function expandWorkspace(page: import('@playwright/test').Page) {
 }
 
 test.describe('Welcome Screen', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start with clean state (no recent files)
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for file tree to render (ensures workspace is ready)
-    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
-  })
-
   test.describe('initial display', () => {
-    test('displays Welcome Screen when no files are open', async ({ page }) => {
+    test('displays Welcome Screen when no files are open', async ({ explorerPage: page }) => {
       // Assert - Welcome screen should be visible
       await expect(page.locator('[data-testid="welcome-screen"]')).toBeVisible()
 
@@ -27,36 +17,36 @@ test.describe('Welcome Screen', () => {
       await expect(page.getByText('Welcome to Lua IDE')).toBeVisible()
     })
 
-    test('shows New File button in Start section', async ({ page }) => {
+    test('shows New File button in Start section', async ({ explorerPage: page }) => {
       // Assert - New File button should be visible in welcome screen
       const welcomeScreen = page.locator('[data-testid="welcome-screen"]')
       await expect(welcomeScreen.getByRole('button', { name: /new file/i })).toBeVisible()
     })
 
-    test('shows Open Shell button in Start section', async ({ page }) => {
+    test('shows Open Shell button in Start section', async ({ explorerPage: page }) => {
       // Assert - Open Shell button should be visible
       const welcomeScreen = page.locator('[data-testid="welcome-screen"]')
       await expect(welcomeScreen.getByRole('button', { name: /open shell/i })).toBeVisible()
     })
 
-    test('shows Recent Files section', async ({ page }) => {
+    test('shows Recent Files section', async ({ explorerPage: page }) => {
       // Assert - Recent Files section heading should be visible
       await expect(page.getByRole('heading', { name: 'Recent Files' })).toBeVisible()
     })
 
-    test('shows empty state message when no recent files', async ({ page }) => {
+    test('shows empty state message when no recent files', async ({ explorerPage: page }) => {
       // Assert - Should show "No recent files" message
       await expect(page.getByText(/no recent files/i)).toBeVisible()
     })
 
-    test('does not show editor panel when Welcome Screen is displayed', async ({ page }) => {
+    test('does not show editor panel when Welcome Screen is displayed', async ({ explorerPage: page }) => {
       // Assert - Editor panel should not be visible
       await expect(page.locator('[data-testid="editor-panel"]')).not.toBeVisible()
     })
   })
 
   test.describe('New File action', () => {
-    test('clicking New File creates and opens a file', async ({ page }) => {
+    test('clicking New File creates and opens a file', async ({ explorerPage: page }) => {
       // First expand the workspace to see created files
       await expandWorkspace(page)
 
@@ -85,7 +75,7 @@ test.describe('Welcome Screen', () => {
   })
 
   test.describe('Open Shell action', () => {
-    test('clicking Open Shell shows terminal panel if hidden', async ({ page }) => {
+    test('clicking Open Shell shows terminal panel if hidden', async ({ explorerPage: page }) => {
       // Arrange - Hide terminal first using Ctrl+`
       await page.keyboard.press('Control+`')
       await expect(page.locator('[data-testid="bottom-panel"]')).not.toBeVisible()
@@ -98,7 +88,7 @@ test.describe('Welcome Screen', () => {
       await expect(page.locator('[data-testid="bottom-panel"]')).toBeVisible()
     })
 
-    test('clicking Open Shell keeps terminal visible if already shown', async ({ page }) => {
+    test('clicking Open Shell keeps terminal visible if already shown', async ({ explorerPage: page }) => {
       // Arrange - Terminal should be visible by default
       await expect(page.locator('[data-testid="bottom-panel"]')).toBeVisible()
 
@@ -112,7 +102,7 @@ test.describe('Welcome Screen', () => {
   })
 
   test.describe('Recent Files', () => {
-    test('recent files appear after opening files', async ({ page }) => {
+    test('recent files appear after opening files', async ({ explorerPage: page }) => {
       // First expand the workspace
       await expandWorkspace(page)
 
@@ -144,7 +134,7 @@ test.describe('Welcome Screen', () => {
       await expect(welcomeScreen.getByRole('button', { name: /test-file\.lua/i })).toBeVisible()
     })
 
-    test('clicking recent file opens it', async ({ page }) => {
+    test('clicking recent file opens it', async ({ explorerPage: page }) => {
       // First expand the workspace
       await expandWorkspace(page)
 
@@ -180,7 +170,7 @@ test.describe('Welcome Screen', () => {
       await expect(page.getByRole('tab', { name: /recent-test\.lua/i })).toBeVisible()
     })
 
-    test('Clear button removes recent files', async ({ page }) => {
+    test('Clear button removes recent files', async ({ explorerPage: page }) => {
       // First expand the workspace
       await expandWorkspace(page)
 
@@ -217,7 +207,7 @@ test.describe('Welcome Screen', () => {
   })
 
   test.describe('Welcome Screen visibility', () => {
-    test('Welcome Screen reappears when all tabs are closed', async ({ page }) => {
+    test('Welcome Screen reappears when all tabs are closed', async ({ explorerPage: page }) => {
       // First expand the workspace
       await expandWorkspace(page)
 

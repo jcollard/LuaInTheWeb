@@ -197,39 +197,16 @@ When a clear issue is found:
 
 ## Step 7: Begin Work on Selected Issue
 
-Automatically proceed to create the worktree using the Python script:
+Automatically proceed to begin work on the issue:
 
-```bash
-python scripts/worktree-create.py <number>
-```
-
-The script handles:
-1. Checking if worktree already exists (reports path if so)
-2. Fetching issue title from GitHub
-3. Creating slugified branch name
-4. Creating worktree with npm install and mutation cache seeding
-5. Updating issue status to "In Progress" in GitHub Project
-
-After script completes, instruct user to open new Claude Code session in worktree:
-
-```
-### Next Steps
-
-Open a new Claude Code session in the worktree:
-```bash
-cd <worktree-path>
-claude
-```
-
-Then run:
 ```bash
 /issue <number> begin
 ```
-```
 
-When user opens new session in worktree and runs `/issue <number> begin` again, it will:
+This will:
 - Generate implementation plan
 - Wait for approval
+- Create worktree via `EnterWorktree` (session stays in same window)
 - Create/checkout branch
 - Inject TDD context
 - Create task list

@@ -108,6 +108,22 @@ const ExamplesWorkspaceIcon = () => (
   </svg>
 )
 
+// Projects workspace icon - rocket/project themed (starter projects for cloning)
+const ProjectsWorkspaceIcon = () => (
+  <svg className={styles.iconSvg} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" data-testid="projects-workspace-icon">
+    {/* Rocket body */}
+    <path d="M8 1c-1.5 2-2.5 4.5-2.5 7h5C10.5 5.5 9.5 3 8 1z" fill="#e06c75" stroke="#c9545d" strokeWidth="0.5" />
+    {/* Window */}
+    <circle cx="8" cy="6" r="1.2" fill="#61afef" />
+    {/* Left fin */}
+    <path d="M5.5 8L3.5 11h2.5V8z" fill="#e5c07b" />
+    {/* Right fin */}
+    <path d="M10.5 8l2 3h-2.5V8z" fill="#e5c07b" />
+    {/* Flame */}
+    <path d="M6.5 11c0 0 .5 3 1.5 3s1.5-3 1.5-3" fill="#e5c07b" />
+  </svg>
+)
+
 // Loading workspace icon - spinner animation
 const LoadingWorkspaceIcon = () => (
   <svg className={`${styles.iconSvg} ${styles.loadingIcon}`} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" data-testid="loading-workspace-icon">
@@ -126,6 +142,7 @@ export function FileTreeItem({
   isDocsWorkspace,
   isBookWorkspace,
   isExamplesWorkspace,
+  isProjectsWorkspace,
   isLoading,
   isReadOnly,
   isSelected,
@@ -293,6 +310,8 @@ export function FileTreeItem({
               <BookWorkspaceIcon />
             ) : isExamplesWorkspace ? (
               <ExamplesWorkspaceIcon />
+            ) : isProjectsWorkspace ? (
+              <ProjectsWorkspaceIcon />
             ) : isLocalWorkspace ? (
               <LocalWorkspaceIcon />
             ) : (

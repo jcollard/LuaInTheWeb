@@ -47,12 +47,8 @@ git worktree list
 You're in the worktree for issue #<current>, but trying to work on issue #<requested>.
 
 **Options:**
-- Open a new Claude Code session in the correct worktree:
-  ```bash
-  cd <path-to-correct-worktree>
-  claude
-  ```
-- Or switch to main first: `cd ../LuaInTheWeb`
+- Switch to main and create the correct worktree
+- Or if the correct worktree exists, switch to it
 ```
 
 Then STOP - do not proceed further.
@@ -102,13 +98,9 @@ Or similar patterns like:
 
 This issue is part of epic #<epic-number>: <epic-title>
 
-The epic worktree already exists. Please work on this sub-issue from there:
-```bash
-cd ../LuaInTheWeb-epic-<epic-number>
-claude
-```
+The epic worktree already exists at `.claude/worktrees/epic-<epic-number>`.
 
-Then run:
+Switch to the epic worktree using `EnterWorktree` with name `epic-<epic-number>`, then run:
 ```bash
 /epic <epic-number> next
 ```
@@ -249,47 +241,30 @@ Waiting for approval...
 
 ## Step 4: On Approval - Create Worktree (if in main)
 
-After user approves, if in main worktree, create the issue worktree using the Python script.
+After user approves, if in main worktree, create the issue worktree using Claude's built-in `EnterWorktree` tool.
 
-**Delegate to Python script:**
+**4a. Call `EnterWorktree`** with name `issue-<number>`:
+- This creates the worktree at `.claude/worktrees/issue-<number>/`
+- The current session's working directory automatically switches to the worktree
+- A new branch is created from HEAD
 
-```bash
-python scripts/worktree-create.py <number>
-```
+**4b. Post-setup** (after EnterWorktree completes, now inside the worktree):
 
-The script handles:
-1. Checking if worktree already exists (reports path if so)
-2. Fetching issue title from GitHub
-3. Creating slugified branch name (`<number>-<title-slug>`)
-4. Creating worktree at `../LuaInTheWeb-issue-<number>`
-5. Installing npm dependencies
-6. Seeding mutation test cache from main
-7. Updating issue status to "In Progress" in GitHub Project
+1. Install npm dependencies:
+   ```bash
+   npm --prefix lua-learning-website install --silent
+   ```
 
-After the script completes, output:
+2. Seed mutation test cache from main:
+   ```bash
+   MAIN_CACHE="$(git rev-parse --path-format=absolute --git-common-dir)/../lua-learning-website/reports/mutation/.stryker-incremental.json"
+   if [ -f "$MAIN_CACHE" ]; then
+     mkdir -p lua-learning-website/reports/mutation
+     cp "$MAIN_CACHE" lua-learning-website/reports/mutation/.stryker-incremental.json
+   fi
+   ```
 
-```
-### Implementation Plan Approved ✓
-
-<repeat the plan summary>
-
-### Next Steps
-
-Open a new Claude Code session in the worktree:
-```bash
-cd <worktree-path>
-claude
-```
-
-Then run:
-```bash
-/issue <number> begin
-```
-
-**Note**: The worktree is ready with all dependencies. Open a new session there to begin work.
-```
-
-Then STOP - the user must open a new session in the worktree.
+**4c. Continue directly to Step 5** - the session is now in the worktree, so work begins immediately. No need for the user to open a new session.
 
 ---
 
@@ -335,27 +310,18 @@ git checkout <number>-<issue-title-slug>
 
 ### 5.2. Update Project Status
 
-Update the issue status to "In Progress" in the GitHub Project:
+Update the issue status to "In Progress" using the shared Python module:
 
 ```bash
-# Get the project item ID for this issue
-gh project item-list 3 --owner jcollard --format json
-
-# Find the item matching the issue number, then update its status
-# Use gh project item-edit with the item ID and field ID
+python3 -c "
+import sys; sys.path.insert(0, '.')
+from scripts.lib.project_board import update_project_status
+success, msg = update_project_status('<number>', 'In Progress')
+print(msg)
+"
 ```
 
-The project uses these Status values (field ID: `PVTSSF_lAHOADXapM4BKKH8zg6G6Vo`):
-- `Concept` (id: f53885f8) - Needs more definition
-- `Todo` (id: f75ad846) - Ready to work on
-- `In Progress` (id: 47fc9ee4) - Actively being worked on
-- `Needs Review` (id: 44687678) - PR created, awaiting review
-- `Done` (id: 98236657) - Completed
-
-**Note**: Project field updates require knowing the item ID. If the issue isn't in the project yet, add it first:
-```bash
-gh project item-add 3 --owner jcollard --url "https://github.com/jcollard/LuaInTheWeb/issues/<number>"
-```
+This handles finding/adding the project item and updating the status field.
 
 ### 5.3. Inject Development Context
 
@@ -421,10 +387,10 @@ npm run test:mutation:scope "src/components/AffectedComponent/**"
 # This directory is automatically created by the scripts if needed
 
 # Recommended approach - use file-based inputs:
-python scripts/issue-review.py <number> --summary-file .tmp/summary.txt --test-plan-file .tmp/test-plan.txt
+python3 scripts/issue-review.py <number> --summary-file .tmp/summary.txt --test-plan-file .tmp/test-plan.txt
 
 # Or use inline arguments (may have shell escaping issues):
-python scripts/issue-review.py <number> --summary "summary text" --test-plan "test plan"
+python3 scripts/issue-review.py <number> --summary "summary text" --test-plan "test plan"
 ```
 
 **Note**: The `.tmp/` directory is gitignored, so temp files won't be committed.
@@ -463,21 +429,21 @@ If changes are requested after PR creation, use `update-pr.py` to add commits:
 
 ```bash
 # Add additional commits to the PR (runs checks by default)
-python scripts/update-pr.py <pr-number> commit --message "fix: Address review feedback"
+python3 scripts/update-pr.py <pr-number> commit --message "fix: Address review feedback"
 
 # Or use file-based message (recommended for agents)
-python scripts/update-pr.py <pr-number> commit --message-file .tmp/commit-msg.txt
+python3 scripts/update-pr.py <pr-number> commit --message-file .tmp/commit-msg.txt
 
 # Skip checks if needed (not recommended)
-python scripts/update-pr.py <pr-number> commit --message "fix: Quick typo fix" --skip-checks
+python3 scripts/update-pr.py <pr-number> commit --message "fix: Quick typo fix" --skip-checks
 
 # Update PR description
-python scripts/update-pr.py <pr-number> update-body --body "Updated description"
-python scripts/update-pr.py <pr-number> update-body --body-file .tmp/pr-body.txt
+python3 scripts/update-pr.py <pr-number> update-body --body "Updated description"
+python3 scripts/update-pr.py <pr-number> update-body --body-file .tmp/pr-body.txt
 
 # Add a comment to the PR
-python scripts/update-pr.py <pr-number> comment --body "Ready for re-review"
-python scripts/update-pr.py <pr-number> comment --body-file .tmp/comment.txt
+python3 scripts/update-pr.py <pr-number> comment --body "Ready for re-review"
+python3 scripts/update-pr.py <pr-number> comment --body-file .tmp/comment.txt
 ```
 
 **Note**: Use the local `.tmp/` directory for file-based inputs (gitignored).

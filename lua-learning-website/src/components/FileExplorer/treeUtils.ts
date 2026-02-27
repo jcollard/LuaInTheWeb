@@ -81,6 +81,36 @@ export function isExamplesWorkspace(tree: TreeNode[], path: string): boolean {
 }
 
 /**
+ * Check if a path is a projects workspace root (read-only, starter projects for cloning).
+ */
+export function isProjectsWorkspace(tree: TreeNode[], path: string): boolean {
+  for (const node of tree) {
+    if (node.path === path && node.isProjectsWorkspace) {
+      return true
+    }
+  }
+  return false
+}
+
+/**
+ * Check if a path is a direct child folder of the projects workspace root.
+ * e.g., /projects/space_shooter returns true, /projects/space_shooter/src returns false.
+ */
+export function isProjectSubfolder(tree: TreeNode[], path: string): boolean {
+  // Find the projects workspace root
+  const projectsRoot = tree.find((node) => node.isProjectsWorkspace)
+  if (!projectsRoot || !projectsRoot.children) return false
+
+  // Check if path is a direct child folder of the projects root
+  for (const child of projectsRoot.children) {
+    if (child.path === path && child.type === 'folder') {
+      return true
+    }
+  }
+  return false
+}
+
+/**
  * Find the name of a node at a given path in the tree.
  */
 export function findNodeName(tree: TreeNode[], path: string): string {
@@ -140,19 +170,29 @@ export function isMarkdownFile(path: string): boolean {
 }
 
 /**
- * Check if a path is in a read-only workspace (library, docs, or book).
+ * Check if a path is an HTML file (.html or .htm extension).
+ */
+export function isHtmlFile(path: string): boolean {
+  const lower = path.toLowerCase()
+  return lower.endsWith('.html') || lower.endsWith('.htm')
+}
+
+/**
+ * Check if a path is a Lua file (.lua extension).
+ */
+export function isLuaFile(path: string): boolean {
+  return path.toLowerCase().endsWith('.lua')
+}
+
+/**
+ * Check if a path is in a read-only workspace (library, docs, book, examples, or projects).
  */
 export function isInReadOnlyWorkspace(
   tree: TreeNode[],
-  path: string,
-  isLibraryWorkspaceCheck: (path: string) => boolean,
-  isDocsWorkspaceCheck: (path: string) => boolean,
-  isBookWorkspaceCheck: (path: string) => boolean
+  path: string
 ): boolean {
   // Check if path starts with a read-only workspace root
   const workspaceRoot = tree.find(node => path.startsWith(node.path))
   if (!workspaceRoot) return false
-  return isLibraryWorkspaceCheck(workspaceRoot.path) ||
-         isDocsWorkspaceCheck(workspaceRoot.path) ||
-         isBookWorkspaceCheck(workspaceRoot.path)
+  return workspaceRoot.isReadOnly === true
 }

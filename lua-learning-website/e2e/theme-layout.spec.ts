@@ -1,14 +1,8 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
 
 test.describe('Theme - Layout Components', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start fresh
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-  })
-
-  test('applies dark theme when set in localStorage', async ({ page }) => {
+  test('applies dark theme when set in localStorage', async ({ cleanEditorPage: page }) => {
     // Set dark theme in localStorage before reload
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'dark'))
     await page.reload()
@@ -21,7 +15,7 @@ test.describe('Theme - Layout Components', () => {
     expect(theme).toBe('dark')
   })
 
-  test('applies light theme when set in localStorage', async ({ page }) => {
+  test('applies light theme when set in localStorage', async ({ cleanEditorPage: page }) => {
     // Set light theme in localStorage before reload
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'light'))
     await page.reload()
@@ -34,7 +28,7 @@ test.describe('Theme - Layout Components', () => {
     expect(theme).toBe('light')
   })
 
-  test('IDE layout uses theme background colors', async ({ page }) => {
+  test('IDE layout uses theme background colors', async ({ cleanEditorPage: page }) => {
     // Start with dark theme
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'dark'))
     await page.reload()
@@ -61,7 +55,7 @@ test.describe('Theme - Layout Components', () => {
     expect(lightBgColor).toBe('rgb(255, 255, 255)') // #ffffff
   })
 
-  test('activity bar uses theme colors', async ({ page }) => {
+  test('activity bar uses theme colors', async ({ cleanEditorPage: page }) => {
     // Start with dark theme
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'dark'))
     await page.reload()
@@ -88,7 +82,7 @@ test.describe('Theme - Layout Components', () => {
     expect(lightBgColor).toBe('rgb(232, 232, 232)') // #e8e8e8
   })
 
-  test('sidebar panel uses theme colors', async ({ page }) => {
+  test('sidebar panel uses theme colors', async ({ cleanEditorPage: page }) => {
     // Start with dark theme
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'dark'))
     await page.reload()
@@ -115,7 +109,7 @@ test.describe('Theme - Layout Components', () => {
     expect(lightBgColor).toBe('rgb(243, 243, 243)') // #f3f3f3
   })
 
-  test('status bar uses theme accent color', async ({ page }) => {
+  test('status bar uses theme accent color', async ({ cleanEditorPage: page }) => {
     // Start with dark theme
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'dark'))
     await page.reload()
@@ -142,7 +136,7 @@ test.describe('Theme - Layout Components', () => {
     expect(lightBgColor).toBe('rgb(0, 102, 184)') // #0066b8
   })
 
-  test('bottom panel uses theme colors', async ({ page }) => {
+  test('bottom panel uses theme colors', async ({ cleanEditorPage: page }) => {
     // Start with dark theme
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'dark'))
     await page.reload()
@@ -169,7 +163,7 @@ test.describe('Theme - Layout Components', () => {
     expect(lightBgColor).toBe('rgb(255, 255, 255)') // #ffffff
   })
 
-  test('theme persists after page reload', async ({ page }) => {
+  test('theme persists after page reload', async ({ cleanEditorPage: page }) => {
     // Set light theme
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'light'))
     await page.reload()
@@ -192,7 +186,7 @@ test.describe('Theme - Layout Components', () => {
     expect(theme).toBe('light')
   })
 
-  test('theme transition is smooth', async ({ page }) => {
+  test('theme transition is smooth', async ({ cleanEditorPage: page }) => {
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'dark'))
     await page.reload()
     await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
@@ -207,7 +201,7 @@ test.describe('Theme - Layout Components', () => {
     expect(transition).toContain('background-color')
   })
 
-  test('file explorer uses theme colors', async ({ page }) => {
+  test('file explorer uses theme colors', async ({ cleanEditorPage: page }) => {
     // Start with dark theme
     await page.evaluate(() => localStorage.setItem('lua-ide-theme', 'dark'))
     await page.reload()

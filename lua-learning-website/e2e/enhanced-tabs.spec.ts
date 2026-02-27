@@ -1,14 +1,7 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 test.describe('Enhanced Editor Tabs', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start with clean state
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for file tree to render
-    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+  test.beforeEach(async ({ explorerPage: page }) => {
     // Expand the workspace folder so files are visible
     const workspaceFolder = page.getByRole('treeitem').first()
     await page.getByTestId('folder-chevron').first().click()
@@ -36,7 +29,7 @@ test.describe('Enhanced Editor Tabs', () => {
   }
 
   test.describe('Tab Context Menu', () => {
-    test('right-clicking a tab opens context menu', async ({ page }) => {
+    test('right-clicking a tab opens context menu', async ({ explorerPage: page }) => {
       // Arrange - Create and open a file
       await createFile(page, 'test.lua')
       await openFilePermanent(page, 'test.lua')
@@ -51,7 +44,7 @@ test.describe('Enhanced Editor Tabs', () => {
       await expect(page.getByRole('menu')).toBeVisible()
     })
 
-    test('context menu shows Pin option for unpinned tabs', async ({ page }) => {
+    test('context menu shows Pin option for unpinned tabs', async ({ explorerPage: page }) => {
       // Arrange
       await createFile(page, 'test.lua')
       await openFilePermanent(page, 'test.lua')
@@ -66,7 +59,7 @@ test.describe('Enhanced Editor Tabs', () => {
       await expect(page.getByRole('menuitem', { name: /pin/i })).toBeVisible()
     })
 
-    test('clicking Close from context menu closes the tab', async ({ page }) => {
+    test('clicking Close from context menu closes the tab', async ({ explorerPage: page }) => {
       // Arrange
       await createFile(page, 'test.lua')
       await openFilePermanent(page, 'test.lua')
@@ -83,7 +76,7 @@ test.describe('Enhanced Editor Tabs', () => {
       await expect(editorPanel.getByRole('tab')).toHaveCount(0)
     })
 
-    test('Close to Right closes all tabs to the right', async ({ page }) => {
+    test('Close to Right closes all tabs to the right', async ({ explorerPage: page }) => {
       // Arrange - Create and open three files
       await createFile(page, 'file1.lua')
       await createFile(page, 'file2.lua')
@@ -106,7 +99,7 @@ test.describe('Enhanced Editor Tabs', () => {
       await expect(editorPanel.getByRole('tab', { name: /file1\.lua/i })).toBeVisible()
     })
 
-    test('Close Others closes all tabs except the clicked one', async ({ page }) => {
+    test('Close Others closes all tabs except the clicked one', async ({ explorerPage: page }) => {
       // Arrange - Create and open three files
       await createFile(page, 'keep.lua')
       await createFile(page, 'close1.lua')
@@ -131,7 +124,7 @@ test.describe('Enhanced Editor Tabs', () => {
   })
 
   test.describe('Drag and Drop Reordering', () => {
-    test('tabs are draggable', async ({ page }) => {
+    test('tabs are draggable', async ({ explorerPage: page }) => {
       // Arrange
       await createFile(page, 'test.lua')
       await openFilePermanent(page, 'test.lua')
@@ -143,7 +136,7 @@ test.describe('Enhanced Editor Tabs', () => {
       await expect(tab).toHaveAttribute('draggable', 'true')
     })
 
-    test('can reorder tabs via drag and drop', async ({ page }) => {
+    test('can reorder tabs via drag and drop', async ({ explorerPage: page }) => {
       // Arrange - Create and open two files
       await createFile(page, 'first.lua')
       await createFile(page, 'second.lua')

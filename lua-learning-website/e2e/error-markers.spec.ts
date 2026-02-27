@@ -1,54 +1,16 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
-
-// Helper to create and open a file so Monaco editor is visible
-async function createAndOpenFile(page: import('@playwright/test').Page) {
-  const sidebar = page.getByTestId('sidebar-panel')
-
-  // First, expand the workspace folder by clicking its chevron
-  const workspaceChevron = page.getByTestId('folder-chevron').first()
-  await workspaceChevron.click()
-  // Wait for folder to expand by checking for child items
-  await expect(page.getByRole('treeitem').nth(1)).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-
-  // Click New File button
-  await sidebar.getByRole('button', { name: /new file/i }).click()
-
-  const input = sidebar.getByRole('textbox')
-  await expect(input).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-  await input.press('Enter') // Accept default name
-  await expect(input).not.toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-
-  // Click the newly created file to open it
-  const fileItems = page.getByRole('treeitem')
-  const count = await fileItems.count()
-  if (count > 1) {
-    await fileItems.nth(1).click()
-  } else {
-    await fileItems.first().click()
-  }
-  // Wait for Monaco editor to load
-  await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-  // Wait for Monaco to fully initialize
-  await page.waitForTimeout(TIMEOUTS.UI_STABLE)
-}
+import { createAndOpenFile } from './helpers/editor'
 
 test.describe('IDE Editor - Error Markers', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start with clean state
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for file tree to render
-    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+  test.beforeEach(async ({ explorerPage: page }) => {
     // Create and open a file
     await createAndOpenFile(page)
     // Wait for Monaco editor to load
     await expect(page.locator('.monaco-editor')).toBeVisible({ timeout: 10000 })
   })
 
-  test('displays error marker when setError is called', async ({ page }) => {
+  test('displays error marker when setError is called', async ({ explorerPage: page }) => {
     // Type some code in the editor
     const monacoEditor = page.locator('.monaco-editor')
     await monacoEditor.click()
@@ -69,7 +31,7 @@ test.describe('IDE Editor - Error Markers', () => {
     await expect(errorDecoration).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
   })
 
-  test('displays gutter marker for error line', async ({ page }) => {
+  test('displays gutter marker for error line', async ({ explorerPage: page }) => {
     // Type some code
     const monacoEditor = page.locator('.monaco-editor')
     await monacoEditor.click()
@@ -90,7 +52,7 @@ test.describe('IDE Editor - Error Markers', () => {
     await expect(errorDecoration).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
   })
 
-  test('clears error markers when clearErrors is called', async ({ page }) => {
+  test('clears error markers when clearErrors is called', async ({ explorerPage: page }) => {
     // Type code and set error
     const monacoEditor = page.locator('.monaco-editor')
     await monacoEditor.click()
@@ -122,7 +84,7 @@ test.describe('IDE Editor - Error Markers', () => {
     await expect(errorDecoration).not.toBeVisible({ timeout: TIMEOUTS.INIT })
   })
 
-  test('shows error message on hover', async ({ page }) => {
+  test('shows error message on hover', async ({ explorerPage: page }) => {
     // Type code
     const monacoEditor = page.locator('.monaco-editor')
     await monacoEditor.click()
@@ -161,7 +123,7 @@ test.describe('IDE Editor - Error Markers', () => {
     }
   })
 
-  test('error marker appears at correct line number', async ({ page }) => {
+  test('error marker appears at correct line number', async ({ explorerPage: page }) => {
     // Type multi-line code
     const monacoEditor = page.locator('.monaco-editor')
     await monacoEditor.click()

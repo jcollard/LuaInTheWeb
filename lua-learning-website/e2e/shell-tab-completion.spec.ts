@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
 import { createTerminalHelper } from './helpers/terminal'
 
@@ -8,19 +8,10 @@ import { createTerminalHelper } from './helpers/terminal'
  * Tests tab completion for both shell commands and file paths.
  */
 test.describe('Shell Tab Completion', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/editor')
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible({
-      timeout: TIMEOUTS.ELEMENT_VISIBLE,
-    })
-
+  test.beforeEach(async ({ shellPage: page }) => {
     // Switch to Shell tab (in the bottom panel)
     await page.getByRole('tab', { name: /shell/i }).click()
     await page.waitForTimeout(TIMEOUTS.UI_STABLE)
-
-    // Wait for the Shell terminal to initialize
-    const shellContainer = page.locator('[data-testid="shell-terminal-container"]')
-    await expect(shellContainer).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
 
     // Wait for xterm to initialize
     await expect(
@@ -30,7 +21,7 @@ test.describe('Shell Tab Completion', () => {
     })
   })
 
-  test('Tab completes partial command (single match)', async ({ page }) => {
+  test('Tab completes partial command (single match)', async ({ shellPage: page }) => {
     const terminal = createTerminalHelper(page)
     await terminal.focus()
 
@@ -52,7 +43,7 @@ test.describe('Shell Tab Completion', () => {
     await terminal.expectToContain('/')
   })
 
-  test('Tab shows multiple command matches', async ({ page }) => {
+  test('Tab shows multiple command matches', async ({ shellPage: page }) => {
     const terminal = createTerminalHelper(page)
     await terminal.focus()
 
@@ -76,7 +67,7 @@ test.describe('Shell Tab Completion', () => {
     await terminal.expectToContain('/')
   })
 
-  test('Tab on empty input shows available commands', async ({ page }) => {
+  test('Tab on empty input shows available commands', async ({ shellPage: page }) => {
     const terminal = createTerminalHelper(page)
     await terminal.focus()
 
@@ -97,7 +88,7 @@ test.describe('Shell Tab Completion', () => {
     await terminal.expectToContain('Available commands')
   })
 
-  test('Tab completes directory path after command', async ({ page }) => {
+  test('Tab completes directory path after command', async ({ shellPage: page }) => {
     const terminal = createTerminalHelper(page)
     await terminal.focus()
 
@@ -120,7 +111,7 @@ test.describe('Shell Tab Completion', () => {
     await terminal.expectToContain('/testdir')
   })
 
-  test('Tab does nothing when no matches', async ({ page }) => {
+  test('Tab does nothing when no matches', async ({ shellPage: page }) => {
     const terminal = createTerminalHelper(page)
     await terminal.focus()
 
@@ -144,7 +135,7 @@ test.describe('Shell Tab Completion', () => {
     await terminal.expectToContain('/')
   })
 
-  test('Tab completion works after creating files', async ({ page }) => {
+  test('Tab completion works after creating files', async ({ shellPage: page }) => {
     const terminal = createTerminalHelper(page)
     await terminal.focus()
 

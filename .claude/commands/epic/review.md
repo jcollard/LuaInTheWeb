@@ -35,13 +35,9 @@ If NOT in `epic-<number>` worktree:
 The `/epic review` command must be run from the epic worktree.
 
 **Current location**: <current-path>
-**Expected**: ../LuaInTheWeb-epic-<number>
+**Expected**: .claude/worktrees/epic-<number>
 
-Switch to the epic worktree:
-```bash
-cd ../LuaInTheWeb-epic-<number>
-claude
-```
+Switch to the epic worktree using `EnterWorktree` with name `epic-<number>`.
 ```
 
 Then STOP.
@@ -131,19 +127,17 @@ Then STOP and wait for user to resolve.
 ## Step 4: Run Full Test Suite
 
 ```bash
-cd lua-learning-website
-
 # Run all tests
-npm run test
+npm --prefix lua-learning-website run test
 
 # Run linter
-npm run lint
+npm --prefix lua-learning-website run lint
 
 # Run build
-npm run build
+npm --prefix lua-learning-website run build
 
 # Run E2E tests
-npm run test:e2e
+npm --prefix lua-learning-website run test:e2e
 ```
 
 **If any check fails:**
@@ -250,19 +244,15 @@ EOF
 
 ## Step 7: Update Project Board
 
-Update epic issue status to "Needs Review":
+Update epic issue status to "Needs Review" using the shared Python module:
 
 ```bash
-# Get project item ID
-gh project item-list 3 --owner jcollard --format json --limit 100
-
-# Update status
-# Status field ID: PVTSSF_lAHOADXapM4BKKH8zg6G6Vo
-# "Needs Review" option ID: 44687678
-
-gh project item-edit --project-id PVT_kwHOADXapM4BKKH8 --id <item-id> \
-  --field-id PVTSSF_lAHOADXapM4BKKH8zg6G6Vo \
-  --single-select-option-id 44687678
+python3 -c "
+import sys; sys.path.insert(0, '.')
+from scripts.lib.project_board import update_project_status
+success, msg = update_project_status('<epic-number>', 'Needs Review')
+print(msg)
+"
 ```
 
 ---

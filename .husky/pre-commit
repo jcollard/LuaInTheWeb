@@ -1,0 +1,8 @@
+#!/bin/sh
+
+branch=$(git rev-parse --abbrev-ref HEAD)
+if [ "$branch" = "main" ]; then
+  echo "ERROR: Direct commits to main are not allowed."
+  echo "Use '/issue <n> begin' to create a worktree, or 'git worktree add' manually."
+  exit 1
+fi

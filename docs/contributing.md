@@ -87,11 +87,11 @@ See [Testing Guide](./testing.md) for details.
 6. Push and create a PR
 
 **Option B: Worktree (Parallel Development)**
-1. Create a worktree for your issue: `git worktree add ../LuaInTheWeb-issue-<n> -b <n>-feature-name`
-2. Work in the worktree directory
+1. Create a worktree for your issue: `/worktree create <n>` (or `EnterWorktree` with name `issue-<n>`)
+2. Work in the worktree directory (session switches automatically)
 3. Follow TDD and complete your changes
 4. Push and create PR from the worktree
-5. Clean up when done: `git worktree remove ../LuaInTheWeb-issue-<n>`
+5. Clean up when done: `/worktree remove <n>` (or `git worktree remove .claude/worktrees/issue-<n> --force`)
 
 See [Worktrees Guide](./worktrees.md) for detailed documentation on parallel development.
 

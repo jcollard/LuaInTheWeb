@@ -5,6 +5,7 @@
 import type { TreeNode } from '../../hooks/useFileSystem'
 import type { Workspace } from '../../hooks/workspaceTypes'
 import { isBinaryExtension } from '../../utils/binaryExtensions'
+import { isHtmlFile } from '../FileExplorer/treeUtils'
 
 export interface ExplorerPropsParams {
   fileTree: TreeNode[]
@@ -31,8 +32,12 @@ export interface ExplorerPropsParams {
   openBinaryViewer: (path: string) => void
   // ANSI art file handler
   openAnsiEditorFile: (path: string) => void
+  // HTML file handlers
+  openHtmlPreview: (path: string) => void
+  openHtmlInBrowser: (path: string) => void
   // Shell integration
   handleCdToLocation?: (path: string) => void
+  handleRunLuaFile?: (path: string) => void
   // File upload
   uploadFiles?: (files: FileList, targetFolderPath: string) => Promise<void>
   // Folder upload
@@ -52,6 +57,11 @@ export interface ExplorerPropsParams {
   handleRenameWorkspace: (mountPath: string, newName: string) => void
   isFolderAlreadyMounted: (handle: FileSystemDirectoryHandle) => Promise<boolean>
   getUniqueWorkspaceName: (baseName: string) => string
+  // Clone project handler
+  handleCloneProject?: (projectPath: string, workspaceName: string, type: 'virtual' | 'local', handle?: FileSystemDirectoryHandle) => void
+  // Download handlers
+  onDownloadFile?: (path: string) => void
+  onDownloadAsZip?: (path: string) => void
 }
 
 /**
@@ -71,6 +81,10 @@ function isAnsiArtFile(path: string): boolean {
 export function createExplorerProps(params: ExplorerPropsParams) {
   // Smart file opener that routes to appropriate viewer based on file type
   const smartOpenPreviewFile = (path: string) => {
+    if (isHtmlFile(path)) {
+      params.openHtmlPreview(path)
+      return
+    }
     if (isAnsiArtFile(path)) {
       params.openAnsiEditorFile(path)
     } else if (isMarkdownFile(path)) {
@@ -87,6 +101,10 @@ export function createExplorerProps(params: ExplorerPropsParams) {
   // For ANSI art files: open in editor (same as single-click since they're always permanent)
   // For other files: open for editing
   const smartOpenFile = (path: string) => {
+    if (isHtmlFile(path)) {
+      params.makeTabPermanent(path)
+      return
+    }
     if (isAnsiArtFile(path)) {
       params.openAnsiEditorFile(path)
     } else if (isMarkdownFile(path) || isBinaryExtension(path)) {
@@ -115,9 +133,16 @@ export function createExplorerProps(params: ExplorerPropsParams) {
     onCancelPendingNewFolder: params.clearPendingNewFolder,
     onPreviewMarkdown: params.openMarkdownPreview,
     onEditMarkdown: params.openMarkdownEdit,
+    onPreviewHtml: params.openHtmlPreview,
+    onEditHtml: params.openFile,
+    onOpenHtmlInBrowser: params.openHtmlInBrowser,
     onCdToLocation: params.handleCdToLocation,
+    onRunLuaFile: params.handleRunLuaFile,
     onUploadFiles: params.uploadFiles,
     onUploadFolder: params.uploadFolder,
+    onCloneProject: params.handleCloneProject,
+    onDownloadFile: params.onDownloadFile,
+    onDownloadAsZip: params.onDownloadAsZip,
     workspaceProps: {
       workspaces: params.workspaces,
       pendingWorkspaces: params.pendingWorkspaces,

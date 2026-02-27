@@ -181,9 +181,7 @@ git log epic-<number> --oneline -10
 
 <If sub-issue in progress:>
 **Continue current work**: #<current-sub> - <title>
-```bash
-cd ../LuaInTheWeb-issue-<current-sub>
-```
+(switch to worktree at `.claude/worktrees/issue-<current-sub>`)
 
 <If all complete:>
 **Ready for final review!**

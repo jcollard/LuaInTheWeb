@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 Create a commit, push, and open a PR for a GitHub issue.
 
-Usage: python scripts/issue-review.py <issue-number> [options]
+Usage: python3 scripts/issue-review.py <issue-number> [options]
 
 Options:
   --summary "..."       PR summary text (inline)
@@ -46,13 +46,7 @@ from lib.helpers import (
 )
 from lib.manual_testing import generate_manual_testing_checklist
 from lib.visual_verification import run_visual_verification
-
-# Project configuration
-PROJECT_NUMBER = 3
-PROJECT_OWNER = "jcollard"
-REPO_NAME = "LuaInTheWeb"
-STATUS_FIELD_ID = "PVTSSF_lAHOADXapM4BKKH8zg6G6Vo"
-NEEDS_REVIEW_OPTION_ID = "44687678"
+from lib.project_board import update_project_status as _update_status
 
 
 def extract_issue_number_from_branch(branch):
@@ -255,63 +249,7 @@ Fixes #{issue_number}
 
 def update_project_status(issue_number):
     """Update issue status to 'Needs Review' in GitHub Project."""
-    # Get project items
-    items_json, _ = run(
-        f'gh project item-list {PROJECT_NUMBER} --owner {PROJECT_OWNER} --format json --limit 100',
-        check=False
-    )
-
-    if not items_json:
-        return False, "Could not fetch project items"
-
-    try:
-        data = json.loads(items_json)
-        items = data.get('items', [])
-    except json.JSONDecodeError:
-        return False, "Invalid JSON from project"
-
-    # Find the item for this issue
-    item_id = None
-    for item in items:
-        content = item.get('content', {})
-        if content.get('number') == int(issue_number):
-            item_id = item.get('id')
-            break
-
-    if not item_id:
-        return False, "Issue not found in project"
-
-    # Get project ID
-    project_json, _ = run(
-        f'gh project list --owner {PROJECT_OWNER} --format json',
-        check=False
-    )
-
-    project_id = None
-    if project_json:
-        try:
-            projects = json.loads(project_json)
-            for proj in projects.get('projects', []):
-                if proj.get('number') == PROJECT_NUMBER:
-                    project_id = proj.get('id')
-                    break
-        except json.JSONDecodeError:
-            pass
-
-    if not project_id:
-        return False, "Could not find project ID"
-
-    # Update the status
-    output, err = run(
-        f'gh project item-edit --project-id {project_id} --id {item_id} '
-        f'--field-id {STATUS_FIELD_ID} --single-select-option-id {NEEDS_REVIEW_OPTION_ID}',
-        check=False
-    )
-
-    if output is None and err:
-        return False, f"Failed to update status: {err}"
-
-    return True, "Status updated to Needs Review"
+    return _update_status(issue_number, "Needs Review")
 
 
 def parse_args():
@@ -444,39 +382,45 @@ def main():
 
     print()
 
-    # Step 5: Run checks (unless skipped)
+    # Step 5: Run checks in parallel (unless skipped)
     if not args['skip_checks']:
-        print(f"{BLUE}Running validation checks...{NC}")
+        print(f"{BLUE}Running validation checks (parallel)...{NC}")
         print()
 
-        # Tests
-        tests_pass, test_output = run_tests(npm_dir)
-        if tests_pass:
-            print(f"  Tests: {GREEN}[PASS]{NC}")
-        else:
-            print(f"  Tests: {RED}[FAIL]{NC}")
-            print(f"\n{test_output}")
-            print(f"\n{RED}Error: Tests must pass before creating PR{NC}")
-            sys.exit(1)
+        from concurrent.futures import ThreadPoolExecutor, as_completed
 
-        # Lint
-        lint_pass, lint_output = run_lint(npm_dir)
-        if lint_pass:
-            print(f"  Lint: {GREEN}[PASS]{NC}")
-        else:
-            print(f"  Lint: {RED}[FAIL]{NC}")
-            print(f"\n{lint_output}")
-            print(f"\n{RED}Error: Lint must pass before creating PR{NC}")
-            sys.exit(1)
+        checks = {
+            'Tests': lambda: run_tests(npm_dir),
+            'Lint': lambda: run_lint(npm_dir),
+            'Build': lambda: run_build(npm_dir),
+        }
 
-        # Build
-        build_pass, build_output = run_build(npm_dir)
-        if build_pass:
-            print(f"  Build: {GREEN}[PASS]{NC}")
-        else:
-            print(f"  Build: {RED}[FAIL]{NC}")
-            print(f"\n{build_output}")
-            print(f"\n{RED}Error: Build must pass before creating PR{NC}")
+        results = {}
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {executor.submit(fn): name for name, fn in checks.items()}
+            for future in as_completed(futures):
+                name = futures[future]
+                passed, output = future.result()
+                results[name] = (passed, output)
+
+        # Report results in consistent order
+        all_passed = True
+        for name in ['Tests', 'Lint', 'Build']:
+            passed, output = results[name]
+            if passed:
+                print(f"  {name}: {GREEN}[PASS]{NC}")
+            else:
+                print(f"  {name}: {RED}[FAIL]{NC}")
+                all_passed = False
+
+        if not all_passed:
+            # Print failure details
+            for name in ['Tests', 'Lint', 'Build']:
+                passed, output = results[name]
+                if not passed:
+                    print(f"\n--- {name} Output ---")
+                    print(output)
+            print(f"\n{RED}Error: All checks must pass before creating PR{NC}")
             sys.exit(1)
 
         print()

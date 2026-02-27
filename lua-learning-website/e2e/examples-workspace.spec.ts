@@ -1,15 +1,8 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
 
 test.describe('Examples Workspace', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start with clean state
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for file tree to render
-    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+  test.beforeEach(async ({ explorerPage: page }) => {
     // Wait for examples workspace to finish loading (loading icon should disappear)
     // This ensures the async fetch has completed before we try to interact
     const examplesWorkspace = page.getByRole('treeitem', { name: /^examples$/i })
@@ -19,17 +12,17 @@ test.describe('Examples Workspace', () => {
   })
 
   test.describe('examples workspace display', () => {
-    test('displays examples workspace as root folder in tree', async ({ page }) => {
+    test('displays examples workspace as root folder in tree', async ({ explorerPage: page }) => {
       // Assert - Examples workspace should be visible in the file tree
       await expect(page.getByRole('treeitem', { name: /^examples$/i })).toBeVisible()
     })
 
-    test('shows examples workspace icon', async ({ page }) => {
+    test('shows examples workspace icon', async ({ explorerPage: page }) => {
       // Assert - Examples workspace should have its distinct icon
       await expect(page.getByTestId('examples-workspace-icon')).toBeVisible()
     })
 
-    test('can expand examples workspace to see hello.lua', async ({ page }) => {
+    test('can expand examples workspace to see hello.lua', async ({ explorerPage: page }) => {
       // Arrange - Find examples workspace
       const examplesWorkspace = page.getByRole('treeitem', { name: /^examples$/i })
       await expect(examplesWorkspace).toBeVisible()
@@ -42,7 +35,7 @@ test.describe('Examples Workspace', () => {
       await expect(page.getByRole('treeitem', { name: 'hello.lua' })).toBeVisible()
     })
 
-    test('examples workspace contains example files and folders', async ({ page }) => {
+    test('examples workspace contains example files and folders', async ({ explorerPage: page }) => {
       // Arrange - Expand examples workspace
       const examplesWorkspace = page.getByRole('treeitem', { name: /^examples$/i })
       await examplesWorkspace.getByTestId('folder-chevron').click()
@@ -58,7 +51,7 @@ test.describe('Examples Workspace', () => {
       await expect(page.getByRole('treeitem', { name: 'canvas', exact: true })).toBeVisible()
     })
 
-    test('can expand ascii_world folder to see game modules', async ({ page }) => {
+    test('can expand ascii_world folder to see game modules', async ({ explorerPage: page }) => {
       // Arrange - Expand examples workspace
       const examplesWorkspace = page.getByRole('treeitem', { name: /^examples$/i })
       await examplesWorkspace.getByTestId('folder-chevron').click()
@@ -75,7 +68,7 @@ test.describe('Examples Workspace', () => {
   })
 
   test.describe('example file viewing', () => {
-    test('can open hello.lua from examples workspace', async ({ page }) => {
+    test('can open hello.lua from examples workspace', async ({ explorerPage: page }) => {
       // Arrange - Expand examples workspace
       const examplesWorkspace = page.getByRole('treeitem', { name: /^examples$/i })
       await examplesWorkspace.getByTestId('folder-chevron').click()
@@ -91,7 +84,7 @@ test.describe('Examples Workspace', () => {
       await expect(tabBar).toContainText('hello.lua')
     })
 
-    test('hello.lua contains Hello World program', async ({ page }) => {
+    test('hello.lua contains Hello World program', async ({ explorerPage: page }) => {
       // Arrange - Expand examples workspace and open hello.lua
       const examplesWorkspace = page.getByRole('treeitem', { name: /^examples$/i })
       await examplesWorkspace.getByTestId('folder-chevron').click()
@@ -107,7 +100,7 @@ test.describe('Examples Workspace', () => {
   })
 
   test.describe('example file read-only behavior', () => {
-    test('shows error toast when trying to save hello.lua', async ({ page }) => {
+    test('shows error toast when trying to save hello.lua', async ({ explorerPage: page }) => {
       // Arrange - Open hello.lua
       const examplesWorkspace = page.getByRole('treeitem', { name: /^examples$/i })
       await examplesWorkspace.getByTestId('folder-chevron').click()
@@ -133,7 +126,7 @@ test.describe('Examples Workspace', () => {
   })
 
   test.describe('examples workspace context menu', () => {
-    test('examples workspace should not have Remove option in context menu', async ({ page }) => {
+    test('examples workspace should not have Remove option in context menu', async ({ explorerPage: page }) => {
       // Act - Right-click on examples workspace
       const examplesWorkspace = page.getByRole('treeitem', { name: /^examples$/i })
       await examplesWorkspace.click({ button: 'right' })
@@ -146,7 +139,7 @@ test.describe('Examples Workspace', () => {
       await expect(removeOption).not.toBeVisible()
     })
 
-    test('examples workspace should not have Rename option in context menu', async ({ page }) => {
+    test('examples workspace should not have Rename option in context menu', async ({ explorerPage: page }) => {
       // Act - Right-click on examples workspace
       const examplesWorkspace = page.getByRole('treeitem', { name: /^examples$/i })
       await examplesWorkspace.click({ button: 'right' })

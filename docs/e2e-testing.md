@@ -159,11 +159,14 @@ npm run test:e2e:headed
 
 ### CI/CD
 
-E2E tests run automatically in GitHub Actions on:
-- Push to `main` branch
-- Pull requests to `main`
+E2E tests run **locally only** — they are too expensive to run in CI. A commit status gate blocks PR merges until E2E is manually verified:
 
-The workflow is defined in `.github/workflows/e2e.yml`.
+1. **PR opened** — `.github/workflows/e2e.yml` sets a pending "E2E Tests" commit status
+2. **Developer runs E2E locally** — `npm run test:e2e`
+3. **Developer comments `/e2e-verified`** on the PR
+4. **`.github/workflows/e2e-on-demand.yml`** sets the status to success, unblocking merge
+
+If new commits are pushed after verification, the status resets to pending and must be re-verified.
 
 ## Configuration
 

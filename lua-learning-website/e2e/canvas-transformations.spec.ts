@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
 import { createTerminalHelper } from './helpers/terminal'
 
@@ -11,16 +11,8 @@ import { createTerminalHelper } from './helpers/terminal'
  * - Typical transformation workflows work correctly
  */
 test.describe('Canvas Transformations', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/editor')
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    await expect(page.locator('[data-testid="shell-terminal-container"]')).toBeVisible({
-      timeout: TIMEOUTS.ELEMENT_VISIBLE,
-    })
-  })
-
   test.describe('Transformation Functions Availability', () => {
-    test('canvas module has all transformation functions', async ({ page }) => {
+    test('canvas module has all transformation functions', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -75,7 +67,7 @@ test.describe('Canvas Transformations', () => {
   })
 
   test.describe('Transformation Function Calls', () => {
-    test('translate function can be called', async ({ page }) => {
+    test('translate function can be called', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -99,7 +91,7 @@ test.describe('Canvas Transformations', () => {
       await terminal.expectToContain('translate ok', { timeout: TIMEOUTS.ASYNC_OPERATION })
     })
 
-    test('rotate function can be called', async ({ page }) => {
+    test('rotate function can be called', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -123,7 +115,7 @@ test.describe('Canvas Transformations', () => {
       await terminal.expectToContain('rotate ok', { timeout: TIMEOUTS.ASYNC_OPERATION })
     })
 
-    test('scale function can be called', async ({ page }) => {
+    test('scale function can be called', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -147,7 +139,7 @@ test.describe('Canvas Transformations', () => {
       await terminal.expectToContain('scale ok', { timeout: TIMEOUTS.ASYNC_OPERATION })
     })
 
-    test('save and restore functions can be called', async ({ page }) => {
+    test('save and restore functions can be called', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -175,7 +167,7 @@ test.describe('Canvas Transformations', () => {
       await terminal.expectToContain('save/restore ok', { timeout: TIMEOUTS.ASYNC_OPERATION })
     })
 
-    test('transform function can be called with matrix values', async ({ page }) => {
+    test('transform function can be called with matrix values', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -199,7 +191,7 @@ test.describe('Canvas Transformations', () => {
       await terminal.expectToContain('transform ok', { timeout: TIMEOUTS.ASYNC_OPERATION })
     })
 
-    test('set_transform function can be called', async ({ page }) => {
+    test('set_transform function can be called', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -223,7 +215,7 @@ test.describe('Canvas Transformations', () => {
       await terminal.expectToContain('set_transform ok', { timeout: TIMEOUTS.ASYNC_OPERATION })
     })
 
-    test('reset_transform function can be called', async ({ page }) => {
+    test('reset_transform function can be called', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -249,7 +241,7 @@ test.describe('Canvas Transformations', () => {
   })
 
   test.describe('Transformation Workflow', () => {
-    test('transformations work during canvas execution', async ({ page }) => {
+    test('transformations work during canvas execution', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 

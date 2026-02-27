@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
 import { createTerminalHelper } from './helpers/terminal'
 
@@ -17,17 +17,8 @@ import { createTerminalHelper } from './helpers/terminal'
  * creating script files.
  */
 test.describe('Canvas Shell Integration', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/editor')
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for the shell terminal to initialize
-    await expect(page.locator('[data-testid="shell-terminal-container"]')).toBeVisible({
-      timeout: TIMEOUTS.ELEMENT_VISIBLE,
-    })
-  })
-
   test.describe('Canvas Module Pattern', () => {
-    test('canvas is not available as a global', async ({ page }) => {
+    test('canvas is not available as a global', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -48,7 +39,7 @@ test.describe('Canvas Shell Integration', () => {
       await terminal.expectToContain('nil', { timeout: TIMEOUTS.ASYNC_OPERATION })
     })
 
-    test('require("canvas") returns the canvas module', async ({ page }) => {
+    test('require("canvas") returns the canvas module', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -73,7 +64,7 @@ test.describe('Canvas Shell Integration', () => {
       await terminal.expectToContain('table', { timeout: TIMEOUTS.ASYNC_OPERATION })
     })
 
-    test('canvas module has expected functions', async ({ page }) => {
+    test('canvas module has expected functions', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -101,7 +92,7 @@ test.describe('Canvas Shell Integration', () => {
   })
 
   test.describe('Canvas Tab Opens', () => {
-    test('canvas.start() opens a canvas tab in REPL', async ({ page }) => {
+    test('canvas.start() opens a canvas tab in REPL', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -146,7 +137,7 @@ test.describe('Canvas Shell Integration', () => {
       await terminal.expectToContain('starting canvas', { timeout: TIMEOUTS.ASYNC_OPERATION })
     })
 
-    test('canvas tab shows correct tab name', async ({ page }) => {
+    test('canvas tab shows correct tab name', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -180,7 +171,7 @@ test.describe('Canvas Shell Integration', () => {
   })
 
   test.describe('Print Output During Canvas', () => {
-    test('print() output goes to terminal while canvas runs', async ({ page }) => {
+    test('print() output goes to terminal while canvas runs', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -232,7 +223,7 @@ test.describe('Canvas Shell Integration', () => {
   })
 
   test.describe('canvas.stop() Behavior', () => {
-    test('canvas.stop() closes canvas tab', async ({ page }) => {
+    test('canvas.stop() closes canvas tab', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -275,7 +266,7 @@ test.describe('Canvas Shell Integration', () => {
   })
 
   test.describe('Ctrl+C Handling', () => {
-    test('Stop button stops canvas and closes tab', async ({ page }) => {
+    test('Stop button stops canvas and closes tab', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -319,7 +310,7 @@ test.describe('Canvas Shell Integration', () => {
   })
 
   test.describe('Canvas Tab Close from UI (Issue #361)', () => {
-    test('closing canvas tab stops the canvas process', async ({ page }) => {
+    test('closing canvas tab stops the canvas process', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -366,7 +357,7 @@ test.describe('Canvas Shell Integration', () => {
       await terminal.expectToContain('after close', { timeout: TIMEOUTS.ASYNC_OPERATION })
     })
 
-    test('closing canvas tab does not leave orphaned game loop', async ({ page }) => {
+    test('closing canvas tab does not leave orphaned game loop', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -421,7 +412,7 @@ test.describe('Canvas Shell Integration', () => {
   })
 
   test.describe('Error Handling', () => {
-    test('second canvas.start() throws error', async ({ page }) => {
+    test('second canvas.start() throws error', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 

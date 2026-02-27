@@ -13,7 +13,8 @@
     "test:shell-core": "npm run test -w @lua-learning/shell-core",
     "test:lua-runtime": "npm run test -w @lua-learning/lua-runtime",
     "ci": "node scripts/ci-local.js",
-    "ci:quick": "node scripts/ci-local.js --skip-e2e"
+    "ci:quick": "node scripts/ci-local.js --skip-e2e",
+    "ci:scope": "node scripts/ci-local.js --scope"
   },
   "devDependencies": {
     "husky": "^9.1.7"

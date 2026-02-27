@@ -36,65 +36,6 @@ Parse the arguments:
 
 ---
 
-## Step 0: Pre-Review Confirmation (Required)
-
-> **IMPORTANT:** Before starting the review, you MUST display the review criteria and get user confirmation.
-
-Output this confirmation message:
-
-```
-## Review Criteria Checklist
-
-I will review PR #<number> against the following criteria:
-
-**Diff Coverage (MANDATORY):**
-- [ ] Read the ENTIRE diff - every line of every changed file
-- [ ] Do NOT skip any files regardless of diff size
-- [ ] If diff is large, process it in chunks but cover 100%
-
-**Code Quality:**
-- [ ] Verify tests perform real testing (not just coverage)
-- [ ] Check best practices are followed
-- [ ] Identify DRY violations (duplicate code)
-- [ ] Identify SOLID principle violations
-
-**Architecture:**
-- [ ] UI components are pure (no business logic)
-- [ ] All logic extracted into custom hooks
-- [ ] Proper separation of concerns
-
-**TypeScript:**
-- [ ] No `any` types
-- [ ] Explicit return types on public functions
-- [ ] Props interfaces defined
-
-**Testing:**
-- [ ] Tests accompany code changes
-- [ ] AAA pattern used (Arrange-Act-Assert)
-- [ ] Edge cases and error cases covered
-- [ ] Tests are colocated with components
-- [ ] Mutation score >= 80% on changed code
-
-**Security:**
-- [ ] No user input rendered as HTML without sanitization
-- [ ] No secrets in code
-- [ ] Input validation present at boundaries
-
-**Additional Checks:**
-- [ ] Error handling is explicit with user-friendly messages
-- [ ] Performance considerations (unnecessary re-renders, memory leaks)
-- [ ] Accessibility (ARIA labels, keyboard navigation)
-- [ ] Naming is clear and intention-revealing
-
-Shall I proceed with the review?
-```
-
-**Wait for user confirmation before continuing to Step 1.**
-
-If user says no or wants to modify criteria, discuss and adjust as needed.
-
----
-
 ## Step 1: Fetch PR Details
 
 ```bash
@@ -281,10 +222,32 @@ Use this information to:
 ## Step 5: Check CI Status (if available)
 
 ```bash
-gh pr checks <number> --json name,state,conclusion
+gh pr checks <number> --json name,state,description
 ```
 
 Report the status of CI checks if available.
+
+**IMPORTANT — Understanding the E2E gate**: The E2E verification uses a **commit status** (not a workflow check run), which can cause confusion in `gh pr checks` output:
+
+| Name in `gh pr checks` | What it is | Meaning |
+|---|---|---|
+| `e2e-gate` | CI **job** that sets the pending commit status | Its state reflects whether the *job* ran, NOT whether E2E is verified |
+| `ci` | Main CI job (lint, build, test) | SUCCESS = all CI checks passed |
+| `E2E Tests` | **Commit status** created by the `e2e-gate` job | `pending` = not verified, `success` = `/e2e-verified` posted |
+
+**Do NOT use `gh pr checks` to determine E2E verification status.** The `e2e-gate` check may show SUCCESS (the job completed) even though the "E2E Tests" commit status it created is still `pending`. Instead, query the **commit status API**:
+
+```bash
+# Get head SHA from PR
+SHA=$(gh pr view <number> --json headRefOid --jq .headRefOid)
+
+# Check E2E Tests commit status
+gh api repos/jcollard/LuaInTheWeb/commits/$SHA/status --jq '.statuses[] | select(.context == "E2E Tests") | .state'
+```
+
+- `pending` — E2E not yet verified (blocks merge)
+- `success` — E2E verified via `/e2e-verified` comment
+- Empty output — Status not set yet (CI hasn't run on this commit)
 
 ---
 
@@ -419,8 +382,10 @@ If subcommand is "accept" (`/pr-review 27 accept`):
 ### 8a. Fetch PR Details and Validate
 
 ```bash
-gh pr view <number> --json number,title,body,state,headRefName,baseRefName,mergeable,url
+gh pr view <number> --json number,title,body,state,headRefName,headRefOid,baseRefName,mergeable,url
 ```
+
+Store `headRefOid` — you will need it in Step 8c to check the E2E commit status.
 
 **Validation checks:**
 - PR must be in OPEN state (not already merged or closed)
@@ -480,7 +445,7 @@ Before merging, verify the branch is ready:
 git fetch origin
 
 # Verify tests pass (quick check)
-cd lua-learning-website && npm run test 2>&1 | tail -5
+npm --prefix lua-learning-website run test 2>&1 | tail -5
 ```
 
 If tests fail:
@@ -491,6 +456,67 @@ If tests fail:
 
 Run `/code-review` to see full test results and fix issues before merging.
 ```
+
+#### Check E2E Verification Status
+
+**IMPORTANT:** Do NOT use `gh pr checks` to check E2E status — it shows the `e2e-gate` *job* status, not the "E2E Tests" *commit status*. Use the commit status API instead:
+
+```bash
+# Use headRefOid from step 8a
+gh api repos/jcollard/LuaInTheWeb/commits/<headRefOid>/status \
+  --jq '.statuses[] | select(.context == "E2E Tests") | .state'
+```
+
+**Handle the result:**
+
+| Status | Action |
+|--------|--------|
+| `success` | E2E verified — proceed to merge |
+| `pending` | E2E not yet verified — see below |
+| Empty (no output) | Commit status not set yet (CI hasn't run on this SHA) — see below |
+
+**If E2E is NOT verified (`pending` or empty):**
+
+This is common after pushing new commits (each push resets the status to `pending`). Offer to resolve it:
+
+```
+### E2E Verification Required
+
+The "E2E Tests" commit status is pending for SHA <headRefOid short>.
+This blocks merging.
+
+**Options:**
+1. Run E2E tests now and post `/e2e-verified` (recommended if not already run)
+2. Post `/e2e-verified` now (only if E2E tests already passed locally for this commit)
+3. Abort and handle manually
+```
+
+If user chooses to run E2E:
+```bash
+npm --prefix lua-learning-website run test:e2e
+```
+Then post the verification comment.
+
+If user confirms E2E already passed (or tests just passed above):
+```bash
+gh pr comment <number> --body "/e2e-verified"
+```
+
+Then **wait for the commit status to propagate** (the `e2e-on-demand.yml` workflow needs to run):
+```bash
+# Poll until status changes (up to 60s)
+for i in $(seq 1 12); do
+  STATUS=$(gh api repos/jcollard/LuaInTheWeb/commits/<headRefOid>/status \
+    --jq '.statuses[] | select(.context == "E2E Tests") | .state' 2>/dev/null)
+  if [ "$STATUS" = "success" ]; then
+    echo "E2E Tests verified"
+    break
+  fi
+  sleep 5
+done
+```
+
+If status never becomes `success` after waiting, report the issue and abort.
 
 ### 8c.5. Clean Up Worktree (Before Merge)
 
@@ -505,12 +531,12 @@ Run `/code-review` to see full test results and fix issues before merging.
 2. **Check if worktree exists** for this issue:
    ```bash
    git worktree list
-   # Look for worktree matching pattern: *-issue-<issue-number>
+   # Look for worktree matching pattern: issue-<issue-number> (at .claude/worktrees/issue-<n>)
    ```
 
 3. **If worktree exists, check for uncommitted changes:**
    ```bash
-   # Get the worktree path (e.g., ../LuaInTheWeb-issue-149)
+   # Get the worktree path (e.g., .claude/worktrees/issue-149)
    git -C "<worktree-path>" status --porcelain
    ```
 
@@ -530,15 +556,16 @@ Run `/code-review` to see full test results and fix issues before merging.
 
    If user types "abort", stop the accept process.
 
-5. **Remove the worktree** (using `--keep-branch` since merge will handle branch deletion):
+5. **Remove the worktree** (keep branch since merge will handle branch deletion):
    ```bash
-   python scripts/worktree-remove.py <issue-number> --keep-branch --headless
+   git worktree remove .claude/worktrees/issue-<issue-number> --force
+   git worktree prune
    ```
 
    Output:
    ```
    ### Pre-Merge Worktree Cleanup
-   - ✅ Removed worktree: <worktree-path>
+   - ✅ Removed worktree: .claude/worktrees/issue-<issue-number>
    - ℹ️ Branch kept (will be deleted by merge)
    ```
 
@@ -562,7 +589,7 @@ gh pr merge <number> --merge --delete-branch
 
 1. Navigate to epic worktree:
    ```bash
-   cd ../LuaInTheWeb-epic-<epic-number>
+   # Epic worktree is at .claude/worktrees/epic-<epic-number>
    ```
 
 2. Update the sub-issue row in EPIC-<n>.md to mark as complete:
@@ -738,13 +765,12 @@ gh project item-list 3 --owner jcollard --format json --limit 100
 Find the item matching the linked issue number, then update its status:
 
 ```bash
-# Project configuration
-# - Status field ID: PVTSSF_lAHOADXapM4BKKH8zg6G6Vo
-# - "Done" option ID: 98236657
-
-gh project item-edit --project-id <project-id> --id <item-id> \
-  --field-id PVTSSF_lAHOADXapM4BKKH8zg6G6Vo \
-  --single-select-option-id 98236657
+python3 -c "
+import sys; sys.path.insert(0, '.')
+from scripts.lib.project_board import update_project_status
+success, msg = update_project_status('<issue-number>', 'Done')
+print(msg)
+"
 ```
 
 **Note**: If the project has GitHub automation enabled with "Item closed" → "Done", this may happen automatically.
@@ -761,11 +787,14 @@ gh issue close <linked-issue-number> --reason completed
 
 **Note:** Worktree cleanup was performed in Step 8c.5 (before merge). This step verifies cleanup was successful.
 
-If the worktree directory still exists (e.g., on Windows where directory deletion can fail):
+If the worktree directory still exists (e.g., directory deletion can sometimes fail):
 
 ```bash
-# Check if orphaned directory exists
-python scripts/worktree-remove.py <issue-number> --orphan --headless
+# Check if orphaned directory exists and clean up
+if [ -d ".claude/worktrees/issue-<issue-number>" ]; then
+  rm -rf .claude/worktrees/issue-<issue-number>
+  git worktree prune
+fi
 ```
 
 This handles cleanup of directories that weren't fully removed in Step 8c.5.
@@ -1046,7 +1075,7 @@ Found: Fixes #7
 - Branch up to date: ✅
 
 ### Pre-Merge Worktree Cleanup
-- ✅ Removed worktree: C:\Users\User\git\jcollard\LuaInTheWeb-issue-7
+- ✅ Removed worktree: .claude/worktrees/issue-7
 - ℹ️ Branch kept (will be deleted by merge)
 
 ### Merging...

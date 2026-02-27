@@ -4,21 +4,16 @@
  * Note: We can't easily test the File System Access API in E2E tests,
  * so these tests verify the modal renders correctly when loading state is true.
  */
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 test.describe('LoadingModal', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/editor')
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-  })
-
-  test('loading modal is not visible by default', async ({ page }) => {
+  test('loading modal is not visible by default', async ({ editorPage: page }) => {
     // The loading modal should not be visible when not loading
     const modal = page.locator('[aria-busy="true"][role="dialog"]')
     await expect(modal).not.toBeVisible()
   })
 
-  test('loading modal renders correctly when forced visible via console', async ({ page }) => {
+  test('loading modal renders correctly when forced visible via console', async ({ editorPage: page }) => {
     // Inject a test to force the loading modal visible by finding the React state
     // This is a debugging test to verify the modal component works
 
@@ -35,7 +30,7 @@ test.describe('LoadingModal', () => {
     expect(hasLoadingModalInTree).toBe(true)
   })
 
-  test('debug: check if loading spinner CSS exists', async ({ page }) => {
+  test('debug: check if loading spinner CSS exists', async ({ editorPage: page }) => {
     // Verify the loading spinner styles are loaded
     const styles = await page.evaluate(() => {
       const styleSheets = Array.from(document.styleSheets)

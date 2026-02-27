@@ -1,41 +1,6 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
-
-// Helper to create and open a file so Monaco editor is visible
-async function createAndOpenFile(page: import('@playwright/test').Page) {
-  const sidebar = page.getByTestId('sidebar-panel')
-
-  // First, expand the workspace folder by clicking its chevron
-  const workspaceChevron = page.getByTestId('folder-chevron').first()
-  await workspaceChevron.click()
-  // Wait for folder to expand by checking for child items
-  await expect(page.getByRole('treeitem').nth(1)).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-
-  // Now click New File button - the file will be created inside the expanded workspace
-  await sidebar.getByRole('button', { name: /new file/i }).click()
-
-  const input = sidebar.getByRole('textbox')
-  await expect(input).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE }) // Wait for rename input to appear
-  await input.press('Enter') // Accept default name
-  await expect(input).not.toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE }) // Wait for rename to complete
-
-  // Click the newly created file to open it (should be second treeitem after workspace)
-  const fileItems = page.getByRole('treeitem')
-  const count = await fileItems.count()
-  if (count > 1) {
-    await fileItems.nth(1).click() // Click the file inside the workspace
-  } else {
-    // Fallback: click first item
-    await fileItems.first().click()
-  }
-
-  // Wait for Monaco to load
-  const monacoEditor = page.locator('.monaco-editor')
-  await expect(monacoEditor).toBeVisible({ timeout: TIMEOUTS.ELEMENT_VISIBLE })
-  // Wait for Monaco to fully initialize
-  await page.waitForTimeout(TIMEOUTS.UI_STABLE)
-  return monacoEditor
-}
+import { createAndOpenFile } from './helpers/editor'
 
 // Helper to type text slowly with delays (to avoid character dropping)
 async function typeSlowly(page: import('@playwright/test').Page, text: string) {
@@ -81,19 +46,12 @@ function getIndentLevel(text: string): number {
 }
 
 test.describe('Auto-Indentation', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start with clean state
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for file tree to render (ensures workspace is ready)
-    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+  test.beforeEach(async ({ explorerPage: page }) => {
     // Wait for UI to fully stabilize before test
     await page.waitForTimeout(TIMEOUTS.UI_STABLE)
   })
 
-  test('indents after function declaration', async ({ page }) => {
+  test('indents after function declaration', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -112,7 +70,7 @@ test.describe('Auto-Indentation', () => {
     expect(containsText(lines[1], 'return')).toBe(true)
   })
 
-  test('indents after if-then statement', async ({ page }) => {
+  test('indents after if-then statement', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -128,7 +86,7 @@ test.describe('Auto-Indentation', () => {
     expect(containsText(lines[1], 'print')).toBe(true)
   })
 
-  test('indents after for-do loop', async ({ page }) => {
+  test('indents after for-do loop', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -143,7 +101,7 @@ test.describe('Auto-Indentation', () => {
     expect(containsText(lines[1], 'print')).toBe(true)
   })
 
-  test('indents after while-do loop', async ({ page }) => {
+  test('indents after while-do loop', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -158,7 +116,7 @@ test.describe('Auto-Indentation', () => {
     expect(containsText(lines[1], 'x = x')).toBe(true)
   })
 
-  test('indents after repeat block', async ({ page }) => {
+  test('indents after repeat block', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -173,7 +131,7 @@ test.describe('Auto-Indentation', () => {
     expect(containsText(lines[1], 'x = x')).toBe(true)
   })
 
-  test('indents after else keyword', async ({ page }) => {
+  test('indents after else keyword', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -193,7 +151,7 @@ test.describe('Auto-Indentation', () => {
     expect(hasElse).toBe(true)
   })
 
-  test('handles nested function inside if block', async ({ page }) => {
+  test('handles nested function inside if block', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -216,7 +174,7 @@ test.describe('Auto-Indentation', () => {
     expect(containsText(lines[2], 'return')).toBe(true)
   })
 
-  test('handles nested loops', async ({ page }) => {
+  test('handles nested loops', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -247,7 +205,7 @@ test.describe('Auto-Indentation', () => {
     expect(getIndentLevel(outerLoopLine!)).toBe(0)
   })
 
-  test('typing end should auto-dedent to match opening block', async ({ page }) => {
+  test('typing end should auto-dedent to match opening block', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -270,7 +228,7 @@ test.describe('Auto-Indentation', () => {
     expect(getIndentLevel(endLine!)).toBe(getIndentLevel(ifLine!))
   })
 
-  test('typing end should dedent to match nested function', async ({ page }) => {
+  test('typing end should dedent to match nested function', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -296,7 +254,7 @@ test.describe('Auto-Indentation', () => {
     expect(getIndentLevel(endLines[0])).toBe(getIndentLevel(innerFuncLine!))
   })
 
-  test('typing else should dedent to match if block', async ({ page }) => {
+  test('typing else should dedent to match if block', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -320,7 +278,7 @@ test.describe('Auto-Indentation', () => {
     expect(getIndentLevel(elseLine!)).toBe(getIndentLevel(ifLine!))
   })
 
-  test('typing elseif should dedent to match if block', async ({ page }) => {
+  test('typing elseif should dedent to match if block', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -344,7 +302,7 @@ test.describe('Auto-Indentation', () => {
     expect(getIndentLevel(elseifLine!)).toBe(getIndentLevel(ifLine!))
   })
 
-  test('typing until should dedent to match repeat block', async ({ page }) => {
+  test('typing until should dedent to match repeat block', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -368,15 +326,12 @@ test.describe('Auto-Indentation', () => {
     expect(getIndentLevel(untilLine!)).toBe(getIndentLevel(repeatLine!))
   })
 
-  test('editor has language configuration applied', async ({ page }) => {
+  test('editor has language configuration applied', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
-    // Verify Monaco has loaded with Lua language
-    const hasMonaco = await page.evaluate(() => {
-      return typeof (window as { monaco?: unknown }).monaco !== 'undefined'
-    })
-    expect(hasMonaco).toBe(true)
+    // Verify Monaco editor has loaded
+    await expect(monacoEditor).toBeVisible()
 
     // Type some Lua code to verify editor is working
     await typeSlowly(page, 'local x = 1')
@@ -385,7 +340,7 @@ test.describe('Auto-Indentation', () => {
     expect(containsText(lines[0], 'local x = 1')).toBe(true)
   })
 
-  test('typing on empty line inside function auto-indents', async ({ page }) => {
+  test('typing on empty line inside function auto-indents', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
@@ -410,7 +365,7 @@ test.describe('Auto-Indentation', () => {
     expect(getIndentLevel(printLine!)).toBeGreaterThanOrEqual(1)
   })
 
-  test('typing on empty line inside nested blocks auto-indents correctly', async ({ page }) => {
+  test('typing on empty line inside nested blocks auto-indents correctly', async ({ explorerPage: page }) => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 

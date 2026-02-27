@@ -6,6 +6,7 @@
 
 import type { IFileSystem } from '@lua-learning/shell-core'
 import { fetchExamplesContent } from './examplesFetcher'
+import { fetchProjectsContent } from './projectsFetcher'
 import { fetchDocsContent } from './docsFetcher'
 import { fetchLibsContent } from './libsFetcher'
 import type {
@@ -35,6 +36,10 @@ export const EXAMPLES_WORKSPACE_ID = 'examples'
 export const EXAMPLES_WORKSPACE_NAME = 'examples'
 export const EXAMPLES_MOUNT_PATH = '/examples'
 export const EXAMPLES_PUBLIC_PATH = '/examples'
+export const PROJECTS_WORKSPACE_ID = 'projects'
+export const PROJECTS_WORKSPACE_NAME = 'Projects'
+export const PROJECTS_MOUNT_PATH = '/projects'
+export const PROJECTS_PUBLIC_PATH = '/projects'
 
 /**
  * Generate a unique workspace ID.
@@ -97,6 +102,7 @@ const NON_PERSISTED_WORKSPACE_IDS = new Set([
   DOCS_WORKSPACE_ID,
   EXAMPLES_WORKSPACE_ID,
   BOOK_WORKSPACE_ID,
+  PROJECTS_WORKSPACE_ID,
 ])
 
 /**
@@ -228,6 +234,38 @@ export async function fetchAndCreateExamplesWorkspace(): Promise<Workspace | nul
 }
 
 /**
+ * Create the projects workspace from pre-fetched content.
+ * This workspace is read-only and contains starter projects that users can clone.
+ * Includes both text files (Lua code) and binary files (images, fonts).
+ */
+export function createProjectsWorkspace(
+  text: Record<string, string>,
+  binary?: Record<string, Uint8Array>
+): Workspace {
+  return {
+    id: PROJECTS_WORKSPACE_ID,
+    name: PROJECTS_WORKSPACE_NAME,
+    type: 'projects',
+    mountPath: PROJECTS_MOUNT_PATH,
+    filesystem: createReadOnlyFileSystem(text, binary),
+    status: 'connected',
+    isReadOnly: true,
+  }
+}
+
+/**
+ * Fetch projects content and create the projects workspace.
+ * Returns null if the fetch fails.
+ */
+export async function fetchAndCreateProjectsWorkspace(): Promise<Workspace | null> {
+  const content = await fetchProjectsContent()
+  if (Object.keys(content.text).length === 0) {
+    return null
+  }
+  return createProjectsWorkspace(content.text, content.binary)
+}
+
+/**
  * Fetch docs content and create the docs workspace.
  * Returns null if the fetch fails.
  */
@@ -313,6 +351,7 @@ export function initializeWorkspaces(): WorkspaceManagerState {
     DOCS_WORKSPACE_ID,
     EXAMPLES_WORKSPACE_ID,
     LIBRARY_WORKSPACE_ID,
+    PROJECTS_WORKSPACE_ID,
   ])
 
   if (!persistedWorkspaces || persistedWorkspaces.length === 0) {

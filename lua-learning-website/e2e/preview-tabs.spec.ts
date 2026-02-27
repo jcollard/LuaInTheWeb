@@ -1,14 +1,7 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 test.describe('Preview Tabs', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start with clean state
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for file tree to render
-    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+  test.beforeEach(async ({ explorerPage: page }) => {
     // Expand the workspace folder so files are visible
     const workspaceChevron = page.getByTestId('folder-chevron').first()
     await workspaceChevron.click()
@@ -16,7 +9,7 @@ test.describe('Preview Tabs', () => {
   })
 
   test.describe('single-click behavior', () => {
-    test('single-clicking a file opens it in a preview tab with italic name', async ({ page }) => {
+    test('single-clicking a file opens it in a preview tab with italic name', async ({ explorerPage: page }) => {
       // Arrange - Create a file
       const sidebar = page.getByTestId('sidebar-panel')
       await sidebar.getByRole('button', { name: /new file/i }).click()
@@ -36,7 +29,7 @@ test.describe('Preview Tabs', () => {
       await expect(tab).toHaveClass(/_preview_/)
     })
 
-    test('single-clicking another file replaces the preview tab', async ({ page }) => {
+    test('single-clicking another file replaces the preview tab', async ({ explorerPage: page }) => {
       // Arrange - Create two files
       const sidebar = page.getByTestId('sidebar-panel')
       const editorPanel = page.getByTestId('editor-panel')
@@ -77,7 +70,7 @@ test.describe('Preview Tabs', () => {
   })
 
   test.describe('double-click behavior', () => {
-    test('double-clicking a file opens it as a permanent tab (no italics)', async ({ page }) => {
+    test('double-clicking a file opens it as a permanent tab (no italics)', async ({ explorerPage: page }) => {
       // Arrange - Create a file
       const sidebar = page.getByTestId('sidebar-panel')
       const editorPanel = page.getByTestId('editor-panel')
@@ -97,7 +90,7 @@ test.describe('Preview Tabs', () => {
       await expect(tab).not.toHaveClass(/_preview_/)
     })
 
-    test('double-clicking opens permanent tab that is not replaced by single-click', async ({ page }) => {
+    test('double-clicking opens permanent tab that is not replaced by single-click', async ({ explorerPage: page }) => {
       // Arrange - Create two files
       const sidebar = page.getByTestId('sidebar-panel')
       const editorPanel = page.getByTestId('editor-panel')
@@ -135,7 +128,7 @@ test.describe('Preview Tabs', () => {
   })
 
   test.describe('preview to permanent conversion', () => {
-    test('editing a preview tab converts it to permanent', async ({ page }) => {
+    test('editing a preview tab converts it to permanent', async ({ explorerPage: page }) => {
       // Arrange - Create a file and open as preview
       const sidebar = page.getByTestId('sidebar-panel')
       const editorPanel = page.getByTestId('editor-panel')
@@ -167,7 +160,7 @@ test.describe('Preview Tabs', () => {
   })
 
   test.describe('mixed tab behavior', () => {
-    test('can have both permanent and preview tabs open', async ({ page }) => {
+    test('can have both permanent and preview tabs open', async ({ explorerPage: page }) => {
       // Arrange - Create three files
       const sidebar = page.getByTestId('sidebar-panel')
       const editorPanel = page.getByTestId('editor-panel')

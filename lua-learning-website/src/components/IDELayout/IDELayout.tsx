@@ -17,6 +17,7 @@ import { AnsiTabContent } from './AnsiTabContent'
 import { AnsiEditorTabContent } from './AnsiEditorTabContent'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import { MarkdownTabContent } from './MarkdownTabContent'
+import { HtmlTabContent } from './HtmlTabContent'
 import { BinaryTabContent } from './BinaryTabContent'
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts'
 import { useBeforeUnloadWarning } from '../../hooks/useBeforeUnloadWarning'
@@ -25,8 +26,10 @@ import { useCanvasWindowManager } from '../../hooks/useCanvasWindowManager'
 import { useWindowFocusRefresh } from '../../hooks/useWindowFocusRefresh'
 import { useWorkspaceManager } from '../../hooks/useWorkspaceManager'
 import { useEditorExtensions } from '../../hooks/useEditorExtensions'
+import { useCloneProject } from '../../hooks/useCloneProject'
 import { createFileSystemAdapter } from '../../hooks/compositeFileSystemAdapter'
 import { initFormatter, formatLuaCode } from '../../utils/luaFormatter'
+import { downloadSingleFile, downloadDirectoryAsZip } from '../../utils/downloadHelper'
 import type { Workspace } from '../../hooks/workspaceTypes'
 import type { IFileSystem, ScreenMode } from '@lua-learning/shell-core'
 import styles from './IDELayout.module.css'
@@ -42,7 +45,7 @@ interface IDELayoutInnerProps {
   compositeFileSystem: IFileSystem
   workspaces: Workspace[]
   pendingWorkspaces: Set<string>
-  addVirtualWorkspace: (name: string) => void
+  addVirtualWorkspace: (name: string) => Promise<Workspace>
   addLocalWorkspace: (name: string, handle: FileSystemDirectoryHandle) => Promise<Workspace>
   removeWorkspace: (workspaceId: string) => void
   isFileSystemAccessSupported: () => boolean
@@ -101,6 +104,8 @@ function IDELayoutInner({
     openFile,
     openPreviewFile,
     openMarkdownPreview,
+    openHtmlPreview,
+    openHtmlInBrowser,
     openBinaryViewer,
     saveFile,
     // New file creation
@@ -163,6 +168,7 @@ function IDELayoutInner({
   // ANSI tab management
   const hasAnsiTabs = tabs.some(t => t.type === 'ansi')
   const hasAnsiEditorTabs = tabs.some(t => t.type === 'ansi-editor')
+  const htmlTabPath = tabs.find(t => t.type === 'html')?.path ?? null
 
   // ANSI tab request management (ansiId -> resolver for terminal handle)
   const pendingAnsiRequestsRef = useRef<Map<string, (handle: AnsiTerminalHandle) => void>>(new Map())
@@ -689,6 +695,23 @@ function IDELayoutInner({
     shellRef.current?.executeCommand(`cd "${path}"`)
   }, [terminalVisible, toggleTerminal])
 
+  // Handle "Run" for Lua files from file explorer context menu
+  const handleRunLuaFile = useCallback((path: string) => {
+    // Show terminal if hidden
+    if (!terminalVisible) {
+      toggleTerminal()
+    }
+    // Stop any currently running process before executing new one
+    shellRef.current?.stopCurrentProcess()
+    // Extract directory and filename from path
+    const lastSlash = path.lastIndexOf('/')
+    const dir = lastSlash > 0 ? path.substring(0, lastSlash) : '/'
+    const filename = path.substring(lastSlash + 1)
+    // cd to directory, then run lua file
+    shellRef.current?.executeCommand(`cd "${dir}"`)
+    shellRef.current?.executeCommand(`lua "${filename}"`)
+  }, [terminalVisible, toggleTerminal])
+
   // Handle file open request from shell's 'open' command
   // Routes to appropriate viewer based on file type
   const handleRequestOpenFile = useCallback((filePath: string) => {
@@ -697,6 +720,8 @@ function IDELayoutInner({
       openAnsiEditorFile(filePath)
     } else if (lowerPath.endsWith('.md')) {
       openMarkdownPreview(filePath)
+    } else if (lowerPath.endsWith('.html') || lowerPath.endsWith('.htm')) {
+      openHtmlPreview(filePath)
     } else if (
       lowerPath.endsWith('.png') || lowerPath.endsWith('.jpg') ||
       lowerPath.endsWith('.jpeg') || lowerPath.endsWith('.gif') ||
@@ -714,7 +739,7 @@ function IDELayoutInner({
     } else {
       openFile(filePath)
     }
-  }, [openFile, openAnsiEditorFile, openMarkdownPreview, openBinaryViewer])
+  }, [openFile, openAnsiEditorFile, openMarkdownPreview, openHtmlPreview, openBinaryViewer])
 
   // Format the current code
   const handleFormat = useCallback(() => {
@@ -733,16 +758,46 @@ function IDELayoutInner({
     }, 0)
   }, [code, setCode, showError])
 
+  const { handleCloneProject } = useCloneProject({
+    compositeFileSystem,
+    addVirtualWorkspace,
+    addLocalWorkspace,
+    refreshFileTree,
+    showError,
+  })
+
+  // Download handlers for context menu
+  const handleDownloadFile = useCallback(async (path: string) => {
+    try {
+      await downloadSingleFile(compositeFileSystem, path)
+    } catch (err) {
+      showError(`Download failed: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }, [compositeFileSystem, showError])
+
+  const handleDownloadAsZip = useCallback(async (path: string) => {
+    try {
+      const zipName = path.split('/').filter(Boolean).pop() || 'download'
+      await downloadDirectoryAsZip(compositeFileSystem, path, zipName)
+    } catch (err) {
+      showError(`Download failed: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }, [compositeFileSystem, showError])
+
   // Explorer props for FileExplorer
   const explorerProps = createExplorerProps({
     fileTree, activeTab, pendingNewFilePath, pendingNewFolderPath,
     handleCreateFile, handleCreateFolder, renameFile, renameFolder,
     deleteFile, deleteFolder, openFile, openPreviewFile, moveFile, copyFile,
     clearPendingNewFile, clearPendingNewFolder, openMarkdownPreview, openMarkdownEdit: openFile,
-    makeTabPermanent, openBinaryViewer, openAnsiEditorFile, handleCdToLocation, uploadFiles, uploadFolder, workspaces, pendingWorkspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
+    makeTabPermanent, openBinaryViewer, openAnsiEditorFile, openHtmlPreview, openHtmlInBrowser,
+    handleCdToLocation, handleRunLuaFile, uploadFiles, uploadFolder, workspaces, pendingWorkspaces, isFileSystemAccessSupported: isFileSystemAccessSupported(),
     addVirtualWorkspace, handleAddLocalWorkspace, handleRemoveWorkspace, refreshWorkspace,
     refreshFileTree, supportsRefresh, handleReconnectWorkspace, handleDisconnectWorkspace,
     handleRenameWorkspace, isFolderAlreadyMounted, getUniqueWorkspaceName,
+    handleCloneProject,
+    onDownloadFile: handleDownloadFile,
+    onDownloadAsZip: handleDownloadAsZip,
   })
 
   // Tab bar props for EditorPanel (only when tabs exist)
@@ -848,6 +903,22 @@ function IDELayoutInner({
                           currentFilePath={activeTab}
                           onOpenMarkdown={openMarkdownPreview}
                         />
+                      )}
+                      {/* HTML preview - positioned off-screen when hidden to preserve iframe browsing context */}
+                      {htmlTabPath && (
+                        <div style={activeTabType === 'html'
+                          ? { display: 'contents' }
+                          : { position: 'absolute', width: 0, height: 0, overflow: 'hidden', opacity: 0, pointerEvents: 'none' as const }
+                        }>
+                          <HtmlTabContent
+                            content={
+                              compositeFileSystem.exists(htmlTabPath)
+                                ? compositeFileSystem.readFile(htmlTabPath)
+                                : ''
+                            }
+                            tabBarProps={tabBarProps}
+                          />
+                        </div>
                       )}
                       {/* Binary file viewer - shown when binary tab is active */}
                       {activeTabType === 'binary' && activeTab && compositeFileSystem.exists(activeTab) && (
