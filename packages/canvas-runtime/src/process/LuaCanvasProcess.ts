@@ -522,6 +522,8 @@ export class LuaCanvasProcess implements IProcess {
   /**
    * Handle moduleContentRequest message from worker.
    * Reads module file content from filesystem and sends it back to the worker.
+   * @param moduleName - The original module name (used to build resolution paths)
+   * @param modulePath - Passed through in the response message (not used for resolution)
    */
   private handleModuleContentRequest(moduleName: string, modulePath: string): void {
     if (!this.worker) return;

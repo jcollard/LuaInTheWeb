@@ -357,6 +357,8 @@ export class HtmlGenerator {
         globalThis.setupAudioBridge(engine, state, ASSET_MANIFEST);
 
         // Set up custom require to load from embedded modules
+        // NOTE: This __load_module block is duplicated in generateShell().
+        // Changes here MUST be mirrored in both locations.
         engine.global.set('__load_module', (modulePath) => {
           let code;
           // Try literal dots preserved first (compound extensions like .ansi.lua)
@@ -623,6 +625,8 @@ export class HtmlGenerator {
         }
 
         // Set up custom require to load from embedded modules
+        // NOTE: This __load_module block is duplicated in generateCanvas().
+        // Changes here MUST be mirrored in both locations.
         engine.global.set('__load_module', (modulePath) => {
           let code;
           // Try literal dots preserved first (compound extensions like .ansi.lua)
