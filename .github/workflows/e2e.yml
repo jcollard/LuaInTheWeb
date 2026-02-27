@@ -12,6 +12,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Set a pending commit status so E2E is required before merge.
+  # The actual E2E tests run on-demand via /run-e2e comment.
+  e2e-gate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set pending E2E status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.payload.pull_request.head.sha,
+              state: 'pending',
+              context: 'E2E Tests',
+              description: 'Waiting for /run-e2e — comment on the PR to trigger',
+            });
+
   ci:
     runs-on: ubuntu-latest
 
