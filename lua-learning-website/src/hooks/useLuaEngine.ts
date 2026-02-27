@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { LuaFactory, LuaEngine } from 'wasmoon'
+import { getWasmUri } from '../wasmSetup'
 import type { UseLuaEngineOptions, UseLuaEngineReturn } from './types'
 
 /**
@@ -124,7 +125,7 @@ export function useLuaEngine(options: UseLuaEngineOptions): UseLuaEngineReturn {
     let mounted = true
 
     const initEngine = async () => {
-      const factory = new LuaFactory()
+      const factory = new LuaFactory(getWasmUri())
       const lua = await factory.createEngine()
 
       if (!mounted) {

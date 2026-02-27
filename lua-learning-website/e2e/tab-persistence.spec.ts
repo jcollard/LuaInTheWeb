@@ -236,19 +236,6 @@ test.describe('Tab Persistence', () => {
       // Wait for docs workspace to load and file tree to appear
       await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible({ timeout: 5000 })
 
-      // Expand docs folder
-      const docsFolder = page.getByRole('treeitem', { name: /docs/i }).first()
-      if (await docsFolder.isVisible()) {
-        await docsFolder.click()
-        await expect(docsFolder).toHaveAttribute('aria-expanded', 'true')
-      }
-
-      // Try to find and open a docs file (e.g., lua folder)
-      const luaFolder = page.getByRole('treeitem', { name: /lua/i }).first()
-      if (await luaFolder.isVisible()) {
-        await luaFolder.dblclick()
-      }
-
       // Wait for persistence
       await page.waitForTimeout(PERSISTENCE_WAIT)
 

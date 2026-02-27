@@ -290,6 +290,18 @@ export interface CodeCompletenessResult {
  * Factory for creating Lua engines with standard setup.
  */
 export class LuaEngineFactory {
+  /** Custom WASM URI for LuaFactory. Set via setWasmUri() at app startup. */
+  private static wasmUri: string | undefined
+
+  /**
+   * Configure the WASM URI for all LuaFactory instances created by this factory.
+   * Call this once at app startup to avoid cross-origin WASM fetches blocked by COEP.
+   * @param uri - Same-origin URL to the wasmoon glue.wasm file
+   */
+  static setWasmUri(uri: string): void {
+    LuaEngineFactory.wasmUri = uri
+  }
+
   /**
    * Create a new Lua engine with callbacks configured.
    * @param callbacks - Output/error/input handlers
@@ -300,7 +312,7 @@ export class LuaEngineFactory {
     callbacks: LuaEngineCallbacks,
     options?: LuaEngineOptions
   ): Promise<LuaEngine> {
-    const factory = new LuaFactory()
+    const factory = new LuaFactory(LuaEngineFactory.wasmUri)
     const engine = await factory.createEngine()
 
     // Apply options with defaults

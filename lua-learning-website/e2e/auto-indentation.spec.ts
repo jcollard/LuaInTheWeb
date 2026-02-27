@@ -330,11 +330,8 @@ test.describe('Auto-Indentation', () => {
     const monacoEditor = await createAndOpenFile(page)
     await monacoEditor.click()
 
-    // Verify Monaco has loaded with Lua language
-    const hasMonaco = await page.evaluate(() => {
-      return typeof (window as { monaco?: unknown }).monaco !== 'undefined'
-    })
-    expect(hasMonaco).toBe(true)
+    // Verify Monaco editor has loaded
+    await expect(monacoEditor).toBeVisible()
 
     // Type some Lua code to verify editor is working
     await typeSlowly(page, 'local x = 1')

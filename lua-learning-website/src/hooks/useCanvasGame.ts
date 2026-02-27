@@ -7,6 +7,7 @@ import {
   LuaCanvasProcess,
   isSharedArrayBufferAvailable,
 } from '@lua-learning/canvas-runtime'
+import { getWasmUri } from '../wasmSetup'
 
 export type CanvasGameState = 'idle' | 'running' | 'error'
 export type CanvasGameMode = 'performance' | 'compatibility'
@@ -70,6 +71,7 @@ export function useCanvasGame(
       const process = new LuaCanvasProcess({
         code,
         canvas,
+        wasmUri: getWasmUri(),
       })
 
       // Wire up callbacks

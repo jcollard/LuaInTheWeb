@@ -76,7 +76,7 @@ function handleModuleContentResponse(moduleName: string, content: string | null)
 /**
  * Handle INIT message - initialize the runtime with Lua code.
  */
-async function handleInit(code: string, sharedBuffer?: SharedArrayBuffer): Promise<void> {
+async function handleInit(code: string, sharedBuffer?: SharedArrayBuffer, wasmUri?: string): Promise<void> {
   try {
     // Create the appropriate channel based on whether SharedArrayBuffer is provided
     if (sharedBuffer) {
@@ -86,7 +86,7 @@ async function handleInit(code: string, sharedBuffer?: SharedArrayBuffer): Promi
     }
 
     // Create and initialize the runtime
-    runtime = new LuaCanvasRuntime(channel);
+    runtime = new LuaCanvasRuntime(channel, wasmUri);
 
     // Set up error handler
     runtime.onError((message) => {
@@ -243,7 +243,7 @@ self.onmessage = async (event: MessageEvent<MainToWorkerMessage & { buffer?: Sha
 
   switch (message.type) {
     case 'init':
-      await handleInit(message.code, event.data.buffer);
+      await handleInit(message.code, event.data.buffer, message.wasmUri);
       break;
 
     case 'assetsLoaded':

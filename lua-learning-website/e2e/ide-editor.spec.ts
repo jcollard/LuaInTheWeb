@@ -128,14 +128,16 @@ test.describe('IDE Editor', () => {
     // Click on Search icon
     await page.getByRole('button', { name: /search/i }).click()
 
-    // Assert - Sidebar should show Search
+    // Assert - Sidebar should show Search header and placeholder
+    await expect(page.locator('[data-testid="sidebar-panel"]').getByText('Search', { exact: true })).toBeVisible()
     await expect(page.getByText('Search coming soon...')).toBeVisible()
 
     // Click on Extensions icon
     await page.getByRole('button', { name: /extensions/i }).click()
 
-    // Assert - Sidebar should show Extensions
-    await expect(page.getByText('Extensions coming soon...')).toBeVisible()
+    // Assert - Sidebar should show Extensions header and panel content
+    await expect(page.locator('[data-testid="sidebar-panel"]').getByText('Extensions', { exact: true })).toBeVisible()
+    await expect(page.getByTestId('extensions-panel')).toBeVisible()
   })
 
   test('displays Welcome Screen when no file is open', async ({ editorPage: page }) => {

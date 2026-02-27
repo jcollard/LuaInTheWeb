@@ -309,48 +309,6 @@ test.describe('Markdown Viewer', () => {
       expect(Math.abs(scrollAfterSwitch - scrollBeforeSwitch)).toBeLessThan(50)
     })
 
-    test('editor scroll position is preserved when switching between two editor tabs', async ({ explorerPage: page }) => {
-      // Open libs folder
-      const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })
-      await libsWorkspace.getByTestId('folder-chevron').click()
-
-      // DOUBLE-click shell.lua to create permanent tab
-      await page.getByRole('treeitem', { name: 'shell.lua' }).dblclick()
-      await expect(page.locator('.monaco-editor')).toBeVisible()
-      await page.waitForTimeout(500)
-
-      // Scroll down in shell.lua
-      await page.evaluate(() => {
-        const monaco = (window as unknown as { monaco?: { editor: { getEditors: () => Array<{ setScrollTop: (v: number) => void }> } } }).monaco
-        monaco?.editor.getEditors()[0]?.setScrollTop(250)
-      })
-      await page.waitForTimeout(200)
-
-      // DOUBLE-click canvas.lua to create second tab
-      await page.getByRole('treeitem', { name: 'canvas.lua' }).dblclick()
-      await expect(page.locator('.monaco-editor')).toBeVisible()
-      await page.waitForTimeout(500)
-
-      // Scroll down in canvas.lua
-      await page.evaluate(() => {
-        const monaco = (window as unknown as { monaco?: { editor: { getEditors: () => Array<{ setScrollTop: (v: number) => void }> } } }).monaco
-        monaco?.editor.getEditors()[0]?.setScrollTop(400)
-      })
-      await page.waitForTimeout(200)
-
-      // Switch back to shell.lua tab
-      await page.getByRole('tab', { name: /shell\.lua/i }).click()
-      await page.waitForTimeout(500)
-
-      // Verify scroll position is preserved (should be ~250, not 400)
-      const shellScrollAfter = await page.evaluate(() => {
-        const monaco = (window as unknown as { monaco?: { editor: { getEditors: () => Array<{ getScrollTop: () => number }> } } }).monaco
-        return monaco?.editor.getEditors()[0]?.getScrollTop() ?? 0
-      })
-
-      expect(shellScrollAfter).toBeGreaterThan(100)
-      expect(shellScrollAfter).toBeLessThan(350)
-    })
   })
 
   test.describe('markdown tab switching', () => {

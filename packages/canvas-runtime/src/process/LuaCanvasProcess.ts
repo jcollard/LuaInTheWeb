@@ -45,6 +45,8 @@ export interface LuaCanvasProcessOptions {
   fileSystem?: IFileSystem;
   /** Script directory for resolving relative asset paths (optional) */
   scriptDirectory?: string;
+  /** Custom WASM URI for LuaFactory (avoids cross-origin CDN fetch blocked by COEP) */
+  wasmUri?: string;
 }
 
 /**
@@ -62,6 +64,7 @@ export class LuaCanvasProcess implements IProcess {
   private readonly mode: ChannelMode;
   private readonly fileSystem?: IFileSystem;
   private readonly scriptDirectory: string;
+  private readonly wasmUri?: string;
 
   private worker: Worker | null = null;
   private running = false;
@@ -121,6 +124,7 @@ export class LuaCanvasProcess implements IProcess {
     this.mode = options.mode ?? 'auto';
     this.fileSystem = options.fileSystem;
     this.scriptDirectory = options.scriptDirectory ?? '/';
+    this.wasmUri = options.wasmUri;
   }
 
   /**
@@ -186,9 +190,11 @@ export class LuaCanvasProcess implements IProcess {
       code: string;
       buffer?: SharedArrayBuffer;
       port?: MessagePort;
+      wasmUri?: string;
     } = {
       type: 'init',
       code: this.code,
+      wasmUri: this.wasmUri,
     };
 
     // Transfer the appropriate resources to the worker
