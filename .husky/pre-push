@@ -1,26 +1,32 @@
 #!/bin/sh
 
-# Skip if environment variable is set (for agents/CI)
-if [ "$SKIP_PRE_PUSH_TESTS" = "1" ]; then
-  echo "Skipping pre-push tests (SKIP_PRE_PUSH_TESTS=1)"
-  exit 0
-fi
-
 # Get the branch being pushed to
 remote="$1"
 url="$2"
 
-# Read stdin for refs
-while read local_ref local_sha remote_ref remote_sha; do
-  # Extract branch name from refs/heads/branch-name
-  branch=$(echo "$remote_ref" | sed 's|refs/heads/||')
+# Save stdin for later use (refs are passed via stdin)
+refs_input=$(cat)
 
-  # Skip if pushing to main
+# Block pushing to main — this check MUST run before any skip logic
+echo "$refs_input" | while read local_ref local_sha remote_ref remote_sha; do
+  branch=$(echo "$remote_ref" | sed 's|refs/heads/||')
   if [ "$branch" = "main" ]; then
-    echo "Pushing to main - skipping pre-push tests"
-    exit 0
+    echo "ERROR: Direct push to main is not allowed."
+    echo "All changes must go through pull requests."
+    exit 1
   fi
 done
+
+# Exit if the main branch check failed (subshell exit code)
+if [ $? -ne 0 ]; then
+  exit 1
+fi
+
+# Skip tests if environment variable is set (for agents/CI)
+if [ "$SKIP_PRE_PUSH_TESTS" = "1" ]; then
+  echo "Skipping pre-push tests (SKIP_PRE_PUSH_TESTS=1)"
+  exit 0
+fi
 
 # Non-interactive mode (agent/CI) - detect changes and run scoped CI
 if [ ! -t 0 ] || [ ! -t 1 ]; then
