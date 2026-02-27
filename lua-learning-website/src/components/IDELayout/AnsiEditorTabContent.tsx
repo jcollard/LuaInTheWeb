@@ -21,6 +21,17 @@ export function AnsiEditorTabContent({ tabBarProps, filePath }: AnsiEditorTabCon
     setTabDirty(path, isDirty)
   }, [setTabDirty])
 
+  // Memoize per-path dirty callbacks to provide stable references to AnsiGraphicsEditor
+  const getDirtyCallback = useMemo(() => {
+    const cache = new Map<string, (dirty: boolean) => void>()
+    return (path: string) => {
+      if (!cache.has(path)) {
+        cache.set(path, (dirty: boolean) => handleDirtyChange(path, dirty))
+      }
+      return cache.get(path)!
+    }
+  }, [handleDirtyChange])
+
   function isFileReady(path: string | undefined): boolean {
     if (!path || path.startsWith('ansi-editor://')) return true
     return fileSystem.readFile(path) !== null
@@ -38,8 +49,8 @@ export function AnsiEditorTabContent({ tabBarProps, filePath }: AnsiEditorTabCon
                 className={`${styles.canvasTab} ${tab.path === tabBarProps.activeTab ? styles.canvasTabActive : ''}`}
                 onClick={() => tabBarProps.onSelect(tab.path)}
               >
-                {tab.isDirty && <span className={styles.canvasTabDirty} data-testid={`dirty-indicator-${tab.path}`}>*</span>}
                 {tab.name}
+                {tab.isDirty && <span className={styles.canvasTabDirty} data-testid={`dirty-indicator-${tab.path}`}> *</span>}
                 <span
                   className={styles.canvasTabClose}
                   onClick={(e) => {
@@ -63,7 +74,7 @@ export function AnsiEditorTabContent({ tabBarProps, filePath }: AnsiEditorTabCon
               <AnsiGraphicsEditor
                 filePath={tab.path}
                 isActive={isActive}
-                onDirtyChange={(dirty) => handleDirtyChange(tab.path, dirty)}
+                onDirtyChange={getDirtyCallback(tab.path)}
               />
             ) : (
               <div className={styles.canvasLoading}>Loading...</div>

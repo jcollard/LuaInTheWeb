@@ -284,32 +284,27 @@ describe('parseScreenLayers', () => {
     expect(layers[0].tags).toEqual([])
   })
 
-  it('defaults tags to empty array for V2 layers', () => {
+  it('defaults tags to empty array for V2+ layers without tags', () => {
     const layerGrid = makeV1Data()['grid']
-    const data: Record<string, unknown> = {
+    const v2Data: Record<string, unknown> = {
       version: 2,
       width: ANSI_COLS,
       height: ANSI_ROWS,
       activeLayerId: 'l1',
       layers: { 1: { id: 'l1', name: 'Layer 1', visible: true, grid: layerGrid } },
     }
-    const layers = parseScreenLayers(data)
-    expect(layers[0].tags).toEqual([])
-  })
+    expect(parseScreenLayers(v2Data)[0].tags).toEqual([])
 
-  it('defaults tags to empty array for V3+ layers without tags', () => {
-    const v1 = makeV1Data()
-    const data: Record<string, unknown> = {
+    const v3Data: Record<string, unknown> = {
       version: 3,
       width: ANSI_COLS,
       height: ANSI_ROWS,
       activeLayerId: 'l1',
       layers: {
-        1: { type: 'drawn', id: 'l1', name: 'Layer 1', visible: true, grid: v1.grid },
+        1: { type: 'drawn', id: 'l1', name: 'Layer 1', visible: true, grid: layerGrid },
       },
     }
-    const layers = parseScreenLayers(data)
-    expect(layers[0].tags).toEqual([])
+    expect(parseScreenLayers(v3Data)[0].tags).toEqual([])
   })
 
   it('throws for unsupported version', () => {

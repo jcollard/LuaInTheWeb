@@ -1,31 +1,14 @@
 /**
  * Integration tests for localStorage API setup.
- * Tests that bridge functions are registered correctly in LuaEngineFactory
- * and that the deprecated setupLocalStorageAPI is a no-op.
+ * Tests that bridge functions are registered correctly in LuaEngineFactory.
  *
  * Note: These tests run in Node.js (not jsdom) because wasmoon requires
  * a real Node.js or browser environment, not jsdom.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { setupLocalStorageAPI } from '../src/setupLocalStorageAPI'
 import { LuaEngineFactory, type LuaEngineCallbacks } from '../src/LuaEngineFactory'
 import type { LuaEngine } from 'wasmoon'
-
-// Create a mock Lua engine for testing the deprecated function
-function createMockLuaEngine(): LuaEngine {
-  const globals = new Map<string, unknown>()
-
-  return {
-    global: {
-      set: vi.fn((name: string, value: unknown) => {
-        globals.set(name, value)
-      }),
-      get: vi.fn((name: string) => globals.get(name)),
-    },
-    doStringSync: vi.fn(),
-  } as unknown as LuaEngine
-}
 
 // Mock localStorage for Node.js environment
 function createMockLocalStorage(): Storage {
@@ -44,26 +27,6 @@ function createMockLocalStorage(): Storage {
     },
   }
 }
-
-describe('setupLocalStorageAPI (deprecated)', () => {
-  it('is a no-op and does not register any functions', () => {
-    const mockEngine = createMockLuaEngine()
-
-    setupLocalStorageAPI(mockEngine)
-
-    // Should NOT call engine.global.set - function is now a no-op
-    expect(mockEngine.global.set).not.toHaveBeenCalled()
-  })
-
-  it('does not execute Lua code', () => {
-    const mockEngine = createMockLuaEngine()
-
-    setupLocalStorageAPI(mockEngine)
-
-    // Should NOT call doStringSync - function is now a no-op
-    expect(mockEngine.doStringSync).not.toHaveBeenCalled()
-  })
-})
 
 describe('localStorage bridge functions (via LuaEngineFactory)', () => {
   let engine: LuaEngine | null = null

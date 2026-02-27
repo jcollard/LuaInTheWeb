@@ -252,6 +252,11 @@ describe('AnsiController layer visibility', () => {
       const id = controller.createScreen(makeV3MultiLayerData())
       expect(() => controller.setScreenLayerVisible(id, 'nonexistent', false)).toThrow('No layers match identifier "nonexistent"')
     })
+
+    it('throws for empty identifier string', () => {
+      const id = controller.createScreen(makeV3MultiLayerData())
+      expect(() => controller.setScreenLayerVisible(id, '', false)).toThrow('Layer identifier must not be empty.')
+    })
   })
 
   describe('toggleScreenLayer', () => {
@@ -279,6 +284,11 @@ describe('AnsiController layer visibility', () => {
     it('throws for no matching identifier', () => {
       const id = controller.createScreen(makeV3MultiLayerData())
       expect(() => controller.toggleScreenLayer(id, 'nonexistent')).toThrow('No layers match identifier "nonexistent"')
+    })
+
+    it('throws for empty identifier string', () => {
+      const id = controller.createScreen(makeV3MultiLayerData())
+      expect(() => controller.toggleScreenLayer(id, '')).toThrow('Layer identifier must not be empty.')
     })
   })
 
