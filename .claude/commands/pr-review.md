@@ -227,6 +227,8 @@ gh pr checks <number> --json name,state,conclusion
 
 Report the status of CI checks if available.
 
+**E2E Tests gate**: E2E tests run locally, not in CI. The "E2E Tests" commit status starts as "pending" on every PR. It is set to "success" when someone comments `/e2e-verified` on the PR. If this status is still pending, the PR cannot be merged — the reviewer should confirm E2E was run locally before accepting.
+
 ---
 
 ## Step 6: Generate Review Report
@@ -422,6 +424,13 @@ git fetch origin
 
 # Verify tests pass (quick check)
 npm --prefix lua-learning-website run test 2>&1 | tail -5
+
+# Check E2E verification status
+gh pr checks <number> --json name,state 2>/dev/null | node -e "
+  const d = JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));
+  const e2e = d.find(c => c.name === 'E2E Tests');
+  console.log(e2e ? e2e.state : 'NOT_FOUND');
+"
 ```
 
 If tests fail:
@@ -431,6 +440,15 @@ If tests fail:
 **Reason**: Tests are failing
 
 Run `/code-review` to see full test results and fix issues before merging.
+```
+
+If E2E status is not "SUCCESS":
+```
+## Cannot Accept PR #<number>
+
+**Reason**: E2E tests have not been verified
+
+Someone must run E2E tests locally and comment `/e2e-verified` on the PR before it can be merged.
 ```
 
 ### 8c.5. Clean Up Worktree (Before Merge)

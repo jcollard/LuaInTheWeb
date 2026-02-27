@@ -171,6 +171,7 @@ This command:
 | `/pr-review <n> reject "feedback"` | Create rework task list from feedback |
 
 **On Accept:**
+- Verify E2E Tests commit status is "success" (requires `/e2e-verified` comment)
 - Squash merge to main
 - Delete remote branch
 - Close linked issues
@@ -489,7 +490,8 @@ This prevents:
 - [ ] Lint passes: `npm run lint`
 - [ ] Type check passes: `npx tsc -p lua-learning-website/tsconfig.app.json --noEmit 2>&1 | grep -v "@lua-learning/"` (must produce no output)
 - [ ] Build succeeds: `npm run build` (may fail locally due to package issues — the tsc check above covers our code)
-- [ ] E2E passes: `npm run test:e2e`
+- [ ] E2E passes locally: `npm run test:e2e`
+- [ ] Comment `/e2e-verified` on the PR to unblock merge
 
 ---
 

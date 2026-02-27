@@ -215,7 +215,8 @@ Now check if mutation tests (started at the beginning) have completed:
 - [ ] `npm run test:mutation` > 80%
 
 ### 3. E2E Tests (If User-Facing Features)
-- [ ] `npm run test:e2e` passes
+- [ ] `npm run test:e2e` passes (runs locally only — not in CI)
+- [ ] Comment `/e2e-verified` on the PR to unblock merge
 
 ---
 

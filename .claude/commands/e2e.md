@@ -178,6 +178,29 @@ Don't write for:
 - Internal utilities or pure functions
 - Components with no user interaction
 
+## CI Verification Flow
+
+E2E tests run **locally only** — they do not run in CI (too expensive). Instead, a commit status gate blocks PR merges until E2E is manually verified.
+
+### How It Works
+
+1. **PR opened** — `e2e.yml` sets a pending "E2E Tests" commit status (blocks merge)
+2. **Developer runs E2E locally** — `npm --prefix lua-learning-website run test:e2e`
+3. **Developer comments `/e2e-verified`** on the PR
+4. **Workflow sets status to success** — merge is unblocked
+
+### When to Verify
+
+- Before commenting `/e2e-verified`, ensure **all** E2E tests pass locally
+- If you push new commits after verification, the status resets to pending — you must re-verify and comment `/e2e-verified` again
+
+### Workflow Files
+
+| File | Purpose |
+|------|---------|
+| `.github/workflows/e2e.yml` | Sets pending "E2E Tests" status on every PR |
+| `.github/workflows/e2e-on-demand.yml` | Listens for `/e2e-verified` comments, sets status to success |
+
 ## Debugging
 
 ```bash

@@ -242,6 +242,8 @@ After the script completes successfully, output:
 The PR is linked to issue #<number> and will auto-close it when merged.
 
 **Next steps:**
+- Run E2E tests locally: `npm --prefix lua-learning-website run test:e2e`
+- Comment `/e2e-verified` on the PR to unblock merge
 - Run `/pr-review <pr-number>` for code review
 - Address any feedback
 - Merge when approved
