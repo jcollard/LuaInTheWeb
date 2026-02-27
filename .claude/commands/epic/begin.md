@@ -13,7 +13,7 @@ Start working on an epic by creating the epic branch, worktree, and EPIC-<n>.md 
 The begin command sets up the epic workspace:
 
 1. Create `epic-<n>` branch from main
-2. Create worktree `LuaInTheWeb-epic-<n>`
+2. Create worktree at `.claude/worktrees/epic-<n>`
 3. Generate `EPIC-<n>.md` with overview, sub-issues, and tracking sections
 4. Update GitHub project board status to "In Progress"
 
@@ -82,13 +82,9 @@ git worktree list | grep "epic-<number>"
 ```
 ## Epic #<number> Already Started
 
-The epic worktree already exists at: <path>
+The epic worktree already exists at: .claude/worktrees/epic-<number>
 
-**To continue working:**
-```bash
-cd <path>
-claude
-```
+**To continue working**, use `EnterWorktree` with name `epic-<number>` to switch to the worktree.
 
 Then run `/epic <number>` to see status.
 ```
@@ -185,24 +181,26 @@ git pull origin main
 git checkout -b epic-<number>
 ```
 
-**4c. Create the worktree:**
+**4c. Create the worktree using `EnterWorktree`:**
+
+Call `EnterWorktree` with name `epic-<number>`:
+- This creates the worktree at `.claude/worktrees/epic-<number>/`
+- The current session's working directory automatically switches to the worktree
+
+**4d. Set up the worktree** (after EnterWorktree completes, now inside the worktree):
 
 ```bash
-# Create worktree directory
-git worktree add ../LuaInTheWeb-epic-<number> epic-<number>
-```
-
-**4d. Set up the worktree:**
-
-```bash
-cd ../LuaInTheWeb-epic-<number>
+# Checkout the epic branch in the worktree
+git checkout epic-<number>
 
 # Install dependencies
-cd lua-learning-website && npm install && cd ..
+npm --prefix lua-learning-website install --silent
 
 # Seed mutation cache if it exists in main
-if [ -d "../LuaInTheWeb/lua-learning-website/.stryker-cache" ]; then
-  cp -r ../LuaInTheWeb/lua-learning-website/.stryker-cache lua-learning-website/
+MAIN_CACHE="$(git rev-parse --path-format=absolute --git-common-dir)/../lua-learning-website/reports/mutation/.stryker-incremental.json"
+if [ -f "$MAIN_CACHE" ]; then
+  mkdir -p lua-learning-website/reports/mutation
+  cp "$MAIN_CACHE" lua-learning-website/reports/mutation/.stryker-incremental.json
 fi
 ```
 
@@ -301,20 +299,16 @@ print(msg)
 
 ---
 
-## Step 7: Return to Main and Output Success
+## Step 7: Output Success and Continue
 
-```bash
-cd ../LuaInTheWeb  # Return to main worktree
-```
-
-Output:
+The session is now in the epic worktree. Output:
 
 ```
 ## Epic #<number> Started
 
 **Title**: <title>
 **Branch**: epic-<number>
-**Worktree**: ../LuaInTheWeb-epic-<number>
+**Worktree**: .claude/worktrees/epic-<number>
 **Sub-Issues**: <count> issues
 
 ### Sub-Issues Overview
@@ -332,13 +326,7 @@ The tracking file has been created with:
 
 ### Next Steps
 
-Open a new Claude Code session in the epic worktree:
-```bash
-cd ../LuaInTheWeb-epic-<number>
-claude
-```
-
-Then run:
+You are now in the epic worktree. Run:
 ```bash
 /epic <number> next
 ```
@@ -352,7 +340,7 @@ This will identify and start the first sub-issue.
 
 | Error | Response |
 |-------|----------|
-| Not in main worktree | "Switch to main worktree first: `cd ../LuaInTheWeb`" |
+| Not in main worktree | "Switch to main worktree first" |
 | Epic already started | Show worktree path, suggest `/epic <n>` for status |
 | No sub-issues found | "No sub-issues found in epic body. Add a `## Sub-Issues` section with issue references." |
 | Branch already exists | Check if worktree exists; if not, create worktree from existing branch |

@@ -25,7 +25,8 @@
       "Bash(git fetch:*)",
       "Bash(git pull:*)",
       "Bash(git worktree:*)",
-      "Bash(git checkout:*)",
+      "Bash(git checkout -b:*)",
+      "Bash(git checkout --:*)",
       "Bash(git add:*)",
       "Bash(gh issue:*)",
       "Bash(gh pr:*)",
@@ -39,20 +40,24 @@
       "Bash(date)",
       "Bash(wc:*)",
       "Bash(ls:*)",
+      "Bash(git commit:*)",
+      "Bash(rm lua-learning-website/reports/mutation/.stryker-incremental.json)",
       "mcp__code-index-mcp__*",
-      "WebSearch"
+      "WebSearch",
+      "Bash(git remote:*)"
     ],
     "deny": [
       "Bash(npm run dev)",
       "Bash(rm -rf:*)",
-      "Bash(npm publish:*)"
+      "Bash(npm publish:*)",
+      "Bash(git push origin main)",
+      "Bash(git push * main)"
     ],
     "ask": [
-      "SlashCommand(/accept-review)",
       "Bash(git push:*)",
-      "Bash(git commit:*)",
       "Bash(gh pr merge:*)",
-      "Bash(rm lua-learning-website/reports/mutation/.stryker-incremental.json)"
+      "Bash(git merge:*)",
+      "Bash(git checkout:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

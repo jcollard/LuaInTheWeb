@@ -270,7 +270,7 @@ TypeScript test mocks that construct the full interface will fail `tsc` if a req
 
 ## Conventions
 
-- **Branch Policy**: Never commit directly to main. All changes must go through branches and PRs.
+- **Branch Policy**: Never commit directly to main. All work must happen in worktrees created via `/issue <n> begin` or `EnterWorktree`. Direct commits and pushes to main are blocked by git hooks.
 - **Python**: Always use `python3` (not `python`) for scripts
 - **Timestamps**: When updating dates in files, use `date` command to get current timestamp
 

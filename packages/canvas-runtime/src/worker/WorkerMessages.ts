@@ -46,6 +46,8 @@ export interface InitMessage {
   code: string;
   /** Preloaded asset data (optional) */
   assets?: SerializedAsset[];
+  /** Custom WASM URI for LuaFactory (avoids cross-origin CDN fetch blocked by COEP) */
+  wasmUri?: string;
 }
 
 /**

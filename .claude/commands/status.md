@@ -154,8 +154,8 @@ gh issue list --label "tech-debt" --limit 5 --json number,title
 ### Other Active Worktrees
 | Path | Branch | Issue | State |
 |------|--------|-------|-------|
-| LuaInTheWeb-issue-42 | 42-add-dark-mode | #42 | 2 files modified |
-| LuaInTheWeb-issue-15 | 15-fix-repl-bug | #15 | Clean |
+| .claude/worktrees/issue-42 | 42-add-dark-mode | #42 | 2 files modified |
+| .claude/worktrees/issue-15 | 15-fix-repl-bug | #15 | Clean |
 
 ### Active Epics
 | # | Title | Status | Sub-Issues |

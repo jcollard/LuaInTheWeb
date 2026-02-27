@@ -1,32 +1,82 @@
 #!/bin/sh
 
-# Skip if environment variable is set (for agents/CI)
+# Get the branch being pushed to
+remote="$1"
+url="$2"
+
+# Save stdin for later use (refs are passed via stdin)
+refs_input=$(cat)
+
+# Block pushing to main — this check MUST run before any skip logic
+echo "$refs_input" | while read local_ref local_sha remote_ref remote_sha; do
+  branch=$(echo "$remote_ref" | sed 's|refs/heads/||')
+  if [ "$branch" = "main" ]; then
+    echo "ERROR: Direct push to main is not allowed."
+    echo "All changes must go through pull requests."
+    exit 1
+  fi
+done
+
+# Exit if the main branch check failed (subshell exit code)
+if [ $? -ne 0 ]; then
+  exit 1
+fi
+
+# Skip tests if environment variable is set (for agents/CI)
 if [ "$SKIP_PRE_PUSH_TESTS" = "1" ]; then
   echo "Skipping pre-push tests (SKIP_PRE_PUSH_TESTS=1)"
   exit 0
 fi
 
-# Get the branch being pushed to
-remote="$1"
-url="$2"
+# Non-interactive mode (agent/CI) - detect changes and run scoped CI
+if [ ! -t 0 ] || [ ! -t 1 ]; then
+  # Resolve HEAD to a SHA to avoid ambiguity with files named "HEAD"
+  HEAD_SHA=$(git rev-parse HEAD)
 
-# Read stdin for refs
-while read local_ref local_sha remote_ref remote_sha; do
-  # Extract branch name from refs/heads/branch-name
-  branch=$(echo "$remote_ref" | sed 's|refs/heads/||')
+  # Find merge base with origin/main
+  MERGE_BASE=$(git merge-base origin/main "$HEAD_SHA" 2>/dev/null || echo "")
+  if [ -z "$MERGE_BASE" ]; then
+    echo "No common ancestor with origin/main — running full CI (skip E2E)..."
+    npm run ci:quick
+    exit $?
+  fi
 
-  # Skip if pushing to main
-  if [ "$branch" = "main" ]; then
-    echo "Pushing to main - skipping pre-push tests"
+  CHANGED_FILES=$(git diff --name-only "$MERGE_BASE" "$HEAD_SHA")
+
+  if [ -z "$CHANGED_FILES" ]; then
+    echo "No changes detected — skipping CI"
     exit 0
   fi
-done
 
-# Non-interactive mode (agent/CI) - run tests automatically
-if [ ! -t 0 ] || [ ! -t 1 ]; then
-  echo "Non-interactive mode detected. Running full CI..."
-  npm run ci
-  exit $?
+  # Detect affected packages from changed files
+  AFFECTED=""
+  echo "$CHANGED_FILES" | grep -q '^packages/shell-core/' && AFFECTED="$AFFECTED,shell-core"
+  echo "$CHANGED_FILES" | grep -q '^packages/canvas-runtime/' && AFFECTED="$AFFECTED,canvas-runtime"
+  echo "$CHANGED_FILES" | grep -q '^packages/ansi-shared/' && AFFECTED="$AFFECTED,ansi-shared"
+  echo "$CHANGED_FILES" | grep -q '^packages/lua-runtime/' && AFFECTED="$AFFECTED,lua-runtime"
+  echo "$CHANGED_FILES" | grep -q '^packages/export/' && AFFECTED="$AFFECTED,export"
+  echo "$CHANGED_FILES" | grep -q '^lua-learning-website/' && AFFECTED="$AFFECTED,lua-learning-website"
+
+  # Root config changes → full CI
+  if echo "$CHANGED_FILES" | grep -qE '^(package\.json|package-lock\.json|tsconfig\.json|\.github/)'; then
+    AFFECTED="all"
+  fi
+
+  # Remove leading comma
+  AFFECTED=$(echo "$AFFECTED" | sed 's/^,//')
+
+  if [ -z "$AFFECTED" ]; then
+    echo "Non-code changes only — skipping CI"
+    exit 0
+  elif [ "$AFFECTED" = "all" ]; then
+    echo "Root config changes detected — running full CI (skip E2E)..."
+    npm run ci:quick
+    exit $?
+  else
+    echo "Code changes in: $AFFECTED — running scoped CI..."
+    node scripts/ci-local.js --skip-e2e --scope "$AFFECTED"
+    exit $?
+  fi
 fi
 
 # Interactive mode (human) - prompt
@@ -36,8 +86,8 @@ printf "Run tests before push? [y/N]: "
 read -r response < /dev/tty
 
 if [ "$response" = "y" ] || [ "$response" = "Y" ]; then
-  echo "Running full CI (lint + build + unit + E2E)..."
-  npm run ci
+  echo "Running CI (lint + build + unit tests, skip E2E)..."
+  npm run ci:quick
   exit $?
 else
   echo "Skipping tests."

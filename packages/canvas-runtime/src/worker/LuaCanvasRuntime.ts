@@ -67,8 +67,12 @@ export class LuaCanvasRuntime {
   // Start screen callback for custom start screen rendering
   private startScreenCallback: (() => void) | null = null;
 
-  constructor(channel: IWorkerChannel) {
+  /** Custom WASM URI for LuaFactory (avoids cross-origin CDN fetch blocked by COEP). */
+  private wasmUri: string | undefined;
+
+  constructor(channel: IWorkerChannel, wasmUri?: string) {
     this.channel = channel;
+    this.wasmUri = wasmUri;
   }
 
   /**
@@ -129,7 +133,7 @@ export class LuaCanvasRuntime {
     this.state = 'initializing';
 
     try {
-      const factory = new LuaFactory();
+      const factory = new LuaFactory(this.wasmUri);
       this.engine = await factory.createEngine();
 
       // Set up the canvas API

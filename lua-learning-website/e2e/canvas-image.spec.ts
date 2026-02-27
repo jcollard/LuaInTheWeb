@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
 import { createTerminalHelper } from './helpers/terminal'
 
@@ -16,17 +16,8 @@ import { createTerminalHelper } from './helpers/terminal'
  * filesystem paths and HTTP URLs.
  */
 test.describe('Canvas Image Support', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/editor')
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for the shell terminal to initialize
-    await expect(page.locator('[data-testid="shell-terminal-container"]')).toBeVisible({
-      timeout: TIMEOUTS.ELEMENT_VISIBLE,
-    })
-  })
-
   test.describe('Image Registration', () => {
-    test('canvas.assets.load_image() registers an image for loading', async ({ page }) => {
+    test('canvas.assets.load_image() registers an image for loading', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -59,7 +50,7 @@ test.describe('Canvas Image Support', () => {
   })
 
   test.describe('Image Loading and Drawing', () => {
-    test('canvas loads and draws image from HTTP URL', async ({ page }) => {
+    test('canvas loads and draws image from HTTP URL', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -98,7 +89,7 @@ test.describe('Canvas Image Support', () => {
       await terminal.expectToContain('image drawn successfully', { timeout: TIMEOUTS.ASYNC_OPERATION })
     })
 
-    test('canvas.assets.get_width and get_height return image dimensions', async ({ page }) => {
+    test('canvas.assets.get_width and get_height return image dimensions', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -139,7 +130,7 @@ test.describe('Canvas Image Support', () => {
   })
 
   test.describe('Image Drawing with Scaling', () => {
-    test('canvas.draw_image supports width and height parameters', async ({ page }) => {
+    test('canvas.draw_image supports width and height parameters', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 

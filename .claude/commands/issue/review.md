@@ -203,7 +203,7 @@ See the workflow documentation for more details on the Visual Verification forma
 
 1. Navigate to epic worktree (if not already there):
    ```bash
-   cd ../LuaInTheWeb-epic-<epic-number>
+   # Epic worktree is at .claude/worktrees/epic-<epic-number>
    ```
 
 2. Update the sub-issue row in EPIC-<n>.md:
@@ -242,6 +242,8 @@ After the script completes successfully, output:
 The PR is linked to issue #<number> and will auto-close it when merged.
 
 **Next steps:**
+- Run E2E tests locally: `npm --prefix lua-learning-website run test:e2e`
+- Comment `/e2e-verified` on the PR to unblock merge
 - Run `/pr-review <pr-number>` for code review
 - Address any feedback
 - Merge when approved

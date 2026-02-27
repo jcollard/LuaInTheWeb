@@ -1,4 +1,5 @@
-import { test, expect, type Dialog } from '@playwright/test'
+import { test, expect } from './fixtures'
+import type { Dialog } from '@playwright/test'
 import { TIMEOUTS } from './constants'
 import { createTerminalHelper } from './helpers/terminal'
 
@@ -11,15 +12,6 @@ import { createTerminalHelper } from './helpers/terminal'
  * - Run high-frequency print loops without freezing the UI
  */
 test.describe('Execution Control', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/editor')
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for the shell terminal to initialize
-    await expect(page.locator('[data-testid="shell-terminal-container"]')).toBeVisible({
-      timeout: TIMEOUTS.ELEMENT_VISIBLE,
-    })
-  })
-
   /**
    * Helper to start Lua REPL using the terminal helper
    */
@@ -34,7 +26,7 @@ test.describe('Execution Control', () => {
   }
 
   test.describe('Stop Button', () => {
-    test('stop button appears when running a Lua process', async ({ page }) => {
+    test('stop button appears when running a Lua process', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -56,7 +48,7 @@ test.describe('Execution Control', () => {
       await terminal.expectToContain('/')
     })
 
-    test('stop button stops execution of infinite loop', async ({ page }) => {
+    test('stop button stops execution of infinite loop', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -92,7 +84,7 @@ test.describe('Execution Control', () => {
   })
 
   test.describe('Continuation Prompt', () => {
-    test('continuation prompt appears and accepts "OK" to continue', async ({ page }) => {
+    test('continuation prompt appears and accepts "OK" to continue', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -130,7 +122,7 @@ test.describe('Execution Control', () => {
       }
     })
 
-    test('continuation prompt accepts "Cancel" to stop execution', async ({ page }) => {
+    test('continuation prompt accepts "Cancel" to stop execution', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -177,7 +169,7 @@ test.describe('Execution Control', () => {
   })
 
   test.describe('Output Throttling', () => {
-    test('high-frequency print loop does not freeze UI', async ({ page }) => {
+    test('high-frequency print loop does not freeze UI', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -213,7 +205,7 @@ test.describe('Execution Control', () => {
       await terminal.expectToContain('/')
     })
 
-    test('all output is eventually delivered even with throttling', async ({ page }) => {
+    test('all output is eventually delivered even with throttling', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 
@@ -252,7 +244,7 @@ test.describe('Execution Control', () => {
   })
 
   test.describe('Ctrl+C Handling', () => {
-    test('Ctrl+C stops running Lua process', async ({ page }) => {
+    test('Ctrl+C stops running Lua process', async ({ shellPage: page }) => {
       const terminal = createTerminalHelper(page)
       await terminal.focus()
 

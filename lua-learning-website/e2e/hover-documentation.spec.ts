@@ -1,35 +1,5 @@
-import { test, expect } from '@playwright/test'
-
-// Helper to create and open a file so Monaco editor is visible
-async function createAndOpenFile(page: import('@playwright/test').Page) {
-  const sidebar = page.getByTestId('sidebar-panel')
-
-  // First, expand the workspace folder by clicking its chevron
-  const workspaceChevron = page.getByTestId('folder-chevron').first()
-  await workspaceChevron.click()
-  // Wait for expansion to complete
-  await expect(workspaceChevron).toBeVisible()
-
-  // Click New File button
-  await sidebar.getByRole('button', { name: /new file/i }).click()
-
-  const input = sidebar.getByRole('textbox')
-  await expect(input).toBeVisible({ timeout: 5000 })
-  await input.press('Enter')
-  await expect(input).not.toBeVisible({ timeout: 5000 })
-
-  // Click the newly created file to open it
-  const fileItems = page.getByRole('treeitem')
-  const count = await fileItems.count()
-  if (count > 1) {
-    await fileItems.nth(1).click()
-  } else {
-    await fileItems.first().click()
-  }
-
-  // Wait for Monaco editor textarea to be ready (indicates editor is fully loaded)
-  await expect(page.locator('.monaco-editor textarea')).toBeVisible({ timeout: 5000 })
-}
+import { test, expect } from './fixtures'
+import { createAndOpenFile } from './helpers/editor'
 
 // Helper to type text slowly with delays (to avoid character dropping)
 async function typeSlowly(page: import('@playwright/test').Page, text: string) {
@@ -37,13 +7,7 @@ async function typeSlowly(page: import('@playwright/test').Page, text: string) {
 }
 
 test.describe('Hover Documentation', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
-
+  test.beforeEach(async ({ explorerPage: page }) => {
     // Create and open a file
     await createAndOpenFile(page)
 
@@ -52,7 +16,7 @@ test.describe('Hover Documentation', () => {
     await expect(monacoEditor).toBeVisible({ timeout: 10000 })
   })
 
-  test('shows hover tooltip when hovering over print function', async ({ page }) => {
+  test('shows hover tooltip when hovering over print function', async ({ explorerPage: page }) => {
     const monacoEditor = page.locator('.monaco-editor')
 
     // Click editor and type simple code with print
@@ -88,7 +52,7 @@ test.describe('Hover Documentation', () => {
     // The exact position where hover triggers varies by environment
   })
 
-  test('hover disappears when mouse moves away', async ({ page }) => {
+  test('hover disappears when mouse moves away', async ({ explorerPage: page }) => {
     const monacoEditor = page.locator('.monaco-editor')
 
     // Click editor and type simple code
@@ -116,7 +80,7 @@ test.describe('Hover Documentation', () => {
     // Monaco's default behavior handles this automatically
   })
 
-  test('editor accepts code with standard library functions', async ({ page }) => {
+  test('editor accepts code with standard library functions', async ({ explorerPage: page }) => {
     const monacoEditor = page.locator('.monaco-editor')
 
     // Click editor and type standard library function calls
@@ -134,7 +98,7 @@ test.describe('Hover Documentation', () => {
     await expect(viewLines).toContainText('tostring', { timeout: 5000 })
   })
 
-  test('hover provider is registered for Lua files', async ({ page }) => {
+  test('hover provider is registered for Lua files', async ({ explorerPage: page }) => {
     // This test verifies the hover provider infrastructure is set up correctly
     // by checking that Monaco is configured properly
 

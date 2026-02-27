@@ -1,15 +1,8 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
 
 test.describe('Library Workspace', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start with clean state
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for file tree to render
-    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+  test.beforeEach(async ({ explorerPage: page }) => {
     // Wait for libs workspace to finish loading (loading icon should disappear)
     // This ensures the async fetch has completed before we try to interact
     const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })
@@ -19,17 +12,17 @@ test.describe('Library Workspace', () => {
   })
 
   test.describe('library workspace display', () => {
-    test('displays libs workspace as root folder in tree', async ({ page }) => {
+    test('displays libs workspace as root folder in tree', async ({ explorerPage: page }) => {
       // Assert - Library workspace (libs) should be visible in the file tree
       await expect(page.getByRole('treeitem', { name: /^libs$/i })).toBeVisible()
     })
 
-    test('shows library (book) icon for libs workspace', async ({ page }) => {
+    test('shows library (book) icon for libs workspace', async ({ explorerPage: page }) => {
       // Assert - Library workspace should have the book icon
       await expect(page.getByTestId('library-workspace-icon')).toBeVisible()
     })
 
-    test('can expand libs workspace to see shell.lua', async ({ page }) => {
+    test('can expand libs workspace to see shell.lua', async ({ explorerPage: page }) => {
       // Arrange - Find libs workspace
       const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })
       await expect(libsWorkspace).toBeVisible()
@@ -44,7 +37,7 @@ test.describe('Library Workspace', () => {
   })
 
   test.describe('library file viewing', () => {
-    test('can open shell.lua from libs workspace', async ({ page }) => {
+    test('can open shell.lua from libs workspace', async ({ explorerPage: page }) => {
       // Arrange - Expand libs workspace
       const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })
       await libsWorkspace.getByTestId('folder-chevron').click()
@@ -60,7 +53,7 @@ test.describe('Library Workspace', () => {
       await expect(tabBar).toContainText('shell.lua')
     })
 
-    test('shell.lua contains shell library code', async ({ page }) => {
+    test('shell.lua contains shell library code', async ({ explorerPage: page }) => {
       // Arrange - Expand libs workspace and open shell.lua
       const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })
       await libsWorkspace.getByTestId('folder-chevron').click()
@@ -79,7 +72,7 @@ test.describe('Library Workspace', () => {
   })
 
   test.describe('library file read-only behavior', () => {
-    test('shows error toast when trying to save shell.lua', async ({ page }) => {
+    test('shows error toast when trying to save shell.lua', async ({ explorerPage: page }) => {
       // Arrange - Open shell.lua
       const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })
       await libsWorkspace.getByTestId('folder-chevron').click()
@@ -103,7 +96,7 @@ test.describe('Library Workspace', () => {
       await expect(toastContainer.getByText(/read-only/i)).toBeVisible()
     })
 
-    test('library file tab shows dirty indicator after editing', async ({ page }) => {
+    test('library file tab shows dirty indicator after editing', async ({ explorerPage: page }) => {
       // Arrange - Open shell.lua
       const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })
       await libsWorkspace.getByTestId('folder-chevron').click()
@@ -124,7 +117,7 @@ test.describe('Library Workspace', () => {
   })
 
   test.describe('library workspace context menu', () => {
-    test('libs workspace should not have Remove option in context menu', async ({ page }) => {
+    test('libs workspace should not have Remove option in context menu', async ({ explorerPage: page }) => {
       // Act - Right-click on libs workspace
       const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })
       await libsWorkspace.click({ button: 'right' })
@@ -139,7 +132,7 @@ test.describe('Library Workspace', () => {
       await expect(removeOption).not.toBeVisible()
     })
 
-    test('libs workspace should not have Rename option in context menu', async ({ page }) => {
+    test('libs workspace should not have Rename option in context menu', async ({ explorerPage: page }) => {
       // Act - Right-click on libs workspace
       const libsWorkspace = page.getByRole('treeitem', { name: /^libs$/i })
       await libsWorkspace.click({ button: 'right' })

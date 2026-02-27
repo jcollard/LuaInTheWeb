@@ -1,15 +1,8 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 import { TIMEOUTS } from './constants'
 
 test.describe('Docs Workspace', () => {
-  test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start with clean state
-    await page.goto('/editor')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
-    await expect(page.locator('[data-testid="ide-layout"]')).toBeVisible()
-    // Wait for file tree to render
-    await expect(page.getByRole('tree', { name: 'File Explorer' })).toBeVisible()
+  test.beforeEach(async ({ explorerPage: page }) => {
     // Wait for docs workspace to finish loading (loading icon should disappear)
     // This ensures the async fetch has completed before we try to interact
     const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
@@ -19,17 +12,17 @@ test.describe('Docs Workspace', () => {
   })
 
   test.describe('docs workspace display', () => {
-    test('displays docs workspace as root folder in tree', async ({ page }) => {
+    test('displays docs workspace as root folder in tree', async ({ explorerPage: page }) => {
       // Assert - Docs workspace should be visible in the file tree
       await expect(page.getByRole('treeitem', { name: /^docs$/i })).toBeVisible()
     })
 
-    test('shows docs (document) icon for docs workspace', async ({ page }) => {
+    test('shows docs (document) icon for docs workspace', async ({ explorerPage: page }) => {
       // Assert - Docs workspace should have the document icon
       await expect(page.getByTestId('docs-workspace-icon')).toBeVisible()
     })
 
-    test('can expand docs workspace to see shell.md', async ({ page }) => {
+    test('can expand docs workspace to see shell.md', async ({ explorerPage: page }) => {
       // Arrange - Find docs workspace
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await expect(docsWorkspace).toBeVisible()
@@ -44,7 +37,7 @@ test.describe('Docs Workspace', () => {
   })
 
   test.describe('docs file viewing', () => {
-    test('can open shell.md from docs workspace', async ({ page }) => {
+    test('can open shell.md from docs workspace', async ({ explorerPage: page }) => {
       // Arrange - Expand docs workspace
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
@@ -59,7 +52,7 @@ test.describe('Docs Workspace', () => {
       await expect(page.getByRole('tab', { name: /shell\.md/i })).toBeVisible()
     })
 
-    test('shell.md contains shell library API documentation', async ({ page }) => {
+    test('shell.md contains shell library API documentation', async ({ explorerPage: page }) => {
       // Arrange - Expand docs workspace and open shell.md
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
@@ -74,7 +67,7 @@ test.describe('Docs Workspace', () => {
       await expect(markdownViewer).toContainText('Color Constants')
     })
 
-    test('shell.md documents color functions', async ({ page }) => {
+    test('shell.md documents color functions', async ({ explorerPage: page }) => {
       // Arrange - Expand docs workspace and open shell.md
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
@@ -87,7 +80,7 @@ test.describe('Docs Workspace', () => {
       await expect(markdownViewer).toContainText('shell.foreground')
     })
 
-    test('shell.md documents require statement', async ({ page }) => {
+    test('shell.md documents require statement', async ({ explorerPage: page }) => {
       // Arrange - Expand docs workspace and open shell.md
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
@@ -102,7 +95,7 @@ test.describe('Docs Workspace', () => {
   })
 
   test.describe('docs file read-only behavior', () => {
-    test('docs file opens in preview mode only', async ({ page }) => {
+    test('docs file opens in preview mode only', async ({ explorerPage: page }) => {
       // Arrange - Open shell.md
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
@@ -114,7 +107,7 @@ test.describe('Docs Workspace', () => {
       await expect(page.locator('.monaco-editor')).not.toBeVisible()
     })
 
-    test('docs file can be opened in edit mode but shows error on save', async ({ page }) => {
+    test('docs file can be opened in edit mode but shows error on save', async ({ explorerPage: page }) => {
       // Arrange - Open shell.md via Edit Markdown context menu
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.getByTestId('folder-chevron').click()
@@ -140,7 +133,7 @@ test.describe('Docs Workspace', () => {
   })
 
   test.describe('docs workspace context menu', () => {
-    test('docs workspace should not have Remove option in context menu', async ({ page }) => {
+    test('docs workspace should not have Remove option in context menu', async ({ explorerPage: page }) => {
       // Act - Right-click on docs workspace
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.click({ button: 'right' })
@@ -155,7 +148,7 @@ test.describe('Docs Workspace', () => {
       await expect(removeOption).not.toBeVisible()
     })
 
-    test('docs workspace should not have Rename option in context menu', async ({ page }) => {
+    test('docs workspace should not have Rename option in context menu', async ({ explorerPage: page }) => {
       // Act - Right-click on docs workspace
       const docsWorkspace = page.getByRole('treeitem', { name: /^docs$/i })
       await docsWorkspace.click({ button: 'right' })
