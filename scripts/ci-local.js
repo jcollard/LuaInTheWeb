@@ -12,9 +12,12 @@
  */
 
 const { execSync } = require('child_process')
+const fs = require('fs')
 const path = require('path')
 
 const ROOT_DIR = path.resolve(__dirname, '..')
+const TMP_DIR = path.join(ROOT_DIR, 'tmp')
+fs.mkdirSync(TMP_DIR, { recursive: true })
 const skipE2E = process.argv.includes('--skip-e2e')
 
 // Parse --scope flag
@@ -51,7 +54,7 @@ function pkgDir(pkg) {
 
 function run(cmd, cwd = ROOT_DIR) {
   console.log(`  → ${cmd}`)
-  execSync(cmd, { cwd, stdio: 'inherit' })
+  execSync(cmd, { cwd, stdio: 'inherit', env: { ...process.env, TMPDIR: TMP_DIR } })
 }
 
 function section(emoji, title) {
