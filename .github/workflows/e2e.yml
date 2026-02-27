@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   # Set a pending commit status so E2E is required before merge.
-  # The actual E2E tests run on-demand via /run-e2e comment.
+  # The actual E2E tests run on-demand via /e2e-verified comment.
   e2e-gate:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -28,7 +28,7 @@ jobs:
               sha: context.payload.pull_request.head.sha,
               state: 'pending',
               context: 'E2E Tests',
-              description: 'Waiting for /run-e2e — comment on the PR to trigger',
+              description: 'Waiting for /e2e-verified — comment on the PR to trigger',
             });
 
   ci:
