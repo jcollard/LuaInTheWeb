@@ -17,6 +17,8 @@ jobs:
   e2e-gate:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      statuses: write
     steps:
       - name: Set pending E2E status
         uses: actions/github-script@v7
