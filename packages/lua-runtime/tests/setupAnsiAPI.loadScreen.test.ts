@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { LuaFactory, LuaEngine } from 'wasmoon'
-import { setupAnsiAPI } from '../src/setupAnsiAPI'
+import { setupAnsiAPI, joinPath } from '../src/setupAnsiAPI'
 import type { AnsiController } from '../src/AnsiController'
 import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG } from '../src/screenTypes'
 
@@ -61,6 +61,28 @@ function createMockController(): AnsiController {
     screenIsPlaying: vi.fn().mockReturnValue(false),
   } as unknown as AnsiController
 }
+
+describe('joinPath()', () => {
+  it('joins two simple segments', () => {
+    expect(joinPath('/projects', 'file.lua')).toBe('/projects/file.lua')
+  })
+
+  it('joins root with a relative path', () => {
+    expect(joinPath('/', 'file.lua')).toBe('/file.lua')
+  })
+
+  it('strips duplicate slashes from segments', () => {
+    expect(joinPath('/projects/', '/sub/', '/file.lua')).toBe('/projects/sub/file.lua')
+  })
+
+  it('handles empty segments', () => {
+    expect(joinPath('/', '', 'file.lua')).toBe('/file.lua')
+  })
+
+  it('handles nested directories', () => {
+    expect(joinPath('/a/b', 'c/d/file.lua')).toBe('/a/b/c/d/file.lua')
+  })
+})
 
 describe('ansi.load_screen()', () => {
   let engine: LuaEngine

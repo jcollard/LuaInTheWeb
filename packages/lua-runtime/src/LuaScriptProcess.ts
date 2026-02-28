@@ -211,19 +211,7 @@ export class LuaScriptProcess implements IProcess {
       onReadInput: (charCount?: number) => this.waitForInput(charCount),
       onInstructionLimitReached: this.options.onInstructionLimitReached,
       // Enable require() to load modules from the virtual file system
-      fileReader: (path: string): string | null => {
-        if (!this.context.filesystem.exists(path)) {
-          return null
-        }
-        if (this.context.filesystem.isDirectory(path)) {
-          return null
-        }
-        try {
-          return this.context.filesystem.readFile(path)
-        } catch {
-          return null
-        }
-      },
+      fileReader: (path: string) => this.readFileOrNull(path),
       // Enable io.open() to read/write files from the virtual file system
       fileOperations: this.fileOpsHandler.createCallbacks(),
     }
@@ -282,6 +270,15 @@ __clear_execution_hook()
       this.onError(formatLuaError(adjustedError) + '\n')
       this.exitWithCode(1)
     }
+  }
+
+  /**
+   * Read a file from the virtual filesystem, returning null if not found or not a file.
+   */
+  private readFileOrNull(path: string): string | null {
+    if (!this.context.filesystem.exists(path)) return null
+    if (this.context.filesystem.isDirectory(path)) return null
+    try { return this.context.filesystem.readFile(path) } catch { return null }
   }
 
   /**
@@ -501,11 +498,7 @@ __clear_execution_hook()
 
     this.ansiController = new AnsiController(ansiCallbacks, 'ansi-main')
     setupAnsiAPI(this.engine, () => this.ansiController, {
-      fileReader: (path: string): string | null => {
-        if (!this.context.filesystem.exists(path)) return null
-        if (this.context.filesystem.isDirectory(path)) return null
-        try { return this.context.filesystem.readFile(path) } catch { return null }
-      },
+      fileReader: (path: string) => this.readFileOrNull(path),
       cwd: this.context.cwd,
     })
   }

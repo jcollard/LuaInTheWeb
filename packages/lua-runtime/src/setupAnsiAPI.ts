@@ -21,7 +21,7 @@ export interface AnsiAPIOptions {
 /**
  * Join path segments into a single absolute path.
  */
-function joinPath(...segments: string[]): string {
+export function joinPath(...segments: string[]): string {
   const parts: string[] = []
   for (const segment of segments) {
     const cleanSegment = segment.replace(/^\/+|\/+$/g, '')
