@@ -7,7 +7,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { LuaFactory, LuaEngine } from 'wasmoon'
 import { setupAnsiAPI } from '../src/setupAnsiAPI'
 import type { AnsiController } from '../src/AnsiController'
-import type { RGBColor } from '../src/screenTypes'
 import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG } from '../src/screenTypes'
 
 /**
