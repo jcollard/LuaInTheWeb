@@ -227,6 +227,8 @@
     "ansi/color_palette.lua",
     "ansi/image_demo.lua",
     "ansi/layers_demo.lua",
-    "ansi/animation_demo.lua"
+    "ansi/animation_demo.lua",
+    "ansi/sample_art.ansi.lua",
+    "ansi/load_screen_demo.lua"
   ]
 }
