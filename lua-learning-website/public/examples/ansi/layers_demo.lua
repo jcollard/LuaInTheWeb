@@ -5,7 +5,8 @@
 local ansi = require("ansi")
 
 -- Build a V4 multi-layer image with groups and nested layers.
--- In real usage, you'd load a .ansi.lua file created in the editor.
+-- In real usage, you'd load a .ansi.lua file:
+--   local screen = ansi.load_screen("my_art.ansi.lua")
 
 -- Helper: create a full 25x80 grid filled with a single color
 local function make_grid(char, fg, bg)

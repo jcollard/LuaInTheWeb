@@ -19,7 +19,6 @@ __pycache__/
 
 # Local temp directory for scripts
 .tmp/
-tmp/
 
 # Screenshots from visual verification (prevent accidental commits)
 screenshots-review/
@@ -33,21 +32,30 @@ screenshots-review/
 !packages/electron-wrapper/icons/*.png
 !packages/electron-wrapper/icons/*.ico
 
-# Claude Code sandbox artifacts (read-only placeholders created by denyWithinAllow)
-/HEAD
-/config
-/hooks
-/objects
-/refs
-/.bash_profile
-/.bashrc
-/.gitconfig
-/.gitmodules
-/.profile
-/.ripgreprc
-/.zprofile
-/.zshrc
-/.idea
-/.vscode
-/.claude/agents
-/.claude/skills
+# Sandbox ghost files (Claude Code denyWithinAllow)
+HEAD
+config
+hooks
+objects
+refs
+.bash_profile
+.bashrc
+.profile
+.zprofile
+.zshrc
+.gitconfig
+.gitmodules
+.ripgreprc
+
+# IDE directories (file or directory)
+.idea
+.vscode
+
+# Temp directories
+tmp/
+lua-learning-website/tmp/
+
+# Claude Code working directories (file or directory)
+.claude/worktrees
+.claude/agents
+.claude/skills

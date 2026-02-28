@@ -9,14 +9,40 @@ import type { AnsiController } from './AnsiController'
 import { ansiLuaCode } from './ansiLuaWrapper'
 
 /**
+ * Options for ANSI API file reading support.
+ */
+export interface AnsiAPIOptions {
+  /** Read a file by absolute path. Returns content string or null if not found. */
+  fileReader?: (path: string) => string | null
+  /** Current working directory for resolving relative paths. */
+  cwd?: string
+}
+
+/**
+ * Join path segments into a single absolute path.
+ */
+export function joinPath(...segments: string[]): string {
+  const parts: string[] = []
+  for (const segment of segments) {
+    const cleanSegment = segment.replace(/^\/+|\/+$/g, '')
+    if (cleanSegment) {
+      parts.push(cleanSegment)
+    }
+  }
+  return '/' + parts.join('/')
+}
+
+/**
  * Set up ANSI terminal API functions in the Lua engine.
  *
  * @param engine - The Lua engine to set up
  * @param getController - Function to get the ANSI controller (allows lazy access)
+ * @param options - Optional file reading support for ansi.load_screen()
  */
 export function setupAnsiAPI(
   engine: LuaEngine,
-  getController: () => AnsiController | null
+  getController: () => AnsiController | null,
+  options?: AnsiAPIOptions
 ): void {
   // --- Lifecycle functions ---
   engine.global.set('__ansi_is_active', () => {
@@ -198,6 +224,34 @@ export function setupAnsiAPI(
     }
     return controller.screenIsPlaying(id)
   })
+
+  // --- File reading for load_screen ---
+  if (options?.fileReader) {
+    const fileReader = options.fileReader
+    const cwd = options.cwd ?? '/'
+
+    engine.global.set('__ansi_readFile', (path: string): string => {
+      // Absolute paths are used directly
+      if (path.startsWith('/')) {
+        const content = fileReader(path)
+        if (content !== null) return content
+        throw new Error(`ANSI file not found: ${path}`)
+      }
+
+      // Relative paths: try CWD first, then root fallback
+      const cwdPath = joinPath(cwd, path)
+      const cwdContent = fileReader(cwdPath)
+      if (cwdContent !== null) return cwdContent
+
+      if (cwd !== '/') {
+        const rootPath = joinPath('/', path)
+        const rootContent = fileReader(rootPath)
+        if (rootContent !== null) return rootContent
+      }
+
+      throw new Error(`ANSI file not found: ${path} (searched ${cwdPath})`)
+    })
+  }
 
   // --- Set up Lua-side ansi table ---
   // ANSI is NOT a global - it must be accessed via require('ansi')
