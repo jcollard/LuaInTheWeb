@@ -505,6 +505,61 @@ describe('HtmlGenerator', () => {
     })
   })
 
+  describe('compound extension resolution', () => {
+    it('should generate __load_module with compound extension fallback in canvas export', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig({ type: 'canvas' })
+      const luaFiles: CollectedFile[] = [
+        { path: 'main.lua', content: 'local art = require("name.ansi")' },
+        { path: 'name.ansi.lua', content: 'return { art = "pixel" }' },
+      ]
+      const assets: CollectedAsset[] = []
+
+      const html = generator.generateCanvas(config, luaFiles, assets)
+
+      // The embedded LUA_MODULES should contain the compound extension file
+      expect(html).toContain('"name.ansi.lua"')
+      // The __load_module function should try compound extension paths
+      // by replacing only the last dot-segment as an extension
+      expect(html).toContain('modulePath + ".lua"')
+    })
+
+    it('should generate __load_module with compound extension fallback in shell export', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig({
+        type: 'shell',
+        shell: { columns: 80, rows: 24 },
+        canvas: undefined,
+      })
+      const luaFiles: CollectedFile[] = [
+        { path: 'main.lua', content: 'local art = require("name.ansi")' },
+        { path: 'name.ansi.lua', content: 'return { art = "pixel" }' },
+      ]
+
+      const html = generator.generateShell(config, luaFiles)
+
+      // The embedded LUA_MODULES should contain the compound extension file
+      expect(html).toContain('"name.ansi.lua"')
+      // The __load_module function should try compound extension paths
+      expect(html).toContain('modulePath + ".lua"')
+    })
+
+    it('should still embed standard module paths correctly in canvas', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig({ type: 'canvas' })
+      const luaFiles: CollectedFile[] = [
+        { path: 'main.lua', content: 'local utils = require("lib.utils")' },
+        { path: 'lib/utils.lua', content: 'return {}' },
+      ]
+      const assets: CollectedAsset[] = []
+
+      const html = generator.generateCanvas(config, luaFiles, assets)
+
+      // Standard dotted path should map to nested directory
+      expect(html).toContain('"lib/utils.lua"')
+    })
+  })
+
   describe('offline capability (no CDN URLs)', () => {
     it('should not import from CDN in canvas export', () => {
       const generator = new HtmlGenerator(createOptions())

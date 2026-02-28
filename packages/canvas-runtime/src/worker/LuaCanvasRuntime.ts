@@ -1698,11 +1698,13 @@ export class LuaCanvasRuntime {
       // Convert module name to path format
       const modulePath = moduleName.replace(/\./g, '/');
 
-      // Try common paths
+      // Try common paths (including compound extension fallback)
       const pathsToTry = [
         `/${modulePath}.lua`,
+        `/${moduleName}.lua`,
         `/${modulePath}/init.lua`,
         `${modulePath}.lua`,
+        `${moduleName}.lua`,
         `${modulePath}/init.lua`,
       ];
 

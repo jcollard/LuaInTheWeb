@@ -161,24 +161,32 @@ export class AssetCollector {
   }
 
   /**
-   * Resolve a module path to a file path, trying both .lua and /init.lua variants.
-   * Returns null if neither variant exists.
+   * Resolve a module path to a file path, trying multiple variants.
+   * Returns null if no variant exists.
    *
-   * Resolution order (matches standard Lua behavior):
-   * 1. module.lua (e.g., "util" -> "util.lua")
-   * 2. module/init.lua (e.g., "util" -> "util/init.lua")
+   * Resolution order:
+   * 1. module.lua with dots->slashes (e.g., "game.core" -> "game/core.lua")
+   * 2. module.lua as compound extension (e.g., "name.ansi" -> "name.ansi.lua")
+   * 3. module/init.lua (e.g., "util" -> "util/init.lua")
    */
   private resolveModulePath(modulePath: string): string | null {
-    // Try direct .lua file first (standard Lua behavior)
+    // Try direct .lua file first (standard Lua behavior: dots become slashes)
     const directPath = this.moduleToFilePath(modulePath)
     const directAbsolute = this.resolvePath(directPath)
     if (this.filesystem.exists(directAbsolute)) {
       return directPath
     }
 
-    // If already ends with .lua, don't try init.lua fallback
+    // If already ends with .lua, don't try further fallbacks
     if (modulePath.endsWith('.lua')) {
       return null
+    }
+
+    // Try compound extension: treat dots as literal (e.g., "name.ansi" -> "name.ansi.lua")
+    const compoundPath = modulePath + '.lua'
+    const compoundAbsolute = this.resolvePath(compoundPath)
+    if (this.filesystem.exists(compoundAbsolute)) {
+      return compoundPath
     }
 
     // Fall back to init.lua in directory
