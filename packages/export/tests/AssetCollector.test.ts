@@ -403,6 +403,36 @@ describe('AssetCollector', () => {
       expect(result.files.map((f) => f.path)).toContain('lib/util/init.lua')
     })
 
+    it('should resolve compound extension require("name.ansi") to name.ansi.lua', async () => {
+      const files = {
+        '/project/main.lua': 'local art = require("name.ansi")',
+        '/project/name.ansi.lua': 'return { art = "pixel art" }',
+      }
+      const fs = createMockFileSystem(files)
+      const collector = new AssetCollector(fs, '/project')
+      const config = createConfig()
+
+      const result = await collector.collect(config)
+
+      expect(result.files).toHaveLength(2)
+      expect(result.files.map((f) => f.path)).toContain('name.ansi.lua')
+    })
+
+    it('should still resolve standard dotted require("lib.utils") to lib/utils.lua', async () => {
+      const files = {
+        '/project/main.lua': 'local utils = require("lib.utils")',
+        '/project/lib/utils.lua': 'return {}',
+      }
+      const fs = createMockFileSystem(files)
+      const collector = new AssetCollector(fs, '/project')
+      const config = createConfig()
+
+      const result = await collector.collect(config)
+
+      expect(result.files).toHaveLength(2)
+      expect(result.files.map((f) => f.path)).toContain('lib/utils.lua')
+    })
+
     it('should prefer direct .lua file over init.lua when both exist', async () => {
       const files = {
         '/project/main.lua': 'local util = require("util")',

@@ -363,6 +363,10 @@ export class HtmlGenerator {
             filePath = modulePath.replace(/[.]/g, '/') + '.lua';
           }
           let code = LUA_MODULES[filePath];
+          // Fallback: try compound extension (e.g., "name.ansi" -> "name.ansi.lua")
+          if (!code && !modulePath.endsWith('.lua')) {
+            code = LUA_MODULES[modulePath + ".lua"];
+          }
           // Fallback to init.lua if direct file not found (standard Lua behavior)
           if (!code && !modulePath.endsWith('.lua')) {
             const initPath = modulePath.replace(/[.]/g, '/') + '/init.lua';
@@ -621,6 +625,10 @@ export class HtmlGenerator {
             filePath = modulePath.replace(/[.]/g, '/') + '.lua';
           }
           let code = LUA_MODULES[filePath];
+          // Fallback: try compound extension (e.g., "name.ansi" -> "name.ansi.lua")
+          if (!code && !modulePath.endsWith('.lua')) {
+            code = LUA_MODULES[modulePath + ".lua"];
+          }
           // Fallback to init.lua if direct file not found (standard Lua behavior)
           if (!code && !modulePath.endsWith('.lua')) {
             const initPath = modulePath.replace(/[.]/g, '/') + '/init.lua';

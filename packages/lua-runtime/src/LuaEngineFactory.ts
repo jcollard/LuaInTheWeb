@@ -489,10 +489,15 @@ export class LuaEngineFactory {
         return false
       }
 
-      // Helper to try both .lua and /init.lua variants in a directory
-      const tryDirectory = (dir: string, modulePath: string): boolean => {
-        // Try dir/module.lua
+      // Helper to try .lua, compound extension, and /init.lua variants in a directory
+      const tryDirectory = (dir: string, modulePath: string, originalName: string): boolean => {
+        // Try dir/module.lua (dots already converted to slashes in modulePath)
         if (tryPath(joinPath(dir, modulePath + '.lua'))) return true
+        // Try compound extension: dir/module.ext.lua (dots preserved)
+        // e.g., require("name.ansi") -> dir/name.ansi.lua
+        if (originalName !== modulePath) {
+          if (tryPath(joinPath(dir, originalName + '.lua'))) return true
+        }
         // Try dir/module/init.lua
         if (tryPath(joinPath(dir, modulePath, 'init.lua'))) return true
         return false
@@ -510,12 +515,12 @@ export class LuaEngineFactory {
 
           // 1. Search CWD first (standard Lua ./?.lua behavior)
           if (cwdDir !== null) {
-            if (tryDirectory(cwdDir, modulePath)) return true
+            if (tryDirectory(cwdDir, modulePath, moduleName)) return true
           }
 
           // 2. Fall back to root if different from CWD
           if (cwdDir !== '/') {
-            if (tryDirectory('/', modulePath)) return true
+            if (tryDirectory('/', modulePath, moduleName)) return true
           }
 
           lastModuleContent = null

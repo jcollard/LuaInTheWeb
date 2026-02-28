@@ -505,6 +505,64 @@ describe('LuaCanvasRuntime', () => {
       expect(await runtime.getGlobal('my')).toBe(200);
     });
 
+    it('should normalize digit key "1" to "Digit1" in is_key_down', async () => {
+      (channel.getInputState as ReturnType<typeof vi.fn>).mockReturnValue({
+        keysDown: ['Digit1'],
+        keysPressed: [],
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtonsDown: [],
+        mouseButtonsPressed: [],
+      });
+
+      await runtime.loadCode(`
+        canvas.tick(function()
+          digit1Down = canvas.is_key_down("1")
+          digit1DownExplicit = canvas.is_key_down("Digit1")
+        end)
+      `);
+
+      runtime.start();
+      channel.signalFrameReady();
+
+      await vi.waitFor(() => {
+        return (channel.sendDrawCommands as ReturnType<typeof vi.fn>).mock.calls.length > 0;
+      }, { timeout: 100 });
+
+      runtime.stop();
+
+      expect(await runtime.getGlobal('digit1Down')).toBe(true);
+      expect(await runtime.getGlobal('digit1DownExplicit')).toBe(true);
+    });
+
+    it('should normalize digit key "0" to "Digit0" in is_key_down', async () => {
+      (channel.getInputState as ReturnType<typeof vi.fn>).mockReturnValue({
+        keysDown: ['Digit0'],
+        keysPressed: [],
+        mouseX: 0,
+        mouseY: 0,
+        mouseButtonsDown: [],
+        mouseButtonsPressed: [],
+      });
+
+      await runtime.loadCode(`
+        canvas.tick(function()
+          digit0Down = canvas.is_key_down("0")
+        end)
+      `);
+
+      runtime.start();
+      channel.signalFrameReady();
+
+      await vi.waitFor(() => {
+        return (channel.sendDrawCommands as ReturnType<typeof vi.fn>).mock.calls.length > 0;
+      }, { timeout: 100 });
+
+      runtime.stop();
+
+      expect(await runtime.getGlobal('digit0Down')).toBe(true);
+    });
+
     it('should return isMouseDown state', async () => {
       (channel.getInputState as ReturnType<typeof vi.fn>).mockReturnValue({
         keysDown: [],

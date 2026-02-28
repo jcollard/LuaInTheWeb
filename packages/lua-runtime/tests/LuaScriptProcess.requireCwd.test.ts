@@ -245,6 +245,69 @@ describe('LuaScriptProcess - require() CWD resolution', () => {
     expect(onExit).toHaveBeenCalledWith(0)
   })
 
+  it('should resolve compound extension require("name.ansi") to name.ansi.lua', async () => {
+    // Setup: CWD has name.ansi.lua (compound extension file)
+    const readFileMock = mockFileSystem.readFile as ReturnType<typeof vi.fn>
+    readFileMock.mockImplementation((path: string) => {
+      if (path === '/projects/main.lua') {
+        return 'local art = require("name.ansi"); print(art.type)'
+      }
+      if (path === '/projects/name.ansi.lua') {
+        return 'return { type = "ANSI_ART" }'
+      }
+      return null
+    })
+    const existsMock = mockFileSystem.exists as ReturnType<typeof vi.fn>
+    existsMock.mockImplementation((path: string) => {
+      return ['/projects/main.lua', '/projects/name.ansi.lua'].includes(path)
+    })
+
+    context = { ...context, cwd: '/projects' }
+
+    process = new LuaScriptProcess('/projects/main.lua', context)
+    process.onOutput = onOutput
+    process.onError = onError
+    process.onExit = onExit
+
+    process.start()
+
+    await new Promise((resolve) => setTimeout(resolve, 200))
+
+    expect(onOutput).toHaveBeenCalledWith('ANSI_ART\n')
+    expect(onExit).toHaveBeenCalledWith(0)
+  })
+
+  it('should still resolve standard require("lib.utils") to lib/utils.lua', async () => {
+    const readFileMock = mockFileSystem.readFile as ReturnType<typeof vi.fn>
+    readFileMock.mockImplementation((path: string) => {
+      if (path === '/projects/main.lua') {
+        return 'local u = require("lib.utils"); print(u.name)'
+      }
+      if (path === '/projects/lib/utils.lua') {
+        return 'return { name = "NESTED" }'
+      }
+      return null
+    })
+    const existsMock = mockFileSystem.exists as ReturnType<typeof vi.fn>
+    existsMock.mockImplementation((path: string) => {
+      return ['/projects/main.lua', '/projects/lib/utils.lua'].includes(path)
+    })
+
+    context = { ...context, cwd: '/projects' }
+
+    process = new LuaScriptProcess('/projects/main.lua', context)
+    process.onOutput = onOutput
+    process.onError = onError
+    process.onExit = onExit
+
+    process.start()
+
+    await new Promise((resolve) => setTimeout(resolve, 200))
+
+    expect(onOutput).toHaveBeenCalledWith('NESTED\n')
+    expect(onExit).toHaveBeenCalledWith(0)
+  })
+
   it('should find init.lua package in CWD', async () => {
     // Setup: CWD has mylib/init.lua
     const readFileMock = mockFileSystem.readFile as ReturnType<typeof vi.fn>
