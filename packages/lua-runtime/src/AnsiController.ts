@@ -75,6 +75,19 @@ export interface LayerInfo {
 }
 
 /**
+ * Per-screen state consolidating all screen-related data.
+ */
+interface ScreenState {
+  ansiString: string
+  layers: LayerData[]
+  schedule: LayerSchedule | null
+  playing: boolean
+  /** True once screenPlay() or screenPause() has been explicitly called. */
+  playbackTouched: boolean
+  lastGrid: AnsiGrid | null
+}
+
+/**
  * Format an onTick error for display.
  */
 function formatOnTickError(error: unknown): string {
@@ -109,18 +122,24 @@ export class AnsiController {
 
   // Screen state
   private nextScreenId = 1
-  private screens: Map<number, string> = new Map()
-  private screenLayers: Map<number, LayerData[]> = new Map()
+  private screenStates: Map<number, ScreenState> = new Map()
   private activeScreenId: number | null = null
-
-  // Animation playback state
-  private screenSchedules: Map<number, LayerSchedule> = new Map()
-  private screenPlaying: Map<number, boolean> = new Map()
-  private lastCompositedGrid: Map<number, AnsiGrid> = new Map()
 
   constructor(callbacks: AnsiCallbacks, ansiId = 'ansi-main') {
     this.callbacks = callbacks
     this.ansiId = ansiId
+  }
+
+  /**
+   * Get or create the screen state for a given screen ID.
+   */
+  private getScreenState(id: number): ScreenState {
+    let state = this.screenStates.get(id)
+    if (!state) {
+      state = { ansiString: '', layers: [], schedule: null, playing: false, playbackTouched: false, lastGrid: null }
+      this.screenStates.set(id, state)
+    }
+    return state
   }
 
   /**
@@ -202,16 +221,10 @@ export class AnsiController {
     // Unregister close handler to prevent double-cleanup
     this.callbacks.unregisterAnsiCloseHandler?.(this.ansiId)
 
-    // Clear screen state
-    this.screens.clear()
-    this.screenLayers.clear()
+    // Clear all screen state
+    this.screenStates.clear()
     this.activeScreenId = null
     this.nextScreenId = 1
-
-    // Clear playback state
-    this.screenSchedules.clear()
-    this.screenPlaying.clear()
-    this.lastCompositedGrid.clear()
 
     // Dispose and close the tab
     if (this.handle) {
@@ -423,7 +436,8 @@ export class AnsiController {
   createScreen(data: Record<string, unknown>): number {
     const layers = parseScreenLayers(data)
     const id = this.nextScreenId++
-    this.screenLayers.set(id, layers)
+    const state = this.getScreenState(id)
+    state.layers = layers
     this.recompositeScreen(id)
     return id
   }
@@ -437,15 +451,15 @@ export class AnsiController {
       this.activeScreenId = null
       return
     }
-    if (!this.screens.has(id)) {
+    if (!this.screenStates.has(id)) {
       throw new Error(`Screen ID ${id} not found. Create a screen first with ansi.create_screen().`)
     }
     this.activeScreenId = id
 
     // Auto-start playback if screen has animated layers and isn't already paused
-    if (!this.screenPlaying.has(id)) {
-      const layers = this.screenLayers.get(id)
-      if (layers && this.hasAnimatedLayers(layers)) {
+    const state = this.getScreenState(id)
+    if (!state.playbackTouched) {
+      if (this.hasAnimatedLayers(state.layers)) {
         this.screenPlay(id)
       }
     }
@@ -465,11 +479,11 @@ export class AnsiController {
    * @throws Error if the screen ID is not found.
    */
   private validateScreenExists(id: number): LayerData[] {
-    const layers = this.screenLayers.get(id)
-    if (!layers) {
+    const state = this.screenStates.get(id)
+    if (!state) {
       throw new Error(`Screen ID ${id} not found. Create a screen first with ansi.create_screen().`)
     }
-    return layers
+    return state.layers
   }
 
   /**
@@ -544,7 +558,9 @@ export class AnsiController {
    */
   screenPlay(id: number): void {
     this.validateScreenExists(id)
-    this.screenPlaying.set(id, true)
+    const state = this.getScreenState(id)
+    state.playing = true
+    state.playbackTouched = true
   }
 
   /**
@@ -552,16 +568,18 @@ export class AnsiController {
    */
   screenPause(id: number): void {
     this.validateScreenExists(id)
-    this.screenPlaying.set(id, false)
+    const state = this.getScreenState(id)
+    state.playing = false
+    state.playbackTouched = true
     // Clear schedule so it re-initializes on next play
-    this.screenSchedules.delete(id)
+    state.schedule = null
   }
 
   /**
    * Check if animation is currently playing for a screen.
    */
   screenIsPlaying(id: number): boolean {
-    return this.screenPlaying.get(id) ?? false
+    return this.screenStates.get(id)?.playing ?? false
   }
 
   /**
@@ -575,12 +593,11 @@ export class AnsiController {
    * Re-composite a screen's layers and update the stored ANSI string and grid cache.
    */
   private recompositeScreen(id: number): void {
-    const layers = this.screenLayers.get(id)
-    if (!layers) return
-    const grid = compositeGrid(layers)
-    const ansiString = renderGridToAnsiString(grid)
-    this.screens.set(id, ansiString)
-    this.lastCompositedGrid.set(id, grid)
+    const state = this.screenStates.get(id)
+    if (!state) return
+    const grid = compositeGrid(state.layers)
+    state.ansiString = renderGridToAnsiString(grid)
+    state.lastGrid = grid
   }
 
   // --- Internal ---
@@ -595,15 +612,18 @@ export class AnsiController {
     this.currentTiming = timing
 
     // Advance animation frames for the active screen if playing
-    if (this.activeScreenId !== null && this.screenPlaying.get(this.activeScreenId)) {
-      this.advanceScreenAnimation(this.activeScreenId, timing.totalTime * 1000)
+    if (this.activeScreenId !== null) {
+      const activeState = this.screenStates.get(this.activeScreenId)
+      if (activeState?.playing) {
+        this.advanceScreenAnimation(this.activeScreenId, timing.totalTime * 1000)
+      }
     }
 
     // Render active screen background before tick callback
     if (this.activeScreenId !== null) {
-      const screenString = this.screens.get(this.activeScreenId)
-      if (screenString) {
-        this.handle?.write(screenString)
+      const activeState = this.screenStates.get(this.activeScreenId)
+      if (activeState?.ansiString) {
+        this.handle?.write(activeState.ansiString)
       }
     }
 
@@ -631,23 +651,21 @@ export class AnsiController {
    * Advance animation frames for a screen and update rendering if frames changed.
    */
   private advanceScreenAnimation(id: number, nowMs: number): void {
-    const layers = this.screenLayers.get(id)
-    if (!layers) return
+    const state = this.screenStates.get(id)
+    if (!state) return
 
     // Initialize schedule on first call
-    let schedule = this.screenSchedules.get(id)
-    if (!schedule) {
-      schedule = initSchedule(layers, nowMs)
-      this.screenSchedules.set(id, schedule)
+    if (!state.schedule) {
+      state.schedule = initSchedule(state.layers, nowMs)
     }
 
-    const { changed } = computePlaybackTick(layers, schedule, nowMs)
+    const { changed } = computePlaybackTick(state.layers, state.schedule, nowMs)
     if (!changed) return
 
     // Re-composite and try diff rendering for efficiency
-    const oldGrid = this.lastCompositedGrid.get(id)
-    const newGrid = compositeGrid(layers)
-    this.lastCompositedGrid.set(id, newGrid)
+    const oldGrid = state.lastGrid
+    const newGrid = compositeGrid(state.layers)
+    state.lastGrid = newGrid
 
     if (oldGrid) {
       const diff = renderDiffAnsiString(oldGrid, newGrid)
@@ -657,7 +675,6 @@ export class AnsiController {
     }
 
     // Always update the full cached ANSI string so paused screens render correctly
-    const ansiString = renderGridToAnsiString(newGrid)
-    this.screens.set(id, ansiString)
+    state.ansiString = renderGridToAnsiString(newGrid)
   }
 }
