@@ -168,7 +168,7 @@ function IDELayoutInner({
   // ANSI tab management
   const hasAnsiTabs = tabs.some(t => t.type === 'ansi')
   const hasAnsiEditorTabs = tabs.some(t => t.type === 'ansi-editor')
-  const htmlTabPath = tabs.find(t => t.type === 'html')?.path ?? null
+  const hasHtmlTabs = tabs.some(t => t.type === 'html')
 
   // ANSI tab request management (ansiId -> resolver for terminal handle)
   const pendingAnsiRequestsRef = useRef<Map<string, (handle: AnsiTerminalHandle) => void>>(new Map())
@@ -904,19 +904,16 @@ function IDELayoutInner({
                           onOpenMarkdown={openMarkdownPreview}
                         />
                       )}
-                      {/* HTML preview - positioned off-screen when hidden to preserve iframe browsing context */}
-                      {htmlTabPath && (
+                      {/* HTML preview - always mounted when html tabs exist to preserve iframe browsing context */}
+                      {hasHtmlTabs && (
                         <div style={activeTabType === 'html'
                           ? { display: 'contents' }
                           : { position: 'absolute', width: 0, height: 0, overflow: 'hidden', opacity: 0, pointerEvents: 'none' as const }
                         }>
                           <HtmlTabContent
-                            content={
-                              compositeFileSystem.exists(htmlTabPath)
-                                ? compositeFileSystem.readFile(htmlTabPath)
-                                : ''
-                            }
                             tabBarProps={tabBarProps}
+                            fileSystem={compositeFileSystem}
+                            activeTab={activeTab}
                           />
                         </div>
                       )}
