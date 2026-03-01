@@ -1,0 +1,17 @@
+{
+  "threshold": 0,
+  "reporters": ["console"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.stryker-tmp/**",
+    "**/*.test.{ts,tsx}",
+    "**/*.generated.ts",
+    "**/reports/**",
+    "**/public/**"
+  ],
+  "format": ["typescript", "tsx"],
+  "minLines": 5,
+  "minTokens": 50,
+  "absolute": false
+}

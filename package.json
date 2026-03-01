@@ -14,9 +14,14 @@
     "test:lua-runtime": "npm run test -w @lua-learning/lua-runtime",
     "ci": "node scripts/ci-local.js",
     "ci:quick": "node scripts/ci-local.js --skip-e2e",
-    "ci:scope": "node scripts/ci-local.js --scope"
+    "ci:scope": "node scripts/ci-local.js --scope",
+    "analytics": "node scripts/code-analytics.js",
+    "analytics:json": "node scripts/code-analytics.js --json",
+    "analytics:duplication": "node scripts/code-analytics.js --duplication",
+    "analytics:complexity": "node scripts/code-analytics.js --complexity"
   },
   "devDependencies": {
-    "husky": "^9.1.7"
+    "husky": "^9.1.7",
+    "jscpd": "^4.0.8"
   }
 }
