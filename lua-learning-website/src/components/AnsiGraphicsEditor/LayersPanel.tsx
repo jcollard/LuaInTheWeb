@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import { useState, useCallback, useEffect } from 'react'
 import type { Layer } from './types'
 import { isGroupLayer, isDrawableLayer, getParentId } from './types'
