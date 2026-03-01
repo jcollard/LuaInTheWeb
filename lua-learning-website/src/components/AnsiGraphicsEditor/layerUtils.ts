@@ -466,3 +466,6 @@ export function cloneLayerState(state: LayerState): LayerState {
     layers: state.layers.map(cloneLayer),
   }
 }
+
+export { formatLayerId, layerMatchesQuery, filterLayers, filterTagsTab } from './layerFilterUtils'
+export type { FilteredTag } from './layerFilterUtils'

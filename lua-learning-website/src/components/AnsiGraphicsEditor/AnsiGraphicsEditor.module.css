@@ -943,6 +943,37 @@
   border-bottom-color: var(--theme-accent-primary);
 }
 
+/* ---- Layer Search ---- */
+.layerSearchRow {
+  display: flex;
+  gap: 4px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.layerSearchInput {
+  flex: 1;
+  font-size: 12px;
+  background-color: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+  border: 1px solid var(--theme-border);
+  border-radius: 2px;
+  padding: 2px 4px;
+  outline: none;
+  user-select: text;
+}
+
+.layerSearchInput:focus {
+  border-color: var(--theme-accent-primary);
+}
+
+.layersEmpty {
+  padding: 16px 8px;
+  font-size: 12px;
+  color: var(--theme-text-secondary);
+  text-align: center;
+}
+
 /* ---- Tags Tab ---- */
 .tagsTabContent {
   flex: 1;

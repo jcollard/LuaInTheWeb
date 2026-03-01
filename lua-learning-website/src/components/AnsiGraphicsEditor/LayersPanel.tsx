@@ -1,7 +1,8 @@
+/* eslint-disable max-lines */
 import { useState, useCallback, useEffect } from 'react'
 import type { Layer } from './types'
 import { isGroupLayer, isDrawableLayer, getParentId } from './types'
-import { getAncestorGroupIds, buildDisplayOrder } from './layerUtils'
+import { getAncestorGroupIds, buildDisplayOrder, filterLayers } from './layerUtils'
 import { LayerRow } from './LayerRow'
 import { TagsTabContent } from './TagsTabContent'
 import { useLayerDragDrop } from './useLayerDragDrop'
@@ -69,6 +70,7 @@ export function LayersPanel({
   onRenameTag,
 }: LayersPanelProps) {
   const [activeTab, setActiveTab] = useState<'layers' | 'tags'>('layers')
+  const [searchQuery, setSearchQuery] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [editingIdFor, setEditingIdFor] = useState<string | null>(null)
@@ -186,7 +188,8 @@ export function LayersPanel({
   )
 
   // Display layers in reverse order with recursive tree-walk
-  const reversed = buildDisplayOrder(layers)
+  const filteredLayers = filterLayers(layers, searchQuery)
+  const reversed = buildDisplayOrder(filteredLayers)
   const drawableCount = layers.filter(isDrawableLayer).length
   const singleDrawable = drawableCount <= 1
   const singleLayer = layers.length <= 1
@@ -225,12 +228,22 @@ export function LayersPanel({
           </button>
         )}
       </div>
+      <div className={styles.layerSearchRow}>
+        <input
+          className={styles.layerSearchInput}
+          data-testid="layer-search-input"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Filter layers..."
+        />
+      </div>
       {activeTab === 'tags' ? (
         <TagsTabContent
           layers={layers}
           availableTags={availableTags}
           activeLayerId={activeLayerId}
           expandedTags={expandedTags}
+          searchQuery={searchQuery}
           onSetActive={onSetActive}
           onCreateTag={onCreateTag}
           onDeleteTag={onDeleteTag}
@@ -242,6 +255,9 @@ export function LayersPanel({
         />
       ) : (
       <div className={styles.layersList}>
+        {reversed.length === 0 && searchQuery.trim() !== '' && (
+          <div className={styles.layersEmpty} data-testid="layers-empty">No matching layers</div>
+        )}
         {reversed.map((layer) => {
           const isGroup = isGroupLayer(layer)
           const isDragged = draggedId === layer.id || draggedGroupChildIds.has(layer.id)
