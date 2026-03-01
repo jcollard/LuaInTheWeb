@@ -20,7 +20,8 @@ import { initSchedule, computePlaybackTick, type LayerSchedule } from '@lua-lear
 import { parseScreenLayers } from './screenParser'
 import { compositeGrid } from './screenCompositor'
 import { renderGridToAnsiString, renderDiffAnsiString } from './ansiStringRenderer'
-import type { AnsiGrid, LayerData, DrawnLayerData } from './screenTypes'
+import { renderTextLayerGrid } from './textLayerGrid'
+import type { AnsiGrid, LayerData, DrawnLayerData, TextLayerData, RGBColor } from './screenTypes'
 
 /**
  * Handle to a running ANSI terminal instance.
@@ -526,6 +527,35 @@ export class AnsiController {
     }
     for (const layer of matched) {
       layer.visible = !layer.visible
+    }
+    this.recompositeScreen(id)
+  }
+
+  /**
+   * Set the text of text layer(s) matching an identifier.
+   * Non-text layers are silently skipped. Errors if zero text layers match.
+   */
+  setScreenLabel(id: number, identifier: string, text: string, textFg?: RGBColor, textFgColors?: RGBColor[]): void {
+    const layers = this.validateScreenExists(id)
+    const matched = this.resolveLayersByIdentifier(layers, identifier)
+    if (matched.length === 0) {
+      throw new Error(`No layers match identifier "${identifier}" in screen ${id}.`)
+    }
+    const textLayers = matched.filter((l): l is TextLayerData => l.type === 'text')
+    if (textLayers.length === 0) {
+      throw new Error(`No text layers match identifier "${identifier}" in screen ${id}.`)
+    }
+    for (const layer of textLayers) {
+      layer.text = text
+      if (textFg !== undefined) {
+        layer.textFg = textFg
+      }
+      if (textFgColors !== undefined) {
+        layer.textFgColors = textFgColors
+      } else {
+        layer.textFgColors = undefined
+      }
+      layer.grid = renderTextLayerGrid(layer.text, layer.bounds, layer.textFg, layer.textFgColors, layer.textAlign)
     }
     this.recompositeScreen(id)
   }
