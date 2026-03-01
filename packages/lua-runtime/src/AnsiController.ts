@@ -550,11 +550,8 @@ export class AnsiController {
       if (textFg !== undefined) {
         layer.textFg = textFg
       }
-      if (textFgColors !== undefined) {
-        layer.textFgColors = textFgColors
-      } else {
-        layer.textFgColors = undefined
-      }
+      // Always assign textFgColors: clears per-character colors when undefined (plain text)
+      layer.textFgColors = textFgColors
       layer.grid = renderTextLayerGrid(layer.text, layer.bounds, layer.textFg, layer.textFgColors, layer.textAlign)
     }
     this.recompositeScreen(id)

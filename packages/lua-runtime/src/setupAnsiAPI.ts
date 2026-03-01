@@ -10,6 +10,28 @@ import type { RGBColor } from './screenTypes'
 import { ansiLuaCode } from './ansiLuaWrapper'
 
 /**
+ * Convert a flat array of numbers from a wasmoon Lua table into RGBColor triples.
+ * Wasmoon may pass Lua array tables as JS arrays (0-indexed) or 1-indexed objects.
+ */
+function parseFlatColorsToRgb(flatColors: Record<number, number>): RGBColor[] {
+  const values: number[] = []
+  if (Array.isArray(flatColors)) {
+    for (const v of flatColors) values.push(v)
+  } else {
+    let i = 1
+    while (flatColors[i] !== undefined) {
+      values.push(flatColors[i])
+      i++
+    }
+  }
+  const colors: RGBColor[] = []
+  for (let j = 0; j < values.length; j += 3) {
+    colors.push([values[j], values[j + 1], values[j + 2]])
+  }
+  return colors
+}
+
+/**
  * Options for ANSI API file reading support.
  */
 export interface AnsiAPIOptions {
@@ -243,24 +265,7 @@ export function setupAnsiAPI(
     const textFg: RGBColor | undefined = textFgR !== undefined
       ? [textFgR, textFgG!, textFgB!]
       : undefined
-    let textFgColors: RGBColor[] | undefined
-    if (flatColors) {
-      // wasmoon may pass Lua array tables as JS arrays (0-indexed) or 1-indexed objects
-      textFgColors = []
-      const values: number[] = []
-      if (Array.isArray(flatColors)) {
-        for (const v of flatColors) values.push(v)
-      } else {
-        let i = 1
-        while (flatColors[i] !== undefined) {
-          values.push(flatColors[i])
-          i++
-        }
-      }
-      for (let j = 0; j < values.length; j += 3) {
-        textFgColors.push([values[j], values[j + 1], values[j + 2]])
-      }
-    }
+    const textFgColors = flatColors ? parseFlatColorsToRgb(flatColors) : undefined
     controller.setScreenLabel(screenId, identifier, text, textFg, textFgColors)
   })
 
