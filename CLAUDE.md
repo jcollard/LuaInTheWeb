@@ -1,6 +1,7 @@
 # Project Rules
 
 - NEVER use `cd` in Bash commands. Always use absolute paths or `--prefix`. The working directory must remain at the repo root to keep hook paths working.
+- NEVER edit code or make changes directly in the root repository (main worktree). ALL implementation work MUST happen in an isolated worktree. Use `/issue <n> begin` (which auto-creates a worktree after plan approval) or `/worktree create <n>` to create one. If you find yourself on the `main` branch and about to edit files, STOP and create a worktree first. The only exceptions are editing CLAUDE.md, docs/, and .claude/ configuration files.
 
 ## Project Overview
 
