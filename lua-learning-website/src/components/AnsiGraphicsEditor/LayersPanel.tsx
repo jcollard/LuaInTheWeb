@@ -3,6 +3,7 @@ import type { Layer } from './types'
 import { isGroupLayer, isDrawableLayer, getParentId } from './types'
 import { getAncestorGroupIds, buildDisplayOrder, filterLayers } from './layerUtils'
 import { LayerRow } from './LayerRow'
+import { LayerContextMenu } from './LayerContextMenu'
 import { TagsTabContent } from './TagsTabContent'
 import { useLayerDragDrop } from './useLayerDragDrop'
 import styles from './AnsiGraphicsEditor.module.css'
@@ -346,96 +347,26 @@ export function LayersPanel({
       </div>
       )}
       {contextMenu && (
-        <>
-          <div
-            className={styles.layerContextBackdrop}
-            data-testid="layer-context-backdrop"
-            onClick={closeContextMenu}
-            onContextMenu={handleBackdropContextMenu}
-          />
-          <div
-            className={styles.layerContextMenu}
-            style={{ left: contextMenu.x, top: contextMenu.y }}
-            data-testid="layer-context-menu"
-          >
-            {!contextIsGroup && (
-              <button
-                className={styles.layerContextMenuItem}
-                data-testid="context-merge-down"
-                onClick={() => { onMergeDown(contextMenu.layerId); setContextMenu(null) }}
-                disabled={contextMenu.layerId === layers[0]?.id}
-              >
-                Merge Down
-              </button>
-            )}
-            <button
-              className={styles.layerContextMenuItem}
-              data-testid="context-wrap-in-group"
-              onClick={() => { onWrapInGroup(contextMenu.layerId); setContextMenu(null) }}
-            >
-              Group with new folder
-            </button>
-            <button
-              className={styles.layerContextMenuItem}
-              data-testid="context-duplicate"
-              onClick={() => { onDuplicate(contextMenu.layerId); setContextMenu(null) }}
-            >
-              Duplicate
-            </button>
-            {contextHasParentId && (
-              <button
-                className={styles.layerContextMenuItem}
-                data-testid="context-remove-from-group"
-                onClick={() => { onRemoveFromGroup(contextMenu.layerId); setContextMenu(null) }}
-              >
-                Remove from group
-              </button>
-            )}
-            <button
-              className={styles.layerContextMenuItem}
-              data-testid="context-copy-layer-id"
-              onClick={() => { void navigator.clipboard.writeText(contextMenu.layerId); closeContextMenu() }}
-            >
-              Copy Layer ID
-            </button>
-            <div
-              className={[styles.layerContextMenuItem, styles.layerContextMenuItemSubmenu].filter(Boolean).join(' ')}
-              data-testid="context-tags-submenu-trigger"
-              onMouseEnter={() => setTagsSubmenuOpen(true)}
-              onMouseLeave={() => setTagsSubmenuOpen(false)}
-            >
-              Tags &gt;
-              {tagsSubmenuOpen && (
-                <div ref={tagsSubmenuRef} className={[styles.layerTagsSubmenu, tagsSubmenuFlipped && styles.layerTagsSubmenuFlipped].filter(Boolean).join(' ')} data-testid="tags-submenu">
-                  {availableTags.length === 0 ? (
-                    <div className={styles.layerTagsSubmenuEmpty} data-testid="tags-submenu-empty">No tags created</div>
-                  ) : (
-                    availableTags.map(tag => {
-                      const hasTag = contextLayer?.tags?.includes(tag) ?? false
-                      return (
-                        <label key={tag} className={styles.layerTagsSubmenuItem}>
-                          <input
-                            type="checkbox"
-                            data-testid={`tag-checkbox-${tag}`}
-                            checked={hasTag}
-                            onChange={() => {
-                              if (hasTag) {
-                                onRemoveTagFromLayer(contextMenu.layerId, tag)
-                              } else {
-                                onAddTagToLayer(contextMenu.layerId, tag)
-                              }
-                            }}
-                          />
-                          {tag}
-                        </label>
-                      )
-                    })
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </>
+        <LayerContextMenu
+          contextMenu={contextMenu}
+          contextLayer={contextLayer}
+          contextIsGroup={contextIsGroup}
+          contextHasParentId={contextHasParentId}
+          firstLayerId={layers[0]?.id}
+          availableTags={availableTags}
+          tagsSubmenuOpen={tagsSubmenuOpen}
+          tagsSubmenuFlipped={tagsSubmenuFlipped}
+          tagsSubmenuRef={tagsSubmenuRef}
+          onMergeDown={onMergeDown}
+          onWrapInGroup={onWrapInGroup}
+          onDuplicate={onDuplicate}
+          onRemoveFromGroup={onRemoveFromGroup}
+          onAddTagToLayer={onAddTagToLayer}
+          onRemoveTagFromLayer={onRemoveTagFromLayer}
+          onSetTagsSubmenuOpen={setTagsSubmenuOpen}
+          onClose={closeContextMenu}
+          onBackdropContextMenu={handleBackdropContextMenu}
+        />
       )}
     </div>
   )
