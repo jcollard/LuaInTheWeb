@@ -15,6 +15,7 @@ __line_count = 0
 __instruction_limit = ${lineLimit}
 __check_interval = ${checkInterval}
 __lines_since_check = 0
+__loading_depth = 0
 
 function __request_stop()
     __stop_requested = true
@@ -32,6 +33,20 @@ end
 
 -- Hook function that counts lines and checks for stop conditions
 function __execution_hook()
+    -- During file loading, skip instruction counting but still check stop requests
+    if __loading_depth > 0 then
+        __lines_since_check = __lines_since_check + 1
+        if __lines_since_check >= __check_interval then
+            __lines_since_check = 0
+            if __stop_requested then
+                __stop_requested = false
+                __loading_depth = 0
+                error("Execution stopped by user", 0)
+            end
+        end
+        return
+    end
+
     __line_count = __line_count + 1
     __lines_since_check = __lines_since_check + 1
 

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { LuaEngine } from 'wasmoon'
 import {
   LuaEngineFactory,
   type LuaEngineCallbacks,
@@ -6,6 +7,9 @@ import {
   DEFAULT_INSTRUCTION_LIMIT,
   DEFAULT_INSTRUCTION_CHECK_INTERVAL,
 } from '../src/LuaEngineFactory'
+import { setupAnsiAPI } from '../src/setupAnsiAPI'
+import type { AnsiController } from '../src/AnsiController'
+import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG } from '../src/screenTypes'
 
 describe('LuaEngineFactory - Execution Control', () => {
   let callbacks: LuaEngineCallbacks
@@ -247,6 +251,185 @@ describe('LuaEngineFactory - Execution Control', () => {
         end
         __clear_execution_hook()
       `)
+
+      engine.global.close()
+    })
+  })
+
+  describe('load_screen execution control integration', () => {
+    /**
+     * Build a minimal V1 .ansi.lua file content string.
+     * Uses one line per cell so parsing triggers the line-based debug hook
+     * (debug.sethook with "l" flag counts each new line).
+     */
+    function makeV1FileContent(): string {
+      const lines: string[] = ['local grid = {}']
+      for (let r = 1; r <= ANSI_ROWS; r++) {
+        lines.push(`grid[${r}] = {}`)
+        for (let c = 1; c <= ANSI_COLS; c++) {
+          lines.push(
+            `grid[${r}][${c}] = { char = " ", fg = {${DEFAULT_FG.join(',')}}, bg = {${DEFAULT_BG.join(',')}} }`
+          )
+        }
+      }
+      lines.push(
+        `return { version = 1, width = ${ANSI_COLS}, height = ${ANSI_ROWS}, grid = grid }`
+      )
+      return lines.join('\n')
+    }
+
+    function createMockController(): AnsiController {
+      let nextId = 1
+      return {
+        isActive: vi.fn().mockReturnValue(false),
+        start: vi.fn().mockResolvedValue(undefined),
+        stop: vi.fn(),
+        setOnTickCallback: vi.fn(),
+        write: vi.fn(),
+        setCursor: vi.fn(),
+        clear: vi.fn(),
+        setForeground: vi.fn(),
+        setBackground: vi.fn(),
+        reset: vi.fn(),
+        getDelta: vi.fn().mockReturnValue(0),
+        getTime: vi.fn().mockReturnValue(0),
+        isKeyDown: vi.fn().mockReturnValue(false),
+        isKeyPressed: vi.fn().mockReturnValue(false),
+        getKeysDown: vi.fn().mockReturnValue([]),
+        getKeysPressed: vi.fn().mockReturnValue([]),
+        getMouseCol: vi.fn().mockReturnValue(1),
+        getMouseRow: vi.fn().mockReturnValue(1),
+        isMouseTopHalf: vi.fn().mockReturnValue(false),
+        getMouseX: vi.fn().mockReturnValue(0),
+        getMouseY: vi.fn().mockReturnValue(0),
+        isMouseButtonDown: vi.fn().mockReturnValue(false),
+        isMouseButtonPressed: vi.fn().mockReturnValue(false),
+        createScreen: vi.fn().mockImplementation(() => nextId++),
+        setScreen: vi.fn(),
+        getActiveScreenId: vi.fn().mockReturnValue(null),
+        getScreenLayers: vi.fn().mockReturnValue([]),
+        setScreenLayerVisible: vi.fn(),
+        toggleScreenLayer: vi.fn(),
+        screenPlay: vi.fn(),
+        screenPause: vi.fn(),
+        screenIsPlaying: vi.fn().mockReturnValue(false),
+      } as unknown as AnsiController
+    }
+
+    /**
+     * Create a Lua engine with ANSI API configured for load_screen testing.
+     * Returns the engine instance (caller is responsible for engine.global.close()).
+     */
+    async function createEngineWithAnsi(
+      engineCallbacks: LuaEngineCallbacks,
+      options: LuaEngineOptions
+    ): Promise<LuaEngine> {
+      const engine = await LuaEngineFactory.create(engineCallbacks, options)
+      const controller = createMockController()
+      setupAnsiAPI(engine, () => controller, {
+        fileReader: engineCallbacks.fileReader,
+        cwd: '/',
+      })
+      return engine
+    }
+
+    /** File reader that returns V1 content for /art/test.ansi.lua. */
+    function v1FileReader(path: string): string | null {
+      if (path === '/art/test.ansi.lua') return makeV1FileContent()
+      return null
+    }
+
+    it('should not trigger instruction limit during load_screen', async () => {
+      const limitReachedCallback = vi.fn().mockReturnValue(false)
+      const engine = await createEngineWithAnsi(
+        { ...callbacks, onInstructionLimitReached: limitReachedCallback, fileReader: v1FileReader },
+        { instructionLimit: 50, instructionCheckInterval: 5 }
+      )
+
+      await engine.doString(`
+        __setup_execution_hook()
+        local ansi = require("ansi")
+        ansi.load_screen("art/test.ansi.lua")
+        __clear_execution_hook()
+      `)
+
+      expect(limitReachedCallback).not.toHaveBeenCalled()
+
+      engine.global.close()
+    })
+
+    it('should reset instruction count after load_screen completes', async () => {
+      const limitReachedCallback = vi.fn().mockReturnValue(false)
+      // The file generates ~2000+ lines. Use a limit well above the post-reset
+      // overhead but below the file's line count to verify the reset prevents
+      // accumulation from the loaded file.
+      const engine = await createEngineWithAnsi(
+        { ...callbacks, onInstructionLimitReached: limitReachedCallback, fileReader: v1FileReader },
+        { instructionLimit: 200, instructionCheckInterval: 10 }
+      )
+
+      // After load_screen, run a loop that would exceed the limit if the
+      // file's 2000+ lines hadn't been reset. With the reset, the loop's
+      // ~100 lines plus post-load overhead stays under the 200 limit.
+      await engine.doString(`
+        __setup_execution_hook()
+        local ansi = require("ansi")
+        ansi.load_screen("art/test.ansi.lua")
+        for i = 1, 50 do
+          local x = i
+        end
+        __clear_execution_hook()
+      `)
+
+      expect(limitReachedCallback).not.toHaveBeenCalled()
+
+      engine.global.close()
+    })
+
+    it('should still honor stop requests during load_screen', async () => {
+      const engine = await createEngineWithAnsi(
+        { ...callbacks, fileReader: v1FileReader },
+        { instructionLimit: 1_000_000, instructionCheckInterval: 5 }
+      )
+
+      // Set stop flag before calling load_screen
+      await engine.doString('__stop_requested = true')
+
+      await expect(
+        engine.doString(`
+          __setup_execution_hook()
+          local ansi = require("ansi")
+          ansi.load_screen("art/test.ansi.lua")
+          __clear_execution_hook()
+        `)
+      ).rejects.toThrow('Execution stopped by user')
+
+      const loadingDepth = await engine.doString('return __loading_depth')
+      expect(loadingDepth).toBe(0)
+
+      engine.global.close()
+    })
+
+    it('should not leak __loading_depth when load_screen errors', async () => {
+      const engine = await createEngineWithAnsi(
+        { ...callbacks, fileReader: () => 'return 42' },
+        { instructionLimit: 1_000_000, instructionCheckInterval: 10 }
+      )
+
+      // load_screen should error because the file returns a number, not a table
+      try {
+        await engine.doString(`
+          __setup_execution_hook()
+          local ansi = require("ansi")
+          ansi.load_screen("bad.ansi.lua")
+          __clear_execution_hook()
+        `)
+      } catch {
+        // Expected error
+      }
+
+      const loadingDepth = await engine.doString('return __loading_depth')
+      expect(loadingDepth).toBe(0)
 
       engine.global.close()
     })

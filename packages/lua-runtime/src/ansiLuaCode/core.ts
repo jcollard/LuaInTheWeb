@@ -184,7 +184,22 @@ export const ansiLuaCoreCode = `
       if not fn then
         error("Failed to parse ANSI file '" .. path .. "': " .. tostring(err))
       end
+
+      -- Suspend instruction counting during file execution
+      local has_exec_control = type(__loading_depth) == 'number'
+      if has_exec_control then
+        __loading_depth = __loading_depth + 1
+      end
+
       local ok, data = pcall(fn)
+
+      if has_exec_control and __loading_depth > 0 then
+        __loading_depth = __loading_depth - 1
+        if __loading_depth == 0 then
+          __reset_instruction_count()
+        end
+      end
+
       if not ok then
         error("Failed to execute ANSI file '" .. path .. "': " .. tostring(data))
       end
