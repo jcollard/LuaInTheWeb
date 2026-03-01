@@ -16,7 +16,7 @@ Add monorepo-wide code quality analytics focusing on **complexity scoring** and 
 |---|-------|------------|--------|--------|----|
 | 1 | Extend ESLint to all packages | — | ✅ Done | epic-693 | — |
 | 2 | Add cognitive complexity scoring | 1 | ✅ Done | epic-693 | — |
-| 3 | Add cross-package duplication detection | — | ⏳ Pending | — | — |
+| 3 | Add cross-package duplication detection | — | ✅ Done | epic-693 | — |
 | 4 | CI integration | 2, 3 | ⏳ Pending | — | — |
 
 ### Dependency Graph
@@ -62,3 +62,4 @@ Sub-issues 1 and 3 can be worked in parallel. Sub-issue 2 depends on 1. Sub-issu
 | 2026-03-01 | Epic created, worktree set up, tracking file initialized |
 | 2026-03-01 | Sub-issue 1 complete: ESLint + complexity rules in all 6 packages, root lint script, ci-local.js updated |
 | 2026-03-01 | Sub-issue 2 complete: eslint-plugin-sonarjs + cognitive-complexity rule (warn@15) in all 6 packages |
+| 2026-03-01 | Sub-issue 3 complete: jscpd cross-package duplication detection — 26 clones found (1.67%), intentional duplication excluded |

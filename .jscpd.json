@@ -1,0 +1,36 @@
+{
+  "threshold": 100,
+  "reporters": ["console", "json"],
+  "output": "reports/jscpd",
+  "path": [
+    "packages/shell-core/src",
+    "packages/canvas-runtime/src",
+    "packages/ansi-shared/src",
+    "packages/lua-runtime/src",
+    "packages/export/src",
+    "lua-learning-website/src"
+  ],
+  "format": ["typescript", "javascript"],
+  "minTokens": 70,
+  "minLines": 5,
+  "maxSize": "200kb",
+  "gitignore": true,
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/*.generated.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/__tests__/**",
+    "**/tests/**",
+    "**/.stryker-tmp/**",
+    "**/e2e/**",
+    "**/export/src/runtime/**",
+    "**/AnsiGraphicsEditor/textLayerGrid.ts",
+    "**/AnsiGraphicsEditor/types.ts",
+    "**/AnsiGraphicsEditor/serialization.ts",
+    "**/AnsiGraphicsEditor/terminalBuffer.ts",
+    "**/AnsiGraphicsEditor/layerUtils.ts"
+  ]
+}

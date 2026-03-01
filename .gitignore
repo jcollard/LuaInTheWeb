@@ -55,6 +55,9 @@ refs
 tmp/
 lua-learning-website/tmp/
 
+# jscpd duplication reports
+/reports/
+
 # Claude Code working directories (file or directory)
 .claude/worktrees
 .claude/agents

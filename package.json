@@ -15,9 +15,11 @@
     "lint": "npm run lint -w @lua-learning/shell-core && npm run lint -w @lua-learning/canvas-runtime && npm run lint -w @lua-learning/ansi-shared && npm run lint -w @lua-learning/lua-runtime && npm run lint -w @lua-learning/export && npm run lint -w lua-learning-website",
     "ci": "node scripts/ci-local.js",
     "ci:quick": "node scripts/ci-local.js --skip-e2e",
-    "ci:scope": "node scripts/ci-local.js --scope"
+    "ci:scope": "node scripts/ci-local.js --scope",
+    "duplicates": "jscpd"
   },
   "devDependencies": {
-    "husky": "^9.1.7"
+    "husky": "^9.1.7",
+    "jscpd": "^4.0.8"
   }
 }
