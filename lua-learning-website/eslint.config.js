@@ -2,6 +2,7 @@ import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import sonarjs from 'eslint-plugin-sonarjs'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
@@ -9,6 +10,7 @@ export default defineConfig([
   globalIgnores(['dist', '.stryker-tmp']),
   {
     files: ['**/*.{ts,tsx}'],
+    plugins: { sonarjs },
     extends: [
       js.configs.recommended,
       tseslint.configs.recommended,
@@ -24,6 +26,7 @@ export default defineConfig([
         'error',
         { argsIgnorePattern: '^_' },
       ],
+      'sonarjs/cognitive-complexity': ['warn', 15],
       'complexity': ['warn', { max: 15 }],
       'max-params': ['warn', { max: 5 }],
       'max-depth': ['warn', { max: 4 }],

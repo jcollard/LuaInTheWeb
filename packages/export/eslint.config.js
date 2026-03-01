@@ -1,5 +1,6 @@
 import js from '@eslint/js'
 import globals from 'globals'
+import sonarjs from 'eslint-plugin-sonarjs'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
@@ -7,6 +8,7 @@ export default defineConfig([
   globalIgnores(['dist', '.stryker-tmp', 'src/runtime/canvas-inline.generated.ts']),
   {
     files: ['**/*.ts'],
+    plugins: { sonarjs },
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
       ecmaVersion: 2020,
@@ -17,6 +19,7 @@ export default defineConfig([
         'error',
         { argsIgnorePattern: '^_' },
       ],
+      'sonarjs/cognitive-complexity': ['warn', 15],
       'complexity': ['warn', { max: 15 }],
       'max-params': ['warn', { max: 5 }],
       'max-depth': ['warn', { max: 4 }],
