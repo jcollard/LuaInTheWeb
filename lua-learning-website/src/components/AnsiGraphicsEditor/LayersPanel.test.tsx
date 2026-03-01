@@ -119,9 +119,9 @@ describe('LayersPanel', () => {
 
   it('rename via double-click shows input and commits on enter', () => {
     const onRename = vi.fn()
-    renderPanel({ onRename })
+    const { container } = renderPanel({ onRename })
     fireEvent.doubleClick(screen.getByText('Background'))
-    const input = screen.getByRole('textbox')
+    const input = container.querySelector<HTMLInputElement>('[data-testid="layer-row-layer-0"] input')!
     fireEvent.change(input, { target: { value: 'Renamed' } })
     fireEvent.keyDown(input, { key: 'Enter' })
     expect(onRename).toHaveBeenCalledWith('layer-0', 'Renamed')
@@ -129,9 +129,9 @@ describe('LayersPanel', () => {
 
   it('rename cancels on Escape', () => {
     const onRename = vi.fn()
-    renderPanel({ onRename })
+    const { container } = renderPanel({ onRename })
     fireEvent.doubleClick(screen.getByText('Background'))
-    const input = screen.getByRole('textbox')
+    const input = container.querySelector<HTMLInputElement>('[data-testid="layer-row-layer-0"] input')!
     fireEvent.change(input, { target: { value: 'Renamed' } })
     fireEvent.keyDown(input, { key: 'Escape' })
     expect(onRename).not.toHaveBeenCalled()
@@ -984,6 +984,63 @@ describe('LayersPanel', () => {
       // All tags should be collapsed (default state) — arrow should be ▶
       const heading = screen.getByTestId('tag-heading-Characters')
       expect(heading.textContent).toContain('\u25B6')
+    })
+  })
+
+  describe('Layer search', () => {
+    it('renders search input', () => {
+      renderPanel()
+      expect(screen.getByTestId('layer-search-input')).toBeTruthy()
+    })
+
+    it('filters layers by name', () => {
+      renderPanel({ layers: makeLayers('Background', 'Foreground') })
+      fireEvent.change(screen.getByTestId('layer-search-input'), { target: { value: 'back' } })
+      expect(screen.getByText('Background')).toBeTruthy()
+      expect(screen.queryByText('Foreground')).toBeNull()
+    })
+
+    it('clearing search restores all layers', () => {
+      renderPanel({ layers: makeLayers('Background', 'Foreground') })
+      const input = screen.getByTestId('layer-search-input')
+      fireEvent.change(input, { target: { value: 'back' } })
+      expect(screen.queryByText('Foreground')).toBeNull()
+      fireEvent.change(input, { target: { value: '' } })
+      expect(screen.getByText('Foreground')).toBeTruthy()
+      expect(screen.getByText('Background')).toBeTruthy()
+    })
+
+    it('shows empty state when no layers match', () => {
+      renderPanel({ layers: makeLayers('Background', 'Foreground') })
+      fireEvent.change(screen.getByTestId('layer-search-input'), { target: { value: 'zzzzz' } })
+      expect(screen.getByTestId('layers-empty')).toBeTruthy()
+      expect(screen.getByTestId('layers-empty').textContent).toBe('No matching layers')
+    })
+
+    it('preserves group hierarchy when filtering child', () => {
+      const group: Layer = { ...createGroup('Sprites', 'g1') }
+      const child: Layer = { ...createLayer('Hero', 'c1'), parentId: 'g1' }
+      const other = createLayer('Background', 'bg')
+      renderPanel({ layers: [other, group, child], activeLayerId: 'c1' })
+      fireEvent.change(screen.getByTestId('layer-search-input'), { target: { value: 'hero' } })
+      expect(screen.getByText('Hero')).toBeTruthy()
+      expect(screen.getByText('Sprites')).toBeTruthy()
+      expect(screen.queryByText('Background')).toBeNull()
+    })
+
+    it('is case-insensitive', () => {
+      renderPanel({ layers: makeLayers('Background', 'Foreground') })
+      fireEvent.change(screen.getByTestId('layer-search-input'), { target: { value: 'BACK' } })
+      expect(screen.getByText('Background')).toBeTruthy()
+      expect(screen.queryByText('Foreground')).toBeNull()
+    })
+
+    it('filters by layer ID', () => {
+      const layers = [createLayer('Alpha', 'abc-123'), createLayer('Beta', 'def-456')]
+      renderPanel({ layers, activeLayerId: 'abc-123' })
+      fireEvent.change(screen.getByTestId('layer-search-input'), { target: { value: 'abc' } })
+      expect(screen.getByText('Alpha')).toBeTruthy()
+      expect(screen.queryByText('Beta')).toBeNull()
     })
   })
 })

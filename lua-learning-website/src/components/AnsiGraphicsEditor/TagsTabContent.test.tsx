@@ -12,6 +12,7 @@ describe('TagsTabContent', () => {
     availableTags?: string[]
     activeLayerId?: string
     expandedTags?: Set<string>
+    searchQuery?: string
     onSetActive?: (id: string) => void
     onCreateTag?: (tag: string) => void
     onDeleteTag?: (tag: string) => void
@@ -29,6 +30,7 @@ describe('TagsTabContent', () => {
         availableTags={tags}
         activeLayerId={overrides?.activeLayerId ?? layers[0].id}
         expandedTags={overrides?.expandedTags ?? new Set(tags)}
+        searchQuery={overrides?.searchQuery}
         onSetActive={overrides?.onSetActive ?? noop}
         onCreateTag={overrides?.onCreateTag ?? noop}
         onDeleteTag={overrides?.onDeleteTag ?? noop}
@@ -372,5 +374,55 @@ describe('TagsTabContent', () => {
     renderTags({ availableTags: ['Characters'], onSetLayerVisibility })
     fireEvent.click(screen.getByTestId('tag-visibility-Characters'))
     expect(onSetLayerVisibility).toHaveBeenCalledWith([], false)
+  })
+
+  // --- Search/filter tests ---
+
+  it('filters tags by tag name', () => {
+    const l1: Layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] } as Layer
+    const l2: Layer = { ...createLayer('Tree', 'l2'), tags: ['Props'] } as Layer
+    renderTags({ layers: [l1, l2], availableTags: ['Characters', 'Props'], searchQuery: 'char' })
+    expect(screen.getByTestId('tag-heading-Characters')).toBeTruthy()
+    expect(screen.queryByTestId('tag-heading-Props')).toBeNull()
+  })
+
+  it('filters by layer name within tag', () => {
+    const l1: Layer = { ...createLayer('Hero', 'l1'), tags: ['Sprites'] } as Layer
+    const l2: Layer = { ...createLayer('Villain', 'l2'), tags: ['Sprites'] } as Layer
+    renderTags({ layers: [l1, l2], availableTags: ['Sprites'], searchQuery: 'hero' })
+    expect(screen.getByTestId('tag-heading-Sprites')).toBeTruthy()
+    expect(screen.getByTestId('tag-layer-row-Sprites-l1')).toBeTruthy()
+    expect(screen.queryByTestId('tag-layer-row-Sprites-l2')).toBeNull()
+  })
+
+  it('shows all layers when tag name matches', () => {
+    const l1: Layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] } as Layer
+    const l2: Layer = { ...createLayer('Villain', 'l2'), tags: ['Characters'] } as Layer
+    renderTags({ layers: [l1, l2], availableTags: ['Characters'], searchQuery: 'char' })
+    expect(screen.getByTestId('tag-layer-row-Characters-l1')).toBeTruthy()
+    expect(screen.getByTestId('tag-layer-row-Characters-l2')).toBeTruthy()
+  })
+
+  it('shows empty state when no tags match', () => {
+    const l1: Layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] } as Layer
+    renderTags({ layers: [l1], availableTags: ['Characters'], searchQuery: 'zzzzz' })
+    expect(screen.getByTestId('tags-search-empty')).toBeTruthy()
+    expect(screen.getByTestId('tags-search-empty').textContent).toBe('No matching tags')
+  })
+
+  it('shows all tags and layers when searchQuery is empty', () => {
+    const l1: Layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] } as Layer
+    const l2: Layer = { ...createLayer('Tree', 'l2'), tags: ['Props'] } as Layer
+    renderTags({ layers: [l1, l2], availableTags: ['Characters', 'Props'], searchQuery: '' })
+    expect(screen.getByTestId('tag-heading-Characters')).toBeTruthy()
+    expect(screen.getByTestId('tag-heading-Props')).toBeTruthy()
+  })
+
+  it('shows all tags and layers when searchQuery is undefined', () => {
+    const l1: Layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] } as Layer
+    const l2: Layer = { ...createLayer('Tree', 'l2'), tags: ['Props'] } as Layer
+    renderTags({ layers: [l1, l2], availableTags: ['Characters', 'Props'] })
+    expect(screen.getByTestId('tag-heading-Characters')).toBeTruthy()
+    expect(screen.getByTestId('tag-heading-Props')).toBeTruthy()
   })
 })

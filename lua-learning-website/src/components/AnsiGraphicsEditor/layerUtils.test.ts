@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import { describe, it, expect } from 'vitest'
-import { isDefaultCell, createLayer, createGroup, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, buildDisplayOrder, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock, addTagToLayer, removeTagFromLayer } from './layerUtils'
+import { isDefaultCell, createLayer, createGroup, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, buildDisplayOrder, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock, addTagToLayer, removeTagFromLayer, formatLayerId, layerMatchesQuery, filterLayers, filterTagsTab } from './layerUtils'
 import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer } from './types'
 import type { AnsiCell, DrawableLayer, DrawnLayer, RGBColor, Layer, LayerState, TextLayer, GroupLayer } from './types'
 
@@ -1509,5 +1509,219 @@ describe('duplicateLayerBlock preserves tags', () => {
     const dupes = duplicateLayerBlock([group, child], 'group-500')
     expect(dupes[0].tags).toEqual(['UI'])
     expect(dupes[1].tags).toEqual(['Props'])
+  })
+})
+
+describe('formatLayerId', () => {
+  it('truncates a valid UUID to first 8 chars + ellipsis', () => {
+    expect(formatLayerId('abcdef01-2345-6789-abcd-ef0123456789')).toBe('abcdef01...')
+  })
+
+  it('returns non-UUID strings unchanged', () => {
+    expect(formatLayerId('my-layer')).toBe('my-layer')
+  })
+
+  it('returns short strings unchanged', () => {
+    expect(formatLayerId('abc')).toBe('abc')
+  })
+
+  it('returns empty string unchanged', () => {
+    expect(formatLayerId('')).toBe('')
+  })
+
+  it('does not truncate UUID-like strings with uppercase', () => {
+    expect(formatLayerId('ABCDEF01-2345-6789-ABCD-EF0123456789')).toBe('ABCDEF01-2345-6789-ABCD-EF0123456789')
+  })
+
+  it('does not truncate a string with UUID embedded in prefix', () => {
+    expect(formatLayerId('xabcdef01-2345-6789-abcd-ef0123456789')).toBe('xabcdef01-2345-6789-abcd-ef0123456789')
+  })
+
+  it('does not truncate a string with UUID embedded with suffix', () => {
+    expect(formatLayerId('abcdef01-2345-6789-abcd-ef0123456789x')).toBe('abcdef01-2345-6789-abcd-ef0123456789x')
+  })
+})
+
+describe('layerMatchesQuery', () => {
+  it('returns true for empty query', () => {
+    const layer = createLayer('Background', 'layer-1')
+    expect(layerMatchesQuery(layer, '')).toBe(true)
+  })
+
+  it('matches layer name case-insensitively', () => {
+    const layer = createLayer('Background', 'layer-1')
+    expect(layerMatchesQuery(layer, 'back')).toBe(true)
+    expect(layerMatchesQuery(layer, 'BACK')).toBe(true)
+  })
+
+  it('matches full layer ID', () => {
+    const layer = createLayer('BG', 'my-custom-id')
+    expect(layerMatchesQuery(layer, 'my-custom')).toBe(true)
+  })
+
+  it('matches truncated UUID', () => {
+    const layer = createLayer('BG', 'abcdef01-2345-6789-abcd-ef0123456789')
+    expect(layerMatchesQuery(layer, 'abcdef01')).toBe(true)
+  })
+
+  it('returns false when nothing matches', () => {
+    const layer = createLayer('Background', 'layer-1')
+    expect(layerMatchesQuery(layer, 'zzzzz')).toBe(false)
+  })
+
+  it('matches whitespace-only query as empty (returns true)', () => {
+    const layer = createLayer('Background', 'layer-1')
+    expect(layerMatchesQuery(layer, '   ')).toBe(true)
+  })
+
+  it('matches ID with mixed case query', () => {
+    const layer = createLayer('BG', 'MyLayer-ABC')
+    expect(layerMatchesQuery(layer, 'mylayer')).toBe(true)
+  })
+
+  it('does not match when query does not appear anywhere', () => {
+    const layer = createLayer('Alpha', 'alpha-id')
+    expect(layerMatchesQuery(layer, 'beta')).toBe(false)
+  })
+})
+
+describe('filterLayers', () => {
+  it('returns all layers when query is empty', () => {
+    const layers = [createLayer('A', 'a'), createLayer('B', 'b')]
+    expect(filterLayers(layers, '')).toEqual(layers)
+  })
+
+  it('filters by layer name', () => {
+    const a = createLayer('Alpha', 'a')
+    const b = createLayer('Beta', 'b')
+    expect(filterLayers([a, b], 'alpha')).toEqual([a])
+  })
+
+  it('preserves hierarchy: matching child includes ancestor group', () => {
+    const group: Layer = { ...createGroup('Group', 'g1') }
+    const child: Layer = { ...createLayer('Alpha', 'a'), parentId: 'g1' }
+    const other = createLayer('Beta', 'b')
+    const result = filterLayers([group, child, other], 'alpha')
+    expect(result.map(l => l.id)).toEqual(['g1', 'a'])
+  })
+
+  it('preserves hierarchy: matching group includes all descendants', () => {
+    const group: Layer = { ...createGroup('Sprites', 'g1') }
+    const child1: Layer = { ...createLayer('Hero', 'c1'), parentId: 'g1' }
+    const child2: Layer = { ...createLayer('Enemy', 'c2'), parentId: 'g1' }
+    const other = createLayer('Background', 'bg')
+    const result = filterLayers([group, child1, child2, other], 'sprites')
+    expect(result.map(l => l.id)).toEqual(['g1', 'c1', 'c2'])
+  })
+
+  it('handles nested groups: matching deep child includes all ancestors', () => {
+    const outerGroup: Layer = { ...createGroup('Outer', 'og') }
+    const innerGroup: Layer = { ...createGroup('Inner', 'ig'), parentId: 'og' }
+    const deepChild: Layer = { ...createLayer('Deep', 'dc'), parentId: 'ig' }
+    const result = filterLayers([outerGroup, innerGroup, deepChild], 'deep')
+    expect(result.map(l => l.id)).toEqual(['og', 'ig', 'dc'])
+  })
+
+  it('returns empty array when nothing matches', () => {
+    const layers = [createLayer('Alpha', 'a'), createLayer('Beta', 'b')]
+    expect(filterLayers(layers, 'zzz')).toEqual([])
+  })
+
+  it('preserves original order', () => {
+    const a = createLayer('Alpha', 'a')
+    const b = createLayer('AlphaBeta', 'b')
+    const c = createLayer('Gamma', 'c')
+    const result = filterLayers([a, b, c], 'alpha')
+    expect(result.map(l => l.id)).toEqual(['a', 'b'])
+  })
+
+  it('filters by layer ID', () => {
+    const a = createLayer('First', 'abc-123')
+    const b = createLayer('Second', 'def-456')
+    expect(filterLayers([a, b], 'abc')).toEqual([a])
+  })
+
+  it('returns all layers for whitespace-only query', () => {
+    const layers = [createLayer('A', 'a'), createLayer('B', 'b')]
+    expect(filterLayers(layers, '   ')).toEqual(layers)
+  })
+
+  it('does not expand ancestors for non-matching layers', () => {
+    const group: Layer = { ...createGroup('Group', 'g1') }
+    const child1: Layer = { ...createLayer('Alpha', 'a'), parentId: 'g1' }
+    const child2: Layer = { ...createLayer('Beta', 'b'), parentId: 'g1' }
+    // Only alpha matches, so beta should not be included
+    const result = filterLayers([group, child1, child2], 'alpha')
+    expect(result.map(l => l.id)).toEqual(['g1', 'a'])
+  })
+
+  it('does not expand descendants for non-matching non-group layers', () => {
+    const group: Layer = { ...createGroup('Group', 'g1') }
+    const child: Layer = { ...createLayer('Child', 'c1'), parentId: 'g1' }
+    const other = createLayer('Alpha', 'a')
+    // 'alpha' matches the root layer, not the group - descendants should NOT be included
+    const result = filterLayers([group, child, other], 'alpha')
+    expect(result.map(l => l.id)).toEqual(['a'])
+  })
+})
+
+describe('filterTagsTab', () => {
+  it('returns all tags with all layers when query is empty', () => {
+    const l1: Layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
+    const l2: Layer = { ...createLayer('BG', 'l2'), tags: ['Backgrounds'] }
+    const result = filterTagsTab(['Characters', 'Backgrounds'], [l1, l2], '')
+    expect(result).toEqual([
+      { tag: 'Characters', layers: [l1] },
+      { tag: 'Backgrounds', layers: [l2] },
+    ])
+  })
+
+  it('includes tag with all its layers when tag name matches', () => {
+    const l1: Layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
+    const l2: Layer = { ...createLayer('Villain', 'l2'), tags: ['Characters'] }
+    const result = filterTagsTab(['Characters'], [l1, l2], 'char')
+    expect(result).toEqual([{ tag: 'Characters', layers: [l1, l2] }])
+  })
+
+  it('includes only matching layers when tag name does not match', () => {
+    const l1: Layer = { ...createLayer('Hero', 'l1'), tags: ['Sprites'] }
+    const l2: Layer = { ...createLayer('Villain', 'l2'), tags: ['Sprites'] }
+    const result = filterTagsTab(['Sprites'], [l1, l2], 'hero')
+    expect(result).toEqual([{ tag: 'Sprites', layers: [l1] }])
+  })
+
+  it('excludes tags with no matching layers when tag name does not match', () => {
+    const l1: Layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
+    const result = filterTagsTab(['Characters', 'Props'], [l1], 'hero')
+    expect(result).toEqual([{ tag: 'Characters', layers: [l1] }])
+  })
+
+  it('returns empty array when nothing matches', () => {
+    const l1: Layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
+    const result = filterTagsTab(['Characters'], [l1], 'zzz')
+    expect(result).toEqual([])
+  })
+
+  it('returns all tags with all layers for whitespace query', () => {
+    const l1: Layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
+    const result = filterTagsTab(['Characters'], [l1], '   ')
+    expect(result).toEqual([{ tag: 'Characters', layers: [l1] }])
+  })
+
+  it('empty query returns correct layer count per tag', () => {
+    const l1: Layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
+    const l2: Layer = { ...createLayer('Villain', 'l2'), tags: ['Characters'] }
+    const l3: Layer = { ...createLayer('BG', 'l3'), tags: ['Backgrounds'] }
+    const result = filterTagsTab(['Characters', 'Backgrounds'], [l1, l2, l3], '')
+    expect(result[0].layers).toHaveLength(2)
+    expect(result[1].layers).toHaveLength(1)
+  })
+
+  it('with query, does not show tag for non-matching layer in non-matching tag', () => {
+    const l1: Layer = { ...createLayer('Hero', 'l1'), tags: ['Characters'] }
+    const l2: Layer = { ...createLayer('Tree', 'l2'), tags: ['Props'] }
+    const result = filterTagsTab(['Characters', 'Props'], [l1, l2], 'hero')
+    expect(result).toHaveLength(1)
+    expect(result[0].tag).toBe('Characters')
   })
 })

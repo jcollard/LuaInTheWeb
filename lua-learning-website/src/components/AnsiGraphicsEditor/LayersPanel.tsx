@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { Layer } from './types'
 import { isGroupLayer, isDrawableLayer, getParentId } from './types'
-import { getAncestorGroupIds, buildDisplayOrder } from './layerUtils'
+import { getAncestorGroupIds, buildDisplayOrder, filterLayers } from './layerUtils'
 import { LayerRow } from './LayerRow'
+import { LayerContextMenu } from './LayerContextMenu'
 import { TagsTabContent } from './TagsTabContent'
 import { useLayerDragDrop } from './useLayerDragDrop'
 import styles from './AnsiGraphicsEditor.module.css'
@@ -69,6 +70,7 @@ export function LayersPanel({
   onRenameTag,
 }: LayersPanelProps) {
   const [activeTab, setActiveTab] = useState<'layers' | 'tags'>('layers')
+  const [searchQuery, setSearchQuery] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
   const [editingIdFor, setEditingIdFor] = useState<string | null>(null)
@@ -186,7 +188,8 @@ export function LayersPanel({
   )
 
   // Display layers in reverse order with recursive tree-walk
-  const reversed = buildDisplayOrder(layers)
+  const filteredLayers = filterLayers(layers, searchQuery)
+  const reversed = buildDisplayOrder(filteredLayers)
   const drawableCount = layers.filter(isDrawableLayer).length
   const singleDrawable = drawableCount <= 1
   const singleLayer = layers.length <= 1
@@ -225,12 +228,22 @@ export function LayersPanel({
           </button>
         )}
       </div>
+      <div className={styles.layerSearchRow}>
+        <input
+          className={styles.layerSearchInput}
+          data-testid="layer-search-input"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          placeholder="Filter layers..."
+        />
+      </div>
       {activeTab === 'tags' ? (
         <TagsTabContent
           layers={layers}
           availableTags={availableTags}
           activeLayerId={activeLayerId}
           expandedTags={expandedTags}
+          searchQuery={searchQuery}
           onSetActive={onSetActive}
           onCreateTag={onCreateTag}
           onDeleteTag={onDeleteTag}
@@ -242,6 +255,9 @@ export function LayersPanel({
         />
       ) : (
       <div className={styles.layersList}>
+        {reversed.length === 0 && searchQuery.trim() !== '' && (
+          <div className={styles.layersEmpty} data-testid="layers-empty">No matching layers</div>
+        )}
         {reversed.map((layer) => {
           const isGroup = isGroupLayer(layer)
           const isDragged = draggedId === layer.id || draggedGroupChildIds.has(layer.id)
@@ -331,96 +347,26 @@ export function LayersPanel({
       </div>
       )}
       {contextMenu && (
-        <>
-          <div
-            className={styles.layerContextBackdrop}
-            data-testid="layer-context-backdrop"
-            onClick={closeContextMenu}
-            onContextMenu={handleBackdropContextMenu}
-          />
-          <div
-            className={styles.layerContextMenu}
-            style={{ left: contextMenu.x, top: contextMenu.y }}
-            data-testid="layer-context-menu"
-          >
-            {!contextIsGroup && (
-              <button
-                className={styles.layerContextMenuItem}
-                data-testid="context-merge-down"
-                onClick={() => { onMergeDown(contextMenu.layerId); setContextMenu(null) }}
-                disabled={contextMenu.layerId === layers[0]?.id}
-              >
-                Merge Down
-              </button>
-            )}
-            <button
-              className={styles.layerContextMenuItem}
-              data-testid="context-wrap-in-group"
-              onClick={() => { onWrapInGroup(contextMenu.layerId); setContextMenu(null) }}
-            >
-              Group with new folder
-            </button>
-            <button
-              className={styles.layerContextMenuItem}
-              data-testid="context-duplicate"
-              onClick={() => { onDuplicate(contextMenu.layerId); setContextMenu(null) }}
-            >
-              Duplicate
-            </button>
-            {contextHasParentId && (
-              <button
-                className={styles.layerContextMenuItem}
-                data-testid="context-remove-from-group"
-                onClick={() => { onRemoveFromGroup(contextMenu.layerId); setContextMenu(null) }}
-              >
-                Remove from group
-              </button>
-            )}
-            <button
-              className={styles.layerContextMenuItem}
-              data-testid="context-copy-layer-id"
-              onClick={() => { void navigator.clipboard.writeText(contextMenu.layerId); closeContextMenu() }}
-            >
-              Copy Layer ID
-            </button>
-            <div
-              className={[styles.layerContextMenuItem, styles.layerContextMenuItemSubmenu].filter(Boolean).join(' ')}
-              data-testid="context-tags-submenu-trigger"
-              onMouseEnter={() => setTagsSubmenuOpen(true)}
-              onMouseLeave={() => setTagsSubmenuOpen(false)}
-            >
-              Tags &gt;
-              {tagsSubmenuOpen && (
-                <div ref={tagsSubmenuRef} className={[styles.layerTagsSubmenu, tagsSubmenuFlipped && styles.layerTagsSubmenuFlipped].filter(Boolean).join(' ')} data-testid="tags-submenu">
-                  {availableTags.length === 0 ? (
-                    <div className={styles.layerTagsSubmenuEmpty} data-testid="tags-submenu-empty">No tags created</div>
-                  ) : (
-                    availableTags.map(tag => {
-                      const hasTag = contextLayer?.tags?.includes(tag) ?? false
-                      return (
-                        <label key={tag} className={styles.layerTagsSubmenuItem}>
-                          <input
-                            type="checkbox"
-                            data-testid={`tag-checkbox-${tag}`}
-                            checked={hasTag}
-                            onChange={() => {
-                              if (hasTag) {
-                                onRemoveTagFromLayer(contextMenu.layerId, tag)
-                              } else {
-                                onAddTagToLayer(contextMenu.layerId, tag)
-                              }
-                            }}
-                          />
-                          {tag}
-                        </label>
-                      )
-                    })
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </>
+        <LayerContextMenu
+          contextMenu={contextMenu}
+          contextLayer={contextLayer}
+          contextIsGroup={contextIsGroup}
+          contextHasParentId={contextHasParentId}
+          firstLayerId={layers[0]?.id}
+          availableTags={availableTags}
+          tagsSubmenuOpen={tagsSubmenuOpen}
+          tagsSubmenuFlipped={tagsSubmenuFlipped}
+          tagsSubmenuRef={tagsSubmenuRef}
+          onMergeDown={onMergeDown}
+          onWrapInGroup={onWrapInGroup}
+          onDuplicate={onDuplicate}
+          onRemoveFromGroup={onRemoveFromGroup}
+          onAddTagToLayer={onAddTagToLayer}
+          onRemoveTagFromLayer={onRemoveTagFromLayer}
+          onSetTagsSubmenuOpen={setTagsSubmenuOpen}
+          onClose={closeContextMenu}
+          onBackdropContextMenu={handleBackdropContextMenu}
+        />
       )}
     </div>
   )

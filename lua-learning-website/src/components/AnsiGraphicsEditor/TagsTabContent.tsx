@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import type { Layer } from './types'
+import { filterTagsTab } from './layerUtils'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface TagsTabContentProps {
@@ -7,6 +8,7 @@ export interface TagsTabContentProps {
   availableTags: string[]
   activeLayerId: string
   expandedTags: Set<string>
+  searchQuery?: string
   onSetActive: (id: string) => void
   onCreateTag: (tag: string) => void
   onDeleteTag: (tag: string) => void
@@ -22,6 +24,7 @@ export function TagsTabContent({
   availableTags,
   activeLayerId,
   expandedTags,
+  searchQuery,
   onSetActive,
   onCreateTag,
   onDeleteTag,
@@ -72,8 +75,9 @@ export function TagsTabContent({
     setEditingTag(null)
   }, [editingTag, editTagValue, onRenameTag])
 
-  const layersForTag = (tag: string): Layer[] =>
-    layers.filter(l => l.tags?.includes(tag))
+  const query = searchQuery ?? ''
+  const filteredTags = filterTagsTab(availableTags, layers, query)
+  const isFiltering = query.trim() !== ''
 
   return (
     <div className={styles.tagsTabContent} data-testid="tags-tab-content">
@@ -97,9 +101,10 @@ export function TagsTabContent({
       </div>
       {availableTags.length === 0 ? (
         <div className={styles.tagsEmpty} data-testid="tags-empty">No tags yet. Create one above.</div>
+      ) : filteredTags.length === 0 && isFiltering ? (
+        <div className={styles.tagsEmpty} data-testid="tags-search-empty">No matching tags</div>
       ) : (
-        availableTags.map(tag => {
-          const tagLayers = layersForTag(tag)
+        filteredTags.map(({ tag, layers: tagLayers }) => {
           const isCollapsed = !expandedTags.has(tag)
           const isEditing = editingTag === tag
           const allVisible = tagLayers.every(l => l.visible)
