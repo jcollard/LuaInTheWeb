@@ -26,7 +26,8 @@ local ansi = {}
 -- 10. Terminal Dimensions (COLS, ROWS)
 -- 11. Screen Display (load_screen, create_screen, set_screen)
 -- 12. Layer Visibility Control (Screen:get_layers, layer_on, layer_off, layer_toggle)
--- 13. Animation Playback (Screen:play, Screen:pause, Screen:is_playing)
+-- 13. Label Text (Screen:set_label, ansi.create_label)
+-- 14. Animation Playback (Screen:play, Screen:pause, Screen:is_playing)
 -- =============================================================================
 
 -- =============================================================================
@@ -241,6 +242,16 @@ function Screen:pause() end
 ---@usage if screen:is_playing() then screen:pause() end
 function Screen:is_playing() end
 
+--- Set the text of text layer(s) matching an identifier.
+--- Resolves by layer ID first, then by name, then by tag.
+--- Non-text layers are silently skipped. Errors if zero text layers match.
+---@param identifier string|number Layer ID, name, or tag
+---@param value string|Label Plain text string or label table from ansi.create_label()
+---@return nil
+---@usage screen:set_label("direction", "NORTH")
+---@usage screen:set_label("description", ansi.create_label("[color=RED]Fire[/color] burns!"))
+function Screen:set_label(identifier, value) end
+
 --- Load a .ansi.lua file by path and return a screen object.
 --- This is the recommended way to load ANSI screen files created with the editor.
 --- Relative paths are resolved from the current working directory, with root fallback.
@@ -268,6 +279,27 @@ function ansi.create_screen(data) end
 ---@usage ansi.set_screen(screen)   -- display the screen
 ---@usage ansi.set_screen(nil)      -- clear the background
 function ansi.set_screen(screen) end
+
+-- =============================================================================
+-- Label Text
+-- =============================================================================
+
+---@class Label
+---@field text string The plain text content
+---@field colors table Per-character RGB color array
+---@field default_color number[] Default RGB color {r, g, b}
+
+--- Parse color markup into a label table for use with screen:set_label().
+--- Supports [color=X]...[/color] tags where X is a hex color (#RGB or #RRGGBB),
+--- a CGA color name (RED, BRIGHT_GREEN), CGA-prefixed (CGA_RED), or
+--- alternating (CGA_ALT_RED). Tags can be nested.
+---@param markup string Text with optional [color=X]...[/color] markup
+---@param default_color? number[]|string Default color as {r,g,b} table or hex string (default: LIGHT_GRAY)
+---@return Label label A label table with text, colors, and default_color fields
+---@usage local label = ansi.create_label("Plain text")
+---@usage local label = ansi.create_label("[color=RED]danger[/color] zone")
+---@usage local label = ansi.create_label("[color=CGA_ALT_GREEN]shimmering[/color]")
+function ansi.create_label(markup, default_color) end
 
 -- =============================================================================
 -- Key Constants

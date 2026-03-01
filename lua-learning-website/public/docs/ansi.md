@@ -140,6 +140,105 @@ end)
 ansi.start()
 ```
 
+## Label Text
+
+Dynamically set the text content of text layers at runtime. Text layers are identified by their ID, name, or tag (same resolution as `layer_on`/`layer_off`).
+
+### `screen:set_label(identifier, value)`
+
+Set the text of text layer(s) matching the identifier. Non-text layers are silently skipped. Errors if zero text layers match.
+
+- **identifier** — Layer ID, name, or tag (string or number)
+- **value** — Plain text string or label table from `ansi.create_label()`
+
+```lua
+-- Plain string: uses the layer's existing color
+screen:set_label("direction", "NORTH")
+
+-- Label with colors: uses per-character coloring
+local label = ansi.create_label("[color=RED]Fire[/color] burns!")
+screen:set_label("description", label)
+```
+
+### `ansi.create_label(markup, default_color?)`
+
+Parse color markup into a label table for use with `set_label`.
+
+- **markup** — Text with optional `[color=X]...[/color]` tags
+- **default_color** — Optional default color as `{r,g,b}` table or hex string (default: `LIGHT_GRAY`)
+- **Returns** — A label table with `text`, `colors`, and `default_color` fields
+
+```lua
+-- Plain text (all default color)
+local plain = ansi.create_label("Hello World")
+
+-- Color markup
+local colored = ansi.create_label(
+  "The [color=GREEN]forest[/color] is [color=CGA_ALT_GREEN]shimmering[/color]..."
+)
+
+-- Custom default color
+local custom = ansi.create_label("Status: OK", ansi.colors.BRIGHT_GREEN)
+```
+
+#### Color Name Formats
+
+| Format | Example | Description |
+|--------|---------|-------------|
+| Hex | `#FF0000`, `#F00` | RGB hex color |
+| CGA name | `RED`, `BRIGHT_RED` | 16 CGA color names (matches `ansi.colors` keys) |
+| CGA prefixed | `CGA_RED`, `CGA_BRIGHT_RED` | Same colors with `CGA_` prefix |
+| Alternating | `CGA_ALT_RED` | Alternates dark/bright per character |
+
+#### CGA Alternating Color Pairs
+
+| Name | Alternates Between |
+|------|-------------------|
+| `CGA_ALT_BLACK` | BLACK / DARK_GRAY |
+| `CGA_ALT_BLUE` | BLUE / BRIGHT_BLUE |
+| `CGA_ALT_GREEN` | GREEN / BRIGHT_GREEN |
+| `CGA_ALT_CYAN` | CYAN / BRIGHT_CYAN |
+| `CGA_ALT_RED` | RED / BRIGHT_RED |
+| `CGA_ALT_MAGENTA` | MAGENTA / BRIGHT_MAGENTA |
+| `CGA_ALT_BROWN` | BROWN / YELLOW |
+| `CGA_ALT_GRAY` | LIGHT_GRAY / WHITE |
+
+Tags can be nested: `[color=BLUE]outer [color=RED]inner[/color] back to blue[/color]`
+
+### Example: Dynamic game UI labels
+
+```lua
+local ansi = require("ansi")
+
+local screen = ansi.load_screen("game.ansi.lua")
+ansi.set_screen(screen)
+
+local directions = {"NORTH", "EAST", "SOUTH", "WEST"}
+local dir_index = 1
+
+ansi.tick(function()
+  if ansi.is_key_pressed("right") then
+    dir_index = (dir_index % 4) + 1
+  end
+
+  -- Update the direction label (text layer tagged "direction")
+  screen:set_label("direction", directions[dir_index])
+
+  -- Update description with colored text
+  local desc = ansi.create_label(
+    "You face [color=CGA_ALT_GREEN]" .. directions[dir_index] .. "[/color]",
+    ansi.colors.LIGHT_GRAY
+  )
+  screen:set_label("description", desc)
+
+  if ansi.is_key_pressed("escape") then
+    ansi.stop()
+  end
+end)
+
+ansi.start()
+```
+
 ## Animation Playback
 
 Control animation playback for screens with animated layers (drawn layers with multiple frames). Screens with animated layers auto-play when set as the active screen via `ansi.set_screen()`.
@@ -209,6 +308,8 @@ ansi.start()
 | `screen:layer_on(id)` | Show layer(s) by ID, name, or tag |
 | `screen:layer_off(id)` | Hide layer(s) by ID, name, or tag |
 | `screen:layer_toggle(id)` | Toggle layer(s) by ID, name, or tag |
+| `screen:set_label(id, val)` | Set text layer content (string or label) |
+| `ansi.create_label(markup)` | Parse color markup into a label table |
 | `screen:play()` | Start/resume animation playback |
 | `screen:pause()` | Pause animation playback |
 | `screen:is_playing()` | Check if animation is playing |

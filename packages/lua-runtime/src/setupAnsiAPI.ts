@@ -6,7 +6,30 @@
 
 import type { LuaEngine } from 'wasmoon'
 import type { AnsiController } from './AnsiController'
+import type { RGBColor } from './screenTypes'
 import { ansiLuaCode } from './ansiLuaWrapper'
+
+/**
+ * Convert a flat array of numbers from a wasmoon Lua table into RGBColor triples.
+ * Wasmoon may pass Lua array tables as JS arrays (0-indexed) or 1-indexed objects.
+ */
+function parseFlatColorsToRgb(flatColors: Record<number, number>): RGBColor[] {
+  const values: number[] = []
+  if (Array.isArray(flatColors)) {
+    for (const v of flatColors) values.push(v)
+  } else {
+    let i = 1
+    while (flatColors[i] !== undefined) {
+      values.push(flatColors[i])
+      i++
+    }
+  }
+  const colors: RGBColor[] = []
+  for (let j = 0; j < values.length; j += 3) {
+    colors.push([values[j], values[j + 1], values[j + 2]])
+  }
+  return colors
+}
 
 /**
  * Options for ANSI API file reading support.
@@ -223,6 +246,27 @@ export function setupAnsiAPI(
       throw new Error('ANSI terminal not available')
     }
     return controller.screenIsPlaying(id)
+  })
+
+  // --- Label functions ---
+  engine.global.set('__ansi_screenSetLabel', (
+    screenId: number,
+    identifier: string,
+    text: string,
+    textFgR?: number,
+    textFgG?: number,
+    textFgB?: number,
+    flatColors?: Record<number, number>,
+  ) => {
+    const controller = getController()
+    if (!controller) {
+      throw new Error('ANSI terminal not available')
+    }
+    const textFg: RGBColor | undefined = textFgR !== undefined
+      ? [textFgR, textFgG!, textFgB!]
+      : undefined
+    const textFgColors = flatColors ? parseFlatColorsToRgb(flatColors) : undefined
+    controller.setScreenLabel(screenId, identifier, text, textFg, textFgColors)
   })
 
   // --- File reading for load_screen ---

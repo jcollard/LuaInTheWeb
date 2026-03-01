@@ -157,6 +157,28 @@ export const ansiLuaCoreCode = `
       function screen:is_playing()
         return __ansi_screenIsPlaying(self.id)
       end
+      function screen:set_label(identifier, value)
+        local id_str = tostring(identifier)
+        if type(value) == 'string' then
+          __ansi_screenSetLabel(self.id, id_str, value)
+        elseif type(value) == 'table' and value.text ~= nil then
+          -- Label table from create_label()
+          local flat_colors = {}
+          for i = 1, #value.colors do
+            local c = value.colors[i]
+            flat_colors[#flat_colors + 1] = c[1]
+            flat_colors[#flat_colors + 1] = c[2]
+            flat_colors[#flat_colors + 1] = c[3]
+          end
+          __ansi_screenSetLabel(
+            self.id, id_str, value.text,
+            value.default_color[1], value.default_color[2], value.default_color[3],
+            flat_colors
+          )
+        else
+          error("set_label() expects a string or label table")
+        end
+      end
       return screen
     end
 
@@ -228,4 +250,138 @@ export const ansiLuaCoreCode = `
       YELLOW        = {255, 255, 85},
       WHITE         = {255, 255, 255},
     }
+
+    -- CGA ALT pairs: alternating dark/bright per character
+    local _ansi_alt_pairs = {
+      CGA_ALT_BLACK   = { _ansi.colors.BLACK, _ansi.colors.DARK_GRAY },
+      CGA_ALT_BLUE    = { _ansi.colors.BLUE, _ansi.colors.BRIGHT_BLUE },
+      CGA_ALT_GREEN   = { _ansi.colors.GREEN, _ansi.colors.BRIGHT_GREEN },
+      CGA_ALT_CYAN    = { _ansi.colors.CYAN, _ansi.colors.BRIGHT_CYAN },
+      CGA_ALT_RED     = { _ansi.colors.RED, _ansi.colors.BRIGHT_RED },
+      CGA_ALT_MAGENTA = { _ansi.colors.MAGENTA, _ansi.colors.BRIGHT_MAGENTA },
+      CGA_ALT_BROWN   = { _ansi.colors.BROWN, _ansi.colors.YELLOW },
+      CGA_ALT_GRAY    = { _ansi.colors.LIGHT_GRAY, _ansi.colors.WHITE },
+    }
+
+    -- Resolve a color name to an RGB table or ALT pair
+    -- Returns: rgb_table, is_alt, alt_pair
+    local function ansi_resolve_color(name)
+      -- Check ALT pairs first
+      local alt = _ansi_alt_pairs[name]
+      if alt then
+        return nil, true, alt
+      end
+
+      -- Direct CGA name
+      local c = _ansi.colors[name]
+      if c then
+        return {c[1], c[2], c[3]}, false, nil
+      end
+
+      -- Strip CGA_ prefix and try again
+      local stripped = name:match("^CGA_(.+)$")
+      if stripped then
+        c = _ansi.colors[stripped]
+        if c then
+          return {c[1], c[2], c[3]}, false, nil
+        end
+      end
+
+      -- Hex color
+      if name:sub(1, 1) == '#' then
+        local r, g, b = ansi_parse_hex(name)
+        return {r, g, b}, false, nil
+      end
+
+      error("Unknown color name: " .. name)
+    end
+
+    -- Parse color markup into a label table
+    function _ansi.create_label(markup, default_color)
+      if type(markup) ~= 'string' then
+        error("ansi.create_label() expects a string, got " .. type(markup))
+      end
+
+      -- Resolve default color
+      local def_rgb
+      if default_color == nil then
+        def_rgb = {_ansi.colors.LIGHT_GRAY[1], _ansi.colors.LIGHT_GRAY[2], _ansi.colors.LIGHT_GRAY[3]}
+      elseif type(default_color) == 'string' and default_color:sub(1, 1) == '#' then
+        local r, g, b = ansi_parse_hex(default_color)
+        def_rgb = {r, g, b}
+      elseif type(default_color) == 'table' then
+        def_rgb = {default_color[1], default_color[2], default_color[3]}
+      else
+        def_rgb = {_ansi.colors.LIGHT_GRAY[1], _ansi.colors.LIGHT_GRAY[2], _ansi.colors.LIGHT_GRAY[3]}
+      end
+
+      local text_chars = {}
+      local colors = {}
+      local color_stack = {}
+      local pos = 1
+      local char_count = 0
+
+      while pos <= #markup do
+        -- Check for [color=X]
+        local tag_start, tag_end, color_name = markup:find("%[color=(.-)%]", pos)
+        -- Check for [/color]
+        local close_start, close_end = markup:find("%[/color%]", pos)
+
+        -- Find whichever tag comes first
+        local next_tag = nil
+        local next_pos = #markup + 1
+
+        if tag_start and tag_start < next_pos then
+          next_tag = "open"
+          next_pos = tag_start
+        end
+        if close_start and close_start < next_pos then
+          next_tag = "close"
+          next_pos = close_start
+        end
+
+        -- Add text before the tag
+        if next_pos > pos then
+          local segment = markup:sub(pos, next_pos - 1)
+          for i = 1, #segment do
+            char_count = char_count + 1
+            text_chars[#text_chars + 1] = segment:sub(i, i)
+            -- Determine current color
+            local current = #color_stack > 0 and color_stack[#color_stack] or nil
+            if current and current.is_alt then
+              -- Alternate based on character position (odd = dark, even = bright)
+              if char_count % 2 == 1 then
+                colors[#colors + 1] = {current.alt_pair[1][1], current.alt_pair[1][2], current.alt_pair[1][3]}
+              else
+                colors[#colors + 1] = {current.alt_pair[2][1], current.alt_pair[2][2], current.alt_pair[2][3]}
+              end
+            elseif current then
+              colors[#colors + 1] = {current.rgb[1], current.rgb[2], current.rgb[3]}
+            else
+              colors[#colors + 1] = {def_rgb[1], def_rgb[2], def_rgb[3]}
+            end
+          end
+        end
+
+        if next_tag == "open" then
+          local rgb, is_alt, alt_pair = ansi_resolve_color(color_name)
+          color_stack[#color_stack + 1] = { rgb = rgb, is_alt = is_alt, alt_pair = alt_pair }
+          pos = tag_end + 1
+        elseif next_tag == "close" then
+          if #color_stack > 0 then
+            color_stack[#color_stack] = nil
+          end
+          pos = close_end + 1
+        else
+          -- No more tags, we're done
+          break
+        end
+      end
+
+      return {
+        text = table.concat(text_chars),
+        colors = colors,
+        default_color = def_rgb,
+      }
+    end
 `
