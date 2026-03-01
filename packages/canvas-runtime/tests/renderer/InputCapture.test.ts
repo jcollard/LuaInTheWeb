@@ -722,8 +722,6 @@ describe('InputCapture', () => {
         bubbles: true,
         cancelable: true,
       });
-      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
-
       target.dispatchEvent(event);
 
       // The default InputCapture from beforeEach still listens,

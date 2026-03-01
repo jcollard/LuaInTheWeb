@@ -25,8 +25,9 @@ export default defineConfig([
         { argsIgnorePattern: '^_' },
       ],
       'complexity': ['warn', { max: 15 }],
-      'max-params': ['warn', { max: 4 }],
+      'max-params': ['warn', { max: 5 }],
       'max-depth': ['warn', { max: 4 }],
+      'max-lines-per-function': ['warn', { max: 200 }],
     },
   },
   {

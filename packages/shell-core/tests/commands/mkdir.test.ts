@@ -125,9 +125,7 @@ describe('mkdir command', () => {
     })
 
     it('should continue on error and report all errors', () => {
-      let callCount = 0
       mockFs.createDirectory = vi.fn().mockImplementation((path: string) => {
-        callCount++
         if (path === '/home/user/dir2') {
           throw new Error('Path already exists')
         }

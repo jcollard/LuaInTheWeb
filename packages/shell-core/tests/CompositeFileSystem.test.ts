@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { CompositeFileSystem, MountPoint } from '../src/CompositeFileSystem'
+import { CompositeFileSystem } from '../src/CompositeFileSystem'
 import type { IFileSystem, FileEntry } from '../src/types'
 
 /**

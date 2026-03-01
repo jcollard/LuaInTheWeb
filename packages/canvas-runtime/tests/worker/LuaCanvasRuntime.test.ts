@@ -159,8 +159,6 @@ describe('LuaCanvasRuntime', () => {
     });
 
     it('should execute onDraw callback each frame', async () => {
-      let frameCount = 0;
-
       await runtime.loadCode(`
         frameCount = 0
         canvas.tick(function()
@@ -364,7 +362,6 @@ describe('LuaCanvasRuntime', () => {
         frameNumber: 90,
       });
 
-      let capturedDelta = 0;
       await runtime.loadCode(`
         canvas.tick(function()
           capturedDelta = canvas.get_delta()
@@ -766,7 +763,7 @@ describe('LuaCanvasRuntime', () => {
       `);
 
       // Verify module is initially loaded
-      let moduleExists = await runtime.getGlobal('__loaded_modules');
+      const moduleExists = await runtime.getGlobal('__loaded_modules');
       expect(moduleExists).toBeDefined();
 
       // Act: Simulate hot reload with parsing error
@@ -784,7 +781,6 @@ describe('LuaCanvasRuntime', () => {
       // Trigger hot reload which will hit the parsing error
       // Use loadCode and store result in a global
       await runtime.loadCode('reload_result = canvas.reload()');
-      const reloadResult = await runtime.getGlobal('reload_result');
 
       // Assert: Module should still be in __loaded_modules after error
       await runtime.loadCode(`

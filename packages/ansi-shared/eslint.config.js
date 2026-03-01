@@ -50,34 +50,4 @@ export default defineConfig([
       ],
     },
   },
-  // Facade file exception: CanvasController delegates to 7 extracted APIs
-  // and requires ~1,100 lines of delegation methods for backward compatibility
-  {
-    files: ['src/CanvasController.ts'],
-    rules: {
-      'max-lines': [
-        'error',
-        {
-          max: 2000,
-          skipBlankLines: true,
-          skipComments: true,
-        },
-      ],
-    },
-  },
-  // Factory file exception: LuaEngineFactory registers all bridge functions
-  // (I/O, localStorage, canvas, audio, etc.) and requires extended line count
-  {
-    files: ['src/LuaEngineFactory.ts'],
-    rules: {
-      'max-lines': [
-        'error',
-        {
-          max: 600,
-          skipBlankLines: true,
-          skipComments: true,
-        },
-      ],
-    },
-  },
 ])

@@ -12,6 +12,7 @@
     "build:lua-runtime": "npm run build -w @lua-learning/lua-runtime",
     "test:shell-core": "npm run test -w @lua-learning/shell-core",
     "test:lua-runtime": "npm run test -w @lua-learning/lua-runtime",
+    "lint": "npm run lint -w @lua-learning/shell-core && npm run lint -w @lua-learning/canvas-runtime && npm run lint -w @lua-learning/ansi-shared && npm run lint -w @lua-learning/lua-runtime && npm run lint -w @lua-learning/export && npm run lint -w lua-learning-website",
     "ci": "node scripts/ci-local.js",
     "ci:quick": "node scripts/ci-local.js --skip-e2e",
     "ci:scope": "node scripts/ci-local.js --scope"
