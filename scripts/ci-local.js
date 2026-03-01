@@ -36,7 +36,7 @@ const PACKAGE_DIRS = {
 }
 
 // Packages that have lint scripts
-const LINTABLE = ['lua-runtime', 'lua-learning-website']
+const LINTABLE = ['shell-core', 'canvas-runtime', 'ansi-shared', 'lua-runtime', 'export', 'lua-learning-website']
 
 // All testable packages in dependency order
 const TESTABLE = ['shell-core', 'canvas-runtime', 'ansi-shared', 'lua-runtime', 'lua-learning-website']

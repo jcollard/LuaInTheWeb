@@ -1,9 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   createChannel,
   createChannelPair,
   isSharedArrayBufferAvailable,
-  ChannelMode,
 } from '../../src/channels/channelFactory.js';
 import { PostMessageChannel } from '../../src/channels/PostMessageChannel.js';
 import { SharedArrayBufferChannel } from '../../src/channels/SharedArrayBufferChannel.js';

@@ -4,7 +4,7 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', '.stryker-tmp']),
+  globalIgnores(['dist', '.stryker-tmp', 'src/runtime/canvas-inline.generated.ts']),
   {
     files: ['**/*.ts'],
     extends: [js.configs.recommended, tseslint.configs.recommended],
@@ -50,30 +50,54 @@ export default defineConfig([
       ],
     },
   },
-  // Facade file exception: CanvasController delegates to 7 extracted APIs
-  // and requires ~1,100 lines of delegation methods for backward compatibility
+  // Large runtime/generator files with documented overrides
   {
-    files: ['src/CanvasController.ts'],
+    files: ['src/runtime/canvas-standalone.ts'],
     rules: {
       'max-lines': [
         'error',
         {
-          max: 2000,
+          max: 1700,
           skipBlankLines: true,
           skipComments: true,
         },
       ],
     },
   },
-  // Factory file exception: LuaEngineFactory registers all bridge functions
-  // (I/O, localStorage, canvas, audio, etc.) and requires extended line count
   {
-    files: ['src/LuaEngineFactory.ts'],
+    files: ['src/runtime/canvas-bridge-core.ts'],
     rules: {
       'max-lines': [
         'error',
         {
-          max: 600,
+          max: 1100,
+          skipBlankLines: true,
+          skipComments: true,
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/HtmlGenerator.ts'],
+    rules: {
+      'max-lines': [
+        'error',
+        {
+          max: 800,
+          skipBlankLines: true,
+          skipComments: true,
+        },
+      ],
+    },
+  },
+  // Large test file
+  {
+    files: ['tests/runtime/canvas-standalone.test.ts'],
+    rules: {
+      'max-lines': [
+        'error',
+        {
+          max: 700,
           skipBlankLines: true,
           skipComments: true,
         },

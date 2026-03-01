@@ -323,6 +323,7 @@ export class LuaCanvasRuntime {
     if (!this.engine) return;
 
     const lua = this.engine;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const runtime = this;
 
     // Set up localStorage API bridge functions first (needed for package.preload)
@@ -1686,6 +1687,7 @@ export class LuaCanvasRuntime {
     if (!this.engine) return;
 
     const lua = this.engine;
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const runtime = this;
 
     // Store last module lookup result

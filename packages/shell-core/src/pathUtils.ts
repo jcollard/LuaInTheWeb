@@ -17,7 +17,7 @@ export function normalizePath(path: string): string {
   }
 
   // Convert backslashes to forward slashes
-  let normalized = path.replace(/\\/g, '/')
+  const normalized = path.replace(/\\/g, '/')
 
   // Split into segments
   const segments = normalized.split('/').filter((s) => s !== '')

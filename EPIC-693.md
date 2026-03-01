@@ -14,7 +14,7 @@ Add monorepo-wide code quality analytics focusing on **complexity scoring** and 
 
 | # | Title | Depends On | Status | Branch | PR |
 |---|-------|------------|--------|--------|----|
-| 1 | Extend ESLint to all packages | — | ⏳ Pending | — | — |
+| 1 | Extend ESLint to all packages | — | ✅ Done | epic-693 | — |
 | 2 | Add cognitive complexity scoring | 1 | ⏳ Pending | — | — |
 | 3 | Add cross-package duplication detection | — | ⏳ Pending | — | — |
 | 4 | CI integration | 2, 3 | ⏳ Pending | — | — |
@@ -60,3 +60,4 @@ Sub-issues 1 and 3 can be worked in parallel. Sub-issue 2 depends on 1. Sub-issu
 | Date | Event |
 |------|-------|
 | 2026-03-01 | Epic created, worktree set up, tracking file initialized |
+| 2026-03-01 | Sub-issue 1 complete: ESLint + complexity rules in all 6 packages, root lint script, ci-local.js updated |

@@ -3,8 +3,6 @@ import {
   classifyFileType,
   isAssetHandle,
   isAudioAssetHandle,
-  VALID_IMAGE_EXTENSIONS,
-  VALID_FONT_EXTENSIONS,
   VALID_AUDIO_EXTENSIONS,
   createEmptyGamepadState,
   createEmptyInputState,
@@ -12,7 +10,7 @@ import {
   GAMEPAD_AXES,
   MAX_GAMEPADS,
 } from '../../src/shared/types.js';
-import type { AssetHandle, AudioAssetHandle, GamepadState, InputState } from '../../src/shared/types.js';
+import type { AssetHandle, AudioAssetHandle, GamepadState } from '../../src/shared/types.js';
 
 describe('types', () => {
   describe('VALID_AUDIO_EXTENSIONS', () => {
