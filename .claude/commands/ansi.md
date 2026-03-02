@@ -55,7 +55,8 @@ The ANSI subsystem spans ~92 files and ~25k lines across four tightly coupled ar
 | `terminalBuffer.ts` | Double-buffered rendering to xterm.js |
 | `drawHelpers.ts` | Drawing preview, commit, and rendering helpers |
 | `gridUtils.ts` | Core grid manipulation (get/set cells, init, copy) |
-| `serialization.ts` | Serialize/deserialize to Lua table format (v1-v6) |
+| `serialization.ts` | Serialize/deserialize to Lua table format (v1-v7) |
+| `v7Codec.ts` | V7 palette building, grid encoding/decoding |
 | `types.ts` | Core types (AnsiCell, AnsiGrid, Layer, DrawTool, Palettes) |
 | `colorUtils.ts` | Color manipulation (RGB, hex, CGA palette) |
 | `selectionTool.ts` | Selection tool implementation |
@@ -80,7 +81,8 @@ The ANSI subsystem spans ~92 files and ~25k lines across four tightly coupled ar
 | `AnsiController.ts` | Main runtime controller (screen mgmt, playback, input, terminal I/O) |
 | `setupAnsiAPI.ts` | Registers JS functions for Lua bridge (`__ansi_*` globals) |
 | `screenCompositor.ts` | Layer **compositing** (`compositeCellCore`) — mirrored from editor |
-| `screenParser.ts` | Parse ANSI screen files (v1-v6 migration) |
+| `screenParser.ts` | Parse ANSI screen files (v1-v7) |
+| `v7Decode.ts` | V7 sparse grid decoding (wasmoon format) |
 | `screenTypes.ts` | Screen types (LayerData, DrawableLayerData, AnsiGrid, constants) |
 | `textLayerGrid.ts` | Text rasterization — **ported from editor** |
 | `ansiStringRenderer.ts` | Convert grid to ANSI escape sequences (full + diff render) |
@@ -126,7 +128,7 @@ These file pairs implement the **same logic** in both editor and runtime. When y
 | **Compositing** | `layerUtils.ts` → `compositeCellCore()` | `screenCompositor.ts` → `compositeCellCore()` | Same algorithm: bottom-to-top, transparent-bg handling, half-block merging |
 | **Text rasterization** | `textLayerGrid.ts` | `textLayerGrid.ts` | Fully ported with identical tests in both locations |
 | **Types & constants** | `types.ts` (AnsiCell, Layer, ANSI_COLS/ROWS, HALF_BLOCK, TRANSPARENT_*) | `screenTypes.ts` (LayerData, DrawableLayerData, same constants) | Editor uses mutable types; runtime uses immutable `LayerData` |
-| **Serialization** | `serialization.ts` (write + read) | `screenParser.ts` (read only) | Both must handle v1-v6. Runtime only parses; editor also writes |
+| **Serialization** | `serialization.ts` + `v7Codec.ts` (write + read) | `screenParser.ts` + `v7Decode.ts` (read only) | Both must handle v1-v7. Runtime only parses; editor also writes |
 | **Visibility filtering** | `layerUtils.ts` → `hiddenGroupIds()`, `visibleDrawableLayers()` | `screenCompositor.ts` → `hiddenGroupIds()`, `visibleDrawableLayers()` | Same group-visibility propagation logic |
 
 ---
@@ -143,11 +145,9 @@ The ANSI file format uses Lua table syntax (`return { ... }`), parsed by `@kilce
 | **v4** | Group layers + parentId nesting | Yes |
 | **v5** | Frame animation (multiple frames per drawn layer) | Yes |
 | **v6** | Layer tags + availableTags list | Yes |
+| **v7** | Palette + sparse run encoding (20-40x file size reduction) | Yes |
 
-**Auto-versioning**: `computeVersion()` in `serialization.ts` selects the minimum version needed:
-- Uses v5 only if any layer has multiple frames
-- Uses v6 only if any layer has tags or availableTags is non-empty
-- Otherwise uses v4 (base modern format)
+**Versioning**: The editor always saves as **v7**. All versions (v1-v7) can be loaded. See `docs/ansi-file-format.md` for the complete format specification.
 
 **Rules**:
 - All versions must remain **backward compatible** — newer code must load older files

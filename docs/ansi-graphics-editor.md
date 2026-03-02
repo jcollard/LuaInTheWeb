@@ -138,8 +138,9 @@ Format: **Lua table** via `@kilcekru/lua-table` (prefix: `return { ... }`)
 | 4 | Group layers with `parentId` |
 | 5 | Animation frames (`frames[]` per drawn layer) |
 | 6 | Tags (`availableTags` + per-layer `tags`) |
+| 7 | Palette + sparse run encoding (20-40x file size reduction) |
 
-Version is auto-selected based on features used (`computeVersion()`). Text layer grids are recomputed on load rather than serialized.
+The editor always saves as v7. All versions can be loaded. Text layer grids are recomputed on load rather than serialized. See `docs/ansi-file-format.md` for the complete format specification.
 
 ## Rendering Pipeline
 
@@ -247,7 +248,7 @@ ANSI escape format per cell:
 
 | Format | Direction | Description |
 |--------|-----------|-------------|
-| Lua table | Load/Save | Native format with versioned serialization (v3–v6) |
+| Lua table | Load/Save | Native format with versioned serialization (v7; loads v1-v6) |
 | PNG | Import | Image import with palette quantization |
 | ANS | Export | Standard ANSI art file format |
 | .sh | Export | Shell script that renders art via `echo -e` (single frame) |

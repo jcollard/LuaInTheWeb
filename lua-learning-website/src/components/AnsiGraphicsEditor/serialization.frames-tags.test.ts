@@ -16,16 +16,17 @@ function createTestGrid(): AnsiGrid {
   )
 }
 
-describe('v5 serialization (frames)', () => {
-  it('single-frame layers serialize as v3 (no frames field)', () => {
+describe('v7 serialization (frames)', () => {
+  it('single-frame layers serialize as v7 with cells (no frameCells)', () => {
     const layer = createLayer('BG', 'l1')
     const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
     const lua = serializeLayers(state)
-    expect(lua).toContain('["version"] = 3')
-    expect(lua).not.toContain('"frames"')
+    expect(lua).toContain('["version"] = 7')
+    expect(lua).toContain('["cells"]')
+    expect(lua).not.toContain('["frameCells"]')
   })
 
-  it('multi-frame layers serialize as v5 with frames', () => {
+  it('multi-frame layers serialize as v7 with frameCells', () => {
     const layer = createLayer('BG', 'l1')
     const frame2 = createTestGrid()
     frame2[0][0] = { char: 'A', fg: [255, 0, 0] as RGBColor, bg: [0, 0, 0] as RGBColor }
@@ -34,10 +35,11 @@ describe('v5 serialization (frames)', () => {
     layer.grid = layer.frames[1]
     const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
     const lua = serializeLayers(state)
-    expect(lua).toContain('["version"] = 5')
-    expect(lua).toContain('["frames"]')
+    expect(lua).toContain('["version"] = 7')
+    expect(lua).toContain('["frameCells"]')
     expect(lua).toContain('["currentFrameIndex"]')
     expect(lua).toContain('["frameDurationMs"]')
+    expect(lua).not.toContain('"cells"')
   })
 
   it('round-trips multi-frame layers', () => {
@@ -59,9 +61,8 @@ describe('v5 serialization (frames)', () => {
     expect(loaded.frames[1][0][0].char).toBe('B')
   })
 
-  it('v3/v4 files load with frames: [grid] and defaults', () => {
+  it('v7 single-frame files load with frames: [grid] and defaults', () => {
     const layer = createLayer('BG', 'l1')
-    // Serialize as v3 (single frame)
     const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
     const lua = serializeLayers(state)
     const result = deserializeLayers(lua)
@@ -84,26 +85,26 @@ describe('v5 serialization (frames)', () => {
   })
 })
 
-describe('v6 serialization (tags)', () => {
-  it('serializes as v6 when layers have tags', () => {
+describe('v7 serialization (tags)', () => {
+  it('serializes as v7 when layers have tags', () => {
     const layer = { ...createLayer('L', 'l1'), tags: ['Characters'] }
     const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
     const lua = serializeLayers(state, ['Characters'])
-    expect(lua).toContain('["version"] = 6')
+    expect(lua).toContain('["version"] = 7')
   })
 
-  it('serializes as v6 when availableTags is non-empty', () => {
+  it('serializes as v7 when availableTags is non-empty', () => {
     const layer = createLayer('L', 'l1')
     const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
     const lua = serializeLayers(state, ['Characters', 'Props'])
-    expect(lua).toContain('["version"] = 6')
+    expect(lua).toContain('["version"] = 7')
   })
 
-  it('does not serialize as v6 when no tags present', () => {
+  it('always serializes as v7 even without tags', () => {
     const layer = createLayer('L', 'l1')
     const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
     const lua = serializeLayers(state)
-    expect(lua).not.toContain('["version"] = 6')
+    expect(lua).toContain('["version"] = 7')
   })
 
   it('round-trips tags on drawn layers', () => {
@@ -157,15 +158,15 @@ describe('v6 serialization (tags)', () => {
   })
 
   it('v1-v5 backward compat: loads without tags', () => {
-    const layer = createLayer('L', 'l1')
-    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
-    const lua = serializeLayers(state)
+    // v1 file loaded via deserializeLayers
+    const grid = createTestGrid()
+    const lua = serializeGrid(grid)
     const result = deserializeLayers(lua)
     expect(result.layers[0].tags).toBeUndefined()
     expect(result.availableTags).toBeUndefined()
   })
 
-  it('v6 with both tags and frames', () => {
+  it('v7 with both tags and frames', () => {
     const layer = { ...createLayer('L', 'l1'), tags: ['Characters'] }
     const frame2 = createTestGrid()
     frame2[0][0] = { char: 'A', fg: [255, 0, 0] as RGBColor, bg: [0, 0, 0] as RGBColor }
@@ -174,7 +175,7 @@ describe('v6 serialization (tags)', () => {
     layer.grid = layer.frames[1]
     const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
     const lua = serializeLayers(state, ['Characters'])
-    expect(lua).toContain('["version"] = 6')
+    expect(lua).toContain('["version"] = 7')
     const result = deserializeLayers(lua)
     const loaded = result.layers[0] as DrawnLayer
     expect(loaded.frames).toHaveLength(2)
@@ -200,14 +201,12 @@ describe('deserialization validation', () => {
     expect(() => deserializeLayers(corrupted)).toThrow('Invalid layer at index 0')
   })
 
-  it('allows missing type (defaults to drawn for backward compat)', () => {
-    // v3 data without explicit type should default to drawn branch
-    const layer = createLayer('L', 'l1')
-    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
-    const lua = serializeLayers(state)
-    // Remove the type field entirely to simulate old v2/v3 data
-    const noType = lua.replace(/\["type"\] = "drawn",?\s*/, '')
-    const result = deserializeLayers(noType)
+  it('allows missing type (defaults to drawn for v3-v6 backward compat)', () => {
+    // Test with a hand-crafted v3 string that has no type field
+    // This only applies to v3-v6 deserialization path
+    const lua = 'return {["version"] = 3, ["width"] = 80, ["height"] = 25, ["activeLayerId"] = "l1", ["layers"] = {{["id"] = "l1", ["name"] = "L", ["visible"] = true, ["grid"] = {}}}}'
+    // Should not throw - defaults to drawn branch
+    const result = deserializeLayers(lua)
     expect(result.layers[0].type).toBe('drawn')
   })
 })

@@ -10,6 +10,7 @@ import type { AnsiGrid, DrawnLayerData, GroupLayerData, LayerData, RGBColor, Rec
 import { DEFAULT_FRAME_DURATION_MS } from './screenTypes'
 import { renderTextLayerGrid } from './textLayerGrid'
 import { compositeGrid } from './screenCompositor'
+import { decodeV7Grid, parseV7Palette } from './v7Decode'
 
 /**
  * Raw layer shape from a Lua table (wasmoon converts tables to plain objects/arrays).
@@ -22,6 +23,8 @@ interface RawLayer {
   visible: boolean
   grid?: AnsiGrid
   frames?: AnsiGrid[]
+  cells?: unknown        // v7: sparse run-encoded grid (wasmoon format)
+  frameCells?: unknown   // v7: array of sparse grids (wasmoon format)
   currentFrameIndex?: number
   frameDurationMs?: number
   text?: string
@@ -38,7 +41,7 @@ interface RawLayer {
  * Convert a wasmoon Lua table (1-indexed, may be object-like) to a proper JS array.
  * Wasmoon represents Lua arrays as objects with numeric string keys starting at "1".
  */
-function luaArrayToJsArray<T>(value: unknown): T[] {
+export function luaArrayToJsArray<T>(value: unknown): T[] {
   if (Array.isArray(value)) return value
   if (value && typeof value === 'object') {
     const obj = value as Record<string, T>
@@ -69,7 +72,7 @@ function normalizeGrid(raw: unknown): AnsiGrid {
   })
 }
 
-function normalizeRgb(raw: unknown): RGBColor {
+export function normalizeRgb(raw: unknown): RGBColor {
   if (Array.isArray(raw)) return [raw[0] ?? 0, raw[1] ?? 0, raw[2] ?? 0]
   if (raw && typeof raw === 'object') {
     const obj = raw as Record<string, number>
@@ -195,6 +198,80 @@ function parseV3to6(data: Record<string, unknown>): LayerData[] {
   })
 }
 
+function parseGroupLayerData(l: RawLayer): GroupLayerData {
+  return {
+    type: 'group',
+    id: l.id,
+    name: l.name,
+    visible: l.visible,
+    collapsed: l.collapsed ?? false,
+    parentId: l.parentId,
+    tags: parseTags(l.tags),
+  }
+}
+
+function parseTextLayerData(l: RawLayer): TextLayerData {
+  const bounds = normalizeRect(l.bounds)
+  const textFg = normalizeRgb(l.textFg)
+  const textFgColors = normalizeRgbArray(l.textFgColors)
+  const textAlign = l.textAlign as TextAlign | undefined
+  const grid = renderTextLayerGrid(l.text ?? '', bounds, textFg, textFgColors, textAlign)
+  return {
+    type: 'text',
+    id: l.id,
+    name: l.name,
+    visible: l.visible,
+    text: l.text ?? '',
+    bounds,
+    textFg,
+    textFgColors,
+    textAlign,
+    grid,
+    parentId: l.parentId,
+    tags: parseTags(l.tags),
+  }
+}
+
+function parseV7(data: Record<string, unknown>): LayerData[] {
+  const palette = parseV7Palette(data.palette)
+  const defaultFgIndex = Number(data.defaultFg)
+  const defaultBgIndex = Number(data.defaultBg)
+
+  const rawLayers = luaArrayToJsArray<RawLayer>(data.layers)
+  return rawLayers.map((l): LayerData => {
+    if (l.type === 'group') {
+      return parseGroupLayerData(l)
+    }
+
+    if (l.type === 'text') {
+      return parseTextLayerData(l)
+    }
+
+    // Drawn layer — decode v7 sparse grids
+    const rawFrameCells = l.frameCells ? luaArrayToJsArray<unknown>(l.frameCells) : null
+    let frames: AnsiGrid[]
+    if (rawFrameCells && rawFrameCells.length > 0) {
+      frames = rawFrameCells.map(rawGrid => decodeV7Grid(rawGrid, palette, defaultFgIndex, defaultBgIndex))
+    } else {
+      frames = [decodeV7Grid(l.cells, palette, defaultFgIndex, defaultBgIndex)]
+    }
+    const currentFrameIndex = l.currentFrameIndex ?? 0
+    const grid = frames[currentFrameIndex] ?? frames[0]
+    return {
+      type: 'drawn',
+      id: l.id,
+      name: l.name,
+      visible: l.visible,
+      grid,
+      frames,
+      currentFrameIndex,
+      frameDurationMs: l.frameDurationMs ?? DEFAULT_FRAME_DURATION_MS,
+      parentId: l.parentId,
+      tags: parseTags(l.tags),
+    }
+  })
+}
+
 /**
  * Parse a data table (from wasmoon) into an array of LayerData.
  *
@@ -210,6 +287,8 @@ export function parseScreenLayers(data: Record<string, unknown>): LayerData[] {
     return parseV2(data)
   } else if (version >= 3 && version <= 6) {
     return parseV3to6(data)
+  } else if (version === 7) {
+    return parseV7(data)
   } else {
     throw new Error(`Unsupported ANSI file version: ${version}`)
   }
