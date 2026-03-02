@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createFileSystemAdapter } from '../src/createFileSystemAdapter'
-import type { IFileSystem, FileEntry } from '../src/types'
+import type { IFileSystem } from '../src/types'
 
 /**
  * External filesystem interface that the adapter wraps.

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { ExportCommand } from '../src/ExportCommand'
 import type { ShellContext } from '@lua-learning/shell-core'
 import type { IFileSystem } from '@lua-learning/shell-core'

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { SharedArrayBufferChannel } from '../../src/channels/SharedArrayBufferChannel.js';
-import type { DrawCommand, GamepadState, InputState, TimingInfo } from '../../src/shared/types.js';
+import type { DrawCommand, InputState, TimingInfo } from '../../src/shared/types.js';
 import { createEmptyGamepadState, MAX_GAMEPADS } from '../../src/shared/types.js';
 
 describe('SharedArrayBufferChannel', () => {
@@ -882,9 +882,6 @@ describe('SharedArrayBufferChannel', () => {
     it('should store data at correct memory locations', () => {
       // This test verifies that data is stored at the documented offsets
       // by checking that independent data doesn't interfere with each other
-      const int32View = new Int32Array(sharedBuffer);
-      const float64View = new Float64Array(sharedBuffer);
-
       // Set timing
       mainChannel.setTimingInfo({
         deltaTime: 0.016,

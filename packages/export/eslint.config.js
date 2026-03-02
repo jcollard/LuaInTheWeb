@@ -1,22 +1,15 @@
 import js from '@eslint/js'
 import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
 import sonarjs from 'eslint-plugin-sonarjs'
 import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', '.stryker-tmp']),
+  globalIgnores(['dist', '.stryker-tmp', 'src/runtime/canvas-inline.generated.ts']),
   {
-    files: ['**/*.{ts,tsx}'],
+    files: ['**/*.ts'],
     plugins: { sonarjs },
-    extends: [
-      js.configs.recommended,
-      tseslint.configs.recommended,
-      reactHooks.configs['recommended-latest'],
-      reactRefresh.configs.vite,
-    ],
+    extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
@@ -34,8 +27,8 @@ export default defineConfig([
     },
   },
   {
-    files: ['**/*.{ts,tsx}'],
-    ignores: ['**/*.test.{ts,tsx}'],
+    files: ['**/*.ts'],
+    ignores: ['**/*.test.ts'],
     rules: {
       'max-lines': [
         'error',
@@ -48,7 +41,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['**/*.test.{ts,tsx}'],
+    files: ['**/*.test.ts'],
     rules: {
       'max-lines': [
         'error',
@@ -60,32 +53,58 @@ export default defineConfig([
       ],
     },
   },
-  // Facade file exception: CanvasController delegates to 7 extracted APIs
-  // and requires ~1,100 lines of delegation methods for backward compatibility
+  // Large runtime/generator files with documented overrides
   {
-    files: ['**/packages/lua-runtime/src/CanvasController.ts'],
+    files: ['src/runtime/canvas-standalone.ts'],
     rules: {
       'max-lines': [
         'error',
         {
-          max: 2000,
+          max: 1700,
           skipBlankLines: true,
           skipComments: true,
         },
       ],
     },
   },
-  // AnsiGraphicsEditor hooks: splitting tracked for follow-up PR
   {
-    files: ['**/AnsiGraphicsEditor/useAnsiEditor.ts'],
-    rules: { 'max-lines': ['error', { max: 850, skipBlankLines: true, skipComments: true }] },
+    files: ['src/runtime/canvas-bridge-core.ts'],
+    rules: {
+      'max-lines': [
+        'error',
+        {
+          max: 1100,
+          skipBlankLines: true,
+          skipComments: true,
+        },
+      ],
+    },
   },
   {
-    files: ['**/AnsiGraphicsEditor/useLayerState.ts'],
-    rules: { 'max-lines': ['error', { max: 600, skipBlankLines: true, skipComments: true }] },
+    files: ['src/HtmlGenerator.ts'],
+    rules: {
+      'max-lines': [
+        'error',
+        {
+          max: 800,
+          skipBlankLines: true,
+          skipComments: true,
+        },
+      ],
+    },
   },
+  // Large test file
   {
-    files: ['**/AnsiGraphicsEditor/AnsiEditorToolbar.tsx'],
-    rules: { 'max-lines': ['error', { max: 500, skipBlankLines: true, skipComments: true }] },
+    files: ['tests/runtime/canvas-standalone.test.ts'],
+    rules: {
+      'max-lines': [
+        'error',
+        {
+          max: 700,
+          skipBlankLines: true,
+          skipComments: true,
+        },
+      ],
+    },
   },
 ])

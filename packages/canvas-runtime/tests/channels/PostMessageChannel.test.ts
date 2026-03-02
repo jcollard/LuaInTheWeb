@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { PostMessageChannel } from '../../src/channels/PostMessageChannel.js';
 import type { DrawCommand, InputState, TimingInfo } from '../../src/shared/types.js';
-import { createEmptyInputState, createDefaultTimingInfo, createEmptyGamepadState, MAX_GAMEPADS } from '../../src/shared/types.js';
+import { createEmptyGamepadState, MAX_GAMEPADS } from '../../src/shared/types.js';
 
 describe('PostMessageChannel', () => {
   let mainChannel: PostMessageChannel;

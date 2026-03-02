@@ -36,7 +36,7 @@ const PACKAGE_DIRS = {
 }
 
 // Packages that have lint scripts
-const LINTABLE = ['lua-runtime', 'lua-learning-website']
+const LINTABLE = ['shell-core', 'canvas-runtime', 'ansi-shared', 'lua-runtime', 'export', 'lua-learning-website']
 
 // All testable packages in dependency order
 const TESTABLE = ['shell-core', 'canvas-runtime', 'ansi-shared', 'lua-runtime', 'lua-learning-website']
@@ -85,14 +85,24 @@ try {
     console.log('⏭️  No lintable packages in scope — skipping lint')
   }
 
-  // Step 2: Build all packages (always full, in dependency order)
+  // Step 2: Duplication detection (always full — cross-package by nature)
+  section('🔍', 'Running duplication detection...')
+  try {
+    run('npm run duplicates', ROOT_DIR)
+    console.log('✅ Duplication check passed')
+  } catch (e) {
+    console.error('❌ Duplication threshold exceeded (> 3%) — see .jscpd.json')
+    throw e
+  }
+
+  // Step 3: Build all packages (always full, in dependency order)
   section('🔨', 'Building packages...')
   for (const pkg of BUILD_ORDER) {
     run('npm run build', pkgDir(pkg))
   }
   console.log('✅ Build passed')
 
-  // Step 3: Test packages (scoped)
+  // Step 4: Test packages (scoped)
   const testTargets = TESTABLE.filter(isInScope)
   if (testTargets.length > 0) {
     section('🧪', 'Running unit tests...')
@@ -105,7 +115,7 @@ try {
     console.log('⏭️  No testable packages in scope — skipping tests')
   }
 
-  // Step 4: E2E tests (only if lua-learning-website is in scope and not skipped)
+  // Step 5: E2E tests (only if lua-learning-website is in scope and not skipped)
   const runE2E = !skipE2E && isInScope('lua-learning-website')
   if (runE2E) {
     section('🎭', 'Running E2E tests...')

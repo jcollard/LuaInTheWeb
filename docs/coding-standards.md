@@ -428,6 +428,99 @@ If a file grows beyond the limit:
 // src/hooks/useFileSystem.ts       - Main hook (imports from above)
 ```
 
+## Code Complexity
+
+ESLint enforces complexity rules across all 6 packages to keep functions understandable and maintainable.
+
+### Thresholds
+
+| Rule | Threshold | Level | Description |
+|------|-----------|-------|-------------|
+| `complexity` (cyclomatic) | 15 | Warning | Number of independent paths through a function |
+| `sonarjs/cognitive-complexity` | 15 | Warning | How difficult a function is to understand |
+| `max-lines-per-function` | 200 | Warning | Lines per function (excluding blanks/comments) |
+| `max-params` | 5 | Warning | Parameters per function |
+| `max-depth` | 4 | Warning | Nesting depth |
+
+### March 2026 Baseline
+
+244 existing warnings across all packages. These are tracked as tech debt — **do not increase them**.
+
+Worst hotspots:
+- `CanvasRenderer.executeCommand` — cognitive complexity 60
+- `LuaCanvasRuntime` setup — 1360 lines
+- 20 cognitive complexity violations, 15 cyclomatic complexity violations
+
+### Existing Suppressions
+
+These source files have `eslint-disable max-lines` and should be refactored:
+
+| File | Reason | Tech Debt |
+|------|--------|-----------|
+| `packages/lua-runtime/src/audio/WebAudioEngine.ts` | Large audio engine implementation | Split into focused modules |
+| `lua-learning-website/src/components/IDELayout/IDELayout.tsx` | Monolithic layout component | Extract sub-components and hooks |
+
+### Policy for New Code
+
+- New functions **MUST NOT** introduce complexity warnings
+- Reviewers check for new warnings in changed files during PR review
+- Existing warnings are advisory — fix them opportunistically when touching those files
+
+### How to Check
+
+```bash
+# Check a specific package
+npm run lint --prefix packages/shell-core
+
+# Check all packages
+npm run lint
+
+# Grep for complexity warnings in lint output
+npm run lint 2>&1 | grep -E "complexity|max-lines|max-params|max-depth"
+```
+
+## Code Duplication
+
+Cross-package duplication is detected by [jscpd](https://github.com/kucherenko/jscpd), configured in `.jscpd.json`.
+
+### March 2026 Baseline
+
+| Metric | Value |
+|--------|-------|
+| Clones | 26 |
+| Duplicated lines | 602 |
+| Duplication rate | 1.67% |
+
+Biggest hotspot: 8 audio engine clones (~500 lines) between `canvas-runtime` and `lua-runtime`.
+
+### Intentional Exclusions
+
+Some duplication is intentional and excluded from scanning:
+
+| Exclusion | Reason |
+|-----------|--------|
+| `export/src/runtime/**` | Paired with `canvas-runtime` — different thread models |
+| `AnsiGraphicsEditor/textLayerGrid.ts` | Shared ANSI subsystem — tracked separately |
+| `AnsiGraphicsEditor/types.ts` | Shared ANSI subsystem types |
+| `AnsiGraphicsEditor/serialization.ts` | Shared ANSI subsystem serialization |
+| `AnsiGraphicsEditor/terminalBuffer.ts` | Shared ANSI subsystem buffer |
+| `AnsiGraphicsEditor/layerUtils.ts` | Shared ANSI subsystem utilities |
+
+### Policy
+
+- **Duplication ceiling: 3%** — CI and local CI fail above this threshold
+- Current rate is 1.67%, providing headroom for growth
+- Reduce duplication by extracting shared code into packages (e.g., `@lua-learning/shell-core`)
+
+### How to Check
+
+```bash
+# Run duplication detection
+npm run duplicates
+
+# Reports are generated in reports/jscpd/
+```
+
 ## Canvas Editor / Export Consistency
 
 The canvas system runs in two environments: the **editor** (`packages/canvas-runtime`) and **export** (`packages/export/src/runtime`). These must stay in sync.
@@ -458,4 +551,6 @@ Before submitting code:
 - [ ] Tests written for components (rendering)
 - [ ] Source files under 400 lines (excluding blanks/comments)
 - [ ] Test files under 500 lines (excluding blanks/comments)
+- [ ] No new complexity warnings in changed files
+- [ ] No new duplication introduced (`npm run duplicates` < 3%)
 - [ ] Canvas changes applied to both editor and export runtimes

@@ -101,6 +101,8 @@ See [Worktrees Guide](./worktrees.md) for detailed documentation on parallel dev
 - [ ] All tests pass
 - [ ] Mutation score > 80%
 - [ ] No lint errors
+- [ ] No new complexity warnings in changed files
+- [ ] Duplication check passes (`npm run duplicates` < 3%)
 - [ ] Documentation updated (if applicable)
 - [ ] Roadmap plan linked (for features)
 

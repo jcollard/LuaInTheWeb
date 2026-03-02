@@ -660,8 +660,8 @@ describe('AssetLoader', () => {
 
     it('should compute relativePath with subdirectory prefix for nested files', () => {
       mockFs = createMockFileSystem({
-        exists: vi.fn((path: string) => true),
-        isFile: vi.fn((path: string) => false),
+        exists: vi.fn((_path: string) => true),
+        isFile: vi.fn((_path: string) => false),
         listDirectory: vi.fn((path: string) => {
           if (path === '/my-files/games/assets') {
             return [

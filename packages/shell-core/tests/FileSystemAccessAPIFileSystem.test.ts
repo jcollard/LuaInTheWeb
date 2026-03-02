@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { FileSystemAccessAPIFileSystem } from '../src/FileSystemAccessAPIFileSystem'
-import type { IFileSystem, FileEntry } from '../src/types'
+import type { IFileSystem } from '../src/types'
 
 // Mock types for File System Access API
 interface MockFileSystemHandle {
