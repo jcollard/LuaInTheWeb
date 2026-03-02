@@ -35,6 +35,8 @@ jobs:
 
   ci:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
@@ -50,13 +52,116 @@ jobs:
         run: npm ci
 
       # Lint all packages
+      - name: Lint shell-core
+        run: npm run lint
+        working-directory: packages/shell-core
+
+      - name: Lint canvas-runtime
+        run: npm run lint
+        working-directory: packages/canvas-runtime
+
+      - name: Lint ansi-shared
+        run: npm run lint
+        working-directory: packages/ansi-shared
+
       - name: Lint lua-runtime
         run: npm run lint
         working-directory: packages/lua-runtime
 
+      - name: Lint export
+        run: npm run lint
+        working-directory: packages/export
+
       - name: Lint lua-learning-website
         run: npm run lint
         working-directory: lua-learning-website
+
+      # Duplication detection (report-only, non-blocking)
+      - name: Run duplication detection
+        run: npm run duplicates
+        continue-on-error: true
+
+      - name: Upload duplication report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jscpd-report
+          path: reports/jscpd/jscpd-report.json
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Comment duplication summary on PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- jscpd-report -->';
+            let body;
+
+            try {
+              const report = JSON.parse(fs.readFileSync('reports/jscpd/jscpd-report.json', 'utf8'));
+              const stats = report.statistics;
+              const total = stats.total;
+              const clones = total.clones || 0;
+              const duplicatedLines = total.duplicatedLines || 0;
+              const percentage = total.percentage != null ? total.percentage.toFixed(2) : '0.00';
+
+              // Per-format breakdown
+              const formats = Object.entries(stats.formats || {}).map(([fmt, data]) => {
+                return `| ${fmt} | ${data.total?.clones || 0} | ${data.total?.duplicatedLines || 0} | ${(data.total?.percentage ?? 0).toFixed(2)}% |`;
+              }).join('\n');
+
+              body = [
+                marker,
+                '## Duplication Report (jscpd)',
+                '',
+                '| Metric | Value |',
+                '|--------|-------|',
+                `| Clones | ${clones} |`,
+                `| Duplicated Lines | ${duplicatedLines} |`,
+                `| Duplication | ${percentage}% |`,
+                '',
+                '<details><summary>Per-format breakdown</summary>',
+                '',
+                '| Format | Clones | Duplicated Lines | Percentage |',
+                '|--------|--------|-----------------|------------|',
+                formats,
+                '',
+                '</details>',
+              ].join('\n');
+            } catch (e) {
+              body = [
+                marker,
+                '## Duplication Report (jscpd)',
+                '',
+                'Duplication detection did not produce a report.',
+              ].join('\n');
+            }
+
+            // Find existing comment to update
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
 
       # Build all packages
       - name: Build shell-core
@@ -74,6 +179,10 @@ jobs:
       - name: Build lua-runtime
         run: npm run build
         working-directory: packages/lua-runtime
+
+      - name: Build export
+        run: npm run build
+        working-directory: packages/export
 
       - name: Build lua-learning-website
         run: npm run build
