@@ -88,4 +88,81 @@ describe('decodeV7Grid', () => {
     expect(grid.length).toBe(ANSI_ROWS)
     expect(grid[0][0]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
   })
+
+  it('throws on out-of-range defaultFgIndex (0)', () => {
+    expect(() => decodeV7Grid({}, palette, 0, 2)).toThrow('defaultFgIndex')
+  })
+
+  it('throws on out-of-range defaultFgIndex (exceeds palette length)', () => {
+    expect(() => decodeV7Grid({}, palette, palette.length + 1, 2)).toThrow('defaultFgIndex')
+  })
+
+  it('throws on out-of-range defaultBgIndex (0)', () => {
+    expect(() => decodeV7Grid({}, palette, 1, 0)).toThrow('defaultBgIndex')
+  })
+
+  it('throws on out-of-range defaultBgIndex (exceeds palette length)', () => {
+    expect(() => decodeV7Grid({}, palette, 1, palette.length + 1)).toThrow('defaultBgIndex')
+  })
+
+  it('throws on negative defaultFgIndex', () => {
+    expect(() => decodeV7Grid({}, palette, -1, 2)).toThrow('defaultFgIndex')
+  })
+
+  it('throws on negative defaultBgIndex', () => {
+    expect(() => decodeV7Grid({}, palette, 1, -1)).toThrow('defaultBgIndex')
+  })
+
+  it('skips runs with out-of-range fgIdx in single cell run', () => {
+    const rawRuns = { 1: { 1: 1, 2: 1, 3: '#', 4: 99, 5: 2 } }
+    const grid = decodeV7Grid(rawRuns, palette, 1, 2)
+    expect(grid[0][0]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+  })
+
+  it('skips runs with out-of-range bgIdx in single cell run', () => {
+    const rawRuns = { 1: { 1: 1, 2: 1, 3: '#', 4: 3, 5: 99 } }
+    const grid = decodeV7Grid(rawRuns, palette, 1, 2)
+    expect(grid[0][0]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+  })
+
+  it('skips runs with out-of-range fgIdx in repeat run', () => {
+    const rawRuns = { 1: { 1: 1, 2: 1, 3: 3, 4: '#', 5: 99, 6: 2 } }
+    const grid = decodeV7Grid(rawRuns, palette, 1, 2)
+    expect(grid[0][0]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+    expect(grid[0][1]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+    expect(grid[0][2]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+  })
+
+  it('skips runs with out-of-range bgIdx in repeat run', () => {
+    const rawRuns = { 1: { 1: 1, 2: 1, 3: 3, 4: '#', 5: 3, 6: 99 } }
+    const grid = decodeV7Grid(rawRuns, palette, 1, 2)
+    expect(grid[0][0]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+  })
+
+  it('skips runs with out-of-range fgIdx in text run', () => {
+    const rawRuns = { 1: { 1: 1, 2: 1, 3: 'Hi', 4: 99, 5: 2 } }
+    const grid = decodeV7Grid(rawRuns, palette, 1, 2)
+    expect(grid[0][0]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+    expect(grid[0][1]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+  })
+
+  it('skips runs with zero fgIdx', () => {
+    const rawRuns = { 1: { 1: 1, 2: 1, 3: '#', 4: 0, 5: 2 } }
+    const grid = decodeV7Grid(rawRuns, palette, 1, 2)
+    expect(grid[0][0]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+  })
+
+  it('skips runs with zero bgIdx', () => {
+    const rawRuns = { 1: { 1: 1, 2: 1, 3: '#', 4: 3, 5: 0 } }
+    const grid = decodeV7Grid(rawRuns, palette, 1, 2)
+    expect(grid[0][0]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+  })
+
+  it('setCell rejects row=0 (1-based row below minimum)', () => {
+    // row=0 means row1-1 = -1, which should be out of bounds
+    const rawRuns = { 1: { 1: 0, 2: 1, 3: '#', 4: 3, 5: 4 } }
+    const grid = decodeV7Grid(rawRuns, palette, 1, 2)
+    // All cells should remain default — no crash, no out-of-bounds write
+    expect(grid[0][0]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+  })
 })

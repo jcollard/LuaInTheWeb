@@ -84,8 +84,8 @@ describe('buildPalette', () => {
 
 describe('encodeGrid', () => {
   function encode(grid: AnsiGrid): Run[] {
-    const { colorToIndex, defaultFgIndex, defaultBgIndex } = buildPalette([grid])
-    return encodeGrid(grid, colorToIndex, defaultFgIndex, defaultBgIndex)
+    const { colorToIndex } = buildPalette([grid])
+    return encodeGrid(grid, colorToIndex)
   }
 
   it('empty default grid produces empty runs', () => {
@@ -268,12 +268,84 @@ describe('decodeGrid', () => {
     expect(grid[4][1].char).toBe('*')
     expect(grid[4][2].char).toBe('*')
   })
+
+  it('throws on out-of-range defaultFgIndex (0)', () => {
+    expect(() => decodeGrid([], palette, 0, 2)).toThrow('defaultFgIndex')
+  })
+
+  it('throws on out-of-range defaultFgIndex (exceeds palette length)', () => {
+    expect(() => decodeGrid([], palette, palette.length + 1, 2)).toThrow('defaultFgIndex')
+  })
+
+  it('throws on out-of-range defaultBgIndex (0)', () => {
+    expect(() => decodeGrid([], palette, 1, 0)).toThrow('defaultBgIndex')
+  })
+
+  it('throws on out-of-range defaultBgIndex (exceeds palette length)', () => {
+    expect(() => decodeGrid([], palette, 1, palette.length + 1)).toThrow('defaultBgIndex')
+  })
+
+  it('throws on negative defaultFgIndex', () => {
+    expect(() => decodeGrid([], palette, -1, 2)).toThrow('defaultFgIndex')
+  })
+
+  it('throws on negative defaultBgIndex', () => {
+    expect(() => decodeGrid([], palette, 1, -1)).toThrow('defaultBgIndex')
+  })
+
+  it('skips runs with out-of-range fgIdx in single cell run', () => {
+    // fgIdx 99 is way beyond palette length
+    const runs: Run[] = [[1, 1, '#', 99, 2]]
+    const grid = decodeGrid(runs, palette, 1, 2)
+    // Cell should remain default because the run was skipped
+    expect(grid[0][0]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+  })
+
+  it('skips runs with out-of-range bgIdx in single cell run', () => {
+    const runs: Run[] = [[1, 1, '#', 3, 99]]
+    const grid = decodeGrid(runs, palette, 1, 2)
+    expect(grid[0][0]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+  })
+
+  it('skips runs with out-of-range fgIdx in repeat run', () => {
+    const runs: Run[] = [[1, 1, 3, '#', 99, 2]]
+    const grid = decodeGrid(runs, palette, 1, 2)
+    // All cells should remain default
+    expect(grid[0][0]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+    expect(grid[0][1]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+    expect(grid[0][2]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+  })
+
+  it('skips runs with out-of-range bgIdx in repeat run', () => {
+    const runs: Run[] = [[1, 1, 3, '#', 3, 99]]
+    const grid = decodeGrid(runs, palette, 1, 2)
+    expect(grid[0][0]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+  })
+
+  it('skips runs with out-of-range fgIdx in text run', () => {
+    const runs: Run[] = [[1, 1, 'Hi', 99, 2]]
+    const grid = decodeGrid(runs, palette, 1, 2)
+    expect(grid[0][0]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+    expect(grid[0][1]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+  })
+
+  it('skips runs with zero fgIdx', () => {
+    const runs: Run[] = [[1, 1, '#', 0, 2]]
+    const grid = decodeGrid(runs, palette, 1, 2)
+    expect(grid[0][0]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+  })
+
+  it('skips runs with zero bgIdx', () => {
+    const runs: Run[] = [[1, 1, '#', 3, 0]]
+    const grid = decodeGrid(runs, palette, 1, 2)
+    expect(grid[0][0]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+  })
 })
 
 describe('round-trip encode/decode', () => {
   function roundTrip(grid: AnsiGrid): AnsiGrid {
     const { palette, colorToIndex, defaultFgIndex, defaultBgIndex } = buildPalette([grid])
-    const runs = encodeGrid(grid, colorToIndex, defaultFgIndex, defaultBgIndex)
+    const runs = encodeGrid(grid, colorToIndex)
     return decodeGrid(runs, palette, defaultFgIndex, defaultBgIndex)
   }
 

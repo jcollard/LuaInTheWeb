@@ -28,11 +28,16 @@ function makeDefaultGrid(fg: RGBColor, bg: RGBColor): AnsiGrid {
   )
 }
 
+/** Check that a 1-based palette index is within bounds. */
+function isValidPaletteIndex(idx: number, palette: RGBColor[]): boolean {
+  return idx >= 1 && idx <= palette.length
+}
+
 /** Write a cell into the grid if within bounds (1-based row/col). */
 function setCell(grid: AnsiGrid, row1: number, col1: number, char: string, fg: RGBColor, bg: RGBColor): void {
   const r = row1 - 1
   const c = col1 - 1
-  if (r < ANSI_ROWS && c >= 0 && c < ANSI_COLS) {
+  if (r >= 0 && r < ANSI_ROWS && c >= 0 && c < ANSI_COLS) {
     grid[r][c] = { char, fg: [...fg] as RGBColor, bg: [...bg] as RGBColor }
   }
 }
@@ -51,6 +56,13 @@ export function decodeV7Grid(
   defaultFgIndex: number,
   defaultBgIndex: number,
 ): AnsiGrid {
+  if (!isValidPaletteIndex(defaultFgIndex, palette)) {
+    throw new RangeError(`defaultFgIndex ${defaultFgIndex} out of palette bounds [1..${palette.length}]`)
+  }
+  if (!isValidPaletteIndex(defaultBgIndex, palette)) {
+    throw new RangeError(`defaultBgIndex ${defaultBgIndex} out of palette bounds [1..${palette.length}]`)
+  }
+
   const grid = makeDefaultGrid(palette[defaultFgIndex - 1], palette[defaultBgIndex - 1])
 
   const runs = luaArrayToJsArray<unknown>(rawRuns)
@@ -63,18 +75,24 @@ export function decodeV7Grid(
 
     if (el.length === 6) {
       // Repeat run: [row, col, count, char, fgIdx, bgIdx]
+      const fgIdx = Number(el[4])
+      const bgIdx = Number(el[5])
+      if (!isValidPaletteIndex(fgIdx, palette) || !isValidPaletteIndex(bgIdx, palette)) continue
       const count = Number(el[2])
       const char = String(el[3])
-      const fg = palette[Number(el[4]) - 1]
-      const bg = palette[Number(el[5]) - 1]
+      const fg = palette[fgIdx - 1]
+      const bg = palette[bgIdx - 1]
       for (let i = 0; i < count; i++) {
         setCell(grid, row, col + i, char, fg, bg)
       }
     } else if (el.length === 5) {
       // Single cell or text run
+      const fgIdx = Number(el[3])
+      const bgIdx = Number(el[4])
+      if (!isValidPaletteIndex(fgIdx, palette) || !isValidPaletteIndex(bgIdx, palette)) continue
       const charOrText = String(el[2])
-      const fg = palette[Number(el[3]) - 1]
-      const bg = palette[Number(el[4]) - 1]
+      const fg = palette[fgIdx - 1]
+      const bg = palette[bgIdx - 1]
 
       if (charOrText.length > 1) {
         for (let i = 0; i < charOrText.length; i++) {

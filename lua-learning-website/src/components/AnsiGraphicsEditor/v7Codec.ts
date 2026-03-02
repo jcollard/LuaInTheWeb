@@ -80,13 +80,7 @@ export type Run = Run5 | Run6
 export function encodeGrid(
   grid: AnsiGrid,
   colorToIndex: Map<string, number>,
-  defaultFgIndex: number,
-  defaultBgIndex: number,
 ): Run[] {
-  // defaultFgIndex/defaultBgIndex reserved for potential future optimizations
-  void defaultFgIndex
-  void defaultBgIndex
-
   const runs: Run[] = []
 
   for (let r = 0; r < grid.length; r++) {
@@ -150,6 +144,11 @@ export function encodeGrid(
   return runs
 }
 
+/** Check that a 1-based palette index is within bounds. */
+function isValidPaletteIndex(idx: number, palette: RGBColor[]): boolean {
+  return idx >= 1 && idx <= palette.length
+}
+
 /**
  * Decode sparse run-encoded tuples back into a full ANSI_ROWS x ANSI_COLS grid.
  * Empty runs array = fully default grid.
@@ -160,6 +159,13 @@ export function decodeGrid(
   defaultFgIndex: number,
   defaultBgIndex: number,
 ): AnsiGrid {
+  if (!isValidPaletteIndex(defaultFgIndex, palette)) {
+    throw new RangeError(`defaultFgIndex ${defaultFgIndex} out of palette bounds [1..${palette.length}]`)
+  }
+  if (!isValidPaletteIndex(defaultBgIndex, palette)) {
+    throw new RangeError(`defaultBgIndex ${defaultBgIndex} out of palette bounds [1..${palette.length}]`)
+  }
+
   const defaultFg = palette[defaultFgIndex - 1]
   const defaultBg = palette[defaultBgIndex - 1]
 
@@ -178,6 +184,7 @@ export function decodeGrid(
     if (run.length === 6) {
       // Repeat run: [row, col, count, char, fgIdx, bgIdx]
       const [row, col, count, char, fgIdx, bgIdx] = run
+      if (!isValidPaletteIndex(fgIdx, palette) || !isValidPaletteIndex(bgIdx, palette)) continue
       const fg = palette[fgIdx - 1]
       const bg = palette[bgIdx - 1]
       for (let i = 0; i < count; i++) {
@@ -189,6 +196,7 @@ export function decodeGrid(
     } else {
       // Single cell or text run: [row, col, charOrText, fgIdx, bgIdx]
       const [row, col, charOrText, fgIdx, bgIdx] = run
+      if (!isValidPaletteIndex(fgIdx, palette) || !isValidPaletteIndex(bgIdx, palette)) continue
       const fg = palette[fgIdx - 1]
       const bg = palette[bgIdx - 1]
 

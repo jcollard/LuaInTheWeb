@@ -81,12 +81,12 @@ export function serializeLayers(state: LayerState, availableTags?: string[]): st
     }
     if (layer.frames.length > 1) {
       serialized.frameCells = layer.frames.map(frame =>
-        encodeGrid(frame, colorToIndex, defaultFgIndex, defaultBgIndex)
+        encodeGrid(frame, colorToIndex)
       )
       serialized.currentFrameIndex = layer.currentFrameIndex
       serialized.frameDurationMs = layer.frameDurationMs
     } else {
-      serialized.cells = encodeGrid(layer.grid, colorToIndex, defaultFgIndex, defaultBgIndex)
+      serialized.cells = encodeGrid(layer.grid, colorToIndex)
     }
     addOptionalFields(serialized, layer)
     return serialized
