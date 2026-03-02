@@ -21,6 +21,56 @@ describe('useAnsiEditor lifecycle', () => {
     })
   })
 
+  describe('document keydown listener cleanup on unmount', () => {
+    it('should remove the document keydown listener when unmounted after onTerminalReady', () => {
+      const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener')
+      const { result, unmount } = renderHook(() => useAnsiEditor())
+
+      // Simulate terminal becoming ready with a mock container
+      const mockContainer = document.createElement('div')
+      act(() => {
+        result.current.onTerminalReady({
+          write: vi.fn(),
+          container: mockContainer,
+          dispose: vi.fn(),
+        })
+      })
+
+      removeEventListenerSpy.mockClear()
+      unmount()
+
+      const keydownRemovals = removeEventListenerSpy.mock.calls
+        .filter(([event]) => event === 'keydown')
+      expect(keydownRemovals.length).toBeGreaterThanOrEqual(1)
+
+      removeEventListenerSpy.mockRestore()
+    })
+
+    it('should not call preventDefault on spacebar after unmount', () => {
+      const { result, unmount } = renderHook(() => useAnsiEditor())
+
+      const mockContainer = document.createElement('div')
+      act(() => {
+        result.current.onTerminalReady({
+          write: vi.fn(),
+          container: mockContainer,
+          dispose: vi.fn(),
+        })
+      })
+
+      unmount()
+
+      const spaceEvent = new KeyboardEvent('keydown', {
+        key: ' ',
+        bubbles: true,
+        cancelable: true,
+      })
+      document.dispatchEvent(spaceEvent)
+
+      expect(spaceEvent.defaultPrevented).toBe(false)
+    })
+  })
+
   describe('importPngAsLayer error handling', () => {
     it('should show toast when PNG import fails', async () => {
       const { loadPngPixels } = await import('./pngImport')

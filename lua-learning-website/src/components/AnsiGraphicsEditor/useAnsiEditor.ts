@@ -701,6 +701,13 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     cleanupRef.current = attachMouseListeners(handle as HTMLElement)
   }, [attachMouseListeners])
 
+  // Ensure document-level listeners (keydown, mouseup) are removed on unmount.
+  // cleanupRef may be set by the effect above OR by onTerminalReady.
+  useEffect(() => () => {
+    cleanupRef.current?.()
+    cleanupRef.current = null
+  }, [])
+
   const setActiveLayerWithBounds = useCallback((id: string) => {
     commitPendingTextRef.current?.()
     const prevLayer = layersRef.current.find(l => l.id === activeLayerIdRef.current)
