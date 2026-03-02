@@ -1,7 +1,9 @@
 import { stringify, parse } from '@kilcekru/lua-table'
 import type { AnsiGrid, Layer, LayerState, TextLayer, TextAlign, RGBColor, Rect, GroupLayer } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_FRAME_DURATION_MS, isGroupLayer, getParentId } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_FRAME_DURATION_MS, isGroupLayer } from './types'
 import { renderTextLayerGrid } from './textLayerGrid'
+import { buildPalette, encodeGrid, decodeGrid } from './v7Codec'
+import type { Run } from './v7Codec'
 
 export function serializeGrid(grid: AnsiGrid): string {
   const data = { version: 1, width: ANSI_COLS, height: ANSI_ROWS, grid }
@@ -20,32 +22,24 @@ export function deserializeGrid(lua: string): AnsiGrid {
   return data.grid as AnsiGrid
 }
 
-function needsV5(state: LayerState): boolean {
-  return state.layers.some(l => l.type === 'drawn' && l.frames.length > 1)
-}
-
-function needsV6(state: LayerState, availableTags?: string[]): boolean {
-  if (availableTags && availableTags.length > 0) return true
-  return state.layers.some(l => l.tags && l.tags.length > 0)
-}
-
 /** Apply optional parentId and tags fields common to all layer types. */
 function addOptionalFields(serialized: Record<string, unknown>, layer: Layer): void {
   if (layer.parentId) serialized.parentId = layer.parentId
   if (layer.tags && layer.tags.length > 0) serialized.tags = layer.tags
 }
 
-function computeVersion(state: LayerState, availableTags?: string[]): number {
-  if (needsV6(state, availableTags)) return 6
-  if (needsV5(state)) return 5
-  const hasGroups = state.layers.some(isGroupLayer)
-  const hasParentId = state.layers.some(l => getParentId(l) != null)
-  if (hasGroups || hasParentId) return 4
-  return 3
-}
-
 export function serializeLayers(state: LayerState, availableTags?: string[]): string {
-  const version = computeVersion(state, availableTags)
+  // Build palette from all drawn layer grids
+  const allGrids: AnsiGrid[] = []
+  for (const layer of state.layers) {
+    if (layer.type === 'drawn') {
+      for (const frame of layer.frames) {
+        allGrids.push(frame)
+      }
+    }
+  }
+  const { palette, colorToIndex, defaultFgIndex, defaultBgIndex } = buildPalette(allGrids)
+
   const layers = state.layers.map(layer => {
     if (isGroupLayer(layer)) {
       const serialized: Record<string, unknown> = {
@@ -78,26 +72,34 @@ export function serializeLayers(state: LayerState, availableTags?: string[]): st
       addOptionalFields(serialized, layer)
       return serialized
     }
+    // Drawn layer — v7 sparse run encoding
     const serialized: Record<string, unknown> = {
       type: 'drawn',
       id: layer.id,
       name: layer.name,
       visible: layer.visible,
-      grid: layer.grid,
     }
     if (layer.frames.length > 1) {
-      serialized.frames = layer.frames
+      serialized.frameCells = layer.frames.map(frame =>
+        encodeGrid(frame, colorToIndex, defaultFgIndex, defaultBgIndex)
+      )
       serialized.currentFrameIndex = layer.currentFrameIndex
       serialized.frameDurationMs = layer.frameDurationMs
+    } else {
+      serialized.cells = encodeGrid(layer.grid, colorToIndex, defaultFgIndex, defaultBgIndex)
     }
     addOptionalFields(serialized, layer)
     return serialized
   })
+
   const data: Record<string, unknown> = {
-    version,
+    version: 7,
     width: ANSI_COLS,
     height: ANSI_ROWS,
     activeLayerId: state.activeLayerId,
+    palette,
+    defaultFg: defaultFgIndex,
+    defaultBg: defaultBgIndex,
     layers,
   }
   if (availableTags && availableTags.length > 0) {
@@ -113,6 +115,8 @@ interface RawLayer {
   visible: boolean
   grid?: AnsiGrid
   frames?: AnsiGrid[]
+  cells?: Run[]
+  frameCells?: Run[][]
   currentFrameIndex?: number
   frameDurationMs?: number
   text?: string
@@ -214,6 +218,91 @@ export function deserializeLayers(lua: string): LayerState {
         throw new Error(`Invalid drawn layer "${l.name}": missing grid`)
       }
       const frames = l.frames && l.frames.length > 0 ? l.frames : [l.grid!]
+      const currentFrameIndex = l.currentFrameIndex ?? 0
+      const grid = frames[currentFrameIndex]
+      return {
+        type: 'drawn' as const,
+        id: l.id,
+        name: l.name,
+        visible: l.visible,
+        grid,
+        frames,
+        currentFrameIndex,
+        frameDurationMs: l.frameDurationMs ?? DEFAULT_FRAME_DURATION_MS,
+        parentId: l.parentId,
+        tags,
+      }
+    })
+    const result: LayerState = {
+      layers,
+      activeLayerId: data.activeLayerId as string,
+    }
+    if (rawAvailableTags && rawAvailableTags.length > 0) {
+      result.availableTags = rawAvailableTags
+    }
+    return result
+  }
+
+  if (version === 7) {
+    const rawPalette = data.palette as RGBColor[]
+    const defaultFgIndex = data.defaultFg as number
+    const defaultBgIndex = data.defaultBg as number
+    const VALID_LAYER_TYPES = new Set(['drawn', 'text', 'group'])
+    const rawLayers = data.layers as RawLayer[]
+    const rawAvailableTags = data.availableTags as string[] | undefined
+    const layers: Layer[] = rawLayers.map((l, i) => {
+      if (!l.id || !l.name || l.visible === undefined) {
+        throw new Error(`Invalid layer at index ${i}: missing required fields (id, name, visible)`)
+      }
+      if (l.type !== undefined && !VALID_LAYER_TYPES.has(l.type)) {
+        throw new Error(`Invalid layer at index ${i}: unknown layer type "${l.type}"`)
+      }
+      const tags = l.tags && l.tags.length > 0 ? l.tags : undefined
+      if (l.type === 'group') {
+        return {
+          type: 'group' as const,
+          id: l.id,
+          name: l.name,
+          visible: l.visible,
+          collapsed: l.collapsed ?? false,
+          parentId: l.parentId,
+          tags,
+        }
+      }
+      if (l.type === 'text') {
+        if (!l.text || !l.bounds || !l.textFg) {
+          throw new Error(`Invalid text layer "${l.name}": missing text, bounds, or textFg`)
+        }
+        const textFgColors = l.textFgColors && l.textFgColors.length > 0 ? l.textFgColors : undefined
+        const textAlign = l.textAlign as TextAlign | undefined
+        return {
+          type: 'text' as const,
+          id: l.id,
+          name: l.name,
+          visible: l.visible,
+          text: l.text,
+          bounds: l.bounds,
+          textFg: l.textFg,
+          textFgColors,
+          textAlign,
+          grid: renderTextLayerGrid(l.text, l.bounds, l.textFg, textFgColors, textAlign),
+          parentId: l.parentId,
+          tags,
+        }
+      }
+      // Drawn layer — decode v7 sparse grids
+      let frames: AnsiGrid[]
+      const frameCells = Array.isArray(l.frameCells) ? l.frameCells : null
+      if (frameCells && frameCells.length > 0) {
+        frames = frameCells.map(runs =>
+          decodeGrid(Array.isArray(runs) ? runs : [], rawPalette, defaultFgIndex, defaultBgIndex)
+        )
+      } else if (l.cells !== undefined) {
+        const cellRuns = Array.isArray(l.cells) ? l.cells : []
+        frames = [decodeGrid(cellRuns, rawPalette, defaultFgIndex, defaultBgIndex)]
+      } else {
+        throw new Error(`Invalid drawn layer "${l.name}": missing cells or frameCells`)
+      }
       const currentFrameIndex = l.currentFrameIndex ?? 0
       const grid = frames[currentFrameIndex]
       return {

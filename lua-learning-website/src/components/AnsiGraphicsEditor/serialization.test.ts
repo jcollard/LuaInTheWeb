@@ -85,11 +85,20 @@ describe('deserializeGrid', () => {
 })
 
 describe('serializeLayers', () => {
-  it('produces a Lua table with version 3', () => {
+  it('produces a Lua table with version 7', () => {
     const layer = createLayer('Background', 'bg-1')
     const state: LayerState = { layers: [layer], activeLayerId: 'bg-1' }
     const lua = serializeLayers(state)
-    expect(lua).toContain('["version"] = 3')
+    expect(lua).toContain('["version"] = 7')
+  })
+
+  it('includes palette and default color indices', () => {
+    const layer = createLayer('Background', 'bg-1')
+    const state: LayerState = { layers: [layer], activeLayerId: 'bg-1' }
+    const lua = serializeLayers(state)
+    expect(lua).toContain('["palette"]')
+    expect(lua).toContain('["defaultFg"]')
+    expect(lua).toContain('["defaultBg"]')
   })
 
   it('includes layer metadata (id, name, visible)', () => {
@@ -107,10 +116,19 @@ describe('serializeLayers', () => {
     const lua = serializeLayers(state)
     expect(lua).toContain('["activeLayerId"] = "bg-1"')
   })
+
+  it('uses cells field for drawn layers instead of grid', () => {
+    const layer = createLayer('BG', 'bg-1')
+    const state: LayerState = { layers: [layer], activeLayerId: 'bg-1' }
+    const lua = serializeLayers(state)
+    expect(lua).toContain('["cells"]')
+    // Should not contain raw grid field
+    expect(lua).not.toContain('["grid"]')
+  })
 })
 
 describe('deserializeLayers', () => {
-  it('round-trips a v2 layer state', () => {
+  it('round-trips a layer state via v7', () => {
     const layer1 = createLayer('Background', 'bg')
     layer1.grid[0][0] = { char: 'A', fg: [255, 0, 0], bg: [0, 0, 0] }
     const layer2 = createLayer('Foreground', 'fg')
@@ -142,9 +160,23 @@ describe('deserializeLayers', () => {
   it('throws on unsupported version', () => {
     expect(() => deserializeLayers('return {["version"] = 99}')).toThrow()
   })
+
+  it('preserves palette round-trip accuracy', () => {
+    const layer = createLayer('L', 'l1')
+    layer.grid[0][0] = { char: 'X', fg: [255, 0, 0], bg: [0, 0, 170] }
+    layer.grid[5][10] = { char: 'Y', fg: [0, 255, 0], bg: [85, 85, 85] }
+    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
+    const lua = serializeLayers(state)
+    const result = deserializeLayers(lua)
+    const grid = (result.layers[0] as DrawableLayer).grid
+    expect(grid[0][0]).toEqual({ char: 'X', fg: [255, 0, 0], bg: [0, 0, 170] })
+    expect(grid[5][10]).toEqual({ char: 'Y', fg: [0, 255, 0], bg: [85, 85, 85] })
+    // Default cells preserved
+    expect(grid[0][1]).toEqual({ char: ' ', fg: [...DEFAULT_FG], bg: [...DEFAULT_BG] })
+  })
 })
 
-describe('v3 serialization with text layers', () => {
+describe('v7 serialization with text layers', () => {
   const red: RGBColor = [255, 0, 0]
   const bounds: Rect = { r0: 1, c0: 2, r1: 3, c1: 12 }
 
@@ -161,12 +193,12 @@ describe('v3 serialization with text layers', () => {
     }
   }
 
-  it('serializes state with text layers as version 3', () => {
+  it('serializes state with text layers as version 7', () => {
     const drawn = createLayer('Background', 'bg')
     const text = createTextLayer('Text', 'Hello', red, bounds)
     const state: LayerState = { layers: [drawn, text], activeLayerId: 'bg' }
     const lua = serializeLayers(state)
-    expect(lua).toContain('["version"] = 3')
+    expect(lua).toContain('["version"] = 7')
   })
 
   it('does not serialize grid for text layers', () => {
@@ -178,12 +210,13 @@ describe('v3 serialization with text layers', () => {
     expect(lua).toContain('["type"] = "text"')
   })
 
-  it('serializes drawn layers with grid and type', () => {
+  it('serializes drawn layers with cells and type', () => {
     const drawn = createLayer('Background', 'bg')
     drawn.grid[0][0] = { char: 'A', fg: [255, 0, 0], bg: [0, 0, 0] }
     const state: LayerState = { layers: [drawn], activeLayerId: 'bg' }
     const lua = serializeLayers(state)
     expect(lua).toContain('["type"] = "drawn"')
+    expect(lua).toContain('["cells"]')
   })
 
   it('round-trips a state with both drawn and text layers', () => {
@@ -213,10 +246,9 @@ describe('v3 serialization with text layers', () => {
 
   it('v2 backward compat: adds type drawn to loaded layers', () => {
     const layer = createLayer('Background', 'bg')
-    // Serialize as v2 (old format without type field)
+    // Serialize then re-parse — v7 round-trip should work
     const state: LayerState = { layers: [layer], activeLayerId: 'bg' }
     const lua = serializeLayers(state)
-    // Re-parse — should still work and add type: 'drawn'
     const result = deserializeLayers(lua)
     expect(result.layers[0].type).toBe('drawn')
   })
@@ -323,29 +355,29 @@ describe('v3 serialization with text layers', () => {
   })
 })
 
-describe('v4 serialization with groups', () => {
-  it('serializes as v4 when groups are present', () => {
+describe('v7 serialization with groups', () => {
+  it('serializes as v7 when groups are present', () => {
     const group = createGroup('G', 'g1')
     const child = createLayer('Child', 'c1')
     child.parentId = 'g1'
     const state: LayerState = { layers: [group, child], activeLayerId: 'c1' }
     const lua = serializeLayers(state)
-    expect(lua).toContain('["version"] = 4')
+    expect(lua).toContain('["version"] = 7')
   })
 
-  it('serializes as v3 when no groups are present', () => {
+  it('serializes as v7 when no groups are present', () => {
     const layer = createLayer('Background', 'bg')
     const state: LayerState = { layers: [layer], activeLayerId: 'bg' }
     const lua = serializeLayers(state)
-    expect(lua).toContain('["version"] = 3')
+    expect(lua).toContain('["version"] = 7')
   })
 
-  it('serializes as v4 when parentId is present even without group layer', () => {
+  it('serializes as v7 when parentId is present even without group layer', () => {
     const layer = createLayer('Child', 'c1')
     layer.parentId = 'g1'
     const state: LayerState = { layers: [layer], activeLayerId: 'c1' }
     const lua = serializeLayers(state)
-    expect(lua).toContain('["version"] = 4')
+    expect(lua).toContain('["version"] = 7')
   })
 
   it('round-trips groups with collapsed and parentId', () => {
@@ -394,13 +426,12 @@ describe('v4 serialization with groups', () => {
     expect(g.collapsed).toBe(false)
   })
 
-  it('v3 backward compat still works (no groups)', () => {
+  it('v7 round-trip still works (no groups)', () => {
     const layer1 = createLayer('Background', 'bg')
     layer1.grid[0][0] = { char: 'A', fg: [255, 0, 0], bg: [0, 0, 0] }
     const state: LayerState = { layers: [layer1], activeLayerId: 'bg' }
     const lua = serializeLayers(state)
-    // Should be v3 (no groups)
-    expect(lua).toContain('["version"] = 3')
+    expect(lua).toContain('["version"] = 7')
     const result = deserializeLayers(lua)
     expect(result.layers).toHaveLength(1)
     expect(result.layers[0].type).toBe('drawn')
@@ -444,7 +475,7 @@ describe('v4 serialization with groups', () => {
     expect(isDrawableLayer(restoredLeaf) && restoredLeaf.parentId).toBe('g-inner')
   })
 
-  it('backward compat: v4 without group parentId still loads', () => {
+  it('backward compat: v7 without group parentId still loads', () => {
     // Create a simple group without parentId
     const group = createGroup('G', 'g1')
     const child = createLayer('Child', 'c1')

@@ -311,3 +311,178 @@ describe('parseScreenLayers', () => {
     expect(() => parseScreenLayers({ version: 99 })).toThrow('Unsupported ANSI file version: 99')
   })
 })
+
+describe('version 7 parsing', () => {
+  const v7Palette = {
+    1: { 1: 170, 2: 170, 3: 170 },  // DEFAULT_FG
+    2: { 1: 0, 2: 0, 3: 0 },         // DEFAULT_BG
+    3: { 1: 255, 2: 0, 3: 0 },        // red
+    4: { 1: 0, 2: 0, 3: 170 },        // blue
+  }
+
+  it('parses v7 with sparse run-encoded drawn layer', () => {
+    const data: Record<string, unknown> = {
+      version: 7,
+      width: ANSI_COLS,
+      height: ANSI_ROWS,
+      activeLayerId: 'l1',
+      palette: v7Palette,
+      defaultFg: 1,
+      defaultBg: 2,
+      layers: {
+        1: {
+          type: 'drawn', id: 'l1', name: 'Layer 1', visible: true,
+          cells: { 1: { 1: 3, 2: 5, 3: '#', 4: 3, 5: 2 } },
+        },
+      },
+    }
+    const grid = parseScreenData(data)
+    expect(grid[2][4]).toEqual({ char: '#', fg: [255, 0, 0], bg: [0, 0, 0] })
+    expect(grid[0][0]).toEqual({ char: ' ', fg: [170, 170, 170], bg: [0, 0, 0] })
+  })
+
+  it('parses v7 empty cells as default grid', () => {
+    const data: Record<string, unknown> = {
+      version: 7,
+      width: ANSI_COLS,
+      height: ANSI_ROWS,
+      activeLayerId: 'l1',
+      palette: v7Palette,
+      defaultFg: 1,
+      defaultBg: 2,
+      layers: {
+        1: {
+          type: 'drawn', id: 'l1', name: 'Layer 1', visible: true,
+          cells: {},
+        },
+      },
+    }
+    const grid = parseScreenData(data)
+    expect(grid[0][0]).toEqual({ char: ' ', fg: [170, 170, 170], bg: [0, 0, 0] })
+  })
+
+  it('parses v7 with text run', () => {
+    const data: Record<string, unknown> = {
+      version: 7,
+      width: ANSI_COLS,
+      height: ANSI_ROWS,
+      activeLayerId: 'l1',
+      palette: v7Palette,
+      defaultFg: 1,
+      defaultBg: 2,
+      layers: {
+        1: {
+          type: 'drawn', id: 'l1', name: 'Layer 1', visible: true,
+          cells: { 1: { 1: 1, 2: 1, 3: 'Hi', 4: 3, 5: 2 } },
+        },
+      },
+    }
+    const grid = parseScreenData(data)
+    expect(grid[0][0].char).toBe('H')
+    expect(grid[0][1].char).toBe('i')
+    expect(grid[0][0].fg).toEqual([255, 0, 0])
+  })
+
+  it('parses v7 with repeat run', () => {
+    const data: Record<string, unknown> = {
+      version: 7,
+      width: ANSI_COLS,
+      height: ANSI_ROWS,
+      activeLayerId: 'l1',
+      palette: v7Palette,
+      defaultFg: 1,
+      defaultBg: 2,
+      layers: {
+        1: {
+          type: 'drawn', id: 'l1', name: 'Layer 1', visible: true,
+          cells: { 1: { 1: 1, 2: 1, 3: 5, 4: '#', 5: 3, 6: 4 } },
+        },
+      },
+    }
+    const grid = parseScreenData(data)
+    for (let i = 0; i < 5; i++) {
+      expect(grid[0][i]).toEqual({ char: '#', fg: [255, 0, 0], bg: [0, 0, 170] })
+    }
+  })
+
+  it('parses v7 with group and text layers', () => {
+    const data: Record<string, unknown> = {
+      version: 7,
+      width: ANSI_COLS,
+      height: ANSI_ROWS,
+      activeLayerId: 'l1',
+      palette: v7Palette,
+      defaultFg: 1,
+      defaultBg: 2,
+      layers: {
+        1: {
+          type: 'drawn', id: 'l1', name: 'BG', visible: true,
+          cells: {},
+        },
+        2: { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false },
+        3: {
+          type: 'text', id: 'l2', name: 'Text', visible: true,
+          text: 'Hi', bounds: { r0: 0, c0: 0, r1: 5, c1: 10 },
+          textFg: { 1: 255, 2: 255, 3: 0 },
+          parentId: 'g1',
+        },
+      },
+    }
+    const layers = parseScreenLayers(data)
+    expect(layers).toHaveLength(3)
+    expect(layers[0].type).toBe('drawn')
+    expect(layers[1].type).toBe('group')
+    expect(layers[2].type).toBe('text')
+    expect(layers[2].parentId).toBe('g1')
+  })
+
+  it('parses v7 with multi-frame animation', () => {
+    const data: Record<string, unknown> = {
+      version: 7,
+      width: ANSI_COLS,
+      height: ANSI_ROWS,
+      activeLayerId: 'l1',
+      palette: v7Palette,
+      defaultFg: 1,
+      defaultBg: 2,
+      layers: {
+        1: {
+          type: 'drawn', id: 'l1', name: 'Animated', visible: true,
+          frameCells: {
+            1: { 1: { 1: 1, 2: 1, 3: 'A', 4: 3, 5: 2 } },
+            2: { 1: { 1: 1, 2: 1, 3: 'B', 4: 3, 5: 2 } },
+          },
+          currentFrameIndex: 0,
+          frameDurationMs: 100,
+        },
+      },
+    }
+    const layers = parseScreenLayers(data)
+    expect(layers[0].type).toBe('drawn')
+    const drawn = layers[0] as { type: 'drawn'; frames: unknown[][]; grid: unknown[] }
+    expect(drawn.frames).toHaveLength(2)
+    const grid = parseScreenData(data)
+    expect(grid[0][0].char).toBe('A')
+  })
+
+  it('parses v7 with tags', () => {
+    const data: Record<string, unknown> = {
+      version: 7,
+      width: ANSI_COLS,
+      height: ANSI_ROWS,
+      activeLayerId: 'l1',
+      palette: v7Palette,
+      defaultFg: 1,
+      defaultBg: 2,
+      layers: {
+        1: {
+          type: 'drawn', id: 'l1', name: 'BG', visible: true,
+          cells: {},
+          tags: { 1: 'background' },
+        },
+      },
+    }
+    const layers = parseScreenLayers(data)
+    expect(layers[0].tags).toEqual(['background'])
+  })
+})
