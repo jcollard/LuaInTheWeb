@@ -139,41 +139,8 @@ function parseV2(data: Record<string, unknown>): LayerData[] {
 function parseV3to6(data: Record<string, unknown>): LayerData[] {
   const rawLayers = luaArrayToJsArray<RawLayer>(data.layers)
   return rawLayers.map((l): LayerData => {
-    if (l.type === 'group') {
-      const group: GroupLayerData = {
-        type: 'group',
-        id: l.id,
-        name: l.name,
-        visible: l.visible,
-        collapsed: l.collapsed ?? false,
-        parentId: l.parentId,
-        tags: parseTags(l.tags),
-      }
-      return group
-    }
-
-    if (l.type === 'text') {
-      const bounds = normalizeRect(l.bounds)
-      const textFg = normalizeRgb(l.textFg)
-      const textFgColors = normalizeRgbArray(l.textFgColors)
-      const textAlign = l.textAlign as TextAlign | undefined
-      const grid = renderTextLayerGrid(l.text ?? '', bounds, textFg, textFgColors, textAlign)
-      const textLayer: TextLayerData = {
-        type: 'text',
-        id: l.id,
-        name: l.name,
-        visible: l.visible,
-        text: l.text ?? '',
-        bounds,
-        textFg,
-        textFgColors,
-        textAlign,
-        grid,
-        parentId: l.parentId,
-        tags: parseTags(l.tags),
-      }
-      return textLayer
-    }
+    if (l.type === 'group') return parseGroupLayerData(l)
+    if (l.type === 'text') return parseTextLayerData(l)
 
     // Drawn layer (default for v3 where type may be unset)
     const rawFrames = l.frames ? luaArrayToJsArray<unknown>(l.frames) : null
