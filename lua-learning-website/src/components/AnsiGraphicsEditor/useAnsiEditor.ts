@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, BorderStyle, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions, DrawableLayer, Layer } from './types'
-import { blendRgb } from './colorUtils'
+import { isClipLayer } from './types'
+import { blendRgb, applyMaskOverlay } from './colorUtils'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, DEFAULT_BLEND_RATIO, DEFAULT_FRAME_DURATION_MS, BORDER_PRESETS, isGroupLayer, isDrawableLayer } from './types'
 import type { CellHalf, ColorTransform } from './gridUtils'
 import { createEmptyGrid, isInBounds, getCellHalfFromMouse, computePixelCell, computeFloodFillCells } from './gridUtils'
@@ -48,7 +49,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   // with undo snapshots below before exposing them as addLayer, removeLayer, etc.
   const {
     layersRef, activeLayerIdRef, applyToActiveLayer, getActiveGrid, restoreLayerState,
-    addLayer: rawAddLayer, addLayerWithGrid: rawAddLayerWithGrid, removeLayer: rawRemoveLayer,
+    addLayer: rawAddLayer, addLayerWithGrid: rawAddLayerWithGrid, addClipLayer: rawAddClipLayer, removeLayer: rawRemoveLayer,
     reorderLayer: rawReorderLayer,
     toggleVisibility: rawToggleVisibility, setLayerVisibility: rawSetLayerVisibility,
     mergeDown: rawMergeDown,
@@ -132,6 +133,16 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     setCanRedo(false)
   }, [layersRef, activeLayerIdRef])
 
+  /** Composite layers, apply clip mask overlay if active layer is a clip layer, then flush. */
+  const flushLayers = useCallback((layers: Layer[]) => {
+    let grid = compositeGrid(layers)
+    const activeLayer = layers.find(l => l.id === activeLayerIdRef.current)
+    if (activeLayer && isClipLayer(activeLayer)) {
+      grid = applyMaskOverlay(grid, activeLayer.grid, 0.5)
+    }
+    terminalBufferRef.current.flush(grid, colorTransformRef.current)
+  }, [activeLayerIdRef])
+
   const restoreSnapshot = useCallback((from: LayerState[], to: LayerState[]) => {
     if (from.length === 0) return
     to.push(cloneLayerState({ layers: layersRef.current, activeLayerId: activeLayerIdRef.current }))
@@ -139,7 +150,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     restoreLayerState(snapshot)
     setIsDirty(true)
     setCanUndo(undoStackRef.current.length > 0); setCanRedo(redoStackRef.current.length > 0)
-    terminalBufferRef.current.flush(compositeGrid(snapshot.layers), colorTransformRef.current)
+    flushLayers(snapshot.layers)
   }, [layersRef, activeLayerIdRef, restoreLayerState])
 
   const undo = useCallback(() => restoreSnapshot(undoStackRef.current, redoStackRef.current), [restoreSnapshot])
@@ -194,12 +205,13 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     if (needsRerender) {
       setIsDirty(true)
       setTimeout(() => {
-        terminalBufferRef.current.flush(compositeGrid(layersRef.current), colorTransformRef.current)
+        flushLayers(layersRef.current)
       }, 0)
     }
   }, [pushSnapshot, layersRef])
 
   const addLayerWithUndo = useCallback(() => withLayerUndo(rawAddLayer, false), [withLayerUndo, rawAddLayer])
+  const addClipLayerWithUndo = useCallback((groupId: string) => withLayerUndo(() => rawAddClipLayer(groupId), false), [withLayerUndo, rawAddClipLayer])
   const removeLayerWithUndo = useCallback((id: string) => withLayerUndo(() => rawRemoveLayer(id)), [withLayerUndo, rawRemoveLayer])
   const reorderLayerWithUndo = useCallback(
     (id: string, newIndex: number, targetGroupId?: string | null) => withLayerUndo(() => rawReorderLayer(id, newIndex, targetGroupId)),
@@ -225,7 +237,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const removeFrameWithUndo = useCallback(() => withLayerUndo(rawRemoveFrame), [withLayerUndo, rawRemoveFrame])
   const setCurrentFrameWithUndo = useCallback((index: number) => {
     rawSetCurrentFrame(index)
-    terminalBufferRef.current.flush(compositeGrid(layersRef.current), colorTransformRef.current)
+    flushLayers(layersRef.current)
   }, [rawSetCurrentFrame, layersRef])
   const reorderFrameWithUndo = useCallback((from: number, to: number) => withLayerUndo(() => rawReorderFrame(from, to)), [withLayerUndo, rawReorderFrame])
   const setFrameDurationWithUndo = useCallback((ms: number) => withLayerUndo(() => rawSetFrameDuration(ms)), [withLayerUndo, rawSetFrameDuration])
@@ -251,7 +263,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       const layers = layersRef.current
       const { changed, nextDelayMs } = computePlaybackTick(layers, schedule, performance.now())
       if (changed) {
-        terminalBufferRef.current.flush(compositeGrid(layers), colorTransformRef.current)
+        flushLayers(layers)
       }
       playbackTimerRef.current = window.setTimeout(tick, nextDelayMs)
     }
@@ -318,7 +330,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       updateTextLayer: rawUpdateTextLayer,
       pushSnapshot,
       rerenderGrid: () => {
-        terminalBufferRef.current.flush(compositeGrid(layersRef.current), colorTransformRef.current)
+        flushLayers(layersRef.current)
       },
       textBoundsRef, textCursorRef, containerRef,
       onExitEditing: updateTextBoundsDisplay,
@@ -343,7 +355,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       if (layer?.type !== 'drawn' || layer.frames.length <= 1) return
       const idx = layer.currentFrameIndex > 0 ? layer.currentFrameIndex - 1 : layer.frames.length - 1
       rawSetCurrentFrame(idx)
-      terminalBufferRef.current.flush(compositeGrid(layersRef.current), colorTransformRef.current)
+      flushLayers(layersRef.current)
     }
 
     function nextFrame(): void {
@@ -351,7 +363,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       if (layer?.type !== 'drawn' || layer.frames.length <= 1) return
       const idx = (layer.currentFrameIndex + 1) % layer.frames.length
       rawSetCurrentFrame(idx)
-      terminalBufferRef.current.flush(compositeGrid(layersRef.current), colorTransformRef.current)
+      flushLayers(layersRef.current)
     }
 
     function positionFlipOriginOverlay(row: number, col: number): void {
@@ -590,7 +602,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
               const dr = target.row - moveStartRef.current.row
               const dc = target.col - moveStartRef.current.col
               rawApplyMoveGridsImmediate(buildAllShiftedFrames(moveCapturedRef.current, moveBlankGridsRef.current, dr, dc))
-              terminalBufferRef.current.flush(compositeGrid(layersRef.current), colorTransformRef.current)
+              flushLayers(layersRef.current)
             })
           }
           break
@@ -717,6 +729,9 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       setBrush(p => (p.tool === 'move' || p.tool === 'flip') ? p : ({ ...p, tool: 'move' }))
     } else if (layer?.type === 'text') {
       setBrush(p => p.tool === 'text' ? p : ({ ...p, tool: 'text' }))
+    } else if (isClipLayer(layer!)) {
+      // Clip layers support all drawing tools, switch from text/move to pencil
+      setBrush(p => (p.tool === 'text' || (p.tool === 'move' && prevLayer && isGroupLayer(prevLayer))) ? ({ ...p, tool: 'pencil' }) : p)
     } else if (brushRef.current.tool === 'move' && prevLayer && isGroupLayer(prevLayer)) {
       setBrush(p => ({ ...p, tool: 'pencil' }))
     } else if (brushRef.current.tool === 'text') {
@@ -733,7 +748,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     pushSnapshot()
     rawUpdateTextLayer(activeId, { textAlign: align })
     setIsDirty(true)
-    terminalBufferRef.current.flush(compositeGrid(layersRef.current), colorTransformRef.current)
+    flushLayers(layersRef.current)
     textToolRef.current?.refreshOverlays()
   }, [pushSnapshot, rawUpdateTextLayer, layersRef, activeLayerIdRef])
 
@@ -741,7 +756,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     setCgaPreviewRaw(on)
     colorTransformRef.current = on ? cgaQuantize : undefined
     terminalBufferRef.current.invalidate()
-    terminalBufferRef.current.flush(compositeGrid(layersRef.current), colorTransformRef.current)
+    flushLayers(layersRef.current)
   }, [layersRef])
 
   const flipSelectionHorizontal = useCallback(() => {
@@ -799,7 +814,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     cleanupRef.current = null
     if (handle) {
       terminalBufferRef.current.attach(handle)
-      terminalBufferRef.current.flush(compositeGrid(layersRef.current), colorTransformRef.current)
+      flushLayers(layersRef.current)
       containerRef.current = handle.container
       cleanupRef.current = attachMouseListenersRef.current(handle.container)
       updateTextBoundsDisplayRef.current?.()
@@ -820,7 +835,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     isDirty, markClean, onTerminalReady, cursorRef, dimensionRef, selectionRef, textBoundsRef, textCursorRef,
     isSaveDialogOpen, openSaveDialog, closeSaveDialog, undo, redo, canUndo, canRedo,
     layers: layerState.layers, activeLayerId: layerState.activeLayerId,
-    addLayer: addLayerWithUndo, removeLayer: removeLayerWithUndo,
+    addLayer: addLayerWithUndo, addClipLayer: addClipLayerWithUndo, removeLayer: removeLayerWithUndo,
     renameLayer: layerState.renameLayer, changeLayerId: layerState.changeLayerId, setActiveLayer: setActiveLayerWithBounds,
     reorderLayer: reorderLayerWithUndo,
     toggleVisibility: toggleVisibilityWithUndo, setLayerVisibility: setLayerVisibilityWithUndo,

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import type { Layer } from './types'
-import { isGroupLayer, isDrawableLayer, getParentId } from './types'
+import { isGroupLayer, isDrawableLayer, isClipLayer, getParentId } from './types'
 import { getAncestorGroupIds, buildDisplayOrder, filterLayers } from './layerUtils'
 import { LayerRow } from './LayerRow'
 import { LayerContextMenu } from './LayerContextMenu'
@@ -24,6 +24,7 @@ export interface LayersPanelProps {
   onWrapInGroup: (layerId: string) => void
   onRemoveFromGroup: (layerId: string) => void
   onDuplicate: (id: string) => void
+  onAddClipLayer: (groupId: string) => void
   onToggleGroupCollapsed: (groupId: string) => void
   availableTags: string[]
   onAddTagToLayer: (layerId: string, tag: string) => void
@@ -61,6 +62,7 @@ export function LayersPanel({
   onWrapInGroup,
   onRemoveFromGroup,
   onDuplicate,
+  onAddClipLayer,
   onToggleGroupCollapsed,
   availableTags,
   onAddTagToLayer,
@@ -197,6 +199,7 @@ export function LayersPanel({
   const contextLayer = contextMenu ? layers.find(l => l.id === contextMenu.layerId) : undefined
   const contextIsGroup = contextLayer != null && isGroupLayer(contextLayer)
   const contextHasParentId = contextLayer != null && getParentId(contextLayer) != null
+  const groupHasClipLayer = contextIsGroup && layers.some(l => isClipLayer(l) && l.parentId === contextMenu?.layerId)
 
   return (
     <div className={styles.layersPanel} data-testid="layers-panel">
@@ -361,6 +364,8 @@ export function LayersPanel({
           onWrapInGroup={onWrapInGroup}
           onDuplicate={onDuplicate}
           onRemoveFromGroup={onRemoveFromGroup}
+          onAddClipLayer={onAddClipLayer}
+          groupHasClipLayer={groupHasClipLayer}
           onAddTagToLayer={onAddTagToLayer}
           onRemoveTagFromLayer={onRemoveTagFromLayer}
           onSetTagsSubmenuOpen={setTagsSubmenuOpen}

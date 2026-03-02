@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { hsvToRgb, rgbToHsv, rgbToHex, hexToRgb, blendRgb, extractGridColors, extractAllLayerColors, simplifyPalette, replaceColorsInGrid } from './colorUtils'
+import { hsvToRgb, rgbToHsv, rgbToHex, hexToRgb, blendRgb, extractGridColors, extractAllLayerColors, simplifyPalette, replaceColorsInGrid, darkenColor, applyMaskOverlay } from './colorUtils'
 import { createLayer } from './layerUtils'
-import { DEFAULT_BG, DEFAULT_FG, TRANSPARENT_HALF, HALF_BLOCK } from './types'
-import type { RGBColor, Layer, PaletteEntry } from './types'
+import { DEFAULT_BG, DEFAULT_FG, DEFAULT_CELL, TRANSPARENT_HALF, HALF_BLOCK, ANSI_ROWS, ANSI_COLS } from './types'
+import type { RGBColor, AnsiGrid, Layer, PaletteEntry } from './types'
 
 describe('hsvToRgb', () => {
   it('converts pure red', () => {
@@ -414,5 +414,76 @@ describe('replaceColorsInGrid', () => {
     const result = replaceColorsInGrid(layer.grid, mapping)
     expect(result[0][0].fg).not.toBe(blue)
     expect(result[0][0].fg).toEqual(blue)
+  })
+})
+
+describe('darkenColor', () => {
+  it('darkens by 50%', () => {
+    expect(darkenColor([200, 100, 50], 0.5)).toEqual([100, 50, 25])
+  })
+
+  it('factor 0 returns black', () => {
+    expect(darkenColor([200, 100, 50], 0)).toEqual([0, 0, 0])
+  })
+
+  it('factor 1 returns original', () => {
+    expect(darkenColor([200, 100, 50], 1)).toEqual([200, 100, 50])
+  })
+
+  it('clamps to 0', () => {
+    expect(darkenColor([0, 0, 0], 0.5)).toEqual([0, 0, 0])
+  })
+})
+
+describe('applyMaskOverlay', () => {
+  function makeGrid(): AnsiGrid {
+    return Array.from({ length: ANSI_ROWS }, () =>
+      Array.from({ length: ANSI_COLS }, () => ({ char: 'A', fg: [200, 100, 50] as RGBColor, bg: [100, 50, 25] as RGBColor }))
+    )
+  }
+
+  function makeDefaultMask(): AnsiGrid {
+    return Array.from({ length: ANSI_ROWS }, () =>
+      Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
+    )
+  }
+
+  it('darkens cells outside mask (default cells in mask)', () => {
+    const grid = makeGrid()
+    const mask = makeDefaultMask()
+    // All mask cells are default → all cells should be darkened
+    const result = applyMaskOverlay(grid, mask, 0.5)
+    expect(result[0][0].fg).toEqual([100, 50, 25])
+    expect(result[0][0].bg).toEqual([50, 25, 13])
+  })
+
+  it('leaves cells inside mask unchanged', () => {
+    const grid = makeGrid()
+    const mask = makeDefaultMask()
+    // Paint a non-default cell in the mask
+    mask[0][0] = { char: '#', fg: [255, 0, 0] as RGBColor, bg: [0, 0, 0] as RGBColor }
+    const result = applyMaskOverlay(grid, mask, 0.5)
+    // Cell at [0][0] is inside mask → unchanged
+    expect(result[0][0].fg).toEqual([200, 100, 50])
+    expect(result[0][0].bg).toEqual([100, 50, 25])
+    // Cell at [0][1] is outside mask → darkened
+    expect(result[0][1].fg).toEqual([100, 50, 25])
+  })
+
+  it('full mask (all non-default): no darkening', () => {
+    const grid = makeGrid()
+    const mask = Array.from({ length: ANSI_ROWS }, () =>
+      Array.from({ length: ANSI_COLS }, () => ({ char: '#', fg: [255, 0, 0] as RGBColor, bg: [0, 0, 0] as RGBColor }))
+    )
+    const result = applyMaskOverlay(grid, mask, 0.5)
+    expect(result[0][0].fg).toEqual([200, 100, 50])
+    expect(result[0][0].bg).toEqual([100, 50, 25])
+  })
+
+  it('preserves char from original grid', () => {
+    const grid = makeGrid()
+    const mask = makeDefaultMask()
+    const result = applyMaskOverlay(grid, mask, 0.5)
+    expect(result[0][0].char).toBe('A')
   })
 })

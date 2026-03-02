@@ -1,5 +1,5 @@
 import type { Layer, GroupLayer } from './types'
-import { isGroupLayer } from './types'
+import { isGroupLayer, isClipLayer } from './types'
 import { formatLayerId } from './layerUtils'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -117,6 +117,9 @@ export function LayerRow({
         )}
         {!isGroup && layer.type === 'text' && (
           <span className={styles.layerTypeBadge} data-testid="text-layer-badge">T</span>
+        )}
+        {isClipLayer(layer) && (
+          <span className={styles.layerTypeBadge} data-testid="clip-layer-badge">{'\u2702'}</span>
         )}
         <span className={styles.layerNameColumn}>
           <span

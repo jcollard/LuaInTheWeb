@@ -29,6 +29,7 @@ describe('LayersPanel', () => {
     onWrapInGroup?: (layerId: string) => void
     onRemoveFromGroup?: (layerId: string) => void
     onDuplicate?: (id: string) => void
+    onAddClipLayer?: (groupId: string) => void
     onToggleGroupCollapsed?: (groupId: string) => void
     availableTags?: string[]
     onAddTagToLayer?: (layerId: string, tag: string) => void
@@ -55,6 +56,7 @@ describe('LayersPanel', () => {
         onWrapInGroup={overrides?.onWrapInGroup ?? noop}
         onRemoveFromGroup={overrides?.onRemoveFromGroup ?? noop}
         onDuplicate={overrides?.onDuplicate ?? noop}
+        onAddClipLayer={overrides?.onAddClipLayer ?? noop}
         onToggleGroupCollapsed={overrides?.onToggleGroupCollapsed ?? noop}
         availableTags={overrides?.availableTags ?? []}
         onAddTagToLayer={overrides?.onAddTagToLayer ?? noop}

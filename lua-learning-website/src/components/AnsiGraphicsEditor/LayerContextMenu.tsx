@@ -15,6 +15,8 @@ export interface LayerContextMenuProps {
   onWrapInGroup: (id: string) => void
   onDuplicate: (id: string) => void
   onRemoveFromGroup: (id: string) => void
+  onAddClipLayer: (groupId: string) => void
+  groupHasClipLayer: boolean
   onAddTagToLayer: (layerId: string, tag: string) => void
   onRemoveTagFromLayer: (layerId: string, tag: string) => void
   onSetTagsSubmenuOpen: (open: boolean) => void
@@ -36,6 +38,8 @@ export function LayerContextMenu({
   onWrapInGroup,
   onDuplicate,
   onRemoveFromGroup,
+  onAddClipLayer,
+  groupHasClipLayer,
   onAddTagToLayer,
   onRemoveTagFromLayer,
   onSetTagsSubmenuOpen,
@@ -73,6 +77,16 @@ export function LayerContextMenu({
         >
           Group with new folder
         </button>
+        {contextIsGroup && (
+          <button
+            className={styles.layerContextMenuItem}
+            data-testid="context-add-clip-mask"
+            onClick={() => { onAddClipLayer(contextMenu.layerId); close() }}
+            disabled={groupHasClipLayer}
+          >
+            Add Clip Mask
+          </button>
+        )}
         <button
           className={styles.layerContextMenuItem}
           data-testid="context-duplicate"

@@ -6,7 +6,7 @@
  * from all visible layers.
  */
 
-import type { AnsiGrid, DrawnLayerData, GroupLayerData, LayerData, RGBColor, Rect, TextAlign, TextLayerData } from './screenTypes'
+import type { AnsiGrid, ClipLayerData, DrawnLayerData, GroupLayerData, LayerData, RGBColor, Rect, TextAlign, TextLayerData } from './screenTypes'
 import { DEFAULT_FRAME_DURATION_MS } from './screenTypes'
 import { renderTextLayerGrid } from './textLayerGrid'
 import { compositeGrid } from './screenCompositor'
@@ -141,6 +141,7 @@ function parseV3to6(data: Record<string, unknown>): LayerData[] {
   return rawLayers.map((l): LayerData => {
     if (l.type === 'group') return parseGroupLayerData(l)
     if (l.type === 'text') return parseTextLayerData(l)
+    if (l.type === 'clip') return parseClipLayerData(l, normalizeGrid(l.grid))
 
     // Drawn layer (default for v3 where type may be unset)
     const rawFrames = l.frames ? luaArrayToJsArray<unknown>(l.frames) : null
@@ -172,6 +173,18 @@ function parseGroupLayerData(l: RawLayer): GroupLayerData {
     name: l.name,
     visible: l.visible,
     collapsed: l.collapsed ?? false,
+    parentId: l.parentId,
+    tags: parseTags(l.tags),
+  }
+}
+
+function parseClipLayerData(l: RawLayer, grid: AnsiGrid): ClipLayerData {
+  return {
+    type: 'clip',
+    id: l.id,
+    name: l.name,
+    visible: l.visible,
+    grid,
     parentId: l.parentId,
     tags: parseTags(l.tags),
   }
@@ -212,6 +225,11 @@ function parseV7(data: Record<string, unknown>): LayerData[] {
 
     if (l.type === 'text') {
       return parseTextLayerData(l)
+    }
+
+    if (l.type === 'clip') {
+      const grid = decodeV7Grid(l.cells, palette, defaultFgIndex, defaultBgIndex)
+      return parseClipLayerData(l, grid)
     }
 
     // Drawn layer — decode v7 sparse grids

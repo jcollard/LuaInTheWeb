@@ -85,9 +85,13 @@ export interface GroupLayerData {
   tags: string[]
 }
 
+export interface ClipLayerData extends BaseLayerData {
+  type: 'clip'
+}
+
 export type DrawableLayerData = DrawnLayerData | TextLayerData
 
-export type LayerData = DrawnLayerData | TextLayerData | GroupLayerData
+export type LayerData = DrawnLayerData | TextLayerData | GroupLayerData | ClipLayerData
 
 // --- Type guards ---
 
@@ -97,6 +101,10 @@ export function isGroupLayer(layer: LayerData): layer is GroupLayerData {
 
 export function isDrawableLayer(layer: LayerData): layer is DrawableLayerData {
   return layer.type === 'drawn' || layer.type === 'text'
+}
+
+export function isClipLayer(layer: LayerData): layer is ClipLayerData {
+  return layer.type === 'clip'
 }
 
 // --- Helpers ---

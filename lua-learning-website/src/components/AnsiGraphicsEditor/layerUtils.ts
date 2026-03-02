@@ -1,5 +1,6 @@
-import type { AnsiCell, AnsiGrid, DrawableLayer, DrawnLayer, GroupLayer, Layer, LayerState, RGBColor, TextLayer } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer, getParentId } from './types'
+import type { AnsiCell, AnsiGrid, ClipLayer, DrawableLayer, DrawnLayer, GroupLayer, Layer, LayerState, RGBColor, TextLayer } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer, isClipLayer, getParentId } from './types'
+import { buildClipMaskMap, isCellClipped } from './clipMaskUtils'
 
 /** Walk parentId chain collecting ancestor group IDs. Uses a visited set to prevent infinite loops. */
 export function getAncestorGroupIds(layer: Layer, layers: Layer[]): string[] {
@@ -103,6 +104,8 @@ export function createGroup(name: string, id?: string): GroupLayer {
   }
 }
 
+export { createClipLayer, buildClipMaskMap, isCellClipped } from './clipMaskUtils'
+
 /** Returns IDs of groups that are effectively hidden (own visible=false or any ancestor hidden). */
 function hiddenGroupIds(layers: Layer[]): Set<string> {
   const ids = new Set<string>()
@@ -197,14 +200,24 @@ function compositeCellCore(layers: DrawableLayer[], getCell: (layer: DrawableLay
 
 export function compositeCell(layers: Layer[], row: number, col: number): AnsiCell {
   const drawable = visibleDrawableLayers(layers)
-  return compositeCellCore(drawable, (layer) => layer.visible ? layer.grid[row][col] : null)
+  const clipMap = buildClipMaskMap(layers)
+  return compositeCellCore(drawable, (layer) => {
+    if (!layer.visible) return null
+    if (isCellClipped(layer, row, col, clipMap, layers)) return null
+    return layer.grid[row][col]
+  })
 }
 
 export function compositeGrid(layers: Layer[]): AnsiGrid {
   const drawable = visibleDrawableLayers(layers)
+  const clipMap = buildClipMaskMap(layers)
   return Array.from({ length: ANSI_ROWS }, (_, r) =>
     Array.from({ length: ANSI_COLS }, (_, c) =>
-      compositeCellCore(drawable, (layer) => layer.visible ? layer.grid[r][c] : null)
+      compositeCellCore(drawable, (layer) => {
+        if (!layer.visible) return null
+        if (isCellClipped(layer, r, c, clipMap, layers)) return null
+        return layer.grid[r][c]
+      })
     )
   )
 }
@@ -214,8 +227,10 @@ export function compositeCellWithOverride(
   activeLayerId: string, overrideCell: AnsiCell,
 ): AnsiCell {
   const drawable = visibleDrawableLayers(layers)
+  const clipMap = buildClipMaskMap(layers)
   return compositeCellCore(drawable, (layer) => {
     if (!layer.visible) return null
+    if (isCellClipped(layer, row, col, clipMap, layers)) return null
     return layer.id === activeLayerId ? overrideCell : layer.grid[row][col]
   })
 }
@@ -252,6 +267,17 @@ function cloneLayer(layer: Layer): Layer {
       parentId: layer.parentId,
       tags: layer.tags ? [...layer.tags] : undefined,
     } satisfies GroupLayer
+  }
+  if (isClipLayer(layer)) {
+    return {
+      type: 'clip',
+      id: layer.id,
+      name: layer.name,
+      visible: layer.visible,
+      grid: cloneGrid(layer.grid),
+      parentId: layer.parentId,
+      tags: layer.tags ? [...layer.tags] : undefined,
+    } satisfies ClipLayer
   }
   const base = {
     id: layer.id,
@@ -290,8 +316,9 @@ export function mergeLayerDown(layers: Layer[], layerId: string): Layer[] | null
   const upper = layers[idx]
   const lower = layers[idx - 1]
 
-  // Cannot merge if either layer is a group
+  // Cannot merge if either layer is a group or clip
   if (isGroupLayer(upper) || isGroupLayer(lower)) return null
+  if (isClipLayer(upper) || isClipLayer(lower)) return null
 
   // After group guard, both are drawable layers
   // Composite the two layers into a new grid, treating both as visible
