@@ -89,9 +89,10 @@ try {
   section('🔍', 'Running duplication detection...')
   try {
     run('npm run duplicates', ROOT_DIR)
-    console.log('✅ Duplication report generated')
-  } catch {
-    console.log('⚠️  Duplication detection encountered issues (non-blocking)')
+    console.log('✅ Duplication check passed')
+  } catch (e) {
+    console.error('❌ Duplication threshold exceeded (> 3%) — see .jscpd.json')
+    throw e
   }
 
   // Step 3: Build all packages (always full, in dependency order)

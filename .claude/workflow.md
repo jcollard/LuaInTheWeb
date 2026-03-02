@@ -479,6 +479,7 @@ This prevents:
 **After each implementation item:**
 - [ ] Tests pass
 - [ ] `npm run test:mutation:scope "path/to/files/**"` >= 80%
+- [ ] No new ESLint complexity warnings introduced
 
 **At MILESTONE markers:**
 - [ ] Run `/milestone`
@@ -490,6 +491,7 @@ This prevents:
 - [ ] Lint passes: `npm run lint`
 - [ ] Type check passes: `npx tsc -p lua-learning-website/tsconfig.app.json --noEmit 2>&1 | grep -v "@lua-learning/"` (must produce no output)
 - [ ] Build succeeds: `npm run build` (may fail locally due to package issues — the tsc check above covers our code)
+- [ ] Duplication check passes: `npm run duplicates` (< 3%)
 - [ ] E2E passes locally: `npm run test:e2e`
 - [ ] Comment `/e2e-verified` on the PR to unblock merge
 

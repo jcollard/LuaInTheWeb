@@ -104,6 +104,28 @@ Flag any existing code that implements similar logic. Common patterns:
 - Duplicated validation logic across components
 - Copy-pasted CSS that could use shared variables/modules
 
+## Complexity & Duplication Check
+
+After DRY detection, check for complexity and duplication issues:
+
+### Complexity Warnings in Changed Files
+
+```bash
+# Run lint and grep for complexity warnings in changed files
+npm run lint 2>&1 | grep -E "complexity|max-lines|max-params|max-depth"
+```
+
+Flag any **new** complexity warnings introduced by the PR. Existing warnings (244 baseline as of March 2026) are tech debt — only new ones are actionable.
+
+### Duplication Check
+
+```bash
+# Run cross-package duplication detection (threshold: 3%)
+npm run duplicates
+```
+
+If this fails, duplication exceeds the 3% ceiling — the PR must reduce duplication before merging.
+
 ---
 
 ## Review Criteria
@@ -192,6 +214,8 @@ Review the code against these criteria:
 - [ ] No unnecessary abstractions
 - [ ] Existing utilities used where available
 - [ ] DRY — no duplicate code with existing codebase
+- [ ] No new complexity warnings in changed files
+- [ ] No new duplication introduced
 
 ## Final Checks
 
@@ -199,6 +223,7 @@ Review the code against these criteria:
 - [ ] `npm run test` passes
 - [ ] `npm run lint` passes
 - [ ] `npm run build` succeeds
+- [ ] `npm run duplicates` passes (< 3%)
 - [ ] No console.log statements left in code
 
 ### 2. Check Mutation Tests (Started at Beginning)
@@ -237,6 +262,8 @@ After completing all checks, output:
 | Lint | pass/fail | X errors, Y warnings |
 | Build | pass/fail | Succeeded/Failed |
 | Mutation | pass/fail | X% (threshold: 80%) |
+| Complexity | pass/fail | X new warnings (0 allowed) |
+| Duplication | pass/fail | X% (threshold: 3%) |
 | E2E | pass/fail/skipped | X passed, Y failed |
 
 ### Result

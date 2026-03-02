@@ -64,3 +64,4 @@ Sub-issues 1 and 3 can be worked in parallel. Sub-issue 2 depends on 1. Sub-issu
 | 2026-03-01 | Sub-issue 2 complete: eslint-plugin-sonarjs + cognitive-complexity rule (warn@15) in all 6 packages |
 | 2026-03-01 | Sub-issue 3 complete: jscpd cross-package duplication detection — 26 clones found (1.67%), intentional duplication excluded |
 | 2026-03-01 | Sub-issue 4 complete: CI integration — lint expanded to all 6 packages, export build added, duplication detection step with artifact upload + PR comment, ci-local.js updated |
+| 2026-03-01 | Docs & policy: jscpd threshold set to 3% (blocking), coding-standards.md updated with complexity/duplication sections, CLAUDE.md/workflow/code-review/contributing docs updated with quality checkpoints |

@@ -76,10 +76,10 @@ jobs:
         run: npm run lint
         working-directory: lua-learning-website
 
-      # Duplication detection (report-only, non-blocking)
+      # Duplication detection (blocking — threshold: 3%)
       - name: Run duplication detection
         run: npm run duplicates
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Upload duplication report
         if: always()

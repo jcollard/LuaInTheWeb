@@ -198,6 +198,13 @@ Use `/tdd` for detailed TDD guidelines, `/mutation-test` for mutation testing gu
 
 **Before PR**: All tests, mutation, lint, type-check, build, E2E pass
 
+### Code Quality
+
+- **Complexity rules**: ESLint warns at cognitive/cyclomatic complexity 15, max 200 lines/function, max 5 params, max depth 4. New functions MUST NOT introduce warnings.
+- **Duplication detection**: `npm run duplicates` runs jscpd cross-package. Threshold: 3%. CI fails above this.
+- **244 existing warnings** are tech debt — do not increase them.
+- See [docs/coding-standards.md](docs/coding-standards.md) for thresholds, baselines, and policy.
+
 ## Commands
 
 **CRITICAL: All npm commands MUST be run using `--prefix lua-learning-website`, NOT by `cd`-ing into the directory.**
@@ -211,6 +218,7 @@ npm --prefix lua-learning-website run test:mutation:scope "path/**"  # Scoped mu
 npm --prefix lua-learning-website run build                # Build for production
 npm --prefix lua-learning-website run lint                 # Run linter
 npm --prefix lua-learning-website run test:e2e             # Run E2E tests (Playwright)
+npm run duplicates                                         # Cross-package duplication scan (jscpd)
 ```
 
 ## Pre-PR Type Checking
