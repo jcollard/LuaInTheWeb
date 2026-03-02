@@ -451,6 +451,15 @@ Worst hotspots:
 - `LuaCanvasRuntime` setup — 1360 lines
 - 20 cognitive complexity violations, 15 cyclomatic complexity violations
 
+### Existing Suppressions
+
+These source files have `eslint-disable max-lines` and should be refactored:
+
+| File | Reason | Tech Debt |
+|------|--------|-----------|
+| `packages/lua-runtime/src/audio/WebAudioEngine.ts` | Large audio engine implementation | Split into focused modules |
+| `lua-learning-website/src/components/IDELayout/IDELayout.tsx` | Monolithic layout component | Extract sub-components and hooks |
+
 ### Policy for New Code
 
 - New functions **MUST NOT** introduce complexity warnings
