@@ -135,6 +135,7 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
     return () => {
       disposed = true
       resizeObserver?.disconnect()
+      onTerminalReadyRef.current?.(null)
       if (terminalRef.current) {
         terminalRef.current.dispose()
         terminalRef.current = null
