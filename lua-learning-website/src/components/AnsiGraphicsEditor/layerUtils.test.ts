@@ -1,8 +1,8 @@
 /* eslint-disable max-lines */
 import { describe, it, expect } from 'vitest'
-import { isDefaultCell, createLayer, createGroup, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, buildDisplayOrder, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock, addTagToLayer, removeTagFromLayer, formatLayerId, layerMatchesQuery, filterLayers, filterTagsTab } from './layerUtils'
-import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer } from './types'
-import type { AnsiCell, DrawableLayer, DrawnLayer, RGBColor, Layer, LayerState, TextLayer, GroupLayer } from './types'
+import { isDefaultCell, createLayer, createGroup, createClipLayer, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, buildDisplayOrder, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock, addTagToLayer, removeTagFromLayer, formatLayerId, layerMatchesQuery, filterLayers, filterTagsTab, buildClipMaskMap, isCellClipped } from './layerUtils'
+import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer, isClipLayer } from './types'
+import type { AnsiCell, DrawableLayer, DrawnLayer, RGBColor, Layer, LayerState, TextLayer, GroupLayer, ClipLayer } from './types'
 
 describe('isDefaultCell', () => {
   it('returns true for DEFAULT_CELL', () => {
@@ -1723,5 +1723,316 @@ describe('filterTagsTab', () => {
     const result = filterTagsTab(['Characters', 'Props'], [l1, l2], 'hero')
     expect(result).toHaveLength(1)
     expect(result[0].tag).toBe('Characters')
+  })
+})
+
+describe('createClipLayer', () => {
+  it('creates a clip layer with given name and parentId', () => {
+    const clip = createClipLayer('Mask', 'group-1')
+    expect(clip.type).toBe('clip')
+    expect(clip.name).toBe('Mask')
+    expect(clip.parentId).toBe('group-1')
+    expect(clip.visible).toBe(true)
+    expect(isClipLayer(clip)).toBe(true)
+  })
+
+  it('creates an 80x25 grid of default cells', () => {
+    const clip = createClipLayer('Mask', 'g1')
+    expect(clip.grid).toHaveLength(ANSI_ROWS)
+    expect(clip.grid[0]).toHaveLength(ANSI_COLS)
+    expect(isDefaultCell(clip.grid[0][0])).toBe(true)
+  })
+
+  it('uses provided id when given', () => {
+    const clip = createClipLayer('Mask', 'g1', 'custom-id')
+    expect(clip.id).toBe('custom-id')
+  })
+
+  it('generates unique id when not given', () => {
+    const a = createClipLayer('A', 'g1')
+    const b = createClipLayer('B', 'g1')
+    expect(a.id).not.toBe(b.id)
+  })
+
+  it('is not a drawable layer', () => {
+    const clip = createClipLayer('Mask', 'g1')
+    expect(isDrawableLayer(clip)).toBe(false)
+  })
+
+  it('is not a group layer', () => {
+    const clip = createClipLayer('Mask', 'g1')
+    expect(isGroupLayer(clip)).toBe(false)
+  })
+})
+
+describe('cloneLayerState with clip layers', () => {
+  it('deep clones clip layer grid', () => {
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    clip.grid[0][0] = { char: 'X', fg: [255, 0, 0], bg: [0, 0, 0] }
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const state: LayerState = {
+      layers: [group, clip],
+      activeLayerId: 'clip-1',
+    }
+    const cloned = cloneLayerState(state)
+    // Verify deep clone
+    expect(cloned.layers[1].type).toBe('clip')
+    const clonedClip = cloned.layers[1] as ClipLayer
+    expect(clonedClip.grid[0][0].char).toBe('X')
+    // Mutate original and verify clone is independent
+    clip.grid[0][0].char = 'Y'
+    expect(clonedClip.grid[0][0].char).toBe('X')
+  })
+
+  it('preserves parentId in cloned clip layer', () => {
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const state: LayerState = { layers: [group, clip], activeLayerId: 'clip-1' }
+    const cloned = cloneLayerState(state)
+    expect((cloned.layers[1] as ClipLayer).parentId).toBe('g1')
+  })
+})
+
+describe('mergeLayerDown with clip layers', () => {
+  it('returns null when upper layer is a clip layer', () => {
+    const drawn = createLayer('Background', 'bg')
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    const result = mergeLayerDown([drawn, clip], 'clip-1')
+    expect(result).toBeNull()
+  })
+
+  it('returns null when lower layer is a clip layer', () => {
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    const drawn = createLayer('Layer', 'l1')
+    const result = mergeLayerDown([clip, drawn], 'l1')
+    expect(result).toBeNull()
+  })
+})
+
+describe('visibleDrawableLayers with clip layers', () => {
+  it('excludes clip layers from visible drawable layers', () => {
+    const drawn = createLayer('Background', 'bg')
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    const layers: Layer[] = [group, drawn, clip]
+    const visible = visibleDrawableLayers(layers)
+    expect(visible).toHaveLength(1)
+    expect(visible[0].id).toBe('bg')
+  })
+})
+
+describe('duplicateLayerBlock with clip layers', () => {
+  it('duplicates a clip layer with new ID', () => {
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    clip.grid[0][0] = { char: '#', fg: [255, 0, 0], bg: [0, 0, 0] }
+    const layers: Layer[] = [group, clip]
+    const dupes = duplicateLayerBlock(layers, 'clip-1')
+    expect(dupes).toHaveLength(1)
+    expect(dupes[0].type).toBe('clip')
+    expect(dupes[0].id).not.toBe('clip-1')
+    expect(dupes[0].name).toBe('Mask (Copy)')
+    expect((dupes[0] as ClipLayer).parentId).toBe('g1')
+    expect((dupes[0] as ClipLayer).grid[0][0].char).toBe('#')
+  })
+})
+
+describe('buildClipMaskMap', () => {
+  it('returns empty map when no clip layers exist', () => {
+    const layers: Layer[] = [createLayer('BG', 'bg')]
+    expect(buildClipMaskMap(layers).size).toBe(0)
+  })
+
+  it('maps parentId to clip layer grid', () => {
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    clip.grid[0][0] = { char: '#', fg: [255, 0, 0], bg: [0, 0, 0] }
+    const layers: Layer[] = [group, clip]
+    const map = buildClipMaskMap(layers)
+    expect(map.size).toBe(1)
+    expect(map.get('g1')).toBeDefined()
+    expect(map.get('g1')![0][0].char).toBe('#')
+  })
+
+  it('topmost visible clip layer wins when multiple exist', () => {
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const clip1 = createClipLayer('Bottom Mask', 'g1', 'clip-1')
+    clip1.grid[0][0] = { char: 'A', fg: [255, 0, 0], bg: [0, 0, 0] }
+    const clip2 = createClipLayer('Top Mask', 'g1', 'clip-2')
+    clip2.grid[0][0] = { char: 'B', fg: [0, 255, 0], bg: [0, 0, 0] }
+    const layers: Layer[] = [group, clip1, clip2]
+    const map = buildClipMaskMap(layers)
+    // clip2 is topmost (higher index = top)
+    expect(map.get('g1')![0][0].char).toBe('B')
+  })
+
+  it('ignores invisible clip layers', () => {
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    clip.visible = false
+    clip.grid[0][0] = { char: '#', fg: [255, 0, 0], bg: [0, 0, 0] }
+    const layers: Layer[] = [group, clip]
+    const map = buildClipMaskMap(layers)
+    expect(map.size).toBe(0)
+  })
+})
+
+describe('isCellClipped', () => {
+  it('returns false when no clip mask applies', () => {
+    const drawn = createLayer('BG', 'bg')
+    const layers: Layer[] = [drawn]
+    const clipMap = buildClipMaskMap(layers)
+    expect(isCellClipped(drawn, 0, 0, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(false)
+  })
+
+  it('returns true when cell is default in clip mask', () => {
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    // clip grid is all default cells (empty mask = everything clipped)
+    const drawn: DrawnLayer = { ...createLayer('Layer', 'l1'), parentId: 'g1' }
+    const layers: Layer[] = [group, drawn, clip]
+    const clipMap = buildClipMaskMap(layers)
+    expect(isCellClipped(drawn, 0, 0, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(true)
+  })
+
+  it('returns false when cell is non-default in clip mask', () => {
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    clip.grid[5][10] = { char: '#', fg: [255, 0, 0], bg: [0, 0, 0] }
+    const drawn: DrawnLayer = { ...createLayer('Layer', 'l1'), parentId: 'g1' }
+    const layers: Layer[] = [group, drawn, clip]
+    const clipMap = buildClipMaskMap(layers)
+    expect(isCellClipped(drawn, 5, 10, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(false)
+  })
+
+  it('stacks ancestor masks (intersection)', () => {
+    const outerGroup: GroupLayer = { type: 'group', id: 'outer', name: 'Outer', visible: true, collapsed: false }
+    const outerClip = createClipLayer('Outer Mask', 'outer', 'oclip')
+    outerClip.grid[0][0] = { char: '#', fg: [255, 0, 0], bg: [0, 0, 0] }
+    outerClip.grid[0][1] = { char: '#', fg: [255, 0, 0], bg: [0, 0, 0] }
+    const innerGroup: GroupLayer = { type: 'group', id: 'inner', name: 'Inner', visible: true, collapsed: false, parentId: 'outer' }
+    const innerClip = createClipLayer('Inner Mask', 'inner', 'iclip')
+    innerClip.grid[0][0] = { char: '#', fg: [255, 0, 0], bg: [0, 0, 0] }
+    // inner mask allows [0][0] only; outer allows [0][0] and [0][1]
+    const drawn: DrawnLayer = { ...createLayer('Layer', 'l1'), parentId: 'inner' }
+    const layers: Layer[] = [outerGroup, outerClip, innerGroup, innerClip, drawn]
+    const clipMap = buildClipMaskMap(layers)
+    // [0][0]: both masks allow -> not clipped
+    expect(isCellClipped(drawn, 0, 0, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(false)
+    // [0][1]: inner mask clips (default cell) -> clipped
+    expect(isCellClipped(drawn, 0, 1, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(true)
+    // [1][0]: outer mask clips (default cell) -> clipped
+    expect(isCellClipped(drawn, 1, 0, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(true)
+  })
+
+  it('treats cell with non-default char but default colors as non-default (not clipped)', () => {
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    // Char differs from default ' ' but colors match DEFAULT_FG/DEFAULT_BG
+    clip.grid[0][0] = { char: '#', fg: DEFAULT_FG, bg: DEFAULT_BG }
+    const drawn: DrawnLayer = { ...createLayer('Layer', 'l1'), parentId: 'g1' }
+    const layers: Layer[] = [group, drawn, clip]
+    const clipMap = buildClipMaskMap(layers)
+    expect(isCellClipped(drawn, 0, 0, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(false)
+  })
+
+  it('treats cell with default char but non-default fg as non-default (not clipped)', () => {
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    // Only fg[0] differs
+    clip.grid[0][0] = { char: ' ', fg: [171, 170, 170], bg: DEFAULT_BG }
+    const drawn: DrawnLayer = { ...createLayer('Layer', 'l1'), parentId: 'g1' }
+    const layers: Layer[] = [group, drawn, clip]
+    const clipMap = buildClipMaskMap(layers)
+    expect(isCellClipped(drawn, 0, 0, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(false)
+  })
+
+  it('treats cell with default char but non-default bg as non-default (not clipped)', () => {
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    // Only bg[2] differs
+    clip.grid[0][0] = { char: ' ', fg: DEFAULT_FG, bg: [0, 0, 1] }
+    const drawn: DrawnLayer = { ...createLayer('Layer', 'l1'), parentId: 'g1' }
+    const layers: Layer[] = [group, drawn, clip]
+    const clipMap = buildClipMaskMap(layers)
+    expect(isCellClipped(drawn, 0, 0, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(false)
+  })
+
+  it('treats cell with fg differing only in green channel as non-default (not clipped)', () => {
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    // Only fg[1] differs
+    clip.grid[0][0] = { char: ' ', fg: [170, 171, 170], bg: DEFAULT_BG }
+    const drawn: DrawnLayer = { ...createLayer('Layer', 'l1'), parentId: 'g1' }
+    const layers: Layer[] = [group, drawn, clip]
+    const clipMap = buildClipMaskMap(layers)
+    expect(isCellClipped(drawn, 0, 0, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(false)
+  })
+
+  it('treats cell with bg differing only in red channel as non-default (not clipped)', () => {
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    // Only bg[0] differs
+    clip.grid[0][0] = { char: ' ', fg: DEFAULT_FG, bg: [1, 0, 0] }
+    const drawn: DrawnLayer = { ...createLayer('Layer', 'l1'), parentId: 'g1' }
+    const layers: Layer[] = [group, drawn, clip]
+    const clipMap = buildClipMaskMap(layers)
+    expect(isCellClipped(drawn, 0, 0, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(false)
+  })
+})
+
+describe('compositeGrid with clip masks', () => {
+  it('clips drawn layer cells where mask is default', () => {
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const drawn: DrawnLayer = { ...createLayer('Layer', 'l1'), parentId: 'g1' }
+    drawn.grid[0][0] = { char: '#', fg: [255, 0, 0], bg: [0, 0, 255] }
+    drawn.grid[0][1] = { char: '@', fg: [0, 255, 0], bg: [0, 0, 255] }
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    clip.grid[0][0] = { char: 'X', fg: [255, 255, 255], bg: [128, 128, 128] } // non-default = pass through
+    // clip.grid[0][1] stays default = clipped
+    const layers: Layer[] = [group, drawn, clip]
+    const result = compositeGrid(layers)
+    // [0][0] should show the drawn layer content
+    expect(result[0][0].char).toBe('#')
+    // [0][1] should be DEFAULT_CELL (clipped)
+    expect(isDefaultCell(result[0][1])).toBe(true)
+  })
+
+  it('does not clip when clip layer is invisible', () => {
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const drawn: DrawnLayer = { ...createLayer('Layer', 'l1'), parentId: 'g1' }
+    drawn.grid[0][0] = { char: '#', fg: [255, 0, 0], bg: [0, 0, 255] }
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    clip.visible = false
+    // empty mask, but invisible -> no clipping
+    const layers: Layer[] = [group, drawn, clip]
+    const result = compositeGrid(layers)
+    expect(result[0][0].char).toBe('#')
+  })
+
+  it('clip layer itself never appears in composited output', () => {
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    clip.grid[0][0] = { char: 'X', fg: [255, 0, 0], bg: [0, 255, 0] }
+    const layers: Layer[] = [group, clip]
+    const result = compositeGrid(layers)
+    // clip layer content should NOT appear - all default
+    expect(isDefaultCell(result[0][0])).toBe(true)
+  })
+
+  it('full mask (all non-default) has no clipping effect', () => {
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const drawn: DrawnLayer = { ...createLayer('Layer', 'l1'), parentId: 'g1' }
+    drawn.grid[0][0] = { char: '#', fg: [255, 0, 0], bg: [0, 0, 255] }
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    // Fill entire mask with non-default
+    for (let r = 0; r < ANSI_ROWS; r++) {
+      for (let c = 0; c < ANSI_COLS; c++) {
+        clip.grid[r][c] = { char: 'X', fg: [255, 255, 255], bg: [128, 128, 128] }
+      }
+    }
+    const layers: Layer[] = [group, drawn, clip]
+    const result = compositeGrid(layers)
+    expect(result[0][0].char).toBe('#')
   })
 })

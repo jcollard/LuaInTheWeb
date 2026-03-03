@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { hiddenGroupIds, visibleDrawableLayers, compositeCellCore, compositeGrid } from '../src/screenCompositor'
-import type { AnsiCell, AnsiGrid, DrawableLayerData, DrawnLayerData, GroupLayerData, LayerData, RGBColor } from '../src/screenTypes'
+import { hiddenGroupIds, visibleDrawableLayers, compositeCellCore, compositeGrid, buildClipMaskMap, isCellClipped } from '../src/screenCompositor'
+import type { AnsiCell, AnsiGrid, ClipLayerData, DrawableLayerData, DrawnLayerData, GroupLayerData, LayerData, RGBColor } from '../src/screenTypes'
 import {
-  ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_CELL,
+  ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_CELL, DEFAULT_FG,
   DEFAULT_FRAME_DURATION_MS, HALF_BLOCK, TRANSPARENT_BG, TRANSPARENT_HALF,
 } from '../src/screenTypes'
 
@@ -278,5 +278,101 @@ describe('compositeGrid', () => {
     ]
     const result = compositeGrid(layers)
     expect(result[0][0].char).toBe('A')
+  })
+})
+
+function makeClipLayer(id: string, parentId: string, visible = true): ClipLayerData {
+  return {
+    type: 'clip', id, name: id, visible,
+    grid: makeEmptyGrid(),
+    parentId,
+    tags: [],
+  }
+}
+
+function isDefaultCell(cell: AnsiCell): boolean {
+  return cell.char === ' ' && cell.fg[0] === DEFAULT_FG[0] && cell.fg[1] === DEFAULT_FG[1] && cell.fg[2] === DEFAULT_FG[2]
+    && cell.bg[0] === DEFAULT_BG[0] && cell.bg[1] === DEFAULT_BG[1] && cell.bg[2] === DEFAULT_BG[2]
+}
+
+describe('buildClipMaskMap (runtime)', () => {
+  it('returns empty map when no clip layers exist', () => {
+    const layers: LayerData[] = [makeDrawnLayer('l1', true, makeEmptyGrid())]
+    expect(buildClipMaskMap(layers).size).toBe(0)
+  })
+
+  it('maps parentId to clip layer grid', () => {
+    const clip = makeClipLayer('c1', 'g1')
+    clip.grid[0][0] = makeCell('#', [255, 0, 0], [0, 0, 0])
+    const layers: LayerData[] = [makeGroup('g1', true), clip]
+    const map = buildClipMaskMap(layers)
+    expect(map.get('g1')![0][0].char).toBe('#')
+  })
+
+  it('ignores invisible clip layers', () => {
+    const clip = makeClipLayer('c1', 'g1', false)
+    const layers: LayerData[] = [makeGroup('g1', true), clip]
+    expect(buildClipMaskMap(layers).size).toBe(0)
+  })
+})
+
+describe('isCellClipped (runtime)', () => {
+  it('returns false when no clip mask applies', () => {
+    const drawn = makeDrawnLayer('l1', true, makeEmptyGrid())
+    const layers: LayerData[] = [drawn]
+    expect(isCellClipped(drawn, 0, 0, buildClipMaskMap(layers), new Map(layers.map(l => [l.id, l])))).toBe(false)
+  })
+
+  it('returns true when cell is default in clip mask', () => {
+    const group = makeGroup('g1', true)
+    const clip = makeClipLayer('c1', 'g1')
+    const drawn = makeDrawnLayer('l1', true, makeEmptyGrid(), 'g1')
+    const layers: LayerData[] = [group, drawn, clip]
+    expect(isCellClipped(drawn, 0, 0, buildClipMaskMap(layers), new Map(layers.map(l => [l.id, l])))).toBe(true)
+  })
+
+  it('returns false when cell is non-default in clip mask', () => {
+    const group = makeGroup('g1', true)
+    const clip = makeClipLayer('c1', 'g1')
+    clip.grid[5][10] = makeCell('#', [255, 0, 0], [0, 0, 0])
+    const drawn = makeDrawnLayer('l1', true, makeEmptyGrid(), 'g1')
+    const layers: LayerData[] = [group, drawn, clip]
+    expect(isCellClipped(drawn, 5, 10, buildClipMaskMap(layers), new Map(layers.map(l => [l.id, l])))).toBe(false)
+  })
+})
+
+describe('compositeGrid with clip masks (runtime)', () => {
+  it('clips drawn layer cells where mask is default', () => {
+    const group = makeGroup('g1', true)
+    const grid = makeEmptyGrid()
+    grid[0][0] = makeCell('#', [255, 0, 0], [0, 0, 255])
+    grid[0][1] = makeCell('@', [0, 255, 0], [0, 0, 255])
+    const drawn = makeDrawnLayer('l1', true, grid, 'g1')
+    const clip = makeClipLayer('c1', 'g1')
+    clip.grid[0][0] = makeCell('X', [255, 255, 255], [128, 128, 128])
+    const layers: LayerData[] = [group, drawn, clip]
+    const result = compositeGrid(layers)
+    expect(result[0][0].char).toBe('#')
+    expect(isDefaultCell(result[0][1])).toBe(true)
+  })
+
+  it('does not clip when clip layer is invisible', () => {
+    const group = makeGroup('g1', true)
+    const grid = makeEmptyGrid()
+    grid[0][0] = makeCell('#', [255, 0, 0], [0, 0, 255])
+    const drawn = makeDrawnLayer('l1', true, grid, 'g1')
+    const clip = makeClipLayer('c1', 'g1', false)
+    const layers: LayerData[] = [group, drawn, clip]
+    const result = compositeGrid(layers)
+    expect(result[0][0].char).toBe('#')
+  })
+
+  it('clip layer itself never appears in composited output', () => {
+    const group = makeGroup('g1', true)
+    const clip = makeClipLayer('c1', 'g1')
+    clip.grid[0][0] = makeCell('X', [255, 0, 0], [0, 255, 0])
+    const layers: LayerData[] = [group, clip]
+    const result = compositeGrid(layers)
+    expect(isDefaultCell(result[0][0])).toBe(true)
   })
 })

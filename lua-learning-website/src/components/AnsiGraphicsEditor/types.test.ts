@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { CGA_PALETTE, EGA_PALETTE, VGA_PALETTE, PALETTES } from './types'
+import { CGA_PALETTE, EGA_PALETTE, VGA_PALETTE, PALETTES, isGroupLayer, isDrawableLayer, isClipLayer } from './types'
+import type { ClipLayer, DrawnLayer, TextLayer, GroupLayer, RGBColor, AnsiGrid } from './types'
+import { DEFAULT_FG, DEFAULT_BG, ANSI_ROWS, ANSI_COLS } from './types'
 
 function rgbKey(rgb: [number, number, number]): string {
   return `${rgb[0]},${rgb[1]},${rgb[2]}`
@@ -49,5 +51,79 @@ describe('palette data', () => {
     expect(grayscale).toHaveLength(24)
     expect(grayscale[0].rgb).toEqual([8, 8, 8])
     expect(grayscale[23].rgb).toEqual([238, 238, 238])
+  })
+})
+
+function makeEmptyGrid(): AnsiGrid {
+  return Array.from({ length: ANSI_ROWS }, () =>
+    Array.from({ length: ANSI_COLS }, () => ({ char: ' ', fg: [...DEFAULT_FG] as RGBColor, bg: [...DEFAULT_BG] as RGBColor }))
+  )
+}
+
+function makeClipLayer(overrides?: Partial<ClipLayer>): ClipLayer {
+  return {
+    type: 'clip',
+    id: 'clip-1',
+    name: 'Clip Mask',
+    visible: true,
+    grid: makeEmptyGrid(),
+    parentId: 'group-1',
+    ...overrides,
+  }
+}
+
+function makeDrawnLayer(): DrawnLayer {
+  const grid = makeEmptyGrid()
+  return { type: 'drawn', id: 'drawn-1', name: 'Layer 1', visible: true, grid, frames: [grid], currentFrameIndex: 0, frameDurationMs: 100 }
+}
+
+function makeTextLayer(): TextLayer {
+  return {
+    type: 'text', id: 'text-1', name: 'Text 1', visible: true,
+    grid: makeEmptyGrid(), text: 'Hello', bounds: { r0: 0, c0: 0, r1: 1, c1: 10 },
+    textFg: [255, 255, 255],
+  }
+}
+
+function makeGroupLayer(): GroupLayer {
+  return { type: 'group', id: 'group-1', name: 'Group 1', visible: true, collapsed: false }
+}
+
+describe('isClipLayer', () => {
+  it('returns true for a clip layer', () => {
+    const clip = makeClipLayer()
+    expect(isClipLayer(clip)).toBe(true)
+  })
+
+  it('returns false for a drawn layer', () => {
+    expect(isClipLayer(makeDrawnLayer())).toBe(false)
+  })
+
+  it('returns false for a text layer', () => {
+    expect(isClipLayer(makeTextLayer())).toBe(false)
+  })
+
+  it('returns false for a group layer', () => {
+    expect(isClipLayer(makeGroupLayer())).toBe(false)
+  })
+})
+
+describe('isDrawableLayer with clip layers', () => {
+  it('returns false for a clip layer', () => {
+    expect(isDrawableLayer(makeClipLayer())).toBe(false)
+  })
+
+  it('still returns true for drawn layers', () => {
+    expect(isDrawableLayer(makeDrawnLayer())).toBe(true)
+  })
+
+  it('still returns true for text layers', () => {
+    expect(isDrawableLayer(makeTextLayer())).toBe(true)
+  })
+})
+
+describe('isGroupLayer with clip layers', () => {
+  it('returns false for a clip layer', () => {
+    expect(isGroupLayer(makeClipLayer())).toBe(false)
   })
 })

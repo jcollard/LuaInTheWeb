@@ -2,6 +2,32 @@ import type { RGBColor, AnsiGrid, Layer, PaletteEntry } from './types'
 import { TRANSPARENT_HALF, isDrawableLayer } from './types'
 import { isDefaultCell, rgbEqual } from './layerUtils'
 
+/** Darken an RGB color by a factor (0 = black, 1 = original). */
+export function darkenColor(color: RGBColor, factor: number): RGBColor {
+  return [
+    Math.round(color[0] * factor),
+    Math.round(color[1] * factor),
+    Math.round(color[2] * factor),
+  ]
+}
+
+/**
+ * Return a new grid with cells outside the mask darkened.
+ * Default cells in maskGrid = clipped (darkened), non-default = visible (unchanged).
+ */
+export function applyMaskOverlay(grid: AnsiGrid, maskGrid: AnsiGrid, darkenFactor: number): AnsiGrid {
+  return grid.map((row, r) =>
+    row.map((cell, c) => {
+      if (!isDefaultCell(maskGrid[r][c])) return cell
+      return {
+        char: cell.char,
+        fg: darkenColor(cell.fg, darkenFactor),
+        bg: darkenColor(cell.bg, darkenFactor),
+      }
+    })
+  )
+}
+
 /** Linearly interpolate between two RGB colors. ratio=0 returns a, ratio=1 returns b. */
 export function blendRgb(a: RGBColor, b: RGBColor, ratio: number): RGBColor {
   return [

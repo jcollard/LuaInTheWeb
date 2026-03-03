@@ -1,6 +1,6 @@
 import { stringify, parse } from '@kilcekru/lua-table'
-import type { AnsiGrid, Layer, LayerState, TextLayer, TextAlign, RGBColor, Rect, GroupLayer } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_FRAME_DURATION_MS, isGroupLayer } from './types'
+import type { AnsiGrid, ClipLayer, Layer, LayerState, TextLayer, TextAlign, RGBColor, Rect, GroupLayer } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_FRAME_DURATION_MS, isGroupLayer, isClipLayer } from './types'
 import { renderTextLayerGrid } from './textLayerGrid'
 import { buildPalette, encodeGrid, decodeGrid } from './v7Codec'
 import type { Run } from './v7Codec'
@@ -29,13 +29,15 @@ function addOptionalFields(serialized: Record<string, unknown>, layer: Layer): v
 }
 
 export function serializeLayers(state: LayerState, availableTags?: string[]): string {
-  // Build palette from all drawn layer grids
+  // Build palette from all drawn and clip layer grids
   const allGrids: AnsiGrid[] = []
   for (const layer of state.layers) {
     if (layer.type === 'drawn') {
       for (const frame of layer.frames) {
         allGrids.push(frame)
       }
+    } else if (isClipLayer(layer)) {
+      allGrids.push(layer.grid)
     }
   }
   const { palette, colorToIndex, defaultFgIndex, defaultBgIndex } = buildPalette(allGrids)
@@ -48,6 +50,17 @@ export function serializeLayers(state: LayerState, availableTags?: string[]): st
         name: layer.name,
         visible: layer.visible,
         collapsed: layer.collapsed,
+      }
+      addOptionalFields(serialized, layer)
+      return serialized
+    }
+    if (isClipLayer(layer)) {
+      const serialized: Record<string, unknown> = {
+        type: 'clip',
+        id: layer.id,
+        name: layer.name,
+        visible: layer.visible,
+        cells: encodeGrid(layer.grid, colorToIndex),
       }
       addOptionalFields(serialized, layer)
       return serialized
@@ -133,7 +146,7 @@ interface RawLayer {
 /*  Private helpers shared by v3-v6 and v7 deserialization blocks      */
 /* ------------------------------------------------------------------ */
 
-const VALID_LAYER_TYPES = new Set(['drawn', 'text', 'group'])
+const VALID_LAYER_TYPES = new Set(['drawn', 'text', 'group', 'clip'])
 
 /** Validate that a raw layer has the required base fields and a known type. */
 function validateRawLayer(l: RawLayer, i: number): void {
@@ -176,6 +189,19 @@ function buildTextLayer(l: RawLayer, tags: string[] | undefined): TextLayer {
     textFgColors,
     textAlign,
     grid: renderTextLayerGrid(l.text, l.bounds, l.textFg, textFgColors, textAlign),
+    parentId: l.parentId,
+    tags,
+  }
+}
+
+/** Build a ClipLayer from a validated raw layer and decoded grid. */
+function buildClipLayer(l: RawLayer, grid: AnsiGrid, tags: string[] | undefined): ClipLayer {
+  return {
+    type: 'clip',
+    id: l.id,
+    name: l.name,
+    visible: l.visible,
+    grid,
     parentId: l.parentId,
     tags,
   }
@@ -274,6 +300,11 @@ export function deserializeLayers(lua: string): LayerState {
       const tags = l.tags && l.tags.length > 0 ? l.tags : undefined
       if (l.type === 'group') return buildGroupLayer(l, tags)
       if (l.type === 'text') return buildTextLayer(l, tags)
+      if (l.type === 'clip') {
+        const cellRuns = Array.isArray(l.cells) ? l.cells : []
+        const grid = decodeGrid(cellRuns, rawPalette, defaultFgIndex, defaultBgIndex)
+        return buildClipLayer(l, grid, tags)
+      }
       // Drawn layer — decode v7 sparse grids
       let frames: AnsiGrid[]
       const frameCells = Array.isArray(l.frameCells) ? l.frameCells : null

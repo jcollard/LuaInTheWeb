@@ -129,9 +129,13 @@ export interface GroupLayer {
   tags?: string[]
 }
 
+export interface ClipLayer extends BaseLayer {
+  type: 'clip'
+}
+
 export type DrawableLayer = DrawnLayer | TextLayer
 
-export type Layer = DrawnLayer | TextLayer | GroupLayer
+export type Layer = DrawnLayer | TextLayer | GroupLayer | ClipLayer
 
 export function isGroupLayer(layer: Layer): layer is GroupLayer {
   return layer.type === 'group'
@@ -139,6 +143,10 @@ export function isGroupLayer(layer: Layer): layer is GroupLayer {
 
 export function isDrawableLayer(layer: Layer): layer is DrawableLayer {
   return layer.type === 'drawn' || layer.type === 'text'
+}
+
+export function isClipLayer(layer: Layer): layer is ClipLayer {
+  return layer.type === 'clip'
 }
 
 /** Extract parentId from any Layer variant. All layer types carry an optional parentId. */
@@ -186,6 +194,7 @@ export interface UseAnsiEditorReturn {
   layers: Layer[]
   activeLayerId: string
   addLayer: () => void
+  addClipLayer: (groupId: string) => void
   removeLayer: (id: string) => void
   renameLayer: (id: string, name: string) => void
   changeLayerId: (oldId: string, newId: string) => { success: boolean; error?: string }

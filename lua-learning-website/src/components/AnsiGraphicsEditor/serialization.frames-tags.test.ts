@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { serializeGrid, serializeLayers, deserializeLayers } from './serialization'
-import { DEFAULT_FRAME_DURATION_MS } from './types'
-import type { AnsiGrid, DrawnLayer, GroupLayer, LayerState, RGBColor, Rect, TextLayer } from './types'
+import { DEFAULT_FRAME_DURATION_MS, isClipLayer } from './types'
+import type { AnsiGrid, ClipLayer, DrawnLayer, GroupLayer, LayerState, RGBColor, Rect, TextLayer } from './types'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG } from './types'
-import { createLayer, createGroup } from './layerUtils'
+import { createLayer, createGroup, createClipLayer, isDefaultCell } from './layerUtils'
 import { renderTextLayerGrid } from './textLayerGrid'
 
 function createTestGrid(): AnsiGrid {
@@ -208,5 +208,63 @@ describe('deserialization validation', () => {
     // Should not throw - defaults to drawn branch
     const result = deserializeLayers(lua)
     expect(result.layers[0].type).toBe('drawn')
+  })
+})
+
+describe('v7 serialization (clip layers)', () => {
+  it('round-trips a clip layer', () => {
+    const group = createGroup('Group', 'g1')
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    clip.grid[2][5] = { char: '#', fg: [255, 0, 0] as RGBColor, bg: [0, 0, 128] as RGBColor }
+    const child = createLayer('Layer', 'l1')
+    child.parentId = 'g1'
+    const state: LayerState = { layers: [group, child, clip], activeLayerId: 'l1' }
+    const lua = serializeLayers(state)
+    const result = deserializeLayers(lua)
+    expect(result.layers).toHaveLength(3)
+    const loadedClip = result.layers[2]
+    expect(isClipLayer(loadedClip)).toBe(true)
+    const c = loadedClip as ClipLayer
+    expect(c.name).toBe('Mask')
+    expect(c.parentId).toBe('g1')
+    expect(c.visible).toBe(true)
+    expect(c.grid[2][5].char).toBe('#')
+    expect(c.grid[2][5].fg).toEqual([255, 0, 0])
+    expect(c.grid[2][5].bg).toEqual([0, 0, 128])
+  })
+
+  it('clip layer grid cells survive sparse encoding', () => {
+    const group = createGroup('Group', 'g1')
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    // Paint several cells
+    clip.grid[0][0] = { char: 'X', fg: [255, 0, 0] as RGBColor, bg: [0, 255, 0] as RGBColor }
+    clip.grid[12][40] = { char: 'O', fg: [0, 0, 255] as RGBColor, bg: [255, 255, 0] as RGBColor }
+    const state: LayerState = { layers: [group, clip], activeLayerId: 'g1' }
+    const lua = serializeLayers(state)
+    const result = deserializeLayers(lua)
+    const loaded = result.layers[1] as ClipLayer
+    expect(loaded.grid[0][0].char).toBe('X')
+    expect(loaded.grid[12][40].char).toBe('O')
+    // Unpainted cells should be default
+    expect(isDefaultCell(loaded.grid[1][1])).toBe(true)
+  })
+
+  it('backward compat: files without clip layers load normally', () => {
+    const layer = createLayer('BG', 'l1')
+    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
+    const lua = serializeLayers(state)
+    const result = deserializeLayers(lua)
+    expect(result.layers).toHaveLength(1)
+    expect(result.layers[0].type).toBe('drawn')
+  })
+
+  it('clip layer with tags round-trips', () => {
+    const group = createGroup('Group', 'g1')
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    ;(clip as ClipLayer).tags = ['Masks']
+    const state: LayerState = { layers: [group, clip], activeLayerId: 'g1' }
+    const lua = serializeLayers(state, ['Masks'])
+    const result = deserializeLayers(lua)
+    expect(result.layers[1].tags).toEqual(['Masks'])
   })
 })

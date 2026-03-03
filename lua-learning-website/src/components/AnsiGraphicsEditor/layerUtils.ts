@@ -1,5 +1,6 @@
-import type { AnsiCell, AnsiGrid, DrawableLayer, DrawnLayer, GroupLayer, Layer, LayerState, RGBColor, TextLayer } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer, getParentId } from './types'
+import type { AnsiCell, AnsiGrid, ClipLayer, DrawableLayer, DrawnLayer, GroupLayer, Layer, LayerState, RGBColor, TextLayer } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer, isClipLayer, getParentId } from './types'
+import { buildClipMaskMap, isCellClipped } from './clipMaskUtils'
 
 /** Walk parentId chain collecting ancestor group IDs. Uses a visited set to prevent infinite loops. */
 export function getAncestorGroupIds(layer: Layer, layers: Layer[]): string[] {
@@ -64,10 +65,8 @@ export function getNestingDepth(layer: Layer, layers: Layer[]): number {
 /** Check if candidateAncestorId is an ancestor of layerId. */
 export function isAncestorOf(layerId: string, candidateAncestorId: string, layers: Layer[]): boolean {
   const layer = layers.find(l => l.id === layerId)
-  if (!layer) return false
-  return getAncestorGroupIds(layer, layers).includes(candidateAncestorId)
+  return layer ? getAncestorGroupIds(layer, layers).includes(candidateAncestorId) : false
 }
-
 
 export function rgbEqual(a: RGBColor, b: RGBColor): boolean {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2]
@@ -195,16 +194,29 @@ function compositeCellCore(layers: DrawableLayer[], getCell: (layer: DrawableLay
   }
 }
 
+/** Prepare shared compositing state: visible drawable layers, clip mask map, and layer lookup map. */
+function prepareComposite(layers: Layer[]) {
+  return { drawable: visibleDrawableLayers(layers), clipMap: buildClipMaskMap(layers), layerMap: new Map(layers.map(l => [l.id, l])) }
+}
+
 export function compositeCell(layers: Layer[], row: number, col: number): AnsiCell {
-  const drawable = visibleDrawableLayers(layers)
-  return compositeCellCore(drawable, (layer) => layer.visible ? layer.grid[row][col] : null)
+  const { drawable, clipMap, layerMap } = prepareComposite(layers)
+  return compositeCellCore(drawable, (layer) => {
+    if (!layer.visible) return null
+    if (isCellClipped(layer, row, col, clipMap, layerMap)) return null
+    return layer.grid[row][col]
+  })
 }
 
 export function compositeGrid(layers: Layer[]): AnsiGrid {
-  const drawable = visibleDrawableLayers(layers)
+  const { drawable, clipMap, layerMap } = prepareComposite(layers)
   return Array.from({ length: ANSI_ROWS }, (_, r) =>
     Array.from({ length: ANSI_COLS }, (_, c) =>
-      compositeCellCore(drawable, (layer) => layer.visible ? layer.grid[r][c] : null)
+      compositeCellCore(drawable, (layer) => {
+        if (!layer.visible) return null
+        if (isCellClipped(layer, r, c, clipMap, layerMap)) return null
+        return layer.grid[r][c]
+      })
     )
   )
 }
@@ -213,9 +225,10 @@ export function compositeCellWithOverride(
   layers: Layer[], row: number, col: number,
   activeLayerId: string, overrideCell: AnsiCell,
 ): AnsiCell {
-  const drawable = visibleDrawableLayers(layers)
+  const { drawable, clipMap, layerMap } = prepareComposite(layers)
   return compositeCellCore(drawable, (layer) => {
     if (!layer.visible) return null
+    if (isCellClipped(layer, row, col, clipMap, layerMap)) return null
     return layer.id === activeLayerId ? overrideCell : layer.grid[row][col]
   })
 }
@@ -252,6 +265,17 @@ function cloneLayer(layer: Layer): Layer {
       parentId: layer.parentId,
       tags: layer.tags ? [...layer.tags] : undefined,
     } satisfies GroupLayer
+  }
+  if (isClipLayer(layer)) {
+    return {
+      type: 'clip',
+      id: layer.id,
+      name: layer.name,
+      visible: layer.visible,
+      grid: cloneGrid(layer.grid),
+      parentId: layer.parentId,
+      tags: layer.tags ? [...layer.tags] : undefined,
+    } satisfies ClipLayer
   }
   const base = {
     id: layer.id,
@@ -290,8 +314,9 @@ export function mergeLayerDown(layers: Layer[], layerId: string): Layer[] | null
   const upper = layers[idx]
   const lower = layers[idx - 1]
 
-  // Cannot merge if either layer is a group
+  // Cannot merge if either layer is a group or clip
   if (isGroupLayer(upper) || isGroupLayer(lower)) return null
+  if (isClipLayer(upper) || isClipLayer(lower)) return null
 
   // After group guard, both are drawable layers
   // Composite the two layers into a new grid, treating both as visible
@@ -461,11 +486,9 @@ export function assertContiguousBlocks(layers: Layer[]): void {
 }
 
 export function cloneLayerState(state: LayerState): LayerState {
-  return {
-    activeLayerId: state.activeLayerId,
-    layers: state.layers.map(cloneLayer),
-  }
+  return { activeLayerId: state.activeLayerId, layers: state.layers.map(cloneLayer) }
 }
 
+export { createClipLayer, buildClipMaskMap, isCellClipped } from './clipMaskUtils'
 export { formatLayerId, layerMatchesQuery, filterLayers, filterTagsTab } from './layerFilterUtils'
 export type { FilteredTag } from './layerFilterUtils'

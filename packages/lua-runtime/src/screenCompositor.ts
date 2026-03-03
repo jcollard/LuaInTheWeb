@@ -9,7 +9,7 @@ import type { AnsiCell, AnsiGrid, DrawableLayerData, LayerData, RGBColor } from 
 import {
   ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_CELL, DEFAULT_FG,
   HALF_BLOCK, TRANSPARENT_BG, TRANSPARENT_HALF,
-  isGroupLayer, isDrawableLayer, rgbEqual,
+  isGroupLayer, isDrawableLayer, isClipLayer, rgbEqual,
 } from './screenTypes'
 
 function isDefaultCell(cell: AnsiCell): boolean {
@@ -18,6 +18,42 @@ function isDefaultCell(cell: AnsiCell): boolean {
 
 function isTransparentBg(color: RGBColor): boolean {
   return rgbEqual(color, TRANSPARENT_BG)
+}
+
+/**
+ * Build a map from group ID to the clip mask grid for that group.
+ * Iterates bottom-to-top; topmost visible clip layer per group wins.
+ * Paired with clipMaskUtils.ts:buildClipMaskMap
+ */
+export function buildClipMaskMap(layers: LayerData[]): Map<string, AnsiGrid> {
+  const map = new Map<string, AnsiGrid>()
+  for (const layer of layers) {
+    if (!isClipLayer(layer) || !layer.visible || !layer.parentId) continue
+    map.set(layer.parentId, layer.grid)
+  }
+  return map
+}
+
+/**
+ * Check if a cell is clipped by any ancestor's clip mask.
+ * Walks the ancestor chain; if ANY ancestor's mask has a default cell at (row, col), returns true.
+ * Paired with clipMaskUtils.ts:isCellClipped
+ */
+export function isCellClipped(
+  layer: LayerData, row: number, col: number,
+  clipMap: Map<string, AnsiGrid>, layerMap: Map<string, LayerData>,
+): boolean {
+  const visited = new Set<string>()
+  let parentId = layer.parentId
+  while (parentId) {
+    if (visited.has(parentId)) break
+    visited.add(parentId)
+    const mask = clipMap.get(parentId)
+    if (mask && isDefaultCell(mask[row][col])) return true
+    const parent = layerMap.get(parentId)
+    parentId = parent?.parentId
+  }
+  return false
 }
 
 /** Returns IDs of groups that are effectively hidden (own visible=false or any ancestor hidden). */
@@ -111,9 +147,15 @@ export function compositeCellCore(layers: DrawableLayerData[], getCell: (layer: 
 /** Composite all visible layers into a single AnsiGrid. */
 export function compositeGrid(layers: LayerData[]): AnsiGrid {
   const drawable = visibleDrawableLayers(layers)
+  const clipMap = buildClipMaskMap(layers)
+  const layerMap = new Map(layers.map(l => [l.id, l]))
   return Array.from({ length: ANSI_ROWS }, (_, r) =>
     Array.from({ length: ANSI_COLS }, (_, c) =>
-      compositeCellCore(drawable, (layer) => layer.visible ? layer.grid[r][c] : null)
+      compositeCellCore(drawable, (layer) => {
+        if (!layer.visible) return null
+        if (isCellClipped(layer, r, c, clipMap, layerMap)) return null
+        return layer.grid[r][c]
+      })
     )
   )
 }
