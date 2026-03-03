@@ -21,8 +21,8 @@ import { parseScreenLayers } from './screenParser'
 import { compositeGrid, compositeGridInto } from './screenCompositor'
 import { renderGridToAnsiString, renderDiffAnsiString } from './ansiStringRenderer'
 import { renderTextLayerGrid } from './textLayerGrid'
-import type { AnsiGrid, AnsiCell, LayerData, DrawnLayerData, TextLayerData, RGBColor } from './screenTypes'
-import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG } from './screenTypes'
+import type { AnsiGrid, LayerData, DrawnLayerData, TextLayerData, RGBColor } from './screenTypes'
+import { createEmptyGrid } from './screenTypes'
 
 /**
  * Handle to a running ANSI terminal instance.
@@ -89,15 +89,6 @@ interface ScreenState {
   lastGrid: AnsiGrid | null
   /** True when the full ANSI string needs to be written to the terminal. */
   dirty: boolean
-}
-
-/** Create a pre-allocated empty ANSI grid (25×80 mutable cells). */
-function createEmptyGrid(): AnsiGrid {
-  return Array.from({ length: ANSI_ROWS }, () =>
-    Array.from({ length: ANSI_COLS }, (): AnsiCell => ({
-      char: ' ', fg: [...DEFAULT_FG] as RGBColor, bg: [...DEFAULT_BG] as RGBColor,
-    }))
-  )
 }
 
 /**

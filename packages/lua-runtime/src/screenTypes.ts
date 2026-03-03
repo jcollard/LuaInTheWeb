@@ -112,3 +112,12 @@ export function isClipLayer(layer: LayerData): layer is ClipLayerData {
 export function rgbEqual(a: RGBColor, b: RGBColor): boolean {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2]
 }
+
+/** Create a pre-allocated empty ANSI grid (25×80 mutable cells). */
+export function createEmptyGrid(): AnsiGrid {
+  return Array.from({ length: ANSI_ROWS }, () =>
+    Array.from({ length: ANSI_COLS }, (): AnsiCell => ({
+      char: ' ', fg: [...DEFAULT_FG] as RGBColor, bg: [...DEFAULT_BG] as RGBColor,
+    }))
+  )
+}
