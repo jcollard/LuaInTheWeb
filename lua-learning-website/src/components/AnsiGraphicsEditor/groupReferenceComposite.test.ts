@@ -16,6 +16,42 @@ function makeRef(id: string, sourceLayerId: string, offsetRow: number, offsetCol
   return { type: 'reference', id, name: id, visible: true, sourceLayerId, offsetRow, offsetCol, parentId }
 }
 
+describe('hidden reference layer rendering (editor)', () => {
+  const red: RGBColor = [255, 0, 0]
+
+  it('hidden reference layer still renders its source content', () => {
+    const source = createLayer('Source', 'src')
+    source.grid[5][5] = { char: 'A', fg: red, bg: DEFAULT_BG }
+    const ref: ReferenceLayer = { ...makeRef('ref1', 'src', 0, 0), visible: false }
+    const layers: Layer[] = [source, ref]
+    const result = compositeGrid(layers)
+    // Source renders at (5,5) and ref (hidden) should also render source at (5,5)
+    // Since both overlap at same position, the ref's contribution on top should show 'A'
+    expect(result[5][5]).toEqual({ char: 'A', fg: red, bg: DEFAULT_BG })
+  })
+
+  it('hidden reference layer renders at offset position', () => {
+    const source = createLayer('Source', 'src')
+    source.grid[0][0] = { char: '#', fg: red, bg: DEFAULT_BG }
+    const ref: ReferenceLayer = { ...makeRef('ref1', 'src', 10, 10), visible: false }
+    const layers: Layer[] = [source, ref]
+    const result = compositeGrid(layers)
+    // Hidden ref still renders source content at offset
+    expect(result[10][10]).toEqual({ char: '#', fg: red, bg: DEFAULT_BG })
+  })
+
+  it('hidden drawable layer does NOT render', () => {
+    const bg = createLayer('BG', 'bg')
+    const fg = createLayer('FG', 'fg')
+    fg.visible = false
+    fg.grid[0][0] = { char: 'X', fg: red, bg: DEFAULT_BG }
+    const layers: Layer[] = [bg, fg]
+    const result = compositeGrid(layers)
+    // Hidden drawable should not render
+    expect(result[0][0]).toEqual(DEFAULT_CELL)
+  })
+})
+
 describe('compositeGrid with group reference layers (editor)', () => {
   const red: RGBColor = [255, 0, 0]
 

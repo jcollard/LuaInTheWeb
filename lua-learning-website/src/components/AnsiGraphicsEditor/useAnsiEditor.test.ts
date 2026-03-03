@@ -1,8 +1,9 @@
+/* eslint-disable max-lines */
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useAnsiEditor, computePixelCell, computeLineCells } from './useAnsiEditor'
-import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG, HALF_BLOCK, TRANSPARENT_HALF } from './types'
-import type { AnsiCell, AnsiGrid, RGBColor } from './types'
+import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG, HALF_BLOCK, TRANSPARENT_HALF, isReferenceLayer } from './types'
+import type { AnsiCell, AnsiGrid, RGBColor, ReferenceLayer } from './types'
 
 
 describe('useAnsiEditor', () => {
@@ -634,4 +635,97 @@ describe('mouse drag off canvas', () => {
     expect(result.current.grid[0][5].char).toBe(' ')
   })
 
+})
+
+describe('move tool with reference layers', () => {
+  function createMockContainer(): HTMLDivElement {
+    const container = document.createElement('div')
+    container.getBoundingClientRect = () => ({
+      left: 0, top: 0, right: 800, bottom: 480,
+      width: 800, height: 480, x: 0, y: 0, toJSON: () => ({}),
+    })
+    return container
+  }
+
+  function mouseAt(type: string, col: number, row: number): MouseEvent {
+    return new MouseEvent(type, {
+      clientX: col * 10 + 5,
+      clientY: row * 20 + 10,
+      bubbles: true,
+    })
+  }
+
+  it('move tool on reference layer updates offsetRow/offsetCol', () => {
+    const { result } = renderHook(() => useAnsiEditor())
+    const container = createMockContainer()
+    const handle = { write: vi.fn(), container, dispose: vi.fn() }
+    act(() => result.current.onTerminalReady(handle))
+
+    // Add a reference layer referencing the background
+    const bgId = result.current.layers[0].id
+    act(() => result.current.addReferenceLayer(bgId))
+    const refLayer = result.current.layers.find(l => isReferenceLayer(l)) as ReferenceLayer
+    expect(refLayer).toBeDefined()
+    expect(refLayer.offsetRow).toBe(0)
+    expect(refLayer.offsetCol).toBe(0)
+
+    // Switch to move tool
+    act(() => result.current.setTool('move'))
+
+    // Mousedown at (5, 5), mouseup at (8, 10) → dr=3, dc=5
+    act(() => { container.dispatchEvent(mouseAt('mousedown', 5, 5)) })
+    act(() => { document.dispatchEvent(mouseAt('mouseup', 10, 8)) })
+
+    const updatedRef = result.current.layers.find(l => isReferenceLayer(l)) as ReferenceLayer
+    expect(updatedRef.offsetRow).toBe(3)
+    expect(updatedRef.offsetCol).toBe(5)
+  })
+
+  it('move tool on reference layer supports undo', () => {
+    const { result } = renderHook(() => useAnsiEditor())
+    const container = createMockContainer()
+    const handle = { write: vi.fn(), container, dispose: vi.fn() }
+    act(() => result.current.onTerminalReady(handle))
+
+    const bgId = result.current.layers[0].id
+    act(() => result.current.addReferenceLayer(bgId))
+
+    act(() => result.current.setTool('move'))
+
+    // Move reference layer: dr=2, dc=3
+    act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
+    act(() => { document.dispatchEvent(mouseAt('mouseup', 3, 2)) })
+
+    const movedRef = result.current.layers.find(l => isReferenceLayer(l)) as ReferenceLayer
+    expect(movedRef.offsetRow).toBe(2)
+    expect(movedRef.offsetCol).toBe(3)
+
+    // Undo should restore original offset
+    act(() => result.current.undo())
+    const restoredRef = result.current.layers.find(l => isReferenceLayer(l)) as ReferenceLayer
+    expect(restoredRef.offsetRow).toBe(0)
+    expect(restoredRef.offsetCol).toBe(0)
+  })
+
+  it('move tool with no movement on reference layer pops undo snapshot', () => {
+    const { result } = renderHook(() => useAnsiEditor())
+    const container = createMockContainer()
+    const handle = { write: vi.fn(), container, dispose: vi.fn() }
+    act(() => result.current.onTerminalReady(handle))
+
+    const bgId = result.current.layers[0].id
+    act(() => result.current.addReferenceLayer(bgId))
+
+    act(() => result.current.setTool('move'))
+
+    // Mousedown and mouseup at same position → no movement
+    act(() => { container.dispatchEvent(mouseAt('mousedown', 5, 5)) })
+    act(() => { document.dispatchEvent(mouseAt('mouseup', 5, 5)) })
+
+    const ref = result.current.layers.find(l => isReferenceLayer(l)) as ReferenceLayer
+    expect(ref.offsetRow).toBe(0)
+    expect(ref.offsetCol).toBe(0)
+    // Should not have pushed a permanent undo entry
+    expect(result.current.canUndo).toBe(true) // addReferenceLayer is undoable
+  })
 })

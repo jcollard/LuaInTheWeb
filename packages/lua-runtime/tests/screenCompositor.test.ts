@@ -528,15 +528,25 @@ describe('compositeGrid with reference layers (runtime)', () => {
     expect(result[4][6]).toEqual(makeCell('X', red, DEFAULT_BG))
   })
 
-  it('hidden reference does not contribute', () => {
+  it('hidden reference still renders source content', () => {
     const grid = makeEmptyGrid()
-    grid[5][5] = makeCell('A', red, DEFAULT_BG)
+    grid[0][0] = makeCell('#', red, DEFAULT_BG)
     const source = makeDrawnLayer('src', true, grid)
-    const ref: ReferenceLayerData = { ...makeRefLayer('ref1', 'src', 0, 0), visible: false }
+    const ref: ReferenceLayerData = { ...makeRefLayer('ref1', 'src', 10, 10), visible: false }
     const layers: LayerData[] = [source, ref]
     const result = compositeGrid(layers)
-    // ref is hidden, only source contributes
-    expect(result[5][5]).toEqual(makeCell('A', red, DEFAULT_BG))
+    // Hidden ref still renders source content at offset
+    expect(result[10][10]).toEqual(makeCell('#', red, DEFAULT_BG))
+  })
+
+  it('hidden drawable layer does NOT render', () => {
+    const grid = makeEmptyGrid()
+    grid[0][0] = makeCell('X', red, DEFAULT_BG)
+    const source = makeDrawnLayer('src', false, grid)
+    const layers: LayerData[] = [source]
+    const result = compositeGrid(layers)
+    // Hidden drawable should not render
+    expect(isDefaultCell(result[0][0])).toBe(true)
   })
 
   it('reference visibility independent of source visibility', () => {

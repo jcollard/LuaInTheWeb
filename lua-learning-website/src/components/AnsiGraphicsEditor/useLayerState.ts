@@ -137,8 +137,12 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
       const source = prev.find(l => l.id === sourceLayerId)
       if (!source || (!isDrawableLayer(source) && !isGroupLayer(source))) return prev
       const ref = createReferenceLayer(`${source.name} (Ref)`, sourceLayerId)
+      if (source.parentId) ref.parentId = source.parentId
       setActiveLayerId(ref.id)
-      return [...prev, ref]
+      const idx = prev.indexOf(source)
+      const next = [...prev]
+      next.splice(idx + 1, 0, ref)
+      return next
     })
   }, [])
 

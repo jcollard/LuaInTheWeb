@@ -250,7 +250,7 @@ function buildCompositeEntries(layers: LayerData[], layerMap: Map<string, LayerD
 }
 
 function getEntryCell(entry: CompositeEntry, row: number, col: number): AnsiCell | null {
-  if (!entry.visible) return null
+  if (!entry.visible && entry.kind !== 'reference') return null
   if (entry.kind === 'reference') {
     const srcRow = row - entry.offsetRow
     const srcCol = col - entry.offsetCol
