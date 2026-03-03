@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { hiddenGroupIds, visibleDrawableLayers, compositeCellCore, compositeGrid, compositeGridInto, buildClipMaskMap, isCellClipped } from '../src/screenCompositor'
-import type { AnsiCell, AnsiGrid, ClipLayerData, DrawableLayerData, DrawnLayerData, GroupLayerData, LayerData, RGBColor } from '../src/screenTypes'
+import type { AnsiCell, AnsiGrid, ClipLayerData, DrawableLayerData, DrawnLayerData, GroupLayerData, LayerData, ReferenceLayerData, RGBColor } from '../src/screenTypes'
 import {
   ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_CELL, DEFAULT_FG,
   DEFAULT_FRAME_DURATION_MS, HALF_BLOCK, TRANSPARENT_BG, TRANSPARENT_HALF,
@@ -466,5 +466,102 @@ describe('compositeGrid with clip masks (runtime)', () => {
     const layers: LayerData[] = [group, clip]
     const result = compositeGrid(layers)
     expect(isDefaultCell(result[0][0])).toBe(true)
+  })
+})
+
+function makeRefLayer(id: string, sourceLayerId: string, offsetRow: number, offsetCol: number, parentId?: string): ReferenceLayerData {
+  return { type: 'reference', id, name: id, visible: true, sourceLayerId, offsetRow, offsetCol, parentId, tags: [] }
+}
+
+describe('compositeGrid with reference layers (runtime)', () => {
+  const red: RGBColor = [255, 0, 0]
+
+  it('reference layer composites source content at offset', () => {
+    const grid = makeEmptyGrid()
+    grid[0][0] = makeCell('#', red, DEFAULT_BG)
+    const source = makeDrawnLayer('src', true, grid)
+    const ref = makeRefLayer('ref1', 'src', 3, 5)
+    const layers: LayerData[] = [source, ref]
+    const result = compositeGrid(layers)
+    // At (3,5), ref reads source[0][0]
+    expect(result[3][5]).toEqual(makeCell('#', red, DEFAULT_BG))
+  })
+
+  it('out-of-bounds offset cell is transparent', () => {
+    const grid = makeEmptyGrid()
+    grid[0][0] = makeCell('#', red, DEFAULT_BG)
+    const source = makeDrawnLayer('src', true, grid)
+    // offset so that source data is shifted beyond grid bounds at (0,0)
+    const ref = makeRefLayer('ref1', 'src', -30, 0)
+    const layers: LayerData[] = [source, ref]
+    const result = compositeGrid(layers)
+    // At (0,0), ref reads source[30][0] which is out of bounds
+    expect(result[0][0]).toEqual(makeCell('#', red, DEFAULT_BG))
+  })
+
+  it('circular reference renders transparent', () => {
+    const bg = makeDrawnLayer('bg', true, makeEmptyGrid())
+    const refA = makeRefLayer('refA', 'refB', 0, 0)
+    const refB = makeRefLayer('refB', 'refA', 0, 0)
+    const layers: LayerData[] = [bg, refA, refB]
+    const result = compositeGrid(layers)
+    expect(isDefaultCell(result[0][0])).toBe(true)
+  })
+
+  it('missing source renders transparent', () => {
+    const bg = makeDrawnLayer('bg', true, makeEmptyGrid())
+    const ref = makeRefLayer('ref1', 'missing', 0, 0)
+    const layers: LayerData[] = [bg, ref]
+    const result = compositeGrid(layers)
+    expect(isDefaultCell(result[0][0])).toBe(true)
+  })
+
+  it('chained references accumulate offsets', () => {
+    const grid = makeEmptyGrid()
+    grid[0][0] = makeCell('X', red, DEFAULT_BG)
+    const source = makeDrawnLayer('src', true, grid)
+    const refA = makeRefLayer('refA', 'src', 1, 2)
+    const refB = makeRefLayer('refB', 'refA', 3, 4)
+    const layers: LayerData[] = [source, refA, refB]
+    const result = compositeGrid(layers)
+    // refB accumulates: row=3+1=4, col=4+2=6
+    expect(result[4][6]).toEqual(makeCell('X', red, DEFAULT_BG))
+  })
+
+  it('hidden reference does not contribute', () => {
+    const grid = makeEmptyGrid()
+    grid[5][5] = makeCell('A', red, DEFAULT_BG)
+    const source = makeDrawnLayer('src', true, grid)
+    const ref: ReferenceLayerData = { ...makeRefLayer('ref1', 'src', 0, 0), visible: false }
+    const layers: LayerData[] = [source, ref]
+    const result = compositeGrid(layers)
+    // ref is hidden, only source contributes
+    expect(result[5][5]).toEqual(makeCell('A', red, DEFAULT_BG))
+  })
+
+  it('reference visibility independent of source visibility', () => {
+    const grid = makeEmptyGrid()
+    grid[0][0] = makeCell('#', red, DEFAULT_BG)
+    const source = makeDrawnLayer('src', false, grid) // source hidden
+    const ref = makeRefLayer('ref1', 'src', 0, 0)
+    const layers: LayerData[] = [source, ref]
+    const result = compositeGrid(layers)
+    // Source is hidden (not in drawable entries) but ref reads its grid
+    expect(result[0][0]).toEqual(makeCell('#', red, DEFAULT_BG))
+  })
+
+  it('clip mask applies to reference layer via parentId', () => {
+    const group = makeGroup('g1', true)
+    const clip = makeClipLayer('c1', 'g1')
+    // clip grid is all default = everything clipped
+    const grid = makeEmptyGrid()
+    grid[0][0] = makeCell('#', red, DEFAULT_BG)
+    const source = makeDrawnLayer('src', true, grid)
+    const ref = makeRefLayer('ref1', 'src', 0, 0, 'g1')
+    const layers: LayerData[] = [group, clip, source, ref]
+    const result = compositeGrid(layers)
+    // ref is inside group g1, clip masks everything, so ref's contribution is clipped
+    // only source (outside group) contributes
+    expect(result[0][0]).toEqual(makeCell('#', red, DEFAULT_BG))
   })
 })

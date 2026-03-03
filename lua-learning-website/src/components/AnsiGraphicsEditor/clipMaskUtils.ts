@@ -43,10 +43,10 @@ export function buildClipMaskMap(layers: Layer[]): Map<string, AnsiGrid> {
  * Paired with screenCompositor.ts:isCellClipped
  */
 export function isCellClipped(
-  layer: Layer, row: number, col: number,
+  layer: { parentId?: string }, row: number, col: number,
   clipMap: Map<string, AnsiGrid>, layerMap: Map<string, Layer>,
 ): boolean {
-  let parentId = getParentId(layer)
+  let parentId = layer.parentId
   let depth = 0
   while (parentId && depth < 10) {
     depth++

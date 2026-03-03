@@ -25,6 +25,7 @@ export interface LayersPanelProps {
   onRemoveFromGroup: (layerId: string) => void
   onDuplicate: (id: string) => void
   onAddClipLayer: (groupId: string) => void
+  onAddReferenceLayer: (sourceLayerId: string) => void
   onToggleGroupCollapsed: (groupId: string) => void
   availableTags: string[]
   onAddTagToLayer: (layerId: string, tag: string) => void
@@ -63,6 +64,7 @@ export function LayersPanel({
   onRemoveFromGroup,
   onDuplicate,
   onAddClipLayer,
+  onAddReferenceLayer,
   onToggleGroupCollapsed,
   availableTags,
   onAddTagToLayer,
@@ -365,6 +367,7 @@ export function LayersPanel({
           onDuplicate={onDuplicate}
           onRemoveFromGroup={onRemoveFromGroup}
           onAddClipLayer={onAddClipLayer}
+          onAddReferenceLayer={onAddReferenceLayer}
           groupHasClipLayer={groupHasClipLayer}
           onAddTagToLayer={onAddTagToLayer}
           onRemoveTagFromLayer={onRemoveTagFromLayer}

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { serializeGrid, deserializeGrid, serializeLayers, deserializeLayers } from './serialization'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, TRANSPARENT_BG, isDrawableLayer } from './types'
-import type { AnsiGrid, DrawableLayer, LayerState, TextLayer, GroupLayer, RGBColor, Rect } from './types'
-import { createLayer, createGroup } from './layerUtils'
+import type { AnsiGrid, DrawableLayer, LayerState, TextLayer, GroupLayer, ReferenceLayer, RGBColor, Rect } from './types'
+import { createLayer, createGroup, createReferenceLayer } from './layerUtils'
 import { renderTextLayerGrid } from './textLayerGrid'
 
 function createTestGrid(): AnsiGrid {
@@ -485,5 +485,66 @@ describe('v7 serialization with groups', () => {
     const result = deserializeLayers(lua)
     const g = result.layers[0] as GroupLayer
     expect(g.parentId).toBeUndefined()
+  })
+})
+
+describe('serializeLayers/deserializeLayers with reference layers', () => {
+  it('round-trips a reference layer', () => {
+    const source = createLayer('Source', 'src')
+    const ref = createReferenceLayer('Ref', 'src', 5, 10, 'ref-1')
+    const state: LayerState = { layers: [source, ref], activeLayerId: 'src' }
+    const lua = serializeLayers(state)
+    const result = deserializeLayers(lua)
+    expect(result.layers).toHaveLength(2)
+    const restoredRef = result.layers[1] as ReferenceLayer
+    expect(restoredRef.type).toBe('reference')
+    expect(restoredRef.id).toBe('ref-1')
+    expect(restoredRef.name).toBe('Ref')
+    expect(restoredRef.visible).toBe(true)
+    expect(restoredRef.sourceLayerId).toBe('src')
+    expect(restoredRef.offsetRow).toBe(5)
+    expect(restoredRef.offsetCol).toBe(10)
+  })
+
+  it('saves as v8 when reference layers present', () => {
+    const source = createLayer('Source', 'src')
+    const ref = createReferenceLayer('Ref', 'src', 0, 0, 'ref-1')
+    const state: LayerState = { layers: [source, ref], activeLayerId: 'src' }
+    const lua = serializeLayers(state)
+    expect(lua).toContain('["version"] = 8')
+  })
+
+  it('saves as v7 when no reference layers present', () => {
+    const layer = createLayer('BG', 'bg')
+    const state: LayerState = { layers: [layer], activeLayerId: 'bg' }
+    const lua = serializeLayers(state)
+    expect(lua).toContain('["version"] = 7')
+  })
+
+  it('v7 files without reference layers still load', () => {
+    // Serialize without reference layers (v7)
+    const layer = createLayer('BG', 'bg')
+    const state: LayerState = { layers: [layer], activeLayerId: 'bg' }
+    const lua = serializeLayers(state)
+    expect(lua).toContain('["version"] = 7')
+    const result = deserializeLayers(lua)
+    expect(result.layers).toHaveLength(1)
+    expect(result.layers[0].type).toBe('drawn')
+  })
+
+  it('reference layer preserves parentId and tags', () => {
+    const group = createGroup('G', 'g1')
+    const source = createLayer('Source', 'src')
+    const ref: ReferenceLayer = {
+      type: 'reference', id: 'ref-1', name: 'Ref', visible: true,
+      sourceLayerId: 'src', offsetRow: 0, offsetCol: 0,
+      parentId: 'g1', tags: ['sprite'],
+    }
+    const state: LayerState = { layers: [group, source, ref], activeLayerId: 'src' }
+    const lua = serializeLayers(state)
+    const result = deserializeLayers(lua)
+    const restoredRef = result.layers[2] as ReferenceLayer
+    expect(restoredRef.parentId).toBe('g1')
+    expect(restoredRef.tags).toEqual(['sprite'])
   })
 })

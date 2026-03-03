@@ -1,5 +1,5 @@
-import type { AnsiCell, AnsiGrid, ClipLayer, DrawableLayer, DrawnLayer, GroupLayer, Layer, LayerState, RGBColor, TextLayer } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, isGroupLayer, isDrawableLayer, isClipLayer, getParentId } from './types'
+import type { AnsiCell, AnsiGrid, ClipLayer, DrawableLayer, DrawnLayer, GroupLayer, Layer, LayerState, ReferenceLayer, RGBColor, TextLayer } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, isGroupLayer, isDrawableLayer, isClipLayer, isReferenceLayer, getParentId } from './types'
 import { compositeGrid } from './compositeUtils'
 export { visibleDrawableLayers, compositeCell, compositeGrid, compositeGridInto, compositeCellWithOverride, prepareComposite, compositeCellPrepared, compositeCellWithOverridePrepared, type CompositeState } from './compositeUtils'
 
@@ -103,6 +103,18 @@ export function createGroup(name: string, id?: string): GroupLayer {
   }
 }
 
+export function createReferenceLayer(name: string, sourceLayerId: string, offsetRow = 0, offsetCol = 0, id?: string): ReferenceLayer {
+  return {
+    type: 'reference',
+    id: id ?? crypto.randomUUID(),
+    name,
+    visible: true,
+    sourceLayerId,
+    offsetRow,
+    offsetCol,
+  }
+}
+
 export function addTagToLayer<T extends Layer>(layer: T, tag: string): T {
   if (layer.tags?.includes(tag)) return layer
   return { ...layer, tags: [...(layer.tags ?? []), tag] }
@@ -147,6 +159,19 @@ function cloneLayer(layer: Layer): Layer {
       tags: layer.tags ? [...layer.tags] : undefined,
     } satisfies ClipLayer
   }
+  if (isReferenceLayer(layer)) {
+    return {
+      type: 'reference',
+      id: layer.id,
+      name: layer.name,
+      visible: layer.visible,
+      sourceLayerId: layer.sourceLayerId,
+      offsetRow: layer.offsetRow,
+      offsetCol: layer.offsetCol,
+      parentId: layer.parentId,
+      tags: layer.tags ? [...layer.tags] : undefined,
+    } satisfies ReferenceLayer
+  }
   const base = {
     id: layer.id,
     name: layer.name,
@@ -184,9 +209,10 @@ export function mergeLayerDown(layers: Layer[], layerId: string): Layer[] | null
   const upper = layers[idx]
   const lower = layers[idx - 1]
 
-  // Cannot merge if either layer is a group or clip
+  // Cannot merge if either layer is a group, clip, or reference
   if (isGroupLayer(upper) || isGroupLayer(lower)) return null
   if (isClipLayer(upper) || isClipLayer(lower)) return null
+  if (isReferenceLayer(upper) || isReferenceLayer(lower)) return null
 
   // After group guard, both are drawable layers
   // Composite the two layers into a new grid, treating both as visible

@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import type { AnsiCell, AnsiGrid, ClipLayer, DrawableLayer, DrawnLayer, Layer, LayerState, RGBColor, Rect, TextAlign, TextLayer } from './types'
-import { MIN_FRAME_DURATION_MS, MAX_FRAME_DURATION_MS, isGroupLayer, isDrawableLayer, isClipLayer, getParentId } from './types'
-import { createLayer, createGroup, createClipLayer, cloneLayerState, mergeLayerDown, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock, addTagToLayer as addTagToLayerUtil, removeTagFromLayer as removeTagFromLayerUtil } from './layerUtils'
+import { MIN_FRAME_DURATION_MS, MAX_FRAME_DURATION_MS, isGroupLayer, isDrawableLayer, isClipLayer, isReferenceLayer, getParentId } from './types'
+import { createLayer, createGroup, createReferenceLayer, createClipLayer, cloneLayerState, mergeLayerDown, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock, addTagToLayer as addTagToLayerUtil, removeTagFromLayer as removeTagFromLayerUtil } from './layerUtils'
 import { createEmptyGrid, cloneGrid } from './gridUtils'
 import { replaceColorsInGrid } from './colorUtils'
 import { renderTextLayerGrid } from './textLayerGrid'
@@ -38,6 +38,8 @@ export interface UseLayerStateReturn {
   addLayer: () => void
   addLayerWithGrid: (name: string, grid: AnsiGrid) => void
   addClipLayer: (groupId: string) => void
+  addReferenceLayer: (sourceLayerId: string) => void
+  updateReferenceOffset: (id: string, offsetRow: number, offsetCol: number) => void
   addTextLayer: (name: string, bounds: Rect, textFg: RGBColor) => void
   updateTextLayer: (id: string, updates: { text?: string; bounds?: Rect; textFg?: RGBColor; textFgColors?: RGBColor[]; textAlign?: TextAlign }) => void
   removeLayer: (id: string) => void
@@ -130,6 +132,25 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     })
   }, [])
 
+  const addReferenceLayer = useCallback((sourceLayerId: string) => {
+    setLayers(prev => {
+      const source = prev.find(l => l.id === sourceLayerId)
+      if (!source || !isDrawableLayer(source)) return prev
+      const ref = createReferenceLayer(`${source.name} (Ref)`, sourceLayerId)
+      setActiveLayerId(ref.id)
+      return [...prev, ref]
+    })
+  }, [])
+
+  const updateReferenceOffset = useCallback((id: string, offsetRow: number, offsetCol: number) => {
+    const mapLayer = (l: Layer): Layer => {
+      if (l.id !== id || !isReferenceLayer(l)) return l
+      return { ...l, offsetRow, offsetCol }
+    }
+    layersRef.current = layersRef.current.map(mapLayer)
+    setLayers(prev => prev.map(mapLayer))
+  }, [])
+
   const addTextLayer = useCallback((name: string, bounds: Rect, textFg: RGBColor) => {
     layerCountRef.current++
     const base = createLayer(name)
@@ -183,8 +204,8 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
         return next
       }
 
-      // Clip layers can always be deleted
-      if (isClipLayer(target)) {
+      // Clip and reference layers can always be deleted
+      if (isClipLayer(target) || isReferenceLayer(target)) {
         const next = prev.filter(l => l.id !== id)
         setActiveLayerId(prevActive => {
           if (prevActive === id) {
@@ -227,9 +248,11 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     if (currentLayers.some(l => l.id === trimmed)) return { success: false, error: 'Duplicate ID already exists' }
 
     const newLayers = currentLayers.map(l => {
-      if (l.id === oldId) return { ...l, id: trimmed }
-      if (getParentId(l) === oldId) return { ...l, parentId: trimmed }
-      return l
+      let updated = l
+      if (l.id === oldId) updated = { ...updated, id: trimmed }
+      if (getParentId(l) === oldId) updated = { ...updated, parentId: trimmed }
+      if (isReferenceLayer(updated) && updated.sourceLayerId === oldId) updated = { ...updated, sourceLayerId: trimmed }
+      return updated
     })
     layersRef.current = newLayers
     setLayers(newLayers)
@@ -280,7 +303,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
             }
             const next = [...prev]
             const [removed] = next.splice(currentIndex, 1)
-            const updated = (isDrawableLayer(removed) || isClipLayer(removed)) ? { ...removed, parentId: undefined } : removed
+            const updated = (isDrawableLayer(removed) || isClipLayer(removed) || isReferenceLayer(removed)) ? { ...removed, parentId: undefined } : removed
             const clamped = Math.max(0, Math.min(next.length, newIndex))
             next.splice(findSafeInsertPos(next, clamped), 0, updated)
             return next
@@ -306,7 +329,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
             return rest
           }
 
-          if (!isDrawableLayer(layer) && !isClipLayer(layer)) return prev
+          if (!isDrawableLayer(layer) && !isClipLayer(layer) && !isReferenceLayer(layer)) return prev
           const next = [...prev]
           const [removed] = next.splice(currentIndex, 1)
           const insertPos = computeGroupInsertPos(next, targetGroupId, newIndex, currentIndex)
@@ -391,7 +414,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
           return rest
         }
 
-        if (!isDrawableLayer(layer) && !isClipLayer(layer)) return prev
+        if (!isDrawableLayer(layer) && !isClipLayer(layer) && !isReferenceLayer(layer)) return prev
 
         const groupIdx = prev.findIndex(l => l.id === groupId)
         if (groupIdx < 0) return prev
@@ -450,6 +473,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     const active = layersRef.current.find(l => l.id === activeId)
     if (!active || isGroupLayer(active)) return
     if (active.type === 'text') return
+    if (isReferenceLayer(active)) return
     const newLayers = layersRef.current.map(l => {
       if (l.id !== activeId) return l
       if (l.type === 'clip') {
@@ -487,6 +511,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     const activeId = activeLayerIdRef.current
     const layer = layersRef.current.find(l => l.id === activeId)
     if (layer && (isDrawableLayer(layer) || isClipLayer(layer))) return layer.grid
+    // Reference layers have no grid; fall back to first drawable
     const firstDrawable = layersRef.current.find(isDrawableLayer)
     return firstDrawable ? firstDrawable.grid : (layersRef.current[0] as DrawableLayer).grid
   }, [])
@@ -613,6 +638,8 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     addLayer,
     addLayerWithGrid,
     addClipLayer,
+    addReferenceLayer,
+    updateReferenceOffset,
     addTextLayer,
     updateTextLayer,
     removeLayer,

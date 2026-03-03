@@ -1,5 +1,5 @@
 import type { AnsiCell, AnsiGrid, DrawableLayer, Layer, RGBColor } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_BG, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_BG, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer, isReferenceLayer } from './types'
 import { buildClipMaskMap, isCellClipped } from './clipMaskUtils'
 import { rgbEqual, isDefaultCell } from './layerUtils'
 
@@ -53,7 +53,7 @@ function isTransparentBg(color: RGBColor): boolean {
   return rgbEqual(color, TRANSPARENT_BG)
 }
 
-function compositeCellCore(layers: DrawableLayer[], getCell: (layer: DrawableLayer) => AnsiCell | null): AnsiCell {
+function compositeCellCore<T>(layers: T[], getCell: (layer: T) => AnsiCell | null): AnsiCell {
   let topColor: RGBColor | null = null
   let bottomColor: RGBColor | null = null
   // Pending text cell: char+fg from a TRANSPARENT_BG cell waiting for a bg source
@@ -108,24 +108,132 @@ function compositeCellCore(layers: DrawableLayer[], getCell: (layer: DrawableLay
   }
 }
 
+// --- Composite entry types ---
+
+export interface DrawableEntry {
+  kind: 'drawable'
+  id: string
+  visible: boolean
+  parentId?: string
+  grid: AnsiGrid
+}
+
+export interface ReferenceEntry {
+  kind: 'reference'
+  id: string
+  visible: boolean
+  parentId?: string
+  sourceGrid: AnsiGrid
+  offsetRow: number
+  offsetCol: number
+}
+
+export type CompositeEntry = DrawableEntry | ReferenceEntry
+
+/**
+ * Resolve a reference layer's source, following chained references.
+ * Returns the ultimate drawable layer's grid and accumulated offsets,
+ * or null if the chain is broken or circular.
+ */
+function resolveReference(
+  sourceLayerId: string,
+  offsetRow: number,
+  offsetCol: number,
+  layerMap: Map<string, Layer>,
+): { grid: AnsiGrid; offsetRow: number; offsetCol: number } | null {
+  const visited = new Set<string>()
+  let currentId = sourceLayerId
+  let accRow = offsetRow
+  let accCol = offsetCol
+
+  while (currentId && visited.size < 10) {
+    if (visited.has(currentId)) return null // cycle
+    visited.add(currentId)
+    const source = layerMap.get(currentId)
+    if (!source) return null // missing source
+    if (isDrawableLayer(source)) {
+      return { grid: source.grid, offsetRow: accRow, offsetCol: accCol }
+    }
+    if (isReferenceLayer(source)) {
+      accRow += source.offsetRow
+      accCol += source.offsetCol
+      currentId = source.sourceLayerId
+      continue
+    }
+    return null // groups/clips can't be referenced
+  }
+  return null // max depth exceeded
+}
+
+/**
+ * Build composite entries from layers: drawable layers become DrawableEntry,
+ * reference layers become ReferenceEntry with resolved source grid and accumulated offsets.
+ * Skips groups, clips, hidden-group children, and broken/circular references.
+ */
+export function buildCompositeEntries(layers: Layer[], layerMap: Map<string, Layer>): CompositeEntry[] {
+  const hidden = hiddenGroupIds(layers)
+  const entries: CompositeEntry[] = []
+
+  for (const layer of layers) {
+    if (layer.parentId && hidden.has(layer.parentId)) continue
+
+    if (isDrawableLayer(layer)) {
+      entries.push({
+        kind: 'drawable',
+        id: layer.id,
+        visible: layer.visible,
+        parentId: layer.parentId,
+        grid: layer.grid,
+      })
+    } else if (isReferenceLayer(layer)) {
+      const resolved = resolveReference(layer.sourceLayerId, layer.offsetRow, layer.offsetCol, layerMap)
+      if (resolved) {
+        entries.push({
+          kind: 'reference',
+          id: layer.id,
+          visible: layer.visible,
+          parentId: layer.parentId,
+          sourceGrid: resolved.grid,
+          offsetRow: resolved.offsetRow,
+          offsetCol: resolved.offsetCol,
+        })
+      }
+      // broken/circular references are silently skipped (render transparent)
+    }
+    // groups, clips are skipped
+  }
+  return entries
+}
+
+function getEntryCell(entry: CompositeEntry, row: number, col: number): AnsiCell | null {
+  if (!entry.visible) return null
+  if (entry.kind === 'reference') {
+    const srcRow = row - entry.offsetRow
+    const srcCol = col - entry.offsetCol
+    if (srcRow < 0 || srcRow >= ANSI_ROWS || srcCol < 0 || srcCol >= ANSI_COLS) return null
+    return entry.sourceGrid[srcRow][srcCol]
+  }
+  return entry.grid[row][col]
+}
+
 /** Pre-computed compositing state for batch operations. */
 export interface CompositeState {
-  drawable: DrawableLayer[]
+  entries: CompositeEntry[]
   clipMap: Map<string, AnsiGrid>
   layerMap: Map<string, Layer>
 }
 
-/** Prepare shared compositing state: visible drawable layers, clip mask map, and layer lookup map. */
+/** Prepare shared compositing state: composite entries, clip mask map, and layer lookup map. */
 export function prepareComposite(layers: Layer[]): CompositeState {
-  return { drawable: visibleDrawableLayers(layers), clipMap: buildClipMaskMap(layers), layerMap: new Map(layers.map(l => [l.id, l])) }
+  const layerMap = new Map(layers.map(l => [l.id, l]))
+  return { entries: buildCompositeEntries(layers, layerMap), clipMap: buildClipMaskMap(layers), layerMap }
 }
 
 /** Composite a single cell using pre-computed state (avoids rebuilding per cell). */
 export function compositeCellPrepared(state: CompositeState, row: number, col: number): AnsiCell {
-  return compositeCellCore(state.drawable, (layer) => {
-    if (!layer.visible) return null
-    if (isCellClipped(layer, row, col, state.clipMap, state.layerMap)) return null
-    return layer.grid[row][col]
+  return compositeCellCore(state.entries, (entry) => {
+    if (isCellClipped(entry, row, col, state.clipMap, state.layerMap)) return null
+    return getEntryCell(entry, row, col)
   })
 }
 
@@ -134,10 +242,10 @@ export function compositeCellWithOverridePrepared(
   state: CompositeState, row: number, col: number,
   activeLayerId: string, overrideCell: AnsiCell,
 ): AnsiCell {
-  return compositeCellCore(state.drawable, (layer) => {
-    if (!layer.visible) return null
-    if (isCellClipped(layer, row, col, state.clipMap, state.layerMap)) return null
-    return layer.id === activeLayerId ? overrideCell : layer.grid[row][col]
+  return compositeCellCore(state.entries, (entry) => {
+    if (isCellClipped(entry, row, col, state.clipMap, state.layerMap)) return null
+    if (entry.id === activeLayerId && entry.kind === 'drawable') return overrideCell
+    return getEntryCell(entry, row, col)
   })
 }
 

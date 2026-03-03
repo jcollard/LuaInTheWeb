@@ -1,4 +1,5 @@
 import type { Layer } from './types'
+import { isDrawableLayer } from './types'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface LayerContextMenuProps {
@@ -16,6 +17,7 @@ export interface LayerContextMenuProps {
   onDuplicate: (id: string) => void
   onRemoveFromGroup: (id: string) => void
   onAddClipLayer: (groupId: string) => void
+  onAddReferenceLayer: (sourceLayerId: string) => void
   groupHasClipLayer: boolean
   onAddTagToLayer: (layerId: string, tag: string) => void
   onRemoveTagFromLayer: (layerId: string, tag: string) => void
@@ -39,6 +41,7 @@ export function LayerContextMenu({
   onDuplicate,
   onRemoveFromGroup,
   onAddClipLayer,
+  onAddReferenceLayer,
   groupHasClipLayer,
   onAddTagToLayer,
   onRemoveTagFromLayer,
@@ -94,6 +97,15 @@ export function LayerContextMenu({
         >
           Duplicate
         </button>
+        {contextLayer && isDrawableLayer(contextLayer) && (
+          <button
+            className={styles.layerContextMenuItem}
+            data-testid="context-create-reference"
+            onClick={() => { onAddReferenceLayer(contextMenu.layerId); close() }}
+          >
+            Create Reference
+          </button>
+        )}
         {contextHasParentId && (
           <button
             className={styles.layerContextMenuItem}

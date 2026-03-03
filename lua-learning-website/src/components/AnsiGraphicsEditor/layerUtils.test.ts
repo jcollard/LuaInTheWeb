@@ -1,8 +1,8 @@
 /* eslint-disable max-lines */
 import { describe, it, expect } from 'vitest'
-import { isDefaultCell, createLayer, createGroup, createClipLayer, compositeCell, compositeGrid, compositeCellWithOverride, prepareComposite, compositeCellPrepared, compositeCellWithOverridePrepared, cloneLayerState, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, buildDisplayOrder, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock, addTagToLayer, removeTagFromLayer, formatLayerId, layerMatchesQuery, filterLayers, filterTagsTab, buildClipMaskMap, isCellClipped } from './layerUtils'
-import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer, isClipLayer } from './types'
-import type { AnsiCell, DrawableLayer, DrawnLayer, RGBColor, Layer, LayerState, TextLayer, GroupLayer, ClipLayer } from './types'
+import { isDefaultCell, createLayer, createGroup, createReferenceLayer, createClipLayer, compositeCell, compositeGrid, compositeCellWithOverride, prepareComposite, compositeCellPrepared, compositeCellWithOverridePrepared, cloneLayerState, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, buildDisplayOrder, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock, addTagToLayer, removeTagFromLayer, formatLayerId, layerMatchesQuery, filterLayers, filterTagsTab, buildClipMaskMap, isCellClipped } from './layerUtils'
+import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer, isClipLayer, isReferenceLayer } from './types'
+import type { AnsiCell, DrawableLayer, DrawnLayer, RGBColor, Layer, LayerState, TextLayer, GroupLayer, ClipLayer, ReferenceLayer } from './types'
 
 describe('isDefaultCell', () => {
   it('returns true for DEFAULT_CELL', () => {
@@ -2076,5 +2076,188 @@ describe('compositeCellWithOverridePrepared', () => {
     const state = prepareComposite(layers)
     expect(compositeCellWithOverridePrepared(state, 0, 0, 'l2', override))
       .toEqual(compositeCellWithOverride(layers, 0, 0, 'l2', override))
+  })
+})
+
+describe('isReferenceLayer', () => {
+  it('returns true for reference layers', () => {
+    const ref = createReferenceLayer('Ref', 'src-1')
+    expect(isReferenceLayer(ref)).toBe(true)
+  })
+
+  it('returns false for drawn layers', () => {
+    const drawn = createLayer('Drawn')
+    expect(isReferenceLayer(drawn)).toBe(false)
+  })
+
+  it('returns false for group layers', () => {
+    const group = createGroup('Group')
+    expect(isReferenceLayer(group)).toBe(false)
+  })
+})
+
+describe('createReferenceLayer', () => {
+  it('creates a reference layer with required fields', () => {
+    const ref = createReferenceLayer('Ref', 'src-1')
+    expect(ref.type).toBe('reference')
+    expect(ref.name).toBe('Ref')
+    expect(ref.sourceLayerId).toBe('src-1')
+    expect(ref.offsetRow).toBe(0)
+    expect(ref.offsetCol).toBe(0)
+    expect(ref.visible).toBe(true)
+    expect(ref.id).toBeTruthy()
+  })
+
+  it('accepts custom offsets', () => {
+    const ref = createReferenceLayer('Ref', 'src-1', 5, 10)
+    expect(ref.offsetRow).toBe(5)
+    expect(ref.offsetCol).toBe(10)
+  })
+
+  it('accepts custom id', () => {
+    const ref = createReferenceLayer('Ref', 'src-1', 0, 0, 'custom-id')
+    expect(ref.id).toBe('custom-id')
+  })
+})
+
+describe('compositeCell with reference layers', () => {
+  const red: RGBColor = [255, 0, 0]
+
+  it('reference layer contributes source cell at offset position', () => {
+    const source = createLayer('Source', 'src')
+    source.grid[0][0] = { char: '#', fg: red, bg: DEFAULT_BG }
+    const ref: ReferenceLayer = { type: 'reference', id: 'ref1', name: 'Ref', visible: true, sourceLayerId: 'src', offsetRow: 2, offsetCol: 3 }
+    const layers: Layer[] = [source, ref]
+    // At (2,3), ref reads source[0][0]
+    expect(compositeCell(layers, 2, 3)).toEqual({ char: '#', fg: red, bg: DEFAULT_BG })
+  })
+
+  it('out-of-bounds offset returns transparent (DEFAULT_CELL)', () => {
+    const source = createLayer('Source', 'src')
+    source.grid[0][0] = { char: '#', fg: red, bg: DEFAULT_BG }
+    const ref: ReferenceLayer = { type: 'reference', id: 'ref1', name: 'Ref', visible: true, sourceLayerId: 'src', offsetRow: -1, offsetCol: 0 }
+    const layers: Layer[] = [source, ref]
+    // At (0,0), ref reads source[1][0] which is default
+    expect(compositeCell(layers, 0, 0)).toEqual({ char: '#', fg: red, bg: DEFAULT_BG })
+  })
+
+  it('reference to missing source renders transparent', () => {
+    const bg = createLayer('BG', 'bg')
+    const ref: ReferenceLayer = { type: 'reference', id: 'ref1', name: 'Ref', visible: true, sourceLayerId: 'missing', offsetRow: 0, offsetCol: 0 }
+    const layers: Layer[] = [bg, ref]
+    expect(compositeCell(layers, 0, 0)).toEqual(DEFAULT_CELL)
+  })
+
+  it('circular reference renders transparent', () => {
+    const bg = createLayer('BG', 'bg')
+    const refA: ReferenceLayer = { type: 'reference', id: 'refA', name: 'RefA', visible: true, sourceLayerId: 'refB', offsetRow: 0, offsetCol: 0 }
+    const refB: ReferenceLayer = { type: 'reference', id: 'refB', name: 'RefB', visible: true, sourceLayerId: 'refA', offsetRow: 0, offsetCol: 0 }
+    const layers: Layer[] = [bg, refA, refB]
+    expect(compositeCell(layers, 0, 0)).toEqual(DEFAULT_CELL)
+  })
+
+  it('chained references accumulate offsets', () => {
+    const source = createLayer('Source', 'src')
+    source.grid[0][0] = { char: 'X', fg: red, bg: DEFAULT_BG }
+    const refA: ReferenceLayer = { type: 'reference', id: 'refA', name: 'RefA', visible: true, sourceLayerId: 'src', offsetRow: 1, offsetCol: 1 }
+    const refB: ReferenceLayer = { type: 'reference', id: 'refB', name: 'RefB', visible: true, sourceLayerId: 'refA', offsetRow: 2, offsetCol: 3 }
+    const layers: Layer[] = [source, refA, refB]
+    // refB accumulates: offsetRow=2+1=3, offsetCol=3+1=4
+    // At (3,4), reads source[0][0]
+    expect(compositeCell(layers, 3, 4)).toEqual({ char: 'X', fg: red, bg: DEFAULT_BG })
+  })
+
+  it('hidden reference layer does not contribute', () => {
+    const source = createLayer('Source', 'src')
+    source.grid[0][0] = { char: '#', fg: red, bg: DEFAULT_BG }
+    const ref: ReferenceLayer = { type: 'reference', id: 'ref1', name: 'Ref', visible: false, sourceLayerId: 'src', offsetRow: 0, offsetCol: 0 }
+    const layers: Layer[] = [source, ref]
+    // ref is hidden, so at (0,0) we should get the source's cell (from the drawable entry, not the ref)
+    const result = compositeCell(layers, 0, 0)
+    expect(result).toEqual({ char: '#', fg: red, bg: DEFAULT_BG })
+  })
+
+  it('reference layer visibility is independent of source visibility', () => {
+    const source = createLayer('Source', 'src')
+    source.visible = false
+    source.grid[0][0] = { char: '#', fg: red, bg: DEFAULT_BG }
+    const ref: ReferenceLayer = { type: 'reference', id: 'ref1', name: 'Ref', visible: true, sourceLayerId: 'src', offsetRow: 0, offsetCol: 0 }
+    const layers: Layer[] = [source, ref]
+    // Source is hidden but ref still reads its grid data
+    expect(compositeCell(layers, 0, 0)).toEqual({ char: '#', fg: red, bg: DEFAULT_BG })
+  })
+
+  it('clip mask applies to reference layer via parentId', () => {
+    const group: GroupLayer = { type: 'group', id: 'g1', name: 'Group', visible: true, collapsed: false }
+    const clip = createClipLayer('Mask', 'g1', 'clip-1')
+    // clip grid all default = everything clipped
+    const source = createLayer('Source', 'src')
+    source.grid[0][0] = { char: '#', fg: red, bg: DEFAULT_BG }
+    const ref: ReferenceLayer = { type: 'reference', id: 'ref1', name: 'Ref', visible: true, sourceLayerId: 'src', offsetRow: 0, offsetCol: 0, parentId: 'g1' }
+    const layers: Layer[] = [group, clip, source, ref]
+    // ref is inside group with clip mask that clips everything
+    expect(compositeCell(layers, 0, 0)).toEqual({ char: '#', fg: red, bg: DEFAULT_BG })
+    // the source's cell is returned from the drawable entry (not ref), since ref is clipped
+  })
+
+  it('override does not apply to reference entries', () => {
+    const source = createLayer('Source', 'src')
+    source.grid[0][0] = { char: '#', fg: red, bg: DEFAULT_BG }
+    const ref: ReferenceLayer = { type: 'reference', id: 'ref1', name: 'Ref', visible: true, sourceLayerId: 'src', offsetRow: 0, offsetCol: 0 }
+    const layers: Layer[] = [source, ref]
+    const override: AnsiCell = { char: 'Z', fg: [0, 255, 0], bg: [0, 0, 255] }
+    // Override targets ref1, but since it's a reference (not drawable), override is ignored
+    const result = compositeCellWithOverride(layers, 0, 0, 'ref1', override)
+    expect(result).toEqual({ char: '#', fg: red, bg: DEFAULT_BG })
+  })
+})
+
+describe('mergeLayerDown with reference layers', () => {
+  it('refuses merge when upper is reference', () => {
+    const bottom = createLayer('Bottom', 'l1')
+    const ref: ReferenceLayer = { type: 'reference', id: 'ref1', name: 'Ref', visible: true, sourceLayerId: 'l1', offsetRow: 0, offsetCol: 0 }
+    const layers: Layer[] = [bottom, ref]
+    expect(mergeLayerDown(layers, 'ref1')).toBeNull()
+  })
+
+  it('refuses merge when lower is reference', () => {
+    const ref: ReferenceLayer = { type: 'reference', id: 'ref1', name: 'Ref', visible: true, sourceLayerId: 'other', offsetRow: 0, offsetCol: 0 }
+    const top = createLayer('Top', 'l2')
+    const layers: Layer[] = [ref, top]
+    expect(mergeLayerDown(layers, 'l2')).toBeNull()
+  })
+})
+
+describe('cloneLayerState with reference layers', () => {
+  it('clones reference layer fields', () => {
+    const drawn = createLayer('Source', 'src')
+    const ref: ReferenceLayer = { type: 'reference', id: 'ref1', name: 'Ref', visible: true, sourceLayerId: 'src', offsetRow: 5, offsetCol: 10, tags: ['tag1'] }
+    const state: LayerState = { layers: [drawn, ref], activeLayerId: 'src' }
+    const cloned = cloneLayerState(state)
+    const clonedRef = cloned.layers[1] as ReferenceLayer
+    expect(clonedRef.type).toBe('reference')
+    expect(clonedRef.sourceLayerId).toBe('src')
+    expect(clonedRef.offsetRow).toBe(5)
+    expect(clonedRef.offsetCol).toBe(10)
+    expect(clonedRef.tags).toEqual(['tag1'])
+    // Verify tags are cloned (not same reference)
+    expect(clonedRef.tags).not.toBe(ref.tags)
+  })
+})
+
+describe('duplicateLayerBlock with reference layers', () => {
+  it('duplicates reference layer keeping same sourceLayerId', () => {
+    const source = createLayer('Source', 'src')
+    const ref: ReferenceLayer = { type: 'reference', id: 'ref1', name: 'Ref', visible: true, sourceLayerId: 'src', offsetRow: 3, offsetCol: 7 }
+    const layers: Layer[] = [source, ref]
+    const dupes = duplicateLayerBlock(layers, 'ref1')
+    expect(dupes).toHaveLength(1)
+    const duped = dupes[0] as ReferenceLayer
+    expect(duped.type).toBe('reference')
+    expect(duped.sourceLayerId).toBe('src')
+    expect(duped.offsetRow).toBe(3)
+    expect(duped.offsetCol).toBe(7)
+    expect(duped.name).toBe('Ref (Copy)')
+    expect(duped.id).not.toBe('ref1')
   })
 })

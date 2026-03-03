@@ -50,7 +50,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   // with undo snapshots below before exposing them as addLayer, removeLayer, etc.
   const {
     layersRef, activeLayerIdRef, applyToActiveLayer, getActiveGrid, restoreLayerState,
-    addLayer: rawAddLayer, addLayerWithGrid: rawAddLayerWithGrid, addClipLayer: rawAddClipLayer, removeLayer: rawRemoveLayer,
+    addLayer: rawAddLayer, addLayerWithGrid: rawAddLayerWithGrid, addClipLayer: rawAddClipLayer, addReferenceLayer: rawAddReferenceLayer, updateReferenceOffset: rawUpdateReferenceOffset, removeLayer: rawRemoveLayer,
     reorderLayer: rawReorderLayer,
     toggleVisibility: rawToggleVisibility, setLayerVisibility: rawSetLayerVisibility,
     mergeDown: rawMergeDown,
@@ -214,6 +214,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
 
   const addLayerWithUndo = useCallback(() => withLayerUndo(rawAddLayer, false), [withLayerUndo, rawAddLayer])
   const addClipLayerWithUndo = useCallback((groupId: string) => withLayerUndo(() => rawAddClipLayer(groupId), false), [withLayerUndo, rawAddClipLayer])
+  const addReferenceLayerWithUndo = useCallback((sourceLayerId: string) => withLayerUndo(() => rawAddReferenceLayer(sourceLayerId), false), [withLayerUndo, rawAddReferenceLayer])
+  const updateReferenceOffsetWithUndo = useCallback((id: string, offsetRow: number, offsetCol: number) => withLayerUndo(() => rawUpdateReferenceOffset(id, offsetRow, offsetCol)), [withLayerUndo, rawUpdateReferenceOffset])
   const removeLayerWithUndo = useCallback((id: string) => withLayerUndo(() => rawRemoveLayer(id)), [withLayerUndo, rawRemoveLayer])
   const reorderLayerWithUndo = useCallback(
     (id: string, newIndex: number, targetGroupId?: string | null) => withLayerUndo(() => rawReorderLayer(id, newIndex, targetGroupId)),
@@ -853,7 +855,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     isDirty, markClean, onTerminalReady, cursorRef, dimensionRef, selectionRef, textBoundsRef, textCursorRef,
     isSaveDialogOpen, openSaveDialog, closeSaveDialog, undo, redo, canUndo, canRedo,
     layers: layerState.layers, activeLayerId: layerState.activeLayerId,
-    addLayer: addLayerWithUndo, addClipLayer: addClipLayerWithUndo, removeLayer: removeLayerWithUndo,
+    addLayer: addLayerWithUndo, addClipLayer: addClipLayerWithUndo, addReferenceLayer: addReferenceLayerWithUndo, updateReferenceOffset: updateReferenceOffsetWithUndo, removeLayer: removeLayerWithUndo,
     renameLayer: layerState.renameLayer, changeLayerId: layerState.changeLayerId, setActiveLayer: setActiveLayerWithBounds,
     reorderLayer: reorderLayerWithUndo,
     toggleVisibility: toggleVisibilityWithUndo, setLayerVisibility: setLayerVisibilityWithUndo,
