@@ -20,11 +20,6 @@ function isTransparentBg(color: RGBColor): boolean {
   return rgbEqual(color, TRANSPARENT_BG)
 }
 
-/** Get parentId from any layer type. */
-function getParentId(layer: LayerData): string | undefined {
-  return layer.parentId
-}
-
 /**
  * Build a map from group ID to the clip mask grid for that group.
  * Iterates bottom-to-top; topmost visible clip layer per group wins.
@@ -47,14 +42,14 @@ export function isCellClipped(
   clipMap: Map<string, AnsiGrid>, layerMap: Map<string, LayerData>,
 ): boolean {
   const visited = new Set<string>()
-  let parentId = getParentId(layer)
+  let parentId = layer.parentId
   while (parentId) {
     if (visited.has(parentId)) break
     visited.add(parentId)
     const mask = clipMap.get(parentId)
     if (mask && isDefaultCell(mask[row][col])) return true
     const parent = layerMap.get(parentId)
-    parentId = parent ? getParentId(parent) : undefined
+    parentId = parent?.parentId
   }
   return false
 }

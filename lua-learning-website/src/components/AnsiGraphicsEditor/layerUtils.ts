@@ -194,10 +194,21 @@ function compositeCellCore(layers: DrawableLayer[], getCell: (layer: DrawableLay
   }
 }
 
+/** Prepare shared compositing state: visible drawable layers, clip mask map, and layer lookup map. */
+function prepareComposite(layers: Layer[]): {
+  drawable: DrawableLayer[]
+  clipMap: Map<string, AnsiGrid>
+  layerMap: Map<string, Layer>
+} {
+  return {
+    drawable: visibleDrawableLayers(layers),
+    clipMap: buildClipMaskMap(layers),
+    layerMap: new Map(layers.map(l => [l.id, l])),
+  }
+}
+
 export function compositeCell(layers: Layer[], row: number, col: number): AnsiCell {
-  const drawable = visibleDrawableLayers(layers)
-  const clipMap = buildClipMaskMap(layers)
-  const layerMap = new Map(layers.map(l => [l.id, l]))
+  const { drawable, clipMap, layerMap } = prepareComposite(layers)
   return compositeCellCore(drawable, (layer) => {
     if (!layer.visible) return null
     if (isCellClipped(layer, row, col, clipMap, layerMap)) return null
@@ -206,9 +217,7 @@ export function compositeCell(layers: Layer[], row: number, col: number): AnsiCe
 }
 
 export function compositeGrid(layers: Layer[]): AnsiGrid {
-  const drawable = visibleDrawableLayers(layers)
-  const clipMap = buildClipMaskMap(layers)
-  const layerMap = new Map(layers.map(l => [l.id, l]))
+  const { drawable, clipMap, layerMap } = prepareComposite(layers)
   return Array.from({ length: ANSI_ROWS }, (_, r) =>
     Array.from({ length: ANSI_COLS }, (_, c) =>
       compositeCellCore(drawable, (layer) => {
@@ -224,9 +233,7 @@ export function compositeCellWithOverride(
   layers: Layer[], row: number, col: number,
   activeLayerId: string, overrideCell: AnsiCell,
 ): AnsiCell {
-  const drawable = visibleDrawableLayers(layers)
-  const clipMap = buildClipMaskMap(layers)
-  const layerMap = new Map(layers.map(l => [l.id, l]))
+  const { drawable, clipMap, layerMap } = prepareComposite(layers)
   return compositeCellCore(drawable, (layer) => {
     if (!layer.visible) return null
     if (isCellClipped(layer, row, col, clipMap, layerMap)) return null
