@@ -107,7 +107,6 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const moveRafRef = useRef<number | null>(null)
   const moveLatestCellRef = useRef<CellHalf | null>(null)
   const moveBlankGridsRef = useRef<Map<string, AnsiGrid[]>>(new Map())
-  const previewRafRef = useRef<number | null>(null)
   const previewLatestCellRef = useRef<CellHalf | null>(null)
   const [cgaPreview, setCgaPreviewRaw] = useState(false)
   const [isMoveDragging, setIsMoveDragging] = useState(false)
@@ -342,10 +341,6 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     commitPendingTextRef.current = () => textTool.commitIfEditing()
 
     function cancelPreviewRaf(): void {
-      if (previewRafRef.current !== null) {
-        cancelAnimationFrame(previewRafRef.current)
-        previewRafRef.current = null
-      }
       previewLatestCellRef.current = null
     }
 
@@ -588,14 +583,9 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         }
         case 'line':
           if (lineStartRef.current) {
+            if (previewLatestCellRef.current && draw.isSameCell(previewLatestCellRef.current, cell)) break
             previewLatestCellRef.current = cell
-            if (previewRafRef.current === null) {
-              previewRafRef.current = requestAnimationFrame(() => {
-                previewRafRef.current = null
-                const target = previewLatestCellRef.current
-                if (target && lineStartRef.current) draw.renderLinePreview(target)
-              })
-            }
+            draw.renderLinePreview(cell)
           }
           break
         case 'rect-outline':
@@ -604,14 +594,9 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         case 'oval-filled':
         case 'border':
           if (lineStartRef.current) {
+            if (previewLatestCellRef.current && draw.isSameCell(previewLatestCellRef.current, cell)) break
             previewLatestCellRef.current = cell
-            if (previewRafRef.current === null) {
-              previewRafRef.current = requestAnimationFrame(() => {
-                previewRafRef.current = null
-                const target = previewLatestCellRef.current
-                if (target && lineStartRef.current) draw.renderShapePreview(target)
-              })
-            }
+            draw.renderShapePreview(cell)
           }
           break
         case 'select':
