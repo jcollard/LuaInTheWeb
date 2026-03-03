@@ -195,16 +195,8 @@ function compositeCellCore(layers: DrawableLayer[], getCell: (layer: DrawableLay
 }
 
 /** Prepare shared compositing state: visible drawable layers, clip mask map, and layer lookup map. */
-function prepareComposite(layers: Layer[]): {
-  drawable: DrawableLayer[]
-  clipMap: Map<string, AnsiGrid>
-  layerMap: Map<string, Layer>
-} {
-  return {
-    drawable: visibleDrawableLayers(layers),
-    clipMap: buildClipMaskMap(layers),
-    layerMap: new Map(layers.map(l => [l.id, l])),
-  }
+function prepareComposite(layers: Layer[]) {
+  return { drawable: visibleDrawableLayers(layers), clipMap: buildClipMaskMap(layers), layerMap: new Map(layers.map(l => [l.id, l])) }
 }
 
 export function compositeCell(layers: Layer[], row: number, col: number): AnsiCell {
