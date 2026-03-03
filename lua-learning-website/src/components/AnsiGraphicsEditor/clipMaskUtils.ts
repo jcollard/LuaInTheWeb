@@ -42,10 +42,9 @@ export function buildClipMaskMap(layers: Layer[]): Map<string, AnsiGrid> {
  */
 export function isCellClipped(
   layer: Layer, row: number, col: number,
-  clipMap: Map<string, AnsiGrid>, allLayers: Layer[],
+  clipMap: Map<string, AnsiGrid>, layerMap: Map<string, Layer>,
 ): boolean {
   const visited = new Set<string>()
-  const layerMap = new Map(allLayers.map(l => [l.id, l]))
   let parentId = getParentId(layer)
   while (parentId) {
     if (visited.has(parentId)) break

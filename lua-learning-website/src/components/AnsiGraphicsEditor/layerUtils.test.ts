@@ -1882,7 +1882,7 @@ describe('isCellClipped', () => {
     const drawn = createLayer('BG', 'bg')
     const layers: Layer[] = [drawn]
     const clipMap = buildClipMaskMap(layers)
-    expect(isCellClipped(drawn, 0, 0, clipMap, layers)).toBe(false)
+    expect(isCellClipped(drawn, 0, 0, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(false)
   })
 
   it('returns true when cell is default in clip mask', () => {
@@ -1892,7 +1892,7 @@ describe('isCellClipped', () => {
     const drawn: DrawnLayer = { ...createLayer('Layer', 'l1'), parentId: 'g1' }
     const layers: Layer[] = [group, drawn, clip]
     const clipMap = buildClipMaskMap(layers)
-    expect(isCellClipped(drawn, 0, 0, clipMap, layers)).toBe(true)
+    expect(isCellClipped(drawn, 0, 0, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(true)
   })
 
   it('returns false when cell is non-default in clip mask', () => {
@@ -1902,7 +1902,7 @@ describe('isCellClipped', () => {
     const drawn: DrawnLayer = { ...createLayer('Layer', 'l1'), parentId: 'g1' }
     const layers: Layer[] = [group, drawn, clip]
     const clipMap = buildClipMaskMap(layers)
-    expect(isCellClipped(drawn, 5, 10, clipMap, layers)).toBe(false)
+    expect(isCellClipped(drawn, 5, 10, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(false)
   })
 
   it('stacks ancestor masks (intersection)', () => {
@@ -1918,11 +1918,11 @@ describe('isCellClipped', () => {
     const layers: Layer[] = [outerGroup, outerClip, innerGroup, innerClip, drawn]
     const clipMap = buildClipMaskMap(layers)
     // [0][0]: both masks allow -> not clipped
-    expect(isCellClipped(drawn, 0, 0, clipMap, layers)).toBe(false)
+    expect(isCellClipped(drawn, 0, 0, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(false)
     // [0][1]: inner mask clips (default cell) -> clipped
-    expect(isCellClipped(drawn, 0, 1, clipMap, layers)).toBe(true)
+    expect(isCellClipped(drawn, 0, 1, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(true)
     // [1][0]: outer mask clips (default cell) -> clipped
-    expect(isCellClipped(drawn, 1, 0, clipMap, layers)).toBe(true)
+    expect(isCellClipped(drawn, 1, 0, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(true)
   })
 
   it('treats cell with non-default char but default colors as non-default (not clipped)', () => {
@@ -1933,7 +1933,7 @@ describe('isCellClipped', () => {
     const drawn: DrawnLayer = { ...createLayer('Layer', 'l1'), parentId: 'g1' }
     const layers: Layer[] = [group, drawn, clip]
     const clipMap = buildClipMaskMap(layers)
-    expect(isCellClipped(drawn, 0, 0, clipMap, layers)).toBe(false)
+    expect(isCellClipped(drawn, 0, 0, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(false)
   })
 
   it('treats cell with default char but non-default fg as non-default (not clipped)', () => {
@@ -1944,7 +1944,7 @@ describe('isCellClipped', () => {
     const drawn: DrawnLayer = { ...createLayer('Layer', 'l1'), parentId: 'g1' }
     const layers: Layer[] = [group, drawn, clip]
     const clipMap = buildClipMaskMap(layers)
-    expect(isCellClipped(drawn, 0, 0, clipMap, layers)).toBe(false)
+    expect(isCellClipped(drawn, 0, 0, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(false)
   })
 
   it('treats cell with default char but non-default bg as non-default (not clipped)', () => {
@@ -1955,7 +1955,7 @@ describe('isCellClipped', () => {
     const drawn: DrawnLayer = { ...createLayer('Layer', 'l1'), parentId: 'g1' }
     const layers: Layer[] = [group, drawn, clip]
     const clipMap = buildClipMaskMap(layers)
-    expect(isCellClipped(drawn, 0, 0, clipMap, layers)).toBe(false)
+    expect(isCellClipped(drawn, 0, 0, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(false)
   })
 
   it('treats cell with fg differing only in green channel as non-default (not clipped)', () => {
@@ -1966,7 +1966,7 @@ describe('isCellClipped', () => {
     const drawn: DrawnLayer = { ...createLayer('Layer', 'l1'), parentId: 'g1' }
     const layers: Layer[] = [group, drawn, clip]
     const clipMap = buildClipMaskMap(layers)
-    expect(isCellClipped(drawn, 0, 0, clipMap, layers)).toBe(false)
+    expect(isCellClipped(drawn, 0, 0, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(false)
   })
 
   it('treats cell with bg differing only in red channel as non-default (not clipped)', () => {
@@ -1977,7 +1977,7 @@ describe('isCellClipped', () => {
     const drawn: DrawnLayer = { ...createLayer('Layer', 'l1'), parentId: 'g1' }
     const layers: Layer[] = [group, drawn, clip]
     const clipMap = buildClipMaskMap(layers)
-    expect(isCellClipped(drawn, 0, 0, clipMap, layers)).toBe(false)
+    expect(isCellClipped(drawn, 0, 0, clipMap, new Map(layers.map(l => [l.id, l])))).toBe(false)
   })
 })
 

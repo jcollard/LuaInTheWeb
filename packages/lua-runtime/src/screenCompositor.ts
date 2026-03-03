@@ -44,10 +44,9 @@ export function buildClipMaskMap(layers: LayerData[]): Map<string, AnsiGrid> {
  */
 export function isCellClipped(
   layer: LayerData, row: number, col: number,
-  clipMap: Map<string, AnsiGrid>, allLayers: LayerData[],
+  clipMap: Map<string, AnsiGrid>, layerMap: Map<string, LayerData>,
 ): boolean {
   const visited = new Set<string>()
-  const layerMap = new Map(allLayers.map(l => [l.id, l]))
   let parentId = getParentId(layer)
   while (parentId) {
     if (visited.has(parentId)) break
@@ -152,11 +151,12 @@ export function compositeCellCore(layers: DrawableLayerData[], getCell: (layer: 
 export function compositeGrid(layers: LayerData[]): AnsiGrid {
   const drawable = visibleDrawableLayers(layers)
   const clipMap = buildClipMaskMap(layers)
+  const layerMap = new Map(layers.map(l => [l.id, l]))
   return Array.from({ length: ANSI_ROWS }, (_, r) =>
     Array.from({ length: ANSI_COLS }, (_, c) =>
       compositeCellCore(drawable, (layer) => {
         if (!layer.visible) return null
-        if (isCellClipped(layer, r, c, clipMap, layers)) return null
+        if (isCellClipped(layer, r, c, clipMap, layerMap)) return null
         return layer.grid[r][c]
       })
     )

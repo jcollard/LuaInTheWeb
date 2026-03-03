@@ -138,7 +138,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     let grid = compositeGrid(layers)
     const activeLayer = layers.find(l => l.id === activeLayerIdRef.current)
     if (activeLayer && isClipLayer(activeLayer)) {
-      grid = applyMaskOverlay(grid, activeLayer.grid, 0.5)
+      grid = applyMaskOverlay(grid, activeLayer.grid, 0.3)
     }
     terminalBufferRef.current.flush(grid, colorTransformRef.current)
   }, [activeLayerIdRef])
@@ -738,8 +738,9 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       setBrush(p => ({ ...p, tool: 'pencil' }))
     }
     updateTextBoundsDisplayRef.current?.()
+    flushLayers(layersRef.current)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layerState.setActiveLayer, layersRef, activeLayerIdRef])
+  }, [layerState.setActiveLayer, layersRef, activeLayerIdRef, flushLayers])
 
   const setTextAlign = useCallback((align: TextAlign) => {
     const activeId = activeLayerIdRef.current

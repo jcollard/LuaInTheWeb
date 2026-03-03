@@ -320,7 +320,7 @@ describe('isCellClipped (runtime)', () => {
   it('returns false when no clip mask applies', () => {
     const drawn = makeDrawnLayer('l1', true, makeEmptyGrid())
     const layers: LayerData[] = [drawn]
-    expect(isCellClipped(drawn, 0, 0, buildClipMaskMap(layers), layers)).toBe(false)
+    expect(isCellClipped(drawn, 0, 0, buildClipMaskMap(layers), new Map(layers.map(l => [l.id, l])))).toBe(false)
   })
 
   it('returns true when cell is default in clip mask', () => {
@@ -328,7 +328,7 @@ describe('isCellClipped (runtime)', () => {
     const clip = makeClipLayer('c1', 'g1')
     const drawn = makeDrawnLayer('l1', true, makeEmptyGrid(), 'g1')
     const layers: LayerData[] = [group, drawn, clip]
-    expect(isCellClipped(drawn, 0, 0, buildClipMaskMap(layers), layers)).toBe(true)
+    expect(isCellClipped(drawn, 0, 0, buildClipMaskMap(layers), new Map(layers.map(l => [l.id, l])))).toBe(true)
   })
 
   it('returns false when cell is non-default in clip mask', () => {
@@ -337,7 +337,7 @@ describe('isCellClipped (runtime)', () => {
     clip.grid[5][10] = makeCell('#', [255, 0, 0], [0, 0, 0])
     const drawn = makeDrawnLayer('l1', true, makeEmptyGrid(), 'g1')
     const layers: LayerData[] = [group, drawn, clip]
-    expect(isCellClipped(drawn, 5, 10, buildClipMaskMap(layers), layers)).toBe(false)
+    expect(isCellClipped(drawn, 5, 10, buildClipMaskMap(layers), new Map(layers.map(l => [l.id, l])))).toBe(false)
   })
 })
 

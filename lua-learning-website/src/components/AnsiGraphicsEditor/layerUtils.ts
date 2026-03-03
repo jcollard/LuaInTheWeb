@@ -65,10 +65,8 @@ export function getNestingDepth(layer: Layer, layers: Layer[]): number {
 /** Check if candidateAncestorId is an ancestor of layerId. */
 export function isAncestorOf(layerId: string, candidateAncestorId: string, layers: Layer[]): boolean {
   const layer = layers.find(l => l.id === layerId)
-  if (!layer) return false
-  return getAncestorGroupIds(layer, layers).includes(candidateAncestorId)
+  return layer ? getAncestorGroupIds(layer, layers).includes(candidateAncestorId) : false
 }
-
 
 export function rgbEqual(a: RGBColor, b: RGBColor): boolean {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2]
@@ -103,8 +101,6 @@ export function createGroup(name: string, id?: string): GroupLayer {
     collapsed: false,
   }
 }
-
-export { createClipLayer, buildClipMaskMap, isCellClipped } from './clipMaskUtils'
 
 /** Returns IDs of groups that are effectively hidden (own visible=false or any ancestor hidden). */
 function hiddenGroupIds(layers: Layer[]): Set<string> {
@@ -201,9 +197,10 @@ function compositeCellCore(layers: DrawableLayer[], getCell: (layer: DrawableLay
 export function compositeCell(layers: Layer[], row: number, col: number): AnsiCell {
   const drawable = visibleDrawableLayers(layers)
   const clipMap = buildClipMaskMap(layers)
+  const layerMap = new Map(layers.map(l => [l.id, l]))
   return compositeCellCore(drawable, (layer) => {
     if (!layer.visible) return null
-    if (isCellClipped(layer, row, col, clipMap, layers)) return null
+    if (isCellClipped(layer, row, col, clipMap, layerMap)) return null
     return layer.grid[row][col]
   })
 }
@@ -211,11 +208,12 @@ export function compositeCell(layers: Layer[], row: number, col: number): AnsiCe
 export function compositeGrid(layers: Layer[]): AnsiGrid {
   const drawable = visibleDrawableLayers(layers)
   const clipMap = buildClipMaskMap(layers)
+  const layerMap = new Map(layers.map(l => [l.id, l]))
   return Array.from({ length: ANSI_ROWS }, (_, r) =>
     Array.from({ length: ANSI_COLS }, (_, c) =>
       compositeCellCore(drawable, (layer) => {
         if (!layer.visible) return null
-        if (isCellClipped(layer, r, c, clipMap, layers)) return null
+        if (isCellClipped(layer, r, c, clipMap, layerMap)) return null
         return layer.grid[r][c]
       })
     )
@@ -228,9 +226,10 @@ export function compositeCellWithOverride(
 ): AnsiCell {
   const drawable = visibleDrawableLayers(layers)
   const clipMap = buildClipMaskMap(layers)
+  const layerMap = new Map(layers.map(l => [l.id, l]))
   return compositeCellCore(drawable, (layer) => {
     if (!layer.visible) return null
-    if (isCellClipped(layer, row, col, clipMap, layers)) return null
+    if (isCellClipped(layer, row, col, clipMap, layerMap)) return null
     return layer.id === activeLayerId ? overrideCell : layer.grid[row][col]
   })
 }
@@ -488,11 +487,9 @@ export function assertContiguousBlocks(layers: Layer[]): void {
 }
 
 export function cloneLayerState(state: LayerState): LayerState {
-  return {
-    activeLayerId: state.activeLayerId,
-    layers: state.layers.map(cloneLayer),
-  }
+  return { activeLayerId: state.activeLayerId, layers: state.layers.map(cloneLayer) }
 }
 
+export { createClipLayer, buildClipMaskMap, isCellClipped } from './clipMaskUtils'
 export { formatLayerId, layerMatchesQuery, filterLayers, filterTagsTab } from './layerFilterUtils'
 export type { FilteredTag } from './layerFilterUtils'
