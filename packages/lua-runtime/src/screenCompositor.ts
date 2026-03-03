@@ -23,6 +23,7 @@ function isTransparentBg(color: RGBColor): boolean {
 /**
  * Build a map from group ID to the clip mask grid for that group.
  * Iterates bottom-to-top; topmost visible clip layer per group wins.
+ * Paired with clipMaskUtils.ts:buildClipMaskMap
  */
 export function buildClipMaskMap(layers: LayerData[]): Map<string, AnsiGrid> {
   const map = new Map<string, AnsiGrid>()
@@ -36,6 +37,7 @@ export function buildClipMaskMap(layers: LayerData[]): Map<string, AnsiGrid> {
 /**
  * Check if a cell is clipped by any ancestor's clip mask.
  * Walks the ancestor chain; if ANY ancestor's mask has a default cell at (row, col), returns true.
+ * Paired with clipMaskUtils.ts:isCellClipped
  */
 export function isCellClipped(
   layer: LayerData, row: number, col: number,

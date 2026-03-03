@@ -26,6 +26,7 @@ export function createClipLayer(name: string, parentId: string, id?: string): Cl
 /**
  * Build a map from group ID to the clip mask grid for that group.
  * Iterates bottom-to-top; topmost visible clip layer per group wins.
+ * Paired with screenCompositor.ts:buildClipMaskMap
  */
 export function buildClipMaskMap(layers: Layer[]): Map<string, AnsiGrid> {
   const map = new Map<string, AnsiGrid>()
@@ -39,6 +40,7 @@ export function buildClipMaskMap(layers: Layer[]): Map<string, AnsiGrid> {
 /**
  * Check if a cell is clipped by any ancestor's clip mask.
  * Walks the ancestor chain; if ANY ancestor's mask has a default cell at (row, col), returns true.
+ * Paired with screenCompositor.ts:isCellClipped
  */
 export function isCellClipped(
   layer: Layer, row: number, col: number,

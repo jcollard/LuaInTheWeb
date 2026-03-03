@@ -21,6 +21,8 @@ import { initSchedule, computePlaybackTick, type LayerSchedule } from '@lua-lear
 export { computePixelCell, computeLineCells } from './gridUtils'
 
 const MAX_HISTORY = 50
+/** Brightness multiplier for clipped regions in the editor overlay (0.15 = 85% darkness). */
+const CLIP_MASK_OVERLAY_DARKEN = 0.15
 
 function singleLayerState(id: string, grid: AnsiGrid): LayerState {
   return {
@@ -137,7 +139,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     let grid = compositeGrid(layers)
     const activeLayer = layers.find(l => l.id === activeLayerIdRef.current)
     if (activeLayer && isClipLayer(activeLayer)) {
-      grid = applyMaskOverlay(grid, activeLayer.grid, 0.3)
+      grid = applyMaskOverlay(grid, activeLayer.grid, CLIP_MASK_OVERLAY_DARKEN)
     }
     terminalBufferRef.current.flush(grid, colorTransformRef.current)
   }, [activeLayerIdRef])
@@ -728,7 +730,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       setBrush(p => (p.tool === 'move' || p.tool === 'flip') ? p : ({ ...p, tool: 'move' }))
     } else if (layer?.type === 'text') {
       setBrush(p => p.tool === 'text' ? p : ({ ...p, tool: 'text' }))
-    } else if (isClipLayer(layer!)) {
+    } else if (layer && isClipLayer(layer)) {
       // Clip layers support all drawing tools, switch from text/move to pencil
       setBrush(p => (p.tool === 'text' || (p.tool === 'move' && prevLayer && isGroupLayer(prevLayer))) ? ({ ...p, tool: 'pencil' }) : p)
     } else if (brushRef.current.tool === 'move' && prevLayer && isGroupLayer(prevLayer)) {
