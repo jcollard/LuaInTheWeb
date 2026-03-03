@@ -53,7 +53,7 @@ function isTransparentBg(color: RGBColor): boolean {
   return rgbEqual(color, TRANSPARENT_BG)
 }
 
-function compositeCellCore<T>(layers: T[], getCell: (layer: T) => AnsiCell | null): AnsiCell {
+function compositeCellCore<T>(layers: T[], getCell: (layer: T) => AnsiCell | null, preserveTransparency?: boolean): AnsiCell {
   let topColor: RGBColor | null = null
   let bottomColor: RGBColor | null = null
   // Pending text cell: char+fg from a TRANSPARENT_BG cell waiting for a bg source
@@ -95,16 +95,17 @@ function compositeCellCore<T>(layers: T[], getCell: (layer: T) => AnsiCell | nul
     if (topColor !== null && bottomColor !== null) break
   }
 
-  // If we have a pending text cell but no bg source, use DEFAULT_BG
+  // If we have a pending text cell but no bg source, use DEFAULT_BG (or preserve transparency)
   if (pendingChar !== null) {
-    return { char: pendingChar, fg: pendingFg!, bg: [...DEFAULT_BG] as RGBColor }
+    const bg = preserveTransparency ? [...TRANSPARENT_BG] : [...DEFAULT_BG]
+    return { char: pendingChar, fg: pendingFg!, bg: bg as RGBColor }
   }
 
   if (topColor === null && bottomColor === null) return DEFAULT_CELL
   return {
     char: HALF_BLOCK,
-    fg: topColor ?? [...DEFAULT_BG] as RGBColor,
-    bg: bottomColor ?? [...DEFAULT_BG] as RGBColor,
+    fg: topColor ?? ([...(preserveTransparency ? TRANSPARENT_HALF : DEFAULT_BG)] as RGBColor),
+    bg: bottomColor ?? ([...(preserveTransparency ? TRANSPARENT_HALF : DEFAULT_BG)] as RGBColor),
   }
 }
 
@@ -174,7 +175,7 @@ function compositeGroupToGrid(
       compositeCellCore(entries, (entry) => {
         if (isCellClipped(entry, r, c, clipMap, subMap)) return null
         return getEntryCell(entry, r, c)
-      })
+      }, true)
     )
   )
 }

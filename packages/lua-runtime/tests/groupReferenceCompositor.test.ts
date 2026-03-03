@@ -3,7 +3,7 @@ import { compositeGrid, compositeGridInto } from '../src/screenCompositor'
 import type { AnsiCell, AnsiGrid, ClipLayerData, DrawnLayerData, GroupLayerData, LayerData, ReferenceLayerData, RGBColor } from '../src/screenTypes'
 import {
   ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_CELL, DEFAULT_FG,
-  DEFAULT_FRAME_DURATION_MS,
+  DEFAULT_FRAME_DURATION_MS, TRANSPARENT_BG,
 } from '../src/screenTypes'
 
 function makeCell(char: string, fg: RGBColor, bg: RGBColor): AnsiCell {
@@ -161,5 +161,29 @@ describe('compositeGrid with group reference layers (runtime)', () => {
     // child2 is on top of child1 in the group; 'B' wins at (0,0)
     // Ref at offset (10,0) shows composited group
     expect(result[10][0].char).toBe('B')
+  })
+
+  it('reference to group preserves transparent cells for compositing below', () => {
+    const blue: RGBColor = [0, 0, 255]
+    // Background layer below the reference provides bg color
+    const bgGrid = makeEmptyGrid()
+    bgGrid[0][0] = makeCell(' ', DEFAULT_FG, blue)
+    const bgLayer = makeDrawnLayer('bg', true, bgGrid)
+
+    // Group with a text-layer child using TRANSPARENT_BG
+    const group = makeGroup('g1', true)
+    const childGrid = makeEmptyGrid()
+    childGrid[0][0] = makeCell('T', red, TRANSPARENT_BG)
+    const child = makeDrawnLayer('child', true, childGrid, 'g1')
+
+    // Reference to the group at offset (0,0) so it overlaps bgLayer
+    const ref = makeRefLayer('ref1', 'g1', 0, 0)
+    const layers: LayerData[] = [bgLayer, group, child, ref]
+    const result = compositeGrid(layers)
+
+    // The 'T' text from the group reference should pick up blue bg from bgLayer below
+    expect(result[0][0].char).toBe('T')
+    expect(result[0][0].fg).toEqual(red)
+    expect(result[0][0].bg).toEqual(blue)
   })
 })

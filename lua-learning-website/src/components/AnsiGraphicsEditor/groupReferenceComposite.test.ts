@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { compositeGrid, compositeCell, createLayer, createClipLayer } from './layerUtils'
-import { DEFAULT_CELL, DEFAULT_BG, DEFAULT_FG } from './types'
+import { DEFAULT_CELL, DEFAULT_BG, DEFAULT_FG, TRANSPARENT_BG } from './types'
 import type { GroupLayer, ReferenceLayer, RGBColor, Layer, AnsiCell } from './types'
 
 function isDefaultCell(cell: AnsiCell): boolean {
@@ -168,5 +168,28 @@ describe('compositeGrid with group reference layers (editor)', () => {
     expect(isDefaultCell(result[0][0])).toBe(true)
     // But visible ref reads the group's composited content and renders at offset
     expect(result[5][10]).toEqual({ char: '#', fg: red, bg: DEFAULT_BG })
+  })
+
+  it('reference to group preserves transparent cells for compositing below', () => {
+    const blue: RGBColor = [0, 0, 255]
+    // Background layer below the reference provides bg color
+    const bgLayer = createLayer('BG', 'bg')
+    bgLayer.grid[0][0] = { char: ' ', fg: DEFAULT_FG, bg: blue }
+
+    // Group with a text-layer child using TRANSPARENT_BG
+    const group = makeGroup('g1', true)
+    const child = createLayer('Child', 'child')
+    child.parentId = 'g1'
+    child.grid[0][0] = { char: 'T', fg: red, bg: [...TRANSPARENT_BG] as RGBColor }
+
+    // Reference to the group at offset (0,0) so it overlaps bgLayer
+    const ref = makeRef('ref1', 'g1', 0, 0)
+    const layers: Layer[] = [bgLayer, group, child, ref]
+    const result = compositeGrid(layers)
+
+    // The 'T' text from the group reference should pick up blue bg from bgLayer below
+    expect(result[0][0].char).toBe('T')
+    expect(result[0][0].fg).toEqual(red)
+    expect(result[0][0].bg).toEqual(blue)
   })
 })

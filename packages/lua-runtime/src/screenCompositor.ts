@@ -167,7 +167,7 @@ function compositeGroupToGrid(
       compositeCellCore(entries, (entry) => {
         if (isCellClipped(entry, r, c, clipMap, subMap)) return null
         return getEntryCell(entry, r, c)
-      })
+      }, true)
     )
   )
 }
@@ -266,7 +266,7 @@ function getEntryCell(entry: CompositeEntry, row: number, col: number): AnsiCell
  * Entries are ordered bottom-to-top (index 0 = bottom).
  * Iterates from top to bottom, resolving transparency.
  */
-export function compositeCellCore<T>(layers: T[], getCell: (layer: T) => AnsiCell | null): AnsiCell {
+export function compositeCellCore<T>(layers: T[], getCell: (layer: T) => AnsiCell | null, preserveTransparency?: boolean): AnsiCell {
   let topColor: RGBColor | null = null
   let bottomColor: RGBColor | null = null
   let pendingChar: string | null = null
@@ -305,14 +305,15 @@ export function compositeCellCore<T>(layers: T[], getCell: (layer: T) => AnsiCel
   }
 
   if (pendingChar !== null) {
-    return { char: pendingChar, fg: pendingFg!, bg: [...DEFAULT_BG] as RGBColor }
+    const bg = preserveTransparency ? [...TRANSPARENT_BG] : [...DEFAULT_BG]
+    return { char: pendingChar, fg: pendingFg!, bg: bg as RGBColor }
   }
 
   if (topColor === null && bottomColor === null) return DEFAULT_CELL
   return {
     char: HALF_BLOCK,
-    fg: topColor ?? [...DEFAULT_BG] as RGBColor,
-    bg: bottomColor ?? [...DEFAULT_BG] as RGBColor,
+    fg: topColor ?? ([...(preserveTransparency ? TRANSPARENT_HALF : DEFAULT_BG)] as RGBColor),
+    bg: bottomColor ?? ([...(preserveTransparency ? TRANSPARENT_HALF : DEFAULT_BG)] as RGBColor),
   }
 }
 
