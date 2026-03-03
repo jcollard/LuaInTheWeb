@@ -1,5 +1,5 @@
 import type { Layer } from './types'
-import { isDrawableLayer } from './types'
+import { isDrawableLayer, isGroupLayer } from './types'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface LayerContextMenuProps {
@@ -97,7 +97,7 @@ export function LayerContextMenu({
         >
           Duplicate
         </button>
-        {contextLayer && isDrawableLayer(contextLayer) && (
+        {contextLayer && (isDrawableLayer(contextLayer) || isGroupLayer(contextLayer)) && (
           <button
             className={styles.layerContextMenuItem}
             data-testid="context-create-reference"

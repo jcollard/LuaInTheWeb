@@ -130,6 +130,54 @@ export interface ReferenceEntry {
 
 export type CompositeEntry = DrawableEntry | ReferenceEntry
 
+/** Collect the group layer and all its descendants from the ordered layer list. */
+function collectGroupSubset(groupId: string, allLayers: Layer[]): Layer[] {
+  const result: Layer[] = []
+  const descendantGroups = new Set([groupId])
+  for (const layer of allLayers) {
+    if (layer.id === groupId) { result.push(layer); continue }
+    if (layer.parentId && descendantGroups.has(layer.parentId)) {
+      result.push(layer)
+      if (isGroupLayer(layer)) descendantGroups.add(layer.id)
+    }
+  }
+  return result
+}
+
+/** Composite a group's children into a single grid, respecting clip masks and nested references. */
+function compositeGroupToGrid(
+  groupId: string, layers: { map: Map<string, Layer>; all: Layer[] }, visited: Set<string>,
+): AnsiGrid | null {
+  const subset = collectGroupSubset(groupId, layers.all)
+  if (subset.length <= 1) return null // only group header, no children
+
+  const hidden = hiddenGroupIds(subset)
+  const entries: CompositeEntry[] = []
+  for (const layer of subset) {
+    if (layer.parentId && hidden.has(layer.parentId)) continue
+    if (isDrawableLayer(layer)) {
+      entries.push({ kind: 'drawable', id: layer.id, visible: layer.visible, parentId: layer.parentId, grid: layer.grid })
+    } else if (isReferenceLayer(layer)) {
+      const resolved = resolveReference(layer.sourceLayerId, layer.offsetRow, layer.offsetCol, layers, visited)
+      if (resolved) {
+        entries.push({ kind: 'reference', id: layer.id, visible: layer.visible, parentId: layer.parentId, sourceGrid: resolved.grid, offsetRow: resolved.offsetRow, offsetCol: resolved.offsetCol })
+      }
+    }
+  }
+  if (entries.length === 0) return null
+
+  const clipMap = buildClipMaskMap(subset)
+  const subMap = new Map(subset.map(l => [l.id, l]))
+  return Array.from({ length: ANSI_ROWS }, (_, r) =>
+    Array.from({ length: ANSI_COLS }, (_, c) =>
+      compositeCellCore(entries, (entry) => {
+        if (isCellClipped(entry, r, c, clipMap, subMap)) return null
+        return getEntryCell(entry, r, c)
+      })
+    )
+  )
+}
+
 /**
  * Resolve a reference layer's source, following chained references.
  * Returns the ultimate drawable layer's grid and accumulated offsets,
@@ -139,20 +187,26 @@ function resolveReference(
   sourceLayerId: string,
   offsetRow: number,
   offsetCol: number,
-  layerMap: Map<string, Layer>,
+  layers: { map: Map<string, Layer>; all: Layer[] },
+  visited?: Set<string>,
 ): { grid: AnsiGrid; offsetRow: number; offsetCol: number } | null {
-  const visited = new Set<string>()
+  const seen = visited ?? new Set<string>()
   let currentId = sourceLayerId
   let accRow = offsetRow
   let accCol = offsetCol
 
-  while (currentId && visited.size < 10) {
-    if (visited.has(currentId)) return null // cycle
-    visited.add(currentId)
-    const source = layerMap.get(currentId)
+  while (currentId && seen.size < 10) {
+    if (seen.has(currentId)) return null // cycle
+    seen.add(currentId)
+    const source = layers.map.get(currentId)
     if (!source) return null // missing source
     if (isDrawableLayer(source)) {
       return { grid: source.grid, offsetRow: accRow, offsetCol: accCol }
+    }
+    if (isGroupLayer(source)) {
+      const grid = compositeGroupToGrid(currentId, layers, seen)
+      if (!grid) return null
+      return { grid, offsetRow: accRow, offsetCol: accCol }
     }
     if (isReferenceLayer(source)) {
       accRow += source.offsetRow
@@ -160,7 +214,7 @@ function resolveReference(
       currentId = source.sourceLayerId
       continue
     }
-    return null // groups/clips can't be referenced
+    return null // clips can't be referenced
   }
   return null // max depth exceeded
 }
@@ -186,7 +240,7 @@ export function buildCompositeEntries(layers: Layer[], layerMap: Map<string, Lay
         grid: layer.grid,
       })
     } else if (isReferenceLayer(layer)) {
-      const resolved = resolveReference(layer.sourceLayerId, layer.offsetRow, layer.offsetCol, layerMap)
+      const resolved = resolveReference(layer.sourceLayerId, layer.offsetRow, layer.offsetCol, { map: layerMap, all: layers })
       if (resolved) {
         entries.push({
           kind: 'reference',

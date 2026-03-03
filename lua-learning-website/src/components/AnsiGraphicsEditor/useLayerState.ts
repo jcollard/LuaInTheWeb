@@ -135,7 +135,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
   const addReferenceLayer = useCallback((sourceLayerId: string) => {
     setLayers(prev => {
       const source = prev.find(l => l.id === sourceLayerId)
-      if (!source || !isDrawableLayer(source)) return prev
+      if (!source || (!isDrawableLayer(source) && !isGroupLayer(source))) return prev
       const ref = createReferenceLayer(`${source.name} (Ref)`, sourceLayerId)
       setActiveLayerId(ref.id)
       return [...prev, ref]
