@@ -528,15 +528,17 @@ describe('compositeGrid with reference layers (runtime)', () => {
     expect(result[4][6]).toEqual(makeCell('X', red, DEFAULT_BG))
   })
 
-  it('hidden reference still renders source content', () => {
+  it('hidden reference does NOT render', () => {
     const grid = makeEmptyGrid()
     grid[0][0] = makeCell('#', red, DEFAULT_BG)
     const source = makeDrawnLayer('src', true, grid)
     const ref: ReferenceLayerData = { ...makeRefLayer('ref1', 'src', 10, 10), visible: false }
     const layers: LayerData[] = [source, ref]
     const result = compositeGrid(layers)
-    // Hidden ref still renders source content at offset
-    expect(result[10][10]).toEqual(makeCell('#', red, DEFAULT_BG))
+    // Hidden ref should not render at offset position
+    expect(isDefaultCell(result[10][10])).toBe(true)
+    // Source itself still renders
+    expect(result[0][0]).toEqual(makeCell('#', red, DEFAULT_BG))
   })
 
   it('hidden drawable layer does NOT render', () => {
