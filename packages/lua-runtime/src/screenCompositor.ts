@@ -43,11 +43,10 @@ export function isCellClipped(
   layer: LayerData, row: number, col: number,
   clipMap: Map<string, AnsiGrid>, layerMap: Map<string, LayerData>,
 ): boolean {
-  const visited = new Set<string>()
   let parentId = layer.parentId
-  while (parentId) {
-    if (visited.has(parentId)) break
-    visited.add(parentId)
+  let depth = 0
+  while (parentId && depth < 10) {
+    depth++
     const mask = clipMap.get(parentId)
     if (mask && isDefaultCell(mask[row][col])) return true
     const parent = layerMap.get(parentId)
@@ -59,18 +58,31 @@ export function isCellClipped(
 /** Returns IDs of groups that are effectively hidden (own visible=false or any ancestor hidden). */
 export function hiddenGroupIds(layers: LayerData[]): Set<string> {
   const ids = new Set<string>()
-  // First pass: collect directly hidden groups
+  // Build parent → children map for single-pass BFS
+  const children = new Map<string, string[]>()
   for (const layer of layers) {
-    if (isGroupLayer(layer) && !layer.visible) ids.add(layer.id)
+    if (isGroupLayer(layer) && layer.parentId) {
+      const siblings = children.get(layer.parentId)
+      if (siblings) siblings.push(layer.id)
+      else children.set(layer.parentId, [layer.id])
+    }
   }
-  // Iterative fixpoint: propagate hidden status to nested sub-groups
-  let changed = true
-  while (changed) {
-    changed = false
-    for (const layer of layers) {
-      if (isGroupLayer(layer) && !ids.has(layer.id) && layer.parentId && ids.has(layer.parentId)) {
-        ids.add(layer.id)
-        changed = true
+  // Seed with directly hidden groups, then BFS to propagate
+  const queue: string[] = []
+  for (const layer of layers) {
+    if (isGroupLayer(layer) && !layer.visible) {
+      ids.add(layer.id)
+      queue.push(layer.id)
+    }
+  }
+  while (queue.length > 0) {
+    const parentId = queue.pop()!
+    const kids = children.get(parentId)
+    if (!kids) continue
+    for (const kid of kids) {
+      if (!ids.has(kid)) {
+        ids.add(kid)
+        queue.push(kid)
       }
     }
   }
@@ -141,6 +153,26 @@ export function compositeCellCore(layers: DrawableLayerData[], getCell: (layer: 
     char: HALF_BLOCK,
     fg: topColor ?? [...DEFAULT_BG] as RGBColor,
     bg: bottomColor ?? [...DEFAULT_BG] as RGBColor,
+  }
+}
+
+/** Composite all visible layers into a pre-allocated target grid (zero allocation). */
+export function compositeGridInto(target: AnsiGrid, layers: LayerData[]): void {
+  const drawable = visibleDrawableLayers(layers)
+  const clipMap = buildClipMaskMap(layers)
+  const layerMap = new Map(layers.map(l => [l.id, l]))
+  for (let r = 0; r < ANSI_ROWS; r++) {
+    for (let c = 0; c < ANSI_COLS; c++) {
+      const result = compositeCellCore(drawable, (layer) => {
+        if (!layer.visible) return null
+        if (isCellClipped(layer, r, c, clipMap, layerMap)) return null
+        return layer.grid[r][c]
+      })
+      const cell = target[r][c]
+      cell.char = result.char
+      cell.fg[0] = result.fg[0]; cell.fg[1] = result.fg[1]; cell.fg[2] = result.fg[2]
+      cell.bg[0] = result.bg[0]; cell.bg[1] = result.bg[1]; cell.bg[2] = result.bg[2]
+    }
   }
 }
 

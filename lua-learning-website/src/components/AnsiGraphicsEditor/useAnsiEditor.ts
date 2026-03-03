@@ -107,6 +107,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const moveRafRef = useRef<number | null>(null)
   const moveLatestCellRef = useRef<CellHalf | null>(null)
   const moveBlankGridsRef = useRef<Map<string, AnsiGrid[]>>(new Map())
+  const previewLatestCellRef = useRef<CellHalf | null>(null)
   const [cgaPreview, setCgaPreviewRaw] = useState(false)
   const [isMoveDragging, setIsMoveDragging] = useState(false)
   const flipOriginRef = useRef<{ row: number; col: number }>({ row: 12, col: 40 })
@@ -338,6 +339,10 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     })
     textToolRef.current = textTool
     commitPendingTextRef.current = () => textTool.commitIfEditing()
+
+    function cancelPreviewRaf(): void {
+      previewLatestCellRef.current = null
+    }
 
     function endMoveDrag(): void {
       if (moveRafRef.current !== null) {
@@ -577,14 +582,22 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           break
         }
         case 'line':
-          if (lineStartRef.current) draw.renderLinePreview(cell)
+          if (lineStartRef.current) {
+            if (previewLatestCellRef.current && draw.isSameCell(previewLatestCellRef.current, cell)) break
+            previewLatestCellRef.current = cell
+            draw.renderLinePreview(cell)
+          }
           break
         case 'rect-outline':
         case 'rect-filled':
         case 'oval-outline':
         case 'oval-filled':
         case 'border':
-          if (lineStartRef.current) draw.renderShapePreview(cell)
+          if (lineStartRef.current) {
+            if (previewLatestCellRef.current && draw.isSameCell(previewLatestCellRef.current, cell)) break
+            previewLatestCellRef.current = cell
+            draw.renderShapePreview(cell)
+          }
           break
         case 'select':
           sel.onMouseMove(cell.row, cell.col)
@@ -619,6 +632,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           lastCellRef.current = null
           break
         case 'line': {
+          cancelPreviewRaf()
           if (!lineStartRef.current) break
           const cell = getCellHalfFromMouse(e, container)
           if (cell) {
@@ -634,6 +648,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         case 'oval-outline':
         case 'oval-filled':
         case 'border': {
+          cancelPreviewRaf()
           if (!lineStartRef.current) break
           const cell = getCellHalfFromMouse(e, container)
           if (cell) {
@@ -698,6 +713,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       container.removeEventListener('contextmenu', onContextMenu)
       document.removeEventListener('mouseup', onDocumentMouseUp)
       document.removeEventListener('keydown', onKeyDown)
+      cancelPreviewRaf()
       textTool.reset()
     }
   }, [paintCell, paintPixel, paintBlendPixel, applyCell, pushSnapshot, layersRef, activeLayerIdRef, getActiveGrid, rawAddTextLayer, rawUpdateTextLayer, undo, redo, rawApplyMoveGrids, rawApplyMoveGridsImmediate, rawSetCurrentFrame, setTool, setBrushMode, togglePlayback])

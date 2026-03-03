@@ -5,7 +5,7 @@ import {
   parseCellKey, isInBounds,
   computeErasePixelCell, computeLineCells, computeRectCells, computeOvalCells, computeBorderCells,
 } from './gridUtils'
-import { compositeCell, compositeCellWithOverride } from './layerUtils'
+import { prepareComposite, compositeCellPrepared, compositeCellWithOverridePrepared } from './layerUtils'
 import type { TerminalBuffer } from './terminalBuffer'
 
 export interface DrawHelperDeps {
@@ -121,12 +121,13 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
   function writePreviewCells(cells: Map<string, AnsiCell>): void {
     const layers = layersRef.current
     const activeId = activeLayerIdRef.current
+    const state = prepareComposite(layers)
     for (const [key, cell] of cells) {
       const [r, c] = parseCellKey(key)
       if (!previewCellsRef.current.has(key)) {
-        previewCellsRef.current.set(key, compositeCell(layers, r, c))
+        previewCellsRef.current.set(key, compositeCellPrepared(state, r, c))
       }
-      terminalBuffer.writeCell(r, c, compositeCellWithOverride(layers, r, c, activeId, cell), colorTransformRef.current)
+      terminalBuffer.writeCell(r, c, compositeCellWithOverridePrepared(state, r, c, activeId, cell), colorTransformRef.current)
     }
   }
 
@@ -139,9 +140,10 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
       affectedKeys.add(key)
     }
     const layers = layersRef.current
+    const state = prepareComposite(layers)
     for (const key of affectedKeys) {
       const [r, c] = parseCellKey(key)
-      terminalBuffer.writeCell(r, c, compositeCell(layers, r, c), colorTransformRef.current)
+      terminalBuffer.writeCell(r, c, compositeCellPrepared(state, r, c), colorTransformRef.current)
     }
   }
 

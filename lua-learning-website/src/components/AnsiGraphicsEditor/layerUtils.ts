@@ -1,6 +1,7 @@
 import type { AnsiCell, AnsiGrid, ClipLayer, DrawableLayer, DrawnLayer, GroupLayer, Layer, LayerState, RGBColor, TextLayer } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer, isClipLayer, getParentId } from './types'
-import { buildClipMaskMap, isCellClipped } from './clipMaskUtils'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, isGroupLayer, isDrawableLayer, isClipLayer, getParentId } from './types'
+import { compositeGrid } from './compositeUtils'
+export { visibleDrawableLayers, compositeCell, compositeGrid, compositeGridInto, compositeCellWithOverride, prepareComposite, compositeCellPrepared, compositeCellWithOverridePrepared, type CompositeState } from './compositeUtils'
 
 /** Walk parentId chain collecting ancestor group IDs. Uses a visited set to prevent infinite loops. */
 export function getAncestorGroupIds(layer: Layer, layers: Layer[]): string[] {
@@ -102,137 +103,6 @@ export function createGroup(name: string, id?: string): GroupLayer {
   }
 }
 
-/** Returns IDs of groups that are effectively hidden (own visible=false or any ancestor hidden). */
-function hiddenGroupIds(layers: Layer[]): Set<string> {
-  const ids = new Set<string>()
-  // First pass: collect directly hidden groups
-  for (const layer of layers) {
-    if (isGroupLayer(layer) && !layer.visible) ids.add(layer.id)
-  }
-  // Iterative fixpoint: propagate hidden status to nested sub-groups
-  let changed = true
-  while (changed) {
-    changed = false
-    for (const layer of layers) {
-      if (isGroupLayer(layer) && !ids.has(layer.id) && layer.parentId && ids.has(layer.parentId)) {
-        ids.add(layer.id)
-        changed = true
-      }
-    }
-  }
-  return ids
-}
-
-/** Filters to only DrawableLayer entries, skipping groups and children of hidden groups. */
-export function visibleDrawableLayers(layers: Layer[]): DrawableLayer[] {
-  const hidden = hiddenGroupIds(layers)
-  const result: DrawableLayer[] = []
-  for (const layer of layers) {
-    if (!isDrawableLayer(layer)) continue
-    if (layer.parentId && hidden.has(layer.parentId)) continue
-    result.push(layer)
-  }
-  return result
-}
-
-function isTransparentBg(color: RGBColor): boolean {
-  return rgbEqual(color, TRANSPARENT_BG)
-}
-
-function compositeCellCore(layers: DrawableLayer[], getCell: (layer: DrawableLayer) => AnsiCell | null): AnsiCell {
-  let topColor: RGBColor | null = null
-  let bottomColor: RGBColor | null = null
-  // Pending text cell: char+fg from a TRANSPARENT_BG cell waiting for a bg source
-  let pendingChar: string | null = null
-  let pendingFg: RGBColor | null = null
-
-  for (let i = layers.length - 1; i >= 0; i--) {
-    const cell = getCell(layers[i])
-    if (cell === null || isDefaultCell(cell)) continue
-
-    // TRANSPARENT_BG cells: space = fully transparent (skip), non-space = pending text
-    if (isTransparentBg(cell.bg)) {
-      if (cell.char === ' ') continue
-      if (pendingChar === null) {
-        pendingChar = cell.char
-        pendingFg = cell.fg
-      }
-      continue
-    }
-
-    if (cell.char === HALF_BLOCK) {
-      // Pending text cell can use the half-block's bg as its background
-      if (pendingChar !== null) {
-        return { char: pendingChar, fg: pendingFg!, bg: cell.bg }
-      }
-      if (topColor === null && !rgbEqual(cell.fg, TRANSPARENT_HALF)) topColor = cell.fg
-      if (bottomColor === null && !rgbEqual(cell.bg, TRANSPARENT_HALF)) bottomColor = cell.bg
-    } else {
-      // Pending text cell uses this opaque cell's bg
-      if (pendingChar !== null) {
-        return { char: pendingChar, fg: pendingFg!, bg: cell.bg }
-      }
-      // Non-HALF_BLOCK cell is fully opaque
-      if (topColor === null && bottomColor === null) return cell
-      if (topColor === null) topColor = cell.bg
-      if (bottomColor === null) bottomColor = cell.bg
-    }
-
-    if (topColor !== null && bottomColor !== null) break
-  }
-
-  // If we have a pending text cell but no bg source, use DEFAULT_BG
-  if (pendingChar !== null) {
-    return { char: pendingChar, fg: pendingFg!, bg: [...DEFAULT_BG] as RGBColor }
-  }
-
-  if (topColor === null && bottomColor === null) return DEFAULT_CELL
-  return {
-    char: HALF_BLOCK,
-    fg: topColor ?? [...DEFAULT_BG] as RGBColor,
-    bg: bottomColor ?? [...DEFAULT_BG] as RGBColor,
-  }
-}
-
-/** Prepare shared compositing state: visible drawable layers, clip mask map, and layer lookup map. */
-function prepareComposite(layers: Layer[]) {
-  return { drawable: visibleDrawableLayers(layers), clipMap: buildClipMaskMap(layers), layerMap: new Map(layers.map(l => [l.id, l])) }
-}
-
-export function compositeCell(layers: Layer[], row: number, col: number): AnsiCell {
-  const { drawable, clipMap, layerMap } = prepareComposite(layers)
-  return compositeCellCore(drawable, (layer) => {
-    if (!layer.visible) return null
-    if (isCellClipped(layer, row, col, clipMap, layerMap)) return null
-    return layer.grid[row][col]
-  })
-}
-
-export function compositeGrid(layers: Layer[]): AnsiGrid {
-  const { drawable, clipMap, layerMap } = prepareComposite(layers)
-  return Array.from({ length: ANSI_ROWS }, (_, r) =>
-    Array.from({ length: ANSI_COLS }, (_, c) =>
-      compositeCellCore(drawable, (layer) => {
-        if (!layer.visible) return null
-        if (isCellClipped(layer, r, c, clipMap, layerMap)) return null
-        return layer.grid[r][c]
-      })
-    )
-  )
-}
-
-export function compositeCellWithOverride(
-  layers: Layer[], row: number, col: number,
-  activeLayerId: string, overrideCell: AnsiCell,
-): AnsiCell {
-  const { drawable, clipMap, layerMap } = prepareComposite(layers)
-  return compositeCellCore(drawable, (layer) => {
-    if (!layer.visible) return null
-    if (isCellClipped(layer, row, col, clipMap, layerMap)) return null
-    return layer.id === activeLayerId ? overrideCell : layer.grid[row][col]
-  })
-}
-
 export function addTagToLayer<T extends Layer>(layer: T, tag: string): T {
   if (layer.tags?.includes(tag)) return layer
   return { ...layer, tags: [...(layer.tags ?? []), tag] }
@@ -320,15 +190,11 @@ export function mergeLayerDown(layers: Layer[], layerId: string): Layer[] | null
 
   // After group guard, both are drawable layers
   // Composite the two layers into a new grid, treating both as visible
-  const pair: DrawableLayer[] = [
+  const pair: Layer[] = [
     { ...lower, visible: true } as DrawableLayer,
     { ...upper, visible: true } as DrawableLayer,
   ]
-  const mergedGrid: AnsiGrid = Array.from({ length: ANSI_ROWS }, (_, r) =>
-    Array.from({ length: ANSI_COLS }, (_, c) =>
-      compositeCellCore(pair, (layer) => layer.grid[r][c])
-    )
-  )
+  const mergedGrid = compositeGrid(pair)
 
   const merged: DrawnLayer = {
     type: 'drawn',
