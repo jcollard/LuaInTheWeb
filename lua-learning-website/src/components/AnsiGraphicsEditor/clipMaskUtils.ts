@@ -46,11 +46,10 @@ export function isCellClipped(
   layer: Layer, row: number, col: number,
   clipMap: Map<string, AnsiGrid>, layerMap: Map<string, Layer>,
 ): boolean {
-  const visited = new Set<string>()
   let parentId = getParentId(layer)
-  while (parentId) {
-    if (visited.has(parentId)) break
-    visited.add(parentId)
+  let depth = 0
+  while (parentId && depth < 10) {
+    depth++
     const mask = clipMap.get(parentId)
     if (mask && isDefault(mask[row][col])) return true
     const parent = layerMap.get(parentId)

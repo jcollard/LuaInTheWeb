@@ -18,10 +18,11 @@ import { InputAPI } from './InputAPI'
 import type { TimingInfo } from '@lua-learning/canvas-runtime'
 import { initSchedule, computePlaybackTick, type LayerSchedule } from '@lua-learning/ansi-shared'
 import { parseScreenLayers } from './screenParser'
-import { compositeGrid } from './screenCompositor'
+import { compositeGrid, compositeGridInto } from './screenCompositor'
 import { renderGridToAnsiString, renderDiffAnsiString } from './ansiStringRenderer'
 import { renderTextLayerGrid } from './textLayerGrid'
-import type { AnsiGrid, LayerData, DrawnLayerData, TextLayerData, RGBColor } from './screenTypes'
+import type { AnsiGrid, AnsiCell, LayerData, DrawnLayerData, TextLayerData, RGBColor } from './screenTypes'
+import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG } from './screenTypes'
 
 /**
  * Handle to a running ANSI terminal instance.
@@ -86,6 +87,17 @@ interface ScreenState {
   /** True once screenPlay() or screenPause() has been explicitly called. */
   playbackTouched: boolean
   lastGrid: AnsiGrid | null
+  /** True when the full ANSI string needs to be written to the terminal. */
+  dirty: boolean
+}
+
+/** Create a pre-allocated empty ANSI grid (25×80 mutable cells). */
+function createEmptyGrid(): AnsiGrid {
+  return Array.from({ length: ANSI_ROWS }, () =>
+    Array.from({ length: ANSI_COLS }, (): AnsiCell => ({
+      char: ' ', fg: [...DEFAULT_FG] as RGBColor, bg: [...DEFAULT_BG] as RGBColor,
+    }))
+  )
 }
 
 /**
@@ -125,6 +137,10 @@ export class AnsiController {
   private nextScreenId = 1
   private screenStates: Map<number, ScreenState> = new Map()
   private activeScreenId: number | null = null
+  /** Double-buffered grids for zero-allocation compositing in advanceScreenAnimation. */
+  private compositeBufferA: AnsiGrid = createEmptyGrid()
+  private compositeBufferB: AnsiGrid = createEmptyGrid()
+  private useBufferA = true
 
   constructor(callbacks: AnsiCallbacks, ansiId = 'ansi-main') {
     this.callbacks = callbacks
@@ -137,7 +153,7 @@ export class AnsiController {
   private getScreenState(id: number): ScreenState {
     let state = this.screenStates.get(id)
     if (!state) {
-      state = { ansiString: '', layers: [], schedule: null, playing: false, playbackTouched: false, lastGrid: null }
+      state = { ansiString: '', layers: [], schedule: null, playing: false, playbackTouched: false, lastGrid: null, dirty: false }
       this.screenStates.set(id, state)
     }
     return state
@@ -457,8 +473,11 @@ export class AnsiController {
     }
     this.activeScreenId = id
 
-    // Auto-start playback if screen has animated layers and isn't already paused
+    // Mark as dirty so onFrame writes the full screen
     const state = this.getScreenState(id)
+    state.dirty = true
+
+    // Auto-start playback if screen has animated layers and isn't already paused
     if (!state.playbackTouched) {
       if (this.hasAnimatedLayers(state.layers)) {
         this.screenPlay(id)
@@ -625,6 +644,7 @@ export class AnsiController {
     const grid = compositeGrid(state.layers)
     state.ansiString = renderGridToAnsiString(grid)
     state.lastGrid = grid
+    state.dirty = true
   }
 
   // --- Internal ---
@@ -646,11 +666,12 @@ export class AnsiController {
       }
     }
 
-    // Render active screen background before tick callback
+    // Render active screen background before tick callback (only when dirty)
     if (this.activeScreenId !== null) {
       const activeState = this.screenStates.get(this.activeScreenId)
-      if (activeState?.ansiString) {
+      if (activeState?.dirty && activeState.ansiString) {
         this.handle?.write(activeState.ansiString)
+        activeState.dirty = false
       }
     }
 
@@ -689,15 +710,20 @@ export class AnsiController {
     const { changed } = computePlaybackTick(state.layers, state.schedule, nowMs)
     if (!changed) return
 
-    // Re-composite and try diff rendering for efficiency
+    // Re-composite into reusable buffer (double-buffered for diff rendering)
     const oldGrid = state.lastGrid
-    const newGrid = compositeGrid(state.layers)
+    const buffer = this.useBufferA ? this.compositeBufferA : this.compositeBufferB
+    this.useBufferA = !this.useBufferA
+    compositeGridInto(buffer, state.layers)
+    const newGrid = buffer
     state.lastGrid = newGrid
 
     if (oldGrid) {
       const diff = renderDiffAnsiString(oldGrid, newGrid)
       if (diff) {
         this.handle?.write(diff)
+        // Diff already rendered the change — suppress redundant full write in onFrame
+        state.dirty = false
       }
     }
 

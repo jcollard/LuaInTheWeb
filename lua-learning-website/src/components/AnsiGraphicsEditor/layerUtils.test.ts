@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import { describe, it, expect } from 'vitest'
-import { isDefaultCell, createLayer, createGroup, createClipLayer, compositeCell, compositeGrid, compositeCellWithOverride, cloneLayerState, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, buildDisplayOrder, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock, addTagToLayer, removeTagFromLayer, formatLayerId, layerMatchesQuery, filterLayers, filterTagsTab, buildClipMaskMap, isCellClipped } from './layerUtils'
+import { isDefaultCell, createLayer, createGroup, createClipLayer, compositeCell, compositeGrid, compositeCellWithOverride, prepareComposite, compositeCellPrepared, compositeCellWithOverridePrepared, cloneLayerState, mergeLayerDown, visibleDrawableLayers, getAncestorGroupIds, getGroupDescendantLayers, getGroupDescendantIds, getNestingDepth, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, buildDisplayOrder, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock, addTagToLayer, removeTagFromLayer, formatLayerId, layerMatchesQuery, filterLayers, filterTagsTab, buildClipMaskMap, isCellClipped } from './layerUtils'
 import { DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, ANSI_ROWS, ANSI_COLS, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer, isClipLayer } from './types'
 import type { AnsiCell, DrawableLayer, DrawnLayer, RGBColor, Layer, LayerState, TextLayer, GroupLayer, ClipLayer } from './types'
 
@@ -2034,5 +2034,47 @@ describe('compositeGrid with clip masks', () => {
     const layers: Layer[] = [group, drawn, clip]
     const result = compositeGrid(layers)
     expect(result[0][0].char).toBe('#')
+  })
+})
+
+describe('compositeCellPrepared', () => {
+  it('produces same result as compositeCell', () => {
+    const bottom = createLayer('Bottom', 'l1')
+    bottom.grid[0][0] = { char: 'A', fg: [255, 0, 0], bg: [0, 0, 255] }
+    const top = createLayer('Top', 'l2')
+    top.grid[0][0] = { char: 'B', fg: [0, 255, 0], bg: [255, 0, 0] }
+    const layers: Layer[] = [bottom, top]
+
+    const state = prepareComposite(layers)
+    expect(compositeCellPrepared(state, 0, 0)).toEqual(compositeCell(layers, 0, 0))
+  })
+
+  it('handles hidden group children same as compositeCell', () => {
+    const bottom = createLayer('Bottom', 'l1')
+    bottom.grid[0][0] = { char: 'A', fg: [255, 0, 0], bg: [0, 0, 255] }
+    const group: GroupLayer = { ...createGroup('G', 'g1'), visible: false }
+    const child = createLayer('Child', 'l2')
+    child.grid[0][0] = { char: 'X', fg: [0, 255, 0], bg: [0, 0, 0] }
+    child.parentId = 'g1'
+    const layers: Layer[] = [bottom, group, child]
+
+    const state = prepareComposite(layers)
+    expect(compositeCellPrepared(state, 0, 0).char).toBe('A')
+    expect(compositeCellPrepared(state, 0, 0)).toEqual(compositeCell(layers, 0, 0))
+  })
+})
+
+describe('compositeCellWithOverridePrepared', () => {
+  it('produces same result as compositeCellWithOverride', () => {
+    const bottom = createLayer('Bottom', 'l1')
+    bottom.grid[0][0] = { char: 'A', fg: [255, 0, 0], bg: [0, 0, 255] }
+    const top = createLayer('Top', 'l2')
+    top.grid[0][0] = { char: 'B', fg: [0, 255, 0], bg: [255, 0, 0] }
+    const layers: Layer[] = [bottom, top]
+
+    const override: AnsiCell = { char: 'Z', fg: [128, 128, 128], bg: [64, 64, 64] }
+    const state = prepareComposite(layers)
+    expect(compositeCellWithOverridePrepared(state, 0, 0, 'l2', override))
+      .toEqual(compositeCellWithOverride(layers, 0, 0, 'l2', override))
   })
 })

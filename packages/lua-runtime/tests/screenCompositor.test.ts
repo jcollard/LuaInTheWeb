@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { hiddenGroupIds, visibleDrawableLayers, compositeCellCore, compositeGrid, buildClipMaskMap, isCellClipped } from '../src/screenCompositor'
+import { hiddenGroupIds, visibleDrawableLayers, compositeCellCore, compositeGrid, compositeGridInto, buildClipMaskMap, isCellClipped } from '../src/screenCompositor'
 import type { AnsiCell, AnsiGrid, ClipLayerData, DrawableLayerData, DrawnLayerData, GroupLayerData, LayerData, RGBColor } from '../src/screenTypes'
 import {
   ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_CELL, DEFAULT_FG,
@@ -281,6 +281,78 @@ describe('compositeGrid', () => {
   })
 })
 
+describe('compositeGridInto', () => {
+  it('produces same result as compositeGrid', () => {
+    const grid1 = makeEmptyGrid()
+    grid1[5][10] = makeCell('X', [255, 0, 0], [0, 0, 255])
+
+    const grid2 = makeEmptyGrid()
+    grid2[5][10] = makeCell('Y', [0, 255, 0], [255, 0, 0])
+
+    const layers: LayerData[] = [
+      makeDrawnLayer('l1', true, grid1),
+      makeDrawnLayer('l2', true, grid2),
+    ]
+
+    const expected = compositeGrid(layers)
+    const target = makeEmptyGrid()
+    compositeGridInto(target, layers)
+
+    expect(target[5][10].char).toBe('Y')
+    expect(target[5][10]).toEqual(expected[5][10])
+  })
+
+  it('mutates the target grid in place', () => {
+    const grid = makeEmptyGrid()
+    grid[0][0] = makeCell('Z', [128, 0, 0], [0, 128, 0])
+
+    const layers: LayerData[] = [makeDrawnLayer('l1', true, grid)]
+    const target = makeEmptyGrid()
+    const refBefore = target[0][0]
+
+    compositeGridInto(target, layers)
+
+    // Same object reference — mutated, not replaced
+    expect(target[0][0]).toBe(refBefore)
+    expect(target[0][0].char).toBe('Z')
+  })
+
+  it('overwrites stale data from previous compositing', () => {
+    const grid1 = makeEmptyGrid()
+    grid1[0][0] = makeCell('A', [255, 0, 0], [0, 0, 255])
+
+    const grid2 = makeEmptyGrid()
+    // grid2[0][0] is default — should overwrite 'A' from previous pass
+
+    const target = makeEmptyGrid()
+
+    // First pass with grid1
+    compositeGridInto(target, [makeDrawnLayer('l1', true, grid1)])
+    expect(target[0][0].char).toBe('A')
+
+    // Second pass with grid2 (no content at 0,0)
+    compositeGridInto(target, [makeDrawnLayer('l2', true, grid2)])
+    expect(target[0][0]).toEqual(DEFAULT_CELL)
+  })
+
+  it('handles hidden groups same as compositeGrid', () => {
+    const grid1 = makeEmptyGrid()
+    grid1[0][0] = makeCell('A', [255, 0, 0], [0, 0, 255])
+
+    const grid2 = makeEmptyGrid()
+    grid2[0][0] = makeCell('B', [0, 255, 0], [255, 0, 0])
+
+    const layers: LayerData[] = [
+      makeDrawnLayer('l1', true, grid1),
+      makeGroup('g1', false),
+      makeDrawnLayer('l2', true, grid2, 'g1'),
+    ]
+    const target = makeEmptyGrid()
+    compositeGridInto(target, layers)
+    expect(target[0][0].char).toBe('A')
+  })
+})
+
 function makeClipLayer(id: string, parentId: string, visible = true): ClipLayerData {
   return {
     type: 'clip', id, name: id, visible,
@@ -338,6 +410,26 @@ describe('isCellClipped (runtime)', () => {
     const drawn = makeDrawnLayer('l1', true, makeEmptyGrid(), 'g1')
     const layers: LayerData[] = [group, drawn, clip]
     expect(isCellClipped(drawn, 5, 10, buildClipMaskMap(layers), new Map(layers.map(l => [l.id, l])))).toBe(false)
+  })
+})
+
+describe('isCellClipped depth limit', () => {
+  it('stops traversing after 10 ancestors to prevent infinite loops', () => {
+    // Create a circular parent chain: g1 -> g2 -> ... -> g11 -> g1
+    const layers: LayerData[] = []
+    for (let i = 1; i <= 11; i++) {
+      const parentId = i === 1 ? 'g11' : `g${i - 1}`
+      layers.push(makeGroup(`g${i}`, true, parentId))
+    }
+    const drawn = makeDrawnLayer('l1', true, makeEmptyGrid(), 'g1')
+    layers.push(drawn)
+
+    const clipMap = new Map<string, AnsiGrid>()
+    const layerMap = new Map(layers.map(l => [l.id, l]))
+
+    // Should terminate without hanging (depth limit reached)
+    const result = isCellClipped(drawn, 0, 0, clipMap, layerMap)
+    expect(result).toBe(false)
   })
 })
 
