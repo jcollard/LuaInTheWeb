@@ -152,6 +152,7 @@ function compositeGroupToGrid(
   if (subset.length <= 1) return null // only group header, no children
 
   const hidden = hiddenGroupIds(subset)
+  hidden.delete(groupId) // root group visibility is handled by the caller
   const entries: CompositeEntry[] = []
   for (const layer of subset) {
     if (layer.parentId && hidden.has(layer.parentId)) continue

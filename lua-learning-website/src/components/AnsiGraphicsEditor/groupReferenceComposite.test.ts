@@ -155,4 +155,18 @@ describe('compositeGrid with group reference layers (editor)', () => {
     // child2 on top of child1 → 'B' wins. Ref at offset (10,0):
     expect(result[10][0].char).toBe('B')
   })
+
+  it('visible reference to hidden group renders group content', () => {
+    const group = makeGroup('g1', false) // group hidden
+    const child = createLayer('Child', 'child')
+    child.parentId = 'g1'
+    child.grid[0][0] = { char: '#', fg: red, bg: DEFAULT_BG }
+    const ref = makeRef('ref1', 'g1', 5, 10)
+    const layers: Layer[] = [group, child, ref]
+    const result = compositeGrid(layers)
+    // Group is hidden so its children don't render directly
+    expect(isDefaultCell(result[0][0])).toBe(true)
+    // But visible ref reads the group's composited content and renders at offset
+    expect(result[5][10]).toEqual({ char: '#', fg: red, bg: DEFAULT_BG })
+  })
 })

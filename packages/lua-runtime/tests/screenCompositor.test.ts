@@ -562,6 +562,20 @@ describe('compositeGrid with reference layers (runtime)', () => {
     expect(result[0][0]).toEqual(makeCell('#', red, DEFAULT_BG))
   })
 
+  it('visible reference to hidden group renders group content', () => {
+    const group = makeGroup('g1', false) // group hidden
+    const grid = makeEmptyGrid()
+    grid[0][0] = makeCell('#', red, DEFAULT_BG)
+    const child = makeDrawnLayer('child', true, grid, 'g1')
+    const ref = makeRefLayer('ref1', 'g1', 5, 10)
+    const layers: LayerData[] = [group, child, ref]
+    const result = compositeGrid(layers)
+    // Group is hidden so its children don't render directly
+    expect(isDefaultCell(result[0][0])).toBe(true)
+    // But visible ref reads the group's composited content and renders at offset
+    expect(result[5][10]).toEqual(makeCell('#', red, DEFAULT_BG))
+  })
+
   it('clip mask applies to reference layer via parentId', () => {
     const group = makeGroup('g1', true)
     const clip = makeClipLayer('c1', 'g1')
