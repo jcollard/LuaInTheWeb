@@ -9,6 +9,7 @@ export interface FileOptionsModalProps {
   onSave: () => void
   onSaveAs: () => void
   onImportPng: () => void
+  onImportLayers: () => void
   onExportAns: () => void
   onExportSh: () => void
   cgaPreview: boolean
@@ -29,6 +30,7 @@ export function FileOptionsModal({
   onSave,
   onSaveAs,
   onImportPng,
+  onImportLayers,
   onExportAns,
   onExportSh,
   cgaPreview,
@@ -52,6 +54,7 @@ export function FileOptionsModal({
     { label: tooltipWithShortcut('Save', ACTION_SHORTCUTS.save), testId: 'file-save', action: onSave },
     { label: tooltipWithShortcut('Save As', ACTION_SHORTCUTS.saveAs), testId: 'file-save-as', action: onSaveAs },
     { label: 'Load PNG', testId: 'file-import-png', action: onImportPng },
+    { label: 'Import Layers', testId: 'file-import-layers', action: onImportLayers },
     { label: 'Export ANS', testId: 'file-export-ans', action: onExportAns },
     { label: 'Export .sh', testId: 'file-export-sh', action: onExportSh },
   ]

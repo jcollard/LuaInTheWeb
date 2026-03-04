@@ -6,12 +6,16 @@ import { AnsiEditorToolbar } from './AnsiEditorToolbar'
 import { ColorPanel } from './ColorPanel'
 import { FramesPanel } from './FramesPanel'
 import { LayersPanel } from './LayersPanel'
+import { ImportLayersDialog } from './ImportLayersDialog'
 import { SaveAsDialog } from './SaveAsDialog'
 import { ToastContainer } from './ToastContainer'
 import { useAnsiEditor } from './useAnsiEditor'
 import { useAnsiEditorFile } from './useAnsiEditorFile'
 import { useToast } from './useToast'
-import type { ScaleMode } from './types'
+import { buildImportEntries, remapLayers } from './layerImport'
+import type { ImportEntry } from './layerImport'
+import type { ScaleMode, GroupLayer, LayerState } from './types'
+import { isGroupLayer } from './types'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface AnsiGraphicsEditorProps {
@@ -88,6 +92,8 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
     duplicateLayer,
     toggleGroupCollapsed,
     importPngAsLayer,
+    parseAnsiFile,
+    importLayersWithUndo,
     simplifyColors,
     selectionRef,
     textBoundsRef,
@@ -156,6 +162,59 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
     e.target.value = ''
   }, [importPngAsLayer])
 
+  // Import Layers state and handlers
+  const layerFileInputRef = useRef<HTMLInputElement>(null)
+  const [importDialogState, setImportDialogState] = useState<{
+    entries: ImportEntry[]
+    sourceLayers: LayerState
+    warnings: string[]
+  } | null>(null)
+
+  const handleImportLayersClick = useCallback(() => {
+    layerFileInputRef.current?.click()
+  }, [])
+
+  const handleLayerFileSelected = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    const parsed = await parseAnsiFile(file)
+    if (!parsed) return
+
+    const entries = buildImportEntries(parsed.layers)
+    const existingIds = new Set(layers.map(l => l.id))
+    const warnings: string[] = []
+
+    for (const { layer } of entries) {
+      if (layer.type === 'reference') {
+        const sourceId = layer.sourceLayerId
+        const sourceInFile = parsed.layers.some(l => l.id === sourceId)
+        if (!sourceInFile && !existingIds.has(sourceId)) {
+          warnings.push(`Ref "${layer.name}" source missing`)
+        }
+      }
+    }
+
+    setImportDialogState({ entries, sourceLayers: parsed, warnings })
+  }, [parseAnsiFile, layers])
+
+  const handleImportConfirm = useCallback((selectedIds: Set<string>, targetParentId: string | undefined) => {
+    if (!importDialogState) return
+    const selected = importDialogState.sourceLayers.layers.filter(l => selectedIds.has(l.id))
+    const existingIds = new Set(layers.map(l => l.id))
+    const remapped = remapLayers(selected, targetParentId, existingIds)
+    if (remapped.length > 0) {
+      importLayersWithUndo(remapped)
+    }
+    setImportDialogState(null)
+  }, [importDialogState, layers, importLayersWithUndo])
+
+  const handleImportCancel = useCallback(() => {
+    setImportDialogState(null)
+  }, [])
+
+  const existingGroups = layers.filter(isGroupLayer) as GroupLayer[]
+
   const handleSaveAs = useCallback(async (folderPath: string, fileName: string) => {
     await fileHandleSaveAs(folderPath, fileName, layers, activeLayerId, availableTags)
   }, [fileHandleSaveAs, layers, activeLayerId, availableTags])
@@ -182,6 +241,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         onSave={handleSave}
         onSaveAs={openSaveDialog}
         onImportPng={handleImportPngClick}
+        onImportLayers={handleImportLayersClick}
         onExportAns={handleExportAns}
         onExportSh={handleExportSh}
         onUndo={undo}
@@ -287,6 +347,23 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         onChange={handleFileSelected}
         data-testid="png-file-input"
       />
+      <input
+        ref={layerFileInputRef}
+        type="file"
+        accept=".lua"
+        style={{ display: 'none' }}
+        onChange={handleLayerFileSelected}
+        data-testid="layer-file-input"
+      />
+      {importDialogState && (
+        <ImportLayersDialog
+          entries={importDialogState.entries}
+          groups={existingGroups}
+          warnings={importDialogState.warnings}
+          onConfirm={handleImportConfirm}
+          onCancel={handleImportCancel}
+        />
+      )}
       <ConfirmDialog
         isOpen={pendingSave !== null}
         title="Overwrite File"

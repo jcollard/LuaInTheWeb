@@ -226,6 +226,8 @@ export interface UseAnsiEditorReturn {
   duplicateLayer: (id: string) => void
   toggleGroupCollapsed: (groupId: string) => void
   importPngAsLayer: (file: File) => Promise<void>
+  parseAnsiFile: (file: File) => Promise<LayerState | null>
+  importLayersWithUndo: (layers: Layer[]) => void
   simplifyColors: (mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => void
   setTextAlign: (align: TextAlign) => void
   flipSelectionHorizontal: () => void

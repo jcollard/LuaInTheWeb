@@ -136,7 +136,7 @@ function cloneGrid(grid: AnsiGrid): AnsiGrid {
   )
 }
 
-function cloneLayer(layer: Layer): Layer {
+export function cloneLayer(layer: Layer): Layer {
   if (isGroupLayer(layer)) {
     return {
       type: 'group',

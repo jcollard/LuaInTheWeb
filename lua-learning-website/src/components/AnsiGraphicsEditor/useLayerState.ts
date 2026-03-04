@@ -75,6 +75,7 @@ export interface UseLayerStateReturn {
   createTag: (tag: string) => void
   deleteTag: (tag: string) => void
   renameTag: (oldTag: string, newTag: string) => void
+  importLayers: (newLayers: Layer[]) => void
 }
 
 export function useLayerState(initial?: LayerState): UseLayerStateReturn {
@@ -633,6 +634,12 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     }))
   }, [])
 
+  const importLayers = useCallback((newLayers: Layer[]) => {
+    if (newLayers.length === 0) return
+    setLayers(prev => [...prev, ...newLayers])
+    setActiveLayerId(newLayers[0].id)
+  }, [])
+
   return {
     layers,
     activeLayerId,
@@ -679,5 +686,6 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     createTag,
     deleteTag,
     renameTag,
+    importLayers,
   }
 }
