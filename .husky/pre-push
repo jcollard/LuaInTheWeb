@@ -22,6 +22,18 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
+# Always run lint before push (fast ~10s gate, catches CI failures early)
+# Skip with SKIP_PRE_PUSH_LINT=1 if needed
+if [ "$SKIP_PRE_PUSH_LINT" != "1" ]; then
+  echo "Running lint check..."
+  if ! npm --prefix lua-learning-website run lint --silent 2>&1; then
+    echo ""
+    echo "ERROR: Lint errors detected. Fix them before pushing."
+    echo "Run: npm --prefix lua-learning-website run lint"
+    exit 1
+  fi
+fi
+
 # Skip tests if environment variable is set (for agents/CI)
 if [ "$SKIP_PRE_PUSH_TESTS" = "1" ]; then
   echo "Skipping pre-push tests (SKIP_PRE_PUSH_TESTS=1)"

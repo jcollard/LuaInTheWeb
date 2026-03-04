@@ -10,6 +10,7 @@ import { cgaQuantize } from './ansExport'
 import { compositeCell, compositeGrid, cloneLayerState, getGroupDescendantLayers } from './layerUtils'
 import { useLayerState } from './useLayerState'
 import { loadPngPixels, rgbaToAnsiGrid } from './pngImport'
+import { deserializeLayers } from './serialization'
 import { createDrawHelpers } from './drawHelpers'
 import { createSelectionHandlers, type SelectionHandlers } from './selectionTool'
 import { createTextToolHandlers, type TextToolHandlers } from './textTool'
@@ -75,6 +76,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     createTag: rawCreateTag,
     deleteTag: rawDeleteTag,
     renameTag: rawRenameTag,
+    importLayers: rawImportLayers,
   } = layerState
 
   const grid = useMemo(() => compositeGrid(layerState.layers), [layerState.layers])
@@ -286,6 +288,21 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       showToastRef.current?.('Failed to import image')
     }
   }, [withLayerUndo, rawAddLayerWithGrid])
+
+  const parseAnsiFile = useCallback(async (file: File): Promise<LayerState | null> => {
+    try {
+      const text = await file.text()
+      return deserializeLayers(text)
+    } catch {
+      showToastRef.current?.('Failed to parse .ansi.lua file')
+      return null
+    }
+  }, [])
+
+  const importLayersWithUndo = useCallback(
+    (layers: Layer[]) => withLayerUndo(() => rawImportLayers(layers)),
+    [withLayerUndo, rawImportLayers],
+  )
 
   const simplifyColors = useCallback(
     (mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => withLayerUndo(() => rawReplaceColors(mapping, scope)),
@@ -892,7 +909,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     mergeDown: mergeDownWithUndo,
     wrapInGroup: wrapInGroupWithUndo, removeFromGroup: removeFromGroupWithUndo,
     duplicateLayer: duplicateLayerWithUndo, toggleGroupCollapsed: toggleGroupCollapsedNoUndo,
-    importPngAsLayer, simplifyColors, setTextAlign, flipSelectionHorizontal, flipSelectionVertical,
+    importPngAsLayer, parseAnsiFile, importLayersWithUndo, simplifyColors, setTextAlign, flipSelectionHorizontal, flipSelectionVertical,
     activeLayerIsGroup, isMoveDragging,
     flipOriginOverlayRef, flipOrigin, flipLayerHorizontal, flipLayerVertical,
     cgaPreview, setCgaPreview,

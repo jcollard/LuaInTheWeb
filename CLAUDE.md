@@ -221,6 +221,13 @@ npm --prefix lua-learning-website run test:e2e             # Run E2E tests (Play
 npm run duplicates                                         # Cross-package duplication scan (jscpd)
 ```
 
+## Pre-Push Lint Gate
+
+The pre-push hook **always** runs lint (even with `SKIP_PRE_PUSH_TESTS=1`). This catches lint errors before they hit CI. Lint runs in ~10 seconds and blocks the push only on **errors** (not warnings).
+
+- To skip lint in exceptional cases: `SKIP_PRE_PUSH_LINT=1 git push ...`
+- The 292 existing warnings are tech debt — do not add new errors.
+
 ## Pre-PR Type Checking
 
 Before committing, always type-check the main app:
