@@ -1,5 +1,5 @@
 import type { AnsiCell, AnsiGrid, DrawableLayer, Layer } from './types'
-import { ANSI_COLS, ANSI_ROWS, isGroupLayer, isDrawableLayer, isReferenceLayer, isClipLayer } from './types'
+import { ANSI_COLS, ANSI_ROWS, isGroupLayer, isDrawableLayer, isReferenceLayer } from './types'
 import { buildClipMaskMap, isCellClipped } from './clipMaskUtils'
 import { createEmptyGrid } from './gridUtils'
 import {
@@ -22,7 +22,6 @@ const engine = createCompositeEngine<Layer>({
   isGroupLayer,
   isDrawableLayer,
   isReferenceLayer,
-  isClipLayer,
   createEmptyGrid,
   buildClipMaskMap,
   isCellClipped,

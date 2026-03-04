@@ -62,7 +62,6 @@ const engine = createCompositeEngine<LayerData>({
   isGroupLayer,
   isDrawableLayer,
   isReferenceLayer,
-  isClipLayer,
   createEmptyGrid,
   buildClipMaskMap,
   isCellClipped,

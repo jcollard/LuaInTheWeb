@@ -24,7 +24,7 @@ export const ANSI_COLS = 80
 export const ANSI_ROWS = 25
 export const DEFAULT_FG: RGBColor = [170, 170, 170]
 export const DEFAULT_BG: RGBColor = [0, 0, 0]
-export const DEFAULT_CELL: AnsiCell = { char: ' ', fg: DEFAULT_FG, bg: DEFAULT_BG }
+export const DEFAULT_CELL: AnsiCell = { char: ' ', fg: [...DEFAULT_FG] as RGBColor, bg: [...DEFAULT_BG] as RGBColor }
 export const HALF_BLOCK = '\u2580'
 export const TRANSPARENT_HALF: RGBColor = [-1, -1, -1]
 export const TRANSPARENT_BG: RGBColor = [-2, -2, -2]
@@ -101,7 +101,6 @@ export interface CompositeHelpers<L extends CompositeLayer> {
   isGroupLayer: (layer: L) => layer is L & GroupCompositeLayer
   isDrawableLayer: (layer: L) => layer is L & GridCompositeLayer
   isReferenceLayer: (layer: L) => layer is L & ReferenceCompositeLayer
-  isClipLayer: (layer: L) => layer is L & GridCompositeLayer
   createEmptyGrid: () => AnsiGrid
   buildClipMaskMap: (layers: L[]) => Map<string, AnsiGrid>
   isCellClipped: (
