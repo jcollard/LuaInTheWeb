@@ -313,49 +313,21 @@ export class AnsiController {
 
   // --- Timing API ---
 
-  /**
-   * Get delta time since last frame in seconds.
-   */
-  getDelta(): number {
-    return this.currentTiming.deltaTime
-  }
-
-  /**
-   * Get total elapsed time in seconds.
-   */
-  getTime(): number {
-    return this.currentTiming.totalTime
-  }
+  /** Get delta time since last frame in seconds. */
+  getDelta(): number { return this.currentTiming.deltaTime }
+  /** Get total elapsed time in seconds. */
+  getTime(): number { return this.currentTiming.totalTime }
 
   // --- Input API (delegated to InputAPI) ---
 
-  /**
-   * Check if a key is currently held down.
-   */
-  isKeyDown(code: string): boolean {
-    return this.inputAPI.isKeyDown(code)
-  }
-
-  /**
-   * Check if a key was just pressed this frame.
-   */
-  isKeyPressed(code: string): boolean {
-    return this.inputAPI.isKeyPressed(code)
-  }
-
-  /**
-   * Get all keys currently held down.
-   */
-  getKeysDown(): string[] {
-    return this.inputAPI.getKeysDown()
-  }
-
-  /**
-   * Get all keys pressed this frame.
-   */
-  getKeysPressed(): string[] {
-    return this.inputAPI.getKeysPressed()
-  }
+  /** Check if a key is currently held down. */
+  isKeyDown(code: string): boolean { return this.inputAPI.isKeyDown(code) }
+  /** Check if a key was just pressed this frame. */
+  isKeyPressed(code: string): boolean { return this.inputAPI.isKeyPressed(code) }
+  /** Get all keys currently held down. */
+  getKeysDown(): string[] { return this.inputAPI.getKeysDown() }
+  /** Get all keys pressed this frame. */
+  getKeysPressed(): string[] { return this.inputAPI.getKeysPressed() }
 
   // --- Mouse Input API ---
 
@@ -641,37 +613,31 @@ export class AnsiController {
     state.needsRecomposite = true
   }
 
-  /**
-   * Flush deferred re-compositing for a screen. Performs one zero-alloc composite
-   * and diff-renders only changed cells to the terminal.
-   */
+  /** Flush deferred re-compositing for a screen via compositeAndDiff. */
   private flushRecomposite(id: number): void {
     const state = this.screenStates.get(id)
     if (!state?.needsRecomposite) return
     state.needsRecomposite = false
+    this.compositeAndDiff(state, id === this.activeScreenId)
+  }
 
-    // Clear group grid cache so reference layers pick up changed layer state
+  /** Composite layers into double buffer, diff-render changed cells, and update cached ANSI string. */
+  private compositeAndDiff(state: ScreenState, canDiffRender: boolean): void {
     this.groupGridCache.clear()
-
     const oldGrid = state.lastGrid
     const buffer = this.useBufferA ? this.compositeBufferA : this.compositeBufferB
     this.useBufferA = !this.useBufferA
     compositeGridInto(buffer, state.layers, this.groupGridCache)
     state.lastGrid = buffer
-
-    // Diff render: write only changed cells directly to terminal
-    if (oldGrid && id === this.activeScreenId) {
+    if (canDiffRender && oldGrid) {
       const diff = renderDiffAnsiString(oldGrid, buffer)
       if (diff) {
         this.handle?.write(diff)
         state.dirty = false
       }
-    } else {
-      // No old grid (first display) — fall back to full write via dirty flag
+    } else if (!oldGrid) {
       state.dirty = true
     }
-
-    // Always update cached full string (needed for setScreen/pause scenarios)
     state.ansiString = renderGridToAnsiString(buffer)
   }
 
@@ -721,43 +687,15 @@ export class AnsiController {
     this.inputCapture?.update()
   }
 
-  /**
-   * Advance animation frames for a screen and update rendering if frames changed.
-   */
+  /** Advance animation frames for a screen and composite+diff if frames changed. */
   private advanceScreenAnimation(id: number, nowMs: number): void {
     const state = this.screenStates.get(id)
     if (!state) return
-
-    // Initialize schedule on first call
     if (!state.schedule) {
       state.schedule = initSchedule(state.layers, nowMs)
     }
-
     const { changed } = computePlaybackTick(state.layers, state.schedule, nowMs)
     if (!changed) return
-
-    // Clear group grid cache so reference layers re-composite groups
-    // with updated animation frames
-    this.groupGridCache.clear()
-
-    // Re-composite into reusable buffer (double-buffered for diff rendering)
-    const oldGrid = state.lastGrid
-    const buffer = this.useBufferA ? this.compositeBufferA : this.compositeBufferB
-    this.useBufferA = !this.useBufferA
-    compositeGridInto(buffer, state.layers, this.groupGridCache)
-    const newGrid = buffer
-    state.lastGrid = newGrid
-
-    if (oldGrid) {
-      const diff = renderDiffAnsiString(oldGrid, newGrid)
-      if (diff) {
-        this.handle?.write(diff)
-        // Diff already rendered the change — suppress redundant full write in onFrame
-        state.dirty = false
-      }
-    }
-
-    // Always update the full cached ANSI string so paused screens render correctly
-    state.ansiString = renderGridToAnsiString(newGrid)
+    this.compositeAndDiff(state, true)
   }
 }
