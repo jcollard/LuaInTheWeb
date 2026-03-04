@@ -89,9 +89,21 @@ export interface ClipLayerData extends BaseLayerData {
   type: 'clip'
 }
 
+export interface ReferenceLayerData {
+  type: 'reference'
+  id: string
+  name: string
+  visible: boolean
+  sourceLayerId: string   // ID of the layer to reference
+  offsetRow: number       // positive = shift down
+  offsetCol: number       // positive = shift right
+  parentId?: string
+  tags: string[]
+}
+
 export type DrawableLayerData = DrawnLayerData | TextLayerData
 
-export type LayerData = DrawnLayerData | TextLayerData | GroupLayerData | ClipLayerData
+export type LayerData = DrawnLayerData | TextLayerData | GroupLayerData | ClipLayerData | ReferenceLayerData
 
 // --- Type guards ---
 
@@ -105,6 +117,10 @@ export function isDrawableLayer(layer: LayerData): layer is DrawableLayerData {
 
 export function isClipLayer(layer: LayerData): layer is ClipLayerData {
   return layer.type === 'clip'
+}
+
+export function isReferenceLayer(layer: LayerData): layer is ReferenceLayerData {
+  return layer.type === 'reference'
 }
 
 // --- Helpers ---

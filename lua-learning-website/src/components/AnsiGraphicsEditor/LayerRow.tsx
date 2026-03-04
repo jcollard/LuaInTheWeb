@@ -1,5 +1,5 @@
 import type { Layer, GroupLayer } from './types'
-import { isGroupLayer, isClipLayer } from './types'
+import { isGroupLayer, isClipLayer, isReferenceLayer } from './types'
 import { formatLayerId } from './layerUtils'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -121,6 +121,10 @@ export function LayerRow({
         {isClipLayer(layer) && (
           <span className={styles.layerTypeBadge} data-testid="clip-layer-badge">{'\u2702'}</span>
         )}
+        {isReferenceLayer(layer) && (
+          <span className={styles.layerTypeBadge} data-testid="ref-layer-badge"
+            title={`References: ${layer.sourceLayerId}`}>Ref</span>
+        )}
         <span className={styles.layerNameColumn}>
           <span
             className={styles.layerName}
@@ -177,7 +181,7 @@ export function LayerRow({
           onClick={e => { e.stopPropagation(); onRemove() }}
           aria-label={isGroup ? 'Delete group' : 'Delete layer'}
           title={isGroup ? 'Delete group (children promoted to root)' : 'Delete layer'}
-          disabled={!isGroup && singleDrawable}
+          disabled={!isGroup && !isClipLayer(layer) && !isReferenceLayer(layer) && singleDrawable}
         >
           &#x1F5D1;
         </button>

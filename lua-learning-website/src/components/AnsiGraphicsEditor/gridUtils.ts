@@ -19,7 +19,9 @@ export function cloneGrid(grid: AnsiGrid): AnsiGrid {
 
 export function createEmptyGrid(): AnsiGrid {
   return Array.from({ length: ANSI_ROWS }, () =>
-    Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
+    Array.from({ length: ANSI_COLS }, (): AnsiCell => ({
+      char: ' ', fg: [...DEFAULT_FG] as RGBColor, bg: [...DEFAULT_BG] as RGBColor,
+    }))
   )
 }
 

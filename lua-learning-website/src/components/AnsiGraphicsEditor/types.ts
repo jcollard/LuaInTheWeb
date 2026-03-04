@@ -133,9 +133,21 @@ export interface ClipLayer extends BaseLayer {
   type: 'clip'
 }
 
+export interface ReferenceLayer {
+  type: 'reference'
+  id: string
+  name: string
+  visible: boolean
+  sourceLayerId: string   // ID of the layer to reference
+  offsetRow: number       // positive = shift down
+  offsetCol: number       // positive = shift right
+  parentId?: string
+  tags?: string[]
+}
+
 export type DrawableLayer = DrawnLayer | TextLayer
 
-export type Layer = DrawnLayer | TextLayer | GroupLayer | ClipLayer
+export type Layer = DrawnLayer | TextLayer | GroupLayer | ClipLayer | ReferenceLayer
 
 export function isGroupLayer(layer: Layer): layer is GroupLayer {
   return layer.type === 'group'
@@ -147,6 +159,10 @@ export function isDrawableLayer(layer: Layer): layer is DrawableLayer {
 
 export function isClipLayer(layer: Layer): layer is ClipLayer {
   return layer.type === 'clip'
+}
+
+export function isReferenceLayer(layer: Layer): layer is ReferenceLayer {
+  return layer.type === 'reference'
 }
 
 /** Extract parentId from any Layer variant. All layer types carry an optional parentId. */
@@ -195,6 +211,8 @@ export interface UseAnsiEditorReturn {
   activeLayerId: string
   addLayer: () => void
   addClipLayer: (groupId: string) => void
+  addReferenceLayer: (sourceLayerId: string) => void
+  updateReferenceOffset: (id: string, offsetRow: number, offsetCol: number) => void
   removeLayer: (id: string) => void
   renameLayer: (id: string, name: string) => void
   changeLayerId: (oldId: string, newId: string) => { success: boolean; error?: string }

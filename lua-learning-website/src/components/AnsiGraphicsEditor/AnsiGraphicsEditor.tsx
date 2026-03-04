@@ -74,6 +74,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
     activeLayerId,
     addLayer,
     addClipLayer,
+    addReferenceLayer,
     removeLayer,
     renameLayer,
     changeLayerId,
@@ -256,6 +257,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
           onRemoveFromGroup={removeFromGroup}
           onDuplicate={duplicateLayer}
           onAddClipLayer={addClipLayer}
+          onAddReferenceLayer={addReferenceLayer}
           onToggleGroupCollapsed={toggleGroupCollapsed}
           availableTags={availableTags}
           onAddTagToLayer={addTagToLayer}

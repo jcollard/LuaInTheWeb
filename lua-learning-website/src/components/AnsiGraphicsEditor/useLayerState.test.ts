@@ -4,7 +4,7 @@ import { renderHook, act } from '@testing-library/react'
 import { useLayerState } from './useLayerState'
 import { createLayer, createGroup } from './layerUtils'
 import type { DrawableLayer, DrawnLayer, Layer, LayerState, RGBColor, Rect, TextLayer, GroupLayer } from './types'
-import { MIN_FRAME_DURATION_MS, MAX_FRAME_DURATION_MS, TRANSPARENT_BG, isGroupLayer, isDrawableLayer } from './types'
+import { MIN_FRAME_DURATION_MS, MAX_FRAME_DURATION_MS, TRANSPARENT_BG, isGroupLayer, isDrawableLayer, isReferenceLayer } from './types'
 
 describe('useLayerState', () => {
   describe('initialization', () => {
@@ -1238,6 +1238,60 @@ describe('useLayerState', () => {
       const { result } = renderHook(() => useLayerState(initial))
       act(() => result.current.removeTagFromLayer('l1', 'Characters'))
       expect(result.current.layers[0].tags).toBeUndefined()
+    })
+  })
+
+  describe('addReferenceLayer', () => {
+    it('inherits parentId from source layer inside a group', () => {
+      const group = createGroup('G', 'g1')
+      const child = createLayer('Child', 'c1')
+      child.parentId = 'g1'
+      const initial: LayerState = { layers: [group, child], activeLayerId: 'c1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.addReferenceLayer('c1'))
+      const ref = result.current.layers.find(l => isReferenceLayer(l))
+      expect(ref).toBeDefined()
+      expect(isReferenceLayer(ref!)).toBe(true)
+      if (isReferenceLayer(ref!)) {
+        expect(ref!.parentId).toBe('g1')
+      }
+    })
+
+    it('inserts reference after source layer, not at end', () => {
+      const group = createGroup('G', 'g1')
+      const child1 = createLayer('Child1', 'c1')
+      child1.parentId = 'g1'
+      const child2 = createLayer('Child2', 'c2')
+      child2.parentId = 'g1'
+      const initial: LayerState = { layers: [group, child1, child2], activeLayerId: 'c1' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.addReferenceLayer('c1'))
+      // Reference should be right after child1 (index 2), before child2
+      const refIdx = result.current.layers.findIndex(l => isReferenceLayer(l))
+      const c2Idx = result.current.layers.findIndex(l => l.id === 'c2')
+      expect(refIdx).toBe(2) // right after child1 at index 1
+      expect(c2Idx).toBe(3) // child2 pushed to index 3
+    })
+
+    it('root-level source produces reference without parentId', () => {
+      const bg = createLayer('BG', 'bg')
+      const initial: LayerState = { layers: [bg], activeLayerId: 'bg' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.addReferenceLayer('bg'))
+      const ref = result.current.layers.find(l => isReferenceLayer(l))
+      expect(ref).toBeDefined()
+      if (isReferenceLayer(ref!)) {
+        expect(ref!.parentId).toBeUndefined()
+      }
+    })
+
+    it('sets reference as active layer', () => {
+      const bg = createLayer('BG', 'bg')
+      const initial: LayerState = { layers: [bg], activeLayerId: 'bg' }
+      const { result } = renderHook(() => useLayerState(initial))
+      act(() => result.current.addReferenceLayer('bg'))
+      const ref = result.current.layers.find(l => isReferenceLayer(l))
+      expect(result.current.activeLayerId).toBe(ref!.id)
     })
   })
 })

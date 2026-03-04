@@ -1,6 +1,6 @@
 import { stringify, parse } from '@kilcekru/lua-table'
-import type { AnsiGrid, ClipLayer, Layer, LayerState, TextLayer, TextAlign, RGBColor, Rect, GroupLayer } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_FRAME_DURATION_MS, isGroupLayer, isClipLayer } from './types'
+import type { AnsiGrid, ClipLayer, Layer, LayerState, TextLayer, TextAlign, RGBColor, Rect, GroupLayer, ReferenceLayer } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_FRAME_DURATION_MS, isGroupLayer, isClipLayer, isReferenceLayer } from './types'
 import { renderTextLayerGrid } from './textLayerGrid'
 import { buildPalette, encodeGrid, decodeGrid } from './v7Codec'
 import type { Run } from './v7Codec'
@@ -42,6 +42,7 @@ export function serializeLayers(state: LayerState, availableTags?: string[]): st
   }
   const { palette, colorToIndex, defaultFgIndex, defaultBgIndex } = buildPalette(allGrids)
 
+  let hasReferenceLayer = false
   const layers = state.layers.map(layer => {
     if (isGroupLayer(layer)) {
       const serialized: Record<string, unknown> = {
@@ -61,6 +62,20 @@ export function serializeLayers(state: LayerState, availableTags?: string[]): st
         name: layer.name,
         visible: layer.visible,
         cells: encodeGrid(layer.grid, colorToIndex),
+      }
+      addOptionalFields(serialized, layer)
+      return serialized
+    }
+    if (isReferenceLayer(layer)) {
+      hasReferenceLayer = true
+      const serialized: Record<string, unknown> = {
+        type: 'reference',
+        id: layer.id,
+        name: layer.name,
+        visible: layer.visible,
+        sourceLayerId: layer.sourceLayerId,
+        offsetRow: layer.offsetRow,
+        offsetCol: layer.offsetCol,
       }
       addOptionalFields(serialized, layer)
       return serialized
@@ -106,7 +121,7 @@ export function serializeLayers(state: LayerState, availableTags?: string[]): st
   })
 
   const data: Record<string, unknown> = {
-    version: 7,
+    version: hasReferenceLayer ? 8 : 7,
     width: ANSI_COLS,
     height: ANSI_ROWS,
     activeLayerId: state.activeLayerId,
@@ -140,13 +155,16 @@ interface RawLayer {
   parentId?: string
   collapsed?: boolean
   tags?: string[]
+  sourceLayerId?: string
+  offsetRow?: number
+  offsetCol?: number
 }
 
 /* ------------------------------------------------------------------ */
 /*  Private helpers shared by v3-v6 and v7 deserialization blocks      */
 /* ------------------------------------------------------------------ */
 
-const VALID_LAYER_TYPES = new Set(['drawn', 'text', 'group', 'clip'])
+const VALID_LAYER_TYPES = new Set(['drawn', 'text', 'group', 'clip', 'reference'])
 
 /** Validate that a raw layer has the required base fields and a known type. */
 function validateRawLayer(l: RawLayer, i: number): void {
@@ -225,6 +243,24 @@ function buildDrawnLayer(l: RawLayer, frames: AnsiGrid[], tags: string[] | undef
   }
 }
 
+/** Build a ReferenceLayer from a validated raw layer. */
+function buildReferenceLayer(l: RawLayer, tags: string[] | undefined): ReferenceLayer {
+  if (!l.sourceLayerId) {
+    throw new Error(`Invalid reference layer "${l.name}": missing sourceLayerId`)
+  }
+  return {
+    type: 'reference',
+    id: l.id,
+    name: l.name,
+    visible: l.visible,
+    sourceLayerId: l.sourceLayerId,
+    offsetRow: l.offsetRow ?? 0,
+    offsetCol: l.offsetCol ?? 0,
+    parentId: l.parentId,
+    tags,
+  }
+}
+
 export function deserializeLayers(lua: string): LayerState {
   const stripped = lua.replace(/^return\s+/, '')
   const data = parse(stripped) as Record<string, unknown>
@@ -289,7 +325,7 @@ export function deserializeLayers(lua: string): LayerState {
     return result
   }
 
-  if (version === 7) {
+  if (version === 7 || version === 8) {
     const rawPalette = data.palette as RGBColor[]
     const defaultFgIndex = data.defaultFg as number
     const defaultBgIndex = data.defaultBg as number
@@ -305,6 +341,7 @@ export function deserializeLayers(lua: string): LayerState {
         const grid = decodeGrid(cellRuns, rawPalette, defaultFgIndex, defaultBgIndex)
         return buildClipLayer(l, grid, tags)
       }
+      if (l.type === 'reference') return buildReferenceLayer(l, tags)
       // Drawn layer — decode v7 sparse grids
       let frames: AnsiGrid[]
       const frameCells = Array.isArray(l.frameCells) ? l.frameCells : null

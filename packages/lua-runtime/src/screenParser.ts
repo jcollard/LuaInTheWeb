@@ -6,7 +6,7 @@
  * from all visible layers.
  */
 
-import type { AnsiGrid, ClipLayerData, DrawnLayerData, GroupLayerData, LayerData, RGBColor, Rect, TextAlign, TextLayerData } from './screenTypes'
+import type { AnsiGrid, ClipLayerData, DrawnLayerData, GroupLayerData, LayerData, RGBColor, Rect, ReferenceLayerData, TextAlign, TextLayerData } from './screenTypes'
 import { DEFAULT_FRAME_DURATION_MS } from './screenTypes'
 import { renderTextLayerGrid } from './textLayerGrid'
 import { compositeGrid } from './screenCompositor'
@@ -35,6 +35,9 @@ interface RawLayer {
   parentId?: string
   collapsed?: boolean
   tags?: unknown
+  sourceLayerId?: string
+  offsetRow?: number
+  offsetCol?: number
 }
 
 /**
@@ -212,6 +215,20 @@ function parseTextLayerData(l: RawLayer): TextLayerData {
   }
 }
 
+function parseReferenceLayerData(l: RawLayer): ReferenceLayerData {
+  return {
+    type: 'reference',
+    id: l.id,
+    name: l.name,
+    visible: l.visible,
+    sourceLayerId: l.sourceLayerId ?? '',
+    offsetRow: l.offsetRow ?? 0,
+    offsetCol: l.offsetCol ?? 0,
+    parentId: l.parentId,
+    tags: parseTags(l.tags),
+  }
+}
+
 function parseV7(data: Record<string, unknown>): LayerData[] {
   const palette = parseV7Palette(data.palette)
   const defaultFgIndex = Number(data.defaultFg)
@@ -230,6 +247,10 @@ function parseV7(data: Record<string, unknown>): LayerData[] {
     if (l.type === 'clip') {
       const grid = decodeV7Grid(l.cells, palette, defaultFgIndex, defaultBgIndex)
       return parseClipLayerData(l, grid)
+    }
+
+    if (l.type === 'reference') {
+      return parseReferenceLayerData(l)
     }
 
     // Drawn layer — decode v7 sparse grids
@@ -272,7 +293,7 @@ export function parseScreenLayers(data: Record<string, unknown>): LayerData[] {
     return parseV2(data)
   } else if (version >= 3 && version <= 6) {
     return parseV3to6(data)
-  } else if (version === 7) {
+  } else if (version === 7 || version === 8) {
     return parseV7(data)
   } else {
     throw new Error(`Unsupported ANSI file version: ${version}`)

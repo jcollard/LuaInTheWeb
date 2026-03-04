@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, BorderStyle, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions, DrawableLayer, Layer } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, DEFAULT_BLEND_RATIO, DEFAULT_FRAME_DURATION_MS, BORDER_PRESETS, isGroupLayer, isDrawableLayer, isClipLayer } from './types'
+import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, DEFAULT_BLEND_RATIO, DEFAULT_FRAME_DURATION_MS, BORDER_PRESETS, isGroupLayer, isDrawableLayer, isClipLayer, isReferenceLayer } from './types'
 import { blendRgb, applyMaskOverlay } from './colorUtils'
 import type { CellHalf, ColorTransform } from './gridUtils'
 import { createEmptyGrid, isInBounds, getCellHalfFromMouse, computePixelCell, computeFloodFillCells } from './gridUtils'
@@ -50,7 +50,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   // with undo snapshots below before exposing them as addLayer, removeLayer, etc.
   const {
     layersRef, activeLayerIdRef, applyToActiveLayer, getActiveGrid, restoreLayerState,
-    addLayer: rawAddLayer, addLayerWithGrid: rawAddLayerWithGrid, addClipLayer: rawAddClipLayer, removeLayer: rawRemoveLayer,
+    addLayer: rawAddLayer, addLayerWithGrid: rawAddLayerWithGrid, addClipLayer: rawAddClipLayer, addReferenceLayer: rawAddReferenceLayer, updateReferenceOffset: rawUpdateReferenceOffset, removeLayer: rawRemoveLayer,
     reorderLayer: rawReorderLayer,
     toggleVisibility: rawToggleVisibility, setLayerVisibility: rawSetLayerVisibility,
     mergeDown: rawMergeDown,
@@ -107,6 +107,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const moveRafRef = useRef<number | null>(null)
   const moveLatestCellRef = useRef<CellHalf | null>(null)
   const moveBlankGridsRef = useRef<Map<string, AnsiGrid[]>>(new Map())
+  const moveRefStartOffset = useRef<{ row: number; col: number } | null>(null)
   const previewLatestCellRef = useRef<CellHalf | null>(null)
   const [cgaPreview, setCgaPreviewRaw] = useState(false)
   const [isMoveDragging, setIsMoveDragging] = useState(false)
@@ -214,6 +215,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
 
   const addLayerWithUndo = useCallback(() => withLayerUndo(rawAddLayer, false), [withLayerUndo, rawAddLayer])
   const addClipLayerWithUndo = useCallback((groupId: string) => withLayerUndo(() => rawAddClipLayer(groupId), false), [withLayerUndo, rawAddClipLayer])
+  const addReferenceLayerWithUndo = useCallback((sourceLayerId: string) => withLayerUndo(() => rawAddReferenceLayer(sourceLayerId), false), [withLayerUndo, rawAddReferenceLayer])
+  const updateReferenceOffsetWithUndo = useCallback((id: string, offsetRow: number, offsetCol: number) => withLayerUndo(() => rawUpdateReferenceOffset(id, offsetRow, offsetCol)), [withLayerUndo, rawUpdateReferenceOffset])
   const removeLayerWithUndo = useCallback((id: string) => withLayerUndo(() => rawRemoveLayer(id)), [withLayerUndo, rawRemoveLayer])
   const reorderLayerWithUndo = useCallback(
     (id: string, newIndex: number, targetGroupId?: string | null) => withLayerUndo(() => rawReorderLayer(id, newIndex, targetGroupId)),
@@ -353,6 +356,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       moveCapturedRef.current = new Map()
       moveBlankGridsRef.current = new Map()
       moveLatestCellRef.current = null
+      moveRefStartOffset.current = null
       setIsMoveDragging(false)
     }
 
@@ -522,6 +526,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           if (fills.size === 0) return
           pushSnapshot()
           draw.commitCells(fills)
+          flushLayers(layersRef.current)
           break
         }
         case 'select': {
@@ -542,15 +547,20 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           moveCapturedRef.current = new Map()
           moveBlankGridsRef.current = new Map()
           moveLatestCellRef.current = null
+          moveRefStartOffset.current = null
           const activeId = activeLayerIdRef.current
           const activeLayer = layersRef.current.find(l => l.id === activeId)
-          const targets: DrawableLayer[] = activeLayer && isGroupLayer(activeLayer)
-            ? getGroupDescendantLayers(activeId, layersRef.current)
-            : layersRef.current.filter((l): l is DrawableLayer => isDrawableLayer(l) && l.id === activeId)
-          for (const target of targets) {
-            const grids = target.type === 'drawn' ? target.frames : [target.grid]
-            moveCapturedRef.current.set(target.id, grids.map(captureNonDefaultCells))
-            moveBlankGridsRef.current.set(target.id, grids.map(() => createEmptyGrid()))
+          if (activeLayer && isReferenceLayer(activeLayer)) {
+            moveRefStartOffset.current = { row: activeLayer.offsetRow, col: activeLayer.offsetCol }
+          } else {
+            const targets: DrawableLayer[] = activeLayer && isGroupLayer(activeLayer)
+              ? getGroupDescendantLayers(activeId, layersRef.current)
+              : layersRef.current.filter((l): l is DrawableLayer => isDrawableLayer(l) && l.id === activeId)
+            for (const target of targets) {
+              const grids = target.type === 'drawn' ? target.frames : [target.grid]
+              moveCapturedRef.current.set(target.id, grids.map(captureNonDefaultCells))
+              moveBlankGridsRef.current.set(target.id, grids.map(() => createEmptyGrid()))
+            }
           }
           break
         }
@@ -608,7 +618,19 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         case 'move': {
           if (!moveStartRef.current) break
           moveLatestCellRef.current = cell
-          if (moveRafRef.current === null) {
+          if (moveRefStartOffset.current !== null) {
+            if (moveRafRef.current === null) {
+              moveRafRef.current = requestAnimationFrame(() => {
+                moveRafRef.current = null
+                const target = moveLatestCellRef.current
+                if (!target || !moveStartRef.current || !moveRefStartOffset.current) return
+                const dr = target.row - moveStartRef.current.row
+                const dc = target.col - moveStartRef.current.col
+                rawUpdateReferenceOffset(activeLayerIdRef.current, moveRefStartOffset.current.row + dr, moveRefStartOffset.current.col + dc)
+                flushLayers(layersRef.current)
+              })
+            }
+          } else if (moveRafRef.current === null) {
             moveRafRef.current = requestAnimationFrame(() => {
               moveRafRef.current = null
               const target = moveLatestCellRef.current
@@ -630,6 +652,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         case 'pencil':
           paintingRef.current = false
           lastCellRef.current = null
+          flushLayers(layersRef.current)
           break
         case 'line': {
           cancelPreviewRaf()
@@ -641,6 +664,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
             draw.restorePreview()
             lineStartRef.current = null
           }
+          flushLayers(layersRef.current)
           break
         }
         case 'rect-outline':
@@ -658,6 +682,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
             lineStartRef.current = null
             draw.hideDimension()
           }
+          flushLayers(layersRef.current)
           break
         }
         case 'select':
@@ -671,7 +696,14 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           const endCell = getCellHalfFromMouse(e, container)
           const dr = endCell ? endCell.row - moveStartRef.current.row : 0
           const dc = endCell ? endCell.col - moveStartRef.current.col : 0
-          if (dr === 0 && dc === 0) {
+          if (moveRefStartOffset.current !== null) {
+            if (dr === 0 && dc === 0) {
+              undo()
+            } else {
+              rawUpdateReferenceOffset(activeLayerIdRef.current, moveRefStartOffset.current.row + dr, moveRefStartOffset.current.col + dc)
+              setIsDirty(true)
+            }
+          } else if (dr === 0 && dc === 0) {
             // No movement -- pop undo snapshot
             undo()
           } else {
@@ -853,7 +885,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     isDirty, markClean, onTerminalReady, cursorRef, dimensionRef, selectionRef, textBoundsRef, textCursorRef,
     isSaveDialogOpen, openSaveDialog, closeSaveDialog, undo, redo, canUndo, canRedo,
     layers: layerState.layers, activeLayerId: layerState.activeLayerId,
-    addLayer: addLayerWithUndo, addClipLayer: addClipLayerWithUndo, removeLayer: removeLayerWithUndo,
+    addLayer: addLayerWithUndo, addClipLayer: addClipLayerWithUndo, addReferenceLayer: addReferenceLayerWithUndo, updateReferenceOffset: updateReferenceOffsetWithUndo, removeLayer: removeLayerWithUndo,
     renameLayer: layerState.renameLayer, changeLayerId: layerState.changeLayerId, setActiveLayer: setActiveLayerWithBounds,
     reorderLayer: reorderLayerWithUndo,
     toggleVisibility: toggleVisibilityWithUndo, setLayerVisibility: setLayerVisibilityWithUndo,

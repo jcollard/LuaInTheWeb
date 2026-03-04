@@ -18,7 +18,7 @@ import { InputAPI } from './InputAPI'
 import type { TimingInfo } from '@lua-learning/canvas-runtime'
 import { initSchedule, computePlaybackTick, type LayerSchedule } from '@lua-learning/ansi-shared'
 import { parseScreenLayers } from './screenParser'
-import { compositeGrid, compositeGridInto } from './screenCompositor'
+import { compositeGridInto } from './screenCompositor'
 import { renderGridToAnsiString, renderDiffAnsiString } from './ansiStringRenderer'
 import { renderTextLayerGrid } from './textLayerGrid'
 import type { AnsiGrid, LayerData, DrawnLayerData, TextLayerData, RGBColor } from './screenTypes'
@@ -89,6 +89,8 @@ interface ScreenState {
   lastGrid: AnsiGrid | null
   /** True when the full ANSI string needs to be written to the terminal. */
   dirty: boolean
+  /** True when layers changed and need re-compositing before next render. */
+  needsRecomposite: boolean
 }
 
 /**
@@ -132,6 +134,8 @@ export class AnsiController {
   private compositeBufferA: AnsiGrid = createEmptyGrid()
   private compositeBufferB: AnsiGrid = createEmptyGrid()
   private useBufferA = true
+  /** Cached group composite buffers — persists across frames to avoid re-allocation. */
+  private groupGridCache: Map<string, AnsiGrid> = new Map()
 
   constructor(callbacks: AnsiCallbacks, ansiId = 'ansi-main') {
     this.callbacks = callbacks
@@ -144,7 +148,7 @@ export class AnsiController {
   private getScreenState(id: number): ScreenState {
     let state = this.screenStates.get(id)
     if (!state) {
-      state = { ansiString: '', layers: [], schedule: null, playing: false, playbackTouched: false, lastGrid: null, dirty: false }
+      state = { ansiString: '', layers: [], schedule: null, playing: false, playbackTouched: false, lastGrid: null, dirty: false, needsRecomposite: false }
       this.screenStates.set(id, state)
     }
     return state
@@ -231,6 +235,7 @@ export class AnsiController {
 
     // Clear all screen state
     this.screenStates.clear()
+    this.groupGridCache.clear()
     this.activeScreenId = null
     this.nextScreenId = 1
 
@@ -308,49 +313,21 @@ export class AnsiController {
 
   // --- Timing API ---
 
-  /**
-   * Get delta time since last frame in seconds.
-   */
-  getDelta(): number {
-    return this.currentTiming.deltaTime
-  }
-
-  /**
-   * Get total elapsed time in seconds.
-   */
-  getTime(): number {
-    return this.currentTiming.totalTime
-  }
+  /** Get delta time since last frame in seconds. */
+  getDelta(): number { return this.currentTiming.deltaTime }
+  /** Get total elapsed time in seconds. */
+  getTime(): number { return this.currentTiming.totalTime }
 
   // --- Input API (delegated to InputAPI) ---
 
-  /**
-   * Check if a key is currently held down.
-   */
-  isKeyDown(code: string): boolean {
-    return this.inputAPI.isKeyDown(code)
-  }
-
-  /**
-   * Check if a key was just pressed this frame.
-   */
-  isKeyPressed(code: string): boolean {
-    return this.inputAPI.isKeyPressed(code)
-  }
-
-  /**
-   * Get all keys currently held down.
-   */
-  getKeysDown(): string[] {
-    return this.inputAPI.getKeysDown()
-  }
-
-  /**
-   * Get all keys pressed this frame.
-   */
-  getKeysPressed(): string[] {
-    return this.inputAPI.getKeysPressed()
-  }
+  /** Check if a key is currently held down. */
+  isKeyDown(code: string): boolean { return this.inputAPI.isKeyDown(code) }
+  /** Check if a key was just pressed this frame. */
+  isKeyPressed(code: string): boolean { return this.inputAPI.isKeyPressed(code) }
+  /** Get all keys currently held down. */
+  getKeysDown(): string[] { return this.inputAPI.getKeysDown() }
+  /** Get all keys pressed this frame. */
+  getKeysPressed(): string[] { return this.inputAPI.getKeysPressed() }
 
   // --- Mouse Input API ---
 
@@ -627,98 +604,98 @@ export class AnsiController {
   }
 
   /**
-   * Re-composite a screen's layers and update the stored ANSI string and grid cache.
+   * Mark a screen as needing re-compositing. The actual work is deferred
+   * to flushRecomposite() which batches all changes per frame.
    */
   private recompositeScreen(id: number): void {
     const state = this.screenStates.get(id)
     if (!state) return
-    const grid = compositeGrid(state.layers)
-    state.ansiString = renderGridToAnsiString(grid)
-    state.lastGrid = grid
-    state.dirty = true
+    state.needsRecomposite = true
+  }
+
+  /** Flush deferred re-compositing for a screen via compositeAndDiff. */
+  private flushRecomposite(id: number): void {
+    const state = this.screenStates.get(id)
+    if (!state?.needsRecomposite) return
+    state.needsRecomposite = false
+    this.compositeAndDiff(state, id === this.activeScreenId)
+  }
+
+  /** Composite layers into double buffer, diff-render changed cells, and update cached ANSI string. */
+  private compositeAndDiff(state: ScreenState, canDiffRender: boolean): void {
+    this.groupGridCache.clear()
+    const oldGrid = state.lastGrid
+    const buffer = this.useBufferA ? this.compositeBufferA : this.compositeBufferB
+    this.useBufferA = !this.useBufferA
+    compositeGridInto(buffer, state.layers, this.groupGridCache)
+    state.lastGrid = buffer
+    if (canDiffRender && oldGrid) {
+      const diff = renderDiffAnsiString(oldGrid, buffer)
+      if (diff) {
+        this.handle?.write(diff)
+        state.dirty = false
+      }
+    } else if (!oldGrid) {
+      state.dirty = true
+    }
+    state.ansiString = renderGridToAnsiString(buffer)
   }
 
   // --- Internal ---
+
+  /** Advance animation, flush deferred composites, and write dirty screen. */
+  private updateActiveScreen(): void {
+    if (this.activeScreenId === null) return
+    const state = this.screenStates.get(this.activeScreenId)
+    if (state?.playing) {
+      this.advanceScreenAnimation(this.activeScreenId, this.currentTiming.totalTime * 1000)
+    }
+    this.flushRecomposite(this.activeScreenId)
+    if (state?.dirty && state.ansiString) {
+      this.handle?.write(state.ansiString)
+      state.dirty = false
+    }
+  }
 
   /**
    * Frame callback from GameLoopController.
    */
   private onFrame(timing: TimingInfo): void {
     if (!this.running) return
-
-    // Store timing for API access
     this.currentTiming = timing
 
-    // Advance animation frames for the active screen if playing
-    if (this.activeScreenId !== null) {
-      const activeState = this.screenStates.get(this.activeScreenId)
-      if (activeState?.playing) {
-        this.advanceScreenAnimation(this.activeScreenId, timing.totalTime * 1000)
-      }
-    }
-
-    // Render active screen background before tick callback (only when dirty)
-    if (this.activeScreenId !== null) {
-      const activeState = this.screenStates.get(this.activeScreenId)
-      if (activeState?.dirty && activeState.ansiString) {
-        this.handle?.write(activeState.ansiString)
-        activeState.dirty = false
-      }
-    }
+    // Pre-tick: advance animation + flush deferred composites + write dirty screen
+    this.updateActiveScreen()
 
     // Call the Lua onTick callback
     if (this.onTickCallback) {
       try {
         this.onTickCallback()
       } catch (error) {
-        const errorMessage = formatOnTickError(error)
-        this.callbacks.onError?.(errorMessage)
-        // Stop on error (ANSI terminal doesn't have pause/resume like canvas)
+        this.callbacks.onError?.(formatOnTickError(error))
         this.stop()
         return
       }
     }
 
-    // Flush output buffer so print() output appears immediately
-    this.callbacks.onFlushOutput?.()
+    // Post-tick: flush composites from this tick's Lua API calls (same-frame render)
+    if (this.activeScreenId !== null) {
+      this.flushRecomposite(this.activeScreenId)
+    }
 
-    // Update input capture (clear "just pressed" state)
+    this.callbacks.onFlushOutput?.()
     this.inputCapture?.update()
   }
 
-  /**
-   * Advance animation frames for a screen and update rendering if frames changed.
-   */
+  /** Advance animation frames for a screen and composite+diff if frames changed. */
   private advanceScreenAnimation(id: number, nowMs: number): void {
     const state = this.screenStates.get(id)
     if (!state) return
-
-    // Initialize schedule on first call
     if (!state.schedule) {
       state.schedule = initSchedule(state.layers, nowMs)
     }
-
     const { changed } = computePlaybackTick(state.layers, state.schedule, nowMs)
     if (!changed) return
-
-    // Re-composite into reusable buffer (double-buffered for diff rendering)
-    const oldGrid = state.lastGrid
-    const buffer = this.useBufferA ? this.compositeBufferA : this.compositeBufferB
-    this.useBufferA = !this.useBufferA
-    compositeGridInto(buffer, state.layers)
-    const newGrid = buffer
-    state.lastGrid = newGrid
-
-    if (oldGrid) {
-      const diff = renderDiffAnsiString(oldGrid, newGrid)
-      if (diff) {
-        this.handle?.write(diff)
-        // Diff already rendered the change — suppress redundant full write in onFrame
-        state.dirty = false
-      }
-    }
-
-    // Always update the full cached ANSI string so paused screens render correctly
-    state.ansiString = renderGridToAnsiString(newGrid)
+    this.compositeAndDiff(state, true)
   }
 }
