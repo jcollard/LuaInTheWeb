@@ -360,7 +360,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     textToolRef.current = textTool
     commitPendingTextRef.current = () => textTool.commitIfEditing()
 
-    function cancelPreviewRaf(): void {
+    function clearPreviewCell(): void {
       previewLatestCellRef.current = null
     }
 
@@ -672,7 +672,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           flushLayers(layersRef.current)
           break
         case 'line': {
-          cancelPreviewRaf()
+          clearPreviewCell()
           if (!lineStartRef.current) break
           const cell = getCellHalfFromMouse(e, container)
           if (cell) {
@@ -689,7 +689,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         case 'oval-outline':
         case 'oval-filled':
         case 'border': {
-          cancelPreviewRaf()
+          clearPreviewCell()
           if (!lineStartRef.current) break
           const cell = getCellHalfFromMouse(e, container)
           if (cell) {
@@ -762,7 +762,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       container.removeEventListener('contextmenu', onContextMenu)
       document.removeEventListener('mouseup', onDocumentMouseUp)
       document.removeEventListener('keydown', onKeyDown)
-      cancelPreviewRaf()
+      clearPreviewCell()
       textTool.reset()
     }
   }, [paintCell, paintPixel, paintBlendPixel, applyCell, pushSnapshot, layersRef, activeLayerIdRef, getActiveGrid, rawAddTextLayer, rawUpdateTextLayer, undo, redo, rawApplyMoveGrids, rawApplyMoveGridsImmediate, rawSetCurrentFrame, setTool, setBrushMode, togglePlayback])
