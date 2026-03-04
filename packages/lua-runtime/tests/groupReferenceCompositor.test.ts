@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { compositeGrid, compositeGridInto } from '../src/screenCompositor'
 import type { AnsiCell, AnsiGrid, ClipLayerData, DrawnLayerData, GroupLayerData, LayerData, ReferenceLayerData, RGBColor } from '../src/screenTypes'
 import {
-  ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_CELL, DEFAULT_FG,
+  ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_FG,
   DEFAULT_FRAME_DURATION_MS, TRANSPARENT_BG,
 } from '../src/screenTypes'
 
