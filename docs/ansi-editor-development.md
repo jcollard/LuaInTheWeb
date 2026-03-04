@@ -51,7 +51,8 @@ All files live in `lua-learning-website/src/components/AnsiGraphicsEditor/`.
 
 | File | Purpose |
 |------|---------|
-| `layerUtils.ts` | Compositing, contiguity, group visibility |
+| `compositeUtils.ts` | Layer compositing, reference resolution, group grid caching |
+| `layerUtils.ts` | Contiguity checks, group visibility helpers, cell utilities |
 | `textLayerGrid.ts` | Text-to-grid rasterization |
 | `selectionGridUtils.ts` | Selection cut/paste grid operations |
 | `moveUtils.ts` | Layer/selection move operations |
@@ -62,7 +63,7 @@ All files live in `lua-learning-website/src/components/AnsiGraphicsEditor/`.
 
 | File | Purpose |
 |------|---------|
-| `serialization.ts` | Lua table serialize/deserialize (v1–v6) |
+| `serialization.ts` | Lua table serialize/deserialize (v1–v8) |
 | `ansExport.ts` | ANS format export |
 | `shExport.ts` | Shell script export (static + animated) |
 | `pngImport.ts` | PNG import with palette quantization |
@@ -149,9 +150,10 @@ All files live in `lua-learning-website/src/components/AnsiGraphicsEditor/`.
    - Add serialization in `serializeLayers()`
    - Add deserialization case in `deserializeLayers()`
 
-5. **Update compositing** in `layerUtils.ts`:
-   - Handle the new type in `visibleDrawableLayers()` if drawable
-   - Handle in `compositeCellCore()` if it has rendering behavior
+5. **Update compositing** in `compositeUtils.ts`:
+   - Handle the new type in `buildCompositeEntries()` if it produces visual output
+   - Handle in `compositeCellCore()` if it has unique blending behavior
+   - See `ReferenceLayer` handling in `resolveReference()` as a concrete example
 
 6. **Thread through UI**:
    - `useAnsiEditor.ts` → expose creation function
