@@ -86,10 +86,12 @@ AnsiGraphicsEditor.tsx (pure UI — props, events, rendering)
 | `DrawnLayer` | `grid, frames[], currentFrameIndex, frameDurationMs` | Pixel/character art with animation |
 | `TextLayer` | `text, bounds, textFg, textFgColors?, textAlign?` | Styled text with bounding rect |
 | `GroupLayer` | `collapsed` | Organizational container (no grid) |
+| `ClipLayer` | *(none beyond base)* | Clip mask (limits child rendering to parent group bounds) |
+| `ReferenceLayer` | `sourceLayerId, offsetRow, offsetCol` | Linked copy of another layer/group rendered at an offset |
 
 All layers share: `id`, `name`, `visible`, `parentId?`, `tags?`
 
-Union: `Layer = DrawnLayer | TextLayer | GroupLayer`
+Union: `Layer = DrawnLayer | TextLayer | GroupLayer | ClipLayer | ReferenceLayer`
 
 ### Sentinel Colors
 
@@ -120,6 +122,15 @@ Layers are stored as a **flat array ordered bottom-to-top** (index 0 = bottom). 
 
 **Contiguity invariant**: Children of a group must be contiguous in the array and immediately follow their parent. Enforced by `assertContiguousBlocks()` in `layerUtils.ts`.
 
+### Reference Layers
+
+Reference layers render a linked copy of another layer or group at an offset position. They are created via the layer context menu ("Create Reference"). Key behaviors:
+
+- **Resolution**: `resolveReference()` in `compositeUtils.ts` follows `sourceLayerId` chains with cycle detection (max depth 10)
+- **Group references**: When the source is a group, all children are composited into a grid via `compositeGroupToGridInto()`, cached in `groupGridCache` for performance
+- **Positioning**: `offsetRow`/`offsetCol` shift the rendered output; adjustable via the Move tool
+- **Visibility**: Independent of the source layer — hiding a reference does not hide the source, and vice versa
+
 ### Tags
 
 - **Global tag list**: `availableTags[]` in `LayerState`
@@ -139,16 +150,21 @@ Format: **Lua table** via `@kilcekru/lua-table` (prefix: `return { ... }`)
 | 5 | Animation frames (`frames[]` per drawn layer) |
 | 6 | Tags (`availableTags` + per-layer `tags`) |
 | 7 | Palette + sparse run encoding (20-40x file size reduction) |
+| 8 | Reference layers |
 
-The editor always saves as v7. All versions can be loaded. Text layer grids are recomputed on load rather than serialized. See `docs/ansi-file-format.md` for the complete format specification.
+The editor saves as v7 (v8 if reference layers are present). All versions can be loaded. Text layer grids are recomputed on load rather than serialized. See `docs/ansi-file-format.md` for the complete format specification.
 
 ## Rendering Pipeline
 
 ```
-1. Layer Compositing
+1. Layer Compositing (compositeUtils.ts)
    compositeGrid(layers)
        │
-       ├── visibleDrawableLayers()    # Filter hidden groups and non-drawable
+       ├── prepareComposite()         # Build composite entries + clip map
+       │   ├── buildCompositeEntries() # Resolve references, filter hidden groups
+       │   │   ├── DrawableEntry       # Drawn/text layers with their grids
+       │   │   └── ReferenceEntry      # Resolved reference with offset + source grid
+       │   └── buildClipMaskMap()      # Clip layer mask computation
        │
        └── compositeCellCore()        # Per-cell blending, bottom-to-top
            ├── Handle TRANSPARENT_BG  # Text floats above pixel art
@@ -248,7 +264,7 @@ ANSI escape format per cell:
 
 | Format | Direction | Description |
 |--------|-----------|-------------|
-| Lua table | Load/Save | Native format with versioned serialization (v7; loads v1-v6) |
+| Lua table | Load/Save | Native format with versioned serialization (v7/v8; loads v1-v8) |
 | PNG | Import | Image import with palette quantization |
 | ANS | Export | Standard ANSI art file format |
 | .sh | Export | Shell script that renders art via `echo -e` (single frame) |

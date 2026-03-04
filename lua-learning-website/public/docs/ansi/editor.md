@@ -198,6 +198,7 @@ The layers panel shows all layers stacked bottom-to-top. Available actions:
   - Merge Down
   - Group with new folder
   - Duplicate
+  - Create Reference
   - Remove from group
   - Tags submenu (add or remove tags)
 
@@ -208,6 +209,9 @@ The layers panel shows all layers stacked bottom-to-top. Available actions:
 | **Drawn** | Pixel and character art with optional animation frames |
 | **Text** | Styled text with a bounding box, created via the Text tool |
 | **Group** | Organizational folders that toggle visibility for all children |
+| **Reference** | A linked copy of another layer or group, rendered at an offset position |
+
+**Reference layers** display a linked copy of an existing layer or group at a different position on the canvas. To create one, right-click a layer and select **Create Reference**. Use the **Move tool (V)** to reposition the reference. Reference layers have independent visibility — hiding a reference does not affect the original, and vice versa. If the source layer is animated, the reference animates in sync.
 
 ### Tags Tab
 

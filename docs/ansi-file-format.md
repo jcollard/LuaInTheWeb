@@ -23,8 +23,9 @@ ANSI art files use Lua table syntax, prefixed with `return` so they are valid Lu
 | 5 | Frame animation (`frames[]` per drawn layer) | Legacy |
 | 6 | Layer tags (`availableTags` + per-layer `tags`) | Legacy |
 | 7 | Palette + sparse run encoding (20-40x size reduction) | 2026-03 |
+| 8 | Reference layers | 2026-03 |
 
-All versions are **backward compatible** — newer code loads older files. The editor always saves as v7.
+All versions are **backward compatible** — newer code loads older files. The editor saves as v7 (v8 if reference layers are present).
 
 ---
 
@@ -127,6 +128,26 @@ Text layer grids are NOT serialized; they are recomputed on load from text, boun
   tags = {"tag"},             -- optional
 }
 ```
+
+#### Reference Layer (v8)
+
+```lua
+{
+  type = "reference",
+  id = "ref-1",
+  name = "Reference",
+  visible = true,
+  sourceLayerId = "layer-1",  -- ID of the referenced layer or group
+  offsetRow = 5,              -- vertical offset (positive = down)
+  offsetCol = 10,             -- horizontal offset (positive = right)
+  parentId = "group-1",       -- optional
+  tags = {"tag"},             -- optional
+}
+```
+
+Reference layers render a linked copy of another layer or group at an offset position. They have no grid data of their own — the referenced source is composited at the given offset during rendering. Circular references are detected (max depth 10) and silently rendered as transparent.
+
+**Version note:** Files containing reference layers are saved as v8. V8 is structurally identical to v7; the only addition is the `"reference"` layer type. Readers that skip unknown layer types handle v8 files gracefully.
 
 ### Sparse Run Encoding
 
@@ -253,7 +274,7 @@ The savings come from three factors:
 
 ## Backward Compatibility
 
-- The editor always saves as v7
-- Both the editor (`serialization.ts`) and runtime (`screenParser.ts`) can load all versions (v1-v7)
+- The editor saves as v7 (v8 if reference layers are present)
+- Both the editor (`serialization.ts`) and runtime (`screenParser.ts`) can load all versions (v1-v8)
 - New fields are always optional with sensible defaults
 - When loading older formats, the editor converts to v7 on the next save

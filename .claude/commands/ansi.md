@@ -50,12 +50,13 @@ The ANSI subsystem spans ~92 files and ~25k lines across four tightly coupled ar
 | `useAnsiEditor.ts` | Main editor state machine (layers, brush, grid, playback, undo/redo) |
 | `useAnsiEditorFile.ts` | File load/save operations and persistence |
 | `useLayerState.ts` | Layer state management (add, remove, reorder, merge, group) |
-| `layerUtils.ts` | Layer structure ops + **compositing** (`compositeCellCore`) |
+| `compositeUtils.ts` | Layer **compositing** (`compositeCellCore`, `compositeGrid`), reference resolution, group grid caching |
+| `layerUtils.ts` | Layer structure ops, contiguity checks, group visibility helpers |
 | `textLayerGrid.ts` | Text rasterization (word wrap, justify, alignment) |
 | `terminalBuffer.ts` | Double-buffered rendering to xterm.js |
 | `drawHelpers.ts` | Drawing preview, commit, and rendering helpers |
 | `gridUtils.ts` | Core grid manipulation (get/set cells, init, copy) |
-| `serialization.ts` | Serialize/deserialize to Lua table format (v1-v7) |
+| `serialization.ts` | Serialize/deserialize to Lua table format (v1-v8) |
 | `v7Codec.ts` | V7 palette building, grid encoding/decoding |
 | `types.ts` | Core types (AnsiCell, AnsiGrid, Layer, DrawTool, Palettes) |
 | `colorUtils.ts` | Color manipulation (RGB, hex, CGA palette) |
@@ -81,7 +82,7 @@ The ANSI subsystem spans ~92 files and ~25k lines across four tightly coupled ar
 | `AnsiController.ts` | Main runtime controller (screen mgmt, playback, input, terminal I/O) |
 | `setupAnsiAPI.ts` | Registers JS functions for Lua bridge (`__ansi_*` globals) |
 | `screenCompositor.ts` | Layer **compositing** (`compositeCellCore`) — mirrored from editor |
-| `screenParser.ts` | Parse ANSI screen files (v1-v7) |
+| `screenParser.ts` | Parse ANSI screen files (v1-v8) |
 | `v7Decode.ts` | V7 sparse grid decoding (wasmoon format) |
 | `screenTypes.ts` | Screen types (LayerData, DrawableLayerData, AnsiGrid, constants) |
 | `textLayerGrid.ts` | Text rasterization — **ported from editor** |
@@ -125,11 +126,11 @@ These file pairs implement the **same logic** in both editor and runtime. When y
 
 | Logic | Editor File | Runtime File | Notes |
 |-------|-------------|--------------|-------|
-| **Compositing** | `layerUtils.ts` → `compositeCellCore()` | `screenCompositor.ts` → `compositeCellCore()` | Same algorithm: bottom-to-top, transparent-bg handling, half-block merging |
+| **Compositing** | `compositeUtils.ts` → `compositeCellCore()` | `screenCompositor.ts` → `compositeCellCore()` | Same algorithm: bottom-to-top, transparent-bg handling, half-block merging. Editor also handles reference resolution + group grid caching |
 | **Text rasterization** | `textLayerGrid.ts` | `textLayerGrid.ts` | Fully ported with identical tests in both locations |
 | **Types & constants** | `types.ts` (AnsiCell, Layer, ANSI_COLS/ROWS, HALF_BLOCK, TRANSPARENT_*) | `screenTypes.ts` (LayerData, DrawableLayerData, same constants) | Editor uses mutable types; runtime uses immutable `LayerData` |
-| **Serialization** | `serialization.ts` + `v7Codec.ts` (write + read) | `screenParser.ts` + `v7Decode.ts` (read only) | Both must handle v1-v7. Runtime only parses; editor also writes |
-| **Visibility filtering** | `layerUtils.ts` → `hiddenGroupIds()`, `visibleDrawableLayers()` | `screenCompositor.ts` → `hiddenGroupIds()`, `visibleDrawableLayers()` | Same group-visibility propagation logic |
+| **Serialization** | `serialization.ts` + `v7Codec.ts` (write + read) | `screenParser.ts` + `v7Decode.ts` (read only) | Both must handle v1-v8. Runtime only parses; editor also writes |
+| **Visibility filtering** | `compositeUtils.ts` → `hiddenGroupIds()`, `visibleDrawableLayers()` | `screenCompositor.ts` → `hiddenGroupIds()`, `visibleDrawableLayers()` | Same group-visibility propagation logic |
 
 ---
 
@@ -146,12 +147,13 @@ The ANSI file format uses Lua table syntax (`return { ... }`), parsed by `@kilce
 | **v5** | Frame animation (multiple frames per drawn layer) | Yes |
 | **v6** | Layer tags + availableTags list | Yes |
 | **v7** | Palette + sparse run encoding (20-40x file size reduction) | Yes |
+| **v8** | Reference layers (`type = "reference"`) | Yes |
 
-**Versioning**: The editor always saves as **v7**. All versions (v1-v7) can be loaded. See `docs/ansi-file-format.md` for the complete format specification.
+**Versioning**: The editor saves as **v7** (v8 if reference layers are present). All versions (v1-v8) can be loaded. See `docs/ansi-file-format.md` for the complete format specification.
 
 **Rules**:
 - All versions must remain **backward compatible** — newer code must load older files
-- `screenParser.ts` (runtime) and `serialization.ts` (editor) must both handle all versions
+- `screenParser.ts` (runtime) and `serialization.ts` (editor) must both handle all versions (v1-v8)
 - New fields should be optional with sensible defaults
 
 ---
@@ -185,6 +187,9 @@ Both renderers:
 | **RAF throttling** | `GameLoopController` (canvas-runtime) | Drives frame timing via requestAnimationFrame |
 | **Preview-then-commit** | `drawHelpers.ts` | Preview cells show during drag; committed only on release |
 | **Playback drift correction** | `playbackEngine.ts` | Snaps forward if more than one full animation period late |
+| **Deferred recomposite** | `useAnsiEditor.ts` | Compositing deferred until flush; avoids redundant recomputes during batch operations |
+| **Group grid caching** | `compositeUtils.ts` | `groupGridCache` avoids re-compositing group children for each reference; cleared on animation tick |
+| **Zero-allocation compositing** | `compositeUtils.ts` → `compositeGridInto()` | Writes into pre-allocated target grid; hoisted closure avoids per-cell allocation |
 
 ### DO NOT:
 
@@ -258,8 +263,8 @@ Use this table to determine what else needs updating when you change a file:
 
 | If you change... | Also update... | Reason |
 |------------------|----------------|--------|
-| `layerUtils.ts` compositing | `screenCompositor.ts` | Same algorithm in both |
-| `screenCompositor.ts` compositing | `layerUtils.ts` | Same algorithm in both |
+| `compositeUtils.ts` compositing | `screenCompositor.ts` | Same core algorithm in both |
+| `screenCompositor.ts` compositing | `compositeUtils.ts` | Same core algorithm in both |
 | `textLayerGrid.ts` (editor) | `textLayerGrid.ts` (runtime) | Ported implementation |
 | `textLayerGrid.ts` (runtime) | `textLayerGrid.ts` (editor) | Ported implementation |
 | `types.ts` (add/change type) | `screenTypes.ts` | Parallel type definitions |
@@ -275,9 +280,9 @@ Use this table to determine what else needs updating when you change a file:
 
 ## Verification Steps
 
-### After changing editor compositing (`layerUtils.ts`):
+### After changing editor compositing (`compositeUtils.ts`):
 ```bash
-npm --prefix lua-learning-website run test -- --run layerUtils
+npm --prefix lua-learning-website run test -- --run compositeUtils
 npm --prefix lua-learning-website run test -- --run drawHelpers
 ```
 
