@@ -50,23 +50,26 @@ export { DEFAULT_FRAME_DURATION_MS } from '@lua-learning/ansi-shared'
 
 // --- Layer interfaces ---
 
-interface BaseLayerData {
+export interface BaseLayerData {
   id: string
   name: string
   visible: boolean
-  grid: AnsiGrid
   parentId?: string
   tags: string[]
 }
 
-export interface DrawnLayerData extends BaseLayerData {
+interface GridLayerData extends BaseLayerData {
+  grid: AnsiGrid
+}
+
+export interface DrawnLayerData extends GridLayerData {
   type: 'drawn'
   frames: AnsiGrid[]
   currentFrameIndex: number
   frameDurationMs: number
 }
 
-export interface TextLayerData extends BaseLayerData {
+export interface TextLayerData extends GridLayerData {
   type: 'text'
   text: string
   bounds: Rect
@@ -75,30 +78,20 @@ export interface TextLayerData extends BaseLayerData {
   textAlign?: TextAlign
 }
 
-export interface GroupLayerData {
+export interface GroupLayerData extends BaseLayerData {
   type: 'group'
-  id: string
-  name: string
-  visible: boolean
   collapsed: boolean
-  parentId?: string
-  tags: string[]
 }
 
-export interface ClipLayerData extends BaseLayerData {
+export interface ClipLayerData extends GridLayerData {
   type: 'clip'
 }
 
-export interface ReferenceLayerData {
+export interface ReferenceLayerData extends BaseLayerData {
   type: 'reference'
-  id: string
-  name: string
-  visible: boolean
   sourceLayerId: string   // ID of the layer to reference
   offsetRow: number       // positive = shift down
   offsetCol: number       // positive = shift right
-  parentId?: string
-  tags: string[]
 }
 
 export type DrawableLayerData = DrawnLayerData | TextLayerData
