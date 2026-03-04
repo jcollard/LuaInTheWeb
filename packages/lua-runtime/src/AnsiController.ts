@@ -704,6 +704,10 @@ export class AnsiController {
     const { changed } = computePlaybackTick(state.layers, state.schedule, nowMs)
     if (!changed) return
 
+    // Clear group grid cache so reference layers re-composite groups
+    // with updated animation frames
+    this.groupGridCache.clear()
+
     // Re-composite into reusable buffer (double-buffered for diff rendering)
     const oldGrid = state.lastGrid
     const buffer = this.useBufferA ? this.compositeBufferA : this.compositeBufferB
