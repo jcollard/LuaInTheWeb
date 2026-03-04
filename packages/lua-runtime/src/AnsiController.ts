@@ -677,59 +677,47 @@ export class AnsiController {
 
   // --- Internal ---
 
+  /** Advance animation, flush deferred composites, and write dirty screen. */
+  private updateActiveScreen(): void {
+    if (this.activeScreenId === null) return
+    const state = this.screenStates.get(this.activeScreenId)
+    if (state?.playing) {
+      this.advanceScreenAnimation(this.activeScreenId, this.currentTiming.totalTime * 1000)
+    }
+    this.flushRecomposite(this.activeScreenId)
+    if (state?.dirty && state.ansiString) {
+      this.handle?.write(state.ansiString)
+      state.dirty = false
+    }
+  }
+
   /**
    * Frame callback from GameLoopController.
    */
   private onFrame(timing: TimingInfo): void {
     if (!this.running) return
-
-    // Store timing for API access
     this.currentTiming = timing
 
-    // Advance animation frames for the active screen if playing
-    if (this.activeScreenId !== null) {
-      const activeState = this.screenStates.get(this.activeScreenId)
-      if (activeState?.playing) {
-        this.advanceScreenAnimation(this.activeScreenId, timing.totalTime * 1000)
-      }
-    }
-
-    // Flush deferred composites from previous tick's Lua API calls
-    if (this.activeScreenId !== null) {
-      this.flushRecomposite(this.activeScreenId)
-    }
-
-    // Render active screen background before tick callback (only when dirty)
-    if (this.activeScreenId !== null) {
-      const activeState = this.screenStates.get(this.activeScreenId)
-      if (activeState?.dirty && activeState.ansiString) {
-        this.handle?.write(activeState.ansiString)
-        activeState.dirty = false
-      }
-    }
+    // Pre-tick: advance animation + flush deferred composites + write dirty screen
+    this.updateActiveScreen()
 
     // Call the Lua onTick callback
     if (this.onTickCallback) {
       try {
         this.onTickCallback()
       } catch (error) {
-        const errorMessage = formatOnTickError(error)
-        this.callbacks.onError?.(errorMessage)
-        // Stop on error (ANSI terminal doesn't have pause/resume like canvas)
+        this.callbacks.onError?.(formatOnTickError(error))
         this.stop()
         return
       }
     }
 
-    // Flush composites from current tick's Lua API calls (same-frame render)
+    // Post-tick: flush composites from this tick's Lua API calls (same-frame render)
     if (this.activeScreenId !== null) {
       this.flushRecomposite(this.activeScreenId)
     }
 
-    // Flush output buffer so print() output appears immediately
     this.callbacks.onFlushOutput?.()
-
-    // Update input capture (clear "just pressed" state)
     this.inputCapture?.update()
   }
 
