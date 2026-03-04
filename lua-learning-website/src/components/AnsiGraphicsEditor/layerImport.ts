@@ -1,5 +1,5 @@
-import type { Layer, ReferenceLayer } from './types'
-import { isGroupLayer, isClipLayer, isReferenceLayer, getParentId } from './types'
+import type { Layer } from './types'
+import { isClipLayer, isReferenceLayer, getParentId } from './types'
 import { cloneLayer } from './layerUtils'
 
 export interface ImportEntry {

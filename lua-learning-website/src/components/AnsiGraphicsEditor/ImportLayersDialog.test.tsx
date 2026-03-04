@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { ImportLayersDialog } from './ImportLayersDialog'
 import type { ImportEntry } from './layerImport'
 import { createLayer, createGroup } from './layerUtils'
-import type { GroupLayer, Layer, ReferenceLayer } from './types'
+import type { GroupLayer, Layer } from './types'
 
 function makeEntries(layers: Layer[]): ImportEntry[] {
   // Simplified: compute depth based on parentId chain

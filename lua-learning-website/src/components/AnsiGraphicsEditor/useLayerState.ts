@@ -613,13 +613,9 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     setAvailableTags(prev => prev.includes(tag) ? prev : [...prev, tag])
   }, [])
 
-  const removeTagFromLayerCb = useCallback((layerId: string, tag: string) => {
-    setLayers(prev => prev.map(l => l.id === layerId ? removeTagFromLayerUtil(l, tag) : l))
-  }, [])
+  const removeTagFromLayerCb = useCallback((layerId: string, tag: string) => { setLayers(prev => prev.map(l => l.id === layerId ? removeTagFromLayerUtil(l, tag) : l)) }, [])
 
-  const createTag = useCallback((tag: string) => {
-    setAvailableTags(prev => prev.includes(tag) ? prev : [...prev, tag])
-  }, [])
+  const createTag = useCallback((tag: string) => { setAvailableTags(prev => prev.includes(tag) ? prev : [...prev, tag]) }, [])
 
   const deleteTag = useCallback((tag: string) => {
     setAvailableTags(prev => prev.filter(t => t !== tag))
@@ -634,11 +630,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     }))
   }, [])
 
-  const importLayers = useCallback((newLayers: Layer[]) => {
-    if (newLayers.length === 0) return
-    setLayers(prev => [...prev, ...newLayers])
-    setActiveLayerId(newLayers[0].id)
-  }, [])
+  const importLayers = useCallback((newLayers: Layer[]) => { if (newLayers.length === 0) return; setLayers(prev => [...prev, ...newLayers]); setActiveLayerId(newLayers[0].id) }, [])
 
   return {
     layers,
