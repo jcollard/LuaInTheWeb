@@ -132,6 +132,8 @@ export class AnsiController {
   private compositeBufferA: AnsiGrid = createEmptyGrid()
   private compositeBufferB: AnsiGrid = createEmptyGrid()
   private useBufferA = true
+  /** Cached group composite buffers — persists across frames to avoid re-allocation. */
+  private groupGridCache: Map<string, AnsiGrid> = new Map()
 
   constructor(callbacks: AnsiCallbacks, ansiId = 'ansi-main') {
     this.callbacks = callbacks
@@ -231,6 +233,7 @@ export class AnsiController {
 
     // Clear all screen state
     this.screenStates.clear()
+    this.groupGridCache.clear()
     this.activeScreenId = null
     this.nextScreenId = 1
 
@@ -632,7 +635,7 @@ export class AnsiController {
   private recompositeScreen(id: number): void {
     const state = this.screenStates.get(id)
     if (!state) return
-    const grid = compositeGrid(state.layers)
+    const grid = compositeGrid(state.layers, this.groupGridCache)
     state.ansiString = renderGridToAnsiString(grid)
     state.lastGrid = grid
     state.dirty = true
@@ -705,7 +708,7 @@ export class AnsiController {
     const oldGrid = state.lastGrid
     const buffer = this.useBufferA ? this.compositeBufferA : this.compositeBufferB
     this.useBufferA = !this.useBufferA
-    compositeGridInto(buffer, state.layers)
+    compositeGridInto(buffer, state.layers, this.groupGridCache)
     const newGrid = buffer
     state.lastGrid = newGrid
 

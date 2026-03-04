@@ -2,6 +2,7 @@ import type { AnsiCell, AnsiGrid, DrawableLayer, Layer, RGBColor } from './types
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_BG, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer, isReferenceLayer } from './types'
 import { buildClipMaskMap, isCellClipped } from './clipMaskUtils'
 import { rgbEqual, isDefaultCell } from './layerUtils'
+import { createEmptyGrid } from './gridUtils'
 
 /** Returns IDs of groups that are effectively hidden (own visible=false or any ancestor hidden). */
 function hiddenGroupIds(layers: Layer[]): Set<string> {
@@ -145,9 +146,11 @@ function collectGroupSubset(groupId: string, allLayers: Layer[]): Layer[] {
   return result
 }
 
-/** Composite a group's children into a single grid, respecting clip masks and nested references. */
-function compositeGroupToGrid(
+/** Composite a group's children into a pre-allocated target grid, respecting clip masks and nested references. */
+function compositeGroupToGridInto(
+  target: AnsiGrid,
   groupId: string, layers: { map: Map<string, Layer>; all: Layer[] }, visited: Set<string>,
+  groupGridCache?: Map<string, AnsiGrid>,
 ): AnsiGrid | null {
   const subset = collectGroupSubset(groupId, layers.all)
   if (subset.length <= 1) return null // only group header, no children
@@ -160,7 +163,7 @@ function compositeGroupToGrid(
     if (isDrawableLayer(layer)) {
       entries.push({ kind: 'drawable', id: layer.id, visible: layer.visible, parentId: layer.parentId, grid: layer.grid })
     } else if (isReferenceLayer(layer)) {
-      const resolved = resolveReference(layer.sourceLayerId, layer.offsetRow, layer.offsetCol, layers, visited)
+      const resolved = resolveReference(layer.sourceLayerId, layer.offsetRow, layer.offsetCol, layers, visited, groupGridCache)
       if (resolved) {
         entries.push({ kind: 'reference', id: layer.id, visible: layer.visible, parentId: layer.parentId, sourceGrid: resolved.grid, offsetRow: resolved.offsetRow, offsetCol: resolved.offsetCol })
       }
@@ -170,14 +173,24 @@ function compositeGroupToGrid(
 
   const clipMap = buildClipMaskMap(subset)
   const subMap = new Map(subset.map(l => [l.id, l]))
-  return Array.from({ length: ANSI_ROWS }, (_, r) =>
-    Array.from({ length: ANSI_COLS }, (_, c) =>
-      compositeCellCore(entries, (entry) => {
-        if (isCellClipped(entry, r, c, clipMap, subMap)) return null
-        return getEntryCell(entry, r, c)
-      }, true)
-    )
-  )
+  // Hoisted closure: one closure per grid composite instead of 2000
+  let curR = 0, curC = 0
+  const getCell = (entry: CompositeEntry) => {
+    if (isCellClipped(entry, curR, curC, clipMap, subMap)) return null
+    return getEntryCell(entry, curR, curC)
+  }
+  for (let r = 0; r < ANSI_ROWS; r++) {
+    curR = r
+    for (let c = 0; c < ANSI_COLS; c++) {
+      curC = c
+      const result = compositeCellCore(entries, getCell, true)
+      const cell = target[r][c]
+      cell.char = result.char
+      cell.fg[0] = result.fg[0]; cell.fg[1] = result.fg[1]; cell.fg[2] = result.fg[2]
+      cell.bg[0] = result.bg[0]; cell.bg[1] = result.bg[1]; cell.bg[2] = result.bg[2]
+    }
+  }
+  return target
 }
 
 /**
@@ -191,6 +204,7 @@ function resolveReference(
   offsetCol: number,
   layers: { map: Map<string, Layer>; all: Layer[] },
   visited?: Set<string>,
+  groupGridCache?: Map<string, AnsiGrid>,
 ): { grid: AnsiGrid; offsetRow: number; offsetCol: number } | null {
   const seen = visited ?? new Set<string>()
   let currentId = sourceLayerId
@@ -206,8 +220,13 @@ function resolveReference(
       return { grid: source.grid, offsetRow: accRow, offsetCol: accCol }
     }
     if (isGroupLayer(source)) {
-      const grid = compositeGroupToGrid(currentId, layers, seen)
+      // Check cache first to avoid duplicate composites for the same group
+      const cached = groupGridCache?.get(currentId)
+      if (cached) return { grid: cached, offsetRow: accRow, offsetCol: accCol }
+      const target = createEmptyGrid()
+      const grid = compositeGroupToGridInto(target, currentId, layers, seen, groupGridCache)
       if (!grid) return null
+      groupGridCache?.set(currentId, grid)
       return { grid, offsetRow: accRow, offsetCol: accCol }
     }
     if (isReferenceLayer(source)) {
@@ -226,7 +245,9 @@ function resolveReference(
  * reference layers become ReferenceEntry with resolved source grid and accumulated offsets.
  * Skips groups, clips, hidden-group children, and broken/circular references.
  */
-export function buildCompositeEntries(layers: Layer[], layerMap: Map<string, Layer>): CompositeEntry[] {
+export function buildCompositeEntries(
+  layers: Layer[], layerMap: Map<string, Layer>, groupGridCache?: Map<string, AnsiGrid>,
+): CompositeEntry[] {
   const hidden = hiddenGroupIds(layers)
   const entries: CompositeEntry[] = []
 
@@ -242,7 +263,10 @@ export function buildCompositeEntries(layers: Layer[], layerMap: Map<string, Lay
         grid: layer.grid,
       })
     } else if (isReferenceLayer(layer)) {
-      const resolved = resolveReference(layer.sourceLayerId, layer.offsetRow, layer.offsetCol, { map: layerMap, all: layers })
+      const resolved = resolveReference(
+        layer.sourceLayerId, layer.offsetRow, layer.offsetCol,
+        { map: layerMap, all: layers }, undefined, groupGridCache,
+      )
       if (resolved) {
         entries.push({
           kind: 'reference',
@@ -280,9 +304,9 @@ export interface CompositeState {
 }
 
 /** Prepare shared compositing state: composite entries, clip mask map, and layer lookup map. */
-export function prepareComposite(layers: Layer[]): CompositeState {
+export function prepareComposite(layers: Layer[], groupGridCache?: Map<string, AnsiGrid>): CompositeState {
   const layerMap = new Map(layers.map(l => [l.id, l]))
-  return { entries: buildCompositeEntries(layers, layerMap), clipMap: buildClipMaskMap(layers), layerMap }
+  return { entries: buildCompositeEntries(layers, layerMap, groupGridCache), clipMap: buildClipMaskMap(layers), layerMap }
 }
 
 /** Composite a single cell using pre-computed state (avoids rebuilding per cell). */
@@ -317,11 +341,19 @@ export function compositeGrid(layers: Layer[]): AnsiGrid {
 }
 
 /** Composite all visible layers into a pre-allocated target grid (zero allocation). */
-export function compositeGridInto(target: AnsiGrid, layers: Layer[]): void {
-  const state = prepareComposite(layers)
+export function compositeGridInto(target: AnsiGrid, layers: Layer[], groupGridCache?: Map<string, AnsiGrid>): void {
+  const state = prepareComposite(layers, groupGridCache)
+  // Hoisted closure: one closure per grid composite instead of 2000
+  let curR = 0, curC = 0
+  const getCell = (entry: CompositeEntry) => {
+    if (isCellClipped(entry, curR, curC, state.clipMap, state.layerMap)) return null
+    return getEntryCell(entry, curR, curC)
+  }
   for (let r = 0; r < ANSI_ROWS; r++) {
+    curR = r
     for (let c = 0; c < ANSI_COLS; c++) {
-      const result = compositeCellPrepared(state, r, c)
+      curC = c
+      const result = compositeCellCore(state.entries, getCell)
       const cell = target[r][c]
       cell.char = result.char
       cell.fg[0] = result.fg[0]; cell.fg[1] = result.fg[1]; cell.fg[2] = result.fg[2]
