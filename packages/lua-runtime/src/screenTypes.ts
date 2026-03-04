@@ -34,8 +34,8 @@ export const DEFAULT_BG: RGBColor = [0, 0, 0]
 
 export const DEFAULT_CELL: AnsiCell = {
   char: ' ',
-  fg: DEFAULT_FG,
-  bg: DEFAULT_BG,
+  fg: [...DEFAULT_FG] as RGBColor,
+  bg: [...DEFAULT_BG] as RGBColor,
 }
 
 /** Sentinel for transparent half-pixel in HALF_BLOCK cells. */
