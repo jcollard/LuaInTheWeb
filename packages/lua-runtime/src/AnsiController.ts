@@ -18,7 +18,7 @@ import { InputAPI } from './InputAPI'
 import type { TimingInfo } from '@lua-learning/canvas-runtime'
 import { initSchedule, computePlaybackTick, type LayerSchedule } from '@lua-learning/ansi-shared'
 import { parseScreenLayers } from './screenParser'
-import { compositeGrid, compositeGridInto } from './screenCompositor'
+import { compositeGridInto } from './screenCompositor'
 import { renderGridToAnsiString, renderDiffAnsiString } from './ansiStringRenderer'
 import { renderTextLayerGrid } from './textLayerGrid'
 import type { AnsiGrid, LayerData, DrawnLayerData, TextLayerData, RGBColor } from './screenTypes'
@@ -89,6 +89,8 @@ interface ScreenState {
   lastGrid: AnsiGrid | null
   /** True when the full ANSI string needs to be written to the terminal. */
   dirty: boolean
+  /** True when layers changed and need re-compositing before next render. */
+  needsRecomposite: boolean
 }
 
 /**
@@ -146,7 +148,7 @@ export class AnsiController {
   private getScreenState(id: number): ScreenState {
     let state = this.screenStates.get(id)
     if (!state) {
-      state = { ansiString: '', layers: [], schedule: null, playing: false, playbackTouched: false, lastGrid: null, dirty: false }
+      state = { ansiString: '', layers: [], schedule: null, playing: false, playbackTouched: false, lastGrid: null, dirty: false, needsRecomposite: false }
       this.screenStates.set(id, state)
     }
     return state
@@ -630,15 +632,47 @@ export class AnsiController {
   }
 
   /**
-   * Re-composite a screen's layers and update the stored ANSI string and grid cache.
+   * Mark a screen as needing re-compositing. The actual work is deferred
+   * to flushRecomposite() which batches all changes per frame.
    */
   private recompositeScreen(id: number): void {
     const state = this.screenStates.get(id)
     if (!state) return
-    const grid = compositeGrid(state.layers, this.groupGridCache)
-    state.ansiString = renderGridToAnsiString(grid)
-    state.lastGrid = grid
-    state.dirty = true
+    state.needsRecomposite = true
+  }
+
+  /**
+   * Flush deferred re-compositing for a screen. Performs one zero-alloc composite
+   * and diff-renders only changed cells to the terminal.
+   */
+  private flushRecomposite(id: number): void {
+    const state = this.screenStates.get(id)
+    if (!state?.needsRecomposite) return
+    state.needsRecomposite = false
+
+    // Clear group grid cache so reference layers pick up changed layer state
+    this.groupGridCache.clear()
+
+    const oldGrid = state.lastGrid
+    const buffer = this.useBufferA ? this.compositeBufferA : this.compositeBufferB
+    this.useBufferA = !this.useBufferA
+    compositeGridInto(buffer, state.layers, this.groupGridCache)
+    state.lastGrid = buffer
+
+    // Diff render: write only changed cells directly to terminal
+    if (oldGrid && id === this.activeScreenId) {
+      const diff = renderDiffAnsiString(oldGrid, buffer)
+      if (diff) {
+        this.handle?.write(diff)
+        state.dirty = false
+      }
+    } else {
+      // No old grid (first display) — fall back to full write via dirty flag
+      state.dirty = true
+    }
+
+    // Always update cached full string (needed for setScreen/pause scenarios)
+    state.ansiString = renderGridToAnsiString(buffer)
   }
 
   // --- Internal ---
@@ -658,6 +692,11 @@ export class AnsiController {
       if (activeState?.playing) {
         this.advanceScreenAnimation(this.activeScreenId, timing.totalTime * 1000)
       }
+    }
+
+    // Flush deferred composites from previous tick's Lua API calls
+    if (this.activeScreenId !== null) {
+      this.flushRecomposite(this.activeScreenId)
     }
 
     // Render active screen background before tick callback (only when dirty)
@@ -680,6 +719,11 @@ export class AnsiController {
         this.stop()
         return
       }
+    }
+
+    // Flush composites from current tick's Lua API calls (same-frame render)
+    if (this.activeScreenId !== null) {
+      this.flushRecomposite(this.activeScreenId)
     }
 
     // Flush output buffer so print() output appears immediately
