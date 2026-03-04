@@ -27,6 +27,11 @@ export function ImportLayersDialog({
     () => new Set(entries.map(e => e.layer.id)),
   )
   const [targetParentId, setTargetParentId] = useState<string | undefined>(undefined)
+  const [filter, setFilter] = useState('')
+
+  const filteredEntries = filter
+    ? entries.filter(e => e.layer.name.toLowerCase().includes(filter.toLowerCase()))
+    : entries
 
   const handleToggle = useCallback((id: string) => {
     setSelected(prev => {
@@ -93,6 +98,15 @@ export function ImportLayersDialog({
             </select>
           </div>
 
+          <input
+            type="text"
+            className={dialogStyles.filenameInput}
+            placeholder="Filter layers..."
+            value={filter}
+            onChange={e => setFilter(e.target.value)}
+            data-testid="import-filter-input"
+          />
+
           <div className={styles.bulkActions}>
             <button
               type="button"
@@ -111,7 +125,7 @@ export function ImportLayersDialog({
           </div>
 
           <div className={styles.layerList} data-testid="import-layer-list">
-            {entries.map(({ layer, depth }) => (
+            {filteredEntries.map(({ layer, depth }) => (
               <label
                 key={layer.id}
                 className={styles.layerItem}

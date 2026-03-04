@@ -198,6 +198,30 @@ describe('ImportLayersDialog', () => {
     expect(screen.getByText('Ref "Shadow" source missing')).toBeInTheDocument()
   })
 
+  it('filter input narrows visible layers', () => {
+    const bg = createLayer('Background', 'bg-1')
+    const fg = createLayer('Foreground', 'fg-1')
+    const entries = makeEntries([bg, fg])
+
+    render(<ImportLayersDialog {...defaultProps} entries={entries} />)
+
+    fireEvent.change(screen.getByTestId('import-filter-input'), { target: { value: 'back' } })
+
+    expect(screen.getByText('Background')).toBeInTheDocument()
+    expect(screen.queryByText('Foreground')).not.toBeInTheDocument()
+  })
+
+  it('filter is case-insensitive', () => {
+    const bg = createLayer('Background', 'bg-1')
+    const entries = makeEntries([bg])
+
+    render(<ImportLayersDialog {...defaultProps} entries={entries} />)
+
+    fireEvent.change(screen.getByTestId('import-filter-input'), { target: { value: 'BACK' } })
+
+    expect(screen.getByText('Background')).toBeInTheDocument()
+  })
+
   it('Escape key calls onCancel', () => {
     const onCancel = vi.fn()
     render(<ImportLayersDialog {...defaultProps} onCancel={onCancel} />)
