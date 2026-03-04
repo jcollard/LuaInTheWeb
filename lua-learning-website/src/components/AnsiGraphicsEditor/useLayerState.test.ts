@@ -1294,4 +1294,84 @@ describe('useLayerState', () => {
       expect(result.current.activeLayerId).toBe(ref!.id)
     })
   })
+
+  describe('reference layer removal', () => {
+    it('removes a reference layer while leaving the source layer intact', () => {
+      const bg = createLayer('BG', 'bg')
+      const initial: LayerState = { layers: [bg], activeLayerId: 'bg' }
+      const { result } = renderHook(() => useLayerState(initial))
+
+      act(() => result.current.addReferenceLayer('bg'))
+      expect(result.current.layers).toHaveLength(2)
+      const ref = result.current.layers.find(l => isReferenceLayer(l))!
+
+      act(() => result.current.removeLayer(ref.id))
+      expect(result.current.layers).toHaveLength(1)
+      expect(result.current.layers[0].id).toBe('bg')
+      expect(result.current.layers[0].name).toBe('BG')
+    })
+
+    it('leaves reference layer intact when its source layer is removed', () => {
+      const layer1 = createLayer('Layer1', 'l1')
+      const layer2 = createLayer('Layer2', 'l2')
+      const initial: LayerState = { layers: [layer1, layer2], activeLayerId: 'l1' }
+      const { result } = renderHook(() => useLayerState(initial))
+
+      act(() => result.current.addReferenceLayer('l1'))
+      expect(result.current.layers).toHaveLength(3)
+      const ref = result.current.layers.find(l => isReferenceLayer(l))!
+
+      // Remove the source layer (l1) — reference should remain (orphaned)
+      act(() => result.current.removeLayer('l1'))
+      expect(result.current.layers).toHaveLength(2)
+      const remainingRef = result.current.layers.find(l => isReferenceLayer(l))
+      expect(remainingRef).toBeDefined()
+      expect(remainingRef!.id).toBe(ref.id)
+      if (isReferenceLayer(remainingRef!)) {
+        // sourceLayerId still points to the now-removed layer
+        expect(remainingRef!.sourceLayerId).toBe('l1')
+      }
+      // l2 should still be present
+      expect(result.current.layers.find(l => l.id === 'l2')).toBeDefined()
+    })
+
+    it('switches active layer to last drawable when active reference layer is removed', () => {
+      const bg = createLayer('BG', 'bg')
+      const fg = createLayer('FG', 'fg')
+      const initial: LayerState = { layers: [bg, fg], activeLayerId: 'bg' }
+      const { result } = renderHook(() => useLayerState(initial))
+
+      act(() => result.current.addReferenceLayer('bg'))
+      const ref = result.current.layers.find(l => isReferenceLayer(l))!
+
+      // Set the reference layer as active
+      act(() => result.current.setActiveLayer(ref.id))
+      expect(result.current.activeLayerId).toBe(ref.id)
+
+      // Remove the active reference layer
+      act(() => result.current.removeLayer(ref.id))
+      // Active should switch to last drawable layer (reversed search)
+      const lastDrawable = [...result.current.layers].reverse().find(isDrawableLayer)
+      expect(result.current.activeLayerId).toBe(lastDrawable!.id)
+    })
+
+    it('does not switch active layer when a non-active reference layer is removed', () => {
+      const bg = createLayer('BG', 'bg')
+      const initial: LayerState = { layers: [bg], activeLayerId: 'bg' }
+      const { result } = renderHook(() => useLayerState(initial))
+
+      act(() => result.current.addReferenceLayer('bg'))
+      const ref = result.current.layers.find(l => isReferenceLayer(l))!
+
+      // Set active back to the drawable layer
+      act(() => result.current.setActiveLayer('bg'))
+      expect(result.current.activeLayerId).toBe('bg')
+
+      // Remove the non-active reference layer
+      act(() => result.current.removeLayer(ref.id))
+      expect(result.current.layers).toHaveLength(1)
+      // Active layer should remain unchanged
+      expect(result.current.activeLayerId).toBe('bg')
+    })
+  })
 })
