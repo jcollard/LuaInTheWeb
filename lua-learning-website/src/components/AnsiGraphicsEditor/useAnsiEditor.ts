@@ -526,6 +526,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           if (fills.size === 0) return
           pushSnapshot()
           draw.commitCells(fills)
+          flushLayers(layersRef.current)
           break
         }
         case 'select': {
@@ -651,6 +652,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         case 'pencil':
           paintingRef.current = false
           lastCellRef.current = null
+          flushLayers(layersRef.current)
           break
         case 'line': {
           cancelPreviewRaf()
@@ -662,6 +664,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
             draw.restorePreview()
             lineStartRef.current = null
           }
+          flushLayers(layersRef.current)
           break
         }
         case 'rect-outline':
@@ -679,6 +682,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
             lineStartRef.current = null
             draw.hideDimension()
           }
+          flushLayers(layersRef.current)
           break
         }
         case 'select':
