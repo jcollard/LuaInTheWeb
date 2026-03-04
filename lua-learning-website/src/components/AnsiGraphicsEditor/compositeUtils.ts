@@ -25,7 +25,8 @@ function hiddenGroupIds(layers: Layer[]): Set<string> {
     }
   }
   while (queue.length > 0) {
-    const parentId = queue.pop()!
+    const parentId = queue.pop()
+    if (!parentId) continue
     const kids = children.get(parentId)
     if (!kids) continue
     for (const kid of kids) {

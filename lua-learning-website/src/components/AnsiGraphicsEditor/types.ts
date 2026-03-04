@@ -88,20 +88,23 @@ export interface Rect {
   c1: number
 }
 
-interface BaseLayer {
+export interface BaseLayer {
   id: string
   name: string
   visible: boolean
-  grid: AnsiGrid
   parentId?: string
   tags?: string[]
+}
+
+interface GridLayer extends BaseLayer {
+  grid: AnsiGrid
 }
 
 export { DEFAULT_FRAME_DURATION_MS } from '@lua-learning/ansi-shared'
 export const MIN_FRAME_DURATION_MS = 16
 export const MAX_FRAME_DURATION_MS = 10000
 
-export interface DrawnLayer extends BaseLayer {
+export interface DrawnLayer extends GridLayer {
   type: 'drawn'
   frames: AnsiGrid[]
   currentFrameIndex: number
@@ -110,7 +113,7 @@ export interface DrawnLayer extends BaseLayer {
 
 export type TextAlign = 'left' | 'center' | 'right' | 'justify'
 
-export interface TextLayer extends BaseLayer {
+export interface TextLayer extends GridLayer {
   type: 'text'
   text: string
   bounds: Rect
@@ -119,30 +122,20 @@ export interface TextLayer extends BaseLayer {
   textAlign?: TextAlign
 }
 
-export interface GroupLayer {
+export interface GroupLayer extends BaseLayer {
   type: 'group'
-  id: string
-  name: string
-  visible: boolean
   collapsed: boolean
-  parentId?: string
-  tags?: string[]
 }
 
-export interface ClipLayer extends BaseLayer {
+export interface ClipLayer extends GridLayer {
   type: 'clip'
 }
 
-export interface ReferenceLayer {
+export interface ReferenceLayer extends BaseLayer {
   type: 'reference'
-  id: string
-  name: string
-  visible: boolean
   sourceLayerId: string   // ID of the layer to reference
   offsetRow: number       // positive = shift down
   offsetCol: number       // positive = shift right
-  parentId?: string
-  tags?: string[]
 }
 
 export type DrawableLayer = DrawnLayer | TextLayer
