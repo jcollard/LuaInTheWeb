@@ -65,7 +65,7 @@ export function remapLayers(
 
     // Exclude ReferenceLayer if source not resolvable
     if (isReferenceLayer(layer)) {
-      const sourceId = (layer as ReferenceLayer).sourceLayerId
+      const sourceId = layer.sourceLayerId
       if (!idMap.has(sourceId) && !existingIds.has(sourceId)) {
         continue
       }
