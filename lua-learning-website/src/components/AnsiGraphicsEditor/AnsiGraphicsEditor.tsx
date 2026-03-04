@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnsiTerminalPanel } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { useIDE } from '../IDEContext/useIDE'
@@ -11,10 +11,9 @@ import { SaveAsDialog } from './SaveAsDialog'
 import { ToastContainer } from './ToastContainer'
 import { useAnsiEditor } from './useAnsiEditor'
 import { useAnsiEditorFile } from './useAnsiEditorFile'
+import { useImportLayers } from './useImportLayers'
 import { useToast } from './useToast'
-import { buildImportEntries, remapLayers } from './layerImport'
-import type { ImportEntry } from './layerImport'
-import type { ScaleMode, GroupLayer, LayerState } from './types'
+import type { ScaleMode, GroupLayer } from './types'
 import { isGroupLayer } from './types'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -162,58 +161,16 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
     e.target.value = ''
   }, [importPngAsLayer])
 
-  // Import Layers state and handlers
-  const layerFileInputRef = useRef<HTMLInputElement>(null)
-  const [importDialogState, setImportDialogState] = useState<{
-    entries: ImportEntry[]
-    sourceLayers: LayerState
-    warnings: string[]
-  } | null>(null)
+  const {
+    layerFileInputRef,
+    importDialogState,
+    handleImportLayersClick,
+    handleLayerFileSelected,
+    handleImportConfirm,
+    handleImportCancel,
+  } = useImportLayers({ layers, parseAnsiFile, importLayersWithUndo })
 
-  const handleImportLayersClick = useCallback(() => {
-    layerFileInputRef.current?.click()
-  }, [])
-
-  const handleLayerFileSelected = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    const parsed = await parseAnsiFile(file)
-    if (!parsed) return
-
-    const entries = buildImportEntries(parsed.layers)
-    const existingIds = new Set(layers.map(l => l.id))
-    const warnings: string[] = []
-
-    for (const { layer } of entries) {
-      if (layer.type === 'reference') {
-        const sourceId = layer.sourceLayerId
-        const sourceInFile = parsed.layers.some(l => l.id === sourceId)
-        if (!sourceInFile && !existingIds.has(sourceId)) {
-          warnings.push(`Ref "${layer.name}" source missing`)
-        }
-      }
-    }
-
-    setImportDialogState({ entries, sourceLayers: parsed, warnings })
-  }, [parseAnsiFile, layers])
-
-  const handleImportConfirm = useCallback((selectedIds: Set<string>, targetParentId: string | undefined) => {
-    if (!importDialogState) return
-    const selected = importDialogState.sourceLayers.layers.filter(l => selectedIds.has(l.id))
-    const existingIds = new Set(layers.map(l => l.id))
-    const remapped = remapLayers(selected, targetParentId, existingIds)
-    if (remapped.length > 0) {
-      importLayersWithUndo(remapped)
-    }
-    setImportDialogState(null)
-  }, [importDialogState, layers, importLayersWithUndo])
-
-  const handleImportCancel = useCallback(() => {
-    setImportDialogState(null)
-  }, [])
-
-  const existingGroups = layers.filter(isGroupLayer) as GroupLayer[]
+  const existingGroups = useMemo(() => layers.filter(isGroupLayer) as GroupLayer[], [layers])
 
   const handleSaveAs = useCallback(async (folderPath: string, fileName: string) => {
     await fileHandleSaveAs(folderPath, fileName, layers, activeLayerId, availableTags)
