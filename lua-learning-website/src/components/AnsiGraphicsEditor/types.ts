@@ -77,8 +77,8 @@ export const TRANSPARENT_BG: RGBColor = [-2, -2, -2]
 
 export const DEFAULT_CELL: AnsiCell = {
   char: ' ',
-  fg: DEFAULT_FG,
-  bg: DEFAULT_BG,
+  fg: [...DEFAULT_FG] as RGBColor,
+  bg: [...DEFAULT_BG] as RGBColor,
 }
 
 export interface Rect {

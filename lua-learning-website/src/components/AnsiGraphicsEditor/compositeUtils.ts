@@ -1,47 +1,37 @@
-import type { AnsiCell, AnsiGrid, DrawableLayer, Layer, RGBColor } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_BG, HALF_BLOCK, TRANSPARENT_HALF, TRANSPARENT_BG, isGroupLayer, isDrawableLayer, isReferenceLayer } from './types'
+import type { AnsiCell, AnsiGrid, DrawableLayer, Layer } from './types'
+import { ANSI_COLS, ANSI_ROWS, isGroupLayer, isDrawableLayer, isReferenceLayer } from './types'
 import { buildClipMaskMap, isCellClipped } from './clipMaskUtils'
-import { rgbEqual, isDefaultCell } from './layerUtils'
 import { createEmptyGrid } from './gridUtils'
+import {
+  createCompositeEngine,
+  compositeCellCore,
+  type CompositeEntry as SharedCompositeEntry,
+  type DrawableEntry as SharedDrawableEntry,
+  type ReferenceEntry as SharedReferenceEntry,
+} from '@lua-learning/ansi-shared'
 
-/** Returns IDs of groups that are effectively hidden (own visible=false or any ancestor hidden). */
-function hiddenGroupIds(layers: Layer[]): Set<string> {
-  const ids = new Set<string>()
-  // Build parent → children map for single-pass BFS
-  const children = new Map<string, string[]>()
-  for (const layer of layers) {
-    if (isGroupLayer(layer) && layer.parentId) {
-      const siblings = children.get(layer.parentId)
-      if (siblings) siblings.push(layer.id)
-      else children.set(layer.parentId, [layer.id])
-    }
-  }
-  // Seed with directly hidden groups, then BFS to propagate
-  const queue: string[] = []
-  for (const layer of layers) {
-    if (isGroupLayer(layer) && !layer.visible) {
-      ids.add(layer.id)
-      queue.push(layer.id)
-    }
-  }
-  while (queue.length > 0) {
-    const parentId = queue.pop()
-    if (!parentId) continue
-    const kids = children.get(parentId)
-    if (!kids) continue
-    for (const kid of kids) {
-      if (!ids.has(kid)) {
-        ids.add(kid)
-        queue.push(kid)
-      }
-    }
-  }
-  return ids
-}
+// --- Composite entry types (re-export from shared) ---
+
+export type DrawableEntry = SharedDrawableEntry
+export type ReferenceEntry = SharedReferenceEntry
+export type CompositeEntry = SharedCompositeEntry
+
+// --- Engine instance (bound to editor type guards) ---
+
+const engine = createCompositeEngine<Layer>({
+  isGroupLayer,
+  isDrawableLayer,
+  isReferenceLayer,
+  createEmptyGrid,
+  buildClipMaskMap,
+  isCellClipped,
+})
+
+// --- Re-export shared engine functions with existing public API ---
 
 /** Filters to only DrawableLayer entries, skipping groups and children of hidden groups. */
 export function visibleDrawableLayers(layers: Layer[]): DrawableLayer[] {
-  const hidden = hiddenGroupIds(layers)
+  const hidden = engine.hiddenGroupIds(layers)
   const result: DrawableLayer[] = []
   for (const layer of layers) {
     if (!isDrawableLayer(layer)) continue
@@ -49,196 +39,6 @@ export function visibleDrawableLayers(layers: Layer[]): DrawableLayer[] {
     result.push(layer)
   }
   return result
-}
-
-function isTransparentBg(color: RGBColor): boolean {
-  return rgbEqual(color, TRANSPARENT_BG)
-}
-
-function compositeCellCore<T>(layers: T[], getCell: (layer: T) => AnsiCell | null, preserveTransparency?: boolean): AnsiCell {
-  let topColor: RGBColor | null = null
-  let bottomColor: RGBColor | null = null
-  // Pending text cell: char+fg from a TRANSPARENT_BG cell waiting for a bg source
-  let pendingChar: string | null = null
-  let pendingFg: RGBColor | null = null
-
-  for (let i = layers.length - 1; i >= 0; i--) {
-    const cell = getCell(layers[i])
-    if (cell === null || isDefaultCell(cell)) continue
-
-    // TRANSPARENT_BG cells: space = fully transparent (skip), non-space = pending text
-    if (isTransparentBg(cell.bg)) {
-      if (cell.char === ' ') continue
-      if (pendingChar === null) {
-        pendingChar = cell.char
-        pendingFg = cell.fg
-      }
-      continue
-    }
-
-    if (cell.char === HALF_BLOCK) {
-      // Pending text cell can use the half-block's bg as its background
-      if (pendingChar !== null) {
-        return { char: pendingChar, fg: pendingFg!, bg: cell.bg }
-      }
-      if (topColor === null && !rgbEqual(cell.fg, TRANSPARENT_HALF)) topColor = cell.fg
-      if (bottomColor === null && !rgbEqual(cell.bg, TRANSPARENT_HALF)) bottomColor = cell.bg
-    } else {
-      // Pending text cell uses this opaque cell's bg
-      if (pendingChar !== null) {
-        return { char: pendingChar, fg: pendingFg!, bg: cell.bg }
-      }
-      // Non-HALF_BLOCK cell is fully opaque
-      if (topColor === null && bottomColor === null) return cell
-      if (topColor === null) topColor = cell.bg
-      if (bottomColor === null) bottomColor = cell.bg
-    }
-
-    if (topColor !== null && bottomColor !== null) break
-  }
-
-  // If we have a pending text cell but no bg source, use DEFAULT_BG (or preserve transparency)
-  if (pendingChar !== null) {
-    const bg = preserveTransparency ? [...TRANSPARENT_BG] : [...DEFAULT_BG]
-    return { char: pendingChar, fg: pendingFg!, bg: bg as RGBColor }
-  }
-
-  if (topColor === null && bottomColor === null) return DEFAULT_CELL
-  return {
-    char: HALF_BLOCK,
-    fg: topColor ?? ([...(preserveTransparency ? TRANSPARENT_HALF : DEFAULT_BG)] as RGBColor),
-    bg: bottomColor ?? ([...(preserveTransparency ? TRANSPARENT_HALF : DEFAULT_BG)] as RGBColor),
-  }
-}
-
-// --- Composite entry types ---
-
-export interface DrawableEntry {
-  kind: 'drawable'
-  id: string
-  visible: boolean
-  parentId?: string
-  grid: AnsiGrid
-}
-
-export interface ReferenceEntry {
-  kind: 'reference'
-  id: string
-  visible: boolean
-  parentId?: string
-  sourceGrid: AnsiGrid
-  offsetRow: number
-  offsetCol: number
-}
-
-export type CompositeEntry = DrawableEntry | ReferenceEntry
-
-/** Collect the group layer and all its descendants from the ordered layer list. */
-function collectGroupSubset(groupId: string, allLayers: Layer[]): Layer[] {
-  const result: Layer[] = []
-  const descendantGroups = new Set([groupId])
-  for (const layer of allLayers) {
-    if (layer.id === groupId) { result.push(layer); continue }
-    if (layer.parentId && descendantGroups.has(layer.parentId)) {
-      result.push(layer)
-      if (isGroupLayer(layer)) descendantGroups.add(layer.id)
-    }
-  }
-  return result
-}
-
-/** Composite a group's children into a pre-allocated target grid, respecting clip masks and nested references. */
-function compositeGroupToGridInto(
-  target: AnsiGrid,
-  groupId: string, layers: { map: Map<string, Layer>; all: Layer[] }, visited: Set<string>,
-  groupGridCache?: Map<string, AnsiGrid>,
-): AnsiGrid | null {
-  const subset = collectGroupSubset(groupId, layers.all)
-  if (subset.length <= 1) return null // only group header, no children
-
-  const hidden = hiddenGroupIds(subset)
-  hidden.delete(groupId) // root group visibility is handled by the caller
-  const entries: CompositeEntry[] = []
-  for (const layer of subset) {
-    if (layer.parentId && hidden.has(layer.parentId)) continue
-    if (isDrawableLayer(layer)) {
-      entries.push({ kind: 'drawable', id: layer.id, visible: layer.visible, parentId: layer.parentId, grid: layer.grid })
-    } else if (isReferenceLayer(layer)) {
-      const resolved = resolveReference(layer.sourceLayerId, layer.offsetRow, layer.offsetCol, layers, visited, groupGridCache)
-      if (resolved) {
-        entries.push({ kind: 'reference', id: layer.id, visible: layer.visible, parentId: layer.parentId, sourceGrid: resolved.grid, offsetRow: resolved.offsetRow, offsetCol: resolved.offsetCol })
-      }
-    }
-  }
-  if (entries.length === 0) return null
-
-  const clipMap = buildClipMaskMap(subset)
-  const subMap = new Map(subset.map(l => [l.id, l]))
-  // Hoisted closure: one closure per grid composite instead of 2000
-  let curR = 0, curC = 0
-  const getCell = (entry: CompositeEntry) => {
-    if (isCellClipped(entry, curR, curC, clipMap, subMap)) return null
-    return getEntryCell(entry, curR, curC)
-  }
-  for (let r = 0; r < ANSI_ROWS; r++) {
-    curR = r
-    for (let c = 0; c < ANSI_COLS; c++) {
-      curC = c
-      const result = compositeCellCore(entries, getCell, true)
-      const cell = target[r][c]
-      cell.char = result.char
-      cell.fg[0] = result.fg[0]; cell.fg[1] = result.fg[1]; cell.fg[2] = result.fg[2]
-      cell.bg[0] = result.bg[0]; cell.bg[1] = result.bg[1]; cell.bg[2] = result.bg[2]
-    }
-  }
-  return target
-}
-
-/**
- * Resolve a reference layer's source, following chained references.
- * Returns the ultimate drawable layer's grid and accumulated offsets,
- * or null if the chain is broken or circular.
- */
-function resolveReference(
-  sourceLayerId: string,
-  offsetRow: number,
-  offsetCol: number,
-  layers: { map: Map<string, Layer>; all: Layer[] },
-  visited?: Set<string>,
-  groupGridCache?: Map<string, AnsiGrid>,
-): { grid: AnsiGrid; offsetRow: number; offsetCol: number } | null {
-  const seen = visited ?? new Set<string>()
-  let currentId = sourceLayerId
-  let accRow = offsetRow
-  let accCol = offsetCol
-
-  while (currentId && seen.size < 10) {
-    if (seen.has(currentId)) return null // cycle
-    seen.add(currentId)
-    const source = layers.map.get(currentId)
-    if (!source) return null // missing source
-    if (isDrawableLayer(source)) {
-      return { grid: source.grid, offsetRow: accRow, offsetCol: accCol }
-    }
-    if (isGroupLayer(source)) {
-      // Check cache first to avoid duplicate composites for the same group
-      const cached = groupGridCache?.get(currentId)
-      if (cached) return { grid: cached, offsetRow: accRow, offsetCol: accCol }
-      const target = createEmptyGrid()
-      const grid = compositeGroupToGridInto(target, currentId, layers, seen, groupGridCache)
-      if (!grid) return null
-      groupGridCache?.set(currentId, grid)
-      return { grid, offsetRow: accRow, offsetCol: accCol }
-    }
-    if (isReferenceLayer(source)) {
-      accRow += source.offsetRow
-      accCol += source.offsetCol
-      currentId = source.sourceLayerId
-      continue
-    }
-    return null // clips can't be referenced
-  }
-  return null // max depth exceeded
 }
 
 /**
@@ -249,52 +49,7 @@ function resolveReference(
 export function buildCompositeEntries(
   layers: Layer[], layerMap: Map<string, Layer>, groupGridCache?: Map<string, AnsiGrid>,
 ): CompositeEntry[] {
-  const hidden = hiddenGroupIds(layers)
-  const entries: CompositeEntry[] = []
-
-  for (const layer of layers) {
-    if (layer.parentId && hidden.has(layer.parentId)) continue
-
-    if (isDrawableLayer(layer)) {
-      entries.push({
-        kind: 'drawable',
-        id: layer.id,
-        visible: layer.visible,
-        parentId: layer.parentId,
-        grid: layer.grid,
-      })
-    } else if (isReferenceLayer(layer)) {
-      const resolved = resolveReference(
-        layer.sourceLayerId, layer.offsetRow, layer.offsetCol,
-        { map: layerMap, all: layers }, undefined, groupGridCache,
-      )
-      if (resolved) {
-        entries.push({
-          kind: 'reference',
-          id: layer.id,
-          visible: layer.visible,
-          parentId: layer.parentId,
-          sourceGrid: resolved.grid,
-          offsetRow: resolved.offsetRow,
-          offsetCol: resolved.offsetCol,
-        })
-      }
-      // broken/circular references are silently skipped (render transparent)
-    }
-    // groups, clips are skipped
-  }
-  return entries
-}
-
-function getEntryCell(entry: CompositeEntry, row: number, col: number): AnsiCell | null {
-  if (!entry.visible) return null
-  if (entry.kind === 'reference') {
-    const srcRow = row - entry.offsetRow
-    const srcCol = col - entry.offsetCol
-    if (srcRow < 0 || srcRow >= ANSI_ROWS || srcCol < 0 || srcCol >= ANSI_COLS) return null
-    return entry.sourceGrid[srcRow][srcCol]
-  }
-  return entry.grid[row][col]
+  return engine.buildCompositeEntries(layers, layerMap, groupGridCache)
 }
 
 /** Pre-computed compositing state for batch operations. */
@@ -307,14 +62,14 @@ export interface CompositeState {
 /** Prepare shared compositing state: composite entries, clip mask map, and layer lookup map. */
 export function prepareComposite(layers: Layer[], groupGridCache?: Map<string, AnsiGrid>): CompositeState {
   const layerMap = new Map(layers.map(l => [l.id, l]))
-  return { entries: buildCompositeEntries(layers, layerMap, groupGridCache), clipMap: buildClipMaskMap(layers), layerMap }
+  return { entries: engine.buildCompositeEntries(layers, layerMap, groupGridCache), clipMap: buildClipMaskMap(layers), layerMap }
 }
 
 /** Composite a single cell using pre-computed state (avoids rebuilding per cell). */
 export function compositeCellPrepared(state: CompositeState, row: number, col: number): AnsiCell {
   return compositeCellCore(state.entries, (entry) => {
     if (isCellClipped(entry, row, col, state.clipMap, state.layerMap)) return null
-    return getEntryCell(entry, row, col)
+    return engine.getEntryCell(entry, row, col)
   })
 }
 
@@ -326,7 +81,7 @@ export function compositeCellWithOverridePrepared(
   return compositeCellCore(state.entries, (entry) => {
     if (isCellClipped(entry, row, col, state.clipMap, state.layerMap)) return null
     if (entry.id === activeLayerId && entry.kind === 'drawable') return overrideCell
-    return getEntryCell(entry, row, col)
+    return engine.getEntryCell(entry, row, col)
   })
 }
 
@@ -348,7 +103,7 @@ export function compositeGridInto(target: AnsiGrid, layers: Layer[], groupGridCa
   let curR = 0, curC = 0
   const getCell = (entry: CompositeEntry) => {
     if (isCellClipped(entry, curR, curC, state.clipMap, state.layerMap)) return null
-    return getEntryCell(entry, curR, curC)
+    return engine.getEntryCell(entry, curR, curC)
   }
   for (let r = 0; r < ANSI_ROWS; r++) {
     curR = r
