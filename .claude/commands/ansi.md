@@ -30,6 +30,7 @@ The ANSI subsystem spans ~92 files and ~25k lines across four tightly coupled ar
                            │  │
                     ┌──────▼──▼──────────┐
                     │  ansi-shared       │
+                    │  compositeEngine.ts│
                     │  playbackEngine.ts │
                     └────────────────────┘
                            │
@@ -50,6 +51,8 @@ The ANSI subsystem spans ~92 files and ~25k lines across four tightly coupled ar
 | `useAnsiEditor.ts` | Main editor state machine (layers, brush, grid, playback, undo/redo) |
 | `useAnsiEditorFile.ts` | File load/save operations and persistence |
 | `useLayerState.ts` | Layer state management (add, remove, reorder, merge, group) |
+| `useImportLayers.ts` | Import dialog state, file selection, layer remapping |
+| `useLayerTags.ts` | Tag CRUD (create, delete, rename, add/remove from layers) |
 | `compositeUtils.ts` | Layer **compositing** (`compositeCellCore`, `compositeGrid`), reference resolution, group grid caching |
 | `layerUtils.ts` | Layer structure ops, contiguity checks, group visibility helpers |
 | `textLayerGrid.ts` | Text rasterization (word wrap, justify, alignment) |
@@ -97,6 +100,7 @@ The ANSI subsystem spans ~92 files and ~25k lines across four tightly coupled ar
 
 | File | Purpose |
 |------|---------|
+| `compositeEngine.ts` | Generic compositing engine (structural typing, `createCompositeEngine<L>()`) |
 | `playbackEngine.ts` | Shared frame animation playback (drift correction, scheduling) |
 | `index.ts` | Module exports |
 
@@ -126,7 +130,7 @@ These file pairs implement the **same logic** in both editor and runtime. When y
 
 | Logic | Editor File | Runtime File | Notes |
 |-------|-------------|--------------|-------|
-| **Compositing** | `compositeUtils.ts` → `compositeCellCore()` | `screenCompositor.ts` → `compositeCellCore()` | Same algorithm: bottom-to-top, transparent-bg handling, half-block merging. Editor also handles reference resolution + group grid caching |
+| **Compositing** | `compositeUtils.ts` | `screenCompositor.ts` | Both delegate core algorithm to `ansi-shared/compositeEngine.ts` via `createCompositeEngine()`. Type-specific helpers (clip masks, empty grids) remain in each side |
 | **Text rasterization** | `textLayerGrid.ts` | `textLayerGrid.ts` | Fully ported with identical tests in both locations |
 | **Types & constants** | `types.ts` (AnsiCell, Layer, ANSI_COLS/ROWS, HALF_BLOCK, TRANSPARENT_*) | `screenTypes.ts` (LayerData, DrawableLayerData, same constants) | Editor uses mutable types; runtime uses immutable `LayerData` |
 | **Serialization** | `serialization.ts` + `v7Codec.ts` (write + read) | `screenParser.ts` + `v7Decode.ts` (read only) | Both must handle v1-v8. Runtime only parses; editor also writes |
@@ -272,9 +276,11 @@ Use this table to determine what else needs updating when you change a file:
 | `serialization.ts` (new version) | `screenParser.ts` | Both must parse the format |
 | `screenParser.ts` (parsing logic) | `serialization.ts` | Ensure write/read roundtrip |
 | `AnsiController.ts` (new method) | `setupAnsiAPI.ts` + `ansiLuaCode/` + docs | Full API chain |
+| `compositeEngine.ts` (ansi-shared) | `compositeUtils.ts` + `screenCompositor.ts` | Core compositing algorithm used by both sides |
 | `playbackEngine.ts` | Editor playback + runtime playback | Shared by both |
 | `terminalBuffer.ts` (rendering) | `ansiStringRenderer.ts` | Must produce identical output |
 | `ansiStringRenderer.ts` (rendering) | `terminalBuffer.ts` | Must produce identical output |
+| `useLayerTags.ts` | `useLayerState.ts` | Tag operations extracted from useLayerState |
 
 ---
 

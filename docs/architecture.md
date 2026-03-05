@@ -32,20 +32,37 @@ The project uses npm workspaces with a monorepo structure:
 ```
 LuaInTheWeb/
 ├── packages/
-│   └── shell-core/              # Independent shell package
-│       ├── src/
-│       │   ├── commands/        # Built-in commands (cd, ls, pwd, help)
-│       │   ├── types.ts         # Core interfaces
-│       │   ├── CommandRegistry.ts
-│       │   ├── createFileSystemAdapter.ts
-│       │   ├── parseCommand.ts
-│       │   └── pathUtils.ts
-│       └── tests/
+│   ├── shell-core/              # Shell infrastructure (no deps)
+│   │   ├── src/
+│   │   │   ├── commands/        # Built-in commands (cd, ls, pwd, help)
+│   │   │   ├── types.ts         # Core interfaces
+│   │   │   ├── CommandRegistry.ts
+│   │   │   ├── createFileSystemAdapter.ts
+│   │   │   ├── parseCommand.ts
+│   │   │   └── pathUtils.ts
+│   │   └── tests/
+│   │
+│   ├── canvas-runtime/          # Canvas rendering (depends on shell-core)
+│   │   └── src/                 # CanvasRenderer, GameLoop, InputCapture, audio
+│   │
+│   ├── ansi-shared/             # Shared ANSI compositing & playback (no deps)
+│   │   └── src/
+│   │       ├── compositeEngine.ts  # Generic compositing engine (createCompositeEngine<L>())
+│   │       ├── playbackEngine.ts   # Frame animation playback with drift correction
+│   │       └── index.ts
+│   │
+│   ├── lua-runtime/             # Lua engine + controllers (depends on canvas-runtime, shell-core, ansi-shared)
+│   │   └── src/                 # AnsiController, CanvasController, screen*, audio
+│   │
+│   └── export/                  # Single-file HTML export (depends on lua-runtime)
+│       └── src/runtime/         # Standalone canvas/ANSI bridge for exported games
 │
-└── lua-learning-website/        # Main web application
+└── lua-learning-website/        # Main React app (depends on lua-runtime, canvas-runtime)
     ├── src/
     │   ├── components/
-    │   │   └── ShellTerminal/   # Shell UI component
+    │   │   ├── AnsiGraphicsEditor/  # ANSI art editor (~92 files)
+    │   │   ├── ShellTerminal/       # Shell UI component
+    │   │   └── ...
     │   └── hooks/
     │       └── useShell.ts      # Shell integration hook
     └── package.json

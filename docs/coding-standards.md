@@ -487,9 +487,9 @@ Cross-package duplication is detected by [jscpd](https://github.com/kucherenko/j
 
 | Metric | Value |
 |--------|-------|
-| Clones | 26 |
-| Duplicated lines | 602 |
-| Duplication rate | 1.67% |
+| Clones | 31 |
+| Duplicated lines | 650 |
+| Duplication rate | 1.73% |
 
 Biggest hotspot: 8 audio engine clones (~500 lines) between `canvas-runtime` and `lua-runtime`.
 
@@ -506,10 +506,12 @@ Some duplication is intentional and excluded from scanning:
 | `AnsiGraphicsEditor/terminalBuffer.ts` | Shared ANSI subsystem buffer |
 | `AnsiGraphicsEditor/layerUtils.ts` | Shared ANSI subsystem utilities |
 
+> **Note:** `compositeUtils.ts` (editor) and `screenCompositor.ts` (runtime) now share core compositing logic via `ansi-shared/compositeEngine.ts`. The remaining exclusions for these files cover type-specific wrappers only.
+
 ### Policy
 
 - **Duplication ceiling: 3%** — CI and local CI fail above this threshold
-- Current rate is 1.67%, providing headroom for growth
+- Current rate is 1.73%, providing headroom for growth
 - Reduce duplication by extracting shared code into packages (e.g., `@lua-learning/shell-core`)
 
 ### How to Check
