@@ -96,7 +96,7 @@ describe('ExportCommand', () => {
       const command = new ExportCommand()
 
       expect(() => command.parseArgs(['--type=invalid'], '/project')).toThrow(
-        "Invalid type: invalid. Must be 'canvas' or 'shell'"
+        "Invalid type: invalid. Must be 'canvas', 'shell', or 'ansi'"
       )
     })
 

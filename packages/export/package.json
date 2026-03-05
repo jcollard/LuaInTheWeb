@@ -15,8 +15,10 @@
     "dist"
   ],
   "scripts": {
-    "build": "npm run build:canvas && tsc",
+    "build": "npm run build:canvas && npm run build:ansi && npm run build:xterm-canvas && tsc",
     "build:canvas": "node scripts/bundle-canvas-inline.js",
+    "build:ansi": "node scripts/bundle-ansi-inline.js",
+    "build:xterm-canvas": "node scripts/bundle-xterm-canvas.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

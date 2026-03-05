@@ -1,6 +1,6 @@
 import * as luaparse from 'luaparse'
 import type { IFileSystem } from '@lua-learning/shell-core'
-import type { ProjectConfig, ParseOutcome, CanvasConfig, ShellConfig, ExportConfig } from './types'
+import type { ProjectConfig, ParseOutcome, CanvasConfig, ShellConfig, AnsiConfig, ExportConfig } from './types'
 
 // luaparse AST node types
 interface LuaNode {
@@ -75,6 +75,16 @@ const DEFAULT_CANVAS_CONFIG: CanvasConfig = {
 const DEFAULT_SHELL_CONFIG: ShellConfig = {
   columns: 80,
   rows: 24,
+}
+
+/**
+ * Default ANSI terminal configuration values.
+ */
+const DEFAULT_ANSI_CONFIG: AnsiConfig = {
+  columns: 80,
+  rows: 25,
+  font_size: 16,
+  scale: 'integer',
 }
 
 /**
@@ -260,8 +270,8 @@ export class ProjectConfigParser {
     }
 
     // Validate type
-    if (config.type !== 'canvas' && config.type !== 'shell') {
-      throw new Error("type must be 'canvas' or 'shell'")
+    if (config.type !== 'canvas' && config.type !== 'shell' && config.type !== 'ansi') {
+      throw new Error("type must be 'canvas', 'shell', or 'ansi'")
     }
 
     // Apply defaults based on type
@@ -278,6 +288,11 @@ export class ProjectConfigParser {
       result.canvas = {
         ...DEFAULT_CANVAS_CONFIG,
         ...config.canvas,
+      }
+    } else if (config.type === 'ansi') {
+      result.ansi = {
+        ...DEFAULT_ANSI_CONFIG,
+        ...config.ansi,
       }
     } else {
       result.shell = {

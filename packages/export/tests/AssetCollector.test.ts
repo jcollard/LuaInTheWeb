@@ -88,16 +88,14 @@ function createConfig(overrides: Partial<ProjectConfig> = {}): ProjectConfig {
 describe('AssetCollector', () => {
   describe('analyzeRequires', () => {
     it('should find require calls with double quotes', () => {
-      const files = {
-        '/project/main.lua': `
-          local utils = require("utils")
-          local game = require("game.core")
-        `,
-      }
-      const fs = createMockFileSystem(files)
+      const fs = createMockFileSystem({})
       const collector = new AssetCollector(fs, '/project')
+      const content = `
+        local utils = require("utils")
+        local game = require("game.core")
+      `
 
-      const requires = collector.analyzeRequires('/project/main.lua')
+      const requires = collector.analyzeRequires(content)
 
       expect(requires).toContain('utils')
       expect(requires).toContain('game.core')
@@ -105,45 +103,35 @@ describe('AssetCollector', () => {
     })
 
     it('should find require calls with single quotes', () => {
-      const files = {
-        "/project/main.lua": `
-          local utils = require('utils')
-        `,
-      }
-      const fs = createMockFileSystem(files)
+      const fs = createMockFileSystem({})
       const collector = new AssetCollector(fs, '/project')
+      const content = `local utils = require('utils')`
 
-      const requires = collector.analyzeRequires('/project/main.lua')
+      const requires = collector.analyzeRequires(content)
 
       expect(requires).toContain('utils')
     })
 
     it('should return empty array for file with no requires', () => {
-      const files = {
-        '/project/main.lua': `
-          print("Hello World")
-        `,
-      }
-      const fs = createMockFileSystem(files)
+      const fs = createMockFileSystem({})
       const collector = new AssetCollector(fs, '/project')
+      const content = `print("Hello World")`
 
-      const requires = collector.analyzeRequires('/project/main.lua')
+      const requires = collector.analyzeRequires(content)
 
       expect(requires).toEqual([])
     })
 
     it('should handle require with variable assignment patterns', () => {
-      const files = {
-        '/project/main.lua': `
-          local a = require("module_a")
-          require("module_b")
-          local c = require 'module_c'
-        `,
-      }
-      const fs = createMockFileSystem(files)
+      const fs = createMockFileSystem({})
       const collector = new AssetCollector(fs, '/project')
+      const content = `
+        local a = require("module_a")
+        require("module_b")
+        local c = require 'module_c'
+      `
 
-      const requires = collector.analyzeRequires('/project/main.lua')
+      const requires = collector.analyzeRequires(content)
 
       expect(requires).toContain('module_a')
       expect(requires).toContain('module_b')
@@ -448,6 +436,92 @@ describe('AssetCollector', () => {
       expect(result.files).toHaveLength(2)
       expect(result.files.map((f) => f.path)).toContain('util.lua')
       expect(result.files.map((f) => f.path)).not.toContain('util/init.lua')
+    })
+  })
+
+  describe('load_screen() detection', () => {
+    it('should detect load_screen() calls and collect screen files', async () => {
+      const files = {
+        '/project/main.lua': 'local screen = load_screen("title.ansi")',
+        '/project/title.ansi.lua': 'return { layers = {} }',
+      }
+      const fs = createMockFileSystem(files)
+      const collector = new AssetCollector(fs, '/project')
+      const config = createConfig()
+
+      const result = await collector.collect(config)
+
+      expect(result.files).toHaveLength(2)
+      expect(result.files.map((f) => f.path)).toContain('title.ansi.lua')
+    })
+
+    it('should detect multiple load_screen() calls', async () => {
+      const files = {
+        '/project/main.lua': [
+          'local title = load_screen("title.ansi")',
+          'local game = load_screen("game.ansi")',
+        ].join('\n'),
+        '/project/title.ansi.lua': 'return { layers = {} }',
+        '/project/game.ansi.lua': 'return { layers = {} }',
+      }
+      const fs = createMockFileSystem(files)
+      const collector = new AssetCollector(fs, '/project')
+      const config = createConfig()
+
+      const result = await collector.collect(config)
+
+      expect(result.files).toHaveLength(3)
+      expect(result.files.map((f) => f.path)).toContain('title.ansi.lua')
+      expect(result.files.map((f) => f.path)).toContain('game.ansi.lua')
+    })
+
+    it('should skip missing screen files gracefully', async () => {
+      const files = {
+        '/project/main.lua': 'local screen = load_screen("missing.ansi")',
+      }
+      const fs = createMockFileSystem(files)
+      const collector = new AssetCollector(fs, '/project')
+      const config = createConfig()
+
+      const result = await collector.collect(config)
+
+      expect(result.files).toHaveLength(1)
+    })
+
+    it('should not duplicate screen files already collected via require', async () => {
+      const files = {
+        '/project/main.lua': [
+          'local data = require("title.ansi")',
+          'local screen = load_screen("title.ansi")',
+        ].join('\n'),
+        '/project/title.ansi.lua': 'return { layers = {} }',
+      }
+      const fs = createMockFileSystem(files)
+      const collector = new AssetCollector(fs, '/project')
+      const config = createConfig()
+
+      const result = await collector.collect(config)
+
+      expect(result.files).toHaveLength(2)
+      const paths = result.files.map((f) => f.path)
+      expect(paths.filter((p) => p === 'title.ansi.lua')).toHaveLength(1)
+    })
+
+    it('should analyze load_screen() calls in content', () => {
+      const fs = createMockFileSystem({})
+      const collector = new AssetCollector(fs, '/project')
+      const content = [
+        'load_screen("title.ansi")',
+        "load_screen('game.ansi')",
+        'load_screen(  "menu.ansi"  )',
+      ].join('\n')
+
+      const screens = collector.analyzeLoadScreenCalls(content)
+
+      expect(screens).toHaveLength(3)
+      expect(screens).toContain('title.ansi')
+      expect(screens).toContain('game.ansi')
+      expect(screens).toContain('menu.ansi')
     })
   })
 })

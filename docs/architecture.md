@@ -127,6 +127,33 @@ Key architectural notes:
 - Uses `TerminalBuffer` for double-buffered rendering to xterm.js
 - Snapshot-based undo/redo (not command pattern)
 
+## ANSI Export System
+
+The ANSI export produces standalone HTML files that run ANSI terminal Lua programs offline. Unlike the canvas export (which reimplements 1,629 lines), the ANSI export **bundles the real runtime code** via esbuild:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    ANSI Export                           │
+├──────────────────────────┬──────────────────────────────┤
+│   Editor ANSI Runtime    │   Export ANSI Runtime         │
+│   (packages/lua-runtime) │   (packages/export)           │
+├──────────────────────────┼──────────────────────────────┤
+│ AnsiController.ts        │ ansi-inline-entry.ts (~28     │
+│ setupAnsiAPI.ts          │   lines, thin adapter)        │
+│ screenCompositor.ts      │                               │
+│ ansiStringRenderer.ts    │ bundle-ansi-inline.js         │
+│ textLayerGrid.ts         │   (esbuild bundles all deps)  │
+├──────────────────────────┼──────────────────────────────┤
+│ Real runtime code        │ Same code, bundled as IIFE    │
+│ used by IDE              │ embedded in standalone HTML   │
+├──────────────────────────┴──────────────────────────────┤
+│ HtmlGenerator.generateAnsi() produces HTML with:         │
+│ xterm.js + CanvasAddon + IBM VGA font + wasmoon + bundle │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Key principle**: Changes to `AnsiController`, `setupAnsiAPI`, or any bundled runtime file are automatically picked up when the export is rebuilt (`npm run build:ansi -w @lua-learning/export`). No code duplication to maintain.
+
 ## Core Components
 
 ### App.tsx

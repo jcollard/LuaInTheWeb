@@ -42,3 +42,9 @@ export {
   handleInput,
   type ShellRuntimeState,
 } from './shell-standalone'
+
+// ANSI exports (bundled inline JS for HTML embedding)
+export { ANSI_INLINE_JS } from './ansi-inline.generated'
+
+// xterm.js + CanvasAddon combined bundle (shared module context required)
+export { XTERM_WITH_CANVAS_ADDON_JS } from './xterm-canvas.generated'

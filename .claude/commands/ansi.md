@@ -1,6 +1,6 @@
 # ANSI Subsystem Guide
 
-The ANSI subsystem spans ~92 files and ~25k lines across four tightly coupled areas: the **ANSI Art Editor**, the **Lua runtime**, a **shared playback engine**, and the **tab system**. They share the same file format, compositing algorithm, playback engine, and terminal display. Changes to one side can silently break the other.
+The ANSI subsystem spans ~92 files and ~25k lines across five tightly coupled areas: the **ANSI Art Editor**, the **Lua runtime**, a **shared playback engine**, the **tab system**, and the **standalone export**. They share the same file format, compositing algorithm, playback engine, and terminal display. Changes to one side can silently break the other.
 
 > **CRITICAL**: Key logic is **intentionally duplicated** between the editor and runtime (compositing, text rasterization, types). When you change one side, you **must** update the other. See [DRY Relationships](#dry-relationships--paired-files) below.
 
@@ -26,18 +26,21 @@ The ANSI subsystem spans ~92 files and ~25k lines across four tightly coupled ar
                     │ types.ts     │  │ screenTypes.ts       │
                     └──────┬───────┘  └──────┬──────────────┘
                            │                 │
-                           │  ┌──────────────┘
-                           │  │
-                    ┌──────▼──▼──────────┐
-                    │  ansi-shared       │
-                    │  compositeEngine.ts│
-                    │  playbackEngine.ts │
-                    └────────────────────┘
-                           │
-                    ┌──────▼─────────────┐
-                    │    xterm.js        │
-                    │  (terminal display)│
-                    └────────────────────┘
+                           │  ┌──────────────┤
+                           │  │              │
+                    ┌──────▼──▼──────────┐   │ bundled via esbuild
+                    │  ansi-shared       │   │ (no reimplementation)
+                    │  compositeEngine.ts│   │
+                    │  playbackEngine.ts │   │
+                    └────────────────────┘   │
+                           │          ┌─────▼──────────────┐
+                    ┌──────▼──────┐   │  Standalone Export  │
+                    │   xterm.js  │   │  (packages/export)  │
+                    │  (terminal  │   │                     │
+                    │   display)  │   │ ansi-inline-entry   │
+                    └─────────────┘   │ HtmlGenerator       │
+                                      │ bundle-ansi-inline  │
+                                      └─────────────────────┘
 ```
 
 ---
@@ -112,6 +115,20 @@ The ANSI subsystem spans ~92 files and ~25k lines across four tightly coupled ar
 | `IDELayout/AnsiTabContent.tsx` | Tab wrapper for runtime ANSI output (`'ansi'` tab type) |
 | `IDELayout/AnsiEditorTabContent.tsx` | Tab wrapper for ANSI editor (`'ansi-editor'` tab type) |
 
+### Standalone Export (`packages/export/`)
+
+| File | Purpose |
+|------|---------|
+| `src/runtime/ansi-inline-entry.ts` | Thin adapter (~28 lines) — imports real AnsiController/setupAnsiAPI, exposes globally |
+| `scripts/bundle-ansi-inline.js` | esbuild script that bundles the entry point into `ansi-inline.generated.ts` IIFE |
+| `src/HtmlGenerator.ts` → `generateAnsi()` | HTML template: xterm.js + CanvasAddon + IBM VGA font + wasmoon + ANSI bridge |
+| `src/AssetCollector.ts` | Collects Lua files; detects `load_screen()` calls for `.ansi.lua` screen files |
+| `src/types.ts` | `AnsiConfig` type and `'ansi'` project type |
+| `src/ProjectConfigParser.ts` | Parses/validates `type = "ansi"` projects with default config |
+| `src/ExportCommand.ts` | CLI command; `--init --type=ansi` generates template `project.lua` |
+
+**Key design**: The export bundles the **real runtime code** from `@lua-learning/lua-runtime` via esbuild — it does NOT reimplement anything (unlike the canvas export's 1,629-line reimplementation). Only the ~28-line adapter is new code.
+
 ### Documentation & Assets
 
 | File | Purpose |
@@ -127,6 +144,8 @@ The ANSI subsystem spans ~92 files and ~25k lines across four tightly coupled ar
 ## DRY Relationships / Paired Files
 
 These file pairs implement the **same logic** in both editor and runtime. When you change one, you **must** update the other.
+
+> **Note**: The standalone export does NOT have paired files — it bundles the real runtime code via esbuild. Changes to `AnsiController.ts`, `setupAnsiAPI.ts`, etc. are automatically picked up on the next `build:ansi`. However, changes to `HtmlGenerator.generateAnsi()` (HTML template, xterm.js setup, module loader) are export-only.
 
 | Logic | Editor File | Runtime File | Notes |
 |-------|-------------|--------------|-------|
@@ -281,6 +300,9 @@ Use this table to determine what else needs updating when you change a file:
 | `terminalBuffer.ts` (rendering) | `ansiStringRenderer.ts` | Must produce identical output |
 | `ansiStringRenderer.ts` (rendering) | `terminalBuffer.ts` | Must produce identical output |
 | `useLayerTags.ts` | `useLayerState.ts` | Tag operations extracted from useLayerState |
+| `AnsiController.ts` / `setupAnsiAPI.ts` | Rebuild export (`npm run build:ansi -w @lua-learning/export`) | Export bundles real runtime; rebuild picks up changes automatically |
+| `HtmlGenerator.ts` → `generateAnsi()` | Export tests (`HtmlGenerator-ansi.test.ts`) | Export-only HTML template; no paired runtime file |
+| `ansi-inline-entry.ts` | Rebuild export bundle | Entry point for esbuild ANSI bundle |
 
 ---
 
@@ -317,6 +339,17 @@ npm test -w @lua-learning/lua-runtime -- --run screenParser
 ### After changing the API bridge:
 ```bash
 npm test -w @lua-learning/lua-runtime -- --run AnsiController
+```
+
+### After changing runtime code used by export (AnsiController, setupAnsiAPI, etc.):
+```bash
+npm run build:ansi -w @lua-learning/export
+npm test -w @lua-learning/export -- --run
+```
+
+### After changing export HTML template (`generateAnsi`):
+```bash
+npm test -w @lua-learning/export -- --run HtmlGenerator-ansi
 ```
 
 ### Full pre-PR verification:

@@ -111,10 +111,16 @@ export class AssetCollector {
     const content = this.filesystem.readFile(absolutePath)
     files.push({ path: filePath, content })
 
-    // Analyze requires and collect dependencies
-    const requires = this.analyzeRequires(absolutePath)
+    // Analyze requires and load_screen() calls, and collect dependencies
+    const requires = this.analyzeRequires(content)
     for (const req of requires) {
       await this.collectLuaFiles(req, files, collected)
+    }
+
+    // Analyze load_screen() calls and collect screen files
+    const screenFiles = this.analyzeLoadScreenCalls(content)
+    for (const screenFile of screenFiles) {
+      await this.collectLuaFiles(screenFile, files, collected)
     }
   }
 
@@ -220,12 +226,30 @@ export class AssetCollector {
   }
 
   /**
-   * Analyze a Lua file for require() calls.
-   * @param filePath - Path to the Lua file
+   * Analyze Lua source content for load_screen() calls.
+   * @param content - Lua source code
+   * @returns Array of screen file paths (e.g., "title.ansi")
+   */
+  analyzeLoadScreenCalls(content: string): string[] {
+    const screens: string[] = []
+
+    const pattern = /load_screen\s*\(\s*["']([^"']+)["']\s*\)/g
+    let match
+    while ((match = pattern.exec(content)) !== null) {
+      if (!screens.includes(match[1])) {
+        screens.push(match[1])
+      }
+    }
+
+    return screens
+  }
+
+  /**
+   * Analyze Lua source content for require() calls.
+   * @param content - Lua source code
    * @returns Array of required module paths
    */
-  analyzeRequires(filePath: string): string[] {
-    const content = this.filesystem.readFile(filePath)
+  analyzeRequires(content: string): string[] {
     const requires: string[] = []
 
     // Match various require patterns:

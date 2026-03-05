@@ -423,7 +423,7 @@ describe('ProjectConfigParser', () => {
           main: 'main.lua',
           type: 'invalid' as 'canvas',
         })
-      ).toThrow("type must be 'canvas' or 'shell'")
+      ).toThrow("type must be 'canvas', 'shell', or 'ansi'")
     })
 
     it('should apply default canvas config for canvas type', () => {
@@ -464,5 +464,63 @@ describe('ProjectConfigParser', () => {
       expect(config.canvas?.width).toBe(1024)
       expect(config.canvas?.height).toBe(600) // default
     })
+
+    it('should apply default ansi config for ansi type', () => {
+      const config = parser.validate({
+        name: 'test',
+        main: 'main.lua',
+        type: 'ansi',
+      })
+
+      expect(config.ansi).toBeDefined()
+      expect(config.ansi?.columns).toBe(80)
+      expect(config.ansi?.rows).toBe(25)
+      expect(config.ansi?.font_size).toBe(16)
+    })
+
+    it('should merge provided ansi config with defaults', () => {
+      const config = parser.validate({
+        name: 'test',
+        main: 'main.lua',
+        type: 'ansi',
+        ansi: {
+          columns: 120,
+        },
+      })
+
+      expect(config.ansi?.columns).toBe(120)
+      expect(config.ansi?.rows).toBe(25) // default
+      expect(config.ansi?.font_size).toBe(16) // default
+    })
+  })
+})
+
+describe('ProjectConfigParser - ANSI parsing', () => {
+  it('should parse ansi type projects', () => {
+    const files = {
+      '/myproject/project.lua': `return {
+        name = "my-ansi-app",
+        main = "main.lua",
+        type = "ansi",
+        ansi = {
+          columns = 120,
+          rows = 40,
+          font_size = 12,
+        }
+      }`,
+    }
+    const fs = createMockFileSystem(files)
+    const parser = new ProjectConfigParser(fs)
+
+    const result = parser.parse('/myproject')
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.config.name).toBe('my-ansi-app')
+      expect(result.config.type).toBe('ansi')
+      expect(result.config.ansi?.columns).toBe(120)
+      expect(result.config.ansi?.rows).toBe(40)
+      expect(result.config.ansi?.font_size).toBe(12)
+    }
   })
 })
