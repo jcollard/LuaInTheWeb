@@ -57,8 +57,11 @@ export { AUDIO_INLINE_JS } from './audio/audio-inline.generated'
 // Wasmoon inline JS for HTML exports (auto-generated, includes embedded WASM)
 export { WASMOON_INLINE_JS } from './wasmoon-inline.generated'
 
-// Xterm inline JS and CSS for HTML shell exports (auto-generated)
+// Xterm inline JS and CSS for HTML shell/ANSI exports (auto-generated)
 export { XTERM_INLINE_JS, XTERM_INLINE_CSS } from './xterm-inline.generated'
+
+// IBM VGA font as data URL for ANSI exports (auto-generated)
+export { IBM_VGA_FONT_DATA_URL } from './ibm-vga-font-inline.generated'
 
 // Canvas controller for shell-based canvas (non-worker)
 export { CanvasController, type CanvasCallbacks } from './CanvasController'
@@ -66,7 +69,9 @@ export { CanvasController, type CanvasCallbacks } from './CanvasController'
 // ANSI terminal controller for shell-based ANSI terminal
 export { AnsiController, type AnsiCallbacks, type AnsiTerminalHandle, type LayerInfo } from './AnsiController'
 
-// ANSI terminal Lua code modules (for bundling in exports)
+// ANSI terminal API setup and Lua code modules (for bundling in exports)
+export { setupAnsiAPI, type AnsiAPIOptions } from './setupAnsiAPI'
+export { ansiLuaCode } from './ansiLuaWrapper'
 export { ansiLuaCoreCode, ansiLuaInputCode } from './ansiLuaCode'
 
 // Asset manager for asset registration, loading, and lifecycle

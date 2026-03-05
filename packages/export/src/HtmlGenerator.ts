@@ -8,6 +8,7 @@ import {
   XTERM_INLINE_CSS,
 } from '@lua-learning/lua-runtime'
 import { toDataUrl } from './base64'
+import { generateAnsiHtml } from './AnsiHtmlGenerator'
 
 /**
  * Generates standalone HTML files for exported projects.
@@ -692,6 +693,16 @@ export class HtmlGenerator {
   }
 
   /**
+   * Generate HTML for an ANSI terminal project.
+   * @param config - Project configuration
+   * @param luaFiles - Collected Lua source files
+   * @returns Generated HTML string
+   */
+  generateAnsi(config: ProjectConfig, luaFiles: CollectedFile[]): string {
+    return generateAnsiHtml(config, this.serializeLuaFiles(luaFiles), this.escapeHtml)
+  }
+
+  /**
    * Generate HTML based on project type.
    * @param config - Project configuration
    * @param luaFiles - Collected Lua source files
@@ -705,6 +716,8 @@ export class HtmlGenerator {
   ): string {
     if (config.type === 'canvas') {
       return this.generateCanvas(config, luaFiles, assets)
+    } else if (config.type === 'ansi') {
+      return this.generateAnsi(config, luaFiles)
     } else {
       return this.generateShell(config, luaFiles)
     }

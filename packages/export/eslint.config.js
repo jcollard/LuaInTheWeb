@@ -5,7 +5,7 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', '.stryker-tmp', 'src/runtime/canvas-inline.generated.ts']),
+  globalIgnores(['dist', '.stryker-tmp', 'src/runtime/canvas-inline.generated.ts', 'src/runtime/xterm-canvas.generated.ts']),
   {
     files: ['**/*.ts'],
     plugins: { sonarjs },

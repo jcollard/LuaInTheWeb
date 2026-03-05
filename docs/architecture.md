@@ -32,20 +32,37 @@ The project uses npm workspaces with a monorepo structure:
 ```
 LuaInTheWeb/
 ├── packages/
-│   └── shell-core/              # Independent shell package
-│       ├── src/
-│       │   ├── commands/        # Built-in commands (cd, ls, pwd, help)
-│       │   ├── types.ts         # Core interfaces
-│       │   ├── CommandRegistry.ts
-│       │   ├── createFileSystemAdapter.ts
-│       │   ├── parseCommand.ts
-│       │   └── pathUtils.ts
-│       └── tests/
+│   ├── shell-core/              # Shell infrastructure (no deps)
+│   │   ├── src/
+│   │   │   ├── commands/        # Built-in commands (cd, ls, pwd, help)
+│   │   │   ├── types.ts         # Core interfaces
+│   │   │   ├── CommandRegistry.ts
+│   │   │   ├── createFileSystemAdapter.ts
+│   │   │   ├── parseCommand.ts
+│   │   │   └── pathUtils.ts
+│   │   └── tests/
+│   │
+│   ├── canvas-runtime/          # Canvas rendering (depends on shell-core)
+│   │   └── src/                 # CanvasRenderer, GameLoop, InputCapture, audio
+│   │
+│   ├── ansi-shared/             # Shared ANSI compositing & playback (no deps)
+│   │   └── src/
+│   │       ├── compositeEngine.ts  # Generic compositing engine (createCompositeEngine<L>())
+│   │       ├── playbackEngine.ts   # Frame animation playback with drift correction
+│   │       └── index.ts
+│   │
+│   ├── lua-runtime/             # Lua engine + controllers (depends on canvas-runtime, shell-core, ansi-shared)
+│   │   └── src/                 # AnsiController, CanvasController, screen*, audio
+│   │
+│   └── export/                  # Single-file HTML export (depends on lua-runtime)
+│       └── src/runtime/         # Standalone canvas/ANSI bridge for exported games
 │
-└── lua-learning-website/        # Main web application
+└── lua-learning-website/        # Main React app (depends on lua-runtime, canvas-runtime)
     ├── src/
     │   ├── components/
-    │   │   └── ShellTerminal/   # Shell UI component
+    │   │   ├── AnsiGraphicsEditor/  # ANSI art editor (~92 files)
+    │   │   ├── ShellTerminal/       # Shell UI component
+    │   │   └── ...
     │   └── hooks/
     │       └── useShell.ts      # Shell integration hook
     └── package.json
@@ -109,6 +126,33 @@ Key architectural notes:
 - UI components are pure — receive props, fire callbacks
 - Uses `TerminalBuffer` for double-buffered rendering to xterm.js
 - Snapshot-based undo/redo (not command pattern)
+
+## ANSI Export System
+
+The ANSI export produces standalone HTML files that run ANSI terminal Lua programs offline. Unlike the canvas export (which reimplements 1,629 lines), the ANSI export **bundles the real runtime code** via esbuild:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    ANSI Export                           │
+├──────────────────────────┬──────────────────────────────┤
+│   Editor ANSI Runtime    │   Export ANSI Runtime         │
+│   (packages/lua-runtime) │   (packages/export)           │
+├──────────────────────────┼──────────────────────────────┤
+│ AnsiController.ts        │ ansi-inline-entry.ts (~28     │
+│ setupAnsiAPI.ts          │   lines, thin adapter)        │
+│ screenCompositor.ts      │                               │
+│ ansiStringRenderer.ts    │ bundle-ansi-inline.js         │
+│ textLayerGrid.ts         │   (esbuild bundles all deps)  │
+├──────────────────────────┼──────────────────────────────┤
+│ Real runtime code        │ Same code, bundled as IIFE    │
+│ used by IDE              │ embedded in standalone HTML   │
+├──────────────────────────┴──────────────────────────────┤
+│ HtmlGenerator.generateAnsi() produces HTML with:         │
+│ xterm.js + CanvasAddon + IBM VGA font + wasmoon + bundle │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Key principle**: Changes to `AnsiController`, `setupAnsiAPI`, or any bundled runtime file are automatically picked up when the export is rebuilt (`npm run build:ansi -w @lua-learning/export`). No code duplication to maintain.
 
 ## Core Components
 

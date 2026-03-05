@@ -9,7 +9,7 @@ export interface ProjectConfig {
   main: string
 
   /** Runtime type */
-  type: 'canvas' | 'shell'
+  type: 'canvas' | 'shell' | 'ansi'
 
   /** Project version */
   version?: string
@@ -25,6 +25,9 @@ export interface ProjectConfig {
 
   /** Shell-specific settings */
   shell?: ShellConfig
+
+  /** ANSI terminal-specific settings */
+  ansi?: AnsiConfig
 
   /** Export settings */
   export?: ExportConfig
@@ -79,6 +82,30 @@ export interface ShellConfig {
 }
 
 /**
+ * ANSI terminal runtime configuration
+ */
+export interface AnsiConfig {
+  /** Terminal columns (default: 80) */
+  columns?: number
+
+  /** Terminal rows (default: 25) */
+  rows?: number
+
+  /** Font size in pixels (default: 16) */
+  font_size?: number
+
+  /**
+   * Terminal scaling mode (default: 'integer')
+   * - 'integer': Largest integer scale that fits the viewport
+   * - 'full': Scale to fill viewport (may use fractional scaling)
+   * - '1x': Fixed 1x scale
+   * - '2x': Fixed 2x scale
+   * - '3x': Fixed 3x scale
+   */
+  scale?: 'integer' | 'full' | '1x' | '2x' | '3x'
+}
+
+/**
  * Export configuration (from project.lua)
  */
 export interface ExportConfig {
@@ -95,7 +122,7 @@ export interface ExportConfig {
  */
 export interface ExportOptions {
   /** Override runtime type */
-  type?: 'canvas' | 'shell'
+  type?: 'canvas' | 'shell' | 'ansi'
 
   /** Output filename (without extension) */
   outputName?: string

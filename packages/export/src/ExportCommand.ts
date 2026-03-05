@@ -16,7 +16,7 @@ export class ExportCommand implements ICommand {
   // Stryker disable all: Command metadata - string mutations don't affect behavior
   readonly name = 'export'
   readonly description = 'Export project as standalone HTML/ZIP package'
-  readonly usage = 'export [path] [--type=canvas|shell] [--init]'
+  readonly usage = 'export [path] [--type=canvas|shell|ansi] [--init]'
   // Stryker restore all
 
   execute(args: string[], context: ShellContext): IProcess | void {
@@ -107,10 +107,10 @@ export class ExportCommand implements ICommand {
         init = true
       } else if (arg.startsWith('--type=')) {
         const type = arg.slice(7)
-        if (type !== 'canvas' && type !== 'shell') {
-          throw new Error(`Invalid type: ${type}. Must be 'canvas' or 'shell'`)
+        if (type !== 'canvas' && type !== 'shell' && type !== 'ansi') {
+          throw new Error(`Invalid type: ${type}. Must be 'canvas', 'shell', or 'ansi'`)
         }
-        options.type = type
+        options.type = type as 'canvas' | 'shell' | 'ansi'
       } else if (!arg.startsWith('-')) {
         projectPath = arg.startsWith('/') ? arg : `${cwd}/${arg}`
       }
@@ -127,7 +127,7 @@ export class ExportCommand implements ICommand {
    */
   private initProject(
     projectPath: string,
-    type: 'canvas' | 'shell',
+    type: 'canvas' | 'shell' | 'ansi',
     context: ShellContext
   ): void {
     const configPath = `${projectPath}/project.lua`
@@ -156,7 +156,27 @@ export class ExportCommand implements ICommand {
    * @param type - Project type
    * @returns Template Lua code
    */
-  private generateProjectTemplate(type: 'canvas' | 'shell'): string {
+  private generateProjectTemplate(type: 'canvas' | 'shell' | 'ansi'): string {
+    if (type === 'ansi') {
+      // Stryker disable all: Template content - string mutations don't affect logic
+      return `return {
+  name = "My ANSI App",
+  main = "main.lua",
+  type = "ansi",
+  ansi = {
+    columns = 80,
+    rows = 25,
+    font_size = 16,
+  },
+  -- Export settings
+  export = {
+    singleFile = true,
+  },
+}
+`
+      // Stryker restore all
+    }
+
     if (type === 'shell') {
       // Stryker disable all: Template content - string mutations don't affect logic
       return `return {

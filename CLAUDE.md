@@ -69,7 +69,8 @@ LuaInTheWeb/
 ├── packages/
 │   ├── shell-core/         # Shell utilities (no deps)
 │   ├── canvas-runtime/     # Canvas rendering (depends on shell-core)
-│   ├── lua-runtime/        # Lua engine + canvas controller (depends on canvas-runtime, shell-core)
+│   ├── ansi-shared/        # Shared ANSI compositing & playback (no deps)
+│   ├── lua-runtime/        # Lua engine + canvas controller (depends on canvas-runtime, shell-core, ansi-shared)
 │   └── export/             # Single-file HTML export (depends on lua-runtime)
 ├── lua-learning-website/   # Main React app (depends on lua-runtime, canvas-runtime)
 │   ├── src/
@@ -88,7 +89,7 @@ LuaInTheWeb/
 Packages **must** be built in this order due to TypeScript type dependencies:
 
 ```
-shell-core → canvas-runtime → lua-runtime → export → lua-learning-website
+shell-core → canvas-runtime → ansi-shared → lua-runtime → export → lua-learning-website
 ```
 
 To build all packages: `npm run build` (from repo root — uses correct order).
@@ -97,6 +98,7 @@ To build individually (must respect order):
 ```bash
 npm run build -w @lua-learning/shell-core
 npm run build -w @lua-learning/canvas-runtime
+npm run build -w @lua-learning/ansi-shared
 npm run build -w @lua-learning/lua-runtime
 npm run build -w @lua-learning/export
 npm run build -w lua-learning-website
