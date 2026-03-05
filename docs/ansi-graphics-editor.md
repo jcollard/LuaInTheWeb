@@ -24,6 +24,7 @@ AnsiGraphicsEditor
 │   ├── FileOptionsModal       # New, open, export options
 │   ├── CharPaletteModal       # Unicode character selection
 │   ├── SimplifyPaletteModal   # Palette reduction (iterative merge)
+│   ├── ImportLayersDialog     # Import layers from another file (with search filter)
 │   └── ConfirmDialog          # Overwrite confirmation
 └── Overlays (absolutely positioned over canvas)
     ├── cellCursor             # Brush position indicator
@@ -41,6 +42,8 @@ AnsiGraphicsEditor.tsx (pure UI — props, events, rendering)
     │
     └── useAnsiEditor(options)          # Orchestrator hook
         ├── useLayerState()             # Layer CRUD, frames, tags
+        │   └── useLayerTags()          # Tag CRUD (extracted from useLayerState)
+        ├── useImportLayers()           # Import dialog state + layer remapping
         ├── useToast()                  # Toast notifications
         ├── TerminalBuffer              # Double-buffered rendering
         ├── undoStackRef / redoStackRef # Snapshot-based undo
@@ -265,6 +268,7 @@ ANSI escape format per cell:
 | Format | Direction | Description |
 |--------|-----------|-------------|
 | Lua table | Load/Save | Native format with versioned serialization (v7/v8; loads v1-v8) |
+| Lua table | Import | Import layers from another .ansi.lua file (selective, with remapping) |
 | PNG | Import | Image import with palette quantization |
 | ANS | Export | Standard ANSI art file format |
 | .sh | Export | Shell script that renders art via `echo -e` (single frame) |

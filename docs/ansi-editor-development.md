@@ -27,6 +27,7 @@ All files live in `lua-learning-website/src/components/AnsiGraphicsEditor/`.
 | `FileOptionsModal.tsx` | New, open, import, export actions |
 | `CharPaletteModal.tsx` | Unicode character selection grid |
 | `SimplifyPaletteModal.tsx` | Palette reduction via iterative merge |
+| `ImportLayersDialog.tsx` | Layer import from another file with search filter |
 | `DirectoryPicker.tsx` | File System Access API directory browser |
 
 ### Hooks
@@ -35,6 +36,8 @@ All files live in `lua-learning-website/src/components/AnsiGraphicsEditor/`.
 |------|---------|
 | `useAnsiEditor.ts` | Orchestrator — wires tools, undo, keyboard, rendering |
 | `useLayerState.ts` | Layer CRUD, frames, tags, state restoration |
+| `useImportLayers.ts` | Import dialog state, file loading, layer ID remapping |
+| `useLayerTags.ts` | Tag management (create, delete, rename, add/remove from layers) |
 | `useToast.ts` | Toast show/dismiss with auto-timeout |
 
 ### Utilities — Drawing & Tools
@@ -67,6 +70,7 @@ All files live in `lua-learning-website/src/components/AnsiGraphicsEditor/`.
 | `ansExport.ts` | ANS format export |
 | `shExport.ts` | Shell script export (static + animated) |
 | `pngImport.ts` | PNG import with palette quantization |
+| `layerImport.ts` | Layer import utilities (buildImportEntries, remapLayers, cloneLayer) |
 
 ### Infrastructure
 
