@@ -1,163 +1,53 @@
 /**
  * Audio Lua code - sound effects and music playback.
+ * DEPRECATED: Canvas audio functions now delegate to the standalone audio module.
+ * Use require('audio') directly instead of canvas.play_sound(), etc.
  */
 
 export const canvasLuaAudioCode = `
     -- ========================================================================
-    -- Audio API
+    -- Audio API (deprecated — delegates to standalone audio module)
     -- ========================================================================
 
-    -- Sound effect playback (can overlap)
-    function _canvas.play_sound(name, volume)
-      __audio_playSound(name, volume)
-    end
+    local _audio_mod = require('audio')
 
-    -- Get the duration of a sound in seconds
-    function _canvas.get_sound_duration(name)
-      return __audio_getSoundDuration(name)
-    end
+    -- Sound effect playback
+    _canvas.play_sound = _audio_mod.play_sound
+    _canvas.get_sound_duration = _audio_mod.get_sound_duration
 
-    -- Music playback (one track at a time)
-    function _canvas.play_music(name, options)
-      local volume = 1
-      local loop = false
-      if options then
-        if options.volume then volume = options.volume end
-        if options.loop then loop = options.loop end
-      end
-      __audio_playMusic(name, volume, loop)
-    end
-
-    function _canvas.stop_music()
-      __audio_stopMusic()
-    end
-
-    function _canvas.pause_music()
-      __audio_pauseMusic()
-    end
-
-    function _canvas.resume_music()
-      __audio_resumeMusic()
-    end
-
-    function _canvas.set_music_volume(volume)
-      __audio_setMusicVolume(volume)
-    end
-
-    function _canvas.is_music_playing()
-      return __audio_isMusicPlaying()
-    end
-
-    function _canvas.get_music_time()
-      return __audio_getMusicTime()
-    end
-
-    function _canvas.get_music_duration()
-      return __audio_getMusicDuration()
-    end
+    -- Music playback
+    _canvas.play_music = _audio_mod.play_music
+    _canvas.stop_music = _audio_mod.stop_music
+    _canvas.pause_music = _audio_mod.pause_music
+    _canvas.resume_music = _audio_mod.resume_music
+    _canvas.set_music_volume = _audio_mod.set_music_volume
+    _canvas.is_music_playing = _audio_mod.is_music_playing
+    _canvas.get_music_time = _audio_mod.get_music_time
+    _canvas.get_music_duration = _audio_mod.get_music_duration
 
     -- Global audio control
-    function _canvas.set_master_volume(volume)
-      __audio_setMasterVolume(volume)
-    end
+    _canvas.set_master_volume = _audio_mod.set_master_volume
+    _canvas.get_master_volume = _audio_mod.get_master_volume
+    _canvas.mute = _audio_mod.mute
+    _canvas.unmute = _audio_mod.unmute
+    _canvas.is_muted = _audio_mod.is_muted
 
-    function _canvas.get_master_volume()
-      return __audio_getMasterVolume()
-    end
-
-    function _canvas.mute()
-      __audio_mute()
-    end
-
-    function _canvas.unmute()
-      __audio_unmute()
-    end
-
-    function _canvas.is_muted()
-      return __audio_isMuted()
-    end
-
-    -- ========================================================================
     -- Audio Channel API
-    -- ========================================================================
-
-    function _canvas.channel_create(name, options)
-      local parent = nil
-      if options and options.parent then
-        parent = options.parent
-      end
-      __audio_channelCreate(name, parent)
-    end
-
-    function _canvas.channel_get_parent(name)
-      return __audio_channelGetParent(name)
-    end
-
-    function _canvas.channel_set_parent(name, parent)
-      __audio_channelSetParent(name, parent)
-    end
-
-    function _canvas.channel_get_effective_volume(name)
-      return __audio_channelGetEffectiveVolume(name)
-    end
-
-    function _canvas.channel_destroy(name)
-      __audio_channelDestroy(name)
-    end
-
-    function _canvas.channel_play(channel, audio, options)
-      local volume = 1
-      local loop = false
-      local start_time = 0
-      if options then
-        if options.volume then volume = options.volume end
-        if options.loop then loop = options.loop end
-        if options.start_time then start_time = options.start_time end
-      end
-      __audio_channelPlay(channel, audio, volume, loop, start_time)
-    end
-
-    function _canvas.channel_stop(channel)
-      __audio_channelStop(channel)
-    end
-
-    function _canvas.channel_pause(channel)
-      __audio_channelPause(channel)
-    end
-
-    function _canvas.channel_resume(channel)
-      __audio_channelResume(channel)
-    end
-
-    function _canvas.channel_set_volume(channel, volume)
-      __audio_channelSetVolume(channel, volume)
-    end
-
-    function _canvas.channel_get_volume(channel)
-      return __audio_channelGetVolume(channel)
-    end
-
-    function _canvas.channel_fade_to(channel, targetVolume, duration)
-      __audio_channelFadeTo(channel, targetVolume, duration)
-    end
-
-    function _canvas.channel_is_playing(channel)
-      return __audio_channelIsPlaying(channel)
-    end
-
-    function _canvas.channel_is_fading(channel)
-      return __audio_channelIsFading(channel)
-    end
-
-    function _canvas.channel_get_time(channel)
-      return __audio_channelGetTime(channel)
-    end
-
-    function _canvas.channel_get_duration(channel)
-      return __audio_channelGetDuration(channel)
-    end
-
-    function _canvas.channel_get_audio(channel)
-      return __audio_channelGetAudio(channel)
-    end
+    _canvas.channel_create = _audio_mod.channel_create
+    _canvas.channel_get_parent = _audio_mod.channel_get_parent
+    _canvas.channel_set_parent = _audio_mod.channel_set_parent
+    _canvas.channel_get_effective_volume = _audio_mod.channel_get_effective_volume
+    _canvas.channel_destroy = _audio_mod.channel_destroy
+    _canvas.channel_play = _audio_mod.channel_play
+    _canvas.channel_stop = _audio_mod.channel_stop
+    _canvas.channel_pause = _audio_mod.channel_pause
+    _canvas.channel_resume = _audio_mod.channel_resume
+    _canvas.channel_set_volume = _audio_mod.channel_set_volume
+    _canvas.channel_get_volume = _audio_mod.channel_get_volume
+    _canvas.channel_fade_to = _audio_mod.channel_fade_to
+    _canvas.channel_is_playing = _audio_mod.channel_is_playing
+    _canvas.channel_is_fading = _audio_mod.channel_is_fading
+    _canvas.channel_get_time = _audio_mod.channel_get_time
+    _canvas.channel_get_duration = _audio_mod.channel_get_duration
+    _canvas.channel_get_audio = _audio_mod.channel_get_audio
 `;

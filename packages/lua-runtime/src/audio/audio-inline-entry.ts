@@ -150,8 +150,18 @@ export function setupAudioBridge(
 
   // === Asset Loading Functions (export-specific) ===
 
+  // No-op: in exports, assets are pre-embedded in the manifest
+  engine.global.set('__audio_assets_addPath', () => {
+    // No-op in exports - assets are discovered at build time
+  });
+
+  // Wait for all pending audio loads to complete
+  engine.global.set('__audio_assets_start', () => {
+    return state.waitForAudioLoads?.() ?? Promise.resolve();
+  });
+
   engine.global.set(
-    '__canvas_assets_loadSound',
+    '__audio_assets_loadSound',
     (name: string, filename: string) => {
       const loadPromise = loadAudioAsset(name, filename).finally(() => {
         pendingLoads.delete(loadPromise);
@@ -163,7 +173,7 @@ export function setupAudioBridge(
   );
 
   engine.global.set(
-    '__canvas_assets_loadMusic',
+    '__audio_assets_loadMusic',
     (name: string, filename: string) => {
       const loadPromise = loadAudioAsset(name, filename).finally(() => {
         pendingLoads.delete(loadPromise);

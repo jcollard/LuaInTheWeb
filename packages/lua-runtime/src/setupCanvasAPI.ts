@@ -286,7 +286,7 @@ export function setupCanvasAPI(
     return controller.loadFontAsset(name, filename)
   })
 
-  engine.global.set('__canvas_assets_loadSound', (name: string, filename: string) => {
+  engine.global.set('__audio_assets_loadSound', (name: string, filename: string) => {
     const controller = getController()
     if (!controller) {
       throw new Error('Canvas controller not available - is canvas support enabled?')
@@ -294,7 +294,7 @@ export function setupCanvasAPI(
     return controller.loadSoundAsset(name, filename)
   })
 
-  engine.global.set('__canvas_assets_loadMusic', (name: string, filename: string) => {
+  engine.global.set('__audio_assets_loadMusic', (name: string, filename: string) => {
     const controller = getController()
     if (!controller) {
       throw new Error('Canvas controller not available - is canvas support enabled?')

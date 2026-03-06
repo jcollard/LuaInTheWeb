@@ -186,6 +186,9 @@ export class HtmlGenerator {
     // LocalStorage library code (from bundled canvas-standalone)
     const LOCALSTORAGE_LUA_CODE = globalThis.localStorageLuaCode;
 
+    // Audio Lua code (registers package.preload['audio'])
+    const AUDIO_LUA_CODE = globalThis.audioLuaCode;
+
     // Project configuration
     const PROJECT_CONFIG = {
       name: ${JSON.stringify(config.name)},
@@ -396,6 +399,11 @@ export class HtmlGenerator {
           "table.insert(package.searchers, 2, custom_loader) " +
           "end"
         );
+
+        // Register audio module (must come before canvas Lua code which delegates to it)
+        if (AUDIO_LUA_CODE) {
+          await engine.doString(AUDIO_LUA_CODE);
+        }
 
         // Execute the bundled canvas Lua API code
         await engine.doString(CANVAS_LUA_CODE);
@@ -698,8 +706,11 @@ export class HtmlGenerator {
    * @param luaFiles - Collected Lua source files
    * @returns Generated HTML string
    */
-  generateAnsi(config: ProjectConfig, luaFiles: CollectedFile[]): string {
-    return generateAnsiHtml(config, this.serializeLuaFiles(luaFiles), this.escapeHtml)
+  generateAnsi(config: ProjectConfig, luaFiles: CollectedFile[], assets: CollectedAsset[]): string {
+    const assetManifest = this.options.singleFile
+      ? this.serializeAssetsWithData(assets)
+      : this.serializeAssets(assets)
+    return generateAnsiHtml(config, this.serializeLuaFiles(luaFiles), this.escapeHtml, assetManifest)
   }
 
   /**
@@ -717,7 +728,7 @@ export class HtmlGenerator {
     if (config.type === 'canvas') {
       return this.generateCanvas(config, luaFiles, assets)
     } else if (config.type === 'ansi') {
-      return this.generateAnsi(config, luaFiles)
+      return this.generateAnsi(config, luaFiles, assets)
     } else {
       return this.generateShell(config, luaFiles)
     }
