@@ -6,6 +6,7 @@
 import type { LuaEngine } from 'wasmoon'
 import type { CanvasController } from './CanvasController'
 import { canvasLuaCode } from './canvasLuaWrapper'
+import { audioLuaCode } from './audioLuaCode'
 import { setupPathBindings } from './setupCanvasAPIPath'
 import { setupStyleBindings } from './setupCanvasAPIStyles'
 import { setupPixelBindings, clearImageDataStore } from './setupCanvasAPIPixels'
@@ -396,6 +397,8 @@ export function setupCanvasAPI(
   // Canvas is NOT a global - it must be accessed via require('canvas')
   // Initialize __loaded_modules if not already set (for tests that don't use LuaEngineFactory)
   engine.doStringSync('if __loaded_modules == nil then __loaded_modules = {} end')
+  // Register audio module first — canvasLuaAudioCode delegates to require('audio')
+  engine.doStringSync(audioLuaCode)
   engine.doStringSync(canvasLuaCode)
 
   // Set up reload callback - allows CanvasController.reload() to trigger canvas.reload() in Lua
