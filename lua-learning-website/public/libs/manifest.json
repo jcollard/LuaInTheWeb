@@ -5,6 +5,7 @@
     "canvas.lua",
     "hc.lua",
     "localstorage.lua",
+    "audio.lua",
     "ansi.lua"
   ]
 }

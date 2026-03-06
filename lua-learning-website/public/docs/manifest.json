@@ -16,6 +16,7 @@
     "canvas/hit-testing.md",
     "canvas/pixels.md",
     "canvas/audio.md",
+    "audio.md",
     "lua/basics.md",
     "lua/string.md",
     "lua/table.md",
