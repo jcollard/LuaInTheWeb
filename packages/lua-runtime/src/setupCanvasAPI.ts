@@ -287,21 +287,9 @@ export function setupCanvasAPI(
     return controller.loadFontAsset(name, filename)
   })
 
-  engine.global.set('__audio_assets_loadSound', (name: string, filename: string) => {
-    const controller = getController()
-    if (!controller) {
-      throw new Error('Canvas controller not available - is canvas support enabled?')
-    }
-    return controller.loadSoundAsset(name, filename)
-  })
-
-  engine.global.set('__audio_assets_loadMusic', (name: string, filename: string) => {
-    const controller = getController()
-    if (!controller) {
-      throw new Error('Canvas controller not available - is canvas support enabled?')
-    }
-    return controller.loadMusicAsset(name, filename)
-  })
+  // Note: __audio_assets_loadSound/Music are registered by setupAudioAssetAPI
+  // (editor) or audio-inline-entry (exports). setupCanvasAPI does NOT register
+  // them to avoid overwriting the AudioAssetManager-backed versions.
 
   // Helper to extract asset name from string or handle
   const extractAssetName = (nameOrHandle: unknown): string => {
@@ -397,7 +385,8 @@ export function setupCanvasAPI(
   // Canvas is NOT a global - it must be accessed via require('canvas')
   // Initialize __loaded_modules if not already set (for tests that don't use LuaEngineFactory)
   engine.doStringSync('if __loaded_modules == nil then __loaded_modules = {} end')
-  // Register audio module first — canvasLuaAudioCode delegates to require('audio')
+  // Register audio module if not already registered — canvasLuaAudioCode
+  // delegates to require('audio'). Safe to run twice (idempotent preload).
   engine.doStringSync(audioLuaCode)
   engine.doStringSync(canvasLuaCode)
 
