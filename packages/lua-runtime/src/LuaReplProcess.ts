@@ -17,6 +17,9 @@ import {
 import { CanvasController, type CanvasCallbacks } from './CanvasController'
 import { setupCanvasAPI } from './setupCanvasAPI'
 import { setupAudioAPI } from './setupAudioAPI'
+import { setupAudioAssetAPI } from './setupAudioAssetAPI'
+import { AudioAssetManager } from './AudioAssetManager'
+import { audioLuaCode } from './audioLuaCode'
 import { FileOperationsHandler } from './FileOperationsHandler'
 
 /**
@@ -55,6 +58,8 @@ export class LuaReplProcess implements IProcess {
   private readonly options: LuaReplProcessOptions
   /** Canvas controller for canvas.start()/stop() functionality */
   private canvasController: CanvasController | null = null
+  /** Audio asset manager for standalone audio */
+  private audioAssetManager: AudioAssetManager | null = null
 
   /** File operations handler for io.open() support */
   private fileOpsHandler: FileOperationsHandler | null = null
@@ -135,6 +140,10 @@ export class LuaReplProcess implements IProcess {
       this.canvasController.stop()
     }
     this.canvasController = null
+
+    // Dispose standalone audio engine if active
+    this.audioAssetManager?.getAudioEngine()?.dispose()
+    this.audioAssetManager = null
 
     // Request stop from any running Lua code via debug hook
     // This sets a flag that the debug hook checks periodically
@@ -397,6 +406,9 @@ export class LuaReplProcess implements IProcess {
         this.stop()
       })
 
+      // Setup standalone audio module (always available, must be before canvas)
+      this.initAudioModule()
+
       // Setup canvas API if canvas callbacks are provided
       if (this.options.canvasCallbacks) {
         this.initCanvasAPI()
@@ -430,6 +442,34 @@ export class LuaReplProcess implements IProcess {
     // Use shared setup functions for canvas
     setupCanvasAPI(this.engine, () => this.canvasController)
     setupAudioAPI(this.engine, () => this.canvasController?.getAudioEngine() ?? null)
+  }
+
+  /**
+   * Set up the standalone audio module.
+   * Creates an AudioAssetManager and injects the audio Lua code.
+   */
+  private initAudioModule(): void {
+    if (!this.engine) return
+
+    this.audioAssetManager = new AudioAssetManager()
+
+    const cwd = this.options.cwd ?? '/'
+
+    // Set up audio asset bridge functions
+    if (this.options.fileSystem) {
+      setupAudioAssetAPI(this.engine, () => this.audioAssetManager, {
+        fileSystem: this.options.fileSystem,
+        scriptDirectory: cwd,
+      })
+    }
+
+    // Set up audio playback bridge functions if not already set up by canvas
+    if (!this.options.canvasCallbacks) {
+      setupAudioAPI(this.engine, () => this.audioAssetManager?.getAudioEngine() ?? null)
+    }
+
+    // Inject the audio Lua code (registers package.preload['audio'])
+    this.engine.doStringSync(audioLuaCode)
   }
 
   /**
