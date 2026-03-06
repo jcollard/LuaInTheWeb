@@ -485,7 +485,9 @@ __clear_execution_hook()
 
     // Use shared setup functions for canvas
     setupCanvasAPI(this.engine, () => this.canvasController)
-    setupAudioAPI(this.engine, () => this.canvasController?.getAudioEngine() ?? null)
+    // Audio playback uses AudioAssetManager's engine (which has the decoded buffers)
+    // rather than the canvas controller's engine (which is separate and empty)
+    setupAudioAPI(this.engine, () => this.audioAssetManager?.getAudioEngine() ?? null)
   }
 
   /**

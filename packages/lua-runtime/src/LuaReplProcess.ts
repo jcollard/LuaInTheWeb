@@ -441,7 +441,8 @@ export class LuaReplProcess implements IProcess {
 
     // Use shared setup functions for canvas
     setupCanvasAPI(this.engine, () => this.canvasController)
-    setupAudioAPI(this.engine, () => this.canvasController?.getAudioEngine() ?? null)
+    // Audio playback uses AudioAssetManager's engine (which has the decoded buffers)
+    setupAudioAPI(this.engine, () => this.audioAssetManager?.getAudioEngine() ?? null)
   }
 
   /**
