@@ -462,6 +462,12 @@ export class LuaReplProcess implements IProcess {
         fileSystem: this.options.fileSystem,
         scriptDirectory: cwd,
       })
+    } else {
+      // Register no-op stubs so require('audio') doesn't error on missing globals
+      this.engine.global.set('__audio_assets_addPath', () => {})
+      this.engine.global.set('__audio_assets_loadSound', () => null)
+      this.engine.global.set('__audio_assets_loadMusic', () => null)
+      this.engine.global.set('__audio_assets_start', () => Promise.resolve())
     }
 
     // Set up audio playback bridge functions if not already set up by canvas

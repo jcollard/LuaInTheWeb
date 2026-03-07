@@ -386,8 +386,8 @@ export function setupCanvasAPI(
   // Initialize __loaded_modules if not already set (for tests that don't use LuaEngineFactory)
   engine.doStringSync('if __loaded_modules == nil then __loaded_modules = {} end')
   // Register audio module if not already registered — canvasLuaAudioCode
-  // delegates to require('audio'). Safe to run twice (idempotent preload).
-  engine.doStringSync(audioLuaCode)
+  // delegates to require('audio'). Guarded to avoid creating a second _audio table.
+  engine.doStringSync('if not package.preload["audio"] then\n' + audioLuaCode + '\nend')
   engine.doStringSync(canvasLuaCode)
 
   // Set up reload callback - allows CanvasController.reload() to trigger canvas.reload() in Lua
