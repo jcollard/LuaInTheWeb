@@ -37,8 +37,8 @@ export { LUA_LOCALSTORAGE_CODE } from './lua/localstorage.generated'
 // ANSI library export (auto-generated from ansi.lua)
 export { LUA_ANSI_CODE } from './lua/ansi.generated'
 
-// Audio library export (auto-generated from audio.lua)
-export { LUA_AUDIO_CODE } from './lua/audio.generated'
+// Audio library export (auto-generated from ail_audio.lua)
+export { LUA_AIL_AUDIO_CODE } from './lua/ail_audio.generated'
 
 // Canvas Lua code modules (for bundling in exports)
 export {
