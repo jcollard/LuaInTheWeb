@@ -9,7 +9,10 @@ export const canvasLuaAudioCode = `
     -- Audio API (deprecated — delegates to standalone audio module)
     -- ========================================================================
 
-    local _audio_mod = require('audio')
+    local _audio_ok, _audio_mod = pcall(require, 'audio')
+    if not _audio_ok then
+      error("Failed to load audio module from canvas: " .. tostring(_audio_mod))
+    end
 
     -- Sound effect playback
     _canvas.play_sound = _audio_mod.play_sound

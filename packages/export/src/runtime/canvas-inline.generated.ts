@@ -1313,7 +1313,10 @@ var CanvasInline = (() => {
     -- Audio API (deprecated \\u2014 delegates to standalone audio module)
     -- ========================================================================
 
-    local _audio_mod = require('audio')
+    local _audio_ok, _audio_mod = pcall(require, 'audio')
+    if not _audio_ok then
+      error("Failed to load audio module from canvas: " .. tostring(_audio_mod))
+    end
 
     -- Sound effect playback
     _canvas.play_sound = _audio_mod.play_sound
@@ -3420,6 +3423,11 @@ return localstorage
           state.tickCallback();
         } catch (err) {
           console.error("Lua error in tick callback:", err);
+          console.error("Error type:", typeof err);
+          if (err instanceof Error) {
+            console.error("Error message:", err.message);
+            console.error("Error stack:", err.stack);
+          }
           state.isRunning = false;
           if (state.stopResolve) {
             state.stopResolve();
