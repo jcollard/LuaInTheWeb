@@ -521,7 +521,7 @@ __clear_execution_hook()
    * Creates an AudioAssetManager for standalone audio asset loading,
    * sets up audio API bridge functions, and injects the audio Lua code.
    * In canvas mode, audio playback delegates to the canvas audio engine;
-   * the standalone asset manager handles require('audio') with its own lifecycle.
+   * the standalone asset manager handles require('ail_audio') with its own lifecycle.
    */
   private initAudioModule(scriptPath: string): void {
     if (!this.engine) return
@@ -546,7 +546,7 @@ __clear_execution_hook()
       setupAudioAPI(this.engine, () => this.audioAssetManager?.getAudioEngine() ?? null)
     }
 
-    // Inject the audio Lua code (registers package.preload['audio'])
+    // Inject the audio Lua code (registers package.preload['ail_audio'])
     this.engine.doStringSync(audioLuaCode)
   }
 

@@ -1,13 +1,13 @@
 # Audio Library
 
-The `audio` library provides standalone audio playback for sound effects, music, volume control, and audio channels. It works in both canvas and ANSI modes.
+The `ail_audio` library provides standalone audio playback for sound effects, music, volume control, and audio channels. It works in both canvas and ANSI modes.
 
 ## Using the Library
 
 Load the library with `require()`:
 
 ```lua
-local audio = require("audio")
+local audio = require("ail_audio")
 
 -- Register asset directory
 audio.add_path("assets")
@@ -29,7 +29,7 @@ audio.play_music("theme", { loop = true })
 Audio files must be registered before `audio.start()`:
 
 ```lua
-local audio = require("audio")
+local audio = require("ail_audio")
 
 -- Set asset directory (relative to your script)
 audio.add_path("assets")
@@ -211,7 +211,7 @@ In canvas mode, you can use either the standalone `audio` module or the canvas a
 
 ```lua
 local canvas = require("canvas")
-local audio = require("audio")
+local audio = require("ail_audio")
 
 -- Canvas asset loading still works
 canvas.assets.add_path("assets")
@@ -232,7 +232,7 @@ The `audio` module enables sound in ANSI terminal applications:
 
 ```lua
 local ansi = require("ansi")
-local audio = require("audio")
+local audio = require("ail_audio")
 
 audio.add_path("assets")
 audio.load_sound("beep", "beep.ogg")

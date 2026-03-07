@@ -137,11 +137,6 @@ function startGameLoop(state: CanvasRuntimeState): void {
         state.tickCallback()
       } catch (err) {
         console.error('Lua error in tick callback:', err)
-        console.error('Error type:', typeof err)
-        if (err instanceof Error) {
-          console.error('Error message:', err.message)
-          console.error('Error stack:', err.stack)
-        }
         state.isRunning = false
         if (state.stopResolve) {
           state.stopResolve()

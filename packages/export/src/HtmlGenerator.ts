@@ -186,7 +186,7 @@ export class HtmlGenerator {
     // LocalStorage library code (from bundled canvas-standalone)
     const LOCALSTORAGE_LUA_CODE = globalThis.localStorageLuaCode;
 
-    // Audio Lua code (registers package.preload['audio'])
+    // Audio Lua code (registers package.preload['ail_audio'])
     const AUDIO_LUA_CODE = globalThis.audioLuaCode;
 
     // Project configuration
@@ -401,10 +401,8 @@ export class HtmlGenerator {
         );
 
         // Register built-in audio module (must come before canvas Lua code which delegates to it).
-        // Skip if the game provides its own audio module to avoid shadowing it —
-        // package.preload is checked before custom loaders.
-        const gameHasAudioModule = LUA_MODULES['audio.lua'] || LUA_MODULES['audio/init.lua'];
-        if (AUDIO_LUA_CODE && !gameHasAudioModule) {
+        // Uses 'ail_audio' namespace to avoid colliding with game's own 'audio' module.
+        if (AUDIO_LUA_CODE) {
           await engine.doString(AUDIO_LUA_CODE);
         }
 

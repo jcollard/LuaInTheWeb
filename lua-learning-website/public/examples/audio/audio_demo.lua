@@ -2,7 +2,7 @@
 -- Demonstrates the standalone audio library with canvas for UI rendering
 
 local canvas = require("canvas")
-local audio = require("audio")
+local audio = require("ail_audio")
 
 -- Register asset directory using the standalone audio module
 audio.add_path("assets")

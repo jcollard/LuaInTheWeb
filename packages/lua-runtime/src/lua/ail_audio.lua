@@ -1,6 +1,6 @@
----@meta audio
---- audio.lua - Standalone Audio Library
---- Load with: local audio = require('audio')
+---@meta ail_audio
+--- ail_audio.lua - Standalone Audio Library
+--- Load with: local audio = require('ail_audio')
 ---
 --- This library provides audio playback functions for sound effects,
 --- music, volume control, and audio channels.

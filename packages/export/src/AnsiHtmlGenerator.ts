@@ -124,7 +124,7 @@ export function generateAnsiHtml(
     // Asset manifest (for audio assets)
     const ASSET_MANIFEST = ${assetManifest};
 
-    // Audio Lua code (registers package.preload['audio'])
+    // Audio Lua code (registers package.preload['ail_audio'])
     const AUDIO_LUA_CODE = \`${escapedAudioLuaCode}\`;
 
     // Project configuration

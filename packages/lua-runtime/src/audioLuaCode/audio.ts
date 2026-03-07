@@ -178,8 +178,8 @@ export const audioLuaCode = `
       return __audio_channelGetAudio(channel)
     end
 
-    -- Register audio as a module so require('audio') works
-    package.preload['audio'] = function()
+    -- Register audio as a module so require('ail_audio') works
+    package.preload['ail_audio'] = function()
       return _audio
     end
 `
