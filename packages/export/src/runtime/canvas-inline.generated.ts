@@ -1314,10 +1314,13 @@ var CanvasInline = (() => {
     -- ========================================================================
 
     local _audio_ok, _audio_mod = pcall(require, 'audio')
-    if not _audio_ok then
-      error("Failed to load audio module from canvas: " .. tostring(_audio_mod))
+    -- Only delegate if we got the built-in audio module (has play_sound).
+    -- Games may provide their own 'audio' module with different API.
+    if not _audio_ok or type(_audio_mod) ~= 'table' or not _audio_mod.play_sound then
+      _audio_mod = nil
     end
 
+    if _audio_mod then
     -- Sound effect playback
     _canvas.play_sound = _audio_mod.play_sound
     _canvas.get_sound_duration = _audio_mod.get_sound_duration
@@ -1357,6 +1360,7 @@ var CanvasInline = (() => {
     _canvas.channel_get_time = _audio_mod.channel_get_time
     _canvas.channel_get_duration = _audio_mod.channel_get_duration
     _canvas.channel_get_audio = _audio_mod.channel_get_audio
+    end
 \`;
 
   // ../lua-runtime/src/lua/hc.generated.ts

@@ -400,8 +400,11 @@ export class HtmlGenerator {
           "end"
         );
 
-        // Register audio module (must come before canvas Lua code which delegates to it)
-        if (AUDIO_LUA_CODE) {
+        // Register built-in audio module (must come before canvas Lua code which delegates to it).
+        // Skip if the game provides its own audio module to avoid shadowing it —
+        // package.preload is checked before custom loaders.
+        const gameHasAudioModule = LUA_MODULES['audio.lua'] || LUA_MODULES['audio/init.lua'];
+        if (AUDIO_LUA_CODE && !gameHasAudioModule) {
           await engine.doString(AUDIO_LUA_CODE);
         }
 
