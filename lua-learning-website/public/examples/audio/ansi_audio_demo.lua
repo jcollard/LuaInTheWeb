@@ -51,12 +51,14 @@ ansi.tick(function()
       music_playing = true
     end
   end
-  -- Number keys 0-9 set volume directly
-  for i = 0, 9 do
-    if ansi.is_key_pressed(tostring(i)) then
-      volume = i
-      audio.set_master_volume(volume / 9)
-    end
+  -- Volume control: - to decrease, = (or +) to increase
+  if ansi.is_key_pressed("-") then
+    volume = math.max(0, volume - 1)
+    audio.set_master_volume(volume / 9)
+  end
+  if ansi.is_key_pressed("=") then
+    volume = math.min(9, volume + 1)
+    audio.set_master_volume(volume / 9)
   end
 
   -- Draw
@@ -106,7 +108,7 @@ ansi.tick(function()
   -- Controls
   ansi.set_cursor(20, 1)
   ansi.foreground(85, 85, 85)
-  ansi.print("Up/Down: Select | Enter: Play | M: Music | 0-9: Volume")
+  ansi.print("Up/Down: Select | Enter: Play | M: Music | -/+: Volume")
 end)
 
 ansi.start()
