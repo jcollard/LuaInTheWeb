@@ -14,6 +14,9 @@ import { setupPixelBindings, clearImageDataStore } from './setupCanvasAPIPixels'
 // Re-export for backward compatibility
 export { clearImageDataStore }
 
+// Pre-built guard string to avoid concatenation on every setupCanvasAPI call
+const audioPreloadGuard = 'if not package.preload["ail_audio"] then\n' + audioLuaCode + '\nend'
+
 /**
  * Set up canvas API functions in the Lua engine.
  * This registers all the JS functions and Lua wrapper code needed for
@@ -387,7 +390,7 @@ export function setupCanvasAPI(
   engine.doStringSync('if __loaded_modules == nil then __loaded_modules = {} end')
   // Register audio module if not already registered — canvasLuaAudioCode
   // delegates to require('ail_audio'). Guarded to avoid creating a second _audio table.
-  engine.doStringSync('if not package.preload["ail_audio"] then\n' + audioLuaCode + '\nend')
+  engine.doStringSync(audioPreloadGuard)
   engine.doStringSync(canvasLuaCode)
 
   // Set up reload callback - allows CanvasController.reload() to trigger canvas.reload() in Lua
