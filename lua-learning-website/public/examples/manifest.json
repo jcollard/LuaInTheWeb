@@ -134,6 +134,8 @@
     "space_shooter/src/images/laser.png",
     "space_shooter/src/images/meteor.png",
     "audio/audio_demo.lua",
+    "audio/ansi_audio_demo.lua",
+    "audio/terminal_audio_demo.lua",
     "audio/channel_test.lua",
     "audio/assets/sfx/blade_01.ogg",
     "audio/assets/sfx/blade_02.ogg",
