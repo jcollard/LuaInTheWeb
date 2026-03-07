@@ -36,7 +36,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     const config = createConfig()
     const luaFiles: CollectedFile[] = []
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('<!DOCTYPE html>')
     expect(html).toContain('<html')
@@ -48,7 +48,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     const config = createConfig({ name: 'My ANSI App' })
     const luaFiles: CollectedFile[] = []
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('<title>My ANSI App</title>')
   })
@@ -58,7 +58,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     const config = createConfig()
     const luaFiles: CollectedFile[] = []
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('@font-face')
     expect(html).toContain('IBM VGA 8x16')
@@ -70,7 +70,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     const config = createConfig()
     const luaFiles: CollectedFile[] = []
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('xterm.js + CanvasAddon')
     expect(html).toContain('shared module context')
@@ -81,7 +81,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     const config = createConfig()
     const luaFiles: CollectedFile[] = []
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('new CanvasAddon()')
   })
@@ -91,7 +91,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     const config = createConfig()
     const luaFiles: CollectedFile[] = []
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('ANSI bridge (bundled from AnsiController + setupAnsiAPI)')
     expect(html).toContain('AnsiStandalone')
@@ -102,7 +102,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     const config = createConfig()
     const luaFiles: CollectedFile[] = []
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('start-overlay')
     expect(html).toContain('Click to Start')
@@ -116,7 +116,7 @@ describe('HtmlGenerator - generateAnsi', () => {
       { path: 'title.ansi.lua', content: 'return { layers = {} }' },
     ]
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('"main.lua"')
     expect(html).toContain('"title.ansi.lua"')
@@ -129,7 +129,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     })
     const luaFiles: CollectedFile[] = []
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('cols: 120')
     expect(html).toContain('rows: 40')
@@ -145,7 +145,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     }
     const luaFiles: CollectedFile[] = []
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('cols: 80')
     expect(html).toContain('rows: 25')
@@ -157,7 +157,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     const config = createConfig()
     const luaFiles: CollectedFile[] = []
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('Wasmoon Lua runtime (bundled with embedded WASM)')
   })
@@ -167,7 +167,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     const config = createConfig()
     const luaFiles: CollectedFile[] = []
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('__load_module')
     expect(html).toContain('custom_loader')
@@ -178,7 +178,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     const config = createConfig()
     const luaFiles: CollectedFile[] = []
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('setupAnsiAPI')
     expect(html).toContain('fileReader')
@@ -189,7 +189,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     const config = createConfig()
     const luaFiles: CollectedFile[] = []
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('__js_write')
     expect(html).toContain('__shell_get_width')
@@ -216,7 +216,7 @@ describe('HtmlGenerator - generateAnsi', () => {
       { path: 'name.ansi.lua', content: 'return {}' },
     ]
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('modulePath + ".lua"')
     expect(html).toMatch(/initPath.*=.*\/init\.lua/)
@@ -227,7 +227,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     const config = createConfig()
     const luaFiles: CollectedFile[] = []
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('disableStdin: true')
     expect(html).toContain('scrollback: 0')
@@ -239,7 +239,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     const config = createConfig()
     const luaFiles: CollectedFile[] = []
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('scale: "integer"')
     expect(html).toContain('applyScale')
@@ -253,7 +253,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     })
     const luaFiles: CollectedFile[] = []
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('scale: "full"')
   })
@@ -265,7 +265,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     })
     const luaFiles: CollectedFile[] = []
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('scale: "2x"')
     expect(html).toContain("case '1x':")
@@ -278,7 +278,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     const config = createConfig()
     const luaFiles: CollectedFile[] = []
 
-    const html = generator.generateAnsi(config, luaFiles)
+    const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('term.options.fontSize = FONT_SIZE * newScale')
   })

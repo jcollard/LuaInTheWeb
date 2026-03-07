@@ -236,14 +236,14 @@ var CanvasInline = (() => {
     -- Returns an asset handle that can be used with play_sound
     -- Must be called before canvas.start()
     function _canvas.assets.load_sound(name, filename)
-      return __canvas_assets_loadSound(name, filename)
+      return __audio_assets_loadSound(name, filename)
     end
 
     -- Create a named reference to a discovered music file
     -- Returns an asset handle that can be used with play_music
     -- Must be called before canvas.start()
     function _canvas.assets.load_music(name, filename)
-      return __canvas_assets_loadMusic(name, filename)
+      return __audio_assets_loadMusic(name, filename)
     end
 
     -- Get asset dimensions (accepts string name or asset handle)
@@ -1310,161 +1310,26 @@ var CanvasInline = (() => {
   // ../lua-runtime/src/canvasLuaCode/audio.ts
   var canvasLuaAudioCode = \`
     -- ========================================================================
-    -- Audio API
+    -- Audio API (delegates to ail_audio module)
     -- ========================================================================
 
-    -- Sound effect playback (can overlap)
-    function _canvas.play_sound(name, volume)
-      __audio_playSound(name, volume)
-    end
+    local _ail_audio = require('ail_audio')
 
-    -- Get the duration of a sound in seconds
-    function _canvas.get_sound_duration(name)
-      return __audio_getSoundDuration(name)
-    end
-
-    -- Music playback (one track at a time)
-    function _canvas.play_music(name, options)
-      local volume = 1
-      local loop = false
-      if options then
-        if options.volume then volume = options.volume end
-        if options.loop then loop = options.loop end
-      end
-      __audio_playMusic(name, volume, loop)
-    end
-
-    function _canvas.stop_music()
-      __audio_stopMusic()
-    end
-
-    function _canvas.pause_music()
-      __audio_pauseMusic()
-    end
-
-    function _canvas.resume_music()
-      __audio_resumeMusic()
-    end
-
-    function _canvas.set_music_volume(volume)
-      __audio_setMusicVolume(volume)
-    end
-
-    function _canvas.is_music_playing()
-      return __audio_isMusicPlaying()
-    end
-
-    function _canvas.get_music_time()
-      return __audio_getMusicTime()
-    end
-
-    function _canvas.get_music_duration()
-      return __audio_getMusicDuration()
-    end
-
-    -- Global audio control
-    function _canvas.set_master_volume(volume)
-      __audio_setMasterVolume(volume)
-    end
-
-    function _canvas.get_master_volume()
-      return __audio_getMasterVolume()
-    end
-
-    function _canvas.mute()
-      __audio_mute()
-    end
-
-    function _canvas.unmute()
-      __audio_unmute()
-    end
-
-    function _canvas.is_muted()
-      return __audio_isMuted()
-    end
-
-    -- ========================================================================
-    -- Audio Channel API
-    -- ========================================================================
-
-    function _canvas.channel_create(name, options)
-      local parent = nil
-      if options and options.parent then
-        parent = options.parent
-      end
-      __audio_channelCreate(name, parent)
-    end
-
-    function _canvas.channel_get_parent(name)
-      return __audio_channelGetParent(name)
-    end
-
-    function _canvas.channel_set_parent(name, parent)
-      __audio_channelSetParent(name, parent)
-    end
-
-    function _canvas.channel_get_effective_volume(name)
-      return __audio_channelGetEffectiveVolume(name)
-    end
-
-    function _canvas.channel_destroy(name)
-      __audio_channelDestroy(name)
-    end
-
-    function _canvas.channel_play(channel, audio, options)
-      local volume = 1
-      local loop = false
-      local start_time = 0
-      if options then
-        if options.volume then volume = options.volume end
-        if options.loop then loop = options.loop end
-        if options.start_time then start_time = options.start_time end
-      end
-      __audio_channelPlay(channel, audio, volume, loop, start_time)
-    end
-
-    function _canvas.channel_stop(channel)
-      __audio_channelStop(channel)
-    end
-
-    function _canvas.channel_pause(channel)
-      __audio_channelPause(channel)
-    end
-
-    function _canvas.channel_resume(channel)
-      __audio_channelResume(channel)
-    end
-
-    function _canvas.channel_set_volume(channel, volume)
-      __audio_channelSetVolume(channel, volume)
-    end
-
-    function _canvas.channel_get_volume(channel)
-      return __audio_channelGetVolume(channel)
-    end
-
-    function _canvas.channel_fade_to(channel, targetVolume, duration)
-      __audio_channelFadeTo(channel, targetVolume, duration)
-    end
-
-    function _canvas.channel_is_playing(channel)
-      return __audio_channelIsPlaying(channel)
-    end
-
-    function _canvas.channel_is_fading(channel)
-      return __audio_channelIsFading(channel)
-    end
-
-    function _canvas.channel_get_time(channel)
-      return __audio_channelGetTime(channel)
-    end
-
-    function _canvas.channel_get_duration(channel)
-      return __audio_channelGetDuration(channel)
-    end
-
-    function _canvas.channel_get_audio(channel)
-      return __audio_channelGetAudio(channel)
+    -- Copy all audio functions onto _canvas for backward compatibility
+    local _audio_funcs = {
+      'play_sound', 'get_sound_duration',
+      'play_music', 'stop_music', 'pause_music', 'resume_music',
+      'set_music_volume', 'is_music_playing', 'get_music_time', 'get_music_duration',
+      'set_master_volume', 'get_master_volume', 'mute', 'unmute', 'is_muted',
+      'channel_create', 'channel_get_parent', 'channel_set_parent',
+      'channel_get_effective_volume', 'channel_destroy',
+      'channel_play', 'channel_stop', 'channel_pause', 'channel_resume',
+      'channel_set_volume', 'channel_get_volume', 'channel_fade_to',
+      'channel_is_playing', 'channel_is_fading',
+      'channel_get_time', 'channel_get_duration', 'channel_get_audio',
+    }
+    for _, name in ipairs(_audio_funcs) do
+      _canvas[name] = _ail_audio[name]
     end
 \`;
 
@@ -3159,6 +3024,186 @@ end
 return localstorage
 \`;
 
+  // ../lua-runtime/src/audioLuaCode/audio.ts
+  var audioLuaCode = \`
+    -- ========================================================================
+    -- Audio Module (standalone)
+    -- ========================================================================
+    local _audio = {}
+
+    -- Asset management
+    function _audio.add_path(path)
+      __audio_assets_addPath(path)
+    end
+
+    function _audio.load_sound(name, filename)
+      return __audio_assets_loadSound(name, filename)
+    end
+
+    function _audio.load_music(name, filename)
+      return __audio_assets_loadMusic(name, filename)
+    end
+
+    function _audio.start()
+      __audio_assets_start()
+    end
+
+    -- Sound effect playback (can overlap)
+    function _audio.play_sound(name, volume)
+      __audio_playSound(name, volume)
+    end
+
+    function _audio.get_sound_duration(name)
+      return __audio_getSoundDuration(name)
+    end
+
+    -- Music playback (one track at a time)
+    function _audio.play_music(name, options)
+      local volume = 1
+      local loop = false
+      if options then
+        if options.volume then volume = options.volume end
+        if options.loop then loop = options.loop end
+      end
+      __audio_playMusic(name, volume, loop)
+    end
+
+    function _audio.stop_music()
+      __audio_stopMusic()
+    end
+
+    function _audio.pause_music()
+      __audio_pauseMusic()
+    end
+
+    function _audio.resume_music()
+      __audio_resumeMusic()
+    end
+
+    function _audio.set_music_volume(volume)
+      __audio_setMusicVolume(volume)
+    end
+
+    function _audio.is_music_playing()
+      return __audio_isMusicPlaying()
+    end
+
+    function _audio.get_music_time()
+      return __audio_getMusicTime()
+    end
+
+    function _audio.get_music_duration()
+      return __audio_getMusicDuration()
+    end
+
+    -- Global audio control
+    function _audio.set_master_volume(volume)
+      __audio_setMasterVolume(volume)
+    end
+
+    function _audio.get_master_volume()
+      return __audio_getMasterVolume()
+    end
+
+    function _audio.mute()
+      __audio_mute()
+    end
+
+    function _audio.unmute()
+      __audio_unmute()
+    end
+
+    function _audio.is_muted()
+      return __audio_isMuted()
+    end
+
+    -- Audio Channel API
+    function _audio.channel_create(name, options)
+      local parent = nil
+      if options and options.parent then
+        parent = options.parent
+      end
+      __audio_channelCreate(name, parent)
+    end
+
+    function _audio.channel_get_parent(name)
+      return __audio_channelGetParent(name)
+    end
+
+    function _audio.channel_set_parent(name, parent)
+      __audio_channelSetParent(name, parent)
+    end
+
+    function _audio.channel_get_effective_volume(name)
+      return __audio_channelGetEffectiveVolume(name)
+    end
+
+    function _audio.channel_destroy(name)
+      __audio_channelDestroy(name)
+    end
+
+    function _audio.channel_play(channel, audio, options)
+      local volume = 1
+      local loop = false
+      local start_time = 0
+      if options then
+        if options.volume then volume = options.volume end
+        if options.loop then loop = options.loop end
+        if options.start_time then start_time = options.start_time end
+      end
+      __audio_channelPlay(channel, audio, volume, loop, start_time)
+    end
+
+    function _audio.channel_stop(channel)
+      __audio_channelStop(channel)
+    end
+
+    function _audio.channel_pause(channel)
+      __audio_channelPause(channel)
+    end
+
+    function _audio.channel_resume(channel)
+      __audio_channelResume(channel)
+    end
+
+    function _audio.channel_set_volume(channel, volume)
+      __audio_channelSetVolume(channel, volume)
+    end
+
+    function _audio.channel_get_volume(channel)
+      return __audio_channelGetVolume(channel)
+    end
+
+    function _audio.channel_fade_to(channel, targetVolume, duration)
+      __audio_channelFadeTo(channel, targetVolume, duration)
+    end
+
+    function _audio.channel_is_playing(channel)
+      return __audio_channelIsPlaying(channel)
+    end
+
+    function _audio.channel_is_fading(channel)
+      return __audio_channelIsFading(channel)
+    end
+
+    function _audio.channel_get_time(channel)
+      return __audio_channelGetTime(channel)
+    end
+
+    function _audio.channel_get_duration(channel)
+      return __audio_channelGetDuration(channel)
+    end
+
+    function _audio.channel_get_audio(channel)
+      return __audio_channelGetAudio(channel)
+    end
+
+    -- Register audio as a module so require('ail_audio') works
+    package.preload['ail_audio'] = function()
+      return _audio
+    end
+\`;
+
   // src/runtime/canvas-bridge-utils.ts
   function toNumberArray(segments) {
     if (Array.isArray(segments)) {
@@ -4164,14 +4209,14 @@ return localstorage
       }
     );
     engine.global.set(
-      "__canvas_assets_loadSound",
+      "__audio_assets_loadSound",
       (name, filename) => {
         state.audioAssets.set(name, { name, filename, type: "sound" });
         return { _type: "sound", _name: name, _file: filename };
       }
     );
     engine.global.set(
-      "__canvas_assets_loadMusic",
+      "__audio_assets_loadMusic",
       (name, filename) => {
         state.audioAssets.set(name, { name, filename, type: "music" });
         return { _type: "music", _name: name, _file: filename };
@@ -4273,7 +4318,8 @@ return localstorage
     setupInputListeners,
     canvasLuaCode,
     hcLuaCode,
-    localStorageLuaCode
+    localStorageLuaCode,
+    audioLuaCode
   };
   globalThis.setupCanvasBridge = setupCanvasBridge;
   globalThis.createCanvasRuntimeState = createCanvasRuntimeState;
@@ -4281,5 +4327,6 @@ return localstorage
   globalThis.canvasLuaCode = canvasLuaCode;
   globalThis.hcLuaCode = hcLuaCode;
   globalThis.localStorageLuaCode = localStorageLuaCode;
+  globalThis.audioLuaCode = audioLuaCode;
 })();
 `

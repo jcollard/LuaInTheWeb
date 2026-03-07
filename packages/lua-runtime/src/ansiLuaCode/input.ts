@@ -32,6 +32,14 @@ export const ansiLuaInputCode = `
       if common[key:lower()] then
         return common[key:lower()]
       end
+      -- Punctuation characters
+      local punct = {
+        ['-'] = 'Minus', ['='] = 'Equal',
+        ['['] = 'BracketLeft', [']'] = 'BracketRight',
+        ['\\\\'] = 'Backslash', [';'] = 'Semicolon', ["'"] = 'Quote',
+        ['${'`'}'] = 'Backquote', [','] = 'Comma', ['.'] = 'Period', ['/'] = 'Slash',
+      }
+      if punct[key] then return punct[key] end
       return key
     end
 
@@ -152,6 +160,24 @@ export const ansiLuaInputCode = `
       SPACE = 'Space', ENTER = 'Enter', ESCAPE = 'Escape', TAB = 'Tab',
       BACKSPACE = 'Backspace', DELETE = 'Delete', INSERT = 'Insert',
       HOME = 'Home', END = 'End', PAGE_UP = 'PageUp', PAGE_DOWN = 'PageDown',
+      PRINT_SCREEN = 'PrintScreen', SCROLL_LOCK = 'ScrollLock', PAUSE = 'Pause',
+      NUM_LOCK = 'NumLock',
+
+      -- Numpad keys
+      NUMPAD_0 = 'Numpad0', NUMPAD_1 = 'Numpad1', NUMPAD_2 = 'Numpad2', NUMPAD_3 = 'Numpad3',
+      NUMPAD_4 = 'Numpad4', NUMPAD_5 = 'Numpad5', NUMPAD_6 = 'Numpad6', NUMPAD_7 = 'Numpad7',
+      NUMPAD_8 = 'Numpad8', NUMPAD_9 = 'Numpad9',
+      NUMPAD_ADD = 'NumpadAdd', NUMPAD_SUBTRACT = 'NumpadSubtract',
+      NUMPAD_MULTIPLY = 'NumpadMultiply', NUMPAD_DIVIDE = 'NumpadDivide',
+      NUMPAD_DECIMAL = 'NumpadDecimal', NUMPAD_ENTER = 'NumpadEnter',
+
+      -- Punctuation and symbols
+      MINUS = 'Minus', EQUAL = 'Equal', BRACKET_LEFT = 'BracketLeft', BRACKET_RIGHT = 'BracketRight',
+      BACKSLASH = 'Backslash', SEMICOLON = 'Semicolon', QUOTE = 'Quote',
+      BACKQUOTE = 'Backquote', COMMA = 'Comma', PERIOD = 'Period', SLASH = 'Slash',
+
+      -- Context menu key
+      CONTEXT_MENU = 'ContextMenu',
     }
 
     -- Register ansi as a module so require('ansi') works

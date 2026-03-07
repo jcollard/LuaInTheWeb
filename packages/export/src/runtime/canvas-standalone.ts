@@ -1482,9 +1482,9 @@ export function setupCanvasBridge(
 
   // --- Audio API ---
 
-  // Audio asset registration
+  // Audio asset registration (stub — overridden by setupAudioBridge in HtmlGenerator)
   engine.global.set(
-    '__canvas_assets_loadSound',
+    '__audio_assets_loadSound',
     (name: string, filename: string) => {
       state.audioAssets.set(name, { name, filename, type: 'sound' })
       return { _type: 'sound', _name: name, _file: filename }
@@ -1492,7 +1492,7 @@ export function setupCanvasBridge(
   )
 
   engine.global.set(
-    '__canvas_assets_loadMusic',
+    '__audio_assets_loadMusic',
     (name: string, filename: string) => {
       state.audioAssets.set(name, { name, filename, type: 'music' })
       return { _type: 'music', _name: name, _file: filename }

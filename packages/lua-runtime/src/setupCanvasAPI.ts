@@ -6,12 +6,16 @@
 import type { LuaEngine } from 'wasmoon'
 import type { CanvasController } from './CanvasController'
 import { canvasLuaCode } from './canvasLuaWrapper'
+import { audioLuaCode } from './audioLuaCode'
 import { setupPathBindings } from './setupCanvasAPIPath'
 import { setupStyleBindings } from './setupCanvasAPIStyles'
 import { setupPixelBindings, clearImageDataStore } from './setupCanvasAPIPixels'
 
 // Re-export for backward compatibility
 export { clearImageDataStore }
+
+// Pre-built guard string to avoid concatenation on every setupCanvasAPI call
+const audioPreloadGuard = 'if not package.preload["ail_audio"] then\n' + audioLuaCode + '\nend'
 
 /**
  * Set up canvas API functions in the Lua engine.
@@ -286,21 +290,9 @@ export function setupCanvasAPI(
     return controller.loadFontAsset(name, filename)
   })
 
-  engine.global.set('__canvas_assets_loadSound', (name: string, filename: string) => {
-    const controller = getController()
-    if (!controller) {
-      throw new Error('Canvas controller not available - is canvas support enabled?')
-    }
-    return controller.loadSoundAsset(name, filename)
-  })
-
-  engine.global.set('__canvas_assets_loadMusic', (name: string, filename: string) => {
-    const controller = getController()
-    if (!controller) {
-      throw new Error('Canvas controller not available - is canvas support enabled?')
-    }
-    return controller.loadMusicAsset(name, filename)
-  })
+  // Note: __audio_assets_loadSound/Music are registered by setupAudioAssetAPI
+  // (editor) or audio-inline-entry (exports). setupCanvasAPI does NOT register
+  // them to avoid overwriting the AudioAssetManager-backed versions.
 
   // Helper to extract asset name from string or handle
   const extractAssetName = (nameOrHandle: unknown): string => {
@@ -396,6 +388,9 @@ export function setupCanvasAPI(
   // Canvas is NOT a global - it must be accessed via require('canvas')
   // Initialize __loaded_modules if not already set (for tests that don't use LuaEngineFactory)
   engine.doStringSync('if __loaded_modules == nil then __loaded_modules = {} end')
+  // Register audio module if not already registered — canvasLuaAudioCode
+  // delegates to require('ail_audio'). Guarded to avoid creating a second _audio table.
+  engine.doStringSync(audioPreloadGuard)
   engine.doStringSync(canvasLuaCode)
 
   // Set up reload callback - allows CanvasController.reload() to trigger canvas.reload() in Lua

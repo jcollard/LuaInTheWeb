@@ -229,14 +229,14 @@ export const canvasLuaCoreCode = `
     -- Returns an asset handle that can be used with play_sound
     -- Must be called before canvas.start()
     function _canvas.assets.load_sound(name, filename)
-      return __canvas_assets_loadSound(name, filename)
+      return __audio_assets_loadSound(name, filename)
     end
 
     -- Create a named reference to a discovered music file
     -- Returns an asset handle that can be used with play_music
     -- Must be called before canvas.start()
     function _canvas.assets.load_music(name, filename)
-      return __canvas_assets_loadMusic(name, filename)
+      return __audio_assets_loadMusic(name, filename)
     end
 
     -- Get asset dimensions (accepts string name or asset handle)

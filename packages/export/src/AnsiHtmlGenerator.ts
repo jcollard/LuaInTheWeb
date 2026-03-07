@@ -3,6 +3,8 @@ import {
   WASMOON_INLINE_JS,
   XTERM_INLINE_CSS,
   IBM_VGA_FONT_DATA_URL,
+  AUDIO_INLINE_JS,
+  audioLuaCode,
 } from '@lua-learning/lua-runtime'
 import { ANSI_INLINE_JS } from './runtime/ansi-inline.generated'
 import { XTERM_WITH_CANVAS_ADDON_JS } from './runtime/xterm-canvas.generated'
@@ -12,17 +14,25 @@ import { XTERM_WITH_CANVAS_ADDON_JS } from './runtime/xterm-canvas.generated'
  * @param config - Project configuration
  * @param luaModules - Serialized JSON string of Lua module map
  * @param escapeHtml - Function to escape HTML special characters
+ * @param assetManifest - Serialized JSON string of asset manifest
  * @returns Generated HTML string
  */
 export function generateAnsiHtml(
   config: ProjectConfig,
   luaModules: string,
-  escapeHtml: (str: string) => string
+  escapeHtml: (str: string) => string,
+  assetManifest: string = '[]'
 ): string {
   const columns = config.ansi?.columns ?? 80
   const rows = config.ansi?.rows ?? 25
   const fontSize = config.ansi?.font_size ?? 16
   const scaleMode = config.ansi?.scale ?? 'integer'
+
+  // Escape audioLuaCode for safe embedding in JS template literal
+  const escapedAudioLuaCode = audioLuaCode
+    .replace(/\\/g, '\\\\')
+    .replace(/`/g, '\\`')
+    .replace(/\$/g, '\\$')
 
   // Stryker disable all: HTML template - mutations to string literals don't affect behavior
   return `<!DOCTYPE html>
@@ -103,9 +113,19 @@ export function generateAnsiHtml(
     // ANSI bridge (bundled from AnsiController + setupAnsiAPI)
     ${ANSI_INLINE_JS}
   </script>
+  <script>
+    // Audio bridge (bundled from audio-inline-entry.ts)
+    ${AUDIO_INLINE_JS}
+  </script>
   <script type="module">
     // Lua module map
     const LUA_MODULES = ${luaModules};
+
+    // Asset manifest (for audio assets)
+    const ASSET_MANIFEST = ${assetManifest};
+
+    // Audio Lua code (registers package.preload['ail_audio'])
+    const AUDIO_LUA_CODE = \`${escapedAudioLuaCode}\`;
 
     // Project configuration
     const PROJECT_CONFIG = {
@@ -143,6 +163,19 @@ export function generateAnsiHtml(
       overlay.remove();
       wrapper.style.display = 'block';
       wrapper.focus();
+
+      // Create AudioContext synchronously in gesture handler (Issue #617)
+      // Browser autoplay policy requires this before any await
+      let preUnlockedAudioContext = null;
+      try {
+        const audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+        preUnlockedAudioContext = audioCtx;
+      } catch (e) {
+        console.warn('Could not pre-unlock AudioContext:', e);
+      }
 
       // Wait for IBM VGA font to load before creating terminal
       await document.fonts.load('${fontSize}px "IBM VGA 8x16"');
@@ -272,24 +305,17 @@ export function generateAnsiHtml(
           },
         });
 
+        // Set up audio bridge with pre-unlocked AudioContext
+        const audioState = { preUnlockedAudioContext: preUnlockedAudioContext };
+        globalThis.setupAudioBridge(engine, audioState, ASSET_MANIFEST);
+
         // Override __ansi_start with non-blocking version.
-        // In the editor, ansi.start() blocks via a Promise that yields the
-        // Lua coroutine. But in single-threaded standalone HTML, a yielded
-        // coroutine prevents the game loop from calling back into Lua.
-        // Solution: call controller.start() (which is async) but DON'T
-        // return the blocking Promise to Lua. The start() setup completes
-        // in the next microtask, then the game loop runs independently.
-        // We return a Promise that resolves as soon as the controller is
-        // initialized, so Lua's :await() unblocks and the script continues.
         engine.global.set('__ansi_start', () => {
           return new Promise((resolve) => {
             controller.start().then(() => {
-              // This resolves when stop() is called — ignore it
             }).catch((err) => {
               console.error('[ANSI Export] controller.start() failed:', err);
             });
-            // Resolve immediately after the microtask that sets up the game loop
-            // (onRequestAnsiTab returns Promise.resolve, so setup happens in next microtask)
             setTimeout(resolve, 0);
           });
         });
@@ -331,6 +357,11 @@ export function generateAnsiHtml(
           "table.insert(package.searchers, 2, custom_loader) " +
           "end"
         );
+
+        // Register audio module (must come before main script)
+        if (AUDIO_LUA_CODE) {
+          await engine.doString(AUDIO_LUA_CODE);
+        }
 
         // Note: setupAnsiAPI() already executed ansiLuaCode via doStringSync()
         // which registers package.preload['ansi']. No need to run it again.

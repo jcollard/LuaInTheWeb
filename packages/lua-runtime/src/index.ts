@@ -37,6 +37,9 @@ export { LUA_LOCALSTORAGE_CODE } from './lua/localstorage.generated'
 // ANSI library export (auto-generated from ansi.lua)
 export { LUA_ANSI_CODE } from './lua/ansi.generated'
 
+// Audio library export (auto-generated from ail_audio.lua)
+export { LUA_AIL_AUDIO_CODE } from './lua/ail_audio.generated'
+
 // Canvas Lua code modules (for bundling in exports)
 export {
   canvasLuaCoreCode,
@@ -50,6 +53,13 @@ export {
 // Audio engine exports (for standalone runtime)
 export { WebAudioEngine } from './audio/WebAudioEngine'
 export type { IAudioEngine, MusicOptions, MusicHandle } from './audio/IAudioEngine'
+
+// Audio Lua code modules (for bundling in exports)
+export { audioLuaCode } from './audioLuaCode'
+
+// Audio asset management (for standalone audio mode)
+export { AudioAssetManager } from './AudioAssetManager'
+export { setupAudioAssetAPI, type AudioAssetAPIOptions } from './setupAudioAssetAPI'
 
 // Audio inline JS for HTML exports (auto-generated from audio-inline-entry.ts)
 export { AUDIO_INLINE_JS } from './audio/audio-inline.generated'

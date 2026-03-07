@@ -602,7 +602,7 @@ export class LuaCanvasRuntime {
     });
 
     // Audio API functions
-    lua.global.set('__canvas_assets_loadSound', (name: string, filename: string) => {
+    lua.global.set('__audio_assets_loadSound', (name: string, filename: string) => {
       // If files have been loaded, validate that the file exists in discovered audio files
       // For audio, we don't store dimensions, just validate the file is known
       if (runtime.filesLoaded) {
@@ -614,7 +614,7 @@ export class LuaCanvasRuntime {
       return { _type: 'sound', _name: name, _file: filename };
     });
 
-    lua.global.set('__canvas_assets_loadMusic', (name: string, filename: string) => {
+    lua.global.set('__audio_assets_loadMusic', (name: string, filename: string) => {
       // Similar to loadSound but for music tracks
       runtime.preRegisteredAssets.set(name, { filename, type: 'music' as 'image' });
       return { _type: 'music', _name: name, _file: filename };
@@ -1110,11 +1110,11 @@ export class LuaCanvasRuntime {
 
       -- Audio asset loading
       function canvas.assets.load_sound(name, filename)
-        return __canvas_assets_loadSound(name, filename)
+        return __audio_assets_loadSound(name, filename)
       end
 
       function canvas.assets.load_music(name, filename)
-        return __canvas_assets_loadMusic(name, filename)
+        return __audio_assets_loadMusic(name, filename)
       end
 
       -- Sound effects
