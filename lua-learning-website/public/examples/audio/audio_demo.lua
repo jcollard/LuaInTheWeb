@@ -1,33 +1,33 @@
 -- Audio Demo
--- Demonstrates the canvas audio API with sound effects and music
+-- Demonstrates the standalone audio library with canvas for UI rendering
 
 local canvas = require("canvas")
+local audio = require("ail_audio")
 
--- Register asset directory (relative to this script)
-canvas.assets.add_path("assets")
+-- Register asset directory using the standalone audio module
+audio.add_path("assets")
 
 -- Register sound effects
-local sfx = {
-  blade = canvas.assets.load_sound("blade", "sfx/blade_01.ogg"),
-  coin = canvas.assets.load_sound("coin", "sfx/item_coins_01.ogg"),
-  gem = canvas.assets.load_sound("gem", "sfx/item_gem_01.ogg"),
-  spell = canvas.assets.load_sound("spell", "sfx/spell_01.ogg"),
-  fire = canvas.assets.load_sound("fire", "sfx/spell_fire_01.ogg"),
-  monster = canvas.assets.load_sound("monster", "sfx/creature_monster_01.ogg"),
-  roar = canvas.assets.load_sound("roar", "sfx/creature_roar_01.ogg"),
-  slime = canvas.assets.load_sound("slime", "sfx/creature_slime_01.ogg"),
-  wood = canvas.assets.load_sound("wood", "sfx/wood_01.ogg"),
-  stone = canvas.assets.load_sound("stone", "sfx/stones_01.ogg"),
-}
+audio.load_sound("blade", "sfx/blade_01.ogg")
+audio.load_sound("coin", "sfx/item_coins_01.ogg")
+audio.load_sound("gem", "sfx/item_gem_01.ogg")
+audio.load_sound("spell", "sfx/spell_01.ogg")
+audio.load_sound("fire", "sfx/spell_fire_01.ogg")
+audio.load_sound("monster", "sfx/creature_monster_01.ogg")
+audio.load_sound("roar", "sfx/creature_roar_01.ogg")
+audio.load_sound("slime", "sfx/creature_slime_01.ogg")
+audio.load_sound("wood", "sfx/wood_01.ogg")
+audio.load_sound("stone", "sfx/stones_01.ogg")
 
 -- Register music tracks
-local music = {
-  title = canvas.assets.load_music("title", "music/title-screen.ogg"),
-  level1 = canvas.assets.load_music("level1", "music/level-1.ogg"),
-  level2 = canvas.assets.load_music("level2", "music/level-2.ogg"),
-  level3 = canvas.assets.load_music("level3", "music/level-3.ogg"),
-  ending = canvas.assets.load_music("ending", "music/ending.ogg"),
-}
+audio.load_music("title", "music/title-screen.ogg")
+audio.load_music("level1", "music/level-1.ogg")
+audio.load_music("level2", "music/level-2.ogg")
+audio.load_music("level3", "music/level-3.ogg")
+audio.load_music("ending", "music/ending.ogg")
+
+-- Initialize audio engine
+audio.start()
 
 -- Set up canvas
 canvas.set_size(600, 500)
@@ -105,7 +105,7 @@ local function initButtons()
       30 + col * 110, 100 + row * 50,
       100, 40,
       sfxLabels[i],
-      function() canvas.play_sound(name) end
+      function() audio.play_sound(name) end
     )
     table.insert(buttons, btn)
   end
@@ -121,7 +121,7 @@ local function initButtons()
       musicLabels[i],
       function()
         currentTrack = name
-        canvas.play_music(name, { loop = true, volume = musicVolume })
+        audio.play_music(name, { loop = true, volume = musicVolume })
       end
     )
     table.insert(buttons, btn)
@@ -129,35 +129,35 @@ local function initButtons()
 
   -- Music control buttons
   table.insert(buttons, createButton(30, 340, 80, 35, "Stop", function()
-    canvas.stop_music()
+    audio.stop_music()
     currentTrack = "none"
   end))
 
   table.insert(buttons, createButton(120, 340, 80, 35, "Pause", function()
-    canvas.pause_music()
+    audio.pause_music()
   end))
 
   table.insert(buttons, createButton(210, 340, 80, 35, "Resume", function()
-    canvas.resume_music()
+    audio.resume_music()
   end))
 
   -- Volume control buttons
   table.insert(buttons, createButton(30, 440, 40, 35, "-", function()
     masterVolume = math.max(0, masterVolume - 0.1)
-    canvas.set_master_volume(masterVolume)
+    audio.set_master_volume(masterVolume)
   end))
 
   table.insert(buttons, createButton(180, 440, 40, 35, "+", function()
     masterVolume = math.min(1, masterVolume + 0.1)
-    canvas.set_master_volume(masterVolume)
+    audio.set_master_volume(masterVolume)
   end))
 
   -- Mute button
   table.insert(buttons, createButton(320, 440, 80, 35, "Mute", function()
-    if canvas.is_muted() then
-      canvas.unmute()
+    if audio.is_muted() then
+      audio.unmute()
     else
-      canvas.mute()
+      audio.mute()
     end
   end))
 end
@@ -223,7 +223,7 @@ canvas.tick(function()
 
   -- Update mute button label
   local muteBtn = buttons[#buttons]
-  if canvas.is_muted() then
+  if audio.is_muted() then
     muteBtn.label = "Unmute"
     muteBtn.active = true
   else
@@ -237,9 +237,9 @@ canvas.tick(function()
   canvas.set_text_align("left")
 
   local trackLabel = currentTrack == "none" and "No track playing" or ("Now playing: " .. currentTrack)
-  if canvas.is_music_playing() then
-    local time = canvas.get_music_time()
-    local duration = canvas.get_music_duration()
+  if audio.is_music_playing() then
+    local time = audio.get_music_time()
+    local duration = audio.get_music_duration()
     trackLabel = trackLabel .. string.format(" (%.1fs / %.1fs)", time, duration)
   elseif currentTrack ~= "none" then
     trackLabel = trackLabel .. " (paused)"

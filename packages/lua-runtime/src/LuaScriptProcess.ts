@@ -16,6 +16,9 @@ import { resolvePath } from '@lua-learning/shell-core'
 import { CanvasController, type CanvasCallbacks } from './CanvasController'
 import { setupCanvasAPI } from './setupCanvasAPI'
 import { setupAudioAPI } from './setupAudioAPI'
+import { setupAudioAssetAPI } from './setupAudioAssetAPI'
+import { AudioAssetManager } from './AudioAssetManager'
+import { audioLuaCode } from './audioLuaCode'
 import { AnsiController, type AnsiCallbacks } from './AnsiController'
 import { setupAnsiAPI } from './setupAnsiAPI'
 import { FileOperationsHandler } from './FileOperationsHandler'
@@ -59,6 +62,7 @@ export class LuaScriptProcess implements IProcess {
   private readonly options: LuaScriptProcessOptions
   private canvasController: CanvasController | null = null
   private ansiController: AnsiController | null = null
+  private audioAssetManager: AudioAssetManager | null = null
 
   /** File operations handler for io.open() support */
   private fileOpsHandler: FileOperationsHandler | null = null
@@ -226,6 +230,9 @@ export class LuaScriptProcess implements IProcess {
     try {
       this.engine = await LuaEngineFactory.create(callbacks, engineOptions)
 
+      // Set up standalone audio module (always available, must be before canvas/ansi)
+      this.initAudioModule(filepath)
+
       // Set up canvas API if callbacks are provided
       this.initCanvasAPI()
 
@@ -351,6 +358,10 @@ __clear_execution_hook()
     }
     this.ansiController = null
 
+    // Dispose standalone audio engine if active
+    this.audioAssetManager?.getAudioEngine()?.dispose()
+    this.audioAssetManager = null
+
     const engineToClose = this.engine
     this.engine = null
     LuaEngineFactory.closeDeferred(engineToClose)
@@ -474,7 +485,9 @@ __clear_execution_hook()
 
     // Use shared setup functions for canvas
     setupCanvasAPI(this.engine, () => this.canvasController)
-    setupAudioAPI(this.engine, () => this.canvasController?.getAudioEngine() ?? null)
+    // Audio playback uses AudioAssetManager's engine (which has the decoded buffers)
+    // rather than the canvas controller's engine (which is separate and empty)
+    setupAudioAPI(this.engine, () => this.audioAssetManager?.getAudioEngine() ?? null)
   }
 
   /**
@@ -501,6 +514,40 @@ __clear_execution_hook()
       fileReader: (path: string) => this.readFileOrNull(path),
       cwd: this.context.cwd,
     })
+  }
+
+  /**
+   * Set up the standalone audio module.
+   * Creates an AudioAssetManager for standalone audio asset loading,
+   * sets up audio API bridge functions, and injects the audio Lua code.
+   * In canvas mode, audio playback delegates to the canvas audio engine;
+   * the standalone asset manager handles require('ail_audio') with its own lifecycle.
+   */
+  private initAudioModule(scriptPath: string): void {
+    if (!this.engine) return
+
+    // Create standalone audio asset manager
+    this.audioAssetManager = new AudioAssetManager()
+
+    // Determine script directory for resolving relative asset paths
+    const lastSlash = scriptPath.lastIndexOf('/')
+    const scriptDirectory = lastSlash >= 0 ? scriptPath.substring(0, lastSlash + 1) : '/'
+
+    // Set up audio asset bridge functions (add_path, load_sound, load_music, start)
+    setupAudioAssetAPI(this.engine, () => this.audioAssetManager, {
+      fileSystem: this.context.filesystem,
+      scriptDirectory,
+    })
+
+    // Set up audio playback bridge functions if not already set up by canvas
+    // In canvas mode, setupAudioAPI is already called in initCanvasAPI
+    // In non-canvas mode, we need to set it up with the standalone audio engine
+    if (!this.options.canvasCallbacks) {
+      setupAudioAPI(this.engine, () => this.audioAssetManager?.getAudioEngine() ?? null)
+    }
+
+    // Inject the audio Lua code (registers package.preload['ail_audio'])
+    this.engine.doStringSync(audioLuaCode)
   }
 
 }
