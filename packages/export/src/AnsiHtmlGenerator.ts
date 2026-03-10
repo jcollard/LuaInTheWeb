@@ -97,55 +97,10 @@ export function generateAnsiHtml(
     #terminal-wrapper .xterm-viewport {
       overflow: hidden !important;
     }${crtEnabled ? `
-    body.crt-enabled {
-      --crt-intensity: ${crtIntensity};
-      position: relative;
-      filter: brightness(calc(1 + 0.1 * var(--crt-intensity)))
-              contrast(calc(1 + 0.05 * var(--crt-intensity)));
-      box-shadow:
-        inset 0 0 calc(60px * var(--crt-intensity)) rgba(0, 255, 100, calc(0.03 * var(--crt-intensity))),
-        inset 0 0 calc(120px * var(--crt-intensity)) rgba(0, 255, 100, calc(0.015 * var(--crt-intensity)));
-      animation: crt-flicker calc(8s / var(--crt-intensity)) infinite;
-    }
-    body.crt-enabled::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background:
-        repeating-linear-gradient(
-          to bottom,
-          transparent,
-          transparent 1px,
-          rgba(0, 0, 0, calc(0.15 * var(--crt-intensity))) 1px,
-          rgba(0, 0, 0, calc(0.15 * var(--crt-intensity))) 2px
-        ),
-        repeating-linear-gradient(
-          to right,
-          rgba(255, 0, 0, calc(0.04 * var(--crt-intensity))),
-          rgba(0, 255, 0, calc(0.04 * var(--crt-intensity))) 33%,
-          rgba(0, 0, 255, calc(0.04 * var(--crt-intensity))) 66%,
-          rgba(255, 0, 0, calc(0.04 * var(--crt-intensity))) 100%
-        );
-      background-size: 100% 100%, 3px 100%;
-      pointer-events: none;
-      z-index: 10;
-    }
-    body.crt-enabled::after {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(
-        ellipse at center,
-        transparent 60%,
-        rgba(0, 0, 0, calc(0.4 * var(--crt-intensity))) 100%
-      );
-      pointer-events: none;
-      z-index: 10;
-    }
-    @keyframes crt-flicker {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.99; }
-    }` : ''}
+    body.crt-enabled { --crt-intensity: ${crtIntensity}; position: relative; filter: brightness(calc(1 + 0.1 * var(--crt-intensity))) contrast(calc(1 + 0.05 * var(--crt-intensity))); box-shadow: inset 0 0 calc(60px * var(--crt-intensity)) rgba(0,255,100,calc(0.03 * var(--crt-intensity))), inset 0 0 calc(120px * var(--crt-intensity)) rgba(0,255,100,calc(0.015 * var(--crt-intensity))); animation: crt-flicker calc(8s / var(--crt-intensity)) infinite; }
+    body.crt-enabled::before { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(to bottom, transparent, transparent 1px, rgba(0,0,0,calc(0.15 * var(--crt-intensity))) 1px, rgba(0,0,0,calc(0.15 * var(--crt-intensity))) 2px), repeating-linear-gradient(to right, rgba(255,0,0,calc(0.04 * var(--crt-intensity))), rgba(0,255,0,calc(0.04 * var(--crt-intensity))) 33%, rgba(0,0,255,calc(0.04 * var(--crt-intensity))) 66%, rgba(255,0,0,calc(0.04 * var(--crt-intensity))) 100%); background-size: 100% 100%, 3px 100%; pointer-events: none; z-index: 10; }
+    body.crt-enabled::after { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,calc(0.4 * var(--crt-intensity))) 100%); pointer-events: none; z-index: 10; }
+    @keyframes crt-flicker { 0%, 100% { opacity: 1; } 50% { opacity: 0.99; } }` : ''}
   </style>
 </head>
 <body${crtEnabled ? ' class="crt-enabled"' : ''}>
@@ -205,18 +160,12 @@ export function generateAnsiHtml(
 
     function writeToTerminal(text) {
       outputBuffer += text;
-      if (!flushTimeout) {
-        flushTimeout = setTimeout(flushOutput, 10);
-      }
+      if (!flushTimeout) { flushTimeout = setTimeout(flushOutput, 10); }
     }
 
     async function startApp() {
-      overlay.remove();
-      wrapper.style.display = 'block';
-      wrapper.focus();
-
+      overlay.remove(); wrapper.style.display = 'block'; wrapper.focus();
       // Create AudioContext synchronously in gesture handler (Issue #617)
-      // Browser autoplay policy requires this before any await
       let preUnlockedAudioContext = null;
       try {
         const audioCtx = new AudioContext();
@@ -294,28 +243,17 @@ export function generateAnsiHtml(
 
       // Create AnsiTerminalHandle wrapping xterm.js
       const handle = {
-        write: (data) => term.write(data),
-        container: wrapper,
-        dispose: () => term.dispose(),
+        write: (data) => term.write(data), container: wrapper, dispose: () => term.dispose(),
         setCrt: (enabled, intensity) => {
-          if (enabled) {
-            document.body.classList.add('crt-enabled');
-            document.body.style.setProperty('--crt-intensity', String(intensity ?? 0.7));
-          } else {
-            document.body.classList.remove('crt-enabled');
-            document.body.style.removeProperty('--crt-intensity');
-          }
+          const b = document.body;
+          if (enabled) { b.classList.add('crt-enabled'); b.style.setProperty('--crt-intensity', String(intensity ?? 0.7)); }
+          else { b.classList.remove('crt-enabled'); b.style.removeProperty('--crt-intensity'); }
         },
       };
-
-      // Create AnsiCallbacks that immediately resolve with the handle
       const callbacks = {
-        onRequestAnsiTab: () => Promise.resolve(handle),
-        onCloseAnsiTab: () => {},
+        onRequestAnsiTab: () => Promise.resolve(handle), onCloseAnsiTab: () => {},
         onFlushOutput: () => flushOutput(),
-        onError: (error) => {
-          console.error('[ANSI Export] Game loop error:', error);
-        },
+        onError: (error) => { console.error('[ANSI Export] Game loop error:', error); },
       };
 
       // Create AnsiController and setup API
