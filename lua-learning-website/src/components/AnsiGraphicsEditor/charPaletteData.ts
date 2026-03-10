@@ -13,10 +13,6 @@ function entry(char: string, name: string): CharEntry {
   return { char, name }
 }
 
-export function findCategoryForChar(char: string): string | undefined {
-  return CHAR_PALETTE_CATEGORIES.find(cat => cat.chars.some(e => e.char === char))?.id
-}
-
 export const CHAR_PALETTE_CATEGORIES: CharCategory[] = [
   {
     id: 'ascii',
@@ -167,3 +163,13 @@ export const CHAR_PALETTE_CATEGORIES: CharCategory[] = [
     ],
   },
 ]
+
+const CHAR_TO_CATEGORY = new Map<string, string>(
+  CHAR_PALETTE_CATEGORIES.flatMap(cat =>
+    cat.chars.map((e): [string, string] => [e.char, cat.id])
+  )
+)
+
+export function findCategoryForChar(char: string): string | undefined {
+  return CHAR_TO_CATEGORY.get(char)
+}
