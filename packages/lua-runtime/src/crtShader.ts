@@ -247,13 +247,10 @@ export class CrtShader {
     this.glCanvas = canvas
     this.gl = gl
 
-    // Position overlay exactly on top of source
+    // Position overlay on top of source canvas, matching its size
     canvas.style.position = 'absolute'
-    canvas.style.top = '0'
-    canvas.style.left = '0'
-    canvas.style.width = '100%'
-    canvas.style.height = '100%'
     canvas.style.pointerEvents = 'none'
+    this.syncOverlayPosition()
     this.container.style.position = 'relative'
     this.container.appendChild(canvas)
 
@@ -319,10 +316,28 @@ export class CrtShader {
     return shader
   }
 
+  /**
+   * Sync the WebGL overlay position/size to match the source canvas's
+   * bounding box within the container. Called each frame to handle resizes.
+   */
+  private syncOverlayPosition(): void {
+    const canvas = this.glCanvas
+    if (!canvas) return
+    const srcRect = this.sourceCanvas.getBoundingClientRect()
+    const containerRect = this.container.getBoundingClientRect()
+    const top = srcRect.top - containerRect.top
+    const left = srcRect.left - containerRect.left
+    canvas.style.top = `${top}px`
+    canvas.style.left = `${left}px`
+    canvas.style.width = `${srcRect.width}px`
+    canvas.style.height = `${srcRect.height}px`
+  }
+
   // ---------- Render loop ----------
 
   private renderLoop = (): void => {
     if (!this.enabled || !this.gl || !this.glCanvas) return
+    this.syncOverlayPosition()
     this.renderFrame()
     this.animFrameId = requestAnimationFrame(this.renderLoop)
   }
