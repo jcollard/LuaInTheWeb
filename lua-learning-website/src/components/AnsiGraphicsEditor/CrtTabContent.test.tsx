@@ -63,8 +63,8 @@ describe('CrtTabContent', () => {
 
   it('displays current values for each slider', () => {
     render(<CrtTabContent {...defaultProps({ crtConfig: { ...CRT_DEFAULTS } })} />)
-    expect(screen.getByTestId('crt-value-scanlineIntensity').textContent).toBe('0.50')
-    expect(screen.getByTestId('crt-value-curvature').textContent).toBe('0.100')
+    expect(screen.getByTestId('crt-value-scanlineIntensity').textContent).toBe('0.33')
+    expect(screen.getByTestId('crt-value-curvature').textContent).toBe('0.050')
   })
 
   it('reset to defaults button calls onSetCrtConfig with defaults', () => {

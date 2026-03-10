@@ -47,19 +47,19 @@ export interface CrtConfig {
 /** Default CRT config values matching the gingerbeardman/webgl-crt-shader demo. */
 export const CRT_DEFAULTS: Readonly<CrtConfig> = {
   smoothing: true,
-  scanlineIntensity: 0.5,
-  scanlineCount: 256,
-  adaptiveIntensity: 0.3,
-  brightness: 1.5,
-  contrast: 1.05,
-  saturation: 1.1,
-  bloomIntensity: 0.5,
-  bloomThreshold: 0.5,
-  rgbShift: 1.0,
-  vignetteStrength: 0.3,
-  curvature: 0.1,
-  flickerStrength: 0.01,
-  phosphor: 0.5,
+  scanlineIntensity: 0.33,
+  scanlineCount: 150,
+  adaptiveIntensity: 1,
+  brightness: 1.15,
+  contrast: 1,
+  saturation: 1,
+  bloomIntensity: 0.25,
+  bloomThreshold: 0,
+  rgbShift: 1,
+  vignetteStrength: 0.22,
+  curvature: 0.05,
+  flickerStrength: 0,
+  phosphor: 0,
 }
 
 // ---------- GLSL ----------
