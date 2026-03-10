@@ -95,14 +95,9 @@ interface ScreenState {
   needsRecomposite: boolean
 }
 
-/**
- * Format an onTick error for display.
- */
+/** Format an onTick error for display. */
 function formatOnTickError(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message
-  }
-  return String(error)
+  return error instanceof Error ? error.message : String(error)
 }
 
 /**
@@ -313,14 +308,8 @@ export class AnsiController {
     this.handle?.write('\x1b[0m')
   }
 
-  /**
-   * Enable/disable CRT monitor effect on the terminal container.
-   * @param enabled - Whether to enable the CRT effect
-   * @param intensity - Effect intensity from 0 to 1 (default 0.7)
-   */
-  setCrt(enabled: boolean, intensity?: number): void {
-    this.handle?.setCrt?.(enabled, intensity)
-  }
+  /** Enable/disable CRT monitor effect on the terminal container. */
+  setCrt(enabled: boolean, intensity?: number): void { this.handle?.setCrt?.(enabled, intensity) }
 
   // --- Timing API ---
 
