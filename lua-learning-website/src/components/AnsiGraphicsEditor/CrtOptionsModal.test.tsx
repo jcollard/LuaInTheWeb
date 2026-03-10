@@ -129,6 +129,22 @@ describe('CrtOptionsModal', () => {
       expect(stored.bloomIntensity).toBe(0.5)
     })
 
+    it('migrates old localStorage keys to new names when toggling on', () => {
+      const oldFormat = { ...CRT_DEFAULTS, scanlines: 0.9, bloom: 0.7 }
+      // Remove new keys that CRT_DEFAULTS has, simulate old format
+      delete (oldFormat as Record<string, unknown>).scanlineIntensity
+      delete (oldFormat as Record<string, unknown>).bloomIntensity
+      localStorage.setItem(CRT_STORAGE_KEY, JSON.stringify(oldFormat))
+      const onSetCrtConfig = vi.fn()
+      render(<CrtOptionsModal {...defaultProps({ onSetCrtConfig })} />)
+      fireEvent.click(screen.getByTestId('crt-enabled-checkbox'))
+      const result = onSetCrtConfig.mock.calls[0][0] as Record<string, number>
+      expect(result.scanlineIntensity).toBe(0.9)
+      expect(result.bloomIntensity).toBe(0.7)
+      expect(result).not.toHaveProperty('scanlines')
+      expect(result).not.toHaveProperty('bloom')
+    })
+
     it('restores saved config from localStorage when toggling on', () => {
       const saved = { ...CRT_DEFAULTS, scanlineIntensity: 0.9, bloomIntensity: 0.7 }
       localStorage.setItem(CRT_STORAGE_KEY, JSON.stringify(saved))
