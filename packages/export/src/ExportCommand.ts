@@ -168,9 +168,16 @@ export class ExportCommand implements ICommand {
     rows = 25,
     font_size = 16,
     scale = "integer",  -- "integer" | "full" | "1x" | "2x" | "3x"
-    -- CRT monitor effect (barrel distortion, scanlines, phosphor glow)
+    -- CRT monitor effect
     -- crt = true,
-    -- crt_intensity = 0.7,  -- 0.0 to 1.0
+    -- crt_curvature = 0.15,   -- barrel distortion (0-0.5)
+    -- crt_scanlines = 0.15,   -- scanline intensity (0-1)
+    -- crt_phosphor = 0.5,     -- RGB phosphor mask (0-1)
+    -- crt_vignette = 0.3,     -- edge darkening (0-1)
+    -- crt_bloom = 0.2,        -- glow on bright areas (0-1)
+    -- crt_chromatic = 0.0,    -- color fringing (0-1)
+    -- crt_flicker = 0.01,     -- temporal flicker (0-0.15)
+    -- crt_brightness = 1.1,   -- brightness boost (0.6-1.8)
   },
   -- Export settings
   export = {

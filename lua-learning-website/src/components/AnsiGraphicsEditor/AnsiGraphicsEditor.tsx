@@ -102,8 +102,8 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
     flipSelectionVertical,
     cgaPreview,
     setCgaPreview,
-    crtPreview,
-    setCrtPreview,
+    crtConfig,
+    setCrtConfig,
     setBorderStyle,
     activeLayerIsGroup,
     isMoveDragging,
@@ -144,7 +144,6 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
   }, [isDirty, onDirtyChange])
 
   const handleToggleCgaPreview = useCallback(() => setCgaPreview(!cgaPreview), [cgaPreview, setCgaPreview])
-  const handleToggleCrtPreview = useCallback(() => setCrtPreview(!crtPreview), [crtPreview, setCrtPreview])
 
   const activeLayer = layers.find(l => l.id === activeLayerId)
   const activeTextAlign = activeLayer?.type === 'text' ? activeLayer.textAlign : undefined
@@ -219,8 +218,8 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         onSetBlendRatio={setBlendRatio}
         cgaPreview={cgaPreview}
         onToggleCgaPreview={handleToggleCgaPreview}
-        crtPreview={crtPreview}
-        onToggleCrtPreview={handleToggleCrtPreview}
+        crtConfig={crtConfig}
+        onSetCrtConfig={setCrtConfig}
         scaleMode={scaleMode}
         onSetScaleMode={setScaleMode}
         activeLayerIsGroup={activeLayerIsGroup}

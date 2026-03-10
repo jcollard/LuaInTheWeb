@@ -119,8 +119,8 @@ export function setupAnsiAPI(
   })
 
   // --- CRT effect ---
-  engine.global.set('__ansi_setCrt', (enabled: boolean, intensity?: number) => {
-    getController()?.setCrt(enabled, intensity)
+  engine.global.set('__ansi_setCrt', (enabled: boolean, intensity?: number, config?: Record<string, number>) => {
+    getController()?.setCrt(enabled, intensity, config)
   })
 
   // --- Timing functions ---

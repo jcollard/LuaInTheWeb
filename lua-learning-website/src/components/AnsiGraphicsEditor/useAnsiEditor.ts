@@ -18,6 +18,7 @@ import { TOOL_KEY_MAP, TOOL_SHIFT_KEY_MAP, MODE_KEY_MAP, TOOL_SHORTCUTS, MODE_SH
 import { flipDrawnLayerHorizontal, flipDrawnLayerVertical, flipTextLayerHorizontal, flipTextLayerVertical } from './flipUtils'
 import { buildAllShiftedFrames, captureNonDefaultCells } from './moveUtils'
 import { initSchedule, computePlaybackTick, type LayerSchedule } from '@lua-learning/ansi-shared'
+import { CRT_DEFAULTS, type CrtConfig } from '@lua-learning/lua-runtime'
 
 export { computePixelCell, computeLineCells } from './gridUtils'
 
@@ -113,7 +114,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const moveRefStartOffset = useRef<{ row: number; col: number } | null>(null)
   const previewLatestCellRef = useRef<CellHalf | null>(null)
   const [cgaPreview, setCgaPreviewRaw] = useState(false)
-  const [crtPreview, setCrtPreviewRaw] = useState(false)
+  const [crtConfig, setCrtConfigRaw] = useState<CrtConfig | null>(null)
   const [isMoveDragging, setIsMoveDragging] = useState(false)
   const flipOriginRef = useRef<{ row: number; col: number }>({ row: 12, col: 40 })
   const [flipOrigin, setFlipOrigin] = useState<{ row: number; col: number }>({ row: 12, col: 40 })
@@ -829,8 +830,23 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   }, [layersRef])
 
   const setCrtPreview = useCallback((on: boolean) => {
-    setCrtPreviewRaw(on)
-    terminalHandleRef.current?.setCrt(on)
+    if (on) {
+      const config = { ...CRT_DEFAULTS }
+      setCrtConfigRaw(config)
+      terminalHandleRef.current?.setCrt(true, undefined, config)
+    } else {
+      setCrtConfigRaw(null)
+      terminalHandleRef.current?.setCrt(false)
+    }
+  }, [])
+
+  const setCrtConfig = useCallback((config: CrtConfig | null) => {
+    setCrtConfigRaw(config)
+    if (config) {
+      terminalHandleRef.current?.setCrt(true, undefined, config)
+    } else {
+      terminalHandleRef.current?.setCrt(false)
+    }
   }, [])
 
   const flipSelectionHorizontal = useCallback(() => {
@@ -921,7 +937,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     activeLayerIsGroup, isMoveDragging,
     flipOriginOverlayRef, flipOrigin, flipLayerHorizontal, flipLayerVertical,
     cgaPreview, setCgaPreview,
-    crtPreview, setCrtPreview,
+    crtPreview: crtConfig !== null, setCrtPreview,
+    crtConfig, setCrtConfig,
     addFrame: addFrameWithUndo, duplicateFrame: duplicateFrameWithUndo,
     removeFrame: removeFrameWithUndo, setCurrentFrame: setCurrentFrameWithUndo,
     reorderFrame: reorderFrameWithUndo, setFrameDuration: setFrameDurationWithUndo,

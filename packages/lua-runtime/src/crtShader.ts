@@ -4,11 +4,43 @@
  * Creates a WebGL2 canvas on top of a source canvas (e.g. xterm.js CanvasAddon)
  * and applies a CRT monitor effect via fragment shader. Effects include barrel
  * distortion, scanlines, RGB phosphor mask, vignette, bloom, chromatic aberration,
- * and subtle flicker — all scaled by an intensity uniform (0–1).
+ * and subtle flicker — each controlled by its own uniform.
  *
  * Adapted from gingerbeardman/webgl-crt-shader (MIT license).
  * https://github.com/gingerbeardman/webgl-crt-shader
  */
+
+/** Per-effect CRT configuration. Each value directly controls one shader effect. */
+export interface CrtConfig {
+  /** Barrel distortion amount (0–0.5, default 0.15) */
+  curvature: number
+  /** Scanline darkness (0–1, default 0.15) */
+  scanlines: number
+  /** RGB phosphor mask strength (0–1, default 0.5) */
+  phosphor: number
+  /** Edge darkening (0–1, default 0.3) */
+  vignette: number
+  /** Bright pixel glow (0–1, default 0.2) */
+  bloom: number
+  /** Chromatic aberration / color fringing (0–1, default 0.0) */
+  chromatic: number
+  /** Temporal flicker (0–0.15, default 0.01) */
+  flicker: number
+  /** Brightness multiplier (0.6–1.8, default 1.1) */
+  brightness: number
+}
+
+/** Default CRT config values matching the gingerbeardman/webgl-crt-shader defaults. */
+export const CRT_DEFAULTS: Readonly<CrtConfig> = {
+  curvature: 0.15,
+  scanlines: 0.15,
+  phosphor: 0.5,
+  vignette: 0.3,
+  bloom: 0.2,
+  chromatic: 0.0,
+  flicker: 0.01,
+  brightness: 1.1,
+}
 
 // ---------- GLSL ----------
 
@@ -31,8 +63,17 @@ out vec4 fragColor;
 
 uniform sampler2D u_texture;
 uniform float u_time;
-uniform float u_intensity;
 uniform vec2 u_resolution;
+
+// Per-effect uniforms
+uniform float u_curvature;
+uniform float u_scanlines;
+uniform float u_phosphor;
+uniform float u_vignette;
+uniform float u_bloom;
+uniform float u_chromatic;
+uniform float u_flicker;
+uniform float u_brightness;
 
 // --- Barrel distortion ---
 vec2 barrelDistort(vec2 uv, float amt) {
@@ -51,11 +92,8 @@ vec3 chromaticAberration(vec2 uv, float amount) {
 }
 
 void main() {
-  float intensity = u_intensity;
-
   // Apply barrel distortion
-  float distortionAmount = 0.12 * intensity;
-  vec2 uv = barrelDistort(v_texCoord, distortionAmount);
+  vec2 uv = barrelDistort(v_texCoord, u_curvature);
 
   // Discard pixels outside [0,1] after distortion (black border)
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
@@ -64,14 +102,13 @@ void main() {
   }
 
   // Base color with chromatic aberration
-  float caAmount = 0.003 * intensity;
+  float caAmount = u_chromatic * 0.003;
   vec3 color = chromaticAberration(uv, caAmount);
 
   // --- Scanlines ---
   float scanFreq = u_resolution.y;
   float scanline = sin(uv.y * scanFreq * 3.14159) * 0.5 + 0.5;
-  // Mix toward darkened by intensity (0 = no scanlines, 1 = full)
-  color *= mix(1.0, 0.7 + 0.3 * scanline, intensity * 0.6);
+  color *= mix(1.0, 0.7 + 0.3 * scanline, u_scanlines);
 
   // --- RGB phosphor mask ---
   float maskX = mod(gl_FragCoord.x, 3.0);
@@ -80,35 +117,34 @@ void main() {
     maskX >= 1.0 && maskX < 2.0 ? 1.0 : 0.85,
     maskX >= 2.0 ? 1.0 : 0.85
   );
-  color *= mix(vec3(1.0), mask, intensity * 0.35);
+  color *= mix(vec3(1.0), mask, u_phosphor);
 
   // --- Bloom / glow ---
-  // Simple threshold-based bloom: average nearby samples for bright areas
   vec3 bloom = vec3(0.0);
   float texelW = 1.0 / u_resolution.x;
   float texelH = 1.0 / u_resolution.y;
   for (int x = -1; x <= 1; x++) {
     for (int y = -1; y <= 1; y++) {
       vec3 s = texture(u_texture, uv + vec2(float(x) * texelW * 1.5, float(y) * texelH * 1.5)).rgb;
-      float brightness = dot(s, vec3(0.299, 0.587, 0.114));
-      bloom += s * smoothstep(0.5, 1.0, brightness);
+      float luma = dot(s, vec3(0.299, 0.587, 0.114));
+      bloom += s * smoothstep(0.5, 1.0, luma);
     }
   }
   bloom /= 9.0;
-  color += bloom * intensity * 0.3;
+  color += bloom * u_bloom;
 
   // --- Vignette ---
   vec2 vigUv = uv * (1.0 - uv);
   float vig = vigUv.x * vigUv.y * 15.0;
-  vig = pow(vig, 0.25 * intensity);
+  vig = pow(vig, u_vignette);
   color *= vig;
 
   // --- Flicker ---
-  float flicker = 1.0 - intensity * 0.015 * sin(u_time * 8.0);
+  float flicker = 1.0 - u_flicker * sin(u_time * 8.0);
   color *= flicker;
 
-  // --- Brightness boost to compensate for darkening effects ---
-  color *= 1.0 + intensity * 0.15;
+  // --- Brightness ---
+  color *= u_brightness;
 
   fragColor = vec4(color, 1.0);
 }
@@ -147,7 +183,7 @@ export class CrtShader {
   private program: WebGLProgram | null = null
   private texture: WebGLTexture | null = null
   private animFrameId = 0
-  private intensity = 0.7
+  private config: CrtConfig = { ...CRT_DEFAULTS }
   private startTime = 0
   private enabled = false
   private usingFallback = false
@@ -155,8 +191,15 @@ export class CrtShader {
   // Uniform locations (cached after link)
   private uTexture = -1
   private uTime = -1
-  private uIntensity = -1
   private uResolution = -1
+  private uCurvature = -1
+  private uScanlines = -1
+  private uPhosphor = -1
+  private uVignette = -1
+  private uBloom = -1
+  private uChromatic = -1
+  private uFlicker = -1
+  private uBrightness = -1
 
   constructor(
     sourceCanvas: HTMLCanvasElement,
@@ -179,16 +222,30 @@ export class CrtShader {
     return this.usingFallback
   }
 
+  /** Get the current CRT config (copy). */
+  getConfig(): CrtConfig {
+    return { ...this.config }
+  }
+
   /**
    * Enable the CRT effect.
-   * @param intensity 0–1 scale factor for all effects. Default 0.7.
+   * @param intensityOrConfig Optional intensity (0–1, scales all defaults) or partial config.
    */
-  enable(intensity?: number): void {
+  enable(intensityOrConfig?: number | Partial<CrtConfig>): void {
     if (this.enabled) {
-      if (intensity !== undefined) this.setIntensity(intensity)
+      if (intensityOrConfig !== undefined) {
+        if (typeof intensityOrConfig === 'number') this.setIntensity(intensityOrConfig)
+        else this.setConfig(intensityOrConfig)
+      }
       return
     }
-    this.intensity = intensity ?? 0.7
+    if (typeof intensityOrConfig === 'number') {
+      this.applyIntensity(intensityOrConfig)
+    } else if (intensityOrConfig) {
+      this.config = { ...CRT_DEFAULTS, ...intensityOrConfig }
+    } else {
+      this.config = { ...CRT_DEFAULTS }
+    }
     this.enabled = true
 
     if (!this.initWebGL()) {
@@ -220,13 +277,45 @@ export class CrtShader {
   }
 
   /**
-   * Update the intensity (0–1) while the effect is active.
+   * Update per-effect config values. Merges with current config.
+   */
+  setConfig(partial: Partial<CrtConfig>): void {
+    Object.assign(this.config, partial)
+    if (this.usingFallback) {
+      this.container.style.setProperty(this.intensityProperty, String(this.computeFallbackIntensity()))
+    }
+  }
+
+  /**
+   * Update the intensity (0–1) — scales all defaults proportionally.
    */
   setIntensity(intensity: number): void {
-    this.intensity = Math.max(0, Math.min(1, intensity))
+    this.applyIntensity(Math.max(0, Math.min(1, intensity)))
     if (this.usingFallback) {
-      this.container.style.setProperty(this.intensityProperty, String(this.intensity))
+      this.container.style.setProperty(this.intensityProperty, String(this.computeFallbackIntensity()))
     }
+  }
+
+  /** Scale all CRT_DEFAULTS by a 0–1 factor and store as current config. */
+  private applyIntensity(factor: number): void {
+    const d = CRT_DEFAULTS
+    this.config = {
+      curvature: d.curvature * factor,
+      scanlines: d.scanlines * factor,
+      phosphor: d.phosphor * factor,
+      vignette: d.vignette * factor,
+      bloom: d.bloom * factor,
+      chromatic: d.chromatic * factor,
+      flicker: d.flicker * factor,
+      brightness: 1 + (d.brightness - 1) * factor,
+    }
+  }
+
+  /** Compute a single fallback intensity for CSS mode (average of normalized config). */
+  private computeFallbackIntensity(): number {
+    const d = CRT_DEFAULTS
+    // Use scanlines as representative intensity for CSS fallback
+    return d.scanlines > 0 ? this.config.scanlines / d.scanlines : 0.7
   }
 
   /**
@@ -272,8 +361,15 @@ export class CrtShader {
     // Cache uniform locations
     this.uTexture = gl.getUniformLocation(prog, 'u_texture') as number
     this.uTime = gl.getUniformLocation(prog, 'u_time') as number
-    this.uIntensity = gl.getUniformLocation(prog, 'u_intensity') as number
     this.uResolution = gl.getUniformLocation(prog, 'u_resolution') as number
+    this.uCurvature = gl.getUniformLocation(prog, 'u_curvature') as number
+    this.uScanlines = gl.getUniformLocation(prog, 'u_scanlines') as number
+    this.uPhosphor = gl.getUniformLocation(prog, 'u_phosphor') as number
+    this.uVignette = gl.getUniformLocation(prog, 'u_vignette') as number
+    this.uBloom = gl.getUniformLocation(prog, 'u_bloom') as number
+    this.uChromatic = gl.getUniformLocation(prog, 'u_chromatic') as number
+    this.uFlicker = gl.getUniformLocation(prog, 'u_flicker') as number
+    this.uBrightness = gl.getUniformLocation(prog, 'u_brightness') as number
 
     // Full-screen quad (2 triangles)
     const positions = new Float32Array([
@@ -362,10 +458,18 @@ export class CrtShader {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src)
 
     // Set uniforms
-    gl.uniform1i(this.uTexture as WebGLUniformLocation & number, 0)
-    gl.uniform1f(this.uTime as WebGLUniformLocation & number, (performance.now() - this.startTime) / 1000)
-    gl.uniform1f(this.uIntensity as WebGLUniformLocation & number, this.intensity)
-    gl.uniform2f(this.uResolution as WebGLUniformLocation & number, canvas.width, canvas.height)
+    const loc = (v: number) => v as WebGLUniformLocation & number
+    gl.uniform1i(loc(this.uTexture), 0)
+    gl.uniform1f(loc(this.uTime), (performance.now() - this.startTime) / 1000)
+    gl.uniform2f(loc(this.uResolution), canvas.width, canvas.height)
+    gl.uniform1f(loc(this.uCurvature), this.config.curvature)
+    gl.uniform1f(loc(this.uScanlines), this.config.scanlines)
+    gl.uniform1f(loc(this.uPhosphor), this.config.phosphor)
+    gl.uniform1f(loc(this.uVignette), this.config.vignette)
+    gl.uniform1f(loc(this.uBloom), this.config.bloom)
+    gl.uniform1f(loc(this.uChromatic), this.config.chromatic)
+    gl.uniform1f(loc(this.uFlicker), this.config.flicker)
+    gl.uniform1f(loc(this.uBrightness), this.config.brightness)
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
   }
@@ -407,7 +511,7 @@ export class CrtShader {
     if (this.fallbackCssClass) {
       this.container.classList.add(this.fallbackCssClass)
     }
-    this.container.style.setProperty(this.intensityProperty, String(this.intensity))
+    this.container.style.setProperty(this.intensityProperty, String(this.computeFallbackIntensity()))
   }
 
   private disableFallback(): void {

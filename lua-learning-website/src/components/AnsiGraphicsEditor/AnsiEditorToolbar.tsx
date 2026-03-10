@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react'
+import type { CrtConfig } from '@lua-learning/lua-runtime'
 import type { BrushMode, DrawTool, BrushSettings, BorderStyle, TextAlign, ScaleMode } from './types'
 import { BORDER_PRESETS, DEFAULT_BLEND_RATIO, borderStyleEqual } from './types'
 import { CharPaletteModal } from './CharPaletteModal'
 import { FileOptionsModal } from './FileOptionsModal'
+import { CrtOptionsModal } from './CrtOptionsModal'
 import { toolTooltip, tooltipWithShortcut, MODE_SHORTCUTS, ACTION_SHORTCUTS } from './keyboardShortcuts'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -33,8 +35,8 @@ export interface AnsiEditorToolbarProps {
   onSetBlendRatio?: (ratio: number) => void
   cgaPreview?: boolean
   onToggleCgaPreview?: () => void
-  crtPreview?: boolean
-  onToggleCrtPreview?: () => void
+  crtConfig?: CrtConfig | null
+  onSetCrtConfig?: (config: CrtConfig | null) => void
   scaleMode?: ScaleMode
   onSetScaleMode?: (mode: ScaleMode) => void
   activeLayerIsGroup?: boolean
@@ -46,7 +48,7 @@ export interface AnsiEditorToolbarProps {
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onImportPng, onImportLayers, onExportAns, onExportSh, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
-  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, crtPreview, onToggleCrtPreview, scaleMode, onSetScaleMode, activeLayerIsGroup, isPlaying,
+  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, crtConfig, onSetCrtConfig, scaleMode, onSetScaleMode, activeLayerIsGroup, isPlaying,
   fileMenuOpen: controlledFileMenuOpen, onSetFileMenuOpen,
 }: AnsiEditorToolbarProps) {
   const toolsDisabled = activeLayerIsGroup || isPlaying
@@ -56,6 +58,7 @@ export function AnsiEditorToolbar({
   const isBorderActive = brush.tool === 'border'
   const blendPercent = Math.round((brush.blendRatio ?? DEFAULT_BLEND_RATIO) * 100)
   const [charPaletteOpen, setCharPaletteOpen] = useState(false)
+  const [crtMenuOpen, setCrtMenuOpen] = useState(false)
   const [internalFileMenuOpen, setInternalFileMenuOpen] = useState(false)
   const fileOptionsOpen = controlledFileMenuOpen ?? internalFileMenuOpen
   const setFileOptionsOpen = onSetFileMenuOpen ?? setInternalFileMenuOpen
@@ -84,10 +87,26 @@ export function AnsiEditorToolbar({
           onExportSh={onExportSh}
           cgaPreview={cgaPreview ?? false}
           onToggleCgaPreview={onToggleCgaPreview!}
-          crtPreview={crtPreview ?? false}
-          onToggleCrtPreview={onToggleCrtPreview!}
           scaleMode={scaleMode ?? 'integer-auto'}
           onSetScaleMode={onSetScaleMode!}
+        />
+      )}
+      {onSetCrtConfig && (
+        <button
+          type="button"
+          className={styles.toolbarButton}
+          onClick={() => setCrtMenuOpen(true)}
+          title="CRT Options"
+          data-testid="crt-options-button"
+        >
+          CRT
+        </button>
+      )}
+      {crtMenuOpen && onSetCrtConfig && (
+        <CrtOptionsModal
+          onClose={() => setCrtMenuOpen(false)}
+          crtConfig={crtConfig ?? null}
+          onSetCrtConfig={onSetCrtConfig}
         />
       )}
       <div className={styles.modeGroup}>

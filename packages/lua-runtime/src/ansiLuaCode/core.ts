@@ -121,10 +121,23 @@ export const ansiLuaCoreCode = `
     end
 
     -- CRT effect
-    function _ansi.crt(enabled, intensity)
-      if enabled == nil then enabled = true end
-      if intensity == nil then intensity = 0.7 end
-      __ansi_setCrt(enabled, intensity)
+    -- ansi.crt(true)              -- enable with defaults
+    -- ansi.crt(false)             -- disable
+    -- ansi.crt(true, 0.7)         -- legacy: scale all defaults by 0.7
+    -- ansi.crt({ scanlines = 0.8 }) -- per-effect config (enables automatically)
+    function _ansi.crt(enabled_or_config, intensity)
+      if type(enabled_or_config) == 'table' then
+        -- Table form: ansi.crt({ scanlines = 0.8, curvature = 0.3 })
+        __ansi_setCrt(true, nil, enabled_or_config)
+      else
+        local enabled = enabled_or_config
+        if enabled == nil then enabled = true end
+        if intensity ~= nil then
+          __ansi_setCrt(enabled, intensity)
+        else
+          __ansi_setCrt(enabled)
+        end
+      end
     end
 
     -- Timing

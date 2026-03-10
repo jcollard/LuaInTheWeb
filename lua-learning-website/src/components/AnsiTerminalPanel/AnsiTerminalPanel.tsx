@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import type { ScaleMode } from '../AnsiGraphicsEditor/types'
 import { Terminal } from '@xterm/xterm'
 import { CanvasAddon } from '@xterm/addon-canvas'
-import { CrtShader } from '@lua-learning/lua-runtime'
+import { CrtShader, type CrtConfig } from '@lua-learning/lua-runtime'
 import '@xterm/xterm/css/xterm.css'
 import styles from './AnsiTerminalPanel.module.css'
 
@@ -18,8 +18,8 @@ export interface AnsiTerminalHandle {
   container: HTMLElement
   /** Dispose of the terminal handle */
   dispose: () => void
-  /** Enable/disable CRT monitor effect with optional intensity (0-1, default 0.7) */
-  setCrt: (enabled: boolean, intensity?: number) => void
+  /** Enable/disable CRT monitor effect with optional intensity or per-effect config */
+  setCrt: (enabled: boolean, intensity?: number, config?: Partial<CrtConfig>) => void
 }
 
 export interface AnsiTerminalPanelProps {
@@ -128,7 +128,7 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
           dispose: () => {
             // No-op - terminal lifecycle managed by this component's cleanup
           },
-          setCrt: (enabled: boolean, intensity?: number) => {
+          setCrt: (enabled: boolean, intensity?: number, config?: Partial<CrtConfig>) => {
             const el = containerRef.current
             const xtermCanvas = wrapperRef.current?.querySelector('canvas')
             if (!el) return
@@ -137,7 +137,11 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
                 crtShaderRef.current ??= new CrtShader(xtermCanvas, el, {
                   fallbackCssClass: styles.crtEnabled,
                 })
-                crtShaderRef.current.enable(intensity ?? 0.7)
+                if (config) {
+                  crtShaderRef.current.enable(config)
+                } else {
+                  crtShaderRef.current.enable(intensity ?? undefined)
+                }
               } else {
                 // No canvas yet — CSS-only fallback
                 el.classList.add(styles.crtEnabled)

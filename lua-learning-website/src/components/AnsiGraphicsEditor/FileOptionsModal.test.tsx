@@ -14,8 +14,6 @@ function defaultProps(overrides?: Partial<FileOptionsModalProps>): FileOptionsMo
     onExportSh: vi.fn(),
     cgaPreview: false,
     onToggleCgaPreview: vi.fn(),
-    crtPreview: false,
-    onToggleCrtPreview: vi.fn(),
     scaleMode: 'integer-auto',
     onSetScaleMode: vi.fn(),
     ...overrides,

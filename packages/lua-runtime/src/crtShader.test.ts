@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { CrtShader } from './crtShader'
+import { CrtShader, CRT_DEFAULTS } from './crtShader'
 
 // Minimal WebGL2RenderingContext mock
 function createMockGL(): Record<string, unknown> {
@@ -211,9 +211,9 @@ describe('CrtShader', () => {
         fallbackCssClass: 'crtEnabled',
       })
       crt.enable(0.5)
-      crt.setIntensity(0.9)
+      crt.setIntensity(0.5)
 
-      expect(container.style.getPropertyValue('--crt-intensity')).toBe('0.9')
+      expect(container.style.getPropertyValue('--crt-intensity')).toBe('0.5')
 
       crt.dispose()
     })
@@ -233,12 +233,71 @@ describe('CrtShader', () => {
 
     it('should work without a fallbackCssClass option', () => {
       const crt = new CrtShader(sourceCanvas, container)
-      crt.enable(0.7)
+      crt.enable()
 
       expect(crt.isFallback()).toBe(true)
-      // No class added, but property is set
-      expect(container.style.getPropertyValue('--crt-intensity')).toBe('0.7')
+      // No class added, but property is set (defaults → fallback intensity 1.0)
+      expect(container.style.getPropertyValue('--crt-intensity')).toBe('1')
 
+      crt.dispose()
+    })
+  })
+
+  describe('per-effect config', () => {
+    it('getConfig() returns defaults after enable()', () => {
+      const crt = new CrtShader(sourceCanvas, container)
+      crt.enable()
+      expect(crt.getConfig()).toEqual(CRT_DEFAULTS)
+      crt.dispose()
+    })
+
+    it('enable() with partial config merges with defaults', () => {
+      const crt = new CrtShader(sourceCanvas, container)
+      crt.enable({ scanlines: 0.8, curvature: 0.3 })
+      const cfg = crt.getConfig()
+      expect(cfg.scanlines).toBe(0.8)
+      expect(cfg.curvature).toBe(0.3)
+      expect(cfg.bloom).toBe(CRT_DEFAULTS.bloom)
+      crt.dispose()
+    })
+
+    it('enable() with numeric intensity scales all defaults', () => {
+      const crt = new CrtShader(sourceCanvas, container)
+      crt.enable(0.5)
+      const cfg = crt.getConfig()
+      expect(cfg.curvature).toBeCloseTo(CRT_DEFAULTS.curvature * 0.5)
+      expect(cfg.scanlines).toBeCloseTo(CRT_DEFAULTS.scanlines * 0.5)
+      expect(cfg.bloom).toBeCloseTo(CRT_DEFAULTS.bloom * 0.5)
+      // Brightness scales relative to 1.0
+      expect(cfg.brightness).toBeCloseTo(1 + (CRT_DEFAULTS.brightness - 1) * 0.5)
+      crt.dispose()
+    })
+
+    it('setConfig() merges partial config', () => {
+      const crt = new CrtShader(sourceCanvas, container)
+      crt.enable()
+      crt.setConfig({ bloom: 0.9 })
+      expect(crt.getConfig().bloom).toBe(0.9)
+      expect(crt.getConfig().scanlines).toBe(CRT_DEFAULTS.scanlines)
+      crt.dispose()
+    })
+
+    it('setIntensity() scales all defaults proportionally', () => {
+      const crt = new CrtShader(sourceCanvas, container)
+      crt.enable()
+      crt.setIntensity(0)
+      const cfg = crt.getConfig()
+      expect(cfg.curvature).toBe(0)
+      expect(cfg.scanlines).toBe(0)
+      expect(cfg.brightness).toBe(1)
+      crt.dispose()
+    })
+
+    it('per-effect uniforms are set during render', () => {
+      const crt = new CrtShader(sourceCanvas, container)
+      crt.enable({ scanlines: 0.9 })
+      // Verify uniform1f was called (indirectly via the mock GL)
+      expect(mockGL.uniform1f).toHaveBeenCalled()
       crt.dispose()
     })
   })

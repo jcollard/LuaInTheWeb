@@ -107,8 +107,25 @@ export interface AnsiConfig {
   /** Enable CRT monitor effect (scanlines, vignette, phosphor glow). Default: false */
   crt?: boolean
 
-  /** CRT effect intensity 0-1 (default: 0.7). Only used when crt is true */
+  /** CRT effect intensity 0-1 (default: 0.7). Only used when crt is true. Legacy shortcut. */
   crt_intensity?: number
+
+  /** Barrel distortion amount (0-0.5, default 0.15) */
+  crt_curvature?: number
+  /** Scanline intensity (0-1, default 0.15) */
+  crt_scanlines?: number
+  /** RGB phosphor mask strength (0-1, default 0.5) */
+  crt_phosphor?: number
+  /** Edge darkening (0-1, default 0.3) */
+  crt_vignette?: number
+  /** Glow on bright areas (0-1, default 0.2) */
+  crt_bloom?: number
+  /** Color fringing (0-1, default 0.0) */
+  crt_chromatic?: number
+  /** Temporal flicker (0-0.15, default 0.01) */
+  crt_flicker?: number
+  /** Brightness boost (0.6-1.8, default 1.1) */
+  crt_brightness?: number
 }
 
 /**
