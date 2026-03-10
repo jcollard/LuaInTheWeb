@@ -167,11 +167,19 @@ export class ExportCommand implements ICommand {
     columns = 80,
     rows = 25,
     font_size = 16,
+    scale = "integer",  -- "integer" | "full" | "1x" | "2x" | "3x"
+    -- CRT monitor effect (barrel distortion, scanlines, phosphor glow)
+    -- crt = true,
+    -- crt_intensity = 0.7,  -- 0.0 to 1.0
   },
   -- Export settings
   export = {
+    -- true: embed all assets as data URLs in a single HTML file (works offline)
+    -- false: create ZIP with separate assets folder (smaller file size)
     singleFile = true,
   },
+  -- Uncomment to include asset directories:
+  -- assets = { "images/", "sounds/" },
 }
 `
       // Stryker restore all
