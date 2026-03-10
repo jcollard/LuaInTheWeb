@@ -58,7 +58,7 @@ export function CharPaletteModal({ anchorRect, currentChar, onSelect, onClose }:
                   title={charEntry.name}
                   onClick={() => handleCharClick(charEntry.char)}
                   data-testid="char-cell"
-                  {...(isSelected ? { 'aria-pressed': true } : {})}
+                  aria-pressed={isSelected || undefined}
                 >
                   {charEntry.char}
                 </button>
