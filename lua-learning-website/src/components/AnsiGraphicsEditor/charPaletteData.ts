@@ -13,6 +13,10 @@ function entry(char: string, name: string): CharEntry {
   return { char, name }
 }
 
+export function findCategoryForChar(char: string): string | undefined {
+  return CHAR_PALETTE_CATEGORIES.find(cat => cat.chars.some(e => e.char === char))?.id
+}
+
 export const CHAR_PALETTE_CATEGORIES: CharCategory[] = [
   {
     id: 'ascii',

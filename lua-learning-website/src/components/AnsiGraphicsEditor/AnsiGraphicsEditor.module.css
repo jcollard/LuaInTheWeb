@@ -555,6 +555,11 @@
   color: var(--theme-bg-primary);
 }
 
+.charCellSelected {
+  outline: 2px solid var(--theme-accent-primary);
+  outline-offset: -2px;
+}
+
 /* Mode selector */
 .modeGroup {
   display: flex;
