@@ -82,4 +82,46 @@ describe('CharPaletteModal', () => {
     const firstName = CHAR_PALETTE_CATEGORIES[0].chars[0].name
     expect(cells[0].getAttribute('title')).toBe(firstName)
   })
+
+  it('should open to blocks tab when currentChar is a block char', () => {
+    render(<CharPaletteModal {...defaultProps} currentChar="█" />)
+    const blocksTab = screen.getByTestId('char-tab-blocks')
+    expect(blocksTab.className).toContain('Active')
+    const blocksCategory = CHAR_PALETTE_CATEGORIES.find(c => c.id === 'blocks')!
+    const cells = screen.getAllByTestId('char-cell')
+    expect(cells).toHaveLength(blocksCategory.chars.length)
+  })
+
+  it('should open to symbols tab when currentChar is a symbol', () => {
+    render(<CharPaletteModal {...defaultProps} currentChar="♠" />)
+    const symbolsTab = screen.getByTestId('char-tab-symbols')
+    expect(symbolsTab.className).toContain('Active')
+  })
+
+  it('should fall back to ASCII tab when currentChar is not in any category', () => {
+    render(<CharPaletteModal {...defaultProps} currentChar="Z" />)
+    const asciiTab = screen.getByTestId('char-tab-ascii')
+    expect(asciiTab.className).toContain('Active')
+  })
+
+  it('should highlight the selected char cell with charCellSelected class', () => {
+    render(<CharPaletteModal {...defaultProps} currentChar="#" />)
+    const cells = screen.getAllByTestId('char-cell')
+    const hashCell = cells.find(c => c.textContent === '#')!
+    expect(hashCell.className).toContain('charCellSelected')
+  })
+
+  it('should set aria-pressed="true" on the selected char cell', () => {
+    render(<CharPaletteModal {...defaultProps} currentChar="#" />)
+    const cells = screen.getAllByTestId('char-cell')
+    const hashCell = cells.find(c => c.textContent === '#')!
+    expect(hashCell.getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('should not set aria-pressed on non-selected char cells', () => {
+    render(<CharPaletteModal {...defaultProps} currentChar="#" />)
+    const cells = screen.getAllByTestId('char-cell')
+    const otherCell = cells.find(c => c.textContent !== '#')!
+    expect(otherCell.getAttribute('aria-pressed')).toBeNull()
+  })
 })

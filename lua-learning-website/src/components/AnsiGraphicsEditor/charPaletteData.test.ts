@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { CHAR_PALETTE_CATEGORIES } from './charPaletteData'
+import { CHAR_PALETTE_CATEGORIES, findCategoryForChar } from './charPaletteData'
 
 function charsOfCategory(id: string): string[] {
   const category = CHAR_PALETTE_CATEGORIES.find(c => c.id === id)
@@ -192,5 +192,39 @@ describe('CHAR_PALETTE_CATEGORIES', () => {
     expect(chars).toContain('★')
     expect(chars).toContain('✓')
     expect(chars).toContain('⌂')
+  })
+})
+
+describe('findCategoryForChar', () => {
+  it('should return "ascii" for an ASCII punctuation char', () => {
+    expect(findCategoryForChar('#')).toBe('ascii')
+  })
+
+  it('should return "blocks" for a block char', () => {
+    expect(findCategoryForChar('█')).toBe('blocks')
+  })
+
+  it('should return "borders" for a border char', () => {
+    expect(findCategoryForChar('╔')).toBe('borders')
+  })
+
+  it('should return "geometric" for a geometric char', () => {
+    expect(findCategoryForChar('●')).toBe('geometric')
+  })
+
+  it('should return "arrows" for an arrow char', () => {
+    expect(findCategoryForChar('→')).toBe('arrows')
+  })
+
+  it('should return "symbols" for a symbol char', () => {
+    expect(findCategoryForChar('♠')).toBe('symbols')
+  })
+
+  it('should return undefined for a char not in any category', () => {
+    expect(findCategoryForChar('Z')).toBeUndefined()
+  })
+
+  it('should return undefined for an empty string', () => {
+    expect(findCategoryForChar('')).toBeUndefined()
   })
 })

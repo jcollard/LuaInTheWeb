@@ -1,16 +1,17 @@
 import { useState } from 'react'
 import type { ReactElement } from 'react'
-import { CHAR_PALETTE_CATEGORIES } from './charPaletteData'
+import { CHAR_PALETTE_CATEGORIES, findCategoryForChar } from './charPaletteData'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface CharPaletteModalProps {
   anchorRect?: DOMRect
+  currentChar?: string
   onSelect: (char: string) => void
   onClose: () => void
 }
 
-export function CharPaletteModal({ anchorRect, onSelect, onClose }: CharPaletteModalProps): ReactElement {
-  const [activeTab, setActiveTab] = useState('ascii')
+export function CharPaletteModal({ anchorRect, currentChar, onSelect, onClose }: CharPaletteModalProps): ReactElement {
+  const [activeTab, setActiveTab] = useState(() => findCategoryForChar(currentChar ?? '') ?? 'ascii')
   const activeCategory = CHAR_PALETTE_CATEGORIES.find(c => c.id === activeTab)!
 
   function handleCharClick(char: string): void {
@@ -47,18 +48,22 @@ export function CharPaletteModal({ anchorRect, onSelect, onClose }: CharPaletteM
         </div>
         <div className={styles.charPaletteBody}>
           <div className={styles.charGrid}>
-            {activeCategory.chars.map(charEntry => (
-              <button
-                key={charEntry.char}
-                type="button"
-                className={styles.charCell}
-                title={charEntry.name}
-                onClick={() => handleCharClick(charEntry.char)}
-                data-testid="char-cell"
-              >
-                {charEntry.char}
-              </button>
-            ))}
+            {activeCategory.chars.map(charEntry => {
+              const isSelected = charEntry.char === currentChar
+              return (
+                <button
+                  key={charEntry.char}
+                  type="button"
+                  className={`${styles.charCell}${isSelected ? ` ${styles.charCellSelected}` : ''}`}
+                  title={charEntry.name}
+                  onClick={() => handleCharClick(charEntry.char)}
+                  data-testid="char-cell"
+                  aria-pressed={isSelected || undefined}
+                >
+                  {charEntry.char}
+                </button>
+              )
+            })}
           </div>
         </div>
       </div>
