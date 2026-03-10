@@ -17,6 +17,7 @@ function createMockGL(): Record<string, unknown> {
     TEXTURE_WRAP_S: 0x2802,
     TEXTURE_WRAP_T: 0x2803,
     LINEAR: 0x2601,
+    NEAREST: 0x2600,
     CLAMP_TO_EDGE: 0x812F,
     RGBA: 0x1908,
     UNSIGNED_BYTE: 0x1401,

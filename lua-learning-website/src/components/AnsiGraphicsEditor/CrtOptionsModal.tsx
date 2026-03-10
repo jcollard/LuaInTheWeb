@@ -40,8 +40,10 @@ export interface CrtOptionsModalProps {
   onSetCrtConfig: (config: CrtConfig | null) => void
 }
 
+type NumericCrtKey = { [K in keyof CrtConfig]: CrtConfig[K] extends number ? K : never }[keyof CrtConfig]
+
 interface SliderDef {
-  key: keyof CrtConfig
+  key: NumericCrtKey
   label: string
   min: number
   max: number
@@ -49,15 +51,23 @@ interface SliderDef {
 }
 
 const SLIDERS: SliderDef[] = [
-  { key: 'curvature', label: 'Curvature', min: 0, max: 0.5, step: 0.005 },
-  { key: 'scanlineIntensity', label: 'Scanlines', min: 0, max: 1, step: 0.01 },
-  { key: 'bloomIntensity', label: 'Bloom', min: 0, max: 1, step: 0.01 },
-  { key: 'vignetteStrength', label: 'Vignette', min: 0, max: 1, step: 0.01 },
-  { key: 'rgbShift', label: 'RGB Shift', min: 0, max: 1, step: 0.01 },
-  { key: 'flickerStrength', label: 'Flicker', min: 0, max: 0.15, step: 0.001 },
+  // Scanlines
+  { key: 'scanlineIntensity', label: 'Intensity', min: 0, max: 1, step: 0.01 },
+  { key: 'scanlineCount', label: 'Count', min: 50, max: 1200, step: 1 },
+  { key: 'adaptiveIntensity', label: 'Adaptive', min: 0, max: 1, step: 0.01 },
+  // Color
   { key: 'brightness', label: 'Brightness', min: 0.6, max: 1.8, step: 0.01 },
-  { key: 'contrast', label: 'Contrast', min: 0.5, max: 1.5, step: 0.01 },
-  { key: 'saturation', label: 'Saturation', min: 0.5, max: 1.5, step: 0.01 },
+  { key: 'contrast', label: 'Contrast', min: 0.6, max: 1.8, step: 0.01 },
+  { key: 'saturation', label: 'Saturation', min: 0, max: 2, step: 0.01 },
+  // Bloom
+  { key: 'bloomIntensity', label: 'Bloom', min: 0, max: 1.5, step: 0.01 },
+  { key: 'bloomThreshold', label: 'Threshold', min: 0, max: 1, step: 0.01 },
+  { key: 'rgbShift', label: 'RGB Shift', min: 0, max: 1, step: 0.01 },
+  // Framing
+  { key: 'vignetteStrength', label: 'Vignette', min: 0, max: 2, step: 0.01 },
+  { key: 'curvature', label: 'Curvature', min: 0, max: 0.5, step: 0.005 },
+  { key: 'flickerStrength', label: 'Flicker', min: 0, max: 0.15, step: 0.001 },
+  // Our addition
   { key: 'phosphor', label: 'Phosphor', min: 0, max: 1, step: 0.01 },
 ]
 
@@ -82,7 +92,7 @@ export function CrtOptionsModal({ onClose, crtConfig, onSetCrtConfig }: CrtOptio
     }
   }
 
-  function handleSliderChange(key: keyof CrtConfig, value: number): void {
+  function handleChange(key: keyof CrtConfig, value: number | boolean): void {
     const updated = { ...config, [key]: value }
     saveConfig(updated)
     onSetCrtConfig(updated)
@@ -128,6 +138,16 @@ export function CrtOptionsModal({ onClose, crtConfig, onSetCrtConfig }: CrtOptio
             />
             Enable CRT
           </label>
+          <label className={styles.fileOptionsAction}>
+            <input
+              type="checkbox"
+              checked={config.smoothing}
+              onChange={() => handleChange('smoothing', !config.smoothing)}
+              disabled={!enabled}
+              data-testid="crt-smoothing-checkbox"
+            />
+            Smoothing
+          </label>
           {SLIDERS.map(({ key, label, min, max, step }) => (
             <label key={key} className={styles.fileOptionsAction}>
               {label}
@@ -137,13 +157,13 @@ export function CrtOptionsModal({ onClose, crtConfig, onSetCrtConfig }: CrtOptio
                 max={max}
                 step={step}
                 value={config[key]}
-                onChange={e => handleSliderChange(key, Number(e.target.value))}
+                onChange={e => handleChange(key, Number(e.target.value))}
                 disabled={!enabled}
                 data-testid={`crt-slider-${key}`}
                 style={{ flex: 1 }}
               />
               <span data-testid={`crt-value-${key}`} style={{ minWidth: '3em', textAlign: 'right' }}>
-                {config[key].toFixed(key === 'curvature' || key === 'flickerStrength' ? 3 : 2)}
+                {key === 'scanlineCount' ? config[key] : config[key].toFixed(key === 'curvature' || key === 'flickerStrength' ? 3 : 2)}
               </span>
             </label>
           ))}

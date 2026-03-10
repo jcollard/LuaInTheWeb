@@ -71,8 +71,8 @@ describe('CrtOptionsModal', () => {
 
   it('displays current values for each slider', () => {
     render(<CrtOptionsModal {...defaultProps({ crtConfig: { ...CRT_DEFAULTS } })} />)
-    expect(screen.getByTestId('crt-value-scanlineIntensity').textContent).toBe('0.15')
-    expect(screen.getByTestId('crt-value-curvature').textContent).toBe('0.150')
+    expect(screen.getByTestId('crt-value-scanlineIntensity').textContent).toBe('0.50')
+    expect(screen.getByTestId('crt-value-curvature').textContent).toBe('0.100')
   })
 
   it('reset to defaults button calls onSetCrtConfig with defaults', () => {
@@ -112,7 +112,7 @@ describe('CrtOptionsModal', () => {
 
   it('renders all 10 effect sliders', () => {
     render(<CrtOptionsModal {...defaultProps({ crtConfig: { ...CRT_DEFAULTS } })} />)
-    const keys = ['curvature', 'scanlineIntensity', 'bloomIntensity', 'vignetteStrength', 'rgbShift', 'flickerStrength', 'brightness', 'contrast', 'saturation', 'phosphor']
+    const keys = ['scanlineIntensity', 'scanlineCount', 'adaptiveIntensity', 'brightness', 'contrast', 'saturation', 'bloomIntensity', 'bloomThreshold', 'rgbShift', 'vignetteStrength', 'curvature', 'flickerStrength', 'phosphor']
     for (const key of keys) {
       expect(screen.getByTestId(`crt-slider-${key}`)).toBeTruthy()
     }
@@ -123,10 +123,10 @@ describe('CrtOptionsModal', () => {
       const onSetCrtConfig = vi.fn()
       const custom = { ...CRT_DEFAULTS, scanlineIntensity: 0.8 }
       render(<CrtOptionsModal {...defaultProps({ crtConfig: custom, onSetCrtConfig })} />)
-      fireEvent.change(screen.getByTestId('crt-slider-bloomIntensity'), { target: { value: '0.5' } })
+      fireEvent.change(screen.getByTestId('crt-slider-bloomIntensity'), { target: { value: '0.9' } })
       const stored = JSON.parse(localStorage.getItem(CRT_STORAGE_KEY)!)
       expect(stored.scanlineIntensity).toBe(0.8)
-      expect(stored.bloomIntensity).toBe(0.5)
+      expect(stored.bloomIntensity).toBe(0.9)
     })
 
     it('migrates old localStorage keys to new names when toggling on', () => {

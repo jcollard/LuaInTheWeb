@@ -14,40 +14,52 @@
 
 /** Per-effect CRT configuration. Each value directly controls one shader effect. */
 export interface CrtConfig {
-  /** Barrel distortion amount (0–0.5, default 0.15) */
-  curvature: number
-  /** Scanline darkness (0–1, default 0.15) */
+  /** Texture smoothing — LINEAR (true) vs NEAREST (false). Default: true */
+  smoothing: boolean
+  /** Scanline darkness (0–1, default 0.5) */
   scanlineIntensity: number
-  /** RGB phosphor mask strength (0–1, default 0.5) */
-  phosphor: number
-  /** Edge darkening (0–1, default 0.3) */
-  vignetteStrength: number
-  /** Bright pixel glow (0–1, default 0.2) */
-  bloomIntensity: number
-  /** Chromatic aberration / color fringing (0–1, default 0.0) */
-  rgbShift: number
-  /** Temporal flicker (0–0.15, default 0.01) */
-  flickerStrength: number
-  /** Brightness multiplier (0.6–1.8, default 1.1) */
+  /** Number of scanlines (50–1200, default 256) */
+  scanlineCount: number
+  /** Scanline adaptive modulation (0–1, default 0.3) */
+  adaptiveIntensity: number
+  /** Brightness multiplier (0.6–1.8, default 1.5) */
   brightness: number
   /** Contrast adjustment (0.5–1.5, default 1.05) */
   contrast: number
-  /** Color saturation (0.5–1.5, default 1.1) */
+  /** Color saturation (0–2, default 1.1) */
   saturation: number
+  /** Bright pixel glow (0–1.5, default 0.5) */
+  bloomIntensity: number
+  /** Bloom luminance threshold (0–1, default 0.5) */
+  bloomThreshold: number
+  /** Chromatic aberration / color fringing (0–1, default 1.0) */
+  rgbShift: number
+  /** Edge darkening (0–2, default 0.3) */
+  vignetteStrength: number
+  /** Barrel distortion amount (0–0.5, default 0.1) */
+  curvature: number
+  /** Temporal flicker (0–0.15, default 0.01) */
+  flickerStrength: number
+  /** RGB phosphor mask strength (0–1, default 0.5) — our addition, not in gingerbeardman */
+  phosphor: number
 }
 
-/** Default CRT config values matching the gingerbeardman/webgl-crt-shader defaults. */
+/** Default CRT config values matching the gingerbeardman/webgl-crt-shader demo. */
 export const CRT_DEFAULTS: Readonly<CrtConfig> = {
-  curvature: 0.15,
-  scanlineIntensity: 0.15,
-  phosphor: 0.5,
-  vignetteStrength: 0.3,
-  bloomIntensity: 0.2,
-  rgbShift: 0.0,
-  flickerStrength: 0.01,
-  brightness: 1.1,
+  smoothing: true,
+  scanlineIntensity: 0.5,
+  scanlineCount: 256,
+  adaptiveIntensity: 0.3,
+  brightness: 1.5,
   contrast: 1.05,
   saturation: 1.1,
+  bloomIntensity: 0.5,
+  bloomThreshold: 0.5,
+  rgbShift: 1.0,
+  vignetteStrength: 0.3,
+  curvature: 0.1,
+  flickerStrength: 0.01,
+  phosphor: 0.5,
 }
 
 // ---------- GLSL ----------
@@ -69,7 +81,7 @@ void main() {
  * https://github.com/gingerbeardman/webgl-crt-shader
  *
  * Ported from WebGL1/Three.js to WebGL2 (texture2D→texture, varying→in, etc.).
- * scanlineCount hardcoded to u_resolution.y; phosphor mask appended after lightingMask.
+ * Phosphor mask appended after lightingMask (our addition).
  */
 const FRAGMENT_SHADER = `#version 300 es
 precision mediump float;
@@ -84,9 +96,12 @@ uniform vec2 u_resolution;
 // Per-effect uniforms
 uniform float u_curvature;
 uniform float u_scanlineIntensity;
+uniform float u_scanlineCount;
+uniform float u_adaptiveIntensity;
 uniform float u_phosphor;
 uniform float u_vignetteStrength;
 uniform float u_bloomIntensity;
+uniform float u_bloomThreshold;
 uniform float u_rgbShift;
 uniform float u_flickerStrength;
 uniform float u_brightness;
@@ -100,8 +115,6 @@ const float BLOOM_THRESHOLD_FACTOR = 0.5;
 const float BLOOM_FACTOR_MULT = 1.5;
 const float RGB_SHIFT_SCALE = 0.005;
 const float RGB_SHIFT_INTENSITY = 0.08;
-const float BLOOM_THRESHOLD = 0.5;
-const float ADAPTIVE_INTENSITY = 0.5;
 
 // Optimized curvature function
 vec2 curveRemapUV(vec2 uv, float curv) {
@@ -150,12 +163,12 @@ void main() {
   // Apply bloom effect with threshold-based sampling (skip if disabled)
   if (u_bloomIntensity > 0.001) {
     float pixelLum = dot(pixel.rgb, LUMA);
-    float bloomThresholdHalf = BLOOM_THRESHOLD * BLOOM_THRESHOLD_FACTOR;
+    float bloomThresholdHalf = u_bloomThreshold * BLOOM_THRESHOLD_FACTOR;
     if (pixelLum > bloomThresholdHalf) {
       vec4 bloomSample = sampleBloom(uv, 0.005, pixel);
       bloomSample.rgb *= u_brightness;
       float bloomLum = dot(bloomSample.rgb, LUMA);
-      float bloomFactor = u_bloomIntensity * max(0.0, (bloomLum - BLOOM_THRESHOLD) * BLOOM_FACTOR_MULT);
+      float bloomFactor = u_bloomIntensity * max(0.0, (bloomLum - u_bloomThreshold) * BLOOM_FACTOR_MULT);
       pixel.rgb += bloomSample.rgb * bloomFactor;
     }
   }
@@ -178,14 +191,14 @@ void main() {
   // Calculate combined lighting mask (scanlines, flicker, vignette)
   float lightingMask = 1.0;
 
-  // Calculate scanlines (skip if disabled); use resolution height as scanline count
+  // Calculate scanlines (skip if disabled)
   if (u_scanlineIntensity > 0.001) {
-    float scanlineY = uv.y * u_resolution.y;
+    float scanlineY = uv.y * u_scanlineCount;
     float scanlinePattern = abs(sin(scanlineY * PI));
 
     // Adaptive intensity
     float yPattern = sin(uv.y * 30.0) * 0.5 + 0.5;
-    float adaptiveFactor = 1.0 - yPattern * ADAPTIVE_INTENSITY * 0.2;
+    float adaptiveFactor = 1.0 - yPattern * u_adaptiveIntensity * 0.2;
 
     lightingMask *= 1.0 - scanlinePattern * u_scanlineIntensity * adaptiveFactor;
   }
@@ -262,9 +275,12 @@ export class CrtShader {
   private uResolution = -1
   private uCurvature = -1
   private uScanlineIntensity = -1
+  private uScanlineCount = -1
+  private uAdaptiveIntensity = -1
   private uPhosphor = -1
   private uVignetteStrength = -1
   private uBloomIntensity = -1
+  private uBloomThreshold = -1
   private uRgbShift = -1
   private uFlickerStrength = -1
   private uBrightness = -1
@@ -350,7 +366,9 @@ export class CrtShader {
    * Update per-effect config values. Merges with current config.
    */
   setConfig(partial: Partial<CrtConfig>): void {
+    const smoothingChanged = partial.smoothing !== undefined && partial.smoothing !== this.config.smoothing
     Object.assign(this.config, partial)
+    if (smoothingChanged) this.applySmoothing()
     if (this.usingFallback) {
       this.container.style.setProperty(this.intensityProperty, String(this.computeFallbackIntensity()))
     }
@@ -370,16 +388,20 @@ export class CrtShader {
   private applyIntensity(factor: number): void {
     const d = CRT_DEFAULTS
     this.config = {
-      curvature: d.curvature * factor,
+      smoothing: d.smoothing,
       scanlineIntensity: d.scanlineIntensity * factor,
-      phosphor: d.phosphor * factor,
-      vignetteStrength: d.vignetteStrength * factor,
-      bloomIntensity: d.bloomIntensity * factor,
-      rgbShift: d.rgbShift * factor,
-      flickerStrength: d.flickerStrength * factor,
+      scanlineCount: d.scanlineCount,
+      adaptiveIntensity: d.adaptiveIntensity,
       brightness: 1 + (d.brightness - 1) * factor,
       contrast: 1 + (d.contrast - 1) * factor,
       saturation: 1 + (d.saturation - 1) * factor,
+      bloomIntensity: d.bloomIntensity * factor,
+      bloomThreshold: d.bloomThreshold,
+      rgbShift: d.rgbShift * factor,
+      vignetteStrength: d.vignetteStrength * factor,
+      curvature: d.curvature * factor,
+      flickerStrength: d.flickerStrength * factor,
+      phosphor: d.phosphor * factor,
     }
   }
 
@@ -436,9 +458,12 @@ export class CrtShader {
     this.uResolution = gl.getUniformLocation(prog, 'u_resolution') as number
     this.uCurvature = gl.getUniformLocation(prog, 'u_curvature') as number
     this.uScanlineIntensity = gl.getUniformLocation(prog, 'u_scanlineIntensity') as number
+    this.uScanlineCount = gl.getUniformLocation(prog, 'u_scanlineCount') as number
+    this.uAdaptiveIntensity = gl.getUniformLocation(prog, 'u_adaptiveIntensity') as number
     this.uPhosphor = gl.getUniformLocation(prog, 'u_phosphor') as number
     this.uVignetteStrength = gl.getUniformLocation(prog, 'u_vignetteStrength') as number
     this.uBloomIntensity = gl.getUniformLocation(prog, 'u_bloomIntensity') as number
+    this.uBloomThreshold = gl.getUniformLocation(prog, 'u_bloomThreshold') as number
     this.uRgbShift = gl.getUniformLocation(prog, 'u_rgbShift') as number
     this.uFlickerStrength = gl.getUniformLocation(prog, 'u_flickerStrength') as number
     this.uBrightness = gl.getUniformLocation(prog, 'u_brightness') as number
@@ -466,12 +491,23 @@ export class CrtShader {
     // Create texture
     this.texture = gl.createTexture()!
     gl.bindTexture(gl.TEXTURE_2D, this.texture)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    const filter = this.config.smoothing ? gl.LINEAR : gl.NEAREST
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 
     return true
+  }
+
+  /** Update texture filtering to match the smoothing config. */
+  private applySmoothing(): void {
+    const gl = this.gl
+    if (!gl || !this.texture) return
+    const filter = this.config.smoothing ? gl.LINEAR : gl.NEAREST
+    gl.bindTexture(gl.TEXTURE_2D, this.texture)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter)
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter)
   }
 
   private compileShader(type: number, source: string): WebGLShader | null {
@@ -538,9 +574,12 @@ export class CrtShader {
     gl.uniform2f(loc(this.uResolution), canvas.width, canvas.height)
     gl.uniform1f(loc(this.uCurvature), this.config.curvature)
     gl.uniform1f(loc(this.uScanlineIntensity), this.config.scanlineIntensity)
+    gl.uniform1f(loc(this.uScanlineCount), this.config.scanlineCount)
+    gl.uniform1f(loc(this.uAdaptiveIntensity), this.config.adaptiveIntensity)
     gl.uniform1f(loc(this.uPhosphor), this.config.phosphor)
     gl.uniform1f(loc(this.uVignetteStrength), this.config.vignetteStrength)
     gl.uniform1f(loc(this.uBloomIntensity), this.config.bloomIntensity)
+    gl.uniform1f(loc(this.uBloomThreshold), this.config.bloomThreshold)
     gl.uniform1f(loc(this.uRgbShift), this.config.rgbShift)
     gl.uniform1f(loc(this.uFlickerStrength), this.config.flickerStrength)
     gl.uniform1f(loc(this.uBrightness), this.config.brightness)

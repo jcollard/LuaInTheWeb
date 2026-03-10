@@ -110,26 +110,34 @@ export interface AnsiConfig {
   /** CRT effect intensity 0-1 (default: 0.7). Only used when crt is true. Legacy shortcut. */
   crt_intensity?: number
 
-  /** Barrel distortion amount (0-0.5, default 0.15) */
-  crt_curvature?: number
-  /** Scanline intensity (0-1, default 0.15) */
+  /** Texture smoothing (default true) */
+  crt_smoothing?: boolean
+  /** Scanline intensity (0-1, default 0.5) */
   crt_scanlineIntensity?: number
-  /** RGB phosphor mask strength (0-1, default 0.5) */
-  crt_phosphor?: number
-  /** Edge darkening (0-1, default 0.3) */
-  crt_vignetteStrength?: number
-  /** Glow on bright areas (0-1, default 0.2) */
-  crt_bloomIntensity?: number
-  /** Color fringing (0-1, default 0.0) */
-  crt_rgbShift?: number
-  /** Temporal flicker (0-0.15, default 0.01) */
-  crt_flickerStrength?: number
-  /** Brightness boost (0.6-1.8, default 1.1) */
+  /** Scanline count (50-1200, default 256) */
+  crt_scanlineCount?: number
+  /** Scanline adaptive modulation (0-1, default 0.3) */
+  crt_adaptiveIntensity?: number
+  /** Brightness boost (0.6-1.8, default 1.5) */
   crt_brightness?: number
   /** Contrast adjustment (0.5-1.5, default 1.05) */
   crt_contrast?: number
-  /** Color saturation (0.5-1.5, default 1.1) */
+  /** Color saturation (0-2, default 1.1) */
   crt_saturation?: number
+  /** Glow on bright areas (0-1.5, default 0.5) */
+  crt_bloomIntensity?: number
+  /** Bloom luminance threshold (0-1, default 0.5) */
+  crt_bloomThreshold?: number
+  /** Color fringing (0-1, default 1.0) */
+  crt_rgbShift?: number
+  /** Edge darkening (0-2, default 0.3) */
+  crt_vignetteStrength?: number
+  /** Barrel distortion amount (0-0.5, default 0.1) */
+  crt_curvature?: number
+  /** Temporal flicker (0-0.15, default 0.01) */
+  crt_flickerStrength?: number
+  /** RGB phosphor mask strength (0-1, default 0.5) */
+  crt_phosphor?: number
 }
 
 /**
