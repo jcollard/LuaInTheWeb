@@ -117,7 +117,7 @@ function ansi.reset() end
 ---@usage ansi.crt(true, 0.5)                   -- enable, scale all effects to 50%
 ---@usage ansi.crt(false)                        -- disable
 ---@usage ansi.crt({ scanlines = 0.8, curvature = 0.3 })  -- per-effect config
---- Available config keys: curvature, scanlines, phosphor, vignette, bloom, chromatic, flicker, brightness
+--- Available config keys: curvature, scanlines, phosphor, vignette, bloom, chromatic, flicker, brightness, contrast, saturation
 function ansi.crt(enabled_or_config, intensity) end
 
 -- =============================================================================

@@ -110,9 +110,9 @@ describe('CrtOptionsModal', () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
-  it('renders all 8 effect sliders', () => {
+  it('renders all 10 effect sliders', () => {
     render(<CrtOptionsModal {...defaultProps({ crtConfig: { ...CRT_DEFAULTS } })} />)
-    const keys = ['curvature', 'scanlines', 'bloom', 'vignette', 'chromatic', 'flicker', 'brightness', 'phosphor']
+    const keys = ['curvature', 'scanlines', 'bloom', 'vignette', 'chromatic', 'flicker', 'brightness', 'contrast', 'saturation', 'phosphor']
     for (const key of keys) {
       expect(screen.getByTestId(`crt-slider-${key}`)).toBeTruthy()
     }

@@ -38,6 +38,8 @@ const SLIDERS: SliderDef[] = [
   { key: 'chromatic', label: 'Chromatic', min: 0, max: 1, step: 0.01 },
   { key: 'flicker', label: 'Flicker', min: 0, max: 0.15, step: 0.001 },
   { key: 'brightness', label: 'Brightness', min: 0.6, max: 1.8, step: 0.01 },
+  { key: 'contrast', label: 'Contrast', min: 0.5, max: 1.5, step: 0.01 },
+  { key: 'saturation', label: 'Saturation', min: 0.5, max: 1.5, step: 0.01 },
   { key: 'phosphor', label: 'Phosphor', min: 0, max: 1, step: 0.01 },
 ]
 

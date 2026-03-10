@@ -126,6 +126,10 @@ export interface AnsiConfig {
   crt_flicker?: number
   /** Brightness boost (0.6-1.8, default 1.1) */
   crt_brightness?: number
+  /** Contrast adjustment (0.5-1.5, default 1.05) */
+  crt_contrast?: number
+  /** Color saturation (0.5-1.5, default 1.1) */
+  crt_saturation?: number
 }
 
 /**

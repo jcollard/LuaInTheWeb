@@ -4,9 +4,10 @@
  * Creates a WebGL2 canvas on top of a source canvas (e.g. xterm.js CanvasAddon)
  * and applies a CRT monitor effect via fragment shader. Effects include barrel
  * distortion, scanlines, RGB phosphor mask, vignette, bloom, chromatic aberration,
- * and subtle flicker — each controlled by its own uniform.
+ * contrast, saturation, and subtle flicker — each controlled by its own uniform.
  *
- * Adapted from gingerbeardman/webgl-crt-shader (MIT license).
+ * CRT fragment shader ported from gingerbeardman/webgl-crt-shader
+ * Copyright (c) 2025 Matt Sephton @gingerbeardman — MIT License
  * https://github.com/gingerbeardman/webgl-crt-shader
  */
 
@@ -28,6 +29,10 @@ export interface CrtConfig {
   flicker: number
   /** Brightness multiplier (0.6–1.8, default 1.1) */
   brightness: number
+  /** Contrast adjustment (0.5–1.5, default 1.05) */
+  contrast: number
+  /** Color saturation (0.5–1.5, default 1.1) */
+  saturation: number
 }
 
 /** Default CRT config values matching the gingerbeardman/webgl-crt-shader defaults. */
@@ -40,6 +45,8 @@ export const CRT_DEFAULTS: Readonly<CrtConfig> = {
   chromatic: 0.0,
   flicker: 0.01,
   brightness: 1.1,
+  contrast: 1.05,
+  saturation: 1.1,
 }
 
 // ---------- GLSL ----------
@@ -55,6 +62,14 @@ void main() {
 }
 `
 
+/**
+ * Fragment shader ported from gingerbeardman/webgl-crt-shader (MIT License).
+ * Copyright (c) 2025 Matt Sephton @gingerbeardman
+ * https://github.com/gingerbeardman/webgl-crt-shader
+ *
+ * Ported from WebGL1/Three.js to WebGL2 (texture2D→texture, varying→in, etc.).
+ * scanlineCount hardcoded to u_resolution.y; phosphor mask appended after lightingMask.
+ */
 const FRAGMENT_SHADER = `#version 300 es
 precision mediump float;
 
@@ -74,79 +89,131 @@ uniform float u_bloom;
 uniform float u_chromatic;
 uniform float u_flicker;
 uniform float u_brightness;
+uniform float u_contrast;
+uniform float u_saturation;
 
-// --- Barrel distortion ---
-vec2 barrelDistort(vec2 uv, float amt) {
-  vec2 cc = uv - 0.5;
-  float dist = dot(cc, cc);
-  return uv + cc * dist * amt;
+// Precomputed constants
+const float PI = 3.14159265;
+const vec3 LUMA = vec3(0.299, 0.587, 0.114);
+const float BLOOM_THRESHOLD_FACTOR = 0.5;
+const float BLOOM_FACTOR_MULT = 1.5;
+const float RGB_SHIFT_SCALE = 0.005;
+const float RGB_SHIFT_INTENSITY = 0.08;
+const float BLOOM_THRESHOLD = 0.5;
+const float ADAPTIVE_INTENSITY = 0.5;
+
+// Optimized curvature function
+vec2 curveRemapUV(vec2 uv, float curv) {
+  vec2 coords = uv * 2.0 - 1.0;
+  float curveAmount = curv * 0.25;
+  float dist = dot(coords, coords);
+  coords = coords * (1.0 + dist * curveAmount);
+  return coords * 0.5 + 0.5;
 }
 
-// --- Chromatic aberration ---
-vec3 chromaticAberration(vec2 uv, float amount) {
-  vec2 dir = uv - 0.5;
-  float r = texture(u_texture, uv + dir * amount).r;
-  float g = texture(u_texture, uv).g;
-  float b = texture(u_texture, uv - dir * amount).b;
-  return vec3(r, g, b);
+// Low-cost symmetric bloom sampling (cross + center, normalized)
+vec4 sampleBloom(vec2 uv, float radius, vec4 centerSample) {
+  vec2 o = vec2(radius);
+  vec4 c = centerSample * 0.4;
+  vec4 cross_s = (
+    texture(u_texture, uv + vec2(o.x, 0.0)) +
+    texture(u_texture, uv - vec2(o.x, 0.0)) +
+    texture(u_texture, uv + vec2(0.0, o.y)) +
+    texture(u_texture, uv - vec2(0.0, o.y))
+  ) * 0.15;
+  return c + cross_s;
+}
+
+// Approximates vignette using Chebyshev distance squared instead of pow()
+float vignetteApprox(vec2 uv, float strength) {
+  vec2 vigCoord = uv * 2.0 - 1.0;
+  float dist = max(abs(vigCoord.x), abs(vigCoord.y));
+  return 1.0 - dist * dist * strength;
 }
 
 void main() {
-  // Apply barrel distortion
-  vec2 uv = barrelDistort(v_texCoord, u_curvature);
+  vec2 uv = v_texCoord;
 
-  // Discard pixels outside [0,1] after distortion (black border)
-  if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-    fragColor = vec4(0.0, 0.0, 0.0, 1.0);
-    return;
-  }
-
-  // Base color with chromatic aberration
-  float caAmount = u_chromatic * 0.003;
-  vec3 color = chromaticAberration(uv, caAmount);
-
-  // --- Scanlines ---
-  float scanFreq = u_resolution.y;
-  float scanline = sin(uv.y * scanFreq * 3.14159) * 0.5 + 0.5;
-  color *= mix(1.0, 0.7 + 0.3 * scanline, u_scanlines);
-
-  // --- RGB phosphor mask ---
-  float maskX = mod(gl_FragCoord.x, 3.0);
-  vec3 mask = vec3(
-    maskX < 1.0 ? 1.0 : 0.85,
-    maskX >= 1.0 && maskX < 2.0 ? 1.0 : 0.85,
-    maskX >= 2.0 ? 1.0 : 0.85
-  );
-  color *= mix(vec3(1.0), mask, u_phosphor);
-
-  // --- Bloom / glow ---
-  vec3 bloom = vec3(0.0);
-  float texelW = 1.0 / u_resolution.x;
-  float texelH = 1.0 / u_resolution.y;
-  for (int x = -1; x <= 1; x++) {
-    for (int y = -1; y <= 1; y++) {
-      vec3 s = texture(u_texture, uv + vec2(float(x) * texelW * 1.5, float(y) * texelH * 1.5)).rgb;
-      float luma = dot(s, vec3(0.299, 0.587, 0.114));
-      bloom += s * smoothstep(0.5, 1.0, luma);
+  // Apply screen curvature if enabled (early out for out-of-bounds)
+  if (u_curvature > 0.001) {
+    uv = curveRemapUV(uv, u_curvature);
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+      fragColor = vec4(0.0);
+      return;
     }
   }
-  bloom /= 9.0;
-  color += bloom * u_bloom;
 
-  // --- Vignette ---
-  vec2 vigUv = uv * (1.0 - uv);
-  float vig = vigUv.x * vigUv.y * 15.0;
-  vig = pow(vig, u_vignette);
-  color *= vig;
+  // Get the original pixel color
+  vec4 pixel = texture(u_texture, uv);
 
-  // --- Flicker ---
-  float flicker = 1.0 - u_flicker * sin(u_time * 8.0);
-  color *= flicker;
+  // Apply bloom effect with threshold-based sampling (skip if disabled)
+  if (u_bloom > 0.001) {
+    float pixelLum = dot(pixel.rgb, LUMA);
+    float bloomThresholdHalf = BLOOM_THRESHOLD * BLOOM_THRESHOLD_FACTOR;
+    if (pixelLum > bloomThresholdHalf) {
+      vec4 bloomSample = sampleBloom(uv, 0.005, pixel);
+      bloomSample.rgb *= u_brightness;
+      float bloomLum = dot(bloomSample.rgb, LUMA);
+      float bloomFactor = u_bloom * max(0.0, (bloomLum - BLOOM_THRESHOLD) * BLOOM_FACTOR_MULT);
+      pixel.rgb += bloomSample.rgb * bloomFactor;
+    }
+  }
 
-  // --- Brightness ---
-  color *= u_brightness;
+  // Apply RGB shift (chromatic aberration) only if significant
+  if (u_chromatic > 0.005) {
+    float shift = u_chromatic * RGB_SHIFT_SCALE;
+    pixel.r += texture(u_texture, vec2(uv.x + shift, uv.y)).r * RGB_SHIFT_INTENSITY;
+    pixel.b += texture(u_texture, vec2(uv.x - shift, uv.y)).b * RGB_SHIFT_INTENSITY;
+  }
 
-  fragColor = vec4(color, 1.0);
+  // Apply brightness
+  pixel.rgb *= u_brightness;
+
+  // Apply contrast and saturation in one pass
+  float luminance = dot(pixel.rgb, LUMA);
+  pixel.rgb = (pixel.rgb - 0.5) * u_contrast + 0.5;
+  pixel.rgb = mix(vec3(luminance), pixel.rgb, u_saturation);
+
+  // Calculate combined lighting mask (scanlines, flicker, vignette)
+  float lightingMask = 1.0;
+
+  // Calculate scanlines (skip if disabled); use resolution height as scanline count
+  if (u_scanlines > 0.001) {
+    float scanlineY = uv.y * u_resolution.y;
+    float scanlinePattern = abs(sin(scanlineY * PI));
+
+    // Adaptive intensity
+    float yPattern = sin(uv.y * 30.0) * 0.5 + 0.5;
+    float adaptiveFactor = 1.0 - yPattern * ADAPTIVE_INTENSITY * 0.2;
+
+    lightingMask *= 1.0 - scanlinePattern * u_scanlines * adaptiveFactor;
+  }
+
+  // Apply flicker effect
+  if (u_flicker > 0.001) {
+    lightingMask *= 1.0 + sin(u_time * 110.0) * u_flicker;
+  }
+
+  // Apply vignette (skip if disabled)
+  if (u_vignette > 0.001) {
+    lightingMask *= vignetteApprox(uv, u_vignette);
+  }
+
+  // Apply combined lighting effects
+  pixel.rgb *= lightingMask;
+
+  // --- RGB phosphor mask (our addition, not in gingerbeardman's shader) ---
+  if (u_phosphor > 0.001) {
+    float maskX = mod(gl_FragCoord.x, 3.0);
+    vec3 mask = vec3(
+      maskX < 1.0 ? 1.0 : 0.85,
+      maskX >= 1.0 && maskX < 2.0 ? 1.0 : 0.85,
+      maskX >= 2.0 ? 1.0 : 0.85
+    );
+    pixel.rgb *= mix(vec3(1.0), mask, u_phosphor);
+  }
+
+  fragColor = pixel;
 }
 `
 
@@ -200,6 +267,8 @@ export class CrtShader {
   private uChromatic = -1
   private uFlicker = -1
   private uBrightness = -1
+  private uContrast = -1
+  private uSaturation = -1
 
   constructor(
     sourceCanvas: HTMLCanvasElement,
@@ -308,6 +377,8 @@ export class CrtShader {
       chromatic: d.chromatic * factor,
       flicker: d.flicker * factor,
       brightness: 1 + (d.brightness - 1) * factor,
+      contrast: 1 + (d.contrast - 1) * factor,
+      saturation: 1 + (d.saturation - 1) * factor,
     }
   }
 
@@ -370,6 +441,8 @@ export class CrtShader {
     this.uChromatic = gl.getUniformLocation(prog, 'u_chromatic') as number
     this.uFlicker = gl.getUniformLocation(prog, 'u_flicker') as number
     this.uBrightness = gl.getUniformLocation(prog, 'u_brightness') as number
+    this.uContrast = gl.getUniformLocation(prog, 'u_contrast') as number
+    this.uSaturation = gl.getUniformLocation(prog, 'u_saturation') as number
 
     // Full-screen quad (2 triangles)
     const positions = new Float32Array([
@@ -470,6 +543,8 @@ export class CrtShader {
     gl.uniform1f(loc(this.uChromatic), this.config.chromatic)
     gl.uniform1f(loc(this.uFlicker), this.config.flicker)
     gl.uniform1f(loc(this.uBrightness), this.config.brightness)
+    gl.uniform1f(loc(this.uContrast), this.config.contrast)
+    gl.uniform1f(loc(this.uSaturation), this.config.saturation)
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
   }

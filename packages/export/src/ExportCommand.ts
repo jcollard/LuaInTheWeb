@@ -178,6 +178,8 @@ export class ExportCommand implements ICommand {
     -- crt_chromatic = 0.0,    -- color fringing (0-1)
     -- crt_flicker = 0.01,     -- temporal flicker (0-0.15)
     -- crt_brightness = 1.1,   -- brightness boost (0.6-1.8)
+    -- crt_contrast = 1.05,    -- contrast adjustment (0.5-1.5)
+    -- crt_saturation = 1.1,   -- color saturation (0.5-1.5)
   },
   -- Export settings
   export = {

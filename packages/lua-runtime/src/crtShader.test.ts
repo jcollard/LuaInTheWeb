@@ -268,8 +268,10 @@ describe('CrtShader', () => {
       expect(cfg.curvature).toBeCloseTo(CRT_DEFAULTS.curvature * 0.5)
       expect(cfg.scanlines).toBeCloseTo(CRT_DEFAULTS.scanlines * 0.5)
       expect(cfg.bloom).toBeCloseTo(CRT_DEFAULTS.bloom * 0.5)
-      // Brightness scales relative to 1.0
+      // Brightness, contrast, saturation scale relative to 1.0
       expect(cfg.brightness).toBeCloseTo(1 + (CRT_DEFAULTS.brightness - 1) * 0.5)
+      expect(cfg.contrast).toBeCloseTo(1 + (CRT_DEFAULTS.contrast - 1) * 0.5)
+      expect(cfg.saturation).toBeCloseTo(1 + (CRT_DEFAULTS.saturation - 1) * 0.5)
       crt.dispose()
     })
 
@@ -290,6 +292,8 @@ describe('CrtShader', () => {
       expect(cfg.curvature).toBe(0)
       expect(cfg.scanlines).toBe(0)
       expect(cfg.brightness).toBe(1)
+      expect(cfg.contrast).toBe(1)
+      expect(cfg.saturation).toBe(1)
       crt.dispose()
     })
 
