@@ -19,8 +19,9 @@ import { setupAudioAPI } from './setupAudioAPI'
 import { setupAudioAssetAPI } from './setupAudioAssetAPI'
 import { AudioAssetManager } from './AudioAssetManager'
 import { audioLuaCode } from './audioLuaCode'
-import { AnsiController, type AnsiCallbacks } from './AnsiController'
+import { AnsiController, type AnsiCallbacks, type AnsiTerminalHandle } from './AnsiController'
 import { setupAnsiAPI } from './setupAnsiAPI'
+import { extractCrtConfig } from './projectCrtConfig'
 import { FileOperationsHandler } from './FileOperationsHandler'
 import type { CanvasMode, ScreenMode, HotReloadMode } from './LuaCommand'
 
@@ -497,8 +498,34 @@ __clear_execution_hook()
   private initAnsiAPI(): void {
     if (!this.engine || !this.options.ansiCallbacks) return
 
+    // Wrap onRequestAnsiTab to auto-apply CRT config from project.lua
+    const originalOnRequest = this.options.ansiCallbacks.onRequestAnsiTab
+    const wrappedOnRequest = async (ansiId: string): Promise<AnsiTerminalHandle> => {
+      const handle = await originalOnRequest(ansiId)
+
+      // Check for project.lua in cwd and apply CRT if configured
+      const projectLuaPath = `${this.context.cwd}/project.lua`
+      try {
+        if (this.context.filesystem.exists(projectLuaPath)) {
+          const content = this.context.filesystem.readFile(projectLuaPath)
+          if (content) {
+            const crtConfig = extractCrtConfig(content)
+            if (crtConfig) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              handle.setCrt?.(true, undefined, crtConfig as any)
+            }
+          }
+        }
+      } catch {
+        // Silently ignore project.lua read/parse errors
+      }
+
+      return handle
+    }
+
     const ansiCallbacks: AnsiCallbacks = {
       ...this.options.ansiCallbacks,
+      onRequestAnsiTab: wrappedOnRequest,
       onError: (error: string) => {
         this.onError(formatLuaError(error) + '\n')
       },
