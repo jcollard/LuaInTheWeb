@@ -52,32 +52,32 @@ describe('CrtOptionsModal', () => {
 
   it('sliders are disabled when CRT is off', () => {
     render(<CrtOptionsModal {...defaultProps()} />)
-    const slider = screen.getByTestId('crt-slider-scanlines') as HTMLInputElement
+    const slider = screen.getByTestId('crt-slider-scanlineIntensity') as HTMLInputElement
     expect(slider.disabled).toBe(true)
   })
 
   it('sliders are enabled when CRT is on', () => {
     render(<CrtOptionsModal {...defaultProps({ crtConfig: { ...CRT_DEFAULTS } })} />)
-    const slider = screen.getByTestId('crt-slider-scanlines') as HTMLInputElement
+    const slider = screen.getByTestId('crt-slider-scanlineIntensity') as HTMLInputElement
     expect(slider.disabled).toBe(false)
   })
 
   it('changing a slider calls onSetCrtConfig with updated value', () => {
     const onSetCrtConfig = vi.fn()
     render(<CrtOptionsModal {...defaultProps({ crtConfig: { ...CRT_DEFAULTS }, onSetCrtConfig })} />)
-    fireEvent.change(screen.getByTestId('crt-slider-scanlines'), { target: { value: '0.8' } })
-    expect(onSetCrtConfig).toHaveBeenCalledWith({ ...CRT_DEFAULTS, scanlines: 0.8 })
+    fireEvent.change(screen.getByTestId('crt-slider-scanlineIntensity'), { target: { value: '0.8' } })
+    expect(onSetCrtConfig).toHaveBeenCalledWith({ ...CRT_DEFAULTS, scanlineIntensity: 0.8 })
   })
 
   it('displays current values for each slider', () => {
     render(<CrtOptionsModal {...defaultProps({ crtConfig: { ...CRT_DEFAULTS } })} />)
-    expect(screen.getByTestId('crt-value-scanlines').textContent).toBe('0.15')
+    expect(screen.getByTestId('crt-value-scanlineIntensity').textContent).toBe('0.15')
     expect(screen.getByTestId('crt-value-curvature').textContent).toBe('0.150')
   })
 
   it('reset to defaults button calls onSetCrtConfig with defaults', () => {
     const onSetCrtConfig = vi.fn()
-    const custom = { ...CRT_DEFAULTS, scanlines: 0.9, bloom: 0.8 }
+    const custom = { ...CRT_DEFAULTS, scanlineIntensity: 0.9, bloomIntensity: 0.8 }
     render(<CrtOptionsModal {...defaultProps({ crtConfig: custom, onSetCrtConfig })} />)
     fireEvent.click(screen.getByTestId('crt-reset-defaults'))
     expect(onSetCrtConfig).toHaveBeenCalledWith({ ...CRT_DEFAULTS })
@@ -112,7 +112,7 @@ describe('CrtOptionsModal', () => {
 
   it('renders all 10 effect sliders', () => {
     render(<CrtOptionsModal {...defaultProps({ crtConfig: { ...CRT_DEFAULTS } })} />)
-    const keys = ['curvature', 'scanlines', 'bloom', 'vignette', 'chromatic', 'flicker', 'brightness', 'contrast', 'saturation', 'phosphor']
+    const keys = ['curvature', 'scanlineIntensity', 'bloomIntensity', 'vignetteStrength', 'rgbShift', 'flickerStrength', 'brightness', 'contrast', 'saturation', 'phosphor']
     for (const key of keys) {
       expect(screen.getByTestId(`crt-slider-${key}`)).toBeTruthy()
     }
@@ -121,16 +121,16 @@ describe('CrtOptionsModal', () => {
   describe('localStorage persistence', () => {
     it('saves config to localStorage when slider changes', () => {
       const onSetCrtConfig = vi.fn()
-      const custom = { ...CRT_DEFAULTS, scanlines: 0.8 }
+      const custom = { ...CRT_DEFAULTS, scanlineIntensity: 0.8 }
       render(<CrtOptionsModal {...defaultProps({ crtConfig: custom, onSetCrtConfig })} />)
-      fireEvent.change(screen.getByTestId('crt-slider-bloom'), { target: { value: '0.5' } })
+      fireEvent.change(screen.getByTestId('crt-slider-bloomIntensity'), { target: { value: '0.5' } })
       const stored = JSON.parse(localStorage.getItem(CRT_STORAGE_KEY)!)
-      expect(stored.scanlines).toBe(0.8)
-      expect(stored.bloom).toBe(0.5)
+      expect(stored.scanlineIntensity).toBe(0.8)
+      expect(stored.bloomIntensity).toBe(0.5)
     })
 
     it('restores saved config from localStorage when toggling on', () => {
-      const saved = { ...CRT_DEFAULTS, scanlines: 0.9, bloom: 0.7 }
+      const saved = { ...CRT_DEFAULTS, scanlineIntensity: 0.9, bloomIntensity: 0.7 }
       localStorage.setItem(CRT_STORAGE_KEY, JSON.stringify(saved))
       const onSetCrtConfig = vi.fn()
       render(<CrtOptionsModal {...defaultProps({ onSetCrtConfig })} />)
@@ -165,7 +165,7 @@ describe('CrtOptionsModal', () => {
 
     it('saves config on reset to defaults', () => {
       const onSetCrtConfig = vi.fn()
-      const custom = { ...CRT_DEFAULTS, scanlines: 0.9 }
+      const custom = { ...CRT_DEFAULTS, scanlineIntensity: 0.9 }
       render(<CrtOptionsModal {...defaultProps({ crtConfig: custom, onSetCrtConfig })} />)
       fireEvent.click(screen.getByTestId('crt-reset-defaults'))
       const stored = JSON.parse(localStorage.getItem(CRT_STORAGE_KEY)!)

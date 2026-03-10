@@ -253,11 +253,11 @@ describe('CrtShader', () => {
 
     it('enable() with partial config merges with defaults', () => {
       const crt = new CrtShader(sourceCanvas, container)
-      crt.enable({ scanlines: 0.8, curvature: 0.3 })
+      crt.enable({ scanlineIntensity: 0.8, curvature: 0.3 })
       const cfg = crt.getConfig()
-      expect(cfg.scanlines).toBe(0.8)
+      expect(cfg.scanlineIntensity).toBe(0.8)
       expect(cfg.curvature).toBe(0.3)
-      expect(cfg.bloom).toBe(CRT_DEFAULTS.bloom)
+      expect(cfg.bloomIntensity).toBe(CRT_DEFAULTS.bloomIntensity)
       crt.dispose()
     })
 
@@ -266,8 +266,8 @@ describe('CrtShader', () => {
       crt.enable(0.5)
       const cfg = crt.getConfig()
       expect(cfg.curvature).toBeCloseTo(CRT_DEFAULTS.curvature * 0.5)
-      expect(cfg.scanlines).toBeCloseTo(CRT_DEFAULTS.scanlines * 0.5)
-      expect(cfg.bloom).toBeCloseTo(CRT_DEFAULTS.bloom * 0.5)
+      expect(cfg.scanlineIntensity).toBeCloseTo(CRT_DEFAULTS.scanlineIntensity * 0.5)
+      expect(cfg.bloomIntensity).toBeCloseTo(CRT_DEFAULTS.bloomIntensity * 0.5)
       // Brightness, contrast, saturation scale relative to 1.0
       expect(cfg.brightness).toBeCloseTo(1 + (CRT_DEFAULTS.brightness - 1) * 0.5)
       expect(cfg.contrast).toBeCloseTo(1 + (CRT_DEFAULTS.contrast - 1) * 0.5)
@@ -278,9 +278,9 @@ describe('CrtShader', () => {
     it('setConfig() merges partial config', () => {
       const crt = new CrtShader(sourceCanvas, container)
       crt.enable()
-      crt.setConfig({ bloom: 0.9 })
-      expect(crt.getConfig().bloom).toBe(0.9)
-      expect(crt.getConfig().scanlines).toBe(CRT_DEFAULTS.scanlines)
+      crt.setConfig({ bloomIntensity: 0.9 })
+      expect(crt.getConfig().bloomIntensity).toBe(0.9)
+      expect(crt.getConfig().scanlineIntensity).toBe(CRT_DEFAULTS.scanlineIntensity)
       crt.dispose()
     })
 
@@ -290,7 +290,7 @@ describe('CrtShader', () => {
       crt.setIntensity(0)
       const cfg = crt.getConfig()
       expect(cfg.curvature).toBe(0)
-      expect(cfg.scanlines).toBe(0)
+      expect(cfg.scanlineIntensity).toBe(0)
       expect(cfg.brightness).toBe(1)
       expect(cfg.contrast).toBe(1)
       expect(cfg.saturation).toBe(1)
@@ -299,7 +299,7 @@ describe('CrtShader', () => {
 
     it('per-effect uniforms are set during render', () => {
       const crt = new CrtShader(sourceCanvas, container)
-      crt.enable({ scanlines: 0.9 })
+      crt.enable({ scanlineIntensity: 0.9 })
       // Verify uniform1f was called (indirectly via the mock GL)
       expect(mockGL.uniform1f).toHaveBeenCalled()
       crt.dispose()

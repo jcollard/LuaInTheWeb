@@ -171,12 +171,12 @@ export class ExportCommand implements ICommand {
     -- CRT monitor effect
     -- crt = true,
     -- crt_curvature = 0.15,   -- barrel distortion (0-0.5)
-    -- crt_scanlines = 0.15,   -- scanline intensity (0-1)
+    -- crt_scanlineIntensity = 0.15,   -- scanline intensity (0-1)
     -- crt_phosphor = 0.5,     -- RGB phosphor mask (0-1)
-    -- crt_vignette = 0.3,     -- edge darkening (0-1)
-    -- crt_bloom = 0.2,        -- glow on bright areas (0-1)
-    -- crt_chromatic = 0.0,    -- color fringing (0-1)
-    -- crt_flicker = 0.01,     -- temporal flicker (0-0.15)
+    -- crt_vignetteStrength = 0.3,     -- edge darkening (0-1)
+    -- crt_bloomIntensity = 0.2,        -- glow on bright areas (0-1)
+    -- crt_rgbShift = 0.0,    -- color fringing (0-1)
+    -- crt_flickerStrength = 0.01,     -- temporal flicker (0-0.15)
     -- crt_brightness = 1.1,   -- brightness boost (0.6-1.8)
     -- crt_contrast = 1.05,    -- contrast adjustment (0.5-1.5)
     -- crt_saturation = 1.1,   -- color saturation (0.5-1.5)

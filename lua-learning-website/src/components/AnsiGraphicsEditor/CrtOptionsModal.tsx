@@ -32,11 +32,11 @@ interface SliderDef {
 
 const SLIDERS: SliderDef[] = [
   { key: 'curvature', label: 'Curvature', min: 0, max: 0.5, step: 0.005 },
-  { key: 'scanlines', label: 'Scanlines', min: 0, max: 1, step: 0.01 },
-  { key: 'bloom', label: 'Bloom', min: 0, max: 1, step: 0.01 },
-  { key: 'vignette', label: 'Vignette', min: 0, max: 1, step: 0.01 },
-  { key: 'chromatic', label: 'Chromatic', min: 0, max: 1, step: 0.01 },
-  { key: 'flicker', label: 'Flicker', min: 0, max: 0.15, step: 0.001 },
+  { key: 'scanlineIntensity', label: 'Scanlines', min: 0, max: 1, step: 0.01 },
+  { key: 'bloomIntensity', label: 'Bloom', min: 0, max: 1, step: 0.01 },
+  { key: 'vignetteStrength', label: 'Vignette', min: 0, max: 1, step: 0.01 },
+  { key: 'rgbShift', label: 'RGB Shift', min: 0, max: 1, step: 0.01 },
+  { key: 'flickerStrength', label: 'Flicker', min: 0, max: 0.15, step: 0.001 },
   { key: 'brightness', label: 'Brightness', min: 0.6, max: 1.8, step: 0.01 },
   { key: 'contrast', label: 'Contrast', min: 0.5, max: 1.5, step: 0.01 },
   { key: 'saturation', label: 'Saturation', min: 0.5, max: 1.5, step: 0.01 },
@@ -125,7 +125,7 @@ export function CrtOptionsModal({ onClose, crtConfig, onSetCrtConfig }: CrtOptio
                 style={{ flex: 1 }}
               />
               <span data-testid={`crt-value-${key}`} style={{ minWidth: '3em', textAlign: 'right' }}>
-                {config[key].toFixed(key === 'curvature' || key === 'flicker' ? 3 : 2)}
+                {config[key].toFixed(key === 'curvature' || key === 'flickerStrength' ? 3 : 2)}
               </span>
             </label>
           ))}

@@ -1,3 +1,4 @@
+/* eslint-disable max-lines -- GLSL shader string inflates line count; logic is ~250 lines */
 /**
  * WebGL2 CRT post-processing shader overlay.
  *
@@ -16,17 +17,17 @@ export interface CrtConfig {
   /** Barrel distortion amount (0–0.5, default 0.15) */
   curvature: number
   /** Scanline darkness (0–1, default 0.15) */
-  scanlines: number
+  scanlineIntensity: number
   /** RGB phosphor mask strength (0–1, default 0.5) */
   phosphor: number
   /** Edge darkening (0–1, default 0.3) */
-  vignette: number
+  vignetteStrength: number
   /** Bright pixel glow (0–1, default 0.2) */
-  bloom: number
+  bloomIntensity: number
   /** Chromatic aberration / color fringing (0–1, default 0.0) */
-  chromatic: number
+  rgbShift: number
   /** Temporal flicker (0–0.15, default 0.01) */
-  flicker: number
+  flickerStrength: number
   /** Brightness multiplier (0.6–1.8, default 1.1) */
   brightness: number
   /** Contrast adjustment (0.5–1.5, default 1.05) */
@@ -38,12 +39,12 @@ export interface CrtConfig {
 /** Default CRT config values matching the gingerbeardman/webgl-crt-shader defaults. */
 export const CRT_DEFAULTS: Readonly<CrtConfig> = {
   curvature: 0.15,
-  scanlines: 0.15,
+  scanlineIntensity: 0.15,
   phosphor: 0.5,
-  vignette: 0.3,
-  bloom: 0.2,
-  chromatic: 0.0,
-  flicker: 0.01,
+  vignetteStrength: 0.3,
+  bloomIntensity: 0.2,
+  rgbShift: 0.0,
+  flickerStrength: 0.01,
   brightness: 1.1,
   contrast: 1.05,
   saturation: 1.1,
@@ -82,12 +83,12 @@ uniform vec2 u_resolution;
 
 // Per-effect uniforms
 uniform float u_curvature;
-uniform float u_scanlines;
+uniform float u_scanlineIntensity;
 uniform float u_phosphor;
-uniform float u_vignette;
-uniform float u_bloom;
-uniform float u_chromatic;
-uniform float u_flicker;
+uniform float u_vignetteStrength;
+uniform float u_bloomIntensity;
+uniform float u_rgbShift;
+uniform float u_flickerStrength;
 uniform float u_brightness;
 uniform float u_contrast;
 uniform float u_saturation;
@@ -147,21 +148,21 @@ void main() {
   vec4 pixel = texture(u_texture, uv);
 
   // Apply bloom effect with threshold-based sampling (skip if disabled)
-  if (u_bloom > 0.001) {
+  if (u_bloomIntensity > 0.001) {
     float pixelLum = dot(pixel.rgb, LUMA);
     float bloomThresholdHalf = BLOOM_THRESHOLD * BLOOM_THRESHOLD_FACTOR;
     if (pixelLum > bloomThresholdHalf) {
       vec4 bloomSample = sampleBloom(uv, 0.005, pixel);
       bloomSample.rgb *= u_brightness;
       float bloomLum = dot(bloomSample.rgb, LUMA);
-      float bloomFactor = u_bloom * max(0.0, (bloomLum - BLOOM_THRESHOLD) * BLOOM_FACTOR_MULT);
+      float bloomFactor = u_bloomIntensity * max(0.0, (bloomLum - BLOOM_THRESHOLD) * BLOOM_FACTOR_MULT);
       pixel.rgb += bloomSample.rgb * bloomFactor;
     }
   }
 
   // Apply RGB shift (chromatic aberration) only if significant
-  if (u_chromatic > 0.005) {
-    float shift = u_chromatic * RGB_SHIFT_SCALE;
+  if (u_rgbShift > 0.005) {
+    float shift = u_rgbShift * RGB_SHIFT_SCALE;
     pixel.r += texture(u_texture, vec2(uv.x + shift, uv.y)).r * RGB_SHIFT_INTENSITY;
     pixel.b += texture(u_texture, vec2(uv.x - shift, uv.y)).b * RGB_SHIFT_INTENSITY;
   }
@@ -178,7 +179,7 @@ void main() {
   float lightingMask = 1.0;
 
   // Calculate scanlines (skip if disabled); use resolution height as scanline count
-  if (u_scanlines > 0.001) {
+  if (u_scanlineIntensity > 0.001) {
     float scanlineY = uv.y * u_resolution.y;
     float scanlinePattern = abs(sin(scanlineY * PI));
 
@@ -186,17 +187,17 @@ void main() {
     float yPattern = sin(uv.y * 30.0) * 0.5 + 0.5;
     float adaptiveFactor = 1.0 - yPattern * ADAPTIVE_INTENSITY * 0.2;
 
-    lightingMask *= 1.0 - scanlinePattern * u_scanlines * adaptiveFactor;
+    lightingMask *= 1.0 - scanlinePattern * u_scanlineIntensity * adaptiveFactor;
   }
 
   // Apply flicker effect
-  if (u_flicker > 0.001) {
-    lightingMask *= 1.0 + sin(u_time * 110.0) * u_flicker;
+  if (u_flickerStrength > 0.001) {
+    lightingMask *= 1.0 + sin(u_time * 110.0) * u_flickerStrength;
   }
 
   // Apply vignette (skip if disabled)
-  if (u_vignette > 0.001) {
-    lightingMask *= vignetteApprox(uv, u_vignette);
+  if (u_vignetteStrength > 0.001) {
+    lightingMask *= vignetteApprox(uv, u_vignetteStrength);
   }
 
   // Apply combined lighting effects
@@ -260,12 +261,12 @@ export class CrtShader {
   private uTime = -1
   private uResolution = -1
   private uCurvature = -1
-  private uScanlines = -1
+  private uScanlineIntensity = -1
   private uPhosphor = -1
-  private uVignette = -1
-  private uBloom = -1
-  private uChromatic = -1
-  private uFlicker = -1
+  private uVignetteStrength = -1
+  private uBloomIntensity = -1
+  private uRgbShift = -1
+  private uFlickerStrength = -1
   private uBrightness = -1
   private uContrast = -1
   private uSaturation = -1
@@ -370,12 +371,12 @@ export class CrtShader {
     const d = CRT_DEFAULTS
     this.config = {
       curvature: d.curvature * factor,
-      scanlines: d.scanlines * factor,
+      scanlineIntensity: d.scanlineIntensity * factor,
       phosphor: d.phosphor * factor,
-      vignette: d.vignette * factor,
-      bloom: d.bloom * factor,
-      chromatic: d.chromatic * factor,
-      flicker: d.flicker * factor,
+      vignetteStrength: d.vignetteStrength * factor,
+      bloomIntensity: d.bloomIntensity * factor,
+      rgbShift: d.rgbShift * factor,
+      flickerStrength: d.flickerStrength * factor,
       brightness: 1 + (d.brightness - 1) * factor,
       contrast: 1 + (d.contrast - 1) * factor,
       saturation: 1 + (d.saturation - 1) * factor,
@@ -385,8 +386,8 @@ export class CrtShader {
   /** Compute a single fallback intensity for CSS mode (average of normalized config). */
   private computeFallbackIntensity(): number {
     const d = CRT_DEFAULTS
-    // Use scanlines as representative intensity for CSS fallback
-    return d.scanlines > 0 ? this.config.scanlines / d.scanlines : 0.7
+    // Use scanlineIntensity as representative intensity for CSS fallback
+    return d.scanlineIntensity > 0 ? this.config.scanlineIntensity / d.scanlineIntensity : 0.7
   }
 
   /**
@@ -434,12 +435,12 @@ export class CrtShader {
     this.uTime = gl.getUniformLocation(prog, 'u_time') as number
     this.uResolution = gl.getUniformLocation(prog, 'u_resolution') as number
     this.uCurvature = gl.getUniformLocation(prog, 'u_curvature') as number
-    this.uScanlines = gl.getUniformLocation(prog, 'u_scanlines') as number
+    this.uScanlineIntensity = gl.getUniformLocation(prog, 'u_scanlineIntensity') as number
     this.uPhosphor = gl.getUniformLocation(prog, 'u_phosphor') as number
-    this.uVignette = gl.getUniformLocation(prog, 'u_vignette') as number
-    this.uBloom = gl.getUniformLocation(prog, 'u_bloom') as number
-    this.uChromatic = gl.getUniformLocation(prog, 'u_chromatic') as number
-    this.uFlicker = gl.getUniformLocation(prog, 'u_flicker') as number
+    this.uVignetteStrength = gl.getUniformLocation(prog, 'u_vignetteStrength') as number
+    this.uBloomIntensity = gl.getUniformLocation(prog, 'u_bloomIntensity') as number
+    this.uRgbShift = gl.getUniformLocation(prog, 'u_rgbShift') as number
+    this.uFlickerStrength = gl.getUniformLocation(prog, 'u_flickerStrength') as number
     this.uBrightness = gl.getUniformLocation(prog, 'u_brightness') as number
     this.uContrast = gl.getUniformLocation(prog, 'u_contrast') as number
     this.uSaturation = gl.getUniformLocation(prog, 'u_saturation') as number
@@ -536,12 +537,12 @@ export class CrtShader {
     gl.uniform1f(loc(this.uTime), (performance.now() - this.startTime) / 1000)
     gl.uniform2f(loc(this.uResolution), canvas.width, canvas.height)
     gl.uniform1f(loc(this.uCurvature), this.config.curvature)
-    gl.uniform1f(loc(this.uScanlines), this.config.scanlines)
+    gl.uniform1f(loc(this.uScanlineIntensity), this.config.scanlineIntensity)
     gl.uniform1f(loc(this.uPhosphor), this.config.phosphor)
-    gl.uniform1f(loc(this.uVignette), this.config.vignette)
-    gl.uniform1f(loc(this.uBloom), this.config.bloom)
-    gl.uniform1f(loc(this.uChromatic), this.config.chromatic)
-    gl.uniform1f(loc(this.uFlicker), this.config.flicker)
+    gl.uniform1f(loc(this.uVignetteStrength), this.config.vignetteStrength)
+    gl.uniform1f(loc(this.uBloomIntensity), this.config.bloomIntensity)
+    gl.uniform1f(loc(this.uRgbShift), this.config.rgbShift)
+    gl.uniform1f(loc(this.uFlickerStrength), this.config.flickerStrength)
     gl.uniform1f(loc(this.uBrightness), this.config.brightness)
     gl.uniform1f(loc(this.uContrast), this.config.contrast)
     gl.uniform1f(loc(this.uSaturation), this.config.saturation)

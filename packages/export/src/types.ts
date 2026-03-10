@@ -113,17 +113,17 @@ export interface AnsiConfig {
   /** Barrel distortion amount (0-0.5, default 0.15) */
   crt_curvature?: number
   /** Scanline intensity (0-1, default 0.15) */
-  crt_scanlines?: number
+  crt_scanlineIntensity?: number
   /** RGB phosphor mask strength (0-1, default 0.5) */
   crt_phosphor?: number
   /** Edge darkening (0-1, default 0.3) */
-  crt_vignette?: number
+  crt_vignetteStrength?: number
   /** Glow on bright areas (0-1, default 0.2) */
-  crt_bloom?: number
+  crt_bloomIntensity?: number
   /** Color fringing (0-1, default 0.0) */
-  crt_chromatic?: number
+  crt_rgbShift?: number
   /** Temporal flicker (0-0.15, default 0.01) */
-  crt_flicker?: number
+  crt_flickerStrength?: number
   /** Brightness boost (0.6-1.8, default 1.1) */
   crt_brightness?: number
   /** Contrast adjustment (0.5-1.5, default 1.05) */
