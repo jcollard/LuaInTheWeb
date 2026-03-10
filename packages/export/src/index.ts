@@ -10,6 +10,7 @@ export type {
   ProjectConfig,
   CanvasConfig,
   ShellConfig,
+  AnsiConfig,
   ExportOptions,
   CollectedFile,
   CollectedAsset,

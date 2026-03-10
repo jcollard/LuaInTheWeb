@@ -9,6 +9,11 @@ import {
 import { ANSI_INLINE_JS } from './runtime/ansi-inline.generated'
 import { XTERM_WITH_CANVAS_ADDON_JS } from './runtime/xterm-canvas.generated'
 
+/** Emit a CRT config field: literal value if defined, CRT_DEFAULTS fallback otherwise. */
+function crtField(name: string, value: number | undefined): string {
+  return value !== undefined ? `${name}: ${value}` : `${name}: CRT_DEFAULTS.${name}`
+}
+
 /**
  * Generate HTML for an ANSI terminal project.
  * @param config - Project configuration
@@ -28,7 +33,24 @@ export function generateAnsiHtml(
   const fontSize = config.ansi?.font_size ?? 16
   const scaleMode = config.ansi?.scale ?? 'integer'
   const crtEnabled = config.ansi?.crt ?? false
-  const crtIntensity = config.ansi?.crt_intensity ?? 0.7
+
+  // Build CRT config JS object entries — use literal values when set, CRT_DEFAULTS fallback otherwise
+  const crtConfigEntries = crtEnabled ? [
+    `smoothing: ${config.ansi?.crt_smoothing ?? true}`,
+    crtField('scanlineIntensity', config.ansi?.crt_scanlineIntensity),
+    crtField('scanlineCount', config.ansi?.crt_scanlineCount),
+    crtField('adaptiveIntensity', config.ansi?.crt_adaptiveIntensity),
+    crtField('brightness', config.ansi?.crt_brightness),
+    crtField('contrast', config.ansi?.crt_contrast),
+    crtField('saturation', config.ansi?.crt_saturation),
+    crtField('bloomIntensity', config.ansi?.crt_bloomIntensity),
+    crtField('bloomThreshold', config.ansi?.crt_bloomThreshold),
+    crtField('rgbShift', config.ansi?.crt_rgbShift),
+    crtField('vignetteStrength', config.ansi?.crt_vignetteStrength),
+    crtField('curvature', config.ansi?.crt_curvature),
+    crtField('flickerStrength', config.ansi?.crt_flickerStrength),
+    crtField('phosphor', config.ansi?.crt_phosphor),
+  ].join(', ') : ''
 
   // Escape audioLuaCode for safe embedding in JS template literal
   const escapedAudioLuaCode = audioLuaCode
@@ -96,14 +118,10 @@ export function generateAnsiHtml(
     }
     #terminal-wrapper .xterm-viewport {
       overflow: hidden !important;
-    }${crtEnabled ? `
-    body.crt-enabled { --crt-intensity: ${crtIntensity}; position: relative; filter: brightness(calc(1 + 0.1 * var(--crt-intensity))) contrast(calc(1 + 0.05 * var(--crt-intensity))); box-shadow: inset 0 0 calc(60px * var(--crt-intensity)) rgba(0,255,100,calc(0.03 * var(--crt-intensity))), inset 0 0 calc(120px * var(--crt-intensity)) rgba(0,255,100,calc(0.015 * var(--crt-intensity))); animation: crt-flicker calc(8s / var(--crt-intensity)) infinite; }
-    body.crt-enabled::before { content: ''; position: fixed; inset: 0; background: repeating-linear-gradient(to bottom, transparent, transparent 1px, rgba(0,0,0,calc(0.15 * var(--crt-intensity))) 1px, rgba(0,0,0,calc(0.15 * var(--crt-intensity))) 2px), repeating-linear-gradient(to right, rgba(255,0,0,calc(0.04 * var(--crt-intensity))), rgba(0,255,0,calc(0.04 * var(--crt-intensity))) 33%, rgba(0,0,255,calc(0.04 * var(--crt-intensity))) 66%, rgba(255,0,0,calc(0.04 * var(--crt-intensity))) 100%); background-size: 100% 100%, 3px 100%; pointer-events: none; z-index: 10; }
-    body.crt-enabled::after { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,calc(0.4 * var(--crt-intensity))) 100%); pointer-events: none; z-index: 10; }
-    @keyframes crt-flicker { 0%, 100% { opacity: 1; } 50% { opacity: 0.99; } }` : ''}
+    }
   </style>
 </head>
-<body${crtEnabled ? ' class="crt-enabled"' : ''}>
+<body>
   <div id="start-overlay"><span>Click to Start</span></div>
   <div id="terminal-wrapper" tabindex="0"></div>
 
@@ -241,13 +259,35 @@ export function generateAnsiHtml(
       applyScale();
       window.addEventListener('resize', applyScale);
 
+      // Initialize WebGL CRT shader if enabled
+      let crtShader = null;
+      ${crtEnabled ? `{
+        const CrtShader = globalThis.AnsiStandalone.CrtShader;
+        const CRT_DEFAULTS = globalThis.AnsiStandalone.CRT_DEFAULTS;
+        const CRT_CONFIG = { ${crtConfigEntries} };
+        const canvas = wrapper.querySelector('canvas');
+        if (canvas) {
+          crtShader = new CrtShader(canvas, wrapper, {});
+          crtShader.enable(CRT_CONFIG);
+        }
+      }` : ''}
+
       // Create AnsiTerminalHandle wrapping xterm.js
       const handle = {
         write: (data) => term.write(data), container: wrapper, dispose: () => term.dispose(),
-        setCrt: (enabled, intensity) => {
-          const b = document.body;
-          if (enabled) { b.classList.add('crt-enabled'); b.style.setProperty('--crt-intensity', String(intensity ?? 0.7)); }
-          else { b.classList.remove('crt-enabled'); b.style.removeProperty('--crt-intensity'); }
+        setCrt: (enabled) => {
+          if (enabled && !crtShader) {
+            const CrtShader = globalThis.AnsiStandalone.CrtShader;
+            const CRT_DEFAULTS = globalThis.AnsiStandalone.CRT_DEFAULTS;
+            const canvas = wrapper.querySelector('canvas');
+            if (canvas) {
+              crtShader = new CrtShader(canvas, wrapper, {});
+              crtShader.enable({ ...CRT_DEFAULTS });
+            }
+          } else if (!enabled && crtShader) {
+            crtShader.disable();
+            crtShader = null;
+          }
         },
       };
       const callbacks = {

@@ -15,6 +15,7 @@ import type { AnsiCallbacks, AnsiTerminalHandle } from '@lua-learning/lua-runtim
 import { setupAnsiAPI } from '@lua-learning/lua-runtime'
 import type { AnsiAPIOptions } from '@lua-learning/lua-runtime'
 import { ansiLuaCode } from '@lua-learning/lua-runtime'
+import { CrtShader, CRT_DEFAULTS } from '@lua-learning/lua-runtime'
 
 // Expose globally for use in exported HTML
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -22,6 +23,8 @@ import { ansiLuaCode } from '@lua-learning/lua-runtime'
   AnsiController,
   setupAnsiAPI,
   ansiLuaCode,
+  CrtShader,
+  CRT_DEFAULTS,
 }
 
 export type { AnsiCallbacks, AnsiTerminalHandle, AnsiAPIOptions }

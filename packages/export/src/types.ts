@@ -107,36 +107,33 @@ export interface AnsiConfig {
   /** Enable CRT monitor effect (scanlines, vignette, phosphor glow). Default: false */
   crt?: boolean
 
-  /** CRT effect intensity 0-1 (default: 0.7). Only used when crt is true. Legacy shortcut. */
-  crt_intensity?: number
-
   /** Texture smoothing (default true) */
   crt_smoothing?: boolean
-  /** Scanline intensity (0-1, default 0.5) */
+  /** Scanline intensity (0-1, default 0.33) */
   crt_scanlineIntensity?: number
-  /** Scanline count (50-1200, default 256) */
+  /** Scanline count (50-1200, default 150) */
   crt_scanlineCount?: number
-  /** Scanline adaptive modulation (0-1, default 0.3) */
+  /** Scanline adaptive modulation (0-1, default 1) */
   crt_adaptiveIntensity?: number
-  /** Brightness boost (0.6-1.8, default 1.5) */
+  /** Brightness boost (0.6-1.8, default 1.15) */
   crt_brightness?: number
-  /** Contrast adjustment (0.5-1.5, default 1.05) */
+  /** Contrast adjustment (0.5-1.5, default 1) */
   crt_contrast?: number
-  /** Color saturation (0-2, default 1.1) */
+  /** Color saturation (0-2, default 1) */
   crt_saturation?: number
-  /** Glow on bright areas (0-1.5, default 0.5) */
+  /** Glow on bright areas (0-1.5, default 0.25) */
   crt_bloomIntensity?: number
-  /** Bloom luminance threshold (0-1, default 0.5) */
+  /** Bloom luminance threshold (0-1, default 0) */
   crt_bloomThreshold?: number
-  /** Color fringing (0-1, default 1.0) */
+  /** Color fringing (0-1, default 1) */
   crt_rgbShift?: number
-  /** Edge darkening (0-2, default 0.3) */
+  /** Edge darkening (0-2, default 0.22) */
   crt_vignetteStrength?: number
-  /** Barrel distortion amount (0-0.5, default 0.1) */
+  /** Barrel distortion amount (0-0.5, default 0.05) */
   crt_curvature?: number
-  /** Temporal flicker (0-0.15, default 0.01) */
+  /** Temporal flicker (0-0.15, default 0) */
   crt_flickerStrength?: number
-  /** RGB phosphor mask strength (0-1, default 0.5) */
+  /** RGB phosphor mask strength (0-1, default 0) */
   crt_phosphor?: number
 }
 

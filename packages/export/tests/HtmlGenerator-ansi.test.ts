@@ -282,4 +282,74 @@ describe('HtmlGenerator - generateAnsi', () => {
 
     expect(html).toContain('term.options.fontSize = FONT_SIZE * newScale')
   })
+
+  it('should not include CrtShader initialization when crt is disabled', () => {
+    const generator = new HtmlGenerator(createOptions())
+    const config = createConfig({ ansi: { columns: 80, rows: 25, font_size: 16, crt: false } })
+    const luaFiles: CollectedFile[] = []
+
+    const html = generator.generateAnsi(config, luaFiles, [])
+
+    expect(html).not.toContain('CRT_CONFIG')
+  })
+
+  it('should not include CSS crt-enabled class', () => {
+    const generator = new HtmlGenerator(createOptions())
+    const config = createConfig({ ansi: { columns: 80, rows: 25, font_size: 16, crt: true } })
+    const luaFiles: CollectedFile[] = []
+
+    const html = generator.generateAnsi(config, luaFiles, [])
+
+    expect(html).not.toContain('crt-enabled')
+    expect(html).not.toContain('crt-flicker')
+  })
+
+  it('should initialize CrtShader when crt is enabled', () => {
+    const generator = new HtmlGenerator(createOptions())
+    const config = createConfig({ ansi: { columns: 80, rows: 25, font_size: 16, crt: true } })
+    const luaFiles: CollectedFile[] = []
+
+    const html = generator.generateAnsi(config, luaFiles, [])
+
+    expect(html).toContain('AnsiStandalone.CrtShader')
+    expect(html).toContain('AnsiStandalone.CRT_DEFAULTS')
+    expect(html).toContain('CRT_CONFIG')
+    expect(html).toContain('crtShader.enable(CRT_CONFIG)')
+  })
+
+  it('should use CRT_DEFAULTS fallback for unset CRT parameters', () => {
+    const generator = new HtmlGenerator(createOptions())
+    const config = createConfig({ ansi: { columns: 80, rows: 25, font_size: 16, crt: true } })
+    const luaFiles: CollectedFile[] = []
+
+    const html = generator.generateAnsi(config, luaFiles, [])
+
+    expect(html).toContain('scanlineIntensity: CRT_DEFAULTS.scanlineIntensity')
+    expect(html).toContain('curvature: CRT_DEFAULTS.curvature')
+  })
+
+  it('should use literal values for explicitly set CRT parameters', () => {
+    const generator = new HtmlGenerator(createOptions())
+    const config = createConfig({
+      ansi: { columns: 80, rows: 25, font_size: 16, crt: true, crt_scanlineIntensity: 0.8, crt_curvature: 0.2 },
+    })
+    const luaFiles: CollectedFile[] = []
+
+    const html = generator.generateAnsi(config, luaFiles, [])
+
+    expect(html).toContain('scanlineIntensity: 0.8')
+    expect(html).toContain('curvature: 0.2')
+  })
+
+  it('should include setCrt handler using CrtShader', () => {
+    const generator = new HtmlGenerator(createOptions())
+    const config = createConfig()
+    const luaFiles: CollectedFile[] = []
+
+    const html = generator.generateAnsi(config, luaFiles, [])
+
+    expect(html).toContain('setCrt:')
+    expect(html).toContain('crtShader.disable()')
+    expect(html).not.toContain('crt-enabled')
+  })
 })
