@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef } from 'react'
 import type { ScaleMode } from '../AnsiGraphicsEditor/types'
 import { Terminal } from '@xterm/xterm'
 import { CanvasAddon } from '@xterm/addon-canvas'
-import { useCrt } from '../../contexts/CrtContext'
 import '@xterm/xterm/css/xterm.css'
 import styles from './AnsiTerminalPanel.module.css'
 
@@ -18,6 +17,8 @@ export interface AnsiTerminalHandle {
   container: HTMLElement
   /** Dispose of the terminal handle */
   dispose: () => void
+  /** Enable/disable CRT monitor effect with optional intensity (0-1, default 0.7) */
+  setCrt: (enabled: boolean, intensity?: number) => void
 }
 
 export interface AnsiTerminalPanelProps {
@@ -31,7 +32,6 @@ export interface AnsiTerminalPanelProps {
 }
 
 export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady }: AnsiTerminalPanelProps) {
-  const { enabled: crtEnabled, intensity: crtIntensity } = useCrt()
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const terminalRef = useRef<Terminal | null>(null)
@@ -126,6 +126,17 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
           dispose: () => {
             // No-op - terminal lifecycle managed by this component's cleanup
           },
+          setCrt: (enabled: boolean, intensity?: number) => {
+            const el = containerRef.current
+            if (!el) return
+            if (enabled) {
+              el.classList.add(styles.crtEnabled)
+              el.style.setProperty('--crt-intensity', String(intensity ?? 0.7))
+            } else {
+              el.classList.remove(styles.crtEnabled)
+              el.style.removeProperty('--crt-intensity')
+            }
+          },
         }
       }
 
@@ -171,15 +182,10 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
     wrapperRef.current?.focus()
   }, [])
 
-  const containerClassName = crtEnabled
-    ? `${styles.container} ${styles.crtEnabled}`
-    : styles.container
-
   return (
     <div
       ref={containerRef}
-      className={containerClassName}
-      style={crtEnabled ? { '--crt-intensity': crtIntensity } as React.CSSProperties : undefined}
+      className={styles.container}
       onMouseDown={handleMouseDown}
     >
       <div ref={wrapperRef} className={styles.terminalWrapper} tabIndex={0} />

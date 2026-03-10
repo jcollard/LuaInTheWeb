@@ -35,6 +35,8 @@ export interface AnsiTerminalHandle {
   container: HTMLElement
   /** Dispose of the terminal handle */
   dispose: () => void
+  /** Enable/disable CRT monitor effect with optional intensity (0-1, default 0.7) */
+  setCrt?: (enabled: boolean, intensity?: number) => void
 }
 
 /**
@@ -309,6 +311,15 @@ export class AnsiController {
    */
   reset(): void {
     this.handle?.write('\x1b[0m')
+  }
+
+  /**
+   * Enable/disable CRT monitor effect on the terminal container.
+   * @param enabled - Whether to enable the CRT effect
+   * @param intensity - Effect intensity from 0 to 1 (default 0.7)
+   */
+  setCrt(enabled: boolean, intensity?: number): void {
+    this.handle?.setCrt?.(enabled, intensity)
   }
 
   // --- Timing API ---

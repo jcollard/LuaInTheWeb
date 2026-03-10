@@ -120,6 +120,13 @@ export const ansiLuaCoreCode = `
       __ansi_reset()
     end
 
+    -- CRT effect
+    function _ansi.crt(enabled, intensity)
+      if enabled == nil then enabled = true end
+      if intensity == nil then intensity = 0.7 end
+      __ansi_setCrt(enabled, intensity)
+    end
+
     -- Timing
     function _ansi.get_delta()
       return __ansi_getDelta()

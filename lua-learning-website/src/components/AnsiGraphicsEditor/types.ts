@@ -236,6 +236,9 @@ export interface UseAnsiEditorReturn {
   // CGA Preview
   cgaPreview: boolean
   setCgaPreview: (on: boolean) => void
+  // CRT Preview
+  crtPreview: boolean
+  setCrtPreview: (on: boolean) => void
   // Frame animation
   addFrame: () => void
   duplicateFrame: () => void

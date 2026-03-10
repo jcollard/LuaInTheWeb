@@ -421,7 +421,7 @@ describe('computeFloodFillCells', () => {
 
 
 function mockHandle(): AnsiTerminalHandle {
-  return { write: vi.fn(), container: document.createElement('div') } as unknown as AnsiTerminalHandle
+  return { write: vi.fn(), container: document.createElement('div'), dispose: vi.fn(), setCrt: vi.fn() } as unknown as AnsiTerminalHandle
 }
 
 describe('writeCellToTerminal with colorTransform', () => {

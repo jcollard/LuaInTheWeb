@@ -88,7 +88,7 @@ describe('useAnsiEditor', () => {
   describe('clearGrid', () => {
     it('should reset grid to default state', () => {
       const { result } = renderHook(() => useAnsiEditor())
-      const mockHandle = { write: vi.fn(), container: document.createElement('div'), dispose: vi.fn() }
+      const mockHandle = { write: vi.fn(), container: document.createElement('div'), dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(mockHandle))
 
       act(() => result.current.clearGrid())
@@ -98,7 +98,7 @@ describe('useAnsiEditor', () => {
 
     it('should write clear sequence to terminal when handle exists', () => {
       const { result } = renderHook(() => useAnsiEditor())
-      const mockHandle = { write: vi.fn(), container: document.createElement('div'), dispose: vi.fn() }
+      const mockHandle = { write: vi.fn(), container: document.createElement('div'), dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(mockHandle))
       act(() => result.current.clearGrid())
       expect(mockHandle.write).toHaveBeenCalled()
@@ -108,7 +108,7 @@ describe('useAnsiEditor', () => {
   describe('onTerminalReady', () => {
     it('should render full grid when terminal handle is provided', () => {
       const { result } = renderHook(() => useAnsiEditor())
-      const mockHandle = { write: vi.fn(), container: document.createElement('div'), dispose: vi.fn() }
+      const mockHandle = { write: vi.fn(), container: document.createElement('div'), dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(mockHandle))
       expect(mockHandle.write).toHaveBeenCalled()
       // Buffer writes all cells as a batched ANSI sequence (no clear-screen needed)
@@ -135,7 +135,7 @@ describe('useAnsiEditor', () => {
   describe('markClean', () => {
     it('should reset isDirty to false', () => {
       const { result } = renderHook(() => useAnsiEditor())
-      const mockHandle = { write: vi.fn(), container: document.createElement('div'), dispose: vi.fn() }
+      const mockHandle = { write: vi.fn(), container: document.createElement('div'), dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(mockHandle))
       // Paint a cell to make dirty
       // clearGrid resets dirty, so we need to simulate painting via the grid ref
@@ -375,7 +375,7 @@ describe('mouse drag off canvas', () => {
   it('pencil: continues painting after leaving and re-entering canvas', () => {
     const { result } = renderHook(() => useAnsiEditor())
     const container = createMockContainer()
-    const handle = { write: vi.fn(), container, dispose: vi.fn() }
+    const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
     act(() => result.current.onTerminalReady(handle))
 
     act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
@@ -392,7 +392,7 @@ describe('mouse drag off canvas', () => {
   it('line tool: commits line after leaving and re-entering canvas', () => {
     const { result } = renderHook(() => useAnsiEditor())
     const container = createMockContainer()
-    const handle = { write: vi.fn(), container, dispose: vi.fn() }
+    const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
     act(() => result.current.onTerminalReady(handle))
     act(() => result.current.setTool('line'))
 
@@ -409,7 +409,7 @@ describe('mouse drag off canvas', () => {
   it('line tool: cancels line when mouseup occurs outside canvas', () => {
     const { result } = renderHook(() => useAnsiEditor())
     const container = createMockContainer()
-    const handle = { write: vi.fn(), container, dispose: vi.fn() }
+    const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
     act(() => result.current.onTerminalReady(handle))
     act(() => result.current.setTool('line'))
 
@@ -422,7 +422,7 @@ describe('mouse drag off canvas', () => {
   it('line tool: redraws committed cells from grid after commit', () => {
     const { result } = renderHook(() => useAnsiEditor())
     const container = createMockContainer()
-    const handle = { write: vi.fn(), container, dispose: vi.fn() }
+    const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
     act(() => result.current.onTerminalReady(handle))
 
     // Draw a cell at (0,0) with pencil
@@ -449,7 +449,7 @@ describe('mouse drag off canvas', () => {
   it('line tool: no flash of originals during commit', () => {
     const { result } = renderHook(() => useAnsiEditor())
     const container = createMockContainer()
-    const handle = { write: vi.fn(), container, dispose: vi.fn() }
+    const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
     act(() => result.current.onTerminalReady(handle))
     act(() => result.current.setTool('line'))
 
@@ -481,7 +481,7 @@ describe('mouse drag off canvas', () => {
     it('should not modify grid when selecting a region (mousedown + move + mouseup)', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(handle))
 
       // Paint some cells first with pencil
@@ -509,7 +509,7 @@ describe('mouse drag off canvas', () => {
     it('should move cells when dragging inside selection', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(handle))
 
       // Paint cell at (0,0) with pencil
@@ -542,7 +542,7 @@ describe('mouse drag off canvas', () => {
     it('should not push undo when clicking outside without moving', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(handle))
       act(() => result.current.setTool('select'))
 
@@ -563,7 +563,7 @@ describe('mouse drag off canvas', () => {
     it('should commit pending selection when changing tool', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(handle))
 
       // Paint cell at (0,0)
@@ -589,7 +589,7 @@ describe('mouse drag off canvas', () => {
     it('should undo after commit reverses the move', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(handle))
 
       // Paint cell at (0,0)
@@ -622,7 +622,7 @@ describe('mouse drag off canvas', () => {
   it('pencil: stops painting on mouseup outside canvas', () => {
     const { result } = renderHook(() => useAnsiEditor())
     const container = createMockContainer()
-    const handle = { write: vi.fn(), container, dispose: vi.fn() }
+    const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
     act(() => result.current.onTerminalReady(handle))
 
     act(() => { container.dispatchEvent(mouseAt('mousedown', 0, 0)) })
@@ -658,7 +658,7 @@ describe('move tool with reference layers', () => {
   it('move tool on reference layer updates offsetRow/offsetCol', () => {
     const { result } = renderHook(() => useAnsiEditor())
     const container = createMockContainer()
-    const handle = { write: vi.fn(), container, dispose: vi.fn() }
+    const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
     act(() => result.current.onTerminalReady(handle))
 
     // Add a reference layer referencing the background
@@ -684,7 +684,7 @@ describe('move tool with reference layers', () => {
   it('move tool on reference layer supports undo', () => {
     const { result } = renderHook(() => useAnsiEditor())
     const container = createMockContainer()
-    const handle = { write: vi.fn(), container, dispose: vi.fn() }
+    const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
     act(() => result.current.onTerminalReady(handle))
 
     const bgId = result.current.layers[0].id
@@ -710,7 +710,7 @@ describe('move tool with reference layers', () => {
   it('move tool with no movement on reference layer pops undo snapshot', () => {
     const { result } = renderHook(() => useAnsiEditor())
     const container = createMockContainer()
-    const handle = { write: vi.fn(), container, dispose: vi.fn() }
+    const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
     act(() => result.current.onTerminalReady(handle))
 
     const bgId = result.current.layers[0].id

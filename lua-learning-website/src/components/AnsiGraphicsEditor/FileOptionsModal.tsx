@@ -14,6 +14,8 @@ export interface FileOptionsModalProps {
   onExportSh: () => void
   cgaPreview: boolean
   onToggleCgaPreview: () => void
+  crtPreview: boolean
+  onToggleCrtPreview: () => void
   scaleMode: ScaleMode
   onSetScaleMode: (mode: ScaleMode) => void
 }
@@ -35,6 +37,8 @@ export function FileOptionsModal({
   onExportSh,
   cgaPreview,
   onToggleCgaPreview,
+  crtPreview,
+  onToggleCrtPreview,
   scaleMode,
   onSetScaleMode,
 }: FileOptionsModalProps) {
@@ -103,6 +107,15 @@ export function FileOptionsModal({
               data-testid="file-cga-preview"
             />
             CGA Preview
+          </label>
+          <label className={styles.fileOptionsAction}>
+            <input
+              type="checkbox"
+              checked={crtPreview}
+              onChange={onToggleCrtPreview}
+              data-testid="file-crt-preview"
+            />
+            CRT Preview
           </label>
           <label className={styles.fileOptionsAction}>
             Scale:

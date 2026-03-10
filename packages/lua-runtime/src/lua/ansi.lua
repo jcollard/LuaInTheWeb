@@ -107,6 +107,16 @@ function ansi.background(r, g, b) end
 ---@return nil
 function ansi.reset() end
 
+--- Enable or disable the CRT monitor effect on the terminal.
+--- When called with no arguments, enables CRT with default intensity.
+---@param enabled? boolean Whether to enable the CRT effect (default: true)
+---@param intensity? number Effect intensity from 0 to 1 (default: 0.7)
+---@return nil
+---@usage ansi.crt()              -- enable with default intensity
+---@usage ansi.crt(true, 0.5)     -- enable at 50% intensity
+---@usage ansi.crt(false)         -- disable
+function ansi.crt(enabled, intensity) end
+
 -- =============================================================================
 -- Color Constants
 -- =============================================================================

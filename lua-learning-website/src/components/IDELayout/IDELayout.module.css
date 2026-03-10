@@ -90,28 +90,6 @@
   background-color: var(--theme-bg-hover);
 }
 
-.crtToggle {
-  display: flex;
-  align-items: center;
-  padding: 4px 8px;
-  margin-right: 4px;
-  border: none;
-  border-radius: 3px;
-  background: transparent;
-  color: var(--theme-text-secondary);
-  font-size: 12px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.crtToggle:hover {
-  background-color: var(--theme-bg-hover);
-}
-
-.crtToggleActive {
-  color: #00ff64;
-}
-
 /* Preview container styles (used by markdown and HTML preview tabs) */
 .previewContainer {
   display: flex;

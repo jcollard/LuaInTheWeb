@@ -22,6 +22,7 @@ function makeHandle(): AnsiTerminalHandle & { written: string[] } {
     write: (data: string) => { written.push(data) },
     container: document.createElement('div'),
     dispose: vi.fn(),
+    setCrt: vi.fn(),
   }
 }
 

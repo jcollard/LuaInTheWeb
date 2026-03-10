@@ -4,7 +4,6 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { ThemeProvider } from './contexts/ThemeContext'
-import { CrtProvider } from './contexts/CrtContext'
 import { ErrorBoundary, DevErrorTrigger } from './components/ErrorBoundary'
 import { logBuildInfo } from './utils/buildInfo'
 import './styles/themes.css'
@@ -33,9 +32,7 @@ createRoot(document.getElementById('root')!).render(
       <DevErrorTrigger />
       <BrowserRouter>
         <ThemeProvider>
-          <CrtProvider>
-            <App />
-          </CrtProvider>
+          <App />
         </ThemeProvider>
       </BrowserRouter>
     </ErrorBoundary>

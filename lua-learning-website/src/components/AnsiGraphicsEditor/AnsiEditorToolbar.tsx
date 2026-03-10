@@ -33,6 +33,8 @@ export interface AnsiEditorToolbarProps {
   onSetBlendRatio?: (ratio: number) => void
   cgaPreview?: boolean
   onToggleCgaPreview?: () => void
+  crtPreview?: boolean
+  onToggleCrtPreview?: () => void
   scaleMode?: ScaleMode
   onSetScaleMode?: (mode: ScaleMode) => void
   activeLayerIsGroup?: boolean
@@ -44,7 +46,7 @@ export interface AnsiEditorToolbarProps {
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onImportPng, onImportLayers, onExportAns, onExportSh, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
-  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, scaleMode, onSetScaleMode, activeLayerIsGroup, isPlaying,
+  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, crtPreview, onToggleCrtPreview, scaleMode, onSetScaleMode, activeLayerIsGroup, isPlaying,
   fileMenuOpen: controlledFileMenuOpen, onSetFileMenuOpen,
 }: AnsiEditorToolbarProps) {
   const toolsDisabled = activeLayerIsGroup || isPlaying
@@ -82,6 +84,8 @@ export function AnsiEditorToolbar({
           onExportSh={onExportSh}
           cgaPreview={cgaPreview ?? false}
           onToggleCgaPreview={onToggleCgaPreview!}
+          crtPreview={crtPreview ?? false}
+          onToggleCrtPreview={onToggleCrtPreview!}
           scaleMode={scaleMode ?? 'integer-auto'}
           onSetScaleMode={onSetScaleMode!}
         />

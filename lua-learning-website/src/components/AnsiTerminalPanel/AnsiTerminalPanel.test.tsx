@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, act } from '@testing-library/react'
 import { AnsiTerminalPanel } from './AnsiTerminalPanel'
-import { CrtProvider } from '../../contexts/CrtContext'
-import { CrtContext } from '../../contexts/CrtContext/context'
+import type { AnsiTerminalHandle } from './AnsiTerminalPanel'
 
 // Mock xterm modules — Terminal must be a class so `new Terminal()` works
 vi.mock('@xterm/xterm', () => {
@@ -44,9 +43,7 @@ describe('AnsiTerminalPanel', () => {
     const onTerminalReady = vi.fn()
 
     const { unmount } = render(
-      <CrtProvider>
-        <AnsiTerminalPanel onTerminalReady={onTerminalReady} />
-      </CrtProvider>
+      <AnsiTerminalPanel onTerminalReady={onTerminalReady} />
     )
 
     // Wait for the async init() to complete (font load + terminal setup)
@@ -66,11 +63,9 @@ describe('AnsiTerminalPanel', () => {
     expect(onTerminalReady).toHaveBeenCalledWith(null)
   })
 
-  it('should not apply crtEnabled class when CRT is disabled', () => {
+  it('should not have crtEnabled class by default', () => {
     const { container } = render(
-      <CrtProvider>
-        <AnsiTerminalPanel />
-      </CrtProvider>
+      <AnsiTerminalPanel />
     )
 
     const outerDiv = container.firstChild as HTMLElement
@@ -78,22 +73,62 @@ describe('AnsiTerminalPanel', () => {
     expect(outerDiv.className).not.toContain('crtEnabled')
   })
 
-  it('should apply crtEnabled class and --crt-intensity when CRT is enabled', () => {
-    const crtValue = {
-      enabled: true,
-      intensity: 0.5,
-      toggleCrt: vi.fn(),
-      setIntensity: vi.fn(),
-    }
+  it('handle.setCrt(true) should add crtEnabled class and set --crt-intensity', async () => {
+    let handle: AnsiTerminalHandle | null = null
+    const onTerminalReady = vi.fn((h: AnsiTerminalHandle | null) => { handle = h })
 
     const { container } = render(
-      <CrtContext.Provider value={crtValue}>
-        <AnsiTerminalPanel />
-      </CrtContext.Provider>
+      <AnsiTerminalPanel onTerminalReady={onTerminalReady} />
     )
 
+    await act(async () => {})
+
+    expect(handle).not.toBeNull()
     const outerDiv = container.firstChild as HTMLElement
-    expect(outerDiv.className).toContain('crtEnabled')
+
+    // Enable CRT via handle
+    act(() => { handle!.setCrt(true, 0.5) })
+
+    expect(outerDiv.classList.contains('crtEnabled')).toBe(true)
     expect(outerDiv.style.getPropertyValue('--crt-intensity')).toBe('0.5')
+  })
+
+  it('handle.setCrt(false) should remove crtEnabled class', async () => {
+    let handle: AnsiTerminalHandle | null = null
+    const onTerminalReady = vi.fn((h: AnsiTerminalHandle | null) => { handle = h })
+
+    const { container } = render(
+      <AnsiTerminalPanel onTerminalReady={onTerminalReady} />
+    )
+
+    await act(async () => {})
+
+    const outerDiv = container.firstChild as HTMLElement
+
+    // Enable then disable
+    act(() => { handle!.setCrt(true, 0.8) })
+    expect(outerDiv.classList.contains('crtEnabled')).toBe(true)
+
+    act(() => { handle!.setCrt(false) })
+    expect(outerDiv.classList.contains('crtEnabled')).toBe(false)
+    expect(outerDiv.style.getPropertyValue('--crt-intensity')).toBe('')
+  })
+
+  it('handle.setCrt(true) with no intensity defaults to 0.7', async () => {
+    let handle: AnsiTerminalHandle | null = null
+    const onTerminalReady = vi.fn((h: AnsiTerminalHandle | null) => { handle = h })
+
+    const { container } = render(
+      <AnsiTerminalPanel onTerminalReady={onTerminalReady} />
+    )
+
+    await act(async () => {})
+
+    const outerDiv = container.firstChild as HTMLElement
+
+    act(() => { handle!.setCrt(true) })
+
+    expect(outerDiv.classList.contains('crtEnabled')).toBe(true)
+    expect(outerDiv.style.getPropertyValue('--crt-intensity')).toBe('0.7')
   })
 })
