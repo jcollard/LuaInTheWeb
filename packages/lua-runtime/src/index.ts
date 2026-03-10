@@ -79,6 +79,9 @@ export { CanvasController, type CanvasCallbacks } from './CanvasController'
 // ANSI terminal controller for shell-based ANSI terminal
 export { AnsiController, type AnsiCallbacks, type AnsiTerminalHandle, type LayerInfo } from './AnsiController'
 
+// CRT post-processing shader for ANSI terminal
+export { CrtShader, type CrtShaderOptions } from './crtShader'
+
 // ANSI terminal API setup and Lua code modules (for bundling in exports)
 export { setupAnsiAPI, type AnsiAPIOptions } from './setupAnsiAPI'
 export { ansiLuaCode } from './ansiLuaWrapper'

@@ -33,7 +33,7 @@
   overflow: hidden !important;
 }
 
-/* CRT monitor effect */
+/* CRT monitor effect (CSS-only fallback when WebGL2 is unavailable) */
 .crtEnabled {
   position: relative;
   filter: brightness(calc(1 + 0.1 * var(--crt-intensity, 0.7)))
@@ -41,20 +41,32 @@
   box-shadow:
     inset 0 0 calc(60px * var(--crt-intensity, 0.7)) rgba(0, 255, 100, calc(0.03 * var(--crt-intensity, 0.7))),
     inset 0 0 calc(120px * var(--crt-intensity, 0.7)) rgba(0, 255, 100, calc(0.015 * var(--crt-intensity, 0.7)));
+  animation: crt-flicker calc(8s / var(--crt-intensity, 0.7)) infinite;
 }
 
-/* Scanlines overlay */
+/* Scanlines + RGB sub-pixel overlay */
 .crtEnabled::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent,
-    transparent 1px,
-    rgba(0, 0, 0, calc(0.15 * var(--crt-intensity, 0.7))) 1px,
-    rgba(0, 0, 0, calc(0.15 * var(--crt-intensity, 0.7))) 2px
-  );
+  background:
+    /* Scanlines */
+    repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 1px,
+      rgba(0, 0, 0, calc(0.15 * var(--crt-intensity, 0.7))) 1px,
+      rgba(0, 0, 0, calc(0.15 * var(--crt-intensity, 0.7))) 2px
+    ),
+    /* RGB phosphor sub-pixel mask */
+    repeating-linear-gradient(
+      to right,
+      rgba(255, 0, 0, calc(0.04 * var(--crt-intensity, 0.7))),
+      rgba(0, 255, 0, calc(0.04 * var(--crt-intensity, 0.7))) 33%,
+      rgba(0, 0, 255, calc(0.04 * var(--crt-intensity, 0.7))) 66%,
+      rgba(255, 0, 0, calc(0.04 * var(--crt-intensity, 0.7))) 100%
+    );
+  background-size: 100% 100%, 3px 100%;
   pointer-events: none;
   z-index: 10;
 }
@@ -71,4 +83,10 @@
   );
   pointer-events: none;
   z-index: 10;
+}
+
+/* Subtle flicker animation for CSS fallback */
+@keyframes crt-flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.99; }
 }

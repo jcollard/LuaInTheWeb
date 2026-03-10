@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import type { ScaleMode } from '../AnsiGraphicsEditor/types'
 import { Terminal } from '@xterm/xterm'
 import { CanvasAddon } from '@xterm/addon-canvas'
+import { CrtShader } from '@lua-learning/lua-runtime'
 import '@xterm/xterm/css/xterm.css'
 import styles from './AnsiTerminalPanel.module.css'
 
@@ -35,6 +36,7 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const terminalRef = useRef<Terminal | null>(null)
+  const crtShaderRef = useRef<CrtShader | null>(null)
   // Stable proxy handle that survives Strict Mode re-runs via terminalRef indirection
   const handleRef = useRef<AnsiTerminalHandle | null>(null)
   const onTerminalReadyRef = useRef(onTerminalReady)
@@ -128,13 +130,26 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
           },
           setCrt: (enabled: boolean, intensity?: number) => {
             const el = containerRef.current
+            const xtermCanvas = wrapperRef.current?.querySelector('canvas')
             if (!el) return
             if (enabled) {
-              el.classList.add(styles.crtEnabled)
-              el.style.setProperty('--crt-intensity', String(intensity ?? 0.7))
+              if (xtermCanvas) {
+                crtShaderRef.current ??= new CrtShader(xtermCanvas, el, {
+                  fallbackCssClass: styles.crtEnabled,
+                })
+                crtShaderRef.current.enable(intensity ?? 0.7)
+              } else {
+                // No canvas yet — CSS-only fallback
+                el.classList.add(styles.crtEnabled)
+                el.style.setProperty('--crt-intensity', String(intensity ?? 0.7))
+              }
             } else {
-              el.classList.remove(styles.crtEnabled)
-              el.style.removeProperty('--crt-intensity')
+              if (crtShaderRef.current) {
+                crtShaderRef.current.disable()
+              } else {
+                el.classList.remove(styles.crtEnabled)
+                el.style.removeProperty('--crt-intensity')
+              }
             }
           },
         }
@@ -149,6 +164,8 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
       disposed = true
       resizeObserver?.disconnect()
       onTerminalReadyRef.current?.(null)
+      crtShaderRef.current?.dispose()
+      crtShaderRef.current = null
       if (terminalRef.current) {
         terminalRef.current.dispose()
         terminalRef.current = null

@@ -105,18 +105,28 @@ export function generateAnsiHtml(
       box-shadow:
         inset 0 0 calc(60px * var(--crt-intensity)) rgba(0, 255, 100, calc(0.03 * var(--crt-intensity))),
         inset 0 0 calc(120px * var(--crt-intensity)) rgba(0, 255, 100, calc(0.015 * var(--crt-intensity)));
+      animation: crt-flicker calc(8s / var(--crt-intensity)) infinite;
     }
     body.crt-enabled::before {
       content: '';
       position: fixed;
       inset: 0;
-      background: repeating-linear-gradient(
-        to bottom,
-        transparent,
-        transparent 1px,
-        rgba(0, 0, 0, calc(0.15 * var(--crt-intensity))) 1px,
-        rgba(0, 0, 0, calc(0.15 * var(--crt-intensity))) 2px
-      );
+      background:
+        repeating-linear-gradient(
+          to bottom,
+          transparent,
+          transparent 1px,
+          rgba(0, 0, 0, calc(0.15 * var(--crt-intensity))) 1px,
+          rgba(0, 0, 0, calc(0.15 * var(--crt-intensity))) 2px
+        ),
+        repeating-linear-gradient(
+          to right,
+          rgba(255, 0, 0, calc(0.04 * var(--crt-intensity))),
+          rgba(0, 255, 0, calc(0.04 * var(--crt-intensity))) 33%,
+          rgba(0, 0, 255, calc(0.04 * var(--crt-intensity))) 66%,
+          rgba(255, 0, 0, calc(0.04 * var(--crt-intensity))) 100%
+        );
+      background-size: 100% 100%, 3px 100%;
       pointer-events: none;
       z-index: 10;
     }
@@ -131,6 +141,10 @@ export function generateAnsiHtml(
       );
       pointer-events: none;
       z-index: 10;
+    }
+    @keyframes crt-flicker {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.99; }
     }` : ''}
   </style>
 </head>
@@ -283,6 +297,15 @@ export function generateAnsiHtml(
         write: (data) => term.write(data),
         container: wrapper,
         dispose: () => term.dispose(),
+        setCrt: (enabled, intensity) => {
+          if (enabled) {
+            document.body.classList.add('crt-enabled');
+            document.body.style.setProperty('--crt-intensity', String(intensity ?? 0.7));
+          } else {
+            document.body.classList.remove('crt-enabled');
+            document.body.style.removeProperty('--crt-intensity');
+          }
+        },
       };
 
       // Create AnsiCallbacks that immediately resolve with the handle
