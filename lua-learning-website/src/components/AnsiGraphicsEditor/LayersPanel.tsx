@@ -7,6 +7,7 @@ import { LayerContextMenu } from './LayerContextMenu'
 import { TagsTabContent } from './TagsTabContent'
 import { CrtTabContent } from './CrtTabContent'
 import { useLayerDragDrop } from './useLayerDragDrop'
+import { useResizablePanel } from './useResizablePanel'
 import type { CrtConfig } from '@lua-learning/lua-runtime'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -104,6 +105,8 @@ export function LayersPanel({
       return next
     })
   }, [filePath])
+
+  const { width: panelWidth, handleMouseDown: handleResizeStart } = useResizablePanel()
 
   const {
     draggedId, dropZoneTargetId, dropOnGroup, draggedGroupChildIds,
@@ -210,7 +213,8 @@ export function LayersPanel({
   const groupHasClipLayer = contextIsGroup && layers.some(l => isClipLayer(l) && l.parentId === contextMenu?.layerId)
 
   return (
-    <div className={styles.layersPanel} data-testid="layers-panel">
+    <div className={styles.layersPanel} data-testid="layers-panel" style={{ width: panelWidth }}>
+      <div className={styles.resizeHandle} onMouseDown={handleResizeStart} data-testid="resize-handle" />
       <div className={styles.layersPanelHeader}>
         <div className={styles.layersPanelTabs}>
           <button

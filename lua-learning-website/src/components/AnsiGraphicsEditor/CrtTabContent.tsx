@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { CRT_DEFAULTS, type CrtConfig } from '@lua-learning/lua-runtime'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -12,18 +13,22 @@ const KEY_MIGRATIONS: Record<string, keyof CrtConfig> = {
   flicker: 'flickerStrength',
 }
 
+function migrateAndMerge(parsed: Record<string, unknown>): CrtConfig {
+  for (const [oldKey, newKey] of Object.entries(KEY_MIGRATIONS)) {
+    if (oldKey in parsed && !(newKey in parsed)) {
+      parsed[newKey] = parsed[oldKey]
+      delete parsed[oldKey]
+    }
+  }
+  return { ...CRT_DEFAULTS, ...parsed } as CrtConfig
+}
+
 function loadSavedConfig(): CrtConfig {
   try {
     const raw = localStorage.getItem(CRT_STORAGE_KEY)
     if (raw) {
-      const parsed = JSON.parse(raw) as Record<string, number>
-      for (const [oldKey, newKey] of Object.entries(KEY_MIGRATIONS)) {
-        if (oldKey in parsed && !(newKey in parsed)) {
-          parsed[newKey] = parsed[oldKey]
-          delete parsed[oldKey]
-        }
-      }
-      return { ...CRT_DEFAULTS, ...parsed } as CrtConfig
+      const parsed = JSON.parse(raw) as Record<string, unknown>
+      return migrateAndMerge(parsed)
     }
   } catch { /* invalid JSON — fall through */ }
   return { ...CRT_DEFAULTS }
@@ -72,6 +77,7 @@ const SLIDERS: SliderDef[] = [
 export function CrtTabContent({ crtConfig, onSetCrtConfig }: CrtTabContentProps) {
   const enabled = crtConfig !== null
   const config = crtConfig ?? CRT_DEFAULTS
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   function handleToggle(): void {
     if (enabled) {
@@ -93,6 +99,39 @@ export function CrtTabContent({ crtConfig, onSetCrtConfig }: CrtTabContentProps)
     const defaults = { ...CRT_DEFAULTS }
     saveConfig(defaults)
     onSetCrtConfig(defaults)
+  }
+
+  function handleExport(): void {
+    const json = JSON.stringify(config, null, 2)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'crt-config.json'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function handleImportClick(): void {
+    fileInputRef.current?.click()
+  }
+
+  function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>): void {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const parsed: unknown = JSON.parse(reader.result as string)
+        if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return
+        const migrated = migrateAndMerge(parsed as Record<string, unknown>)
+        saveConfig(migrated)
+        onSetCrtConfig(migrated)
+      } catch { /* invalid JSON — ignore */ }
+    }
+    reader.readAsText(file)
+    // Reset so the same file can be re-imported
+    e.target.value = ''
   }
 
   return (
@@ -144,6 +183,31 @@ export function CrtTabContent({ crtConfig, onSetCrtConfig }: CrtTabContentProps)
       >
         Reset to Defaults
       </button>
+      <button
+        type="button"
+        className={styles.fileOptionsAction}
+        onClick={handleExport}
+        disabled={!enabled}
+        data-testid="crt-export-btn"
+      >
+        Export Config
+      </button>
+      <button
+        type="button"
+        className={styles.fileOptionsAction}
+        onClick={handleImportClick}
+        data-testid="crt-import-btn"
+      >
+        Import Config
+      </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleFileSelected}
+        data-testid="crt-import-input"
+        style={{ display: 'none' }}
+      />
     </div>
   )
 }

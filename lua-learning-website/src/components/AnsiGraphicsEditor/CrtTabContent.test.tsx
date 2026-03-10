@@ -159,4 +159,129 @@ describe('CrtTabContent', () => {
       expect(stored).toEqual({ ...CRT_DEFAULTS })
     })
   })
+
+  describe('export', () => {
+    it('export button is disabled when CRT is off', () => {
+      render(<CrtTabContent {...defaultProps()} />)
+      const btn = screen.getByTestId('crt-export-btn') as HTMLButtonElement
+      expect(btn.disabled).toBe(true)
+    })
+
+    it('export button is enabled when CRT is on', () => {
+      render(<CrtTabContent {...defaultProps({ crtConfig: { ...CRT_DEFAULTS } })} />)
+      const btn = screen.getByTestId('crt-export-btn') as HTMLButtonElement
+      expect(btn.disabled).toBe(false)
+    })
+
+    it('export triggers blob download with correct JSON', () => {
+      const config = { ...CRT_DEFAULTS, scanlineIntensity: 0.9 }
+      render(<CrtTabContent {...defaultProps({ crtConfig: config })} />)
+
+      const createObjectURL = vi.fn(() => 'blob:test')
+      const revokeObjectURL = vi.fn()
+      global.URL.createObjectURL = createObjectURL
+      global.URL.revokeObjectURL = revokeObjectURL
+
+      const clickSpy = vi.fn()
+      const originalCreateElement = document.createElement.bind(document)
+      vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+        const el = originalCreateElement(tag)
+        if (tag === 'a') {
+          Object.defineProperty(el, 'click', { value: clickSpy })
+        }
+        return el
+      })
+
+      fireEvent.click(screen.getByTestId('crt-export-btn'))
+
+      expect(createObjectURL).toHaveBeenCalledTimes(1)
+      const blob = createObjectURL.mock.calls[0][0] as Blob
+      expect(blob.type).toBe('application/json')
+      expect(clickSpy).toHaveBeenCalled()
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:test')
+
+      vi.restoreAllMocks()
+    })
+  })
+
+  describe('import', () => {
+    it('import button is always enabled even when CRT is off', () => {
+      render(<CrtTabContent {...defaultProps()} />)
+      const btn = screen.getByTestId('crt-import-btn') as HTMLButtonElement
+      expect(btn.disabled).toBe(false)
+    })
+
+    it('import with valid JSON calls onSetCrtConfig with migrated config', async () => {
+      const onSetCrtConfig = vi.fn()
+      render(<CrtTabContent {...defaultProps({ onSetCrtConfig })} />)
+
+      const input = screen.getByTestId('crt-import-input') as HTMLInputElement
+      const file = new File([JSON.stringify({ ...CRT_DEFAULTS, scanlineIntensity: 0.8 })], 'preset.json', { type: 'application/json' })
+      fireEvent.change(input, { target: { files: [file] } })
+
+      // FileReader is async
+      await vi.waitFor(() => {
+        expect(onSetCrtConfig).toHaveBeenCalledTimes(1)
+      })
+      const result = onSetCrtConfig.mock.calls[0][0]
+      expect(result.scanlineIntensity).toBe(0.8)
+    })
+
+    it('import with old key names applies KEY_MIGRATIONS', async () => {
+      const onSetCrtConfig = vi.fn()
+      render(<CrtTabContent {...defaultProps({ onSetCrtConfig })} />)
+
+      const input = screen.getByTestId('crt-import-input') as HTMLInputElement
+      const oldConfig = { scanlines: 0.9, bloom: 0.7, brightness: 1.2 }
+      const file = new File([JSON.stringify(oldConfig)], 'old.json', { type: 'application/json' })
+      fireEvent.change(input, { target: { files: [file] } })
+
+      await vi.waitFor(() => {
+        expect(onSetCrtConfig).toHaveBeenCalledTimes(1)
+      })
+      const result = onSetCrtConfig.mock.calls[0][0]
+      expect(result.scanlineIntensity).toBe(0.9)
+      expect(result.bloomIntensity).toBe(0.7)
+      expect(result.brightness).toBe(1.2)
+      expect(result).not.toHaveProperty('scanlines')
+      expect(result).not.toHaveProperty('bloom')
+    })
+
+    it('import with invalid JSON does not call onSetCrtConfig', async () => {
+      const onSetCrtConfig = vi.fn()
+      render(<CrtTabContent {...defaultProps({ onSetCrtConfig })} />)
+
+      const input = screen.getByTestId('crt-import-input') as HTMLInputElement
+      const file = new File(['not-json{{{'], 'bad.json', { type: 'application/json' })
+      fireEvent.change(input, { target: { files: [file] } })
+
+      // Wait a tick, then ensure it was NOT called
+      await new Promise(r => setTimeout(r, 50))
+      expect(onSetCrtConfig).not.toHaveBeenCalled()
+    })
+
+    it('import with non-object JSON (array) does not call onSetCrtConfig', async () => {
+      const onSetCrtConfig = vi.fn()
+      render(<CrtTabContent {...defaultProps({ onSetCrtConfig })} />)
+
+      const input = screen.getByTestId('crt-import-input') as HTMLInputElement
+      const file = new File([JSON.stringify([1, 2, 3])], 'array.json', { type: 'application/json' })
+      fireEvent.change(input, { target: { files: [file] } })
+
+      await new Promise(r => setTimeout(r, 50))
+      expect(onSetCrtConfig).not.toHaveBeenCalled()
+    })
+
+    it('import with non-object JSON (string) does not call onSetCrtConfig', async () => {
+      const onSetCrtConfig = vi.fn()
+      render(<CrtTabContent {...defaultProps({ onSetCrtConfig })} />)
+
+      const input = screen.getByTestId('crt-import-input') as HTMLInputElement
+      const file = new File([JSON.stringify('hello')], 'string.json', { type: 'application/json' })
+      fireEvent.change(input, { target: { files: [file] } })
+
+      await new Promise(r => setTimeout(r, 50))
+      expect(onSetCrtConfig).not.toHaveBeenCalled()
+    })
+  })
 })
