@@ -218,8 +218,6 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         onSetBlendRatio={setBlendRatio}
         cgaPreview={cgaPreview}
         onToggleCgaPreview={handleToggleCgaPreview}
-        crtConfig={crtConfig}
-        onSetCrtConfig={setCrtConfig}
         scaleMode={scaleMode}
         onSetScaleMode={setScaleMode}
         activeLayerIsGroup={activeLayerIsGroup}
@@ -286,6 +284,8 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
           onCreateTag={createTag}
           onDeleteTag={deleteTag}
           onRenameTag={renameTag}
+          crtConfig={crtConfig}
+          onSetCrtConfig={setCrtConfig}
         />
       </div>
       <div ref={cursorRef} className={styles.cellCursor} />

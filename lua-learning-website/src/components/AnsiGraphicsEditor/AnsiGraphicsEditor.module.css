@@ -1280,6 +1280,16 @@
   padding: 8px 16px 16px;
 }
 
+.crtTabContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
 .fileOptionsAction {
   display: flex;
   align-items: center;

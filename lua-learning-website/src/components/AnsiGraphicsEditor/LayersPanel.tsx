@@ -5,7 +5,9 @@ import { getAncestorGroupIds, buildDisplayOrder, filterLayers } from './layerUti
 import { LayerRow } from './LayerRow'
 import { LayerContextMenu } from './LayerContextMenu'
 import { TagsTabContent } from './TagsTabContent'
+import { CrtTabContent } from './CrtTabContent'
 import { useLayerDragDrop } from './useLayerDragDrop'
+import type { CrtConfig } from '@lua-learning/lua-runtime'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface LayersPanelProps {
@@ -33,6 +35,8 @@ export interface LayersPanelProps {
   onCreateTag: (tag: string) => void
   onDeleteTag: (tag: string) => void
   onRenameTag: (oldTag: string, newTag: string) => void
+  crtConfig?: CrtConfig | null
+  onSetCrtConfig?: (config: CrtConfig | null) => void
 }
 
 const EXPANDED_TAGS_PREFIX = 'ansi-expanded-tags:'
@@ -72,8 +76,10 @@ export function LayersPanel({
   onCreateTag,
   onDeleteTag,
   onRenameTag,
+  crtConfig,
+  onSetCrtConfig,
 }: LayersPanelProps) {
-  const [activeTab, setActiveTab] = useState<'layers' | 'tags'>('layers')
+  const [activeTab, setActiveTab] = useState<'layers' | 'tags' | 'crt'>('layers')
   const [searchQuery, setSearchQuery] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState('')
@@ -221,6 +227,15 @@ export function LayersPanel({
           >
             Tags
           </button>
+          {onSetCrtConfig && (
+            <button
+              className={[styles.layersPanelTab, activeTab === 'crt' && styles.layersPanelTabActive].filter(Boolean).join(' ')}
+              data-testid="tab-crt"
+              onClick={() => setActiveTab('crt')}
+            >
+              CRT
+            </button>
+          )}
         </div>
         {activeTab === 'layers' && (
           <button
@@ -242,7 +257,12 @@ export function LayersPanel({
           placeholder="Filter layers..."
         />
       </div>
-      {activeTab === 'tags' ? (
+      {activeTab === 'crt' && onSetCrtConfig ? (
+        <CrtTabContent
+          crtConfig={crtConfig ?? null}
+          onSetCrtConfig={onSetCrtConfig}
+        />
+      ) : activeTab === 'tags' ? (
         <TagsTabContent
           layers={layers}
           availableTags={availableTags}

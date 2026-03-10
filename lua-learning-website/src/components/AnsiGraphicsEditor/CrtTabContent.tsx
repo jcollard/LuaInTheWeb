@@ -1,4 +1,3 @@
-import type { KeyboardEvent } from 'react'
 import { CRT_DEFAULTS, type CrtConfig } from '@lua-learning/lua-runtime'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -34,8 +33,7 @@ function saveConfig(config: CrtConfig): void {
   localStorage.setItem(CRT_STORAGE_KEY, JSON.stringify(config))
 }
 
-export interface CrtOptionsModalProps {
-  onClose: () => void
+export interface CrtTabContentProps {
   crtConfig: CrtConfig | null
   onSetCrtConfig: (config: CrtConfig | null) => void
 }
@@ -71,16 +69,9 @@ const SLIDERS: SliderDef[] = [
   { key: 'phosphor', label: 'Phosphor', min: 0, max: 1, step: 0.01 },
 ]
 
-export function CrtOptionsModal({ onClose, crtConfig, onSetCrtConfig }: CrtOptionsModalProps) {
+export function CrtTabContent({ crtConfig, onSetCrtConfig }: CrtTabContentProps) {
   const enabled = crtConfig !== null
   const config = crtConfig ?? CRT_DEFAULTS
-
-  function handleKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      onClose()
-    }
-  }
 
   function handleToggle(): void {
     if (enabled) {
@@ -105,79 +96,54 @@ export function CrtOptionsModal({ onClose, crtConfig, onSetCrtConfig }: CrtOptio
   }
 
   return (
-    <div
-      className={styles.fileOptionsOverlay}
-      data-testid="crt-options-overlay"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        className={styles.fileOptionsDialog}
-        onKeyDown={handleKeyDown}
-        onClick={e => e.stopPropagation()}
-        tabIndex={-1}
-      >
-        <div className={styles.fileOptionsHeader}>
-          <span className={styles.fileOptionsTitle}>CRT Options</span>
-          <button
-            type="button"
-            className={styles.fileOptionsClose}
-            onClick={onClose}
-          >
-            ✕
-          </button>
-        </div>
-        <div className={styles.fileOptionsBody}>
-          <label className={styles.fileOptionsAction}>
-            <input
-              type="checkbox"
-              checked={enabled}
-              onChange={handleToggle}
-              data-testid="crt-enabled-checkbox"
-            />
-            Enable CRT
-          </label>
-          <label className={styles.fileOptionsAction}>
-            <input
-              type="checkbox"
-              checked={config.smoothing}
-              onChange={() => handleChange('smoothing', !config.smoothing)}
-              disabled={!enabled}
-              data-testid="crt-smoothing-checkbox"
-            />
-            Smoothing
-          </label>
-          {SLIDERS.map(({ key, label, min, max, step }) => (
-            <label key={key} className={styles.fileOptionsAction}>
-              {label}
-              <input
-                type="range"
-                min={min}
-                max={max}
-                step={step}
-                value={config[key]}
-                onChange={e => handleChange(key, Number(e.target.value))}
-                disabled={!enabled}
-                data-testid={`crt-slider-${key}`}
-                style={{ flex: 1 }}
-              />
-              <span data-testid={`crt-value-${key}`} style={{ minWidth: '3em', textAlign: 'right' }}>
-                {key === 'scanlineCount' ? config[key] : config[key].toFixed(key === 'curvature' || key === 'flickerStrength' ? 3 : 2)}
-              </span>
-            </label>
-          ))}
-          <button
-            type="button"
-            className={styles.fileOptionsAction}
-            onClick={handleReset}
+    <div className={styles.crtTabContent} data-testid="crt-tab-content">
+      <label className={styles.fileOptionsAction}>
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={handleToggle}
+          data-testid="crt-enabled-checkbox"
+        />
+        Enable CRT
+      </label>
+      <label className={styles.fileOptionsAction}>
+        <input
+          type="checkbox"
+          checked={config.smoothing}
+          onChange={() => handleChange('smoothing', !config.smoothing)}
+          disabled={!enabled}
+          data-testid="crt-smoothing-checkbox"
+        />
+        Smoothing
+      </label>
+      {SLIDERS.map(({ key, label, min, max, step }) => (
+        <label key={key} className={styles.fileOptionsAction}>
+          {label}
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={config[key]}
+            onChange={e => handleChange(key, Number(e.target.value))}
             disabled={!enabled}
-            data-testid="crt-reset-defaults"
-          >
-            Reset to Defaults
-          </button>
-        </div>
-      </div>
+            data-testid={`crt-slider-${key}`}
+            style={{ flex: 1 }}
+          />
+          <span data-testid={`crt-value-${key}`} style={{ minWidth: '3em', textAlign: 'right' }}>
+            {key === 'scanlineCount' ? config[key] : config[key].toFixed(key === 'curvature' || key === 'flickerStrength' ? 3 : 2)}
+          </span>
+        </label>
+      ))}
+      <button
+        type="button"
+        className={styles.fileOptionsAction}
+        onClick={handleReset}
+        disabled={!enabled}
+        data-testid="crt-reset-defaults"
+      >
+        Reset to Defaults
+      </button>
     </div>
   )
 }
