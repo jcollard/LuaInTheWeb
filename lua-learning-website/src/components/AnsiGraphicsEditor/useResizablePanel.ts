@@ -27,6 +27,8 @@ export function useResizablePanel(): ResizablePanelResult {
   const [isResizing, setIsResizing] = useState(false)
   const startXRef = useRef(0)
   const startWidthRef = useRef(0)
+  const widthRef = useRef(width)
+  widthRef.current = width
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     // Panel is on the right, so dragging left (decreasing clientX) means wider
@@ -51,13 +53,13 @@ export function useResizablePanel(): ResizablePanelResult {
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     startXRef.current = e.clientX
-    startWidthRef.current = width
+    startWidthRef.current = widthRef.current
     setIsResizing(true)
     document.body.style.userSelect = 'none'
     document.body.style.cursor = 'col-resize'
     window.addEventListener('mousemove', handleMouseMove)
     window.addEventListener('mouseup', handleMouseUp)
-  }, [width, handleMouseMove, handleMouseUp])
+  }, [handleMouseMove, handleMouseUp])
 
   // Cleanup on unmount
   useEffect(() => {

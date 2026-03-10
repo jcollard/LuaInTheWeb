@@ -74,6 +74,12 @@ const SLIDERS: SliderDef[] = [
   { key: 'phosphor', label: 'Phosphor', min: 0, max: 1, step: 0.01 },
 ]
 
+function formatSliderValue(key: NumericCrtKey, value: number): string {
+  if (key === 'scanlineCount') return String(value)
+  if (key === 'curvature' || key === 'flickerStrength') return value.toFixed(3)
+  return value.toFixed(2)
+}
+
 export function CrtTabContent({ crtConfig, onSetCrtConfig }: CrtTabContentProps) {
   const enabled = crtConfig !== null
   const config = crtConfig ?? CRT_DEFAULTS
@@ -170,7 +176,7 @@ export function CrtTabContent({ crtConfig, onSetCrtConfig }: CrtTabContentProps)
             style={{ flex: 1 }}
           />
           <span data-testid={`crt-value-${key}`} style={{ minWidth: '3em', textAlign: 'right' }}>
-            {key === 'scanlineCount' ? config[key] : config[key].toFixed(key === 'curvature' || key === 'flickerStrength' ? 3 : 2)}
+            {formatSliderValue(key, config[key])}
           </span>
         </label>
       ))}
