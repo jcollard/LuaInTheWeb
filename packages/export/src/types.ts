@@ -103,6 +103,12 @@ export interface AnsiConfig {
    * - '3x': Fixed 3x scale
    */
   scale?: 'integer' | 'full' | '1x' | '2x' | '3x'
+
+  /** Enable CRT monitor effect (scanlines, vignette, phosphor glow). Default: false */
+  crt?: boolean
+
+  /** CRT effect intensity 0-1 (default: 0.7). Only used when crt is true */
+  crt_intensity?: number
 }
 
 /**

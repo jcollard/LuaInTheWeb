@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, act } from '@testing-library/react'
 import { AnsiTerminalPanel } from './AnsiTerminalPanel'
+import { CrtProvider } from '../../contexts/CrtContext'
+import { CrtContext } from '../../contexts/CrtContext/context'
 
 // Mock xterm modules — Terminal must be a class so `new Terminal()` works
 vi.mock('@xterm/xterm', () => {
@@ -22,7 +24,11 @@ vi.mock('@xterm/addon-canvas', () => {
 
 // Mock CSS module
 vi.mock('./AnsiTerminalPanel.module.css', () => ({
-  default: { container: 'container', terminalWrapper: 'terminalWrapper' },
+  default: {
+    container: 'container',
+    terminalWrapper: 'terminalWrapper',
+    crtEnabled: 'crtEnabled',
+  },
 }))
 
 beforeEach(() => {
@@ -38,7 +44,9 @@ describe('AnsiTerminalPanel', () => {
     const onTerminalReady = vi.fn()
 
     const { unmount } = render(
-      <AnsiTerminalPanel onTerminalReady={onTerminalReady} />
+      <CrtProvider>
+        <AnsiTerminalPanel onTerminalReady={onTerminalReady} />
+      </CrtProvider>
     )
 
     // Wait for the async init() to complete (font load + terminal setup)
@@ -56,5 +64,36 @@ describe('AnsiTerminalPanel', () => {
     unmount()
 
     expect(onTerminalReady).toHaveBeenCalledWith(null)
+  })
+
+  it('should not apply crtEnabled class when CRT is disabled', () => {
+    const { container } = render(
+      <CrtProvider>
+        <AnsiTerminalPanel />
+      </CrtProvider>
+    )
+
+    const outerDiv = container.firstChild as HTMLElement
+    expect(outerDiv.className).toBe('container')
+    expect(outerDiv.className).not.toContain('crtEnabled')
+  })
+
+  it('should apply crtEnabled class and --crt-intensity when CRT is enabled', () => {
+    const crtValue = {
+      enabled: true,
+      intensity: 0.5,
+      toggleCrt: vi.fn(),
+      setIntensity: vi.fn(),
+    }
+
+    const { container } = render(
+      <CrtContext.Provider value={crtValue}>
+        <AnsiTerminalPanel />
+      </CrtContext.Provider>
+    )
+
+    const outerDiv = container.firstChild as HTMLElement
+    expect(outerDiv.className).toContain('crtEnabled')
+    expect(outerDiv.style.getPropertyValue('--crt-intensity')).toBe('0.5')
   })
 })

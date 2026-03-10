@@ -27,6 +27,8 @@ export function generateAnsiHtml(
   const rows = config.ansi?.rows ?? 25
   const fontSize = config.ansi?.font_size ?? 16
   const scaleMode = config.ansi?.scale ?? 'integer'
+  const crtEnabled = config.ansi?.crt ?? false
+  const crtIntensity = config.ansi?.crt_intensity ?? 0.7
 
   // Escape audioLuaCode for safe embedding in JS template literal
   const escapedAudioLuaCode = audioLuaCode
@@ -94,10 +96,45 @@ export function generateAnsiHtml(
     }
     #terminal-wrapper .xterm-viewport {
       overflow: hidden !important;
+    }${crtEnabled ? `
+    body.crt-enabled {
+      --crt-intensity: ${crtIntensity};
+      position: relative;
+      filter: brightness(calc(1 + 0.1 * var(--crt-intensity)))
+              contrast(calc(1 + 0.05 * var(--crt-intensity)));
+      box-shadow:
+        inset 0 0 calc(60px * var(--crt-intensity)) rgba(0, 255, 100, calc(0.03 * var(--crt-intensity))),
+        inset 0 0 calc(120px * var(--crt-intensity)) rgba(0, 255, 100, calc(0.015 * var(--crt-intensity)));
     }
+    body.crt-enabled::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent 1px,
+        rgba(0, 0, 0, calc(0.15 * var(--crt-intensity))) 1px,
+        rgba(0, 0, 0, calc(0.15 * var(--crt-intensity))) 2px
+      );
+      pointer-events: none;
+      z-index: 10;
+    }
+    body.crt-enabled::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(
+        ellipse at center,
+        transparent 60%,
+        rgba(0, 0, 0, calc(0.4 * var(--crt-intensity))) 100%
+      );
+      pointer-events: none;
+      z-index: 10;
+    }` : ''}
   </style>
 </head>
-<body>
+<body${crtEnabled ? ' class="crt-enabled"' : ''}>
   <div id="start-overlay"><span>Click to Start</span></div>
   <div id="terminal-wrapper" tabindex="0"></div>
 

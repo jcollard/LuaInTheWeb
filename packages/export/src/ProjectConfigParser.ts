@@ -85,6 +85,8 @@ const DEFAULT_ANSI_CONFIG: AnsiConfig = {
   rows: 25,
   font_size: 16,
   scale: 'integer',
+  crt: false,
+  crt_intensity: 0.7,
 }
 
 /**

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import type { ScaleMode } from '../AnsiGraphicsEditor/types'
 import { Terminal } from '@xterm/xterm'
 import { CanvasAddon } from '@xterm/addon-canvas'
+import { useCrt } from '../../contexts/CrtContext'
 import '@xterm/xterm/css/xterm.css'
 import styles from './AnsiTerminalPanel.module.css'
 
@@ -30,6 +31,7 @@ export interface AnsiTerminalPanelProps {
 }
 
 export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady }: AnsiTerminalPanelProps) {
+  const { enabled: crtEnabled, intensity: crtIntensity } = useCrt()
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const terminalRef = useRef<Terminal | null>(null)
@@ -169,8 +171,17 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
     wrapperRef.current?.focus()
   }, [])
 
+  const containerClassName = crtEnabled
+    ? `${styles.container} ${styles.crtEnabled}`
+    : styles.container
+
   return (
-    <div ref={containerRef} className={styles.container} onMouseDown={handleMouseDown}>
+    <div
+      ref={containerRef}
+      className={containerClassName}
+      style={crtEnabled ? { '--crt-intensity': crtIntensity } as React.CSSProperties : undefined}
+      onMouseDown={handleMouseDown}
+    >
       <div ref={wrapperRef} className={styles.terminalWrapper} tabIndex={0} />
     </div>
   )

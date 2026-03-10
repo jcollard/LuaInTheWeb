@@ -1,4 +1,5 @@
 import { AnsiTerminalPanel, type AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
+import { useCrt } from '../../contexts/CrtContext'
 import type { TabInfo } from '../TabBar'
 import styles from './IDELayout.module.css'
 
@@ -20,6 +21,8 @@ export function AnsiTabContent({
   isActive,
   onTerminalReady,
 }: AnsiTabContentProps) {
+  const { enabled: crtEnabled, toggleCrt } = useCrt()
+
   return (
     <div className={styles.canvasContainer}>
       <div className={styles.canvasToolbar}>
@@ -44,6 +47,15 @@ export function AnsiTabContent({
             </button>
           ))}
         </div>
+        <button
+          type="button"
+          className={`${styles.crtToggle} ${crtEnabled ? styles.crtToggleActive : ''}`}
+          onClick={toggleCrt}
+          aria-pressed={crtEnabled}
+          title="Toggle CRT effect"
+        >
+          CRT
+        </button>
       </div>
       <AnsiTerminalPanel
         isActive={isActive}

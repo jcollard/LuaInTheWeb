@@ -167,6 +167,12 @@ All work happens in isolated worktrees. `/issue <n> begin` auto-creates worktree
 
 **Note**: Worktrees are auto-removed by `/pr-review <n> accept` after merge.
 
+**Worktree node_modules**: Worktrees start without `node_modules`. If `npm install` fails partway (e.g. Electron postinstall errors), packages may be incomplete (missing `.mjs` files). Fix with:
+```bash
+python3 scripts/clean-worktree-modules.py
+```
+This safely removes and reinstalls `node_modules` (only works inside `.claude/worktrees/`).
+
 ## Development Practices
 
 ### Code Architecture
@@ -307,6 +313,15 @@ gh project item-list 3 --owner jcollard --format json | node scripts/jq.js ".ite
 gh project item-list 3 --owner jcollard --format json | node scripts/jq.js ".items[] | select(.content.number == 34)"
 
 # Supported: . .field .field.nested .array[0] .array[] select() pipes (|)
+```
+
+### Worktree node_modules (`scripts/clean-worktree-modules.py`)
+
+Safely removes and reinstalls `node_modules` in a worktree. Refuses to operate outside `.claude/worktrees/`.
+
+```bash
+python3 scripts/clean-worktree-modules.py           # current directory
+python3 scripts/clean-worktree-modules.py /path/to/worktree  # explicit path
 ```
 
 ## Continuation Policy
