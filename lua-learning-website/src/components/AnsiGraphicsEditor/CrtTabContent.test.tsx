@@ -195,7 +195,7 @@ describe('CrtTabContent', () => {
       fireEvent.click(screen.getByTestId('crt-export-btn'))
 
       expect(createObjectURL).toHaveBeenCalledTimes(1)
-      const blob = createObjectURL.mock.calls[0][0] as Blob
+      const blob = (createObjectURL.mock.calls[0] as unknown[])[0] as Blob
       expect(blob.type).toBe('application/json')
       expect(clickSpy).toHaveBeenCalled()
       expect(revokeObjectURL).toHaveBeenCalledWith('blob:test')
