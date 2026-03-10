@@ -167,6 +167,10 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
 
     try {
       const content = fileSystem.readFile(projectLuaPath)
+      if (!content) {
+        setCrtConfig(null)
+        return
+      }
       const result = ProjectConfigParser.parseContent(content)
       if (result.success && result.config.ansi?.crt === true) {
         const ansi = result.config.ansi
