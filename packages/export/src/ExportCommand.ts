@@ -25,7 +25,12 @@ export class ExportCommand implements ICommand {
 
     // Handle --init flag
     if (init) {
-      this.initProject(projectPath, options.type || 'canvas', context)
+      if (!options.type) {
+        context.error('Error: --type is required with --init\n')
+        context.error('Options: --type=canvas | --type=shell | --type=ansi\n')
+        return
+      }
+      this.initProject(projectPath, options.type, context)
       return
     }
 
@@ -171,19 +176,19 @@ export class ExportCommand implements ICommand {
     -- CRT monitor effect
     -- crt = true,
     -- crt_smoothing = true,
-    -- crt_scanlineIntensity = 0.5,
-    -- crt_scanlineCount = 256,
-    -- crt_adaptiveIntensity = 0.3,
-    -- crt_brightness = 1.5,
-    -- crt_contrast = 1.05,
-    -- crt_saturation = 1.1,
-    -- crt_bloomIntensity = 0.5,
-    -- crt_bloomThreshold = 0.5,
-    -- crt_rgbShift = 1.0,
-    -- crt_vignetteStrength = 0.3,
-    -- crt_curvature = 0.1,
-    -- crt_flickerStrength = 0.01,
-    -- crt_phosphor = 0.5,
+    -- crt_scanlineIntensity = 0.33,
+    -- crt_scanlineCount = 150,
+    -- crt_adaptiveIntensity = 1,
+    -- crt_brightness = 1.15,
+    -- crt_contrast = 1,
+    -- crt_saturation = 1,
+    -- crt_bloomIntensity = 0.25,
+    -- crt_bloomThreshold = 0,
+    -- crt_rgbShift = 1,
+    -- crt_vignetteStrength = 0.22,
+    -- crt_curvature = 0.05,
+    -- crt_flickerStrength = 0,
+    -- crt_phosphor = 0,
   },
   -- Export settings
   export = {

@@ -337,12 +337,26 @@ describe('ExportCommand', () => {
   })
 
   describe('--init flag', () => {
-    it('should create project.lua when it does not exist', () => {
+    it('should error when --type is not specified', () => {
       const command = new ExportCommand()
       const filesystem = createMockFilesystem({})
       const context = createMockContext(filesystem)
 
       command.execute(['--init'], context)
+
+      expect(filesystem.writeFile).not.toHaveBeenCalled()
+      expect(context.errors.join('')).toContain('--type is required')
+      expect(context.errors.join('')).toContain('--type=canvas')
+      expect(context.errors.join('')).toContain('--type=shell')
+      expect(context.errors.join('')).toContain('--type=ansi')
+    })
+
+    it('should create project.lua when it does not exist', () => {
+      const command = new ExportCommand()
+      const filesystem = createMockFilesystem({})
+      const context = createMockContext(filesystem)
+
+      command.execute(['--init', '--type=canvas'], context)
 
       expect(filesystem.writeFile).toHaveBeenCalledWith(
         '/project/project.lua',
@@ -358,7 +372,7 @@ describe('ExportCommand', () => {
       })
       const context = createMockContext(filesystem)
 
-      command.execute(['--init'], context)
+      command.execute(['--init', '--type=canvas'], context)
 
       expect(filesystem.writeFile).not.toHaveBeenCalled()
       expect(context.errors.join('')).toContain('already exists')
@@ -369,7 +383,7 @@ describe('ExportCommand', () => {
       const filesystem = createMockFilesystem({})
       const context = createMockContext(filesystem)
 
-      command.execute(['--init', '/other/path'], context)
+      command.execute(['--init', '--type=canvas', '/other/path'], context)
 
       expect(filesystem.writeFile).toHaveBeenCalledWith(
         '/other/path/project.lua',
@@ -377,12 +391,12 @@ describe('ExportCommand', () => {
       )
     })
 
-    it('should create canvas project template by default', () => {
+    it('should create canvas project template with --type=canvas', () => {
       const command = new ExportCommand()
       const filesystem = createMockFilesystem({})
       const context = createMockContext(filesystem)
 
-      command.execute(['--init'], context)
+      command.execute(['--init', '--type=canvas'], context)
 
       const writeCall = (filesystem.writeFile as ReturnType<typeof vi.fn>).mock.calls[0]
       const content = writeCall[1] as string
@@ -410,7 +424,7 @@ describe('ExportCommand', () => {
       const filesystem = createMockFilesystem({})
       const context = createMockContext(filesystem)
 
-      command.execute(['--init'], context)
+      command.execute(['--init', '--type=canvas'], context)
 
       const writeCall = (filesystem.writeFile as ReturnType<typeof vi.fn>).mock.calls[0]
       const content = writeCall[1] as string
@@ -437,7 +451,7 @@ describe('ExportCommand', () => {
       const context = createMockContext(filesystem)
       context.onTriggerDownload = undefined
 
-      command.execute(['--init'], context)
+      command.execute(['--init', '--type=canvas'], context)
 
       expect(filesystem.writeFile).toHaveBeenCalled()
       expect(context.errors.length).toBe(0)
