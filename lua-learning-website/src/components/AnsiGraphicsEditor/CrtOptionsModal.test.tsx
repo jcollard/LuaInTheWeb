@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { CrtOptionsModal, type CrtOptionsModalProps } from './CrtOptionsModal'
+import { CrtOptionsModal, type CrtOptionsModalProps, CRT_STORAGE_KEY } from './CrtOptionsModal'
 import { CRT_DEFAULTS } from '@lua-learning/lua-runtime'
 
 function defaultProps(overrides?: Partial<CrtOptionsModalProps>): CrtOptionsModalProps {
@@ -13,6 +13,10 @@ function defaultProps(overrides?: Partial<CrtOptionsModalProps>): CrtOptionsModa
 }
 
 describe('CrtOptionsModal', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
   it('renders dialog with correct role and aria-modal', () => {
     render(<CrtOptionsModal {...defaultProps()} />)
     const dialog = screen.getByRole('dialog')
@@ -112,5 +116,60 @@ describe('CrtOptionsModal', () => {
     for (const key of keys) {
       expect(screen.getByTestId(`crt-slider-${key}`)).toBeTruthy()
     }
+  })
+
+  describe('localStorage persistence', () => {
+    it('saves config to localStorage when slider changes', () => {
+      const onSetCrtConfig = vi.fn()
+      const custom = { ...CRT_DEFAULTS, scanlines: 0.8 }
+      render(<CrtOptionsModal {...defaultProps({ crtConfig: custom, onSetCrtConfig })} />)
+      fireEvent.change(screen.getByTestId('crt-slider-bloom'), { target: { value: '0.5' } })
+      const stored = JSON.parse(localStorage.getItem(CRT_STORAGE_KEY)!)
+      expect(stored.scanlines).toBe(0.8)
+      expect(stored.bloom).toBe(0.5)
+    })
+
+    it('restores saved config from localStorage when toggling on', () => {
+      const saved = { ...CRT_DEFAULTS, scanlines: 0.9, bloom: 0.7 }
+      localStorage.setItem(CRT_STORAGE_KEY, JSON.stringify(saved))
+      const onSetCrtConfig = vi.fn()
+      render(<CrtOptionsModal {...defaultProps({ onSetCrtConfig })} />)
+      fireEvent.click(screen.getByTestId('crt-enabled-checkbox'))
+      expect(onSetCrtConfig).toHaveBeenCalledWith(saved)
+    })
+
+    it('falls back to CRT_DEFAULTS when localStorage is empty', () => {
+      const onSetCrtConfig = vi.fn()
+      render(<CrtOptionsModal {...defaultProps({ onSetCrtConfig })} />)
+      fireEvent.click(screen.getByTestId('crt-enabled-checkbox'))
+      expect(onSetCrtConfig).toHaveBeenCalledWith({ ...CRT_DEFAULTS })
+    })
+
+    it('falls back to CRT_DEFAULTS when localStorage has invalid JSON', () => {
+      localStorage.setItem(CRT_STORAGE_KEY, 'not-valid-json{{{')
+      const onSetCrtConfig = vi.fn()
+      render(<CrtOptionsModal {...defaultProps({ onSetCrtConfig })} />)
+      fireEvent.click(screen.getByTestId('crt-enabled-checkbox'))
+      expect(onSetCrtConfig).toHaveBeenCalledWith({ ...CRT_DEFAULTS })
+    })
+
+    it('saves config to localStorage when toggling off (preserves settings)', () => {
+      const custom = { ...CRT_DEFAULTS, curvature: 0.4 }
+      const onSetCrtConfig = vi.fn()
+      render(<CrtOptionsModal {...defaultProps({ crtConfig: custom, onSetCrtConfig })} />)
+      fireEvent.click(screen.getByTestId('crt-enabled-checkbox'))
+      expect(onSetCrtConfig).toHaveBeenCalledWith(null)
+      const stored = JSON.parse(localStorage.getItem(CRT_STORAGE_KEY)!)
+      expect(stored.curvature).toBe(0.4)
+    })
+
+    it('saves config on reset to defaults', () => {
+      const onSetCrtConfig = vi.fn()
+      const custom = { ...CRT_DEFAULTS, scanlines: 0.9 }
+      render(<CrtOptionsModal {...defaultProps({ crtConfig: custom, onSetCrtConfig })} />)
+      fireEvent.click(screen.getByTestId('crt-reset-defaults'))
+      const stored = JSON.parse(localStorage.getItem(CRT_STORAGE_KEY)!)
+      expect(stored).toEqual({ ...CRT_DEFAULTS })
+    })
   })
 })

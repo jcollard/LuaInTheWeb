@@ -2,6 +2,20 @@ import type { KeyboardEvent } from 'react'
 import { CRT_DEFAULTS, type CrtConfig } from '@lua-learning/lua-runtime'
 import styles from './AnsiGraphicsEditor.module.css'
 
+export const CRT_STORAGE_KEY = 'ansi-crt-config'
+
+function loadSavedConfig(): CrtConfig {
+  try {
+    const raw = localStorage.getItem(CRT_STORAGE_KEY)
+    if (raw) return JSON.parse(raw) as CrtConfig
+  } catch { /* invalid JSON — fall through */ }
+  return { ...CRT_DEFAULTS }
+}
+
+function saveConfig(config: CrtConfig): void {
+  localStorage.setItem(CRT_STORAGE_KEY, JSON.stringify(config))
+}
+
 export interface CrtOptionsModalProps {
   onClose: () => void
   crtConfig: CrtConfig | null
@@ -40,18 +54,24 @@ export function CrtOptionsModal({ onClose, crtConfig, onSetCrtConfig }: CrtOptio
 
   function handleToggle(): void {
     if (enabled) {
+      saveConfig(config)
       onSetCrtConfig(null)
     } else {
-      onSetCrtConfig({ ...CRT_DEFAULTS })
+      const restored = loadSavedConfig()
+      onSetCrtConfig(restored)
     }
   }
 
   function handleSliderChange(key: keyof CrtConfig, value: number): void {
-    onSetCrtConfig({ ...config, [key]: value })
+    const updated = { ...config, [key]: value }
+    saveConfig(updated)
+    onSetCrtConfig(updated)
   }
 
   function handleReset(): void {
-    onSetCrtConfig({ ...CRT_DEFAULTS })
+    const defaults = { ...CRT_DEFAULTS }
+    saveConfig(defaults)
+    onSetCrtConfig(defaults)
   }
 
   return (
