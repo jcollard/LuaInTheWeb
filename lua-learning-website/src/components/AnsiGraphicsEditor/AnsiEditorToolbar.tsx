@@ -66,15 +66,10 @@ export function AnsiEditorToolbar({
 
   return (
     <div className={styles.toolbar} data-testid="ansi-editor-toolbar">
-      <button
-        type="button"
-        className={styles.toolbarButton}
+      <button type="button" className={styles.toolbarButton}
         onClick={() => setFileOptionsOpen(true)}
         title={tooltipWithShortcut('File', ACTION_SHORTCUTS.fileMenu)}
-        data-testid="file-options-button"
-      >
-        File
-      </button>
+        data-testid="file-options-button">File</button>
       {fileOptionsOpen && (
         <FileOptionsModal
           onClose={() => setFileOptionsOpen(false)}
@@ -91,24 +86,14 @@ export function AnsiEditorToolbar({
           onSetScaleMode={onSetScaleMode!}
         />
       )}
-      {onSetCrtConfig && (
-        <button
-          type="button"
-          className={styles.toolbarButton}
-          onClick={() => setCrtMenuOpen(true)}
-          title="CRT Options"
-          data-testid="crt-options-button"
-        >
-          CRT
-        </button>
-      )}
-      {crtMenuOpen && onSetCrtConfig && (
-        <CrtOptionsModal
-          onClose={() => setCrtMenuOpen(false)}
-          crtConfig={crtConfig ?? null}
-          onSetCrtConfig={onSetCrtConfig}
-        />
-      )}
+      {onSetCrtConfig && (<>
+        <button type="button" className={styles.toolbarButton}
+          onClick={() => setCrtMenuOpen(true)} title="CRT Options" data-testid="crt-options-button">CRT</button>
+        {crtMenuOpen && (
+          <CrtOptionsModal onClose={() => setCrtMenuOpen(false)}
+            crtConfig={crtConfig ?? null} onSetCrtConfig={onSetCrtConfig} />
+        )}
+      </>)}
       <div className={styles.modeGroup}>
         <span className={styles.modeLabel}>Tool</span>
         <button
