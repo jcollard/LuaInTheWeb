@@ -8,19 +8,19 @@ local ansi = require("ansi")
 -- Parameter definitions
 ------------------------------------------------------------
 local params = {
-  {key="scanlineIntensity",  label="scanlineIntensity", min=0,   max=1,    step=0.05, default=0.33},
-  {key="scanlineCount",      label="scanlineCount",     min=50,  max=1200, step=25,   default=150},
-  {key="adaptiveIntensity",  label="adaptiveIntensity", min=0,   max=1,    step=0.05, default=1},
-  {key="brightness",         label="brightness",        min=0.6, max=1.8,  step=0.05, default=1.15},
-  {key="contrast",           label="contrast",          min=0.5, max=1.5,  step=0.05, default=1},
-  {key="saturation",         label="saturation",        min=0,   max=2,    step=0.05, default=1},
-  {key="bloomIntensity",     label="bloomIntensity",    min=0,   max=1.5,  step=0.05, default=0.25},
-  {key="bloomThreshold",     label="bloomThreshold",    min=0,   max=1,    step=0.05, default=0},
-  {key="rgbShift",           label="rgbShift",          min=0,   max=1,    step=0.05, default=1},
-  {key="vignetteStrength",   label="vignetteStrength",  min=0,   max=2,    step=0.1,  default=0.22},
-  {key="curvature",          label="curvature",         min=0,   max=0.5,  step=0.01, default=0.05},
-  {key="flickerStrength",    label="flickerStrength",   min=0,   max=0.15, step=0.01, default=0},
-  {key="phosphor",           label="phosphor",          min=0,   max=1,    step=0.05, default=0},
+  {key="scanlineIntensity",  min=0,   max=1,    step=0.05, default=0.33},
+  {key="scanlineCount",      min=50,  max=1200, step=25,   default=150},
+  {key="adaptiveIntensity",  min=0,   max=1,    step=0.05, default=1},
+  {key="brightness",         min=0.6, max=1.8,  step=0.05, default=1.15},
+  {key="contrast",           min=0.5, max=1.5,  step=0.05, default=1},
+  {key="saturation",         min=0,   max=2,    step=0.05, default=1},
+  {key="bloomIntensity",     min=0,   max=1.5,  step=0.05, default=0.25},
+  {key="bloomThreshold",     min=0,   max=1,    step=0.05, default=0},
+  {key="rgbShift",           min=0,   max=1,    step=0.05, default=1},
+  {key="vignetteStrength",   min=0,   max=2,    step=0.1,  default=0.22},
+  {key="curvature",          min=0,   max=0.5,  step=0.01, default=0.05},
+  {key="flickerStrength",    min=0,   max=0.15, step=0.01, default=0},
+  {key="phosphor",           min=0,   max=1,    step=0.05, default=0},
 }
 -- smoothing is boolean, handled separately
 local smoothing = true
@@ -33,9 +33,10 @@ end
 ------------------------------------------------------------
 -- State
 ------------------------------------------------------------
-local selected = 1       -- selected parameter index (1-14, 14=smoothing)
-local current_scene = 1  -- 1-5
-local crt_dirty = true   -- flag to push CRT update
+local total_params = #params + 1  -- +1 for smoothing toggle
+local selected = 1                -- selected parameter index (1-14, 14=smoothing)
+local current_scene = 1           -- 1-5
+local crt_dirty = true            -- flag to push CRT update
 
 ------------------------------------------------------------
 -- Build CRT config from current values
@@ -69,14 +70,19 @@ end
 -- Pixel art scene drawing (32x16 viewport, origin ox,oy)
 ------------------------------------------------------------
 
+-- Helper: draw a single colored pixel (█ with matching fg/bg)
+local function put_pixel(row, col, r, g, b)
+  ansi.set_cursor(row, col)
+  ansi.foreground(r, g, b)
+  ansi.background(r, g, b)
+  ansi.print("\226\150\136") -- █
+end
+
 -- Helper: draw a filled rect
 local function fill_rect(ox, oy, x1, y1, x2, y2, r, g, b)
   for row = y1, y2 do
     for col = x1, x2 do
-      ansi.set_cursor(oy + row, ox + col)
-      ansi.foreground(r, g, b)
-      ansi.background(r, g, b)
-      ansi.print("\226\150\136") -- █
+      put_pixel(oy + row, ox + col, r, g, b)
     end
   end
 end
@@ -94,38 +100,21 @@ local function draw_smiley(ox, oy)
   -- Yellow circle
   for row = 1, 16 do
     for col = 1, 32 do
-      local d = dist(cx, cy, col, row * 1.6)
-      if d < 11 then
-        ansi.set_cursor(oy + row, ox + col)
-        ansi.foreground(255, 220, 50)
-        ansi.background(255, 220, 50)
-        ansi.print("\226\150\136")
+      if dist(cx, cy, col, row * 1.6) < 11 then
+        put_pixel(oy + row, ox + col, 255, 220, 50)
       end
     end
   end
   -- Eyes (black)
   for row = 5, 7 do
-    for col = 12, 13 do
-      ansi.set_cursor(oy + row, ox + col)
-      ansi.foreground(40, 40, 40)
-      ansi.background(40, 40, 40)
-      ansi.print("\226\150\136")
-    end
-    for col = 19, 20 do
-      ansi.set_cursor(oy + row, ox + col)
-      ansi.foreground(40, 40, 40)
-      ansi.background(40, 40, 40)
-      ansi.print("\226\150\136")
-    end
+    for col = 12, 13 do put_pixel(oy + row, ox + col, 40, 40, 40) end
+    for col = 19, 20 do put_pixel(oy + row, ox + col, 40, 40, 40) end
   end
   -- Mouth (curved)
   for col = 11, 21 do
     local mouth_row = 11 + math.floor(0.04 * (col - 16)^2)
     if mouth_row >= 11 and mouth_row <= 13 then
-      ansi.set_cursor(oy + mouth_row, ox + col)
-      ansi.foreground(40, 40, 40)
-      ansi.background(40, 40, 40)
-      ansi.print("\226\150\136")
+      put_pixel(oy + mouth_row, ox + col, 40, 40, 40)
     end
   end
 end
@@ -140,22 +129,15 @@ local function draw_apple(ox, oy)
   for col = 18, 22 do
     local leaf_row = 3 - math.floor(0.3 * math.abs(col - 20))
     if leaf_row >= 2 then
-      ansi.set_cursor(oy + leaf_row, ox + col)
-      ansi.foreground(50, 180, 50)
-      ansi.background(50, 180, 50)
-      ansi.print("\226\150\136")
+      put_pixel(oy + leaf_row, ox + col, 50, 180, 50)
     end
   end
   -- Red apple body
   for row = 5, 14 do
     for col = 8, 25 do
-      local d = dist(16.5, 10, col, row * 1.3)
-      if d < 8 then
-        local shade = 200 + math.floor(30 * math.cos((col - 14) * 0.3))
-        ansi.set_cursor(oy + row, ox + col)
-        ansi.foreground(clamp(shade, 150, 240), 20, 20)
-        ansi.background(clamp(shade, 150, 240), 20, 20)
-        ansi.print("\226\150\136")
+      if dist(16.5, 10, col, row * 1.3) < 8 then
+        local shade = clamp(200 + math.floor(30 * math.cos((col - 14) * 0.3)), 150, 240)
+        put_pixel(oy + row, ox + col, shade, 20, 20)
       end
     end
   end
@@ -174,13 +156,9 @@ local function draw_tree(ox, oy)
   -- Crown (green oval)
   for row = 2, 10 do
     for col = 7, 26 do
-      local d = dist(16.5, 6, col, row * 1.5)
-      if d < 10 then
-        local g = 120 + math.floor(40 * math.sin(col * 0.7 + row))
-        ansi.set_cursor(oy + row, ox + col)
-        ansi.foreground(30, clamp(g, 100, 200), 30)
-        ansi.background(30, clamp(g, 100, 200), 30)
-        ansi.print("\226\150\136")
+      if dist(16.5, 6, col, row * 1.5) < 10 then
+        local g = clamp(120 + math.floor(40 * math.sin(col * 0.7 + row)), 100, 200)
+        put_pixel(oy + row, ox + col, 30, g, 30)
       end
     end
   end
@@ -204,23 +182,14 @@ local function draw_house(ox, oy)
   -- Door (blue)
   fill_rect(ox, oy, 15, 10, 18, 15, 60, 80, 180)
   -- Doorknob
-  ansi.set_cursor(oy + 12, ox + 17)
-  ansi.foreground(220, 200, 50)
-  ansi.background(220, 200, 50)
-  ansi.print("\226\150\136")
+  put_pixel(oy + 12, ox + 17, 220, 200, 50)
   -- Windows (yellow)
   fill_rect(ox, oy, 10, 8, 13, 10, 255, 255, 120)
   fill_rect(ox, oy, 20, 8, 23, 10, 255, 255, 120)
   -- Window crosses
   for r = 8, 10 do
-    ansi.set_cursor(oy + r, ox + 11)
-    ansi.foreground(100, 80, 60)
-    ansi.background(100, 80, 60)
-    ansi.print("\226\150\136")
-    ansi.set_cursor(oy + r, ox + 21)
-    ansi.foreground(100, 80, 60)
-    ansi.background(100, 80, 60)
-    ansi.print("\226\150\136")
+    put_pixel(oy + r, ox + 11, 100, 80, 60)
+    put_pixel(oy + r, ox + 21, 100, 80, 60)
   end
 end
 
@@ -284,11 +253,8 @@ end
 local function fmt_val(p)
   if p.step >= 1 then
     return string.format("%4d", math.floor(p.value + 0.5))
-  elseif p.step >= 0.05 then
-    return string.format("%4.2f", p.value)
-  else
-    return string.format("%4.2f", p.value)
   end
+  return string.format("%4.2f", p.value)
 end
 
 -- Draw a slider bar (10 chars)
@@ -300,7 +266,6 @@ end
 
 -- Draw parameter panel (cols 36-80, rows 2-15)
 local function draw_panel()
-  local total_params = #params + 1 -- +1 for smoothing
   for i = 1, total_params do
     local row = i + 1 -- rows 2-15
     ansi.set_cursor(row, 36)
@@ -317,27 +282,11 @@ local function draw_panel()
     end
 
     if i <= #params then
-      -- Numeric parameter
       local p = params[i]
-      local name = string.format("%-19s", p.label)
-      local val = fmt_val(p)
-      local bar = slider_bar(p)
-      if is_selected then
-        ansi.foreground(255, 255, 100)
-      else
-        ansi.foreground(160, 160, 160)
-      end
-      ansi.print(name .. val .. "  [" .. bar .. "]")
+      ansi.print(string.format("%-19s", p.key) .. fmt_val(p) .. "  [" .. slider_bar(p) .. "]")
     else
-      -- Smoothing toggle
-      local name = string.format("%-19s", "smoothing")
       local val = smoothing and " ON" or "OFF"
-      if is_selected then
-        ansi.foreground(255, 255, 100)
-      else
-        ansi.foreground(160, 160, 160)
-      end
-      ansi.print(name .. " " .. val .. "                ")
+      ansi.print(string.format("%-19s", "smoothing") .. " " .. val .. "                ")
     end
     ansi.reset()
   end
@@ -374,9 +323,18 @@ end
 ------------------------------------------------------------
 -- Input handling
 ------------------------------------------------------------
-local function handle_input()
-  local total_params = #params + 1
+-- Adjust the selected parameter by direction (-1 or +1)
+local function adjust_selected(direction)
+  if selected <= #params then
+    local p = params[selected]
+    p.value = round(clamp(p.value + direction * p.step, p.min, p.max), 2)
+  else
+    smoothing = not smoothing
+  end
+  crt_dirty = true
+end
 
+local function handle_input()
   if ansi.is_key_pressed("up") then
     selected = selected - 1
     if selected < 1 then selected = total_params end
@@ -387,27 +345,8 @@ local function handle_input()
     if selected > total_params then selected = 1 end
   end
 
-  if ansi.is_key_pressed("left") then
-    if selected <= #params then
-      local p = params[selected]
-      p.value = round(clamp(p.value - p.step, p.min, p.max), 2)
-      crt_dirty = true
-    else
-      smoothing = not smoothing
-      crt_dirty = true
-    end
-  end
-
-  if ansi.is_key_pressed("right") then
-    if selected <= #params then
-      local p = params[selected]
-      p.value = round(clamp(p.value + p.step, p.min, p.max), 2)
-      crt_dirty = true
-    else
-      smoothing = not smoothing
-      crt_dirty = true
-    end
-  end
+  if ansi.is_key_pressed("left") then adjust_selected(-1) end
+  if ansi.is_key_pressed("right") then adjust_selected(1) end
 
   -- Scene selection
   for i = 1, 5 do
