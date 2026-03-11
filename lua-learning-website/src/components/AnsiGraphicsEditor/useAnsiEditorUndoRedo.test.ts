@@ -24,7 +24,7 @@ describe('useAnsiEditor undo/redo', () => {
   function setupEditor() {
     const { result } = renderHook(() => useAnsiEditor())
     const container = createMockContainer()
-    const handle = { write: vi.fn(), container, dispose: vi.fn() }
+    const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
     act(() => result.current.onTerminalReady(handle))
     return { result, container, handle }
   }

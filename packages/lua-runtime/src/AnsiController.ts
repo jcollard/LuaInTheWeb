@@ -35,6 +35,8 @@ export interface AnsiTerminalHandle {
   container: HTMLElement
   /** Dispose of the terminal handle */
   dispose: () => void
+  /** Enable/disable CRT monitor effect with optional intensity or per-effect config */
+  setCrt?: (enabled: boolean, intensity?: number, config?: Record<string, number>) => void
 }
 
 /**
@@ -93,14 +95,9 @@ interface ScreenState {
   needsRecomposite: boolean
 }
 
-/**
- * Format an onTick error for display.
- */
+/** Format an onTick error for display. */
 function formatOnTickError(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message
-  }
-  return String(error)
+  return error instanceof Error ? error.message : String(error)
 }
 
 /**
@@ -116,12 +113,10 @@ export class AnsiController {
   private inputAPI: InputAPI = new InputAPI()
   private gameLoop: GameLoopController | null = null
 
-  // Timing state
   private currentTiming: TimingInfo = { deltaTime: 0, totalTime: 0, frameNumber: 0 }
-
-  // Blocking state for start()
   private running = false
   private stopResolver: (() => void) | null = null
+  private pendingCrt: { enabled: boolean; intensity?: number; config?: Record<string, number> } | null = null
 
   // onTick callback from Lua
   private onTickCallback: (() => void) | null = null
@@ -154,19 +149,11 @@ export class AnsiController {
     return state
   }
 
-  /**
-   * Check if the terminal is currently active.
-   */
-  isActive(): boolean {
-    return this.running
-  }
+  /** Check if the terminal is currently active. */
+  isActive(): boolean { return this.running }
 
-  /**
-   * Set the onTick callback from Lua.
-   */
-  setOnTickCallback(callback: () => void): void {
-    this.onTickCallback = callback
-  }
+  /** Set the onTick callback from Lua. */
+  setOnTickCallback(callback: () => void): void { this.onTickCallback = callback }
 
   /**
    * Start the ANSI terminal and block until stop() is called.
@@ -309,6 +296,17 @@ export class AnsiController {
    */
   reset(): void {
     this.handle?.write('\x1b[0m')
+  }
+
+  /** Enable/disable CRT monitor effect. Stores config if called before start(). */
+  setCrt(enabled: boolean, intensity?: number, config?: Record<string, number>): void {
+    if (!this.handle) { this.pendingCrt = { enabled, intensity, config }; return }
+    this.handle.setCrt?.(enabled, intensity, config)
+  }
+
+  /** Get and clear any CRT config set before start(). */
+  consumePendingCrt(): { enabled: boolean; intensity?: number; config?: Record<string, number> } | null {
+    const pending = this.pendingCrt; this.pendingCrt = null; return pending
   }
 
   // --- Timing API ---

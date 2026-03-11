@@ -103,6 +103,38 @@ export interface AnsiConfig {
    * - '3x': Fixed 3x scale
    */
   scale?: 'integer' | 'full' | '1x' | '2x' | '3x'
+
+  /** Enable CRT monitor effect (scanlines, vignette, phosphor glow). Default: false */
+  crt?: boolean
+
+  /** Texture smoothing (default true) */
+  crt_smoothing?: boolean
+  /** Scanline intensity (0-1, default 0.33) */
+  crt_scanlineIntensity?: number
+  /** Scanline count (50-1200, default 150) */
+  crt_scanlineCount?: number
+  /** Scanline adaptive modulation (0-1, default 1) */
+  crt_adaptiveIntensity?: number
+  /** Brightness boost (0.6-1.8, default 1.15) */
+  crt_brightness?: number
+  /** Contrast adjustment (0.5-1.5, default 1) */
+  crt_contrast?: number
+  /** Color saturation (0-2, default 1) */
+  crt_saturation?: number
+  /** Glow on bright areas (0-1.5, default 0.25) */
+  crt_bloomIntensity?: number
+  /** Bloom luminance threshold (0-1, default 0) */
+  crt_bloomThreshold?: number
+  /** Color fringing (0-1, default 1) */
+  crt_rgbShift?: number
+  /** Edge darkening (0-2, default 0.22) */
+  crt_vignetteStrength?: number
+  /** Barrel distortion amount (0-0.5, default 0.05) */
+  crt_curvature?: number
+  /** Temporal flicker (0-0.15, default 0) */
+  crt_flickerStrength?: number
+  /** RGB phosphor mask strength (0-1, default 0) */
+  crt_phosphor?: number
 }
 
 /**

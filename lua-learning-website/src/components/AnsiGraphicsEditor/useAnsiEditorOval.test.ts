@@ -31,7 +31,7 @@ describe('oval tool', () => {
     it('should draw oval outline on mousedown→mousemove→mouseup', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(handle))
       act(() => result.current.setTool('oval-outline'))
 
@@ -66,7 +66,7 @@ describe('oval tool', () => {
     it('should draw filled oval on mousedown→mousemove→mouseup', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(handle))
       act(() => result.current.setTool('oval-filled'))
 
@@ -90,7 +90,7 @@ describe('oval tool', () => {
     it('should show preview during drag (terminal writes occur)', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(handle))
       act(() => result.current.setTool('oval-outline'))
 
@@ -104,7 +104,7 @@ describe('oval tool', () => {
     it('should update preview when mouse moves to new position', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(handle))
       act(() => result.current.setTool('oval-outline'))
 
@@ -121,7 +121,7 @@ describe('oval tool', () => {
     it('should cancel oval when mouseup occurs outside canvas', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(handle))
       act(() => result.current.setTool('oval-outline'))
 
@@ -139,7 +139,7 @@ describe('oval tool', () => {
     it('should revert oval on undo', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(handle))
       act(() => result.current.setTool('oval-filled'))
 
@@ -162,7 +162,7 @@ describe('oval tool', () => {
     it('should show dimensions during oval preview in brush mode', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       const dimEl = document.createElement('div')
       result.current.dimensionRef.current = dimEl
       act(() => result.current.onTerminalReady(handle))
@@ -179,7 +179,7 @@ describe('oval tool', () => {
     it('should hide dimension label on commit', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       const dimEl = document.createElement('div')
       result.current.dimensionRef.current = dimEl
       act(() => result.current.onTerminalReady(handle))
@@ -196,7 +196,7 @@ describe('oval tool', () => {
     it('should hide dimension label on cancel', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       const dimEl = document.createElement('div')
       result.current.dimensionRef.current = dimEl
       act(() => result.current.onTerminalReady(handle))

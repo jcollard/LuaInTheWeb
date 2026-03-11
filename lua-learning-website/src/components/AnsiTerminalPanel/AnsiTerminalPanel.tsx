@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import type { ScaleMode } from '../AnsiGraphicsEditor/types'
 import { Terminal } from '@xterm/xterm'
 import { CanvasAddon } from '@xterm/addon-canvas'
+import { CrtShader, type CrtConfig } from '@lua-learning/lua-runtime'
 import '@xterm/xterm/css/xterm.css'
 import styles from './AnsiTerminalPanel.module.css'
 
@@ -17,6 +18,8 @@ export interface AnsiTerminalHandle {
   container: HTMLElement
   /** Dispose of the terminal handle */
   dispose: () => void
+  /** Enable/disable CRT monitor effect with optional intensity or per-effect config */
+  setCrt: (enabled: boolean, intensity?: number, config?: Partial<CrtConfig>) => void
 }
 
 export interface AnsiTerminalPanelProps {
@@ -33,6 +36,7 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const terminalRef = useRef<Terminal | null>(null)
+  const crtShaderRef = useRef<CrtShader | null>(null)
   // Stable proxy handle that survives Strict Mode re-runs via terminalRef indirection
   const handleRef = useRef<AnsiTerminalHandle | null>(null)
   const onTerminalReadyRef = useRef(onTerminalReady)
@@ -124,6 +128,34 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
           dispose: () => {
             // No-op - terminal lifecycle managed by this component's cleanup
           },
+          setCrt: (enabled: boolean, intensity?: number, config?: Partial<CrtConfig>) => {
+            const el = containerRef.current
+            const xtermCanvas = wrapperRef.current?.querySelector('canvas')
+            if (!el) return
+            if (enabled) {
+              if (xtermCanvas) {
+                crtShaderRef.current ??= new CrtShader(xtermCanvas, el, {
+                  fallbackCssClass: styles.crtEnabled,
+                })
+                if (config) {
+                  crtShaderRef.current.enable(config)
+                } else {
+                  crtShaderRef.current.enable(intensity ?? undefined)
+                }
+              } else {
+                // No canvas yet — CSS-only fallback
+                el.classList.add(styles.crtEnabled)
+                el.style.setProperty('--crt-intensity', String(intensity ?? 0.7))
+              }
+            } else {
+              if (crtShaderRef.current) {
+                crtShaderRef.current.disable()
+              } else {
+                el.classList.remove(styles.crtEnabled)
+                el.style.removeProperty('--crt-intensity')
+              }
+            }
+          },
         }
       }
 
@@ -136,6 +168,8 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
       disposed = true
       resizeObserver?.disconnect()
       onTerminalReadyRef.current?.(null)
+      crtShaderRef.current?.dispose()
+      crtShaderRef.current = null
       if (terminalRef.current) {
         terminalRef.current.dispose()
         terminalRef.current = null
@@ -170,7 +204,11 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
   }, [])
 
   return (
-    <div ref={containerRef} className={styles.container} onMouseDown={handleMouseDown}>
+    <div
+      ref={containerRef}
+      className={styles.container}
+      onMouseDown={handleMouseDown}
+    >
       <div ref={wrapperRef} className={styles.terminalWrapper} tabIndex={0} />
     </div>
   )

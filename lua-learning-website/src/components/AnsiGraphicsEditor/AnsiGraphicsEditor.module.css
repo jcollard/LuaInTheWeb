@@ -670,6 +670,22 @@
   background-color: var(--theme-bg-secondary);
   border-left: 1px solid var(--theme-border);
   overflow-y: auto;
+  position: relative;
+}
+
+.resizeHandle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  background-color: transparent;
+}
+
+.resizeHandle:hover {
+  background-color: var(--theme-accent-primary);
 }
 
 .layersPanelHeader {
@@ -1278,6 +1294,16 @@
   flex-direction: column;
   gap: 6px;
   padding: 8px 16px 16px;
+}
+
+.crtTabContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .fileOptionsAction {

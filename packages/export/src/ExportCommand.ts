@@ -25,7 +25,12 @@ export class ExportCommand implements ICommand {
 
     // Handle --init flag
     if (init) {
-      this.initProject(projectPath, options.type || 'canvas', context)
+      if (!options.type) {
+        context.error('Error: --type is required with --init\n')
+        context.error('Options: --type=canvas | --type=shell | --type=ansi\n')
+        return
+      }
+      this.initProject(projectPath, options.type, context)
       return
     }
 
@@ -167,11 +172,32 @@ export class ExportCommand implements ICommand {
     columns = 80,
     rows = 25,
     font_size = 16,
+    scale = "integer",  -- "integer" | "full" | "1x" | "2x" | "3x"
+    -- CRT monitor effect
+    -- crt = true,
+    -- crt_smoothing = true,
+    -- crt_scanlineIntensity = 0.33,
+    -- crt_scanlineCount = 150,
+    -- crt_adaptiveIntensity = 1,
+    -- crt_brightness = 1.15,
+    -- crt_contrast = 1,
+    -- crt_saturation = 1,
+    -- crt_bloomIntensity = 0.25,
+    -- crt_bloomThreshold = 0,
+    -- crt_rgbShift = 1,
+    -- crt_vignetteStrength = 0.22,
+    -- crt_curvature = 0.05,
+    -- crt_flickerStrength = 0,
+    -- crt_phosphor = 0,
   },
   -- Export settings
   export = {
+    -- true: embed all assets as data URLs in a single HTML file (works offline)
+    -- false: create ZIP with separate assets folder (smaller file size)
     singleFile = true,
   },
+  -- Uncomment to include asset directories:
+  -- assets = { "images/", "sounds/" },
 }
 `
       // Stryker restore all

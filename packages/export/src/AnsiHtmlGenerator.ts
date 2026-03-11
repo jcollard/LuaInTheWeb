@@ -9,6 +9,11 @@ import {
 import { ANSI_INLINE_JS } from './runtime/ansi-inline.generated'
 import { XTERM_WITH_CANVAS_ADDON_JS } from './runtime/xterm-canvas.generated'
 
+/** Emit a CRT config field: literal value if defined, CRT_DEFAULTS fallback otherwise. */
+function crtField(name: string, value: number | undefined): string {
+  return value !== undefined ? `${name}: ${value}` : `${name}: CRT_DEFAULTS.${name}`
+}
+
 /**
  * Generate HTML for an ANSI terminal project.
  * @param config - Project configuration
@@ -27,6 +32,25 @@ export function generateAnsiHtml(
   const rows = config.ansi?.rows ?? 25
   const fontSize = config.ansi?.font_size ?? 16
   const scaleMode = config.ansi?.scale ?? 'integer'
+  const crtEnabled = config.ansi?.crt ?? false
+
+  // Build CRT config JS object entries — use literal values when set, CRT_DEFAULTS fallback otherwise
+  const crtConfigEntries = crtEnabled ? [
+    `smoothing: ${config.ansi?.crt_smoothing ?? true}`,
+    crtField('scanlineIntensity', config.ansi?.crt_scanlineIntensity),
+    crtField('scanlineCount', config.ansi?.crt_scanlineCount),
+    crtField('adaptiveIntensity', config.ansi?.crt_adaptiveIntensity),
+    crtField('brightness', config.ansi?.crt_brightness),
+    crtField('contrast', config.ansi?.crt_contrast),
+    crtField('saturation', config.ansi?.crt_saturation),
+    crtField('bloomIntensity', config.ansi?.crt_bloomIntensity),
+    crtField('bloomThreshold', config.ansi?.crt_bloomThreshold),
+    crtField('rgbShift', config.ansi?.crt_rgbShift),
+    crtField('vignetteStrength', config.ansi?.crt_vignetteStrength),
+    crtField('curvature', config.ansi?.crt_curvature),
+    crtField('flickerStrength', config.ansi?.crt_flickerStrength),
+    crtField('phosphor', config.ansi?.crt_phosphor),
+  ].join(', ') : ''
 
   // Escape audioLuaCode for safe embedding in JS template literal
   const escapedAudioLuaCode = audioLuaCode
@@ -154,18 +178,12 @@ export function generateAnsiHtml(
 
     function writeToTerminal(text) {
       outputBuffer += text;
-      if (!flushTimeout) {
-        flushTimeout = setTimeout(flushOutput, 10);
-      }
+      if (!flushTimeout) { flushTimeout = setTimeout(flushOutput, 10); }
     }
 
     async function startApp() {
-      overlay.remove();
-      wrapper.style.display = 'block';
-      wrapper.focus();
-
+      overlay.remove(); wrapper.style.display = 'block'; wrapper.focus();
       // Create AudioContext synchronously in gesture handler (Issue #617)
-      // Browser autoplay policy requires this before any await
       let preUnlockedAudioContext = null;
       try {
         const audioCtx = new AudioContext();
@@ -241,21 +259,41 @@ export function generateAnsiHtml(
       applyScale();
       window.addEventListener('resize', applyScale);
 
+      // Initialize WebGL CRT shader if enabled
+      let crtShader = null;
+      ${crtEnabled ? `{
+        const CrtShader = globalThis.AnsiStandalone.CrtShader;
+        const CRT_DEFAULTS = globalThis.AnsiStandalone.CRT_DEFAULTS;
+        const CRT_CONFIG = { ${crtConfigEntries} };
+        const canvas = wrapper.querySelector('canvas');
+        if (canvas) {
+          crtShader = new CrtShader(canvas, wrapper, {});
+          crtShader.enable(CRT_CONFIG);
+        }
+      }` : ''}
+
       // Create AnsiTerminalHandle wrapping xterm.js
       const handle = {
-        write: (data) => term.write(data),
-        container: wrapper,
-        dispose: () => term.dispose(),
-      };
-
-      // Create AnsiCallbacks that immediately resolve with the handle
-      const callbacks = {
-        onRequestAnsiTab: () => Promise.resolve(handle),
-        onCloseAnsiTab: () => {},
-        onFlushOutput: () => flushOutput(),
-        onError: (error) => {
-          console.error('[ANSI Export] Game loop error:', error);
+        write: (data) => term.write(data), container: wrapper, dispose: () => term.dispose(),
+        setCrt: (enabled) => {
+          if (enabled && !crtShader) {
+            const CrtShader = globalThis.AnsiStandalone.CrtShader;
+            const CRT_DEFAULTS = globalThis.AnsiStandalone.CRT_DEFAULTS;
+            const canvas = wrapper.querySelector('canvas');
+            if (canvas) {
+              crtShader = new CrtShader(canvas, wrapper, {});
+              crtShader.enable({ ...CRT_DEFAULTS });
+            }
+          } else if (!enabled && crtShader) {
+            crtShader.disable();
+            crtShader = null;
+          }
         },
+      };
+      const callbacks = {
+        onRequestAnsiTab: () => Promise.resolve(handle), onCloseAnsiTab: () => {},
+        onFlushOutput: () => flushOutput(),
+        onError: (error) => { console.error('[ANSI Export] Game loop error:', error); },
       };
 
       // Create AnsiController and setup API

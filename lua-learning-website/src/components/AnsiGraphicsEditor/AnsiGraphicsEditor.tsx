@@ -15,6 +15,9 @@ import { useImportLayers } from './useImportLayers'
 import { useToast } from './useToast'
 import type { ScaleMode, GroupLayer } from './types'
 import { isGroupLayer } from './types'
+import { ProjectConfigParser } from '@lua-learning/export'
+import { CRT_DEFAULTS } from '@lua-learning/lua-runtime'
+import type { CrtConfig } from '@lua-learning/lua-runtime'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface AnsiGraphicsEditorProps {
@@ -102,6 +105,8 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
     flipSelectionVertical,
     cgaPreview,
     setCgaPreview,
+    crtConfig,
+    setCrtConfig,
     setBorderStyle,
     activeLayerIsGroup,
     isMoveDragging,
@@ -140,6 +145,59 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
   useEffect(() => {
     onDirtyChange?.(isDirty)
   }, [isDirty, onDirtyChange])
+
+  // Load CRT config from sibling project.lua when filePath changes
+  const appliedProjectLuaRef = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    if (appliedProjectLuaRef.current === filePath) return
+    appliedProjectLuaRef.current = filePath
+
+    if (!filePath) {
+      setCrtConfig(null)
+      return
+    }
+
+    const parentDir = filePath.replace(/\/[^/]+$/, '')
+    const projectLuaPath = `${parentDir}/project.lua`
+
+    if (!fileSystem.exists(projectLuaPath)) {
+      setCrtConfig(null)
+      return
+    }
+
+    try {
+      const content = fileSystem.readFile(projectLuaPath)
+      if (!content) {
+        setCrtConfig(null)
+        return
+      }
+      const result = ProjectConfigParser.parseContent(content)
+      if (result.success && result.config.ansi?.crt === true) {
+        const ansi = result.config.ansi
+        const merged: CrtConfig = {
+          smoothing: ansi.crt_smoothing ?? CRT_DEFAULTS.smoothing,
+          scanlineIntensity: ansi.crt_scanlineIntensity ?? CRT_DEFAULTS.scanlineIntensity,
+          scanlineCount: ansi.crt_scanlineCount ?? CRT_DEFAULTS.scanlineCount,
+          adaptiveIntensity: ansi.crt_adaptiveIntensity ?? CRT_DEFAULTS.adaptiveIntensity,
+          brightness: ansi.crt_brightness ?? CRT_DEFAULTS.brightness,
+          contrast: ansi.crt_contrast ?? CRT_DEFAULTS.contrast,
+          saturation: ansi.crt_saturation ?? CRT_DEFAULTS.saturation,
+          bloomIntensity: ansi.crt_bloomIntensity ?? CRT_DEFAULTS.bloomIntensity,
+          bloomThreshold: ansi.crt_bloomThreshold ?? CRT_DEFAULTS.bloomThreshold,
+          rgbShift: ansi.crt_rgbShift ?? CRT_DEFAULTS.rgbShift,
+          vignetteStrength: ansi.crt_vignetteStrength ?? CRT_DEFAULTS.vignetteStrength,
+          curvature: ansi.crt_curvature ?? CRT_DEFAULTS.curvature,
+          flickerStrength: ansi.crt_flickerStrength ?? CRT_DEFAULTS.flickerStrength,
+          phosphor: ansi.crt_phosphor ?? CRT_DEFAULTS.phosphor,
+        }
+        setCrtConfig(merged)
+      } else {
+        setCrtConfig(null)
+      }
+    } catch {
+      setCrtConfig(null)
+    }
+  }, [filePath, fileSystem, setCrtConfig])
 
   const handleToggleCgaPreview = useCallback(() => setCgaPreview(!cgaPreview), [cgaPreview, setCgaPreview])
 
@@ -282,6 +340,8 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
           onCreateTag={createTag}
           onDeleteTag={deleteTag}
           onRenameTag={renameTag}
+          crtConfig={crtConfig}
+          onSetCrtConfig={setCrtConfig}
         />
       </div>
       <div ref={cursorRef} className={styles.cellCursor} />

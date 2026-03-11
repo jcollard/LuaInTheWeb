@@ -1,4 +1,5 @@
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
+import type { CrtConfig } from '@lua-learning/lua-runtime'
 
 export type RGBColor = [number, number, number]
 
@@ -236,6 +237,11 @@ export interface UseAnsiEditorReturn {
   // CGA Preview
   cgaPreview: boolean
   setCgaPreview: (on: boolean) => void
+  // CRT Preview
+  crtPreview: boolean
+  setCrtPreview: (on: boolean) => void
+  crtConfig: CrtConfig | null
+  setCrtConfig: (config: CrtConfig | null) => void
   // Frame animation
   addFrame: () => void
   duplicateFrame: () => void

@@ -18,6 +18,7 @@ import { TOOL_KEY_MAP, TOOL_SHIFT_KEY_MAP, MODE_KEY_MAP, TOOL_SHORTCUTS, MODE_SH
 import { flipDrawnLayerHorizontal, flipDrawnLayerVertical, flipTextLayerHorizontal, flipTextLayerVertical } from './flipUtils'
 import { buildAllShiftedFrames, captureNonDefaultCells } from './moveUtils'
 import { initSchedule, computePlaybackTick, type LayerSchedule } from '@lua-learning/ansi-shared'
+import { CRT_DEFAULTS, type CrtConfig } from '@lua-learning/lua-runtime'
 
 export { computePixelCell, computeLineCells } from './gridUtils'
 
@@ -92,6 +93,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
 
   const undoStackRef = useRef<LayerState[]>([]), redoStackRef = useRef<LayerState[]>([])
   const terminalBufferRef = useRef(new TerminalBuffer())
+  const terminalHandleRef = useRef<AnsiTerminalHandle | null>(null)
   const brushRef = useRef(brush); brushRef.current = brush
   const paintingRef = useRef(false)
   const lastCellRef = useRef<{ row: number; col: number; isTopHalf?: boolean } | null>(null)
@@ -112,6 +114,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const moveRefStartOffset = useRef<{ row: number; col: number } | null>(null)
   const previewLatestCellRef = useRef<CellHalf | null>(null)
   const [cgaPreview, setCgaPreviewRaw] = useState(false)
+  const [crtConfig, setCrtConfigRaw] = useState<CrtConfig | null>(null)
   const [isMoveDragging, setIsMoveDragging] = useState(false)
   const flipOriginRef = useRef<{ row: number; col: number }>({ row: 12, col: 40 })
   const [flipOrigin, setFlipOrigin] = useState<{ row: number; col: number }>({ row: 12, col: 40 })
@@ -826,6 +829,26 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     flushLayers(layersRef.current)
   }, [layersRef])
 
+  const setCrtPreview = useCallback((on: boolean) => {
+    if (on) {
+      const config = { ...CRT_DEFAULTS }
+      setCrtConfigRaw(config)
+      terminalHandleRef.current?.setCrt(true, undefined, config)
+    } else {
+      setCrtConfigRaw(null)
+      terminalHandleRef.current?.setCrt(false)
+    }
+  }, [])
+
+  const setCrtConfig = useCallback((config: CrtConfig | null) => {
+    setCrtConfigRaw(config)
+    if (config) {
+      terminalHandleRef.current?.setCrt(true, undefined, config)
+    } else {
+      terminalHandleRef.current?.setCrt(false)
+    }
+  }, [])
+
   const flipSelectionHorizontal = useCallback(() => {
     selHandlersRef.current?.flipHorizontal()
   }, [])
@@ -879,6 +902,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const onTerminalReady = useCallback((handle: AnsiTerminalHandle | null) => {
     cleanupRef.current?.()
     cleanupRef.current = null
+    terminalHandleRef.current = handle
     if (handle) {
       terminalBufferRef.current.attach(handle)
       flushLayers(layersRef.current)
@@ -913,6 +937,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     activeLayerIsGroup, isMoveDragging,
     flipOriginOverlayRef, flipOrigin, flipLayerHorizontal, flipLayerVertical,
     cgaPreview, setCgaPreview,
+    crtPreview: crtConfig !== null, setCrtPreview,
+    crtConfig, setCrtConfig,
     addFrame: addFrameWithUndo, duplicateFrame: duplicateFrameWithUndo,
     removeFrame: removeFrameWithUndo, setCurrentFrame: setCurrentFrameWithUndo,
     reorderFrame: reorderFrameWithUndo, setFrameDuration: setFrameDurationWithUndo,

@@ -523,4 +523,55 @@ describe('ProjectConfigParser - ANSI parsing', () => {
       expect(result.config.ansi?.font_size).toBe(12)
     }
   })
+
+  describe('parseContent (static)', () => {
+    it('should parse valid Lua content string', () => {
+      const content = `return {
+        name = "test",
+        main = "main.lua",
+        type = "ansi",
+        ansi = { crt = true, crt_curvature = 0.2 }
+      }`
+      const result = ProjectConfigParser.parseContent(content)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.config.name).toBe('test')
+        expect(result.config.ansi?.crt).toBe(true)
+        expect(result.config.ansi?.crt_curvature).toBe(0.2)
+      }
+    })
+
+    it('should return error for invalid Lua syntax', () => {
+      const result = ProjectConfigParser.parseContent('return { name = ')
+
+      expect(result.success).toBe(false)
+    })
+
+    it('should return error for missing required fields', () => {
+      const result = ProjectConfigParser.parseContent('return { name = "test" }')
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toContain('main')
+      }
+    })
+
+    it('should apply ANSI defaults when crt fields are not set', () => {
+      const content = `return {
+        name = "test",
+        main = "main.lua",
+        type = "ansi",
+        ansi = { crt = true }
+      }`
+      const result = ProjectConfigParser.parseContent(content)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.config.ansi?.crt).toBe(true)
+        expect(result.config.ansi?.columns).toBe(80)
+        expect(result.config.ansi?.rows).toBe(25)
+      }
+    })
+  })
 })

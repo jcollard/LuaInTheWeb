@@ -73,6 +73,8 @@ async function bundleAnsiInline() {
               export { ansiLuaCode } from '${join(LUA_RUNTIME_SRC, 'ansiLuaWrapper.ts').replace(/\\/g, '/')}';
               export { ansiLuaCoreCode, ansiLuaInputCode } from '${join(LUA_RUNTIME_SRC, 'ansiLuaCode/index.ts').replace(/\\/g, '/')}';
               export { InputAPI } from '${join(LUA_RUNTIME_SRC, 'InputAPI.ts').replace(/\\/g, '/')}';
+              export { CrtShader, CRT_DEFAULTS } from '${join(LUA_RUNTIME_SRC, 'crtShader.ts').replace(/\\/g, '/')}';
+              export type { CrtConfig } from '${join(LUA_RUNTIME_SRC, 'crtShader.ts').replace(/\\/g, '/')}';
             `,
             loader: 'ts',
             resolveDir: LUA_RUNTIME_SRC,

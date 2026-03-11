@@ -31,7 +31,7 @@ describe('rectangle tool', () => {
     it('should draw outline rect on mousedown→mousemove→mouseup', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(handle))
       act(() => result.current.setTool('rect-outline'))
 
@@ -61,7 +61,7 @@ describe('rectangle tool', () => {
     it('should draw filled rect on mousedown→mousemove→mouseup', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(handle))
       act(() => result.current.setTool('rect-filled'))
 
@@ -83,7 +83,7 @@ describe('rectangle tool', () => {
     it('should show preview during drag (terminal writes occur)', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(handle))
       act(() => result.current.setTool('rect-outline'))
 
@@ -98,7 +98,7 @@ describe('rectangle tool', () => {
     it('should update preview when mouse moves to new position', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(handle))
       act(() => result.current.setTool('rect-outline'))
 
@@ -116,7 +116,7 @@ describe('rectangle tool', () => {
     it('should cancel rect when mouseup occurs outside canvas', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(handle))
       act(() => result.current.setTool('rect-outline'))
 
@@ -134,7 +134,7 @@ describe('rectangle tool', () => {
     it('should revert rect on undo', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(handle))
       act(() => result.current.setTool('rect-outline'))
 
@@ -159,7 +159,7 @@ describe('rectangle tool', () => {
     it('should show dimensions during rect preview in brush mode', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       const dimEl = document.createElement('div')
       result.current.dimensionRef.current = dimEl
       act(() => result.current.onTerminalReady(handle))
@@ -176,7 +176,7 @@ describe('rectangle tool', () => {
     it('should show dimensions during rect preview in pixel mode', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       const dimEl = document.createElement('div')
       result.current.dimensionRef.current = dimEl
       act(() => result.current.onTerminalReady(handle))
@@ -205,7 +205,7 @@ describe('rectangle tool', () => {
     it('should hide dimension label on commit', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       const dimEl = document.createElement('div')
       result.current.dimensionRef.current = dimEl
       act(() => result.current.onTerminalReady(handle))
@@ -222,7 +222,7 @@ describe('rectangle tool', () => {
     it('should hide dimension label on cancel', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       const dimEl = document.createElement('div')
       result.current.dimensionRef.current = dimEl
       act(() => result.current.onTerminalReady(handle))
@@ -239,7 +239,7 @@ describe('rectangle tool', () => {
     it('should show 1×2 for a single-cell brush rect', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       const dimEl = document.createElement('div')
       result.current.dimensionRef.current = dimEl
       act(() => result.current.onTerminalReady(handle))
@@ -255,7 +255,7 @@ describe('rectangle tool', () => {
     it('should not flash originals during rect commit', () => {
       const { result } = renderHook(() => useAnsiEditor())
       const container = createMockContainer()
-      const handle = { write: vi.fn(), container, dispose: vi.fn() }
+      const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
       act(() => result.current.onTerminalReady(handle))
       act(() => result.current.setTool('rect-filled'))
 

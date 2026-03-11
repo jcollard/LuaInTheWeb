@@ -85,6 +85,7 @@ const DEFAULT_ANSI_CONFIG: AnsiConfig = {
   rows: 25,
   font_size: 16,
   scale: 'integer',
+  crt: false,
 }
 
 /**
@@ -104,32 +105,12 @@ export class ProjectConfigParser {
   constructor(private filesystem: IFileSystem) {}
 
   /**
-   * Parse a project.lua file and return the configuration.
-   * @param projectPath - Path to the directory containing project.lua
+   * Parse a project.lua string and return the configuration.
+   * Useful when you already have the file content (e.g. from a virtual filesystem).
+   * @param content - Lua source code of project.lua
    * @returns Parse result with config or error details
    */
-  parse(projectPath: string): ParseOutcome {
-    const configPath = `${projectPath}/project.lua`
-
-    // Check if project.lua exists
-    if (!this.filesystem.exists(configPath)) {
-      return {
-        success: false,
-        error: `project.lua not found in ${projectPath}`,
-      }
-    }
-
-    // Read the file
-    let content: string
-    try {
-      content = this.filesystem.readFile(configPath)
-    } catch (err) {
-      return {
-        success: false,
-        error: `Failed to read project.lua: ${(err as Error).message}`,
-      }
-    }
-
+  static parseContent(content: string): ParseOutcome {
     // Parse the Lua code
     let ast: LuaChunk
     try {
@@ -177,11 +158,11 @@ export class ProjectConfigParser {
     }
 
     // Convert the Lua table to a JavaScript object
-    const rawConfig = this.tableToObject(returnedExpr as LuaTableConstructorExpression)
+    const rawConfig = ProjectConfigParser.tableToObject(returnedExpr as LuaTableConstructorExpression)
 
     // Validate and return
     try {
-      const config = this.validate(rawConfig)
+      const config = ProjectConfigParser.validateConfig(rawConfig)
       return { success: true, config }
     } catch (err) {
       return {
@@ -192,16 +173,46 @@ export class ProjectConfigParser {
   }
 
   /**
+   * Parse a project.lua file and return the configuration.
+   * @param projectPath - Path to the directory containing project.lua
+   * @returns Parse result with config or error details
+   */
+  parse(projectPath: string): ParseOutcome {
+    const configPath = `${projectPath}/project.lua`
+
+    // Check if project.lua exists
+    if (!this.filesystem.exists(configPath)) {
+      return {
+        success: false,
+        error: `project.lua not found in ${projectPath}`,
+      }
+    }
+
+    // Read the file
+    let content: string
+    try {
+      content = this.filesystem.readFile(configPath)
+    } catch (err) {
+      return {
+        success: false,
+        error: `Failed to read project.lua: ${(err as Error).message}`,
+      }
+    }
+
+    return ProjectConfigParser.parseContent(content)
+  }
+
+  /**
    * Convert a Lua table AST node to a JavaScript object.
    */
-  private tableToObject(table: LuaTableConstructorExpression): Record<string, unknown> {
+  private static tableToObject(table: LuaTableConstructorExpression): Record<string, unknown> {
     const result: Record<string, unknown> = {}
 
     for (const field of table.fields) {
       if (field.type === 'TableKeyString') {
         const keyNode = field.key as LuaIdentifier
         const key = keyNode.name
-        result[key] = this.valueToJS(field.value)
+        result[key] = ProjectConfigParser.valueToJS(field.value)
       }
     }
 
@@ -211,7 +222,7 @@ export class ProjectConfigParser {
   /**
    * Convert a Lua value AST node to a JavaScript value.
    */
-  private valueToJS(node: LuaExpression): unknown {
+  private static valueToJS(node: LuaExpression): unknown {
     switch (node.type) {
       case 'StringLiteral': {
         const strNode = node as LuaStringLiteral
@@ -231,7 +242,7 @@ export class ProjectConfigParser {
       case 'BooleanLiteral':
         return (node as LuaBooleanLiteral).value
       case 'TableConstructorExpression':
-        return this.tableOrArrayToJS(node as LuaTableConstructorExpression)
+        return ProjectConfigParser.tableOrArrayToJS(node as LuaTableConstructorExpression)
       default:
         return undefined
     }
@@ -241,15 +252,15 @@ export class ProjectConfigParser {
    * Convert a Lua table to either a JS object or array.
    * Tables with only TableValue fields are converted to arrays.
    */
-  private tableOrArrayToJS(table: LuaTableConstructorExpression): unknown {
+  private static tableOrArrayToJS(table: LuaTableConstructorExpression): unknown {
     // Check if this is an array (all TableValue fields)
     const isArray = table.fields.every((f) => f.type === 'TableValue')
 
     if (isArray) {
-      return table.fields.map((f) => this.valueToJS(f.value))
+      return table.fields.map((f) => ProjectConfigParser.valueToJS(f.value))
     }
 
-    return this.tableToObject(table)
+    return ProjectConfigParser.tableToObject(table)
   }
 
   /**
@@ -257,7 +268,7 @@ export class ProjectConfigParser {
    * @param config - Partial config to validate
    * @returns Validated config or throws with details
    */
-  validate(config: Partial<ProjectConfig>): ProjectConfig {
+  static validateConfig(config: Partial<ProjectConfig>): ProjectConfig {
     // Check required fields
     if (!config.name) {
       throw new Error("missing required field 'name'")
@@ -308,5 +319,14 @@ export class ProjectConfigParser {
     }
 
     return result
+  }
+
+  /**
+   * Instance method delegating to static validateConfig.
+   * @param config - Partial config to validate
+   * @returns Validated config or throws with details
+   */
+  validate(config: Partial<ProjectConfig>): ProjectConfig {
+    return ProjectConfigParser.validateConfig(config)
   }
 }

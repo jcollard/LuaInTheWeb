@@ -61,15 +61,10 @@ export function AnsiEditorToolbar({
 
   return (
     <div className={styles.toolbar} data-testid="ansi-editor-toolbar">
-      <button
-        type="button"
-        className={styles.toolbarButton}
+      <button type="button" className={styles.toolbarButton}
         onClick={() => setFileOptionsOpen(true)}
         title={tooltipWithShortcut('File', ACTION_SHORTCUTS.fileMenu)}
-        data-testid="file-options-button"
-      >
-        File
-      </button>
+        data-testid="file-options-button">File</button>
       {fileOptionsOpen && (
         <FileOptionsModal
           onClose={() => setFileOptionsOpen(false)}

@@ -33,6 +33,7 @@ describe('useAnsiEditor lifecycle', () => {
           write: vi.fn(),
           container: mockContainer,
           dispose: vi.fn(),
+          setCrt: vi.fn(),
         })
       })
 
@@ -55,6 +56,7 @@ describe('useAnsiEditor lifecycle', () => {
           write: vi.fn(),
           container: mockContainer,
           dispose: vi.fn(),
+          setCrt: vi.fn(),
         })
       })
 

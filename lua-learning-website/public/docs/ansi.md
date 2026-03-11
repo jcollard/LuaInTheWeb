@@ -297,6 +297,96 @@ end)
 ansi.start()
 ```
 
+## CRT Shader Effect
+
+Apply a retro CRT monitor post-processing effect to the terminal output using a WebGL shader. The effect can be enabled before or after `ansi.start()`, and parameters can be adjusted live from within the `tick()` loop.
+
+### `ansi.crt(config)`
+
+Enable or update the CRT shader with the given configuration. When called while the shader is already enabled, the new values are merged into the existing config (partial updates are supported).
+
+- **config** — A table of CRT parameters (all optional; omitted keys keep their current values)
+
+```lua
+-- Enable CRT with custom settings
+ansi.crt({
+  scanlineIntensity = 0.33,
+  brightness = 1.15,
+  curvature = 0.05,
+})
+
+-- Later, update just one parameter
+ansi.crt({ bloomIntensity = 0.8 })
+```
+
+### CRT Parameters
+
+| Parameter | Type | Range | Default | Description |
+|-----------|------|-------|---------|-------------|
+| `smoothing` | boolean | — | `true` | Texture filtering: `true` = LINEAR (smooth), `false` = NEAREST (pixelated) |
+| `scanlineIntensity` | number | 0–1 | 0.33 | Scanline darkness |
+| `scanlineCount` | number | 50–1200 | 150 | Number of horizontal scanlines |
+| `adaptiveIntensity` | number | 0–1 | 1 | Scanline adaptive modulation (reduces scanlines on bright pixels) |
+| `brightness` | number | 0.6–1.8 | 1.15 | Brightness multiplier |
+| `contrast` | number | 0.5–1.5 | 1 | Contrast adjustment |
+| `saturation` | number | 0–2 | 1 | Color saturation |
+| `bloomIntensity` | number | 0–1.5 | 0.25 | Bright pixel glow strength |
+| `bloomThreshold` | number | 0–1 | 0 | Luminance threshold for bloom |
+| `rgbShift` | number | 0–1 | 1 | Chromatic aberration (RGB sub-pixel shift) |
+| `vignetteStrength` | number | 0–2 | 0.22 | Edge darkening |
+| `curvature` | number | 0–0.5 | 0.05 | Barrel distortion (screen curvature) |
+| `flickerStrength` | number | 0–0.15 | 0 | Temporal brightness flicker |
+| `phosphor` | number | 0–1 | 0 | RGB phosphor mask strength |
+
+### Example: Enable CRT before start
+
+```lua
+local ansi = require("ansi")
+
+ansi.crt({
+  scanlineIntensity = 0.4,
+  brightness = 1.2,
+  curvature = 0.08,
+  bloomIntensity = 0.5,
+})
+
+ansi.tick(function()
+  ansi.clear()
+  ansi.set_cursor(1, 1)
+  ansi.foreground(85, 255, 85)
+  ansi.print("CRT effect active!")
+end)
+
+ansi.start()
+```
+
+### Example: Live parameter adjustment
+
+```lua
+local ansi = require("ansi")
+
+local bloom = 0.25
+ansi.crt({ bloomIntensity = bloom })
+
+ansi.tick(function()
+  if ansi.is_key_pressed("up") then
+    bloom = math.min(bloom + 0.05, 1.5)
+    ansi.crt({ bloomIntensity = bloom })
+  end
+  if ansi.is_key_pressed("down") then
+    bloom = math.max(bloom - 0.05, 0)
+    ansi.crt({ bloomIntensity = bloom })
+  end
+
+  ansi.clear()
+  ansi.set_cursor(1, 1)
+  ansi.foreground(255, 255, 255)
+  ansi.print(string.format("Bloom: %.2f (UP/DOWN to adjust)", bloom))
+end)
+
+ansi.start()
+```
+
 ## Quick Reference
 
 | Function | Description |
@@ -313,6 +403,7 @@ ansi.start()
 | `screen:play()` | Start/resume animation playback |
 | `screen:pause()` | Pause animation playback |
 | `screen:is_playing()` | Check if animation is playing |
+| `ansi.crt(config)` | Enable/update CRT shader effect |
 | `ansi.start()` | Start terminal (blocks until `stop()`) |
 | `ansi.stop()` | Stop terminal |
 | `ansi.tick(fn)` | Register per-frame callback |
