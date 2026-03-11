@@ -4,31 +4,12 @@ import styles from './AnsiGraphicsEditor.module.css'
 
 export const CRT_STORAGE_KEY = 'ansi-crt-config'
 
-/** Migrate old localStorage keys to new gingerbeardman-aligned names. */
-const KEY_MIGRATIONS: Record<string, keyof CrtConfig> = {
-  scanlines: 'scanlineIntensity',
-  vignette: 'vignetteStrength',
-  bloom: 'bloomIntensity',
-  chromatic: 'rgbShift',
-  flicker: 'flickerStrength',
-}
-
-function migrateAndMerge(parsed: Record<string, unknown>): CrtConfig {
-  for (const [oldKey, newKey] of Object.entries(KEY_MIGRATIONS)) {
-    if (oldKey in parsed && !(newKey in parsed)) {
-      parsed[newKey] = parsed[oldKey]
-      delete parsed[oldKey]
-    }
-  }
-  return { ...CRT_DEFAULTS, ...parsed } as CrtConfig
-}
-
 function loadSavedConfig(): CrtConfig {
   try {
     const raw = localStorage.getItem(CRT_STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw) as Record<string, unknown>
-      return migrateAndMerge(parsed)
+      return { ...CRT_DEFAULTS, ...parsed } as CrtConfig
     }
   } catch { /* invalid JSON — fall through */ }
   return { ...CRT_DEFAULTS }
@@ -130,9 +111,9 @@ export function CrtTabContent({ crtConfig, onSetCrtConfig }: CrtTabContentProps)
       try {
         const parsed: unknown = JSON.parse(reader.result as string)
         if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return
-        const migrated = migrateAndMerge(parsed as Record<string, unknown>)
-        saveConfig(migrated)
-        onSetCrtConfig(migrated)
+        const imported = { ...CRT_DEFAULTS, ...parsed } as CrtConfig
+        saveConfig(imported)
+        onSetCrtConfig(imported)
       } catch { /* invalid JSON — ignore */ }
     }
     reader.readAsText(file)

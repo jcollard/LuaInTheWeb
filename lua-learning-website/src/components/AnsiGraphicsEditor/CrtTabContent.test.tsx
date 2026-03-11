@@ -100,22 +100,6 @@ describe('CrtTabContent', () => {
       expect(stored.bloomIntensity).toBe(0.9)
     })
 
-    it('migrates old localStorage keys to new names when toggling on', () => {
-      const oldFormat = { ...CRT_DEFAULTS, scanlines: 0.9, bloom: 0.7 }
-      // Remove new keys that CRT_DEFAULTS has, simulate old format
-      delete (oldFormat as Record<string, unknown>).scanlineIntensity
-      delete (oldFormat as Record<string, unknown>).bloomIntensity
-      localStorage.setItem(CRT_STORAGE_KEY, JSON.stringify(oldFormat))
-      const onSetCrtConfig = vi.fn()
-      render(<CrtTabContent {...defaultProps({ onSetCrtConfig })} />)
-      fireEvent.click(screen.getByTestId('crt-enabled-checkbox'))
-      const result = onSetCrtConfig.mock.calls[0][0] as Record<string, number>
-      expect(result.scanlineIntensity).toBe(0.9)
-      expect(result.bloomIntensity).toBe(0.7)
-      expect(result).not.toHaveProperty('scanlines')
-      expect(result).not.toHaveProperty('bloom')
-    })
-
     it('restores saved config from localStorage when toggling on', () => {
       const saved = { ...CRT_DEFAULTS, scanlineIntensity: 0.9, bloomIntensity: 0.7 }
       localStorage.setItem(CRT_STORAGE_KEY, JSON.stringify(saved))
@@ -211,7 +195,7 @@ describe('CrtTabContent', () => {
       expect(btn.disabled).toBe(false)
     })
 
-    it('import with valid JSON calls onSetCrtConfig with migrated config', async () => {
+    it('import with valid JSON calls onSetCrtConfig with merged config', async () => {
       const onSetCrtConfig = vi.fn()
       render(<CrtTabContent {...defaultProps({ onSetCrtConfig })} />)
 
@@ -225,26 +209,6 @@ describe('CrtTabContent', () => {
       })
       const result = onSetCrtConfig.mock.calls[0][0]
       expect(result.scanlineIntensity).toBe(0.8)
-    })
-
-    it('import with old key names applies KEY_MIGRATIONS', async () => {
-      const onSetCrtConfig = vi.fn()
-      render(<CrtTabContent {...defaultProps({ onSetCrtConfig })} />)
-
-      const input = screen.getByTestId('crt-import-input') as HTMLInputElement
-      const oldConfig = { scanlines: 0.9, bloom: 0.7, brightness: 1.2 }
-      const file = new File([JSON.stringify(oldConfig)], 'old.json', { type: 'application/json' })
-      fireEvent.change(input, { target: { files: [file] } })
-
-      await vi.waitFor(() => {
-        expect(onSetCrtConfig).toHaveBeenCalledTimes(1)
-      })
-      const result = onSetCrtConfig.mock.calls[0][0]
-      expect(result.scanlineIntensity).toBe(0.9)
-      expect(result.bloomIntensity).toBe(0.7)
-      expect(result.brightness).toBe(1.2)
-      expect(result).not.toHaveProperty('scanlines')
-      expect(result).not.toHaveProperty('bloom')
     })
 
     it('import with invalid JSON does not call onSetCrtConfig', async () => {
