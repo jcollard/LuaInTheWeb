@@ -113,12 +113,10 @@ export class AnsiController {
   private inputAPI: InputAPI = new InputAPI()
   private gameLoop: GameLoopController | null = null
 
-  // Timing state
   private currentTiming: TimingInfo = { deltaTime: 0, totalTime: 0, frameNumber: 0 }
-
-  // Blocking state for start()
   private running = false
   private stopResolver: (() => void) | null = null
+  private pendingCrt: { enabled: boolean; intensity?: number; config?: Record<string, number> } | null = null
 
   // onTick callback from Lua
   private onTickCallback: (() => void) | null = null
@@ -151,19 +149,11 @@ export class AnsiController {
     return state
   }
 
-  /**
-   * Check if the terminal is currently active.
-   */
-  isActive(): boolean {
-    return this.running
-  }
+  /** Check if the terminal is currently active. */
+  isActive(): boolean { return this.running }
 
-  /**
-   * Set the onTick callback from Lua.
-   */
-  setOnTickCallback(callback: () => void): void {
-    this.onTickCallback = callback
-  }
+  /** Set the onTick callback from Lua. */
+  setOnTickCallback(callback: () => void): void { this.onTickCallback = callback }
 
   /**
    * Start the ANSI terminal and block until stop() is called.
@@ -308,9 +298,15 @@ export class AnsiController {
     this.handle?.write('\x1b[0m')
   }
 
-  /** Enable/disable CRT monitor effect on the terminal container. */
+  /** Enable/disable CRT monitor effect. Stores config if called before start(). */
   setCrt(enabled: boolean, intensity?: number, config?: Record<string, number>): void {
-    this.handle?.setCrt?.(enabled, intensity, config)
+    if (!this.handle) { this.pendingCrt = { enabled, intensity, config }; return }
+    this.handle.setCrt?.(enabled, intensity, config)
+  }
+
+  /** Get and clear any CRT config set before start(). */
+  consumePendingCrt(): { enabled: boolean; intensity?: number; config?: Record<string, number> } | null {
+    const pending = this.pendingCrt; this.pendingCrt = null; return pending
   }
 
   // --- Timing API ---

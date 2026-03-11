@@ -20,6 +20,7 @@ import { setupAudioAssetAPI } from './setupAudioAssetAPI'
 import { AudioAssetManager } from './AudioAssetManager'
 import { audioLuaCode } from './audioLuaCode'
 import { AnsiController, type AnsiCallbacks, type AnsiTerminalHandle } from './AnsiController'
+import type { CrtConfig } from './crtShader'
 import { setupAnsiAPI } from './setupAnsiAPI'
 import { extractCrtConfig } from './projectCrtConfig'
 import { FileOperationsHandler } from './FileOperationsHandler'
@@ -498,26 +499,42 @@ __clear_execution_hook()
   private initAnsiAPI(): void {
     if (!this.engine || !this.options.ansiCallbacks) return
 
-    // Wrap onRequestAnsiTab to auto-apply CRT config from project.lua
+    // Wrap onRequestAnsiTab to merge pre-start CRT calls with project.lua defaults
     const originalOnRequest = this.options.ansiCallbacks.onRequestAnsiTab
     const wrappedOnRequest = async (ansiId: string): Promise<AnsiTerminalHandle> => {
       const handle = await originalOnRequest(ansiId)
 
-      // Check for project.lua in cwd and apply CRT if configured
+      // Consume any ansi.crt() calls made before ansi.start()
+      const pending = this.ansiController?.consumePendingCrt()
+
+      // Load project.lua CRT config
+      let projectCrt: CrtConfig | null = null
       const projectLuaPath = `${this.context.cwd}/project.lua`
       try {
         if (this.context.filesystem.exists(projectLuaPath)) {
           const content = this.context.filesystem.readFile(projectLuaPath)
           if (content) {
-            const crtConfig = extractCrtConfig(content)
-            if (crtConfig) {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              handle.setCrt?.(true, undefined, crtConfig as any)
-            }
+            projectCrt = extractCrtConfig(content)
           }
         }
       } catch {
         // Silently ignore project.lua read/parse errors
+      }
+
+      // Merge: explicit pre-start values override project.lua values
+      if (pending || projectCrt) {
+        const enabled = pending?.enabled ?? (projectCrt !== null)
+        if (enabled) {
+          // Start with project.lua config (or empty), overlay explicit values
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const merged: Record<string, any> = { ...(projectCrt ?? {}) }
+          if (pending?.config) {
+            Object.assign(merged, pending.config)
+          }
+          handle.setCrt?.(true, pending?.intensity, merged as Record<string, number>)
+        } else {
+          handle.setCrt?.(false)
+        }
       }
 
       return handle

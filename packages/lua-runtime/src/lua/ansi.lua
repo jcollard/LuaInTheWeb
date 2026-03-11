@@ -18,16 +18,17 @@ local ansi = {}
 -- 2.  Game Loop (tick)
 -- 3.  Terminal Output (print, set_cursor, clear)
 -- 4.  Color Functions (foreground, background, reset)
--- 5.  Color Constants (ansi.colors.*)
--- 6.  Timing Functions (get_delta, get_time)
--- 7.  Keyboard Input (is_key_down, is_key_pressed, get_keys_down, get_keys_pressed)
--- 8.  Mouse Input (is_mouse_down, is_mouse_pressed, get_mouse_col, get_mouse_row, etc.)
--- 9.  Key Constants (ansi.keys.*)
--- 10. Terminal Dimensions (COLS, ROWS)
--- 11. Screen Display (load_screen, create_screen, set_screen)
--- 12. Layer Visibility Control (Screen:get_layers, layer_on, layer_off, layer_toggle)
--- 13. Label Text (Screen:set_label, ansi.create_label)
--- 14. Animation Playback (Screen:play, Screen:pause, Screen:is_playing)
+-- 5.  CRT Monitor Effect (crt)
+-- 6.  Color Constants (ansi.colors.*)
+-- 7.  Timing Functions (get_delta, get_time)
+-- 8.  Keyboard Input (is_key_down, is_key_pressed, get_keys_down, get_keys_pressed)
+-- 9.  Mouse Input (is_mouse_down, is_mouse_pressed, get_mouse_col, get_mouse_row, etc.)
+-- 10. Key Constants (ansi.keys.*)
+-- 11. Terminal Dimensions (COLS, ROWS)
+-- 12. Screen Display (load_screen, create_screen, set_screen)
+-- 13. Layer Visibility Control (Screen:get_layers, layer_on, layer_off, layer_toggle)
+-- 14. Label Text (Screen:set_label, ansi.create_label)
+-- 15. Animation Playback (Screen:play, Screen:pause, Screen:is_playing)
 -- =============================================================================
 
 -- =============================================================================
@@ -107,17 +108,48 @@ function ansi.background(r, g, b) end
 ---@return nil
 function ansi.reset() end
 
+-- =============================================================================
+-- CRT Monitor Effect
+-- =============================================================================
+
 --- Enable or disable the CRT monitor effect on the terminal.
---- When called with no arguments, enables CRT with default settings.
---- Can accept a table of per-effect parameters for fine-grained control.
+--- Applies a WebGL post-processing shader that simulates a CRT monitor with
+--- scanlines, barrel distortion, bloom, chromatic aberration, and more.
+---
+--- Can be called before or after ansi.start(). When called before start(),
+--- the config is stored and merged with project.lua defaults at start time.
+--- Explicitly set values always take priority over project.lua defaults.
+---
+--- Forms:
+---   ansi.crt()                    -- enable with defaults
+---   ansi.crt(true)                -- enable with defaults
+---   ansi.crt(false)               -- disable
+---   ansi.crt(true, 0.5)           -- enable, scale intensity (legacy)
+---   ansi.crt({ ... })             -- enable with per-effect config
+---
+--- Config table keys and their ranges:
+---   smoothing         boolean   Texture filtering: true=LINEAR, false=NEAREST (default: true)
+---   scanlineIntensity number    Scanline darkness, 0-1 (default: 0.33)
+---   scanlineCount     number    Number of scanlines, 50-1200 (default: 150)
+---   adaptiveIntensity number    Scanline adaptive modulation, 0-1 (default: 1)
+---   brightness        number    Brightness multiplier, 0.6-1.8 (default: 1.15)
+---   contrast          number    Contrast adjustment, 0.5-1.5 (default: 1)
+---   saturation        number    Color saturation, 0-2 (default: 1)
+---   bloomIntensity    number    Bright pixel glow, 0-1.5 (default: 0.25)
+---   bloomThreshold    number    Bloom luminance threshold, 0-1 (default: 0)
+---   rgbShift          number    Chromatic aberration, 0-1 (default: 1)
+---   vignetteStrength  number    Edge darkening, 0-2 (default: 0.22)
+---   curvature         number    Barrel distortion, 0-0.5 (default: 0.05)
+---   flickerStrength   number    Temporal flicker, 0-0.15 (default: 0)
+---   phosphor          number    RGB phosphor mask strength, 0-1 (default: 0)
+---
 ---@param enabled_or_config? boolean|table Enable/disable, or a config table
 ---@param intensity? number Legacy intensity 0-1 (scales all defaults). Only used with boolean first arg.
 ---@return nil
----@usage ansi.crt()                            -- enable with defaults
----@usage ansi.crt(true, 0.5)                   -- enable, scale all effects to 50%
----@usage ansi.crt(false)                        -- disable
----@usage ansi.crt({ scanlineIntensity = 0.8, curvature = 0.3 })  -- per-effect config
---- Available config keys: smoothing, scanlineIntensity, scanlineCount, adaptiveIntensity, brightness, contrast, saturation, bloomIntensity, bloomThreshold, rgbShift, vignetteStrength, curvature, flickerStrength, phosphor
+---@usage ansi.crt()
+---@usage ansi.crt(false)
+---@usage ansi.crt({ scanlineIntensity = 0.8, curvature = 0.3 })
+---@usage ansi.crt({ curvature = 0.2, bloomIntensity = 0.8, phosphor = 0.3 })
 function ansi.crt(enabled_or_config, intensity) end
 
 -- =============================================================================
