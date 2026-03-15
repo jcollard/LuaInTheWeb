@@ -20,7 +20,6 @@ import { setupAudioAPI } from './setupAudioAPI'
 import { setupAudioAssetAPI } from './setupAudioAssetAPI'
 import { AudioAssetManager } from './AudioAssetManager'
 import { audioLuaCode } from './audioLuaCode'
-import { ChipPlayer } from '@chip-composer/player'
 import { setupChipAPI } from './setupChipAPI'
 import { setupChipAssetAPI } from './setupChipAssetAPI'
 import { ChipAssetManager } from './ChipAssetManager'
@@ -66,7 +65,8 @@ export class LuaReplProcess implements IProcess {
   /** Audio asset manager for standalone audio */
   private audioAssetManager: AudioAssetManager | null = null
   /** Chip player for OPL3 FM synthesis */
-  private chipPlayer: ChipPlayer | null = null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private chipPlayer: any = null
   /** Chip asset manager for .wcol/.wsng files */
   private chipAssetManager: ChipAssetManager | null = null
 
@@ -423,7 +423,7 @@ export class LuaReplProcess implements IProcess {
       // Setup standalone audio module (always available, must be before canvas)
       this.initAudioModule()
 
-      // Setup chip (OPL3 FM synthesis) module
+      // Setup chip (OPL3 FM synthesis) module (non-blocking, optional)
       this.initChipModule()
 
       // Setup canvas API if canvas callbacks are provided
@@ -504,9 +504,7 @@ export class LuaReplProcess implements IProcess {
   private initChipModule(): void {
     if (!this.engine) return
 
-    this.chipPlayer = new ChipPlayer()
     this.chipAssetManager = new ChipAssetManager()
-
     const cwd = this.options.cwd ?? '/'
 
     // Set up chip asset bridge functions
@@ -523,11 +521,16 @@ export class LuaReplProcess implements IProcess {
       this.engine.global.set('__chip_assets_getFileContent', () => null)
     }
 
-    // Set up chip playback bridge functions
+    // Set up chip playback bridge functions (player loaded lazily on first use)
     setupChipAPI(this.engine, () => this.chipPlayer)
 
     // Inject the chip Lua code (registers package.preload['chip'])
     this.engine.doStringSync(chipLuaCode)
+
+    // Load ChipPlayer asynchronously — available by time user calls chip.init()
+    import('@chip-composer/player')
+      .then(({ ChipPlayer }) => { this.chipPlayer = new ChipPlayer() })
+      .catch(() => { /* ChipPlayer not available — chip API will return early on null player */ })
   }
 
   /**
