@@ -4,8 +4,7 @@
  */
 
 import type { LuaEngine } from 'wasmoon'
-import type { ChipPlayer, OPLPatch } from '@chip-composer/player'
-import { PatternBuilder } from '@chip-composer/player'
+import type { ChipPlayer, OPLPatch, PatternBuilder } from '@chip-composer/player'
 
 /**
  * Set up chip API functions in the Lua engine.
@@ -159,8 +158,9 @@ export function setupChipAPI(
 
   engine.global.set(
     '__chip_buildPattern',
-    (tracks: number, rows: number, bpm?: number | null) => {
-      const builder = new PatternBuilder(tracks, rows, bpm ?? 120)
+    async (tracks: number, rows: number, bpm?: number | null) => {
+      const { PatternBuilder: PB } = await import('@chip-composer/player')
+      const builder: PatternBuilder = new PB(tracks, rows, bpm ?? 120)
       const handle = nextPatternHandle++
       patternBuilders.set(handle, builder)
       return handle
