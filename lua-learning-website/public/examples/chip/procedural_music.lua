@@ -66,9 +66,18 @@ end
 -- State
 local bpm = generate_pattern()
 local current_row = 0
+local prev_row = 0
 local playing = false
+local gen_count = 1
 
 chip.on_row_change(function(row)
+  -- Detect loop wrap: row jumped backward (end of pattern → start)
+  if row < prev_row and playing then
+    bpm = generate_pattern()
+    chip.play({loop = true})
+    gen_count = gen_count + 1
+  end
+  prev_row = row
   current_row = row
 end)
 
@@ -92,7 +101,6 @@ canvas.tick(function()
     chip.stop(); playing = false; current_row = 0
     bpm = generate_pattern()
   end
-  end
   if canvas.is_key_pressed(canvas.keys.ESCAPE) then
     chip.stop(); chip.destroy(); canvas.stop(); return
   end
@@ -113,7 +121,7 @@ canvas.tick(function()
   -- Status bar
   canvas.set_color("#888888")
   canvas.set_font_size(12)
-  canvas.draw_text(200, 32, (playing and "Playing" or "Stopped") .. "  BPM: " .. bpm)
+  canvas.draw_text(200, 32, (playing and "Playing" or "Stopped") .. "  BPM: " .. bpm .. "  #" .. gen_count)
 
   -- Grid visualizer
   local grid_x, grid_y = 20, 50
