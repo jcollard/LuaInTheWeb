@@ -64,6 +64,13 @@ export { setupAudioAssetAPI, type AudioAssetAPIOptions } from './setupAudioAsset
 // Audio inline JS for HTML exports (auto-generated from audio-inline-entry.ts)
 export { AUDIO_INLINE_JS } from './audio/audio-inline.generated'
 
+// Chip (OPL3 FM synthesis) modules
+export { setupChipAPI } from './setupChipAPI'
+export { setupChipAssetAPI, type ChipAssetAPIOptions } from './setupChipAssetAPI'
+export { ChipAssetManager, type ChipAssetDefinition } from './ChipAssetManager'
+export { chipLuaCode } from './chipLuaCode'
+export { CHIP_INLINE_JS } from './chip/chip-inline.generated'
+
 // Wasmoon inline JS for HTML exports (auto-generated, includes embedded WASM)
 export { WASMOON_INLINE_JS } from './wasmoon-inline.generated'
 

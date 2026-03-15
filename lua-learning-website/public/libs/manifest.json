@@ -6,6 +6,7 @@
     "hc.lua",
     "localstorage.lua",
     "ail_audio.lua",
-    "ansi.lua"
+    "ansi.lua",
+    "chip.lua"
   ]
 }
