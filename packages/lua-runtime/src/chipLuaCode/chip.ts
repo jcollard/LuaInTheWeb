@@ -60,14 +60,16 @@ export const chipLuaCode = `
 
     function _chip.start()
       __chip_assets_start()
-      __chip_init()
+      __chip_initAndLoadBank()
     end
 
     -- ========================================================================
     -- Lifecycle
     -- ========================================================================
     function _chip.init()
-      __chip_init()
+      -- __chip_initAndLoadBank is async: awaits player import, init, and bank loading.
+      -- wasmoon awaits the returned Promise so Lua blocks until everything is ready.
+      __chip_initAndLoadBank()
     end
 
     function _chip.destroy()
