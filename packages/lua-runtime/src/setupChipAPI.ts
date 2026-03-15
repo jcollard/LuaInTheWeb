@@ -300,11 +300,13 @@ export function setupChipAPI(
 
   engine.global.set(
     '__chip_buildPattern',
-    (tracks: number, rows: number, bpm?: number | null) => {
+    async (tracks: number, rows: number, bpm?: number | null) => {
       if (!PatternBuilderCtor) {
-        throw new Error('ChipPlayer not initialized — call chip.init() before chip.pattern()')
+        // Fallback: import on demand if init didn't cache it
+        const { PatternBuilder: PB } = await import('@chip-composer/player')
+        PatternBuilderCtor = PB as unknown as typeof PatternBuilderCtor
       }
-      const builder: PatternBuilder = new PatternBuilderCtor(tracks, rows, bpm ?? 120)
+      const builder: PatternBuilder = new PatternBuilderCtor!(tracks, rows, bpm ?? 120)
       const handle = nextPatternHandle++
       patternBuilders.set(handle, builder)
       return handle
