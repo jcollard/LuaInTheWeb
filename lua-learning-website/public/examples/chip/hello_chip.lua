@@ -25,9 +25,6 @@ local key_notes = {
   {key = "m", note = "B-4", label = "B"},
 }
 
--- Set initial instrument (bank is loaded by chip.init())
-chip.set_instrument(0, instruments[inst_index][1])
-
 -- State
 local active_notes = {}  -- key -> true when held
 

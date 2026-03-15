@@ -109,18 +109,19 @@ export function setupChipAPI(
   // Track PatternBuilder instances by handle ID
   const patternBuilders = new Map<number, PatternBuilder>()
   let nextPatternHandle = 1
-  // Cache PatternBuilder constructor — eagerly start import at setup time
-  let PatternBuilderCtor: (new (tracks: number, rows: number, bpm?: number) => PatternBuilder) | null = null
-  const patternBuilderReady = import('@chip-composer/player').then(({ PatternBuilder: PB }) => {
-    PatternBuilderCtor = PB as unknown as typeof PatternBuilderCtor
-  }).catch(() => { /* will be retried in __chip_initAndLoadBank */ })
+  // PatternBuilder constructor — cached after first use by __chip_initAndLoadBank
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let PB: any = null
 
   // --- Lifecycle ---
 
   // Legacy __chip_init kept for backward compatibility
   engine.global.set('__chip_init', async () => {
     if (getPlayerReady) await getPlayerReady()
-    await patternBuilderReady
+    if (!PB) {
+      const mod = await import('@chip-composer/player')
+      PB = mod.PatternBuilder
+    }
     const player = getPlayer()
     if (!player) return
     await player.init()
@@ -143,9 +144,12 @@ export function setupChipAPI(
       return
     }
 
-    // Ensure PatternBuilder is cached (from eager import started at setup)
-    await patternBuilderReady
-    console.debug('[chip] PatternBuilder ready:', !!PatternBuilderCtor)
+    // Cache PatternBuilder constructor (same module, already loaded)
+    if (!PB) {
+      const mod = await import('@chip-composer/player')
+      PB = mod.PatternBuilder
+    }
+    console.debug('[chip] PatternBuilder cached')
 
     // Initialize audio engine
     console.debug('[chip] Calling player.init()...')
@@ -298,13 +302,10 @@ export function setupChipAPI(
   engine.global.set(
     '__chip_buildPattern',
     (tracks: number, rows: number, bpm?: number | null) => {
-      if (!PatternBuilderCtor) {
-        throw new Error(
-          'PatternBuilder not ready — chip.init() must complete before chip.pattern(). ' +
-          'Make sure chip.init() is called and the dev server cache is cleared (rm -rf node_modules/.vite).'
-        )
+      if (!PB) {
+        throw new Error('chip.init() must be called before chip.pattern()')
       }
-      const builder: PatternBuilder = new PatternBuilderCtor(tracks, rows, bpm ?? 120)
+      const builder: PatternBuilder = new PB(tracks, rows, bpm ?? 120)
       const handle = nextPatternHandle++
       patternBuilders.set(handle, builder)
       return handle
