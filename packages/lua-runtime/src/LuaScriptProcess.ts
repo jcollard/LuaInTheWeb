@@ -71,6 +71,8 @@ export class LuaScriptProcess implements IProcess {
   private audioAssetManager: AudioAssetManager | null = null
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private chipPlayer: any = null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private chipPlayerReady: Promise<any> | null = null
   private chipAssetManager: ChipAssetManager | null = null
 
   /** File operations handler for io.open() support */
@@ -629,17 +631,16 @@ __clear_execution_hook()
       scriptDirectory,
     })
 
-    // Set up chip playback bridge functions (player loaded lazily on first use)
-    setupChipAPI(this.engine, () => this.chipPlayer)
+    // Load ChipPlayer asynchronously — chip.init() awaits this promise
+    this.chipPlayerReady = import('@chip-composer/player')
+      .then(({ ChipPlayer }) => { this.chipPlayer = new ChipPlayer() })
+      .catch(() => { /* ChipPlayer not available — chip API will return early on null player */ })
+
+    // Set up chip playback bridge functions
+    setupChipAPI(this.engine, () => this.chipPlayer, () => this.chipPlayerReady)
 
     // Inject the chip Lua code (registers package.preload['chip'])
     this.engine.doStringSync(chipLuaCode)
-
-    // Load ChipPlayer asynchronously — it will be available by the time
-    // user calls chip.init() or chip.start() (which are themselves async)
-    import('@chip-composer/player')
-      .then(({ ChipPlayer }) => { this.chipPlayer = new ChipPlayer() })
-      .catch(() => { /* ChipPlayer not available — chip API will return early on null player */ })
   }
 
 }

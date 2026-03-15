@@ -67,6 +67,9 @@ export class LuaReplProcess implements IProcess {
   /** Chip player for OPL3 FM synthesis */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private chipPlayer: any = null
+  /** Promise that resolves when ChipPlayer is constructed */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private chipPlayerReady: Promise<any> | null = null
   /** Chip asset manager for .wcol/.wsng files */
   private chipAssetManager: ChipAssetManager | null = null
 
@@ -521,16 +524,16 @@ export class LuaReplProcess implements IProcess {
       this.engine.global.set('__chip_assets_getFileContent', () => null)
     }
 
-    // Set up chip playback bridge functions (player loaded lazily on first use)
-    setupChipAPI(this.engine, () => this.chipPlayer)
+    // Load ChipPlayer asynchronously — chip.init() awaits this promise
+    this.chipPlayerReady = import('@chip-composer/player')
+      .then(({ ChipPlayer }) => { this.chipPlayer = new ChipPlayer() })
+      .catch(() => { /* ChipPlayer not available — chip API will return early on null player */ })
+
+    // Set up chip playback bridge functions
+    setupChipAPI(this.engine, () => this.chipPlayer, () => this.chipPlayerReady)
 
     // Inject the chip Lua code (registers package.preload['chip'])
     this.engine.doStringSync(chipLuaCode)
-
-    // Load ChipPlayer asynchronously — available by time user calls chip.init()
-    import('@chip-composer/player')
-      .then(({ ChipPlayer }) => { this.chipPlayer = new ChipPlayer() })
-      .catch(() => { /* ChipPlayer not available — chip API will return early on null player */ })
   }
 
   /**
