@@ -6,10 +6,8 @@ local chip = require("chip")
 
 chip.init()
 
--- Build melody as a pattern
+-- Melody data
 local rows = 64
-local p = chip.pattern(1, rows, 180)
-
 local melody = {
   {0,  "C-4"}, {4,  "C-4"}, {8,  "G-4"}, {12, "G-4"},
   {16, "A-4"}, {20, "A-4"}, {24, "G-4"},
@@ -17,22 +15,40 @@ local melody = {
   {48, "D-4"}, {52, "D-4"}, {56, "C-4"},
 }
 
-for _, n in ipairs(melody) do
-  p:set_note(n[1], 0, n[2], {instrument = 73, velocity = 58})
-  p:set_note_off(n[1] + 3, 0)
-end
-p:build()
-
 -- State
 local current_row = 0
 local bpm = 180
 local playing = false
+local ready = false
 
-chip.on_row_change(function(row)
-  current_row = row
-end)
+local function build_pattern()
+  local ok, p = pcall(chip.pattern, 1, rows, 180)
+  if not ok then return false end
+
+  for _, n in ipairs(melody) do
+    p:set_note(n[1], 0, n[2], {instrument = 73, velocity = 58})
+    p:set_note_off(n[1] + 3, 0)
+  end
+  p:build()
+
+  chip.on_row_change(function(row)
+    current_row = row
+  end)
+  return true
+end
 
 ansi.tick(function()
+  if not ready then
+    ready = build_pattern()
+    if not ready then
+      ansi.clear()
+      ansi.set_cursor(1, 1)
+      ansi.foreground(255, 200, 50)
+      ansi.print("Loading...")
+      return
+    end
+  end
+
   -- Controls
   if ansi.is_key_pressed(" ") then
     if playing then chip.pause(); playing = false
@@ -56,13 +72,11 @@ ansi.tick(function()
   ansi.foreground(255, 200, 50)
   ansi.print("=== Melody Player ===")
 
-  -- Status
   ansi.set_cursor(3, 1)
   ansi.foreground(100, 150, 255)
   local status = playing and "Playing" or "Stopped"
   ansi.print("Status: " .. status .. "  |  BPM: " .. bpm)
 
-  -- Progress bar
   ansi.set_cursor(5, 1)
   ansi.foreground(170, 170, 170)
   ansi.print("Row: " .. string.format("%2d", current_row) .. " / " .. rows)
@@ -78,7 +92,6 @@ ansi.tick(function()
   ansi.foreground(85, 255, 85)
   ansi.print("]")
 
-  -- Pattern display
   ansi.set_cursor(8, 1)
   ansi.foreground(170, 170, 170)
   ansi.print("Pattern:")
@@ -87,14 +100,11 @@ ansi.tick(function()
   for i = 0, 15 do
     local row = display_start + i
     if row >= rows then break end
-
     ansi.set_cursor(9 + i, 3)
-
     local note_name = "---"
     for _, n in ipairs(melody) do
       if n[1] == row then note_name = n[2] end
     end
-
     if row == current_row and playing then
       ansi.foreground(255, 255, 85)
       ansi.print(string.format("> %2d | %s", row, note_name))
@@ -104,7 +114,6 @@ ansi.tick(function()
     end
   end
 
-  -- Controls
   ansi.set_cursor(26, 1)
   ansi.foreground(85, 85, 85)
   ansi.print("Space: Play/Pause | S: Stop | Up/Down: BPM | Q: Quit")

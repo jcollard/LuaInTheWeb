@@ -244,6 +244,7 @@
     "chip/melody.lua",
     "chip/pattern_builder.lua",
     "chip/song_player.lua",
-    "chip/procedural_music.lua"
+    "chip/procedural_music.lua",
+    "chip/assets/dc-example.wcol"
   ]
 }

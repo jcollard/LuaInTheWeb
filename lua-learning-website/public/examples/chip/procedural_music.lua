@@ -29,7 +29,8 @@ local function generate_pattern()
   grid = {}
   for r = 0, rows - 1 do grid[r] = {} end
 
-  local p = chip.pattern(tracks, rows, 120)
+  local ok, p = pcall(chip.pattern, tracks, rows, 120)
+  if not ok then return nil end
   local gen_bpm = 120 + math.random(-20, 20)
 
   -- Track 0: Random melody (Marimba)
@@ -64,18 +65,22 @@ local function generate_pattern()
 end
 
 -- State
-local bpm = generate_pattern()
+local bpm = 120
 local current_row = 0
 local prev_row = 0
 local playing = false
-local gen_count = 1
+local gen_count = 0
+local ready = false
 
 chip.on_row_change(function(row)
   -- Detect loop wrap: row jumped backward (end of pattern → start)
   if row < prev_row and playing then
-    bpm = generate_pattern()
-    chip.play({loop = true})
-    gen_count = gen_count + 1
+    local new_bpm = generate_pattern()
+    if new_bpm then
+      bpm = new_bpm
+      chip.play({loop = true})
+      gen_count = gen_count + 1
+    end
   end
   prev_row = row
   current_row = row
@@ -89,6 +94,24 @@ local function midi_to_name(midi)
 end
 
 canvas.tick(function()
+  -- Deferred init
+  if not ready then
+    local new_bpm = generate_pattern()
+    if not new_bpm then
+      canvas.set_color("#1a1a2e")
+      canvas.fill_rect(0, 0, 400, 300)
+      canvas.set_color("#fbbf24")
+      canvas.set_font_size(14)
+      canvas.set_text_align("center")
+      canvas.set_text_baseline("middle")
+      canvas.draw_text(200, 150, "Loading...")
+      return
+    end
+    bpm = new_bpm
+    gen_count = 1
+    ready = true
+  end
+
   -- Input
   if canvas.is_key_pressed(" ") then
     if playing then chip.pause(); playing = false
@@ -99,7 +122,8 @@ canvas.tick(function()
   end
   if canvas.is_key_pressed("r") then
     chip.stop(); playing = false; current_row = 0
-    bpm = generate_pattern()
+    local new_bpm = generate_pattern()
+    if new_bpm then bpm = new_bpm; gen_count = gen_count + 1 end
   end
   if canvas.is_key_pressed(canvas.keys.ESCAPE) then
     chip.stop(); chip.destroy(); canvas.stop(); return

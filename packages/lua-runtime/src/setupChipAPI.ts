@@ -104,24 +104,18 @@ async function loadBankIntoPlayer(player: ChipPlayer): Promise<void> {
 export function setupChipAPI(
   engine: LuaEngine,
   getPlayer: () => ChipPlayer | null,
-  getPlayerReady?: () => Promise<unknown> | null
+  getPlayerReady?: () => Promise<unknown> | null,
+  getPatternBuilder?: () => (new (tracks: number, rows: number, bpm?: number) => PatternBuilder) | null
 ): void {
   // Track PatternBuilder instances by handle ID
   const patternBuilders = new Map<number, PatternBuilder>()
   let nextPatternHandle = 1
-  // PatternBuilder constructor — cached after first use by __chip_initAndLoadBank
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let PB: any = null
 
   // --- Lifecycle ---
 
   // Legacy __chip_init kept for backward compatibility
   engine.global.set('__chip_init', async () => {
     if (getPlayerReady) await getPlayerReady()
-    if (!PB) {
-      const mod = await import('@chip-composer/player')
-      PB = mod.PatternBuilder
-    }
     const player = getPlayer()
     if (!player) return
     await player.init()
@@ -143,13 +137,6 @@ export function setupChipAPI(
       console.error('[chip] player is null after ready')
       return
     }
-
-    // Cache PatternBuilder constructor (same module, already loaded)
-    if (!PB) {
-      const mod = await import('@chip-composer/player')
-      PB = mod.PatternBuilder
-    }
-    console.debug('[chip] PatternBuilder cached')
 
     // Initialize audio engine
     console.debug('[chip] Calling player.init()...')
@@ -229,14 +216,14 @@ export function setupChipAPI(
     '__chip_loadCollection',
     (yaml: string, songIndex?: number | null) => {
       const player = getPlayer()
-      if (!player) return
+      if (!player) throw new Error('ChipPlayer not initialized — call chip.init() first')
       player.loadCollection(yaml, songIndex ?? undefined)
     }
   )
 
   engine.global.set('__chip_loadSongFile', (yaml: string) => {
     const player = getPlayer()
-    if (!player) return
+    if (!player) throw new Error('ChipPlayer not initialized — call chip.init() first')
     player.loadSongFile(yaml)
   })
 
@@ -302,10 +289,11 @@ export function setupChipAPI(
   engine.global.set(
     '__chip_buildPattern',
     (tracks: number, rows: number, bpm?: number | null) => {
-      if (!PB) {
+      const PBCtor = getPatternBuilder?.()
+      if (!PBCtor) {
         throw new Error('chip.init() must be called before chip.pattern()')
       }
-      const builder: PatternBuilder = new PB(tracks, rows, bpm ?? 120)
+      const builder: PatternBuilder = new PBCtor(tracks, rows, bpm ?? 120)
       const handle = nextPatternHandle++
       patternBuilders.set(handle, builder)
       return handle

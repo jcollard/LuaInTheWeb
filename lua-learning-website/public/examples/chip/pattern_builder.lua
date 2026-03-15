@@ -6,39 +6,7 @@ local chip = require("chip")
 
 chip.init()
 
--- Build a 4-track, 32-row pattern at 140 BPM
 local rows = 32
-local p = chip.pattern(4, rows, 140)
-
--- Track 0: Lead melody (Synth Lead - instrument 80)
-p:set_note(0,  0, "C-5", {instrument = 80, velocity = 64})
-p:set_note(4,  0, "E-5"); p:set_note(8,  0, "G-5")
-p:set_note(12, 0, "E-5"); p:set_note(16, 0, "C-5")
-p:set_note(20, 0, "D-5"); p:set_note(24, 0, "E-5")
-p:set_note(28, 0, "C-5")
-
--- Track 1: Bass (Synth Bass - instrument 38)
-for row = 0, 28, 4 do
-  local notes = {"C-3","C-3","G-2","G-2","A-2","A-2","F-2","G-2"}
-  p:set_note(row, 1, notes[row/4+1], {instrument = 38, velocity = 50})
-  p:set_note_off(row + 2, 1)
-end
-
--- Track 2: Pad chords (Pad - instrument 89)
-p:set_note(0,  2, "E-4", {instrument = 89, velocity = 40})
-p:set_note(16, 2, "F-4")
-
--- Track 3: Arpeggiated bells (Tubular Bells - instrument 14)
-for row = 0, 28, 4 do
-  local notes = {"C-6", "E-6", "G-6", "C-7"}
-  local idx = (row / 4) % 4 + 1
-  p:set_note(row, 3, notes[idx], {instrument = 14, velocity = 32})
-  p:set_note_off(row + 1, 3)
-end
-
-p:build()
-
--- Track names and note data for display
 local track_names = {"Lead", "Bass", "Pad", "Bell"}
 local track_data = {
   {{0,"C-5"},{4,"E-5"},{8,"G-5"},{12,"E-5"},{16,"C-5"},{20,"D-5"},{24,"E-5"},{28,"C-5"}},
@@ -47,14 +15,41 @@ local track_data = {
   {{0,"C-6"},{4,"E-6"},{8,"G-6"},{12,"C-7"},{16,"C-6"},{20,"E-6"},{24,"G-6"},{28,"C-7"}},
 }
 
--- State
 local current_row = 0
 local bpm = 140
 local playing = false
+local ready = false
 
-chip.on_row_change(function(row)
-  current_row = row
-end)
+local function build_pattern()
+  local ok, p = pcall(chip.pattern, 4, rows, 140)
+  if not ok then return false end
+
+  p:set_note(0,  0, "C-5", {instrument = 80, velocity = 64})
+  p:set_note(4,  0, "E-5"); p:set_note(8,  0, "G-5")
+  p:set_note(12, 0, "E-5"); p:set_note(16, 0, "C-5")
+  p:set_note(20, 0, "D-5"); p:set_note(24, 0, "E-5")
+  p:set_note(28, 0, "C-5")
+
+  for row = 0, 28, 4 do
+    local notes = {"C-3","C-3","G-2","G-2","A-2","A-2","F-2","G-2"}
+    p:set_note(row, 1, notes[row/4+1], {instrument = 38, velocity = 50})
+    p:set_note_off(row + 2, 1)
+  end
+
+  p:set_note(0,  2, "E-4", {instrument = 89, velocity = 40})
+  p:set_note(16, 2, "F-4")
+
+  for row = 0, 28, 4 do
+    local notes = {"C-6", "E-6", "G-6", "C-7"}
+    local idx = (row / 4) % 4 + 1
+    p:set_note(row, 3, notes[idx], {instrument = 14, velocity = 32})
+    p:set_note_off(row + 1, 3)
+  end
+
+  p:build()
+  chip.on_row_change(function(row) current_row = row end)
+  return true
+end
 
 local function note_at(track, row)
   for _, n in ipairs(track_data[track]) do
@@ -64,7 +59,17 @@ local function note_at(track, row)
 end
 
 ansi.tick(function()
-  -- Controls
+  if not ready then
+    ready = build_pattern()
+    if not ready then
+      ansi.clear()
+      ansi.set_cursor(1, 1)
+      ansi.foreground(255, 200, 50)
+      ansi.print("Loading...")
+      return
+    end
+  end
+
   if ansi.is_key_pressed(" ") then
     if playing then chip.pause(); playing = false
     else chip.play({loop = true}); playing = true end
@@ -80,9 +85,7 @@ ansi.tick(function()
     chip.stop(); chip.destroy(); ansi.stop(); return
   end
 
-  -- Draw
   ansi.clear()
-
   ansi.set_cursor(1, 1)
   ansi.foreground(255, 200, 50)
   ansi.print("=== Pattern Builder ===")
@@ -92,7 +95,6 @@ ansi.tick(function()
   local status = playing and "Playing" or "Stopped"
   ansi.print(status .. " | BPM: " .. bpm .. " | Row: " .. current_row .. "/" .. rows)
 
-  -- Column headers
   ansi.set_cursor(5, 1)
   ansi.foreground(170, 170, 170)
   ansi.print("Row  ")
@@ -100,15 +102,12 @@ ansi.tick(function()
     ansi.print(string.format("%-6s", name))
   end
 
-  -- Pattern grid
   local win_start = math.max(0, current_row - 7)
   for i = 0, 17 do
     local row = win_start + i
     if row >= rows then break end
-
     ansi.set_cursor(6 + i, 1)
     local is_current = (row == current_row and playing)
-
     if is_current then
       ansi.foreground(255, 255, 85)
       ansi.print(string.format(">%2d  ", row))
@@ -116,7 +115,6 @@ ansi.tick(function()
       ansi.foreground(85, 85, 85)
       ansi.print(string.format(" %2d  ", row))
     end
-
     for t = 1, 4 do
       local note = note_at(t, row)
       if note then
@@ -134,7 +132,6 @@ ansi.tick(function()
     end
   end
 
-  -- Controls
   ansi.set_cursor(25, 1)
   ansi.foreground(85, 85, 85)
   ansi.print("Space: Play/Pause | S: Stop | Up/Down: BPM | Q: Quit")
