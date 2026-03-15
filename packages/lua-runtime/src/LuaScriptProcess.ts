@@ -629,13 +629,19 @@ __clear_execution_hook()
       scriptDirectory,
     })
 
-    // Load ChipPlayer lazily — chip.init() awaits this via __chip_initAndLoadBank
-    import('@chip-composer/player')
-      .then(({ ChipPlayer }) => { this.chipPlayer = new ChipPlayer() })
+    // Load ChipPlayer lazily — chip.init() awaits this promise
+    // Also extract PatternBuilder for synchronous use by __chip_buildPattern
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let patternBuilderCtor: any = null
+    const playerReady = import('@chip-composer/player')
+      .then(({ ChipPlayer, PatternBuilder }) => {
+        this.chipPlayer = new ChipPlayer()
+        patternBuilderCtor = PatternBuilder
+      })
       .catch(() => { /* ChipPlayer not available */ })
 
     // Set up chip playback bridge functions
-    setupChipAPI(this.engine, () => this.chipPlayer)
+    setupChipAPI(this.engine, () => this.chipPlayer, () => playerReady, () => patternBuilderCtor)
 
     // Inject the chip Lua code (registers package.preload['chip'])
     this.engine.doStringSync(chipLuaCode)

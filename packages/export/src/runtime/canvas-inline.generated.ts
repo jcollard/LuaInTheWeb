@@ -3268,7 +3268,6 @@ return localstorage
     -- ========================================================================
     function _chip.init()
       -- __chip_initAndLoadBank is async: awaits player import, init, and bank loading.
-      -- wasmoon awaits the returned Promise so Lua blocks until everything is ready.
       __chip_initAndLoadBank()
     end
 
