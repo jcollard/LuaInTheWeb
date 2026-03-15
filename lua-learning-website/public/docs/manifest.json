@@ -23,6 +23,7 @@
     "lua/math.md",
     "lua/io.md",
     "ansi/editor.md",
-    "ansi.md"
+    "ansi.md",
+    "chip.md"
   ]
 }

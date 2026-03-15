@@ -5,6 +5,8 @@ import {
   IBM_VGA_FONT_DATA_URL,
   AUDIO_INLINE_JS,
   audioLuaCode,
+  CHIP_INLINE_JS,
+  chipLuaCode,
 } from '@lua-learning/lua-runtime'
 import { ANSI_INLINE_JS } from './runtime/ansi-inline.generated'
 import { XTERM_WITH_CANVAS_ADDON_JS } from './runtime/xterm-canvas.generated'
@@ -54,6 +56,12 @@ export function generateAnsiHtml(
 
   // Escape audioLuaCode for safe embedding in JS template literal
   const escapedAudioLuaCode = audioLuaCode
+    .replace(/\\/g, '\\\\')
+    .replace(/`/g, '\\`')
+    .replace(/\$/g, '\\$')
+
+  // Escape chipLuaCode for safe embedding in JS template literal
+  const escapedChipLuaCode = chipLuaCode
     .replace(/\\/g, '\\\\')
     .replace(/`/g, '\\`')
     .replace(/\$/g, '\\$')
@@ -136,6 +144,10 @@ export function generateAnsiHtml(
     // Audio bridge (bundled from audio-inline-entry.ts)
     ${AUDIO_INLINE_JS}
   </script>
+  <script>
+    // Chip bridge (bundled from chip-inline-entry.ts)
+    ${CHIP_INLINE_JS}
+  </script>
   <script type="module">
     // Lua module map
     const LUA_MODULES = ${luaModules};
@@ -145,6 +157,9 @@ export function generateAnsiHtml(
 
     // Audio Lua code (registers package.preload['ail_audio'])
     const AUDIO_LUA_CODE = \`${escapedAudioLuaCode}\`;
+
+    // Chip Lua code (registers package.preload['chip'])
+    const CHIP_LUA_CODE = \`${escapedChipLuaCode}\`;
 
     // Project configuration
     const PROJECT_CONFIG = {
@@ -350,6 +365,9 @@ export function generateAnsiHtml(
         const audioState = { preUnlockedAudioContext: preUnlockedAudioContext };
         globalThis.setupAudioBridge(engine, audioState, ASSET_MANIFEST);
 
+        // Set up chip (OPL3 FM synthesis) bridge
+        globalThis.setupChipBridge(engine, ASSET_MANIFEST);
+
         // Override __ansi_start with non-blocking version.
         engine.global.set('__ansi_start', () => {
           return new Promise((resolve) => {
@@ -402,6 +420,11 @@ export function generateAnsiHtml(
         // Register audio module (must come before main script)
         if (AUDIO_LUA_CODE) {
           await engine.doString(AUDIO_LUA_CODE);
+        }
+
+        // Register chip (OPL3) module
+        if (CHIP_LUA_CODE) {
+          await engine.doString(CHIP_LUA_CODE);
         }
 
         // Note: setupAnsiAPI() already executed ansiLuaCode via doStringSync()

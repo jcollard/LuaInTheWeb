@@ -17,10 +17,11 @@
   "scripts": {
     "build:lua": "node scripts/generate-lua-exports.js",
     "build:audio": "node scripts/bundle-audio-inline.js",
+    "build:chip": "node scripts/bundle-chip-inline.js",
     "build:wasmoon": "node scripts/bundle-wasmoon-inline.js",
     "build:xterm": "node scripts/bundle-xterm-inline.js",
     "build:font": "node scripts/bundle-ibm-vga-font.js",
-    "prebuild": "npm run build:lua && npm run build:audio && npm run build:wasmoon && npm run build:xterm && npm run build:font",
+    "prebuild": "npm run build:lua && npm run build:audio && npm run build:chip && npm run build:wasmoon && npm run build:xterm && npm run build:font",
     "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -37,6 +38,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@chip-composer/player": "*",
     "@lua-learning/ansi-shared": "*",
     "@lua-learning/canvas-runtime": "*",
     "@lua-learning/shell-core": "*",

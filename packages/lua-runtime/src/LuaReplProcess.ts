@@ -20,6 +20,11 @@ import { setupAudioAPI } from './setupAudioAPI'
 import { setupAudioAssetAPI } from './setupAudioAssetAPI'
 import { AudioAssetManager } from './AudioAssetManager'
 import { audioLuaCode } from './audioLuaCode'
+import { ChipPlayer } from '@chip-composer/player'
+import { setupChipAPI } from './setupChipAPI'
+import { setupChipAssetAPI } from './setupChipAssetAPI'
+import { ChipAssetManager } from './ChipAssetManager'
+import { chipLuaCode } from './chipLuaCode'
 import { FileOperationsHandler } from './FileOperationsHandler'
 
 /**
@@ -60,6 +65,10 @@ export class LuaReplProcess implements IProcess {
   private canvasController: CanvasController | null = null
   /** Audio asset manager for standalone audio */
   private audioAssetManager: AudioAssetManager | null = null
+  /** Chip player for OPL3 FM synthesis */
+  private chipPlayer: ChipPlayer | null = null
+  /** Chip asset manager for .wcol/.wsng files */
+  private chipAssetManager: ChipAssetManager | null = null
 
   /** File operations handler for io.open() support */
   private fileOpsHandler: FileOperationsHandler | null = null
@@ -144,6 +153,11 @@ export class LuaReplProcess implements IProcess {
     // Dispose standalone audio engine if active
     this.audioAssetManager?.getAudioEngine()?.dispose()
     this.audioAssetManager = null
+
+    // Dispose chip player if active
+    this.chipPlayer?.destroy()
+    this.chipPlayer = null
+    this.chipAssetManager = null
 
     // Request stop from any running Lua code via debug hook
     // This sets a flag that the debug hook checks periodically
@@ -409,6 +423,9 @@ export class LuaReplProcess implements IProcess {
       // Setup standalone audio module (always available, must be before canvas)
       this.initAudioModule()
 
+      // Setup chip (OPL3 FM synthesis) module
+      this.initChipModule()
+
       // Setup canvas API if canvas callbacks are provided
       if (this.options.canvasCallbacks) {
         this.initCanvasAPI()
@@ -477,6 +494,40 @@ export class LuaReplProcess implements IProcess {
 
     // Inject the audio Lua code (registers package.preload['ail_audio'])
     this.engine.doStringSync(audioLuaCode)
+  }
+
+  /**
+   * Set up the chip (OPL3 FM synthesis) module.
+   * Creates a ChipPlayer and ChipAssetManager, sets up bridge functions,
+   * and injects the chip Lua code.
+   */
+  private initChipModule(): void {
+    if (!this.engine) return
+
+    this.chipPlayer = new ChipPlayer()
+    this.chipAssetManager = new ChipAssetManager()
+
+    const cwd = this.options.cwd ?? '/'
+
+    // Set up chip asset bridge functions
+    if (this.options.fileSystem) {
+      setupChipAssetAPI(this.engine, () => this.chipAssetManager, {
+        fileSystem: this.options.fileSystem,
+        scriptDirectory: cwd,
+      })
+    } else {
+      // Register no-op stubs so require('chip') doesn't error on missing globals
+      this.engine.global.set('__chip_assets_addPath', () => {})
+      this.engine.global.set('__chip_assets_loadFile', () => {})
+      this.engine.global.set('__chip_assets_start', () => Promise.resolve())
+      this.engine.global.set('__chip_assets_getFileContent', () => null)
+    }
+
+    // Set up chip playback bridge functions
+    setupChipAPI(this.engine, () => this.chipPlayer)
+
+    // Inject the chip Lua code (registers package.preload['chip'])
+    this.engine.doStringSync(chipLuaCode)
   }
 
   /**
