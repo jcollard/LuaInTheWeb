@@ -53,6 +53,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'issue_comment' && steps.pr.outputs.sha || github.event.pull_request.head.sha }}
+          submodules: true
+          token: ${{ secrets.SUBMODULE_PAT }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -75,6 +77,10 @@ jobs:
       - name: Build ansi-shared
         run: npm run build
         working-directory: packages/ansi-shared
+
+      - name: Build chip-composer-player
+        run: npm run build
+        working-directory: vendor/WebOPL/packages/chip-composer-player
 
       - name: Build lua-runtime
         run: npm run build
