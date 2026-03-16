@@ -179,6 +179,48 @@ export const chipLuaCode = `
     end
 
     -- ========================================================================
+    -- Collection pattern access
+    -- ========================================================================
+    function _chip.parse_collection(name_or_yaml)
+      if not _chip.ready() then return nil end
+      -- Try asset lookup first
+      local content = __chip_assets_getFileContent(name_or_yaml)
+      local yaml = content or name_or_yaml
+      local result = __chip_parseCollection(yaml)
+      if not result then return nil end
+      -- Build Lua-friendly collection table
+      local col = {
+        _handle = result.handle,
+        patterns = {}
+      }
+      for i, p in ipairs(result.patterns) do
+        col.patterns[i] = {
+          name = p.name,
+          id = p.id,
+          tracks = p.tracks,
+          rows = p.rows,
+          bpm = p.bpm,
+        }
+      end
+      return col
+    end
+
+    function _chip.play_pattern(collection, pattern_index)
+      if not collection or not collection._handle then
+        error("Expected a collection from chip.parse_collection()")
+      end
+      -- Convert 1-based Lua index to 0-based JS index
+      __chip_playPattern(collection._handle, pattern_index - 1)
+    end
+
+    function _chip.free_collection(collection)
+      if collection and collection._handle then
+        __chip_freeCollection(collection._handle)
+        collection._handle = nil
+      end
+    end
+
+    -- ========================================================================
     -- Playback control
     -- ========================================================================
     function _chip.play(options)

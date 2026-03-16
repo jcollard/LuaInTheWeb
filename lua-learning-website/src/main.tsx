@@ -1,6 +1,8 @@
 import './monacoSetup'
 import './wasmSetup'
-import './utils/testChipPlayback'
+if (import.meta.env.DEV) {
+  import('./utils/testChipPlayback')
+}
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'

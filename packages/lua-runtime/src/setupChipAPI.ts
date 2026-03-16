@@ -136,6 +136,13 @@ export function setupChipAPI(
   // Track PatternBuilder instances by handle ID
   const patternBuilders = new Map<number, PatternBuilder>()
   let nextPatternHandle = 1
+
+  // Track parsed collections by handle ID
+  // Stores the result of ChipPlayer.parseCollection() keyed by handle
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const parsedCollections = new Map<number, { patterns: Array<{ id: string; name: string; data: any }> }>()
+  let nextCollectionHandle = 1
+
   let initComplete = false
 
   // --- Lifecycle ---
@@ -317,6 +324,53 @@ export function setupChipAPI(
     const player = getPlayer()
     if (!player) return
     player.setInstrumentBank(data as OPLPatch[])
+  })
+
+  // --- Collection pattern access ---
+
+  engine.global.set('__chip_parseCollection', (yaml: string) => {
+    const player = getPlayer()
+    if (!player) throw new Error('ChipPlayer not initialized — call chip.init() first')
+    // parseCollection() is defined on ChipPlayer but tsc can't see it
+    // because the player package types resolve from the Vite JS bundle
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = (player as any).parseCollection(yaml) as {
+      patterns: Array<{ id: string; name: string; data: { rows: unknown[][]; bpm: number } }>
+    }
+    const handle = nextCollectionHandle++
+    parsedCollections.set(handle, {
+      patterns: result.patterns,
+    })
+
+    // Return pattern metadata (without TrackerPattern data) to Lua
+    const patterns = result.patterns.map(p => ({
+      name: p.name,
+      id: p.id,
+      tracks: p.data.rows[0]?.length ?? 0,
+      rows: p.data.rows.length,
+      bpm: p.data.bpm,
+    }))
+
+    return { handle, patterns }
+  })
+
+  engine.global.set(
+    '__chip_playPattern',
+    (collectionHandle: number, patternIndex: number) => {
+      const entry = parsedCollections.get(collectionHandle)
+      if (!entry) throw new Error(`Invalid collection handle: ${collectionHandle}`)
+
+      const pattern = entry.patterns[patternIndex]
+      if (!pattern) throw new Error(`Pattern index ${patternIndex} out of range`)
+
+      const player = getPlayer()
+      if (!player) throw new Error('ChipPlayer not initialized')
+      player.loadPattern(pattern.data)
+    }
+  )
+
+  engine.global.set('__chip_freeCollection', (collectionHandle: number) => {
+    parsedCollections.delete(collectionHandle)
   })
 
   // --- PatternBuilder ---
