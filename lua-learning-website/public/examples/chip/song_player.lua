@@ -25,10 +25,6 @@ local playing = false
 local current_row = 0
 local ready = false
 
-chip.on_row_change(function(row)
-  current_row = row
-end)
-
 local function load_song(index)
   chip.stop()
   playing = false
@@ -47,6 +43,9 @@ ansi.tick(function()
       ansi.print("Loading...")
       return
     end
+    chip.on_row_change(function(row)
+      current_row = row
+    end)
     chip.load_collection(wcol_content, songs[current_song].index)
     ready = true
   end

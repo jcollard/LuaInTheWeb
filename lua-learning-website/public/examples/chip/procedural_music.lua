@@ -72,20 +72,6 @@ local playing = false
 local gen_count = 0
 local ready = false
 
-chip.on_row_change(function(row)
-  -- Detect loop wrap: row jumped backward (end of pattern → start)
-  if row < prev_row and playing then
-    local new_bpm = generate_pattern()
-    if new_bpm then
-      bpm = new_bpm
-      chip.play({loop = true})
-      gen_count = gen_count + 1
-    end
-  end
-  prev_row = row
-  current_row = row
-end)
-
 local note_names = {"C","C#","D","D#","E","F","F#","G","G#","A","A#","B"}
 local function midi_to_name(midi)
   local octave = math.floor(midi / 12) - 1
@@ -106,6 +92,19 @@ canvas.tick(function()
       canvas.draw_text(200, 150, "Loading...")
       return
     end
+    chip.on_row_change(function(row)
+      -- Detect loop wrap: row jumped backward (end of pattern → start)
+      if row < prev_row and playing then
+        local new_bpm = generate_pattern()
+        if new_bpm then
+          bpm = new_bpm
+          chip.play({loop = true})
+          gen_count = gen_count + 1
+        end
+      end
+      prev_row = row
+      current_row = row
+    end)
     local new_bpm = generate_pattern()
     if not new_bpm then return end
     bpm = new_bpm
