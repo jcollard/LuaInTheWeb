@@ -22,8 +22,8 @@ local playing = false
 local ready = false
 
 local function build_pattern()
-  local ok, p = pcall(chip.pattern, 1, rows, 180)
-  if not ok then return false end
+  local p = chip.pattern(1, rows, 180)
+  if not p then return false end
 
   for _, n in ipairs(melody) do
     p:set_note(n[1], 0, n[2], {instrument = 73, velocity = 58})
@@ -39,14 +39,14 @@ end
 
 ansi.tick(function()
   if not ready then
-    ready = build_pattern()
-    if not ready then
+    if not chip.ready() then
       ansi.clear()
       ansi.set_cursor(1, 1)
       ansi.foreground(255, 200, 50)
       ansi.print("Loading...")
       return
     end
+    ready = build_pattern()
   end
 
   -- Controls

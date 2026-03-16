@@ -34,20 +34,20 @@ local function load_song(index)
   playing = false
   current_row = 0
   current_song = index
-  __chip_loadCollection(wcol_content, songs[index].index)
+  chip.load_collection(wcol_content, songs[index].index)
 end
 
 ansi.tick(function()
   -- Deferred init: wait until player is ready
   if not ready then
-    local ok, err = pcall(__chip_loadCollection, wcol_content, songs[current_song].index)
-    if not ok then
+    if not chip.ready() then
       ansi.clear()
       ansi.set_cursor(1, 1)
       ansi.foreground(255, 200, 50)
       ansi.print("Loading...")
       return
     end
+    chip.load_collection(wcol_content, songs[current_song].index)
     ready = true
   end
 

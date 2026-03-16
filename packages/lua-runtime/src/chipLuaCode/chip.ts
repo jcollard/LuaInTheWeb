@@ -75,6 +75,13 @@ export const chipLuaCode = `
       __chip_destroy()
     end
 
+    local _chip_is_ready = false
+    function _chip.ready()
+      if _chip_is_ready then return true end
+      _chip_is_ready = __chip_isReady()
+      return _chip_is_ready
+    end
+
     -- ========================================================================
     -- Direct note control
     -- ========================================================================
@@ -118,6 +125,7 @@ export const chipLuaCode = `
     -- Pattern building (programmatic)
     -- ========================================================================
     function _chip.pattern(tracks, rows, bpm)
+      if not _chip.ready() then return nil end
       local handle = __chip_buildPattern(tracks, rows, bpm)
       local builder = {}
 
@@ -146,6 +154,7 @@ export const chipLuaCode = `
     -- File loading (from pre-loaded assets or raw YAML strings)
     -- ========================================================================
     function _chip.load_collection(name_or_yaml, song_index)
+      if not _chip.ready() then return nil end
       -- Check if it's a pre-loaded asset name
       local content = __chip_assets_getFileContent(name_or_yaml)
       if content then
@@ -154,9 +163,11 @@ export const chipLuaCode = `
         -- Treat as raw YAML string
         __chip_loadCollection(name_or_yaml, song_index)
       end
+      return true
     end
 
     function _chip.load_song_file(name_or_yaml)
+      if not _chip.ready() then return nil end
       -- Check if it's a pre-loaded asset name
       local content = __chip_assets_getFileContent(name_or_yaml)
       if content then

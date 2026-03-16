@@ -110,6 +110,7 @@ export function setupChipAPI(
   // Track PatternBuilder instances by handle ID
   const patternBuilders = new Map<number, PatternBuilder>()
   let nextPatternHandle = 1
+  let initComplete = false
 
   // --- Lifecycle ---
 
@@ -158,7 +159,15 @@ export function setupChipAPI(
       console.debug('[chip] Could not set default instrument:', e)
     }
 
+    initComplete = true
     console.debug('[chip] initAndLoadBank complete')
+  })
+
+  engine.global.set('__chip_isReady', () => {
+    if (!initComplete) return false
+    if (!getPlayer()) return false
+    if (!getPatternBuilder?.()) return false
+    return true
   })
 
   engine.global.set('__chip_destroy', async () => {
