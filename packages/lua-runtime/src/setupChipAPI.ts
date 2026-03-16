@@ -33,11 +33,37 @@ function convertGENMIDI(data: any): OPLPatch[] {
     }
   }
 
+  /** Sum of absolute differences between two operators' numeric parameters */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function operatorDistance(op1: any, op2: any): number {
+    return (
+      Math.abs(op1.attack - op2.attack) +
+      Math.abs(op1.decay - op2.decay) +
+      Math.abs(op1.sustain - op2.sustain) +
+      Math.abs(op1.release - op2.release) +
+      Math.abs(op1.multi - op2.multi) +
+      Math.abs(op1.out - op2.out) +
+      Math.abs(op1.wave - op2.wave) +
+      Math.abs(op1.ksl - op2.ksl)
+    )
+  }
+
+  /** Heuristic: enable dual-voice only when voice2 differs meaningfully from voice1 */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function isDualVoiceWorthwhile(inst: any): boolean {
+    const v1 = inst.voice1
+    const v2 = inst.voice2
+    if (v1.feedback !== v2.feedback) return true
+    if (v1.additive !== v2.additive) return true
+    return (operatorDistance(v1.mod, v2.mod) + operatorDistance(v1.car, v2.car)) > 10
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return data.instruments.map((inst: any) => ({
     id: inst.id,
     name: inst.name,
     noteOffset: inst.note,
+    type: inst.id >= 128 ? 'percussion' as const : 'melodic' as const,
     voice1: {
       modulator: convertOp(inst.voice1.mod),
       carrier: convertOp(inst.voice1.car),
@@ -56,7 +82,7 @@ function convertGENMIDI(data: any): OPLPatch[] {
     carrier: convertOp(inst.voice1.car),
     feedback: inst.voice1.feedback,
     connection: inst.voice1.additive ? 'additive' : 'fm',
-    dualVoiceEnabled: true,
+    dualVoiceEnabled: isDualVoiceWorthwhile(inst),
   }))
 }
 
