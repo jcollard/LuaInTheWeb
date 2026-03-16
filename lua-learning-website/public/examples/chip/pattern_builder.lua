@@ -21,8 +21,8 @@ local playing = false
 local ready = false
 
 local function build_pattern()
-  local ok, p = pcall(chip.pattern, 4, rows, 140)
-  if not ok then return false end
+  local p = chip.pattern(4, rows, 140)
+  if not p then return false end
 
   p:set_note(0,  0, "C-5", {instrument = 80, velocity = 64})
   p:set_note(4,  0, "E-5"); p:set_note(8,  0, "G-5")
@@ -60,14 +60,14 @@ end
 
 ansi.tick(function()
   if not ready then
-    ready = build_pattern()
-    if not ready then
+    if not chip.ready() then
       ansi.clear()
       ansi.set_cursor(1, 1)
       ansi.foreground(255, 200, 50)
       ansi.print("Loading...")
       return
     end
+    ready = build_pattern()
   end
 
   if ansi.is_key_pressed(" ") then

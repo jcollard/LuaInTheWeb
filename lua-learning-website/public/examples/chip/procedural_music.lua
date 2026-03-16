@@ -29,8 +29,8 @@ local function generate_pattern()
   grid = {}
   for r = 0, rows - 1 do grid[r] = {} end
 
-  local ok, p = pcall(chip.pattern, tracks, rows, 120)
-  if not ok then return nil end
+  local p = chip.pattern(tracks, rows, 120)
+  if not p then return nil end
   local gen_bpm = 120 + math.random(-20, 20)
 
   -- Track 0: Random melody (Marimba)
@@ -96,8 +96,7 @@ end
 canvas.tick(function()
   -- Deferred init
   if not ready then
-    local new_bpm = generate_pattern()
-    if not new_bpm then
+    if not chip.ready() then
       canvas.set_color("#1a1a2e")
       canvas.fill_rect(0, 0, 400, 300)
       canvas.set_color("#fbbf24")
@@ -107,6 +106,8 @@ canvas.tick(function()
       canvas.draw_text(200, 150, "Loading...")
       return
     end
+    local new_bpm = generate_pattern()
+    if not new_bpm then return end
     bpm = new_bpm
     gen_count = 1
     ready = true

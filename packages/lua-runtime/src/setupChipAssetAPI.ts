@@ -59,6 +59,10 @@ export function setupChipAssetAPI(
     if (!manager) {
       throw new Error('Chip asset manager not available')
     }
-    return manager.getFileContent(name)
+    // Return undefined (not null) when asset not found — wasmoon treats null
+    // as a value and checks null.then for thenability, which throws TypeError.
+    const content = manager.getFileContent(name)
+    if (content === null) return
+    return content
   })
 }
