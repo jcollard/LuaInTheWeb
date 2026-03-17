@@ -39,6 +39,9 @@ const MIME_TYPES: Record<string, string> = {
   // Data
   '.json': 'application/json',
   '.xml': 'application/xml',
+  // Chip music (YAML-based)
+  '.wcol': 'text/yaml',
+  '.wsng': 'text/yaml',
 }
 // Stryker restore all
 
@@ -144,10 +147,15 @@ export class AssetCollector {
         // Recursively collect from subdirectory
         await this.collectAssetsFromDir(relativePath + '/', assets)
       } else {
-        // Collect binary file
+        const mimeType = this.getMimeType(entry.name)
         if (this.filesystem.isBinaryFile?.(absolutePath)) {
+          // Collect binary file
           const data = this.filesystem.readBinaryFile!(absolutePath)
-          const mimeType = this.getMimeType(entry.name)
+          assets.push({ path: relativePath, data, mimeType })
+        } else if (this.isTextAsset(entry.name)) {
+          // Collect text-based asset (.wcol, .wsng, .json, .xml)
+          const content = this.filesystem.readFile(absolutePath)
+          const data = new TextEncoder().encode(content)
           assets.push({ path: relativePath, data, mimeType })
         }
       }
@@ -220,6 +228,14 @@ export class AssetCollector {
   /**
    * Get MIME type for a file based on its extension.
    */
+  /**
+   * Check if a file is a text-based asset that should be collected.
+   */
+  private isTextAsset(filename: string): boolean {
+    const ext = filename.slice(filename.lastIndexOf('.')).toLowerCase()
+    return ext === '.wcol' || ext === '.wsng' || ext === '.json' || ext === '.xml'
+  }
+
   private getMimeType(filename: string): string {
     const ext = filename.slice(filename.lastIndexOf('.')).toLowerCase()
     return MIME_TYPES[ext] || 'application/octet-stream'

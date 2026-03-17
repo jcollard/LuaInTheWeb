@@ -21,7 +21,7 @@ import {
   hcLuaCode,
   localStorageLuaCode,
 } from './canvas-standalone.js';
-import { audioLuaCode } from '@lua-learning/lua-runtime';
+import { audioLuaCode, chipLuaCode } from '@lua-learning/lua-runtime';
 
 // Expose globally for use in exported HTML
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -33,6 +33,7 @@ import { audioLuaCode } from '@lua-learning/lua-runtime';
   hcLuaCode,
   localStorageLuaCode,
   audioLuaCode,
+  chipLuaCode,
 };
 
 // Also expose individual functions for backward compatibility
@@ -50,3 +51,5 @@ import { audioLuaCode } from '@lua-learning/lua-runtime';
 (globalThis as any).localStorageLuaCode = localStorageLuaCode;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).audioLuaCode = audioLuaCode;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).chipLuaCode = chipLuaCode;

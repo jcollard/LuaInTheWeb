@@ -84,6 +84,7 @@ async function bundleCanvasInline() {
               export { LUA_HC_CODE } from '${join(LUA_RUNTIME_SRC, 'lua/hc.generated.ts').replace(/\\/g, '/')}';
               export { LUA_LOCALSTORAGE_CODE } from '${join(LUA_RUNTIME_SRC, 'lua/localstorage.generated.ts').replace(/\\/g, '/')}';
               export { audioLuaCode } from '${join(LUA_RUNTIME_SRC, 'audioLuaCode/audio.ts').replace(/\\/g, '/')}';
+              export { chipLuaCode } from '${join(LUA_RUNTIME_SRC, 'chipLuaCode/chip.ts').replace(/\\/g, '/')}';
             `,
             loader: 'ts',
             resolveDir: LUA_RUNTIME_SRC,
