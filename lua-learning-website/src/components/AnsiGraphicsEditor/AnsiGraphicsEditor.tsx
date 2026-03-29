@@ -6,18 +6,19 @@ import { AnsiEditorToolbar } from './AnsiEditorToolbar'
 import { ColorPanel } from './ColorPanel'
 import { FramesPanel } from './FramesPanel'
 import { LayersPanel } from './LayersPanel'
+import { ExportLayersDialog } from './ExportLayersDialog'
 import { ImportLayersDialog } from './ImportLayersDialog'
 import { SaveAsDialog } from './SaveAsDialog'
 import { ToastContainer } from './ToastContainer'
 import { useAnsiEditor } from './useAnsiEditor'
 import { useAnsiEditorFile } from './useAnsiEditorFile'
+import { useExportLayers } from './useExportLayers'
 import { useImportLayers } from './useImportLayers'
 import { useToast } from './useToast'
 import type { ScaleMode, GroupLayer } from './types'
 import { isGroupLayer } from './types'
 import { ProjectConfigParser } from '@lua-learning/export'
 import { CRT_DEFAULTS } from '@lua-learning/lua-runtime'
-import type { CrtConfig } from '@lua-learning/lua-runtime'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface AnsiGraphicsEditorProps {
@@ -173,24 +174,17 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
       }
       const result = ProjectConfigParser.parseContent(content)
       if (result.success && result.config.ansi?.crt === true) {
-        const ansi = result.config.ansi
-        const merged: CrtConfig = {
-          smoothing: ansi.crt_smoothing ?? CRT_DEFAULTS.smoothing,
-          scanlineIntensity: ansi.crt_scanlineIntensity ?? CRT_DEFAULTS.scanlineIntensity,
-          scanlineCount: ansi.crt_scanlineCount ?? CRT_DEFAULTS.scanlineCount,
-          adaptiveIntensity: ansi.crt_adaptiveIntensity ?? CRT_DEFAULTS.adaptiveIntensity,
-          brightness: ansi.crt_brightness ?? CRT_DEFAULTS.brightness,
-          contrast: ansi.crt_contrast ?? CRT_DEFAULTS.contrast,
-          saturation: ansi.crt_saturation ?? CRT_DEFAULTS.saturation,
-          bloomIntensity: ansi.crt_bloomIntensity ?? CRT_DEFAULTS.bloomIntensity,
-          bloomThreshold: ansi.crt_bloomThreshold ?? CRT_DEFAULTS.bloomThreshold,
-          rgbShift: ansi.crt_rgbShift ?? CRT_DEFAULTS.rgbShift,
-          vignetteStrength: ansi.crt_vignetteStrength ?? CRT_DEFAULTS.vignetteStrength,
-          curvature: ansi.crt_curvature ?? CRT_DEFAULTS.curvature,
-          flickerStrength: ansi.crt_flickerStrength ?? CRT_DEFAULTS.flickerStrength,
-          phosphor: ansi.crt_phosphor ?? CRT_DEFAULTS.phosphor,
-        }
-        setCrtConfig(merged)
+        const a = result.config.ansi
+        const d = CRT_DEFAULTS
+        setCrtConfig({
+          smoothing: a.crt_smoothing ?? d.smoothing, scanlineIntensity: a.crt_scanlineIntensity ?? d.scanlineIntensity,
+          scanlineCount: a.crt_scanlineCount ?? d.scanlineCount, adaptiveIntensity: a.crt_adaptiveIntensity ?? d.adaptiveIntensity,
+          brightness: a.crt_brightness ?? d.brightness, contrast: a.crt_contrast ?? d.contrast,
+          saturation: a.crt_saturation ?? d.saturation, bloomIntensity: a.crt_bloomIntensity ?? d.bloomIntensity,
+          bloomThreshold: a.crt_bloomThreshold ?? d.bloomThreshold, rgbShift: a.crt_rgbShift ?? d.rgbShift,
+          vignetteStrength: a.crt_vignetteStrength ?? d.vignetteStrength, curvature: a.crt_curvature ?? d.curvature,
+          flickerStrength: a.crt_flickerStrength ?? d.flickerStrength, phosphor: a.crt_phosphor ?? d.phosphor,
+        })
       } else {
         setCrtConfig(null)
       }
@@ -207,15 +201,10 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleImportPngClick = useCallback(() => {
-    fileInputRef.current?.click()
-  }, [])
-
+  const handleImportPngClick = useCallback(() => fileInputRef.current?.click(), [])
   const handleFileSelected = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      importPngAsLayer(file)
-    }
+    if (file) importPngAsLayer(file)
     e.target.value = ''
   }, [importPngAsLayer])
 
@@ -228,15 +217,18 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
     handleImportCancel,
   } = useImportLayers({ layers, parseAnsiFile, importLayersWithUndo })
 
+  const exportLayers = useExportLayers({ layers, availableTags, fileSystem, refreshFileTree, filePath })
+
   const existingGroups = useMemo(() => layers.filter(isGroupLayer) as GroupLayer[], [layers])
 
-  const handleSaveAs = useCallback(async (folderPath: string, fileName: string) => {
-    await fileHandleSaveAs(folderPath, fileName, layers, activeLayerId, availableTags)
-  }, [fileHandleSaveAs, layers, activeLayerId, availableTags])
-
-  const handleSave = useCallback(async () => {
-    await fileHandleSave(layers, activeLayerId, availableTags, markClean, openSaveDialog)
-  }, [fileHandleSave, layers, activeLayerId, availableTags, markClean, openSaveDialog])
+  const handleSaveAs = useCallback(
+    (f: string, n: string) => fileHandleSaveAs(f, n, layers, activeLayerId, availableTags),
+    [fileHandleSaveAs, layers, activeLayerId, availableTags],
+  )
+  const handleSave = useCallback(
+    () => fileHandleSave(layers, activeLayerId, availableTags, markClean, openSaveDialog),
+    [fileHandleSave, layers, activeLayerId, availableTags, markClean, openSaveDialog],
+  )
 
   handleSaveRef.current = handleSave
   handleOpenSaveDialogRef.current = openSaveDialog
@@ -259,6 +251,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         onImportLayers={handleImportLayersClick}
         onExportAns={handleExportAns}
         onExportSh={handleExportSh}
+        onExportLayers={exportLayers.handleExportLayersClick}
         onUndo={undo}
         onRedo={redo}
         canUndo={canUndo}
@@ -356,22 +349,10 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         onSave={handleSaveAs}
         onCancel={closeSaveDialog}
       />
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/png,image/*"
-        style={{ display: 'none' }}
-        onChange={handleFileSelected}
-        data-testid="png-file-input"
-      />
-      <input
-        ref={layerFileInputRef}
-        type="file"
-        accept=".lua"
-        style={{ display: 'none' }}
-        onChange={handleLayerFileSelected}
-        data-testid="layer-file-input"
-      />
+      <input ref={fileInputRef} type="file" accept="image/png,image/*"
+        style={{ display: 'none' }} onChange={handleFileSelected} data-testid="png-file-input" />
+      <input ref={layerFileInputRef} type="file" accept=".lua"
+        style={{ display: 'none' }} onChange={handleLayerFileSelected} data-testid="layer-file-input" />
       {importDialogState && (
         <ImportLayersDialog
           entries={importDialogState.entries}
@@ -381,15 +362,25 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
           onCancel={handleImportCancel}
         />
       )}
+      {exportLayers.isExportDialogOpen && (
+        <ExportLayersDialog
+          entries={exportLayers.exportEntries}
+          allLayers={layers}
+          tree={fileTree}
+          defaultFileName={exportLayers.defaultExportFileName}
+          defaultFolderPath={exportLayers.defaultExportFolderPath}
+          availableTags={availableTags}
+          checkFileExists={exportLayers.checkFileExists}
+          onConfirm={exportLayers.handleExportConfirm}
+          onCancel={exportLayers.handleExportCancel}
+        />
+      )}
       <ConfirmDialog
         isOpen={pendingSave !== null}
         title="Overwrite File"
         message={`The file "${pendingSave?.path ?? ''}" already exists. Do you want to overwrite it?`}
-        confirmLabel="Overwrite"
-        cancelLabel="Cancel"
-        variant="danger"
-        onConfirm={handleConfirmOverwrite}
-        onCancel={handleCancelOverwrite}
+        confirmLabel="Overwrite" cancelLabel="Cancel" variant="danger"
+        onConfirm={handleConfirmOverwrite} onCancel={handleCancelOverwrite}
       />
     </div>
   )
