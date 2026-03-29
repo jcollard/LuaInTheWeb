@@ -18,6 +18,7 @@ export interface AnsiEditorToolbarProps {
   onImportLayers: () => void
   onExportAns: () => void
   onExportSh: () => void
+  onExportLayers: () => void
   onUndo: () => void
   onRedo: () => void
   canUndo: boolean
@@ -43,7 +44,7 @@ export interface AnsiEditorToolbarProps {
 
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
-  onImportPng, onImportLayers, onExportAns, onExportSh, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
+  onImportPng, onImportLayers, onExportAns, onExportSh, onExportLayers, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
   onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, scaleMode, onSetScaleMode, activeLayerIsGroup, isPlaying,
   fileMenuOpen: controlledFileMenuOpen, onSetFileMenuOpen,
 }: AnsiEditorToolbarProps) {
@@ -75,6 +76,7 @@ export function AnsiEditorToolbar({
           onImportLayers={onImportLayers}
           onExportAns={onExportAns}
           onExportSh={onExportSh}
+          onExportLayers={onExportLayers}
           cgaPreview={cgaPreview ?? false}
           onToggleCgaPreview={onToggleCgaPreview!}
           scaleMode={scaleMode ?? 'integer-auto'}
