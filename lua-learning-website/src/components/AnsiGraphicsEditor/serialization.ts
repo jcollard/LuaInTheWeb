@@ -191,7 +191,7 @@ function buildGroupLayer(l: RawLayer, tags: string[] | undefined): GroupLayer {
 
 /** Build a TextLayer from a validated raw layer (includes text-field validation). */
 function buildTextLayer(l: RawLayer, tags: string[] | undefined): TextLayer {
-  if (!l.text || !l.bounds || !l.textFg) {
+  if (l.text == null || !l.bounds || !l.textFg) {
     throw new Error(`Invalid text layer "${l.name}": missing text, bounds, or textFg`)
   }
   const textFgColors = l.textFgColors && l.textFgColors.length > 0 ? l.textFgColors : undefined

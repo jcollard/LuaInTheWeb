@@ -42,6 +42,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
 
   const {
     initialLayerState,
+    loadError,
     pendingSave,
     handleSave: fileHandleSave,
     handleSaveAs: fileHandleSaveAs,
@@ -236,6 +237,42 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
 
   const handleExportAns = useCallback(() => fileHandleExportAns(layers), [fileHandleExportAns, layers])
   const handleExportSh = useCallback(() => fileHandleExportSh(layers), [fileHandleExportSh, layers])
+
+  const [showErrorDetail, setShowErrorDetail] = useState(false)
+  const [errorCopied, setErrorCopied] = useState(false)
+  const handleCopyError = useCallback(() => {
+    if (!loadError) return
+    navigator.clipboard.writeText(loadError.detail).then(() => {
+      setErrorCopied(true)
+      setTimeout(() => setErrorCopied(false), 2000)
+    })
+  }, [loadError])
+
+  if (loadError) {
+    return (
+      <div className={styles.editor} data-testid="ansi-graphics-editor">
+        <div className={styles.loadErrorBanner}>
+          <div className={styles.loadErrorIcon}>!</div>
+          <div className={styles.loadErrorContent}>
+            <div className={styles.loadErrorTitle}>Failed to open file</div>
+            <div className={styles.loadErrorMessage}>{loadError.message}</div>
+            {filePath && <div className={styles.loadErrorPath}>{filePath}</div>}
+            <div className={styles.loadErrorActions}>
+              <button className={styles.loadErrorButton} onClick={() => setShowErrorDetail(v => !v)}>
+                {showErrorDetail ? 'Hide Details' : 'Show Details'}
+              </button>
+              <button className={styles.loadErrorButton} onClick={handleCopyError}>
+                {errorCopied ? 'Copied!' : 'Copy Error'}
+              </button>
+            </div>
+            {showErrorDetail && (
+              <pre className={styles.loadErrorDetail}>{loadError.detail}</pre>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={styles.editor} data-testid="ansi-graphics-editor" onContextMenu={e => e.preventDefault()}>

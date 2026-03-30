@@ -244,6 +244,20 @@ describe('v7 serialization with text layers', () => {
     expect(tl.grid[1][2].bg).toEqual(TRANSPARENT_BG)
   })
 
+  it('round-trips a text layer with empty text', () => {
+    const text = createTextLayer('Text', '', red, bounds)
+    const state: LayerState = { layers: [text], activeLayerId: 'text-1' }
+    const lua = serializeLayers(state)
+    const result = deserializeLayers(lua)
+
+    expect(result.layers).toHaveLength(1)
+    const tl = result.layers[0] as TextLayer
+    expect(tl.type).toBe('text')
+    expect(tl.text).toBe('')
+    expect(tl.bounds).toEqual(bounds)
+    expect(tl.textFg).toEqual(red)
+  })
+
   it('v2 backward compat: adds type drawn to loaded layers', () => {
     const layer = createLayer('Background', 'bg')
     // Serialize then re-parse — v7 round-trip should work
