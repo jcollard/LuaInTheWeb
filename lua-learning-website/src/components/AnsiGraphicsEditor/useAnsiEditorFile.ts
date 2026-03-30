@@ -65,8 +65,14 @@ export interface UseAnsiEditorFileOptions {
   closeSaveDialog: () => void
 }
 
+export interface LoadError {
+  message: string
+  detail: string
+}
+
 export interface UseAnsiEditorFileReturn {
   initialLayerState: LayerState | undefined
+  loadError: LoadError | null
   pendingSave: { path: string; content: string } | null
   handleSave: (layers: Layer[], activeLayerId: string, availableTags: string[], markClean: () => void, openSaveDialog: () => void) => Promise<void>
   handleSaveAs: (folderPath: string, fileName: string, layers: Layer[], activeLayerId: string, availableTags: string[]) => Promise<void>
@@ -86,16 +92,23 @@ export function useAnsiEditorFile({
 }: UseAnsiEditorFileOptions): UseAnsiEditorFileReturn {
   const [pendingSave, setPendingSave] = useState<{ path: string; content: string } | null>(null)
 
-  const initialLayerState = useMemo((): LayerState | undefined => {
-    if (!filePath || filePath.startsWith('ansi-editor://')) return undefined
+  const loadResult = useMemo((): { state: LayerState | undefined; error: LoadError | null } => {
+    if (!filePath || filePath.startsWith('ansi-editor://')) return { state: undefined, error: null }
     const content = fileSystem.readFile(filePath)
-    if (content === null) return undefined
+    if (content === null) return { state: undefined, error: null }
     try {
-      return deserializeLayers(content)
-    } catch {
-      return undefined
+      return { state: deserializeLayers(content), error: null }
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      const stack = e instanceof Error ? e.stack ?? message : message
+      const detail = `Failed to load "${filePath}"\n\n${stack}`
+      console.error(`Failed to load ANSI file "${filePath}":`, e)
+      return { state: undefined, error: { message, detail } }
     }
   }, [filePath, fileSystem])
+
+  const initialLayerState = loadResult.state
+  const loadError = loadResult.error
 
   const finishSaveAs = useCallback(async (savedPath: string) => {
     await fileSystem.flush()
@@ -167,6 +180,7 @@ export function useAnsiEditorFile({
 
   return {
     initialLayerState,
+    loadError,
     pendingSave,
     handleSave,
     handleSaveAs,

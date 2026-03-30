@@ -12,7 +12,7 @@ vi.mock('../AnsiTerminalPanel/AnsiTerminalPanel', () => ({
 
 // Mock useIDE to provide required IDE context
 const mockFileSystem = {
-  readFile: vi.fn(() => null),
+  readFile: vi.fn((): string | null => null),
   writeFile: vi.fn(),
   createFile: vi.fn(),
   exists: vi.fn(() => false),
@@ -77,5 +77,28 @@ describe('AnsiGraphicsEditor', () => {
   it('should accept isActive=false without crashing', () => {
     render(<AnsiGraphicsEditor isActive={false} />)
     expect(screen.getByTestId('ansi-graphics-editor')).toBeTruthy()
+  })
+
+  it('should show error banner when file fails to deserialize', () => {
+    mockFileSystem.readFile.mockReturnValue('return { invalid lua data }}}')
+    render(<AnsiGraphicsEditor filePath="/test/broken.ansi.lua" />)
+    expect(screen.getByText('Failed to open file')).toBeTruthy()
+    expect(screen.getByText('/test/broken.ansi.lua')).toBeTruthy()
+    expect(screen.getByText('Show Details')).toBeTruthy()
+    expect(screen.getByText('Copy Error')).toBeTruthy()
+  })
+
+  it('should toggle error detail visibility', async () => {
+    const { userEvent } = await import('@testing-library/user-event')
+    mockFileSystem.readFile.mockReturnValue('return { invalid lua data }}}')
+    render(<AnsiGraphicsEditor filePath="/test/broken.ansi.lua" />)
+    const toggle = screen.getByText('Show Details')
+    await userEvent.setup().click(toggle)
+    expect(screen.getByText('Hide Details')).toBeTruthy()
+  })
+
+  it('should not show error banner for new files', () => {
+    render(<AnsiGraphicsEditor filePath="ansi-editor://new" />)
+    expect(screen.queryByText('Failed to open file')).toBeNull()
   })
 })
