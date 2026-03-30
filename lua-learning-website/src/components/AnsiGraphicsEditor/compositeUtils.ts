@@ -5,6 +5,9 @@ import { createEmptyGrid } from './gridUtils'
 import {
   createCompositeEngine,
   compositeCellCore,
+  isDefaultCell,
+  rgbEqual,
+  TRANSPARENT_BG,
   type CompositeEntry as SharedCompositeEntry,
   type DrawableEntry as SharedDrawableEntry,
   type ReferenceEntry as SharedReferenceEntry,
@@ -83,6 +86,32 @@ export function compositeCellWithOverridePrepared(
     if (entry.id === activeLayerId && entry.kind === 'drawable') return overrideCell
     return engine.getEntryCell(entry, row, col)
   })
+}
+
+/**
+ * Check whether a layer is hidden or occluded at a given cell position.
+ * Returns true if the layer is not in the composite (hidden group), individually
+ * hidden (visible=false), or covered by opaque content from layers above it.
+ */
+export function isLayerOccludedAt(
+  layerId: string, row: number, col: number, state: CompositeState,
+): boolean {
+  const entryIndex = state.entries.findIndex(e => e.id === layerId)
+  if (entryIndex === -1) return true
+  if (!state.entries[entryIndex].visible) return true
+
+  for (let i = entryIndex + 1; i < state.entries.length; i++) {
+    const entry = state.entries[i]
+    if (isCellClipped(entry, row, col, state.clipMap, state.layerMap)) continue
+    const cell = engine.getEntryCell(entry, row, col)
+    if (cell === null || isDefaultCell(cell)) continue
+    if (rgbEqual(cell.bg, TRANSPARENT_BG)) {
+      if (cell.char !== ' ') return true
+      continue
+    }
+    return true
+  }
+  return false
 }
 
 export function compositeCell(layers: Layer[], row: number, col: number): AnsiCell {

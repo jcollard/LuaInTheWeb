@@ -1,6 +1,7 @@
 import type { Layer, Rect, RGBColor, TextAlign, TextLayer } from './types'
 import { ANSI_COLS, ANSI_ROWS } from './types'
 import { cursorPosToVisual } from './textLayerGrid'
+import { prepareComposite, isLayerOccludedAt, type CompositeState } from './compositeUtils'
 
 type Handle = 'top-left' | 'top' | 'top-right' | 'left' | 'right' | 'bottom-left' | 'bottom' | 'bottom-right' | 'inside' | 'outside'
 
@@ -51,13 +52,15 @@ export interface TextToolHandlers {
   refreshOverlays: () => void
 }
 
-function findTextLayerAtPosition(layers: Layer[], row: number, col: number): TextLayer | null {
-  // Search top-to-bottom for a text layer whose bounds contain (row, col)
+function findTextLayerAtPosition(layers: Layer[], row: number, col: number, state: CompositeState): TextLayer | null {
+  // Search top-to-bottom for a visible, uncovered text layer whose bounds contain (row, col)
   for (let i = layers.length - 1; i >= 0; i--) {
     const layer = layers[i]
     if (layer.type !== 'text') continue
     const { r0, c0, r1, c1 } = layer.bounds
-    if (row >= r0 && row <= r1 && col >= c0 && col <= c1) return layer
+    if (row >= r0 && row <= r1 && col >= c0 && col <= c1) {
+      if (!isLayerOccludedAt(layer.id, row, col, state)) return layer
+    }
   }
   return null
 }
@@ -150,19 +153,22 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
 
   function onMouseDown(row: number, col: number): void {
     if (phase === 'idle') {
+      const layers = deps.layersRef.current
+      const state = prepareComposite(layers)
+
       // Check if clicking on an existing text layer
       const activeId = deps.activeLayerIdRef.current
-      const activeLayer = deps.layersRef.current.find(l => l.id === activeId)
+      const activeLayer = layers.find(l => l.id === activeId)
       if (activeLayer?.type === 'text') {
         const handle = detectHandle(row, col, activeLayer.bounds)
-        if (handle !== 'outside') {
+        if (handle !== 'outside' && !isLayerOccludedAt(activeLayer.id, row, col, state)) {
           deps.pushSnapshot()
           enterEditing(activeLayer.id)
           return
         }
       }
       // Check any text layer at this position
-      const textLayer = findTextLayerAtPosition(deps.layersRef.current, row, col)
+      const textLayer = findTextLayerAtPosition(layers, row, col, state)
       if (textLayer) {
         deps.pushSnapshot()
         enterEditing(textLayer.id)
