@@ -56,6 +56,7 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
 
     let disposed = false
     let resizeObserver: ResizeObserver | null = null
+    let canvasObserver: MutationObserver | null = null
 
     const init = async () => {
       await document.fonts.load(`${FONT_SIZE}px ${FONT_FAMILY}`)
@@ -85,6 +86,26 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
       terminal.open(wrapper)
       // Canvas renderer avoids anti-aliasing artifacts at half-block (▀) boundaries.
       terminal.loadAddon(new CanvasAddon())
+
+      // Snap fillRect to integer device pixels on xterm's canvases to prevent
+      // antialiasing seams between cells (custom glyph renderer divides cells
+      // into 8ths which produces fractional coordinates at most DPR values).
+      const patchFillRect = (canvas: Element) => {
+        const ctx = (canvas as HTMLCanvasElement).getContext('2d')
+        if (!ctx || (ctx as unknown as Record<string, unknown>).__patchedFR) return
+        const orig = ctx.fillRect.bind(ctx)
+        ctx.fillRect = (x: number, y: number, w: number, h: number) => {
+          const x1 = Math.round(x), y1 = Math.round(y)
+          orig(x1, y1, Math.round(x + w) - x1, Math.round(y + h) - y1)
+        }
+        ;(ctx as unknown as Record<string, unknown>).__patchedFR = true
+      }
+      wrapper.querySelectorAll('canvas').forEach(patchFillRect)
+      // Re-patch when xterm recreates canvases (e.g. on font size change)
+      canvasObserver = new MutationObserver(() =>
+        wrapper.querySelectorAll('canvas').forEach(patchFillRect))
+      canvasObserver.observe(wrapper, { childList: true, subtree: true })
+
       // Prevent xterm.js from processing keyboard events (and calling preventDefault).
       // This terminal is display-only; input capture is handled separately by InputCapture.
       terminal.attachCustomKeyEventHandler(() => false)
@@ -111,13 +132,7 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
         }
         if (newScale === currentScaleRef.current) return
         currentScaleRef.current = newScale
-        // Quantize font size so deviceCellHeight is a multiple of 8.
-        // xterm.js custom glyph renderer divides cells into 8ths; fractional
-        // device pixels cause canvas antialiasing that shows as grid lines.
-        const dpr = window.devicePixelRatio || 1
-        const rawDeviceHeight = Math.ceil(FONT_SIZE * newScale * dpr)
-        const quantizedDeviceHeight = Math.max(8, Math.round(rawDeviceHeight / 8) * 8)
-        terminal.options.fontSize = quantizedDeviceHeight / dpr
+        terminal.options.fontSize = FONT_SIZE * newScale
       }
       updateScaleRef.current = updateScale
 
@@ -172,6 +187,7 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
 
     return () => {
       disposed = true
+      canvasObserver?.disconnect()
       resizeObserver?.disconnect()
       onTerminalReadyRef.current?.(null)
       crtShaderRef.current?.dispose()
