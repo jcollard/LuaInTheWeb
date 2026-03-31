@@ -116,6 +116,7 @@ export function generateAnsiHtml(
       user-select: none;
       pointer-events: none;
     }
+    #terminal-wrapper .xterm canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
     #terminal-wrapper .xterm-viewport {
       overflow: hidden !important;
     }
@@ -254,7 +255,10 @@ export function generateAnsiHtml(
         }
         if (newScale === currentScale) return;
         currentScale = newScale;
-        term.options.fontSize = FONT_SIZE * newScale;
+        // Quantize so deviceCellHeight is a multiple of 8 (avoids fractional custom glyph fills)
+        var dpr = window.devicePixelRatio || 1;
+        var qH = Math.max(8, Math.round(Math.ceil(FONT_SIZE * newScale * dpr) / 8) * 8);
+        term.options.fontSize = qH / dpr;
       }
       applyScale();
       window.addEventListener('resize', applyScale);
