@@ -111,7 +111,13 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
         }
         if (newScale === currentScaleRef.current) return
         currentScaleRef.current = newScale
-        terminal.options.fontSize = FONT_SIZE * newScale
+        // Quantize font size so deviceCellHeight is a multiple of 8.
+        // xterm.js custom glyph renderer divides cells into 8ths; fractional
+        // device pixels cause canvas antialiasing that shows as grid lines.
+        const dpr = window.devicePixelRatio || 1
+        const rawDeviceHeight = Math.ceil(FONT_SIZE * newScale * dpr)
+        const quantizedDeviceHeight = Math.max(8, Math.round(rawDeviceHeight / 8) * 8)
+        terminal.options.fontSize = quantizedDeviceHeight / dpr
       }
       updateScaleRef.current = updateScale
 

@@ -28,6 +28,12 @@
   pointer-events: none;
 }
 
+.terminalWrapper :global(.xterm canvas) {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
 .terminalWrapper :global(.xterm-viewport) {
   border-radius: 0;
   overflow: hidden !important;
