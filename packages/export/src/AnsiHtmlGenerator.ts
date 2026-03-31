@@ -111,15 +111,9 @@ export function generateAnsiHtml(
       cursor: default;
       user-select: none;
     }
-    #terminal-wrapper .xterm {
-      cursor: default;
-      user-select: none;
-      pointer-events: none;
-    }
+    #terminal-wrapper .xterm { cursor: default; user-select: none; pointer-events: none; }
     #terminal-wrapper .xterm canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
-    #terminal-wrapper .xterm-viewport {
-      overflow: hidden !important;
-    }
+    #terminal-wrapper .xterm-viewport { overflow: hidden !important; }
   </style>
 </head>
 <body>
@@ -227,6 +221,11 @@ export function generateAnsiHtml(
         console.warn('[ANSI Export] CanvasAddon failed:', e);
       }
 
+      // Snap fillRect to integer pixels to prevent antialiasing seams between cells
+      function patchFR(c) { var ctx = c.getContext('2d'); if (!ctx || ctx._p) return; var o = ctx.fillRect.bind(ctx); ctx.fillRect = function(x,y,w,h) { var x1=Math.round(x),y1=Math.round(y); o(x1,y1,Math.round(x+w)-x1,Math.round(y+h)-y1); }; ctx._p = 1; }
+      wrapper.querySelectorAll('canvas').forEach(patchFR);
+      new MutationObserver(function() { wrapper.querySelectorAll('canvas').forEach(patchFR); }).observe(wrapper, { childList: true, subtree: true });
+
       // Prevent xterm.js from processing keyboard events
       term.attachCustomKeyEventHandler(() => false);
       termRef = term;
@@ -255,10 +254,7 @@ export function generateAnsiHtml(
         }
         if (newScale === currentScale) return;
         currentScale = newScale;
-        // Quantize so deviceCellHeight is a multiple of 8 (avoids fractional custom glyph fills)
-        var dpr = window.devicePixelRatio || 1;
-        var qH = Math.max(8, Math.round(Math.ceil(FONT_SIZE * newScale * dpr) / 8) * 8);
-        term.options.fontSize = qH / dpr;
+        term.options.fontSize = FONT_SIZE * newScale;
       }
       applyScale();
       window.addEventListener('resize', applyScale);
