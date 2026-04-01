@@ -31,7 +31,8 @@ describe('formatCell', () => {
 
   it('ends with reset code', () => {
     const result = formatCell(0, 0, [0, 0, 0], [0, 0, 0], ' ')
-    expect(result).toMatch(/\x1b\[0m$/)
+    expect(result).toContain('\x1b[0m')
+    expect(result.endsWith('\x1b[0m')).toBe(true)
   })
 })
 
