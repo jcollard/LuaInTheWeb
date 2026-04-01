@@ -132,3 +132,12 @@ export function createEmptyGrid(): AnsiGrid {
     }))
   )
 }
+
+/** Create a solid-fill grid (25×80) with specified character and color. */
+export function createFillGrid(char: string, color: RGBColor): AnsiGrid {
+  return Array.from({ length: ANSI_ROWS }, () =>
+    Array.from({ length: ANSI_COLS }, (): AnsiCell => ({
+      char, fg: [...color] as RGBColor, bg: [...color] as RGBColor,
+    }))
+  )
+}

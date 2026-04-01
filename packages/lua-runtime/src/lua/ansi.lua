@@ -287,6 +287,26 @@ function Screen:pause() end
 ---@usage if screen:is_playing() then screen:pause() end
 function Screen:is_playing() end
 
+--- Swipe out: replace cells left-to-right with a fill color.
+---@param opts? table Options: duration (number, default 1), color ({r,g,b}, default {0,0,0}), char (string, default " ")
+---@return nil
+---@usage screen:swipe_out()
+---@usage screen:swipe_out({ duration = 0.5, color = {255, 0, 0} })
+function Screen:swipe_out(opts) end
+
+--- Swipe in: composite a preview with specified layers visible, then swipe in left-to-right.
+--- When the swipe completes, the specified layers are permanently toggled visible.
+---@param opts table Options: layers (string, required — ID/name/tag), duration (number, default 1)
+---@return nil
+---@usage screen:swipe_in({ layers = "scene2" })
+---@usage screen:swipe_in({ layers = "scene2", duration = 1.5 })
+function Screen:swipe_in(opts) end
+
+--- Check if a swipe transition is currently in progress.
+---@return boolean swiping True if a swipe is active
+---@usage if not screen:is_swiping() then screen:swipe_out() end
+function Screen:is_swiping() end
+
 --- Set the text of text layer(s) matching an identifier.
 --- Resolves by layer ID first, then by name, then by tag.
 --- Non-text layers are silently skipped. Errors if zero text layers match.

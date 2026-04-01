@@ -275,6 +275,29 @@ export function setupAnsiAPI(
     return controller.screenIsPlaying(id)
   })
 
+  // --- Swipe transition functions ---
+  engine.global.set('__ansi_screenSwipeOut', (
+    id: number, duration: number, colorR: number, colorG: number, colorB: number, char: string,
+  ) => {
+    const controller = getController()
+    if (!controller) throw new Error('ANSI terminal not available')
+    controller.screenSwipeOut(id, duration, [colorR, colorG, colorB], char)
+  })
+
+  engine.global.set('__ansi_screenSwipeIn', (
+    id: number, layerIdentifier: string, duration: number,
+  ) => {
+    const controller = getController()
+    if (!controller) throw new Error('ANSI terminal not available')
+    controller.screenSwipeIn(id, layerIdentifier, duration)
+  })
+
+  engine.global.set('__ansi_screenIsSwiping', (id: number) => {
+    const controller = getController()
+    if (!controller) throw new Error('ANSI terminal not available')
+    return controller.screenIsSwiping(id)
+  })
+
   // --- Label functions ---
   engine.global.set('__ansi_screenSetLabel', (
     screenId: number,

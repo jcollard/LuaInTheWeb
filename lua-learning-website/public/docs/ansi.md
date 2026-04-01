@@ -341,6 +341,75 @@ end)
 ansi.start()
 ```
 
+## Swipe Transitions
+
+Swipe transitions reveal or hide content by sweeping a boundary left-to-right across the screen.
+
+### `screen:swipe_out(opts?)`
+
+Replace cells left-to-right with a solid fill color. Defaults to black spaces over 1 second.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `duration` | number | `1` | Duration in seconds |
+| `color` | `{r,g,b}` | `{0,0,0}` | Fill color |
+| `char` | string | `" "` | Fill character |
+
+```lua
+screen:swipe_out()                                    -- default black, 1 second
+screen:swipe_out({ duration = 0.5 })                  -- faster
+screen:swipe_out({ color = {255, 0, 0}, char = "#" }) -- red # fill
+```
+
+### `screen:swipe_in(opts)`
+
+Composite a preview with specified layers visible, then swipe that preview in left-to-right over the current display. When the swipe completes, the specified layers are permanently toggled visible.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `layers` | string | *required* | Layer identifier (ID, name, or tag) |
+| `duration` | number | `1` | Duration in seconds |
+
+```lua
+screen:swipe_in({ layers = "scene2" })
+screen:swipe_in({ layers = "scene2", duration = 1.5 })
+```
+
+### `screen:is_swiping()`
+
+Check if a swipe transition is currently in progress.
+
+- **Returns** — `true` if a swipe is active, `false` otherwise
+
+```lua
+if not screen:is_swiping() then
+  screen:swipe_out()
+end
+```
+
+### Example: Scene transitions with swipe
+
+```lua
+local ansi = require("ansi")
+
+local screen = ansi.load_screen("my_scenes.ansi.lua")
+ansi.set_screen(screen)
+
+ansi.tick(function()
+  if ansi.is_key_pressed("o") and not screen:is_swiping() then
+    screen:swipe_out({ duration = 0.8 })
+  end
+  if ansi.is_key_pressed("i") and not screen:is_swiping() then
+    screen:swipe_in({ layers = "scene2", duration = 0.8 })
+  end
+  if ansi.is_key_pressed("escape") then
+    ansi.stop()
+  end
+end)
+
+ansi.start()
+```
+
 ## CRT Shader Effect
 
 Apply a retro CRT monitor post-processing effect to the terminal output using a WebGL shader. The effect can be enabled before or after `ansi.start()`, and parameters can be adjusted live from within the `tick()` loop.
@@ -448,6 +517,9 @@ ansi.start()
 | `screen:play()` | Start/resume animation playback |
 | `screen:pause()` | Pause animation playback |
 | `screen:is_playing()` | Check if animation is playing |
+| `screen:swipe_out(opts?)` | Swipe out to fill color (left to right) |
+| `screen:swipe_in(opts)` | Swipe in preview layers (left to right) |
+| `screen:is_swiping()` | Check if swipe is active |
 | `ansi.crt(config)` | Enable/update CRT shader effect |
 | `ansi.start()` | Start terminal (blocks until `stop()`) |
 | `ansi.stop()` | Stop terminal |
