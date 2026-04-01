@@ -31,6 +31,8 @@ interface RawLayer {
   bounds?: Rect
   textFg?: RGBColor
   textFgColors?: RGBColor[]
+  textBg?: RGBColor
+  textBgColors?: RGBColor[]
   textAlign?: string
   parentId?: string
   collapsed?: boolean
@@ -197,8 +199,10 @@ function parseTextLayerData(l: RawLayer): TextLayerData {
   const bounds = normalizeRect(l.bounds)
   const textFg = normalizeRgb(l.textFg)
   const textFgColors = normalizeRgbArray(l.textFgColors)
+  const textBg = l.textBg ? normalizeRgb(l.textBg) : undefined
+  const textBgColors = l.textBgColors ? normalizeRgbArray(l.textBgColors) : undefined
   const textAlign = l.textAlign as TextAlign | undefined
-  const grid = renderTextLayerGrid(l.text ?? '', bounds, textFg, textFgColors, textAlign)
+  const grid = renderTextLayerGrid(l.text ?? '', bounds, textFg, textFgColors, textAlign, textBg, textBgColors)
   return {
     type: 'text',
     id: l.id,
@@ -208,6 +212,8 @@ function parseTextLayerData(l: RawLayer): TextLayerData {
     bounds,
     textFg,
     textFgColors,
+    textBg,
+    textBgColors,
     textAlign,
     grid,
     parentId: l.parentId,

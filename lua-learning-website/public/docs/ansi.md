@@ -160,26 +160,70 @@ local label = ansi.create_label("[color=RED]Fire[/color] burns!")
 screen:set_label("description", label)
 ```
 
-### `ansi.create_label(markup, default_color?)`
+### `ansi.create_label(markup, default_color?, default_bg?)`
 
-Parse color markup into a label table for use with `set_label`.
+Parse color tag markup into a label table for use with `set_label`.
 
-- **markup** — Text with optional `[color=X]...[/color]` tags
-- **default_color** — Optional default color as `{r,g,b}` table or hex string (default: `LIGHT_GRAY`)
-- **Returns** — A label table with `text`, `colors`, and `default_color` fields
+- **markup** — Text with `[color=X]...[/color]` and/or `[bg=X]...[/bg]` tags
+- **default_color** — Optional default foreground as `{r,g,b}` table or hex string (default: `LIGHT_GRAY`)
+- **default_bg** — Optional default background as `{r,g,b}` table or hex string
+- **Returns** — A label table for use with `screen:set_label()`
 
 ```lua
 -- Plain text (all default color)
 local plain = ansi.create_label("Hello World")
 
--- Color markup
+-- Foreground color markup
 local colored = ansi.create_label(
   "The [color=GREEN]forest[/color] is [color=CGA_ALT_GREEN]shimmering[/color]..."
+)
+
+-- Background color markup
+local highlighted = ansi.create_label(
+  "[bg=YELLOW][color=BLACK]WARNING[/color][/bg] Normal text"
 )
 
 -- Custom default color
 local custom = ansi.create_label("Status: OK", ansi.colors.BRIGHT_GREEN)
 ```
+
+### `ansi.create_escaped_label(text, default_fg?, default_bg?)`
+
+Parse ANSI escape sequences into a label table for use with `set_label`. Use this instead of `create_label` when your text contains terminal escape codes.
+
+- **text** — Text containing ANSI escape sequences (e.g., `\x1b[31m`)
+- **default_fg** — Default foreground color as `{r,g,b}` or hex (default: `LIGHT_GRAY`)
+- **default_bg** — Default background color as `{r,g,b}` or hex (optional)
+- **Returns** — A label table for use with `screen:set_label()`
+
+```lua
+local ESC = string.char(27)
+
+-- Standard CGA colors
+local label = ansi.create_escaped_label(ESC .. "[31mRed" .. ESC .. "[32m Green" .. ESC .. "[0m Normal")
+
+-- 24-bit RGB colors
+local rgb = ansi.create_escaped_label(ESC .. "[38;2;255;128;0mOrange" .. ESC .. "[0m")
+
+-- Combined foreground + background
+local combo = ansi.create_escaped_label(ESC .. "[31;42mRed on Green" .. ESC .. "[0m")
+
+screen:set_label("status", label)
+```
+
+Supported SGR codes:
+
+| Code | Effect |
+|------|--------|
+| `0` | Reset all attributes |
+| `30-37` | Standard foreground (CGA palette) |
+| `38;2;R;G;B` | 24-bit RGB foreground |
+| `39` | Default foreground |
+| `40-47` | Standard background |
+| `48;2;R;G;B` | 24-bit RGB background |
+| `49` | Default background |
+| `90-97` | Bright foreground |
+| `100-107` | Bright background |
 
 #### Color Name Formats
 
@@ -399,7 +443,8 @@ ansi.start()
 | `screen:layer_off(id)` | Hide layer(s) by ID, name, or tag |
 | `screen:layer_toggle(id)` | Toggle layer(s) by ID, name, or tag |
 | `screen:set_label(id, val)` | Set text layer content (string or label) |
-| `ansi.create_label(markup)` | Parse color markup into a label table |
+| `ansi.create_label(markup)` | Parse `[color=X]`/`[bg=X]` markup into a label table |
+| `ansi.create_escaped_label(text)` | Parse ANSI escape sequences into a label table |
 | `screen:play()` | Start/resume animation playback |
 | `screen:pause()` | Pause animation playback |
 | `screen:is_playing()` | Check if animation is playing |

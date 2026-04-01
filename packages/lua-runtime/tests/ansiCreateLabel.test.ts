@@ -269,4 +269,5 @@ describe('ansi.create_label()', () => {
       )).rejects.toThrow('Unknown color name')
     })
   })
+
 })

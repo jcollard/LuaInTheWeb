@@ -181,19 +181,49 @@ export const ansiLuaCoreCode = `
         local id_str = tostring(identifier)
         if type(value) == 'string' then
           __ansi_screenSetLabel(self.id, id_str, value)
+        elseif type(value) == 'table' and value._escaped then
+          -- Escaped label from create_escaped_label(): colors stored on JS side
+          __ansi_screenSetEscapedLabel(self.id, id_str)
         elseif type(value) == 'table' and value.text ~= nil then
           -- Label table from create_label()
-          local flat_colors = {}
-          for i = 1, #value.colors do
-            local c = value.colors[i]
-            flat_colors[#flat_colors + 1] = c[1]
-            flat_colors[#flat_colors + 1] = c[2]
-            flat_colors[#flat_colors + 1] = c[3]
+          local flat_fg_colors = {}
+          if value.colors then
+            for i = 1, #value.colors do
+              local c = value.colors[i]
+              flat_fg_colors[#flat_fg_colors + 1] = c[1]
+              flat_fg_colors[#flat_fg_colors + 1] = c[2]
+              flat_fg_colors[#flat_fg_colors + 1] = c[3]
+            end
+          end
+          -- Flatten bg_colors if present
+          local flat_bg_colors = nil
+          local bg_r, bg_g, bg_b = nil, nil, nil
+          if value.bg_colors then
+            flat_bg_colors = {}
+            for i = 1, #value.bg_colors do
+              local c = value.bg_colors[i]
+              if c then
+                flat_bg_colors[#flat_bg_colors + 1] = c[1]
+                flat_bg_colors[#flat_bg_colors + 1] = c[2]
+                flat_bg_colors[#flat_bg_colors + 1] = c[3]
+              else
+                flat_bg_colors[#flat_bg_colors + 1] = -1
+                flat_bg_colors[#flat_bg_colors + 1] = -1
+                flat_bg_colors[#flat_bg_colors + 1] = -1
+              end
+            end
+          end
+          if value.default_bg then
+            bg_r = value.default_bg[1]
+            bg_g = value.default_bg[2]
+            bg_b = value.default_bg[3]
           end
           __ansi_screenSetLabel(
             self.id, id_str, value.text,
             value.default_color[1], value.default_color[2], value.default_color[3],
-            flat_colors
+            flat_fg_colors,
+            bg_r, bg_g, bg_b,
+            flat_bg_colors
           )
         else
           error("set_label() expects a string or label table")
@@ -316,8 +346,40 @@ export const ansiLuaCoreCode = `
       error("Unknown color name: " .. name)
     end
 
+    -- Parse ANSI escape sequences via JS bridge.
+    -- Parsing happens entirely on the JS side to avoid wasmoon serialization issues.
+    -- Returns a label table with a _escaped marker for set_label to use.
+    function _ansi.create_escaped_label(text, default_fg, default_bg)
+      if type(text) ~= 'string' then
+        error("ansi.create_escaped_label() expects a string, got " .. type(text))
+      end
+      local def_fg = default_fg or {_ansi.colors.LIGHT_GRAY[1], _ansi.colors.LIGHT_GRAY[2], _ansi.colors.LIGHT_GRAY[3]}
+      if type(def_fg) == 'string' and def_fg:sub(1, 1) == '#' then
+        local r, g, b = ansi_parse_hex(def_fg)
+        def_fg = {r, g, b}
+      end
+      local bg_r, bg_g, bg_b
+      if default_bg then
+        if type(default_bg) == 'string' and default_bg:sub(1, 1) == '#' then
+          local r, g, b = ansi_parse_hex(default_bg)
+          bg_r, bg_g, bg_b = r, g, b
+        elseif type(default_bg) == 'table' then
+          bg_r, bg_g, bg_b = default_bg[1], default_bg[2], default_bg[3]
+        end
+      end
+      -- JS bridge parses escapes and stores colors on controller
+      local parsed_text = __ansi_createEscapedLabel(
+        text, def_fg[1], def_fg[2], def_fg[3], bg_r, bg_g, bg_b
+      )
+      return {
+        text = parsed_text,
+        _escaped = true,
+        default_color = {def_fg[1], def_fg[2], def_fg[3]},
+      }
+    end
+
     -- Parse color markup into a label table
-    function _ansi.create_label(markup, default_color)
+    function _ansi.create_label(markup, default_color, default_bg)
       if type(markup) ~= 'string' then
         error("ansi.create_label() expects a string, got " .. type(markup))
       end
@@ -335,29 +397,52 @@ export const ansiLuaCoreCode = `
         def_rgb = {_ansi.colors.LIGHT_GRAY[1], _ansi.colors.LIGHT_GRAY[2], _ansi.colors.LIGHT_GRAY[3]}
       end
 
+      -- Resolve default bg
+      local def_bg_rgb
+      if default_bg ~= nil then
+        if type(default_bg) == 'string' and default_bg:sub(1, 1) == '#' then
+          local r, g, b = ansi_parse_hex(default_bg)
+          def_bg_rgb = {r, g, b}
+        elseif type(default_bg) == 'table' then
+          def_bg_rgb = {default_bg[1], default_bg[2], default_bg[3]}
+        end
+      end
+
       local text_chars = {}
       local colors = {}
+      local bg_colors = {}
+      local has_bg = false
       local color_stack = {}
+      local bg_color_stack = {}
       local pos = 1
       local char_count = 0
 
       while pos <= #markup do
-        -- Check for [color=X]
+        -- Check for [color=X], [/color], [bg=X], [/bg]
         local tag_start, tag_end, color_name = markup:find("%[color=(.-)%]", pos)
-        -- Check for [/color]
         local close_start, close_end = markup:find("%[/color%]", pos)
+        local bg_tag_start, bg_tag_end, bg_color_name = markup:find("%[bg=(.-)%]", pos)
+        local bg_close_start, bg_close_end = markup:find("%[/bg%]", pos)
 
         -- Find whichever tag comes first
         local next_tag = nil
         local next_pos = #markup + 1
 
         if tag_start and tag_start < next_pos then
-          next_tag = "open"
+          next_tag = "fg_open"
           next_pos = tag_start
         end
         if close_start and close_start < next_pos then
-          next_tag = "close"
+          next_tag = "fg_close"
           next_pos = close_start
+        end
+        if bg_tag_start and bg_tag_start < next_pos then
+          next_tag = "bg_open"
+          next_pos = bg_tag_start
+        end
+        if bg_close_start and bg_close_start < next_pos then
+          next_tag = "bg_close"
+          next_pos = bg_close_start
         end
 
         -- Add text before the tag
@@ -366,10 +451,9 @@ export const ansiLuaCoreCode = `
           for i = 1, #segment do
             char_count = char_count + 1
             text_chars[#text_chars + 1] = segment:sub(i, i)
-            -- Determine current color
+            -- Determine current fg color
             local current = #color_stack > 0 and color_stack[#color_stack] or nil
             if current and current.is_alt then
-              -- Alternate based on character position (odd = dark, even = bright)
               if char_count % 2 == 1 then
                 colors[#colors + 1] = {current.alt_pair[1][1], current.alt_pair[1][2], current.alt_pair[1][3]}
               else
@@ -380,18 +464,37 @@ export const ansiLuaCoreCode = `
             else
               colors[#colors + 1] = {def_rgb[1], def_rgb[2], def_rgb[3]}
             end
+            -- Determine current bg color
+            local bg_current = #bg_color_stack > 0 and bg_color_stack[#bg_color_stack] or nil
+            if bg_current then
+              has_bg = true
+              bg_colors[#bg_colors + 1] = {bg_current.rgb[1], bg_current.rgb[2], bg_current.rgb[3]}
+            elseif def_bg_rgb then
+              bg_colors[#bg_colors + 1] = {def_bg_rgb[1], def_bg_rgb[2], def_bg_rgb[3]}
+            else
+              bg_colors[#bg_colors + 1] = false  -- placeholder for nil
+            end
           end
         end
 
-        if next_tag == "open" then
+        if next_tag == "fg_open" then
           local rgb, is_alt, alt_pair = ansi_resolve_color(color_name)
           color_stack[#color_stack + 1] = { rgb = rgb, is_alt = is_alt, alt_pair = alt_pair }
           pos = tag_end + 1
-        elseif next_tag == "close" then
+        elseif next_tag == "fg_close" then
           if #color_stack > 0 then
             color_stack[#color_stack] = nil
           end
           pos = close_end + 1
+        elseif next_tag == "bg_open" then
+          local rgb = ansi_resolve_color(bg_color_name)
+          bg_color_stack[#bg_color_stack + 1] = { rgb = rgb }
+          pos = bg_tag_end + 1
+        elseif next_tag == "bg_close" then
+          if #bg_color_stack > 0 then
+            bg_color_stack[#bg_color_stack] = nil
+          end
+          pos = bg_close_end + 1
         else
           -- No more tags, we're done
           break
@@ -401,7 +504,9 @@ export const ansiLuaCoreCode = `
       return {
         text = table.concat(text_chars),
         colors = colors,
+        bg_colors = has_bg and bg_colors or nil,
         default_color = def_rgb,
+        default_bg = def_bg_rgb,
       }
     end
 `

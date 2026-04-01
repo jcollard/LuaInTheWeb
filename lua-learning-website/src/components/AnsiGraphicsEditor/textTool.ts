@@ -32,7 +32,7 @@ export interface TextToolDeps {
   activeLayerIdRef: React.RefObject<string>
   brushRef: React.RefObject<{ fg: RGBColor }>
   addTextLayer: (name: string, bounds: Rect, textFg: RGBColor) => void
-  updateTextLayer: (id: string, updates: { text?: string; bounds?: Rect; textFg?: RGBColor; textFgColors?: RGBColor[]; textAlign?: TextAlign }) => void
+  updateTextLayer: (id: string, updates: { text?: string; bounds?: Rect; textFg?: RGBColor; textFgColors?: RGBColor[]; textBg?: RGBColor; textBgColors?: RGBColor[]; textAlign?: TextAlign }) => void
   pushSnapshot: () => void
   rerenderGrid: () => void
   textBoundsRef: React.RefObject<HTMLDivElement | null>
@@ -278,8 +278,8 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
   }
 
   /** Apply a text+color mutation and rerender. */
-  function applyTextEdit(text: string, textFgColors: RGBColor[]): void {
-    deps.updateTextLayer(editingLayerId!, { text, textFgColors })
+  function applyTextEdit(text: string, textFgColors: RGBColor[], textBgColors?: RGBColor[]): void {
+    deps.updateTextLayer(editingLayerId!, { text, textFgColors, textBgColors })
     deps.rerenderGrid()
     positionCursorOverlay()
   }
@@ -303,8 +303,10 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
         const newText = layer.text.slice(0, cursorPos - 1) + layer.text.slice(cursorPos)
         const colors = [...(layer.textFgColors ?? [])]
         colors.splice(cursorPos - 1, 1)
+        const bgColors = layer.textBgColors ? [...layer.textBgColors] : undefined
+        bgColors?.splice(cursorPos - 1, 1)
         cursorPos--
-        applyTextEdit(newText, colors)
+        applyTextEdit(newText, colors, bgColors)
       }
       return
     }
@@ -314,7 +316,9 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
         const newText = layer.text.slice(0, cursorPos) + layer.text.slice(cursorPos + 1)
         const colors = [...(layer.textFgColors ?? [])]
         colors.splice(cursorPos, 1)
-        applyTextEdit(newText, colors)
+        const bgColors = layer.textBgColors ? [...layer.textBgColors] : undefined
+        bgColors?.splice(cursorPos, 1)
+        applyTextEdit(newText, colors, bgColors)
       }
       return
     }
@@ -323,8 +327,13 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
       const newText = layer.text.slice(0, cursorPos) + '\n' + layer.text.slice(cursorPos)
       const colors = [...(layer.textFgColors ?? [])]
       colors.splice(cursorPos, 0, [...deps.brushRef.current.fg] as RGBColor)
+      const bgColors = layer.textBgColors ? [...layer.textBgColors] : undefined
+      // New chars get no bg (transparent) — splice undefined placeholder
+      if (bgColors) {
+        bgColors.splice(cursorPos, 0, undefined as unknown as RGBColor)
+      }
       cursorPos++
-      applyTextEdit(newText, colors)
+      applyTextEdit(newText, colors, bgColors)
       return
     }
 
@@ -350,8 +359,12 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
       const newText = layer.text.slice(0, cursorPos) + e.key + layer.text.slice(cursorPos)
       const colors = [...(layer.textFgColors ?? [])]
       colors.splice(cursorPos, 0, [...deps.brushRef.current.fg] as RGBColor)
+      const bgColors = layer.textBgColors ? [...layer.textBgColors] : undefined
+      if (bgColors) {
+        bgColors.splice(cursorPos, 0, undefined as unknown as RGBColor)
+      }
       cursorPos++
-      applyTextEdit(newText, colors)
+      applyTextEdit(newText, colors, bgColors)
     }
   }
 

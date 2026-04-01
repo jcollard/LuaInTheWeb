@@ -94,6 +94,12 @@ export function serializeLayers(state: LayerState, availableTags?: string[]): st
       if (layer.textFgColors && layer.textFgColors.length > 0) {
         serialized.textFgColors = layer.textFgColors
       }
+      if (layer.textBg) {
+        serialized.textBg = layer.textBg
+      }
+      if (layer.textBgColors && layer.textBgColors.length > 0) {
+        serialized.textBgColors = layer.textBgColors
+      }
       if (layer.textAlign && layer.textAlign !== 'left') {
         serialized.textAlign = layer.textAlign
       }
@@ -151,6 +157,8 @@ interface RawLayer {
   bounds?: Rect
   textFg?: RGBColor
   textFgColors?: RGBColor[]
+  textBg?: RGBColor
+  textBgColors?: RGBColor[]
   textAlign?: string
   parentId?: string
   collapsed?: boolean
@@ -195,6 +203,8 @@ function buildTextLayer(l: RawLayer, tags: string[] | undefined): TextLayer {
     throw new Error(`Invalid text layer "${l.name}": missing text, bounds, or textFg`)
   }
   const textFgColors = l.textFgColors && l.textFgColors.length > 0 ? l.textFgColors : undefined
+  const textBg = l.textBg
+  const textBgColors = l.textBgColors && l.textBgColors.length > 0 ? l.textBgColors : undefined
   const textAlign = l.textAlign as TextAlign | undefined
   return {
     type: 'text',
@@ -205,8 +215,10 @@ function buildTextLayer(l: RawLayer, tags: string[] | undefined): TextLayer {
     bounds: l.bounds,
     textFg: l.textFg,
     textFgColors,
+    textBg,
+    textBgColors,
     textAlign,
-    grid: renderTextLayerGrid(l.text, l.bounds, l.textFg, textFgColors, textAlign),
+    grid: renderTextLayerGrid(l.text, l.bounds, l.textFg, textFgColors, textAlign, textBg, textBgColors),
     parentId: l.parentId,
     tags,
   }

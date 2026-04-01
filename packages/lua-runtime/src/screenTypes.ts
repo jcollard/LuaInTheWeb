@@ -75,6 +75,8 @@ export interface TextLayerData extends GridLayerData {
   bounds: Rect
   textFg: RGBColor
   textFgColors?: RGBColor[]
+  textBg?: RGBColor
+  textBgColors?: RGBColor[]
   textAlign?: TextAlign
 }
 

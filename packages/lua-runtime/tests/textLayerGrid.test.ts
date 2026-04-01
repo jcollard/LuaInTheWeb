@@ -147,4 +147,73 @@ describe('renderTextLayerGrid', () => {
     expect(grid.length).toBe(ANSI_ROWS)
     expect(grid[0].length).toBe(ANSI_COLS)
   })
+
+  describe('background colors', () => {
+    it('uses TRANSPARENT_BG when no bg params provided', () => {
+      const grid = renderTextLayerGrid('Hi', bounds, textFg)
+      expect(grid[0][0].bg).toEqual(TRANSPARENT_BG)
+      expect(grid[0][1].bg).toEqual(TRANSPARENT_BG)
+    })
+
+    it('uses textBg for all characters when only textBg provided', () => {
+      const textBg: RGBColor = [0, 0, 128]
+      const grid = renderTextLayerGrid('Hi', bounds, textFg, undefined, undefined, textBg)
+      expect(grid[0][0].bg).toEqual([0, 0, 128])
+      expect(grid[0][1].bg).toEqual([0, 0, 128])
+    })
+
+    it('uses per-character textBgColors when provided', () => {
+      const bgColors: RGBColor[] = [[255, 0, 0], [0, 255, 0]]
+      const grid = renderTextLayerGrid('AB', bounds, textFg, undefined, undefined, undefined, bgColors)
+      expect(grid[0][0].bg).toEqual([255, 0, 0])
+      expect(grid[0][1].bg).toEqual([0, 255, 0])
+    })
+
+    it('falls back to textBg when textBgColors entry is missing', () => {
+      const textBg: RGBColor = [0, 0, 128]
+      const bgColors: RGBColor[] = [[255, 0, 0]]  // only 1 color for 2 chars
+      const grid = renderTextLayerGrid('AB', bounds, textFg, undefined, undefined, textBg, bgColors)
+      expect(grid[0][0].bg).toEqual([255, 0, 0])
+      expect(grid[0][1].bg).toEqual([0, 0, 128])  // falls back to textBg
+    })
+
+    it('falls back to TRANSPARENT_BG when no textBg and textBgColors entry is missing', () => {
+      const bgColors: RGBColor[] = [[255, 0, 0]]  // only 1 color for 2 chars
+      const grid = renderTextLayerGrid('AB', bounds, textFg, undefined, undefined, undefined, bgColors)
+      expect(grid[0][0].bg).toEqual([255, 0, 0])
+      expect(grid[0][1].bg).toEqual(TRANSPARENT_BG)
+    })
+
+    it('supports both fg and bg per-character colors simultaneously', () => {
+      const fgColors: RGBColor[] = [[255, 0, 0], [0, 255, 0]]
+      const bgColors: RGBColor[] = [[0, 0, 255], [255, 255, 0]]
+      const grid = renderTextLayerGrid('AB', bounds, textFg, fgColors, undefined, undefined, bgColors)
+      expect(grid[0][0].fg).toEqual([255, 0, 0])
+      expect(grid[0][0].bg).toEqual([0, 0, 255])
+      expect(grid[0][1].fg).toEqual([0, 255, 0])
+      expect(grid[0][1].bg).toEqual([255, 255, 0])
+    })
+
+    it('preserves bg colors through word wrap', () => {
+      const narrowBounds: Rect = { r0: 0, c0: 0, r1: 5, c1: 2 }
+      // width=3: "ab cd" wraps to "ab" and "cd"
+      // Raw indices: a=0, b=1, space=2, c=3, d=4
+      // buildRawIndexMap: line 0 = [0,1], line 1 = [3,4]
+      const bgColors: RGBColor[] = [[255, 0, 0], [0, 255, 0], [0, 0, 0], [0, 0, 255], [255, 255, 0]]
+      const grid = renderTextLayerGrid('ab cd', narrowBounds, textFg, undefined, undefined, undefined, bgColors)
+      expect(grid[0][0].bg).toEqual([255, 0, 0])    // 'a' -> index 0
+      expect(grid[0][1].bg).toEqual([0, 255, 0])    // 'b' -> index 1
+      expect(grid[1][0].bg).toEqual([0, 0, 255])    // 'c' -> index 3
+      expect(grid[1][1].bg).toEqual([255, 255, 0])  // 'd' -> index 4
+    })
+
+    it('non-text cells remain DEFAULT_CELL bg', () => {
+      const textBg: RGBColor = [0, 0, 128]
+      const grid = renderTextLayerGrid('A', bounds, textFg, undefined, undefined, textBg)
+      // Cell with text has textBg
+      expect(grid[0][0].bg).toEqual([0, 0, 128])
+      // Cell without text has default bg
+      expect(grid[0][1]).toEqual(DEFAULT_CELL)
+    })
+  })
 })

@@ -106,7 +106,9 @@ Single-frame layers use `cells`. Multi-frame layers use `frameCells` (array of s
   text = "Hello World",
   bounds = { r0 = 0, c0 = 0, r1 = 5, c1 = 40 },
   textFg = {255, 255, 255},
-  textFgColors = { {255,0,0}, {0,255,0} },  -- optional per-char colors
+  textFgColors = { {255,0,0}, {0,255,0} },  -- optional per-char fg colors
+  textBg = {0, 0, 128},                      -- optional uniform bg color
+  textBgColors = { {255,0,0}, {0,255,0} },   -- optional per-char bg colors
   textAlign = "center",                       -- optional: "left"|"center"|"right"|"justify"
   parentId = "group-1",                       -- optional
   tags = {"tag"},                             -- optional

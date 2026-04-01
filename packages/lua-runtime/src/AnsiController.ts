@@ -131,6 +131,8 @@ export class AnsiController {
   private useBufferA = true
   /** Cached group composite buffers — persists across frames to avoid re-allocation. */
   private groupGridCache: Map<string, AnsiGrid> = new Map()
+  /** Temporary storage for parsed ANSI escape label — avoids passing color arrays through wasmoon. */
+  lastParsedLabel?: { text: string; fgColors: RGBColor[]; bgColors: (RGBColor | undefined)[] }
 
   constructor(callbacks: AnsiCallbacks, ansiId = 'ansi-main') {
     this.callbacks = callbacks
@@ -520,7 +522,7 @@ export class AnsiController {
    * Set the text of text layer(s) matching an identifier.
    * Non-text layers are silently skipped. Errors if zero text layers match.
    */
-  setScreenLabel(id: number, identifier: string, text: string, textFg?: RGBColor, textFgColors?: RGBColor[]): void {
+  setScreenLabel(id: number, identifier: string, text: string, textFg?: RGBColor, textFgColors?: RGBColor[], textBg?: RGBColor, textBgColors?: RGBColor[]): void {
     const layers = this.validateScreenExists(id)
     const matched = this.resolveLayersByIdentifier(layers, identifier)
     if (matched.length === 0) {
@@ -535,11 +537,29 @@ export class AnsiController {
       if (textFg !== undefined) {
         layer.textFg = textFg
       }
-      // Always assign textFgColors: clears per-character colors when undefined (plain text)
+      // Always assign per-character colors: clears when undefined (plain text)
       layer.textFgColors = textFgColors
-      layer.grid = renderTextLayerGrid(layer.text, layer.bounds, layer.textFg, layer.textFgColors, layer.textAlign)
+      layer.textBg = textBg
+      layer.textBgColors = textBgColors
+      layer.grid = renderTextLayerGrid(layer.text, layer.bounds, layer.textFg, layer.textFgColors, layer.textAlign, layer.textBg, layer.textBgColors)
     }
     this.recompositeScreen(id)
+  }
+
+  /**
+   * Set a text layer using the pre-parsed label stored in lastParsedLabel.
+   * This avoids passing color arrays through wasmoon's Lua↔JS boundary.
+   */
+  setScreenEscapedLabel(id: number, identifier: string): void {
+    if (!this.lastParsedLabel) {
+      throw new Error('No parsed label available. Call createEscapedLabel first.')
+    }
+    const { text, fgColors, bgColors } = this.lastParsedLabel
+    const textFgColors = fgColors
+    // Convert bgColors: filter undefined entries to produce sparse RGBColor[]
+    const hasBg = bgColors.some(c => c !== undefined)
+    const textBgColors = hasBg ? bgColors as RGBColor[] : undefined
+    this.setScreenLabel(id, identifier, text, undefined, textFgColors, undefined, textBgColors)
   }
 
   /**

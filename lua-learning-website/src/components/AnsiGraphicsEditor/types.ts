@@ -120,6 +120,8 @@ export interface TextLayer extends GridLayer {
   bounds: Rect
   textFg: RGBColor
   textFgColors?: RGBColor[]
+  textBg?: RGBColor
+  textBgColors?: RGBColor[]
   textAlign?: TextAlign
 }
 
