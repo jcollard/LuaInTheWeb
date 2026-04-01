@@ -1,5 +1,5 @@
 import type { Layer, Rect, RGBColor, TextAlign, TextLayer } from './types'
-import { ANSI_COLS, ANSI_ROWS } from './types'
+import { ANSI_COLS, ANSI_ROWS, TRANSPARENT_BG } from './types'
 import { cursorPosToVisual } from './textLayerGrid'
 import { prepareComposite, isLayerOccludedAt, type CompositeState } from './compositeUtils'
 
@@ -328,9 +328,8 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
       const colors = [...(layer.textFgColors ?? [])]
       colors.splice(cursorPos, 0, [...deps.brushRef.current.fg] as RGBColor)
       const bgColors = layer.textBgColors ? [...layer.textBgColors] : undefined
-      // New chars get no bg (transparent) — splice undefined placeholder
       if (bgColors) {
-        bgColors.splice(cursorPos, 0, undefined as unknown as RGBColor)
+        bgColors.splice(cursorPos, 0, [...TRANSPARENT_BG] as RGBColor)
       }
       cursorPos++
       applyTextEdit(newText, colors, bgColors)
@@ -361,7 +360,7 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
       colors.splice(cursorPos, 0, [...deps.brushRef.current.fg] as RGBColor)
       const bgColors = layer.textBgColors ? [...layer.textBgColors] : undefined
       if (bgColors) {
-        bgColors.splice(cursorPos, 0, undefined as unknown as RGBColor)
+        bgColors.splice(cursorPos, 0, [...TRANSPARENT_BG] as RGBColor)
       }
       cursorPos++
       applyTextEdit(newText, colors, bgColors)
