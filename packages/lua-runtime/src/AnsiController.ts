@@ -10,10 +10,7 @@
  * - Supports blocking via Promise (start() blocks until stop())
  */
 
-import {
-  InputCapture,
-  GameLoopController,
-} from '@lua-learning/canvas-runtime'
+import { InputCapture, GameLoopController } from '@lua-learning/canvas-runtime'
 import { InputAPI } from './InputAPI'
 import type { TimingInfo } from '@lua-learning/canvas-runtime'
 import { initSchedule, computePlaybackTick, type LayerSchedule } from '@lua-learning/ansi-shared'
@@ -21,9 +18,8 @@ import { parseScreenLayers } from './screenParser'
 import { compositeGridInto } from './screenCompositor'
 import { renderGridToAnsiString, renderDiffAnsiString } from './ansiStringRenderer'
 import { renderTextLayerGrid } from './textLayerGrid'
-import type { AnsiGrid, LayerData, DrawnLayerData, TextLayerData, RGBColor } from './screenTypes'
-import { createEmptyGrid, createFillGrid, ANSI_COLS } from './screenTypes'
-import { buildSwipeGrid, renderSwipeDiff, updateShadow, createSentinelGrid } from './swipeRenderer'
+import { createEmptyGrid, type AnsiGrid, type LayerData, type DrawnLayerData, type TextLayerData, type RGBColor } from './screenTypes'
+import { startSwipeOut, startSwipeIn, advanceSwipe, type SwipeState } from './screenSwipe'
 
 /**
  * Handle to a running ANSI terminal instance.
@@ -92,23 +88,8 @@ interface ScreenState {
   lastGrid: AnsiGrid | null
   /** True when the full ANSI string needs to be written to the terminal. */
   dirty: boolean
-  /** True when layers changed and need re-compositing before next render. */
   needsRecomposite: boolean
-  /** Active swipe transition, or null. */
   swipe: SwipeState | null
-}
-
-interface SwipeState {
-  direction: 'out' | 'in'
-  duration: number
-  elapsed: number
-  targetGrid: AnsiGrid
-  sourceGrid: AnsiGrid
-  shadowGrid: AnsiGrid
-  /** Pre-allocated buffer for building the desired grid each frame. */
-  desiredGrid: AnsiGrid
-  /** Layer IDs to toggle visible when swipe-in completes. */
-  commitLayerIds?: string[]
 }
 
 /** Format an onTick error for display. */
@@ -600,103 +581,9 @@ export class AnsiController {
     return this.screenStates.get(id)?.playing ?? false
   }
 
-  // --- Swipe Transition API ---
-
-  /**
-   * Start a swipe-out transition: replace cells left-to-right with a fill color.
-   */
-  screenSwipeOut(id: number, duration: number, color: RGBColor, char: string): void {
-    this.validateScreenExists(id)
-    if (duration <= 0) throw new Error('Swipe duration must be a positive number.')
-
-    const state = this.getScreenState(id)
-    const targetGrid = createFillGrid(char, color)
-
-    // Capture what's currently on screen as the source
-    const sourceGrid = createEmptyGrid()
-    if (state.lastGrid) {
-      this.copyGrid(sourceGrid, state.lastGrid)
-    } else {
-      this.groupGridCache.clear()
-      compositeGridInto(sourceGrid, state.layers, this.groupGridCache)
-    }
-
-    state.swipe = {
-      direction: 'out',
-      duration,
-      elapsed: 0,
-      targetGrid,
-      sourceGrid,
-      shadowGrid: createSentinelGrid(),
-      desiredGrid: createEmptyGrid(),
-    }
-  }
-
-  /**
-   * Start a swipe-in transition: composite a preview with specified layers
-   * toggled visible, then swipe that preview in left-to-right.
-   */
-  screenSwipeIn(id: number, layerIdentifier: string, duration: number): void {
-    const layers = this.validateScreenExists(id)
-    if (duration <= 0) throw new Error('Swipe duration must be a positive number.')
-
-    // Temporarily toggle matched layers visible to composite preview
-    const matched = this.resolveLayersByIdentifier(layers, layerIdentifier)
-    if (matched.length === 0) {
-      throw new Error(`No layers match identifier "${layerIdentifier}" in screen ${id}.`)
-    }
-    const originalVisibility = matched.map(l => l.visible)
-    for (const l of matched) l.visible = true
-
-    const targetGrid = createEmptyGrid()
-    this.groupGridCache.clear()
-    compositeGridInto(targetGrid, layers, this.groupGridCache)
-
-    // Restore original visibility
-    matched.forEach((l, i) => l.visible = originalVisibility[i])
-
-    const state = this.getScreenState(id)
-
-    // Capture what's currently on screen as the source
-    const sourceGrid = createEmptyGrid()
-    if (state.lastGrid) {
-      this.copyGrid(sourceGrid, state.lastGrid)
-    } else {
-      this.groupGridCache.clear()
-      compositeGridInto(sourceGrid, state.layers, this.groupGridCache)
-    }
-
-    state.swipe = {
-      direction: 'in',
-      duration,
-      elapsed: 0,
-      targetGrid,
-      sourceGrid,
-      shadowGrid: createSentinelGrid(),
-      desiredGrid: createEmptyGrid(),
-      commitLayerIds: matched.map(l => l.id),
-    }
-  }
-
-  /**
-   * Check if a swipe transition is currently in progress.
-   */
-  screenIsSwiping(id: number): boolean {
-    return (this.screenStates.get(id)?.swipe ?? null) !== null
-  }
-
-  /** Copy grid cell data from src into dst (in place, no allocation). */
-  private copyGrid(dst: AnsiGrid, src: AnsiGrid): void {
-    for (let r = 0; r < dst.length; r++) {
-      for (let c = 0; c < dst[r].length; c++) {
-        const d = dst[r][c]
-        const s = src[r][c]
-        d.char = s.char
-        d.fg[0] = s.fg[0]; d.fg[1] = s.fg[1]; d.fg[2] = s.fg[2]
-        d.bg[0] = s.bg[0]; d.bg[1] = s.bg[1]; d.bg[2] = s.bg[2]
-      }
-    }
-  }
+  screenSwipeOut(id: number, duration: number, color: RGBColor, char: string): void { this.validateScreenExists(id); startSwipeOut(this.getScreenState(id), duration, color, char, this.groupGridCache) }
+  screenSwipeIn(id: number, identifier: string, duration: number): void { const layers = this.validateScreenExists(id); const m = this.resolveLayersByIdentifier(layers, identifier); if (m.length === 0) throw new Error(`No layers match "${identifier}" in screen ${id}.`); startSwipeIn(this.getScreenState(id), layers, m, duration, this.groupGridCache) }
+  screenIsSwiping(id: number): boolean { return (this.screenStates.get(id)?.swipe ?? null) !== null }
 
   /**
    * Check if any layers in the list are animated (drawn with multiple frames).
@@ -752,55 +639,11 @@ export class AnsiController {
     if (state?.playing) {
       this.advanceScreenAnimation(this.activeScreenId, this.currentTiming.totalTime * 1000)
     }
-    // When a swipe is active, suppress normal compositing writes
-    if (state?.swipe) {
-      this.applySwipe(state)
-      return
-    }
+    if (state?.swipe) { const b = advanceSwipe(state, this.currentTiming.deltaTime); if (b) this.handle?.write(b); return }
     this.flushRecomposite(this.activeScreenId)
     if (state?.dirty && state.ansiString) {
       this.handle?.write(state.ansiString)
       state.dirty = false
-    }
-  }
-
-  /** Render one frame of a swipe transition using the terminalBuffer pattern. */
-  private applySwipe(state: ScreenState): void {
-    const swipe = state.swipe!
-
-    swipe.elapsed += this.currentTiming.deltaTime
-    const progress = Math.min(swipe.elapsed / swipe.duration, 1)
-    const boundaryCol = Math.floor(progress * ANSI_COLS)
-
-    // Build desired grid: target left of boundary, source right of boundary
-    buildSwipeGrid(swipe.targetGrid, swipe.sourceGrid, boundaryCol, swipe.desiredGrid)
-
-    // Diff against shadow and write only changed cells (proven pattern)
-    const batch = renderSwipeDiff(swipe.desiredGrid, swipe.shadowGrid)
-    if (batch) {
-      this.handle?.write(batch)
-    }
-    updateShadow(swipe.desiredGrid, swipe.shadowGrid)
-
-    // Complete
-    if (swipe.elapsed >= swipe.duration) {
-      if (swipe.commitLayerIds) {
-        // Swipe-in: permanently toggle the previewed layers visible
-        for (const layerId of swipe.commitLayerIds) {
-          const layer = state.layers.find(l => l.id === layerId)
-          if (layer) layer.visible = true
-        }
-        // Re-composite so normal rendering shows the new layer state
-        state.needsRecomposite = true
-        state.dirty = true
-      }
-      // Update lastGrid to reflect what's actually on the terminal now.
-      // This is critical: if the next operation (e.g., swipe_in) captures
-      // the source from lastGrid, it must match the terminal display.
-      if (!state.lastGrid) state.lastGrid = createEmptyGrid()
-      this.copyGrid(state.lastGrid, swipe.desiredGrid)
-
-      state.swipe = null
     }
   }
 
@@ -825,13 +668,8 @@ export class AnsiController {
       }
     }
 
-    // Post-tick: flush composites from this tick's Lua API calls (same-frame render)
-    // Suppress when a swipe is active to avoid flashing the composited scene.
-    if (this.activeScreenId !== null) {
-      const activeState = this.screenStates.get(this.activeScreenId)
-      if (!activeState?.swipe) {
-        this.flushRecomposite(this.activeScreenId)
-      }
+    if (this.activeScreenId !== null && !this.screenStates.get(this.activeScreenId)?.swipe) {
+      this.flushRecomposite(this.activeScreenId)
     }
 
     this.callbacks.onFlushOutput?.()
@@ -842,9 +680,7 @@ export class AnsiController {
   private advanceScreenAnimation(id: number, nowMs: number): void {
     const state = this.screenStates.get(id)
     if (!state) return
-    if (!state.schedule) {
-      state.schedule = initSchedule(state.layers, nowMs)
-    }
+    if (!state.schedule) state.schedule = initSchedule(state.layers, nowMs)
     const { changed } = computePlaybackTick(state.layers, state.schedule, nowMs)
     if (!changed) return
     this.compositeAndDiff(state, true)

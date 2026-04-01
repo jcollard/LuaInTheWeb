@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { AnsiController } from '../src/AnsiController'
 import type { AnsiCallbacks, AnsiTerminalHandle } from '../src/AnsiController'
 import type { RGBColor } from '../src/screenTypes'
-import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG } from '../src/screenTypes'
+import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG } from '../src/screenTypes'
 import type { TimingInfo } from '@lua-learning/canvas-runtime'
 
 let capturedOnFrame: ((timing: TimingInfo) => void) | null = null
