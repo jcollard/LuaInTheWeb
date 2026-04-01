@@ -106,33 +106,22 @@ function formatOnTickError(error: unknown): string {
 export class AnsiController {
   private readonly callbacks: AnsiCallbacks
   private readonly ansiId: string
-
-  // Terminal state
   private handle: AnsiTerminalHandle | null = null
   private inputCapture: InputCapture | null = null
   private inputAPI: InputAPI = new InputAPI()
   private gameLoop: GameLoopController | null = null
-
   private currentTiming: TimingInfo = { deltaTime: 0, totalTime: 0, frameNumber: 0 }
   private running = false
   private stopResolver: (() => void) | null = null
   private pendingCrt: { enabled: boolean; intensity?: number; config?: Record<string, number> } | null = null
-
-  // onTick callback from Lua
   private onTickCallback: (() => void) | null = null
-
-  // Screen state
   private nextScreenId = 1
   private screenStates: Map<number, ScreenState> = new Map()
   private activeScreenId: number | null = null
-  /** Double-buffered grids for zero-allocation compositing in advanceScreenAnimation. */
   private compositeBufferA: AnsiGrid = createEmptyGrid()
   private compositeBufferB: AnsiGrid = createEmptyGrid()
   private useBufferA = true
-  /** Cached group composite buffers — persists across frames to avoid re-allocation. */
   private groupGridCache: Map<string, AnsiGrid> = new Map()
-  /** Temporary storage for parsed ANSI escape label — avoids passing color arrays through wasmoon. */
-  lastParsedLabel?: { text: string; fgColors: RGBColor[]; bgColors: (RGBColor | undefined)[] }
 
   constructor(callbacks: AnsiCallbacks, ansiId = 'ansi-main') {
     this.callbacks = callbacks
@@ -534,32 +523,13 @@ export class AnsiController {
     }
     for (const layer of textLayers) {
       layer.text = text
-      if (textFg !== undefined) {
-        layer.textFg = textFg
-      }
-      // Always assign per-character colors: clears when undefined (plain text)
+      if (textFg !== undefined) layer.textFg = textFg
       layer.textFgColors = textFgColors
       layer.textBg = textBg
       layer.textBgColors = textBgColors
       layer.grid = renderTextLayerGrid(layer.text, layer.bounds, layer.textFg, layer.textFgColors, layer.textAlign, layer.textBg, layer.textBgColors)
     }
     this.recompositeScreen(id)
-  }
-
-  /**
-   * Set a text layer using the pre-parsed label stored in lastParsedLabel.
-   * This avoids passing color arrays through wasmoon's Lua↔JS boundary.
-   */
-  setScreenEscapedLabel(id: number, identifier: string): void {
-    if (!this.lastParsedLabel) {
-      throw new Error('No parsed label available. Call createEscapedLabel first.')
-    }
-    const { text, fgColors, bgColors } = this.lastParsedLabel
-    const textFgColors = fgColors
-    // Convert bgColors: filter undefined entries to produce sparse RGBColor[]
-    const hasBg = bgColors.some(c => c !== undefined)
-    const textBgColors = hasBg ? bgColors as RGBColor[] : undefined
-    this.setScreenLabel(id, identifier, text, undefined, textFgColors, undefined, textBgColors)
   }
 
   /**

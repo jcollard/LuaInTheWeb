@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { LuaFactory, LuaEngine } from 'wasmoon'
 import { ansiLuaCoreCode } from '../src/ansiLuaCode/core'
+import { ansiLuaLabelsCode } from '../src/ansiLuaCode/labels'
 
 /**
  * Minimal Lua setup that loads the core ansi code and exposes _ansi globally.
@@ -17,7 +18,7 @@ async function createLuaWithAnsiCore(): Promise<LuaEngine> {
   const engine = await factory.createEngine()
   // The core code defines `local _ansi = {}` which is chunk-scoped.
   // We need to expose it globally for our tests.
-  engine.doStringSync(ansiLuaCoreCode + '\n_G._ansi = _ansi')
+  engine.doStringSync(ansiLuaCoreCode + ansiLuaLabelsCode + '\n_G._ansi = _ansi')
   return engine
 }
 

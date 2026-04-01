@@ -81,14 +81,14 @@ export function parseAnsiEscapes(
       } else {
         // Bare ESC without [, treat as literal
         chars.push(input[i])
-        fgColors.push([...currentFg] as RGBColor)
-        bgColors.push(currentBg ? [...currentBg] as RGBColor : undefined)
+        fgColors.push(currentFg)
+        bgColors.push(currentBg)
         i++
       }
     } else {
       chars.push(input[i])
-      fgColors.push([...currentFg] as RGBColor)
-      bgColors.push(currentBg ? [...currentBg] as RGBColor : undefined)
+      fgColors.push(currentFg)
+      bgColors.push(currentBg)
       i++
     }
   }
@@ -115,40 +115,42 @@ export function parseAnsiEscapes(
         currentFg = defFg
         currentBg = defBg
       } else if (code >= 30 && code <= 37) {
-        currentFg = CGA_COLORS[code - 30]
+        currentFg = [...CGA_COLORS[code - 30]] as RGBColor
       } else if (code === 38) {
-        // Extended fg
-        if (j + 1 < params.length && params[j + 1] === 2) {
-          // 24-bit: 38;2;R;G;B
-          if (j + 4 < params.length) {
-            const r = Math.min(255, Math.max(0, params[j + 2]))
-            const g = Math.min(255, Math.max(0, params[j + 3]))
-            const b = Math.min(255, Math.max(0, params[j + 4]))
-            currentFg = [r, g, b]
-            j += 4
-          }
+        // Extended fg: 38;2;R;G;B (24-bit) or 38;5;N (256-color)
+        if (j + 1 < params.length && params[j + 1] === 2 && j + 4 < params.length) {
+          currentFg = [
+            Math.min(255, Math.max(0, params[j + 2])),
+            Math.min(255, Math.max(0, params[j + 3])),
+            Math.min(255, Math.max(0, params[j + 4])),
+          ]
+          j += 4
+        } else if (j + 1 < params.length && params[j + 1] === 5) {
+          // 256-color mode: skip the index parameter (not implemented, but must consume it)
+          j += 2
         }
       } else if (code === 39) {
         currentFg = defFg
       } else if (code >= 40 && code <= 47) {
-        currentBg = CGA_COLORS[code - 40]
+        currentBg = [...CGA_COLORS[code - 40]] as RGBColor
       } else if (code === 48) {
-        // Extended bg
-        if (j + 1 < params.length && params[j + 1] === 2) {
-          if (j + 4 < params.length) {
-            const r = Math.min(255, Math.max(0, params[j + 2]))
-            const g = Math.min(255, Math.max(0, params[j + 3]))
-            const b = Math.min(255, Math.max(0, params[j + 4]))
-            currentBg = [r, g, b]
-            j += 4
-          }
+        // Extended bg: 48;2;R;G;B (24-bit) or 48;5;N (256-color)
+        if (j + 1 < params.length && params[j + 1] === 2 && j + 4 < params.length) {
+          currentBg = [
+            Math.min(255, Math.max(0, params[j + 2])),
+            Math.min(255, Math.max(0, params[j + 3])),
+            Math.min(255, Math.max(0, params[j + 4])),
+          ]
+          j += 4
+        } else if (j + 1 < params.length && params[j + 1] === 5) {
+          j += 2
         }
       } else if (code === 49) {
         currentBg = defBg
       } else if (code >= 90 && code <= 97) {
-        currentFg = CGA_BRIGHT[code - 90]
+        currentFg = [...CGA_BRIGHT[code - 90]] as RGBColor
       } else if (code >= 100 && code <= 107) {
-        currentBg = CGA_BRIGHT[code - 100]
+        currentBg = [...CGA_BRIGHT[code - 100]] as RGBColor
       }
       j++
     }

@@ -305,40 +305,27 @@ export function setupAnsiAPI(
   })
 
   // --- ANSI escape label functions ---
-  // Parses ANSI escapes on the JS side and stores the result on the controller.
-  // Returns the parsed plain text string (simple string — safe for wasmoon).
+  // Parsed label stored between create and apply calls (closure, not on controller).
+  let pendingEscapedLabel: ReturnType<typeof parseAnsiEscapes> | null = null
+
   engine.global.set('__ansi_createEscapedLabel', (
-    text: string,
-    defFgR: number,
-    defFgG: number,
-    defFgB: number,
-    defBgR?: number,
-    defBgG?: number,
-    defBgB?: number,
+    text: string, defFgR: number, defFgG: number, defFgB: number,
+    defBgR?: number, defBgG?: number, defBgB?: number,
   ): string => {
-    const controller = getController()
-    if (!controller) {
-      throw new Error('ANSI terminal not available')
-    }
     const defaultFg: RGBColor = [defFgR, defFgG, defFgB]
-    const defaultBg: RGBColor | undefined = (defBgR != null)
-      ? [defBgR, defBgG!, defBgB!]
-      : undefined
-    const result = parseAnsiEscapes(text, defaultFg, defaultBg)
-    controller.lastParsedLabel = result
-    return result.text
+    const defaultBg: RGBColor | undefined = (defBgR != null) ? [defBgR, defBgG!, defBgB!] : undefined
+    pendingEscapedLabel = parseAnsiEscapes(text, defaultFg, defaultBg)
+    return pendingEscapedLabel.text
   })
 
-  // Applies the last parsed escaped label to a text layer.
-  engine.global.set('__ansi_screenSetEscapedLabel', (
-    screenId: number,
-    identifier: string,
-  ) => {
+  engine.global.set('__ansi_screenSetEscapedLabel', (screenId: number, identifier: string) => {
     const controller = getController()
-    if (!controller) {
-      throw new Error('ANSI terminal not available')
-    }
-    controller.setScreenEscapedLabel(screenId, identifier)
+    if (!controller) throw new Error('ANSI terminal not available')
+    if (!pendingEscapedLabel) throw new Error('No parsed label. Call create_escaped_label first.')
+    const { text, fgColors, bgColors } = pendingEscapedLabel
+    pendingEscapedLabel = null
+    const hasBg = bgColors.some(c => c !== undefined)
+    controller.setScreenLabel(screenId, identifier, text, undefined, fgColors, undefined, hasBg ? bgColors as RGBColor[] : undefined)
   })
 
   // --- File reading for load_screen ---

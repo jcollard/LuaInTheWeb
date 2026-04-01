@@ -4,4 +4,5 @@
  */
 
 export { ansiLuaCoreCode } from './core'
+export { ansiLuaLabelsCode } from './labels'
 export { ansiLuaInputCode } from './input'

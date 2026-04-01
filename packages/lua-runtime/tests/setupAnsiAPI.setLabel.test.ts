@@ -6,7 +6,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { LuaFactory, LuaEngine } from 'wasmoon'
 import { setupAnsiAPI } from '../src/setupAnsiAPI'
 import type { AnsiController } from '../src/AnsiController'
-import type { RGBColor } from '../src/screenTypes'
 
 function createMockController(): AnsiController {
   let nextId = 1
@@ -44,13 +43,6 @@ function createMockController(): AnsiController {
     screenPause: vi.fn(),
     screenIsPlaying: vi.fn().mockReturnValue(false),
     setScreenLabel: vi.fn(),
-    setScreenEscapedLabel: vi.fn().mockImplementation(function (this: AnsiController, id: number, identifier: string) {
-      if (!this.lastParsedLabel) throw new Error('No parsed label')
-      const { text, fgColors, bgColors } = this.lastParsedLabel
-      const hasBg = bgColors.some((c: unknown) => c !== undefined)
-      this.setScreenLabel(id, identifier, text, undefined, fgColors, undefined, hasBg ? bgColors as RGBColor[] : undefined)
-    }),
-    lastParsedLabel: undefined,
   } as unknown as AnsiController
 }
 
