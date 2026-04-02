@@ -4,7 +4,7 @@
  * and all its functions.
  */
 
-import { ansiLuaCoreCode, ansiLuaInputCode } from './ansiLuaCode'
+import { ansiLuaCoreCode, ansiLuaLabelsCode, ansiLuaInputCode } from './ansiLuaCode'
 
 /**
  * Complete Lua ANSI terminal module code.
@@ -12,4 +12,5 @@ import { ansiLuaCoreCode, ansiLuaInputCode } from './ansiLuaCode'
  */
 export const ansiLuaCode =
   ansiLuaCoreCode +
+  ansiLuaLabelsCode +
   ansiLuaInputCode

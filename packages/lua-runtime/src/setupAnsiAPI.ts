@@ -8,25 +8,47 @@ import type { LuaEngine } from 'wasmoon'
 import type { AnsiController } from './AnsiController'
 import type { RGBColor } from './screenTypes'
 import { ansiLuaCode } from './ansiLuaWrapper'
+import { parseAnsiEscapes } from './ansiEscapeParser'
 
 /**
  * Convert a flat array of numbers from a wasmoon Lua table into RGBColor triples.
  * Wasmoon may pass Lua array tables as JS arrays (0-indexed) or 1-indexed objects.
  */
-function parseFlatColorsToRgb(flatColors: Record<number, number>): RGBColor[] {
+function flatToValues(flat: Record<number, number>): number[] {
   const values: number[] = []
-  if (Array.isArray(flatColors)) {
-    for (const v of flatColors) values.push(v)
+  if (Array.isArray(flat)) {
+    for (const v of flat) values.push(v)
   } else {
     let i = 1
-    while (flatColors[i] !== undefined) {
-      values.push(flatColors[i])
+    while (flat[i] !== undefined) {
+      values.push(flat[i])
       i++
     }
   }
+  return values
+}
+
+function parseFlatColorsToRgb(flatColors: Record<number, number>): RGBColor[] {
+  const values = flatToValues(flatColors)
   const colors: RGBColor[] = []
   for (let j = 0; j < values.length; j += 3) {
     colors.push([values[j], values[j + 1], values[j + 2]])
+  }
+  return colors
+}
+
+/**
+ * Parse flat bg color triples, treating [-1,-1,-1] as undefined (transparent).
+ */
+function parseFlatBgColorsToRgb(flatColors: Record<number, number>): (RGBColor | undefined)[] {
+  const values = flatToValues(flatColors)
+  const colors: (RGBColor | undefined)[] = []
+  for (let j = 0; j < values.length; j += 3) {
+    if (values[j] === -1 && values[j + 1] === -1 && values[j + 2] === -1) {
+      colors.push(undefined)
+    } else {
+      colors.push([values[j], values[j + 1], values[j + 2]])
+    }
   }
   return colors
 }
@@ -261,17 +283,49 @@ export function setupAnsiAPI(
     textFgR?: number,
     textFgG?: number,
     textFgB?: number,
-    flatColors?: Record<number, number>,
+    flatFgColors?: Record<number, number>,
+    textBgR?: number,
+    textBgG?: number,
+    textBgB?: number,
+    flatBgColors?: Record<number, number>,
   ) => {
     const controller = getController()
     if (!controller) {
       throw new Error('ANSI terminal not available')
     }
-    const textFg: RGBColor | undefined = textFgR !== undefined
+    const textFg: RGBColor | undefined = (textFgR != null)
       ? [textFgR, textFgG!, textFgB!]
       : undefined
-    const textFgColors = flatColors ? parseFlatColorsToRgb(flatColors) : undefined
-    controller.setScreenLabel(screenId, identifier, text, textFg, textFgColors)
+    const textFgColors = flatFgColors ? parseFlatColorsToRgb(flatFgColors) : undefined
+    const textBg: RGBColor | undefined = (textBgR != null)
+      ? [textBgR, textBgG!, textBgB!]
+      : undefined
+    const textBgColors = flatBgColors ? parseFlatBgColorsToRgb(flatBgColors) as RGBColor[] : undefined
+    controller.setScreenLabel(screenId, identifier, text, textFg, textFgColors, textBg, textBgColors)
+  })
+
+  // --- ANSI escape label functions ---
+  // Parsed label stored between create and apply calls (closure, not on controller).
+  let pendingEscapedLabel: ReturnType<typeof parseAnsiEscapes> | null = null
+
+  engine.global.set('__ansi_createEscapedLabel', (
+    text: string, defFgR: number, defFgG: number, defFgB: number,
+    defBgR?: number, defBgG?: number, defBgB?: number,
+  ): string => {
+    const defaultFg: RGBColor = [defFgR, defFgG, defFgB]
+    const defaultBg: RGBColor | undefined = (defBgR != null) ? [defBgR, defBgG!, defBgB!] : undefined
+    pendingEscapedLabel = parseAnsiEscapes(text, defaultFg, defaultBg)
+    return pendingEscapedLabel.text
+  })
+
+  engine.global.set('__ansi_screenSetEscapedLabel', (screenId: number, identifier: string) => {
+    const controller = getController()
+    if (!controller) throw new Error('ANSI terminal not available')
+    if (!pendingEscapedLabel) throw new Error('No parsed label. Call create_escaped_label first.')
+    const { text, fgColors, bgColors } = pendingEscapedLabel
+    pendingEscapedLabel = null
+    const hasBg = bgColors.some(c => c !== undefined)
+    controller.setScreenLabel(screenId, identifier, text, undefined, fgColors, undefined, hasBg ? bgColors as RGBColor[] : undefined)
   })
 
   // --- File reading for load_screen ---

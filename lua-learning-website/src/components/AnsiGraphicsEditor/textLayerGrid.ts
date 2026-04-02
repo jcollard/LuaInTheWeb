@@ -153,9 +153,11 @@ export function justifyLine(line: string, width: number): string {
  * Text is word-wrapped to bounds width. Overflow is truncated.
  *
  * When `textFgColors` is provided, each character uses its per-character
- * color instead of the uniform `textFg`.
+ * foreground color instead of the uniform `textFg`.
+ * When `textBgColors` is provided, each character uses its per-character
+ * background color. Falls back to `textBg`, then `TRANSPARENT_BG`.
  */
-export function renderTextLayerGrid(text: string, bounds: Rect, textFg: RGBColor, textFgColors?: RGBColor[], textAlign?: TextAlign): AnsiGrid {
+export function renderTextLayerGrid(text: string, bounds: Rect, textFg: RGBColor, textFgColors?: RGBColor[], textAlign?: TextAlign, textBg?: RGBColor, textBgColors?: RGBColor[]): AnsiGrid {
   const grid: AnsiGrid = Array.from({ length: ANSI_ROWS }, () =>
     Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
   )
@@ -164,7 +166,7 @@ export function renderTextLayerGrid(text: string, bounds: Rect, textFg: RGBColor
   const width = bounds.c1 - bounds.c0 + 1
   const maxRows = bounds.r1 - bounds.r0 + 1
   const lines = wrapText(text, width)
-  const indexMap = textFgColors ? buildRawIndexMap(text, width) : null
+  const indexMap = (textFgColors || textBgColors) ? buildRawIndexMap(text, width) : null
   const align = textAlign ?? 'left'
 
   // Determine which lines are "last in their paragraph" for justify
@@ -205,7 +207,10 @@ export function renderTextLayerGrid(text: string, bounds: Rect, textFg: RGBColor
       const fg = (textFgColors && rawIndices && charIdx < rawIndices.length)
         ? textFgColors[rawIndices[charIdx]] ?? textFg
         : textFg
-      grid[row][col] = { char: line[charIdx], fg, bg: TRANSPARENT_BG }
+      const bg = (textBgColors && rawIndices && charIdx < rawIndices.length)
+        ? textBgColors[rawIndices[charIdx]] ?? textBg ?? TRANSPARENT_BG
+        : textBg ?? TRANSPARENT_BG
+      grid[row][col] = { char: line[charIdx], fg, bg }
     }
   }
 

@@ -69,7 +69,7 @@ describe('setupAnsiAPI set_label bridge', () => {
     `)
 
     expect(controller.setScreenLabel).toHaveBeenCalledWith(
-      1, 'direction', 'NORTH', undefined, undefined
+      1, 'direction', 'NORTH', undefined, undefined, undefined, undefined
     )
   })
 
@@ -109,6 +109,46 @@ describe('setupAnsiAPI set_label bridge', () => {
     expect(textFg).toEqual([170, 170, 170])
     // A = RED, B = default (LIGHT_GRAY)
     expect(textFgColors).toEqual([[170, 0, 0], [170, 170, 170]])
+  })
+
+  it('set_label with create_escaped_label passes correct text and colors via JS bridge', async () => {
+    await engine.doString(`
+      local ansi = require("ansi")
+      local screen = ansi.create_screen({ version = 1, width = 80, height = 25, grid = {} })
+      local ESC = string.char(27)
+      local label = ansi.create_escaped_label(ESC .. "[31mRed" .. ESC .. "[0m Ok")
+      screen:set_label("text1", label)
+    `)
+
+    // create_escaped_label uses setScreenEscapedLabel which calls setScreenLabel internally
+    const mock = controller.setScreenLabel as ReturnType<typeof vi.fn>
+    expect(mock).toHaveBeenCalledTimes(1)
+    const [, , text, , textFgColors] = mock.mock.calls[0]
+    expect(text).toBe('Red Ok')
+    // R,e,d = RED [170,0,0]; space,O,k = LIGHT_GRAY [170,170,170]
+    expect(textFgColors).toEqual([
+      [170, 0, 0], [170, 0, 0], [170, 0, 0],
+      [170, 170, 170], [170, 170, 170], [170, 170, 170],
+    ])
+  })
+
+  it('set_label with create_escaped_label passes bg colors via JS bridge', async () => {
+    await engine.doString(`
+      local ansi = require("ansi")
+      local screen = ansi.create_screen({ version = 1, width = 80, height = 25, grid = {} })
+      local ESC = string.char(27)
+      local label = ansi.create_escaped_label(ESC .. "[42mAB" .. ESC .. "[0m")
+      screen:set_label("text1", label)
+    `)
+
+    const mock = controller.setScreenLabel as ReturnType<typeof vi.fn>
+    expect(mock).toHaveBeenCalledTimes(1)
+    const [, , text, , , , textBgColors] = mock.mock.calls[0]
+    expect(text).toBe('AB')
+    // Both chars should have green background [0, 170, 0]
+    expect(textBgColors).toBeDefined()
+    expect(textBgColors[0]).toEqual([0, 170, 0])
+    expect(textBgColors[1]).toEqual([0, 170, 0])
   })
 
   it('set_label throws when controller is not available', async () => {

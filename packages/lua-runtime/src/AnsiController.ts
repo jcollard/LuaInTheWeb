@@ -106,30 +106,21 @@ function formatOnTickError(error: unknown): string {
 export class AnsiController {
   private readonly callbacks: AnsiCallbacks
   private readonly ansiId: string
-
-  // Terminal state
   private handle: AnsiTerminalHandle | null = null
   private inputCapture: InputCapture | null = null
   private inputAPI: InputAPI = new InputAPI()
   private gameLoop: GameLoopController | null = null
-
   private currentTiming: TimingInfo = { deltaTime: 0, totalTime: 0, frameNumber: 0 }
   private running = false
   private stopResolver: (() => void) | null = null
   private pendingCrt: { enabled: boolean; intensity?: number; config?: Record<string, number> } | null = null
-
-  // onTick callback from Lua
   private onTickCallback: (() => void) | null = null
-
-  // Screen state
   private nextScreenId = 1
   private screenStates: Map<number, ScreenState> = new Map()
   private activeScreenId: number | null = null
-  /** Double-buffered grids for zero-allocation compositing in advanceScreenAnimation. */
   private compositeBufferA: AnsiGrid = createEmptyGrid()
   private compositeBufferB: AnsiGrid = createEmptyGrid()
   private useBufferA = true
-  /** Cached group composite buffers — persists across frames to avoid re-allocation. */
   private groupGridCache: Map<string, AnsiGrid> = new Map()
 
   constructor(callbacks: AnsiCallbacks, ansiId = 'ansi-main') {
@@ -520,7 +511,7 @@ export class AnsiController {
    * Set the text of text layer(s) matching an identifier.
    * Non-text layers are silently skipped. Errors if zero text layers match.
    */
-  setScreenLabel(id: number, identifier: string, text: string, textFg?: RGBColor, textFgColors?: RGBColor[]): void {
+  setScreenLabel(id: number, identifier: string, text: string, textFg?: RGBColor, textFgColors?: RGBColor[], textBg?: RGBColor, textBgColors?: RGBColor[]): void {
     const layers = this.validateScreenExists(id)
     const matched = this.resolveLayersByIdentifier(layers, identifier)
     if (matched.length === 0) {
@@ -532,12 +523,11 @@ export class AnsiController {
     }
     for (const layer of textLayers) {
       layer.text = text
-      if (textFg !== undefined) {
-        layer.textFg = textFg
-      }
-      // Always assign textFgColors: clears per-character colors when undefined (plain text)
+      if (textFg !== undefined) layer.textFg = textFg
       layer.textFgColors = textFgColors
-      layer.grid = renderTextLayerGrid(layer.text, layer.bounds, layer.textFg, layer.textFgColors, layer.textAlign)
+      layer.textBg = textBg
+      layer.textBgColors = textBgColors
+      layer.grid = renderTextLayerGrid(layer.text, layer.bounds, layer.textFg, layer.textFgColors, layer.textAlign, layer.textBg, layer.textBgColors)
     }
     this.recompositeScreen(id)
   }

@@ -42,7 +42,7 @@ export interface UseLayerStateReturn {
   addReferenceLayer: (sourceLayerId: string) => void
   updateReferenceOffset: (id: string, offsetRow: number, offsetCol: number) => void
   addTextLayer: (name: string, bounds: Rect, textFg: RGBColor) => void
-  updateTextLayer: (id: string, updates: { text?: string; bounds?: Rect; textFg?: RGBColor; textFgColors?: RGBColor[]; textAlign?: TextAlign }) => void
+  updateTextLayer: (id: string, updates: { text?: string; bounds?: Rect; textFg?: RGBColor; textFgColors?: RGBColor[]; textBg?: RGBColor; textBgColors?: RGBColor[]; textAlign?: TextAlign }) => void
   removeLayer: (id: string) => void
   renameLayer: (id: string, name: string) => void
   changeLayerId: (oldId: string, newId: string) => { success: boolean; error?: string }
@@ -173,7 +173,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     setActiveLayerId(textLayer.id)
   }, [])
 
-  const updateTextLayer = useCallback((id: string, updates: { text?: string; bounds?: Rect; textFg?: RGBColor; textFgColors?: RGBColor[]; textAlign?: TextAlign }) => {
+  const updateTextLayer = useCallback((id: string, updates: { text?: string; bounds?: Rect; textFg?: RGBColor; textFgColors?: RGBColor[]; textBg?: RGBColor; textBgColors?: RGBColor[]; textAlign?: TextAlign }) => {
     const mapLayer = (l: Layer): Layer => {
       if (l.id !== id || l.type !== 'text') return l
       const updated: TextLayer = {
@@ -182,9 +182,11 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
         bounds: updates.bounds ?? l.bounds,
         textFg: updates.textFg ?? l.textFg,
         textFgColors: updates.textFgColors !== undefined ? updates.textFgColors : l.textFgColors,
+        textBg: updates.textBg !== undefined ? updates.textBg : l.textBg,
+        textBgColors: updates.textBgColors !== undefined ? updates.textBgColors : l.textBgColors,
         textAlign: updates.textAlign !== undefined ? updates.textAlign : l.textAlign,
       }
-      updated.grid = renderTextLayerGrid(updated.text, updated.bounds, updated.textFg, updated.textFgColors, updated.textAlign)
+      updated.grid = renderTextLayerGrid(updated.text, updated.bounds, updated.textFg, updated.textFgColors, updated.textAlign, updated.textBg, updated.textBgColors)
       return updated
     }
     layersRef.current = layersRef.current.map(mapLayer)
