@@ -23,6 +23,7 @@ export interface TransitionState {
   shadowGrid: AnsiGrid
   desiredGrid: AnsiGrid
   commitLayerIds?: string[]
+  commitVisible?: boolean
   direction?: SwipeDirection
   ditherOrder?: number[]
 }
@@ -57,6 +58,20 @@ export function resolveMultipleIdentifiers(
   return result
 }
 
+/** Temporarily set matched layers' visibility, composite, then restore original visibility. */
+function compositeWithVisibility(
+  layers: LayerData[], matched: LayerData[], visible: boolean,
+  groupGridCache: Map<string, AnsiGrid>,
+): AnsiGrid {
+  const originalVis = matched.map(l => l.visible)
+  for (const l of matched) l.visible = visible
+  const targetGrid = createEmptyGrid()
+  groupGridCache.clear()
+  compositeGridInto(targetGrid, layers, groupGridCache)
+  matched.forEach((l, i) => l.visible = originalVis[i])
+  return targetGrid
+}
+
 function captureSource(state: ScreenStateForTransition, groupGridCache: Map<string, AnsiGrid>): AnsiGrid {
   const grid = createEmptyGrid()
   if (state.lastGrid) {
@@ -86,18 +101,26 @@ export function startSwipeIn(
   duration: number, direction: SwipeDirection, groupGridCache: Map<string, AnsiGrid>,
 ): void {
   if (duration <= 0) throw new Error('Transition duration must be a positive number.')
-  const originalVis = matched.map(l => l.visible)
-  for (const l of matched) l.visible = true
-  const targetGrid = createEmptyGrid()
-  groupGridCache.clear()
-  compositeGridInto(targetGrid, layers, groupGridCache)
-  matched.forEach((l, i) => l.visible = originalVis[i])
-
+  const targetGrid = compositeWithVisibility(layers, matched, true, groupGridCache)
   state.swipe = {
     mode: 'swipe', inOut: 'in', duration, elapsed: 0, direction,
     targetGrid, sourceGrid: captureSource(state, groupGridCache),
     shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
-    commitLayerIds: matched.map(l => l.id),
+    commitLayerIds: matched.map(l => l.id), commitVisible: true,
+  }
+}
+
+export function startSwipeOutLayers(
+  state: ScreenStateForTransition, layers: LayerData[], matched: LayerData[],
+  duration: number, direction: SwipeDirection, groupGridCache: Map<string, AnsiGrid>,
+): void {
+  if (duration <= 0) throw new Error('Transition duration must be a positive number.')
+  const targetGrid = compositeWithVisibility(layers, matched, false, groupGridCache)
+  state.swipe = {
+    mode: 'swipe', inOut: 'out', duration, elapsed: 0, direction,
+    targetGrid, sourceGrid: captureSource(state, groupGridCache),
+    shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
+    commitLayerIds: matched.map(l => l.id), commitVisible: false,
   }
 }
 
@@ -120,19 +143,28 @@ export function startDitherIn(
   duration: number, seed: number, groupGridCache: Map<string, AnsiGrid>,
 ): void {
   if (duration <= 0) throw new Error('Transition duration must be a positive number.')
-  const originalVis = matched.map(l => l.visible)
-  for (const l of matched) l.visible = true
-  const targetGrid = createEmptyGrid()
-  groupGridCache.clear()
-  compositeGridInto(targetGrid, layers, groupGridCache)
-  matched.forEach((l, i) => l.visible = originalVis[i])
-
+  const targetGrid = compositeWithVisibility(layers, matched, true, groupGridCache)
   state.swipe = {
     mode: 'dither', inOut: 'in', duration, elapsed: 0,
     targetGrid, sourceGrid: captureSource(state, groupGridCache),
     shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
     ditherOrder: generateDitherOrder(seed),
-    commitLayerIds: matched.map(l => l.id),
+    commitLayerIds: matched.map(l => l.id), commitVisible: true,
+  }
+}
+
+export function startDitherOutLayers(
+  state: ScreenStateForTransition, layers: LayerData[], matched: LayerData[],
+  duration: number, seed: number, groupGridCache: Map<string, AnsiGrid>,
+): void {
+  if (duration <= 0) throw new Error('Transition duration must be a positive number.')
+  const targetGrid = compositeWithVisibility(layers, matched, false, groupGridCache)
+  state.swipe = {
+    mode: 'dither', inOut: 'out', duration, elapsed: 0,
+    targetGrid, sourceGrid: captureSource(state, groupGridCache),
+    shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
+    ditherOrder: generateDitherOrder(seed),
+    commitLayerIds: matched.map(l => l.id), commitVisible: false,
   }
 }
 
@@ -152,9 +184,10 @@ export function advanceTransition(state: ScreenStateForTransition, deltaTime: nu
 
   if (t.elapsed >= t.duration) {
     if (t.commitLayerIds) {
+      const vis = t.commitVisible ?? true
       for (const id of t.commitLayerIds) {
         const layer = state.layers.find(l => l.id === id)
-        if (layer) layer.visible = true
+        if (layer) layer.visible = vis
       }
       state.needsRecomposite = true
       state.dirty = true

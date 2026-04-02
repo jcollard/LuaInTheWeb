@@ -300,6 +300,18 @@ export function setupAnsiAPI(
     const c = getController(); if (!c) throw new Error('ANSI terminal not available')
     c.screenDitherIn(id, layerIdentifier, duration, seed)
   })
+  engine.global.set('__ansi_screenSwipeOutLayers', (
+    id: number, layerIdentifier: string, duration: number, dir: string,
+  ) => {
+    const c = getController(); if (!c) throw new Error('ANSI terminal not available')
+    c.screenSwipeOutLayers(id, layerIdentifier, duration, dir as 'right')
+  })
+  engine.global.set('__ansi_screenDitherOutLayers', (
+    id: number, layerIdentifier: string, duration: number, seed: number,
+  ) => {
+    const c = getController(); if (!c) throw new Error('ANSI terminal not available')
+    c.screenDitherOutLayers(id, layerIdentifier, duration, seed)
+  })
   engine.global.set('__ansi_screenIsSwiping', (id: number) => {
     const c = getController(); if (!c) throw new Error('ANSI terminal not available')
     return c.screenIsSwiping(id)
