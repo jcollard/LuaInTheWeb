@@ -1,6 +1,6 @@
 -- Screen Transitions Demo
 -- Demonstrates: swipe_out, swipe_in, dither_out, dither_in with directions
--- Controls shown at bottom of screen.
+-- and multi-layer transitions. Controls shown at bottom of screen.
 
 local ansi = require("ansi")
 
@@ -35,6 +35,14 @@ for row = 1, 25 do
   end
 end
 
+-- Title overlay (used to demonstrate multi-layer transitions)
+local title = make_grid(" ", {170, 170, 170}, {0, 0, 0})
+local text = "TRANSITIONS DEMO"
+local col0 = math.floor((80 - #text) / 2) + 1
+for i = 1, #text do
+  title[3][col0 + i - 1] = { char = text:sub(i, i), fg = {255, 255, 255}, bg = {50, 50, 120} }
+end
+
 local screen = ansi.create_screen({
   version = 4, width = 80, height = 25,
   layers = {
@@ -42,6 +50,8 @@ local screen = ansi.create_screen({
       grid = s1, frames = { s1 } },
     { id = "scene2", name = "Scene 2", type = "drawn", visible = false,
       grid = s2, frames = { s2 } },
+    { id = "title", name = "Title", type = "drawn", visible = true,
+      grid = title, frames = { title } },
   }
 })
 ansi.set_screen(screen)
@@ -55,7 +65,7 @@ ansi.tick(function()
     ansi.foreground(200, 200, 200)
     ansi.background(30, 30, 30)
     local s = string.format(
-      " [O]ut [1]S1 [2]S2 [D]out [3]Din1 [4]Din2 [Dir:%s] Arrows ESC",
+      " [O]ut [1]S1 [2]S2+Title [D]out [3]Din1 [4]Din2+Title [Dir:%s] ESC",
       dirs[dir_i]
     )
     ansi.print(s .. string.rep(" ", 80 - #s))
@@ -66,18 +76,24 @@ ansi.tick(function()
       screen:swipe_out({ duration = 0.8, direction = dirs[dir_i] })
     elseif ansi.is_key_pressed("1") then
       screen:layer_off("scene2")
+      screen:layer_off("title")
       screen:swipe_in({ layers = "scene1", duration = 0.8, direction = dirs[dir_i] })
     elseif ansi.is_key_pressed("2") then
       screen:layer_off("scene1")
-      screen:swipe_in({ layers = "scene2", duration = 0.8, direction = dirs[dir_i] })
+      screen:layer_off("title")
+      -- Multi-layer: swipe in scene2 + title together
+      screen:swipe_in({ layers = {"scene2", "title"}, duration = 0.8, direction = dirs[dir_i] })
     elseif ansi.is_key_pressed("d") then
       screen:dither_out({ duration = 1.5 })
     elseif ansi.is_key_pressed("3") then
       screen:layer_off("scene2")
+      screen:layer_off("title")
       screen:dither_in({ layers = "scene1", duration = 1.5 })
     elseif ansi.is_key_pressed("4") then
       screen:layer_off("scene1")
-      screen:dither_in({ layers = "scene2", duration = 1.5 })
+      screen:layer_off("title")
+      -- Multi-layer: dither in scene2 + title together
+      screen:dither_in({ layers = {"scene2", "title"}, duration = 1.5 })
     elseif ansi.is_key_pressed("right") then
       dir_i = (dir_i % #dirs) + 1
     elseif ansi.is_key_pressed("left") then

@@ -38,6 +38,25 @@ interface ScreenStateForTransition {
   dirty: boolean
 }
 
+/**
+ * Resolve one or more layer identifiers (\\x1F-separated string) against a layer list.
+ * Each identifier is resolved by ID, name, or tag. Results are unioned and deduplicated.
+ */
+export function resolveMultipleIdentifiers(
+  layers: LayerData[],
+  ids: string,
+  resolveOne: (layers: LayerData[], id: string) => LayerData[],
+): LayerData[] {
+  const seen = new Set<string>()
+  const result: LayerData[] = []
+  for (const id of ids.split('\x1F')) {
+    for (const l of resolveOne(layers, id)) {
+      if (!seen.has(l.id)) { seen.add(l.id); result.push(l) }
+    }
+  }
+  return result
+}
+
 function captureSource(state: ScreenStateForTransition, groupGridCache: Map<string, AnsiGrid>): AnsiGrid {
   const grid = createEmptyGrid()
   if (state.lastGrid) {

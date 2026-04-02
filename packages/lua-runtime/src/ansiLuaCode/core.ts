@@ -183,8 +183,10 @@ export const ansiLuaCoreCode = `
         __ansi_screenSwipeOut(self.id, opts.duration or 1, c[1], c[2], c[3], opts.char or ' ', opts.direction or 'right')
       end
       function screen:swipe_in(opts)
-        if type(opts) ~= 'table' or type(opts.layers) ~= 'string' then error('swipe_in() requires opts with layers') end
-        __ansi_screenSwipeIn(self.id, opts.layers, opts.duration or 1, opts.direction or 'right')
+        if type(opts) ~= 'table' then error('swipe_in() requires an options table') end
+        local L = opts.layers
+        if type(L) == 'table' then L = table.concat(L, '\\x1f') elseif type(L) ~= 'string' then error('swipe_in() layers must be a string or table of strings') end
+        __ansi_screenSwipeIn(self.id, L, opts.duration or 1, opts.direction or 'right')
       end
       function screen:dither_out(opts)
         opts = type(opts) == 'table' and opts or {}
@@ -192,8 +194,10 @@ export const ansiLuaCoreCode = `
         __ansi_screenDitherOut(self.id, opts.duration or 1, c[1], c[2], c[3], opts.char or ' ', opts.seed or os.time())
       end
       function screen:dither_in(opts)
-        if type(opts) ~= 'table' or type(opts.layers) ~= 'string' then error('dither_in() requires opts with layers') end
-        __ansi_screenDitherIn(self.id, opts.layers, opts.duration or 1, opts.seed or os.time())
+        if type(opts) ~= 'table' then error('dither_in() requires an options table') end
+        local L = opts.layers
+        if type(L) == 'table' then L = table.concat(L, '\\x1f') elseif type(L) ~= 'string' then error('dither_in() layers must be a string or table of strings') end
+        __ansi_screenDitherIn(self.id, L, opts.duration or 1, opts.seed or os.time())
       end
       function screen:is_transitioning() return __ansi_screenIsSwiping(self.id) end
       function screen:is_swiping() return __ansi_screenIsSwiping(self.id) end

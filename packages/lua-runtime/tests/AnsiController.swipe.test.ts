@@ -155,7 +155,44 @@ describe('AnsiController swipe transitions', () => {
 
     it('throws for unknown layer identifier', () => {
       const id = controller.createScreen(makeV4WithTwoScenes())
-      expect(() => controller.screenSwipeIn(id, 'nonexistent', 1)).toThrow('No layers match', 'right')
+      expect(() => controller.screenSwipeIn(id, 'nonexistent', 1, 'right')).toThrow('No layers match')
+    })
+
+    it('accepts multiple layer identifiers separated by \\x1F', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      // Both scene1 and scene2 resolved via \x1F-separated string
+      controller.screenSwipeIn(id, 'scene1\x1Fscene2', 1, 'right')
+      expect(controller.screenIsSwiping(id)).toBe(true)
+    })
+
+    it('deduplicates layers when same identifier appears twice', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      // Same identifier twice — should not error
+      controller.screenSwipeIn(id, 'scene1\x1Fscene1', 1, 'right')
+      expect(controller.screenIsSwiping(id)).toBe(true)
+    })
+
+    it('commits all specified layers on completion', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      // Both start hidden for this test
+      controller.setScreenLayerVisible(id, 'scene1', false)
+      capturedOnFrame!(makeTiming(0.016, 0.016))
+
+      controller.screenSwipeIn(id, 'scene1\x1Fscene2', 0.01, 'right')
+      capturedOnFrame!(makeTiming(0.1, 0.1))
+
+      const layers = controller.getScreenLayers(id)
+      expect(layers.find(l => l.id === 'scene1')?.visible).toBe(true)
+      expect(layers.find(l => l.id === 'scene2')?.visible).toBe(true)
     })
 
     it('permanently toggles layers visible after completion', () => {
