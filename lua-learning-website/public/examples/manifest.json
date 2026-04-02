@@ -238,6 +238,7 @@
     "ansi/swipe_demo.lua",
     "ansi/pan_demo.lua",
     "ansi/layer_offset_demo.lua",
-    "ansi/layer_transition_demo.lua"
+    "ansi/layer_transition_demo.lua",
+    "ansi/layer_transition_screen.ansi.lua"
   ]
 }
