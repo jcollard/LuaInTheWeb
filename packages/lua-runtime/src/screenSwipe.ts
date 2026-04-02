@@ -26,6 +26,7 @@ export interface TransitionState {
   commitVisible?: boolean
   direction?: SwipeDirection
   ditherOrder?: number[]
+  onComplete?: () => void
 }
 
 // Re-export for AnsiController type usage
@@ -85,7 +86,7 @@ function captureSource(state: ScreenStateForTransition, groupGridCache: Map<stri
 
 export function startSwipeOut(
   state: ScreenStateForTransition, duration: number, color: RGBColor, char: string,
-  direction: SwipeDirection, groupGridCache: Map<string, AnsiGrid>,
+  direction: SwipeDirection, groupGridCache: Map<string, AnsiGrid>, onComplete?: () => void,
 ): void {
   if (duration <= 0) throw new Error('Transition duration must be a positive number.')
   state.swipe = {
@@ -93,12 +94,13 @@ export function startSwipeOut(
     targetGrid: createFillGrid(char, color),
     sourceGrid: captureSource(state, groupGridCache),
     shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
+    onComplete,
   }
 }
 
 export function startSwipeIn(
   state: ScreenStateForTransition, layers: LayerData[], matched: LayerData[],
-  duration: number, direction: SwipeDirection, groupGridCache: Map<string, AnsiGrid>,
+  duration: number, direction: SwipeDirection, groupGridCache: Map<string, AnsiGrid>, onComplete?: () => void,
 ): void {
   if (duration <= 0) throw new Error('Transition duration must be a positive number.')
   const targetGrid = compositeWithVisibility(layers, matched, true, groupGridCache)
@@ -107,12 +109,13 @@ export function startSwipeIn(
     targetGrid, sourceGrid: captureSource(state, groupGridCache),
     shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
     commitLayerIds: matched.map(l => l.id), commitVisible: true,
+    onComplete,
   }
 }
 
 export function startSwipeOutLayers(
   state: ScreenStateForTransition, layers: LayerData[], matched: LayerData[],
-  duration: number, direction: SwipeDirection, groupGridCache: Map<string, AnsiGrid>,
+  duration: number, direction: SwipeDirection, groupGridCache: Map<string, AnsiGrid>, onComplete?: () => void,
 ): void {
   if (duration <= 0) throw new Error('Transition duration must be a positive number.')
   const targetGrid = compositeWithVisibility(layers, matched, false, groupGridCache)
@@ -121,12 +124,13 @@ export function startSwipeOutLayers(
     targetGrid, sourceGrid: captureSource(state, groupGridCache),
     shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
     commitLayerIds: matched.map(l => l.id), commitVisible: false,
+    onComplete,
   }
 }
 
 export function startDitherOut(
   state: ScreenStateForTransition, duration: number, color: RGBColor, char: string,
-  seed: number, groupGridCache: Map<string, AnsiGrid>,
+  seed: number, groupGridCache: Map<string, AnsiGrid>, onComplete?: () => void,
 ): void {
   if (duration <= 0) throw new Error('Transition duration must be a positive number.')
   state.swipe = {
@@ -135,12 +139,13 @@ export function startDitherOut(
     sourceGrid: captureSource(state, groupGridCache),
     shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
     ditherOrder: generateDitherOrder(seed),
+    onComplete,
   }
 }
 
 export function startDitherIn(
   state: ScreenStateForTransition, layers: LayerData[], matched: LayerData[],
-  duration: number, seed: number, groupGridCache: Map<string, AnsiGrid>,
+  duration: number, seed: number, groupGridCache: Map<string, AnsiGrid>, onComplete?: () => void,
 ): void {
   if (duration <= 0) throw new Error('Transition duration must be a positive number.')
   const targetGrid = compositeWithVisibility(layers, matched, true, groupGridCache)
@@ -150,12 +155,13 @@ export function startDitherIn(
     shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
     ditherOrder: generateDitherOrder(seed),
     commitLayerIds: matched.map(l => l.id), commitVisible: true,
+    onComplete,
   }
 }
 
 export function startDitherOutLayers(
   state: ScreenStateForTransition, layers: LayerData[], matched: LayerData[],
-  duration: number, seed: number, groupGridCache: Map<string, AnsiGrid>,
+  duration: number, seed: number, groupGridCache: Map<string, AnsiGrid>, onComplete?: () => void,
 ): void {
   if (duration <= 0) throw new Error('Transition duration must be a positive number.')
   const targetGrid = compositeWithVisibility(layers, matched, false, groupGridCache)
@@ -165,10 +171,16 @@ export function startDitherOutLayers(
     shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
     ditherOrder: generateDitherOrder(seed),
     commitLayerIds: matched.map(l => l.id), commitVisible: false,
+    onComplete,
   }
 }
 
-export function advanceTransition(state: ScreenStateForTransition, deltaTime: number): string | null {
+export interface TransitionResult {
+  batch: string | null
+  onComplete?: () => void
+}
+
+export function advanceTransition(state: ScreenStateForTransition, deltaTime: number): TransitionResult {
   const t = state.swipe!
   t.elapsed += deltaTime
   const progress = Math.min(t.elapsed / t.duration, 1)
@@ -194,9 +206,11 @@ export function advanceTransition(state: ScreenStateForTransition, deltaTime: nu
     }
     if (!state.lastGrid) state.lastGrid = createEmptyGrid()
     copyGrid(state.lastGrid, t.desiredGrid)
+    const onComplete = t.onComplete
     state.swipe = null
+    return { batch, onComplete }
   }
-  return batch
+  return { batch }
 }
 
 function copyGrid(dst: AnsiGrid, src: AnsiGrid): void {

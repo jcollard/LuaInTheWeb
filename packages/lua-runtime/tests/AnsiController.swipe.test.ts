@@ -379,4 +379,102 @@ describe('AnsiController swipe transitions', () => {
       expect(controller.screenIsSwiping(id)).toBe(false)
     })
   })
+
+  describe('onComplete callback', () => {
+    it('fires after swipeIn completes', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      const cb = vi.fn()
+      controller.screenSwipeIn(id, 'scene2', 0.1, 'right', cb)
+      capturedOnFrame!(makeTiming(0.2, 0.2))
+
+      expect(cb).toHaveBeenCalledOnce()
+    })
+
+    it('fires after swipeOut completes', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      const cb = vi.fn()
+      controller.screenSwipeOut(id, 0.1, [0, 0, 0], ' ', 'right', cb)
+      capturedOnFrame!(makeTiming(0.2, 0.2))
+
+      expect(cb).toHaveBeenCalledOnce()
+    })
+
+    it('fires after swipeOutLayers completes', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      const cb = vi.fn()
+      controller.screenSwipeOutLayers(id, 'scene1', 0.1, 'right', cb)
+      capturedOnFrame!(makeTiming(0.2, 0.2))
+
+      expect(cb).toHaveBeenCalledOnce()
+    })
+
+    it('fires after ditherIn completes', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      const cb = vi.fn()
+      controller.screenDitherIn(id, 'scene2', 0.1, 42, cb)
+      capturedOnFrame!(makeTiming(0.2, 0.2))
+
+      expect(cb).toHaveBeenCalledOnce()
+    })
+
+    it('fires after ditherOut completes', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      const cb = vi.fn()
+      controller.screenDitherOut(id, 0.1, [0, 0, 0], ' ', 42, cb)
+      capturedOnFrame!(makeTiming(0.2, 0.2))
+
+      expect(cb).toHaveBeenCalledOnce()
+    })
+
+    it('fires after ditherOutLayers completes', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      const cb = vi.fn()
+      controller.screenDitherOutLayers(id, 'scene1', 0.1, 42, cb)
+      capturedOnFrame!(makeTiming(0.2, 0.2))
+
+      expect(cb).toHaveBeenCalledOnce()
+    })
+
+    it('does not fire before transition completes', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      const cb = vi.fn()
+      controller.screenSwipeIn(id, 'scene2', 1, 'right', cb)
+      capturedOnFrame!(makeTiming(0.5, 0.5)) // halfway
+
+      expect(cb).not.toHaveBeenCalled()
+    })
+
+    it('works without a callback (undefined)', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      // Should not throw when no callback provided
+      controller.screenSwipeIn(id, 'scene2', 0.1, 'right')
+      capturedOnFrame!(makeTiming(0.2, 0.2))
+
+      expect(controller.screenIsSwiping(id)).toBe(false)
+    })
+  })
 })

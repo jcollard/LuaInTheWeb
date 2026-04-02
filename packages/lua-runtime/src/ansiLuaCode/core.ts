@@ -186,28 +186,28 @@ export const ansiLuaCoreCode = `
       function screen:swipe_out(opts)
         opts = type(opts) == 'table' and opts or {}
         if opts.layers then
-          __ansi_screenSwipeOutLayers(self.id, _coerce_layer_ids(opts.layers, 'swipe_out()'), opts.duration or 1, opts.direction or 'right')
+          __ansi_screenSwipeOutLayers(self.id, _coerce_layer_ids(opts.layers, 'swipe_out()'), opts.duration or 1, opts.direction or 'right', opts.on_complete)
         else
           local c = opts.color or {0, 0, 0}
-          __ansi_screenSwipeOut(self.id, opts.duration or 1, c[1], c[2], c[3], opts.char or ' ', opts.direction or 'right')
+          __ansi_screenSwipeOut(self.id, opts.duration or 1, c[1], c[2], c[3], opts.char or ' ', opts.direction or 'right', opts.on_complete)
         end
       end
       function screen:swipe_in(opts)
         if type(opts) ~= 'table' then error('swipe_in() requires an options table') end
-        __ansi_screenSwipeIn(self.id, _coerce_layer_ids(opts.layers, 'swipe_in()'), opts.duration or 1, opts.direction or 'right')
+        __ansi_screenSwipeIn(self.id, _coerce_layer_ids(opts.layers, 'swipe_in()'), opts.duration or 1, opts.direction or 'right', opts.on_complete)
       end
       function screen:dither_out(opts)
         opts = type(opts) == 'table' and opts or {}
         if opts.layers then
-          __ansi_screenDitherOutLayers(self.id, _coerce_layer_ids(opts.layers, 'dither_out()'), opts.duration or 1, opts.seed or os.time())
+          __ansi_screenDitherOutLayers(self.id, _coerce_layer_ids(opts.layers, 'dither_out()'), opts.duration or 1, opts.seed or os.time(), opts.on_complete)
         else
           local c = opts.color or {0, 0, 0}
-          __ansi_screenDitherOut(self.id, opts.duration or 1, c[1], c[2], c[3], opts.char or ' ', opts.seed or os.time())
+          __ansi_screenDitherOut(self.id, opts.duration or 1, c[1], c[2], c[3], opts.char or ' ', opts.seed or os.time(), opts.on_complete)
         end
       end
       function screen:dither_in(opts)
         if type(opts) ~= 'table' then error('dither_in() requires an options table') end
-        __ansi_screenDitherIn(self.id, _coerce_layer_ids(opts.layers, 'dither_in()'), opts.duration or 1, opts.seed or os.time())
+        __ansi_screenDitherIn(self.id, _coerce_layer_ids(opts.layers, 'dither_in()'), opts.duration or 1, opts.seed or os.time(), opts.on_complete)
       end
       function screen:is_transitioning() return __ansi_screenIsSwiping(self.id) end
       function screen:is_swiping() return __ansi_screenIsSwiping(self.id) end
