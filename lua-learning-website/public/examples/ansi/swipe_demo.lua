@@ -66,7 +66,7 @@ ansi.tick(function()
     ansi.foreground(200, 200, 200)
     ansi.background(30, 30, 30)
     local s = string.format(
-      " [O]ut [H]ideS1 [1]S1 [2]S2+Title [D]out [5]DhideTitle [Dir:%s] ESC",
+      " [O]ut [H]ideS1 [1]S1 [2]S2+T [D]out [5]DhideT [3]Din1 [4]Din2+T [Dir:%s] ESC",
       dirs[dir_i]
     )
     ansi.print(s .. string.rep(" ", 80 - #s))
@@ -94,6 +94,14 @@ ansi.tick(function()
     elseif ansi.is_key_pressed("5") then
       -- Per-layer dither out: dissolve away the title overlay
       screen:dither_out({ layers = "title", duration = 1.0 })
+    elseif ansi.is_key_pressed("3") then
+      screen:layer_off("scene2")
+      screen:layer_off("title")
+      screen:dither_in({ layers = "scene1", duration = 1.5 })
+    elseif ansi.is_key_pressed("4") then
+      screen:layer_off("scene1")
+      screen:layer_off("title")
+      screen:dither_in({ layers = {"scene2", "title"}, duration = 1.5 })
     elseif ansi.is_key_pressed("right") then
       dir_i = (dir_i % #dirs) + 1
     elseif ansi.is_key_pressed("left") then

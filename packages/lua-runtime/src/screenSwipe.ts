@@ -58,6 +58,20 @@ export function resolveMultipleIdentifiers(
   return result
 }
 
+/** Temporarily set matched layers' visibility, composite, then restore original visibility. */
+function compositeWithVisibility(
+  layers: LayerData[], matched: LayerData[], visible: boolean,
+  groupGridCache: Map<string, AnsiGrid>,
+): AnsiGrid {
+  const originalVis = matched.map(l => l.visible)
+  for (const l of matched) l.visible = visible
+  const targetGrid = createEmptyGrid()
+  groupGridCache.clear()
+  compositeGridInto(targetGrid, layers, groupGridCache)
+  matched.forEach((l, i) => l.visible = originalVis[i])
+  return targetGrid
+}
+
 function captureSource(state: ScreenStateForTransition, groupGridCache: Map<string, AnsiGrid>): AnsiGrid {
   const grid = createEmptyGrid()
   if (state.lastGrid) {
@@ -87,13 +101,7 @@ export function startSwipeIn(
   duration: number, direction: SwipeDirection, groupGridCache: Map<string, AnsiGrid>,
 ): void {
   if (duration <= 0) throw new Error('Transition duration must be a positive number.')
-  const originalVis = matched.map(l => l.visible)
-  for (const l of matched) l.visible = true
-  const targetGrid = createEmptyGrid()
-  groupGridCache.clear()
-  compositeGridInto(targetGrid, layers, groupGridCache)
-  matched.forEach((l, i) => l.visible = originalVis[i])
-
+  const targetGrid = compositeWithVisibility(layers, matched, true, groupGridCache)
   state.swipe = {
     mode: 'swipe', inOut: 'in', duration, elapsed: 0, direction,
     targetGrid, sourceGrid: captureSource(state, groupGridCache),
@@ -107,13 +115,7 @@ export function startSwipeOutLayers(
   duration: number, direction: SwipeDirection, groupGridCache: Map<string, AnsiGrid>,
 ): void {
   if (duration <= 0) throw new Error('Transition duration must be a positive number.')
-  const originalVis = matched.map(l => l.visible)
-  for (const l of matched) l.visible = false
-  const targetGrid = createEmptyGrid()
-  groupGridCache.clear()
-  compositeGridInto(targetGrid, layers, groupGridCache)
-  matched.forEach((l, i) => l.visible = originalVis[i])
-
+  const targetGrid = compositeWithVisibility(layers, matched, false, groupGridCache)
   state.swipe = {
     mode: 'swipe', inOut: 'out', duration, elapsed: 0, direction,
     targetGrid, sourceGrid: captureSource(state, groupGridCache),
@@ -141,13 +143,7 @@ export function startDitherIn(
   duration: number, seed: number, groupGridCache: Map<string, AnsiGrid>,
 ): void {
   if (duration <= 0) throw new Error('Transition duration must be a positive number.')
-  const originalVis = matched.map(l => l.visible)
-  for (const l of matched) l.visible = true
-  const targetGrid = createEmptyGrid()
-  groupGridCache.clear()
-  compositeGridInto(targetGrid, layers, groupGridCache)
-  matched.forEach((l, i) => l.visible = originalVis[i])
-
+  const targetGrid = compositeWithVisibility(layers, matched, true, groupGridCache)
   state.swipe = {
     mode: 'dither', inOut: 'in', duration, elapsed: 0,
     targetGrid, sourceGrid: captureSource(state, groupGridCache),
@@ -162,13 +158,7 @@ export function startDitherOutLayers(
   duration: number, seed: number, groupGridCache: Map<string, AnsiGrid>,
 ): void {
   if (duration <= 0) throw new Error('Transition duration must be a positive number.')
-  const originalVis = matched.map(l => l.visible)
-  for (const l of matched) l.visible = false
-  const targetGrid = createEmptyGrid()
-  groupGridCache.clear()
-  compositeGridInto(targetGrid, layers, groupGridCache)
-  matched.forEach((l, i) => l.visible = originalVis[i])
-
+  const targetGrid = compositeWithVisibility(layers, matched, false, groupGridCache)
   state.swipe = {
     mode: 'dither', inOut: 'out', duration, elapsed: 0,
     targetGrid, sourceGrid: captureSource(state, groupGridCache),
