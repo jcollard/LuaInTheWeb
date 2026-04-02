@@ -228,6 +228,151 @@ describe('AnsiController swipe transitions', () => {
     })
   })
 
+  describe('screenSwipeOutLayers', () => {
+    it('sets swipe state on screen', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+      controller.screenSwipeOutLayers(id, 'scene1', 1, 'right')
+      expect(controller.screenIsSwiping(id)).toBe(true)
+    })
+
+    it('throws for unknown layer identifier', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      expect(() => controller.screenSwipeOutLayers(id, 'nonexistent', 1, 'right')).toThrow('No layers match')
+    })
+
+    it('throws for duration <= 0', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      expect(() => controller.screenSwipeOutLayers(id, 'scene1', 0, 'right')).toThrow('positive')
+    })
+
+    it('does not change visibility during transition', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      // scene1 starts visible
+      expect(controller.getScreenLayers(id).find(l => l.id === 'scene1')?.visible).toBe(true)
+
+      controller.screenSwipeOutLayers(id, 'scene1', 1, 'right')
+
+      // scene1 should still be visible during transition
+      expect(controller.getScreenLayers(id).find(l => l.id === 'scene1')?.visible).toBe(true)
+    })
+
+    it('hides layers on completion', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      // scene1 starts visible
+      expect(controller.getScreenLayers(id).find(l => l.id === 'scene1')?.visible).toBe(true)
+
+      controller.screenSwipeOutLayers(id, 'scene1', 0.1, 'right')
+      capturedOnFrame!(makeTiming(0.2, 0.2)) // completes
+
+      // scene1 should now be hidden
+      expect(controller.getScreenLayers(id).find(l => l.id === 'scene1')?.visible).toBe(false)
+    })
+
+    it('accepts multiple layer identifiers separated by \\x1F', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      // Make scene2 visible so we can hide both
+      controller.setScreenLayerVisible(id, 'scene2', true)
+      capturedOnFrame!(makeTiming(0.016, 0.016))
+
+      controller.screenSwipeOutLayers(id, 'scene1\x1Fscene2', 0.01, 'right')
+      capturedOnFrame!(makeTiming(0.1, 0.1))
+
+      const layers = controller.getScreenLayers(id)
+      expect(layers.find(l => l.id === 'scene1')?.visible).toBe(false)
+      expect(layers.find(l => l.id === 'scene2')?.visible).toBe(false)
+    })
+
+    it('deduplicates layers', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      controller.screenSwipeOutLayers(id, 'scene1\x1Fscene1', 1, 'right')
+      expect(controller.screenIsSwiping(id)).toBe(true)
+    })
+  })
+
+  describe('screenDitherOutLayers', () => {
+    it('sets swipe state on screen', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+      controller.screenDitherOutLayers(id, 'scene1', 1, 42)
+      expect(controller.screenIsSwiping(id)).toBe(true)
+    })
+
+    it('throws for unknown layer identifier', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      expect(() => controller.screenDitherOutLayers(id, 'nonexistent', 1, 42)).toThrow('No layers match')
+    })
+
+    it('throws for duration <= 0', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      expect(() => controller.screenDitherOutLayers(id, 'scene1', 0, 42)).toThrow('positive')
+    })
+
+    it('does not change visibility during transition', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      expect(controller.getScreenLayers(id).find(l => l.id === 'scene1')?.visible).toBe(true)
+
+      controller.screenDitherOutLayers(id, 'scene1', 1, 42)
+
+      expect(controller.getScreenLayers(id).find(l => l.id === 'scene1')?.visible).toBe(true)
+    })
+
+    it('hides layers on completion', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      expect(controller.getScreenLayers(id).find(l => l.id === 'scene1')?.visible).toBe(true)
+
+      controller.screenDitherOutLayers(id, 'scene1', 0.1, 42)
+      capturedOnFrame!(makeTiming(0.2, 0.2)) // completes
+
+      expect(controller.getScreenLayers(id).find(l => l.id === 'scene1')?.visible).toBe(false)
+    })
+
+    it('accepts multiple layer identifiers separated by \\x1F', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      controller.setScreenLayerVisible(id, 'scene2', true)
+      capturedOnFrame!(makeTiming(0.016, 0.016))
+
+      controller.screenDitherOutLayers(id, 'scene1\x1Fscene2', 0.01, 42)
+      capturedOnFrame!(makeTiming(0.1, 0.1))
+
+      const layers = controller.getScreenLayers(id)
+      expect(layers.find(l => l.id === 'scene1')?.visible).toBe(false)
+      expect(layers.find(l => l.id === 'scene2')?.visible).toBe(false)
+    })
+
+    it('deduplicates layers', () => {
+      const id = controller.createScreen(makeV4WithTwoScenes())
+      controller.setScreen(id)
+      capturedOnFrame!(makeTiming())
+
+      controller.screenDitherOutLayers(id, 'scene1\x1Fscene1', 1, 42)
+      expect(controller.screenIsSwiping(id)).toBe(true)
+    })
+  })
+
   describe('screenIsSwiping', () => {
     it('returns false when no swipe is active', () => {
       const id = controller.createScreen(makeV4WithTwoScenes())

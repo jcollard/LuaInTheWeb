@@ -19,7 +19,7 @@ import { compositeGridInto } from './screenCompositor'
 import { renderGridToAnsiString, renderDiffAnsiString } from './ansiStringRenderer'
 import { renderTextLayerGrid } from './textLayerGrid'
 import { createEmptyGrid, type AnsiGrid, type LayerData, type DrawnLayerData, type TextLayerData, type RGBColor } from './screenTypes'
-import { startSwipeOut, startSwipeIn, startDitherOut, startDitherIn, advanceTransition, resolveMultipleIdentifiers, type TransitionState, type SwipeDirection } from './screenSwipe'
+import { startSwipeOut, startSwipeIn, startSwipeOutLayers, startDitherOut, startDitherIn, startDitherOutLayers, advanceTransition, resolveMultipleIdentifiers, type TransitionState, type SwipeDirection } from './screenSwipe'
 import { startPan, advancePan, type PanState } from './screenPan'
 
 /**
@@ -535,6 +535,8 @@ export class AnsiController {
   screenSwipeIn(id: number, ids: string, duration: number, dir: SwipeDirection): void { const layers = this.validateScreenExists(id); const m = resolveMultipleIdentifiers(layers, ids, this.resolveLayersByIdentifier.bind(this)); if (m.length === 0) throw new Error(`No layers match "${ids}" in screen ${id}.`); startSwipeIn(this.getScreenState(id), layers, m, duration, dir, this.groupGridCache) }
   screenDitherOut(id: number, duration: number, color: RGBColor, char: string, seed: number): void { this.validateScreenExists(id); startDitherOut(this.getScreenState(id), duration, color, char, seed, this.groupGridCache) }
   screenDitherIn(id: number, ids: string, duration: number, seed: number): void { const layers = this.validateScreenExists(id); const m = resolveMultipleIdentifiers(layers, ids, this.resolveLayersByIdentifier.bind(this)); if (m.length === 0) throw new Error(`No layers match "${ids}" in screen ${id}.`); startDitherIn(this.getScreenState(id), layers, m, duration, seed, this.groupGridCache) }
+  screenSwipeOutLayers(id: number, ids: string, duration: number, dir: SwipeDirection): void { const layers = this.validateScreenExists(id); const m = resolveMultipleIdentifiers(layers, ids, this.resolveLayersByIdentifier.bind(this)); if (m.length === 0) throw new Error(`No layers match "${ids}" in screen ${id}.`); startSwipeOutLayers(this.getScreenState(id), layers, m, duration, dir, this.groupGridCache) }
+  screenDitherOutLayers(id: number, ids: string, duration: number, seed: number): void { const layers = this.validateScreenExists(id); const m = resolveMultipleIdentifiers(layers, ids, this.resolveLayersByIdentifier.bind(this)); if (m.length === 0) throw new Error(`No layers match "${ids}" in screen ${id}.`); startDitherOutLayers(this.getScreenState(id), layers, m, duration, seed, this.groupGridCache) }
   screenIsSwiping(id: number): boolean { return (this.screenStates.get(id)?.swipe ?? null) !== null }
 
   screenPan(id: number, duration: number, fromCol: number, fromRow: number, toCol: number, toRow: number): void { this.validateScreenExists(id); const s = this.getScreenState(id); s.pan = startPan(duration, fromCol, fromRow, toCol, toRow); s.viewportCol = fromCol; s.viewportRow = fromRow; s.needsRecomposite = true }
