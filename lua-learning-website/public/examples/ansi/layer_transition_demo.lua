@@ -126,39 +126,40 @@ local function draw_status()
     if l.id == "yellow-circle" then circle_vis = l.visible end
   end
 
-  -- Row 25: status line
+  -- Row 25: instructions (must fit in 80 cols to avoid scroll)
   ansi.set_cursor(25, 1)
   ansi.background(30, 30, 40)
   ansi.foreground(200, 200, 200)
-  ansi.print(" 1:Rect ON  2:Circle ON  3:Circle OFF  4:Rect OFF  5:Group ON  6:Group OFF  R:Reset ")
+  --       1234567890123456789012345678901234567890123456789012345678901234567890123456789
+  ansi.print(" 1:Rect+  2:Circ+  3:Circ-  4:Rect-  5:Grp+  6:Grp-  R:Reset  Esc:Quit")
 
-  -- Row 24: layer state display
+  -- Row 24: layer state display (use set_cursor to avoid overflow)
   ansi.set_cursor(24, 1)
   ansi.background(30, 30, 40)
   ansi.foreground(180, 180, 180)
   ansi.print(" Rect:")
   if rect_vis then
     ansi.foreground(85, 255, 85)
-    ansi.print("ON ")
+    ansi.print("ON")
   else
     ansi.foreground(255, 85, 85)
-    ansi.print("OFF")
+    ansi.print("--")
   end
   ansi.foreground(180, 180, 180)
-  ansi.print("  Circle:")
+  ansi.print(" Circle:")
   if circle_vis then
     ansi.foreground(85, 255, 85)
-    ansi.print("ON ")
+    ansi.print("ON")
   else
     ansi.foreground(255, 85, 85)
-    ansi.print("OFF")
+    ansi.print("--")
   end
   ansi.foreground(180, 180, 180)
   if screen:is_transitioning() then
     ansi.foreground(255, 255, 85)
-    ansi.print("  [TRANSITIONING]                              ")
+    ansi.print(" [TRANSITIONING]             ")
   else
-    ansi.print("                                               ")
+    ansi.print("                             ")
   end
 end
 
