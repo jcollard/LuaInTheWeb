@@ -42,7 +42,7 @@ describe('buildSwipeGrid', () => {
     const source = makeGradientGrid()
     const output = createEmptyGrid()
 
-    buildSwipeGrid(target, source, 0, output)
+    buildSwipeGrid(target, source, 0, 'right', output)
 
     for (let r = 0; r < ANSI_ROWS; r++) {
       for (let c = 0; c < ANSI_COLS; c++) {
@@ -56,7 +56,7 @@ describe('buildSwipeGrid', () => {
     const source = makeGradientGrid()
     const output = createEmptyGrid()
 
-    buildSwipeGrid(target, source, 80, output)
+    buildSwipeGrid(target, source, 1, 'right', output)
 
     for (let r = 0; r < ANSI_ROWS; r++) {
       for (let c = 0; c < ANSI_COLS; c++) {
@@ -70,7 +70,7 @@ describe('buildSwipeGrid', () => {
     const source = makeGradientGrid()
     const output = createEmptyGrid()
 
-    buildSwipeGrid(target, source, 40, output)
+    buildSwipeGrid(target, source, 0.5, 'right', output)
 
     for (let r = 0; r < ANSI_ROWS; r++) {
       for (let c = 0; c < 40; c++) {
@@ -89,7 +89,7 @@ describe('buildSwipeGrid', () => {
     const source = makeGradientGrid()
     const output = createEmptyGrid()
 
-    buildSwipeGrid(target, source, 25, output)
+    buildSwipeGrid(target, source, 0.3125, 'right', output)
 
     for (let r = 0; r < ANSI_ROWS; r++) {
       // Col 24 should be target, col 25 should be source

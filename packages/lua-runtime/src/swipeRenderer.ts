@@ -38,15 +38,77 @@ export function createSentinelGrid(): AnsiGrid {
   )
 }
 
+export type SwipeDirection = 'right' | 'left' | 'down' | 'up' | 'down-right' | 'down-left' | 'up-right' | 'up-left'
+
 /**
- * Build the desired grid for the current swipe progress.
- * Columns < boundaryCol show target, columns >= boundaryCol show source.
+ * Build the desired grid for the current swipe progress and direction.
+ * Cells past the sweep boundary show target, others show source.
  * Mutates output grid in place.
  */
-export function buildSwipeGrid(target: AnsiGrid, source: AnsiGrid, boundaryCol: number, output: AnsiGrid): void {
+export function buildSwipeGrid(target: AnsiGrid, source: AnsiGrid, progress: number, direction: SwipeDirection, output: AnsiGrid): void {
   for (let r = 0; r < ANSI_ROWS; r++) {
     for (let c = 0; c < ANSI_COLS; c++) {
-      const src = c < boundaryCol ? target[r][c] : source[r][c]
+      const showTarget = isSwiped(r, c, progress, direction)
+      const src = showTarget ? target[r][c] : source[r][c]
+      const out = output[r][c]
+      out.char = src.char
+      out.fg[0] = src.fg[0]; out.fg[1] = src.fg[1]; out.fg[2] = src.fg[2]
+      out.bg[0] = src.bg[0]; out.bg[1] = src.bg[1]; out.bg[2] = src.bg[2]
+    }
+  }
+}
+
+function isSwiped(r: number, c: number, t: number, dir: SwipeDirection): boolean {
+  if (t <= 0) return false
+  if (t >= 1) return true
+  switch (dir) {
+    case 'right': return c < t * ANSI_COLS
+    case 'left': return c >= (1 - t) * ANSI_COLS
+    case 'down': return r < t * ANSI_ROWS
+    case 'up': return r >= (1 - t) * ANSI_ROWS
+    case 'down-right': return (r / ANSI_ROWS + c / ANSI_COLS) / 2 < t
+    case 'up-left': return ((ANSI_ROWS - 1 - r) / ANSI_ROWS + (ANSI_COLS - 1 - c) / ANSI_COLS) / 2 < t
+    case 'down-left': return (r / ANSI_ROWS + (ANSI_COLS - 1 - c) / ANSI_COLS) / 2 < t
+    case 'up-right': return ((ANSI_ROWS - 1 - r) / ANSI_ROWS + c / ANSI_COLS) / 2 < t
+  }
+}
+
+/** Mulberry32 PRNG — fast, deterministic, 32-bit state. */
+function mulberry32(seed: number): () => number {
+  let s = seed | 0
+  return () => {
+    s = (s + 0x6D2B79F5) | 0
+    let t = Math.imul(s ^ (s >>> 15), 1 | s)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/** Generate shuffled cell indices [0..ROWS*COLS-1] using seeded Fisher-Yates. */
+export function generateDitherOrder(seed: number): number[] {
+  const total = ANSI_ROWS * ANSI_COLS
+  const order = Array.from({ length: total }, (_, i) => i)
+  const rng = mulberry32(seed)
+  for (let i = total - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    const tmp = order[i]; order[i] = order[j]; order[j] = tmp
+  }
+  return order
+}
+
+/**
+ * Build desired grid for dither transition at given progress.
+ * First floor(total * progress) cells in ditherOrder show target, rest show source.
+ */
+export function buildDitherGrid(target: AnsiGrid, source: AnsiGrid, progress: number, ditherOrder: number[], output: AnsiGrid): void {
+  const t = progress < 0 ? 0 : progress > 1 ? 1 : progress
+  const total = ANSI_ROWS * ANSI_COLS
+  const count = Math.floor(total * t)
+  const isTarget = new Uint8Array(total)
+  for (let i = 0; i < count; i++) isTarget[ditherOrder[i]] = 1
+  for (let r = 0; r < ANSI_ROWS; r++) {
+    for (let c = 0; c < ANSI_COLS; c++) {
+      const src = isTarget[r * ANSI_COLS + c] ? target[r][c] : source[r][c]
       const out = output[r][c]
       out.char = src.char
       out.fg[0] = src.fg[0]; out.fg[1] = src.fg[1]; out.fg[2] = src.fg[2]

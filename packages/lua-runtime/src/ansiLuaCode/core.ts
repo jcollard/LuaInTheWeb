@@ -178,26 +178,25 @@ export const ansiLuaCoreCode = `
         return __ansi_screenIsPlaying(self.id)
       end
       function screen:swipe_out(opts)
-        local duration = 1
-        local color = {0, 0, 0}
-        local char = ' '
-        if type(opts) == 'table' then
-          if opts.duration ~= nil then duration = opts.duration end
-          if opts.color ~= nil then color = opts.color end
-          if opts.char ~= nil then char = opts.char end
-        end
-        __ansi_screenSwipeOut(self.id, duration, color[1], color[2], color[3], char)
+        opts = type(opts) == 'table' and opts or {}
+        local c = opts.color or {0, 0, 0}
+        __ansi_screenSwipeOut(self.id, opts.duration or 1, c[1], c[2], c[3], opts.char or ' ', opts.direction or 'right')
       end
       function screen:swipe_in(opts)
-        if type(opts) ~= 'table' or type(opts.layers) ~= 'string' then
-          error('swipe_in() requires an options table with a layers field')
-        end
-        local duration = opts.duration or 1
-        __ansi_screenSwipeIn(self.id, opts.layers, duration)
+        if type(opts) ~= 'table' or type(opts.layers) ~= 'string' then error('swipe_in() requires opts with layers') end
+        __ansi_screenSwipeIn(self.id, opts.layers, opts.duration or 1, opts.direction or 'right')
       end
-      function screen:is_swiping()
-        return __ansi_screenIsSwiping(self.id)
+      function screen:dither_out(opts)
+        opts = type(opts) == 'table' and opts or {}
+        local c = opts.color or {0, 0, 0}
+        __ansi_screenDitherOut(self.id, opts.duration or 1, c[1], c[2], c[3], opts.char or ' ', opts.seed or os.time())
       end
+      function screen:dither_in(opts)
+        if type(opts) ~= 'table' or type(opts.layers) ~= 'string' then error('dither_in() requires opts with layers') end
+        __ansi_screenDitherIn(self.id, opts.layers, opts.duration or 1, opts.seed or os.time())
+      end
+      function screen:is_transitioning() return __ansi_screenIsSwiping(self.id) end
+      function screen:is_swiping() return __ansi_screenIsSwiping(self.id) end
       function screen:set_label(identifier, value)
         local id_str = tostring(identifier)
         if type(value) == 'string' then

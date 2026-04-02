@@ -1,10 +1,9 @@
--- Swipe Transition Demo
--- Demonstrates: screen:swipe_out(), screen:swipe_in(), screen:is_swiping()
--- Press O to swipe out, I to swipe in scene2, ESC to quit.
+-- Screen Transitions Demo
+-- Demonstrates: swipe_out, swipe_in, dither_out, dither_in with directions
+-- Controls shown at bottom of screen.
 
 local ansi = require("ansi")
 
--- Helper: create a full 25x80 grid filled with a single color
 local function make_grid(char, fg, bg)
   local grid = {}
   for row = 1, 25 do
@@ -16,83 +15,72 @@ local function make_grid(char, fg, bg)
   return grid
 end
 
--- Scene 1: blue gradient (visible by default)
-local scene1_grid = make_grid(" ", {170, 170, 170}, {0, 0, 0})
+-- Scene 1: cool blue gradient
+local s1 = make_grid(" ", {170, 170, 170}, {0, 0, 0})
 for row = 1, 25 do
   for col = 1, 80 do
     local b = math.floor(col / 80 * 200) + 55
     local g = math.floor(row / 25 * 100)
-    scene1_grid[row][col] = { char = " ", fg = {170, 170, 170}, bg = {0, g, b} }
+    s1[row][col] = { char = " ", fg = {170, 170, 170}, bg = {0, g, b} }
   end
 end
 
--- Scene 2: warm gradient (hidden, used for swipe-in)
-local scene2_grid = make_grid(" ", {170, 170, 170}, {0, 0, 0})
+-- Scene 2: warm orange gradient
+local s2 = make_grid(" ", {170, 170, 170}, {0, 0, 0})
 for row = 1, 25 do
   for col = 1, 80 do
     local r = math.floor(col / 80 * 200) + 55
     local g = math.floor(row / 25 * 150)
-    scene2_grid[row][col] = { char = " ", fg = {170, 170, 170}, bg = {r, g, 30} }
+    s2[row][col] = { char = " ", fg = {170, 170, 170}, bg = {r, g, 30} }
   end
 end
 
--- Title overlay
-local title_grid = make_grid(" ", {170, 170, 170}, {0, 0, 0})
-local title = "SWIPE DEMO"
-local start_col = math.floor((80 - #title) / 2) + 1
-for i = 1, #title do
-  title_grid[3][start_col + i - 1] = {
-    char = title:sub(i, i),
-    fg = {255, 255, 255},
-    bg = {50, 50, 120}
-  }
-end
-
-local screen_data = {
-  version = 4,
-  width = 80,
-  height = 25,
+local screen = ansi.create_screen({
+  version = 4, width = 80, height = 25,
   layers = {
     { id = "scene1", name = "Scene 1", type = "drawn", visible = true,
-      grid = scene1_grid, frames = { scene1_grid } },
+      grid = s1, frames = { s1 } },
     { id = "scene2", name = "Scene 2", type = "drawn", visible = false,
-      grid = scene2_grid, frames = { scene2_grid } },
-    { id = "title", name = "Title", type = "drawn", visible = true,
-      grid = title_grid, frames = { title_grid } },
+      grid = s2, frames = { s2 } },
   }
-}
-
-local screen = ansi.create_screen(screen_data)
+})
 ansi.set_screen(screen)
 
+local dirs = { "right", "left", "down", "up", "down-right", "down-left", "up-right", "up-left" }
+local dir_i = 1
+
 ansi.tick(function()
-  -- Show controls when not swiping
-  if not screen:is_swiping() then
+  if not screen:is_transitioning() then
     ansi.set_cursor(25, 1)
     ansi.foreground(200, 200, 200)
     ansi.background(30, 30, 30)
-    local status = "  [O] Swipe Out  [1] Swipe In Scene1  [2] Swipe In Scene2  [ESC] Quit"
-    ansi.print(status .. string.rep(" ", 80 - #status))
+    local s = string.format(
+      " [O]ut [1]S1 [2]S2 [D]ither [Dir:%s] Arrows ESC",
+      dirs[dir_i]
+    )
+    ansi.print(s .. string.rep(" ", 80 - #s))
   end
 
-  if not screen:is_swiping() then
+  if not screen:is_transitioning() then
     if ansi.is_key_pressed("o") then
-      screen:swipe_out({ duration = 0.8 })
+      screen:swipe_out({ duration = 0.8, direction = dirs[dir_i] })
     elseif ansi.is_key_pressed("1") then
-      -- Turn off scene2 so only scene1 shows in the preview
       screen:layer_off("scene2")
-      screen:swipe_in({ layers = "scene1", duration = 0.8 })
+      screen:swipe_in({ layers = "scene1", duration = 0.8, direction = dirs[dir_i] })
     elseif ansi.is_key_pressed("2") then
-      -- Turn off scene1 so only scene2 shows in the preview
       screen:layer_off("scene1")
-      screen:swipe_in({ layers = "scene2", duration = 0.8 })
+      screen:swipe_in({ layers = "scene2", duration = 0.8, direction = dirs[dir_i] })
+    elseif ansi.is_key_pressed("d") then
+      screen:dither_out({ duration = 1.5 })
+    elseif ansi.is_key_pressed("right") then
+      dir_i = (dir_i % #dirs) + 1
+    elseif ansi.is_key_pressed("left") then
+      dir_i = ((dir_i - 2) % #dirs) + 1
     end
   end
 
-  if ansi.is_key_pressed("escape") then
-    ansi.stop()
-  end
+  if ansi.is_key_pressed("escape") then ansi.stop() end
 end)
 
 ansi.start()
-print("Swipe demo finished!")
+print("Transitions demo finished!")

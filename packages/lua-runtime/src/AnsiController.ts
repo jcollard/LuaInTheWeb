@@ -19,7 +19,7 @@ import { compositeGridInto } from './screenCompositor'
 import { renderGridToAnsiString, renderDiffAnsiString } from './ansiStringRenderer'
 import { renderTextLayerGrid } from './textLayerGrid'
 import { createEmptyGrid, type AnsiGrid, type LayerData, type DrawnLayerData, type TextLayerData, type RGBColor } from './screenTypes'
-import { startSwipeOut, startSwipeIn, advanceSwipe, type SwipeState } from './screenSwipe'
+import { startSwipeOut, startSwipeIn, startDitherOut, startDitherIn, advanceTransition, type TransitionState, type SwipeDirection } from './screenSwipe'
 
 /**
  * Handle to a running ANSI terminal instance.
@@ -89,7 +89,7 @@ interface ScreenState {
   /** True when the full ANSI string needs to be written to the terminal. */
   dirty: boolean
   needsRecomposite: boolean
-  swipe: SwipeState | null
+  swipe: TransitionState | null
 }
 
 /** Format an onTick error for display. */
@@ -577,12 +577,12 @@ export class AnsiController {
   /**
    * Check if animation is currently playing for a screen.
    */
-  screenIsPlaying(id: number): boolean {
-    return this.screenStates.get(id)?.playing ?? false
-  }
+  screenIsPlaying(id: number): boolean { return this.screenStates.get(id)?.playing ?? false }
 
-  screenSwipeOut(id: number, duration: number, color: RGBColor, char: string): void { this.validateScreenExists(id); startSwipeOut(this.getScreenState(id), duration, color, char, this.groupGridCache) }
-  screenSwipeIn(id: number, identifier: string, duration: number): void { const layers = this.validateScreenExists(id); const m = this.resolveLayersByIdentifier(layers, identifier); if (m.length === 0) throw new Error(`No layers match "${identifier}" in screen ${id}.`); startSwipeIn(this.getScreenState(id), layers, m, duration, this.groupGridCache) }
+  screenSwipeOut(id: number, duration: number, color: RGBColor, char: string, dir: SwipeDirection): void { this.validateScreenExists(id); startSwipeOut(this.getScreenState(id), duration, color, char, dir, this.groupGridCache) }
+  screenSwipeIn(id: number, identifier: string, duration: number, dir: SwipeDirection): void { const layers = this.validateScreenExists(id); const m = this.resolveLayersByIdentifier(layers, identifier); if (m.length === 0) throw new Error(`No layers match "${identifier}" in screen ${id}.`); startSwipeIn(this.getScreenState(id), layers, m, duration, dir, this.groupGridCache) }
+  screenDitherOut(id: number, duration: number, color: RGBColor, char: string, seed: number): void { this.validateScreenExists(id); startDitherOut(this.getScreenState(id), duration, color, char, seed, this.groupGridCache) }
+  screenDitherIn(id: number, identifier: string, duration: number, seed: number): void { const layers = this.validateScreenExists(id); const m = this.resolveLayersByIdentifier(layers, identifier); if (m.length === 0) throw new Error(`No layers match "${identifier}" in screen ${id}.`); startDitherIn(this.getScreenState(id), layers, m, duration, seed, this.groupGridCache) }
   screenIsSwiping(id: number): boolean { return (this.screenStates.get(id)?.swipe ?? null) !== null }
 
   /**
@@ -639,7 +639,7 @@ export class AnsiController {
     if (state?.playing) {
       this.advanceScreenAnimation(this.activeScreenId, this.currentTiming.totalTime * 1000)
     }
-    if (state?.swipe) { const b = advanceSwipe(state, this.currentTiming.deltaTime); if (b) this.handle?.write(b); return }
+    if (state?.swipe) { const b = advanceTransition(state, this.currentTiming.deltaTime); if (b) this.handle?.write(b); return }
     this.flushRecomposite(this.activeScreenId)
     if (state?.dirty && state.ansiString) {
       this.handle?.write(state.ansiString)

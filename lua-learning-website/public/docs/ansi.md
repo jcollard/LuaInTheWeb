@@ -341,70 +341,103 @@ end)
 ansi.start()
 ```
 
-## Swipe Transitions
+## Screen Transitions
 
-Swipe transitions reveal or hide content by sweeping a boundary left-to-right across the screen.
+Swipe and dither transitions reveal or hide content with cinematic effects.
 
 ### `screen:swipe_out(opts?)`
 
-Replace cells left-to-right with a solid fill color. Defaults to black spaces over 1 second.
+Replace cells with a fill color by sweeping a boundary across the screen.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `duration` | number | `1` | Duration in seconds |
 | `color` | `{r,g,b}` | `{0,0,0}` | Fill color |
 | `char` | string | `" "` | Fill character |
+| `direction` | string | `"right"` | Sweep direction (see below) |
+
+**Directions**: `"right"`, `"left"`, `"down"`, `"up"`, `"down-right"`, `"down-left"`, `"up-right"`, `"up-left"`
 
 ```lua
-screen:swipe_out()                                    -- default black, 1 second
-screen:swipe_out({ duration = 0.5 })                  -- faster
-screen:swipe_out({ color = {255, 0, 0}, char = "#" }) -- red # fill
+screen:swipe_out()                                           -- default: right, black, 1s
+screen:swipe_out({ duration = 0.5, direction = "down" })     -- swipe down
+screen:swipe_out({ color = {255, 0, 0}, direction = "left" }) -- red fill, swipe left
 ```
 
 ### `screen:swipe_in(opts)`
 
-Composite a preview with specified layers visible, then swipe that preview in left-to-right over the current display. When the swipe completes, the specified layers are permanently toggled visible.
+Composite a preview with specified layers visible, then swipe it in. When complete, the layers are permanently toggled visible.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `layers` | string | *required* | Layer identifier (ID, name, or tag) |
 | `duration` | number | `1` | Duration in seconds |
+| `direction` | string | `"right"` | Sweep direction |
 
 ```lua
 screen:swipe_in({ layers = "scene2" })
-screen:swipe_in({ layers = "scene2", duration = 1.5 })
+screen:swipe_in({ layers = "scene2", duration = 1.5, direction = "up" })
 ```
 
-### `screen:is_swiping()`
+### `screen:dither_out(opts?)`
 
-Check if a swipe transition is currently in progress.
+Randomly replace cells one-by-one with a fill color (dissolve effect).
 
-- **Returns** — `true` if a swipe is active, `false` otherwise
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `duration` | number | `1` | Duration in seconds |
+| `color` | `{r,g,b}` | `{0,0,0}` | Fill color |
+| `char` | string | `" "` | Fill character |
+| `seed` | number | `os.time()` | Random seed for dither pattern |
 
 ```lua
-if not screen:is_swiping() then
+screen:dither_out()
+screen:dither_out({ duration = 2, seed = 42 })
+```
+
+### `screen:dither_in(opts)`
+
+Randomly reveal cells one-by-one from a preview with specified layers visible. When complete, the layers are permanently toggled visible.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `layers` | string | *required* | Layer identifier (ID, name, or tag) |
+| `duration` | number | `1` | Duration in seconds |
+| `seed` | number | `os.time()` | Random seed for dither pattern |
+
+```lua
+screen:dither_in({ layers = "scene2" })
+screen:dither_in({ layers = "scene2", duration = 2, seed = 42 })
+```
+
+### `screen:is_transitioning()` / `screen:is_swiping()`
+
+Check if any transition (swipe or dither) is currently in progress.
+
+```lua
+if not screen:is_transitioning() then
   screen:swipe_out()
 end
 ```
 
-### Example: Scene transitions with swipe
+### Example: Scene transitions
 
 ```lua
 local ansi = require("ansi")
-
 local screen = ansi.load_screen("my_scenes.ansi.lua")
 ansi.set_screen(screen)
 
 ansi.tick(function()
-  if ansi.is_key_pressed("o") and not screen:is_swiping() then
-    screen:swipe_out({ duration = 0.8 })
+  if not screen:is_transitioning() then
+    if ansi.is_key_pressed("o") then
+      screen:swipe_out({ duration = 0.8, direction = "right" })
+    elseif ansi.is_key_pressed("i") then
+      screen:swipe_in({ layers = "scene2", duration = 0.8 })
+    elseif ansi.is_key_pressed("d") then
+      screen:dither_out({ duration = 1.5 })
+    end
   end
-  if ansi.is_key_pressed("i") and not screen:is_swiping() then
-    screen:swipe_in({ layers = "scene2", duration = 0.8 })
-  end
-  if ansi.is_key_pressed("escape") then
-    ansi.stop()
-  end
+  if ansi.is_key_pressed("escape") then ansi.stop() end
 end)
 
 ansi.start()
@@ -517,9 +550,11 @@ ansi.start()
 | `screen:play()` | Start/resume animation playback |
 | `screen:pause()` | Pause animation playback |
 | `screen:is_playing()` | Check if animation is playing |
-| `screen:swipe_out(opts?)` | Swipe out to fill color (left to right) |
-| `screen:swipe_in(opts)` | Swipe in preview layers (left to right) |
-| `screen:is_swiping()` | Check if swipe is active |
+| `screen:swipe_out(opts?)` | Swipe out to fill color (8 directions) |
+| `screen:swipe_in(opts)` | Swipe in preview layers (8 directions) |
+| `screen:dither_out(opts?)` | Dither out to fill color (dissolve) |
+| `screen:dither_in(opts)` | Dither in preview layers (dissolve) |
+| `screen:is_transitioning()` | Check if any transition is active |
 | `ansi.crt(config)` | Enable/update CRT shader effect |
 | `ansi.start()` | Start terminal (blocks until `stop()`) |
 | `ansi.stop()` | Stop terminal |

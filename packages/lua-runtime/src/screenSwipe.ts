@@ -1,35 +1,21 @@
 /**
- * Swipe transition state and logic, extracted from AnsiController
- * to keep file size under the max-lines lint limit.
+ * Swipe/dither transition state and logic, extracted from AnsiController.
  */
 
 import type { AnsiGrid, LayerData, RGBColor } from './screenTypes'
-import { createEmptyGrid, createFillGrid, ANSI_COLS } from './screenTypes'
+import { createEmptyGrid, createFillGrid } from './screenTypes'
 import { compositeGridInto } from './screenCompositor'
-import { buildSwipeGrid, renderSwipeDiff, updateShadow, createSentinelGrid } from './swipeRenderer'
+import {
+  buildSwipeGrid, buildDitherGrid, generateDitherOrder,
+  renderSwipeDiff, updateShadow, createSentinelGrid,
+  type SwipeDirection,
+} from './swipeRenderer'
 
-/** Validate and start a swipe-out. */
-export function startSwipeOut(
-  state: ScreenStateForSwipe,
-  duration: number, color: RGBColor, char: string,
-  groupGridCache: Map<string, AnsiGrid>,
-): void {
-  if (duration <= 0) throw new Error('Swipe duration must be a positive number.')
-  state.swipe = createSwipeOut(state, duration, color, char, groupGridCache)
-}
+export type TransitionMode = 'swipe' | 'dither'
 
-/** Validate and start a swipe-in with layer preview. */
-export function startSwipeIn(
-  state: ScreenStateForSwipe, layers: LayerData[],
-  matched: LayerData[], duration: number,
-  groupGridCache: Map<string, AnsiGrid>,
-): void {
-  if (duration <= 0) throw new Error('Swipe duration must be a positive number.')
-  state.swipe = createSwipeIn(state, layers, matched, duration, groupGridCache)
-}
-
-export interface SwipeState {
-  direction: 'out' | 'in'
+export interface TransitionState {
+  mode: TransitionMode
+  inOut: 'out' | 'in'
   duration: number
   elapsed: number
   targetGrid: AnsiGrid
@@ -37,124 +23,134 @@ export interface SwipeState {
   shadowGrid: AnsiGrid
   desiredGrid: AnsiGrid
   commitLayerIds?: string[]
+  direction?: SwipeDirection
+  ditherOrder?: number[]
 }
 
-interface ScreenStateForSwipe {
+// Re-export for AnsiController type usage
+export type { SwipeDirection }
+
+interface ScreenStateForTransition {
   layers: LayerData[]
   lastGrid: AnsiGrid | null
-  swipe: SwipeState | null
+  swipe: TransitionState | null
   needsRecomposite: boolean
   dirty: boolean
 }
 
-/**
- * Create a swipe-out state: fill grid as target, current display as source.
- */
-export function createSwipeOut(
-  state: ScreenStateForSwipe,
-  duration: number,
-  color: RGBColor,
-  char: string,
-  groupGridCache: Map<string, AnsiGrid>,
-): SwipeState {
-  const targetGrid = createFillGrid(char, color)
-  const sourceGrid = createEmptyGrid()
+function captureSource(state: ScreenStateForTransition, groupGridCache: Map<string, AnsiGrid>): AnsiGrid {
+  const grid = createEmptyGrid()
   if (state.lastGrid) {
-    copyGrid(sourceGrid, state.lastGrid)
+    copyGrid(grid, state.lastGrid)
   } else {
     groupGridCache.clear()
-    compositeGridInto(sourceGrid, state.layers, groupGridCache)
+    compositeGridInto(grid, state.layers, groupGridCache)
   }
-  return {
-    direction: 'out', duration, elapsed: 0,
-    targetGrid, sourceGrid,
-    shadowGrid: createSentinelGrid(),
-    desiredGrid: createEmptyGrid(),
+  return grid
+}
+
+export function startSwipeOut(
+  state: ScreenStateForTransition, duration: number, color: RGBColor, char: string,
+  direction: SwipeDirection, groupGridCache: Map<string, AnsiGrid>,
+): void {
+  if (duration <= 0) throw new Error('Transition duration must be a positive number.')
+  state.swipe = {
+    mode: 'swipe', inOut: 'out', duration, elapsed: 0, direction,
+    targetGrid: createFillGrid(char, color),
+    sourceGrid: captureSource(state, groupGridCache),
+    shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
   }
 }
 
-/**
- * Create a swipe-in state: composite preview with matched layers visible.
- * Returns the SwipeState and the matched layer IDs for commit on completion.
- */
-export function createSwipeIn(
-  state: ScreenStateForSwipe,
-  layers: LayerData[],
-  matched: LayerData[],
-  duration: number,
-  groupGridCache: Map<string, AnsiGrid>,
-): SwipeState {
-  // Temporarily toggle matched layers visible to composite preview
-  const originalVisibility = matched.map(l => l.visible)
+export function startSwipeIn(
+  state: ScreenStateForTransition, layers: LayerData[], matched: LayerData[],
+  duration: number, direction: SwipeDirection, groupGridCache: Map<string, AnsiGrid>,
+): void {
+  if (duration <= 0) throw new Error('Transition duration must be a positive number.')
+  const originalVis = matched.map(l => l.visible)
   for (const l of matched) l.visible = true
-
   const targetGrid = createEmptyGrid()
   groupGridCache.clear()
   compositeGridInto(targetGrid, layers, groupGridCache)
+  matched.forEach((l, i) => l.visible = originalVis[i])
 
-  // Restore original visibility
-  matched.forEach((l, i) => l.visible = originalVisibility[i])
-
-  const sourceGrid = createEmptyGrid()
-  if (state.lastGrid) {
-    copyGrid(sourceGrid, state.lastGrid)
-  } else {
-    groupGridCache.clear()
-    compositeGridInto(sourceGrid, state.layers, groupGridCache)
-  }
-
-  return {
-    direction: 'in', duration, elapsed: 0,
-    targetGrid, sourceGrid,
-    shadowGrid: createSentinelGrid(),
-    desiredGrid: createEmptyGrid(),
+  state.swipe = {
+    mode: 'swipe', inOut: 'in', duration, elapsed: 0, direction,
+    targetGrid, sourceGrid: captureSource(state, groupGridCache),
+    shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
     commitLayerIds: matched.map(l => l.id),
   }
 }
 
-/**
- * Advance one frame of swipe. Returns the batch string to write, or null.
- * Also handles completion: commits layers, updates lastGrid.
- */
-export function advanceSwipe(
-  state: ScreenStateForSwipe,
-  deltaTime: number,
-): string | null {
-  const swipe = state.swipe!
+export function startDitherOut(
+  state: ScreenStateForTransition, duration: number, color: RGBColor, char: string,
+  seed: number, groupGridCache: Map<string, AnsiGrid>,
+): void {
+  if (duration <= 0) throw new Error('Transition duration must be a positive number.')
+  state.swipe = {
+    mode: 'dither', inOut: 'out', duration, elapsed: 0,
+    targetGrid: createFillGrid(char, color),
+    sourceGrid: captureSource(state, groupGridCache),
+    shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
+    ditherOrder: generateDitherOrder(seed),
+  }
+}
 
-  swipe.elapsed += deltaTime
-  const progress = Math.min(swipe.elapsed / swipe.duration, 1)
-  const boundaryCol = Math.floor(progress * ANSI_COLS)
+export function startDitherIn(
+  state: ScreenStateForTransition, layers: LayerData[], matched: LayerData[],
+  duration: number, seed: number, groupGridCache: Map<string, AnsiGrid>,
+): void {
+  if (duration <= 0) throw new Error('Transition duration must be a positive number.')
+  const originalVis = matched.map(l => l.visible)
+  for (const l of matched) l.visible = true
+  const targetGrid = createEmptyGrid()
+  groupGridCache.clear()
+  compositeGridInto(targetGrid, layers, groupGridCache)
+  matched.forEach((l, i) => l.visible = originalVis[i])
 
-  buildSwipeGrid(swipe.targetGrid, swipe.sourceGrid, boundaryCol, swipe.desiredGrid)
+  state.swipe = {
+    mode: 'dither', inOut: 'in', duration, elapsed: 0,
+    targetGrid, sourceGrid: captureSource(state, groupGridCache),
+    shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
+    ditherOrder: generateDitherOrder(seed),
+    commitLayerIds: matched.map(l => l.id),
+  }
+}
 
-  const batch = renderSwipeDiff(swipe.desiredGrid, swipe.shadowGrid)
-  updateShadow(swipe.desiredGrid, swipe.shadowGrid)
+export function advanceTransition(state: ScreenStateForTransition, deltaTime: number): string | null {
+  const t = state.swipe!
+  t.elapsed += deltaTime
+  const progress = Math.min(t.elapsed / t.duration, 1)
 
-  // Complete
-  if (swipe.elapsed >= swipe.duration) {
-    if (swipe.commitLayerIds) {
-      for (const layerId of swipe.commitLayerIds) {
-        const layer = state.layers.find(l => l.id === layerId)
+  if (t.mode === 'swipe') {
+    buildSwipeGrid(t.targetGrid, t.sourceGrid, progress, t.direction!, t.desiredGrid)
+  } else {
+    buildDitherGrid(t.targetGrid, t.sourceGrid, progress, t.ditherOrder!, t.desiredGrid)
+  }
+
+  const batch = renderSwipeDiff(t.desiredGrid, t.shadowGrid)
+  updateShadow(t.desiredGrid, t.shadowGrid)
+
+  if (t.elapsed >= t.duration) {
+    if (t.commitLayerIds) {
+      for (const id of t.commitLayerIds) {
+        const layer = state.layers.find(l => l.id === id)
         if (layer) layer.visible = true
       }
       state.needsRecomposite = true
       state.dirty = true
     }
-    // Update lastGrid to reflect what's on the terminal
     if (!state.lastGrid) state.lastGrid = createEmptyGrid()
-    copyGrid(state.lastGrid, swipe.desiredGrid)
+    copyGrid(state.lastGrid, t.desiredGrid)
     state.swipe = null
   }
-
   return batch
 }
 
 function copyGrid(dst: AnsiGrid, src: AnsiGrid): void {
   for (let r = 0; r < dst.length; r++) {
     for (let c = 0; c < dst[r].length; c++) {
-      const d = dst[r][c]
-      const s = src[r][c]
+      const d = dst[r][c]; const s = src[r][c]
       d.char = s.char
       d.fg[0] = s.fg[0]; d.fg[1] = s.fg[1]; d.fg[2] = s.fg[2]
       d.bg[0] = s.bg[0]; d.bg[1] = s.bg[1]; d.bg[2] = s.bg[2]

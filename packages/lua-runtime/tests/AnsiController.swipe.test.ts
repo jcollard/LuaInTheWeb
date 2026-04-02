@@ -76,17 +76,17 @@ describe('AnsiController swipe transitions', () => {
       const id = controller.createScreen(makeV4WithTwoScenes())
       controller.setScreen(id)
       capturedOnFrame!(makeTiming())
-      controller.screenSwipeOut(id, 1, [0, 0, 0], ' ')
+      controller.screenSwipeOut(id, 1, [0, 0, 0], ' ', 'right')
       expect(controller.screenIsSwiping(id)).toBe(true)
     })
 
     it('throws for unknown screen ID', () => {
-      expect(() => controller.screenSwipeOut(999, 1, [0, 0, 0], ' ')).toThrow('Screen ID 999')
+      expect(() => controller.screenSwipeOut(999, 1, [0, 0, 0], ' ', 'right')).toThrow('Screen ID 999')
     })
 
     it('throws for duration <= 0', () => {
       const id = controller.createScreen(makeV4WithTwoScenes())
-      expect(() => controller.screenSwipeOut(id, 0, [0, 0, 0], ' ')).toThrow('positive')
+      expect(() => controller.screenSwipeOut(id, 0, [0, 0, 0], ' ', 'right')).toThrow('positive')
     })
 
     it('writes to terminal on first frame using formatCell pattern', () => {
@@ -95,7 +95,7 @@ describe('AnsiController swipe transitions', () => {
       capturedOnFrame!(makeTiming())
       writeFn.mockClear()
 
-      controller.screenSwipeOut(id, 1, [0, 0, 0], ' ')
+      controller.screenSwipeOut(id, 1, [0, 0, 0], ' ', 'right')
       capturedOnFrame!(makeTiming(0.016, 0.016))
 
       expect(writeFn).toHaveBeenCalled()
@@ -109,7 +109,7 @@ describe('AnsiController swipe transitions', () => {
       controller.setScreen(id)
       capturedOnFrame!(makeTiming())
 
-      controller.screenSwipeOut(id, 0.5, [0, 0, 0], ' ')
+      controller.screenSwipeOut(id, 0.5, [0, 0, 0], ' ', 'right')
 
       capturedOnFrame!(makeTiming(0.3, 0.3))
       expect(controller.screenIsSwiping(id)).toBe(true)
@@ -127,7 +127,7 @@ describe('AnsiController swipe transitions', () => {
       writeFn.mockClear()
 
       // Scene2 is hidden. Swipe in should preview it as visible.
-      controller.screenSwipeIn(id, 'scene2', 1)
+      controller.screenSwipeIn(id, 'scene2', 1, 'right')
       expect(controller.screenIsSwiping(id)).toBe(true)
 
       // Advance one frame
@@ -145,7 +145,7 @@ describe('AnsiController swipe transitions', () => {
       controller.setScreen(id)
       capturedOnFrame!(makeTiming())
 
-      controller.screenSwipeIn(id, 'scene2', 1)
+      controller.screenSwipeIn(id, 'scene2', 1, 'right')
 
       // scene2 should still be hidden
       const layers = controller.getScreenLayers(id)
@@ -155,7 +155,7 @@ describe('AnsiController swipe transitions', () => {
 
     it('throws for unknown layer identifier', () => {
       const id = controller.createScreen(makeV4WithTwoScenes())
-      expect(() => controller.screenSwipeIn(id, 'nonexistent', 1)).toThrow('No layers match')
+      expect(() => controller.screenSwipeIn(id, 'nonexistent', 1)).toThrow('No layers match', 'right')
     })
 
     it('permanently toggles layers visible after completion', () => {
@@ -166,7 +166,7 @@ describe('AnsiController swipe transitions', () => {
       // scene2 starts hidden
       expect(controller.getScreenLayers(id).find(l => l.id === 'scene2')?.visible).toBe(false)
 
-      controller.screenSwipeIn(id, 'scene2', 0.1)
+      controller.screenSwipeIn(id, 'scene2', 0.1, 'right')
       capturedOnFrame!(makeTiming(0.2, 0.2)) // completes
 
       // scene2 should now be permanently visible
@@ -181,7 +181,7 @@ describe('AnsiController swipe transitions', () => {
       capturedOnFrame!(makeTiming())
       writeFn.mockClear()
 
-      controller.screenSwipeOut(id, 0.1, [0, 0, 0], ' ')
+      controller.screenSwipeOut(id, 0.1, [0, 0, 0], ' ', 'right')
       capturedOnFrame!(makeTiming(0.2, 0.2)) // completes
 
       // After completion, another frame should NOT write (fill stays)
