@@ -30,6 +30,7 @@ local ansi = {}
 -- 14. Label Text (Screen:set_label, ansi.create_label)
 -- 15. Animation Playback (Screen:play, Screen:pause, Screen:is_playing)
 -- 16. Viewport / Pan (Screen:pan, Screen:set_viewport, Screen:is_panning, Screen:get_viewport)
+-- 17. Layer Offsets (Screen:set_layer_offset, Screen:get_layer_offset)
 -- =============================================================================
 
 -- =============================================================================
@@ -363,6 +364,24 @@ function Screen:is_panning() end
 ---@return number row Current viewport row offset
 ---@usage local col, row = screen:get_viewport()
 function Screen:get_viewport() end
+
+--- Set the position offset of layer(s) matching an identifier.
+--- Offsets shift the layer's content in the virtual canvas, enabling scenes
+--- wider or taller than 80x25. Use with screen:pan() for panoramic scrolling.
+--- Resolves by layer ID first, then by name, then by tag.
+---@param identifier string|number Layer ID, name, or tag
+---@param col number Column offset (0 = default position)
+---@param row number Row offset (0 = default position)
+---@usage screen:set_layer_offset("scene-right", 80, 0)
+function Screen:set_layer_offset(identifier, col, row) end
+
+--- Get the position offset of the first layer matching an identifier.
+--- Returns two values: column offset and row offset.
+---@param identifier string|number Layer ID, name, or tag
+---@return number col Column offset
+---@return number row Row offset
+---@usage local col, row = screen:get_layer_offset("scene-right")
+function Screen:get_layer_offset(identifier) end
 
 --- Set the text of text layer(s) matching an identifier.
 --- Resolves by layer ID first, then by name, then by tag.

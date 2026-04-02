@@ -337,6 +337,16 @@ export function setupAnsiAPI(
     return c.screenGetViewport(id)
   })
 
+  // --- Layer offset functions ---
+  engine.global.set('__ansi_screenSetLayerOffset', (id: number, identifier: string, col: number, row: number) => {
+    const c = getController(); if (!c) throw new Error('ANSI terminal not available')
+    c.setScreenLayerOffset(id, identifier, col, row)
+  })
+  engine.global.set('__ansi_screenGetLayerOffset', (id: number, identifier: string) => {
+    const c = getController(); if (!c) throw new Error('ANSI terminal not available')
+    return c.getScreenLayerOffset(id, identifier)
+  })
+
   // --- Label functions ---
   engine.global.set('__ansi_screenSetLabel', (
     screenId: number,

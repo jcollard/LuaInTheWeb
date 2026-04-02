@@ -56,6 +56,8 @@ export interface BaseLayerData {
   visible: boolean
   parentId?: string
   tags: string[]
+  runtimeOffsetRow?: number
+  runtimeOffsetCol?: number
 }
 
 interface GridLayerData extends BaseLayerData {
