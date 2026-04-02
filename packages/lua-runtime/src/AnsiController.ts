@@ -20,6 +20,7 @@ import { renderGridToAnsiString, renderDiffAnsiString } from './ansiStringRender
 import { renderTextLayerGrid } from './textLayerGrid'
 import { createEmptyGrid, type AnsiGrid, type LayerData, type DrawnLayerData, type TextLayerData, type RGBColor } from './screenTypes'
 import { startSwipeOut, startSwipeIn, startDitherOut, startDitherIn, advanceTransition, resolveMultipleIdentifiers, type TransitionState, type SwipeDirection } from './screenSwipe'
+import { startPan, advancePan, type PanState } from './screenPan'
 
 /**
  * Handle to a running ANSI terminal instance.
@@ -90,9 +91,11 @@ interface ScreenState {
   dirty: boolean
   needsRecomposite: boolean
   swipe: TransitionState | null
+  viewportCol: number
+  viewportRow: number
+  pan: PanState | null
 }
 
-/** Format an onTick error for display. */
 function formatOnTickError(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
@@ -131,7 +134,7 @@ export class AnsiController {
   private getScreenState(id: number): ScreenState {
     let state = this.screenStates.get(id)
     if (!state) {
-      state = { ansiString: '', layers: [], schedule: null, playing: false, playbackTouched: false, lastGrid: null, dirty: false, needsRecomposite: false, swipe: null }
+      state = { ansiString: '', layers: [], schedule: null, playing: false, playbackTouched: false, lastGrid: null, dirty: false, needsRecomposite: false, swipe: null, viewportCol: 0, viewportRow: 0, pan: null }
       this.screenStates.set(id, state)
     }
     return state
@@ -228,7 +231,7 @@ export class AnsiController {
     }
   }
 
-  // --- Terminal Output API ---
+
 
   /**
    * Write text to the terminal.
@@ -286,18 +289,16 @@ export class AnsiController {
     this.handle?.write('\x1b[0m')
   }
 
-  /** Enable/disable CRT monitor effect. Stores config if called before start(). */
   setCrt(enabled: boolean, intensity?: number, config?: Record<string, number>): void {
     if (!this.handle) { this.pendingCrt = { enabled, intensity, config }; return }
     this.handle.setCrt?.(enabled, intensity, config)
   }
 
-  /** Get and clear any CRT config set before start(). */
   consumePendingCrt(): { enabled: boolean; intensity?: number; config?: Record<string, number> } | null {
     const pending = this.pendingCrt; this.pendingCrt = null; return pending
   }
 
-  // --- Timing API ---
+
 
   /** Get delta time since last frame in seconds. */
   getDelta(): number { return this.currentTiming.deltaTime }
@@ -460,9 +461,6 @@ export class AnsiController {
     return state.layers
   }
 
-  /**
-   * Get layer information for a screen.
-   */
   getScreenLayers(id: number): LayerInfo[] {
     const layers = this.validateScreenExists(id)
     return layers.map(layer => ({
@@ -474,9 +472,6 @@ export class AnsiController {
     }))
   }
 
-  /**
-   * Set layer visibility by identifier (ID, name, or tag) and re-composite.
-   */
   setScreenLayerVisible(id: number, identifier: string, visible: boolean): void {
     const layers = this.validateScreenExists(id)
     const matched = this.resolveLayersByIdentifier(layers, identifier)
@@ -489,9 +484,6 @@ export class AnsiController {
     this.recompositeScreen(id)
   }
 
-  /**
-   * Toggle layer visibility by identifier (ID, name, or tag) and re-composite.
-   */
   toggleScreenLayer(id: number, identifier: string): void {
     const layers = this.validateScreenExists(id)
     const matched = this.resolveLayersByIdentifier(layers, identifier)
@@ -504,10 +496,6 @@ export class AnsiController {
     this.recompositeScreen(id)
   }
 
-  /**
-   * Set the text of text layer(s) matching an identifier.
-   * Non-text layers are silently skipped. Errors if zero text layers match.
-   */
   setScreenLabel(id: number, identifier: string, text: string, textFg?: RGBColor, textFgColors?: RGBColor[], textBg?: RGBColor, textBgColors?: RGBColor[]): void {
     const layers = this.validateScreenExists(id)
     const matched = this.resolveLayersByIdentifier(layers, identifier)
@@ -529,53 +517,18 @@ export class AnsiController {
     this.recompositeScreen(id)
   }
 
-  /**
-   * Resolve layers by identifier: first try exact ID match, then name match, then tag match.
-   */
   private resolveLayersByIdentifier(layers: LayerData[], identifier: string): LayerData[] {
-    if (identifier === '') {
-      throw new Error('Layer identifier must not be empty.')
-    }
-
-    // Try exact ID match
+    if (identifier === '') throw new Error('Layer identifier must not be empty.')
     const byId = layers.filter(l => l.id === identifier)
     if (byId.length > 0) return byId
-
-    // Try name match
     const byName = layers.filter(l => l.name === identifier)
     if (byName.length > 0) return byName
-
-    // Try tag match
     return layers.filter(l => l.tags.includes(identifier))
   }
 
-  // --- Animation Playback API ---
+  screenPlay(id: number): void { this.validateScreenExists(id); const s = this.getScreenState(id); s.playing = true; s.playbackTouched = true }
+  screenPause(id: number): void { this.validateScreenExists(id); const s = this.getScreenState(id); s.playing = false; s.playbackTouched = true; s.schedule = null }
 
-  /**
-   * Start or resume animation playback for a screen.
-   */
-  screenPlay(id: number): void {
-    this.validateScreenExists(id)
-    const state = this.getScreenState(id)
-    state.playing = true
-    state.playbackTouched = true
-  }
-
-  /**
-   * Pause animation playback for a screen.
-   */
-  screenPause(id: number): void {
-    this.validateScreenExists(id)
-    const state = this.getScreenState(id)
-    state.playing = false
-    state.playbackTouched = true
-    // Clear schedule so it re-initializes on next play
-    state.schedule = null
-  }
-
-  /**
-   * Check if animation is currently playing for a screen.
-   */
   screenIsPlaying(id: number): boolean { return this.screenStates.get(id)?.playing ?? false }
 
   screenSwipeOut(id: number, duration: number, color: RGBColor, char: string, dir: SwipeDirection): void { this.validateScreenExists(id); startSwipeOut(this.getScreenState(id), duration, color, char, dir, this.groupGridCache) }
@@ -584,24 +537,17 @@ export class AnsiController {
   screenDitherIn(id: number, ids: string, duration: number, seed: number): void { const layers = this.validateScreenExists(id); const m = resolveMultipleIdentifiers(layers, ids, this.resolveLayersByIdentifier.bind(this)); if (m.length === 0) throw new Error(`No layers match "${ids}" in screen ${id}.`); startDitherIn(this.getScreenState(id), layers, m, duration, seed, this.groupGridCache) }
   screenIsSwiping(id: number): boolean { return (this.screenStates.get(id)?.swipe ?? null) !== null }
 
-  /**
-   * Check if any layers in the list are animated (drawn with multiple frames).
-   */
+  screenPan(id: number, duration: number, fromCol: number, fromRow: number, toCol: number, toRow: number): void { this.validateScreenExists(id); const s = this.getScreenState(id); s.pan = startPan(duration, fromCol, fromRow, toCol, toRow); s.viewportCol = fromCol; s.viewportRow = fromRow; s.needsRecomposite = true }
+  screenSetViewport(id: number, col: number, row: number): void { this.validateScreenExists(id); const s = this.getScreenState(id); s.pan = null; s.viewportCol = col; s.viewportRow = row; s.needsRecomposite = true }
+  screenIsPanning(id: number): boolean { return (this.screenStates.get(id)?.pan ?? null) !== null }
+  screenGetViewport(id: number): [number, number] { const s = this.screenStates.get(id); return [s?.viewportCol ?? 0, s?.viewportRow ?? 0] }
+
   private hasAnimatedLayers(layers: LayerData[]): boolean {
     return layers.some(l => l.type === 'drawn' && (l as DrawnLayerData).frames.length > 1)
   }
 
-  /**
-   * Mark a screen as needing re-compositing. The actual work is deferred
-   * to flushRecomposite() which batches all changes per frame.
-   */
-  private recompositeScreen(id: number): void {
-    const state = this.screenStates.get(id)
-    if (!state) return
-    state.needsRecomposite = true
-  }
+  private recompositeScreen(id: number): void { const state = this.screenStates.get(id); if (state) state.needsRecomposite = true }
 
-  /** Flush deferred re-compositing for a screen via compositeAndDiff. */
   private flushRecomposite(id: number): void {
     const state = this.screenStates.get(id)
     if (!state?.needsRecomposite) return
@@ -609,13 +555,12 @@ export class AnsiController {
     this.compositeAndDiff(state, id === this.activeScreenId)
   }
 
-  /** Composite layers into double buffer, diff-render changed cells, and update cached ANSI string. */
   private compositeAndDiff(state: ScreenState, canDiffRender: boolean): void {
     this.groupGridCache.clear()
     const oldGrid = state.lastGrid
     const buffer = this.useBufferA ? this.compositeBufferA : this.compositeBufferB
     this.useBufferA = !this.useBufferA
-    compositeGridInto(buffer, state.layers, this.groupGridCache)
+    compositeGridInto(buffer, state.layers, this.groupGridCache, Math.floor(state.viewportRow), Math.floor(state.viewportCol))
     state.lastGrid = buffer
     if (canDiffRender && oldGrid) {
       const diff = renderDiffAnsiString(oldGrid, buffer)
@@ -629,14 +574,21 @@ export class AnsiController {
     state.ansiString = renderGridToAnsiString(buffer)
   }
 
-  // --- Internal ---
-
-  /** Advance animation, flush deferred composites, handle swipe, and write dirty screen. */
   private updateActiveScreen(): void {
     if (this.activeScreenId === null) return
     const state = this.screenStates.get(this.activeScreenId)
     if (state?.playing) {
       this.advanceScreenAnimation(this.activeScreenId, this.currentTiming.totalTime * 1000)
+    }
+    if (state?.pan) {
+      const prevCol = Math.floor(state.viewportCol), prevRow = Math.floor(state.viewportRow)
+      const result = advancePan(state.pan, this.currentTiming.deltaTime)
+      state.viewportCol = result.col
+      state.viewportRow = result.row
+      if (Math.floor(result.col) !== prevCol || Math.floor(result.row) !== prevRow) {
+        state.needsRecomposite = true
+      }
+      if (result.done) state.pan = null
     }
     if (state?.swipe) { const b = advanceTransition(state, this.currentTiming.deltaTime); if (b) this.handle?.write(b); return }
     this.flushRecomposite(this.activeScreenId)
@@ -653,10 +605,8 @@ export class AnsiController {
     if (!this.running) return
     this.currentTiming = timing
 
-    // Pre-tick: advance animation + flush deferred composites + write dirty screen
     this.updateActiveScreen()
 
-    // Call the Lua onTick callback
     if (this.onTickCallback) {
       try {
         this.onTickCallback()
@@ -675,7 +625,6 @@ export class AnsiController {
     this.inputCapture?.update()
   }
 
-  /** Advance animation frames for a screen and composite+diff if frames changed. */
   private advanceScreenAnimation(id: number, nowMs: number): void {
     const state = this.screenStates.get(id)
     if (!state) return

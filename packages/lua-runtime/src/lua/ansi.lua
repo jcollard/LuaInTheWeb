@@ -29,6 +29,7 @@ local ansi = {}
 -- 13. Layer Visibility Control (Screen:get_layers, layer_on, layer_off, layer_toggle)
 -- 14. Label Text (Screen:set_label, ansi.create_label)
 -- 15. Animation Playback (Screen:play, Screen:pause, Screen:is_playing)
+-- 16. Viewport / Pan (Screen:pan, Screen:set_viewport, Screen:is_panning, Screen:get_viewport)
 -- =============================================================================
 
 -- =============================================================================
@@ -327,6 +328,33 @@ function Screen:is_transitioning() end
 --- Check if a swipe/dither transition is currently in progress (alias for is_transitioning).
 ---@return boolean active True if a transition is active
 function Screen:is_swiping() end
+
+--- Pan the viewport to a new position over time.
+--- Use reference layers with offsets to position content beyond the 80x25 grid,
+--- then pan to reveal it. For example, two 80x25 scenes side-by-side with reference
+--- layers at offsetCol=0 and offsetCol=80 create a 160x25 virtual space.
+---@param opts table Pan options: { col=number, row=number, duration=number, from_col=number, from_row=number }
+---@usage screen:pan({ col = 80, duration = 2 })
+---@usage screen:pan({ col = 80, row = 10, duration = 3, from_col = 0, from_row = 0 })
+function Screen:pan(opts) end
+
+--- Set the viewport position instantly (no animation).
+--- Use this to jump to a specific position in the virtual space.
+---@param col number Column offset (default 0)
+---@param row number Row offset (default 0)
+---@usage screen:set_viewport(80, 0)
+function Screen:set_viewport(col, row) end
+
+--- Check if a pan animation is currently in progress.
+---@return boolean panning True if a pan is active
+---@usage while screen:is_panning() do coroutine.yield() end
+function Screen:is_panning() end
+
+--- Get the current viewport position.
+---@return number col Current viewport column offset
+---@return number row Current viewport row offset
+---@usage local col, row = screen:get_viewport()
+function Screen:get_viewport() end
 
 --- Set the text of text layer(s) matching an identifier.
 --- Resolves by layer ID first, then by name, then by tag.

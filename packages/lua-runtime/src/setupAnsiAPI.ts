@@ -305,6 +305,26 @@ export function setupAnsiAPI(
     return c.screenIsSwiping(id)
   })
 
+  // --- Viewport / pan functions ---
+  engine.global.set('__ansi_screenPan', (
+    id: number, duration: number, fromCol: number, fromRow: number, toCol: number, toRow: number,
+  ) => {
+    const c = getController(); if (!c) throw new Error('ANSI terminal not available')
+    c.screenPan(id, duration, fromCol, fromRow, toCol, toRow)
+  })
+  engine.global.set('__ansi_screenSetViewport', (id: number, col: number, row: number) => {
+    const c = getController(); if (!c) throw new Error('ANSI terminal not available')
+    c.screenSetViewport(id, col, row)
+  })
+  engine.global.set('__ansi_screenIsPanning', (id: number) => {
+    const c = getController(); if (!c) throw new Error('ANSI terminal not available')
+    return c.screenIsPanning(id)
+  })
+  engine.global.set('__ansi_screenGetViewport', (id: number) => {
+    const c = getController(); if (!c) throw new Error('ANSI terminal not available')
+    return c.screenGetViewport(id)
+  })
+
   // --- Label functions ---
   engine.global.set('__ansi_screenSetLabel', (
     screenId: number,

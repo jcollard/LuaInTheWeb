@@ -201,6 +201,25 @@ export const ansiLuaCoreCode = `
       end
       function screen:is_transitioning() return __ansi_screenIsSwiping(self.id) end
       function screen:is_swiping() return __ansi_screenIsSwiping(self.id) end
+      function screen:pan(opts)
+        if type(opts) ~= 'table' then error('pan() requires an options table') end
+        local vp = __ansi_screenGetViewport(self.id)
+        local from_col = opts.from_col or vp[1]
+        local from_row = opts.from_row or vp[2]
+        local to_col = opts.col or from_col
+        local to_row = opts.row or from_row
+        __ansi_screenPan(self.id, opts.duration or 1, from_col, from_row, to_col, to_row)
+      end
+      function screen:set_viewport(col, row)
+        __ansi_screenSetViewport(self.id, col or 0, row or 0)
+      end
+      function screen:is_panning()
+        return __ansi_screenIsPanning(self.id)
+      end
+      function screen:get_viewport()
+        local vp = __ansi_screenGetViewport(self.id)
+        return vp[1], vp[2]
+      end
       function screen:set_label(identifier, value)
         local id_str = tostring(identifier)
         if type(value) == 'string' then

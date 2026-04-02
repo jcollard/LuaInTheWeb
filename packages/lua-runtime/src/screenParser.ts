@@ -147,6 +147,7 @@ function parseV3to6(data: Record<string, unknown>): LayerData[] {
     if (l.type === 'group') return parseGroupLayerData(l)
     if (l.type === 'text') return parseTextLayerData(l)
     if (l.type === 'clip') return parseClipLayerData(l, normalizeGrid(l.grid))
+    if (l.type === 'reference') return parseReferenceLayerData(l)
 
     // Drawn layer (default for v3 where type may be unset)
     const rawFrames = l.frames ? luaArrayToJsArray<unknown>(l.frames) : null

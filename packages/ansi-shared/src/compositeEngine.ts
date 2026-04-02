@@ -380,6 +380,7 @@ export function createCompositeEngine<L extends CompositeLayer>(
       if (srcRow < 0 || srcRow >= ANSI_ROWS || srcCol < 0 || srcCol >= ANSI_COLS) return null
       return entry.sourceGrid[srcRow][srcCol]
     }
+    if (row < 0 || row >= ANSI_ROWS || col < 0 || col >= ANSI_COLS) return null
     return entry.grid[row][col]
   }
 
