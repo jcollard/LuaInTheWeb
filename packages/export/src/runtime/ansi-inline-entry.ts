@@ -19,9 +19,8 @@ import { ansiLuaCode } from '@lua-learning/lua-runtime'
 import { CrtShader, CRT_DEFAULTS } from '@lua-learning/lua-runtime'
 import { LUA_LOCALSTORAGE_CODE } from '@lua-learning/lua-runtime'
 
-const STORAGE_LIMIT = 5 * 1024 * 1024
-
 function getRemainingSpace(): number {
+  const STORAGE_LIMIT = 5 * 1024 * 1024
   try {
     if (typeof localStorage === 'undefined') return 0
     let used = 0
@@ -39,6 +38,7 @@ function getRemainingSpace(): number {
   }
 }
 
+// Uses `any` because the esbuild bundle stubs wasmoon (LuaEngine type unavailable).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function setupLocalStorageBridge(engine: any): Promise<void> {
   engine.global.set('__localstorage_getItem', (key: string): string | undefined => {
