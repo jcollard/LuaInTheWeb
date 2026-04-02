@@ -108,12 +108,13 @@ export class AnsiController {
   private running = false
   private stopResolver: (() => void) | null = null
   private pendingCrt: { enabled: boolean; intensity?: number; config?: Record<string, number> } | null = null
-  private pendingOnComplete: (() => void) | null = null
-  private onTickCallback: (() => void) | null = null; private nextScreenId = 1
+  private onTickCallback: (() => void) | null = null
+  private nextScreenId = 1
   private screenStates: Map<number, ScreenState> = new Map()
   private activeScreenId: number | null = null
   private compositeBufferA: AnsiGrid = createEmptyGrid()
-  private compositeBufferB: AnsiGrid = createEmptyGrid(); private useBufferA = true
+  private compositeBufferB: AnsiGrid = createEmptyGrid()
+  private useBufferA = true
   private groupGridCache: Map<string, AnsiGrid> = new Map()
 
   constructor(callbacks: AnsiCallbacks, ansiId = 'ansi-main') {
@@ -541,7 +542,9 @@ export class AnsiController {
   private hasAnimatedLayers(layers: LayerData[]): boolean {
     return layers.some(l => l.type === 'drawn' && (l as DrawnLayerData).frames.length > 1)
   }
+
   private recompositeScreen(id: number): void { const state = this.screenStates.get(id); if (state) state.needsRecomposite = true }
+
   private flushRecomposite(id: number): void {
     const state = this.screenStates.get(id)
     if (!state?.needsRecomposite) return
@@ -568,7 +571,7 @@ export class AnsiController {
     state.ansiString = renderGridToAnsiString(buffer)
   }
 
-  private updateActiveScreen(): void {
+  private updateActiveScreen(): (() => void) | undefined {
     if (this.activeScreenId === null) return
     const state = this.screenStates.get(this.activeScreenId)
     if (state?.playing) {
@@ -584,7 +587,7 @@ export class AnsiController {
       }
       if (result.done) state.pan = null
     }
-    if (state?.swipe) { const r = advanceTransition(state, this.currentTiming.deltaTime); if (r.batch) this.handle?.write(r.batch); if (r.onComplete) this.pendingOnComplete = r.onComplete; return }
+    if (state?.swipe) { const r = advanceTransition(state, this.currentTiming.deltaTime); if (r.batch) this.handle?.write(r.batch); return r.onComplete }
     this.flushRecomposite(this.activeScreenId)
     if (state?.dirty && state.ansiString) {
       this.handle?.write(state.ansiString)
@@ -598,8 +601,9 @@ export class AnsiController {
   private onFrame(timing: TimingInfo): void {
     if (!this.running) return
     this.currentTiming = timing
-    this.updateActiveScreen()
-    if (this.pendingOnComplete) { const cb = this.pendingOnComplete; this.pendingOnComplete = null; cb() }
+
+    this.updateActiveScreen()?.call(undefined)
+
     if (this.onTickCallback) {
       try {
         this.onTickCallback()
@@ -613,9 +617,11 @@ export class AnsiController {
     if (this.activeScreenId !== null && !this.screenStates.get(this.activeScreenId)?.swipe) {
       this.flushRecomposite(this.activeScreenId)
     }
+
     this.callbacks.onFlushOutput?.()
     this.inputCapture?.update()
   }
+
   private advanceScreenAnimation(id: number, nowMs: number): void {
     const state = this.screenStates.get(id)
     if (!state) return

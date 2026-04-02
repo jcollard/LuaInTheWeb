@@ -363,7 +363,9 @@ Sweep a boundary across the screen to hide content. When called without `layers`
 ```lua
 screen:swipe_out()                                           -- default: right, black, 1s
 screen:swipe_out({ duration = 0.5, direction = "down" })     -- swipe down
+screen:swipe_out({ color = {255, 0, 0}, direction = "left" }) -- red fill, swipe left
 screen:swipe_out({ layers = "scene1", duration = 0.8 })      -- hide scene1 with swipe
+screen:swipe_out({ layers = {"scene1", "ui"} })              -- hide multiple layers
 screen:swipe_out({ layers = "enemy", duration = 0.5, on_complete = function()
   screen:layer_on("loot-panel")  -- safe: runs after transition commits
 end })
@@ -382,6 +384,8 @@ Composite a preview with specified layers visible, then swipe it in. When comple
 
 ```lua
 screen:swipe_in({ layers = "scene2" })
+screen:swipe_in({ layers = "scene2", duration = 1.5, direction = "up" })
+screen:swipe_in({ layers = {"background", "characters", "ui"} })
 screen:swipe_in({ layers = "enemy", direction = "up", duration = 0.5, on_complete = function()
   screen:layer_on("combat-ui")
 end })
@@ -402,7 +406,9 @@ Randomly replace cells one-by-one to hide content (dissolve effect). When called
 
 ```lua
 screen:dither_out()
+screen:dither_out({ duration = 2, seed = 42 })
 screen:dither_out({ layers = "scene1", duration = 1 })
+screen:dither_out({ layers = {"scene1", "ui"}, seed = 42 })
 screen:dither_out({ layers = "enemy", duration = 0.5, on_complete = function()
   screen:layer_on("loot-panel")
 end })
@@ -421,6 +427,7 @@ Randomly reveal cells one-by-one from a preview with specified layers visible. W
 
 ```lua
 screen:dither_in({ layers = "scene2" })
+screen:dither_in({ layers = {"scene2", "overlay"}, duration = 2 })
 screen:dither_in({ layers = "enemy", duration = 0.5, on_complete = function()
   screen:layer_on("combat-ui")
 end })
