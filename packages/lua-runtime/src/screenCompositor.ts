@@ -49,7 +49,10 @@ export function isCellClipped(
   while (parentId && depth < 10) {
     depth++
     const mask = clipMap.get(parentId)
-    if (mask && isDefaultCell(mask[row][col])) return true
+    if (mask) {
+      if (row < 0 || row >= ANSI_ROWS || col < 0 || col >= ANSI_COLS) return true
+      if (isDefaultCell(mask[row][col])) return true
+    }
     const parent = layerMap.get(parentId)
     parentId = parent?.parentId
   }
@@ -87,7 +90,11 @@ export function visibleDrawableLayers(layers: LayerData[]): DrawableLayerData[] 
 export { compositeCellCore }
 
 /** Composite all visible layers into a pre-allocated target grid (zero allocation). */
-export function compositeGridInto(target: AnsiGrid, layers: LayerData[], groupGridCache?: Map<string, AnsiGrid>): void {
+export function compositeGridInto(
+  target: AnsiGrid, layers: LayerData[],
+  groupGridCache?: Map<string, AnsiGrid>,
+  viewportRow = 0, viewportCol = 0,
+): void {
   const layerMap = new Map(layers.map(l => [l.id, l]))
   const entries = engine.buildCompositeEntries(layers, layerMap, groupGridCache)
   const clipMap = buildClipMaskMap(layers)
@@ -98,9 +105,9 @@ export function compositeGridInto(target: AnsiGrid, layers: LayerData[], groupGr
     return engine.getEntryCell(entry, curR, curC)
   }
   for (let r = 0; r < ANSI_ROWS; r++) {
-    curR = r
     for (let c = 0; c < ANSI_COLS; c++) {
-      curC = c
+      curR = r + viewportRow
+      curC = c + viewportCol
       const result = compositeCellCore(entries, getCell)
       const cell = target[r][c]
       cell.char = result.char

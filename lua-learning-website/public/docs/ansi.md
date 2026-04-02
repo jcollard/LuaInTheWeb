@@ -444,6 +444,77 @@ end)
 ansi.start()
 ```
 
+## Viewport / Pan
+
+The viewport controls which 80x25 window of virtual space is displayed. By default, the viewport is at position (0, 0). Use reference layers with offsets to position content beyond the standard grid, then pan the viewport to reveal it.
+
+### `screen:pan(opts)`
+
+Smoothly animate the viewport from one position to another over a specified duration.
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `col` | number | current | Target column offset |
+| `row` | number | current | Target row offset |
+| `duration` | number | 1 | Duration in seconds |
+| `from_col` | number | current | Starting column offset |
+| `from_row` | number | current | Starting row offset |
+
+```lua
+-- Pan from left scene to right scene over 3 seconds
+screen:pan({ col = 80, duration = 3 })
+
+-- Pan with explicit start position
+screen:pan({ col = 80, row = 0, duration = 2, from_col = 0, from_row = 0 })
+```
+
+### `screen:set_viewport(col, row)`
+
+Instantly set the viewport position (no animation).
+
+```lua
+screen:set_viewport(80, 0)  -- jump to column 80
+screen:set_viewport(0, 0)   -- reset to origin
+```
+
+### `screen:is_panning()`
+
+Check if a pan animation is currently in progress.
+
+```lua
+while screen:is_panning() do
+  coroutine.yield()
+end
+```
+
+### `screen:get_viewport()`
+
+Get the current viewport position. Returns two values: column and row.
+
+```lua
+local col, row = screen:get_viewport()
+```
+
+### Example: Cinematic pan
+
+Create a screen with two scenes positioned side-by-side using reference layers
+(Scene A at offsetCol=0, Scene B at offsetCol=80), then pan between them:
+
+```lua
+local ansi = require("ansi")
+local screen = ansi.load_screen("panorama.ansi.lua")
+ansi.set_screen(screen)
+
+-- Pan from scene A to scene B over 3 seconds
+screen:pan({ col = 80, duration = 3 })
+
+ansi.tick(function()
+  if ansi.is_key_pressed("escape") then ansi.stop() end
+end)
+
+ansi.start()
+```
+
 ## CRT Shader Effect
 
 Apply a retro CRT monitor post-processing effect to the terminal output using a WebGL shader. The effect can be enabled before or after `ansi.start()`, and parameters can be adjusted live from within the `tick()` loop.
@@ -556,6 +627,10 @@ ansi.start()
 | `screen:dither_out(opts?)` | Dither out to fill color (dissolve) |
 | `screen:dither_in(opts)` | Dither in preview layers (dissolve) |
 | `screen:is_transitioning()` | Check if any transition is active |
+| `screen:pan(opts)` | Animate viewport pan over time |
+| `screen:set_viewport(col, row)` | Set viewport position instantly |
+| `screen:is_panning()` | Check if pan animation is active |
+| `screen:get_viewport()` | Get current viewport position (col, row) |
 | `ansi.crt(config)` | Enable/update CRT shader effect |
 | `ansi.start()` | Start terminal (blocks until `stop()`) |
 | `ansi.stop()` | Stop terminal |

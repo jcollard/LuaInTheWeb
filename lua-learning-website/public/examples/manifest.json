@@ -235,6 +235,7 @@
     "ansi/label_demo.lua",
     "ansi/ansi_escape_demo.lua",
     "ansi/crt.lua",
-    "ansi/swipe_demo.lua"
+    "ansi/swipe_demo.lua",
+    "ansi/pan_demo.lua"
   ]
 }
