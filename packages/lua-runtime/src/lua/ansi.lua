@@ -292,41 +292,44 @@ function Screen:is_playing() end
 --- Swipe out: sweep a boundary across the screen to hide content.
 --- Without layers: replaces all cells with a fill color.
 --- With layers: transitions to the screen with those layers hidden, then permanently hides them.
----@param opts? table Options: layers (string or string[], optional), duration (number, default 1), color ({r,g,b}, default {0,0,0}, ignored with layers), char (string, default " ", ignored with layers), direction (string, default "right")
+--- **Important:** Do not call layer_on/layer_off on other layers in the same frame as a
+--- transition call. The transition snapshots the screen state when it starts. Use on_complete
+--- to sequence layer changes after the transition finishes.
+---@param opts? table Options: layers (string or string[], optional), duration (number, default 1), color ({r,g,b}, default {0,0,0}, ignored with layers), char (string, default " ", ignored with layers), direction (string, default "right"), on_complete (function, optional callback when transition finishes)
 ---@return nil
 ---@usage screen:swipe_out()
 ---@usage screen:swipe_out({ duration = 0.5, direction = "down" })
----@usage screen:swipe_out({ color = {255, 0, 0}, direction = "up-left" })
 ---@usage screen:swipe_out({ layers = "scene1", duration = 0.8 })
----@usage screen:swipe_out({ layers = {"scene1", "ui"}, direction = "left" })
+---@usage screen:swipe_out({ layers = "enemy", duration = 0.5, on_complete = function() screen:layer_on("combat-ui") end })
 function Screen:swipe_out(opts) end
 
 --- Swipe in: composite a preview with specified layers visible, then swipe in.
 --- When the swipe completes, the specified layers are permanently toggled visible.
 --- Directions: "right", "left", "down", "up", "down-right", "down-left", "up-right", "up-left"
----@param opts table Options: layers (string or string[], required), duration (number, default 1), direction (string, default "right")
+---@param opts table Options: layers (string or string[], required), duration (number, default 1), direction (string, default "right"), on_complete (function, optional callback when transition finishes)
 ---@return nil
 ---@usage screen:swipe_in({ layers = "scene2" })
----@usage screen:swipe_in({ layers = {"background", "characters"}, duration = 1.5 })
+---@usage screen:swipe_in({ layers = "enemy", direction = "up", duration = 0.5, on_complete = function() screen:layer_on("combat-ui") end })
 function Screen:swipe_in(opts) end
 
 --- Dither out: randomly replace cells one-by-one to hide content (dissolve effect).
 --- Without layers: dissolves to a fill color.
 --- With layers: dissolves to the screen with those layers hidden, then permanently hides them.
----@param opts? table Options: layers (string or string[], optional), duration (number, default 1), color ({r,g,b}, default {0,0,0}, ignored with layers), char (string, default " ", ignored with layers), seed (number, default os.time())
+--- **Important:** Do not call layer_on/layer_off on other layers in the same frame as a
+--- transition call. Use on_complete to safely chain layer changes after the transition.
+---@param opts? table Options: layers (string or string[], optional), duration (number, default 1), color ({r,g,b}, default {0,0,0}, ignored with layers), char (string, default " ", ignored with layers), seed (number, default os.time()), on_complete (function, optional callback when transition finishes)
 ---@return nil
 ---@usage screen:dither_out()
----@usage screen:dither_out({ duration = 2, seed = 42 })
 ---@usage screen:dither_out({ layers = "scene1", duration = 1 })
----@usage screen:dither_out({ layers = {"scene1", "ui"}, seed = 42 })
+---@usage screen:dither_out({ layers = "enemy", duration = 0.5, on_complete = function() screen:layer_on("loot-panel") end })
 function Screen:dither_out(opts) end
 
 --- Dither in: randomly reveal cells one-by-one from a preview with specified layers visible.
 --- When complete, the specified layers are permanently toggled visible.
----@param opts table Options: layers (string or string[], required), duration (number, default 1), seed (number, default os.time())
+---@param opts table Options: layers (string or string[], required), duration (number, default 1), seed (number, default os.time()), on_complete (function, optional callback when transition finishes)
 ---@return nil
 ---@usage screen:dither_in({ layers = "scene2" })
----@usage screen:dither_in({ layers = {"scene2", "overlay"}, duration = 2 })
+---@usage screen:dither_in({ layers = "enemy", duration = 0.5, on_complete = function() screen:layer_on("combat-ui") end })
 function Screen:dither_in(opts) end
 
 --- Check if a transition (swipe or dither) is currently in progress.

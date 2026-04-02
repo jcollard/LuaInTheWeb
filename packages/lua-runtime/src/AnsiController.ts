@@ -108,13 +108,12 @@ export class AnsiController {
   private running = false
   private stopResolver: (() => void) | null = null
   private pendingCrt: { enabled: boolean; intensity?: number; config?: Record<string, number> } | null = null
-  private onTickCallback: (() => void) | null = null
-  private nextScreenId = 1
+  private pendingOnComplete: (() => void) | null = null
+  private onTickCallback: (() => void) | null = null; private nextScreenId = 1
   private screenStates: Map<number, ScreenState> = new Map()
   private activeScreenId: number | null = null
   private compositeBufferA: AnsiGrid = createEmptyGrid()
-  private compositeBufferB: AnsiGrid = createEmptyGrid()
-  private useBufferA = true
+  private compositeBufferB: AnsiGrid = createEmptyGrid(); private useBufferA = true
   private groupGridCache: Map<string, AnsiGrid> = new Map()
 
   constructor(callbacks: AnsiCallbacks, ansiId = 'ansi-main') {
@@ -526,12 +525,12 @@ export class AnsiController {
   screenPlay(id: number): void { this.validateScreenExists(id); const s = this.getScreenState(id); s.playing = true; s.playbackTouched = true }
   screenPause(id: number): void { this.validateScreenExists(id); const s = this.getScreenState(id); s.playing = false; s.playbackTouched = true; s.schedule = null }
   screenIsPlaying(id: number): boolean { return this.screenStates.get(id)?.playing ?? false }
-  screenSwipeOut(id: number, duration: number, color: RGBColor, char: string, dir: SwipeDirection): void { this.validateScreenExists(id); startSwipeOut(this.getScreenState(id), duration, color, char, dir, this.groupGridCache) }
-  screenSwipeIn(id: number, ids: string, duration: number, dir: SwipeDirection): void { const [layers, m] = this.resolveScreenLayers(id, ids); startSwipeIn(this.getScreenState(id), layers, m, duration, dir, this.groupGridCache) }
-  screenSwipeOutLayers(id: number, ids: string, duration: number, dir: SwipeDirection): void { const [layers, m] = this.resolveScreenLayers(id, ids); startSwipeOutLayers(this.getScreenState(id), layers, m, duration, dir, this.groupGridCache) }
-  screenDitherOut(id: number, duration: number, color: RGBColor, char: string, seed: number): void { this.validateScreenExists(id); startDitherOut(this.getScreenState(id), duration, color, char, seed, this.groupGridCache) }
-  screenDitherIn(id: number, ids: string, duration: number, seed: number): void { const [layers, m] = this.resolveScreenLayers(id, ids); startDitherIn(this.getScreenState(id), layers, m, duration, seed, this.groupGridCache) }
-  screenDitherOutLayers(id: number, ids: string, duration: number, seed: number): void { const [layers, m] = this.resolveScreenLayers(id, ids); startDitherOutLayers(this.getScreenState(id), layers, m, duration, seed, this.groupGridCache) }
+  screenSwipeOut(id: number, duration: number, color: RGBColor, char: string, dir: SwipeDirection, onComplete?: () => void): void { this.validateScreenExists(id); startSwipeOut(this.getScreenState(id), duration, color, char, dir, this.groupGridCache, onComplete) }
+  screenSwipeIn(id: number, ids: string, duration: number, dir: SwipeDirection, onComplete?: () => void): void { const [layers, m] = this.resolveScreenLayers(id, ids); startSwipeIn(this.getScreenState(id), layers, m, duration, dir, this.groupGridCache, onComplete) }
+  screenSwipeOutLayers(id: number, ids: string, duration: number, dir: SwipeDirection, onComplete?: () => void): void { const [layers, m] = this.resolveScreenLayers(id, ids); startSwipeOutLayers(this.getScreenState(id), layers, m, duration, dir, this.groupGridCache, onComplete) }
+  screenDitherOut(id: number, duration: number, color: RGBColor, char: string, seed: number, onComplete?: () => void): void { this.validateScreenExists(id); startDitherOut(this.getScreenState(id), duration, color, char, seed, this.groupGridCache, onComplete) }
+  screenDitherIn(id: number, ids: string, duration: number, seed: number, onComplete?: () => void): void { const [layers, m] = this.resolveScreenLayers(id, ids); startDitherIn(this.getScreenState(id), layers, m, duration, seed, this.groupGridCache, onComplete) }
+  screenDitherOutLayers(id: number, ids: string, duration: number, seed: number, onComplete?: () => void): void { const [layers, m] = this.resolveScreenLayers(id, ids); startDitherOutLayers(this.getScreenState(id), layers, m, duration, seed, this.groupGridCache, onComplete) }
   screenIsSwiping(id: number): boolean { return (this.screenStates.get(id)?.swipe ?? null) !== null }
   screenPan(id: number, duration: number, fromCol: number, fromRow: number, toCol: number, toRow: number): void { this.validateScreenExists(id); const s = this.getScreenState(id); s.pan = startPan(duration, fromCol, fromRow, toCol, toRow); s.viewportCol = fromCol; s.viewportRow = fromRow; s.needsRecomposite = true }
   screenSetViewport(id: number, col: number, row: number): void { this.validateScreenExists(id); const s = this.getScreenState(id); s.pan = null; s.viewportCol = col; s.viewportRow = row; s.needsRecomposite = true }
@@ -542,9 +541,7 @@ export class AnsiController {
   private hasAnimatedLayers(layers: LayerData[]): boolean {
     return layers.some(l => l.type === 'drawn' && (l as DrawnLayerData).frames.length > 1)
   }
-
   private recompositeScreen(id: number): void { const state = this.screenStates.get(id); if (state) state.needsRecomposite = true }
-
   private flushRecomposite(id: number): void {
     const state = this.screenStates.get(id)
     if (!state?.needsRecomposite) return
@@ -587,7 +584,7 @@ export class AnsiController {
       }
       if (result.done) state.pan = null
     }
-    if (state?.swipe) { const b = advanceTransition(state, this.currentTiming.deltaTime); if (b) this.handle?.write(b); return }
+    if (state?.swipe) { const r = advanceTransition(state, this.currentTiming.deltaTime); if (r.batch) this.handle?.write(r.batch); if (r.onComplete) this.pendingOnComplete = r.onComplete; return }
     this.flushRecomposite(this.activeScreenId)
     if (state?.dirty && state.ansiString) {
       this.handle?.write(state.ansiString)
@@ -601,9 +598,8 @@ export class AnsiController {
   private onFrame(timing: TimingInfo): void {
     if (!this.running) return
     this.currentTiming = timing
-
     this.updateActiveScreen()
-
+    if (this.pendingOnComplete) { const cb = this.pendingOnComplete; this.pendingOnComplete = null; cb() }
     if (this.onTickCallback) {
       try {
         this.onTickCallback()
@@ -617,11 +613,9 @@ export class AnsiController {
     if (this.activeScreenId !== null && !this.screenStates.get(this.activeScreenId)?.swipe) {
       this.flushRecomposite(this.activeScreenId)
     }
-
     this.callbacks.onFlushOutput?.()
     this.inputCapture?.update()
   }
-
   private advanceScreenAnimation(id: number, nowMs: number): void {
     const state = this.screenStates.get(id)
     if (!state) return

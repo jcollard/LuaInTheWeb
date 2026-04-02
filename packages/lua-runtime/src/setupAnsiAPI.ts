@@ -277,40 +277,40 @@ export function setupAnsiAPI(
 
   // --- Swipe/dither transition functions ---
   engine.global.set('__ansi_screenSwipeOut', (
-    id: number, duration: number, cR: number, cG: number, cB: number, char: string, dir: string,
+    id: number, duration: number, cR: number, cG: number, cB: number, char: string, dir: string, onComplete?: () => void,
   ) => {
     const c = getController(); if (!c) throw new Error('ANSI terminal not available')
-    c.screenSwipeOut(id, duration, [cR, cG, cB], char, dir as 'right')
+    c.screenSwipeOut(id, duration, [cR, cG, cB], char, dir as 'right', onComplete)
   })
   engine.global.set('__ansi_screenSwipeIn', (
-    id: number, layerIdentifier: string, duration: number, dir: string,
+    id: number, layerIdentifier: string, duration: number, dir: string, onComplete?: () => void,
   ) => {
     const c = getController(); if (!c) throw new Error('ANSI terminal not available')
-    c.screenSwipeIn(id, layerIdentifier, duration, dir as 'right')
+    c.screenSwipeIn(id, layerIdentifier, duration, dir as 'right', onComplete)
   })
   engine.global.set('__ansi_screenDitherOut', (
-    id: number, duration: number, cR: number, cG: number, cB: number, char: string, seed: number,
+    id: number, duration: number, cR: number, cG: number, cB: number, char: string, seed: number, onComplete?: () => void,
   ) => {
     const c = getController(); if (!c) throw new Error('ANSI terminal not available')
-    c.screenDitherOut(id, duration, [cR, cG, cB], char, seed)
+    c.screenDitherOut(id, duration, [cR, cG, cB], char, seed, onComplete)
   })
   engine.global.set('__ansi_screenDitherIn', (
-    id: number, layerIdentifier: string, duration: number, seed: number,
+    id: number, layerIdentifier: string, duration: number, seed: number, onComplete?: () => void,
   ) => {
     const c = getController(); if (!c) throw new Error('ANSI terminal not available')
-    c.screenDitherIn(id, layerIdentifier, duration, seed)
+    c.screenDitherIn(id, layerIdentifier, duration, seed, onComplete)
   })
   engine.global.set('__ansi_screenSwipeOutLayers', (
-    id: number, layerIdentifier: string, duration: number, dir: string,
+    id: number, layerIdentifier: string, duration: number, dir: string, onComplete?: () => void,
   ) => {
     const c = getController(); if (!c) throw new Error('ANSI terminal not available')
-    c.screenSwipeOutLayers(id, layerIdentifier, duration, dir as 'right')
+    c.screenSwipeOutLayers(id, layerIdentifier, duration, dir as 'right', onComplete)
   })
   engine.global.set('__ansi_screenDitherOutLayers', (
-    id: number, layerIdentifier: string, duration: number, seed: number,
+    id: number, layerIdentifier: string, duration: number, seed: number, onComplete?: () => void,
   ) => {
     const c = getController(); if (!c) throw new Error('ANSI terminal not available')
-    c.screenDitherOutLayers(id, layerIdentifier, duration, seed)
+    c.screenDitherOutLayers(id, layerIdentifier, duration, seed, onComplete)
   })
   engine.global.set('__ansi_screenIsSwiping', (id: number) => {
     const c = getController(); if (!c) throw new Error('ANSI terminal not available')
