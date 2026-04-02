@@ -10,10 +10,7 @@
  * - Supports blocking via Promise (start() blocks until stop())
  */
 
-import {
-  InputCapture,
-  GameLoopController,
-} from '@lua-learning/canvas-runtime'
+import { InputCapture, GameLoopController } from '@lua-learning/canvas-runtime'
 import { InputAPI } from './InputAPI'
 import type { TimingInfo } from '@lua-learning/canvas-runtime'
 import { initSchedule, computePlaybackTick, type LayerSchedule } from '@lua-learning/ansi-shared'
@@ -21,8 +18,8 @@ import { parseScreenLayers } from './screenParser'
 import { compositeGridInto } from './screenCompositor'
 import { renderGridToAnsiString, renderDiffAnsiString } from './ansiStringRenderer'
 import { renderTextLayerGrid } from './textLayerGrid'
-import type { AnsiGrid, LayerData, DrawnLayerData, TextLayerData, RGBColor } from './screenTypes'
-import { createEmptyGrid } from './screenTypes'
+import { createEmptyGrid, type AnsiGrid, type LayerData, type DrawnLayerData, type TextLayerData, type RGBColor } from './screenTypes'
+import { startSwipeOut, startSwipeIn, startDitherOut, startDitherIn, advanceTransition, type TransitionState, type SwipeDirection } from './screenSwipe'
 
 /**
  * Handle to a running ANSI terminal instance.
@@ -91,8 +88,8 @@ interface ScreenState {
   lastGrid: AnsiGrid | null
   /** True when the full ANSI string needs to be written to the terminal. */
   dirty: boolean
-  /** True when layers changed and need re-compositing before next render. */
   needsRecomposite: boolean
+  swipe: TransitionState | null
 }
 
 /** Format an onTick error for display. */
@@ -134,7 +131,7 @@ export class AnsiController {
   private getScreenState(id: number): ScreenState {
     let state = this.screenStates.get(id)
     if (!state) {
-      state = { ansiString: '', layers: [], schedule: null, playing: false, playbackTouched: false, lastGrid: null, dirty: false, needsRecomposite: false }
+      state = { ansiString: '', layers: [], schedule: null, playing: false, playbackTouched: false, lastGrid: null, dirty: false, needsRecomposite: false, swipe: null }
       this.screenStates.set(id, state)
     }
     return state
@@ -580,9 +577,13 @@ export class AnsiController {
   /**
    * Check if animation is currently playing for a screen.
    */
-  screenIsPlaying(id: number): boolean {
-    return this.screenStates.get(id)?.playing ?? false
-  }
+  screenIsPlaying(id: number): boolean { return this.screenStates.get(id)?.playing ?? false }
+
+  screenSwipeOut(id: number, duration: number, color: RGBColor, char: string, dir: SwipeDirection): void { this.validateScreenExists(id); startSwipeOut(this.getScreenState(id), duration, color, char, dir, this.groupGridCache) }
+  screenSwipeIn(id: number, identifier: string, duration: number, dir: SwipeDirection): void { const layers = this.validateScreenExists(id); const m = this.resolveLayersByIdentifier(layers, identifier); if (m.length === 0) throw new Error(`No layers match "${identifier}" in screen ${id}.`); startSwipeIn(this.getScreenState(id), layers, m, duration, dir, this.groupGridCache) }
+  screenDitherOut(id: number, duration: number, color: RGBColor, char: string, seed: number): void { this.validateScreenExists(id); startDitherOut(this.getScreenState(id), duration, color, char, seed, this.groupGridCache) }
+  screenDitherIn(id: number, identifier: string, duration: number, seed: number): void { const layers = this.validateScreenExists(id); const m = this.resolveLayersByIdentifier(layers, identifier); if (m.length === 0) throw new Error(`No layers match "${identifier}" in screen ${id}.`); startDitherIn(this.getScreenState(id), layers, m, duration, seed, this.groupGridCache) }
+  screenIsSwiping(id: number): boolean { return (this.screenStates.get(id)?.swipe ?? null) !== null }
 
   /**
    * Check if any layers in the list are animated (drawn with multiple frames).
@@ -631,13 +632,14 @@ export class AnsiController {
 
   // --- Internal ---
 
-  /** Advance animation, flush deferred composites, and write dirty screen. */
+  /** Advance animation, flush deferred composites, handle swipe, and write dirty screen. */
   private updateActiveScreen(): void {
     if (this.activeScreenId === null) return
     const state = this.screenStates.get(this.activeScreenId)
     if (state?.playing) {
       this.advanceScreenAnimation(this.activeScreenId, this.currentTiming.totalTime * 1000)
     }
+    if (state?.swipe) { const b = advanceTransition(state, this.currentTiming.deltaTime); if (b) this.handle?.write(b); return }
     this.flushRecomposite(this.activeScreenId)
     if (state?.dirty && state.ansiString) {
       this.handle?.write(state.ansiString)
@@ -666,8 +668,7 @@ export class AnsiController {
       }
     }
 
-    // Post-tick: flush composites from this tick's Lua API calls (same-frame render)
-    if (this.activeScreenId !== null) {
+    if (this.activeScreenId !== null && !this.screenStates.get(this.activeScreenId)?.swipe) {
       this.flushRecomposite(this.activeScreenId)
     }
 
@@ -679,9 +680,7 @@ export class AnsiController {
   private advanceScreenAnimation(id: number, nowMs: number): void {
     const state = this.screenStates.get(id)
     if (!state) return
-    if (!state.schedule) {
-      state.schedule = initSchedule(state.layers, nowMs)
-    }
+    if (!state.schedule) state.schedule = initSchedule(state.layers, nowMs)
     const { changed } = computePlaybackTick(state.layers, state.schedule, nowMs)
     if (!changed) return
     this.compositeAndDiff(state, true)

@@ -287,6 +287,47 @@ function Screen:pause() end
 ---@usage if screen:is_playing() then screen:pause() end
 function Screen:is_playing() end
 
+--- Swipe out: replace cells with a fill color in a sweep direction.
+---@param opts? table Options: duration (number, default 1), color ({r,g,b}, default {0,0,0}), char (string, default " "), direction (string, default "right")
+---@return nil
+---@usage screen:swipe_out()
+---@usage screen:swipe_out({ duration = 0.5, direction = "down" })
+---@usage screen:swipe_out({ color = {255, 0, 0}, direction = "up-left" })
+function Screen:swipe_out(opts) end
+
+--- Swipe in: composite a preview with specified layers visible, then swipe in.
+--- When the swipe completes, the specified layers are permanently toggled visible.
+--- Directions: "right", "left", "down", "up", "down-right", "down-left", "up-right", "up-left"
+---@param opts table Options: layers (string, required), duration (number, default 1), direction (string, default "right")
+---@return nil
+---@usage screen:swipe_in({ layers = "scene2" })
+---@usage screen:swipe_in({ layers = "scene2", duration = 1.5, direction = "down" })
+function Screen:swipe_in(opts) end
+
+--- Dither out: randomly replace cells one-by-one with a fill color.
+---@param opts? table Options: duration (number, default 1), color ({r,g,b}, default {0,0,0}), char (string, default " "), seed (number, default os.time())
+---@return nil
+---@usage screen:dither_out()
+---@usage screen:dither_out({ duration = 2, seed = 42 })
+function Screen:dither_out(opts) end
+
+--- Dither in: randomly reveal cells one-by-one from a preview with specified layers visible.
+--- When complete, the specified layers are permanently toggled visible.
+---@param opts table Options: layers (string, required), duration (number, default 1), seed (number, default os.time())
+---@return nil
+---@usage screen:dither_in({ layers = "scene2" })
+---@usage screen:dither_in({ layers = "scene2", duration = 2, seed = 42 })
+function Screen:dither_in(opts) end
+
+--- Check if a transition (swipe or dither) is currently in progress.
+---@return boolean active True if a transition is active
+---@usage if not screen:is_transitioning() then screen:swipe_out() end
+function Screen:is_transitioning() end
+
+--- Check if a swipe/dither transition is currently in progress (alias for is_transitioning).
+---@return boolean active True if a transition is active
+function Screen:is_swiping() end
+
 --- Set the text of text layer(s) matching an identifier.
 --- Resolves by layer ID first, then by name, then by tag.
 --- Non-text layers are silently skipped. Errors if zero text layers match.

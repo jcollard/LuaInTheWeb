@@ -177,6 +177,26 @@ export const ansiLuaCoreCode = `
       function screen:is_playing()
         return __ansi_screenIsPlaying(self.id)
       end
+      function screen:swipe_out(opts)
+        opts = type(opts) == 'table' and opts or {}
+        local c = opts.color or {0, 0, 0}
+        __ansi_screenSwipeOut(self.id, opts.duration or 1, c[1], c[2], c[3], opts.char or ' ', opts.direction or 'right')
+      end
+      function screen:swipe_in(opts)
+        if type(opts) ~= 'table' or type(opts.layers) ~= 'string' then error('swipe_in() requires opts with layers') end
+        __ansi_screenSwipeIn(self.id, opts.layers, opts.duration or 1, opts.direction or 'right')
+      end
+      function screen:dither_out(opts)
+        opts = type(opts) == 'table' and opts or {}
+        local c = opts.color or {0, 0, 0}
+        __ansi_screenDitherOut(self.id, opts.duration or 1, c[1], c[2], c[3], opts.char or ' ', opts.seed or os.time())
+      end
+      function screen:dither_in(opts)
+        if type(opts) ~= 'table' or type(opts.layers) ~= 'string' then error('dither_in() requires opts with layers') end
+        __ansi_screenDitherIn(self.id, opts.layers, opts.duration or 1, opts.seed or os.time())
+      end
+      function screen:is_transitioning() return __ansi_screenIsSwiping(self.id) end
+      function screen:is_swiping() return __ansi_screenIsSwiping(self.id) end
       function screen:set_label(identifier, value)
         local id_str = tostring(identifier)
         if type(value) == 'string' then

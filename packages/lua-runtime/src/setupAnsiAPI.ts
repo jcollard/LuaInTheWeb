@@ -275,6 +275,36 @@ export function setupAnsiAPI(
     return controller.screenIsPlaying(id)
   })
 
+  // --- Swipe/dither transition functions ---
+  engine.global.set('__ansi_screenSwipeOut', (
+    id: number, duration: number, cR: number, cG: number, cB: number, char: string, dir: string,
+  ) => {
+    const c = getController(); if (!c) throw new Error('ANSI terminal not available')
+    c.screenSwipeOut(id, duration, [cR, cG, cB], char, dir as 'right')
+  })
+  engine.global.set('__ansi_screenSwipeIn', (
+    id: number, layerIdentifier: string, duration: number, dir: string,
+  ) => {
+    const c = getController(); if (!c) throw new Error('ANSI terminal not available')
+    c.screenSwipeIn(id, layerIdentifier, duration, dir as 'right')
+  })
+  engine.global.set('__ansi_screenDitherOut', (
+    id: number, duration: number, cR: number, cG: number, cB: number, char: string, seed: number,
+  ) => {
+    const c = getController(); if (!c) throw new Error('ANSI terminal not available')
+    c.screenDitherOut(id, duration, [cR, cG, cB], char, seed)
+  })
+  engine.global.set('__ansi_screenDitherIn', (
+    id: number, layerIdentifier: string, duration: number, seed: number,
+  ) => {
+    const c = getController(); if (!c) throw new Error('ANSI terminal not available')
+    c.screenDitherIn(id, layerIdentifier, duration, seed)
+  })
+  engine.global.set('__ansi_screenIsSwiping', (id: number) => {
+    const c = getController(); if (!c) throw new Error('ANSI terminal not available')
+    return c.screenIsSwiping(id)
+  })
+
   // --- Label functions ---
   engine.global.set('__ansi_screenSetLabel', (
     screenId: number,
