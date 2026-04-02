@@ -11,7 +11,7 @@
 local ansi = require("ansi")
 
 -- Load V8 screen file (same code path as real game)
-local screen = ansi.load_screen("ansi/layer_transition_screen.ansi.lua")
+local screen = ansi.load_screen("layer_transition_screen.ansi.lua")
 ansi.set_screen(screen)
 
 local DURATION = 0.5
