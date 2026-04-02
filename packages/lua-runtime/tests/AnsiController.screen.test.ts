@@ -160,6 +160,8 @@ describe('AnsiController layer visibility', () => {
         type: 'drawn',
         visible: true,
         tags: [],
+        offsetCol: 0,
+        offsetRow: 0,
       })
     })
 
@@ -168,13 +170,13 @@ describe('AnsiController layer visibility', () => {
       const layers = controller.getScreenLayers(id)
       expect(layers).toHaveLength(3)
       expect(layers[0]).toEqual({
-        id: 'bg', name: 'Background', type: 'drawn', visible: true, tags: ['background', 'static'],
+        id: 'bg', name: 'Background', type: 'drawn', visible: true, tags: ['background', 'static'], offsetCol: 0, offsetRow: 0,
       })
       expect(layers[1]).toEqual({
-        id: 'g1', name: 'UI Group', type: 'group', visible: true, tags: ['ui'],
+        id: 'g1', name: 'UI Group', type: 'group', visible: true, tags: ['ui'], offsetCol: 0, offsetRow: 0,
       })
       expect(layers[2]).toEqual({
-        id: 'fg', name: 'Foreground', type: 'drawn', visible: true, tags: [],
+        id: 'fg', name: 'Foreground', type: 'drawn', visible: true, tags: [], offsetCol: 0, offsetRow: 0,
       })
     })
 

@@ -220,6 +220,13 @@ export const ansiLuaCoreCode = `
         local vp = __ansi_screenGetViewport(self.id)
         return vp[1], vp[2]
       end
+      function screen:set_layer_offset(identifier, col, row)
+        __ansi_screenSetLayerOffset(self.id, tostring(identifier), col or 0, row or 0)
+      end
+      function screen:get_layer_offset(identifier)
+        local off = __ansi_screenGetLayerOffset(self.id, tostring(identifier))
+        return off[1], off[2]
+      end
       function screen:set_label(identifier, value)
         local id_str = tostring(identifier)
         if type(value) == 'string' then

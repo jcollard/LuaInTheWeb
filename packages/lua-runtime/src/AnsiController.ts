@@ -65,15 +65,9 @@ export interface AnsiCallbacks {
   onFlushOutput?: () => void
 }
 
-/**
- * Layer information returned by getScreenLayers().
- */
 export interface LayerInfo {
-  id: string
-  name: string
-  type: string
-  visible: boolean
-  tags: string[]
+  id: string; name: string; type: string; visible: boolean; tags: string[]
+  offsetCol: number; offsetRow: number
 }
 
 /**
@@ -462,46 +456,24 @@ export class AnsiController {
   }
 
   getScreenLayers(id: number): LayerInfo[] {
-    const layers = this.validateScreenExists(id)
-    return layers.map(layer => ({
-      id: layer.id,
-      name: layer.name,
-      type: layer.type,
-      visible: layer.visible,
-      tags: layer.tags,
+    return this.validateScreenExists(id).map(layer => ({
+      id: layer.id, name: layer.name, type: layer.type, visible: layer.visible,
+      tags: layer.tags, offsetCol: layer.runtimeOffsetCol ?? 0, offsetRow: layer.runtimeOffsetRow ?? 0,
     }))
   }
 
   setScreenLayerVisible(id: number, identifier: string, visible: boolean): void {
-    const layers = this.validateScreenExists(id)
-    const matched = this.resolveLayersByIdentifier(layers, identifier)
-    if (matched.length === 0) {
-      throw new Error(`No layers match identifier "${identifier}" in screen ${id}.`)
-    }
-    for (const layer of matched) {
-      layer.visible = visible
-    }
+    for (const layer of this.resolveMatchedLayers(id, identifier)) layer.visible = visible
     this.recompositeScreen(id)
   }
 
   toggleScreenLayer(id: number, identifier: string): void {
-    const layers = this.validateScreenExists(id)
-    const matched = this.resolveLayersByIdentifier(layers, identifier)
-    if (matched.length === 0) {
-      throw new Error(`No layers match identifier "${identifier}" in screen ${id}.`)
-    }
-    for (const layer of matched) {
-      layer.visible = !layer.visible
-    }
+    for (const layer of this.resolveMatchedLayers(id, identifier)) layer.visible = !layer.visible
     this.recompositeScreen(id)
   }
 
   setScreenLabel(id: number, identifier: string, text: string, textFg?: RGBColor, textFgColors?: RGBColor[], textBg?: RGBColor, textBgColors?: RGBColor[]): void {
-    const layers = this.validateScreenExists(id)
-    const matched = this.resolveLayersByIdentifier(layers, identifier)
-    if (matched.length === 0) {
-      throw new Error(`No layers match identifier "${identifier}" in screen ${id}.`)
-    }
+    const matched = this.resolveMatchedLayers(id, identifier)
     const textLayers = matched.filter((l): l is TextLayerData => l.type === 'text')
     if (textLayers.length === 0) {
       throw new Error(`No text layers match identifier "${identifier}" in screen ${id}.`)
@@ -517,6 +489,23 @@ export class AnsiController {
     this.recompositeScreen(id)
   }
 
+  setScreenLayerOffset(id: number, identifier: string, col: number, row: number): void {
+    let changed = false
+    for (const layer of this.resolveMatchedLayers(id, identifier)) {
+      if ((layer.runtimeOffsetCol ?? 0) !== col || (layer.runtimeOffsetRow ?? 0) !== row) {
+        layer.runtimeOffsetCol = col
+        layer.runtimeOffsetRow = row
+        changed = true
+      }
+    }
+    if (changed) this.recompositeScreen(id)
+  }
+
+  getScreenLayerOffset(id: number, identifier: string): [number, number] {
+    const layer = this.resolveMatchedLayers(id, identifier)[0]
+    return [layer.runtimeOffsetCol ?? 0, layer.runtimeOffsetRow ?? 0]
+  }
+
   private resolveLayersByIdentifier(layers: LayerData[], identifier: string): LayerData[] {
     if (identifier === '') throw new Error('Layer identifier must not be empty.')
     const byId = layers.filter(l => l.id === identifier)
@@ -524,6 +513,13 @@ export class AnsiController {
     const byName = layers.filter(l => l.name === identifier)
     if (byName.length > 0) return byName
     return layers.filter(l => l.tags.includes(identifier))
+  }
+
+  private resolveMatchedLayers(id: number, identifier: string): LayerData[] {
+    const layers = this.validateScreenExists(id)
+    const matched = this.resolveLayersByIdentifier(layers, identifier)
+    if (matched.length === 0) throw new Error(`No layers match identifier "${identifier}" in screen ${id}.`)
+    return matched
   }
 
   screenPlay(id: number): void { this.validateScreenExists(id); const s = this.getScreenState(id); s.playing = true; s.playbackTouched = true }

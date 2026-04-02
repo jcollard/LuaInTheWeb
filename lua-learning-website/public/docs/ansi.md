@@ -515,6 +515,52 @@ end)
 ansi.start()
 ```
 
+Alternatively, use `set_layer_offset` to position layers at runtime without needing reference layers in the screen file:
+
+```lua
+local ansi = require("ansi")
+local screen = ansi.load_screen("title.ansi.lua")
+-- Position the right half at column 80
+screen:set_layer_offset("title-screen-right", 80, 0)
+ansi.set_screen(screen)
+
+-- Pan from left to right over 3 seconds
+screen:pan({ col = 80, duration = 3 })
+
+ansi.tick(function()
+  if ansi.is_key_pressed("escape") then ansi.stop() end
+end)
+
+ansi.start()
+```
+
+## Layer Offsets
+
+Layer offsets let you position layers at arbitrary positions in the virtual canvas, creating scenes wider or taller than the standard 80x25 terminal. This is especially useful for panoramic scrolling with `screen:pan()`.
+
+### `screen:set_layer_offset(identifier, col, row)`
+
+Set the position offset of layer(s) matching an identifier. All matching layers receive the same offset. Resolves by layer ID first, then by name, then by tag.
+
+```lua
+-- Position a layer 80 columns to the right
+screen:set_layer_offset("scene-right", 80, 0)
+
+-- Position a layer below the visible area
+screen:set_layer_offset("scene-bottom", 0, 25)
+
+-- Reset a layer to its default position
+screen:set_layer_offset("scene-right", 0, 0)
+```
+
+### `screen:get_layer_offset(identifier)`
+
+Get the position offset of the first layer matching an identifier. Returns two values: column and row.
+
+```lua
+local col, row = screen:get_layer_offset("scene-right")
+```
+
 ## CRT Shader Effect
 
 Apply a retro CRT monitor post-processing effect to the terminal output using a WebGL shader. The effect can be enabled before or after `ansi.start()`, and parameters can be adjusted live from within the `tick()` loop.
@@ -631,6 +677,8 @@ ansi.start()
 | `screen:set_viewport(col, row)` | Set viewport position instantly |
 | `screen:is_panning()` | Check if pan animation is active |
 | `screen:get_viewport()` | Get current viewport position (col, row) |
+| `screen:set_layer_offset(id, col, row)` | Set layer position offset in virtual canvas |
+| `screen:get_layer_offset(id)` | Get layer position offset (col, row) |
 | `ansi.crt(config)` | Enable/update CRT shader effect |
 | `ansi.start()` | Start terminal (blocks until `stop()`) |
 | `ansi.stop()` | Stop terminal |

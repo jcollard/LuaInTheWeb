@@ -89,6 +89,47 @@ export function visibleDrawableLayers(layers: LayerData[]): DrawableLayerData[] 
 
 export { compositeCellCore }
 
+/**
+ * Post-process composite entries to apply runtime offsets from LayerData.
+ * Drawable entries with nonzero runtime offsets are promoted to reference entries
+ * so the shared engine's offset-aware getEntryCell handles them.
+ * Reference entries accumulate runtime offsets onto their existing offsets.
+ */
+export function applyRuntimeOffsets(
+  entries: CompositeEntry[], layerMap: Map<string, LayerData>,
+): CompositeEntry[] {
+  let changed = false
+  const result: CompositeEntry[] = []
+  for (const entry of entries) {
+    const layer = layerMap.get(entry.id)
+    const offRow = layer?.runtimeOffsetRow ?? 0
+    const offCol = layer?.runtimeOffsetCol ?? 0
+    if (offRow === 0 && offCol === 0) {
+      result.push(entry)
+      continue
+    }
+    changed = true
+    if (entry.kind === 'drawable') {
+      result.push({
+        kind: 'reference' as const,
+        id: entry.id,
+        visible: entry.visible,
+        parentId: entry.parentId,
+        sourceGrid: entry.grid,
+        offsetRow: offRow,
+        offsetCol: offCol,
+      })
+    } else {
+      result.push({
+        ...entry,
+        offsetRow: entry.offsetRow + offRow,
+        offsetCol: entry.offsetCol + offCol,
+      })
+    }
+  }
+  return changed ? result : entries
+}
+
 /** Composite all visible layers into a pre-allocated target grid (zero allocation). */
 export function compositeGridInto(
   target: AnsiGrid, layers: LayerData[],
@@ -96,7 +137,8 @@ export function compositeGridInto(
   viewportRow = 0, viewportCol = 0,
 ): void {
   const layerMap = new Map(layers.map(l => [l.id, l]))
-  const entries = engine.buildCompositeEntries(layers, layerMap, groupGridCache)
+  const rawEntries = engine.buildCompositeEntries(layers, layerMap, groupGridCache)
+  const entries = applyRuntimeOffsets(rawEntries, layerMap)
   const clipMap = buildClipMaskMap(layers)
   // Hoisted closure: one closure per grid composite instead of 2000
   let curR = 0, curC = 0
@@ -120,7 +162,8 @@ export function compositeGridInto(
 /** Composite all visible layers into a single AnsiGrid. */
 export function compositeGrid(layers: LayerData[], groupGridCache?: Map<string, AnsiGrid>): AnsiGrid {
   const layerMap = new Map(layers.map(l => [l.id, l]))
-  const entries = engine.buildCompositeEntries(layers, layerMap, groupGridCache)
+  const rawEntries = engine.buildCompositeEntries(layers, layerMap, groupGridCache)
+  const entries = applyRuntimeOffsets(rawEntries, layerMap)
   const clipMap = buildClipMaskMap(layers)
   // Hoisted closure: one closure per grid composite instead of 2000
   let curR = 0, curC = 0
