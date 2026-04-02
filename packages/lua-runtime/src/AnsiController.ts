@@ -602,7 +602,7 @@ export class AnsiController {
     if (!this.running) return
     this.currentTiming = timing
 
-    this.updateActiveScreen()?.call(undefined)
+    const cb = this.updateActiveScreen(); cb?.()
 
     if (this.onTickCallback) {
       try {
