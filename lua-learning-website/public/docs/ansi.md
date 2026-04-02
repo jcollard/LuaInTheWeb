@@ -356,15 +356,17 @@ Sweep a boundary across the screen to hide content. When called without `layers`
 | `color` | `{r,g,b}` | `{0,0,0}` | Fill color (ignored when `layers` is set) |
 | `char` | string | `" "` | Fill character (ignored when `layers` is set) |
 | `direction` | string | `"right"` | Sweep direction (see below) |
+| `on_complete` | function | *none* | Callback invoked when the transition finishes |
 
 **Directions**: `"right"`, `"left"`, `"down"`, `"up"`, `"down-right"`, `"down-left"`, `"up-right"`, `"up-left"`
 
 ```lua
 screen:swipe_out()                                           -- default: right, black, 1s
 screen:swipe_out({ duration = 0.5, direction = "down" })     -- swipe down
-screen:swipe_out({ color = {255, 0, 0}, direction = "left" }) -- red fill, swipe left
 screen:swipe_out({ layers = "scene1", duration = 0.8 })      -- hide scene1 with swipe
-screen:swipe_out({ layers = {"scene1", "ui"} })              -- hide multiple layers
+screen:swipe_out({ layers = "enemy", duration = 0.5, on_complete = function()
+  screen:layer_on("loot-panel")  -- safe: runs after transition commits
+end })
 ```
 
 ### `screen:swipe_in(opts)`
@@ -376,11 +378,13 @@ Composite a preview with specified layers visible, then swipe it in. When comple
 | `layers` | string or string[] | *required* | Layer identifier(s) — ID, name, or tag. Use a table for multiple. |
 | `duration` | number | `1` | Duration in seconds |
 | `direction` | string | `"right"` | Sweep direction |
+| `on_complete` | function | *none* | Callback invoked when the transition finishes |
 
 ```lua
 screen:swipe_in({ layers = "scene2" })
-screen:swipe_in({ layers = "scene2", duration = 1.5, direction = "up" })
-screen:swipe_in({ layers = {"background", "characters", "ui"} })
+screen:swipe_in({ layers = "enemy", direction = "up", duration = 0.5, on_complete = function()
+  screen:layer_on("combat-ui")
+end })
 ```
 
 ### `screen:dither_out(opts?)`
@@ -394,12 +398,14 @@ Randomly replace cells one-by-one to hide content (dissolve effect). When called
 | `color` | `{r,g,b}` | `{0,0,0}` | Fill color (ignored when `layers` is set) |
 | `char` | string | `" "` | Fill character (ignored when `layers` is set) |
 | `seed` | number | `os.time()` | Random seed for dither pattern |
+| `on_complete` | function | *none* | Callback invoked when the transition finishes |
 
 ```lua
 screen:dither_out()
-screen:dither_out({ duration = 2, seed = 42 })
-screen:dither_out({ layers = "scene1", duration = 1 })        -- hide scene1 with dissolve
-screen:dither_out({ layers = {"scene1", "ui"}, seed = 42 })   -- hide multiple layers
+screen:dither_out({ layers = "scene1", duration = 1 })
+screen:dither_out({ layers = "enemy", duration = 0.5, on_complete = function()
+  screen:layer_on("loot-panel")
+end })
 ```
 
 ### `screen:dither_in(opts)`
@@ -411,10 +417,13 @@ Randomly reveal cells one-by-one from a preview with specified layers visible. W
 | `layers` | string or string[] | *required* | Layer identifier(s) — ID, name, or tag. Use a table for multiple. |
 | `duration` | number | `1` | Duration in seconds |
 | `seed` | number | `os.time()` | Random seed for dither pattern |
+| `on_complete` | function | *none* | Callback invoked when the transition finishes |
 
 ```lua
 screen:dither_in({ layers = "scene2" })
-screen:dither_in({ layers = {"scene2", "overlay"}, duration = 2 })
+screen:dither_in({ layers = "enemy", duration = 0.5, on_complete = function()
+  screen:layer_on("combat-ui")
+end })
 ```
 
 ### `screen:is_transitioning()` / `screen:is_swiping()`
@@ -425,6 +434,24 @@ Check if any transition (swipe or dither) is currently in progress.
 if not screen:is_transitioning() then
   screen:swipe_out()
 end
+```
+
+### Important: Transitions snapshot the screen
+
+When a transition starts, it captures a snapshot of the current screen state. Any `layer_on`, `layer_off`, or `set_label` calls made **in the same frame** as the transition call will be included in that snapshot, which can cause unexpected visual results (e.g., the entire screen appearing to go black).
+
+**Use `on_complete` to safely chain layer changes after a transition:**
+
+```lua
+-- WRONG: layer_off in the same frame affects the transition's snapshot
+screen:layer_off("crawling-panel")
+screen:swipe_in({ layers = "enemy", duration = 0.5 })
+
+-- RIGHT: use on_complete to change layers after the transition finishes
+screen:swipe_in({ layers = "enemy", duration = 0.5, on_complete = function()
+  screen:layer_off("crawling-panel")
+  screen:layer_on("combat-panel")
+end })
 ```
 
 ### Example: Scene transitions
@@ -450,6 +477,30 @@ ansi.tick(function()
 end)
 
 ansi.start()
+```
+
+### Example: Chaining transitions with on_complete
+
+```lua
+-- Combat flow: swipe in enemy, then on defeat dither out and show loot
+screen:swipe_in({
+  layers = "enemy",
+  direction = "up",
+  duration = 0.5,
+  on_complete = function()
+    screen:layer_on("combat-ui")
+  end,
+})
+
+-- Later, on defeat:
+screen:dither_out({
+  layers = "enemy",
+  duration = 0.5,
+  on_complete = function()
+    screen:layer_off("combat-ui")
+    screen:dither_in({ layers = "loot-panel", duration = 0.3 })
+  end,
+})
 ```
 
 ## Viewport / Pan
@@ -676,10 +727,10 @@ ansi.start()
 | `screen:play()` | Start/resume animation playback |
 | `screen:pause()` | Pause animation playback |
 | `screen:is_playing()` | Check if animation is playing |
-| `screen:swipe_out(opts?)` | Swipe out to fill color or hide layers (8 directions) |
-| `screen:swipe_in(opts)` | Swipe in preview layers (8 directions) |
-| `screen:dither_out(opts?)` | Dither out to fill color or hide layers (dissolve) |
-| `screen:dither_in(opts)` | Dither in preview layers (dissolve) |
+| `screen:swipe_out(opts?)` | Swipe out to fill color or hide layers (8 directions, `on_complete`) |
+| `screen:swipe_in(opts)` | Swipe in preview layers (8 directions, `on_complete`) |
+| `screen:dither_out(opts?)` | Dither out to fill color or hide layers (dissolve, `on_complete`) |
+| `screen:dither_in(opts)` | Dither in preview layers (dissolve, `on_complete`) |
 | `screen:is_transitioning()` | Check if any transition is active |
 | `screen:pan(opts)` | Animate viewport pan over time |
 | `screen:set_viewport(col, row)` | Set viewport position instantly |
