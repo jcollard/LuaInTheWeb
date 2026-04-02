@@ -343,6 +343,9 @@ export function generateAnsiHtml(
           },
         });
 
+        // Set up localStorage bridge (JS globals + package.preload)
+        await globalThis.AnsiStandalone.setupLocalStorageBridge(engine);
+
         // Set up audio bridge with pre-unlocked AudioContext
         const audioState = { preUnlockedAudioContext: preUnlockedAudioContext };
         globalThis.setupAudioBridge(engine, audioState, ASSET_MANIFEST);
