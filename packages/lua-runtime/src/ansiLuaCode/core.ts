@@ -150,6 +150,12 @@ export const ansiLuaCoreCode = `
     end
 
     -- Screen Display
+    local function _coerce_layer_ids(L, method)
+      if type(L) == 'table' then return table.concat(L, '\\x1f') end
+      if type(L) == 'string' then return L end
+      error(method .. ' layers must be a string or table of strings')
+    end
+
     function _ansi.create_screen(data)
       if type(data) ~= 'table' then
         error("ansi.create_screen() expects a table, got " .. type(data))
@@ -179,25 +185,29 @@ export const ansiLuaCoreCode = `
       end
       function screen:swipe_out(opts)
         opts = type(opts) == 'table' and opts or {}
-        local c = opts.color or {0, 0, 0}
-        __ansi_screenSwipeOut(self.id, opts.duration or 1, c[1], c[2], c[3], opts.char or ' ', opts.direction or 'right')
+        if opts.layers then
+          __ansi_screenSwipeOutLayers(self.id, _coerce_layer_ids(opts.layers, 'swipe_out()'), opts.duration or 1, opts.direction or 'right')
+        else
+          local c = opts.color or {0, 0, 0}
+          __ansi_screenSwipeOut(self.id, opts.duration or 1, c[1], c[2], c[3], opts.char or ' ', opts.direction or 'right')
+        end
       end
       function screen:swipe_in(opts)
         if type(opts) ~= 'table' then error('swipe_in() requires an options table') end
-        local L = opts.layers
-        if type(L) == 'table' then L = table.concat(L, '\\x1f') elseif type(L) ~= 'string' then error('swipe_in() layers must be a string or table of strings') end
-        __ansi_screenSwipeIn(self.id, L, opts.duration or 1, opts.direction or 'right')
+        __ansi_screenSwipeIn(self.id, _coerce_layer_ids(opts.layers, 'swipe_in()'), opts.duration or 1, opts.direction or 'right')
       end
       function screen:dither_out(opts)
         opts = type(opts) == 'table' and opts or {}
-        local c = opts.color or {0, 0, 0}
-        __ansi_screenDitherOut(self.id, opts.duration or 1, c[1], c[2], c[3], opts.char or ' ', opts.seed or os.time())
+        if opts.layers then
+          __ansi_screenDitherOutLayers(self.id, _coerce_layer_ids(opts.layers, 'dither_out()'), opts.duration or 1, opts.seed or os.time())
+        else
+          local c = opts.color or {0, 0, 0}
+          __ansi_screenDitherOut(self.id, opts.duration or 1, c[1], c[2], c[3], opts.char or ' ', opts.seed or os.time())
+        end
       end
       function screen:dither_in(opts)
         if type(opts) ~= 'table' then error('dither_in() requires an options table') end
-        local L = opts.layers
-        if type(L) == 'table' then L = table.concat(L, '\\x1f') elseif type(L) ~= 'string' then error('dither_in() layers must be a string or table of strings') end
-        __ansi_screenDitherIn(self.id, L, opts.duration or 1, opts.seed or os.time())
+        __ansi_screenDitherIn(self.id, _coerce_layer_ids(opts.layers, 'dither_in()'), opts.duration or 1, opts.seed or os.time())
       end
       function screen:is_transitioning() return __ansi_screenIsSwiping(self.id) end
       function screen:is_swiping() return __ansi_screenIsSwiping(self.id) end

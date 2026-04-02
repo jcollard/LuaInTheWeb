@@ -1,6 +1,7 @@
 -- Screen Transitions Demo
--- Demonstrates: swipe_out, swipe_in, dither_out, dither_in with directions
--- and multi-layer transitions. Controls shown at bottom of screen.
+-- Demonstrates: swipe_out, swipe_in, dither_out, dither_in with directions,
+-- multi-layer transitions, and per-layer swipe/dither out.
+-- Controls shown at bottom of screen.
 
 local ansi = require("ansi")
 
@@ -65,7 +66,7 @@ ansi.tick(function()
     ansi.foreground(200, 200, 200)
     ansi.background(30, 30, 30)
     local s = string.format(
-      " [O]ut [1]S1 [2]S2+Title [D]out [3]Din1 [4]Din2+Title [Dir:%s] ESC",
+      " [O]ut [H]ideS1 [1]S1 [2]S2+T [D]out [5]DhideT [3]Din1 [4]Din2+T [Dir:%s] ESC",
       dirs[dir_i]
     )
     ansi.print(s .. string.rep(" ", 80 - #s))
@@ -73,7 +74,11 @@ ansi.tick(function()
 
   if not screen:is_transitioning() then
     if ansi.is_key_pressed("o") then
+      -- Full-screen swipe out to black
       screen:swipe_out({ duration = 0.8, direction = dirs[dir_i] })
+    elseif ansi.is_key_pressed("h") then
+      -- Per-layer swipe out: hide scene1 with transition
+      screen:swipe_out({ layers = "scene1", duration = 0.8, direction = dirs[dir_i] })
     elseif ansi.is_key_pressed("1") then
       screen:layer_off("scene2")
       screen:layer_off("title")
@@ -84,7 +89,11 @@ ansi.tick(function()
       -- Multi-layer: swipe in scene2 + title together
       screen:swipe_in({ layers = {"scene2", "title"}, duration = 0.8, direction = dirs[dir_i] })
     elseif ansi.is_key_pressed("d") then
+      -- Full-screen dither out to black
       screen:dither_out({ duration = 1.5 })
+    elseif ansi.is_key_pressed("5") then
+      -- Per-layer dither out: dissolve away the title overlay
+      screen:dither_out({ layers = "title", duration = 1.0 })
     elseif ansi.is_key_pressed("3") then
       screen:layer_off("scene2")
       screen:layer_off("title")
@@ -92,7 +101,6 @@ ansi.tick(function()
     elseif ansi.is_key_pressed("4") then
       screen:layer_off("scene1")
       screen:layer_off("title")
-      -- Multi-layer: dither in scene2 + title together
       screen:dither_in({ layers = {"scene2", "title"}, duration = 1.5 })
     elseif ansi.is_key_pressed("right") then
       dir_i = (dir_i % #dirs) + 1

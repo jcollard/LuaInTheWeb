@@ -19,7 +19,7 @@ import { compositeGridInto } from './screenCompositor'
 import { renderGridToAnsiString, renderDiffAnsiString } from './ansiStringRenderer'
 import { renderTextLayerGrid } from './textLayerGrid'
 import { createEmptyGrid, type AnsiGrid, type LayerData, type DrawnLayerData, type TextLayerData, type RGBColor } from './screenTypes'
-import { startSwipeOut, startSwipeIn, startDitherOut, startDitherIn, advanceTransition, resolveMultipleIdentifiers, type TransitionState, type SwipeDirection } from './screenSwipe'
+import { startSwipeOut, startSwipeIn, startSwipeOutLayers, startDitherOut, startDitherIn, startDitherOutLayers, advanceTransition, resolveMultipleIdentifiers, type TransitionState, type SwipeDirection } from './screenSwipe'
 import { startPan, advancePan, type PanState } from './screenPan'
 
 /**
@@ -473,26 +473,18 @@ export class AnsiController {
   }
 
   setScreenLayerVisible(id: number, identifier: string, visible: boolean): void {
-    const layers = this.validateScreenExists(id)
-    const matched = this.resolveLayersByIdentifier(layers, identifier)
-    if (matched.length === 0) {
-      throw new Error(`No layers match identifier "${identifier}" in screen ${id}.`)
-    }
-    for (const layer of matched) {
-      layer.visible = visible
-    }
-    this.recompositeScreen(id)
+    this.modifyScreenLayers(id, identifier, l => { l.visible = visible })
   }
 
   toggleScreenLayer(id: number, identifier: string): void {
+    this.modifyScreenLayers(id, identifier, l => { l.visible = !l.visible })
+  }
+
+  private modifyScreenLayers(id: number, identifier: string, fn: (l: LayerData) => void): void {
     const layers = this.validateScreenExists(id)
     const matched = this.resolveLayersByIdentifier(layers, identifier)
-    if (matched.length === 0) {
-      throw new Error(`No layers match identifier "${identifier}" in screen ${id}.`)
-    }
-    for (const layer of matched) {
-      layer.visible = !layer.visible
-    }
+    if (matched.length === 0) throw new Error(`No layers match identifier "${identifier}" in screen ${id}.`)
+    for (const layer of matched) fn(layer)
     this.recompositeScreen(id)
   }
 
@@ -528,20 +520,20 @@ export class AnsiController {
 
   screenPlay(id: number): void { this.validateScreenExists(id); const s = this.getScreenState(id); s.playing = true; s.playbackTouched = true }
   screenPause(id: number): void { this.validateScreenExists(id); const s = this.getScreenState(id); s.playing = false; s.playbackTouched = true; s.schedule = null }
-
   screenIsPlaying(id: number): boolean { return this.screenStates.get(id)?.playing ?? false }
-
   screenSwipeOut(id: number, duration: number, color: RGBColor, char: string, dir: SwipeDirection): void { this.validateScreenExists(id); startSwipeOut(this.getScreenState(id), duration, color, char, dir, this.groupGridCache) }
-  screenSwipeIn(id: number, ids: string, duration: number, dir: SwipeDirection): void { const layers = this.validateScreenExists(id); const m = resolveMultipleIdentifiers(layers, ids, this.resolveLayersByIdentifier.bind(this)); if (m.length === 0) throw new Error(`No layers match "${ids}" in screen ${id}.`); startSwipeIn(this.getScreenState(id), layers, m, duration, dir, this.groupGridCache) }
+  screenSwipeIn(id: number, ids: string, duration: number, dir: SwipeDirection): void { const [layers, m] = this.resolveScreenLayers(id, ids); startSwipeIn(this.getScreenState(id), layers, m, duration, dir, this.groupGridCache) }
+  screenSwipeOutLayers(id: number, ids: string, duration: number, dir: SwipeDirection): void { const [layers, m] = this.resolveScreenLayers(id, ids); startSwipeOutLayers(this.getScreenState(id), layers, m, duration, dir, this.groupGridCache) }
   screenDitherOut(id: number, duration: number, color: RGBColor, char: string, seed: number): void { this.validateScreenExists(id); startDitherOut(this.getScreenState(id), duration, color, char, seed, this.groupGridCache) }
-  screenDitherIn(id: number, ids: string, duration: number, seed: number): void { const layers = this.validateScreenExists(id); const m = resolveMultipleIdentifiers(layers, ids, this.resolveLayersByIdentifier.bind(this)); if (m.length === 0) throw new Error(`No layers match "${ids}" in screen ${id}.`); startDitherIn(this.getScreenState(id), layers, m, duration, seed, this.groupGridCache) }
+  screenDitherIn(id: number, ids: string, duration: number, seed: number): void { const [layers, m] = this.resolveScreenLayers(id, ids); startDitherIn(this.getScreenState(id), layers, m, duration, seed, this.groupGridCache) }
+  screenDitherOutLayers(id: number, ids: string, duration: number, seed: number): void { const [layers, m] = this.resolveScreenLayers(id, ids); startDitherOutLayers(this.getScreenState(id), layers, m, duration, seed, this.groupGridCache) }
   screenIsSwiping(id: number): boolean { return (this.screenStates.get(id)?.swipe ?? null) !== null }
-
   screenPan(id: number, duration: number, fromCol: number, fromRow: number, toCol: number, toRow: number): void { this.validateScreenExists(id); const s = this.getScreenState(id); s.pan = startPan(duration, fromCol, fromRow, toCol, toRow); s.viewportCol = fromCol; s.viewportRow = fromRow; s.needsRecomposite = true }
   screenSetViewport(id: number, col: number, row: number): void { this.validateScreenExists(id); const s = this.getScreenState(id); s.pan = null; s.viewportCol = col; s.viewportRow = row; s.needsRecomposite = true }
   screenIsPanning(id: number): boolean { return (this.screenStates.get(id)?.pan ?? null) !== null }
   screenGetViewport(id: number): [number, number] { const s = this.screenStates.get(id); return [s?.viewportCol ?? 0, s?.viewportRow ?? 0] }
 
+  private resolveScreenLayers(id: number, ids: string): [LayerData[], LayerData[]] { const layers = this.validateScreenExists(id); const m = resolveMultipleIdentifiers(layers, ids, this.resolveLayersByIdentifier.bind(this)); if (m.length === 0) throw new Error(`No layers match "${ids}" in screen ${id}.`); return [layers, m] }
   private hasAnimatedLayers(layers: LayerData[]): boolean {
     return layers.some(l => l.type === 'drawn' && (l as DrawnLayerData).frames.length > 1)
   }

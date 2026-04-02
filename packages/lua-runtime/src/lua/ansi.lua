@@ -288,12 +288,16 @@ function Screen:pause() end
 ---@usage if screen:is_playing() then screen:pause() end
 function Screen:is_playing() end
 
---- Swipe out: replace cells with a fill color in a sweep direction.
----@param opts? table Options: duration (number, default 1), color ({r,g,b}, default {0,0,0}), char (string, default " "), direction (string, default "right")
+--- Swipe out: sweep a boundary across the screen to hide content.
+--- Without layers: replaces all cells with a fill color.
+--- With layers: transitions to the screen with those layers hidden, then permanently hides them.
+---@param opts? table Options: layers (string or string[], optional), duration (number, default 1), color ({r,g,b}, default {0,0,0}, ignored with layers), char (string, default " ", ignored with layers), direction (string, default "right")
 ---@return nil
 ---@usage screen:swipe_out()
 ---@usage screen:swipe_out({ duration = 0.5, direction = "down" })
 ---@usage screen:swipe_out({ color = {255, 0, 0}, direction = "up-left" })
+---@usage screen:swipe_out({ layers = "scene1", duration = 0.8 })
+---@usage screen:swipe_out({ layers = {"scene1", "ui"}, direction = "left" })
 function Screen:swipe_out(opts) end
 
 --- Swipe in: composite a preview with specified layers visible, then swipe in.
@@ -305,11 +309,15 @@ function Screen:swipe_out(opts) end
 ---@usage screen:swipe_in({ layers = {"background", "characters"}, duration = 1.5 })
 function Screen:swipe_in(opts) end
 
---- Dither out: randomly replace cells one-by-one with a fill color.
----@param opts? table Options: duration (number, default 1), color ({r,g,b}, default {0,0,0}), char (string, default " "), seed (number, default os.time())
+--- Dither out: randomly replace cells one-by-one to hide content (dissolve effect).
+--- Without layers: dissolves to a fill color.
+--- With layers: dissolves to the screen with those layers hidden, then permanently hides them.
+---@param opts? table Options: layers (string or string[], optional), duration (number, default 1), color ({r,g,b}, default {0,0,0}, ignored with layers), char (string, default " ", ignored with layers), seed (number, default os.time())
 ---@return nil
 ---@usage screen:dither_out()
 ---@usage screen:dither_out({ duration = 2, seed = 42 })
+---@usage screen:dither_out({ layers = "scene1", duration = 1 })
+---@usage screen:dither_out({ layers = {"scene1", "ui"}, seed = 42 })
 function Screen:dither_out(opts) end
 
 --- Dither in: randomly reveal cells one-by-one from a preview with specified layers visible.

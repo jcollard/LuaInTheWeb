@@ -347,13 +347,14 @@ Swipe and dither transitions reveal or hide content with cinematic effects.
 
 ### `screen:swipe_out(opts?)`
 
-Replace cells with a fill color by sweeping a boundary across the screen.
+Sweep a boundary across the screen to hide content. When called without `layers`, replaces all cells with a fill color. When called with `layers`, transitions to the screen state with those layers hidden, then permanently hides them.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `duration` | number | `1` | Duration in seconds |
-| `color` | `{r,g,b}` | `{0,0,0}` | Fill color |
-| `char` | string | `" "` | Fill character |
+| `layers` | string or string[] | *none* | Layer identifier(s) to hide — ID, name, or tag. If omitted, fills entire screen. |
+| `color` | `{r,g,b}` | `{0,0,0}` | Fill color (ignored when `layers` is set) |
+| `char` | string | `" "` | Fill character (ignored when `layers` is set) |
 | `direction` | string | `"right"` | Sweep direction (see below) |
 
 **Directions**: `"right"`, `"left"`, `"down"`, `"up"`, `"down-right"`, `"down-left"`, `"up-right"`, `"up-left"`
@@ -362,6 +363,8 @@ Replace cells with a fill color by sweeping a boundary across the screen.
 screen:swipe_out()                                           -- default: right, black, 1s
 screen:swipe_out({ duration = 0.5, direction = "down" })     -- swipe down
 screen:swipe_out({ color = {255, 0, 0}, direction = "left" }) -- red fill, swipe left
+screen:swipe_out({ layers = "scene1", duration = 0.8 })      -- hide scene1 with swipe
+screen:swipe_out({ layers = {"scene1", "ui"} })              -- hide multiple layers
 ```
 
 ### `screen:swipe_in(opts)`
@@ -382,18 +385,21 @@ screen:swipe_in({ layers = {"background", "characters", "ui"} })
 
 ### `screen:dither_out(opts?)`
 
-Randomly replace cells one-by-one with a fill color (dissolve effect).
+Randomly replace cells one-by-one to hide content (dissolve effect). When called without `layers`, dissolves to a fill color. When called with `layers`, dissolves to the screen state with those layers hidden, then permanently hides them.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `duration` | number | `1` | Duration in seconds |
-| `color` | `{r,g,b}` | `{0,0,0}` | Fill color |
-| `char` | string | `" "` | Fill character |
+| `layers` | string or string[] | *none* | Layer identifier(s) to hide — ID, name, or tag. If omitted, fills entire screen. |
+| `color` | `{r,g,b}` | `{0,0,0}` | Fill color (ignored when `layers` is set) |
+| `char` | string | `" "` | Fill character (ignored when `layers` is set) |
 | `seed` | number | `os.time()` | Random seed for dither pattern |
 
 ```lua
 screen:dither_out()
 screen:dither_out({ duration = 2, seed = 42 })
+screen:dither_out({ layers = "scene1", duration = 1 })        -- hide scene1 with dissolve
+screen:dither_out({ layers = {"scene1", "ui"}, seed = 42 })   -- hide multiple layers
 ```
 
 ### `screen:dither_in(opts)`
@@ -432,6 +438,8 @@ ansi.tick(function()
   if not screen:is_transitioning() then
     if ansi.is_key_pressed("o") then
       screen:swipe_out({ duration = 0.8, direction = "right" })
+    elseif ansi.is_key_pressed("h") then
+      screen:swipe_out({ layers = "scene2", duration = 0.8 })  -- hide scene2
     elseif ansi.is_key_pressed("i") then
       screen:swipe_in({ layers = "scene2", duration = 0.8 })
     elseif ansi.is_key_pressed("d") then
@@ -622,9 +630,9 @@ ansi.start()
 | `screen:play()` | Start/resume animation playback |
 | `screen:pause()` | Pause animation playback |
 | `screen:is_playing()` | Check if animation is playing |
-| `screen:swipe_out(opts?)` | Swipe out to fill color (8 directions) |
+| `screen:swipe_out(opts?)` | Swipe out to fill color or hide layers (8 directions) |
 | `screen:swipe_in(opts)` | Swipe in preview layers (8 directions) |
-| `screen:dither_out(opts?)` | Dither out to fill color (dissolve) |
+| `screen:dither_out(opts?)` | Dither out to fill color or hide layers (dissolve) |
 | `screen:dither_in(opts)` | Dither in preview layers (dissolve) |
 | `screen:is_transitioning()` | Check if any transition is active |
 | `screen:pan(opts)` | Animate viewport pan over time |
