@@ -298,10 +298,10 @@ function Screen:swipe_out(opts) end
 --- Swipe in: composite a preview with specified layers visible, then swipe in.
 --- When the swipe completes, the specified layers are permanently toggled visible.
 --- Directions: "right", "left", "down", "up", "down-right", "down-left", "up-right", "up-left"
----@param opts table Options: layers (string, required), duration (number, default 1), direction (string, default "right")
+---@param opts table Options: layers (string or string[], required), duration (number, default 1), direction (string, default "right")
 ---@return nil
 ---@usage screen:swipe_in({ layers = "scene2" })
----@usage screen:swipe_in({ layers = "scene2", duration = 1.5, direction = "down" })
+---@usage screen:swipe_in({ layers = {"background", "characters"}, duration = 1.5 })
 function Screen:swipe_in(opts) end
 
 --- Dither out: randomly replace cells one-by-one with a fill color.
@@ -313,10 +313,10 @@ function Screen:dither_out(opts) end
 
 --- Dither in: randomly reveal cells one-by-one from a preview with specified layers visible.
 --- When complete, the specified layers are permanently toggled visible.
----@param opts table Options: layers (string, required), duration (number, default 1), seed (number, default os.time())
+---@param opts table Options: layers (string or string[], required), duration (number, default 1), seed (number, default os.time())
 ---@return nil
 ---@usage screen:dither_in({ layers = "scene2" })
----@usage screen:dither_in({ layers = "scene2", duration = 2, seed = 42 })
+---@usage screen:dither_in({ layers = {"scene2", "overlay"}, duration = 2 })
 function Screen:dither_in(opts) end
 
 --- Check if a transition (swipe or dither) is currently in progress.

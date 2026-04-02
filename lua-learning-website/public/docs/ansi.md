@@ -370,13 +370,14 @@ Composite a preview with specified layers visible, then swipe it in. When comple
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `layers` | string | *required* | Layer identifier (ID, name, or tag) |
+| `layers` | string or string[] | *required* | Layer identifier(s) — ID, name, or tag. Use a table for multiple. |
 | `duration` | number | `1` | Duration in seconds |
 | `direction` | string | `"right"` | Sweep direction |
 
 ```lua
 screen:swipe_in({ layers = "scene2" })
 screen:swipe_in({ layers = "scene2", duration = 1.5, direction = "up" })
+screen:swipe_in({ layers = {"background", "characters", "ui"} })
 ```
 
 ### `screen:dither_out(opts?)`
@@ -401,13 +402,13 @@ Randomly reveal cells one-by-one from a preview with specified layers visible. W
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `layers` | string | *required* | Layer identifier (ID, name, or tag) |
+| `layers` | string or string[] | *required* | Layer identifier(s) — ID, name, or tag. Use a table for multiple. |
 | `duration` | number | `1` | Duration in seconds |
 | `seed` | number | `os.time()` | Random seed for dither pattern |
 
 ```lua
 screen:dither_in({ layers = "scene2" })
-screen:dither_in({ layers = "scene2", duration = 2, seed = 42 })
+screen:dither_in({ layers = {"scene2", "overlay"}, duration = 2 })
 ```
 
 ### `screen:is_transitioning()` / `screen:is_swiping()`

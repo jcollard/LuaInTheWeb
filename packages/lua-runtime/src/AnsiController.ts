@@ -19,7 +19,7 @@ import { compositeGridInto } from './screenCompositor'
 import { renderGridToAnsiString, renderDiffAnsiString } from './ansiStringRenderer'
 import { renderTextLayerGrid } from './textLayerGrid'
 import { createEmptyGrid, type AnsiGrid, type LayerData, type DrawnLayerData, type TextLayerData, type RGBColor } from './screenTypes'
-import { startSwipeOut, startSwipeIn, startDitherOut, startDitherIn, advanceTransition, type TransitionState, type SwipeDirection } from './screenSwipe'
+import { startSwipeOut, startSwipeIn, startDitherOut, startDitherIn, advanceTransition, resolveMultipleIdentifiers, type TransitionState, type SwipeDirection } from './screenSwipe'
 
 /**
  * Handle to a running ANSI terminal instance.
@@ -546,8 +546,7 @@ export class AnsiController {
     if (byName.length > 0) return byName
 
     // Try tag match
-    const byTag = layers.filter(l => l.tags.includes(identifier))
-    return byTag
+    return layers.filter(l => l.tags.includes(identifier))
   }
 
   // --- Animation Playback API ---
@@ -580,9 +579,9 @@ export class AnsiController {
   screenIsPlaying(id: number): boolean { return this.screenStates.get(id)?.playing ?? false }
 
   screenSwipeOut(id: number, duration: number, color: RGBColor, char: string, dir: SwipeDirection): void { this.validateScreenExists(id); startSwipeOut(this.getScreenState(id), duration, color, char, dir, this.groupGridCache) }
-  screenSwipeIn(id: number, identifier: string, duration: number, dir: SwipeDirection): void { const layers = this.validateScreenExists(id); const m = this.resolveLayersByIdentifier(layers, identifier); if (m.length === 0) throw new Error(`No layers match "${identifier}" in screen ${id}.`); startSwipeIn(this.getScreenState(id), layers, m, duration, dir, this.groupGridCache) }
+  screenSwipeIn(id: number, ids: string, duration: number, dir: SwipeDirection): void { const layers = this.validateScreenExists(id); const m = resolveMultipleIdentifiers(layers, ids, this.resolveLayersByIdentifier.bind(this)); if (m.length === 0) throw new Error(`No layers match "${ids}" in screen ${id}.`); startSwipeIn(this.getScreenState(id), layers, m, duration, dir, this.groupGridCache) }
   screenDitherOut(id: number, duration: number, color: RGBColor, char: string, seed: number): void { this.validateScreenExists(id); startDitherOut(this.getScreenState(id), duration, color, char, seed, this.groupGridCache) }
-  screenDitherIn(id: number, identifier: string, duration: number, seed: number): void { const layers = this.validateScreenExists(id); const m = this.resolveLayersByIdentifier(layers, identifier); if (m.length === 0) throw new Error(`No layers match "${identifier}" in screen ${id}.`); startDitherIn(this.getScreenState(id), layers, m, duration, seed, this.groupGridCache) }
+  screenDitherIn(id: number, ids: string, duration: number, seed: number): void { const layers = this.validateScreenExists(id); const m = resolveMultipleIdentifiers(layers, ids, this.resolveLayersByIdentifier.bind(this)); if (m.length === 0) throw new Error(`No layers match "${ids}" in screen ${id}.`); startDitherIn(this.getScreenState(id), layers, m, duration, seed, this.groupGridCache) }
   screenIsSwiping(id: number): boolean { return (this.screenStates.get(id)?.swipe ?? null) !== null }
 
   /**
