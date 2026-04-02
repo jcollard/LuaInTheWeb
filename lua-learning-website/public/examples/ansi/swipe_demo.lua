@@ -55,7 +55,7 @@ ansi.tick(function()
     ansi.foreground(200, 200, 200)
     ansi.background(30, 30, 30)
     local s = string.format(
-      " [O]ut [1]S1 [2]S2 [D]ither [Dir:%s] Arrows ESC",
+      " [O]ut [1]S1 [2]S2 [D]out [3]Din1 [4]Din2 [Dir:%s] Arrows ESC",
       dirs[dir_i]
     )
     ansi.print(s .. string.rep(" ", 80 - #s))
@@ -72,6 +72,12 @@ ansi.tick(function()
       screen:swipe_in({ layers = "scene2", duration = 0.8, direction = dirs[dir_i] })
     elseif ansi.is_key_pressed("d") then
       screen:dither_out({ duration = 1.5 })
+    elseif ansi.is_key_pressed("3") then
+      screen:layer_off("scene2")
+      screen:dither_in({ layers = "scene1", duration = 1.5 })
+    elseif ansi.is_key_pressed("4") then
+      screen:layer_off("scene1")
+      screen:dither_in({ layers = "scene2", duration = 1.5 })
     elseif ansi.is_key_pressed("right") then
       dir_i = (dir_i % #dirs) + 1
     elseif ansi.is_key_pressed("left") then
