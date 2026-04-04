@@ -278,16 +278,23 @@ export function generateAnsiHtml(
       // Create AnsiTerminalHandle wrapping xterm.js
       const handle = {
         write: (data) => term.write(data), container: wrapper, dispose: () => term.dispose(),
-        setCrt: (enabled) => {
-          if (enabled && !crtShader) {
-            const CrtShader = globalThis.AnsiStandalone.CrtShader;
-            const CRT_DEFAULTS = globalThis.AnsiStandalone.CRT_DEFAULTS;
-            const canvas = wrapper.querySelector('canvas');
-            if (canvas) {
-              crtShader = new CrtShader(canvas, wrapper, {});
-              crtShader.enable({ ...CRT_DEFAULTS });
+        setCrt: (enabled, intensity, config) => {
+          if (enabled) {
+            if (!crtShader) {
+              const CrtShader = globalThis.AnsiStandalone.CrtShader;
+              const canvas = wrapper.querySelector('canvas');
+              if (canvas) {
+                crtShader = new CrtShader(canvas, wrapper, {});
+              }
             }
-          } else if (!enabled && crtShader) {
+            if (crtShader) {
+              if (config) {
+                crtShader.enable(config);
+              } else {
+                crtShader.enable(intensity !== undefined ? intensity : undefined);
+              }
+            }
+          } else if (crtShader) {
             crtShader.disable();
             crtShader = null;
           }
