@@ -144,8 +144,8 @@ export class AssetLoader {
         // Classify the file by extension
         const fileType = classifyFileType(entry.name);
 
-        // Only include image, font, and audio files
-        if (fileType === 'image' || fileType === 'font' || fileType === 'audio') {
+        // Only include recognized asset files (images, fonts, audio, music)
+        if (fileType !== 'unknown') {
           // Compute relative path from base: prefix/filename or just filename
           const relativePath = relativePrefix
             ? `${relativePrefix}/${entry.name}`

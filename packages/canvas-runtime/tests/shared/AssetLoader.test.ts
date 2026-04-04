@@ -618,6 +618,25 @@ describe('AssetLoader', () => {
       expect(files.map(f => f.type)).toEqual(['audio', 'audio', 'audio']);
     });
 
+    it('should discover music files (.wcol, .wsng) in a directory', () => {
+      mockFs = createMockFileSystem({
+        exists: vi.fn(() => true),
+        isFile: vi.fn(() => false),
+        listDirectory: vi.fn(() => [
+          { name: 'title-screen.wcol', path: '/assets/title-screen.wcol', type: 'file' as const },
+          { name: 'battle.wsng', path: '/assets/battle.wsng', type: 'file' as const },
+          { name: 'readme.txt', path: '/assets/readme.txt', type: 'file' as const },
+        ]),
+      });
+      loader = new AssetLoader(mockFs, '/my-files/games');
+
+      const files = loader.scanDirectory('assets');
+
+      expect(files).toHaveLength(2);
+      expect(files.map(f => f.filename)).toEqual(['title-screen.wcol', 'battle.wsng']);
+      expect(files.map(f => f.type)).toEqual(['music', 'music']);
+    });
+
     it('should discover all asset types: images, fonts, and audio', () => {
       mockFs = createMockFileSystem({
         exists: vi.fn(() => true),

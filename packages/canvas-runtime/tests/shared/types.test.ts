@@ -4,6 +4,7 @@ import {
   isAssetHandle,
   isAudioAssetHandle,
   VALID_AUDIO_EXTENSIONS,
+  VALID_MUSIC_EXTENSIONS,
   createEmptyGamepadState,
   createEmptyInputState,
   GAMEPAD_BUTTONS,
@@ -18,6 +19,13 @@ describe('types', () => {
       expect(VALID_AUDIO_EXTENSIONS).toContain('.mp3');
       expect(VALID_AUDIO_EXTENSIONS).toContain('.wav');
       expect(VALID_AUDIO_EXTENSIONS).toContain('.ogg');
+    });
+  });
+
+  describe('VALID_MUSIC_EXTENSIONS', () => {
+    it('should include chip music formats', () => {
+      expect(VALID_MUSIC_EXTENSIONS).toContain('.wcol');
+      expect(VALID_MUSIC_EXTENSIONS).toContain('.wsng');
     });
   });
 
@@ -71,6 +79,23 @@ describe('types', () => {
       it('should handle audio files in paths', () => {
         expect(classifyFileType('sounds/jump.mp3')).toBe('audio');
         expect(classifyFileType('/assets/music/level1.ogg')).toBe('audio');
+      });
+    });
+
+    describe('music files', () => {
+      it('should classify WCOL files as music', () => {
+        expect(classifyFileType('song.wcol')).toBe('music');
+        expect(classifyFileType('SONG.WCOL')).toBe('music');
+      });
+
+      it('should classify WSNG files as music', () => {
+        expect(classifyFileType('track.wsng')).toBe('music');
+        expect(classifyFileType('TRACK.WSNG')).toBe('music');
+      });
+
+      it('should handle music files in paths', () => {
+        expect(classifyFileType('assets/title-screen.wcol')).toBe('music');
+        expect(classifyFileType('/music/battle.wsng')).toBe('music');
       });
     });
 
