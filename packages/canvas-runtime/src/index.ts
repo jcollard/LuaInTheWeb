@@ -53,6 +53,7 @@ export {
   VALID_IMAGE_EXTENSIONS,
   VALID_FONT_EXTENSIONS,
   VALID_AUDIO_EXTENSIONS,
+  VALID_MUSIC_EXTENSIONS,
   // Asset path API utilities
   classifyFileType,
   isAssetHandle,

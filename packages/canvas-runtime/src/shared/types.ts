@@ -1461,6 +1461,11 @@ export const VALID_FONT_EXTENSIONS = ['.ttf', '.otf', '.woff', '.woff2'] as cons
 export const VALID_AUDIO_EXTENSIONS = ['.mp3', '.wav', '.ogg'] as const;
 
 /**
+ * Valid music file extensions for chip composer assets (.wcol collections, .wsng songs).
+ */
+export const VALID_MUSIC_EXTENSIONS = ['.wcol', '.wsng'] as const;
+
+/**
  * Definition of an asset to be loaded.
  */
 export interface AssetDefinition {
@@ -1484,7 +1489,7 @@ export type AssetManifest = Map<string, AssetDefinition>;
 /**
  * Type of asset file based on extension.
  */
-export type AssetFileType = 'image' | 'font' | 'audio' | 'unknown';
+export type AssetFileType = 'image' | 'font' | 'audio' | 'music' | 'unknown';
 
 /**
  * Represents a file discovered from scanning an asset path directory.
@@ -1576,6 +1581,9 @@ export function classifyFileType(filename: string): AssetFileType {
   }
   if (VALID_AUDIO_EXTENSIONS.some(ext => lowerName.endsWith(ext))) {
     return 'audio';
+  }
+  if (VALID_MUSIC_EXTENSIONS.some(ext => lowerName.endsWith(ext))) {
+    return 'music';
   }
   return 'unknown';
 }
