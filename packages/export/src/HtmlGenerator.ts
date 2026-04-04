@@ -6,6 +6,7 @@ import {
   WASMOON_INLINE_JS,
   XTERM_INLINE_JS,
   XTERM_INLINE_CSS,
+  CHIP_INLINE_JS,
 } from '@lua-learning/lua-runtime'
 import { toDataUrl } from './base64'
 import { generateAnsiHtml } from './AnsiHtmlGenerator'
@@ -189,6 +190,9 @@ export class HtmlGenerator {
     // Audio Lua code (registers package.preload['ail_audio'])
     const AUDIO_LUA_CODE = globalThis.audioLuaCode;
 
+    // Chip Lua code (registers package.preload['chip'])
+    const CHIP_LUA_CODE = globalThis.chipLuaCode;
+
     // Project configuration
     const PROJECT_CONFIG = {
       name: ${JSON.stringify(config.name)},
@@ -360,6 +364,10 @@ export class HtmlGenerator {
         ${AUDIO_INLINE_JS}
         globalThis.setupAudioBridge(engine, state, ASSET_MANIFEST);
 
+        // === CHIP (OPL3 FM Synthesis) API ===
+        ${CHIP_INLINE_JS}
+        globalThis.setupChipBridge(engine, ASSET_MANIFEST);
+
         // Set up custom require to load from embedded modules
         engine.global.set('__load_module', (modulePath) => {
           let filePath = modulePath;
@@ -404,6 +412,11 @@ export class HtmlGenerator {
         // Uses 'ail_audio' namespace to avoid colliding with game's own 'audio' module.
         if (AUDIO_LUA_CODE) {
           await engine.doString(AUDIO_LUA_CODE);
+        }
+
+        // Register chip (OPL3) module
+        if (CHIP_LUA_CODE) {
+          await engine.doString(CHIP_LUA_CODE);
         }
 
         // Execute the bundled canvas Lua API code

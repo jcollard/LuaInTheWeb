@@ -239,6 +239,12 @@
     "ansi/pan_demo.lua",
     "ansi/layer_offset_demo.lua",
     "ansi/layer_transition_demo.lua",
-    "ansi/layer_transition_screen.ansi.lua"
+    "ansi/layer_transition_screen.ansi.lua",
+    "chip/hello_chip.lua",
+    "chip/melody.lua",
+    "chip/pattern_builder.lua",
+    "chip/song_player.lua",
+    "chip/procedural_music.lua",
+    "chip/assets/dc-example.wcol"
   ]
 }

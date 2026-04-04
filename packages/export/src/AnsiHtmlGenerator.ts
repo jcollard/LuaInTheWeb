@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type { ProjectConfig } from './types'
 import {
   WASMOON_INLINE_JS,
@@ -5,6 +6,8 @@ import {
   IBM_VGA_FONT_DATA_URL,
   AUDIO_INLINE_JS,
   audioLuaCode,
+  CHIP_INLINE_JS,
+  chipLuaCode,
 } from '@lua-learning/lua-runtime'
 import { ANSI_INLINE_JS } from './runtime/ansi-inline.generated'
 import { XTERM_WITH_CANVAS_ADDON_JS } from './runtime/xterm-canvas.generated'
@@ -52,11 +55,10 @@ export function generateAnsiHtml(
     crtField('phosphor', config.ansi?.crt_phosphor),
   ].join(', ') : ''
 
-  // Escape audioLuaCode for safe embedding in JS template literal
-  const escapedAudioLuaCode = audioLuaCode
-    .replace(/\\/g, '\\\\')
-    .replace(/`/g, '\\`')
-    .replace(/\$/g, '\\$')
+  // Escape Lua code strings for safe embedding in JS template literals
+  const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$')
+  const escapedAudioLuaCode = esc(audioLuaCode)
+  const escapedChipLuaCode = esc(chipLuaCode)
 
   // Stryker disable all: HTML template - mutations to string literals don't affect behavior
   return `<!DOCTYPE html>
@@ -135,6 +137,7 @@ export function generateAnsiHtml(
   <script>
     // Audio bridge (bundled from audio-inline-entry.ts)
     ${AUDIO_INLINE_JS}
+    ${CHIP_INLINE_JS}
   </script>
   <script type="module">
     // Lua module map
@@ -143,8 +146,8 @@ export function generateAnsiHtml(
     // Asset manifest (for audio assets)
     const ASSET_MANIFEST = ${assetManifest};
 
-    // Audio Lua code (registers package.preload['ail_audio'])
     const AUDIO_LUA_CODE = \`${escapedAudioLuaCode}\`;
+    const CHIP_LUA_CODE = \`${escapedChipLuaCode}\`;
 
     // Project configuration
     const PROJECT_CONFIG = {
@@ -343,12 +346,10 @@ export function generateAnsiHtml(
           },
         });
 
-        // Set up localStorage bridge (JS globals + package.preload)
         await globalThis.AnsiStandalone.setupLocalStorageBridge(engine);
-
-        // Set up audio bridge with pre-unlocked AudioContext
         const audioState = { preUnlockedAudioContext: preUnlockedAudioContext };
         globalThis.setupAudioBridge(engine, audioState, ASSET_MANIFEST);
+        globalThis.setupChipBridge(engine, ASSET_MANIFEST);
 
         // Override __ansi_start with non-blocking version.
         engine.global.set('__ansi_start', () => {
@@ -399,13 +400,8 @@ export function generateAnsiHtml(
           "end"
         );
 
-        // Register audio module (must come before main script)
-        if (AUDIO_LUA_CODE) {
-          await engine.doString(AUDIO_LUA_CODE);
-        }
-
-        // Note: setupAnsiAPI() already executed ansiLuaCode via doStringSync()
-        // which registers package.preload['ansi']. No need to run it again.
+        if (AUDIO_LUA_CODE) { await engine.doString(AUDIO_LUA_CODE); }
+        if (CHIP_LUA_CODE) { await engine.doString(CHIP_LUA_CODE); }
 
         // Get and execute main script
         const mainCode = LUA_MODULES[PROJECT_CONFIG.main];

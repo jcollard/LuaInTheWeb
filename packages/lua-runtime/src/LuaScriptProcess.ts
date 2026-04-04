@@ -19,6 +19,10 @@ import { setupAudioAPI } from './setupAudioAPI'
 import { setupAudioAssetAPI } from './setupAudioAssetAPI'
 import { AudioAssetManager } from './AudioAssetManager'
 import { audioLuaCode } from './audioLuaCode'
+import { setupChipAPI } from './setupChipAPI'
+import { setupChipAssetAPI } from './setupChipAssetAPI'
+import { ChipAssetManager } from './ChipAssetManager'
+import { chipLuaCode } from './chipLuaCode'
 import { AnsiController, type AnsiCallbacks, type AnsiTerminalHandle } from './AnsiController'
 import type { CrtConfig } from './crtShader'
 import { setupAnsiAPI } from './setupAnsiAPI'
@@ -65,6 +69,9 @@ export class LuaScriptProcess implements IProcess {
   private canvasController: CanvasController | null = null
   private ansiController: AnsiController | null = null
   private audioAssetManager: AudioAssetManager | null = null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private chipPlayer: any = null
+  private chipAssetManager: ChipAssetManager | null = null
 
   /** File operations handler for io.open() support */
   private fileOpsHandler: FileOperationsHandler | null = null
@@ -235,6 +242,9 @@ export class LuaScriptProcess implements IProcess {
       // Set up standalone audio module (always available, must be before canvas/ansi)
       this.initAudioModule(filepath)
 
+      // Set up chip (OPL3 FM synthesis) module (non-blocking, optional)
+      this.initChipModule(filepath)
+
       // Set up canvas API if callbacks are provided
       this.initCanvasAPI()
 
@@ -363,6 +373,11 @@ __clear_execution_hook()
     // Dispose standalone audio engine if active
     this.audioAssetManager?.getAudioEngine()?.dispose()
     this.audioAssetManager = null
+
+    // Dispose chip player if active
+    this.chipPlayer?.destroy()
+    this.chipPlayer = null
+    this.chipAssetManager = null
 
     const engineToClose = this.engine
     this.engine = null
@@ -592,6 +607,44 @@ __clear_execution_hook()
 
     // Inject the audio Lua code (registers package.preload['ail_audio'])
     this.engine.doStringSync(audioLuaCode)
+  }
+
+  /**
+   * Set up the chip (OPL3 FM synthesis) module.
+   * Creates a ChipPlayer and ChipAssetManager, sets up bridge functions,
+   * and injects the chip Lua code.
+   */
+  private initChipModule(scriptPath: string): void {
+    if (!this.engine) return
+
+    this.chipAssetManager = new ChipAssetManager()
+
+    // Determine script directory for resolving relative asset paths
+    const lastSlash = scriptPath.lastIndexOf('/')
+    const scriptDirectory = lastSlash >= 0 ? scriptPath.substring(0, lastSlash + 1) : '/'
+
+    // Set up chip asset bridge functions (add_path, load_file, start, getFileContent)
+    setupChipAssetAPI(this.engine, () => this.chipAssetManager, {
+      fileSystem: this.context.filesystem,
+      scriptDirectory,
+    })
+
+    // Load ChipPlayer lazily — chip.init() awaits this promise
+    // Also extract PatternBuilder for synchronous use by __chip_buildPattern
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let patternBuilderCtor: any = null
+    const playerReady = import('@chip-composer/player')
+      .then(({ ChipPlayer, PatternBuilder }) => {
+        this.chipPlayer = new ChipPlayer()
+        patternBuilderCtor = PatternBuilder
+      })
+      .catch(() => { /* ChipPlayer not available */ })
+
+    // Set up chip playback bridge functions
+    setupChipAPI(this.engine, () => this.chipPlayer, () => playerReady, () => patternBuilderCtor)
+
+    // Inject the chip Lua code (registers package.preload['chip'])
+    this.engine.doStringSync(chipLuaCode)
   }
 
 }
