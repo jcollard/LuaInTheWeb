@@ -181,6 +181,9 @@ export function generateAnsiHtml(
 
     async function startApp() {
       overlay.remove(); wrapper.style.display = 'block'; wrapper.focus();
+      // Restore focus when user clicks back into the page or alt-tabs back
+      wrapper.addEventListener('mousedown', () => wrapper.focus());
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) wrapper.focus(); });
       // Create AudioContext synchronously in gesture handler (Issue #617)
       let preUnlockedAudioContext = null;
       try {
