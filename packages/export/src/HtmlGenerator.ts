@@ -496,6 +496,9 @@ export class HtmlGenerator {
 
       await initLua();
       gameCanvas.focus();
+      // Restore focus when user clicks back into the page or alt-tabs back
+      gameCanvas.addEventListener('mousedown', () => gameCanvas.focus());
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) gameCanvas.focus(); });
     }
 
     // Wait for user interaction before starting
