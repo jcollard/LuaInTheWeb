@@ -575,7 +575,7 @@ export class AnsiController {
     if (this.activeScreenId === null) return
     const state = this.screenStates.get(this.activeScreenId)
     if (state?.playing) {
-      this.advanceScreenAnimation(this.activeScreenId, this.currentTiming.totalTime * 1000)
+      this.advanceScreenAnimation(this.activeScreenId, this.currentTiming.totalTime * 1000, !!state.swipe)
     }
     if (state?.pan) {
       const prevCol = Math.floor(state.viewportCol), prevRow = Math.floor(state.viewportRow)
@@ -622,12 +622,12 @@ export class AnsiController {
     this.inputCapture?.update()
   }
 
-  private advanceScreenAnimation(id: number, nowMs: number): void {
+  private advanceScreenAnimation(id: number, nowMs: number, suppressWrite = false): void {
     const state = this.screenStates.get(id)
     if (!state) return
     if (!state.schedule) state.schedule = initSchedule(state.layers, nowMs)
     const { changed } = computePlaybackTick(state.layers, state.schedule, nowMs)
     if (!changed) return
-    this.compositeAndDiff(state, true)
+    this.compositeAndDiff(state, !suppressWrite)
   }
 }
