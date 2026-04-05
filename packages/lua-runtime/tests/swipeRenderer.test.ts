@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   formatCell,
   buildSwipeGrid,
+  buildDitherGrid,
+  generateDitherOrder,
   renderSwipeDiff,
   updateShadow,
   createSentinelGrid,
@@ -170,5 +172,110 @@ describe('updateShadow', () => {
     // Mutate desired — shadow should not change
     desired[0][0].fg[0] = 999
     expect(shadow[0][0].fg[0]).not.toBe(999)
+  })
+})
+
+describe('generateDitherOrder', () => {
+  it('returns exactly ROWS*COLS elements', () => {
+    const order = generateDitherOrder(42)
+    expect(order).toHaveLength(ANSI_ROWS * ANSI_COLS)
+  })
+
+  it('is a valid permutation (no duplicates, all indices present)', () => {
+    const order = generateDitherOrder(42)
+    const total = ANSI_ROWS * ANSI_COLS
+    const seen = new Set(order)
+    expect(seen.size).toBe(total)
+    for (let i = 0; i < total; i++) {
+      expect(seen.has(i)).toBe(true)
+    }
+  })
+
+  it('different seeds produce different orders', () => {
+    const a = generateDitherOrder(1)
+    const b = generateDitherOrder(2)
+    // At least some elements should differ
+    const diffs = a.filter((v, i) => v !== b[i]).length
+    expect(diffs).toBeGreaterThan(0)
+  })
+})
+
+describe('buildDitherGrid', () => {
+  const total = ANSI_ROWS * ANSI_COLS
+
+  function countTargetCells(output: AnsiGrid, target: AnsiGrid): number {
+    let count = 0
+    for (let r = 0; r < ANSI_ROWS; r++) {
+      for (let c = 0; c < ANSI_COLS; c++) {
+        const o = output[r][c], t = target[r][c]
+        if (o.char === t.char
+          && o.fg[0] === t.fg[0] && o.fg[1] === t.fg[1] && o.fg[2] === t.fg[2]
+          && o.bg[0] === t.bg[0] && o.bg[1] === t.bg[1] && o.bg[2] === t.bg[2]) {
+          count++
+        }
+      }
+    }
+    return count
+  }
+
+  it('at progress=0, all cells match source', () => {
+    const target = createFillGrid('T', [255, 0, 0])
+    const source = makeGradientGrid()
+    const output = createEmptyGrid()
+    const order = generateDitherOrder(42)
+
+    buildDitherGrid(target, source, 0, order, output)
+
+    expect(countTargetCells(output, source)).toBe(total)
+  })
+
+  it('at progress=1, all cells match target', () => {
+    const target = createFillGrid('T', [255, 0, 0])
+    const source = makeGradientGrid()
+    const output = createEmptyGrid()
+    const order = generateDitherOrder(42)
+
+    buildDitherGrid(target, source, 1, order, output)
+
+    expect(countTargetCells(output, target)).toBe(total)
+  })
+
+  it('at progress=0.5, approximately half cells are target', () => {
+    const target = createFillGrid('T', [255, 0, 0])
+    const source = makeGradientGrid()
+    const output = createEmptyGrid()
+    const order = generateDitherOrder(42)
+
+    buildDitherGrid(target, source, 0.5, order, output)
+
+    const targetCount = countTargetCells(output, target)
+    expect(targetCount).toBe(Math.floor(total * 0.5))
+  })
+
+  it('at progress=0.999, count is floor(total*0.999)', () => {
+    const target = createFillGrid('T', [255, 0, 0])
+    const source = makeGradientGrid()
+    const output = createEmptyGrid()
+    const order = generateDitherOrder(42)
+
+    buildDitherGrid(target, source, 0.999, order, output)
+
+    const targetCount = countTargetCells(output, target)
+    expect(targetCount).toBe(Math.floor(total * 0.999))
+  })
+
+  it('monotonically increases target cell count as progress increases', () => {
+    const target = createFillGrid('T', [255, 0, 0])
+    const source = makeGradientGrid()
+    const output = createEmptyGrid()
+    const order = generateDitherOrder(42)
+
+    let prevCount = 0
+    for (let p = 0; p <= 1; p += 0.05) {
+      buildDitherGrid(target, source, p, order, output)
+      const count = countTargetCells(output, target)
+      expect(count).toBeGreaterThanOrEqual(prevCount)
+      prevCount = count
+    }
   })
 })
