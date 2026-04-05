@@ -4,7 +4,7 @@ import {
   startSwipeOut,
   advanceTransition,
 } from '../src/screenSwipe'
-import { createEmptyGrid, createFillGrid, ANSI_ROWS, ANSI_COLS } from '../src/screenTypes'
+import { createFillGrid, ANSI_ROWS, ANSI_COLS } from '../src/screenTypes'
 import type { AnsiGrid, AnsiCell, LayerData, DrawnLayerData, RGBColor } from '../src/screenTypes'
 
 const total = ANSI_ROWS * ANSI_COLS
@@ -129,7 +129,7 @@ describe('advanceTransition', () => {
 
       // Phase 1: dither_out to black
       startDitherOut(state, 0.5, [0, 0, 0], ' ', 42, new Map())
-      const cb1 = runToCompletion(state)
+      runToCompletion(state)
       expect(state.swipe).toBeNull()
 
       // Phase 2: start dither_in (simulating what on_complete would do)
