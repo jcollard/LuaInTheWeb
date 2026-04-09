@@ -16,7 +16,7 @@
 -- - M: Open menu
 -- - Q: Quit game
 
-local game = require("examples/ascii_world/game")
+local game = require("demos/ascii_world/game")
 
 -- Start the adventure!
 game.start()

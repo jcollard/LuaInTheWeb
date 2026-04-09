@@ -48,6 +48,7 @@ import {
 import { useBookWorkspaceLoader } from './useBookWorkspaceLoader'
 import { useDocsWorkspaceLoader } from './useDocsWorkspaceLoader'
 import { useExamplesWorkspaceLoader } from './useExamplesWorkspaceLoader'
+import { useDemosWorkspaceLoader } from './useDemosWorkspaceLoader'
 import { useLibsWorkspaceLoader } from './useLibsWorkspaceLoader'
 import { useProjectsWorkspaceLoader } from './useProjectsWorkspaceLoader'
 
@@ -79,7 +80,8 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
         w.type !== 'docs' &&
         w.type !== 'book' &&
         w.type !== 'examples' &&
-        w.type !== 'projects'
+        w.type !== 'projects' &&
+        w.type !== 'demos'
     )
     saveWorkspaces(persistableWorkspaces)
   }, [state])
@@ -114,6 +116,9 @@ export function useWorkspaceManager(): UseWorkspaceManagerReturn {
 
   // Fetch and add examples workspace on mount
   useExamplesWorkspaceLoader(setState)
+
+  // Fetch and add demos workspace on mount
+  useDemosWorkspaceLoader(setState)
 
   // Fetch and add libs workspace on mount
   useLibsWorkspaceLoader(setState)

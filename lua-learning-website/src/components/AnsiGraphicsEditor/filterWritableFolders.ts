@@ -1,7 +1,7 @@
 import type { TreeNode } from '../../hooks/fileSystemTypes'
 
 function isReadOnlyNode(node: TreeNode): boolean {
-  return !!(node.isReadOnly || node.isLibraryWorkspace || node.isDocsWorkspace || node.isBookWorkspace || node.isExamplesWorkspace)
+  return !!(node.isReadOnly || node.isLibraryWorkspace || node.isDocsWorkspace || node.isBookWorkspace || node.isExamplesWorkspace || node.isDemosWorkspace)
 }
 
 /** Filter tree to only writable folders (no read-only workspaces, no files). */

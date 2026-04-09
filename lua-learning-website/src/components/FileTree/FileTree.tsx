@@ -9,6 +9,7 @@ const PENDING_WORKSPACE_NAMES: Record<string, string> = {
   adventures: 'Adventures',
   docs: 'Docs',
   examples: 'Examples',
+  demos: 'Demos',
   libs: 'Libs',
   projects: 'Projects',
 }
@@ -37,7 +38,7 @@ export function FileTree({
     const readOnly: TreeNode[] = []
 
     for (const node of tree) {
-      if (node.isLibraryWorkspace || node.isDocsWorkspace || node.isBookWorkspace || node.isExamplesWorkspace || node.isProjectsWorkspace) {
+      if (node.isLibraryWorkspace || node.isDocsWorkspace || node.isBookWorkspace || node.isExamplesWorkspace || node.isProjectsWorkspace || node.isDemosWorkspace) {
         readOnly.push(node)
       } else {
         regular.push(node)
@@ -67,6 +68,7 @@ export function FileTree({
             isExamplesWorkspace: id === 'examples',
             isProjectsWorkspace: id === 'projects',
             isLibraryWorkspace: id === 'libs',
+            isDemosWorkspace: id === 'demos',
           })
         }
       }
@@ -218,6 +220,7 @@ export function FileTree({
           isDocsWorkspace={node.isDocsWorkspace}
           isBookWorkspace={node.isBookWorkspace}
           isExamplesWorkspace={node.isExamplesWorkspace}
+          isDemosWorkspace={node.isDemosWorkspace}
           isProjectsWorkspace={node.isProjectsWorkspace}
           isLoading={node.isLoading}
           isReadOnly={node.isReadOnly}

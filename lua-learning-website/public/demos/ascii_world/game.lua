@@ -2,13 +2,13 @@
 -- Main game loop and state management
 
 local shell = require("shell")
-local config = require("examples/ascii_world/config")
-local ui = require("examples/ascii_world/ui")
-local player_mod = require("examples/ascii_world/player")
-local items = require("examples/ascii_world/items")
-local maps = require("examples/ascii_world/maps")
-local monsters = require("examples/ascii_world/monsters")
-local combat = require("examples/ascii_world/combat")
+local config = require("demos/ascii_world/config")
+local ui = require("demos/ascii_world/ui")
+local player_mod = require("demos/ascii_world/player")
+local items = require("demos/ascii_world/items")
+local maps = require("demos/ascii_world/maps")
+local monsters = require("demos/ascii_world/monsters")
+local combat = require("demos/ascii_world/combat")
 
 local game = {}
 
