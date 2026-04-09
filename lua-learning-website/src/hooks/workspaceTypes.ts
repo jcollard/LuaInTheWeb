@@ -18,8 +18,9 @@ import type { IFileSystem } from '@lua-learning/shell-core'
  * - 'book': Read-only workspace for book content fetched from public assets (e.g., /adventures)
  * - 'examples': Read-only workspace for example Lua programs (e.g., /examples)
  * - 'projects': Read-only workspace for starter projects that can be cloned (e.g., /projects)
+ * - 'demos': Read-only workspace for full game/app demos (e.g., /demos)
  */
-export type WorkspaceType = 'virtual' | 'local' | 'library' | 'docs' | 'book' | 'examples' | 'projects'
+export type WorkspaceType = 'virtual' | 'local' | 'library' | 'docs' | 'book' | 'examples' | 'projects' | 'demos'
 
 /**
  * Connection status for workspaces.

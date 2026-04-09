@@ -1,8 +1,8 @@
 -- ascii_world/player.lua
 -- Player state and progression
 
-local config = require("examples/ascii_world/config")
-local ui = require("examples/ascii_world/ui")
+local config = require("demos/ascii_world/config")
+local ui = require("demos/ascii_world/ui")
 
 local player = {}
 

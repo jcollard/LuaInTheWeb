@@ -45,25 +45,8 @@ test.describe('Examples Workspace', () => {
       await expect(page.getByRole('treeitem', { name: 'colors.lua' })).toBeVisible()
       await expect(page.getByRole('treeitem', { name: 'mad_takes.lua' })).toBeVisible()
       await expect(page.getByRole('treeitem', { name: 'adventure.lua' })).toBeVisible()
-      await expect(page.getByRole('treeitem', { name: 'ascii_world.lua' })).toBeVisible()
-      // Assert - ascii_world and canvas subdirectories should be visible
-      await expect(page.getByRole('treeitem', { name: 'ascii_world', exact: true })).toBeVisible()
+      // Assert - canvas subdirectory should be visible
       await expect(page.getByRole('treeitem', { name: 'canvas', exact: true })).toBeVisible()
-    })
-
-    test('can expand ascii_world folder to see game modules', async ({ explorerPage: page }) => {
-      // Arrange - Expand examples workspace
-      const examplesWorkspace = page.getByRole('treeitem', { name: /^examples$/i })
-      await examplesWorkspace.getByTestId('folder-chevron').click()
-
-      // Act - Find and expand ascii_world folder
-      const asciiWorldFolder = page.getByRole('treeitem', { name: 'ascii_world', exact: true })
-      await asciiWorldFolder.getByTestId('folder-chevron').click()
-
-      // Assert - Game module files should be visible
-      await expect(page.getByRole('treeitem', { name: 'config.lua' })).toBeVisible()
-      await expect(page.getByRole('treeitem', { name: 'game.lua' })).toBeVisible()
-      await expect(page.getByRole('treeitem', { name: 'EXTENSIONS.md' })).toBeVisible()
     })
   })
 

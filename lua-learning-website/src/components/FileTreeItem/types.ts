@@ -20,6 +20,8 @@ export interface FileTreeItemProps {
   isExamplesWorkspace?: boolean
   /** Indicates this is a projects workspace (read-only, starter projects for cloning) */
   isProjectsWorkspace?: boolean
+  /** Indicates this is a demos workspace (read-only, full game/app demos) */
+  isDemosWorkspace?: boolean
   /** Indicates this workspace is currently loading */
   isLoading?: boolean
   /** Indicates this file/folder is in a read-only workspace */

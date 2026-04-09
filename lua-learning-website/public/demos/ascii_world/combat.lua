@@ -2,10 +2,10 @@
 -- Turn-based battle system
 
 local shell = require("shell")
-local config = require("examples/ascii_world/config")
-local ui = require("examples/ascii_world/ui")
-local player_mod = require("examples/ascii_world/player")
-local monsters_mod = require("examples/ascii_world/monsters")
+local config = require("demos/ascii_world/config")
+local ui = require("demos/ascii_world/ui")
+local player_mod = require("demos/ascii_world/player")
+local monsters_mod = require("demos/ascii_world/monsters")
 
 local combat = {}
 

@@ -2,7 +2,7 @@
 -- UI rendering helpers
 
 local shell = require("shell")
-local config = require("examples/ascii_world/config")
+local config = require("demos/ascii_world/config")
 
 local ui = {}
 

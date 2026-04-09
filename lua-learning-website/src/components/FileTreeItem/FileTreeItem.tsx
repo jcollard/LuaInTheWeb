@@ -108,6 +108,20 @@ const ExamplesWorkspaceIcon = () => (
   </svg>
 )
 
+// Demos workspace icon - gamepad themed (full game/app demos)
+const DemosWorkspaceIcon = () => (
+  <svg className={styles.iconSvg} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" data-testid="demos-workspace-icon">
+    {/* Gamepad body */}
+    <rect x="1" y="5" width="14" height="8" rx="3" fill="#7a4da8" stroke="#5a3488" strokeWidth="0.5" />
+    {/* D-pad */}
+    <rect x="3" y="8" width="3" height="1" fill="#e0d0ff" />
+    <rect x="4" y="7" width="1" height="3" fill="#e0d0ff" />
+    {/* A/B buttons */}
+    <circle cx="11" cy="8" r="0.9" fill="#ff6b6b" />
+    <circle cx="12.5" cy="9.5" r="0.9" fill="#ffd93d" />
+  </svg>
+)
+
 // Projects workspace icon - rocket/project themed (starter projects for cloning)
 const ProjectsWorkspaceIcon = () => (
   <svg className={styles.iconSvg} viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" data-testid="projects-workspace-icon">
@@ -143,6 +157,7 @@ export function FileTreeItem({
   isBookWorkspace,
   isExamplesWorkspace,
   isProjectsWorkspace,
+  isDemosWorkspace,
   isLoading,
   isReadOnly,
   isSelected,
@@ -310,6 +325,8 @@ export function FileTreeItem({
               <BookWorkspaceIcon />
             ) : isExamplesWorkspace ? (
               <ExamplesWorkspaceIcon />
+            ) : isDemosWorkspace ? (
+              <DemosWorkspaceIcon />
             ) : isProjectsWorkspace ? (
               <ProjectsWorkspaceIcon />
             ) : isLocalWorkspace ? (
