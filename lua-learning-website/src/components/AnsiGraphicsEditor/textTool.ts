@@ -38,7 +38,6 @@ export interface TextToolDeps {
   textBoundsRef: React.RefObject<HTMLDivElement | null>
   textCursorRef: React.RefObject<HTMLDivElement | null>
   containerRef: React.RefObject<HTMLElement | null>
-  /** Live refs for current project canvas dimensions. */
   projectColsRef: React.RefObject<number>
   projectRowsRef: React.RefObject<number>
   onExitEditing?: () => void
@@ -102,8 +101,8 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
     const container = deps.containerRef.current
     if (!el || !container) return
     const rect = container.getBoundingClientRect()
-    const cellW = rect.width / (deps.projectColsRef.current ?? 80)
-    const cellH = rect.height / (deps.projectRowsRef.current ?? 25)
+    const cellW = rect.width / deps.projectColsRef.current
+    const cellH = rect.height / deps.projectRowsRef.current
     el.style.display = 'block'
     el.style.left = `${rect.left + bounds.c0 * cellW}px`
     el.style.top = `${rect.top + bounds.r0 * cellH}px`
@@ -117,8 +116,8 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
     const container = deps.containerRef.current
     if (!el || !container || !layer) { hideCursorOverlay(); return }
     const rect = container.getBoundingClientRect()
-    const cellW = rect.width / (deps.projectColsRef.current ?? 80)
-    const cellH = rect.height / (deps.projectRowsRef.current ?? 25)
+    const cellW = rect.width / deps.projectColsRef.current
+    const cellH = rect.height / deps.projectRowsRef.current
     const boundsWidth = layer.bounds.c1 - layer.bounds.c0 + 1
     const visual = cursorPosToVisual(layer.text, boundsWidth, cursorPos, layer.textAlign)
     const gridRow = layer.bounds.r0 + visual.row
@@ -254,8 +253,8 @@ export function createTextToolHandlers(deps: TextToolDeps): TextToolHandlers {
       const bounds: Rect = {
         r0: Math.max(0, Math.min(drawStart.row, end.row)),
         c0: Math.max(0, Math.min(drawStart.col, end.col)),
-        r1: Math.min((deps.projectRowsRef.current ?? 25) - 1, Math.max(drawStart.row, end.row)),
-        c1: Math.min((deps.projectColsRef.current ?? 80) - 1, Math.max(drawStart.col, end.col)),
+        r1: Math.min(deps.projectRowsRef.current - 1, Math.max(drawStart.row, end.row)),
+        c1: Math.min(deps.projectColsRef.current - 1, Math.max(drawStart.col, end.col)),
       }
       deps.pushSnapshot()
       deps.addTextLayer('Text', bounds, [...deps.brushRef.current.fg] as RGBColor)

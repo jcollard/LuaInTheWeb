@@ -18,7 +18,6 @@ export interface DrawHelperDeps {
   previewCellsRef: React.MutableRefObject<Map<string, AnsiCell>>
   lineStartRef: React.MutableRefObject<CellHalf | null>
   colorTransformRef: React.RefObject<ColorTransform | undefined>
-  /** Live refs for current project canvas dimensions. */
   projectColsRef: React.RefObject<number>
   projectRowsRef: React.RefObject<number>
   getActiveGrid: () => AnsiGrid
@@ -42,8 +41,8 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
     const el = cursorRef.current
     if (!el) return
     const rect = container.getBoundingClientRect()
-    const cellW = rect.width / (projectColsRef.current ?? 80)
-    const cellH = rect.height / (projectRowsRef.current ?? 25)
+    const cellW = rect.width / projectColsRef.current
+    const cellH = rect.height / projectRowsRef.current
     const isHalf = isTopHalf !== undefined
     const cursorH = isHalf ? cellH / 2 : cellH
     const offsetY = isHalf && !isTopHalf ? cellH / 2 : 0
@@ -62,8 +61,8 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
     const el = dimensionRef.current
     if (!el) return
     const rect = container.getBoundingClientRect()
-    const cellW = rect.width / (projectColsRef.current ?? 80)
-    const cellH = rect.height / (projectRowsRef.current ?? 25)
+    const cellW = rect.width / projectColsRef.current
+    const cellH = rect.height / projectRowsRef.current
     const minCol = Math.min(start.col, end.col)
     const maxCol = Math.max(start.col, end.col)
     const minRow = Math.min(start.row, end.row)
@@ -101,7 +100,7 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
   function paintAt(row: number, col: number, isTopHalf: boolean): void {
     const mode = brushRef.current.mode
     if (mode === 'eraser') {
-      if (isInBounds(row, col, projectRowsRef.current ?? 25, projectColsRef.current ?? 80)) {
+      if (isInBounds(row, col, projectRowsRef.current, projectColsRef.current)) {
         applyCell(row, col, computeErasePixelCell(getActiveGrid()[row][col], isTopHalf))
       }
     } else if (mode === 'pixel') {

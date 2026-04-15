@@ -383,7 +383,13 @@ export function assertContiguousBlocks(layers: Layer[]): void {
 }
 
 export function cloneLayerState(state: LayerState): LayerState {
-  return { activeLayerId: state.activeLayerId, layers: state.layers.map(cloneLayer) }
+  return {
+    activeLayerId: state.activeLayerId,
+    layers: state.layers.map(cloneLayer),
+    cols: state.cols,
+    rows: state.rows,
+    availableTags: state.availableTags,
+  }
 }
 
 export { createClipLayer, buildClipMaskMap, isCellClipped } from './clipMaskUtils'

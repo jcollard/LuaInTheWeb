@@ -25,7 +25,6 @@ export interface SelectionDeps {
   pushSnapshot: () => void
   getActiveGrid: () => AnsiGrid
   hideDimension: () => void
-  /** Live refs for current project canvas dimensions. */
   projectColsRef: React.RefObject<number>
   projectRowsRef: React.RefObject<number>
 }
@@ -42,8 +41,6 @@ export interface SelectionHandlers {
 export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers {
   const { container, selectionRef, commitPendingRef, projectColsRef, projectRowsRef } = deps
   const { restorePreview, writePreviewCells, commitCells, pushSnapshot, getActiveGrid, hideDimension } = deps
-  const cols = () => projectColsRef.current ?? 80
-  const rows = () => projectRowsRef.current ?? 25
 
   let phase: 'idle' | 'selecting' | 'selected' | 'dragging' = 'idle'
   let selRect: Rect | null = null
@@ -56,8 +53,8 @@ export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers 
     const el = selectionRef.current
     if (!el) return
     const rect = container.getBoundingClientRect()
-    const cellW = rect.width / cols()
-    const cellH = rect.height / rows()
+    const cellW = rect.width / projectColsRef.current
+    const cellH = rect.height / projectRowsRef.current
     const minR = Math.min(r0, r1), maxR = Math.max(r0, r1)
     const minC = Math.min(c0, c1), maxC = Math.max(c0, c1)
     el.style.display = 'block'
@@ -86,7 +83,7 @@ export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers 
     const result = new Map<string, AnsiCell>()
     for (const [key, cell] of cells) {
       const [r, c] = parseCellKey(key)
-      if (r >= 0 && r < rows() && c >= 0 && c < cols()) {
+      if (r >= 0 && r < projectRowsRef.current && c >= 0 && c < projectColsRef.current) {
         result.set(key, cell)
       }
     }
@@ -114,7 +111,7 @@ export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers 
         commitCells(toAbsoluteKeys(captured, selRect.r0, selRect.c0))
       } else {
         commitCells(computeSelectionMoveCells(
-          captured, selOrigRect.r0, selOrigRect.c0, selRect.r0, selRect.c0, rows(), cols(),
+          captured, selOrigRect.r0, selOrigRect.c0, selRect.r0, selRect.c0, projectRowsRef.current, projectColsRef.current,
         ))
       }
     } else {
@@ -127,7 +124,7 @@ export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers 
     restorePreview()
     if (!selRect || !selOrigRect) return
     writePreviewCells(computeSelectionMoveCells(
-      captured, selOrigRect.r0, selOrigRect.c0, selRect.r0, selRect.c0, rows(), cols(),
+      captured, selOrigRect.r0, selOrigRect.c0, selRect.r0, selRect.c0, projectRowsRef.current, projectColsRef.current,
     ))
   }
 
@@ -181,7 +178,7 @@ export function createSelectionHandlers(deps: SelectionDeps): SelectionHandlers 
         restorePreview()
         pushSnapshot()
         commitCells(computeSelectionMoveCells(
-          captured, selOrigRect.r0, selOrigRect.c0, selRect.r0, selRect.c0, rows(), cols(),
+          captured, selOrigRect.r0, selOrigRect.c0, selRect.r0, selRect.c0, projectRowsRef.current, projectColsRef.current,
         ))
         captured = extractRegionCells(getActiveGrid(), selRect.r0, selRect.c0, selRect.r1, selRect.c1)
         selOrigRect = { ...selRect }

@@ -279,11 +279,14 @@ export class AnsiController {
     this.compositeBufferB = createEmptyGrid(c, r)
     this.useBufferA = true
     this.handle?.resize?.(c, r)
-    // Force the next frame to emit a full redraw; existing per-screen lastGrid
-    // snapshots are at the old dims and must be discarded to avoid diffing
-    // across shape mismatches.
+    // Drop snapshots that no longer match the terminal — diffing a 25-row
+    // lastGrid against a 40-row buffer would emit garbage. Screens whose
+    // own dims still match keep their lastGrid so flipping back to them
+    // can render via diff instead of a full redraw.
     for (const state of this.screenStates.values()) {
-      state.lastGrid = null
+      if (state.cols !== c || state.rows !== r) {
+        state.lastGrid = null
+      }
       state.dirty = true
       state.needsRecomposite = true
     }

@@ -132,10 +132,7 @@ export function rgbEqual(a: RGBColor, b: RGBColor): boolean {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2]
 }
 
-/** Return the dimensions of an AnsiGrid. */
-export function gridDims(grid: AnsiGrid): { cols: number; rows: number } {
-  return { rows: grid.length, cols: grid[0]?.length ?? 0 }
-}
+export { gridDims, type GridDims } from '@lua-learning/ansi-shared'
 
 /** Create a pre-allocated empty ANSI grid. Defaults to 80×25 when dims omitted. */
 export function createEmptyGrid(cols: number = DEFAULT_ANSI_COLS, rows: number = DEFAULT_ANSI_ROWS): AnsiGrid {

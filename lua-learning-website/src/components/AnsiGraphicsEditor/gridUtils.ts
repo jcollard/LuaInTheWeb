@@ -17,10 +17,7 @@ export function cloneGrid(grid: AnsiGrid): AnsiGrid {
   return grid.map(row => row.map(cloneCell))
 }
 
-/** Return the dimensions of an AnsiGrid. */
-export function gridDims(grid: AnsiGrid): { cols: number; rows: number } {
-  return { rows: grid.length, cols: grid[0]?.length ?? 0 }
-}
+export { gridDims, type GridDims } from '@lua-learning/ansi-shared'
 
 export function createEmptyGrid(cols: number = DEFAULT_ANSI_COLS, rows: number = DEFAULT_ANSI_ROWS): AnsiGrid {
   return Array.from({ length: rows }, () =>

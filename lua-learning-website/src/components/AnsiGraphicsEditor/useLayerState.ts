@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import type { AnsiCell, AnsiGrid, ClipLayer, DrawableLayer, DrawnLayer, Layer, LayerState, RGBColor, Rect, TextAlign, TextLayer } from './types'
-import { MIN_FRAME_DURATION_MS, MAX_FRAME_DURATION_MS, isGroupLayer, isDrawableLayer, isClipLayer, isReferenceLayer, getParentId } from './types'
+import { DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS, MIN_FRAME_DURATION_MS, MAX_FRAME_DURATION_MS, isGroupLayer, isDrawableLayer, isClipLayer, isReferenceLayer, getParentId } from './types'
 import { createLayer, createGroup, createReferenceLayer, createClipLayer, cloneLayerState, mergeLayerDown, isAncestorOf, findGroupBlockEnd, snapPastSubBlocks, extractGroupBlock, assertContiguousBlocks, findSafeInsertPos, duplicateLayerBlock } from './layerUtils'
 import { createEmptyGrid, cloneGrid } from './gridUtils'
 import { replaceColorsInGrid } from './colorUtils'
@@ -33,8 +33,12 @@ function computeGroupInsertPos(
 export interface UseLayerStateReturn {
   layers: Layer[]
   activeLayerId: string
+  cols: number
+  rows: number
   layersRef: React.RefObject<Layer[]>
   activeLayerIdRef: React.RefObject<string>
+  colsRef: React.RefObject<number>
+  rowsRef: React.RefObject<number>
   activeLayer: Layer
   addLayer: () => void
   addLayerWithGrid: (name: string, grid: AnsiGrid) => void
@@ -91,10 +95,17 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     return layers[0].id
   })
 
+  const [cols, setCols] = useState<number>(() => initial?.cols ?? DEFAULT_ANSI_COLS)
+  const [rows, setRows] = useState<number>(() => initial?.rows ?? DEFAULT_ANSI_ROWS)
+
   const layersRef = useRef(layers)
   layersRef.current = layers
   const activeLayerIdRef = useRef(activeLayerId)
   activeLayerIdRef.current = activeLayerId
+  const colsRef = useRef(cols)
+  colsRef.current = cols
+  const rowsRef = useRef(rows)
+  rowsRef.current = rows
   const layerCountRef = useRef(initial ? initial.layers.length : 1)
 
   const tagState = useLayerTags(initial, setLayers, setActiveLayerId)
@@ -523,7 +534,12 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
   }, [])
 
   const getLayerState = useCallback((): LayerState => {
-    return cloneLayerState({ layers: layersRef.current, activeLayerId: activeLayerIdRef.current })
+    return cloneLayerState({
+      layers: layersRef.current,
+      activeLayerId: activeLayerIdRef.current,
+      cols: colsRef.current,
+      rows: rowsRef.current,
+    })
   }, [])
 
   const restoreLayerState = useCallback((state: LayerState) => {
@@ -531,6 +547,14 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     activeLayerIdRef.current = state.activeLayerId
     setLayers(state.layers)
     setActiveLayerId(state.activeLayerId)
+    if (state.cols !== undefined && state.cols !== colsRef.current) {
+      colsRef.current = state.cols
+      setCols(state.cols)
+    }
+    if (state.rows !== undefined && state.rows !== rowsRef.current) {
+      rowsRef.current = state.rows
+      setRows(state.rows)
+    }
   }, [])
 
   const updateActiveDrawnLayer = useCallback((updater: (layer: DrawnLayer) => DrawnLayer) => {
@@ -612,8 +636,12 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
   return {
     layers,
     activeLayerId,
+    cols,
+    rows,
     layersRef,
     activeLayerIdRef,
+    colsRef,
+    rowsRef,
     activeLayer,
     addLayer,
     addLayerWithGrid,
