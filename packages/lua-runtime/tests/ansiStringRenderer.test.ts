@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { renderGridToAnsiString, renderDiffAnsiString } from '../src/ansiStringRenderer'
 import type { AnsiGrid, AnsiCell, RGBColor } from '../src/screenTypes'
-import { DEFAULT_FG, DEFAULT_BG, HALF_BLOCK, ANSI_ROWS, ANSI_COLS } from '../src/screenTypes'
+import { DEFAULT_FG, DEFAULT_BG, HALF_BLOCK } from '../src/screenTypes'
 
 const ESC = '\x1b'
 

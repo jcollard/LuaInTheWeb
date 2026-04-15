@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { compositeGrid, compositeGridInto } from '../src/screenCompositor'
-import type { AnsiGrid, DrawnLayerData, LayerData, ReferenceLayerData, RGBColor } from '../src/screenTypes'
-import { DEFAULT_FRAME_DURATION_MS, DEFAULT_BG, DEFAULT_FG, createEmptyGrid } from '../src/screenTypes'
+import type { AnsiGrid, DrawnLayerData, ReferenceLayerData, RGBColor } from '../src/screenTypes'
+import { DEFAULT_FRAME_DURATION_MS, createEmptyGrid } from '../src/screenTypes'
 
 function makeFilledGrid(cols: number, rows: number, char: string, fg: RGBColor, bg: RGBColor): AnsiGrid {
   return Array.from({ length: rows }, () =>

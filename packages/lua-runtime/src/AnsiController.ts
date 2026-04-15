@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /**
  * ANSI terminal controller for managing terminal lifecycle from within LuaScriptProcess.
  *
