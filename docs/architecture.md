@@ -115,7 +115,7 @@ When adding or modifying canvas features (drawing operations, input handling, au
 
 ## ANSI Graphics Editor
 
-The ANSI Graphics Editor is a full-featured art editor for creating ANSI-style artwork using the terminal's character grid (80x25). It supports multiple layer types, animation frames, drawing tools, and export formats.
+The ANSI Graphics Editor is a full-featured art editor for creating ANSI-style artwork on a configurable character grid (default 80×25, resizable per project). It supports multiple layer types, animation frames, drawing tools, and export formats.
 
 - **Architecture**: [ANSI Graphics Editor](./ansi-graphics-editor.md)
 - **Development Guide**: [ANSI Editor Development Guide](./ansi-editor-development.md)

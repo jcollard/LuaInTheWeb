@@ -1,6 +1,6 @@
 # ANSI Terminal Library
 
-The `ansi` library provides an 80×25 text terminal for DOS-style ANSI games and art display. Load it with:
+The `ansi` library provides a text terminal for DOS-style ANSI games and art display. The terminal defaults to 80×25 and automatically resizes when you `load_screen()` a file authored at different dimensions. Load the library with:
 
 ```lua
 local ansi = require("ansi")
@@ -512,7 +512,7 @@ screen:dither_out({
 
 ## Viewport / Pan
 
-The viewport controls which 80x25 window of virtual space is displayed. By default, the viewport is at position (0, 0). Use reference layers with offsets to position content beyond the standard grid, then pan the viewport to reveal it.
+The viewport controls which terminal-sized window of virtual space is displayed. By default, the viewport is at position (0, 0). Use reference layers with offsets to position content beyond the visible area, then pan the viewport to reveal it. The window size matches the current screen's authored dimensions (e.g. 80×25 for the default, 120×40 for a wide screen).
 
 ### `screen:pan(opts)`
 
@@ -602,7 +602,7 @@ ansi.start()
 
 ## Layer Offsets
 
-Layer offsets let you position layers at arbitrary positions in the virtual canvas, creating scenes wider or taller than the standard 80x25 terminal. This is especially useful for panoramic scrolling with `screen:pan()`.
+Layer offsets let you position layers at arbitrary positions in the virtual canvas, creating scenes wider or taller than the visible terminal window. This is especially useful for panoramic scrolling with `screen:pan()`.
 
 ### `screen:set_layer_offset(identifier, col, row)`
 
@@ -626,6 +626,31 @@ Get the position offset of the first layer matching an identifier. Returns two v
 ```lua
 local col, row = screen:get_layer_offset("scene-right")
 ```
+
+## Terminal Dimensions
+
+The terminal starts at 80 columns × 25 rows and automatically resizes when you call `ansi.set_screen()` on a screen authored at different dimensions. Programs that only use `ansi.print()` without loading a screen run at the default 80×25.
+
+### `ansi.width()` and `ansi.height()`
+
+Return the current terminal dimensions in characters. These query the live terminal size and update whenever a screen with different dimensions becomes active.
+
+```lua
+print("Terminal is " .. ansi.width() .. "×" .. ansi.height())
+```
+
+### `ansi.COLS` and `ansi.ROWS`
+
+Live values exposed via a metatable — reading them is equivalent to calling `ansi.width()` / `ansi.height()`. Existing programs that do `for c = 1, ansi.COLS do` continue to work and automatically adapt when a differently-sized screen is loaded.
+
+```lua
+-- Draw a horizontal line across the full terminal width
+for c = 1, ansi.COLS do
+  ansi.set_cursor(1, c); ansi.print("-")
+end
+```
+
+**Caching caveat:** Do not cache `ansi.COLS` / `ansi.ROWS` in a local if your program later loads a differently-sized screen. The field is re-read on every access, so caching into `local W = ansi.COLS` captures the value *at that instant* and becomes stale after a resize. Read the field fresh (or call `ansi.width()`) inside any loop that runs across screen transitions.
 
 ## CRT Shader Effect
 
@@ -760,5 +785,7 @@ ansi.start()
 | `ansi.is_key_down(key)` | Check if key is held |
 | `ansi.is_key_pressed(key)` | Check if key was just pressed |
 | `ansi.is_mouse_down(btn)` | Check if mouse button is held |
-| `ansi.get_mouse_col()` | Mouse column (1–80) |
-| `ansi.get_mouse_row()` | Mouse row (1–25) |
+| `ansi.get_mouse_col()` | Mouse column (1–`ansi.COLS`) |
+| `ansi.get_mouse_row()` | Mouse row (1–`ansi.ROWS`) |
+| `ansi.width()` / `ansi.COLS` | Current terminal width in columns |
+| `ansi.height()` / `ansi.ROWS` | Current terminal height in rows |

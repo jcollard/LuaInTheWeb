@@ -151,7 +151,7 @@ These file pairs implement the **same logic** in both editor and runtime. When y
 |-------|-------------|--------------|-------|
 | **Compositing** | `compositeUtils.ts` | `screenCompositor.ts` | Both delegate core algorithm to `ansi-shared/compositeEngine.ts` via `createCompositeEngine()`. Type-specific helpers (clip masks, empty grids) remain in each side |
 | **Text rasterization** | `textLayerGrid.ts` | `textLayerGrid.ts` | Fully ported with identical tests in both locations |
-| **Types & constants** | `types.ts` (AnsiCell, Layer, ANSI_COLS/ROWS, HALF_BLOCK, TRANSPARENT_*) | `screenTypes.ts` (LayerData, DrawableLayerData, same constants) | Editor uses mutable types; runtime uses immutable `LayerData` |
+| **Types & constants** | `types.ts` (AnsiCell, Layer, DEFAULT_ANSI_COLS/ROWS, HALF_BLOCK, TRANSPARENT_*) | `screenTypes.ts` (LayerData, DrawableLayerData, same constants) | Editor uses mutable types; runtime uses immutable `LayerData`. Legacy `ANSI_COLS`/`ANSI_ROWS` remain as deprecated aliases. |
 | **Serialization** | `serialization.ts` + `v7Codec.ts` (write + read) | `screenParser.ts` + `v7Decode.ts` (read only) | Both must handle v1-v8. Runtime only parses; editor also writes |
 | **Visibility filtering** | `compositeUtils.ts` → `hiddenGroupIds()`, `visibleDrawableLayers()` | `screenCompositor.ts` → `hiddenGroupIds()`, `visibleDrawableLayers()` | Same group-visibility propagation logic |
 
@@ -223,6 +223,38 @@ Both renderers:
 
 ---
 
+## Canvas Dimensions (arbitrary per-screen sizing)
+
+The ANSI terminal is **not hardcoded to 80×25**. Every layer of the subsystem carries per-project/per-screen dimensions.
+
+**Authoritative sources:**
+- Editor: `LayerState.cols` / `LayerState.rows`, managed by `useLayerState` and exposed via `useAnsiEditor`. Serialized as `width` / `height` in `.ansi.lua` v1–v8.
+- Runtime: `ScreenState.cols` / `ScreenState.rows` (per loaded screen) and `AnsiController.currentCols` / `currentRows` (current terminal size). `parseScreen()` in `screenParser.ts` reads the authored dims via `getScreenDims()`.
+- Shared: `DEFAULT_ANSI_COLS = 80` / `DEFAULT_ANSI_ROWS = 25` live in `packages/ansi-shared/src/compositeEngine.ts`, re-exported from runtime `screenTypes.ts` and editor `types.ts`. Legacy `ANSI_COLS` / `ANSI_ROWS` are kept as deprecated aliases.
+- Shared: `gridDims(grid): { cols, rows }` helper in `ansi-shared` — use this (or derive from `grid.length`/`grid[0].length` inline) instead of reading the constants.
+
+**Runtime resize flow:**
+1. `ansi.create_screen(data)` calls `parseScreen()` which stores `cols`/`rows` on the screen's `ScreenState`.
+2. `ansi.set_screen(id)` calls `AnsiController.setScreen(id)`, which calls `resizeTerminal(cols, rows)` if the screen's dims differ from `currentCols`/`currentRows`.
+3. `resizeTerminal` calls `handle.resize?.(cols, rows)` — both `AnsiTerminalPanel.tsx` (website) and the exported HTML (`AnsiHtmlGenerator.ts`) implement this to call `term.resize()` on xterm.js and re-apply scale.
+4. `resizeTerminal` only invalidates `lastGrid` for screens whose own dims don't match the new terminal size, so switching back to a screen at a different size still uses diff rendering.
+
+**Editor resize flow:**
+1. `FileOptionsModal` has a "Canvas size" control that calls `useAnsiEditor.resizeCanvas(cols, rows, anchor?)`.
+2. `resizeProject()` in `resizeGrid.ts` crops or pads every drawn frame, clip layer grid, and text-layer bounds with top-left or center anchor. Reference and group layers are metadata-only and unchanged.
+3. The resize is undoable — `pushSnapshot` runs before `restoreLayerState(resized)`, and `restoreLayerState` propagates `cols`/`rows` back into `useLayerState`'s tracking state.
+
+**Lua API:**
+- `ansi.width()` / `ansi.height()` — blessed API, return live terminal dims.
+- `ansi.COLS` / `ansi.ROWS` — backed by an `__index` metatable that calls the JS bridge on every read. Existing code like `for c = 1, ansi.COLS do` adapts to the active screen automatically. **Caching into a local** (`local W = ansi.COLS`) captures a stale snapshot and breaks after a `load_screen()` resize — document this in any example code.
+
+**Call sites that must pass dims (no silent defaults):**
+- `isInBounds(row, col, rows, cols)` and `getCellHalfFromMouse(e, container, cols, rows)` — earlier versions of the refactor defaulted these to 80×25 and produced a mouse-stuck-at-80×25 bug. Always pass explicit project dims from `projectColsRef` / `projectRowsRef`.
+- Tool helpers in `drawHelpers.ts`, `selectionTool.ts`, `textTool.ts`, `moveUtils.ts` all derive cell pixel math from `projectColsRef` / `projectRowsRef` threaded via their Deps interfaces.
+- `renderTextLayerGrid(text, bounds, ..., cols, rows)` allocates its output at the passed dims — callers must pass the active screen's dims.
+
+---
+
 ## ansi.lua API Bridge
 
 The ANSI API uses a three-layer architecture:
@@ -273,8 +305,9 @@ Two tab types display ANSI content:
 | `'ansi-editor'` | `AnsiEditorTabContent.tsx` | ANSI Art Editor |
 
 Both use `AnsiTerminalPanel.tsx` as the xterm.js container. The panel:
-- Creates an xterm.js Terminal instance
-- Configures 80x25 character grid (80x50 with half-blocks)
+- Creates an xterm.js Terminal instance at the dimensions passed via `cols` / `rows` props (default 80×25, effectively 2× vertical via half-blocks)
+- Exposes `handle.resize(cols, rows)` so the runtime can resize on `setScreen()` and the editor can resize on `useAnsiEditor.resizeCanvas()`
+- Re-measures base pixel dimensions on resize and re-applies scale
 - Sets `disableStdin: true` for display-only mode
 - Prevents xterm.js from capturing keyboard events (important for editor shortcuts)
 
