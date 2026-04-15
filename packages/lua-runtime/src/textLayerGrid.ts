@@ -6,7 +6,7 @@
  */
 
 import type { AnsiGrid, RGBColor, Rect, TextAlign } from './screenTypes'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, TRANSPARENT_BG } from './screenTypes'
+import { DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS, DEFAULT_CELL, TRANSPARENT_BG } from './screenTypes'
 
 /**
  * Computes the length of the next wrapped-line segment starting at `paraOff`
@@ -100,18 +100,30 @@ export function justifyLine(line: string, width: number): string {
 }
 
 /**
- * Renders text into an 80x25 AnsiGrid within the given bounds.
+ * Renders text into an AnsiGrid within the given bounds.
  * Characters use `{ char, fg: textFg, bg: TRANSPARENT_BG }`.
  * Text is word-wrapped to bounds width. Overflow is truncated.
+ *
+ * `cols`/`rows` control the output grid size and default to 80×25 for back-compat.
  *
  * When `textFgColors` is provided, each character uses its per-character
  * foreground color instead of the uniform `textFg`.
  * When `textBgColors` is provided, each character uses its per-character
  * background color. Falls back to `textBg`, then `TRANSPARENT_BG`.
  */
-export function renderTextLayerGrid(text: string, bounds: Rect, textFg: RGBColor, textFgColors?: RGBColor[], textAlign?: TextAlign, textBg?: RGBColor, textBgColors?: RGBColor[]): AnsiGrid {
-  const grid: AnsiGrid = Array.from({ length: ANSI_ROWS }, () =>
-    Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
+export function renderTextLayerGrid(
+  text: string,
+  bounds: Rect,
+  textFg: RGBColor,
+  textFgColors?: RGBColor[],
+  textAlign?: TextAlign,
+  textBg?: RGBColor,
+  textBgColors?: RGBColor[],
+  cols: number = DEFAULT_ANSI_COLS,
+  rows: number = DEFAULT_ANSI_ROWS,
+): AnsiGrid {
+  const grid: AnsiGrid = Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => ({ ...DEFAULT_CELL }))
   )
   if (!text) return grid
 
@@ -135,7 +147,7 @@ export function renderTextLayerGrid(text: string, bounds: Rect, textFg: RGBColor
 
   for (let lineIdx = 0; lineIdx < Math.min(lines.length, maxRows); lineIdx++) {
     const row = bounds.r0 + lineIdx
-    if (row < 0 || row >= ANSI_ROWS) continue
+    if (row < 0 || row >= rows) continue
     let line = lines[lineIdx]
     const rawIndices = indexMap?.[lineIdx]
 
@@ -154,7 +166,7 @@ export function renderTextLayerGrid(text: string, bounds: Rect, textFg: RGBColor
 
     for (let charIdx = 0; charIdx < Math.min(line.length, width); charIdx++) {
       const col = bounds.c0 + offset + charIdx
-      if (col < 0 || col >= ANSI_COLS) continue
+      if (col < 0 || col >= cols) continue
       const fg = (textFgColors && rawIndices && charIdx < rawIndices.length)
         ? textFgColors[rawIndices[charIdx]] ?? textFg
         : textFg

@@ -6,7 +6,7 @@
  */
 
 import type { AnsiGrid, RGBColor } from './screenTypes'
-import { ANSI_COLS, ANSI_ROWS } from './screenTypes'
+import { DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS } from './screenTypes'
 import { luaArrayToJsArray, normalizeRgb } from './screenParser'
 
 /**
@@ -18,9 +18,9 @@ export function parseV7Palette(raw: unknown): RGBColor[] {
 }
 
 /** Build a default ANSI grid filled with the given fg/bg colors. */
-function makeDefaultGrid(fg: RGBColor, bg: RGBColor): AnsiGrid {
-  return Array.from({ length: ANSI_ROWS }, () =>
-    Array.from({ length: ANSI_COLS }, () => ({
+function makeDefaultGrid(fg: RGBColor, bg: RGBColor, cols: number, rows: number): AnsiGrid {
+  return Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => ({
       char: ' ',
       fg: [...fg] as RGBColor,
       bg: [...bg] as RGBColor,
@@ -34,16 +34,26 @@ function isValidPaletteIndex(idx: number, palette: RGBColor[]): boolean {
 }
 
 /** Write a cell into the grid if within bounds (1-based row/col). */
-function setCell(grid: AnsiGrid, row1: number, col1: number, char: string, fg: RGBColor, bg: RGBColor): void {
+function setCell(
+  grid: AnsiGrid,
+  row1: number,
+  col1: number,
+  char: string,
+  fg: RGBColor,
+  bg: RGBColor,
+  cols: number,
+  rows: number,
+): void {
   const r = row1 - 1
   const c = col1 - 1
-  if (r >= 0 && r < ANSI_ROWS && c >= 0 && c < ANSI_COLS) {
+  if (r >= 0 && r < rows && c >= 0 && c < cols) {
     grid[r][c] = { char, fg: [...fg] as RGBColor, bg: [...bg] as RGBColor }
   }
 }
 
 /**
  * Decode a v7 sparse run-encoded grid from wasmoon format.
+ * `cols`/`rows` default to 80×25 when omitted (legacy callers).
  *
  * Run disambiguation:
  * - 6 elements: repeat run [row, col, count, char, fgIdx, bgIdx]
@@ -55,6 +65,8 @@ export function decodeV7Grid(
   palette: RGBColor[],
   defaultFgIndex: number,
   defaultBgIndex: number,
+  cols: number = DEFAULT_ANSI_COLS,
+  rows: number = DEFAULT_ANSI_ROWS,
 ): AnsiGrid {
   if (!isValidPaletteIndex(defaultFgIndex, palette)) {
     throw new RangeError(`defaultFgIndex ${defaultFgIndex} out of palette bounds [1..${palette.length}]`)
@@ -63,7 +75,7 @@ export function decodeV7Grid(
     throw new RangeError(`defaultBgIndex ${defaultBgIndex} out of palette bounds [1..${palette.length}]`)
   }
 
-  const grid = makeDefaultGrid(palette[defaultFgIndex - 1], palette[defaultBgIndex - 1])
+  const grid = makeDefaultGrid(palette[defaultFgIndex - 1], palette[defaultBgIndex - 1], cols, rows)
 
   const runs = luaArrayToJsArray<unknown>(rawRuns)
   if (runs.length === 0) return grid
@@ -83,7 +95,7 @@ export function decodeV7Grid(
       const fg = palette[fgIdx - 1]
       const bg = palette[bgIdx - 1]
       for (let i = 0; i < count; i++) {
-        setCell(grid, row, col + i, char, fg, bg)
+        setCell(grid, row, col + i, char, fg, bg, cols, rows)
       }
     } else if (el.length === 5) {
       // Single cell or text run
@@ -96,10 +108,10 @@ export function decodeV7Grid(
 
       if (charOrText.length > 1) {
         for (let i = 0; i < charOrText.length; i++) {
-          setCell(grid, row, col + i, charOrText[i], fg, bg)
+          setCell(grid, row, col + i, charOrText[i], fg, bg, cols, rows)
         }
       } else {
-        setCell(grid, row, col, charOrText, fg, bg)
+        setCell(grid, row, col, charOrText, fg, bg, cols, rows)
       }
     }
   }

@@ -40,6 +40,8 @@ interface ScreenStateForTransition {
   dirty: boolean
   viewportRow: number
   viewportCol: number
+  cols: number
+  rows: number
 }
 
 /**
@@ -65,11 +67,12 @@ export function resolveMultipleIdentifiers(
 function compositeWithVisibility(
   layers: LayerData[], matched: LayerData[], visible: boolean,
   groupGridCache: Map<string, AnsiGrid>,
+  cols: number, rows: number,
   viewportRow = 0, viewportCol = 0,
 ): AnsiGrid {
   const originalVis = matched.map(l => l.visible)
   for (const l of matched) l.visible = visible
-  const targetGrid = createEmptyGrid()
+  const targetGrid = createEmptyGrid(cols, rows)
   groupGridCache.clear()
   compositeGridInto(targetGrid, layers, groupGridCache, viewportRow, viewportCol)
   matched.forEach((l, i) => l.visible = originalVis[i])
@@ -77,7 +80,7 @@ function compositeWithVisibility(
 }
 
 function captureSource(state: ScreenStateForTransition, groupGridCache: Map<string, AnsiGrid>): AnsiGrid {
-  const grid = createEmptyGrid()
+  const grid = createEmptyGrid(state.cols, state.rows)
   if (state.lastGrid) {
     copyGrid(grid, state.lastGrid)
   } else {
@@ -95,9 +98,10 @@ export function startSwipeOut(
   if (duration <= 0) throw new Error('Transition duration must be a positive number.')
   state.swipe = {
     mode: 'swipe', inOut: 'out', duration, elapsed: 0, direction,
-    targetGrid: createFillGrid(char, color),
+    targetGrid: createFillGrid(char, color, state.cols, state.rows),
     sourceGrid: captureSource(state, groupGridCache),
-    shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
+    shadowGrid: createSentinelGrid(state.cols, state.rows),
+    desiredGrid: createEmptyGrid(state.cols, state.rows),
     onComplete,
   }
 }
@@ -108,11 +112,12 @@ export function startSwipeIn(
 ): void {
   if (duration <= 0) throw new Error('Transition duration must be a positive number.')
   const targetGrid = compositeWithVisibility(layers, matched, true, groupGridCache,
-    Math.floor(state.viewportRow), Math.floor(state.viewportCol))
+    state.cols, state.rows, Math.floor(state.viewportRow), Math.floor(state.viewportCol))
   state.swipe = {
     mode: 'swipe', inOut: 'in', duration, elapsed: 0, direction,
     targetGrid, sourceGrid: captureSource(state, groupGridCache),
-    shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
+    shadowGrid: createSentinelGrid(state.cols, state.rows),
+    desiredGrid: createEmptyGrid(state.cols, state.rows),
     commitLayerIds: matched.map(l => l.id), commitVisible: true,
     onComplete,
   }
@@ -124,11 +129,12 @@ export function startSwipeOutLayers(
 ): void {
   if (duration <= 0) throw new Error('Transition duration must be a positive number.')
   const targetGrid = compositeWithVisibility(layers, matched, false, groupGridCache,
-    Math.floor(state.viewportRow), Math.floor(state.viewportCol))
+    state.cols, state.rows, Math.floor(state.viewportRow), Math.floor(state.viewportCol))
   state.swipe = {
     mode: 'swipe', inOut: 'out', duration, elapsed: 0, direction,
     targetGrid, sourceGrid: captureSource(state, groupGridCache),
-    shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
+    shadowGrid: createSentinelGrid(state.cols, state.rows),
+    desiredGrid: createEmptyGrid(state.cols, state.rows),
     commitLayerIds: matched.map(l => l.id), commitVisible: false,
     onComplete,
   }
@@ -141,10 +147,11 @@ export function startDitherOut(
   if (duration <= 0) throw new Error('Transition duration must be a positive number.')
   state.swipe = {
     mode: 'dither', inOut: 'out', duration, elapsed: 0,
-    targetGrid: createFillGrid(char, color),
+    targetGrid: createFillGrid(char, color, state.cols, state.rows),
     sourceGrid: captureSource(state, groupGridCache),
-    shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
-    ditherOrder: generateDitherOrder(seed),
+    shadowGrid: createSentinelGrid(state.cols, state.rows),
+    desiredGrid: createEmptyGrid(state.cols, state.rows),
+    ditherOrder: generateDitherOrder(seed, state.cols, state.rows),
     onComplete,
   }
 }
@@ -155,12 +162,13 @@ export function startDitherIn(
 ): void {
   if (duration <= 0) throw new Error('Transition duration must be a positive number.')
   const targetGrid = compositeWithVisibility(layers, matched, true, groupGridCache,
-    Math.floor(state.viewportRow), Math.floor(state.viewportCol))
+    state.cols, state.rows, Math.floor(state.viewportRow), Math.floor(state.viewportCol))
   state.swipe = {
     mode: 'dither', inOut: 'in', duration, elapsed: 0,
     targetGrid, sourceGrid: captureSource(state, groupGridCache),
-    shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
-    ditherOrder: generateDitherOrder(seed),
+    shadowGrid: createSentinelGrid(state.cols, state.rows),
+    desiredGrid: createEmptyGrid(state.cols, state.rows),
+    ditherOrder: generateDitherOrder(seed, state.cols, state.rows),
     commitLayerIds: matched.map(l => l.id), commitVisible: true,
     onComplete,
   }
@@ -172,12 +180,13 @@ export function startDitherOutLayers(
 ): void {
   if (duration <= 0) throw new Error('Transition duration must be a positive number.')
   const targetGrid = compositeWithVisibility(layers, matched, false, groupGridCache,
-    Math.floor(state.viewportRow), Math.floor(state.viewportCol))
+    state.cols, state.rows, Math.floor(state.viewportRow), Math.floor(state.viewportCol))
   state.swipe = {
     mode: 'dither', inOut: 'out', duration, elapsed: 0,
     targetGrid, sourceGrid: captureSource(state, groupGridCache),
-    shadowGrid: createSentinelGrid(), desiredGrid: createEmptyGrid(),
-    ditherOrder: generateDitherOrder(seed),
+    shadowGrid: createSentinelGrid(state.cols, state.rows),
+    desiredGrid: createEmptyGrid(state.cols, state.rows),
+    ditherOrder: generateDitherOrder(seed, state.cols, state.rows),
     commitLayerIds: matched.map(l => l.id), commitVisible: false,
     onComplete,
   }
@@ -212,7 +221,7 @@ export function advanceTransition(state: ScreenStateForTransition, deltaTime: nu
       state.needsRecomposite = true
       state.dirty = true
     }
-    if (!state.lastGrid) state.lastGrid = createEmptyGrid()
+    if (!state.lastGrid) state.lastGrid = createEmptyGrid(state.cols, state.rows)
     copyGrid(state.lastGrid, t.desiredGrid)
     const onComplete = t.onComplete
     state.swipe = null

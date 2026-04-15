@@ -17,6 +17,9 @@ function defaultProps(overrides?: Partial<FileOptionsModalProps>): FileOptionsMo
     onToggleCgaPreview: vi.fn(),
     scaleMode: 'integer-auto',
     onSetScaleMode: vi.fn(),
+    cols: 80,
+    rows: 25,
+    onResizeCanvas: vi.fn(),
     ...overrides,
   }
 }

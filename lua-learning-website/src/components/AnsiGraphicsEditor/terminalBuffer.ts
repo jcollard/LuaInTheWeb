@@ -1,6 +1,6 @@
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { AnsiCell, RGBColor, AnsiGrid } from './types'
-import { ANSI_ROWS, ANSI_COLS } from './types'
+import { DEFAULT_ANSI_ROWS, DEFAULT_ANSI_COLS } from './types'
 import type { ColorTransform } from './gridUtils'
 
 interface BufferCell {
@@ -37,14 +37,18 @@ export class TerminalBuffer {
   private shadow: BufferCell[][]
   private handle: AnsiTerminalHandle | null = null
   private dirty = true
+  private cols: number
+  private rows: number
 
-  constructor() {
+  constructor(cols: number = DEFAULT_ANSI_COLS, rows: number = DEFAULT_ANSI_ROWS) {
+    this.cols = cols
+    this.rows = rows
     this.shadow = this.createSentinelGrid()
   }
 
   private createSentinelGrid(): BufferCell[][] {
-    return Array.from({ length: ANSI_ROWS }, () =>
-      Array.from({ length: ANSI_COLS }, () => cloneBufferCell(SENTINEL))
+    return Array.from({ length: this.rows }, () =>
+      Array.from({ length: this.cols }, () => cloneBufferCell(SENTINEL))
     )
   }
 
@@ -57,6 +61,13 @@ export class TerminalBuffer {
   /** Unbind from the terminal handle. Prevents further writes. */
   detach(): void {
     this.handle = null
+  }
+
+  /** Resize the shadow buffer. Invalidates so the next flush re-emits everything. */
+  resize(cols: number, rows: number): void {
+    this.cols = cols
+    this.rows = rows
+    this.invalidate()
   }
 
   /** Force a full rewrite on the next flush. */
@@ -89,8 +100,10 @@ export class TerminalBuffer {
     if (!this.handle) return
 
     let batch = ''
-    for (let r = 0; r < ANSI_ROWS; r++) {
-      for (let c = 0; c < ANSI_COLS; c++) {
+    const rows = Math.min(this.rows, grid.length)
+    const cols = Math.min(this.cols, grid[0]?.length ?? 0)
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
         const cell = grid[r][c]
         const fg = colorTransform ? colorTransform(cell.fg) : cell.fg
         const bg = colorTransform ? colorTransform(cell.bg) : cell.bg

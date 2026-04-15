@@ -7,10 +7,26 @@
  */
 
 import type { AnsiGrid, ClipLayerData, DrawnLayerData, GroupLayerData, LayerData, RGBColor, Rect, ReferenceLayerData, TextAlign, TextLayerData } from './screenTypes'
-import { DEFAULT_FRAME_DURATION_MS } from './screenTypes'
+import { DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS, DEFAULT_FRAME_DURATION_MS } from './screenTypes'
 import { renderTextLayerGrid } from './textLayerGrid'
 import { compositeGrid } from './screenCompositor'
 import { decodeV7Grid, parseV7Palette } from './v7Decode'
+
+/** Dimensions of a parsed ANSI screen. */
+export interface ScreenDims {
+  cols: number
+  rows: number
+}
+
+/**
+ * Extract the authored dimensions from a parsed screen data object.
+ * Returns 80×25 defaults when `width` / `height` are absent (pre-dim formats).
+ */
+export function getScreenDims(data: Record<string, unknown>): ScreenDims {
+  const cols = typeof data.width === 'number' && data.width > 0 ? Math.floor(data.width) : DEFAULT_ANSI_COLS
+  const rows = typeof data.height === 'number' && data.height > 0 ? Math.floor(data.height) : DEFAULT_ANSI_ROWS
+  return { cols, rows }
+}
 
 /**
  * Raw layer shape from a Lua table (wasmoon converts tables to plain objects/arrays).
@@ -108,7 +124,7 @@ function parseTags(raw: unknown): string[] {
   return luaArrayToJsArray<string>(raw).map(String)
 }
 
-function parseV1(data: Record<string, unknown>): LayerData[] {
+function parseV1(data: Record<string, unknown>, _dims: ScreenDims): LayerData[] {
   const grid = normalizeGrid(data.grid)
   return [{
     type: 'drawn',
@@ -123,7 +139,7 @@ function parseV1(data: Record<string, unknown>): LayerData[] {
   }]
 }
 
-function parseV2(data: Record<string, unknown>): LayerData[] {
+function parseV2(data: Record<string, unknown>, _dims: ScreenDims): LayerData[] {
   const rawLayers = luaArrayToJsArray<Record<string, unknown>>(data.layers)
   return rawLayers.map((l): DrawnLayerData => {
     const grid = normalizeGrid(l.grid)
@@ -141,11 +157,11 @@ function parseV2(data: Record<string, unknown>): LayerData[] {
   })
 }
 
-function parseV3to6(data: Record<string, unknown>): LayerData[] {
+function parseV3to6(data: Record<string, unknown>, dims: ScreenDims): LayerData[] {
   const rawLayers = luaArrayToJsArray<RawLayer>(data.layers)
   return rawLayers.map((l): LayerData => {
     if (l.type === 'group') return parseGroupLayerData(l)
-    if (l.type === 'text') return parseTextLayerData(l)
+    if (l.type === 'text') return parseTextLayerData(l, dims)
     if (l.type === 'clip') return parseClipLayerData(l, normalizeGrid(l.grid))
     if (l.type === 'reference') return parseReferenceLayerData(l)
 
@@ -196,14 +212,14 @@ function parseClipLayerData(l: RawLayer, grid: AnsiGrid): ClipLayerData {
   }
 }
 
-function parseTextLayerData(l: RawLayer): TextLayerData {
+function parseTextLayerData(l: RawLayer, dims: ScreenDims): TextLayerData {
   const bounds = normalizeRect(l.bounds)
   const textFg = normalizeRgb(l.textFg)
   const textFgColors = normalizeRgbArray(l.textFgColors)
   const textBg = l.textBg ? normalizeRgb(l.textBg) : undefined
   const textBgColors = l.textBgColors ? normalizeRgbArray(l.textBgColors) : undefined
   const textAlign = l.textAlign as TextAlign | undefined
-  const grid = renderTextLayerGrid(l.text ?? '', bounds, textFg, textFgColors, textAlign, textBg, textBgColors)
+  const grid = renderTextLayerGrid(l.text ?? '', bounds, textFg, textFgColors, textAlign, textBg, textBgColors, dims.cols, dims.rows)
   return {
     type: 'text',
     id: l.id,
@@ -236,7 +252,7 @@ function parseReferenceLayerData(l: RawLayer): ReferenceLayerData {
   }
 }
 
-function parseV7(data: Record<string, unknown>): LayerData[] {
+function parseV7(data: Record<string, unknown>, dims: ScreenDims): LayerData[] {
   const palette = parseV7Palette(data.palette)
   const defaultFgIndex = Number(data.defaultFg)
   const defaultBgIndex = Number(data.defaultBg)
@@ -248,11 +264,11 @@ function parseV7(data: Record<string, unknown>): LayerData[] {
     }
 
     if (l.type === 'text') {
-      return parseTextLayerData(l)
+      return parseTextLayerData(l, dims)
     }
 
     if (l.type === 'clip') {
-      const grid = decodeV7Grid(l.cells, palette, defaultFgIndex, defaultBgIndex)
+      const grid = decodeV7Grid(l.cells, palette, defaultFgIndex, defaultBgIndex, dims.cols, dims.rows)
       return parseClipLayerData(l, grid)
     }
 
@@ -264,9 +280,9 @@ function parseV7(data: Record<string, unknown>): LayerData[] {
     const rawFrameCells = l.frameCells ? luaArrayToJsArray<unknown>(l.frameCells) : null
     let frames: AnsiGrid[]
     if (rawFrameCells && rawFrameCells.length > 0) {
-      frames = rawFrameCells.map(rawGrid => decodeV7Grid(rawGrid, palette, defaultFgIndex, defaultBgIndex))
+      frames = rawFrameCells.map(rawGrid => decodeV7Grid(rawGrid, palette, defaultFgIndex, defaultBgIndex, dims.cols, dims.rows))
     } else {
-      frames = [decodeV7Grid(l.cells, palette, defaultFgIndex, defaultBgIndex)]
+      frames = [decodeV7Grid(l.cells, palette, defaultFgIndex, defaultBgIndex, dims.cols, dims.rows)]
     }
     const currentFrameIndex = l.currentFrameIndex ?? 0
     const grid = frames[currentFrameIndex] ?? frames[0]
@@ -293,26 +309,38 @@ function parseV7(data: Record<string, unknown>): LayerData[] {
  */
 export function parseScreenLayers(data: Record<string, unknown>): LayerData[] {
   const version = Number(data.version)
+  const dims = getScreenDims(data)
 
   if (version === 1) {
-    return parseV1(data)
+    return parseV1(data, dims)
   } else if (version === 2) {
-    return parseV2(data)
+    return parseV2(data, dims)
   } else if (version >= 3 && version <= 6) {
-    return parseV3to6(data)
+    return parseV3to6(data, dims)
   } else if (version === 7 || version === 8) {
-    return parseV7(data)
+    return parseV7(data, dims)
   } else {
     throw new Error(`Unsupported ANSI file version: ${version}`)
   }
 }
 
 /**
+ * Parse a data table (from wasmoon) into layers plus authored dimensions.
+ * Callers that need the canvas size should use this instead of `parseScreenLayers`.
+ */
+export function parseScreen(data: Record<string, unknown>): { layers: LayerData[]; cols: number; rows: number } {
+  const dims = getScreenDims(data)
+  return { layers: parseScreenLayers(data), cols: dims.cols, rows: dims.rows }
+}
+
+/**
  * Parse a data table (from wasmoon) into a composited AnsiGrid.
+ * Uses the authored width/height if present, otherwise defaults to 80×25.
  *
  * @param data - The parsed data object (version, grid/layers, etc.)
  * @returns The composited AnsiGrid ready for rendering
  */
 export function parseScreenData(data: Record<string, unknown>): AnsiGrid {
-  return compositeGrid(parseScreenLayers(data))
+  const { layers, cols, rows } = parseScreen(data)
+  return compositeGrid(layers, undefined, cols, rows)
 }

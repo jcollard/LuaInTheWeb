@@ -1,5 +1,5 @@
 import type { AnsiCell, AnsiGrid, DrawableLayer, Layer } from './types'
-import { ANSI_COLS, ANSI_ROWS, isGroupLayer, isDrawableLayer, isReferenceLayer } from './types'
+import { isGroupLayer, isDrawableLayer, isReferenceLayer } from './types'
 import { buildClipMaskMap, isCellClipped } from './clipMaskUtils'
 import { createEmptyGrid } from './gridUtils'
 import {
@@ -118,25 +118,37 @@ export function compositeCell(layers: Layer[], row: number, col: number): AnsiCe
   return compositeCellPrepared(prepareComposite(layers), row, col)
 }
 
-export function compositeGrid(layers: Layer[]): AnsiGrid {
-  const state = prepareComposite(layers)
-  return Array.from({ length: ANSI_ROWS }, (_, r) =>
-    Array.from({ length: ANSI_COLS }, (_, c) => compositeCellPrepared(state, r, c))
-  )
+/** Composite all visible layers into a single AnsiGrid.
+ * When `cols`/`rows` are omitted, derives dimensions from the first drawable
+ * or clip layer found, falling back to 80×25. */
+export function compositeGrid(layers: Layer[], cols?: number, rows?: number): AnsiGrid {
+  if (cols === undefined || rows === undefined) {
+    for (const l of layers) {
+      if ((isDrawableLayer(l) || l.type === 'clip') && 'grid' in l) {
+        cols = cols ?? (l.grid[0]?.length)
+        rows = rows ?? l.grid.length
+        break
+      }
+    }
+  }
+  const target = createEmptyGrid(cols, rows)
+  compositeGridInto(target, layers)
+  return target
 }
 
 /** Composite all visible layers into a pre-allocated target grid (zero allocation). */
 export function compositeGridInto(target: AnsiGrid, layers: Layer[], groupGridCache?: Map<string, AnsiGrid>): void {
   const state = prepareComposite(layers, groupGridCache)
-  // Hoisted closure: one closure per grid composite instead of 2000
   let curR = 0, curC = 0
   const getCell = (entry: CompositeEntry) => {
     if (isCellClipped(entry, curR, curC, state.clipMap, state.layerMap)) return null
     return engine.getEntryCell(entry, curR, curC)
   }
-  for (let r = 0; r < ANSI_ROWS; r++) {
+  const rows = target.length
+  const cols = target[0]?.length ?? 0
+  for (let r = 0; r < rows; r++) {
     curR = r
-    for (let c = 0; c < ANSI_COLS; c++) {
+    for (let c = 0; c < cols; c++) {
       curC = c
       const result = compositeCellCore(state.entries, getCell)
       const cell = target[r][c]

@@ -55,8 +55,14 @@ export interface BrushSettings {
   blendRatio?: number  // 0..1, defaults to DEFAULT_BLEND_RATIO
 }
 
-export const ANSI_COLS = 80
-export const ANSI_ROWS = 25
+/** Default ANSI canvas width used when a project does not specify one. */
+export const DEFAULT_ANSI_COLS = 80
+/** Default ANSI canvas height used when a project does not specify one. */
+export const DEFAULT_ANSI_ROWS = 25
+/** @deprecated Use {@link DEFAULT_ANSI_COLS} or read from project dims. */
+export const ANSI_COLS = DEFAULT_ANSI_COLS
+/** @deprecated Use {@link DEFAULT_ANSI_ROWS} or read from project dims. */
+export const ANSI_ROWS = DEFAULT_ANSI_ROWS
 
 export const DEFAULT_FG: RGBColor = [170, 170, 170]
 export const DEFAULT_BG: RGBColor = [0, 0, 0]
@@ -170,11 +176,21 @@ export interface LayerState {
   layers: Layer[]         // ordered bottom-to-top (index 0 = bottom)
   activeLayerId: string
   availableTags?: string[]
+  /** Canvas width in columns. Defaults to 80 when absent. */
+  cols?: number
+  /** Canvas height in rows. Defaults to 25 when absent. */
+  rows?: number
 }
 
 export interface UseAnsiEditorReturn {
   // Canvas state
   grid: AnsiGrid
+  /** Canvas width in columns. Defaults to 80. */
+  cols: number
+  /** Canvas height in rows. Defaults to 25. */
+  rows: number
+  /** Resize every layer in the project to the new dimensions (undoable). */
+  resizeCanvas: (cols: number, rows: number, anchor?: 'top-left' | 'center') => void
   brush: BrushSettings
   setBrushFg: (color: RGBColor) => void
   setBrushBg: (color: RGBColor) => void

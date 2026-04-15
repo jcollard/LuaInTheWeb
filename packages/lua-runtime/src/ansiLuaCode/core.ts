@@ -5,9 +5,27 @@
 export const ansiLuaCoreCode = `
     local _ansi = {}
 
-    -- Terminal dimensions
-    _ansi.COLS = 80
-    _ansi.ROWS = 25
+    -- Terminal dimensions (live — query the controller on every read)
+    function _ansi.width()
+      return __ansi_getCols()
+    end
+
+    function _ansi.height()
+      return __ansi_getRows()
+    end
+
+    -- Legacy constant-style access: ansi.COLS and ansi.ROWS read the
+    -- live terminal dimensions via a metatable. Caching the value in a
+    -- local (local W = ansi.COLS) will return a stale snapshot after a
+    -- subsequent load_screen() resizes the terminal — prefer reading the
+    -- field fresh, or call ansi.width() / ansi.height() for the current size.
+    setmetatable(_ansi, {
+      __index = function(_, k)
+        if k == 'COLS' then return __ansi_getCols() end
+        if k == 'ROWS' then return __ansi_getRows() end
+        return nil
+      end,
+    })
 
     -- Terminal lifecycle
     function _ansi.start()

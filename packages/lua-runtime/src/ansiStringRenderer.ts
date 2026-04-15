@@ -6,7 +6,6 @@
  */
 
 import type { AnsiCell, AnsiGrid, RGBColor } from './screenTypes'
-import { ANSI_ROWS, ANSI_COLS } from './screenTypes'
 
 /**
  * Render an AnsiGrid into a single ANSI escape string.
@@ -23,14 +22,14 @@ export function renderGridToAnsiString(grid: AnsiGrid): string {
   let currentFg: RGBColor | null = null
   let currentBg: RGBColor | null = null
 
-  const rows = Math.min(grid.length, ANSI_ROWS)
+  const rows = grid.length
 
   for (let r = 0; r < rows; r++) {
     // Position cursor at start of each row
     parts.push(`\x1b[${r + 1};1H`)
 
     const row = grid[r]
-    const cols = Math.min(row.length, ANSI_COLS)
+    const cols = row.length
 
     for (let c = 0; c < cols; c++) {
       const cell = row[c]
@@ -73,13 +72,13 @@ export function renderDiffAnsiString(oldGrid: AnsiGrid, newGrid: AnsiGrid): stri
   let currentFg: RGBColor | null = null
   let currentBg: RGBColor | null = null
 
-  const rows = Math.min(newGrid.length, ANSI_ROWS)
+  const rows = newGrid.length
 
   for (let r = 0; r < rows; r++) {
     const oldRow = oldGrid[r]
     const newRow = newGrid[r]
     if (!oldRow || !newRow) continue
-    const cols = Math.min(newRow.length, ANSI_COLS)
+    const cols = newRow.length
 
     for (let c = 0; c < cols; c++) {
       const oldCell = oldRow[c]

@@ -127,6 +127,15 @@ export function setupAnsiAPI(
     getController()?.clear()
   })
 
+  // --- Dimensions (live) ---
+  engine.global.set('__ansi_getCols', () => {
+    return getController()?.getCols() ?? 80
+  })
+
+  engine.global.set('__ansi_getRows', () => {
+    return getController()?.getRows() ?? 25
+  })
+
   // --- Color functions ---
   engine.global.set('__ansi_setForeground', (r: number, g: number, b: number) => {
     getController()?.setForeground(r, g, b)

@@ -6,8 +6,8 @@ import { CrtShader, type CrtConfig } from '@lua-learning/lua-runtime'
 import '@xterm/xterm/css/xterm.css'
 import styles from './AnsiTerminalPanel.module.css'
 
-const COLS = 80
-const ROWS = 25
+const DEFAULT_COLS = 80
+const DEFAULT_ROWS = 25
 const FONT_SIZE = 16
 const FONT_FAMILY = '"IBM VGA 8x16", monospace'
 
@@ -20,11 +20,17 @@ export interface AnsiTerminalHandle {
   dispose: () => void
   /** Enable/disable CRT monitor effect with optional intensity or per-effect config */
   setCrt: (enabled: boolean, intensity?: number, config?: Partial<CrtConfig>) => void
+  /** Resize the underlying xterm.js instance to the given cell dimensions. */
+  resize?: (cols: number, rows: number) => void
 }
 
 export interface AnsiTerminalPanelProps {
   isActive?: boolean
   scaleMode?: ScaleMode
+  /** Initial terminal width in cells. Defaults to 80. */
+  cols?: number
+  /** Initial terminal height in cells. Defaults to 25. */
+  rows?: number
   /**
    * Callback when the terminal handle becomes available or is disposed.
    * Called with the handle on mount, and with null on unmount.
@@ -32,7 +38,7 @@ export interface AnsiTerminalPanelProps {
   onTerminalReady?: (handle: AnsiTerminalHandle | null) => void
 }
 
-export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady }: AnsiTerminalPanelProps) {
+export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', cols = DEFAULT_COLS, rows = DEFAULT_ROWS, onTerminalReady }: AnsiTerminalPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const terminalRef = useRef<Terminal | null>(null)
@@ -45,6 +51,10 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
   scaleModeRef.current = scaleMode
   const currentScaleRef = useRef(-1)
   const updateScaleRef = useRef<(() => void) | null>(null)
+  // Track the initial dims passed at mount so the Terminal is constructed at
+  // the right size. Subsequent changes go through the `resize` handle method.
+  const initialColsRef = useRef(cols)
+  const initialRowsRef = useRef(rows)
 
   // Wait for the IBM VGA font before opening the terminal so xterm.js
   // measures cell dimensions correctly and the ResizeObserver gets accurate metrics.
@@ -63,8 +73,8 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
       if (disposed) return
 
       const terminal = new Terminal({
-        cols: COLS,
-        rows: ROWS,
+        cols: initialColsRef.current,
+        rows: initialRowsRef.current,
         fontSize: FONT_SIZE,
         fontFamily: FONT_FAMILY,
         lineHeight: 1,
@@ -113,8 +123,12 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
 
       // Scale by integer font-size multiples instead of CSS transform to keep
       // the canvas at native resolution (no blur at 2x/3x).
-      const baseW = wrapper.scrollWidth
-      const baseH = wrapper.scrollHeight
+      let baseW = wrapper.scrollWidth
+      let baseH = wrapper.scrollHeight
+      const remeasureBase = () => {
+        baseW = wrapper.scrollWidth
+        baseH = wrapper.scrollHeight
+      }
       const updateScale = () => {
         if (baseW === 0 || baseH === 0) return
         const containerW = container.clientWidth
@@ -148,6 +162,16 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
           container: wrapper,
           dispose: () => {
             // No-op - terminal lifecycle managed by this component's cleanup
+          },
+          resize: (c: number, r: number) => {
+            const t = terminalRef.current
+            if (!t) return
+            try { t.resize(c, r) } catch (e) { console.warn('[AnsiTerminalPanel] resize failed:', e) }
+            requestAnimationFrame(() => {
+              remeasureBase()
+              currentScaleRef.current = -1
+              updateScale()
+            })
           },
           setCrt: (enabled: boolean, intensity?: number, config?: Partial<CrtConfig>) => {
             const el = containerRef.current
@@ -205,6 +229,12 @@ export function AnsiTerminalPanel({ isActive, scaleMode = 'fit', onTerminalReady
     currentScaleRef.current = -1
     updateScaleRef.current?.()
   }, [scaleMode])
+
+  // Resize the terminal when the cols/rows props change (e.g. a project of
+  // different dimensions is loaded).
+  useEffect(() => {
+    handleRef.current?.resize?.(cols, rows)
+  }, [cols, rows])
 
   // Notify parent when callback identity changes
   useEffect(() => {

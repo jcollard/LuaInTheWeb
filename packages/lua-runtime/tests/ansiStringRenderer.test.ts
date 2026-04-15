@@ -82,17 +82,15 @@ describe('renderGridToAnsiString', () => {
     expect(result).toContain(`${ESC}[3;1H`)
   })
 
-  it('clamps to ANSI_ROWS x ANSI_COLS', () => {
-    // Oversized grid should only render up to bounds
+  it('renders the full grid dimensions (arbitrary size)', () => {
+    // The renderer derives dims from the input grid itself — a 30×85 grid
+    // should render all 30 rows and all 85 columns, not clamp to 80×25.
     const grid = makeGrid(30, 85, makeCell('Z', [0, 0, 0], [0, 0, 0]))
     const result = renderGridToAnsiString(grid)
 
-    // Should not have row 26 positioning
-    expect(result).not.toContain(`${ESC}[26;1H`)
-    // Should have row 25
-    expect(result).toContain(`${ESC}[25;1H`)
-    // Count Z characters: 25 rows * 80 cols = 2000
-    expect(countOccurrences(result, 'Z')).toBe(ANSI_ROWS * ANSI_COLS)
+    expect(result).toContain(`${ESC}[26;1H`)
+    expect(result).toContain(`${ESC}[30;1H`)
+    expect(countOccurrences(result, 'Z')).toBe(30 * 85)
   })
 
   it('handles empty grid', () => {
@@ -219,16 +217,17 @@ describe('renderDiffAnsiString', () => {
     expect(result).toBeNull()
   })
 
-  it('clamps to ANSI_ROWS x ANSI_COLS', () => {
+  it('diffs arbitrary-size grids (no 80x25 clamp)', () => {
     const oldGrid = makeGrid(30, 85, makeCell('A', DEFAULT_FG, DEFAULT_BG))
     const newGrid = makeGrid(30, 85, makeCell('A', DEFAULT_FG, DEFAULT_BG))
-    // Change a cell beyond bounds — should not appear
+    // Change a cell beyond the legacy 80x25 region — it must still be diffed.
     newGrid[26][81] = makeCell('Z', [255, 0, 0], DEFAULT_BG)
-    // Change a cell within bounds — should appear
+    // And a cell inside the legacy region.
     newGrid[0][0] = makeCell('X', [255, 0, 0], DEFAULT_BG)
 
     const result = renderDiffAnsiString(oldGrid, newGrid)!
     expect(result).toContain('X')
-    expect(result).not.toContain('Z')
+    expect(result).toContain('Z')
+    expect(result).toContain(`${ESC}[27;82H`)
   })
 })

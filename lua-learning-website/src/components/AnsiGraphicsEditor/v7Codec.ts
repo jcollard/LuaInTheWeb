@@ -8,7 +8,7 @@
  */
 
 import type { AnsiGrid, RGBColor } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG } from './types'
+import { DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS, DEFAULT_FG, DEFAULT_BG } from './types'
 import { isDefaultCell, rgbEqual } from './layerUtils'
 
 export interface PaletteResult {
@@ -150,7 +150,8 @@ function isValidPaletteIndex(idx: number, palette: RGBColor[]): boolean {
 }
 
 /**
- * Decode sparse run-encoded tuples back into a full ANSI_ROWS x ANSI_COLS grid.
+ * Decode sparse run-encoded tuples into a grid of the given dimensions.
+ * Defaults to 80×25 when `cols` / `rows` are omitted (legacy callers).
  * Empty runs array = fully default grid.
  */
 export function decodeGrid(
@@ -158,6 +159,8 @@ export function decodeGrid(
   palette: RGBColor[],
   defaultFgIndex: number,
   defaultBgIndex: number,
+  cols: number = DEFAULT_ANSI_COLS,
+  rows: number = DEFAULT_ANSI_ROWS,
 ): AnsiGrid {
   if (!isValidPaletteIndex(defaultFgIndex, palette)) {
     throw new RangeError(`defaultFgIndex ${defaultFgIndex} out of palette bounds [1..${palette.length}]`)
@@ -169,8 +172,8 @@ export function decodeGrid(
   const defaultFg = palette[defaultFgIndex - 1]
   const defaultBg = palette[defaultBgIndex - 1]
 
-  const grid: AnsiGrid = Array.from({ length: ANSI_ROWS }, () =>
-    Array.from({ length: ANSI_COLS }, () => ({
+  const grid: AnsiGrid = Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => ({
       char: ' ',
       fg: [...defaultFg] as RGBColor,
       bg: [...defaultBg] as RGBColor,
@@ -185,11 +188,12 @@ export function decodeGrid(
       // Repeat run: [row, col, count, char, fgIdx, bgIdx]
       const [row, col, count, char, fgIdx, bgIdx] = run
       if (!isValidPaletteIndex(fgIdx, palette) || !isValidPaletteIndex(bgIdx, palette)) continue
+      if (row < 1 || row > rows) continue
       const fg = palette[fgIdx - 1]
       const bg = palette[bgIdx - 1]
       for (let i = 0; i < count; i++) {
         const c = col - 1 + i
-        if (c < ANSI_COLS) {
+        if (c >= 0 && c < cols) {
           grid[row - 1][c] = { char, fg: [...fg] as RGBColor, bg: [...bg] as RGBColor }
         }
       }
@@ -197,6 +201,7 @@ export function decodeGrid(
       // Single cell or text run: [row, col, charOrText, fgIdx, bgIdx]
       const [row, col, charOrText, fgIdx, bgIdx] = run
       if (!isValidPaletteIndex(fgIdx, palette) || !isValidPaletteIndex(bgIdx, palette)) continue
+      if (row < 1 || row > rows) continue
       const fg = palette[fgIdx - 1]
       const bg = palette[bgIdx - 1]
 
@@ -204,13 +209,16 @@ export function decodeGrid(
         // Text run
         for (let i = 0; i < charOrText.length; i++) {
           const c = col - 1 + i
-          if (c < ANSI_COLS) {
+          if (c >= 0 && c < cols) {
             grid[row - 1][c] = { char: charOrText[i], fg: [...fg] as RGBColor, bg: [...bg] as RGBColor }
           }
         }
       } else {
         // Single cell
-        grid[row - 1][col - 1] = { char: charOrText, fg: [...fg] as RGBColor, bg: [...bg] as RGBColor }
+        const c = col - 1
+        if (c >= 0 && c < cols) {
+          grid[row - 1][c] = { char: charOrText, fg: [...fg] as RGBColor, bg: [...bg] as RGBColor }
+        }
       }
     }
   }

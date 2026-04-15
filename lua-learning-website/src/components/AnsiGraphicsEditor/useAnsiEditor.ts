@@ -1,7 +1,8 @@
+/* eslint-disable max-lines */
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, BorderStyle, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions, DrawableLayer, Layer } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, DEFAULT_BLEND_RATIO, DEFAULT_FRAME_DURATION_MS, BORDER_PRESETS, isGroupLayer, isDrawableLayer, isClipLayer, isReferenceLayer } from './types'
+import { DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS, DEFAULT_FG, DEFAULT_BG, DEFAULT_BLEND_RATIO, DEFAULT_FRAME_DURATION_MS, BORDER_PRESETS, isGroupLayer, isDrawableLayer, isClipLayer, isReferenceLayer } from './types'
 import { blendRgb, applyMaskOverlay } from './colorUtils'
 import type { CellHalf, ColorTransform } from './gridUtils'
 import { createEmptyGrid, isInBounds, getCellHalfFromMouse, computePixelCell, computeFloodFillCells } from './gridUtils'
@@ -11,6 +12,7 @@ import { compositeCell, compositeGrid, cloneLayerState, getGroupDescendantLayers
 import { useLayerState } from './useLayerState'
 import { loadPngPixels, rgbaToAnsiGrid } from './pngImport'
 import { deserializeLayers } from './serialization'
+import { resizeProject, type ResizeAnchor } from './resizeGrid'
 import { createDrawHelpers } from './drawHelpers'
 import { createSelectionHandlers, type SelectionHandlers } from './selectionTool'
 import { createTextToolHandlers, type TextToolHandlers } from './textTool'
@@ -47,6 +49,15 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   }, [])
 
   const layerState = useLayerState(initialState)
+
+  // Project canvas dimensions. Derived from initial state at mount, then
+  // updated whenever a new LayerState is restored (file load, undo, etc.).
+  const [projectCols, setProjectCols] = useState<number>(() => initialState?.cols ?? DEFAULT_ANSI_COLS)
+  const [projectRows, setProjectRows] = useState<number>(() => initialState?.rows ?? DEFAULT_ANSI_ROWS)
+  const projectColsRef = useRef(projectCols)
+  const projectRowsRef = useRef(projectRows)
+  projectColsRef.current = projectCols
+  projectRowsRef.current = projectRows
   // Destructure identity-stable refs/callbacks for use in dependency arrays.
   // Layer mutation functions are aliased with "raw" prefix because we wrap them
   // with undo snapshots below before exposing them as addLayer, removeLayer, etc.
@@ -80,7 +91,31 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     importLayers: rawImportLayers,
   } = layerState
 
-  const grid = useMemo(() => compositeGrid(layerState.layers), [layerState.layers])
+  const grid = useMemo(() => compositeGrid(layerState.layers, projectCols, projectRows), [layerState.layers, projectCols, projectRows])
+
+  // Resize the shadow buffer when project dims change so it stays in sync
+  // with the terminal and the composited grid.
+  useEffect(() => {
+    terminalBufferRef.current.resize(projectCols, projectRows)
+  }, [projectCols, projectRows])
+
+  // Sync project dims from layer state. File loads, undo, and redo all
+  // restore a LayerState that may carry different dims; pick them up.
+  useEffect(() => {
+    // Derive dims from the first drawable/clip layer's grid if the layer
+    // state didn't carry explicit cols/rows (older files).
+    let nextCols: number | undefined
+    let nextRows: number | undefined
+    for (const l of layerState.layers) {
+      if ((l.type === 'drawn' || l.type === 'clip') && 'grid' in l) {
+        nextCols = l.grid[0]?.length
+        nextRows = l.grid.length
+        break
+      }
+    }
+    if (nextCols && nextCols !== projectColsRef.current) setProjectCols(nextCols)
+    if (nextRows && nextRows !== projectRowsRef.current) setProjectRows(nextRows)
+  }, [layerState.layers])
 
   const [brush, setBrush] = useState<BrushSettings>({
     char: '#', fg: DEFAULT_FG, bg: DEFAULT_BG, mode: 'brush', tool: 'pencil',
@@ -92,7 +127,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const [canRedo, setCanRedo] = useState(false)
 
   const undoStackRef = useRef<LayerState[]>([]), redoStackRef = useRef<LayerState[]>([])
-  const terminalBufferRef = useRef(new TerminalBuffer())
+  const terminalBufferRef = useRef(new TerminalBuffer(projectCols, projectRows))
   const terminalHandleRef = useRef<AnsiTerminalHandle | null>(null)
   const brushRef = useRef(brush); brushRef.current = brush
   const paintingRef = useRef(false)
@@ -194,18 +229,41 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   }, [applyCell, getActiveGrid])
 
   const paintCell = useCallback((row: number, col: number) => {
-    if (!isInBounds(row, col)) return
+    if (!isInBounds(row, col, projectRowsRef.current, projectColsRef.current)) return
     const { char, fg, bg } = brushRef.current
     applyCell(row, col, { char, fg: [...fg] as RGBColor, bg: [...bg] as RGBColor })
   }, [applyCell])
 
   const clearGrid = useCallback(() => {
     pushSnapshot()
-    const emptyGrid = createEmptyGrid()
-    restoreLayerState(singleLayerState('clear-bg-' + Date.now(), emptyGrid))
+    const emptyGrid = createEmptyGrid(projectColsRef.current, projectRowsRef.current)
+    const cleared = singleLayerState('clear-bg-' + Date.now(), emptyGrid)
+    cleared.cols = projectColsRef.current
+    cleared.rows = projectRowsRef.current
+    restoreLayerState(cleared)
     setIsDirty(false)
     terminalBufferRef.current.flush(emptyGrid, colorTransformRef.current)
   }, [pushSnapshot, restoreLayerState])
+
+  const resizeCanvas = useCallback((cols: number, rows: number, anchor: ResizeAnchor = 'top-left') => {
+    if (cols <= 0 || rows <= 0) return
+    if (cols === projectColsRef.current && rows === projectRowsRef.current) return
+    pushSnapshot()
+    const currentState: LayerState = {
+      layers: layersRef.current,
+      activeLayerId: activeLayerIdRef.current,
+      cols: projectColsRef.current,
+      rows: projectRowsRef.current,
+    }
+    const resized = resizeProject(currentState, cols, rows, anchor)
+    // Drop the shadow buffer so the next render emits everything fresh at the new size.
+    terminalBufferRef.current.invalidate()
+    terminalBufferRef.current.resize(cols, rows)
+    setProjectCols(cols)
+    setProjectRows(rows)
+    restoreLayerState(resized)
+    setIsDirty(true)
+  }, [pushSnapshot, restoreLayerState, layersRef, activeLayerIdRef])
 
   const withLayerUndo = useCallback((action: () => void, needsRerender = true) => {
     pushSnapshot()
@@ -336,8 +394,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         if (!el) return
         const { bounds } = activeLayer
         const rect = container.getBoundingClientRect()
-        const cellW = rect.width / ANSI_COLS
-        const cellH = rect.height / ANSI_ROWS
+        const cellW = rect.width / projectColsRef.current
+        const cellH = rect.height / projectRowsRef.current
         el.style.display = 'block'
         el.style.left = `${rect.left + bounds.c0 * cellW}px`
         el.style.top = `${rect.top + bounds.r0 * cellH}px`
@@ -400,8 +458,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
       const el = flipOriginOverlayRef.current
       if (!el) return
       const rect = container.getBoundingClientRect()
-      const cellW = rect.width / ANSI_COLS
-      const cellH = rect.height / ANSI_ROWS
+      const cellW = rect.width / projectColsRef.current
+      const cellH = rect.height / projectRowsRef.current
       el.style.display = 'block'
       el.style.left = `${rect.left + (col + 0.5) * cellW}px`
       el.style.top = `${rect.top + (row + 0.5) * cellH}px`
@@ -922,7 +980,11 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const activeLayerFrameDuration = activeLayer?.type === 'drawn' ? activeLayer.frameDurationMs : DEFAULT_FRAME_DURATION_MS
 
   return {
-    grid, brush, setBrushFg, setBrushBg, setBrushChar, setBrushMode, setBlendRatio, setTool, setBorderStyle, clearGrid,
+    grid,
+    cols: projectCols,
+    rows: projectRows,
+    resizeCanvas,
+    brush, setBrushFg, setBrushBg, setBrushChar, setBrushMode, setBlendRatio, setTool, setBorderStyle, clearGrid,
     isDirty, markClean, onTerminalReady, cursorRef, dimensionRef, selectionRef, textBoundsRef, textCursorRef,
     isSaveDialogOpen, openSaveDialog, closeSaveDialog, undo, redo, canUndo, canRedo,
     layers: layerState.layers, activeLayerId: layerState.activeLayerId,
