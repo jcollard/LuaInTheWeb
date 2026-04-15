@@ -1,5 +1,4 @@
 import type { AnsiCell, AnsiGrid, BrushSettings, Layer } from './types'
-import { ANSI_COLS, ANSI_ROWS } from './types'
 import type { CellHalf, ColorTransform } from './gridUtils'
 import {
   parseCellKey, isInBounds,
@@ -19,6 +18,9 @@ export interface DrawHelperDeps {
   previewCellsRef: React.MutableRefObject<Map<string, AnsiCell>>
   lineStartRef: React.MutableRefObject<CellHalf | null>
   colorTransformRef: React.RefObject<ColorTransform | undefined>
+  /** Live refs for current project canvas dimensions. */
+  projectColsRef: React.RefObject<number>
+  projectRowsRef: React.RefObject<number>
   getActiveGrid: () => AnsiGrid
   applyCell: (row: number, col: number, cell: AnsiCell) => void
   paintPixel: (row: number, col: number, isTopHalf: boolean) => void
@@ -32,15 +34,16 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
   const {
     container, cursorRef, dimensionRef, terminalBuffer, brushRef,
     layersRef, activeLayerIdRef, previewCellsRef, lineStartRef,
-    colorTransformRef, getActiveGrid, applyCell, paintPixel, paintBlendPixel, paintCell,
+    colorTransformRef, projectColsRef, projectRowsRef,
+    getActiveGrid, applyCell, paintPixel, paintBlendPixel, paintCell,
   } = deps
 
   function positionCursor(row: number, col: number, isTopHalf?: boolean): void {
     const el = cursorRef.current
     if (!el) return
     const rect = container.getBoundingClientRect()
-    const cellW = rect.width / ANSI_COLS
-    const cellH = rect.height / ANSI_ROWS
+    const cellW = rect.width / (projectColsRef.current ?? 80)
+    const cellH = rect.height / (projectRowsRef.current ?? 25)
     const isHalf = isTopHalf !== undefined
     const cursorH = isHalf ? cellH / 2 : cellH
     const offsetY = isHalf && !isTopHalf ? cellH / 2 : 0
@@ -59,8 +62,8 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
     const el = dimensionRef.current
     if (!el) return
     const rect = container.getBoundingClientRect()
-    const cellW = rect.width / ANSI_COLS
-    const cellH = rect.height / ANSI_ROWS
+    const cellW = rect.width / (projectColsRef.current ?? 80)
+    const cellH = rect.height / (projectRowsRef.current ?? 25)
     const minCol = Math.min(start.col, end.col)
     const maxCol = Math.max(start.col, end.col)
     const minRow = Math.min(start.row, end.row)
@@ -98,7 +101,7 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
   function paintAt(row: number, col: number, isTopHalf: boolean): void {
     const mode = brushRef.current.mode
     if (mode === 'eraser') {
-      if (isInBounds(row, col)) {
+      if (isInBounds(row, col, projectRowsRef.current ?? 25, projectColsRef.current ?? 80)) {
         applyCell(row, col, computeErasePixelCell(getActiveGrid()[row][col], isTopHalf))
       }
     } else if (mode === 'pixel') {

@@ -218,12 +218,12 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   }, [applyToActiveLayer, layersRef])
 
   const paintPixel = useCallback((row: number, col: number, isTopHalf: boolean) => {
-    if (!isInBounds(row, col)) return
+    if (!isInBounds(row, col, projectRowsRef.current, projectColsRef.current)) return
     applyCell(row, col, computePixelCell(getActiveGrid()[row][col], brushRef.current.fg, isTopHalf))
   }, [applyCell, getActiveGrid])
 
   const paintBlendPixel = useCallback((row: number, col: number, isTopHalf: boolean) => {
-    if (!isInBounds(row, col)) return
+    if (!isInBounds(row, col, projectRowsRef.current, projectColsRef.current)) return
     const { fg, bg, blendRatio } = brushRef.current
     applyCell(row, col, computePixelCell(getActiveGrid()[row][col], blendRgb(bg, fg, blendRatio ?? DEFAULT_BLEND_RATIO), isTopHalf))
   }, [applyCell, getActiveGrid])
@@ -374,13 +374,15 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     const draw = createDrawHelpers({
       container, cursorRef, dimensionRef, terminalBuffer: terminalBufferRef.current, brushRef,
       layersRef, activeLayerIdRef, previewCellsRef, lineStartRef,
-      colorTransformRef, getActiveGrid, applyCell, paintPixel, paintBlendPixel, paintCell,
+      colorTransformRef, projectColsRef, projectRowsRef,
+      getActiveGrid, applyCell, paintPixel, paintBlendPixel, paintCell,
     })
 
     const sel = createSelectionHandlers({
       container, selectionRef, commitPendingRef: commitPendingSelectionRef,
       restorePreview: draw.restorePreview, writePreviewCells: draw.writePreviewCells,
       commitCells: draw.commitCells, pushSnapshot, getActiveGrid, hideDimension: draw.hideDimension,
+      projectColsRef, projectRowsRef,
     })
 
     selHandlersRef.current = sel
@@ -416,6 +418,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         flushLayers(layersRef.current)
       },
       textBoundsRef, textCursorRef, containerRef,
+      projectColsRef, projectRowsRef,
       onExitEditing: updateTextBoundsDisplay,
     })
     textToolRef.current = textTool
@@ -561,7 +564,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     function onMouseDown(e: MouseEvent): void {
       e.preventDefault()
       if (isPlayingRef.current) return
-      const cell = getCellHalfFromMouse(e, container)
+      const cell = getCellHalfFromMouse(e, container, projectColsRef.current, projectRowsRef.current)
       if (cell && sampleCell(e, cell)) {
         draw.positionCursor(cell.row, cell.col, draw.cursorHalf(cell))
         return
@@ -637,7 +640,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
             for (const target of targets) {
               const grids = target.type === 'drawn' ? target.frames : [target.grid]
               moveCapturedRef.current.set(target.id, grids.map(captureNonDefaultCells))
-              moveBlankGridsRef.current.set(target.id, grids.map(() => createEmptyGrid()))
+              moveBlankGridsRef.current.set(target.id, grids.map(() => createEmptyGrid(projectColsRef.current, projectRowsRef.current)))
             }
           }
           break
@@ -655,7 +658,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     }
 
     function onMouseMove(e: MouseEvent): void {
-      const cell = getCellHalfFromMouse(e, container)
+      const cell = getCellHalfFromMouse(e, container, projectColsRef.current, projectRowsRef.current)
       if (cell) draw.positionCursor(cell.row, cell.col, draw.cursorHalf(cell))
       else draw.hideCursor()
       if (!cell) return
@@ -735,7 +738,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         case 'line': {
           clearPreviewCell()
           if (!lineStartRef.current) break
-          const cell = getCellHalfFromMouse(e, container)
+          const cell = getCellHalfFromMouse(e, container, projectColsRef.current, projectRowsRef.current)
           if (cell) {
             draw.commitLine(cell)
           } else {
@@ -752,7 +755,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         case 'border': {
           clearPreviewCell()
           if (!lineStartRef.current) break
-          const cell = getCellHalfFromMouse(e, container)
+          const cell = getCellHalfFromMouse(e, container, projectColsRef.current, projectRowsRef.current)
           if (cell) {
             draw.commitShape(cell)
           } else {
@@ -771,7 +774,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
           break
         case 'move': {
           if (!moveStartRef.current) { endMoveDrag(); break }
-          const endCell = getCellHalfFromMouse(e, container)
+          const endCell = getCellHalfFromMouse(e, container, projectColsRef.current, projectRowsRef.current)
           const dr = endCell ? endCell.row - moveStartRef.current.row : 0
           const dc = endCell ? endCell.col - moveStartRef.current.col : 0
           if (moveRefStartOffset.current !== null) {

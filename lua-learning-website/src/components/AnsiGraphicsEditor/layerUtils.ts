@@ -77,9 +77,14 @@ export function isDefaultCell(cell: AnsiCell): boolean {
   return cell.char === ' ' && rgbEqual(cell.fg, DEFAULT_FG) && rgbEqual(cell.bg, DEFAULT_BG)
 }
 
-export function createLayer(name: string, id?: string): DrawnLayer {
-  const grid: AnsiGrid = Array.from({ length: ANSI_ROWS }, () =>
-    Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
+export function createLayer(
+  name: string,
+  id?: string,
+  cols: number = ANSI_COLS,
+  rows: number = ANSI_ROWS,
+): DrawnLayer {
+  const grid: AnsiGrid = Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => ({ ...DEFAULT_CELL }))
   )
   return {
     type: 'drawn',
