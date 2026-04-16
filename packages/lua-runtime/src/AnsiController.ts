@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 /**
  * ANSI terminal controller for managing terminal lifecycle from within LuaScriptProcess.
  *
@@ -14,11 +15,11 @@ import { InputCapture, GameLoopController } from '@lua-learning/canvas-runtime'
 import { InputAPI } from './InputAPI'
 import type { TimingInfo } from '@lua-learning/canvas-runtime'
 import { initSchedule, computePlaybackTick, type LayerSchedule } from '@lua-learning/ansi-shared'
-import { parseScreenLayers } from './screenParser'
+import { parseScreen } from './screenParser'
 import { compositeGridInto } from './screenCompositor'
 import { renderGridToAnsiString, renderDiffAnsiString } from './ansiStringRenderer'
 import { renderTextLayerGrid } from './textLayerGrid'
-import { createEmptyGrid, type AnsiGrid, type LayerData, type DrawnLayerData, type TextLayerData, type RGBColor } from './screenTypes'
+import { createEmptyGrid, DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS, type AnsiGrid, type LayerData, type DrawnLayerData, type TextLayerData, type RGBColor } from './screenTypes'
 import { startSwipeOut, startSwipeIn, startSwipeOutLayers, startDitherOut, startDitherIn, startDitherOutLayers, advanceTransition, resolveMultipleIdentifiers, type TransitionState, type SwipeDirection } from './screenSwipe'
 import { startPan, advancePan, type PanState } from './screenPan'
 
@@ -35,6 +36,8 @@ export interface AnsiTerminalHandle {
   dispose: () => void
   /** Enable/disable CRT monitor effect with optional intensity or per-effect config */
   setCrt?: (enabled: boolean, intensity?: number, config?: Record<string, number>) => void
+  /** Resize the underlying xterm.js instance to the given cell dimensions. */
+  resize?: (cols: number, rows: number) => void
 }
 
 /**
@@ -76,6 +79,9 @@ export interface LayerInfo {
 interface ScreenState {
   ansiString: string
   layers: LayerData[]
+  /** Authored canvas dimensions for this screen. */
+  cols: number
+  rows: number
   schedule: LayerSchedule | null
   playing: boolean
   /** True once screenPlay() or screenPause() has been explicitly called. */
@@ -112,8 +118,10 @@ export class AnsiController {
   private nextScreenId = 1
   private screenStates: Map<number, ScreenState> = new Map()
   private activeScreenId: number | null = null
-  private compositeBufferA: AnsiGrid = createEmptyGrid()
-  private compositeBufferB: AnsiGrid = createEmptyGrid()
+  private currentCols: number = DEFAULT_ANSI_COLS
+  private currentRows: number = DEFAULT_ANSI_ROWS
+  private compositeBufferA: AnsiGrid = createEmptyGrid(DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS)
+  private compositeBufferB: AnsiGrid = createEmptyGrid(DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS)
   private useBufferA = true
   private groupGridCache: Map<string, AnsiGrid> = new Map()
 
@@ -128,7 +136,13 @@ export class AnsiController {
   private getScreenState(id: number): ScreenState {
     let state = this.screenStates.get(id)
     if (!state) {
-      state = { ansiString: '', layers: [], schedule: null, playing: false, playbackTouched: false, lastGrid: null, dirty: false, needsRecomposite: false, swipe: null, viewportCol: 0, viewportRow: 0, pan: null }
+      state = {
+        ansiString: '', layers: [],
+        cols: DEFAULT_ANSI_COLS, rows: DEFAULT_ANSI_ROWS,
+        schedule: null, playing: false, playbackTouched: false,
+        lastGrid: null, dirty: false, needsRecomposite: false,
+        swipe: null, viewportCol: 0, viewportRow: 0, pan: null,
+      }
       this.screenStates.set(id, state)
     }
     return state
@@ -240,9 +254,42 @@ export class AnsiController {
    * @param col - Column (1-based)
    */
   setCursor(row: number, col: number): void {
-    const r = Math.max(1, Math.min(AnsiController.ROWS, Math.floor(row)))
-    const c = Math.max(1, Math.min(AnsiController.COLS, Math.floor(col)))
+    const r = Math.max(1, Math.min(this.currentRows, Math.floor(row)))
+    const c = Math.max(1, Math.min(this.currentCols, Math.floor(col)))
     this.handle?.write(`\x1b[${r};${c}H`)
+  }
+
+  /** Current terminal width in cells. */
+  getCols(): number { return this.currentCols }
+  /** Current terminal height in cells. */
+  getRows(): number { return this.currentRows }
+
+  /**
+   * Resize the xterm.js terminal to match the given dimensions and invalidate
+   * the composite buffers. Called internally when switching to a screen whose
+   * authored dimensions differ from the current terminal.
+   */
+  resizeTerminal(cols: number, rows: number): void {
+    const c = Math.max(1, Math.floor(cols))
+    const r = Math.max(1, Math.floor(rows))
+    if (c === this.currentCols && r === this.currentRows) return
+    this.currentCols = c
+    this.currentRows = r
+    this.compositeBufferA = createEmptyGrid(c, r)
+    this.compositeBufferB = createEmptyGrid(c, r)
+    this.useBufferA = true
+    this.handle?.resize?.(c, r)
+    // Drop snapshots that no longer match the terminal — diffing a 25-row
+    // lastGrid against a 40-row buffer would emit garbage. Screens whose
+    // own dims still match keep their lastGrid so flipping back to them
+    // can render via diff instead of a full redraw.
+    for (const state of this.screenStates.values()) {
+      if (state.cols !== c || state.rows !== r) {
+        state.lastGrid = null
+      }
+      state.dirty = true
+      state.needsRecomposite = true
+    }
   }
 
   /**
@@ -312,9 +359,6 @@ export class AnsiController {
 
   // --- Mouse Input API ---
 
-  private static readonly COLS = 80
-  private static readonly ROWS = 25
-
   /**
    * Get the container's bounding rect, or null if unavailable or zero-sized.
    */
@@ -326,33 +370,35 @@ export class AnsiController {
   }
 
   /**
-   * Get the mouse column in 1-based cell coordinates, clamped to 1-COLS.
+   * Get the mouse column in 1-based cell coordinates, clamped to the
+   * current terminal width.
    */
   getMouseCol(): number {
     const rect = this.getContainerRect()
     if (!rect) return 1
-    const col = Math.floor(this.inputAPI.getMouseX() / rect.width * AnsiController.COLS) + 1
-    return Math.max(1, Math.min(AnsiController.COLS, col))
+    const col = Math.floor(this.inputAPI.getMouseX() / rect.width * this.currentCols) + 1
+    return Math.max(1, Math.min(this.currentCols, col))
   }
 
   /**
-   * Get the mouse row in 1-based cell coordinates, clamped to 1-ROWS.
+   * Get the mouse row in 1-based cell coordinates, clamped to the
+   * current terminal height.
    */
   getMouseRow(): number {
     const rect = this.getContainerRect()
     if (!rect) return 1
-    const row = Math.floor(this.inputAPI.getMouseY() / rect.height * AnsiController.ROWS) + 1
-    return Math.max(1, Math.min(AnsiController.ROWS, row))
+    const row = Math.floor(this.inputAPI.getMouseY() / rect.height * this.currentRows) + 1
+    return Math.max(1, Math.min(this.currentRows, row))
   }
 
   /**
    * Check if the mouse cursor is in the top half of the current cell.
-   * Useful for half-block rendering at effective 80x50 resolution.
+   * Useful for half-block rendering at effective 2× vertical resolution.
    */
   isMouseTopHalf(): boolean {
     const rect = this.getContainerRect()
     if (!rect) return false
-    const cellFraction = (this.inputAPI.getMouseY() / rect.height * AnsiController.ROWS) % 1
+    const cellFraction = (this.inputAPI.getMouseY() / rect.height * this.currentRows) % 1
     return cellFraction < 0.5
   }
 
@@ -400,10 +446,12 @@ export class AnsiController {
    * composites and renders to an ANSI escape string, and returns the ID.
    */
   createScreen(data: Record<string, unknown>): number {
-    const layers = parseScreenLayers(data)
+    const { layers, cols, rows } = parseScreen(data)
     const id = this.nextScreenId++
     const state = this.getScreenState(id)
     state.layers = layers
+    state.cols = cols
+    state.rows = rows
     this.recompositeScreen(id)
     return id
   }
@@ -422,8 +470,12 @@ export class AnsiController {
     }
     this.activeScreenId = id
 
-    // Mark as dirty so onFrame writes the full screen
     const state = this.getScreenState(id)
+    // Resize the terminal to match the authored dimensions of this screen.
+    if (state.cols !== this.currentCols || state.rows !== this.currentRows) {
+      this.resizeTerminal(state.cols, state.rows)
+    }
+    // Mark as dirty so onFrame writes the full screen
     state.dirty = true
 
     // Auto-start playback if screen has animated layers and isn't already paused
@@ -480,6 +532,7 @@ export class AnsiController {
 
   setScreenLabel(id: number, identifier: string, text: string, textFg?: RGBColor, textFgColors?: RGBColor[], textBg?: RGBColor, textBgColors?: RGBColor[]): void {
     const layers = this.validateScreenExists(id)
+    const state = this.screenStates.get(id)!
     const matched = this.resolveLayersByIdentifier(layers, identifier)
     if (matched.length === 0) throw new Error(`No layers match identifier "${identifier}" in screen ${id}.`)
     const textLayers = matched.filter((l): l is TextLayerData => l.type === 'text')
@@ -492,7 +545,7 @@ export class AnsiController {
       layer.textFgColors = textFgColors
       layer.textBg = textBg
       layer.textBgColors = textBgColors
-      layer.grid = renderTextLayerGrid(layer.text, layer.bounds, layer.textFg, layer.textFgColors, layer.textAlign, layer.textBg, layer.textBgColors)
+      layer.grid = renderTextLayerGrid(layer.text, layer.bounds, layer.textFg, layer.textFgColors, layer.textAlign, layer.textBg, layer.textBgColors, state.cols, state.rows)
     }
     this.recompositeScreen(id)
   }
@@ -555,6 +608,14 @@ export class AnsiController {
   private compositeAndDiff(state: ScreenState, canDiffRender: boolean): void {
     this.groupGridCache.clear()
     const oldGrid = state.lastGrid
+    // Ensure shared buffers match the screen's dims. This should already be
+    // the case for the active screen (setScreen triggers resizeTerminal), but
+    // handle drift defensively.
+    if (this.compositeBufferA.length !== state.rows || (this.compositeBufferA[0]?.length ?? 0) !== state.cols) {
+      this.compositeBufferA = createEmptyGrid(state.cols, state.rows)
+      this.compositeBufferB = createEmptyGrid(state.cols, state.rows)
+      this.useBufferA = true
+    }
     const buffer = this.useBufferA ? this.compositeBufferA : this.compositeBufferB
     this.useBufferA = !this.useBufferA
     compositeGridInto(buffer, state.layers, this.groupGridCache, Math.floor(state.viewportRow), Math.floor(state.viewportCol))

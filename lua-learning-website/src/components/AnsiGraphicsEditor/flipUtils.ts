@@ -1,5 +1,5 @@
 import type { AnsiCell, AnsiGrid, DrawnLayer, RGBColor, TextLayer } from './types'
-import { ANSI_ROWS, ANSI_COLS, DEFAULT_CELL, HALF_BLOCK } from './types'
+import { DEFAULT_CELL, HALF_BLOCK } from './types'
 import { cloneCell, parseCellKey } from './gridUtils'
 
 export function flipCellsHorizontal(cells: Map<string, AnsiCell>): Map<string, AnsiCell> {
@@ -46,13 +46,15 @@ function cloneDefaultCell(): AnsiCell {
 }
 
 export function flipGridHorizontal(grid: AnsiGrid, originCol: number): AnsiGrid {
-  const result: AnsiGrid = Array.from({ length: ANSI_ROWS }, () =>
-    Array.from({ length: ANSI_COLS }, cloneDefaultCell),
+  const rows = grid.length
+  const cols = grid[0]?.length ?? 0
+  const result: AnsiGrid = Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, cloneDefaultCell),
   )
-  for (let r = 0; r < ANSI_ROWS; r++) {
-    for (let c = 0; c < ANSI_COLS; c++) {
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
       const nc = 2 * originCol - c
-      if (nc < 0 || nc >= ANSI_COLS) continue
+      if (nc < 0 || nc >= cols) continue
       result[r][nc] = cloneCell(grid[r][c])
     }
   }
@@ -60,13 +62,15 @@ export function flipGridHorizontal(grid: AnsiGrid, originCol: number): AnsiGrid 
 }
 
 export function flipGridVertical(grid: AnsiGrid, originRow: number): AnsiGrid {
-  const result: AnsiGrid = Array.from({ length: ANSI_ROWS }, () =>
-    Array.from({ length: ANSI_COLS }, cloneDefaultCell),
+  const rows = grid.length
+  const cols = grid[0]?.length ?? 0
+  const result: AnsiGrid = Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, cloneDefaultCell),
   )
-  for (let r = 0; r < ANSI_ROWS; r++) {
+  for (let r = 0; r < rows; r++) {
     const nr = 2 * originRow - r
-    if (nr < 0 || nr >= ANSI_ROWS) continue
-    for (let c = 0; c < ANSI_COLS; c++) {
+    if (nr < 0 || nr >= rows) continue
+    for (let c = 0; c < cols; c++) {
       const cloned = cloneCell(grid[r][c])
       if (cloned.char === HALF_BLOCK) {
         ;[cloned.fg, cloned.bg] = [cloned.bg, cloned.fg]

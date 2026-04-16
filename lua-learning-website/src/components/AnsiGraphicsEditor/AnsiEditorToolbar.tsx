@@ -36,6 +36,12 @@ export interface AnsiEditorToolbarProps {
   onToggleCgaPreview?: () => void
   scaleMode?: ScaleMode
   onSetScaleMode?: (mode: ScaleMode) => void
+  /** Current canvas width. Passed to FileOptionsModal for the resize control. */
+  cols?: number
+  /** Current canvas height. Passed to FileOptionsModal for the resize control. */
+  rows?: number
+  /** Resize handler forwarded to FileOptionsModal. */
+  onResizeCanvas?: (cols: number, rows: number) => void
   activeLayerIsGroup?: boolean
   isPlaying?: boolean
   fileMenuOpen?: boolean
@@ -45,7 +51,7 @@ export interface AnsiEditorToolbarProps {
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onImportPng, onImportLayers, onExportAns, onExportSh, onExportLayers, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
-  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, scaleMode, onSetScaleMode, activeLayerIsGroup, isPlaying,
+  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, scaleMode, onSetScaleMode, cols, rows, onResizeCanvas, activeLayerIsGroup, isPlaying,
   fileMenuOpen: controlledFileMenuOpen, onSetFileMenuOpen,
 }: AnsiEditorToolbarProps) {
   const toolsDisabled = activeLayerIsGroup || isPlaying
@@ -81,6 +87,9 @@ export function AnsiEditorToolbar({
           onToggleCgaPreview={onToggleCgaPreview!}
           scaleMode={scaleMode ?? 'integer-auto'}
           onSetScaleMode={onSetScaleMode!}
+          cols={cols ?? 80}
+          rows={rows ?? 25}
+          onResizeCanvas={onResizeCanvas ?? (() => {})}
         />
       )}
       <div className={styles.modeGroup}>

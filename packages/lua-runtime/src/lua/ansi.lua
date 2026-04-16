@@ -2,7 +2,11 @@
 --- ansi.lua - ANSI Terminal Library
 --- Load with: local ansi = require('ansi')
 ---
---- This library provides an 80x25 text terminal for DOS-style ANSI games.
+--- This library provides a text terminal for DOS-style ANSI games.
+--- The terminal defaults to 80×25 and can be resized on the fly by loading
+--- screens authored at other dimensions (e.g. 120×40). Use `ansi.width()` and
+--- `ansi.height()` for the current size, or `ansi.COLS` / `ansi.ROWS` which
+--- now read the live dimensions through a metatable.
 --- It uses xterm.js as the renderer and supports true color (24-bit) output.
 ---
 --- Note: The ANSI API is available in both script and REPL mode.
@@ -563,12 +567,22 @@ ansi.keys = {}
 -- Terminal Dimensions
 -- =============================================================================
 
---- Number of columns in the terminal (80).
----@type number
+--- Number of columns in the current terminal. Live value — reads fresh on
+--- every access via a metatable. Changes when a screen of different
+--- dimensions is activated. Caching into a local produces a stale snapshot.
+---@type integer
 ansi.COLS = 80
 
---- Number of rows in the terminal (25).
----@type number
+--- Number of rows in the current terminal. Live value; see `ansi.COLS`.
+---@type integer
 ansi.ROWS = 25
+
+--- Return the current terminal width in columns.
+---@return integer cols
+function ansi.width() end
+
+--- Return the current terminal height in rows.
+---@return integer rows
+function ansi.height() end
 
 return ansi

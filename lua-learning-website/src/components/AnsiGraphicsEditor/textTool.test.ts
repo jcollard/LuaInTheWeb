@@ -78,6 +78,8 @@ describe('createTextToolHandlers', () => {
       textBoundsRef: { current: document.createElement('div') },
       textCursorRef: { current: document.createElement('div') },
       containerRef: { current: document.createElement('div') },
+      projectColsRef: { current: 80 },
+      projectRowsRef: { current: 25 },
     }
     handlers = createTextToolHandlers(deps)
   })

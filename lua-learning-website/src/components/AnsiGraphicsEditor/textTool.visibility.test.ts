@@ -57,6 +57,8 @@ describe('text tool visibility and occlusion', () => {
       textBoundsRef: { current: document.createElement('div') },
       textCursorRef: { current: document.createElement('div') },
       containerRef: { current: document.createElement('div') },
+      projectColsRef: { current: 80 },
+      projectRowsRef: { current: 25 },
     }
   })
 

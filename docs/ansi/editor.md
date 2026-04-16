@@ -1,6 +1,6 @@
 # ANSI Graphics Editor — User Guide
 
-The ANSI Graphics Editor is an art editor for creating ANSI-style artwork on an 80-column by 25-row character grid. You can draw with characters, half-block pixels, box-drawing borders, and full RGB colors. The editor supports multiple layers, animation frames, and export to several formats.
+The ANSI Graphics Editor is an art editor for creating ANSI-style artwork on a configurable character grid (default 80×25, resizable up to 240×100 per project). You can draw with characters, half-block pixels, box-drawing borders, and full RGB colors. The editor supports multiple layers, animation frames, and export to several formats.
 
 
 ## Interface Overview
@@ -9,7 +9,7 @@ The editor is divided into four areas:
 
 - **Toolbar** (top) — tool and mode selection, brush settings, file operations
 - **Color panel** (left) — color picker and palette swatches
-- **Canvas** (center) — the 80x25 drawing surface
+- **Canvas** (center) — the drawing surface (sized to the current project dimensions)
 - **Layers panel** (right) — layer list and tag organization
 
 
@@ -29,6 +29,10 @@ Press **F** to open the File menu, then select **Open** to load a `.ansi.lua` fi
 - **Ctrl+Shift+S** — Save As (opens a dialog to choose a directory and filename)
 
 The Save As dialog lets you pick a directory and enter a filename. The `.ansi.lua` extension is added automatically.
+
+### Resizing the Canvas
+
+Press **F** to open File options and use the "Canvas size" controls to change the project's dimensions (1–240 cols, 1–100 rows). The resize is undoable: content is anchored to the top-left, so cropping removes cells beyond the new edges and enlarging pads them with empty defaults.
 
 ## Drawing Tools
 

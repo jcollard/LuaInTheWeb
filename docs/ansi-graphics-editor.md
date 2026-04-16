@@ -1,6 +1,6 @@
 # ANSI Graphics Editor
 
-The ANSI Graphics Editor is a full-featured art editor for creating ANSI-style artwork using the terminal's 80x25 character grid. It supports multiple layer types, animation frames, pixel-level drawing, and export to multiple formats.
+The ANSI Graphics Editor is a full-featured art editor for creating ANSI-style artwork on a configurable character grid (default 80×25, resizable per project via File options). It supports multiple layer types, animation frames, pixel-level drawing, and export to multiple formats.
 
 For usage instructions, see the [User Guide](./ansi/editor.md).
 
@@ -80,7 +80,7 @@ AnsiGraphicsEditor.tsx (pure UI — props, events, rendering)
 | `BrushMode` | `'brush' \| 'pixel' \| 'blend-pixel' \| 'eraser'` | Brush behavior mode |
 | `BorderStyle` | `{ tl, t, tr, l, r, bl, b, br }` | 8-character border set |
 | `Rect` | `{ r0, c0, r1, c1 }` | Bounding rectangle |
-| `LayerState` | `{ layers, activeLayerId, availableTags? }` | Full editor state |
+| `LayerState` | `{ layers, activeLayerId, cols?, rows?, availableTags? }` | Full editor state including per-project canvas dimensions |
 
 ### Layer Types
 
@@ -109,8 +109,9 @@ Both must be resolved by compositing before reaching the terminal.
 
 | Constant | Value | Description |
 |----------|-------|-------------|
-| `ANSI_COLS` | `80` | Canvas width in characters |
-| `ANSI_ROWS` | `25` | Canvas height in characters |
+| `DEFAULT_ANSI_COLS` | `80` | Default canvas width when a project doesn't specify one |
+| `DEFAULT_ANSI_ROWS` | `25` | Default canvas height when a project doesn't specify one |
+| `ANSI_COLS` / `ANSI_ROWS` | `80` / `25` | Deprecated aliases kept for migration. New code should read `LayerState.cols` / `rows` or derive from the grid itself. |
 | `HALF_BLOCK` | `'\u2580'` (▀) | Character for pixel-level graphics |
 | `DEFAULT_BLEND_RATIO` | `0.25` | Default blend-pixel transparency |
 | `DEFAULT_FRAME_DURATION_MS` | `100` | Default animation frame timing |
@@ -262,6 +263,12 @@ ANSI escape format per cell:
 - **HSV picker** with brightness slider
 - **Simplify palette**: Iterative merge of similar colors to reduce palette size
 - **CGA preview mode**: `cgaQuantize` maps all colors to nearest CGA color (display-only, non-destructive)
+
+## Canvas Dimensions
+
+Each project stores its own canvas size in `LayerState.cols` / `LayerState.rows`, which round-trip through the `.ansi.lua` `width` / `height` fields. New projects default to 80×25; files authored at other sizes are loaded at their authored dimensions and the xterm.js preview panel resizes to match.
+
+The **File Options** modal includes a "Canvas size" control that accepts new dimensions (1–240 cols, 1–100 rows) and triggers `useAnsiEditor.resizeCanvas()`. Resizing is undoable and uses `resizeGrid.ts`'s `resizeProject()` to crop or pad every drawn frame, clip layer, and text-layer bounds with a top-left anchor (center anchor also supported in the utility).
 
 ## Import/Export
 

@@ -1,5 +1,5 @@
 import type { AnsiCell, AnsiGrid, ClipLayer, DrawableLayer, DrawnLayer, GroupLayer, Layer, LayerState, ReferenceLayer, RGBColor, TextLayer } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, isGroupLayer, isDrawableLayer, isClipLayer, isReferenceLayer, getParentId } from './types'
+import { DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, isGroupLayer, isDrawableLayer, isClipLayer, isReferenceLayer, getParentId } from './types'
 import { compositeGrid } from './compositeUtils'
 export { visibleDrawableLayers, compositeCell, compositeGrid, compositeGridInto, compositeCellWithOverride, prepareComposite, compositeCellPrepared, compositeCellWithOverridePrepared, type CompositeState } from './compositeUtils'
 
@@ -77,9 +77,14 @@ export function isDefaultCell(cell: AnsiCell): boolean {
   return cell.char === ' ' && rgbEqual(cell.fg, DEFAULT_FG) && rgbEqual(cell.bg, DEFAULT_BG)
 }
 
-export function createLayer(name: string, id?: string): DrawnLayer {
-  const grid: AnsiGrid = Array.from({ length: ANSI_ROWS }, () =>
-    Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
+export function createLayer(
+  name: string,
+  id?: string,
+  cols: number = DEFAULT_ANSI_COLS,
+  rows: number = DEFAULT_ANSI_ROWS,
+): DrawnLayer {
+  const grid: AnsiGrid = Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => ({ ...DEFAULT_CELL }))
   )
   return {
     type: 'drawn',
@@ -378,7 +383,13 @@ export function assertContiguousBlocks(layers: Layer[]): void {
 }
 
 export function cloneLayerState(state: LayerState): LayerState {
-  return { activeLayerId: state.activeLayerId, layers: state.layers.map(cloneLayer) }
+  return {
+    activeLayerId: state.activeLayerId,
+    layers: state.layers.map(cloneLayer),
+    cols: state.cols,
+    rows: state.rows,
+    availableTags: state.availableTags,
+  }
 }
 
 export { createClipLayer, buildClipMaskMap, isCellClipped } from './clipMaskUtils'

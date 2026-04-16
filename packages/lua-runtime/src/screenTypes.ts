@@ -26,8 +26,14 @@ export type TextAlign = 'left' | 'center' | 'right' | 'justify'
 
 // --- Constants ---
 
-export const ANSI_COLS = 80
-export const ANSI_ROWS = 25
+/** Default ANSI canvas width used when a screen does not specify one. */
+export const DEFAULT_ANSI_COLS = 80
+/** Default ANSI canvas height used when a screen does not specify one. */
+export const DEFAULT_ANSI_ROWS = 25
+/** @deprecated Use {@link DEFAULT_ANSI_COLS} or derive from the grid itself. */
+export const ANSI_COLS = DEFAULT_ANSI_COLS
+/** @deprecated Use {@link DEFAULT_ANSI_ROWS} or derive from the grid itself. */
+export const ANSI_ROWS = DEFAULT_ANSI_ROWS
 
 export const DEFAULT_FG: RGBColor = [170, 170, 170]
 export const DEFAULT_BG: RGBColor = [0, 0, 0]
@@ -126,19 +132,26 @@ export function rgbEqual(a: RGBColor, b: RGBColor): boolean {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2]
 }
 
-/** Create a pre-allocated empty ANSI grid (25×80 mutable cells). */
-export function createEmptyGrid(): AnsiGrid {
-  return Array.from({ length: ANSI_ROWS }, () =>
-    Array.from({ length: ANSI_COLS }, (): AnsiCell => ({
+export { gridDims, type GridDims } from '@lua-learning/ansi-shared'
+
+/** Create a pre-allocated empty ANSI grid. Defaults to 80×25 when dims omitted. */
+export function createEmptyGrid(cols: number = DEFAULT_ANSI_COLS, rows: number = DEFAULT_ANSI_ROWS): AnsiGrid {
+  return Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, (): AnsiCell => ({
       char: ' ', fg: [...DEFAULT_FG] as RGBColor, bg: [...DEFAULT_BG] as RGBColor,
     }))
   )
 }
 
-/** Create a solid-fill grid (25×80) with specified character and color. */
-export function createFillGrid(char: string, color: RGBColor): AnsiGrid {
-  return Array.from({ length: ANSI_ROWS }, () =>
-    Array.from({ length: ANSI_COLS }, (): AnsiCell => ({
+/** Create a solid-fill grid with specified character and color. Defaults to 80×25. */
+export function createFillGrid(
+  char: string,
+  color: RGBColor,
+  cols: number = DEFAULT_ANSI_COLS,
+  rows: number = DEFAULT_ANSI_ROWS,
+): AnsiGrid {
+  return Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, (): AnsiCell => ({
       char, fg: [...color] as RGBColor, bg: [...color] as RGBColor,
     }))
   )

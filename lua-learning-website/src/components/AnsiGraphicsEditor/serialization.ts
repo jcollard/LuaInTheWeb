@@ -1,12 +1,21 @@
 import { stringify, parse } from '@kilcekru/lua-table'
 import type { AnsiGrid, ClipLayer, Layer, LayerState, TextLayer, TextAlign, RGBColor, Rect, GroupLayer, ReferenceLayer } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_FRAME_DURATION_MS, isGroupLayer, isClipLayer, isReferenceLayer } from './types'
+import { DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS, DEFAULT_FRAME_DURATION_MS, isGroupLayer, isClipLayer, isReferenceLayer } from './types'
 import { renderTextLayerGrid } from './textLayerGrid'
 import { buildPalette, encodeGrid, decodeGrid } from './v7Codec'
 import type { Run } from './v7Codec'
 
+/** Extract `(cols, rows)` from a parsed file, falling back to 80×25 defaults. */
+function extractDims(data: Record<string, unknown>): { cols: number; rows: number } {
+  const cols = typeof data.width === 'number' && data.width > 0 ? Math.floor(data.width) : DEFAULT_ANSI_COLS
+  const rows = typeof data.height === 'number' && data.height > 0 ? Math.floor(data.height) : DEFAULT_ANSI_ROWS
+  return { cols, rows }
+}
+
 export function serializeGrid(grid: AnsiGrid): string {
-  const data = { version: 1, width: ANSI_COLS, height: ANSI_ROWS, grid }
+  const rows = grid.length
+  const cols = grid[0]?.length ?? 0
+  const data = { version: 1, width: cols, height: rows, grid }
   return 'return ' + stringify(data)
 }
 
@@ -40,6 +49,12 @@ export function serializeLayers(state: LayerState, availableTags?: string[]): st
       allGrids.push(layer.grid)
     }
   }
+  // Prefer explicit project dims from state; otherwise derive from the first
+  // sized grid so the written width/height match the actual content instead
+  // of silently defaulting to 80×25 when a caller forgets to thread dims.
+  const firstGrid = allGrids[0]
+  const cols = state.cols ?? firstGrid?.[0]?.length ?? DEFAULT_ANSI_COLS
+  const rows = state.rows ?? firstGrid?.length ?? DEFAULT_ANSI_ROWS
   const { palette, colorToIndex, defaultFgIndex, defaultBgIndex } = buildPalette(allGrids)
 
   let hasReferenceLayer = false
@@ -128,8 +143,8 @@ export function serializeLayers(state: LayerState, availableTags?: string[]): st
 
   const data: Record<string, unknown> = {
     version: hasReferenceLayer ? 8 : 7,
-    width: ANSI_COLS,
-    height: ANSI_ROWS,
+    width: cols,
+    height: rows,
     activeLayerId: state.activeLayerId,
     palette,
     defaultFg: defaultFgIndex,
@@ -198,7 +213,12 @@ function buildGroupLayer(l: RawLayer, tags: string[] | undefined): GroupLayer {
 }
 
 /** Build a TextLayer from a validated raw layer (includes text-field validation). */
-function buildTextLayer(l: RawLayer, tags: string[] | undefined): TextLayer {
+function buildTextLayer(
+  l: RawLayer,
+  tags: string[] | undefined,
+  cols: number,
+  rows: number,
+): TextLayer {
   if (l.text == null || !l.bounds || !l.textFg) {
     throw new Error(`Invalid text layer "${l.name}": missing text, bounds, or textFg`)
   }
@@ -218,7 +238,7 @@ function buildTextLayer(l: RawLayer, tags: string[] | undefined): TextLayer {
     textBg,
     textBgColors,
     textAlign,
-    grid: renderTextLayerGrid(l.text, l.bounds, l.textFg, textFgColors, textAlign, textBg, textBgColors),
+    grid: renderTextLayerGrid(l.text, l.bounds, l.textFg, textFgColors, textAlign, textBg, textBgColors, cols, rows),
     parentId: l.parentId,
     tags,
   }
@@ -277,6 +297,7 @@ export function deserializeLayers(lua: string): LayerState {
   const stripped = lua.replace(/^return\s+/, '')
   const data = parse(stripped) as Record<string, unknown>
   const version = data.version as number
+  const { cols, rows } = extractDims(data)
 
   if (version === 1) {
     if (!Array.isArray(data.grid)) {
@@ -284,6 +305,9 @@ export function deserializeLayers(lua: string): LayerState {
     }
     const id = 'v1-background'
     const grid = data.grid as AnsiGrid
+    // v1 files predate stored dims; prefer actual grid size, fall back to extracted.
+    const vCols = grid[0]?.length ?? cols
+    const vRows = grid.length || rows
     return {
       layers: [{
         type: 'drawn' as const,
@@ -296,6 +320,8 @@ export function deserializeLayers(lua: string): LayerState {
         frameDurationMs: DEFAULT_FRAME_DURATION_MS,
       }],
       activeLayerId: id,
+      cols: vCols,
+      rows: vRows,
     }
   }
 
@@ -309,6 +335,8 @@ export function deserializeLayers(lua: string): LayerState {
     return {
       layers,
       activeLayerId: data.activeLayerId as string,
+      cols,
+      rows,
     }
   }
 
@@ -319,7 +347,7 @@ export function deserializeLayers(lua: string): LayerState {
       validateRawLayer(l, i)
       const tags = l.tags && l.tags.length > 0 ? l.tags : undefined
       if (l.type === 'group') return buildGroupLayer(l, tags)
-      if (l.type === 'text') return buildTextLayer(l, tags)
+      if (l.type === 'text') return buildTextLayer(l, tags, cols, rows)
       // Drawn layer — raw grids (v3-v6)
       if (!l.grid && (!l.frames || l.frames.length === 0)) {
         throw new Error(`Invalid drawn layer "${l.name}": missing grid`)
@@ -330,6 +358,8 @@ export function deserializeLayers(lua: string): LayerState {
     const result: LayerState = {
       layers,
       activeLayerId: data.activeLayerId as string,
+      cols,
+      rows,
     }
     if (rawAvailableTags && rawAvailableTags.length > 0) {
       result.availableTags = rawAvailableTags
@@ -347,10 +377,10 @@ export function deserializeLayers(lua: string): LayerState {
       validateRawLayer(l, i)
       const tags = l.tags && l.tags.length > 0 ? l.tags : undefined
       if (l.type === 'group') return buildGroupLayer(l, tags)
-      if (l.type === 'text') return buildTextLayer(l, tags)
+      if (l.type === 'text') return buildTextLayer(l, tags, cols, rows)
       if (l.type === 'clip') {
         const cellRuns = Array.isArray(l.cells) ? l.cells : []
-        const grid = decodeGrid(cellRuns, rawPalette, defaultFgIndex, defaultBgIndex)
+        const grid = decodeGrid(cellRuns, rawPalette, defaultFgIndex, defaultBgIndex, cols, rows)
         return buildClipLayer(l, grid, tags)
       }
       if (l.type === 'reference') return buildReferenceLayer(l, tags)
@@ -359,11 +389,11 @@ export function deserializeLayers(lua: string): LayerState {
       const frameCells = Array.isArray(l.frameCells) ? l.frameCells : null
       if (frameCells && frameCells.length > 0) {
         frames = frameCells.map(runs =>
-          decodeGrid(Array.isArray(runs) ? runs : [], rawPalette, defaultFgIndex, defaultBgIndex)
+          decodeGrid(Array.isArray(runs) ? runs : [], rawPalette, defaultFgIndex, defaultBgIndex, cols, rows)
         )
       } else if (l.cells !== undefined) {
         const cellRuns = Array.isArray(l.cells) ? l.cells : []
-        frames = [decodeGrid(cellRuns, rawPalette, defaultFgIndex, defaultBgIndex)]
+        frames = [decodeGrid(cellRuns, rawPalette, defaultFgIndex, defaultBgIndex, cols, rows)]
       } else {
         throw new Error(`Invalid drawn layer "${l.name}": missing cells or frameCells`)
       }
@@ -372,6 +402,8 @@ export function deserializeLayers(lua: string): LayerState {
     const result: LayerState = {
       layers,
       activeLayerId: data.activeLayerId as string,
+      cols,
+      rows,
     }
     if (rawAvailableTags && rawAvailableTags.length > 0) {
       result.availableTags = rawAvailableTags

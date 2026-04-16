@@ -34,8 +34,8 @@ All files live in `lua-learning-website/src/components/AnsiGraphicsEditor/`.
 
 | File | Purpose |
 |------|---------|
-| `useAnsiEditor.ts` | Orchestrator — wires tools, undo, keyboard, rendering |
-| `useLayerState.ts` | Layer CRUD, frames, tags, state restoration |
+| `useAnsiEditor.ts` | Orchestrator — wires tools, undo, keyboard, rendering; reads `cols`/`rows` from `useLayerState` |
+| `useLayerState.ts` | Layer CRUD, frames, tags, canvas dimensions (`cols`/`rows`), state restoration |
 | `useImportLayers.ts` | Import dialog state, file loading, layer ID remapping |
 | `useLayerTags.ts` | Tag management (create, delete, rename, add/remove from layers) |
 | `useToast.ts` | Toast show/dismiss with auto-timeout |
@@ -59,6 +59,7 @@ All files live in `lua-learning-website/src/components/AnsiGraphicsEditor/`.
 | `textLayerGrid.ts` | Text-to-grid rasterization |
 | `selectionGridUtils.ts` | Selection cut/paste grid operations |
 | `moveUtils.ts` | Layer/selection move operations |
+| `resizeGrid.ts` | Crop/pad grids to new dimensions; `resizeProject()` applies to every drawn frame, clip layer, and text-layer bounds (top-left or center anchor) |
 | `flipUtils.ts` | Horizontal/vertical flip operations |
 | `colorUtils.ts` | Color math, CGA quantize, palette extraction |
 

@@ -240,8 +240,8 @@ export function generateAnsiHtml(
       // Measure base dimensions once at 1x, then use those for all future calculations.
       const FONT_SIZE = ${fontSize};
       const scaleMode = PROJECT_CONFIG.scale;
-      const baseW = wrapper.scrollWidth;
-      const baseH = wrapper.scrollHeight;
+      let baseW = wrapper.scrollWidth;
+      let baseH = wrapper.scrollHeight;
       let currentScale = -1;
       function applyScale() {
         if (baseW === 0 || baseH === 0) return;
@@ -281,6 +281,16 @@ export function generateAnsiHtml(
       // Create AnsiTerminalHandle wrapping xterm.js
       const handle = {
         write: (data) => term.write(data), container: wrapper, dispose: () => term.dispose(),
+        resize: (cols, rows) => {
+          try { term.resize(cols, rows) } catch (e) { console.warn('[ANSI Export] resize failed:', e) }
+          // xterm re-renders its DOM after resize. Defer so scrollWidth/Height reflect the new size.
+          requestAnimationFrame(() => {
+            baseW = wrapper.scrollWidth
+            baseH = wrapper.scrollHeight
+            currentScale = -1
+            applyScale()
+          })
+        },
         setCrt: (enabled, intensity, config) => {
           if (enabled) {
             if (!crtShader) {

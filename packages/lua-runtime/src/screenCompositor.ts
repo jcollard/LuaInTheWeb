@@ -7,7 +7,7 @@
 
 import type { AnsiCell, AnsiGrid, DrawableLayerData, LayerData } from './screenTypes'
 import {
-  ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG,
+  DEFAULT_FG, DEFAULT_BG,
   isGroupLayer, isDrawableLayer, isClipLayer, isReferenceLayer, rgbEqual,
   createEmptyGrid,
 } from './screenTypes'
@@ -50,7 +50,9 @@ export function isCellClipped(
     depth++
     const mask = clipMap.get(parentId)
     if (mask) {
-      if (row < 0 || row >= ANSI_ROWS || col < 0 || col >= ANSI_COLS) return true
+      const maskRows = mask.length
+      const maskCols = mask[0]?.length ?? 0
+      if (row < 0 || row >= maskRows || col < 0 || col >= maskCols) return true
       if (isDefaultCell(mask[row][col])) return true
     }
     const parent = layerMap.get(parentId)
@@ -140,14 +142,15 @@ export function compositeGridInto(
   const rawEntries = engine.buildCompositeEntries(layers, layerMap, groupGridCache)
   const entries = applyRuntimeOffsets(rawEntries, layerMap)
   const clipMap = buildClipMaskMap(layers)
-  // Hoisted closure: one closure per grid composite instead of 2000
   let curR = 0, curC = 0
   const getCell = (entry: CompositeEntry) => {
     if (isCellClipped(entry, curR, curC, clipMap, layerMap)) return null
     return engine.getEntryCell(entry, curR, curC)
   }
-  for (let r = 0; r < ANSI_ROWS; r++) {
-    for (let c = 0; c < ANSI_COLS; c++) {
+  const targetRows = target.length
+  const targetCols = target[0]?.length ?? 0
+  for (let r = 0; r < targetRows; r++) {
+    for (let c = 0; c < targetCols; c++) {
       curR = r + viewportRow
       curC = c + viewportCol
       const result = compositeCellCore(entries, getCell)
@@ -159,23 +162,17 @@ export function compositeGridInto(
   }
 }
 
-/** Composite all visible layers into a single AnsiGrid. */
-export function compositeGrid(layers: LayerData[], groupGridCache?: Map<string, AnsiGrid>): AnsiGrid {
-  const layerMap = new Map(layers.map(l => [l.id, l]))
-  const rawEntries = engine.buildCompositeEntries(layers, layerMap, groupGridCache)
-  const entries = applyRuntimeOffsets(rawEntries, layerMap)
-  const clipMap = buildClipMaskMap(layers)
-  // Hoisted closure: one closure per grid composite instead of 2000
-  let curR = 0, curC = 0
-  const getCell = (entry: CompositeEntry) => {
-    if (isCellClipped(entry, curR, curC, clipMap, layerMap)) return null
-    return engine.getEntryCell(entry, curR, curC)
-  }
-  return Array.from({ length: ANSI_ROWS }, (_, r) => {
-    curR = r
-    return Array.from({ length: ANSI_COLS }, (_, c) => {
-      curC = c
-      return compositeCellCore(entries, getCell)
-    })
-  })
+/**
+ * Composite all visible layers into a single AnsiGrid.
+ * When `cols`/`rows` are omitted, uses the default 80×25 canvas.
+ */
+export function compositeGrid(
+  layers: LayerData[],
+  groupGridCache?: Map<string, AnsiGrid>,
+  cols?: number,
+  rows?: number,
+): AnsiGrid {
+  const target = createEmptyGrid(cols, rows)
+  compositeGridInto(target, layers, groupGridCache)
+  return target
 }

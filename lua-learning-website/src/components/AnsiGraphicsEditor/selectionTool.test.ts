@@ -57,6 +57,8 @@ function makeDeps(gridOverride?: AnsiCell[][]): SelectionDeps & {
     pushSnapshot: () => { snapshots++ },
     getActiveGrid: () => grid,
     hideDimension: () => {},
+    projectColsRef: { current: grid[0]?.length ?? 80 },
+    projectRowsRef: { current: grid.length || 25 },
     committed,
     get snapshots() { return snapshots },
     previews,

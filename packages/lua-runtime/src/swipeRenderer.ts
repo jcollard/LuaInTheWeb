@@ -10,7 +10,7 @@
  */
 
 import type { AnsiGrid, AnsiCell, RGBColor } from './screenTypes'
-import { ANSI_ROWS, ANSI_COLS } from './screenTypes'
+import { DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS } from './screenTypes'
 
 /** Sentinel cell that never matches any real cell, forcing first diff to write everything. */
 const SENTINEL: AnsiCell = { char: '\x00', fg: [-1, -1, -1], bg: [-1, -1, -1] }
@@ -30,9 +30,12 @@ export function formatCell(row: number, col: number, fg: RGBColor, bg: RGBColor,
 }
 
 /** Create a sentinel grid (forces first diff to write all cells). */
-export function createSentinelGrid(): AnsiGrid {
-  return Array.from({ length: ANSI_ROWS }, () =>
-    Array.from({ length: ANSI_COLS }, (): AnsiCell => ({
+export function createSentinelGrid(
+  cols: number = DEFAULT_ANSI_COLS,
+  rows: number = DEFAULT_ANSI_ROWS,
+): AnsiGrid {
+  return Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, (): AnsiCell => ({
       char: SENTINEL.char, fg: [...SENTINEL.fg] as RGBColor, bg: [...SENTINEL.bg] as RGBColor,
     }))
   )
@@ -43,12 +46,14 @@ export type SwipeDirection = 'right' | 'left' | 'down' | 'up' | 'down-right' | '
 /**
  * Build the desired grid for the current swipe progress and direction.
  * Cells past the sweep boundary show target, others show source.
- * Mutates output grid in place.
+ * Mutates output grid in place. All three grids must share the same dimensions.
  */
 export function buildSwipeGrid(target: AnsiGrid, source: AnsiGrid, progress: number, direction: SwipeDirection, output: AnsiGrid): void {
-  for (let r = 0; r < ANSI_ROWS; r++) {
-    for (let c = 0; c < ANSI_COLS; c++) {
-      const showTarget = isSwiped(r, c, progress, direction)
+  const rows = output.length
+  const cols = output[0]?.length ?? 0
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const showTarget = isSwiped(r, c, progress, direction, rows, cols)
       const src = showTarget ? target[r][c] : source[r][c]
       const out = output[r][c]
       out.char = src.char
@@ -58,18 +63,18 @@ export function buildSwipeGrid(target: AnsiGrid, source: AnsiGrid, progress: num
   }
 }
 
-function isSwiped(r: number, c: number, t: number, dir: SwipeDirection): boolean {
+function isSwiped(r: number, c: number, t: number, dir: SwipeDirection, rows: number, cols: number): boolean {
   if (t <= 0) return false
   if (t >= 1) return true
   switch (dir) {
-    case 'right': return c < t * ANSI_COLS
-    case 'left': return c >= (1 - t) * ANSI_COLS
-    case 'down': return r < t * ANSI_ROWS
-    case 'up': return r >= (1 - t) * ANSI_ROWS
-    case 'down-right': return (r / ANSI_ROWS + c / ANSI_COLS) / 2 < t
-    case 'up-left': return ((ANSI_ROWS - 1 - r) / ANSI_ROWS + (ANSI_COLS - 1 - c) / ANSI_COLS) / 2 < t
-    case 'down-left': return (r / ANSI_ROWS + (ANSI_COLS - 1 - c) / ANSI_COLS) / 2 < t
-    case 'up-right': return ((ANSI_ROWS - 1 - r) / ANSI_ROWS + c / ANSI_COLS) / 2 < t
+    case 'right': return c < t * cols
+    case 'left': return c >= (1 - t) * cols
+    case 'down': return r < t * rows
+    case 'up': return r >= (1 - t) * rows
+    case 'down-right': return (r / rows + c / cols) / 2 < t
+    case 'up-left': return ((rows - 1 - r) / rows + (cols - 1 - c) / cols) / 2 < t
+    case 'down-left': return (r / rows + (cols - 1 - c) / cols) / 2 < t
+    case 'up-right': return ((rows - 1 - r) / rows + c / cols) / 2 < t
   }
 }
 
@@ -84,9 +89,16 @@ function mulberry32(seed: number): () => number {
   }
 }
 
-/** Generate shuffled cell indices [0..ROWS*COLS-1] using seeded Fisher-Yates. */
-export function generateDitherOrder(seed: number): number[] {
-  const total = ANSI_ROWS * ANSI_COLS
+/**
+ * Generate shuffled cell indices [0..cols*rows-1] using seeded Fisher-Yates.
+ * Defaults to 80×25 when dims omitted.
+ */
+export function generateDitherOrder(
+  seed: number,
+  cols: number = DEFAULT_ANSI_COLS,
+  rows: number = DEFAULT_ANSI_ROWS,
+): number[] {
+  const total = rows * cols
   const order = Array.from({ length: total }, (_, i) => i)
   const rng = mulberry32(seed)
   for (let i = total - 1; i > 0; i--) {
@@ -99,16 +111,19 @@ export function generateDitherOrder(seed: number): number[] {
 /**
  * Build desired grid for dither transition at given progress.
  * First floor(total * progress) cells in ditherOrder show target, rest show source.
+ * Output grid dims determine iteration.
  */
 export function buildDitherGrid(target: AnsiGrid, source: AnsiGrid, progress: number, ditherOrder: number[], output: AnsiGrid): void {
   const t = progress < 0 ? 0 : progress > 1 ? 1 : progress
-  const total = ANSI_ROWS * ANSI_COLS
+  const rows = output.length
+  const cols = output[0]?.length ?? 0
+  const total = rows * cols
   const count = Math.floor(total * t)
   const isTarget = new Uint8Array(total)
   for (let i = 0; i < count; i++) isTarget[ditherOrder[i]] = 1
-  for (let r = 0; r < ANSI_ROWS; r++) {
-    for (let c = 0; c < ANSI_COLS; c++) {
-      const src = isTarget[r * ANSI_COLS + c] ? target[r][c] : source[r][c]
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const src = isTarget[r * cols + c] ? target[r][c] : source[r][c]
       const out = output[r][c]
       out.char = src.char
       out.fg[0] = src.fg[0]; out.fg[1] = src.fg[1]; out.fg[2] = src.fg[2]
@@ -124,8 +139,10 @@ export function buildDitherGrid(target: AnsiGrid, source: AnsiGrid, progress: nu
  */
 export function renderSwipeDiff(desired: AnsiGrid, shadow: AnsiGrid): string | null {
   let batch = ''
-  for (let r = 0; r < ANSI_ROWS; r++) {
-    for (let c = 0; c < ANSI_COLS; c++) {
+  const rows = desired.length
+  const cols = desired[0]?.length ?? 0
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
       const d = desired[r][c]
       const s = shadow[r][c]
       if (cellsEqual(d, s)) continue
@@ -139,8 +156,10 @@ export function renderSwipeDiff(desired: AnsiGrid, shadow: AnsiGrid): string | n
  * Update shadow grid to match desired grid (deep copy of cell values).
  */
 export function updateShadow(desired: AnsiGrid, shadow: AnsiGrid): void {
-  for (let r = 0; r < ANSI_ROWS; r++) {
-    for (let c = 0; c < ANSI_COLS; c++) {
+  const rows = desired.length
+  const cols = desired[0]?.length ?? 0
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
       const d = desired[r][c]
       const s = shadow[r][c]
       s.char = d.char

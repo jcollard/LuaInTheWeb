@@ -1,6 +1,6 @@
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { AnsiCell, AnsiGrid, BrushSettings, RGBColor } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_BLEND_RATIO, DEFAULT_CELL, DEFAULT_FG, HALF_BLOCK, TRANSPARENT_HALF } from './types'
+import { DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS, DEFAULT_BG, DEFAULT_BLEND_RATIO, DEFAULT_CELL, DEFAULT_FG, HALF_BLOCK, TRANSPARENT_HALF } from './types'
 import { bresenhamLine, midpointEllipse } from './lineAlgorithm'
 import { rgbEqual } from './layerUtils'
 import { blendRgb } from './colorUtils'
@@ -17,9 +17,11 @@ export function cloneGrid(grid: AnsiGrid): AnsiGrid {
   return grid.map(row => row.map(cloneCell))
 }
 
-export function createEmptyGrid(): AnsiGrid {
-  return Array.from({ length: ANSI_ROWS }, () =>
-    Array.from({ length: ANSI_COLS }, (): AnsiCell => ({
+export { gridDims, type GridDims } from '@lua-learning/ansi-shared'
+
+export function createEmptyGrid(cols: number = DEFAULT_ANSI_COLS, rows: number = DEFAULT_ANSI_ROWS): AnsiGrid {
+  return Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, (): AnsiCell => ({
       char: ' ', fg: [...DEFAULT_FG] as RGBColor, bg: [...DEFAULT_BG] as RGBColor,
     }))
   )
@@ -44,23 +46,35 @@ export function writeCellToTerminal(
 
 export function renderFullGrid(handle: AnsiTerminalHandle, grid: AnsiGrid, colorTransform?: ColorTransform): void {
   handle.write('\x1b[2J\x1b[?25l')
-  for (let r = 0; r < ANSI_ROWS; r++) {
-    for (let c = 0; c < ANSI_COLS; c++) {
+  const rows = grid.length
+  const cols = grid[0]?.length ?? 0
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
       writeCellToTerminal(handle, r, c, grid[r][c], colorTransform)
     }
   }
 }
 
-export function isInBounds(row: number, col: number): boolean {
-  return row >= 0 && row < ANSI_ROWS && col >= 0 && col < ANSI_COLS
+export function isInBounds(
+  row: number,
+  col: number,
+  rows: number = DEFAULT_ANSI_ROWS,
+  cols: number = DEFAULT_ANSI_COLS,
+): boolean {
+  return row >= 0 && row < rows && col >= 0 && col < cols
 }
 
-export function getCellHalfFromMouse(e: MouseEvent, container: HTMLElement): { row: number; col: number; isTopHalf: boolean } | null {
+export function getCellHalfFromMouse(
+  e: MouseEvent,
+  container: HTMLElement,
+  cols: number = DEFAULT_ANSI_COLS,
+  rows: number = DEFAULT_ANSI_ROWS,
+): { row: number; col: number; isTopHalf: boolean } | null {
   const rect = container.getBoundingClientRect()
-  const col = Math.floor((e.clientX - rect.left) * ANSI_COLS / rect.width)
-  const fractionalRow = (e.clientY - rect.top) * ANSI_ROWS / rect.height
+  const col = Math.floor((e.clientX - rect.left) * cols / rect.width)
+  const fractionalRow = (e.clientY - rect.top) * rows / rect.height
   const row = Math.floor(fractionalRow)
-  if (!isInBounds(row, col)) return null
+  if (!isInBounds(row, col, rows, cols)) return null
   const isTopHalf = (fractionalRow - row) < 0.5
   return { row, col, isTopHalf }
 }
@@ -122,6 +136,8 @@ export function computeRectCells(
   filled: boolean,
 ): Map<string, AnsiCell> {
   const cells = new Map<string, AnsiCell>()
+  const rows = baseGrid.length
+  const cols = baseGrid[0]?.length ?? 0
 
   if (brush.mode !== 'brush') {
     const py0 = start.row * 2 + (start.isTopHalf ? 0 : 1)
@@ -136,7 +152,7 @@ export function computeRectCells(
         const isPerimeter = py === minPY || py === maxPY || cx === minCX || cx === maxCX
         if (!filled && !isPerimeter) continue
         const row = Math.floor(py / 2)
-        if (!isInBounds(row, cx)) continue
+        if (!isInBounds(row, cx, rows, cols)) continue
         const isTop = py % 2 === 0
         const key = `${row},${cx}`
         const existing = cells.get(key) ?? baseGrid[row][cx]
@@ -155,7 +171,7 @@ export function computeRectCells(
       for (let c = minCol; c <= maxCol; c++) {
         const isPerimeter = r === minRow || r === maxRow || c === minCol || c === maxCol
         if (!filled && !isPerimeter) continue
-        if (!isInBounds(r, c)) continue
+        if (!isInBounds(r, c, rows, cols)) continue
         const key = `${r},${c}`
         cells.set(key, { char: brush.char, fg: [...brush.fg] as RGBColor, bg: [...brush.bg] as RGBColor })
       }
@@ -176,6 +192,8 @@ export function computeBorderCells(
   }
 
   const cells = new Map<string, AnsiCell>()
+  const rows = baseGrid.length
+  const cols = baseGrid[0]?.length ?? 0
   const minRow = Math.min(start.row, end.row)
   const maxRow = Math.max(start.row, end.row)
   const minCol = Math.min(start.col, end.col)
@@ -200,7 +218,7 @@ export function computeBorderCells(
       else if (isRight) char = r
 
       if (char === null) continue
-      if (!isInBounds(row, col)) continue
+      if (!isInBounds(row, col, rows, cols)) continue
       cells.set(`${row},${col}`, { char, fg: [...brush.fg] as RGBColor, bg: [...brush.bg] as RGBColor })
     }
   }
@@ -216,6 +234,8 @@ export function computeOvalCells(
   start: CellHalf, end: CellHalf, brush: LineBrush, baseGrid: AnsiGrid, filled: boolean,
 ): Map<string, AnsiCell> {
   const cells = new Map<string, AnsiCell>()
+  const rows = baseGrid.length
+  const cols = baseGrid[0]?.length ?? 0
 
   if (brush.mode !== 'brush') {
     const py0 = start.row * 2 + (start.isTopHalf ? 0 : 1)
@@ -231,7 +251,7 @@ export function computeOvalCells(
 
     function paintPixel(col: number, py: number): void {
       const row = Math.floor(py / 2)
-      if (!isInBounds(row, col)) return
+      if (!isInBounds(row, col, rows, cols)) return
       const isTop = py % 2 === 0
       const key = `${row},${col}`
       const existing = cells.get(key) ?? baseGrid[row][col]
@@ -264,12 +284,12 @@ export function computeOvalCells(
     if (filled) {
       for (let r = minRow; r <= maxRow; r++) {
         for (let c = minCol; c <= maxCol; c++) {
-          if (insideEllipse(c - cx, r - cy, a, b) && isInBounds(r, c)) cells.set(`${r},${c}`, makeBrushCell())
+          if (insideEllipse(c - cx, r - cy, a, b) && isInBounds(r, c, rows, cols)) cells.set(`${r},${c}`, makeBrushCell())
         }
       }
     }
     for (const { x: c, y: r } of midpointEllipse(cx, cy, a, b)) {
-      if (isInBounds(r, c)) cells.set(`${r},${c}`, makeBrushCell())
+      if (isInBounds(r, c, rows, cols)) cells.set(`${r},${c}`, makeBrushCell())
     }
   }
   return cells
@@ -282,6 +302,8 @@ export function computeLineCells(
   baseGrid: AnsiGrid,
 ): Map<string, AnsiCell> {
   const cells = new Map<string, AnsiCell>()
+  const rows = baseGrid.length
+  const cols = baseGrid[0]?.length ?? 0
 
   if (brush.mode !== 'brush') {
     const py0 = start.row * 2 + (start.isTopHalf ? 0 : 1)
@@ -290,7 +312,7 @@ export function computeLineCells(
 
     for (const { x: col, y: pixelY } of points) {
       const row = Math.floor(pixelY / 2)
-      if (!isInBounds(row, col)) continue
+      if (!isInBounds(row, col, rows, cols)) continue
       const isTop = pixelY % 2 === 0
       const key = `${row},${col}`
       const existing = cells.get(key) ?? baseGrid[row][col]
@@ -302,7 +324,7 @@ export function computeLineCells(
     const points = bresenhamLine(start.col, start.row, end.col, end.row)
 
     for (const { x: col, y: row } of points) {
-      if (!isInBounds(row, col)) continue
+      if (!isInBounds(row, col, rows, cols)) continue
       const key = `${row},${col}`
       cells.set(key, { char: brush.char, fg: [...brush.fg] as RGBColor, bg: [...brush.bg] as RGBColor })
     }

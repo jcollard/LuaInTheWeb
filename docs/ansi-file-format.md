@@ -12,6 +12,8 @@ ANSI art files use Lua table syntax, prefixed with `return` so they are valid Lu
 
 **Structure:** `return { version = N, ... }`
 
+**Canvas dimensions:** All versions carry `width` and `height` fields. Loaders honor them authoritatively — a file saved at 120×40 displays at 120×40, and the runtime terminal resizes on `load_screen()` to match. Files missing the fields default to 80×25 for backwards compatibility.
+
 ## Version History
 
 | Version | Features | Date |
@@ -50,8 +52,8 @@ return {
 | Field | Type | Description |
 |-------|------|-------------|
 | `version` | number | Always `7` |
-| `width` | number | Grid width in characters (always 80) |
-| `height` | number | Grid height in characters (always 25) |
+| `width` | number | Canvas width in characters. Authoritative — loaders resize to this size. Defaults to 80 for legacy files without the field. |
+| `height` | number | Canvas height in characters. Authoritative — loaders resize to this size. Defaults to 25 for legacy files without the field. |
 | `activeLayerId` | string | ID of the currently selected layer |
 | `palette` | `RGBColor[]` | Deduplicated color palette; index 1 = default fg, index 2 = default bg |
 | `defaultFg` | number | 1-based palette index for the default foreground color |

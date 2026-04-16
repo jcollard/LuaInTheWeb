@@ -20,8 +20,14 @@ export type AnsiGrid = AnsiCell[][]
 
 // --- Constants ---
 
-export const ANSI_COLS = 80
-export const ANSI_ROWS = 25
+/** Default ANSI canvas width used when a screen does not specify one. */
+export const DEFAULT_ANSI_COLS = 80
+/** Default ANSI canvas height used when a screen does not specify one. */
+export const DEFAULT_ANSI_ROWS = 25
+/** @deprecated Use {@link DEFAULT_ANSI_COLS} or derive from the grid itself. */
+export const ANSI_COLS = DEFAULT_ANSI_COLS
+/** @deprecated Use {@link DEFAULT_ANSI_ROWS} or derive from the grid itself. */
+export const ANSI_ROWS = DEFAULT_ANSI_ROWS
 export const DEFAULT_FG: RGBColor = [170, 170, 170]
 export const DEFAULT_BG: RGBColor = [0, 0, 0]
 export const DEFAULT_CELL: AnsiCell = { char: ' ', fg: [...DEFAULT_FG] as RGBColor, bg: [...DEFAULT_BG] as RGBColor }
@@ -30,6 +36,16 @@ export const TRANSPARENT_HALF: RGBColor = [-1, -1, -1]
 export const TRANSPARENT_BG: RGBColor = [-2, -2, -2]
 
 // --- Helpers ---
+
+export interface GridDims {
+  cols: number
+  rows: number
+}
+
+/** Return the dimensions of an AnsiGrid, handling empty/ragged grids defensively. */
+export function gridDims(grid: AnsiGrid): GridDims {
+  return { rows: grid.length, cols: grid[0]?.length ?? 0 }
+}
 
 export function rgbEqual(a: RGBColor, b: RGBColor): boolean {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2]
@@ -279,9 +295,11 @@ export function createCompositeEngine<L extends CompositeLayer>(
       if (isCellClipped(entry, curR, curC, clipMap, subMap)) return null
       return getEntryCell(entry, curR, curC)
     }
-    for (let r = 0; r < ANSI_ROWS; r++) {
+    const targetRows = target.length
+    const targetCols = target[0]?.length ?? 0
+    for (let r = 0; r < targetRows; r++) {
       curR = r
-      for (let c = 0; c < ANSI_COLS; c++) {
+      for (let c = 0; c < targetCols; c++) {
         curC = c
         const result = compositeCellCore(entries, getCell, true)
         const cell = target[r][c]
@@ -377,11 +395,17 @@ export function createCompositeEngine<L extends CompositeLayer>(
     if (entry.kind === 'reference') {
       const srcRow = row - entry.offsetRow
       const srcCol = col - entry.offsetCol
-      if (srcRow < 0 || srcRow >= ANSI_ROWS || srcCol < 0 || srcCol >= ANSI_COLS) return null
-      return entry.sourceGrid[srcRow][srcCol]
+      const src = entry.sourceGrid
+      const srcRows = src.length
+      const srcCols = src[0]?.length ?? 0
+      if (srcRow < 0 || srcRow >= srcRows || srcCol < 0 || srcCol >= srcCols) return null
+      return src[srcRow][srcCol]
     }
-    if (row < 0 || row >= ANSI_ROWS || col < 0 || col >= ANSI_COLS) return null
-    return entry.grid[row][col]
+    const g = entry.grid
+    const gRows = g.length
+    const gCols = g[0]?.length ?? 0
+    if (row < 0 || row >= gRows || col < 0 || col >= gCols) return null
+    return g[row][col]
   }
 
   return {

@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from 'react'
+import { useState, type KeyboardEvent } from 'react'
 import type { ScaleMode } from './types'
 import { tooltipWithShortcut, ACTION_SHORTCUTS } from './keyboardShortcuts'
 import styles from './AnsiGraphicsEditor.module.css'
@@ -17,6 +17,12 @@ export interface FileOptionsModalProps {
   onToggleCgaPreview: () => void
   scaleMode: ScaleMode
   onSetScaleMode: (mode: ScaleMode) => void
+  /** Current canvas width in columns. */
+  cols: number
+  /** Current canvas height in rows. */
+  rows: number
+  /** Apply a new canvas size. Content is cropped or padded with defaults. */
+  onResizeCanvas: (cols: number, rows: number) => void
 }
 
 interface ActionItem {
@@ -39,7 +45,18 @@ export function FileOptionsModal({
   onToggleCgaPreview,
   scaleMode,
   onSetScaleMode,
+  cols,
+  rows,
+  onResizeCanvas,
 }: FileOptionsModalProps) {
+  const [nextCols, setNextCols] = useState<string>(String(cols))
+  const [nextRows, setNextRows] = useState<string>(String(rows))
+  const parsedCols = Number.parseInt(nextCols, 10)
+  const parsedRows = Number.parseInt(nextRows, 10)
+  const dimsValid =
+    Number.isFinite(parsedCols) && parsedCols >= 1 && parsedCols <= 240 &&
+    Number.isFinite(parsedRows) && parsedRows >= 1 && parsedRows <= 100
+  const dimsChanged = parsedCols !== cols || parsedRows !== rows
   function handleKeyDown(event: KeyboardEvent): void {
     if (event.key === 'Escape') {
       event.preventDefault()
@@ -131,6 +148,41 @@ export function FileOptionsModal({
           >
             Clear
           </button>
+          <div className={styles.fileOptionsAction} data-testid="file-resize-canvas-group">
+            <span>Canvas size:</span>
+            <input
+              type="number"
+              min={1}
+              max={240}
+              value={nextCols}
+              onChange={e => setNextCols(e.target.value)}
+              data-testid="file-resize-cols"
+              aria-label="Canvas width in columns"
+              className={styles.fileOptionsSelect}
+              style={{ width: '4em' }}
+            />
+            <span>×</span>
+            <input
+              type="number"
+              min={1}
+              max={100}
+              value={nextRows}
+              onChange={e => setNextRows(e.target.value)}
+              data-testid="file-resize-rows"
+              aria-label="Canvas height in rows"
+              className={styles.fileOptionsSelect}
+              style={{ width: '4em' }}
+            />
+            <button
+              type="button"
+              className={styles.fileOptionsAction}
+              onClick={() => { if (dimsValid && dimsChanged) handleAction(() => onResizeCanvas(parsedCols, parsedRows)) }}
+              disabled={!dimsValid || !dimsChanged}
+              data-testid="file-resize-apply"
+            >
+              Resize
+            </button>
+          </div>
         </div>
       </div>
     </div>

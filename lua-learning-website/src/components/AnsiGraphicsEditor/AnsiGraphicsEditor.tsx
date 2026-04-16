@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnsiTerminalPanel } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import { ConfirmDialog } from '../ConfirmDialog'
@@ -59,6 +60,9 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
   })
 
   const {
+    cols: projectCols,
+    rows: projectRows,
+    resizeCanvas,
     brush,
     setBrushFg,
     setBrushBg,
@@ -223,12 +227,12 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
   const existingGroups = useMemo(() => layers.filter(isGroupLayer) as GroupLayer[], [layers])
 
   const handleSaveAs = useCallback(
-    (f: string, n: string) => fileHandleSaveAs(f, n, layers, activeLayerId, availableTags),
-    [fileHandleSaveAs, layers, activeLayerId, availableTags],
+    (f: string, n: string) => fileHandleSaveAs(f, n, layers, activeLayerId, availableTags, projectCols, projectRows),
+    [fileHandleSaveAs, layers, activeLayerId, availableTags, projectCols, projectRows],
   )
   const handleSave = useCallback(
-    () => fileHandleSave(layers, activeLayerId, availableTags, markClean, openSaveDialog),
-    [fileHandleSave, layers, activeLayerId, availableTags, markClean, openSaveDialog],
+    () => fileHandleSave(layers, activeLayerId, availableTags, projectCols, projectRows, markClean, openSaveDialog),
+    [fileHandleSave, layers, activeLayerId, availableTags, projectCols, projectRows, markClean, openSaveDialog],
   )
 
   handleSaveRef.current = handleSave
@@ -306,6 +310,9 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         onToggleCgaPreview={handleToggleCgaPreview}
         scaleMode={scaleMode}
         onSetScaleMode={setScaleMode}
+        cols={projectCols}
+        rows={projectRows}
+        onResizeCanvas={resizeCanvas}
         activeLayerIsGroup={activeLayerIsGroup}
         isPlaying={isPlaying}
         fileMenuOpen={fileMenuOpen}
@@ -326,6 +333,8 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
             <AnsiTerminalPanel
               isActive={true}
               scaleMode={scaleMode}
+              cols={projectCols}
+              rows={projectRows}
               onTerminalReady={onTerminalReady}
             />
           </div>
