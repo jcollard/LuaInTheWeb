@@ -138,4 +138,36 @@ describe('useAnsiEditor — loading a project with non-default dimensions', () =
     expect(active.frames[1].length).toBe(40)
     expect(active.frames[1][0].length).toBe(120)
   })
+
+  it('move tool shifts cells within the full 120×40 canvas, not just 80×25', () => {
+    // Place a mark at (100, 35) on the loaded 120×40 project.
+    const state = wideProject(120, 40)
+    const drawnLayer = state.layers[0] as DrawnLayer
+    drawnLayer.grid[35][100] = { char: 'M', fg: [255, 0, 0], bg: [0, 0, 0] }
+    drawnLayer.frames[0] = drawnLayer.grid
+
+    const { result } = renderHook(() => useAnsiEditor({ initialLayerState: state }))
+    const container = createMockContainer(120 * 10, 40 * 20)
+    const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
+    act(() => result.current.onTerminalReady(handle))
+    act(() => result.current.setTool('move'))
+
+    // Drag from (100, 35) to (110, 38) — both well outside the old 80×25 region.
+    // mousedown on container starts capture; mouseup on document commits the shift.
+    const cellW = 10, cellH = 20
+    act(() => { container.dispatchEvent(new MouseEvent('mousedown', {
+      clientX: 100 * cellW + cellW / 2, clientY: 35 * cellH + cellH / 2, bubbles: true,
+    })) })
+    act(() => { document.dispatchEvent(new MouseEvent('mouseup', {
+      clientX: 110 * cellW + cellW / 2, clientY: 38 * cellH + cellH / 2, bubbles: true,
+    })) })
+
+    // After move, 'M' should have shifted from (100,35) to (110,38).
+    const movedLayer = result.current.layers[0] as DrawnLayer
+    expect(movedLayer.grid.length).toBe(40)
+    expect(movedLayer.grid[0].length).toBe(120)
+    expect(movedLayer.grid[38][110].char).toBe('M')
+    // Original position should be cleared.
+    expect(movedLayer.grid[35][100].char).toBe(' ')
+  })
 })

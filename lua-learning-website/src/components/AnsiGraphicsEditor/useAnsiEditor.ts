@@ -313,13 +313,15 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
 
   const importPngAsLayer = useCallback(async (file: File) => {
     try {
-      const px = await loadPngPixels(file)
+      const c = projectColsRef.current
+      const r = projectRowsRef.current
+      const px = await loadPngPixels(file, c, r)
       const name = file.name.replace(/\.\w+$/, '')
-      withLayerUndo(() => rawAddLayerWithGrid(name, rgbaToAnsiGrid(px.rgba, px.width, px.height)))
+      withLayerUndo(() => rawAddLayerWithGrid(name, rgbaToAnsiGrid(px.rgba, px.width, px.height, c, r)))
     } catch {
       showToastRef.current?.('Failed to import image')
     }
-  }, [withLayerUndo, rawAddLayerWithGrid])
+  }, [withLayerUndo, rawAddLayerWithGrid, projectColsRef, projectRowsRef])
 
   const parseAnsiFile = useCallback(async (file: File): Promise<LayerState | null> => {
     try {
