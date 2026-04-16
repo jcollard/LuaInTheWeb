@@ -227,12 +227,12 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
   const existingGroups = useMemo(() => layers.filter(isGroupLayer) as GroupLayer[], [layers])
 
   const handleSaveAs = useCallback(
-    (f: string, n: string) => fileHandleSaveAs(f, n, layers, activeLayerId, availableTags),
-    [fileHandleSaveAs, layers, activeLayerId, availableTags],
+    (f: string, n: string) => fileHandleSaveAs(f, n, layers, activeLayerId, availableTags, projectCols, projectRows),
+    [fileHandleSaveAs, layers, activeLayerId, availableTags, projectCols, projectRows],
   )
   const handleSave = useCallback(
-    () => fileHandleSave(layers, activeLayerId, availableTags, markClean, openSaveDialog),
-    [fileHandleSave, layers, activeLayerId, availableTags, markClean, openSaveDialog],
+    () => fileHandleSave(layers, activeLayerId, availableTags, projectCols, projectRows, markClean, openSaveDialog),
+    [fileHandleSave, layers, activeLayerId, availableTags, projectCols, projectRows, markClean, openSaveDialog],
   )
 
   handleSaveRef.current = handleSave

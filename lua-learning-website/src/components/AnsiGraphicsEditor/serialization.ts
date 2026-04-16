@@ -38,8 +38,6 @@ function addOptionalFields(serialized: Record<string, unknown>, layer: Layer): v
 }
 
 export function serializeLayers(state: LayerState, availableTags?: string[]): string {
-  const cols = state.cols ?? DEFAULT_ANSI_COLS
-  const rows = state.rows ?? DEFAULT_ANSI_ROWS
   // Build palette from all drawn and clip layer grids
   const allGrids: AnsiGrid[] = []
   for (const layer of state.layers) {
@@ -51,6 +49,12 @@ export function serializeLayers(state: LayerState, availableTags?: string[]): st
       allGrids.push(layer.grid)
     }
   }
+  // Prefer explicit project dims from state; otherwise derive from the first
+  // sized grid so the written width/height match the actual content instead
+  // of silently defaulting to 80×25 when a caller forgets to thread dims.
+  const firstGrid = allGrids[0]
+  const cols = state.cols ?? firstGrid?.[0]?.length ?? DEFAULT_ANSI_COLS
+  const rows = state.rows ?? firstGrid?.length ?? DEFAULT_ANSI_ROWS
   const { palette, colorToIndex, defaultFgIndex, defaultBgIndex } = buildPalette(allGrids)
 
   let hasReferenceLayer = false
