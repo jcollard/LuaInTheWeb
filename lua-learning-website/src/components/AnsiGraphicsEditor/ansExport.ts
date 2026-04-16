@@ -156,7 +156,7 @@ export function gridToAnsBytes(grid: AnsiGrid): Uint8Array {
   return new Uint8Array(bytes)
 }
 
-export function buildSauceRecord(title: string, fileSize: number): Uint8Array {
+export function buildSauceRecord(title: string, fileSize: number, cols = 80, rows = 25): Uint8Array {
   const record = new Uint8Array(128)
   const view = new DataView(record.buffer)
 
@@ -189,10 +189,10 @@ export function buildSauceRecord(title: string, fileSize: number): Uint8Array {
   record[94] = 1
   // FileType = 1 (ANSi)
   record[95] = 1
-  // TInfo1 = 80 (width, LE 16-bit)
-  view.setUint16(96, 80, true)
-  // TInfo2 = 25 (height, LE 16-bit)
-  view.setUint16(98, 25, true)
+  // TInfo1 = width (LE 16-bit)
+  view.setUint16(96, cols, true)
+  // TInfo2 = height (LE 16-bit)
+  view.setUint16(98, rows, true)
   // TInfo3/4 = 0 (already zero)
   // Comments = 0 (already zero at offset 104)
   // TFlags = 0x01 (iCE colors)
@@ -206,7 +206,9 @@ export function buildSauceRecord(title: string, fileSize: number): Uint8Array {
 export function exportAnsFile(grid: AnsiGrid, title?: string): Uint8Array {
   const ansData = gridToAnsBytes(grid)
   const sauceTitle = title ?? 'untitled'
-  const sauce = buildSauceRecord(sauceTitle, ansData.byteLength)
+  const cols = grid[0]?.length ?? 80
+  const rows = grid.length ?? 25
+  const sauce = buildSauceRecord(sauceTitle, ansData.byteLength, cols, rows)
 
   const result = new Uint8Array(ansData.byteLength + 1 + 128)
   result.set(ansData, 0)
