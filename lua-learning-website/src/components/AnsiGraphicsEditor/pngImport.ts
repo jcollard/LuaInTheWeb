@@ -1,10 +1,6 @@
 import type { AnsiGrid, RGBColor } from './types'
-import { ANSI_COLS, ANSI_ROWS, HALF_BLOCK, DEFAULT_CELL, TRANSPARENT_HALF } from './types'
+import { DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS, HALF_BLOCK, DEFAULT_CELL, TRANSPARENT_HALF } from './types'
 import { rgbEqual } from './layerUtils'
-
-/** Maximum pixel dimensions of the canvas (80 wide x 50 tall). */
-const MAX_PX_W = ANSI_COLS
-const MAX_PX_H = ANSI_ROWS * 2
 
 export interface ScaledSize {
   width: number
@@ -32,17 +28,25 @@ export function computeScaledSize(
  * Each cell encodes two vertical pixels: fg = top pixel, bg = bottom pixel.
  * Pixels with alpha < 128 are treated as transparent (TRANSPARENT_HALF).
  * Cells where both halves are transparent become DEFAULT_CELL (transparent in layer system).
+ *
+ * `cols`/`rows` control the output grid size and pixel bounds. Defaults to 80×25.
  */
-export function rgbaToAnsiGrid(rgba: Uint8ClampedArray, width: number, height: number): AnsiGrid {
-  const grid: AnsiGrid = Array.from({ length: ANSI_ROWS }, () =>
-    Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
+export function rgbaToAnsiGrid(
+  rgba: Uint8ClampedArray,
+  width: number,
+  height: number,
+  cols: number = DEFAULT_ANSI_COLS,
+  rows: number = DEFAULT_ANSI_ROWS,
+): AnsiGrid {
+  const grid: AnsiGrid = Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => ({ ...DEFAULT_CELL }))
   )
 
   for (let py = 0; py < height; py += 2) {
     const row = py >> 1
-    if (row >= ANSI_ROWS) break
+    if (row >= rows) break
     for (let px = 0; px < width; px++) {
-      if (px >= ANSI_COLS) break
+      if (px >= cols) break
 
       const topIdx = (py * width + px) * 4
       const topAlpha = rgba[topIdx + 3]
@@ -77,10 +81,15 @@ export interface PngPixels {
 }
 
 /**
- * Load a PNG file, decode it, scale to fit 80x50 pixel bounds, and return the RGBA buffer.
+ * Load a PNG file, decode it, scale to fit the given pixel bounds, and return the RGBA buffer.
+ * `cols`/`rows` control the max dimensions (rows are doubled for half-block encoding).
  * Uses createImageBitmap + OffscreenCanvas for browser-native decoding.
  */
-export async function loadPngPixels(file: File): Promise<PngPixels> {
+export async function loadPngPixels(
+  file: File,
+  cols: number = DEFAULT_ANSI_COLS,
+  rows: number = DEFAULT_ANSI_ROWS,
+): Promise<PngPixels> {
   let bitmap: ImageBitmap
   try {
     bitmap = await createImageBitmap(file)
@@ -88,7 +97,7 @@ export async function loadPngPixels(file: File): Promise<PngPixels> {
     throw new Error(`Failed to decode image "${file.name}". The file may be corrupted or not a supported image format.`)
   }
 
-  const { width, height } = computeScaledSize(bitmap.width, bitmap.height, MAX_PX_W, MAX_PX_H)
+  const { width, height } = computeScaledSize(bitmap.width, bitmap.height, cols, rows * 2)
 
   if (width === 0 || height === 0) {
     bitmap.close()
