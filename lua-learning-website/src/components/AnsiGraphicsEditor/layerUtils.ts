@@ -1,5 +1,5 @@
 import type { AnsiCell, AnsiGrid, ClipLayer, DrawableLayer, DrawnLayer, GroupLayer, Layer, LayerState, ReferenceLayer, RGBColor, TextLayer } from './types'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, isGroupLayer, isDrawableLayer, isClipLayer, isReferenceLayer, getParentId } from './types'
+import { DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS, DEFAULT_CELL, DEFAULT_FG, DEFAULT_BG, DEFAULT_FRAME_DURATION_MS, isGroupLayer, isDrawableLayer, isClipLayer, isReferenceLayer, getParentId } from './types'
 import { compositeGrid } from './compositeUtils'
 export { visibleDrawableLayers, compositeCell, compositeGrid, compositeGridInto, compositeCellWithOverride, prepareComposite, compositeCellPrepared, compositeCellWithOverridePrepared, type CompositeState } from './compositeUtils'
 
@@ -80,8 +80,8 @@ export function isDefaultCell(cell: AnsiCell): boolean {
 export function createLayer(
   name: string,
   id?: string,
-  cols: number = ANSI_COLS,
-  rows: number = ANSI_ROWS,
+  cols: number = DEFAULT_ANSI_COLS,
+  rows: number = DEFAULT_ANSI_ROWS,
 ): DrawnLayer {
   const grid: AnsiGrid = Array.from({ length: rows }, () =>
     Array.from({ length: cols }, () => ({ ...DEFAULT_CELL }))

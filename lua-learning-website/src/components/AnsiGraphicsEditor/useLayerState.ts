@@ -114,14 +114,14 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
 
   const addLayer = useCallback(() => {
     layerCountRef.current++
-    const layer = createLayer(`Layer ${layerCountRef.current}`)
+    const layer = createLayer(`Layer ${layerCountRef.current}`, undefined, colsRef.current, rowsRef.current)
     setLayers(prev => [...prev, layer])
     setActiveLayerId(layer.id)
   }, [])
 
   const addLayerWithGrid = useCallback((name: string, grid: AnsiGrid) => {
     layerCountRef.current++
-    const layer = createLayer(`Layer ${layerCountRef.current}`)
+    const layer = createLayer(`Layer ${layerCountRef.current}`, undefined, colsRef.current, rowsRef.current)
     layer.name = name
     layer.grid = grid
     layer.frames = [grid]
@@ -133,7 +133,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
     setLayers(prev => {
       const group = prev.find(l => l.id === groupId)
       if (!group || !isGroupLayer(group)) return prev
-      const clip = createClipLayer('Clip Mask', groupId)
+      const clip = createClipLayer('Clip Mask', groupId, undefined, colsRef.current, rowsRef.current)
       const groupIdx = prev.findIndex(l => l.id === groupId)
       const blockEnd = findGroupBlockEnd(prev, groupId, groupIdx)
       const next = [...prev.slice(0, blockEnd), clip, ...prev.slice(blockEnd)]
@@ -168,7 +168,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
 
   const addTextLayer = useCallback((name: string, bounds: Rect, textFg: RGBColor) => {
     layerCountRef.current++
-    const base = createLayer(name)
+    const base = createLayer(name, undefined, colsRef.current, rowsRef.current)
     const textLayer: TextLayer = {
       ...base,
       type: 'text',
@@ -176,7 +176,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
       bounds,
       textFg,
       textFgColors: [],
-      grid: renderTextLayerGrid('', bounds, textFg),
+      grid: renderTextLayerGrid('', bounds, textFg, undefined, undefined, undefined, undefined, colsRef.current, rowsRef.current),
     }
     layersRef.current = [...layersRef.current, textLayer]
     activeLayerIdRef.current = textLayer.id
@@ -569,7 +569,7 @@ export function useLayerState(initial?: LayerState): UseLayerStateReturn {
 
   const addFrame = useCallback(() => {
     updateActiveDrawnLayer(l => {
-      const newGrid = createEmptyGrid()
+      const newGrid = createEmptyGrid(colsRef.current, rowsRef.current)
       const newFrames = [...l.frames, newGrid]
       return { ...l, grid: newGrid, frames: newFrames, currentFrameIndex: newFrames.length - 1 }
     })
