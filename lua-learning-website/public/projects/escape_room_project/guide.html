@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escape Room Tutorial</title>
+<style>
+/* ============================================================
+   BASE / RESET
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background: #0a0e27;
+    color: #e0e6ff;
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* ============================================================
+   HEADER + TABS
+   ============================================================ */
+header {
+    background: #101538;
+    border-bottom: 2px solid #1a2050;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-title {
+    text-align: center;
+    padding: 12px 16px 0;
+    font-size: 1.3em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #a0a8e0;
+}
+
+.tab-bar {
+    display: flex;
+    gap: 4px;
+    padding: 8px 16px 0;
+    overflow-x: auto;
+}
+
+.tab-bar button {
+    background: transparent;
+    border: none;
+    color: #808cc0;
+    padding: 10px 18px;
+    font-size: 0.95em;
+    font-family: inherit;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.tab-bar button:hover {
+    color: #b0b8f0;
+}
+
+.tab-bar button.active {
+    color: #e0e6ff;
+    border-bottom-color: #6c63ff;
+    font-weight: 600;
+}
+
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
+main {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+}
+
+.part { display: none; }
+.part.active { display: block; }
+
+.part > h1 {
+    font-size: 1.8em;
+    margin-bottom: 4px;
+    color: #fff;
+}
+
+.part > .subtitle {
+    font-size: 1.1em;
+    color: #8890c0;
+    margin-bottom: 28px;
+}
+
+/* ============================================================
+   CONCEPTS SECTION
+   ============================================================ */
+.concepts {
+    background: #121640;
+    border: 1px solid #1e2460;
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 32px;
+}
+
+.concepts h2 {
+    font-size: 1.15em;
+    color: #a0a8e0;
+    margin-bottom: 12px;
+}
+
+.concepts p, .concepts li {
+    margin-bottom: 8px;
+    color: #c0c8f0;
+}
+
+.concepts ul, .concepts ol {
+    padding-left: 24px;
+    margin-bottom: 8px;
+}
+
+.concepts strong { color: #e0e6ff; }
+
+/* ============================================================
+   STEPS
+   ============================================================ */
+.step {
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    border-left: 4px solid;
+}
+
+.step-copy {
+    background: #0d1a2c;
+    border-left-color: #00bcd4;
+}
+
+.step-challenge {
+    background: #1a1510;
+    border-left-color: #ff9800;
+}
+
+.step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #e0e6ff;
+}
+
+.badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.72em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.badge-copy {
+    background: #00bcd4;
+    color: #001820;
+}
+
+.badge-challenge {
+    background: #ff9800;
+    color: #1a0e00;
+}
+
+.step-location {
+    font-size: 0.9em;
+    color: #8890c0;
+    margin-bottom: 10px;
+    font-style: italic;
+}
+
+.step-desc, .step-task {
+    margin-bottom: 12px;
+    color: #c0c8f0;
+}
+
+.step-desc strong, .step-task strong { color: #e0e6ff; }
+
+.step-note {
+    background: #0a1028;
+    border-left: 3px solid #2196f3;
+    padding: 8px 14px;
+    margin-top: 10px;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.92em;
+    color: #90a0d0;
+}
+
+/* ============================================================
+   CODE BLOCKS (copy/paste ALLOWED in this project)
+   ============================================================ */
+pre.code-block {
+    background: #0d1030;
+    border: 1px solid #1a2050;
+    border-radius: 6px;
+    padding: 14px 18px;
+    overflow-x: auto;
+    margin: 8px 0;
+}
+
+pre.code-block code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.92em;
+    line-height: 1.55;
+    color: #eeffff;
+}
+
+.step-desc code, .step-task code, .step-note code,
+.concepts code, .hint code, p code, li code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    background: #0d1030;
+    color: #82aaff;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+/* ============================================================
+   SYNTAX HIGHLIGHTING
+   ============================================================ */
+.kw  { color: #c792ea; }
+.str { color: #c3e88d; }
+.cm  { color: #809aa5; }
+.num { color: #f78c6c; }
+.fn  { color: #82aaff; }
+
+/* ============================================================
+   HINTS + SOLUTIONS
+   ============================================================ */
+.hints-container { margin: 8px 0; }
+
+.hint {
+    background: #141028;
+    border: 1px solid #2a2060;
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin: 8px 0;
+    color: #b0b8e0;
+    font-size: 0.95em;
+}
+
+.hint strong { color: #e0e6ff; }
+
+.solution { margin: 8px 0; }
+
+.btn-hint, .btn-solution {
+    border: none;
+    padding: 8px 18px;
+    border-radius: 5px;
+    font-size: 0.9em;
+    font-family: inherit;
+    cursor: pointer;
+    margin: 6px 6px 6px 0;
+    font-weight: 600;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.btn-hint:active, .btn-solution:active { transform: scale(0.97); }
+
+.btn-hint { background: #6c63ff; color: #fff; }
+.btn-hint:hover { background: #7d75ff; }
+
+.btn-solution { background: #ff9800; color: #1a0e00; }
+.btn-solution:hover { background: #ffad33; }
+
+/* ============================================================
+   CHECK YOUR WORK + STUCK
+   ============================================================ */
+.check-work {
+    background: #0d1830;
+    border: 1px solid #1a2850;
+    border-radius: 8px;
+    padding: 18px 24px;
+    margin-top: 32px;
+}
+
+.check-work h2 {
+    font-size: 1.1em;
+    color: #4caf50;
+    margin-bottom: 10px;
+}
+
+.check-work ul { padding-left: 24px; }
+
+.check-work li {
+    margin-bottom: 6px;
+    color: #b0c0d0;
+}
+
+.run-reminder {
+    background: #10281a;
+    border: 1px solid #1a4228;
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin: 16px 0;
+    color: #a8d0b4;
+    font-size: 0.95em;
+}
+
+.run-reminder strong { color: #7cd992; }
+
+.stuck {
+    margin-top: 16px;
+    padding: 12px 18px;
+    background: #10101a;
+    border-radius: 6px;
+    color: #7880a0;
+    font-size: 0.9em;
+}
+
+.stuck code { color: #82aaff; }
+
+.btn-stuck {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0;
+}
+
+.btn-stuck:hover { color: #a0a8d0; }
+.btn-stuck code { color: #82aaff; }
+
+.stuck-code {
+    margin-top: 12px;
+    max-height: 600px;
+    overflow-y: auto;
+    border-radius: 6px;
+}
+
+.sep {
+    border: none;
+    border-top: 1px solid #1a2050;
+    margin: 24px 0;
+}
+</style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">ESCAPE ROOM TUTORIAL</div>
+    <nav class="tab-bar">
+        <button class="active" data-part="1">Lesson 1: Hello</button>
+        <button data-part="2">Lesson 2: Colors</button>
+        <button data-part="3">Lesson 3: Input</button>
+        <button data-part="4">Lesson 4: Choices</button>
+        <button data-part="5">Lesson 5: Rooms</button>
+        <button data-part="6">Lesson 6: Items</button>
+    </nav>
+</header>
+
+<main>
+
+<!-- ============================================================
+     LESSON 1: HELLO, ESCAPE ROOM!
+     ============================================================ -->
+<div class="part active" id="part-1">
+    <h1>Lesson 1: Hello, Escape Room!</h1>
+    <p class="subtitle">Print the opening scene of your escape room.</p>
+
+    <div class="concepts">
+        <h2>New Concepts</h2>
+        <ul>
+            <li><code>print("text")</code> &mdash; shows one line of text</li>
+            <li><code>print()</code> with nothing in the parentheses &mdash; prints an empty line (good for spacing)</li>
+            <li><code>print[[ ...several lines... ]]</code> &mdash; prints a <strong>block</strong> of text exactly as you typed it, even with line breaks</li>
+        </ul>
+        <p>Your mission in this lesson: write the opening of your escape room using only <code>print</code>.</p>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 1: Print the title</div>
+        <div class="step-location">Where: at the bottom of <code>escape.lua</code>, below the comment banner</div>
+        <pre class="code-block"><code class="lua">print("=== THE LOCKED ROOM ===")</code></pre>
+        <div class="step-desc">Every program starts somewhere. This is the title line of your game.</div>
+        <div class="run-reminder"><strong>Run it now!</strong> Click the <strong>Run</strong> button. You should see <code>=== THE LOCKED ROOM ===</code> print out.</div>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 2: Add a blank line and some description</div>
+        <div class="step-location">Where: below the title line you just added</div>
+        <pre class="code-block"><code class="lua">print()
+print("You wake up in a dim, dusty room.")
+print("Your head is pounding. The door is shut.")</code></pre>
+        <div class="step-desc"><code>print()</code> with empty parentheses just prints a blank line &mdash; a nice gap between your title and the description.</div>
+        <div class="run-reminder"><strong>Run it again.</strong> You should now see the title, a blank line, and two description lines.</div>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 3: Print a multi-line block</div>
+        <div class="step-location">Where: below the two description lines you just added</div>
+        <pre class="code-block"><code class="lua">print()
+print[[
+There is a bed, a small wooden drawer,
+and a heavy wooden door with no handle.
+]]</code></pre>
+        <div class="step-desc"><code>print[[ ]]</code> (with <strong>two square brackets</strong>) lets you write text that spans many lines without adding <code>print</code> on every line.</div>
+        <div class="step-note">Tip: notice there are <strong>no quotes</strong> inside the brackets. The brackets are the quotes!</div>
+        <div class="run-reminder"><strong>Run it.</strong> The block of text should appear exactly as you typed it.</div>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 4: Print the goal</div>
+        <div class="step-location">Where: below the multi-line block</div>
+        <pre class="code-block"><code class="lua">print("You need to find a way out!")</code></pre>
+        <div class="run-reminder"><strong>Run it.</strong> Read the whole opening scene. Does it feel like the start of a game?</div>
+    </div>
+
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 5: Add your own detail</div>
+        <div class="step-location">Where: anywhere in your scene &mdash; you choose!</div>
+        <div class="step-task">Add <strong>one more <code>print</code> line</strong> that describes something else in the room. A spider web? A cracked window? A note on the floor? Make the room feel like <em>yours</em>.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Pick a spot in your code where the new detail makes sense, then write a new line like <code>print("Something about the room.")</code>.</div>
+            <div class="hint" hidden>For example: <code>print("A cracked lantern sits on the floor.")</code></div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">print("A cracked lantern sits on the floor.")</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+        <div class="run-reminder"><strong>Run it.</strong> Does your new detail appear where you expected?</div>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>When you run <code>escape.lua</code>, you should see:</p>
+        <ul>
+            <li>The title <code>=== THE LOCKED ROOM ===</code></li>
+            <li>A blank line, then two description lines</li>
+            <li>A multi-line block describing what's in the room</li>
+            <li>The line <code>You need to find a way out!</code></li>
+            <li>Your extra detail line from Step 5</li>
+        </ul>
+    </div>
+
+    <div class="stuck">
+        <button class="btn-stuck">Stuck? Show the full <code>escape.lua</code> for Lesson 1</button>
+        <div class="stuck-code" hidden>
+            <pre class="code-block"><code class="lua">-- ============================================================
+-- Escape Room
+-- Your mission: build a text escape room, one step at a time!
+-- ============================================================
+
+print("=== THE LOCKED ROOM ===")
+print()
+print("You wake up in a dim, dusty room.")
+print("Your head is pounding. The door is shut.")
+print()
+print[[
+There is a bed, a small wooden drawer,
+and a heavy wooden door with no handle.
+]]
+print("You need to find a way out!")
+print("A cracked lantern sits on the floor.")</code></pre>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     LESSON 2: ADDING COLORS
+     ============================================================ -->
+<div class="part" id="part-2">
+    <h1>Lesson 2: Adding Colors</h1>
+    <p class="subtitle">Use the shell library to color your text and clear the screen.</p>
+
+    <div class="concepts">
+        <h2>New Concepts</h2>
+        <ul>
+            <li><code>local shell = require("shell")</code> &mdash; loads the <strong>shell library</strong> so you can use its features. "Require" means "I want to use this."</li>
+            <li><code>shell.clear()</code> &mdash; wipes everything off the screen before your game starts</li>
+            <li><code>shell.foreground(color)</code> &mdash; changes the text color for everything that prints <em>after</em> this line</li>
+            <li><code>shell.reset()</code> &mdash; changes the color back to normal</li>
+            <li>Color names: <code>shell.RED</code>, <code>shell.GREEN</code>, <code>shell.YELLOW</code>, <code>shell.BLUE</code>, <code>shell.CYAN</code>, <code>shell.MAGENTA</code>, <code>shell.WHITE</code></li>
+        </ul>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 1: Load the shell library</div>
+        <div class="step-location">Where: at the very top of your code (below the comment banner, above all your <code>print</code> lines)</div>
+        <pre class="code-block"><code class="lua">local shell = require("shell")</code></pre>
+        <div class="step-desc">This line tells Lua "I want to use the shell library, and I'll call it <code>shell</code>." You only need to do this <strong>once</strong> per file.</div>
+        <div class="run-reminder"><strong>Run it.</strong> Nothing looks different yet &mdash; but make sure the program still works and prints the same text.</div>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 2: Clear the screen</div>
+        <div class="step-location">Where: right below the <code>require</code> line</div>
+        <pre class="code-block"><code class="lua">
+shell.clear()
+</code></pre>
+        <div class="step-desc">Now every run starts on a fresh, clean screen.</div>
+        <div class="run-reminder"><strong>Run it.</strong> The screen should wipe before showing the scene.</div>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 3: Color the title yellow</div>
+        <div class="step-location">Where: <strong>around</strong> your title line &mdash; the two shell lines go ABOVE and BELOW the <code>print("=== THE LOCKED ROOM ===")</code></div>
+        <div class="step-desc">Add <code>shell.foreground(shell.YELLOW)</code> just <strong>above</strong> the title line, and <code>shell.reset()</code> just <strong>below</strong> it. Your title section should look like this:</div>
+        <pre class="code-block"><code class="lua">shell.foreground(shell.YELLOW)
+print("=== THE LOCKED ROOM ===")
+shell.reset()</code></pre>
+        <div class="step-note">The color stays active until you <code>reset()</code>. Always reset when you're done coloring, or the next lines will also come out yellow!</div>
+        <div class="run-reminder"><strong>Run it.</strong> The title should glow yellow. Everything else stays the normal color.</div>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 4: Color the goal line red</div>
+        <div class="step-location">Where: around the <code>print("You need to find a way out!")</code> line</div>
+        <div class="step-desc">Same idea &mdash; put a foreground line above and a reset line below:</div>
+        <pre class="code-block"><code class="lua">shell.foreground(shell.RED)
+print("You need to find a way out!")
+shell.reset()</code></pre>
+        <div class="run-reminder"><strong>Run it.</strong> The goal line should now stand out in red.</div>
+    </div>
+
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 5: Color one more line yourself</div>
+        <div class="step-task">Pick a different line in your scene (for example, your extra detail from Lesson 1) and color it using a color you <strong>haven't used yet</strong>: <code>shell.CYAN</code>, <code>shell.GREEN</code>, <code>shell.MAGENTA</code>, or <code>shell.BLUE</code>. Don't forget to reset after!</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Follow the same 3-line pattern: <code>shell.foreground(...)</code>, your <code>print</code>, then <code>shell.reset()</code>.</div>
+            <div class="hint" hidden>Example using cyan: wrap the line with <code>shell.foreground(shell.CYAN)</code> above and <code>shell.reset()</code> below.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">shell.foreground(shell.CYAN)
+print("A cracked lantern sits on the floor.")
+shell.reset()</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+        <div class="run-reminder"><strong>Run it.</strong> Your chosen line should appear in the new color.</div>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>When you run <code>escape.lua</code>, you should see:</p>
+        <ul>
+            <li>The screen clears before anything appears</li>
+            <li>The title is yellow</li>
+            <li>The goal line <code>You need to find a way out!</code> is red</li>
+            <li>Your extra line from Step 5 has a new color</li>
+            <li>Everything else is still the normal color (that's what <code>shell.reset()</code> does)</li>
+        </ul>
+    </div>
+
+    <div class="stuck">
+        <button class="btn-stuck">Stuck? Show the full <code>escape.lua</code> for Lesson 2</button>
+        <div class="stuck-code" hidden>
+            <pre class="code-block"><code class="lua">-- ============================================================
+-- Escape Room
+-- ============================================================
+
+local shell = require("shell")
+
+shell.clear()
+
+shell.foreground(shell.YELLOW)
+print("=== THE LOCKED ROOM ===")
+shell.reset()
+
+print()
+print("You wake up in a dim, dusty room.")
+print("Your head is pounding. The door is shut.")
+print()
+print[[
+There is a bed, a small wooden drawer,
+and a heavy wooden door with no handle.
+]]
+shell.foreground(shell.RED)
+print("You need to find a way out!")
+shell.reset()
+
+shell.foreground(shell.CYAN)
+print("A cracked lantern sits on the floor.")
+shell.reset()</code></pre>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     LESSON 3: ASKING THE PLAYER
+     ============================================================ -->
+<div class="part" id="part-3">
+    <h1>Lesson 3: Asking the Player</h1>
+    <p class="subtitle">Wait for the player to type something, then respond.</p>
+
+    <div class="concepts">
+        <h2>New Concepts</h2>
+        <ul>
+            <li><code>io.read()</code> &mdash; pauses the program until the player <strong>types something and presses Enter</strong>, then gives you back whatever they typed</li>
+            <li><code>local choice = io.read()</code> &mdash; stores what the player typed in a <strong>variable</strong> called <code>choice</code>. A variable is a named box that holds a value.</li>
+            <li><code>if choice == "look" then ... end</code> &mdash; an <strong>if statement</strong>. It only runs the code inside when what's in <code>choice</code> is exactly the word <code>"look"</code>. Note: two equals signs (<code>==</code>) means "is equal to".</li>
+        </ul>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 1: Add a prompt</div>
+        <div class="step-location">Where: at the bottom of your file, below everything you wrote in Lesson 2</div>
+        <pre class="code-block"><code class="lua">
+print()
+print("Type 'look' and press Enter to look around.")</code></pre>
+        <div class="step-desc">This tells the player what to do. The first <code>print()</code> is just for spacing.</div>
+        <div class="run-reminder"><strong>Run it.</strong> You should see the prompt at the bottom of your scene.</div>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 2: Read what the player types</div>
+        <div class="step-location">Where: right below the prompt you just added</div>
+        <pre class="code-block"><code class="lua">
+local choice = io.read()</code></pre>
+        <div class="step-desc">This line does two things at once:
+        <ol>
+            <li><code>io.read()</code> waits for the player to type a word and press Enter.</li>
+            <li><code>local choice =</code> stores whatever they typed in a variable named <code>choice</code>.</li>
+        </ol>
+        </div>
+        <div class="run-reminder"><strong>Run it.</strong> The program will now wait for you after printing the prompt. Type anything and press Enter. Nothing visible happens yet &mdash; but the program now finishes. That's progress!</div>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 3: React when the player types <code>look</code></div>
+        <div class="step-location">Where: right below the <code>local choice = io.read()</code> line</div>
+        <pre class="code-block"><code class="lua">
+if choice == "look" then
+  print("You spot something shiny under the bed!")
+end</code></pre>
+        <div class="step-desc">This is an <strong>if statement</strong>. Read it out loud: "If choice equals look, then print this." The <code>end</code> marks where the "if" block stops.</div>
+        <div class="step-note">The two spaces before <code>print</code> are called <strong>indentation</strong>. They aren't required, but they make your code easier to read.</div>
+        <div class="run-reminder"><strong>Run it.</strong> Try typing <code>look</code> &mdash; you should see the shiny message. Try typing anything else &mdash; nothing happens (yet).</div>
+    </div>
+
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 4: Change the magic word</div>
+        <div class="step-task">Pick your own magic word instead of <code>"look"</code>. Update <strong>both</strong> the prompt AND the <code>if</code> check so they match. The game should only respond when the player types your new word.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>There are two places to change: the text inside the <code>print("Type '...'")</code> line, and the text inside the <code>if choice == "..."</code> line. They have to be spelled exactly the same.</div>
+            <div class="hint" hidden>For example, if your magic word is <code>"search"</code>, your prompt says "Type 'search' and press Enter" and your if says <code>if choice == "search" then</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">print("Type 'search' and press Enter to search the room.")
+
+local choice = io.read()
+
+if choice == "search" then
+  print("You spot something shiny under the bed!")
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+        <div class="run-reminder"><strong>Run it.</strong> Your new magic word should trigger the message, and the old one should do nothing.</div>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>When you run <code>escape.lua</code>, you should see:</p>
+        <ul>
+            <li>The opening scene still prints</li>
+            <li>At the bottom, a prompt telling the player what to type</li>
+            <li>The program pauses, waiting for you</li>
+            <li>If you type your magic word and press Enter, the shiny message appears</li>
+            <li>If you type anything else and press Enter, nothing extra happens (the program just ends)</li>
+        </ul>
+    </div>
+
+    <div class="stuck">
+        <button class="btn-stuck">Stuck? Show the full <code>escape.lua</code> for Lesson 3</button>
+        <div class="stuck-code" hidden>
+            <pre class="code-block"><code class="lua">-- ============================================================
+-- Escape Room
+-- ============================================================
+
+local shell = require("shell")
+
+shell.clear()
+
+shell.foreground(shell.YELLOW)
+print("=== THE LOCKED ROOM ===")
+shell.reset()
+
+print()
+print("You wake up in a dim, dusty room.")
+print("Your head is pounding. The door is shut.")
+print()
+print[[
+There is a bed, a small wooden drawer,
+and a heavy wooden door with no handle.
+]]
+shell.foreground(shell.RED)
+print("You need to find a way out!")
+shell.reset()
+
+print()
+print("Type 'look' and press Enter to look around.")
+
+local choice = io.read()
+
+if choice == "look" then
+  print("You spot something shiny under the bed!")
+end</code></pre>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     LESSON 4: MULTIPLE OPTIONS
+     ============================================================ -->
+<div class="part" id="part-4">
+    <h1>Lesson 4: Multiple Options</h1>
+    <p class="subtitle">Give the player a menu and react to each choice.</p>
+
+    <div class="concepts">
+        <h2>New Concepts</h2>
+        <ul>
+            <li><code>elseif</code> &mdash; lets you check <strong>another</strong> condition after your <code>if</code>. You can have as many <code>elseif</code> branches as you need.</li>
+            <li><code>else</code> &mdash; runs when <strong>none</strong> of the other checks matched. Great for handling bad input.</li>
+            <li>Numbered menus: print numbered options like <code>1. Do this</code>, <code>2. Do that</code>, and ask the player to type the number.</li>
+        </ul>
+        <p>Structure:</p>
+        <pre class="code-block"><code class="lua">if choice == "1" then
+  -- code for option 1
+elseif choice == "2" then
+  -- code for option 2
+elseif choice == "3" then
+  -- code for option 3
+else
+  -- code for any other input
+end</code></pre>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 1: Replace the prompt with a menu</div>
+        <div class="step-location">Where: replace the single prompt line <code>print("Type 'look' and press Enter to look around.")</code> with the menu below</div>
+        <pre class="code-block"><code class="lua">print("What do you do?")
+print("  1. Look under the bed")
+print("  2. Open the drawer")
+print("  3. Push the door")
+print()</code></pre>
+        <div class="step-desc">Now the player has real choices. Each line tells them a number to type.</div>
+        <div class="run-reminder"><strong>Run it.</strong> You should see the three options before the program pauses for input.</div>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 2: Replace your <code>if</code> with a branching menu</div>
+        <div class="step-location">Where: replace your existing <code>if choice == "look" then ... end</code> block with the one below</div>
+        <pre class="code-block"><code class="lua">if choice == "1" then
+  print("You spot something shiny under the bed!")
+elseif choice == "2" then
+  print("The drawer is empty except for a spider.")
+elseif choice == "3" then
+  print("The door won't budge. You need something to open it.")
+else
+  print("That is not a valid choice.")
+end</code></pre>
+        <div class="step-desc">Each <code>elseif</code> checks a different number. The <code>else</code> at the end runs if the player types something that isn't <code>1</code>, <code>2</code>, or <code>3</code>.</div>
+        <div class="step-note">Notice we're comparing to <code>"1"</code> (in quotes) and not <code>1</code> (no quotes). <code>io.read()</code> always gives back <strong>text</strong> &mdash; even when it's a number &mdash; so we compare to text too.</div>
+        <div class="run-reminder"><strong>Run it.</strong> Try typing <code>1</code>, then run again and try <code>2</code>, then <code>3</code>, then try <code>potato</code>. Each one should give a different message.</div>
+    </div>
+
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 3: Add a fourth option</div>
+        <div class="step-task">Add a new option to your menu &mdash; something like "Shout for help" or "Kick the door". You'll need to:
+        <ul>
+            <li>Add a new <code>print("  4. ...")</code> line in the menu</li>
+            <li>Add a new <code>elseif choice == "4" then</code> branch that prints what happens</li>
+        </ul>
+        </div>
+        <div class="hints-container">
+            <div class="hint" hidden>The new <code>elseif</code> branch goes <strong>before</strong> the final <code>else</code>. The order is: <code>if</code> &rarr; <code>elseif</code>s &rarr; <code>else</code> &rarr; <code>end</code>.</div>
+            <div class="hint" hidden>See the solution for the exact pattern.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- In the menu prints, add:
+print("  4. Shout for help")
+
+-- In the if/elseif chain, add this branch before the else:
+elseif choice == "4" then
+  print("You shout, but no one answers. Your throat hurts now.")</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+        <div class="run-reminder"><strong>Run it.</strong> Try all four options AND an invalid one. Every option should respond.</div>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>When you run <code>escape.lua</code>, you should see:</p>
+        <ul>
+            <li>The opening scene</li>
+            <li>A menu listing your options (3 from the copy steps, plus your challenge option)</li>
+            <li>When you type <code>1</code>, <code>2</code>, <code>3</code>, or <code>4</code>, you get the matching message</li>
+            <li>When you type something else (like <code>potato</code>), you get "That is not a valid choice."</li>
+        </ul>
+    </div>
+
+    <div class="stuck">
+        <button class="btn-stuck">Stuck? Show the full <code>escape.lua</code> for Lesson 4</button>
+        <div class="stuck-code" hidden>
+            <pre class="code-block"><code class="lua">-- ============================================================
+-- Escape Room
+-- ============================================================
+
+local shell = require("shell")
+
+shell.clear()
+
+shell.foreground(shell.YELLOW)
+print("=== THE LOCKED ROOM ===")
+shell.reset()
+
+print()
+print("You wake up in a dim, dusty room.")
+print("Your head is pounding. The door is shut.")
+print()
+print[[
+There is a bed, a small wooden drawer,
+and a heavy wooden door with no handle.
+]]
+shell.foreground(shell.RED)
+print("You need to find a way out!")
+shell.reset()
+
+print()
+print("What do you do?")
+print("  1. Look under the bed")
+print("  2. Open the drawer")
+print("  3. Push the door")
+print("  4. Shout for help")
+print()
+
+local choice = io.read()
+
+if choice == "1" then
+  print("You spot something shiny under the bed!")
+elseif choice == "2" then
+  print("The drawer is empty except for a spider.")
+elseif choice == "3" then
+  print("The door won't budge. You need something to open it.")
+elseif choice == "4" then
+  print("You shout, but no one answers. Your throat hurts now.")
+else
+  print("That is not a valid choice.")
+end</code></pre>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     LESSON 5: MAKING ROOMS (FUNCTIONS)
+     ============================================================ -->
+<div class="part" id="part-5">
+    <h1>Lesson 5: Making Rooms</h1>
+    <p class="subtitle">Turn each location into a function, and let the player walk between rooms.</p>
+
+    <div class="concepts">
+        <h2>New Concepts</h2>
+        <ul>
+            <li><code>function name() ... end</code> &mdash; a <strong>function</strong> is a named chunk of code. You can run it later by writing <code>name()</code>. Think of a function as a "named section" you can jump to.</li>
+            <li><code>bedroom()</code> &mdash; this <strong>calls</strong> the function named <code>bedroom</code> &mdash; it runs everything inside.</li>
+            <li>A function can call <strong>another</strong> function (to move the player to a new location).</li>
+            <li>A function can call <strong>itself</strong> to show its menu again (for when the player types something invalid, or comes back to the same room).</li>
+        </ul>
+        <p class="step-note">Why do this? Without functions, you can only run your code top-to-bottom one time. With functions, the player can move back and forth between locations, and invalid input can simply re-show the menu.</p>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 1: Wrap the bedroom code in a function</div>
+        <div class="step-location">Where: around <strong>everything</strong> you have after the <code>local shell = require("shell")</code> line</div>
+        <div class="step-desc">Add <code>function bedroom()</code> just below the <code>require</code> line, then add <code>end</code> at the very bottom of your file. Everything between those two lines is now "the bedroom". It will look like this:</div>
+        <pre class="code-block"><code class="lua">local shell = require("shell")
+
+function bedroom()
+  -- ALL your existing code goes here (shell.clear, prints, if/elseif, etc.)
+end</code></pre>
+        <div class="step-note">Nothing inside the function runs yet &mdash; you've only <strong>defined</strong> the room. The next steps will actually start the game.</div>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 2: Start the game at the bottom</div>
+        <div class="step-location">Where: on a brand-new line at the very end of your file, <strong>after</strong> the <code>end</code> of the bedroom function</div>
+        <pre class="code-block"><code class="lua">
+bedroom()</code></pre>
+        <div class="step-desc">This one line starts the game. It <strong>calls</strong> the bedroom function, which runs everything inside.</div>
+        <div class="run-reminder"><strong>Run it.</strong> The game should work exactly as before. Good &mdash; we haven't changed the behaviour yet, just rearranged it.</div>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 3: Update each branch to loop back and add a door option</div>
+        <div class="step-location">Where: replace the entire <code>if / elseif / else</code> block inside <code>bedroom()</code> with this one</div>
+        <pre class="code-block"><code class="lua">if choice == "1" then
+  print("You spot something shiny under the bed!")
+  print("Press Enter to continue.")
+  io.read()
+  bedroom()
+elseif choice == "2" then
+  print("The drawer is empty except for a spider.")
+  print("Press Enter to continue.")
+  io.read()
+  bedroom()
+elseif choice == "3" then
+  hallway()
+elseif choice == "4" then
+  print("You shout, but no one answers. Your throat hurts now.")
+  print("Press Enter to continue.")
+  io.read()
+  bedroom()
+else
+  print("Invalid choice! Press Enter to continue.")
+  io.read()
+  bedroom()
+end</code></pre>
+        <div class="step-desc">Look at what changed in each branch:
+        <ul>
+            <li>After the message, we <code>print</code> "Press Enter to continue", then <code>io.read()</code> waits for Enter.</li>
+            <li>Then we <strong>call <code>bedroom()</code> again</strong>, which re-shows the menu.</li>
+            <li>The "push the door" branch (option 3) now calls <code>hallway()</code> instead &mdash; it moves the player to a new room (we'll build that next).</li>
+            <li>The <code>else</code> branch handles invalid input by going back to the menu.</li>
+        </ul>
+        </div>
+        <div class="step-note">Don't run yet &mdash; the <code>hallway</code> function doesn't exist. Your editor might complain. The next step fixes that.</div>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 4: Add the hallway function</div>
+        <div class="step-location">Where: between <code>end</code> (closing <code>bedroom()</code>) and the <code>bedroom()</code> call at the bottom</div>
+        <pre class="code-block"><code class="lua">function hallway()
+  shell.clear()
+
+  shell.foreground(shell.CYAN)
+  print("=== DUSTY HALLWAY ===")
+  shell.reset()
+
+  print()
+  print("A long hallway with torches flickering on the walls.")
+  print("At the far end is a heavy iron gate.")
+  print()
+  print("What do you do?")
+  print("  1. Go back to the bedroom")
+  print("  2. Look at the iron gate")
+  print()
+
+  local choice = io.read()
+
+  if choice == "1" then
+    bedroom()
+  elseif choice == "2" then
+    print("The gate is locked. You need a key.")
+    print("Press Enter to continue.")
+    io.read()
+    hallway()
+  else
+    print("Invalid choice! Press Enter to continue.")
+    io.read()
+    hallway()
+  end
+end</code></pre>
+        <div class="step-desc">This is a brand-new location. Notice it follows the same pattern:
+        <ul>
+            <li>Clear the screen and show a colored title</li>
+            <li>Describe the room</li>
+            <li>Show menu options</li>
+            <li>Read the choice and branch with <code>if/elseif/else</code></li>
+            <li>Each branch either moves to another room (<code>bedroom()</code>) or re-shows the menu (<code>hallway()</code>)</li>
+        </ul>
+        </div>
+        <div class="run-reminder"><strong>Run it.</strong> Start in the bedroom, type <code>3</code> to go to the hallway, then <code>1</code> to come back. Try invalid input in each room &mdash; it should re-show the menu instead of crashing.</div>
+    </div>
+
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 5: Add a twist</div>
+        <div class="step-task">Pick ONE of these:
+        <ul>
+            <li><strong>Easier:</strong> Add a third option in the hallway (for example, "Touch the torches"). It should print a message and then call <code>hallway()</code> again to re-show the menu.</li>
+            <li><strong>Harder:</strong> Add a third <em>location</em> (a new function like <code>function attic() ... end</code>) and wire one of the bedroom or hallway options to travel to it.</li>
+        </ul>
+        </div>
+        <div class="hints-container">
+            <div class="hint" hidden>For the easier version, copy the pattern from one of the existing branches: add a <code>print</code> for the option, add an <code>elseif choice == "3" then</code>, make the branch end with <code>hallway()</code>.</div>
+            <div class="hint" hidden>For a new location, copy the hallway function, rename it (for example <code>attic</code>), change the descriptions, and make one of its options call an existing room like <code>hallway()</code> so the player can return.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- Easier version: add a torch option to the hallway menu:
+print("  3. Touch the torches")
+
+-- And a new elseif branch in the hallway if:
+elseif choice == "3" then
+  print("The flames are cold! Strange...")
+  print("Press Enter to continue.")
+  io.read()
+  hallway()</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+        <div class="run-reminder"><strong>Run it.</strong> Walk through every path &mdash; bedroom &rarr; hallway &rarr; bedroom, plus your new option/location.</div>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>Play through your game. You should be able to:</p>
+        <ul>
+            <li>Start in the bedroom with its yellow title and red goal line</li>
+            <li>Pick option 1, 2, or 4 and see a message, then press Enter to get the menu back</li>
+            <li>Pick option 3 to walk into the hallway (new cyan title)</li>
+            <li>Pick option 1 in the hallway to walk back to the bedroom</li>
+            <li>Type garbage and have the menu re-show (not crash)</li>
+            <li>Your challenge option or new location works too</li>
+        </ul>
+    </div>
+
+    <div class="stuck">
+        <button class="btn-stuck">Stuck? Show the full <code>escape.lua</code> for Lesson 5</button>
+        <div class="stuck-code" hidden>
+            <pre class="code-block"><code class="lua">-- ============================================================
+-- Escape Room
+-- ============================================================
+
+local shell = require("shell")
+
+function bedroom()
+  shell.clear()
+
+  shell.foreground(shell.YELLOW)
+  print("=== THE LOCKED ROOM ===")
+  shell.reset()
+
+  print()
+  print("You wake up in a dim, dusty room.")
+  print("Your head is pounding. The door is shut.")
+  print()
+  print[[
+There is a bed, a small wooden drawer,
+and a heavy wooden door with no handle.
+]]
+  shell.foreground(shell.RED)
+  print("You need to find a way out!")
+  shell.reset()
+
+  print()
+  print("What do you do?")
+  print("  1. Look under the bed")
+  print("  2. Open the drawer")
+  print("  3. Push the door into the hallway")
+  print("  4. Shout for help")
+  print()
+
+  local choice = io.read()
+
+  if choice == "1" then
+    print("You spot something shiny under the bed!")
+    print("Press Enter to continue.")
+    io.read()
+    bedroom()
+  elseif choice == "2" then
+    print("The drawer is empty except for a spider.")
+    print("Press Enter to continue.")
+    io.read()
+    bedroom()
+  elseif choice == "3" then
+    hallway()
+  elseif choice == "4" then
+    print("You shout, but no one answers. Your throat hurts now.")
+    print("Press Enter to continue.")
+    io.read()
+    bedroom()
+  else
+    print("Invalid choice! Press Enter to continue.")
+    io.read()
+    bedroom()
+  end
+end
+
+function hallway()
+  shell.clear()
+
+  shell.foreground(shell.CYAN)
+  print("=== DUSTY HALLWAY ===")
+  shell.reset()
+
+  print()
+  print("A long hallway with torches flickering on the walls.")
+  print("At the far end is a heavy iron gate.")
+  print()
+  print("What do you do?")
+  print("  1. Go back to the bedroom")
+  print("  2. Look at the iron gate")
+  print("  3. Touch the torches")
+  print()
+
+  local choice = io.read()
+
+  if choice == "1" then
+    bedroom()
+  elseif choice == "2" then
+    print("The gate is locked. You need a key.")
+    print("Press Enter to continue.")
+    io.read()
+    hallway()
+  elseif choice == "3" then
+    print("The flames are cold! Strange...")
+    print("Press Enter to continue.")
+    io.read()
+    hallway()
+  else
+    print("Invalid choice! Press Enter to continue.")
+    io.read()
+    hallway()
+  end
+end
+
+bedroom()</code></pre>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     LESSON 6: TRACKING ITEMS (BOOLEANS)
+     ============================================================ -->
+<div class="part" id="part-6">
+    <h1>Lesson 6: Tracking Items</h1>
+    <p class="subtitle">Use true/false variables to remember what the player has picked up &mdash; and finally escape!</p>
+
+    <div class="concepts">
+        <h2>New Concepts</h2>
+        <ul>
+            <li><code>local has_key = false</code> &mdash; a <strong>boolean</strong> variable. A boolean only has two values: <code>true</code> or <code>false</code>. We use them to remember things like "does the player have the key?"</li>
+            <li><code>has_key = true</code> &mdash; change the value later, for example when the player picks up the key.</li>
+            <li><code>if has_key then ... end</code> &mdash; checks a boolean directly. When <code>has_key</code> is <code>true</code>, the code inside runs.</li>
+            <li><code>if not has_key then ... end</code> &mdash; the word <code>not</code> flips a boolean. Runs the code inside only when <code>has_key</code> is <code>false</code>.</li>
+        </ul>
+        <p>The plan for this lesson: add a key to pick up in the bedroom, use it to unlock the gate in the hallway, and write a win scene.</p>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 1: Declare the <code>has_key</code> variable</div>
+        <div class="step-location">Where: just below <code>local shell = require("shell")</code>, above the <code>function bedroom()</code> line</div>
+        <pre class="code-block"><code class="lua">
+local has_key = false</code></pre>
+        <div class="step-desc">The game starts with the player having no key. Putting this variable <strong>outside</strong> any function means every function can see and change it.</div>
+        <div class="run-reminder"><strong>Run it.</strong> Nothing visible changes, but confirm the game still works.</div>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 2: Hide the "look under the bed" option once the key is taken</div>
+        <div class="step-location">Where: replace the plain <code>print("  1. Look under the bed")</code> line (inside <code>bedroom()</code>) with the <code>if</code> block below</div>
+        <pre class="code-block"><code class="lua">if not has_key then
+  print("  1. Look under the bed")
+end</code></pre>
+        <div class="step-desc">Now the option only shows up if the player doesn't already have the key. After they pick it up, the option disappears.</div>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 3: Make "look under the bed" actually give the key</div>
+        <div class="step-location">Where: replace the existing <code>if choice == "1" then ... bedroom()</code> branch inside <code>bedroom()</code> with this one</div>
+        <pre class="code-block"><code class="lua">if choice == "1" and not has_key then
+  has_key = true
+  shell.foreground(shell.GREEN)
+  print("You found a golden key under the bed!")
+  shell.reset()
+  print("Press Enter to continue.")
+  io.read()
+  bedroom()</code></pre>
+        <div class="step-desc">Three important things happen here:
+        <ul>
+            <li><code>choice == "1" and not has_key</code> &mdash; only accept option 1 <strong>if the player doesn't already have the key</strong>.</li>
+            <li><code>has_key = true</code> &mdash; remember that the player picked it up.</li>
+            <li>We color the message green so the player knows it's a win.</li>
+        </ul>
+        </div>
+        <div class="run-reminder"><strong>Run it.</strong> Pick option 1. You should get the golden key message. Go back to the menu &mdash; option 1 should now be <strong>gone</strong>. You can still use options 2, 3, 4.</div>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 4: Change the hallway gate option based on the key</div>
+        <div class="step-location">Where: inside <code>hallway()</code>, replace the plain <code>print("  2. Look at the iron gate")</code> line with the block below</div>
+        <pre class="code-block"><code class="lua">if has_key then
+  print("  2. Unlock the gate with the golden key")
+else
+  print("  2. Look at the iron gate")
+end</code></pre>
+        <div class="step-desc">Same menu slot, different label. If the player has the key, they see "Unlock". Otherwise, they see "Look".</div>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 5: Make option 2 actually unlock the gate</div>
+        <div class="step-location">Where: inside <code>hallway()</code>, replace the existing <code>elseif choice == "2" then ... hallway()</code> branch with the one below</div>
+        <pre class="code-block"><code class="lua">elseif choice == "2" then
+  if has_key then
+    escape_scene()
+  else
+    print("The gate is locked. You need a key.")
+    print("Press Enter to continue.")
+    io.read()
+    hallway()
+  end</code></pre>
+        <div class="step-desc">An <code>if</code> <strong>inside</strong> an <code>elseif</code>! If the player has the key, call a new function <code>escape_scene()</code> (we'll add it next). Otherwise, they're stuck at the gate.</div>
+    </div>
+
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 6: Add the escape scene</div>
+        <div class="step-location">Where: below the <code>end</code> that closes <code>hallway()</code>, above the <code>bedroom()</code> line at the very bottom</div>
+        <pre class="code-block"><code class="lua">function escape_scene()
+  shell.clear()
+  shell.foreground(shell.GREEN)
+  print("=================================")
+  print("         YOU ESCAPED!")
+  print("=================================")
+  shell.reset()
+  print()
+  print("The golden key turns with a satisfying click.")
+  print("The gate swings open and sunlight pours in.")
+  print()
+  print("You are free!")
+end</code></pre>
+        <div class="step-desc">This is the ending! It doesn't call any other room or itself &mdash; it just prints and finishes. That's how the player wins.</div>
+        <div class="run-reminder"><strong>Run it.</strong> Try the full path: look under the bed, push the door, unlock the gate. You should see the green "YOU ESCAPED!" banner. Also try pushing the door <strong>without</strong> the key first &mdash; the gate should be locked.</div>
+    </div>
+
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Step 7: Add another item</div>
+        <div class="step-task">Add a second boolean like <code>local has_note = false</code> and an option somewhere to "pick up a note". When the player has the note, reveal an extra clue somewhere in the game (for example, a new message in the hallway).</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Follow the same pattern as <code>has_key</code>: declare the variable at the top, set it to <code>true</code> in some branch, and use <code>if has_note then ... end</code> somewhere to change what the player sees.</div>
+            <div class="hint" hidden>Good places to hide a note: the drawer (option 2 in the bedroom) or the torches (option 3 in the hallway). Good places to use it: an extra clue line in the hallway description, or a new room.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- Top of file:
+local has_note = false
+
+-- In the bedroom drawer branch (elseif choice == "2"):
+elseif choice == "2" and not has_note then
+  has_note = true
+  shell.foreground(shell.GREEN)
+  print("You find a folded note inside the drawer!")
+  shell.reset()
+  print("The note reads: 'The key fits the iron gate.'")
+  print("Press Enter to continue.")
+  io.read()
+  bedroom()</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+        <div class="run-reminder"><strong>Run it.</strong> Try picking up the note first, then the key. Try them in the other order. Try escaping without finding the note.</div>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>Your finished escape room should let the player:</p>
+        <ul>
+            <li>Explore the bedroom and find a key under the bed</li>
+            <li>See the "look under the bed" option disappear after picking up the key</li>
+            <li>Walk to the hallway and see the gate option change from "Look at" to "Unlock"</li>
+            <li>Try the gate without the key &mdash; told they need one</li>
+            <li>Unlock the gate with the key &mdash; see the green "YOU ESCAPED!" scene</li>
+            <li>Invalid input always brings you back to the menu instead of crashing</li>
+            <li>Your challenge item works too</li>
+        </ul>
+        <p style="color:#7cd992;margin-top:12px;"><strong>Congratulations!</strong> You built a complete text escape room with printing, colors, input, branching, functions, and state tracking. Every concept from these six lessons is in your code.</p>
+    </div>
+
+    <div class="stuck">
+        <button class="btn-stuck">Stuck? Show the full <code>escape.lua</code> for Lesson 6</button>
+        <div class="stuck-code" hidden>
+            <pre class="code-block"><code class="lua">-- ============================================================
+-- Escape Room
+-- ============================================================
+
+local shell = require("shell")
+
+local has_key = false
+
+function bedroom()
+  shell.clear()
+
+  shell.foreground(shell.YELLOW)
+  print("=== THE LOCKED ROOM ===")
+  shell.reset()
+
+  print()
+  print("You wake up in a dim, dusty room.")
+  print("Your head is pounding. The door is shut.")
+  print()
+  print[[
+There is a bed, a small wooden drawer,
+and a heavy wooden door with no handle.
+]]
+  shell.foreground(shell.RED)
+  print("You need to find a way out!")
+  shell.reset()
+
+  print()
+  print("What do you do?")
+  if not has_key then
+    print("  1. Look under the bed")
+  end
+  print("  2. Open the drawer")
+  print("  3. Push the door into the hallway")
+  print("  4. Shout for help")
+  print()
+
+  local choice = io.read()
+
+  if choice == "1" and not has_key then
+    has_key = true
+    shell.foreground(shell.GREEN)
+    print("You found a golden key under the bed!")
+    shell.reset()
+    print("Press Enter to continue.")
+    io.read()
+    bedroom()
+  elseif choice == "2" then
+    print("The drawer is empty except for a spider.")
+    print("Press Enter to continue.")
+    io.read()
+    bedroom()
+  elseif choice == "3" then
+    hallway()
+  elseif choice == "4" then
+    print("You shout, but no one answers. Your throat hurts now.")
+    print("Press Enter to continue.")
+    io.read()
+    bedroom()
+  else
+    print("Invalid choice! Press Enter to continue.")
+    io.read()
+    bedroom()
+  end
+end
+
+function hallway()
+  shell.clear()
+
+  shell.foreground(shell.CYAN)
+  print("=== DUSTY HALLWAY ===")
+  shell.reset()
+
+  print()
+  print("A long hallway with torches flickering on the walls.")
+  print("At the far end is a heavy iron gate.")
+  print()
+  print("What do you do?")
+  print("  1. Go back to the bedroom")
+  if has_key then
+    print("  2. Unlock the gate with the golden key")
+  else
+    print("  2. Look at the iron gate")
+  end
+  print("  3. Touch the torches")
+  print()
+
+  local choice = io.read()
+
+  if choice == "1" then
+    bedroom()
+  elseif choice == "2" then
+    if has_key then
+      escape_scene()
+    else
+      print("The gate is locked. You need a key.")
+      print("Press Enter to continue.")
+      io.read()
+      hallway()
+    end
+  elseif choice == "3" then
+    print("The flames are cold! Strange...")
+    print("Press Enter to continue.")
+    io.read()
+    hallway()
+  else
+    print("Invalid choice! Press Enter to continue.")
+    io.read()
+    hallway()
+  end
+end
+
+function escape_scene()
+  shell.clear()
+  shell.foreground(shell.GREEN)
+  print("=================================")
+  print("         YOU ESCAPED!")
+  print("=================================")
+  shell.reset()
+  print()
+  print("The golden key turns with a satisfying click.")
+  print("The gate swings open and sunlight pours in.")
+  print()
+  print("You are free!")
+end
+
+bedroom()</code></pre>
+        </div>
+    </div>
+</div>
+
+</main>
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+(function() {
+    'use strict';
+
+    // ============================================================
+    // TAB SWITCHING
+    // ============================================================
+
+    var tabs = document.querySelectorAll('.tab-bar button');
+    var parts = document.querySelectorAll('.part');
+
+    tabs.forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            var partId = 'part-' + tab.getAttribute('data-part');
+
+            tabs.forEach(function(t) { t.classList.remove('active'); });
+            parts.forEach(function(p) { p.classList.remove('active'); });
+
+            tab.classList.add('active');
+            document.getElementById(partId).classList.add('active');
+
+            window.scrollTo(0, 0);
+        });
+    });
+
+    // ============================================================
+    // HINT REVEAL
+    // ============================================================
+
+    document.querySelectorAll('.btn-hint').forEach(function(btn) {
+        var step = btn.closest('.step');
+        var hints = step.querySelectorAll('.hints-container .hint');
+        var total = parseInt(btn.getAttribute('data-total'), 10);
+        var revealed = 0;
+
+        btn.addEventListener('click', function() {
+            if (revealed < total) {
+                hints[revealed].removeAttribute('hidden');
+                revealed++;
+
+                if (revealed < total) {
+                    btn.textContent = 'Show Hint (' + (revealed + 1) + '/' + total + ')';
+                } else {
+                    btn.setAttribute('hidden', '');
+                    var solBtn = step.querySelector('.btn-solution');
+                    if (solBtn) solBtn.removeAttribute('hidden');
+                }
+            }
+        });
+    });
+
+    // ============================================================
+    // SOLUTION REVEAL
+    // ============================================================
+
+    document.querySelectorAll('.btn-solution').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var step = btn.closest('.step');
+            var sol = step.querySelector('.solution');
+            if (sol) {
+                var isHidden = sol.hasAttribute('hidden');
+                if (isHidden) {
+                    sol.removeAttribute('hidden');
+                    btn.textContent = 'Hide Solution';
+                    sol.querySelectorAll('code.lua').forEach(highlightElement);
+                } else {
+                    sol.setAttribute('hidden', '');
+                    btn.textContent = 'Show Solution';
+                }
+            }
+        });
+    });
+
+    // ============================================================
+    // STUCK CODE TOGGLE
+    // ============================================================
+
+    document.querySelectorAll('.btn-stuck').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var stuck = btn.closest('.stuck');
+            var codeDiv = stuck.querySelector('.stuck-code');
+            if (codeDiv) {
+                var isHidden = codeDiv.hasAttribute('hidden');
+                if (isHidden) {
+                    codeDiv.removeAttribute('hidden');
+                    codeDiv.querySelectorAll('code.lua').forEach(highlightElement);
+                } else {
+                    codeDiv.setAttribute('hidden', '');
+                }
+            }
+        });
+    });
+
+    // ============================================================
+    // LUA SYNTAX HIGHLIGHTING
+    // ============================================================
+
+    var LUA_KEYWORDS = ['local','function','end','if','then','else','elseif',
+        'for','do','while','return','break','and','or','not','in',
+        'true','false','nil','repeat','until'];
+    var kwSet = {};
+    LUA_KEYWORDS.forEach(function(k) { kwSet[k] = true; });
+
+    function escapeHTML(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function highlightLua(code) {
+        var result = '';
+        var i = 0;
+        var len = code.length;
+
+        while (i < len) {
+            if (code[i] === '-' && i + 1 < len && code[i + 1] === '-') {
+                var end = code.indexOf('\n', i);
+                if (end === -1) end = len;
+                result += '<span class="cm">' + escapeHTML(code.substring(i, end)) + '</span>';
+                i = end;
+            }
+            else if (code[i] === '"') {
+                var j = i + 1;
+                while (j < len && code[j] !== '"' && code[j] !== '\n') {
+                    if (code[j] === '\\') j++;
+                    j++;
+                }
+                if (j < len && code[j] === '"') j++;
+                result += '<span class="str">' + escapeHTML(code.substring(i, j)) + '</span>';
+                i = j;
+            }
+            else if (code[i] === "'") {
+                var j = i + 1;
+                while (j < len && code[j] !== "'" && code[j] !== '\n') {
+                    if (code[j] === '\\') j++;
+                    j++;
+                }
+                if (j < len && code[j] === "'") j++;
+                result += '<span class="str">' + escapeHTML(code.substring(i, j)) + '</span>';
+                i = j;
+            }
+            else if (/[0-9]/.test(code[i]) && (i === 0 || !/[a-zA-Z_]/.test(code[i - 1]))) {
+                var j = i;
+                while (j < len && /[0-9.]/.test(code[j])) j++;
+                result += '<span class="num">' + code.substring(i, j) + '</span>';
+                i = j;
+            }
+            else if (/[a-zA-Z_]/.test(code[i])) {
+                var j = i;
+                while (j < len && /[a-zA-Z0-9_]/.test(code[j])) j++;
+                var word = code.substring(i, j);
+                if (kwSet[word]) {
+                    result += '<span class="kw">' + word + '</span>';
+                } else {
+                    var k = j;
+                    while (k < len && code[k] === ' ') k++;
+                    if (k < len && code[k] === '(') {
+                        result += '<span class="fn">' + word + '</span>';
+                    } else {
+                        result += word;
+                    }
+                }
+                i = j;
+            }
+            else if (code[i] === '.' && i + 1 < len && /[a-zA-Z_]/.test(code[i + 1])) {
+                result += '.';
+                i++;
+            }
+            else {
+                result += escapeHTML(code[i]);
+                i++;
+            }
+        }
+        return result;
+    }
+
+    function highlightElement(el) {
+        var raw = el.textContent;
+        el.innerHTML = highlightLua(raw);
+    }
+
+    document.querySelectorAll('code.lua').forEach(function(el) {
+        var parent = el.closest('[hidden]');
+        if (!parent) {
+            highlightElement(el);
+        }
+    });
+
+})();
+</script>
+
+</body>
+</html>

@@ -5,6 +5,9 @@
     "space_game_project/guide.html",
     "space_game_project/images/blue_ship.png",
     "space_game_project/images/laser.png",
-    "space_game_project/images/meteor.png"
+    "space_game_project/images/meteor.png",
+    "escape_room_project/escape.lua",
+    "escape_room_project/escape-demo.lua",
+    "escape_room_project/guide.html"
   ]
 }

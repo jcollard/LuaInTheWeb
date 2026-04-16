@@ -1,0 +1,8 @@
+-- ============================================================
+-- Escape Room
+-- Your mission: build a text escape room, one step at a time!
+-- Open guide.html to get started.
+--
+-- Follow the lessons one tab at a time. Every lesson builds on
+-- the one before it. Run your code after EVERY change you make!
+-- ============================================================
