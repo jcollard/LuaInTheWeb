@@ -352,12 +352,12 @@ pre.code-block code {
 <header>
     <div class="header-title">ESCAPE ROOM TUTORIAL</div>
     <nav class="tab-bar">
-        <button class="active" data-part="1">Lesson 1: Hello</button>
-        <button data-part="2">Lesson 2: Colors</button>
-        <button data-part="3">Lesson 3: Input</button>
-        <button data-part="4">Lesson 4: Choices</button>
-        <button data-part="5">Lesson 5: Rooms</button>
-        <button data-part="6">Lesson 6: Items</button>
+        <button class="active" data-part="1">Lesson 1: Hello, Escape Room!</button>
+        <button data-part="2">Lesson 2: Adding Colors</button>
+        <button data-part="3">Lesson 3: Asking the Player</button>
+        <button data-part="4">Lesson 4: Multiple Options</button>
+        <button data-part="5">Lesson 5: Making Rooms</button>
+        <button data-part="6">Lesson 6: Tracking Items</button>
     </nav>
 </header>
 
@@ -498,9 +498,7 @@ print("A cracked lantern sits on the floor.")</code></pre>
     <div class="step step-copy">
         <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 2: Clear the screen</div>
         <div class="step-location">Where: right below the <code>require</code> line</div>
-        <pre class="code-block"><code class="lua">
-shell.clear()
-</code></pre>
+        <pre class="code-block"><code class="lua">shell.clear()</code></pre>
         <div class="step-desc">Now every run starts on a fresh, clean screen.</div>
         <div class="run-reminder"><strong>Run it.</strong> The screen should wipe before showing the scene.</div>
     </div>
@@ -608,8 +606,7 @@ shell.reset()</code></pre>
     <div class="step step-copy">
         <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 1: Add a prompt</div>
         <div class="step-location">Where: at the bottom of your file, below everything you wrote in Lesson 2</div>
-        <pre class="code-block"><code class="lua">
-print()
+        <pre class="code-block"><code class="lua">print()
 print("Type 'look' and press Enter to look around.")</code></pre>
         <div class="step-desc">This tells the player what to do. The first <code>print()</code> is just for spacing.</div>
         <div class="run-reminder"><strong>Run it.</strong> You should see the prompt at the bottom of your scene.</div>
@@ -618,8 +615,7 @@ print("Type 'look' and press Enter to look around.")</code></pre>
     <div class="step step-copy">
         <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 2: Read what the player types</div>
         <div class="step-location">Where: right below the prompt you just added</div>
-        <pre class="code-block"><code class="lua">
-local choice = io.read()</code></pre>
+        <pre class="code-block"><code class="lua">local choice = io.read()</code></pre>
         <div class="step-desc">This line does two things at once:
         <ol>
             <li><code>io.read()</code> waits for the player to type a word and press Enter.</li>
@@ -632,8 +628,7 @@ local choice = io.read()</code></pre>
     <div class="step step-copy">
         <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 3: React when the player types <code>look</code></div>
         <div class="step-location">Where: right below the <code>local choice = io.read()</code> line</div>
-        <pre class="code-block"><code class="lua">
-if choice == "look" then
+        <pre class="code-block"><code class="lua">if choice == "look" then
   print("You spot something shiny under the bed!")
 end</code></pre>
         <div class="step-desc">This is an <strong>if statement</strong>. Read it out loud: "If choice equals look, then print this." The <code>end</code> marks where the "if" block stops.</div>
@@ -889,8 +884,7 @@ end</code></pre>
     <div class="step step-copy">
         <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 2: Start the game at the bottom</div>
         <div class="step-location">Where: on a brand-new line at the very end of your file, <strong>after</strong> the <code>end</code> of the bedroom function</div>
-        <pre class="code-block"><code class="lua">
-bedroom()</code></pre>
+        <pre class="code-block"><code class="lua">bedroom()</code></pre>
         <div class="step-desc">This one line starts the game. It <strong>calls</strong> the bedroom function, which runs everything inside.</div>
         <div class="run-reminder"><strong>Run it.</strong> The game should work exactly as before. Good &mdash; we haven't changed the behaviour yet, just rearranged it.</div>
     </div>
@@ -1144,8 +1138,7 @@ bedroom()</code></pre>
     <div class="step step-copy">
         <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Step 1: Declare the <code>has_key</code> variable</div>
         <div class="step-location">Where: just below <code>local shell = require("shell")</code>, above the <code>function bedroom()</code> line</div>
-        <pre class="code-block"><code class="lua">
-local has_key = false</code></pre>
+        <pre class="code-block"><code class="lua">local has_key = false</code></pre>
         <div class="step-desc">The game starts with the player having no key. Putting this variable <strong>outside</strong> any function means every function can see and change it.</div>
         <div class="run-reminder"><strong>Run it.</strong> Nothing visible changes, but confirm the game still works.</div>
     </div>
