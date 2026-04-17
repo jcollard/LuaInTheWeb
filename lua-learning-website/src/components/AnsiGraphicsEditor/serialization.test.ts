@@ -67,6 +67,22 @@ describe('deserializeGrid', () => {
     expect(() => deserializeGrid('not valid lua')).toThrow()
   })
 
+  it('should round-trip a cell containing a backslash character', () => {
+    const grid = createTestGrid()
+    grid[1][2] = { char: '\\', fg: [255, 255, 255], bg: [0, 0, 0] }
+    const lua = serializeGrid(grid)
+    const result = deserializeGrid(lua)
+    expect(result[1][2].char).toBe('\\')
+  })
+
+  it('should round-trip a cell containing a double-quote character', () => {
+    const grid = createTestGrid()
+    grid[0][0] = { char: '"', fg: [255, 255, 255], bg: [0, 0, 0] }
+    const lua = serializeGrid(grid)
+    const result = deserializeGrid(lua)
+    expect(result[0][0].char).toBe('"')
+  })
+
   it('should throw on missing version field', () => {
     expect(() => deserializeGrid('return {["width"] = 80, ["height"] = 25, ["grid"] = {}}')).toThrow()
   })
@@ -159,6 +175,16 @@ describe('deserializeLayers', () => {
 
   it('throws on unsupported version', () => {
     expect(() => deserializeLayers('return {["version"] = 99}')).toThrow()
+  })
+
+  it('round-trips a drawn layer containing a backslash character', () => {
+    const layer = createLayer('L', 'l1')
+    layer.grid[2][3] = { char: '\\', fg: [255, 255, 255], bg: [0, 0, 0] }
+    const state: LayerState = { layers: [layer], activeLayerId: 'l1' }
+    const lua = serializeLayers(state)
+    const result = deserializeLayers(lua)
+    const grid = (result.layers[0] as DrawableLayer).grid
+    expect(grid[2][3].char).toBe('\\')
   })
 
   it('preserves palette round-trip accuracy', () => {
