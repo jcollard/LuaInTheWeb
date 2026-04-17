@@ -1,28 +1,26 @@
 import { describe, it, expect } from 'vitest'
 import { serializeGrid, deserializeGrid, serializeLayers, deserializeLayers } from './serialization'
-import { ANSI_COLS, ANSI_ROWS, DEFAULT_FG, DEFAULT_BG } from './types'
-import type { AnsiGrid, DrawableLayer, LayerState } from './types'
+import { luaStringify, luaParse } from './luaCodec'
+import type { DrawableLayer, LayerState } from './types'
+import { createEmptyGrid } from './gridUtils'
 import { createLayer } from './layerUtils'
 
-function emptyGrid(): AnsiGrid {
-  return Array.from({ length: ANSI_ROWS }, () =>
-    Array.from({ length: ANSI_COLS }, () => ({
-      char: ' ',
-      fg: [...DEFAULT_FG] as [number, number, number],
-      bg: [...DEFAULT_BG] as [number, number, number],
-    }))
-  )
-}
+describe('luaCodec round-trip', () => {
+  it('preserves a string containing backslashes', () => {
+    const data = { s: 'a\\b\\\\c' }
+    expect(luaParse(luaStringify(data))).toEqual(data)
+  })
+})
 
-describe('lua string escape round-trips', () => {
+describe('serialization escape round-trips', () => {
   it('v1 grid round-trips a cell containing a backslash', () => {
-    const grid = emptyGrid()
+    const grid = createEmptyGrid()
     grid[1][2] = { char: '\\', fg: [255, 255, 255], bg: [0, 0, 0] }
     expect(deserializeGrid(serializeGrid(grid))[1][2].char).toBe('\\')
   })
 
   it('v1 grid round-trips a cell containing a double-quote', () => {
-    const grid = emptyGrid()
+    const grid = createEmptyGrid()
     grid[0][0] = { char: '"', fg: [255, 255, 255], bg: [0, 0, 0] }
     expect(deserializeGrid(serializeGrid(grid))[0][0].char).toBe('"')
   })
