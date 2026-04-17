@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 
 export interface UseFrameDragDropReturn {
   draggedIndex: number | null
@@ -15,6 +15,11 @@ export function useFrameDragDrop(
 ): UseFrameDragDropReturn {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dropZoneIndex, setDropZoneIndex] = useState<number | null>(null)
+  const rafRef = useRef<number | null>(null)
+
+  useEffect(() => () => {
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+  }, [])
 
   const clearDragState = useCallback(() => {
     setDraggedIndex(null)
@@ -24,9 +29,11 @@ export function useFrameDragDrop(
   const handleDragStart = useCallback((e: React.DragEvent, from: number) => {
     e.dataTransfer.setData('text/plain', String(from))
     e.dataTransfer.effectAllowed = 'move'
-    // Defer so the browser captures the drag image before React re-renders
-    // and restyles the dragged cell (mirrors useLayerDragDrop).
-    requestAnimationFrame(() => setDraggedIndex(from))
+    // RAF defer so the browser captures the drag image before React restyles the source cell.
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null
+      setDraggedIndex(from)
+    })
   }, [])
 
   const handleDragEnd = useCallback(clearDragState, [clearDragState])
@@ -39,17 +46,14 @@ export function useFrameDragDrop(
 
   const handleDropOnZone = useCallback((e: React.DragEvent, zone: number) => {
     e.preventDefault()
-    const raw = e.dataTransfer.getData('text/plain')
-    const from = parseInt(raw, 10)
-    if (!Number.isFinite(from) || from < 0 || from >= frameCount) {
+    const from = parseInt(e.dataTransfer.getData('text/plain'), 10)
+    if (!Number.isInteger(from) || from < 0 || from >= frameCount) {
       clearDragState()
       return
     }
-    // Zone index z ∈ [0, frameCount] represents the gap before frame z
-    // (so zone frameCount is the gap after the last frame). Zones flanking
-    // the dragged frame (z === from, z === from + 1) are no-ops.
-    // Otherwise map to the final `to` passed to reorderFrame, compensating
-    // for the splice-then-insert semantics.
+    // Zone z ∈ [0, frameCount] is the gap before frame z; zones flanking the source
+    // (z === from, z === from + 1) are no-ops. Otherwise compensate for the
+    // splice-then-insert semantics of reorderFrame(from, to).
     if (zone !== from && zone !== from + 1) {
       const to = zone > from ? zone - 1 : zone
       onReorder(from, to)

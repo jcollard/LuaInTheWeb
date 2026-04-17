@@ -126,7 +126,7 @@ describe('FramesPanel drag-and-drop frame reordering', () => {
   /** Fire dragStart and flush the deferred requestAnimationFrame. */
   function startDrag(cell: HTMLElement): void {
     fireEvent.dragStart(cell, { dataTransfer: { setData: vi.fn(), effectAllowed: '' } })
-    act(() => { vi.runAllTimers() })
+    act(() => { vi.advanceTimersToNextFrame() })
   }
 
   it('renders frameCount + 1 drop zones', () => {
