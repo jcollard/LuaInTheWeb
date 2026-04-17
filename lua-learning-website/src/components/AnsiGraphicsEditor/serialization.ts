@@ -1,52 +1,9 @@
-import { stringify, parse } from '@kilcekru/lua-table'
 import type { AnsiGrid, ClipLayer, Layer, LayerState, TextLayer, TextAlign, RGBColor, Rect, GroupLayer, ReferenceLayer } from './types'
 import { DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS, DEFAULT_FRAME_DURATION_MS, isGroupLayer, isClipLayer, isReferenceLayer } from './types'
 import { renderTextLayerGrid } from './textLayerGrid'
 import { buildPalette, encodeGrid, decodeGrid } from './v7Codec'
 import type { Run } from './v7Codec'
-
-// @kilcekru/lua-table@1.1.2 has a symmetric bug on both sides: stringify only
-// escapes `"` and `\n` (not `\`), and parse only decodes `\"`, `\'`, `\n`, `\t`
-// (not `\\`). A raw `\` in a string value therefore produces an unterminated
-// Lua literal on write, and a valid `"\\"` literal decodes to two chars on
-// read. Double on write, halve on read. Known limitation: if a string contains
-// `\` immediately followed by `n`/`t`/`"`/`'`, the library's parse-side
-// replaceAll will still corrupt it — but cell chars are single code points,
-// and v7 text runs that pack multiple cells only hit this for specific
-// adjacencies, which is acceptable for now.
-function escapeBackslashes(data: unknown): unknown {
-  if (typeof data === 'string') return data.replaceAll('\\', '\\\\')
-  if (Array.isArray(data)) return data.map(escapeBackslashes)
-  if (data !== null && typeof data === 'object') {
-    const out: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(data as Record<string, unknown>)) {
-      out[k] = escapeBackslashes(v)
-    }
-    return out
-  }
-  return data
-}
-
-function unescapeBackslashes(data: unknown): unknown {
-  if (typeof data === 'string') return data.replaceAll('\\\\', '\\')
-  if (Array.isArray(data)) return data.map(unescapeBackslashes)
-  if (data !== null && typeof data === 'object') {
-    const out: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(data as Record<string, unknown>)) {
-      out[k] = unescapeBackslashes(v)
-    }
-    return out
-  }
-  return data
-}
-
-function luaStringify(data: unknown): string {
-  return stringify(escapeBackslashes(data))
-}
-
-function luaParse(source: string): Record<string, unknown> {
-  return unescapeBackslashes(parse(source)) as Record<string, unknown>
-}
+import { luaStringify, luaParse } from './luaCodec'
 
 /** Extract `(cols, rows)` from a parsed file, falling back to 80×25 defaults. */
 function extractDims(data: Record<string, unknown>): { cols: number; rows: number } {
