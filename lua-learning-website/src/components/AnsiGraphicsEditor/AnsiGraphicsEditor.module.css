@@ -1211,9 +1211,10 @@
 
 .framesStrip {
   display: flex;
-  gap: 4px;
+  gap: 0;
   overflow-x: auto;
   padding: 2px 0;
+  align-items: stretch;
 }
 
 .frameCell {
@@ -1223,13 +1224,18 @@
   align-items: center;
   justify-content: center;
   padding: 0 6px;
+  margin: 0 2px;
   font-size: 11px;
-  cursor: pointer;
+  cursor: grab;
   background: var(--theme-bg-tertiary, #2d2d2d);
   border: 1px solid var(--theme-border, #444);
   border-radius: 3px;
   color: var(--theme-text-primary, #ccc);
   flex-shrink: 0;
+}
+
+.frameCell:active {
+  cursor: grabbing;
 }
 
 .frameCell:hover {
@@ -1240,6 +1246,23 @@
   background: var(--theme-accent-primary, #0078d4);
   border-color: var(--theme-accent-primary, #0078d4);
   color: #fff;
+}
+
+.frameCellDragging {
+  opacity: 0.4;
+}
+
+.frameDropZone {
+  width: 4px;
+  min-height: 24px;
+  flex-shrink: 0;
+  background-color: transparent;
+  border-radius: 2px;
+}
+
+.frameDropZoneActive {
+  width: 10px;
+  background-color: var(--theme-accent-primary, #0078d4);
 }
 
 /* File Options Modal */

@@ -123,6 +123,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
     addFrame,
     duplicateFrame,
     removeFrame,
+    reorderFrame,
     setCurrentFrame,
     setFrameDuration,
     isPlaying,
@@ -348,6 +349,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
               onAddFrame={addFrame}
               onDuplicateFrame={duplicateFrame}
               onRemoveFrame={removeFrame}
+              onReorderFrame={reorderFrame}
               onSetDuration={setFrameDuration}
               onTogglePlayback={togglePlayback}
             />

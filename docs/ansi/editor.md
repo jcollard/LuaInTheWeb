@@ -235,7 +235,10 @@ When a drawn layer is active, the Frames panel appears below the canvas:
 - Click **Dup** to duplicate the current frame
 - Click **- Del** to remove the current frame
 - Click a frame thumbnail to switch to it
+- **Drag a frame thumbnail** onto the gap before, between, or after other frames to reorder it. Drop zones highlight while dragging.
 - Set the frame duration per layer (16–10,000 ms)
+
+Reordering is captured by undo/redo. Drag-and-drop is disabled during playback.
 
 ### Playback
 
