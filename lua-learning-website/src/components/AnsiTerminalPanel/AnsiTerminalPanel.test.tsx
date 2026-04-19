@@ -36,7 +36,11 @@ vi.mock('@xterm/xterm', () => {
 })
 
 vi.mock('@xterm/addon-canvas', () => {
-  class MockCanvasAddon {}
+  class MockCanvasAddon {
+    textureAtlas: HTMLCanvasElement | undefined = undefined
+    onAddTextureAtlasCanvas = vi.fn()
+    onChangeTextureAtlas = vi.fn()
+  }
   return { CanvasAddon: MockCanvasAddon }
 })
 
