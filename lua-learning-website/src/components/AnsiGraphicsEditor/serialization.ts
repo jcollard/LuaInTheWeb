@@ -1,9 +1,9 @@
-import { stringify, parse } from '@kilcekru/lua-table'
 import type { AnsiGrid, ClipLayer, Layer, LayerState, TextLayer, TextAlign, RGBColor, Rect, GroupLayer, ReferenceLayer } from './types'
 import { DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS, DEFAULT_FRAME_DURATION_MS, isGroupLayer, isClipLayer, isReferenceLayer } from './types'
 import { renderTextLayerGrid } from './textLayerGrid'
 import { buildPalette, encodeGrid, decodeGrid } from './v7Codec'
 import type { Run } from './v7Codec'
+import { luaStringify, luaParse } from './luaCodec'
 
 /** Extract `(cols, rows)` from a parsed file, falling back to 80×25 defaults. */
 function extractDims(data: Record<string, unknown>): { cols: number; rows: number } {
@@ -16,12 +16,12 @@ export function serializeGrid(grid: AnsiGrid): string {
   const rows = grid.length
   const cols = grid[0]?.length ?? 0
   const data = { version: 1, width: cols, height: rows, grid }
-  return 'return ' + stringify(data)
+  return 'return ' + luaStringify(data)
 }
 
 export function deserializeGrid(lua: string): AnsiGrid {
   const stripped = lua.replace(/^return\s+/, '')
-  const data = parse(stripped) as Record<string, unknown>
+  const data = luaParse(stripped)
   if (data.version !== 1) {
     throw new Error(`Unsupported version: ${data.version}`)
   }
@@ -154,7 +154,7 @@ export function serializeLayers(state: LayerState, availableTags?: string[]): st
   if (availableTags && availableTags.length > 0) {
     data.availableTags = availableTags
   }
-  return 'return ' + stringify(data)
+  return 'return ' + luaStringify(data)
 }
 
 interface RawLayer {
@@ -295,7 +295,7 @@ function buildReferenceLayer(l: RawLayer, tags: string[] | undefined): Reference
 
 export function deserializeLayers(lua: string): LayerState {
   const stripped = lua.replace(/^return\s+/, '')
-  const data = parse(stripped) as Record<string, unknown>
+  const data = luaParse(stripped)
   const version = data.version as number
   const { cols, rows } = extractDims(data)
 
