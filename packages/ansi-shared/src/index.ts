@@ -9,6 +9,17 @@ export {
 } from './playbackEngine'
 
 export {
+  ANSI_FONTS,
+  DEFAULT_ANSI_FONT,
+  DEFAULT_USE_FONT_BLOCKS,
+  getFontFamily,
+  isAnsiFontId,
+  normalizeAnsiFont,
+  type AnsiFontId,
+  type AnsiFontDescriptor,
+} from './ansiFonts'
+
+export {
   createCompositeEngine,
   compositeCellCore,
   rgbEqual,

@@ -180,6 +180,14 @@ export interface LayerState {
   cols?: number
   /** Canvas height in rows. Defaults to 25 when absent. */
   rows?: number
+  /** Font ID (registry key in `@lua-learning/ansi-shared`). Defaults to `IBM_VGA`. */
+  font?: string
+  /**
+   * When true (default), xterm.js uses the font's glyphs for block-drawing
+   * characters. When false, xterm.js rasterizes its own rectangles
+   * (the legacy `customGlyphs: true` behavior).
+   */
+  useFontBlocks?: boolean
 }
 
 export interface UseAnsiEditorReturn {
@@ -260,6 +268,11 @@ export interface UseAnsiEditorReturn {
   setCrtPreview: (on: boolean) => void
   crtConfig: CrtConfig | null
   setCrtConfig: (config: CrtConfig | null) => void
+  // Display
+  font: string
+  setFont: (id: string) => void
+  useFontBlocks: boolean
+  setUseFontBlocks: (enabled: boolean) => void
   // Frame animation
   addFrame: () => void
   duplicateFrame: () => void

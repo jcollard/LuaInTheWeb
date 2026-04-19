@@ -70,12 +70,18 @@ export interface LoadError {
   detail: string
 }
 
+/** Display settings persisted alongside the layer data. */
+export interface DisplaySettings {
+  font: string
+  useFontBlocks: boolean
+}
+
 export interface UseAnsiEditorFileReturn {
   initialLayerState: LayerState | undefined
   loadError: LoadError | null
   pendingSave: { path: string; content: string } | null
-  handleSave: (layers: Layer[], activeLayerId: string, availableTags: string[], cols: number, rows: number, markClean: () => void, openSaveDialog: () => void) => Promise<void>
-  handleSaveAs: (folderPath: string, fileName: string, layers: Layer[], activeLayerId: string, availableTags: string[], cols: number, rows: number) => Promise<void>
+  handleSave: (layers: Layer[], activeLayerId: string, availableTags: string[], cols: number, rows: number, display: DisplaySettings, markClean: () => void, openSaveDialog: () => void) => Promise<void>
+  handleSaveAs: (folderPath: string, fileName: string, layers: Layer[], activeLayerId: string, availableTags: string[], cols: number, rows: number, display: DisplaySettings) => Promise<void>
   handleConfirmOverwrite: () => Promise<void>
   handleCancelOverwrite: () => void
   handleExportAns: (layers: Layer[]) => void
@@ -119,9 +125,9 @@ export function useAnsiEditorFile({
     }
   }, [fileSystem, refreshFileTree, closeSaveDialog, filePath, updateAnsiEditorTabPath])
 
-  const handleSaveAs = useCallback(async (folderPath: string, fileName: string, layers: Layer[], activeLayerId: string, availableTags: string[], cols: number, rows: number) => {
+  const handleSaveAs = useCallback(async (folderPath: string, fileName: string, layers: Layer[], activeLayerId: string, availableTags: string[], cols: number, rows: number, display: DisplaySettings) => {
     const fullPath = folderPath === '/' ? `/${fileName}` : `${folderPath}/${fileName}`
-    const content = serializeLayers({ layers, activeLayerId, cols, rows }, availableTags)
+    const content = serializeLayers({ layers, activeLayerId, cols, rows, font: display.font, useFontBlocks: display.useFontBlocks }, availableTags)
     if (fileSystem.exists(fullPath)) {
       setPendingSave({ path: fullPath, content })
       return
@@ -141,9 +147,9 @@ export function useAnsiEditorFile({
     setPendingSave(null)
   }, [])
 
-  const handleSave = useCallback(async (layers: Layer[], activeLayerId: string, availableTags: string[], cols: number, rows: number, markClean: () => void, openSaveDialog: () => void) => {
+  const handleSave = useCallback(async (layers: Layer[], activeLayerId: string, availableTags: string[], cols: number, rows: number, display: DisplaySettings, markClean: () => void, openSaveDialog: () => void) => {
     if (filePath && !filePath.startsWith('ansi-editor://')) {
-      const content = serializeLayers({ layers, activeLayerId, cols, rows }, availableTags)
+      const content = serializeLayers({ layers, activeLayerId, cols, rows, font: display.font, useFontBlocks: display.useFontBlocks }, availableTags)
       fileSystem.writeFile(filePath, content)
       await fileSystem.flush()
       markClean()

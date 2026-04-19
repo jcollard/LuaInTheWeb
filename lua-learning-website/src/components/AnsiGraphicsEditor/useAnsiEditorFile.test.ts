@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useAnsiEditorFile, type FileSystemLike } from './useAnsiEditorFile'
+import { useAnsiEditorFile, type DisplaySettings, type FileSystemLike } from './useAnsiEditorFile'
 import { deserializeLayers, serializeLayers } from './serialization'
 import type { AnsiCell, AnsiGrid, DrawnLayer, Layer, RGBColor } from './types'
 import { DEFAULT_FRAME_DURATION_MS } from './types'
+
+const DEFAULT_DISPLAY: DisplaySettings = { font: 'IBM_VGA', useFontBlocks: true }
 
 function cell(char: string): AnsiCell {
   return { char, fg: [170, 170, 170] as RGBColor, bg: [0, 0, 0] as RGBColor }
@@ -68,7 +70,7 @@ describe('useAnsiEditorFile — canvas dimension roundtrip', () => {
     const openSaveDialog = vi.fn()
 
     await act(async () => {
-      await result.current.handleSave(layers, 'bg', [], 120, 40, markClean, openSaveDialog)
+      await result.current.handleSave(layers, 'bg', [], 120, 40, DEFAULT_DISPLAY, markClean, openSaveDialog)
     })
 
     const content = fs.files.get('/art.ansi.lua')!
@@ -93,7 +95,7 @@ describe('useAnsiEditorFile — canvas dimension roundtrip', () => {
     const layers: Layer[] = [makeDrawnLayer('bg', 40, 10)]
 
     await act(async () => {
-      await result.current.handleSaveAs('/projects', 'small.ansi.lua', layers, 'bg', [], 40, 10)
+      await result.current.handleSaveAs('/projects', 'small.ansi.lua', layers, 'bg', [], 40, 10, DEFAULT_DISPLAY)
     })
 
     const content = fs.files.get('/projects/small.ansi.lua')!
@@ -112,7 +114,7 @@ describe('useAnsiEditorFile — canvas dimension roundtrip', () => {
 
     const layers: Layer[] = [makeDrawnLayer('bg', 160, 60)]
     await act(async () => {
-      await saveHook.current.handleSave(layers, 'bg', [], 160, 60, vi.fn(), vi.fn())
+      await saveHook.current.handleSave(layers, 'bg', [], 160, 60, DEFAULT_DISPLAY, vi.fn(), vi.fn())
     })
 
     // Simulate reopening the file through a fresh hook mount.

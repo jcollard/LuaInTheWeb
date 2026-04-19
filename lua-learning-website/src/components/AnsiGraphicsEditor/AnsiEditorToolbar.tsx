@@ -42,6 +42,12 @@ export interface AnsiEditorToolbarProps {
   rows?: number
   /** Resize handler forwarded to FileOptionsModal. */
   onResizeCanvas?: (cols: number, rows: number) => void
+  /** Current font ID. Passed to FileOptionsModal Display section. */
+  font?: string
+  onSetFont?: (id: string) => void
+  /** Whether xterm uses font glyphs for block-drawing chars. */
+  useFontBlocks?: boolean
+  onToggleUseFontBlocks?: () => void
   activeLayerIsGroup?: boolean
   isPlaying?: boolean
   fileMenuOpen?: boolean
@@ -51,7 +57,9 @@ export interface AnsiEditorToolbarProps {
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onImportPng, onImportLayers, onExportAns, onExportSh, onExportLayers, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
-  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, scaleMode, onSetScaleMode, cols, rows, onResizeCanvas, activeLayerIsGroup, isPlaying,
+  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, scaleMode, onSetScaleMode, cols, rows, onResizeCanvas,
+  font, onSetFont, useFontBlocks, onToggleUseFontBlocks,
+  activeLayerIsGroup, isPlaying,
   fileMenuOpen: controlledFileMenuOpen, onSetFileMenuOpen,
 }: AnsiEditorToolbarProps) {
   const toolsDisabled = activeLayerIsGroup || isPlaying
@@ -90,6 +98,10 @@ export function AnsiEditorToolbar({
           cols={cols ?? 80}
           rows={rows ?? 25}
           onResizeCanvas={onResizeCanvas ?? (() => {})}
+          font={font}
+          onSetFont={onSetFont}
+          useFontBlocks={useFontBlocks}
+          onToggleUseFontBlocks={onToggleUseFontBlocks}
         />
       )}
       <div className={styles.modeGroup}>

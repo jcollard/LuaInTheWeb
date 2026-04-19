@@ -11,6 +11,22 @@ import { DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS, DEFAULT_FRAME_DURATION_MS } from 
 import { renderTextLayerGrid } from './textLayerGrid'
 import { compositeGrid } from './screenCompositor'
 import { decodeV7Grid, parseV7Palette } from './v7Decode'
+import { DEFAULT_USE_FONT_BLOCKS, normalizeAnsiFont, type AnsiFontId } from '@lua-learning/ansi-shared'
+
+/** Optional display settings authored alongside the layer data. */
+export interface ScreenDisplaySettings {
+  font: AnsiFontId
+  /** When true, xterm.js renders block-drawing chars via the font glyphs. */
+  useFontBlocks: boolean
+}
+
+/** Read optional `font` / `useFontBlocks` from a parsed screen, applying defaults. */
+export function getDisplaySettings(data: Record<string, unknown>): ScreenDisplaySettings {
+  return {
+    font: normalizeAnsiFont(data.font),
+    useFontBlocks: typeof data.useFontBlocks === 'boolean' ? data.useFontBlocks : DEFAULT_USE_FONT_BLOCKS,
+  }
+}
 
 /** Dimensions of a parsed ANSI screen. */
 export interface ScreenDims {
@@ -325,12 +341,21 @@ export function parseScreenLayers(data: Record<string, unknown>): LayerData[] {
 }
 
 /**
- * Parse a data table (from wasmoon) into layers plus authored dimensions.
- * Callers that need the canvas size should use this instead of `parseScreenLayers`.
+ * Parse a data table (from wasmoon) into layers plus authored dimensions
+ * and optional display settings (font, useFontBlocks).
  */
-export function parseScreen(data: Record<string, unknown>): { layers: LayerData[]; cols: number; rows: number } {
+export function parseScreen(
+  data: Record<string, unknown>,
+): { layers: LayerData[]; cols: number; rows: number; font: AnsiFontId; useFontBlocks: boolean } {
   const dims = getScreenDims(data)
-  return { layers: parseScreenLayers(data), cols: dims.cols, rows: dims.rows }
+  const display = getDisplaySettings(data)
+  return {
+    layers: parseScreenLayers(data),
+    cols: dims.cols,
+    rows: dims.rows,
+    font: display.font,
+    useFontBlocks: display.useFontBlocks,
+  }
 }
 
 /**

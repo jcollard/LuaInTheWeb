@@ -199,12 +199,15 @@ export function generateAnsiHtml(
       // Wait for IBM VGA font to load before creating terminal
       await document.fonts.load('${fontSize}px "IBM VGA 8x16"');
 
-      // Create xterm.js terminal with IBM VGA font
+      // Create xterm.js terminal with IBM VGA font.
+      // customGlyphs: false renders block-drawing chars from the font (the new
+      // default); the runtime will flip this per-screen via setUseFontBlocks.
       const term = new Terminal({
         cols: ${columns},
         rows: ${rows},
         fontSize: ${fontSize},
         fontFamily: '"IBM VGA 8x16", monospace',
+        customGlyphs: false,
         lineHeight: 1,
         letterSpacing: 0,
         cursorBlink: false,
@@ -311,6 +314,20 @@ export function generateAnsiHtml(
             crtShader.disable();
             crtShader = null;
           }
+        },
+        setFontFamily: (family) => {
+          document.fonts.load(FONT_SIZE + 'px ' + family).finally(() => {
+            term.options.fontFamily = family;
+            requestAnimationFrame(() => {
+              baseW = wrapper.scrollWidth;
+              baseH = wrapper.scrollHeight;
+              currentScale = -1;
+              applyScale();
+            });
+          });
+        },
+        setUseFontBlocks: (enabled) => {
+          term.options.customGlyphs = !enabled;
         },
       };
       const callbacks = {

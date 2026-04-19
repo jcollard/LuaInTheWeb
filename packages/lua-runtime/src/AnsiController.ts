@@ -14,7 +14,7 @@
 import { InputCapture, GameLoopController } from '@lua-learning/canvas-runtime'
 import { InputAPI } from './InputAPI'
 import type { TimingInfo } from '@lua-learning/canvas-runtime'
-import { initSchedule, computePlaybackTick, type LayerSchedule } from '@lua-learning/ansi-shared'
+import { initSchedule, computePlaybackTick, type LayerSchedule, DEFAULT_ANSI_FONT, DEFAULT_USE_FONT_BLOCKS, getFontFamily, type AnsiFontId } from '@lua-learning/ansi-shared'
 import { parseScreen } from './screenParser'
 import { compositeGridInto } from './screenCompositor'
 import { renderGridToAnsiString, renderDiffAnsiString } from './ansiStringRenderer'
@@ -38,6 +38,13 @@ export interface AnsiTerminalHandle {
   setCrt?: (enabled: boolean, intensity?: number, config?: Record<string, number>) => void
   /** Resize the underlying xterm.js instance to the given cell dimensions. */
   resize?: (cols: number, rows: number) => void
+  /** Update the xterm.js `fontFamily` option. */
+  setFontFamily?: (fontFamily: string) => void
+  /**
+   * Toggle xterm.js block-glyph rendering. `useFontBlocks: true` maps to
+   * `customGlyphs: false` (font glyphs); false maps to xterm's rasterized rects.
+   */
+  setUseFontBlocks?: (useFontBlocks: boolean) => void
 }
 
 /**
@@ -82,6 +89,10 @@ interface ScreenState {
   /** Authored canvas dimensions for this screen. */
   cols: number
   rows: number
+  /** Authored font ID for this screen. */
+  font: AnsiFontId
+  /** When true, xterm uses font glyphs for block-drawing characters. */
+  useFontBlocks: boolean
   schedule: LayerSchedule | null
   playing: boolean
   /** True once screenPlay() or screenPause() has been explicitly called. */
@@ -120,6 +131,8 @@ export class AnsiController {
   private activeScreenId: number | null = null
   private currentCols: number = DEFAULT_ANSI_COLS
   private currentRows: number = DEFAULT_ANSI_ROWS
+  private currentFont: AnsiFontId = DEFAULT_ANSI_FONT
+  private currentUseFontBlocks: boolean = DEFAULT_USE_FONT_BLOCKS
   private compositeBufferA: AnsiGrid = createEmptyGrid(DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS)
   private compositeBufferB: AnsiGrid = createEmptyGrid(DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS)
   private useBufferA = true
@@ -139,6 +152,7 @@ export class AnsiController {
       state = {
         ansiString: '', layers: [],
         cols: DEFAULT_ANSI_COLS, rows: DEFAULT_ANSI_ROWS,
+        font: DEFAULT_ANSI_FONT, useFontBlocks: DEFAULT_USE_FONT_BLOCKS,
         schedule: null, playing: false, playbackTouched: false,
         lastGrid: null, dirty: false, needsRecomposite: false,
         swipe: null, viewportCol: 0, viewportRow: 0, pan: null,
@@ -289,6 +303,22 @@ export class AnsiController {
       }
       state.dirty = true
       state.needsRecomposite = true
+    }
+  }
+
+  /**
+   * Apply per-screen font and block-rendering settings to the xterm instance,
+   * skipping calls when the values are unchanged. Safe to call before the
+   * handle is attached — values are remembered and applied via setScreen.
+   */
+  private applyFontSettings(font: AnsiFontId, useFontBlocks: boolean): void {
+    if (font !== this.currentFont) {
+      this.currentFont = font
+      this.handle?.setFontFamily?.(getFontFamily(font))
+    }
+    if (useFontBlocks !== this.currentUseFontBlocks) {
+      this.currentUseFontBlocks = useFontBlocks
+      this.handle?.setUseFontBlocks?.(useFontBlocks)
     }
   }
 
@@ -446,12 +476,14 @@ export class AnsiController {
    * composites and renders to an ANSI escape string, and returns the ID.
    */
   createScreen(data: Record<string, unknown>): number {
-    const { layers, cols, rows } = parseScreen(data)
+    const { layers, cols, rows, font, useFontBlocks } = parseScreen(data)
     const id = this.nextScreenId++
     const state = this.getScreenState(id)
     state.layers = layers
     state.cols = cols
     state.rows = rows
+    state.font = font
+    state.useFontBlocks = useFontBlocks
     this.recompositeScreen(id)
     return id
   }
@@ -475,6 +507,8 @@ export class AnsiController {
     if (state.cols !== this.currentCols || state.rows !== this.currentRows) {
       this.resizeTerminal(state.cols, state.rows)
     }
+    // Apply per-screen font and block-rendering settings to the terminal.
+    this.applyFontSettings(state.font, state.useFontBlocks)
     // Mark as dirty so onFrame writes the full screen
     state.dirty = true
 

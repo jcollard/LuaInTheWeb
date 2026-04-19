@@ -20,6 +20,7 @@ import type { ScaleMode, GroupLayer } from './types'
 import { isGroupLayer } from './types'
 import { ProjectConfigParser } from '@lua-learning/export'
 import { CRT_DEFAULTS } from '@lua-learning/lua-runtime'
+import { getFontFamily } from '@lua-learning/ansi-shared'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface AnsiGraphicsEditorProps {
@@ -113,6 +114,10 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
     setCgaPreview,
     crtConfig,
     setCrtConfig,
+    font,
+    setFont,
+    useFontBlocks,
+    setUseFontBlocks,
     setBorderStyle,
     activeLayerIsGroup,
     isMoveDragging,
@@ -200,6 +205,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
   }, [filePath, fileSystem, setCrtConfig])
 
   const handleToggleCgaPreview = useCallback(() => setCgaPreview(!cgaPreview), [cgaPreview, setCgaPreview])
+  const handleToggleUseFontBlocks = useCallback(() => setUseFontBlocks(!useFontBlocks), [useFontBlocks, setUseFontBlocks])
 
   const activeLayer = layers.find(l => l.id === activeLayerId)
   const activeTextAlign = activeLayer?.type === 'text' ? activeLayer.textAlign : undefined
@@ -227,13 +233,14 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
 
   const existingGroups = useMemo(() => layers.filter(isGroupLayer) as GroupLayer[], [layers])
 
+  const display = useMemo(() => ({ font, useFontBlocks }), [font, useFontBlocks])
   const handleSaveAs = useCallback(
-    (f: string, n: string) => fileHandleSaveAs(f, n, layers, activeLayerId, availableTags, projectCols, projectRows),
-    [fileHandleSaveAs, layers, activeLayerId, availableTags, projectCols, projectRows],
+    (f: string, n: string) => fileHandleSaveAs(f, n, layers, activeLayerId, availableTags, projectCols, projectRows, display),
+    [fileHandleSaveAs, layers, activeLayerId, availableTags, projectCols, projectRows, display],
   )
   const handleSave = useCallback(
-    () => fileHandleSave(layers, activeLayerId, availableTags, projectCols, projectRows, markClean, openSaveDialog),
-    [fileHandleSave, layers, activeLayerId, availableTags, projectCols, projectRows, markClean, openSaveDialog],
+    () => fileHandleSave(layers, activeLayerId, availableTags, projectCols, projectRows, display, markClean, openSaveDialog),
+    [fileHandleSave, layers, activeLayerId, availableTags, projectCols, projectRows, display, markClean, openSaveDialog],
   )
 
   handleSaveRef.current = handleSave
@@ -314,6 +321,10 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         cols={projectCols}
         rows={projectRows}
         onResizeCanvas={resizeCanvas}
+        font={font}
+        onSetFont={setFont}
+        useFontBlocks={useFontBlocks}
+        onToggleUseFontBlocks={handleToggleUseFontBlocks}
         activeLayerIsGroup={activeLayerIsGroup}
         isPlaying={isPlaying}
         fileMenuOpen={fileMenuOpen}
@@ -336,6 +347,8 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
               scaleMode={scaleMode}
               cols={projectCols}
               rows={projectRows}
+              fontFamily={getFontFamily(font)}
+              useFontBlocks={useFontBlocks}
               onTerminalReady={onTerminalReady}
             />
           </div>
