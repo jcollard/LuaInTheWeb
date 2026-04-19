@@ -19,7 +19,7 @@ import { createTextToolHandlers, type TextToolHandlers } from './textTool'
 import { TOOL_KEY_MAP, TOOL_SHIFT_KEY_MAP, MODE_KEY_MAP, TOOL_SHORTCUTS, MODE_SHORTCUTS, ACTION_SHORTCUTS } from './keyboardShortcuts'
 import { flipDrawnLayerHorizontal, flipDrawnLayerVertical, flipTextLayerHorizontal, flipTextLayerVertical } from './flipUtils'
 import { buildAllShiftedFrames, captureNonDefaultCells } from './moveUtils'
-import { initSchedule, computePlaybackTick, type LayerSchedule } from '@lua-learning/ansi-shared'
+import { initSchedule, computePlaybackTick, type LayerSchedule, DEFAULT_USE_FONT_BLOCKS, normalizeAnsiFont } from '@lua-learning/ansi-shared'
 import { CRT_DEFAULTS, type CrtConfig } from '@lua-learning/lua-runtime'
 
 export { computePixelCell, computeLineCells } from './gridUtils'
@@ -127,6 +127,18 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const previewLatestCellRef = useRef<CellHalf | null>(null)
   const [cgaPreview, setCgaPreviewRaw] = useState(false)
   const [crtConfig, setCrtConfigRaw] = useState<CrtConfig | null>(null)
+  const [font, setFontState] = useState<string>(() => normalizeAnsiFont(initialState?.font))
+  const [useFontBlocks, setUseFontBlocksState] = useState<boolean>(
+    () => initialState?.useFontBlocks ?? DEFAULT_USE_FONT_BLOCKS,
+  )
+  const setFont = useCallback((id: string) => {
+    setFontState(normalizeAnsiFont(id))
+    setIsDirty(true)
+  }, [])
+  const setUseFontBlocks = useCallback((enabled: boolean) => {
+    setUseFontBlocksState(enabled)
+    setIsDirty(true)
+  }, [])
   const [isMoveDragging, setIsMoveDragging] = useState(false)
   const flipOriginRef = useRef<{ row: number; col: number }>({ row: 12, col: 40 })
   const [flipOrigin, setFlipOrigin] = useState<{ row: number; col: number }>({ row: 12, col: 40 })
@@ -977,6 +989,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     cgaPreview, setCgaPreview,
     crtPreview: crtConfig !== null, setCrtPreview,
     crtConfig, setCrtConfig,
+    font, setFont,
+    useFontBlocks, setUseFontBlocks,
     addFrame: addFrameWithUndo, duplicateFrame: duplicateFrameWithUndo,
     removeFrame: removeFrameWithUndo, setCurrentFrame: setCurrentFrameWithUndo,
     reorderFrame: reorderFrameWithUndo, setFrameDuration: setFrameDurationWithUndo,

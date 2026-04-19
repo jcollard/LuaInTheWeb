@@ -1,4 +1,12 @@
-All included fonts are CC0 or Public Domain, found on one of the following:
+Most included fonts are CC0 or Public Domain, found on one of the following:
 
 https://www.pentacom.jp/pentacom/bitfontmaker2/gallery/
 https://int10h.org/oldschool-pc-fonts/
+
+The following fonts are from "The Ultimate Oldschool PC Font Pack v2.2"
+by VileR (https://int10h.org/oldschool-pc-fonts/), licensed under
+Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0):
+https://creativecommons.org/licenses/by-sa/4.0/
+
+  16px-IBM_VGA_8x16.ttf       (MxPlus IBM VGA 8x16)
+  12px-Mx437_DOS-V_re_JPN12.ttf

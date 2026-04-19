@@ -1,6 +1,7 @@
 import { useState, type KeyboardEvent } from 'react'
 import type { ScaleMode } from './types'
 import { tooltipWithShortcut, ACTION_SHORTCUTS } from './keyboardShortcuts'
+import { ANSI_FONTS, DEFAULT_ANSI_FONT, DEFAULT_USE_FONT_BLOCKS, normalizeAnsiFont } from '@lua-learning/ansi-shared'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface FileOptionsModalProps {
@@ -23,6 +24,12 @@ export interface FileOptionsModalProps {
   rows: number
   /** Apply a new canvas size. Content is cropped or padded with defaults. */
   onResizeCanvas: (cols: number, rows: number) => void
+  /** Current font ID (registry key). Defaults to IBM_VGA when omitted. */
+  font?: string
+  onSetFont?: (id: string) => void
+  /** When true, xterm uses font glyphs for block-drawing characters. */
+  useFontBlocks?: boolean
+  onToggleUseFontBlocks?: () => void
 }
 
 interface ActionItem {
@@ -48,6 +55,10 @@ export function FileOptionsModal({
   cols,
   rows,
   onResizeCanvas,
+  font = DEFAULT_ANSI_FONT,
+  onSetFont,
+  useFontBlocks = DEFAULT_USE_FONT_BLOCKS,
+  onToggleUseFontBlocks,
 }: FileOptionsModalProps) {
   const [nextCols, setNextCols] = useState<string>(String(cols))
   const [nextRows, setNextRows] = useState<string>(String(rows))
@@ -139,6 +150,30 @@ export function FileOptionsModal({
               <option value="fit">Fit</option>
               <option value="fill">Fill</option>
             </select>
+          </label>
+          <label className={styles.fileOptionsAction}>
+            Font:
+            <select
+              value={normalizeAnsiFont(font)}
+              onChange={e => onSetFont?.(e.target.value)}
+              disabled={!onSetFont}
+              data-testid="file-font"
+              className={styles.fileOptionsSelect}
+            >
+              {Object.entries(ANSI_FONTS).map(([id, descriptor]) => (
+                <option key={id} value={id}>{descriptor.displayName}</option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.fileOptionsAction}>
+            <input
+              type="checkbox"
+              checked={useFontBlocks}
+              onChange={onToggleUseFontBlocks}
+              disabled={!onToggleUseFontBlocks}
+              data-testid="file-use-font-blocks"
+            />
+            Use font blocks
           </label>
           <button
             type="button"

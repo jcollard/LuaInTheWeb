@@ -4,6 +4,14 @@ import { renderTextLayerGrid } from './textLayerGrid'
 import { buildPalette, encodeGrid, decodeGrid } from './v7Codec'
 import type { Run } from './v7Codec'
 import { luaStringify, luaParse } from './luaCodec'
+import { DEFAULT_ANSI_FONT, DEFAULT_USE_FONT_BLOCKS, normalizeAnsiFont } from '@lua-learning/ansi-shared'
+
+/** Extract optional `font` and `useFontBlocks` settings, falling back to defaults. */
+function extractDisplaySettings(data: Record<string, unknown>): { font: string; useFontBlocks: boolean } {
+  const font = normalizeAnsiFont(data.font)
+  const useFontBlocks = typeof data.useFontBlocks === 'boolean' ? data.useFontBlocks : DEFAULT_USE_FONT_BLOCKS
+  return { font, useFontBlocks }
+}
 
 /** Extract `(cols, rows)` from a parsed file, falling back to 80×25 defaults. */
 function extractDims(data: Record<string, unknown>): { cols: number; rows: number } {
@@ -154,6 +162,13 @@ export function serializeLayers(state: LayerState, availableTags?: string[]): st
   if (availableTags && availableTags.length > 0) {
     data.availableTags = availableTags
   }
+  const font = normalizeAnsiFont(state.font)
+  if (font !== DEFAULT_ANSI_FONT) {
+    data.font = font
+  }
+  if (state.useFontBlocks !== undefined && state.useFontBlocks !== DEFAULT_USE_FONT_BLOCKS) {
+    data.useFontBlocks = state.useFontBlocks
+  }
   return 'return ' + luaStringify(data)
 }
 
@@ -298,6 +313,7 @@ export function deserializeLayers(lua: string): LayerState {
   const data = luaParse(stripped)
   const version = data.version as number
   const { cols, rows } = extractDims(data)
+  const { font, useFontBlocks } = extractDisplaySettings(data)
 
   if (version === 1) {
     if (!Array.isArray(data.grid)) {
@@ -322,6 +338,8 @@ export function deserializeLayers(lua: string): LayerState {
       activeLayerId: id,
       cols: vCols,
       rows: vRows,
+      font,
+      useFontBlocks,
     }
   }
 
@@ -337,6 +355,8 @@ export function deserializeLayers(lua: string): LayerState {
       activeLayerId: data.activeLayerId as string,
       cols,
       rows,
+      font,
+      useFontBlocks,
     }
   }
 
@@ -360,6 +380,8 @@ export function deserializeLayers(lua: string): LayerState {
       activeLayerId: data.activeLayerId as string,
       cols,
       rows,
+      font,
+      useFontBlocks,
     }
     if (rawAvailableTags && rawAvailableTags.length > 0) {
       result.availableTags = rawAvailableTags
@@ -404,6 +426,8 @@ export function deserializeLayers(lua: string): LayerState {
       activeLayerId: data.activeLayerId as string,
       cols,
       rows,
+      font,
+      useFontBlocks,
     }
     if (rawAvailableTags && rawAvailableTags.length > 0) {
       result.availableTags = rawAvailableTags

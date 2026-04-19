@@ -65,6 +65,27 @@ describe('HtmlGenerator - generateAnsi', () => {
     expect(html).toContain('format("truetype")')
   })
 
+  it('should construct the terminal with customGlyphs disabled (use font glyphs by default)', () => {
+    const generator = new HtmlGenerator(createOptions())
+    const config = createConfig()
+    const luaFiles: CollectedFile[] = []
+
+    const html = generator.generateAnsi(config, luaFiles, [])
+
+    expect(html).toContain('customGlyphs: false')
+  })
+
+  it('exposes setFontFamily and setUseFontBlocks on the terminal handle', () => {
+    const generator = new HtmlGenerator(createOptions())
+    const config = createConfig()
+    const luaFiles: CollectedFile[] = []
+
+    const html = generator.generateAnsi(config, luaFiles, [])
+
+    expect(html).toContain('setFontFamily:')
+    expect(html).toContain('setUseFontBlocks:')
+  })
+
   it('should include xterm.js + CanvasAddon combined bundle', () => {
     const generator = new HtmlGenerator(createOptions())
     const config = createConfig()
