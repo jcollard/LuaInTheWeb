@@ -224,10 +224,33 @@ export function generateAnsiHtml(
       term.open(wrapper);
 
       // Load CanvasAddon for crisp half-block rendering
+      let canvasAddon = null;
       try {
-        term.loadAddon(new CanvasAddon());
+        canvasAddon = new CanvasAddon();
+        term.loadAddon(canvasAddon);
       } catch (e) {
         console.warn('[ANSI Export] CanvasAddon failed:', e);
+      }
+
+      // Patch the off-screen texture atlas to snap glyph rasterization
+      // to integer pixels and disable smoothing — fixes the 1-px black
+      // seam visible between stacked half-block characters.
+      const patchAtlas = (atlas) => {
+        const ctx = atlas.getContext('2d');
+        if (!ctx || ctx.__patchedAtlas) return;
+        ctx.imageSmoothingEnabled = false;
+        try { ctx.textRendering = 'geometricPrecision'; } catch (e) {}
+        const orig = ctx.fillText.bind(ctx);
+        ctx.fillText = function(text, x, y, maxWidth) {
+          const xs = Math.round(x), ys = Math.round(y);
+          return maxWidth === undefined ? orig(text, xs, ys) : orig(text, xs, ys, maxWidth);
+        };
+        ctx.__patchedAtlas = true;
+      };
+      if (canvasAddon) {
+        canvasAddon.onAddTextureAtlasCanvas(patchAtlas);
+        canvasAddon.onChangeTextureAtlas(patchAtlas);
+        if (canvasAddon.textureAtlas) patchAtlas(canvasAddon.textureAtlas);
       }
 
       // Snap fillRect to integer pixels to prevent antialiasing seams between cells

@@ -121,7 +121,33 @@ export function AnsiTerminalPanel({
       wrapper.replaceChildren()
       terminal.open(wrapper)
       // Canvas renderer avoids anti-aliasing artifacts at half-block (▀) boundaries.
-      terminal.loadAddon(new CanvasAddon())
+      const canvasAddon = new CanvasAddon()
+      terminal.loadAddon(canvasAddon)
+
+      // With customGlyphs=false, xterm rasterizes each glyph into an off-screen
+      // texture atlas via fillText, then drawImages to each cell. Default
+      // fillText sub-pixel positioning leaves a 1-px AA edge inside the atlas
+      // bitmap that shows up as a black seam between stacked half-blocks (▀).
+      // Snap glyph rasterization to integer pixels and disable smoothing on
+      // the atlas itself.
+      const patchAtlasCanvas = (atlas: HTMLCanvasElement) => {
+        const ctx = atlas.getContext('2d')
+        type Patched = CanvasRenderingContext2D & { __patchedAtlas?: boolean; textRendering?: string }
+        const pctx = ctx as Patched | null
+        if (!pctx || pctx.__patchedAtlas) return
+        pctx.imageSmoothingEnabled = false
+        try { pctx.textRendering = 'geometricPrecision' } catch { /* unsupported */ }
+        const orig = pctx.fillText.bind(pctx)
+        pctx.fillText = (text: string, x: number, y: number, maxWidth?: number) => {
+          const xs = Math.round(x), ys = Math.round(y)
+          if (maxWidth === undefined) orig(text, xs, ys)
+          else orig(text, xs, ys, maxWidth)
+        }
+        pctx.__patchedAtlas = true
+      }
+      canvasAddon.onAddTextureAtlasCanvas(patchAtlasCanvas)
+      canvasAddon.onChangeTextureAtlas(patchAtlasCanvas)
+      if (canvasAddon.textureAtlas) patchAtlasCanvas(canvasAddon.textureAtlas)
 
       // Snap fillRect to integer device pixels on xterm's canvases to prevent
       // antialiasing seams between cells (custom glyph renderer divides cells
