@@ -15,7 +15,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const FONT_FILE = join(__dirname, '..', '..', '..', 'lua-learning-website', 'public', 'fonts', '16px-IBM_VGA_8x16.ttf');
+const FONT_FILE = join(__dirname, '..', '..', '..', 'lua-learning-website', 'public', 'fonts', 'WebPlus_IBM_VGA_8x16.woff');
 const OUTPUT_DIR = join(__dirname, '..', 'src');
 const OUTPUT_TS = join(OUTPUT_DIR, 'ibm-vga-font-inline.generated.ts');
 
@@ -30,7 +30,7 @@ function bundleFont() {
   console.log(`  Read font: ${fontData.length} bytes`);
 
   const base64 = fontData.toString('base64');
-  const dataUrl = `data:font/ttf;base64,${base64}`;
+  const dataUrl = `data:font/woff;base64,${base64}`;
   console.log(`  Data URL: ${dataUrl.length} chars`);
 
   const tsContent = `/**

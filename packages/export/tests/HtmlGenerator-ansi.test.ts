@@ -62,7 +62,7 @@ describe('HtmlGenerator - generateAnsi', () => {
 
     expect(html).toContain('@font-face')
     expect(html).toContain('IBM VGA 8x16')
-    expect(html).toContain('format("truetype")')
+    expect(html).toContain('format("woff")')
   })
 
   it('should construct the terminal with customGlyphs disabled (use font glyphs by default)', () => {

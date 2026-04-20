@@ -8,5 +8,5 @@ by VileR (https://int10h.org/oldschool-pc-fonts/), licensed under
 Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0):
 https://creativecommons.org/licenses/by-sa/4.0/
 
-  16px-IBM_VGA_8x16.ttf       (MxPlus IBM VGA 8x16)
+  WebPlus_IBM_VGA_8x16.woff   (WebPlus IBM VGA 8x16, WOFF webfont variant)
   12px-Mx437_DOS-V_re_JPN12.ttf

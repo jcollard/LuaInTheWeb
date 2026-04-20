@@ -74,7 +74,7 @@ export function generateAnsiHtml(
   <style>
     @font-face {
       font-family: "IBM VGA 8x16";
-      src: url("${IBM_VGA_FONT_DATA_URL}") format("truetype");
+      src: url("${IBM_VGA_FONT_DATA_URL}") format("woff");
       font-weight: normal;
       font-style: normal;
     }
