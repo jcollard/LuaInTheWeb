@@ -86,25 +86,27 @@ describe('HtmlGenerator - generateAnsi', () => {
     expect(html).toContain('setUseFontBlocks:')
   })
 
-  it('should include xterm.js + CanvasAddon combined bundle', () => {
+  it('should include xterm.js + render addons combined bundle', () => {
     const generator = new HtmlGenerator(createOptions())
     const config = createConfig()
     const luaFiles: CollectedFile[] = []
 
     const html = generator.generateAnsi(config, luaFiles, [])
 
-    expect(html).toContain('xterm.js + CanvasAddon')
+    expect(html).toContain('xterm.js + render addons')
     expect(html).toContain('shared module context')
   })
 
-  it('should load CanvasAddon after terminal.open', () => {
+  it('should prefer WebglAddon with CanvasAddon as fallback', () => {
     const generator = new HtmlGenerator(createOptions())
     const config = createConfig()
     const luaFiles: CollectedFile[] = []
 
     const html = generator.generateAnsi(config, luaFiles, [])
 
+    expect(html).toContain('new WebglAddon()')
     expect(html).toContain('new CanvasAddon()')
+    expect(html).toContain('onContextLoss')
   })
 
   it('should include ANSI bridge bundle', () => {

@@ -123,7 +123,7 @@ export function generateAnsiHtml(
   <div id="terminal-wrapper" tabindex="0"></div>
 
   <script>
-    // xterm.js + CanvasAddon (bundled together for shared module context)
+    // xterm.js + render addons (bundled together for shared module context)
     ${XTERM_WITH_CANVAS_ADDON_JS}
   </script>
   <script>
@@ -223,34 +223,23 @@ export function generateAnsiHtml(
       });
       term.open(wrapper);
 
-      // Load CanvasAddon for crisp half-block rendering
-      let canvasAddon = null;
+      // Prefer WebGL renderer (pixel-perfect half-block rendering via GPU
+      // nearest-neighbor sampling, avoiding the canvas fillText font-AA seam).
+      // Fall back to CanvasAddon if WebGL fails or the context is lost.
       try {
-        canvasAddon = new CanvasAddon();
-        term.loadAddon(canvasAddon);
+        const webgl = new WebglAddon();
+        webgl.onContextLoss(() => {
+          webgl.dispose();
+          term.loadAddon(new CanvasAddon());
+        });
+        term.loadAddon(webgl);
       } catch (e) {
-        console.warn('[ANSI Export] CanvasAddon failed:', e);
-      }
-
-      // Patch the off-screen texture atlas to snap glyph rasterization
-      // to integer pixels and disable smoothing — fixes the 1-px black
-      // seam visible between stacked half-block characters.
-      const patchAtlas = (atlas) => {
-        const ctx = atlas.getContext('2d');
-        if (!ctx || ctx.__patchedAtlas) return;
-        ctx.imageSmoothingEnabled = false;
-        try { ctx.textRendering = 'geometricPrecision'; } catch (e) {}
-        const orig = ctx.fillText.bind(ctx);
-        ctx.fillText = function(text, x, y, maxWidth) {
-          const xs = Math.round(x), ys = Math.round(y);
-          return maxWidth === undefined ? orig(text, xs, ys) : orig(text, xs, ys, maxWidth);
-        };
-        ctx.__patchedAtlas = true;
-      };
-      if (canvasAddon) {
-        canvasAddon.onAddTextureAtlasCanvas(patchAtlas);
-        canvasAddon.onChangeTextureAtlas(patchAtlas);
-        if (canvasAddon.textureAtlas) patchAtlas(canvasAddon.textureAtlas);
+        console.warn('[ANSI Export] WebGL addon failed, falling back to canvas:', e);
+        try {
+          term.loadAddon(new CanvasAddon());
+        } catch (e2) {
+          console.warn('[ANSI Export] CanvasAddon also failed:', e2);
+        }
       }
 
       // Snap fillRect to integer pixels to prevent antialiasing seams between cells

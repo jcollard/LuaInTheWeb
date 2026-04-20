@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import type { ScaleMode } from '../AnsiGraphicsEditor/types'
 import { Terminal } from '@xterm/xterm'
 import { CanvasAddon } from '@xterm/addon-canvas'
+import { WebglAddon } from '@xterm/addon-webgl'
 import { CrtShader, type CrtConfig } from '@lua-learning/lua-runtime'
 import { DEFAULT_USE_FONT_BLOCKS, getFontFamily } from '@lua-learning/ansi-shared'
 import '@xterm/xterm/css/xterm.css'
@@ -13,38 +14,24 @@ const FONT_SIZE = 16
 const DEFAULT_FONT_FAMILY = getFontFamily(undefined)
 
 /**
- * With customGlyphs=false, xterm rasterizes each glyph into an off-screen
- * texture-atlas canvas via fillText, then drawImages to each cell. Default
- * fillText sub-pixel positioning leaves a 1-px AA edge baked into the atlas
- * bitmap that shows up as a black seam between stacked half-blocks (▀).
- * Snap glyph rasterization to integer pixels and disable smoothing on the
- * atlas itself so the cached bitmap is crisp.
+ * Try to load the WebGL renderer (pixel-perfect glyph blits via GPU
+ * nearest-neighbor sampling, avoiding the font-AA seam that the
+ * canvas fillText path produces between stacked half-blocks). If
+ * WebGL fails to construct or the context is lost later, fall back
+ * to the CanvasAddon so the terminal keeps rendering.
  */
-function patchAtlasCanvas(atlas: HTMLCanvasElement): void {
-  const ctx = atlas.getContext('2d')
-  type Patched = CanvasRenderingContext2D & { __patchedAtlas?: boolean; textRendering?: string }
-  const pctx = ctx as Patched | null
-  if (!pctx || pctx.__patchedAtlas) return
-  pctx.imageSmoothingEnabled = false
-  try { pctx.textRendering = 'geometricPrecision' } catch { /* unsupported */ }
-  const orig = pctx.fillText.bind(pctx)
-  pctx.fillText = (text: string, x: number, y: number, maxWidth?: number) => {
-    const xs = Math.round(x), ys = Math.round(y)
-    if (maxWidth === undefined) orig(text, xs, ys)
-    else orig(text, xs, ys, maxWidth)
+function loadPreferredRenderer(terminal: Terminal): void {
+  try {
+    const webgl = new WebglAddon()
+    webgl.onContextLoss(() => {
+      webgl.dispose()
+      terminal.loadAddon(new CanvasAddon())
+    })
+    terminal.loadAddon(webgl)
+  } catch (e) {
+    console.warn('[AnsiTerminalPanel] WebGL addon failed, falling back to canvas:', e)
+    terminal.loadAddon(new CanvasAddon())
   }
-  pctx.__patchedAtlas = true
-}
-
-/** Hook a CanvasAddon's atlas events so each new atlas page gets patched. */
-function setupAtlasPatching(addon: CanvasAddon): void {
-  if (typeof addon.onAddTextureAtlasCanvas === 'function') {
-    addon.onAddTextureAtlasCanvas(patchAtlasCanvas)
-  }
-  if (typeof addon.onChangeTextureAtlas === 'function') {
-    addon.onChangeTextureAtlas(patchAtlasCanvas)
-  }
-  if (addon.textureAtlas) patchAtlasCanvas(addon.textureAtlas)
 }
 
 export interface AnsiTerminalHandle {
@@ -155,10 +142,8 @@ export function AnsiTerminalPanel({
       // Clear residual DOM from Strict Mode double-mount
       wrapper.replaceChildren()
       terminal.open(wrapper)
-      // Canvas renderer avoids anti-aliasing artifacts at half-block (▀) boundaries.
-      const canvasAddon = new CanvasAddon()
-      terminal.loadAddon(canvasAddon)
-      setupAtlasPatching(canvasAddon)
+      // WebGL renderer for pixel-perfect half-block rendering; canvas fallback.
+      loadPreferredRenderer(terminal)
 
       // Snap fillRect to integer device pixels on xterm's canvases to prevent
       // antialiasing seams between cells (custom glyph renderer divides cells
