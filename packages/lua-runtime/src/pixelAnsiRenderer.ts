@@ -23,6 +23,7 @@
  */
 
 import { Terminal, type IBufferCell, type IDisposable } from '@xterm/xterm'
+import { GLYPH_ATLAS } from './glyphAtlas.generated'
 
 /** Cell dimensions in canvas pixels. */
 export const CELL_W = 8
@@ -425,8 +426,13 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
     gctx.fillStyle = '#ffffff'
 
     for (const code of this.codepointSet) {
+      // Prefer the prebuilt atlas (extracted from the font's EBDT
+      // bitmap strike at build time, guaranteed pixel-exact). Fall
+      // back to fillText rasterization for codepoints the atlas
+      // doesn't cover (chars beyond the font's bitmap-strike range).
+      const atlasMask = GLYPH_ATLAS.get(code)
+      if (atlasMask) { this.glyphMasks.set(code, atlasMask); continue }
       const { mask, hasContent } = rasterizeGlyphPixels(gctx, code)
-      // Only cache masks that have content; blank cells just use bg fill.
       if (hasContent) this.glyphMasks.set(code, mask)
     }
 

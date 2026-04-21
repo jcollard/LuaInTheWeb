@@ -3,6 +3,7 @@ import {
   BLOCK_GLYPH_REFERENCE,
   CELL_H,
   CELL_W,
+  GLYPH_ATLAS,
   rasterizeGlyphForDebug,
   type GlyphDebugInfo,
 } from '@lua-learning/lua-runtime'
@@ -80,6 +81,7 @@ export function GlyphDebug() {
   }, [currentCodepoint])
 
   const referenceMask = BLOCK_GLYPH_REFERENCE.get(currentCodepoint)
+  const atlasMask = GLYPH_ATLAS.get(currentCodepoint)
   const char = String.fromCodePoint(currentCodepoint)
 
   return (
@@ -157,6 +159,23 @@ export function GlyphDebug() {
           {debug && (
             <div className={styles.stats}>
               on pixels {countOn(debug.mask)} / {CELL_W * CELL_H}
+            </div>
+          )}
+        </div>
+
+        <div className={styles.panel}>
+          <h2 className={styles.panelTitle}>Atlas (font EBDT)</h2>
+          <div className={styles.panelSubtitle}>
+            Pixel-exact bitmap extracted from the TTF's 16ppem EBDT strike
+            at build time. Used by the renderer when present.
+          </div>
+          {atlasMask
+            ? <PixelGrid data={atlasMask} alphaMode={false} />
+            : <div className={styles.missing}>not in atlas — renderer falls back to fillText</div>
+          }
+          {atlasMask && (
+            <div className={styles.stats}>
+              on pixels {countOn(atlasMask)} / {CELL_W * CELL_H}
             </div>
           )}
         </div>

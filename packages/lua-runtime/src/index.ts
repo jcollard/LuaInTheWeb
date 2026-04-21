@@ -104,6 +104,9 @@ export {
 // Reference patterns for block-drawing characters (U+2580-U+259F)
 export { BLOCK_GLYPH_REFERENCE, hasReferenceMask } from './blockGlyphReference'
 
+// Prebuilt bitmap atlas — extracted from the font's EBDT strike at build time
+export { GLYPH_ATLAS } from './glyphAtlas.generated'
+
 // ANSI terminal API setup and Lua code modules (for bundling in exports)
 export { setupAnsiAPI, type AnsiAPIOptions } from './setupAnsiAPI'
 export { ansiLuaCode } from './ansiLuaWrapper'
