@@ -9,6 +9,7 @@
 import { Terminal, type IBufferCell, type IDisposable } from '@xterm/xterm'
 import { DEFAULT_ANSI_FONT, getFontFamily } from '@lua-learning/ansi-shared'
 import { GLYPH_ATLAS } from './glyphAtlas.generated'
+import { BLOCK_GLYPH_REFERENCE } from './blockGlyphReference'
 
 /** Cell dimensions in canvas pixels. */
 export const CELL_W = 8
@@ -89,6 +90,15 @@ export interface PixelAnsiRendererOptions {
   theme?: Partial<PixelRendererTheme>
   /** Additional codepoints to pre-rasterize. */
   extraCodepoints?: number[]
+  /**
+   * When true (default), block-drawing codepoints (U+2580–U+259F) render
+   * from the font's bitmap strike via the atlas — whatever the font's
+   * designer chose. When false, those codepoints use hand-coded canonical
+   * patterns from `BLOCK_GLYPH_REFERENCE` instead. Toggling lets the user
+   * pick between the font's shade bitmaps (e.g. MxPlus's `1144` ░) and
+   * the reference Bayer-dither patterns.
+   */
+  useFontBlocks?: boolean
 }
 
 /** Result of a single-codepoint rasterization (for debug / inspection). */
@@ -188,6 +198,8 @@ export interface PixelAnsiRendererHandle {
   resize(cols: number, rows: number): void
   /** Swap the rasterization font and rebuild masks. */
   setFontFamily(fontFamily: string): Promise<void>
+  /** Toggle font-provided block glyphs vs hand-coded reference patterns. */
+  setUseFontBlocks(useFontBlocks: boolean): Promise<void>
   /** Current column / row count. */
   readonly cols: number
   readonly rows: number
@@ -207,23 +219,24 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
   private rafHandle: number | null = null
   private disposables: IDisposable[] = []
   private codepointSet: number[]
+  private useFontBlocks: boolean
   /**
-   * Device pixels per logical pixel. Round UP from devicePixelRatio so
-   * that fractional-DPR displays (1.25 / 1.5 / 1.75) still render on
-   * integer device-pixel boundaries — prevents uneven "stretching"
-   * where some logical pixels display 1 device pixel wide and others
-   * 2 due to nearest-neighbor CSS scaling.
+   * Canvas backing and CSS are both sized at the authored `cols × CELL_W`
+   * pixel grid — no devicePixelRatio handling. At integer DPRs (1, 2, 3)
+   * the browser scales to device with an integer factor via nearest-
+   * neighbor (image-rendering: pixelated), producing a uniform bitmap.
+   * At fractional DPRs the browser's downsample is uneven and you get
+   * the classic 1-2-1-2 pattern on a subset of pixels; acceptable as a
+   * trade-off for not having to track DPR state that would otherwise go
+   * stale on monitor switches.
    */
-  private readonly pixelScale: number
   private reusableImageData: ImageData
 
   constructor(opts: PixelAnsiRendererOptions) {
     this.fontFamily = opts.fontFamily ?? getFontFamily(DEFAULT_ANSI_FONT)
     this.theme = { ...DEFAULT_THEME, ...opts.theme }
     this.codepointSet = [...defaultCodepointSet(), ...(opts.extraCodepoints ?? [])]
-    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1
-    this.pixelScale = Math.max(1, Math.ceil(dpr))
-
+    this.useFontBlocks = opts.useFontBlocks ?? true
     this.terminal = new Terminal({
       cols: opts.cols,
       rows: opts.rows,
@@ -244,10 +257,7 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
     this.ctx.imageSmoothingEnabled = false
 
     this.shadow = new Uint32Array(opts.cols * opts.rows)
-    this.reusableImageData = this.ctx.createImageData(
-      CELL_W * this.pixelScale,
-      CELL_H * this.pixelScale,
-    )
+    this.reusableImageData = this.ctx.createImageData(CELL_W, CELL_H)
 
     this.disposables.push(
       this.terminal.onWriteParsed(() => this.scheduleRender()),
@@ -281,6 +291,15 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
     this.scheduleRender()
   }
 
+  async setUseFontBlocks(useFontBlocks: boolean): Promise<void> {
+    if (useFontBlocks === this.useFontBlocks) return
+    this.useFontBlocks = useFontBlocks
+    this.glyphMasks.clear()
+    await this.buildGlyphMasks()
+    this.dirty = true
+    this.scheduleRender()
+  }
+
   dispose(): void {
     if (this.rafHandle !== null) {
       cancelAnimationFrame(this.rafHandle)
@@ -295,8 +314,11 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
   // ---- internals ----
 
   private applyCanvasSize(cols: number, rows: number): void {
-    this.canvas.width = cols * CELL_W * this.pixelScale
-    this.canvas.height = rows * CELL_H * this.pixelScale
+    // Backing and CSS are both the authored source-pixel grid. Whatever
+    // the browser does when mapping CSS to device pixels (image-rendering:
+    // pixelated, nearest-neighbor) is what the user sees.
+    this.canvas.width = cols * CELL_W
+    this.canvas.height = rows * CELL_H
     this.canvas.style.width = `${cols * CELL_W}px`
     this.canvas.style.height = `${rows * CELL_H}px`
   }
@@ -352,25 +374,17 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
     const bgR = (bg >>> 16) & 0xff
     const bgG = (bg >>> 8) & 0xff
     const bgB = bg & 0xff
-    const ps = this.pixelScale
-    const stride = CELL_W * ps // pixels per ImageData row
-    // Each source pixel (sx, sy) writes a ps×ps block in the ImageData.
-    for (let sy = 0; sy < CELL_H; sy++) {
-      for (let sx = 0; sx < CELL_W; sx++) {
-        const on = mask ? mask[sy * CELL_W + sx] : 0
-        const r = on ? fgR : bgR
-        const g = on ? fgG : bgG
-        const b = on ? fgB : bgB
-        for (let dy = 0; dy < ps; dy++) {
-          let p = ((sy * ps + dy) * stride + sx * ps) << 2
-          for (let dx = 0; dx < ps; dx++) {
-            data[p] = r; data[p + 1] = g; data[p + 2] = b; data[p + 3] = 255
-            p += 4
-          }
-        }
-      }
+    // One backing pixel per source pixel.
+    let p = 0
+    for (let i = 0; i < CELL_W * CELL_H; i++) {
+      const on = mask ? mask[i] : 0
+      data[p] = on ? fgR : bgR
+      data[p + 1] = on ? fgG : bgG
+      data[p + 2] = on ? fgB : bgB
+      data[p + 3] = 255
+      p += 4
     }
-    this.ctx.putImageData(this.reusableImageData, x * CELL_W * ps, y * CELL_H * ps)
+    this.ctx.putImageData(this.reusableImageData, x * CELL_W, y * CELL_H)
   }
 
   private resolveFg(cell: IBufferCell): number {
@@ -396,6 +410,13 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
   private async buildGlyphMasks(): Promise<void> {
     const gctx = await createGlyphContext(this.fontFamily)
     for (const code of this.codepointSet) {
+      // When useFontBlocks is off, substitute block elements (U+2580–
+      // U+259F) with the hand-coded reference patterns. Other codepoints
+      // always come from the font atlas.
+      if (!this.useFontBlocks) {
+        const ref = BLOCK_GLYPH_REFERENCE.get(code)
+        if (ref) { this.glyphMasks.set(code, ref); continue }
+      }
       // Atlas entries are pre-extracted from the font's EBDT bitmap
       // strike at build time, so they're pixel-exact. Anything not in
       // the atlas (chars beyond the strike's coverage) falls back to

@@ -291,8 +291,12 @@ export function generateAnsiHtml(
         setFontFamily: (family) => {
           renderer.setFontFamily(family);
         },
-        // No-op: pixel renderer always produces crisp block chars from the font.
-        setUseFontBlocks: () => {},
+        // Forwards to PixelAnsiRenderer — when false, block elements
+        // (U+2580–U+259F) render from the hand-coded reference patterns
+        // instead of the font's bitmap strike.
+        setUseFontBlocks: (value) => {
+          renderer.setUseFontBlocks(value);
+        },
       };
       const callbacks = {
         onRequestAnsiTab: () => Promise.resolve(handle), onCloseAnsiTab: () => {},

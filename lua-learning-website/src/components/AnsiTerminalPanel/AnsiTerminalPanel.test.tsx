@@ -17,6 +17,7 @@ const mockRendererDispose = vi.fn()
 const mockRendererWrite = vi.fn()
 const mockRendererResize = vi.fn()
 const mockRendererSetFontFamily = vi.fn().mockResolvedValue(undefined)
+const mockRendererSetUseFontBlocks = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('@lua-learning/lua-runtime', () => ({
   CrtShader: vi.fn().mockImplementation(function MockCrtShader() {
@@ -43,6 +44,7 @@ vi.mock('@lua-learning/lua-runtime', () => ({
       write: mockRendererWrite,
       resize: mockRendererResize,
       setFontFamily: mockRendererSetFontFamily,
+      setUseFontBlocks: mockRendererSetUseFontBlocks,
       dispose: mockRendererDispose,
     }
   }),
@@ -69,6 +71,7 @@ beforeEach(() => {
   mockRendererWrite.mockClear()
   mockRendererResize.mockClear()
   mockRendererSetFontFamily.mockClear()
+  mockRendererSetUseFontBlocks.mockClear()
 
   // Provide FontFaceSet.load mock since jsdom lacks it
   Object.defineProperty(document, 'fonts', {
@@ -217,16 +220,19 @@ describe('AnsiTerminalPanel', () => {
     expect(mockRendererResize).toHaveBeenCalledWith(120, 40)
   })
 
-  it('handle.setUseFontBlocks is a no-op (pixel renderer always crisp)', async () => {
+  it('handle.setUseFontBlocks forwards to the renderer', async () => {
     let handle: AnsiTerminalHandle | null = null
     const onTerminalReady = vi.fn((h: AnsiTerminalHandle | null) => { handle = h })
 
     render(<AnsiTerminalPanel onTerminalReady={onTerminalReady} />)
     await act(async () => {})
+    mockRendererSetUseFontBlocks.mockClear()
 
-    // Must not throw; no observable state changes.
-    expect(() => handle!.setUseFontBlocks?.(true)).not.toThrow()
-    expect(() => handle!.setUseFontBlocks?.(false)).not.toThrow()
+    act(() => { handle!.setUseFontBlocks?.(false) })
+    expect(mockRendererSetUseFontBlocks).toHaveBeenCalledWith(false)
+
+    act(() => { handle!.setUseFontBlocks?.(true) })
+    expect(mockRendererSetUseFontBlocks).toHaveBeenCalledWith(true)
   })
 
   it('disposes the renderer on unmount', async () => {

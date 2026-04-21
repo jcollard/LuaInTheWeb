@@ -10,7 +10,10 @@ export const MAX_TOASTS = 3
 
 export interface UseToastReturn {
   toasts: Toast[]
-  showToast: (message: string) => void
+  /** Show a toast. Optional durationMs overrides TOAST_DURATION_MS for this toast. */
+  showToast: (message: string, durationMs?: number) => void
+  /** Remove a specific toast immediately (e.g. on click). */
+  dismissToast: (id: number) => void
 }
 
 export function useToast(): UseToastReturn {
@@ -28,15 +31,24 @@ export function useToast(): UseToastReturn {
     }
   }, [])
 
-  const showToast = useCallback((message: string) => {
+  const showToast = useCallback((message: string, durationMs?: number) => {
     const id = nextId.current++
     setToasts(prev => [...prev.slice(-(MAX_TOASTS - 1)), { id, message }])
     const timer = setTimeout(() => {
       timersRef.current.delete(id)
       setToasts(prev => prev.filter(t => t.id !== id))
-    }, TOAST_DURATION_MS)
+    }, durationMs ?? TOAST_DURATION_MS)
     timersRef.current.set(id, timer)
   }, [])
 
-  return { toasts, showToast }
+  const dismissToast = useCallback((id: number) => {
+    const timer = timersRef.current.get(id)
+    if (timer !== undefined) {
+      clearTimeout(timer)
+      timersRef.current.delete(id)
+    }
+    setToasts(prev => prev.filter(t => t.id !== id))
+  }, [])
+
+  return { toasts, showToast, dismissToast }
 }

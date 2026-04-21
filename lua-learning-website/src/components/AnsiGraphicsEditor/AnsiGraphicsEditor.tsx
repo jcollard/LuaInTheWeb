@@ -32,9 +32,9 @@ export interface AnsiGraphicsEditorProps {
 export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGraphicsEditorProps) {
   const { fileSystem, fileTree, refreshFileTree, updateAnsiEditorTabPath } = useIDE()
   const [fileMenuOpen, setFileMenuOpen] = useState(false)
-  const [scaleMode, setScaleMode] = useState<ScaleMode>('fit')
+  const [scaleMode, setScaleMode] = useState<ScaleMode>('integer-auto')
 
-  const { toasts, showToast } = useToast()
+  const { toasts, showToast, dismissToast } = useToast()
   const handleSaveRef = useRef<() => void>(() => {})
   const handleOpenFileMenuRef = useRef<() => void>(() => {})
   const handleOpenSaveDialogRef = useRef<() => void>(() => {})
@@ -367,7 +367,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
               onTogglePlayback={togglePlayback}
             />
           )}
-          <ToastContainer toasts={toasts} />
+          <ToastContainer toasts={toasts} onDismiss={dismissToast} />
         </div>
         <LayersPanel
           filePath={filePath}

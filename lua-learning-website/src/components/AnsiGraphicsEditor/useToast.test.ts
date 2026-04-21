@@ -94,6 +94,40 @@ describe('useToast', () => {
     act(() => { vi.advanceTimersByTime(TOAST_DURATION_MS) })
   })
 
+  it('should use a custom duration when durationMs is passed', () => {
+    const { result } = renderHook(() => useToast())
+    act(() => result.current.showToast('Long', 5000))
+    expect(result.current.toasts).toHaveLength(1)
+
+    // Not dismissed at the default TOAST_DURATION_MS.
+    act(() => { vi.advanceTimersByTime(TOAST_DURATION_MS) })
+    expect(result.current.toasts).toHaveLength(1)
+
+    // Dismissed once the custom duration elapses.
+    act(() => { vi.advanceTimersByTime(5000 - TOAST_DURATION_MS) })
+    expect(result.current.toasts).toHaveLength(0)
+  })
+
+  it('should remove a toast immediately when dismissToast is called', () => {
+    const { result } = renderHook(() => useToast())
+    act(() => result.current.showToast('Clickable', 5000))
+    const id = result.current.toasts[0].id
+
+    act(() => result.current.dismissToast(id))
+    expect(result.current.toasts).toHaveLength(0)
+  })
+
+  it('dismissToast clears the pending auto-dismiss timer', () => {
+    const { result } = renderHook(() => useToast())
+    act(() => result.current.showToast('Clickable'))
+    const id = result.current.toasts[0].id
+
+    act(() => result.current.dismissToast(id))
+    // Advancing past the original duration must not re-fire any state update.
+    act(() => { vi.advanceTimersByTime(TOAST_DURATION_MS * 2) })
+    expect(result.current.toasts).toHaveLength(0)
+  })
+
   it('should dismiss only the specific toast after its timeout', () => {
     const { result } = renderHook(() => useToast())
     act(() => result.current.showToast('First'))
