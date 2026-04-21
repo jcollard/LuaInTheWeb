@@ -1,38 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type { ScaleMode } from '../AnsiGraphicsEditor/types'
-import { Terminal } from '@xterm/xterm'
-import { CanvasAddon } from '@xterm/addon-canvas'
-import { WebglAddon } from '@xterm/addon-webgl'
-import { CrtShader, type CrtConfig } from '@lua-learning/lua-runtime'
+import { CrtShader, PixelAnsiRenderer, CELL_W, CELL_H, type CrtConfig } from '@lua-learning/lua-runtime'
 import { DEFAULT_USE_FONT_BLOCKS, getFontFamily } from '@lua-learning/ansi-shared'
-import '@xterm/xterm/css/xterm.css'
 import styles from './AnsiTerminalPanel.module.css'
 
 const DEFAULT_COLS = 80
 const DEFAULT_ROWS = 25
-const FONT_SIZE = 16
 const DEFAULT_FONT_FAMILY = getFontFamily(undefined)
-
-/**
- * Try to load the WebGL renderer (pixel-perfect glyph blits via GPU
- * nearest-neighbor sampling, avoiding the font-AA seam that the
- * canvas fillText path produces between stacked half-blocks). If
- * WebGL fails to construct or the context is lost later, fall back
- * to the CanvasAddon so the terminal keeps rendering.
- */
-function loadPreferredRenderer(terminal: Terminal): void {
-  try {
-    const webgl = new WebglAddon()
-    webgl.onContextLoss(() => {
-      webgl.dispose()
-      terminal.loadAddon(new CanvasAddon())
-    })
-    terminal.loadAddon(webgl)
-  } catch (e) {
-    console.warn('[AnsiTerminalPanel] WebGL addon failed, falling back to canvas:', e)
-    terminal.loadAddon(new CanvasAddon())
-  }
-}
 
 export interface AnsiTerminalHandle {
   /** Write data (including ANSI escape sequences) to the terminal */
@@ -43,11 +17,16 @@ export interface AnsiTerminalHandle {
   dispose: () => void
   /** Enable/disable CRT monitor effect with optional intensity or per-effect config */
   setCrt: (enabled: boolean, intensity?: number, config?: Partial<CrtConfig>) => void
-  /** Resize the underlying xterm.js instance to the given cell dimensions. */
+  /** Resize the underlying terminal to the given cell dimensions. */
   resize?: (cols: number, rows: number) => void
-  /** Update the xterm.js `fontFamily` option at runtime. */
+  /** Update the rasterization font family. Rebuilds glyph masks. */
   setFontFamily?: (fontFamily: string) => void
-  /** Toggle font-glyph block rendering: true => `customGlyphs: false`. */
+  /**
+   * Toggle whether block-drawing characters are rendered via the font's
+   * glyphs. In the pixel-perfect renderer this is always effectively true
+   * (binary-thresholded masks from the font), so this is a no-op kept for
+   * backward-compat with the file-format field.
+   */
   setUseFontBlocks?: (useFontBlocks: boolean) => void
 }
 
@@ -58,13 +37,9 @@ export interface AnsiTerminalPanelProps {
   cols?: number
   /** Initial terminal height in cells. Defaults to 25. */
   rows?: number
-  /** xterm.js font family. Defaults to IBM VGA 8x16 from the shared font registry. */
+  /** Font family. Defaults to IBM VGA 8x16 from the shared font registry. */
   fontFamily?: string
-  /**
-   * When true (default), xterm uses the font's glyphs for block-drawing
-   * characters (xterm `customGlyphs: false`). When false, xterm rasterizes
-   * its own rectangles (xterm `customGlyphs: true`, the legacy behavior).
-   */
+  /** File-format toggle; no effect on rendering (kept for backward compat). */
   useFontBlocks?: boolean
   /**
    * Callback when the terminal handle becomes available or is disposed.
@@ -79,14 +54,13 @@ export function AnsiTerminalPanel({
   cols = DEFAULT_COLS,
   rows = DEFAULT_ROWS,
   fontFamily = DEFAULT_FONT_FAMILY,
-  useFontBlocks = DEFAULT_USE_FONT_BLOCKS,
+  useFontBlocks: _useFontBlocks = DEFAULT_USE_FONT_BLOCKS,
   onTerminalReady,
 }: AnsiTerminalPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
-  const terminalRef = useRef<Terminal | null>(null)
+  const rendererRef = useRef<PixelAnsiRenderer | null>(null)
   const crtShaderRef = useRef<CrtShader | null>(null)
-  // Stable proxy handle that survives Strict Mode re-runs via terminalRef indirection
   const handleRef = useRef<AnsiTerminalHandle | null>(null)
   const onTerminalReadyRef = useRef(onTerminalReady)
   onTerminalReadyRef.current = onTerminalReady
@@ -94,16 +68,10 @@ export function AnsiTerminalPanel({
   scaleModeRef.current = scaleMode
   const currentScaleRef = useRef(-1)
   const updateScaleRef = useRef<(() => void) | null>(null)
-  // Track the initial dims passed at mount so the Terminal is constructed at
-  // the right size. Subsequent changes go through the `resize` handle method.
   const initialColsRef = useRef(cols)
   const initialRowsRef = useRef(rows)
   const initialFontFamilyRef = useRef(fontFamily)
-  const initialUseFontBlocksRef = useRef(useFontBlocks)
 
-  // Wait for the IBM VGA font before opening the terminal so xterm.js
-  // measures cell dimensions correctly and the ResizeObserver gets accurate metrics.
-  // The handle uses terminalRef indirection to survive Strict Mode re-runs.
   useEffect(() => {
     const container = containerRef.current
     const wrapper = wrapperRef.current
@@ -111,185 +79,118 @@ export function AnsiTerminalPanel({
 
     let disposed = false
     let resizeObserver: ResizeObserver | null = null
-    let canvasObserver: MutationObserver | null = null
 
-    const init = async () => {
-      const initialFontFamily = initialFontFamilyRef.current
-      await document.fonts.load(`${FONT_SIZE}px ${initialFontFamily}`)
-      if (disposed) return
+    const renderer = new PixelAnsiRenderer({
+      cols: initialColsRef.current,
+      rows: initialRowsRef.current,
+      fontFamily: initialFontFamilyRef.current,
+    })
+    if (disposed) { renderer.dispose(); return }
 
-      const terminal = new Terminal({
-        cols: initialColsRef.current,
-        rows: initialRowsRef.current,
-        fontSize: FONT_SIZE,
-        fontFamily: initialFontFamily,
-        // useFontBlocks=true => use font glyphs => xterm customGlyphs=false.
-        customGlyphs: !initialUseFontBlocksRef.current,
-        lineHeight: 1,
-        letterSpacing: 0,
-        cursorBlink: false,
-        disableStdin: true,
-        scrollback: 0,
-        overviewRulerWidth: 0,
-        allowTransparency: false,
-        theme: {
-          background: '#000000',
-          foreground: '#AAAAAA',
-          cursor: '#AAAAAA',
+    rendererRef.current = renderer
+
+    // Mount the renderer's canvas into the wrapper.
+    wrapper.replaceChildren(renderer.canvas)
+    renderer.canvas.style.transformOrigin = '0 0'
+    renderer.canvas.style.imageRendering = 'pixelated'
+    // Some browsers honor both; include the older hint too.
+    ;(renderer.canvas.style as unknown as Record<string, string>)['imageRendering'] = 'pixelated'
+
+    const updateScale = (): void => {
+      const r = rendererRef.current
+      if (!r) return
+      const baseW = r.cols * CELL_W
+      const baseH = r.rows * CELL_H
+      if (baseW === 0 || baseH === 0) return
+      const containerW = container.clientWidth
+      const containerH = container.clientHeight
+      const mode = scaleModeRef.current
+      let newScale: number
+      switch (mode) {
+        case 'integer-1x': newScale = 1; break
+        case 'integer-2x': newScale = 2; break
+        case 'integer-3x': newScale = 3; break
+        case 'fit': newScale = Math.min(containerW / baseW, containerH / baseH); break
+        case 'fill': newScale = Math.max(containerW / baseW, containerH / baseH); break
+        default: // 'integer-auto'
+          newScale = Math.max(1, Math.floor(Math.min(containerW / baseW, containerH / baseH)))
+      }
+      if (newScale <= 0) return
+      if (newScale === currentScaleRef.current) return
+      currentScaleRef.current = newScale
+      renderer.canvas.style.transform = `scale(${newScale})`
+      // Keep the wrapper sized so the scaled canvas' bounds are correct.
+      wrapper.style.width = `${baseW * newScale}px`
+      wrapper.style.height = `${baseH * newScale}px`
+    }
+    updateScaleRef.current = updateScale
+
+    resizeObserver = new ResizeObserver(updateScale)
+    resizeObserver.observe(container)
+    updateScale()
+
+    if (!handleRef.current) {
+      handleRef.current = {
+        write: (data: string) => rendererRef.current?.write(data),
+        container: wrapper,
+        dispose: () => {
+          // Lifecycle managed by this component's cleanup below.
         },
-      })
-
-      // Clear residual DOM from Strict Mode double-mount
-      wrapper.replaceChildren()
-      terminal.open(wrapper)
-      // WebGL renderer for pixel-perfect half-block rendering; canvas fallback.
-      loadPreferredRenderer(terminal)
-
-      // Snap fillRect to integer device pixels on xterm's canvases to prevent
-      // antialiasing seams between cells (custom glyph renderer divides cells
-      // into 8ths which produces fractional coordinates at most DPR values).
-      const patchFillRect = (canvas: Element) => {
-        const ctx = (canvas as HTMLCanvasElement).getContext('2d')
-        if (!ctx || (ctx as unknown as Record<string, unknown>).__patchedFR) return
-        const orig = ctx.fillRect.bind(ctx)
-        ctx.fillRect = (x: number, y: number, w: number, h: number) => {
-          const x1 = Math.round(x), y1 = Math.round(y)
-          orig(x1, y1, Math.round(x + w) - x1, Math.round(y + h) - y1)
-        }
-        ;(ctx as unknown as Record<string, unknown>).__patchedFR = true
-      }
-      wrapper.querySelectorAll('canvas').forEach(patchFillRect)
-      // Re-patch when xterm recreates canvases (e.g. on font size change)
-      canvasObserver = new MutationObserver(() =>
-        wrapper.querySelectorAll('canvas').forEach(patchFillRect))
-      canvasObserver.observe(wrapper, { childList: true, subtree: true })
-
-      // Prevent xterm.js from processing keyboard events (and calling preventDefault).
-      // This terminal is display-only; input capture is handled separately by InputCapture.
-      terminal.attachCustomKeyEventHandler(() => false)
-      terminalRef.current = terminal
-
-      // Scale by integer font-size multiples instead of CSS transform to keep
-      // the canvas at native resolution (no blur at 2x/3x).
-      let baseW = wrapper.scrollWidth
-      let baseH = wrapper.scrollHeight
-      const remeasureBase = () => {
-        baseW = wrapper.scrollWidth
-        baseH = wrapper.scrollHeight
-      }
-      const updateScale = () => {
-        if (baseW === 0 || baseH === 0) return
-        const containerW = container.clientWidth
-        const containerH = container.clientHeight
-        const mode = scaleModeRef.current
-        let newScale: number
-        switch (mode) {
-          case 'integer-1x': newScale = 1; break
-          case 'integer-2x': newScale = 2; break
-          case 'integer-3x': newScale = 3; break
-          case 'fit': newScale = Math.min(containerW / baseW, containerH / baseH); break
-          case 'fill': newScale = Math.max(containerW / baseW, containerH / baseH); break
-          default: // 'integer-auto'
-            newScale = Math.max(1, Math.floor(Math.min(containerW / baseW, containerH / baseH)))
-        }
-        if (newScale === currentScaleRef.current) return
-        currentScaleRef.current = newScale
-        terminal.options.fontSize = FONT_SIZE * newScale
-      }
-      updateScaleRef.current = updateScale
-
-      resizeObserver = new ResizeObserver(updateScale)
-      resizeObserver.observe(container)
-      updateScale()
-
-      // Create stable proxy handle on first mount; delegates through terminalRef
-      // so it survives Strict Mode disposal/recreation.
-      if (!handleRef.current) {
-        handleRef.current = {
-          write: (data: string) => terminalRef.current?.write(data),
-          container: wrapper,
-          dispose: () => {
-            // No-op - terminal lifecycle managed by this component's cleanup
-          },
-          resize: (c: number, r: number) => {
-            const t = terminalRef.current
-            if (!t) return
-            try { t.resize(c, r) } catch (e) { console.warn('[AnsiTerminalPanel] resize failed:', e) }
-            requestAnimationFrame(() => {
-              remeasureBase()
-              currentScaleRef.current = -1
-              updateScale()
-            })
-          },
-          setFontFamily: (family: string) => {
-            const t = terminalRef.current
-            if (!t) return
-            // Wait for the font to load so xterm re-measures cells against the
-            // new face on its next render — otherwise the canvas keeps the old
-            // metrics until the next reflow.
-            document.fonts.load(`${FONT_SIZE}px ${family}`).finally(() => {
-              if (terminalRef.current !== t) return
-              t.options.fontFamily = family
-              requestAnimationFrame(() => {
-                remeasureBase()
-                currentScaleRef.current = -1
-                updateScale()
+        resize: (c: number, r: number) => {
+          const rnd = rendererRef.current
+          if (!rnd) return
+          rnd.resize(c, r)
+          requestAnimationFrame(() => {
+            currentScaleRef.current = -1
+            updateScale()
+          })
+        },
+        setFontFamily: (family: string) => {
+          void rendererRef.current?.setFontFamily(family)
+        },
+        // Kept as a no-op: our pixel renderer always produces crisp block
+        // chars from the font via binary-thresholded masks.
+        setUseFontBlocks: () => {},
+        setCrt: (enabled: boolean, intensity?: number, config?: Partial<CrtConfig>) => {
+          const el = containerRef.current
+          if (!el) return
+          const canvas = rendererRef.current?.canvas ?? null
+          if (enabled) {
+            if (canvas) {
+              crtShaderRef.current ??= new CrtShader(canvas, el, {
+                fallbackCssClass: styles.crtEnabled,
               })
-            })
-          },
-          setUseFontBlocks: (enabled: boolean) => {
-            const t = terminalRef.current
-            if (!t) return
-            t.options.customGlyphs = !enabled
-          },
-          setCrt: (enabled: boolean, intensity?: number, config?: Partial<CrtConfig>) => {
-            const el = containerRef.current
-            const xtermCanvas = wrapperRef.current?.querySelector('canvas')
-            if (!el) return
-            if (enabled) {
-              if (xtermCanvas) {
-                crtShaderRef.current ??= new CrtShader(xtermCanvas, el, {
-                  fallbackCssClass: styles.crtEnabled,
-                })
-                if (config) {
-                  crtShaderRef.current.enable(config)
-                } else {
-                  crtShaderRef.current.enable(intensity ?? undefined)
-                }
+              if (config) {
+                crtShaderRef.current.enable(config)
               } else {
-                // No canvas yet — CSS-only fallback
-                el.classList.add(styles.crtEnabled)
-                el.style.setProperty('--crt-intensity', String(intensity ?? 0.7))
+                crtShaderRef.current.enable(intensity ?? undefined)
               }
             } else {
-              if (crtShaderRef.current) {
-                crtShaderRef.current.disable()
-              } else {
-                el.classList.remove(styles.crtEnabled)
-                el.style.removeProperty('--crt-intensity')
-              }
+              el.classList.add(styles.crtEnabled)
+              el.style.setProperty('--crt-intensity', String(intensity ?? 0.7))
             }
-          },
-        }
+          } else {
+            if (crtShaderRef.current) {
+              crtShaderRef.current.disable()
+            } else {
+              el.classList.remove(styles.crtEnabled)
+              el.style.removeProperty('--crt-intensity')
+            }
+          }
+        },
       }
-
-      onTerminalReadyRef.current?.(handleRef.current)
     }
 
-    init()
+    onTerminalReadyRef.current?.(handleRef.current)
 
     return () => {
       disposed = true
-      canvasObserver?.disconnect()
       resizeObserver?.disconnect()
       onTerminalReadyRef.current?.(null)
       crtShaderRef.current?.dispose()
       crtShaderRef.current = null
-      if (terminalRef.current) {
-        terminalRef.current.dispose()
-        terminalRef.current = null
-      }
-      // Don't null handleRef -- proxy survives re-runs via terminalRef indirection
+      rendererRef.current?.dispose()
+      rendererRef.current = null
     }
   }, [])
 
@@ -305,21 +206,10 @@ export function AnsiTerminalPanel({
     handleRef.current?.resize?.(cols, rows)
   }, [cols, rows])
 
-  // Re-apply font / block-glyph settings when the corresponding props change.
+  // Re-apply font family when it changes.
   useEffect(() => {
     handleRef.current?.setFontFamily?.(fontFamily)
   }, [fontFamily])
-
-  useEffect(() => {
-    handleRef.current?.setUseFontBlocks?.(useFontBlocks)
-  }, [useFontBlocks])
-
-  // Notify parent when callback identity changes
-  useEffect(() => {
-    if (handleRef.current && onTerminalReady) {
-      onTerminalReady(handleRef.current)
-    }
-  }, [onTerminalReady])
 
   // Auto-focus wrapper when tab becomes active
   useEffect(() => {

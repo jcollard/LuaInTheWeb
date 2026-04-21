@@ -18,25 +18,19 @@
   border-radius: 0;
   cursor: default;
   user-select: none;
+  overflow: hidden;
 }
 
-.terminalWrapper :global(.xterm) {
-  border-radius: 0;
-  cursor: default;
-  /* Let mouse events pass through xterm's DOM to the wrapper where
-     InputCapture listens. Prevents xterm's internal selection handling. */
-  pointer-events: none;
-}
-
-.terminalWrapper :global(.xterm canvas) {
+/* The PixelAnsiRenderer canvas lives inside .terminalWrapper. Pixelated
+   image-rendering makes CSS scaling crisp (integer scales are nearest-
+   neighbor upscaled by the browser). */
+.terminalWrapper > canvas {
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
-}
-
-.terminalWrapper :global(.xterm-viewport) {
-  border-radius: 0;
-  overflow: hidden !important;
+  display: block;
+  /* Mouse events pass through to the wrapper where InputCapture listens. */
+  pointer-events: none;
 }
 
 /* CRT monitor effect (CSS-only fallback when WebGL2 is unavailable) */

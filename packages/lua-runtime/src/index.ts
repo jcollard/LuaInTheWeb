@@ -89,6 +89,16 @@ export { AnsiController, type AnsiCallbacks, type AnsiTerminalHandle, type Layer
 // CRT post-processing shader for ANSI terminal
 export { CrtShader, CRT_DEFAULTS, type CrtConfig, type CrtShaderOptions } from './crtShader'
 
+// Pixel-perfect ANSI renderer (xterm parser + custom canvas; pixel-exact half-blocks)
+export {
+  PixelAnsiRenderer,
+  CELL_W,
+  CELL_H,
+  type PixelAnsiRendererOptions,
+  type PixelAnsiRendererHandle,
+  type PixelRendererTheme,
+} from './pixelAnsiRenderer'
+
 // ANSI terminal API setup and Lua code modules (for bundling in exports)
 export { setupAnsiAPI, type AnsiAPIOptions } from './setupAnsiAPI'
 export { ansiLuaCode } from './ansiLuaWrapper'

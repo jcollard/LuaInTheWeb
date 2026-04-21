@@ -65,14 +65,21 @@ describe('HtmlGenerator - generateAnsi', () => {
     expect(html).toContain('format("woff")')
   })
 
-  it('should construct the terminal with customGlyphs disabled (use font glyphs by default)', () => {
+  it('should construct a PixelAnsiRenderer instead of xterm Terminal', () => {
     const generator = new HtmlGenerator(createOptions())
     const config = createConfig()
     const luaFiles: CollectedFile[] = []
 
     const html = generator.generateAnsi(config, luaFiles, [])
 
-    expect(html).toContain('customGlyphs: false')
+    expect(html).toContain('new PixelAnsiRenderer(')
+    // Bundled xterm.js code inside ANSI_INLINE_JS may contain the substrings
+    // "new Terminal(" and "customGlyphs:" as part of its internal identifiers,
+    // so we can't negative-assert on those globally. We assert instead that the
+    // template does not itself instantiate those directly by checking for the
+    // hand-written patterns that used to appear at the top level.
+    expect(html).not.toContain('term.open(wrapper)')
+    expect(html).not.toContain('term.loadAddon(')
   })
 
   it('exposes setFontFamily and setUseFontBlocks on the terminal handle', () => {
@@ -84,29 +91,6 @@ describe('HtmlGenerator - generateAnsi', () => {
 
     expect(html).toContain('setFontFamily:')
     expect(html).toContain('setUseFontBlocks:')
-  })
-
-  it('should include xterm.js + render addons combined bundle', () => {
-    const generator = new HtmlGenerator(createOptions())
-    const config = createConfig()
-    const luaFiles: CollectedFile[] = []
-
-    const html = generator.generateAnsi(config, luaFiles, [])
-
-    expect(html).toContain('xterm.js + render addons')
-    expect(html).toContain('shared module context')
-  })
-
-  it('should prefer WebglAddon with CanvasAddon as fallback', () => {
-    const generator = new HtmlGenerator(createOptions())
-    const config = createConfig()
-    const luaFiles: CollectedFile[] = []
-
-    const html = generator.generateAnsi(config, luaFiles, [])
-
-    expect(html).toContain('new WebglAddon()')
-    expect(html).toContain('new CanvasAddon()')
-    expect(html).toContain('onContextLoss')
   })
 
   it('should include ANSI bridge bundle', () => {
@@ -156,7 +140,6 @@ describe('HtmlGenerator - generateAnsi', () => {
 
     expect(html).toContain('cols: 120')
     expect(html).toContain('rows: 40')
-    expect(html).toContain('fontSize: 12')
   })
 
   it('should use default values when ansi config is undefined', () => {
@@ -172,7 +155,6 @@ describe('HtmlGenerator - generateAnsi', () => {
 
     expect(html).toContain('cols: 80')
     expect(html).toContain('rows: 25')
-    expect(html).toContain('fontSize: 16')
   })
 
   it('should include wasmoon runtime', () => {
@@ -245,16 +227,15 @@ describe('HtmlGenerator - generateAnsi', () => {
     expect(html).toMatch(/initPath.*=.*\/init\.lua/)
   })
 
-  it('should configure xterm.js with correct display settings', () => {
+  it('should construct the renderer with a theme for default colors', () => {
     const generator = new HtmlGenerator(createOptions())
     const config = createConfig()
     const luaFiles: CollectedFile[] = []
 
     const html = generator.generateAnsi(config, luaFiles, [])
 
-    expect(html).toContain('disableStdin: true')
-    expect(html).toContain('scrollback: 0')
-    expect(html).toContain('cursorBlink: false')
+    expect(html).toContain('foreground: 0xAAAAAA')
+    expect(html).toContain('background: 0x000000')
   })
 
   it('should default to integer scale mode', () => {
@@ -296,14 +277,14 @@ describe('HtmlGenerator - generateAnsi', () => {
     expect(html).toContain("case '3x':")
   })
 
-  it('should scale via terminal.options.fontSize', () => {
+  it('should scale via CSS transform on the renderer canvas', () => {
     const generator = new HtmlGenerator(createOptions())
     const config = createConfig()
     const luaFiles: CollectedFile[] = []
 
     const html = generator.generateAnsi(config, luaFiles, [])
 
-    expect(html).toContain('term.options.fontSize = FONT_SIZE * newScale')
+    expect(html).toContain("renderer.canvas.style.transform = 'scale(' + newScale + ')'")
   })
 
   it('should not include CrtShader initialization when crt is disabled', () => {

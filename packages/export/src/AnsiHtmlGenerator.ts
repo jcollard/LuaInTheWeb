@@ -113,9 +113,14 @@ export function generateAnsiHtml(
       cursor: default;
       user-select: none;
     }
-    #terminal-wrapper .xterm { cursor: default; user-select: none; pointer-events: none; }
-    #terminal-wrapper .xterm canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
-    #terminal-wrapper .xterm-viewport { overflow: hidden !important; }
+    #terminal-wrapper { overflow: hidden; }
+    #terminal-wrapper > canvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      display: block;
+      pointer-events: none;
+      transform-origin: 0 0;
+    }
   </style>
 </head>
 <body>
@@ -196,69 +201,31 @@ export function generateAnsiHtml(
         console.warn('Could not pre-unlock AudioContext:', e);
       }
 
-      // Wait for IBM VGA font to load before creating terminal
-      await document.fonts.load('${fontSize}px "IBM VGA 8x16"');
+      // Wait for IBM VGA font to load before creating renderer
+      await document.fonts.load('16px "IBM VGA 8x16"');
 
-      // Create xterm.js terminal with IBM VGA font.
-      // customGlyphs: false renders block-drawing chars from the font (the new
-      // default); the runtime will flip this per-screen via setUseFontBlocks.
-      const term = new Terminal({
+      // Pixel-perfect ANSI renderer: xterm parser + custom canvas with
+      // binary-thresholded glyph masks. Block-drawing chars render with
+      // zero sub-pixel bleed regardless of scale.
+      const PixelAnsiRenderer = globalThis.AnsiStandalone.PixelAnsiRenderer;
+      const CELL_W = globalThis.AnsiStandalone.CELL_W;
+      const CELL_H = globalThis.AnsiStandalone.CELL_H;
+      const renderer = new PixelAnsiRenderer({
         cols: ${columns},
         rows: ${rows},
-        fontSize: ${fontSize},
         fontFamily: '"IBM VGA 8x16", monospace',
-        customGlyphs: false,
-        lineHeight: 1,
-        letterSpacing: 0,
-        cursorBlink: false,
-        disableStdin: true,
-        scrollback: 0,
-        overviewRulerWidth: 0,
-        allowTransparency: false,
-        theme: {
-          background: '#000000',
-          foreground: '#AAAAAA',
-          cursor: '#AAAAAA',
-        },
+        theme: { foreground: 0xAAAAAA, background: 0x000000 },
       });
-      term.open(wrapper);
+      wrapper.appendChild(renderer.canvas);
+      termRef = renderer;
 
-      // Prefer WebGL renderer (pixel-perfect half-block rendering via GPU
-      // nearest-neighbor sampling, avoiding the canvas fillText font-AA seam).
-      // Fall back to CanvasAddon if WebGL fails or the context is lost.
-      try {
-        const webgl = new WebglAddon();
-        webgl.onContextLoss(() => {
-          webgl.dispose();
-          term.loadAddon(new CanvasAddon());
-        });
-        term.loadAddon(webgl);
-      } catch (e) {
-        console.warn('[ANSI Export] WebGL addon failed, falling back to canvas:', e);
-        try {
-          term.loadAddon(new CanvasAddon());
-        } catch (e2) {
-          console.warn('[ANSI Export] CanvasAddon also failed:', e2);
-        }
-      }
-
-      // Snap fillRect to integer pixels to prevent antialiasing seams between cells
-      function patchFR(c) { var ctx = c.getContext('2d'); if (!ctx || ctx._p) return; var o = ctx.fillRect.bind(ctx); ctx.fillRect = function(x,y,w,h) { var x1=Math.round(x),y1=Math.round(y); o(x1,y1,Math.round(x+w)-x1,Math.round(y+h)-y1); }; ctx._p = 1; }
-      wrapper.querySelectorAll('canvas').forEach(patchFR);
-      new MutationObserver(function() { wrapper.querySelectorAll('canvas').forEach(patchFR); }).observe(wrapper, { childList: true, subtree: true });
-
-      // Prevent xterm.js from processing keyboard events
-      term.attachCustomKeyEventHandler(() => false);
-      termRef = term;
-
-      // Apply terminal scaling based on configured mode.
-      // Measure base dimensions once at 1x, then use those for all future calculations.
-      const FONT_SIZE = ${fontSize};
+      // Apply CSS transform scaling — the canvas backing stays at native
+      // res so pixelated upscaling is crisp at any integer scale.
       const scaleMode = PROJECT_CONFIG.scale;
-      let baseW = wrapper.scrollWidth;
-      let baseH = wrapper.scrollHeight;
       let currentScale = -1;
       function applyScale() {
+        const baseW = renderer.cols * CELL_W;
+        const baseH = renderer.rows * CELL_H;
         if (baseW === 0 || baseH === 0) return;
         const containerW = window.innerWidth;
         const containerH = window.innerHeight;
@@ -275,7 +242,9 @@ export function generateAnsiHtml(
         }
         if (newScale === currentScale) return;
         currentScale = newScale;
-        term.options.fontSize = FONT_SIZE * newScale;
+        renderer.canvas.style.transform = 'scale(' + newScale + ')';
+        wrapper.style.width = (baseW * newScale) + 'px';
+        wrapper.style.height = (baseH * newScale) + 'px';
       }
       applyScale();
       window.addEventListener('resize', applyScale);
@@ -286,41 +255,32 @@ export function generateAnsiHtml(
         const CrtShader = globalThis.AnsiStandalone.CrtShader;
         const CRT_DEFAULTS = globalThis.AnsiStandalone.CRT_DEFAULTS;
         const CRT_CONFIG = { ${crtConfigEntries} };
-        const canvas = wrapper.querySelector('canvas');
-        if (canvas) {
-          crtShader = new CrtShader(canvas, wrapper, {});
-          crtShader.enable(CRT_CONFIG);
-        }
+        crtShader = new CrtShader(renderer.canvas, wrapper, {});
+        crtShader.enable(CRT_CONFIG);
       }` : ''}
 
-      // Create AnsiTerminalHandle wrapping xterm.js
+      // AnsiTerminalHandle wrapping the PixelAnsiRenderer
       const handle = {
-        write: (data) => term.write(data), container: wrapper, dispose: () => term.dispose(),
+        write: (data) => renderer.write(data),
+        container: wrapper,
+        dispose: () => renderer.dispose(),
         resize: (cols, rows) => {
-          try { term.resize(cols, rows) } catch (e) { console.warn('[ANSI Export] resize failed:', e) }
-          // xterm re-renders its DOM after resize. Defer so scrollWidth/Height reflect the new size.
+          renderer.resize(cols, rows);
           requestAnimationFrame(() => {
-            baseW = wrapper.scrollWidth
-            baseH = wrapper.scrollHeight
-            currentScale = -1
-            applyScale()
-          })
+            currentScale = -1;
+            applyScale();
+          });
         },
         setCrt: (enabled, intensity, config) => {
           if (enabled) {
             if (!crtShader) {
               const CrtShader = globalThis.AnsiStandalone.CrtShader;
-              const canvas = wrapper.querySelector('canvas');
-              if (canvas) {
-                crtShader = new CrtShader(canvas, wrapper, {});
-              }
+              crtShader = new CrtShader(renderer.canvas, wrapper, {});
             }
-            if (crtShader) {
-              if (config) {
-                crtShader.enable(config);
-              } else {
-                crtShader.enable(intensity !== undefined ? intensity : undefined);
-              }
+            if (config) {
+              crtShader.enable(config);
+            } else {
+              crtShader.enable(intensity !== undefined ? intensity : undefined);
             }
           } else if (crtShader) {
             crtShader.disable();
@@ -328,19 +288,10 @@ export function generateAnsiHtml(
           }
         },
         setFontFamily: (family) => {
-          document.fonts.load(FONT_SIZE + 'px ' + family).finally(() => {
-            term.options.fontFamily = family;
-            requestAnimationFrame(() => {
-              baseW = wrapper.scrollWidth;
-              baseH = wrapper.scrollHeight;
-              currentScale = -1;
-              applyScale();
-            });
-          });
+          renderer.setFontFamily(family);
         },
-        setUseFontBlocks: (enabled) => {
-          term.options.customGlyphs = !enabled;
-        },
+        // No-op: pixel renderer always produces crisp block chars from the font.
+        setUseFontBlocks: () => {},
       };
       const callbacks = {
         onRequestAnsiTab: () => Promise.resolve(handle), onCloseAnsiTab: () => {},

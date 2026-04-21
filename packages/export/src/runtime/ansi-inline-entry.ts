@@ -17,6 +17,7 @@ import { setupAnsiAPI } from '@lua-learning/lua-runtime'
 import type { AnsiAPIOptions } from '@lua-learning/lua-runtime'
 import { ansiLuaCode } from '@lua-learning/lua-runtime'
 import { CrtShader, CRT_DEFAULTS } from '@lua-learning/lua-runtime'
+import { PixelAnsiRenderer, CELL_W, CELL_H } from '@lua-learning/lua-runtime'
 import { LUA_LOCALSTORAGE_CODE } from '@lua-learning/lua-runtime'
 
 function getRemainingSpace(): number {
@@ -117,6 +118,9 @@ function setupLocalStorageBridge(engine: any): Promise<void> {
   ansiLuaCode,
   CrtShader,
   CRT_DEFAULTS,
+  PixelAnsiRenderer,
+  CELL_W,
+  CELL_H,
   setupLocalStorageBridge,
 }
 
