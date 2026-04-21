@@ -33,7 +33,6 @@ export function generateAnsiHtml(
 ): string {
   const columns = config.ansi?.columns ?? 80
   const rows = config.ansi?.rows ?? 25
-  const fontSize = config.ansi?.font_size ?? 16
   const scaleMode = config.ansi?.scale ?? 'integer'
   const crtEnabled = config.ansi?.crt ?? false
 
@@ -128,7 +127,9 @@ export function generateAnsiHtml(
   <div id="terminal-wrapper" tabindex="0"></div>
 
   <script>
-    // xterm.js + render addons (bundled together for shared module context)
+    // xterm.js + CanvasAddon (bundled together for shared module context;
+    // ANSI uses PixelAnsiRenderer, but we keep xterm exposed for parity
+    // with the shell export and for any legacy callers).
     ${XTERM_WITH_CANVAS_ADDON_JS}
   </script>
   <script>

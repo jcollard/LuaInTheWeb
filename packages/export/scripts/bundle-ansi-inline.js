@@ -75,6 +75,7 @@ async function bundleAnsiInline() {
               export { InputAPI } from '${join(LUA_RUNTIME_SRC, 'InputAPI.ts').replace(/\\/g, '/')}';
               export { CrtShader, CRT_DEFAULTS } from '${join(LUA_RUNTIME_SRC, 'crtShader.ts').replace(/\\/g, '/')}';
               export type { CrtConfig } from '${join(LUA_RUNTIME_SRC, 'crtShader.ts').replace(/\\/g, '/')}';
+              export { PixelAnsiRenderer, CELL_W, CELL_H } from '${join(LUA_RUNTIME_SRC, 'pixelAnsiRenderer.ts').replace(/\\/g, '/')}';
               export { LUA_LOCALSTORAGE_CODE } from '${join(LUA_RUNTIME_SRC, 'lua/localstorage.generated.ts').replace(/\\/g, '/')}';
             `,
             loader: 'ts',
