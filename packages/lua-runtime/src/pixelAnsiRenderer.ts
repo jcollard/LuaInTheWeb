@@ -207,12 +207,22 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
   private rafHandle: number | null = null
   private disposables: IDisposable[] = []
   private codepointSet: number[]
-  private readonly reusableImageData: ImageData
+  /**
+   * Device pixels per logical pixel. Round UP from devicePixelRatio so
+   * that fractional-DPR displays (1.25 / 1.5 / 1.75) still render on
+   * integer device-pixel boundaries — prevents uneven "stretching"
+   * where some logical pixels display 1 device pixel wide and others
+   * 2 due to nearest-neighbor CSS scaling.
+   */
+  private readonly pixelScale: number
+  private reusableImageData: ImageData
 
   constructor(opts: PixelAnsiRendererOptions) {
     this.fontFamily = opts.fontFamily ?? getFontFamily(DEFAULT_ANSI_FONT)
     this.theme = { ...DEFAULT_THEME, ...opts.theme }
     this.codepointSet = [...defaultCodepointSet(), ...(opts.extraCodepoints ?? [])]
+    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1
+    this.pixelScale = Math.max(1, Math.ceil(dpr))
 
     this.terminal = new Terminal({
       cols: opts.cols,
@@ -227,15 +237,17 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
     })
 
     this.canvas = document.createElement('canvas')
-    this.canvas.width = opts.cols * CELL_W
-    this.canvas.height = opts.rows * CELL_H
+    this.applyCanvasSize(opts.cols, opts.rows)
     const ctx = this.canvas.getContext('2d')
     if (!ctx) throw new Error('PixelAnsiRenderer: failed to get 2D context')
     this.ctx = ctx
     this.ctx.imageSmoothingEnabled = false
 
     this.shadow = new Uint32Array(opts.cols * opts.rows)
-    this.reusableImageData = this.ctx.createImageData(CELL_W, CELL_H)
+    this.reusableImageData = this.ctx.createImageData(
+      CELL_W * this.pixelScale,
+      CELL_H * this.pixelScale,
+    )
 
     this.disposables.push(
       this.terminal.onWriteParsed(() => this.scheduleRender()),
@@ -282,9 +294,15 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
 
   // ---- internals ----
 
+  private applyCanvasSize(cols: number, rows: number): void {
+    this.canvas.width = cols * CELL_W * this.pixelScale
+    this.canvas.height = rows * CELL_H * this.pixelScale
+    this.canvas.style.width = `${cols * CELL_W}px`
+    this.canvas.style.height = `${rows * CELL_H}px`
+  }
+
   private resizeBacking(cols: number, rows: number): void {
-    this.canvas.width = cols * CELL_W
-    this.canvas.height = rows * CELL_H
+    this.applyCanvasSize(cols, rows)
     this.ctx.imageSmoothingEnabled = false
     this.shadow = new Uint32Array(cols * rows)
     this.dirty = true
@@ -334,23 +352,25 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
     const bgR = (bg >>> 16) & 0xff
     const bgG = (bg >>> 8) & 0xff
     const bgB = bg & 0xff
-    if (!mask) {
-      for (let i = 0; i < CELL_W * CELL_H; i++) {
-        const p = i << 2
-        data[p] = bgR; data[p + 1] = bgG; data[p + 2] = bgB; data[p + 3] = 255
-      }
-    } else {
-      for (let i = 0; i < CELL_W * CELL_H; i++) {
-        const p = i << 2
-        if (mask[i]) {
-          data[p] = fgR; data[p + 1] = fgG; data[p + 2] = fgB
-        } else {
-          data[p] = bgR; data[p + 1] = bgG; data[p + 2] = bgB
+    const ps = this.pixelScale
+    const stride = CELL_W * ps // pixels per ImageData row
+    // Each source pixel (sx, sy) writes a ps×ps block in the ImageData.
+    for (let sy = 0; sy < CELL_H; sy++) {
+      for (let sx = 0; sx < CELL_W; sx++) {
+        const on = mask ? mask[sy * CELL_W + sx] : 0
+        const r = on ? fgR : bgR
+        const g = on ? fgG : bgG
+        const b = on ? fgB : bgB
+        for (let dy = 0; dy < ps; dy++) {
+          let p = ((sy * ps + dy) * stride + sx * ps) << 2
+          for (let dx = 0; dx < ps; dx++) {
+            data[p] = r; data[p + 1] = g; data[p + 2] = b; data[p + 3] = 255
+            p += 4
+          }
         }
-        data[p + 3] = 255
       }
     }
-    this.ctx.putImageData(this.reusableImageData, x * CELL_W, y * CELL_H)
+    this.ctx.putImageData(this.reusableImageData, x * CELL_W * ps, y * CELL_H * ps)
   }
 
   private resolveFg(cell: IBufferCell): number {
