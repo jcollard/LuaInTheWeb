@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactElement } from 'react'
+import { memo, useEffect, useMemo, useState, type ReactElement } from 'react'
 import {
   BLOCK_GLYPH_REFERENCE,
   CELL_H,
@@ -7,9 +7,10 @@ import {
   rasterizeGlyphForDebug,
   type GlyphDebugInfo,
 } from '@lua-learning/lua-runtime'
+import { DEFAULT_ANSI_FONT, getFontFamily } from '@lua-learning/ansi-shared'
 import styles from './GlyphDebug.module.css'
 
-const FONT_FAMILY = '"IBM VGA 8x16", monospace'
+const FONT_FAMILY = getFontFamily(DEFAULT_ANSI_FONT)
 
 /** Build the Block Elements preset range (U+2580..U+259F). */
 function blockElementCodepoints(): number[] {
@@ -25,7 +26,7 @@ interface PixelGridProps {
   alphaMode: boolean
 }
 
-function PixelGrid({ data, alphaMode }: PixelGridProps) {
+const PixelGrid = memo(function PixelGrid({ data, alphaMode }: PixelGridProps) {
   const cells: ReactElement[] = []
   for (let y = 0; y < CELL_H; y++) {
     for (let x = 0; x < CELL_W; x++) {
@@ -44,7 +45,7 @@ function PixelGrid({ data, alphaMode }: PixelGridProps) {
     }
   }
   return <div className={styles.grid}>{cells}</div>
-}
+})
 
 function hexCodepoint(cp: number): string {
   return 'U+' + cp.toString(16).toUpperCase().padStart(4, '0')

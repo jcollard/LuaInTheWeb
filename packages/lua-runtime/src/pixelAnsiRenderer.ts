@@ -1,28 +1,13 @@
 /* eslint-disable max-lines */
 /**
- * Pixel-perfect ANSI renderer.
- *
- * Owns an xterm.js Terminal instance (constructed but never `open()`-ed)
- * purely as an ANSI escape-code parser. Rendering is done by this class:
- *
- * 1. At init, rasterize every expected Unicode codepoint into an 8×16
- *    binary mask by calling `fillText` on an OffscreenCanvas and
- *    thresholding the resulting alpha values. The threshold collapses
- *    font anti-aliasing to pure on/off pixels.
- *
- * 2. Each frame (scheduled on the next animation frame after
- *    `onWriteParsed` fires), iterate the terminal buffer and paint each
- *    changed cell onto the target canvas via `putImageData`. Because the
- *    glyph masks are binary and `putImageData` writes raw pixels with no
- *    smoothing, adjacent cells touch with zero sub-pixel bleed — so
- *    stacked half-blocks (▀) are seamless.
- *
- * Integer scaling is applied via CSS `transform: scale(N)` +
- * `image-rendering: pixelated` on the canvas. The backing canvas
- * resolution stays at exactly `cols * CELL_W × rows * CELL_H`.
+ * Pixel-perfect ANSI renderer. Uses xterm.js purely as an escape-code
+ * parser (constructed but never `open()`-ed) and paints cells via
+ * `putImageData` from binary glyph masks — no canvas `fillText` on the
+ * hot path, so block-drawing characters have zero sub-pixel bleed.
  */
 
 import { Terminal, type IBufferCell, type IDisposable } from '@xterm/xterm'
+import { DEFAULT_ANSI_FONT, getFontFamily } from '@lua-learning/ansi-shared'
 import { GLYPH_ATLAS } from './glyphAtlas.generated'
 
 /** Cell dimensions in canvas pixels. */
@@ -118,19 +103,47 @@ export interface GlyphDebugInfo {
   hasContent: boolean
 }
 
-type AnyCanvasRenderingContext2D = CanvasRenderingContext2D | (OffscreenCanvas extends unknown
-  ? OffscreenCanvasRenderingContext2D
-  : never)
+type GlyphContext2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
+
+function get2DContext(c: HTMLCanvasElement | OffscreenCanvas): GlyphContext2D | null {
+  // The Canvas/OffscreenCanvas `getContext('2d')` overloads return
+  // incompatible types to TS even though both are valid — prefer a single
+  // runtime call here over sprinkling conditional casts at every use site.
+  if (c instanceof OffscreenCanvas) return c.getContext('2d')
+  return c.getContext('2d')
+}
 
 /**
- * Write a single glyph into an already-configured 2D context and return the
- * raw alpha plus the thresholded binary mask. Assumes the context is 8×16,
- * has `textBaseline='top'`, `font` set, `imageSmoothingEnabled=false`, and
- * `fillStyle='#ffffff'`. Used both by the renderer's batch loop and by the
- * debug helper below.
+ * Create an 8×16 off-screen canvas context configured for single-glyph
+ * rasterization (font, textBaseline, no smoothing, white fill). Returns
+ * null when no 2D context is available (non-browser test environments).
  */
+async function createGlyphContext(fontFamily: string): Promise<GlyphContext2D | null> {
+  try {
+    if (typeof document !== 'undefined' && 'fonts' in document) {
+      await document.fonts.load(`${CELL_H}px ${fontFamily}`)
+    }
+  } catch { /* non-browser */ }
+
+  let gc: HTMLCanvasElement | OffscreenCanvas
+  if (typeof OffscreenCanvas !== 'undefined') {
+    gc = new OffscreenCanvas(CELL_W, CELL_H)
+  } else {
+    gc = document.createElement('canvas')
+    gc.width = CELL_W
+    gc.height = CELL_H
+  }
+  const ctx = get2DContext(gc)
+  if (!ctx) return null
+  ctx.textBaseline = 'top'
+  ctx.font = `${CELL_H}px ${fontFamily}`
+  ctx.imageSmoothingEnabled = false
+  ctx.fillStyle = '#ffffff'
+  return ctx
+}
+
 function rasterizeGlyphPixels(
-  ctx: AnyCanvasRenderingContext2D,
+  ctx: GlyphContext2D,
   codepoint: number,
 ): { rawAlpha: Uint8Array; mask: Uint8Array; hasContent: boolean } {
   ctx.clearRect(0, 0, CELL_W, CELL_H)
@@ -148,41 +161,22 @@ function rasterizeGlyphPixels(
 }
 
 /**
- * Standalone rasterization helper for diagnostics: creates its own tiny
- * canvas, loads the font, rasterizes one glyph, and returns the raw alpha
- * + thresholded mask. Useful for the /glyph-debug page.
+ * Rasterize one glyph into an 8×16 binary mask (and expose the raw alpha
+ * values for diagnostics). Used by the renderer's mask-build loop for
+ * codepoints not in the atlas, and by the /glyph-debug page.
  */
 export async function rasterizeGlyphForDebug(
   codepoint: number,
-  fontFamily: string = '"IBM VGA 8x16", monospace',
+  fontFamily: string = getFontFamily(DEFAULT_ANSI_FONT),
 ): Promise<GlyphDebugInfo> {
-  try {
-    if (typeof document !== 'undefined' && 'fonts' in document) {
-      await document.fonts.load(`${CELL_H}px ${fontFamily}`)
-    }
-  } catch { /* non-browser */ }
-
-  const useOffscreen = typeof OffscreenCanvas !== 'undefined'
-  let gc: HTMLCanvasElement | OffscreenCanvas
-  if (useOffscreen) {
-    gc = new OffscreenCanvas(CELL_W, CELL_H)
-  } else {
-    gc = document.createElement('canvas')
-    gc.width = CELL_W
-    gc.height = CELL_H
-  }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const ctx = (gc as any).getContext('2d') as AnyCanvasRenderingContext2D | null
+  const ctx = await createGlyphContext(fontFamily)
+  const char = String.fromCodePoint(codepoint)
   if (!ctx) {
     const empty = new Uint8Array(CELL_W * CELL_H)
-    return { codepoint, char: String.fromCodePoint(codepoint), rawAlpha: empty, mask: empty, hasContent: false }
+    return { codepoint, char, rawAlpha: empty, mask: empty, hasContent: false }
   }
-  ctx.textBaseline = 'top'
-  ctx.font = `${CELL_H}px ${fontFamily}`
-  ctx.imageSmoothingEnabled = false
-  ctx.fillStyle = '#ffffff'
   const { rawAlpha, mask, hasContent } = rasterizeGlyphPixels(ctx, codepoint)
-  return { codepoint, char: String.fromCodePoint(codepoint), rawAlpha, mask, hasContent }
+  return { codepoint, char, rawAlpha, mask, hasContent }
 }
 
 export interface PixelAnsiRendererHandle {
@@ -201,11 +195,6 @@ export interface PixelAnsiRendererHandle {
   dispose(): void
 }
 
-/**
- * Construct a pixel-perfect ANSI renderer. Returns a handle immediately
- * but glyph masks are loaded asynchronously; writes before init resolves
- * are buffered in xterm and painted when masks are ready.
- */
 export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
   readonly canvas: HTMLCanvasElement
   private readonly ctx: CanvasRenderingContext2D
@@ -216,20 +205,18 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
   private shadow: Uint32Array
   private dirty = true
   private rafHandle: number | null = null
-  private onWriteParsedDisposable: IDisposable | null = null
+  private disposables: IDisposable[] = []
   private codepointSet: number[]
-  private masksReady = false
   private readonly reusableImageData: ImageData
 
   constructor(opts: PixelAnsiRendererOptions) {
-    this.fontFamily = opts.fontFamily ?? '"IBM VGA 8x16", monospace'
+    this.fontFamily = opts.fontFamily ?? getFontFamily(DEFAULT_ANSI_FONT)
     this.theme = { ...DEFAULT_THEME, ...opts.theme }
     this.codepointSet = [...defaultCodepointSet(), ...(opts.extraCodepoints ?? [])]
 
     this.terminal = new Terminal({
       cols: opts.cols,
       rows: opts.rows,
-      // xterm's own rendering is never engaged (no open(), no render addon).
       disableStdin: true,
       scrollback: 0,
       allowTransparency: false,
@@ -250,15 +237,14 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
     this.shadow = new Uint32Array(opts.cols * opts.rows)
     this.reusableImageData = this.ctx.createImageData(CELL_W, CELL_H)
 
-    // Schedule renders when the parser has digested a chunk of input.
-    this.onWriteParsedDisposable = this.terminal.onWriteParsed(() => this.scheduleRender())
-    // Also redraw on explicit resize.
-    this.terminal.onResize(({ cols, rows }) => {
-      this.resizeBacking(cols, rows)
-      this.scheduleRender()
-    })
+    this.disposables.push(
+      this.terminal.onWriteParsed(() => this.scheduleRender()),
+      this.terminal.onResize(({ cols, rows }) => {
+        this.resizeBacking(cols, rows)
+        this.scheduleRender()
+      }),
+    )
 
-    // Build glyph masks asynchronously; first render will happen when ready.
     void this.buildGlyphMasks()
   }
 
@@ -278,10 +264,7 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
     if (fontFamily === this.fontFamily) return
     this.fontFamily = fontFamily
     this.glyphMasks.clear()
-    this.masksReady = false
     await this.buildGlyphMasks()
-    // Invalidate shadow so every cell repaints with the new glyphs.
-    this.shadow.fill(0)
     this.dirty = true
     this.scheduleRender()
   }
@@ -291,8 +274,8 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
       cancelAnimationFrame(this.rafHandle)
       this.rafHandle = null
     }
-    this.onWriteParsedDisposable?.dispose()
-    this.onWriteParsedDisposable = null
+    for (const d of this.disposables) d.dispose()
+    this.disposables.length = 0
     this.terminal.dispose()
     this.canvas.remove()
   }
@@ -316,12 +299,10 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
   }
 
   private render(): void {
-    if (!this.masksReady) return
+    if (this.glyphMasks.size === 0) return // masks not yet built
     const cols = this.terminal.cols
     const rows = this.terminal.rows
     const buf = this.terminal.buffer.active
-
-    // Reusable cell accessor to avoid per-cell allocations.
     const probe = buf.getNullCell()
 
     for (let y = 0; y < rows; y++) {
@@ -329,14 +310,12 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
       if (!line) continue
       for (let x = 0; x < cols; x++) {
         line.getCell(x, probe)
-        const code = probe.getCode() || 0x20 // treat empty cell as space
+        const code = probe.getCode() || 0x20 // empty cell -> space
         const fg = this.resolveFg(probe)
         const bg = this.resolveBg(probe)
-        // Signature for shadow diff: packed into a Uint32 isn't enough
-        // for truecolor + codepoint, but we track a composite key via a
-        // cheap hash across (code, fg, bg). Collisions here only cause
-        // spurious repaints; correctness is preserved.
-        const sig = (code ^ fg ^ (bg >>> 1)) >>> 0
+        // Mixed hash over (code, fg, bg). Collisions are possible but rare
+        // and only cause a missed repaint, not incorrect pixels elsewhere.
+        const sig = (Math.imul(code, 0x9e3779b1) ^ Math.imul(fg, 0x85ebca77) ^ bg) >>> 0
         const idx = y * cols + x
         if (!this.dirty && this.shadow[idx] === sig) continue
         this.shadow[idx] = sig
@@ -395,48 +374,20 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
   }
 
   private async buildGlyphMasks(): Promise<void> {
-    try {
-      if (typeof document !== 'undefined' && 'fonts' in document) {
-        await document.fonts.load(`${CELL_H}px ${this.fontFamily}`)
-      }
-    } catch {
-      // In jsdom / non-browser, document.fonts.load may throw — render will fall back.
-    }
-
-    const useOffscreen = typeof OffscreenCanvas !== 'undefined'
-    // Use a single off-screen canvas for glyph rasterization.
-    let gc: HTMLCanvasElement | OffscreenCanvas
-    if (useOffscreen) {
-      gc = new OffscreenCanvas(CELL_W, CELL_H)
-    } else {
-      gc = document.createElement('canvas')
-      gc.width = CELL_W
-      gc.height = CELL_H
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const gctx = (gc as any).getContext('2d') as AnyCanvasRenderingContext2D | null
-    if (!gctx) {
-      this.masksReady = true
-      this.scheduleRender()
-      return
-    }
-    gctx.textBaseline = 'top'
-    gctx.font = `${CELL_H}px ${this.fontFamily}`
-    gctx.imageSmoothingEnabled = false
-    gctx.fillStyle = '#ffffff'
-
+    const gctx = await createGlyphContext(this.fontFamily)
     for (const code of this.codepointSet) {
-      // Prefer the prebuilt atlas (extracted from the font's EBDT
-      // bitmap strike at build time, guaranteed pixel-exact). Fall
-      // back to fillText rasterization for codepoints the atlas
-      // doesn't cover (chars beyond the font's bitmap-strike range).
+      // Atlas entries are pre-extracted from the font's EBDT bitmap
+      // strike at build time, so they're pixel-exact. Anything not in
+      // the atlas (chars beyond the strike's coverage) falls back to
+      // fillText rasterization, which works fine for ASCII / box-
+      // drawing glyphs but would smear block-drawing shades.
       const atlasMask = GLYPH_ATLAS.get(code)
       if (atlasMask) { this.glyphMasks.set(code, atlasMask); continue }
+      if (!gctx) continue
       const { mask, hasContent } = rasterizeGlyphPixels(gctx, code)
       if (hasContent) this.glyphMasks.set(code, mask)
     }
 
-    this.masksReady = true
     this.dirty = true
     this.scheduleRender()
   }

@@ -137,7 +137,3 @@ export const BLOCK_GLYPH_REFERENCE: Map<number, Uint8Array> = new Map<number, Ui
   [0x259F, quadrants(false, true,  true,  true)],   // ▟ UR + LL + LR
 ])
 
-/** Cheap lookup to check whether a codepoint has a reference pattern. */
-export function hasReferenceMask(codepoint: number): boolean {
-  return BLOCK_GLYPH_REFERENCE.has(codepoint)
-}

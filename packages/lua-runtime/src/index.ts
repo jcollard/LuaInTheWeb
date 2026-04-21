@@ -101,8 +101,9 @@ export {
   type GlyphDebugInfo,
 } from './pixelAnsiRenderer'
 
-// Reference patterns for block-drawing characters (U+2580-U+259F)
-export { BLOCK_GLYPH_REFERENCE, hasReferenceMask } from './blockGlyphReference'
+// Reference patterns for block-drawing chars — diagnostic helper for the
+// /glyph-debug page (not part of the rendering path).
+export { BLOCK_GLYPH_REFERENCE } from './blockGlyphReference'
 
 // Prebuilt bitmap atlas — extracted from the font's EBDT strike at build time
 export { GLYPH_ATLAS } from './glyphAtlas.generated'
