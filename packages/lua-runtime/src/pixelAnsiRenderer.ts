@@ -105,6 +105,85 @@ export interface PixelAnsiRendererOptions {
   extraCodepoints?: number[]
 }
 
+/** Result of a single-codepoint rasterization (for debug / inspection). */
+export interface GlyphDebugInfo {
+  codepoint: number
+  char: string
+  /** Row-major alpha values (0..255) as produced by fillText into an 8×16 canvas. */
+  rawAlpha: Uint8Array
+  /** Row-major binary mask after the alpha >= 128 threshold. */
+  mask: Uint8Array
+  /** True iff any pixel in the mask is on. */
+  hasContent: boolean
+}
+
+type AnyCanvasRenderingContext2D = CanvasRenderingContext2D | (OffscreenCanvas extends unknown
+  ? OffscreenCanvasRenderingContext2D
+  : never)
+
+/**
+ * Write a single glyph into an already-configured 2D context and return the
+ * raw alpha plus the thresholded binary mask. Assumes the context is 8×16,
+ * has `textBaseline='top'`, `font` set, `imageSmoothingEnabled=false`, and
+ * `fillStyle='#ffffff'`. Used both by the renderer's batch loop and by the
+ * debug helper below.
+ */
+function rasterizeGlyphPixels(
+  ctx: AnyCanvasRenderingContext2D,
+  codepoint: number,
+): { rawAlpha: Uint8Array; mask: Uint8Array; hasContent: boolean } {
+  ctx.clearRect(0, 0, CELL_W, CELL_H)
+  ctx.fillText(String.fromCodePoint(codepoint), 0, 0)
+  const img = ctx.getImageData(0, 0, CELL_W, CELL_H)
+  const rawAlpha = new Uint8Array(CELL_W * CELL_H)
+  const mask = new Uint8Array(CELL_W * CELL_H)
+  let hasContent = false
+  for (let i = 0; i < CELL_W * CELL_H; i++) {
+    const alpha = img.data[(i << 2) + 3]
+    rawAlpha[i] = alpha
+    if (alpha >= 128) { mask[i] = 1; hasContent = true }
+  }
+  return { rawAlpha, mask, hasContent }
+}
+
+/**
+ * Standalone rasterization helper for diagnostics: creates its own tiny
+ * canvas, loads the font, rasterizes one glyph, and returns the raw alpha
+ * + thresholded mask. Useful for the /glyph-debug page.
+ */
+export async function rasterizeGlyphForDebug(
+  codepoint: number,
+  fontFamily: string = '"IBM VGA 8x16", monospace',
+): Promise<GlyphDebugInfo> {
+  try {
+    if (typeof document !== 'undefined' && 'fonts' in document) {
+      await document.fonts.load(`${CELL_H}px ${fontFamily}`)
+    }
+  } catch { /* non-browser */ }
+
+  const useOffscreen = typeof OffscreenCanvas !== 'undefined'
+  let gc: HTMLCanvasElement | OffscreenCanvas
+  if (useOffscreen) {
+    gc = new OffscreenCanvas(CELL_W, CELL_H)
+  } else {
+    gc = document.createElement('canvas')
+    gc.width = CELL_W
+    gc.height = CELL_H
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ctx = (gc as any).getContext('2d') as AnyCanvasRenderingContext2D | null
+  if (!ctx) {
+    const empty = new Uint8Array(CELL_W * CELL_H)
+    return { codepoint, char: String.fromCodePoint(codepoint), rawAlpha: empty, mask: empty, hasContent: false }
+  }
+  ctx.textBaseline = 'top'
+  ctx.font = `${CELL_H}px ${fontFamily}`
+  ctx.imageSmoothingEnabled = false
+  ctx.fillStyle = '#ffffff'
+  const { rawAlpha, mask, hasContent } = rasterizeGlyphPixels(ctx, codepoint)
+  return { codepoint, char: String.fromCodePoint(codepoint), rawAlpha, mask, hasContent }
+}
+
 export interface PixelAnsiRendererHandle {
   /** Write ANSI-escape-encoded data into the parser. */
   write(data: string): void
@@ -334,7 +413,7 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
       gc.height = CELL_H
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const gctx = (gc as any).getContext('2d') as CanvasRenderingContext2D | null
+    const gctx = (gc as any).getContext('2d') as AnyCanvasRenderingContext2D | null
     if (!gctx) {
       this.masksReady = true
       this.scheduleRender()
@@ -343,26 +422,12 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
     gctx.textBaseline = 'top'
     gctx.font = `${CELL_H}px ${this.fontFamily}`
     gctx.imageSmoothingEnabled = false
+    gctx.fillStyle = '#ffffff'
 
     for (const code of this.codepointSet) {
-      // Clear (fully transparent).
-      gctx.clearRect(0, 0, CELL_W, CELL_H)
-      gctx.fillStyle = '#ffffff'
-      const char = String.fromCodePoint(code)
-      gctx.fillText(char, 0, 0)
-      const img = gctx.getImageData(0, 0, CELL_W, CELL_H)
-      const mask = new Uint8Array(CELL_W * CELL_H)
-      let hasPixel = false
-      for (let i = 0; i < CELL_W * CELL_H; i++) {
-        // Alpha-channel threshold: >= 128 counts as "on".
-        const alpha = img.data[(i << 2) + 3]
-        if (alpha >= 128) {
-          mask[i] = 1
-          hasPixel = true
-        }
-      }
+      const { mask, hasContent } = rasterizeGlyphPixels(gctx, code)
       // Only cache masks that have content; blank cells just use bg fill.
-      if (hasPixel) this.glyphMasks.set(code, mask)
+      if (hasContent) this.glyphMasks.set(code, mask)
     }
 
     this.masksReady = true

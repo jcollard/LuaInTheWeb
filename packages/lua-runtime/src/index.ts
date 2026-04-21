@@ -94,10 +94,15 @@ export {
   PixelAnsiRenderer,
   CELL_W,
   CELL_H,
+  rasterizeGlyphForDebug,
   type PixelAnsiRendererOptions,
   type PixelAnsiRendererHandle,
   type PixelRendererTheme,
+  type GlyphDebugInfo,
 } from './pixelAnsiRenderer'
+
+// Reference patterns for block-drawing characters (U+2580-U+259F)
+export { BLOCK_GLYPH_REFERENCE, hasReferenceMask } from './blockGlyphReference'
 
 // ANSI terminal API setup and Lua code modules (for bundling in exports)
 export { setupAnsiAPI, type AnsiAPIOptions } from './setupAnsiAPI'

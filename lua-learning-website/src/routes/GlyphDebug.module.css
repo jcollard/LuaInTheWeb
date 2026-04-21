@@ -1,0 +1,169 @@
+.page {
+  min-height: 100vh;
+  background: #121212;
+  color: #ddd;
+  font-family: system-ui, -apple-system, sans-serif;
+  padding: 24px 32px;
+}
+
+@font-face {
+  font-family: 'IBM VGA 8x16';
+  src: url('/fonts/WebPlus_IBM_VGA_8x16.woff') format('woff');
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.title { margin: 0; font-size: 22px; }
+.subtitle { color: #888; font-size: 14px; }
+
+.controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.input {
+  background: #222;
+  color: #fff;
+  border: 1px solid #444;
+  padding: 6px 10px;
+  font-family: monospace;
+  font-size: 14px;
+  width: 10em;
+}
+
+.preset {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+}
+
+.presetChar {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  color: #fff;
+  font-family: 'IBM VGA 8x16', monospace;
+  font-size: 16px;
+  line-height: 1;
+  border: 1px solid transparent;
+  cursor: pointer;
+  user-select: none;
+}
+.presetChar:hover { border-color: #666; }
+.presetCharActive { border-color: #4af; }
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.panel {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.panelTitle {
+  font-size: 13px;
+  color: #aaa;
+  margin: 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.panelSubtitle {
+  font-size: 11px;
+  color: #666;
+  margin-top: -4px;
+}
+
+.native {
+  background: #000;
+  color: #fff;
+  font-family: 'IBM VGA 8x16', monospace;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+  display: inline-block;
+  width: calc(8px * 16);   /* 8px cell × 16× CSS zoom */
+  height: calc(16px * 16);
+  text-align: center;
+  overflow: hidden;
+  image-rendering: pixelated;
+  transform: scale(16);
+  transform-origin: 0 0;
+  /* The span itself is 1 CSS px wide @ fontSize 16px; scale shows it as 16×. */
+}
+.nativeWrap {
+  width: calc(8px * 16);
+  height: calc(16px * 16);
+  overflow: hidden;
+  background: #000;
+  position: relative;
+  outline: 1px solid #444;
+}
+.nativeChar {
+  font-family: 'IBM VGA 8x16', monospace;
+  color: #fff;
+  background: #000;
+  font-size: 16px;
+  line-height: 16px;
+  letter-spacing: 0;
+  display: inline-block;
+  width: 8px;
+  height: 16px;
+  transform: scale(16);
+  transform-origin: 0 0;
+  image-rendering: pixelated;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(8, 16px);
+  grid-template-rows: repeat(16, 16px);
+  width: calc(8 * 16px);
+  height: calc(16 * 16px);
+  outline: 1px solid #444;
+  background: #000;
+  image-rendering: pixelated;
+}
+
+.pixel { width: 16px; height: 16px; }
+
+.missing {
+  width: calc(8 * 16px);
+  height: calc(16 * 16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #111;
+  outline: 1px dashed #333;
+  color: #666;
+  font-size: 13px;
+  font-style: italic;
+}
+
+.stats {
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+}
