@@ -85,56 +85,6 @@ function parseBitmapStrike(fontBuf, fontkitFont, ppem) {
  * Bits are MSB-first, packed across the full cellW*cellH bitmap with
  * no row padding.
  */
-function bytesToMask(bytes, cellW, cellH) {
-  const total = cellW * cellH
-  const mask = new Uint8Array(total)
-  for (let p = 0; p < total; p++) {
-    const byteIdx = p >> 3
-    const bitIdx = 7 - (p & 7)
-    mask[p] = (bytes[byteIdx] >> bitIdx) & 1
-  }
-  return mask
-}
-
-/** Re-pack a per-pixel mask back into the bit-aligned byte stream. */
-function maskToBytes(mask, cellW, cellH) {
-  const total = cellW * cellH
-  const out = new Uint8Array(Math.ceil(total / 8))
-  for (let p = 0; p < total; p++) {
-    if (!mask[p]) continue
-    const byteIdx = p >> 3
-    const bitIdx = 7 - (p & 7)
-    out[byteIdx] |= 1 << bitIdx
-  }
-  return out
-}
-
-/**
- * Fill col (cellW-1) by copying col (cellW-2) for 9-wide fonts on
- * codepoints in U+2500..U+259F (box drawing + block elements).
- *
- * Int10h's MxPlus 9x16 encodes the CP437 8-wide pattern in cols 0..7
- * and leaves col 8 blank — faithful to IBM VGA 9-dot hardware, where
- * "line graphics enable" only triggered col-8 replication for CP437
- * 0xC0..0xDF. For everything else (including shades 0xB0..0xB2) col 8
- * was blank, producing visible gaps when rendering rows of ░/▒/▓ or
- * box-drawing runs.
- *
- * Modern terminal emulators apply col-8 replication across the full
- * box-drawing + block-elements range so dither / lines tile cleanly.
- * We do the same here, baked into the atlas so the renderer stays
- * format-agnostic.
- */
-function replicateLastColumnIfNeeded(mask, cellW, cellH, codepoint) {
-  if (cellW !== 9) return mask
-  if (codepoint < 0x2500 || codepoint > 0x259f) return mask
-  const out = new Uint8Array(mask)
-  for (let r = 0; r < cellH; r++) {
-    out[r * cellW + (cellW - 1)] = mask[r * cellW + (cellW - 2)]
-  }
-  return out
-}
-
 function extractGlyphBytes(strike, glyphId, bytesPerGlyph) {
   const sub = strike.subtables.find((t) => glyphId >= t.firstGlyph && glyphId <= t.lastGlyph)
   if (!sub) return null
@@ -174,12 +124,7 @@ function extractAtlas(entry) {
     if (!glyph || glyph.id === 0) { missing++; continue }
     const raw = extractGlyphBytes(strike, glyph.id, bytesPerGlyph)
     if (!raw) { missing++; continue }
-    // Unpack → post-process → repack so replication stays baked into
-    // the stored hex. Runtime decode path stays format-agnostic.
-    const mask = bytesToMask(raw, entry.cellW, entry.cellH)
-    const final = replicateLastColumnIfNeeded(mask, entry.cellW, entry.cellH, cp)
-    const out = maskToBytes(final, entry.cellW, entry.cellH)
-    const hex = Array.from(out, (v) => v.toString(16).padStart(2, '0')).join('')
+    const hex = Array.from(raw, (v) => v.toString(16).padStart(2, '0')).join('')
     glyphs.push([cp, hex])
   }
 
