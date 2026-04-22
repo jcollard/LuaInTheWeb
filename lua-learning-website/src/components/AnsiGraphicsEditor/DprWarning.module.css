@@ -1,0 +1,45 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  background: #3a2e0f;
+  color: #f0d280;
+  border-bottom: 1px solid #5a4620;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.message {
+  flex: 1;
+}
+
+.message strong {
+  color: #ffdc80;
+}
+
+.message em {
+  font-style: normal;
+  background: rgba(255, 220, 128, 0.12);
+  padding: 0 4px;
+  border-radius: 2px;
+}
+
+.dismiss {
+  background: transparent;
+  color: inherit;
+  border: 1px solid #7a6030;
+  border-radius: 3px;
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  padding: 0;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.dismiss:hover {
+  background: rgba(255, 220, 128, 0.15);
+  border-color: #a0803c;
+}
