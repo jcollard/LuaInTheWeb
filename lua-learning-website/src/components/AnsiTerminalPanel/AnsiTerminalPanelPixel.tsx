@@ -56,8 +56,7 @@ export function AnsiTerminalPanelPixel({
     })
     rendererRef.current = renderer
 
-    wrapper.replaceChildren()
-    wrapper.appendChild(renderer.canvas)
+    wrapper.replaceChildren(renderer.canvas)
     // Nearest-neighbor upscale for integer multiples — the browser handles
     // the CSS-to-device mapping and image-rendering: pixelated keeps the
     // scaled glyphs crisp.
@@ -150,12 +149,7 @@ export function AnsiTerminalPanelPixel({
   useEffect(() => {
     currentScaleRef.current = -1
     updateScaleRef.current?.()
-  }, [scaleMode])
-  useEffect(() => {
-    // Recompute when the compensate flag toggles.
-    currentScaleRef.current = -1
-    updateScaleRef.current?.()
-  }, [dprCompensate])
+  }, [scaleMode, dprCompensate])
   useDprChange(() => {
     currentScaleRef.current = -1
     updateScaleRef.current?.()

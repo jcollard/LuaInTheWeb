@@ -54,7 +54,7 @@ export async function rasterizeGlyphForDebug(
     cellW,
     cellH,
     mask: result.mask,
-    rawAlpha: result.rawAlpha ?? new Uint8Array(cellW * cellH),
+    rawAlpha: result.rawAlpha!,
     hasContent: result.hasContent,
   }
 }

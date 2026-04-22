@@ -198,12 +198,7 @@ export function AnsiTerminalPanelXterm({
   useEffect(() => {
     currentScaleRef.current = -1
     updateScaleRef.current?.()
-  }, [scaleMode])
-
-  useEffect(() => {
-    currentScaleRef.current = -1
-    updateScaleRef.current?.()
-  }, [dprCompensate])
+  }, [scaleMode, dprCompensate])
 
   useDprChange(() => {
     currentScaleRef.current = -1

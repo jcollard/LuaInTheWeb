@@ -13,7 +13,7 @@
  * No devicePixelRatio reads anywhere. Canvas is sized in source-pixel
  * units; the browser handles CSS→device mapping with `image-rendering:
  * pixelated`. Four DPR-compensation strategies were tried in the
- * prototype and all failed — see §4.6/§4.7 of the renderer plan.
+ * prototype and all failed — see docs/ansi/renderer-implementation-plan.md.
  */
 
 import { Terminal, type IBufferCell, type IDisposable } from '@xterm/xterm'
@@ -228,7 +228,7 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
   }
 
   setUseFontBlocks(useFontBlocks: boolean): Promise<void> {
-    // Reserved for future reference-pattern substitution (§3.2/§5.3).
+    // Reserved for future reference-pattern substitution.
     // Flag is stored so callers can query state even while the toggle
     // is a no-op. Rebuild of masks isn't necessary yet.
     this.useFontBlocks = useFontBlocks
