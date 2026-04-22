@@ -3,7 +3,6 @@ import type { ProjectConfig } from './types'
 import {
   WASMOON_INLINE_JS,
   XTERM_INLINE_CSS,
-  IBM_VGA_FONT_DATA_URL,
   AUDIO_INLINE_JS,
   audioLuaCode,
   CHIP_INLINE_JS,
@@ -80,14 +79,6 @@ export function generateAnsiHtml(
     ${XTERM_INLINE_CSS}
   </style>
   <style>
-    /* Legacy IBM VGA TTF — kept until Step 9 cleanup for backward compat
-       with projects authored against the pre-feature default family. */
-    @font-face {
-      font-family: "IBM VGA 8x16";
-      src: url("${IBM_VGA_FONT_DATA_URL}") format("truetype");
-      font-weight: normal;
-      font-style: normal;
-    }
     /* Bitmap font registry — inline data URLs so the export stays
        self-contained even when served from the file:// protocol. */
     ${buildFontFaceRules()}
@@ -209,15 +200,16 @@ export function generateAnsiHtml(
         console.warn('Could not pre-unlock AudioContext:', e);
       }
 
-      // Wait for IBM VGA font to load before creating terminal
-      await document.fonts.load('${fontSize}px "IBM VGA 8x16"');
+      // Wait for the default bitmap font to load before creating terminal
+      await document.fonts.load('${fontSize}px "Web IBM VGA 8x16"');
 
-      // Create xterm.js terminal with IBM VGA font
+      // Create xterm.js terminal with the default bitmap font; per-screen
+      // font changes flow through handle.setFontFamily (Step 7+Step 8).
       const term = new Terminal({
         cols: ${columns},
         rows: ${rows},
         fontSize: ${fontSize},
-        fontFamily: '"IBM VGA 8x16", monospace',
+        fontFamily: '"Web IBM VGA 8x16", monospace',
         lineHeight: 1,
         letterSpacing: 0,
         cursorBlink: false,

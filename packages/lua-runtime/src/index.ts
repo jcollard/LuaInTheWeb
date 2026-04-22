@@ -77,9 +77,6 @@ export { WASMOON_INLINE_JS } from './wasmoon-inline.generated'
 // Xterm inline JS and CSS for HTML shell/ANSI exports (auto-generated)
 export { XTERM_INLINE_JS, XTERM_INLINE_CSS } from './xterm-inline.generated'
 
-// IBM VGA font as data URL for ANSI exports (auto-generated)
-export { IBM_VGA_FONT_DATA_URL } from './ibm-vga-font-inline.generated'
-
 // Canvas controller for shell-based canvas (non-worker)
 export { CanvasController, type CanvasCallbacks } from './CanvasController'
 
