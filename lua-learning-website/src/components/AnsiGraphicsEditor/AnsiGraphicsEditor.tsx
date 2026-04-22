@@ -1,6 +1,13 @@
 /* eslint-disable max-lines */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnsiTerminalPanel } from '../AnsiTerminalPanel/AnsiTerminalPanel'
+import { DprWarning } from './DprWarning'
+import {
+  loadStoredScaleMode,
+  saveStoredScaleMode,
+  loadStoredDprCompensate,
+  saveStoredDprCompensate,
+} from './scaleModePersistence'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { useIDE } from '../IDEContext/useIDE'
 import { AnsiEditorToolbar } from './AnsiEditorToolbar'
@@ -31,7 +38,18 @@ export interface AnsiGraphicsEditorProps {
 export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGraphicsEditorProps) {
   const { fileSystem, fileTree, refreshFileTree, updateAnsiEditorTabPath } = useIDE()
   const [fileMenuOpen, setFileMenuOpen] = useState(false)
-  const [scaleMode, setScaleMode] = useState<ScaleMode>('fit')
+  const [scaleMode, setScaleModeRaw] = useState<ScaleMode>(() => loadStoredScaleMode())
+  // Persist on every change so the user's last choice sticks across
+  // sessions. Global (not per-file) — see scaleModePersistence.ts.
+  const setScaleMode = useCallback((mode: ScaleMode) => {
+    setScaleModeRaw(mode)
+    saveStoredScaleMode(mode)
+  }, [])
+  const [dprCompensate, setDprCompensateRaw] = useState<boolean>(() => loadStoredDprCompensate())
+  const setDprCompensate = useCallback((flag: boolean) => {
+    setDprCompensateRaw(flag)
+    saveStoredDprCompensate(flag)
+  }, [])
 
   const { toasts, showToast } = useToast()
   const handleSaveRef = useRef<() => void>(() => {})
@@ -113,6 +131,10 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
     setCgaPreview,
     crtConfig,
     setCrtConfig,
+    font,
+    setFont,
+    useFontBlocks,
+    setUseFontBlocks,
     setBorderStyle,
     activeLayerIsGroup,
     isMoveDragging,
@@ -228,12 +250,12 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
   const existingGroups = useMemo(() => layers.filter(isGroupLayer) as GroupLayer[], [layers])
 
   const handleSaveAs = useCallback(
-    (f: string, n: string) => fileHandleSaveAs(f, n, layers, activeLayerId, availableTags, projectCols, projectRows),
-    [fileHandleSaveAs, layers, activeLayerId, availableTags, projectCols, projectRows],
+    (f: string, n: string) => fileHandleSaveAs(f, n, layers, activeLayerId, availableTags, projectCols, projectRows, { font, useFontBlocks }),
+    [fileHandleSaveAs, layers, activeLayerId, availableTags, projectCols, projectRows, font, useFontBlocks],
   )
   const handleSave = useCallback(
-    () => fileHandleSave(layers, activeLayerId, availableTags, projectCols, projectRows, markClean, openSaveDialog),
-    [fileHandleSave, layers, activeLayerId, availableTags, projectCols, projectRows, markClean, openSaveDialog],
+    () => fileHandleSave(layers, activeLayerId, availableTags, projectCols, projectRows, { font, useFontBlocks }, markClean, openSaveDialog),
+    [fileHandleSave, layers, activeLayerId, availableTags, projectCols, projectRows, font, useFontBlocks, markClean, openSaveDialog],
   )
 
   handleSaveRef.current = handleSave
@@ -314,6 +336,12 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         cols={projectCols}
         rows={projectRows}
         onResizeCanvas={resizeCanvas}
+        font={font}
+        onSetFont={setFont}
+        useFontBlocks={useFontBlocks}
+        onSetUseFontBlocks={setUseFontBlocks}
+        dprCompensate={dprCompensate}
+        onSetDprCompensate={setDprCompensate}
         activeLayerIsGroup={activeLayerIsGroup}
         isPlaying={isPlaying}
         fileMenuOpen={fileMenuOpen}
@@ -330,12 +358,16 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
           activeLayerId={activeLayerId}
         />
         <div className={styles.canvasAndFrames}>
+          <DprWarning scaleMode={scaleMode} dprCompensate={dprCompensate} />
           <div className={[styles.canvas, brush.tool === 'move' && (isMoveDragging ? styles.canvasMoveDragging : styles.canvasMove), brush.tool === 'flip' && styles.canvasFlip].filter(Boolean).join(' ')}>
             <AnsiTerminalPanel
               isActive={true}
               scaleMode={scaleMode}
               cols={projectCols}
               rows={projectRows}
+              fontId={font}
+              useFontBlocks={useFontBlocks}
+              dprCompensate={dprCompensate}
               onTerminalReady={onTerminalReady}
             />
           </div>

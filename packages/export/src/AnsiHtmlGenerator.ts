@@ -3,12 +3,19 @@ import type { ProjectConfig } from './types'
 import {
   WASMOON_INLINE_JS,
   XTERM_INLINE_CSS,
-  IBM_VGA_FONT_DATA_URL,
   AUDIO_INLINE_JS,
   audioLuaCode,
   CHIP_INLINE_JS,
   chipLuaCode,
+  ANSI_FONT_DATA,
 } from '@lua-learning/lua-runtime'
+
+/** Build the @font-face rule block for every registered bitmap font. */
+function buildFontFaceRules(): string {
+  return ANSI_FONT_DATA.map((f) =>
+    `@font-face { font-family: "${f.fontFamily}"; src: url("${f.dataUrl}") format("woff"); font-weight: normal; font-style: normal; }`,
+  ).join('\n    ')
+}
 import { ANSI_INLINE_JS } from './runtime/ansi-inline.generated'
 import { XTERM_WITH_CANVAS_ADDON_JS } from './runtime/xterm-canvas.generated'
 
@@ -72,12 +79,9 @@ export function generateAnsiHtml(
     ${XTERM_INLINE_CSS}
   </style>
   <style>
-    @font-face {
-      font-family: "IBM VGA 8x16";
-      src: url("${IBM_VGA_FONT_DATA_URL}") format("truetype");
-      font-weight: normal;
-      font-style: normal;
-    }
+    /* Bitmap font registry — inline data URLs so the export stays
+       self-contained even when served from the file:// protocol. */
+    ${buildFontFaceRules()}
     body {
       margin: 0;
       padding: 0;
@@ -196,15 +200,16 @@ export function generateAnsiHtml(
         console.warn('Could not pre-unlock AudioContext:', e);
       }
 
-      // Wait for IBM VGA font to load before creating terminal
-      await document.fonts.load('${fontSize}px "IBM VGA 8x16"');
+      // Wait for the default bitmap font to load before creating terminal
+      await document.fonts.load('${fontSize}px "Web IBM VGA 8x16"');
 
-      // Create xterm.js terminal with IBM VGA font
+      // Create xterm.js terminal with the default bitmap font; per-screen
+      // font changes flow through handle.setFontFamily.
       const term = new Terminal({
         cols: ${columns},
         rows: ${rows},
         fontSize: ${fontSize},
-        fontFamily: '"IBM VGA 8x16", monospace',
+        fontFamily: '"Web IBM VGA 8x16", monospace',
         lineHeight: 1,
         letterSpacing: 0,
         cursorBlink: false,
@@ -279,6 +284,7 @@ export function generateAnsiHtml(
       }` : ''}
 
       // Create AnsiTerminalHandle wrapping xterm.js
+      const getFontById = globalThis.AnsiStandalone.getFontById;
       const handle = {
         write: (data) => term.write(data), container: wrapper, dispose: () => term.dispose(),
         resize: (cols, rows) => {
@@ -312,6 +318,28 @@ export function generateAnsiHtml(
             crtShader = null;
           }
         },
+        // Per-screen font switch — AnsiController calls this when a
+        // running program switches to a screen with a different font.
+        // Updates xterm fontFamily + fontSize from the registry and
+        // re-applies scale.
+        setFontFamily: (fontId) => {
+          const entry = getFontById(fontId);
+          if (!entry) return;
+          document.fonts.load(entry.cellH + 'px "' + entry.fontFamily + '"').catch(() => {});
+          term.options.fontFamily = '"' + entry.fontFamily + '", monospace';
+          term.options.fontSize = entry.cellH;
+          // Re-measure base dims at the new font size then re-apply scale.
+          requestAnimationFrame(() => {
+            baseW = wrapper.scrollWidth;
+            baseH = wrapper.scrollHeight;
+            currentScale = -1;
+            applyScale();
+          });
+        },
+        // Reserved for a dual-mode export variant. The current export
+        // always uses xterm; the no-op keeps the handle surface
+        // compatible with AnsiController.applyFontSettings.
+        setUseFontBlocks: () => { /* no-op until export has pixel variant */ },
       };
       const callbacks = {
         onRequestAnsiTab: () => Promise.resolve(handle), onCloseAnsiTab: () => {},

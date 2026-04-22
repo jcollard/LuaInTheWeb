@@ -61,8 +61,32 @@ describe('HtmlGenerator - generateAnsi', () => {
     const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('@font-face')
-    expect(html).toContain('IBM VGA 8x16')
-    expect(html).toContain('format("truetype")')
+    // Default bitmap family is the WOFF-backed `Web IBM VGA 8x16`.
+    expect(html).toContain('Web IBM VGA 8x16')
+    expect(html).toContain('format("woff")')
+  })
+
+  it('emits one @font-face rule per entry in ANSI_FONT_DATA, each with an inline data URL', async () => {
+    const generator = new HtmlGenerator(createOptions())
+    const config = createConfig()
+    const luaFiles: CollectedFile[] = []
+
+    const html = generator.generateAnsi(config, luaFiles, [])
+
+    // ANSI_FONT_DATA is the single source of truth for which WOFFs the
+    // export bundles. Verify every registered font makes it into the
+    // HTML @font-face block (not just the default IBM VGA 8×16).
+    const { ANSI_FONT_DATA } = await import('@lua-learning/lua-runtime')
+    expect(ANSI_FONT_DATA.length).toBeGreaterThan(0)
+
+    for (const entry of ANSI_FONT_DATA) {
+      // Family name must appear inside an @font-face rule.
+      const familyRule = `font-family: "${entry.fontFamily}"`
+      expect(html, `missing @font-face family for ${entry.id}`).toContain(familyRule)
+      // And the matching base64 data URL must be inlined — no external fetches
+      // permitted in the standalone export.
+      expect(html, `missing inline data URL for ${entry.id}`).toContain(entry.dataUrl)
+    }
   })
 
   it('should include xterm.js + CanvasAddon combined bundle', () => {

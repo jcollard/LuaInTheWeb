@@ -4,12 +4,32 @@ import { renderTextLayerGrid } from './textLayerGrid'
 import { buildPalette, encodeGrid, decodeGrid } from './v7Codec'
 import type { Run } from './v7Codec'
 import { luaStringify, luaParse } from './luaCodec'
+import { DEFAULT_ANSI_FONT_ID, DEFAULT_USE_FONT_BLOCKS, normalizeAnsiFontId } from '@lua-learning/ansi-shared'
 
 /** Extract `(cols, rows)` from a parsed file, falling back to 80×25 defaults. */
 function extractDims(data: Record<string, unknown>): { cols: number; rows: number } {
   const cols = typeof data.width === 'number' && data.width > 0 ? Math.floor(data.width) : DEFAULT_ANSI_COLS
   const rows = typeof data.height === 'number' && data.height > 0 ? Math.floor(data.height) : DEFAULT_ANSI_ROWS
   return { cols, rows }
+}
+
+/** Read optional `font` / `useFontBlocks` display settings, applying defaults. */
+function extractDisplaySettings(data: Record<string, unknown>): { font: string; useFontBlocks: boolean } {
+  return {
+    font: normalizeAnsiFontId(data.font),
+    useFontBlocks: typeof data.useFontBlocks === 'boolean' ? data.useFontBlocks : DEFAULT_USE_FONT_BLOCKS,
+  }
+}
+
+/** Copy non-default display settings into the serialized output map. */
+function writeDisplaySettings(data: Record<string, unknown>, state: LayerState): void {
+  const font = normalizeAnsiFontId(state.font)
+  if (font !== DEFAULT_ANSI_FONT_ID) {
+    data.font = font
+  }
+  if (state.useFontBlocks !== undefined && state.useFontBlocks !== DEFAULT_USE_FONT_BLOCKS) {
+    data.useFontBlocks = state.useFontBlocks
+  }
 }
 
 export function serializeGrid(grid: AnsiGrid): string {
@@ -154,6 +174,10 @@ export function serializeLayers(state: LayerState, availableTags?: string[]): st
   if (availableTags && availableTags.length > 0) {
     data.availableTags = availableTags
   }
+  // Only write display settings when they differ from defaults so files
+  // authored without touching the picker stay byte-identical to their
+  // v7/v8 predecessors on disk.
+  writeDisplaySettings(data, state)
   return 'return ' + luaStringify(data)
 }
 
@@ -298,6 +322,7 @@ export function deserializeLayers(lua: string): LayerState {
   const data = luaParse(stripped)
   const version = data.version as number
   const { cols, rows } = extractDims(data)
+  const { font, useFontBlocks } = extractDisplaySettings(data)
 
   if (version === 1) {
     if (!Array.isArray(data.grid)) {
@@ -322,6 +347,8 @@ export function deserializeLayers(lua: string): LayerState {
       activeLayerId: id,
       cols: vCols,
       rows: vRows,
+      font,
+      useFontBlocks,
     }
   }
 
@@ -337,6 +364,8 @@ export function deserializeLayers(lua: string): LayerState {
       activeLayerId: data.activeLayerId as string,
       cols,
       rows,
+      font,
+      useFontBlocks,
     }
   }
 
@@ -360,6 +389,8 @@ export function deserializeLayers(lua: string): LayerState {
       activeLayerId: data.activeLayerId as string,
       cols,
       rows,
+      font,
+      useFontBlocks,
     }
     if (rawAvailableTags && rawAvailableTags.length > 0) {
       result.availableTags = rawAvailableTags
@@ -404,6 +435,8 @@ export function deserializeLayers(lua: string): LayerState {
       activeLayerId: data.activeLayerId as string,
       cols,
       rows,
+      font,
+      useFontBlocks,
     }
     if (rawAvailableTags && rawAvailableTags.length > 0) {
       result.availableTags = rawAvailableTags

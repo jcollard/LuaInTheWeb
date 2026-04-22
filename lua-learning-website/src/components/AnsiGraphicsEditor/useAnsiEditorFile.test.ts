@@ -68,7 +68,7 @@ describe('useAnsiEditorFile — canvas dimension roundtrip', () => {
     const openSaveDialog = vi.fn()
 
     await act(async () => {
-      await result.current.handleSave(layers, 'bg', [], 120, 40, markClean, openSaveDialog)
+      await result.current.handleSave(layers, 'bg', [], 120, 40, { font: 'IBM_VGA_8x16', useFontBlocks: true }, markClean, openSaveDialog)
     })
 
     const content = fs.files.get('/art.ansi.lua')!
@@ -93,7 +93,7 @@ describe('useAnsiEditorFile — canvas dimension roundtrip', () => {
     const layers: Layer[] = [makeDrawnLayer('bg', 40, 10)]
 
     await act(async () => {
-      await result.current.handleSaveAs('/projects', 'small.ansi.lua', layers, 'bg', [], 40, 10)
+      await result.current.handleSaveAs('/projects', 'small.ansi.lua', layers, 'bg', [], 40, 10, { font: 'IBM_VGA_8x16', useFontBlocks: true })
     })
 
     const content = fs.files.get('/projects/small.ansi.lua')!
@@ -112,7 +112,7 @@ describe('useAnsiEditorFile — canvas dimension roundtrip', () => {
 
     const layers: Layer[] = [makeDrawnLayer('bg', 160, 60)]
     await act(async () => {
-      await saveHook.current.handleSave(layers, 'bg', [], 160, 60, vi.fn(), vi.fn())
+      await saveHook.current.handleSave(layers, 'bg', [], 160, 60, { font: 'IBM_VGA_8x16', useFontBlocks: true }, vi.fn(), vi.fn())
     })
 
     // Simulate reopening the file through a fresh hook mount.

@@ -11,6 +11,7 @@ import { DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS, DEFAULT_FRAME_DURATION_MS } from 
 import { renderTextLayerGrid } from './textLayerGrid'
 import { compositeGrid } from './screenCompositor'
 import { decodeV7Grid, parseV7Palette } from './v7Decode'
+import { DEFAULT_USE_FONT_BLOCKS, normalizeAnsiFontId } from '@lua-learning/ansi-shared'
 
 /** Dimensions of a parsed ANSI screen. */
 export interface ScreenDims {
@@ -26,6 +27,30 @@ export function getScreenDims(data: Record<string, unknown>): ScreenDims {
   const cols = typeof data.width === 'number' && data.width > 0 ? Math.floor(data.width) : DEFAULT_ANSI_COLS
   const rows = typeof data.height === 'number' && data.height > 0 ? Math.floor(data.height) : DEFAULT_ANSI_ROWS
   return { cols, rows }
+}
+
+/** Optional display settings authored alongside the layer data. */
+export interface ScreenDisplaySettings {
+  /** Registered bitmap font ID. */
+  font: string
+  /**
+   * When true (default), the pixel-perfect renderer is active. When
+   * false, the legacy xterm.js + CanvasAddon renderer is used.
+   */
+  useFontBlocks: boolean
+}
+
+/**
+ * Read optional `font` / `useFontBlocks` display settings from a parsed
+ * screen, applying defaults. The `font` value is normalized to a string
+ * but not validated against the bitmap-font registry — consumers should
+ * fall back to the default at render time if the id isn't registered.
+ */
+export function getDisplaySettings(data: Record<string, unknown>): ScreenDisplaySettings {
+  return {
+    font: normalizeAnsiFontId(data.font),
+    useFontBlocks: typeof data.useFontBlocks === 'boolean' ? data.useFontBlocks : DEFAULT_USE_FONT_BLOCKS,
+  }
 }
 
 /**
@@ -325,12 +350,21 @@ export function parseScreenLayers(data: Record<string, unknown>): LayerData[] {
 }
 
 /**
- * Parse a data table (from wasmoon) into layers plus authored dimensions.
- * Callers that need the canvas size should use this instead of `parseScreenLayers`.
+ * Parse a data table (from wasmoon) into layers plus authored dimensions
+ * and optional display settings (font, useFontBlocks).
  */
-export function parseScreen(data: Record<string, unknown>): { layers: LayerData[]; cols: number; rows: number } {
+export function parseScreen(
+  data: Record<string, unknown>,
+): { layers: LayerData[]; cols: number; rows: number; font: string; useFontBlocks: boolean } {
   const dims = getScreenDims(data)
-  return { layers: parseScreenLayers(data), cols: dims.cols, rows: dims.rows }
+  const display = getDisplaySettings(data)
+  return {
+    layers: parseScreenLayers(data),
+    cols: dims.cols,
+    rows: dims.rows,
+    font: display.font,
+    useFontBlocks: display.useFontBlocks,
+  }
 }
 
 /**

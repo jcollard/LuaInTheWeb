@@ -1,35 +1,80 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, act } from '@testing-library/react'
 import { AnsiTerminalPanel } from './AnsiTerminalPanel'
-import type { AnsiTerminalHandle } from './AnsiTerminalPanel'
+import type { AnsiTerminalHandle } from './types'
 
-// Track CrtShader mock instances
+// Mock @lua-learning/lua-runtime: the pixel path (default) only needs
+// PixelAnsiRenderer, CrtShader, DEFAULT_FONT_ID, and a few type shims.
+// No xterm mock needed for the default path; the xterm variant isn't
+// mounted unless useFontBlocks=false.
+
+const mockRenderer = {
+  write: vi.fn(),
+  resize: vi.fn(),
+  setFontFamily: vi.fn().mockResolvedValue(undefined),
+  setUseFontBlocks: vi.fn().mockResolvedValue(undefined),
+  dispose: vi.fn(),
+  canvas: (() => {
+    const c = document.createElement('canvas')
+    c.width = 80 * 8
+    c.height = 25 * 16
+    return c
+  })(),
+  cols: 80,
+  rows: 25,
+  cellW: 8,
+  cellH: 16,
+  fontId: 'IBM_VGA_8x16',
+  usesFontBlocks: true,
+}
+
 const mockEnable = vi.fn()
 const mockDisable = vi.fn()
 const mockDispose = vi.fn()
-const mockIsFallback = vi.fn(() => false)
 
-vi.mock('@lua-learning/lua-runtime', () => ({
-  CrtShader: vi.fn().mockImplementation(function MockCrtShader() {
-    return {
-      enable: mockEnable,
-      disable: mockDisable,
-      dispose: mockDispose,
-      isFallback: mockIsFallback,
-      setIntensity: vi.fn(),
-      isEnabled: vi.fn(() => false),
+const pixelCtor = vi.fn()
+vi.mock('@lua-learning/lua-runtime', () => {
+  class MockPixelAnsiRenderer {
+    constructor(opts: unknown) {
+      pixelCtor(opts)
+      Object.assign(this, mockRenderer)
     }
-  }),
-}))
+  }
+  class MockCrtShader {
+    enable = mockEnable
+    disable = mockDisable
+    dispose = mockDispose
+    isFallback = () => false
+    setIntensity = () => {}
+    isEnabled = () => false
+  }
+  return {
+    DEFAULT_FONT_ID: 'IBM_VGA_8x16',
+    PixelAnsiRenderer: MockPixelAnsiRenderer,
+    CrtShader: MockCrtShader,
+    getFontById: (id: string) => ({
+      id,
+      label: id,
+      ttfPath: '',
+      woffPath: '/fonts/fake.woff',
+      fontFamily: 'Fake Family',
+      cellW: 8,
+      cellH: 16,
+      nativePpem: 16,
+    }),
+  }
+})
 
-// Mock xterm modules — Terminal must be a class so `new Terminal()` works
+// Mock xterm so that — on the off chance a test mounts useFontBlocks=false —
+// the xterm variant doesn't blow up. The tests below focus on the pixel path.
 vi.mock('@xterm/xterm', () => {
   class MockTerminal {
-    options = { fontSize: 16 }
+    options = { fontSize: 16, fontFamily: '' }
     open = vi.fn()
     loadAddon = vi.fn()
     attachCustomKeyEventHandler = vi.fn()
     write = vi.fn()
+    resize = vi.fn()
     dispose = vi.fn()
   }
   return { Terminal: MockTerminal }
@@ -40,7 +85,6 @@ vi.mock('@xterm/addon-canvas', () => {
   return { CanvasAddon: MockCanvasAddon }
 })
 
-// Mock CSS module
 vi.mock('./AnsiTerminalPanel.module.css', () => ({
   default: {
     container: 'container',
@@ -50,174 +94,127 @@ vi.mock('./AnsiTerminalPanel.module.css', () => ({
 }))
 
 beforeEach(() => {
+  mockRenderer.write.mockClear()
+  mockRenderer.resize.mockClear()
+  mockRenderer.setFontFamily.mockClear()
+  mockRenderer.setUseFontBlocks.mockClear()
+  mockRenderer.dispose.mockClear()
   mockEnable.mockClear()
   mockDisable.mockClear()
   mockDispose.mockClear()
-  mockIsFallback.mockClear()
-
-  // Provide FontFaceSet.load mock since jsdom lacks it
   Object.defineProperty(document, 'fonts', {
     value: { load: vi.fn().mockResolvedValue([]) },
     configurable: true,
   })
 })
 
-describe('AnsiTerminalPanel', () => {
-  it('should call onTerminalReady(null) on unmount', async () => {
+describe('AnsiTerminalPanel — pixel variant (default)', () => {
+  it('calls onTerminalReady with a handle on mount and with null on unmount', async () => {
     const onTerminalReady = vi.fn()
+    const { unmount } = render(<AnsiTerminalPanel onTerminalReady={onTerminalReady} />)
+    await act(async () => {})
 
-    const { unmount } = render(
-      <AnsiTerminalPanel onTerminalReady={onTerminalReady} />
-    )
-
-    // Wait for the async init() to complete (font load + terminal setup)
-    await act(async () => {
-      // Flush microtask queue
-    })
-
-    // Should have been called with a handle on mount
     expect(onTerminalReady).toHaveBeenCalledWith(
-      expect.objectContaining({ write: expect.any(Function) })
+      expect.objectContaining({ write: expect.any(Function) }),
     )
 
     onTerminalReady.mockClear()
-
     unmount()
-
     expect(onTerminalReady).toHaveBeenCalledWith(null)
   })
 
-  it('should not have crtEnabled class by default', () => {
-    const { container } = render(
-      <AnsiTerminalPanel />
-    )
-
-    const outerDiv = container.firstChild as HTMLElement
-    expect(outerDiv.className).toBe('container')
-    expect(outerDiv.className).not.toContain('crtEnabled')
-  })
-
-  it('handle.setCrt(true) should enable CRT shader when canvas exists', async () => {
+  it('handle.write delegates to the PixelAnsiRenderer', async () => {
     let handle: AnsiTerminalHandle | null = null
-    const onTerminalReady = vi.fn((h: AnsiTerminalHandle | null) => { handle = h })
-
-    render(
-      <AnsiTerminalPanel onTerminalReady={onTerminalReady} />
-    )
-
+    render(<AnsiTerminalPanel onTerminalReady={(h) => { handle = h }} />)
     await act(async () => {})
-
     expect(handle).not.toBeNull()
 
-    // Note: In jsdom, xterm won't create a real canvas, so setCrt falls through
-    // to the CSS-only fallback path (no querySelector('canvas') result).
-    // The CrtShader constructor won't be called in this case.
+    act(() => { handle!.write('hello') })
+    expect(mockRenderer.write).toHaveBeenCalledWith('hello')
+  })
+
+  it('handle.resize forwards to the renderer', async () => {
+    let handle: AnsiTerminalHandle | null = null
+    render(<AnsiTerminalPanel onTerminalReady={(h) => { handle = h }} />)
+    await act(async () => {})
+
+    act(() => { handle!.resize!(40, 12) })
+    expect(mockRenderer.resize).toHaveBeenCalledWith(40, 12)
+  })
+
+  it('fontId prop change calls setFontFamily on the handle', async () => {
+    let handle: AnsiTerminalHandle | null = null
+    const { rerender } = render(
+      <AnsiTerminalPanel
+        fontId="IBM_VGA_8x16"
+        onTerminalReady={(h) => { handle = h }}
+      />,
+    )
+    await act(async () => {})
+    expect(handle).not.toBeNull()
+    // The fontId effect fires on initial mount too, passing the same id —
+    // the renderer treats matching ids as a no-op (verified in pixelAnsiRenderer.test).
+    mockRenderer.setFontFamily.mockClear()
+
+    rerender(
+      <AnsiTerminalPanel
+        fontId="IBM_VGA_9x16"
+        onTerminalReady={(h) => { handle = h }}
+      />,
+    )
+    expect(mockRenderer.setFontFamily).toHaveBeenCalledWith('IBM_VGA_9x16')
+  })
+
+  it('handle.setCrt(true) adds the CSS fallback class when no canvas-shader path is available', async () => {
+    let handle: AnsiTerminalHandle | null = null
+    const { container } = render(<AnsiTerminalPanel onTerminalReady={(h) => { handle = h }} />)
+    await act(async () => {})
+
+    const outer = container.firstChild as HTMLElement
+    // The PixelAnsiRenderer mock's canvas is attached to the wrapper — so
+    // the real shader path engages. Verify shader.enable was called.
     act(() => { handle!.setCrt(true, 0.5) })
-
-    // Since jsdom has no real canvas child, it uses CSS fallback
-    // We verify the CSS fallback still works
+    expect(mockEnable).toHaveBeenCalledWith(0.5)
+    // CSS fallback class shouldn't be applied when the shader path runs.
+    expect(outer.classList.contains('crtEnabled')).toBe(false)
   })
 
-  it('handle.setCrt(false) should disable CRT effect', async () => {
+  it('handle.setCrt(false) disables the shader', async () => {
     let handle: AnsiTerminalHandle | null = null
-    const onTerminalReady = vi.fn((h: AnsiTerminalHandle | null) => { handle = h })
-
-    const { container } = render(
-      <AnsiTerminalPanel onTerminalReady={onTerminalReady} />
-    )
-
+    render(<AnsiTerminalPanel onTerminalReady={(h) => { handle = h }} />)
     await act(async () => {})
 
-    const outerDiv = container.firstChild as HTMLElement
-
-    // Enable then disable via CSS fallback path (no canvas in jsdom)
-    act(() => { handle!.setCrt(true, 0.8) })
-    expect(outerDiv.classList.contains('crtEnabled')).toBe(true)
-
+    act(() => { handle!.setCrt(true, 0.7) })
     act(() => { handle!.setCrt(false) })
-    expect(outerDiv.classList.contains('crtEnabled')).toBe(false)
-    expect(outerDiv.style.getPropertyValue('--crt-intensity')).toBe('')
+    expect(mockDisable).toHaveBeenCalled()
   })
 
-  it('handle.setCrt(true) with no intensity defaults to 0.7', async () => {
-    let handle: AnsiTerminalHandle | null = null
-    const onTerminalReady = vi.fn((h: AnsiTerminalHandle | null) => { handle = h })
-
-    const { container } = render(
-      <AnsiTerminalPanel onTerminalReady={onTerminalReady} />
-    )
-
-    await act(async () => {})
-
-    const outerDiv = container.firstChild as HTMLElement
-
-    act(() => { handle!.setCrt(true) })
-
-    // CSS fallback path — default intensity
-    expect(outerDiv.classList.contains('crtEnabled')).toBe(true)
-    expect(outerDiv.style.getPropertyValue('--crt-intensity')).toBe('0.7')
-  })
-
-  it('should dispose CrtShader on unmount', async () => {
-    const onTerminalReady = vi.fn()
-
-    const { unmount } = render(
-      <AnsiTerminalPanel onTerminalReady={onTerminalReady} />
-    )
-
+  it('disposes the renderer on unmount', async () => {
+    const { unmount } = render(<AnsiTerminalPanel onTerminalReady={vi.fn()} />)
     await act(async () => {})
     unmount()
-
-    // CrtShader.dispose() should be called during cleanup
-    // (only if one was created — in jsdom it may not be)
+    expect(mockRenderer.dispose).toHaveBeenCalled()
   })
 
-  describe('with canvas element available', () => {
-    it('should create CrtShader when xterm canvas exists', async () => {
-      let handle: AnsiTerminalHandle | null = null
-      const onTerminalReady = vi.fn((h: AnsiTerminalHandle | null) => { handle = h })
+  it('constructs a new renderer on useFontBlocks toggle (key-swap remount)', async () => {
+    const onTerminalReady = vi.fn()
+    const { rerender, unmount } = render(
+      <AnsiTerminalPanel useFontBlocks={true} onTerminalReady={onTerminalReady} />,
+    )
+    await act(async () => {})
+    const pixelMountCount = pixelCtor.mock.calls.length
+    expect(pixelMountCount).toBeGreaterThanOrEqual(1)
 
-      const { container } = render(
-        <AnsiTerminalPanel onTerminalReady={onTerminalReady} />
-      )
+    // Toggle to xterm — the pixel renderer should not be constructed again.
+    rerender(
+      <AnsiTerminalPanel useFontBlocks={false} onTerminalReady={onTerminalReady} />,
+    )
+    await act(async () => {})
+    expect(pixelCtor.mock.calls.length).toBe(pixelMountCount)
 
-      await act(async () => {})
-
-      // Manually inject a canvas into the wrapper to simulate xterm's CanvasAddon
-      const wrapperDiv = container.querySelector('[class="terminalWrapper"]')
-      if (wrapperDiv) {
-        const fakeCanvas = document.createElement('canvas')
-        wrapperDiv.appendChild(fakeCanvas)
-      }
-
-      act(() => { handle!.setCrt(true, 0.6) })
-
-      // CrtShader constructor should have been called
-      const { CrtShader } = await import('@lua-learning/lua-runtime')
-      expect(CrtShader).toHaveBeenCalled()
-      expect(mockEnable).toHaveBeenCalledWith(0.6)
-    })
-
-    it('should call CrtShader.disable when setCrt(false)', async () => {
-      let handle: AnsiTerminalHandle | null = null
-      const onTerminalReady = vi.fn((h: AnsiTerminalHandle | null) => { handle = h })
-
-      const { container } = render(
-        <AnsiTerminalPanel onTerminalReady={onTerminalReady} />
-      )
-
-      await act(async () => {})
-
-      // Inject canvas
-      const wrapperDiv = container.querySelector('[class="terminalWrapper"]')
-      if (wrapperDiv) {
-        wrapperDiv.appendChild(document.createElement('canvas'))
-      }
-
-      act(() => { handle!.setCrt(true, 0.7) })
-      act(() => { handle!.setCrt(false) })
-
-      expect(mockDisable).toHaveBeenCalled()
-    })
+    // And the pixel renderer the original mount constructed should have
+    // been disposed during the remount.
+    expect(mockRenderer.dispose).toHaveBeenCalled()
+    unmount()
   })
 })

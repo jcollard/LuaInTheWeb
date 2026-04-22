@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 
 // Lazy load the IDE layout component
 const IDELayout = lazy(() => import('./components/IDELayout').then(m => ({ default: m.IDELayout })))
+const GlyphDebug = lazy(() => import('./routes/GlyphDebug').then(m => ({ default: m.GlyphDebug })))
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
     }}>Loading editor...</div>}>
       <Routes>
         <Route path="/editor" element={<IDELayout />} />
+        <Route path="/glyph-debug" element={<GlyphDebug />} />
         {/* Redirect all other routes to /editor */}
         <Route path="*" element={<Navigate to="/editor" replace />} />
       </Routes>

@@ -18,6 +18,13 @@ import type { AnsiAPIOptions } from '@lua-learning/lua-runtime'
 import { ansiLuaCode } from '@lua-learning/lua-runtime'
 import { CrtShader, CRT_DEFAULTS } from '@lua-learning/lua-runtime'
 import { LUA_LOCALSTORAGE_CODE } from '@lua-learning/lua-runtime'
+import {
+  PixelAnsiRenderer,
+  BITMAP_FONT_REGISTRY,
+  DEFAULT_FONT_ID,
+  getFontById,
+  FONT_ATLASES,
+} from '@lua-learning/lua-runtime'
 
 function getRemainingSpace(): number {
   const STORAGE_LIMIT = 5 * 1024 * 1024
@@ -118,6 +125,13 @@ function setupLocalStorageBridge(engine: any): Promise<void> {
   CrtShader,
   CRT_DEFAULTS,
   setupLocalStorageBridge,
+  // Bitmap renderer + registry — the HTML template uses these to honor
+  // per-screen font + useFontBlocks settings from .ansi.lua files.
+  PixelAnsiRenderer,
+  BITMAP_FONT_REGISTRY,
+  DEFAULT_FONT_ID,
+  getFontById,
+  FONT_ATLASES,
 }
 
 export type { AnsiCallbacks, AnsiTerminalHandle, AnsiAPIOptions }

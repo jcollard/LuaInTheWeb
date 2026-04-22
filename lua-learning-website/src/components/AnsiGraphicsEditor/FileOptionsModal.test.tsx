@@ -20,6 +20,12 @@ function defaultProps(overrides?: Partial<FileOptionsModalProps>): FileOptionsMo
     cols: 80,
     rows: 25,
     onResizeCanvas: vi.fn(),
+    font: 'IBM_VGA_8x16',
+    onSetFont: vi.fn(),
+    useFontBlocks: true,
+    onSetUseFontBlocks: vi.fn(),
+    dprCompensate: false,
+    onSetDprCompensate: vi.fn(),
     ...overrides,
   }
 }

@@ -77,9 +77,6 @@ export { WASMOON_INLINE_JS } from './wasmoon-inline.generated'
 // Xterm inline JS and CSS for HTML shell/ANSI exports (auto-generated)
 export { XTERM_INLINE_JS, XTERM_INLINE_CSS } from './xterm-inline.generated'
 
-// IBM VGA font as data URL for ANSI exports (auto-generated)
-export { IBM_VGA_FONT_DATA_URL } from './ibm-vga-font-inline.generated'
-
 // Canvas controller for shell-based canvas (non-worker)
 export { CanvasController, type CanvasCallbacks } from './CanvasController'
 
@@ -111,3 +108,30 @@ export { PathAPI, type IPathAPI, type FillRule } from './PathAPI'
 
 // Transform API for canvas transformations (translate, rotate, scale, etc.)
 export { TransformAPI, type ITransformAPI } from './TransformAPI'
+
+// Pixel-perfect ANSI renderer and bitmap font registry.
+export {
+  PixelAnsiRenderer,
+  type PixelAnsiRendererHandle,
+  type PixelAnsiRendererOptions,
+  type PixelAnsiRendererTheme,
+} from './pixelAnsiRenderer'
+export {
+  BITMAP_FONT_REGISTRY,
+  DEFAULT_FONT_ID,
+  getFontById,
+  type BitmapFontRegistryEntry,
+} from './fontRegistry'
+export { FONT_ATLASES, type FontAtlas } from './glyphAtlas.generated'
+export {
+  ANSI_FONT_DATA,
+  type AnsiFontDataEntry,
+} from './ansi-fonts-inline.generated'
+export {
+  getBlockReference,
+  BLOCK_GLYPH_REFERENCE_8X16,
+} from './blockGlyphReference'
+export {
+  rasterizeGlyphForDebug,
+  type GlyphDebugInfo,
+} from './glyphDebug'
