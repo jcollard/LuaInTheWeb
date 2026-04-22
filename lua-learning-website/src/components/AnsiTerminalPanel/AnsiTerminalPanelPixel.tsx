@@ -56,14 +56,21 @@ export function AnsiTerminalPanelPixel({
 
     wrapper.replaceChildren()
     wrapper.appendChild(renderer.canvas)
-    // Apply the same "crisp pixels" hint as the xterm path for parity.
+    // Nearest-neighbor upscale for integer multiples — the browser handles
+    // the CSS-to-device mapping and image-rendering: pixelated keeps the
+    // scaled glyphs crisp.
     renderer.canvas.style.imageRendering = 'pixelated'
-    renderer.canvas.style.transformOrigin = '0 0'
     renderer.canvas.style.display = 'block'
 
     const updateScale = () => {
       const r = rendererRef.current
       if (!r) return
+      // Backing is always source-pixel (cols*cellW × rows*cellH) — the
+      // renderer's applyCanvasSize sets both canvas.width and
+      // canvas.style.width to that. Here we override ONLY the CSS size
+      // to visually scale by `newScale`. No CSS transform: setting the
+      // CSS box directly keeps layout and visual size in sync so flex
+      // centering / scroll measurements just work.
       const baseW = r.canvas.width
       const baseH = r.canvas.height
       if (baseW === 0 || baseH === 0) return
@@ -76,11 +83,8 @@ export function AnsiTerminalPanelPixel({
       )
       if (newScale === currentScaleRef.current) return
       currentScaleRef.current = newScale
-      r.canvas.style.transform = `scale(${newScale})`
-      // Reserve layout space for the scaled canvas so the wrapper sizes to
-      // the visible area and flex centering works.
-      wrapper.style.width = `${baseW * newScale}px`
-      wrapper.style.height = `${baseH * newScale}px`
+      r.canvas.style.width = `${baseW * newScale}px`
+      r.canvas.style.height = `${baseH * newScale}px`
     }
     updateScaleRef.current = updateScale
     resizeObserver = new ResizeObserver(updateScale)
