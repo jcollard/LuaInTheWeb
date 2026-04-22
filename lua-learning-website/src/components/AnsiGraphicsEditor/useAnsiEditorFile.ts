@@ -1,8 +1,9 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { AnsiGrid, Layer, LayerState } from './types'
 import { compositeGrid, visibleDrawableLayers } from './layerUtils'
-import { exportAnsFile } from './ansExport'
+import { exportAnsFile, exportDosAnsFile } from './ansExport'
 import { exportShFile, exportAnimatedShFile } from './shExport'
+import { exportBatFile } from './batExport'
 import { serializeLayers, deserializeLayers } from './serialization'
 
 /** Find the maximum frame count across all visible drawn layers. */
@@ -85,7 +86,9 @@ export interface UseAnsiEditorFileReturn {
   handleConfirmOverwrite: () => Promise<void>
   handleCancelOverwrite: () => void
   handleExportAns: (layers: Layer[]) => void
+  handleExportDosAns: (layers: Layer[]) => void
   handleExportSh: (layers: Layer[]) => void
+  handleExportBat: (layers: Layer[]) => void
   finishSaveAs: (savedPath: string) => Promise<void>
 }
 
@@ -158,13 +161,27 @@ export function useAnsiEditorFile({
     }
   }, [filePath, fileSystem])
 
-  const handleExportAns = useCallback((layers: Layer[]) => {
-    const grid = compositeGrid(layers)
-    const filename = deriveExportFilename(filePath, 'ans')
-    const title = filename.replace(/\.ans$/, '')
-    const data = exportAnsFile(grid, title)
+  const exportBinary = useCallback((
+    layers: Layer[],
+    ext: string,
+    encode: (grid: AnsiGrid, filename: string) => Uint8Array,
+  ) => {
+    const filename = deriveExportFilename(filePath, ext)
+    const data = encode(compositeGrid(layers), filename)
     downloadBlob(new Blob([new Uint8Array(data)], { type: 'application/octet-stream' }), filename)
   }, [filePath])
+
+  const handleExportAns = useCallback((layers: Layer[]) => {
+    exportBinary(layers, 'ans', (grid, fn) => exportAnsFile(grid, fn.replace(/\.ans$/, '')))
+  }, [exportBinary])
+
+  const handleExportDosAns = useCallback((layers: Layer[]) => {
+    exportBinary(layers, 'ans', exportDosAnsFile)
+  }, [exportBinary])
+
+  const handleExportBat = useCallback((layers: Layer[]) => {
+    exportBinary(layers, 'bat', exportBatFile)
+  }, [exportBinary])
 
   const handleExportSh = useCallback((layers: Layer[]) => {
     const filename = deriveExportFilename(filePath, 'sh')
@@ -193,7 +210,9 @@ export function useAnsiEditorFile({
     handleConfirmOverwrite,
     handleCancelOverwrite,
     handleExportAns,
+    handleExportDosAns,
     handleExportSh,
+    handleExportBat,
     finishSaveAs,
   }
 }

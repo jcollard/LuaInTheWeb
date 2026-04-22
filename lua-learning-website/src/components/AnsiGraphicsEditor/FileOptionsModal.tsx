@@ -12,7 +12,9 @@ export interface FileOptionsModalProps {
   onImportPng: () => void
   onImportLayers: () => void
   onExportAns: () => void
+  onExportDosAns: () => void
   onExportSh: () => void
+  onExportBat: () => void
   onExportLayers: () => void
   cgaPreview: boolean
   onToggleCgaPreview: () => void
@@ -52,7 +54,9 @@ export function FileOptionsModal({
   onImportPng,
   onImportLayers,
   onExportAns,
+  onExportDosAns,
   onExportSh,
+  onExportBat,
   onExportLayers,
   cgaPreview,
   onToggleCgaPreview,
@@ -95,7 +99,9 @@ export function FileOptionsModal({
     { label: 'Import Layers', testId: 'file-import-layers', action: onImportLayers },
     { label: 'Export Layers', testId: 'file-export-layers', action: onExportLayers },
     { label: 'Export ANS', testId: 'file-export-ans', action: onExportAns },
+    { label: 'Export ANS (DOS)', testId: 'file-export-dos-ans', action: onExportDosAns },
     { label: 'Export .sh', testId: 'file-export-sh', action: onExportSh },
+    { label: 'Export .bat', testId: 'file-export-bat', action: onExportBat },
   ]
 
   return (

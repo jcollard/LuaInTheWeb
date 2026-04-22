@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { unicodeToCp437, CP437_TABLE, gridToAnsBytes, buildSauceRecord, exportAnsFile, nearestCgaIndex, cgaQuantize } from './ansExport'
+import { unicodeToCp437, CP437_TABLE, gridToAnsBytes, buildSauceRecord, exportAnsFile, exportDosAnsFile, nearestCgaIndex, cgaQuantize } from './ansExport'
 import type { AnsiCell, AnsiGrid, RGBColor } from './types'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_FG } from './types'
 
@@ -390,5 +390,96 @@ describe('exportAnsFile', () => {
     const ansBytes = gridToAnsBytes(grid)
     const result = exportAnsFile(grid)
     expect(result.byteLength).toBe(ansBytes.byteLength + 1 + 128)
+  })
+})
+
+describe('nearestCgaIndex (paletteSize = 8)', () => {
+  it('never returns an index >= 8', () => {
+    const samples: RGBColor[] = [
+      [0, 0, 0], [255, 255, 255], [255, 0, 0], [0, 255, 0], [0, 0, 255],
+      [85, 85, 85], [170, 170, 170], [255, 255, 85], [128, 128, 128],
+    ]
+    for (const c of samples) {
+      expect(nearestCgaIndex(c, 8)).toBeLessThan(8)
+    }
+  })
+
+  it('folds bright white to light-gray (idx 7)', () => {
+    expect(nearestCgaIndex([255, 255, 255], 8)).toBe(7)
+  })
+
+  it('folds bright blue to blue (idx 1)', () => {
+    expect(nearestCgaIndex([85, 85, 255], 8)).toBe(1)
+  })
+
+  it('maps exact CGA low-intensity colors to their own index', () => {
+    expect(nearestCgaIndex([0, 0, 0], 8)).toBe(0)
+    expect(nearestCgaIndex([0, 0, 170], 8)).toBe(1)
+    expect(nearestCgaIndex([170, 0, 0], 8)).toBe(4)
+    expect(nearestCgaIndex([170, 170, 170], 8)).toBe(7)
+  })
+})
+
+describe('exportDosAnsFile', () => {
+  it('produces a plain byte stream with no SAUCE record and no 0x1A EOF marker', () => {
+    const grid = makeDefaultGrid()
+    const result = exportDosAnsFile(grid)
+    expect(result.byteLength).toBe(gridToAnsBytes(grid, 8).byteLength)
+    // No 0x1A (Ctrl+Z) anywhere — there is no EOF/SAUCE framing.
+    expect(result.includes(0x1a)).toBe(false)
+    // Final byte is the reset SGR's 'm' (0x6d), not a SAUCE magic byte.
+    expect(result[result.byteLength - 1]).toBe(0x6d)
+  })
+
+  it('never emits SGR 5 (blink) even when authored with bright backgrounds', () => {
+    const brightBgs: RGBColor[] = [
+      [85, 85, 255], [85, 255, 85], [85, 255, 255],
+      [255, 85, 85], [255, 85, 255], [255, 255, 85], [255, 255, 255],
+    ]
+    const blinkRegex = new RegExp(`${String.fromCharCode(0x1b)}\\[[^m]*;5[;m]`)
+    for (const bg of brightBgs) {
+      const grid: AnsiGrid = [[makeCell('A', DEFAULT_FG, bg)]]
+      const str = new TextDecoder('latin1').decode(exportDosAnsFile(grid))
+      expect(str).not.toMatch(blinkRegex)
+    }
+  })
+
+  it('still emits bold (SGR 1) for bright foregrounds', () => {
+    const grid: AnsiGrid = [[makeCell('A', [255, 255, 255], DEFAULT_BG)]]
+    const str = new TextDecoder('latin1').decode(exportDosAnsFile(grid))
+    expect(str).toContain('\x1b[0;1;37;40m')
+  })
+
+  it('emits CP437 bytes for glyphs above 0x7F', () => {
+    const grid: AnsiGrid = [[makeCell('█', DEFAULT_FG, DEFAULT_BG)]] // U+2588 → 0xDB
+    expect(Array.from(exportDosAnsFile(grid))).toContain(0xdb)
+  })
+
+  it('uses CRLF row separators', () => {
+    const grid: AnsiGrid = [
+      [makeCell('A', DEFAULT_FG, DEFAULT_BG)],
+      [makeCell('B', DEFAULT_FG, DEFAULT_BG)],
+    ]
+    const bytes = exportDosAnsFile(grid)
+    // Count 0x0D 0x0A pairs — should be exactly 2 (one per row).
+    let crlfs = 0
+    for (let i = 0; i < bytes.length - 1; i++) {
+      if (bytes[i] === 0x0d && bytes[i + 1] === 0x0a) crlfs++
+    }
+    expect(crlfs).toBe(2)
+  })
+})
+
+describe('gridToAnsBytes bgPaletteSize option', () => {
+  it('defaults to 16-color bg quantization (iCE: emits SGR 5 for bright bg)', () => {
+    const grid: AnsiGrid = [[makeCell('A', DEFAULT_FG, [255, 255, 255])]]
+    const str = new TextDecoder('latin1').decode(gridToAnsBytes(grid))
+    expect(str).toContain(';5;')
+  })
+
+  it('bgPaletteSize=8 folds bright bg so SGR 5 is never emitted', () => {
+    const grid: AnsiGrid = [[makeCell('A', DEFAULT_FG, [255, 255, 255])]]
+    const str = new TextDecoder('latin1').decode(gridToAnsBytes(grid, 8))
+    expect(str).not.toContain(';5;')
   })
 })

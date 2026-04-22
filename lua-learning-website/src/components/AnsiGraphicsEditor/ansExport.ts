@@ -74,19 +74,26 @@ const CGA_COLORS: RGBColor[] = CGA_PALETTE.map(e => e.rgb)
  * CGA index → SGR foreground code.
  * Indices 0-7 map to SGR 30-37; indices 8-15 reuse 30-37 with bold attribute.
  */
-const CGA_FG_SGR = [30, 34, 32, 36, 31, 35, 33, 37, 30, 34, 32, 36, 31, 35, 33, 37]
+export const CGA_FG_SGR = [30, 34, 32, 36, 31, 35, 33, 37, 30, 34, 32, 36, 31, 35, 33, 37]
 
 /**
  * CGA index → SGR background code.
  * Indices 0-7 map to SGR 40-47; indices 8-15 reuse 40-47 with blink/iCE attribute.
  */
-const CGA_BG_SGR = [40, 44, 42, 46, 41, 45, 43, 47, 40, 44, 42, 46, 41, 45, 43, 47]
+export const CGA_BG_SGR = [40, 44, 42, 46, 41, 45, 43, 47, 40, 44, 42, 46, 41, 45, 43, 47]
 
-/** Map an RGB color to the nearest CGA 16-color palette index. */
-export function nearestCgaIndex(color: RGBColor): number {
+/**
+ * Map an RGB color to the nearest CGA palette index.
+ *
+ * `paletteSize` restricts the search: 16 (default) covers the full CGA palette;
+ * 8 folds bright colors down to the low-intensity half. The 8-variant is needed
+ * by consumers that cannot honour iCE-colors re-interpretation of SGR 5 as a
+ * bright-bg bit — without a SAUCE TFlag the terminal renders SGR 5 as blink.
+ */
+export function nearestCgaIndex(color: RGBColor, paletteSize: 8 | 16 = 16): number {
   let bestIdx = 0
   let bestDist = Infinity
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < paletteSize; i++) {
     const c = CGA_COLORS[i]
     const dr = color[0] - c[0]
     const dg = color[1] - c[1]
@@ -105,7 +112,18 @@ export function cgaQuantize(color: RGBColor): RGBColor {
   return CGA_COLORS[nearestCgaIndex(color)]
 }
 
-export function gridToAnsBytes(grid: AnsiGrid): Uint8Array {
+/**
+ * Emit `grid` as ANSI escape + CP437 byte stream, no framing.
+ *
+ * `bgPaletteSize` picks the CGA palette size for background quantization:
+ * 16 (default) preserves bright-bg colors as SGR 5 (iCE colors, requires SAUCE
+ * TFlags=0x01 at read time); 8 folds them down so SGR 5 is never emitted —
+ * needed for DOS `type` / plain cmd which render SGR 5 as literal blink.
+ */
+export function gridToAnsBytes(
+  grid: AnsiGrid,
+  bgPaletteSize: 8 | 16 = 16,
+): Uint8Array {
   const bytes: number[] = []
   const ESC = 0x1b
 
@@ -140,7 +158,7 @@ export function gridToAnsBytes(grid: AnsiGrid): Uint8Array {
     for (let c = 0; c < row.length; c++) {
       const cell = row[c]
       const fgIdx = nearestCgaIndex(cell.fg)
-      const bgIdx = nearestCgaIndex(cell.bg)
+      const bgIdx = nearestCgaIndex(cell.bg, bgPaletteSize)
       if (fgIdx !== curFgIdx || bgIdx !== curBgIdx) {
         pushSgr(fgIdx, bgIdx)
         curFgIdx = fgIdx
@@ -154,6 +172,16 @@ export function gridToAnsBytes(grid: AnsiGrid): Uint8Array {
 
   pushReset()
   return new Uint8Array(bytes)
+}
+
+/**
+ * Plain ANSI+CP437 byte stream suitable for `type file.ans` on DOS/DOSBox.
+ *
+ * Differs from {@link exportAnsFile}: no SAUCE record, no 0x1A EOF marker,
+ * bg quantized to the 8 low-intensity CGA indices so cells never blink.
+ */
+export function exportDosAnsFile(grid: AnsiGrid): Uint8Array {
+  return gridToAnsBytes(grid, 8)
 }
 
 export function buildSauceRecord(title: string, fileSize: number, cols = 80, rows = 25): Uint8Array {

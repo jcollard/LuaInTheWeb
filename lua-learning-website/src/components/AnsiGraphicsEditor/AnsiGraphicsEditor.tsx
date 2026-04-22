@@ -68,7 +68,9 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
     handleConfirmOverwrite,
     handleCancelOverwrite,
     handleExportAns: fileHandleExportAns,
+    handleExportDosAns: fileHandleExportDosAns,
     handleExportSh: fileHandleExportSh,
+    handleExportBat: fileHandleExportBat,
   } = useAnsiEditorFile({
     filePath,
     fileSystem,
@@ -263,7 +265,9 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
   handleOpenFileMenuRef.current = useCallback(() => setFileMenuOpen(true), [])
 
   const handleExportAns = useCallback(() => fileHandleExportAns(layers), [fileHandleExportAns, layers])
+  const handleExportDosAns = useCallback(() => fileHandleExportDosAns(layers), [fileHandleExportDosAns, layers])
   const handleExportSh = useCallback(() => fileHandleExportSh(layers), [fileHandleExportSh, layers])
+  const handleExportBat = useCallback(() => fileHandleExportBat(layers), [fileHandleExportBat, layers])
 
   const [showErrorDetail, setShowErrorDetail] = useState(false)
   const [errorCopied, setErrorCopied] = useState(false)
@@ -314,7 +318,9 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         onImportPng={handleImportPngClick}
         onImportLayers={handleImportLayersClick}
         onExportAns={handleExportAns}
+        onExportDosAns={handleExportDosAns}
         onExportSh={handleExportSh}
+        onExportBat={handleExportBat}
         onExportLayers={exportLayers.handleExportLayersClick}
         onUndo={undo}
         onRedo={redo}

@@ -17,7 +17,9 @@ export interface AnsiEditorToolbarProps {
   onImportPng: () => void
   onImportLayers: () => void
   onExportAns: () => void
+  onExportDosAns: () => void
   onExportSh: () => void
+  onExportBat: () => void
   onExportLayers: () => void
   onUndo: () => void
   onRedo: () => void
@@ -62,7 +64,7 @@ export interface AnsiEditorToolbarProps {
 
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
-  onImportPng, onImportLayers, onExportAns, onExportSh, onExportLayers, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
+  onImportPng, onImportLayers, onExportAns, onExportDosAns, onExportSh, onExportBat, onExportLayers, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
   onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, scaleMode, onSetScaleMode, cols, rows, onResizeCanvas, font, onSetFont, useFontBlocks, onSetUseFontBlocks, dprCompensate, onSetDprCompensate, activeLayerIsGroup, isPlaying,
   fileMenuOpen: controlledFileMenuOpen, onSetFileMenuOpen,
 }: AnsiEditorToolbarProps) {
@@ -90,11 +92,9 @@ export function AnsiEditorToolbar({
           onClear={onClear}
           onSave={onSave}
           onSaveAs={onSaveAs}
-          onImportPng={onImportPng}
-          onImportLayers={onImportLayers}
-          onExportAns={onExportAns}
-          onExportSh={onExportSh}
-          onExportLayers={onExportLayers}
+          onImportPng={onImportPng} onImportLayers={onImportLayers}
+          onExportAns={onExportAns} onExportDosAns={onExportDosAns} onExportSh={onExportSh}
+          onExportBat={onExportBat} onExportLayers={onExportLayers}
           cgaPreview={cgaPreview ?? false}
           onToggleCgaPreview={onToggleCgaPreview!}
           scaleMode={scaleMode ?? 'integer-auto'}
