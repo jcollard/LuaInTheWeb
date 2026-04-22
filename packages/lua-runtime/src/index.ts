@@ -111,3 +111,18 @@ export { PathAPI, type IPathAPI, type FillRule } from './PathAPI'
 
 // Transform API for canvas transformations (translate, rotate, scale, etc.)
 export { TransformAPI, type ITransformAPI } from './TransformAPI'
+
+// Pixel-perfect ANSI renderer and bitmap font registry.
+export {
+  PixelAnsiRenderer,
+  type PixelAnsiRendererHandle,
+  type PixelAnsiRendererOptions,
+  type PixelAnsiRendererTheme,
+} from './pixelAnsiRenderer'
+export {
+  BITMAP_FONT_REGISTRY,
+  DEFAULT_FONT_ID,
+  getFontById,
+  type BitmapFontRegistryEntry,
+} from './fontRegistry'
+export { FONT_ATLASES, type FontAtlas } from './glyphAtlas.generated'
