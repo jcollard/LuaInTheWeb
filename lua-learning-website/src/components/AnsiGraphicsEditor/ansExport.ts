@@ -74,13 +74,13 @@ const CGA_COLORS: RGBColor[] = CGA_PALETTE.map(e => e.rgb)
  * CGA index → SGR foreground code.
  * Indices 0-7 map to SGR 30-37; indices 8-15 reuse 30-37 with bold attribute.
  */
-const CGA_FG_SGR = [30, 34, 32, 36, 31, 35, 33, 37, 30, 34, 32, 36, 31, 35, 33, 37]
+export const CGA_FG_SGR = [30, 34, 32, 36, 31, 35, 33, 37, 30, 34, 32, 36, 31, 35, 33, 37]
 
 /**
  * CGA index → SGR background code.
  * Indices 0-7 map to SGR 40-47; indices 8-15 reuse 40-47 with blink/iCE attribute.
  */
-const CGA_BG_SGR = [40, 44, 42, 46, 41, 45, 43, 47, 40, 44, 42, 46, 41, 45, 43, 47]
+export const CGA_BG_SGR = [40, 44, 42, 46, 41, 45, 43, 47, 40, 44, 42, 46, 41, 45, 43, 47]
 
 /** Map an RGB color to the nearest CGA 16-color palette index. */
 export function nearestCgaIndex(color: RGBColor): number {
