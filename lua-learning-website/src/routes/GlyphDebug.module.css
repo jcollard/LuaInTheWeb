@@ -135,11 +135,12 @@
   justify-content: center;
   padding: 8px;
   text-align: center;
-  background: #111;
-  outline: 1px dashed #333;
-  color: #666;
+  background: #1d1812;
+  outline: 1px dashed #554535;
+  color: #c8a06a;
   font-size: 12px;
   font-style: italic;
+  line-height: 1.4;
 }
 
 .stats {

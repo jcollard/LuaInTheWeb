@@ -279,8 +279,8 @@ export function GlyphDebug() {
             ? <PixelGrid data={referenceMask} cellW={cellW} cellH={cellH} alphaMode={false} />
             : <div className={styles.missing} style={{ width: cellW * DISPLAY_SCALE, height: cellH * DISPLAY_SCALE }}>
                 {cellW === 8 && cellH === 16
-                  ? `no reference for ${hexCodepoint(currentCodepoint)}`
-                  : `no reference available at ${cellW}×${cellH}`}
+                  ? <>no reference<br />for {hexCodepoint(currentCodepoint)}</>
+                  : <>reference patterns<br />are 8×16 only<br />(this font is {cellW}×{cellH})</>}
               </div>
           }
           {referenceMask && (
