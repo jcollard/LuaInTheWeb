@@ -66,20 +66,33 @@ describe('exportBatFile', () => {
     expect(result).toContain(`${ESC}[0;1;37;40m`)
   })
 
-  it('adds blink attribute (5) for bright background (idx >= 8)', () => {
-    const grid = make1x1Grid(makeCell('A', DEFAULT_FG, [255, 255, 255]))
-    const result = bytesToStr(exportBatFile(grid))
-    // white bg → idx 15; fg light-gray → idx 7 (no bold); bg SGR 47 with blink
-    expect(result).toContain(`${ESC}[0;5;37;47m`)
+  it('never emits SGR 5 (blink) — bg is quantized to low-intensity CGA (idx 0-7)', () => {
+    // Author every possible bright-bg color. The SGR stream must never include
+    // `;5` (which DOSBox renders as actual blink without an iCE-colors flag).
+    const brightBgCells = [
+      [85, 85, 85], [85, 85, 255], [85, 255, 85], [85, 255, 255],
+      [255, 85, 85], [255, 85, 255], [255, 255, 85], [255, 255, 255],
+    ] as const
+    const blinkSgrRegex = new RegExp(`${ESC}\\[[^m]*;5[;m]`)
+    for (const bg of brightBgCells) {
+      const grid = make1x1Grid(makeCell('A', DEFAULT_FG, bg as RGBColor))
+      const result = bytesToStr(exportBatFile(grid))
+      expect(result).not.toMatch(blinkSgrRegex)
+    }
   })
 
-  it('omits bold and blink for plain (idx 0-7) fg and bg', () => {
+  it('quantizes a bright bg down to the nearest low-intensity CGA color', () => {
+    // Bright white [255,255,255] has nearest low-intensity = light-gray [170,170,170] (idx 7, SGR 47).
+    const grid = make1x1Grid(makeCell('A', DEFAULT_FG, [255, 255, 255]))
+    const result = bytesToStr(exportBatFile(grid))
+    expect(result).toContain(`${ESC}[0;37;47m`)
+  })
+
+  it('omits bold for plain (idx 0-7) fg with any bg', () => {
     const grid = make1x1Grid(makeCell('A', DEFAULT_FG, DEFAULT_BG))
     const result = bytesToStr(exportBatFile(grid))
-    // SGR should be `\x1b[0;37;40m` — no 1 (bold), no 5 (blink)
     expect(result).toContain(`${ESC}[0;37;40m`)
     expect(result).not.toContain(`${ESC}[0;1;37;40m`)
-    expect(result).not.toContain(`${ESC}[0;5;37;40m`)
   })
 
   it('skips redundant SGR when consecutive cells share fg and bg indices', () => {
@@ -115,15 +128,28 @@ describe('exportBatFile', () => {
     expect(result).toContain(`${ESC}[0;37;44m`) // gray / blue
   })
 
-  it('emits reset at the end of each row', () => {
+  it('emits reset at the end of each row followed by a cursor-park ESC[H', () => {
     const grid: AnsiGrid = [
       [makeCell('A', DEFAULT_FG, DEFAULT_BG)],
       [makeCell('B', DEFAULT_FG, DEFAULT_BG)],
     ]
     const result = bytesToStr(exportBatFile(grid))
-    const matches = result.match(new RegExp(`${ESC}\\[0m\\r\\n`, 'g'))
-    // 2 rows, each ending with reset + CRLF
+    // Each row ends with `reset + ESC[H + CRLF`. The ESC[H parks the cursor at
+    // (1,1) so the final row's trailing CRLF does not scroll the screen.
+    const matches = result.match(new RegExp(`${ESC}\\[0m${ESC}\\[H\\r\\n`, 'g'))
     expect(matches?.length).toBe(2)
+  })
+
+  it('prefixes every row with an explicit cursor-position ESC[R;1H', () => {
+    const grid: AnsiGrid = [
+      [makeCell('A', DEFAULT_FG, DEFAULT_BG)],
+      [makeCell('B', DEFAULT_FG, DEFAULT_BG)],
+      [makeCell('C', DEFAULT_FG, DEFAULT_BG)],
+    ]
+    const result = bytesToStr(exportBatFile(grid))
+    expect(result).toContain(`echo ${ESC}[1;1H`)
+    expect(result).toContain(`echo ${ESC}[2;1H`)
+    expect(result).toContain(`echo ${ESC}[3;1H`)
   })
 
   it('doubles the % byte inside echo lines to suppress cmd variable expansion', () => {
