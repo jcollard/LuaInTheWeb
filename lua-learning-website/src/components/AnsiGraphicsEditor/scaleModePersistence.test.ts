@@ -49,12 +49,12 @@ describe('scaleModePersistence', () => {
 })
 
 describe('dprCompensatePersistence', () => {
-  it('DEFAULT_DPR_COMPENSATE is false', () => {
-    expect(DEFAULT_DPR_COMPENSATE).toBe(false)
+  it('DEFAULT_DPR_COMPENSATE is true (on by default)', () => {
+    expect(DEFAULT_DPR_COMPENSATE).toBe(true)
   })
 
-  it('returns default when storage is empty', () => {
-    expect(loadStoredDprCompensate()).toBe(false)
+  it('returns default (true) when storage is empty', () => {
+    expect(loadStoredDprCompensate()).toBe(true)
   })
 
   it('round-trips a true value', () => {
@@ -62,10 +62,16 @@ describe('dprCompensatePersistence', () => {
     expect(loadStoredDprCompensate()).toBe(true)
   })
 
-  it('clears the key when saving false', () => {
-    saveStoredDprCompensate(true)
+  it('persists explicit false — distinguishes "user turned off" from "never set"', () => {
     saveStoredDprCompensate(false)
     expect(loadStoredDprCompensate()).toBe(false)
-    expect(localStorage.getItem('ansi-editor:dpr-compensate')).toBe(null)
+    expect(localStorage.getItem('ansi-editor:dpr-compensate')).toBe('0')
+  })
+
+  it('re-enabling overwrites the false value', () => {
+    saveStoredDprCompensate(false)
+    saveStoredDprCompensate(true)
+    expect(loadStoredDprCompensate()).toBe(true)
+    expect(localStorage.getItem('ansi-editor:dpr-compensate')).toBe('1')
   })
 })

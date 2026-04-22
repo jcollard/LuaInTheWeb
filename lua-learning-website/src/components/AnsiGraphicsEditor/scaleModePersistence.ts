@@ -51,14 +51,20 @@ export function saveStoredScaleMode(mode: ScaleMode): void {
  * the scale mode — both are editor-level view preferences — but kept as
  * independent fields so the schema is forward-compatible if we later add
  * more panel prefs.
+ *
+ * Stored as '1' (on) / '0' (off). Absent = default (true) so first-time
+ * users get pixel-perfect emulation automatically on fractional-DPR
+ * displays. Values other than '0' are treated as on.
  */
 const DPR_COMPENSATE_KEY = 'ansi-editor:dpr-compensate'
 
-export const DEFAULT_DPR_COMPENSATE = false
+export const DEFAULT_DPR_COMPENSATE = true
 
 export function loadStoredDprCompensate(): boolean {
   try {
-    return localStorage.getItem(DPR_COMPENSATE_KEY) === '1'
+    const raw = localStorage.getItem(DPR_COMPENSATE_KEY)
+    if (raw === null) return DEFAULT_DPR_COMPENSATE
+    return raw !== '0'
   } catch {
     return DEFAULT_DPR_COMPENSATE
   }
@@ -66,11 +72,9 @@ export function loadStoredDprCompensate(): boolean {
 
 export function saveStoredDprCompensate(flag: boolean): void {
   try {
-    if (flag) {
-      localStorage.setItem(DPR_COMPENSATE_KEY, '1')
-    } else {
-      localStorage.removeItem(DPR_COMPENSATE_KEY)
-    }
+    // Always write explicitly so load can distinguish "user turned it off"
+    // from "never set" (default).
+    localStorage.setItem(DPR_COMPENSATE_KEY, flag ? '1' : '0')
   } catch {
     /* ignore */
   }
