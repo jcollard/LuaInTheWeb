@@ -76,6 +76,12 @@ async function bundleAnsiInline() {
               export { CrtShader, CRT_DEFAULTS } from '${join(LUA_RUNTIME_SRC, 'crtShader.ts').replace(/\\/g, '/')}';
               export type { CrtConfig } from '${join(LUA_RUNTIME_SRC, 'crtShader.ts').replace(/\\/g, '/')}';
               export { LUA_LOCALSTORAGE_CODE } from '${join(LUA_RUNTIME_SRC, 'lua/localstorage.generated.ts').replace(/\\/g, '/')}';
+              export { PixelAnsiRenderer } from '${join(LUA_RUNTIME_SRC, 'pixelAnsiRenderer.ts').replace(/\\/g, '/')}';
+              export type { PixelAnsiRendererHandle, PixelAnsiRendererOptions } from '${join(LUA_RUNTIME_SRC, 'pixelAnsiRenderer.ts').replace(/\\/g, '/')}';
+              export { BITMAP_FONT_REGISTRY, DEFAULT_FONT_ID, getFontById } from '${join(LUA_RUNTIME_SRC, 'fontRegistry.ts').replace(/\\/g, '/')}';
+              export type { BitmapFontRegistryEntry } from '${join(LUA_RUNTIME_SRC, 'fontRegistry.ts').replace(/\\/g, '/')}';
+              export { FONT_ATLASES } from '${join(LUA_RUNTIME_SRC, 'glyphAtlas.generated.ts').replace(/\\/g, '/')}';
+              export type { FontAtlas } from '${join(LUA_RUNTIME_SRC, 'glyphAtlas.generated.ts').replace(/\\/g, '/')}';
             `,
             loader: 'ts',
             resolveDir: LUA_RUNTIME_SRC,

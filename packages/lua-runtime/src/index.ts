@@ -127,6 +127,10 @@ export {
 } from './fontRegistry'
 export { FONT_ATLASES, type FontAtlas } from './glyphAtlas.generated'
 export {
+  ANSI_FONT_DATA,
+  type AnsiFontDataEntry,
+} from './ansi-fonts-inline.generated'
+export {
   getBlockReference,
   BLOCK_GLYPH_REFERENCE_8X16,
 } from './blockGlyphReference'

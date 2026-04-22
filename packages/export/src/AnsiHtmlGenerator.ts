@@ -8,7 +8,15 @@ import {
   audioLuaCode,
   CHIP_INLINE_JS,
   chipLuaCode,
+  ANSI_FONT_DATA,
 } from '@lua-learning/lua-runtime'
+
+/** Build the @font-face rule block for every registered bitmap font. */
+function buildFontFaceRules(): string {
+  return ANSI_FONT_DATA.map((f) =>
+    `@font-face { font-family: "${f.fontFamily}"; src: url("${f.dataUrl}") format("woff"); font-weight: normal; font-style: normal; }`,
+  ).join('\n    ')
+}
 import { ANSI_INLINE_JS } from './runtime/ansi-inline.generated'
 import { XTERM_WITH_CANVAS_ADDON_JS } from './runtime/xterm-canvas.generated'
 
@@ -72,12 +80,17 @@ export function generateAnsiHtml(
     ${XTERM_INLINE_CSS}
   </style>
   <style>
+    /* Legacy IBM VGA TTF — kept until Step 9 cleanup for backward compat
+       with projects authored against the pre-feature default family. */
     @font-face {
       font-family: "IBM VGA 8x16";
       src: url("${IBM_VGA_FONT_DATA_URL}") format("truetype");
       font-weight: normal;
       font-style: normal;
     }
+    /* Bitmap font registry — inline data URLs so the export stays
+       self-contained even when served from the file:// protocol. */
+    ${buildFontFaceRules()}
     body {
       margin: 0;
       padding: 0;
@@ -279,6 +292,7 @@ export function generateAnsiHtml(
       }` : ''}
 
       // Create AnsiTerminalHandle wrapping xterm.js
+      const getFontById = globalThis.AnsiStandalone.getFontById;
       const handle = {
         write: (data) => term.write(data), container: wrapper, dispose: () => term.dispose(),
         resize: (cols, rows) => {
@@ -312,6 +326,30 @@ export function generateAnsiHtml(
             crtShader = null;
           }
         },
+        // Per-screen font switch (Step 7 AnsiController calls this when
+        // ansi.set_screen switches to a screen with a different font).
+        // For the xterm-based export path, we update fontFamily + fontSize
+        // from the registry and re-apply scale. Pixel-renderer path in
+        // the export is follow-up work.
+        setFontFamily: (fontId) => {
+          const entry = getFontById(fontId);
+          if (!entry) return;
+          document.fonts.load(entry.cellH + 'px "' + entry.fontFamily + '"').catch(() => {});
+          term.options.fontFamily = '"' + entry.fontFamily + '", monospace';
+          term.options.fontSize = entry.cellH;
+          // Re-measure base dims at the new font size then re-apply scale.
+          requestAnimationFrame(() => {
+            baseW = wrapper.scrollWidth;
+            baseH = wrapper.scrollHeight;
+            currentScale = -1;
+            applyScale();
+          });
+        },
+        // Reserved for the dual-mode export variant (plan §3.6).
+        // The current export path always uses xterm; recording the flag
+        // keeps the handle's surface compatible with the runtime's
+        // AnsiController, which calls this on screen switches.
+        setUseFontBlocks: () => { /* no-op until export has pixel variant */ },
       };
       const callbacks = {
         onRequestAnsiTab: () => Promise.resolve(handle), onCloseAnsiTab: () => {},
