@@ -3,6 +3,31 @@
   src: url('/fonts/16px-IBM_VGA_8x16.ttf') format('truetype');
 }
 
+/* Bitmap-font registry (see packages/lua-runtime/src/fontRegistry.ts).
+ * These families back the new pixel renderer's fillText fallback and the
+ * legacy xterm path once it consumes the registry. The old 'IBM VGA 8x16'
+ * family above stays until the legacy TTF is removed. */
+@font-face {
+  font-family: 'Web IBM CGA';
+  src: url('/fonts/WebPlus_IBM_CGA.woff') format('woff');
+}
+@font-face {
+  font-family: 'Web IBM EGA 8x14';
+  src: url('/fonts/WebPlus_IBM_EGA_8x14.woff') format('woff');
+}
+@font-face {
+  font-family: 'Web IBM MDA';
+  src: url('/fonts/WebPlus_IBM_MDA.woff') format('woff');
+}
+@font-face {
+  font-family: 'Web IBM VGA 8x16';
+  src: url('/fonts/WebPlus_IBM_VGA_8x16.woff') format('woff');
+}
+@font-face {
+  font-family: 'Web IBM VGA 9x16';
+  src: url('/fonts/WebPlus_IBM_VGA_9x16.woff') format('woff');
+}
+
 .container {
   display: flex;
   align-items: center;
