@@ -3,7 +3,7 @@ import type { AnsiGrid, Layer, LayerState } from './types'
 import { compositeGrid, visibleDrawableLayers } from './layerUtils'
 import { exportAnsFile } from './ansExport'
 import { exportShFile, exportAnimatedShFile } from './shExport'
-import { exportBatFile, exportAnimatedBatFile } from './batExport'
+import { exportBatFile } from './batExport'
 import { serializeLayers, deserializeLayers } from './serialization'
 
 /** Find the maximum frame count across all visible drawn layers. */
@@ -188,19 +188,7 @@ export function useAnsiEditorFile({
 
   const handleExportBat = useCallback((layers: Layer[]) => {
     const filename = deriveExportFilename(filePath, 'bat')
-    const maxFrames = getMaxFrameCount(layers)
-
-    let data: Uint8Array
-    if (maxFrames > 1) {
-      const frames = allFrameComposites(layers, maxFrames)
-      const drawable = visibleDrawableLayers(layers)
-      const drawnLayer = drawable.find(l => l.type === 'drawn' && l.frames.length > 1)
-      const durationMs = drawnLayer?.type === 'drawn' ? drawnLayer.frameDurationMs : 100
-      data = exportAnimatedBatFile(frames, durationMs)
-    } else {
-      data = exportBatFile(compositeGrid(layers))
-    }
-
+    const data = exportBatFile(compositeGrid(layers))
     downloadBlob(new Blob([new Uint8Array(data)], { type: 'application/octet-stream' }), filename)
   }, [filePath])
 

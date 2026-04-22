@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { exportBatFile, exportAnimatedBatFile } from './batExport'
+import { exportBatFile } from './batExport'
 import type { AnsiCell, AnsiGrid, RGBColor } from './types'
 import { ANSI_COLS, ANSI_ROWS, DEFAULT_BG, DEFAULT_FG } from './types'
 
@@ -154,76 +154,3 @@ describe('exportBatFile', () => {
   })
 })
 
-// ─── exportAnimatedBatFile ───
-
-describe('exportAnimatedBatFile', () => {
-  const f1 = make1x1Grid(makeCell('A', [255, 0, 0], DEFAULT_BG))
-  const f2 = make1x1Grid(makeCell('B', [0, 255, 0], DEFAULT_BG))
-
-  it('contains :loop label and goto loop terminator', () => {
-    const result = bytesToStr(exportAnimatedBatFile([f1, f2], 100))
-    expect(result).toContain('\r\n:loop\r\n')
-    expect(result.endsWith('goto loop\r\n')).toBe(true)
-  })
-
-  it('emits cursor-hide ESC[?25l before the loop', () => {
-    const result = bytesToStr(exportAnimatedBatFile([f1, f2], 100))
-    const hideIdx = result.indexOf(`${ESC}[?25l`)
-    const loopIdx = result.indexOf(':loop')
-    expect(hideIdx).toBeGreaterThan(0)
-    expect(hideIdx).toBeLessThan(loopIdx)
-  })
-
-  it('prepends ESC[H to the first row of every frame', () => {
-    const result = bytesToStr(exportAnimatedBatFile([f1, f2], 100))
-    // 2 frames × 1 row each → 2 cursor-home prefixes on echo lines
-    const matches = result.match(new RegExp(`echo ${ESC}\\[H`, 'g'))
-    expect(matches?.length).toBe(2)
-  })
-
-  it('prepends ESC[H only to the first row of a multi-row frame', () => {
-    const multiRow: AnsiGrid = [
-      [makeCell('A', DEFAULT_FG, DEFAULT_BG)],
-      [makeCell('B', DEFAULT_FG, DEFAULT_BG)],
-      [makeCell('C', DEFAULT_FG, DEFAULT_BG)],
-    ]
-    const result = bytesToStr(exportAnimatedBatFile([multiRow, multiRow], 100))
-    // 2 frames × 3 rows = 6 echo lines, but only 2 cursor-home prefixes (one per frame).
-    const matches = result.match(new RegExp(`echo ${ESC}\\[H`, 'g'))
-    expect(matches?.length).toBe(2)
-  })
-
-  it('emits a ping delay with the exact millisecond value between frames', () => {
-    const result = bytesToStr(exportAnimatedBatFile([f1, f2], 250))
-    expect(result).toContain('ping -n 1 -w 250 192.0.2.1 >nul\r\n')
-  })
-
-  it('rounds fractional durations to whole milliseconds', () => {
-    const result = bytesToStr(exportAnimatedBatFile([f1, f2], 83.4))
-    expect(result).toContain('ping -n 1 -w 83 192.0.2.1 >nul\r\n')
-  })
-
-  it('clamps sub-1ms durations to at least 1ms', () => {
-    const result = bytesToStr(exportAnimatedBatFile([f1, f2], 0))
-    expect(result).toContain('ping -n 1 -w 1 192.0.2.1 >nul\r\n')
-  })
-
-  it('falls back to the static exporter when given a single frame', () => {
-    const result = bytesToStr(exportAnimatedBatFile([f1], 100))
-    expect(result).not.toContain(':loop')
-    expect(result).not.toContain('goto loop')
-    expect(result.endsWith('pause >nul\r\n')).toBe(true)
-  })
-
-  it('falls back to an empty grid when given zero frames', () => {
-    const result = bytesToStr(exportAnimatedBatFile([], 100))
-    expect(result.startsWith('@echo off\r\n')).toBe(true)
-    expect(result.endsWith('pause >nul\r\n')).toBe(true)
-  })
-
-  it('emits one ping delay per frame', () => {
-    const result = bytesToStr(exportAnimatedBatFile([f1, f2, f1], 100))
-    const pings = result.match(/ping -n 1 -w 100 192\.0\.2\.1 >nul\r\n/g)
-    expect(pings?.length).toBe(3)
-  })
-})

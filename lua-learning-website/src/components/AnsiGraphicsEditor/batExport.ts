@@ -8,11 +8,6 @@ const PERCENT = 0x25
 
 const ECHO_PREFIX = 'echo '
 const REM_LINE = 'REM Requires ANSI.SYS (DOS/9x) or a modern terminal (Win10+ cmd, ConEmu, ANSICON).'
-const PING_PREFIX = 'ping -n 1 -w '
-const PING_SUFFIX = ' 192.0.2.1 >nul'
-
-/** ESC[H cursor-home prefix prepended to the first row of each animated frame. */
-const HOME_PREFIX = new Uint8Array([ESC, 0x5b, 0x48])
 
 function pushAscii(bytes: number[], s: string): void {
   for (let i = 0; i < s.length; i++) {
@@ -47,11 +42,8 @@ function pushCellChar(bytes: number[], cell: AnsiCell): void {
   else bytes.push(b)
 }
 
-function pushRow(bytes: number[], row: AnsiCell[], prefix?: Uint8Array): void {
+function pushRow(bytes: number[], row: AnsiCell[]): void {
   pushAscii(bytes, ECHO_PREFIX)
-  if (prefix) {
-    for (let i = 0; i < prefix.length; i++) bytes.push(prefix[i])
-  }
   let curFgIdx = -1
   let curBgIdx = -1
   for (let c = 0; c < row.length; c++) {
@@ -86,31 +78,6 @@ export function exportBatFile(grid: AnsiGrid): Uint8Array {
     pushCrlf(bytes)
   }
   pushAscii(bytes, 'pause >nul')
-  pushCrlf(bytes)
-  return new Uint8Array(bytes)
-}
-
-/** Generate an animated DOS BAT script that loops frames until Ctrl+C. */
-export function exportAnimatedBatFile(frames: AnsiGrid[], durationMs: number): Uint8Array {
-  if (frames.length <= 1) return exportBatFile(frames[0] ?? [])
-  const waitMs = Math.max(1, Math.round(durationMs))
-  const bytes: number[] = []
-  pushHeader(bytes)
-  pushAscii(bytes, ECHO_PREFIX)
-  bytes.push(ESC)
-  pushAscii(bytes, '[?25l')
-  pushCrlf(bytes)
-  pushAscii(bytes, ':loop')
-  pushCrlf(bytes)
-  for (const frame of frames) {
-    for (let r = 0; r < frame.length; r++) {
-      pushRow(bytes, frame[r], r === 0 ? HOME_PREFIX : undefined)
-      pushCrlf(bytes)
-    }
-    pushAscii(bytes, `${PING_PREFIX}${waitMs}${PING_SUFFIX}`)
-    pushCrlf(bytes)
-  }
-  pushAscii(bytes, 'goto loop')
   pushCrlf(bytes)
   return new Uint8Array(bytes)
 }
