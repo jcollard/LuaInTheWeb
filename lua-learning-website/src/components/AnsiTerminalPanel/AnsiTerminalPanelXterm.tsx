@@ -9,7 +9,7 @@ import {
 } from '@lua-learning/lua-runtime'
 import '@xterm/xterm/css/xterm.css'
 import type { AnsiTerminalHandle, AnsiTerminalPanelProps } from './types'
-import { computeScale, makeSetCrt, patchFillRect } from './panelHelpers'
+import { computeScale, makeSetCrt, patchFillRect, useDprChange } from './panelHelpers'
 import styles from './AnsiTerminalPanel.module.css'
 
 function fontSpec(entry: BitmapFontRegistryEntry): { family: string; size: number } {
@@ -30,6 +30,7 @@ function fontSpec(entry: BitmapFontRegistryEntry): { family: string; size: numbe
 export function AnsiTerminalPanelXterm({
   isActive,
   scaleMode = 'integer-auto',
+  dprCompensate = false,
   cols = 80,
   rows = 25,
   fontId = DEFAULT_FONT_ID,
@@ -44,6 +45,8 @@ export function AnsiTerminalPanelXterm({
   onTerminalReadyRef.current = onTerminalReady
   const scaleModeRef = useRef(scaleMode)
   scaleModeRef.current = scaleMode
+  const dprCompensateRef = useRef(dprCompensate)
+  dprCompensateRef.current = dprCompensate
   const currentScaleRef = useRef(-1)
   const updateScaleRef = useRef<(() => void) | null>(null)
   const fontRef = useRef<BitmapFontRegistryEntry>(
@@ -111,10 +114,12 @@ export function AnsiTerminalPanelXterm({
         if (baseW === 0 || baseH === 0) return
         const newScale = computeScale(
           scaleModeRef.current,
-          container.clientWidth,
-          container.clientHeight,
-          baseW,
-          baseH,
+          { w: container.clientWidth, h: container.clientHeight },
+          { w: baseW, h: baseH },
+          {
+            dprCompensate: dprCompensateRef.current,
+            dpr: typeof window !== 'undefined' ? window.devicePixelRatio : 1,
+          },
         )
         if (newScale === currentScaleRef.current) return
         currentScaleRef.current = newScale
@@ -194,6 +199,16 @@ export function AnsiTerminalPanelXterm({
     currentScaleRef.current = -1
     updateScaleRef.current?.()
   }, [scaleMode])
+
+  useEffect(() => {
+    currentScaleRef.current = -1
+    updateScaleRef.current?.()
+  }, [dprCompensate])
+
+  useDprChange(() => {
+    currentScaleRef.current = -1
+    updateScaleRef.current?.()
+  })
 
   useEffect(() => {
     handleRef.current?.resize?.(cols, rows)

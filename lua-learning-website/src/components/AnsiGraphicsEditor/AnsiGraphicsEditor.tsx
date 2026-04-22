@@ -2,7 +2,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnsiTerminalPanel } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import { DprWarning } from './DprWarning'
-import { loadStoredScaleMode, saveStoredScaleMode } from './scaleModePersistence'
+import {
+  loadStoredScaleMode,
+  saveStoredScaleMode,
+  loadStoredDprCompensate,
+  saveStoredDprCompensate,
+} from './scaleModePersistence'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { useIDE } from '../IDEContext/useIDE'
 import { AnsiEditorToolbar } from './AnsiEditorToolbar'
@@ -39,6 +44,11 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
   const setScaleMode = useCallback((mode: ScaleMode) => {
     setScaleModeRaw(mode)
     saveStoredScaleMode(mode)
+  }, [])
+  const [dprCompensate, setDprCompensateRaw] = useState<boolean>(() => loadStoredDprCompensate())
+  const setDprCompensate = useCallback((flag: boolean) => {
+    setDprCompensateRaw(flag)
+    saveStoredDprCompensate(flag)
   }, [])
 
   const { toasts, showToast } = useToast()
@@ -330,6 +340,8 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         onSetFont={setFont}
         useFontBlocks={useFontBlocks}
         onSetUseFontBlocks={setUseFontBlocks}
+        dprCompensate={dprCompensate}
+        onSetDprCompensate={setDprCompensate}
         activeLayerIsGroup={activeLayerIsGroup}
         isPlaying={isPlaying}
         fileMenuOpen={fileMenuOpen}
@@ -346,7 +358,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
           activeLayerId={activeLayerId}
         />
         <div className={styles.canvasAndFrames}>
-          <DprWarning scaleMode={scaleMode} />
+          <DprWarning scaleMode={scaleMode} dprCompensate={dprCompensate} />
           <div className={[styles.canvas, brush.tool === 'move' && (isMoveDragging ? styles.canvasMoveDragging : styles.canvasMove), brush.tool === 'flip' && styles.canvasFlip].filter(Boolean).join(' ')}>
             <AnsiTerminalPanel
               isActive={true}
@@ -355,6 +367,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
               rows={projectRows}
               fontId={font}
               useFontBlocks={useFontBlocks}
+              dprCompensate={dprCompensate}
               onTerminalReady={onTerminalReady}
             />
           </div>

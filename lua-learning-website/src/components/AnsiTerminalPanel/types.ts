@@ -42,6 +42,15 @@ export interface AnsiTerminalPanelProps {
    */
   useFontBlocks?: boolean
   /**
+   * When true, snap the chosen integer scale UP to the smallest
+   * multiple where `scale × devicePixelRatio` is integer, producing
+   * uniform device-pixel mapping (no 1-2-1-2 browser nearest-neighbor
+   * artifact at fractional DPRs). Falls back to nominal scale when the
+   * snapped value would overflow the container. No effect on fit / fill
+   * modes or at integer DPRs.
+   */
+  dprCompensate?: boolean
+  /**
    * Callback when the terminal handle becomes available or is disposed.
    * Called with the handle on mount and with null on unmount.
    */

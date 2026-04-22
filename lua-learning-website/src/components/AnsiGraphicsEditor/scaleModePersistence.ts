@@ -45,3 +45,33 @@ export function saveStoredScaleMode(mode: ScaleMode): void {
     /* ignore quota / privacy-mode errors */
   }
 }
+
+/**
+ * Separate key for the "Crisp pixels on HiDPI" toggle. Lives alongside
+ * the scale mode — both are editor-level view preferences — but kept as
+ * independent fields so the schema is forward-compatible if we later add
+ * more panel prefs.
+ */
+const DPR_COMPENSATE_KEY = 'ansi-editor:dpr-compensate'
+
+export const DEFAULT_DPR_COMPENSATE = false
+
+export function loadStoredDprCompensate(): boolean {
+  try {
+    return localStorage.getItem(DPR_COMPENSATE_KEY) === '1'
+  } catch {
+    return DEFAULT_DPR_COMPENSATE
+  }
+}
+
+export function saveStoredDprCompensate(flag: boolean): void {
+  try {
+    if (flag) {
+      localStorage.setItem(DPR_COMPENSATE_KEY, '1')
+    } else {
+      localStorage.removeItem(DPR_COMPENSATE_KEY)
+    }
+  } catch {
+    /* ignore */
+  }
+}

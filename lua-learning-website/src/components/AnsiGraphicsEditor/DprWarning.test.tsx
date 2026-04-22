@@ -102,4 +102,10 @@ describe('DprWarning', () => {
     render(<DprWarning scaleMode="integer-1x" />)
     expect(screen.getByTestId('dpr-warning')).toBeInTheDocument()
   })
+
+  it('hides when dprCompensate is true (user has already acted on the warning)', () => {
+    setDpr(1.5)
+    render(<DprWarning scaleMode="integer-1x" dprCompensate={true} />)
+    expect(screen.queryByTestId('dpr-warning')).toBeNull()
+  })
 })

@@ -5,7 +5,7 @@ import {
   DEFAULT_FONT_ID,
 } from '@lua-learning/lua-runtime'
 import type { AnsiTerminalHandle, AnsiTerminalPanelProps } from './types'
-import { computeScale, makeSetCrt } from './panelHelpers'
+import { computeScale, makeSetCrt, useDprChange } from './panelHelpers'
 import styles from './AnsiTerminalPanel.module.css'
 
 /**
@@ -21,6 +21,7 @@ export function AnsiTerminalPanelPixel({
   cols = 80,
   rows = 25,
   fontId = DEFAULT_FONT_ID,
+  dprCompensate = false,
   onTerminalReady,
 }: AnsiTerminalPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -32,6 +33,8 @@ export function AnsiTerminalPanelPixel({
   onTerminalReadyRef.current = onTerminalReady
   const scaleModeRef = useRef(scaleMode)
   scaleModeRef.current = scaleMode
+  const dprCompensateRef = useRef(dprCompensate)
+  dprCompensateRef.current = dprCompensate
   const currentScaleRef = useRef(-1)
   const updateScaleRef = useRef<(() => void) | null>(null)
 
@@ -75,10 +78,12 @@ export function AnsiTerminalPanelPixel({
       if (baseW === 0 || baseH === 0) return
       const newScale = computeScale(
         scaleModeRef.current,
-        container.clientWidth,
-        container.clientHeight,
-        baseW,
-        baseH,
+        { w: container.clientWidth, h: container.clientHeight },
+        { w: baseW, h: baseH },
+        {
+          dprCompensate: dprCompensateRef.current,
+          dpr: typeof window !== 'undefined' ? window.devicePixelRatio : 1,
+        },
       )
       if (newScale === currentScaleRef.current) return
       currentScaleRef.current = newScale
@@ -146,6 +151,15 @@ export function AnsiTerminalPanelPixel({
     currentScaleRef.current = -1
     updateScaleRef.current?.()
   }, [scaleMode])
+  useEffect(() => {
+    // Recompute when the compensate flag toggles.
+    currentScaleRef.current = -1
+    updateScaleRef.current?.()
+  }, [dprCompensate])
+  useDprChange(() => {
+    currentScaleRef.current = -1
+    updateScaleRef.current?.()
+  })
   useEffect(() => {
     handleRef.current?.setFontFamily?.(fontId)
   }, [fontId])

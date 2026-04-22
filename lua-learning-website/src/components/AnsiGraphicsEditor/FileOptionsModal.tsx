@@ -32,6 +32,10 @@ export interface FileOptionsModalProps {
   useFontBlocks: boolean
   /** Toggle between the pixel renderer (true) and legacy xterm (false). */
   onSetUseFontBlocks: (enabled: boolean) => void
+  /** Crisp-pixel (DPR-clean scale snap) mode. */
+  dprCompensate: boolean
+  /** Toggle crisp-pixel mode. */
+  onSetDprCompensate: (enabled: boolean) => void
 }
 
 interface ActionItem {
@@ -61,6 +65,8 @@ export function FileOptionsModal({
   onSetFont,
   useFontBlocks,
   onSetUseFontBlocks,
+  dprCompensate,
+  onSetDprCompensate,
 }: FileOptionsModalProps) {
   const [nextCols, setNextCols] = useState<string>(String(cols))
   const [nextRows, setNextRows] = useState<string>(String(rows))
@@ -176,6 +182,15 @@ export function FileOptionsModal({
               <option value="fit">Fit</option>
               <option value="fill">Fill</option>
             </select>
+          </label>
+          <label className={styles.fileOptionsAction} title="Snap the scale up to a multiple where scale × DPR is integer, eliminating the 1-2-1-2 pixel pattern on fractional-DPR displays. May render larger than the selected scale.">
+            <input
+              type="checkbox"
+              checked={dprCompensate}
+              onChange={e => onSetDprCompensate(e.target.checked)}
+              data-testid="file-dpr-compensate"
+            />
+            Crisp pixels on HiDPI
           </label>
           <button
             type="button"

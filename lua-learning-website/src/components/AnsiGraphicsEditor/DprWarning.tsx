@@ -35,9 +35,15 @@ function writeDismissed(): void {
 
 export interface DprWarningProps {
   scaleMode: ScaleMode
+  /**
+   * When true, the user has enabled "Crisp pixels on HiDPI" so the
+   * scale is already DPR-snapped — the warning is no longer
+   * informative and is suppressed.
+   */
+  dprCompensate?: boolean
 }
 
-export function DprWarning({ scaleMode }: DprWarningProps) {
+export function DprWarning({ scaleMode, dprCompensate = false }: DprWarningProps) {
   const [dismissed, setDismissed] = useState<boolean>(() => readDismissed())
   const [dpr, setDpr] = useState<number>(
     () => (typeof window !== 'undefined' ? window.devicePixelRatio : 1),
@@ -54,6 +60,7 @@ export function DprWarning({ scaleMode }: DprWarningProps) {
   }, [dpr])
 
   if (dismissed) return null
+  if (dprCompensate) return null
   if (!isFractionalDpr(dpr)) return null
   if (!isAtRisk(scaleMode)) return null
 

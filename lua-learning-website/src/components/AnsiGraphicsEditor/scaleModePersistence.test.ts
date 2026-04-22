@@ -6,6 +6,9 @@ import {
   loadStoredScaleMode,
   saveStoredScaleMode,
   DEFAULT_ANSI_SCALE_MODE,
+  loadStoredDprCompensate,
+  saveStoredDprCompensate,
+  DEFAULT_DPR_COMPENSATE,
 } from './scaleModePersistence'
 
 beforeEach(() => {
@@ -42,5 +45,27 @@ describe('scaleModePersistence', () => {
       saveStoredScaleMode(m)
       expect(loadStoredScaleMode()).toBe(m)
     }
+  })
+})
+
+describe('dprCompensatePersistence', () => {
+  it('DEFAULT_DPR_COMPENSATE is false', () => {
+    expect(DEFAULT_DPR_COMPENSATE).toBe(false)
+  })
+
+  it('returns default when storage is empty', () => {
+    expect(loadStoredDprCompensate()).toBe(false)
+  })
+
+  it('round-trips a true value', () => {
+    saveStoredDprCompensate(true)
+    expect(loadStoredDprCompensate()).toBe(true)
+  })
+
+  it('clears the key when saving false', () => {
+    saveStoredDprCompensate(true)
+    saveStoredDprCompensate(false)
+    expect(loadStoredDprCompensate()).toBe(false)
+    expect(localStorage.getItem('ansi-editor:dpr-compensate')).toBe(null)
   })
 })
