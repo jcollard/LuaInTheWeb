@@ -138,19 +138,15 @@ Common causes and fixes:
 
 The build-time parser reads `Math.ceil((cellW × cellH) / 8)` bytes per glyph and decodes per-pixel. The runtime mask is 1-byte-per-pixel `Uint8Array` of length `cellW × cellH`. Verify this logic holds if adding a font wider than 9 pixels.
 
-## 5. 9-wide col-8 replication (IBM VGA hardware accuracy vs modern tile-continuity)
+## 5. Source-faithful extraction (no post-processing)
 
-For 9-wide fonts, the generator applies a post-processing step: **col (cellW-2) is copied into col (cellW-1) for codepoints in U+2500..U+259F** (box drawing + block elements). Other codepoints are left as the font authored them.
+The generator extracts the EBDT strike verbatim — no column replication, no per-codepoint fixups. The atlas matches the TTF byte-for-byte and is checked by `npm run verify:glyph-atlas -w @lua-learning/lua-runtime`, which runs automatically before every build and test.
 
-**Why:** Int10h's MxPlus 9x16 encodes the CP437 pattern in cols 0..7 and leaves col 8 blank — faithful to IBM VGA 9-dot hardware, where the "line graphics enable" bit only triggered col-8 replication for CP437 0xC0..0xDF. Shades (0xB0..0xB2) and other block chars were blank in col 8, producing visible gaps when rendering adjacent ░/▒/▓ cells. We match modern terminal-emulator convention (xterm, iTerm) and replicate col 8 across the full box/block range instead.
-
-**Caveat:** a fundamental limitation — a two-pixel checkerboard CANNOT tile continuously across odd-width cells. Replication eliminates the "blank strip" artifact but introduces "double-pixel bands" every 9 cols on alternate rows. For perfectly uniform dither, users should pick an 8-wide font (IBM_VGA_8x16 is the default).
-
-If you're adding a font with `cellW=9` or odd-width ≥9, the same replication will apply — update `replicateLastColumnIfNeeded()` in `generate-glyph-atlas.js` if the rule should differ for your font.
+**Implication for 9-wide fonts:** Int10h's MxPlus 9x16 leaves col 8 blank for shades U+2591..U+2593 (faithful to IBM VGA 9-dot hardware, where "line graphics enable" only triggered col-8 replication for CP437 0xC0..0xDF). Rendering rows of ░/▒/▓ at 9x16 shows a 1-pixel gap between cells. This is the authored behavior; for uniform dither, pick an 8-wide font (IBM_VGA_8x16 is the default).
 
 ---
 
-## 5. Checklist
+## 6. Checklist
 
 - [ ] TTF has an EBDT strike at `nativePpem`
 - [ ] TTF copied to `packages/lua-runtime/scripts/fonts/`

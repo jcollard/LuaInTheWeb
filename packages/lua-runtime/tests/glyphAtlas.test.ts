@@ -80,32 +80,26 @@ describe('FONT_ATLASES', () => {
     }
   })
 
-  it('9-wide fonts replicate col 7 into col 8 for box drawing + block elements (U+2500..U+259F)', () => {
-    // Fixes the dither / line-drawing tile break: Int10h's MxPlus 9x16
-    // encodes the 8-wide CP437 pattern with col 8 blank (IBM VGA hardware
-    // behavior). Without replication, rows of ▒ show a 1-col gap every
-    // 9 cols and horizontal box lines break at every cell boundary.
+  it('9-wide shades U+2591..U+2593 have col 8 blank — faithful to the TTF', () => {
+    // Int10h's MxPlus 9x16 encodes the 8-wide CP437 shade pattern with
+    // col 8 blank, matching IBM VGA 9-dot hardware where "line graphics
+    // enable" only triggered col-8 replication for CP437 0xC0..0xDF.
+    // The atlas is source-faithful: no col-8 post-processing.
     const atlas = FONT_ATLASES.get('IBM_VGA_9x16')!
     const cellW = atlas.cellW
     const cellH = atlas.cellH
     expect(cellW).toBe(9)
-    for (const cp of [0x2500, 0x2580, 0x2592, 0x259f]) {
-      const mask = atlas.glyphs.get(cp)
-      if (!mask) continue // font may legitimately not ship every cp
+    for (const cp of [0x2591, 0x2592, 0x2593]) {
+      const mask = atlas.glyphs.get(cp)!
       for (let r = 0; r < cellH; r++) {
-        const col7 = mask[r * cellW + (cellW - 2)]
-        const col8 = mask[r * cellW + (cellW - 1)]
-        expect(col8, `${cp.toString(16)} row ${r}: col 8 != col 7`).toBe(col7)
+        expect(mask[r * cellW + (cellW - 1)], `U+${cp.toString(16)} row ${r}: col 8 should be blank`).toBe(0)
       }
     }
   })
 
-  it('9-wide fonts keep col 8 empty for text characters where the font authored it so', () => {
-    // Replication is scoped to U+2500..U+259F in generate-glyph-atlas.js.
-    // Sanity-check that an ASCII letter stays with col 8 blank after
-    // extraction. (The Int10h 9x16 font centers letters in cols 0..6,
-    // leaving cols 7 AND 8 as padding, so this test confirms no
-    // spurious replication pass is running over the full atlas.)
+  it('9-wide fonts keep col 8 blank for text characters too', () => {
+    // The Int10h 9x16 font centers letters in cols 0..6, leaving cols 7
+    // AND 8 as padding in the authored strike.
     const atlas = FONT_ATLASES.get('IBM_VGA_9x16')!
     const cellW = atlas.cellW
     const cellH = atlas.cellH
