@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnsiTerminalPanel } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import { DprWarning } from './DprWarning'
+import { loadStoredScaleMode, saveStoredScaleMode } from './scaleModePersistence'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { useIDE } from '../IDEContext/useIDE'
 import { AnsiEditorToolbar } from './AnsiEditorToolbar'
@@ -32,7 +33,13 @@ export interface AnsiGraphicsEditorProps {
 export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGraphicsEditorProps) {
   const { fileSystem, fileTree, refreshFileTree, updateAnsiEditorTabPath } = useIDE()
   const [fileMenuOpen, setFileMenuOpen] = useState(false)
-  const [scaleMode, setScaleMode] = useState<ScaleMode>('fit')
+  const [scaleMode, setScaleModeRaw] = useState<ScaleMode>(() => loadStoredScaleMode())
+  // Persist on every change so the user's last choice sticks across
+  // sessions. Global (not per-file) — see scaleModePersistence.ts.
+  const setScaleMode = useCallback((mode: ScaleMode) => {
+    setScaleModeRaw(mode)
+    saveStoredScaleMode(mode)
+  }, [])
 
   const { toasts, showToast } = useToast()
   const handleSaveRef = useRef<() => void>(() => {})
