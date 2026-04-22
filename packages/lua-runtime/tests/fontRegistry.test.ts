@@ -8,8 +8,8 @@ import {
 } from '../src/fontRegistry'
 
 describe('BITMAP_FONT_REGISTRY', () => {
-  it('ships five entries (CGA, EGA, MDA, VGA 8x16, VGA 9x16)', () => {
-    expect(BITMAP_FONT_REGISTRY).toHaveLength(5)
+  it('ships three entries (CGA 8x8, VGA 8x16, VGA 9x16)', () => {
+    expect(BITMAP_FONT_REGISTRY).toHaveLength(3)
   })
 
   it('has unique ids', () => {
@@ -21,8 +21,6 @@ describe('BITMAP_FONT_REGISTRY', () => {
     const ids = BITMAP_FONT_REGISTRY.map((f) => f.id).sort()
     expect(ids).toEqual([
       'IBM_CGA_8x8',
-      'IBM_EGA_8x14',
-      'IBM_MDA_9x14',
       'IBM_VGA_8x16',
       'IBM_VGA_9x16',
     ])
@@ -71,7 +69,7 @@ describe('DEFAULT_FONT_ID', () => {
 describe('getFontById', () => {
   it('returns the matching entry', () => {
     expect(getFontById('IBM_CGA_8x8')?.cellH).toBe(8)
-    expect(getFontById('IBM_MDA_9x14')?.cellW).toBe(9)
+    expect(getFontById('IBM_VGA_9x16')?.cellW).toBe(9)
   })
 
   it('returns undefined for an unknown id', () => {
