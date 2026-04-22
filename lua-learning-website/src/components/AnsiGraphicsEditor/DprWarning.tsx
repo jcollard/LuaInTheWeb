@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { ScaleMode } from './types'
+import { useDprChange } from '../AnsiTerminalPanel/panelHelpers'
 import styles from './DprWarning.module.css'
 
 const DISMISS_KEY = 'ansi-editor:dpr-warning-dismissed'
@@ -48,16 +49,7 @@ export function DprWarning({ scaleMode, dprCompensate = false }: DprWarningProps
   const [dpr, setDpr] = useState<number>(
     () => (typeof window !== 'undefined' ? window.devicePixelRatio : 1),
   )
-
-  // Re-read DPR when it actually changes (monitor hot-swap, browser zoom).
-  // matchMedia is the only reliable DPR-change event in browsers.
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
-    const mq = window.matchMedia(`(resolution: ${dpr}dppx)`)
-    const onChange = () => setDpr(window.devicePixelRatio)
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [dpr])
+  useDprChange(() => setDpr(window.devicePixelRatio))
 
   if (dismissed) return null
   if (dprCompensate) return null

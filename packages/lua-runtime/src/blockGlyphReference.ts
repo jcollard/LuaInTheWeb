@@ -7,7 +7,6 @@
  * NOT used as a production fallback: font-author choices for shades
  * (e.g. Int10h's `1144` ░ Bayer phase) legitimately differ from this
  * reference, and users authoring ANSI art expect the font's glyphs.
- * See plan §4.5 (dead ends) for the rationale.
  *
  * Only 8×16 is supported. Other cell sizes get `undefined` from
  * `getBlockReference(cp, cellW, cellH)` and the GlyphDebug page shows

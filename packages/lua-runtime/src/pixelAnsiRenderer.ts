@@ -24,6 +24,7 @@ import {
   type BitmapFontRegistryEntry,
 } from './fontRegistry'
 import { FONT_ATLASES, type FontAtlas } from './glyphAtlas.generated'
+import { createGlyphContext, rasterizeGlyph } from './glyphRaster'
 
 export interface PixelAnsiRendererTheme {
   /** Foreground color as 0xRRGGBB when cell has default fg. */
@@ -92,7 +93,7 @@ export interface PixelAnsiRendererOptions {
   /**
    * Reserved for future reference-pattern substitution. Stored on the
    * instance but currently a no-op; hand-coded canonical block patterns
-   * (BLOCK_GLYPH_REFERENCE) aren't multi-font yet — see plan §3.2 / §5.3.
+   * (BLOCK_GLYPH_REFERENCE_8X16) aren't multi-font yet.
    */
   useFontBlocks?: boolean
 }
@@ -129,65 +130,6 @@ function resolveFontOrThrow(id: string): { entry: BitmapFontRegistryEntry; atlas
   return { entry, atlas }
 }
 
-type GlyphContext2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D
-
-function get2DContext(c: HTMLCanvasElement | OffscreenCanvas): GlyphContext2D | null {
-  // `OffscreenCanvas` may not exist (jsdom, SSR) — guard the instanceof
-  // check so a missing global doesn't throw ReferenceError.
-  if (typeof OffscreenCanvas !== 'undefined' && c instanceof OffscreenCanvas) {
-    return c.getContext('2d')
-  }
-  return (c as HTMLCanvasElement).getContext('2d')
-}
-
-async function createGlyphContext(
-  fontFamily: string,
-  cellW: number,
-  cellH: number,
-): Promise<GlyphContext2D | null> {
-  try {
-    if (typeof document !== 'undefined' && 'fonts' in document) {
-      await document.fonts.load(`${cellH}px ${fontFamily}`)
-    }
-  } catch { /* non-browser environment — continue with whatever font is available */ }
-
-  let gc: HTMLCanvasElement | OffscreenCanvas
-  if (typeof OffscreenCanvas !== 'undefined') {
-    gc = new OffscreenCanvas(cellW, cellH)
-  } else if (typeof document !== 'undefined') {
-    gc = document.createElement('canvas')
-    gc.width = cellW
-    gc.height = cellH
-  } else {
-    return null
-  }
-  const ctx = get2DContext(gc)
-  if (!ctx) return null
-  ctx.textBaseline = 'top'
-  ctx.font = `${cellH}px ${fontFamily}`
-  ctx.imageSmoothingEnabled = false
-  ctx.fillStyle = '#ffffff'
-  return ctx
-}
-
-function rasterizeGlyphPixels(
-  ctx: GlyphContext2D,
-  codepoint: number,
-  cellW: number,
-  cellH: number,
-): { mask: Uint8Array; hasContent: boolean } {
-  ctx.clearRect(0, 0, cellW, cellH)
-  ctx.fillText(String.fromCodePoint(codepoint), 0, 0)
-  const img = ctx.getImageData(0, 0, cellW, cellH)
-  const mask = new Uint8Array(cellW * cellH)
-  let hasContent = false
-  for (let i = 0; i < cellW * cellH; i++) {
-    const alpha = img.data[(i << 2) + 3]
-    if (alpha >= 128) { mask[i] = 1; hasContent = true }
-  }
-  return { mask, hasContent }
-}
-
 export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
   readonly canvas: HTMLCanvasElement
   private readonly ctx: CanvasRenderingContext2D
@@ -196,6 +138,12 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
   private atlas: FontAtlas
   private theme: PixelAnsiRendererTheme
   private glyphMasks = new Map<number, Uint8Array>()
+  /**
+   * Per-cell shadow — three Uint32 entries per cell: `[code, fg, bg]`.
+   * Carries the full tuple with zero collision risk. Storage is 24 KB
+   * for an 80×25 grid, which dwarfs the previous single-u32 hash but is
+   * trivially small next to the paint cost.
+   */
   private shadow: Uint32Array
   private dirty = true
   private rafHandle: number | null = null
@@ -232,7 +180,7 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
     this.ctx = ctx
     this.ctx.imageSmoothingEnabled = false
 
-    this.shadow = new Uint32Array(opts.cols * opts.rows)
+    this.shadow = new Uint32Array(opts.cols * opts.rows * 3)
     this.reusableImageData = this.ctx.createImageData(this.cellW, this.cellH)
 
     this.disposables.push(
@@ -271,7 +219,7 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
     this.atlas = atlas
     this.applyCanvasSize(this.terminal.cols, this.terminal.rows)
     this.ctx.imageSmoothingEnabled = false
-    this.shadow = new Uint32Array(this.terminal.cols * this.terminal.rows)
+    this.shadow = new Uint32Array(this.terminal.cols * this.terminal.rows * 3)
     this.reusableImageData = this.ctx.createImageData(this.cellW, this.cellH)
     this.glyphMasks.clear()
     await this.buildGlyphMasks()
@@ -314,7 +262,7 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
   private resizeBacking(cols: number, rows: number): void {
     this.applyCanvasSize(cols, rows)
     this.ctx.imageSmoothingEnabled = false
-    this.shadow = new Uint32Array(cols * rows)
+    this.shadow = new Uint32Array(cols * rows * 3)
     this.dirty = true
   }
 
@@ -343,10 +291,14 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
         const code = probe.getCode() || 0x20
         const fg = this.resolveFg(probe)
         const bg = this.resolveBg(probe)
-        const sig = (Math.imul(code, 0x9e3779b1) ^ Math.imul(fg, 0x85ebca77) ^ bg) >>> 0
-        const idx = y * cols + x
-        if (!this.dirty && this.shadow[idx] === sig) continue
-        this.shadow[idx] = sig
+        const idx = (y * cols + x) * 3
+        if (!this.dirty
+            && this.shadow[idx] === code
+            && this.shadow[idx + 1] === fg
+            && this.shadow[idx + 2] === bg) continue
+        this.shadow[idx] = code
+        this.shadow[idx + 1] = fg
+        this.shadow[idx + 2] = bg
         this.paintCell(x, y, code, fg, bg)
       }
     }
@@ -418,7 +370,7 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
     }
     for (const code of this.codepointSet) {
       if (this.glyphMasks.has(code)) continue
-      const { mask, hasContent } = rasterizeGlyphPixels(gctx, code, this.cellW, this.cellH)
+      const { mask, hasContent } = rasterizeGlyph(gctx, code, this.cellW, this.cellH)
       if (hasContent) this.glyphMasks.set(code, mask)
     }
 

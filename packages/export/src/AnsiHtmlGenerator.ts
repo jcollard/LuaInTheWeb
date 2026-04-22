@@ -204,7 +204,7 @@ export function generateAnsiHtml(
       await document.fonts.load('${fontSize}px "Web IBM VGA 8x16"');
 
       // Create xterm.js terminal with the default bitmap font; per-screen
-      // font changes flow through handle.setFontFamily (Step 7+Step 8).
+      // font changes flow through handle.setFontFamily.
       const term = new Terminal({
         cols: ${columns},
         rows: ${rows},
@@ -318,11 +318,10 @@ export function generateAnsiHtml(
             crtShader = null;
           }
         },
-        // Per-screen font switch (Step 7 AnsiController calls this when
-        // ansi.set_screen switches to a screen with a different font).
-        // For the xterm-based export path, we update fontFamily + fontSize
-        // from the registry and re-apply scale. Pixel-renderer path in
-        // the export is follow-up work.
+        // Per-screen font switch — AnsiController calls this when a
+        // running program switches to a screen with a different font.
+        // Updates xterm fontFamily + fontSize from the registry and
+        // re-applies scale.
         setFontFamily: (fontId) => {
           const entry = getFontById(fontId);
           if (!entry) return;
@@ -337,10 +336,9 @@ export function generateAnsiHtml(
             applyScale();
           });
         },
-        // Reserved for the dual-mode export variant (plan §3.6).
-        // The current export path always uses xterm; recording the flag
-        // keeps the handle's surface compatible with the runtime's
-        // AnsiController, which calls this on screen switches.
+        // Reserved for a dual-mode export variant. The current export
+        // always uses xterm; the no-op keeps the handle surface
+        // compatible with AnsiController.applyFontSettings.
         setUseFontBlocks: () => { /* no-op until export has pixel variant */ },
       };
       const callbacks = {

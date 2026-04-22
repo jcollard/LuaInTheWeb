@@ -1,21 +1,19 @@
 /**
- * Single-glyph fillText rasterization used by the /glyph-debug page.
- * Keep separate from the hot-path renderer — this allocates per call
- * and returns both raw alpha and thresholded mask for inspection.
+ * Single-glyph rasterization used by the `/glyph-debug` page.
+ * Uses the shared {@link rasterizeGlyph} with `keepRawAlpha` so the page
+ * can display the pre-threshold AA alongside the binary mask.
  */
 
 import { getFontById } from './fontRegistry'
+import { createGlyphContext, rasterizeGlyph } from './glyphRaster'
 
 export interface GlyphDebugInfo {
   codepoint: number
   char: string
   cellW: number
   cellH: number
-  /** Row-major alpha values (0..255) as produced by fillText. */
   rawAlpha: Uint8Array
-  /** Binary mask after alpha ≥ 128 threshold. */
   mask: Uint8Array
-  /** True iff any pixel of the mask is set. */
   hasContent: boolean
 }
 
@@ -46,42 +44,17 @@ export async function rasterizeGlyphForDebug(
   if (!entry) throw new Error(`rasterizeGlyphForDebug: unknown fontId "${fontId}"`)
   const { cellW, cellH, fontFamily } = entry
 
-  if (typeof document === 'undefined' || typeof OffscreenCanvas === 'undefined') {
-    return emptyInfo(codepoint, cellW, cellH)
-  }
-
-  try {
-    if ('fonts' in document) await document.fonts.load(`${cellH}px ${fontFamily}`)
-  } catch { /* non-browser, continue best-effort */ }
-
-  const gc = new OffscreenCanvas(cellW, cellH)
-  const ctx = gc.getContext('2d')
+  const ctx = await createGlyphContext(fontFamily, cellW, cellH)
   if (!ctx) return emptyInfo(codepoint, cellW, cellH)
 
-  ctx.textBaseline = 'top'
-  ctx.font = `${cellH}px ${fontFamily}`
-  ctx.imageSmoothingEnabled = false
-  ctx.fillStyle = '#ffffff'
-  ctx.clearRect(0, 0, cellW, cellH)
-  ctx.fillText(String.fromCodePoint(codepoint), 0, 0)
-
-  const img = ctx.getImageData(0, 0, cellW, cellH)
-  const total = cellW * cellH
-  const rawAlpha = new Uint8Array(total)
-  const mask = new Uint8Array(total)
-  let hasContent = false
-  for (let i = 0; i < total; i++) {
-    const alpha = img.data[(i << 2) + 3]
-    rawAlpha[i] = alpha
-    if (alpha >= 128) { mask[i] = 1; hasContent = true }
-  }
+  const result = rasterizeGlyph(ctx, codepoint, cellW, cellH, { keepRawAlpha: true })
   return {
     codepoint,
     char: String.fromCodePoint(codepoint),
     cellW,
     cellH,
-    rawAlpha,
-    mask,
-    hasContent,
+    mask: result.mask,
+    rawAlpha: result.rawAlpha ?? new Uint8Array(cellW * cellH),
+    hasContent: result.hasContent,
   }
 }

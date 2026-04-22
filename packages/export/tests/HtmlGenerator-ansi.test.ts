@@ -61,8 +61,7 @@ describe('HtmlGenerator - generateAnsi', () => {
     const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('@font-face')
-    // Default bitmap family is now the WOFF-backed `Web IBM VGA 8x16`
-    // (the legacy TTF was removed in Step 9 cleanup).
+    // Default bitmap family is the WOFF-backed `Web IBM VGA 8x16`.
     expect(html).toContain('Web IBM VGA 8x16')
     expect(html).toContain('format("woff")')
   })

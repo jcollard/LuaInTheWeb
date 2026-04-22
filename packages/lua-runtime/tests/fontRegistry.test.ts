@@ -37,7 +37,7 @@ describe('BITMAP_FONT_REGISTRY', () => {
   it('points every ttfPath at an on-disk file', () => {
     // ttfPath is relative to the package root (packages/lua-runtime), which is
     // the parent of the tests/ directory. This catches "registry entry added
-    // but asset missing" before Step 2's atlas generator tries to parse them.
+    // but asset missing" before the atlas generator tries to parse them.
     const packageRoot = resolve(__dirname, '..')
     for (const f of BITMAP_FONT_REGISTRY) {
       const abs = resolve(packageRoot, f.ttfPath)

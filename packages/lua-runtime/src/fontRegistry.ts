@@ -7,6 +7,8 @@
  * `docs/ansi/adding-a-bitmap-font.md` for the full checklist.
  */
 
+import { DEFAULT_ANSI_FONT_ID } from '@lua-learning/ansi-shared'
+
 export interface BitmapFontRegistryEntry {
   /** Stable ID used by the file format and registry lookups. */
   id: string
@@ -62,7 +64,12 @@ export const BITMAP_FONT_REGISTRY: readonly BitmapFontRegistryEntry[] = [
   },
 ] as const
 
-export const DEFAULT_FONT_ID = 'IBM_VGA_8x16'
+/**
+ * Re-export of {@link DEFAULT_ANSI_FONT_ID} under the renderer-side name.
+ * Canonical value lives in `@lua-learning/ansi-shared/rendererConfig.ts`
+ * so the file format and renderer can't drift apart.
+ */
+export const DEFAULT_FONT_ID = DEFAULT_ANSI_FONT_ID
 
 export function getFontById(id: string): BitmapFontRegistryEntry | undefined {
   return BITMAP_FONT_REGISTRY.find((f) => f.id === id)

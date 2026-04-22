@@ -109,18 +109,18 @@ export function computeScale(
  * divides cells into eighths and produces fractional coordinates at
  * fractional DPRs.
  */
+const patchedContexts = new WeakSet<CanvasRenderingContext2D>()
+
 export function patchFillRect(canvas: Element): void {
   const ctx = (canvas as HTMLCanvasElement).getContext('2d')
-  if (!ctx) return
-  const patched = ctx as unknown as Record<string, unknown>
-  if (patched.__patchedFR) return
+  if (!ctx || patchedContexts.has(ctx)) return
   const orig = ctx.fillRect.bind(ctx)
   ctx.fillRect = (x: number, y: number, w: number, h: number) => {
     const x1 = Math.round(x)
     const y1 = Math.round(y)
     orig(x1, y1, Math.round(x + w) - x1, Math.round(y + h) - y1)
   }
-  patched.__patchedFR = true
+  patchedContexts.add(ctx)
 }
 
 /**

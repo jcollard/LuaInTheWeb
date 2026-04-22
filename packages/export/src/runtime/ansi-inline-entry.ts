@@ -125,8 +125,8 @@ function setupLocalStorageBridge(engine: any): Promise<void> {
   CrtShader,
   CRT_DEFAULTS,
   setupLocalStorageBridge,
-  // Bitmap renderer + registry (Step 8). The HTML template uses these to
-  // honor per-screen font + useFontBlocks settings from .ansi.lua files.
+  // Bitmap renderer + registry — the HTML template uses these to honor
+  // per-screen font + useFontBlocks settings from .ansi.lua files.
   PixelAnsiRenderer,
   BITMAP_FONT_REGISTRY,
   DEFAULT_FONT_ID,
