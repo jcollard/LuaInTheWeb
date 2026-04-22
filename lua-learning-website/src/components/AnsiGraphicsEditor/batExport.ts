@@ -1,5 +1,5 @@
 import type { AnsiCell, AnsiGrid } from './types'
-import { unicodeToCp437, nearestCgaIndex, nearestCga8BgIndex, CGA_FG_SGR, CGA_BG_SGR } from './ansExport'
+import { unicodeToCp437, nearestCgaIndex, CGA_FG_SGR, CGA_BG_SGR } from './ansExport'
 
 const ESC = 0x1b
 const CR = 0x0d
@@ -63,7 +63,7 @@ function pushRow(bytes: number[], row: AnsiCell[], rowIdx: number): void {
   for (let c = 0; c < row.length; c++) {
     const cell = row[c]
     const fgIdx = nearestCgaIndex(cell.fg)
-    const bgIdx = nearestCga8BgIndex(cell.bg)
+    const bgIdx = nearestCgaIndex(cell.bg, 8)
     if (fgIdx !== curFgIdx || bgIdx !== curBgIdx) {
       pushCgaSgr(bytes, fgIdx, bgIdx)
       curFgIdx = fgIdx

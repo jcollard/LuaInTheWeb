@@ -161,20 +161,27 @@ export function useAnsiEditorFile({
     }
   }, [filePath, fileSystem])
 
-  const handleExportAns = useCallback((layers: Layer[]) => {
-    const grid = compositeGrid(layers)
-    const filename = deriveExportFilename(filePath, 'ans')
-    const title = filename.replace(/\.ans$/, '')
-    const data = exportAnsFile(grid, title)
+  const exportBinary = useCallback((
+    layers: Layer[],
+    ext: string,
+    encode: (grid: AnsiGrid, filename: string) => Uint8Array,
+  ) => {
+    const filename = deriveExportFilename(filePath, ext)
+    const data = encode(compositeGrid(layers), filename)
     downloadBlob(new Blob([new Uint8Array(data)], { type: 'application/octet-stream' }), filename)
   }, [filePath])
 
+  const handleExportAns = useCallback((layers: Layer[]) => {
+    exportBinary(layers, 'ans', (grid, fn) => exportAnsFile(grid, fn.replace(/\.ans$/, '')))
+  }, [exportBinary])
+
   const handleExportDosAns = useCallback((layers: Layer[]) => {
-    const grid = compositeGrid(layers)
-    const filename = deriveExportFilename(filePath, 'ans')
-    const data = exportDosAnsFile(grid)
-    downloadBlob(new Blob([new Uint8Array(data)], { type: 'application/octet-stream' }), filename)
-  }, [filePath])
+    exportBinary(layers, 'ans', exportDosAnsFile)
+  }, [exportBinary])
+
+  const handleExportBat = useCallback((layers: Layer[]) => {
+    exportBinary(layers, 'bat', exportBatFile)
+  }, [exportBinary])
 
   const handleExportSh = useCallback((layers: Layer[]) => {
     const filename = deriveExportFilename(filePath, 'sh')
@@ -192,12 +199,6 @@ export function useAnsiEditorFile({
     }
 
     downloadBlob(new Blob([script], { type: 'text/x-shellscript' }), filename)
-  }, [filePath])
-
-  const handleExportBat = useCallback((layers: Layer[]) => {
-    const filename = deriveExportFilename(filePath, 'bat')
-    const data = exportBatFile(compositeGrid(layers))
-    downloadBlob(new Blob([new Uint8Array(data)], { type: 'application/octet-stream' }), filename)
   }, [filePath])
 
   return {
