@@ -217,13 +217,13 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
     const { entry, atlas } = resolveFontOrThrow(fontId)
     this.fontEntry = entry
     this.atlas = atlas
-    this.applyCanvasSize(this.terminal.cols, this.terminal.rows)
-    this.ctx.imageSmoothingEnabled = false
-    this.shadow = new Uint32Array(this.terminal.cols * this.terminal.rows * 3)
+    // cellW / cellH may have changed — resizeBacking covers canvas, shadow,
+    // smoothing, and dirty flag; reusableImageData must rebuild at the
+    // new cell size too.
+    this.resizeBacking(this.terminal.cols, this.terminal.rows)
     this.reusableImageData = this.ctx.createImageData(this.cellW, this.cellH)
     this.glyphMasks.clear()
     await this.buildGlyphMasks()
-    this.dirty = true
     this.scheduleRender()
   }
 
