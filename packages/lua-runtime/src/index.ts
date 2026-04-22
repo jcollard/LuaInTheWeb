@@ -126,3 +126,11 @@ export {
   type BitmapFontRegistryEntry,
 } from './fontRegistry'
 export { FONT_ATLASES, type FontAtlas } from './glyphAtlas.generated'
+export {
+  getBlockReference,
+  BLOCK_GLYPH_REFERENCE_8X16,
+} from './blockGlyphReference'
+export {
+  rasterizeGlyphForDebug,
+  type GlyphDebugInfo,
+} from './glyphDebug'

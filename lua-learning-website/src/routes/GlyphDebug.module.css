@@ -1,0 +1,149 @@
+.page {
+  min-height: 100vh;
+  background: #121212;
+  color: #ddd;
+  font-family: system-ui, -apple-system, sans-serif;
+  padding: 24px 32px;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.title { margin: 0; font-size: 22px; }
+.subtitle { color: #888; font-size: 14px; }
+
+.controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.input,
+.select {
+  background: #222;
+  color: #fff;
+  border: 1px solid #444;
+  padding: 6px 10px;
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.input { width: 14em; }
+.select { cursor: pointer; }
+
+.preset {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+}
+
+.presetChar {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  color: #fff;
+  line-height: 1;
+  border: 1px solid transparent;
+  cursor: pointer;
+  user-select: none;
+}
+.presetChar:hover { border-color: #666; }
+.presetCharActive { border-color: #4af; }
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+  margin-top: 24px;
+}
+
+.panel {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.panelTitle {
+  font-size: 13px;
+  color: #aaa;
+  margin: 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.panelSubtitle {
+  font-size: 11px;
+  color: #666;
+  margin-top: -4px;
+  line-height: 1.4;
+}
+
+.nativeWrap {
+  overflow: hidden;
+  background: #000;
+  position: relative;
+  outline: 1px solid #444;
+}
+
+.nativeChar {
+  color: #fff;
+  background: #000;
+  letter-spacing: 0;
+  display: inline-block;
+  transform-origin: 0 0;
+  image-rendering: pixelated;
+}
+
+.grid {
+  display: grid;
+  outline: 1px solid #444;
+  background: #000;
+  image-rendering: pixelated;
+}
+
+.pixel {
+  width: 16px;
+  height: 16px;
+}
+
+.missing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  text-align: center;
+  background: #111;
+  outline: 1px dashed #333;
+  color: #666;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.stats {
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+}
