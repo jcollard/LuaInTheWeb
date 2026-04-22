@@ -44,7 +44,6 @@ export function AnsiTerminalPanelPixel({
     const wrapper = wrapperRef.current
     if (!container || !wrapper) return
 
-    let disposed = false
     let resizeObserver: ResizeObserver | null = null
 
     const renderer = new PixelAnsiRenderer({
@@ -130,7 +129,6 @@ export function AnsiTerminalPanelPixel({
     onTerminalReadyRef.current?.(handleRef.current)
 
     return () => {
-      disposed = true
       resizeObserver?.disconnect()
       onTerminalReadyRef.current?.(null)
       crtShaderRef.current?.dispose()
@@ -139,7 +137,6 @@ export function AnsiTerminalPanelPixel({
         rendererRef.current.dispose()
         rendererRef.current = null
       }
-      if (disposed) { /* noop — keeps `disposed` referenced */ }
     }
   }, [])
 

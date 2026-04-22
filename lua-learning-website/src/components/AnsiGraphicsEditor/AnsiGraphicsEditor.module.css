@@ -1357,6 +1357,11 @@
   border-radius: 4px;
 }
 
+/* Narrow numeric inputs (e.g. the Canvas size width / height fields). */
+.fileOptionsNumberInput {
+  width: 4em;
+}
+
 /* ---- Toast Notifications ---- */
 
 .toastContainer {

@@ -195,8 +195,7 @@ export function FileOptionsModal({
               onChange={e => setNextCols(e.target.value)}
               data-testid="file-resize-cols"
               aria-label="Canvas width in columns"
-              className={styles.fileOptionsSelect}
-              style={{ width: '4em' }}
+              className={`${styles.fileOptionsSelect} ${styles.fileOptionsNumberInput}`}
             />
             <span>×</span>
             <input
@@ -207,8 +206,7 @@ export function FileOptionsModal({
               onChange={e => setNextRows(e.target.value)}
               data-testid="file-resize-rows"
               aria-label="Canvas height in rows"
-              className={styles.fileOptionsSelect}
-              style={{ width: '4em' }}
+              className={`${styles.fileOptionsSelect} ${styles.fileOptionsNumberInput}`}
             />
             <button
               type="button"
