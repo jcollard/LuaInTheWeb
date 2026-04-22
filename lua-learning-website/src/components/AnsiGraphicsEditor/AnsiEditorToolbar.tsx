@@ -42,6 +42,14 @@ export interface AnsiEditorToolbarProps {
   rows?: number
   /** Resize handler forwarded to FileOptionsModal. */
   onResizeCanvas?: (cols: number, rows: number) => void
+  /** Current bitmap font ID. */
+  font?: string
+  /** Select a new bitmap font for this screen. */
+  onSetFont?: (id: string) => void
+  /** Whether the pixel-perfect renderer is active. */
+  useFontBlocks?: boolean
+  /** Toggle between pixel renderer and legacy xterm. */
+  onSetUseFontBlocks?: (enabled: boolean) => void
   activeLayerIsGroup?: boolean
   isPlaying?: boolean
   fileMenuOpen?: boolean
@@ -51,7 +59,7 @@ export interface AnsiEditorToolbarProps {
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onImportPng, onImportLayers, onExportAns, onExportSh, onExportLayers, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
-  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, scaleMode, onSetScaleMode, cols, rows, onResizeCanvas, activeLayerIsGroup, isPlaying,
+  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, scaleMode, onSetScaleMode, cols, rows, onResizeCanvas, font, onSetFont, useFontBlocks, onSetUseFontBlocks, activeLayerIsGroup, isPlaying,
   fileMenuOpen: controlledFileMenuOpen, onSetFileMenuOpen,
 }: AnsiEditorToolbarProps) {
   const toolsDisabled = activeLayerIsGroup || isPlaying
@@ -90,6 +98,10 @@ export function AnsiEditorToolbar({
           cols={cols ?? 80}
           rows={rows ?? 25}
           onResizeCanvas={onResizeCanvas ?? (() => {})}
+          font={font ?? 'IBM_VGA_8x16'}
+          onSetFont={onSetFont ?? (() => {})}
+          useFontBlocks={useFontBlocks ?? true}
+          onSetUseFontBlocks={onSetUseFontBlocks ?? (() => {})}
         />
       )}
       <div className={styles.modeGroup}>

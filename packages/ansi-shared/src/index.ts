@@ -39,4 +39,8 @@ export {
   type CompositeEntry,
 } from './compositeEngine'
 
-export { DEFAULT_USE_FONT_BLOCKS } from './rendererConfig'
+export {
+  DEFAULT_USE_FONT_BLOCKS,
+  DEFAULT_ANSI_FONT_ID,
+  normalizeAnsiFontId,
+} from './rendererConfig'

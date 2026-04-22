@@ -113,6 +113,10 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
     setCgaPreview,
     crtConfig,
     setCrtConfig,
+    font,
+    setFont,
+    useFontBlocks,
+    setUseFontBlocks,
     setBorderStyle,
     activeLayerIsGroup,
     isMoveDragging,
@@ -228,12 +232,12 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
   const existingGroups = useMemo(() => layers.filter(isGroupLayer) as GroupLayer[], [layers])
 
   const handleSaveAs = useCallback(
-    (f: string, n: string) => fileHandleSaveAs(f, n, layers, activeLayerId, availableTags, projectCols, projectRows),
-    [fileHandleSaveAs, layers, activeLayerId, availableTags, projectCols, projectRows],
+    (f: string, n: string) => fileHandleSaveAs(f, n, layers, activeLayerId, availableTags, projectCols, projectRows, { font, useFontBlocks }),
+    [fileHandleSaveAs, layers, activeLayerId, availableTags, projectCols, projectRows, font, useFontBlocks],
   )
   const handleSave = useCallback(
-    () => fileHandleSave(layers, activeLayerId, availableTags, projectCols, projectRows, markClean, openSaveDialog),
-    [fileHandleSave, layers, activeLayerId, availableTags, projectCols, projectRows, markClean, openSaveDialog],
+    () => fileHandleSave(layers, activeLayerId, availableTags, projectCols, projectRows, { font, useFontBlocks }, markClean, openSaveDialog),
+    [fileHandleSave, layers, activeLayerId, availableTags, projectCols, projectRows, font, useFontBlocks, markClean, openSaveDialog],
   )
 
   handleSaveRef.current = handleSave
@@ -314,6 +318,10 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         cols={projectCols}
         rows={projectRows}
         onResizeCanvas={resizeCanvas}
+        font={font}
+        onSetFont={setFont}
+        useFontBlocks={useFontBlocks}
+        onSetUseFontBlocks={setUseFontBlocks}
         activeLayerIsGroup={activeLayerIsGroup}
         isPlaying={isPlaying}
         fileMenuOpen={fileMenuOpen}
@@ -336,6 +344,8 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
               scaleMode={scaleMode}
               cols={projectCols}
               rows={projectRows}
+              fontId={font}
+              useFontBlocks={useFontBlocks}
               onTerminalReady={onTerminalReady}
             />
           </div>

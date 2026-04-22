@@ -180,6 +180,14 @@ export interface LayerState {
   cols?: number
   /** Canvas height in rows. Defaults to 25 when absent. */
   rows?: number
+  /** Registered bitmap font ID. Defaults to DEFAULT_ANSI_FONT_ID when absent. */
+  font?: string
+  /**
+   * When true (default), the editor mounts the pixel-perfect bitmap
+   * renderer. When false, the legacy xterm.js + CanvasAddon renderer
+   * is used instead (kept as fallback for content authored against it).
+   */
+  useFontBlocks?: boolean
 }
 
 export interface UseAnsiEditorReturn {
@@ -260,6 +268,11 @@ export interface UseAnsiEditorReturn {
   setCrtPreview: (on: boolean) => void
   crtConfig: CrtConfig | null
   setCrtConfig: (config: CrtConfig | null) => void
+  // Bitmap font selection
+  font: string
+  setFont: (id: string) => void
+  useFontBlocks: boolean
+  setUseFontBlocks: (enabled: boolean) => void
   // Frame animation
   addFrame: () => void
   duplicateFrame: () => void
