@@ -105,7 +105,43 @@ export function cgaQuantize(color: RGBColor): RGBColor {
   return CGA_COLORS[nearestCgaIndex(color)]
 }
 
-export function gridToAnsBytes(grid: AnsiGrid): Uint8Array {
+/**
+ * Map an RGB color to the nearest low-intensity CGA index (0-7 only).
+ *
+ * Used by exporters that cannot rely on SAUCE iCE-colors re-interpretation of
+ * SGR 5 (DOS `type`, the .bat exporter): any bright-bg color gets folded down
+ * to its nearest low-intensity match so no blink attribute is ever emitted.
+ */
+export function nearestCga8BgIndex(color: RGBColor): number {
+  let bestIdx = 0
+  let bestDist = Infinity
+  for (let i = 0; i < 8; i++) {
+    const c = CGA_COLORS[i]
+    const dr = color[0] - c[0]
+    const dg = color[1] - c[1]
+    const db = color[2] - c[2]
+    const dist = dr * dr + dg * dg + db * db
+    if (dist < bestDist) {
+      bestDist = dist
+      bestIdx = i
+    }
+  }
+  return bestIdx
+}
+
+/**
+ * Emit `grid` as ANSI escape + CP437 byte stream, no framing.
+ *
+ * `bgQuantizer` picks which CGA index a background color maps to. Defaults to
+ * the full 16-color `nearestCgaIndex` (iCE-colors behavior, which relies on
+ * SAUCE TFlags=0x01 at read time). Pass `nearestCga8BgIndex` for consumers
+ * that cannot honour iCE (DOS `type`, cmd without ANSICON/iCE support) — this
+ * keeps bg in the 0-7 range so SGR 5 (blink) is never produced.
+ */
+export function gridToAnsBytes(
+  grid: AnsiGrid,
+  bgQuantizer: (color: RGBColor) => number = nearestCgaIndex,
+): Uint8Array {
   const bytes: number[] = []
   const ESC = 0x1b
 
@@ -140,7 +176,7 @@ export function gridToAnsBytes(grid: AnsiGrid): Uint8Array {
     for (let c = 0; c < row.length; c++) {
       const cell = row[c]
       const fgIdx = nearestCgaIndex(cell.fg)
-      const bgIdx = nearestCgaIndex(cell.bg)
+      const bgIdx = bgQuantizer(cell.bg)
       if (fgIdx !== curFgIdx || bgIdx !== curBgIdx) {
         pushSgr(fgIdx, bgIdx)
         curFgIdx = fgIdx
@@ -154,6 +190,16 @@ export function gridToAnsBytes(grid: AnsiGrid): Uint8Array {
 
   pushReset()
   return new Uint8Array(bytes)
+}
+
+/**
+ * Plain ANSI+CP437 byte stream suitable for `type file.ans` on DOS/DOSBox.
+ *
+ * Differs from {@link exportAnsFile}: no SAUCE record, no 0x1A EOF marker,
+ * bg quantized to the 8 low-intensity CGA indices so cells never blink.
+ */
+export function exportDosAnsFile(grid: AnsiGrid): Uint8Array {
+  return gridToAnsBytes(grid, nearestCga8BgIndex)
 }
 
 export function buildSauceRecord(title: string, fileSize: number, cols = 80, rows = 25): Uint8Array {

@@ -1,6 +1,5 @@
-import type { AnsiCell, AnsiGrid, RGBColor } from './types'
-import { CGA_PALETTE } from './types'
-import { unicodeToCp437, nearestCgaIndex, CGA_FG_SGR, CGA_BG_SGR } from './ansExport'
+import type { AnsiCell, AnsiGrid } from './types'
+import { unicodeToCp437, nearestCgaIndex, nearestCga8BgIndex, CGA_FG_SGR, CGA_BG_SGR } from './ansExport'
 
 const ESC = 0x1b
 const CR = 0x0d
@@ -9,33 +8,6 @@ const PERCENT = 0x25
 
 const ECHO_PREFIX = 'echo '
 const REM_LINE = 'REM Requires ANSI.SYS (DOS/9x) or a modern terminal supporting 16-color ANSI.'
-
-/**
- * Background color quantization restricted to the 8 low-intensity CGA indices.
- *
- * DOS/ANSI.SYS interprets SGR 5 as the real blink attribute — unlike .ans
- * viewers that re-purpose it as an iCE-colors bright-bg bit via SAUCE TFlags.
- * A BAT file has no SAUCE, so we avoid SGR 5 entirely by never producing a
- * bright (idx 8–15) background.
- */
-const CGA_LOW_COLORS: RGBColor[] = CGA_PALETTE.slice(0, 8).map(e => e.rgb)
-
-function nearestCga8BgIndex(color: RGBColor): number {
-  let bestIdx = 0
-  let bestDist = Infinity
-  for (let i = 0; i < 8; i++) {
-    const c = CGA_LOW_COLORS[i]
-    const dr = color[0] - c[0]
-    const dg = color[1] - c[1]
-    const db = color[2] - c[2]
-    const dist = dr * dr + dg * dg + db * db
-    if (dist < bestDist) {
-      bestDist = dist
-      bestIdx = i
-    }
-  }
-  return bestIdx
-}
 
 function pushAscii(bytes: number[], s: string): void {
   for (let i = 0; i < s.length; i++) {

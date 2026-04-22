@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import type { AnsiGrid, Layer, LayerState } from './types'
 import { compositeGrid, visibleDrawableLayers } from './layerUtils'
-import { exportAnsFile } from './ansExport'
+import { exportAnsFile, exportDosAnsFile } from './ansExport'
 import { exportShFile, exportAnimatedShFile } from './shExport'
 import { exportBatFile } from './batExport'
 import { serializeLayers, deserializeLayers } from './serialization'
@@ -86,6 +86,7 @@ export interface UseAnsiEditorFileReturn {
   handleConfirmOverwrite: () => Promise<void>
   handleCancelOverwrite: () => void
   handleExportAns: (layers: Layer[]) => void
+  handleExportDosAns: (layers: Layer[]) => void
   handleExportSh: (layers: Layer[]) => void
   handleExportBat: (layers: Layer[]) => void
   finishSaveAs: (savedPath: string) => Promise<void>
@@ -168,6 +169,13 @@ export function useAnsiEditorFile({
     downloadBlob(new Blob([new Uint8Array(data)], { type: 'application/octet-stream' }), filename)
   }, [filePath])
 
+  const handleExportDosAns = useCallback((layers: Layer[]) => {
+    const grid = compositeGrid(layers)
+    const filename = deriveExportFilename(filePath, 'ans')
+    const data = exportDosAnsFile(grid)
+    downloadBlob(new Blob([new Uint8Array(data)], { type: 'application/octet-stream' }), filename)
+  }, [filePath])
+
   const handleExportSh = useCallback((layers: Layer[]) => {
     const filename = deriveExportFilename(filePath, 'sh')
     const maxFrames = getMaxFrameCount(layers)
@@ -201,6 +209,7 @@ export function useAnsiEditorFile({
     handleConfirmOverwrite,
     handleCancelOverwrite,
     handleExportAns,
+    handleExportDosAns,
     handleExportSh,
     handleExportBat,
     finishSaveAs,
