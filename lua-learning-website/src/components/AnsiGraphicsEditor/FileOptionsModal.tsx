@@ -32,7 +32,7 @@ export interface FileOptionsModalProps {
   useFontBlocks: boolean
   /** Toggle between the pixel renderer (true) and legacy xterm (false). */
   onSetUseFontBlocks: (enabled: boolean) => void
-  /** Crisp-pixel (DPR-clean scale snap) mode. */
+  /** Pixel-perfect emulation on HiDPI: snaps scale to DPR-clean multiple. */
   dprCompensate: boolean
   /** Toggle crisp-pixel mode. */
   onSetDprCompensate: (enabled: boolean) => void
@@ -190,7 +190,7 @@ export function FileOptionsModal({
               onChange={e => onSetDprCompensate(e.target.checked)}
               data-testid="file-dpr-compensate"
             />
-            Crisp pixels on HiDPI
+            Emulate Pixel Perfect on HiDPI
           </label>
           <button
             type="button"

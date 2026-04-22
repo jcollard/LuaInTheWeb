@@ -50,7 +50,7 @@ export interface AnsiEditorToolbarProps {
   useFontBlocks?: boolean
   /** Toggle between pixel renderer and legacy xterm. */
   onSetUseFontBlocks?: (enabled: boolean) => void
-  /** Crisp-pixel (DPR-clean scale snap) mode. */
+  /** Pixel-perfect emulation on HiDPI: snaps scale to DPR-clean multiple. */
   dprCompensate?: boolean
   /** Toggle crisp-pixel mode. */
   onSetDprCompensate?: (enabled: boolean) => void

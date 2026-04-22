@@ -47,7 +47,7 @@ export function saveStoredScaleMode(mode: ScaleMode): void {
 }
 
 /**
- * Separate key for the "Crisp pixels on HiDPI" toggle. Lives alongside
+ * Separate key for the "Emulate Pixel Perfect on HiDPI" toggle. Lives alongside
  * the scale mode — both are editor-level view preferences — but kept as
  * independent fields so the schema is forward-compatible if we later add
  * more panel prefs.

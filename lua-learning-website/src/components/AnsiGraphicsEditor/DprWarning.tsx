@@ -36,8 +36,8 @@ function writeDismissed(): void {
 export interface DprWarningProps {
   scaleMode: ScaleMode
   /**
-   * When true, the user has enabled "Crisp pixels on HiDPI" so the
-   * scale is already DPR-snapped — the warning is no longer
+   * When true, the user has enabled "Emulate Pixel Perfect on HiDPI"
+   * so the scale is already DPR-snapped — the warning is no longer
    * informative and is suppressed.
    */
   dprCompensate?: boolean
