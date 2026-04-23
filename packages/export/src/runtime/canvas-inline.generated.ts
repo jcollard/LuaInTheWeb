@@ -8,7 +8,7 @@
  */
 export const CANVAS_INLINE_JS = `"use strict";
 var CanvasInline = (() => {
-  // ../lua-runtime/src/canvasLuaCode/core.ts
+  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/canvasLuaCode/core.ts
   var canvasLuaCoreCode = \`
     local _canvas = {}
 
@@ -17,6 +17,9 @@ var CanvasInline = (() => {
       if __canvas_is_active() then
         error("Canvas is already running. Call canvas.stop() first.")
       end
+      -- Drive the ail_audio asset manager before canvas so assets loaded via
+      -- canvas.assets.load_sound/load_music are decoded before the game loop.
+      if __audio_assets_start then __audio_assets_start():await() end
       __canvas_start():await()
     end
 
@@ -216,6 +219,8 @@ var CanvasInline = (() => {
     -- Must be called BEFORE canvas.start()
     function _canvas.assets.add_path(path)
       __canvas_assets_addPath(path)
+      -- Mirror to ail_audio so load_sound/load_music can resolve from the path.
+      if __audio_assets_addPath then __audio_assets_addPath(path) end
     end
 
     -- Create a named reference to a discovered image file
@@ -463,7 +468,7 @@ var CanvasInline = (() => {
     end
 \`;
 
-  // ../lua-runtime/src/canvasLuaCode/path.ts
+  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/canvasLuaCode/path.ts
   var canvasLuaPathCode = \`
     -- Path API
     function _canvas.begin_path()
@@ -740,7 +745,7 @@ var CanvasInline = (() => {
     end
 \`;
 
-  // ../lua-runtime/src/canvasLuaCode/styling.ts
+  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/canvasLuaCode/styling.ts
   var canvasLuaStylingCode = \`
     -- Line Style API
     function _canvas.set_line_cap(cap)
@@ -877,7 +882,7 @@ var CanvasInline = (() => {
     end
 \`;
 
-  // ../lua-runtime/src/canvasLuaCode/text.ts
+  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/canvasLuaCode/text.ts
   var canvasLuaTextCode = \`
     -- Text Alignment
     function _canvas.set_text_align(align)
@@ -1081,7 +1086,7 @@ var CanvasInline = (() => {
     end
 \`;
 
-  // ../lua-runtime/src/canvasLuaCode/input.ts
+  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/canvasLuaCode/input.ts
   var canvasLuaInputCode = \`
     -- Helper to normalize key names
     local function normalize_key(key)
@@ -1307,7 +1312,7 @@ var CanvasInline = (() => {
     end
 \`;
 
-  // ../lua-runtime/src/canvasLuaCode/audio.ts
+  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/canvasLuaCode/audio.ts
   var canvasLuaAudioCode = \`
     -- ========================================================================
     -- Audio API (delegates to ail_audio module)
@@ -1333,7 +1338,7 @@ var CanvasInline = (() => {
     end
 \`;
 
-  // ../lua-runtime/src/lua/hc.generated.ts
+  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/lua/hc.generated.ts
   var LUA_HC_CODE = \`---@meta hc
 --- hc.lua - HC Collision Detection Library
 --- Load with: local HC = require('hc')
@@ -2922,7 +2927,7 @@ return setmetatable({
 }, {__call = function(_, ...) return common_local.instance(HC, ...) end})
 \`;
 
-  // ../lua-runtime/src/lua/localstorage.generated.ts
+  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/lua/localstorage.generated.ts
   var LUA_LOCALSTORAGE_CODE = \`---@meta localstorage
 --- localstorage.lua - Persistent key-value storage library
 --- Load with: local localstorage = require('localstorage')
@@ -3024,7 +3029,7 @@ end
 return localstorage
 \`;
 
-  // ../lua-runtime/src/audioLuaCode/audio.ts
+  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/audioLuaCode/audio.ts
   var audioLuaCode = \`
     -- ========================================================================
     -- Audio Module (standalone)
@@ -3204,7 +3209,7 @@ return localstorage
     end
 \`;
 
-  // ../lua-runtime/src/chipLuaCode/chip.ts
+  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/chipLuaCode/chip.ts
   var chipLuaCode = \`
     -- ========================================================================
     -- Chip Module (OPL3 FM Synthesis)
@@ -3468,7 +3473,7 @@ return localstorage
     end
 \`;
 
-  // src/runtime/canvas-bridge-utils.ts
+  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/export/src/runtime/canvas-bridge-utils.ts
   function toNumberArray(segments) {
     if (Array.isArray(segments)) {
       return [...segments];
@@ -3483,7 +3488,7 @@ return localstorage
     return result;
   }
 
-  // src/runtime/canvas-standalone.ts
+  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/export/src/runtime/canvas-standalone.ts
   function createEmptyGamepadState() {
     return {
       connected: false,
@@ -4575,7 +4580,7 @@ return localstorage
   }
   var localStorageLuaCode = LUA_LOCALSTORAGE_CODE;
 
-  // src/runtime/canvas-inline-entry.ts
+  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/export/src/runtime/canvas-inline-entry.ts
   globalThis.CanvasStandalone = {
     setupCanvasBridge,
     createCanvasRuntimeState,
