@@ -192,6 +192,17 @@ describe('ExportLayersDialog', () => {
     expect(screen.getByText('Location')).toBeInTheDocument()
   })
 
+  it('strips .ansi.lua from defaultFileName and shows it as a non-editable suffix', () => {
+    render(<ExportLayersDialog {...defaultProps({ defaultFileName: 'export.ansi.lua' })} />)
+
+    const input = screen.getByTestId('export-filename') as HTMLInputElement
+    expect(input.value).toBe('export')
+
+    const suffix = screen.getByTestId('export-extension-suffix')
+    expect(suffix.textContent).toBe('.ansi.lua')
+    expect(suffix.tagName).toBe('SPAN')
+  })
+
   it('confirm calls onConfirm with correct args', () => {
     const bg = createLayer('Background', 'bg-1')
     const layers = [bg]

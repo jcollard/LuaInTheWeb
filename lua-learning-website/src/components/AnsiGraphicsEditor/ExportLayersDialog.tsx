@@ -40,7 +40,7 @@ export function ExportLayersDialog({
   const [includeEmptyGroups, setIncludeEmptyGroups] = useState(false)
   const [filter, setFilter] = useState('')
   const [selectedPath, setSelectedPath] = useState(defaultFolderPath ?? '/')
-  const [fileName, setFileName] = useState(defaultFileName)
+  const [fileName, setFileName] = useState(() => defaultFileName.replace(/\.ansi\.lua$/, ''))
   const [error, setError] = useState('')
 
   const {
@@ -60,8 +60,8 @@ export function ExportLayersDialog({
 
   const resolvedFileName = useMemo(() => {
     const trimmed = fileName.trim()
-    if (!trimmed || trimmed === EXTENSION) return null
     const withExt = ensureExtension(trimmed)
+    if (!trimmed || withExt === EXTENSION) return null
     if (!checkFileExists) return { finalName: withExt, renamed: false }
     return deduplicateFileName(selectedPath, withExt, checkFileExists)
   }, [fileName, selectedPath, checkFileExists])
@@ -183,10 +183,19 @@ export function ExportLayersDialog({
 
           <div className={dialogStyles.filenameGroup}>
             <label className={dialogStyles.label} htmlFor="export-filename">File name</label>
-            <input ref={filenameInputRef} id="export-filename" className={dialogStyles.filenameInput}
-              type="text" value={fileName}
-              onChange={e => { setFileName(e.target.value); setError('') }}
-              data-testid="export-filename" />
+            <div className={dialogStyles.filenameInputRow}>
+              <input ref={filenameInputRef} id="export-filename" className={dialogStyles.filenameInput}
+                type="text" value={fileName}
+                onChange={e => { setFileName(e.target.value); setError('') }}
+                data-testid="export-filename" />
+              <span
+                className={dialogStyles.filenameSuffix}
+                data-testid="export-extension-suffix"
+                aria-hidden="true"
+              >
+                {EXTENSION}
+              </span>
+            </div>
             {error && <div className={dialogStyles.errorMessage} data-testid="export-error">{error}</div>}
             {resolvedFileName?.renamed && (
               <div className={importStyles.warning} data-testid="export-rename-warning">

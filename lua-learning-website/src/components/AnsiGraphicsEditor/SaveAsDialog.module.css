@@ -115,6 +115,12 @@
   flex-direction: column;
 }
 
+.filenameInputRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .filenameInput {
   padding: 5px 8px;
   font-size: 13px;
@@ -123,6 +129,16 @@
   border: 1px solid var(--theme-border, #454545);
   border-radius: 4px;
   outline: none;
+  flex: 1;
+  min-width: 0;
+}
+
+.filenameSuffix {
+  font-size: 13px;
+  font-family: var(--theme-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  color: var(--theme-text-secondary, #969696);
+  user-select: none;
+  flex-shrink: 0;
 }
 
 .filenameInput:focus {

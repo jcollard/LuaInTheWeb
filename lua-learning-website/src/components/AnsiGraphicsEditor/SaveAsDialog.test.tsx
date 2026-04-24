@@ -49,10 +49,17 @@ describe('SaveAsDialog', () => {
     expect(screen.getByText('File name')).toBeTruthy()
   })
 
-  it('should show filename input with default value', () => {
+  it('should show filename input with default name-only value', () => {
     render(<SaveAsDialog isOpen={true} tree={sampleTree} {...handlers} />)
     const input = screen.getByTestId('save-as-filename') as HTMLInputElement
-    expect(input.value).toBe('untitled.ansi.lua')
+    expect(input.value).toBe('untitled')
+  })
+
+  it('should render .ansi.lua as a non-editable suffix next to the input', () => {
+    render(<SaveAsDialog isOpen={true} tree={sampleTree} {...handlers} />)
+    const suffix = screen.getByTestId('save-as-extension-suffix')
+    expect(suffix.textContent).toBe('.ansi.lua')
+    expect(suffix.tagName).toBe('SPAN')
   })
 
   it('should call onSave with root path and default filename when Save is clicked', () => {
@@ -122,10 +129,9 @@ describe('SaveAsDialog', () => {
     expect(handlers.onSave).not.toHaveBeenCalled()
   })
 
-  it('should show error when filename is only the extension', () => {
+  it.each(['.ansi.lua', '.ansi', '.lua'])('should show error when filename is only the extension: %s', value => {
     render(<SaveAsDialog isOpen={true} tree={sampleTree} {...handlers} />)
-    const input = screen.getByTestId('save-as-filename')
-    fireEvent.change(input, { target: { value: '.ansi.lua' } })
+    fireEvent.change(screen.getByTestId('save-as-filename'), { target: { value } })
     fireEvent.click(screen.getByTestId('save-as-save'))
     expect(screen.getByTestId('save-as-error')).toBeTruthy()
     expect(handlers.onSave).not.toHaveBeenCalled()
@@ -184,12 +190,12 @@ describe('SaveAsDialog', () => {
     const { rerender } = render(<SaveAsDialog isOpen={true} tree={sampleTree} {...handlers} />)
     // Change filename
     const input = screen.getByTestId('save-as-filename') as HTMLInputElement
-    fireEvent.change(input, { target: { value: 'custom.ansi.lua' } })
-    expect(input.value).toBe('custom.ansi.lua')
+    fireEvent.change(input, { target: { value: 'custom' } })
+    expect(input.value).toBe('custom')
     // Close and reopen
     rerender(<SaveAsDialog isOpen={false} tree={sampleTree} {...handlers} />)
     rerender(<SaveAsDialog isOpen={true} tree={sampleTree} {...handlers} />)
     const newInput = screen.getByTestId('save-as-filename') as HTMLInputElement
-    expect(newInput.value).toBe('untitled.ansi.lua')
+    expect(newInput.value).toBe('untitled')
   })
 })
