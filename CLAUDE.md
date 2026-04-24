@@ -173,6 +173,12 @@ python3 scripts/clean-worktree-modules.py
 ```
 This safely removes and reinstalls `node_modules` (only works inside `.claude/worktrees/`).
 
+**Worktree submodules**: Worktrees do not auto-populate git submodules, and `npm install` leaves placeholder dirs inside submodule paths (e.g. `vendor/WebOPL`) that block a subsequent `git submodule update --init`. Symptom: `build:chip` fails with "Could not resolve @chip-composer/player". Fix with:
+```bash
+python3 scripts/init-worktree-submodules.py
+```
+This removes placeholders that aren't real git checkouts (scoped to paths in `.gitmodules`) and re-inits the submodule. Run before `npm install` in a fresh worktree, or after if you already hit the error. See `scripts/init-worktree-submodules.py` docstring for details.
+
 ## Development Practices
 
 ### Code Architecture
@@ -323,6 +329,19 @@ Safely removes and reinstalls `node_modules` in a worktree. Refuses to operate o
 python3 scripts/clean-worktree-modules.py           # current directory
 python3 scripts/clean-worktree-modules.py /path/to/worktree  # explicit path
 ```
+
+### Worktree submodules (`scripts/init-worktree-submodules.py`)
+
+Populates git submodules inside a worktree. Git worktrees don't auto-populate submodules, and running `npm install` creates placeholder directories inside submodule paths (via workspace resolution) that then block `git submodule update --init` with "destination path already exists and is not an empty directory". Symptom: `build:chip` fails with `Could not resolve "@chip-composer/player"`.
+
+The script parses `.gitmodules`, removes any placeholder directories that aren't real git checkouts (only the paths declared in `.gitmodules`), then runs `git submodule update --init --recursive`. Refuses to operate outside `.claude/worktrees/`. Run this whenever a worktree hits missing-submodule build errors — it is the sanctioned alternative to `rm -rf` in a worktree.
+
+```bash
+python3 scripts/init-worktree-submodules.py           # current directory
+python3 scripts/init-worktree-submodules.py /path/to/worktree  # explicit path
+```
+
+Use this in combination with `clean-worktree-modules.py` if both the submodule and `node_modules` are broken: run `init-worktree-submodules.py` first (fixes submodule source), then `clean-worktree-modules.py` (rebuilds `node_modules` against the real submodule).
 
 ## Continuation Policy
 
