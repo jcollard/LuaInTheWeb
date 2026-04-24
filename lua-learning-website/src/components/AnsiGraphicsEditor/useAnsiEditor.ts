@@ -26,6 +26,10 @@ import {
   DEFAULT_USE_FONT_BLOCKS,
   normalizeAnsiFontId,
 } from '@lua-learning/ansi-shared'
+import {
+  DEFAULT_EYEDROPPER_MODIFIER,
+  isEyedropperModifierPressed,
+} from './eyedropperModifierPersistence'
 import { CRT_DEFAULTS, type CrtConfig } from '@lua-learning/lua-runtime'
 
 export { computePixelCell, computeLineCells } from './gridUtils'
@@ -153,6 +157,8 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const openFileMenuRef = useRef<(() => void) | undefined>(options?.onOpenFileMenu); openFileMenuRef.current = options?.onOpenFileMenu
   const showToastRef = useRef<((msg: string) => void) | undefined>(options?.onShowToast); showToastRef.current = options?.onShowToast
   const isActiveRef = useRef(options?.isActive ?? true); isActiveRef.current = options?.isActive ?? true
+  const eyedropperModifierRef = useRef(options?.eyedropperModifier ?? DEFAULT_EYEDROPPER_MODIFIER)
+  eyedropperModifierRef.current = options?.eyedropperModifier ?? DEFAULT_EYEDROPPER_MODIFIER
 
   const pushSnapshot = useCallback(() => {
     const stack = undoStackRef.current
@@ -536,7 +542,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
         setBrush(p => isRight ? { ...p, bg: [...c] as RGBColor } : { ...p, fg: [...c] as RGBColor })
         return true
       }
-      if (e.ctrlKey) {
+      if (isEyedropperModifierPressed(e, eyedropperModifierRef.current)) {
         setBrush(p => isRight ? { ...p, bg: [...s.bg] as RGBColor } : { ...p, fg: [...s.fg] as RGBColor })
         return true
       }

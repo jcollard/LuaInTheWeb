@@ -1265,23 +1265,27 @@
   background-color: var(--theme-accent-primary, #0078d4);
 }
 
-/* File Options Modal */
+/* File Options Modal.
+ * Overlay is transparent so the canvas remains visible while toggling
+ * view settings (e.g. CGA Preview). Dialog sits at a fixed top-left
+ * position so it doesn't cover the canvas center and doesn't shift
+ * around when tabs are switched. */
 .fileOptionsOverlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background-color: transparent;
   z-index: 1000;
 }
 
 .fileOptionsDialog {
+  position: fixed;
+  top: 48px;
+  left: 16px;
+  width: 300px;
   background-color: var(--theme-bg-secondary);
   border: 1px solid var(--theme-border);
   border-radius: 6px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  min-width: 220px;
   outline: none;
 }
 
@@ -1317,6 +1321,9 @@
   flex-direction: column;
   gap: 6px;
   padding: 8px 16px 16px;
+  /* Sized to fit the tallest tab (File) so the modal does not resize
+   * when switching between tabs. */
+  min-height: 360px;
 }
 
 .crtTabContent {
@@ -1360,6 +1367,15 @@
 /* Narrow numeric inputs (e.g. the Canvas size width / height fields). */
 .fileOptionsNumberInput {
   width: 4em;
+}
+
+/* Muted help text shown under a control (e.g. the Input tab's eyedropper hint). */
+.fileOptionsHelp {
+  margin: 0;
+  padding: 0 2px;
+  font-size: 11px;
+  color: var(--theme-text-secondary);
+  line-height: 1.4;
 }
 
 /* ---- Toast Notifications ---- */
