@@ -6,6 +6,7 @@ import styles from './SaveAsDialog.module.css'
 export interface SaveAsDialogProps {
   isOpen: boolean
   tree: TreeNode[]
+  defaultFolderPath: string
   onSave: (folderPath: string, fileName: string) => void
   onCancel: () => void
 }
@@ -19,9 +20,9 @@ function ensureExtension(name: string): string {
   return stripped + EXTENSION
 }
 
-export function SaveAsDialog({ isOpen, tree, onSave, onCancel }: SaveAsDialogProps) {
-  const [selectedPath, setSelectedPath] = useState('/')
-  const [fileName, setFileName] = useState('untitled.ansi.lua')
+export function SaveAsDialog({ isOpen, tree, defaultFolderPath, onSave, onCancel }: SaveAsDialogProps) {
+  const [selectedPath, setSelectedPath] = useState(defaultFolderPath)
+  const [fileName, setFileName] = useState('untitled')
   const [error, setError] = useState('')
 
   const filenameInputRef = useRef<HTMLInputElement>(null)
@@ -40,19 +41,19 @@ export function SaveAsDialog({ isOpen, tree, onSave, onCancel }: SaveAsDialogPro
   // Reset state when dialog opens
   useEffect(() => {
     if (isOpen) {
-      setSelectedPath('/')
-      setFileName('untitled.ansi.lua')
+      setSelectedPath(defaultFolderPath)
+      setFileName('untitled')
       setError('')
     }
-  }, [isOpen])
+  }, [isOpen, defaultFolderPath])
 
   const handleSave = useCallback(() => {
     const trimmed = fileName.trim()
-    if (!trimmed || trimmed === EXTENSION) {
+    const finalName = ensureExtension(trimmed)
+    if (!trimmed || finalName === EXTENSION) {
       setError('Please enter a file name.')
       return
     }
-    const finalName = ensureExtension(trimmed)
     setError('')
     onSave(selectedPath, finalName)
   }, [fileName, selectedPath, onSave])
@@ -102,18 +103,27 @@ export function SaveAsDialog({ isOpen, tree, onSave, onCancel }: SaveAsDialogPro
           </div>
           <div className={styles.filenameGroup}>
             <label className={styles.label} htmlFor="save-as-filename">File name</label>
-            <input
-              ref={filenameInputRef}
-              id="save-as-filename"
-              className={styles.filenameInput}
-              type="text"
-              value={fileName}
-              onChange={e => {
-                setFileName(e.target.value)
-                setError('')
-              }}
-              data-testid="save-as-filename"
-            />
+            <div className={styles.filenameInputRow}>
+              <input
+                ref={filenameInputRef}
+                id="save-as-filename"
+                className={styles.filenameInput}
+                type="text"
+                value={fileName}
+                onChange={e => {
+                  setFileName(e.target.value)
+                  setError('')
+                }}
+                data-testid="save-as-filename"
+              />
+              <span
+                className={styles.filenameSuffix}
+                data-testid="save-as-extension-suffix"
+                aria-hidden="true"
+              >
+                {EXTENSION}
+              </span>
+            </div>
             {error && <div className={styles.errorMessage} data-testid="save-as-error">{error}</div>}
           </div>
         </div>

@@ -73,11 +73,10 @@ describe('DirectoryPicker', () => {
     makeFolder('lib', '/lib', { isLibraryWorkspace: true }),
   ]
 
-  it('should render root option with correct text', () => {
-    render(<DirectoryPicker tree={sampleTree} selectedPath="/" onSelect={vi.fn()} />)
-    const rootItem = screen.getByTestId('directory-item-/')
-    expect(rootItem).toBeTruthy()
-    expect(rootItem.textContent).toContain('/ (root)')
+  it('should not render a synthetic root option', () => {
+    render(<DirectoryPicker tree={sampleTree} selectedPath="/workspace" onSelect={vi.fn()} />)
+    expect(screen.queryByTestId('directory-item-/')).toBeNull()
+    expect(screen.queryByText('/ (root)')).toBeNull()
   })
 
   it('should render tree role attribute', () => {
@@ -100,18 +99,10 @@ describe('DirectoryPicker', () => {
     expect(onSelect).toHaveBeenCalledWith('/workspace')
   })
 
-  it('should highlight the selected path and not highlight others', () => {
+  it('should highlight the selected path', () => {
     render(<DirectoryPicker tree={sampleTree} selectedPath="/workspace" onSelect={vi.fn()} />)
     const workspaceItem = screen.getByTestId('directory-item-/workspace')
-    const rootItem = screen.getByTestId('directory-item-/')
     expect(workspaceItem.className).toContain('Selected')
-    expect(rootItem.className).not.toContain('Selected')
-  })
-
-  it('should highlight root when root is selected', () => {
-    render(<DirectoryPicker tree={sampleTree} selectedPath="/" onSelect={vi.fn()} />)
-    const rootItem = screen.getByTestId('directory-item-/')
-    expect(rootItem.className).toContain('Selected')
   })
 
   it('should expand folder on chevron click to show children', () => {
@@ -130,14 +121,6 @@ describe('DirectoryPicker', () => {
     expect(screen.getByText('src')).toBeTruthy()
     fireEvent.click(chevron)
     expect(screen.queryByText('src')).toBeNull()
-  })
-
-  it('should select root by clicking root item', () => {
-    const onSelect = vi.fn()
-    render(<DirectoryPicker tree={sampleTree} selectedPath="/workspace" onSelect={onSelect} />)
-    fireEvent.click(screen.getByText('/ (root)'))
-    expect(onSelect).toHaveBeenCalledTimes(1)
-    expect(onSelect).toHaveBeenCalledWith('/')
   })
 
   it('should select child folder after expanding', () => {
@@ -161,12 +144,9 @@ describe('DirectoryPicker', () => {
     expect(childPadding).toBeGreaterThan(parentPadding)
   })
 
-  it('should render with empty tree', () => {
-    render(<DirectoryPicker tree={[]} selectedPath="/" onSelect={vi.fn()} />)
-    expect(screen.getByText('/ (root)')).toBeTruthy()
-    // Only root should be present
-    const items = screen.getAllByTestId(/^directory-item-/)
-    expect(items).toHaveLength(1)
+  it('should render an empty tree with no items', () => {
+    render(<DirectoryPicker tree={[]} selectedPath="/home" onSelect={vi.fn()} />)
+    expect(screen.queryAllByTestId(/^directory-item-/)).toHaveLength(0)
   })
 
   it('should hide chevron for leaf folders', () => {
