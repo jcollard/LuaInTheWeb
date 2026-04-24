@@ -6,6 +6,7 @@ import styles from './SaveAsDialog.module.css'
 export interface SaveAsDialogProps {
   isOpen: boolean
   tree: TreeNode[]
+  defaultFolderPath: string
   onSave: (folderPath: string, fileName: string) => void
   onCancel: () => void
 }
@@ -19,8 +20,8 @@ function ensureExtension(name: string): string {
   return stripped + EXTENSION
 }
 
-export function SaveAsDialog({ isOpen, tree, onSave, onCancel }: SaveAsDialogProps) {
-  const [selectedPath, setSelectedPath] = useState('/')
+export function SaveAsDialog({ isOpen, tree, defaultFolderPath, onSave, onCancel }: SaveAsDialogProps) {
+  const [selectedPath, setSelectedPath] = useState(defaultFolderPath)
   const [fileName, setFileName] = useState('untitled')
   const [error, setError] = useState('')
 
@@ -40,11 +41,11 @@ export function SaveAsDialog({ isOpen, tree, onSave, onCancel }: SaveAsDialogPro
   // Reset state when dialog opens
   useEffect(() => {
     if (isOpen) {
-      setSelectedPath('/')
+      setSelectedPath(defaultFolderPath)
       setFileName('untitled')
       setError('')
     }
-  }, [isOpen])
+  }, [isOpen, defaultFolderPath])
 
   const handleSave = useCallback(() => {
     const trimmed = fileName.trim()

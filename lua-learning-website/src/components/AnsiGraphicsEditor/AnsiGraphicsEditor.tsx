@@ -40,6 +40,13 @@ export interface AnsiGraphicsEditorProps {
   isActive?: boolean
 }
 
+function deriveSaveAsFolderPath(filePath: string | undefined): string {
+  if (!filePath || filePath.startsWith('ansi-editor://')) return '/home'
+  const lastSlash = filePath.lastIndexOf('/')
+  if (lastSlash <= 0) return '/home'
+  return filePath.substring(0, lastSlash)
+}
+
 export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGraphicsEditorProps) {
   const { fileSystem, fileTree, refreshFileTree, updateAnsiEditorTabPath } = useIDE()
   const [fileMenuOpen, setFileMenuOpen] = useState(false)
@@ -445,6 +452,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
       <SaveAsDialog
         isOpen={isSaveDialogOpen}
         tree={fileTree}
+        defaultFolderPath={deriveSaveAsFolderPath(filePath)}
         onSave={handleSaveAs}
         onCancel={closeSaveDialog}
       />

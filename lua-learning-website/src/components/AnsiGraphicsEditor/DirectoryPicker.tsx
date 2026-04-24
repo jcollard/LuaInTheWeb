@@ -101,23 +101,8 @@ export function DirectoryPicker({ tree, selectedPath, onSelect }: DirectoryPicke
     })
   }, [])
 
-  const isRootSelected = selectedPath === '/'
-
   return (
     <div className={styles.directoryPicker} data-testid="directory-picker" role="tree">
-      <div
-        className={`${styles.directoryItem} ${isRootSelected ? styles.directoryItemSelected : ''}`}
-        onClick={() => onSelect('/')}
-        data-testid="directory-item-/"
-      >
-        <span className={styles.directoryChevron} style={{ visibility: 'hidden' }}>
-          <ChevronIcon />
-        </span>
-        <span className={styles.directoryIcon}>
-          <FolderIcon />
-        </span>
-        <span className={styles.directoryName}>/ (root)</span>
-      </div>
       {filteredTree.map(node => (
         <DirectoryNode
           key={node.path}
