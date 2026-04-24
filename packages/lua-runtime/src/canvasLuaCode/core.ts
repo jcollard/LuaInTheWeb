@@ -10,6 +10,9 @@ export const canvasLuaCoreCode = `
       if __canvas_is_active() then
         error("Canvas is already running. Call canvas.stop() first.")
       end
+      -- Drive the ail_audio asset manager before canvas so assets loaded via
+      -- canvas.assets.load_sound/load_music are decoded before the game loop.
+      if __audio_assets_start then __audio_assets_start():await() end
       __canvas_start():await()
     end
 
@@ -209,6 +212,8 @@ export const canvasLuaCoreCode = `
     -- Must be called BEFORE canvas.start()
     function _canvas.assets.add_path(path)
       __canvas_assets_addPath(path)
+      -- Mirror to ail_audio so load_sound/load_music can resolve from the path.
+      if __audio_assets_addPath then __audio_assets_addPath(path) end
     end
 
     -- Create a named reference to a discovered image file
