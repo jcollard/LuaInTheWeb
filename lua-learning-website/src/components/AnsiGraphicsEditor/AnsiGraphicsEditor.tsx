@@ -8,6 +8,11 @@ import {
   loadStoredDprCompensate,
   saveStoredDprCompensate,
 } from './scaleModePersistence'
+import {
+  loadStoredEyedropperModifier,
+  saveStoredEyedropperModifier,
+  type EyedropperModifier,
+} from './eyedropperModifierPersistence'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { useIDE } from '../IDEContext/useIDE'
 import { AnsiEditorToolbar } from './AnsiEditorToolbar'
@@ -49,6 +54,11 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
   const setDprCompensate = useCallback((flag: boolean) => {
     setDprCompensateRaw(flag)
     saveStoredDprCompensate(flag)
+  }, [])
+  const [eyedropperModifier, setEyedropperModifierRaw] = useState<EyedropperModifier>(() => loadStoredEyedropperModifier())
+  const setEyedropperModifier = useCallback((modifier: EyedropperModifier) => {
+    setEyedropperModifierRaw(modifier)
+    saveStoredEyedropperModifier(modifier)
   }, [])
 
   const { toasts, showToast } = useToast()
@@ -169,6 +179,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
     onOpenFileMenu: () => handleOpenFileMenuRef.current(),
     onShowToast: showToast,
     isActive,
+    eyedropperModifier,
   })
 
   closeSaveDialogRef.current = closeSaveDialog
@@ -348,6 +359,8 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         onSetUseFontBlocks={setUseFontBlocks}
         dprCompensate={dprCompensate}
         onSetDprCompensate={setDprCompensate}
+        eyedropperModifier={eyedropperModifier}
+        onSetEyedropperModifier={setEyedropperModifier}
         activeLayerIsGroup={activeLayerIsGroup}
         isPlaying={isPlaying}
         fileMenuOpen={fileMenuOpen}

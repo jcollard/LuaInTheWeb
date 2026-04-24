@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react'
-import type { BrushMode, DrawTool, BrushSettings, BorderStyle, TextAlign, ScaleMode } from './types'
-import { BORDER_PRESETS, DEFAULT_BLEND_RATIO, borderStyleEqual } from './types'
+import { BORDER_PRESETS, DEFAULT_BLEND_RATIO, borderStyleEqual, type BrushMode, type DrawTool, type BrushSettings, type BorderStyle, type TextAlign, type ScaleMode } from './types'
 import { CharPaletteModal } from './CharPaletteModal'
 import { FileOptionsModal } from './FileOptionsModal'
+import { DEFAULT_EYEDROPPER_MODIFIER, type EyedropperModifier } from './eyedropperModifierPersistence'
 import { toolTooltip, tooltipWithShortcut, MODE_SHORTCUTS, ACTION_SHORTCUTS } from './keyboardShortcuts'
 import styles from './AnsiGraphicsEditor.module.css'
 
@@ -56,6 +56,8 @@ export interface AnsiEditorToolbarProps {
   dprCompensate?: boolean
   /** Toggle crisp-pixel mode. */
   onSetDprCompensate?: (enabled: boolean) => void
+  eyedropperModifier?: EyedropperModifier
+  onSetEyedropperModifier?: (modifier: EyedropperModifier) => void
   activeLayerIsGroup?: boolean
   isPlaying?: boolean
   fileMenuOpen?: boolean
@@ -65,7 +67,7 @@ export interface AnsiEditorToolbarProps {
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onImportPng, onImportLayers, onExportAns, onExportDosAns, onExportSh, onExportBat, onExportLayers, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
-  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, scaleMode, onSetScaleMode, cols, rows, onResizeCanvas, font, onSetFont, useFontBlocks, onSetUseFontBlocks, dprCompensate, onSetDprCompensate, activeLayerIsGroup, isPlaying,
+  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, scaleMode, onSetScaleMode, cols, rows, onResizeCanvas, font, onSetFont, useFontBlocks, onSetUseFontBlocks, dprCompensate, onSetDprCompensate, eyedropperModifier, onSetEyedropperModifier, activeLayerIsGroup, isPlaying,
   fileMenuOpen: controlledFileMenuOpen, onSetFileMenuOpen,
 }: AnsiEditorToolbarProps) {
   const toolsDisabled = activeLayerIsGroup || isPlaying
@@ -89,25 +91,18 @@ export function AnsiEditorToolbar({
       {fileOptionsOpen && (
         <FileOptionsModal
           onClose={() => setFileOptionsOpen(false)}
-          onClear={onClear}
-          onSave={onSave}
-          onSaveAs={onSaveAs}
+          onClear={onClear} onSave={onSave} onSaveAs={onSaveAs}
           onImportPng={onImportPng} onImportLayers={onImportLayers}
           onExportAns={onExportAns} onExportDosAns={onExportDosAns} onExportSh={onExportSh}
           onExportBat={onExportBat} onExportLayers={onExportLayers}
-          cgaPreview={cgaPreview ?? false}
-          onToggleCgaPreview={onToggleCgaPreview!}
-          scaleMode={scaleMode ?? 'integer-auto'}
-          onSetScaleMode={onSetScaleMode!}
-          cols={cols ?? 80}
-          rows={rows ?? 25}
-          onResizeCanvas={onResizeCanvas ?? (() => {})}
-          font={font ?? 'IBM_VGA_8x16'}
-          onSetFont={onSetFont ?? (() => {})}
-          useFontBlocks={useFontBlocks ?? true}
-          onSetUseFontBlocks={onSetUseFontBlocks ?? (() => {})}
-          dprCompensate={dprCompensate ?? false}
-          onSetDprCompensate={onSetDprCompensate ?? (() => {})}
+          cgaPreview={cgaPreview ?? false} onToggleCgaPreview={onToggleCgaPreview!}
+          scaleMode={scaleMode ?? 'integer-auto'} onSetScaleMode={onSetScaleMode!}
+          cols={cols ?? 80} rows={rows ?? 25} onResizeCanvas={onResizeCanvas ?? (() => {})}
+          font={font ?? 'IBM_VGA_8x16'} onSetFont={onSetFont ?? (() => {})}
+          useFontBlocks={useFontBlocks ?? true} onSetUseFontBlocks={onSetUseFontBlocks ?? (() => {})}
+          dprCompensate={dprCompensate ?? false} onSetDprCompensate={onSetDprCompensate ?? (() => {})}
+          eyedropperModifier={eyedropperModifier ?? DEFAULT_EYEDROPPER_MODIFIER}
+          onSetEyedropperModifier={onSetEyedropperModifier ?? (() => {})}
         />
       )}
       <div className={styles.modeGroup}>

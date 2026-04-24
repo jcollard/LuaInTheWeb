@@ -302,6 +302,13 @@ export interface UseAnsiEditorOptions {
   onOpenFileMenu?: () => void
   onShowToast?: (message: string) => void
   isActive?: boolean
+  /**
+   * Keyboard modifier that enables click-to-sample-color when not in the
+   * eyedropper tool. User-configurable via the File Options → Input tab so
+   * it doesn't collide with OS-level virtual-right-click conventions.
+   * See `eyedropperModifierPersistence.ts`. Defaults to 'ctrl' when omitted.
+   */
+  eyedropperModifier?: import('./eyedropperModifierPersistence').EyedropperModifier
 }
 
 export type StaticPaletteType = 'cga' | 'ega' | 'vga'
