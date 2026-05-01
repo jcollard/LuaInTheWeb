@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ColorPanel, type ColorPanelProps } from './ColorPanel'
-import { CGA_PALETTE, DEFAULT_FG, DEFAULT_BG } from './types'
+import { CGA_PALETTE, DEFAULT_FG, DEFAULT_BG, HALF_BLOCK } from './types'
 import type { RGBColor, Layer } from './types'
 import { createLayer } from './layerUtils'
 
@@ -13,6 +13,8 @@ describe('ColorPanel', () => {
     props = {
       selectedFg: DEFAULT_FG,
       selectedBg: DEFAULT_BG,
+      brushMode: 'pixel',
+      brushChar: HALF_BLOCK,
       onSetFg: vi.fn(),
       onSetBg: vi.fn(),
       onSimplifyColors: vi.fn(),
@@ -36,7 +38,7 @@ describe('ColorPanel', () => {
   it('defaults to CGA palette with 16 swatches', () => {
     render(<ColorPanel {...props} />)
     const grid = screen.getByTestId('color-grid')
-    const swatches = grid.querySelectorAll('button')
+    const swatches = grid.querySelectorAll('button:not([data-testid="alpha-swatch"])')
     expect(swatches).toHaveLength(16)
   })
 
@@ -44,7 +46,7 @@ describe('ColorPanel', () => {
     render(<ColorPanel {...props} />)
     fireEvent.click(screen.getByTestId('palette-btn-ega'))
     const grid = screen.getByTestId('color-grid')
-    const swatches = grid.querySelectorAll('button')
+    const swatches = grid.querySelectorAll('button:not([data-testid="alpha-swatch"])')
     expect(swatches).toHaveLength(64)
   })
 
@@ -52,14 +54,14 @@ describe('ColorPanel', () => {
     render(<ColorPanel {...props} />)
     fireEvent.click(screen.getByTestId('palette-btn-vga'))
     const grid = screen.getByTestId('color-grid')
-    const swatches = grid.querySelectorAll('button')
+    const swatches = grid.querySelectorAll('button:not([data-testid="alpha-swatch"])')
     expect(swatches).toHaveLength(256)
   })
 
   it('left-click on swatch calls onSetFg', () => {
     render(<ColorPanel {...props} />)
     const grid = screen.getByTestId('color-grid')
-    const firstSwatch = grid.querySelectorAll('button')[0]
+    const firstSwatch = grid.querySelectorAll('button:not([data-testid="alpha-swatch"])')[0]
     fireEvent.click(firstSwatch)
     expect(props.onSetFg).toHaveBeenCalledWith(CGA_PALETTE[0].rgb)
   })
@@ -67,7 +69,7 @@ describe('ColorPanel', () => {
   it('right-click on swatch calls onSetBg', () => {
     render(<ColorPanel {...props} />)
     const grid = screen.getByTestId('color-grid')
-    const firstSwatch = grid.querySelectorAll('button')[0]
+    const firstSwatch = grid.querySelectorAll('button:not([data-testid="alpha-swatch"])')[0]
     fireEvent.contextMenu(firstSwatch)
     expect(props.onSetBg).toHaveBeenCalledWith(CGA_PALETTE[0].rgb)
   })
@@ -75,7 +77,7 @@ describe('ColorPanel', () => {
   it('marks FG-selected swatch with data-fg-selected', () => {
     render(<ColorPanel {...props} />)
     const grid = screen.getByTestId('color-grid')
-    const swatches = grid.querySelectorAll('button')
+    const swatches = grid.querySelectorAll('button:not([data-testid="alpha-swatch"])')
     expect(swatches[7].getAttribute('data-fg-selected')).toBe('true')
     expect(swatches[0].getAttribute('data-fg-selected')).toBeNull()
   })
@@ -83,7 +85,7 @@ describe('ColorPanel', () => {
   it('marks BG-selected swatch with data-bg-selected', () => {
     render(<ColorPanel {...props} />)
     const grid = screen.getByTestId('color-grid')
-    const swatches = grid.querySelectorAll('button')
+    const swatches = grid.querySelectorAll('button:not([data-testid="alpha-swatch"])')
     expect(swatches[0].getAttribute('data-bg-selected')).toBe('true')
     expect(swatches[1].getAttribute('data-bg-selected')).toBeNull()
   })
@@ -92,7 +94,7 @@ describe('ColorPanel', () => {
     const sameColor: RGBColor = [0, 0, 0]
     render(<ColorPanel {...props} selectedFg={sameColor} selectedBg={sameColor} />)
     const grid = screen.getByTestId('color-grid')
-    const swatches = grid.querySelectorAll('button')
+    const swatches = grid.querySelectorAll('button:not([data-testid="alpha-swatch"])')
     expect(swatches[0].getAttribute('data-fg-selected')).toBe('true')
     expect(swatches[0].getAttribute('data-bg-selected')).toBe('true')
   })
@@ -110,7 +112,7 @@ describe('ColorPanel', () => {
   it('swatch has correct title and aria-label from palette entry', () => {
     render(<ColorPanel {...props} />)
     const grid = screen.getByTestId('color-grid')
-    const firstSwatch = grid.querySelectorAll('button')[0]
+    const firstSwatch = grid.querySelectorAll('button:not([data-testid="alpha-swatch"])')[0]
     expect(firstSwatch.getAttribute('title')).toBe('Black')
     expect(firstSwatch.getAttribute('aria-label')).toBe('Black')
   })
@@ -118,7 +120,7 @@ describe('ColorPanel', () => {
   it('swatch has correct background color style', () => {
     render(<ColorPanel {...props} />)
     const grid = screen.getByTestId('color-grid')
-    const blueSwatch = grid.querySelectorAll('button')[1]
+    const blueSwatch = grid.querySelectorAll('button:not([data-testid="alpha-swatch"])')[1] as HTMLButtonElement
     expect(blueSwatch.style.backgroundColor).toBe('rgb(0, 0, 170)')
   })
 
@@ -137,7 +139,7 @@ describe('ColorPanel', () => {
   it('clicking second swatch calls onSetFg with correct color', () => {
     render(<ColorPanel {...props} />)
     const grid = screen.getByTestId('color-grid')
-    const secondSwatch = grid.querySelectorAll('button')[1]
+    const secondSwatch = grid.querySelectorAll('button:not([data-testid="alpha-swatch"])')[1]
     fireEvent.click(secondSwatch)
     expect(props.onSetFg).toHaveBeenCalledWith(CGA_PALETTE[1].rgb)
   })
@@ -145,7 +147,7 @@ describe('ColorPanel', () => {
   it('right-click second swatch calls onSetBg with correct color', () => {
     render(<ColorPanel {...props} />)
     const grid = screen.getByTestId('color-grid')
-    const secondSwatch = grid.querySelectorAll('button')[1]
+    const secondSwatch = grid.querySelectorAll('button:not([data-testid="alpha-swatch"])')[1]
     fireEvent.contextMenu(secondSwatch)
     expect(props.onSetBg).toHaveBeenCalledWith(CGA_PALETTE[1].rgb)
   })
@@ -153,7 +155,7 @@ describe('ColorPanel', () => {
   it('non-selected swatch does not have data-fg-selected or data-bg-selected', () => {
     render(<ColorPanel {...props} />)
     const grid = screen.getByTestId('color-grid')
-    const swatch = grid.querySelectorAll('button')[1]
+    const swatch = grid.querySelectorAll('button:not([data-testid="alpha-swatch"])')[1]
     expect(swatch.getAttribute('data-fg-selected')).toBeNull()
     expect(swatch.getAttribute('data-bg-selected')).toBeNull()
   })
@@ -163,7 +165,7 @@ describe('ColorPanel', () => {
     fireEvent.click(screen.getByTestId('palette-btn-ega'))
     fireEvent.click(screen.getByTestId('palette-btn-cga'))
     const grid = screen.getByTestId('color-grid')
-    expect(grid.querySelectorAll('button')).toHaveLength(16)
+    expect(grid.querySelectorAll('button:not([data-testid="alpha-swatch"])')).toHaveLength(16)
   })
 
   describe('FG/BG color buttons', () => {
@@ -387,7 +389,7 @@ describe('ColorPanel', () => {
       render(<ColorPanel {...props} layers={[l1, l2]} activeLayerId="l1" />)
       fireEvent.click(screen.getByTestId('palette-btn-current'))
       const grid = screen.getByTestId('color-grid')
-      const swatches = grid.querySelectorAll('button')
+      const swatches = grid.querySelectorAll('button:not([data-testid="alpha-swatch"])')
       expect(swatches.length).toBeGreaterThanOrEqual(2)
     })
 
@@ -398,7 +400,7 @@ describe('ColorPanel', () => {
       render(<ColorPanel {...props} layers={[layer]} activeLayerId="l1" />)
       fireEvent.click(screen.getByTestId('palette-btn-current'))
       const grid = screen.getByTestId('color-grid')
-      const swatch = grid.querySelectorAll('button')[0]
+      const swatch = grid.querySelectorAll('button:not([data-testid="alpha-swatch"])')[0]
       fireEvent.click(swatch)
       expect(props.onSetFg).toHaveBeenCalled()
     })
@@ -422,7 +424,7 @@ describe('ColorPanel', () => {
       render(<ColorPanel {...props} layers={[l1, l2]} activeLayerId="l1" />)
       fireEvent.click(screen.getByTestId('palette-btn-layer'))
       const grid = screen.getByTestId('color-grid')
-      const swatches = grid.querySelectorAll('button')
+      const swatches = grid.querySelectorAll('button:not([data-testid="alpha-swatch"])')
       // Only red should appear (not blue from l2)
       expect(swatches).toHaveLength(1)
       expect(swatches[0].getAttribute('title')).toBe('#ff0000')
@@ -435,7 +437,7 @@ describe('ColorPanel', () => {
       render(<ColorPanel {...props} layers={[layer]} activeLayerId="l1" />)
       fireEvent.click(screen.getByTestId('palette-btn-layer'))
       const grid = screen.getByTestId('color-grid')
-      const swatch = grid.querySelectorAll('button')[0]
+      const swatch = grid.querySelectorAll('button:not([data-testid="alpha-swatch"])')[0]
       fireEvent.contextMenu(swatch)
       expect(props.onSetBg).toHaveBeenCalled()
     })
@@ -557,4 +559,5 @@ describe('ColorPanel', () => {
       expect(screen.queryByTestId('simplify-modal')).toBeNull()
     })
   })
+
 })

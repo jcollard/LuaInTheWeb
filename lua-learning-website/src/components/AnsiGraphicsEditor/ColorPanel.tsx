@@ -1,8 +1,8 @@
 import { Fragment, useState, useMemo } from 'react'
-import type { RGBColor, PaletteType, StaticPaletteType, Layer } from './types'
+import type { RGBColor, PaletteType, StaticPaletteType, Layer, BrushMode } from './types'
 import { isDrawableLayer } from './types'
 import { rgbEqual } from './layerUtils'
-import { rgbStyle, extractGridColors, extractAllLayerColors } from './colorUtils'
+import { rgbStyle, extractGridColors, extractAllLayerColors, isAlphaColor, resolveAlphaForSlot } from './colorUtils'
 import { isDynamicPalette, resolvePalette } from './colorPanelUtils'
 import { SimplifyPaletteModal } from './SimplifyPaletteModal'
 import { useColorPicker } from './useColorPicker'
@@ -11,12 +11,17 @@ import styles from './AnsiGraphicsEditor.module.css'
 export interface ColorPanelProps {
   selectedFg: RGBColor
   selectedBg: RGBColor
+  brushMode: BrushMode
+  brushChar: string
   onSetFg: (color: RGBColor) => void
   onSetBg: (color: RGBColor) => void
   onSimplifyColors: (mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => void
+  onShowToast?: (message: string) => void
   layers: Layer[]
   activeLayerId: string
 }
+
+const ALPHA_FG_DISABLED_TOAST = 'Alpha foreground requires the half-block (▀) character. Switch to pixel mode or change the brush character.'
 
 type PickerTarget = 'fg' | 'bg'
 
@@ -43,7 +48,7 @@ function resolveGridClass(type: PaletteType, paletteLength: number): string {
   return STATIC_GRID_CLASS[type]
 }
 
-export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplifyColors, layers, activeLayerId }: ColorPanelProps) {
+export function ColorPanel({ selectedFg, selectedBg, brushMode, brushChar, onSetFg, onSetBg, onSimplifyColors, onShowToast, layers, activeLayerId }: ColorPanelProps) {
   const [paletteType, setPaletteType] = useState<PaletteType>('cga')
 
   // Dynamic palette computation
@@ -77,6 +82,15 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplif
     handleHexApply,
     adjustBrightness,
   } = useColorPicker(selectedFg, selectedBg, onSetFg, onSetBg)
+
+  const fgAlpha = resolveAlphaForSlot('fg', brushMode, brushChar)
+  const bgAlpha = resolveAlphaForSlot('bg', brushMode, brushChar)
+  const fgIsAlpha = isAlphaColor(selectedFg)
+  const bgIsAlpha = isAlphaColor(selectedBg)
+  const alphaFullyDisabled = fgAlpha === null && bgAlpha === null
+  const alphaTitle = fgAlpha
+    ? 'Alpha (click = FG, right-click = BG)'
+    : 'Alpha (right-click = BG; FG disabled while painting non-block glyphs)'
 
   return (
     <div className={styles.colorPanel} data-testid="color-panel">
@@ -121,6 +135,22 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplif
         className={`${styles.colorGrid} ${gridClass}`}
         data-testid="color-grid"
       >
+        <button
+          type="button"
+          className={`${styles.colorSwatch} ${styles.alphaSwatch} ${styles.alphaSwatchFull} ${fgIsAlpha ? styles.swatchFgSelected : ''} ${bgIsAlpha ? styles.swatchBgSelected : ''}`}
+          title={alphaTitle}
+          aria-label="Alpha (transparent)"
+          onClick={() => {
+            if (fgAlpha) onSetFg(fgAlpha)
+            else onShowToast?.(ALPHA_FG_DISABLED_TOAST)
+          }}
+          onContextMenu={(e) => { e.preventDefault(); if (bgAlpha) onSetBg(bgAlpha) }}
+          data-testid="alpha-swatch"
+          data-fg-disabled={fgAlpha === null ? 'true' : undefined}
+          data-disabled={alphaFullyDisabled ? 'true' : undefined}
+          {...(fgIsAlpha ? { 'data-fg-selected': 'true' } : {})}
+          {...(bgIsAlpha ? { 'data-bg-selected': 'true' } : {})}
+        />
         {palette.length === 0 && isDynamicPalette(paletteType) ? (
           <div className={styles.emptyPalette} data-testid="empty-palette">No colors in use</div>
         ) : palette.map((entry, i) => {
@@ -220,24 +250,25 @@ export function ColorPanel({ selectedFg, selectedBg, onSetFg, onSetBg, onSimplif
       )}
       <div className={styles.fgBgButtonSection} ref={fgBgSectionRef}>
         {([
-          { target: 'fg' as PickerTarget, label: 'FG', fullLabel: 'Foreground', color: selectedFg },
-          { target: 'bg' as PickerTarget, label: 'BG', fullLabel: 'Background', color: selectedBg },
-        ]).map(({ target, label, fullLabel, color }) => (
+          { target: 'fg' as PickerTarget, label: 'FG', fullLabel: 'Foreground', color: selectedFg, isAlpha: fgIsAlpha },
+          { target: 'bg' as PickerTarget, label: 'BG', fullLabel: 'Background', color: selectedBg, isAlpha: bgIsAlpha },
+        ]).map(({ target, label, fullLabel, color, isAlpha }) => (
           <Fragment key={target}>
             <button
               type="button"
-              className={styles.fgBgButton}
-              style={{ backgroundColor: rgbStyle(color) }}
-              onClick={() => openPicker(target)}
+              className={`${styles.fgBgButton} ${isAlpha ? styles.alphaSwatch : ''}`}
+              style={isAlpha ? undefined : { backgroundColor: rgbStyle(color) }}
+              onClick={() => { if (!isAlpha) openPicker(target) }}
+              disabled={isAlpha}
               data-testid={`${target}-color-btn`}
-              title={`${fullLabel} color`}
+              title={isAlpha ? `${fullLabel} is alpha — pick an opaque color first` : `${fullLabel} color`}
             >
               {label}
             </button>
             <div className={styles.brightnessRow} data-testid={`${target}-brightness-row`}>
               <span className={styles.brightnessLabel}>Brightness</span>
-              <button type="button" className={styles.brightnessBtn} onClick={() => adjustBrightness(target, -0.01)} data-testid={`${target}-darken-btn`} title={`Darken ${fullLabel.toLowerCase()}`}>−</button>
-              <button type="button" className={styles.brightnessBtn} onClick={() => adjustBrightness(target, 0.01)} data-testid={`${target}-lighten-btn`} title={`Lighten ${fullLabel.toLowerCase()}`}>+</button>
+              <button type="button" className={styles.brightnessBtn} onClick={() => adjustBrightness(target, -0.01)} data-testid={`${target}-darken-btn`} title={`Darken ${fullLabel.toLowerCase()}`} disabled={isAlpha}>−</button>
+              <button type="button" className={styles.brightnessBtn} onClick={() => adjustBrightness(target, 0.01)} data-testid={`${target}-lighten-btn`} title={`Lighten ${fullLabel.toLowerCase()}`} disabled={isAlpha}>+</button>
             </div>
           </Fragment>
         ))}

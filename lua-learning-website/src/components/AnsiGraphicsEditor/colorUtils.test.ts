@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { hsvToRgb, rgbToHsv, rgbToHex, hexToRgb, blendRgb, extractGridColors, extractAllLayerColors, simplifyPalette, replaceColorsInGrid, darkenColor, applyMaskOverlay } from './colorUtils'
+import { hsvToRgb, rgbToHsv, rgbToHex, hexToRgb, blendRgb, extractGridColors, extractAllLayerColors, simplifyPalette, replaceColorsInGrid, darkenColor, applyMaskOverlay, isAlphaColor, resolveAlphaForSlot } from './colorUtils'
 import { createLayer } from './layerUtils'
-import { DEFAULT_BG, DEFAULT_FG, DEFAULT_CELL, TRANSPARENT_HALF, HALF_BLOCK, ANSI_ROWS, ANSI_COLS } from './types'
+import { DEFAULT_BG, DEFAULT_FG, DEFAULT_CELL, TRANSPARENT_BG, TRANSPARENT_HALF, HALF_BLOCK, ANSI_ROWS, ANSI_COLS } from './types'
 import type { RGBColor, AnsiGrid, Layer, PaletteEntry } from './types'
 
 describe('hsvToRgb', () => {
@@ -201,6 +201,16 @@ describe('extractGridColors', () => {
     const result = extractGridColors(layer.grid)
     const rgbs = result.map(e => e.rgb)
     expect(rgbs).not.toContainEqual(TRANSPARENT_HALF)
+    expect(rgbs).toContainEqual(green)
+  })
+
+  it('skips TRANSPARENT_BG sentinel colors', () => {
+    const layer = createLayer('test', 'test-4b')
+    const green: RGBColor = [0, 255, 0]
+    layer.grid[0][0] = { char: 'X', fg: green, bg: TRANSPARENT_BG }
+    const result = extractGridColors(layer.grid)
+    const rgbs = result.map(e => e.rgb)
+    expect(rgbs).not.toContainEqual(TRANSPARENT_BG)
     expect(rgbs).toContainEqual(green)
   })
 
@@ -485,5 +495,59 @@ describe('applyMaskOverlay', () => {
     const mask = makeDefaultMask()
     const result = applyMaskOverlay(grid, mask, 0.5)
     expect(result[0][0].char).toBe('A')
+  })
+})
+
+describe('isAlphaColor', () => {
+  it('returns true for TRANSPARENT_HALF', () => {
+    expect(isAlphaColor(TRANSPARENT_HALF)).toBe(true)
+  })
+
+  it('returns true for TRANSPARENT_BG', () => {
+    expect(isAlphaColor(TRANSPARENT_BG)).toBe(true)
+  })
+
+  it('returns false for ordinary colors', () => {
+    expect(isAlphaColor([0, 0, 0])).toBe(false)
+    expect(isAlphaColor([255, 255, 255])).toBe(false)
+    expect(isAlphaColor([170, 85, 0])).toBe(false)
+    expect(isAlphaColor(DEFAULT_FG)).toBe(false)
+    expect(isAlphaColor(DEFAULT_BG)).toBe(false)
+  })
+})
+
+describe('resolveAlphaForSlot', () => {
+  it('returns TRANSPARENT_HALF for FG in pixel mode', () => {
+    expect(resolveAlphaForSlot('fg', 'pixel', HALF_BLOCK)).toEqual(TRANSPARENT_HALF)
+  })
+
+  it('returns TRANSPARENT_HALF for BG in pixel mode', () => {
+    expect(resolveAlphaForSlot('bg', 'pixel', HALF_BLOCK)).toEqual(TRANSPARENT_HALF)
+  })
+
+  it('returns TRANSPARENT_HALF for both slots in eraser mode', () => {
+    expect(resolveAlphaForSlot('fg', 'eraser', HALF_BLOCK)).toEqual(TRANSPARENT_HALF)
+    expect(resolveAlphaForSlot('bg', 'eraser', HALF_BLOCK)).toEqual(TRANSPARENT_HALF)
+  })
+
+  it('returns TRANSPARENT_HALF for both slots in blend-pixel mode', () => {
+    expect(resolveAlphaForSlot('fg', 'blend-pixel', HALF_BLOCK)).toEqual(TRANSPARENT_HALF)
+    expect(resolveAlphaForSlot('bg', 'blend-pixel', HALF_BLOCK)).toEqual(TRANSPARENT_HALF)
+  })
+
+  it('returns TRANSPARENT_HALF when brush mode paints a HALF_BLOCK char', () => {
+    expect(resolveAlphaForSlot('fg', 'brush', HALF_BLOCK)).toEqual(TRANSPARENT_HALF)
+    expect(resolveAlphaForSlot('bg', 'brush', HALF_BLOCK)).toEqual(TRANSPARENT_HALF)
+  })
+
+  it('returns null for FG when brush mode paints a non-HALF_BLOCK glyph', () => {
+    expect(resolveAlphaForSlot('fg', 'brush', 'X')).toBeNull()
+    expect(resolveAlphaForSlot('fg', 'brush', '#')).toBeNull()
+    expect(resolveAlphaForSlot('fg', 'brush', ' ')).toBeNull()
+  })
+
+  it('returns TRANSPARENT_BG for BG when brush mode paints a non-HALF_BLOCK glyph', () => {
+    expect(resolveAlphaForSlot('bg', 'brush', 'X')).toEqual(TRANSPARENT_BG)
+    expect(resolveAlphaForSlot('bg', 'brush', '#')).toEqual(TRANSPARENT_BG)
   })
 })

@@ -3,7 +3,7 @@ import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import type { AnsiTerminalHandle } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import type { AnsiCell, AnsiGrid, BrushMode, DrawTool, BrushSettings, BorderStyle, RGBColor, LayerState, TextAlign, UseAnsiEditorReturn, UseAnsiEditorOptions, DrawableLayer, Layer } from './types'
 import { DEFAULT_FG, DEFAULT_BG, DEFAULT_BLEND_RATIO, DEFAULT_FRAME_DURATION_MS, BORDER_PRESETS, isGroupLayer, isDrawableLayer, isClipLayer, isReferenceLayer } from './types'
-import { blendRgb, applyMaskOverlay } from './colorUtils'
+import { blendRgb, applyMaskOverlay, isAlphaColor } from './colorUtils'
 import type { CellHalf, ColorTransform } from './gridUtils'
 import { createEmptyGrid, isInBounds, getCellHalfFromMouse, computePixelCell, computeFloodFillCells } from './gridUtils'
 import { TerminalBuffer } from './terminalBuffer'
@@ -218,7 +218,14 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
   const paintBlendPixel = useCallback((row: number, col: number, isTopHalf: boolean) => {
     if (!isInBounds(row, col, projectRowsRef.current, projectColsRef.current)) return
     const { fg, bg, blendRatio } = brushRef.current
-    applyCell(row, col, computePixelCell(getActiveGrid()[row][col], blendRgb(bg, fg, blendRatio ?? DEFAULT_BLEND_RATIO), isTopHalf))
+    const fgAlpha = isAlphaColor(fg)
+    const bgAlpha = isAlphaColor(bg)
+    const paintColor = fgAlpha && bgAlpha
+      ? fg
+      : fgAlpha ? bg
+      : bgAlpha ? fg
+      : blendRgb(bg, fg, blendRatio ?? DEFAULT_BLEND_RATIO)
+    applyCell(row, col, computePixelCell(getActiveGrid()[row][col], paintColor, isTopHalf))
   }, [applyCell, getActiveGrid])
 
   const paintCell = useCallback((row: number, col: number) => {

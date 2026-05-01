@@ -1,8 +1,9 @@
 import type { AnsiCell, AnsiGrid, BrushSettings, Layer } from './types'
+import { TRANSPARENT_HALF } from './types'
 import type { CellHalf, ColorTransform } from './gridUtils'
 import {
   parseCellKey, isInBounds,
-  computeErasePixelCell, computeLineCells, computeRectCells, computeOvalCells, computeBorderCells,
+  computePixelCell, computeLineCells, computeRectCells, computeOvalCells, computeBorderCells,
 } from './gridUtils'
 import { prepareComposite, compositeCellPrepared, compositeCellWithOverridePrepared } from './layerUtils'
 import type { TerminalBuffer } from './terminalBuffer'
@@ -101,7 +102,7 @@ export function createDrawHelpers(deps: DrawHelperDeps) {
     const mode = brushRef.current.mode
     if (mode === 'eraser') {
       if (isInBounds(row, col, projectRowsRef.current, projectColsRef.current)) {
-        applyCell(row, col, computeErasePixelCell(getActiveGrid()[row][col], isTopHalf))
+        applyCell(row, col, computePixelCell(getActiveGrid()[row][col], TRANSPARENT_HALF, isTopHalf))
       }
     } else if (mode === 'pixel') {
       paintPixel(row, col, isTopHalf)

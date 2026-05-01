@@ -377,9 +377,12 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         <ColorPanel
           selectedFg={brush.fg}
           selectedBg={brush.bg}
+          brushMode={brush.mode}
+          brushChar={brush.char}
           onSetFg={setBrushFg}
           onSetBg={setBrushBg}
           onSimplifyColors={simplifyColors}
+          onShowToast={showToast}
           layers={layers}
           activeLayerId={activeLayerId}
         />

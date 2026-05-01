@@ -3,7 +3,7 @@ import type { AnsiCell, AnsiGrid, BrushSettings, RGBColor } from './types'
 import { DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS, DEFAULT_BG, DEFAULT_BLEND_RATIO, DEFAULT_CELL, DEFAULT_FG, HALF_BLOCK, TRANSPARENT_HALF } from './types'
 import { bresenhamLine, midpointEllipse } from './lineAlgorithm'
 import { rgbEqual } from './layerUtils'
-import { blendRgb } from './colorUtils'
+import { blendRgb, isAlphaColor } from './colorUtils'
 
 export function cloneCell(cell: AnsiCell): AnsiCell {
   return { char: cell.char, fg: [...cell.fg] as RGBColor, bg: [...cell.bg] as RGBColor }
@@ -80,29 +80,25 @@ export function getCellHalfFromMouse(
 }
 
 export function computePixelCell(existingCell: AnsiCell, paintColor: RGBColor, isTopHalf: boolean): AnsiCell {
-  const isPixelCell = existingCell.char === HALF_BLOCK
-  const existingTop: RGBColor = isPixelCell ? [...existingCell.fg] as RGBColor : [...TRANSPARENT_HALF] as RGBColor
-  const existingBottom: RGBColor = isPixelCell ? [...existingCell.bg] as RGBColor : [...TRANSPARENT_HALF] as RGBColor
+  const paintingAlpha = isAlphaColor(paintColor)
 
-  return {
-    char: HALF_BLOCK,
-    fg: isTopHalf ? [...paintColor] as RGBColor : existingTop,
-    bg: isTopHalf ? existingBottom : [...paintColor] as RGBColor,
-  }
-}
-
-export function computeErasePixelCell(existingCell: AnsiCell, isTopHalf: boolean): AnsiCell {
-  // Erasing a default cell is a no-op
-  if (existingCell.char === ' ' && rgbEqual(existingCell.fg, DEFAULT_FG) && rgbEqual(existingCell.bg, DEFAULT_BG)) {
+  if (paintingAlpha
+    && existingCell.char === ' '
+    && rgbEqual(existingCell.fg, DEFAULT_FG)
+    && rgbEqual(existingCell.bg, DEFAULT_BG)) {
     return { ...DEFAULT_CELL }
   }
 
   const isPixelCell = existingCell.char === HALF_BLOCK
-  const existingTop: RGBColor = isPixelCell ? [...existingCell.fg] as RGBColor : [...existingCell.bg] as RGBColor
-  const existingBottom: RGBColor = [...existingCell.bg] as RGBColor
+  const existingTop: RGBColor = isPixelCell
+    ? [...existingCell.fg] as RGBColor
+    : (paintingAlpha ? [...existingCell.bg] : [...TRANSPARENT_HALF]) as RGBColor
+  const existingBottom: RGBColor = isPixelCell
+    ? [...existingCell.bg] as RGBColor
+    : (paintingAlpha ? [...existingCell.bg] : [...TRANSPARENT_HALF]) as RGBColor
 
-  const newTop = isTopHalf ? [...TRANSPARENT_HALF] as RGBColor : existingTop
-  const newBottom = isTopHalf ? existingBottom : [...TRANSPARENT_HALF] as RGBColor
+  const newTop = isTopHalf ? [...paintColor] as RGBColor : existingTop
+  const newBottom = isTopHalf ? existingBottom : [...paintColor] as RGBColor
 
   if (rgbEqual(newTop, TRANSPARENT_HALF) && rgbEqual(newBottom, TRANSPARENT_HALF)) {
     return { ...DEFAULT_CELL }
@@ -114,7 +110,14 @@ export function computeErasePixelCell(existingCell: AnsiCell, isTopHalf: boolean
 export type LineBrush = Omit<BrushSettings, 'tool'>
 
 function effectivePaintColor(brush: LineBrush): RGBColor {
-  return brush.mode === 'blend-pixel' ? blendRgb(brush.bg, brush.fg, brush.blendRatio ?? DEFAULT_BLEND_RATIO) : brush.fg
+  if (brush.mode === 'eraser') return [...TRANSPARENT_HALF] as RGBColor
+  if (brush.mode === 'blend-pixel') {
+    if (isAlphaColor(brush.fg) || isAlphaColor(brush.bg)) {
+      return isAlphaColor(brush.fg) ? [...brush.bg] as RGBColor : [...brush.fg] as RGBColor
+    }
+    return blendRgb(brush.bg, brush.fg, brush.blendRatio ?? DEFAULT_BLEND_RATIO)
+  }
+  return brush.fg
 }
 
 export interface CellHalf {
@@ -156,9 +159,7 @@ export function computeRectCells(
         const isTop = py % 2 === 0
         const key = `${row},${cx}`
         const existing = cells.get(key) ?? baseGrid[row][cx]
-        cells.set(key, brush.mode === 'eraser'
-          ? computeErasePixelCell(existing, isTop)
-          : computePixelCell(existing, effectivePaintColor(brush), isTop))
+        cells.set(key, computePixelCell(existing, effectivePaintColor(brush), isTop))
       }
     }
   } else {
@@ -255,8 +256,7 @@ export function computeOvalCells(
       const isTop = py % 2 === 0
       const key = `${row},${col}`
       const existing = cells.get(key) ?? baseGrid[row][col]
-      cells.set(key, brush.mode === 'eraser'
-        ? computeErasePixelCell(existing, isTop) : computePixelCell(existing, effectivePaintColor(brush), isTop))
+      cells.set(key, computePixelCell(existing, effectivePaintColor(brush), isTop))
     }
 
     if (filled) {
@@ -316,9 +316,7 @@ export function computeLineCells(
       const isTop = pixelY % 2 === 0
       const key = `${row},${col}`
       const existing = cells.get(key) ?? baseGrid[row][col]
-      cells.set(key, brush.mode === 'eraser'
-        ? computeErasePixelCell(existing, isTop)
-        : computePixelCell(existing, effectivePaintColor(brush), isTop))
+      cells.set(key, computePixelCell(existing, effectivePaintColor(brush), isTop))
     }
   } else {
     const points = bresenhamLine(start.col, start.row, end.col, end.row)
@@ -356,7 +354,8 @@ export function computeFloodFillCells(
 
     if (startCell.char !== HALF_BLOCK) {
       // Cell-level BFS: match non-half-block cells by full identity (char+fg+bg)
-      if (brush.mode === 'eraser' && startCell.char === DEFAULT_CELL.char
+      const paintColor = effectivePaintColor(brush)
+      if (isAlphaColor(paintColor) && startCell.char === DEFAULT_CELL.char
         && rgbEqual(startCell.fg, DEFAULT_CELL.fg) && rgbEqual(startCell.bg, DEFAULT_CELL.bg)) return cells
 
       const visited = new Set<string>()
@@ -370,11 +369,8 @@ export function computeFloodFillCells(
           || !rgbEqual(cell.fg, startCell.fg) || !rgbEqual(cell.bg, startCell.bg)) continue
 
         const key = `${r},${c}`
-        const paintColor = effectivePaintColor(brush)
-        let result = brush.mode === 'eraser'
-          ? computeErasePixelCell(cell, true) : computePixelCell(cell, paintColor, true)
-        result = brush.mode === 'eraser'
-          ? computeErasePixelCell(result, false) : computePixelCell(result, paintColor, false)
+        let result = computePixelCell(cell, paintColor, true)
+        result = computePixelCell(result, paintColor, false)
         cells.set(key, result)
 
         const neighbors: [number, number][] = [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]]
@@ -391,8 +387,8 @@ export function computeFloodFillCells(
       const startPY = startRow * 2 + (isTopHalf ? 0 : 1)
       const maxPY = rows * 2
       const targetColor = readPixelColor(baseGrid, startRow, startCol, !!isTopHalf)
-      const noopColor = brush.mode === 'eraser' ? TRANSPARENT_HALF : effectivePaintColor(brush)
-      if (rgbEqual(targetColor, noopColor)) return cells
+      const paintColor = effectivePaintColor(brush)
+      if (rgbEqual(targetColor, paintColor)) return cells
 
       const visited = new Set<string>()
       const queue: [number, number][] = [[startPY, startCol]]
@@ -407,9 +403,7 @@ export function computeFloodFillCells(
 
         const key = `${row},${cx}`
         const existing = cells.get(key) ?? baseGrid[row][cx]
-        cells.set(key, brush.mode === 'eraser'
-          ? computeErasePixelCell(existing, isTop)
-          : computePixelCell(existing, effectivePaintColor(brush), isTop))
+        cells.set(key, computePixelCell(existing, paintColor, isTop))
 
         const neighbors: [number, number][] = [[py - 1, cx], [py + 1, cx], [py, cx - 1], [py, cx + 1]]
         for (const [ny, nx] of neighbors) {
