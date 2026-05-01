@@ -75,11 +75,16 @@ function defaultCodepointSet(): number[] {
   const out: number[] = []
   for (let c = 0x20; c <= 0x7e; c++) out.push(c)          // ASCII printable
   for (let c = 0xa0; c <= 0xff; c++) out.push(c)          // Latin-1 supplement
+  for (let c = 0x2000; c <= 0x206f; c++) out.push(c)      // General Punctuation
+  for (let c = 0x2100; c <= 0x214f; c++) out.push(c)      // Letterlike Symbols
+  for (let c = 0x2190; c <= 0x21ff; c++) out.push(c)      // Arrows
+  for (let c = 0x2200; c <= 0x22ff; c++) out.push(c)      // Math Operators
+  for (let c = 0x2300; c <= 0x23ff; c++) out.push(c)      // Misc Technical
   for (let c = 0x2500; c <= 0x257f; c++) out.push(c)      // Box drawing
   for (let c = 0x2580; c <= 0x259f; c++) out.push(c)      // Block elements
   for (let c = 0x25a0; c <= 0x25ff; c++) out.push(c)      // Geometric shapes
-  for (let c = 0x2190; c <= 0x21ff; c++) out.push(c)      // Arrows
-  for (let c = 0x2660; c <= 0x266f; c++) out.push(c)      // Card suits / misc
+  for (let c = 0x2600; c <= 0x267f; c++) out.push(c)      // Misc Symbols (smileys, suits, music)
+  for (let c = 0x2700; c <= 0x27bf; c++) out.push(c)      // Dingbats
   return out
 }
 

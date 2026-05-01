@@ -71,6 +71,33 @@ describe('FONT_ATLASES', () => {
     }
   })
 
+  it('VGA 8x16 covers symbols beyond the original CP437-only harvest', () => {
+    // Regression: the static harvest list used to skip Misc Symbols,
+    // Letterlike, Math Operators, Misc Technical, and Dingbats. Mining
+    // the font's full cmap brings them in — the editor's character
+    // palette filters by atlas keys, so anything in the palette below
+    // must end up in the atlas if the font ships the glyph.
+    const atlas = FONT_ATLASES.get('IBM_VGA_8x16')!
+    const required = [
+      0x263A, // ☺ White Smiling Face
+      0x263B, // ☻ Black Smiling Face
+      0x263C, // ☼ White Sun With Rays
+      0x2122, // ™ Trade Mark
+      0x2713, // ✓ Check Mark
+      0x2302, // ⌂ House
+      0x2022, // • Bullet
+      0x2248, // ≈ Almost Equal
+      0x2260, // ≠ Not Equal
+      0x2264, // ≤ Less-Than Or Equal
+      0x2265, // ≥ Greater-Than Or Equal
+      0x221A, // √ Square Root
+      0x221E, // ∞ Infinity
+    ]
+    for (const cp of required) {
+      expect(atlas.glyphs.has(cp), `IBM_VGA_8x16 missing U+${cp.toString(16).toUpperCase()}`).toBe(true)
+    }
+  })
+
   it('VGA 8x16 and 9x16 ship the full block elements range U+2591/2592/2593', () => {
     for (const id of ['IBM_VGA_8x16', 'IBM_VGA_9x16']) {
       const atlas = FONT_ATLASES.get(id)!
