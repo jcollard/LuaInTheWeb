@@ -25,6 +25,7 @@ import {
 } from './fontRegistry'
 import { FONT_ATLASES, type FontAtlas } from './glyphAtlas.generated'
 import { createGlyphContext, rasterizeGlyph } from './glyphRaster'
+import { getMissingBlockFallbacks } from './blockGlyphReference'
 
 export interface PixelAnsiRendererTheme {
   /** Foreground color as 0xRRGGBB when cell has default fg. */
@@ -353,9 +354,21 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
     // Atlas entries come first — they're the pixel-exact EBDT extractions
     // the whole renderer exists for. Anything missing from the atlas falls
     // back to fillText at the font's cell size (acceptable quality loss
-    // for chars beyond the strike's coverage; block-drawing / box-drawing
-    // chars should always be in the atlas).
+    // for chars beyond the strike's coverage).
     for (const [cp, mask] of this.atlas.glyphs) {
+      this.glyphMasks.set(cp, mask)
+    }
+
+    // Canonical block-element fallback: the IBM VGA 8x16 ROM charset
+    // omits U+2595 ▕, the upper/lower eighths, and the quadrants. Install
+    // hand-coded patterns for any block-element codepoint missing from
+    // the atlas BEFORE the fillText fallback so the canonical pattern
+    // wins over whatever a browser fallback font would draw.
+    for (const [cp, mask] of getMissingBlockFallbacks(
+      this.cellW,
+      this.cellH,
+      (c) => this.glyphMasks.has(c),
+    )) {
       this.glyphMasks.set(cp, mask)
     }
 
