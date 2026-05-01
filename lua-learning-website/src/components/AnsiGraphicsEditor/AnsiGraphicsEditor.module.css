@@ -649,17 +649,17 @@
 
 .charPanelGrid {
   display: grid;
-  grid-template-columns: repeat(6, 28px);
+  grid-template-columns: repeat(auto-fill, 26px);
   gap: 2px;
 }
 
 .charPanelCell {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   text-align: center;
   font-family: 'Web IBM VGA 8x16', monospace;
-  font-size: 24px;
-  line-height: 28px;
+  font-size: 22px;
+  line-height: 26px;
   background-color: var(--theme-bg-primary);
   color: var(--theme-text-primary);
   border: none;
