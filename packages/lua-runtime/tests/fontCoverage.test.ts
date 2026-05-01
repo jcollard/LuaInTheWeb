@@ -6,6 +6,7 @@ describe('getFontCoverage', () => {
   it('returns the atlas codepoints for a registered font', () => {
     const cov = getFontCoverage('IBM_VGA_8x16')
     const atlas = FONT_ATLASES.get('IBM_VGA_8x16')!
+    expect(cov.size).toBe(atlas.glyphs.size)
     for (const cp of atlas.glyphs.keys()) {
       expect(cov.has(cp), `atlas U+${cp.toString(16)} should be in coverage`).toBe(true)
     }
@@ -15,23 +16,23 @@ describe('getFontCoverage', () => {
     expect(getFontCoverage('NOT_A_FONT').size).toBe(0)
   })
 
-  it('includes the full block-element range for IBM_VGA_8x16 (atlas + canonical fallbacks)', () => {
+  it('does not include codepoints absent from the atlas, even at 8x16', () => {
+    // The IBM VGA 8x16 ROM charset omits U+2595 ▕. The pixel renderer
+    // installs a canonical fallback so the canvas can still paint it,
+    // but coverage is font-faithful — the WOFF cannot preview U+2595, so
+    // it stays out so the palette filter matches what the DOM can show.
     const cov = getFontCoverage('IBM_VGA_8x16')
-    for (let cp = 0x2580; cp <= 0x259F; cp++) {
-      expect(cov.has(cp), `U+${cp.toString(16)} (block) should be covered`).toBe(true)
-    }
-    // The user-reported codepoint specifically.
-    expect(cov.has(0x2595)).toBe(true)
+    expect(cov.has(0x2595)).toBe(false)
+    expect(cov.has(0x2594)).toBe(false)
+    expect(cov.has(0x2596)).toBe(false)
   })
 
-  it('does not extend block-element coverage for non-8x16 fonts', () => {
-    // CGA 8x8 has no canonical fallback (the reference is 8x16-only),
-    // so coverage equals the atlas exactly. Cross-check by sampling a
-    // codepoint that's in the 8x16 reference but typically not in CGA.
-    const cgaCov = getFontCoverage('IBM_CGA_8x8')
-    const cgaAtlas = FONT_ATLASES.get('IBM_CGA_8x8')!
-    expect(cgaCov.size).toBe(cgaAtlas.glyphs.size)
-    expect(cgaCov.has(0x2595)).toBe(cgaAtlas.glyphs.has(0x2595))
+  it('matches the atlas exactly across all registered fonts', () => {
+    for (const id of ['IBM_CGA_8x8', 'IBM_VGA_8x16', 'IBM_VGA_9x16']) {
+      const atlas = FONT_ATLASES.get(id)!
+      const cov = getFontCoverage(id)
+      expect(cov.size, id).toBe(atlas.glyphs.size)
+    }
   })
 
   it('caches results by fontId (returns the same set instance)', () => {

@@ -13,7 +13,24 @@ function entry(char: string, name: string): CharEntry {
   return { char, name }
 }
 
+function range(from: string, to: string): CharEntry[] {
+  const out: CharEntry[] = []
+  for (let cp = from.codePointAt(0)!; cp <= to.codePointAt(0)!; cp++) {
+    out.push(entry(String.fromCodePoint(cp), String.fromCodePoint(cp)))
+  }
+  return out
+}
+
 export const CHAR_PALETTE_CATEGORIES: CharCategory[] = [
+  {
+    id: 'alpha',
+    label: 'Alpha',
+    chars: [
+      ...range('0', '9'),
+      ...range('A', 'Z'),
+      ...range('a', 'z'),
+    ],
+  },
   {
     id: 'ascii',
     label: 'ASCII',

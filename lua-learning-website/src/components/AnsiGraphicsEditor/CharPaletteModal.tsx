@@ -1,33 +1,42 @@
 import { useMemo, useState } from 'react'
 import type { ReactElement } from 'react'
-import { getFontCoverage } from '@lua-learning/lua-runtime'
+import { getFontById, getFontCoverage } from '@lua-learning/lua-runtime'
 import { CHAR_PALETTE_CATEGORIES, findCategoryForChar } from './charPaletteData'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface CharPaletteModalProps {
   anchorRect?: DOMRect
   currentChar?: string
-  /** Active font id — used to filter the palette to glyphs the renderer can paint. */
+  /** Active font id — used to preview each glyph in the active font and to hide chars the font does not ship. */
   fontId?: string
   onSelect: (char: string) => void
   onClose: () => void
 }
 
 export function CharPaletteModal({ anchorRect, currentChar, fontId, onSelect, onClose }: CharPaletteModalProps): ReactElement {
-  const [activeTab, setActiveTab] = useState(() => findCategoryForChar(currentChar ?? '') ?? 'ascii')
-  // Filter each category by what the active font can render. Categories
-  // with no covered glyphs are still shown so the user can see the
-  // section exists; the body just renders empty.
+  const [activeTab, setActiveTab] = useState(() => findCategoryForChar(currentChar ?? '') ?? 'alpha')
+  // Hide chars the active font does not ship — the WOFF preview would
+  // fall through to the browser's default font, which doesn't match the
+  // canvas. Only categories with at least one covered glyph are shown.
   const filteredCategories = useMemo(() => {
     if (!fontId) return CHAR_PALETTE_CATEGORIES
     const cov = getFontCoverage(fontId)
-    return CHAR_PALETTE_CATEGORIES.map(cat => ({
-      ...cat,
-      chars: cat.chars.filter(e => cov.has(e.char.codePointAt(0) ?? -1)),
-    }))
+    return CHAR_PALETTE_CATEGORIES
+      .map(cat => ({
+        ...cat,
+        chars: cat.chars.filter(e => cov.has(e.char.codePointAt(0) ?? -1)),
+      }))
+      .filter(cat => cat.chars.length > 0)
   }, [fontId])
   const activeCategory = filteredCategories.find(c => c.id === activeTab)
     ?? filteredCategories[0]!
+  // Render each cell in the active font's WOFF so the preview reflects
+  // what the canvas will paint. Falls back to monospace when no fontId
+  // is provided (legacy callers, tests).
+  const previewFontFamily = fontId ? getFontById(fontId)?.fontFamily : undefined
+  const cellStyle = previewFontFamily
+    ? { fontFamily: `"${previewFontFamily}", monospace` }
+    : undefined
 
   function handleCharClick(char: string): void {
     onSelect(char)
@@ -70,6 +79,7 @@ export function CharPaletteModal({ anchorRect, currentChar, fontId, onSelect, on
                   key={charEntry.char}
                   type="button"
                   className={`${styles.charCell}${isSelected ? ` ${styles.charCellSelected}` : ''}`}
+                  style={cellStyle}
                   title={charEntry.name}
                   onClick={() => handleCharClick(charEntry.char)}
                   data-testid="char-cell"

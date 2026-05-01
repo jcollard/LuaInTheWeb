@@ -8,13 +8,24 @@ function charsOfCategory(id: string): string[] {
 }
 
 describe('CHAR_PALETTE_CATEGORIES', () => {
-  it('should export exactly 6 categories', () => {
-    expect(CHAR_PALETTE_CATEGORIES).toHaveLength(6)
+  it('should export exactly 7 categories', () => {
+    expect(CHAR_PALETTE_CATEGORIES).toHaveLength(7)
   })
 
-  it('should have categories in expected order: ascii, blocks, borders, geometric, arrows, symbols', () => {
+  it('should have categories in expected order: alpha, ascii, blocks, borders, geometric, arrows, symbols', () => {
     const ids = CHAR_PALETTE_CATEGORIES.map(c => c.id)
-    expect(ids).toEqual(['ascii', 'blocks', 'borders', 'geometric', 'arrows', 'symbols'])
+    expect(ids).toEqual(['alpha', 'ascii', 'blocks', 'borders', 'geometric', 'arrows', 'symbols'])
+  })
+
+  it('should expose A-Z, a-z, and 0-9 in the alpha category', () => {
+    const alphaChars = charsOfCategory('alpha')
+    expect(alphaChars).toHaveLength(10 + 26 + 26)
+    expect(alphaChars).toContain('0')
+    expect(alphaChars).toContain('9')
+    expect(alphaChars).toContain('A')
+    expect(alphaChars).toContain('Z')
+    expect(alphaChars).toContain('a')
+    expect(alphaChars).toContain('z')
   })
 
   it('should have unique category ids', () => {
@@ -220,8 +231,13 @@ describe('findCategoryForChar', () => {
     expect(findCategoryForChar('♠')).toBe('symbols')
   })
 
+  it('should return "alpha" for a letter or digit', () => {
+    expect(findCategoryForChar('Z')).toBe('alpha')
+    expect(findCategoryForChar('0')).toBe('alpha')
+  })
+
   it('should return undefined for a char not in any category', () => {
-    expect(findCategoryForChar('Z')).toBeUndefined()
+    expect(findCategoryForChar('¡')).toBeUndefined() // ¡ — not in any palette tab
   })
 
   it('should return undefined for an empty string', () => {
