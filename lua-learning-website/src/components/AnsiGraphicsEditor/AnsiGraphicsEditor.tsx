@@ -16,6 +16,7 @@ import {
 import { ConfirmDialog } from '../ConfirmDialog'
 import { useIDE } from '../IDEContext/useIDE'
 import { AnsiEditorToolbar } from './AnsiEditorToolbar'
+import { CharacterPanel } from './CharacterPanel'
 import { ColorPanel } from './ColorPanel'
 import { FramesPanel } from './FramesPanel'
 import { LayersPanel } from './LayersPanel'
@@ -27,6 +28,7 @@ import { useAnsiEditor } from './useAnsiEditor'
 import { useAnsiEditorFile } from './useAnsiEditorFile'
 import { useExportLayers } from './useExportLayers'
 import { useImportLayers } from './useImportLayers'
+import { useRecentChars } from './useRecentChars'
 import { useToast } from './useToast'
 import type { ScaleMode, GroupLayer } from './types'
 import { isGroupLayer } from './types'
@@ -69,6 +71,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
   }, [])
 
   const { toasts, showToast } = useToast()
+  const { recent: recentChars, pushRecent: pushRecentChar } = useRecentChars()
   const handleSaveRef = useRef<() => void>(() => {})
   const handleOpenFileMenuRef = useRef<() => void>(() => {})
   const handleOpenSaveDialogRef = useRef<() => void>(() => {})
@@ -269,6 +272,11 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
 
   const existingGroups = useMemo(() => layers.filter(isGroupLayer) as GroupLayer[], [layers])
 
+  const selectBrushChar = useCallback((char: string) => {
+    setBrushChar(char)
+    pushRecentChar(char)
+  }, [setBrushChar, pushRecentChar])
+
   const handleSaveAs = useCallback(
     (f: string, n: string) => fileHandleSaveAs(f, n, layers, activeLayerId, availableTags, projectCols, projectRows, { font, useFontBlocks }),
     [fileHandleSaveAs, layers, activeLayerId, availableTags, projectCols, projectRows, font, useFontBlocks],
@@ -327,7 +335,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
     <div className={styles.editor} data-testid="ansi-graphics-editor" onContextMenu={e => e.preventDefault()}>
       <AnsiEditorToolbar
         brush={brush}
-        onSetChar={setBrushChar}
+        onSetChar={selectBrushChar}
         onSetMode={setBrushMode}
         onSetTool={setTool}
         onClear={clearGrid}
@@ -374,18 +382,30 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         onSetFileMenuOpen={setFileMenuOpen}
       />
       <div className={styles.editorBody}>
-        <ColorPanel
-          selectedFg={brush.fg}
-          selectedBg={brush.bg}
-          brushMode={brush.mode}
-          brushChar={brush.char}
-          onSetFg={setBrushFg}
-          onSetBg={setBrushBg}
-          onSimplifyColors={simplifyColors}
-          onShowToast={showToast}
-          layers={layers}
-          activeLayerId={activeLayerId}
-        />
+        <div className={styles.leftSidebar}>
+          <ColorPanel
+            selectedFg={brush.fg}
+            selectedBg={brush.bg}
+            brushMode={brush.mode}
+            brushChar={brush.char}
+            onSetFg={setBrushFg}
+            onSetBg={setBrushBg}
+            onSimplifyColors={simplifyColors}
+            onShowToast={showToast}
+            layers={layers}
+            activeLayerId={activeLayerId}
+          />
+          {brush.mode === 'brush' && !activeLayerIsGroup && (
+            <CharacterPanel
+              currentChar={brush.char}
+              fontId={font ?? 'IBM_VGA_8x16'}
+              layers={layers}
+              activeLayerId={activeLayerId}
+              recent={recentChars}
+              onSelect={selectBrushChar}
+            />
+          )}
+        </div>
         <div className={styles.canvasAndFrames}>
           <DprWarning scaleMode={scaleMode} dprCompensate={dprCompensate} />
           <div className={[styles.canvas, brush.tool === 'move' && (isMoveDragging ? styles.canvasMoveDragging : styles.canvasMove), brush.tool === 'flip' && styles.canvasFlip].filter(Boolean).join(' ')}>
