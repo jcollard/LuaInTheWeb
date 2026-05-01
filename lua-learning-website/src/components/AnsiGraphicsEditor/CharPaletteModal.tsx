@@ -1,18 +1,33 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ReactElement } from 'react'
+import { getFontCoverage } from '@lua-learning/lua-runtime'
 import { CHAR_PALETTE_CATEGORIES, findCategoryForChar } from './charPaletteData'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface CharPaletteModalProps {
   anchorRect?: DOMRect
   currentChar?: string
+  /** Active font id — used to filter the palette to glyphs the renderer can paint. */
+  fontId?: string
   onSelect: (char: string) => void
   onClose: () => void
 }
 
-export function CharPaletteModal({ anchorRect, currentChar, onSelect, onClose }: CharPaletteModalProps): ReactElement {
+export function CharPaletteModal({ anchorRect, currentChar, fontId, onSelect, onClose }: CharPaletteModalProps): ReactElement {
   const [activeTab, setActiveTab] = useState(() => findCategoryForChar(currentChar ?? '') ?? 'ascii')
-  const activeCategory = CHAR_PALETTE_CATEGORIES.find(c => c.id === activeTab)!
+  // Filter each category by what the active font can render. Categories
+  // with no covered glyphs are still shown so the user can see the
+  // section exists; the body just renders empty.
+  const filteredCategories = useMemo(() => {
+    if (!fontId) return CHAR_PALETTE_CATEGORIES
+    const cov = getFontCoverage(fontId)
+    return CHAR_PALETTE_CATEGORIES.map(cat => ({
+      ...cat,
+      chars: cat.chars.filter(e => cov.has(e.char.codePointAt(0) ?? -1)),
+    }))
+  }, [fontId])
+  const activeCategory = filteredCategories.find(c => c.id === activeTab)
+    ?? filteredCategories[0]!
 
   function handleCharClick(char: string): void {
     onSelect(char)
@@ -34,7 +49,7 @@ export function CharPaletteModal({ anchorRect, currentChar, onSelect, onClose }:
           </button>
         </header>
         <div className={styles.charPaletteTabs}>
-          {CHAR_PALETTE_CATEGORIES.map(cat => (
+          {filteredCategories.map(cat => (
             <button
               key={cat.id}
               type="button"

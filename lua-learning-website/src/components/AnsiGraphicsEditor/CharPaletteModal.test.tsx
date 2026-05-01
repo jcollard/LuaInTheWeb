@@ -125,3 +125,36 @@ describe('CharPaletteModal', () => {
     expect(otherCell.getAttribute('aria-pressed')).toBeNull()
   })
 })
+
+describe('CharPaletteModal — font coverage filtering', () => {
+  const defaultProps = {
+    onSelect: vi.fn<(char: string) => void>(),
+    onClose: vi.fn<() => void>(),
+  }
+
+  it('shows the IBM_VGA_8x16 atlas + canonical-block fallbacks for the blocks tab', () => {
+    render(<CharPaletteModal {...defaultProps} fontId="IBM_VGA_8x16" currentChar="█" />)
+    const cellChars = screen.getAllByTestId('char-cell').map(c => c.textContent)
+    // The full block-element range is covered for IBM_VGA_8x16 (atlas
+    // ships some, canonical fallback fills the rest), so every block
+    // entry in the palette should still render.
+    const blocksCategory = CHAR_PALETTE_CATEGORIES.find(c => c.id === 'blocks')!
+    expect(cellChars).toHaveLength(blocksCategory.chars.length)
+    // The user-reported codepoint that previously rendered empty.
+    expect(cellChars).toContain('▕')
+  })
+
+  it('hides characters the active font cannot render', () => {
+    // The CGA atlas does not ship vertical-eighth blocks (no fallback at 8x8).
+    render(<CharPaletteModal {...defaultProps} fontId="IBM_CGA_8x8" currentChar="█" />)
+    const cellChars = screen.getAllByTestId('char-cell').map(c => c.textContent)
+    expect(cellChars).not.toContain('▕') // U+2595
+    expect(cellChars).not.toContain('▏') // U+258F
+  })
+
+  it('falls back to the unfiltered palette when fontId is omitted', () => {
+    render(<CharPaletteModal {...defaultProps} currentChar="█" />)
+    const blocksCategory = CHAR_PALETTE_CATEGORIES.find(c => c.id === 'blocks')!
+    expect(screen.getAllByTestId('char-cell')).toHaveLength(blocksCategory.chars.length)
+  })
+})
