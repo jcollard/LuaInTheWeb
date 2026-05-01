@@ -119,11 +119,19 @@ function extractAtlas(entry) {
   const codepoints = fontCodepoints(font)
   const glyphs = []
   let missing = 0
+  let blank = 0
   for (const cp of codepoints) {
     const glyph = font.glyphForCodePoint(cp)
     if (!glyph || glyph.id === 0) { missing++; continue }
     const raw = extractGlyphBytes(strike, glyph.id, bytesPerGlyph)
     if (!raw) { missing++; continue }
+    // Some ROM-faithful TTFs map a handful of codepoints (U+0020 SPACE,
+    // U+00A0 NBSP, plus a few hiragana stubs left over from vendor cmap
+    // tooling) to all-zero EBDT bitmaps. Drop them: the renderer paints
+    // an empty cell for any codepoint missing from the atlas, so SPACE
+    // still works, and the editor's character palette no longer surfaces
+    // hiragana glyphs that render blank on the canvas.
+    if (raw.every((b) => b === 0)) { blank++; continue }
     const hex = Array.from(raw, (v) => v.toString(16).padStart(2, '0')).join('')
     glyphs.push([cp, hex])
   }
@@ -132,7 +140,7 @@ function extractAtlas(entry) {
     throw new Error(`[${entry.id}] extracted zero glyphs — is this really a bitmap font at ${entry.nativePpem}ppem?`)
   }
 
-  console.log(`  [${entry.id}] ${glyphs.length}/${codepoints.length} glyphs extracted (skipped ${missing} unsupported strike formats)`)
+  console.log(`  [${entry.id}] ${glyphs.length}/${codepoints.length} glyphs extracted (skipped ${missing} unsupported strike formats, ${blank} blank bitmaps)`)
   return glyphs
 }
 
