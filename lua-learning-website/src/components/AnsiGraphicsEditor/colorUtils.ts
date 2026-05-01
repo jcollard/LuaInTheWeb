@@ -1,6 +1,32 @@
-import type { RGBColor, AnsiGrid, Layer, PaletteEntry } from './types'
-import { TRANSPARENT_HALF, isDrawableLayer } from './types'
+import type { BrushMode, RGBColor, AnsiGrid, Layer, PaletteEntry } from './types'
+import { HALF_BLOCK, TRANSPARENT_BG, TRANSPARENT_HALF, isDrawableLayer } from './types'
 import { isDefaultCell, rgbEqual } from './layerUtils'
+
+/**
+ * Whether `color` is a transparency sentinel ({@link TRANSPARENT_HALF} or
+ * {@link TRANSPARENT_BG}) — i.e. "alpha" / "no color, inherit from below".
+ */
+export function isAlphaColor(color: RGBColor): boolean {
+  return rgbEqual(color, TRANSPARENT_HALF) || rgbEqual(color, TRANSPARENT_BG)
+}
+
+/**
+ * Resolve which alpha sentinel value (if any) should fill a brush slot given
+ * the current brush mode and character. Returns `null` when alpha is not
+ * meaningful for that combination — currently only the FG slot of a brush-mode
+ * stroke that paints a non-{@link HALF_BLOCK} glyph (the compositor would
+ * render the sentinel as garbage instead of resolving it).
+ */
+export function resolveAlphaForSlot(
+  slot: 'fg' | 'bg',
+  brushMode: BrushMode,
+  brushChar: string,
+): RGBColor | null {
+  const writesHalfBlock = brushMode !== 'brush' || brushChar === HALF_BLOCK
+  if (writesHalfBlock) return [...TRANSPARENT_HALF] as RGBColor
+  if (slot === 'fg') return null
+  return [...TRANSPARENT_BG] as RGBColor
+}
 
 /** Darken an RGB color by a factor (0 = black, 1 = original). */
 export function darkenColor(color: RGBColor, factor: number): RGBColor {
@@ -115,7 +141,7 @@ function collectUniqueColors(grids: AnsiGrid[]): PaletteEntry[] {
       for (const cell of row) {
         if (isDefaultCell(cell)) continue
         for (const color of [cell.fg, cell.bg]) {
-          if (rgbEqual(color, TRANSPARENT_HALF)) continue
+          if (isAlphaColor(color)) continue
           const key = rgbKey(color)
           if (seen.has(key)) continue
           seen.add(key)

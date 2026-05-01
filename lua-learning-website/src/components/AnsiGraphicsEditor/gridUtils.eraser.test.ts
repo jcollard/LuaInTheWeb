@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeRectCells, computeFloodFillCells, computeErasePixelCell, computeLineCells } from './gridUtils'
+import { computeRectCells, computeFloodFillCells, computePixelCell, computeLineCells } from './gridUtils'
 import type { AnsiCell, AnsiGrid, RGBColor } from './types'
 import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG, DEFAULT_CELL, HALF_BLOCK, TRANSPARENT_HALF } from './types'
 
@@ -24,47 +24,47 @@ const red: RGBColor = [255, 0, 0]
 const blue: RGBColor = [0, 0, 255]
 const green: RGBColor = [0, 170, 0]
 
-describe('computeErasePixelCell', () => {
-  it('should erase top half of a half-block cell, preserving bottom', () => {
+describe('computePixelCell — alpha paint (eraser semantics)', () => {
+  it('erases top half of a half-block cell, preserving bottom', () => {
     const cell: AnsiCell = { char: HALF_BLOCK, fg: [...red] as RGBColor, bg: [...blue] as RGBColor }
-    const result = computeErasePixelCell(cell, true)
+    const result = computePixelCell(cell, TRANSPARENT_HALF, true)
     expect(result.char).toBe(HALF_BLOCK)
     expect(result.fg).toEqual(TRANSPARENT_HALF) // top erased
     expect(result.bg).toEqual(blue)             // bottom preserved
   })
 
-  it('should erase bottom half of a half-block cell, preserving top', () => {
+  it('erases bottom half of a half-block cell, preserving top', () => {
     const cell: AnsiCell = { char: HALF_BLOCK, fg: [...red] as RGBColor, bg: [...blue] as RGBColor }
-    const result = computeErasePixelCell(cell, false)
+    const result = computePixelCell(cell, TRANSPARENT_HALF, false)
     expect(result.char).toBe(HALF_BLOCK)
     expect(result.fg).toEqual(red)              // top preserved
     expect(result.bg).toEqual(TRANSPARENT_HALF) // bottom erased
   })
 
-  it('should revert to DEFAULT_CELL when erasing top and bottom is already transparent', () => {
+  it('reverts to DEFAULT_CELL when erasing top and bottom is already transparent', () => {
     const cell: AnsiCell = { char: HALF_BLOCK, fg: [...red] as RGBColor, bg: [...TRANSPARENT_HALF] as RGBColor }
-    const result = computeErasePixelCell(cell, true)
+    const result = computePixelCell(cell, TRANSPARENT_HALF, true)
     expect(result).toEqual(DEFAULT_CELL)
   })
 
-  it('should revert to DEFAULT_CELL when erasing bottom and top is already transparent', () => {
+  it('reverts to DEFAULT_CELL when erasing bottom and top is already transparent', () => {
     const cell: AnsiCell = { char: HALF_BLOCK, fg: [...TRANSPARENT_HALF] as RGBColor, bg: [...blue] as RGBColor }
-    const result = computeErasePixelCell(cell, false)
+    const result = computePixelCell(cell, TRANSPARENT_HALF, false)
     expect(result).toEqual(DEFAULT_CELL)
   })
 
-  it('should handle non-half-block cells by converting to half-block', () => {
+  it('handles non-half-block cells by converting to half-block, preserving original bg', () => {
     const cell: AnsiCell = { char: '#', fg: [...red] as RGBColor, bg: [...blue] as RGBColor }
     // Non-half-block: both halves treated as bg color (blue)
-    const result = computeErasePixelCell(cell, true)
+    const result = computePixelCell(cell, TRANSPARENT_HALF, true)
     expect(result.char).toBe(HALF_BLOCK)
     expect(result.fg).toEqual(TRANSPARENT_HALF) // top erased
     expect(result.bg).toEqual(blue)             // bottom = original bg
   })
 
-  it('should be idempotent on DEFAULT_CELL', () => {
+  it('is idempotent on DEFAULT_CELL', () => {
     const cell: AnsiCell = { ...DEFAULT_CELL }
-    const result = computeErasePixelCell(cell, true)
+    const result = computePixelCell(cell, TRANSPARENT_HALF, true)
     expect(result).toEqual(DEFAULT_CELL)
   })
 })

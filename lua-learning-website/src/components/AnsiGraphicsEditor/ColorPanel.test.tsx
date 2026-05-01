@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ColorPanel, type ColorPanelProps } from './ColorPanel'
-import { CGA_PALETTE, DEFAULT_FG, DEFAULT_BG } from './types'
+import { CGA_PALETTE, DEFAULT_FG, DEFAULT_BG, HALF_BLOCK } from './types'
 import type { RGBColor, Layer } from './types'
 import { createLayer } from './layerUtils'
 
@@ -13,6 +13,8 @@ describe('ColorPanel', () => {
     props = {
       selectedFg: DEFAULT_FG,
       selectedBg: DEFAULT_BG,
+      brushMode: 'pixel',
+      brushChar: HALF_BLOCK,
       onSetFg: vi.fn(),
       onSetBg: vi.fn(),
       onSimplifyColors: vi.fn(),
@@ -557,4 +559,5 @@ describe('ColorPanel', () => {
       expect(screen.queryByTestId('simplify-modal')).toBeNull()
     })
   })
+
 })
