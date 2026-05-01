@@ -196,7 +196,7 @@
   background-position: 0 0, 0 4px, 4px -4px, -4px 0;
 }
 
-.alphaSwatch[data-fg-disabled='true'] {
+.alphaSwatch[data-disabled='true'] {
   cursor: not-allowed;
 }
 

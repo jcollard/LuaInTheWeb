@@ -16,9 +16,12 @@ export interface ColorPanelProps {
   onSetFg: (color: RGBColor) => void
   onSetBg: (color: RGBColor) => void
   onSimplifyColors: (mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => void
+  onShowToast?: (message: string) => void
   layers: Layer[]
   activeLayerId: string
 }
+
+const ALPHA_FG_DISABLED_TOAST = 'Alpha foreground requires the half-block (▀) character. Switch to pixel mode or change the brush character.'
 
 type PickerTarget = 'fg' | 'bg'
 
@@ -45,7 +48,7 @@ function resolveGridClass(type: PaletteType, paletteLength: number): string {
   return STATIC_GRID_CLASS[type]
 }
 
-export function ColorPanel({ selectedFg, selectedBg, brushMode, brushChar, onSetFg, onSetBg, onSimplifyColors, layers, activeLayerId }: ColorPanelProps) {
+export function ColorPanel({ selectedFg, selectedBg, brushMode, brushChar, onSetFg, onSetBg, onSimplifyColors, onShowToast, layers, activeLayerId }: ColorPanelProps) {
   const [paletteType, setPaletteType] = useState<PaletteType>('cga')
 
   // Dynamic palette computation
@@ -84,6 +87,7 @@ export function ColorPanel({ selectedFg, selectedBg, brushMode, brushChar, onSet
   const bgAlpha = resolveAlphaForSlot('bg', brushMode, brushChar)
   const fgIsAlpha = isAlphaColor(selectedFg)
   const bgIsAlpha = isAlphaColor(selectedBg)
+  const alphaFullyDisabled = fgAlpha === null && bgAlpha === null
   const alphaTitle = fgAlpha
     ? 'Alpha (click = FG, right-click = BG)'
     : 'Alpha (right-click = BG; FG disabled while painting non-block glyphs)'
@@ -136,10 +140,14 @@ export function ColorPanel({ selectedFg, selectedBg, brushMode, brushChar, onSet
           className={`${styles.colorSwatch} ${styles.alphaSwatch} ${styles.alphaSwatchFull} ${fgIsAlpha ? styles.swatchFgSelected : ''} ${bgIsAlpha ? styles.swatchBgSelected : ''}`}
           title={alphaTitle}
           aria-label="Alpha (transparent)"
-          onClick={() => { if (fgAlpha) onSetFg(fgAlpha) }}
+          onClick={() => {
+            if (fgAlpha) onSetFg(fgAlpha)
+            else onShowToast?.(ALPHA_FG_DISABLED_TOAST)
+          }}
           onContextMenu={(e) => { e.preventDefault(); if (bgAlpha) onSetBg(bgAlpha) }}
           data-testid="alpha-swatch"
           data-fg-disabled={fgAlpha === null ? 'true' : undefined}
+          data-disabled={alphaFullyDisabled ? 'true' : undefined}
           {...(fgIsAlpha ? { 'data-fg-selected': 'true' } : {})}
           {...(bgIsAlpha ? { 'data-bg-selected': 'true' } : {})}
         />

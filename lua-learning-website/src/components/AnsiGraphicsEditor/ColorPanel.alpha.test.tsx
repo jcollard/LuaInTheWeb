@@ -46,16 +46,37 @@ describe('ColorPanel — alpha swatch', () => {
     expect(props.onSetBg).toHaveBeenCalledWith(TRANSPARENT_BG)
   })
 
-  it('left-click is a no-op in brush mode with a non-HALF_BLOCK glyph', () => {
+  it('left-click does not call onSetFg in brush mode with a non-HALF_BLOCK glyph', () => {
     render(<ColorPanel {...props} brushMode="brush" brushChar="X" />)
     fireEvent.click(screen.getByTestId('alpha-swatch'))
     expect(props.onSetFg).not.toHaveBeenCalled()
+  })
+
+  it('left-click fires onShowToast when FG alpha is disabled', () => {
+    const onShowToast = vi.fn()
+    render(<ColorPanel {...props} brushMode="brush" brushChar="X" onShowToast={onShowToast} />)
+    fireEvent.click(screen.getByTestId('alpha-swatch'))
+    expect(onShowToast).toHaveBeenCalledTimes(1)
+    expect(onShowToast.mock.calls[0][0]).toMatch(/half-block/i)
+  })
+
+  it('does not fire onShowToast when FG alpha is allowed', () => {
+    const onShowToast = vi.fn()
+    render(<ColorPanel {...props} brushMode="pixel" brushChar={HALF_BLOCK} onShowToast={onShowToast} />)
+    fireEvent.click(screen.getByTestId('alpha-swatch'))
+    expect(onShowToast).not.toHaveBeenCalled()
   })
 
   it('marks data-fg-disabled when FG alpha is not allowed', () => {
     render(<ColorPanel {...props} brushMode="brush" brushChar="X" />)
     const swatch = screen.getByTestId('alpha-swatch')
     expect(swatch.getAttribute('data-fg-disabled')).toBe('true')
+  })
+
+  it('does not mark data-disabled when only FG alpha is disabled (BG still works)', () => {
+    render(<ColorPanel {...props} brushMode="brush" brushChar="X" />)
+    const swatch = screen.getByTestId('alpha-swatch')
+    expect(swatch.getAttribute('data-disabled')).toBeNull()
   })
 
   it('shows fg-selected indicator when selectedFg is alpha', () => {

@@ -382,6 +382,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
           onSetFg={setBrushFg}
           onSetBg={setBrushBg}
           onSimplifyColors={simplifyColors}
+          onShowToast={showToast}
           layers={layers}
           activeLayerId={activeLayerId}
         />
