@@ -127,10 +127,13 @@ export function ColorPanel({ selectedFg, selectedBg, brushMode, brushChar, onSet
           onClose={() => setSimplifyOpen(false)}
         />
       )}
-      <div className={styles.alphaSwatchRow}>
+      <div
+        className={`${styles.colorGrid} ${gridClass}`}
+        data-testid="color-grid"
+      >
         <button
           type="button"
-          className={`${styles.colorSwatch} ${styles.alphaSwatch} ${fgIsAlpha ? styles.swatchFgSelected : ''} ${bgIsAlpha ? styles.swatchBgSelected : ''}`}
+          className={`${styles.colorSwatch} ${styles.alphaSwatch} ${styles.alphaSwatchFull} ${fgIsAlpha ? styles.swatchFgSelected : ''} ${bgIsAlpha ? styles.swatchBgSelected : ''}`}
           title={alphaTitle}
           aria-label="Alpha (transparent)"
           onClick={() => { if (fgAlpha) onSetFg(fgAlpha) }}
@@ -140,11 +143,6 @@ export function ColorPanel({ selectedFg, selectedBg, brushMode, brushChar, onSet
           {...(fgIsAlpha ? { 'data-fg-selected': 'true' } : {})}
           {...(bgIsAlpha ? { 'data-bg-selected': 'true' } : {})}
         />
-      </div>
-      <div
-        className={`${styles.colorGrid} ${gridClass}`}
-        data-testid="color-grid"
-      >
         {palette.length === 0 && isDynamicPalette(paletteType) ? (
           <div className={styles.emptyPalette} data-testid="empty-palette">No colors in use</div>
         ) : palette.map((entry, i) => {

@@ -180,16 +180,6 @@
   padding: 0 8px 4px;
 }
 
-.alphaSwatchRow {
-  display: flex;
-  padding: 0 8px 4px;
-}
-
-.alphaSwatchRow .colorSwatch {
-  width: 22px;
-  height: 22px;
-}
-
 /*
  * Checkered "no color / inherit from below" swatch.
  * Used both for the alpha pick-swatch and for the FG/BG buttons when their slot
@@ -208,6 +198,17 @@
 
 .alphaSwatch[data-fg-disabled='true'] {
   cursor: not-allowed;
+}
+
+/* Full-row variant for the alpha swatch when it lives inside .colorGrid. */
+.alphaSwatchFull {
+  grid-column: 1 / -1;
+  aspect-ratio: auto;
+  height: 18px;
+}
+
+.colorGridVga .alphaSwatchFull {
+  height: 11px;
 }
 
 .simplifyBtn {
