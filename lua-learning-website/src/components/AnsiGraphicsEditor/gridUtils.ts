@@ -70,6 +70,9 @@ export function getCellHalfFromMouse(
   cols: number = DEFAULT_ANSI_COLS,
   rows: number = DEFAULT_ANSI_ROWS,
 ): { row: number; col: number; isTopHalf: boolean } | null {
+  // getBoundingClientRect returns the post-transform AND post-scroll
+  // viewport-relative box, so this math is correct at any zoom level
+  // and any pan offset (overflow scroll on an ancestor).
   const rect = container.getBoundingClientRect()
   const col = Math.floor((e.clientX - rect.left) * cols / rect.width)
   const fractionalRow = (e.clientY - rect.top) * rows / rect.height

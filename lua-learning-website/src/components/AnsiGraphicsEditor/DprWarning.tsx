@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import type { ScaleMode } from './types'
 import { useDprChange } from '../AnsiTerminalPanel/panelHelpers'
 import styles from './DprWarning.module.css'
 
@@ -16,14 +15,13 @@ function isFractionalDpr(dpr: number): boolean {
 }
 
 /**
- * At these scale modes the canvas displays near its source-pixel size,
- * so the browser's fractional-DPR downsample is most visible. Integer
- * 2× / 3× effectively pre-scale before the browser resample, masking
- * the artifact; `fit` / `fill` already produce non-integer scales so
- * the warning isn't additionally informative there.
+ * At low zoom levels the canvas displays near its source-pixel size,
+ * so the browser's fractional-DPR downsample is most visible. Higher
+ * integer zooms effectively pre-scale before the browser resample,
+ * masking the artifact.
  */
-function isAtRisk(scaleMode: ScaleMode): boolean {
-  return scaleMode === 'integer-1x' || scaleMode === 'integer-auto'
+function isAtRisk(zoom: number): boolean {
+  return zoom < 1.5
 }
 
 function readDismissed(): boolean {
@@ -35,7 +33,8 @@ function writeDismissed(): void {
 }
 
 export interface DprWarningProps {
-  scaleMode: ScaleMode
+  /** Current viewport zoom (1 = 1x, 2 = 2x, etc.). */
+  zoom: number
   /**
    * When true, the user has enabled "Emulate Pixel Perfect on HiDPI"
    * so the scale is already DPR-snapped — the warning is no longer
@@ -44,7 +43,7 @@ export interface DprWarningProps {
   dprCompensate?: boolean
 }
 
-export function DprWarning({ scaleMode, dprCompensate = false }: DprWarningProps) {
+export function DprWarning({ zoom, dprCompensate = false }: DprWarningProps) {
   const [dismissed, setDismissed] = useState<boolean>(() => readDismissed())
   const [dpr, setDpr] = useState<number>(
     () => (typeof window !== 'undefined' ? window.devicePixelRatio : 1),
@@ -54,7 +53,7 @@ export function DprWarning({ scaleMode, dprCompensate = false }: DprWarningProps
   if (dismissed) return null
   if (dprCompensate) return null
   if (!isFractionalDpr(dpr)) return null
-  if (!isAtRisk(scaleMode)) return null
+  if (!isAtRisk(zoom)) return null
 
   const handleDismiss = () => {
     setDismissed(true)
@@ -65,8 +64,8 @@ export function DprWarning({ scaleMode, dprCompensate = false }: DprWarningProps
     <div className={styles.banner} role="status" data-testid="dpr-warning">
       <span className={styles.message}>
         Your display is at <strong>{dpr.toFixed(2)}× DPR</strong>. Bitmap fonts may show
-        uneven pixels at <em>Integer 1×</em> / <em>Integer Auto</em>. Switch Scale to
-        <em> Integer 2×</em> or <em> Integer 3×</em> in File Options for a crisp look.
+        uneven pixels at <em>1×</em> zoom. Increase zoom to <em>2×</em> or <em>3×</em>
+        for a crisp look.
       </span>
       <button
         type="button"

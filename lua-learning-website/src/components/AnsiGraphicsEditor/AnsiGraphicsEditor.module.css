@@ -40,6 +40,19 @@
   cursor: grabbing;
 }
 
+/* Pan affordance: space-held shows grab cursor, active drag shows
+ * grabbing. These override tool-specific cursors when the user is
+ * about to / actively panning the viewport. */
+.canvasPanReady,
+.canvasPanReady * {
+  cursor: grab !important;
+}
+
+.canvasPanning,
+.canvasPanning * {
+  cursor: grabbing !important;
+}
+
 /* Cell cursor overlay — uses position:fixed and is positioned imperatively
    by useAnsiEditor so that no React re-renders are needed on mouse movement. */
 .cellCursor {
@@ -731,6 +744,30 @@
 
 .toolbarButton:hover {
   background-color: var(--theme-bg-hover);
+}
+
+/* Zoom control (slider + number + Fit) */
+.zoomSlider {
+  width: 110px;
+  cursor: pointer;
+}
+
+.zoomLabel {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--theme-text-primary);
+  min-width: 32px;
+  text-align: right;
+}
+
+.zoomNumber {
+  width: 56px;
+  padding: 3px 6px;
+  font-size: 11px;
+  background-color: var(--theme-bg-primary);
+  color: var(--theme-text-primary);
+  border: 1px solid var(--theme-border);
+  border-radius: 3px;
 }
 
 /* Tool flyout (rect tool variants) */

@@ -5,7 +5,7 @@ import {
   DEFAULT_FONT_ID,
 } from '@lua-learning/lua-runtime'
 import type { AnsiTerminalHandle, AnsiTerminalPanelProps } from './types'
-import { computeScale, makeSetCrt, useDprChange } from './panelHelpers'
+import { resolveRenderScale, makeSetCrt, useDprChange } from './panelHelpers'
 import styles from './AnsiTerminalPanel.module.css'
 
 /**
@@ -22,6 +22,7 @@ export function AnsiTerminalPanelPixel({
   rows = 25,
   fontId = DEFAULT_FONT_ID,
   dprCompensate = false,
+  zoom,
   onTerminalReady,
 }: AnsiTerminalPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -35,6 +36,8 @@ export function AnsiTerminalPanelPixel({
   scaleModeRef.current = scaleMode
   const dprCompensateRef = useRef(dprCompensate)
   dprCompensateRef.current = dprCompensate
+  const zoomRef = useRef(zoom)
+  zoomRef.current = zoom
   const currentScaleRef = useRef(-1)
   const updateScaleRef = useRef<(() => void) | null>(null)
 
@@ -75,7 +78,8 @@ export function AnsiTerminalPanelPixel({
       const baseW = r.canvas.width
       const baseH = r.canvas.height
       if (baseW === 0 || baseH === 0) return
-      const newScale = computeScale(
+      const newScale = resolveRenderScale(
+        zoomRef.current,
         scaleModeRef.current,
         { w: container.clientWidth, h: container.clientHeight },
         { w: baseW, h: baseH },
@@ -103,6 +107,7 @@ export function AnsiTerminalPanelPixel({
       const handle: AnsiTerminalHandle = {
         write: (data: string) => rendererRef.current?.write(data),
         container: wrapper,
+        scrollContainer: container,
         dispose: () => { /* lifecycle is component-managed */ },
         resize: (c: number, r: number) => {
           rendererRef.current?.resize(c, r)
@@ -149,7 +154,7 @@ export function AnsiTerminalPanelPixel({
   useEffect(() => {
     currentScaleRef.current = -1
     updateScaleRef.current?.()
-  }, [scaleMode, dprCompensate])
+  }, [scaleMode, dprCompensate, zoom])
   useDprChange(() => {
     currentScaleRef.current = -1
     updateScaleRef.current?.()

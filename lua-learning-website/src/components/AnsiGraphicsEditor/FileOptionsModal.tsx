@@ -1,5 +1,4 @@
 import { useState, type KeyboardEvent, type ReactNode } from 'react'
-import type { ScaleMode } from './types'
 import { tooltipWithShortcut, ACTION_SHORTCUTS } from './keyboardShortcuts'
 import { BITMAP_FONT_REGISTRY } from '@lua-learning/lua-runtime'
 import type { EyedropperModifier } from './eyedropperModifierPersistence'
@@ -19,8 +18,6 @@ export interface FileOptionsModalProps {
   onExportLayers: () => void
   cgaPreview: boolean
   onToggleCgaPreview: () => void
-  scaleMode: ScaleMode
-  onSetScaleMode: (mode: ScaleMode) => void
   /** Current canvas width in columns. */
   cols: number
   /** Current canvas height in rows. */
@@ -166,7 +163,6 @@ function CanvasTab(props: FileOptionsModalProps): ReactNode {
   const {
     onClose, onClear,
     cgaPreview, onToggleCgaPreview,
-    scaleMode, onSetScaleMode,
     cols, rows, onResizeCanvas,
     font, onSetFont,
     useFontBlocks, onSetUseFontBlocks,
@@ -221,22 +217,6 @@ function CanvasTab(props: FileOptionsModalProps): ReactNode {
           data-testid="file-use-font-blocks"
         />
         Use pixel renderer (font blocks)
-      </label>
-      <label className={styles.fileOptionsAction}>
-        Scale:
-        <select
-          value={scaleMode}
-          onChange={e => onSetScaleMode(e.target.value as ScaleMode)}
-          data-testid="file-scale-mode"
-          className={styles.fileOptionsSelect}
-        >
-          <option value="integer-auto">Integer Auto</option>
-          <option value="integer-1x">Integer 1x</option>
-          <option value="integer-2x">Integer 2x</option>
-          <option value="integer-3x">Integer 3x</option>
-          <option value="fit">Fit</option>
-          <option value="fill">Fill</option>
-        </select>
       </label>
       <label className={styles.fileOptionsAction} title="Snap the scale up to a multiple where scale × DPR is integer, eliminating the 1-2-1-2 pixel pattern on fractional-DPR displays. May render larger than the selected scale.">
         <input

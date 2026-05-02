@@ -71,7 +71,7 @@ describe('useAnsiEditor — loading a project with non-default dimensions', () =
     const { result } = renderHook(() => useAnsiEditor({ initialLayerState: wideProject(120, 40) }))
     // Container sized so each cell is 10px × 20px.
     const container = createMockContainer(120 * 10, 40 * 20)
-    const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
+    const handle = { write: vi.fn(), container, scrollContainer: container, dispose: vi.fn(), setCrt: vi.fn() }
     act(() => result.current.onTerminalReady(handle))
     act(() => result.current.setTool('pencil'))
 
@@ -101,7 +101,7 @@ describe('useAnsiEditor — loading a project with non-default dimensions', () =
 
   it('clearGrid on a loaded 120×40 project produces a 120×40 empty grid', () => {
     const { result } = renderHook(() => useAnsiEditor({ initialLayerState: wideProject(120, 40) }))
-    const handle = { write: vi.fn(), container: document.createElement('div'), dispose: vi.fn(), setCrt: vi.fn() }
+    const handle = { write: vi.fn(), container: document.createElement('div'), scrollContainer: document.createElement('div'), dispose: vi.fn(), setCrt: vi.fn() }
     act(() => result.current.onTerminalReady(handle))
     act(() => result.current.clearGrid())
     expect(result.current.cols).toBe(120)
@@ -113,7 +113,7 @@ describe('useAnsiEditor — loading a project with non-default dimensions', () =
   it('drawing on a NEW layer added after load works at the project dims', () => {
     const { result } = renderHook(() => useAnsiEditor({ initialLayerState: wideProject(120, 40) }))
     const container = createMockContainer(120 * 10, 40 * 20)
-    const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
+    const handle = { write: vi.fn(), container, scrollContainer: container, dispose: vi.fn(), setCrt: vi.fn() }
     act(() => result.current.onTerminalReady(handle))
 
     // Add a new layer (which becomes active) and draw on it at (100, 35).
@@ -148,7 +148,7 @@ describe('useAnsiEditor — loading a project with non-default dimensions', () =
 
     const { result } = renderHook(() => useAnsiEditor({ initialLayerState: state }))
     const container = createMockContainer(120 * 10, 40 * 20)
-    const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
+    const handle = { write: vi.fn(), container, scrollContainer: container, dispose: vi.fn(), setCrt: vi.fn() }
     act(() => result.current.onTerminalReady(handle))
     act(() => result.current.setTool('move'))
 

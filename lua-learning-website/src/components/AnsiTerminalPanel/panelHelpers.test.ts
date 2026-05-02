@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeScale, snapToDprCleanScale } from './panelHelpers'
+import { computeScale, resolveRenderScale, snapToDprCleanScale } from './panelHelpers'
 
 describe('snapToDprCleanScale', () => {
   it('returns ceil(scale) when DPR is already integer', () => {
@@ -97,5 +97,39 @@ describe('computeScale — dprCompensate', () => {
   it('omitting options produces legacy behavior', () => {
     const s = computeScale('integer-auto', { w: CONTAINER, h: CONTAINER }, { w: BASE, h: BASE })
     expect(s).toBe(3)
+  })
+})
+
+describe('resolveRenderScale', () => {
+  const CONTAINER = { w: 2000, h: 2000 }
+  const BASE = { w: 640, h: 400 }
+
+  it('returns the explicit zoom when provided (no DPR snap)', () => {
+    expect(resolveRenderScale(2.5, 'integer-auto', CONTAINER, BASE)).toBe(2.5)
+  })
+
+  it('passes a non-integer zoom through unchanged', () => {
+    expect(resolveRenderScale(1.22, 'integer-1x', CONTAINER, BASE)).toBe(1.22)
+  })
+
+  it('falls back to scaleMode-based computation when zoom is undefined', () => {
+    expect(resolveRenderScale(undefined, 'integer-2x', CONTAINER, BASE)).toBe(2)
+  })
+
+  it('applies DPR snap to explicit zoom when dprCompensate is on', () => {
+    // zoom=1, dpr=1.5 → snap up to 2 (smallest N where N*1.5 is integer)
+    expect(resolveRenderScale(1, 'integer-1x', CONTAINER, BASE, { dprCompensate: true, dpr: 1.5 })).toBe(2)
+  })
+
+  it('does not apply DPR snap when dprCompensate is off', () => {
+    expect(resolveRenderScale(1, 'integer-1x', CONTAINER, BASE, { dprCompensate: false, dpr: 1.5 })).toBe(1)
+  })
+
+  it('does not apply container-overflow guard to explicit zoom — scrollbars handle it', () => {
+    // Tiny container vs huge zoom: scaleMode-based computeScale would
+    // fall back to nominal; explicit zoom keeps the user's choice so
+    // scrollbars on the wrapper let them pan to it.
+    const tiny = { w: 100, h: 100 }
+    expect(resolveRenderScale(8, 'integer-1x', tiny, BASE, { dprCompensate: true, dpr: 1.5 })).toBe(8)
   })
 })

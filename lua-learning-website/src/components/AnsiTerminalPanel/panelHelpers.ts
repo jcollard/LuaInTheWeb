@@ -104,6 +104,33 @@ export function computeScale(
 }
 
 /**
+ * Resolve the effective render scale for a panel that may be driven
+ * either by an explicit numeric `zoom` (editor viewport) or by the
+ * legacy `scaleMode` enum (runtime auto-fit). When `zoom` is provided
+ * it bypasses the mode-driven path entirely; the container size is no
+ * longer the constraint (the editor wraps the panel in a scroll
+ * viewport, so overflow is allowed). DPR-compensate still applies to
+ * snap the value up to a DPR-clean multiple — without the
+ * container-overflow guard, since overflow is now scrollable rather
+ * than clipped.
+ */
+export function resolveRenderScale(
+  zoom: number | undefined,
+  mode: ScaleMode,
+  container: { w: number; h: number },
+  base: { w: number; h: number },
+  options: ComputeScaleOptions = {},
+): number {
+  if (zoom !== undefined) {
+    if (options.dprCompensate && options.dpr && options.dpr > 0) {
+      return snapToDprCleanScale(zoom, options.dpr)
+    }
+    return zoom
+  }
+  return computeScale(mode, container, base, options)
+}
+
+/**
  * Snap fillRect calls to integer device pixels on an xterm canvas.
  * Prevents antialiasing seams between cells when xterm's glyph renderer
  * divides cells into eighths and produces fractional coordinates at

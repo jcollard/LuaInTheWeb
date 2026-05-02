@@ -9,7 +9,7 @@ import {
 } from '@lua-learning/lua-runtime'
 import '@xterm/xterm/css/xterm.css'
 import type { AnsiTerminalHandle, AnsiTerminalPanelProps } from './types'
-import { computeScale, makeSetCrt, patchFillRect, useDprChange } from './panelHelpers'
+import { resolveRenderScale, makeSetCrt, patchFillRect, useDprChange } from './panelHelpers'
 import styles from './AnsiTerminalPanel.module.css'
 
 function fontSpec(entry: BitmapFontRegistryEntry): { family: string; size: number } {
@@ -34,6 +34,7 @@ export function AnsiTerminalPanelXterm({
   cols = 80,
   rows = 25,
   fontId = DEFAULT_FONT_ID,
+  zoom,
   onTerminalReady,
 }: AnsiTerminalPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -47,6 +48,8 @@ export function AnsiTerminalPanelXterm({
   scaleModeRef.current = scaleMode
   const dprCompensateRef = useRef(dprCompensate)
   dprCompensateRef.current = dprCompensate
+  const zoomRef = useRef(zoom)
+  zoomRef.current = zoom
   const currentScaleRef = useRef(-1)
   const updateScaleRef = useRef<(() => void) | null>(null)
   const fontRef = useRef<BitmapFontRegistryEntry>(
@@ -112,7 +115,8 @@ export function AnsiTerminalPanelXterm({
         const t = terminalRef.current
         if (!t) return
         if (baseW === 0 || baseH === 0) return
-        const newScale = computeScale(
+        const newScale = resolveRenderScale(
+          zoomRef.current,
           scaleModeRef.current,
           { w: container.clientWidth, h: container.clientHeight },
           { w: baseW, h: baseH },
@@ -134,6 +138,7 @@ export function AnsiTerminalPanelXterm({
         const handle: AnsiTerminalHandle = {
           write: (data: string) => terminalRef.current?.write(data),
           container: wrapper,
+          scrollContainer: container,
           dispose: () => { /* lifecycle is component-managed */ },
           resize: (c: number, r: number) => {
             const t = terminalRef.current
@@ -198,7 +203,7 @@ export function AnsiTerminalPanelXterm({
   useEffect(() => {
     currentScaleRef.current = -1
     updateScaleRef.current?.()
-  }, [scaleMode, dprCompensate])
+  }, [scaleMode, dprCompensate, zoom])
 
   useDprChange(() => {
     currentScaleRef.current = -1

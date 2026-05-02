@@ -101,4 +101,33 @@ describe('AnsiGraphicsEditor', () => {
     render(<AnsiGraphicsEditor filePath="ansi-editor://new" />)
     expect(screen.queryByText('Failed to open file')).toBeNull()
   })
+
+  describe('viewport controls', () => {
+    it('renders the zoom slider in the toolbar', () => {
+      render(<AnsiGraphicsEditor />)
+      expect(screen.getByTestId('zoom-slider')).toBeTruthy()
+    })
+
+    it('renders the zoom numeric input in the toolbar', () => {
+      render(<AnsiGraphicsEditor />)
+      expect(screen.getByTestId('zoom-number')).toBeTruthy()
+    })
+
+    it('renders the Fit button in the toolbar', () => {
+      render(<AnsiGraphicsEditor />)
+      expect(screen.getByTestId('zoom-fit')).toBeTruthy()
+    })
+
+    it('renders the zoom label initially showing 1x', () => {
+      render(<AnsiGraphicsEditor />)
+      expect(screen.getByTestId('zoom-label').textContent).toBe('1x')
+    })
+
+    it('does not render the deleted Scale dropdown', () => {
+      render(<AnsiGraphicsEditor />)
+      // Open File Options modal so the canvas tab would be reachable.
+      // file-scale-mode used to live there; assert it's gone everywhere.
+      expect(screen.queryByTestId('file-scale-mode')).toBeNull()
+    })
+  })
 })

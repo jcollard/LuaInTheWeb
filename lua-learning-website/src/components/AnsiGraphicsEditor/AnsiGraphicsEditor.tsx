@@ -3,8 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnsiTerminalPanel } from '../AnsiTerminalPanel/AnsiTerminalPanel'
 import { DprWarning } from './DprWarning'
 import {
-  loadStoredScaleMode,
-  saveStoredScaleMode,
   loadStoredDprCompensate,
   saveStoredDprCompensate,
 } from './scaleModePersistence'
@@ -26,11 +24,14 @@ import { SaveAsDialog } from './SaveAsDialog'
 import { ToastContainer } from './ToastContainer'
 import { useAnsiEditor } from './useAnsiEditor'
 import { useAnsiEditorFile } from './useAnsiEditorFile'
+import { fitZoom, useViewport } from './useViewport'
+import { useCanvasPan, useCtrlWheelZoom } from './useViewportInputs'
+import { getFontById } from '@lua-learning/lua-runtime'
 import { useExportLayers } from './useExportLayers'
 import { useImportLayers } from './useImportLayers'
 import { useRecentChars } from './useRecentChars'
 import { useToast } from './useToast'
-import type { ScaleMode, GroupLayer } from './types'
+import type { GroupLayer } from './types'
 import { isGroupLayer } from './types'
 import { ProjectConfigParser } from '@lua-learning/export'
 import { CRT_DEFAULTS, DEFAULT_FONT_ID } from '@lua-learning/lua-runtime'
@@ -52,13 +53,6 @@ function deriveSaveAsFolderPath(filePath: string | undefined): string {
 export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGraphicsEditorProps) {
   const { fileSystem, fileTree, refreshFileTree, updateAnsiEditorTabPath } = useIDE()
   const [fileMenuOpen, setFileMenuOpen] = useState(false)
-  const [scaleMode, setScaleModeRaw] = useState<ScaleMode>(() => loadStoredScaleMode())
-  // Persist on every change so the user's last choice sticks across
-  // sessions. Global (not per-file) — see scaleModePersistence.ts.
-  const setScaleMode = useCallback((mode: ScaleMode) => {
-    setScaleModeRaw(mode)
-    saveStoredScaleMode(mode)
-  }, [])
   const [dprCompensate, setDprCompensateRaw] = useState<boolean>(() => loadStoredDprCompensate())
   const setDprCompensate = useCallback((flag: boolean) => {
     setDprCompensateRaw(flag)
@@ -72,6 +66,11 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
 
   const { toasts, showToast } = useToast()
   const { recent: recentChars, pushRecent: pushRecentChar } = useRecentChars()
+  const viewport = useViewport(1)
+  const canvasWrapperRef = useRef<HTMLDivElement>(null)
+  const [scrollContainerEl, setScrollContainerEl] = useState<HTMLElement | null>(null)
+  useCtrlWheelZoom({ scrollEl: scrollContainerEl, zoom: viewport.zoom, setZoom: viewport.setZoom })
+  const { isPanning, spaceHeld } = useCanvasPan({ scrollEl: scrollContainerEl })
   const handleSaveRef = useRef<() => void>(() => {})
   const handleOpenFileMenuRef = useRef<() => void>(() => {})
   const handleOpenSaveDialogRef = useRef<() => void>(() => {})
@@ -246,6 +245,34 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
 
   const handleToggleCgaPreview = useCallback(() => setCgaPreview(!cgaPreview), [cgaPreview, setCgaPreview])
 
+  const wrappedOnTerminalReady = useCallback((handle: Parameters<typeof onTerminalReady>[0]) => {
+    setScrollContainerEl(handle?.scrollContainer ?? null)
+    onTerminalReady(handle)
+  }, [onTerminalReady])
+
+  const handleFitZoom = useCallback(() => {
+    const el = scrollContainerEl ?? canvasWrapperRef.current
+    if (!el) return
+    const fontEntry = getFontById(font ?? DEFAULT_FONT_ID)
+    if (!fontEntry) return
+    const baseW = projectCols * fontEntry.cellW
+    const baseH = projectRows * fontEntry.cellH
+    const z = fitZoom({ w: baseW, h: baseH }, { w: el.clientWidth, h: el.clientHeight })
+    viewport.setZoom(z)
+  }, [scrollContainerEl, font, projectCols, projectRows, viewport])
+
+  // Apply Fit once on initial mount (when the panel first reports its
+  // scroll container). Matches the prior `Integer Auto` default. The
+  // user's subsequent zoom changes are not re-overridden by this — the
+  // ref guard ensures it runs at most once per editor instance.
+  const initialFitAppliedRef = useRef(false)
+  useEffect(() => {
+    if (initialFitAppliedRef.current) return
+    if (!scrollContainerEl) return
+    initialFitAppliedRef.current = true
+    handleFitZoom()
+  }, [scrollContainerEl, handleFitZoom])
+
   const activeLayer = layers.find(l => l.id === activeLayerId)
   const activeTextAlign = activeLayer?.type === 'text' ? activeLayer.textAlign : undefined
   const activeLayerIsDrawn = activeLayer?.type === 'drawn'
@@ -363,8 +390,6 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         onSetBlendRatio={setBlendRatio}
         cgaPreview={cgaPreview}
         onToggleCgaPreview={handleToggleCgaPreview}
-        scaleMode={scaleMode}
-        onSetScaleMode={setScaleMode}
         cols={projectCols}
         rows={projectRows}
         onResizeCanvas={resizeCanvas}
@@ -380,6 +405,9 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         isPlaying={isPlaying}
         fileMenuOpen={fileMenuOpen}
         onSetFileMenuOpen={setFileMenuOpen}
+        zoom={viewport.zoom}
+        onSetZoom={viewport.setZoom}
+        onFitZoom={handleFitZoom}
       />
       <div className={styles.editorBody}>
         <div className={styles.leftSidebar}>
@@ -407,17 +435,26 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
           )}
         </div>
         <div className={styles.canvasAndFrames}>
-          <DprWarning scaleMode={scaleMode} dprCompensate={dprCompensate} />
-          <div className={[styles.canvas, brush.tool === 'move' && (isMoveDragging ? styles.canvasMoveDragging : styles.canvasMove), brush.tool === 'flip' && styles.canvasFlip].filter(Boolean).join(' ')}>
+          <DprWarning zoom={viewport.zoom} dprCompensate={dprCompensate} />
+          <div
+            ref={canvasWrapperRef}
+            className={[
+              styles.canvas,
+              brush.tool === 'move' && (isMoveDragging ? styles.canvasMoveDragging : styles.canvasMove),
+              brush.tool === 'flip' && styles.canvasFlip,
+              isPanning && styles.canvasPanning,
+              !isPanning && spaceHeld && styles.canvasPanReady,
+            ].filter(Boolean).join(' ')}
+          >
             <AnsiTerminalPanel
               isActive={true}
-              scaleMode={scaleMode}
+              zoom={viewport.zoom}
               cols={projectCols}
               rows={projectRows}
               fontId={font}
               useFontBlocks={useFontBlocks}
               dprCompensate={dprCompensate}
-              onTerminalReady={onTerminalReady}
+              onTerminalReady={wrappedOnTerminalReady}
             />
           </div>
           {activeLayerIsDrawn && (
