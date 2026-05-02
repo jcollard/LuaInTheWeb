@@ -9,9 +9,13 @@ export interface ZoomControlProps {
 }
 
 function formatZoomLabel(z: number): string {
-  // Integers render as "1x"; non-integers render with one decimal ("2.5x").
+  // Integers render as "1x". Above 1, one decimal ("2.5x"). Below 1, two
+  // decimals so 0.25x doesn't display as 0.3x (which would also render
+  // visually identical to a 0.3 slider step that ISN'T 0.25).
   if (Math.abs(z - Math.round(z)) < 0.005) return `${Math.round(z)}x`
-  return `${z.toFixed(1)}x`
+  const decimals = z < 1 ? 2 : 1
+  // Trim trailing zeros (e.g. 0.50 → 0.5) for a cleaner display.
+  return `${z.toFixed(decimals).replace(/\.?0+$/, '')}x`
 }
 
 export function ZoomControl({ zoom, onSetZoom, onFit }: ZoomControlProps) {

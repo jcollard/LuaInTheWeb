@@ -11,9 +11,19 @@ describe('ZoomControl', () => {
     expect(screen.getByTestId('zoom-label').textContent).toBe('2x')
   })
 
-  it('renders the zoom label with one decimal for non-integers', () => {
+  it('renders the zoom label with one decimal for non-integers above 1x', () => {
     render(<ZoomControl zoom={2.5} onSetZoom={vi.fn()} onFit={vi.fn()} />)
     expect(screen.getByTestId('zoom-label').textContent).toBe('2.5x')
+  })
+
+  it('renders sub-1x zooms with two decimals so 0.25x stays exact', () => {
+    render(<ZoomControl zoom={0.25} onSetZoom={vi.fn()} onFit={vi.fn()} />)
+    expect(screen.getByTestId('zoom-label').textContent).toBe('0.25x')
+  })
+
+  it('trims trailing zeros below 1x (0.5x not 0.50x)', () => {
+    render(<ZoomControl zoom={0.5} onSetZoom={vi.fn()} onFit={vi.fn()} />)
+    expect(screen.getByTestId('zoom-label').textContent).toBe('0.5x')
   })
 
   it('calls onSetZoom when the slider is moved', () => {

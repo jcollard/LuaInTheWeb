@@ -69,7 +69,9 @@ describe('useCtrlWheelZoom', () => {
   it('does not call setZoom when newZoom equals oldZoom (clamped at MIN)', () => {
     const el = makeEl()
     const setZoom = vi.fn()
-    renderHook(() => useCtrlWheelZoom({ scrollEl: el, zoom: 1, setZoom }))
+    // Start exactly at MIN_ZOOM (0.25); wheel-down should clamp back
+    // to MIN, producing the same value, so setZoom is skipped.
+    renderHook(() => useCtrlWheelZoom({ scrollEl: el, zoom: 0.25, setZoom }))
     el.dispatchEvent(new WheelEvent('wheel', { deltaY: 100, ctrlKey: true, bubbles: true, cancelable: true }))
     expect(setZoom).not.toHaveBeenCalled()
   })

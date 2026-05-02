@@ -1,11 +1,17 @@
 import { useCallback, useState } from 'react'
 
-/** Minimum allowed zoom. The Fit calculator clamps to this when the canvas
- * doesn't fit at 1x — old `Integer Auto` behaved the same. */
-export const MIN_ZOOM = 1
+/** Minimum allowed zoom for user-driven setZoom (slider / numeric input /
+ * Ctrl+wheel). Allows shrinking below 1× so a user can preview an
+ * oversized canvas in one frame. */
+export const MIN_ZOOM = 0.25
 
 /** Maximum allowed zoom. Matches the toolbar slider range. */
 export const MAX_ZOOM = 8
+
+/** Floor used by the Fit calculator. Preserves the prior `Integer Auto`
+ * behavior (largest integer ≥ 1 that fits) so existing files don't
+ * suddenly load at sub-1× zoom. */
+export const FIT_MIN_ZOOM = 1
 
 /** Absolute snap-to-integer tolerance: |z - round(z)| ≤ this snaps to the integer. */
 export const SNAP_TOLERANCE = 0.04
@@ -26,9 +32,9 @@ export function fitZoom(
   base: { w: number; h: number },
   viewport: { w: number; h: number },
 ): number {
-  if (base.w <= 0 || base.h <= 0) return MIN_ZOOM
+  if (base.w <= 0 || base.h <= 0) return FIT_MIN_ZOOM
   const fit = Math.floor(Math.min(viewport.w / base.w, viewport.h / base.h))
-  return clampZoom(fit)
+  return clampZoom(Math.max(FIT_MIN_ZOOM, fit))
 }
 
 /**

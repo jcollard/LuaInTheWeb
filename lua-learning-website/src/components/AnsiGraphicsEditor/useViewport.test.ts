@@ -4,6 +4,7 @@
 import { describe, expect, it } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import {
+  FIT_MIN_ZOOM,
   MAX_ZOOM,
   MIN_ZOOM,
   SNAP_TOLERANCE,
@@ -19,8 +20,13 @@ describe('clampZoom', () => {
     expect(clampZoom(2.5)).toBe(2.5)
   })
 
+  it('allows sub-1x values (down to MIN_ZOOM)', () => {
+    expect(clampZoom(0.5)).toBe(0.5)
+    expect(clampZoom(MIN_ZOOM)).toBe(MIN_ZOOM)
+  })
+
   it('clamps to MIN_ZOOM when below', () => {
-    expect(clampZoom(MIN_ZOOM - 1)).toBe(MIN_ZOOM)
+    expect(clampZoom(MIN_ZOOM - 0.1)).toBe(MIN_ZOOM)
   })
 
   it('clamps to MAX_ZOOM when above', () => {
@@ -69,8 +75,8 @@ describe('fitZoom', () => {
     expect(fitZoom({ w: 80, h: 25 }, { w: 320, h: 100 })).toBe(4)
   })
 
-  it('clamps to MIN_ZOOM when canvas does not fit at 1x', () => {
-    expect(fitZoom({ w: 200, h: 100 }, { w: 100, h: 50 })).toBe(MIN_ZOOM)
+  it('clamps to FIT_MIN_ZOOM (1x) when canvas does not fit at 1x — preserves Integer Auto behavior even though MIN_ZOOM is 0.25', () => {
+    expect(fitZoom({ w: 200, h: 100 }, { w: 100, h: 50 })).toBe(FIT_MIN_ZOOM)
   })
 
   it('uses the smaller axis ratio (height-constrained)', () => {
@@ -93,9 +99,9 @@ describe('fitZoom', () => {
     expect(fitZoom({ w: 1, h: 1 }, { w: 9999, h: 9999 })).toBe(MAX_ZOOM)
   })
 
-  it('returns MIN_ZOOM when base size is zero', () => {
-    expect(fitZoom({ w: 0, h: 25 }, { w: 800, h: 600 })).toBe(MIN_ZOOM)
-    expect(fitZoom({ w: 80, h: 0 }, { w: 800, h: 600 })).toBe(MIN_ZOOM)
+  it('returns FIT_MIN_ZOOM when base size is zero', () => {
+    expect(fitZoom({ w: 0, h: 25 }, { w: 800, h: 600 })).toBe(FIT_MIN_ZOOM)
+    expect(fitZoom({ w: 80, h: 0 }, { w: 800, h: 600 })).toBe(FIT_MIN_ZOOM)
   })
 })
 
@@ -163,8 +169,16 @@ describe('useViewport', () => {
     const { result } = renderHook(() => useViewport(1))
     act(() => result.current.setZoom(MAX_ZOOM + 100))
     expect(result.current.zoom).toBe(MAX_ZOOM)
-    act(() => result.current.setZoom(MIN_ZOOM - 100))
+    act(() => result.current.setZoom(-1))
     expect(result.current.zoom).toBe(MIN_ZOOM)
+  })
+
+  it('allows sub-1x values via setZoom', () => {
+    const { result } = renderHook(() => useViewport(1))
+    act(() => result.current.setZoom(0.5))
+    expect(result.current.zoom).toBe(0.5)
+    act(() => result.current.setZoom(0.25))
+    expect(result.current.zoom).toBe(0.25)
   })
 
   it('preserves non-integer zoom outside snap zone', () => {

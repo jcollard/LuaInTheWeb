@@ -116,13 +116,14 @@ describe('resolveRenderScale', () => {
     expect(resolveRenderScale(undefined, 'integer-2x', CONTAINER, BASE)).toBe(2)
   })
 
-  it('applies DPR snap to explicit zoom when dprCompensate is on', () => {
-    // zoom=1, dpr=1.5 → snap up to 2 (smallest N where N*1.5 is integer)
-    expect(resolveRenderScale(1, 'integer-1x', CONTAINER, BASE, { dprCompensate: true, dpr: 1.5 })).toBe(2)
+  it('does NOT apply DPR snap to explicit zoom (would silently lock to integer)', () => {
+    // zoom=1.22 with dprCompensate on must remain 1.22, not jump to 2.
+    expect(resolveRenderScale(1.22, 'integer-1x', CONTAINER, BASE, { dprCompensate: true, dpr: 1.5 })).toBe(1.22)
   })
 
-  it('does not apply DPR snap when dprCompensate is off', () => {
-    expect(resolveRenderScale(1, 'integer-1x', CONTAINER, BASE, { dprCompensate: false, dpr: 1.5 })).toBe(1)
+  it('respects sub-1x explicit zoom regardless of dprCompensate', () => {
+    expect(resolveRenderScale(0.5, 'integer-1x', CONTAINER, BASE, { dprCompensate: true, dpr: 1.5 })).toBe(0.5)
+    expect(resolveRenderScale(0.25, 'integer-1x', CONTAINER, BASE)).toBe(0.25)
   })
 
   it('does not apply container-overflow guard to explicit zoom — scrollbars handle it', () => {

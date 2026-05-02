@@ -107,12 +107,17 @@ export function computeScale(
  * Resolve the effective render scale for a panel that may be driven
  * either by an explicit numeric `zoom` (editor viewport) or by the
  * legacy `scaleMode` enum (runtime auto-fit). When `zoom` is provided
- * it bypasses the mode-driven path entirely; the container size is no
- * longer the constraint (the editor wraps the panel in a scroll
- * viewport, so overflow is allowed). DPR-compensate still applies to
- * snap the value up to a DPR-clean multiple — without the
- * container-overflow guard, since overflow is now scrollable rather
- * than clipped.
+ * it bypasses the mode-driven path entirely and is fed straight into
+ * the renderer's CSS sizing — the user picked this exact value, so we
+ * respect it.
+ *
+ * DPR-compensate is intentionally NOT applied here. With the legacy
+ * integer-only scale modes, DPR snap rounded `1× → 2×` on fractional
+ * DPRs to dodge the "1-2-1-2" device-pixel pattern; with user-driven
+ * fractional zoom the same logic would silently lock the slider to
+ * integers (e.g. zoom=1.22 → 2). The DprWarning surfaces the artifact
+ * to users at low zoom on fractional DPRs so they can choose to bump
+ * up themselves.
  */
 export function resolveRenderScale(
   zoom: number | undefined,
@@ -121,12 +126,7 @@ export function resolveRenderScale(
   base: { w: number; h: number },
   options: ComputeScaleOptions = {},
 ): number {
-  if (zoom !== undefined) {
-    if (options.dprCompensate && options.dpr && options.dpr > 0) {
-      return snapToDprCleanScale(zoom, options.dpr)
-    }
-    return zoom
-  }
+  if (zoom !== undefined) return zoom
   return computeScale(mode, container, base, options)
 }
 
