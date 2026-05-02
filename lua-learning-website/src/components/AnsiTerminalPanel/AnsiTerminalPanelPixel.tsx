@@ -21,7 +21,6 @@ export function AnsiTerminalPanelPixel({
   cols = 80,
   rows = 25,
   fontId = DEFAULT_FONT_ID,
-  dprCompensate = false,
   zoom,
   onTerminalReady,
 }: AnsiTerminalPanelProps) {
@@ -34,8 +33,6 @@ export function AnsiTerminalPanelPixel({
   onTerminalReadyRef.current = onTerminalReady
   const scaleModeRef = useRef(scaleMode)
   scaleModeRef.current = scaleMode
-  const dprCompensateRef = useRef(dprCompensate)
-  dprCompensateRef.current = dprCompensate
   const zoomRef = useRef(zoom)
   zoomRef.current = zoom
   const currentScaleRef = useRef(-1)
@@ -83,10 +80,6 @@ export function AnsiTerminalPanelPixel({
         scaleModeRef.current,
         { w: container.clientWidth, h: container.clientHeight },
         { w: baseW, h: baseH },
-        {
-          dprCompensate: dprCompensateRef.current,
-          dpr: typeof window !== 'undefined' ? window.devicePixelRatio : 1,
-        },
       )
       if (newScale === currentScaleRef.current) return
       currentScaleRef.current = newScale
@@ -154,7 +147,7 @@ export function AnsiTerminalPanelPixel({
   useEffect(() => {
     currentScaleRef.current = -1
     updateScaleRef.current?.()
-  }, [scaleMode, dprCompensate, zoom])
+  }, [scaleMode, zoom])
   useDprChange(() => {
     currentScaleRef.current = -1
     updateScaleRef.current?.()

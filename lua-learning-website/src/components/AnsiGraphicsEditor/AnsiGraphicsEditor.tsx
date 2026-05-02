@@ -1,11 +1,7 @@
 /* eslint-disable max-lines */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnsiTerminalPanel } from '../AnsiTerminalPanel/AnsiTerminalPanel'
-import { DprWarning } from './DprWarning'
-import {
-  loadStoredDprCompensate,
-  saveStoredDprCompensate,
-} from './scaleModePersistence'
+import { useDprChange } from '../AnsiTerminalPanel/panelHelpers'
 import {
   loadStoredEyedropperModifier,
   saveStoredEyedropperModifier,
@@ -53,11 +49,8 @@ function deriveSaveAsFolderPath(filePath: string | undefined): string {
 export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGraphicsEditorProps) {
   const { fileSystem, fileTree, refreshFileTree, updateAnsiEditorTabPath } = useIDE()
   const [fileMenuOpen, setFileMenuOpen] = useState(false)
-  const [dprCompensate, setDprCompensateRaw] = useState<boolean>(() => loadStoredDprCompensate())
-  const setDprCompensate = useCallback((flag: boolean) => {
-    setDprCompensateRaw(flag)
-    saveStoredDprCompensate(flag)
-  }, [])
+  const [dpr, setDpr] = useState<number>(() => (typeof window !== 'undefined' ? window.devicePixelRatio : 1))
+  useDprChange(() => setDpr(window.devicePixelRatio))
   const [eyedropperModifier, setEyedropperModifierRaw] = useState<EyedropperModifier>(() => loadStoredEyedropperModifier())
   const setEyedropperModifier = useCallback((modifier: EyedropperModifier) => {
     setEyedropperModifierRaw(modifier)
@@ -397,8 +390,6 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         onSetFont={setFont}
         useFontBlocks={useFontBlocks}
         onSetUseFontBlocks={setUseFontBlocks}
-        dprCompensate={dprCompensate}
-        onSetDprCompensate={setDprCompensate}
         eyedropperModifier={eyedropperModifier}
         onSetEyedropperModifier={setEyedropperModifier}
         activeLayerIsGroup={activeLayerIsGroup}
@@ -408,6 +399,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         zoom={viewport.zoom}
         onSetZoom={viewport.setZoom}
         onFitZoom={handleFitZoom}
+        dpr={dpr}
       />
       <div className={styles.editorBody}>
         <div className={styles.leftSidebar}>
@@ -435,7 +427,6 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
           )}
         </div>
         <div className={styles.canvasAndFrames}>
-          <DprWarning zoom={viewport.zoom} dprCompensate={dprCompensate} />
           <div
             ref={canvasWrapperRef}
             className={[
@@ -453,7 +444,6 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
               rows={projectRows}
               fontId={font}
               useFontBlocks={useFontBlocks}
-              dprCompensate={dprCompensate}
               onTerminalReady={wrappedOnTerminalReady}
             />
           </div>

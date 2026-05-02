@@ -85,4 +85,62 @@ describe('ZoomControl', () => {
     rerender(<ZoomControl zoom={2.5} onSetZoom={vi.fn()} onFit={vi.fn()} />)
     expect(input.value).toBe('2.50')
   })
+
+  describe('crispness indicator', () => {
+    it('shows the OK indicator when zoom × dpr is integer', () => {
+      render(<ZoomControl zoom={2} onSetZoom={vi.fn()} onFit={vi.fn()} dpr={1.5} />)
+      expect(screen.getByTestId('zoom-crisp-ok')).toBeTruthy()
+      expect(screen.queryByTestId('zoom-crisp-snap')).toBeNull()
+    })
+
+    it('shows the snap button when zoom × dpr is fractional', () => {
+      render(<ZoomControl zoom={1.22} onSetZoom={vi.fn()} onFit={vi.fn()} dpr={1.5} />)
+      expect(screen.getByTestId('zoom-crisp-snap')).toBeTruthy()
+      expect(screen.queryByTestId('zoom-crisp-ok')).toBeNull()
+    })
+
+    it('snap button calls onSetZoom with the next crisp zoom on click', () => {
+      const onSetZoom = vi.fn()
+      // zoom=1.22 with DPR=1.5 → next crisp = 4/3 ≈ 1.333
+      render(<ZoomControl zoom={1.22} onSetZoom={onSetZoom} onFit={vi.fn()} dpr={1.5} />)
+      fireEvent.click(screen.getByTestId('zoom-crisp-snap'))
+      expect(onSetZoom).toHaveBeenCalledTimes(1)
+      expect(onSetZoom.mock.calls[0][0]).toBeCloseTo(4 / 3, 5)
+    })
+
+    it('snap button is disabled when no crisp value fits within MAX_ZOOM', () => {
+      // zoom=8.5 (clamped to MAX, but pretend it slipped through) on DPR=1
+      // → next integer is 9, > MAX_ZOOM. The button shows but is disabled.
+      const onSetZoom = vi.fn()
+      render(<ZoomControl zoom={8.5} onSetZoom={onSetZoom} onFit={vi.fn()} dpr={1} />)
+      const btn = screen.getByTestId('zoom-crisp-snap') as HTMLButtonElement
+      expect(btn.disabled).toBe(true)
+      fireEvent.click(btn)
+      expect(onSetZoom).not.toHaveBeenCalled()
+    })
+
+    it('OK indicator title shows the device-px-per-cell math', () => {
+      render(<ZoomControl zoom={2} onSetZoom={vi.fn()} onFit={vi.fn()} dpr={1.5} />)
+      const ok = screen.getByTestId('zoom-crisp-ok')
+      expect(ok.getAttribute('title')).toContain('Pixel-crisp')
+      expect(ok.getAttribute('title')).toContain('1.50')
+    })
+
+    it('snap button title surfaces the actual fractional device-px-per-cell value', () => {
+      render(<ZoomControl zoom={1.22} onSetZoom={vi.fn()} onFit={vi.fn()} dpr={1.5} />)
+      const btn = screen.getByTestId('zoom-crisp-snap')
+      // 1.22 × 1.5 = 1.83
+      expect(btn.getAttribute('title')).toContain('1.83')
+    })
+
+    it('integers are crisp at DPR=1 (default)', () => {
+      render(<ZoomControl zoom={2} onSetZoom={vi.fn()} onFit={vi.fn()} />)
+      expect(screen.getByTestId('zoom-crisp-ok')).toBeTruthy()
+    })
+
+    it('non-integer zoom is not crisp at DPR=1', () => {
+      render(<ZoomControl zoom={1.5} onSetZoom={vi.fn()} onFit={vi.fn()} />)
+      expect(screen.getByTestId('zoom-crisp-snap')).toBeTruthy()
+    })
+  })
 })

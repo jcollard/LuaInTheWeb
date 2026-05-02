@@ -24,8 +24,6 @@ function defaultProps(overrides?: Partial<FileOptionsModalProps>): FileOptionsMo
     onSetFont: vi.fn(),
     useFontBlocks: true,
     onSetUseFontBlocks: vi.fn(),
-    dprCompensate: false,
-    onSetDprCompensate: vi.fn(),
     eyedropperModifier: 'ctrl',
     onSetEyedropperModifier: vi.fn(),
     ...overrides,

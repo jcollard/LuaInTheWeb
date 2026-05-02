@@ -32,10 +32,6 @@ export interface FileOptionsModalProps {
   useFontBlocks: boolean
   /** Toggle between the pixel renderer (true) and legacy xterm (false). */
   onSetUseFontBlocks: (enabled: boolean) => void
-  /** Pixel-perfect emulation on HiDPI: snaps scale to DPR-clean multiple. */
-  dprCompensate: boolean
-  /** Toggle crisp-pixel mode. */
-  onSetDprCompensate: (enabled: boolean) => void
   /** Modifier key that enables click-to-sample-color outside the eyedropper tool. */
   eyedropperModifier: EyedropperModifier
   /** Update the eyedropper modifier preference. */
@@ -166,7 +162,6 @@ function CanvasTab(props: FileOptionsModalProps): ReactNode {
     cols, rows, onResizeCanvas,
     font, onSetFont,
     useFontBlocks, onSetUseFontBlocks,
-    dprCompensate, onSetDprCompensate,
   } = props
 
   const [nextCols, setNextCols] = useState<string>(String(cols))
@@ -217,15 +212,6 @@ function CanvasTab(props: FileOptionsModalProps): ReactNode {
           data-testid="file-use-font-blocks"
         />
         Use pixel renderer (font blocks)
-      </label>
-      <label className={styles.fileOptionsAction} title="Snap the scale up to a multiple where scale × DPR is integer, eliminating the 1-2-1-2 pixel pattern on fractional-DPR displays. May render larger than the selected scale.">
-        <input
-          type="checkbox"
-          checked={dprCompensate}
-          onChange={e => onSetDprCompensate(e.target.checked)}
-          data-testid="file-dpr-compensate"
-        />
-        Emulate Pixel Perfect on HiDPI
       </label>
       <button
         type="button"

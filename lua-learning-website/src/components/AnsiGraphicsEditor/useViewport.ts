@@ -37,6 +37,36 @@ export function fitZoom(
   return clampZoom(Math.max(FIT_MIN_ZOOM, fit))
 }
 
+/** Tolerance for `zoom × dpr` equaling an integer. Tight enough that
+ *  legit fractional values aren't accidentally classified as crisp. */
+const CRISP_TOLERANCE = 0.001
+
+/**
+ * True when `zoom × dpr` lands on (or near) an integer — i.e. one
+ * source pixel maps to a whole number of device pixels and the canvas
+ * displays without the "1-2-1-2" subpixel-resampling pattern.
+ */
+export function isCrisp(zoom: number, dpr: number): boolean {
+  if (dpr <= 0) return false
+  const product = zoom * dpr
+  return Math.abs(product - Math.round(product)) < CRISP_TOLERANCE
+}
+
+/**
+ * Smallest crisp zoom ≥ the current zoom. Returns `null` when no crisp
+ * value exists in `[zoom, MAX_ZOOM]` — caller should treat that as
+ * "can't snap up; user is already past the highest crisp tick."
+ */
+export function nextCrispZoom(zoom: number, dpr: number): number | null {
+  if (dpr <= 0) return null
+  if (isCrisp(zoom, dpr)) return zoom
+  // Crisp values are k/dpr for integer k. Next k above zoom × dpr.
+  const k = Math.floor(zoom * dpr) + 1
+  const candidate = k / dpr
+  if (candidate > MAX_ZOOM + CRISP_TOLERANCE) return null
+  return Math.min(candidate, MAX_ZOOM)
+}
+
 /**
  * When zooming in/out at a fixed cursor anchor, return the new scroll
  * position that keeps the same content point under the cursor.

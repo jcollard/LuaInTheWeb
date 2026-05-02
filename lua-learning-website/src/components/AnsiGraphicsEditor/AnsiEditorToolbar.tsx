@@ -51,10 +51,6 @@ export interface AnsiEditorToolbarProps {
   useFontBlocks?: boolean
   /** Toggle between pixel renderer and legacy xterm. */
   onSetUseFontBlocks?: (enabled: boolean) => void
-  /** Pixel-perfect emulation on HiDPI: snaps scale to DPR-clean multiple. */
-  dprCompensate?: boolean
-  /** Toggle crisp-pixel mode. */
-  onSetDprCompensate?: (enabled: boolean) => void
   eyedropperModifier?: EyedropperModifier
   onSetEyedropperModifier?: (modifier: EyedropperModifier) => void
   activeLayerIsGroup?: boolean
@@ -65,14 +61,17 @@ export interface AnsiEditorToolbarProps {
   zoom?: number
   onSetZoom?: (z: number) => void
   onFitZoom?: () => void
+  /** Current devicePixelRatio, surfaced to ZoomControl so it can render
+   *  the crispness indicator + snap-to-crisp button. */
+  dpr?: number
 }
 
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onImportPng, onImportLayers, onExportAns, onExportDosAns, onExportSh, onExportBat, onExportLayers, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
-  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, cols, rows, onResizeCanvas, font, onSetFont, useFontBlocks, onSetUseFontBlocks, dprCompensate, onSetDprCompensate, eyedropperModifier, onSetEyedropperModifier, activeLayerIsGroup, isPlaying,
+  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, cols, rows, onResizeCanvas, font, onSetFont, useFontBlocks, onSetUseFontBlocks, eyedropperModifier, onSetEyedropperModifier, activeLayerIsGroup, isPlaying,
   fileMenuOpen: controlledFileMenuOpen, onSetFileMenuOpen,
-  zoom, onSetZoom, onFitZoom,
+  zoom, onSetZoom, onFitZoom, dpr,
 }: AnsiEditorToolbarProps) {
   const toolsDisabled = activeLayerIsGroup || isPlaying
   const isRectActive = brush.tool === 'rect-outline' || brush.tool === 'rect-filled'
@@ -103,7 +102,6 @@ export function AnsiEditorToolbar({
           cols={cols ?? 80} rows={rows ?? 25} onResizeCanvas={onResizeCanvas ?? (() => {})}
           font={font ?? 'IBM_VGA_8x16'} onSetFont={onSetFont ?? (() => {})}
           useFontBlocks={useFontBlocks ?? true} onSetUseFontBlocks={onSetUseFontBlocks ?? (() => {})}
-          dprCompensate={dprCompensate ?? false} onSetDprCompensate={onSetDprCompensate ?? (() => {})}
           eyedropperModifier={eyedropperModifier ?? DEFAULT_EYEDROPPER_MODIFIER}
           onSetEyedropperModifier={onSetEyedropperModifier ?? (() => {})}
         />
@@ -506,7 +504,7 @@ export function AnsiEditorToolbar({
       >
         ↷
       </button>
-      {zoom !== undefined && onSetZoom && onFitZoom && <ZoomControl zoom={zoom} onSetZoom={onSetZoom} onFit={onFitZoom} />}
+      {zoom !== undefined && onSetZoom && onFitZoom && <ZoomControl zoom={zoom} onSetZoom={onSetZoom} onFit={onFitZoom} dpr={dpr} />}
     </div>
   )
 }

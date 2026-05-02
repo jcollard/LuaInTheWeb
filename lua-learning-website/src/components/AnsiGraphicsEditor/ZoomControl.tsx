@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
-import { MAX_ZOOM, MIN_ZOOM, clampZoom } from './useViewport'
+import { MAX_ZOOM, MIN_ZOOM, clampZoom, isCrisp, nextCrispZoom } from './useViewport'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface ZoomControlProps {
   zoom: number
   onSetZoom: (z: number) => void
   onFit: () => void
+  /** Current devicePixelRatio. Used to compute pixel-crispness of the
+   *  selected zoom and surface a snap-to-crisp button when the canvas
+   *  would render with the 1-2-1-2 subpixel-resampling pattern. */
+  dpr?: number
 }
 
 function formatZoomLabel(z: number): string {
@@ -18,7 +22,7 @@ function formatZoomLabel(z: number): string {
   return `${z.toFixed(decimals).replace(/\.?0+$/, '')}x`
 }
 
-export function ZoomControl({ zoom, onSetZoom, onFit }: ZoomControlProps) {
+export function ZoomControl({ zoom, onSetZoom, onFit, dpr = 1 }: ZoomControlProps) {
   // Local input state lets the user type values like "1.2" without
   // each keystroke being clamped/parsed mid-edit. Sync from prop on
   // external zoom changes (slider drag, Fit, Ctrl+wheel).
@@ -36,6 +40,10 @@ export function ZoomControl({ zoom, onSetZoom, onFit }: ZoomControlProps) {
       setTextValue(zoom.toFixed(2))
     }
   }
+
+  const crisp = isCrisp(zoom, dpr)
+  const nextCrisp = crisp ? null : nextCrispZoom(zoom, dpr)
+  const devicePxPerCell = zoom * dpr
 
   return (
     <div className={styles.modeGroup} data-testid="zoom-control">
@@ -55,6 +63,32 @@ export function ZoomControl({ zoom, onSetZoom, onFit }: ZoomControlProps) {
       <span className={styles.zoomLabel} data-testid="zoom-label">
         {formatZoomLabel(zoom)}
       </span>
+      {crisp ? (
+        <span
+          className={styles.zoomCrispOk}
+          data-testid="zoom-crisp-ok"
+          title={`Pixel-crisp: ${formatZoomLabel(zoom)} × DPR ${dpr.toFixed(2)} = ${Math.round(devicePxPerCell)} device px / source px`}
+          aria-label="Pixel-crisp at this zoom"
+        >
+          ✓
+        </span>
+      ) : (
+        <button
+          type="button"
+          className={styles.zoomCrispWarn}
+          onClick={() => { if (nextCrisp !== null) onSetZoom(nextCrisp) }}
+          disabled={nextCrisp === null}
+          data-testid="zoom-crisp-snap"
+          title={
+            nextCrisp !== null
+              ? `${formatZoomLabel(zoom)} × DPR ${dpr.toFixed(2)} = ${devicePxPerCell.toFixed(2)} device px / source px (uneven). Click to snap to ${formatZoomLabel(nextCrisp)}.`
+              : `${formatZoomLabel(zoom)} × DPR ${dpr.toFixed(2)} = ${devicePxPerCell.toFixed(2)} device px / source px (uneven). No crisp value available below max zoom.`
+          }
+          aria-label="Snap to next pixel-crisp zoom"
+        >
+          ⚠
+        </button>
+      )}
       <input
         type="number"
         min={MIN_ZOOM}

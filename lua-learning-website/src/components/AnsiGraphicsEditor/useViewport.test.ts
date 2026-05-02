@@ -10,6 +10,8 @@ import {
   SNAP_TOLERANCE,
   clampZoom,
   fitZoom,
+  isCrisp,
+  nextCrispZoom,
   snapZoom,
   useViewport,
   zoomAtPoint,
@@ -185,5 +187,62 @@ describe('useViewport', () => {
     const { result } = renderHook(() => useViewport(1))
     act(() => result.current.setZoom(2.5))
     expect(result.current.zoom).toBe(2.5)
+  })
+})
+
+describe('isCrisp', () => {
+  it('integer zooms are crisp at integer DPR', () => {
+    expect(isCrisp(1, 1)).toBe(true)
+    expect(isCrisp(2, 1)).toBe(true)
+    expect(isCrisp(3, 2)).toBe(true)
+  })
+
+  it('integer zoom is NOT crisp on fractional DPR', () => {
+    expect(isCrisp(1, 1.5)).toBe(false)
+    expect(isCrisp(1, 1.25)).toBe(false)
+    expect(isCrisp(3, 1.5)).toBe(false)
+  })
+
+  it('fractional zoom can be crisp on fractional DPR', () => {
+    // zoom=2 on DPR=1.5 → 3 device px (crisp)
+    expect(isCrisp(2, 1.5)).toBe(true)
+    // zoom=4/3 on DPR=1.5 → 2 device px (crisp)
+    expect(isCrisp(4 / 3, 1.5)).toBe(true)
+    // zoom=0.8 on DPR=1.25 → 1 device px (crisp)
+    expect(isCrisp(0.8, 1.25)).toBe(true)
+  })
+
+  it('non-positive DPR is treated as not-crisp (degenerate)', () => {
+    expect(isCrisp(1, 0)).toBe(false)
+    expect(isCrisp(1, -1)).toBe(false)
+  })
+})
+
+describe('nextCrispZoom', () => {
+  it('returns the same zoom when already crisp', () => {
+    expect(nextCrispZoom(2, 1)).toBe(2)
+    expect(nextCrispZoom(2, 1.5)).toBe(2)
+  })
+
+  it('snaps up to the next crisp value (DPR=1: integers only)', () => {
+    expect(nextCrispZoom(1.22, 1)).toBe(2)
+    expect(nextCrispZoom(2.5, 1)).toBe(3)
+  })
+
+  it('snaps to fractional crisp values on fractional DPR', () => {
+    // DPR=1.5 → crisp at k/1.5: 2/3 ≈ 0.667, 4/3 ≈ 1.333, 2, 8/3 ≈ 2.667, ...
+    expect(nextCrispZoom(1.22, 1.5)).toBeCloseTo(4 / 3, 5)
+    expect(nextCrispZoom(0.5, 1.5)).toBeCloseTo(2 / 3, 5)
+  })
+
+  it('returns null when no crisp value fits within MAX_ZOOM', () => {
+    // Pathological: zoom near MAX with a DPR where the next k/dpr exceeds MAX.
+    // At zoom = MAX_ZOOM (8) on DPR=1, MAX itself is crisp so returns 8.
+    // Push past MAX: zoom = 8.001 on DPR=1 → next integer is 9 which > MAX.
+    expect(nextCrispZoom(MAX_ZOOM + 0.5, 1)).toBeNull()
+  })
+
+  it('returns null on non-positive DPR', () => {
+    expect(nextCrispZoom(1, 0)).toBeNull()
   })
 })

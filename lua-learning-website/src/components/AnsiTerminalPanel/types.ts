@@ -47,20 +47,12 @@ export interface AnsiTerminalPanelProps {
    */
   useFontBlocks?: boolean
   /**
-   * When true, snap the chosen integer scale UP to the smallest
-   * multiple where `scale × devicePixelRatio` is integer, producing
-   * uniform device-pixel mapping (no 1-2-1-2 browser nearest-neighbor
-   * artifact at fractional DPRs). Falls back to nominal scale when the
-   * snapped value would overflow the container. No effect on fit / fill
-   * modes or at integer DPRs.
-   */
-  dprCompensate?: boolean
-  /**
    * Numeric zoom multiplier (1 = 1x, 2 = 2x, 2.5 = 2.5x, etc.). When
    * present, takes precedence over `scaleMode` and is fed directly into
-   * the renderer's CSS sizing path. `dprCompensate` still applies to snap
-   * the value up to a DPR-clean multiple. Used by the ANSI editor for
-   * user-driven viewport zoom; runtime callers continue using `scaleMode`.
+   * the renderer's CSS sizing path verbatim. Used by the ANSI editor
+   * for user-driven viewport zoom; runtime callers continue using
+   * `scaleMode`. Pixel-crispness on fractional DPR is surfaced via a
+   * UI indicator + snap button rather than being silently mutated here.
    */
   zoom?: number
   /**
