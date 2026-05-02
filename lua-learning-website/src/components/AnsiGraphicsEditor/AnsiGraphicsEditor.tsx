@@ -448,6 +448,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
               fontId={font}
               useFontBlocks={useFontBlocks}
               onTerminalReady={wrappedOnTerminalReady}
+              surroundClassName={styles.editorSurround}
             />
           </div>
           {activeLayerIsDrawn && (

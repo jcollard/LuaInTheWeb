@@ -60,4 +60,11 @@ export interface AnsiTerminalPanelProps {
    * Called with the handle on mount and with null on unmount.
    */
   onTerminalReady?: (handle: AnsiTerminalHandle | null) => void
+  /**
+   * Extra class merged onto the panel's outer container element. Lets
+   * consumers layer additional surround styling (e.g. the ANSI editor's
+   * lighter background + border) without affecting other consumers
+   * (e.g. runtime ANSI playback) that share this panel.
+   */
+  surroundClassName?: string
 }

@@ -196,6 +196,38 @@ describe('AnsiTerminalPanel — pixel variant (default)', () => {
     expect(mockRenderer.dispose).toHaveBeenCalled()
   })
 
+  it('applies surroundClassName to the container element (pixel variant)', async () => {
+    const { container } = render(
+      <AnsiTerminalPanel surroundClassName="editor-surround" onTerminalReady={vi.fn()} />,
+    )
+    await act(async () => {})
+    const outer = container.firstChild as HTMLElement
+    expect(outer.classList.contains('container')).toBe(true)
+    expect(outer.classList.contains('editor-surround')).toBe(true)
+  })
+
+  it('omits surroundClassName when not provided (pixel variant)', async () => {
+    const { container } = render(<AnsiTerminalPanel onTerminalReady={vi.fn()} />)
+    await act(async () => {})
+    const outer = container.firstChild as HTMLElement
+    expect(outer.classList.contains('container')).toBe(true)
+    expect(outer.className).not.toMatch(/editor-surround/)
+  })
+
+  it('applies surroundClassName to the container element (xterm variant)', async () => {
+    const { container } = render(
+      <AnsiTerminalPanel
+        useFontBlocks={false}
+        surroundClassName="editor-surround"
+        onTerminalReady={vi.fn()}
+      />,
+    )
+    await act(async () => {})
+    const outer = container.firstChild as HTMLElement
+    expect(outer.classList.contains('container')).toBe(true)
+    expect(outer.classList.contains('editor-surround')).toBe(true)
+  })
+
   it('constructs a new renderer on useFontBlocks toggle (key-swap remount)', async () => {
     const onTerminalReady = vi.fn()
     const { rerender, unmount } = render(

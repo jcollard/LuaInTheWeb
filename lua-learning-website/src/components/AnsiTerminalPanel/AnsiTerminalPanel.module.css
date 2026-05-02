@@ -23,12 +23,22 @@
   place-content: safe center;
   width: 100%;
   height: 100%;
-  background: #000d11;
+  /* Surround background — variable so editor consumers can lighten it
+     via `surroundClassName` without affecting runtime playback. */
+  background: var(--ansi-surround-bg, #000d11);
   overflow: auto;
 }
 
 .terminalWrapper {
   outline: none;
+  /* Border around the drawable canvas. Longhands (not the `border`
+     shorthand) so editor consumers can drive each piece via custom
+     properties — the shorthand doesn't reliably substitute nested
+     `var()` references in every browser. Defaults to no border so
+     runtime playback stays chrome-free. */
+  border-style: var(--ansi-canvas-border-style, none);
+  border-width: var(--ansi-canvas-border-width, 0);
+  border-color: var(--ansi-canvas-border-color, transparent);
   border-radius: 0;
   cursor: default;
   user-select: none;
