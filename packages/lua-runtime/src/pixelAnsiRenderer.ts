@@ -25,6 +25,7 @@ import {
 } from './fontRegistry'
 import { FONT_ATLASES, type FontAtlas } from './glyphAtlas.generated'
 import { createGlyphContext, rasterizeGlyph } from './glyphRaster'
+import { getMissingBlockFallbacks } from './blockGlyphReference'
 
 export interface PixelAnsiRendererTheme {
   /** Foreground color as 0xRRGGBB when cell has default fg. */
@@ -74,11 +75,16 @@ function defaultCodepointSet(): number[] {
   const out: number[] = []
   for (let c = 0x20; c <= 0x7e; c++) out.push(c)          // ASCII printable
   for (let c = 0xa0; c <= 0xff; c++) out.push(c)          // Latin-1 supplement
+  for (let c = 0x2000; c <= 0x206f; c++) out.push(c)      // General Punctuation
+  for (let c = 0x2100; c <= 0x214f; c++) out.push(c)      // Letterlike Symbols
+  for (let c = 0x2190; c <= 0x21ff; c++) out.push(c)      // Arrows
+  for (let c = 0x2200; c <= 0x22ff; c++) out.push(c)      // Math Operators
+  for (let c = 0x2300; c <= 0x23ff; c++) out.push(c)      // Misc Technical
   for (let c = 0x2500; c <= 0x257f; c++) out.push(c)      // Box drawing
   for (let c = 0x2580; c <= 0x259f; c++) out.push(c)      // Block elements
   for (let c = 0x25a0; c <= 0x25ff; c++) out.push(c)      // Geometric shapes
-  for (let c = 0x2190; c <= 0x21ff; c++) out.push(c)      // Arrows
-  for (let c = 0x2660; c <= 0x266f; c++) out.push(c)      // Card suits / misc
+  for (let c = 0x2600; c <= 0x267f; c++) out.push(c)      // Misc Symbols (smileys, suits, music)
+  for (let c = 0x2700; c <= 0x27bf; c++) out.push(c)      // Dingbats
   return out
 }
 
@@ -353,9 +359,21 @@ export class PixelAnsiRenderer implements PixelAnsiRendererHandle {
     // Atlas entries come first — they're the pixel-exact EBDT extractions
     // the whole renderer exists for. Anything missing from the atlas falls
     // back to fillText at the font's cell size (acceptable quality loss
-    // for chars beyond the strike's coverage; block-drawing / box-drawing
-    // chars should always be in the atlas).
+    // for chars beyond the strike's coverage).
     for (const [cp, mask] of this.atlas.glyphs) {
+      this.glyphMasks.set(cp, mask)
+    }
+
+    // Canonical block-element fallback: the IBM VGA 8x16 ROM charset
+    // omits U+2595 ▕, the upper/lower eighths, and the quadrants. Install
+    // hand-coded patterns for any block-element codepoint missing from
+    // the atlas BEFORE the fillText fallback so the canonical pattern
+    // wins over whatever a browser fallback font would draw.
+    for (const [cp, mask] of getMissingBlockFallbacks(
+      this.cellW,
+      this.cellH,
+      (c) => this.glyphMasks.has(c),
+    )) {
       this.glyphMasks.set(cp, mask)
     }
 

@@ -13,7 +13,24 @@ function entry(char: string, name: string): CharEntry {
   return { char, name }
 }
 
+function range(from: string, to: string): CharEntry[] {
+  const out: CharEntry[] = []
+  for (let cp = from.codePointAt(0)!; cp <= to.codePointAt(0)!; cp++) {
+    out.push(entry(String.fromCodePoint(cp), String.fromCodePoint(cp)))
+  }
+  return out
+}
+
 export const CHAR_PALETTE_CATEGORIES: CharCategory[] = [
+  {
+    id: 'alpha',
+    label: 'Alpha',
+    chars: [
+      ...range('0', '9'),
+      ...range('A', 'Z'),
+      ...range('a', 'z'),
+    ],
+  },
   {
     id: 'ascii',
     label: 'ASCII',
@@ -164,12 +181,28 @@ export const CHAR_PALETTE_CATEGORIES: CharCategory[] = [
   },
 ]
 
-const CHAR_TO_CATEGORY = new Map<string, string>(
-  CHAR_PALETTE_CATEGORIES.flatMap(cat =>
-    cat.chars.map((e): [string, string] => [e.char, cat.id])
-  )
-)
+const CHAR_TO_CATEGORY = new Map<string, string>()
+const CHAR_TO_NAME = new Map<string, string>()
+for (const cat of CHAR_PALETTE_CATEGORIES) {
+  for (const e of cat.chars) {
+    CHAR_TO_CATEGORY.set(e.char, cat.id)
+    CHAR_TO_NAME.set(e.char, e.name)
+  }
+}
 
 export function findCategoryForChar(char: string): string | undefined {
   return CHAR_TO_CATEGORY.get(char)
+}
+
+/**
+ * Curated name for the char if present in the palette categories,
+ * otherwise the codepoint in `U+####` form so the filter input still
+ * has something to match on.
+ */
+export function getCharName(char: string): string {
+  const curated = CHAR_TO_NAME.get(char)
+  if (curated) return curated
+  const cp = char.codePointAt(0)
+  if (cp === undefined) return ''
+  return `U+${cp.toString(16).toUpperCase().padStart(4, '0')}`
 }

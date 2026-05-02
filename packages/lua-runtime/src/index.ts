@@ -129,8 +129,10 @@ export {
 } from './ansi-fonts-inline.generated'
 export {
   getBlockReference,
+  getMissingBlockFallbacks,
   BLOCK_GLYPH_REFERENCE_8X16,
 } from './blockGlyphReference'
+export { getFontCoverage } from './fontCoverage'
 export {
   rasterizeGlyphForDebug,
   type GlyphDebugInfo,

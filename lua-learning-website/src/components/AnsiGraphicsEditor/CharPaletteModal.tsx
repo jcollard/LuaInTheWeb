@@ -1,18 +1,40 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { ReactElement } from 'react'
+import { getFontById, getFontCoverage } from '@lua-learning/lua-runtime'
 import { CHAR_PALETTE_CATEGORIES, findCategoryForChar } from './charPaletteData'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface CharPaletteModalProps {
   anchorRect?: DOMRect
   currentChar?: string
+  /** Active font id — used to preview each glyph in the active font and to hide chars the font does not ship. */
+  fontId?: string
   onSelect: (char: string) => void
   onClose: () => void
 }
 
-export function CharPaletteModal({ anchorRect, currentChar, onSelect, onClose }: CharPaletteModalProps): ReactElement {
-  const [activeTab, setActiveTab] = useState(() => findCategoryForChar(currentChar ?? '') ?? 'ascii')
-  const activeCategory = CHAR_PALETTE_CATEGORIES.find(c => c.id === activeTab)!
+export function CharPaletteModal({ anchorRect, currentChar, fontId, onSelect, onClose }: CharPaletteModalProps): ReactElement {
+  const [activeTab, setActiveTab] = useState(() => findCategoryForChar(currentChar ?? '') ?? 'alpha')
+  // Hide chars the active font does not ship — the WOFF preview would
+  // fall through to the browser's default font, which doesn't match the
+  // canvas. Only categories with at least one covered glyph are shown.
+  const filteredCategories = useMemo(() => {
+    if (!fontId) return CHAR_PALETTE_CATEGORIES
+    const cov = getFontCoverage(fontId)
+    return CHAR_PALETTE_CATEGORIES
+      .map(cat => ({
+        ...cat,
+        chars: cat.chars.filter(e => cov.has(e.char.codePointAt(0) ?? -1)),
+      }))
+      .filter(cat => cat.chars.length > 0)
+  }, [fontId])
+  const activeCategory = filteredCategories.find(c => c.id === activeTab)
+    ?? filteredCategories[0]!
+  const previewFontFamily = fontId ? getFontById(fontId)?.fontFamily : undefined
+  const cellStyle = useMemo(
+    () => previewFontFamily ? { fontFamily: `"${previewFontFamily}", monospace` } : undefined,
+    [previewFontFamily],
+  )
 
   function handleCharClick(char: string): void {
     onSelect(char)
@@ -34,7 +56,7 @@ export function CharPaletteModal({ anchorRect, currentChar, onSelect, onClose }:
           </button>
         </header>
         <div className={styles.charPaletteTabs}>
-          {CHAR_PALETTE_CATEGORIES.map(cat => (
+          {filteredCategories.map(cat => (
             <button
               key={cat.id}
               type="button"
@@ -55,6 +77,7 @@ export function CharPaletteModal({ anchorRect, currentChar, onSelect, onClose }:
                   key={charEntry.char}
                   type="button"
                   className={`${styles.charCell}${isSelected ? ` ${styles.charCellSelected}` : ''}`}
+                  style={cellStyle}
                   title={charEntry.name}
                   onClick={() => handleCharClick(charEntry.char)}
                   data-testid="char-cell"

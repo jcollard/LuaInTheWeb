@@ -476,6 +476,7 @@ export function AnsiEditorToolbar({
             <CharPaletteModal
               anchorRect={charButtonRef.current?.getBoundingClientRect()}
               currentChar={brush.char}
+              fontId={font}
               onSelect={onSetChar}
               onClose={() => setCharPaletteOpen(false)}
             />

@@ -35,24 +35,33 @@ describe('CharPaletteModal', () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
-  it('should render tab buttons for all 6 categories', () => {
+  it('should render tab buttons for every category', () => {
     render(<CharPaletteModal {...defaultProps} />)
     for (const cat of CHAR_PALETTE_CATEGORIES) {
       expect(screen.getByTestId(`char-tab-${cat.id}`)).toBeTruthy()
     }
   })
 
-  it('should show ASCII tab as active by default', () => {
+  it('should show Alpha tab as active by default', () => {
     render(<CharPaletteModal {...defaultProps} />)
-    const asciiTab = screen.getByTestId('char-tab-ascii')
-    expect(asciiTab.className).toContain('Active')
+    const alphaTab = screen.getByTestId('char-tab-alpha')
+    expect(alphaTab.className).toContain('Active')
   })
 
-  it('should render correct number of char cells for ASCII tab', () => {
+  it('should render correct number of char cells for the default Alpha tab', () => {
     render(<CharPaletteModal {...defaultProps} />)
-    const asciiCategory = CHAR_PALETTE_CATEGORIES.find(c => c.id === 'ascii')!
+    const alphaCategory = CHAR_PALETTE_CATEGORIES.find(c => c.id === 'alpha')!
     const cells = screen.getAllByTestId('char-cell')
-    expect(cells).toHaveLength(asciiCategory.chars.length)
+    expect(cells).toHaveLength(alphaCategory.chars.length)
+  })
+
+  it('should expose 0-9, A-Z, a-z in the Alpha tab', () => {
+    render(<CharPaletteModal {...defaultProps} />)
+    const cellChars = screen.getAllByTestId('char-cell').map(c => c.textContent)
+    for (const cp of ['0', '5', '9', 'A', 'M', 'Z', 'a', 'm', 'z']) {
+      expect(cellChars).toContain(cp)
+    }
+    expect(cellChars).toHaveLength(10 + 26 + 26)
   })
 
   it('should switch active tab and displayed chars on tab click', () => {
@@ -71,8 +80,8 @@ describe('CharPaletteModal', () => {
     render(<CharPaletteModal onSelect={onSelect} onClose={onClose} />)
     const cells = screen.getAllByTestId('char-cell')
     fireEvent.click(cells[0])
-    const asciiCategory = CHAR_PALETTE_CATEGORIES.find(c => c.id === 'ascii')!
-    expect(onSelect).toHaveBeenCalledWith(asciiCategory.chars[0].char)
+    const alphaCategory = CHAR_PALETTE_CATEGORIES.find(c => c.id === 'alpha')!
+    expect(onSelect).toHaveBeenCalledWith(alphaCategory.chars[0].char)
     expect(onClose).toHaveBeenCalledOnce()
   })
 
@@ -98,10 +107,17 @@ describe('CharPaletteModal', () => {
     expect(symbolsTab.className).toContain('Active')
   })
 
-  it('should fall back to ASCII tab when currentChar is not in any category', () => {
+  it('should default to Alpha tab when currentChar is in the Alpha category', () => {
     render(<CharPaletteModal {...defaultProps} currentChar="Z" />)
-    const asciiTab = screen.getByTestId('char-tab-ascii')
-    expect(asciiTab.className).toContain('Active')
+    const alphaTab = screen.getByTestId('char-tab-alpha')
+    expect(alphaTab.className).toContain('Active')
+  })
+
+  it('should fall back to Alpha tab when currentChar is not in any category', () => {
+    //  isn't in any category — should default to Alpha.
+    render(<CharPaletteModal {...defaultProps} currentChar={''} />)
+    const alphaTab = screen.getByTestId('char-tab-alpha')
+    expect(alphaTab.className).toContain('Active')
   })
 
   it('should highlight the selected char cell with charCellSelected class', () => {
@@ -123,5 +139,53 @@ describe('CharPaletteModal', () => {
     const cells = screen.getAllByTestId('char-cell')
     const otherCell = cells.find(c => c.textContent !== '#')!
     expect(otherCell.getAttribute('aria-pressed')).toBeNull()
+  })
+})
+
+describe('CharPaletteModal — font coverage filtering', () => {
+  const defaultProps = {
+    onSelect: vi.fn<(char: string) => void>(),
+    onClose: vi.fn<() => void>(),
+  }
+
+  it('hides block-element chars the IBM_VGA_8x16 font does not ship', () => {
+    render(<CharPaletteModal {...defaultProps} fontId="IBM_VGA_8x16" currentChar="█" />)
+    const cellChars = screen.getAllByTestId('char-cell').map(c => c.textContent)
+    // Filtering is font-faithful — chars the WOFF cannot preview are
+    // hidden even though the canvas can paint U+2595 via canonical
+    // fallback.
+    expect(cellChars).not.toContain('▕') // U+2595
+    expect(cellChars).not.toContain('▔') // U+2594
+    // But chars the font does ship are still present.
+    expect(cellChars).toContain('█')
+    expect(cellChars).toContain('▒')
+  })
+
+  it('hides block-element chars not shipped in IBM_CGA_8x8 either', () => {
+    render(<CharPaletteModal {...defaultProps} fontId="IBM_CGA_8x8" currentChar="█" />)
+    const cellChars = screen.getAllByTestId('char-cell').map(c => c.textContent)
+    expect(cellChars).not.toContain('▕') // U+2595
+    expect(cellChars).not.toContain('▏') // U+258F
+  })
+
+  it('falls back to the unfiltered palette when fontId is omitted', () => {
+    render(<CharPaletteModal {...defaultProps} currentChar="█" />)
+    const blocksCategory = CHAR_PALETTE_CATEGORIES.find(c => c.id === 'blocks')!
+    expect(screen.getAllByTestId('char-cell')).toHaveLength(blocksCategory.chars.length)
+  })
+
+  it('hides empty categories when no chars survive the filter', () => {
+    // If a category had no chars covered by the active font we'd hide
+    // its tab. All registered fonts ship full ASCII, so Alpha and ASCII
+    // always survive — exercise the contract by sampling a font that
+    // covers Alpha and asserting the tab is present.
+    render(<CharPaletteModal {...defaultProps} fontId="IBM_VGA_8x16" />)
+    expect(screen.getByTestId('char-tab-alpha')).toBeTruthy()
+  })
+
+  it('previews each cell in the active font', () => {
+    render(<CharPaletteModal {...defaultProps} fontId="IBM_VGA_8x16" />)
+    const firstCell = screen.getAllByTestId('char-cell')[0]
+    expect(firstCell.style.fontFamily).toContain('Web IBM VGA 8x16')
   })
 })

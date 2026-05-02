@@ -1,16 +1,18 @@
 /**
  * Hand-coded 8×16 binary patterns for the Unicode "Block Elements" range
- * (U+2580–U+259F). Diagnostic reference only — consumed by the
- * `/glyph-debug` page so users can compare the font's actual glyphs
- * against a canonical Bayer-dither / fractional-block interpretation.
+ * (U+2580–U+259F). Two consumers:
  *
- * NOT used as a production fallback: font-author choices for shades
- * (e.g. Int10h's `1144` ░ Bayer phase) legitimately differ from this
- * reference, and users authoring ANSI art expect the font's glyphs.
+ * 1. `/glyph-debug` page (via `getBlockReference`) — compares the font's
+ *    actual glyphs against a canonical interpretation.
+ * 2. Pixel renderer (via `getMissingBlockFallbacks`) — fills in the cells
+ *    a font does not ship glyphs for. The IBM VGA 8x16 ROM charset omits
+ *    U+2595 (▕), the upper/lower eighths, and the quadrants, so without
+ *    a fallback those characters render as empty cells. Font glyphs
+ *    always win when present; the reference only fills gaps.
  *
  * Only 8×16 is supported. Other cell sizes get `undefined` from
- * `getBlockReference(cp, cellW, cellH)` and the GlyphDebug page shows
- * a "no reference available" placeholder.
+ * `getBlockReference(cp, cellW, cellH)` and an empty map from
+ * `getMissingBlockFallbacks` — callers handle other sizes separately.
  *
  * Mask layout: row-major Uint8Array of length 128 (8 cols × 16 rows).
  * 1 = foreground, 0 = background. Index = `y * 8 + x`.
@@ -138,4 +140,28 @@ export function getBlockReference(
 ): Uint8Array | undefined {
   if (cellW !== W || cellH !== H) return undefined
   return BLOCK_GLYPH_REFERENCE_8X16.get(codepoint)
+}
+
+/**
+ * Build a map of canonical block-element masks for codepoints the caller
+ * reports as missing. Used by the pixel renderer so a font with gaps in
+ * U+2580–U+259F (e.g. IBM VGA 8x16's ROM charset) still renders every
+ * block element with the canonical pattern instead of an empty cell or
+ * a fallback-font glyph.
+ *
+ * Returns an empty map for cell sizes other than 8×16 — callers should
+ * handle other sizes separately. The reference only carries 8×16 patterns.
+ */
+export function getMissingBlockFallbacks(
+  cellW: number,
+  cellH: number,
+  has: (codepoint: number) => boolean,
+): Map<number, Uint8Array> {
+  const out = new Map<number, Uint8Array>()
+  if (cellW !== W || cellH !== H) return out
+  for (const [cp, mask] of BLOCK_GLYPH_REFERENCE_8X16) {
+    if (has(cp)) continue
+    out.set(cp, mask)
+  }
+  return out
 }

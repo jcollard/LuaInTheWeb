@@ -29,17 +29,16 @@ const FONTS = [
   { id: 'IBM_VGA_9x16',  ttfPath: 'scripts/fonts/MxPlus_IBM_VGA_9x16.ttf',  cellW: 9, cellH: 16, nativePpem: 16 },
 ]
 
-const CODEPOINTS = (() => {
-  const out = []
-  for (let c = 0x20; c <= 0x7e; c++) out.push(c)          // printable ASCII
-  for (let c = 0xa0; c <= 0xff; c++) out.push(c)          // Latin-1 supplement
-  for (let c = 0x2500; c <= 0x257f; c++) out.push(c)      // Box drawing
-  for (let c = 0x2580; c <= 0x259f; c++) out.push(c)      // Block elements
-  for (let c = 0x25a0; c <= 0x25ff; c++) out.push(c)      // Geometric shapes
-  for (let c = 0x2190; c <= 0x21ff; c++) out.push(c)      // Arrows
-  for (let c = 0x2660; c <= 0x266f; c++) out.push(c)      // Card suits / misc
-  return out
-})()
+/**
+ * Harvest set per font = the font's full cmap (`fontkit`'s `characterSet`).
+ * The IBM ROM-faithful fonts in this repo ship ~700–800 codepoints each,
+ * so mining the cmap captures everything the editor's character palette
+ * could surface (smileys, ™, ✓, math operators, etc.) without curating
+ * a static range list that drifts behind the palette.
+ */
+function fontCodepoints(font) {
+  return Array.from(font.characterSet).sort((a, b) => a - b)
+}
 
 function parseBitmapStrike(fontBuf, fontkitFont, ppem) {
   const eblcEntry = fontkitFont.directory.tables.EBLC
@@ -117,13 +116,22 @@ function extractAtlas(entry) {
     throw new Error(`[${entry.id}] ${err.message}`)
   }
 
+  const codepoints = fontCodepoints(font)
   const glyphs = []
   let missing = 0
-  for (const cp of CODEPOINTS) {
+  let blank = 0
+  for (const cp of codepoints) {
     const glyph = font.glyphForCodePoint(cp)
     if (!glyph || glyph.id === 0) { missing++; continue }
     const raw = extractGlyphBytes(strike, glyph.id, bytesPerGlyph)
     if (!raw) { missing++; continue }
+    // Some ROM-faithful TTFs map a handful of codepoints (U+0020 SPACE,
+    // U+00A0 NBSP, plus a few hiragana stubs left over from vendor cmap
+    // tooling) to all-zero EBDT bitmaps. Drop them: the renderer paints
+    // an empty cell for any codepoint missing from the atlas, so SPACE
+    // still works, and the editor's character palette no longer surfaces
+    // hiragana glyphs that render blank on the canvas.
+    if (raw.every((b) => b === 0)) { blank++; continue }
     const hex = Array.from(raw, (v) => v.toString(16).padStart(2, '0')).join('')
     glyphs.push([cp, hex])
   }
@@ -132,7 +140,7 @@ function extractAtlas(entry) {
     throw new Error(`[${entry.id}] extracted zero glyphs — is this really a bitmap font at ${entry.nativePpem}ppem?`)
   }
 
-  console.log(`  [${entry.id}] ${glyphs.length} glyphs, ${missing} missing (fall back at runtime)`)
+  console.log(`  [${entry.id}] ${glyphs.length}/${codepoints.length} glyphs extracted (skipped ${missing} unsupported strike formats, ${blank} blank bitmaps)`)
   return glyphs
 }
 

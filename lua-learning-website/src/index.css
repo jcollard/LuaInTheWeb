@@ -17,6 +17,30 @@
   box-sizing: border-box;
 }
 
+/* Theme-consistent scrollbars across the app. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--theme-scrollbar-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--theme-scrollbar-thumb);
+  border-radius: 5px;
+  border: 2px solid var(--theme-scrollbar-bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-scrollbar-thumb-hover);
+}
+::-webkit-scrollbar-corner {
+  background: var(--theme-scrollbar-bg);
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-scrollbar-thumb) var(--theme-scrollbar-bg);
+}
+
 html, body, #root {
   margin: 0;
   padding: 0;
