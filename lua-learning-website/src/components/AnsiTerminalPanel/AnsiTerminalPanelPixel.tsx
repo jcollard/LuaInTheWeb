@@ -23,6 +23,7 @@ export function AnsiTerminalPanelPixel({
   fontId = DEFAULT_FONT_ID,
   zoom,
   onTerminalReady,
+  surroundClassName,
 }: AnsiTerminalPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -167,10 +168,14 @@ export function AnsiTerminalPanelPixel({
     wrapperRef.current?.focus()
   }, [])
 
+  const containerClassName = surroundClassName
+    ? `${styles.container} ${surroundClassName}`
+    : styles.container
+
   return (
     <div
       ref={containerRef}
-      className={styles.container}
+      className={containerClassName}
       onMouseDown={handleMouseDown}
     >
       <div ref={wrapperRef} className={styles.terminalWrapper} tabIndex={0} />

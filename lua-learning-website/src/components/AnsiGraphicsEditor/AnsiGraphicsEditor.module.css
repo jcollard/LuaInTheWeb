@@ -32,6 +32,19 @@
   overflow: hidden;
 }
 
+/* Surround treatment for the AnsiTerminalPanel container while it's
+   embedded in the editor. Lightens the surround so a black canvas no
+   longer blends into the chrome, and frames the canvas with a 1px
+   border that reads against any content. Cascades into the panel via
+   CSS custom properties so runtime playback (which doesn't apply this
+   class) stays unchanged. */
+.editorSurround {
+  --ansi-surround-bg: var(--theme-bg-secondary);
+  --ansi-canvas-border-style: solid;
+  --ansi-canvas-border-width: 1px;
+  --ansi-canvas-border-color: var(--theme-border);
+}
+
 .canvasMove {
   cursor: grab;
 }
