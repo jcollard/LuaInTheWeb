@@ -183,6 +183,24 @@ export class AnsiController {
     // Request ANSI tab from UI
     this.handle = await this.callbacks.onRequestAnsiTab(this.ansiId)
 
+    // Sync the freshly-attached handle to whatever state the controller
+    // accumulated before start(). set_screen() called before ansi.start()
+    // (the pattern every example uses) updates currentCols/currentRows/
+    // currentFont but cannot push to a null handle, so without this the
+    // panel stays at its mount-time 80×25 / default font even though the
+    // controller is already compositing at the screen's real dims.
+    // Only forward when the controller has moved off defaults — panels
+    // mount at the same defaults, so a redundant resize is avoidable.
+    if (this.currentCols !== DEFAULT_ANSI_COLS || this.currentRows !== DEFAULT_ANSI_ROWS) {
+      this.handle.resize?.(this.currentCols, this.currentRows)
+    }
+    if (this.currentFont !== DEFAULT_ANSI_FONT_ID) {
+      this.handle.setFontFamily?.(this.currentFont)
+    }
+    if (this.currentUseFontBlocks !== DEFAULT_USE_FONT_BLOCKS) {
+      this.handle.setUseFontBlocks?.(this.currentUseFontBlocks)
+    }
+
     // Register close handler so UI can stop us when tab is closed
     this.callbacks.registerAnsiCloseHandler?.(this.ansiId, () => this.stop())
 
@@ -284,8 +302,8 @@ export class AnsiController {
   /**
    * Apply per-screen font + renderer-mode settings to the attached handle,
    * skipping calls when the values are unchanged. Safe to call before the
-   * handle is attached — values are remembered on the controller and
-   * applied the next time `setScreen` runs after a handle attaches.
+   * handle is attached — values are remembered on the controller, and
+   * `start()` forwards them to the handle once it attaches.
    */
   private applyFontSettings(font: string, useFontBlocks: boolean): void {
     if (font !== this.currentFont) {
