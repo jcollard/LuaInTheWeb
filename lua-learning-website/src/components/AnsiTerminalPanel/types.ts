@@ -8,8 +8,13 @@ import type { ScaleMode } from '../AnsiGraphicsEditor/types'
 export interface AnsiTerminalHandle {
   /** Write data (including ANSI escape sequences) to the terminal. */
   write: (data: string) => void
-  /** The container element for keyboard event capture. */
+  /** The wrapper element holding the canvas. Cell-coord math uses this
+   *  as `container` (the post-transform/post-scroll rect basis). */
   container: HTMLElement
+  /** The scrollable outer element (overflow: auto). The editor attaches
+   *  pan / Ctrl+wheel-zoom listeners here. Same element as `container`
+   *  on consumers that don't need a separate scroll surface. */
+  scrollContainer: HTMLElement
   /** Dispose of the terminal handle (lifecycle is component-managed; no-op for external callers). */
   dispose: () => void
   /** Enable/disable the CRT monitor effect with optional intensity or per-effect config. */
@@ -42,14 +47,14 @@ export interface AnsiTerminalPanelProps {
    */
   useFontBlocks?: boolean
   /**
-   * When true, snap the chosen integer scale UP to the smallest
-   * multiple where `scale × devicePixelRatio` is integer, producing
-   * uniform device-pixel mapping (no 1-2-1-2 browser nearest-neighbor
-   * artifact at fractional DPRs). Falls back to nominal scale when the
-   * snapped value would overflow the container. No effect on fit / fill
-   * modes or at integer DPRs.
+   * Numeric zoom multiplier (1 = 1x, 2 = 2x, 2.5 = 2.5x, etc.). When
+   * present, takes precedence over `scaleMode` and is fed directly into
+   * the renderer's CSS sizing path verbatim. Used by the ANSI editor
+   * for user-driven viewport zoom; runtime callers continue using
+   * `scaleMode`. Pixel-crispness on fractional DPR is surfaced via a
+   * UI indicator + snap button rather than being silently mutated here.
    */
-  dprCompensate?: boolean
+  zoom?: number
   /**
    * Callback when the terminal handle becomes available or is disposed.
    * Called with the handle on mount and with null on unmount.

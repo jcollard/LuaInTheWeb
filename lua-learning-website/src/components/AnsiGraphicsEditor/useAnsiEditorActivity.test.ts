@@ -16,7 +16,7 @@ describe('useAnsiEditor isActive gating', () => {
     const onSave = vi.fn()
     const { result } = renderHook(() => useAnsiEditor({ isActive: false, onSave }))
     const container = createMockContainer()
-    const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
+    const handle = { write: vi.fn(), container, scrollContainer: container, dispose: vi.fn(), setCrt: vi.fn() }
     act(() => result.current.onTerminalReady(handle))
 
     // Ctrl+S should be ignored when inactive
@@ -30,7 +30,7 @@ describe('useAnsiEditor isActive gating', () => {
     const onSave = vi.fn()
     const { result } = renderHook(() => useAnsiEditor({ isActive: true, onSave }))
     const container = createMockContainer()
-    const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
+    const handle = { write: vi.fn(), container, scrollContainer: container, dispose: vi.fn(), setCrt: vi.fn() }
     act(() => result.current.onTerminalReady(handle))
 
     act(() => {
@@ -43,7 +43,7 @@ describe('useAnsiEditor isActive gating', () => {
     const onSave = vi.fn()
     const { result } = renderHook(() => useAnsiEditor({ onSave }))
     const container = createMockContainer()
-    const handle = { write: vi.fn(), container, dispose: vi.fn(), setCrt: vi.fn() }
+    const handle = { write: vi.fn(), container, scrollContainer: container, dispose: vi.fn(), setCrt: vi.fn() }
     act(() => result.current.onTerminalReady(handle))
 
     act(() => {

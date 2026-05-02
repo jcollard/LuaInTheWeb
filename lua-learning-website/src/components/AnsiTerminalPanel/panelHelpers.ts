@@ -24,83 +24,42 @@ export function useDprChange(onChange: () => void): void {
   }, [])
 }
 
-/** Options for `computeScale`. */
-export interface ComputeScaleOptions {
-  /**
-   * When true and the mode is an integer mode, snap the chosen scale UP
-   * to the smallest multiple `N ≥ scale` such that `N × dpr` is integer.
-   * This eliminates the 1-2-1-2 device-pixel distribution caused by
-   * fractional DPR (the "column stretching" artifact at DPR=1.5 etc.).
-   * No-op on fit / fill modes (already fractional by design).
-   */
-  dprCompensate?: boolean
-  /** Current `window.devicePixelRatio`. Defaults to 1 when omitted. */
-  dpr?: number
-}
-
-const INTEGER_MODES: ReadonlySet<ScaleMode> = new Set<ScaleMode>([
-  'integer-auto',
-  'integer-1x',
-  'integer-2x',
-  'integer-3x',
-])
-
-/**
- * Snap `scale` up to the smallest integer `N ≥ scale` such that `N × dpr`
- * is an integer. Useful for picking a CSS scale whose device-pixel mapping
- * is uniform (no 1-2-1-2 browser-nearest-neighbor pattern).
- *
- * Examples:
- *   DPR=1.5: scale=1 → 2 (1.5 × 2 = 3). scale=2 → 2. scale=3 → 4.
- *   DPR=1.25: scale=1 → 4 (1.25 × 4 = 5). scale=5 → 8.
- *   DPR=1.0 / 2.0 / 3.0: any integer is clean; returns `ceil(scale)`.
- *
- * Hard cap at 16 — protects against fractional DPRs we'd never expect
- * (e.g. 1.3333...) from looping. 16× source is already excessive.
- */
-export function snapToDprCleanScale(scale: number, dpr: number): number {
-  const MAX = 16
-  let n = Math.max(1, Math.ceil(scale))
-  while (n <= MAX) {
-    const product = n * dpr
-    // Tolerance accounts for floating-point imprecision in DPR values.
-    if (Math.abs(product - Math.round(product)) < 0.001) return n
-    n += 1
-  }
-  // Safety net — return the requested scale unmodified if no clean
-  // multiple exists in [1, MAX]. Caller's visual will be fractional
-  // but rendering is still correct.
-  return Math.max(1, Math.ceil(scale))
-}
 
 /** Compute a numeric scale factor for the chosen mode. */
 export function computeScale(
   mode: ScaleMode,
   container: { w: number; h: number },
   base: { w: number; h: number },
-  options: ComputeScaleOptions = {},
 ): number {
   if (base.w === 0 || base.h === 0) return 1
-  let scale: number
   switch (mode) {
-    case 'integer-1x': scale = 1; break
-    case 'integer-2x': scale = 2; break
-    case 'integer-3x': scale = 3; break
+    case 'integer-1x': return 1
+    case 'integer-2x': return 2
+    case 'integer-3x': return 3
     case 'fit': return Math.min(container.w / base.w, container.h / base.h)
     case 'fill': return Math.max(container.w / base.w, container.h / base.h)
     default: // 'integer-auto'
-      scale = Math.max(1, Math.floor(Math.min(container.w / base.w, container.h / base.h)))
+      return Math.max(1, Math.floor(Math.min(container.w / base.w, container.h / base.h)))
   }
-  if (options.dprCompensate && INTEGER_MODES.has(mode) && options.dpr && options.dpr > 0) {
-    const snapped = snapToDprCleanScale(scale, options.dpr)
-    // Fall back to the nominal scale when the snapped value would overflow
-    // the container — a fractional-DPR render is better than a canvas the
-    // user can't see the whole of.
-    if (snapped * base.w <= container.w && snapped * base.h <= container.h) {
-      return snapped
-    }
-  }
-  return scale
+}
+
+/**
+ * Resolve the effective render scale for a panel that may be driven
+ * either by an explicit numeric `zoom` (editor viewport) or by the
+ * legacy `scaleMode` enum (runtime auto-fit). When `zoom` is provided
+ * it bypasses the mode-driven path entirely — the user picked this
+ * exact value, so we respect it. The crispness indicator + snap
+ * button in the toolbar handle the "1-2-1-2 pattern" concern at the
+ * UI level rather than silently mutating the user's chosen zoom.
+ */
+export function resolveRenderScale(
+  zoom: number | undefined,
+  mode: ScaleMode,
+  container: { w: number; h: number },
+  base: { w: number; h: number },
+): number {
+  if (zoom !== undefined) return zoom
+  return computeScale(mode, container, base)
 }
 
 /**

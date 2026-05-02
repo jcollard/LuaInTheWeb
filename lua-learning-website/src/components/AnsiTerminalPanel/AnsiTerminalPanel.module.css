@@ -15,13 +15,16 @@
 }
 
 .container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  /* `safe center` keeps the canvas centered when it fits, but anchors
+     it at the top-left when it overflows so the start of the content
+     stays scrollable. Without `safe`, grid centering pushes content
+     off the start edge and the user can't scroll back to it. */
+  place-content: safe center;
   width: 100%;
   height: 100%;
   background: #000d11;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .terminalWrapper {

@@ -8,7 +8,7 @@
  */
 export const CANVAS_INLINE_JS = `"use strict";
 var CanvasInline = (() => {
-  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/canvasLuaCode/core.ts
+  // ../lua-runtime/src/canvasLuaCode/core.ts
   var canvasLuaCoreCode = \`
     local _canvas = {}
 
@@ -468,7 +468,7 @@ var CanvasInline = (() => {
     end
 \`;
 
-  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/canvasLuaCode/path.ts
+  // ../lua-runtime/src/canvasLuaCode/path.ts
   var canvasLuaPathCode = \`
     -- Path API
     function _canvas.begin_path()
@@ -745,7 +745,7 @@ var CanvasInline = (() => {
     end
 \`;
 
-  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/canvasLuaCode/styling.ts
+  // ../lua-runtime/src/canvasLuaCode/styling.ts
   var canvasLuaStylingCode = \`
     -- Line Style API
     function _canvas.set_line_cap(cap)
@@ -882,7 +882,7 @@ var CanvasInline = (() => {
     end
 \`;
 
-  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/canvasLuaCode/text.ts
+  // ../lua-runtime/src/canvasLuaCode/text.ts
   var canvasLuaTextCode = \`
     -- Text Alignment
     function _canvas.set_text_align(align)
@@ -1086,7 +1086,7 @@ var CanvasInline = (() => {
     end
 \`;
 
-  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/canvasLuaCode/input.ts
+  // ../lua-runtime/src/canvasLuaCode/input.ts
   var canvasLuaInputCode = \`
     -- Helper to normalize key names
     local function normalize_key(key)
@@ -1312,7 +1312,7 @@ var CanvasInline = (() => {
     end
 \`;
 
-  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/canvasLuaCode/audio.ts
+  // ../lua-runtime/src/canvasLuaCode/audio.ts
   var canvasLuaAudioCode = \`
     -- ========================================================================
     -- Audio API (delegates to ail_audio module)
@@ -1338,7 +1338,7 @@ var CanvasInline = (() => {
     end
 \`;
 
-  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/lua/hc.generated.ts
+  // ../lua-runtime/src/lua/hc.generated.ts
   var LUA_HC_CODE = \`---@meta hc
 --- hc.lua - HC Collision Detection Library
 --- Load with: local HC = require('hc')
@@ -2927,7 +2927,7 @@ return setmetatable({
 }, {__call = function(_, ...) return common_local.instance(HC, ...) end})
 \`;
 
-  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/lua/localstorage.generated.ts
+  // ../lua-runtime/src/lua/localstorage.generated.ts
   var LUA_LOCALSTORAGE_CODE = \`---@meta localstorage
 --- localstorage.lua - Persistent key-value storage library
 --- Load with: local localstorage = require('localstorage')
@@ -3029,7 +3029,7 @@ end
 return localstorage
 \`;
 
-  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/audioLuaCode/audio.ts
+  // ../lua-runtime/src/audioLuaCode/audio.ts
   var audioLuaCode = \`
     -- ========================================================================
     -- Audio Module (standalone)
@@ -3209,7 +3209,7 @@ return localstorage
     end
 \`;
 
-  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/lua-runtime/src/chipLuaCode/chip.ts
+  // ../lua-runtime/src/chipLuaCode/chip.ts
   var chipLuaCode = \`
     -- ========================================================================
     -- Chip Module (OPL3 FM Synthesis)
@@ -3473,7 +3473,7 @@ return localstorage
     end
 \`;
 
-  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/export/src/runtime/canvas-bridge-utils.ts
+  // src/runtime/canvas-bridge-utils.ts
   function toNumberArray(segments) {
     if (Array.isArray(segments)) {
       return [...segments];
@@ -3488,7 +3488,7 @@ return localstorage
     return result;
   }
 
-  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/export/src/runtime/canvas-standalone.ts
+  // src/runtime/canvas-standalone.ts
   function createEmptyGamepadState() {
     return {
       connected: false,
@@ -4580,7 +4580,7 @@ return localstorage
   }
   var localStorageLuaCode = LUA_LOCALSTORAGE_CODE;
 
-  // .claude/worktrees/fix-canvas-audio-lifecycle/packages/export/src/runtime/canvas-inline-entry.ts
+  // src/runtime/canvas-inline-entry.ts
   globalThis.CanvasStandalone = {
     setupCanvasBridge,
     createCanvasRuntimeState,

@@ -17,10 +17,12 @@ function makeGrid(): AnsiGrid {
 
 function makeHandle(): AnsiTerminalHandle & { written: string[] } {
   const written: string[] = []
+  const container = document.createElement('div')
   return {
     written,
     write: (data: string) => { written.push(data) },
-    container: document.createElement('div'),
+    container,
+    scrollContainer: container,
     dispose: vi.fn(),
     setCrt: vi.fn(),
   }

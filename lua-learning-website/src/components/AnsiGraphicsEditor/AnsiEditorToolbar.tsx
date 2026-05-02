@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
-import { BORDER_PRESETS, DEFAULT_BLEND_RATIO, borderStyleEqual, type BrushMode, type DrawTool, type BrushSettings, type BorderStyle, type TextAlign, type ScaleMode } from './types'
+import { BORDER_PRESETS, DEFAULT_BLEND_RATIO, borderStyleEqual, type BrushMode, type DrawTool, type BrushSettings, type BorderStyle, type TextAlign } from './types'
 import { CharPaletteModal } from './CharPaletteModal'
 import { FileOptionsModal } from './FileOptionsModal'
+import { ZoomControl } from './ZoomControl'
 import { DEFAULT_EYEDROPPER_MODIFIER, type EyedropperModifier } from './eyedropperModifierPersistence'
 import { toolTooltip, tooltipWithShortcut, MODE_SHORTCUTS, ACTION_SHORTCUTS } from './keyboardShortcuts'
 import styles from './AnsiGraphicsEditor.module.css'
@@ -36,8 +37,6 @@ export interface AnsiEditorToolbarProps {
   onSetBlendRatio?: (ratio: number) => void
   cgaPreview?: boolean
   onToggleCgaPreview?: () => void
-  scaleMode?: ScaleMode
-  onSetScaleMode?: (mode: ScaleMode) => void
   /** Current canvas width. Passed to FileOptionsModal for the resize control. */
   cols?: number
   /** Current canvas height. Passed to FileOptionsModal for the resize control. */
@@ -52,23 +51,27 @@ export interface AnsiEditorToolbarProps {
   useFontBlocks?: boolean
   /** Toggle between pixel renderer and legacy xterm. */
   onSetUseFontBlocks?: (enabled: boolean) => void
-  /** Pixel-perfect emulation on HiDPI: snaps scale to DPR-clean multiple. */
-  dprCompensate?: boolean
-  /** Toggle crisp-pixel mode. */
-  onSetDprCompensate?: (enabled: boolean) => void
   eyedropperModifier?: EyedropperModifier
   onSetEyedropperModifier?: (modifier: EyedropperModifier) => void
   activeLayerIsGroup?: boolean
   isPlaying?: boolean
   fileMenuOpen?: boolean
   onSetFileMenuOpen?: (open: boolean) => void
+  /** Viewport zoom controls (1 = 1x, etc.); Fit re-fits canvas to viewport. */
+  zoom?: number
+  onSetZoom?: (z: number) => void
+  onFitZoom?: () => void
+  /** Current devicePixelRatio, surfaced to ZoomControl so it can render
+   *  the crispness indicator + snap-to-crisp button. */
+  dpr?: number
 }
 
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
   onImportPng, onImportLayers, onExportAns, onExportDosAns, onExportSh, onExportBat, onExportLayers, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
-  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, scaleMode, onSetScaleMode, cols, rows, onResizeCanvas, font, onSetFont, useFontBlocks, onSetUseFontBlocks, dprCompensate, onSetDprCompensate, eyedropperModifier, onSetEyedropperModifier, activeLayerIsGroup, isPlaying,
+  onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, cols, rows, onResizeCanvas, font, onSetFont, useFontBlocks, onSetUseFontBlocks, eyedropperModifier, onSetEyedropperModifier, activeLayerIsGroup, isPlaying,
   fileMenuOpen: controlledFileMenuOpen, onSetFileMenuOpen,
+  zoom, onSetZoom, onFitZoom, dpr,
 }: AnsiEditorToolbarProps) {
   const toolsDisabled = activeLayerIsGroup || isPlaying
   const isRectActive = brush.tool === 'rect-outline' || brush.tool === 'rect-filled'
@@ -96,11 +99,9 @@ export function AnsiEditorToolbar({
           onExportAns={onExportAns} onExportDosAns={onExportDosAns} onExportSh={onExportSh}
           onExportBat={onExportBat} onExportLayers={onExportLayers}
           cgaPreview={cgaPreview ?? false} onToggleCgaPreview={onToggleCgaPreview!}
-          scaleMode={scaleMode ?? 'integer-auto'} onSetScaleMode={onSetScaleMode!}
           cols={cols ?? 80} rows={rows ?? 25} onResizeCanvas={onResizeCanvas ?? (() => {})}
           font={font ?? 'IBM_VGA_8x16'} onSetFont={onSetFont ?? (() => {})}
           useFontBlocks={useFontBlocks ?? true} onSetUseFontBlocks={onSetUseFontBlocks ?? (() => {})}
-          dprCompensate={dprCompensate ?? false} onSetDprCompensate={onSetDprCompensate ?? (() => {})}
           eyedropperModifier={eyedropperModifier ?? DEFAULT_EYEDROPPER_MODIFIER}
           onSetEyedropperModifier={onSetEyedropperModifier ?? (() => {})}
         />
@@ -503,6 +504,7 @@ export function AnsiEditorToolbar({
       >
         ↷
       </button>
+      {zoom !== undefined && onSetZoom && onFitZoom && <ZoomControl zoom={zoom} onSetZoom={onSetZoom} onFit={onFitZoom} dpr={dpr} />}
     </div>
   )
 }

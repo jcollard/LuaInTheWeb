@@ -17,8 +17,6 @@ function defaultProps(overrides?: Partial<FileOptionsModalProps>): FileOptionsMo
     onExportLayers: vi.fn(),
     cgaPreview: false,
     onToggleCgaPreview: vi.fn(),
-    scaleMode: 'integer-auto',
-    onSetScaleMode: vi.fn(),
     cols: 80,
     rows: 25,
     onResizeCanvas: vi.fn(),
@@ -26,8 +24,6 @@ function defaultProps(overrides?: Partial<FileOptionsModalProps>): FileOptionsMo
     onSetFont: vi.fn(),
     useFontBlocks: true,
     onSetUseFontBlocks: vi.fn(),
-    dprCompensate: false,
-    onSetDprCompensate: vi.fn(),
     eyedropperModifier: 'ctrl',
     onSetEyedropperModifier: vi.fn(),
     ...overrides,
@@ -67,7 +63,6 @@ describe('FileOptionsModal', () => {
       selectTab('canvas')
       expect(screen.getByTestId('file-options-tab-canvas').getAttribute('aria-selected')).toBe('true')
       expect(screen.getByTestId('file-cga-preview')).toBeTruthy()
-      expect(screen.getByTestId('file-scale-mode')).toBeTruthy()
       expect(screen.getByTestId('file-resize-apply')).toBeTruthy()
       expect(screen.queryByTestId('file-save')).toBeNull()
       expect(screen.queryByTestId('file-eyedropper-modifier')).toBeNull()
@@ -137,22 +132,6 @@ describe('FileOptionsModal', () => {
       expect(onClose).not.toHaveBeenCalled()
     })
 
-    it('renders scale mode select with correct initial value', () => {
-      render(<FileOptionsModal {...defaultProps({ scaleMode: 'fit' })} />)
-      selectTab('canvas')
-      const select = screen.getByTestId('file-scale-mode') as HTMLSelectElement
-      expect(select.value).toBe('fit')
-    })
-
-    it('calls onSetScaleMode on change and does NOT close modal', () => {
-      const onSetScaleMode = vi.fn()
-      const onClose = vi.fn()
-      render(<FileOptionsModal {...defaultProps({ onSetScaleMode, onClose })} />)
-      selectTab('canvas')
-      fireEvent.change(screen.getByTestId('file-scale-mode'), { target: { value: 'integer-2x' } })
-      expect(onSetScaleMode).toHaveBeenCalledWith('integer-2x')
-      expect(onClose).not.toHaveBeenCalled()
-    })
   })
 
   describe('Input tab', () => {

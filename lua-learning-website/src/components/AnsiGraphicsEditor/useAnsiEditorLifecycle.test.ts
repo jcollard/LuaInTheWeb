@@ -31,7 +31,7 @@ describe('useAnsiEditor lifecycle', () => {
       act(() => {
         result.current.onTerminalReady({
           write: vi.fn(),
-          container: mockContainer,
+          container: mockContainer, scrollContainer: mockContainer,
           dispose: vi.fn(),
           setCrt: vi.fn(),
         })
@@ -54,7 +54,7 @@ describe('useAnsiEditor lifecycle', () => {
       act(() => {
         result.current.onTerminalReady({
           write: vi.fn(),
-          container: mockContainer,
+          container: mockContainer, scrollContainer: mockContainer,
           dispose: vi.fn(),
           setCrt: vi.fn(),
         })

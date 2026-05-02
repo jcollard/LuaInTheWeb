@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { computeRectCells, computeFloodFillCells, writeCellToTerminal, renderFullGrid } from './gridUtils'
+import { computeRectCells, computeFloodFillCells, getCellHalfFromMouse, writeCellToTerminal, renderFullGrid } from './gridUtils'
 import type { ColorTransform } from './gridUtils'
 import type { AnsiCell, AnsiGrid, RGBColor } from './types'
 import { ANSI_ROWS, ANSI_COLS, DEFAULT_FG, DEFAULT_BG, HALF_BLOCK } from './types'
@@ -421,7 +421,7 @@ describe('computeFloodFillCells', () => {
 
 
 function mockHandle(): AnsiTerminalHandle {
-  return { write: vi.fn(), container: document.createElement('div'), dispose: vi.fn(), setCrt: vi.fn() } as unknown as AnsiTerminalHandle
+  return { write: vi.fn(), container: document.createElement('div'), scrollContainer: document.createElement('div'), dispose: vi.fn(), setCrt: vi.fn() } as unknown as AnsiTerminalHandle
 }
 
 describe('writeCellToTerminal with colorTransform', () => {
@@ -464,3 +464,85 @@ describe('renderFullGrid with colorTransform', () => {
   })
 })
 
+
+describe('getCellHalfFromMouse — viewport zoom + pan invariants', () => {
+  // The cell-coord math relies on getBoundingClientRect returning the
+  // post-transform AND post-scroll viewport-relative box, so the same
+  // arithmetic produces correct cell indices at any zoom or scroll
+  // offset on an ancestor. These tests pin that invariant by mocking
+  // the rect to simulate the various display states.
+
+  function fakeContainer(rect: { left: number; top: number; width: number; height: number }): HTMLElement {
+    const el = document.createElement('div')
+    el.getBoundingClientRect = (): DOMRect => ({
+      x: rect.left, y: rect.top,
+      left: rect.left, top: rect.top,
+      right: rect.left + rect.width, bottom: rect.top + rect.height,
+      width: rect.width, height: rect.height,
+      toJSON: () => ({}),
+    })
+    return el
+  }
+
+  function mouseAt(x: number, y: number): MouseEvent {
+    return new MouseEvent('mousemove', { clientX: x, clientY: y })
+  }
+
+  it('maps mouse to cell at zoom=1 with no scroll', () => {
+    const cols = 80, rows = 25
+    // Native size: 80×25 cells × 1 px/cell = 80×25 px (toy units)
+    const el = fakeContainer({ left: 0, top: 0, width: 80, height: 50 })
+    const result = getCellHalfFromMouse(mouseAt(20, 10), el, cols, rows)
+    expect(result).toEqual({ row: 5, col: 20, isTopHalf: true })
+  })
+
+  it('maps mouse to cell at zoom=2 (rect doubled)', () => {
+    const cols = 80, rows = 25
+    // At zoom=2 the displayed rect doubles in width and height.
+    const el = fakeContainer({ left: 0, top: 0, width: 160, height: 100 })
+    // Mouse at clientX=80 → 80 × 80 / 160 = col 40 (midpoint of canvas).
+    const result = getCellHalfFromMouse(mouseAt(80, 50), el, cols, rows)
+    expect(result?.col).toBe(40)
+    expect(result?.row).toBe(12)
+  })
+
+  it('maps mouse to cell when canvas is panned (rect.left negative)', () => {
+    const cols = 80, rows = 25
+    // User has scrolled right by 50px in a zoom=2 view: the inner
+    // canvas's rect.left becomes -50 relative to the viewport.
+    const el = fakeContainer({ left: -50, top: 0, width: 160, height: 100 })
+    // Mouse at clientX=10 → offset within canvas = 10 - (-50) = 60.
+    // 60 × 80 / 160 = col 30.
+    const result = getCellHalfFromMouse(mouseAt(10, 0), el, cols, rows)
+    expect(result?.col).toBe(30)
+  })
+
+  it('returns null when mouse is outside the canvas bounds', () => {
+    const cols = 80, rows = 25
+    const el = fakeContainer({ left: 0, top: 0, width: 80, height: 50 })
+    // Past the right edge.
+    expect(getCellHalfFromMouse(mouseAt(200, 10), el, cols, rows)).toBeNull()
+    // Above the top edge.
+    expect(getCellHalfFromMouse(mouseAt(10, -10), el, cols, rows)).toBeNull()
+  })
+
+  it('classifies top vs bottom half within a row', () => {
+    const cols = 80, rows = 25
+    // 80×25 cells × 4 px/cell = 320×100 px.
+    const el = fakeContainer({ left: 0, top: 0, width: 320, height: 100 })
+    // Each cell is 4×4 px. Mouse at y=1 (top quarter of row 0) is top half.
+    expect(getCellHalfFromMouse(mouseAt(2, 1), el, cols, rows)?.isTopHalf).toBe(true)
+    // Mouse at y=3 (bottom quarter of row 0) is bottom half.
+    expect(getCellHalfFromMouse(mouseAt(2, 3), el, cols, rows)?.isTopHalf).toBe(false)
+  })
+
+  it('preserves cell math at fractional zoom', () => {
+    const cols = 80, rows = 25
+    // Zoom=2.5 → rect dims = 80*2.5 = 200, 50*2.5 = 125.
+    const el = fakeContainer({ left: 0, top: 0, width: 200, height: 125 })
+    // Mouse at clientX=100 → 100 × 80 / 200 = col 40 (midpoint).
+    const result = getCellHalfFromMouse(mouseAt(100, 62), el, cols, rows)
+    expect(result?.col).toBe(40)
+    expect(result?.row).toBe(12)
+  })
+})
