@@ -39,14 +39,31 @@ function entriesFor(chars: readonly string[]): CharEntry[] {
   return chars.map(c => ({ char: c, name: getCharName(c) }))
 }
 
+const allFontEntriesCache = new Map<string, CharEntry[]>()
 function allFontEntries(fontId: string): CharEntry[] {
+  const cached = allFontEntriesCache.get(fontId)
+  if (cached) return cached
   const atlas = FONT_ATLASES.get(fontId)
-  if (!atlas) return []
-  const cps = Array.from(atlas.glyphs.keys()).sort((a, b) => a - b)
-  return cps.map(cp => {
+  const cps = atlas ? Array.from(atlas.glyphs.keys()).sort((a, b) => a - b) : []
+  const out = cps.map(cp => {
     const ch = String.fromCodePoint(cp)
     return { char: ch, name: getCharName(ch) }
   })
+  allFontEntriesCache.set(fontId, out)
+  return out
+}
+
+const curatedEntriesCache = new Map<string, ResolvedTab[]>()
+function curatedTabsFor(fontId: string): ResolvedTab[] {
+  const cached = curatedEntriesCache.get(fontId)
+  if (cached) return cached
+  const cov = getFontCoverage(fontId)
+  const inFont = (e: CharEntry) => cov.has(e.char.codePointAt(0) ?? -1)
+  const out = CHAR_PALETTE_CATEGORIES
+    .map(cat => ({ id: cat.id, label: cat.label, entries: cat.chars.filter(inFont) }))
+    .filter(t => t.entries.length > 0)
+  curatedEntriesCache.set(fontId, out)
+  return out
 }
 
 function matchesQuery(entry: CharEntry, query: string): boolean {
@@ -74,28 +91,27 @@ export function CharacterPanel({
 
   const previewFontFamily = getFontById(fontId)?.fontFamily
 
-  const tabs = useMemo<ResolvedTab[]>(() => {
+  const curatedTabs = useMemo(() => curatedTabsFor(fontId), [fontId])
+  const allTab = useMemo<ResolvedTab>(
+    () => ({ id: 'all', label: SPECIAL_TAB_LABELS.all, entries: allFontEntries(fontId) }),
+    [fontId],
+  )
+
+  const dynamicTabs = useMemo<ResolvedTab[]>(() => {
     const cov = getFontCoverage(fontId)
-    const inFont = (e: CharEntry) => cov.has(e.char.codePointAt(0) ?? -1)
-
-    const curated: ResolvedTab[] = CHAR_PALETTE_CATEGORIES
-      .map(cat => ({ id: cat.id, label: cat.label, entries: cat.chars.filter(inFont) }))
-      .filter(t => t.entries.length > 0)
-
+    const inFont = (c: string) => cov.has(c.codePointAt(0) ?? -1)
     const activeLayer = layers.find(l => l.id === activeLayerId)
-    const layerChars = extractLayerChars(activeLayer).filter(c => cov.has(c.codePointAt(0) ?? -1))
-    const currentChars = extractCurrentChars(layers).filter(c => cov.has(c.codePointAt(0) ?? -1))
-    const recentChars = recent.filter(c => cov.has(c.codePointAt(0) ?? -1))
-
-    const special: ResolvedTab[] = [
-      { id: 'layer', label: SPECIAL_TAB_LABELS.layer, entries: entriesFor(layerChars) },
-      { id: 'current', label: SPECIAL_TAB_LABELS.current, entries: entriesFor(currentChars) },
-      { id: 'recent', label: SPECIAL_TAB_LABELS.recent, entries: entriesFor(recentChars) },
-      { id: 'all', label: SPECIAL_TAB_LABELS.all, entries: allFontEntries(fontId) },
+    return [
+      { id: 'layer', label: SPECIAL_TAB_LABELS.layer, entries: entriesFor(extractLayerChars(activeLayer).filter(inFont)) },
+      { id: 'current', label: SPECIAL_TAB_LABELS.current, entries: entriesFor(extractCurrentChars(layers).filter(inFont)) },
+      { id: 'recent', label: SPECIAL_TAB_LABELS.recent, entries: entriesFor(recent.filter(inFont)) },
     ]
-
-    return [...curated, ...special]
   }, [fontId, layers, activeLayerId, recent])
+
+  const tabs = useMemo<ResolvedTab[]>(
+    () => [...curatedTabs, ...dynamicTabs, allTab],
+    [curatedTabs, dynamicTabs, allTab],
+  )
 
   const active = tabs.find(t => t.id === activeTab) ?? tabs[0]
   const visibleEntries = useMemo(
@@ -103,9 +119,10 @@ export function CharacterPanel({
     [active, query],
   )
 
-  const cellStyle = previewFontFamily
-    ? { fontFamily: `"${previewFontFamily}", monospace` }
-    : undefined
+  const cellStyle = useMemo(
+    () => previewFontFamily ? { fontFamily: `"${previewFontFamily}", monospace` } : undefined,
+    [previewFontFamily],
+  )
 
   return (
     <div className={styles.characterPanel} data-testid="character-panel">

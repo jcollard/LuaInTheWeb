@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { useRecentChars } from './useRecentChars'
 
-const STORAGE_KEY = 'ansiEditor.recentChars'
+const STORAGE_KEY = 'ansi-editor:recent-chars'
 
 afterEach(() => {
   localStorage.clear()
@@ -23,6 +23,14 @@ describe('useRecentChars', () => {
     act(() => result.current.pushRecent('B'))
     act(() => result.current.pushRecent('C'))
     expect(result.current.recent).toEqual(['C', 'B', 'A'])
+  })
+
+  it('returns the same array reference when the pushed char is already at the front', () => {
+    const { result } = renderHook(() => useRecentChars())
+    act(() => result.current.pushRecent('A'))
+    const before = result.current.recent
+    act(() => result.current.pushRecent('A'))
+    expect(result.current.recent).toBe(before)
   })
 
   it('moves an existing char to the front rather than duplicating it', () => {

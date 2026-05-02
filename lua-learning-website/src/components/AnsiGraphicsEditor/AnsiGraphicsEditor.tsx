@@ -33,7 +33,7 @@ import { useToast } from './useToast'
 import type { ScaleMode, GroupLayer } from './types'
 import { isGroupLayer } from './types'
 import { ProjectConfigParser } from '@lua-learning/export'
-import { CRT_DEFAULTS } from '@lua-learning/lua-runtime'
+import { CRT_DEFAULTS, DEFAULT_FONT_ID } from '@lua-learning/lua-runtime'
 import styles from './AnsiGraphicsEditor.module.css'
 
 export interface AnsiGraphicsEditorProps {
@@ -398,7 +398,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
           {brush.mode === 'brush' && !activeLayerIsGroup && (
             <CharacterPanel
               currentChar={brush.char}
-              fontId={font ?? 'IBM_VGA_8x16'}
+              fontId={font ?? DEFAULT_FONT_ID}
               layers={layers}
               activeLayerId={activeLayerId}
               recent={recentChars}

@@ -30,13 +30,11 @@ export function CharPaletteModal({ anchorRect, currentChar, fontId, onSelect, on
   }, [fontId])
   const activeCategory = filteredCategories.find(c => c.id === activeTab)
     ?? filteredCategories[0]!
-  // Render each cell in the active font's WOFF so the preview reflects
-  // what the canvas will paint. Falls back to monospace when no fontId
-  // is provided (legacy callers, tests).
   const previewFontFamily = fontId ? getFontById(fontId)?.fontFamily : undefined
-  const cellStyle = previewFontFamily
-    ? { fontFamily: `"${previewFontFamily}", monospace` }
-    : undefined
+  const cellStyle = useMemo(
+    () => previewFontFamily ? { fontFamily: `"${previewFontFamily}", monospace` } : undefined,
+    [previewFontFamily],
+  )
 
   function handleCharClick(char: string): void {
     onSelect(char)
