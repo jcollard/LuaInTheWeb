@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { CHAR_PALETTE_CATEGORIES, findCategoryForChar } from './charPaletteData'
+import { CHAR_PALETTE_CATEGORIES, findCategoryForChar, getCharName } from './charPaletteData'
 
 function charsOfCategory(id: string): string[] {
   const category = CHAR_PALETTE_CATEGORIES.find(c => c.id === id)
@@ -242,5 +242,28 @@ describe('findCategoryForChar', () => {
 
   it('should return undefined for an empty string', () => {
     expect(findCategoryForChar('')).toBeUndefined()
+  })
+})
+
+describe('getCharName', () => {
+  it('returns the curated name for a char in the palette categories', () => {
+    expect(getCharName('▕')).toBe('Right One Eighth')
+    expect(getCharName('☺')).toBe('White Smiley')
+    expect(getCharName('═')).toBe('Double Horizontal')
+  })
+
+  it('returns U+#### for an uncurated codepoint', () => {
+    // Hiragana ん — not in any palette category.
+    expect(getCharName('ん')).toBe('U+3093')
+  })
+
+  it('zero-pads codepoints below 0x1000', () => {
+    expect(getCharName('A')).toBe('A') // curated as plain "A" in the alpha tab
+    // A codepoint not in the curated set, low value:
+    expect(getCharName('þ')).toBe('U+00FE')
+  })
+
+  it('returns empty string for the empty input', () => {
+    expect(getCharName('')).toBe('')
   })
 })
