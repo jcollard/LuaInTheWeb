@@ -27,12 +27,20 @@ function makeV1Data(cols: number, rows: number, char: string): Record<string, un
   return { version: 1, width: cols, height: rows, grid }
 }
 
-function makeHandle(): AnsiTerminalHandle & { resize: ReturnType<typeof vi.fn> } {
+interface HandleMocks {
+  resize: ReturnType<typeof vi.fn>
+  setFontFamily: ReturnType<typeof vi.fn>
+  setUseFontBlocks: ReturnType<typeof vi.fn>
+}
+
+function makeHandle(): AnsiTerminalHandle & HandleMocks {
   return {
     write: vi.fn(),
     container: { getBoundingClientRect: () => ({ width: 800, height: 500 }) } as unknown as HTMLElement,
     dispose: vi.fn(),
     resize: vi.fn(),
+    setFontFamily: vi.fn(),
+    setUseFontBlocks: vi.fn(),
   }
 }
 
@@ -112,6 +120,24 @@ describe('AnsiController — terminal resize on screen load', () => {
     controller.setCursor(35, 110)
     // Row 35 is within 40, col 110 is within 120 — no clamping.
     expect((handle.write as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith('\x1b[35;110H')
+    await teardown()
+  })
+
+  // Regression: every example program calls set_screen() before ansi.start().
+  // setScreen runs resizeTerminal (which does handle?.resize) while the handle
+  // is still null, so the panel never learned the new dims. start() must
+  // forward the controller's accumulated dims to the freshly-attached handle.
+  it('forwards pre-start setScreen dimensions to the handle once it attaches', async () => {
+    const id = controller.createScreen(makeV1Data(120, 40, 'A'))
+    // setScreen BEFORE bringUp — handle is still null inside resizeTerminal,
+    // so the resize call must come from start() instead.
+    controller.setScreen(id)
+    expect(handle.resize).not.toHaveBeenCalled()
+    expect(controller.getCols()).toBe(120)
+    expect(controller.getRows()).toBe(40)
+
+    const teardown = await bringUp(controller)
+    expect(handle.resize).toHaveBeenCalledWith(120, 40)
     await teardown()
   })
 })
