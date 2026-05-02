@@ -225,6 +225,25 @@ describe('useCanvasPan', () => {
     expect(result.current.isPanning).toBe(false)
   })
 
+  it('does not pan on right-click (button=2)', () => {
+    const el = makeEl()
+    const { result } = renderHook(() => useCanvasPan({ scrollEl: el }))
+    act(() => {
+      el.dispatchEvent(new MouseEvent('mousedown', { button: 2, clientX: 200, clientY: 200, bubbles: true, cancelable: true }))
+    })
+    expect(result.current.isPanning).toBe(false)
+  })
+
+  it('does not pan on right-click + space (only middle-click or space+left should pan)', () => {
+    const el = makeEl()
+    const { result } = renderHook(() => useCanvasPan({ scrollEl: el }))
+    act(() => { window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' })) })
+    act(() => {
+      el.dispatchEvent(new MouseEvent('mousedown', { button: 2, clientX: 200, clientY: 200, bubbles: true, cancelable: true }))
+    })
+    expect(result.current.isPanning).toBe(false)
+  })
+
   it('reflects spaceHeld true on Space keydown and false on keyup', () => {
     const el = makeEl()
     const { result } = renderHook(() => useCanvasPan({ scrollEl: el }))

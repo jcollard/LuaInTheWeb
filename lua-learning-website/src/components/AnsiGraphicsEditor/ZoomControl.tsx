@@ -22,6 +22,15 @@ function formatZoomLabel(z: number): string {
   return `${z.toFixed(decimals).replace(/\.?0+$/, '')}x`
 }
 
+/** Build the shared "Nx × DPR D = P device px / source px" prefix used
+ *  by the crisp/warn tooltips. `pxFormat` controls how the product is
+ *  rendered: integer for crisp ticks, two decimals for the fractional
+ *  warning case. */
+function deviceScaleSummary(zoomLabel: string, dpr: number, product: number, pxFormat: 'integer' | 'fraction'): string {
+  const px = pxFormat === 'integer' ? Math.round(product) : product.toFixed(2)
+  return `${zoomLabel} × DPR ${dpr.toFixed(2)} = ${px} device px / source px`
+}
+
 export function ZoomControl({ zoom, onSetZoom, onFit, dpr = 1 }: ZoomControlProps) {
   // Local input state lets the user type values like "1.2" without
   // each keystroke being clamped/parsed mid-edit. Sync from prop on
@@ -43,7 +52,8 @@ export function ZoomControl({ zoom, onSetZoom, onFit, dpr = 1 }: ZoomControlProp
 
   const crisp = isCrisp(zoom, dpr)
   const nextCrisp = crisp ? null : nextCrispZoom(zoom, dpr)
-  const devicePxPerCell = zoom * dpr
+  const zoomLabel = formatZoomLabel(zoom)
+  const product = zoom * dpr
 
   return (
     <div className={styles.modeGroup} data-testid="zoom-control">
@@ -58,16 +68,16 @@ export function ZoomControl({ zoom, onSetZoom, onFit, dpr = 1 }: ZoomControlProp
         className={styles.zoomSlider}
         data-testid="zoom-slider"
         aria-label="Canvas zoom"
-        title={`Canvas zoom: ${formatZoomLabel(zoom)}`}
+        title={`Canvas zoom: ${zoomLabel}`}
       />
       <span className={styles.zoomLabel} data-testid="zoom-label">
-        {formatZoomLabel(zoom)}
+        {zoomLabel}
       </span>
       {crisp ? (
         <span
           className={styles.zoomCrispOk}
           data-testid="zoom-crisp-ok"
-          title={`Pixel-crisp: ${formatZoomLabel(zoom)} × DPR ${dpr.toFixed(2)} = ${Math.round(devicePxPerCell)} device px / source px`}
+          title={`Pixel-crisp: ${deviceScaleSummary(zoomLabel, dpr, product, 'integer')}`}
           aria-label="Pixel-crisp at this zoom"
         >
           ✓
@@ -79,11 +89,11 @@ export function ZoomControl({ zoom, onSetZoom, onFit, dpr = 1 }: ZoomControlProp
           onClick={() => { if (nextCrisp !== null) onSetZoom(nextCrisp) }}
           disabled={nextCrisp === null}
           data-testid="zoom-crisp-snap"
-          title={
+          title={`${deviceScaleSummary(zoomLabel, dpr, product, 'fraction')} (uneven). ${
             nextCrisp !== null
-              ? `${formatZoomLabel(zoom)} × DPR ${dpr.toFixed(2)} = ${devicePxPerCell.toFixed(2)} device px / source px (uneven). Click to snap to ${formatZoomLabel(nextCrisp)}.`
-              : `${formatZoomLabel(zoom)} × DPR ${dpr.toFixed(2)} = ${devicePxPerCell.toFixed(2)} device px / source px (uneven). No crisp value available below max zoom.`
-          }
+              ? `Click to snap to ${formatZoomLabel(nextCrisp)}.`
+              : 'No crisp value available below max zoom.'
+          }`}
           aria-label="Snap to next pixel-crisp zoom"
         >
           ⚠

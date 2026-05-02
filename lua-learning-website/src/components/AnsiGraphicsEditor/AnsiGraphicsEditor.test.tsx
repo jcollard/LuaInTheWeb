@@ -1,10 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import { AnsiGraphicsEditor } from './AnsiGraphicsEditor'
 
-// Mock AnsiTerminalPanel since it depends on xterm.js
+// Captured handler from the most recent panel mount, so tests can
+// simulate the terminal becoming ready with a real (sized) wrapper.
+let lastOnTerminalReady: ((handle: unknown) => void) | null = null
+
+// Mock AnsiTerminalPanel since it depends on xterm.js. The default
+// behavior matches the previous shape — a div that fires
+// `onTerminalReady(null)` immediately. Tests that need the live panel
+// flow (initial Fit, scroll-element wiring) read `lastOnTerminalReady`
+// and call it with a fake handle.
 vi.mock('../AnsiTerminalPanel/AnsiTerminalPanel', () => ({
-  AnsiTerminalPanel: ({ onTerminalReady }: { onTerminalReady?: (handle: null) => void }) => {
+  AnsiTerminalPanel: ({ onTerminalReady }: { onTerminalReady?: (handle: unknown) => void }) => {
+    lastOnTerminalReady = onTerminalReady ?? null
     if (onTerminalReady) onTerminalReady(null)
     return <div data-testid="mock-terminal">Mock Terminal</div>
   },
@@ -128,6 +137,69 @@ describe('AnsiGraphicsEditor', () => {
       // Open File Options modal so the canvas tab would be reachable.
       // file-scale-mode used to live there; assert it's gone everywhere.
       expect(screen.queryByTestId('file-scale-mode')).toBeNull()
+    })
+
+    it('does not render the deleted DPR-compensate checkbox', () => {
+      render(<AnsiGraphicsEditor />)
+      expect(screen.queryByTestId('file-dpr-compensate')).toBeNull()
+    })
+
+    it('does not render the deleted DprWarning banner', () => {
+      render(<AnsiGraphicsEditor />)
+      expect(screen.queryByTestId('dpr-warning')).toBeNull()
+    })
+
+    it('applies the initial Fit zoom when the panel first reports its scroll container', () => {
+      render(<AnsiGraphicsEditor />)
+      // Default canvas: 80×25 cells × 8×16 px (IBM_VGA_8x16 default font)
+      // = 640×400 source px. Mock a sized scroll container that fits 2x
+      // (1300×850 → floor(min(1300/640, 850/400)) = 2).
+      const fakeContainer = document.createElement('div')
+      Object.defineProperty(fakeContainer, 'clientWidth', { value: 1300 })
+      Object.defineProperty(fakeContainer, 'clientHeight', { value: 850 })
+      const fakeWrapper = document.createElement('div')
+      const fakeHandle = {
+        write: () => {},
+        container: fakeWrapper,
+        scrollContainer: fakeContainer,
+        dispose: () => {},
+        setCrt: () => {},
+      }
+      // Initial render shows zoom=1 (the useViewport default before fit).
+      expect(screen.getByTestId('zoom-label').textContent).toBe('1x')
+      // Simulate panel mount completing with a real handle.
+      act(() => { lastOnTerminalReady?.(fakeHandle) })
+      // Initial-fit useEffect should have fired and set zoom to 2x.
+      expect(screen.getByTestId('zoom-label').textContent).toBe('2x')
+    })
+
+    it('does not re-apply initial Fit on subsequent terminal-ready callbacks', () => {
+      render(<AnsiGraphicsEditor />)
+      const makeContainer = (w: number, h: number) => {
+        const c = document.createElement('div')
+        Object.defineProperty(c, 'clientWidth', { value: w })
+        Object.defineProperty(c, 'clientHeight', { value: h })
+        return c
+      }
+      // First mount: 1300×850 → fit at 2x.
+      act(() => {
+        lastOnTerminalReady?.({
+          write: () => {}, container: document.createElement('div'),
+          scrollContainer: makeContainer(1300, 850),
+          dispose: () => {}, setCrt: () => {},
+        })
+      })
+      expect(screen.getByTestId('zoom-label').textContent).toBe('2x')
+      // Re-fire with a *different* size that would fit 4x. The initial-fit
+      // guard should NOT re-apply, leaving zoom at 2x.
+      act(() => {
+        lastOnTerminalReady?.({
+          write: () => {}, container: document.createElement('div'),
+          scrollContainer: makeContainer(2700, 1700),
+          dispose: () => {}, setCrt: () => {},
+        })
+      })
+      expect(screen.getByTestId('zoom-label').textContent).toBe('2x')
     })
   })
 })

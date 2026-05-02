@@ -50,7 +50,10 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
   const { fileSystem, fileTree, refreshFileTree, updateAnsiEditorTabPath } = useIDE()
   const [fileMenuOpen, setFileMenuOpen] = useState(false)
   const [dpr, setDpr] = useState<number>(() => (typeof window !== 'undefined' ? window.devicePixelRatio : 1))
-  useDprChange(() => setDpr(window.devicePixelRatio))
+  // Guard against no-op updates: if matchMedia ever fires when the
+  // value hasn't actually changed, the functional setter returns the
+  // same reference and React skips the re-render.
+  useDprChange(() => setDpr(prev => prev === window.devicePixelRatio ? prev : window.devicePixelRatio))
   const [eyedropperModifier, setEyedropperModifierRaw] = useState<EyedropperModifier>(() => loadStoredEyedropperModifier())
   const setEyedropperModifier = useCallback((modifier: EyedropperModifier) => {
     setEyedropperModifierRaw(modifier)

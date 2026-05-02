@@ -61,6 +61,26 @@ describe('ZoomControl', () => {
     expect(onSetZoom).not.toHaveBeenCalled()
   })
 
+  it('restores the displayed value when committing junk input', () => {
+    const onSetZoom = vi.fn()
+    render(<ZoomControl zoom={2.5} onSetZoom={onSetZoom} onFit={vi.fn()} />)
+    const input = screen.getByTestId('zoom-number') as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'not-a-number' } })
+    fireEvent.blur(input)
+    expect(input.value).toBe('2.50')
+  })
+
+  it('does not call onSetZoom when committing an empty input', () => {
+    const onSetZoom = vi.fn()
+    render(<ZoomControl zoom={1} onSetZoom={onSetZoom} onFit={vi.fn()} />)
+    const input = screen.getByTestId('zoom-number') as HTMLInputElement
+    fireEvent.change(input, { target: { value: '' } })
+    fireEvent.blur(input)
+    expect(onSetZoom).not.toHaveBeenCalled()
+    // Should also restore the displayed value.
+    expect(input.value).toBe('1.00')
+  })
+
   it('commits typed value on Enter key', () => {
     const onSetZoom = vi.fn()
     render(<ZoomControl zoom={1} onSetZoom={onSetZoom} onFit={vi.fn()} />)
