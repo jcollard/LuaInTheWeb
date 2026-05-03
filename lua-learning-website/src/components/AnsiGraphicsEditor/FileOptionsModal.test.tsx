@@ -14,6 +14,7 @@ function defaultProps(overrides?: Partial<FileOptionsModalProps>): FileOptionsMo
     onExportDosAns: vi.fn(),
     onExportSh: vi.fn(),
     onExportBat: vi.fn(),
+    onExportPng: vi.fn(),
     onExportLayers: vi.fn(),
     cgaPreview: false,
     onToggleCgaPreview: vi.fn(),
@@ -88,6 +89,7 @@ describe('FileOptionsModal', () => {
       ['onExportDosAns', 'file-export-dos-ans'],
       ['onExportSh', 'file-export-sh'],
       ['onExportBat', 'file-export-bat'],
+      ['onExportPng', 'file-export-png'],
       ['onExportLayers', 'file-export-layers'],
     ] as const)('fires %s and onClose when %s is clicked', (handlerName, testId) => {
       const handler = vi.fn()

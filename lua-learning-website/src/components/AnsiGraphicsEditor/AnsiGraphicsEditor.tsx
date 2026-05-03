@@ -86,6 +86,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
     handleExportDosAns: fileHandleExportDosAns,
     handleExportSh: fileHandleExportSh,
     handleExportBat: fileHandleExportBat,
+    handleExportPng: fileHandleExportPng,
   } = useAnsiEditorFile({
     filePath,
     fileSystem,
@@ -317,6 +318,12 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
   const handleExportDosAns = useCallback(() => fileHandleExportDosAns(layers), [fileHandleExportDosAns, layers])
   const handleExportSh = useCallback(() => fileHandleExportSh(layers), [fileHandleExportSh, layers])
   const handleExportBat = useCallback(() => fileHandleExportBat(layers), [fileHandleExportBat, layers])
+  const handleExportPng = useCallback(() => {
+    void fileHandleExportPng(layers, font ?? DEFAULT_FONT_ID).catch(err => {
+      const msg = err instanceof Error ? err.message : String(err)
+      showToast(`PNG export failed: ${msg}`)
+    })
+  }, [fileHandleExportPng, layers, font, showToast])
 
   const [showErrorDetail, setShowErrorDetail] = useState(false)
   const [errorCopied, setErrorCopied] = useState(false)
@@ -370,6 +377,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
         onExportDosAns={handleExportDosAns}
         onExportSh={handleExportSh}
         onExportBat={handleExportBat}
+        onExportPng={handleExportPng}
         onExportLayers={exportLayers.handleExportLayersClick}
         onUndo={undo}
         onRedo={redo}

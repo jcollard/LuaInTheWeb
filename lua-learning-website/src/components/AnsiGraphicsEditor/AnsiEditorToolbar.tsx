@@ -21,6 +21,7 @@ export interface AnsiEditorToolbarProps {
   onExportDosAns: () => void
   onExportSh: () => void
   onExportBat: () => void
+  onExportPng: () => void
   onExportLayers: () => void
   onUndo: () => void
   onRedo: () => void
@@ -68,7 +69,7 @@ export interface AnsiEditorToolbarProps {
 
 export function AnsiEditorToolbar({
   brush, onSetChar, onSetMode, onSetTool, onClear, onSave, onSaveAs,
-  onImportPng, onImportLayers, onExportAns, onExportDosAns, onExportSh, onExportBat, onExportLayers, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
+  onImportPng, onImportLayers, onExportAns, onExportDosAns, onExportSh, onExportBat, onExportPng, onExportLayers, onUndo, onRedo, canUndo, canRedo, textAlign, onSetTextAlign,
   onFlipHorizontal, onFlipVertical, onFlipLayerHorizontal, onFlipLayerVertical, flipOrigin, onSetBorderStyle, onSetBlendRatio, cgaPreview, onToggleCgaPreview, cols, rows, onResizeCanvas, font, onSetFont, useFontBlocks, onSetUseFontBlocks, eyedropperModifier, onSetEyedropperModifier, activeLayerIsGroup, isPlaying,
   fileMenuOpen: controlledFileMenuOpen, onSetFileMenuOpen,
   zoom, onSetZoom, onFitZoom, dpr,
@@ -97,7 +98,7 @@ export function AnsiEditorToolbar({
           onClear={onClear} onSave={onSave} onSaveAs={onSaveAs}
           onImportPng={onImportPng} onImportLayers={onImportLayers}
           onExportAns={onExportAns} onExportDosAns={onExportDosAns} onExportSh={onExportSh}
-          onExportBat={onExportBat} onExportLayers={onExportLayers}
+          onExportBat={onExportBat} onExportPng={onExportPng} onExportLayers={onExportLayers}
           cgaPreview={cgaPreview ?? false} onToggleCgaPreview={onToggleCgaPreview!}
           cols={cols ?? 80} rows={rows ?? 25} onResizeCanvas={onResizeCanvas ?? (() => {})}
           font={font ?? 'IBM_VGA_8x16'} onSetFont={onSetFont ?? (() => {})}
