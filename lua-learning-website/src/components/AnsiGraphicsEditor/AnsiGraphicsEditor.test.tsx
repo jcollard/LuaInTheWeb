@@ -1,6 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, act } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, act, fireEvent } from '@testing-library/react'
 import { AnsiGraphicsEditor } from './AnsiGraphicsEditor'
+
+vi.mock('./pngExport', async () => {
+  const actual = await vi.importActual<typeof import('./pngExport')>('./pngExport')
+  return {
+    ...actual,
+    gridToPngBlob: vi.fn(async () => new Blob([new Uint8Array([1, 2, 3])], { type: 'image/png' })),
+  }
+})
+import { gridToPngBlob } from './pngExport'
 
 // Captured handler from the most recent panel mount, so tests can
 // simulate the terminal becoming ready with a real (sized) wrapper.
@@ -201,5 +210,75 @@ describe('AnsiGraphicsEditor', () => {
       })
       expect(screen.getByTestId('zoom-label').textContent).toBe('2x')
     })
+  })
+
+})
+
+describe('AnsiGraphicsEditor — PNG export', () => {
+  let createObjectURLSpy: ReturnType<typeof vi.spyOn>
+  let revokeObjectURLSpy: ReturnType<typeof vi.spyOn>
+  let clickSpy: ReturnType<typeof vi.spyOn>
+  let lastDownloadName: string | null
+
+  beforeEach(() => {
+    lastDownloadName = null
+    // Earlier tests in this file set readFile to return broken content,
+    // and vi.clearAllMocks doesn't reset mock implementations — restore
+    // the "no file" default so the editor doesn't render its error banner.
+    mockFileSystem.readFile.mockReturnValue(null)
+    vi.mocked(gridToPngBlob).mockClear()
+    vi.mocked(gridToPngBlob).mockResolvedValue(new Blob([new Uint8Array([1, 2, 3])], { type: 'image/png' }))
+    createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock')
+    revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      lastDownloadName = this.download
+    })
+  })
+
+  afterEach(() => {
+    createObjectURLSpy.mockRestore()
+    revokeObjectURLSpy.mockRestore()
+    clickSpy.mockRestore()
+  })
+
+  function openExportPngDialog(): void {
+    fireEvent.click(screen.getByTestId('file-options-button'))
+    fireEvent.click(screen.getByTestId('file-export-png'))
+  }
+
+  it('clicking File → Export PNG opens the dialog (does not export immediately)', () => {
+    render(<AnsiGraphicsEditor filePath="/projects/cool.ansi.lua" />)
+    expect(screen.queryByTestId('png-export-overlay')).toBeNull()
+    openExportPngDialog()
+    expect(screen.getByTestId('png-export-overlay')).toBeTruthy()
+    expect(gridToPngBlob).not.toHaveBeenCalled()
+  })
+
+  it('seeds the dialog filename from the open file path', () => {
+    render(<AnsiGraphicsEditor filePath="/projects/cool.ansi.lua" />)
+    openExportPngDialog()
+    expect((screen.getByTestId('png-export-filename') as HTMLInputElement).value).toBe('cool')
+  })
+
+  it('confirming with a chosen scale calls gridToPngBlob with that scale and downloads with the chosen filename', async () => {
+    render(<AnsiGraphicsEditor filePath="/projects/cool.ansi.lua" />)
+    openExportPngDialog()
+    fireEvent.click(screen.getByTestId('png-export-scale-3x'))
+    fireEvent.change(screen.getByTestId('png-export-filename'), { target: { value: 'shot' } })
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('png-export-confirm'))
+    })
+    expect(gridToPngBlob).toHaveBeenCalledTimes(1)
+    expect(gridToPngBlob).toHaveBeenCalledWith(expect.any(Array), expect.any(String), 3)
+    expect(lastDownloadName).toBe('shot.png')
+    expect(screen.queryByTestId('png-export-overlay')).toBeNull()
+  })
+
+  it('cancelling closes the dialog without calling gridToPngBlob', () => {
+    render(<AnsiGraphicsEditor filePath="/projects/cool.ansi.lua" />)
+    openExportPngDialog()
+    fireEvent.click(screen.getByTestId('png-export-cancel'))
+    expect(screen.queryByTestId('png-export-overlay')).toBeNull()
+    expect(gridToPngBlob).not.toHaveBeenCalled()
   })
 })

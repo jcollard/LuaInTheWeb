@@ -4,6 +4,7 @@ import { compositeGrid, visibleDrawableLayers } from './layerUtils'
 import { exportAnsFile, exportDosAnsFile } from './ansExport'
 import { exportShFile, exportAnimatedShFile } from './shExport'
 import { exportBatFile } from './batExport'
+import { gridToPngBlob } from './pngExport'
 import { serializeLayers, deserializeLayers } from './serialization'
 
 /** Find the maximum frame count across all visible drawn layers. */
@@ -89,7 +90,15 @@ export interface UseAnsiEditorFileReturn {
   handleExportDosAns: (layers: Layer[]) => void
   handleExportSh: (layers: Layer[]) => void
   handleExportBat: (layers: Layer[]) => void
+  handleExportPng: (layers: Layer[], options: PngExportOptions) => Promise<void>
+  pngDefaultFileName: string
   finishSaveAs: (savedPath: string) => Promise<void>
+}
+
+export interface PngExportOptions {
+  fontId: string
+  fileName: string
+  scale: number
 }
 
 export function useAnsiEditorFile({
@@ -201,6 +210,13 @@ export function useAnsiEditorFile({
     downloadBlob(new Blob([script], { type: 'text/x-shellscript' }), filename)
   }, [filePath])
 
+  const handleExportPng = useCallback(async (layers: Layer[], options: PngExportOptions) => {
+    const blob = await gridToPngBlob(compositeGrid(layers), options.fontId, options.scale)
+    downloadBlob(blob, options.fileName)
+  }, [])
+
+  const pngDefaultFileName = useMemo(() => deriveExportFilename(filePath, 'png'), [filePath])
+
   return {
     initialLayerState,
     loadError,
@@ -213,6 +229,8 @@ export function useAnsiEditorFile({
     handleExportDosAns,
     handleExportSh,
     handleExportBat,
+    handleExportPng,
+    pngDefaultFileName,
     finishSaveAs,
   }
 }

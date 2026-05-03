@@ -5,6 +5,15 @@ import { deserializeLayers, serializeLayers } from './serialization'
 import type { AnsiCell, AnsiGrid, DrawnLayer, Layer, RGBColor } from './types'
 import { DEFAULT_FRAME_DURATION_MS } from './types'
 
+vi.mock('./pngExport', async () => {
+  const actual = await vi.importActual<typeof import('./pngExport')>('./pngExport')
+  return {
+    ...actual,
+    gridToPngBlob: vi.fn(async (_grid: AnsiGrid, _fontId: string, _scale: number) => new Blob([new Uint8Array([1, 2, 3])], { type: 'image/png' })),
+  }
+})
+import { gridToPngBlob } from './pngExport'
+
 function cell(char: string): AnsiCell {
   return { char, fg: [170, 170, 170] as RGBColor, bg: [0, 0, 0] as RGBColor }
 }
@@ -121,5 +130,87 @@ describe('useAnsiEditorFile — canvas dimension roundtrip', () => {
     expect(loaded).toBeDefined()
     expect(loaded!.cols).toBe(160)
     expect(loaded!.rows).toBe(60)
+  })
+})
+
+describe('useAnsiEditorFile — PNG export', () => {
+  let createObjectURLSpy: ReturnType<typeof vi.spyOn>
+  let revokeObjectURLSpy: ReturnType<typeof vi.spyOn>
+  let clickSpy: ReturnType<typeof vi.spyOn>
+  let lastDownloadedBlob: Blob | null = null
+  let lastDownloadedFilename: string | null = null
+
+  beforeEach(() => {
+    lastDownloadedBlob = null
+    lastDownloadedFilename = null
+    vi.mocked(gridToPngBlob).mockClear()
+    createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockImplementation((blob) => {
+      lastDownloadedBlob = blob as Blob
+      return 'blob:mock'
+    })
+    revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    // Capture the filename written to the synthetic <a download="..."> element.
+    clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      lastDownloadedFilename = this.download
+    })
+  })
+
+  afterEach(() => {
+    createObjectURLSpy.mockRestore()
+    revokeObjectURLSpy.mockRestore()
+    clickSpy.mockRestore()
+  })
+
+  it('handleExportPng calls gridToPngBlob with the chosen fontId/scale and downloads the result', async () => {
+    const fs = makeRecordingFs()
+    const { result } = mountHook('/art.ansi.lua', fs)
+
+    const layers: Layer[] = [makeDrawnLayer('bg', 80, 25)]
+    await act(async () => {
+      await result.current.handleExportPng(layers, { fontId: 'IBM_VGA_8x16', fileName: 'art.png', scale: 2 })
+    })
+
+    expect(gridToPngBlob).toHaveBeenCalledTimes(1)
+    expect(gridToPngBlob).toHaveBeenCalledWith(expect.any(Array), 'IBM_VGA_8x16', 2)
+    expect(lastDownloadedFilename).toBe('art.png')
+    expect(lastDownloadedBlob).toBeInstanceOf(Blob)
+    expect(lastDownloadedBlob!.type).toBe('image/png')
+  })
+
+  it('pngDefaultFileName derives <name>.png from the open file path', () => {
+    const fs = makeRecordingFs()
+    const { result } = mountHook('/projects/cool.ansi.lua', fs)
+    expect(result.current.pngDefaultFileName).toBe('cool.png')
+  })
+
+  it('pngDefaultFileName falls back to untitled.png when the editor has no real file path', () => {
+    const fs = makeRecordingFs()
+    const { result } = mountHook('ansi-editor://untitled', fs)
+    expect(result.current.pngDefaultFileName).toBe('untitled.png')
+  })
+
+  it('pngDefaultFileName returns untitled.png when filePath is undefined', () => {
+    const fs = makeRecordingFs()
+    const { result } = mountHook(undefined, fs)
+    expect(result.current.pngDefaultFileName).toBe('untitled.png')
+  })
+
+  it('handleExportPng surfaces gridToPngBlob errors via the returned promise', async () => {
+    const fs = makeRecordingFs()
+    const { result } = mountHook('/art.ansi.lua', fs)
+    vi.mocked(gridToPngBlob).mockRejectedValueOnce(new Error('boom'))
+
+    let caught: unknown
+    await act(async () => {
+      try {
+        await result.current.handleExportPng([makeDrawnLayer('bg', 80, 25)], { fontId: 'IBM_VGA_8x16', fileName: 'art.png', scale: 1 })
+      } catch (e) {
+        caught = e
+      }
+    })
+
+    expect(caught).toBeInstanceOf(Error)
+    expect((caught as Error).message).toBe('boom')
+    expect(lastDownloadedBlob).toBeNull()
   })
 })

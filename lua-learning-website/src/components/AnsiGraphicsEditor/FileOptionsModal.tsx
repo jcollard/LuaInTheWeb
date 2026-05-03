@@ -15,6 +15,7 @@ export interface FileOptionsModalProps {
   onExportDosAns: () => void
   onExportSh: () => void
   onExportBat: () => void
+  onExportPng: () => void
   onExportLayers: () => void
   cgaPreview: boolean
   onToggleCgaPreview: () => void
@@ -119,7 +120,7 @@ export function FileOptionsModal(props: FileOptionsModalProps) {
 }
 
 function FileTab(props: FileOptionsModalProps): ReactNode {
-  const { onClose, onSave, onSaveAs, onImportPng, onImportLayers, onExportLayers, onExportAns, onExportDosAns, onExportSh, onExportBat } = props
+  const { onClose, onSave, onSaveAs, onImportPng, onImportLayers, onExportLayers, onExportAns, onExportDosAns, onExportSh, onExportBat, onExportPng } = props
 
   function handleAction(action: () => void): void {
     action()
@@ -132,6 +133,7 @@ function FileTab(props: FileOptionsModalProps): ReactNode {
     { label: 'Load PNG', testId: 'file-import-png', action: onImportPng },
     { label: 'Import Layers', testId: 'file-import-layers', action: onImportLayers },
     { label: 'Export Layers', testId: 'file-export-layers', action: onExportLayers },
+    { label: 'Export PNG', testId: 'file-export-png', action: onExportPng },
     { label: 'Export ANS', testId: 'file-export-ans', action: onExportAns },
     { label: 'Export ANS (DOS)', testId: 'file-export-dos-ans', action: onExportDosAns },
     { label: 'Export .sh', testId: 'file-export-sh', action: onExportSh },
