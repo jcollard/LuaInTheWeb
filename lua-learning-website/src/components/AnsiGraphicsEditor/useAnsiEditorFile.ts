@@ -34,7 +34,7 @@ function allFrameComposites(layers: Layer[], frameCount: number): AnsiGrid[] {
 }
 
 /** Derive an export filename from the editor's filePath, replacing the extension. */
-function deriveExportFilename(filePath: string | undefined, ext: string): string {
+export function deriveExportFilename(filePath: string | undefined, ext: string): string {
   if (!filePath || filePath.startsWith('ansi-editor://')) return `untitled.${ext}`
   const base = filePath.split('/').pop() ?? 'untitled'
   const replaced = base.replace(/\.ansi\.lua$/, `.${ext}`)
@@ -90,7 +90,7 @@ export interface UseAnsiEditorFileReturn {
   handleExportDosAns: (layers: Layer[]) => void
   handleExportSh: (layers: Layer[]) => void
   handleExportBat: (layers: Layer[]) => void
-  handleExportPng: (layers: Layer[], fontId: string) => Promise<void>
+  handleExportPng: (layers: Layer[], fontId: string, fileName: string, scale: number) => Promise<void>
   finishSaveAs: (savedPath: string) => Promise<void>
 }
 
@@ -203,11 +203,10 @@ export function useAnsiEditorFile({
     downloadBlob(new Blob([script], { type: 'text/x-shellscript' }), filename)
   }, [filePath])
 
-  const handleExportPng = useCallback(async (layers: Layer[], fontId: string) => {
-    const filename = deriveExportFilename(filePath, 'png')
-    const blob = await gridToPngBlob(compositeGrid(layers), fontId)
-    downloadBlob(blob, filename)
-  }, [filePath])
+  const handleExportPng = useCallback(async (layers: Layer[], fontId: string, fileName: string, scale: number) => {
+    const blob = await gridToPngBlob(compositeGrid(layers), fontId, scale)
+    downloadBlob(blob, fileName)
+  }, [])
 
   return {
     initialLayerState,

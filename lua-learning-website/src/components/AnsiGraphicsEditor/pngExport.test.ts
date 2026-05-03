@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { paintCellInto, gridPngDimensions } from './pngExport'
+import { paintCellInto, gridPngDimensions, scaledPngDimensions, PNG_EXPORT_SCALES } from './pngExport'
 import type { AnsiGrid, RGBColor } from './types'
 
 const FG: RGBColor = [255, 128, 64]
@@ -73,5 +73,44 @@ describe('gridPngDimensions', () => {
 
   it('handles a single-row grid', () => {
     expect(gridPngDimensions(emptyGrid(10, 1), 8, 16)).toEqual({ width: 80, height: 16 })
+  })
+})
+
+describe('scaledPngDimensions', () => {
+  function emptyGrid(cols: number, rows: number): AnsiGrid {
+    return Array.from({ length: rows }, () =>
+      Array.from({ length: cols }, () => ({ char: ' ', fg: FG, bg: BG }))
+    )
+  }
+  const FONT = 'IBM_VGA_8x16'
+
+  it('returns native size at scale=1', () => {
+    expect(scaledPngDimensions(emptyGrid(80, 25), FONT, 1)).toEqual({ width: 640, height: 400 })
+  })
+
+  it('multiplies dimensions by scale', () => {
+    expect(scaledPngDimensions(emptyGrid(80, 25), FONT, 2)).toEqual({ width: 1280, height: 800 })
+    expect(scaledPngDimensions(emptyGrid(80, 25), FONT, 3)).toEqual({ width: 1920, height: 1200 })
+  })
+
+  it('clamps non-finite or sub-1 scale to 1', () => {
+    const baseline = { width: 640, height: 400 }
+    expect(scaledPngDimensions(emptyGrid(80, 25), FONT, 0)).toEqual(baseline)
+    expect(scaledPngDimensions(emptyGrid(80, 25), FONT, -5)).toEqual(baseline)
+    expect(scaledPngDimensions(emptyGrid(80, 25), FONT, NaN)).toEqual(baseline)
+  })
+
+  it('floors fractional scales', () => {
+    expect(scaledPngDimensions(emptyGrid(80, 25), FONT, 2.7)).toEqual({ width: 1280, height: 800 })
+  })
+
+  it('returns 0×0 for unknown font', () => {
+    expect(scaledPngDimensions(emptyGrid(80, 25), 'NOT_A_FONT', 2)).toEqual({ width: 0, height: 0 })
+  })
+})
+
+describe('PNG_EXPORT_SCALES', () => {
+  it('exposes 1, 2, 3 in order', () => {
+    expect(PNG_EXPORT_SCALES).toEqual([1, 2, 3])
   })
 })

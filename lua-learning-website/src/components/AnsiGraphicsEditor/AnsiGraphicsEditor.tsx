@@ -19,7 +19,9 @@ import { ImportLayersDialog } from './ImportLayersDialog'
 import { SaveAsDialog } from './SaveAsDialog'
 import { ToastContainer } from './ToastContainer'
 import { useAnsiEditor } from './useAnsiEditor'
-import { useAnsiEditorFile } from './useAnsiEditorFile'
+import { useAnsiEditorFile, deriveExportFilename } from './useAnsiEditorFile'
+import { PngExportDialog } from './PngExportDialog'
+import type { PngExportScale } from './pngExport'
 import { fitZoom, useViewport } from './useViewport'
 import { useCanvasPan, useCtrlWheelZoom } from './useViewportInputs'
 import { getFontById } from '@lua-learning/lua-runtime'
@@ -318,8 +320,20 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
   const handleExportDosAns = useCallback(() => fileHandleExportDosAns(layers), [fileHandleExportDosAns, layers])
   const handleExportSh = useCallback(() => fileHandleExportSh(layers), [fileHandleExportSh, layers])
   const handleExportBat = useCallback(() => fileHandleExportBat(layers), [fileHandleExportBat, layers])
-  const handleExportPng = useCallback(() => {
-    void fileHandleExportPng(layers, font ?? DEFAULT_FONT_ID).catch(err => {
+
+  const [pngExportDialogOpen, setPngExportDialogOpen] = useState(false)
+  const handleExportPng = useCallback(() => setPngExportDialogOpen(true), [])
+  const handlePngExportCancel = useCallback(() => setPngExportDialogOpen(false), [])
+  const pngDefaultFileName = useMemo(() => deriveExportFilename(filePath, 'png'), [filePath])
+  const pngDimensionsForScale = useCallback((scale: PngExportScale) => {
+    const fontEntry = getFontById(font ?? DEFAULT_FONT_ID)
+    const cellW = fontEntry?.cellW ?? 0
+    const cellH = fontEntry?.cellH ?? 0
+    return { width: projectCols * cellW * scale, height: projectRows * cellH * scale }
+  }, [font, projectCols, projectRows])
+  const handlePngExportConfirm = useCallback((fileName: string, scale: PngExportScale) => {
+    setPngExportDialogOpen(false)
+    void fileHandleExportPng(layers, font ?? DEFAULT_FONT_ID, fileName, scale).catch(err => {
       const msg = err instanceof Error ? err.message : String(err)
       showToast(`PNG export failed: ${msg}`)
     })
@@ -544,6 +558,13 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
           onCancel={exportLayers.handleExportCancel}
         />
       )}
+      <PngExportDialog
+        isOpen={pngExportDialogOpen}
+        defaultFileName={pngDefaultFileName}
+        dimensionsForScale={pngDimensionsForScale}
+        onExport={handlePngExportConfirm}
+        onCancel={handlePngExportCancel}
+      />
       <ConfirmDialog
         isOpen={pendingSave !== null}
         title="Overwrite File"
