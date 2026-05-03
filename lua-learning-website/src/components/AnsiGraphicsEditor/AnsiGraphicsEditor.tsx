@@ -19,7 +19,7 @@ import { ImportLayersDialog } from './ImportLayersDialog'
 import { SaveAsDialog } from './SaveAsDialog'
 import { ToastContainer } from './ToastContainer'
 import { useAnsiEditor } from './useAnsiEditor'
-import { useAnsiEditorFile, deriveExportFilename } from './useAnsiEditorFile'
+import { useAnsiEditorFile } from './useAnsiEditorFile'
 import { PngExportDialog } from './PngExportDialog'
 import type { PngExportScale } from './pngExport'
 import { fitZoom, useViewport } from './useViewport'
@@ -89,6 +89,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
     handleExportSh: fileHandleExportSh,
     handleExportBat: fileHandleExportBat,
     handleExportPng: fileHandleExportPng,
+    pngDefaultFileName,
   } = useAnsiEditorFile({
     filePath,
     fileSystem,
@@ -324,7 +325,6 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
   const [pngExportDialogOpen, setPngExportDialogOpen] = useState(false)
   const handleExportPng = useCallback(() => setPngExportDialogOpen(true), [])
   const handlePngExportCancel = useCallback(() => setPngExportDialogOpen(false), [])
-  const pngDefaultFileName = useMemo(() => deriveExportFilename(filePath, 'png'), [filePath])
   const pngDimensionsForScale = useCallback((scale: PngExportScale) => {
     const fontEntry = getFontById(font ?? DEFAULT_FONT_ID)
     const cellW = fontEntry?.cellW ?? 0
@@ -333,7 +333,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
   }, [font, projectCols, projectRows])
   const handlePngExportConfirm = useCallback((fileName: string, scale: PngExportScale) => {
     setPngExportDialogOpen(false)
-    void fileHandleExportPng(layers, font ?? DEFAULT_FONT_ID, fileName, scale).catch(err => {
+    void fileHandleExportPng(layers, { fontId: font ?? DEFAULT_FONT_ID, fileName, scale }).catch(err => {
       const msg = err instanceof Error ? err.message : String(err)
       showToast(`PNG export failed: ${msg}`)
     })

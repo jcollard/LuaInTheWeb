@@ -34,7 +34,7 @@ function allFrameComposites(layers: Layer[], frameCount: number): AnsiGrid[] {
 }
 
 /** Derive an export filename from the editor's filePath, replacing the extension. */
-export function deriveExportFilename(filePath: string | undefined, ext: string): string {
+function deriveExportFilename(filePath: string | undefined, ext: string): string {
   if (!filePath || filePath.startsWith('ansi-editor://')) return `untitled.${ext}`
   const base = filePath.split('/').pop() ?? 'untitled'
   const replaced = base.replace(/\.ansi\.lua$/, `.${ext}`)
@@ -90,8 +90,15 @@ export interface UseAnsiEditorFileReturn {
   handleExportDosAns: (layers: Layer[]) => void
   handleExportSh: (layers: Layer[]) => void
   handleExportBat: (layers: Layer[]) => void
-  handleExportPng: (layers: Layer[], fontId: string, fileName: string, scale: number) => Promise<void>
+  handleExportPng: (layers: Layer[], options: PngExportOptions) => Promise<void>
+  pngDefaultFileName: string
   finishSaveAs: (savedPath: string) => Promise<void>
+}
+
+export interface PngExportOptions {
+  fontId: string
+  fileName: string
+  scale: number
 }
 
 export function useAnsiEditorFile({
@@ -203,10 +210,12 @@ export function useAnsiEditorFile({
     downloadBlob(new Blob([script], { type: 'text/x-shellscript' }), filename)
   }, [filePath])
 
-  const handleExportPng = useCallback(async (layers: Layer[], fontId: string, fileName: string, scale: number) => {
-    const blob = await gridToPngBlob(compositeGrid(layers), fontId, scale)
-    downloadBlob(blob, fileName)
+  const handleExportPng = useCallback(async (layers: Layer[], options: PngExportOptions) => {
+    const blob = await gridToPngBlob(compositeGrid(layers), options.fontId, options.scale)
+    downloadBlob(blob, options.fileName)
   }, [])
+
+  const pngDefaultFileName = useMemo(() => deriveExportFilename(filePath, 'png'), [filePath])
 
   return {
     initialLayerState,
@@ -221,6 +230,7 @@ export function useAnsiEditorFile({
     handleExportSh,
     handleExportBat,
     handleExportPng,
+    pngDefaultFileName,
     finishSaveAs,
   }
 }
