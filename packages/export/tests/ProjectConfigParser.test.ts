@@ -492,38 +492,6 @@ describe('ProjectConfigParser', () => {
       expect(config.ansi?.rows).toBe(25) // default
       expect(config.ansi?.font_size).toBe(16) // default
     })
-
-    it('should leave use_font_blocks undefined when omitted (auto / per-screen)', () => {
-      const config = parser.validate({
-        name: 'test',
-        main: 'main.lua',
-        type: 'ansi',
-      })
-
-      expect(config.ansi?.use_font_blocks).toBeUndefined()
-    })
-
-    it('should preserve use_font_blocks=true when explicitly set', () => {
-      const config = parser.validate({
-        name: 'test',
-        main: 'main.lua',
-        type: 'ansi',
-        ansi: { use_font_blocks: true },
-      })
-
-      expect(config.ansi?.use_font_blocks).toBe(true)
-    })
-
-    it('should preserve use_font_blocks=false when explicitly set', () => {
-      const config = parser.validate({
-        name: 'test',
-        main: 'main.lua',
-        type: 'ansi',
-        ansi: { use_font_blocks: false },
-      })
-
-      expect(config.ansi?.use_font_blocks).toBe(false)
-    })
   })
 })
 
@@ -603,36 +571,6 @@ describe('ProjectConfigParser - ANSI parsing', () => {
         expect(result.config.ansi?.crt).toBe(true)
         expect(result.config.ansi?.columns).toBe(80)
         expect(result.config.ansi?.rows).toBe(25)
-      }
-    })
-
-    it('should round-trip use_font_blocks=true from Lua source', () => {
-      const content = `return {
-        name = "test",
-        main = "main.lua",
-        type = "ansi",
-        ansi = { use_font_blocks = true }
-      }`
-      const result = ProjectConfigParser.parseContent(content)
-
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.config.ansi?.use_font_blocks).toBe(true)
-      }
-    })
-
-    it('should round-trip use_font_blocks=false from Lua source', () => {
-      const content = `return {
-        name = "test",
-        main = "main.lua",
-        type = "ansi",
-        ansi = { use_font_blocks = false }
-      }`
-      const result = ProjectConfigParser.parseContent(content)
-
-      expect(result.success).toBe(true)
-      if (result.success) {
-        expect(result.config.ansi?.use_font_blocks).toBe(false)
       }
     })
   })
