@@ -104,6 +104,14 @@ export interface AnsiConfig {
    */
   scale?: 'integer' | 'full' | '1x' | '2x' | '3x'
 
+  /**
+   * Override per-screen `useFontBlocks` for the export. Default: nil.
+   * - `undefined` / omitted — honor each `.ansi.lua` screen's own `useFontBlocks` flag (recommended).
+   * - `true` — force the pixel renderer (PixelAnsiRenderer + bitmap font atlas) for all screens.
+   * - `false` — force xterm.js + CanvasAddon for all screens.
+   */
+  use_font_blocks?: boolean
+
   /** Enable CRT monitor effect (scanlines, vignette, phosphor glow). Default: false */
   crt?: boolean
 

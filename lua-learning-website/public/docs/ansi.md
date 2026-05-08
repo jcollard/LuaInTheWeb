@@ -789,3 +789,64 @@ ansi.start()
 | `ansi.get_mouse_row()` | Mouse row (1–`ansi.ROWS`) |
 | `ansi.width()` / `ansi.COLS` | Current terminal width in columns |
 | `ansi.height()` / `ansi.ROWS` | Current terminal height in rows |
+
+## Export configuration
+
+When you export a project with the `export` CLI, the runtime is configured by the `ansi = { ... }` block of `project.lua`. All fields are optional — defaults are applied for anything you omit.
+
+```lua
+return {
+  name = "My ANSI App",
+  main = "main.lua",
+  type = "ansi",
+  ansi = {
+    columns = 80,
+    rows = 25,
+    font_size = 16,
+    scale = "integer",          -- "integer" | "full" | "1x" | "2x" | "3x"
+    -- use_font_blocks = true,  -- force pixel renderer for all screens
+    -- use_font_blocks = false, -- force xterm + CanvasAddon for all screens
+    -- crt = true,              -- enable CRT post-processing (and crt_* tuning fields)
+  },
+}
+```
+
+### Field reference
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `columns` | number | 80 | Initial terminal width in cells |
+| `rows` | number | 25 | Initial terminal height in cells |
+| `font_size` | number | 16 | Cell pixel height for the default `Web IBM VGA 8x16` font |
+| `scale` | string | `"integer"` | Viewport scaling: `"integer"` (largest whole-pixel scale that fits) / `"full"` (fractional fit) / `"1x"` / `"2x"` / `"3x"` |
+| `use_font_blocks` | boolean \| nil | nil | Renderer override — see below |
+| `crt` | boolean | false | Enable WebGL CRT post-processing (scanlines, bloom, vignette, etc.) |
+| `crt_smoothing` | boolean | true | CRT texture smoothing |
+| `crt_scanlineIntensity` | number | 0.33 | Scanline darkness (0–1) |
+| `crt_scanlineCount` | number | 150 | Scanline count (50–1200) |
+| `crt_adaptiveIntensity` | number | 1 | Adaptive scanline modulation (0–1) |
+| `crt_brightness` | number | 1.15 | Brightness boost (0.6–1.8) |
+| `crt_contrast` | number | 1 | Contrast (0.5–1.5) |
+| `crt_saturation` | number | 1 | Color saturation (0–2) |
+| `crt_bloomIntensity` | number | 0.25 | Bloom on bright areas (0–1.5) |
+| `crt_bloomThreshold` | number | 0 | Bloom luminance threshold (0–1) |
+| `crt_rgbShift` | number | 1 | Color fringing (0–1) |
+| `crt_vignetteStrength` | number | 0.22 | Edge darkening (0–2) |
+| `crt_curvature` | number | 0.05 | Barrel distortion (0–0.5) |
+| `crt_flickerStrength` | number | 0 | Temporal flicker (0–0.15) |
+| `crt_phosphor` | number | 0 | RGB phosphor mask strength (0–1) |
+
+### `use_font_blocks` — renderer override
+
+Each `.ansi.lua` file carries its own `useFontBlocks` flag, set in the ANSI Editor via **File Options → Use font blocks (pixel renderer)** and saved into the file. The runtime picks the renderer per-screen based on that flag:
+
+- `useFontBlocks = true` (default) — `PixelAnsiRenderer` (bitmap atlas, `image-rendering: pixelated`, no sub-pixel AA seams). Matches the editor preview pixel-for-pixel.
+- `useFontBlocks = false` — xterm.js + CanvasAddon (visible sub-pixel AA on half-blocks; useful for fonts that aren't in the bitmap atlas).
+
+`use_font_blocks` in `project.lua` overrides that per-screen choice for the export only:
+
+- **Omit / `nil` (default)** — honor each screen's own `useFontBlocks`. Recommended; the export looks the same as the editor.
+- **`true`** — force the pixel renderer for every screen, even ones authored at `useFontBlocks = false`.
+- **`false`** — force xterm + CanvasAddon for every screen, even ones authored at `useFontBlocks = true`.
+
+If a running program calls `ansi.set_screen()` to switch between screens with different `useFontBlocks` values and no override is set, the export tears down the active renderer and constructs the other one (CRT state, font ID, and terminal size are preserved across the swap).

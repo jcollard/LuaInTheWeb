@@ -445,6 +445,22 @@ describe('ExportCommand', () => {
       expect(content).toContain('singleFile = true')
     })
 
+    it('should include commented use_font_blocks options in ansi template', () => {
+      const command = new ExportCommand()
+      const filesystem = createMockFilesystem({})
+      const context = createMockContext(filesystem)
+
+      command.execute(['--init', '--type=ansi'], context)
+
+      const writeCall = (filesystem.writeFile as ReturnType<typeof vi.fn>).mock.calls[0]
+      const content = writeCall[1] as string
+      expect(content).toContain('type = "ansi"')
+      // Both override values must be discoverable as commented examples so
+      // users can flip the renderer choice without reading source.
+      expect(content).toContain('-- use_font_blocks = true')
+      expect(content).toContain('-- use_font_blocks = false')
+    })
+
     it('should not require onTriggerDownload for --init', () => {
       const command = new ExportCommand()
       const filesystem = createMockFilesystem({})

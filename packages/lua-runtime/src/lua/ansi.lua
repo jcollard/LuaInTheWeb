@@ -7,7 +7,14 @@
 --- screens authored at other dimensions (e.g. 120×40). Use `ansi.width()` and
 --- `ansi.height()` for the current size, or `ansi.COLS` / `ansi.ROWS` which
 --- now read the live dimensions through a metatable.
---- It uses xterm.js as the renderer and supports true color (24-bit) output.
+---
+--- Renderer: each loaded screen carries a `useFontBlocks` flag (set in the
+--- ANSI Editor's File Options). When true (default) the runtime uses the
+--- pixel-perfect bitmap renderer; when false it falls back to xterm.js +
+--- CanvasAddon. Both paths support true color (24-bit) output. The
+--- standalone HTML export honors the per-screen flag; set
+--- `ansi.use_font_blocks` in project.lua to force one renderer for the
+--- whole export — see the "Export configuration" section of the ansi docs.
 ---
 --- Note: The ANSI API is available in both script and REPL mode.
 --- Use ansi.tick() to register your per-frame callback.

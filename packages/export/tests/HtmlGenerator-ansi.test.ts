@@ -155,9 +155,12 @@ describe('HtmlGenerator - generateAnsi', () => {
 
     const html = generator.generateAnsi(config, luaFiles, [])
 
-    expect(html).toContain('cols: 120')
-    expect(html).toContain('rows: 40')
-    expect(html).toContain('fontSize: 12')
+    // The wrapper handle seeds lastCols / lastRows from the config so the
+    // initial buildPixelHandle/buildXtermHandle call constructs at the right size.
+    expect(html).toContain('let lastCols = 120;')
+    expect(html).toContain('let lastRows = 40;')
+    // Font size is interpolated as the FONT_SIZE constant used by both factories.
+    expect(html).toContain('const FONT_SIZE = 12;')
   })
 
   it('should use default values when ansi config is undefined', () => {
@@ -171,9 +174,9 @@ describe('HtmlGenerator - generateAnsi', () => {
 
     const html = generator.generateAnsi(config, luaFiles, [])
 
-    expect(html).toContain('cols: 80')
-    expect(html).toContain('rows: 25')
-    expect(html).toContain('fontSize: 16')
+    expect(html).toContain('let lastCols = 80;')
+    expect(html).toContain('let lastRows = 25;')
+    expect(html).toContain('const FONT_SIZE = 16;')
   })
 
   it('should include wasmoon runtime', () => {
@@ -267,7 +270,11 @@ describe('HtmlGenerator - generateAnsi', () => {
 
     expect(html).toContain('scale: "integer"')
     expect(html).toContain('applyScale')
-    expect(html).toContain("window.addEventListener('resize', applyScale)")
+    // After the chooser refactor the listener delegates to whichever inner
+    // handle is currently mounted; assert the listener is wired and routes
+    // to inner.applyScale.
+    expect(html).toContain("window.addEventListener('resize',")
+    expect(html).toContain('inner.applyScale')
   })
 
   it('should use configured scale mode', () => {
@@ -304,7 +311,9 @@ describe('HtmlGenerator - generateAnsi', () => {
 
     const html = generator.generateAnsi(config, luaFiles, [])
 
-    expect(html).toContain('term.options.fontSize = FONT_SIZE * newScale')
+    // The xterm factory scales by mutating term.options.fontSize using the
+    // currently-active font's cell height (so per-screen font swaps scale correctly).
+    expect(html).toContain('term.options.fontSize = currentFontEntryCellH * newScale')
   })
 
   it('should not include CrtShader initialization when crt is disabled', () => {
@@ -338,7 +347,10 @@ describe('HtmlGenerator - generateAnsi', () => {
     expect(html).toContain('AnsiStandalone.CrtShader')
     expect(html).toContain('AnsiStandalone.CRT_DEFAULTS')
     expect(html).toContain('CRT_CONFIG')
-    expect(html).toContain('crtShader.enable(CRT_CONFIG)')
+    // The wrapper now drives CRT activation via handle.setCrt so it persists
+    // across pixel/xterm renderer swaps. The shader itself is enabled inside applyCrt.
+    expect(html).toContain('handle.setCrt(true, undefined, CRT_CONFIG)')
+    expect(html).toContain('crtShader.enable(config)')
   })
 
   it('should use CRT_DEFAULTS fallback for unset CRT parameters', () => {
@@ -373,7 +385,94 @@ describe('HtmlGenerator - generateAnsi', () => {
     const html = generator.generateAnsi(config, luaFiles, [])
 
     expect(html).toContain('setCrt:')
-    expect(html).toContain('crtShader.disable()')
+    expect(html).toContain('destroyCrt')
     expect(html).not.toContain('crt-enabled')
+  })
+
+  describe('use_font_blocks override', () => {
+    it('emits PROJECT_USE_FONT_BLOCKS_OVERRIDE = null when omitted (auto / per-screen)', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig()
+      const html = generator.generateAnsi(config, [], [])
+
+      expect(html).toContain('const PROJECT_USE_FONT_BLOCKS_OVERRIDE = null;')
+    })
+
+    it('emits PROJECT_USE_FONT_BLOCKS_OVERRIDE = true when forced to pixel', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig({
+        ansi: { columns: 80, rows: 25, font_size: 16, use_font_blocks: true },
+      })
+      const html = generator.generateAnsi(config, [], [])
+
+      expect(html).toContain('const PROJECT_USE_FONT_BLOCKS_OVERRIDE = true;')
+    })
+
+    it('emits PROJECT_USE_FONT_BLOCKS_OVERRIDE = false when forced to xterm', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig({
+        ansi: { columns: 80, rows: 25, font_size: 16, use_font_blocks: false },
+      })
+      const html = generator.generateAnsi(config, [], [])
+
+      expect(html).toContain('const PROJECT_USE_FONT_BLOCKS_OVERRIDE = false;')
+    })
+
+    it('emits both buildPixelHandle and buildXtermHandle factories regardless of override', () => {
+      // Both factories must be reachable so the runtime can swap renderers
+      // when AnsiController fires setUseFontBlocks per-screen.
+      for (const override of [undefined, true, false] as const) {
+        const generator = new HtmlGenerator(createOptions())
+        const config = createConfig({
+          ansi: {
+            columns: 80,
+            rows: 25,
+            font_size: 16,
+            ...(override === undefined ? {} : { use_font_blocks: override }),
+          },
+        })
+        const html = generator.generateAnsi(config, [], [])
+
+        expect(html, `pixel factory missing for override=${String(override)}`).toContain(
+          'function buildPixelHandle('
+        )
+        expect(html, `xterm factory missing for override=${String(override)}`).toContain(
+          'async function buildXtermHandle('
+        )
+      }
+    })
+
+    it('references the bundled PixelAnsiRenderer global so the pixel path can construct', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig()
+      const html = generator.generateAnsi(config, [], [])
+
+      // The ansi-inline bundle exposes PixelAnsiRenderer on globalThis.AnsiStandalone.
+      // The template must read it from there for the pixel factory to work.
+      expect(html).toContain('globalThis.AnsiStandalone.PixelAnsiRenderer')
+    })
+
+    it('exposes setUseFontBlocks on the wrapper handle (not a no-op stub)', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig()
+      const html = generator.generateAnsi(config, [], [])
+
+      // The wrapper's setUseFontBlocks must call resolveUsePixel + rebuild
+      // so AnsiController.applyFontSettings actually swaps renderers.
+      expect(html).toContain('setUseFontBlocks: async')
+      expect(html).toContain('resolveUsePixel(flag)')
+      expect(html).toContain('rebuild(target)')
+    })
+
+    it('resolveUsePixel honors the override over the per-screen request', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig()
+      const html = generator.generateAnsi(config, [], [])
+
+      // resolveUsePixel must short-circuit on === true / === false
+      // before falling through to the requested per-screen value.
+      expect(html).toContain('PROJECT_USE_FONT_BLOCKS_OVERRIDE === true')
+      expect(html).toContain('PROJECT_USE_FONT_BLOCKS_OVERRIDE === false')
+    })
   })
 })

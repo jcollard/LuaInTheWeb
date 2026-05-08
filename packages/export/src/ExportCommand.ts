@@ -173,6 +173,9 @@ export class ExportCommand implements ICommand {
     rows = 25,
     font_size = 16,
     scale = "integer",  -- "integer" | "full" | "1x" | "2x" | "3x"
+    -- Renderer override (omit / nil = honor each screen's per-screen useFontBlocks):
+    -- use_font_blocks = true,    -- force pixel renderer (PixelAnsiRenderer) for all screens
+    -- use_font_blocks = false,   -- force xterm + CanvasAddon for all screens
     -- CRT monitor effect
     -- crt = true,
     -- crt_smoothing = true,

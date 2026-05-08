@@ -43,6 +43,12 @@ export function generateAnsiHtml(
   const fontSize = config.ansi?.font_size ?? 16
   const scaleMode = config.ansi?.scale ?? 'integer'
   const crtEnabled = config.ansi?.crt ?? false
+  // Project-wide useFontBlocks override.
+  // - undefined: honor each screen's per-screen useFontBlocks (default).
+  // - true: force pixel renderer (PixelAnsiRenderer) for all screens.
+  // - false: force xterm + CanvasAddon for all screens.
+  const useFontBlocksOverrideLiteral =
+    config.ansi?.use_font_blocks === undefined ? 'null' : String(config.ansi.use_font_blocks)
 
   // Build CRT config JS object entries — use literal values when set, CRT_DEFAULTS fallback otherwise
   const crtConfigEntries = crtEnabled ? [
@@ -200,147 +206,236 @@ export function generateAnsiHtml(
         console.warn('Could not pre-unlock AudioContext:', e);
       }
 
-      // Wait for the default bitmap font to load before creating terminal
-      await document.fonts.load('${fontSize}px "Web IBM VGA 8x16"');
-
-      // Create xterm.js terminal with the default bitmap font; per-screen
-      // font changes flow through handle.setFontFamily.
-      const term = new Terminal({
-        cols: ${columns},
-        rows: ${rows},
-        fontSize: ${fontSize},
-        fontFamily: '"Web IBM VGA 8x16", monospace',
-        lineHeight: 1,
-        letterSpacing: 0,
-        cursorBlink: false,
-        disableStdin: true,
-        scrollback: 0,
-        overviewRulerWidth: 0,
-        allowTransparency: false,
-        theme: {
-          background: '#000000',
-          foreground: '#AAAAAA',
-          cursor: '#AAAAAA',
-        },
-      });
-      term.open(wrapper);
-
-      // Load CanvasAddon for crisp half-block rendering
-      try {
-        term.loadAddon(new CanvasAddon());
-      } catch (e) {
-        console.warn('[ANSI Export] CanvasAddon failed:', e);
-      }
-
-      // Snap fillRect to integer pixels to prevent antialiasing seams between cells
-      function patchFR(c) { var ctx = c.getContext('2d'); if (!ctx || ctx._p) return; var o = ctx.fillRect.bind(ctx); ctx.fillRect = function(x,y,w,h) { var x1=Math.round(x),y1=Math.round(y); o(x1,y1,Math.round(x+w)-x1,Math.round(y+h)-y1); }; ctx._p = 1; }
-      wrapper.querySelectorAll('canvas').forEach(patchFR);
-      new MutationObserver(function() { wrapper.querySelectorAll('canvas').forEach(patchFR); }).observe(wrapper, { childList: true, subtree: true });
-
-      // Prevent xterm.js from processing keyboard events
-      term.attachCustomKeyEventHandler(() => false);
-      termRef = term;
-
-      // Apply terminal scaling based on configured mode.
-      // Measure base dimensions once at 1x, then use those for all future calculations.
       const FONT_SIZE = ${fontSize};
       const scaleMode = PROJECT_CONFIG.scale;
-      let baseW = wrapper.scrollWidth;
-      let baseH = wrapper.scrollHeight;
-      let currentScale = -1;
-      function applyScale() {
-        if (baseW === 0 || baseH === 0) return;
-        const containerW = window.innerWidth;
-        const containerH = window.innerHeight;
-        let newScale;
-        switch (scaleMode) {
-          case '1x': newScale = 1; break;
-          case '2x': newScale = 2; break;
-          case '3x': newScale = 3; break;
-          case 'full':
-            newScale = Math.min(containerW / baseW, containerH / baseH);
-            break;
-          default: // 'integer'
-            newScale = Math.max(1, Math.floor(Math.min(containerW / baseW, containerH / baseH)));
-        }
-        if (newScale === currentScale) return;
-        currentScale = newScale;
-        term.options.fontSize = FONT_SIZE * newScale;
-      }
-      applyScale();
-      window.addEventListener('resize', applyScale);
-
-      // Initialize WebGL CRT shader if enabled
-      let crtShader = null;
-      ${crtEnabled ? `{
-        const CrtShader = globalThis.AnsiStandalone.CrtShader;
-        const CRT_DEFAULTS = globalThis.AnsiStandalone.CRT_DEFAULTS;
-        const CRT_CONFIG = { ${crtConfigEntries} };
-        const canvas = wrapper.querySelector('canvas');
-        if (canvas) {
-          crtShader = new CrtShader(canvas, wrapper, {});
-          crtShader.enable(CRT_CONFIG);
-        }
-      }` : ''}
-
-      // Create AnsiTerminalHandle wrapping xterm.js
       const getFontById = globalThis.AnsiStandalone.getFontById;
-      const handle = {
-        write: (data) => term.write(data), container: wrapper, dispose: () => term.dispose(),
-        resize: (cols, rows) => {
-          try { term.resize(cols, rows) } catch (e) { console.warn('[ANSI Export] resize failed:', e) }
-          // xterm re-renders its DOM after resize. Defer so scrollWidth/Height reflect the new size.
-          requestAnimationFrame(() => {
-            baseW = wrapper.scrollWidth
-            baseH = wrapper.scrollHeight
-            currentScale = -1
-            applyScale()
-          })
-        },
-        setCrt: (enabled, intensity, config) => {
-          if (enabled) {
-            if (!crtShader) {
-              const CrtShader = globalThis.AnsiStandalone.CrtShader;
-              const canvas = wrapper.querySelector('canvas');
-              if (canvas) {
-                crtShader = new CrtShader(canvas, wrapper, {});
-              }
-            }
-            if (crtShader) {
-              if (config) {
-                crtShader.enable(config);
-              } else {
-                crtShader.enable(intensity !== undefined ? intensity : undefined);
-              }
-            }
-          } else if (crtShader) {
-            crtShader.disable();
-            crtShader = null;
-          }
-        },
-        // Per-screen font switch — AnsiController calls this when a
-        // running program switches to a screen with a different font.
-        // Updates xterm fontFamily + fontSize from the registry and
-        // re-applies scale.
-        setFontFamily: (fontId) => {
-          const entry = getFontById(fontId);
-          if (!entry) return;
-          document.fonts.load(entry.cellH + 'px "' + entry.fontFamily + '"').catch(() => {});
-          term.options.fontFamily = '"' + entry.fontFamily + '", monospace';
-          term.options.fontSize = entry.cellH;
-          // Re-measure base dims at the new font size then re-apply scale.
-          requestAnimationFrame(() => {
-            baseW = wrapper.scrollWidth;
-            baseH = wrapper.scrollHeight;
+      const DEFAULT_FONT_ID = globalThis.AnsiStandalone.DEFAULT_FONT_ID;
+
+      // Project-wide override resolved at export time.
+      // null = honor per-screen flag; true = force pixel; false = force xterm.
+      const PROJECT_USE_FONT_BLOCKS_OVERRIDE = ${useFontBlocksOverrideLiteral};
+      function resolveUsePixel(requested) {
+        if (PROJECT_USE_FONT_BLOCKS_OVERRIDE === true) return true;
+        if (PROJECT_USE_FONT_BLOCKS_OVERRIDE === false) return false;
+        return !!requested;
+      }
+      function computeIntegerScale(containerW, containerH, baseW, baseH) {
+        if (baseW === 0 || baseH === 0) return 1;
+        switch (scaleMode) {
+          case '1x': return 1;
+          case '2x': return 2;
+          case '3x': return 3;
+          case 'full': return Math.min(containerW / baseW, containerH / baseH);
+          default: return Math.max(1, Math.floor(Math.min(containerW / baseW, containerH / baseH)));
+        }
+      }
+
+      // Pixel renderer factory — uses PixelAnsiRenderer (bitmap atlas, image-rendering: pixelated).
+      function buildPixelHandle(opts) {
+        const PixelAnsiRenderer = globalThis.AnsiStandalone.PixelAnsiRenderer;
+        const renderer = new PixelAnsiRenderer({ cols: opts.cols, rows: opts.rows, fontId: opts.fontId });
+        wrapper.replaceChildren(renderer.canvas);
+        renderer.canvas.style.imageRendering = 'pixelated';
+        let baseW = renderer.canvas.width;
+        let baseH = renderer.canvas.height;
+        let currentScale = -1;
+        function applyScale() {
+          const newScale = computeIntegerScale(window.innerWidth, window.innerHeight, baseW, baseH);
+          if (newScale === currentScale) return;
+          currentScale = newScale;
+          renderer.canvas.style.width = (baseW * newScale) + 'px';
+          renderer.canvas.style.height = (baseH * newScale) + 'px';
+        }
+        applyScale();
+        return {
+          type: 'pixel',
+          write: (data) => renderer.write(data),
+          container: wrapper,
+          dispose: () => { try { renderer.dispose(); } catch (e) { console.warn('[ANSI Export] pixel dispose failed:', e); } },
+          resize: (cols, rows) => {
+            try { renderer.resize(cols, rows); } catch (e) { console.warn('[ANSI Export] pixel resize failed:', e); }
+            baseW = renderer.canvas.width;
+            baseH = renderer.canvas.height;
             currentScale = -1;
             applyScale();
-          });
+          },
+          setFontFamily: async (fontId) => {
+            try { await renderer.setFontFamily(fontId); } catch (e) { console.warn('[ANSI Export] pixel setFontFamily failed:', e); }
+            requestAnimationFrame(() => {
+              baseW = renderer.canvas.width;
+              baseH = renderer.canvas.height;
+              currentScale = -1;
+              applyScale();
+            });
+          },
+          setUseFontBlocks: (flag) => { try { renderer.setUseFontBlocks(flag); } catch (e) { /* renderer flag is informational */ void e; } },
+          applyScale,
+          getCanvas: () => renderer.canvas,
+        };
+      }
+
+      // xterm + CanvasAddon factory — fallback for screens authored with useFontBlocks=false.
+      async function buildXtermHandle(opts) {
+        await document.fonts.load(FONT_SIZE + 'px "Web IBM VGA 8x16"');
+        const term = new Terminal({
+          cols: opts.cols,
+          rows: opts.rows,
+          fontSize: FONT_SIZE,
+          fontFamily: '"Web IBM VGA 8x16", monospace',
+          lineHeight: 1,
+          letterSpacing: 0,
+          cursorBlink: false,
+          disableStdin: true,
+          scrollback: 0,
+          overviewRulerWidth: 0,
+          allowTransparency: false,
+          theme: { background: '#000000', foreground: '#AAAAAA', cursor: '#AAAAAA' },
+        });
+        term.open(wrapper);
+        try { term.loadAddon(new CanvasAddon()); } catch (e) { console.warn('[ANSI Export] CanvasAddon failed:', e); }
+        // Snap fillRect to integer pixels to prevent antialiasing seams between cells.
+        function patchFR(c) { var ctx = c.getContext('2d'); if (!ctx || ctx._p) return; var o = ctx.fillRect.bind(ctx); ctx.fillRect = function(x,y,w,h) { var x1=Math.round(x),y1=Math.round(y); o(x1,y1,Math.round(x+w)-x1,Math.round(y+h)-y1); }; ctx._p = 1; }
+        wrapper.querySelectorAll('canvas').forEach(patchFR);
+        const observer = new MutationObserver(function() { wrapper.querySelectorAll('canvas').forEach(patchFR); });
+        observer.observe(wrapper, { childList: true, subtree: true });
+        term.attachCustomKeyEventHandler(() => false);
+        let baseW = wrapper.scrollWidth;
+        let baseH = wrapper.scrollHeight;
+        let currentScale = -1;
+        let currentFontEntryCellH = FONT_SIZE;
+        function applyScale() {
+          const newScale = computeIntegerScale(window.innerWidth, window.innerHeight, baseW, baseH);
+          if (newScale === currentScale) return;
+          currentScale = newScale;
+          term.options.fontSize = currentFontEntryCellH * newScale;
+        }
+        applyScale();
+        // Apply non-default initial font if provided.
+        if (opts.fontId && opts.fontId !== DEFAULT_FONT_ID) {
+          const entry = getFontById(opts.fontId);
+          if (entry) {
+            document.fonts.load(entry.cellH + 'px "' + entry.fontFamily + '"').catch(() => {});
+            term.options.fontFamily = '"' + entry.fontFamily + '", monospace';
+            currentFontEntryCellH = entry.cellH;
+            requestAnimationFrame(() => {
+              baseW = wrapper.scrollWidth;
+              baseH = wrapper.scrollHeight;
+              currentScale = -1;
+              applyScale();
+            });
+          }
+        }
+        return {
+          type: 'xterm',
+          write: (data) => term.write(data),
+          container: wrapper,
+          dispose: () => { try { observer.disconnect(); term.dispose(); } catch (e) { console.warn('[ANSI Export] xterm dispose failed:', e); } },
+          resize: (cols, rows) => {
+            try { term.resize(cols, rows); } catch (e) { console.warn('[ANSI Export] xterm resize failed:', e); }
+            requestAnimationFrame(() => {
+              baseW = wrapper.scrollWidth;
+              baseH = wrapper.scrollHeight;
+              currentScale = -1;
+              applyScale();
+            });
+          },
+          setFontFamily: (fontId) => {
+            const entry = getFontById(fontId);
+            if (!entry) return;
+            document.fonts.load(entry.cellH + 'px "' + entry.fontFamily + '"').catch(() => {});
+            term.options.fontFamily = '"' + entry.fontFamily + '", monospace';
+            currentFontEntryCellH = entry.cellH;
+            requestAnimationFrame(() => {
+              baseW = wrapper.scrollWidth;
+              baseH = wrapper.scrollHeight;
+              currentScale = -1;
+              applyScale();
+            });
+          },
+          setUseFontBlocks: () => { /* swap is handled by the outer wrapper */ },
+          applyScale,
+          getCanvas: () => wrapper.querySelector('canvas'),
+        };
+      }
+
+      // CRT shader is attached to whichever inner handle is currently active.
+      // Track its state at the wrapper level so it can be re-applied after a renderer swap.
+      let crtShader = null;
+      function destroyCrt() {
+        if (crtShader) { try { crtShader.disable(); } catch (e) { console.warn('[ANSI Export] CRT disable failed:', e); } crtShader = null; }
+      }
+      function applyCrt(canvas, config) {
+        const CrtShader = globalThis.AnsiStandalone.CrtShader;
+        if (!canvas) return;
+        crtShader = new CrtShader(canvas, wrapper, {});
+        crtShader.enable(config);
+      }
+
+      // Outer wrapper handle — persists across renderer swaps. AnsiController only sees this.
+      let inner = null;
+      let lastCols = ${columns};
+      let lastRows = ${rows};
+      let lastFontId = DEFAULT_FONT_ID;
+      let crtEnabled = false;
+      let crtConfig = null;
+      let swapInProgress = null;
+
+      async function rebuild(usePixel) {
+        destroyCrt();
+        if (inner) { try { inner.dispose(); } catch (e) { console.warn('[ANSI Export] inner dispose failed:', e); } inner = null; }
+        while (wrapper.firstChild) wrapper.firstChild.remove();
+        const opts = { cols: lastCols, rows: lastRows, fontId: lastFontId };
+        inner = usePixel ? buildPixelHandle(opts) : await buildXtermHandle(opts);
+        if (crtEnabled && crtConfig) applyCrt(inner.getCanvas(), crtConfig);
+      }
+
+      const handle = {
+        write: (data) => { if (inner) inner.write(data); },
+        container: wrapper,
+        dispose: () => { destroyCrt(); if (inner) inner.dispose(); },
+        resize: (cols, rows) => {
+          lastCols = cols; lastRows = rows;
+          if (inner) inner.resize(cols, rows);
         },
-        // Reserved for a dual-mode export variant. The current export
-        // always uses xterm; the no-op keeps the handle surface
-        // compatible with AnsiController.applyFontSettings.
-        setUseFontBlocks: () => { /* no-op until export has pixel variant */ },
+        setFontFamily: (fontId) => {
+          lastFontId = fontId;
+          if (inner) return inner.setFontFamily(fontId);
+        },
+        setCrt: (enabled, intensity, config) => {
+          crtEnabled = !!enabled;
+          if (config) crtConfig = config;
+          else if (intensity !== undefined && !crtConfig) crtConfig = { /* shader uses intensity directly */ };
+          if (enabled) {
+            if (!crtShader) applyCrt(inner ? inner.getCanvas() : null, crtConfig);
+            else if (config) { try { crtShader.enable(config); } catch (e) { console.warn('[ANSI Export] CRT re-enable failed:', e); } }
+          } else {
+            destroyCrt();
+          }
+        },
+        setUseFontBlocks: async (flag) => {
+          const target = resolveUsePixel(flag);
+          if (inner && target === (inner.type === 'pixel')) return;
+          // Serialize swaps so a rapid sequence doesn't tear the DOM mid-rebuild.
+          const prev = swapInProgress;
+          let resolveSwap;
+          const mine = new Promise((r) => { resolveSwap = r; });
+          swapInProgress = mine;
+          if (prev) { try { await prev; } catch (e) { void e; } }
+          try { await rebuild(target); } finally { resolveSwap(); if (swapInProgress === mine) swapInProgress = null; }
+        },
       };
+
+      const initialUsePixel = resolveUsePixel(true /* DEFAULT_USE_FONT_BLOCKS */);
+      await rebuild(initialUsePixel);
+      termRef = handle;
+      window.addEventListener('resize', () => { if (inner && inner.applyScale) inner.applyScale(); });
+
+      ${crtEnabled ? `{
+        const CRT_DEFAULTS = globalThis.AnsiStandalone.CRT_DEFAULTS;
+        const CRT_CONFIG = { ${crtConfigEntries} };
+        handle.setCrt(true, undefined, CRT_CONFIG);
+      }` : ''}
+
       const callbacks = {
         onRequestAnsiTab: () => Promise.resolve(handle), onCloseAnsiTab: () => {},
         onFlushOutput: () => flushOutput(),
