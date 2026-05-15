@@ -173,6 +173,11 @@ export class ExportCommand implements ICommand {
     rows = 25,
     font_size = 16,
     scale = "integer",  -- "integer" | "full" | "1x" | "2x" | "3x"
+    -- Override the per-screen pixel renderer toggle saved in each .ansi.lua:
+    --   "auto" (default): use whatever each screen's file specifies
+    --   "on": force the pixel renderer for every screen
+    --   "off": force the legacy xterm path for every screen
+    use_font_blocks = "auto",  -- "on" | "off" | "auto"
     -- CRT monitor effect
     -- crt = true,
     -- crt_smoothing = true,

@@ -10,6 +10,12 @@ export interface AnsiTabContentProps {
   isActive?: boolean
   /** Callback when the terminal is ready, providing a handle for programmatic control */
   onTerminalReady?: (ansiId: string, handle: AnsiTerminalHandle | null) => void
+  /**
+   * Override the panel's renderer mount: `true` forces the pixel renderer,
+   * `false` forces the legacy xterm path, `undefined` leaves it on the
+   * AnsiTerminalPanel default. Comes from project.lua's `ansi.use_font_blocks`.
+   */
+  useFontBlocks?: boolean
 }
 
 export function AnsiTabContent({
@@ -19,6 +25,7 @@ export function AnsiTabContent({
   onCloseTab,
   isActive,
   onTerminalReady,
+  useFontBlocks,
 }: AnsiTabContentProps) {
   return (
     <div className={styles.canvasContainer}>
@@ -47,6 +54,7 @@ export function AnsiTabContent({
       </div>
       <AnsiTerminalPanel
         isActive={isActive}
+        useFontBlocks={useFontBlocks}
         onTerminalReady={onTerminalReady
           ? (handle) => {
               // Extract ansiId from active tab path (ansi://{ansiId})

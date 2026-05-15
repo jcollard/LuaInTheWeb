@@ -17,6 +17,7 @@ interface LuaTableField extends LuaNode { type: string; key?: LuaNode; value: Lu
 interface LuaIdentifier extends LuaNode { name: string }
 interface LuaNumericLiteral extends LuaNode { value: number }
 interface LuaBooleanLiteral extends LuaNode { value: boolean }
+interface LuaStringLiteral extends LuaNode { value: string | null; raw: string }
 
 /**
  * Extract a flat key→value map from a Lua table AST node.
@@ -30,6 +31,17 @@ function tableToMap(table: LuaTableConstructor): Record<string, unknown> {
     const val = field.value
     if (val.type === 'NumericLiteral') result[key] = (val as LuaNumericLiteral).value
     else if (val.type === 'BooleanLiteral') result[key] = (val as LuaBooleanLiteral).value
+    else if (val.type === 'StringLiteral') {
+      const s = val as LuaStringLiteral
+      if (typeof s.value === 'string') {
+        result[key] = s.value
+      } else if (typeof s.raw === 'string' && s.raw.length >= 2) {
+        const first = s.raw[0]
+        if ((first === '"' || first === "'") && s.raw.endsWith(first)) {
+          result[key] = s.raw.slice(1, -1)
+        }
+      }
+    }
     else if (val.type === 'TableConstructorExpression') result[key] = tableToMap(val as LuaTableConstructor)
   }
   return result
@@ -70,6 +82,33 @@ export function extractCrtConfig(content: string): CrtConfig | null {
       flickerStrength: typeof ansi.crt_flickerStrength === 'number' ? ansi.crt_flickerStrength : CRT_DEFAULTS.flickerStrength,
       phosphor: typeof ansi.crt_phosphor === 'number' ? ansi.crt_phosphor : CRT_DEFAULTS.phosphor,
     }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Extract a project.lua `ansi.use_font_blocks` override.
+ * Returns `true` for "on", `false` for "off", and `null` for "auto"
+ * (or missing / unparseable).
+ */
+export function extractUseFontBlocksOverride(content: string): boolean | null {
+  try {
+    const ast = luaparse.parse(content, {
+      luaVersion: '5.3',
+      comments: false,
+      scope: false,
+    }) as LuaChunk
+
+    const ret = ast.body.find((n): n is LuaReturnStatement => n.type === 'ReturnStatement')
+    if (!ret?.arguments?.[0] || ret.arguments[0].type !== 'TableConstructorExpression') return null
+
+    const root = tableToMap(ret.arguments[0] as LuaTableConstructor)
+    const ansi = root.ansi as Record<string, unknown> | undefined
+    const value = ansi?.use_font_blocks
+    if (value === 'on') return true
+    if (value === 'off') return false
+    return null
   } catch {
     return null
   }

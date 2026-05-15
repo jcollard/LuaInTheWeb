@@ -742,6 +742,50 @@ end)
 ansi.start()
 ```
 
+## Renderer Toggle (Pixel Renderer)
+
+Each ANSI screen file (`.ansi.lua`) saves a `useFontBlocks` flag that selects between the **pixel renderer** (true; renders block characters from pre-extracted bitmap masks for pixel-perfect output) and the **legacy xterm path** (false). The editor's "Use pixel renderer (font blocks)" checkbox writes this field.
+
+You can override the per-screen value in two places:
+
+### Project-level override (`project.lua`)
+
+```lua
+return {
+  name = "My ANSI App",
+  main = "main.lua",
+  type = "ansi",
+  ansi = {
+    use_font_blocks = "auto",  -- "on" | "off" | "auto"
+  },
+}
+```
+
+- `"auto"` (default): use each screen's saved `useFontBlocks` value.
+- `"on"`: force the pixel renderer for every screen, regardless of the file's saved value.
+- `"off"`: force the legacy xterm path for every screen.
+
+### Runtime override: `ansi.set_use_font_blocks(value)`
+
+Override the renderer at any point while the program is running:
+
+```lua
+ansi.set_use_font_blocks(true)   -- force pixel renderer for every screen
+ansi.set_use_font_blocks(false)  -- force legacy xterm path
+ansi.set_use_font_blocks(nil)    -- clear the runtime override; defer to
+                                  -- project.lua (then to each screen's saved value)
+```
+
+### Resolution priority
+
+When `ansi.set_screen()` activates a screen, the effective `useFontBlocks` value is resolved as:
+
+1. **Runtime override** (`ansi.set_use_font_blocks(true/false)`) — highest priority.
+2. **Project override** (`ansi.use_font_blocks = "on"/"off"` in `project.lua`).
+3. **Screen value** (the screen's saved `useFontBlocks` field, or `true` if unset).
+
+`"auto"` and `nil` mean "not an override at this level — defer to the next one."
+
 ## Quick Reference
 
 | Function | Description |
@@ -771,6 +815,7 @@ ansi.start()
 | `screen:set_layer_offset(id, col, row)` | Set layer position offset in virtual canvas |
 | `screen:get_layer_offset(id)` | Get layer position offset (col, row) |
 | `ansi.crt(config)` | Enable/update CRT shader effect |
+| `ansi.set_use_font_blocks(v)` | Override pixel renderer at runtime (`true`/`false`/`nil`) |
 | `ansi.start()` | Start terminal (blocks until `stop()`) |
 | `ansi.stop()` | Stop terminal |
 | `ansi.tick(fn)` | Register per-frame callback |

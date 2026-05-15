@@ -118,3 +118,73 @@ describe('AnsiController per-screen font settings', () => {
     expect(handle.setUseFontBlocks).toHaveBeenLastCalledWith(true)
   })
 })
+
+describe('AnsiController useFontBlocks override resolution', () => {
+  let controller: AnsiController
+  let handle: MockHandle
+
+  beforeEach(async () => {
+    ;({ controller, handle } = await bootController())
+    handle.setFontFamily.mockClear()
+    handle.setUseFontBlocks.mockClear()
+  })
+
+  it('project override "on" forces useFontBlocks=true even when screen says false', () => {
+    controller.setProjectUseFontBlocksOverride(true)
+    const id = controller.createScreen(makeV1Data({ useFontBlocks: false }))
+    controller.setScreen(id)
+    // Screen says false but override forces true; default is true so no callback fires.
+    expect(handle.setUseFontBlocks).not.toHaveBeenCalled()
+  })
+
+  it('project override "off" forces useFontBlocks=false even when screen says true', () => {
+    controller.setProjectUseFontBlocksOverride(false)
+    const id = controller.createScreen(makeV1Data({ useFontBlocks: true }))
+    controller.setScreen(id)
+    expect(handle.setUseFontBlocks).toHaveBeenLastCalledWith(false)
+  })
+
+  it('project override null (auto) uses each screen\'s saved value', () => {
+    controller.setProjectUseFontBlocksOverride(null)
+    const id = controller.createScreen(makeV1Data({ useFontBlocks: false }))
+    controller.setScreen(id)
+    expect(handle.setUseFontBlocks).toHaveBeenLastCalledWith(false)
+  })
+
+  it('dynamic Lua API override takes precedence over project override', () => {
+    // Set screen first so the override calls during setup don't apply twice.
+    const id = controller.createScreen(makeV1Data({ useFontBlocks: false }))
+    controller.setScreen(id)
+    expect(handle.setUseFontBlocks).toHaveBeenLastCalledWith(false) // screen=false, no overrides
+    handle.setUseFontBlocks.mockClear()
+
+    controller.setProjectUseFontBlocksOverride(false) // no change — already false
+    expect(handle.setUseFontBlocks).not.toHaveBeenCalled()
+
+    controller.setRuntimeUseFontBlocksOverride(true)
+    // Runtime true wins over project false and screen false.
+    expect(handle.setUseFontBlocks).toHaveBeenLastCalledWith(true)
+  })
+
+  it('dynamic Lua API override null falls back to project override', () => {
+    controller.setProjectUseFontBlocksOverride(false)
+    controller.setRuntimeUseFontBlocksOverride(null)
+    const id = controller.createScreen(makeV1Data({ useFontBlocks: true }))
+    controller.setScreen(id)
+    // Runtime null → project override false wins over screen true.
+    expect(handle.setUseFontBlocks).toHaveBeenLastCalledWith(false)
+  })
+
+  it('changing runtime override re-applies to current screen', () => {
+    const id = controller.createScreen(makeV1Data({ useFontBlocks: true }))
+    controller.setScreen(id)
+    expect(handle.setUseFontBlocks).not.toHaveBeenCalled() // default true
+
+    controller.setRuntimeUseFontBlocksOverride(false)
+    expect(handle.setUseFontBlocks).toHaveBeenLastCalledWith(false)
+
+    controller.setRuntimeUseFontBlocksOverride(null)
+    // Back to screen's true value (default) — no callback because already at default.
+    expect(handle.setUseFontBlocks).toHaveBeenLastCalledWith(true)
+  })
+})

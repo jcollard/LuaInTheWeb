@@ -158,6 +158,22 @@ function ansi.reset() end
 ---@usage ansi.crt({ curvature = 0.2, bloomIntensity = 0.8, phosphor = 0.3 })
 function ansi.crt(enabled_or_config, intensity) end
 
+--- Override the per-screen pixel renderer (font blocks) toggle at runtime.
+--- Each ANSI screen file saves a `useFontBlocks` flag, and `project.lua` can
+--- supply a project-wide override via `ansi.use_font_blocks = "on" | "off" | "auto"`.
+--- This function lets a running program override both, screen-by-screen or globally:
+---
+---   ansi.set_use_font_blocks(true)   -- force the pixel renderer for every screen
+---   ansi.set_use_font_blocks(false)  -- force the legacy xterm path
+---   ansi.set_use_font_blocks(nil)    -- clear the runtime override; defer to
+---                                    -- project.lua (then to each screen's saved value)
+---
+--- Priority: runtime API > project.lua > screen file.
+---@param value boolean|nil true (pixel), false (xterm), or nil (clear override)
+---@return nil
+---@usage ansi.set_use_font_blocks(true)
+function ansi.set_use_font_blocks(value) end
+
 -- =============================================================================
 -- Color Constants
 -- =============================================================================

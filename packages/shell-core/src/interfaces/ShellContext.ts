@@ -283,6 +283,24 @@ export interface ShellContext {
   unregisterAnsiCloseHandler?: (ansiId: string) => void
 
   /**
+   * Hint the UI which ANSI terminal panel variant to mount (pixel vs xterm)
+   * before the panel is requested. Called by LuaScriptProcess when it
+   * discovers the project's `ansi.use_font_blocks` override.
+   * `true` → pixel, `false` → xterm, `null` → no override (use default).
+   */
+  onAnsiPanelMode?: (useFontBlocks: boolean | null) => void
+
+  /**
+   * Subscribe to ANSI terminal-handle changes. The controller registers
+   * a listener that fires whenever the panel (re)mounts and a new handle
+   * becomes available — needed so the controller can pick up the new
+   * handle after a panel-variant remount. Returns an unsubscribe function.
+   */
+  registerAnsiHandleListener?: (
+    listener: (handle: unknown) => void
+  ) => () => void
+
+  /**
    * Request a file to be opened in the editor.
    * Called by the 'open' command to integrate with an IDE or editor.
    * Optional - when undefined, the open command will report that
