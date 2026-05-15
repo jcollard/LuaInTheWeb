@@ -233,6 +233,14 @@ export interface ShellCanvasCallbacks {
    * Called by LuaScriptProcess before the panel is requested.
    */
   onAnsiPanelMode?: (useFontBlocks: boolean | null) => void
+  /**
+   * Subscribe to ANSI terminal-handle changes. The controller registers a
+   * listener that fires whenever the panel (re)mounts and a new handle
+   * becomes available. Returns an unsubscribe function.
+   */
+  registerAnsiHandleListener?: (
+    listener: (handle: unknown) => void
+  ) => () => void
 }
 
 /**
@@ -449,6 +457,7 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
         registerAnsiCloseHandler: options?.canvasCallbacks?.registerAnsiCloseHandler,
         unregisterAnsiCloseHandler: options?.canvasCallbacks?.unregisterAnsiCloseHandler,
         onAnsiPanelMode: options?.canvasCallbacks?.onAnsiPanelMode,
+        registerAnsiHandleListener: options?.canvasCallbacks?.registerAnsiHandleListener,
         // Editor integration callback for 'open' command
         onRequestOpenFile: options?.onRequestOpenFile,
         // Filesystem change notification for UI refresh (e.g., file tree)

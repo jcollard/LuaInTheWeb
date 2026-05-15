@@ -291,6 +291,16 @@ export interface ShellContext {
   onAnsiPanelMode?: (useFontBlocks: boolean | null) => void
 
   /**
+   * Subscribe to ANSI terminal-handle changes. The controller registers
+   * a listener that fires whenever the panel (re)mounts and a new handle
+   * becomes available — needed so the controller can pick up the new
+   * handle after a panel-variant remount. Returns an unsubscribe function.
+   */
+  registerAnsiHandleListener?: (
+    listener: (handle: unknown) => void
+  ) => () => void
+
+  /**
    * Request a file to be opened in the editor.
    * Called by the 'open' command to integrate with an IDE or editor.
    * Optional - when undefined, the open command will report that

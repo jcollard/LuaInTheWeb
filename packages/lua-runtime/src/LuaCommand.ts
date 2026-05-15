@@ -223,6 +223,7 @@ export class LuaCommand implements ICommand {
             registerAnsiCloseHandler: context.registerAnsiCloseHandler,
             unregisterAnsiCloseHandler: context.unregisterAnsiCloseHandler,
             onAnsiPanelMode: context.onAnsiPanelMode,
+            registerHandleListener: context.registerAnsiHandleListener,
           }
         : undefined
 
