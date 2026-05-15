@@ -227,6 +227,12 @@ export interface ShellCanvasCallbacks {
   registerAnsiCloseHandler?: (ansiId: string, handler: () => void) => void
   /** Unregister the ANSI close handler */
   unregisterAnsiCloseHandler?: (ansiId: string) => void
+  /**
+   * Hint the UI which ANSI panel variant to mount (pixel vs xterm) based
+   * on the running script's `project.lua` `ansi.use_font_blocks` field.
+   * Called by LuaScriptProcess before the panel is requested.
+   */
+  onAnsiPanelMode?: (useFontBlocks: boolean | null) => void
 }
 
 /**
@@ -442,6 +448,7 @@ export function useShell(fileSystem: UseShellFileSystem, options?: UseShellOptio
         onCloseAnsiTab: options?.canvasCallbacks?.onCloseAnsiTab,
         registerAnsiCloseHandler: options?.canvasCallbacks?.registerAnsiCloseHandler,
         unregisterAnsiCloseHandler: options?.canvasCallbacks?.unregisterAnsiCloseHandler,
+        onAnsiPanelMode: options?.canvasCallbacks?.onAnsiPanelMode,
         // Editor integration callback for 'open' command
         onRequestOpenFile: options?.onRequestOpenFile,
         // Filesystem change notification for UI refresh (e.g., file tree)
