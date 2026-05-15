@@ -130,7 +130,7 @@ export function LayerContextMenu({
             data-testid="context-set-text-fg-from-brush"
             onClick={() => { onSetTextLayerFgFromBrush(contextMenu.layerId); close() }}
           >
-            Set Default Color From Brush
+            Set Default Color from Brush
           </button>
         )}
         <div

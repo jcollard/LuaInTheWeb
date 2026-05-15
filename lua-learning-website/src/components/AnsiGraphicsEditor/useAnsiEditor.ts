@@ -879,13 +879,14 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     textToolRef.current?.refreshOverlays()
   }, [pushSnapshot, rawUpdateTextLayer, layersRef, activeLayerIdRef])
 
-  const setTextLayerFg = useCallback((layerId: string, textFg: RGBColor) => {
+  const setTextLayerFgFromBrush = useCallback((layerId: string) => {
     const layer = layersRef.current.find(l => l.id === layerId)
     if (!layer || layer.type !== 'text') return
     pushSnapshot()
-    rawUpdateTextLayer(layerId, { textFg })
+    rawUpdateTextLayer(layerId, { textFg: [...brushRef.current.fg] as RGBColor })
     setIsDirty(true)
     flushLayers(layersRef.current)
+    textToolRef.current?.refreshOverlays()
   }, [pushSnapshot, rawUpdateTextLayer, layersRef])
 
   const setCgaPreview = useCallback((on: boolean) => {
@@ -1013,7 +1014,7 @@ export function useAnsiEditor(options?: UseAnsiEditorOptions): UseAnsiEditorRetu
     mergeDown: mergeDownWithUndo,
     wrapInGroup: wrapInGroupWithUndo, removeFromGroup: removeFromGroupWithUndo,
     duplicateLayer: duplicateLayerWithUndo, toggleGroupCollapsed: toggleGroupCollapsedNoUndo,
-    importPngAsLayer, parseAnsiFile, importLayersWithUndo, simplifyColors, setTextAlign, setTextLayerFg, flipSelectionHorizontal, flipSelectionVertical,
+    importPngAsLayer, parseAnsiFile, importLayersWithUndo, simplifyColors, setTextAlign, setTextLayerFgFromBrush, flipSelectionHorizontal, flipSelectionVertical,
     activeLayerIsGroup, isMoveDragging,
     flipOriginOverlayRef, flipOrigin, flipLayerHorizontal, flipLayerVertical,
     cgaPreview, setCgaPreview,

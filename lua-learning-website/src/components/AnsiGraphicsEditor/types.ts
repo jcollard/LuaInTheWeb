@@ -250,7 +250,7 @@ export interface UseAnsiEditorReturn {
   importLayersWithUndo: (layers: Layer[]) => void
   simplifyColors: (mapping: Map<string, RGBColor>, scope: 'current' | 'layer') => void
   setTextAlign: (align: TextAlign) => void
-  setTextLayerFg: (layerId: string, textFg: RGBColor) => void
+  setTextLayerFgFromBrush: (layerId: string) => void
   flipSelectionHorizontal: () => void
   flipSelectionVertical: () => void
   // Move tool

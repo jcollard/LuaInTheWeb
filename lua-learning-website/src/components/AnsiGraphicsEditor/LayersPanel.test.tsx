@@ -489,37 +489,35 @@ describe('LayersPanel', () => {
       expect(screen.getByTestId('context-merge-down')).toBeDisabled()
     })
 
-    it('shows "Set Default Color From Brush" for text layers', () => {
+    function openTextLayerContextMenu(onSetTextLayerFgFromBrush?: (id: string) => void) {
       const drawn = createLayer('Background', 'layer-0')
       const text = makeTextLayer('text-1')
-      renderPanel({ layers: [drawn, text] })
+      renderPanel({ layers: [drawn, text], onSetTextLayerFgFromBrush })
       fireEvent.contextMenu(screen.getByTestId('layer-row-text-1'))
+    }
+
+    it('shows "Set Default Color from Brush" for text layers', () => {
+      openTextLayerContextMenu()
       const item = screen.getByTestId('context-set-text-fg-from-brush')
       expect(item).toBeTruthy()
-      expect(item.textContent).toBe('Set Default Color From Brush')
+      expect(item.textContent).toBe('Set Default Color from Brush')
     })
 
-    it('does not show "Set Default Color From Brush" for drawn layers', () => {
+    it('does not show "Set Default Color from Brush" for drawn layers', () => {
       renderPanel()
       fireEvent.contextMenu(screen.getByTestId('layer-row-layer-1'))
       expect(screen.queryByTestId('context-set-text-fg-from-brush')).toBeNull()
     })
 
-    it('clicking "Set Default Color From Brush" calls onSetTextLayerFgFromBrush with the layer id', () => {
-      const drawn = createLayer('Background', 'layer-0')
-      const text = makeTextLayer('text-1')
+    it('clicking "Set Default Color from Brush" calls onSetTextLayerFgFromBrush with the layer id', () => {
       const onSetTextLayerFgFromBrush = vi.fn()
-      renderPanel({ layers: [drawn, text], onSetTextLayerFgFromBrush })
-      fireEvent.contextMenu(screen.getByTestId('layer-row-text-1'))
+      openTextLayerContextMenu(onSetTextLayerFgFromBrush)
       fireEvent.click(screen.getByTestId('context-set-text-fg-from-brush'))
       expect(onSetTextLayerFgFromBrush).toHaveBeenCalledWith('text-1')
     })
 
-    it('closes context menu after clicking "Set Default Color From Brush"', () => {
-      const drawn = createLayer('Background', 'layer-0')
-      const text = makeTextLayer('text-1')
-      renderPanel({ layers: [drawn, text] })
-      fireEvent.contextMenu(screen.getByTestId('layer-row-text-1'))
+    it('closes context menu after clicking "Set Default Color from Brush"', () => {
+      openTextLayerContextMenu()
       fireEvent.click(screen.getByTestId('context-set-text-fg-from-brush'))
       expect(screen.queryByTestId('layer-context-menu')).toBeNull()
     })
