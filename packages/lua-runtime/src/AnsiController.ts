@@ -76,6 +76,15 @@ export interface AnsiCallbacks {
    * Called after each frame to ensure print() output appears immediately.
    */
   onFlushOutput?: () => void
+  /**
+   * Hint the UI which terminal-panel variant to mount before the panel
+   * is requested. Called by LuaScriptProcess when it discovers the
+   * project's `ansi.use_font_blocks` override.
+   * - `true` → mount the pixel renderer
+   * - `false` → mount the xterm path
+   * - `null` → no project-level override; the UI uses its default
+   */
+  onAnsiPanelMode?: (useFontBlocks: boolean | null) => void
 }
 
 export interface LayerInfo {

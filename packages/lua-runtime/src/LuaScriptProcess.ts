@@ -516,28 +516,34 @@ __clear_execution_hook()
 
     // Wrap onRequestAnsiTab to merge pre-start CRT calls with project.lua defaults
     const originalOnRequest = this.options.ansiCallbacks.onRequestAnsiTab
+    const originalOnPanelMode = this.options.ansiCallbacks.onAnsiPanelMode
     const wrappedOnRequest = async (ansiId: string): Promise<AnsiTerminalHandle> => {
-      const handle = await originalOnRequest(ansiId)
-
-      // Consume any ansi.crt() calls made before ansi.start()
-      const pending = this.ansiController?.consumePendingCrt()
-
-      // Load project.lua CRT config and use_font_blocks override
+      // Read project.lua up front so the UI can mount the correct panel
+      // variant (pixel vs xterm) BEFORE the terminal handle is created.
+      // `useFontBlocks` is a mount-time React prop on AnsiTerminalPanel;
+      // switching variants after mount won't take effect, so the override
+      // must reach the UI before the tab is opened.
       let projectCrt: CrtConfig | null = null
+      let useFontBlocksOverride: boolean | null = null
       const projectLuaPath = `${this.context.cwd}/project.lua`
       try {
         if (this.context.filesystem.exists(projectLuaPath)) {
           const content = this.context.filesystem.readFile(projectLuaPath)
           if (content) {
             projectCrt = extractCrtConfig(content)
-            this.ansiController?.setProjectUseFontBlocksOverride(
-              extractUseFontBlocksOverride(content)
-            )
+            useFontBlocksOverride = extractUseFontBlocksOverride(content)
           }
         }
       } catch {
         // Silently ignore project.lua read/parse errors
       }
+      this.ansiController?.setProjectUseFontBlocksOverride(useFontBlocksOverride)
+      originalOnPanelMode?.(useFontBlocksOverride)
+
+      const handle = await originalOnRequest(ansiId)
+
+      // Consume any ansi.crt() calls made before ansi.start()
+      const pending = this.ansiController?.consumePendingCrt()
 
       // Merge: explicit pre-start values override project.lua values
       if (pending || projectCrt) {
