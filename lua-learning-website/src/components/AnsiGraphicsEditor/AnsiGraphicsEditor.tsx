@@ -142,6 +142,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
     textBoundsRef,
     textCursorRef,
     setTextAlign,
+    setTextLayerFg,
     flipSelectionHorizontal,
     flipSelectionVertical,
     cgaPreview,
@@ -493,6 +494,7 @@ export function AnsiGraphicsEditor({ filePath, onDirtyChange, isActive }: AnsiGr
           onCreateTag={createTag}
           onDeleteTag={deleteTag}
           onRenameTag={renameTag}
+          onSetTextLayerFgFromBrush={(layerId) => setTextLayerFg(layerId, brush.fg)}
           crtConfig={crtConfig}
           onSetCrtConfig={setCrtConfig}
         />
