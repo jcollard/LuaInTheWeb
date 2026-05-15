@@ -22,6 +22,7 @@ export interface LayerContextMenuProps {
   onAddTagToLayer: (layerId: string, tag: string) => void
   onRemoveTagFromLayer: (layerId: string, tag: string) => void
   onSetTagsSubmenuOpen: (open: boolean) => void
+  onSetTextLayerFgFromBrush: (layerId: string) => void
   onClose: () => void
   onBackdropContextMenu: (e: React.MouseEvent) => void
 }
@@ -46,6 +47,7 @@ export function LayerContextMenu({
   onAddTagToLayer,
   onRemoveTagFromLayer,
   onSetTagsSubmenuOpen,
+  onSetTextLayerFgFromBrush,
   onClose,
   onBackdropContextMenu,
 }: LayerContextMenuProps): React.JSX.Element {
@@ -122,6 +124,15 @@ export function LayerContextMenu({
         >
           Copy Layer ID
         </button>
+        {contextLayer?.type === 'text' && (
+          <button
+            className={styles.layerContextMenuItem}
+            data-testid="context-set-text-fg-from-brush"
+            onClick={() => { onSetTextLayerFgFromBrush(contextMenu.layerId); close() }}
+          >
+            Set Default Color from Brush
+          </button>
+        )}
         <div
           className={[styles.layerContextMenuItem, styles.layerContextMenuItemSubmenu].filter(Boolean).join(' ')}
           data-testid="context-tags-submenu-trigger"

@@ -38,6 +38,7 @@ describe('LayersPanel', () => {
     onCreateTag?: (tag: string) => void
     onDeleteTag?: (tag: string) => void
     onRenameTag?: (oldTag: string, newTag: string) => void
+    onSetTextLayerFgFromBrush?: (layerId: string) => void
   }) {
     const layers = overrides?.layers ?? makeLayers('Background', 'Foreground')
     return render(
@@ -66,8 +67,25 @@ describe('LayersPanel', () => {
         onCreateTag={overrides?.onCreateTag ?? noop}
         onDeleteTag={overrides?.onDeleteTag ?? noop}
         onRenameTag={overrides?.onRenameTag ?? noop}
+        onSetTextLayerFgFromBrush={overrides?.onSetTextLayerFgFromBrush ?? noop}
       />
     )
+  }
+
+  function makeTextLayer(id: string, name = 'Label'): TextLayer {
+    const emptyGrid = Array.from({ length: ANSI_ROWS }, () =>
+      Array.from({ length: ANSI_COLS }, () => ({ ...DEFAULT_CELL }))
+    )
+    return {
+      type: 'text',
+      id,
+      name,
+      visible: true,
+      text: 'Hi',
+      bounds: { r0: 0, c0: 0, r1: 2, c1: 10 },
+      textFg: [170, 85, 0],
+      grid: emptyGrid,
+    }
   }
 
   it('renders layer names', () => {
@@ -469,6 +487,39 @@ describe('LayersPanel', () => {
       // Context menu should still be open, now for layer-0
       expect(screen.getByTestId('layer-context-menu')).toBeTruthy()
       expect(screen.getByTestId('context-merge-down')).toBeDisabled()
+    })
+
+    function openTextLayerContextMenu(onSetTextLayerFgFromBrush?: (id: string) => void) {
+      const drawn = createLayer('Background', 'layer-0')
+      const text = makeTextLayer('text-1')
+      renderPanel({ layers: [drawn, text], onSetTextLayerFgFromBrush })
+      fireEvent.contextMenu(screen.getByTestId('layer-row-text-1'))
+    }
+
+    it('shows "Set Default Color from Brush" for text layers', () => {
+      openTextLayerContextMenu()
+      const item = screen.getByTestId('context-set-text-fg-from-brush')
+      expect(item).toBeTruthy()
+      expect(item.textContent).toBe('Set Default Color from Brush')
+    })
+
+    it('does not show "Set Default Color from Brush" for drawn layers', () => {
+      renderPanel()
+      fireEvent.contextMenu(screen.getByTestId('layer-row-layer-1'))
+      expect(screen.queryByTestId('context-set-text-fg-from-brush')).toBeNull()
+    })
+
+    it('clicking "Set Default Color from Brush" calls onSetTextLayerFgFromBrush with the layer id', () => {
+      const onSetTextLayerFgFromBrush = vi.fn()
+      openTextLayerContextMenu(onSetTextLayerFgFromBrush)
+      fireEvent.click(screen.getByTestId('context-set-text-fg-from-brush'))
+      expect(onSetTextLayerFgFromBrush).toHaveBeenCalledWith('text-1')
+    })
+
+    it('closes context menu after clicking "Set Default Color from Brush"', () => {
+      openTextLayerContextMenu()
+      fireEvent.click(screen.getByTestId('context-set-text-fg-from-brush'))
+      expect(screen.queryByTestId('layer-context-menu')).toBeNull()
     })
 
     it('right-clicking backdrop over non-layer area closes context menu', () => {

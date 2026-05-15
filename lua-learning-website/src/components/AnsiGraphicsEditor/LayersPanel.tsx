@@ -36,6 +36,7 @@ export interface LayersPanelProps {
   onCreateTag: (tag: string) => void
   onDeleteTag: (tag: string) => void
   onRenameTag: (oldTag: string, newTag: string) => void
+  onSetTextLayerFgFromBrush: (layerId: string) => void
   crtConfig?: CrtConfig | null
   onSetCrtConfig?: (config: CrtConfig | null) => void
 }
@@ -77,6 +78,7 @@ export function LayersPanel({
   onCreateTag,
   onDeleteTag,
   onRenameTag,
+  onSetTextLayerFgFromBrush,
   crtConfig,
   onSetCrtConfig,
 }: LayersPanelProps) {
@@ -396,6 +398,7 @@ export function LayersPanel({
           onAddTagToLayer={onAddTagToLayer}
           onRemoveTagFromLayer={onRemoveTagFromLayer}
           onSetTagsSubmenuOpen={setTagsSubmenuOpen}
+          onSetTextLayerFgFromBrush={onSetTextLayerFgFromBrush}
           onClose={closeContextMenu}
           onBackdropContextMenu={handleBackdropContextMenu}
         />
