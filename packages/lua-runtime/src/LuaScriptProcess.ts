@@ -538,7 +538,16 @@ __clear_execution_hook()
         // Silently ignore project.lua read/parse errors
       }
       this.ansiController?.setProjectUseFontBlocksOverride(useFontBlocksOverride)
-      originalOnPanelMode?.(useFontBlocksOverride)
+      // Only push the UI's panel mode for an *actual* project override —
+      // for "auto" (null), leave the UI state alone. The controller has
+      // typically already fired onAnsiPanelMode from set_screen (when the
+      // script ran set_screen before start()), and passing null here would
+      // overwrite that value and force the panel back to its default
+      // variant. The controller will fire onAnsiPanelMode again later if
+      // the script's first set_screen happens after start().
+      if (useFontBlocksOverride !== null) {
+        originalOnPanelMode?.(useFontBlocksOverride)
+      }
 
       const handle = await originalOnRequest(ansiId)
 
