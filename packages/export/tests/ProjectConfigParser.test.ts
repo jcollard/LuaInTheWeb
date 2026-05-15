@@ -476,6 +476,7 @@ describe('ProjectConfigParser', () => {
       expect(config.ansi?.columns).toBe(80)
       expect(config.ansi?.rows).toBe(25)
       expect(config.ansi?.font_size).toBe(16)
+      expect(config.ansi?.use_font_blocks).toBe('auto')
     })
 
     it('should merge provided ansi config with defaults', () => {
@@ -491,6 +492,49 @@ describe('ProjectConfigParser', () => {
       expect(config.ansi?.columns).toBe(120)
       expect(config.ansi?.rows).toBe(25) // default
       expect(config.ansi?.font_size).toBe(16) // default
+      expect(config.ansi?.use_font_blocks).toBe('auto') // default
+    })
+
+    it('should accept use_font_blocks = "on"', () => {
+      const config = parser.validate({
+        name: 'test',
+        main: 'main.lua',
+        type: 'ansi',
+        ansi: { use_font_blocks: 'on' },
+      })
+      expect(config.ansi?.use_font_blocks).toBe('on')
+    })
+
+    it('should accept use_font_blocks = "off"', () => {
+      const config = parser.validate({
+        name: 'test',
+        main: 'main.lua',
+        type: 'ansi',
+        ansi: { use_font_blocks: 'off' },
+      })
+      expect(config.ansi?.use_font_blocks).toBe('off')
+    })
+
+    it('should accept use_font_blocks = "auto"', () => {
+      const config = parser.validate({
+        name: 'test',
+        main: 'main.lua',
+        type: 'ansi',
+        ansi: { use_font_blocks: 'auto' },
+      })
+      expect(config.ansi?.use_font_blocks).toBe('auto')
+    })
+
+    it('should reject invalid use_font_blocks value', () => {
+      expect(() =>
+        parser.validate({
+          name: 'test',
+          main: 'main.lua',
+          type: 'ansi',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ansi: { use_font_blocks: 'maybe' as any },
+        })
+      ).toThrow("ansi.use_font_blocks must be 'on', 'off', or 'auto'")
     })
   })
 })
@@ -554,6 +598,36 @@ describe('ProjectConfigParser - ANSI parsing', () => {
       expect(result.success).toBe(false)
       if (!result.success) {
         expect(result.error).toContain('main')
+      }
+    })
+
+    it('should parse use_font_blocks from project.lua content', () => {
+      const content = `return {
+        name = "test",
+        main = "main.lua",
+        type = "ansi",
+        ansi = { use_font_blocks = "off" }
+      }`
+      const result = ProjectConfigParser.parseContent(content)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.config.ansi?.use_font_blocks).toBe('off')
+      }
+    })
+
+    it('should reject invalid use_font_blocks from project.lua content', () => {
+      const content = `return {
+        name = "test",
+        main = "main.lua",
+        type = "ansi",
+        ansi = { use_font_blocks = "yes" }
+      }`
+      const result = ProjectConfigParser.parseContent(content)
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toContain('use_font_blocks')
       }
     })
 

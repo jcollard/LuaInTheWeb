@@ -26,7 +26,7 @@ import { chipLuaCode } from './chipLuaCode'
 import { AnsiController, type AnsiCallbacks, type AnsiTerminalHandle } from './AnsiController'
 import type { CrtConfig } from './crtShader'
 import { setupAnsiAPI } from './setupAnsiAPI'
-import { extractCrtConfig } from './projectCrtConfig'
+import { extractCrtConfig, extractUseFontBlocksOverride } from './projectCrtConfig'
 import { FileOperationsHandler } from './FileOperationsHandler'
 import type { CanvasMode, ScreenMode, HotReloadMode } from './LuaCommand'
 
@@ -522,7 +522,7 @@ __clear_execution_hook()
       // Consume any ansi.crt() calls made before ansi.start()
       const pending = this.ansiController?.consumePendingCrt()
 
-      // Load project.lua CRT config
+      // Load project.lua CRT config and use_font_blocks override
       let projectCrt: CrtConfig | null = null
       const projectLuaPath = `${this.context.cwd}/project.lua`
       try {
@@ -530,6 +530,9 @@ __clear_execution_hook()
           const content = this.context.filesystem.readFile(projectLuaPath)
           if (content) {
             projectCrt = extractCrtConfig(content)
+            this.ansiController?.setProjectUseFontBlocksOverride(
+              extractUseFontBlocksOverride(content)
+            )
           }
         }
       } catch {

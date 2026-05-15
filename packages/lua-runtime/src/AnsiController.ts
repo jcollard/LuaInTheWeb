@@ -136,6 +136,10 @@ export class AnsiController {
   private currentRows: number = DEFAULT_ANSI_ROWS
   private currentFont: string = DEFAULT_ANSI_FONT_ID
   private currentUseFontBlocks: boolean = DEFAULT_USE_FONT_BLOCKS
+  /** Project-level override from project.lua (null = auto / use screen value). */
+  private projectUseFontBlocksOverride: boolean | null = null
+  /** Dynamic Lua API override (null = no override; outranks project + screen). */
+  private runtimeUseFontBlocksOverride: boolean | null = null
   private compositeBufferA: AnsiGrid = createEmptyGrid(DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS)
   private compositeBufferB: AnsiGrid = createEmptyGrid(DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS)
   private useBufferA = true
@@ -300,6 +304,16 @@ export class AnsiController {
   getRows(): number { return this.currentRows }
 
   /**
+   * Resolve the effective useFontBlocks value, applying override priority:
+   * runtime API override > project.lua override > screen's saved value.
+   */
+  private resolveUseFontBlocks(screenValue: boolean): boolean {
+    if (this.runtimeUseFontBlocksOverride !== null) return this.runtimeUseFontBlocksOverride
+    if (this.projectUseFontBlocksOverride !== null) return this.projectUseFontBlocksOverride
+    return screenValue
+  }
+
+  /**
    * Apply per-screen font + renderer-mode settings to the attached handle,
    * skipping calls when the values are unchanged. Safe to call before the
    * handle is attached — values are remembered on the controller, and
@@ -310,9 +324,40 @@ export class AnsiController {
       this.currentFont = font
       this.handle?.setFontFamily?.(font)
     }
-    if (useFontBlocks !== this.currentUseFontBlocks) {
-      this.currentUseFontBlocks = useFontBlocks
-      this.handle?.setUseFontBlocks?.(useFontBlocks)
+    const effective = this.resolveUseFontBlocks(useFontBlocks)
+    if (effective !== this.currentUseFontBlocks) {
+      this.currentUseFontBlocks = effective
+      this.handle?.setUseFontBlocks?.(effective)
+    }
+  }
+
+  /**
+   * Set the project-level useFontBlocks override (from project.lua).
+   * Pass null for "auto" (use each screen's saved value).
+   */
+  setProjectUseFontBlocksOverride(value: boolean | null): void {
+    this.projectUseFontBlocksOverride = value
+    this.reapplyUseFontBlocks()
+  }
+
+  /**
+   * Set the dynamic runtime useFontBlocks override (from ansi.set_use_font_blocks).
+   * Pass null to clear the override (defer to project / screen value).
+   */
+  setRuntimeUseFontBlocksOverride(value: boolean | null): void {
+    this.runtimeUseFontBlocksOverride = value
+    this.reapplyUseFontBlocks()
+  }
+
+  /** Re-resolve and apply useFontBlocks for the active screen (if any). */
+  private reapplyUseFontBlocks(): void {
+    const screenValue = this.activeScreenId !== null
+      ? this.screenStates.get(this.activeScreenId)?.useFontBlocks ?? DEFAULT_USE_FONT_BLOCKS
+      : DEFAULT_USE_FONT_BLOCKS
+    const effective = this.resolveUseFontBlocks(screenValue)
+    if (effective !== this.currentUseFontBlocks) {
+      this.currentUseFontBlocks = effective
+      this.handle?.setUseFontBlocks?.(effective)
     }
   }
 

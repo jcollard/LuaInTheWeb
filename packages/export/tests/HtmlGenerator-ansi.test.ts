@@ -376,4 +376,40 @@ describe('HtmlGenerator - generateAnsi', () => {
     expect(html).toContain('crtShader.disable()')
     expect(html).not.toContain('crt-enabled')
   })
+
+  describe('use_font_blocks override', () => {
+    it('emits setProjectUseFontBlocksOverride(null) for default (auto)', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig()
+      const html = generator.generateAnsi(config, [], [])
+      expect(html).toContain('controller.setProjectUseFontBlocksOverride(null)')
+    })
+
+    it('emits setProjectUseFontBlocksOverride(null) for explicit "auto"', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig({
+        ansi: { columns: 80, rows: 25, use_font_blocks: 'auto' },
+      })
+      const html = generator.generateAnsi(config, [], [])
+      expect(html).toContain('controller.setProjectUseFontBlocksOverride(null)')
+    })
+
+    it('emits setProjectUseFontBlocksOverride(true) for "on"', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig({
+        ansi: { columns: 80, rows: 25, use_font_blocks: 'on' },
+      })
+      const html = generator.generateAnsi(config, [], [])
+      expect(html).toContain('controller.setProjectUseFontBlocksOverride(true)')
+    })
+
+    it('emits setProjectUseFontBlocksOverride(false) for "off"', () => {
+      const generator = new HtmlGenerator(createOptions())
+      const config = createConfig({
+        ansi: { columns: 80, rows: 25, use_font_blocks: 'off' },
+      })
+      const html = generator.generateAnsi(config, [], [])
+      expect(html).toContain('controller.setProjectUseFontBlocksOverride(false)')
+    })
+  })
 })

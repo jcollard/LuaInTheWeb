@@ -43,6 +43,11 @@ export function generateAnsiHtml(
   const fontSize = config.ansi?.font_size ?? 16
   const scaleMode = config.ansi?.scale ?? 'integer'
   const crtEnabled = config.ansi?.crt ?? false
+  const useFontBlocksMode = config.ansi?.use_font_blocks ?? 'auto'
+  const useFontBlocksOverride =
+    useFontBlocksMode === 'on' ? 'true'
+    : useFontBlocksMode === 'off' ? 'false'
+    : 'null'
 
   // Build CRT config JS object entries — use literal values when set, CRT_DEFAULTS fallback otherwise
   const crtConfigEntries = crtEnabled ? [
@@ -351,6 +356,8 @@ export function generateAnsiHtml(
       const AnsiController = globalThis.AnsiStandalone.AnsiController;
       const setupAnsiAPI = globalThis.AnsiStandalone.setupAnsiAPI;
       const controller = new AnsiController(callbacks);
+      // Apply the project-level use_font_blocks override from project.lua.
+      controller.setProjectUseFontBlocksOverride(${useFontBlocksOverride});
 
       // Initialize Lua runtime
       try {
