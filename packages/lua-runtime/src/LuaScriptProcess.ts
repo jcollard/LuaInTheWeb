@@ -26,7 +26,7 @@ import { chipLuaCode } from './chipLuaCode'
 import { AnsiController, type AnsiCallbacks, type AnsiTerminalHandle } from './AnsiController'
 import type { CrtConfig } from './crtShader'
 import { setupAnsiAPI } from './setupAnsiAPI'
-import { extractCrtConfig } from './projectCrtConfig'
+import { extractCrtConfig, extractUseFontBlocksOverride } from './projectCrtConfig'
 import { FileOperationsHandler } from './FileOperationsHandler'
 import type { CanvasMode, ScreenMode, HotReloadMode } from './LuaCommand'
 
@@ -516,25 +516,43 @@ __clear_execution_hook()
 
     // Wrap onRequestAnsiTab to merge pre-start CRT calls with project.lua defaults
     const originalOnRequest = this.options.ansiCallbacks.onRequestAnsiTab
+    const originalOnPanelMode = this.options.ansiCallbacks.onAnsiPanelMode
     const wrappedOnRequest = async (ansiId: string): Promise<AnsiTerminalHandle> => {
-      const handle = await originalOnRequest(ansiId)
-
-      // Consume any ansi.crt() calls made before ansi.start()
-      const pending = this.ansiController?.consumePendingCrt()
-
-      // Load project.lua CRT config
+      // Read project.lua up front so the UI can mount the correct panel
+      // variant (pixel vs xterm) BEFORE the terminal handle is created.
+      // `useFontBlocks` is a mount-time React prop on AnsiTerminalPanel;
+      // switching variants after mount won't take effect, so the override
+      // must reach the UI before the tab is opened.
       let projectCrt: CrtConfig | null = null
+      let useFontBlocksOverride: boolean | null = null
       const projectLuaPath = `${this.context.cwd}/project.lua`
       try {
         if (this.context.filesystem.exists(projectLuaPath)) {
           const content = this.context.filesystem.readFile(projectLuaPath)
           if (content) {
             projectCrt = extractCrtConfig(content)
+            useFontBlocksOverride = extractUseFontBlocksOverride(content)
           }
         }
       } catch {
         // Silently ignore project.lua read/parse errors
       }
+      this.ansiController?.setProjectUseFontBlocksOverride(useFontBlocksOverride)
+      // Only push the UI's panel mode for an *actual* project override —
+      // for "auto" (null), leave the UI state alone. The controller has
+      // typically already fired onAnsiPanelMode from set_screen (when the
+      // script ran set_screen before start()), and passing null here would
+      // overwrite that value and force the panel back to its default
+      // variant. The controller will fire onAnsiPanelMode again later if
+      // the script's first set_screen happens after start().
+      if (useFontBlocksOverride !== null) {
+        originalOnPanelMode?.(useFontBlocksOverride)
+      }
+
+      const handle = await originalOnRequest(ansiId)
+
+      // Consume any ansi.crt() calls made before ansi.start()
+      const pending = this.ansiController?.consumePendingCrt()
 
       // Merge: explicit pre-start values override project.lua values
       if (pending || projectCrt) {

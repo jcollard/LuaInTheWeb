@@ -154,6 +154,12 @@ export function setupAnsiAPI(
     getController()?.setCrt(enabled, intensity, config)
   })
 
+  // --- Renderer toggle ---
+  engine.global.set('__ansi_setUseFontBlocks', (value: boolean | null | undefined) => {
+    const normalized = value === null || value === undefined ? null : Boolean(value)
+    getController()?.setRuntimeUseFontBlocksOverride(normalized)
+  })
+
   // --- Timing functions ---
   engine.global.set('__ansi_getDelta', () => {
     return getController()?.getDelta() ?? 0

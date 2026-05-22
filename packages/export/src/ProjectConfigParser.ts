@@ -85,8 +85,11 @@ const DEFAULT_ANSI_CONFIG: AnsiConfig = {
   rows: 25,
   font_size: 16,
   scale: 'integer',
+  use_font_blocks: 'auto',
   crt: false,
 }
+
+const VALID_USE_FONT_BLOCKS = ['on', 'off', 'auto'] as const
 
 /**
  * Default export configuration values.
@@ -301,6 +304,10 @@ export class ProjectConfigParser {
         ...config.canvas,
       }
     } else if (config.type === 'ansi') {
+      const ufb = config.ansi?.use_font_blocks
+      if (ufb !== undefined && !VALID_USE_FONT_BLOCKS.includes(ufb)) {
+        throw new Error("ansi.use_font_blocks must be 'on', 'off', or 'auto'")
+      }
       result.ansi = {
         ...DEFAULT_ANSI_CONFIG,
         ...config.ansi,

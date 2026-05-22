@@ -179,6 +179,34 @@ function IDELayoutInner({
   // Cached ANSI terminal handle -- allows immediate resolution when the terminal is already mounted
   const ansiTerminalHandleRef = useRef<AnsiTerminalHandle | null>(null)
 
+  // Listeners that subscribe to ANSI terminal-handle changes. The runtime
+  // controller registers one inside ansi.start() so it can pick up the new
+  // handle after a panel-variant remount.
+  const ansiHandleListenersRef = useRef<Set<(handle: unknown) => void>>(new Set())
+
+  const registerAnsiHandleListener = useCallback((listener: (handle: unknown) => void) => {
+    ansiHandleListenersRef.current.add(listener)
+    return () => { ansiHandleListenersRef.current.delete(listener) }
+  }, [])
+
+  // Project.lua `ansi.use_font_blocks` override for the ANSI panel mount.
+  // `true` / `false` force a variant; `undefined` leaves the AnsiTerminalPanel
+  // default. Set by LuaScriptProcess via the `onAnsiPanelMode` callback.
+  const [ansiPanelUseFontBlocks, setAnsiPanelUseFontBlocks] = useState<boolean | undefined>(undefined)
+  const ansiPanelUseFontBlocksRef = useRef<boolean | undefined>(undefined)
+
+  const handleAnsiPanelMode = useCallback((useFontBlocks: boolean | null) => {
+    const next = useFontBlocks === null ? undefined : useFontBlocks
+    if (next !== ansiPanelUseFontBlocksRef.current) {
+      // The panel variant is about to change — invalidate the cached handle
+      // so the next request waits for the freshly-mounted panel rather than
+      // returning the stale handle from the old variant.
+      ansiTerminalHandleRef.current = null
+      ansiPanelUseFontBlocksRef.current = next
+    }
+    setAnsiPanelUseFontBlocks(next)
+  }, [])
+
   // Handle ANSI tab request from shell (ansi.start())
   const handleRequestAnsiTab = useCallback(async (ansiId: string): Promise<AnsiTerminalHandle> => {
     const tabPath = `ansi://${ansiId}`
@@ -214,6 +242,12 @@ function IDELayoutInner({
         resolver(handle)
         pendingAnsiRequestsRef.current.delete(key)
       }
+    }
+
+    // Notify any subscribed listeners (e.g., the runtime controller) so they
+    // can pick up the new handle after a panel-variant remount.
+    for (const listener of ansiHandleListenersRef.current) {
+      listener(handle)
     }
   }, [])
 
@@ -594,6 +628,8 @@ function IDELayoutInner({
     onCloseAnsiTab: handleCloseAnsiTab,
     registerAnsiCloseHandler,
     unregisterAnsiCloseHandler,
+    onAnsiPanelMode: handleAnsiPanelMode,
+    registerAnsiHandleListener,
   }), [
     handleRequestCanvasTab,
     handleCloseCanvasTab,
@@ -628,6 +664,8 @@ function IDELayoutInner({
     handleCloseAnsiTab,
     registerAnsiCloseHandler,
     unregisterAnsiCloseHandler,
+    handleAnsiPanelMode,
+    registerAnsiHandleListener,
   ])
 
   const combinedClassName = className
@@ -881,6 +919,7 @@ function IDELayoutInner({
                             onCloseTab={handleCloseTab}
                             isActive={activeTabType === 'ansi'}
                             onTerminalReady={handleAnsiTerminalReady}
+                            useFontBlocks={ansiPanelUseFontBlocks}
                           />
                         </div>
                       )}

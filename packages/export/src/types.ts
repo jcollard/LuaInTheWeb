@@ -104,6 +104,14 @@ export interface AnsiConfig {
    */
   scale?: 'integer' | 'full' | '1x' | '2x' | '3x'
 
+  /**
+   * Project-level override for the pixel renderer toggle. Default: 'auto'.
+   * - 'on': force the pixel renderer regardless of each screen's saved value
+   * - 'off': force the xterm + CanvasAddon path regardless of saved value
+   * - 'auto': use each screen's `useFontBlocks` field from its .ansi.lua file
+   */
+  use_font_blocks?: 'on' | 'off' | 'auto'
+
   /** Enable CRT monitor effect (scanlines, vignette, phosphor glow). Default: false */
   crt?: boolean
 

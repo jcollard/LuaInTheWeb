@@ -138,6 +138,17 @@ export const ansiLuaCoreCode = `
       __ansi_reset()
     end
 
+    -- Renderer toggle: override the per-screen pixel renderer setting.
+    -- ansi.set_use_font_blocks(true)   -- force the pixel renderer for every screen
+    -- ansi.set_use_font_blocks(false)  -- force the legacy xterm path
+    -- ansi.set_use_font_blocks(nil)    -- clear the override; defer to project.lua / screen
+    function _ansi.set_use_font_blocks(value)
+      if value ~= nil and type(value) ~= 'boolean' then
+        error("ansi.set_use_font_blocks() expects true, false, or nil")
+      end
+      __ansi_setUseFontBlocks(value)
+    end
+
     -- CRT effect
     -- ansi.crt(true)              -- enable with defaults
     -- ansi.crt(false)             -- disable

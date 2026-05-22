@@ -76,6 +76,31 @@ export interface AnsiCallbacks {
    * Called after each frame to ensure print() output appears immediately.
    */
   onFlushOutput?: () => void
+  /**
+   * Request that the UI mount (or remount) the ANSI terminal panel with the
+   * given renderer variant. Called from two sources:
+   * 1. `LuaScriptProcess` before the panel is opened, with the project-level
+   *    `ansi.use_font_blocks` override (`true`/`false`/`null` for auto).
+   * 2. `AnsiController.applyFontSettings`, when a screen switch resolves a
+   *    new effective `useFontBlocks` that differs from the currently mounted
+   *    variant (e.g., the screen file says `useFontBlocks = false` and there
+   *    is no project override).
+   * The UI is expected to mount the matching variant; the controller picks
+   * up the new handle via `registerHandleListener`.
+   */
+  onAnsiPanelMode?: (useFontBlocks: boolean | null) => void
+  /**
+   * Subscribe to terminal-handle changes. Called once by the controller
+   * inside `start()`; the UI invokes the listener whenever the panel
+   * (re)mounts and a new handle becomes available (or `null` on unmount).
+   * Returns an unsubscribe function. Without this, the controller cannot
+   * pick up the new handle that arrives after a panel-variant remount.
+   *
+   * The listener is typed as `unknown` so callers (e.g., `ShellContext`)
+   * don't need to depend on the controller's `AnsiTerminalHandle` shape.
+   * The controller casts the incoming value at runtime.
+   */
+  registerHandleListener?: (listener: (handle: unknown) => void) => () => void
 }
 
 export interface LayerInfo {
@@ -121,6 +146,7 @@ export class AnsiController {
   private readonly callbacks: AnsiCallbacks
   private readonly ansiId: string
   private handle: AnsiTerminalHandle | null = null
+  private unregisterHandleListener: (() => void) | null = null
   private inputCapture: InputCapture | null = null
   private inputAPI: InputAPI = new InputAPI()
   private gameLoop: GameLoopController | null = null
@@ -136,6 +162,10 @@ export class AnsiController {
   private currentRows: number = DEFAULT_ANSI_ROWS
   private currentFont: string = DEFAULT_ANSI_FONT_ID
   private currentUseFontBlocks: boolean = DEFAULT_USE_FONT_BLOCKS
+  /** Project-level override from project.lua (null = auto / use screen value). */
+  private projectUseFontBlocksOverride: boolean | null = null
+  /** Dynamic Lua API override (null = no override; outranks project + screen). */
+  private runtimeUseFontBlocksOverride: boolean | null = null
   private compositeBufferA: AnsiGrid = createEmptyGrid(DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS)
   private compositeBufferB: AnsiGrid = createEmptyGrid(DEFAULT_ANSI_COLS, DEFAULT_ANSI_ROWS)
   private useBufferA = true
@@ -180,26 +210,18 @@ export class AnsiController {
       throw new Error('ANSI terminal is already running. Call ansi.stop() first.')
     }
 
+    // Subscribe to handle changes BEFORE requesting the tab — the panel
+    // may remount mid-session (when the screen's useFontBlocks differs from
+    // the currently mounted variant), and the controller needs to pick up
+    // the new handle. The first call from onRequestAnsiTab seeds this.handle
+    // below; subsequent calls come through the listener.
+    this.unregisterHandleListener = this.callbacks.registerHandleListener?.(
+      (handle) => this.attachHandle(handle as AnsiTerminalHandle | null)
+    ) ?? null
+
     // Request ANSI tab from UI
     this.handle = await this.callbacks.onRequestAnsiTab(this.ansiId)
-
-    // Sync the freshly-attached handle to whatever state the controller
-    // accumulated before start(). set_screen() called before ansi.start()
-    // (the pattern every example uses) updates currentCols/currentRows/
-    // currentFont but cannot push to a null handle, so without this the
-    // panel stays at its mount-time 80×25 / default font even though the
-    // controller is already compositing at the screen's real dims.
-    // Only forward when the controller has moved off defaults — panels
-    // mount at the same defaults, so a redundant resize is avoidable.
-    if (this.currentCols !== DEFAULT_ANSI_COLS || this.currentRows !== DEFAULT_ANSI_ROWS) {
-      this.handle.resize?.(this.currentCols, this.currentRows)
-    }
-    if (this.currentFont !== DEFAULT_ANSI_FONT_ID) {
-      this.handle.setFontFamily?.(this.currentFont)
-    }
-    if (this.currentUseFontBlocks !== DEFAULT_USE_FONT_BLOCKS) {
-      this.handle.setUseFontBlocks?.(this.currentUseFontBlocks)
-    }
+    this.syncHandleState()
 
     // Register close handler so UI can stop us when tab is closed
     this.callbacks.registerAnsiCloseHandler?.(this.ansiId, () => this.stop())
@@ -224,6 +246,51 @@ export class AnsiController {
     return new Promise<void>((resolve) => {
       this.stopResolver = resolve
     })
+  }
+
+  /**
+   * Push controller state (dims, font, useFontBlocks) onto the currently
+   * attached handle. Used after the initial handle attaches and after a
+   * panel remount delivers a new handle. Only fires calls when the state
+   * has moved off defaults — panels mount at the same defaults, so a
+   * redundant resize is avoidable.
+   */
+  private syncHandleState(): void {
+    if (!this.handle) return
+    if (this.currentCols !== DEFAULT_ANSI_COLS || this.currentRows !== DEFAULT_ANSI_ROWS) {
+      this.handle.resize?.(this.currentCols, this.currentRows)
+    }
+    if (this.currentFont !== DEFAULT_ANSI_FONT_ID) {
+      this.handle.setFontFamily?.(this.currentFont)
+    }
+    if (this.currentUseFontBlocks !== DEFAULT_USE_FONT_BLOCKS) {
+      this.handle.setUseFontBlocks?.(this.currentUseFontBlocks)
+    }
+  }
+
+  /**
+   * Swap the attached handle (e.g., after a panel-variant remount) and
+   * re-sync controller state to it. Mark every screen dirty so the next
+   * frame pushes a full redraw — diff-against-stale-handle would emit
+   * garbage. A null handle is treated as a temporary detach and ignored
+   * (we keep the previous handle until a fresh one arrives).
+   */
+  private attachHandle(handle: AnsiTerminalHandle | null): void {
+    if (!handle) return
+    if (handle === this.handle) return
+    this.handle = handle
+    // Replace input capture against the new container so keyboard input
+    // continues to flow once the new panel takes over.
+    if (this.inputCapture) {
+      this.inputCapture.dispose()
+      this.inputCapture = new InputCapture(handle.container)
+      this.inputAPI.setInputCapture(this.inputCapture)
+    }
+    this.syncHandleState()
+    for (const state of this.screenStates.values()) {
+      state.lastGrid = null
+      state.dirty = true
+    }
   }
 
   /**
@@ -253,6 +320,10 @@ export class AnsiController {
 
     // Unregister close handler to prevent double-cleanup
     this.callbacks.unregisterAnsiCloseHandler?.(this.ansiId)
+
+    // Unsubscribe from handle changes
+    this.unregisterHandleListener?.()
+    this.unregisterHandleListener = null
 
     // Clear all screen state
     this.screenStates.clear()
@@ -300,6 +371,16 @@ export class AnsiController {
   getRows(): number { return this.currentRows }
 
   /**
+   * Resolve the effective useFontBlocks value, applying override priority:
+   * runtime API override > project.lua override > screen's saved value.
+   */
+  private resolveUseFontBlocks(screenValue: boolean): boolean {
+    if (this.runtimeUseFontBlocksOverride !== null) return this.runtimeUseFontBlocksOverride
+    if (this.projectUseFontBlocksOverride !== null) return this.projectUseFontBlocksOverride
+    return screenValue
+  }
+
+  /**
    * Apply per-screen font + renderer-mode settings to the attached handle,
    * skipping calls when the values are unchanged. Safe to call before the
    * handle is attached — values are remembered on the controller, and
@@ -310,9 +391,46 @@ export class AnsiController {
       this.currentFont = font
       this.handle?.setFontFamily?.(font)
     }
-    if (useFontBlocks !== this.currentUseFontBlocks) {
-      this.currentUseFontBlocks = useFontBlocks
-      this.handle?.setUseFontBlocks?.(useFontBlocks)
+    const effective = this.resolveUseFontBlocks(useFontBlocks)
+    if (effective !== this.currentUseFontBlocks) {
+      this.currentUseFontBlocks = effective
+      this.handle?.setUseFontBlocks?.(effective)
+      // Ask the UI to remount the panel variant. The pixel renderer's
+      // setUseFontBlocks() is currently a no-op, so without this signal
+      // a screen-level useFontBlocks=false would have no visible effect
+      // when the panel is already mounted as pixel.
+      this.callbacks.onAnsiPanelMode?.(effective)
+    }
+  }
+
+  /**
+   * Set the project-level useFontBlocks override (from project.lua).
+   * Pass null for "auto" (use each screen's saved value).
+   */
+  setProjectUseFontBlocksOverride(value: boolean | null): void {
+    this.projectUseFontBlocksOverride = value
+    this.reapplyUseFontBlocks()
+  }
+
+  /**
+   * Set the dynamic runtime useFontBlocks override (from ansi.set_use_font_blocks).
+   * Pass null to clear the override (defer to project / screen value).
+   */
+  setRuntimeUseFontBlocksOverride(value: boolean | null): void {
+    this.runtimeUseFontBlocksOverride = value
+    this.reapplyUseFontBlocks()
+  }
+
+  /** Re-resolve and apply useFontBlocks for the active screen (if any). */
+  private reapplyUseFontBlocks(): void {
+    const screenValue = this.activeScreenId !== null
+      ? this.screenStates.get(this.activeScreenId)?.useFontBlocks ?? DEFAULT_USE_FONT_BLOCKS
+      : DEFAULT_USE_FONT_BLOCKS
+    const effective = this.resolveUseFontBlocks(screenValue)
+    if (effective !== this.currentUseFontBlocks) {
+      this.currentUseFontBlocks = effective
+      this.handle?.setUseFontBlocks?.(effective)
+      this.callbacks.onAnsiPanelMode?.(effective)
     }
   }
 
