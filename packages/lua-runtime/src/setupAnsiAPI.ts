@@ -284,6 +284,18 @@ export function setupAnsiAPI(
     return controller.screenIsPlaying(id)
   })
 
+  engine.global.set('__ansi_screenSetLayerFrame', (id: number, identifier: string, frame: number) => {
+    const controller = getController()
+    if (!controller) throw new Error('ANSI terminal not available')
+    controller.setScreenLayerFrame(id, identifier, frame)
+  })
+
+  engine.global.set('__ansi_screenGetLayerFrame', (id: number, identifier: string) => {
+    const controller = getController()
+    if (!controller) throw new Error('ANSI terminal not available')
+    return controller.getScreenLayerFrame(id, identifier)
+  })
+
   // --- Swipe/dither transition functions ---
   engine.global.set('__ansi_screenSwipeOut', (
     id: number, duration: number, cR: number, cG: number, cB: number, char: string, dir: string, onComplete?: () => void,

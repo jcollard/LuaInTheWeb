@@ -201,6 +201,16 @@ export const ansiLuaCoreCode = `
       function screen:is_playing()
         return __ansi_screenIsPlaying(self.id)
       end
+      function screen:set_layer_frame(identifier, frame)
+        if type(frame) ~= 'number' then
+          error('set_layer_frame() requires a numeric frame index (got ' .. type(frame) .. ')')
+        end
+        __ansi_screenSetLayerFrame(self.id, tostring(identifier), frame)
+      end
+      function screen:get_layer_frame(identifier)
+        local result = __ansi_screenGetLayerFrame(self.id, tostring(identifier))
+        return result[1], result[2]
+      end
       function screen:swipe_out(opts)
         opts = type(opts) == 'table' and opts or {}
         if opts.layers then
@@ -342,6 +352,22 @@ export const ansiLuaCoreCode = `
       end
 
       local ok, data = pcall(fn)
+      if not ok then
+        if has_exec_control and __loading_depth > 0 then
+          __loading_depth = __loading_depth - 1
+          if __loading_depth == 0 then __reset_instruction_count() end
+        end
+        error("Failed to execute ANSI file '" .. path .. "': " .. tostring(data))
+      end
+      if type(data) ~= 'table' then
+        if has_exec_control and __loading_depth > 0 then
+          __loading_depth = __loading_depth - 1
+          if __loading_depth == 0 then __reset_instruction_count() end
+        end
+        error("ANSI file '" .. path .. "' did not return a table")
+      end
+
+      local screen = _ansi.create_screen(data)
 
       if has_exec_control and __loading_depth > 0 then
         __loading_depth = __loading_depth - 1
@@ -350,13 +376,7 @@ export const ansiLuaCoreCode = `
         end
       end
 
-      if not ok then
-        error("Failed to execute ANSI file '" .. path .. "': " .. tostring(data))
-      end
-      if type(data) ~= 'table' then
-        error("ANSI file '" .. path .. "' did not return a table")
-      end
-      return _ansi.create_screen(data)
+      return screen
     end
 
     -- Standard CGA/VGA color palette

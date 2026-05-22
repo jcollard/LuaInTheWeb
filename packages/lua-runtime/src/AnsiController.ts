@@ -617,6 +617,41 @@ export class AnsiController {
   screenPlay(id: number): void { this.validateScreenExists(id); const s = this.getScreenState(id); s.playing = true; s.playbackTouched = true }
   screenPause(id: number): void { this.validateScreenExists(id); const s = this.getScreenState(id); s.playing = false; s.playbackTouched = true; s.schedule = null }
   screenIsPlaying(id: number): boolean { return this.screenStates.get(id)?.playing ?? false }
+
+  setScreenLayerFrame(id: number, identifier: string, frame: number): void {
+    const layers = this.validateScreenExists(id)
+    const matched = this.resolveLayersByIdentifier(layers, identifier)
+    if (matched.length === 0) throw new Error(`No layers match identifier "${identifier}" in screen ${id}.`)
+    const state = this.getScreenState(id)
+    let changed = false
+    for (const layer of matched) {
+      if (layer.type !== 'drawn') continue
+      const drawn = layer as DrawnLayerData
+      const total = drawn.frames.length
+      if (total <= 1) continue
+      const requested = Math.floor(frame)
+      const wrappedZeroBased = ((requested - 1) % total + total) % total
+      if (requested < 1 || requested > total) {
+        console.warn(`ansi: set_layer_frame(${identifier}, ${frame}) out of range for layer "${drawn.id}" (frames 1..${total}); wrapped to ${wrappedZeroBased + 1}.`)
+      }
+      drawn.currentFrameIndex = wrappedZeroBased
+      drawn.grid = drawn.frames[wrappedZeroBased]
+      if (state.schedule) {
+        state.schedule.set(drawn.id, this.currentTiming.totalTime * 1000 + drawn.frameDurationMs)
+      }
+      changed = true
+    }
+    if (changed) this.recompositeScreen(id)
+  }
+
+  getScreenLayerFrame(id: number, identifier: string): [number, number] {
+    const layers = this.validateScreenExists(id)
+    const matched = this.resolveLayersByIdentifier(layers, identifier)
+    if (matched.length === 0) throw new Error(`No layers match identifier "${identifier}" in screen ${id}.`)
+    const drawn = matched.find(l => l.type === 'drawn') as DrawnLayerData | undefined
+    if (!drawn) return [1, 1]
+    return [drawn.currentFrameIndex + 1, drawn.frames.length]
+  }
   screenSwipeOut(id: number, duration: number, color: RGBColor, char: string, dir: SwipeDirection, onComplete?: () => void): void { this.validateScreenExists(id); startSwipeOut(this.getScreenState(id), duration, color, char, dir, this.groupGridCache, onComplete) }
   screenSwipeIn(id: number, ids: string, duration: number, dir: SwipeDirection, onComplete?: () => void): void { const [layers, m] = this.resolveScreenLayers(id, ids); startSwipeIn(this.getScreenState(id), layers, m, duration, dir, this.groupGridCache, onComplete) }
   screenSwipeOutLayers(id: number, ids: string, duration: number, dir: SwipeDirection, onComplete?: () => void): void { const [layers, m] = this.resolveScreenLayers(id, ids); startSwipeOutLayers(this.getScreenState(id), layers, m, duration, dir, this.groupGridCache, onComplete) }
