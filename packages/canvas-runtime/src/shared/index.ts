@@ -14,6 +14,7 @@ export type {
   DrawCommand,
   MouseButton,
   InputState,
+  KeyTypedEvent,
   // Gamepad types
   GamepadState,
   TimingInfo,

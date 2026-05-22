@@ -839,6 +839,111 @@ When `ansi.set_screen()` activates a screen, the effective `useFontBlocks` value
 
 `"auto"` and `nil` mean "not an override at this level — defer to the next one."
 
+## Typed-Character Input & Modifier Keys
+
+The basic keyboard API (`is_key_down`, `is_key_pressed`, `get_keys_down`,
+`get_keys_pressed`) works in terms of **physical keys** — `Shift+1` arrives as
+`Digit1`, regardless of which character that key actually produces. That's
+perfect for game movement (`KeyW`, `ArrowUp`) but useless for text entry.
+
+For text entry, shifted symbols, and keyboard shortcuts, use
+`ansi.get_keys_typed()` and the modifier helpers below.
+
+### `ansi.get_keys_typed()`
+
+Returns an array of typed-character events captured since the last frame. Each
+event is a Lua table:
+
+```lua
+{
+  key   = "!",        -- event.key: logical character or key name (layout-respecting)
+  code  = "Digit1",   -- event.code: physical key (matches ansi.keys.* values)
+  shift = true,
+  ctrl  = false,
+  alt   = false,
+  meta  = false,
+}
+```
+
+- `key` is the **logical character** the user actually typed:
+  - Letters reflect Shift and Caps Lock (`"a"` vs `"A"`).
+  - Shifted symbols arrive correctly: `Shift+1 → "!"`, `Shift+/ → "?"`, etc.
+  - Non-printing keys appear as full names: `"Enter"`, `"Backspace"`,
+    `"Escape"`, `"ArrowUp"`, `"Tab"`, etc.
+  - Modifier keys themselves appear as `"Shift"`, `"Control"`, `"Alt"`, `"Meta"`.
+- `code` is the **physical key** — useful when you want layout-independent
+  behavior or to map back to `ansi.keys.*`.
+- The queue includes **auto-repeat** events: holding `a` produces multiple
+  events (essential for text entry).
+- The queue is cleared each frame.
+
+#### Example: Text-input prompt
+
+```lua
+local ansi = require('ansi')
+local buffer = ""
+
+ansi.tick(function()
+  for _, ev in ipairs(ansi.get_keys_typed()) do
+    if ev.key == "Backspace" then
+      buffer = buffer:sub(1, -2)
+    elseif ev.key == "Enter" then
+      print("You typed: " .. buffer)
+      buffer = ""
+    elseif #ev.key == 1 and not ev.ctrl and not ev.meta then
+      buffer = buffer .. ev.key  -- printable character, no shortcut modifier
+    end
+  end
+
+  ansi.clear()
+  ansi.set_cursor(1, 1)
+  ansi.print("Type something: " .. buffer .. "_")
+end)
+
+ansi.start()
+```
+
+#### Example: Keyboard shortcuts
+
+```lua
+ansi.tick(function()
+  for _, ev in ipairs(ansi.get_keys_typed()) do
+    if ev.ctrl and ev.key == "s" then
+      save_file()
+    elseif ev.ctrl and ev.key == "q" then
+      ansi.stop()
+    end
+  end
+end)
+```
+
+### Modifier-state helpers
+
+When you need to know whether a modifier is currently held (independent of any
+specific typed event), use the convenience helpers:
+
+| Function | Returns |
+|----------|---------|
+| `ansi.is_shift_down()` | true if ShiftLeft **or** ShiftRight is held |
+| `ansi.is_ctrl_down()`  | true if ControlLeft **or** ControlRight is held |
+| `ansi.is_alt_down()`   | true if AltLeft **or** AltRight is held |
+| `ansi.is_meta_down()`  | true if MetaLeft **or** MetaRight (Cmd / Windows key) is held |
+
+These poll the live modifier state. For shortcut detection at the moment a
+keystroke fires (which is usually what you want), use the modifier booleans on
+each `get_keys_typed()` event instead — they capture the modifier state at the
+exact moment the key was pressed.
+
+### Choosing between APIs
+
+| Use case | API |
+|----------|-----|
+| Game movement (WASD, arrows) | `is_key_down(ansi.keys.W)` |
+| "Was this key just pressed?" (edge trigger) | `is_key_pressed(...)` |
+| Text entry (printable characters, shifted symbols) | `get_keys_typed()` filtering on `#ev.key == 1` |
+| Keyboard shortcuts (Ctrl+S, Ctrl+Q) | `get_keys_typed()` checking `ev.ctrl` and `ev.key` |
+| "Is Shift currently held?" | `is_shift_down()` |
+
 ## Quick Reference
 
 | Function | Description |
@@ -884,6 +989,8 @@ When `ansi.set_screen()` activates a screen, the effective `useFontBlocks` value
 | `ansi.get_time()` | Total elapsed seconds |
 | `ansi.is_key_down(key)` | Check if key is held |
 | `ansi.is_key_pressed(key)` | Check if key was just pressed |
+| `ansi.get_keys_typed()` | Typed-character events (with modifier state) for text input |
+| `ansi.is_shift_down()` / `is_ctrl_down()` / `is_alt_down()` / `is_meta_down()` | Modifier-key state |
 | `ansi.is_mouse_down(btn)` | Check if mouse button is held |
 | `ansi.get_mouse_col()` | Mouse column (1–`ansi.COLS`) |
 | `ansi.get_mouse_row()` | Mouse row (1–`ansi.ROWS`) |

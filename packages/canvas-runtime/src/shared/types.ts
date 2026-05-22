@@ -1322,6 +1322,26 @@ export function createEmptyGamepadState(): GamepadState {
 }
 
 /**
+ * A single typed-character keyboard event, captured from a browser `keydown`.
+ * Carries both the logical character (`event.key`, layout-respecting) and the
+ * physical key (`event.code`) alongside the modifier state at the moment of press.
+ */
+export interface KeyTypedEvent {
+  /** Logical character or key name from `KeyboardEvent.key` (e.g., "a", "!", "Enter"). */
+  key: string;
+  /** Physical key code from `KeyboardEvent.code` (e.g., "KeyA", "Digit1"). */
+  code: string;
+  /** True if Shift was held when the event fired. */
+  shift: boolean;
+  /** True if Control was held when the event fired. */
+  ctrl: boolean;
+  /** True if Alt/Option was held when the event fired. */
+  alt: boolean;
+  /** True if Meta (Command/Windows) was held when the event fired. */
+  meta: boolean;
+}
+
+/**
  * State of keyboard and mouse input.
  * Uses arrays instead of Sets for channel serialization.
  */

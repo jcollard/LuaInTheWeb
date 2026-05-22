@@ -25,7 +25,8 @@ local ansi = {}
 -- 5.  CRT Monitor Effect (crt)
 -- 6.  Color Constants (ansi.colors.*)
 -- 7.  Timing Functions (get_delta, get_time)
--- 8.  Keyboard Input (is_key_down, is_key_pressed, get_keys_down, get_keys_pressed)
+-- 8.  Keyboard Input (is_key_down, is_key_pressed, get_keys_down, get_keys_pressed,
+--                     get_keys_typed, is_shift_down, is_ctrl_down, is_alt_down, is_meta_down)
 -- 9.  Mouse Input (is_mouse_down, is_mouse_pressed, get_mouse_col, get_mouse_row, etc.)
 -- 10. Key Constants (ansi.keys.*)
 -- 11. Terminal Dimensions (COLS, ROWS)
@@ -218,6 +219,52 @@ function ansi.get_keys_down() end
 --- Get all keys pressed this frame.
 ---@return string[] keys Array of key codes
 function ansi.get_keys_pressed() end
+
+--- A single typed-character event with modifier state, returned from get_keys_typed().
+---@class ansi.KeyTypedEvent
+---@field key string Logical character or key name (e.g., "a", "!", "Enter") — respects shift and keyboard layout
+---@field code string Physical key code (e.g., "KeyA", "Digit1") — same value space as ansi.keys.*
+---@field shift boolean True if Shift was held when the event fired
+---@field ctrl boolean True if Ctrl was held when the event fired
+---@field alt boolean True if Alt was held when the event fired
+---@field meta boolean True if Meta (Cmd/Windows) was held when the event fired
+
+--- Get all typed-character events captured since the last frame.
+--- Each event carries the logical character (`event.key`), the physical key code
+--- (`event.code`), and a snapshot of the modifier state. Includes auto-repeat
+--- (good for text entry — holding 'a' produces multiple events). Cleared each frame.
+---
+--- Use this for:
+---   * **Text entry**: shifted symbols (`Shift+1` arrives as `key = "!"`) and
+---     keyboard-layout-respecting input (AZERTY user pressing "A" produces `"a"`).
+---   * **Shortcuts**: `if ev.ctrl and ev.key == "s" then save() end`.
+---   * **Non-printing keys**: special keys like `"Enter"`, `"Backspace"`,
+---     `"Escape"`, `"ArrowUp"` appear in `ev.key` for text-input handlers.
+---
+--- For frame-based "is this physical key held?" checks, prefer `is_key_down`.
+---@return ansi.KeyTypedEvent[] events Array of typed events captured this frame
+---@usage for _, ev in ipairs(ansi.get_keys_typed()) do
+---   if #ev.key == 1 then buffer = buffer .. ev.key end
+---   if ev.key == "Backspace" then buffer = buffer:sub(1, -2) end
+---   if ev.ctrl and ev.key == "s" then save(buffer) end
+--- end
+function ansi.get_keys_typed() end
+
+--- True if either left or right Shift is currently held.
+---@return boolean down
+function ansi.is_shift_down() end
+
+--- True if either left or right Ctrl is currently held.
+---@return boolean down
+function ansi.is_ctrl_down() end
+
+--- True if either left or right Alt is currently held.
+---@return boolean down
+function ansi.is_alt_down() end
+
+--- True if either left or right Meta (Cmd / Windows key) is currently held.
+---@return boolean down
+function ansi.is_meta_down() end
 
 -- =============================================================================
 -- Mouse Input

@@ -186,6 +186,26 @@ export function setupAnsiAPI(
     return getController()?.getKeysPressed() ?? []
   })
 
+  engine.global.set('__ansi_getKeysTyped', () => {
+    return getController()?.getKeysTyped() ?? []
+  })
+
+  engine.global.set('__ansi_isShiftDown', () => {
+    return getController()?.isShiftDown() ?? false
+  })
+
+  engine.global.set('__ansi_isCtrlDown', () => {
+    return getController()?.isCtrlDown() ?? false
+  })
+
+  engine.global.set('__ansi_isAltDown', () => {
+    return getController()?.isAltDown() ?? false
+  })
+
+  engine.global.set('__ansi_isMetaDown', () => {
+    return getController()?.isMetaDown() ?? false
+  })
+
   // --- Mouse input functions ---
   engine.global.set('__ansi_getMouseCol', () => {
     return getController()?.getMouseCol() ?? 0

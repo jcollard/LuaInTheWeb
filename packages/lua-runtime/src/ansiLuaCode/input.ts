@@ -94,6 +94,33 @@ export const ansiLuaInputCode = `
       return _ansi_keys_pressed_cache
     end
 
+    -- Cache for keys_typed Lua table (reduces GC pressure)
+    local _ansi_keys_typed_cache = {}
+    local _ansi_keys_typed_last_ref = nil
+
+    function _ansi.get_keys_typed()
+      local js_array = __ansi_getKeysTyped()
+      if js_array ~= _ansi_keys_typed_last_ref then
+        _ansi_keys_typed_last_ref = js_array
+        local i = 1
+        while i <= #js_array do
+          _ansi_keys_typed_cache[i] = js_array[i]
+          i = i + 1
+        end
+        while _ansi_keys_typed_cache[i] ~= nil do
+          _ansi_keys_typed_cache[i] = nil
+          i = i + 1
+        end
+      end
+      return _ansi_keys_typed_cache
+    end
+
+    -- Modifier-state convenience helpers (true if either left/right variant is held)
+    function _ansi.is_shift_down() return __ansi_isShiftDown() end
+    function _ansi.is_ctrl_down() return __ansi_isCtrlDown() end
+    function _ansi.is_alt_down() return __ansi_isAltDown() end
+    function _ansi.is_meta_down() return __ansi_isMetaDown() end
+
     -- Mouse input
     function _ansi.is_mouse_down(button)
       return __ansi_isMouseDown(button or 0)

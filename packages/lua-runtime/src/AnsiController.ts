@@ -13,7 +13,7 @@
 
 import { InputCapture, GameLoopController } from '@lua-learning/canvas-runtime'
 import { InputAPI } from './InputAPI'
-import type { TimingInfo } from '@lua-learning/canvas-runtime'
+import type { TimingInfo, KeyTypedEvent } from '@lua-learning/canvas-runtime'
 import {
   initSchedule,
   computePlaybackTick,
@@ -526,6 +526,16 @@ export class AnsiController {
   getKeysDown(): string[] { return this.inputAPI.getKeysDown() }
   /** Get all keys pressed this frame. */
   getKeysPressed(): string[] { return this.inputAPI.getKeysPressed() }
+  /** Get all typed-character events captured since the last frame. */
+  getKeysTyped(): KeyTypedEvent[] { return this.inputAPI.getKeysTyped() }
+  /** True if either ShiftLeft or ShiftRight is currently held. */
+  isShiftDown(): boolean { return this.inputAPI.isShiftDown() }
+  /** True if either ControlLeft or ControlRight is currently held. */
+  isCtrlDown(): boolean { return this.inputAPI.isCtrlDown() }
+  /** True if either AltLeft or AltRight is currently held. */
+  isAltDown(): boolean { return this.inputAPI.isAltDown() }
+  /** True if either MetaLeft or MetaRight is currently held. */
+  isMetaDown(): boolean { return this.inputAPI.isMetaDown() }
 
   // --- Mouse Input API ---
 
