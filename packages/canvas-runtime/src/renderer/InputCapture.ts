@@ -1,5 +1,14 @@
-import type { InputState, GamepadState } from '../shared/types.js';
+import type { InputState, GamepadState, KeyTypedEvent } from '../shared/types.js';
 import { createEmptyGamepadState, MAX_GAMEPADS } from '../shared/types.js';
+
+/** Physical key codes that count as the "Shift" modifier when held. */
+const SHIFT_CODES: readonly string[] = ['ShiftLeft', 'ShiftRight'];
+/** Physical key codes that count as the "Control" modifier when held. */
+const CTRL_CODES: readonly string[] = ['ControlLeft', 'ControlRight'];
+/** Physical key codes that count as the "Alt" modifier when held. */
+const ALT_CODES: readonly string[] = ['AltLeft', 'AltRight'];
+/** Physical key codes that count as the "Meta" modifier when held. */
+const META_CODES: readonly string[] = ['MetaLeft', 'MetaRight'];
 
 /**
  * Captures keyboard and mouse input from a target element.
@@ -25,6 +34,10 @@ export class InputCapture {
   private keysPressedArray: string[] = [];
   private mouseButtonsDownArray: number[] = [];
   private mouseButtonsPressedArray: number[] = [];
+
+  // Per-frame queue of typed-character events (from keydown, includes auto-repeat).
+  // Cleared by update(), reset(), and blur. Reused across frames — callers must not mutate.
+  private readonly keysTypedArray: KeyTypedEvent[] = [];
 
   // Dirty flags track when Sets have changed and arrays need re-syncing
   private keysDownDirty = false;
@@ -117,6 +130,47 @@ export class InputCapture {
   getKeysDown(): string[] {
     this.syncKeysDownArray();
     return this.keysDownArray;
+  }
+
+  /**
+   * Get all typed-character events captured since the last frame.
+   *
+   * Each event carries the logical character (`event.key`), the physical key
+   * (`event.code`), and a snapshot of the modifier state at the moment of press.
+   * Includes auto-repeat events (good for text entry). Cleared by `update()`.
+   *
+   * IMPORTANT: The returned array is cached and reused across calls.
+   * Callers must NOT mutate the returned array.
+   */
+  getKeysTyped(): KeyTypedEvent[] {
+    return this.keysTypedArray;
+  }
+
+  /** True if either ShiftLeft or ShiftRight is currently held. */
+  isShiftDown(): boolean {
+    return this.anyHeld(SHIFT_CODES);
+  }
+
+  /** True if either ControlLeft or ControlRight is currently held. */
+  isCtrlDown(): boolean {
+    return this.anyHeld(CTRL_CODES);
+  }
+
+  /** True if either AltLeft or AltRight is currently held. */
+  isAltDown(): boolean {
+    return this.anyHeld(ALT_CODES);
+  }
+
+  /** True if either MetaLeft or MetaRight is currently held. */
+  isMetaDown(): boolean {
+    return this.anyHeld(META_CODES);
+  }
+
+  private anyHeld(codes: readonly string[]): boolean {
+    for (const code of codes) {
+      if (this.keysDown.has(code)) return true;
+    }
+    return false;
   }
 
   /**
@@ -301,7 +355,7 @@ export class InputCapture {
 
   /**
    * Update called at the end of each frame.
-   * Clears the "just pressed" state for keys and buttons.
+   * Clears the "just pressed" state for keys and buttons and drains the typed-event queue.
    */
   update(): void {
     if (this.keysPressed.size > 0) {
@@ -311,6 +365,9 @@ export class InputCapture {
     if (this.mouseButtonsPressed.size > 0) {
       this.mouseButtonsPressed.clear();
       this.mouseButtonsPressedDirty = true;
+    }
+    if (this.keysTypedArray.length > 0) {
+      this.keysTypedArray.length = 0;
     }
   }
 
@@ -333,6 +390,9 @@ export class InputCapture {
     if (this.mouseButtonsPressed.size > 0) {
       this.mouseButtonsPressed.clear();
       this.mouseButtonsPressedDirty = true;
+    }
+    if (this.keysTypedArray.length > 0) {
+      this.keysTypedArray.length = 0;
     }
     this.mouseX = 0;
     this.mouseY = 0;
@@ -368,6 +428,14 @@ export class InputCapture {
     }
     this.keysDown.add(event.code);
     this.keysDownDirty = true;
+    this.keysTypedArray.push({
+      key: event.key,
+      code: event.code,
+      shift: event.shiftKey,
+      ctrl: event.ctrlKey,
+      alt: event.altKey,
+      meta: event.metaKey,
+    });
   }
 
   private onKeyUp(event: KeyboardEvent): void {
@@ -470,6 +538,9 @@ export class InputCapture {
     if (this.mouseButtonsPressed.size > 0) {
       this.mouseButtonsPressed.clear();
       this.mouseButtonsPressedDirty = true;
+    }
+    if (this.keysTypedArray.length > 0) {
+      this.keysTypedArray.length = 0;
     }
   }
 }

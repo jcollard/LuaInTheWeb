@@ -94,6 +94,47 @@ export const ansiLuaInputCode = `
       return _ansi_keys_pressed_cache
     end
 
+    -- Cache for keys_typed Lua table (reduces GC pressure).
+    -- We can't use a reference-equality shortcut here (as get_keys_down does)
+    -- because the underlying JS array is reused and mutated in place across
+    -- frames — the reference stays the same even when contents change. We also
+    -- eagerly copy each event's fields into a Lua table so the cache holds
+    -- real values, not lazy JS-object proxies that could go stale after the
+    -- next frame's update() clears the source array.
+    local _ansi_keys_typed_cache = {}
+
+    function _ansi.get_keys_typed()
+      local js_array = __ansi_getKeysTyped()
+      local n = #js_array
+      local i = 1
+      while i <= n do
+        local src = js_array[i]
+        local dst = _ansi_keys_typed_cache[i]
+        if dst == nil then
+          dst = {}
+          _ansi_keys_typed_cache[i] = dst
+        end
+        dst.key = src.key
+        dst.code = src.code
+        dst.shift = src.shift
+        dst.ctrl = src.ctrl
+        dst.alt = src.alt
+        dst.meta = src.meta
+        i = i + 1
+      end
+      while _ansi_keys_typed_cache[i] ~= nil do
+        _ansi_keys_typed_cache[i] = nil
+        i = i + 1
+      end
+      return _ansi_keys_typed_cache
+    end
+
+    -- Modifier-state convenience helpers (true if either left/right variant is held)
+    function _ansi.is_shift_down() return __ansi_isShiftDown() end
+    function _ansi.is_ctrl_down() return __ansi_isCtrlDown() end
+    function _ansi.is_alt_down() return __ansi_isAltDown() end
+    function _ansi.is_meta_down() return __ansi_isMetaDown() end
+
     -- Mouse input
     function _ansi.is_mouse_down(button)
       return __ansi_isMouseDown(button or 0)

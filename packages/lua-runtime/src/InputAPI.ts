@@ -7,7 +7,7 @@
  */
 
 import type { InputCapture } from '@lua-learning/canvas-runtime'
-import type { InputState } from '@lua-learning/canvas-runtime'
+import type { InputState, KeyTypedEvent } from '@lua-learning/canvas-runtime'
 import { createEmptyInputState } from '@lua-learning/canvas-runtime'
 
 /**
@@ -18,6 +18,11 @@ export interface IInputCapture {
   isKeyDown(code: string): boolean
   isKeyPressed(code: string): boolean
   getKeysDown(): string[]
+  getKeysTyped(): KeyTypedEvent[]
+  isShiftDown(): boolean
+  isCtrlDown(): boolean
+  isAltDown(): boolean
+  isMetaDown(): boolean
   getInputState(): InputState
   getMousePosition(): { x: number; y: number }
   isMouseButtonDown(button: number): boolean
@@ -90,6 +95,40 @@ export class InputAPI {
     if (!this.inputCapture) return []
     const state = this.inputCapture.getInputState()
     return state.keysPressed
+  }
+
+  /**
+   * Get all typed-character events captured since the last frame.
+   *
+   * Each event carries the logical character (`event.key`), the physical key
+   * (`event.code`), and modifier state at the moment of press. Suitable for
+   * text-entry use cases and keyboard shortcuts.
+   *
+   * @returns Array of typed events, or empty array if InputCapture is null.
+   */
+  getKeysTyped(): KeyTypedEvent[] {
+    if (!this.inputCapture) return []
+    return this.inputCapture.getKeysTyped()
+  }
+
+  /** True if either ShiftLeft or ShiftRight is currently held. */
+  isShiftDown(): boolean {
+    return this.inputCapture?.isShiftDown() ?? false
+  }
+
+  /** True if either ControlLeft or ControlRight is currently held. */
+  isCtrlDown(): boolean {
+    return this.inputCapture?.isCtrlDown() ?? false
+  }
+
+  /** True if either AltLeft or AltRight is currently held. */
+  isAltDown(): boolean {
+    return this.inputCapture?.isAltDown() ?? false
+  }
+
+  /** True if either MetaLeft or MetaRight is currently held. */
+  isMetaDown(): boolean {
+    return this.inputCapture?.isMetaDown() ?? false
   }
 
   // --- Mouse API ---

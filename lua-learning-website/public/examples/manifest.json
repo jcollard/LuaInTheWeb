@@ -182,6 +182,7 @@
     "storage/save_demo.lua",
     "ansi/hello.lua",
     "ansi/input_demo.lua",
+    "ansi/typed_input_demo.lua",
     "ansi/mouse_demo.lua",
     "ansi/color_palette.lua",
     "ansi/image_demo.lua",

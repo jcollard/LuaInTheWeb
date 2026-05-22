@@ -15,6 +15,7 @@ export type {
   DrawCommand,
   MouseButton,
   InputState,
+  KeyTypedEvent,
   TimingInfo,
   AssetDefinition,
   AssetManifest,

@@ -6,7 +6,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { InputAPI } from '../src/InputAPI'
-import type { InputState, GamepadState } from '@lua-learning/canvas-runtime'
+import type { InputState, GamepadState, KeyTypedEvent } from '@lua-learning/canvas-runtime'
 
 /**
  * Mock InputCapture interface for testing.
@@ -16,6 +16,11 @@ interface MockInputCapture {
   isKeyDown: ReturnType<typeof vi.fn>
   isKeyPressed: ReturnType<typeof vi.fn>
   getKeysDown: ReturnType<typeof vi.fn>
+  getKeysTyped: ReturnType<typeof vi.fn>
+  isShiftDown: ReturnType<typeof vi.fn>
+  isCtrlDown: ReturnType<typeof vi.fn>
+  isAltDown: ReturnType<typeof vi.fn>
+  isMetaDown: ReturnType<typeof vi.fn>
   getInputState: ReturnType<typeof vi.fn>
   getMousePosition: ReturnType<typeof vi.fn>
   isMouseButtonDown: ReturnType<typeof vi.fn>
@@ -64,6 +69,11 @@ function createMockInputCapture(): MockInputCapture {
     isKeyDown: vi.fn().mockReturnValue(false),
     isKeyPressed: vi.fn().mockReturnValue(false),
     getKeysDown: vi.fn().mockReturnValue(new Set<string>()),
+    getKeysTyped: vi.fn().mockReturnValue([] as KeyTypedEvent[]),
+    isShiftDown: vi.fn().mockReturnValue(false),
+    isCtrlDown: vi.fn().mockReturnValue(false),
+    isAltDown: vi.fn().mockReturnValue(false),
+    isMetaDown: vi.fn().mockReturnValue(false),
     getInputState: vi.fn().mockReturnValue(createEmptyInputState()),
     getMousePosition: vi.fn().mockReturnValue({ x: 0, y: 0 }),
     isMouseButtonDown: vi.fn().mockReturnValue(false),
