@@ -341,6 +341,59 @@ end)
 ansi.start()
 ```
 
+### `screen:set_layer_frame(identifier, frame)`
+
+Set the current frame of an animated layer (drawn layer with more than one frame). Frames are **1-based** (matching Lua conventions).
+
+- **identifier** — layer ID, name, or tag (matches `screen:layer_on()` rules). When the identifier resolves to multiple layers, all matched animated layers are updated.
+- **frame** — 1-based frame index. Indices outside `1..total_frames` wrap with modulo and emit a warning to the developer console.
+
+Single-frame drawn layers (and non-drawn layers like text/reference/group) are silently ignored.
+
+`set_layer_frame` does **not** change playing state. If you want to step frames manually, call `screen:pause()` first; otherwise the playback engine will resume advancing from the frame you set on the next tick.
+
+```lua
+screen:pause()
+screen:set_layer_frame("walk", 1)   -- jump to first frame
+screen:set_layer_frame("walk", 99)  -- wraps, prints a warning
+```
+
+### `screen:get_layer_frame(identifier)`
+
+Return the current frame index and total frame count for the first drawn layer matching `identifier`. Both values are 1-based.
+
+- **Returns** — `frame, total_frames` (both `number`). Returns `1, 1` for non-animated drawn layers; non-drawn layers also return `1, 1`.
+
+```lua
+local frame, total = screen:get_layer_frame("walk")
+print(string.format("frame %d of %d", frame, total))
+```
+
+### Example: Step through frames with arrow keys
+
+```lua
+local ansi = require("ansi")
+
+local screen = ansi.load_screen("walk_cycle.ansi.lua")
+ansi.set_screen(screen)
+screen:pause()  -- we'll drive frames manually
+
+ansi.tick(function()
+  local frame, total = screen:get_layer_frame("walk")
+  if ansi.is_key_pressed("right") then
+    screen:set_layer_frame("walk", frame + 1)  -- wraps past the end
+  elseif ansi.is_key_pressed("left") then
+    screen:set_layer_frame("walk", frame - 1)  -- wraps below 1
+  elseif ansi.is_key_pressed("space") then
+    if screen:is_playing() then screen:pause() else screen:play() end
+  elseif ansi.is_key_pressed("escape") then
+    ansi.stop()
+  end
+end)
+
+ansi.start()
+```
+
 ## Screen Transitions
 
 Swipe and dither transitions reveal or hide content with cinematic effects.
@@ -803,6 +856,8 @@ When `ansi.set_screen()` activates a screen, the effective `useFontBlocks` value
 | `screen:play()` | Start/resume animation playback |
 | `screen:pause()` | Pause animation playback |
 | `screen:is_playing()` | Check if animation is playing |
+| `screen:set_layer_frame(id, frame)` | Set the current frame (1-based) of an animated layer; wraps out of range |
+| `screen:get_layer_frame(id)` | Return `frame, total_frames` for an animated layer (1-based) |
 | `screen:swipe_out(opts?)` | Swipe out to fill color or hide layers (8 directions, `on_complete`) |
 | `screen:swipe_in(opts)` | Swipe in preview layers (8 directions, `on_complete`) |
 | `screen:dither_out(opts?)` | Dither out to fill color or hide layers (dissolve, `on_complete`) |

@@ -32,7 +32,7 @@ local ansi = {}
 -- 12. Screen Display (load_screen, create_screen, set_screen)
 -- 13. Layer Visibility Control (Screen:get_layers, layer_on, layer_off, layer_toggle)
 -- 14. Label Text (Screen:set_label, ansi.create_label)
--- 15. Animation Playback (Screen:play, Screen:pause, Screen:is_playing)
+-- 15. Animation Playback & Frame Control (Screen:play, Screen:pause, Screen:is_playing, Screen:set_layer_frame, Screen:get_layer_frame)
 -- 16. Viewport / Pan (Screen:pan, Screen:set_viewport, Screen:is_panning, Screen:get_viewport)
 -- 17. Layer Offsets (Screen:set_layer_offset, Screen:get_layer_offset)
 -- =============================================================================
@@ -308,6 +308,26 @@ function Screen:pause() end
 ---@return boolean playing True if animation is playing
 ---@usage if screen:is_playing() then screen:pause() end
 function Screen:is_playing() end
+
+--- Set the current frame for an animated layer (1-based).
+--- Out-of-range indices wrap with modulo (and emit a warning to the console).
+--- Non-animated layers (single frame, or non-drawn layer types) are silently ignored.
+--- Does not change playing state — call screen:pause() first if you want to step manually.
+---@param identifier string|number Layer ID, name, or tag
+---@param frame number 1-based frame index
+---@return nil
+---@usage screen:set_layer_frame("walk", 1)
+---@usage screen:pause(); screen:set_layer_frame("walk", current + 1)
+function Screen:set_layer_frame(identifier, frame) end
+
+--- Get the current frame and total frame count for an animated layer.
+--- Returns (1, 1) for single-frame drawn layers; for non-drawn layers, returns (1, 1) as well.
+--- When the identifier matches multiple layers, returns info for the first drawn layer matched.
+---@param identifier string|number Layer ID, name, or tag
+---@return number frame Current frame index (1-based)
+---@return number total Total number of frames
+---@usage local f, total = screen:get_layer_frame("walk")
+function Screen:get_layer_frame(identifier) end
 
 --- Swipe out: sweep a boundary across the screen to hide content.
 --- Without layers: replaces all cells with a fill color.
