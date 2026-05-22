@@ -178,6 +178,16 @@ describe('AnsiController set/get layer frame', () => {
     it('throws for invalid screen id', () => {
       expect(() => controller.setScreenLayerFrame(999, 'anim', 1)).toThrow('Screen ID 999 not found')
     })
+
+    it('throws for NaN frame', () => {
+      const id = controller.createScreen(makeAnimatedScreen(4))
+      expect(() => controller.setScreenLayerFrame(id, 'anim', NaN)).toThrow('finite number')
+    })
+
+    it('throws for Infinity frame', () => {
+      const id = controller.createScreen(makeAnimatedScreen(4))
+      expect(() => controller.setScreenLayerFrame(id, 'anim', Infinity)).toThrow('finite number')
+    })
   })
 
   describe('getScreenLayerFrame', () => {

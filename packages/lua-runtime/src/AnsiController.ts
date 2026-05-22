@@ -619,6 +619,7 @@ export class AnsiController {
   screenIsPlaying(id: number): boolean { return this.screenStates.get(id)?.playing ?? false }
 
   setScreenLayerFrame(id: number, identifier: string, frame: number): void {
+    if (!Number.isFinite(frame)) throw new Error(`set_layer_frame() frame must be a finite number, got ${frame}.`)
     const layers = this.validateScreenExists(id)
     const matched = this.resolveLayersByIdentifier(layers, identifier)
     if (matched.length === 0) throw new Error(`No layers match identifier "${identifier}" in screen ${id}.`)

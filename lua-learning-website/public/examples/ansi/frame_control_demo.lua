@@ -95,7 +95,7 @@ local function handle_input()
     -- Intentionally out of range — emits a console.warn and wraps.
     screen:set_layer_frame("anim", total + 3)
   else
-    for i = 1, math.min(FRAME_COUNT, 6) do
+    for i = 1, FRAME_COUNT do
       if ansi.is_key_pressed(tostring(i)) then
         screen:set_layer_frame("anim", i)
       end

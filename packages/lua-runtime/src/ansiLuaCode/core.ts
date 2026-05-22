@@ -345,37 +345,30 @@ export const ansiLuaCoreCode = `
         error("Failed to parse ANSI file '" .. path .. "': " .. tostring(err))
       end
 
-      -- Suspend instruction counting during file execution
+      -- Suspend instruction counting during file execution + create_screen.
       local has_exec_control = type(__loading_depth) == 'number'
       if has_exec_control then
         __loading_depth = __loading_depth + 1
       end
+      local function _finish_loading()
+        if has_exec_control and __loading_depth > 0 then
+          __loading_depth = __loading_depth - 1
+          if __loading_depth == 0 then __reset_instruction_count() end
+        end
+      end
 
       local ok, data = pcall(fn)
       if not ok then
-        if has_exec_control and __loading_depth > 0 then
-          __loading_depth = __loading_depth - 1
-          if __loading_depth == 0 then __reset_instruction_count() end
-        end
+        _finish_loading()
         error("Failed to execute ANSI file '" .. path .. "': " .. tostring(data))
       end
       if type(data) ~= 'table' then
-        if has_exec_control and __loading_depth > 0 then
-          __loading_depth = __loading_depth - 1
-          if __loading_depth == 0 then __reset_instruction_count() end
-        end
+        _finish_loading()
         error("ANSI file '" .. path .. "' did not return a table")
       end
 
       local screen = _ansi.create_screen(data)
-
-      if has_exec_control and __loading_depth > 0 then
-        __loading_depth = __loading_depth - 1
-        if __loading_depth == 0 then
-          __reset_instruction_count()
-        end
-      end
-
+      _finish_loading()
       return screen
     end
 
