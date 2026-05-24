@@ -10,16 +10,32 @@ import {
   setAutoIndentEnabled,
 } from '../../utils/luaTokenizer'
 
-// Cap on how many recently-emitted values we remember for stale-echo detection.
-// Long enough to cover bursts of rapid typing, small enough to bound memory.
-const EMISSION_HISTORY_LIMIT = 64
+// How many recently-emitted values we remember for stale-echo detection.
+// In a minimal scenario (single file, no autosave) the drift maxes out around
+// 4 keystrokes; with more state churn per keystroke (many tabs, autosave,
+// large files) it gets deeper. 32 covers comfortably wider bursts without
+// the per-tab memory of a much larger buffer. Each entry is a full snapshot
+// of the model, so the limit also caps memory cost.
+// False-positive risk from this size is small because `isStaleValueSync`
+// also requires `edit.forceMoveMarkers === true`, which only the
+// @monaco-editor/react value-sync emits in this codebase.
+const EMISSION_HISTORY_LIMIT = 32
 
 /**
- * True iff the given edit is a single full-range replace whose text was once
- * emitted via onChange. That is the signature of @monaco-editor/react's
- * value-sync useEffect firing with a stale value (React state lagging behind
- * Monaco's local model during rapid typing). Suppressing such edits prevents
- * the cursor from jumping to end-of-file.
+ * True iff the given edit is the signature of @monaco-editor/react's value-sync
+ * useEffect firing with a stale value (React state lagging behind Monaco's
+ * local model during rapid typing). Suppressing such edits prevents the cursor
+ * from jumping to end-of-file.
+ *
+ * Detection requires ALL of:
+ *   - source === '' — the wrapper's executeEdits call uses an empty source;
+ *     Monaco's own paths (typing, paste, format) use a non-empty source.
+ *   - exactly one edit covering the full model range — partial edits are real.
+ *   - edit.forceMoveMarkers === true — the wrapper's call sets this; nothing
+ *     else in this codebase does.
+ *   - text was recently emitted via our onChange — proves the editor has
+ *     already moved past this snapshot, so the sync would corrupt user state.
+ *   - text !== current model value — a no-op sync is harmless to pass through.
  */
 function isStaleValueSync(
   source: string | null | undefined,
@@ -29,6 +45,7 @@ function isStaleValueSync(
 ): boolean {
   if (source !== '' || edits.length !== 1) return false
   const edit = edits[0]
+  if (edit.forceMoveMarkers !== true) return false
   if (typeof edit.text !== 'string') return false
   if (!emittedHistory.has(edit.text)) return false
   if (edit.text === model.getValue()) return false
