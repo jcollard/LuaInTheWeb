@@ -302,6 +302,18 @@ TypeScript test mocks that construct the full interface will fail `tsc` if a req
 ## Conventions
 
 - **Branch Policy**: Never commit directly to main. All work must happen in worktrees created via `/issue <n> begin` or `EnterWorktree`. Direct commits and pushes to main are blocked by git hooks.
+- **Integration branches**: A milestone may declare an integration branch. When an issue belongs to
+  one, branch from and PR to that branch — **never `main`**. The integration branch merges to `main`
+  in a single PR when the milestone completes. This overrides the "branch from main" default in
+  `.claude/commands/issue/begin.md` and the `main` fallback in `scripts/issue-review.py`, so **both**
+  commands need an explicit `--base`:
+  ```bash
+  gh issue develop <n> --base <integration-branch> --checkout
+  python3 scripts/issue-review.py <n> --base <integration-branch> --summary "..." --test-plan "..."
+  ```
+  | Milestone | Integration branch |
+  |-----------|--------------------|
+  | [Cloud Accounts & Storage](https://github.com/jcollard/LuaInTheWeb/milestone/1) (#787-#799) | `feat/cloud` |
 - **Python**: Always use `python3` (not `python`) for scripts
 - **Timestamps**: When updating dates in files, use `date` command to get current timestamp
 
