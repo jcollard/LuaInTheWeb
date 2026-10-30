@@ -1,0 +1,73 @@
+# phrase | category
+# Matched case-insensitively on whole words, outside code. Add to this as the readers find new patterns.
+# Copied from html-escape-room; see docs/guide-style.md.
+
+# Makes a step sound trivial
+simply | condescending
+just | condescending
+easy | condescending
+easily | condescending
+obviously | condescending
+of course | condescending
+clearly | condescending
+trivial | condescending
+
+# Talks to a group instead of one student
+everyone | group-address
+students | group-address
+learners | group-address
+you all | group-address
+class | group-address
+
+# Stock AI phrasing
+dive in | ai-phrase
+dive into | ai-phrase
+let's dive | ai-phrase
+deep dive | ai-phrase
+delve | ai-phrase
+embark | ai-phrase
+journey | ai-phrase
+unlock | ai-phrase
+unleash | ai-phrase
+empower | ai-phrase
+seamless | ai-phrase
+seamlessly | ai-phrase
+robust | ai-phrase
+leverage | ai-phrase
+harness | ai-phrase
+elevate | ai-phrase
+tapestry | ai-phrase
+game-changer | ai-phrase
+under the hood | ai-phrase
+happy coding | ai-phrase
+and that's it | ai-phrase
+that's it! | ai-phrase
+in this lesson, we will | ai-phrase
+in this guide, we will | ai-phrase
+in this part, we will | ai-phrase
+in this lesson we will | ai-phrase
+by the end of this lesson | ai-phrase
+by the end of this part | ai-phrase
+let's explore | ai-phrase
+let's take a look | ai-phrase
+not only | ai-phrase
+whether you're | ai-phrase
+the magic happens | ai-phrase
+voilà | ai-phrase
+voila | ai-phrase
+
+# Filler
+it's important to note | filler
+it is important to note | filler
+it's worth noting | filler
+it's worth mentioning | filler
+keep in mind that | filler
+note that | filler
+in other words | filler
+essentially | filler
+basically | filler
+
+# Promotional lines html-escape-room readers flagged
+deserves a | ai-phrase
+professional sites | ai-phrase
+like a pro | ai-phrase

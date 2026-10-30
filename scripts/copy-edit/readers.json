@@ -1,0 +1,31 @@
+{
+  "_comment": "Each reader uses a different model family so they don't share the same blind spots. Swap models freely; IDs come from https://openrouter.ai/models. Adapted from html-escape-room's copy-edit-pass.",
+  "temperature": 0.3,
+  "max_tokens": 6000,
+  "readers": [
+    {
+      "id": "ai-tells",
+      "model": "openai/gpt-6.1-sol",
+      "rubric": "rubrics/ai-tells.md"
+    },
+    {
+      "id": "kid-reader",
+      "model": "google/gemini-4-argon",
+      "rubric": "rubrics/kid-reader.md"
+    },
+    {
+      "id": "guide-voice",
+      "model": "moonshotai/kimi-k3",
+      "rubric": "rubrics/guide-voice.md",
+      "max_tokens": 20000,
+      "reasoning": {"effort": "low"}
+    },
+    {
+      "id": "supportive",
+      "model": "z-ai/glm-5.3",
+      "rubric": "rubrics/supportive.md",
+      "max_tokens": 20000,
+      "reasoning": {"effort": "low"}
+    }
+  ]
+}
