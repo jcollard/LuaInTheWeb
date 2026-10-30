@@ -55,16 +55,32 @@ def load_key():
     return key
 
 
+FIELD_LINE = re.compile(r'^(\s*"(?:quote|issue|suggestion|overall|severity)"\s*:\s*")(.*)("\s*,?\s*)$')
+
+
+def repair_quotes(text):
+    """Escape bare quotes inside one-line string values, e.g. "quote": "draw `"life"` icons".
+    Models often copy quoted guide text without escaping it."""
+    out = []
+    for line in text.splitlines():
+        m = FIELD_LINE.match(line)
+        if m:
+            inner = re.sub(r'(?<!\\)"', r'\\"', m.group(2))
+            line = m.group(1) + inner + m.group(3)
+        out.append(line)
+    return "\n".join(out)
+
+
 def parse_json(text):
     text = text.strip()
     text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text)
+    start, end = text.find("{"), text.rfind("}")
+    if start != -1 and end > start:
+        text = text[start:end + 1]
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        start, end = text.find("{"), text.rfind("}")
-        if start != -1 and end > start:
-            return json.loads(text[start:end + 1])
-        raise
+        return json.loads(repair_quotes(text))
 
 
 def norm(s):
@@ -79,6 +95,8 @@ def call(key, model, system, user, cfg):
         "temperature": cfg.get("temperature", 0.3),
         "max_tokens": cfg["max_tokens"],
         "usage": {"include": True},
+        # Ask for strict JSON; some models otherwise leave quotes in code unescaped.
+        "response_format": {"type": "json_object"},
     }
     if cfg.get("reasoning"):
         body["reasoning"] = cfg["reasoning"]

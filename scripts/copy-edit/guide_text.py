@@ -20,15 +20,21 @@ CODE_BLOCK = re.compile(r'<pre[^>]*>\s*<code[^>]*>(.*?)</code>\s*</pre>', re.S)
 ANY_CODE = re.compile(r'<code[^>]*>(.*?)</code>', re.S)
 
 
+def _tags_off(s):
+    """Remove tags but keep entities escaped, so a later pass can't mistake
+    an unescaped `<=` ... `>` in code for a tag."""
+    return re.sub(r'<[^>]+>', '', s)
+
+
 def _inline(fragment):
-    """Text of a fragment that has no code blocks in it."""
-    s = re.sub(r'<code[^>]*>(.*?)</code>', lambda m: '`' + _strip(m.group(1)) + '`', fragment, flags=re.S)
-    return _strip(s)
+    """Text of a fragment that has no code blocks in it (still HTML-escaped)."""
+    s = re.sub(r'<code[^>]*>(.*?)</code>', lambda m: '`' + _tags_off(m.group(1)) + '`', fragment, flags=re.S)
+    return _tags_off(s)
 
 
 def _strip(s):
-    s = re.sub(r'<[^>]+>', '', s)
-    return html.unescape(s)
+    """Remove tags, then unescape entities. Only call this once, at the end."""
+    return html.unescape(_tags_off(s))
 
 
 def part_ids(path):
@@ -86,7 +92,7 @@ def extract(path, part=None):
     s = re.sub(r'<div class="step-header"[^>]*>(.*?)</div>', lambda m: '\n### ' + _inline(m.group(1)) + '\n', s, flags=re.S)
     s = re.sub(r'<li[^>]*>', '\n- ', s)
     s = re.sub(r'</?(p|div|ul|ol|br|section|header|nav|main)[^>]*>', '\n', s)
-    s = re.sub(r'<code[^>]*>(.*?)</code>', lambda m: '`' + _strip(m.group(1)) + '`', s, flags=re.S)
+    s = re.sub(r'<code[^>]*>(.*?)</code>', lambda m: '`' + _tags_off(m.group(1)) + '`', s, flags=re.S)
     s = _strip(s)
     s = re.sub(r'[ \t]+', ' ', s)
     s = re.sub(r' *\n *', '\n', s)
