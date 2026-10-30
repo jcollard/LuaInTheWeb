@@ -1,0 +1,10 @@
+{
+  "num": 14,
+  "slug": "mouse_gamepad",
+  "title": "Mouse & Gamepad Controls",
+  "tier": 3,
+  "subtitle": "Fly the ship with the mouse or a gamepad, while the keyboard keeps working too.",
+  "summary": "Hold the mouse button to fly toward the pointer and click to shoot. Plug in a gamepad to move with the left stick (with a dead zone) and fire with the A button.",
+  "prereqs": [],
+  "new_files": []
+}

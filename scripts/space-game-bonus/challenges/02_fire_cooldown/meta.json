@@ -1,0 +1,10 @@
+{
+  "num": 2,
+  "slug": "fire_cooldown",
+  "title": "Fire Cooldown & Auto-Fire",
+  "tier": 1,
+  "subtitle": "Hold SPACE to keep firing, with a cooldown timer so you can't flood the screen with lasers.",
+  "summary": "Hold SPACE for auto-fire. A cooldown timer limits how fast you shoot, and a small bar shows when you can fire again.",
+  "prereqs": [],
+  "new_files": []
+}

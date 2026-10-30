@@ -1,0 +1,170 @@
+    <div class="concepts">
+        <h2>New Concepts</h2>
+        <ul>
+            <li><strong>Hit points (hp)</strong> &mdash; a number stored in each meteor that says how many more hits it can take. A hit subtracts 1. At 0, it's destroyed.</li>
+            <li><strong>Per-meteor flags</strong> &mdash; a <code>true</code>/<code>false</code> field like <code>meteor.tough</code> lets the same code treat some meteors differently.</li>
+            <li><strong>Short effect timers</strong> &mdash; set <code>meteor.flash = 0.1</code> on a hit and count it down with <code>dt</code>. While it's above 0, draw the meteor differently.</li>
+            <li><code>canvas.set_global_alpha(a)</code> &mdash; makes <strong>everything</strong> drawn after it see-through. <code>1</code> is solid, <code>0</code> is invisible. It stays that way until you change it back, so always set it back to <code>1</code>.</li>
+        </ul>
+    </div>
+
+    <!-- Task 1 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 1: Load the grey meteor and add hp</div>
+        <div class="step-task">Load <code>meteor_grey.png</code> as <code>"meteor_grey"</code>. Then change <code>spawn_meteor()</code> so every meteor gets three new fields: <code>hp = 1</code>, <code>tough = false</code> and <code>flash = 0</code>. One meteor in four should instead be tough: <code>hp = 3</code> and <code>tough = true</code>.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Add the three fields to the meteor table with their normal values. Then, after the table is made but before <code>table.insert</code>, change them for the unlucky 1 in 4.</div>
+            <div class="hint" hidden><code>math.random(1, 4)</code> gives 1, 2, 3 or 4. Checking <code>if math.random(1, 4) == 1 then</code> is true one time in four. Inside, set <code>meteor.hp = 3</code> and <code>meteor.tough = true</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- With the other load_image lines
+canvas.assets.load_image("meteor_grey", "meteor_grey.png")
+
+local function spawn_meteor()
+    local meteor = {
+        x = math.random(0, SCREEN_W - meteor_w),
+        y = -meteor_h,
+        hp = 1,
+        tough = false,
+        flash = 0
+    }
+    -- 1 in 4 meteors is tough
+    if math.random(1, 4) == 1 then
+        meteor.hp = 3
+        meteor.tough = true
+    end
+    table.insert(meteors, meteor)
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Task 2 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 2: Draw tough meteors in grey</div>
+        <div class="step-task">In the meteor drawing loop, draw tough meteors with the <code>"meteor_grey"</code> image and normal meteors with <code>"meteor"</code>.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Make a local variable for the image name before you call <code>draw_image</code>.</div>
+            <div class="hint" hidden>Start with <code>local image = "meteor"</code>. If <code>meteor.tough</code> is true, change it to <code>"meteor_grey"</code>. Then pass <code>image</code> to <code>canvas.draw_image</code> instead of <code>"meteor"</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">for i, meteor in ipairs(meteors) do
+    local image = "meteor"
+    if meteor.tough then
+        image = "meteor_grey"
+    end
+    canvas.draw_image(image, meteor.x, meteor.y, meteor_w, meteor_h)
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Task 3 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 3: Hits take away hp</div>
+        <div class="step-task">Change the laser-vs-meteor collision. When a laser hits a meteor, the laser is <strong>always</strong> removed, and the meteor loses 1 hp. Only remove the meteor when its hp reaches 0. A destroyed tough meteor is worth 3 points; a normal one is worth 1.</div>
+        <div class="step-note">Keep the <code>break</code>! Once <code>table.remove(lasers, i)</code> runs, <code>lasers[i]</code> is gone (or is now a different laser), so we must stop checking meteors for it. The <code>break</code> has to happen whether the meteor was destroyed or not.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Inside the <code>if check_collision(...)</code>, split the work in two: things that happen on <em>every</em> hit (remove the laser, lose hp), and things that only happen when hp is 0 (remove the meteor, add score).</div>
+            <div class="hint" hidden>Writing <code>meteors[j]</code> over and over gets messy. Add <code>local meteor = meteors[j]</code> at the start of the inner loop and use <code>meteor</code> instead.</div>
+            <div class="hint" hidden>After <code>table.remove(lasers, i)</code> and <code>meteor.hp = meteor.hp - 1</code>, write <code>if meteor.hp &lt;= 0 then</code>. Inside it, remove the meteor and add <code>3</code> or <code>1</code> to the score depending on <code>meteor.tough</code>. Put the <code>break</code> after that <code>if</code>'s <code>end</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- Laser vs meteor collision
+for i = #lasers, 1, -1 do
+    for j = #meteors, 1, -1 do
+        local meteor = meteors[j]
+        if check_collision(lasers[i].x, lasers[i].y, laser_w, laser_h,
+                           meteor.x, meteor.y, meteor_w, meteor_h) then
+            -- Every hit uses up the laser and costs the meteor 1 hp
+            table.remove(lasers, i)
+            meteor.hp = meteor.hp - 1
+            if meteor.hp &lt;= 0 then
+                table.remove(meteors, j)
+                if meteor.tough then
+                    score = score + 3
+                else
+                    score = score + 1
+                end
+            end
+            break
+        end
+    end
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Task 4 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 4: Blink when hit</div>
+        <div class="step-task">Right now you can't tell if a tough meteor was hit. When a laser hits a meteor, set its <code>flash</code> to <code>0.1</code>. In the meteor movement loop, count <code>flash</code> down by <code>dt</code> (but never below 0). When drawing, if <code>flash</code> is above 0, draw the meteor see-through with <code>canvas.set_global_alpha(0.3)</code>.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Add <code>meteor.flash = 0.1</code> next to <code>meteor.hp = meteor.hp - 1</code>. To count down without going below 0, use <code>math.max(0, ...)</code>.</div>
+            <div class="hint" hidden>In the movement loop: <code>meteors[i].flash = math.max(0, meteors[i].flash - dt)</code>.</div>
+            <div class="hint" hidden>When drawing: <code>if meteor.flash &gt; 0 then canvas.set_global_alpha(0.3) end</code>, then <code>draw_image</code>, then <strong>always</strong> <code>canvas.set_global_alpha(1)</code> afterwards. If you forget that last line, the ship, the HUD and everything else turns see-through too!</div>
+        </div>
+        <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- In the laser vs meteor collision, after losing hp
+meteor.flash = 0.1
+
+-- In the meteor movement loop
+meteors[i].flash = math.max(0, meteors[i].flash - dt)
+
+-- In the meteor drawing loop
+-- Blink (draw see-through) for a moment after being hit
+if meteor.flash &gt; 0 then
+    canvas.set_global_alpha(0.3)
+end
+canvas.draw_image(image, meteor.x, meteor.y, meteor_w, meteor_h)
+canvas.set_global_alpha(1)</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Task 5 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 5 (optional): Show the hp</div>
+        <div class="step-task">Above each tough meteor, draw one small red rectangle (a &ldquo;pip&rdquo;) for each hp it has left. Make each pip 8 pixels wide and 4 tall, 8 pixels above the meteor, with pips 12 pixels apart.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Use a <code>for</code> loop from <code>1</code> to <code>meteor.hp</code>. Each time round the loop, draw one pip a bit further to the right.</div>
+            <div class="hint" hidden>Pip number <code>p</code> goes at <code>x = meteor.x + 8 + (p - 1) * 12</code> and <code>y = meteor.y - 8</code>. Three pips then sit centered over the 48-pixel-wide meteor.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- HP pips above tough meteors
+if meteor.tough then
+    canvas.set_color(255, 80, 80)
+    for p = 1, meteor.hp do
+        canvas.fill_rect(meteor.x + 8 + (p - 1) * 12, meteor.y - 8, 8, 4)
+    end
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>Run <code>game.lua</code>. You should see:</p>
+        <ul>
+            <li>About one meteor in four is grey</li>
+            <li>Brown meteors still break with one hit and give 1 point</li>
+            <li>Grey meteors take three hits, and give 3 points when they break</li>
+            <li>Every laser disappears when it hits a meteor, even if the meteor survives</li>
+            <li>A meteor blinks briefly each time it's hit, and the rest of the screen never turns see-through</li>
+            <li>(Optional) Grey meteors show red pips that go down 3, 2, 1 as you hit them</li>
+        </ul>
+    </div>
+
+    <div class="stretch">
+        <h2>Going Further</h2>
+        <ul>
+            <li>Make tough meteors fall a little slower than normal ones, so they're fair to shoot three times.</li>
+            <li>Instead of 1 in 4, make tough meteors more common as your score goes up.</li>
+            <li>Try a different hit effect: draw a white rectangle with low alpha over the meteor, or nudge it up a few pixels when hit.</li>
+        </ul>
+    </div>

@@ -1,0 +1,10 @@
+{
+  "num": 3,
+  "slug": "lives",
+  "title": "Lives & Invincibility",
+  "tier": 1,
+  "subtitle": "Survive three hits instead of one. After each hit your ship blinks and can't be hurt for two seconds.",
+  "summary": "Give the player 3 lives. Each hit costs a life and gives a short blinking invincibility. Show the lives as ship icons in the HUD.",
+  "prereqs": [],
+  "new_files": ["images/life.png"]
+}

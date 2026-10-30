@@ -1,0 +1,10 @@
+{
+  "num": 15,
+  "slug": "design_your_own",
+  "title": "Design Your Own",
+  "tier": 3,
+  "subtitle": "No step-by-step instructions this time. Plan a feature, build it, test it, and make the game yours.",
+  "summary": "A capstone: plan and build your own feature using a design checklist. No reference solution &mdash; it's your idea.",
+  "prereqs": [],
+  "new_files": []
+}

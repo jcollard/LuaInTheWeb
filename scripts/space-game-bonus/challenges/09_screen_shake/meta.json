@@ -1,0 +1,10 @@
+{
+  "num": 9,
+  "slug": "screen_shake",
+  "title": "Screen Shake",
+  "tier": 2,
+  "subtitle": "Make explosions feel powerful: the screen jolts when a meteor breaks, and shakes hard when your ship is destroyed.",
+  "summary": "Shake the game world when a meteor is destroyed and when the ship crashes, fading the shake out over time while the HUD stays perfectly still.",
+  "prereqs": [],
+  "new_files": []
+}

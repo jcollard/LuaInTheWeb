@@ -1,0 +1,10 @@
+{
+  "num": 6,
+  "slug": "tough_meteors",
+  "title": "Tough Meteors",
+  "tier": 2,
+  "subtitle": "Some meteors are made of tougher rock. They take three hits to destroy, blink when hit, and are worth more points.",
+  "summary": "Give meteors hit points. Grey tough meteors take three laser hits, blink when they're hit, and are worth 3 points.",
+  "prereqs": [],
+  "new_files": ["images/meteor_grey.png"]
+}

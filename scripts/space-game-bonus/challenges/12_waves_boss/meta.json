@@ -1,0 +1,10 @@
+{
+  "num": 12,
+  "slug": "waves_boss",
+  "title": "Waves & a Boss",
+  "tier": 3,
+  "subtitle": "Swap endless spawning for numbered waves, and fight a big boss with a health bar every third wave.",
+  "summary": "Each wave spawns a set number of meteors and enemies, with a big WAVE banner in between. Every third wave a boss flies in, fires spreads of lasers, and shows a health bar.",
+  "prereqs": [11],
+  "new_files": ["images/boss.png"]
+}

@@ -1,0 +1,10 @@
+{
+  "num": 10,
+  "slug": "game_states",
+  "title": "Game States: Title, Pause, Game Over",
+  "tier": 3,
+  "subtitle": "Replace the game_over flag with a single state variable, then add a title screen and a pause button.",
+  "summary": "Swap the game_over boolean for one state string (title, playing, paused, game_over). Add a title screen with a sci-fi font and press P to pause.",
+  "prereqs": [],
+  "new_files": ["fonts/kenvector_future.ttf"]
+}

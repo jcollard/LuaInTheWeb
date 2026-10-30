@@ -1,0 +1,10 @@
+{
+  "num": 5,
+  "slug": "meteor_variety",
+  "title": "Meteor Variety",
+  "tier": 2,
+  "subtitle": "Small fast rocks, big slow boulders: every meteor gets its own size, speed, image and spin.",
+  "summary": "Move the shared meteor size and speed into each meteor's own table, pick a random kind for every meteor, and make them spin as they fall.",
+  "prereqs": [],
+  "new_files": ["images/meteor_small.png", "images/meteor_med.png"]
+}

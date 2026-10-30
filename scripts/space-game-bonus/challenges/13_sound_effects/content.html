@@ -1,0 +1,141 @@
+    <div class="concepts">
+        <h2>New Concepts</h2>
+        <ul>
+            <li><code>canvas.assets.load_sound(name, file)</code> &mdash; loads a sound file once, at the start, just like images.</li>
+            <li><code>canvas.play_sound(name, volume)</code> &mdash; plays a sound one time. <code>volume</code> is optional and goes from <code>0</code> (silent) to <code>1</code> (full volume). Leave it out and you get full volume.</li>
+            <li><strong>Events, not states</strong> &mdash; a sound should play at the <em>moment</em> something happens (the frame the laser fires), not every frame while something is true. Play a sound 60 times a second and you get a horrible buzz.</li>
+            <li><code>canvas.mute()</code>, <code>canvas.unmute()</code>, <code>canvas.is_muted()</code> &mdash; turn all game sound off and on, and check which it is.</li>
+            <li><strong>Browsers and sound</strong> &mdash; web browsers won't play any audio until the player has clicked or pressed a key on the page. That stops websites blasting noise at you. If the game is silent at first, click on it and try again.</li>
+        </ul>
+    </div>
+
+    <!-- Step: load the sounds -->
+    <div class="step step-copy">
+        <div class="step-header"><span class="badge badge-copy">TYPE THIS CODE</span> Load the sounds</div>
+        <div class="step-location">Where: at the top, after <code>canvas.assets.add_path("images")</code>, and after the image loading lines</div>
+        <pre class="code-block"><code class="lua">-- At the top, after canvas.assets.add_path("images")
+canvas.assets.add_path("sounds")
+
+-- After the "Load images" lines
+-- Load sounds
+canvas.assets.load_sound("laser", "laser.ogg")
+canvas.assets.load_sound("hit", "hit.ogg")
+canvas.assets.load_sound("game_over", "game_over.ogg")</code></pre>
+        <div class="step-desc">This tells the game to look in the <code>sounds/</code> folder, then loads three sound files and gives each one a name. You'll use those names with <code>canvas.play_sound()</code>. Like images, sounds must be loaded <em>before</em> <code>canvas.start()</code>.</div>
+    </div>
+
+    <!-- Task 1 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 1: Pew pew!</div>
+        <div class="step-task">Play the <code>"laser"</code> sound every time the ship fires. Play it at half volume (<code>0.5</code>).</div>
+        <div class="step-note">Why half volume? You'll hear the laser far more often than any other sound. If everything is at full volume, the lasers drown out the important sounds like explosions. Quieter for common sounds, louder for rare ones.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Find the place in your code where a new laser is created. That line only runs on the one frame SPACE is pressed &mdash; perfect for a sound.</div>
+            <div class="hint" hidden>Inside the <code>if canvas.is_key_pressed(canvas.keys.SPACE) then</code> block, right after <code>spawn_laser(...)</code>, add <code>canvas.play_sound("laser", 0.5)</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- Fire laser
+if canvas.is_key_pressed(canvas.keys.SPACE) then
+    spawn_laser(ship_x + ship_w / 2 - laser_w / 2, ship_y)
+    canvas.play_sound("laser", 0.5)
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Task 2 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 2: Boom!</div>
+        <div class="step-task">Play the <code>"hit"</code> sound at full volume whenever a laser destroys a meteor.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Which code runs exactly once when a laser hits a meteor? Look for where the score goes up.</div>
+            <div class="hint" hidden>In the laser vs meteor collision loop, after <code>score = score + 1</code> and before <code>break</code>, add <code>canvas.play_sound("hit")</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">table.remove(meteors, j)
+table.remove(lasers, i)
+score = score + 1
+canvas.play_sound("hit")
+break</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Task 3 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 3: Game over sound &mdash; once!</div>
+        <div class="step-task">Play the <code>"game_over"</code> sound when the ship crashes. It must play <strong>once</strong>, not over and over while the game over screen is showing.</div>
+        <div class="step-note">A tempting mistake is to put it in <code>draw()</code> inside <code>if game_over then</code>. But <code>draw()</code> runs every frame, so <code>game_over</code> is true on <em>every</em> frame of the game over screen &mdash; that's 60 game over sounds per second! Look for the one line that runs only on the frame the ship crashes.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Where does <code>game_over</code> change from <code>false</code> to <code>true</code>? That happens once per game.</div>
+            <div class="hint" hidden>In the ship vs meteor collision loop, add <code>canvas.play_sound("game_over")</code> right after <code>game_over = true</code> and before <code>return</code>. On the next frame, <code>update()</code> stops at <code>if game_over then return end</code>, so the collision code can't run again.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- Ship vs meteor collision
+for i, meteor in ipairs(meteors) do
+    if check_collision(ship_x, ship_y, ship_w, ship_h,
+                       meteor.x, meteor.y, meteor_w, meteor_h) then
+        game_over = true
+        canvas.play_sound("game_over")
+        return
+    end
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Task 4 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 4: Mute button</div>
+        <div class="step-task">Pressing M should mute the game if it has sound, and unmute it if it's muted. It should work at any time, even on the game over screen. Show <code>"Sound: ON"</code> or <code>"Sound: OFF"</code> in the HUD under the controls, and add <code>| M: Mute</code> to the controls text.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>This is a <strong>toggle</strong>: one key that flips between two states. Ask <code>canvas.is_muted()</code> which state you're in, then do the opposite.</div>
+            <div class="hint" hidden>In <code>user_input()</code>, the game over check has a <code>return</code>, so anything after it is skipped on the game over screen. Put the M check <em>before</em> it, right after <code>local dt = ...</code>.</div>
+            <div class="hint" hidden>In the HUD, use <code>if canvas.is_muted() then ... else ... end</code> to choose which text to draw at <code>y = 50</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- In user_input(), before the game over check
+-- Mute / unmute (works any time, even on the game over screen)
+if canvas.is_key_pressed(canvas.keys.M) then
+    if canvas.is_muted() then
+        canvas.unmute()
+    else
+        canvas.mute()
+    end
+end
+
+-- In draw(), HUD section
+canvas.draw_text(10, 30, "Arrow keys: Move | SPACE: Shoot | M: Mute")
+if canvas.is_muted() then
+    canvas.draw_text(10, 50, "Sound: OFF")
+else
+    canvas.draw_text(10, 50, "Sound: ON")
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>Run <code>game.lua</code>. You should hear:</p>
+        <ul>
+            <li>A quiet <em>pew</em> every time you press SPACE</li>
+            <li>A louder hit sound every time a meteor is destroyed</li>
+            <li>The game over sound <strong>once</strong> when you crash &mdash; not a buzzing loop</li>
+            <li>Silence after pressing M, with <strong>Sound: OFF</strong> in the HUD; press M again and the sounds come back</li>
+            <li>M still works on the game over screen</li>
+        </ul>
+    </div>
+
+    <div class="stretch">
+        <h2>Going Further</h2>
+        <ul>
+            <li>Done other bonus challenges? The <code>sounds/</code> folder also has <code>powerup.ogg</code> (for picking up a power-up), <code>hurt.ogg</code> (for losing a life), and <code>enemy_laser.ogg</code> (for enemy ships firing). Load them and play them at the right moments.</li>
+            <li>Make the hit sound a little different each time by playing it at a random volume between <code>0.6</code> and <code>1.0</code>. (Hint: <code>0.6 + math.random() * 0.4</code>.)</li>
+            <li>Mash SPACE as fast as you can. Is it too noisy? Try a fire cooldown timer so you can only shoot every 0.2 seconds.</li>
+        </ul>
+    </div>

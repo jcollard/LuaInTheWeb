@@ -1,0 +1,10 @@
+{
+  "num": 13,
+  "slug": "sound_effects",
+  "title": "Sound Effects",
+  "tier": 3,
+  "subtitle": "Play sounds when you fire, when a meteor explodes, and when the game ends, plus a key to mute it all.",
+  "summary": "Load and play sound effects for lasers, hits, and game over. Press M to mute or unmute, with a HUD indicator.",
+  "prereqs": [],
+  "new_files": ["sounds/laser.ogg", "sounds/hit.ogg", "sounds/game_over.ogg"]
+}
