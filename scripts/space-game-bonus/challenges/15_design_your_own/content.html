@@ -1,0 +1,96 @@
+    <div class="concepts">
+        <h2>How to design a feature</h2>
+        <p>Every challenge you've done followed the same four questions. Use them for your own idea:</p>
+        <ol>
+            <li><strong>What data does it need?</strong> New variables? A new list of tables? New fields on meteors or lasers?</li>
+            <li><strong>What changes it?</strong> Which keys, timers, or collisions change that data? That code goes in <code>user_input()</code> or <code>update()</code>.</li>
+            <li><strong>How does the player see it?</strong> What do you draw, and in what order? That code goes in <code>draw()</code>.</li>
+            <li><strong>How does it start over?</strong> What needs to go back to normal in <code>reset_game()</code>?</li>
+        </ol>
+        <p>Most features are built from patterns you already know: <strong>timers</strong>, <strong>lists of tables</strong>, <strong>reverse loops for removing</strong>, and <strong>collision checks</strong>.</p>
+    </div>
+
+    <!-- Task 1 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 1: Pick an idea</div>
+        <div class="step-task">Pick one idea from the list below, or invent your own. Start small. You can always add more later.</div>
+        <div class="step-note">
+            <strong>Ideas:</strong>
+            <ul style="padding-left: 22px; margin-top: 6px;">
+                <li><strong>Homing missile:</strong> press X to fire a slow missile that turns toward the nearest meteor.</li>
+                <li><strong>Combo multiplier:</strong> each hit within 2 seconds of the last one raises a multiplier from x1 to x2 to x3 (the most). Your points are multiplied by it. Two seconds with no hit puts it back to x1.</li>
+                <li><strong>Splitting meteors:</strong> big meteors break into two small ones that fly apart.</li>
+                <li><strong>Bomb:</strong> press B to destroy everything on screen. You only get 3 per game.</li>
+                <li><strong>Coins and a shop:</strong> destroyed meteors drop coins. Between games, spend them on upgrades.</li>
+                <li><strong>Two players:</strong> a second ship that moves with WASD and fires with F.</li>
+                <li><strong>Black hole:</strong> a black hole drifts across the screen and pulls the ship and meteors toward it.</li>
+            </ul>
+        </div>
+        <div class="hints-container">
+            <div class="hint" hidden>Not sure which one? Pick the one that sounds most fun to <em>play</em>. The combo multiplier and the bomb are the smallest; two players and the shop are the biggest.</div>
+            <div class="hint" hidden>Write your idea as one sentence that starts with "When the player..." For example: "When the player presses B, every meteor on screen explodes and the bomb count goes down by one."</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+    </div>
+
+    <!-- Task 2 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 2: Write a plan</div>
+        <div class="step-task">Before writing code, answer the four questions from the top of this page for your idea. Write the answers as comments at the top of <code>game.lua</code>.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Here's a plan for the bomb idea:
+<pre class="code-block"><code class="lua">-- MY FEATURE: Bombs
+-- Data:    bombs = 3
+-- Changes: pressing B (if bombs &gt; 0) clears meteors, adds to score, bombs - 1
+-- Draw:    "Bombs: 3" in the HUD, a white flash when one goes off
+-- Reset:   bombs = 3 in reset_game()</code></pre></div>
+            <div class="hint" hidden>If your plan has more than about five "Changes" lines, split it into a smaller first version. Get that working, then add the rest.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+    </div>
+
+    <!-- Task 3 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 3: Build it one piece at a time</div>
+        <div class="step-task">Build your feature in small steps, and run the game after each one. Add the data first, then the drawing (so you can see it), then the code that changes it, and finally the reset.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Drawing early helps you find bugs. If you can <em>see</em> your new data on screen (even as plain text in the HUD), it's much easier to tell when the code that changes it is wrong.</div>
+            <div class="hint" hidden>Stuck on an error? That's normal when you build something new. Read the line number in the error message, then look at that line and the line above it. Missing <code>end</code>s and misspelled variable names are the most common causes.</div>
+            <div class="hint" hidden>Look back at a bonus challenge that used a similar pattern. Splitting meteors works a lot like Bonus 7: Explosion Particles. A homing missile uses the same <code>math.cos</code>/<code>math.sin</code> idea from that challenge. Combos are timers, like Bonus 2: Fire Cooldown &amp; Auto-Fire: count <code>combo_timer</code> down by <code>dt</code> each frame, and reset the combo when it reaches 0.</div>
+            <div class="hint" hidden>If your feature changes what happens when you score, like a combo multiplier, find every line that adds to <code>score</code>. If you did other bonus challenges, there may be several (meteors, enemies, a boss). Write one function, such as <code>add_points(n)</code>, and call it in all of those places. Then your change only has to go in one spot.</div>
+        </div>
+        <button class="btn-hint" data-total="4">Show Hint (1/4)</button>
+    </div>
+
+    <!-- Task 4 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 4: Playtest and adjust</div>
+        <div class="step-task">Play your game five times. After each game, change one number (a speed, a timer, a cost) to make it more fun. Then ask someone else to play it without telling them how it works, and watch whether they can figure it out.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>If you keep changing the same number, give it a name in <code>ALL_CAPS</code> at the top of the file (like <code>BOMB_COUNT = 3</code>). Then it's in one place where you can find and change it.</div>
+            <div class="hint" hidden>If your playtester gets confused, add a line to the HUD or the title screen explaining the new key or rule.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>Your feature is done when:</p>
+        <ul>
+            <li>It adds at least one <strong>new thing</strong> (a new object, rule, or ability)</li>
+            <li>The player can <strong>see</strong> it working (a drawing, a HUD value, an effect)</li>
+            <li>It <strong>resets</strong> correctly when you press ENTER after a game over</li>
+            <li>The rest of the game still works: moving, shooting, scoring, and game over</li>
+            <li>Someone else can play it and understand it</li>
+        </ul>
+        <p style="margin-top: 12px; color: #4caf50; font-weight: 600;">There's no reference solution for this one. It's your game now.</p>
+    </div>
+
+    <div class="stretch">
+        <h2>Going Further</h2>
+        <ul>
+            <li>Combine several bonus challenges into one game. Which features work well together?</li>
+            <li>Give your game a new name and title screen, and change the ship's color. Kenney's free Space Shooter pack at kenney.nl has more ships to choose from.</li>
+            <li>Make a second game from scratch using the same patterns: a dodging game, a falling-object catcher, or a top-down racer.</li>
+        </ul>
+    </div>

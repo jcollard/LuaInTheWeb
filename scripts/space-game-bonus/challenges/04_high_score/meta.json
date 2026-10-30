@@ -1,0 +1,10 @@
+{
+  "num": 4,
+  "slug": "high_score",
+  "title": "High Score",
+  "tier": 1,
+  "subtitle": "Keep track of your best score, celebrate when you beat it, and save it so it's still there next time.",
+  "summary": "Track a high score that survives restarts, show NEW HIGH SCORE! when you beat it, and save it between sessions with localstorage.",
+  "prereqs": [],
+  "new_files": []
+}

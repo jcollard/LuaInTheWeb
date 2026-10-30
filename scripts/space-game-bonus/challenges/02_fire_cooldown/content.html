@@ -1,0 +1,129 @@
+    <div class="concepts">
+        <h2>New Concepts</h2>
+        <ul>
+            <li><code>canvas.is_key_down</code> vs <code>canvas.is_key_pressed</code>: <code>is_key_pressed</code> is true for only <strong>one frame</strong> when the key goes down. <code>is_key_down</code> is true <strong>every frame</strong> while the key is held. Right now you shoot with <code>is_key_pressed</code>, so you have to tap.</li>
+            <li><strong>Cooldown timer</strong>: if you switch to <code>is_key_down</code> and change nothing else, you fire a laser every frame (60 per second!). A cooldown says &ldquo;after you shoot, wait a bit before you can shoot again.&rdquo;</li>
+            <li><strong>The timer pattern, again</strong>: this is the same idea as the meteor <code>spawn_timer</code>. That one counts <em>up</em> to <code>spawn_interval</code>. This one counts <em>down</em> to 0. Both use <code>dt</code> so they work the same at any frame rate.</li>
+            <li><code>math.max(0, x)</code> gives back the bigger of the two numbers, so it keeps a countdown from going below zero.</li>
+        </ul>
+    </div>
+
+    <!-- Task 1 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 1: Add cooldown variables</div>
+        <div class="step-task">In the GAME STATE section, right after the laser variables, add a constant <code>FIRE_COOLDOWN</code> for how many seconds to wait between shots (<code>0.25</code>). Also add a <code>fire_timer</code> variable that starts at <code>0</code>.</div>
+        <div class="step-note"><code>fire_timer</code> means &ldquo;seconds left until you can fire again.&rdquo; At <code>0</code>, you're ready to shoot.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Use the <code>ALL_CAPS</code> style for the constant, like <code>SCREEN_W</code> and <code>STAR_COUNT</code>.</div>
+            <div class="hint" hidden>Two lines: <code>local FIRE_COOLDOWN = 0.25</code> and <code>local fire_timer = 0</code>. Putting them right after the laser variables keeps laser things together.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- Fire cooldown
+local FIRE_COOLDOWN = 0.25
+local fire_timer = 0</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Task 2 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 2: Count the timer down</div>
+        <div class="step-task">In <code>update()</code>, right before the spawn timer, make <code>fire_timer</code> go down by <code>dt</code> each frame. It should stop at <code>0</code> and never go negative.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>The spawn timer does <code>spawn_timer = spawn_timer + dt</code>. This timer counts the other way.</div>
+            <div class="hint" hidden><code>fire_timer - dt</code> could become <code>-0.01</code>. Wrap it in <code>math.max(0, ...)</code> so the smallest it can be is 0.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- Fire cooldown counts down to 0
+fire_timer = math.max(0, fire_timer - dt)</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Task 3 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 3: Hold SPACE to auto-fire</div>
+        <div class="step-task">Change the fire code in <code>user_input()</code> so that holding SPACE keeps firing, but only when the cooldown is finished. Every time a laser is fired, start the cooldown again.</div>
+        <div class="step-note">Try swapping <code>is_key_pressed</code> for <code>is_key_down</code> first, without the timer. Hold SPACE and watch the solid wall of lasers. That's why we need a cooldown!</div>
+        <div class="hints-container">
+            <div class="hint" hidden>You need two things to be true before firing: SPACE is held down, <strong>and</strong> the timer has run out.</div>
+            <div class="hint" hidden>The condition is <code>canvas.is_key_down(canvas.keys.SPACE) and fire_timer &lt;= 0</code>.</div>
+            <div class="hint" hidden>After calling <code>spawn_laser(...)</code>, set <code>fire_timer = FIRE_COOLDOWN</code>. Now the next shot has to wait 0.25 seconds.</div>
+        </div>
+        <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- Fire laser (hold SPACE for auto-fire, once per cooldown)
+if canvas.is_key_down(canvas.keys.SPACE) and fire_timer &lt;= 0 then
+    spawn_laser(ship_x + ship_w / 2 - laser_w / 2, ship_y)
+    fire_timer = FIRE_COOLDOWN
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Task 4 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 4: Reset and update the controls text</div>
+        <div class="step-task">Make <code>reset_game()</code> set <code>fire_timer</code> back to <code>0</code> so you can shoot right away in a new game. Then change the controls text in the HUD to say <code>Hold SPACE: Shoot</code>.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Every timer the game uses should be reset in <code>reset_game()</code>. Look at how <code>spawn_timer</code> is handled there.</div>
+            <div class="hint" hidden>Add <code>fire_timer = 0</code> next to <code>spawn_timer = 0</code>. The HUD text is the last <code>draw_text</code> in the HUD section.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- In reset_game()
+spawn_timer = 0
+fire_timer = 0
+
+-- In draw(), HUD section
+canvas.draw_text(10, 30, "Arrow keys: Move | Hold SPACE: Shoot")</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <!-- Task 5 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 5: Draw a cooldown bar (optional)</div>
+        <div class="step-task">In <code>draw()</code>, right after drawing the ship, draw a thin yellow bar <code>2</code> pixels below the ship while the cooldown is running. Make it <code>4</code> pixels tall. Its width, <code>bar_w</code>, should match <code>ship_w</code> right after you fire and shrink to nothing when you're ready to shoot again.</div>
+        <div class="step-note">When the ship is at the very bottom of the screen, there's no room below it, and the bar would be drawn off-screen. Store the bar's y position in <code>bar_y</code>, and keep it from going lower than <code>SCREEN_H - 4</code>.</div>
+        <div class="hints-container">
+            <div class="hint" hidden><code>fire_timer / FIRE_COOLDOWN</code> is <code>1</code> right after firing and <code>0</code> when ready. Multiply that by <code>ship_w</code> to get the bar width.</div>
+            <div class="hint" hidden>Only draw it when <code>fire_timer &gt; 0</code>. Its y position is <code>ship_y + ship_h + 2</code>, but <code>math.min</code> picks the smaller number, so <code>math.min(ship_y + ship_h + 2, SCREEN_H - 4)</code> stops it at the bottom edge.</div>
+            <div class="hint" hidden>Use <code>canvas.set_color(255, 200, 50)</code> and <code>canvas.fill_rect(ship_x, bar_y, bar_w, 4)</code>.</div>
+        </div>
+        <button class="btn-hint" data-total="3">Show Hint (1/3)</button>
+        <div class="solution" hidden>
+            <pre class="code-block"><code class="lua">-- Cooldown bar under the ship (shrinks as the cooldown runs out)
+if fire_timer &gt; 0 then
+    local bar_w = ship_w * (fire_timer / FIRE_COOLDOWN)
+    -- Stay on screen when the ship is at the bottom edge
+    local bar_y = math.min(ship_y + ship_h + 2, SCREEN_H - 4)
+    canvas.set_color(255, 200, 50)
+    canvas.fill_rect(ship_x, bar_y, bar_w, 4)
+end</code></pre>
+        </div>
+        <button class="btn-solution" hidden>Show Solution</button>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>Run <code>game.lua</code>. You should see:</p>
+        <ul>
+            <li>Holding SPACE fires a steady stream of lasers, about 4 per second</li>
+            <li>Lasers are evenly spaced, not a solid beam</li>
+            <li>Tapping SPACE quickly can't fire faster than the cooldown allows</li>
+            <li>A yellow bar under the ship shrinks after each shot (if you did Task 5)</li>
+            <li>After a game over and ENTER, you can shoot right away</li>
+        </ul>
+    </div>
+
+    <div class="stretch">
+        <h2>Going Further</h2>
+        <ul>
+            <li>Try different values for <code>FIRE_COOLDOWN</code>. What feels best: <code>0.1</code>, <code>0.25</code>, or <code>0.5</code>?</li>
+            <li>For a bigger challenge, add <strong>overheat</strong>. Firing adds heat, heat cools down over time, and if heat gets too high you can't shoot for 2 seconds.</li>
+            <li>Make the bar change color: red right after a shot, green when you're almost ready.</li>
+        </ul>
+    </div>

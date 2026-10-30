@@ -1,0 +1,10 @@
+{
+  "num": 11,
+  "slug": "enemy_ships",
+  "title": "Enemy Ships That Shoot Back",
+  "tier": 3,
+  "subtitle": "Red enemy ships sway down the screen and fire lasers at you. Hit them twice to take them down.",
+  "summary": "Add enemy ships that drift side to side as they fly down and fire their own lasers. It's the meteor and laser patterns you already know, combined.",
+  "prereqs": [],
+  "new_files": ["images/enemy.png", "images/enemy_laser.png"]
+}

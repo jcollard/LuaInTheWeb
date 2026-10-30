@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bonus 15: Design Your Own</title>
+<style>
+/* ============================================================
+   BASE / RESET
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background: #0a0e27;
+    color: #e0e6ff;
+    font-family: 'Segoe UI', 'Arial', sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+/* ============================================================
+   HEADER + TABS
+   ============================================================ */
+header {
+    background: #101538;
+    border-bottom: 2px solid #1a2050;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-title {
+    text-align: center;
+    padding: 12px 16px 0;
+    font-size: 1.3em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #a0a8e0;
+}
+
+.tab-bar {
+    display: flex;
+    gap: 4px;
+    padding: 8px 16px 0;
+    overflow-x: auto;
+}
+
+.tab-bar button {
+    background: transparent;
+    border: none;
+    color: #808cc0;
+    padding: 10px 18px;
+    font-size: 0.95em;
+    font-family: inherit;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.tab-bar button:hover {
+    color: #b0b8f0;
+}
+
+.tab-bar button.active {
+    color: #e0e6ff;
+    border-bottom-color: #6c63ff;
+    font-weight: 600;
+}
+
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
+main {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+}
+
+.part { display: none; }
+.part.active { display: block; }
+
+.part > h1 {
+    font-size: 1.8em;
+    margin-bottom: 4px;
+    color: #fff;
+}
+
+.part > .subtitle {
+    font-size: 1.1em;
+    color: #8890c0;
+    margin-bottom: 28px;
+}
+
+/* ============================================================
+   CONCEPTS SECTION
+   ============================================================ */
+.concepts {
+    background: #121640;
+    border: 1px solid #1e2460;
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 32px;
+}
+
+.concepts h2 {
+    font-size: 1.15em;
+    color: #a0a8e0;
+    margin-bottom: 12px;
+}
+
+.concepts p, .concepts li {
+    margin-bottom: 8px;
+    color: #c0c8f0;
+}
+
+.concepts ul, .concepts ol {
+    padding-left: 24px;
+    margin-bottom: 8px;
+}
+
+.concepts strong { color: #e0e6ff; }
+
+.concepts .concept-code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    background: #0d1030;
+    color: #82aaff;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.92em;
+}
+
+/* ============================================================
+   STEPS
+   ============================================================ */
+.step {
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    border-left: 4px solid;
+}
+
+.step-copy {
+    background: #0d1a2c;
+    border-left-color: #00bcd4;
+}
+
+.step-challenge {
+    background: #1a1510;
+    border-left-color: #ff9800;
+}
+
+.step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #e0e6ff;
+}
+
+.badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.72em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+.badge-copy {
+    background: #00bcd4;
+    color: #001820;
+}
+
+.badge-challenge {
+    background: #ff9800;
+    color: #1a0e00;
+}
+
+.step-location {
+    font-size: 0.9em;
+    color: #8890c0;
+    margin-bottom: 10px;
+    font-style: italic;
+}
+
+.step-desc, .step-task {
+    margin-bottom: 12px;
+    color: #c0c8f0;
+}
+
+.step-desc strong, .step-task strong { color: #e0e6ff; }
+
+.step-note {
+    background: #0a1028;
+    border-left: 3px solid #2196f3;
+    padding: 8px 14px;
+    margin-top: 10px;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.92em;
+    color: #90a0d0;
+}
+
+/* ============================================================
+   CODE BLOCKS
+   ============================================================ */
+pre.code-block {
+    background: #0d1030;
+    border: 1px solid #1a2050;
+    border-radius: 6px;
+    padding: 14px 18px;
+    overflow-x: auto;
+    margin: 8px 0;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+pre.code-block code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.92em;
+    line-height: 1.55;
+    color: #eeffff;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Inline code in descriptions */
+.step-desc code, .step-task code, .step-note code,
+.concepts code, .hint code, p code, li code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    background: #0d1030;
+    color: #82aaff;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+
+/* ============================================================
+   SYNTAX HIGHLIGHTING
+   ============================================================ */
+.kw  { color: #c792ea; }   /* keywords */
+.str { color: #c3e88d; }   /* strings */
+.cm  { color: #809aa5; }   /* comments */
+.num { color: #f78c6c; }   /* numbers */
+.fn  { color: #82aaff; }   /* function calls */
+
+/* ============================================================
+   HINTS + SOLUTIONS
+   ============================================================ */
+.hints-container {
+    margin: 8px 0;
+}
+
+.hint {
+    background: #141028;
+    border: 1px solid #2a2060;
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin: 8px 0;
+    color: #b0b8e0;
+    font-size: 0.95em;
+}
+
+.hint strong { color: #e0e6ff; }
+
+.solution {
+    margin: 8px 0;
+}
+
+.btn-hint, .btn-solution {
+    border: none;
+    padding: 8px 18px;
+    border-radius: 5px;
+    font-size: 0.9em;
+    font-family: inherit;
+    cursor: pointer;
+    margin: 6px 6px 6px 0;
+    font-weight: 600;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.btn-hint:active, .btn-solution:active {
+    transform: scale(0.97);
+}
+
+.btn-hint {
+    background: #6c63ff;
+    color: #fff;
+}
+
+.btn-hint:hover { background: #7d75ff; }
+
+.btn-solution {
+    background: #ff9800;
+    color: #1a0e00;
+}
+
+.btn-solution:hover { background: #ffad33; }
+
+/* ============================================================
+   CHECK YOUR WORK + STUCK
+   ============================================================ */
+.check-work {
+    background: #0d1830;
+    border: 1px solid #1a2850;
+    border-radius: 8px;
+    padding: 18px 24px;
+    margin-top: 32px;
+}
+
+.check-work h2 {
+    font-size: 1.1em;
+    color: #4caf50;
+    margin-bottom: 10px;
+}
+
+.check-work ul {
+    padding-left: 24px;
+}
+
+.check-work li {
+    margin-bottom: 6px;
+    color: #b0c0d0;
+}
+
+.stuck {
+    margin-top: 16px;
+    padding: 12px 18px;
+    background: #10101a;
+    border-radius: 6px;
+    color: #7880a0;
+    font-size: 0.9em;
+}
+
+.stuck code {
+    color: #82aaff;
+}
+
+.btn-stuck {
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: inherit;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0;
+}
+
+.btn-stuck:hover {
+    color: #a0a8d0;
+}
+
+.btn-stuck code {
+    color: #82aaff;
+}
+
+.stuck-code {
+    margin-top: 12px;
+    max-height: 600px;
+    overflow-y: auto;
+    border-radius: 6px;
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+#toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #ff9800;
+    color: #1a0e00;
+    padding: 10px 24px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.95em;
+    opacity: 0;
+    transition: transform 0.3s, opacity 0.3s;
+    z-index: 200;
+    pointer-events: none;
+}
+
+#toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+/* ============================================================
+   SEPARATOR
+   ============================================================ */
+.sep {
+    border: none;
+    border-top: 1px solid #1a2050;
+    margin: 24px 0;
+}
+
+/* ============================================================
+   DELETE INSTRUCTION
+   ============================================================ */
+.delete-block {
+    background: #1a0d0d;
+    border: 1px solid #3a1515;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin: 8px 0;
+}
+
+.delete-block .delete-label {
+    color: #e05050;
+    font-weight: 700;
+    font-size: 0.85em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+}
+
+.delete-block pre.code-block {
+    border-color: #3a1515;
+    opacity: 0.7;
+}
+
+/* ============================================================
+   BONUS PAGES
+   ============================================================ */
+.tier {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+.tier-1 { background: #2e7d32; color: #e8ffe8; }
+.tier-2 { background: #1565c0; color: #e8f0ff; }
+.tier-3 { background: #8e24aa; color: #fbe8ff; }
+
+.before-start {
+    background: #10182e;
+    border: 1px solid #24305a;
+    border-radius: 8px;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+    color: #b0b8e0;
+    font-size: 0.95em;
+}
+.before-start strong { color: #e0e6ff; }
+.before-start ul { padding-left: 22px; margin-top: 6px; }
+.before-start li { margin-bottom: 4px; }
+
+.stretch {
+    background: #1a1028;
+    border: 1px solid #3a2060;
+    border-radius: 8px;
+    padding: 16px 22px;
+    margin-top: 24px;
+}
+.stretch h2 { font-size: 1.05em; color: #ce93d8; margin-bottom: 8px; }
+.stretch ul { padding-left: 24px; }
+.stretch li { margin-bottom: 6px; color: #c0b0d8; }
+
+.reference h2 { font-size: 1.1em; color: #a0a8e0; margin-bottom: 10px; }
+.reference {
+    margin-top: 32px;
+    padding: 18px 24px;
+    background: #10101a;
+    border-radius: 8px;
+}
+.warning {
+    background: #2a1a08;
+    border-left: 4px solid #ff9800;
+    padding: 10px 16px;
+    border-radius: 0 6px 6px 0;
+    color: #ffcc80;
+    margin-bottom: 12px;
+    font-size: 0.95em;
+}
+.warning strong { color: #ffe0b2; }
+
+.challenge-list { list-style: none; padding: 0; }
+.challenge-list li {
+    background: #121640;
+    border: 1px solid #1e2460;
+    border-radius: 8px;
+    padding: 12px 18px;
+    margin-bottom: 10px;
+}
+.challenge-list .file { font-family: 'Consolas', 'Monaco', 'Courier New', monospace; color: #82aaff; font-size: 0.9em; }
+.challenge-list .title { font-weight: 700; color: #fff; }
+.challenge-list .summary { color: #a0a8d0; font-size: 0.95em; margin-top: 4px; }
+.challenge-list .req { color: #8088b8; font-size: 0.85em; margin-top: 4px; font-style: italic; }
+.tier-heading { margin: 28px 0 12px; font-size: 1.25em; color: #e0e6ff; }
+</style>
+</head>
+<body>
+
+<header>
+    <div class="header-title">SPACE SHOOTER &mdash; BONUS CHALLENGES</div>
+    <div style="height: 10px"></div>
+</header>
+
+<main>
+<div class="part active">
+    <h1><span class="tier tier-3">★★★ STRUCTURE</span>Bonus 15: Design Your Own</h1>
+    <p class="subtitle">This time there are no step-by-step instructions. Plan a feature, build it, test it, and make the game yours.</p>
+
+    <div class="before-start">
+        <strong>Before you start</strong>
+        <ul>
+            <li><strong>Prerequisites:</strong> None &mdash; start from your finished Part 7 game.</li>
+            
+            <li>Make a backup copy of your <code>game.lua</code> first, so you can always go back.</li>
+            <li>Bonus challenges give you less help than the main guide. Work out <em>where</em> each piece of code goes, and use the hints if you get stuck.</li>
+        </ul>
+    </div>
+
+    <div class="concepts">
+        <h2>How to design a feature</h2>
+        <p>Every challenge you've done followed the same four questions. Use them for your own idea:</p>
+        <ol>
+            <li><strong>What data does it need?</strong> New variables? A new list of tables? New fields on meteors or lasers?</li>
+            <li><strong>What changes it?</strong> Which keys, timers, or collisions change that data? That code goes in <code>user_input()</code> or <code>update()</code>.</li>
+            <li><strong>How does the player see it?</strong> What do you draw, and in what order? That code goes in <code>draw()</code>.</li>
+            <li><strong>How does it start over?</strong> What needs to go back to normal in <code>reset_game()</code>?</li>
+        </ol>
+        <p>Most features are built from patterns you already know: <strong>timers</strong>, <strong>lists of tables</strong>, <strong>reverse loops for removing</strong>, and <strong>collision checks</strong>.</p>
+    </div>
+
+    <!-- Task 1 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 1: Pick an idea</div>
+        <div class="step-task">Pick one idea from the list below, or invent your own. Start small. You can always add more later.</div>
+        <div class="step-note">
+            <strong>Ideas:</strong>
+            <ul style="padding-left: 22px; margin-top: 6px;">
+                <li><strong>Homing missile:</strong> press X to fire a slow missile that turns toward the nearest meteor.</li>
+                <li><strong>Combo multiplier:</strong> each hit within 2 seconds of the last one raises a multiplier from x1 to x2 to x3 (the most). Your points are multiplied by it. Two seconds with no hit puts it back to x1.</li>
+                <li><strong>Splitting meteors:</strong> big meteors break into two small ones that fly apart.</li>
+                <li><strong>Bomb:</strong> press B to destroy everything on screen. You only get 3 per game.</li>
+                <li><strong>Coins and a shop:</strong> destroyed meteors drop coins. Between games, spend them on upgrades.</li>
+                <li><strong>Two players:</strong> a second ship that moves with WASD and fires with F.</li>
+                <li><strong>Black hole:</strong> a black hole drifts across the screen and pulls the ship and meteors toward it.</li>
+            </ul>
+        </div>
+        <div class="hints-container">
+            <div class="hint" hidden>Not sure which one? Pick the one that sounds most fun to <em>play</em>. The combo multiplier and the bomb are the smallest; two players and the shop are the biggest.</div>
+            <div class="hint" hidden>Write your idea as one sentence that starts with "When the player..." For example: "When the player presses B, every meteor on screen explodes and the bomb count goes down by one."</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+    </div>
+
+    <!-- Task 2 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 2: Write a plan</div>
+        <div class="step-task">Before writing code, answer the four questions from the top of this page for your idea. Write the answers as comments at the top of <code>game.lua</code>.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Here's a plan for the bomb idea:
+<pre class="code-block"><code class="lua">-- MY FEATURE: Bombs
+-- Data:    bombs = 3
+-- Changes: pressing B (if bombs &gt; 0) clears meteors, adds to score, bombs - 1
+-- Draw:    "Bombs: 3" in the HUD, a white flash when one goes off
+-- Reset:   bombs = 3 in reset_game()</code></pre></div>
+            <div class="hint" hidden>If your plan has more than about five "Changes" lines, split it into a smaller first version. Get that working, then add the rest.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+    </div>
+
+    <!-- Task 3 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 3: Build it one piece at a time</div>
+        <div class="step-task">Build your feature in small steps, and run the game after each one. Add the data first, then the drawing (so you can see it), then the code that changes it, and finally the reset.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>Drawing early helps you find bugs. If you can <em>see</em> your new data on screen (even as plain text in the HUD), it's much easier to tell when the code that changes it is wrong.</div>
+            <div class="hint" hidden>Stuck on an error? That's normal when you build something new. Read the line number in the error message, then look at that line and the line above it. Missing <code>end</code>s and misspelled variable names are the most common causes.</div>
+            <div class="hint" hidden>Look back at a bonus challenge that used a similar pattern. Splitting meteors works a lot like Bonus 7: Explosion Particles. A homing missile uses the same <code>math.cos</code>/<code>math.sin</code> idea from that challenge. Combos are timers, like Bonus 2: Fire Cooldown &amp; Auto-Fire: count <code>combo_timer</code> down by <code>dt</code> each frame, and reset the combo when it reaches 0.</div>
+            <div class="hint" hidden>If your feature changes what happens when you score, like a combo multiplier, find every line that adds to <code>score</code>. If you did other bonus challenges, there may be several (meteors, enemies, a boss). Write one function, such as <code>add_points(n)</code>, and call it in all of those places. Then your change only has to go in one spot.</div>
+        </div>
+        <button class="btn-hint" data-total="4">Show Hint (1/4)</button>
+    </div>
+
+    <!-- Task 4 -->
+    <div class="step step-challenge">
+        <div class="step-header"><span class="badge badge-challenge">CHALLENGE</span> Task 4: Playtest and adjust</div>
+        <div class="step-task">Play your game five times. After each game, change one number (a speed, a timer, a cost) to make it more fun. Then ask someone else to play it without telling them how it works, and watch whether they can figure it out.</div>
+        <div class="hints-container">
+            <div class="hint" hidden>If you keep changing the same number, give it a name in <code>ALL_CAPS</code> at the top of the file (like <code>BOMB_COUNT = 3</code>). Then it's in one place where you can find and change it.</div>
+            <div class="hint" hidden>If your playtester gets confused, add a line to the HUD or the title screen explaining the new key or rule.</div>
+        </div>
+        <button class="btn-hint" data-total="2">Show Hint (1/2)</button>
+    </div>
+
+    <div class="check-work">
+        <h2>Check Your Work</h2>
+        <p>Your feature is done when:</p>
+        <ul>
+            <li>It adds at least one <strong>new thing</strong> (a new object, rule, or ability)</li>
+            <li>The player can <strong>see</strong> it working (a drawing, a HUD value, an effect)</li>
+            <li>It <strong>resets</strong> correctly when you press ENTER after a game over</li>
+            <li>The rest of the game still works: moving, shooting, scoring, and game over</li>
+            <li>Someone else can play it and understand it</li>
+        </ul>
+        <p style="margin-top: 12px; color: #4caf50; font-weight: 600;">There's no reference solution for this one. It's your game now.</p>
+    </div>
+
+    <div class="stretch">
+        <h2>Going Further</h2>
+        <ul>
+            <li>Combine several bonus challenges into one game. Which features work well together?</li>
+            <li>Give your game a new name and title screen, and change the ship's color. Kenney's free Space Shooter pack at kenney.nl has more ships to choose from.</li>
+            <li>Make a second game from scratch using the same patterns: a dodging game, a falling-object catcher, or a top-down racer.</li>
+        </ul>
+    </div>
+
+</div>
+</main>
+
+<!-- Toast notification for blocked copy -->
+<div id="toast">Type it out! You'll remember it better.</div>
+
+<script>
+(function() {
+    'use strict';
+
+    // ============================================================
+    // HINT REVEAL
+    // ============================================================
+
+    document.querySelectorAll('.btn-hint').forEach(function(btn) {
+        var step = btn.closest('.step');
+        var hints = step.querySelectorAll('.hints-container .hint');
+        var total = parseInt(btn.getAttribute('data-total'), 10);
+        var revealed = 0;
+
+        btn.addEventListener('click', function() {
+            if (revealed < total) {
+                hints[revealed].removeAttribute('hidden');
+                hints[revealed].querySelectorAll('code.lua').forEach(highlightElement);
+                revealed++;
+
+                if (revealed < total) {
+                    btn.textContent = 'Show Hint (' + (revealed + 1) + '/' + total + ')';
+                } else {
+                    // All hints revealed — hide hint button, show solution button
+                    btn.setAttribute('hidden', '');
+                    var solBtn = step.querySelector('.btn-solution');
+                    if (solBtn) solBtn.removeAttribute('hidden');
+                }
+            }
+        });
+    });
+
+    // ============================================================
+    // SOLUTION REVEAL
+    // ============================================================
+
+    document.querySelectorAll('.btn-solution').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var step = btn.closest('.step');
+            var sol = step.querySelector('.solution');
+            if (sol) {
+                var isHidden = sol.hasAttribute('hidden');
+                if (isHidden) {
+                    sol.removeAttribute('hidden');
+                    btn.textContent = 'Hide Solution';
+                    // Re-highlight any code blocks that were hidden
+                    sol.querySelectorAll('code.lua').forEach(highlightElement);
+                } else {
+                    sol.setAttribute('hidden', '');
+                    btn.textContent = 'Show Solution';
+                }
+            }
+        });
+    });
+
+    // ============================================================
+    // STUCK CODE TOGGLE
+    // ============================================================
+
+    document.querySelectorAll('.btn-stuck').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var stuck = btn.closest('.stuck');
+            var codeDiv = stuck.querySelector('.stuck-code');
+            if (codeDiv) {
+                var isHidden = codeDiv.hasAttribute('hidden');
+                if (isHidden) {
+                    codeDiv.removeAttribute('hidden');
+                    codeDiv.querySelectorAll('code.lua').forEach(highlightElement);
+                } else {
+                    codeDiv.setAttribute('hidden', '');
+                }
+            }
+        });
+    });
+
+    // ============================================================
+    // LUA SYNTAX HIGHLIGHTING
+    // ============================================================
+
+    var LUA_KEYWORDS = ['local','function','end','if','then','else','elseif',
+        'for','do','while','return','break','and','or','not','in',
+        'true','false','nil','repeat','until'];
+    var kwSet = {};
+    LUA_KEYWORDS.forEach(function(k) { kwSet[k] = true; });
+
+    function escapeHTML(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function highlightLua(code) {
+        var result = '';
+        var i = 0;
+        var len = code.length;
+
+        while (i < len) {
+            // Comment
+            if (code[i] === '-' && i + 1 < len && code[i + 1] === '-') {
+                var end = code.indexOf('\n', i);
+                if (end === -1) end = len;
+                result += '<span class="cm">' + escapeHTML(code.substring(i, end)) + '</span>';
+                i = end;
+            }
+            // String (double quote)
+            else if (code[i] === '"') {
+                var j = i + 1;
+                while (j < len && code[j] !== '"' && code[j] !== '\n') {
+                    if (code[j] === '\\') j++;
+                    j++;
+                }
+                if (j < len && code[j] === '"') j++;
+                result += '<span class="str">' + escapeHTML(code.substring(i, j)) + '</span>';
+                i = j;
+            }
+            // String (single quote)
+            else if (code[i] === "'") {
+                var j = i + 1;
+                while (j < len && code[j] !== "'" && code[j] !== '\n') {
+                    if (code[j] === '\\') j++;
+                    j++;
+                }
+                if (j < len && code[j] === "'") j++;
+                result += '<span class="str">' + escapeHTML(code.substring(i, j)) + '</span>';
+                i = j;
+            }
+            // Number (not preceded by word char)
+            else if (/[0-9]/.test(code[i]) && (i === 0 || !/[a-zA-Z_]/.test(code[i - 1]))) {
+                var j = i;
+                while (j < len && /[0-9.]/.test(code[j])) j++;
+                result += '<span class="num">' + code.substring(i, j) + '</span>';
+                i = j;
+            }
+            // Identifier / keyword
+            else if (/[a-zA-Z_]/.test(code[i])) {
+                var j = i;
+                while (j < len && /[a-zA-Z0-9_]/.test(code[j])) j++;
+                var word = code.substring(i, j);
+                if (kwSet[word]) {
+                    result += '<span class="kw">' + word + '</span>';
+                } else {
+                    // Check for function call (skip whitespace, look for '(')
+                    var k = j;
+                    while (k < len && code[k] === ' ') k++;
+                    if (k < len && code[k] === '(') {
+                        result += '<span class="fn">' + word + '</span>';
+                    } else {
+                        result += word;
+                    }
+                }
+                i = j;
+            }
+            // Dot accessor — check if next word is a function call
+            else if (code[i] === '.' && i + 1 < len && /[a-zA-Z_]/.test(code[i + 1])) {
+                result += '.';
+                i++;
+            }
+            // Other character
+            else {
+                result += escapeHTML(code[i]);
+                i++;
+            }
+        }
+        return result;
+    }
+
+    function highlightElement(el) {
+        var raw = el.textContent;
+        el.innerHTML = highlightLua(raw);
+    }
+
+    // Highlight all visible code blocks on load
+    document.querySelectorAll('code.lua').forEach(function(el) {
+        // Only highlight if the element is not inside a hidden container
+        var parent = el.closest('[hidden]');
+        if (!parent) {
+            highlightElement(el);
+        }
+    });
+
+    // ============================================================
+    // ANTI-COPY-PASTE
+    // ============================================================
+
+    var toast = document.getElementById('toast');
+    var toastTimer = null;
+
+    function showToast() {
+        toast.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(function() {
+            toast.classList.remove('show');
+        }, 2000);
+    }
+
+    // Block copy/cut on code blocks
+    document.querySelectorAll('pre.code-block').forEach(function(block) {
+        block.addEventListener('copy', function(e) {
+            e.preventDefault();
+            showToast();
+        });
+        block.addEventListener('cut', function(e) {
+            e.preventDefault();
+            showToast();
+        });
+    });
+
+    // Also block on the whole document for code elements
+    document.addEventListener('copy', function(e) {
+        var sel = window.getSelection();
+        if (sel && sel.anchorNode) {
+            var node = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentNode : sel.anchorNode;
+            if (node && node.closest && node.closest('pre.code-block')) {
+                e.preventDefault();
+                showToast();
+            }
+        }
+    });
+
+})();
+</script>
+
+</body>
+</html>

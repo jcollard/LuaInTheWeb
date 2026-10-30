@@ -1,0 +1,10 @@
+{
+  "num": 7,
+  "slug": "explosions",
+  "title": "Explosion Particles",
+  "tier": 2,
+  "subtitle": "Meteors burst into a shower of fading sparks when you shoot them, and so does your ship when it gets hit.",
+  "summary": "Spawn dozens of tiny particles that fly out in random directions and fade away. Meteors explode when shot, and your ship explodes on game over.",
+  "prereqs": [],
+  "new_files": []
+}

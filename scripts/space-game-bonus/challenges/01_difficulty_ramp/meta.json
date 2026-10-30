@@ -1,0 +1,10 @@
+{
+  "num": 1,
+  "slug": "difficulty_ramp",
+  "title": "Difficulty Ramp",
+  "tier": 1,
+  "subtitle": "The game gets harder as your score goes up: meteors spawn more often and fall faster.",
+  "summary": "Add levels. Every few points, meteors spawn faster and fall faster. Show the level in the HUD.",
+  "prereqs": [],
+  "new_files": []
+}

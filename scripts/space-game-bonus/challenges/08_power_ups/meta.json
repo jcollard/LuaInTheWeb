@@ -1,0 +1,10 @@
+{
+  "num": 8,
+  "slug": "power_ups",
+  "title": "Power-Ups",
+  "tier": 2,
+  "subtitle": "Destroyed meteors sometimes drop a power-up: triple shot, a shield, or a speed boost.",
+  "summary": "Shot meteors sometimes drop power-ups. Catch one for a few seconds of triple shot or double speed, or a shield that saves you from one hit.",
+  "prereqs": [],
+  "new_files": ["images/powerup_triple.png", "images/powerup_shield.png", "images/powerup_speed.png", "images/shield.png"]
+}
